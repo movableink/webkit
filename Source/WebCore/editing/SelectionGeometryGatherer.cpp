@@ -39,7 +39,7 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(SelectionGeometryGatherer);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(SelectionGeometryGatherer, Notifier);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SelectionGeometryGatherer::Notifier);
 
 SelectionGeometryGatherer::SelectionGeometryGatherer(RenderView& renderView)
     : m_renderView(renderView)

@@ -41,8 +41,6 @@
 #include <wtf/UniqueRef.h>
 #include <wtf/text/MakeString.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 #define PUSHDB_RELEASE_LOG(fmt, ...) RELEASE_LOG(Push, "%p - PushDatabase::" fmt, this, ##__VA_ARGS__)
 #define PUSHDB_RELEASE_LOG_ERROR(fmt, ...) RELEASE_LOG_ERROR(Push, "%p - PushDatabase::" fmt, this, ##__VA_ARGS__)
 
@@ -62,11 +60,11 @@ namespace WebCore {
 // In the database, the state column in the SubscriptionSets table uses 0 for enabled and 1 for ignored.
 enum class SubscriptionSetsStateColumn { Enabled, Ignored };
 
-static constexpr ASCIILiteral pushDatabaseSchemaV1Statements[] = {
+static constexpr std::array<ASCIILiteral, 1> pushDatabaseSchemaV1Statements {
     "PRAGMA auto_vacuum=INCREMENTAL"_s,
 };
 
-static constexpr ASCIILiteral pushDatabaseSchemaV2Statements[] = {
+static constexpr std::array<ASCIILiteral, 3> pushDatabaseSchemaV2Statements {
     "CREATE TABLE SubscriptionSets("
     "  rowID INTEGER PRIMARY KEY AUTOINCREMENT,"
     "  creationTime INT NOT NULL,"
@@ -90,15 +88,15 @@ static constexpr ASCIILiteral pushDatabaseSchemaV2Statements[] = {
     "CREATE INDEX Subscriptions_SubscriptionSetID_Index ON Subscriptions(subscriptionSetID)"_s,
 };
 
-static constexpr ASCIILiteral pushDatabaseSchemaV3Statements[] = {
+static constexpr std::array<ASCIILiteral, 1> pushDatabaseSchemaV3Statements {
     "CREATE TABLE Metadata(key TEXT, value, UNIQUE(key))"_s,
 };
 
-static constexpr ASCIILiteral pushDatabaseSchemaV4Statements[] = {
+static constexpr std::array<ASCIILiteral, 1> pushDatabaseSchemaV4Statements {
     "ALTER TABLE SubscriptionSets ADD COLUMN state INT NOT NULL DEFAULT 0"_s,
 };
 
-static constexpr ASCIILiteral pushDatabaseSchemaV5Statements[] = {
+static constexpr std::array<ASCIILiteral, 4> pushDatabaseSchemaV5Statements {
     "ALTER TABLE SubscriptionSets RENAME TO SubscriptionSetsOld"_s,
     "CREATE TABLE SubscriptionSets("
     "  rowID INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -114,12 +112,12 @@ static constexpr ASCIILiteral pushDatabaseSchemaV5Statements[] = {
     "DROP TABLE SubscriptionSetsOld"_s,
 };
 
-static constexpr std::span<const ASCIILiteral> pushDatabaseSchemaStatements[] = {
-    { pushDatabaseSchemaV1Statements },
-    { pushDatabaseSchemaV2Statements },
-    { pushDatabaseSchemaV3Statements },
-    { pushDatabaseSchemaV4Statements },
-    { pushDatabaseSchemaV5Statements },
+static constexpr std::array<std::span<const ASCIILiteral>, 5> pushDatabaseSchemaStatements {
+    std::span { pushDatabaseSchemaV1Statements },
+    std::span { pushDatabaseSchemaV2Statements },
+    std::span { pushDatabaseSchemaV3Statements },
+    std::span { pushDatabaseSchemaV4Statements },
+    std::span { pushDatabaseSchemaV5Statements },
 };
 
 static constexpr int currentPushDatabaseVersion = std::size(pushDatabaseSchemaStatements);
@@ -279,7 +277,7 @@ void PushDatabase::create(const String& path, CreationHandler&& completionHandle
     auto queue = WorkQueue::create("PushDatabase I/O Thread"_s);
     queue->dispatch([queue, path = crossThreadCopy(path), completionHandler = WTFMove(completionHandler)]() mutable {
         auto database = openAndMigrateDatabase(path);
-        WorkQueue::main().dispatch([queue = WTFMove(queue), database = WTFMove(database), completionHandler = WTFMove(completionHandler)]() mutable {
+        WorkQueue::protectedMain()->dispatch([queue = WTFMove(queue), database = WTFMove(database), completionHandler = WTFMove(completionHandler)]() mutable {
             if (!database) {
                 completionHandler(nullptr);
                 return;
@@ -398,7 +396,7 @@ template <class T, class U>
 static void completeOnMainQueue(CompletionHandler<void(T)>&& completionHandler, U&& result)
 {
     ASSERT(!RunLoop::isMain());
-    WorkQueue::main().dispatch([completionHandler = WTFMove(completionHandler), result = crossThreadCopy(std::forward<U>(result))]() mutable {
+    WorkQueue::protectedMain()->dispatch([completionHandler = WTFMove(completionHandler), result = crossThreadCopy(std::forward<U>(result))]() mutable {
         completionHandler(WTFMove(result));
     });
 }
@@ -991,5 +989,3 @@ void PushDatabase::setPushesEnabledForOrigin(const PushSubscriptionSetIdentifier
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

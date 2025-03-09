@@ -86,6 +86,10 @@ public:
     void registerForInvalidationCallbacks(FontSelectorClient&) final;
     void unregisterForInvalidationCallbacks(FontSelectorClient&) final;
 
+    bool isSimpleFontSelectorForDescription() const final;
+
+    bool isCSSFontSelector() const final { return true; }
+
     ScriptExecutionContext* scriptExecutionContext() const { return m_context.get(); }
 
     FontFaceSet* fontFaceSetIfExists();
@@ -126,7 +130,7 @@ private:
     WeakPtr<ScriptExecutionContext> m_context;
     RefPtr<FontFaceSet> m_fontFaceSet;
     Ref<CSSFontFaceSet> m_cssFontFaceSet;
-    HashSet<FontSelectorClient*> m_clients;
+    UncheckedKeyHashSet<FontSelectorClient*> m_clients;
 
     struct PaletteMapHash : DefaultHash<std::pair<AtomString, AtomString>> {
         static unsigned hash(const std::pair<AtomString, AtomString>& key)
@@ -142,8 +146,8 @@ private:
     UncheckedKeyHashMap<std::pair<AtomString, AtomString>, FontPaletteValues, PaletteMapHash> m_paletteMap;
     UncheckedKeyHashMap<String, Ref<FontFeatureValues>> m_featureValues;
 
-    HashSet<RefPtr<CSSFontFace>> m_cssConnectionsPossiblyToRemove;
-    HashSet<RefPtr<StyleRuleFontFace>> m_cssConnectionsEncounteredDuringBuild;
+    UncheckedKeyHashSet<RefPtr<CSSFontFace>> m_cssConnectionsPossiblyToRemove;
+    UncheckedKeyHashSet<RefPtr<StyleRuleFontFace>> m_cssConnectionsEncounteredDuringBuild;
 
     CSSFontFaceSet::FontModifiedObserver m_fontModifiedObserver;
 
@@ -158,3 +162,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSFontSelector)
+    static bool isType(const WebCore::FontSelector& selector) { return selector.isCSSFontSelector(); }
+SPECIALIZE_TYPE_TRAITS_END()

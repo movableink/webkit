@@ -34,14 +34,14 @@ struct TwoComponentPositionHorizontal {
 
     bool operator==(const TwoComponentPositionHorizontal&) const = default;
 };
-DEFINE_TYPE_WRAPPER(TwoComponentPositionHorizontal, offset);
+DEFINE_TYPE_WRAPPER_GET(TwoComponentPositionHorizontal, offset);
 
 struct TwoComponentPositionVertical {
     std::variant<Keyword::Top, Keyword::Bottom, Keyword::Center, LengthPercentage<>> offset;
 
     bool operator==(const TwoComponentPositionVertical&) const = default;
 };
-DEFINE_TYPE_WRAPPER(TwoComponentPositionVertical, offset);
+DEFINE_TYPE_WRAPPER_GET(TwoComponentPositionVertical, offset);
 
 using TwoComponentPosition              = SpaceSeparatedTuple<TwoComponentPositionHorizontal, TwoComponentPositionVertical>;
 
@@ -75,33 +75,22 @@ struct Position {
     {
     }
 
+    template<typename... F> decltype(auto) switchOn(F&&... f) const
+    {
+        return WTF::switchOn(value, std::forward<F>(f)...);
+    }
+
     bool operator==(const Position&) const = default;
 
     std::variant<TwoComponentPosition, FourComponentPosition> value;
 };
-DEFINE_TYPE_WRAPPER(Position, value);
+DEFINE_TYPE_WRAPPER_GET(Position, value);
 
 bool isCenterPosition(const Position&);
 
 } // namespace CSS
 } // namespace WebCore
 
-namespace WTF {
-
-// Overload WTF::switchOn to make it so CSS::Position can be used directly.
-
-template<class... F> ALWAYS_INLINE auto switchOn(const WebCore::CSS::Position& position, F&&... f) -> decltype(switchOn(position.value, std::forward<F>(f)...))
-{
-    return switchOn(position.value, std::forward<F>(f)...);
-}
-
-template<class... F> ALWAYS_INLINE auto switchOn(WebCore::CSS::Position&& position, F&&... f) -> decltype(switchOn(WTFMove(position.value), std::forward<F>(f)...))
-{
-    return switchOn(WTFMove(position.value), std::forward<F>(f)...);
-}
-
-} // namespace WTF
-
-CSS_TUPLE_LIKE_CONFORMANCE(TwoComponentPositionHorizontal, 1)
-CSS_TUPLE_LIKE_CONFORMANCE(TwoComponentPositionVertical, 1)
-CSS_TUPLE_LIKE_CONFORMANCE(Position, 1)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::TwoComponentPositionHorizontal, 1)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::TwoComponentPositionVertical, 1)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::Position, 1)

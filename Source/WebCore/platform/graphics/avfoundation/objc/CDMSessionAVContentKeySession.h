@@ -46,16 +46,11 @@ namespace WebCore {
 class CDMSessionAVContentKeySession;
 }
 
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CDMSessionAVContentKeySession> : std::true_type { };
-}
-
 namespace WebCore {
 
 class CDMPrivateMediaSourceAVFObjC;
 
-class CDMSessionAVContentKeySession : public CDMSessionMediaSourceAVFObjC, public RefCounted<CDMSessionAVContentKeySession> {
+class CDMSessionAVContentKeySession : public CDMSessionMediaSourceAVFObjC {
     WTF_MAKE_TZONE_ALLOCATED(CDMSessionAVContentKeySession);
 public:
     static Ref<CDMSessionAVContentKeySession> create(Vector<int>&& protocolVersions, int cdmVersion, CDMPrivateMediaSourceAVFObjC& parent, LegacyCDMSessionClient& client)
@@ -64,9 +59,6 @@ public:
     }
 
     virtual ~CDMSessionAVContentKeySession();
-
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
 
     static bool isAvailable();
 
@@ -85,7 +77,7 @@ public:
 
     void didProvideContentKeyRequest(AVContentKeyRequest *);
 
-    bool hasContentKeySession() const { return m_contentKeySession; }
+    bool hasContentKeySession() const { return !!m_contentKeySession; }
     AVContentKeySession* contentKeySession();
 
     bool hasContentKeyRequest() const;

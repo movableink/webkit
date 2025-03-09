@@ -44,6 +44,9 @@ struct WebKit::InteractionInformationAtPosition {
     bool touchCalloutEnabled;
     bool isLink;
     bool isImage;
+#if ENABLE(MODEL_PROCESS)
+    bool isInteractiveModel;
+#endif
     bool isAttachment;
     bool isAnimatedImage;
     bool isAnimating;
@@ -55,16 +58,13 @@ struct WebKit::InteractionInformationAtPosition {
 #if ENABLE(DATA_DETECTION)
     bool isDataDetectorLink;
 #endif
-#if ENABLE(DATALIST_ELEMENT)
     bool preventTextInteraction;
-#endif
     bool elementContainsImageOverlay;
-    bool shouldNotUseIBeamInEditableContent;
     bool isImageOverlayText;
-    bool isVerticalWritingMode;
 #if ENABLE(SPATIAL_IMAGE_DETECTION)
     bool isSpatialImage;
 #endif
+    bool isInPlugin;
     bool needsPointerTouchCompatibilityQuirk;
     WebCore::FloatPoint adjustedPointForNodeRespondingToClickEvents;
     URL url;
@@ -80,10 +80,7 @@ struct WebKit::InteractionInformationAtPosition {
     String textBefore;
     String textAfter;
 
-    float caretLength;
-    WebCore::FloatRect lineCaretExtent;
-
-    std::optional<WebCore::Cursor> cursor;
+    WebKit::CursorContext cursorContext;
 
     WebCore::TextIndicatorData linkIndicator;
 #if ENABLE(DATA_DETECTION)

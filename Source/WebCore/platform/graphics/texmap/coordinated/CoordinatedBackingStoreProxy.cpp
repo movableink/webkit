@@ -21,7 +21,7 @@
 #include "CoordinatedBackingStoreProxy.h"
 
 #if USE(COORDINATED_GRAPHICS)
-#include "CoordinatedGraphicsLayer.h"
+#include "CoordinatedPlatformLayer.h"
 #include "CoordinatedTileBuffer.h"
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/MemoryPressureHandler.h>
@@ -45,18 +45,22 @@ static uint32_t generateTileID()
 
 CoordinatedBackingStoreProxy::Update::~Update() = default;
 
-void CoordinatedBackingStoreProxy::Update::appendUpdate(float scale, Vector<uint32_t>&& tilesToCreate, Vector<TileUpdate>&& tilesToUpdate, Vector<uint32_t>&& tilesToRemove)
+void CoordinatedBackingStoreProxy::Update::appendUpdate(Vector<uint32_t>&& tilesToCreate, Vector<TileUpdate>&& tilesToUpdate, Vector<uint32_t>&& tilesToRemove)
 {
-    m_scale = scale;
-
     // Remove any creations or updates previously registered for tiles that are going to be removed now.
     if (!m_tilesToCreate.isEmpty() || !m_tilesToUpdate.isEmpty()) {
+        Vector<uint32_t, 8> createdTilesRemoved;
         for (const auto& tileID : tilesToRemove) {
-            m_tilesToCreate.removeAll(tileID);
+            if (m_tilesToCreate.removeAll(tileID))
+                createdTilesRemoved.append(tileID);
             m_tilesToUpdate.removeAllMatching([tileID](auto& update) {
                 return update.tileID == tileID;
             });
         }
+
+        // Remove the removals of tiles also registered to be created.
+        for (const auto& tileID : createdTilesRemoved)
+            tilesToRemove.removeFirst(tileID);
     }
 
     if (m_tilesToCreate.isEmpty())
@@ -75,6 +79,12 @@ void CoordinatedBackingStoreProxy::Update::appendUpdate(float scale, Vector<uint
         m_tilesToRemove.appendVector(WTFMove(tilesToRemove));
 }
 
+void CoordinatedBackingStoreProxy::Update::waitUntilPaintingComplete()
+{
+    for (auto& update : m_tilesToUpdate)
+        update.buffer->waitUntilPaintingComplete();
+}
+
 Ref<CoordinatedBackingStoreProxy> CoordinatedBackingStoreProxy::create(float contentsScale, std::optional<IntSize> tileSize)
 {
     return adoptRef(*new CoordinatedBackingStoreProxy(contentsScale, tileSize.value_or(IntSize { s_defaultTileDimension, s_defaultTileDimension })));
@@ -88,12 +98,8 @@ CoordinatedBackingStoreProxy::CoordinatedBackingStoreProxy(float contentsScale, 
 
 CoordinatedBackingStoreProxy::~CoordinatedBackingStoreProxy() = default;
 
-bool CoordinatedBackingStoreProxy::setContentsScale(float contentsScale)
+void CoordinatedBackingStoreProxy::reset()
 {
-    if (m_contentsScale == contentsScale)
-        return false;
-
-    m_contentsScale = contentsScale;
     m_coverAreaMultiplier = 2;
     m_pendingTileCreation = false;
     m_contentsRect = { };
@@ -101,10 +107,30 @@ bool CoordinatedBackingStoreProxy::setContentsScale(float contentsScale)
     m_coverRect = { };
     m_keepRect = { };
 
+    Vector<uint32_t> tilesToRemove;
+    for (const auto& tile : m_tiles.values())
+        tilesToRemove.append(tile.id);
+    m_tiles.clear();
+
+    {
+        Locker locker { m_update.lock };
+        m_update.pending = Update();
+        if (!tilesToRemove.isEmpty())
+            m_update.pending.appendUpdate({ }, { }, WTFMove(tilesToRemove));
+    }
+}
+
+bool CoordinatedBackingStoreProxy::setContentsScale(float contentsScale)
+{
+    if (m_contentsScale == contentsScale)
+        return false;
+
+    m_contentsScale = contentsScale;
+    reset();
     return true;
 }
 
-OptionSet<CoordinatedBackingStoreProxy::UpdateResult> CoordinatedBackingStoreProxy::updateIfNeeded(const IntRect& unscaledVisibleRect, const IntRect& unscaledContentsRect, bool shouldCreateAndDestroyTiles, const Vector<IntRect, 1>& dirtyRegion, CoordinatedGraphicsLayer& layer)
+OptionSet<CoordinatedBackingStoreProxy::UpdateResult> CoordinatedBackingStoreProxy::updateIfNeeded(const IntRect& unscaledVisibleRect, const IntRect& unscaledContentsRect, bool shouldCreateAndDestroyTiles, const Vector<IntRect, 1>& dirtyRegion, CoordinatedPlatformLayer& layer)
 {
     invalidateRegion(dirtyRegion);
 
@@ -139,7 +165,7 @@ OptionSet<CoordinatedBackingStoreProxy::UpdateResult> CoordinatedBackingStorePro
         WTFBeginSignpost(this, UpdateTile, "%u/%u, id: %d, rect: %ix%i+%i+%i, dirty: %ix%i+%i+%i", ++dirtyTileIndex, dirtyTilesCount, tile.id,
             tile.rect.x(), tile.rect.y(), tile.rect.width(), tile.rect.height(), tile.dirtyRect.x(), tile.dirtyRect.y(), tile.dirtyRect.width(), tile.dirtyRect.height());
 
-        auto buffer = layer.paintTile(tile.dirtyRect);
+        auto buffer = layer.paint(tile.dirtyRect);
         IntRect updateRect(tile.dirtyRect);
         updateRect.move(-tile.rect.x(), -tile.rect.y());
         tilesToUpdate.append({ tile.id, tile.rect, WTFMove(updateRect), WTFMove(buffer) });
@@ -151,13 +177,18 @@ OptionSet<CoordinatedBackingStoreProxy::UpdateResult> CoordinatedBackingStorePro
 
     WTFEndSignpost(this, UpdateTiles);
 
+#if !HAVE(OS_SIGNPOST) && !USE(SYSPROF_CAPTURE)
+    UNUSED_VARIABLE(dirtyTilesCount);
+    UNUSED_VARIABLE(dirtyTileIndex);
+#endif
+
     if (tilesToCreate.isEmpty() && tilesToUpdate.isEmpty() && tilesToRemove.isEmpty())
         return result;
 
     result.add(UpdateResult::TilesChanged);
     {
         Locker locker { m_update.lock };
-        m_update.pending.appendUpdate(m_contentsScale, WTFMove(tilesToCreate), WTFMove(tilesToUpdate), WTFMove(tilesToRemove));
+        m_update.pending.appendUpdate(WTFMove(tilesToCreate), WTFMove(tilesToUpdate), WTFMove(tilesToRemove));
     }
     return result;
 }
@@ -425,6 +456,12 @@ void CoordinatedBackingStoreProxy::forEachTilePositionInRect(const IntRect& rect
         for (int x = topLeft.x(); x <= innerBottomRight.x(); ++x)
             callback(IntPoint(x, y));
     }
+}
+
+void CoordinatedBackingStoreProxy::waitUntilPaintingComplete()
+{
+    Locker locker { m_update.lock };
+    m_update.pending.waitUntilPaintingComplete();
 }
 
 } // namespace WebCore

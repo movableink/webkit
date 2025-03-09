@@ -110,7 +110,6 @@ colspan
 command
 commandfor
 compact
-composite
 content
 contenteditable
 controls
@@ -201,6 +200,7 @@ name
 nohref
 nomodule
 nonce
+noportal
 noresize
 noshade
 novalidate
@@ -230,6 +230,7 @@ oncanplaythrough
 onchange
 onclick
 onclose
+oncommand
 oncontentvisibilityautostatechange
 oncontextmenu
 oncopy
@@ -391,8 +392,10 @@ scrolling
 select
 selected
 shadowrootclonable
+shadowrootcustomelementregistry
 shadowrootdelegatesfocus
 shadowrootmode
+shadowrootreferencetarget
 shadowrootserializable
 shape
 size
@@ -404,6 +407,7 @@ src
 srcdoc
 srclang
 srcset
+stagemode
 standby
 start
 step

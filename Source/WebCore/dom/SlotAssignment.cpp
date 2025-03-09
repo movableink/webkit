@@ -37,7 +37,7 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(SlotAssignment);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(NamedSlotAssignment);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(NamedSlotAssignment, Slot);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NamedSlotAssignment::Slot);
 
 using namespace HTMLNames;
 
@@ -322,6 +322,8 @@ void NamedSlotAssignment::didChangeSlot(const AtomString& slotAttrValue, ShadowR
 
     if (slotElement->selfOrPrecedingNodesAffectDirAuto())
         slotElement->updateEffectiveTextDirection();
+
+    slotElement->updateAccessibilityOnSlotChange();
 }
 
 void NamedSlotAssignment::didRemoveAllChildrenOfShadowHost(ShadowRoot& shadowRoot)
@@ -505,7 +507,7 @@ void ManualSlotAssignment::removeSlotElementByName(const AtomString&, HTMLSlotEl
 void ManualSlotAssignment::slotManualAssignmentDidChange(HTMLSlotElement& slot, Vector<WeakPtr<Node, WeakPtrImplWithEventTargetData>>& previous, Vector<WeakPtr<Node, WeakPtrImplWithEventTargetData>>& current, ShadowRoot& shadowRoot)
 {
     auto effectivePrevious = effectiveAssignedNodes(shadowRoot, previous);
-    HashSet<Ref<HTMLSlotElement>> affectedSlots;
+    UncheckedKeyHashSet<Ref<HTMLSlotElement>> affectedSlots;
     for (auto& node : current) {
         RefPtr protectedNode = node.get();
         if (RefPtr previousSlot = protectedNode->manuallyAssignedSlot()) {

@@ -25,7 +25,7 @@
 
 import Combine
 import Foundation
-import RealityKit
+ @_spi(RealityKit) import RealityKit
 import WebKitSwift
 import os
 import simd
@@ -43,8 +43,52 @@ public final class WKSRKEntity: NSObject {
     private var _duration: TimeInterval? = nil
     private var _playbackRate: Float = 1.0
 
+    @objc(isLoadFromDataAvailable) public static func isLoadFromDataAvailable() -> Bool {
+#if canImport(RealityKit, _version: 377)
+        return true
+#else
+        return false
+#endif
+    }
+
+    @objc(loadFromData:completionHandler:) public static func load(from data: Data, completionHandler: @MainActor @escaping (WKSRKEntity?) -> Void) {
+#if canImport(RealityKit, _version: 377)
+        Task {
+            do {
+                let loadedEntity = try await Entity(fromData: data)
+                let result: WKSRKEntity = .init(with: loadedEntity)
+                await completionHandler(result)
+            } catch {
+                Logger.realityKitEntity.error("Failed to load entity from data")
+                await completionHandler(nil)
+            }
+        }
+#else
+        Task {
+            await completionHandler(nil)
+        }
+#endif
+    }
+
+    private init(with rkEntity: Entity) {
+        self.entity = rkEntity
+    }
+
     @objc(initWithCoreEntity:) init(with coreEntity: REEntityRef) {
         entity = Entity.__fromCore(__EntityRef.__fromCore(coreEntity))
+    }
+
+    @objc(name) public var name: String {
+        get {
+            entity.name
+        }
+        set {
+            entity.name = newValue
+        }
+    }
+    
+    @objc(interactionPivotPoint) public var interactionPivotPoint: simd_float3 {
+        entity.visualBounds(relativeTo: nil).center
     }
 
     @objc(boundingBoxExtents) public var boundingBoxExtents: simd_float3 {
@@ -63,16 +107,17 @@ public final class WKSRKEntity: NSObject {
 
     @objc(transform) public var transform: WKEntityTransform {
         get {
-            guard let transformComponent = entity.components[Transform.self] else {
-                Logger.realityKitEntity.error("No transform component available from entity")
-                return WKEntityTransform(scale: simd_float3.one, rotation: simd_quatf(ix: 0, iy: 0, iz: 0, r: 1), translation: simd_float3.zero)
-            }
-
-            return WKEntityTransform(scale: transformComponent.scale, rotation: transformComponent.rotation, translation: transformComponent.translation)
+            let transform = Transform(matrix: entity.transformMatrix(relativeTo: nil))
+            return WKEntityTransform(scale: transform.scale, rotation: transform.rotation, translation: transform.translation)
         }
 
         set {
-            entity.components[Transform.self] = Transform(scale: newValue.scale, rotation: newValue.rotation, translation: newValue.translation)
+            var adjustedTransform = Transform(scale: newValue.scale, rotation: newValue.rotation, translation: newValue.translation)
+            if let container = entity.parent {
+                adjustedTransform = container.convert(transform: adjustedTransform, from: nil)
+            }
+            
+            entity.transform = adjustedTransform
         }
     }
 
@@ -188,7 +233,6 @@ public final class WKSRKEntity: NSObject {
     }
 
     @objc(applyIBLData:withCompletion:) public func applyIBL(data: Data, completion: @escaping (Bool) -> Void) {
-#if canImport(RealityKit, _version: 366)
         guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil) else {
             Logger.realityKitEntity.error("Cannot get CGImageSource from IBL image data")
             completion(false)
@@ -215,7 +259,6 @@ public final class WKSRKEntity: NSObject {
                 completion(false)
             }
         }
-#endif
     }
 
     @objc(removeIBL) public func removeIBL() {
@@ -225,7 +268,16 @@ public final class WKSRKEntity: NSObject {
 
     private func animationPlaybackStateDidUpdate() {
         delegate?.entityAnimationPlaybackStateDidUpdate?(self)
-     }
+    }
+
+    @objc(setParentCoreEntity:preservingWorldTransform:) public func setParent(_ coreEntity: REEntityRef, preservingWorldTransform: Bool) {
+        let parentEntity = Entity.__fromCore(__EntityRef.__fromCore(coreEntity))
+        entity.setParent(parentEntity, preservingWorldTransform: preservingWorldTransform)
+    }
+    
+    @objc(interactionContainerDidRecenterFromTransform:) public func interactionContainerDidRecenter(_ transform: simd_float4x4) {
+        entity.setTransformMatrix(transform, relativeTo: nil)
+    }
 }
 
 #endif // os(visionOS)

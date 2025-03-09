@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<style>
+    .container {
+        width: 200px;
+        height: 200px;
+        will-change: transform;
+    }
+    .element {
+        width: 100px;
+        height: 100px;
+    }
+</style>
+<body>
+    <pre id="layers">Layer tree goes here in DRT</pre>
+    <div style="position: fixed; top: 10px; left: 10px;">
+        <img class="container">
+    </div>
+    <div style="position: fixed; top: 10px; left: 220px;">
+        <div class="container">
+            <img class="element">
+        </div>
+    </div>
+    <div style="position: fixed; top: 10px; left: 440px;">
+        <div class="container">
+            <img class="element">
+        </div>
+    </div>
+    <script>
+        if (window.internals && window.testRunner) {
+            internals.clearMemoryCache();
+            internals.setScreenContentsFormatsForTesting(["RGBA8", "RGBA16F"]);
+            testRunner.dumpAsText();
+            testRunner.waitUntilDone();
+        }
+
+        let images = [];
+        let imageSources = ["../../fast/images/resources/green-400x400.png", "../../fast/images/resources/red-100x100.png"];
+
+        function loadImages() {
+            return imageSources.map((imageSource) => {
+                return new Promise((resolve) => {
+                    let image = new Image;
+                    image.onload = (e) => {
+                        if (window.internals)
+                            internals.setHeadroomForTesting(image, 5);
+
+                        resolve({ width: image.width, height: image.height });
+                    };
+                    image.src = imageSource;
+                    images.push(image);             
+                });
+            });
+        }
+ 
+        (async () => {
+            await Promise.all(loadImages());
+
+            const imageElements = document.querySelectorAll("img");
+
+            imageElements[0].src = images[0].src;
+            imageElements[1].src = images[1].src;
+            imageElements[2].src = images[1].src;
+
+            const containerElements = document.querySelectorAll("div.container");
+
+            containerElements[0].style.backgroundImage = 'url(' + images[0].src + ')';
+            containerElements[1].style.borderImage = 'url(' + images[0].src + ') 30 fill';
+
+            if (window.testRunner) {
+                document.getElementById("layers").textContent = internals.layerTreeAsText(document);
+                testRunner.notifyDone();
+            }
+        })();
+    </script>
+</body>
+</html>

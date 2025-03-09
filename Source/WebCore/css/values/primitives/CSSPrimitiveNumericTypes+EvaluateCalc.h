@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include "CSSNoConversionDataRequiredToken.h"
 #include "CSSPrimitiveNumericTypes.h"
 #include "CSSUnevaluatedCalc.h"
 
@@ -32,7 +33,7 @@ namespace CSS {
 
 // MARK: - Requires Conversion Data
 
-template<typename T> bool requiresConversionData(const PrimitiveNumeric<T>& primitive)
+inline bool requiresConversionData(Numeric auto const& primitive)
 {
     return WTF::switchOn(primitive, [&](const auto& value) { return requiresConversionData(value); });
 }
@@ -41,12 +42,12 @@ template<typename T> bool requiresConversionData(const PrimitiveNumeric<T>& prim
 
 // FIXME: Remove "evaluateCalc" family of functions once color code has moved to the "toStyle" family of functions.
 
-template<RawNumeric T> auto evaluateCalcNoConversionDataRequired(const UnevaluatedCalc<T>& calc, const CSSCalcSymbolTable& symbolTable) -> T
+template<Calc T> auto evaluateCalc(const T& calc, NoConversionDataRequiredToken token, const CSSCalcSymbolTable& symbolTable) -> typename T::Raw
 {
-    return { unevaluatedCalcEvaluateNoConversionDataRequired(calc.protectedCalc(), symbolTable, T::category) };
+    return { calc.evaluate(T::category, token, symbolTable) };
 }
 
-template<typename T> constexpr auto evaluateCalcNoConversionDataRequired(const T& component, const CSSCalcSymbolTable&) -> T
+template<typename T> constexpr auto evaluateCalc(const T& component, NoConversionDataRequiredToken, const CSSCalcSymbolTable&) -> T
 {
     return component;
 }
@@ -56,16 +57,16 @@ template<typename... Ts> auto evaluateCalcIfNoConversionDataRequired(const std::
     return WTF::switchOn(component, [&](const auto& alternative) -> std::variant<Ts...> {
         if (requiresConversionData(alternative))
             return alternative;
-        return evaluateCalcNoConversionDataRequired(alternative, symbolTable);
+        return evaluateCalc(alternative, NoConversionDataRequiredToken { }, symbolTable);
     });
 }
 
-template<typename T> auto evaluateCalcIfNoConversionDataRequired(const PrimitiveNumeric<T>& component, const CSSCalcSymbolTable& symbolTable) -> PrimitiveNumeric<T>
+template<Numeric T> auto evaluateCalcIfNoConversionDataRequired(const T& component, const CSSCalcSymbolTable& symbolTable) -> T
 {
-    return WTF::switchOn(component, [&](const auto& alternative) -> PrimitiveNumeric<T> {
+    return WTF::switchOn(component, [&](const auto& alternative) -> T {
         if (requiresConversionData(alternative))
             return { alternative };
-        return { evaluateCalcNoConversionDataRequired(alternative, symbolTable) };
+        return { evaluateCalc(alternative, NoConversionDataRequiredToken { }, symbolTable) };
     });
 }
 
@@ -76,16 +77,9 @@ template<typename T> decltype(auto) evaluateCalcIfNoConversionDataRequired(const
 
 // MARK: - Is UnevaluatedCalc
 
-template<typename T> bool isUnevaluatedCalc(const PrimitiveNumeric<T>& primitive)
+inline bool isUnevaluatedCalc(Numeric auto const& value)
 {
-    return WTF::switchOn(primitive, [&](const auto& value) { return isUnevaluatedCalc(value); });
-}
-
-// MARK: Simplify
-
-template<typename T> auto simplifyUnevaluatedCalc(const PrimitiveNumeric<T>& primitive, const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable) -> PrimitiveNumeric<T>
-{
-    WTF::switchOn(primitive, [&](const auto& value) { return simplifyUnevaluatedCalc(value, conversionData, symbolTable); });
+    return WTF::switchOn(value, [&](const auto& alternative) { return isUnevaluatedCalc(alternative); });
 }
 
 } // namespace CSS

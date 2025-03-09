@@ -64,6 +64,10 @@
 #import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/text/TextStream.h>
 
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+#import "WKSeparatedImageView.h"
+#endif
+
 
 namespace WebKit {
 
@@ -90,7 +94,8 @@ private:
         : m_fence(WTFMove(fence))
     {
     }
-    Ref<PlatformCALayerDelegatedContentsFence> m_fence;
+
+    const Ref<PlatformCALayerDelegatedContentsFence> m_fence;
 };
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(DelegatedContentsFenceFlusher);
@@ -263,11 +268,11 @@ ImageBufferPixelFormat RemoteLayerBackingStore::pixelFormat() const
     case ContentsFormat::RGBA8:
         return m_parameters.isOpaque ? ImageBufferPixelFormat::BGRX8 : ImageBufferPixelFormat::BGRA8;
 
-#if HAVE(IOSURFACE_RGB10)
+#if ENABLE(PIXEL_FORMAT_RGB10)
     case ContentsFormat::RGBA10:
         return m_parameters.isOpaque ? ImageBufferPixelFormat::RGB10 : ImageBufferPixelFormat::RGB10A8;
 #endif
-#if HAVE(HDR_SUPPORT)
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
     case ContentsFormat::RGBA16F:
         return ImageBufferPixelFormat::RGBA16F;
 #endif
@@ -279,9 +284,13 @@ unsigned RemoteLayerBackingStore::bytesPerPixel() const
     switch (pixelFormat()) {
     case ImageBufferPixelFormat::BGRX8: return 4;
     case ImageBufferPixelFormat::BGRA8: return 4;
+#if ENABLE(PIXEL_FORMAT_RGB10)
     case ImageBufferPixelFormat::RGB10: return 4;
+#endif
+#if ENABLE(PIXEL_FORMAT_RGB10A8)
     case ImageBufferPixelFormat::RGB10A8: return 5;
-#if HAVE(HDR_SUPPORT)
+#endif
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
     case ImageBufferPixelFormat::RGBA16F: return 8;
 #endif
     }
@@ -293,7 +302,7 @@ bool RemoteLayerBackingStore::supportsPartialRepaint() const
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
     // FIXME: Find a way to support partial repaint for backing store that
     // includes a display list without allowing unbounded memory growth.
-    if (m_parameters.includeDisplayList == IncludeDisplayList::Yes)
+    if (m_parameters.includeDisplayList == WebCore::IncludeDynamicContentScalingDisplayList::Yes)
         return false;
 #endif
 
@@ -412,14 +421,21 @@ void RemoteLayerBackingStore::drawInContext(GraphicsContext& context)
         paintBehavior.add(GraphicsLayerPaintBehavior::ForceSynchronousImageDecode);
     
     // FIXME: This should be moved to PlatformCALayerRemote for better layering.
-    switch (m_layer->layerType()) {
+    Ref layer = m_layer.get();
+    switch (layer->layerType()) {
     case PlatformCALayer::LayerType::LayerTypeSimpleLayer:
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+    case PlatformCALayer::LayerType::LayerTypeSeparatedImageLayer:
+#endif
     case PlatformCALayer::LayerType::LayerTypeTiledBackingTileLayer:
-        m_layer->owner()->platformCALayerPaintContents(m_layer.ptr(), context, dirtyBounds, paintBehavior);
+        layer->owner()->platformCALayerPaintContents(layer.ptr(), context, dirtyBounds, paintBehavior);
         break;
     case PlatformCALayer::LayerType::LayerTypeWebLayer:
     case PlatformCALayer::LayerType::LayerTypeBackdropLayer:
-        PlatformCALayer::drawLayerContents(context, m_layer.ptr(), m_paintingRects, paintBehavior);
+#if HAVE(CORE_MATERIAL)
+    case PlatformCALayer::LayerType::LayerTypeMaterialLayer:
+#endif
+        PlatformCALayer::drawLayerContents(context, layer.ptr(), m_paintingRects, paintBehavior);
         break;
     case PlatformCALayer::LayerType::LayerTypeLayer:
     case PlatformCALayer::LayerType::LayerTypeTransformLayer:
@@ -435,6 +451,9 @@ void RemoteLayerBackingStore::drawInContext(GraphicsContext& context)
 #endif
     case PlatformCALayer::LayerType::LayerTypeCustom:
     case PlatformCALayer::LayerType::LayerTypeHost:
+#if HAVE(MATERIAL_HOSTING)
+    case PlatformCALayer::LayerType::LayerTypeMaterialHostingLayer:
+#endif
         ASSERT_NOT_REACHED();
         break;
     };
@@ -444,7 +463,7 @@ void RemoteLayerBackingStore::drawInContext(GraphicsContext& context)
     m_dirtyRegion = { };
     m_paintingRects.clear();
 
-    m_layer->owner()->platformCALayerLayerDidDisplay(m_layer.ptr());
+    layer->owner()->platformCALayerLayerDidDisplay(layer.ptr());
 
     m_previouslyPaintedRect = dirtyBounds;
     if (auto flusher = createFlusher())
@@ -500,12 +519,24 @@ RetainPtr<id> RemoteLayerBackingStoreProperties::layerContentsBufferFromBackendH
     return contents;
 }
 
-void RemoteLayerBackingStoreProperties::applyBackingStoreToLayer(CALayer *layer, LayerContentsType contentsType, std::optional<WebCore::RenderingResourceIdentifier> asyncContentsIdentifier, bool replayDynamicContentScalingDisplayListsIntoBackingStore)
+void RemoteLayerBackingStoreProperties::applyBackingStoreToLayer(CALayer *layer, LayerContentsType contentsType, std::optional<WebCore::RenderingResourceIdentifier> asyncContentsIdentifier, bool replayDynamicContentScalingDisplayListsIntoBackingStore, UIView *hostingView)
 {
     if (asyncContentsIdentifier && m_contentsRenderingResourceIdentifier && *asyncContentsIdentifier >= m_contentsRenderingResourceIdentifier)
         return;
 
     layer.contentsOpaque = m_isOpaque;
+
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+    if (hostingView && [hostingView isKindOfClass:[WKSeparatedImageView class]] && contentsType == LayerContentsType::CachedIOSurface) {
+        auto machSendRight = std::get<MachSendRight>(WTFMove(*m_bufferHandle));
+        auto surface = WebCore::IOSurface::createFromSendRight(WTFMove(machSendRight));
+        if (surface)
+            [(WKSeparatedImageView *)hostingView setSurface:surface->surface()];
+        else
+            [(WKSeparatedImageView *)hostingView setSurface:nil];
+        return;
+    }
+#endif
 
     RetainPtr<id> contents;
     // m_bufferHandle can be unset here if IPC with the GPU process timed out.
@@ -533,7 +564,7 @@ void RemoteLayerBackingStoreProperties::applyBackingStoreToLayer(CALayer *layer,
             [layer setValue:@(layer.contentsScale) forKeyPath:WKDynamicContentScalingBifurcationScaleKey];
         } else
             layer.opaque = m_isOpaque;
-        [(WKCompositingLayer *)layer _setWKContents:contents.get() withDisplayList:WTFMove(std::get<DynamicContentScalingDisplayList>(*m_displayListBufferHandle)) replayForTesting:replayDynamicContentScalingDisplayListsIntoBackingStore];
+        [(WKCompositingLayer *)layer _setWKContents:contents.get() withDisplayList:WTFMove(*m_displayListBufferHandle) replayForTesting:replayDynamicContentScalingDisplayListsIntoBackingStore];
         return;
     } else
         [layer _web_clearDynamicContentScalingDisplayListIfNeeded];

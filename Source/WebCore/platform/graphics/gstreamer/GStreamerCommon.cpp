@@ -34,12 +34,15 @@
 #include "IntSize.h"
 #include "PlatformDisplay.h"
 #include "SharedBuffer.h"
+#include "VideoSinkGStreamer.h"
 #include "WebKitAudioSinkGStreamer.h"
+#include <fnmatch.h>
 #include <gst/audio/audio-info.h>
 #include <gst/gst.h>
 #include <mutex>
 #include <wtf/FileSystem.h>
 #include <wtf/HashMap.h>
+#include <wtf/MallocSpan.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/PrintStream.h>
 #include <wtf/RecursiveLockAdapter.h>
@@ -47,6 +50,7 @@
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/UUID.h>
+#include <wtf/glib/GSpanExtras.h>
 #include <wtf/glib/GThreadSafeWeakPtr.h>
 #include <wtf/glib/GUniquePtr.h>
 #include <wtf/glib/RunLoopSourcePriority.h>
@@ -128,7 +132,7 @@ GstPad* webkitGstGhostPadFromStaticTemplate(GstStaticPadTemplate* staticPadTempl
 }
 
 #if ENABLE(VIDEO)
-bool getVideoSizeAndFormatFromCaps(const GstCaps* caps, WebCore::IntSize& size, GstVideoFormat& format, int& pixelAspectRatioNumerator, int& pixelAspectRatioDenominator, int& stride)
+bool getVideoSizeAndFormatFromCaps(const GstCaps* caps, WebCore::IntSize& size, GstVideoFormat& format, int& pixelAspectRatioNumerator, int& pixelAspectRatioDenominator, int& stride, double& frameRate, PlatformVideoColorSpace& colorSpace)
 {
     if (!doCapsHaveType(caps, GST_VIDEO_CAPS_TYPE_PREFIX)) {
         GST_WARNING("Failed to get the video size and format, these are not a video caps");
@@ -142,6 +146,11 @@ bool getVideoSizeAndFormatFromCaps(const GstCaps* caps, WebCore::IntSize& size, 
         if (!gst_video_info_from_caps(&info, caps))
             return false;
 
+        if (GST_VIDEO_INFO_FPS_N(&info))
+            gst_util_fraction_to_double(GST_VIDEO_INFO_FPS_N(&info), GST_VIDEO_INFO_FPS_D(&info), &frameRate);
+
+        colorSpace = videoColorSpaceFromInfo(info);
+
         format = GST_VIDEO_INFO_FORMAT(&info);
         size.setWidth(GST_VIDEO_INFO_WIDTH(&info));
         size.setHeight(GST_VIDEO_INFO_HEIGHT(&info));
@@ -154,6 +163,7 @@ bool getVideoSizeAndFormatFromCaps(const GstCaps* caps, WebCore::IntSize& size, 
         else
             format = GST_VIDEO_FORMAT_UNKNOWN;
         stride = 0;
+        frameRate = 1;
 
         auto width = gstStructureGet<int>(structure, "width"_s);
         if (!width) {
@@ -189,7 +199,7 @@ std::optional<FloatSize> getVideoResolutionFromCaps(const GstCaps* caps)
     int pixelAspectRatioNumerator = 1, pixelAspectRatioDenominator = 1;
 
     GstStructure* structure = gst_caps_get_structure(caps, 0);
-    if (!areEncryptedCaps(caps) && (!gst_structure_has_name(structure, "video/x-raw") || gst_structure_has_field(structure, "format"))) {
+    if (!areEncryptedCaps(caps) && (gst_structure_has_name(structure, "video/x-raw") || gst_structure_has_field(structure, "format"))) {
         GstVideoInfo info;
         gst_video_info_init(&info);
         if (!gst_video_info_from_caps(&info, caps))
@@ -307,7 +317,7 @@ bool doCapsHaveType(const GstCaps* caps, const char* type)
         GST_WARNING("Failed to get MediaType");
         return false;
     }
-    return mediaType.startsWith(span(type));
+    return mediaType.startsWith(unsafeSpan(type));
 }
 
 bool areEncryptedCaps(const GstCaps* caps)
@@ -334,13 +344,13 @@ void setGStreamerOptionsFromUIProcess(Vector<String>&& options)
 
 Vector<String> extractGStreamerOptionsFromCommandLine()
 {
-    GUniqueOutPtr<char> contents;
-    gsize length;
-    if (!g_file_get_contents("/proc/self/cmdline", &contents.outPtr(), &length, nullptr))
+    GUniqueOutPtr<GError> error;
+    GMallocSpan<char> contents = gFileGetContents("/proc/self/cmdline", error);
+    if (!contents)
         return { };
 
     Vector<String> options;
-    auto optionsString = String::fromUTF8(std::span(contents.get(), length));
+    auto optionsString = String::fromUTF8(contents.span());
     optionsString.split('\0', [&options](StringView item) {
         if (item.startsWith("--gst"_s))
             options.append(item.toString());
@@ -449,7 +459,10 @@ void registerWebKitGStreamerElements()
 
 #if ENABLE(VIDEO)
         gst_element_register(0, "webkitwebsrc", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_WEB_SRC);
+        gst_element_register(0, "webkitvideosink", GST_RANK_NONE, WEBKIT_TYPE_VIDEO_SINK);
+#if USE(GSTREAMER_GL)
         gst_element_register(0, "webkitglvideosink", GST_RANK_NONE, WEBKIT_TYPE_GL_VIDEO_SINK);
+#endif
 #endif
         // We don't want autoaudiosink to autoplug our sink.
         gst_element_register(0, "webkitaudiosink", GST_RANK_NONE, WEBKIT_TYPE_AUDIO_SINK);
@@ -550,14 +563,14 @@ void registerActivePipeline(const GRefPtr<GstElement>& pipeline)
 {
     GUniquePtr<gchar> name(gst_object_get_name(GST_OBJECT_CAST(pipeline.get())));
     Locker locker { s_activePipelinesMapLock };
-    activePipelinesMap().add(span(name.get()), GRefPtr<GstElement>(pipeline));
+    activePipelinesMap().add(unsafeSpan(name.get()), GRefPtr<GstElement>(pipeline));
 }
 
 void unregisterPipeline(const GRefPtr<GstElement>& pipeline)
 {
     GUniquePtr<gchar> name(gst_object_get_name(GST_OBJECT_CAST(pipeline.get())));
     Locker locker { s_activePipelinesMapLock };
-    activePipelinesMap().remove(span(name.get()));
+    activePipelinesMap().remove(unsafeSpan(name.get()));
 }
 
 void WebCoreLogObserver::didLogMessage(const WTFLogChannel& channel, WTFLogLevel level, Vector<JSONLogValue>&& values)
@@ -611,9 +624,10 @@ void WebCoreLogObserver::removeWatch(const Logger& logger)
 
 void deinitializeGStreamer()
 {
+#if USE(GSTREAMER_GL)
     if (auto* sharedDisplay = PlatformDisplay::sharedDisplayIfExists())
         sharedDisplay->clearGStreamerGLState();
-
+#endif
 #if ENABLE(MEDIA_STREAM)
     teardownGStreamerCaptureDeviceManagers();
 #endif
@@ -749,6 +763,12 @@ int GstMappedFrame::componentStride(int stride) const
     return GST_VIDEO_FRAME_COMP_STRIDE(&m_frame, stride);
 }
 
+int GstMappedFrame::componentWidth(int index) const
+{
+    RELEASE_ASSERT(isValid());
+    return GST_VIDEO_FRAME_COMP_WIDTH(&m_frame, index);
+}
+
 GstVideoInfo* GstMappedFrame::info()
 {
     RELEASE_ASSERT(isValid());
@@ -792,7 +812,7 @@ GstMappedAudioBuffer::GstMappedAudioBuffer(GstBuffer* buffer, GstAudioInfo info,
     m_isValid = gst_audio_buffer_map(&m_buffer, &info, buffer, flags);
 }
 
-GstMappedAudioBuffer::GstMappedAudioBuffer(GRefPtr<GstSample> sample, GstMapFlags flags)
+GstMappedAudioBuffer::GstMappedAudioBuffer(const GRefPtr<GstSample>& sample, GstMapFlags flags)
 {
     GstAudioInfo info;
 
@@ -830,6 +850,44 @@ GstAudioInfo* GstMappedAudioBuffer::info()
 
     return &m_buffer.info;
 }
+
+template<typename T> Vector<std::span<T>> GstMappedAudioBuffer::samples(size_t offset) const
+{
+    RELEASE_ASSERT(m_isValid);
+    if (!m_isValid)
+        return Vector<std::span<T>> { };
+
+    auto planeCount = static_cast<uint32_t>(GST_AUDIO_INFO_CHANNELS(&m_buffer.info));
+    auto planeSizeTotal = m_buffer.n_samples * GST_AUDIO_INFO_BPS(&m_buffer.info);
+
+    if (GST_AUDIO_INFO_LAYOUT(&m_buffer.info) == GST_AUDIO_LAYOUT_INTERLEAVED) {
+        auto planeSizeInBytes = (m_buffer.n_samples - offset) * GST_AUDIO_INFO_BPS(&m_buffer.info);
+        Vector<std::span<T>> result;
+        result.reserveInitialCapacity(planeCount);
+        for (uint32_t i = 0; i < planeCount; i++) {
+            auto plane = MallocSpan<T>::malloc(planeSizeInBytes);
+            result.append(plane.leakSpan());
+        }
+
+        auto inputSpan = unsafeMakeSpan(reinterpret_cast<T*>(m_buffer.planes[0]), planeSizeTotal * planeCount);
+        for (uint32_t s = offset; s < m_buffer.n_samples; s++) {
+            for (uint32_t c = 0; c < planeCount; c++)
+                result[c][s] = inputSpan[s * planeCount + c];
+        }
+        return result;
+    }
+
+    RELEASE_ASSERT(GST_AUDIO_INFO_LAYOUT(&m_buffer.info) == GST_AUDIO_LAYOUT_NON_INTERLEAVED);
+    return Vector<std::span<T>> { planeCount, [&](auto index) {
+        auto totalData = unsafeMakeSpan(reinterpret_cast<T*>(m_buffer.planes[index]), planeSizeTotal);
+        return totalData.subspan(offset);
+    } };
+}
+
+template Vector<std::span<uint8_t>> GstMappedAudioBuffer::samples(size_t) const;
+template Vector<std::span<int16_t>> GstMappedAudioBuffer::samples(size_t) const;
+template Vector<std::span<int32_t>> GstMappedAudioBuffer::samples(size_t) const;
+template Vector<std::span<float>> GstMappedAudioBuffer::samples(size_t) const;
 
 static GQuark customMessageHandlerQuark()
 {
@@ -872,7 +930,7 @@ void connectSimpleBusMessageCallback(GstElement* pipeline, Function<void(GstMess
         switch (GST_MESSAGE_TYPE(message)) {
         case GST_MESSAGE_ERROR: {
             GST_ERROR_OBJECT(pipeline.get(), "Got message: %" GST_PTR_FORMAT, message);
-            auto dotFileName = makeString(span(GST_OBJECT_NAME(pipeline.get())), "_error"_s);
+            auto dotFileName = makeString(unsafeSpan(GST_OBJECT_NAME(pipeline.get())), "_error"_s);
             GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN_CAST(pipeline.get()), GST_DEBUG_GRAPH_SHOW_ALL, dotFileName.utf8().data());
             break;
         }
@@ -888,7 +946,7 @@ void connectSimpleBusMessageCallback(GstElement* pipeline, Function<void(GstMess
             GST_INFO_OBJECT(pipeline.get(), "State changed (old: %s, new: %s, pending: %s)", gst_element_state_get_name(oldState),
                 gst_element_state_get_name(newState), gst_element_state_get_name(pending));
 
-            auto dotFileName = makeString(span(GST_OBJECT_NAME(pipeline.get())), '_', span(gst_element_state_get_name(oldState)), '_', span(gst_element_state_get_name(newState)));
+            auto dotFileName = makeString(unsafeSpan(GST_OBJECT_NAME(pipeline.get())), '_', unsafeSpan(gst_element_state_get_name(oldState)), '_', unsafeSpan(gst_element_state_get_name(newState)));
             GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN_CAST(pipeline.get()), GST_DEBUG_GRAPH_SHOW_ALL, dotFileName.utf8().data());
             break;
         }
@@ -914,7 +972,7 @@ void connectSimpleBusMessageCallback(GstElement* pipeline, Function<void(GstMess
 template<>
 Vector<uint8_t> GstMappedBuffer::createVector() const
 {
-    return std::span<const uint8_t> { data(), size() };
+    return span<uint8_t>();
 }
 
 bool isGStreamerPluginAvailable(const char* name)
@@ -1156,7 +1214,8 @@ StringView gstStructureGetString(const GstStructure* structure, StringView key)
         return { };
     }
 
-    return StringView::fromLatin1(gst_structure_get_string(structure, static_cast<const char*>(key.rawCharacters())));
+    auto utf8String = key.utf8();
+    return StringView::fromLatin1(gst_structure_get_string(structure, utf8String.data()));
 }
 
 StringView gstStructureGetName(const GstStructure* structure)
@@ -1265,7 +1324,7 @@ static std::optional<RefPtr<JSON::Value>> gstStructureValueToJSON(const GValue* 
     }
 
     if (valueType == G_TYPE_STRING)
-        return JSON::Value::create(makeString(span(g_value_get_string(value))))->asValue();
+        return JSON::Value::create(makeString(unsafeSpan(g_value_get_string(value))))->asValue();
 
 #if USE(GSTREAMER_WEBRTC)
     if (valueType == GST_TYPE_WEBRTC_STATS_TYPE) {
@@ -1584,6 +1643,10 @@ void configureAudioDecoderForHarnessing(const GRefPtr<GstElement>& element)
 {
     if (gstObjectHasProperty(element.get(), "max-errors"))
         g_object_set(element.get(), "max-errors", 0, nullptr);
+
+    // rawaudioparse-specific:
+    if (gstElementMatchesFactoryAndHasProperty(element.get(), "rawaudioparse"_s, "use-sink-caps"_s))
+        g_object_set(element.get(), "use-sink-caps", TRUE, nullptr);
 }
 
 void configureVideoDecoderForHarnessing(const GRefPtr<GstElement>& element)
@@ -1595,14 +1658,14 @@ void configureVideoDecoderForHarnessing(const GRefPtr<GstElement>& element)
         g_object_set(element.get(), "max-errors", 0, nullptr);
 
     // avdec-specific:
-    if (gstObjectHasProperty(element.get(), "std-compliance"))
+    if (gstElementMatchesFactoryAndHasProperty(element.get(), "avdec*"_s, "std-compliance"_s))
         gst_util_set_object_arg(G_OBJECT(element.get()), "std-compliance", "strict");
 
-    if (gstObjectHasProperty(element.get(), "output-corrupt"))
+    if (gstElementMatchesFactoryAndHasProperty(element.get(), "avdec*"_s, "output-corrupt"_s))
         g_object_set(element.get(), "output-corrupt", FALSE, nullptr);
 
     // dav1ddec-specific:
-    if (gstObjectHasProperty(element.get(), "n-threads"))
+    if (gstElementMatchesFactoryAndHasProperty(element.get(), "dav1ddec"_s, "n-threads"_s))
         g_object_set(element.get(), "n-threads", 1, nullptr);
 }
 
@@ -1630,7 +1693,7 @@ void configureVideoRTPDepayloader(GstElement* element)
         g_object_set(element, "wait-for-keyframe", TRUE, nullptr);
 }
 
-static bool gstObjectHasProperty(GstObject* gstObject, const char* name)
+bool gstObjectHasProperty(GstObject* gstObject, const char* name)
 {
     return g_object_class_find_property(G_OBJECT_GET_CLASS(gstObject), name);
 }
@@ -1643,6 +1706,19 @@ bool gstObjectHasProperty(GstElement* element, const char* name)
 bool gstObjectHasProperty(GstPad* pad, const char* name)
 {
     return gstObjectHasProperty(GST_OBJECT_CAST(pad), name);
+}
+
+bool gstElementMatchesFactoryAndHasProperty(GstElement* element, ASCIILiteral factoryNamePattern, ASCIILiteral propertyName)
+{
+    auto factory = gst_element_get_factory(element);
+    if (!factory)
+        return gstObjectHasProperty(element, propertyName.characters());
+
+    auto nameView = StringView::fromLatin1(GST_OBJECT_NAME(factory));
+    if (fnmatch(factoryNamePattern.characters(), nameView.toStringWithoutCopying().ascii().data(), 0))
+        return false;
+
+    return gstObjectHasProperty(element, propertyName.characters());
 }
 
 GRefPtr<GstBuffer> wrapSpanData(const std::span<const uint8_t>& span)
@@ -1811,7 +1887,7 @@ GRefPtr<GstCaps> buildDMABufCaps()
                 gst_value_list_append_and_take_value(&supportedFormats, &value);
             }
         }
-#elif USE(GBM)
+#else
         GValue value = G_VALUE_INIT;
         g_value_init(&value, G_TYPE_STRING);
         g_value_set_string(&value, gst_video_format_to_string(drmFourccToGstVideoFormat(format.fourcc)));
@@ -1821,7 +1897,7 @@ GRefPtr<GstCaps> buildDMABufCaps()
 
 #if GST_CHECK_VERSION(1, 24, 0)
     gst_caps_set_value(caps.get(), "drm-format", &supportedFormats);
-#elif USE(GBM)
+#else
     gst_caps_set_value(caps.get(), "format", &supportedFormats);
 #endif
     g_value_unset(&supportedFormats);
@@ -1829,6 +1905,45 @@ GRefPtr<GstCaps> buildDMABufCaps()
     return caps;
 }
 #endif // USE(GBM)
+
+#if USE(GSTREAMER_GL)
+static std::optional<GRefPtr<GstContext>> requestGLContext(const char* contextType)
+{
+    auto& sharedDisplay = PlatformDisplay::sharedDisplay();
+    auto* gstGLDisplay = sharedDisplay.gstGLDisplay();
+    auto* gstGLContext = sharedDisplay.gstGLContext();
+
+    if (!gstGLDisplay || !gstGLContext)
+        return std::nullopt;
+
+    if (!g_strcmp0(contextType, GST_GL_DISPLAY_CONTEXT_TYPE)) {
+        GRefPtr<GstContext> displayContext = adoptGRef(gst_context_new(GST_GL_DISPLAY_CONTEXT_TYPE, FALSE));
+        gst_context_set_gl_display(displayContext.get(), gstGLDisplay);
+        return displayContext;
+    }
+
+    if (!g_strcmp0(contextType, "gst.gl.app_context")) {
+        GRefPtr<GstContext> appContext = adoptGRef(gst_context_new("gst.gl.app_context", FALSE));
+        GstStructure* structure = gst_context_writable_structure(appContext.get());
+        gst_structure_set(structure, "context", GST_TYPE_GL_CONTEXT, gstGLContext, nullptr);
+        return appContext;
+    }
+
+    return std::nullopt;
+}
+
+bool setGstElementGLContext(GstElement* element, const char* contextType)
+{
+    GRefPtr<GstContext> oldContext = adoptGRef(gst_element_get_context(element, contextType));
+    if (!oldContext) {
+        auto newContext = requestGLContext(contextType);
+        if (!newContext)
+            return false;
+        gst_element_set_context(element, newContext->get());
+    }
+    return true;
+}
+#endif
 
 #undef GST_CAT_DEFAULT
 

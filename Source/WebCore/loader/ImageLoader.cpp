@@ -22,6 +22,7 @@
 #include "config.h"
 #include "ImageLoader.h"
 
+#include "ArchiveResource.h"
 #include "BitmapImage.h"
 #include "CachedImage.h"
 #include "CachedResourceLoader.h"
@@ -127,7 +128,7 @@ static bool canReuseFromListOfAvailableImages(const CachedResourceRequest& reque
     if (!resource || resource->stillNeedsLoad() || resource->isPreloaded())
         return false;
 
-    if (resource->options().mode == FetchOptions::Mode::Cors && !document.protectedSecurityOrigin()->isSameOriginAs(*resource->origin()))
+    if (resource->options().mode == FetchOptions::Mode::Cors && !document.protectedSecurityOrigin()->isSameOriginAs(*resource->protectedOrigin()))
         return false;
 
     if (resource->options().mode != request.options().mode || resource->options().credentials != request.options().credentials)
@@ -258,7 +259,7 @@ void ImageLoader::updateFromElement(RelevantMutation relevantMutation)
         RefPtr imageElement = dynamicDowncast<HTMLImageElement>(element());
         if (imageElement) {
             options.referrerPolicy = imageElement->referrerPolicy();
-            options.fetchPriorityHint = imageElement->fetchPriorityHint();
+            options.fetchPriority = imageElement->fetchPriority();
             if (imageElement->usesSrcsetOrPicture())
                 options.initiator = Initiator::Imageset;
         }

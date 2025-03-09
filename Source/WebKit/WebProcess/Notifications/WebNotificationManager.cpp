@@ -56,7 +56,7 @@ namespace WebKit {
 using namespace WebCore;
 
 #if ENABLE(NOTIFICATIONS)
-static bool sendMessage(WebPage* page, const Function<bool(IPC::Connection&, uint64_t)>& sendMessage)
+static bool sendMessage(WebPage* page, NOESCAPE const Function<bool(IPC::Connection&, uint64_t)>& sendMessage)
 {
 #if ENABLE(WEB_PUSH_NOTIFICATIONS)
     if (DeprecatedGlobalSettings::builtInNotificationsEnabled()) {
@@ -156,7 +156,7 @@ void WebNotificationManager::didRemoveNotificationDecisions(const Vector<String>
 
 NotificationClient::Permission WebNotificationManager::policyForOrigin(const String& originString, WebPage* page) const
 {
-#if ENABLE(WEB_PUSH_NOTIFICATIONS)
+#if ENABLE(WEB_PUSH_NOTIFICATIONS) && ENABLE(NOTIFICATIONS)
     if (DeprecatedGlobalSettings::builtInNotificationsEnabled()) {
         Ref connection = WebProcess::singleton().ensureNetworkProcessConnection().connection();
         auto origin = SecurityOriginData::fromURL(URL { originString });
@@ -176,7 +176,7 @@ NotificationClient::Permission WebNotificationManager::policyForOrigin(const Str
             RELEASE_ASSERT_NOT_REACHED();
         }
     }
-#endif
+#endif // ENABLE(WEB_PUSH_NOTIFICATIONS) && ENABLE(NOTIFICATIONS)
 
 #if ENABLE(NOTIFICATIONS)
     if (originString.isEmpty())

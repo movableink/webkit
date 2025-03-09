@@ -111,8 +111,8 @@ RefPtr<RenderPassEncoder> CommandEncoderImpl::beginRenderPass(const RenderPassDe
     WGPURenderPassDescriptor backingDescriptor {
         .nextInChain = descriptor.maxDrawCount ? &maxDrawCount.chain : nullptr,
         .label = label.data(),
-        .colorAttachmentCount = static_cast<uint32_t>(colorAttachments.size()),
-        .colorAttachments = colorAttachments.data(),
+        .colorAttachmentCount = colorAttachments.size(),
+        .colorAttachments = colorAttachments.size() ? colorAttachments.data() : nullptr,
         .depthStencilAttachment = depthStencilAttachment ? &depthStencilAttachment.value() : nullptr,
         .occlusionQuerySet = descriptor.occlusionQuerySet ? convertToBackingContext->convertToBacking(*descriptor.protectedOcclusionQuerySet()) : nullptr,
         .timestampWrites = timestampWrites.querySet ? &timestampWrites : nullptr
@@ -123,7 +123,7 @@ RefPtr<RenderPassEncoder> CommandEncoderImpl::beginRenderPass(const RenderPassDe
 
 RefPtr<ComputePassEncoder> CommandEncoderImpl::beginComputePass(const std::optional<ComputePassDescriptor>& descriptor)
 {
-    CString label = descriptor ? descriptor->label.utf8() : CString("");
+    CString label = descriptor ? descriptor->label.utf8() : CString(""_s);
 
     WGPUComputePassTimestampWrites timestampWrites {
         .querySet = (descriptor && descriptor->timestampWrites && descriptor->timestampWrites->querySet) ? protectedConvertToBackingContext()->convertToBacking(*descriptor->timestampWrites->protectedQuerySet().get()) : nullptr,

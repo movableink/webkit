@@ -24,38 +24,35 @@
 
 #pragma once
 
+#include "CSSPrimitiveNumericTypes+Serialization.h"
+#include "CSSSerializationContext.h"
 #include "StylePrimitiveNumericTypes.h"
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 namespace Style {
 
-// Type-erased helper to allow for shared code.
-WTF::TextStream& rawNumericLogging(WTF::TextStream&, double, CSSUnitType);
-
-WTF::TextStream& operator<<(WTF::TextStream& ts, StyleNumericPrimitive auto const& value)
+WTF::TextStream& operator<<(WTF::TextStream& ts, Calc auto const& value)
 {
-    return rawNumericLogging(ts, value.value, value.unit);
+    return ts << value.get();
 }
 
-WTF::TextStream& operator<<(WTF::TextStream& ts, StyleDimensionPercentage auto const& value)
+WTF::TextStream& operator<<(WTF::TextStream& ts, Numeric auto const& value)
 {
-    return WTF::switchOn(value,
-        [&](StyleNumericPrimitive auto const& value) -> WTF::TextStream& {
-            return ts << value;
-        },
-        [&](Ref<CalculationValue> value) -> WTF::TextStream& {
-            return ts << value.get();
-        }
-    );
+    return ts << CSS::serializationForCSS(CSS::defaultSerializationContext(), CSS::SerializableNumber { value.value, CSS::unitString(value.unit) });
 }
 
-template<auto nR, auto pR> WTF::TextStream& operator<<(WTF::TextStream& ts, const NumberOrPercentage<nR, pR>& value)
+WTF::TextStream& operator<<(WTF::TextStream& ts, DimensionPercentageNumeric auto const& value)
 {
     return WTF::switchOn(value, [&](const auto& value) -> WTF::TextStream& { return ts << value; });
 }
 
-template<auto nR, auto pR> WTF::TextStream& operator<<(WTF::TextStream& ts, const NumberOrPercentageResolvedToNumber<nR, pR>& value)
+template<auto nR, auto pR, typename V> WTF::TextStream& operator<<(WTF::TextStream& ts, const NumberOrPercentage<nR, pR, V>& value)
+{
+    return WTF::switchOn(value, [&](const auto& value) -> WTF::TextStream& { return ts << value; });
+}
+
+template<auto nR, auto pR, typename V> WTF::TextStream& operator<<(WTF::TextStream& ts, const NumberOrPercentageResolvedToNumber<nR, pR, V>& value)
 {
     return ts << value.value;
 }

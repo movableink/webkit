@@ -23,6 +23,7 @@
 
 #include <stdint.h>
 #include <unicode/utypes.h>
+#include <wtf/BitSet.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/LChar.h>
 
@@ -30,9 +31,27 @@
 #include <emmintrin.h>
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WTF {
+
+template<unsigned charactersCount>
+inline constexpr BitSet<256> makeLatin1CharacterBitSet(const char (&characters)[charactersCount])
+{
+    static_assert(charactersCount > 0, "Since string literal is null terminated, characterCount is always larger than 0");
+    BitSet<256> bitmap;
+    for (unsigned i = 0; i < charactersCount - 1; ++i)
+        bitmap.set(characters[i]);
+    return bitmap;
+}
+
+inline constexpr BitSet<256> makeLatin1CharacterBitSet(NOESCAPE const Invocable<bool(LChar)> auto& matches)
+{
+    BitSet<256> bitmap;
+    for (unsigned i = 0; i < bitmap.size(); ++i) {
+        if (matches(static_cast<LChar>(i)))
+            bitmap.set(i);
+    }
+    return bitmap;
+}
 
 template <uintptr_t mask>
 inline bool isAlignedTo(const void* pointer)
@@ -95,28 +114,20 @@ template<typename CharacterType>
 inline bool charactersAreAllASCII(std::span<const CharacterType> span)
 {
     MachineWord allCharBits = 0;
-    auto* characters = span.data();
-    auto* end = characters + span.size();
 
     // Prologue: align the input.
-    while (!isAlignedToMachineWord(characters) && characters != end) {
-        allCharBits |= *characters;
-        ++characters;
-    }
+    while (!span.empty() && !isAlignedToMachineWord(span.data()))
+        allCharBits |= WTF::consume(span);
 
     // Compare the values of CPU word size.
-    const CharacterType* wordEnd = alignToMachineWord(end);
+    size_t sizeAfterAlignedEnd = std::to_address(span.end()) - alignToMachineWord(std::to_address(span.end()));
     const size_t loopIncrement = sizeof(MachineWord) / sizeof(CharacterType);
-    while (characters < wordEnd) {
-        allCharBits |= *(reinterpret_cast_ptr<const MachineWord*>(characters));
-        characters += loopIncrement;
-    }
+    while (span.size() > sizeAfterAlignedEnd)
+        allCharBits |= reinterpretCastSpanStartTo<const MachineWord>(consumeSpan(span, loopIncrement));
 
     // Process the remaining bytes.
-    while (characters != end) {
-        allCharBits |= *characters;
-        ++characters;
-    }
+    while (!span.empty())
+        allCharBits |= WTF::consume(span);
 
     MachineWord nonASCIIBitMask = NonASCIIMask<sizeof(MachineWord), CharacterType>::value();
     return !(allCharBits & nonASCIIBitMask);
@@ -131,28 +142,20 @@ inline bool charactersAreAllLatin1(std::span<const CharacterType> span)
         return true;
     else {
         MachineWord allCharBits = 0;
-        auto* characters = span.data();
-        auto* end = characters + span.size();
 
         // Prologue: align the input.
-        while (!isAlignedToMachineWord(characters) && characters != end) {
-            allCharBits |= *characters;
-            ++characters;
-        }
+        while (!span.empty() && !isAlignedToMachineWord(span.data()))
+            allCharBits |= WTF::consume(span);
 
         // Compare the values of CPU word size.
-        const CharacterType* wordEnd = alignToMachineWord(end);
+        size_t sizeAfterAlignedEnd = std::to_address(span.end()) - alignToMachineWord(std::to_address(span.end()));
         const size_t loopIncrement = sizeof(MachineWord) / sizeof(CharacterType);
-        while (characters < wordEnd) {
-            allCharBits |= *(reinterpret_cast_ptr<const MachineWord*>(characters));
-            characters += loopIncrement;
-        }
+        while (span.size() > sizeAfterAlignedEnd)
+            allCharBits |= reinterpretCastSpanStartTo<const MachineWord>(consumeSpan(span, loopIncrement));
 
         // Process the remaining bytes.
-        while (characters != end) {
-            allCharBits |= *characters;
-            ++characters;
-        }
+        while (!span.empty())
+            allCharBits |= WTF::consume(span);
 
         MachineWord nonLatin1BitMask = NonLatin1Mask<sizeof(MachineWord), CharacterType>::value();
         return !(allCharBits & nonLatin1BitMask);
@@ -162,5 +165,4 @@ inline bool charactersAreAllLatin1(std::span<const CharacterType> span)
 } // namespace WTF
 
 using WTF::charactersAreAllASCII;
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+using WTF::makeLatin1CharacterBitSet;

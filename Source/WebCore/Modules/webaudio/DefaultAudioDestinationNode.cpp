@@ -34,12 +34,14 @@
 #include "AudioNodeInput.h"
 #include "AudioWorklet.h"
 #include "AudioWorkletMessagingProxy.h"
+#include "Document.h"
 #include "Logging.h"
 #include "MediaStrategy.h"
 #include "PlatformStrategies.h"
 #include "ScriptExecutionContext.h"
 #include "WorkerRunLoop.h"
 #include <wtf/MainThread.h>
+#include <wtf/MediaTime.h>
 #include <wtf/TZoneMallocInlines.h>
 
 constexpr unsigned EnabledInputChannels = 2;
@@ -115,7 +117,11 @@ void DefaultAudioDestinationNode::createDestination()
 {
     ALWAYS_LOG(LOGIDENTIFIER, "contextSampleRate = ", sampleRate(), ", hardwareSampleRate = ", AudioDestination::hardwareSampleRate());
     ASSERT(!m_destination);
-    m_destination = platformStrategies()->mediaStrategy().createAudioDestination(*this, m_inputDeviceId, m_numberOfInputChannels, channelCount(), sampleRate());
+    m_destination = platformStrategies()->mediaStrategy().createAudioDestination({ *this, m_inputDeviceId, m_numberOfInputChannels, channelCount(), sampleRate()
+#if PLATFORM(IOS_FAMILY)
+        , context().sceneIdentifier()
+#endif
+        });
 }
 
 void DefaultAudioDestinationNode::recreateDestination()
@@ -249,6 +255,11 @@ unsigned DefaultAudioDestinationNode::framesPerBuffer() const
     return m_destination ? m_destination->framesPerBuffer() : 0;
 }
 
+MediaTime DefaultAudioDestinationNode::outputLatency() const
+{
+    return m_destination ? m_destination->outputLatency() : MediaTime::zeroTime();
+}
+
 void DefaultAudioDestinationNode::render(AudioBus*, AudioBus* destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
 {
     renderQuantum(destinationBus, numberOfFrames, outputPosition);
@@ -284,6 +295,15 @@ void DefaultAudioDestinationNode::updateIsEffectivelyPlayingAudio()
     m_isEffectivelyPlayingAudio = isEffectivelyPlayingAudio;
     context().isPlayingAudioDidChange();
 }
+
+#if PLATFORM(IOS_FAMILY)
+void DefaultAudioDestinationNode::setSceneIdentifier(const String& sceneIdentifier)
+{
+    if (m_destination)
+        m_destination->setSceneIdentifier(sceneIdentifier);
+}
+#endif
+
 
 } // namespace WebCore
 

@@ -40,9 +40,9 @@
 #include <wtf/ThreadSafeRefCounted.h>
 
 #if USE(SKIA)
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/core/SkColor.h>
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #endif
 
 #if USE(CG)
@@ -141,7 +141,7 @@ public:
     // from the underlying type into any analogous components in ColorType.
     template<typename ColorType> ColorType toColorTypeLossyCarryingForwardMissing() const;
 
-    ColorComponents<float, 4> toResolvedColorComponentsInColorSpace(ColorSpace) const;
+    WEBCORE_EXPORT ColorComponents<float, 4> toResolvedColorComponentsInColorSpace(ColorSpace) const;
     ColorComponents<float, 4> toResolvedColorComponentsInColorSpace(const DestinationColorSpace&) const;
 
     WEBCORE_EXPORT std::pair<ColorSpace, ColorComponents<float, 4>> colorSpaceAndResolvedColorComponents() const;
@@ -203,6 +203,7 @@ public:
     static constexpr auto darkGreen = SRGBA<uint8_t> { 0, 128, 0 };
     static constexpr auto orange = SRGBA<uint8_t> { 255, 128, 0 };
     static constexpr auto purple = SRGBA<uint8_t> { 128, 0, 255 };
+    static constexpr auto gold = SRGBA<uint8_t> { 255, 215, 0 };
 
     static bool isBlackColor(const Color&);
     static bool isWhiteColor(const Color&);
@@ -275,7 +276,7 @@ private:
     PackedColor::RGBA asPackedInline() const;
 
     const OutOfLineComponents& asOutOfLine() const;
-    Ref<OutOfLineComponents> asOutOfLineRef() const;
+    Ref<OutOfLineComponents> protectedAsOutOfLine() const;
 
 #if CPU(ADDRESS64)
     static constexpr unsigned maxNumberOfBitsInPointer = 48;
@@ -502,7 +503,7 @@ inline const Color::OutOfLineComponents& Color::asOutOfLine() const
     return decodedOutOfLineComponents(m_colorAndFlags);
 }
 
-inline Ref<Color::OutOfLineComponents> Color::asOutOfLineRef() const
+inline Ref<Color::OutOfLineComponents> Color::protectedAsOutOfLine() const
 {
     ASSERT(isOutOfLine());
     return decodedOutOfLineComponents(m_colorAndFlags);

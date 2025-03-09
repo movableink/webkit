@@ -44,22 +44,11 @@ CSSPropertyID StylePropertyMetadata::shorthandID() const
     return shorthands[m_indexInShorthandsVector].id();
 }
 
-// FIXME: Generate from logical property groups.
-bool CSSProperty::isInsetProperty(CSSPropertyID propertyID)
+bool CSSProperty::isSizingProperty(CSSPropertyID propertyId)
 {
-    switch (propertyID) {
-    case CSSPropertyLeft:
-    case CSSPropertyRight:
-    case CSSPropertyTop:
-    case CSSPropertyBottom:
-    case CSSPropertyInsetInlineStart:
-    case CSSPropertyInsetInlineEnd:
-    case CSSPropertyInsetBlockStart:
-    case CSSPropertyInsetBlockEnd:
-        return true;
-    default:
-        return false;
-    }
-};
+    return isSizeProperty(propertyId)
+        || isMaxSizeProperty(propertyId)
+        || isMinSizeProperty(propertyId);
+}
 
 } // namespace WebCore

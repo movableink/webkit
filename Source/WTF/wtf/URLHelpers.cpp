@@ -35,6 +35,8 @@
 #include <unicode/uidna.h>
 #include <unicode/uscript.h>
 #include <wtf/IteratorRange.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
@@ -453,7 +455,7 @@ static inline bool isSecondLevelDomainNameAllowedByTLDRules(std::span<const UCha
 #define CHECK_RULES_IF_SUFFIX_MATCHES(suffix, function) \
     { \
         static constexpr size_t suffixLength = suffix.size(); \
-        if (buffer.size() > suffixLength && !memcmp(buffer.last(suffixLength).data(), suffix.data(), suffix.size())) \
+        if (spanHasSuffix(buffer, std::span { suffix })) \
             return isSecondLevelDomainNameAllowedByTLDRules(buffer.first(buffer.size() - suffixLength), function); \
     }
 
@@ -467,7 +469,7 @@ static bool allCharactersAllowedByTLDRules(std::span<const UChar> buffer)
 {
     // Skip trailing dot for root domain.
     if (buffer.back() == '.')
-        buffer = buffer.first(buffer.size() - 1);
+        dropLast(buffer);
 
     // http://cctld.ru/files/pdf/docs/rules_ru-rf.pdf
     static constexpr std::array<UChar, 3> cyrillicRF {
@@ -852,9 +854,9 @@ static String escapeUnsafeCharacters(const String& sourceBuffer)
 
     outBuffer.grow(i);
     if (sourceBuffer.is8Bit())
-        StringImpl::copyCharacters(outBuffer.data(), sourceBuffer.span8().first(i));
+        StringImpl::copyCharacters(outBuffer.mutableSpan(), sourceBuffer.span8().first(i));
     else
-        StringImpl::copyCharacters(outBuffer.data(), sourceBuffer.span16().first(i));
+        StringImpl::copyCharacters(outBuffer.mutableSpan(), sourceBuffer.span16().first(i));
 
     for (; i < length; ) {
         char32_t c = sourceBuffer.characterStartingAt(i);
@@ -937,17 +939,17 @@ String userVisibleURL(const CString& url)
         // as we convert.
         int afterlength = afterIndex;
         auto p = after.mutableSpan().subspan(bufferLength.value() - afterlength - 1);
-        memmove(p.data(), after.data(), afterlength + 1); // copies trailing '\0'
+        memmoveSpan(p, after.span().first(afterlength + 1)); // copies trailing '\0'
         afterIndex = 0;
         while (p.front()) {
-            unsigned char c = p.front();
-            if (c > 0x7f) {
+            unsigned char c = consume(p);
+            if (isASCII(c))
+                after[afterIndex++] = c;
+            else {
                 after[afterIndex++] = '%';
                 after[afterIndex++] = upperNibbleToASCIIHexDigit(c);
                 after[afterIndex++] = lowerNibbleToASCIIHexDigit(c);
-            } else
-                after[afterIndex++] = p.front();
-            p = p.subspan(1);
+            }
         }
         after[afterIndex] = '\0';
         // Note: after.data() points to a null-terminated, pure ASCII string.

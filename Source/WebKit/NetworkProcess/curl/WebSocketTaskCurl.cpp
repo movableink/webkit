@@ -335,7 +335,7 @@ std::optional<String> WebSocketTask::receiveFrames(Function<void(WebCore::WebSoc
         WebCore::WebSocketFrame frame;
         const uint8_t* frameEnd;
         String errorString;
-        auto parseResult = WebCore::WebSocketFrame::parseFrame(reinterpret_cast<uint8_t*>(m_receiveBuffer.data()), m_receiveBuffer.size(), frame, frameEnd, errorString);
+        auto parseResult = WebCore::WebSocketFrame::parseFrame(m_receiveBuffer.mutableSpan(), frame, frameEnd, errorString);
         if (parseResult == WebCore::WebSocketFrame::FrameIncomplete)
             return std::nullopt;
         if (parseResult == WebCore::WebSocketFrame::FrameError)

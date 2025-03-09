@@ -31,8 +31,10 @@
 #include "AlternativeTextController.h"
 #include "ApplyStyleCommand.h"
 #include "AttachmentAssociatedElement.h"
+#include "BoundaryPointInlines.h"
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSPropertyNames.h"
+#include "CSSSerializationContext.h"
 #include "CSSValueList.h"
 #include "CSSValuePool.h"
 #include "CachedResourceLoader.h"
@@ -76,6 +78,7 @@
 #include "HTMLOListElement.h"
 #include "HTMLQuoteElement.h"
 #include "HTMLSpanElement.h"
+#include "HTMLTextAreaElement.h"
 #include "HTMLUListElement.h"
 #include "HitTestResult.h"
 #include "ImageOverlay.h"
@@ -136,6 +139,7 @@
 #include <wtf/SetForScope.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/unicode/CharacterNames.h>
 
 #if PLATFORM(MAC)
@@ -320,7 +324,7 @@ VisibleSelection Editor::selectionForCommand(Event* event)
         auto start = selection.start();
         if (start.isNull() || event->target() != enclosingTextFormControl(start)) {
             if (auto range = target->selection())
-                return { *range, Affinity::Downstream, selection.isDirectional() };
+                return { *range, Affinity::Downstream, selection.directionality() };
         }
     }
     return selection;
@@ -538,7 +542,7 @@ bool Editor::canCopy() const
     if (imageElementFromImageDocument(document()))
         return true;
     const VisibleSelection& selection = document().selection().selection();
-    return selection.isRange() && (!selection.isInPasswordField() || selection.isInAutoFilledAndViewableField());
+    return (selection.isRange() || !isEditablePosition(selection.start())) && (!selection.isInPasswordField() || selection.isInAutoFilledAndViewableField());
 }
 
 bool Editor::canDelete() const
@@ -806,7 +810,7 @@ bool Editor::tryDHTMLCut()
 bool Editor::shouldInsertText(const String& text, const std::optional<SimpleRange>& range, EditorInsertAction action) const
 {
     // FIXME(273431): shouldSuppressTextInputFromEditing does not work with site isolation.
-    RefPtr localFrame = dynamicDowncast<LocalFrame>(document().frame()->mainFrame());
+    RefPtr localFrame = document().localMainFrame();
     if (localFrame && localFrame->loader().shouldSuppressTextInputFromEditing() && action == EditorInsertAction::Typed)
         return false;
 
@@ -986,7 +990,15 @@ RefPtr<Element> Editor::findEventTargetFrom(const VisibleSelection& selection) c
 
 RefPtr<Element> Editor::findEventTargetFromSelection() const
 {
-    return findEventTargetFrom(document().selection().selection());
+    // https://www.w3.org/TR/clipboard-apis/#fire-a-clipboard-event says:
+    // If the context is editable, then
+    // Set target to be the element that contains the start of the visible selection or cursor in document order, or the body element if there is no visible selection or cursor.
+    const VisibleSelection& selection = document().selection().selection();
+    if (selection.isRange() || isEditablePosition(selection.start()))
+        return findEventTargetFrom(selection);
+    // Else, if the context is not editable, then
+    // Set target to the focused node, or the body element if no node has focus.
+    return document().activeElement();
 }
 
 void Editor::applyStyle(StyleProperties* style, EditAction editingAction)
@@ -1050,7 +1062,7 @@ void Editor::applyParagraphStyle(StyleProperties* style, EditAction editingActio
     if (document->selection().isNone())
         return;
 
-    ApplyStyleCommand::create(WTFMove(document), EditingStyle::create(style).ptr(), editingAction, ApplyStyleCommand::PropertyLevel::ForceBlock)->apply();
+    ApplyStyleCommand::create(WTFMove(document), EditingStyle::create(style).ptr(), editingAction, ApplyStylePropertyLevel::ForceBlock)->apply();
 
     if (client())
         client()->didApplyStyle();
@@ -1114,14 +1126,14 @@ String Editor::selectionStartCSSPropertyValue(CSSPropertyID propertyID)
     return selectionStyle->style()->getPropertyValue(propertyID);
 }
 
-static void notifyTextFromControls(Element* startRoot, Element* endRoot)
+static void notifyTextFromControls(Element* startRoot, Element* endRoot, bool wasUserEdit = true)
 {
     RefPtr startingTextControl { enclosingTextFormControl(firstPositionInOrBeforeNode(startRoot)) };
     RefPtr endingTextControl { enclosingTextFormControl(firstPositionInOrBeforeNode(endRoot)) };
     if (startingTextControl)
-        startingTextControl->didEditInnerTextValue();
+        startingTextControl->didEditInnerTextValue(wasUserEdit);
     if (endingTextControl && startingTextControl != endingTextControl)
-        endingTextControl->didEditInnerTextValue();
+        endingTextControl->didEditInnerTextValue(wasUserEdit);
 }
 
 static inline bool shouldRemoveAutocorrectionIndicator(bool shouldConsiderApplyingAutocorrection, bool autocorrectionWasApplied, bool isAutocompletion)
@@ -1236,7 +1248,11 @@ void Editor::appliedEditing(CompositeEditCommand& command)
     Ref composition = *command.composition();
     VisibleSelection newSelection(command.endingSelection());
 
-    notifyTextFromControls(composition->startingRootEditableElement(), composition->endingRootEditableElement());
+    bool wasUserEdit = [&command] {
+        RefPtr typingCommand = dynamicDowncast<TypingCommand>(command);
+        return !typingCommand || !typingCommand->triggeringEventWasCreatedFromBindings();
+    }();
+    notifyTextFromControls(composition->startingRootEditableElement(), composition->endingRootEditableElement(), wasUserEdit);
 
     if (command.isTopLevelCommand()) {
         // Don't clear the typing style with this selection change. We do those things elsewhere if necessary.
@@ -1444,7 +1460,8 @@ bool Editor::insertTextWithoutSendingTextEvent(const String& text, bool selectIn
                     options.add(TypingCommand::Option::IsAutocompletion);
                 if (shouldRemoveAutocorrectionIndicator(shouldConsiderApplyingAutocorrection, autocorrectionWasApplied, options.contains(TypingCommand::Option::IsAutocompletion)))
                     options.remove(TypingCommand::Option::RetainAutocorrectionIndicator);
-                TypingCommand::insertText(document.copyRef(), text, selection, options, triggeringEvent && triggeringEvent->isComposition() ? TypingCommand::TextCompositionType::Final : TypingCommand::TextCompositionType::None);
+                auto compositionType = triggeringEvent && triggeringEvent->isComposition() ? TypingCommand::TextCompositionType::Final : TypingCommand::TextCompositionType::None;
+                TypingCommand::insertText(document.copyRef(), text, triggeringEvent, selection, options, compositionType);
             }
 
             // Reveal the current selection. Note that focus may have changed after insertion.
@@ -1602,7 +1619,7 @@ void Editor::performCutOrCopy(EditorActionSpecifier action)
             writeSelectionToPasteboard(*Pasteboard::createForCopyAndPaste(PagePasteboardContext::create(document->pageID())));
 #else
             // FIXME: Delete after <http://webkit.org/b/177618> lands.
-            Pasteboard::createForCopyAndPaste(PagePasteboardContext::create(document->pageID()))->writeSelection(*selection, canSmartCopyOrDelete(), *document->frame(), IncludeImageAltTextForDataTransfer);
+            Pasteboard::createForCopyAndPaste(PagePasteboardContext::create(document->pageID()))->writeSelection(selection, canSmartCopyOrDelete(), *document->frame(), IncludeImageAltTextForDataTransfer);
 #endif
         }
     }
@@ -2055,6 +2072,81 @@ void Editor::toggleUnderline()
     command("ToggleUnderline"_s).execute();
 }
 
+void Editor::setTextAlignmentForChangedBaseWritingDirection(WritingDirection direction)
+{
+    // Note that the passed-in argument is the direction that has been changed to by
+    // some code or user interaction outside the scope of this function. The former
+    // direction is not known, nor is it required for the kind of text alignment
+    // changes done by this function.
+    //
+    // Rules:
+    // When text has no explicit alignment, set alignment to match the writing direction.
+    // If the text has left or right alignment, flip left->right and right->left.
+    // Otherwise, do nothing.
+
+    Ref document = this->document();
+    RefPtr selectionStyle = EditingStyle::styleAtSelectionStart(document->selection().selection());
+    if (!selectionStyle || !selectionStyle->style())
+        return;
+
+    auto value = selectionStyle->style()->propertyAsValueID(CSSPropertyTextAlign);
+    if (!value)
+        return;
+
+    auto newValue = CSSValueInvalid;
+    switch (*value) {
+    case CSSValueStart:
+    case CSSValueEnd:
+        switch (direction) {
+        case WritingDirection::Natural:
+            return;
+        case WritingDirection::LeftToRight:
+            newValue = CSSValueLeft;
+            break;
+        case WritingDirection::RightToLeft:
+            newValue = CSSValueRight;
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+            return;
+        }
+        break;
+    case CSSValueLeft:
+    case CSSValueWebkitLeft:
+        newValue = CSSValueRight;
+        break;
+    case CSSValueRight:
+    case CSSValueWebkitRight:
+        newValue = CSSValueLeft;
+        break;
+    case CSSValueCenter:
+    case CSSValueWebkitCenter:
+    case CSSValueJustify:
+        return;
+    default:
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    auto isTextControl = [](Element* focusedElement) {
+        if (RefPtr input = dynamicDowncast<HTMLInputElement>(focusedElement))
+            return input->isTextField() || input->isSearchField();
+        return is<HTMLTextAreaElement>(focusedElement);
+    };
+
+    if (RefPtr focusedElement = document->focusedElement(); isTextControl(focusedElement.get())) {
+        if (direction != WritingDirection::Natural) {
+            focusedElement->setAttributeWithoutSynchronization(alignAttr, nameString(newValue));
+            document->updateStyleIfNeeded();
+        }
+        return;
+    }
+
+    Ref style = MutableStyleProperties::create();
+    style->setProperty(CSSPropertyTextAlign, newValue);
+    applyParagraphStyle(style.ptr());
+}
+
 void Editor::setBaseWritingDirection(WritingDirection direction)
 {
     Ref document = protectedDocument();
@@ -2402,6 +2494,7 @@ void Editor::setComposition(const String& text, const Vector<CompositionUnderlin
     client()->startDelayingAndCoalescingContentChangeNotifications();
 #endif
 
+    RefPtr<CompositionEvent> event;
     RefPtr target { document->focusedElement() };
     if (target) {
         // Dispatch an appropriate composition event to the focused node.
@@ -2419,7 +2512,6 @@ void Editor::setComposition(const String& text, const Vector<CompositionUnderlin
         // 3. Canceling the ongoing composition.
         //    Send a compositionend event when function deletes the existing composition node, i.e.
         //    m_compositionNode != 0 && test.isEmpty().
-        RefPtr<CompositionEvent> event;
         if (!m_compositionNode) {
             // We should send a compositionstart event only when the given text is not empty because this
             // function doesn't create a composition node when the text is empty.
@@ -2455,7 +2547,7 @@ void Editor::setComposition(const String& text, const Vector<CompositionUnderlin
     m_customCompositionAnnotations.clear();
 
     if (!text.isEmpty()) {
-        TypingCommand::insertText(document.copyRef(), text, OptionSet { TypingCommand::Option::SelectInsertedText, TypingCommand::Option::PreventSpellChecking }, TypingCommand::TextCompositionType::Pending);
+        TypingCommand::insertText(document.copyRef(), text, event.get(), OptionSet { TypingCommand::Option::SelectInsertedText, TypingCommand::Option::PreventSpellChecking }, TypingCommand::TextCompositionType::Pending);
 
         // Find out what node has the composition now.
         Position base = document->selection().selection().base().downstream();
@@ -3133,13 +3225,12 @@ void Editor::markAndReplaceFor(const SpellCheckRequest& request, const Vector<Te
     auto textCheckingOptions = request.data().checkingTypes();
     TextCheckingParagraph paragraph(request.checkingRange(), request.automaticReplacementRange(), request.paragraphRange());
 
-    // FIXME: Mark this const once MSVC bug is fixed: <https://developercommunity.visualstudio.com/content/problem/316713/msvc-cant-compile-webkits-optionsetcontainsany.html>.
-    bool shouldPerformReplacement = textCheckingOptions.containsAny({ TextCheckingType::Quote, TextCheckingType::Dash, TextCheckingType::Replacement });
-    bool shouldMarkSpelling = textCheckingOptions.contains(TextCheckingType::Spelling);
-    bool shouldMarkGrammar = textCheckingOptions.contains(TextCheckingType::Grammar);
-    bool shouldMarkLink = textCheckingOptions.contains(TextCheckingType::Link);
-    bool shouldShowCorrectionPanel = textCheckingOptions.contains(TextCheckingType::ShowCorrectionPanel);
-    bool shouldCheckForCorrection = shouldShowCorrectionPanel || textCheckingOptions.contains(TextCheckingType::Correction);
+    const bool shouldPerformReplacement = textCheckingOptions.containsAny({ TextCheckingType::Quote, TextCheckingType::Dash, TextCheckingType::Replacement });
+    const bool shouldMarkSpelling = textCheckingOptions.contains(TextCheckingType::Spelling);
+    const bool shouldMarkGrammar = textCheckingOptions.contains(TextCheckingType::Grammar);
+    const bool shouldMarkLink = textCheckingOptions.contains(TextCheckingType::Link);
+    const bool shouldShowCorrectionPanel = textCheckingOptions.contains(TextCheckingType::ShowCorrectionPanel);
+    const bool shouldCheckForCorrection = shouldShowCorrectionPanel || textCheckingOptions.contains(TextCheckingType::Correction);
 #if !USE(AUTOCORRECTION_PANEL)
     ASSERT(!shouldShowCorrectionPanel);
 #endif
@@ -4120,7 +4211,7 @@ static Vector<SimpleRange> scanForTelephoneNumbers(const SimpleRange& range)
         auto scannerPosition = span.data() - characters.span().data();
         ASSERT(scannerPosition + relativeEndPosition <= text.length());
         result.append(resolveCharacterRange(range, CharacterRange(scannerPosition + relativeStartPosition, relativeEndPosition - relativeStartPosition)));
-        span = span.subspan(relativeEndPosition);
+        skip(span, relativeEndPosition);
     }
     return result;
 }
@@ -4796,7 +4887,7 @@ const RenderStyle* Editor::styleForSelectionStart(RefPtr<Node>& nodeToRemove)
 
     auto styleElement = HTMLSpanElement::create(document);
 
-    auto styleText = makeAtomString(typingStyle->style()->asText(), " display: inline"_s);
+    auto styleText = makeAtomString(typingStyle->style()->asText(CSS::defaultSerializationContext()), " display: inline"_s);
     styleElement->setAttribute(HTMLNames::styleAttr, styleText);
 
     styleElement->appendChild(document->createEditingTextNode(String { emptyString() }));
@@ -4826,7 +4917,7 @@ RefPtr<Font> Editor::fontForSelection(bool& hasMultipleFonts)
             if (!style)
                 return nullptr;
             ScriptDisallowedScope::InMainThread scriptDisallowedScope;
-            font = const_cast<Font*>(&style->fontCascade().primaryFont());
+            font = const_cast<Font*>(style->fontCascade().primaryFont().ptr());
         }
 
         if (nodeToRemove)
@@ -4852,10 +4943,10 @@ RefPtr<Font> Editor::fontForSelection(bool& hasMultipleFonts)
         auto renderer = node.renderer();
         if (!renderer)
             continue;
-        auto& primaryFont = renderer->style().fontCascade().primaryFont();
+        Ref primaryFont = renderer->style().fontCascade().primaryFont();
         if (!font)
-            font = const_cast<Font*>(&primaryFont);
-        else if (font != &primaryFont) {
+            font = const_cast<Font*>(primaryFont.ptr());
+        else if (font != primaryFont.ptr()) {
             hasMultipleFonts = true;
             break;
         }

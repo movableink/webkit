@@ -34,8 +34,6 @@
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace PAL {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(TextCodecCJK);
@@ -184,7 +182,7 @@ static const JIS0208EncodeIndex& jis0208EncodeIndex()
     return *table;
 }
 
-String TextCodecCJK::decodeCommon(std::span<const uint8_t> bytes, bool flush, bool stopOnError, bool& sawError, const Function<SawError(uint8_t, StringBuilder&)>& byteParser)
+String TextCodecCJK::decodeCommon(std::span<const uint8_t> bytes, bool flush, bool stopOnError, bool& sawError, NOESCAPE const Function<SawError(uint8_t, StringBuilder&)>& byteParser)
 {
     StringBuilder result;
     result.reserveCapacity(bytes.size());
@@ -672,14 +670,14 @@ static Vector<uint8_t> shiftJISEncode(StringView string, Function<void(char32_t,
             codePoint = 0xFF0D;
 
         auto range = findInSortedPairs(jis0208EncodeIndex(), codePoint);
-        if (range.first == range.second) {
+        if (range.empty()) {
             unencodableHandler(codePoint, result);
             continue;
         }
 
-        ASSERT(range.first + 3 >= range.second);
-        for (auto pair = range.first; pair < range.second; pair++) {
-            uint16_t pointer = pair->second;
+        ASSERT(range.size() <= 3);
+        for (auto& pair : range) {
+            uint16_t pointer = pair.second;
             if (pointer >= 8272 && pointer <= 8835)
                 continue;
             uint8_t lead = pointer / 188;
@@ -796,17 +794,17 @@ static Vector<uint8_t> big5Encode(StringView string, Function<void(char32_t, Vec
             continue;
         }
 
-        auto pointerRange = findInSortedPairs(big5EncodeIndex(), codePoint);
-        if (pointerRange.first == pointerRange.second) {
+        auto range = findInSortedPairs(big5EncodeIndex(), codePoint);
+        if (range.empty()) {
             unencodableHandler(codePoint, result);
             continue;
         }
 
         uint16_t pointer = 0;
         if (codePoint == 0x2550 || codePoint == 0x255E || codePoint == 0x2561 || codePoint == 0x256A || codePoint == 0x5341 || codePoint == 0x5345)
-            pointer = (pointerRange.second - 1)->second;
+            pointer = range.back().second;
         else
-            pointer = pointerRange.first->second;
+            pointer = range.front().second;
 
         if (pointer < 157 * (0xA1 - 0x81)) {
             unencodableHandler(codePoint, result);
@@ -856,6 +854,8 @@ static const std::array<std::pair<uint32_t, char32_t>, 207>& gb18030Ranges()
     return ranges;
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 // https://encoding.spec.whatwg.org/#index-gb18030-ranges-code-point
 static std::optional<char32_t> gb18030RangesCodePoint(uint32_t pointer)
 {
@@ -881,6 +881,8 @@ static uint32_t gb18030RangesPointer(char32_t codePoint)
     char32_t offset = (upperBound - 1)->second;
     return pointerOffset + codePoint - offset;
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 using GB18030EncodeIndex = std::array<std::pair<UChar, uint16_t>, 23940>;
 static const GB18030EncodeIndex& gb18030EncodeIndex()
@@ -1042,9 +1044,9 @@ static Vector<uint8_t> gbEncodeShared(StringView string, Function<void(char32_t,
             result.append(*encoded);
             continue;
         }
-        auto pointerRange = findInSortedPairs(gb18030EncodeIndex(), codePoint);
-        if (pointerRange.first != pointerRange.second) {
-            uint16_t pointer = pointerRange.first->second;
+        auto range = findInSortedPairs(gb18030EncodeIndex(), codePoint);
+        if (!range.empty()) {
+            uint16_t pointer = range[0].second;
             uint8_t lead = pointer / 190 + 0x81;
             uint8_t trail = pointer % 190;
             uint8_t offset = trail < 0x3F ? 0x40 : 0x41;
@@ -1208,5 +1210,3 @@ Vector<uint8_t> TextCodecCJK::encode(StringView string, UnencodableHandling hand
 }
 
 } // namespace PAL
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

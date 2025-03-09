@@ -13,6 +13,7 @@
 #include <wtf/text/StringBuilderJSON.h>
 
 #include <wtf/text/EscapedFormsForJSON.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
@@ -38,25 +39,21 @@ void StringBuilder::appendQuotedJSONString(const String& string)
     if (is8Bit() && string.is8Bit()) {
         if (auto output = extendBufferForAppending<LChar>(saturatedSum<int32_t>(m_length, stringLengthValue)); output.data()) {
             output = output.first(stringLengthValue);
-            output[0] = '"';
-            output = output.subspan(1);
+            consume(output) = '"';
             appendEscapedJSONStringContent(output, string.span8());
-            output[0] = '"';
-            output = output.subspan(1);
+            consume(output) = '"';
             if (!output.empty())
                 shrink(m_length - output.size());
         }
     } else {
         if (auto output = extendBufferForAppendingWithUpconvert(saturatedSum<int32_t>(m_length, stringLengthValue)); output.data()) {
             output = output.first(stringLengthValue);
-            output[0] = '"';
-            output = output.subspan(1);
+            consume(output) = '"';
             if (string.is8Bit())
                 appendEscapedJSONStringContent(output, string.span8());
             else
                 appendEscapedJSONStringContent(output, string.span16());
-            output[0] = '"';
-            output = output.subspan(1);
+            consume(output) = '"';
             if (!output.empty())
                 shrink(m_length - output.size());
         }

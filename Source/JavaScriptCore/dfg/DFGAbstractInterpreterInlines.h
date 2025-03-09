@@ -75,7 +75,7 @@ AbstractInterpreter<AbstractStateType>::AbstractInterpreter(Graph& graph, Abstra
     , m_state(state)
 {
     if (m_graph.m_form == SSA)
-        m_phiChildren = makeUnique<PhiChildren>(m_graph);
+        m_phiChildren = makeUniqueWithoutFastMallocCheck<PhiChildren>(m_graph);
 }
 
 template<typename AbstractStateType>
@@ -785,6 +785,20 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         setNonCellTypeForNode(node, SpecInt32Only);
         break;
     }
+
+    case PurifyNaN: {
+        auto abstractValue = forNode(node->child1());
+        JSValue child = abstractValue.value();
+        if (child && child.isNumber()) {
+            setConstant(node, jsDoubleNumber(purifyNaN(child.asNumber())));
+            break;
+        }
+        if (!abstractValue.couldBeType(SpecDoubleImpureNaN))
+            m_state.setShouldTryConstantFolding(true);
+        abstractValue.filter(SpecBytecodeDouble);
+        forNode(node) = abstractValue;
+        break;
+    }
         
     case DoubleRep: {
         JSValue child = forNode(node->child1()).value();
@@ -926,6 +940,19 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             if (left && right && left.isNumber() && right.isNumber()) {
                 setConstant(node, jsDoubleNumber(left.asNumber() + right.asNumber()));
                 break;
+            }
+
+            // Addition is subtle with doubles. Zero is not the neutral value, negative zero is:
+            //    0 + 0 = 0
+            //    0 + -0 = 0
+            //    -0 + 0 = 0
+            //    -0 + -0 = -0
+            if (left && left.isNumber()) {
+                if (isNegativeZero(left.asNumber()))
+                    m_state.setShouldTryConstantFolding(true);
+            } else if (right && right.isNumber()) {
+                if (isNegativeZero(right.asNumber()))
+                    m_state.setShouldTryConstantFolding(true);
             }
             setNonCellTypeForNode(node, 
                 typeOfDoubleSum(
@@ -1255,6 +1282,15 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                 setConstant(node, jsDoubleNumber(left.asNumber() * right.asNumber()));
                 break;
             }
+
+            if (left && left.isNumber()) {
+                if (left.asNumber() == 1)
+                    m_state.setShouldTryConstantFolding(true);
+            } else if (right && right.isNumber()) {
+                if (right.asNumber() == 1)
+                    m_state.setShouldTryConstantFolding(true);
+            }
+
             setNonCellTypeForNode(node, 
                 typeOfDoubleProduct(
                     forNode(node->child1()).m_type, forNode(node->child2()).m_type));
@@ -1511,7 +1547,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                 roundedValue = Math::ceilDouble(*number);
             else {
                 ASSERT(node->op() == ArithTrunc);
-                roundedValue = trunc(*number);
+                roundedValue = Math::truncDouble(*number);
             }
 
             if (node->child1().useKind() == UntypedUse) {
@@ -1671,6 +1707,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         break;
 
     case MapStorage:
+    case MapStorageOrSentinel:
     case MapIterationNext:
         setTypeForNode(node, SpecCellOther);
         break;
@@ -2440,6 +2477,14 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         setForNode(node, m_vm.stringStructure.get());
         break;
 
+    case StringAt: {
+        if (node->arrayMode().isOutOfBounds())
+            setTypeForNode(node, SpecString | SpecOther);
+        else
+            setForNode(node, m_vm.stringStructure.get());
+        break;
+    }
+
     case StringLocaleCompare:
         setNonCellTypeForNode(node, SpecInt32Only);
         break;
@@ -2884,6 +2929,16 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
 
     case ArraySlice: {
         JSGlobalObject* globalObject = m_graph.globalObjectFor(node->origin.semantic);
+        bool includesCopyOnWrite = true;
+        AbstractValue& source = forNode(m_graph.varArgChild(node, 0));
+        if (source.m_structure.isFinite()) {
+            includesCopyOnWrite = false;
+            source.m_structure.forEach(
+                [&](RegisteredStructure structure) {
+                    if (isCopyOnWrite(structure->indexingMode()))
+                        includesCopyOnWrite = true;
+                });
+        }
 
         // FIXME: We could do better here if we prove that the
         // incoming value has only a single structure.
@@ -2891,6 +2946,11 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         structureSet.add(m_graph.registerStructure(globalObject->originalArrayStructureForIndexingType(ArrayWithInt32)));
         structureSet.add(m_graph.registerStructure(globalObject->originalArrayStructureForIndexingType(ArrayWithContiguous)));
         structureSet.add(m_graph.registerStructure(globalObject->originalArrayStructureForIndexingType(ArrayWithDouble)));
+        if (includesCopyOnWrite) {
+            structureSet.add(m_graph.registerStructure(globalObject->originalArrayStructureForIndexingType(CopyOnWriteArrayWithInt32)));
+            structureSet.add(m_graph.registerStructure(globalObject->originalArrayStructureForIndexingType(CopyOnWriteArrayWithContiguous)));
+            structureSet.add(m_graph.registerStructure(globalObject->originalArrayStructureForIndexingType(CopyOnWriteArrayWithDouble)));
+        }
 
         setForNode(node, structureSet);
         break;
@@ -2899,6 +2959,10 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
     case ArraySplice:
         clobberWorld();
         makeBytecodeTopForNode(node);
+        break;
+
+    case ArrayIncludes:
+        setNonCellTypeForNode(node, SpecBoolean);
         break;
 
     case ArrayIndexOf: {
@@ -3366,7 +3430,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             break;
         }
 
-        setForNode(node, m_vm.immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].get());
+        setForNode(node, m_vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous));
         break;
         
     case NewArrayBuffer:
@@ -3411,6 +3475,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
     }
 
     case NewArrayWithConstantSize:
+    case MaterializeNewArrayWithConstantSize:
         setForNode(node, m_graph.globalObjectFor(node->origin.semantic)->arrayStructureForIndexingTypeDuringAllocation(node->indexingMode()));
         break;
 
@@ -3668,6 +3733,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
     }
 
     case PhantomNewObject:
+    case PhantomNewArrayWithConstantSize:
     case PhantomNewFunction:
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncGeneratorFunction:
@@ -3897,7 +3963,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                     break;
                 }
             }
-            setTypeForNode(node, SpecBytecodeRealNumber);
+            setTypeForNode(node, SpecBytecodeDouble);
             break;
         }
 
@@ -3983,7 +4049,25 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                     if (attemptToFold(m_vm.propertyNames->exec.impl(), globalObject->regExpProtoExecFunction()))
                         break;
 
+                    if (attemptToFold(m_vm.propertyNames->flags.impl(), globalObject->regExpProtoFlagsGetter()))
+                        break;
+
+                    if (attemptToFold(m_vm.propertyNames->dotAll.impl(), globalObject->regExpProtoDotAllGetter()))
+                        break;
+
                     if (attemptToFold(m_vm.propertyNames->global.impl(), globalObject->regExpProtoGlobalGetter()))
+                        break;
+
+                    if (attemptToFold(m_vm.propertyNames->hasIndices.impl(), globalObject->regExpProtoHasIndicesGetter()))
+                        break;
+
+                    if (attemptToFold(m_vm.propertyNames->ignoreCase.impl(), globalObject->regExpProtoIgnoreCaseGetter()))
+                        break;
+
+                    if (attemptToFold(m_vm.propertyNames->multiline.impl(), globalObject->regExpProtoMultilineGetter()))
+                        break;
+
+                    if (attemptToFold(m_vm.propertyNames->sticky.impl(), globalObject->regExpProtoStickyGetter()))
                         break;
 
                     if (attemptToFold(m_vm.propertyNames->unicode.impl(), globalObject->regExpProtoUnicodeGetter()))
@@ -4563,10 +4647,10 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             m_state.setIsValid(false);
 
         if (node->hasDoubleResult()) {
-            if (value.isType(SpecBytecodeRealNumber))
+            if (value.isType(SpecBytecodeDouble))
                 setForNode(node, value);
             else
-                setTypeForNode(node, SpecBytecodeRealNumber);
+                setTypeForNode(node, SpecBytecodeDouble);
         } else
             setForNode(node, value);
 
@@ -4633,10 +4717,10 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             m_state.setIsValid(false);
         
         if (node->hasDoubleResult()) {
-            if (result.isType(SpecBytecodeRealNumber))
+            if (result.isType(SpecBytecodeDouble))
                 setForNode(node, result);
             else
-                setTypeForNode(node, SpecBytecodeRealNumber);
+                setTypeForNode(node, SpecBytecodeDouble);
         } else
             setForNode(node, result);
         break;
@@ -5032,17 +5116,35 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
 
     case GetGlobalVar: {
         if (node->hasDoubleResult())
-            setTypeForNode(node, SpecBytecodeRealNumber);
-        else
+            setTypeForNode(node, SpecBytecodeDouble);
+        else {
+            // Emptiness is monotonic. And GetGlobalLexicalVariable and GetGlobalVar are tied to GlobalObject.
+            // So long as it is not unlinked.
+            if (!m_graph.m_plan.isUnlinked()) {
+                if (JSValue concurrentlyRead = node->variablePointer()->get()) {
+                    setTypeForNode(node, SpecHeapTop & ~SpecEmpty);
+                    break;
+                }
+            }
             makeHeapTopForNode(node);
+        }
         break;
     }
 
     case GetGlobalLexicalVariable:
         if (node->hasDoubleResult())
-            setTypeForNode(node, SpecBytecodeRealNumber);
-        else
+            setTypeForNode(node, SpecBytecodeDouble);
+        else {
+            // Emptiness is monotonic. And GetGlobalLexicalVariable and GetGlobalVar are tied to GlobalObject.
+            // So long as it is not unlinked.
+            if (!m_graph.m_plan.isUnlinked()) {
+                if (JSValue concurrentlyRead = node->variablePointer()->get()) {
+                    setTypeForNode(node, SpecBytecodeTop & ~SpecEmpty);
+                    break;
+                }
+            }
             makeBytecodeTopForNode(node);
+        }
         break;
 
     case GetDynamicVar:
@@ -5688,7 +5790,7 @@ template<typename AbstractStateType>
 void AbstractInterpreter<AbstractStateType>::dump(PrintStream& out)
 {
     CommaPrinter comma(" "_s);
-    HashSet<NodeFlowProjection> seen;
+    UncheckedKeyHashSet<NodeFlowProjection> seen;
     if (m_graph.m_form == SSA) {
         for (NodeFlowProjection node : m_state.block()->ssa->liveAtHead) {
             seen.add(node);

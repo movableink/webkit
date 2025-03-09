@@ -32,7 +32,10 @@
 #include "APILoaderClient.h"
 #include "APINavigation.h"
 #include "APIPageConfiguration.h"
+#include "APISerializedScriptValue.h"
+#include "JavaScriptEvaluationResult.h"
 #include "PageLoadState.h"
+#include "RunJavaScriptParameters.h"
 #include "WebPageGroup.h"
 #include "WebPageProxy.h"
 #include "WebScriptMessageHandler.h"
@@ -58,9 +61,10 @@ public:
 
     ~ScriptMessageClient() { }
 
-    void didPostMessage(WebPageProxy& page, FrameInfoData&&, API::ContentWorld&, WebCore::SerializedScriptValue& serializedScriptValue) override
+    void didPostMessage(WebPageProxy& page, FrameInfoData&&, API::ContentWorld&, JavaScriptEvaluationResult&& jsMessage) override
     {
-        auto valueAsString = serializedScriptValue.toString();
+        Ref serializedScriptValue = API::SerializedScriptValue::createFromWireBytes(jsMessage.wireBytes());
+        auto valueAsString = serializedScriptValue->internalRepresentation().toString();
         auto tokens = StringView { valueAsString }.split(':');
         uint32_t connectionID = 0;
         uint32_t targetID = 0;
@@ -89,7 +93,7 @@ public:
         return false;
     }
     
-    void didPostMessageWithAsyncReply(WebPageProxy&, FrameInfoData&&, API::ContentWorld&, WebCore::SerializedScriptValue&, WTF::Function<void(API::SerializedScriptValue*, const String&)>&&) override
+    void didPostMessageWithAsyncReply(WebPageProxy&, FrameInfoData&&, API::ContentWorld&, JavaScriptEvaluationResult&&, WTF::Function<void(Expected<JavaScriptEvaluationResult, String>&&)>&&) override
     {
     }
 
@@ -147,10 +151,17 @@ Ref<WebPageProxy> RemoteInspectorProtocolHandler::protectedPage() const
 
 void RemoteInspectorProtocolHandler::runScript(const String& script)
 {
-    protectedPage()->runJavaScriptInMainFrame({ script, JSC::SourceTaintedOrigin::Untainted, URL { }, false, std::nullopt, false, RemoveTransientActivation::Yes },
-        [] (auto&& result) {
-        if (!result.has_value())
-            LOG_ERROR("Exception running script \"%s\"", result.error().message.utf8().data());
+    protectedPage()->runJavaScriptInMainFrame(WebKit::RunJavaScriptParameters {
+        script,
+        JSC::SourceTaintedOrigin::Untainted,
+        URL { },
+        WebCore::RunAsAsyncFunction::No,
+        std::nullopt,
+        WebCore::ForceUserGesture::No,
+        RemoveTransientActivation::Yes
+    }, [] (auto&& result) {
+        if (!result && result.error())
+            LOG_ERROR("Exception running script \"%s\"", result.error()->message.utf8().data());
     });
 }
 
@@ -195,7 +206,7 @@ void RemoteInspectorProtocolHandler::platformStartTask(WebPageProxy& pageProxy, 
     m_inspectorClient = makeUnique<RemoteInspectorClient>(requestURL, *this);
 
     // Setup target postMessage listener
-    auto handler = WebScriptMessageHandler::create(makeUnique<ScriptMessageClient>(*this), "inspector"_s, API::ContentWorld::pageContentWorld());
+    auto handler = WebScriptMessageHandler::create(makeUnique<ScriptMessageClient>(*this), "inspector"_s, API::ContentWorld::pageContentWorldSingleton());
     pageProxy.configuration().userContentController().addUserScriptMessageHandler(handler.get());
 
     // Setup loader client to get notified of page load

@@ -26,11 +26,14 @@
 #pragma once
 
 #include "ContextDestructionObserver.h"
+#include "Element.h"
 #include "EventTarget.h"
 #include "QualifiedName.h"
+#include "TreeScope.h"
 #include <wtf/Lock.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/RobinHoodHashSet.h>
+#include <wtf/WeakHashMap.h>
 #include <wtf/WeakListHashSet.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
@@ -61,7 +64,31 @@ public:
     static Ref<CustomElementRegistry> create(ScriptExecutionContext&);
     ~CustomElementRegistry();
 
+    bool isScoped() const { return !m_window; }
     Document* document() const;
+
+    static CustomElementRegistry* registryForElement(const Element& element)
+    {
+        if (element.usesNullCustomElementRegistry())
+            return nullptr;
+        if (UNLIKELY(element.usesScopedCustomElementRegistryMap()))
+            return scopedCustomElementRegistryMap().get(element);
+        return element.treeScope().customElementRegistry();
+    }
+
+    static CustomElementRegistry* registryForNodeOrTreeScope(const Node& node, const TreeScope& treeScope)
+    {
+        if (node.usesNullCustomElementRegistry()) {
+            ASSERT(is<Element>(node));
+            return nullptr;
+        }
+        if (auto* element = dynamicDowncast<Element>(node); UNLIKELY(element && element->usesScopedCustomElementRegistryMap()))
+            return scopedCustomElementRegistryMap().get(*element);
+        return treeScope.customElementRegistry();
+    }
+
+    static void addToScopedCustomElementRegistryMap(Element&, CustomElementRegistry&);
+    static void removeFromScopedCustomElementRegistryMap(Element&);
 
     void didAssociateWithDocument(Document&);
 
@@ -78,6 +105,7 @@ public:
     JSC::JSValue get(const AtomString&);
     String getName(JSC::JSValue);
     void upgrade(Node& root);
+    void initialize(Node& root);
 
     MemoryCompactRobinHoodHashMap<AtomString, Ref<DeferredPromise>>& promiseMap() { return m_promiseMap; }
     bool isShadowDisabled(const AtomString& name) const { return m_disabledShadowSet.contains(name); }
@@ -87,6 +115,8 @@ public:
 private:
     CustomElementRegistry(ScriptExecutionContext&, LocalDOMWindow&);
     CustomElementRegistry(ScriptExecutionContext&);
+
+    static WeakHashMap<Element, Ref<CustomElementRegistry>, WeakPtrImplWithEventTargetData>& scopedCustomElementRegistryMap();
 
     WeakPtr<LocalDOMWindow, WeakPtrImplWithEventTargetData> m_window;
     UncheckedKeyHashMap<AtomString, Ref<JSCustomElementInterface>> m_nameMap;

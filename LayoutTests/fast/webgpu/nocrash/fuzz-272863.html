@@ -1,3 +1,4 @@
+<!-- webkit-test-runner [ enableMetalDebugDevice=true ] -->
 <script>
 async function run() {
     let adapter = await navigator.gpu.requestAdapter()
@@ -6,7 +7,13 @@ async function run() {
     let commandEncoder = device.createCommandEncoder();
     let querySet = device.createQuerySet({ type: 'occlusion', count: 52 });
     commandEncoder.resolveQuerySet(querySet, 3, 0, buffer, 11264)
+    await device.queue.onSubmittedWorkDone();
+    console.log('Pass')
+    globalThis.testRunner?.notifyDone();
 }
+globalThis.testRunner?.dumpAsText();
 globalThis.testRunner?.waitUntilDone();
-run().finally(() => globalThis.testRunner?.notifyDone());
+
+run();
 </script>
+

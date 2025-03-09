@@ -267,10 +267,11 @@ HTMLConstructionSite::HTMLConstructionSite(Document& document, OptionSet<ParserC
 {
 }
 
-HTMLConstructionSite::HTMLConstructionSite(DocumentFragment& fragment, OptionSet<ParserContentPolicy> parserContentPolicy, unsigned maximumDOMTreeDepth)
+HTMLConstructionSite::HTMLConstructionSite(DocumentFragment& fragment, OptionSet<ParserContentPolicy> parserContentPolicy, unsigned maximumDOMTreeDepth, CustomElementRegistry* registry)
     : m_document(fragment.document())
     , m_attachmentRoot(fragment)
     , m_parserContentPolicy(parserContentPolicy)
+    , m_registry(registry)
     , m_isParsingFragment(true)
     , m_redirectAttachToFosterParent(false)
     , m_maximumDOMTreeDepth(maximumDOMTreeDepth)
@@ -555,6 +556,8 @@ void HTMLConstructionSite::insertHTMLTemplateElement(AtomHTMLToken&& token)
         auto delegatesFocus = ShadowRootDelegatesFocus::No;
         auto clonable = ShadowRootClonable::No;
         auto serializable = ShadowRootSerializable::No;
+        String referenceTarget;
+        auto registryKind = Element::CustomElementRegistryKind::Window;
         for (auto& attribute : token.attributes()) {
             if (attribute.name() == HTMLNames::shadowrootmodeAttr) {
                 if (equalLettersIgnoringASCIICase(attribute.value(), "closed"_s))
@@ -567,9 +570,13 @@ void HTMLConstructionSite::insertHTMLTemplateElement(AtomHTMLToken&& token)
                 clonable = ShadowRootClonable::Yes;
             else if (attribute.name() == HTMLNames::shadowrootserializableAttr)
                 serializable = ShadowRootSerializable::Yes;
+            else if (document().settings().shadowRootReferenceTargetEnabled() && attribute.name() == HTMLNames::shadowrootreferencetargetAttr)
+                referenceTarget = AtomString(attribute.value());
+            else if (attribute.name() == HTMLNames::shadowrootcustomelementregistryAttr)
+                registryKind = Element::CustomElementRegistryKind::Null;
         }
         if (mode && is<Element>(currentNode())) {
-            auto exceptionOrShadowRoot = currentElement().attachDeclarativeShadow(*mode, delegatesFocus, clonable, serializable);
+            auto exceptionOrShadowRoot = currentElement().attachDeclarativeShadow(*mode, delegatesFocus, clonable, serializable, referenceTarget, registryKind);
             if (!exceptionOrShadowRoot.hasException()) {
                 Ref shadowRoot = exceptionOrShadowRoot.releaseReturnValue();
                 auto element = createHTMLElement(token);
@@ -779,7 +786,7 @@ static inline QualifiedName qualifiedNameForHTMLTag(const AtomHTMLToken& token)
 
 Ref<Element> HTMLConstructionSite::createElement(AtomHTMLToken& token, const AtomString& namespaceURI)
 {
-    auto element = treeScopeForCurrentNode().createElement(qualifiedNameForTag(token, namespaceURI), true);
+    auto element = ownerDocumentForCurrentNode().createElement(qualifiedNameForTag(token, namespaceURI), true);
     setAttributes(element, token, m_parserContentPolicy);
     return element;
 }
@@ -798,6 +805,16 @@ inline Document& HTMLConstructionSite::ownerDocumentForCurrentNode()
     return currentNode().document();
 }
 
+static CustomElementRegistry* registryForCurrentNode(Node& currentNode, TreeScope& treeScope)
+{
+    if (auto* templateElement = dynamicDowncast<HTMLTemplateElement>(currentNode)) {
+        auto& templateFragmentTreeScope = templateElement->fragmentForInsertion().treeScope();
+        if (templateFragmentTreeScope.rootNode().usesNullCustomElementRegistry())
+            return nullptr;
+    }
+    return CustomElementRegistry::registryForNodeOrTreeScope(currentNode, treeScope);
+}
+
 std::tuple<RefPtr<HTMLElement>, RefPtr<JSCustomElementInterface>, RefPtr<CustomElementRegistry>> HTMLConstructionSite::createHTMLElementOrFindCustomElementInterface(AtomHTMLToken& token)
 {
     // FIXME: This can't use HTMLConstructionSite::createElement because we
@@ -809,13 +826,15 @@ std::tuple<RefPtr<HTMLElement>, RefPtr<JSCustomElementInterface>, RefPtr<CustomE
     bool insideTemplateElement = !ownerDocument->frame();
     RefPtr element = HTMLElementFactory::createKnownElement(token.tagName(), ownerDocument, insideTemplateElement ? nullptr : form(), true);
     if (UNLIKELY(!element)) {
-        RefPtr<CustomElementRegistry> registry = treeScope->customElementRegistry();
+        RefPtr<CustomElementRegistry> registry = m_openElements.stackDepth() > 1 ? registryForCurrentNode(currentNode(), treeScope) : m_registry;
         auto* elementInterface = registry ? registry->findInterface(token.name()) : nullptr;
         if (UNLIKELY(elementInterface)) {
             if (!m_isParsingFragment)
                 return { nullptr, elementInterface, WTFMove(registry) };
             ASSERT(qualifiedNameForHTMLTag(token) == elementInterface->name());
             element = elementInterface->createElement(ownerDocument);
+            if (UNLIKELY(registry->isScoped()))
+                CustomElementRegistry::addToScopedCustomElementRegistryMap(*element, *registry);
             element->setIsCustomElementUpgradeCandidate();
             element->enqueueToUpgrade(*elementInterface);
         } else {
@@ -826,6 +845,8 @@ std::tuple<RefPtr<HTMLElement>, RefPtr<JSCustomElementInterface>, RefPtr<CustomE
             } else
                 element = HTMLUnknownElement::create(qualifiedName, ownerDocument);
         }
+        if (!registry)
+            element->setUsesNullCustomElementRegistry();
     }
     ASSERT(element);
 

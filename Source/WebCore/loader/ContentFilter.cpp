@@ -359,7 +359,7 @@ void ContentFilter::handleProvisionalLoadFailure(const ResourceError& error)
 void ContentFilter::deliverStoredResourceData()
 {
     for (auto& buffer : m_buffers)
-        deliverResourceData(*buffer.buffer, buffer.encodedDataLength);
+        deliverResourceData(Ref { *buffer.buffer }, buffer.encodedDataLength);
     m_buffers.clear();
 }
 
@@ -369,6 +369,27 @@ void ContentFilter::setHostProcessAuditToken(const std::optional<audit_token_t>&
     for (auto& contentFilter : m_contentFilters)
         contentFilter->setHostProcessAuditToken(token);
 }
+#endif
+
+#if HAVE(WEBCONTENTRESTRICTIONS)
+
+bool ContentFilter::isWebContentRestrictionsUnblockURL(const URL& url)
+{
+#if PLATFORM(MAC)
+    // FIXME: Remove this when rdar://145714903 is fixed.
+    if (url.host() == "127.0.0.1"_s && url.path() == "/webcontentfilter.override.local"_s)
+        return true;
+#endif
+
+    return url.protocolIs(ContentFilter::urlScheme()) && equalIgnoringASCIICase(url.host(), "unblock"_s);
+}
+
+void ContentFilter::setUsesWebContentRestrictions(bool usesWebContentRestrictions)
+{
+    for (auto& contentFilter : m_contentFilters)
+        contentFilter->setUsesWebContentRestrictions(usesWebContentRestrictions);
+}
+
 #endif
 
 } // namespace WebCore

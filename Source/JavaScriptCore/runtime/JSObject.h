@@ -1156,6 +1156,7 @@ protected:
     ArrayStorage* convertContiguousToArrayStorage(VM&, TransitionKind);
     ArrayStorage* convertContiguousToArrayStorage(VM&);
 
+    void convertToIndexingTypeIfNeeded(VM&, IndexingType);
         
     ArrayStorage* ensureArrayStorageExistsAndEnterDictionaryIndexingMode(VM&);
         

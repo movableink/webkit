@@ -33,6 +33,7 @@ struct WebKit::FrameInfoData {
     Markable<WebCore::FrameIdentifier> frameID;
     Markable<WebCore::FrameIdentifier> parentFrameID;
     Markable<WebCore::ScriptExecutionContextIdentifier> documentID;
+    WebCore::CertificateInfo certificateInfo;
     WTF::ProcessID processID;
     bool isFocused;
     bool errorOccurred;

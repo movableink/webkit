@@ -101,8 +101,7 @@ void dumpAndVerifyGraph(Graph& graph, const char* text, bool forceDump = false)
 {
     GraphDumpMode modeForFinalValidate = DumpGraph;
     if (verboseCompilationEnabled(graph.m_plan.mode()) || forceDump) {
-        dataLog(text, "\n");
-        graph.dump();
+        dataLog(text, "\n", graph);
         modeForFinalValidate = DontDumpGraph;
     }
     if (validationEnabled())
@@ -193,11 +192,9 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         cleanMustHandleValuesIfNecessary();
     }
 
-    if (verboseCompilationEnabled(m_mode) && m_osrEntryBytecodeIndex) {
-        dataLog("\n");
-        dataLog("Compiler must handle OSR entry from ", m_osrEntryBytecodeIndex, " with values: ", m_mustHandleValues, "\n");
-        dataLog("\n");
-    }
+    dataLogLnIf(verboseCompilationEnabled(m_mode) && m_osrEntryBytecodeIndex,
+        "\n",
+        "Compiler must handle OSR entry from ", m_osrEntryBytecodeIndex, " with values: ", m_mustHandleValues, "\n");
 
     Graph dfg(*m_vm, *this);
 
@@ -236,10 +233,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
     if (validationEnabled())
         validate(dfg);
     
-    if (Options::dumpGraphAfterParsing()) {
-        dataLog("Graph after parsing:\n");
-        dfg.dump();
-    }
+    dataLogIf(Options::dumpGraphAfterParsing(), "Graph after parsing:\n", dfg);
 
     RUN_PHASE(performCPSRethreading);
     RUN_PHASE(performUnification);
@@ -402,11 +396,14 @@ Plan::CompilationPath Plan::compileInThreadImpl()
             RUN_PHASE(performCriticalEdgeBreaking);
             RUN_PHASE(performObjectAllocationSinking);
         }
-        if (Options::useValueRepElimination())
+        if (Options::useValueRepElimination()) {
             RUN_PHASE(performValueRepReduction);
+            RUN_PHASE(performStrengthReduction);
+        }
         if (changed) {
             // State-at-tail and state-at-head will be invalid if we did strength reduction since
             // it might increase live ranges.
+            RUN_PHASE(performGlobalCSE);
             RUN_PHASE(performGraphPackingAndLivenessAnalysis);
             RUN_PHASE(performCFA);
             RUN_PHASE(performConstantFolding);
@@ -642,7 +639,7 @@ CompilationResult Plan::finalize()
     return result;
 }
 
-bool Plan::iterateCodeBlocksForGC(AbstractSlotVisitor& visitor, const Function<void(CodeBlock*)>& func)
+bool Plan::iterateCodeBlocksForGC(AbstractSlotVisitor& visitor, NOESCAPE const Function<void(CodeBlock*)>& func)
 {
     if (!Base::iterateCodeBlocksForGC(visitor, func))
         return false;

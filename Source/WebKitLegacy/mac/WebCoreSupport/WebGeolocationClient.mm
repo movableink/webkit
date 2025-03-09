@@ -38,7 +38,6 @@
 #import <WebCore/LocalFrame.h>
 #import <wtf/BlockObjCExceptions.h>
 #import <wtf/NakedPtr.h>
-#import <wtf/NakedRef.h>
 #import <wtf/TZoneMallocInlines.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -53,7 +52,7 @@ using namespace WebCore;
 {
     RefPtr<Geolocation> _geolocation;
 }
-- (id)initWithGeolocation:(NakedRef<Geolocation>)geolocation;
+- (id)initWithGeolocation:(std::reference_wrapper<Geolocation>)geolocation;
 @end
 #else
 @interface WebGeolocationPolicyListener : NSObject <WebAllowDenyPolicyListener>
@@ -70,7 +69,7 @@ using namespace WebCore;
 @private
     RefPtr<Geolocation> m_geolocation;
 }
-- (id)initWithGeolocation:(NakedRef<Geolocation>)geolocation;
+- (id)initWithGeolocation:(std::reference_wrapper<Geolocation>)geolocation;
 @end
 #endif
 
@@ -150,11 +149,11 @@ std::optional<GeolocationPositionData> WebGeolocationClient::lastPosition()
 #if !PLATFORM(IOS_FAMILY)
 @implementation WebGeolocationPolicyListener
 
-- (id)initWithGeolocation:(NakedRef<Geolocation>)geolocation
+- (id)initWithGeolocation:(std::reference_wrapper<Geolocation>)geolocation
 {
     if (!(self = [super init]))
         return nil;
-    _geolocation = geolocation.ptr();
+    _geolocation = &geolocation.get();
     return self;
 }
 
@@ -216,11 +215,11 @@ std::optional<GeolocationPositionData> WebGeolocationClient::lastPosition()
 @end
 
 @implementation WebGeolocationProviderInitializationListener
-- (id)initWithGeolocation:(NakedRef<Geolocation>)geolocation
+- (id)initWithGeolocation:(std::reference_wrapper<Geolocation>)geolocation
 {
     self = [super init];
     if (self)
-        m_geolocation = geolocation.ptr();
+        m_geolocation = &geolocation.get();
     return self;
 }
 

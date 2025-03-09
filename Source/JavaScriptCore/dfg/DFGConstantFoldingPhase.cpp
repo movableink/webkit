@@ -436,6 +436,7 @@ private:
                         if (canFold) {
                             if (m_graph.isWatchingArrayBufferDetachWatchpoint(node)) {
                                 node->setOp(GetUndetachedTypeArrayLength);
+                                node->setArrayMode(arrayMode.withArrayClass(Array::NonArray));
                                 changed = true;
                                 break;
                             }
@@ -1012,18 +1013,11 @@ private:
                 if (m_graph.isWatchingHavingABadTimeWatchpoint(node)) {
                     if (node->child1().useKind() == Int32Use && node->child1()->isInt32Constant()) {
                         int32_t length = node->child1()->asInt32();
-                        if (length >= 0 && length < MIN_ARRAY_STORAGE_CONSTRUCTION_LENGTH) {
-                            switch (node->indexingType()) {
-                            case ALL_DOUBLE_INDEXING_TYPES:
-                            case ALL_INT32_INDEXING_TYPES:
-                            case ALL_CONTIGUOUS_INDEXING_TYPES: {
+                        if (length >= 0
+                            && length < MIN_ARRAY_STORAGE_CONSTRUCTION_LENGTH
+                            && isNewArrayWithConstantSizeIndexingType(node->indexingType())) {
                                 node->convertToNewArrayWithConstantSize(m_graph, length);
                                 changed = true;
-                                break;
-                            }
-                            default:
-                                break;
-                            }
                         }
                     }
                 }
@@ -1430,7 +1424,78 @@ private:
                 break;
             }
 
+            case PurifyNaN: {
+                auto abstractValue = m_state.forNode(node->child1());
+                if (!abstractValue.couldBeType(SpecDoubleImpureNaN)) {
+                    node->convertToIdentityOn(node->child1().node());
+                    changed = true;
+                }
+                break;
+            }
+
+            case ArithAdd: {
+                JSValue left = m_state.forNode(node->child1()).value();
+                JSValue right = m_state.forNode(node->child2()).value();
+                switch (node->binaryUseKind()) {
+                case DoubleRepUse: {
+                    // Addition is subtle with doubles. Zero is not the neutral value, negative zero is:
+                    //    0 + 0 = 0
+                    //    0 + -0 = 0
+                    //    -0 + 0 = 0
+                    //    -0 + -0 = -0
+                    if (left && left.isNumber()) {
+                        if (isNegativeZero(left.asNumber())) {
+                            node->convertToPurifyNaN(node->child2().node());
+                            changed = true;
+                            break;
+                        }
+                    }
+
+                    if (right && right.isNumber()) {
+                        if (isNegativeZero(right.asNumber())) {
+                            node->convertToPurifyNaN(node->child1().node());
+                            changed = true;
+                            break;
+                        }
+                    }
+                    break;
+                }
+                default:
+                    break;
+                }
+                break;
+            }
+
+            case ArithMul: {
+                JSValue left = m_state.forNode(node->child1()).value();
+                JSValue right = m_state.forNode(node->child2()).value();
+                switch (node->binaryUseKind()) {
+                case DoubleRepUse: {
+                    if (left && left.isNumber()) {
+                        if (left.asNumber() == 1) {
+                            node->convertToPurifyNaN(node->child2().node());
+                            changed = true;
+                            break;
+                        }
+                    }
+
+                    if (right && right.isNumber()) {
+                        if (right.asNumber() == 1) {
+                            node->convertToPurifyNaN(node->child1().node());
+                            changed = true;
+                            break;
+                        }
+                    }
+                    break;
+                }
+                default:
+                    break;
+                }
+                break;
+            }
+
             case PhantomNewObject:
+            case PhantomNewArrayWithConstantSize:
             case PhantomNewFunction:
             case PhantomNewGeneratorFunction:
             case PhantomNewAsyncGeneratorFunction:

@@ -108,7 +108,7 @@ NSString *WebExtensionAPIPort::name()
 
 NSDictionary *WebExtensionAPIPort::sender()
 {
-    return m_senderParameters ? toWebAPI(m_senderParameters.value()) : nil;
+    return m_senderParameters ? toWebAPI(m_senderParameters.value(), extensionContext().baseURL()) : nil;
 }
 
 JSValue *WebExtensionAPIPort::error()
@@ -126,12 +126,12 @@ void WebExtensionAPIPort::postMessage(WebFrame& frame, NSString *message, NSStri
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/runtime/Port#postmessage
 
     if (isDisconnected()) {
-        *outExceptionString = toErrorString(nil, nil, @"the port is disconnected");
+        *outExceptionString = toErrorString(nullString(), nullString(), @"the port is disconnected");
         return;
     }
 
     if (message.length > webExtensionMaxMessageLength) {
-        *outExceptionString = toErrorString(nil, @"message", @"it exceeded the maximum allowed length");
+        *outExceptionString = toErrorString(nullString(), @"message", @"it exceeded the maximum allowed length");
         return;
     }
 

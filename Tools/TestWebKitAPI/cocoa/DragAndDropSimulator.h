@@ -112,6 +112,7 @@ typedef NSDictionary<NSNumber *, NSValue *> *ProgressToCGPointValueMap;
 @property (nonatomic, strong) NSArray *externalItemProviders;
 @property (nonatomic, readonly) UIDropProposal *lastKnownDropProposal;
 
+@property (nonatomic, copy) void(^dragProgressMidPointReachedBlock)(void);
 @property (nonatomic, copy) BOOL(^showCustomActionSheetBlock)(_WKActivatedElementInfo *);
 @property (nonatomic, copy) NSArray *(^convertItemProvidersBlock)(NSItemProvider *, NSArray *, NSDictionary *);
 @property (nonatomic, copy) NSArray *(^overridePerformDropBlock)(id <UIDropSession>);
@@ -163,5 +164,15 @@ typedef NSDictionary<NSNumber *, NSValue *> *ProgressToCGPointValueMap;
 @end
 
 #endif // !PLATFORM(MACCATALYST)
+
+#if ENABLE(MODEL_PROCESS)
+@interface DragAndDropSimulator (ModelElementStageMode)
+
+- (void)hitTestForStageModeAt:(CGPoint)hitPoint;
+- (BOOL)awaitingStageModeHitResult;
+- (BOOL)stageModeHitTestValidModel;
+
+@end
+#endif
 
 #endif // ENABLE(DRAG_SUPPORT)

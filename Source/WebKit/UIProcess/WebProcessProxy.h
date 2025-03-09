@@ -32,10 +32,10 @@
 #include "MessageReceiverMap.h"
 #include "NetworkProcessProxy.h"
 #include "ProcessLauncher.h"
-#include "ProcessTerminationReason.h"
 #include "ProcessThrottler.h"
 #include "RemoteWorkerInitializationData.h"
 #include "ResponsivenessTimer.h"
+#include "ScopedActiveMessageReceiveQueue.h"
 #include "SharedPreferencesForWebProcess.h"
 #include "SpeechRecognitionServer.h"
 #include "UserContentControllerIdentifier.h"
@@ -79,6 +79,10 @@
 #include "LogStreamIdentifier.h"
 #endif
 
+#if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
+#include "ServiceWorkerDebuggableProxy.h"
+#endif
+
 namespace API {
 class Navigation;
 class PageConfiguration;
@@ -87,6 +91,7 @@ class PageConfiguration;
 namespace WebCore {
 class DeferrableOneShotTimer;
 class ResourceRequest;
+struct CryptoKeyData;
 struct NotificationData;
 struct PluginInfo;
 struct PrewarmInformation;
@@ -116,6 +121,7 @@ class SuspendedPageProxy;
 class UserMediaCaptureManagerProxy;
 class VisitedLinkStore;
 class WebBackForwardListItem;
+class WebCompiledContentRuleList;
 class WebCompiledContentRuleListData;
 class WebFrameProxy;
 class WebLockRegistryProxy;
@@ -135,6 +141,7 @@ struct WebPageCreationParameters;
 struct WebPreferencesStore;
 struct WebsiteData;
 
+enum class ProcessTerminationReason : uint8_t;
 enum class ProcessThrottleState : uint8_t;
 enum class RemoteWorkerType : uint8_t;
 enum class WebsiteDataType : uint32_t;
@@ -175,7 +182,7 @@ public:
 
     ~WebProcessProxy();
 
-    static void forWebPagesWithOrigin(PAL::SessionID, const WebCore::SecurityOriginData&, const Function<void(WebPageProxy&)>&);
+    static void forWebPagesWithOrigin(PAL::SessionID, const WebCore::SecurityOriginData&, NOESCAPE const Function<void(WebPageProxy&)>&);
     static Vector<std::pair<WebCore::ProcessIdentifier, WebCore::RegistrableDomain>> allowedFirstPartiesForCookies();
 
     void initializeWebProcess(WebProcessCreationParameters&&);
@@ -190,7 +197,7 @@ public:
 
     std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const { return m_sharedPreferencesForWebProcess; }
     SharedPreferencesForWebProcess sharedPreferencesForWebProcessValue() const { return m_sharedPreferencesForWebProcess; }
-    std::optional<SharedPreferencesForWebProcess> updateSharedPreferencesForWebProcess(const WebPreferencesStore&);
+    std::optional<SharedPreferencesForWebProcess> updateSharedPreferences(const WebPreferencesStore&);
     void didSyncSharedPreferencesForWebProcessWithNetworkProcess(uint64_t syncedPreferencesVersion);
 #if ENABLE(GPU_PROCESS)
     void didSyncSharedPreferencesForWebProcessWithGPUProcess(uint64_t syncedPreferencesVersion);
@@ -249,6 +256,10 @@ public:
 
     void activePagesDomainsForTesting(CompletionHandler<void(Vector<String>&&)>&&); // This is what is reported to ActivityMonitor.
 
+#if ENABLE(NOTIFY_BLOCKING)
+    void getNotifyStateForTesting(const String&, CompletionHandler<void(std::optional<uint64_t>)>&&);
+#endif
+
     bool isRunningServiceWorkers() const { return !!m_serviceWorkerInformation; }
     bool isStandaloneServiceWorkerProcess() const { return isRunningServiceWorkers() && !pageCount(); }
     bool isRunningSharedWorkers() const { return !!m_sharedWorkerInformation; }
@@ -303,6 +314,9 @@ public:
     void deleteWebsiteDataForOrigins(PAL::SessionID, OptionSet<WebsiteDataType>, const Vector<WebCore::SecurityOriginData>&, CompletionHandler<void()>&&);
 
     void setThirdPartyCookieBlockingMode(WebCore::ThirdPartyCookieBlockingMode, CompletionHandler<void()>&&);
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+    void setOptInCookiePartitioningEnabled(bool);
+#endif
 
     void enableSuddenTermination();
     void disableSuddenTermination();
@@ -485,6 +499,7 @@ public:
 #endif
     void getNotifications(const URL&, const String&, CompletionHandler<void(Vector<WebCore::NotificationData>&&)>&&);
     void wrapCryptoKey(Vector<uint8_t>&&, CompletionHandler<void(std::optional<Vector<uint8_t>>&&)>&&);
+    void serializeAndWrapCryptoKey(WebCore::CryptoKeyData&&, CompletionHandler<void(std::optional<Vector<uint8_t>>&&)>&&);
     void unwrapCryptoKey(WebCore::WrappedCryptoKey&&, CompletionHandler<void(std::optional<Vector<uint8_t>>&&)>&&);
 
     void setAppBadge(std::optional<WebPageProxyIdentifier>, const WebCore::SecurityOriginData&, std::optional<uint64_t> badge);
@@ -524,6 +539,20 @@ public:
 #endif
 
     bool isAlwaysOnLoggingAllowed() const;
+
+    bool shouldRegisterServiceWorkerClients(const WebCore::Site&, PAL::SessionID) const;
+    void registerServiceWorkerClients(CompletionHandler<void()>&&);
+    void resetHasRegisteredServiceWorkerClients() { m_hasRegisteredServiceWorkerClients = false; }
+
+#if HAVE(AUDIT_TOKEN)
+    HashMap<WebCore::PageIdentifier, CoreIPCAuditToken> presentingApplicationAuditTokens() const;
+#endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    void requestResourceMonitorRuleLists();
+    void setResourceMonitorRuleListsIfRequired(RefPtr<WebCompiledContentRuleList>);
+    void setResourceMonitorRuleLists(RefPtr<WebCompiledContentRuleList>, CompletionHandler<void()>&&);
+#endif
 
 private:
     Type type() const final { return Type::WebContent; }
@@ -568,15 +597,13 @@ private:
     void platformInitialize();
     void platformDestroy();
 
+    ProcessTerminationReason terminationReason() const;
+
     // IPC message handlers.
-    void updateBackForwardItem(Ref<FrameState>&&);
     void didDestroyUserGestureToken(WebCore::PageIdentifier, WebCore::UserGestureTokenIdentifier);
 
     bool canBeAddedToWebProcessCache() const;
     void shouldTerminate(CompletionHandler<void(bool)>&&);
-
-    bool hasProvisionalPageWithID(WebPageProxyIdentifier) const;
-    bool isAllowedToUpdateBackForwardItem(WebBackForwardListItem&) const;
     
     void getNetworkProcessConnection(CompletionHandler<void(NetworkProcessConnectionInfo&&)>&&);
 
@@ -643,12 +670,16 @@ private:
 
     void updateRuntimeStatistics();
     void enableMediaPlaybackIfNecessary();
-
-    void updateSharedWorkerProcessAssertion();
-    void updateServiceWorkerProcessAssertion();
+    void sharedPreferencesDidChange();
 
 #if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
     void setupLogStream(uint32_t pid, IPC::StreamServerConnectionHandle&&, LogStreamIdentifier, CompletionHandler<void(IPC::Semaphore& streamWakeUpSemaphore, IPC::Semaphore& streamClientWaitSemaphore)>&&);
+#endif
+
+#if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
+    void createServiceWorkerDebuggable(WebCore::ServiceWorkerIdentifier, URL&&);
+    void deleteServiceWorkerDebuggable(WebCore::ServiceWorkerIdentifier);
+    void sendMessageToInspector(WebCore::ServiceWorkerIdentifier, String&& message);
 #endif
 
     enum class IsWeak : bool { No, Yes };
@@ -756,10 +787,10 @@ private:
         RemoteWorkerInitializationData initializationData;
         RefPtr<ProcessThrottler::Activity> activity;
         WeakHashSet<WebProcessProxy> clientProcesses;
-        bool hasBackgroundProcessing { false };
     };
     std::optional<RemoteWorkerInformation> m_serviceWorkerInformation;
     std::optional<RemoteWorkerInformation> m_sharedWorkerInformation;
+    bool m_hasServiceWorkerBackgroundProcessing { false };
 
     struct AudibleMediaActivity {
         Ref<ProcessAssertion> assertion;
@@ -813,8 +844,18 @@ private:
     Seconds m_totalSuspendedTime;
     WebCore::ProcessIdentity m_processIdentity;
 
+    bool m_hasRegisteredServiceWorkerClients { true };
+
 #if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
-    LogStream m_logStream;
+    IPC::ScopedActiveMessageReceiveQueue<LogStream> m_logStream;
+#endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    bool m_resourceMonitorRuleListRequestedBySomePage { false };
+    RefPtr<WebCompiledContentRuleList> m_resourceMonitorRuleList;
+#endif
+#if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
+    HashMap<WebCore::ServiceWorkerIdentifier, Ref<ServiceWorkerDebuggableProxy>> m_serviceWorkerDebuggableProxies;
 #endif
 };
 

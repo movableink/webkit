@@ -113,11 +113,13 @@ public:
     bool syncAnimations(MonotonicTime);
     WEBCORE_EXPORT bool descendantsOrSelfHaveRunningAnimations() const;
 
+    WEBCORE_EXPORT void prepareForPainting(TextureMapper&);
     WEBCORE_EXPORT void paint(TextureMapper&);
 
     void addChild(TextureMapperLayer*);
 
 #if ENABLE(DAMAGE_TRACKING)
+    void setDamagePropagation(bool enabled) { m_damagePropagation = enabled; }
     void setDamage(const Damage&);
     void collectDamage(TextureMapper&, Damage&);
 #endif
@@ -144,7 +146,7 @@ private:
 
     void processDescendantLayersFlatteningRequirements();
     void processFlatteningRequirements();
-    void computeFlattenedRegion(Region&, bool);
+    void computeFlattenedRegion(Region&, bool) const;
     void destroyFlattenedDescendantLayers();
 
     struct ComputeTransformData;
@@ -166,6 +168,7 @@ private:
         Region& nonOverlapRegion;
     };
     void computeOverlapRegions(ComputeOverlapRegionData&, const TransformationMatrix&, bool includesReplica = true);
+    Vector<IntRect, 1> computeConsolidatedOverlapRegionRects(TextureMapperPaintOptions&);
 
     void paintRecursive(TextureMapperPaintOptions&);
     void paintFlattened(TextureMapperPaintOptions&);
@@ -184,9 +187,13 @@ private:
     void collect3DRenderingContextLayers(Vector<TextureMapperLayer*>&);
 
 #if ENABLE(DAMAGE_TRACKING)
+    bool canInferDamage() const { return m_damagePropagation && !m_receivedDamage.isInvalid(); }
     void collectDamageRecursive(TextureMapperPaintOptions&, Damage&);
+    void collectDamageSelfAndChildren(TextureMapperPaintOptions&, Damage&);
     void collectDamageSelf(TextureMapperPaintOptions&, Damage&);
-    FloatRect transformRectForDamage(const FloatRect&, const TransformationMatrix&, const TextureMapperPaintOptions&);
+    void collectDamageSelfChildrenReplicaFilterAndMask(TextureMapperPaintOptions&, Damage&);
+    void collectDamageSelfChildrenFilterAndMask(TextureMapperPaintOptions&, Damage&);
+    void damageWholeLayerDueToTransformChange(const TransformationMatrix& beforeChange, const TransformationMatrix& afterChange);
 #endif
 
     bool isVisible() const;
@@ -196,6 +203,7 @@ private:
     bool flattensAsLeafOf3DSceneOr3DPerspective() const;
 
     bool preserves3D() const { return m_state.preserves3D; }
+    bool isLeafOf3DRenderingContext() const { return !m_state.preserves3D && (m_parent && m_parent->preserves3D()); }
     bool isFlattened() const { return !!m_flattenedLayer; }
     bool hasMask() const { return !!m_state.maskLayer; }
     bool hasBackdrop() const  { return !!m_state.backdropLayer; }
@@ -277,7 +285,11 @@ private:
     bool m_isReplica { false };
 
 #if ENABLE(DAMAGE_TRACKING)
-    Damage m_damage;
+    bool m_damagePropagation { false };
+    Damage m_receivedDamage; // In layer coordinate space.
+    Damage m_inferredLayerDamage; // In layer coordinate space.
+    Damage m_inferredGlobalDamage; // In global coordinate space.
+    FloatRect m_accumulatedOverlapRegionDamage;
 #endif
 
     struct {

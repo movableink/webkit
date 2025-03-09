@@ -442,7 +442,7 @@ public:
     bool isRenderFrame() const { return type() == Type::Frame; }
     bool isRenderFrameSet() const { return type() == Type::FrameSet; }
     virtual bool isImage() const { return false; }
-    virtual bool isInlineBlockOrInlineTable() const { return false; }
+    virtual bool isNonReplacedAtomicInline() const { return false; }
     bool isRenderListBox() const { return type() == Type::ListBox; }
     bool isRenderListItem() const { return type() == Type::ListItem; }
     bool isRenderListMarker() const { return type() == Type::ListMarker; }
@@ -649,7 +649,7 @@ public:
     // rest of the rendering tree will move to a similar model.
     virtual bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction);
 
-    virtual bool hasIntrinsicAspectRatio() const { return isReplacedOrInlineBlock() && (isImage() || isRenderVideo() || isRenderHTMLCanvas() || isRenderViewTransitionCapture()); }
+    virtual bool hasIntrinsicAspectRatio() const { return isReplacedOrAtomicInline() && (isImage() || isRenderVideo() || isRenderHTMLCanvas() || isRenderViewTransitionCapture()); }
     bool isAnonymous() const { return m_typeFlags.contains(TypeFlag::IsAnonymous); }
     bool isAnonymousBlock() const;
     bool isAnonymousForPercentageResolution() const { return isAnonymous() && !isViewTransitionPseudo(); }
@@ -678,7 +678,7 @@ public:
     bool isRenderTableRow() const { return type() == Type::TableRow; }
     bool isRenderView() const  { return type() == Type::View; }
     bool isInline() const { return !m_stateBitfields.hasFlag(StateFlag::IsBlock); } // inline object
-    bool isReplacedOrInlineBlock() const { return m_stateBitfields.hasFlag(StateFlag::IsReplacedOrInlineBlock); }
+    bool isReplacedOrAtomicInline() const { return m_stateBitfields.hasFlag(StateFlag::IsReplacedOrAtomicInline); }
     bool isHorizontalWritingMode() const { return !m_stateBitfields.hasFlag(StateFlag::VerticalWritingMode); }
 
     bool hasReflection() const { return hasRareData() && rareData().hasReflection; }
@@ -752,6 +752,7 @@ public:
     RefPtr<Node> protectedNode() const { return node(); }
 
     Node* nonPseudoNode() const { return isPseudoElement() ? nullptr : node(); }
+    RefPtr<Node> protectedNonPseudoNode() const { return nonPseudoNode(); }
 
     // Returns the styled node that caused the generation of this renderer.
     // This is the same as node() except for renderers of :before and :after
@@ -761,9 +762,11 @@ public:
     Document& document() const { return m_node.get().document(); }
     inline Ref<Document> protectedDocument() const; // Defined in RenderObjectInlines.h.
     TreeScope& treeScopeForSVGReferences() const { return m_node.get().treeScopeForSVGReferences(); }
+    Ref<TreeScope> protectedTreeScopeForSVGReferences() const { return treeScopeForSVGReferences(); }
     LocalFrame& frame() const;
     Ref<LocalFrame> protectedFrame() const { return frame(); }
     Page& page() const;
+    Ref<Page> protectedPage() const;
     Settings& settings() const { return page().settings(); }
 
     // Returns the object containing this one. Can be different from parent for positioned elements.
@@ -793,7 +796,7 @@ public:
     void invalidateBackgroundObscurationStatus();
     virtual bool computeBackgroundIsKnownToBeObscured(const LayoutPoint&) { return false; }
 
-    void setReplacedOrInlineBlock(bool b = true) { m_stateBitfields.setFlag(StateFlag::IsReplacedOrInlineBlock, b); }
+    void setReplacedOrAtomicInline(bool b = true) { m_stateBitfields.setFlag(StateFlag::IsReplacedOrAtomicInline, b); }
     void setHorizontalWritingMode(bool b = true) { m_stateBitfields.setFlag(StateFlag::VerticalWritingMode, !b); }
     void setHasNonVisibleOverflow(bool b = true) { m_stateBitfields.setFlag(StateFlag::HasNonVisibleOverflow, b); }
     void setHasLayer(bool b = true) { m_stateBitfields.setFlag(StateFlag::HasLayer, b); }
@@ -950,7 +953,7 @@ public:
 
     struct RepaintRects {
         LayoutRect clippedOverflowRect; // Some rect (normally the visual overflow rect) mapped up to the repaint container, respecting clipping.
-        std::optional<LayoutRect> outlineBoundsRect; // A rect repsenting the extent of outlines and shadows, mapped to the repaint container, but not clipped.
+        std::optional<LayoutRect> outlineBoundsRect; // A rect representing the extent of outlines and shadows, mapped to the repaint container, but not clipped.
 
         RepaintRects(LayoutRect rect = { }, const std::optional<LayoutRect>& outlineBounds = { })
             : clippedOverflowRect(rect)
@@ -1054,7 +1057,7 @@ public:
     virtual std::optional<RepaintRects> computeVisibleRectsInContainer(const RepaintRects&, const RenderLayerModelObject* repaintContainer, VisibleRectContext) const;
     virtual std::optional<FloatRect> computeFloatVisibleRectInContainer(const FloatRect&, const RenderLayerModelObject* repaintContainer, VisibleRectContext) const;
 
-    WEBCORE_EXPORT bool hasNonEmptyVisibleRectRespectingParentFrames() const;
+    WEBCORE_EXPORT bool hasEmptyVisibleRectRespectingParentFrames() const;
 
     virtual unsigned length() const { return 1; }
 
@@ -1213,7 +1216,7 @@ private:
 
     enum class StateFlag : uint32_t {
         IsBlock = 1 << 0,
-        IsReplacedOrInlineBlock = 1 << 1,
+        IsReplacedOrAtomicInline = 1 << 1,
         BeingDestroyed = 1 << 2,
         NeedsLayout = 1 << 3,
         NeedsPositionedMovementLayout = 1 << 4,
@@ -1351,6 +1354,11 @@ inline Page& RenderObject::page() const
     // so it's safe to assume Frame::page() is non-null as long as there are live RenderObjects.
     ASSERT(frame().page());
     return *frame().page();
+}
+
+inline Ref<Page> RenderObject::protectedPage() const
+{
+    return page();
 }
 
 inline bool RenderObject::renderTreeBeingDestroyed() const

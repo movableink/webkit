@@ -28,6 +28,7 @@
 #include "JSWrappable.h"
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <wtf/Ref.h>
+#include <wtf/WeakPtr.h>
 
 OBJC_CLASS NSUndoManager;
 OBJC_CLASS NSView;
@@ -71,7 +72,6 @@ public:
 
     void notImplemented() const { RELEASE_ASSERT_NOT_REACHED(); }
 
-    void contextDestroyed();
     virtual void waitForOutstandingCallbacks() { /* notImplemented(); */ }
 
     void makeWindowObject(JSContextRef);
@@ -107,6 +107,8 @@ public:
 
     virtual void setScrollViewKeyboardAvoidanceEnabled(bool) { notImplemented(); }
 
+    virtual void setRubberBandingBehavior(JSStringRef, bool, bool) { notImplemented(); }
+
     virtual std::optional<bool> stableStateOverride() const { notImplemented(); return std::nullopt; }
     virtual void setStableStateOverride(std::optional<bool>) { notImplemented(); }
 
@@ -117,6 +119,10 @@ public:
     virtual void beginInteractiveObscuredInsetsChange() { notImplemented(); }
     virtual void endInteractiveObscuredInsetsChange() { notImplemented(); }
     virtual void setObscuredInsets(double, double, double, double) { notImplemented(); }
+
+    virtual JSObjectRef fixedContainerEdgeColors() const { return nullptr; }
+
+    virtual void cookiesForDomain(JSStringRef, JSValueRef) { notImplemented(); }
 
     // View Parenting and Visibility
 
@@ -177,6 +183,9 @@ public:
     
     virtual JSRetainPtr<JSStringRef> scrollbarStateForScrollingNodeID(unsigned long long, unsigned long long, bool) const { notImplemented(); return nullptr; }
 
+    virtual void setAlwaysBounceVertical(bool) { notImplemented(); }
+    virtual void setAlwaysBounceHorizontal(bool) { notImplemented(); }
+
     // Touches
 
     virtual void touchDownAtPoint(long, long, long, JSValueRef) { notImplemented(); }
@@ -208,6 +217,12 @@ public:
     {
         notImplemented();
         return false;
+    }
+
+    virtual unsigned keyboardUpdateForChangedSelectionCount() const
+    {
+        notImplemented();
+        return 0;
     }
 
     virtual bool isAnimatingDragCancel() const
@@ -423,10 +438,12 @@ public:
     virtual void adjustVisibilityForFrontmostTarget(int, int, JSValueRef) { notImplemented(); }
     virtual void resetVisibilityAdjustments(JSValueRef) { notImplemented(); }
 
+    virtual JSRetainPtr<JSStringRef> frontmostViewAtPoint(int, int) { notImplemented(); return { }; }
+
 protected:
     explicit UIScriptController(UIScriptContext&);
     
-    UIScriptContext* context() { return m_context; }
+    UIScriptContext* context();
 
     virtual void clearAllCallbacks() { /* notImplemented(); */ }
 
@@ -445,7 +462,7 @@ protected:
 
     JSObjectRef objectFromRect(const WebCore::FloatRect&) const;
 
-    UIScriptContext* m_context;
+    WeakPtr<UIScriptContext> m_context;
 
 #if PLATFORM(COCOA)
     bool m_capsLockOn { false };

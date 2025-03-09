@@ -19,6 +19,8 @@
 
 #pragma once
 
+#if HAVE(GL_FENCE)
+
 #include "GLFence.h"
 
 typedef void* EGLSync;
@@ -28,29 +30,24 @@ namespace WebCore {
 class GLFenceEGL final : public GLFence {
 public:
     static std::unique_ptr<GLFence> create();
-    explicit GLFenceEGL(EGLSync);
-
 #if OS(UNIX)
     static std::unique_ptr<GLFence> createExportable();
     static std::unique_ptr<GLFence> importFD(WTF::UnixFileDescriptor&&);
-    GLFenceEGL(EGLSync, bool);
 #endif
-
-    ~GLFenceEGL() final;
+    GLFenceEGL(EGLSync, bool);
+    virtual ~GLFenceEGL();
 
 private:
-    void clientWait() final;
-    void serverWait() final;
-
+    void clientWait() override;
+    void serverWait() override;
 #if OS(UNIX)
-    WTF::UnixFileDescriptor exportFD() final;
+    WTF::UnixFileDescriptor exportFD() override;
 #endif
 
     EGLSync m_sync { nullptr };
-
-#if OS(UNIX)
     bool m_isExportable { false };
-#endif
 };
 
 } // namespace WebCore
+
+#endif // HAVE(GL_FENCE)

@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include "BoundaryPoint.h"
 #include "CaretRectComputation.h"
 #include "InlineIteratorBox.h"
 #include "InlineIteratorLineBox.h"
@@ -71,7 +72,12 @@ public:
     Position positionAtLeftBoundaryOfBiDiRun() const;
     Position positionAtRightBoundaryOfBiDiRun() const;
 
+    bool atLeftmostOffsetInBox() const { return m_box && m_offset == m_box->leftmostCaretOffset(); }
+    bool atRightmostOffsetInBox() const { return m_box && m_offset == m_box->rightmostCaretOffset(); }
+
     IntRect absoluteRect(CaretRectMode = CaretRectMode::Normal) const;
+
+    std::optional<BoundaryPoint> boundaryPoint() const;
 
 private:
     bool operator==(const RenderedPosition&) const { return false; }
@@ -79,8 +85,6 @@ private:
 
     InlineIterator::LeafBoxIterator previousLeafOnLine() const;
     InlineIterator::LeafBoxIterator nextLeafOnLine() const;
-    bool atLeftmostOffsetInBox() const { return m_box && m_offset == m_box->leftmostCaretOffset(); }
-    bool atRightmostOffsetInBox() const { return m_box && m_offset == m_box->rightmostCaretOffset(); }
     bool atLeftBoundaryOfBidiRun(ShouldMatchBidiLevel, unsigned char bidiLevelOfRun) const;
     bool atRightBoundaryOfBidiRun(ShouldMatchBidiLevel, unsigned char bidiLevelOfRun) const;
 

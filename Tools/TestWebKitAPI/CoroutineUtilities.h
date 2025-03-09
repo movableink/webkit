@@ -25,17 +25,7 @@
 
 #pragma once
 
-#if (_LIBCPP_VERSION >= 14000) && !defined(_LIBCPP_HAS_NO_CXX20_COROUTINES)
 #import <coroutine>
-#else
-// FIXME: Remove this once all supported toolchains have non-experimental coroutine support.
-#import <experimental/coroutine>
-namespace std {
-using std::experimental::coroutine_handle;
-using std::experimental::suspend_never;
-using std::experimental::suspend_always;
-}
-#endif
 
 namespace TestWebKitAPI {
 

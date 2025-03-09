@@ -571,6 +571,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     assembler/CPU.h
     assembler/CPUInlines.h
     assembler/CodeLocation.h
+    assembler/DisallowMacroScratchRegisterUsage.h
     assembler/FastJITPermissions.h
     assembler/JITOperationList.h
     assembler/JITOperationValidation.h
@@ -751,7 +752,6 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     heap/IsoMemoryAllocatorBase.h
     heap/IsoSubspace.h
     heap/IsoSubspaceInlines.h
-    heap/IsoSubspacePerVM.h
     heap/LocalAllocator.h
     heap/LocalAllocatorInlines.h
     heap/MachineStackMarker.h
@@ -765,6 +765,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     heap/MutatorState.h
     heap/PackedCellPtr.h
     heap/PreciseAllocation.h
+    heap/PreciseSubspace.h
     heap/RegisterState.h
     heap/RootMarkReason.h
     heap/RunningScope.h
@@ -1019,7 +1020,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/FunctionRareData.h
     runtime/FuzzerAgent.h
     runtime/Gate.h
-    runtime/GenericArguments.h
+    runtime/GenericArgumentsImpl.h
     runtime/GenericOffset.h
     runtime/GenericTypedArrayView.h
     runtime/GenericTypedArrayViewInlines.h
@@ -1145,6 +1146,8 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/MemoryMode.h
     runtime/MemoryStatistics.h
     runtime/Microtask.h
+    runtime/MicrotaskQueue.h
+    runtime/MicrotaskQueueInlines.h
     runtime/ModuleProgramExecutable.h
     runtime/NativeCallee.h
     runtime/NativeExecutable.h
@@ -1395,7 +1398,6 @@ set(JavaScriptCore_INSPECTOR_PROTOCOL_SCRIPTS
 
 set(JavaScriptCore_INSPECTOR_DOMAINS
     ${JAVASCRIPTCORE_DIR}/inspector/protocol/Animation.json
-    ${JAVASCRIPTCORE_DIR}/inspector/protocol/ApplicationCache.json
     ${JAVASCRIPTCORE_DIR}/inspector/protocol/Audit.json
     ${JAVASCRIPTCORE_DIR}/inspector/protocol/Browser.json
     ${JAVASCRIPTCORE_DIR}/inspector/protocol/CPUProfiler.json
@@ -1405,7 +1407,6 @@ set(JavaScriptCore_INSPECTOR_DOMAINS
     ${JAVASCRIPTCORE_DIR}/inspector/protocol/DOM.json
     ${JAVASCRIPTCORE_DIR}/inspector/protocol/DOMDebugger.json
     ${JAVASCRIPTCORE_DIR}/inspector/protocol/DOMStorage.json
-    ${JAVASCRIPTCORE_DIR}/inspector/protocol/Database.json
     ${JAVASCRIPTCORE_DIR}/inspector/protocol/Debugger.json
     ${JAVASCRIPTCORE_DIR}/inspector/protocol/GenericTypes.json
     ${JAVASCRIPTCORE_DIR}/inspector/protocol/Heap.json
@@ -1460,7 +1461,7 @@ set(JavaScriptCore_INTERFACE_DEPENDENCIES
 WEBKIT_FRAMEWORK_DECLARE(JavaScriptCore)
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 
-if (PORT STREQUAL GTK OR PORT STREQUAL WPE OR PORT STREQUAL JSCOnly)
+if (NOT WIN32)
     WEBKIT_ADD_TARGET_CXX_FLAGS(JavaScriptCore
         -Wunsafe-buffer-usage
         -fsafe-buffer-usage-suggestions

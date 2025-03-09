@@ -70,15 +70,8 @@ GCController::GCController()
 
 void GCController::garbageCollectSoon()
 {
-    // We only use reportAbandonedObjectGraph for systems for which there's an implementation
-    // of the garbage collector timers in JavaScriptCore. We wouldn't need this if JavaScriptCore
-    // used a timer implementation from WTF like RunLoop::Timer.
-#if USE(CF) || USE(GLIB) || PLATFORM(QT)
     JSLockHolder lock(commonVM());
     commonVM().heap.reportAbandonedObjectGraph();
-#else
-    garbageCollectNow();
-#endif
 }
 
 void GCController::garbageCollectOnNextRunLoop()
@@ -103,13 +96,9 @@ void GCController::garbageCollectNow()
 
 void GCController::garbageCollectNowIfNotDoneRecently()
 {
-#if USE(CF) || USE(GLIB) || PLATFORM(QT)
     JSLockHolder lock(commonVM());
     if (!commonVM().heap.currentThreadIsDoingGCWork())
         commonVM().heap.collectNowFullIfNotDoneRecently(Async);
-#else
-    garbageCollectNow();
-#endif
 }
 
 void GCController::garbageCollectOnAlternateThreadForDebugging(bool waitUntilDone)
@@ -164,9 +153,9 @@ void GCController::dumpHeapForVM(VM& vm)
 
     CString utf8String = jsonData.utf8();
 
-    FileSystem::writeToFile(fileHandle, utf8String.span());
+    FileSystem::writeToFile(fileHandle, byteCast<uint8_t>(utf8String.span()));
     FileSystem::closeFile(fileHandle);
-    WTFLogAlways("Dumped GC heap to %s%s", tempFilePath.utf8().data(), isMainThread() ? ""_s : " for Worker");
+    WTFLogAlways("Dumped GC heap to %s%s", tempFilePath.utf8().data(), isMainThread() ? "" : " for Worker");
 }
 
 void GCController::dumpHeap()

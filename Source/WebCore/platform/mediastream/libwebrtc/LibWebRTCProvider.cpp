@@ -41,9 +41,7 @@
 #include <dlfcn.h>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 #include <webrtc/api/audio_codecs/builtin_audio_decoder_factory.h>
 #include <webrtc/api/audio_codecs/builtin_audio_encoder_factory.h>
@@ -59,9 +57,7 @@ IGNORE_CLANG_WARNINGS_END
 #include <webrtc/rtc_base/physical_socket_server.h>
 #include <webrtc/rtc_base/task_queue_gcd.h>
 
-ALLOW_COMMA_END
-ALLOW_UNUSED_PARAMETERS_END
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 #include <wtf/Function.h>
 #include <wtf/NeverDestroyed.h>
@@ -81,12 +77,6 @@ LibWebRTCProvider::LibWebRTCProvider()
 LibWebRTCProvider::~LibWebRTCProvider()
 {
 }
-
-#if !PLATFORM(COCOA)
-void WebRTCProvider::setH264HardwareEncoderAllowed(bool)
-{
-}
-#endif
 
 static inline rtc::SocketAddress prepareSocketAddress(const rtc::SocketAddress& address, bool disableNonLocalhostConnections)
 {
@@ -422,13 +412,6 @@ static inline std::optional<cricket::MediaType> typeFromKind(const String& kind)
     return { };
 }
 
-static inline std::optional<uint16_t> toChannels(absl::optional<int> numChannels)
-{
-    if (!numChannels)
-        return { };
-    return static_cast<uint32_t>(*numChannels);
-}
-
 static inline RTCRtpCapabilities toRTCRtpCapabilities(const webrtc::RtpCapabilities& rtpCapabilities)
 {
     RTCRtpCapabilities capabilities;
@@ -443,7 +426,7 @@ static inline RTCRtpCapabilities toRTCRtpCapabilities(const webrtc::RtpCapabilit
         String sdpFmtpLine;
         if (sdpFmtpLineBuilder.length())
             sdpFmtpLine = sdpFmtpLineBuilder.toString();
-        return RTCRtpCodecCapability { fromStdString(codec.mime_type()), static_cast<uint32_t>(codec.clock_rate ? *codec.clock_rate : 0), toChannels(codec.num_channels), WTFMove(sdpFmtpLine) };
+        return RTCRtpCodecCapability { fromStdString(codec.mime_type()), static_cast<uint32_t>(codec.clock_rate ? *codec.clock_rate : 0), codec.num_channels, WTFMove(sdpFmtpLine) };
 
     });
 

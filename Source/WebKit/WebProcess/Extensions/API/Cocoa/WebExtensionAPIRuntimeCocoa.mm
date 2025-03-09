@@ -99,7 +99,7 @@ using ReplyCallbackAggregator = EagerCallbackAggregator<void(id, IsDefaultReply)
 
 namespace WebKit {
 
-JSValue *WebExtensionAPIRuntimeBase::reportError(NSString *errorMessage, JSGlobalContextRef contextRef, Function<void()>&& handler)
+JSValue *WebExtensionAPIRuntimeBase::reportError(NSString *errorMessage, JSGlobalContextRef contextRef, NOESCAPE const Function<void()>& handler)
 {
     ASSERT(errorMessage.length);
     ASSERT(contextRef);
@@ -304,13 +304,13 @@ void WebExtensionAPIRuntime::sendMessage(WebPageProxyIdentifier webPageProxyIden
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/runtime/sendMessage
 
     if (messageJSON.length > webExtensionMaxMessageLength) {
-        *outExceptionString = toErrorString(nil, @"message", @"it exceeded the maximum allowed length");
+        *outExceptionString = toErrorString(nullString(), @"message", @"it exceeded the maximum allowed length");
         return;
     }
 
     auto documentIdentifier = toDocumentIdentifier(frame);
     if (!documentIdentifier) {
-        *outExceptionString = toErrorString(nil, nil, @"an unexpected error occured");
+        *outExceptionString = toErrorString(nullString(), nullString(), @"an unexpected error occured");
         return;
     }
 
@@ -342,7 +342,7 @@ RefPtr<WebExtensionAPIPort> WebExtensionAPIRuntime::connect(WebPageProxyIdentifi
 
     auto documentIdentifier = toDocumentIdentifier(frame);
     if (!documentIdentifier) {
-        *outExceptionString = toErrorString(nil, nil, @"an unexpected error occured");
+        *outExceptionString = toErrorString(nullString(), nullString(), @"an unexpected error occured");
         return nullptr;
     }
 
@@ -411,13 +411,13 @@ void WebExtensionAPIWebPageRuntime::sendMessage(WebPage& page, WebFrame& frame, 
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/runtime/sendMessage
 
     if (messageJSON.length > webExtensionMaxMessageLength) {
-        *outExceptionString = toErrorString(nil, @"message", @"it exceeded the maximum allowed length");
+        *outExceptionString = toErrorString(nullString(), @"message", @"it exceeded the maximum allowed length");
         return;
     }
 
     auto documentIdentifier = toDocumentIdentifier(frame);
     if (!documentIdentifier) {
-        *outExceptionString = toErrorString(nil, nil, @"an unexpected error occured");
+        *outExceptionString = toErrorString(nullString(), nullString(), @"an unexpected error occured");
         return;
     }
 
@@ -461,7 +461,7 @@ RefPtr<WebExtensionAPIPort> WebExtensionAPIWebPageRuntime::connect(WebPage& page
 
     auto documentIdentifier = toDocumentIdentifier(frame);
     if (!documentIdentifier) {
-        *outExceptionString = toErrorString(nil, nil, @"an unexpected error occured");
+        *outExceptionString = toErrorString(nullString(), nullString(), @"an unexpected error occured");
         return nullptr;
     }
 
@@ -562,7 +562,7 @@ WebExtensionAPIEvent& WebExtensionAPIRuntime::onMessageExternal()
     return *m_onMessageExternal;
 }
 
-NSDictionary *toWebAPI(const WebExtensionMessageSenderParameters& parameters)
+NSDictionary *toWebAPI(const WebExtensionMessageSenderParameters& parameters, const URL& baseURL)
 {
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
 
@@ -577,8 +577,15 @@ NSDictionary *toWebAPI(const WebExtensionMessageSenderParameters& parameters)
         result[frameIdKey] = @(toWebAPI(parameters.frameIdentifier.value()));
 
     if (parameters.url.isValid()) {
+        auto securityOrigin = WebCore::SecurityOrigin::create(parameters.url)->toString();
+        auto baseURLOrigin = makeString(baseURL.protocol(), "://"_s, baseURL.host());
+
+        if (equalIgnoringASCIICase(securityOrigin, baseURLOrigin))
+            result[originKey] = (NSString *)baseURLOrigin;
+        else
+            result[originKey] = (NSString *)securityOrigin;
+
         result[urlKey] = (NSString *)parameters.url.string();
-        result[originKey] = (NSString *)WebCore::SecurityOrigin::create(parameters.url)->toString();
     }
 
     if (parameters.documentIdentifier.isValid())
@@ -618,7 +625,7 @@ void WebExtensionContextProxy::internalDispatchRuntimeMessageEvent(WebExtensionC
     }
 
     id message = parseJSON(messageJSON, JSONOptions::FragmentsAllowed);
-    auto *senderInfo = toWebAPI(senderParameters);
+    auto *senderInfo = toWebAPI(senderParameters, baseURL());
     auto sourceContentWorldType = senderParameters.contentWorldType;
 
     auto callbackAggregator = ReplyCallbackAggregator::create([completionHandler = WTFMove(completionHandler)](JSValue *replyMessage, IsDefaultReply defaultReply) mutable {

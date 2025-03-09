@@ -620,6 +620,35 @@ WTF::TextStream& operator<<(WTF::TextStream& ts, const PathRoundedRect& data)
     return ts;
 }
 
+FloatPoint PathContinuousRoundedRect::calculateEndPoint(const FloatPoint&, FloatPoint& lastMoveToPoint) const
+{
+    lastMoveToPoint = rect.location();
+    return lastMoveToPoint;
+}
+
+std::optional<FloatPoint> PathContinuousRoundedRect::tryGetEndPointWithoutContext() const
+{
+    FloatPoint lastMoveToPoint;
+    return calculateEndPoint({ }, lastMoveToPoint);
+}
+
+void PathContinuousRoundedRect::extendFastBoundingRect(const FloatPoint& currentPoint, const FloatPoint& lastMoveToPoint, FloatRect& boundingRect) const
+{
+    extendBoundingRect(currentPoint, lastMoveToPoint, boundingRect);
+}
+
+void PathContinuousRoundedRect::extendBoundingRect(const FloatPoint&, const FloatPoint&, FloatRect& boundingRect) const
+{
+    boundingRect.extend(rect.minXMinYCorner());
+    boundingRect.extend(rect.maxXMaxYCorner());
+}
+
+WTF::TextStream& operator<<(WTF::TextStream& ts, const PathContinuousRoundedRect& data)
+{
+    ts << "add continuous rounded rect " << data.rect << " " << data.cornerWidth << " " << data.cornerHeight;
+    return ts;
+}
+
 FloatPoint PathDataLine::calculateEndPoint(const FloatPoint&, FloatPoint& lastMoveToPoint) const
 {
     lastMoveToPoint = start;

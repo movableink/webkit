@@ -94,7 +94,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'layout-tests',
             'set-build-summary'
         ],
-        'iOS-17-Build-EWS': [
+        'iOS-18-Build-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -109,7 +109,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'validate-change',
             'compile-webkit'
         ],
-        'iOS-17-Simulator-Build-EWS': [
+        'iOS-18-Simulator-Build-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -124,7 +124,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'validate-change',
             'compile-webkit'
         ],
-        'iOS-17-Simulator-WK2-Tests-EWS': [
+        'iOS-18-Simulator-WK2-Tests-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -147,7 +147,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'trigger-crash-log-submission',
             'set-build-summary'
         ],
-        'iOS-17-Simulator-WPT-WK2-Tests-EWS': [
+        'iOS-18-Simulator-WPT-WK2-Tests-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -209,7 +209,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'trigger-crash-log-submission',
             'set-build-summary'
         ],
-        'macOS-Ventura-Release-Build-EWS': [
+        'macOS-Sonoma-Release-Build-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -224,7 +224,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'validate-change',
             'compile-webkit'
         ],
-        'macOS-Ventura-Release-WK1-Tests-EWS': [
+        'macOS-Sonoma-Release-WK1-Tests-EWS': [
             'configure-build',
             'check-change-relevance',
             'validate-change',
@@ -248,7 +248,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'trigger-crash-log-submission',
             'set-build-summary'
         ],
-        'macOS-Ventura-Release-WK2-Tests-EWS': [
+        'macOS-Sonoma-Release-WK2-Tests-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -271,7 +271,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'trigger-crash-log-submission',
             'set-build-summary'
         ],
-        'macOS-Ventura-Release-WK2-Intel-Tests-EWS': [
+        'macOS-Sonoma-Release-WK2-Intel-Tests-EWS': [
             'configure-build',
             'validate-change',
             'configuration',
@@ -311,6 +311,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'checkout-pull-request',
             'kill-old-processes',
             'validate-change',
+            'find-modified-safer-cpp-expectations',
             'scan-build'
         ],
         'macOS-Release-WK2-Stress-Tests-EWS': [
@@ -444,6 +445,22 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'show-identifier',
             'apply-patch',
             'checkout-pull-request',
+            'kill-old-processes',
+            'validate-change',
+            'compile-webkit'
+        ],
+        'PlayStation-Build-EWS': [
+            'configure-build',
+            'validate-change',
+            'configuration',
+            'clean-up-git-repo',
+            'checkout-source',
+            'fetch-branch-references',
+            'checkout-specific-revision',
+            'show-identifier',
+            'apply-patch',
+            'checkout-pull-request',
+            'validate-user-for-queue',
             'kill-old-processes',
             'validate-change',
             'compile-webkit'

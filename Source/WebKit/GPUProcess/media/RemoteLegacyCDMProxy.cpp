@@ -91,8 +91,7 @@ std::optional<SharedPreferencesForWebProcess> RemoteLegacyCDMProxy::sharedPrefer
     if (!m_factory)
         return std::nullopt;
 
-    // FIXME: Remove SUPPRESS_UNCOUNTED_ARG once https://github.com/llvm/llvm-project/pull/111198 lands.
-    SUPPRESS_UNCOUNTED_ARG return m_factory->sharedPreferencesForWebProcess();
+    return m_factory->sharedPreferencesForWebProcess();
 }
 
 }

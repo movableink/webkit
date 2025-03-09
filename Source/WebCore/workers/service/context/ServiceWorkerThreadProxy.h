@@ -41,6 +41,7 @@
 #include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/URLHash.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
@@ -100,6 +101,10 @@ public:
 
     WEBCORE_EXPORT void setInspectable(bool);
 
+#if ENABLE(REMOTE_INSPECTOR) && ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
+    ServiceWorkerDebuggable& remoteDebuggable() { return m_remoteDebuggable; }
+#endif
+
     uint32_t checkedPtrCount() const { return CanMakeThreadSafeCheckedPtr<ServiceWorkerThreadProxy>::checkedPtrCount(); }
     uint32_t checkedPtrCountWithoutThreadCheck() const { return CanMakeThreadSafeCheckedPtr<ServiceWorkerThreadProxy>::checkedPtrCountWithoutThreadCheck(); }
     void incrementCheckedPtrCount() const { CanMakeThreadSafeCheckedPtr<ServiceWorkerThreadProxy>::incrementCheckedPtrCount(); }
@@ -110,6 +115,10 @@ private:
 
     WEBCORE_EXPORT static void networkStateChanged(bool isOnLine);
     bool postTaskForModeToWorkerOrWorkletGlobalScope(ScriptExecutionContext::Task&&, const String& mode);
+
+#if ENABLE(REMOTE_INSPECTOR) && ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
+    void threadStartedRunningDebuggerTasks();
+#endif
 
     // WorkerLoaderProxy
     void postTaskToLoader(ScriptExecutionContext::Task&&) final;
@@ -124,13 +133,13 @@ private:
     // WorkerBadgeProxy
     void setAppBadge(std::optional<uint64_t>) final;
 
-    Ref<Page> m_page;
-    Ref<Document> m_document;
+    const Ref<Page> m_page;
+    const Ref<Document> m_document;
 #if ENABLE(REMOTE_INSPECTOR)
-    Ref<ServiceWorkerDebuggable> m_remoteDebuggable;
+    const Ref<ServiceWorkerDebuggable> m_remoteDebuggable;
 #endif
-    Ref<ServiceWorkerThread> m_serviceWorkerThread;
-    CacheStorageProvider& m_cacheStorageProvider;
+    const Ref<ServiceWorkerThread> m_serviceWorkerThread;
+    WeakRef<CacheStorageProvider> m_cacheStorageProvider;
     RefPtr<CacheStorageConnection> m_cacheStorageConnection;
     bool m_isTerminatingOrTerminated { false };
 

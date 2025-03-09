@@ -31,11 +31,13 @@
 namespace JSC {
 class RegExp;
 class VM;
+class JSValue;
 }
 
 namespace WebCore {
 
 class ScriptExecutionContext;
+struct URLPatternComponentResult;
 enum class EncodingCallbackType : uint8_t;
 template<typename> class ExceptionOr;
 
@@ -46,7 +48,10 @@ class URLPatternComponent {
 public:
     static ExceptionOr<URLPatternComponent> compile(Ref<JSC::VM>, StringView, EncodingCallbackType, const URLPatternStringOptions&);
     const String& patternString() const { return m_patternString; }
+    bool hasRegexGroupsFromPartList() const { return m_hasRegexGroupsFromPartList; }
     bool matchSpecialSchemeProtocol(ScriptExecutionContext&) const;
+    JSC::JSValue componentExec(ScriptExecutionContext&, StringView) const;
+    URLPatternComponentResult createComponentMatchResult(ScriptExecutionContext&, String&& input, const JSC::JSValue& execResult) const;
     URLPatternComponent() = default;
 
 private:
@@ -55,7 +60,7 @@ private:
     String m_patternString;
     JSC::Strong<JSC::RegExp> m_regularExpression;
     Vector<String> m_groupNameList;
-    bool m_hasRegexpGroups = false;
+    bool m_hasRegexGroupsFromPartList { false };
 };
 
 }

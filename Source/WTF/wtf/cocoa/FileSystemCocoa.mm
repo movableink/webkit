@@ -31,7 +31,9 @@
 
 #import <sys/resource.h>
 #import <wtf/SoftLinking.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
+#import <wtf/text/StringCommon.h>
 
 #if HAVE(APFS_CACHEDELETE_PURGEABLE)
 #import <apfs/apfs_fsctl.h>
@@ -76,7 +78,7 @@ String createTemporaryZipArchive(const String& path)
     RetainPtr coordinator = adoptNS([[NSFileCoordinator alloc] initWithFilePresenter:nil]);
     [coordinator coordinateReadingItemAtURL:[NSURL fileURLWithPath:path] options:NSFileCoordinatorReadingWithoutChanges error:nullptr byAccessor:[&](NSURL *newURL) mutable {
         CString archivePath([NSTemporaryDirectory() stringByAppendingPathComponent:@"WebKitGeneratedFileXXXXXX"].fileSystemRepresentation);
-        int fd = mkostemp(archivePath.mutableData(), O_CLOEXEC);
+        int fd = mkostemp(archivePath.mutableSpanIncludingNullTerminator().data(), O_CLOEXEC);
         if (fd == -1)
             return;
         close(fd);
@@ -117,6 +119,14 @@ String extractTemporaryZipArchive(const String& path)
         BOMCopierFree(copier);
     }];
 
+    auto *contentsOfTemporaryDirectory = [NSFileManager.defaultManager contentsOfDirectoryAtPath:temporaryDirectory error:nil];
+    if (contentsOfTemporaryDirectory.count == 1) {
+        auto *subdirectoryPath = [temporaryDirectory stringByAppendingPathComponent:contentsOfTemporaryDirectory.firstObject];
+        BOOL isDirectory;
+        if ([NSFileManager.defaultManager fileExistsAtPath:subdirectoryPath isDirectory:&isDirectory] && isDirectory)
+            temporaryDirectory = subdirectoryPath;
+    }
+
     return temporaryDirectory;
 }
 
@@ -129,7 +139,7 @@ std::pair<String, PlatformFileHandle> openTemporaryFile(StringView prefix, Strin
         return { String(), invalidPlatformFileHandle };
 
     // Shrink the vector.
-    temporaryFilePath.shrink(strlen(temporaryFilePath.data()));
+    temporaryFilePath.shrink(strlenSpan(temporaryFilePath.span()));
 
     ASSERT(temporaryFilePath.last() == '/');
 
@@ -158,23 +168,31 @@ NSString *createTemporaryDirectory(NSString *directoryPrefix)
         return nil;
 
     NSString *tempDirectoryComponent = [directoryPrefix stringByAppendingString:@"-XXXXXXXX"];
-    const char* tempDirectoryCString = [[tempDirectory stringByAppendingPathComponent:tempDirectoryComponent] fileSystemRepresentation];
-    if (!tempDirectoryCString)
+    auto tempDirectorySpanIncludingNullTerminator = unsafeSpanIncludingNullTerminator([[tempDirectory stringByAppendingPathComponent:tempDirectoryComponent] fileSystemRepresentation]);
+    if (tempDirectorySpanIncludingNullTerminator.empty())
         return nil;
 
-    const size_t length = strlen(tempDirectoryCString);
+    const size_t length = tempDirectorySpanIncludingNullTerminator.size() - 1;
     ASSERT(length <= MAXPATHLEN);
     if (length > MAXPATHLEN)
         return nil;
 
-    const size_t lengthPlusNullTerminator = length + 1;
-    Vector<char, MAXPATHLEN + 1> path(lengthPlusNullTerminator);
-    memcpy(path.data(), tempDirectoryCString, lengthPlusNullTerminator);
+    Vector<char, MAXPATHLEN + 1> path(tempDirectorySpanIncludingNullTerminator.size());
+    memcpySpan(path.mutableSpan(), tempDirectorySpanIncludingNullTerminator);
 
     if (!mkdtemp(path.data()))
         return nil;
 
     return [[NSFileManager defaultManager] stringWithFileSystemRepresentation:path.data() length:length];
+}
+
+std::pair<PlatformFileHandle, CString> createTemporaryFileInDirectory(const String& directory, const String& suffix)
+{
+    auto fsSuffix = fileSystemRepresentation(suffix);
+    auto templatePath = pathByAppendingComponents(directory, { StringView { "XXXXXX"_s }, StringView { suffix } });
+    auto fsTemplatePath = fileSystemRepresentation(templatePath);
+    int fd = mkstemps(fsTemplatePath.mutableSpanIncludingNullTerminator().data(), fsSuffix.length());
+    return { fd, WTFMove(fsTemplatePath) };
 }
 
 #ifdef IOPOL_TYPE_VFS_MATERIALIZE_DATALESS_FILES

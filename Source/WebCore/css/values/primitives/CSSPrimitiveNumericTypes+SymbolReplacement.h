@@ -25,9 +25,33 @@
 #pragma once
 
 #include "CSSPrimitiveNumericTypes.h"
+#include "CSSSymbol.h"
+#include <wtf/Brigand.h>
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
+
+class CSSCalcSymbolTable;
+
 namespace CSS {
+
+// MARK: Add/Remove Symbol
+
+// MARK: Transform CSS type list -> CSS type list + Symbol
+
+// Transform `brigand::list<css1, css2, ...>`  -> `brigand::list<css1, css2, ..., symbol>`
+template<typename TypeList> struct PlusSymbolLazy {
+    using type = brigand::append<TypeList, brigand::list<Symbol>>;
+};
+template<typename TypeList> using PlusSymbol = typename PlusSymbolLazy<TypeList>::type;
+
+// MARK: Transform CSS type list + Symbol -> CSS type list - Symbol
+
+// Transform `brigand::list<css1, css2, ..., symbol>`  -> `brigand::list<css1, css2, ...>`
+template<typename TypeList> struct MinusSymbolLazy {
+    using type = brigand::remove_if<TypeList, IsSymbol<brigand::_1>>;
+};
+template<typename TypeList> using MinusSymbol = typename MinusSymbolLazy<TypeList>::type;
 
 // MARK: - Symbol replacement
 
@@ -41,7 +65,7 @@ template<typename T> constexpr auto replaceSymbol(T value, const CSSCalcSymbolTa
     return value;
 }
 
-template<typename... Ts> using TypesMinusSymbol = VariantOrSingle<TypeTransform::List::MinusSymbol<brigand::list<Ts...>>>;
+template<typename... Ts> using TypesMinusSymbol = VariantOrSingle<MinusSymbol<brigand::list<Ts...>>>;
 
 template<typename... Ts> constexpr auto replaceSymbol(const std::variant<Ts...>& component, const CSSCalcSymbolTable& symbolTable) -> TypesMinusSymbol<Ts...>
 {

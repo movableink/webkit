@@ -63,6 +63,13 @@ public:
         : ASCIILiteral()
     { }
 
+    template<size_t length>
+    consteval ASCIILiteral(const char (&literal)[length])
+        : m_charactersWithNullTerminator(unsafeMakeSpan(literal, length))
+    {
+        RELEASE_ASSERT_UNDER_CONSTEXPR_CONTEXT(m_charactersWithNullTerminator[length - 1] == '\0');
+    }
+
     unsigned hash() const;
     constexpr bool isNull() const { return m_charactersWithNullTerminator.empty(); }
 
@@ -103,18 +110,11 @@ private:
     std::span<const char> m_charactersWithNullTerminator;
 };
 
-inline bool operator==(ASCIILiteral a, const char* b)
-{
-    if (!a || !b)
-        return a.characters() == b;
-    return !strcmp(a.characters(), b);
-}
-
 inline bool operator==(ASCIILiteral a, ASCIILiteral b)
 {
     if (!a || !b)
         return a.characters() == b.characters();
-    return !strcmp(a.characters(), b.characters());
+    return equalSpans(a.span(), b.span());
 }
 
 inline unsigned ASCIILiteral::hash() const
@@ -151,7 +151,17 @@ constexpr ASCIILiteral operator""_s(const char* characters, size_t)
     return result;
 }
 
-constexpr std::span<const LChar> operator""_span(const char* characters, size_t n)
+constexpr std::span<const char> operator""_span(const char* characters, size_t n)
+{
+    auto span = unsafeMakeSpan(characters, n);
+#if ASSERT_ENABLED
+    for (size_t i = 0, size = span.size(); i < size; ++i)
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(isASCII(span[i]));
+#endif
+    return span;
+}
+
+constexpr std::span<const LChar> operator""_span8(const char* characters, size_t n)
 {
     auto span = byteCast<LChar>(unsafeMakeSpan(characters, n));
 #if ASSERT_ENABLED
@@ -162,6 +172,9 @@ constexpr std::span<const LChar> operator""_span(const char* characters, size_t 
 }
 
 } // inline StringLiterals
+
+// ASCIILiteral is null terminated
+inline const char* safePrintfType(const ASCIILiteral& asciiLiteral) { return asciiLiteral.characters(); }
 
 } // namespace WTF
 

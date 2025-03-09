@@ -86,8 +86,10 @@ std::optional<ImageBufferBackendHandle> RemoteLayerWithInProcessRenderingBacking
 }
 
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-std::optional<ImageBufferBackendHandle> RemoteLayerWithInProcessRenderingBackingStore::displayListHandle() const
+std::optional<DynamicContentScalingDisplayList> RemoteLayerWithInProcessRenderingBackingStore::displayListHandle() const
 {
+    if (auto list = m_layer->owner()->platformCALayerDynamicContentScalingDisplayList(m_layer.ptr()))
+        return list;
     if (RefPtr frontBuffer = m_bufferSet.m_frontBuffer)
         return frontBuffer->dynamicContentScalingDisplayList();
     return std::nullopt;
@@ -201,18 +203,17 @@ static RefPtr<ImageBuffer> allocateBufferInternal(RemoteLayerBackingStore::Type 
 
 RefPtr<WebCore::ImageBuffer> RemoteLayerWithInProcessRenderingBackingStore::allocateBuffer()
 {
-    auto purpose = m_layer->containsBitmapOnly() ? WebCore::RenderingPurpose::BitmapOnlyLayerBacking : WebCore::RenderingPurpose::LayerBacking;
     ImageBufferCreationContext creationContext;
     creationContext.surfacePool = &WebCore::IOSurfacePool::sharedPoolSingleton();
 
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-    if (m_parameters.includeDisplayList == IncludeDisplayList::Yes) {
+    if (m_parameters.includeDisplayList == WebCore::IncludeDynamicContentScalingDisplayList::Yes) {
         creationContext.dynamicContentScalingResourceCache = ensureDynamicContentScalingResourceCache();
-        return allocateBufferInternal<DynamicContentScalingBifurcatedImageBuffer>(type(), size(), purpose, scale(), colorSpace(), pixelFormat(), creationContext);
+        return allocateBufferInternal<DynamicContentScalingBifurcatedImageBuffer>(type(), size(), RenderingPurpose::LayerBacking, scale(), colorSpace(), pixelFormat(), creationContext);
     }
 #endif
 
-    return allocateBufferInternal<ImageBuffer>(type(), size(), purpose, scale(), colorSpace(), pixelFormat(), creationContext);
+    return allocateBufferInternal<ImageBuffer>(type(), size(), RenderingPurpose::LayerBacking, scale(), colorSpace(), pixelFormat(), creationContext);
 }
 
 void RemoteLayerWithInProcessRenderingBackingStore::ensureFrontBuffer()

@@ -57,12 +57,16 @@ public:
 #endif
 
 #if PLATFORM(COCOA)
+#ifdef __OBJC__
     id platformUIElement() const { return m_element.get(); }
+#endif
 #endif
 
 #if !PLATFORM(COCOA)
     PlatformUIElement platformUIElement() const { return m_element; }
 #endif
+
+    bool hasPlatformUIElement() const { return !!m_element; }
 
     static JSObjectRef makeJSAccessibilityUIElement(JSContextRef, const AccessibilityUIElement&);
 
@@ -219,8 +223,8 @@ public:
     JSRetainPtr<JSStringRef> customContent() const;
 #endif
 
-    // ARIA Drag and Drop
-    bool ariaIsGrabbed() const;
+    // Drag and drop
+    bool isGrabbed() const;
     // A space concatentated string of all the drop effects.
     JSRetainPtr<JSStringRef> ariaDropEffects() const;
     

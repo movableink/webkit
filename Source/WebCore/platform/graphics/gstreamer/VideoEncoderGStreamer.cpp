@@ -27,12 +27,15 @@
 #include "GStreamerRegistryScanner.h"
 #include "VideoEncoderPrivateGStreamer.h"
 #include "VideoFrameGStreamer.h"
-#include <gst/gl/gstglmemory.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WorkQueue.h>
 #include <wtf/text/MakeString.h>
+
+#if USE(GSTREAMER_GL)
+#include <gst/gl/gstglmemory.h>
+#endif
 
 namespace WebCore {
 
@@ -185,8 +188,9 @@ static std::optional<unsigned> retrieveTemporalIndex(const GRefPtr<GstSample>& s
         return gstStructureGet<unsigned>(metaStructure, "layer-id"_s);
     }
 #ifndef GST_DISABLE_GST_DEBUG
-    auto name = gstStructureGetName(structure);
-    GST_TRACE("Retrieval of temporal index from encoded format %s is not yet supported.", reinterpret_cast<const char*>(name.rawCharacters()));
+    auto nameView = gstStructureGetName(structure);
+    auto name = nameView.utf8();
+    GST_TRACE("Retrieval of temporal index from encoded format %s is not yet supported.", name.data());
 #endif
 #endif
     return { };
@@ -299,9 +303,7 @@ bool GStreamerInternalVideoEncoder::encode(VideoEncoder::RawFrame&& rawFrame, bo
     }
 
     auto& gstVideoFrame = downcast<VideoFrameGStreamer>(rawFrame.frame.get());
-
-    // FIXME: The WebRTC encoder doesn't support GL memories ingesting yet, so until then we do a conversion here.
-    return m_harness->pushSample(gstVideoFrame.downloadSample());
+    return m_harness->pushSample(gstVideoFrame.sample());
 }
 
 void GStreamerInternalVideoEncoder::setRates(uint64_t bitRate, double frameRate)

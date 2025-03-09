@@ -133,6 +133,16 @@ struct NetworkSessionCreationParameters {
     std::optional<Vector<std::pair<Vector<uint8_t>, WTF::UUID>>> proxyConfigData;
 #endif
     ResourceLoadStatisticsParameters resourceLoadStatisticsParameters;
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    String resourceMonitorThrottlerDirectory;
+    SandboxExtension::Handle resourceMonitorThrottlerDirectoryExtensionHandle;
+#endif
+#if ENABLE(TLS_1_2_DEFAULT_MINIMUM)
+    bool isLegacyTLSAllowed { false };
+#else
+    bool isLegacyTLSAllowed { true };
+#endif
 };
 
 } // namespace WebKit

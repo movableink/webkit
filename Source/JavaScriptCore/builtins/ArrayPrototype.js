@@ -273,97 +273,6 @@ function findLastIndex(callback /*, thisArg */)
     return -1;
 }
 
-function includes(searchElement /*, fromIndex*/)
-{
-    "use strict";
-
-    var array = @toObject(this, "Array.prototype.includes requires that |this| not be null or undefined");
-    var length = @toLength(array.length);
-
-    if (length === 0)
-        return false;
-
-    var fromIndex = 0;
-    var from = @argument(1);
-    if (from !== @undefined)
-        fromIndex = @toIntegerOrInfinity(from);
-
-    var index;
-    if (fromIndex >= 0)
-        index = fromIndex;
-    else
-        index = length + fromIndex;
-
-    if (index < 0)
-        index = 0;
-
-    var currentElement;
-    for (; index < length; ++index) {
-        currentElement = array[index];
-        // Use SameValueZero comparison, rather than just StrictEquals.
-        if (searchElement === currentElement || (searchElement !== searchElement && currentElement !== currentElement))
-            return true;
-    }
-    return false;
-}
-
-@linkTimeConstant
-function maxWithPositives(a, b)
-{
-    "use strict";
-
-    return (a < b) ? b : a;
-}
-
-@linkTimeConstant
-function minWithMaybeNegativeZeroAndPositive(maybeNegativeZero, positive)
-{
-    "use strict";
-
-    return (maybeNegativeZero < positive) ? maybeNegativeZero : positive;
-}
-
-function copyWithin(target, start /*, end */)
-{
-    "use strict";
-
-    var array = @toObject(this, "Array.prototype.copyWithin requires that |this| not be null or undefined");
-    var length = @toLength(array.length);
-
-    var relativeTarget = @toIntegerOrInfinity(target);
-    var to = (relativeTarget < 0) ? @maxWithPositives(length + relativeTarget, 0) : @minWithMaybeNegativeZeroAndPositive(relativeTarget, length);
-
-    var relativeStart = @toIntegerOrInfinity(start);
-    var from = (relativeStart < 0) ? @maxWithPositives(length + relativeStart, 0) : @minWithMaybeNegativeZeroAndPositive(relativeStart, length);
-
-    var relativeEnd;
-    var end = @argument(2);
-    if (end === @undefined)
-        relativeEnd = length;
-    else
-        relativeEnd = @toIntegerOrInfinity(end);
-
-    var finalValue = (relativeEnd < 0) ? @maxWithPositives(length + relativeEnd, 0) : @minWithMaybeNegativeZeroAndPositive(relativeEnd, length);
-
-    var count = @minWithMaybeNegativeZeroAndPositive(finalValue - from, length - to);
-
-    var direction = 1;
-    if (from < to && to < from + count) {
-        direction = -1;
-        from = from + count - 1;
-        to = to + count - 1;
-    }
-
-    for (var i = 0; i < count; ++i, from += direction, to += direction) {
-        if (from in array)
-            array[to] = array[from];
-        else
-            delete array[to];
-    }
-
-    return array;
-}
-
 @linkTimeConstant
 function flatIntoArray(target, source, sourceLength, targetIndex, depth)
 {
@@ -455,33 +364,6 @@ function at(index)
     return (k >= 0 && k < length) ? array[k] : @undefined;
 }
 
-function toSorted(comparator)
-{
-    "use strict";
-
-    // Step 1.
-    if (comparator !== @undefined && !@isCallable(comparator))
-        @throwTypeError("Array.prototype.toSorted requires the comparator argument to be a function or undefined");
-
-    // Step 2.
-    var array = @toObject(this, "Array.prototype.toSorted requires that |this| not be null or undefined");
-
-    // Step 3.
-    var length = @toLength(array.length);
-
-    // Step 4.
-    var result = @newArrayWithSize(length);
-
-    // Step 8.
-    for (var k = 0; k < length; k++)
-        @putByValDirect(result, k, array[k]);
-
-    // Step 6.
-    @arraySort.@call(result, comparator);
-
-    return result;
-}
-
 function toSpliced(start, deleteCount /*, ...items */)
 {
     "use strict"
@@ -550,47 +432,4 @@ function toSpliced(start, deleteCount /*, ...items */)
 
     return result;
 
-}
-
-function with(index, value)
-{
-    "use strict";
-
-    // Step 1.
-    var array = @toObject(this, "Array.prototype.with requires that |this| not be null or undefined");
-
-    // Step 2.
-    var length = @toLength(array.length);
-
-    // Step 3.
-    var relativeIndex = @toIntegerOrInfinity(index);
-
-    // Step 4-5.
-    var actualIndex;
-    if (relativeIndex >= 0)
-        actualIndex = relativeIndex;
-    else
-        actualIndex = length + relativeIndex;
-
-    // Step 6.
-    if (actualIndex >= length || actualIndex < 0)
-        @throwRangeError("Array index out of Range");
-
-    // Step 7.
-    var fastResult = @arrayFromFastFillWithUndefined(@Array, array);
-    if (fastResult) {
-        @putByValDirect(fastResult, actualIndex, value);
-        return fastResult;
-    }
-    var result = @newArrayWithSize(length);
-
-    // Step 8-9
-    for (var k = 0; k < length; k++) {
-        if (k === actualIndex)
-            @putByValDirect(result, k, value);
-        else
-            @putByValDirect(result, k, array[k]);
-    }
-
-    return result;
 }

@@ -39,8 +39,8 @@ RefPtr<CSSPrimitiveValue> consumeTime(CSSParserTokenRange& range, const CSSParse
         .parserMode = context.mode,
     };
     if (valueRange == ValueRange::All)
-        return CSSPrimitiveValueResolver<CSS::Time<CSS::All>>::consumeAndResolve(range, context, { }, { }, options);
-    return CSSPrimitiveValueResolver<CSS::Time<CSS::Nonnegative>>::consumeAndResolve(range, context, { }, { }, options);
+        return CSSPrimitiveValueResolver<CSS::Time<CSS::All>>::consumeAndResolve(range, context, options);
+    return CSSPrimitiveValueResolver<CSS::Time<CSS::Nonnegative>>::consumeAndResolve(range, context, options);
 }
 
 } // namespace CSSPropertyParserHelpers

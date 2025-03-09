@@ -74,7 +74,7 @@ private:
     CheckedPtr<WebCore::KeyboardScrollingAnimator> checkedKeyboardScrollingAnimator() const;
 #endif
 
-    std::optional<VisiblePDFPosition> pdfPositionForCurrentView(bool preservePosition) const override;
+    std::optional<PDFDocumentLayout::PageIndex> pageIndexForCurrentView(AnchorPoint) const override;
     void restorePDFPosition(const VisiblePDFPosition&) override;
 
     void ensurePageIsVisible(PDFDocumentLayout::PageIndex) override { }
@@ -85,12 +85,15 @@ private:
     float deviceScaleFactor() const override;
     std::optional<float> customContentsScale(const WebCore::GraphicsLayer*) const override;
     bool layerNeedsPlatformContext(const WebCore::GraphicsLayer*) const override;
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    bool layerAllowsDynamicContentScaling(const WebCore::GraphicsLayer*) const override;
+#endif
     void tiledBackingUsageChanged(const WebCore::GraphicsLayer*, bool /*usingTiledBacking*/) override;
     void paintContents(const WebCore::GraphicsLayer*, WebCore::GraphicsContext&, const WebCore::FloatRect&, OptionSet<WebCore::GraphicsLayerPaintBehavior>) override;
 
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
     void paintPDFSelection(const WebCore::GraphicsLayer*, WebCore::GraphicsContext&, const WebCore::FloatRect& clipRect, std::optional<PDFLayoutRow> = { });
-#endif
+
+    std::optional<WebCore::PlatformLayerIdentifier> contentsLayerIdentifier() const final;
 
     void updatePageBackgroundLayers();
     std::optional<PDFDocumentLayout::PageIndex> pageIndexForPageBackgroundLayer(const WebCore::GraphicsLayer*) const;
@@ -100,12 +103,12 @@ private:
 
     void paintBackgroundLayerForPage(const WebCore::GraphicsLayer*, WebCore::GraphicsContext&, const WebCore::FloatRect& clipRect, PDFDocumentLayout::PageIndex);
 
-    void repaintForIncrementalLoad() override;
-    void setNeedsRepaintInDocumentRect(OptionSet<RepaintRequirement>, const WebCore::FloatRect& rectInDocumentCoordinates, std::optional<PDFLayoutRow>) override;
+    Vector<LayerCoverage> layerCoveragesForRepaintPageCoverage(RepaintRequirements, const PDFPageCoverage&) override;
 
     RefPtr<WebCore::GraphicsLayer> m_pageBackgroundsContainerLayer;
     RefPtr<WebCore::GraphicsLayer> m_contentsLayer;
-#if ENABLE(UNIFIED_PDF_SELECTION_LAYER)
+
+#if ENABLE(PDFKIT_PAINTED_SELECTIONS)
     RefPtr<WebCore::GraphicsLayer> m_selectionLayer;
 #endif
 

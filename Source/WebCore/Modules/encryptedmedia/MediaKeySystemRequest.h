@@ -51,10 +51,10 @@ public:
     WEBCORE_EXPORT static Ref<MediaKeySystemRequest> create(Document&, const String& keySystem, Ref<DeferredPromise>&&);
     virtual ~MediaKeySystemRequest();
 
-    void setAllowCallback(CompletionHandler<void(Ref<DeferredPromise>&&)>&& callback) { m_allowCompletionHandler = WTFMove(callback); }
+    void setAllowCallback(CompletionHandler<void(String&& mediaKeysHashSalt, Ref<DeferredPromise>&&)>&& callback) { m_allowCompletionHandler = WTFMove(callback); }
     WEBCORE_EXPORT void start();
 
-    WEBCORE_EXPORT void allow();
+    WEBCORE_EXPORT void allow(String&& mediaKeysHashSalt);
     WEBCORE_EXPORT void deny(const String& errorMessage = emptyString());
 
     WEBCORE_EXPORT SecurityOrigin* topLevelDocumentOrigin() const;
@@ -71,7 +71,7 @@ private:
     String m_keySystem;
     Ref<DeferredPromise> m_promise;
 
-    CompletionHandler<void(Ref<DeferredPromise>&&)> m_allowCompletionHandler;
+    CompletionHandler<void(String&&, Ref<DeferredPromise>&&)> m_allowCompletionHandler;
 };
 
 } // namespace WebCore

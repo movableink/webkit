@@ -68,7 +68,7 @@ private:
             return completionHandler(WTFMove(request));
 
         RetainPtr<NSURLRequest> nsRequest = request.nsURLRequest(WebCore::HTTPBodyUpdatePolicy::DoNotUpdateHTTPBody);
-        [m_delegate download:wrapper(download) willPerformHTTPRedirection:static_cast<NSHTTPURLResponse *>(response.nsURLResponse()) newRequest:nsRequest.get() decisionHandler:makeBlockPtr([request = WTFMove(request), completionHandler = WTFMove(completionHandler), checker = WebKit::CompletionHandlerCallChecker::create(m_delegate.get().get(), @selector(download:willPerformHTTPRedirection:newRequest:decisionHandler:))](WKDownloadRedirectPolicy policy) mutable {
+        [m_delegate download:wrapper(download) willPerformHTTPRedirection:checked_objc_cast<NSHTTPURLResponse>(response.nsURLResponse()) newRequest:nsRequest.get() decisionHandler:makeBlockPtr([request = WTFMove(request), completionHandler = WTFMove(completionHandler), checker = WebKit::CompletionHandlerCallChecker::create(m_delegate.get().get(), @selector(download:willPerformHTTPRedirection:newRequest:decisionHandler:))](WKDownloadRedirectPolicy policy) mutable {
             if (checker->completionHandlerHasBeenCalled())
                 return;
             checker->didCallCompletionHandler();
@@ -131,20 +131,10 @@ private:
             }
 
             NSFileManager *fileManager = [NSFileManager defaultManager];
-            if (![fileManager fileExistsAtPath:[destination URLByDeletingLastPathComponent].path]) {
-                RunLoop::main().dispatch([download] {
-                    download->didFail([NSError errorWithDomain:NSURLErrorDomain code:NSURLErrorCannotCreateFile userInfo:nil], { });
-                });
-                completionHandler(WebKit::AllowOverwrite::No, { });
-                return;
-            }
-            if ([fileManager fileExistsAtPath:destination.path]) {
-                RunLoop::main().dispatch([download] {
-                    download->didFail([NSError errorWithDomain:NSURLErrorDomain code:NSURLErrorCannotCreateFile userInfo:nil], { });
-                });
-                completionHandler(WebKit::AllowOverwrite::No, { });
-                return;
-            }
+            if (![fileManager fileExistsAtPath:[destination URLByDeletingLastPathComponent].path])
+                return completionHandler(WebKit::AllowOverwrite::No, { });
+            if ([fileManager fileExistsAtPath:destination.path])
+                return completionHandler(WebKit::AllowOverwrite::No, { });
 
             wrapper(download.get()).progress.fileURL = destination;
 

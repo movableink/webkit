@@ -28,6 +28,7 @@
 #include "CSSPropertyNames.h"
 #include "CSSValue.h"
 #include "EventTarget.h"
+#include "Length.h"
 #include "TimelineRangeOffset.h"
 #include "WebAnimationTime.h"
 #include <wtf/BitSet.h>
@@ -109,10 +110,18 @@ constexpr OptionSet<AcceleratedEffectProperty> transformRelatedAcceleratedProper
 };
 
 struct CSSPropertiesBitSet {
-    WTF::BitSet<numCSSProperties> m_properties { };
+    WTF::BitSet<cssPropertyIDEnumValueCount> m_properties { };
 };
 
 using TimelineRangeValue = std::variant<TimelineRangeOffset, RefPtr<CSSNumericValue>, RefPtr<CSSKeywordValue>, String>;
+
+enum class Scroller : uint8_t { Nearest, Root, Self };
+
+struct ViewTimelineInsets {
+    std::optional<Length> start;
+    std::optional<Length> end;
+    bool operator==(const ViewTimelineInsets&) const = default;
+};
 
 } // namespace WebCore
 

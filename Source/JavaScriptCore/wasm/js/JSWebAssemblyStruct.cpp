@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "JSWebAssemblyInstance.h"
 #include "WasmFormat.h"
 #include "WasmModuleInformation.h"
+#include <wtf/ScopedPrintStream.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -44,35 +45,22 @@ Structure* JSWebAssemblyStruct::createStructure(VM& vm, JSGlobalObject* globalOb
     return Structure::create(vm, globalObject, prototype, TypeInfo(WebAssemblyGCObjectType, StructureFlags), info());
 }
 
-JSWebAssemblyStruct::JSWebAssemblyStruct(VM& vm, Structure* structure, Ref<const Wasm::TypeDefinition>&& type, RefPtr<const Wasm::RTT> rtt)
-    : Base(vm, structure, rtt)
+JSWebAssemblyStruct::JSWebAssemblyStruct(VM& vm, Structure* structure, Ref<const Wasm::TypeDefinition>&& type, RefPtr<const Wasm::RTT>&& rtt)
+    : Base(vm, structure, WTFMove(rtt))
+    , TrailingArrayType(type->as<Wasm::StructType>()->instancePayloadSize())
     , m_type(WTFMove(type))
-    , m_payload(structType()->instancePayloadSize(), 0)
 {
+    // FIXME: It would be nice to not do this but we need to zero the memory otherwise we would have to be extremely careful to avoid visiting this object before the mutator initializes all the fields.
+    memsetSpan(span(), 0);
 }
 
-JSWebAssemblyStruct* JSWebAssemblyStruct::tryCreate(JSGlobalObject* globalObject, Structure* structure, JSWebAssemblyInstance* instance, uint32_t typeIndex, RefPtr<const Wasm::RTT> rtt)
+JSWebAssemblyStruct* JSWebAssemblyStruct::create(VM& vm, Structure* structure, JSWebAssemblyInstance* instance, uint32_t typeIndex, RefPtr<const Wasm::RTT>&& rtt)
 {
-    VM& vm = globalObject->vm();
-
-    Ref<const Wasm::TypeDefinition> type = instance->module().moduleInformation().typeSignatures[typeIndex]->expand();
-
-    void* buffer = tryAllocateCell<JSWebAssemblyStruct>(vm);
-    if (UNLIKELY(!buffer))
-        return nullptr;
-    auto* structValue = new (NotNull, buffer) JSWebAssemblyStruct(vm, structure, Ref { type }, rtt);
+    Ref type = instance->module().moduleInformation().typeSignatures[typeIndex]->expand();
+    auto* structType = type->as<Wasm::StructType>();
+    auto* structValue = new (NotNull, allocateCell<JSWebAssemblyStruct>(vm, TrailingArrayType::allocationSize(structType->instancePayloadSize()))) JSWebAssemblyStruct(vm, structure, WTFMove(type), WTFMove(rtt));
     structValue->finishCreation(vm);
     return structValue;
-}
-
-const uint8_t* JSWebAssemblyStruct::fieldPointer(uint32_t fieldIndex) const
-{
-    return m_payload.span().data() + structType()->offsetOfFieldInternal(fieldIndex);
-}
-
-uint8_t* JSWebAssemblyStruct::fieldPointer(uint32_t fieldIndex)
-{
-    return const_cast<uint8_t*>(const_cast<const JSWebAssemblyStruct*>(this)->fieldPointer(fieldIndex));
 }
 
 uint64_t JSWebAssemblyStruct::get(uint32_t fieldIndex) const
@@ -161,6 +149,7 @@ void JSWebAssemblyStruct::set(uint32_t fieldIndex, uint64_t argument)
     case TypeKind::Exn:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
+    case TypeKind::Nullexn:
     case TypeKind::Nullref:
     case TypeKind::Nullfuncref:
     case TypeKind::Nullexternref:
@@ -186,9 +175,21 @@ void JSWebAssemblyStruct::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     Base::visitChildren(cell, visitor);
 
     auto* wasmStruct = jsCast<JSWebAssemblyStruct*>(cell);
-    for (unsigned i = 0; i < wasmStruct->structType()->fieldCount(); ++i) {
-        if (isRefType(wasmStruct->fieldType(i).type))
+    if (!wasmStruct->structType().hasRefFieldTypes()) {
+#if ASSERT_ENABLED
+        for (unsigned i = 0; i < wasmStruct->structType().fieldCount(); ++i)
+            ASSERT(!isRefType(wasmStruct->fieldType(i).type));
+#endif
+        return;
+    }
+
+    for (unsigned i = 0; i < wasmStruct->structType().fieldCount(); ++i) {
+        auto fieldType = wasmStruct->fieldType(i).type;
+        if (isRefType(fieldType)) {
+            auto* writeBarrier = std::bit_cast<WriteBarrier<Unknown>*>(wasmStruct->fieldPointer(i));
+            validateWasmValue(JSValue::encode(writeBarrier->get()), fieldType.unpacked());
             visitor.append(*std::bit_cast<WriteBarrier<Unknown>*>(wasmStruct->fieldPointer(i)));
+        }
     }
 }
 

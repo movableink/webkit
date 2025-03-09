@@ -425,34 +425,34 @@ void WebPaymentCoordinatorProxy::platformSetPaymentRequestUserAgent(PKPaymentReq
 
 void WebPaymentCoordinatorProxy::platformCompletePaymentSession(WebCore::ApplePayPaymentAuthorizationResult&& result)
 {
-    m_authorizationPresenter->completePaymentSession(WTFMove(result));
+    protectedAuthorizationPresenter()->completePaymentSession(WTFMove(result));
 }
 
 void WebPaymentCoordinatorProxy::platformCompleteMerchantValidation(const WebCore::PaymentMerchantSession& paymentMerchantSession)
 {
-    m_authorizationPresenter->completeMerchantValidation(paymentMerchantSession);
+    protectedAuthorizationPresenter()->completeMerchantValidation(paymentMerchantSession);
 }
 
 void WebPaymentCoordinatorProxy::platformCompleteShippingMethodSelection(std::optional<WebCore::ApplePayShippingMethodUpdate>&& update)
 {
-    m_authorizationPresenter->completeShippingMethodSelection(WTFMove(update));
+    protectedAuthorizationPresenter()->completeShippingMethodSelection(WTFMove(update));
 }
 
 void WebPaymentCoordinatorProxy::platformCompleteShippingContactSelection(std::optional<WebCore::ApplePayShippingContactUpdate>&& update)
 {
-    m_authorizationPresenter->completeShippingContactSelection(WTFMove(update));
+    protectedAuthorizationPresenter()->completeShippingContactSelection(WTFMove(update));
 }
 
 void WebPaymentCoordinatorProxy::platformCompletePaymentMethodSelection(std::optional<WebCore::ApplePayPaymentMethodUpdate>&& update)
 {
-    m_authorizationPresenter->completePaymentMethodSelection(WTFMove(update));
+    protectedAuthorizationPresenter()->completePaymentMethodSelection(WTFMove(update));
 }
 
 #if ENABLE(APPLE_PAY_COUPON_CODE)
 
 void WebPaymentCoordinatorProxy::platformCompleteCouponCodeChange(std::optional<WebCore::ApplePayCouponCodeUpdate>&& update)
 {
-    m_authorizationPresenter->completeCouponCodeChange(WTFMove(update));
+    protectedAuthorizationPresenter()->completeCouponCodeChange(WTFMove(update));
 }
 
 #endif // ENABLE(APPLE_PAY_COUPON_CODE)
@@ -540,7 +540,7 @@ void WebPaymentCoordinatorProxy::platformBeginApplePaySetup(const PaymentSetupCo
     }
 
     auto completion = makeBlockPtr([reply = WTFMove(reply)]() mutable {
-        RunLoop::main().dispatch([reply = WTFMove(reply)]() mutable {
+        RunLoop::protectedMain()->dispatch([reply = WTFMove(reply)]() mutable {
             reply(true);
         });
     });

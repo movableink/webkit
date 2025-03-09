@@ -1,0 +1,39 @@
+{
+    "domain": "BidiBrowsingContext",
+    "description": "The browsingContext module contains commands and events relating to navigables.",
+    "condition": "ENABLE(WEBDRIVER_BIDI)",
+    "types": [
+        {
+            "id": "BrowsingContext",
+            "type": "string",
+            "description": "A unique identifier for a navigable."
+        },
+        {
+            "id": "Navigation",
+            "type": "string",
+            "description": "Unique string identifying an ongoing navigation."
+        },
+        {
+            "id": "ReadinessState",
+            "type": "string",
+            "description": "Represents the stage of document loading at which a navigation command will return.",
+            "enum": ["none", "interactive", "complete"]
+        }
+    ],
+    "commands": [
+        {
+            "name": "navigate",
+            "description": "Navigates a navigable to the given URL.",
+            "parameters": [
+                { "name": "context", "$ref": "BrowsingContext", "description": "The identifier of the browsing context to navigate." },
+                { "name": "url", "type": "string", "description": "The URL to navigate to." },
+                { "name": "wait", "$ref": "ReadinessState", "optional": true, "description": "The readiness state at which the command will return (default is 'none')." }
+            ],
+            "returns": [
+                { "name": "url", "type": "string", "description": "The URL the browsing context navigated to." },
+                { "name": "navigation", "$ref": "Navigation", "optional": true, "description": "The navigation ID, or null if not applicable." }
+            ],
+            "async": true
+        }
+    ]
+}

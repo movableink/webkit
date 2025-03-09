@@ -47,12 +47,12 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 
 + (WKContentWorld *)pageWorld
 {
-    return wrapper(API::ContentWorld::pageContentWorld());
+    return wrapper(API::ContentWorld::pageContentWorldSingleton());
 }
 
 + (WKContentWorld *)defaultClientWorld
 {
-    return wrapper(API::ContentWorld::defaultClientWorld());
+    return wrapper(API::ContentWorld::defaultClientWorldSingleton());
 }
 
 + (WKContentWorld *)worldWithName:(NSString *)name

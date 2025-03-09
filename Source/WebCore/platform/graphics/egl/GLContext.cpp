@@ -80,7 +80,7 @@ bool GLContext::getEGLConfig(PlatformDisplay& platformDisplay, EGLConfig* config
             WTFLogAlways("Unknown pixel layout %s, falling back to RGBA8888", environmentVariable);
     }
 
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib / Windows ports.
     EGLint attributeList[] = {
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
         EGL_RED_SIZE, rgbaSize[0],
@@ -390,7 +390,7 @@ GLContext::~GLContext()
 
 EGLContext GLContext::createContextForEGLVersion(PlatformDisplay& platformDisplay, EGLConfig config, EGLContext sharingContext)
 {
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib / Windows ports.
     static EGLint contextAttributes[3];
     WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     static bool contextAttributesInitialized = false;
@@ -485,7 +485,7 @@ bool GLContext::isExtensionSupported(const char* extensionList, const char* exte
 
     ASSERT(extension);
     int extensionLen = strlen(extension);
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib / Windows ports.
     const char* extensionListPtr = extensionList;
     WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     while ((extensionListPtr = strstr(extensionListPtr, extension))) {

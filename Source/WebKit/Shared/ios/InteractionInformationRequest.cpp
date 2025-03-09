@@ -39,7 +39,7 @@ bool InteractionInformationRequest::isValidForRequest(const InteractionInformati
     if (other.includeLinkIndicator && !includeLinkIndicator)
         return false;
 
-    if (other.includeCaretContext && !includeCaretContext)
+    if (other.includeCursorContext && !includeCursorContext)
         return false;
 
     if (other.includeHasDoubleClickHandler && !includeHasDoubleClickHandler)

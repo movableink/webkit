@@ -199,6 +199,7 @@ public:
     void toggleElementSelection();
 
     bool isUnderTest() const { return m_underTest; }
+    void markAsUnderTest() { m_underTest = true; }
 
     void setDiagnosticLoggingAvailable(bool);
 
@@ -255,7 +256,7 @@ private:
     void platformLoad(const String& path, CompletionHandler<void(const String&)>&&);
     void platformPickColorFromScreen(CompletionHandler<void(const std::optional<WebCore::Color>&)>&&);
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(WIN)
     bool platformCanAttach(bool webProcessCanAttach);
 #elif PLATFORM(WPE)
     bool platformCanAttach(bool) { return false; }
@@ -264,9 +265,10 @@ private:
 #endif
 
     // Called by WebInspectorUIProxy messages
-    void openLocalInspectorFrontend(bool canAttach, bool underTest);
+    void requestOpenLocalInspectorFrontend();
     void setFrontendConnection(IPC::Connection::Handle&&);
 
+    void openLocalInspectorFrontend();
     void sendMessageToBackend(const String&);
     void frontendLoaded();
     void didClose();

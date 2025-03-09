@@ -12,6 +12,9 @@ PASS align-items: "flex-start" onto "flex-end"
 PASS align-self (type: discrete) has testAccumulation function
 PASS align-self: "flex-end" onto "flex-start"
 PASS align-self: "flex-start" onto "flex-end"
+PASS anchor-scope (type: discrete) has testAccumulation function
+PASS anchor-scope: "all" onto "none"
+PASS anchor-scope: "none" onto "all"
 PASS appearance (type: discrete) has testAccumulation function
 PASS appearance: "none" onto "auto"
 PASS appearance: "auto" onto "none"
@@ -283,6 +286,8 @@ PASS font-stretch: percentage
 PASS font-style (type: discrete) has testAccumulation function
 PASS font-style: "oblique" onto "italic"
 PASS font-style: "italic" onto "oblique"
+PASS font-width (type: percentage) has testAccumulation function
+PASS font-width: percentage
 PASS float (type: discrete) has testAccumulation function
 PASS float: "right" onto "left"
 PASS float: "left" onto "right"

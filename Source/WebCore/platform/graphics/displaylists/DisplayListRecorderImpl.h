@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,6 +40,9 @@ public:
     WEBCORE_EXPORT virtual ~RecorderImpl();
 
     bool isEmpty() const { return m_displayList.isEmpty(); }
+#if USE(SKIA)
+    bool usedAcceleratedRendering() const { return m_usedAcceleratedRendering; }
+#endif
 
     void save(GraphicsContextState::Purpose) final;
     void restore(GraphicsContextState::Purpose) final;
@@ -64,7 +67,7 @@ public:
     void endTransparencyLayer() final;
     void drawRect(const FloatRect&, float) final;
     void drawLine(const FloatPoint& point1, const FloatPoint& point2) final;
-    void drawLinesForText(const FloatPoint&, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle) final;
+    void drawLinesForText(const FloatPoint&, float thickness, std::span<const FloatSegment>, bool isPrinting, bool doubleLines, StrokeStyle) final;
     void drawDotsForDocumentMarker(const FloatRect&, DocumentMarkerLineStyle) final;
     void drawEllipse(const FloatRect&) final;
     void drawPath(const Path&) final;
@@ -91,6 +94,11 @@ public:
 #endif
     void applyDeviceScaleFactor(float) final;
 
+    void beginPage(const IntSize&) final;
+    void endPage() final;
+
+    void setURLForRect(const URL&, const FloatRect&) final;
+
 private:
     void recordSetInlineFillColor(PackedColor::RGBA) final;
     void recordSetInlineStroke(SetInlineStroke&&) final;
@@ -98,7 +106,7 @@ private:
     void recordClearDropShadow() final;
     void recordClipToImageBuffer(ImageBuffer&, const FloatRect& destinationRect) final;
     void recordDrawFilteredImageBuffer(ImageBuffer*, const FloatRect& sourceImageRect, Filter&) final;
-    void recordDrawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode) final;
+    void recordDrawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& localAnchor, FontSmoothingMode) final;
     void recordDrawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) final;
     void recordDrawImageBuffer(ImageBuffer&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions) final;
     void recordDrawNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions) final;
@@ -123,7 +131,6 @@ private:
 #endif
     void recordStrokePathSegment(const PathSegment&) final;
     void recordStrokePath(const Path&) final;
-    void recordDrawDisplayListItems(const Vector<Item>&, const FloatPoint& destination) final;
 
     bool recordResourceUse(NativeImage&) final;
     bool recordResourceUse(ImageBuffer&) final;
@@ -139,6 +146,9 @@ private:
     }
 
     DisplayList& m_displayList;
+#if USE(SKIA)
+    bool m_usedAcceleratedRendering : 1 { false };
+#endif
 };
 
 }

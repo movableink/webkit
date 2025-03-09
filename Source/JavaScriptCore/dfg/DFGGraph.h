@@ -286,7 +286,17 @@ public:
     void assertIsRegistered(Structure* structure);
     
     // CodeBlock is optional, but may allow additional information to be dumped (e.g. Identifier names).
-    void dump(PrintStream& = WTF::dataFile(), DumpContext* = nullptr);
+    void dump() const
+    {
+        const_cast<Graph&>(*this).dump(WTF::dataFile(), nullptr);
+    }
+
+    void dump(PrintStream& out) const
+    {
+        const_cast<Graph&>(*this).dump(out, nullptr);
+    }
+
+    void dump(PrintStream&, DumpContext*);
 
     bool terminalsAreValid();
     
@@ -543,7 +553,7 @@ public:
     BasicBlock* block(BlockIndex blockIndex) const { return m_blocks[blockIndex].get(); }
     BasicBlock* lastBlock() const { return block(numBlocks() - 1); }
 
-    void appendBlock(Ref<BasicBlock>&& basicBlock)
+    void appendBlock(std::unique_ptr<BasicBlock>&& basicBlock)
     {
         basicBlock->index = m_blocks.size();
         m_blocks.append(WTFMove(basicBlock));
@@ -1209,7 +1219,7 @@ public:
     CodeBlock* const m_codeBlock;
     CodeBlock* const m_profiledBlock;
 
-    Vector<RefPtr<BasicBlock>, 8> m_blocks;
+    Vector<std::unique_ptr<BasicBlock>, 8> m_blocks;
     Vector<BasicBlock*, 1> m_roots;
     Vector<Edge, 16> m_varArgChildren;
 
@@ -1286,7 +1296,7 @@ public:
     Bag<BitVector> m_bitVectors;
     Vector<InlineVariableData, 4> m_inlineVariableData;
     UncheckedKeyHashMap<CodeBlock*, std::unique_ptr<FullBytecodeLiveness>> m_bytecodeLiveness;
-    HashSet<std::pair<JSObject*, PropertyOffset>> m_safeToLoad;
+    UncheckedKeyHashSet<std::pair<JSObject*, PropertyOffset>> m_safeToLoad;
     Vector<Ref<Snippet>> m_domJITSnippets;
     std::unique_ptr<CPSDominators> m_cpsDominators;
     std::unique_ptr<SSADominators> m_ssaDominators;
@@ -1313,8 +1323,8 @@ public:
     UncheckedKeyHashMap<unsigned, BytecodeIndex> m_entrypointIndexToCatchBytecodeIndex;
     Vector<CatchEntrypointData> m_catchEntrypoints;
 
-    HashSet<String> m_localStrings;
-    HashSet<String> m_copiedStrings;
+    UncheckedKeyHashSet<String> m_localStrings;
+    UncheckedKeyHashSet<String> m_copiedStrings;
 
 #if USE(JSVALUE32_64)
     UncheckedKeyHashMap<GenericHashKey<int64_t>, double*> m_doubleConstantsMap;
@@ -1342,8 +1352,8 @@ public:
     RegisteredStructure stringStructure;
     RegisteredStructure symbolStructure;
 
-    HashSet<Node*> m_slowGetByVal;
-    HashSet<Node*> m_slowPutByVal;
+    UncheckedKeyHashSet<Node*> m_slowGetByVal;
+    UncheckedKeyHashSet<Node*> m_slowPutByVal;
 
 private:
     template<typename Visitor> void visitChildrenImpl(Visitor&);

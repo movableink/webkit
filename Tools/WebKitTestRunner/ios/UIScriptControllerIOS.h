@@ -128,7 +128,6 @@ private:
     JSObjectRef inputViewBounds() const override;
     JSRetainPtr<JSStringRef> scrollingTreeAsText() const override;
     JSRetainPtr<JSStringRef> uiViewTreeAsText() const override;
-    JSObjectRef propertiesOfLayerWithID(uint64_t layerID) const override;
     void simulateRotation(DeviceOrientation*, JSValueRef) override;
     void simulateRotationLikeSafari(DeviceOrientation*, JSValueRef) override;
     bool isShowingPopover() const override;
@@ -149,6 +148,7 @@ private:
     void toggleCapsLock(JSValueRef) override;
     unsigned keyboardWillHideCount() const override;
     bool keyboardIsAutomaticallyShifted() const override;
+    unsigned keyboardUpdateForChangedSelectionCount() const final;
     bool isAnimatingDragCancel() const override;
     JSRetainPtr<JSStringRef> selectionCaretBackgroundColor() const override;
     JSObjectRef tapHighlightViewRect() const override;
@@ -186,6 +186,8 @@ private:
 
     void presentFindNavigator() override;
     void dismissFindNavigator() override;
+
+    JSRetainPtr<JSStringRef> frontmostViewAtPoint(int, int) final;
 
     void waitForModalTransitionToFinish() const;
     void waitForSingleTapToReset() const;

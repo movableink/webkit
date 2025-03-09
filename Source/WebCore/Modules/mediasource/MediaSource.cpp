@@ -39,7 +39,6 @@
 #include "AudioTrackPrivate.h"
 #include "ContentType.h"
 #include "ContentTypeUtilities.h"
-#include "DeprecatedGlobalSettings.h"
 #include "DocumentInlines.h"
 #include "Event.h"
 #include "EventNames.h"
@@ -49,6 +48,7 @@
 #include "Logging.h"
 #include "ManagedMediaSource.h"
 #include "ManagedSourceBuffer.h"
+#include "MediaSourceConfiguration.h"
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
 #include "MediaSourceHandle.h"
 #endif
@@ -73,15 +73,13 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaSource);
 
 String convertEnumerationToString(MediaSourcePrivate::AddStatus enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 3> values {
         MAKE_STATIC_STRING_IMPL("Ok"),
         MAKE_STATIC_STRING_IMPL("NotSupported"),
         MAKE_STATIC_STRING_IMPL("ReachedIdLimit"),
@@ -95,7 +93,7 @@ String convertEnumerationToString(MediaSourcePrivate::AddStatus enumerationValue
 
 String convertEnumerationToString(MediaSourcePrivate::EndOfStreamStatus enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 3> values {
         MAKE_STATIC_STRING_IMPL("NoError"),
         MAKE_STATIC_STRING_IMPL("NetworkError"),
         MAKE_STATIC_STRING_IMPL("DecodeError"),
@@ -1422,8 +1420,9 @@ void MediaSource::onReadyStateChange(ReadyState oldState, ReadyState newState)
         // https://w3c.github.io/media-source/#htmlmediaelement-extensions-buffered
         for (auto& sourceBuffer : m_sourceBuffers.get())
             sourceBuffer->setMediaSourceEnded(true);
-        updateBufferedIfNeeded(true /* force */);
     }
+    if (newState == ReadyState::Ended || (newState == ReadyState::Open && oldState == ReadyState::Ended))
+        updateBufferedIfNeeded(true /* force */);
 
     // MediaSource's readyState transitions from "open" to "closed" or "ended" to "closed".
     if (oldState > ReadyState::Closed && newState == ReadyState::Closed) {
@@ -1455,7 +1454,10 @@ ExceptionOr<Ref<SourceBufferPrivate>> MediaSource::createSourceBufferPrivate(con
     Ref msp = protectedPrivate().releaseNonNull();
 
     RefPtr<SourceBufferPrivate> sourceBufferPrivate;
-    switch (msp->addSourceBuffer(type, DeprecatedGlobalSettings::webMParserEnabled(), sourceBufferPrivate)) {
+    MediaSourceConfiguration configuration = {
+        scriptExecutionContext()->settingsValues().textTracksInMSEEnabled
+    };
+    switch (msp->addSourceBuffer(type, configuration, sourceBufferPrivate)) {
     case MediaSourcePrivate::AddStatus::Ok:
         return sourceBufferPrivate.releaseNonNull();
     case MediaSourcePrivate::AddStatus::NotSupported:
@@ -1757,7 +1759,5 @@ bool MediaSource::canConstructInDedicatedWorker(ScriptExecutionContext& context)
 #endif
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(MEDIA_SOURCE)

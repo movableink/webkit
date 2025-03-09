@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,8 @@
 
 #include "BufferIdentifierSet.h"
 #include "GPUConnectionToWebProcess.h"
+#include "ImageBufferRemoteDisplayListBackend.h"
+#include "ImageBufferRemotePDFDocumentBackend.h"
 #include "ImageBufferShareableBitmapBackend.h"
 #include "Logging.h"
 #include "RemoteDisplayListRecorderProxy.h"
@@ -62,7 +64,7 @@ using namespace WebCore;
 Ref<RemoteRenderingBackendProxy> RemoteRenderingBackendProxy::create(WebPage& webPage)
 {
     Ref instance = adoptRef(*new RemoteRenderingBackendProxy(RunLoop::main()));
-    RELEASE_LOG(RemoteLayerBuffers, "[renderingBackend=%" PRIu64 "] Created rendering backend for pageProxyID=%" PRIu64 ", webPageID=%" PRIu64, instance->renderingBackendIdentifier().toUInt64(),  webPage.webPageProxyIdentifier().toUInt64(), webPage.identifier().toUInt64());
+    RELEASE_LOG_FORWARDABLE(RemoteLayerBuffers, REMOTE_RENDERING_BACKEND_PROXY_CREATED_RENDERING_BACKEND, instance->renderingBackendIdentifier().toUInt64(),  webPage.webPageProxyIdentifier().toUInt64(), webPage.identifier().toUInt64());
     return instance;
 }
 
@@ -247,7 +249,11 @@ RefPtr<ImageBuffer> RemoteRenderingBackendProxy::createImageBuffer(const FloatSi
         break;
 
     case RenderingMode::PDFDocument:
+        imageBuffer = RemoteImageBufferProxy::create<ImageBufferRemotePDFDocumentBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, *this);
+        break;
+
     case RenderingMode::DisplayList:
+        imageBuffer = RemoteImageBufferProxy::create<ImageBufferRemoteDisplayListBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, *this);
         break;
     }
 
@@ -268,8 +274,6 @@ std::unique_ptr<RemoteDisplayListRecorderProxy> RemoteRenderingBackendProxy::cre
 
 void RemoteRenderingBackendProxy::releaseImageBuffer(RenderingResourceIdentifier renderingResourceIdentifier)
 {
-    if (!m_connection)
-        return;
     send(Messages::RemoteRenderingBackend::ReleaseImageBuffer(renderingResourceIdentifier));
 }
 
@@ -301,6 +305,13 @@ void RemoteRenderingBackendProxy::moveToImageBuffer(WebCore::RenderingResourceId
 {
     send(Messages::RemoteRenderingBackend::MoveToImageBuffer(identifier));
 }
+
+#if PLATFORM(COCOA)
+void RemoteRenderingBackendProxy::didDrawRemoteToPDF(PageIdentifier pageID, RenderingResourceIdentifier imageBufferIdentifier, SnapshotIdentifier snapshotIdentifier)
+{
+    send(Messages::RemoteRenderingBackend::DidDrawRemoteToPDF(pageID, imageBufferIdentifier, snapshotIdentifier));
+}
+#endif
 
 bool RemoteRenderingBackendProxy::getPixelBufferForImageBuffer(RenderingResourceIdentifier imageBuffer, const PixelBufferFormat& destinationFormat, const IntRect& srcRect, std::span<uint8_t> result)
 {
@@ -372,9 +383,19 @@ void RemoteRenderingBackendProxy::cacheNativeImage(ShareableBitmap::Handle&& han
     send(Messages::RemoteRenderingBackend::CacheNativeImage(WTFMove(handle), renderingResourceIdentifier));
 }
 
+void RemoteRenderingBackendProxy::releaseNativeImage(RenderingResourceIdentifier identifier)
+{
+    send(Messages::RemoteRenderingBackend::ReleaseNativeImage(identifier));
+}
+
 void RemoteRenderingBackendProxy::cacheFont(const WebCore::Font::Attributes& fontAttributes, const WebCore::FontPlatformDataAttributes& platformData, std::optional<WebCore::RenderingResourceIdentifier> ident)
 {
     send(Messages::RemoteRenderingBackend::CacheFont(fontAttributes, platformData, ident));
+}
+
+void RemoteRenderingBackendProxy::releaseFont(RenderingResourceIdentifier identifier)
+{
+    send(Messages::RemoteRenderingBackend::ReleaseFont(identifier));
 }
 
 void RemoteRenderingBackendProxy::cacheFontCustomPlatformData(Ref<const FontCustomPlatformData>&& customPlatformData)
@@ -383,9 +404,19 @@ void RemoteRenderingBackendProxy::cacheFontCustomPlatformData(Ref<const FontCust
     send(Messages::RemoteRenderingBackend::CacheFontCustomPlatformData(data->serializedData()));
 }
 
+void RemoteRenderingBackendProxy::releaseFontCustomPlatformData(RenderingResourceIdentifier identifier)
+{
+    send(Messages::RemoteRenderingBackend::ReleaseFontCustomPlatformData(identifier));
+}
+
 void RemoteRenderingBackendProxy::cacheDecomposedGlyphs(Ref<DecomposedGlyphs>&& decomposedGlyphs)
 {
     send(Messages::RemoteRenderingBackend::CacheDecomposedGlyphs(WTFMove(decomposedGlyphs)));
+}
+
+void RemoteRenderingBackendProxy::releaseDecomposedGlyphs(RenderingResourceIdentifier identifier)
+{
+    send(Messages::RemoteRenderingBackend::ReleaseDecomposedGlyphs(identifier));
 }
 
 void RemoteRenderingBackendProxy::cacheGradient(Ref<Gradient>&& gradient)
@@ -393,29 +424,28 @@ void RemoteRenderingBackendProxy::cacheGradient(Ref<Gradient>&& gradient)
     send(Messages::RemoteRenderingBackend::CacheGradient(WTFMove(gradient)));
 }
 
+void RemoteRenderingBackendProxy::releaseGradient(RenderingResourceIdentifier identifier)
+{
+    send(Messages::RemoteRenderingBackend::ReleaseGradient(identifier));
+}
+
 void RemoteRenderingBackendProxy::cacheFilter(Ref<Filter>&& filter)
 {
     send(Messages::RemoteRenderingBackend::CacheFilter(WTFMove(filter)));
 }
 
-void RemoteRenderingBackendProxy::releaseAllDrawingResources()
+void RemoteRenderingBackendProxy::releaseFilter(RenderingResourceIdentifier identifier)
 {
-    if (!m_connection)
-        return;
-    send(Messages::RemoteRenderingBackend::ReleaseAllDrawingResources());
+    send(Messages::RemoteRenderingBackend::ReleaseFilter(identifier));
 }
 
-void RemoteRenderingBackendProxy::releaseRenderingResource(RenderingResourceIdentifier renderingResourceIdentifier)
+void RemoteRenderingBackendProxy::releaseAllDrawingResources()
 {
-    if (!m_connection)
-        return;
-    send(Messages::RemoteRenderingBackend::ReleaseRenderingResource(renderingResourceIdentifier));
+    send(Messages::RemoteRenderingBackend::ReleaseAllDrawingResources());
 }
 
 void RemoteRenderingBackendProxy::releaseAllImageResources()
 {
-    if (!m_connection)
-        return;
     send(Messages::RemoteRenderingBackend::ReleaseAllImageResources());
 }
 

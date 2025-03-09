@@ -54,6 +54,11 @@ PASS onclose: the default value must be null
 PASS onclose: the content attribute must be compiled into a function as the corresponding property
 PASS onclose: the content attribute must execute when an event is dispatched
 PASS onclose: dispatching an Event at a <meta> element must trigger element.onclose
+PASS oncommand: must be on the appropriate locations for GlobalEventHandlers
+PASS oncommand: the default value must be null
+PASS oncommand: the content attribute must be compiled into a function as the corresponding property
+PASS oncommand: the content attribute must execute when an event is dispatched
+PASS oncommand: dispatching an Event at a <meta> element must trigger element.oncommand
 FAIL oncontextlost: must be on the appropriate locations for GlobalEventHandlers assert_true: Window has an own property named "oncontextlost" expected true got false
 FAIL oncontextlost: the default value must be null assert_equals: The default value of the property is null for a Window instance expected (object) null but got (undefined) undefined
 FAIL oncontextlost: the content attribute must be compiled into a function as the corresponding property assert_equals: The oncontextlost property must be a function expected "function" but got "undefined"

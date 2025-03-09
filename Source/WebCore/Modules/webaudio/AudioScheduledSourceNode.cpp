@@ -37,13 +37,12 @@
 #include <algorithm>
 #include <wtf/MathExtras.h>
 #include <wtf/Scope.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include "ScriptController.h"
 #endif
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -117,7 +116,7 @@ void AudioScheduledSourceNode::updateSchedulingInfo(size_t quantumFrameSize, Aud
     // Zero any initial frames representing silence leading up to a rendering start time in the middle of the quantum.
     if (quantumFrameOffset) {
         for (unsigned i = 0; i < outputBus.numberOfChannels(); ++i)
-            memset(outputBus.channel(i)->mutableData(), 0, sizeof(float) * quantumFrameOffset);
+            zeroSpan(outputBus.channel(i)->mutableSpan().first(quantumFrameOffset));
     }
 
     // Handle silence after we're done playing.
@@ -139,7 +138,7 @@ void AudioScheduledSourceNode::updateSchedulingInfo(size_t quantumFrameSize, Aud
                 nonSilentFramesToProcess -= framesToZero;
 
             for (unsigned i = 0; i < outputBus.numberOfChannels(); ++i)
-                memset(outputBus.channel(i)->mutableData() + zeroStartFrame, 0, sizeof(float) * framesToZero);
+                zeroSpan(outputBus.channel(i)->mutableSpan().subspan(zeroStartFrame, framesToZero));
         }
 
         finish();
@@ -209,7 +208,5 @@ void AudioScheduledSourceNode::finish()
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

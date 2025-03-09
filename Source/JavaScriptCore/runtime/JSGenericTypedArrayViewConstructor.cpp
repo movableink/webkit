@@ -99,8 +99,7 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayConstructorFromBase64, (JSGlobalObject* globa
     JSUint8Array* uint8Array = JSUint8Array::createUninitialized(globalObject, globalObject->typedArrayStructure(TypeUint8, false), writeLength);
     RETURN_IF_EXCEPTION(scope, { });
 
-    uint8_t* data = uint8Array->typedVector();
-    memcpySpan(std::span { data, data + writeLength }, output.span().subspan(0, writeLength));
+    memcpySpan(uint8Array->typedSpan(), output.span().first(writeLength));
     return JSValue::encode(uint8Array);
 }
 
@@ -154,7 +153,7 @@ inline static WARN_UNUSED_RETURN size_t decodeHexImpl(std::span<CharacterType> s
     if (span.size() >= stride) {
         auto doStridedDecode = [&]() ALWAYS_INLINE_LAMBDA {
             if constexpr (sizeof(CharacterType) == 1) {
-                for (; cursor + (stride - 1) < end; cursor += stride, output += halfStride) {
+                for (; cursor + stride <= end; cursor += stride, output += halfStride) {
                     if (!vectorDecode8(SIMD::load(std::bit_cast<const uint8_t*>(cursor)), output))
                         return false;
                 }
@@ -170,7 +169,7 @@ inline static WARN_UNUSED_RETURN size_t decodeHexImpl(std::span<CharacterType> s
                     return vectorDecode8(input.val[0], output);
                 };
 
-                for (; cursor + (stride - 1) < end; cursor += stride, output += halfStride) {
+                for (; cursor + stride <= end; cursor += stride, output += halfStride) {
                     if (!vectorDecode16(simde_vld2q_u8(std::bit_cast<const uint8_t*>(cursor)), output))
                         return false;
                 }

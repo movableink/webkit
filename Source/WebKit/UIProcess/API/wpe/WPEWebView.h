@@ -30,7 +30,6 @@
 #include "KeyAutoRepeatHandler.h"
 #include "PageClientImpl.h"
 #include "WebFullScreenManagerProxy.h"
-#include "WebKitWebViewAccessible.h"
 #include "WebPageProxy.h"
 #include <WebCore/ActivityState.h>
 #include <memory>
@@ -76,8 +75,8 @@ public:
 
 #if ENABLE(FULLSCREEN_API)
     bool isFullScreen() const;
-    void willEnterFullScreen();
-    void willExitFullScreen();
+    void willEnterFullScreen(CompletionHandler<void(bool)>&&);
+    void willExitFullScreen(CompletionHandler<void()>&&);
 #endif
 
     void selectionDidChange();
@@ -87,10 +86,6 @@ public:
     API::ViewClient& client() const { return *m_client; }
     const WebCore::IntSize& size() const { return m_size; }
     OptionSet<WebCore::ActivityState> viewState() const { return m_viewStateFlags; }
-
-#if USE(ATK)
-    WebKitWebViewAccessible* accessible() const;
-#endif
 
     virtual struct wpe_view_backend* backend() const { return nullptr; }
 #if ENABLE(WPE_PLATFORM)
@@ -121,9 +116,6 @@ protected:
 #endif
     WebKit::InputMethodFilter m_inputMethodFilter;
     WebKit::KeyAutoRepeatHandler m_keyAutoRepeatHandler;
-#if USE(ATK)
-    mutable GRefPtr<WebKitWebViewAccessible> m_accessible;
-#endif
 };
 
 } // namespace WKWPE

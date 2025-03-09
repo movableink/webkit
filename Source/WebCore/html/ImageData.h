@@ -41,11 +41,12 @@ namespace WebCore {
 
 class ImageData : public RefCounted<ImageData> {
 public:
-    WEBCORE_EXPORT static Ref<ImageData> create(Ref<ByteArrayPixelBuffer>&&);
-    WEBCORE_EXPORT static RefPtr<ImageData> create(RefPtr<ByteArrayPixelBuffer>&&);
-    WEBCORE_EXPORT static RefPtr<ImageData> create(const IntSize&, PredefinedColorSpace);
+    WEBCORE_EXPORT static Ref<ImageData> create(Ref<ByteArrayPixelBuffer>&&, std::optional<ImageDataStorageFormat> = { });
+    WEBCORE_EXPORT static RefPtr<ImageData> create(RefPtr<ByteArrayPixelBuffer>&&, std::optional<ImageDataStorageFormat> = { });
+    WEBCORE_EXPORT static RefPtr<ImageData> create(const IntSize&, PredefinedColorSpace, ImageDataStorageFormat = ImageDataStorageFormat::Uint8);
     WEBCORE_EXPORT static RefPtr<ImageData> create(const IntSize&, ImageDataArray&&, PredefinedColorSpace);
-    WEBCORE_EXPORT static ExceptionOr<Ref<ImageData>> createUninitialized(unsigned rows, unsigned pixelsPerRow, PredefinedColorSpace defaultColorSpace, std::optional<ImageDataSettings> = std::nullopt);
+
+    WEBCORE_EXPORT static ExceptionOr<Ref<ImageData>> create(unsigned sw, unsigned sh, PredefinedColorSpace defaultColorSpace, std::optional<ImageDataSettings> = std::nullopt, std::span<const uint8_t> = { });
     WEBCORE_EXPORT static ExceptionOr<Ref<ImageData>> create(unsigned sw, unsigned sh, std::optional<ImageDataSettings>);
     WEBCORE_EXPORT static ExceptionOr<Ref<ImageData>> create(ImageDataArray&&, unsigned sw, std::optional<unsigned> sh, std::optional<ImageDataSettings>);
 
@@ -57,15 +58,15 @@ public:
 
     int width() const { return m_size.width(); }
     int height() const { return m_size.height(); }
-    Uint8ClampedArray& data() const { return m_data.get(); }
+    const ImageDataArray& data() const { return m_data; }
     PredefinedColorSpace colorSpace() const { return m_colorSpace; }
+    ImageDataStorageFormat storageFormat() const { return m_data.storageFormat(); }
 
     Ref<ByteArrayPixelBuffer> pixelBuffer() const;
 
-    RefPtr<ImageData> clone() const;
-
 private:
     explicit ImageData(const IntSize&, ImageDataArray&&, PredefinedColorSpace);
+    explicit ImageData(const IntSize&, ImageDataArray&&, PredefinedColorSpace, std::optional<ImageDataStorageFormat>);
 
     IntSize m_size;
     ImageDataArray m_data;

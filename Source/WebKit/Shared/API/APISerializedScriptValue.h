@@ -27,6 +27,8 @@
 
 #include "APIObject.h"
 #include "WKRetainPtr.h"
+#include <JavaScriptCore/JSRetainPtr.h>
+#include <WebCore/CryptoKey.h>
 #include <WebCore/SerializedScriptValue.h>
 #include <wtf/RefPtr.h>
 
@@ -56,22 +58,26 @@ public:
             return nullptr;
         return adoptRef(*new SerializedScriptValue(serializedValue.releaseNonNull()));
     }
-    
+
+#if !PLATFORM(COCOA)
     static Ref<SerializedScriptValue> createFromWireBytes(std::span<const uint8_t> buffer)
     {
         return adoptRef(*new SerializedScriptValue(WebCore::SerializedScriptValue::createFromWireBytes(Vector<uint8_t>(buffer))));
     }
-    
+#endif
+
     JSValueRef deserialize(JSContextRef context, JSValueRef* exception)
     {
         return m_serializedScriptValue->deserialize(context, exception);
     }
 
     static WKRetainPtr<WKTypeRef> deserializeWK(WebCore::SerializedScriptValue&);
+    static Vector<uint8_t> serializeCryptoKey(const WebCore::CryptoKey&);
 
 #if PLATFORM(COCOA) && defined(__OBJC__)
     static id deserialize(WebCore::SerializedScriptValue&);
     static RefPtr<SerializedScriptValue> createFromNSObject(id);
+    static JSRetainPtr<JSGlobalContextRef> deserializationContext();
 #endif
 
 #if USE(GLIB)
@@ -91,7 +97,7 @@ private:
     {
     }
 
-    Ref<WebCore::SerializedScriptValue> m_serializedScriptValue;
+    const Ref<WebCore::SerializedScriptValue> m_serializedScriptValue;
 };
     
 }

@@ -25,7 +25,9 @@
 
 #pragma once
 
+#include "JSCJSValue.h"
 #include "ProfilerOrigin.h"
+#include <wtf/PrintStream.h>
 #include <wtf/Vector.h>
 
 namespace JSC {

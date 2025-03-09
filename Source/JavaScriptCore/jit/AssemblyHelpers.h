@@ -56,7 +56,7 @@ namespace JSC {
 typedef void (*V_DebugOperation_EPP)(CallFrame*, void*, void*);
 
 class AssemblyHelpers : public MacroAssembler {
-    WTF_MAKE_TZONE_ALLOCATED(AssemblyHelpers);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(AssemblyHelpers);
 public:
     AssemblyHelpers(CodeBlock* codeBlock)
         : m_codeBlock(codeBlock)
@@ -1450,7 +1450,7 @@ public:
     void incrementSuperSamplerCount();
     void decrementSuperSamplerCount();
     
-    void purifyNaN(FPRReg);
+    void purifyNaN(FPRReg, FPRReg);
 
     // These methods convert between doubles, and doubles boxed and JSValues.
 #if USE(JSVALUE64)

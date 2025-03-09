@@ -64,6 +64,8 @@
 #import <WebCore/HTMLInputElement.h>
 #import <WebCore/LocalFrame.h>
 #import <WebCore/WebCoreObjCExtras.h>
+#import <wtf/AlignedStorage.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/WeakObjCPtr.h>
 #import <wtf/cocoa/VectorCocoa.h>
@@ -73,7 +75,7 @@
 @end
 
 @implementation WKWebProcessPlugInBrowserContextController {
-    API::ObjectStorage<WebKit::WebPage> _page;
+    AlignedStorage<WebKit::WebPage> _page;
     WeakObjCPtr<id <WKWebProcessPlugInLoadDelegate>> _loadDelegate;
     WeakObjCPtr<id <WKWebProcessPlugInFormDelegatePrivate>> _formDelegate;
     WeakObjCPtr<id <WKWebProcessPlugInEditingDelegate>> _editingDelegate;
@@ -254,7 +256,7 @@ static void didHandleOnloadEventsForFrame(WKBundlePageRef page, WKBundleFrameRef
 static void setUpPageLoaderClient(WKWebProcessPlugInBrowserContextController *contextController, WebKit::WebPage& page)
 {
     WKBundlePageLoaderClientV11 client;
-    memset(&client, 0, sizeof(client));
+    zeroBytes(client);
 
     client.base.version = 11;
     client.base.clientInfo = (__bridge void*)contextController;
@@ -351,7 +353,7 @@ static void didFailLoadForResource(WKBundlePageRef, WKBundleFrameRef frame, uint
 static void setUpResourceLoadClient(WKWebProcessPlugInBrowserContextController *contextController, WebKit::WebPage& page)
 {
     WKBundlePageResourceLoadClientV1 client;
-    memset(&client, 0, sizeof(client));
+    zeroBytes(client);
 
     client.base.version = 1;
     client.base.clientInfo = (__bridge void*) contextController;

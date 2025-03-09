@@ -33,25 +33,24 @@
 #include "PlatformDisplay.h"
 #include <skia/core/SkData.h>
 #include <skia/core/SkImage.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN // GLib/Win ports
 #include <skia/gpu/ganesh/GrBackendSurface.h>
 #include <skia/gpu/ganesh/SkImageGanesh.h>
 #include <skia/private/chromium/SkImageChromium.h>
-
-IGNORE_CLANG_WARNINGS_BEGIN("cast-align")
 #include <skia/core/SkPixmap.h>
-IGNORE_CLANG_WARNINGS_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 namespace WebCore {
 
-void PlatformImageNativeImageBackend::finishAcceleratedRenderingAndCreateFence()
+bool PlatformImageNativeImageBackend::finishAcceleratedRenderingAndCreateFence()
 {
     Locker locker { m_fenceLock };
     if (m_fence)
-        return;
+        return true;
 
     auto* glContext = PlatformDisplay::sharedDisplay().skiaGLContext();
     if (!glContext || !glContext->makeContextCurrent())
-        return;
+        return false;
 
     auto* grContext = PlatformDisplay::sharedDisplay().skiaGrContext();
     RELEASE_ASSERT(grContext);
@@ -65,6 +64,8 @@ void PlatformImageNativeImageBackend::finishAcceleratedRenderingAndCreateFence()
 
     if (!m_fence)
         grContext->submit(GrSyncCpu::kYes);
+
+    return true;
 }
 
 void PlatformImageNativeImageBackend::waitForAcceleratedRenderingFenceCompletion()
@@ -168,6 +169,15 @@ void NativeImage::draw(GraphicsContext& context, const FloatRect& destinationRec
 void NativeImage::clearSubimages()
 {
 }
+
+#if USE(COORDINATED_GRAPHICS)
+uint64_t NativeImage::uniqueID() const
+{
+    if (auto& image = platformImage())
+        return image->uniqueID();
+    return 0;
+}
+#endif
 
 } // namespace WebCore
 

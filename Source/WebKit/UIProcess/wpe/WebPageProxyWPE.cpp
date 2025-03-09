@@ -26,12 +26,15 @@
 #include "config.h"
 #include "WebPageProxy.h"
 
+#include "DrawingAreaMessages.h"
+#include "DrawingAreaProxy.h"
 #include "EditorState.h"
 #include "InputMethodState.h"
 #include "PageClientImpl.h"
 #include "UserMessage.h"
 #include "WebProcessProxy.h"
 #include <WebCore/PlatformEvent.h>
+#include <wtf/CallbackAggregator.h>
 
 #if USE(ATK)
 #include <atk/atk.h>
@@ -72,10 +75,19 @@ WPEView* WebPageProxy::wpeView() const
 
 void WebPageProxy::bindAccessibilityTree(const String& plugID)
 {
-#if USE(ATK)
     RefPtr pageClient = this->pageClient();
     if (!pageClient)
         return;
+
+#if ENABLE(WPE_PLATFORM)
+    if (auto* view = wpeView()) {
+        if (auto* accessible = wpe_view_get_accessible(view))
+            wpe_view_accessible_bind(accessible, plugID.utf8().data());
+        return;
+    }
+#endif
+
+#if USE(ATK)
     auto* accessible = static_cast<PageClientImpl&>(*pageClient).accessible();
     atk_socket_embed(ATK_SOCKET(accessible), const_cast<char*>(plugID.utf8().data()));
     atk_object_notify_state_change(accessible, ATK_STATE_TRANSIENT, FALSE);
@@ -165,7 +177,7 @@ Vector<DMABufRendererBufferFormat> WebPageProxy::preferredBufferFormats() const
 #endif
 }
 
-#if ENABLE(WPE_PLATFORM)
+#if USE(GBM) && ENABLE(WPE_PLATFORM)
 void WebPageProxy::preferredBufferFormatsDidChange()
 {
     auto* view = wpeView();
@@ -214,13 +226,21 @@ void WebPageProxy::callAfterNextPresentationUpdate(CompletionHandler<void()>&& c
     }
 
 #if USE(COORDINATED_GRAPHICS)
-    if (RefPtr pageClient = this->pageClient()) {
-        static_cast<PageClientImpl&>(*pageClient).callAfterNextPresentationUpdate(WTFMove(callback));
-        return;
-    }
-#endif
+    Ref aggregator = CallbackAggregator::create([weakThis = WeakPtr { *this }, callback = WTFMove(callback)]() mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return callback();
 
+        if (RefPtr pageClient = protectedThis->pageClient())
+            static_cast<PageClientImpl&>(*pageClient).callAfterNextPresentationUpdate(WTFMove(callback));
+    });
+    auto drawingAreaIdentifier = m_drawingArea->identifier();
+    forEachWebContentProcess([&] (auto& process, auto) {
+        process.sendWithAsyncReply(Messages::DrawingArea::DispatchAfterEnsuringDrawing(), [aggregator] { }, drawingAreaIdentifier);
+    });
+#else
     callback();
+#endif
 }
 
 } // namespace WebKit

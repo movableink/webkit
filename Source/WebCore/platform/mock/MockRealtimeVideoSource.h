@@ -32,6 +32,7 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "DashArray.h"
 #include "FontCascade.h"
 #include "ImageBuffer.h"
 #include "MockMediaDevice.h"
@@ -54,6 +55,7 @@ public:
     virtual ~MockRealtimeVideoSource();
 
     static void setIsInterrupted(bool);
+    static void triggerCameraConfigurationChange();
 
     ImageBuffer* imageBuffer();
 

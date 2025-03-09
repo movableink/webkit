@@ -32,8 +32,6 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/AtomStringHash.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 class CSSValueList;
@@ -58,10 +56,10 @@ private:
 
     static constexpr int maximumCacheableIntegerValue = 255;
 
-    LazyNeverDestroyed<CSSPrimitiveValue> m_pixelValues[maximumCacheableIntegerValue + 1];
-    LazyNeverDestroyed<CSSPrimitiveValue> m_percentageValues[maximumCacheableIntegerValue + 1];
-    LazyNeverDestroyed<CSSPrimitiveValue> m_numberValues[maximumCacheableIntegerValue + 1];
-    LazyNeverDestroyed<CSSPrimitiveValue> m_identifierValues[numCSSValueKeywords];
+    std::array<LazyNeverDestroyed<CSSPrimitiveValue>, maximumCacheableIntegerValue + 1> m_pixelValues;
+    std::array<LazyNeverDestroyed<CSSPrimitiveValue>, maximumCacheableIntegerValue + 1> m_percentageValues;
+    std::array<LazyNeverDestroyed<CSSPrimitiveValue>, maximumCacheableIntegerValue + 1> m_numberValues;
+    std::array<LazyNeverDestroyed<CSSPrimitiveValue>, numCSSValueKeywords> m_identifierValues;
 };
 
 WEBCORE_EXPORT extern LazyNeverDestroyed<StaticCSSValuePool> staticCSSValuePool;
@@ -97,5 +95,3 @@ inline Ref<CSSPrimitiveValue> CSSPrimitiveValue::create(CSSValueID identifier)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

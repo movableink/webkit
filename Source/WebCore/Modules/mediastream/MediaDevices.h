@@ -95,7 +95,8 @@ public:
     MediaTrackSupportedConstraints getSupportedConstraints();
 
     String deviceIdToPersistentId(const String& deviceId) const { return m_audioOutputDeviceIdToPersistentId.get(deviceId); }
-    String hashedGroupId(const String& groupId);
+
+    void willStartMediaCapture(bool microphone, bool camera);
 
 private:
     explicit MediaDevices(Document&);
@@ -130,13 +131,14 @@ private:
     const EventNames& m_eventNames; // Need to cache this so we can use it from GC threads.
     bool m_listeningForDeviceChanges { false };
 
-    String m_groupIdHashSalt;
-
     OptionSet<GestureAllowedRequest> m_requestTypesForCurrentGesture;
     WeakPtr<UserGestureToken> m_currentGestureToken;
 
     MemoryCompactRobinHoodHashMap<String, String> m_audioOutputDeviceIdToPersistentId;
     String m_audioOutputDeviceId;
+
+    bool m_hasRestrictedCameraDevices { true };
+    bool m_hasRestrictedMicrophoneDevices { true };
 };
 
 } // namespace WebCore

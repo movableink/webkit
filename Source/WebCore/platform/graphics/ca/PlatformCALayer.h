@@ -28,7 +28,7 @@
 #include "FloatRoundedRect.h"
 #include "GraphicsLayer.h"
 #include <wtf/RetainPtr.h>
-#include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/Vector.h>
 
@@ -55,6 +55,7 @@ class AcceleratedEffect;
 struct AcceleratedEffectValues;
 #endif
 
+enum class AppleVisualEffect : uint8_t;
 enum class MediaPlayerVideoGravity : uint8_t;
 enum class ContentsFormat : uint8_t;
 
@@ -76,16 +77,25 @@ enum class PlatformCALayerLayerType : uint8_t {
         LayerTypeAVPlayerLayer,
         LayerTypeContentsProvidedLayer,
         LayerTypeBackdropLayer,
+#if HAVE(CORE_MATERIAL)
+        LayerTypeMaterialLayer,
+#endif
+#if HAVE(MATERIAL_HOSTING)
+        LayerTypeMaterialHostingLayer,
+#endif
         LayerTypeShapeLayer,
         LayerTypeScrollContainerLayer,
 #if ENABLE(MODEL_ELEMENT)
         LayerTypeModelLayer,
 #endif
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+        LayerTypeSeparatedImageLayer,
+#endif
         LayerTypeCustom,
         LayerTypeHost,
 };
 
-class WEBCORE_EXPORT PlatformCALayer : public ThreadSafeRefCounted<PlatformCALayer, WTF::DestructionThread::Main> {
+class WEBCORE_EXPORT PlatformCALayer : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<PlatformCALayer, WTF::DestructionThread::Main> {
     friend class PlatformCALayerCocoa;
 public:
     static CFTimeInterval currentTimeToMediaTime(MonotonicTime);
@@ -302,6 +312,11 @@ public:
 #endif
 #endif
 
+#if HAVE(CORE_MATERIAL)
+    virtual AppleVisualEffectData appleVisualEffectData() const = 0;
+    virtual void setAppleVisualEffectData(AppleVisualEffectData) = 0;
+#endif
+
     virtual TiledBacking* tiledBacking() = 0;
 
     void drawTextAtPoint(CGContextRef, CGFloat x, CGFloat y, CGSize scale, CGFloat fontSize, std::span<const char8_t> text, CGFloat strokeWidthAsPercentageOfFontSize = 0, Color strokeColor = Color()) const;
@@ -332,6 +347,8 @@ public:
     static void drawLayerContents(GraphicsContext&, PlatformCALayer*, RepaintRectList&, OptionSet<GraphicsLayerPaintBehavior>);
     static void drawRepaintIndicator(GraphicsContext&, PlatformCALayer*, int repaintCount, Color customBackgroundColor = { });
     static CGRect frameForLayer(const PlatformLayer*);
+
+    static ContentsFormat contentsFormatForLayer(Widget* = nullptr, PlatformCALayerClient* = nullptr);
 
     virtual void markFrontBufferVolatileForTesting() { }
     void moveToLayerPool();

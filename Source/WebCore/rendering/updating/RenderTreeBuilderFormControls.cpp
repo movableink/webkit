@@ -26,6 +26,7 @@
 #include "config.h"
 #include "RenderTreeBuilderFormControls.h"
 
+#include "RenderBlockInlines.h"
 #include "RenderButton.h"
 #include "RenderMenuList.h"
 #include "RenderTreeBuilderBlock.h"
@@ -33,7 +34,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeBuilder, FormControls);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::FormControls);
 
 RenderTreeBuilder::FormControls::FormControls(RenderTreeBuilder& builder)
     : m_builder(builder)

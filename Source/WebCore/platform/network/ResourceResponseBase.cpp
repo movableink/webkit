@@ -38,6 +38,7 @@
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/persistence/PersistentCoders.h>
 #include <wtf/persistence/PersistentDecoder.h>
 #include <wtf/persistence/PersistentEncoder.h>
 #include <wtf/text/MakeString.h>
@@ -83,6 +84,7 @@ ResourceResponseBase::ResourceResponseBase(std::optional<ResourceResponseData> d
     , m_isNull(!data)
     , m_usedLegacyTLS(data ? data->usedLegacyTLS : UsedLegacyTLS::No)
     , m_wasPrivateRelayed(data ? data->wasPrivateRelayed : WasPrivateRelayed::No)
+    , m_proxyName(data ? data->proxyName : String { })
     , m_isRedirected(data ? data->isRedirected : false)
     , m_isRangeRequested(data ? data->isRangeRequested : false)
     , m_tainting(data ? data->tainting : Tainting::Basic)
@@ -110,6 +112,7 @@ ResourceResponseData ResourceResponseData::isolatedCopy() const
     result.isRedirected = isRedirected;
     result.usedLegacyTLS = usedLegacyTLS;
     result.wasPrivateRelayed = wasPrivateRelayed;
+    result.proxyName = proxyName;
     result.isRangeRequested = isRangeRequested;
     if (certificateInfo)
         result.certificateInfo = certificateInfo->isolatedCopy();
@@ -136,6 +139,7 @@ ResourceResponseData ResourceResponseBase::crossThreadData() const
     data.isRedirected = m_isRedirected;
     data.usedLegacyTLS = m_usedLegacyTLS;
     data.wasPrivateRelayed = m_wasPrivateRelayed;
+    data.proxyName = m_proxyName;
     data.isRangeRequested = m_isRangeRequested;
     if (m_certificateInfo)
         data.certificateInfo = m_certificateInfo->isolatedCopy();
@@ -167,6 +171,7 @@ ResourceResponse ResourceResponseBase::fromCrossThreadData(CrossThreadData&& dat
     response.m_isRedirected = data.isRedirected;
     response.m_usedLegacyTLS =  data.usedLegacyTLS;
     response.m_wasPrivateRelayed = data.wasPrivateRelayed;
+    response.m_proxyName = data.proxyName;
     response.m_isRangeRequested = data.isRangeRequested;
     response.m_certificateInfo = WTFMove(data.certificateInfo);
 
@@ -489,7 +494,6 @@ static bool isSafeCrossOriginResponseHeader(HTTPHeaderName name)
         || name == HTTPHeaderName::Trailer
         || name == HTTPHeaderName::Vary
         || name == HTTPHeaderName::XContentTypeOptions
-        || name == HTTPHeaderName::XDNSPrefetchControl
         || name == HTTPHeaderName::XFrameOptions
         || name == HTTPHeaderName::XXSSProtection;
 }
@@ -907,6 +911,7 @@ std::optional<ResourceResponseData> ResourceResponseBase::getResponseData() cons
         m_isRedirected,
         m_usedLegacyTLS,
         m_wasPrivateRelayed,
+        String { m_proxyName },
         m_isRangeRequested,
         m_certificateInfo
     } };
@@ -933,6 +938,7 @@ void Coder<WebCore::ResourceResponseData>::encodeForPersistence(Encoder& encoder
     encoder << data.isRedirected;
     encoder << data.usedLegacyTLS;
     encoder << data.wasPrivateRelayed;
+    encoder << data.proxyName;
     encoder << data.isRangeRequested;
 }
 
@@ -1013,6 +1019,11 @@ std::optional<WebCore::ResourceResponseData> Coder<WebCore::ResourceResponseData
     if (!wasPrivateRelayed)
         return std::nullopt;
 
+    std::optional<String> proxyName;
+    decoder >> proxyName;
+    if (!proxyName)
+        return std::nullopt;
+
     std::optional<bool> isRangeRequested;
     decoder >> isRangeRequested;
     if (!isRangeRequested)
@@ -1034,6 +1045,7 @@ std::optional<WebCore::ResourceResponseData> Coder<WebCore::ResourceResponseData
         *isRedirected,
         *usedLegacyTLS,
         *wasPrivateRelayed,
+        WTFMove(*proxyName),
         *isRangeRequested,
         WTFMove(*certificateInfo)
     };

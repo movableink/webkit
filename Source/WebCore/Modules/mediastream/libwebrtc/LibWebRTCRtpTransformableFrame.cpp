@@ -28,19 +28,11 @@
 
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 #include <webrtc/api/frame_transformer_interface.h>
 
-ALLOW_COMMA_END
-ALLOW_DEPRECATED_DECLARATIONS_END
-ALLOW_UNUSED_PARAMETERS_END
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 namespace WebCore {
 
@@ -66,7 +58,7 @@ std::span<const uint8_t> LibWebRTCRtpTransformableFrame::data() const
     if (!m_rtcFrame)
         return { };
     auto data = m_rtcFrame->GetData();
-    return { data.begin(), data.size() };
+    return unsafeMakeSpan(data.begin(), data.size());
 }
 
 void LibWebRTCRtpTransformableFrame::setData(std::span<const uint8_t> data)
@@ -122,7 +114,5 @@ RTCEncodedVideoFrameMetadata LibWebRTCRtpTransformableFrame::videoMetadata() con
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_RTC) && USE(LIBWEBRTC)

@@ -33,6 +33,7 @@
 #import "TestUIDelegate.h"
 #import "TestURLSchemeHandler.h"
 #import "TestWKWebView.h"
+#import "UserMediaCaptureUIDelegate.h"
 #import "Utilities.h"
 #import "WKWebViewConfigurationExtras.h"
 #import "WKWebViewFindStringFindDelegate.h"
@@ -48,9 +49,33 @@
 #import <WebKit/WKWebsiteDataStorePrivate.h>
 #import <WebKit/_WKFeature.h>
 #import <WebKit/_WKFrameTreeNode.h>
+#import <WebKit/_WKProcessPoolConfiguration.h>
 #import <WebKit/_WKWebsiteDataStoreConfiguration.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/text/MakeString.h>
+
+@interface NavigationDelegateAllowingAllTLS : NSObject<WKNavigationDelegate>
+- (void)waitForDidFinishNavigation;
+@end
+
+@implementation NavigationDelegateAllowingAllTLS {
+    bool _finishedNavigation;
+}
+- (void)webView:(WKWebView *)webView didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition, NSURLCredential *))completionHandler
+{
+    EXPECT_WK_STREQ(challenge.protectionSpace.authenticationMethod, NSURLAuthenticationMethodServerTrust);
+    completionHandler(NSURLSessionAuthChallengeUseCredential, [NSURLCredential credentialForTrust:challenge.protectionSpace.serverTrust]);
+}
+- (void)waitForDidFinishNavigation
+{
+    _finishedNavigation = false;
+    TestWebKitAPI::Util::run(&_finishedNavigation);
+}
+- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation
+{
+    _finishedNavigation = true;
+}
+@end
 
 @interface TestObserver : NSObject
 
@@ -1241,6 +1266,18 @@ TEST(SiteIsolation, CrossOriginOpenerPolicy)
     [webView waitForNextPresentationUpdate];
 }
 
+TEST(SiteIsolation, CrossOriginOpenerPolicyMainFrame)
+{
+    HTTPServer server({
+        { "/example"_s, { { { "cross-origin-opener-policy"_s, "same-origin-allow-popups"_s } }, "hi"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+}
+
 TEST(SiteIsolation, NavigationWithIFrames)
 {
     HTTPServer server({
@@ -1846,6 +1883,32 @@ TEST(SiteIsolation, MainFrameURLAfterFragmentNavigation)
     EXPECT_FALSE(canLoadURLInIFrame(@"/always_blocked"));
 }
 
+TEST(SiteIsolation, LoadRequestOnOpenerWebView)
+{
+    HTTPServer server({
+        { "/example"_s, { "<script>w = window.open('https://webkit.org/webkit')</script>"_s } },
+        { "/webkit"_s, { ""_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+    auto [opener, opened] = openerAndOpenedViews(server);
+    [opener.webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://apple.com/webkit"]]];
+    [opener.navigationDelegate waitForDidFinishNavigation];
+    checkFrameTreesInProcesses(opener.webView.get(), { { "https://apple.com"_s } });
+    checkFrameTreesInProcesses(opened.webView.get(), { { "https://webkit.org"_s } });
+}
+
+TEST(SiteIsolation, LoadRequestOnOpenedWebView)
+{
+    HTTPServer server({
+        { "/example"_s, { "<script>w = window.open('https://webkit.org/webkit')</script>"_s } },
+        { "/webkit"_s, { ""_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+    auto [opener, opened] = openerAndOpenedViews(server);
+    [opened.webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://apple.com/webkit"]]];
+    [opened.navigationDelegate waitForDidFinishNavigation];
+    checkFrameTreesInProcesses(opened.webView.get(), { { "https://apple.com"_s } });
+    checkFrameTreesInProcesses(opener.webView.get(), { { "https://example.com"_s } });
+}
+
 TEST(SiteIsolation, FocusOpenedWindow)
 {
     auto openerHTML = "<script>"
@@ -2283,6 +2346,24 @@ TEST(SiteIsolation, FindStringMatchCount)
 
     EXPECT_TRUE([[webView findStringAndWait:@"Hello World" withConfiguration:findConfiguration.get()] matchFound]);
     EXPECT_EQ(3ul, [findDelegate matchesCount]);
+}
+
+TEST(SiteIsolation, CountStringMatches)
+{
+    HTTPServer server({
+        { "/mainframe"_s, { "<p>Hello world</p><iframe src='https://webkit.org/subframe'></iframe>"_s } },
+        { "/subframe"_s, { "<p>Hello world</p>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
+    auto findConfiguration = adoptNS([[WKFindConfiguration alloc] init]);
+    auto findDelegate = adoptNS([[WKWebViewFindStringFindDelegate alloc] init]);
+    [webView _setFindDelegate:findDelegate.get()];
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://apple.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    [webView _countStringMatches:@"Hello world" options:0 maxCount:100];
+    while ([findDelegate matchesCount] != 2)
+        Util::spinRunLoop();
 }
 
 #if PLATFORM(MAC)
@@ -2999,7 +3080,22 @@ TEST(SiteIsolation, CanGoBackAfterNavigatingFrameCrossOrigin)
     EXPECT_TRUE([webView canGoBack]);
 }
 
-TEST(SiteIsolation, NavigateIframeSameOriginBackForward)
+TEST(SiteIsolation, RestoreSessionFromAnotherWebView)
+{
+    HTTPServer server({
+        { "/example"_s, { "<iframe src='https://webkit.org/frame'></iframe>"_s } },
+        { "/frame"_s, { "<script> alert('done'); </script>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+    auto [webView1, navigationDelegate] = siteIsolatedViewAndDelegate(server);
+    [webView1 loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    EXPECT_WK_STREQ([webView1 _test_waitForAlert], "done");
+
+    auto [webView2, navigationDelegate2] = siteIsolatedViewAndDelegate(server);
+    [webView2 _restoreSessionState:[webView1 _sessionState] andNavigate:YES];
+    EXPECT_WK_STREQ([webView2 _test_waitForAlert], "done");
+}
+
+static void testNavigateIframeBackForward(NSString *navigationURL, bool restoreSessionState)
 {
     HTTPServer server({
         { "/example"_s, { "<iframe src='https://webkit.org/source'></iframe>"_s } },
@@ -3011,8 +3107,11 @@ TEST(SiteIsolation, NavigateIframeSameOriginBackForward)
     EXPECT_WK_STREQ([webView _test_waitForAlert], "source");
 
     RetainPtr childFrame = [webView firstChildFrame];
-    [webView evaluateJavaScript:@"location.href = 'https://webkit.org/destination'" inFrame:childFrame.get() completionHandler:nil];
+    [webView evaluateJavaScript:[NSString stringWithFormat:@"location.href = '%@'", navigationURL] inFrame:childFrame.get() completionHandler:nil];
     EXPECT_WK_STREQ([webView _test_waitForAlert], "destination");
+
+    if (restoreSessionState)
+        [webView _restoreSessionState:[webView _sessionState] andNavigate:NO];
 
     [webView goBack];
     EXPECT_WK_STREQ("source", [webView _test_waitForAlert]);
@@ -3020,26 +3119,59 @@ TEST(SiteIsolation, NavigateIframeSameOriginBackForward)
 
     [webView goForward];
     EXPECT_WK_STREQ("destination", [webView _test_waitForAlert]);
-    EXPECT_WK_STREQ("https://webkit.org/destination", [webView objectByEvaluatingJavaScript:@"location.href" inFrame:childFrame.get()]);
+    EXPECT_WK_STREQ(navigationURL, [webView objectByEvaluatingJavaScript:@"location.href" inFrame:childFrame.get()]);
+
+    [webView goBack];
+    EXPECT_WK_STREQ("source", [webView _test_waitForAlert]);
+    EXPECT_WK_STREQ("https://webkit.org/source", [webView objectByEvaluatingJavaScript:@"location.href" inFrame:childFrame.get()]);
+}
+
+TEST(SiteIsolation, NavigateIframeSameOriginBackForward)
+{
+    testNavigateIframeBackForward(@"https://webkit.org/destination", false);
+}
+
+TEST(SiteIsolation, DISABLED_NavigateIframeSameOriginBackForwardAfterSessionRestore)
+{
+    testNavigateIframeBackForward(@"https://webkit.org/destination", true);
 }
 
 TEST(SiteIsolation, NavigateIframeCrossOriginBackForward)
 {
-    HTTPServer server({
-        { "/example"_s, { "<iframe src='https://a.com/a'></iframe>"_s } },
-        { "/a"_s, { "<script> alert('a'); </script>"_s } },
-        { "/b"_s, { "<script> alert('b'); </script>"_s } }
-    }, HTTPServer::Protocol::HttpsProxy);
-    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
-    EXPECT_WK_STREQ([webView _test_waitForAlert], "a");
+    testNavigateIframeBackForward(@"https://apple.com/destination", false);
+}
 
-    [webView evaluateJavaScript:@"location.href = 'https://b.com/b'" inFrame:[webView firstChildFrame] completionHandler:nil];
-    EXPECT_WK_STREQ([webView _test_waitForAlert], "b");
+TEST(SiteIsolation, DISABLED_NavigateIframeCrossOriginBackForwardAfterSessionRestore)
+{
+    testNavigateIframeBackForward(@"https://apple.com/destination", true);
+}
+
+TEST(SiteIsolation, DiscardUncachedBackItemForNavigatedOverIframe)
+{
+    HTTPServer server({
+        { "/example"_s, { "<iframe src='https://webkit.org/a'></iframe>"_s } },
+        { "/a"_s, { "<script> alert('a'); </script>"_s } },
+        { "/b"_s, { "<script> alert('b'); </script>"_s } },
+        { "/c"_s, { "<script> alert('c'); </script>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+    RetainPtr processPoolConfiguration = adoptNS([[_WKProcessPoolConfiguration alloc] init]);
+    processPoolConfiguration.get().pageCacheEnabled = NO;
+    RetainPtr processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
+    RetainPtr webViewConfiguration = server.httpsProxyConfiguration();
+    [webViewConfiguration setProcessPool:processPool.get()];
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(webViewConfiguration.get());
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    EXPECT_WK_STREQ("a", [webView _test_waitForAlert]);
+
+    [webView evaluateJavaScript:@"location.href = 'https://webkit.org/b'" inFrame:[webView firstChildFrame] completionHandler:nil];
+    EXPECT_WK_STREQ("b", [webView _test_waitForAlert]);
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://apple.com/c"]]];
+    EXPECT_WK_STREQ("c", [webView _test_waitForAlert]);
+
     [webView goBack];
-    EXPECT_WK_STREQ([webView _test_waitForAlert], "a");
-    [webView goForward];
-    EXPECT_WK_STREQ([webView _test_waitForAlert], "b");
+    EXPECT_WK_STREQ("a", [webView _test_waitForAlert]);
 }
 
 TEST(SiteIsolation, ProtocolProcessSeparation)
@@ -3124,6 +3256,38 @@ TEST(SiteIsolation, NavigateNestedIframeSameOriginBackForward)
     EXPECT_WK_STREQ([webView _test_waitForAlert], "a");
     [webView goForward];
     EXPECT_WK_STREQ([webView _test_waitForAlert], "b");
+}
+
+TEST(SiteIsolation, GoBackToNestedIframeCreatedAfterNavigatingSibling)
+{
+    HTTPServer server({
+        { "/example"_s, { "<iframe src='https://webkit.org/a'></iframe>"_s } },
+        { "/a"_s, { "<script> alert('a'); </script>"_s } },
+        { "/b"_s, { "<script> alert('b'); </script>"_s } },
+        { "/c"_s, { "<script> alert('c'); </script>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "a");
+
+    auto createIframe = @"var iframe = document.createElement('iframe');"
+        "iframe.src = 'https://apple.com/c';"
+        "document.body.appendChild(iframe);";
+    [webView evaluateJavaScript:createIframe completionHandler:nil];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "c");
+
+    [webView evaluateJavaScript:@"location.href = 'https://webkit.org/b'" inFrame:[webView firstChildFrame] completionHandler:nil];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "b");
+
+    [webView evaluateJavaScript:createIframe inFrame:[webView secondChildFrame] completionHandler:nil];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "c");
+
+    RetainPtr<WKFrameInfo> nestedChildFrame = [webView mainFrame].childFrames[1].childFrames.firstObject.info;
+    [webView evaluateJavaScript:@"location.href = 'https://apple.com/a'" inFrame:nestedChildFrame.get() completionHandler:nil];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "a");
+
+    [webView goBack];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "c");
 }
 
 TEST(SiteIsolation, AdvancedPrivacyProtectionsHideScreenMetricsFromBindings)
@@ -3235,30 +3399,48 @@ TEST(SiteIsolation, URLSchemeTask)
 TEST(SiteIsolation, ThemeColor)
 {
     HTTPServer server({
-        { "/example"_s, { "<meta name='theme-color' content='red'><iframe src='https://webkit.org/webkit'></iframe>"_s } },
-        { "/webkit"_s, { "<meta name='theme-color' content='blue'>"_s } }
+        { "/example"_s, {
+            "<style> html { background-color: blue } </style>"
+            "<meta name='theme-color' content='red'><iframe src='https://webkit.org/webkit'></iframe>"_s
+        } },
+        { "/webkit"_s, {
+            "<style> html { background-color: red } </style>"
+            "<meta name='theme-color' content='blue'>"_s
+        } }
     }, HTTPServer::Protocol::HttpsProxy);
 
     auto [webView, delegate] = siteIsolatedViewAndDelegate(server);
     EXPECT_FALSE([webView themeColor]);
+    EXPECT_TRUE([webView underPageBackgroundColor]);
 
-    __block bool observed { false };
+    __block bool observedThemeColor { false };
+    __block bool observedUnderPageBackgroundColor { false };
     auto observer = adoptNS([TestObserver new]);
     observer.get().observeValueForKeyPath = ^(NSString *path, id view) {
-        EXPECT_WK_STREQ(path, "themeColor");
-
         auto sRGBColorSpace = adoptCF(CGColorSpaceCreateWithName(kCGColorSpaceSRGB));
-        auto redColor = adoptCF(CGColorCreate(sRGBColorSpace.get(), redColorComponents));
-        EXPECT_TRUE(CGColorEqualToColor([[view themeColor] CGColor], redColor.get()));
-        observed = true;
+        if ([path isEqualToString:@"themeColor"]) {
+            auto redColor = adoptCF(CGColorCreate(sRGBColorSpace.get(), redColorComponents));
+            EXPECT_TRUE(CGColorEqualToColor([[view themeColor] CGColor], redColor.get()));
+            observedThemeColor = true;
+        } else {
+            EXPECT_WK_STREQ(path, "underPageBackgroundColor");
+            auto blueColor = adoptCF(CGColorCreate(sRGBColorSpace.get(), blueColorComponents));
+            EXPECT_TRUE(CGColorEqualToColor([[view underPageBackgroundColor] CGColor], blueColor.get()));
+            observedUnderPageBackgroundColor = true;
+        }
     };
     [webView.get() addObserver:observer.get() forKeyPath:@"themeColor" options:NSKeyValueObservingOptionNew context:nil];
+    [webView.get() addObserver:observer.get() forKeyPath:@"underPageBackgroundColor" options:NSKeyValueObservingOptionNew context:nil];
 
     [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
     [delegate waitForDidFinishNavigation];
     [webView waitForNextPresentationUpdate];
-    Util::run(&observed);
+    Util::run(&observedThemeColor);
+    Util::run(&observedUnderPageBackgroundColor);
     Util::runFor(0.1_s);
+
+    [webView.get() removeObserver:observer.get() forKeyPath:@"themeColor"];
+    [webView.get() removeObserver:observer.get() forKeyPath:@"underPageBackgroundColor"];
 }
 
 static WebViewAndDelegates makeWebViewAndDelegates(HTTPServer& server)
@@ -3635,6 +3817,490 @@ TEST(SiteIsolation, ProcessReuse)
     [webView objectByEvaluatingJavaScript:@"var frame = document.getElementById('onlyiframe'); frame.parentNode.removeChild(frame);1"];
     [webView evaluateJavaScript:@"var iframe = document.createElement('iframe');iframe.src = 'https://webkit.org/iframe_with_alert';document.body.appendChild(iframe)" completionHandler:nil];
     EXPECT_WK_STREQ([webView _test_waitForAlert], "loaded");
+}
+
+TEST(SiteIsolation, ProcessTerminationReason)
+{
+    HTTPServer server({
+        { "/example"_s, { "<iframe id='onlyiframe' src='https://webkit.org/iframe'></iframe>"_s } },
+        { "/iframe"_s, { "hi"_s } },
+        { "/iframe2"_s, { "hi"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    RetainPtr configuration = server.httpsProxyConfiguration();
+    RetainPtr navigationDelegate = adoptNS([NavigationDelegateAllowingAllTLS new]);
+    enableSiteIsolation(configuration.get());
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    webView.get().navigationDelegate = navigationDelegate.get();
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+    EXPECT_EQ(server.totalRequests(), 2u);
+
+    kill([webView firstChildFrame]._processIdentifier, 9);
+    Util::runFor(0.1_s);
+    EXPECT_EQ(server.totalRequests(), 2u);
+
+    [webView evaluateJavaScript:@"onlyiframe.src='https://webkit.org/iframe2'" completionHandler:nil];
+    while (server.totalRequests() < 3u)
+        Util::spinRunLoop();
+
+    kill([webView mainFrame].info._processIdentifier, 9);
+    [navigationDelegate waitForDidFinishNavigation];
+    EXPECT_EQ(server.totalRequests(), 5u);
+}
+
+TEST(SiteIsolation, FormSubmit)
+{
+    auto mainHTML = "<script>onload=()=>{onlyform.submit()}</script>"
+    "<iframe name='onlyiframe' src='https://webkit.org/iframe'></iframe>"
+    "<form action='alert_when_loaded' method='get' target='onlyiframe' id='onlyform'><input type='hidden' name='textname' value='textvalue'>"_s;
+
+    HTTPServer server({
+        { "/example"_s, { mainHTML } },
+        { "/iframe"_s, { "hi"_s } },
+        { "/alert_when_loaded?textname=textvalue"_s, { "<script>alert(window.location.search)</script>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "?textname=textvalue");
+    checkFrameTreesInProcesses(webView.get(), {
+        { "https://example.com"_s,
+            { { "https://example.com"_s } }
+        }
+    });
+}
+
+TEST(SiteIsolation, ContentRuleListFrameURL)
+{
+    HTTPServer server({
+        { "/example"_s, { "<iframe src='https://webkit.org/iframe'></iframe>"_s } },
+        { "/iframe"_s, { "<script>fetch('/example')</script>"_s } },
+        { "/alert_when_loaded"_s, { "<script>alert('loaded second iframe')</script>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
+    __block WKWebViewConfiguration *configuration = [webView configuration];
+
+    __block bool doneClearing { false };
+    [[WKContentRuleListStore defaultStore] removeContentRuleListForIdentifier:@"Test" completionHandler:^(NSError *error) {
+        doneClearing = true;
+    }];
+    TestWebKitAPI::Util::run(&doneClearing);
+
+    __block bool doneCompiling = false;
+    static NSString *filterSource = @"["
+        "{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\"should_not_match\", \"if-frame-url\":[\"should_not_match\"]}}"
+    "]";
+    [[WKContentRuleListStore defaultStore] compileContentRuleListForIdentifier:@"Test" encodedContentRuleList:filterSource completionHandler:^(WKContentRuleList *ruleList, NSError *error) {
+        [configuration.userContentController addContentRuleList:ruleList];
+        doneCompiling = true;
+    }];
+    TestWebKitAPI::Util::run(&doneCompiling);
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    [webView evaluateJavaScript:@"var iframe = document.createElement('iframe');document.body.appendChild(iframe);iframe.src = 'https://webkit.org/alert_when_loaded'" completionHandler:nil];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "loaded second iframe");
+}
+
+TEST(SiteIsolation, ReuseConfiguration)
+{
+    HTTPServer server({
+        { "/example"_s, { "<iframe src='https://webkit.org/iframe'></iframe>"_s } },
+        { "/iframe"_s, { "hi"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+    RetainPtr configuration = server.httpsProxyConfiguration();
+
+    auto [webView1, navigationDelegate1] = siteIsolatedViewAndDelegate(configuration);
+    [webView1 loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    [navigationDelegate1 waitForDidFinishNavigation];
+
+    auto [webView2, navigationDelegate2] = siteIsolatedViewAndDelegate(configuration);
+    [webView2 loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    [navigationDelegate2 waitForDidFinishNavigation];
+}
+
+static void callMethodOnFirstVideoElementInFrame(WKWebView *webView, NSString *methodName, WKFrameInfo *frame)
+{
+    __block RetainPtr<NSError> error;
+    __block bool done = false;
+
+    NSString *source = [NSString stringWithFormat:@"document.getElementsByTagName('video')[0].%@()", methodName];
+    [webView callAsyncJavaScript:source arguments:nil inFrame:frame inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *callError) {
+        error = callError;
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+
+    EXPECT_FALSE(!!error) << [error description].UTF8String;
+}
+
+static void expectPlayingAudio(WKWebView *webView, bool expected, ASCIILiteral reason)
+{
+    bool success = TestWebKitAPI::Util::waitFor([webView, expected]() {
+        return [webView _isPlayingAudio] == expected;
+    });
+    EXPECT_TRUE(success) << reason.characters();
+}
+
+TEST(SiteIsolation, PlayAudioInMultipleFrames)
+{
+    auto mainFrameHTML = "<video src='/video-with-audio.mp4' webkit-playsinline loop></video>"
+    "<iframe src='https://webkit.org/subframe'></iframe>"_s;
+    auto subFrameHTML = "<video src='/video-with-audio.mp4' webkit-playsinline loop></video>"_s;
+
+    RetainPtr<NSData> videoData = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"video-with-audio" ofType:@"mp4"] options:0 error:NULL];
+    HTTPResponse videoResponse { videoData.get() };
+    videoResponse.headerFields.set("Content-Type"_s, "video/mp4"_s);
+
+    HTTPServer server({
+        { "/mainframe"_s, { { { "Content-Type"_s, "text/html"_s } }, mainFrameHTML } },
+        { "/subframe"_s, { { { "Content-Type"_s, "text/html"_s } }, subFrameHTML } },
+        { "/video-with-audio.mp4"_s, { videoData.get() } },
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    RetainPtr configuration = server.httpsProxyConfiguration();
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(configuration);
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    callMethodOnFirstVideoElementInFrame(webView.get(), @"play", nil);
+    expectPlayingAudio(webView.get(), true, "Should be playing audio in main frame"_s);
+
+    callMethodOnFirstVideoElementInFrame(webView.get(), @"play", [webView firstChildFrame]);
+    expectPlayingAudio(webView.get(), true, "Should be playing audio in remote frame"_s);
+
+    callMethodOnFirstVideoElementInFrame(webView.get(), @"pause", nil);
+    expectPlayingAudio(webView.get(), true, "Should still be playing audio after pausing one of the two frames"_s);
+
+    callMethodOnFirstVideoElementInFrame(webView.get(), @"pause", [webView firstChildFrame]);
+    expectPlayingAudio(webView.get(), false, "Should not be playing audio after pausing in both frames"_s);
+}
+
+TEST(SiteIsolation, PlayAudioInRemoteFrameThenRemove)
+{
+    auto mainFrameHTML = "<iframe src='https://webkit.org/subframe'></iframe>"_s;
+    auto subFrameHTML = "<video src='/video-with-audio.mp4' webkit-playsinline loop></video>"_s;
+
+    RetainPtr<NSData> videoData = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"video-with-audio" ofType:@"mp4"] options:0 error:NULL];
+    HTTPResponse videoResponse { videoData.get() };
+    videoResponse.headerFields.set("Content-Type"_s, "video/mp4"_s);
+
+    HTTPServer server({
+        { "/mainframe"_s, { { { "Content-Type"_s, "text/html"_s } }, mainFrameHTML } },
+        { "/subframe"_s, { { { "Content-Type"_s, "text/html"_s } }, subFrameHTML } },
+        { "/video-with-audio.mp4"_s, { videoData.get() } },
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    RetainPtr configuration = server.httpsProxyConfiguration();
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(configuration);
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    callMethodOnFirstVideoElementInFrame(webView.get(), @"play", [webView firstChildFrame]);
+    expectPlayingAudio(webView.get(), true, "Should be playing audio in main frame"_s);
+
+    __block bool done = false;
+    __block RetainPtr<NSError> error;
+    [webView evaluateJavaScript:@"document.querySelectorAll('iframe').forEach(iframe => iframe.remove())" completionHandler:^(id result, NSError *scriptError) {
+        error = scriptError;
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    EXPECT_FALSE(!!error) << [error description].UTF8String;
+    done = false;
+
+    expectPlayingAudio(webView.get(), false, "Should not be playing audio after removing iframe"_s);
+}
+
+TEST(SiteIsolation, MutesAndSetsAudioInMultipleFrames)
+{
+    auto mainFrameHTML = "<video src='/video-with-audio.mp4' webkit-playsinline loop></video>"
+        "<iframe src='https://webkit.org/subframe'></iframe>"_s;
+    auto subFrameHTML = "<video src='/video-with-audio.mp4' webkit-playsinline loop></video>"_s;
+
+    RetainPtr<NSData> videoData = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"video-with-audio" ofType:@"mp4"] options:0 error:NULL];
+    HTTPResponse videoResponse { videoData.get() };
+    videoResponse.headerFields.set("Content-Type"_s, "video/mp4"_s);
+
+    HTTPServer server({
+        { "/mainframe"_s, { { { "Content-Type"_s, "text/html"_s } }, mainFrameHTML } },
+        { "/subframe"_s, { { { "Content-Type"_s, "text/html"_s } }, subFrameHTML } },
+        { "/video-with-audio.mp4"_s, { videoData.get() } },
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    WKWebViewConfiguration *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
+    auto storeConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] initNonPersistentConfiguration]);
+    [storeConfiguration setHTTPSProxy:[NSURL URLWithString:[NSString stringWithFormat:@"https://127.0.0.1:%d/", server.port()]]];
+    [configuration setWebsiteDataStore:adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:storeConfiguration.get()]).get()];
+    enableSiteIsolation(configuration);
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(configuration);
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    callMethodOnFirstVideoElementInFrame(webView.get(), @"play", nil);
+    expectPlayingAudio(webView.get(), true, "Should be playing audio in main frame"_s);
+
+    callMethodOnFirstVideoElementInFrame(webView.get(), @"play", [webView firstChildFrame]);
+    expectPlayingAudio(webView.get(), true, "Should be playing audio in remote frame"_s);
+
+    auto expectMuted = [&](bool expectedMuted, WKFrameInfo *frame, ASCIILiteral reason) {
+        bool success = TestWebKitAPI::Util::waitFor([&]() {
+            id actuallyMuted = [webView objectByEvaluatingJavaScript:@"window.internals.isEffectivelyMuted(document.getElementsByTagName('video')[0])" inFrame:frame];
+            return [actuallyMuted boolValue] == expectedMuted;
+        });
+        EXPECT_TRUE(success) << reason.characters();
+    };
+
+    auto expectMediaVolume = [&](float expectedMediaVolume, WKFrameInfo *frame, ASCIILiteral reason) {
+        bool success = TestWebKitAPI::Util::waitFor([&]() {
+            id actualMediaVolume = [webView objectByEvaluatingJavaScript:@"window.internals.pageMediaVolume()" inFrame:frame];
+            return [actualMediaVolume floatValue] == expectedMediaVolume;
+        });
+        EXPECT_TRUE(success) << reason.characters();
+    };
+
+    expectMuted(false, nil, "Should not be muted in main frame"_s);
+    expectMuted(false, [webView firstChildFrame], "Should not be muted in remote frame"_s);
+
+    [webView _setPageMuted:_WKMediaAudioMuted];
+    [webView _setMediaVolumeForTesting:0.125f];
+
+    expectMuted(true, nil, "Should be muted in main frame"_s);
+    expectMediaVolume(0.125f, nil, "Should set volume in main frame"_s);
+    expectMuted(true, [webView firstChildFrame], "Should be muted in remote frame"_s);
+    expectMediaVolume(0.125f, nil, "Should set volume in remote frame"_s);
+
+    auto addFrameToBody = @""
+        "return new Promise((resolve, reject) => {"
+        "    let frame = document.createElement('iframe');"
+        "    frame.onload = () => resolve(true);"
+        "    frame.setAttribute('src', 'https://webkit.org/subframe');"
+        "    document.body.appendChild(frame);"
+        "})";
+    __block RetainPtr<NSError> error;
+    __block bool done = false;
+    [webView callAsyncJavaScript:addFrameToBody arguments:nil inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *callError) {
+        error = callError;
+        done = true;
+    }];
+    Util::run(&done);
+    EXPECT_FALSE(!!error) << "Failed to add iframe: " << [error description].UTF8String;
+
+    callMethodOnFirstVideoElementInFrame(webView.get(), @"play", [webView secondChildFrame]);
+    expectMuted(true, [webView secondChildFrame], "Should be muted in newly created remote frame"_s);
+    expectMediaVolume(0.125f, [webView secondChildFrame], "Should initialize newly created remote frame with previously set media volume"_s);
+}
+
+#if ENABLE(MEDIA_STREAM)
+
+TEST(SiteIsolation, StopsMediaCaptureInRemoteFrame)
+{
+    auto mainFrameHTML = "<video id='video' controlsplaysinline autoplay></video>"
+        "<script>var didStartStream = new Promise(resolve => { video.onplay = resolve; })</script>"
+        "<script>var didEndStream = new Promise(resolve => { video.onended = resolve; })</script>"
+        "<iframe allow='camera *' src='https://webkit.org/subframe'></iframe>"_s;
+    auto subFrameHTML = "<video id='video' controlsplaysinline autoplay></video>"
+        "<script>var didStartStream = new Promise(resolve => { video.onplay = resolve; })</script>"
+        "<script>var didEndStream = new Promise(resolve => { video.onended = resolve; })</script>"_s;
+
+    HTTPServer server({
+        { "/mainframe"_s, { { { "Content-Type"_s, "text/html"_s } }, mainFrameHTML } },
+        { "/subframe"_s, { { { "Content-Type"_s, "text/html"_s } }, subFrameHTML } },
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    RetainPtr configuration = server.httpsProxyConfiguration();
+    [configuration _setMediaCaptureEnabled:YES];
+
+    RetainPtr preferences = [configuration preferences];
+    [preferences _setMediaCaptureRequiresSecureConnection:NO];
+    [preferences _setMockCaptureDevicesEnabled:YES];
+    [preferences _setGetUserMediaRequiresFocus:NO];
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(configuration, CGRectZero, false);
+    auto delegate = adoptNS([[UserMediaCaptureUIDelegate alloc] init]);
+    [webView setUIDelegate:delegate.get()];
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/mainframe"]]];
+    [navigationDelegate waitForDidFinishNavigation];
+
+    auto assertStartCaptureSucceedsInFrameWithPrompt = [&](WKFrameInfo *frame) {
+        __block RetainPtr<NSError> error;
+        __block bool done = false;
+
+        NSString *source = @"return navigator.mediaDevices.getUserMedia({ audio: false, video: true }).then(stream => { video.srcObject = stream; })";
+        [webView callAsyncJavaScript:source arguments:nil inFrame:frame inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *callError) {
+            error = callError;
+            done = true;
+        }];
+        TestWebKitAPI::Util::run(&done);
+
+        ASSERT_FALSE(!!error) << "Failed to start capture: " << [error description].UTF8String;
+
+        [delegate waitUntilPrompted];
+    };
+
+    // FIXME: the mock media stream doesn't seem to start or stop producing frames for the video
+    // element in the sim. This doesn't seem to be related to site isolation.
+#if PLATFORM(IOS_FAMILY_SIMULATOR)
+    auto assertVideoStreamStartedOrEndedInFrame = [&](bool, WKFrameInfo*) { };
+#else
+    auto assertVideoStreamStartedOrEndedInFrame = [&](bool started, WKFrameInfo* frame) {
+        __block RetainPtr<NSError> error;
+        __block bool done = false;
+
+        NSString *source = started ? @"return didStartStream.then(() => true)" : @"return didEndStream.then(() => true)";
+        [webView callAsyncJavaScript:source arguments:nil inFrame:frame inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *callError) {
+            error = callError;
+            done = true;
+        }];
+        TestWebKitAPI::Util::run(&done);
+
+        ASSERT_FALSE(!!error) << "Capture failed to " << (started ? "start" : "end") << " frames for video element: " << [error description].UTF8String;
+    };
+#endif
+
+    auto assertVideoStreamStartedInFrame = [&](WKFrameInfo *frame) {
+        assertVideoStreamStartedOrEndedInFrame(true, frame);
+    };
+    auto assertVideoStreamEndedInFrame = [&](WKFrameInfo *frame) {
+        assertVideoStreamStartedOrEndedInFrame(false, frame);
+    };
+
+    auto assertCaptureState = [&](_WKMediaCaptureStateDeprecated expected) {
+        _WKMediaCaptureStateDeprecated actual;
+        TestWebKitAPI::Util::waitFor([webView, expected, &actual]() {
+            actual = [webView _mediaCaptureState];
+            return actual == expected;
+        });
+        ASSERT_EQ(actual, expected);
+    };
+
+    assertStartCaptureSucceedsInFrameWithPrompt(nil);
+    assertStartCaptureSucceedsInFrameWithPrompt([webView firstChildFrame]);
+    assertVideoStreamStartedInFrame(nil);
+    assertVideoStreamStartedInFrame([webView firstChildFrame]);
+    assertCaptureState(_WKMediaCaptureStateDeprecatedActiveCamera);
+
+    [webView _stopMediaCapture];
+
+    assertVideoStreamEndedInFrame(nil);
+    assertVideoStreamEndedInFrame([webView firstChildFrame]);
+    assertCaptureState(_WKMediaCaptureStateDeprecatedNone);
+
+    assertStartCaptureSucceedsInFrameWithPrompt([webView firstChildFrame]);
+    assertStartCaptureSucceedsInFrameWithPrompt(nil);
+    assertVideoStreamStartedInFrame(nil);
+    assertVideoStreamStartedInFrame([webView firstChildFrame]);
+    assertCaptureState(_WKMediaCaptureStateDeprecatedActiveCamera);
+}
+
+#endif // ENABLE(MEDIA_STREAM)
+
+TEST(SiteIsolation, FrameServerTrust)
+{
+    HTTPServer plaintextServer({
+        { "/"_s, { "<iframe src='https://webkit.org/iframe'></iframe>"_s } },
+    });
+    HTTPServer secureServer({
+        { "/iframe"_s, { "<script>alert('iframe loaded')</script>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(secureServer);
+    [webView loadRequest:plaintextServer.request()];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "iframe loaded");
+    EXPECT_NULL([webView mainFrame].info._serverTrust);
+    verifyCertificateAndPublicKey([webView firstChildFrame]._serverTrust);
+}
+
+TEST(SiteIsolation, CoordinateTransformation)
+{
+    HTTPServer server({
+        { "/example"_s, { "<br><iframe id='wk' src='https://webkit.org/iframe'></iframe>"_s } },
+        { "/iframe"_s, { "hi"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
+
+    auto convertPoint = [] (TestWKWebView *webView, CGPoint point) {
+        __block CGPoint result;
+        __block bool done { false };
+        [webView _convertPoint:point fromFrame:[webView firstChildFrame] toMainFrameCoordinates:^(CGPoint transformedPoint, NSError *error) {
+            EXPECT_NULL(error);
+            result = transformedPoint;
+            done = true;
+        }];
+        Util::run(&done);
+        return result;
+    };
+    auto convertRect = [] (TestWKWebView *webView, CGRect rect) {
+        __block CGRect result;
+        __block bool done { false };
+        [webView _convertRect:rect fromFrame:[webView firstChildFrame] toMainFrameCoordinates:^(CGRect transformedRect, NSError *error) {
+            EXPECT_NULL(error);
+            result = transformedRect;
+            done = true;
+        }];
+        Util::run(&done);
+        return result;
+    };
+
+#if PLATFORM(MAC)
+    constexpr auto expectedTransformedY = 38;
+#else
+    constexpr auto expectedTransformedY = 40;
+#endif
+    {
+        [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+        [navigationDelegate waitForDidFinishNavigation];
+        auto transformedPoint = convertPoint(webView.get(), { 11, 10 });
+        EXPECT_EQ(transformedPoint.x, 21);
+        EXPECT_EQ(transformedPoint.y, expectedTransformedY);
+        auto transformedRect = convertRect(webView.get(), { { 11, 10 }, { 9, 8 } });
+        EXPECT_EQ(transformedRect.origin.x, 21);
+        EXPECT_EQ(transformedRect.origin.y, expectedTransformedY);
+        EXPECT_EQ(transformedRect.size.height, 8);
+        EXPECT_EQ(transformedRect.size.width, 9);
+    }
+
+    {
+        [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://webkit.org/example"]]];
+        [navigationDelegate waitForDidFinishNavigation];
+        auto transformedPoint = convertPoint(webView.get(), { 11, 10 });
+        EXPECT_EQ(transformedPoint.x, 21);
+        EXPECT_EQ(transformedPoint.y, expectedTransformedY);
+        auto transformedRect = convertRect(webView.get(), { { 11, 10 }, { 9, 8 } });
+        EXPECT_EQ(transformedRect.origin.x, 21);
+        EXPECT_EQ(transformedRect.origin.y, expectedTransformedY);
+        EXPECT_EQ(transformedRect.size.height, 8);
+        EXPECT_EQ(transformedRect.size.width, 9);
+    }
+
+    RetainPtr frameInfoOfRemovedFrame = [webView firstChildFrame];
+    __block bool removedIframe { false };
+    [webView evaluateJavaScript:@"var frame = document.getElementById('wk');frame.parentNode.removeChild(frame)" completionHandler:^(id, NSError *error) {
+        removedIframe = true;
+    }];
+    Util::run(&removedIframe);
+    __block bool done { false };
+    [webView _convertPoint:CGPoint { 11, 10 } fromFrame:frameInfoOfRemovedFrame.get() toMainFrameCoordinates:^(CGPoint, NSError *error) {
+        EXPECT_NOT_NULL(error);
+        done = true;
+    }];
+    Util::run(&done);
+    done = false;
+    [webView _convertRect:CGRect { { 11, 10 }, { 9, 8 } } fromFrame:frameInfoOfRemovedFrame.get() toMainFrameCoordinates:^(CGRect, NSError *error) {
+        EXPECT_NOT_NULL(error);
+        done = true;
+    }];
+    Util::run(&done);
 }
 
 }

@@ -28,6 +28,7 @@
 
 #if ENABLE(PDF_PLUGIN)
 
+#include "DocumentEditingContext.h"
 #include "FrameInfoData.h"
 #include "PDFPlugin.h"
 #include "UnifiedPDFPlugin.h"
@@ -44,6 +45,7 @@
 #include <WebCore/CookieJar.h>
 #include <WebCore/Credential.h>
 #include <WebCore/CredentialStorage.h>
+#include <WebCore/DocumentInlines.h>
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/EventHandler.h>
 #include <WebCore/EventNames.h>
@@ -240,6 +242,7 @@ PluginView::PluginView(HTMLPlugInElement& element, const URL& mainResourceURL, c
 {
     protectedPlugin()->startLoading();
     m_webPage->addPluginView(*this);
+    updateDocumentForPluginSizingBehavior();
 }
 
 PluginView::~PluginView()
@@ -320,7 +323,7 @@ void PluginView::manualLoadDidFail()
     protectedPlugin()->streamDidFail();
 }
 
-void PluginView::topContentInsetDidChange()
+void PluginView::obscuredContentInsetsDidChange()
 {
     viewGeometryDidChange();
 }
@@ -357,6 +360,8 @@ double PluginView::pageScaleFactor() const
 
 void PluginView::pluginScaleFactorDidChange()
 {
+    if (!protectedPlugin()->handlesPageScaleFactor())
+        return;
     auto scaleFactor = pageScaleFactor();
     RefPtr webPage = m_webPage.get();
     webPage->send(Messages::WebPageProxy::PluginScaleFactorDidChange(scaleFactor));
@@ -423,7 +428,7 @@ void PluginView::initializePlugin()
         if (RefPtr frameView = frame->view())
             frameView->setNeedsLayoutAfterViewConfigurationChange();
         if (frame->isMainFrame() && plugin->isFullFramePlugin())
-            WebFrame::fromCoreFrame(*frame)->protectedPage()->send(Messages::WebPageProxy::MainFramePluginHandlesPageScaleGestureDidChange(true, plugin->minScaleFactor(), plugin->maxScaleFactor()));
+            WebFrame::fromCoreFrame(*frame)->protectedPage()->send(Messages::WebPageProxy::MainFramePluginHandlesPageScaleGestureDidChange(plugin->handlesPageScaleFactor(), plugin->minScaleFactor(), plugin->maxScaleFactor()));
     }
 }
 
@@ -447,11 +452,9 @@ PlatformLayer* PluginView::platformLayer() const
     if (!m_isInitialized)
         return nullptr;
 
-#if ENABLE(LEGACY_PDFKIT_PLUGIN)
     Ref plugin = m_plugin;
     if (plugin->layerHostingStrategy() == PluginLayerHostingStrategy::PlatformLayer)
         return plugin->platformLayer();
-#endif
 
     return nullptr;
 }
@@ -671,12 +674,28 @@ void PluginView::scrollToRevealTextMatch(const WebFoundTextRange::PDFData& match
     return protectedPlugin()->scrollToRevealTextMatch(match);
 }
 
+String PluginView::fullDocumentString() const
+{
+    if (!m_isInitialized)
+        return { };
+
+    return protectedPlugin()->fullDocumentString();
+}
+
 String PluginView::selectionString() const
 {
     if (!m_isInitialized)
         return String();
 
     return protectedPlugin()->selectionString();
+}
+
+std::pair<String, String> PluginView::stringsBeforeAndAfterSelection(int characterCount) const
+{
+    if (!m_isInitialized)
+        return { };
+
+    return protectedPlugin()->stringsBeforeAndAfterSelection(characterCount);
 }
 
 void PluginView::handleEvent(Event& event)
@@ -700,18 +719,18 @@ void PluginView::handleEvent(Event& event)
         } else if (currentEvent->type() == WebEventType::MouseUp)
             frame->checkedEventHandler()->setCapturingMouseEventsElement(nullptr);
 
-        didHandleEvent = protectedPlugin()->handleMouseEvent(static_cast<const WebMouseEvent&>(*currentEvent));
+        didHandleEvent = protectedPlugin()->handleMouseEvent(downcast<WebMouseEvent>(*currentEvent));
     } else if ((event.type() == eventNames().wheelEvent || event.type() == eventNames().mousewheelEvent) && currentEvent->type() == WebEventType::Wheel)
-        didHandleEvent = protectedPlugin()->handleWheelEvent(static_cast<const WebWheelEvent&>(*currentEvent));
+        didHandleEvent = protectedPlugin()->handleWheelEvent(downcast<WebWheelEvent>(*currentEvent));
     else if (event.type() == eventNames().mouseoverEvent && currentEvent->type() == WebEventType::MouseMove)
-        didHandleEvent = protectedPlugin()->handleMouseEnterEvent(static_cast<const WebMouseEvent&>(*currentEvent));
+        didHandleEvent = protectedPlugin()->handleMouseEnterEvent(downcast<WebMouseEvent>(*currentEvent));
     else if (event.type() == eventNames().mouseoutEvent && currentEvent->type() == WebEventType::MouseMove)
-        didHandleEvent = protectedPlugin()->handleMouseLeaveEvent(static_cast<const WebMouseEvent&>(*currentEvent));
+        didHandleEvent = protectedPlugin()->handleMouseLeaveEvent(downcast<WebMouseEvent>(*currentEvent));
     else if (event.type() == eventNames().contextmenuEvent && currentEvent->type() == WebEventType::MouseDown)
-        didHandleEvent = protectedPlugin()->handleContextMenuEvent(static_cast<const WebMouseEvent&>(*currentEvent));
+        didHandleEvent = protectedPlugin()->handleContextMenuEvent(downcast<WebMouseEvent>(*currentEvent));
     else if ((event.type() == eventNames().keydownEvent && currentEvent->type() == WebEventType::KeyDown)
         || (event.type() == eventNames().keyupEvent && currentEvent->type() == WebEventType::KeyUp))
-        didHandleEvent = protectedPlugin()->handleKeyboardEvent(static_cast<const WebKeyboardEvent&>(*currentEvent));
+        didHandleEvent = protectedPlugin()->handleKeyboardEvent(downcast<WebKeyboardEvent>(*currentEvent));
 
     if (didHandleEvent)
         event.setDefaultHandled();
@@ -863,17 +882,35 @@ void PluginView::viewGeometryDidChange()
         return;
 
     ASSERT(frame());
-    float pageScaleFactor = frame()->page() ? frame()->page()->pageScaleFactor() : 1;
-
-    IntPoint scaledFrameRectLocation(frameRect().location().x() * pageScaleFactor, frameRect().location().y() * pageScaleFactor);
-    IntPoint scaledLocationInRootViewCoordinates(protectedParent()->contentsToRootView(scaledFrameRectLocation));
 
     // FIXME: We still don't get the right coordinates for transformed plugins.
-    AffineTransform transform;
-    transform.translate(scaledLocationInRootViewCoordinates.x(), scaledLocationInRootViewCoordinates.y());
-    transform.scale(pageScaleFactor);
+    auto pluginToRootViewTransform = [this, protectedThis = Ref { *this }] {
+        AffineTransform transform;
 
-    protectedPlugin()->geometryDidChange(size(), transform);
+        RefPtr plugin = protectedPlugin();
+        RefPtr frame = this->frame();
+        if (frame->isMainFrame() && plugin->isFullFramePlugin() && !plugin->handlesPageScaleFactor())
+            return transform;
+
+        float pageScaleFactor = frame->page() ? frame->page()->pageScaleFactor() : 1;
+        IntPoint scaledFrameRectLocation { frameRect().location().scaled(pageScaleFactor) };
+        IntPoint scaledLocationInRootViewCoordinates { protectedParent()->contentsToRootView(scaledFrameRectLocation) };
+
+        transform.translate(scaledLocationInRootViewCoordinates);
+        transform.scale(pageScaleFactor);
+
+        return transform;
+    }();
+
+    protectedPlugin()->geometryDidChange(size(), pluginToRootViewTransform);
+}
+
+void PluginView::frameViewLayoutOrVisualViewportChanged(const IntRect& unobscuredContentRect)
+{
+    if (!m_isInitialized || !parent())
+        return;
+
+    protectedPlugin()->frameViewLayoutOrVisualViewportChanged(unobscuredContentRect);
 }
 
 void PluginView::viewVisibilityDidChange()
@@ -1110,11 +1147,83 @@ void PluginView::openWithPreview(CompletionHandler<void(const String&, FrameInfo
 }
 
 #if PLATFORM(IOS_FAMILY)
-void PluginView::pluginDidInstallPDFDocument(double initialScale)
+
+void PluginView::setSelectionRange(FloatPoint pointInRootView, TextGranularity granularity)
 {
-    protectedWebPage()->pluginDidInstallPDFDocument(initialScale);
+    protectedPlugin()->setSelectionRange(pointInRootView, granularity);
 }
-#endif
+
+SelectionWasFlipped PluginView::moveSelectionEndpoint(FloatPoint pointInRootView, SelectionEndpoint endpoint)
+{
+    return protectedPlugin()->moveSelectionEndpoint(pointInRootView, endpoint);
+}
+
+SelectionEndpoint PluginView::extendInitialSelection(FloatPoint pointInRootView, TextGranularity granularity)
+{
+    return protectedPlugin()->extendInitialSelection(pointInRootView, granularity);
+}
+
+DocumentEditingContext PluginView::documentEditingContext(DocumentEditingContextRequest&& request) const
+{
+    return protectedPlugin()->documentEditingContext(WTFMove(request));
+}
+
+void PluginView::clearSelection()
+{
+    protectedPlugin()->clearSelection();
+}
+
+std::pair<URL, FloatRect> PluginView::linkURLAndBoundsAtPoint(FloatPoint pointInRootView) const
+{
+    return protectedPlugin()->linkURLAndBoundsAtPoint(pointInRootView);
+}
+
+std::optional<FloatRect> PluginView::highlightRectForTapAtPoint(FloatPoint pointInRootView) const
+{
+    return protectedPlugin()->highlightRectForTapAtPoint(pointInRootView);
+}
+
+void PluginView::handleSyntheticClick(PlatformMouseEvent&& event)
+{
+    protectedPlugin()->handleSyntheticClick(WTFMove(event));
+}
+
+CursorContext PluginView::cursorContext(FloatPoint pointInRootView) const
+{
+    return protectedPlugin()->cursorContext(pointInRootView);
+}
+
+#endif // PLATFORM(IOS_FAMILY)
+
+bool PluginView::populateEditorStateIfNeeded(EditorState& state) const
+{
+    return protectedPlugin()->populateEditorStateIfNeeded(state);
+}
+
+WebCore::FloatRect PluginView::absoluteBoundingRectForSmartMagnificationAtPoint(WebCore::FloatPoint point) const
+{
+    if (!m_isInitialized)
+        return { };
+
+    return protectedPlugin()->absoluteBoundingRectForSmartMagnificationAtPoint(point);
+}
+
+void PluginView::updateDocumentForPluginSizingBehavior()
+{
+    if (!protectedPlugin()->shouldSizeToFitContent())
+        return;
+    // The styles in PluginDocumentParser are constructed to respond to this class.
+    if (RefPtr documentElement = protectedPluginElement()->protectedDocument()->protectedDocumentElement())
+        documentElement->setAttributeWithoutSynchronization(HTMLNames::classAttr, "plugin-fits-content"_s);
+}
+
+bool PluginView::pluginHandlesPageScaleFactor() const
+{
+    if (!m_isInitialized)
+        return false;
+
+    return protectedPlugin()->handlesPageScaleFactor();
+}
 
 } // namespace WebKit
 

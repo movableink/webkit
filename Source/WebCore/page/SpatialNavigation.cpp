@@ -37,7 +37,7 @@
 #include "IntRect.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
-#include "Node.h"
+#include "NodeInlines.h"
 #include "Page.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"

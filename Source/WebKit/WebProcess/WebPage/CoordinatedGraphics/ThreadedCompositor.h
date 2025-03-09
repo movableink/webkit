@@ -26,13 +26,14 @@
 #pragma once
 
 #if USE(COORDINATED_GRAPHICS)
-
 #include "CompositingRunLoop.h"
-#include "CoordinatedGraphicsScene.h"
 #include <WebCore/Damage.h>
 #include <WebCore/DisplayUpdate.h>
 #include <WebCore/GLContext.h>
 #include <WebCore/IntSize.h>
+#include <WebCore/TextureMapperDamageVisualizer.h>
+#include <WebCore/TextureMapperFPSCounter.h>
+#include <atomic>
 #include <wtf/Atomics.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Noncopyable.h>
@@ -43,12 +44,25 @@
 #include "ThreadedDisplayRefreshMonitor.h"
 #endif
 
-namespace WebKit {
+#if ENABLE(DAMAGE_TRACKING)
+#include "FrameDamageForTesting.h"
+#endif
 
+namespace WebCore {
+class TextureMapper;
+class TransformationMatrix;
+}
+
+namespace WebKit {
 class AcceleratedSurface;
+class CoordinatedSceneState;
 class LayerTreeHost;
 
-class ThreadedCompositor : public CoordinatedGraphicsSceneClient, public ThreadSafeRefCounted<ThreadedCompositor>, public CanMakeThreadSafeCheckedPtr<ThreadedCompositor> {
+class ThreadedCompositor : public ThreadSafeRefCounted<ThreadedCompositor>, public CanMakeThreadSafeCheckedPtr<ThreadedCompositor>
+#if ENABLE(DAMAGE_TRACKING)
+    , public FrameDamageForTesting
+#endif
+{
     WTF_MAKE_TZONE_ALLOCATED(ThreadedCompositor);
     WTF_MAKE_NONCOPYABLE(ThreadedCompositor);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ThreadedCompositor);
@@ -60,27 +74,25 @@ public:
     };
 
 #if HAVE(DISPLAY_LINK)
-    static Ref<ThreadedCompositor> create(LayerTreeHost&, float scaleFactor);
+    static Ref<ThreadedCompositor> create(LayerTreeHost&);
 #else
-    static Ref<ThreadedCompositor> create(LayerTreeHost&, ThreadedDisplayRefreshMonitor::Client&, float scaleFactor, WebCore::PlatformDisplayID);
+    static Ref<ThreadedCompositor> create(LayerTreeHost&, ThreadedDisplayRefreshMonitor::Client&, WebCore::PlatformDisplayID);
 #endif
     virtual ~ThreadedCompositor();
 
     uint64_t surfaceID() const;
 
-    void setViewportSize(const WebCore::IntSize&, float scale);
     void backgroundColorDidChange();
 #if PLATFORM(WPE) && USE(GBM) && ENABLE(WPE_PLATFORM)
     void preferredBufferFormatsDidChange();
 #endif
 
-    uint32_t requestComposition(const RefPtr<Nicosia::Scene>&);
-    void updateScene();
-    void updateSceneWithoutRendering();
+    void setSize(const WebCore::IntSize&, float);
+    uint32_t requestComposition();
+    void scheduleUpdate();
+    RunLoop* runLoop();
 
     void invalidate();
-
-    void forceRepaint();
 
 #if !HAVE(DISPLAY_LINK)
     WebCore::DisplayRefreshMonitor& displayRefreshMonitor() const;
@@ -89,24 +101,24 @@ public:
     void suspend();
     void resume();
 
+    bool isActive() const;
+
 #if ENABLE(DAMAGE_TRACKING)
     void setDamagePropagation(WebCore::Damage::Propagation);
+    WebCore::FrameDamageHistory* frameDamageHistory() const { return m_frameDamageHistory.get(); }
+    void resetFrameDamageHistory();
 #endif
 
 private:
 #if HAVE(DISPLAY_LINK)
-    ThreadedCompositor(LayerTreeHost&, float scaleFactor);
+    explicit ThreadedCompositor(LayerTreeHost&);
 #else
-    ThreadedCompositor(LayerTreeHost&, ThreadedDisplayRefreshMonitor::Client&, float scaleFactor, WebCore::PlatformDisplayID);
+    ThreadedCompositor(LayerTreeHost&, ThreadedDisplayRefreshMonitor::Client&, WebCore::PlatformDisplayID);
 #endif
 
-    // CoordinatedGraphicsSceneClient
-    void updateViewport() override;
-#if ENABLE(DAMAGE_TRACKING)
-    const WebCore::Damage& addSurfaceDamage(const WebCore::Damage&) override;
-#endif
-
+    void updateSceneState();
     void renderLayerTree();
+    void paintToCurrentGLContext(const WebCore::TransformationMatrix&, const WebCore::IntSize&);
     void frameComplete();
 
 #if HAVE(DISPLAY_LINK)
@@ -116,27 +128,37 @@ private:
     void sceneUpdateFinished();
 #endif
 
+    void updateSceneAttributes(const WebCore::IntSize&, float deviceScaleFactor);
+
     CheckedPtr<LayerTreeHost> m_layerTreeHost;
     std::unique_ptr<AcceleratedSurface> m_surface;
-    RefPtr<CoordinatedGraphicsScene> m_scene;
+    RefPtr<CoordinatedSceneState> m_sceneState;
     std::unique_ptr<WebCore::GLContext> m_context;
 
     bool m_flipY { false };
-    unsigned m_suspendedCount { 0 };
+    std::atomic<unsigned> m_suspendedCount { 0 };
 
     std::unique_ptr<CompositingRunLoop> m_compositingRunLoop;
 
     struct {
         Lock lock;
         WebCore::IntSize viewportSize;
-        float scaleFactor { 1 };
-        bool needsResize { false };
-        Vector<RefPtr<Nicosia::Scene>> states;
+        float deviceScaleFactor { 1 };
 
+#if !HAVE(DISPLAY_LINK)
         bool clientRendersNextFrame { false };
-        uint32_t compositionRequestID { 0 };
+#endif
     } m_attributes;
 
+    std::unique_ptr<WebCore::TextureMapper> m_textureMapper;
+    WebCore::TextureMapperFPSCounter m_fpsCounter;
+
+#if ENABLE(DAMAGE_TRACKING)
+    WebCore::Damage::Propagation m_damagePropagation { WebCore::Damage::Propagation::None };
+    std::unique_ptr<WebCore::TextureMapperDamageVisualizer> m_damageVisualizer;
+#endif
+
+    std::atomic<uint32_t> m_compositionRequestID { 0 };
 #if HAVE(DISPLAY_LINK)
     std::atomic<uint32_t> m_compositionResponseID { 0 };
     RunLoop::Timer m_didRenderFrameTimer;
@@ -148,6 +170,9 @@ private:
     } m_display;
 
     Ref<ThreadedDisplayRefreshMonitor> m_displayRefreshMonitor;
+#endif
+#if ENABLE(DAMAGE_TRACKING)
+    std::unique_ptr<WebCore::FrameDamageHistory> m_frameDamageHistory;
 #endif
 };
 

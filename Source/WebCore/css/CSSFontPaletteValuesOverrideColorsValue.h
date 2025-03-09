@@ -49,11 +49,11 @@ public:
     const CSSPrimitiveValue& key() const { return m_key; }
     const CSSValue& color() const { return m_color; }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
 
     bool equals(const CSSFontPaletteValuesOverrideColorsValue&) const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         if (func(m_key.get()) == IterationStatus::Done)
             return IterationStatus::Done;
@@ -70,8 +70,8 @@ private:
     {
     }
 
-    Ref<CSSPrimitiveValue> m_key;
-    Ref<CSSValue> m_color;
+    const Ref<CSSPrimitiveValue> m_key;
+    const Ref<CSSValue> m_color;
 };
 
 } // namespace WebCore

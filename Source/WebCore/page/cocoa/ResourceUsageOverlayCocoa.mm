@@ -47,7 +47,7 @@
 using WebCore::ResourceUsageOverlay;
 
 @interface WebResourceUsageOverlayLayer : CALayer {
-    ResourceUsageOverlay* m_overlay;
+    WeakPtr<ResourceUsageOverlay> m_overlay;
 }
 @end
 
@@ -64,7 +64,8 @@ using WebCore::ResourceUsageOverlay;
 
 - (void)drawInContext:(CGContextRef)context
 {
-    m_overlay->platformDraw(context);
+    if (RefPtr overlay = m_overlay.get())
+        overlay->platformDraw(context);
 }
 
 @end
@@ -92,7 +93,7 @@ public:
         return m_data[index];
     }
 
-    void forEach(const WTF::Function<void(T)>& apply) const
+    void forEach(NOESCAPE const WTF::Function<void(T)>& apply) const
     {
         unsigned i = m_current;
         for (unsigned visited = 0; visited < size; ++visited) {
@@ -276,7 +277,7 @@ static void showText(CGContextRef context, float x, float y, CGColorRef color, c
     auto attributes = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, keys, values, std::size(keys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
     CString cstr = text.ascii();
     auto cstrSpan = cstr.span();
-    auto string = adoptCF(CFStringCreateWithBytesNoCopy(kCFAllocatorDefault, cstrSpan.data(), cstrSpan.size(), kCFStringEncodingASCII, false, kCFAllocatorNull));
+    auto string = adoptCF(CFStringCreateWithBytesNoCopy(kCFAllocatorDefault, byteCast<UInt8>(cstrSpan.data()), cstrSpan.size(), kCFStringEncodingASCII, false, kCFAllocatorNull));
     auto attributedString = adoptCF(CFAttributedStringCreate(kCFAllocatorDefault, string.get(), attributes.get()));
     auto line = adoptCF(CTLineCreateWithAttributedString(attributedString.get()));
     CGContextSetTextPosition(context, x, y);
@@ -460,6 +461,7 @@ void ResourceUsageOverlay::platformDraw(CGContextRef context)
     CGContextSetShouldAntialias(context, false);
     CGContextSetShouldSmoothFonts(context, false);
 
+    RefPtr overlay = m_overlay.get();
     CGRect viewBounds = m_overlay->bounds();
     CGContextClearRect(context, viewBounds);
 

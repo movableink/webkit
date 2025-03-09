@@ -92,6 +92,7 @@ class Preference
   attr_accessor :exposed
   attr_accessor :sharedPreferenceForWebProcess
   attr_accessor :richJavaScript
+  attr_accessor :mediaPlaybackRelated
   attr_accessor :inspectorOverride
 
   def initialize(name, opts, frontend)
@@ -119,6 +120,7 @@ class Preference
     @exposed = !opts["exposed"] || opts["exposed"].include?(frontend)
     @sharedPreferenceForWebProcess = opts["sharedPreferenceForWebProcess"] || false
     @richJavaScript = opts["richJavaScript"] || false
+    @mediaPlaybackRelated = opts["mediaPlaybackRelated"] || false
     @inspectorOverride = opts["inspectorOverride"]
   end
 

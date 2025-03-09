@@ -294,6 +294,13 @@ static NSDictionary *searchTextParameterizedAttributeForCriteria(JSContextRef co
 }
 #endif
 
+bool AccessibilityUIElement::isEqual(AccessibilityUIElement* otherElement)
+{
+    if (!otherElement)
+        return false;
+    return platformUIElement() == otherElement->platformUIElement();
+}
+
 void AccessibilityUIElement::getLinkedUIElements(Vector<AccessibilityUIElement>& elementVector)
 {
     BEGIN_AX_OBJC_EXCEPTIONS
@@ -984,7 +991,7 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::classList() const
     return nullptr;
 }
 
-bool AccessibilityUIElement::ariaIsGrabbed() const
+bool AccessibilityUIElement::isGrabbed() const
 {
     return boolAttributeValue(NSAccessibilityGrabbedAttribute);
 }
@@ -1706,6 +1713,9 @@ AccessibilityTextMarkerRange AccessibilityUIElement::misspellingTextMarkerRange(
 
 AccessibilityTextMarkerRange AccessibilityUIElement::textMarkerRangeForElement(AccessibilityUIElement* element)
 {
+    if (!element)
+        return nullptr;
+
     BEGIN_AX_OBJC_EXCEPTIONS
     id textMarkerRange = [m_element accessibilityAttributeValue:@"AXTextMarkerRangeForUIElement" forParameter:element->platformUIElement()];
     return AccessibilityTextMarkerRange(textMarkerRange);

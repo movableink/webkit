@@ -73,6 +73,34 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationPopulateObjectInOSR, void, (JSGlobalO
     DeferGCForAWhile deferGC(vm);
 
     switch (materialization->type()) {
+    case PhantomNewArrayWithConstantSize: {
+        JSArray* array = jsCast<JSArray*>(JSValue::decode(*encodedValue));
+        for (unsigned i = materialization->properties().size(); i--;) {
+            const ExitPropertyValue& property = materialization->properties()[i];
+            JSValue value = JSValue::decode(values[i]);
+            unsigned index = property.location().info();
+            Butterfly* butterfly = array->butterfly();
+
+            switch (materialization->indexingType()) {
+            case ALL_DOUBLE_INDEXING_TYPES: {
+                ASSERT(value.isNumber());
+                double valueAsDouble = value.asNumber();
+                butterfly->contiguousDouble().at(array, index) = valueAsDouble;
+                break;
+            }
+            case ALL_INT32_INDEXING_TYPES:
+            case ALL_CONTIGUOUS_INDEXING_TYPES: {
+                butterfly->contiguous().at(array, index).set(vm, array, value);
+                break;
+            }
+            default:
+                RELEASE_ASSERT_NOT_REACHED();
+                break;
+            }
+        }
+        break;
+    }
+
     case PhantomNewObject: {
         JSFinalObject* object = jsCast<JSFinalObject*>(JSValue::decode(*encodedValue));
         Structure* structure = object->structure();
@@ -203,8 +231,22 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSG
 
     // We cannot GC. We've got pointers in evil places.
     DeferGCForAWhile deferGC(vm);
-    
+
     switch (materialization->type()) {
+    case PhantomNewArrayWithConstantSize: {
+        auto scope = DECLARE_THROW_SCOPE(vm);
+
+        size_t size = materialization->size();
+        Structure* structure = globalObject->arrayStructureForIndexingTypeDuringAllocation(materialization->indexingType());
+
+        JSArray* result = JSArray::tryCreate(vm, structure, size);
+        if (UNLIKELY(!result)) {
+            throwOutOfMemoryError(globalObject, scope);
+            OPERATION_RETURN(scope, nullptr);
+        }
+        return result;
+    }
+
     case PhantomNewObject: {
         // Figure out what the structure is
         Structure* structure = nullptr;

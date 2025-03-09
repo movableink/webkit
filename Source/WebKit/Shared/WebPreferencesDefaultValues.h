@@ -40,7 +40,7 @@
 #define Webgpu_feature_status Preview
 #endif
 
-#if defined(ENABLE_WEBGPU_BY_DEFAULT) && ENABLE_WEBGPU_BY_DEFAULT && defined(ENABLE_WEBGPU_HDR_BY_DEFAULT) && ENABLE_WEBGPU_HDR_BY_DEFAULT
+#if defined(ENABLE_WEBGPU_BY_DEFAULT) && ENABLE_WEBGPU_BY_DEFAULT && defined(HAVE_SUPPORT_HDR_DISPLAY) && HAVE_SUPPORT_HDR_DISPLAY
 #define Webgpuhdr_feature_status Stable
 #else
 #define Webgpuhdr_feature_status Preview
@@ -58,7 +58,9 @@
 #define Webgpu_webxr_feature_status Unstable
 #endif
 
-#if defined(ENABLE_UNIFIED_PDF_AS_PREVIEW) && ENABLE_UNIFIED_PDF_AS_PREVIEW
+#if defined(ENABLE_UNIFIED_PDF_BY_DEFAULT) && ENABLE_UNIFIED_PDF_BY_DEFAULT && PLATFORM(MAC)
+#define Unifiedpdf_feature_status Mature
+#elif defined(ENABLE_UNIFIED_PDF_AS_PREVIEW) && ENABLE_UNIFIED_PDF_AS_PREVIEW
 #define Unifiedpdf_feature_status Preview
 #else
 #define Unifiedpdf_feature_status Internal
@@ -70,13 +72,18 @@
 #define Backdropfilter_feature_status Testable
 #endif
 
+#if defined(ENABLE_MODEL_ELEMENT) && ENABLE_MODEL_ELEMENT && PLATFORM(VISION)
+#define Modelelement_feature_status Stable
+#else
+#define Modelelement_feature_status Testable
+#endif
+
 namespace WebKit {
 
 #if PLATFORM(IOS_FAMILY)
 bool defaultPassiveTouchListenersAsDefaultOnDocument();
 bool defaultCSSOMViewScrollingAPIEnabled();
 bool defaultShouldPrintBackgrounds();
-bool defaultAlternateFormControlDesignEnabled();
 bool defaultUseAsyncUIKitInteractions();
 bool defaultWriteRichTextDataWhenCopyingOrDragging();
 #if ENABLE(TEXT_AUTOSIZING)
@@ -92,18 +99,11 @@ bool defaultVideoFullscreenRequiresElementFullscreen();
 bool defaultScrollAnimatorEnabled();
 bool defaultPassiveWheelListenersAsDefaultOnDocument();
 bool defaultWheelEventGesturesBecomeNonBlocking();
-#endif
-
-#if PLATFORM(MAC) || PLATFORM(IOS_FAMILY)
-bool defaultDisallowSyncXHRDuringPageDismissalEnabled();
-#endif
-
-#if PLATFORM(MAC)
 bool defaultAppleMailPaginationQuirkEnabled();
 #endif
 
-#if !PLATFORM(MACCATALYST) && !PLATFORM(WATCHOS)
-bool allowsDeprecatedSynchronousXMLHttpRequestDuringUnload();
+#if PLATFORM(COCOA)
+bool defaultFixedContainerEdgeSamplingEnabled();
 #endif
 
 #if ENABLE(MEDIA_STREAM)
@@ -137,8 +137,14 @@ bool defaultRemoveBackgroundEnabled();
 bool defaultGamepadVibrationActuatorEnabled();
 #endif
 
+#if ENABLE(WEB_AUTHN)
+bool defaultDigitalCredentialsEnabled();
+#endif
+
 #if PLATFORM(IOS_FAMILY)
 bool defaultAutomaticLiveResizeEnabled();
+bool defaultVisuallyContiguousBidiTextSelectionEnabled();
+bool defaultBidiContentAwarePasteEnabled();
 #endif
 
 bool defaultRunningBoardThrottlingEnabled();
@@ -159,5 +165,45 @@ bool defaultUseSCContentSharingPicker();
 #if USE(LIBWEBRTC)
 bool defaultPeerConnectionEnabledAvailable();
 #endif
+
+#if ENABLE(WEB_PUSH_NOTIFICATIONS)
+bool defaultBuiltInNotificationsEnabled();
+#endif
+
+bool defaultRequiresPageVisibilityForVideoToBeNowPlaying();
+
+bool defaultCookieStoreAPIEnabled();
+
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+bool defaultContentInsetBackgroundFillEnabled();
+#endif
+
+#if ENABLE(SCREEN_TIME)
+bool defaultScreenTimeEnabled();
+#endif
+
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+bool defaultMacStyleControlsOnCatalyst();
+#endif
+
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+bool defaultVectorBasedControlsOnMacEnabled();
+#endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+bool defaultIFrameResourceMonitoringEnabled();
+#endif
+
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+bool defaultPreferSpatialAudioExperience();
+#endif
+
+#if HAVE(MATERIAL_HOSTING)
+bool defaultHostedBlurMaterialInMediaControlsEnabled();
+#endif
+
+bool defaultMutationEventsEnabled();
+
+bool defaultTrustedTypesEnabled();
 
 } // namespace WebKit

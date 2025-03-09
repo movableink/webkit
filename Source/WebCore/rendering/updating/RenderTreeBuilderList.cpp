@@ -35,7 +35,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeBuilder, List);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::List);
 
 // FIXME: This shouldn't need LegacyInlineIterator
 static bool generatesLineBoxesForInlineChild(RenderBlock& current, RenderObject* inlineObj)

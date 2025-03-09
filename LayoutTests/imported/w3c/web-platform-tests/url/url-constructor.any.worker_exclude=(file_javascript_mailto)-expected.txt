@@ -187,6 +187,7 @@ PASS Parsing: <gopher:example.com/> without base
 PASS Parsing: <ws:example.com/> without base
 PASS Parsing: <wss:example.com/> without base
 PASS Parsing: <data:example.com/> without base
+PASS Parsing: <https://example.com/aaa/bbb/%2e%2e?query> without base
 PASS Parsing: <http:@www.example.com> without base
 PASS Parsing: <http:/@www.example.com> without base
 PASS Parsing: <http://@www.example.com> without base
@@ -581,6 +582,7 @@ PASS Parsing: <non-spec:/test?a#b\0c> without base
 PASS Parsing: <a1234567890-+.:foo/bar> against <http://example.com/dir/file>
 PASS Parsing: <#link> against <https://example.org/##link>
 PASS Parsing: <non-special:cannot-be-a-base-url-\0~> without base
+PASS Parsing: <non-special:cannot-be-a-base-url-!"$%&'()*+,-.;<=>@[\]^_`{|}~@/> without base
 PASS Parsing: <https://www.example.com/path{path.html?query'=query#fragment<fragment> without base
 PASS Parsing: <https://user:pass[@foo/bar> against <http://example.org>
 PASS Parsing: <foo:// !"$%&'()*+,-.;<=>@[\]^_`{|}~@host/> without base

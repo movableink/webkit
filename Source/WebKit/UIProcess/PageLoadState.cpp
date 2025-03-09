@@ -255,21 +255,6 @@ double PageLoadState::estimatedProgress() const
     return estimatedProgress(m_committedState);
 }
 
-const String& PageLoadState::pendingAPIRequestURL() const
-{
-    return m_committedState.pendingAPIRequest.url;
-}
-
-auto PageLoadState::pendingAPIRequest() const -> const PendingAPIRequest&
-{
-    return m_committedState.pendingAPIRequest;
-}
-
-const URL& PageLoadState::resourceDirectoryURL() const
-{
-    return m_committedState.resourceDirectoryURL;
-}
-
 void PageLoadState::setPendingAPIRequest(const Transaction::Token& token, PendingAPIRequest&& pendingAPIRequest, const URL& resourceDirectoryURL)
 {
     ASSERT_UNUSED(token, &token.m_pageLoadState == this);
@@ -322,7 +307,7 @@ void PageLoadState::didFailProvisionalLoad(const Transaction::Token& token)
     m_uncommittedState.unreachableURL = m_lastUnreachableURL;
 }
 
-void PageLoadState::didCommitLoad(const Transaction::Token& token, const WebCore::CertificateInfo& certificateInfo, bool hasInsecureContent, bool usedLegacyTLS, bool wasPrivateRelayed, const WebCore::SecurityOriginData& origin)
+void PageLoadState::didCommitLoad(const Transaction::Token& token, const WebCore::CertificateInfo& certificateInfo, bool hasInsecureContent, bool usedLegacyTLS, bool wasPrivateRelayed, const String& proxyName, const WebCore::ResourceResponseSource source, const WebCore::SecurityOriginData& origin)
 {
     ASSERT_UNUSED(token, &token.m_pageLoadState == this);
     ASSERT(m_uncommittedState.state == State::Provisional);
@@ -340,6 +325,8 @@ void PageLoadState::didCommitLoad(const Transaction::Token& token, const WebCore
 
     m_uncommittedState.title = String();
     m_uncommittedState.titleFromBrowsingWarning = { };
+    m_uncommittedState.proxyName = proxyName;
+    m_uncommittedState.source = source;
 }
 
 void PageLoadState::didFinishLoad(const Transaction::Token& token)

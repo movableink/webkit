@@ -118,6 +118,7 @@ enum class TapHandlingResult : uint8_t;
 - (void)_updateScrollViewIndicatorStyle;
 
 - (void)_videoControlsManagerDidChange;
+- (void)_videosInElementFullscreenChanged;
 
 - (void)_navigationGestureDidBegin;
 - (void)_navigationGestureDidEnd;
@@ -190,10 +191,6 @@ enum class TapHandlingResult : uint8_t;
 
 - (BOOL)_tryToHandleKeyEventInCustomContentView:(UIPressesEvent *)event;
 
-#if ENABLE(PDF_PLUGIN)
-- (void)_pluginDidInstallPDFDocument:(double)initialScale;
-#endif
-
 @property (nonatomic, readonly) WKPasswordView *_passwordView;
 @property (nonatomic, readonly) WKWebViewContentProviderRegistry *_contentProviderRegistry;
 @property (nonatomic, readonly) WKSelectionGranularity _selectionGranularity;
@@ -229,6 +226,10 @@ enum class TapHandlingResult : uint8_t;
 
 #if ENABLE(PAGE_LOAD_OBSERVER)
 - (void)_updatePageLoadObserverState NS_DIRECT;
+#endif
+
+#if ENABLE(MODEL_PROCESS)
+- (void)_willInvalidateDraggedModelWithContainerView:(UIView *)containerView;
 #endif
 
 @end

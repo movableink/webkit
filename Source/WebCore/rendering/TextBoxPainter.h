@@ -53,6 +53,8 @@ public:
 
     void paint();
 
+    static inline FloatSize rotateShadowOffset(const SpaceSeparatedPoint<Style::Length<>>& offset, WritingMode);
+
 protected:
     auto& textBox() const { return m_textBox; }
     InlineIterator::TextBoxIterator makeIterator() const;
@@ -81,6 +83,7 @@ protected:
     std::pair<unsigned, unsigned> selectionStartEnd() const;
     MarkedText createMarkedTextFromSelectionInBox();
     const FontCascade& fontCascade() const;
+    WritingMode writingMode() const { return m_style.writingMode(); }
     FloatPoint textOriginFromPaintRect(const FloatRect&) const;
 
     struct DecoratingBox {
@@ -90,7 +93,7 @@ protected:
         FloatPoint location;
     };
     using DecoratingBoxList = Vector<DecoratingBox>;
-    void collectDecoratingBoxesForTextBox(DecoratingBoxList&, const InlineIterator::TextBoxIterator&, FloatPoint textBoxLocation, const TextDecorationPainter::Styles&);
+    void collectDecoratingBoxesForBackgroundPainting(DecoratingBoxList&, const InlineIterator::TextBoxIterator&, FloatPoint textBoxLocation, const TextDecorationPainter::Styles&);
 
     // FIXME: We could just talk to the display box directly.
     const InlineIterator::BoxModernPath m_textBox;
@@ -107,9 +110,17 @@ protected:
     const bool m_isCombinedText;
     const bool m_isPrinting;
     const bool m_haveSelection;
-    const bool m_containsComposition;
-    const bool m_useCustomUnderlines;
+    bool m_containsComposition { false };
+    bool m_useCustomUnderlines { false };
     std::optional<bool> m_emphasisMarkExistsAndIsAbove { };
 };
 
+inline FloatSize TextBoxPainter::rotateShadowOffset(const SpaceSeparatedPoint<Style::Length<>>& offset, WritingMode writingMode)
+{
+    if (writingMode.isHorizontal())
+        return { offset.x().value, offset.y().value };
+    if (writingMode.isLineOverLeft()) // sideways-lr
+        return { -offset.y().value, offset.x().value };
+    return { offset.y().value, -offset.x().value };
+}
 }

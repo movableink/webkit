@@ -53,7 +53,7 @@ namespace WebCore {
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSFontFace);
 
-template<typename T> void iterateClients(WeakHashSet<CSSFontFaceClient>& clients, T callback)
+static void iterateClients(WeakHashSet<CSSFontFaceClient>& clients, NOESCAPE const Function<void(CSSFontFaceClient&)>& callback)
 {
     for (auto& client : copyToVectorOf<Ref<CSSFontFaceClient>>(clients))
         callback(client);
@@ -151,7 +151,7 @@ void CSSFontFace::setFamilies(CSSValueList& family)
     ASSERT(family.length());
 
     RefPtr oldFamily = std::exchange(m_families, &family);
-    mutableProperties().setProperty(CSSPropertyFontFamily, &family);
+    mutableProperties().setProperty(CSSPropertyFontFamily, family);
 
     iterateClients(m_clients, [&](CSSFontFaceClient& client) {
         client.fontPropertyChanged(*this, oldFamily.get());
@@ -185,7 +185,7 @@ static FontSelectionRange calculateWeightRange(CSSValue& value)
 
 void CSSFontFace::setWeight(CSSValue& weight)
 {
-    mutableProperties().setProperty(CSSPropertyFontWeight, &weight);
+    mutableProperties().setProperty(CSSPropertyFontWeight, weight);
 
     auto range = calculateWeightRange(weight);
     if (m_fontSelectionCapabilities.weight == range)
@@ -198,12 +198,12 @@ void CSSFontFace::setWeight(CSSValue& weight)
     });
 }
 
-static FontSelectionRange calculateStretchRange(CSSValue& value)
+static FontSelectionRange calculateWidthRange(CSSValue& value)
 {
     if (auto* valueList = dynamicDowncast<CSSValueList>(value)) {
         ASSERT(valueList->length() == 2);
         if (valueList->length() != 2)
-            return { normalStretchValue(), normalStretchValue() };
+            return { normalWidthValue(), normalWidthValue() };
         ASSERT(valueList->item(0)->isPrimitiveValue());
         ASSERT(valueList->item(1)->isPrimitiveValue());
         auto& value0 = downcast<CSSPrimitiveValue>(*valueList->item(0));
@@ -218,11 +218,11 @@ static FontSelectionRange calculateStretchRange(CSSValue& value)
     return { result, result };
 }
 
-void CSSFontFace::setStretch(CSSValue& style)
+void CSSFontFace::setWidth(CSSValue& style)
 {
-    mutableProperties().setProperty(CSSPropertyFontStretch, &style);
+    mutableProperties().setProperty(CSSPropertyFontWidth, style);
 
-    auto range = calculateStretchRange(style);
+    auto range = calculateWidthRange(style);
     if (m_fontSelectionCapabilities.width == range)
         return;
 
@@ -249,7 +249,7 @@ static FontSelectionRange calculateItalicRange(CSSValue& value)
     ASSERT(keyword == CSSValueOblique);
     auto length = rangeValue->obliqueValues->length();
     ASSERT(length == 1 || length == 2);
-    auto angleAtIndex = [&] (size_t index) {
+    auto angleAtIndex = [rangeValue = Ref { *rangeValue }] (size_t index) {
         return Style::fontStyleAngleFromCSSValueDeprecated(*rangeValue->obliqueValues->itemWithoutBoundsCheck(index));
     };
     if (length == 1)
@@ -259,7 +259,7 @@ static FontSelectionRange calculateItalicRange(CSSValue& value)
 
 void CSSFontFace::setStyle(CSSValue& style)
 {
-    mutableProperties().setProperty(CSSPropertyFontStyle, &style);
+    mutableProperties().setProperty(CSSPropertyFontStyle, style);
 
     auto range = calculateItalicRange(style);
     if (m_fontSelectionCapabilities.slope == range)
@@ -274,7 +274,7 @@ void CSSFontFace::setStyle(CSSValue& style)
 
 void CSSFontFace::setUnicodeRange(CSSValueList& list)
 {
-    mutableProperties().setProperty(CSSPropertyUnicodeRange, &list);
+    mutableProperties().setProperty(CSSPropertyUnicodeRange, list);
 
     auto ranges = WTF::map(list, [](auto& rangeValue) {
         auto& range = downcast<CSSUnicodeRangeValue>(rangeValue);
@@ -296,7 +296,7 @@ void CSSFontFace::setFeatureSettings(CSSValue& featureSettings)
     // Can only call this with a primitive value of normal, or a value list containing font feature values.
     ASSERT(is<CSSPrimitiveValue>(featureSettings) || is<CSSValueList>(featureSettings));
 
-    mutableProperties().setProperty(CSSPropertyFontFeatureSettings, &featureSettings);
+    mutableProperties().setProperty(CSSPropertyFontFeatureSettings, featureSettings);
 
     FontFeatureSettings settings;
 
@@ -319,7 +319,7 @@ void CSSFontFace::setFeatureSettings(CSSValue& featureSettings)
 
 void CSSFontFace::setSizeAdjust(CSSValue& value)
 {
-    mutableProperties().setProperty(CSSPropertySizeAdjust, &value);
+    mutableProperties().setProperty(CSSPropertySizeAdjust, value);
 
     auto& sizeAdjustValue = downcast<CSSPrimitiveValue>(value);
     auto sizeAdjust = sizeAdjustValue.resolveAsPercentageDeprecated<float>() / 100;
@@ -336,7 +336,7 @@ void CSSFontFace::setSizeAdjust(CSSValue& value)
 
 void CSSFontFace::setDisplay(CSSValue& loadingBehaviorValue)
 {
-    mutableProperties().setProperty(CSSPropertyFontDisplay, &loadingBehaviorValue);
+    mutableProperties().setProperty(CSSPropertyFontDisplay, loadingBehaviorValue);
 
     auto loadingBehavior = fromCSSValue<FontLoadingBehavior>(loadingBehaviorValue);
 
@@ -374,9 +374,9 @@ String CSSFontFace::weight() const
     return properties().getPropertyValue(CSSPropertyFontWeight);
 }
 
-String CSSFontFace::stretch() const
+String CSSFontFace::width() const
 {
-    return properties().getPropertyValue(CSSPropertyFontStretch);
+    return properties().getPropertyValue(CSSPropertyFontWidth);
 }
 
 String CSSFontFace::unicodeRange() const

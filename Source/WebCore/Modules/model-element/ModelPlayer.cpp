@@ -30,15 +30,15 @@
 #include "TransformationMatrix.h"
 #include <wtf/TZoneMallocInlines.h>
 
+#if ENABLE(MODEL_PROCESS)
+#include <WebCore/StageModeOperations.h>
+#endif
+
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ModelPlayer);
 
 ModelPlayer::~ModelPlayer() = default;
-
-void ModelPlayer::setBackgroundColor(Color)
-{
-}
 
 void ModelPlayer::setEntityTransform(TransformationMatrix)
 {
@@ -110,6 +110,27 @@ void ModelPlayer::setCurrentTime(Seconds, CompletionHandler<void()>&& completion
 void ModelPlayer::setEnvironmentMap(Ref<SharedBuffer>&&)
 {
 }
+
+void ModelPlayer::setHasPortal(bool)
+{
+}
+
+void ModelPlayer::setStageMode(StageModeOperation)
+{
+}
+
+void ModelPlayer::beginStageModeTransform(const TransformationMatrix&)
+{
+}
+
+void ModelPlayer::updateStageModeTransform(const TransformationMatrix&)
+{
+}
+
+void ModelPlayer::endStageModeInteraction()
+{
+}
+
 #endif // ENABLE(MODEL_PROCESS)
 
 }

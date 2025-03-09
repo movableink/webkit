@@ -95,8 +95,10 @@ public:
         : BitVector(CFBitVectorGetCount(bitVector))
     {
         auto count = CFBitVectorGetCount(bitVector);
-        for (CFIndex i = 0; i < count; ++i)
-            quickSet(i, CFBitVectorGetBitAtIndex(bitVector, i));
+        for (CFIndex i = 0; i < count; ++i) {
+            if (CFBitVectorGetBitAtIndex(bitVector, i))
+                quickSet(i);
+        }
     }
 #endif
     
@@ -433,20 +435,20 @@ private:
         // value = true: casts to 1, then xors to 0, then negates to 0.
         // value = false: casts to 0, then xors to 1, then negates to -1 (i.e. all one bits).
         uintptr_t skipValue = -(static_cast<uintptr_t>(value) ^ 1);
-        size_t numWords = bits->numWords();
         
         size_t wordIndex = startIndex / bitsInPointer();
         size_t startIndexInWord = startIndex - wordIndex * bitsInPointer();
         
-        while (wordIndex < numWords) {
-            uintptr_t word = bits->bits()[wordIndex];
+        auto words = bits->wordsSpan();
+        while (wordIndex < words.size()) {
+            uintptr_t word = words[wordIndex];
             if (word != skipValue) {
                 size_t index = startIndexInWord;
                 if (findBitInWord(word, index, bitsInPointer(), value))
                     return wordIndex * bitsInPointer() + index;
             }
             
-            wordIndex++;
+            ++wordIndex;
             startIndexInWord = 0;
         }
         
@@ -458,7 +460,7 @@ private:
         while (index < size()) {
             if (get(index) == value)
                 return index;
-            index++;
+            ++index;
         }
         return size();
     }
@@ -467,9 +469,12 @@ private:
     public:
         size_t numBits() const { return m_numBits; }
         size_t numWords() const { return (m_numBits + bitsInPointer() - 1) / bitsInPointer(); }
-        uintptr_t* bits() { return std::bit_cast<uintptr_t*>(this + 1); }
-        const uintptr_t* bits() const { return std::bit_cast<const uintptr_t*>(this + 1); }
-        
+
+        std::span<const uint8_t> byteSpan() const { return unsafeMakeSpan(reinterpret_cast<const uint8_t*>(bits()), byteCount(numBits())); }
+        std::span<uint8_t> byteSpan() { return unsafeMakeSpan(reinterpret_cast<uint8_t*>(bits()), byteCount(numBits())); }
+        std::span<const uintptr_t> wordsSpan() const { return unsafeMakeSpan(bits(), numWords()); }
+        std::span<uintptr_t> wordsSpan() { return unsafeMakeSpan(bits(), numWords()); }
+
         static WTF_EXPORT_PRIVATE OutOfLineBits* create(size_t numBits);
         
         static WTF_EXPORT_PRIVATE void destroy(OutOfLineBits*);
@@ -479,6 +484,9 @@ private:
             : m_numBits(numBits)
         {
         }
+
+        uintptr_t* bits() { return std::bit_cast<uintptr_t*>(this + 1); }
+        const uintptr_t* bits() const { return std::bit_cast<const uintptr_t*>(this + 1); }
         
         size_t m_numBits;
     };
@@ -507,45 +515,36 @@ private:
     {
         if (isInline())
             return &m_bitsOrPointer;
-        return outOfLineBits()->bits();
+        return outOfLineBits()->wordsSpan().data();
     }
     
     const uintptr_t* bits() const
     {
         if (isInline())
             return &m_bitsOrPointer;
-        return outOfLineBits()->bits();
+        return outOfLineBits()->wordsSpan().data();
     }
-    
+
+    std::span<uint8_t> byteSpan() { return unsafeMakeSpan(reinterpret_cast<uint8_t*>(bits()), byteCount(size())); }
+    std::span<const uint8_t> byteSpan() const { return unsafeMakeSpan(reinterpret_cast<const uint8_t*>(bits()), byteCount(size())); }
+
     uintptr_t m_bitsOrPointer;
 };
 
 template<typename Func>
 ALWAYS_INLINE constexpr void BitVector::forEachSetBit(const Func& func) const
 {
-    uintptr_t copiedInline = cleanseInlineBits(m_bitsOrPointer);
-    const uintptr_t* bits = &copiedInline;
-    size_t words = 1;
-    if (!isInline()) {
-        const OutOfLineBits* outOfLineBits = this->outOfLineBits();
-        bits = outOfLineBits->bits();
-        words = outOfLineBits->numWords();
-    }
-    WTF::forEachSetBit(std::span { bits, words }, func);
+    const uintptr_t copiedInline = cleanseInlineBits(m_bitsOrPointer);
+    auto words = isInline() ? singleElementSpan(copiedInline) : outOfLineBits()->wordsSpan();
+    WTF::forEachSetBit(words, func);
 }
 
 template<typename Func>
 ALWAYS_INLINE constexpr void BitVector::forEachSetBit(size_t startIndex, const Func& func) const
 {
-    uintptr_t copiedInline = cleanseInlineBits(m_bitsOrPointer);
-    const uintptr_t* bits = &copiedInline;
-    size_t words = 1;
-    if (!isInline()) {
-        const OutOfLineBits* outOfLineBits = this->outOfLineBits();
-        bits = outOfLineBits->bits();
-        words = outOfLineBits->numWords();
-    }
-    WTF::forEachSetBit(std::span { bits, words }, startIndex, func);
+    const uintptr_t copiedInline = cleanseInlineBits(m_bitsOrPointer);
+    auto words = isInline() ? singleElementSpan(copiedInline) : outOfLineBits()->wordsSpan();
+    WTF::forEachSetBit(words, startIndex, func);
 }
 
 struct BitVectorHash {

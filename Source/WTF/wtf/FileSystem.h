@@ -136,6 +136,7 @@ WTF_EXPORT_PRIVATE bool makeAllDirectories(const String& path);
 WTF_EXPORT_PRIVATE String pathFileName(const String&);
 WTF_EXPORT_PRIVATE String parentPath(const String&);
 WTF_EXPORT_PRIVATE String lexicallyNormal(const String&);
+WTF_EXPORT_PRIVATE bool isAncestor(const String& first, const String& second);
 WTF_EXPORT_PRIVATE std::optional<uint64_t> volumeFreeSpace(const String&);
 WTF_EXPORT_PRIVATE std::optional<uint64_t> volumeCapacity(const String&);
 WTF_EXPORT_PRIVATE std::optional<uint32_t> volumeFileBlockSize(const String&);
@@ -170,6 +171,9 @@ WTF_EXPORT_PRIVATE int overwriteEntireFile(const String& path, std::span<const u
 // Prefix is what the filename should be prefixed with, not the full path.
 WTF_EXPORT_PRIVATE std::pair<String, PlatformFileHandle> openTemporaryFile(StringView prefix, StringView suffix = { });
 WTF_EXPORT_PRIVATE String createTemporaryFile(StringView prefix, StringView suffix = { });
+#if PLATFORM(COCOA)
+WTF_EXPORT_PRIVATE std::pair<PlatformFileHandle, CString> createTemporaryFileInDirectory(const String& directory, const String& suffix);
+#endif
 WTF_EXPORT_PRIVATE PlatformFileHandle openFile(const String& path, FileOpenMode, FileAccessPermission = FileAccessPermission::All, bool failIfFileExists = false);
 WTF_EXPORT_PRIVATE void closeFile(PlatformFileHandle&);
 // Returns the resulting offset from the beginning of the file if successful, -1 otherwise.
@@ -219,7 +223,10 @@ WTF_EXPORT_PRIVATE CString currentExecutablePath();
 WTF_EXPORT_PRIVATE CString currentExecutableName();
 WTF_EXPORT_PRIVATE String userCacheDirectory();
 WTF_EXPORT_PRIVATE String userDataDirectory();
+#if ENABLE(DEVELOPER_MODE)
+WTF_EXPORT_PRIVATE CString webkitTopLevelDirectory();
 #endif
+#endif // USE(GLIB)
 
 #if PLATFORM(QT)
 uint64_t getVolumeFreeSizeForPath(const char*);
@@ -271,8 +278,8 @@ public:
     std::span<uint8_t> leakHandle() { return m_fileData.leakSpan(); }
     explicit operator bool() const { return !!m_fileData; }
     size_t size() const { return m_fileData.span().size(); }
-    std::span<const uint8_t> span() const { return m_fileData.span(); }
-    std::span<uint8_t> mutableSpan() { return m_fileData.mutableSpan(); }
+    std::span<const uint8_t> span() const LIFETIME_BOUND { return m_fileData.span(); }
+    std::span<uint8_t> mutableSpan() LIFETIME_BOUND { return m_fileData.mutableSpan(); }
 #elif OS(WINDOWS)
     const Win32Handle& fileMapping() const { return m_fileMapping; }
     explicit operator bool() const { return !!m_fileData.data(); }
@@ -351,7 +358,7 @@ inline MappedFileData& MappedFileData::operator=(MappedFileData&& other)
 
 // This creates the destination file, maps it, write the provided data to it and returns the mapped file.
 // This function fails if there is already a file at the destination path.
-WTF_EXPORT_PRIVATE MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(const Function<bool(std::span<const uint8_t>)>&)>&& apply, PlatformFileHandle* = nullptr);
+WTF_EXPORT_PRIVATE MappedFileData mapToFile(const String& path, size_t bytesSize, NOESCAPE const Function<void(const Function<bool(std::span<const uint8_t>)>&)>& apply, PlatformFileHandle* = nullptr);
 
 WTF_EXPORT_PRIVATE MappedFileData createMappedFileData(const String&, size_t, PlatformFileHandle* = nullptr);
 WTF_EXPORT_PRIVATE void finalizeMappedFileData(MappedFileData&, size_t);

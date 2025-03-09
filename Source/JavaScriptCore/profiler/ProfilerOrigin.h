@@ -28,7 +28,7 @@
 #include "BytecodeIndex.h"
 #include "CodeBlockHash.h"
 #include "JSCJSValue.h"
-#include <wtf/JSONValues.h>
+#include <wtf/PrintStream.h>
 
 namespace JSC {
 

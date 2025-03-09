@@ -153,12 +153,13 @@ public:
 
     RefPtr<JSC::Bindings::Instance>  createScriptInstanceForWidget(Widget*);
     WEBCORE_EXPORT JSC::Bindings::RootObject* bindingRootObject();
+    RefPtr<JSC::Bindings::RootObject> protectedBindingRootObject();
     JSC::Bindings::RootObject* cacheableBindingRootObject();
     JSC::Bindings::RootObject* existingCacheableBindingRootObject() const { return m_cacheableBindingRootObject.get(); }
 
     WEBCORE_EXPORT Ref<JSC::Bindings::RootObject> createRootObject(void* nativeHandle);
 
-    void collectIsolatedContexts(Vector<std::pair<JSC::JSGlobalObject*, SecurityOrigin*>>&);
+    void collectIsolatedContexts(Vector<std::pair<JSC::JSGlobalObject*, RefPtr<SecurityOrigin>>>&);
 
 #if PLATFORM(COCOA)
     WEBCORE_EXPORT WebScriptObject* windowScriptObject();
@@ -174,10 +175,6 @@ public:
     void reportExceptionFromScriptError(LoadableScript::Error, bool);
 
     void registerImportMap(const ScriptSourceCode&, const URL& baseURL);
-    bool isAcquiringImportMaps();
-    void setAcquiringImportMaps();
-    void setPendingImportMaps();
-    void clearPendingImportMaps();
 
 private:
     ValueOrException executeScriptInWorld(DOMWrapperWorld&, RunJavaScriptParameters&&);
@@ -187,15 +184,16 @@ private:
 
     void disconnectPlatformScriptObjects();
 
+    Ref<WindowProxy> protectedWindowProxy() { return windowProxy(); }
     WEBCORE_EXPORT WindowProxy& windowProxy();
     WEBCORE_EXPORT JSWindowProxy& jsWindowProxy(DOMWrapperWorld&);
 
     Ref<LocalFrame> protectedFrame() const;
 
-    LocalFrame& m_frame;
+    WeakRef<LocalFrame> m_frame;
     const URL* m_sourceURL { nullptr };
 
-    bool m_paused;
+    bool m_paused { false };
     bool m_willReplaceWithResultOfExecutingJavascriptURL { false };
 
     // The root object used for objects bound outside the context of a plugin, such
@@ -209,6 +207,7 @@ private:
 #if PLATFORM(COCOA)
     RetainPtr<WebScriptObject> m_windowScriptObject;
 #endif
+
 };
 
 } // namespace WebCore

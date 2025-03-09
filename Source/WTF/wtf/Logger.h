@@ -55,6 +55,7 @@ struct LogArgument {
     template<typename U = T> static std::enable_if_t<std::is_same_v<typename std::remove_reference_t<U>, AtomString>, String> toString(const AtomString& argument) { return argument.string(); }
     template<typename U = T> static std::enable_if_t<std::is_same_v<typename std::remove_reference_t<U>, String>, String> toString(String argument) { return argument; }
     template<typename U = T> static std::enable_if_t<std::is_same_v<typename std::remove_reference_t<U>, StringBuilder*>, String> toString(StringBuilder* argument) { return argument->toString(); }
+    template<typename U = T> static std::enable_if_t<std::is_same_v<typename std::remove_reference_t<U>, StringView>, String> toString(const StringView& argument) { return argument.toString(); }
     template<typename U = T> static std::enable_if_t<std::is_same_v<U, const char*>, String> toString(const char* argument) { return String::fromLatin1(argument); }
     template<typename U = T> static std::enable_if_t<std::is_same_v<U, ASCIILiteral>, String> toString(ASCIILiteral argument) { return argument; }
 #ifdef __OBJC__
@@ -385,7 +386,7 @@ private:
         UNUSED_PARAM(line);
         UNUSED_PARAM(function);
 #elif ENABLE(JOURNALD_LOG)
-        auto fileString = makeString("CODE_FILE="_s, span(file));
+        auto fileString = makeString("CODE_FILE="_s, unsafeSpan(file));
         auto lineString = makeString("CODE_LINE="_s, line);
         sd_journal_send_with_location(fileString.utf8().data(), lineString.utf8().data(), function, "WEBKIT_SUBSYSTEM=%s", channel.subsystem, "WEBKIT_CHANNEL=%s", channel.name, "MESSAGE=%s", logMessage.utf8().data(), nullptr);
 #else

@@ -1446,7 +1446,7 @@ JSC_DEFINE_JIT_OPERATION(operationRegExpExecNonGlobalOrSticky, EncodedJSValue, (
 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto input = string->value(globalObject);
+    auto input = string->view(globalObject);
     OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
     unsigned lastIndex = 0;
@@ -1494,7 +1494,7 @@ JSC_DEFINE_JIT_OPERATION(operationRegExpMatchFastGlobalString, EncodedJSValue, (
         OPERATION_RETURN(scope, JSValue::encode(collectGlobalAtomMatches(globalObject, string, regExp)));
     }
 
-    auto s = string->value(globalObject);
+    auto s = string->view(globalObject);
     OPERATION_RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
     if (regExp->eitherUnicode()) {
@@ -3706,6 +3706,131 @@ JSC_DEFINE_JIT_OPERATION(operationToLengthUntyped, EncodedJSValue, (JSGlobalObje
     OPERATION_RETURN(scope, JSValue::encode(jsNumber(value.toLength(globalObject))));
 }
 
+static ALWAYS_INLINE UCPUStrictInt32 arrayIncludesString(JSGlobalObject* globalObject, Butterfly* butterfly, JSString* searchElement, int32_t index)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    int32_t length = butterfly->publicLength();
+    auto data = butterfly->contiguous().data();
+    for (; index < length; ++index) {
+        JSValue value = data[index].get();
+        if (!value || !value.isString())
+            continue;
+        auto* string = asString(value);
+        if (string == searchElement)
+            return toUCPUStrictInt32(1);
+        if (string->equalInline(globalObject, searchElement)) {
+            scope.assertNoExceptionExceptTermination();
+            return toUCPUStrictInt32(1);
+        }
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+    return toUCPUStrictInt32(0);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationArrayIncludesString, UCPUStrictInt32, (JSGlobalObject* globalObject, Butterfly* butterfly, JSString* searchElement, int32_t index))
+{
+    VM& vm = globalObject->vm();
+    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    OPERATION_RETURN(scope, arrayIncludesString(globalObject, butterfly, searchElement, index));
+}
+
+JSC_DEFINE_JIT_OPERATION(operationArrayIncludesValueInt32OrContiguous, UCPUStrictInt32, (JSGlobalObject* globalObject, Butterfly* butterfly, EncodedJSValue encodedValue, int32_t index))
+{
+    VM& vm = globalObject->vm();
+    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue searchElement = JSValue::decode(encodedValue);
+
+    if (searchElement.isString())
+        OPERATION_RETURN(scope, arrayIncludesString(globalObject, butterfly, asString(searchElement), index));
+
+    int32_t length = butterfly->publicLength();
+    auto data = butterfly->contiguous().data();
+
+    if (index >= length)
+        OPERATION_RETURN(scope, toUCPUStrictInt32(0));
+
+    if (searchElement.isObject()) {
+        auto* result = std::bit_cast<const WriteBarrier<Unknown>*>(WTF::find64(std::bit_cast<const uint64_t*>(data + index), encodedValue, length - index));
+        if (result)
+            OPERATION_RETURN(scope, toUCPUStrictInt32(1));
+        OPERATION_RETURN(scope, toUCPUStrictInt32(0));
+    }
+
+    if (searchElement.isInt32()) {
+        for (; index < length; ++index) {
+            JSValue value = data[index].get();
+            if (!value || !value.isNumber())
+                continue;
+            if (searchElement.asInt32() == value.asNumber())
+                OPERATION_RETURN(scope, toUCPUStrictInt32(1));
+        }
+        OPERATION_RETURN(scope, toUCPUStrictInt32(0));
+    }
+
+    bool searchElementIsUndefined = searchElement.isUndefined();
+    for (; index < length; ++index) {
+        JSValue value = data[index].get();
+        if (!value) {
+            if (searchElementIsUndefined)
+                OPERATION_RETURN(scope, 1);
+            continue;
+        }
+        bool isEqual = sameValueZero(globalObject, searchElement, value);
+        OPERATION_RETURN_IF_EXCEPTION(scope, 0);
+        if (isEqual)
+            OPERATION_RETURN(scope, toUCPUStrictInt32(1));
+    }
+    OPERATION_RETURN(scope, toUCPUStrictInt32(0));
+}
+
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationArrayIncludesValueDouble, UCPUStrictInt32, (Butterfly* butterfly, EncodedJSValue encodedValue, int32_t index))
+{
+    // We do not cause any exceptions, thus we do not need FrameTracers.
+    JSValue searchElement = JSValue::decode(encodedValue);
+    const double* data = butterfly->contiguousDouble().data();
+    int32_t length = butterfly->publicLength();
+
+    if (searchElement.isUndefined() && containsHole(data, length))
+        return toUCPUStrictInt32(1);
+    if (!searchElement.isNumber())
+        return toUCPUStrictInt32(0);
+
+    double number = searchElement.asNumber();
+    for (; index < length; ++index) {
+        // This comparison ignores NaN.
+        if (data[index] == number)
+            return toUCPUStrictInt32(1);
+    }
+    return toUCPUStrictInt32(0);
+}
+
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationArrayIncludesNonStringIdentityValueContiguous, UCPUStrictInt32, (Butterfly* butterfly, EncodedJSValue searchElement, int32_t index))
+{
+    // We do not cause any exceptions, thus we do not need FrameTracers.
+    int32_t length = butterfly->publicLength();
+    auto data = butterfly->contiguous().data();
+
+    if (index >= length)
+        return toUCPUStrictInt32(0);
+
+    auto* result = std::bit_cast<const WriteBarrier<Unknown>*>(WTF::find64(std::bit_cast<const uint64_t*>(data + index), searchElement, length - index));
+    if (result)
+        return toUCPUStrictInt32(1);
+
+    JSValue searchElementValue = JSValue::decode(searchElement);
+    if (searchElementValue.isUndefined() && containsHole(data, length))
+        return toUCPUStrictInt32(1);
+    return toUCPUStrictInt32(0);
+}
+
 static ALWAYS_INLINE UCPUStrictInt32 arrayIndexOfString(JSGlobalObject* globalObject, Butterfly* butterfly, JSString* searchElement, int32_t index)
 {
     VM& vm = globalObject->vm();
@@ -3739,6 +3864,39 @@ JSC_DEFINE_JIT_OPERATION(operationArrayIndexOfString, UCPUStrictInt32, (JSGlobal
     OPERATION_RETURN(scope, arrayIndexOfString(globalObject, butterfly, searchElement, index));
 }
 
+JSC_DEFINE_JIT_OPERATION(operationCopyOnWriteArrayIndexOfString, UCPUStrictInt32, (JSGlobalObject* globalObject, Butterfly* butterfly, JSString* searchElement, int32_t index))
+{
+    VM& vm = globalObject->vm();
+    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (JSImmutableButterfly::isOnlyAtomStringsStructure(vm, butterfly)) {
+        AtomString search = searchElement->toAtomString(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        UCPUStrictInt32 result = toUCPUStrictInt32(-1);
+        if (vm.atomStringToJSStringMap.contains(search.impl())) {
+            int32_t length = butterfly->publicLength();
+            auto data = butterfly->contiguous().data();
+            for (int32_t i = index; i < length; ++i) {
+                JSValue value = data[i].get();
+                if (asString(value)->getValueImpl() == search.impl()) {
+                    result = toUCPUStrictInt32(i);
+                    break;
+                }
+            }
+        }
+#if ASSERT_ENABLED
+        UCPUStrictInt32 expected = arrayIndexOfString(globalObject, butterfly, searchElement, index);
+        ASSERT(expected == result);
+#endif
+        OPERATION_RETURN(scope, result);
+    }
+
+    OPERATION_RETURN(scope, arrayIndexOfString(globalObject, butterfly, searchElement, index));
+}
+
 JSC_DEFINE_JIT_OPERATION(operationArrayIndexOfValueInt32OrContiguous, UCPUStrictInt32, (JSGlobalObject* globalObject, Butterfly* butterfly, EncodedJSValue encodedValue, int32_t index))
 {
     VM& vm = globalObject->vm();
@@ -3761,6 +3919,17 @@ JSC_DEFINE_JIT_OPERATION(operationArrayIndexOfValueInt32OrContiguous, UCPUStrict
         auto* result = std::bit_cast<const WriteBarrier<Unknown>*>(WTF::find64(std::bit_cast<const uint64_t*>(data + index), encodedValue, length - index));
         if (result)
             OPERATION_RETURN(scope, toUCPUStrictInt32(result - data));
+        OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
+    }
+
+    if (searchElement.isInt32()) {
+        for (; index < length; ++index) {
+            JSValue value = data[index].get();
+            if (!value || !value.isNumber())
+                continue;
+            if (searchElement.asInt32() == value.asNumber())
+                OPERATION_RETURN(scope, toUCPUStrictInt32(index));
+        }
         OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
     }
 
@@ -3988,7 +4157,7 @@ JSC_DEFINE_JIT_OPERATION(operationCreateImmutableButterfly, JSCell*, (JSGlobalOb
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].get(), length))
+    if (JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), length))
         OPERATION_RETURN(scope, result);
 
     throwOutOfMemoryError(globalObject, scope);
@@ -4263,7 +4432,7 @@ JSC_DEFINE_JIT_OPERATION(operationSetGet, JSValue*, (JSGlobalObject* globalObjec
     OPERATION_RETURN(scope, keySlot);
 }
 
-JSC_DEFINE_JIT_OPERATION(operationMapStorage, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell))
+JSC_DEFINE_JIT_OPERATION(operationMapStorageOrSentinel, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
@@ -4271,13 +4440,32 @@ JSC_DEFINE_JIT_OPERATION(operationMapStorage, EncodedJSValue, (JSGlobalObject* g
     auto scope = DECLARE_THROW_SCOPE(vm);
     OPERATION_RETURN(scope, JSValue::encode(jsCast<JSMap*>(cell)->storageOrSentinel(vm)));
 }
-JSC_DEFINE_JIT_OPERATION(operationSetStorage, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell))
+
+JSC_DEFINE_JIT_OPERATION(operationSetStorageOrSentinel, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     OPERATION_RETURN(scope, JSValue::encode(jsCast<JSSet*>(cell)->storageOrSentinel(vm)));
+}
+
+JSC_DEFINE_JIT_OPERATION(operationMapStorage, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell))
+{
+    VM& vm = globalObject->vm();
+    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    OPERATION_RETURN(scope, JSValue::encode(jsCast<JSMap*>(cell)->storage(globalObject)));
+}
+
+JSC_DEFINE_JIT_OPERATION(operationSetStorage, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell))
+{
+    VM& vm = globalObject->vm();
+    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    OPERATION_RETURN(scope, JSValue::encode(jsCast<JSSet*>(cell)->storage(globalObject)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationMapIterationNext, EncodedJSValue, (JSGlobalObject* globalObject, JSCell* cell, int32_t index))
@@ -4915,7 +5103,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationTriggerTierUpNow, void, (VM* vmPointe
     sanitizeStackForVM(vm);
 
     if (codeBlock->jitType() != JITType::DFGJIT) {
-        dataLog("Unexpected code block in DFG->FTL tier-up: ", *codeBlock, "\n");
+        dataLogLn("Unexpected code block in DFG->FTL tier-up: ", *codeBlock);
         RELEASE_ASSERT_NOT_REACHED();
     }
     
@@ -5213,7 +5401,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationTriggerOSREntryNow, char*, (VM* vmPoi
     sanitizeStackForVM(vm);
 
     if (codeBlock->jitType() != JITType::DFGJIT) {
-        dataLog("Unexpected code block in DFG->FTL tier-up: ", *codeBlock, "\n");
+        dataLogLn("Unexpected code block in DFG->FTL tier-up: ", *codeBlock);
         RELEASE_ASSERT_NOT_REACHED();
     }
 

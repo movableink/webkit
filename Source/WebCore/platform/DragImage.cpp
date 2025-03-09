@@ -85,7 +85,7 @@ struct ScopedNodeDragEnabler {
     {
         if (element)
             element->setBeingDragged(true);
-        frame.document()->updateLayout();
+        frame.protectedDocument()->updateLayout();
     }
 
     ~ScopedNodeDragEnabler()
@@ -157,13 +157,13 @@ struct ScopedFrameSelectionState {
 
     ~ScopedFrameSelectionState()
     {
-        if (auto* renderView = frame.contentRenderer()) {
+        if (auto* renderView = frame->contentRenderer()) {
             ASSERT(selection);
             renderView->selection().set(selection.value(), RenderSelection::RepaintMode::Nothing);
         }
     }
 
-    const LocalFrame& frame;
+    const WeakRef<LocalFrame> frame;
     std::optional<RenderRange> selection;
 };
 
@@ -171,7 +171,7 @@ struct ScopedFrameSelectionState {
 
 DragImageRef createDragImageForRange(LocalFrame& frame, const SimpleRange& range, bool forceBlackText)
 {
-    frame.document()->updateLayout();
+    frame.protectedDocument()->updateLayout();
     RenderView* view = frame.contentRenderer();
     if (!view)
 #if PLATFORM(QT)
@@ -355,7 +355,7 @@ DragImageRef dissolveDragImageToFraction(DragImageRef, float)
     return nullptr;
 }
 
-DragImageRef createDragImageFromImage(Image*, ImageOrientation)
+DragImageRef createDragImageFromImage(Image*, ImageOrientation, GraphicsClient*, float)
 {
     notImplemented();
     return nullptr;

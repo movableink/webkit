@@ -138,10 +138,12 @@ const FontCascade& MockRealtimeVideoSource::DrawingState::statsFont()
 MockRealtimeVideoSource::MockRealtimeVideoSource(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&& hashSalts, std::optional<PageIdentifier> pageIdentifier)
     : RealtimeVideoCaptureSource(CaptureDevice { WTFMove(deviceID), CaptureDevice::DeviceType::Camera, WTFMove(name) }, WTFMove(hashSalts), pageIdentifier)
     , m_runLoop(RunLoop::create("WebKit::MockRealtimeVideoSource generateFrame runloop"_s))
-    , m_emitFrameTimer(m_runLoop.get(), [protectedThis = Ref { *this }] { protectedThis->generateFrame(); })
+    , m_emitFrameTimer(m_runLoop.get(), [weakThis = ThreadSafeWeakPtr { *this }]() {
+        if (RefPtr protectedThis = weakThis.get())
+            protectedThis->generateFrame();
+      })
     , m_deviceOrientation { VideoFrameRotation::None }
 {
-
     allMockRealtimeVideoSource().add(*this);
 
     auto device = MockRealtimeMediaSourceCenter::mockDeviceWithPersistentID(persistentID());
@@ -204,11 +206,14 @@ const RealtimeMediaSourceCapabilities& MockRealtimeVideoSource::capabilities()
 
     auto supportedConstraints = settings().supportedConstraints();
     RealtimeMediaSourceCapabilities capabilities(supportedConstraints);
+
+    capabilities.setDeviceId(hashedId());
+
     if (mockCamera()) {
         auto facingMode = std::get<MockCameraProperties>(m_device.properties).facingMode;
         if (facingMode != VideoFacingMode::Unknown)
             capabilities.addFacingMode(facingMode);
-        capabilities.setDeviceId(hashedId());
+        capabilities.setGroupId(hashedGroupId());
         updateCapabilities(capabilities);
 
         if (facingMode == VideoFacingMode::Environment) {
@@ -317,7 +322,7 @@ const RealtimeMediaSourceSettings& MockRealtimeVideoSource::settings()
         settings.setLogicalSurface(false);
     }
     settings.setDeviceId(hashedId());
-    settings.setGroupId(captureDevice().groupId());
+    settings.setGroupId(hashedGroupId());
 
     settings.setFrameRate(frameRate());
     auto size = this->size();
@@ -764,6 +769,23 @@ void MockRealtimeVideoSource::setIsInterrupted(bool isInterrupted)
         else
             source.startCaptureTimer();
         source.notifyMutedChange(isInterrupted);
+    }
+}
+
+void MockRealtimeVideoSource::triggerCameraConfigurationChange()
+{
+    for (auto& source : allMockRealtimeVideoSource()) {
+        if (!source.isProducingData() || source.deviceType() != CaptureDevice::DeviceType::Camera)
+            continue;
+
+        std::get<MockCameraProperties>(source.m_device.properties).hasBackgroundBlur = !std::get<MockCameraProperties>(source.m_device.properties).hasBackgroundBlur;
+
+        source.m_currentSettings = { };
+        source.m_capabilities = { };
+
+        source.forEachObserver([](auto& observer) {
+            observer.sourceConfigurationChanged();
+        });
     }
 }
 

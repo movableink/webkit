@@ -77,6 +77,9 @@ header: "RemoteLayerTreeTransaction.h"
     VisibleRectChanged
 #endif
     ContentsFormatChanged
+#if HAVE(CORE_MATERIAL)
+    AppleVisualEffectChanged
+#endif
 };
 
 header: "SwapBuffersDisplayRequirement.h"
@@ -107,7 +110,7 @@ header: "RemoteLayerBackingStore.h"
     std::optional<WebCore::RenderingResourceIdentifier> m_contentsRenderingResourceIdentifier;
     std::optional<WebCore::IntRect> m_paintedRect;
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-    std::optional<WebKit::ImageBufferBackendHandle> m_displayListBufferHandle;
+    std::optional<WebCore::DynamicContentScalingDisplayList> m_displayListBufferHandle;
 #endif
 };
 
@@ -134,6 +137,7 @@ header: "RemoteLayerBackingStore.h"
     WebCore::Color m_themeColor;
     WebCore::Color m_pageExtendedBackgroundColor;
     WebCore::Color m_sampledPageTopColor;
+    WebCore::FixedContainerEdges m_fixedContainerEdges;
 
 #if PLATFORM(MAC)
     Markable<WebCore::PlatformLayerIdentifier> m_pageScalingLayerID;
@@ -191,10 +195,13 @@ headers: "LayerProperties.h" "PlatformCALayerRemote.h"
     Markable<WebCore::PlatformLayerIdentifier> layerID;
     WebCore::PlatformCALayerLayerType type;
     std::optional<WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::VideoElementData> videoElementData;
-#if ENABLE(MODEL_ELEMENT)
+#if ENABLE(MODEL_ELEMENT) && ENABLE(MODEL_PROCESS)
+    std::variant<WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::NoAdditionalData, WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::CustomData, Ref<WebCore::Model>, Ref<WebCore::ModelContext>, WebCore::LayerHostingContextIdentifier> additionalData;
+#endif
+#if ENABLE(MODEL_ELEMENT) && !ENABLE(MODEL_PROCESS)
     std::variant<WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::NoAdditionalData, WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::CustomData, Ref<WebCore::Model>, WebCore::LayerHostingContextIdentifier> additionalData;
 #endif
-#if !ENABLE(MODEL_ELEMENT)
+#if !ENABLE(MODEL_PROCESS) && !ENABLE(MODEL_ELEMENT)
     std::variant<WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::NoAdditionalData, WebKit::RemoteLayerTreeTransaction::LayerCreationProperties::CustomData, WebCore::LayerHostingContextIdentifier> additionalData;
 #endif
 };
@@ -275,6 +282,9 @@ headers: "LayerProperties.h" "PlatformCALayerRemote.h"
     [OptionalTupleBit=WebKit::LayerChange::VisibleRectChanged] WebCore::FloatRect visibleRect;
 #endif
     [OptionalTupleBit=WebKit::LayerChange::ContentsFormatChanged] WebCore::ContentsFormat contentsFormat;
+#if HAVE(CORE_MATERIAL)
+    [OptionalTupleBit=WebKit::LayerChange::AppleVisualEffectChanged] WebCore::AppleVisualEffectData appleVisualEffectData;
+#endif
 };
 
 using WebKit::LayerHostingContextID = uint32_t;

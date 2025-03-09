@@ -44,8 +44,7 @@
 #include <wtf/RunLoop.h>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -81,8 +80,8 @@ public:
         });
 
         // We do not need to recreate the buffer if the current buffer is large enough.
-        if (m_imageBuffer && m_imageBuffer->truncatedLogicalSize().width() >= size.width() && m_imageBuffer->truncatedLogicalSize().height() >= size.height())
-            return m_imageBuffer;
+        if (RefPtr imageBuffer = m_imageBuffer; imageBuffer && imageBuffer->truncatedLogicalSize().width() >= size.width() && imageBuffer->truncatedLogicalSize().height() >= size.height())
+            return imageBuffer;
 
         // Round to the nearest 32 pixels so we do not grow the buffer for similar sized requests.
         IntSize roundedSize(roundUpToMultipleOf32(size.width()), roundUpToMultipleOf32(size.height()));
@@ -244,7 +243,7 @@ void ShadowBlur::updateShadowBlurValues()
 static const int blurSumShift = 15;
 
 // Takes a two dimensional array with three rows and two columns for the lobes.
-static void calculateLobes(int lobes[][2], float blurRadius, bool shadowsIgnoreTransforms)
+static void calculateLobes(std::array<std::array<int, 2>, 3>& lobes, float blurRadius, bool shadowsIgnoreTransforms)
 {
     int diameter;
     if (shadowsIgnoreTransforms)
@@ -294,9 +293,9 @@ void ShadowBlur::clear()
 
 void ShadowBlur::blurLayerImage(std::span<uint8_t> imageData, const IntSize& size, int rowStride)
 {
-    const int channels[4] = { 3, 0, 1, 3 };
+    constexpr std::array channels { 3, 0, 1, 3 };
 
-    int lobes[3][2]; // indexed by pass, and left/right lobe
+    std::array<std::array<int, 2>, 3> lobes; // indexed by pass, and left/right lobe
     calculateLobes(lobes, m_blurRadius.width(), m_shadowsIgnoreTransforms);
 
     // First pass is horizontal.
@@ -312,7 +311,7 @@ void ShadowBlur::blurLayerImage(std::span<uint8_t> imageData, const IntSize& siz
         if (!pass && !m_blurRadius.width())
             final = 0; // Do no work if horizonal blur is zero.
 
-        for (int j = 0; j < final; ++j, pixels = pixels.subspan(delta)) {
+        for (int j = 0; j < final; ++j, skip(pixels, delta)) {
             // For each step, we blur the alpha in a channel and store the result
             // in another channel for the subsequent step.
             // We use sliding window algorithm to accumulate the alpha values.
@@ -348,18 +347,18 @@ void ShadowBlur::blurLayerImage(std::span<uint8_t> imageData, const IntSize& siz
                     sum += (side2 - limit + 1) * alpha2;
 
                 limit = (side1 < dim) ? side1 : dim;
-                for (i = 0; i < limit && ptr.size() >= stride && next.size() >= stride; ptr = ptr.subspan(stride), next = next.subspan(stride), ++i, ++ofs) {
+                for (i = 0; i < limit && ptr.size() >= stride && next.size() >= stride; skip(ptr, stride), skip(next, stride), ++i, ++ofs) {
                     ptr[0] = (sum * invCount) >> blurSumShift;
                     sum += ((ofs < dim) ? next.front() : alpha2) - alpha1;
                 }
 
                 prev = pixels.subspan(channels[step]);
-                for (; ofs < dim && ptr.size() >= stride && prev.size() >= stride && next.size() >= stride; ptr = ptr.subspan(stride), prev = prev.subspan(stride), next = next.subspan(stride), ++i, ++ofs) {
+                for (; ofs < dim && ptr.size() >= stride && prev.size() >= stride && next.size() >= stride; skip(ptr, stride), skip(prev, stride), skip(next, stride), ++i, ++ofs) {
                     ptr[0] = (sum * invCount) >> blurSumShift;
                     sum += next.front() - prev.front();
                 }
 
-                for (; i < dim && ptr.size() >= stride && prev.size() >= stride; ptr = ptr.subspan(stride), prev = prev.subspan(stride), ++i) {
+                for (; i < dim && ptr.size() >= stride && prev.size() >= stride; skip(ptr, stride), skip(prev, stride), ++i) {
                     ptr[0] = (sum * invCount) >> blurSumShift;
                     sum += alpha2 - prev.front();
                 }
@@ -948,5 +947,3 @@ void ShadowBlur::drawShadowLayer(const AffineTransform& transform, const IntRect
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -48,6 +48,7 @@ class Document;
 class Element;
 class FloatPoint;
 class JSDOMGlobalObject;
+class HTMLAnchorElement;
 class HTMLImageElement;
 class HTMLLabelElement;
 class HTMLMapElement;
@@ -78,13 +79,11 @@ public:
 
     void setCustomElementRegistry(Ref<CustomElementRegistry>&&);
     CustomElementRegistry* customElementRegistry() const { return m_customElementRegistry.get(); }
-    WEBCORE_EXPORT ExceptionOr<Ref<Element>> createElementForBindings(const AtomString& tagName);
-    WEBCORE_EXPORT ExceptionOr<Ref<Element>> createElementNS(const AtomString& namespaceURI, const AtomString& qualifiedName);
-    WEBCORE_EXPORT Ref<Element> createElement(const QualifiedName&, bool createdByParser);
 
     WEBCORE_EXPORT RefPtr<Element> getElementById(const AtomString&) const;
     WEBCORE_EXPORT RefPtr<Element> getElementById(const String&) const;
     RefPtr<Element> getElementById(StringView) const;
+    RefPtr<Element> elementByIdResolvingReferenceTarget(const AtomString&) const;
     const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* getAllElementsById(const AtomString&) const;
     inline bool hasElementWithId(const AtomString&) const; // Defined in TreeScopeInlines.h.
     inline bool containsMultipleElementsWithId(const AtomString& id) const; // Defined in TreeScopeInlines.h.
@@ -130,6 +129,7 @@ public:
     // Anchor name matching is case sensitive in strict mode and not case sensitive in
     // quirks mode for historical compatibility reasons.
     RefPtr<Element> findAnchor(StringView name);
+    bool isMatchingAnchor(HTMLAnchorElement&, StringView name);
 
     inline ContainerNode& rootNode() const; // Defined in ContainerNode.h
     Ref<ContainerNode> protectedRootNode() const;

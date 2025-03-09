@@ -31,6 +31,7 @@
 #include "PixelBuffer.h"
 #include "TaskSource.h"
 #include <atomic>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/HashSet.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/WeakHashSet.h>
@@ -72,14 +73,9 @@ public:
     virtual void canvasDisplayBufferPrepared(CanvasBase&) = 0;
 };
 
-class CanvasBase {
+class CanvasBase : public AbstractRefCountedAndCanMakeWeakPtr<CanvasBase> {
 public:
     virtual ~CanvasBase();
-
-    virtual void refCanvasBase() const = 0;
-    virtual void derefCanvasBase() const = 0;
-    void ref() const { refCanvasBase(); }
-    void deref() const { derefCanvasBase(); }
 
     virtual bool isHTMLCanvasElement() const { return false; }
     virtual bool isOffscreenCanvas() const { return false; }
@@ -122,7 +118,7 @@ public:
     void notifyObserversCanvasDisplayBufferPrepared();
     bool hasDisplayBufferObservers() const { return !m_displayBufferObservers.isEmptyIgnoringNullReferences(); }
 
-    HashSet<Element*> cssCanvasClients() const;
+    UncheckedKeyHashSet<Element*> cssCanvasClients() const;
 
     // !rect means caller knows the full canvas is invalidated previously.
     void didDraw(const std::optional<FloatRect>& rect) { return didDraw(rect, ShouldApplyPostProcessingToDirtyRect::Yes); }
@@ -137,7 +133,7 @@ public:
 
     WEBCORE_EXPORT static void setMaxCanvasAreaForTesting(std::optional<size_t>);
 
-    virtual void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) = 0;
+    virtual void queueTaskKeepingObjectAlive(TaskSource, Function<void(CanvasBase&)>&&) = 0;
     virtual void dispatchEvent(Event&) = 0;
 
     bool postProcessPixelBufferResults(Ref<PixelBuffer>&&) const;
@@ -180,16 +176,18 @@ private:
 
     String m_lastFillText;
 
+    WeakHashSet<CanvasObserver> m_observers;
+    WeakHashSet<CanvasDisplayBufferObserver> m_displayBufferObservers;
+
     CanvasNoiseInjection m_canvasNoiseInjection;
     Markable<NoiseInjectionHashSalt, IntegralMarkableTraits<NoiseInjectionHashSalt, std::numeric_limits<int64_t>::max()>> m_canvasNoiseHashSalt;
+
     bool m_originClean { true };
     // m_hasCreatedImageBuffer means we tried to malloc the buffer. We didn't necessarily get it.
     bool m_hasCreatedImageBuffer { false };
 #if ASSERT_ENABLED
     bool m_didNotifyObserversCanvasDestroyed { false };
 #endif
-    WeakHashSet<CanvasObserver> m_observers;
-    WeakHashSet<CanvasDisplayBufferObserver> m_displayBufferObservers;
 };
 
 WebCoreOpaqueRoot root(CanvasBase*);

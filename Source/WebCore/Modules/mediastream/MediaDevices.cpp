@@ -36,7 +36,7 @@
 
 #include "AudioSession.h"
 #include "CaptureDeviceWithCapabilities.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "FrameDestructionObserverInlines.h"
@@ -47,6 +47,7 @@
 #include "Logging.h"
 #include "MediaTrackSupportedConstraints.h"
 #include "PermissionsPolicy.h"
+#include "Quirks.h"
 #include "RealtimeMediaSourceSettings.h"
 #include "Settings.h"
 #include "UserGestureIndicator.h"
@@ -63,7 +64,6 @@ inline MediaDevices::MediaDevices(Document& document)
     : ActiveDOMObject(document)
     , m_scheduledEventTimer(RunLoop::main(), this, &MediaDevices::scheduledEventTimerFired)
     , m_eventNames(eventNames())
-    , m_groupIdHashSalt(createVersion4UUIDString())
 {
     static_assert(static_cast<size_t>(MediaDevices::DisplayCaptureSurfaceType::Monitor) == static_cast<size_t>(DisplaySurfaceType::Monitor), "MediaDevices::DisplayCaptureSurfaceType::Monitor is not equal to DisplaySurfaceType::Monitor as expected");
     static_assert(static_cast<size_t>(MediaDevices::DisplayCaptureSurfaceType::Window) == static_cast<size_t>(DisplaySurfaceType::Window), "MediaDevices::DisplayCaptureSurfaceType::Window is not DisplaySurfaceType::Window as expected");
@@ -302,11 +302,16 @@ static inline bool checkMicrophoneAccess(const Document& document)
     return PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, document, PermissionsPolicy::ShouldReportViolation::No);
 }
 
+static bool isFeaturePolicyAllowingSpeakerSelection(const Document& document)
+{
+    return PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::SpeakerSelection, document, PermissionsPolicy::ShouldReportViolation::No) || (document.quirks().shouldEnableSpeakerSelectionPermissionsPolicyQuirk() && PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, document, PermissionsPolicy::ShouldReportViolation::No));
+}
+
 static inline bool checkSpeakerAccess(const Document& document)
 {
     return document.frame()
         && document.frame()->settings().exposeSpeakersEnabled()
-        && PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::SpeakerSelection, document, PermissionsPolicy::ShouldReportViolation::No);
+        && isFeaturePolicyAllowingSpeakerSelection(document);
 }
 
 static inline bool exposeSpeakersWithoutMicrophoneAccess(const Document& document)
@@ -351,22 +356,22 @@ void MediaDevices::exposeDevices(Vector<CaptureDeviceWithCapabilities>&& newDevi
             deviceId = center.hashStringWithSalt(newDevice.persistentId(), deviceIDHashSalts.ephemeralDeviceSalt);
         else
             deviceId = center.hashStringWithSalt(newDevice.persistentId(), deviceIDHashSalts.persistentDeviceSalt);
-        auto groupId = newDevice.groupId().isEmpty() ? emptyString() : hashedGroupId(newDevice.groupId());
+        auto groupId = center.hashStringWithSalt(newDevice.groupId(), deviceIDHashSalts.ephemeralDeviceSalt);
 
         if (newDevice.type() == CaptureDevice::DeviceType::Speaker) {
             if (exposeSpeakersWithoutMicrophoneAccess(document) || haveMicrophoneDevice(newDevices, newDevice.groupId())) {
                 m_audioOutputDeviceIdToPersistentId.add(deviceId, newDevice.persistentId());
                 devices.append(RefPtr<MediaDeviceInfo> { MediaDeviceInfo::create(newDevice.label(), WTFMove(deviceId), WTFMove(groupId), toMediaDeviceInfoKind(newDevice.type())) });
             }
-        } else
+        } else {
+            if (newDevice.type() == CaptureDevice::DeviceType::Camera && !newDevice.label().isEmpty())
+                m_hasRestrictedCameraDevices = false;
+            if (newDevice.type() == CaptureDevice::DeviceType::Microphone && !newDevice.label().isEmpty())
+                m_hasRestrictedMicrophoneDevices = false;
             devices.append(RefPtr<InputDeviceInfo> { InputDeviceInfo::create(WTFMove(newDeviceWithCapabilities), WTFMove(deviceId), WTFMove(groupId)) });
+        }
     }
     promise.resolve(WTFMove(devices));
-}
-
-String MediaDevices::hashedGroupId(const String& groupId)
-{
-    return RealtimeMediaSourceCenter::singleton().hashStringWithSalt(groupId, m_groupIdHashSalt);
 }
 
 void MediaDevices::enumerateDevices(EnumerateDevicesPromise&& promise)
@@ -444,6 +449,23 @@ bool MediaDevices::addEventListener(const AtomString& eventType, Ref<EventListen
         listenForDeviceChanges();
 
     return EventTarget::addEventListener(eventType, WTFMove(listener), options);
+}
+
+void MediaDevices::willStartMediaCapture(bool microphone, bool camera)
+{
+    bool shouldFireDeviceChangeEvent = false;
+    if (camera && m_hasRestrictedCameraDevices) {
+        m_hasRestrictedCameraDevices = false;
+        shouldFireDeviceChangeEvent = true;
+    }
+    if (microphone && m_hasRestrictedMicrophoneDevices) {
+        m_hasRestrictedMicrophoneDevices = false;
+        shouldFireDeviceChangeEvent = true;
+    }
+    if (!shouldFireDeviceChangeEvent || !m_listeningForDeviceChanges)
+        return;
+
+    queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, Event::create(eventNames().devicechangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 } // namespace WebCore

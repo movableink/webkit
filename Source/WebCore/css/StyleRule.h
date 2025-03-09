@@ -56,7 +56,7 @@ class StyleRuleBase : public RefCounted<StyleRuleBase> {
     WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRuleBase);
 public:
     StyleRuleType type() const { return static_cast<StyleRuleType>(m_type); }
-    
+
     bool isCharsetRule() const { return type() == StyleRuleType::Charset; }
     bool isCounterStyleRule() const { return type() == StyleRuleType::CounterStyle; }
     bool isFontFaceRule() const { return type() == StyleRuleType::FontFace; }
@@ -68,7 +68,7 @@ public:
     bool isNamespaceRule() const { return type() == StyleRuleType::Namespace; }
     bool isMediaRule() const { return type() == StyleRuleType::Media; }
     bool isPageRule() const { return type() == StyleRuleType::Page; }
-    bool isStyleRule() const { return type() == StyleRuleType::Style || type() == StyleRuleType::StyleWithNesting; }
+    bool isStyleRule() const { return type() == StyleRuleType::Style || type() == StyleRuleType::StyleWithNesting || type() == StyleRuleType::NestedDeclarations; }
     bool isStyleRuleWithNesting() const { return type() == StyleRuleType::StyleWithNesting; }
     bool isNestedDeclarationsRule() const { return type() == StyleRuleType::NestedDeclarations; }
     bool isGroupRule() const { return type() == StyleRuleType::Media || type() == StyleRuleType::Supports || type() == StyleRuleType::LayerBlock || type() == StyleRuleType::Container || type() == StyleRuleType::Scope || type() == StyleRuleType::StartingStyle; }
@@ -80,6 +80,7 @@ public:
     bool isScopeRule() const { return type() == StyleRuleType::Scope; }
     bool isStartingStyleRule() const { return type() == StyleRuleType::StartingStyle; }
     bool isViewTransitionRule() const { return type() == StyleRuleType::ViewTransition; }
+    bool isPositionTryRule() const { return type() == StyleRuleType::PositionTry; }
 
     Ref<StyleRuleBase> copy() const;
 
@@ -317,7 +318,7 @@ public:
 protected:
     StyleRuleGroup(StyleRuleType, Vector<Ref<StyleRuleBase>>&&);
     StyleRuleGroup(const StyleRuleGroup&);
-    
+
 private:
     mutable Vector<Ref<StyleRuleBase>> m_childRules;
 };

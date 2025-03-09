@@ -1177,15 +1177,15 @@ static JSValueRef domIdentifierCallback(JSContextRef context, JSObjectRef thisOb
     return JSValueMakeString(context, domIdentifier.get());
 }
 
-static JSValueRef getARIAIsGrabbedCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
+static JSValueRef getIsGrabbedCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
 {
-    return JSValueMakeBoolean(context, toAXElement(thisObject)->ariaIsGrabbed());
+    return JSValueMakeBoolean(context, toAXElement(thisObject)->isGrabbed());
 }
 
 static JSValueRef getIsValidCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
 {
     AccessibilityUIElement* uiElement = toAXElement(thisObject);
-    if (!uiElement->platformUIElement())
+    if (!uiElement->hasPlatformUIElement())
         return JSValueMakeBoolean(context, false);
     
     // There might be other platform logic that one could check here...
@@ -1720,15 +1720,6 @@ void AccessibilityUIElement::setValue(JSStringRef) { }
 void AccessibilityUIElement::uiElementArrayAttributeValue(JSStringRef, Vector<AccessibilityUIElement>&) const { }
 #endif
 
-#if !PLATFORM(WIN)
-bool AccessibilityUIElement::isEqual(AccessibilityUIElement* otherElement)
-{
-    if (!otherElement)
-        return false;
-    return platformUIElement() == otherElement->platformUIElement();
-}
-#endif
-
 #if !PLATFORM(MAC)
 void AccessibilityUIElement::setBoolAttributeValue(JSStringRef, bool) { }
 bool AccessibilityUIElement::isOnScreen() const { return true; }
@@ -1950,7 +1941,7 @@ static void finalize(JSObjectRef thisObject)
 
 JSObjectRef AccessibilityUIElement::makeJSAccessibilityUIElement(JSContextRef context, const AccessibilityUIElement& element)
 {
-    if (!element.platformUIElement())
+    if (!element.hasPlatformUIElement())
         return nullptr;
 
     return JSObjectMake(context, AccessibilityUIElement::getJSClass(), new AccessibilityUIElement(element));
@@ -2012,7 +2003,7 @@ JSClassRef AccessibilityUIElement::getJSClass()
         { "liveRegionRelevant", getLiveRegionRelevantCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "liveRegionStatus", getLiveRegionStatusCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "orientation", getOrientationCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "ariaIsGrabbed", getARIAIsGrabbedCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "isGrabbed", getIsGrabbedCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "ariaDropEffects", getARIADropEffectsCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "classList", getClassListCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "domIdentifier", domIdentifierCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },

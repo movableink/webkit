@@ -18,7 +18,6 @@ list(APPEND WebKit_SOURCES
 
     NetworkProcess/Classifier/WebResourceLoadStatisticsStore.cpp
 
-    Platform/IPC/win/ArgumentCodersWin.cpp
     Platform/IPC/win/ConnectionWin.cpp
     Platform/IPC/win/IPCSemaphoreWin.cpp
 
@@ -83,6 +82,10 @@ list(APPEND WebKit_SOURCES
     WebProcess/win/WebProcessWin.cpp
 
     win/WebKitDLL.cpp
+)
+
+list(APPEND WebKit_SERIALIZATION_IN_FILES
+    Shared/win/WTFArgumentCodersWin.serialization.in
 )
 
 list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES
@@ -154,8 +157,4 @@ if (USE_CAIRO)
     include(Platform/Cairo.cmake)
 elseif (USE_SKIA)
     include(Platform/Skia.cmake)
-
-    list(APPEND WebKit_PUBLIC_FRAMEWORK_HEADERS
-        Shared/API/c/skia/WKImageSkia.h
-    )
 endif ()

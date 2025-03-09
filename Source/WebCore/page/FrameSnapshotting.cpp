@@ -175,7 +175,12 @@ RefPtr<ImageBuffer> snapshotNode(LocalFrame& frame, Node& node, SnapshotOptions&
 
 static bool styleContainsComplexBackground(const RenderStyle& style)
 {
-    return style.hasBlendMode() || style.hasBackgroundImage() || style.hasBackdropFilter();
+    return style.hasBlendMode()
+        || style.hasBackgroundImage()
+#if HAVE(CORE_MATERIAL)
+        || style.hasAppleVisualEffectRequiringBackdropFilter()
+#endif
+        || style.hasBackdropFilter();
 }
 
 Color estimatedBackgroundColorForRange(const SimpleRange& range, const LocalFrame& frame)

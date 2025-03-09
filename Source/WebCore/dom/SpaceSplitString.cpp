@@ -25,8 +25,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/AtomStringHash.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -169,7 +168,7 @@ private:
 class TokenAtomStringInitializer {
     WTF_MAKE_NONCOPYABLE(TokenAtomStringInitializer);
 public:
-    TokenAtomStringInitializer(const AtomString& keyString, AtomString* memory)
+    TokenAtomStringInitializer(const AtomString& keyString, std::span<AtomString> memory)
         : m_keyString(keyString)
         , m_memoryBucket(memory)
     { }
@@ -177,18 +176,18 @@ public:
     template<typename CharacterType> bool processToken(std::span<const CharacterType> characters)
     {
         if (characters.size() == m_keyString.length())
-            new (NotNull, m_memoryBucket) AtomString(m_keyString);
+            new (NotNull, m_memoryBucket.data()) AtomString(m_keyString);
         else
-            new (NotNull, m_memoryBucket) AtomString(characters);
-        ++m_memoryBucket;
+            new (NotNull, m_memoryBucket.data()) AtomString(characters);
+        skip(m_memoryBucket, 1);
         return true;
     }
 
-    const AtomString* nextMemoryBucket() const { return m_memoryBucket; }
+    const AtomString* nextMemoryBucket() const { return m_memoryBucket.data(); }
 
 private:
     const AtomString& m_keyString;
-    AtomString* m_memoryBucket;
+    std::span<AtomString> m_memoryBucket;
 };
 
 inline Ref<SpaceSplitStringData> SpaceSplitStringData::create(const AtomString& keyString, unsigned tokenCount)
@@ -200,11 +199,11 @@ inline Ref<SpaceSplitStringData> SpaceSplitStringData::create(const AtomString& 
     SpaceSplitStringData* spaceSplitStringData = static_cast<SpaceSplitStringData*>(fastMalloc(sizeToAllocate));
 
     new (NotNull, spaceSplitStringData) SpaceSplitStringData(keyString, tokenCount);
-    AtomString* tokenArrayStart = spaceSplitStringData->tokenArrayStart();
-    TokenAtomStringInitializer tokenInitializer(keyString, tokenArrayStart);
+    auto tokenArray = spaceSplitStringData->tokenArray();
+    TokenAtomStringInitializer tokenInitializer(keyString, tokenArray);
     tokenizeSpaceSplitString(tokenInitializer, keyString);
-    ASSERT(static_cast<unsigned>(tokenInitializer.nextMemoryBucket() - tokenArrayStart) == tokenCount);
-    ASSERT(reinterpret_cast<const char*>(tokenInitializer.nextMemoryBucket()) == reinterpret_cast<const char*>(spaceSplitStringData) + sizeToAllocate);
+    ASSERT(static_cast<unsigned>(tokenInitializer.nextMemoryBucket() - tokenArray.data()) == tokenCount);
+    ASSERT(reinterpret_cast<const char*>(tokenInitializer.nextMemoryBucket()) - reinterpret_cast<const char*>(spaceSplitStringData) == sizeToAllocate);
 
     return adoptRef(*spaceSplitStringData);
 }
@@ -239,13 +238,8 @@ void SpaceSplitStringData::destroy(SpaceSplitStringData* spaceSplitString)
 
     spaceSplitStringTable().remove(spaceSplitString->m_keyString);
 
-    unsigned i = 0;
-    unsigned size = spaceSplitString->size();
-    const AtomString* data = spaceSplitString->tokenArrayStart();
-    do {
-        data[i].~AtomString();
-        ++i;
-    } while (i < size);
+    for (auto& data : spaceSplitString->tokenArray())
+        data.~AtomString();
 
     spaceSplitString->~SpaceSplitStringData();
 
@@ -253,5 +247,3 @@ void SpaceSplitStringData::destroy(SpaceSplitStringData* spaceSplitString)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

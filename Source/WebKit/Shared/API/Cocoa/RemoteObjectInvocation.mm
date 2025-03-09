@@ -30,7 +30,7 @@
 namespace WebKit {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteObjectInvocation);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RemoteObjectInvocation, ReplyInfo);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteObjectInvocation::ReplyInfo);
 
 RemoteObjectInvocation::RemoteObjectInvocation() = default;
 

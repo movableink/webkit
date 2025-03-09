@@ -49,6 +49,7 @@
 #include "WebExtensionMenuItem.h"
 #include "WebExtensionMessagePort.h"
 #include "WebExtensionPortChannelIdentifier.h"
+#include "WebExtensionStorageSQLiteStore.h"
 #include "WebExtensionTab.h"
 #include "WebExtensionTabIdentifier.h"
 #include "WebExtensionUtilities.h"
@@ -60,6 +61,7 @@
 #include "WebProcessProxy.h"
 #include <WebCore/ContentRuleListResults.h>
 #include <wtf/CompletionHandler.h>
+#include <wtf/Deque.h>
 #include <wtf/Forward.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashMap.h>
@@ -107,7 +109,6 @@ OBJC_CLASS WKWebViewConfiguration;
 OBJC_CLASS _WKWebExtensionContextDelegate;
 OBJC_CLASS _WKWebExtensionDeclarativeNetRequestSQLiteStore;
 OBJC_CLASS _WKWebExtensionRegisteredScriptsSQLiteStore;
-OBJC_CLASS _WKWebExtensionStorageSQLiteStore;
 OBJC_PROTOCOL(WKWebExtensionTab);
 OBJC_PROTOCOL(WKWebExtensionWindow);
 
@@ -187,7 +188,7 @@ public:
     using EventListenerTypeFrameMap = HashMap<WebExtensionEventListenerTypeWorldPair, WeakFrameCountedSet>;
     using EventListenerTypeSet = HashSet<WebExtensionEventListenerType>;
     using ContentWorldTypeSet = HashSet<WebExtensionContentWorldType>;
-    using VoidCompletionHandlerVector = Vector<CompletionHandler<void()>>;
+    using VoidFunctionVector = Vector<Function<void()>>;
 
     using WindowIdentifierMap = HashMap<WebExtensionWindowIdentifier, Ref<WebExtensionWindow>>;
     using WindowIdentifierVector = Vector<WebExtensionWindowIdentifier>;
@@ -303,7 +304,7 @@ public:
 
     void invalidateStorage();
 
-    _WKWebExtensionStorageSQLiteStore *storageForType(WebExtensionDataType);
+    Ref<WebExtensionStorageSQLiteStore> storageForType(WebExtensionDataType);
 
     bool load(WebExtensionController&, String storageDirectory, NSError ** = nullptr);
     bool unload(NSError ** = nullptr);
@@ -340,6 +341,7 @@ public:
     InjectedContentVector injectedContents() const;
     bool hasInjectedContentForURL(const URL&);
     bool hasInjectedContent();
+    bool safeToInjectContent() const { return isLoaded() && m_safeToInjectContent; }
 
     bool hasContentModificationRules();
 
@@ -506,7 +508,7 @@ public:
     WebExtensionMenuItem* menuItem(const String& identifier) const;
     void performMenuItem(WebExtensionMenuItem&, const WebExtensionMenuItemContextParameters&, UserTriggered = UserTriggered::No);
 
-    CocoaMenuItem *singleMenuItemOrExtensionItemWithSubmenu(const WebExtensionMenuItemContextParameters&) const;
+    CocoaMenuItem *singleMenuItemOrExtensionItemWithSubmenu(const WebExtensionMenuItemContextParameters&, const bool allowTopLevelImages) const;
 
 #if PLATFORM(MAC)
     void addItemsToContextMenu(WebPageProxy&, const ContextMenuContextData&, NSMenu *);
@@ -517,6 +519,10 @@ public:
     void clearUserGesture(WebExtensionTab&);
 
     bool inTestingMode() const;
+
+#if PLATFORM(COCOA)
+    void sendTestMessage(const String& message, id argument);
+#endif
 
 #if PLATFORM(COCOA)
     URL backgroundContentURL();
@@ -564,7 +570,7 @@ public:
     void addExtensionTabPage(WebPageProxy&, WebExtensionTab&);
     void addPopupPage(WebPageProxy&, WebExtensionAction&);
 
-    void enumerateExtensionPages(Function<void(WebPageProxy&, bool& stop)>&&);
+    void enumerateExtensionPages(NOESCAPE Function<void(WebPageProxy&, bool& stop)>&&);
 
     WKWebView *relatedWebView();
     NSString *processDisplayName();
@@ -578,8 +584,8 @@ public:
 
     void loadBackgroundContent(CompletionHandler<void(NSError *)>&&);
 
-    void wakeUpBackgroundContentIfNecessary(CompletionHandler<void()>&&);
-    void wakeUpBackgroundContentIfNecessaryToFireEvents(EventListenerTypeSet&&, CompletionHandler<void()>&&);
+    void wakeUpBackgroundContentIfNecessary(Function<void()>&&);
+    void wakeUpBackgroundContentIfNecessaryToFireEvents(EventListenerTypeSet&&, Function<void()>&&);
 
     HashSet<Ref<WebProcessProxy>> processes(WebExtensionEventListenerType type, WebExtensionContentWorldType contentWorldType) const
     {
@@ -734,9 +740,9 @@ private:
     bool isSessionStorageAllowedInContentScripts() const { return m_isSessionStorageAllowedInContentScripts; }
     size_t quotaForStorageType(WebExtensionDataType);
 
-    _WKWebExtensionStorageSQLiteStore *localStorageStore();
-    _WKWebExtensionStorageSQLiteStore *sessionStorageStore();
-    _WKWebExtensionStorageSQLiteStore *syncStorageStore();
+    Ref<WebExtensionStorageSQLiteStore> localStorageStore();
+    Ref<WebExtensionStorageSQLiteStore> sessionStorageStore();
+    Ref<WebExtensionStorageSQLiteStore> syncStorageStore();
 
     void fetchCookies(WebsiteDataStore&, const URL&, const WebExtensionCookieFilterParameters&, CompletionHandler<void(Expected<Vector<WebExtensionCookieParameters>, WebExtensionError>&&)>&&);
 
@@ -797,7 +803,7 @@ private:
     // DevTools APIs
     bool isDevToolsMessageAllowed();
     void devToolsPanelsCreate(WebPageProxyIdentifier, const String& title, const String& iconPath, const String& pagePath, CompletionHandler<void(Expected<Inspector::ExtensionTabID, WebExtensionError>&&)>&&);
-    void devToolsInspectedWindowEval(WebPageProxyIdentifier, const String& scriptSource, const std::optional<URL>& frameURL, CompletionHandler<void(Expected<Expected<std::span<const uint8_t>, WebCore::ExceptionDetails>, WebExtensionError>&&)>&&);
+    void devToolsInspectedWindowEval(WebPageProxyIdentifier, const String& scriptSource, const std::optional<URL>& frameURL, CompletionHandler<void(Expected<Expected<JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>, WebExtensionError>&&)>&&);
     void devToolsInspectedWindowReload(WebPageProxyIdentifier, const std::optional<bool>& ignoreCache);
 #endif
 
@@ -890,7 +896,7 @@ private:
     void storageRemove(WebPageProxyIdentifier, WebExtensionDataType, const Vector<String>& keys, CompletionHandler<void(Expected<void, WebExtensionError>&&)>&&);
     void storageClear(WebPageProxyIdentifier, WebExtensionDataType, CompletionHandler<void(Expected<void, WebExtensionError>&&)>&&);
     void storageSetAccessLevel(WebPageProxyIdentifier, WebExtensionDataType, WebExtensionStorageAccessLevel, CompletionHandler<void(Expected<void, WebExtensionError>&&)>&&);
-    void fireStorageChangedEventIfNeeded(NSDictionary *oldKeysAndValues, NSDictionary *newKeysAndValues, WebExtensionDataType);
+    void fireStorageChangedEventIfNeeded(HashMap<String, String> oldKeysAndValues, HashMap<String, String> newKeysAndValues, WebExtensionDataType);
 
     // Tabs APIs
     void tabsCreate(std::optional<WebPageProxyIdentifier>, const WebExtensionTabParameters&, CompletionHandler<void(Expected<std::optional<WebExtensionTabParameters>, WebExtensionError>&&)>&&);
@@ -987,7 +993,7 @@ private:
     bool m_requestedOptionalAccessToAllHosts { false };
     bool m_hasAccessToPrivateData { false };
 
-    VoidCompletionHandlerVector m_actionsToPerformAfterBackgroundContentLoads;
+    VoidFunctionVector m_actionsToPerformAfterBackgroundContentLoads;
     EventListenerTypeCountedSet m_backgroundContentEventListeners;
     EventListenerTypeFrameMap m_eventListenerFrames;
 
@@ -1012,6 +1018,8 @@ private:
 #if ENABLE(INSPECTOR_EXTENSIONS)
     WeakHashMap<WebInspectorUIProxy, InspectorContext> m_inspectorContextMap;
 #endif
+
+    bool m_safeToInjectContent { false };
 
     HashMap<Ref<WebExtensionMatchPattern>, UserScriptVector> m_injectedScriptsPerPatternMap;
     HashMap<Ref<WebExtensionMatchPattern>, UserStyleSheetVector> m_injectedStyleSheetsPerPatternMap;
@@ -1070,11 +1078,22 @@ private:
 
     bool m_isSessionStorageAllowedInContentScripts { false };
 
+    RefPtr<WebExtensionStorageSQLiteStore> m_localStorageStore;
+    RefPtr<WebExtensionStorageSQLiteStore> m_sessionStorageStore;
+    RefPtr<WebExtensionStorageSQLiteStore> m_syncStorageStore;
+
+    struct TestMessage {
+        String message;
 #if PLATFORM(COCOA)
-    RetainPtr<_WKWebExtensionStorageSQLiteStore> m_localStorageStore;
-    RetainPtr<_WKWebExtensionStorageSQLiteStore> m_sessionStorageStore;
-    RetainPtr<_WKWebExtensionStorageSQLiteStore> m_syncStorageStore;
+        RetainPtr<id> argument;
 #endif
+    };
+
+    size_t m_testMessageListenersCount { 0 };
+    Deque<TestMessage> m_testMessageQueue;
+
+    bool hasTestMessageEventListeners() { return m_testMessageListenersCount; }
+    void flushTestMessageQueueIfNeeded();
 };
 
 template<typename T>

@@ -68,7 +68,7 @@ IDBDatabase::IDBDatabase(ScriptExecutionContext& context, IDBClient::IDBConnecti
     , m_eventNames(eventNames())
 {
     LOG(IndexedDB, "IDBDatabase::IDBDatabase - Creating database %s with version %" PRIu64 " connection %" PRIu64 " (%p)", m_info.name().utf8().data(), m_info.version(), m_databaseConnectionIdentifier.toUInt64(), this);
-    m_connectionProxy->registerDatabaseConnection(*this);
+    m_connectionProxy->registerDatabaseConnection(*this, context.identifier());
 }
 
 IDBDatabase::~IDBDatabase()
@@ -486,6 +486,14 @@ void IDBDatabase::didDeleteIndexInfo(const IDBIndexInfo& info)
     auto* objectStore = m_info.infoForExistingObjectStore(info.objectStoreIdentifier());
     ASSERT(objectStore);
     objectStore->deleteIndex(info.name());
+}
+
+std::optional<ScriptExecutionContextIdentifier> IDBDatabase::scriptExecutionContextIdentifier() const
+{
+    if (RefPtr context = scriptExecutionContext())
+        return context->identifier();
+
+    return std::nullopt;
 }
 
 } // namespace WebCore

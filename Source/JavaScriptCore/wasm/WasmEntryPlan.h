@@ -56,7 +56,7 @@ public:
 
     void prepare();
 
-    void compileFunctions(CompilationEffort);
+    void compileFunctions();
 
     Ref<ModuleInformation>&& takeModuleInformation()
     {
@@ -95,9 +95,14 @@ public:
 
     bool completeSyncIfPossible();
 
+    virtual void completeInStreaming() = 0;
+    virtual void didCompileFunctionInStreaming() = 0;
+    virtual void didFailInStreaming(String&&) = 0;
+
 private:
     class ThreadCountHolder;
     friend class ThreadCountHolder;
+    friend class StreamingPlan;
 
 protected:
     // For some reason friendship doesn't extend to parent classes...
@@ -133,7 +138,7 @@ protected:
     Vector<uint8_t> m_source;
     Vector<MacroAssemblerCodeRef<WasmEntryPtrTag>> m_wasmToWasmExitStubs;
     Vector<MacroAssemblerCodeRef<WasmEntryPtrTag>> m_wasmToJSExitStubs;
-    HashSet<uint32_t, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_exportedFunctionIndices;
+    UncheckedKeyHashSet<uint32_t, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_exportedFunctionIndices;
 
     Vector<Vector<UnlinkedWasmToWasmCall>> m_unlinkedWasmToWasmCalls;
     StreamingParser m_streamingParser;

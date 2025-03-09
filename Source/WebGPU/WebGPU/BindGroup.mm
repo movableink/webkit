@@ -439,6 +439,7 @@ Device::ExternalTextureData Device::createExternalTextureFromPixelBuffer(CVPixel
         return [texture newTextureViewWithPixelFormat:texture.pixelFormat textureType:texture.textureType levels:NSMakeRange(0, texture.mipmapLevelCount) slices:NSMakeRange(0, texture.arrayLength) swizzle:alphaFirst ? MTLTextureSwizzleChannelsMake(MTLTextureSwizzleBlue, MTLTextureSwizzleAlpha, MTLTextureSwizzleZero, MTLTextureSwizzleZero) : MTLTextureSwizzleChannelsMake(MTLTextureSwizzleGreen, MTLTextureSwizzleBlue, MTLTextureSwizzleZero, MTLTextureSwizzleZero)];
     };
 
+    CVMetalTextureCacheFlush(m_coreVideoTextureCache.get(), 0);
     const bool supportsExtendedFormats = [m_device supportsFamily:MTLGPUFamilyApple4];
     IOSurfaceRef ioSurface = CVPixelBufferGetIOSurface(pixelBuffer);
     if (!ioSurface || isIntel()) {
@@ -995,7 +996,7 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
                 Ref apiBuffer = WebGPU::protectedFromAPI(entry.buffer);
                 id<MTLBuffer> buffer = apiBuffer->buffer();
                 bool isDestroyed = apiBuffer->isDestroyed();
-                if (isDestroyed) {
+                if (isDestroyed && stage != ShaderStage::Undefined) {
                     argumentEncoder[stage] = nil;
                     argumentBuffer[stage] = nil;
                 }
@@ -1139,7 +1140,7 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
                         VALIDATION_ERROR(@"Can not create bind group with filterable 32bpp floating point texture as float32-filterable feature is not enabled");
                         return BindGroup::createInvalid(*this);
                     }
-                } else {
+                } else if (stage != ShaderStage::Undefined) {
                     argumentEncoder[stage] = nil;
                     argumentBuffer[stage] = nil;
                 }
@@ -1179,6 +1180,7 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
 
                 if (stage != ShaderStage::Undefined) {
                     argumentIndices[stage].remove(index);
+                    externalTexture->updateExternalTextures(texture0, texture1);
                     [argumentEncoder[stage] setTexture:texture0 atIndex:index++];
 
                     argumentIndices[stage].remove(index);
@@ -1212,8 +1214,9 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
             auto renderStage = metalRenderStage(stage);
             auto &v = stageResources[renderStage][i];
             auto &u = stageResourceUsages[renderStage][i];
+            static_assert(MTLResourceUsageRead == 1 && !BindGroupLayout::BindingAccessReadOnly);
             if (v.size()) {
-                if (stage != ShaderStage::Undefined)
+                if (stage != ShaderStage::Undefined && i == BindGroupLayout::BindingAccessReadOnly)
                     externalTextureIndices[stage].containerIndex = resources.size();
                 resources.append(BindableResources {
                     .mtlResources = WTFMove(v),
@@ -1229,6 +1232,9 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
     argumentBuffer[ShaderStage::Fragment].label = bindGroupLayout->fragmentArgumentEncoder().label;
     argumentBuffer[ShaderStage::Compute].label = bindGroupLayout->computeArgumentEncoder().label;
 
+    std::sort(dynamicBuffers.begin(), dynamicBuffers.end(), [](const BindGroup::BufferAndType& a, const BindGroup::BufferAndType& b) {
+        return a.bindingIndex < b.bindingIndex;
+    });
     return BindGroup::create(argumentBuffer[ShaderStage::Vertex], argumentBuffer[ShaderStage::Fragment], argumentBuffer[ShaderStage::Compute], WTFMove(resources), bindGroupLayout, WTFMove(dynamicBuffers), WTFMove(samplersSet), WTFMove(externalTextureIndices), *this);
 #undef VALIDATION_ERROR
 #undef INTERNAL_ERROR_STRING
@@ -1335,10 +1341,19 @@ uint64_t BindGroup::makeEntryMapKey(uint32_t baseMipLevel, uint32_t baseArrayLay
     return (static_cast<uint64_t>(aspect) - 1) | (static_cast<uint64_t>(baseMipLevel) << 1) | (static_cast<uint64_t>(baseArrayLayer) << 32);
 }
 
-void BindGroup::rebindSamplersIfNeeded() const
+static bool WARN_UNUSED_RETURN setArgumentBuffer(id<MTLArgumentEncoder> encoder, id<MTLBuffer> buffer)
+{
+    if (!encoder || !buffer)
+        return false;
+
+    [encoder setArgumentBuffer:buffer offset:0];
+    return true;
+}
+
+bool BindGroup::rebindSamplersIfNeeded() const
 {
     if (!m_bindGroupLayout)
-        return;
+        return true;
 
     for (auto& [samplerRefPtr, shaderStageArray] : m_samplers) {
         auto sampler = samplerRefPtr;
@@ -1348,22 +1363,21 @@ void BindGroup::rebindSamplersIfNeeded() const
 
         WTFLogAlways("Rebinding of samplers required, if this occurs frequently the application is using too many unique samplers");
         id<MTLSamplerState> samplerState = sampler->samplerState();
-        if (shaderStageArray[ShaderStage::Vertex].has_value()) {
-            [m_bindGroupLayout->vertexArgumentEncoder() setArgumentBuffer:vertexArgumentBuffer() offset:0];
+        if (!samplerState)
+            return false;
+        if (shaderStageArray[ShaderStage::Vertex].has_value() && setArgumentBuffer(m_bindGroupLayout->vertexArgumentEncoder(), vertexArgumentBuffer()))
             [m_bindGroupLayout->vertexArgumentEncoder() setSamplerState:samplerState atIndex:*shaderStageArray[ShaderStage::Vertex]];
-        }
-        if (shaderStageArray[ShaderStage::Fragment].has_value()) {
-            [m_bindGroupLayout->fragmentArgumentEncoder() setArgumentBuffer:fragmentArgumentBuffer() offset:0];
+
+        if (shaderStageArray[ShaderStage::Fragment].has_value() && setArgumentBuffer(m_bindGroupLayout->fragmentArgumentEncoder(), fragmentArgumentBuffer()))
             [m_bindGroupLayout->fragmentArgumentEncoder() setSamplerState:samplerState atIndex:*shaderStageArray[ShaderStage::Fragment]];
-        }
-        if (shaderStageArray[ShaderStage::Compute].has_value()) {
-            [m_bindGroupLayout->computeArgumentEncoder() setArgumentBuffer:computeArgumentBuffer() offset:0];
+
+        if (shaderStageArray[ShaderStage::Compute].has_value() && setArgumentBuffer(m_bindGroupLayout->computeArgumentEncoder(), computeArgumentBuffer()))
             [m_bindGroupLayout->computeArgumentEncoder() setSamplerState:samplerState atIndex:*shaderStageArray[ShaderStage::Compute]];
-        }
     }
+    return true;
 }
 
-bool BindGroup::updateExternalTextures(const ExternalTexture& externalTexture)
+bool BindGroup::updateExternalTextures(ExternalTexture& externalTexture)
 {
     if (!m_bindGroupLayout || externalTexture.openCommandEncoderCount())
         return false;
@@ -1372,6 +1386,7 @@ bool BindGroup::updateExternalTextures(const ExternalTexture& externalTexture)
     auto textureData = device->createExternalTextureFromPixelBuffer(externalTexture.pixelBuffer(), externalTexture.colorSpace());
     id<MTLTexture> texture0 = textureData.texture0 ?: device->placeholderTexture(WGPUTextureFormat_BGRA8Unorm);
     id<MTLTexture> texture1 = textureData.texture1 ?: device->placeholderTexture(WGPUTextureFormat_BGRA8Unorm);
+    externalTexture.updateExternalTextures(texture0, texture1);
     if (!texture0 || !texture1)
         return false;
 
@@ -1389,7 +1404,8 @@ bool BindGroup::updateExternalTextures(const ExternalTexture& externalTexture)
         m_resources[containerIndex].mtlResources[resourceIndex + 1] = texture1;
 
         id<MTLArgumentEncoder> argumentEncoder = argumentEncoders[stage];
-        [argumentEncoder setArgumentBuffer:argumentBuffers[stage] offset:0];
+        if (!setArgumentBuffer(argumentEncoder, argumentBuffers[stage]))
+            continue;
 
         [argumentEncoder setTexture:texture0 atIndex:index++];
         [argumentEncoder setTexture:texture1 atIndex:index++];

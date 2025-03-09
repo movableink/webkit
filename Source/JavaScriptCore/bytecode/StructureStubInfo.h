@@ -240,7 +240,7 @@ private:
 
     ALWAYS_INLINE bool considerRepatchingCacheImpl(VM& vm, CodeBlock* codeBlock, Structure* structure, CacheableIdentifier impl)
     {
-        DisallowGC disallowGC;
+        AssertNoGC assertNoGC;
 
         
         // This method is called from the Optimize variants of IC slow paths. The first part of this

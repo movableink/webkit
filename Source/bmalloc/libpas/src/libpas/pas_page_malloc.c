@@ -86,11 +86,11 @@ PAS_NEVER_INLINE size_t pas_page_malloc_alignment_shift_slow(void)
 }
 
 static void*
-pas_page_malloc_try_map_pages(size_t size)
+pas_page_malloc_try_map_pages(size_t size, bool may_contain_small_or_medium)
 {
     void* mmap_result = NULL;
 
-    PAS_PROFILE(PAGE_ALLOCATION, size, PAS_VM_TAG);
+    PAS_PROFILE(PAGE_ALLOCATION, size, may_contain_small_or_medium, PAS_VM_TAG);
 
     mmap_result = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | PAS_NORESERVE, PAS_VM_TAG, 0);
     if (mmap_result == MAP_FAILED) {
@@ -106,7 +106,7 @@ pas_page_malloc_try_map_pages(size_t size)
 
 pas_aligned_allocation_result
 pas_page_malloc_try_allocate_without_deallocating_padding(
-    size_t size, pas_alignment alignment)
+    size_t size, pas_alignment alignment, bool may_contain_small_or_medium)
 {
     static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_OTHER);
     
@@ -141,7 +141,7 @@ pas_page_malloc_try_allocate_without_deallocating_padding(
             return result;
     }
 
-    mmap_result = pas_page_malloc_try_map_pages(mapped_size);
+    mmap_result = pas_page_malloc_try_map_pages(mapped_size, may_contain_small_or_medium);
     if (!mmap_result)
         return result;
 

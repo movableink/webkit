@@ -108,7 +108,7 @@ class CustomFlagsMixin(object):
 
 
 class ShellMixin(object):
-    WINDOWS_SHELL_PLATFORMS = ['win']
+    WINDOWS_SHELL_PLATFORMS = ['win', 'playstation']
 
     def has_windows_shell(self):
         return self.getProperty('platform', '*') in self.WINDOWS_SHELL_PLATFORMS
@@ -259,7 +259,7 @@ class CheckOutSource(git.Git):
         defer.returnValue(rc)
 
 
-class CleanUpGitIndexLock(shell.ShellCommandNewStyle):
+class CleanUpGitIndexLock(shell.ShellCommandNewStyle, ShellMixin):
     name = 'clean-git-index-lock'
     command = ['rm', '-f', '.git/index.lock']
     descriptionDone = ['Deleted .git/index.lock']
@@ -269,8 +269,7 @@ class CleanUpGitIndexLock(shell.ShellCommandNewStyle):
 
     @defer.inlineCallbacks
     def run(self):
-        platform = self.getProperty('platform', '*')
-        if platform == 'win':
+        if self.has_windows_shell():
             self.command = ['del', r'.git\index.lock']
 
         rc = yield super().run()
@@ -477,6 +476,7 @@ class CompileWebKit(shell.Compile, CustomFlagsMixin):
                     f"{self.getProperty('fullPlatform')}-{self.getProperty('architecture')}-{self.getProperty('configuration')}-{self.name}",
                     extension='txt',
                     content_type='text/plain',
+                    additions=f'{self.build.number}'
                 ), UploadFileToS3(
                     'build-log.txt',
                     links={self.name: 'Full build log'},
@@ -797,6 +797,7 @@ class RunJavaScriptCoreTests(TestWithFailureCount, CustomFlagsMixin):
                 f"{self.getProperty('fullPlatform')}-{self.getProperty('architecture')}-{self.getProperty('configuration')}-{self.name}",
                 extension='txt',
                 content_type='text/plain',
+                additions=f'{self.build.number}',
             ), UploadFileToS3(
                 'logs.txt',
                 links={self.name: 'Full logs'},
@@ -856,7 +857,7 @@ class RunTest262Tests(TestWithFailureCount, CustomFlagsMixin):
         return self.failedTestCount
 
 
-class RunWebKitTests(shell.TestNewStyle, CustomFlagsMixin):
+class RunWebKitTests(shell.TestNewStyle, CustomFlagsMixin, ShellMixin):
     name = "layout-test"
     description = ["layout-tests running"]
     descriptionDone = ["layout-tests"]
@@ -888,6 +889,7 @@ class RunWebKitTests(shell.TestNewStyle, CustomFlagsMixin):
 
     def __init__(self, *args, **kwargs):
         kwargs['logEnviron'] = False
+        kwargs['timeout'] = 3 * 60 * 60
         super().__init__(*args, **kwargs)
 
     def run(self):
@@ -909,6 +911,9 @@ class RunWebKitTests(shell.TestNewStyle, CustomFlagsMixin):
 
         if additionalArguments:
             self.command += additionalArguments
+
+        filter_command = ' '.join(self.command) + ' 2>&1 | python3 Tools/Scripts/filter-test-logs layout'
+        self.command = self.shell_command(filter_command)
         return super().run()
 
     def _strip_python_logging_prefix(self, line):
@@ -939,6 +944,20 @@ class RunWebKitTests(shell.TestNewStyle, CustomFlagsMixin):
     def evaluateCommand(self, cmd):
         self.processTestFailures()
         result = SUCCESS
+
+        steps_to_add = [
+            GenerateS3URL(
+                f"{self.getProperty('fullPlatform')}-{self.getProperty('architecture')}-{self.getProperty('configuration')}-{self.name}",
+                additions=f"{self.build.number}{'-wk1' if self.getProperty('use-dump-render-tree', False) else ''}",
+                extension='txt',
+                content_type='text/plain',
+            ), UploadFileToS3(
+                'logs.txt',
+                links={self.name: 'Full logs'},
+                content_type='text/plain',
+            )
+        ]
+        self.build.addStepsAfterCurrentStep(steps_to_add)
 
         if self.incorrectLayoutLines:
             if len(self.incorrectLayoutLines) == 1:
@@ -984,7 +1003,26 @@ class RunDashboardTests(RunWebKitTests):
     resultDirectory = os.path.join(RunWebKitTests.resultDirectory, "dashboard-layout-test-results")
 
     def run(self):
-        self.command += ["--layout-tests-directory", "Tools/CISupport/build-webkit-org/public_html/dashboard/Scripts/tests"]
+        self.command += ["--no-http-servers", "--layout-tests-directory", "Tools/CISupport/build-webkit-org/public_html/dashboard/Scripts/tests"]
+        return super().run()
+
+
+class RunWorldLeaksTests(RunWebKitTests):
+    name = "world-leaks-tests"
+    description = ["world-leaks-tests running"]
+    descriptionDone = ["world-leaks-tests"]
+    resultDirectory = os.path.join(RunWebKitTests.resultDirectory, "world-leaks-layout-test-results")
+    command = ["python3", "Tools/Scripts/run-webkit-tests",
+               "--no-build",
+               "--no-show-results",
+               "--no-new-test-results",
+               "--clobber-old-results",
+               "--exit-after-n-crashes-or-timeouts", "50",
+               "--exit-after-n-failures", "500",
+               WithProperties("--%(configuration)s")]
+
+    def run(self):
+        self.command += ["--world-leaks"]
         return super().run()
 
 
@@ -1236,6 +1274,27 @@ class RunBuiltinsTests(shell.TestNewStyle):
     command = ["python3", "Tools/Scripts/run-builtins-generator-tests"]
 
 
+class RunMVTTests(shell.TestNewStyle):
+    command = ["Tools/Scripts/run-mvt-tests", WithProperties("--%(configuration)s"),
+               WithProperties("--%(fullPlatform)s"), "--headless"]
+    name = "MVT-tests"
+    description = ["MVT tests running"]
+    descriptionDone = ["MVT tests"]
+
+    def evaluateCommand(self, cmd):
+        self.totalUnexpectedFailures = cmd.rc
+        if self.totalUnexpectedFailures != 0:
+            self.commandFailed = True
+            return FAILURE
+        return SUCCESS
+
+    def getResultSummary(self):
+        if self.results != SUCCESS and self.totalUnexpectedFailures > 0:
+            s = "s" if self.totalUnexpectedFailures > 1 else ""
+            return {'step': f"MVT Tests: {self.totalUnexpectedFailures} unexpected failure{s}"}
+        return super().getResultSummary()
+
+
 class RunGLibAPITests(shell.TestNewStyle):
     name = "API-tests"
     description = ["API tests running"]
@@ -1347,6 +1406,7 @@ class RunWebDriverTests(shell.Test, CustomFlagsMixin):
         steps_to_add = [
             GenerateS3URL(
                 f"{self.getProperty('fullPlatform')}-{self.getProperty('architecture')}-{self.getProperty('configuration')}-{self.name}",
+                additions=f'{self.build.number}',
                 extension='txt',
                 content_type='text/plain',
             ), UploadFileToS3(
@@ -1384,6 +1444,7 @@ class RunWebDriverTests(shell.Test, CustomFlagsMixin):
 class RunWebKit1Tests(RunWebKitTests):
     def run(self):
         self.command += ["--dump-render-tree"]
+        self.setProperty('use-dump-render-tree', True)
         return super().run()
 
 
@@ -1552,10 +1613,11 @@ class GenerateS3URL(master.MasterShellCommandNewStyle):
     haltOnFailure = False
     flunkOnFailure = False
 
-    def __init__(self, identifier, extension='zip', content_type=None, minified=False, **kwargs):
+    def __init__(self, identifier, extension='zip', content_type=None, minified=False, additions=None, **kwargs):
         self.identifier = identifier
         self.extension = extension
         self.minified = minified
+        self.additions = additions
         kwargs['command'] = [
             'python3', '../Shared/generate-s3-url',
             '--revision', WithProperties('%(archive_revision)s'),
@@ -1567,6 +1629,8 @@ class GenerateS3URL(master.MasterShellCommandNewStyle):
             kwargs['command'] += ['--content-type', content_type]
         if minified:
             kwargs['command'] += ['--minified']
+        if additions:
+            kwargs['command'] += ['--additions', additions]
         super().__init__(logEnviron=False, **kwargs)
 
     @defer.inlineCallbacks
@@ -1589,7 +1653,7 @@ class GenerateS3URL(master.MasterShellCommandNewStyle):
             self.build.s3url = match.group('url')
             print(f'build: {build_url}, url for GenerateS3URL: {self.build.s3url}')
             bucket_url = S3_BUCKET_MINIFIED if self.minified else S3_BUCKET
-            self.build.s3_archives.append(S3URL + f"{bucket_url}/{self.identifier}/{self.getProperty('archive_revision')}.{self.extension}")
+            self.build.s3_archives.append(S3URL + f"{bucket_url}/{self.identifier}/{self.getProperty('archive_revision')}{f'-{self.additions}' if self.additions else ''}.{self.extension}")
             defer.returnValue(rc)
         else:
             print(f'build: {build_url}, logs for GenerateS3URL:\n{log_text}')
@@ -1672,6 +1736,7 @@ class ScanBuild(steps.ShellSequence, ShellMixin):
                 f"{self.getProperty('fullPlatform')}-{self.getProperty('architecture')}-{self.getProperty('configuration')}-{self.name}",
                 extension='txt',
                 content_type='text/plain',
+                additions=f'{self.build.number}'
             ), UploadFileToS3(
                 'build-log.txt',
                 links={self.name: 'Full build log'},

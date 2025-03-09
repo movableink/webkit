@@ -74,10 +74,15 @@ IconLoadingDelegate::IconLoadingClient::~IconLoadingClient()
 
 typedef void (^IconLoadCompletionHandler)(NSData*);
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(IconLoadingDelegate, IconLoadingClient);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(IconLoadingDelegate::IconLoadingClient);
 
 void IconLoadingDelegate::IconLoadingClient::getLoadDecisionForIcon(const WebCore::LinkIcon& linkIcon, CompletionHandler<void(CompletionHandler<void(API::Data*)>&&)>&& completionHandler)
 {
+    if (!linkIcon.url.protocolIsInHTTPFamily() && !linkIcon.url.protocolIsData()) {
+        completionHandler(nullptr);
+        return;
+    }
+
     if (!m_iconLoadingDelegate->m_delegateMethods.webViewShouldLoadIconWithParametersCompletionHandler) {
         completionHandler(nullptr);
         return;

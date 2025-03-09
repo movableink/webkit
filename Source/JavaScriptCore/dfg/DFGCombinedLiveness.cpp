@@ -31,11 +31,8 @@
 #include "DFGAvailabilityMap.h"
 #include "DFGBlockMapInlines.h"
 #include "JSCJSValueInlines.h"
-#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace DFG {
-
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED_TEMPLATE(CombinedLiveness, NodeLivenessMap);
 
 static void addBytecodeLiveness(Graph& graph, AvailabilityMap& availabilityMap, NodeSet& seen, Node* node)
 {

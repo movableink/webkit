@@ -51,9 +51,11 @@ class AudioMediaStreamTrackRendererUnit : public BaseAudioMediaStreamTrackRender
     WTF_MAKE_FAST_ALLOCATED;
 public:
     WEBCORE_EXPORT static AudioMediaStreamTrackRendererUnit& singleton();
+    static bool supportsPerDeviceRendering();
 
     ~AudioMediaStreamTrackRendererUnit();
 
+    void setLastDeviceUsed(const String&);
     void retrieveFormatDescription(CompletionHandler<void(std::optional<CAAudioStreamDescription>)>&&);
 
     // BaseAudioMediaStreamTrackRendererUnit
@@ -84,6 +86,7 @@ private:
 
         void close();
         void retrieveFormatDescription(CompletionHandler<void(std::optional<CAAudioStreamDescription>)>&&);
+        void setLastDeviceUsed(const String&);
 
     private:
         explicit Unit(const String&);
@@ -96,7 +99,7 @@ private:
         OSStatus render(size_t sampleCount, AudioBufferList&, uint64_t sampleTime, double hostTime, AudioUnitRenderActionFlags&) final;
         void reset() final;
 
-        HashSet<Ref<AudioSampleDataSource>> m_sources WTF_GUARDED_BY_CAPABILITY(mainThread);
+        UncheckedKeyHashSet<Ref<AudioSampleDataSource>> m_sources WTF_GUARDED_BY_CAPABILITY(mainThread);
         Vector<Ref<AudioSampleDataSource>> m_renderSources;
 
         Lock m_pendingRenderSourcesLock;
@@ -107,6 +110,9 @@ private:
         WeakHashSet<ResetObserver> m_resetObservers WTF_GUARDED_BY_CAPABILITY(mainThread);
         const bool m_isDefaultUnit { false };
     };
+
+    Ref<Unit> ensureDeviceUnit(const String&);
+    RefPtr<Unit> getDeviceUnit(const String&);
 
     HashMap<String, Ref<Unit>> m_units WTF_GUARDED_BY_CAPABILITY(mainThread);
     Timer m_deleteUnitsTimer;

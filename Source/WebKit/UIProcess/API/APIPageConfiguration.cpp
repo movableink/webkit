@@ -156,11 +156,6 @@ void PageConfiguration::setOpenerInfo(std::optional<OpenerInfo>&& info)
 
 bool PageConfiguration::OpenerInfo::operator==(const OpenerInfo&) const = default;
 
-WebCore::SandboxFlags PageConfiguration::initialSandboxFlags() const
-{
-    return m_data.initialSandboxFlags;
-}
-
 void PageConfiguration::setInitialSandboxFlags(WebCore::SandboxFlags sandboxFlags)
 {
     m_data.initialSandboxFlags = sandboxFlags;
@@ -171,6 +166,11 @@ WebProcessPool& PageConfiguration::processPool() const
     return m_data.processPool.get();
 }
 
+Ref<WebKit::WebProcessPool> PageConfiguration::protectedProcessPool() const
+{
+    return processPool();
+}
+
 void PageConfiguration::setProcessPool(RefPtr<WebProcessPool>&& processPool)
 {
     m_data.processPool = WTFMove(processPool);
@@ -179,6 +179,11 @@ void PageConfiguration::setProcessPool(RefPtr<WebProcessPool>&& processPool)
 WebUserContentControllerProxy& PageConfiguration::userContentController() const
 {
     return m_data.userContentController.get();
+}
+
+Ref<WebUserContentControllerProxy> PageConfiguration::protectedUserContentController() const
+{
+    return userContentController();
 }
 
 void PageConfiguration::setUserContentController(RefPtr<WebUserContentControllerProxy>&& userContentController)
@@ -202,6 +207,11 @@ WebExtensionController* PageConfiguration::webExtensionController() const
     return m_data.webExtensionController.get();
 }
 
+RefPtr<WebExtensionController> PageConfiguration::protectedWebExtensionController() const
+{
+    return webExtensionController();
+}
+
 void PageConfiguration::setWebExtensionController(RefPtr<WebExtensionController>&& webExtensionController)
 {
     m_data.webExtensionController = WTFMove(webExtensionController);
@@ -210,6 +220,11 @@ void PageConfiguration::setWebExtensionController(RefPtr<WebExtensionController>
 WebExtensionController* PageConfiguration::weakWebExtensionController() const
 {
     return m_data.weakWebExtensionController.get();
+}
+
+RefPtr<WebExtensionController> PageConfiguration::protectedWeakWebExtensionController() const
+{
+    return weakWebExtensionController();
 }
 
 void PageConfiguration::setWeakWebExtensionController(WebExtensionController* webExtensionController)
@@ -243,6 +258,11 @@ void PageConfiguration::setPageGroup(RefPtr<WebPageGroup>&& pageGroup)
 WebPreferences& PageConfiguration::preferences() const
 {
     return m_data.preferences.get();
+}
+
+Ref<WebPreferences> PageConfiguration::protectedPreferences() const
+{
+    return preferences();
 }
 
 void PageConfiguration::setPreferences(RefPtr<WebPreferences>&& preferences)
@@ -280,6 +300,11 @@ WebKit::VisitedLinkStore& PageConfiguration::visitedLinkStore() const
     return m_data.visitedLinkStore.get();
 }
 
+Ref<WebKit::VisitedLinkStore> PageConfiguration::protectedVisitedLinkStore() const
+{
+    return visitedLinkStore();
+}
+
 void PageConfiguration::setVisitedLinkStore(RefPtr<WebKit::VisitedLinkStore>&& visitedLinkStore)
 {
     m_data.visitedLinkStore = WTFMove(visitedLinkStore);
@@ -297,6 +322,11 @@ WebKit::WebsiteDataStore* PageConfiguration::websiteDataStoreIfExists() const
     return m_data.websiteDataStore.get();
 }
 
+RefPtr<WebKit::WebsiteDataStore> PageConfiguration::protectedWebsiteDataStoreIfExists() const
+{
+    return websiteDataStoreIfExists();
+}
+
 Ref<WebsiteDataStore> PageConfiguration::protectedWebsiteDataStore() const
 {
     return websiteDataStore();
@@ -310,6 +340,11 @@ void PageConfiguration::setWebsiteDataStore(RefPtr<WebsiteDataStore>&& websiteDa
 WebsitePolicies& PageConfiguration::defaultWebsitePolicies() const
 {
     return m_data.defaultWebsitePolicies.get();
+}
+
+Ref<WebsitePolicies> PageConfiguration::protectedDefaultWebsitePolicies() const
+{
+    return defaultWebsitePolicies();
 }
 
 void PageConfiguration::setDefaultWebsitePolicies(RefPtr<WebsitePolicies>&& policies)
@@ -350,15 +385,15 @@ bool PageConfiguration::delaysWebProcessLaunchUntilFirstLoad() const
         return false;
     }
     if (m_data.delaysWebProcessLaunchUntilFirstLoad) {
-        RELEASE_LOG(Process, "%p - PageConfiguration::delaysWebProcessLaunchUntilFirstLoad() -> %{public}s because of explicit client value", this, *m_data.delaysWebProcessLaunchUntilFirstLoad ? "true" : "false");
+        RELEASE_LOG(Process, "%p - PageConfiguration::delaysWebProcessLaunchUntilFirstLoad() -> %" PUBLIC_LOG_STRING " because of explicit client value", this, *m_data.delaysWebProcessLaunchUntilFirstLoad ? "true" : "false");
         // If the client explicitly enabled / disabled the feature, then obey their directives.
         return *m_data.delaysWebProcessLaunchUntilFirstLoad;
     }
     if (RefPtr processPool = m_data.processPool.getIfExists()) {
-        RELEASE_LOG(Process, "%p - PageConfiguration::delaysWebProcessLaunchUntilFirstLoad() -> %{public}s because of associated processPool value", this, processPool->delaysWebProcessLaunchDefaultValue() ? "true" : "false");
+        RELEASE_LOG(Process, "%p - PageConfiguration::delaysWebProcessLaunchUntilFirstLoad() -> %" PUBLIC_LOG_STRING " because of associated processPool value", this, processPool->delaysWebProcessLaunchDefaultValue() ? "true" : "false");
         return processPool->delaysWebProcessLaunchDefaultValue();
     }
-    RELEASE_LOG(Process, "%p - PageConfiguration::delaysWebProcessLaunchUntilFirstLoad() -> %{public}s because of global default value", this, WebProcessPool::globalDelaysWebProcessLaunchDefaultValue() ? "true" : "false");
+    RELEASE_LOG(Process, "%p - PageConfiguration::delaysWebProcessLaunchUntilFirstLoad() -> %" PUBLIC_LOG_STRING " because of global default value", this, WebProcessPool::globalDelaysWebProcessLaunchDefaultValue() ? "true" : "false");
     return WebProcessPool::globalDelaysWebProcessLaunchDefaultValue();
 }
 
@@ -373,6 +408,11 @@ bool PageConfiguration::isLockdownModeExplicitlySet() const
 ApplicationManifest* PageConfiguration::applicationManifest() const
 {
     return m_data.applicationManifest.get();
+}
+
+RefPtr<ApplicationManifest> PageConfiguration::protectedApplicationManifest() const
+{
+    return applicationManifest();
 }
 
 void PageConfiguration::setApplicationManifest(RefPtr<ApplicationManifest>&& applicationManifest)

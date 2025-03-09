@@ -42,10 +42,9 @@
 #include <JavaScriptCore/JSGenericTypedArrayViewInlines.h>
 #include <algorithm>
 #include <wtf/MainThread.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/threads/BinarySemaphore.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -187,9 +186,9 @@ auto OfflineAudioDestinationNode::renderOnAudioThread() -> RenderResult
         size_t framesAvailableToCopy = std::min(m_framesToProcess, AudioUtilities::renderQuantumSize);
         
         for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex) {
-            const float* source = m_renderBus->channel(channelIndex)->data();
-            float* destination = m_renderTarget->channelData(channelIndex)->data();
-            memcpy(destination + m_destinationOffset, source, sizeof(float) * framesAvailableToCopy);
+            auto source = m_renderBus->channel(channelIndex)->span().first(framesAvailableToCopy);
+            auto destination = m_renderTarget->channelData(channelIndex)->typedMutableSpan();
+            memcpySpan(destination.subspan(m_destinationOffset), source);
         }
         
         m_destinationOffset += framesAvailableToCopy;
@@ -200,7 +199,5 @@ auto OfflineAudioDestinationNode::renderOnAudioThread() -> RenderResult
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

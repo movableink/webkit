@@ -168,7 +168,7 @@ RegisterID* RegExpNode::emitBytecode(BytecodeGenerator& generator, RegisterID* d
     if (regExp->isValid())
         return generator.emitNewRegExp(generator.finalDestination(dst), regExp);
 
-    auto& message = generator.parserArena().identifierArena().makeIdentifier(generator.vm(), span8(regExp->errorMessage()));
+    auto& message = generator.parserArena().identifierArena().makeIdentifier(generator.vm(), regExp->errorMessage().span8());
     generator.emitThrowStaticError(ErrorTypeWithExtension::SyntaxError, message);
     return generator.emitLoad(generator.finalDestination(dst), jsUndefined());
 }
@@ -421,6 +421,7 @@ RegisterID* TaggedTemplateNode::emitBytecode(BytecodeGenerator& generator, Regis
 RegisterID* ArrayNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 {
     bool hadVariableExpression = false;
+    bool allDenseStrings = true;
     unsigned length = 0;
 
     IndexingType recommendedIndexingType = ArrayWithUndecided;
@@ -434,23 +435,40 @@ RegisterID* ArrayNode::emitBytecode(BytecodeGenerator& generator, RegisterID* ds
             JSValue constant = static_cast<ConstantNode*>(firstPutElement->value())->jsValue(generator);
             if (UNLIKELY(!constant))
                 hadVariableExpression = true;
-            else
+            else {
                 recommendedIndexingType = leastUpperBoundOfIndexingTypeAndValue(recommendedIndexingType, constant);
+                if (!constant.isString())
+                    allDenseStrings = false;
+                else if (auto* impl = asString(constant)->tryGetValueImpl(); !impl || !impl->isAtom())
+                    allDenseStrings = false;
+            }
         }
 
         ++length;
     }
+    if (hadVariableExpression)
+        allDenseStrings = false;
 
-    auto newArray = [&] (RegisterID* dst, ElementNode* elements, unsigned length, bool hadVariableExpression) {
+    auto newArray = [&](RegisterID* dst, ElementNode* elements, unsigned length) {
         if (length && !hadVariableExpression) {
+            VM& vm = generator.vm();
             recommendedIndexingType |= CopyOnWrite;
-            ASSERT(generator.vm().heap.isDeferred()); // We run bytecode generator under a DeferGC. If we stopped doing that, we'd need to put a DeferGC here as we filled in these slots.
-            auto* array = JSImmutableButterfly::create(generator.vm(), recommendedIndexingType, length);
+            ASSERT(vm.heap.isDeferred()); // We run bytecode generator under a DeferGC. If we stopped doing that, we'd need to put a DeferGC here as we filled in these slots.
+
+            Structure* immutableButterflyStructure = allDenseStrings ? vm.immutableButterflyOnlyAtomStringsStructure.get() : vm.immutableButterflyStructure(recommendedIndexingType);
+            auto* array = JSImmutableButterfly::tryCreate(generator.vm(), immutableButterflyStructure, length);
+            RELEASE_ASSERT(array);
+
             unsigned index = 0;
             for (ElementNode* element = elements; index < length; element = element->next()) {
                 ASSERT(element->value()->isConstant());
                 JSValue constant = static_cast<ConstantNode*>(element->value())->jsValue(generator);
                 ASSERT(constant);
+                if (allDenseStrings) {
+                    JSString* string = asString(constant);
+                    StringImpl* stringImpl = const_cast<StringImpl*>(string->getValueImpl());
+                    constant = vm.atomStringToJSStringMap.ensureValue(stringImpl, [&] { return string; });
+                }
                 array->setIndex(generator.vm(), index++, constant);
             }
             return generator.emitNewArrayBuffer(dst, array, recommendedIndexingType);
@@ -459,7 +477,9 @@ RegisterID* ArrayNode::emitBytecode(BytecodeGenerator& generator, RegisterID* ds
     };
 
     if (!firstPutElement && !m_elision)
-        return newArray(generator.finalDestination(dst), m_element, length, hadVariableExpression);
+        return newArray(generator.finalDestination(dst), m_element, length);
+
+    allDenseStrings = false;
 
     if (firstPutElement && firstPutElement->value()->isSpreadExpression()) {
         bool hasElision = m_elision;
@@ -476,7 +496,7 @@ RegisterID* ArrayNode::emitBytecode(BytecodeGenerator& generator, RegisterID* ds
             return generator.emitNewArrayWithSpread(generator.finalDestination(dst), m_element);
     }
 
-    RefPtr<RegisterID> array = newArray(generator.tempDestination(dst), m_element, length, hadVariableExpression);
+    RefPtr<RegisterID> array = newArray(generator.tempDestination(dst), m_element, length);
     ElementNode* n = firstPutElement;
     for (; n; n = n->next()) {
         if (n->value()->isSpreadExpression())
@@ -1239,7 +1259,7 @@ CallArguments::CallArguments(BytecodeGenerator& generator, ArgumentsNode* argume
     // We initialize 0 based on offset. And adjust m_argv based on that.
     if ((-m_allocatedRegisters[1]->index() + CallFrame::headerSizeInRegisters) % stackAlignmentRegisters()) {
         m_allocatedRegisters[0] = generator.newTemporary();
-        m_argv = m_allocatedRegisters.mutableSpan().subspan(0, argumentCountIncludingThis);
+        m_argv = m_allocatedRegisters.mutableSpan().first(argumentCountIncludingThis);
     } else
         m_argv = m_allocatedRegisters.mutableSpan().subspan(1, argumentCountIncludingThis);
 }
@@ -3673,6 +3693,20 @@ RegisterID* InNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 
 RegisterID* LogicalOpNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 {
+    if (dst == generator.ignoredResult()) {
+        Ref<Label> afterExpr1 = generator.newLabel();
+        Ref<Label> afterExpr2 = generator.newLabel();
+        if (m_operator == LogicalOperator::And)
+            generator.emitNodeInConditionContext(m_expr1, afterExpr1.get(), afterExpr2.get(), FallThroughMeansTrue);
+        else
+            generator.emitNodeInConditionContext(m_expr1, afterExpr2.get(), afterExpr1.get(), FallThroughMeansFalse);
+        generator.emitLabel(afterExpr1.get());
+
+        generator.emitNodeInTailPosition(dst, m_expr2);
+        generator.emitLabel(afterExpr2.get());
+        return dst;
+    }
+
     RefPtr<RegisterID> temp = generator.tempDestination(dst);
     Ref<Label> target = generator.newLabel();
     
@@ -4257,9 +4291,12 @@ inline void SourceElements::emitBytecode(BytecodeGenerator& generator, RegisterI
     }
 
     for (StatementNode* statement = m_head; statement; statement = statement->next()) {
-        if (statement == lastStatementWithCompletionValue)
-            generator.emitLoad(dst, jsUndefined());
-        generator.emitNodeInTailPosition(dst, statement);
+        if (generator.shouldBeConcernedWithCompletionValue()) {
+            if (statement == lastStatementWithCompletionValue)
+                generator.emitLoad(dst, jsUndefined());
+            generator.emitNodeInTailPosition(dst, statement);
+        } else
+            generator.emitNodeInTailPosition(generator.ignoredResult(), statement);
     }
 }
 

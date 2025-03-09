@@ -50,6 +50,7 @@
 #include "InspectorInstrumentation.h"
 #include "IntRect.h"
 #include "JSCanvasRenderingContext2D.h"
+#include "JSDOMRectReadOnly.h"
 #include "JSExecState.h"
 #include "JSHTMLCanvasElement.h"
 #include "JSImageBitmap.h"
@@ -83,6 +84,10 @@
 #include "JSWebGL2RenderingContext.h"
 #include "WebGL2RenderingContext.h"
 #include "WebGLRenderingContext.h"
+#endif
+
+#if ENABLE(WEBDRIVER_BIDI)
+#include "AutomationInstrumentation.h"
 #endif
 
 namespace WebCore {
@@ -155,6 +160,9 @@ void PageConsoleClient::addMessage(std::unique_ptr<Inspector::ConsoleMessage>&& 
             logMessageToSystemConsole(*consoleMessage);
     }
 
+#if ENABLE(WEBDRIVER_BIDI)
+    AutomationInstrumentation::addMessageToConsole(consoleMessage);
+#endif
     InspectorInstrumentation::addMessageToConsole(page, WTFMove(consoleMessage));
 }
 
@@ -205,6 +213,9 @@ void PageConsoleClient::messageWithTypeAndLevel(MessageType type, MessageLevel l
     unsigned lineNumber = message->line();
     unsigned columnNumber = message->column();
 
+#if ENABLE(WEBDRIVER_BIDI)
+    AutomationInstrumentation::addMessageToConsole(message);
+#endif
     Ref page = m_page.get();
     InspectorInstrumentation::addMessageToConsole(page, WTFMove(message));
 
@@ -230,16 +241,16 @@ void PageConsoleClient::countReset(JSC::JSGlobalObject* lexicalGlobalObject, con
     InspectorInstrumentation::consoleCountReset(protectedPage(), lexicalGlobalObject, label);
 }
 
-void PageConsoleClient::profile(JSC::JSGlobalObject* lexicalGlobalObject, const String& title)
+void PageConsoleClient::profile(JSC::JSGlobalObject*, const String& title)
 {
     // FIXME: <https://webkit.org/b/153499> Web Inspector: console.profile should use the new Sampling Profiler
-    InspectorInstrumentation::startProfiling(protectedPage(), lexicalGlobalObject, title);
+    InspectorInstrumentation::startProfiling(protectedPage(), title);
 }
 
-void PageConsoleClient::profileEnd(JSC::JSGlobalObject* lexicalGlobalObject, const String& title)
+void PageConsoleClient::profileEnd(JSC::JSGlobalObject*, const String& title)
 {
     // FIXME: <https://webkit.org/b/153499> Web Inspector: console.profile should use the new Sampling Profiler
-    InspectorInstrumentation::stopProfiling(protectedPage(), lexicalGlobalObject, title);
+    InspectorInstrumentation::stopProfiling(protectedPage(), title);
 }
 
 void PageConsoleClient::takeHeapSnapshot(JSC::JSGlobalObject*, const String& title)
@@ -369,7 +380,7 @@ void PageConsoleClient::screenshot(JSC::JSGlobalObject* lexicalGlobalObject, Ref
 
                 if (dataURL.isEmpty()) {
                     if (!snapshot) {
-                        if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame()))
+                        if (RefPtr localMainFrame = m_page->localMainFrame())
                             snapshot = WebCore::snapshotNode(*localMainFrame, *node, { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() });
                     }
 
@@ -399,6 +410,14 @@ void PageConsoleClient::screenshot(JSC::JSGlobalObject* lexicalGlobalObject, Ref
                 if (auto result = InspectorCanvas::getContentAsDataURL(*context))
                     dataURL = result.value();
             }
+        } else if (auto* rect = JSDOMRectReadOnly::toWrapped(vm, possibleTarget)) {
+            target = possibleTarget;
+            if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+                if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame())) {
+                    if (auto snapshot = WebCore::snapshotFrameRect(*localMainFrame, enclosingIntRect(rect->toFloatRect()), { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() }))
+                        dataURL = snapshot->toDataURL("image/png"_s, std::nullopt, PreserveResolution::Yes);
+                }
+            }
         } else {
             String base64;
             if (possibleTarget.getString(lexicalGlobalObject, base64) && startsWithLettersIgnoringASCIICase(base64, "data:"_s) && base64.length() > 5) {
@@ -410,7 +429,7 @@ void PageConsoleClient::screenshot(JSC::JSGlobalObject* lexicalGlobalObject, Ref
 
     if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
         if (!target) {
-            if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame())) {
+            if (RefPtr localMainFrame = m_page->localMainFrame()) {
                 // If no target is provided, capture an image of the viewport.
                 auto viewportRect = localMainFrame->view()->unobscuredContentRect();
                 if (auto snapshot = WebCore::snapshotFrameRect(*localMainFrame, viewportRect, { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() }))

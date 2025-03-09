@@ -38,6 +38,7 @@ class InternalObserver;
 class JSSubscriptionObserverCallback;
 class MapperCallback;
 class PredicateCallback;
+class ReducerCallback;
 class ScriptExecutionContext;
 class VisitorCallback;
 struct ObservableInspector;
@@ -72,6 +73,7 @@ public:
     void find(ScriptExecutionContext&, Ref<PredicateCallback>&&, const SubscribeOptions&, Ref<DeferredPromise>&&);
     void every(ScriptExecutionContext&, Ref<PredicateCallback>&&, const SubscribeOptions&, Ref<DeferredPromise>&&);
     void some(ScriptExecutionContext&, Ref<PredicateCallback>&&, const SubscribeOptions&, Ref<DeferredPromise>&&);
+    void reduce(ScriptExecutionContext&, Ref<ReducerCallback>&&, JSC::JSValue, const SubscribeOptions&, Ref<DeferredPromise>&&);
 
 private:
     Ref<SubscriberCallback> m_subscriberCallback;

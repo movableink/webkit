@@ -30,7 +30,7 @@
 
 #import "CAAudioStreamDescription.h"
 #import "Logging.h"
-#import "MediaSample.h"
+#import "MediaSampleAVFObjC.h"
 #import "MediaUtilities.h"
 #import "SharedBuffer.h"
 #import "WebMAudioUtilitiesCocoa.h"
@@ -55,24 +55,36 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(PacketDurationParser);
 constexpr uint32_t kAudioFormatVorbis = 'vorb';
 #endif
 
-#if ENABLE(OPUS) || ENABLE(VORBIS)
+CAAudioStreamDescription audioStreamDescriptionFromAudioInfo(const AudioInfo& info)
+{
+    ASSERT(info.codecName.value != kAudioFormatLinearPCM);
+    AudioStreamBasicDescription asbd { };
+    asbd.mFormatID = info.codecName.value;
+    std::span<const uint8_t> cookieDataSpan { };
+    RefPtr cookieData = info.cookieData;
+    if (cookieData)
+        cookieDataSpan = cookieData->span();
+    UInt32 size = sizeof(asbd);
+    if (auto error = PAL::AudioFormatGetProperty(kAudioFormatProperty_FormatInfo, cookieDataSpan.size(), cookieDataSpan.data(), &size, &asbd)) {
+        RELEASE_LOG_DEBUG(Media, "kAudioFormatProperty_FormatInfo failed with error %d (%.4s)", static_cast<int>(error), (char *)&error);
+        asbd.mSampleRate = info.rate;
+        asbd.mFramesPerPacket = info.framesPerPacket;
+        asbd.mChannelsPerFrame = info.channels;
+        asbd.mBitsPerChannel = info.bitDepth;
+    }
+
+    return asbd;
+}
 
 static RetainPtr<CMFormatDescriptionRef> createAudioFormatDescription(const AudioInfo& info)
 {
-    AudioStreamBasicDescription asbd { };
-    asbd.mFormatID = info.codecName.value;
-    UInt32 size = sizeof(asbd);
-    auto cookieDataSpan = info.cookieData->span();
-    auto error = PAL::AudioFormatGetProperty(kAudioFormatProperty_FormatInfo, cookieDataSpan.size(), cookieDataSpan.data(), &size, &asbd);
-    if (error) {
-        RELEASE_LOG_ERROR(Media, "createAudioFormatDescription failed with error %d (%.4s)", error, (char *)&error);
-        return nullptr;
-    }
-
-    return createAudioFormatDescription(CAAudioStreamDescription(asbd), cookieDataSpan);
+    auto streamDescription = audioStreamDescriptionFromAudioInfo(info);
+    std::span<const uint8_t> cookie;
+    RefPtr cookieData = info.cookieData;
+    if (cookieData)
+        cookie = cookieData->span();
+    return createAudioFormatDescription(streamDescription, cookie);
 }
-
-#endif
 
 static CFStringRef convertToCMColorPrimaries(PlatformVideoColorPrimaries primaries)
 {
@@ -143,7 +155,7 @@ RetainPtr<CMFormatDescriptionRef> createFormatDescriptionFromTrackInfo(const Tra
     ASSERT(info.isVideo() || info.isAudio());
 
     if (auto* audioInfo = dynamicDowncast<AudioInfo>(info)) {
-        if (!audioInfo->cookieData || !audioInfo->cookieData->size())
+        if (audioInfo->codecName.value != kAudioFormatLinearPCM && (!audioInfo->cookieData || !audioInfo->cookieData->size()))
             return nullptr;
 
         switch (audioInfo->codecName.value) {
@@ -159,8 +171,18 @@ RetainPtr<CMFormatDescriptionRef> createFormatDescriptionFromTrackInfo(const Tra
                 return nullptr;
             return createAudioFormatDescription(*audioInfo);
 #endif
+        case kAudioFormatLinearPCM: {
+            auto absd = CAAudioStreamDescription { static_cast<double>(audioInfo->rate), audioInfo->channels, AudioStreamDescription::Float32, CAAudioStreamDescription::IsInterleaved::Yes }.streamDescription();
+
+            CMFormatDescriptionRef newFormat = nullptr;
+            if (auto error = PAL::CMAudioFormatDescriptionCreate(kCFAllocatorDefault, &absd, 0, nullptr, 0, nullptr, nullptr, &newFormat)) {
+                RELEASE_LOG_ERROR(MediaStream, "createFormatDescriptionFromTrackInfo: CMAudioFormatDescriptionCreate failed with error %d", (int)error);
+                return nullptr;
+            }
+            return adoptCF(newFormat);
+        }
         default:
-            return nullptr;
+            return createAudioFormatDescription(*audioInfo);
         }
     }
 
@@ -168,8 +190,8 @@ RetainPtr<CMFormatDescriptionRef> createFormatDescriptionFromTrackInfo(const Tra
 
     RetainPtr extensions = adoptCF(CFDictionaryCreateMutable(kCFAllocatorDefault, 5, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
 
-    if (videoInfo.atomData) {
-        RetainPtr data = videoInfo.atomData->createCFData();
+    if (RefPtr atomData = videoInfo.atomData) {
+        RetainPtr data = atomData->createCFData();
         ASSERT(videoInfo.codecName == kCMVideoCodecType_VP9 || videoInfo.codecName == 'vp08' || videoInfo.codecName == kCMVideoCodecType_H264 || videoInfo.codecName == kCMVideoCodecType_HEVC || videoInfo.codecName == kCMVideoCodecType_AV1);
         CFStringRef keyName = [](auto codec) {
             switch (codec) {
@@ -228,16 +250,35 @@ RetainPtr<CMFormatDescriptionRef> createFormatDescriptionFromTrackInfo(const Tra
     return adoptCF(formatDescription);
 }
 
-Expected<RetainPtr<CMSampleBufferRef>, CString> toCMSampleBuffer(MediaSamplesBlock&& samples, CMFormatDescriptionRef formatDescription)
+RefPtr<AudioInfo> createAudioInfoFromFormatDescription(CMFormatDescriptionRef description)
+{
+    // This method currently only works for compressed content.
+    auto mediaType = PAL::CMFormatDescriptionGetMediaType(description);
+    if (mediaType != kCMMediaType_Audio)
+        return nullptr;
+    const AudioStreamBasicDescription* asbd = PAL::CMAudioFormatDescriptionGetStreamBasicDescription(description);
+    ASSERT(asbd);
+    if (!asbd)
+        return nullptr;
+    Ref audioInfo = AudioInfo::create();
+    audioInfo->codecName = asbd->mFormatID;
+    audioInfo->rate = asbd->mSampleRate;
+    audioInfo->channels = asbd->mChannelsPerFrame;
+    audioInfo->framesPerPacket = asbd->mFramesPerPacket;
+    audioInfo->bitDepth = asbd->mBitsPerChannel;
+    size_t cookieSize = 0;
+    const void* cookie = PAL::CMAudioFormatDescriptionGetMagicCookie(description, &cookieSize);
+    if (cookieSize)
+        audioInfo->cookieData = SharedBuffer::create(unsafeMakeSpan(static_cast<const uint8_t*>(cookie), cookieSize));
+    return audioInfo;
+}
+
+Expected<RetainPtr<CMSampleBufferRef>, CString> toCMSampleBuffer(const MediaSamplesBlock& samples, CMFormatDescriptionRef formatDescription)
 {
     if (!samples.info())
         return makeUnexpected("No TrackInfo found");
 
-    auto scopeExit = makeScopeExit([&] {
-        samples.clear();
-    });
-
-    RetainPtr format = formatDescription ? retainPtr(formatDescription) : createFormatDescriptionFromTrackInfo(*samples.info());
+    RetainPtr format = formatDescription ? retainPtr(formatDescription) : createFormatDescriptionFromTrackInfo(*samples.protectedInfo());
     if (!format)
         return makeUnexpected("No CMFormatDescription available");
 
@@ -257,10 +298,8 @@ Expected<RetainPtr<CMSampleBufferRef>, CString> toCMSampleBuffer(MediaSamplesBlo
     packetSizes.reserveInitialCapacity(samples.size());
     auto cumulativeTrimDuration = MediaTime::zeroTime();
     for (auto& sample : samples) {
-        if (!std::holds_alternative<Ref<const FragmentedSharedBuffer>>(sample.data))
-            return makeUnexpected("Invalid MediaSamplesBlock type");
-        auto& data = std::get<Ref<const FragmentedSharedBuffer>>(sample.data);
-        auto blockBuffer = data->createCMBlockBuffer();
+        RefPtr sampleData = sample.data;
+        auto blockBuffer = sampleData->createCMBlockBuffer();
         if (!blockBuffer)
             return makeUnexpected("Couldn't create CMBlockBuffer");
 
@@ -272,12 +311,12 @@ Expected<RetainPtr<CMSampleBufferRef>, CString> toCMSampleBuffer(MediaSamplesBlo
                 return makeUnexpected("CMBlockBufferAppendBufferReference failed");
         }
         packetTimings.append({ PAL::toCMTime(sample.duration), PAL::toCMTime(sample.presentationTime), PAL::toCMTime(sample.decodeTime) });
-        packetSizes.append(data->size());
-        cumulativeTrimDuration += sample.trimDuration;
+        packetSizes.append(sampleData->size());
+        cumulativeTrimDuration += sample.trimInterval.first;
     }
 
     CMSampleBufferRef rawSampleBuffer = nullptr;
-    if (auto err = PAL::CMSampleBufferCreateReady(kCFAllocatorDefault, completeBlockBuffers.get(), format.get(), packetSizes.size(), packetTimings.size(), packetTimings.data(), packetSizes.size(), packetSizes.data(), &rawSampleBuffer))
+    if (PAL::CMSampleBufferCreateReady(kCFAllocatorDefault, completeBlockBuffers.get(), format.get(), packetSizes.size(), packetTimings.size(), packetTimings.data(), packetSizes.size(), packetSizes.data(), &rawSampleBuffer))
         return makeUnexpected("CMSampleBufferCreateReady failed: OOM");
 
     if (samples.isVideo() && samples.size()) {
@@ -290,6 +329,10 @@ Expected<RetainPtr<CMSampleBufferRef>, CString> toCMSampleBuffer(MediaSamplesBlo
             CFMutableDictionaryRef attachments = checked_cf_cast<CFMutableDictionaryRef>(CFArrayGetValueAtIndex(attachmentsArray, i));
             if (!(samples[i].flags & MediaSample::SampleFlags::IsSync))
                 CFDictionarySetValue(attachments, PAL::kCMSampleAttachmentKey_NotSync, kCFBooleanTrue);
+
+            // Attach HDR10+ (aka SMPTE ST 2094-40) metadata, if present:
+            if (samples[i].hdrMetadataType == HdrMetadataType::SmpteSt209440 && samples[i].hdrMetadata)
+                CFDictionarySetValue(attachments, PAL::kCMSampleAttachmentKey_HDR10PlusPerFrameData, Ref { *samples[i].hdrMetadata }->createCFData().get());
         }
     } else if (samples.isAudio() && samples.discontinuity())
         PAL::CMSetAttachment(rawSampleBuffer, PAL::kCMSampleBufferAttachmentKey_FillDiscontinuitiesWithSilence, *samples.discontinuity() ? kCFBooleanTrue : kCFBooleanFalse, kCMAttachmentMode_ShouldPropagate);
@@ -300,6 +343,51 @@ Expected<RetainPtr<CMSampleBufferRef>, CString> toCMSampleBuffer(MediaSamplesBlo
     }
 
     return adoptCF(rawSampleBuffer);
+}
+
+UniqueRef<MediaSamplesBlock> samplesBlockFromCMSampleBuffer(CMSampleBufferRef cmSample, TrackInfo* trackInfo)
+{
+    ASSERT(cmSample);
+    RefPtr info = trackInfo;
+    if (!trackInfo) {
+        // While this path is currently unused; we only support creating a TrackInfo from an Audio CMFormatDescription
+        if (RetainPtr description = PAL::CMSampleBufferGetFormatDescription(cmSample)) {
+            ASSERT(PAL::CMFormatDescriptionGetMediaType(description.get()) == kCMMediaType_Audio);
+            info = createAudioInfoFromFormatDescription(description.get());
+        }
+    }
+
+    auto mediaSampleItemForSample = [](auto&& sample) {
+        MediaTime duration = sample->duration();
+        RetainPtr blockBuffer = PAL::CMSampleBufferGetDataBuffer(sample->sampleBuffer());
+        auto trimDurationAtStart = MediaTime::zeroTime();
+        if (auto* trimDurationDict = static_cast<CFDictionaryRef>(PAL::CMGetAttachment(sample->sampleBuffer(), PAL::get_CoreMedia_kCMSampleBufferAttachmentKey_TrimDurationAtStart(), nullptr)))
+            trimDurationAtStart = PAL::toMediaTime(PAL::CMTimeMakeFromDictionary(trimDurationDict));
+        auto trimDurationAtEnd = MediaTime::zeroTime();
+        if (auto* trimDurationDict = static_cast<CFDictionaryRef>(PAL::CMGetAttachment(sample->sampleBuffer(), PAL::get_CoreMedia_kCMSampleBufferAttachmentKey_TrimDurationAtEnd(), nullptr)))
+            trimDurationAtEnd = PAL::toMediaTime(PAL::CMTimeMakeFromDictionary(trimDurationDict));
+        return MediaSamplesBlock::MediaSampleItem {
+            .presentationTime = sample->presentationTime(),
+            .decodeTime = sample->decodeTime(),
+            .duration = sample->duration() + trimDurationAtStart + trimDurationAtEnd,
+            .trimInterval = { trimDurationAtStart, trimDurationAtEnd },
+            .data = sharedBufferFromCMBlockBuffer(blockBuffer.get()),
+            .flags = sample->flags()
+        };
+    };
+
+    if (info && info->codecName == kAudioFormatLinearPCM) {
+        MediaSamplesBlock::SamplesVector sample;
+        sample.reserveInitialCapacity(1);
+        sample.append(mediaSampleItemForSample(MediaSampleAVFObjC::create(cmSample, info->trackID)));
+        return makeUniqueRef<MediaSamplesBlock>(info.get(), WTFMove(sample));
+    }
+
+    auto subSamples = MediaSampleAVFObjC::create(cmSample, info ? info->trackID : 0)->divide();
+    MediaSamplesBlock::SamplesVector samples(subSamples.size(), [&](auto index) {
+        return mediaSampleItemForSample(subSamples[index]);
+    });
+    return makeUniqueRef<MediaSamplesBlock>(info.get(), WTFMove(samples));
 }
 
 void attachColorSpaceToPixelBuffer(const PlatformVideoColorSpace& colorSpace, CVPixelBufferRef pixelBuffer)
@@ -322,7 +410,8 @@ PacketDurationParser::PacketDurationParser(const AudioInfo& info)
     AudioStreamBasicDescription asbd { };
     asbd.mFormatID = info.codecName.value;
     UInt32 size = sizeof(asbd);
-    auto cookieDataSpan = info.cookieData->span();
+    RefPtr cookieData = info.cookieData;
+    auto cookieDataSpan = cookieData->span();
     auto error = PAL::AudioFormatGetProperty(kAudioFormatProperty_FormatInfo, cookieDataSpan.size(), cookieDataSpan.data(), &size, &asbd);
     if (error || !info.rate) {
         RELEASE_LOG_ERROR(Media, "createAudioFormatDescription failed with error %d (%.4s)", (int)error, (char*)&error);
@@ -367,7 +456,7 @@ PacketDurationParser::PacketDurationParser(const AudioInfo& info)
     m_isValid = true;
 }
 
-size_t PacketDurationParser::framesInPacket(SharedBuffer& packet)
+size_t PacketDurationParser::framesInPacket(std::span<const uint8_t> packet)
 {
 #if !HAVE(AUDIOFORMATPROPERTY_VARIABLEPACKET_SUPPORTED)
     UNUSED_PARAM(packet);
@@ -376,7 +465,7 @@ size_t PacketDurationParser::framesInPacket(SharedBuffer& packet)
     if (m_constantFramesPerPacket)
         return m_constantFramesPerPacket;
 
-    if (packet.isEmpty())
+    if (packet.empty())
         return 0;
 
     switch (m_audioFormatID) {
@@ -440,25 +529,48 @@ Vector<AudioStreamPacketDescription> getPacketDescriptions(CMSampleBufferRef sam
 {
     size_t packetDescriptionsSize;
     if (PAL::CMSampleBufferGetAudioStreamPacketDescriptions(sampleBuffer, 0, nullptr, &packetDescriptionsSize) != noErr) {
-        RELEASE_LOG_FAULT(WebAudio, "Unable to get packet description list size");
+        RELEASE_LOG_FAULT(Media, "Unable to get packet description list size");
         return { };
     }
     size_t numDescriptions = packetDescriptionsSize / sizeof(AudioStreamPacketDescription);
     if (!numDescriptions) {
-        RELEASE_LOG_FAULT(WebAudio, "No packet description found.");
+        RELEASE_LOG_DEBUG(Media, "No packet description found.");
         return { };
     }
     Vector<AudioStreamPacketDescription> descriptions(numDescriptions);
     if (PAL::CMSampleBufferGetAudioStreamPacketDescriptions(sampleBuffer, packetDescriptionsSize, descriptions.data(), nullptr) != noErr) {
-        RELEASE_LOG_FAULT(WebAudio, "Unable to get packet description list");
+        RELEASE_LOG_FAULT(Media, "Unable to get packet description list");
         return { };
     }
     auto numPackets = PAL::CMSampleBufferGetNumSamples(sampleBuffer);
     if (numDescriptions != size_t(numPackets)) {
-        RELEASE_LOG_FAULT(WebAudio, "Unhandled CMSampleBuffer structure");
+        RELEASE_LOG_FAULT(Media, "Unhandled CMSampleBuffer structure");
         return { };
     }
     return descriptions;
+}
+
+RetainPtr<CMBlockBufferRef> ensureContiguousBlockBuffer(CMBlockBufferRef rawBlockBuffer)
+{
+    if (PAL::CMBlockBufferIsRangeContiguous(rawBlockBuffer, 0, 0))
+        return rawBlockBuffer;
+    CMBlockBufferRef contiguousBuffer;
+    if (auto status = PAL::CMBlockBufferCreateContiguous(nullptr, rawBlockBuffer, nullptr, nullptr, 0, 0, 0, &contiguousBuffer)) {
+        RELEASE_LOG_FAULT(Media, "Failed to create contiguous blockBuffer with error:%d", static_cast<int>(status));
+        return nullptr;
+    }
+    return adoptCF(contiguousBuffer);
+}
+
+Ref<SharedBuffer> sharedBufferFromCMBlockBuffer(CMBlockBufferRef blockBuffer)
+{
+    return SharedBuffer::create(DataSegment::Provider {
+        [blockBuffer = ensureContiguousBlockBuffer(blockBuffer)]() -> std::span<const uint8_t> {
+            if (!blockBuffer)
+                return { };
+            return PAL::CMBlockBufferGetDataSpan(blockBuffer.get());
+        }
+    });
 }
 
 } // namespace WebCore

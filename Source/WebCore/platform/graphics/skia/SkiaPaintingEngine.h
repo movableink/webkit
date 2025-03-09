@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Igalia S.L.
+ * Copyright (C) 2024, 2025 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,17 +26,18 @@
 #pragma once
 
 #if USE(COORDINATED_GRAPHICS) && USE(SKIA)
-#include "BitmapTexturePool.h"
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WorkerPool.h>
 
 namespace WebCore {
-class CoordinatedGraphicsLayer;
+class BitmapTexturePool;
 class CoordinatedTileBuffer;
 class GraphicsContext;
+class GraphicsLayer;
 class IntRect;
+class IntSize;
 enum class RenderingMode : uint8_t;
 
 namespace DisplayList {
@@ -48,31 +49,43 @@ class SkiaPaintingEngine {
     WTF_MAKE_NONCOPYABLE(SkiaPaintingEngine);
 public:
     SkiaPaintingEngine(unsigned numberOfCPUThreads, unsigned numberOfGPUThreads);
-    ~SkiaPaintingEngine() = default;
+    ~SkiaPaintingEngine();
 
     static std::unique_ptr<SkiaPaintingEngine> create();
 
+    enum class HybridPaintingStrategy {
+        PreferCPUIfIdle,
+        PreferGPUIfIdle,
+        PreferGPUAboveMinimumArea,
+        MinimumFractionOfTasksUsingGPU,
+        CPUAffineRendering,
+        GPUAffineRendering
+    };
+
     static unsigned numberOfCPUPaintingThreads();
     static unsigned numberOfGPUPaintingThreads();
+    static unsigned minimumAreaForGPUPainting();
+    static float minimumFractionOfTasksUsingGPUPainting();
+    static HybridPaintingStrategy hybridPaintingStrategy();
 
-    Ref<CoordinatedTileBuffer> paintLayer(const CoordinatedGraphicsLayer&, const IntRect& dirtyRect);
+    Ref<CoordinatedTileBuffer> paintLayer(const GraphicsLayer&, const IntRect& dirtyRect, bool contentsOpaque, float contentsScale);
 
 private:
-    Ref<CoordinatedTileBuffer> createBuffer(RenderingMode, const CoordinatedGraphicsLayer&, const IntSize&) const;
-    std::unique_ptr<DisplayList::DisplayList> recordDisplayList(const CoordinatedGraphicsLayer&, const IntRect& dirtyRect) const;
-    void paintIntoGraphicsContext(const CoordinatedGraphicsLayer&, GraphicsContext&, const IntRect&) const;
+    Ref<CoordinatedTileBuffer> createBuffer(RenderingMode, const IntSize&, bool contentsOpaque) const;
+    std::unique_ptr<DisplayList::DisplayList> recordDisplayList(RenderingMode&, const GraphicsLayer&, const IntRect& dirtyRect, bool contentsOpaque, float contentsScale) const;
+    void paintIntoGraphicsContext(const GraphicsLayer&, GraphicsContext&, const IntRect&, bool contentsOpaque, float contentsScale) const;
 
     static bool paintDisplayListIntoBuffer(Ref<CoordinatedTileBuffer>&, DisplayList::DisplayList&);
-    bool paintGraphicsLayerIntoBuffer(Ref<CoordinatedTileBuffer>&, const CoordinatedGraphicsLayer&, const IntRect& dirtyRect) const;
+    bool paintGraphicsLayerIntoBuffer(Ref<CoordinatedTileBuffer>&, const GraphicsLayer&, const IntRect& dirtyRect, bool contentsOpaque, float contentsScale) const;
 
     // Threaded rendering
-    Ref<CoordinatedTileBuffer> postPaintingTask(RenderingMode, const CoordinatedGraphicsLayer&, const IntRect& dirtyRect);
+    Ref<CoordinatedTileBuffer> postPaintingTask(const GraphicsLayer&, RenderingMode, const IntRect& dirtyRect, bool contentsOpaque, float contentsScale);
 
     // Main thread rendering
-    Ref<CoordinatedTileBuffer> performPaintingTask(RenderingMode, const CoordinatedGraphicsLayer&, const IntRect& dirtyRect);
+    Ref<CoordinatedTileBuffer> performPaintingTask(const GraphicsLayer&, RenderingMode, const IntRect& dirtyRect, bool contentsOpaque, float contentsScale);
 
-    RenderingMode renderingMode() const;
-    std::optional<RenderingMode> threadedRenderingMode() const;
+    bool isHybridMode() const;
+    RenderingMode decideHybridRenderingMode(const IntRect& dirtyRect, float contentsScale) const;
 
     RefPtr<WorkerPool> m_cpuWorkerPool;
     RefPtr<WorkerPool> m_gpuWorkerPool;

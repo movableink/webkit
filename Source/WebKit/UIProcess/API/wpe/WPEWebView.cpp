@@ -47,10 +47,6 @@ View::View()
 
 View::~View()
 {
-#if USE(ATK)
-    if (m_accessible)
-        webkitWebViewAccessibleSetWebView(m_accessible.get(), nullptr);
-#endif
     m_pageProxy->close();
 }
 
@@ -135,35 +131,24 @@ void View::close()
     m_pageProxy->close();
 }
 
-#if USE(ATK)
-WebKitWebViewAccessible* View::accessible() const
-{
-    if (!m_accessible)
-        m_accessible = webkitWebViewAccessibleNew(const_cast<View*>(this));
-    return m_accessible.get();
-}
-#endif
-
 #if ENABLE(FULLSCREEN_API)
 bool View::isFullScreen() const
 {
     return m_fullscreenState == WebFullScreenManagerProxy::FullscreenState::EnteringFullscreen || m_fullscreenState == WebFullScreenManagerProxy::FullscreenState::InFullscreen;
 }
 
-void View::willEnterFullScreen()
+void View::willEnterFullScreen(CompletionHandler<void(bool)>&& completionHandler)
 {
     ASSERT(m_fullscreenState == WebFullScreenManagerProxy::FullscreenState::NotInFullscreen);
-    if (auto* fullScreenManagerProxy = page().fullScreenManager())
-        fullScreenManagerProxy->willEnterFullScreen();
+    completionHandler(true);
     m_fullscreenState = WebFullScreenManagerProxy::FullscreenState::EnteringFullscreen;
 }
 
-void View::willExitFullScreen()
+void View::willExitFullScreen(CompletionHandler<void()>&& completionHandler)
 {
     ASSERT(m_fullscreenState == WebFullScreenManagerProxy::FullscreenState::EnteringFullscreen || m_fullscreenState == WebFullScreenManagerProxy::FullscreenState::InFullscreen);
 
-    if (auto* fullScreenManagerProxy = page().fullScreenManager())
-        fullScreenManagerProxy->willExitFullScreen();
+    completionHandler();
     m_fullscreenState = WebFullScreenManagerProxy::FullscreenState::ExitingFullscreen;
 }
 #endif // ENABLE(FULLSCREEN_API)

@@ -42,14 +42,20 @@
 #include "SharedBuffer.h"
 #include <wtf/UniqueRef.h>
 
+#if ENABLE(MODEL_PROCESS)
+#include "StageModeOperations.h"
+#endif
+
 namespace WebCore {
 
 class DOMMatrixReadOnly;
 class DOMPointReadOnly;
 class Event;
+class GraphicsLayer;
 class LayoutSize;
 class Model;
 class ModelPlayer;
+class ModelPlayerProvider;
 class MouseEvent;
 
 template<typename IDLType> class DOMPromiseDeferred;
@@ -57,6 +63,7 @@ template<typename IDLType> class DOMPromiseProxyWithResolveCallback;
 
 #if ENABLE(MODEL_PROCESS)
 template<typename IDLType> class DOMPromiseProxy;
+class ModelContext;
 #endif
 
 class HTMLModelElement final : public HTMLElement, private CachedRawResourceClient, public ModelPlayerClient, public ActiveDOMObject {
@@ -81,16 +88,18 @@ public:
     using ReadyPromise = DOMPromiseProxyWithResolveCallback<IDLInterface<HTMLModelElement>>;
     ReadyPromise& ready() { return m_readyPromise.get(); }
 
-    RefPtr<Model> model() const;
+    WEBCORE_EXPORT RefPtr<Model> model() const;
 
     bool usesPlatformLayer() const;
     PlatformLayer* platformLayer() const;
 
     std::optional<LayerHostingContextIdentifier> layerHostingContextIdentifier() const;
 
-    void applyBackgroundColor(Color);
+    std::optional<PlatformLayerIdentifier> layerID() const;
 
 #if ENABLE(MODEL_PROCESS)
+    RefPtr<ModelContext> modelContext() const;
+
     const DOMMatrixReadOnly& entityTransform() const;
     ExceptionOr<void> setEntityTransform(const DOMMatrixReadOnly&);
 
@@ -143,9 +152,12 @@ public:
     void setPaused(bool, DOMPromiseDeferred<void>&&);
     double currentTime() const;
     void setCurrentTime(double);
-
     const URL& environmentMap() const;
     void setEnvironmentMap(const URL&);
+    WEBCORE_EXPORT bool supportsStageModeInteraction() const;
+    WEBCORE_EXPORT void beginStageModeTransform(const TransformationMatrix&);
+    WEBCORE_EXPORT void updateStageModeTransform(const TransformationMatrix&);
+    WEBCORE_EXPORT void endStageModeInteraction();
 #endif
 
 #if PLATFORM(COCOA)
@@ -166,6 +178,8 @@ private:
     void modelDidChange();
     void createModelPlayer();
     void deleteModelPlayer();
+
+    RefPtr<GraphicsLayer> graphicsLayer() const;
 
     HTMLModelElement& readyPromiseResolve();
 
@@ -199,7 +213,10 @@ private:
     void didUpdateBoundingBox(ModelPlayer&, const FloatPoint3D&, const FloatPoint3D&) final;
     void didFinishEnvironmentMapLoading(bool succeeded) final;
 #endif
-    std::optional<PlatformLayerIdentifier> platformLayerID() final;
+    std::optional<PlatformLayerIdentifier> modelContentsLayerID() const final;
+
+    Node::InsertedIntoAncestorResult insertedIntoAncestor(InsertionType , ContainerNode& parentOfInsertedTree) override;
+    void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree) override;
 
     void defaultEventHandler(Event&) final;
     void dragDidStart(MouseEvent&);
@@ -222,12 +239,17 @@ private:
     void environmentMapRequestResource();
     void environmentMapResetAndReject(Exception&&);
     void environmentMapResourceFinished();
+    bool hasPortal() const;
+    void updateHasPortal();
+    WebCore::StageModeOperation stageMode() const;
+    void updateStageMode();
 #endif
     void modelResourceFinished();
 
     URL m_sourceURL;
     CachedResourceHandle<CachedRawResource> m_resource;
     SharedBufferBuilder m_data;
+    WeakPtr<ModelPlayerProvider> m_modelPlayerProvider;
     RefPtr<Model> m_model;
     UniqueRef<ReadyPromise> m_readyPromise;
     bool m_dataComplete { false };

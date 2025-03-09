@@ -58,7 +58,7 @@ public:
     virtual void didUpdateBoundingBox(ModelPlayer&, const FloatPoint3D&, const FloatPoint3D&) = 0;
     virtual void didFinishEnvironmentMapLoading(bool succeeded) = 0;
 #endif
-    virtual std::optional<PlatformLayerIdentifier> platformLayerID() = 0;
+    virtual std::optional<PlatformLayerIdentifier> modelContentsLayerID() const = 0;
 };
 
 }

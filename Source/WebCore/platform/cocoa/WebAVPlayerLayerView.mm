@@ -57,9 +57,13 @@ static void WebAVPlayerLayerView_transferVideoViewTo(id aSelf, SEL, WebAVPlayerL
     if (!videoView)
         return;
 
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
     [videoView removeFromSuperview];
     [playerLayerView setVideoView:nil];
     [targetPlayerLayerView setVideoView:videoView.get()];
+    [targetPlayerLayerView addSubview:videoView.get()];
+    [CATransaction commit];
 }
 
 static AVPlayerController *WebAVPlayerLayerView_playerController(id aSelf, SEL)

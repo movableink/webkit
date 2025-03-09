@@ -34,6 +34,10 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/TZoneMalloc.h>
 
+#if PLATFORM(IOS_FAMILY) && ENABLE(MODEL_PROCESS)
+#include <WebCore/ElementIdentifier.h>
+#endif
+
 OBJC_CLASS CAAnimation;
 OBJC_CLASS WKAnimationDelegate;
 
@@ -104,6 +108,8 @@ public:
     void remotePageProcessDidTerminate(WebCore::ProcessIdentifier);
 
 private:
+    Ref<RemoteLayerTreeDrawingAreaProxy> protectedDrawingArea() const;
+
     void createLayer(const RemoteLayerTreeTransaction::LayerCreationProperties&);
     RefPtr<RemoteLayerTreeNode> makeNode(const RemoteLayerTreeTransaction::LayerCreationProperties&);
 
@@ -125,6 +131,9 @@ private:
 #endif
 #if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
     HashSet<WebCore::PlatformLayerIdentifier> m_overlayRegionIDs;
+#endif
+#if PLATFORM(IOS_FAMILY) && ENABLE(MODEL_PROCESS)
+    HashSet<WebCore::PlatformLayerIdentifier> m_modelLayers;
 #endif
     bool m_isDebugLayerTreeHost { false };
 };

@@ -27,6 +27,7 @@
 
 #include "ExceptionOr.h"
 #include "URLPatternComponent.h"
+#include "URLPatternInit.h"
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -36,7 +37,6 @@
 namespace WebCore {
 
 class ScriptExecutionContext;
-struct URLPatternInit;
 struct URLPatternOptions;
 struct URLPatternResult;
 enum class BaseURLStringType : bool { Pattern, URL };
@@ -52,11 +52,15 @@ public:
 
     static ExceptionOr<Ref<URLPattern>> create(ScriptExecutionContext&, URLPatternInput&&, String&& baseURL, URLPatternOptions&&);
     static ExceptionOr<Ref<URLPattern>> create(ScriptExecutionContext&, std::optional<URLPatternInput>&&, URLPatternOptions&&);
+
+    using Compatible = std::variant<String, URLPatternInit, RefPtr<URLPattern>>;
+    static ExceptionOr<Ref<URLPattern>> create(ScriptExecutionContext&, Compatible&&, const String&);
+
     ~URLPattern();
 
-    ExceptionOr<bool> test(std::optional<URLPatternInput>&&, String&& baseURL) const;
+    ExceptionOr<bool> test(ScriptExecutionContext&, std::optional<URLPatternInput>&&, String&& baseURL) const;
 
-    ExceptionOr<std::optional<URLPatternResult>> exec(std::optional<URLPatternInput>&&, String&& baseURL) const;
+    ExceptionOr<std::optional<URLPatternResult>> exec(ScriptExecutionContext&, std::optional<URLPatternInput>&&, String&& baseURL) const;
 
     const String& protocol() const { return m_protocolComponent.patternString(); }
     const String& username() const { return m_usernameComponent.patternString(); }
@@ -67,11 +71,12 @@ public:
     const String& search() const { return m_searchComponent.patternString(); }
     const String& hash() const { return m_hashComponent.patternString(); }
 
-    bool hasRegExpGroups() const { return m_hasRegExpGroups; }
+    bool hasRegExpGroups() const;
 
 private:
     URLPattern();
     ExceptionOr<void> compileAllComponents(ScriptExecutionContext&, URLPatternInit&&, const URLPatternOptions&);
+    ExceptionOr<std::optional<URLPatternResult>> match(ScriptExecutionContext&, std::variant<URL, URLPatternInput>&&, String&& baseURLString) const;
 
     URLPatternUtilities::URLPatternComponent m_protocolComponent;
     URLPatternUtilities::URLPatternComponent m_usernameComponent;
@@ -81,8 +86,6 @@ private:
     URLPatternUtilities::URLPatternComponent m_portComponent;
     URLPatternUtilities::URLPatternComponent m_searchComponent;
     URLPatternUtilities::URLPatternComponent m_hashComponent;
-
-    bool m_hasRegExpGroups { false };
 };
 
 }

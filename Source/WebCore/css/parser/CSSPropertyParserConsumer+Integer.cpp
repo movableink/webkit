@@ -36,7 +36,7 @@ namespace CSSPropertyParserHelpers {
 
 template<typename T> static RefPtr<CSSPrimitiveValue> consumeIntegerType(CSSParserTokenRange& range, const CSSParserContext& context)
 {
-    return CSSPrimitiveValueResolver<T>::consumeAndResolve(range, context, { }, { }, { });
+    return CSSPrimitiveValueResolver<T>::consumeAndResolve(range, context, { });
 }
 
 RefPtr<CSSPrimitiveValue> consumeInteger(CSSParserTokenRange& range, const CSSParserContext& context)

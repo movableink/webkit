@@ -21,15 +21,10 @@
 
 #pragma once
 
-#include <wtf/Compiler.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 #include "JSDOMGlobalObject.h"
+#include <wtf/Compiler.h>
 #include <wtf/Forward.h>
 #include <wtf/WeakPtr.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 namespace WebCore {
 
@@ -84,7 +79,7 @@ protected:
 
 private:
     JSC::VM& m_vm;
-    HashSet<WindowProxy*> m_jsWindowProxies;
+    UncheckedKeyHashSet<WindowProxy*> m_jsWindowProxies;
     DOMObjectWrapperMap m_wrappers;
 
     String m_name;
@@ -97,11 +92,11 @@ private:
 };
 
 DOMWrapperWorld& normalWorld(JSC::VM&);
-WEBCORE_EXPORT DOMWrapperWorld& mainThreadNormalWorld();
-inline Ref<DOMWrapperWorld> protectedMainThreadNormalWorld() { return mainThreadNormalWorld(); }
+WEBCORE_EXPORT DOMWrapperWorld& mainThreadNormalWorldSingleton();
+inline Ref<DOMWrapperWorld> protectedMainThreadNormalWorld() { return mainThreadNormalWorldSingleton(); }
 
-inline DOMWrapperWorld& debuggerWorld() { return mainThreadNormalWorld(); }
-inline DOMWrapperWorld& pluginWorld() { return mainThreadNormalWorld(); }
+inline DOMWrapperWorld& debuggerWorldSingleton() { return mainThreadNormalWorldSingleton(); }
+inline DOMWrapperWorld& pluginWorldSingleton() { return mainThreadNormalWorldSingleton(); }
 
 DOMWrapperWorld& currentWorld(JSC::JSGlobalObject&);
 DOMWrapperWorld& worldForDOMObject(JSC::JSObject&);

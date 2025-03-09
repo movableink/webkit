@@ -85,7 +85,6 @@ static void setContext(GstElement*, GstContext*);
 GST_DEBUG_CATEGORY(webkit_media_common_encryption_decrypt_debug_category);
 #define GST_CAT_DEFAULT webkit_media_common_encryption_decrypt_debug_category
 
-#define webkit_media_common_encryption_decrypt_parent_class parent_class
 WEBKIT_DEFINE_TYPE(WebKitMediaCommonEncryptionDecrypt, webkit_media_common_encryption_decrypt, GST_TYPE_BASE_TRANSFORM)
 
 static void webkit_media_common_encryption_decrypt_class_init(WebKitMediaCommonEncryptionDecryptClass* klass)
@@ -111,7 +110,7 @@ static void webkit_media_common_encryption_decrypt_class_init(WebKitMediaCommonE
 
 static void constructed(GObject* object)
 {
-    GST_CALL_PARENT(G_OBJECT_CLASS, constructed, (object));
+    G_OBJECT_CLASS(webkit_media_common_encryption_decrypt_parent_class)->constructed(object);
 
     GstBaseTransform* base = GST_BASE_TRANSFORM(object);
     gst_base_transform_set_in_place(base, TRUE);
@@ -155,9 +154,10 @@ static GstCaps* transformCaps(GstBaseTransform* base, GstPadDirection direction,
             outgoingStructure = GUniquePtr<GstStructure>(gst_structure_copy(incomingStructure));
 
             if (!canDoPassthrough) {
-                auto originalMediaType = WebCore::gstStructureGetString(outgoingStructure.get(), "original-media-type"_s);
-                RELEASE_ASSERT(originalMediaType);
-                gst_structure_set_name(outgoingStructure.get(), static_cast<const char*>(originalMediaType.rawCharacters()));
+                auto originalMediaTypeView = WebCore::gstStructureGetString(outgoingStructure.get(), "original-media-type"_s);
+                RELEASE_ASSERT(originalMediaTypeView);
+                auto originalMediaType = originalMediaTypeView.utf8();
+                gst_structure_set_name(outgoingStructure.get(), originalMediaType.data());
             }
 
             // Filter out the DRM related fields from the down-stream caps.
@@ -170,9 +170,10 @@ static GstCaps* transformCaps(GstBaseTransform* base, GstPadDirection direction,
                 // can cause caps negotiation failures with adaptive bitrate streams.
                 gst_structure_remove_fields(outgoingStructure.get(), "base-profile", "codec_data", "height", "framerate", "level", "pixel-aspect-ratio", "profile", "rate", "width", nullptr);
 
-                auto name = WebCore::gstStructureGetName(incomingStructure);
+                auto nameView = WebCore::gstStructureGetName(incomingStructure);
+                auto name = nameView.utf8();
                 gst_structure_set(outgoingStructure.get(), "protection-system", G_TYPE_STRING, klass->protectionSystemId(self),
-                    "original-media-type", G_TYPE_STRING, reinterpret_cast<const char*>(name.rawCharacters()) , nullptr);
+                    "original-media-type", G_TYPE_STRING, name.data() , nullptr);
 
                 // GST_PROTECTION_UNSPECIFIED_SYSTEM_ID was added in the GStreamer
                 // developement git master which will ship as version 1.16.0.
@@ -209,7 +210,7 @@ static GstCaps* transformCaps(GstBaseTransform* base, GstPadDirection direction,
 
 static gboolean acceptCaps(GstBaseTransform* trans, GstPadDirection direction, GstCaps* caps)
 {
-    gboolean result = GST_BASE_TRANSFORM_CLASS(parent_class)->accept_caps(trans, direction, caps);
+    gboolean result = GST_BASE_TRANSFORM_CLASS(webkit_media_common_encryption_decrypt_parent_class)->accept_caps(trans, direction, caps);
 
     if (result || direction == GST_PAD_SRC)
         return result;
@@ -486,7 +487,7 @@ static gboolean sinkEventHandler(GstBaseTransform* trans, GstEvent* event)
         break;
     }
 
-    return GST_BASE_TRANSFORM_CLASS(parent_class)->sink_event(trans, event);
+    return GST_BASE_TRANSFORM_CLASS(webkit_media_common_encryption_decrypt_parent_class)->sink_event(trans, event);
 }
 
 bool webKitMediaCommonEncryptionDecryptIsAborting(WebKitMediaCommonEncryptionDecrypt* self)
@@ -530,7 +531,7 @@ static GstStateChangeReturn changeState(GstElement* element, GstStateChange tran
         break;
     }
 
-    GstStateChangeReturn result = GST_ELEMENT_CLASS(parent_class)->change_state(element, transition);
+    GstStateChangeReturn result = GST_ELEMENT_CLASS(webkit_media_common_encryption_decrypt_parent_class)->change_state(element, transition);
 
     // Add post-transition code here.
 
@@ -552,7 +553,7 @@ static void setContext(GstElement* element, GstContext* context)
         return;
     }
 
-    GST_ELEMENT_CLASS(parent_class)->set_context(element, context);
+    GST_ELEMENT_CLASS(webkit_media_common_encryption_decrypt_parent_class)->set_context(element, context);
 }
 
 #undef GST_CAT_DEFAULT

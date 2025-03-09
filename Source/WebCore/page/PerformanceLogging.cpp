@@ -81,7 +81,7 @@ Vector<std::pair<ASCIILiteral, size_t>> PerformanceLogging::memoryUsageStatistic
     return stats;
 }
 
-HashCountedSet<const char*> PerformanceLogging::javaScriptObjectCounts()
+HashCountedSet<ASCIILiteral> PerformanceLogging::javaScriptObjectCounts()
 {
     return WTFMove(*commonVM().heap.objectTypeCounts());
 }
@@ -103,9 +103,9 @@ void PerformanceLogging::didReachPointOfInterest(PointOfInterest poi)
             return;
     }
 
-    RELEASE_LOG(PerformanceLogging, "Memory usage info dump at %s:", toString(poi).characters());
+    RELEASE_LOG_FORWARDABLE(PerformanceLogging, PERFORMANCELOGGING_MEMORY_USAGE_INFO, toString(poi).characters());
     for (auto& [key, value] : memoryUsageStatistics(ShouldIncludeExpensiveComputations::No))
-        RELEASE_LOG(PerformanceLogging, "  %s: %zu", key.characters(), value);
+        RELEASE_LOG_FORWARDABLE(PerformanceLogging, PERFORMANCELOGGING_MEMORY_USAGE_FOR_KEY, key.characters(), value);
 #endif
 }
 

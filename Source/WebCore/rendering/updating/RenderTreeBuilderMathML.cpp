@@ -36,7 +36,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeBuilder, MathML);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::MathML);
 
 RenderTreeBuilder::MathML::MathML(RenderTreeBuilder& builder)
     : m_builder(builder)

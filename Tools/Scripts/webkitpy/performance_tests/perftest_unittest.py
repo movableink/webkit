@@ -153,6 +153,8 @@ median= 1101.0 ms, stdev= 13.3140211016 ms, min= 1080.0 ms, max= 1120.0 ms
         output = DriverOutput(":Time -> [1080, 1120, 1095, 1101, 1104] ms", image=None, image_hash=None, audio=None, error="""
 2024-09-19 18:02:28.602 WebKitTestRunner[4850:966605] +[IMKClient subclass]: chose IMKClient_Legacy
 2024-09-20 05:19:16.085 WebKitTestRunner[89065:4681480] +[IMKClient subclass]: chose IMKClient_Modern
+2025-02-18 18:04:05.907 com.apple.WebKit.WebContent.Development[24121:773847] CoreText note: Client requested name ".Times Fallback", it will get TimesNewRomanPSMT rather than the intended font. All system UI font access should be through proper APIs such as CTFontCreateUIFontForLanguage() or +[NSFont systemFontOfSize:].
+2025-02-18 18:04:05.907 com.apple.WebKit.WebContent.Development[24121:773847] CoreText note: Set a breakpoint on CTFontLogSystemFontNameRequest to debug.
 """)
 
         class MockPortWithSequoiaName(MockPort):

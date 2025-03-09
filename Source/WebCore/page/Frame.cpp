@@ -26,10 +26,10 @@
 #include "config.h"
 #include "Frame.h"
 
+#include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLIFrameElement.h"
-#include "HistoryController.h"
 #include "LocalDOMWindow.h"
 #include "NavigationScheduler.h"
 #include "Page.h"
@@ -114,7 +114,6 @@ Frame::Frame(Page& page, FrameIdentifier frameID, FrameType frameType, HTMLFrame
     , m_frameType(frameType)
     , m_navigationScheduler(makeUniqueRefWithoutRefCountedCheck<NavigationScheduler>(*this))
     , m_opener(opener)
-    , m_history(makeUniqueRef<HistoryController>(*this))
 {
     if (parent)
         parent->tree().appendChild(*this);
@@ -138,13 +137,6 @@ Frame::~Frame()
 #if ASSERT_ENABLED
     FrameLifetimeVerifier::singleton().frameDestroyed(*this);
 #endif
-}
-
-std::optional<PageIdentifier> Frame::pageID() const
-{
-    if (auto* page = this->page())
-        return page->identifier();
-    return std::nullopt;
 }
 
 void Frame::resetWindowProxy()
@@ -268,11 +260,6 @@ bool Frame::hasOpenedFrames() const
     return !m_openedFrames.isEmptyIgnoringNullReferences();
 }
 
-CheckedRef<HistoryController> Frame::checkedHistory() const
-{
-    return m_history.get();
-}
-
 void Frame::setOwnerElement(HTMLFrameOwnerElement* element)
 {
     m_ownerElement = element;
@@ -309,6 +296,16 @@ void Frame::updateSandboxFlags(SandboxFlags flags, NotifyUIProcess notifyUIProce
 {
     if (notifyUIProcess == NotifyUIProcess::Yes)
         loaderClient().updateSandboxFlags(flags);
+}
+
+void Frame::stopForBackForwardCache()
+{
+    if (RefPtr localFrame = dynamicDowncast<LocalFrame>(*this))
+        localFrame->protectedLoader()->stopForBackForwardCache();
+    else {
+        for (RefPtr child = tree().firstChild(); child; child = child->tree().nextSibling())
+            child->stopForBackForwardCache();
+    }
 }
 
 } // namespace WebCore

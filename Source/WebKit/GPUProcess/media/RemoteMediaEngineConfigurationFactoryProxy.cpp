@@ -29,6 +29,7 @@
 #if ENABLE(GPU_PROCESS)
 
 #include "GPUConnectionToWebProcess.h"
+#include "SharedPreferencesForWebProcess.h"
 #include <WebCore/MediaCapabilitiesDecodingInfo.h>
 #include <WebCore/MediaCapabilitiesEncodingInfo.h>
 #include <WebCore/MediaDecodingConfiguration.h>
@@ -72,6 +73,13 @@ void RemoteMediaEngineConfigurationFactoryProxy::ref() const
 void RemoteMediaEngineConfigurationFactoryProxy::deref() const
 {
     m_connection.get()->deref();
+}
+
+std::optional<SharedPreferencesForWebProcess> RemoteMediaEngineConfigurationFactoryProxy::sharedPreferencesForWebProcess() const
+{
+    if (RefPtr connection = m_connection.get())
+        return connection->sharedPreferencesForWebProcess();
+    return std::nullopt;
 }
 
 }

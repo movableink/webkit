@@ -27,6 +27,7 @@
 #include "JSStringJoiner.h"
 
 #include "JSCJSValueInlines.h"
+#include <wtf/text/ParsingUtilities.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -42,14 +43,14 @@ static inline void appendStringToData(std::span<CharacterType>& data, StringView
         string.getCharacters8(data);
     } else
         string.getCharacters(data);
-    data = data.subspan(string.length());
+    skip(data, string.length());
 }
 
 template<typename OutputCharacterType, typename SeparatorCharacterType>
 static inline void appendStringToData(std::span<OutputCharacterType>& data, std::span<const SeparatorCharacterType> separator)
 {
-    StringImpl::copyCharacters(data.data(), separator);
-    data = data.subspan(separator.size());
+    StringImpl::copyCharacters(data, separator);
+    skip(data, separator.size());
 }
 
 template<typename CharacterType>
@@ -66,7 +67,7 @@ static inline void appendStringToDataWithOneCharacterSeparatorRepeatedly(std::sp
                 string.getCharacters8(std::span { pattern }.subspan(1));
                 size_t fillLength = count * 16;
                 memset_pattern16(data.data(), pattern, fillLength);
-                data = data.subspan(fillLength);
+                skip(data, fillLength);
                 return;
             }
             case 8: {
@@ -75,7 +76,7 @@ static inline void appendStringToDataWithOneCharacterSeparatorRepeatedly(std::sp
                 string.getCharacters8(std::span { pattern }.subspan(1));
                 size_t fillLength = count * 8;
                 memset_pattern8(data.data(), pattern, fillLength);
-                data = data.subspan(fillLength);
+                skip(data, fillLength);
                 return;
             }
             case 4: {
@@ -84,7 +85,7 @@ static inline void appendStringToDataWithOneCharacterSeparatorRepeatedly(std::sp
                 string.getCharacters8(std::span { pattern }.subspan(1));
                 size_t fillLength = count * 4;
                 memset_pattern4(data.data(), pattern, fillLength);
-                data = data.subspan(fillLength);
+                skip(data, fillLength);
                 return;
             }
             default:
@@ -95,8 +96,7 @@ static inline void appendStringToDataWithOneCharacterSeparatorRepeatedly(std::sp
 #endif
 
     while (count--) {
-        data[0] = separatorCharacter;
-        data = data.subspan(1);
+        consume(data) = separatorCharacter;
         appendStringToData(data, string);
     }
 }

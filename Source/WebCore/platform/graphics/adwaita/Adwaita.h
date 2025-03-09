@@ -29,7 +29,7 @@
 #if USE(THEME_ADWAITA)
 
 #include "Color.h"
-#include <wtf/Seconds.h>
+#include <wtf/Forward.h>
 
 namespace WebCore {
 class GraphicsContext;

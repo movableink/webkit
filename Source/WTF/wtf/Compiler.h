@@ -128,7 +128,7 @@
 
 #endif
 
-#if !COMPILER(CLANG) && !COMPILER(MSVC)
+#if !COMPILER(CLANG)
 #define WTF_COMPILER_QUIRK_CONSIDERS_UNREACHABLE_CODE 1
 #endif
 
@@ -241,10 +241,12 @@
 /* LIFETIME_BOUND */
 
 #if !defined(LIFETIME_BOUND) && defined(__cplusplus)
-#if defined(__has_cpp_attribute) && __has_cpp_attribute(clang::lifetimebound)
+#if __has_cpp_attribute(clang::lifetimebound)
 #define LIFETIME_BOUND [[clang::lifetimebound]]
-#elif COMPILER_HAS_ATTRIBUTE(lifetimebound)
-#define LIFETIME_BOUND __attribute__((lifetimebound))
+#elif __has_cpp_attribute(msvc::lifetimebound)
+#define LIFETIME_BOUND [[msvc::lifetimebound]]
+#elif __has_cpp_attribute(lifetimebound)
+#define LIFETIME_BOUND [[lifetimebound]]
 #endif
 #endif
 
@@ -293,6 +295,7 @@
 #if !defined(MUST_TAIL_CALL) && defined(__cplusplus) && defined(__has_cpp_attribute)
 #if __has_cpp_attribute(clang::musttail) && !defined(__powerpc__) && !defined(_WIN32)
 #define MUST_TAIL_CALL [[clang::musttail]]
+#define HAVE_MUST_TAIL_CALL 1
 #endif
 #endif
 #endif
@@ -300,6 +303,7 @@
 
 #if !defined(MUST_TAIL_CALL)
 #define MUST_TAIL_CALL
+#define HAVE_MUST_TAIL_CALL 0
 #endif
 
 /* RETURNS_NONNULL */
@@ -554,8 +558,18 @@
 #define SUPPRESS_UNCOUNTED_MEMBER \
     IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE_ON_MEMBER("webkit.NoUncountedMemberChecker")
 
+#if COMPILER(APPLE_CLANG) || defined(CLANG_WEBKIT_BRANCH) || !defined __clang_major__ || __clang_major__ >= 19
+#define SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE \
+    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("webkit.UncountedLambdaCapturesChecker")
+#else
+#define SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE
+#endif
+
 #define SUPPRESS_REFCOUNTED_WITHOUT_VIRTUAL_DESTRUCTOR \
     IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE_ON_CLASS("webkit.RefCntblBaseVirtualDtor")
+
+#define SUPPRESS_MEMORY_UNSAFE_CAST \
+    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("alpha.webkit.MemoryUnsafeCastChecker")
 
 #define IGNORE_RETURN_TYPE_WARNINGS_BEGIN IGNORE_WARNINGS_BEGIN("return-type")
 #define IGNORE_RETURN_TYPE_WARNINGS_END IGNORE_WARNINGS_END
@@ -601,18 +615,16 @@
 
 /* UNREACHABLE */
 
-#if COMPILER(MSVC)
-#define WTF_UNREACHABLE(...) __assume(0)
-#else
 #define WTF_UNREACHABLE(...) __builtin_unreachable();
-#endif
 
 /* WTF_ALLOW_UNSAFE_BUFFER_USAGE */
 
 #if COMPILER(CLANG)
 #define WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN \
     _Pragma("clang diagnostic push") \
-    _Pragma("clang diagnostic ignored \"-Wunsafe-buffer-usage\"")
+    _Pragma("clang diagnostic ignored \"-Wunknown-warning-option\"") \
+    _Pragma("clang diagnostic ignored \"-Wunsafe-buffer-usage\"") \
+    _Pragma("clang diagnostic ignored \"-Wunsafe-buffer-usage-in-libc-call\"")
 
 #define WTF_ALLOW_UNSAFE_BUFFER_USAGE_END \
     _Pragma("clang diagnostic pop")
@@ -649,6 +661,7 @@
     WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN \
     ALLOW_COMMA_BEGIN \
     ALLOW_DEPRECATED_DECLARATIONS_BEGIN \
+    ALLOW_UNUSED_PARAMETERS_BEGIN \
     IGNORE_WARNINGS_BEGIN("cast-align") \
     IGNORE_CLANG_WARNINGS_BEGIN("thread-safety-reference-return")
 
@@ -657,4 +670,5 @@
     IGNORE_WARNINGS_END \
     WTF_ALLOW_UNSAFE_BUFFER_USAGE_END \
     ALLOW_COMMA_END \
-    ALLOW_DEPRECATED_DECLARATIONS_END
+    ALLOW_DEPRECATED_DECLARATIONS_END \
+    ALLOW_UNUSED_PARAMETERS_END

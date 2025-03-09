@@ -86,7 +86,18 @@
 
 ;; FIXME: Add check `(with-filter (system-attribute virtual-device)` when this is supported. See rdar://118274636.
 (allow iokit-open-service (iokit-registry-entry-class "AppleVideoToolboxParavirtualizationDriver"))
-(allow iokit-open-user-client (iokit-user-client-class "AppleVideoToolboxParavirtualizationUserClient"))
+
+(if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+    (allow iokit-open-user-client
+        (iokit-user-client-class "AppleVideoToolboxParavirtualizationUserClient")
+        (apply-message-filter
+            (allow (with report) (with telemetry)
+                iokit-async-external-method
+                iokit-external-method
+                iokit-external-trap)))
+    ;; else
+    (allow iokit-open-user-client
+        (iokit-user-client-class "AppleVideoToolboxParavirtualizationUserClient")))
 
 (deny darwin-notification-post (with no-report))
 (deny nvram-get (with no-report))
@@ -149,8 +160,38 @@
     ;; OpenCL
     (allow IOKIT_OPEN_SERVICE
         (iokit-connection "IOAccelerator"))
-    (allow IOKIT_OPEN_USER_CLIENT
-        (iokit-connection "IOAccelerator"))
+
+    (if (and (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES") (not (equal? (param "CPU") "arm64")))
+        (allow IOKIT_OPEN_USER_CLIENT
+            (iokit-connection "IOAccelerator")
+            (apply-message-filter
+                (allow (with report) (with telemetry)
+                    iokit-async-external-method
+                    iokit-external-method
+                    iokit-external-trap)
+                (allow iokit-external-method
+                    (iokit-method-number 1 4 9 11 12 20 257))
+                (allow iokit-async-external-method
+                    (iokit-method-number 0)))))
+
+    (if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+        (allow IOKIT_OPEN_USER_CLIENT
+            (iokit-connection "IOAccelerator")
+            (apply-message-filter
+                (allow (with report) (with telemetry)
+                    iokit-async-external-method
+                    iokit-external-method
+                    iokit-external-trap)
+                (allow iokit-external-method
+                    (iokit-method-number 0 2 5 6 7 8 9 10 14 15 16 17 28 29 30 31 39 40 256 258 261 263 264))
+                (allow iokit-external-trap
+                    (iokit-trap-number 0 1 3))
+                (allow iokit-async-external-method
+                    (iokit-method-number 263))))
+        ;; else
+        (allow IOKIT_OPEN_USER_CLIENT
+            (iokit-connection "IOAccelerator")))
+
     (allow IOKIT_OPEN_USER_CLIENT
         (iokit-user-client-class "IOSurfaceRootUserClient"))
     (deny IOKIT_OPEN_USER_CLIENT
@@ -160,10 +201,29 @@
         (iokit-user-client-class "IOFramebufferSharedUserClient"))
 
     ;; These are needed for Encrypted Media on some hardware (MacMini8,1 for example)
-    (allow IOKIT_OPEN_USER_CLIENT
-        (iokit-user-client-class
-            "AppleIntelMEUserClient"
-            "AppleSNBFBUserClient"))
+    (if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+        (allow IOKIT_OPEN_USER_CLIENT (with report) (with telemetry)
+            (iokit-user-client-class "AppleIntelMEUserClient")
+            (apply-message-filter
+                (allow (with report) (with telemetry)
+                    iokit-async-external-method
+                    iokit-external-method
+                    iokit-external-trap)))
+        ;; else
+        (allow IOKIT_OPEN_USER_CLIENT
+            (iokit-user-client-class "AppleIntelMEUserClient")))
+
+    (if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+        (allow IOKIT_OPEN_USER_CLIENT (with report) (with telemetry)
+            (iokit-user-client-class "AppleSNBFBUserClient")
+            (apply-message-filter
+                (allow (with report) (with telemetry)
+                    iokit-async-external-method
+                    iokit-external-method
+                    iokit-external-trap)))
+        ;; else
+        (allow IOKIT_OPEN_USER_CLIENT
+            (iokit-user-client-class "AppleSNBFBUserClient")))
 
     ;; QuartzCore
     (deny IOKIT_OPEN_USER_CLIENT (with no-report)
@@ -697,26 +757,91 @@
     (allow-read-write-directory-and-issue-read-write-extensions (param "DARWIN_USER_TEMP_DIR")))
 
 ;; IOKit user clients
-(allow IOKIT_OPEN_USER_CLIENT
-    (iokit-user-client-class "AppleUpstreamUserClient")
-    (iokit-user-client-class "RootDomainUserClient")
-    (iokit-user-client-class "IOAudioControlUserClient")
-    (iokit-user-client-class "IOAudioEngineUserClient")
-    ;; Following is needed due to <rdar://problem/10427451> && <rdar://problem/10808817>
-    (iokit-user-client-class "AudioAUUC")
-)
+(if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+    (allow IOKIT_OPEN_USER_CLIENT (with report) (with telemetry)
+        (iokit-user-client-class "AppleUpstreamUserClient")
+        (apply-message-filter
+            (allow (with report) (with telemetry)
+                iokit-async-external-method
+                iokit-external-method
+                iokit-external-trap)))
+    ;; else
+    (allow IOKIT_OPEN_USER_CLIENT
+        (iokit-user-client-class "AppleUpstreamUserClient")))
+
+(if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+    (allow IOKIT_OPEN_USER_CLIENT
+        (iokit-user-client-class "RootDomainUserClient")
+        (apply-message-filter
+            (allow (with report) (with telemetry)
+                iokit-async-external-method
+                iokit-external-method
+                iokit-external-trap)))
+    ;; else
+    (allow IOKIT_OPEN_USER_CLIENT
+        (iokit-user-client-class "RootDomainUserClient")))
+
+(if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+    (allow IOKIT_OPEN_USER_CLIENT (with report) (with telemetry)
+        (iokit-user-client-class "IOAudioControlUserClient")
+        (apply-message-filter
+            (allow (with report) (with telemetry)
+                iokit-async-external-method
+                iokit-external-method
+                iokit-external-trap)))
+    ;; else
+    (allow IOKIT_OPEN_USER_CLIENT
+        (iokit-user-client-class "IOAudioControlUserClient")))
+
+(if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+    (allow IOKIT_OPEN_USER_CLIENT
+        (iokit-user-client-class "IOAudioEngineUserClient")
+        (apply-message-filter
+            (allow (with report) (with telemetry)
+                iokit-async-external-method
+                iokit-external-method
+                iokit-external-trap)))
+    ;; else
+    (allow IOKIT_OPEN_USER_CLIENT
+        (iokit-user-client-class "IOAudioEngineUserClient")))
+
+;; Following is needed due to <rdar://problem/10427451> && <rdar://problem/10808817>
+(if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+    (allow IOKIT_OPEN_USER_CLIENT (with report) (with telemetry)
+        (iokit-user-client-class "AudioAUUC")
+        (apply-message-filter
+            (allow (with report) (with telemetry)
+                iokit-async-external-method
+                iokit-external-method
+                iokit-external-trap)))
+    ;; else
+    (allow IOKIT_OPEN_USER_CLIENT
+        (iokit-user-client-class "AudioAUUC")))
 
 #if HAVE(APPLE_CAMERA_USER_CLIENT)
 ;; Following is needed due to <rdar://problem/108282689>
-(allow IOKIT_OPEN_USER_CLIENT
-    (require-all
-        (extension "com.apple.webkit.extension.iokit")
-        (iokit-user-client-class "H11ANEInDirectPathClient")))
+(if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+    (allow IOKIT_OPEN_USER_CLIENT
+        (require-all
+            (extension "com.apple.webkit.extension.iokit")
+            (iokit-user-client-class "H11ANEInDirectPathClient"))
+        (apply-message-filter
+            (allow (with report) (with telemetry)
+                iokit-async-external-method
+                iokit-external-method
+                iokit-external-trap)))
+    ;; else
+    (allow IOKIT_OPEN_USER_CLIENT
+        (require-all
+            (extension "com.apple.webkit.extension.iokit")
+            (iokit-user-client-class "H11ANEInDirectPathClient"))))
 
 (allow iokit-open-service
     (require-all
         (extension "com.apple.webkit.extension.iokit")
-        (iokit-user-client-class "H11ANEIn")))
+        (iokit-user-client-class
+            "H11ANEIn"
+            "H1xANELoadBalancer")))
 #endif // HAVE(APPLE_CAMERA_USER_CLIENT)
 
 (deny IOKIT_OPEN_USER_CLIENT
@@ -1029,14 +1154,50 @@
 (allow mach-lookup
     (global-name "com.apple.relatived.tempest"))
 
-(allow IOKIT_OPEN_USER_CLIENT
-    (iokit-user-client-class "AppleAVDUserClient"))
+(if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+    (allow IOKIT_OPEN_USER_CLIENT
+        (iokit-user-client-class "AppleAVDUserClient")
+        (apply-message-filter
+            (allow iokit-external-method
+                (iokit-method-number 0 1 2 3 4))
+            (allow iokit-async-external-method
+                (iokit-method-number 8))
+            (allow (with report) (with telemetry)
+                iokit-async-external-method
+                iokit-external-method
+                iokit-external-trap)))
+    ;; else
+    (allow IOKIT_OPEN_USER_CLIENT
+        (iokit-user-client-class "AppleAVDUserClient")))
 
 (when (equal? (param "CPU") "arm64")
-    (allow IOKIT_OPEN_USER_CLIENT
-        (iokit-user-client-class "IOMobileFramebufferUserClient")
-        ;; VideoToolbox VTImageRotationSession
-        (iokit-user-client-class "IOSurfaceAcceleratorClient")))
+    (if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+        (allow IOKIT_OPEN_USER_CLIENT (with report) (with telemetry)
+            (iokit-user-client-class "IOMobileFramebufferUserClient")
+            (apply-message-filter
+                (allow (with report) (with telemetry)
+                    iokit-async-external-method
+                    iokit-external-method
+                    iokit-external-trap)))
+        ;; else
+        (allow IOKIT_OPEN_USER_CLIENT
+            (iokit-user-client-class "IOMobileFramebufferUserClient"))))
+
+;; VideoToolbox VTImageRotationSession
+(when (equal? (param "CPU") "arm64")
+    (if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+        (allow IOKIT_OPEN_USER_CLIENT
+            (iokit-user-client-class "IOSurfaceAcceleratorClient")
+            (apply-message-filter
+                (allow iokit-external-method
+                    (iokit-method-number 10))
+                (allow (with report) (with telemetry)
+                    iokit-async-external-method
+                    iokit-external-method
+                    iokit-external-trap)))
+        ;; else
+        (allow IOKIT_OPEN_USER_CLIENT
+            (iokit-user-client-class "IOSurfaceAcceleratorClient"))))
 
 #if HAVE(SANDBOX_MESSAGE_FILTERING)
 (when (and (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES") (defined? 'mach-kernel-endpoint))

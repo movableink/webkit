@@ -45,12 +45,14 @@ public:
     static Ref<InjectedBundleScriptWorld> create(const String& name, Type = Type::Internal);
     static Ref<InjectedBundleScriptWorld> getOrCreate(WebCore::DOMWrapperWorld&);
     static InjectedBundleScriptWorld* find(const String&);
-    static InjectedBundleScriptWorld& normalWorld();
+    static InjectedBundleScriptWorld& normalWorldSingleton();
 
     virtual ~InjectedBundleScriptWorld();
 
     const WebCore::DOMWrapperWorld& coreWorld() const;
     WebCore::DOMWrapperWorld& coreWorld();
+    Ref<const WebCore::DOMWrapperWorld> protectedCoreWorld() const;
+    Ref<WebCore::DOMWrapperWorld> protectedCoreWorld();
 
     void clearWrappers();
     void setAllowAutofill();
@@ -63,7 +65,7 @@ public:
 private:
     InjectedBundleScriptWorld(WebCore::DOMWrapperWorld&, const String&);
 
-    Ref<WebCore::DOMWrapperWorld> m_world;
+    const Ref<WebCore::DOMWrapperWorld> m_world;
     String m_name;
 };
 

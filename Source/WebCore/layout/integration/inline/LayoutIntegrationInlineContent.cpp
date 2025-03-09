@@ -32,13 +32,11 @@
 #include "SVGTextFragment.h"
 #include "TextPainter.h"
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 namespace LayoutIntegration {
 
-InlineContent::InlineContent(const LineLayout& lineLayout)
-    : m_lineLayout(lineLayout)
+InlineContent::InlineContent(const RenderBlockFlow& formattingContextRoot)
+    : m_formattingContextRoot(formattingContextRoot)
 {
 }
 
@@ -58,14 +56,14 @@ IteratorRange<const InlineDisplay::Box*> InlineContent::boxesForRect(const Layou
 
     // FIXME: Do the flips.
     if (formattingContextRoot().writingMode().isBlockFlipped())
-        return { &boxes.first(), &boxes.last() + 1 };
+        return { boxes.begin(), boxes.end() };
 
     if (lines.first().inkOverflow().maxY() > rect.y() && lines.last().inkOverflow().y() < rect.maxY())
-        return { &boxes.first(), &boxes.last() + 1 };
+        return { boxes.begin(), boxes.end() };
 
     // The optimization below relies on line paint bounds not exeeding those of the neighboring lines
-    if (hasMultilinePaintOverlap)
-        return { &boxes.first(), &boxes.last() + 1 };
+    if (m_hasMultilinePaintOverlap)
+        return { boxes.begin(), boxes.end() };
 
     auto height = lines.last().lineBoxBottom() - lines.first().lineBoxTop();
     auto averageLineHeight = height / lines.size();
@@ -88,14 +86,15 @@ IteratorRange<const InlineDisplay::Box*> InlineContent::boxesForRect(const Layou
     }
 
     auto firstBox = lines[startLine].firstBoxIndex();
-    auto lastBox = lines[endLine].firstBoxIndex() + lines[endLine].boxCount() - 1;
+    auto lastBox = lines[endLine].firstBoxIndex() + lines[endLine].boxCount();
 
-    return { &boxes[firstBox], &boxes[lastBox] + 1 };
+    auto boxSpan = boxes.subspan(firstBox, lastBox - firstBox);
+    return { std::to_address(boxSpan.begin()), std::to_address(boxSpan.end()) };
 }
 
 const RenderBlockFlow& InlineContent::formattingContextRoot() const
 {
-    return lineLayout().flow();
+    return m_formattingContextRoot;
 }
 
 size_t InlineContent::indexForBox(const InlineDisplay::Box& box) const
@@ -190,5 +189,3 @@ void InlineContent::shrinkToFit()
 
 }
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

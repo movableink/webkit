@@ -41,7 +41,6 @@ public:
 
     AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::ListBox; }
 
-    std::optional<AccessibilityChildrenVector> selectedChildren() final;
     AccessibilityChildrenVector visibleChildren() final;
     
     void addChildren() final;

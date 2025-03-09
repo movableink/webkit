@@ -54,9 +54,6 @@ public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
 
-    virtual bool isRemoteLayerTreeDrawingAreaProxyMac() const { return false; }
-    virtual bool isRemoteLayerTreeDrawingAreaProxyIOS() const { return false; }
-
     const RemoteLayerTreeHost& remoteLayerTreeHost() const { return *m_remoteLayerTreeHost; }
     std::unique_ptr<RemoteLayerTreeHost> detachRemoteLayerTreeHost();
 
@@ -65,7 +62,7 @@ public:
     void acceleratedAnimationDidStart(WebCore::PlatformLayerIdentifier, const String& key, MonotonicTime startTime);
     void acceleratedAnimationDidEnd(WebCore::PlatformLayerIdentifier, const String& key);
 
-    TransactionID nextMainFrameLayerTreeTransactionID() const { return m_webPageProxyProcessState.pendingLayerTreeTransactionID.next(); }
+    TransactionID nextMainFrameLayerTreeTransactionID() const { return m_webPageProxyProcessState.pendingLayerTreeTransactionID.value_or(TransactionID(TransactionIdentifier(),  m_transactionIDForPendingCACommit.processIdentifier())).next(); }
     TransactionID lastCommittedMainFrameLayerTreeTransactionID() const { return m_transactionIDForPendingCACommit; }
 
     virtual void didRefreshDisplay();
@@ -88,6 +85,10 @@ public:
     // For testing.
     unsigned countOfTransactionsWithNonEmptyLayerChanges() const { return m_countOfTransactionsWithNonEmptyLayerChanges; }
 
+#if ENABLE(TOUCH_EVENT_REGIONS)
+    WebCore::TrackingType eventTrackingTypeForPoint(WebCore::EventTrackingRegions::EventType, WebCore::IntPoint);
+#endif
+
 protected:
     RemoteLayerTreeDrawingAreaProxy(WebPageProxy&, WebProcessProxy&);
 
@@ -107,8 +108,8 @@ protected:
         ProcessState& operator=(ProcessState&&) = default;
 
         CommitLayerTreeMessageState commitLayerTreeMessageState { Idle };
-        TransactionID lastLayerTreeTransactionID;
-        TransactionID pendingLayerTreeTransactionID;
+        std::optional<TransactionID> lastLayerTreeTransactionID;
+        std::optional<TransactionID> pendingLayerTreeTransactionID;
 
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
         Seconds acceleratedTimelineTimeOrigin;
@@ -119,7 +120,7 @@ protected:
     ProcessState& processStateForConnection(IPC::Connection&);
     const ProcessState& processStateForIdentifier(WebCore::ProcessIdentifier) const;
     IPC::Connection* connectionForIdentifier(WebCore::ProcessIdentifier);
-    void forEachProcessState(Function<void(ProcessState&, WebProcessProxy&)>&&);
+    void forEachProcessState(NOESCAPE Function<void(ProcessState&, WebProcessProxy&)>&&);
 
 private:
 
@@ -135,7 +136,7 @@ private:
     virtual void scheduleDisplayRefreshCallbacks() { }
     virtual void pauseDisplayRefreshCallbacks() { }
 
-    virtual void dispatchSetTopContentInset() { }
+    virtual void dispatchSetObscuredContentInsets() { }
 
     float indicatorScale(WebCore::IntSize contentsSize) const;
     void updateDebugIndicator() final;

@@ -371,7 +371,7 @@ static std::tuple<FromBase64ShouldThrowError, size_t, size_t> fromBase64SlowImpl
                 if (lastChunkHandling == LastChunkHandling::Strict && decoded[chunkLength - 1])
                     return { FromBase64ShouldThrowError::Yes, read, write };
 
-                decoded = decoded.subspan(0, chunkLength - 1);
+                decoded = decoded.first(chunkLength - 1);
             }
 
             memcpySpan(output.subspan(write), decoded);
@@ -434,7 +434,7 @@ static std::tuple<FromBase64ShouldThrowError, size_t, size_t> fromBase64SlowImpl
         auto decoded = decodedVector->span();
 
         if (chunkLength == 2 || chunkLength == 3)
-            decoded = decoded.subspan(0, chunkLength - 1);
+            decoded = decoded.first(chunkLength - 1);
 
         memcpySpan(output.subspan(write), decoded);
         write += decoded.size();

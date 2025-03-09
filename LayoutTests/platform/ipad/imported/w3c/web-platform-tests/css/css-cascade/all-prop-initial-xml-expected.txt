@@ -8,6 +8,7 @@ PASS align-items
 PASS align-self
 PASS alignment-baseline
 PASS anchor-name
+PASS anchor-scope
 PASS animation-composition
 PASS animation-delay
 PASS animation-direction
@@ -122,6 +123,7 @@ PASS d
 PASS direction
 PASS display
 PASS dominant-baseline
+PASS dynamic-range-limit
 PASS empty-cells
 PASS field-sizing
 PASS fill
@@ -245,6 +247,8 @@ PASS outline-offset
 PASS outline-style
 PASS outline-width
 PASS overflow-anchor
+PASS overflow-block
+PASS overflow-inline
 PASS overflow-wrap
 PASS overflow-x
 PASS overflow-y
@@ -266,7 +270,9 @@ PASS perspective-origin
 PASS pointer-events
 PASS position
 PASS position-anchor
+PASS position-area
 PASS position-try-order
+PASS position-visibility
 PASS print-color-adjust
 PASS quotes
 PASS r

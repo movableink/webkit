@@ -34,24 +34,22 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CharacterProperties.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WidthIterator);
 
 using namespace WTF::Unicode;
 
-WidthIterator::WidthIterator(const FontCascade& font, const TextRun& run, SingleThreadWeakHashSet<const Font>* fallbackFonts, bool accountForGlyphBounds, bool forTextEmphasis)
-    : m_font(font)
+WidthIterator::WidthIterator(const FontCascade& fontCascade, const TextRun& run, SingleThreadWeakHashSet<const Font>* fallbackFonts, bool accountForGlyphBounds, bool forTextEmphasis)
+    : m_fontCascade(fontCascade)
     , m_run(run)
     , m_fallbackFonts(fallbackFonts)
     , m_expansion(run.expansion())
     , m_direction(m_run->direction())
     , m_isAfterExpansion(run.expansionBehavior().left == ExpansionBehavior::Behavior::Forbid)
     , m_accountForGlyphBounds(accountForGlyphBounds)
-    , m_enableKerning(font.enableKerning())
-    , m_requiresShaping(font.requiresShaping())
+    , m_enableKerning(fontCascade.enableKerning())
+    , m_requiresShaping(fontCascade.requiresShaping())
     , m_forTextEmphasis(forTextEmphasis)
 {
     // FIXME: Should we clamp m_expansion so it can never be negative?
@@ -88,17 +86,17 @@ inline auto WidthIterator::applyFontTransforms(GlyphBuffer& glyphBuffer, unsigne
     if (lastGlyphCount >= glyphBufferSize)
         return { 0, makeGlyphBufferAdvance() };
 
-    GlyphBufferAdvance* advances = glyphBuffer.advances(0);
+    auto advances = glyphBuffer.advances();
     float beforeWidth = 0;
     for (unsigned i = lastGlyphCount; i < glyphBufferSize; ++i)
         beforeWidth += width(advances[i]);
 
-    auto initialAdvance = font.applyTransforms(glyphBuffer, lastGlyphCount, m_currentCharacterIndex, m_enableKerning, m_requiresShaping, m_font->fontDescription().computedLocale(), m_run->text(), direction());
+    auto initialAdvance = font.applyTransforms(glyphBuffer, lastGlyphCount, m_currentCharacterIndex, m_enableKerning, m_requiresShaping, m_fontCascade->fontDescription().computedLocale(), m_run->text(), direction());
 
     glyphBufferSize = glyphBuffer.size();
-    advances = glyphBuffer.advances(0);
+    advances = glyphBuffer.advances();
 
-    GlyphBufferOrigin* origins = glyphBuffer.origins(0);
+    auto origins = glyphBuffer.origins();
     for (unsigned i = lastGlyphCount; i < glyphBufferSize; ++i) {
         setHeight(advances[i], -height(advances[i]));
         setY(origins[i], -y(origins[i]));
@@ -112,7 +110,7 @@ inline auto WidthIterator::applyFontTransforms(GlyphBuffer& glyphBuffer, unsigne
         if (iterator == charactersTreatedAsSpace.end() || iterator->stringOffset != characterIndex)
             continue;
         const auto& originalAdvances = *iterator;
-        setWidth(*glyphBuffer.advances(i), originalAdvances.advance);
+        setWidth(glyphBuffer.advanceAt(i), originalAdvances.advance);
     }
     charactersTreatedAsSpace.clear();
 
@@ -168,7 +166,7 @@ void WidthIterator::applyInitialAdvance(GlyphBuffer& glyphBuffer, GlyphBufferAdv
     ASSERT(lastGlyphCount || (!width(m_leftoverInitialAdvance) && !height(m_leftoverInitialAdvance)));
 
     if (rtl() && lastGlyphCount) {
-        auto& visuallyLastAdvance = *glyphBuffer.advances(lastGlyphCount);
+        auto& visuallyLastAdvance = glyphBuffer.advanceAt(lastGlyphCount);
         expandWithInitialAdvance(visuallyLastAdvance, m_leftoverInitialAdvance);
         m_runWidthSoFar += width(m_leftoverInitialAdvance);
         m_leftoverInitialAdvance = makeGlyphBufferAdvance();
@@ -178,7 +176,7 @@ void WidthIterator::applyInitialAdvance(GlyphBuffer& glyphBuffer, GlyphBufferAdv
         m_leftoverInitialAdvance = initialAdvance;
     else {
         if (lastGlyphCount) {
-            auto& visuallyPreviousAdvance = *glyphBuffer.advances(lastGlyphCount - 1);
+            auto& visuallyPreviousAdvance = glyphBuffer.advanceAt(lastGlyphCount - 1);
             expandWithInitialAdvance(visuallyPreviousAdvance, initialAdvance);
             m_runWidthSoFar += width(initialAdvance);
         } else
@@ -188,7 +186,7 @@ void WidthIterator::applyInitialAdvance(GlyphBuffer& glyphBuffer, GlyphBufferAdv
 
 bool WidthIterator::hasExtraSpacing() const
 {
-    return (m_font->letterSpacing() || m_font->wordSpacing() || m_expansion || !m_font->textAutospace().isNoAutospace()) && !m_run->spacingDisabled();
+    return (m_fontCascade->letterSpacing() || m_fontCascade->wordSpacing() || m_expansion || !m_fontCascade->textAutospace().isNoAutospace()) && !m_run->spacingDisabled();
 }
 
 static void resetGlyphBuffer(GlyphBuffer& glyphBuffer, GlyphBufferStringOffset index)
@@ -379,8 +377,8 @@ inline void WidthIterator::advanceInternal(TextIterator& textIterator, GlyphBuff
 {
     // The core logic here needs to match FontCascade::widthForTextUsingSimplifiedMeasuring()
     FloatRect bounds;
-    auto fontDescription = m_font->fontDescription();
-    Ref primaryFont = m_font->primaryFont();
+    auto fontDescription = m_fontCascade->fontDescription();
+    Ref primaryFont = m_fontCascade->primaryFont();
     AdvanceInternalState advanceInternalState(glyphBuffer, primaryFont, textIterator.currentIndex());
     SmallCapsState smallCapsState(fontDescription);
 
@@ -391,7 +389,7 @@ inline void WidthIterator::advanceInternal(TextIterator& textIterator, GlyphBuff
     if (!textIterator.consume(character, clusterLength))
         return;
 
-    auto glyphData = m_font->glyphDataForCharacter(character, false, FontVariant::NormalVariant);
+    auto glyphData = m_fontCascade->glyphDataForCharacter(character, false, FontVariant::NormalVariant);
 
     RefPtr<Font> halfWidthFont;
     auto shouldProcessTextSpacingTrim = !fontDescription.textSpacingTrim().isSpaceAll();
@@ -429,7 +427,7 @@ inline void WidthIterator::advanceInternal(TextIterator& textIterator, GlyphBuff
             continue;
         }
 #endif
-        auto glyphData = m_font->glyphDataForCharacter(character, false, FontVariant::NormalVariant);
+        auto glyphData = m_fontCascade->glyphDataForCharacter(character, false, FontVariant::NormalVariant);
 
         if (shouldProcessTextSpacingTrim) {
             TextSpacing::CharactersData charactersData = { .currentCharacter = character, .currentCharacterClass = TextSpacing::characterClass(character) };
@@ -509,7 +507,7 @@ auto WidthIterator::calculateAdditionalWidth(GlyphBuffer& glyphBuffer, GlyphBuff
     if (character == tabCharacter && m_run->allowTabs()) {
         auto& font = glyphBuffer.fontAt(trailingGlyphIndex);
         // Synthetic bold will be handled in applyCSSVisibilityRules() later.
-        auto newWidth = m_font->tabWidth(font, m_run->tabSize(), position, Font::SyntheticBoldInclusion::Exclude);
+        auto newWidth = m_fontCascade->tabWidth(font, m_run->tabSize(), position, Font::SyntheticBoldInclusion::Exclude);
         auto currentWidth = width(glyphBuffer.advanceAt(trailingGlyphIndex));
         rightAdditionalWidth += newWidth - currentWidth;
     }
@@ -522,10 +520,10 @@ auto WidthIterator::calculateAdditionalWidth(GlyphBuffer& glyphBuffer, GlyphBuff
         for (unsigned i = leadingGlyphIndex; i <= trailingGlyphIndex; ++i)
             baseWidth += width(glyphBuffer.advanceAt(i));
         if (baseWidth)
-            rightAdditionalWidth += m_font->letterSpacing();
+            rightAdditionalWidth += m_fontCascade->letterSpacing();
 
-        if (treatAsSpace && (character != tabCharacter || !m_run->allowTabs()) && (currentCharacterIndex || character == noBreakSpace) && m_font->wordSpacing())
-            rightAdditionalWidth += m_font->wordSpacing();
+        if (treatAsSpace && (character != tabCharacter || !m_run->allowTabs()) && (currentCharacterIndex || character == noBreakSpace) && m_fontCascade->wordSpacing())
+            rightAdditionalWidth += m_fontCascade->wordSpacing();
 
         if (m_expansion > 0) {
             bool currentIsLastCharacter = m_lastCharacterIndex && currentCharacterIndex == static_cast<GlyphBufferStringOffset>(*m_lastCharacterIndex);
@@ -633,7 +631,7 @@ void WidthIterator::applyExtraSpacingAfterShaping(GlyphBuffer& glyphBuffer, unsi
 
     auto previousCharacterClass = m_run->textSpacingState().lastCharacterClassFromPreviousRun;
     float position = m_run->xPos() + startingRunWidth;
-    const auto& textAutospace = m_font->textAutospace();
+    const auto& textAutospace = m_fontCascade->textAutospace();
     for (auto i = characterStartIndex; i < characterDestinationIndex; ++i) {
         auto& glyphIndexRange = characterIndexToGlyphIndexRange[i];
         if (!glyphIndexRange)
@@ -875,5 +873,3 @@ bool WidthIterator::advanceOneCharacter(float& width, GlyphBuffer& glyphBuffer)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -81,6 +81,11 @@ void BackgroundFetchStoreImpl::initializeFetches(const ServiceWorkerRegistration
     initializeFetches({ key.topOrigin(), SecurityOriginData::fromURL(key.scope()) }, WTFMove(callback));
 }
 
+RefPtr<WebCore::SWServer> BackgroundFetchStoreImpl::protectedServer()
+{
+    return m_server.get();
+}
+
 void BackgroundFetchStoreImpl::initializeFetches(const WebCore::ClientOrigin& origin, CompletionHandler<void()>&& callback)
 {
     if (!m_manager) {
@@ -96,10 +101,10 @@ void BackgroundFetchStoreImpl::initializeFetches(const WebCore::ClientOrigin& or
 
     addResult.iterator->value.initializationCallbacks.append(WTFMove(callback));
 
-    initializeFetchesInternal(origin, [origin, weakEngine = WeakPtr { m_server->backgroundFetchEngine() }, protectedThis = Ref { *this }, manager = m_manager](Vector<std::pair<RefPtr<WebCore::SharedBuffer>, String>>&& fetches) {
+    initializeFetchesInternal(origin, [origin, weakEngine = WeakPtr { protectedServer()->backgroundFetchEngine() }, protectedThis = Ref { *this }, manager = m_manager](Vector<std::pair<RefPtr<WebCore::SharedBuffer>, String>>&& fetches) {
         if (weakEngine && manager) {
             for (auto& fetch : fetches) {
-                weakEngine->addFetchFromStore(fetch.first->span(), [&](auto& key, auto& identifier) {
+                weakEngine->addFetchFromStore(Ref { *fetch.first }->span(), [&](auto& key, auto& identifier) {
                     if (identifier.isEmpty()) {
                         manager->dispatchTaskToBackgroundFetchManager(origin, [identifier = crossThreadCopy(WTFMove(fetch.second))](auto* backgroundFetchManager) {
                             if (backgroundFetchManager)
@@ -367,12 +372,13 @@ void BackgroundFetchStoreImpl::fetchInformationFromFilename(const String& filena
 
 void BackgroundFetchStoreImpl::loadAllFetches(CompletionHandler<void()>&& callback)
 {
-    if (!m_server) {
+    RefPtr server = m_server.get();
+    if (!server) {
         callback();
         return;
     }
 
-    m_server->getAllOrigins([protectedThis = Ref { *this }, callback = WTFMove(callback)](auto&& origins) mutable {
+    server->getAllOrigins([protectedThis = Ref { *this }, callback = WTFMove(callback)](auto&& origins) mutable {
         auto callbackAggregator = MainRunLoopCallbackAggregator::create(WTFMove(callback));
         for (auto& origin : origins)
             protectedThis->initializeFetches(origin, [callbackAggregator] { });
@@ -388,7 +394,7 @@ void BackgroundFetchStoreImpl::getAllBackgroundFetchIdentifiers(CompletionHandle
 
 void BackgroundFetchStoreImpl::getBackgroundFetchState(const String& backgroundFetchIdentifier, CompletionHandler<void(std::optional<BackgroundFetchState>&&)>&& callback)
 {
-    fetchInformationFromFilename(backgroundFetchIdentifier, [engine = WeakPtr { m_server->backgroundFetchEngine() }, callback = WTFMove(callback)](auto key, auto identifier) mutable {
+    fetchInformationFromFilename(backgroundFetchIdentifier, [engine = WeakPtr { protectedServer()->backgroundFetchEngine() }, callback = WTFMove(callback)](auto key, auto identifier) mutable {
         WeakPtr<BackgroundFetch> fetch = engine ? engine->backgroundFetch(key, identifier) : nullptr;
         if (!fetch) {
             callback({ });
@@ -401,7 +407,7 @@ void BackgroundFetchStoreImpl::getBackgroundFetchState(const String& backgroundF
 
 void BackgroundFetchStoreImpl::abortBackgroundFetch(const String& filename, CompletionHandler<void()>&& callback)
 {
-    fetchInformationFromFilename(filename, [engine = WeakPtr { m_server->backgroundFetchEngine() }, callback = WTFMove(callback)](auto key, auto identifier) mutable {
+    fetchInformationFromFilename(filename, [engine = WeakPtr { protectedServer()->backgroundFetchEngine() }, callback = WTFMove(callback)](auto key, auto identifier) mutable {
         if (engine && !identifier.isNull())
             engine->abortBackgroundFetch(key, identifier);
         callback();
@@ -410,7 +416,7 @@ void BackgroundFetchStoreImpl::abortBackgroundFetch(const String& filename, Comp
 
 void BackgroundFetchStoreImpl::pauseBackgroundFetch(const String& filename, CompletionHandler<void()>&& callback)
 {
-    fetchInformationFromFilename(filename, [engine = WeakPtr { m_server->backgroundFetchEngine() }, callback = WTFMove(callback)](auto key, auto identifier) mutable {
+    fetchInformationFromFilename(filename, [engine = WeakPtr { protectedServer()->backgroundFetchEngine() }, callback = WTFMove(callback)](auto key, auto identifier) mutable {
         if (engine && !identifier.isNull())
             engine->pauseBackgroundFetch(key, identifier);
         callback();
@@ -419,7 +425,7 @@ void BackgroundFetchStoreImpl::pauseBackgroundFetch(const String& filename, Comp
 
 void BackgroundFetchStoreImpl::resumeBackgroundFetch(const String& filename, CompletionHandler<void()>&& callback)
 {
-    fetchInformationFromFilename(filename, [engine = WeakPtr { m_server->backgroundFetchEngine() }, callback = WTFMove(callback)](auto key, auto identifier) mutable {
+    fetchInformationFromFilename(filename, [engine = WeakPtr { protectedServer()->backgroundFetchEngine() }, callback = WTFMove(callback)](auto key, auto identifier) mutable {
         if (engine && !identifier.isNull())
             engine->resumeBackgroundFetch(key, identifier);
         callback();
@@ -428,7 +434,7 @@ void BackgroundFetchStoreImpl::resumeBackgroundFetch(const String& filename, Com
 
 void BackgroundFetchStoreImpl::clickBackgroundFetch(const String& filename, CompletionHandler<void()>&& callback)
 {
-    fetchInformationFromFilename(filename, [engine = WeakPtr { m_server->backgroundFetchEngine() }, callback = WTFMove(callback)](auto key, auto identifier) mutable {
+    fetchInformationFromFilename(filename, [engine = WeakPtr { protectedServer()->backgroundFetchEngine() }, callback = WTFMove(callback)](auto key, auto identifier) mutable {
         if (engine && !identifier.isNull())
             engine->clickBackgroundFetch(key, identifier);
         callback();

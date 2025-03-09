@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "Identifier.h"
 #include "JSCJSValue.h"
 #include <array>
+#include <wtf/Range.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
@@ -39,6 +40,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 namespace JSC {
 
 enum ParserMode : uint8_t { StrictJSON, SloppyJSON, JSONP };
+enum class JSONReviverMode : uint8_t { Disabled, Enabled };
 
 enum JSONPPathEntryType : uint8_t {
     JSONPPathEntryTypeDeclareVar, // var pathEntryName = JSON
@@ -72,6 +74,38 @@ struct JSONPData {
     Strong<Unknown> m_value;
 };
 
+class JSONRanges {
+public:
+    struct Entry;
+    using Object = UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, Entry, IdentifierRepHash>;
+    using Array = Vector<Entry>;
+    struct Entry {
+        JSValue value;
+        WTF::Range<unsigned> range;
+        std::variant<std::monostate, Object, Array> properties;
+    };
+
+    JSONRanges() = default;
+
+    const Entry& root() const { return m_root; }
+
+    JSValue record(JSValue value)
+    {
+        m_values.appendWithCrashOnOverflow(value);
+        return value;
+    }
+
+    void setRoot(Entry root)
+    {
+        m_root = WTFMove(root);
+    }
+
+private:
+    Entry m_root { };
+    MarkedArgumentBuffer m_values;
+};
+
+
 template<typename CharacterType> struct LiteralParserToken {
     WTF_MAKE_NONCOPYABLE(LiteralParserToken);
 
@@ -95,7 +129,7 @@ template<typename CharacterType> struct LiteralParserToken {
 template <typename CharType>
 ALWAYS_INLINE void setParserTokenString(LiteralParserToken<CharType>&, const CharType* string);
 
-template <typename CharType>
+template <typename CharType, JSONReviverMode reviverMode>
 class LiteralParser {
 public:
     LiteralParser(JSGlobalObject* globalObject, std::span<const CharType> characters, ParserMode mode, CodeBlock* nullOrCodeBlock = nullptr)
@@ -116,23 +150,59 @@ public:
     }
     
     JSValue tryLiteralParse()
+        requires (reviverMode == JSONReviverMode::Disabled)
     {
+        ASSERT(m_mode == StrictJSON);
         m_lexer.next();
-        JSValue result;
         VM& vm = getVM(m_globalObject);
-        if (m_mode == StrictJSON)
-            result = parseRecursivelyEntry(vm);
-        else {
-            result = parse(vm, StartParseStatement);
-            if (m_lexer.currentToken()->type == TokSemi)
-                m_lexer.next();
-        }
+        JSValue result = parseRecursivelyEntry(vm);
         if (m_lexer.currentToken()->type != TokEnd)
             return JSValue();
         return result;
     }
-    
-    bool tryJSONPParse(Vector<JSONPData>&, bool needsFullSourceInfo);
+
+    JSValue tryLiteralParse(JSONRanges* sourceRanges)
+        requires (reviverMode == JSONReviverMode::Enabled)
+    {
+        ASSERT(m_mode == StrictJSON);
+        m_lexer.next();
+        JSValue result = parse(getVM(m_globalObject), StartParseExpression, sourceRanges);
+        if (m_lexer.currentToken()->type != TokEnd)
+            return JSValue();
+        return result;
+    }
+
+    JSValue tryEval()
+        requires (reviverMode == JSONReviverMode::Disabled)
+    {
+        ASSERT(m_mode == SloppyJSON);
+        m_lexer.next();
+        VM& vm = getVM(m_globalObject);
+        JSValue result = evalRecursivelyEntry(vm);
+        if (m_lexer.currentToken()->type == TokSemi)
+            m_lexer.next();
+        if (m_lexer.currentToken()->type != TokEnd)
+            return JSValue();
+        return result;
+    }
+
+    JSValue tryLiteralParsePrimitiveValue()
+        requires (reviverMode == JSONReviverMode::Disabled)
+    {
+        ASSERT(m_mode == StrictJSON);
+        m_lexer.next();
+        JSValue result = parsePrimitiveValue(getVM(m_globalObject));
+        if (result) {
+            if (m_lexer.currentToken()->type != TokEnd) {
+                m_parseErrorMessage = "Unexpected content at end of JSON literal"_s;
+                return JSValue();
+            }
+        }
+        return result;
+    }
+
+    bool tryJSONPParse(Vector<JSONPData>&, bool needsFullSourceInfo)
+        requires (reviverMode == JSONReviverMode::Disabled);
 
 private:
     class Lexer {
@@ -141,6 +211,7 @@ private:
             : m_mode(mode)
             , m_ptr(characters.data())
             , m_end(characters.data() + characters.size())
+            , m_start(characters.data())
         {
         }
         
@@ -183,6 +254,11 @@ private:
 #endif // ASSERT_ENABLED
         
         String getErrorMessage() { return m_lexErrorMessage; }
+
+        const CharType* ptr() const { return m_ptr; }
+        const CharType* start() const { return m_start; }
+        inline const CharType* currentTokenStart() const;
+        inline const CharType* currentTokenEnd() const;
         
     private:
         template<JSONIdentifierHint>
@@ -199,15 +275,19 @@ private:
         const CharType* m_ptr;
         const CharType* m_end;
         StringBuilder m_builder;
+        const CharType* m_start;
+        const CharType* m_currentTokenStart { nullptr };
+        const CharType* m_currentTokenEnd { nullptr };
 #if ASSERT_ENABLED
         unsigned m_currentTokenID { 0 };
 #endif
     };
     
     class StackGuard;
-    JSValue parseRecursivelyEntry(VM&);
-    JSValue parseRecursively(VM&, uint8_t* stackLimit);
-    JSValue parse(VM&, ParserState);
+    JSValue parseRecursivelyEntry(VM&) requires (reviverMode == JSONReviverMode::Disabled);
+    JSValue evalRecursivelyEntry(VM&) requires (reviverMode == JSONReviverMode::Disabled);
+    template<ParserMode> JSValue parseRecursively(VM&, uint8_t* stackLimit) requires (reviverMode == JSONReviverMode::Disabled);
+    JSValue parse(VM&, ParserState, JSONRanges*);
 
     JSValue parsePrimitiveValue(VM&);
 
@@ -218,13 +298,14 @@ private:
 
     JSGlobalObject* const m_globalObject;
     CodeBlock* const m_nullOrCodeBlock;
-    typename LiteralParser<CharType>::Lexer m_lexer;
+    Lexer m_lexer;
     const ParserMode m_mode;
     String m_parseErrorMessage;
-    HashSet<JSObject*> m_visitedUnderscoreProto;
+    UncheckedKeyHashSet<JSObject*> m_visitedUnderscoreProto;
     MarkedArgumentBuffer m_objectStack;
     Vector<ParserState, 16, UnsafeVectorOverflow> m_stateStack;
     Vector<Identifier, 16, UnsafeVectorOverflow> m_identifierStack;
+    Vector<JSONRanges::Entry, 8> m_rangesStack;
 };
 
 } // namespace JSC

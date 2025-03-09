@@ -732,6 +732,115 @@ TEST(WKNavigation, WillGoToBackForwardListItem)
     TestWebKitAPI::Util::run(&isDone);
 }
 
+static bool didRejectNavigation = false;
+
+@interface BackForwardDelegateWithShouldGo : NSObject<WKNavigationDelegatePrivate>
+@property (nonatomic, readwrite) BOOL allowNavigation;
+@property (nonatomic, retain) WKBackForwardListItem *targetItem;
+@end
+@implementation BackForwardDelegateWithShouldGo
+- (void)_webView:(WKWebView *)webView willGoToBackForwardListItem:(WKBackForwardListItem *)item inPageCache:(BOOL)inPageCache
+{
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+- (void)webView:(WKWebView *)webView shouldGoToBackForwardListItem:(WKBackForwardListItem *)item willUseInstantBack:(BOOL)willUseInstantBack completionHandler:(void (^)(BOOL shouldGoToItem))completionHandler
+{
+    EXPECT_EQ(item, _targetItem);
+    EXPECT_TRUE(item.title == nil);
+    EXPECT_TRUE(willUseInstantBack);
+
+    completionHandler(_allowNavigation);
+    if (!_allowNavigation)
+        didRejectNavigation = true;
+}
+
+- (void)_webView:(WKWebView *)webView shouldGoToBackForwardListItem:(WKBackForwardListItem *)item inPageCache:(BOOL)inPageCache completionHandler:(void (^)(BOOL shouldGoToItem))completionHandler
+{
+    // When the API selector exists, it should be preferred over the SPI selector
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation
+{
+    navigationComplete = true;
+}
+@end
+
+@interface BackForwardDelegateWithShouldGoSPI : NSObject<WKNavigationDelegatePrivate>
+@property (nonatomic, readwrite) BOOL allowNavigation;
+@property (nonatomic, retain) WKBackForwardListItem *targetItem;
+@end
+@implementation BackForwardDelegateWithShouldGoSPI
+- (void)_webView:(WKWebView *)webView willGoToBackForwardListItem:(WKBackForwardListItem *)item inPageCache:(BOOL)inPageCache
+{
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+- (void)_webView:(WKWebView *)webView shouldGoToBackForwardListItem:(WKBackForwardListItem *)item inPageCache:(BOOL)inPageCache completionHandler:(void (^)(BOOL shouldGoToItem))completionHandler
+{
+    EXPECT_EQ(item, _targetItem);
+    EXPECT_TRUE(item.title == nil);
+    EXPECT_TRUE(inPageCache);
+
+    completionHandler(_allowNavigation);
+    if (!_allowNavigation)
+        didRejectNavigation = true;
+}
+
+- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation
+{
+    navigationComplete = true;
+}
+@end
+
+TEST(WKNavigation, ShouldGoToBackForwardListItem)
+{
+    auto webView = adoptNS([[WKWebView alloc] init]);
+    auto delegate = adoptNS([[BackForwardDelegateWithShouldGo alloc] init]);
+    [webView setNavigationDelegate:delegate.get()];
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"simple" withExtension:@"html"]]];
+    TestWebKitAPI::Util::run(&navigationComplete);
+    navigationComplete = false;
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"simple2" withExtension:@"html"]]];
+    TestWebKitAPI::Util::run(&navigationComplete);
+    navigationComplete = false;
+    delegate.get().targetItem = webView.get().backForwardList.backItem;
+    delegate.get().allowNavigation = YES;
+    [webView goBack];
+    TestWebKitAPI::Util::run(&navigationComplete);
+
+    EXPECT_FALSE(didRejectNavigation);
+
+    delegate.get().targetItem = webView.get().backForwardList.forwardItem;
+    delegate.get().allowNavigation = NO;
+    [webView goForward];
+    TestWebKitAPI::Util::run(&didRejectNavigation);
+
+    navigationComplete = false;
+    delegate.get().allowNavigation = YES;
+    [webView goForward];
+    TestWebKitAPI::Util::run(&navigationComplete);
+
+    navigationComplete = false;
+    didRejectNavigation = false;
+
+    auto delegate2 = adoptNS([[BackForwardDelegateWithShouldGoSPI alloc] init]);
+    [webView setNavigationDelegate:delegate2.get()];
+    delegate2.get().targetItem = webView.get().backForwardList.backItem;
+    delegate2.get().allowNavigation = YES;
+
+    [webView goBack];
+    TestWebKitAPI::Util::run(&navigationComplete);
+
+    EXPECT_FALSE(didRejectNavigation);
+
+    delegate2.get().targetItem = webView.get().backForwardList.forwardItem;
+    delegate2.get().allowNavigation = NO;
+    [webView goForward];
+    TestWebKitAPI::Util::run(&didRejectNavigation);
+}
+
 #if PLATFORM(MAC)
 
 RetainPtr<WKBackForwardListItem> firstItem;

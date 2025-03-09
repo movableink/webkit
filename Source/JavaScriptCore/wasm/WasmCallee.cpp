@@ -29,6 +29,7 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "InPlaceInterpreter.h"
+#include "JSCJSValueInlines.h"
 #include "JSToWasm.h"
 #include "LLIntData.h"
 #include "LLIntExceptions.h"
@@ -205,6 +206,14 @@ void JSToWasmICCallee::setEntrypoint(MacroAssemblerCodeRef<JSEntryPtrTag>&& entr
 
 WasmToJSCallee::WasmToJSCallee()
     : Callee(Wasm::CompilationMode::WasmToJSMode)
+    , m_boxedThis(CalleeBits::encodeNativeCallee(this))
+{
+    NativeCalleeRegistry::singleton().registerCallee(this);
+}
+
+WasmToJSCallee::WasmToJSCallee(FunctionSpaceIndex index, std::pair<const Name*, RefPtr<NameSection>>&& name)
+    : Callee(Wasm::CompilationMode::WasmToJSMode, index, WTFMove(name))
+    , m_boxedThis(CalleeBits::encodeNativeCallee(this))
 {
     NativeCalleeRegistry::singleton().registerCallee(this);
 }
@@ -244,7 +253,28 @@ IPIntCallee::IPIntCallee(FunctionIPIntMetadataGenerator& generator, FunctionSpac
         for (size_t i = 0; i < count; i++) {
             const UnlinkedHandlerInfo& unlinkedHandler = generator.m_exceptionHandlers[i];
             HandlerInfo& handler = m_exceptionHandlers[i];
-            void* ptr = reinterpret_cast<void*>(unlinkedHandler.m_type == HandlerType::Catch ? ipint_catch_entry : ipint_catch_all_entry);
+            void* ptr = nullptr;
+            switch (unlinkedHandler.m_type) {
+            case HandlerType::Catch:
+                ptr = reinterpret_cast<void*>(ipint_catch_entry);
+                break;
+            case HandlerType::CatchAll:
+            case HandlerType::Delegate:
+                ptr = reinterpret_cast<void*>(ipint_catch_all_entry);
+                break;
+            case HandlerType::TryTableCatch:
+                ptr = reinterpret_cast<void*>(ipint_table_catch_entry);
+                break;
+            case HandlerType::TryTableCatchRef:
+                ptr = reinterpret_cast<void*>(ipint_table_catch_ref_entry);
+                break;
+            case HandlerType::TryTableCatchAll:
+                ptr = reinterpret_cast<void*>(ipint_table_catch_all_entry);
+                break;
+            case HandlerType::TryTableCatchAllRef:
+                ptr = reinterpret_cast<void*>(ipint_table_catch_allref_entry);
+                break;
+            }
             void* untagged = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).untaggedPtr();
             void* retagged = nullptr;
 #if ENABLE(JIT_CAGE)
@@ -425,6 +455,19 @@ IndexOrName OptimizingJITCallee::getOrigin(unsigned csi, unsigned depth, bool& i
     return indexOrName();
 }
 
+std::optional<CallSiteIndex> OptimizingJITCallee::tryGetCallSiteIndex(const void* pc) const
+{
+    constexpr bool verbose = false;
+    if (m_callSiteIndexMap) {
+        dataLogLnIf(verbose, "Querying ", RawPointer(pc));
+        if (std::optional<CodeOrigin> codeOrigin = m_callSiteIndexMap->findPC(removeCodePtrTag<void*>(pc))) {
+            dataLogLnIf(verbose, "Found ", *codeOrigin);
+            return CallSiteIndex { codeOrigin->bytecodeIndex().offset() };
+        }
+    }
+    return std::nullopt;
+}
+
 const StackMap& OptimizingJITCallee::stackmap(CallSiteIndex callSiteIndex) const
 {
     auto iter = m_stackmaps.find(callSiteIndex);
@@ -439,6 +482,40 @@ const StackMap& OptimizingJITCallee::stackmap(CallSiteIndex callSiteIndex) const
     RELEASE_ASSERT(iter != m_stackmaps.end());
     return iter->value;
 }
+
+Box<PCToCodeOriginMap> OptimizingJITCallee::materializePCToOriginMap(B3::PCToOriginMap&& originMap, LinkBuffer& linkBuffer)
+{
+    constexpr bool shouldBuildMapping = true;
+    PCToCodeOriginMapBuilder builder(shouldBuildMapping);
+    for (const B3::PCToOriginMap::OriginRange& originRange : originMap.ranges()) {
+        B3::Origin b3Origin = originRange.origin;
+        auto* origin = std::bit_cast<const OMGOrigin*>(b3Origin.data());
+        if (origin) {
+            // We stash the location into a BytecodeIndex.
+            builder.appendItem(originRange.label, CodeOrigin(BytecodeIndex(origin->m_callSiteIndex.bits())));
+        } else
+            builder.appendItem(originRange.label, PCToCodeOriginMapBuilder::defaultCodeOrigin());
+    }
+    auto map = Box<PCToCodeOriginMap>::create(WTFMove(builder), linkBuffer);
+    WTF::storeStoreFence();
+    m_callSiteIndexMap = WTFMove(map);
+
+    if (Options::useSamplingProfiler()) {
+        PCToCodeOriginMapBuilder samplingProfilerBuilder(shouldBuildMapping);
+        for (const B3::PCToOriginMap::OriginRange& originRange : originMap.ranges()) {
+            B3::Origin b3Origin = originRange.origin;
+            auto* origin = std::bit_cast<const OMGOrigin*>(b3Origin.data());
+            if (origin) {
+                // We stash the location into a BytecodeIndex.
+                samplingProfilerBuilder.appendItem(originRange.label, CodeOrigin(BytecodeIndex(origin->m_opcodeOrigin.location())));
+            } else
+                samplingProfilerBuilder.appendItem(originRange.label, PCToCodeOriginMapBuilder::defaultCodeOrigin());
+        }
+        return Box<PCToCodeOriginMap>::create(WTFMove(samplingProfilerBuilder), linkBuffer);
+    }
+    return nullptr;
+}
+
 #endif
 
 JSEntrypointCallee::JSEntrypointCallee(TypeIndex typeIndex, bool usesSIMD)
@@ -461,7 +538,10 @@ JSEntrypointCallee::JSEntrypointCallee(TypeIndex typeIndex, bool usesSIMD)
     if (false) {
 #endif
         if (Options::useWasmIPInt())
-            m_wasmFunctionPrologue = LLInt::inPlaceInterpreterEntryThunk().code().retagged<WasmEntryPtrTag>();
+            if (usesSIMD)
+                m_wasmFunctionPrologue = LLInt::inPlaceInterpreterSIMDEntryThunk().code().retagged<WasmEntryPtrTag>();
+            else
+                m_wasmFunctionPrologue = LLInt::inPlaceInterpreterEntryThunk().code().retagged<WasmEntryPtrTag>();
         else {
             if (usesSIMD)
                 m_wasmFunctionPrologue = LLInt::wasmFunctionEntryThunkSIMD().code().retagged<WasmEntryPtrTag>();

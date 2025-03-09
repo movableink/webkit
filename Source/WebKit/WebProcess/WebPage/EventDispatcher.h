@@ -68,6 +68,14 @@ class WebPage;
 class WebProcess;
 class WebWheelEvent;
 
+#if ENABLE(IOS_TOUCH_EVENTS)
+struct TouchEventData {
+    WebCore::FrameIdentifier frameID;
+    WebTouchEvent event;
+    CompletionHandler<void(bool, std::optional<WebCore::RemoteUserInputEventData>)> completionHandler;
+};
+#endif
+
 class EventDispatcher final :
 #if ENABLE(MOMENTUM_EVENT_DISPATCHER)
     public MomentumEventDispatcher::Client,
@@ -94,11 +102,6 @@ public:
 #endif
 
 #if ENABLE(IOS_TOUCH_EVENTS)
-    struct TouchEventData {
-        WebCore::FrameIdentifier frameID;
-        WebTouchEvent event;
-        CompletionHandler<void(bool, std::optional<WebCore::RemoteUserInputEventData>)> completionHandler;
-    };
     using TouchEventQueue = Vector<TouchEventData, 1>;
     void takeQueuedTouchEventsForPage(const WebPage&, UniqueRef<TouchEventQueue>&);
 #endif
@@ -112,7 +115,7 @@ private:
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
 
     // Message handlers
-    void wheelEvent(WebCore::PageIdentifier, const WebWheelEvent&, WebCore::RectEdges<bool> rubberBandableEdges);
+    void wheelEvent(WebCore::PageIdentifier, const WebWheelEvent&, WebCore::RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges);
 #if ENABLE(MOMENTUM_EVENT_DISPATCHER)
     void setScrollingAccelerationCurve(WebCore::PageIdentifier, std::optional<ScrollingAccelerationCurve>);
 #endif
@@ -120,20 +123,20 @@ private:
     void touchEvent(WebCore::PageIdentifier, WebCore::FrameIdentifier, const WebTouchEvent&, CompletionHandler<void(bool, std::optional<WebCore::RemoteUserInputEventData>)>&&);
 #endif
 #if ENABLE(MAC_GESTURE_EVENTS) || ENABLE(QT_GESTURE_EVENTS)
-    void gestureEvent(WebCore::FrameIdentifier, WebCore::PageIdentifier, const WebGestureEvent&);
+    void gestureEvent(WebCore::FrameIdentifier, WebCore::PageIdentifier, const WebGestureEvent&, CompletionHandler<void(std::optional<WebEventType>, bool, std::optional<WebCore::RemoteUserInputEventData>)>&&);
 #endif
 
     // This is called on the main thread.
     void dispatchWheelEvent(WebCore::PageIdentifier, const WebWheelEvent&, OptionSet<WebCore::WheelEventProcessingSteps>, WheelEventOrigin);
     void dispatchWheelEventViaMainThread(WebCore::PageIdentifier, const WebWheelEvent&, OptionSet<WebCore::WheelEventProcessingSteps>, WheelEventOrigin);
 
-    void internalWheelEvent(WebCore::PageIdentifier, const WebWheelEvent&, WebCore::RectEdges<bool> rubberBandableEdges, WheelEventOrigin);
+    void internalWheelEvent(WebCore::PageIdentifier, const WebWheelEvent&, WebCore::RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges, WheelEventOrigin);
 
 #if ENABLE(IOS_TOUCH_EVENTS)
     void dispatchTouchEvents();
 #endif
 #if ENABLE(MAC_GESTURE_EVENTS) || ENABLE(QT_GESTURE_EVENTS)
-    void dispatchGestureEvent(WebCore::FrameIdentifier, WebCore::PageIdentifier, const WebGestureEvent&);
+    void dispatchGestureEvent(WebCore::FrameIdentifier, WebCore::PageIdentifier, const WebGestureEvent&, CompletionHandler<void(std::optional<WebEventType>, bool, std::optional<WebCore::RemoteUserInputEventData>)>&&);
 #endif
 
     static void sendDidReceiveEvent(WebCore::PageIdentifier, WebEventType, bool didHandleEvent);
@@ -148,7 +151,7 @@ private:
 
 #if ENABLE(MOMENTUM_EVENT_DISPATCHER)
     // EventDispatcher::Client
-    void handleSyntheticWheelEvent(WebCore::PageIdentifier, const WebWheelEvent&, WebCore::RectEdges<bool> rubberBandableEdges) override;
+    void handleSyntheticWheelEvent(WebCore::PageIdentifier, const WebWheelEvent&, WebCore::RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges) override;
     void startDisplayDidRefreshCallbacks(WebCore::PlatformDisplayID) override;
     void stopDisplayDidRefreshCallbacks(WebCore::PlatformDisplayID) override;
 

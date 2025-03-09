@@ -61,6 +61,7 @@
 #import <wtf/BlockPtr.h>
 #import <wtf/CheckedPtr.h>
 #import <wtf/NeverDestroyed.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/WeakObjCPtr.h>
 #import <wtf/cf/CFURLExtras.h>
 #import <wtf/cocoa/SpanCocoa.h>
@@ -115,8 +116,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if ([NSThread isMainThread])
         WebKit::WebProcessPool::registerGlobalURLSchemeAsHavingCustomProtocolHandlers(scheme);
     else {
-        // This cannot be RunLoop::main().dispatch because it is called before the main runloop is initialized.  See rdar://problem/73615999
-        WorkQueue::main().dispatch([scheme = retainPtr(scheme)] {
+        // This cannot be RunLoop::protectedMain()->dispatch because it is called before the main runloop is initialized. See rdar://problem/73615999
+        WorkQueue::protectedMain()->dispatch([scheme = retainPtr(scheme)] {
             WebKit::WebProcessPool::registerGlobalURLSchemeAsHavingCustomProtocolHandlers(scheme.get());
         });
     }
@@ -127,8 +128,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if ([NSThread isMainThread])
         WebKit::WebProcessPool::unregisterGlobalURLSchemeAsHavingCustomProtocolHandlers(scheme);
     else {
-        // This cannot be RunLoop::main().dispatch because it is called before the main runloop is initialized.  See rdar://problem/73615999
-        WorkQueue::main().dispatch([scheme = retainPtr(scheme)] {
+        // This cannot be RunLoop::protectedMain()->dispatch because it is called before the main runloop is initialized. See rdar://problem/73615999
+        WorkQueue::protectedMain()->dispatch([scheme = retainPtr(scheme)] {
             WebKit::WebProcessPool::unregisterGlobalURLSchemeAsHavingCustomProtocolHandlers(scheme.get());
         });
     }
@@ -438,7 +439,7 @@ static void setUpPageLoaderClient(WKBrowsingContextController *browsingContext, 
 ALLOW_DEPRECATED_DECLARATIONS_END
 {
     WKPageNavigationClientV0 loaderClient;
-    memset(&loaderClient, 0, sizeof(loaderClient));
+    zeroBytes(loaderClient);
 
     loaderClient.base.version = 0;
     loaderClient.base.clientInfo = (__bridge void*)browsingContext;
@@ -477,7 +478,7 @@ static void setUpPagePolicyClient(WKBrowsingContextController *browsingContext, 
 ALLOW_DEPRECATED_DECLARATIONS_END
 {
     WKPagePolicyClientInternal policyClient;
-    memset(&policyClient, 0, sizeof(policyClient));
+    zeroBytes(policyClient);
 
     policyClient.base.version = 2;
     policyClient.base.clientInfo = (__bridge void*)browsingContext;
@@ -748,7 +749,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
 - (BOOL)_webProcessIsResponsive
 {
-    return _page->legacyMainFrameProcess().isResponsive();
+    return _page->protectedLegacyMainFrameProcess()->isResponsive();
 }
 
 @end

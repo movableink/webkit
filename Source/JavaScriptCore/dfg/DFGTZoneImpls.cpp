@@ -45,30 +45,16 @@
 
 namespace JSC { namespace DFG {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(ArrayifySlowPathGenerator);
-WTF_MAKE_TZONE_ALLOCATED_IMPL(BackwardsCFG);
-WTF_MAKE_TZONE_ALLOCATED_IMPL(BackwardsDominators);
-WTF_MAKE_TZONE_ALLOCATED_IMPL(CFG);
-WTF_MAKE_TZONE_ALLOCATED_IMPL(CallArrayAllocatorSlowPathGenerator);
-WTF_MAKE_TZONE_ALLOCATED_IMPL(CallArrayAllocatorWithVariableSizeSlowPathGenerator);
-WTF_MAKE_TZONE_ALLOCATED_IMPL(CallArrayAllocatorWithVariableStructureVariableSizeSlowPathGenerator);
-WTF_MAKE_TZONE_ALLOCATED_IMPL(CallCreateDirectArgumentsSlowPathGenerator);
-WTF_MAKE_TZONE_ALLOCATED_IMPL(ControlEquivalenceAnalysis);
-WTF_MAKE_TZONE_ALLOCATED_IMPL(SaneStringGetByValSlowPathGenerator);
-
-using AbstractInterpreterInPlaceAbstractState = AbstractInterpreter<InPlaceAbstractState>;
-using DominatorsCFG = Dominators<CFG>;
-using DominatorsCPSCFG = Dominators<CPSCFG>;
-using FlowMapAbstractValue = FlowMap<AbstractValue>;
-using NaturalLoopsCFG = NaturalLoops<CFG>;
-using NaturalLoopsCPSCFG = NaturalLoops<CPSCFG>;
-
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(AbstractInterpreterInPlaceAbstractState);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(DominatorsCFG);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(DominatorsCPSCFG);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(FlowMapAbstractValue);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(NaturalLoopsCFG);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(NaturalLoopsCPSCFG);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(ArrayifySlowPathGenerator);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(BackwardsCFG);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(BackwardsDominators);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(CFG);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(CallArrayAllocatorSlowPathGenerator);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(CallArrayAllocatorWithVariableSizeSlowPathGenerator);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(CallArrayAllocatorWithVariableStructureVariableSizeSlowPathGenerator);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(CallCreateDirectArgumentsSlowPathGenerator);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(ControlEquivalenceAnalysis);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(SaneStringGetByValSlowPathGenerator);
 
 } } // namespace JSC::DFG
 

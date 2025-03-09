@@ -40,6 +40,7 @@
 #import "Utilities.h"
 #import "WebPushDaemonConnectionConfiguration.h"
 #import <WebCore/PushSubscriptionIdentifier.h>
+#import <WebCore/SecurityOriginData.h>
 #import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/WKProcessPoolPrivate.h>
 #import <WebKit/WKUIDelegatePrivate.h>
@@ -57,6 +58,7 @@
 #import <mach/task.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/OSObjectPtr.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/UUID.h>
 #import <wtf/UniqueRef.h>
 #import <wtf/cocoa/SpanCocoa.h>
@@ -312,7 +314,7 @@ static WebKit::WebPushD::WebPushDaemonConnectionConfiguration defaultWebPushDaem
 {
     auto token = getSelfAuditToken();
     Vector<uint8_t> auditToken(sizeof(token));
-    memcpy(auditToken.data(), &token, sizeof(token));
+    memcpySpan(auditToken.mutableSpan(), asByteSpan(token));
 
     IGNORE_CLANG_WARNINGS_BEGIN("missing-designated-field-initializers")
     return { .hostAppAuditTokenData = WTFMove(auditToken) };
@@ -401,7 +403,7 @@ window.onload = function()
 async function subscribe(key)
 {
     try {
-        globalSubscription = await navigator.pushManager.subscribe({
+        globalSubscription = await window.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: key
         });
@@ -424,7 +426,7 @@ async function unsubscribe()
 async function getPushSubscription()
 {
     try {
-        let subscription = await navigator.pushManager.getSubscription();
+        let subscription = await window.pushManager.getSubscription();
         return subscription ? subscription.toJSON() : null;
     } catch (error) {
         return "Error: " + error;
@@ -525,13 +527,28 @@ async function queryPermissionFromServiceWorker(name)
     return await promise;
 }
 
+async function getPushSubscriptionFromWindow()
+{
+    try {
+        let subscription = await window.pushManager.getSubscription();
+        return subscription;
+    } catch (error) {
+        return "Error: " + error;
+    }
+}
+
 async function getPushSubscription()
 {
     try {
         let subscription = await globalRegistration.pushManager.getSubscription();
         return subscription ? subscription.toJSON() : null;
     } catch (error) {
-        return "Error: " + error;
+        try {
+            let subscription = await getPushSubscriptionFromWindow();
+            return subscription ? subscription.toJSON() : null;
+        } catch (error2) {
+            return "Error(s): " + error + ", " + error2;
+        }
     }
 }
 
@@ -614,48 +631,50 @@ self.addEventListener("message", (event) => {
     }
 });
 
-self.addEventListener("pushnotification", async (event) => {
-    // If the tag is empty, do nothing
-    if (!event.proposedNotification.tag)
-        return;
-
-    var optionsFromTag = event.proposedNotification.tag.split(" ");
-    var newTitle;
-    var newBadge;
-    var newActionURL;
-    if (optionsFromTag[0] == "titleandbadge") {
-        newTitle = optionsFromTag[1];
-        newBadge = optionsFromTag[2];
-    } else if (optionsFromTag[0] == "title")
-        newTitle = optionsFromTag[1];
-    else if (optionsFromTag[0] == "badge")
-        newBadge = optionsFromTag[1];
-    else if (optionsFromTag[0] == "datatotitle")
-        newTitle = event.proposedNotification.data;
-    else if (optionsFromTag[0] == "defaultactionurl")
-        newActionURL = optionsFromTag[1];
-    else if (optionsFromTag[0] == "emptydefaultactionurl") {
-        self.registration.showNotification("Missing default action").then((value) => {
-            globalPort.postMessage("showNotification succeeded");
-        }, (exception) => {
-            globalPort.postMessage("showNotification failed: " + exception);
-        });
-    }
-
-    if (newTitle || newActionURL) {
-        if (!newTitle)
-            newTitle = event.proposedNotification.title;
-        if (!newActionURL)
-            newActionURL = event.proposedNotification.defaultAction;
-
-        self.registration.showNotification(newTitle, { "defaultAction": newActionURL });
-    }
-
-    if (newBadge)
-        navigator.setAppBadge(newBadge);
-});
-
 self.addEventListener("push", async (event) => {
+    if (event.notification) {
+        // If the tag is empty, do nothing
+        if (!event.notification.tag)
+            return;
+
+        var optionsFromTag = event.notification.tag.split(" ");
+        var newTitle;
+        var newBadge;
+        var newActionURL;
+        if (optionsFromTag[0] == "titleandbadge") {
+            newTitle = optionsFromTag[1];
+            newBadge = optionsFromTag[2];
+        } else if (optionsFromTag[0] == "title")
+            newTitle = optionsFromTag[1];
+        else if (optionsFromTag[0] == "badge")
+            newBadge = optionsFromTag[1];
+        else if (optionsFromTag[0] == "datatotitle")
+            newTitle = event.notification.data;
+        else if (optionsFromTag[0] == "defaultactionurl")
+            newActionURL = optionsFromTag[1];
+        else if (optionsFromTag[0] == "emptydefaultactionurl") {
+            self.registration.showNotification("Missing default action").then((value) => {
+                globalPort.postMessage("showNotification succeeded");
+            }, (exception) => {
+                globalPort.postMessage("showNotification failed: " + exception);
+            });
+        }
+
+        if (newTitle || newActionURL) {
+            if (!newTitle)
+                newTitle = event.notification.title;
+            if (!newActionURL)
+                newActionURL = event.notification.navigate;
+
+            self.registration.showNotification(newTitle, { "navigate": newActionURL });
+        }
+
+        if (newBadge)
+            navigator.setAppBadge(newBadge);
+
+        return;
+    }
+
     try {
         if (showNotifications) {
             await self.registration.showNotification("notification");
@@ -869,6 +888,13 @@ public:
         return [getPushSubscription() isKindOfClass:[NSDictionary class]];
     }
 
+    bool hasServiceWorkerRegistration()
+    {
+        NSError *error = nil;
+        id obj = [m_webView objectByCallingAsyncFunction:@"return await navigator.serviceWorker.getRegistration()" withArguments:@{ } error:&error];
+        return error ?: obj;
+    }
+
     // Can be used in cases where the service worker was unregistered (in which case
     // hasPushSubscription would fail, since PushManager.getSubscription() fails if there is no
     // active service worker).
@@ -940,11 +966,11 @@ public:
 
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    void injectDeclarativePushMessage(ASCIILiteral json, ASCIILiteral url = "https://example.com"_s)
+    void injectDeclarativePushMessage(ASCIILiteral json)
     {
         WebKit::WebPushD::PushMessageForTesting message;
         message.targetAppCodeSigningIdentifier = "com.apple.WebKit.TestWebKitAPI"_s;
-        message.registrationURL = URL(url);
+        message.registrationURL = URL("https://example.com"_s);
         message.disposition = WebKit::WebPushD::PushMessageDisposition::Notification;
         message.payload = json;
 
@@ -1414,16 +1440,11 @@ TEST_F(WebPushDTest, UnsubscribesOnServiceWorkerUnregisterTest)
         v->subscribe();
     ASSERT_EQ(subscribedTopicsCount(), webViews().size());
 
-    int i = 1;
     for (auto& v : webViews()) {
         ASSERT_TRUE(v->hasPushSubscription());
         id result = v->unregisterServiceWorker();
         ASSERT_TRUE([result isEqual:@YES]);
-        ASSERT_FALSE(v->hasPushSubscription());
-
-        // Unsubscribing from this data store should not affect subscriptions in other data stores.
-        ASSERT_EQ(subscribedTopicsCount(), webViews().size() - i);
-        i++;
+        ASSERT_TRUE(v->hasPushSubscription());
     }
 }
 
@@ -1772,6 +1793,43 @@ TEST_F(WebPushDBuiltInTest, ImplicitSilentPushTimerCancelledOnShowingNotificatio
     }
 }
 
+TEST_F(WebPushDBuiltInTest, ImplicitSilentPushTimerIgnoredForInspectedContexts)
+{
+    auto utilityConnection = createAndConfigureConnectionToService("org.webkit.webpushtestdaemon.service");
+    auto sender = WebPushXPCConnectionMessageSender { utilityConnection.get() };
+
+    auto setServiceWorkerIsBeingInspected = [&](const String& originString) {
+        __block bool done = false;
+        sender.sendWithAsyncReplyWithoutUsingIPCConnection(Messages::PushClientConnection::SetServiceWorkerIsBeingInspected(URL(originString), true), ^() {
+            done = true;
+        });
+        TestWebKitAPI::Util::run(&done);
+    };
+
+    for (auto& v : webViews()) {
+        v->subscribe();
+        v->disableShowNotifications();
+    }
+    ASSERT_EQ(subscribedTopicsCount(), webViews().size());
+
+    for (auto& v : webViews()) {
+        ASSERT_TRUE(v->hasPushSubscription());
+        setServiceWorkerIsBeingInspected(v->origin());
+
+        for (unsigned i = 0; i < WebKit::WebPushD::maxSilentPushCount; i++) {
+            v->injectPushMessage(@{ });
+            auto message = v->fetchPushMessage();
+
+            // _processPushMessage should return false since we disabled showing notifications above.
+            ASSERT_FALSE(v->expectDecryptedMessage(@"null data", message.get()));
+        }
+
+        // Should still be subscribed since we don't enforce the silent push timer while being inspected.
+        [NSThread sleepForTimeInterval:(WebKit::WebPushD::silentPushTimeoutForTesting.seconds() + 0.5)];
+        ASSERT_TRUE(v->hasPushSubscription());
+    }
+}
+
 TEST_F(WebPushDBuiltInTest, ImplicitSilentPushTimerCausesUnsubscribe)
 {
     for (auto& v : webViews()) {
@@ -1861,24 +1919,6 @@ TEST_F(WebPushDInjectedPushTest, HandleInjectedAES128GCMPush)
     });
 }
 
-TEST_F(WebPushDTest, PushSubscriptionExtendsITPCleanupTimerBy30Days)
-{
-    // FIXME: test on all webviews once we finish refactoring the shared service worker notification
-    // managers to be datastore-aware.
-    auto& v = webViews().last();
-    v->subscribe();
-
-    EXPECT_TRUE(v->hasPushSubscription());
-
-    v->assertPushEventSucceeds(0);
-    v->assertPushEventSucceeds(29);
-    EXPECT_TRUE(v->hasPushSubscription());
-
-    v->assertPushEventFails(31);
-    v->assertPushEventFails(100);
-    EXPECT_FALSE(v->hasPushSubscription());
-}
-
 TEST_F(WebPushDTest, NotificationClickExtendsITPCleanupTimerBy30Days)
 {
     // FIXME: test on all webviews once we finish refactoring the shared service worker notification
@@ -1886,18 +1926,27 @@ TEST_F(WebPushDTest, NotificationClickExtendsITPCleanupTimerBy30Days)
     auto& v = webViews().last();
     v->subscribe();
 
+    EXPECT_TRUE(v->hasServiceWorkerRegistration());
     EXPECT_TRUE(v->hasPushSubscription());
 
     v->assertPushEventSucceeds(0);
     v->assertPushEventSucceeds(29);
     v->simulateNotificationClick();
+    EXPECT_TRUE(v->hasServiceWorkerRegistration());
     EXPECT_TRUE(v->hasPushSubscription());
 
     v->assertPushEventSucceeds(58);
+    EXPECT_TRUE(v->hasServiceWorkerRegistration());
     EXPECT_TRUE(v->hasPushSubscription());
 
-    v->assertPushEventFails(61);
-    EXPECT_FALSE(v->hasPushSubscription());
+    v->setITPTimeAdvance(61);
+    EXPECT_FALSE(v->hasServiceWorkerRegistration());
+    EXPECT_TRUE(v->hasPushSubscription());
+
+    // Verify that even though the service worker is gone, push messages do make it through (because the subscription is still active)
+    v->injectPushMessage(@{ });
+    auto messages = v->fetchPushMessages();
+    ASSERT_EQ([messages count], 1u) << "Unexpected push event injection failure after advancing ITP timer by 61 days; ITP cleanup removed subscription?";
 }
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
@@ -2779,11 +2828,11 @@ public:
         webViews().first()->clearMostRecents();
         webViews().first()->injectDeclarativePushMessage(jsonMessage);
 
-        auto messages = webViews().first()->fetchPushMessages();
-        ASSERT_EQ([messages count], 1u);
+        auto message = webViews().first()->fetchPushMessage();
+        EXPECT_TRUE(message);
 
         webViews().first()->captureAllMessages();
-        webViews().first()->processPushMessage([messages firstObject]);
+        webViews().first()->processPushMessage(message.get());
     }
 
     void waitForMessageAndVerify(NSString *message)
@@ -2801,7 +2850,6 @@ public:
 
         if (![recentTitle isEqualToString:title])
             NSLog(@"Most recent title: %@\nExpected title: %@", recentTitle, title);
-
     }
 
     void checkLastNotificationDefaultActionURL(NSString *actionURL)
@@ -2833,25 +2881,37 @@ TEST_F(WebPushDPushNotificationEventTest, Basic)
     checkLastNotificationTitle(@"Hello world!");
     checkLastAppBadge(12);
 
+    EXPECT_TRUE(webViews().first()->hasPushSubscription());
+
     runTest(json40);
     checkLastNotificationTitle(@"Gotcha!");
     checkLastAppBadge(12);
+
+    EXPECT_TRUE(webViews().first()->hasPushSubscription());
 
     runTest(json41);
     checkLastNotificationTitle(@"Hello world!");
     checkLastAppBadge(1024);
 
+    EXPECT_TRUE(webViews().first()->hasPushSubscription());
+
     runTest(json42);
     checkLastNotificationTitle(@"ThisRules");
     checkLastAppBadge(4096);
+
+    EXPECT_TRUE(webViews().first()->hasPushSubscription());
 
     runTest(json43);
     checkLastNotificationTitle(@"Raw string");
     checkLastAppBadge(12);
 
+    EXPECT_TRUE(webViews().first()->hasPushSubscription());
+
     runTest(json44);
     checkLastNotificationTitle(@"[object Object]");
     checkLastAppBadge(12);
+
+    EXPECT_TRUE(webViews().first()->hasPushSubscription());
 
     runTest(json45);
     checkLastNotificationTitle(@"Test a default action URL override");
@@ -2862,6 +2922,11 @@ TEST_F(WebPushDPushNotificationEventTest, Basic)
     checkLastNotificationTitle(@"Test a missing default action URL override");
     checkLastNotificationDefaultActionURL(@"https://example.com/");
     waitForMessageAndVerify(@"showNotification failed: TypeError: Call to showNotification() while handling a `pushnotification` event did not include NotificationOptions that specify a valid defaultAction url");
+
+    // After the slew of above messages that were handled by service workers, silent push tracking should *not* have
+    // kicked in, and therefore there should still be a push subscription.
+    [NSThread sleepForTimeInterval:(WebKit::WebPushD::silentPushTimeoutForTesting.seconds() + 0.5)];
+    EXPECT_TRUE(webViews().first()->hasPushSubscription());
 }
 
 #endif // ENABLE(DECLARATIVE_WEB_PUSH)

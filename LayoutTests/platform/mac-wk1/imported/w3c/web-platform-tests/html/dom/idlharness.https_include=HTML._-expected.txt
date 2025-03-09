@@ -252,6 +252,7 @@ PASS HTMLElement interface: attribute oncanplaythrough
 PASS HTMLElement interface: attribute onchange
 PASS HTMLElement interface: attribute onclick
 PASS HTMLElement interface: attribute onclose
+PASS HTMLElement interface: attribute oncommand
 FAIL HTMLElement interface: attribute oncontextlost assert_true: The prototype object must have a property "oncontextlost" expected true got false
 PASS HTMLElement interface: attribute oncontextmenu
 FAIL HTMLElement interface: attribute oncontextrestored assert_true: The prototype object must have a property "oncontextrestored" expected true got false
@@ -351,6 +352,7 @@ PASS HTMLElement interface: document.createElement("noscript") must inherit prop
 PASS HTMLElement interface: document.createElement("noscript") must inherit property "onchange" with the proper type
 PASS HTMLElement interface: document.createElement("noscript") must inherit property "onclick" with the proper type
 PASS HTMLElement interface: document.createElement("noscript") must inherit property "onclose" with the proper type
+PASS HTMLElement interface: document.createElement("noscript") must inherit property "oncommand" with the proper type
 FAIL HTMLElement interface: document.createElement("noscript") must inherit property "oncontextlost" with the proper type assert_inherits: property "oncontextlost" not found in prototype chain
 PASS HTMLElement interface: document.createElement("noscript") must inherit property "oncontextmenu" with the proper type
 FAIL HTMLElement interface: document.createElement("noscript") must inherit property "oncontextrestored" with the proper type assert_inherits: property "oncontextrestored" not found in prototype chain

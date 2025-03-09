@@ -20,6 +20,8 @@
 #include "config.h"
 #include "GLFenceEGL.h"
 
+#if HAVE(GL_FENCE)
+
 #include "PlatformDisplay.h"
 #include <wtf/Vector.h>
 
@@ -50,11 +52,12 @@ static std::unique_ptr<GLFence> createEGLFence(EGLenum type, const Vector<EGLAtt
 
     glFlush();
 
-#if !OS(UNIX)
-    return makeUnique<GLFenceEGL>(sync);
+#if OS(UNIX)
+    bool isExportable = type == EGL_SYNC_NATIVE_FENCE_ANDROID;
 #else
-    return makeUnique<GLFenceEGL>(sync, type == EGL_SYNC_NATIVE_FENCE_ANDROID);
+    bool isExportable = false;
 #endif
+    return makeUnique<GLFenceEGL>(sync, isExportable);
 }
 
 std::unique_ptr<GLFence> GLFenceEGL::create()
@@ -62,13 +65,7 @@ std::unique_ptr<GLFence> GLFenceEGL::create()
     return createEGLFence(EGL_SYNC_FENCE_KHR, { });
 }
 
-GLFenceEGL::GLFenceEGL(EGLSyncKHR sync)
-    : m_sync(sync)
-{
-}
-
 #if OS(UNIX)
-
 std::unique_ptr<GLFence> GLFenceEGL::createExportable()
 {
     return createEGLFence(EGL_SYNC_NATIVE_FENCE_ANDROID, { });
@@ -82,14 +79,13 @@ std::unique_ptr<GLFence> GLFenceEGL::importFD(UnixFileDescriptor&& fd)
     };
     return createEGLFence(EGL_SYNC_NATIVE_FENCE_ANDROID, attributes);
 }
+#endif
 
 GLFenceEGL::GLFenceEGL(EGLSyncKHR sync, bool isExportable)
     : m_sync(sync)
     , m_isExportable(isExportable)
 {
 }
-
-#endif
 
 GLFenceEGL::~GLFenceEGL()
 {
@@ -124,7 +120,6 @@ void GLFenceEGL::serverWait()
 }
 
 #if OS(UNIX)
-
 UnixFileDescriptor GLFenceEGL::exportFD()
 {
     if (!m_isExportable)
@@ -132,7 +127,8 @@ UnixFileDescriptor GLFenceEGL::exportFD()
 
     return UnixFileDescriptor { eglDupNativeFenceFDANDROID(PlatformDisplay::sharedDisplay().eglDisplay(), m_sync), UnixFileDescriptor::Adopt };
 }
-
 #endif
 
 } // namespace WebCore
+
+#endif // HAVE(GL_FENCE)

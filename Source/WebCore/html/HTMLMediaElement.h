@@ -43,6 +43,7 @@
 #include "MediaProducer.h"
 #include "MediaResourceSniffer.h"
 #include "MediaUniqueIdentifier.h"
+#include "PlatformDynamicRangeLimit.h"
 #include "ReducedResolutionSeconds.h"
 #include "TextTrackClient.h"
 #include "URLKeepingBlobAlive.h"
@@ -187,6 +188,7 @@ public:
     // ActiveDOMObject.
     void ref() const final { HTMLElement::ref(); }
     void deref() const final { HTMLElement::deref(); }
+    using HTMLElement::protectedScriptExecutionContext;
 
     MediaPlayer* player() const { return m_player.get(); }
     RefPtr<MediaPlayer> protectedPlayer() const { return m_player; }
@@ -246,6 +248,7 @@ public:
 
     WEBCORE_EXPORT bool isActiveNowPlayingSession() const;
     void isActiveNowPlayingSessionChanged() final;
+    ProcessID presentingApplicationPID() const final;
 
 // DOM API
 // error state
@@ -499,7 +502,7 @@ public:
     // of one of them here.
     using HTMLElement::scriptExecutionContext;
 
-    bool didPassCORSAccessCheck() const { return m_player && m_player->didPassCORSAccessCheck(); }
+    bool didPassCORSAccessCheck() const { return m_player && protectedPlayer()->didPassCORSAccessCheck(); }
     bool taintsOrigin(const SecurityOrigin&) const;
     
     WEBCORE_EXPORT bool isFullscreen() const override;
@@ -510,6 +513,7 @@ public:
     VideoFullscreenMode fullscreenMode() const { return m_videoFullscreenMode; }
 
     void enterFullscreen(VideoFullscreenMode);
+    WEBCORE_EXPORT void setPlayerIdentifierForVideoElement();
     WEBCORE_EXPORT void enterFullscreen() override;
     WEBCORE_EXPORT void exitFullscreen();
     WEBCORE_EXPORT void prepareForVideoFullscreenStandby();
@@ -647,6 +651,8 @@ public:
 
     WEBCORE_EXPORT void setOverridePreferredDynamicRangeMode(DynamicRangeMode);
     void setPreferredDynamicRangeMode(DynamicRangeMode);
+    void dynamicRangeLimitDidChange(PlatformDynamicRangeLimit);
+    void shouldSuppressHDRDidChange();
 
     void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&) override;
 
@@ -696,6 +702,7 @@ public:
 #endif
 
     void mediaSourceWasDetached();
+    WEBCORE_EXPORT void setFullscreenMode(VideoFullscreenMode);
 
 protected:
     HTMLMediaElement(const QualifiedName&, Document&, bool createdByParser);
@@ -725,7 +732,6 @@ protected:
 
     bool mediaControlsDependOnPageScaleFactor() const { return m_mediaControlsDependOnPageScaleFactor; }
     void setMediaControlsDependOnPageScaleFactor(bool);
-    void updateMediaControlsAfterPresentationModeChange();
 
     void scheduleEvent(const AtomString&);
     template<typename T> void scheduleEventOn(T& target, Ref<Event>&&);
@@ -762,6 +768,9 @@ protected:
 
     void ignoreFullscreenPermissionPolicyOnNextCallToEnterFullscreen() { m_ignoreFullscreenPermissionsPolicy = true; }
 
+    SoundStageSize soundStageSize() const { return m_soundStageSize; }
+    void setSoundStageSize(SoundStageSize);
+
 protected:
     // ActiveDOMObject
     void stop() override;
@@ -772,7 +781,6 @@ private:
     void createMediaPlayer();
 
     bool supportsFocus() const override;
-    bool isMouseFocusable() const override;
     bool rendererIsNeeded(const RenderStyle&) override;
     bool childShouldCreateRenderer(const Node&) const override;
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
@@ -782,7 +790,6 @@ private:
     bool canStartSelection() const override { return false; } 
     bool isInteractiveContent() const override;
 
-    void setFullscreenMode(VideoFullscreenMode);
     void willStopBeingFullscreenElement() override;
 
     // ActiveDOMObject.
@@ -884,7 +891,8 @@ private:
     FloatSize mediaPlayerVideoLayerSize() const final { return videoLayerSize(); }
     void mediaPlayerVideoLayerSizeDidChange(const FloatSize& size) final { m_videoLayerSize = size; }
 
-    std::optional<MediaPlayerClientIdentifier> mediaPlayerClientIdentifier() const final { return identifier(); }
+    MediaPlayerClientIdentifier mediaPlayerClientIdentifier() const final { return identifier(); }
+    SoundStageSize mediaPlayerSoundStageSize() const final { return soundStageSize(); }
 
     void pendingActionTimerFired();
     void progressEventTimerFired();
@@ -910,7 +918,7 @@ private:
 
     void selectMediaResource();
     void queueLoadMediaResourceTask();
-    void loadResource(const URL&, const ContentType&, const String& keySystem);
+    void loadResource(const URL&, const ContentType&);
     void scheduleNextSourceChild();
     void loadNextSourceChild();
     void userCancelledLoad();
@@ -921,7 +929,7 @@ private:
     void waitForSourceChange();
     void prepareToPlay();
 
-    URL selectNextSourceChild(ContentType*, String* keySystem, InvalidURLAction);
+    URL selectNextSourceChild(ContentType*, InvalidURLAction);
 
     bool ignoreTrackDisplayUpdateRequests() const;
     void beginIgnoringTrackDisplayUpdateRequests();
@@ -987,8 +995,7 @@ private:
 
     void mediaCanStart(Document&) final;
 
-    void invalidateCachedTime() const;
-    void refreshCachedTime() const;
+    void invalidateOfficialPlaybackPosition();
 
     void configureMediaControls();
 
@@ -1034,6 +1041,9 @@ private:
 
     void visibilityAdjustmentStateDidChange() final;
     void pageMutedStateDidChange() override;
+#if PLATFORM(IOS_FAMILY)
+    void sceneIdentifierDidChange() final;
+#endif
 
 #if USE(AUDIO_SESSION) && PLATFORM(MAC)
     void hardwareMutedStateDidChange(const AudioSession&) final;
@@ -1113,6 +1123,7 @@ private:
 #endif
 
     bool shouldDisableHDR() const;
+    WEBCORE_EXPORT PlatformDynamicRangeLimit computePlayerDynamicRangeLimit() const;
 
     bool shouldLogWatchtimeEvent() const;
     bool isWatchtimeTimerActive() const;
@@ -1128,6 +1139,8 @@ private:
     enum ForceMuteChange { False, True };
     void setMutedInternal(bool muted, ForceMuteChange);
     bool implicitlyMuted() const { return m_implicitlyMuted.value_or(false); }
+
+    bool limitedMatroskaSupportEnabled() const;
 
     Timer m_progressEventTimer;
     Timer m_playbackProgressTimer;
@@ -1148,9 +1161,7 @@ private:
     TaskCancellationGroup m_updateShouldAutoplayTaskCancellationGroup;
     RefPtr<TimeRanges> m_playedTimeRanges;
     TaskCancellationGroup m_asyncEventsCancellationGroup;
-#if PLATFORM(IOS_FAMILY)
     TaskCancellationGroup m_volumeRevertTaskCancellationGroup;
-#endif
 
     PlayPromiseVector m_pendingPlayPromises;
 
@@ -1225,9 +1236,7 @@ private:
 #endif
 
     MediaTime m_defaultPlaybackStartPosition = MediaTime::zeroTime();
-    mutable MediaTime m_cachedTime;
-    mutable MonotonicTime m_clockTimeAtLastCachedTimeUpdate;
-    mutable MonotonicTime m_minimumClockTimeToUpdateCachedTime;
+    mutable MediaTime m_officialPlaybackPosition { MediaTime::invalidTime() };
 
     MediaTime m_fragmentStartTime;
     MediaTime m_fragmentEndTime;
@@ -1293,13 +1302,11 @@ private:
     bool m_tracksAreReady : 1;
     bool m_haveVisibleTextTrack : 1;
     bool m_processingPreferenceChange : 1;
-    bool m_shouldAudioPlaybackRequireUserGesture : 1;
-    bool m_shouldVideoPlaybackRequireUserGesture : 1;
+    bool m_shouldAudioPlaybackRequireUserGesture : 1 { true };
+    bool m_shouldVideoPlaybackRequireUserGesture : 1 { true };
     bool m_volumeLocked : 1;
     bool m_cachedIsInVisibilityAdjustmentSubtree : 1 { false };
     bool m_requiresTextTrackRepresentation : 1 { false };
-    bool m_isResumingPlayback : 1 { false };
-    bool m_seekAfterPlaybackEnded : 1 { false };
 
     IntRect m_textTrackRepresentationBounds;
 
@@ -1343,6 +1350,7 @@ private:
     WeakPtr<const MediaResourceLoader> m_lastMediaResourceLoaderForTesting;
 
     std::optional<DynamicRangeMode> m_overrideDynamicRangeMode;
+    PlatformDynamicRangeLimit m_platformDynamicRangeLimit { PlatformDynamicRangeLimit::constrainedHigh() };
 
     friend class TrackDisplayUpdateScope;
 
@@ -1440,6 +1448,7 @@ private:
     RefPtr<WTF::Stopwatch> m_bufferingStopwatch;
 
     bool m_ignoreFullscreenPermissionsPolicy { false };
+    SoundStageSize m_soundStageSize { SoundStageSize::Auto };
 };
 
 String convertEnumerationToString(HTMLMediaElement::AutoplayEventPlaybackState);

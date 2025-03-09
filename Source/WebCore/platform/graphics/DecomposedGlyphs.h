@@ -34,7 +34,8 @@ namespace WebCore {
 class DecomposedGlyphs final : public RenderingResource {
     WTF_MAKE_TZONE_ALLOCATED(DecomposedGlyphs);
 public:
-    static WEBCORE_EXPORT Ref<DecomposedGlyphs> create(const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode, RenderingResourceIdentifier = RenderingResourceIdentifier::generate());
+    ~DecomposedGlyphs();
+    static WEBCORE_EXPORT Ref<DecomposedGlyphs> create(std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& localAnchor, FontSmoothingMode, RenderingResourceIdentifier = RenderingResourceIdentifier::generate());
     static WEBCORE_EXPORT Ref<DecomposedGlyphs> create(PositionedGlyphs&&, RenderingResourceIdentifier);
 
     const PositionedGlyphs& positionedGlyphs() const { return m_positionedGlyphs; }

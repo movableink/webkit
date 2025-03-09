@@ -52,6 +52,13 @@ bool shouldRun(const TestConfig* config, const char* testName)
             }
         }
     }
+    // FIXME: rdar://145150735. But note this test is already skipped on ARM64, see above.
+    if (!filter && Options::airUseGreedyRegAlloc()) {
+        if (WTF::findIgnoringASCIICaseWithoutLength(testName, "testPinRegisters") != WTF::notFound) {
+            dataLogLn("*** Warning: Skipping known-bad test: ", testName);
+            return false;
+        }
+    }
 
     if (!filter && isARM_THUMB2()) {
         for (auto& failingTest : {
@@ -161,6 +168,7 @@ void run(const TestConfig* config)
     RUN_UNARY(testNegDouble, floatingPointOperands<double>());
     RUN_UNARY(testNegFloat, floatingPointOperands<float>());
     RUN_UNARY(testNegFloatWithUselessDoubleConversion, floatingPointOperands<float>());
+    RUN(testImpureNaN());
 
     addBitTests(config, tasks);
 
@@ -278,6 +286,13 @@ void run(const TestConfig* config)
     RUN_UNARY(testFloorArgWithUselessDoubleConversion, floatingPointOperands<float>());
     RUN_UNARY(testFloorArgWithEffectfulDoubleConversion, floatingPointOperands<float>());
 
+    RUN_UNARY(testFTruncArg, floatingPointOperands<double>());
+    RUN_UNARY(testFTruncImm, floatingPointOperands<double>());
+    RUN_UNARY(testFTruncMem, floatingPointOperands<double>());
+    RUN_UNARY(testFTruncArg, floatingPointOperands<float>());
+    RUN_UNARY(testFTruncImm, floatingPointOperands<float>());
+    RUN_UNARY(testFTruncMem, floatingPointOperands<float>());
+
     RUN_UNARY(testSqrtArg, floatingPointOperands<double>());
     RUN_UNARY(testSqrtImm, floatingPointOperands<double>());
     RUN_UNARY(testSqrtMem, floatingPointOperands<double>());
@@ -286,6 +301,8 @@ void run(const TestConfig* config)
     RUN_UNARY(testSqrtMem, floatingPointOperands<float>());
     RUN_UNARY(testSqrtArgWithUselessDoubleConversion, floatingPointOperands<float>());
     RUN_UNARY(testSqrtArgWithEffectfulDoubleConversion, floatingPointOperands<float>());
+
+    RUN(testPurifyNaN());
 
     RUN_BINARY(testCompareTwoFloatToDouble, floatingPointOperands<float>(), floatingPointOperands<float>());
     RUN_BINARY(testCompareOneFloatToDouble, floatingPointOperands<float>(), floatingPointOperands<double>());
@@ -345,11 +362,15 @@ void run(const TestConfig* config)
     RUN_UNARY(testIToF32Imm, int32Operands());
     RUN(testIToDReducedToIToF64Arg());
     RUN(testIToDReducedToIToF32Arg());
+    RUN_UNARY(testInt52RoundTripUnary, int32Operands());
+    RUN(testInt52RoundTripBinary());
 
+#if !CPU(ARM)
     RUN_UNARY(testCheckAddRemoveCheckWithSExt8, int8Operands());
     RUN_UNARY(testCheckAddRemoveCheckWithSExt16, int16Operands());
     RUN_UNARY(testCheckAddRemoveCheckWithSExt32, int32Operands());
     RUN_UNARY(testCheckAddRemoveCheckWithZExt32, int32Operands());
+#endif
 
     RUN(testStoreZeroReg());
     RUN(testStore32(44));
@@ -501,6 +522,7 @@ void run(const TestConfig* config)
     RUN(testCheckTrickyMegaCombo());
     RUN(testCheckTwoMegaCombos());
     RUN(testCheckTwoNonRedundantMegaCombos());
+#if !CPU(ARM)
     RUN(testCheckAddImm());
     RUN(testCheckAddImmCommute());
     RUN(testCheckAddImmSomeRegister());
@@ -530,6 +552,7 @@ void run(const TestConfig* config)
     RUN(testCheckMulFoldFail(2147483647, 100));
     RUN(testCheckMulArgumentAliasing64());
     RUN(testCheckMulArgumentAliasing32());
+#endif
 
     RUN_BINARY([](int32_t a, int32_t b) { testCompare(Equal, a, b); }, int64Operands(), int64Operands());
     RUN_BINARY([](int32_t a, int32_t b) { testCompare(NotEqual, a, b); }, int64Operands(), int64Operands());

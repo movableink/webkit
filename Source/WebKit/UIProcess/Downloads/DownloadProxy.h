@@ -134,7 +134,7 @@ public:
     void decideDestinationWithSuggestedFilename(const WebCore::ResourceResponse&, String&& suggestedFilename, DecideDestinationCallback&&);
 
 private:
-    explicit DownloadProxy(DownloadProxyMap&, WebsiteDataStore&, API::DownloadClient&, const WebCore::ResourceRequest&, const FrameInfoData&, WebPageProxy*);
+    explicit DownloadProxy(DownloadProxyMap&, WebsiteDataStore&, API::DownloadClient&, const WebCore::ResourceRequest&, const std::optional<FrameInfoData>&, WebPageProxy*);
 
     Ref<API::DownloadClient> protectedClient() const;
     RefPtr<WebsiteDataStore> protectedDataStore() { return m_dataStore; }
@@ -160,6 +160,7 @@ private:
     WeakPtr<WebPageProxy> m_originatingPage;
     Vector<URL> m_redirectChain;
     bool m_wasUserInitiated { true };
+    bool m_downloadIsCancelled { false };
     Ref<API::FrameInfo> m_frameInfo;
     CompletionHandler<void(DownloadProxy*)> m_didStartCallback;
 #if PLATFORM(COCOA)

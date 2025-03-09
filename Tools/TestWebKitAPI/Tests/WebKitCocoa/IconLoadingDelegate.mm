@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,19 +25,18 @@
 
 #import "config.h"
 
+#import "HTTPServer.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
-#import <WebKit/WKURLSchemeHandler.h>
-#import <WebKit/WKURLSchemeTask.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/WebKit.h>
 #import <WebKit/_WKIconLoadingDelegate.h>
 #import <WebKit/_WKLinkIconParameters.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/text/MakeString.h>
 
 static bool doneWithIcons;
-static bool alreadyProvidedIconData;
 
 @interface IconLoadingDelegate : NSObject <_WKIconLoadingDelegate> {
     @public
@@ -60,7 +59,8 @@ static bool alreadyProvidedIconData;
     switch (parameters.iconType) {
     case WKLinkIconTypeFavicon:
         favicon = parameters;
-        EXPECT_TRUE([[parameters.url absoluteString] isEqual:@"testing:///favicon.ico"]);
+        EXPECT_TRUE([[parameters.url absoluteString] hasPrefix:@"http://localhost:"]);
+        EXPECT_TRUE([[parameters.url absoluteString] hasSuffix:@"/favicon.ico"]);
         break;
     case WKLinkIconTypeTouchIcon:
         touch = parameters;
@@ -89,95 +89,35 @@ static bool alreadyProvidedIconData;
 
 @end
 
-@interface IconLoadingSchemeHandler : NSObject <WKURLSchemeHandler> {
-    @public
-    bool shouldIgnoreFaviconTask;
-    bool receivedFaviconTask;
-    bool faviconTaskStopped;
-}
-- (instancetype)initWithData:(NSData *)data;
-- (void)setFaviconData:(NSData *)data;
-@end
-
-@implementation IconLoadingSchemeHandler {
-    RetainPtr<NSData> mainResourceData;
-    RetainPtr<NSData> faviconData;
-}
-
-- (instancetype)initWithData:(NSData *)data
-{
-    self = [super init];
-    if (!self)
-        return nil;
-
-    mainResourceData = data;
-
-    return self;
-}
-
-- (void)setFaviconData:(NSData *)data
-{
-    faviconData = data;
-}
-
-- (void)webView:(WKWebView *)webView startURLSchemeTask:(id <WKURLSchemeTask>)task
-{
-    RetainPtr<NSURLResponse> response;
-    NSData *data = nil;
-
-    if ([[task.request.URL absoluteString] isEqual:@"testing:///favicon.ico"]) {
-        EXPECT_FALSE(alreadyProvidedIconData);
-        if (shouldIgnoreFaviconTask) {
-            receivedFaviconTask = true;
-            return;
-        }
-        response = adoptNS([[NSURLResponse alloc] initWithURL:task.request.URL MIMEType:@"image/png" expectedContentLength:1 textEncodingName:nil]);
-        data = faviconData.get();
-        alreadyProvidedIconData = true;
-    } else {
-        response = adoptNS([[NSURLResponse alloc] initWithURL:task.request.URL MIMEType:@"text/html" expectedContentLength:1 textEncodingName:nil]);
-        data = mainResourceData.get();
-    }
-
-    [task didReceiveResponse:response.get()];
-    [task didReceiveData:data];
-    [task didFinish];
-}
-
-- (void)webView:(WKWebView *)webView stopURLSchemeTask:(id <WKURLSchemeTask>)task
-{
-    if ([[task.request.URL absoluteString] isEqual:@"testing:///favicon.ico"])
-        faviconTaskStopped = true;
-}
-
-@end
-
-static const char mainBytes1[] =
+static constexpr auto mainBody =
 "<head>" \
 "<link rel=\"apple-touch-icon\" sizes=\"57x57\" non-standard-attribute href=\"http://example.com/my-apple-touch-icon.png\">" \
 "<link rel=\"apple-touch-icon-precomposed\" sizes=\"57x57\" href=\"http://example.com/my-apple-touch-icon-precomposed.png\">" \
-"</head>";
+"</head>"_s;
 
 TEST(IconLoading, DefaultFavicon)
 {
-    RetainPtr<WKWebViewConfiguration> configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { mainBody } },
+        { "/favicon.ico"_s, { "Actual response is immaterial."_s } },
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
 
-    RetainPtr<IconLoadingSchemeHandler> handler = adoptNS([[IconLoadingSchemeHandler alloc] initWithData:[NSData dataWithBytesNoCopy:(void*)mainBytes1 length:sizeof(mainBytes1) freeWhenDone:NO]]);
-    [configuration setURLSchemeHandler:handler.get() forURLScheme:@"testing"];
+    RetainPtr<WKWebViewConfiguration> configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
 
     RetainPtr<WKWebView> webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
     RetainPtr<IconLoadingDelegate> iconDelegate = adoptNS([[IconLoadingDelegate alloc] init]);
 
     webView.get()._iconLoadingDelegate = iconDelegate.get();
 
-    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"testing:///main"]];
+    auto mainURL = makeString("http://localhost:"_s, server.port(), "/"_s);
+    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:mainURL]];
     [webView loadRequest:request];
 
     TestWebKitAPI::Util::run(&doneWithIcons);
     TestWebKitAPI::Util::run(&iconDelegate.get()->receivedFaviconDataCallback);
 
     auto* faviconParameters = iconDelegate.get()->favicon.get();
-    EXPECT_WK_STREQ("testing:///favicon.ico", faviconParameters.url.absoluteString);
+    EXPECT_WK_STREQ(makeString(mainURL, "favicon.ico"_s), faviconParameters.url.absoluteString);
     EXPECT_EQ(WKLinkIconTypeFavicon, faviconParameters.iconType);
     EXPECT_EQ(static_cast<unsigned long>(0), faviconParameters.attributes.count);
 
@@ -192,28 +132,26 @@ TEST(IconLoading, DefaultFavicon)
     EXPECT_FALSE([touchParameters.attributes.allKeys containsObject:@"nonexistent-attribute"]);
 }
 
-static const char mainBytes2[] =
-"Oh, hello there!";
-
 TEST(IconLoading, AlreadyCachedIcon)
 {
-    RetainPtr<WKWebViewConfiguration> configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
-
-    NSData *mainData = [NSData dataWithBytesNoCopy:(void*)mainBytes2 length:sizeof(mainBytes2) freeWhenDone:NO];
-    RetainPtr<IconLoadingSchemeHandler> handler = adoptNS([[IconLoadingSchemeHandler alloc] initWithData:mainData]);
-
     NSURL *url = [NSBundle.test_resourcesBundle URLForResource:@"large-red-square-image" withExtension:@"html"];
     RetainPtr<NSData> iconDataFromDisk = [NSData dataWithContentsOfURL:url];
-    [handler.get() setFaviconData:iconDataFromDisk.get()];
 
-    [configuration setURLSchemeHandler:handler.get() forURLScheme:@"testing"];
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { "Oh, hello there!"_s } },
+        { "/favicon.ico"_s, { iconDataFromDisk.get() } },
+        { "/main"_s, { "Main? Yes."_s } }
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    RetainPtr<WKWebViewConfiguration> configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
 
     RetainPtr<WKWebView> webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
     RetainPtr<IconLoadingDelegate> iconDelegate = adoptNS([[IconLoadingDelegate alloc] init]);
 
     webView.get()._iconLoadingDelegate = iconDelegate.get();
 
-    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"testing:///main"]];
+    auto mainURL = makeString("http://localhost:"_s, server.port(), "/"_s);
+    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:mainURL]];
     [webView loadRequest:request];
 
     TestWebKitAPI::Util::run(&iconDelegate.get()->receivedFaviconDataCallback);
@@ -224,7 +162,7 @@ TEST(IconLoading, AlreadyCachedIcon)
     iconDelegate.get()->receivedFaviconData = nil;
 
     // Load another main resource that results in the same icon being loaded (which should come from the memory cache).
-    request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"testing:///main2"]];
+    request = [NSURLRequest requestWithURL:[NSURL URLWithString:makeString(mainURL, "main"_s)]];
     [webView loadRequest:request];
 
     TestWebKitAPI::Util::run(&iconDelegate.get()->receivedFaviconDataCallback);
@@ -234,41 +172,42 @@ TEST(IconLoading, AlreadyCachedIcon)
 
 TEST(IconLoading, IconLoadCancelledCallback)
 {
-    RetainPtr<WKWebViewConfiguration> configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    doneWithIcons = false;
 
-    NSData *mainData = [NSData dataWithBytesNoCopy:(void*)mainBytes1 length:sizeof(mainBytes1) freeWhenDone:NO];
-    RetainPtr<IconLoadingSchemeHandler> handler = adoptNS([[IconLoadingSchemeHandler alloc] initWithData:mainData]);
-    handler.get()->shouldIgnoreFaviconTask = true;
-    [configuration setURLSchemeHandler:handler.get() forURLScheme:@"testing"];
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { mainBody } },
+        { "/favicon.ico"_s, { TestWebKitAPI::HTTPResponse::Behavior::NeverSendResponse } }
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    RetainPtr<WKWebViewConfiguration> configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
 
     RetainPtr<WKWebView> webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
 
     RetainPtr<IconLoadingDelegate> iconDelegate = adoptNS([[IconLoadingDelegate alloc] init]);
     webView.get()._iconLoadingDelegate = iconDelegate.get();
 
-    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"testing:///main"]];
+    auto mainURL = makeString("http://localhost:"_s, server.port(), "/"_s);
+    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:mainURL]];
     [webView loadRequest:request];
 
-    TestWebKitAPI::Util::run(&handler.get()->receivedFaviconTask);
+    TestWebKitAPI::Util::run(&doneWithIcons);
 
-    // Our scheme handler never replies to the favicon task, so our icon delegate load callback is still pending.
-    // Stop the documentloader's loading and verify the icon delegate callback is called.
+    // Our server never replies to the favicon request, so our icon delegate load callback is still pending.
+    // Stop the DocumentLoader's loading.
     [webView stopLoading];
 
-    // Wait until the data callback is called, *and* the task is stopped
-    TestWebKitAPI::Util::run(&handler.get()->faviconTaskStopped);
+    // Wait until the data callback is called
     TestWebKitAPI::Util::run(&iconDelegate.get()->receivedFaviconDataCallback);
-
     EXPECT_EQ(iconDelegate.get()->receivedFaviconData.get().length, (unsigned long)0);
 }
 
 TEST(IconLoading, IconLoadCancelledCallback2)
 {
-    RetainPtr<WKWebViewConfiguration> configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { mainBody } },
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
 
-    NSData *mainData = [NSData dataWithBytesNoCopy:(void*)mainBytes1 length:sizeof(mainBytes1) freeWhenDone:NO];
-    RetainPtr<IconLoadingSchemeHandler> handler = adoptNS([[IconLoadingSchemeHandler alloc] initWithData:mainData]);
-    [configuration setURLSchemeHandler:handler.get() forURLScheme:@"testing"];
+    RetainPtr<WKWebViewConfiguration> configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
 
     RetainPtr<WKWebView> webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
 
@@ -276,7 +215,8 @@ TEST(IconLoading, IconLoadCancelledCallback2)
     iconDelegate.get()->shouldSaveCallback = true;
     webView.get()._iconLoadingDelegate = iconDelegate.get();
 
-    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"testing:///main"]];
+    auto mainURL = makeString("http://localhost:"_s, server.port(), "/"_s);
+    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:mainURL]];
     [webView loadRequest:request];
 
     TestWebKitAPI::Util::run(&iconDelegate.get()->didSaveCallback);
@@ -284,7 +224,6 @@ TEST(IconLoading, IconLoadCancelledCallback2)
     // Our scheme handler never replies to the favicon task, so our icon delegate load callback is still pending.
     // Stop the documentloader's loading and verify the icon delegate callback is called.
     [webView stopLoading];
-
 
     // Even though loading has already been stopped (and therefore IconLoaders were cancelled),
     // we should still get the callback.

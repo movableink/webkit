@@ -28,9 +28,10 @@
 
 #import "WKNSURLExtras.h"
 #import <WebCore/WebCoreObjCExtras.h>
+#import <wtf/AlignedStorage.h>
 
 @implementation WKBackForwardListItem {
-    API::ObjectStorage<WebKit::WebBackForwardListItem> _item;
+    AlignedStorage<WebKit::WebBackForwardListItem> _item;
 }
 
 WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
@@ -77,7 +78,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 
 - (CGPoint)_scrollPosition
 {
-    return CGPointMake(_item->rootFrameState().scrollPosition.x(), _item->rootFrameState().scrollPosition.y());
+    return CGPointMake(_item->mainFrameState()->scrollPosition.x(), _item->mainFrameState()->scrollPosition.y());
 }
 
 - (BOOL)_wasCreatedByJSWithoutUserInteraction

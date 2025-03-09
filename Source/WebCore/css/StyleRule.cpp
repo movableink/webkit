@@ -37,8 +37,10 @@
 #include "CSSNamespaceRule.h"
 #include "CSSNestedDeclarations.h"
 #include "CSSPageRule.h"
+#include "CSSPositionTryRule.h"
 #include "CSSPropertyRule.h"
 #include "CSSScopeRule.h"
+#include "CSSSerializationContext.h"
 #include "CSSStartingStyleRule.h"
 #include "CSSStyleRule.h"
 #include "CSSSupportsRule.h"
@@ -130,9 +132,9 @@ template<typename Visitor> constexpr decltype(auto) StyleRuleBase::visitDerived(
         return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleStartingStyle>(*this));
     case StyleRuleType::ViewTransition:
         return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleViewTransition>(*this));
+    case StyleRuleType::PositionTry:
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRulePositionTry>(*this));
     case StyleRuleType::Margin:
-        break;
-    case StyleRuleType::Unknown:
         break;
     }
     RELEASE_ASSERT_NOT_REACHED();
@@ -228,6 +230,9 @@ Ref<CSSRule> StyleRuleBase::createCSSOMWrapper(CSSStyleSheet* parentSheet, CSSRu
         },
         [&](StyleRuleViewTransition& rule) -> Ref<CSSRule> {
             return CSSViewTransitionRule::create(rule, parentSheet);
+        },
+        [&](StyleRulePositionTry& rule) -> Ref<CSSRule> {
+            return CSSPositionTryRule::create(rule, parentSheet);
         },
         [](StyleRuleCharset&) -> Ref<CSSRule> {
             RELEASE_ASSERT_NOT_REACHED();
@@ -337,9 +342,7 @@ Vector<Ref<StyleRule>> StyleRule::splitIntoMultipleRulesWithMaximumSelectorCompo
 
 String StyleRule::debugDescription() const
 {
-    StringBuilder builder;
-    builder.append("StyleRule ["_s, m_properties->asText(), ']');
-    return builder.toString();
+    return makeString("StyleRule ["_s, m_properties->asText(CSS::defaultSerializationContext()), ']');
 }
 
 StyleRuleWithNesting::~StyleRuleWithNesting() = default;
@@ -352,7 +355,7 @@ Ref<StyleRuleWithNesting> StyleRuleWithNesting::copy() const
 String StyleRuleWithNesting::debugDescription() const
 {
     StringBuilder builder;
-    builder.append("StyleRuleWithNesting ["_s, properties().asText(), " "_s);
+    builder.append("StyleRuleWithNesting ["_s, properties().asText(CSS::defaultSerializationContext()), " "_s);
     for (const auto& rule : m_nestedRules)
         builder.append(rule->debugDescription());
     builder.append(']');
@@ -414,9 +417,7 @@ StyleRuleNestedDeclarations::StyleRuleNestedDeclarations(Ref<StyleProperties>&& 
 
 String StyleRuleNestedDeclarations::debugDescription() const
 {
-    StringBuilder builder;
-    builder.append("StyleRuleNestedDeclarations ["_s, properties().asText(), ']');
-    return builder.toString();
+    return makeString("StyleRuleNestedDeclarations ["_s, properties().asText(CSS::defaultSerializationContext()), ']');
 }
 
 StyleRulePage::~StyleRulePage() = default;

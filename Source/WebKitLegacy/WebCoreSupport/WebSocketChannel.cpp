@@ -55,6 +55,7 @@
 #include <WebCore/UserContentProvider.h>
 #include <WebCore/WebSocketChannelClient.h>
 #include <WebCore/WebSocketHandshake.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
@@ -148,62 +149,44 @@ String WebSocketChannel::extensions()
     return extensions;
 }
 
-ThreadableWebSocketChannel::SendResult WebSocketChannel::send(CString&& message)
+void WebSocketChannel::send(CString&& message)
 {
     if (m_outgoingFrameQueueStatus != OutgoingFrameQueueOpen)
-        return ThreadableWebSocketChannel::SendSuccess;
+        return;
 
     LOG(Network, "WebSocketChannel %p send() Sending String '%s'", this, message.data());
     enqueueTextFrame(WTFMove(message));
     processOutgoingFrameQueue();
-    // According to WebSocket API specification, WebSocket.send() should return void instead
-    // of boolean. However, our implementation still returns boolean due to compatibility
-    // concern (see bug 65850).
-    // m_channel->send() may happen later, thus it's not always possible to know whether
-    // the message has been sent to the socket successfully. In this case, we have no choice
-    // but to return true.
-    return ThreadableWebSocketChannel::SendSuccess;
 }
 
-ThreadableWebSocketChannel::SendResult WebSocketChannel::send(const ArrayBuffer& binaryData, unsigned byteOffset, unsigned byteLength)
+void WebSocketChannel::send(const ArrayBuffer& binaryData, unsigned byteOffset, unsigned byteLength)
 {
     if (m_outgoingFrameQueueStatus != OutgoingFrameQueueOpen)
-        return ThreadableWebSocketChannel::SendSuccess;
+        return;
 
     LOG(Network, "WebSocketChannel %p send() Sending ArrayBuffer %p byteOffset=%u byteLength=%u", this, &binaryData, byteOffset, byteLength);
     enqueueRawFrame(WebSocketFrame::OpCodeBinary, binaryData.span().subspan(byteOffset, byteLength));
     processOutgoingFrameQueue();
-    return ThreadableWebSocketChannel::SendSuccess;
 }
 
-ThreadableWebSocketChannel::SendResult WebSocketChannel::send(Blob& binaryData)
+void WebSocketChannel::send(Blob& binaryData)
 {
     if (m_outgoingFrameQueueStatus != OutgoingFrameQueueOpen)
-        return ThreadableWebSocketChannel::SendSuccess;
+        return;
 
     LOG(Network, "WebSocketChannel %p send() Sending Blob '%s'", this, binaryData.url().string().utf8().data());
     enqueueBlobFrame(WebSocketFrame::OpCodeBinary, binaryData);
     processOutgoingFrameQueue();
-    return ThreadableWebSocketChannel::SendSuccess;
 }
 
-bool WebSocketChannel::send(std::span<const uint8_t> data)
+void WebSocketChannel::send(std::span<const uint8_t> data)
 {
     if (m_outgoingFrameQueueStatus != OutgoingFrameQueueOpen)
-        return ThreadableWebSocketChannel::SendSuccess;
+        return;
 
     LOG(Network, "WebSocketChannel %p send() Sending uint8_t* data=%p length=%zu", this, data.data(), data.size());
     enqueueRawFrame(WebSocketFrame::OpCodeBinary, data);
     processOutgoingFrameQueue();
-    return true;
-}
-
-unsigned WebSocketChannel::bufferedAmount() const
-{
-    LOG(Network, "WebSocketChannel %p bufferedAmount()", this);
-    ASSERT(m_handle);
-    ASSERT(!m_suspended);
-    return m_handle->bufferedAmount();
 }
 
 void WebSocketChannel::close(int code, const String& reason)
@@ -437,11 +420,11 @@ bool WebSocketChannel::appendToBuffer(std::span<const uint8_t> data)
     return true;
 }
 
-void WebSocketChannel::skipBuffer(size_t len)
+void WebSocketChannel::skipBuffer(size_t length)
 {
-    ASSERT_WITH_SECURITY_IMPLICATION(len <= m_buffer.size());
-    memmove(m_buffer.data(), m_buffer.data() + len, m_buffer.size() - len);
-    m_buffer.shrink(m_buffer.size() - len);
+    ASSERT_WITH_SECURITY_IMPLICATION(length <= m_buffer.size());
+    memmoveSpan(m_buffer.mutableSpan(), m_buffer.subspan(length));
+    m_buffer.shrink(m_buffer.size() - length);
 }
 
 bool WebSocketChannel::processBuffer()
@@ -548,7 +531,7 @@ bool WebSocketChannel::processFrame()
     WebSocketFrame frame;
     const uint8_t* frameEnd;
     String errorString;
-    WebSocketFrame::ParseFrameResult result = WebSocketFrame::parseFrame(m_buffer.data(), m_buffer.size(), frame, frameEnd, errorString);
+    WebSocketFrame::ParseFrameResult result = WebSocketFrame::parseFrame(m_buffer.mutableSpan(), frame, frameEnd, errorString);
     if (result == WebSocketFrame::FrameIncomplete)
         return false;
     if (result == WebSocketFrame::FrameError) {
@@ -769,7 +752,7 @@ void WebSocketChannel::processOutgoingFrameQueue()
         auto frame = m_outgoingFrameQueue.takeFirst();
         switch (frame->frameType) {
         case QueuedFrameTypeString: {
-            sendFrame(frame->opCode, frame->stringData.span(), [this, protectedThis = Ref { *this }] (bool success) {
+            sendFrame(frame->opCode, byteCast<uint8_t>(frame->stringData.span()), [this, protectedThis = Ref { *this }] (bool success) {
                 if (!success)
                     fail("Failed to send WebSocket frame."_s);
             });

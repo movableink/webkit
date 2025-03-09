@@ -36,6 +36,7 @@
 #if ENABLE(OFFSCREEN_CANVAS)
 
 #include "CSSFontSelector.h"
+#include "CSSParserContext.h"
 #include "CSSPropertyParserConsumer+Font.h"
 #include "InspectorInstrumentation.h"
 #include "RenderStyle.h"
@@ -108,6 +109,11 @@ void OffscreenCanvasRenderingContext2D::setFont(const String& newFont)
     if (auto fontCascade = Style::resolveForUnresolvedFont(*unresolvedFont, WTFMove(fontDescription), context)) {
         ASSERT(context.cssFontSelector());
         modifiableState().font.initialize(*context.cssFontSelector(), *fontCascade);
+
+        String letterSpacing;
+        setLetterSpacing(std::exchange(modifiableState().letterSpacing, letterSpacing));
+        String wordSpacing;
+        setWordSpacing(std::exchange(modifiableState().wordSpacing, wordSpacing));
     }
 }
 

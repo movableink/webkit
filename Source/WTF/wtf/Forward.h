@@ -23,6 +23,13 @@
 #include <stddef.h>
 #include <wtf/Platform.h>
 
+#if defined(__has_feature)
+#if __has_feature(objc_arc)
+#define OSObjectPtr OSObjectPtrArc
+#define RetainPtr RetainPtrArc
+#endif
+#endif
+
 namespace WTF {
 
 class ASCIILiteral;
@@ -64,6 +71,12 @@ struct MainThreadAccessTraits;
 template<typename> struct ObjectIdentifierMainThreadAccessTraits;
 template<typename> struct ObjectIdentifierThreadSafeAccessTraits;
 
+#if USE(PROTECTED_JIT)
+struct SequesteredArenaMalloc;
+#else
+using SequesteredArenaMalloc = FastMalloc;
+#endif
+
 namespace JSONImpl {
 class Array;
 class Object;
@@ -72,9 +85,12 @@ template<typename> class ArrayOf;
 
 #if ENABLE(MALLOC_HEAP_BREAKDOWN)
 struct VectorBufferMalloc;
+struct EmbeddedFixedVectorMalloc;
 #else
 using VectorBufferMalloc = FastMalloc;
+using EmbeddedFixedVectorMalloc = FastMalloc;
 #endif
+using SegmentedVectorMalloc = FastMalloc;
 
 template<typename> struct DefaultRefDerefTraits;
 
@@ -82,8 +98,11 @@ template<typename> class CompactPtr;
 template<typename> class CompletionHandler;
 template<typename, size_t = 0> class Deque;
 template<typename Key, typename, Key> class EnumeratedArray;
-template<typename> class FixedVector;
+template<typename, typename = EmbeddedFixedVectorMalloc> class FixedVector;
+template<typename, size_t = 8, typename = SegmentedVectorMalloc> class SegmentedVector;
 template<typename> class Function;
+template<typename> struct FlatteningVariantTraits;
+template<typename> struct IsSmartPtr;
 template<typename, typename = AnyThreadsAccessTraits> class LazyNeverDestroyed;
 template<typename T, typename Traits = typename T::MarkableTraits> class Markable;
 template<typename, typename = AnyThreadsAccessTraits> class NeverDestroyed;
@@ -115,6 +134,13 @@ template<typename, size_t = 0, typename = CrashOnOverflow, size_t = 16, typename
 template<typename, typename WeakPtrImpl = DefaultWeakPtrImpl, typename = RawPtrTraits<WeakPtrImpl>> class WeakPtr;
 template<typename, typename = DefaultWeakPtrImpl> class WeakRef;
 
+template <typename T>
+using SaSegmentedVector = SegmentedVector<T, 8, SequesteredArenaMalloc>;
+template <typename T>
+using SaFixedVector = FixedVector<T, SequesteredArenaMalloc>;
+template <typename T>
+using SaVector = Vector<T, 0, CrashOnOverflow, 16, SequesteredArenaMalloc>;
+
 template<typename> struct DefaultHash;
 template<> struct DefaultHash<AtomString>;
 template<typename T> struct DefaultHash<OptionSet<T>>;
@@ -135,12 +161,15 @@ template<typename T> struct KeyValuePairKeyExtractor;
 template<typename KeyTraits, typename MappedTraits> struct KeyValuePairTraits;
 template<typename KeyTypeArg, typename ValueTypeArg> struct KeyValuePair;
 enum class ShouldValidateKey : bool { No, Yes };
-template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, ShouldValidateKey shouldValidateKey = ShouldValidateKey::No> class HashTable;
+template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, ShouldValidateKey shouldValidateKey = ShouldValidateKey::Yes> class HashTable;
 template<typename Value, typename = DefaultHash<Value>, typename = HashTraits<Value>> class HashCountedSet;
 template<typename KeyArg, typename MappedArg, typename = DefaultHash<KeyArg>, typename = HashTraits<KeyArg>, typename = HashTraits<MappedArg>, typename = HashTableTraits, ShouldValidateKey = ShouldValidateKey::Yes> class HashMap;
 template<typename KeyArg, typename MappedArg, typename KeyHash = DefaultHash<KeyArg>, typename KeyTraits = HashTraits<KeyArg>, typename MappedTraits = HashTraits<MappedArg>, typename HashTraits = HashTableTraits>
 using UncheckedKeyHashMap = HashMap<KeyArg, MappedArg, KeyHash, KeyTraits, MappedTraits, HashTraits, ShouldValidateKey::No>;
-template<typename ValueArg, typename = DefaultHash<ValueArg>, typename = HashTraits<ValueArg>, typename = HashTableTraits> class HashSet;
+template<typename ValueArg, typename = DefaultHash<ValueArg>, typename = HashTraits<ValueArg>, typename = HashTableTraits, ShouldValidateKey = ShouldValidateKey::Yes> class HashSet;
+template<typename ValueArg, typename = DefaultHash<ValueArg>> class ListHashSet;
+template<typename ValueArg, typename HashArg = DefaultHash<ValueArg>, typename TraitsArg = HashTraits<ValueArg>, typename TableTraitsArg = HashTableTraits>
+using UncheckedKeyHashSet = HashSet<ValueArg, HashArg, TraitsArg, TableTraitsArg, ShouldValidateKey::No>;
 template<typename ResolveValueT, typename RejectValueT, unsigned options = 0> class NativePromise;
 using GenericPromise = NativePromise<void, void>;
 using GenericNonExclusivePromise = NativePromise<void, void, 1>;
@@ -157,6 +186,10 @@ inline namespace fundamentals_v3 {
 template<class, class> class expected;
 template<class> class unexpected;
 }}} // namespace std::experimental::fundamentals_v3
+
+using WTF::SaSegmentedVector;
+using WTF::SaFixedVector;
+using WTF::SaVector;
 
 using WTF::ASCIILiteral;
 using WTF::AbstractLocker;
@@ -177,6 +210,7 @@ using WTF::HashMap;
 using WTF::HashSet;
 using WTF::Hasher;
 using WTF::LazyNeverDestroyed;
+using WTF::ListHashSet;
 using WTF::Lock;
 using WTF::Logger;
 using WTF::MachSendRight;
@@ -201,7 +235,6 @@ using WTF::RefPtr;
 using WTF::RetainPtr;
 using WTF::SHA1;
 using WTF::ScopedLambda;
-using WTF::Seconds;
 using WTF::SerialFunctionDispatcher;
 using WTF::String;
 using WTF::StringBuffer;
@@ -214,9 +247,9 @@ using WTF::TextPosition;
 using WTF::TextStream;
 using WTF::URL;
 using WTF::UncheckedKeyHashMap;
+using WTF::UncheckedKeyHashSet;
 using WTF::UniqueRef;
 using WTF::Vector;
-using WTF::WallTime;
 using WTF::WeakPtr;
 using WTF::WeakRef;
 

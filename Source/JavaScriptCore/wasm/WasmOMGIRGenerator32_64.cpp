@@ -130,6 +130,7 @@ public:
 
     static constexpr bool shouldFuseBranchCompare = false;
     static constexpr bool tierSupportsSIMD = true;
+    static constexpr bool validateFunctionBodySize = true;
 
     struct ControlData {
         ControlData(Procedure& proc, Origin origin, BlockSignature signature, BlockType type, unsigned stackSize, BasicBlock* continuation, BasicBlock* special = nullptr)
@@ -988,9 +989,10 @@ private:
     Value* emitAtomicBinaryRMWOp(ExtAtomicOpType, Type, Value* pointer, Value*, uint32_t offset);
     Value* emitAtomicCompareExchange(ExtAtomicOpType, Type, Value* pointer, Value* expected, Value*, uint32_t offset);
 
+    Value* emitGetArrayPayloadBase(Wasm::StorageType, Value*);
     void emitArrayNullCheck(Value*, ExceptionType);
     void emitArraySetUnchecked(uint32_t, Value*, Value*, Value*);
-    void emitStructSet(Value*, uint32_t, const StructType&, Value*);
+    bool WARN_UNUSED_RETURN emitStructSet(Value*, uint32_t, const StructType&, Value*);
     ExpressionType WARN_UNUSED_RETURN pushArrayNew(uint32_t typeIndex, Value* initValue, ExpressionType size);
     using ArraySegmentOperation = EncodedJSValue SYSV_ABI (&)(JSC::JSWebAssemblyInstance*, uint32_t, uint32_t, uint32_t, uint32_t);
     ExpressionType WARN_UNUSED_RETURN pushArrayNewFromSegment(ArraySegmentOperation, uint32_t typeIndex, uint32_t segmentIndex, ExpressionType arraySize, ExpressionType offset, ExceptionType);
@@ -1264,10 +1266,6 @@ struct ValueAppender<AtomicValue> {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(OMGIRGenerator);
 
-using FunctionParserOMGIRGenerator = FunctionParser<OMGIRGenerator>;
-
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(FunctionParserOMGIRGenerator);
-
 // Memory accesses in WebAssembly have unsigned 32-bit offsets, whereas they have signed 32-bit offsets in B3.
 int32_t OMGIRGenerator::fixupPointerPlusOffset(Value*& ptr, uint32_t offset)
 {
@@ -1397,7 +1395,7 @@ OMGIRGenerator::OMGIRGenerator(CalleeGroup& calleeGroup, const ModuleInformation
         m_proc.pinRegister(GPRInfo::wasmBoundsCheckingSizeRegister);
 #endif
     if (info.memory) {
-        m_proc.setWasmBoundsCheckGenerator([=, this] (CCallHelpers& jit, GPRReg pinnedGPR) {
+        m_proc.setWasmBoundsCheckGenerator([=, this](CCallHelpers& jit, WasmBoundsCheckValue*, GPRReg pinnedGPR) {
             AllowMacroScratchRegisterUsage allowScratch(jit);
             switch (m_mode) {
             case MemoryMode::BoundsChecking:
@@ -3057,28 +3055,27 @@ Value* OMGIRGenerator::emitAtomicCompareExchange(ExtAtomicOpType op, Type valueT
     return sanitizeAtomicResult(op, valueType, result);
 }
 
-void OMGIRGenerator::emitStructSet(Value* structValue, uint32_t fieldIndex, const StructType& structType, Value* argument)
+bool OMGIRGenerator::emitStructSet(Value* structValue, uint32_t fieldIndex, const StructType& structType, Value* argument)
 {
     structValue = truncate(structValue); // payload
     auto fieldType = structType.field(fieldIndex).type;
-    Value* payloadBase = append<MemoryValue>(heapTop(), m_proc, memoryKind(Load), pointerType(), origin(), structValue, JSWebAssemblyStruct::offsetOfPayload());
-    int32_t fieldOffset = fixupPointerPlusOffset(payloadBase, *structType.offsetOfField(fieldIndex));
+    int32_t fieldOffset = fixupPointerPlusOffset(structValue, JSWebAssemblyStruct::offsetOfData() + structType.offsetOfFieldInPayload(fieldIndex));
 
     if (fieldType.is<PackedType>()) {
         switch (structType.field(fieldIndex).type.as<PackedType>()) {
         case PackedType::I8:
-            append<MemoryValue>(heapTop(), m_proc, memoryKind(Store8), origin(), argument, payloadBase, fieldOffset);
-            return;
+            append<MemoryValue>(heapTop(), m_proc, memoryKind(Store8), origin(), argument, structValue, fieldOffset);
+            return false;
         case PackedType::I16:
-            append<MemoryValue>(heapTop(), m_proc, memoryKind(Store16), origin(), argument, payloadBase, fieldOffset);
-            return;
+            append<MemoryValue>(heapTop(), m_proc, memoryKind(Store16), origin(), argument, structValue, fieldOffset);
+            return false;
         }
     }
 
     ASSERT(fieldType.is<Type>());
-    append<MemoryValue>(heapTop(), m_proc, memoryKind(Store), origin(), argument, payloadBase, fieldOffset);
-    if (isRefType(fieldType.unpacked()))
-        emitWriteBarrier(structValue, instanceValue());
+    append<MemoryValue>(heapTop(), m_proc, memoryKind(Store), origin(), argument, structValue, fieldOffset);
+    // FIXME: We should be able elide this write barrier if we know we're storing jsNull();
+    return isRefType(fieldType.unpacked());
 }
 
 auto OMGIRGenerator::atomicCompareExchange(ExtAtomicOpType op, Type valueType, ExpressionType pointer, ExpressionType expected, ExpressionType value, ExpressionType& result, uint32_t offset) -> PartialResult
@@ -3491,11 +3488,10 @@ auto OMGIRGenerator::addArrayGet(ExtGCOpType arrayGetKind, uint32_t typeIndex, E
         });
     }
 
-    Value* payloadBase = append<MemoryValue>(heapTop(), m_proc, memoryKind(Load), pointerType(), origin(), truncate(get(arrayref)), JSWebAssemblyArray::offsetOfPayload());
+    Value* payloadBase = emitGetArrayPayloadBase(elementType, get(arrayref));
     Value* indexValue = is32Bit() ? get(index) : append<Value>(m_proc, ZExt32, origin(), get(index));
     Value* indexedAddress = append<Value>(m_proc, Add, pointerType(), origin(), payloadBase,
-        append<Value>(m_proc, Add, pointerType(), origin(), constant(pointerType(), JSWebAssemblyArray::offsetOfElements(elementType)),
-            append<Value>(m_proc, Mul, pointerType(), origin(), indexValue, constant(pointerType(), elementType.elementSize()))));
+        append<Value>(m_proc, Mul, pointerType(), origin(), indexValue, constant(pointerType(), elementType.elementSize())));
 
     if (elementType.is<PackedType>()) {
         Value* load;
@@ -3533,6 +3529,18 @@ auto OMGIRGenerator::addArrayGet(ExtGCOpType arrayGetKind, uint32_t typeIndex, E
     return { };
 }
 
+Value* OMGIRGenerator::emitGetArrayPayloadBase(Wasm::StorageType fieldType, Value* arrayref)
+{
+    auto payloadBase = m_currentBlock->appendNew<Value>(m_proc, Add, pointerType(), origin(), arrayref, constant(pointerType(), JSWebAssemblyArray::offsetOfData()));
+    if (JSWebAssemblyArray::needsAlignmentCheck(fieldType)) {
+        auto isPreciseAllocation = m_currentBlock->appendNew<Value>(m_proc, BitAnd, origin(), arrayref, constant(pointerType(), PreciseAllocation::halfAlignment));
+        return m_currentBlock->appendNew<Value>(m_proc, B3::Select, origin(), isPreciseAllocation,
+            m_currentBlock->appendNew<Value>(m_proc, Add, origin(), payloadBase, constant(pointerType(), PreciseAllocation::halfAlignment)),
+            payloadBase);
+    }
+    return payloadBase;
+}
+
 void OMGIRGenerator::emitArrayNullCheck(Value* arrayref, ExceptionType exceptionType)
 {
     CheckValue* check = append<CheckValue>(m_proc, Check, origin(),
@@ -3549,11 +3557,10 @@ void OMGIRGenerator::emitArraySetUnchecked(uint32_t typeIndex, Value* arrayref, 
     StorageType elementType;
     getArrayElementType(typeIndex, elementType);
 
-    auto payloadBase = append<MemoryValue>(heapTop(), m_proc, memoryKind(Load), pointerType(), origin(), truncate(arrayref), JSWebAssemblyArray::offsetOfPayload());
+    auto payloadBase = emitGetArrayPayloadBase(elementType, arrayref);
     auto indexValue = is32Bit() ? index : append<Value>(m_proc, ZExt32, origin(), index);
     auto indexedAddress = append<Value>(m_proc, Add, pointerType(), origin(), payloadBase,
-        append<Value>(m_proc, Add, pointerType(), origin(), constant(pointerType(), JSWebAssemblyArray::offsetOfElements(elementType)),
-            append<Value>(m_proc, Mul, pointerType(), origin(), indexValue, constant(pointerType(), elementType.elementSize()))));
+        append<Value>(m_proc, Mul, pointerType(), origin(), indexValue, constant(pointerType(), elementType.elementSize())));
 
     if (elementType.is<PackedType>()) {
         switch (elementType.as<PackedType>()) {
@@ -3733,8 +3740,12 @@ auto OMGIRGenerator::addStructNew(uint32_t typeIndex, ArgumentList& args, Expres
     }
 
     const auto& structType = *m_info.typeSignatures[typeIndex]->expand().template as<StructType>();
+    bool needsWriteBarrier = false;
     for (uint32_t i = 0; i < args.size(); ++i)
-        emitStructSet(structValue, i, structType, get(args[i]));
+        needsWriteBarrier |= emitStructSet(structValue, i, structType, get(args[i]));
+
+    if (needsWriteBarrier)
+        emitWriteBarrier(structValue, instanceValue());
 
     result = push(structValue);
 
@@ -3768,7 +3779,9 @@ auto OMGIRGenerator::addStructNewDefault(uint32_t typeIndex, ExpressionType& res
             initValue = m_currentBlock->appendNew<Const32Value>(m_proc, origin(), 0);
         else
             initValue = m_currentBlock->appendNew<Const64Value>(m_proc, origin(), 0);
-        emitStructSet(structValue, i, structType, initValue);
+        // We know all the values here are not cells so we don't need a writeBarrier.
+        bool needsWriteBarrier = emitStructSet(structValue, i, structType, initValue);
+        UNUSED_VARIABLE(needsWriteBarrier);
     }
 
     result = push(structValue);
@@ -3789,17 +3802,17 @@ auto OMGIRGenerator::addStructGet(ExtGCOpType structGetKind, ExpressionType stru
         });
     }
 
-    Value* payloadBase = append<MemoryValue>(heapTop(), m_proc, memoryKind(Load), pointerType(), origin(), truncate(get(structReference)), JSWebAssemblyStruct::offsetOfPayload());
-    int32_t fieldOffset = fixupPointerPlusOffset(payloadBase, *structType.offsetOfField(fieldIndex));
+    Value* structValue = truncate(get(structReference));
+    int32_t fieldOffset = fixupPointerPlusOffset(structValue, JSWebAssemblyStruct::offsetOfData() + structType.offsetOfFieldInPayload(fieldIndex));
 
     if (fieldType.is<PackedType>()) {
         Value* load;
         switch (fieldType.as<PackedType>()) {
         case PackedType::I8:
-            load = append<MemoryValue>(heapTop(), m_proc, memoryKind(Load8Z), Int32, origin(), payloadBase, fieldOffset);
+            load = append<MemoryValue>(heapTop(), m_proc, memoryKind(Load8Z), Int32, origin(), structValue, fieldOffset);
             break;
         case PackedType::I16:
-            load = append<MemoryValue>(heapTop(), m_proc, memoryKind(Load16Z), Int32, origin(), payloadBase, fieldOffset);
+            load = append<MemoryValue>(heapTop(), m_proc, memoryKind(Load16Z), Int32, origin(), structValue, fieldOffset);
             break;
         }
         Value* postProcess = load;
@@ -3821,7 +3834,7 @@ auto OMGIRGenerator::addStructGet(ExtGCOpType structGetKind, ExpressionType stru
     }
 
     ASSERT(fieldType.is<Type>());
-    result = push<MemoryValue>(heapTop(), m_proc, memoryKind(Load), toB3Type(resultType), origin(), payloadBase, fieldOffset);
+    result = push<MemoryValue>(heapTop(), m_proc, memoryKind(Load), toB3Type(resultType), origin(), structValue, fieldOffset);
 
     return { };
 }
@@ -3836,7 +3849,10 @@ auto OMGIRGenerator::addStructSet(ExpressionType structReference, const StructTy
         });
     }
 
-    emitStructSet(get(structReference), fieldIndex, structType, get(value));
+    Value* structValue = get(structReference);
+    bool needsWriteBarrier = emitStructSet(structValue, fieldIndex, structType, get(value));
+    if (needsWriteBarrier)
+        emitWriteBarrier(structValue, instanceValue());
     return { };
 }
 
@@ -3909,6 +3925,7 @@ void OMGIRGenerator::emitRefTestOrCast(CastKind castKind, ExpressionType referen
         case Wasm::TypeKind::Anyref:
             // Casts to these types cannot fail as they are the top types of their respective hierarchies, and static type-checking does not allow cross-hierarchy casts.
             break;
+        case Wasm::TypeKind::Nullexn:
         case Wasm::TypeKind::Nullref:
         case Wasm::TypeKind::Nullfuncref:
         case Wasm::TypeKind::Nullexternref:
@@ -3997,7 +4014,7 @@ void OMGIRGenerator::emitRefTestOrCast(CastKind castKind, ExpressionType referen
         m_currentBlock = slowPath;
         // FIXME: It may be worthwhile to JIT inline this in the future.
         Value* isSubRTT = append<CCallValue>(m_proc, B3::Int32, origin(),
-            append<ConstPtrValue>(m_proc, origin(), tagCFunction<OperationPtrTag>(operationWasmIsSubRTT)),
+            append<ConstPtrValue>(m_proc, origin(), tagCFunction<OperationPtrTag>(operationWasmIsStrictSubRTT)),
             truncate(rtt), targetRTT);
         emitCheckOrBranchForCast(castKind, append<Value>(m_proc, Equal, origin(), isSubRTT, constant(Int32, 0)), castFailure, falseBlock);
     }
@@ -5223,7 +5240,7 @@ static inline void prepareForTailCallImpl(unsigned functionIndex, CCallHelpers& 
             dataLogLn("callee original: ", RawPointer(fpp->callee().rawPtr()));
             auto& wasmCallee = context.gpr<uint64_t*>(GPRInfo::callFrameRegister)[CallFrameSlot::callee * 1];
             dataLogLn("callee original: ", RawHex(wasmCallee), " at ", RawPointer(&wasmCallee));
-            dataLogLn("retPC original: ", RawPointer(fpp->rawReturnPCForInspection()));
+            dataLogLn("retPC original: ", RawPointer(fpp->rawReturnPC()));
             auto& retPC = context.gpr<uint64_t*>(GPRInfo::callFrameRegister)[CallFrame::returnPCOffset() / sizeof(uint64_t)];
             dataLogLn("retPC original: ", RawHex(retPC), " at ", RawPointer(&retPC));
             dataLogLn("callerFrame original: ", RawPointer(fpp->callerFrame()));
@@ -5637,7 +5654,7 @@ bool OMGIRGenerator::canInline(FunctionSpaceIndex functionIndexSpace) const
     if (m_inlineRoot->m_inlinedBytes.value() >= Options::maximumWasmCallerSizeForInlining())
         return false;
 
-    if (m_inlineDepth > 1 && !StackCheck(Thread::current().stack(), StackBounds::DefaultReservedZone * 2).isSafeToRecurse())
+    if (m_inlineDepth > 1 && !StackCheck(Thread::currentSingleton().stack(), StackBounds::DefaultReservedZone * 2).isSafeToRecurse())
         return false;
 
     // FIXME: There's no fundamental reason we can't inline these including imports.
@@ -5947,7 +5964,7 @@ auto OMGIRGenerator::addCallIndirect(unsigned tableIndex, const TypeDefinition& 
 
     BasicBlock* throwBlock = m_proc.addBlock();
     // The subtype check can be omitted as an optimization for final types, but is needed otherwise if GC is on.
-    if (Options::useWasmGC() && !originalSignature.isFinalType()) {
+    if (!originalSignature.isFinalType()) {
         // We don't need to check the RTT kind because by validation both RTTs must be for functions.
         Value* rttSize = append<MemoryValue>(heapTop(), m_proc, Load, Int32, origin(), calleeRTT, safeCast<uint32_t>(RTT::offsetOfDisplaySize()));
         Value* rttSizeAsPointerType = rttSize;
@@ -6121,15 +6138,7 @@ Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileOMG(Compilati
     if (shouldDumpIRFor(functionIndex + info.importFunctionCount()))
         procedure.setShouldDumpIR();
 
-
-    if (Options::useSamplingProfiler()) {
-        // FIXME: We should do this based on VM relevant info.
-        // But this is good enough for our own profiling for now.
-        // When we start to show this data in web inspector, we'll
-        // need other hooks into this besides the JSC option.
-        procedure.setNeedsPCToOriginMap();
-    }
-
+    procedure.setNeedsPCToOriginMap();
     procedure.setOriginPrinter([] (PrintStream& out, Origin origin) {
         if (origin.data())
             out.print("Wasm: ", OpcodeOrigin(origin));
@@ -6424,24 +6433,6 @@ auto OMGIRGenerator::addF32Nearest(ExpressionType argVar, ExpressionType& result
 {
     Value* arg = get(argVar);
     Value* callee = append<ConstPtrValue>(m_proc, origin(), tagCFunction<OperationPtrTag>(Math::f32_roundeven));
-    Value* call = append<CCallValue>(m_proc, B3::Float, origin(), callee, arg);
-    result = push(call);
-    return { };
-}
-
-auto OMGIRGenerator::addF64Trunc(ExpressionType argVar, ExpressionType& result) -> PartialResult
-{
-    Value* arg = get(argVar);
-    Value* callee = append<ConstPtrValue>(m_proc, origin(), tagCFunction<OperationPtrTag>(Math::f64_trunc));
-    Value* call = append<CCallValue>(m_proc, B3::Double, origin(), callee, arg);
-    result = push(call);
-    return { };
-}
-
-auto OMGIRGenerator::addF32Trunc(ExpressionType argVar, ExpressionType& result) -> PartialResult
-{
-    Value* arg = get(argVar);
-    Value* callee = append<ConstPtrValue>(m_proc, origin(), tagCFunction<OperationPtrTag>(Math::f32_trunc));
     Value* call = append<CCallValue>(m_proc, B3::Float, origin(), callee, arg);
     result = push(call);
     return { };

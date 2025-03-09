@@ -107,7 +107,7 @@ static const String& fullyQualifiedInfoTableName()
 
 static String formatErrorMessage(ASCIILiteral message, int sqliteErrorCode, const char* sqliteErrorMessage)
 {
-    return makeString(message, " ("_s, sqliteErrorCode, ' ', span(sqliteErrorMessage), ')');
+    return makeString(message, " ("_s, sqliteErrorCode, ' ', unsafeSpan(sqliteErrorMessage), ')');
 }
 
 static bool setTextValueInDatabase(SQLiteDatabase& db, StringView query, const String& value)
@@ -277,7 +277,7 @@ void Database::close()
 
 void Database::performClose()
 {
-    ASSERT(databaseThread().getThread() == &Thread::current());
+    ASSERT(databaseThread().getThread() == &Thread::currentSingleton());
 
     {
         Locker locker { m_transactionInProgressLock };
@@ -772,7 +772,7 @@ SecurityOriginData Database::securityOrigin()
 {
     if (isMainThread())
         return m_contextThreadSecurityOrigin->data();
-    if (databaseThread().getThread() == &Thread::current())
+    if (databaseThread().getThread() == &Thread::currentSingleton())
         return m_databaseThreadSecurityOrigin->data();
     RELEASE_ASSERT_NOT_REACHED();
 }

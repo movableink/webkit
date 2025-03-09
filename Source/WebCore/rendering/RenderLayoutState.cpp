@@ -48,7 +48,7 @@ RenderLayoutState::RenderLayoutState(RenderElement& renderer)
 #if ASSERT_ENABLED
     , m_layoutDeltaXSaturated(false)
     , m_layoutDeltaYSaturated(false)
-    , m_blockStartTrimming(Vector<bool>(0))
+    , m_marginTrimBlockStart(false)
     , m_renderer(&renderer)
 #endif
 {
@@ -69,7 +69,7 @@ RenderLayoutState::RenderLayoutState(RenderElement& renderer)
     }
 }
 
-RenderLayoutState::RenderLayoutState(const LocalFrameViewLayoutContext::LayoutStateStack& layoutStateStack, RenderBox& renderer, const LayoutSize& offset, LayoutUnit pageLogicalHeight, bool pageLogicalHeightChanged, std::optional<LineClamp> lineClamp, std::optional<LegacyLineClamp> legacyLineClamp, std::optional<TextBoxTrim> textBoxTrim)
+RenderLayoutState::RenderLayoutState(const LocalFrameViewLayoutContext::LayoutStateStack& layoutStateStack, RenderBox& renderer, const LayoutSize& offset, LayoutUnit pageLogicalHeight, bool pageLogicalHeightChanged, std::optional<LineClamp> lineClamp, std::optional<LegacyLineClamp> legacyLineClamp)
     : m_clipped(false)
     , m_isPaginated(false)
     , m_pageLogicalHeightChanged(false)
@@ -77,10 +77,9 @@ RenderLayoutState::RenderLayoutState(const LocalFrameViewLayoutContext::LayoutSt
     , m_layoutDeltaXSaturated(false)
     , m_layoutDeltaYSaturated(false)
 #endif
-    , m_blockStartTrimming(Vector<bool>(0))
+    , m_marginTrimBlockStart(false)
     , m_lineClamp(lineClamp)
     , m_legacyLineClamp(legacyLineClamp)
-    , m_textBoxTrim(textBoxTrim)
 #if ASSERT_ENABLED
     , m_renderer(&renderer)
 #endif
@@ -340,18 +339,32 @@ SubtreeLayoutStateMaintainer::~SubtreeLayoutStateMaintainer()
     }
 }
 
-ContentVisibilityForceLayoutScope::ContentVisibilityForceLayoutScope(RenderView& layoutRoot, const Element* context)
+FlexPercentResolveDisabler::FlexPercentResolveDisabler(LocalFrameViewLayoutContext& layoutContext, const RenderBox& flexItem)
+    : m_layoutContext(layoutContext)
+    , m_flexItem(flexItem)
 {
-    if (context) {
-        m_context = &layoutRoot.frameView().layoutContext();
-        m_context->setNeedsSkippedContentLayout(true);
-    }
+    m_layoutContext->disablePercentHeightResolveFor(flexItem);
+}
+
+FlexPercentResolveDisabler::~FlexPercentResolveDisabler()
+{
+    m_layoutContext->enablePercentHeightResolveFor(m_flexItem);
+}
+
+ContentVisibilityForceLayoutScope::ContentVisibilityForceLayoutScope(LocalFrameViewLayoutContext& layoutContext, const Element* element)
+    : m_layoutContext(layoutContext)
+    , m_element(element)
+{
+    if (element)
+        m_layoutContext->setNeedsSkippedContentLayout(true);
 }
 
 ContentVisibilityForceLayoutScope::~ContentVisibilityForceLayoutScope()
 {
-    if (m_context)
-        m_context->setNeedsSkippedContentLayout(false);
+    if (m_element) {
+        ASSERT(m_layoutContext->needsSkippedContentLayout());
+        m_layoutContext->setNeedsSkippedContentLayout(false);
+    }
 }
 
 } // namespace WebCore

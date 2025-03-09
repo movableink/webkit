@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ExitKind.h"
+#include "JSCJSValue.h"
 #include "ProfilerOriginStack.h"
 
 namespace JSC { namespace Profiler {

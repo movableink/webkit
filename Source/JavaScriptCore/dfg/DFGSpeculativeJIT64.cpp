@@ -1067,7 +1067,7 @@ void SpeculativeJIT::emitCall(Node* node)
         if (isTail) {
             RELEASE_ASSERT(node->op() == DirectTailCall);
 
-            SuppressRegisetrAllocationValidation suppressScope(*this);
+            SuppressRegisterAllocationValidation suppressScope(*this);
             Label mainPath = label();
             emitStoreCallSiteIndex(callSite);
             auto slowCases = callLinkInfo->emitDirectTailCallFastPath(*this, scopedLambda<void()>([&] {
@@ -1085,7 +1085,7 @@ void SpeculativeJIT::emitCall(Node* node)
             return;
         }
 
-        SuppressRegisetrAllocationValidation suppressScope(*this);
+        SuppressRegisterAllocationValidation suppressScope(*this);
         Label mainPath = label();
         emitStoreCallSiteIndex(callSite);
         auto slowCases = callLinkInfo->emitDirectFastPath(*this);
@@ -3625,6 +3625,10 @@ void SpeculativeJIT::compile(Node* node)
         compileArithUnary(node);
         break;
 
+    case PurifyNaN:
+        compilePurifyNaN(node);
+        break;
+
     case ToBoolean: {
         bool invert = false;
         compileToBoolean(node, invert);
@@ -3698,8 +3702,9 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
+    case StringAt:
     case StringCharAt: {
-        // Relies on StringCharAt node having same basic layout as GetByVal
+        // Relies on StringCharAt and StringAt node having same basic layout as GetByVal
         JSValueRegsTemporary result;
         compileGetByValOnString(node, scopedLambda<std::tuple<JSValueRegs, DataFormat>(DataFormat preferredFormat, bool needsFlush)>([&] (DataFormat preferredFormat, bool needsFlush) {
             result = JSValueRegsTemporary(this);
@@ -3930,7 +3935,7 @@ void SpeculativeJIT::compile(Node* node)
         if (!ok)
             break;
 
-        SuppressRegisetrAllocationValidation suppressScope(*this);
+        SuppressRegisterAllocationValidation suppressScope(*this);
 
         StorageOperand storage(this, storageEdge);
         GPRTemporary oldValue(this);
@@ -4149,8 +4154,9 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
+    case ArrayIncludes:
     case ArrayIndexOf: {
-        compileArrayIndexOf(node);
+        compileArrayIndexOfOrArrayIncludes(node);
         break;
     }
         
@@ -5362,6 +5368,10 @@ void SpeculativeJIT::compile(Node* node)
         compileMapStorage(node);
         break;
 
+    case MapStorageOrSentinel:
+        compileMapStorageOrSentinel(node);
+        break;
+
     case MapIteratorNext:
         compileMapIteratorNext(node);
         break;
@@ -5875,6 +5885,10 @@ void SpeculativeJIT::compile(Node* node)
         compileMaterializeNewObject(node);
         break;
 
+    case MaterializeNewArrayWithConstantSize:
+        compileMaterializeNewArrayWithConstantSize(node);
+        break;
+
     case CallDOM:
         compileCallDOM(node);
         break;
@@ -6140,7 +6154,7 @@ void SpeculativeJIT::compile(Node* node)
         case DoubleRepUse:
             doubleValue.emplace(this, valueEdge);
             valueFPR = doubleValue->fpr();
-            if (data.byteSize == 4) {
+            if (data.byteSize < 8) {
                 fprTemporary.emplace(this);
                 tempFPR = fprTemporary->fpr();
             }
@@ -6192,6 +6206,7 @@ void SpeculativeJIT::compile(Node* node)
         auto baseIndex = BaseIndex(t2, t1, TimesOne);
 
         if (data.isFloatingPoint) {
+            ASSERT(valueEdge.useKind() == DoubleRepUse);
             RELEASE_ASSERT(valueFPR != InvalidFPRReg);
             if (data.byteSize == 2) {
                 RELEASE_ASSERT(tempFPR != InvalidFPRReg);
@@ -6462,6 +6477,7 @@ void SpeculativeJIT::compile(Node* node)
     case CheckBadValue:
     case BottomValue:
     case PhantomNewObject:
+    case PhantomNewArrayWithConstantSize:
     case PhantomNewFunction:
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncFunction:

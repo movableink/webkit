@@ -29,9 +29,10 @@
 
 #import "APINavigation.h"
 #import <WebCore/WebCoreObjCExtras.h>
+#import <wtf/AlignedStorage.h>
 
 @implementation WKNavigation {
-    API::ObjectStorage<API::Navigation> _navigation;
+    AlignedStorage<API::Navigation> _navigation;
 }
 
 WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
@@ -41,7 +42,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
     if (WebCoreObjCScheduleDeallocateOnMainRunLoop(WKNavigation.class, self))
         return;
 
-    _navigation->~Navigation();
+    Ref { *_navigation }->~Navigation();
 
     [super dealloc];
 }

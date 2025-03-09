@@ -29,25 +29,6 @@
 
 namespace WebCore {
 
-static void copyBusData(AudioBus& bus, GstBuffer* buffer, bool isMuted)
-{
-    GstMappedBuffer mappedBuffer(buffer, GST_MAP_WRITE);
-    if (isMuted) {
-        memset(mappedBuffer.data(), 0, mappedBuffer.size());
-        return;
-    }
-
-    size_t offset = 0;
-    for (size_t channelIndex = 0; channelIndex < bus.numberOfChannels(); ++channelIndex) {
-        const auto& channel = *bus.channel(channelIndex);
-        auto dataSize = sizeof(float) * channel.length();
-        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
-        memcpy(mappedBuffer.data() + offset, channel.data(), dataSize);
-        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-        offset += dataSize;
-    }
-}
-
 void MediaStreamAudioSource::consumeAudio(AudioBus& bus, size_t numberOfFrames)
 {
     if (!bus.numberOfChannels() || bus.numberOfChannels() > 2) {
@@ -58,22 +39,35 @@ void MediaStreamAudioSource::consumeAudio(AudioBus& bus, size_t numberOfFrames)
     MediaTime mediaTime((m_numberOfFrames * G_USEC_PER_SEC) / m_currentSettings.sampleRate(), G_USEC_PER_SEC);
     m_numberOfFrames += numberOfFrames;
 
-    GstAudioInfo info;
-    gst_audio_info_set_format(&info, GST_AUDIO_FORMAT_F32LE, m_currentSettings.sampleRate(), bus.numberOfChannels(), nullptr);
-    GST_AUDIO_INFO_LAYOUT(&info) = GST_AUDIO_LAYOUT_NON_INTERLEAVED;
-    size_t size = GST_AUDIO_INFO_BPS(&info) * bus.numberOfChannels() * numberOfFrames;
+    // Lazily initialize caps, the settings don't change so this is OK.
+    if (!m_caps || GST_AUDIO_INFO_CHANNELS(&m_info) != static_cast<int>(bus.numberOfChannels())) {
+        gst_audio_info_set_format(&m_info, GST_AUDIO_FORMAT_F32LE, m_currentSettings.sampleRate(), bus.numberOfChannels(), nullptr);
+        GST_AUDIO_INFO_LAYOUT(&m_info) = GST_AUDIO_LAYOUT_NON_INTERLEAVED;
+        m_caps = adoptGRef(gst_audio_info_to_caps(&m_info));
+    }
 
-    auto caps = adoptGRef(gst_audio_info_to_caps(&info));
-    auto buffer = adoptGRef(gst_buffer_new_allocate(nullptr, size, nullptr));
-
+    auto buffer = adoptGRef(gst_buffer_new());
     GST_BUFFER_PTS(buffer.get()) = toGstClockTime(mediaTime);
     GST_BUFFER_FLAG_SET(buffer.get(), GST_BUFFER_FLAG_LIVE);
 
-    copyBusData(bus, buffer.get(), muted());
-    gst_buffer_add_audio_meta(buffer.get(), &info, numberOfFrames, nullptr);
-    auto sample = adoptGRef(gst_sample_new(buffer.get(), caps.get(), nullptr, nullptr));
-    GStreamerAudioData audioBuffer(WTFMove(sample), info);
-    GStreamerAudioStreamDescription description(&info);
+    for (size_t channelIndex = 0; channelIndex < bus.numberOfChannels(); ++channelIndex) {
+        auto& channel = *bus.channel(channelIndex);
+        auto dataSize = sizeof(float) * channel.length();
+
+        bus.ref();
+        gst_buffer_append_memory(buffer.get(), gst_memory_new_wrapped(GST_MEMORY_FLAG_READONLY, channel.mutableData(), dataSize, 0, dataSize, &bus, reinterpret_cast<GDestroyNotify>(+[](gpointer data) {
+            auto bus = reinterpret_cast<AudioBus*>(data);
+            bus->deref();
+        })));
+    }
+
+    gst_buffer_add_audio_meta(buffer.get(), &m_info, numberOfFrames, nullptr);
+    if (bus.isSilent())
+        gst_buffer_add_audio_level_meta(buffer.get(), 127, FALSE);
+
+    auto sample = adoptGRef(gst_sample_new(buffer.get(), m_caps.get(), nullptr, nullptr));
+    GStreamerAudioData audioBuffer(WTFMove(sample), m_info);
+    GStreamerAudioStreamDescription description(&m_info);
     audioSamplesAvailable(mediaTime, audioBuffer, description, numberOfFrames);
 }
 

@@ -43,6 +43,7 @@
 #include <WebCore/MediaPlayer.h>
 #include <WebCore/MediaPlayerIdentifier.h>
 #include <WebCore/MediaPromiseTypes.h>
+#include <WebCore/PlatformDynamicRangeLimit.h>
 #include <WebCore/PlatformMediaResourceLoader.h>
 #include <optional>
 #include <wtf/LoggerHelper.h>
@@ -76,6 +77,7 @@ class MachSendRight;
 
 namespace WebCore {
 class AudioTrackPrivate;
+struct MediaPlayerLoadOptions;
 class SecurityOriginData;
 class VideoTrackPrivate;
 
@@ -137,6 +139,7 @@ public:
 #if PLATFORM(IOS_FAMILY)
     void accessLog(CompletionHandler<void(String)>&&);
     void errorLog(CompletionHandler<void(String)>&&);
+    void setSceneIdentifier(String&&);
 #endif
 
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
@@ -144,12 +147,12 @@ public:
 
     void getConfiguration(RemoteMediaPlayerConfiguration&);
 
-    void prepareForPlayback(bool privateMode, WebCore::MediaPlayerEnums::Preload, bool preservesPitch, WebCore::MediaPlayerEnums::PitchCorrectionAlgorithm, bool prepareToPlay, bool prepareForRendering, WebCore::IntSize presentationSize, float videoContentScale, WebCore::DynamicRangeMode);
+    void prepareForPlayback(bool privateMode, WebCore::MediaPlayerEnums::Preload, bool preservesPitch, WebCore::MediaPlayerEnums::PitchCorrectionAlgorithm, bool prepareToPlay, bool prepareForRendering, WebCore::IntSize presentationSize, float videoContentScale, WebCore::DynamicRangeMode, WebCore::PlatformDynamicRangeLimit);
     void prepareForRendering();
 
-    void load(URL&&, std::optional<SandboxExtension::Handle>&&, const WebCore::ContentType&, const String&, bool, CompletionHandler<void(RemoteMediaPlayerConfiguration&&)>&&);
+    void load(URL&&, std::optional<SandboxExtension::Handle>&&, const WebCore::MediaPlayerLoadOptions&, CompletionHandler<void(RemoteMediaPlayerConfiguration&&)>&&);
 #if ENABLE(MEDIA_SOURCE)
-    void loadMediaSource(URL&&, const WebCore::ContentType&, bool webMParserEnabled, RemoteMediaSourceIdentifier, CompletionHandler<void(RemoteMediaPlayerConfiguration&&)>&&);
+    void loadMediaSource(URL&&, const WebCore::MediaPlayerLoadOptions&, RemoteMediaSourceIdentifier, CompletionHandler<void(RemoteMediaPlayerConfiguration&&)>&&);
 #endif
     void cancelLoad();
 
@@ -160,6 +163,7 @@ public:
 
     void seekToTarget(const WebCore::SeekTarget&);
 
+    void setVolumeLocked(bool);
     void setVolume(double);
     void setMuted(bool);
 
@@ -228,6 +232,7 @@ public:
     void setVideoPlaybackMetricsUpdateInterval(double);
 
     void setPreferredDynamicRangeMode(WebCore::DynamicRangeMode);
+    void setPlatformDynamicRangeLimit(WebCore::PlatformDynamicRangeLimit);
 
     RefPtr<WebCore::PlatformMediaResource> requestResource(WebCore::ResourceRequest&&, WebCore::PlatformMediaResourceLoader::LoadOptions);
     void sendH2Ping(const URL&, CompletionHandler<void(Expected<WTF::Seconds, WebCore::ResourceError>&&)>&&);
@@ -316,6 +321,7 @@ private:
 #endif
 
     String mediaPlayerSourceApplicationIdentifier() const final;
+    WebCore::MediaPlayerClientIdentifier mediaPlayerClientIdentifier() const final { return m_clientIdentifier; }
 
     double mediaPlayerRequestedPlaybackRate() const final;
 #if ENABLE(VIDEO_PRESENTATION_MODE)
@@ -379,10 +385,16 @@ private:
     void setDefaultSpatialTrackingLabel(const String&);
     void setSpatialTrackingLabel(const String&);
 #endif
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    void setPrefersSpatialAudioExperience(bool);
+#endif
 
     void isInFullscreenOrPictureInPictureChanged(bool);
 
     void audioOutputDeviceChanged(String&&);
+    using SoundStageSize = WebCore::MediaPlayer::SoundStageSize;
+    void setSoundStageSize(SoundStageSize);
+        SoundStageSize mediaPlayerSoundStageSize() const final { return m_soundStageSize; }
 
 #if !RELEASE_LOG_DISABLED
     const Logger& mediaPlayerLogger() final { return m_logger; }
@@ -453,6 +465,7 @@ private:
     Ref<RemoteVideoFrameObjectHeap> m_videoFrameObjectHeap;
     RefPtr<WebCore::VideoFrame> m_videoFrameForCurrentTime;
     bool m_shouldCheckHardwareSupport { false };
+    SoundStageSize m_soundStageSize { SoundStageSize::Auto };
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
 #endif

@@ -8,6 +8,7 @@ PASS align-items
 PASS align-self
 PASS alignment-baseline
 PASS anchor-name
+PASS anchor-scope
 PASS animation-composition
 PASS animation-delay
 PASS animation-direction
@@ -113,6 +114,14 @@ PASS container-type
 PASS content
 PASS content-visibility
 PASS continue
+PASS corner-bottom-left-shape
+PASS corner-bottom-right-shape
+PASS corner-end-end-shape
+PASS corner-end-start-shape
+PASS corner-start-end-shape
+PASS corner-start-start-shape
+PASS corner-top-left-shape
+PASS corner-top-right-shape
 PASS counter-increment
 PASS counter-reset
 PASS counter-set
@@ -123,6 +132,7 @@ PASS d
 PASS direction
 PASS display
 PASS dominant-baseline
+PASS dynamic-range-limit
 PASS empty-cells
 PASS field-sizing
 PASS fill
@@ -144,7 +154,6 @@ PASS font-optical-sizing
 PASS font-palette
 PASS font-size
 PASS font-size-adjust
-PASS font-stretch
 PASS font-style
 PASS font-synthesis-small-caps
 PASS font-synthesis-style
@@ -158,6 +167,7 @@ PASS font-variant-numeric
 PASS font-variant-position
 PASS font-variation-settings
 PASS font-weight
+PASS font-width
 PASS glyph-orientation-horizontal
 PASS glyph-orientation-vertical
 PASS grid-auto-columns
@@ -246,6 +256,8 @@ PASS outline-offset
 PASS outline-style
 PASS outline-width
 PASS overflow-anchor
+PASS overflow-block
+PASS overflow-inline
 PASS overflow-wrap
 PASS overflow-x
 PASS overflow-y
@@ -267,7 +279,10 @@ PASS perspective-origin
 PASS pointer-events
 PASS position
 PASS position-anchor
+PASS position-area
+PASS position-try-fallbacks
 PASS position-try-order
+PASS position-visibility
 PASS print-color-adjust
 PASS quotes
 PASS r

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2009 Joseph Pecoraro
  *
@@ -55,9 +55,11 @@
 #include "ContainerNode.h"
 #include "Cookie.h"
 #include "CookieJar.h"
+#include "CustomElementRegistry.h"
 #include "DOMEditor.h"
 #include "DOMException.h"
 #include "DOMPatchSupport.h"
+#include "DocumentFullscreen.h"
 #include "DocumentInlines.h"
 #include "DocumentType.h"
 #include "Editing.h"
@@ -66,7 +68,6 @@
 #include "EventListener.h"
 #include "EventNames.h"
 #include "FrameTree.h"
-#include "FullscreenManager.h"
 #include "HTMLElement.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLMediaElement.h"
@@ -196,7 +197,7 @@ static bool parseQuad(Ref<JSON::Array>&& quadArray, FloatQuad* quad)
 }
 
 class RevalidateStyleAttributeTask final : public CanMakeCheckedPtr<RevalidateStyleAttributeTask> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(RevalidateStyleAttributeTask);
+    WTF_MAKE_TZONE_ALLOCATED(RevalidateStyleAttributeTask);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RevalidateStyleAttributeTask);
 public:
     RevalidateStyleAttributeTask(InspectorDOMAgent*);
@@ -209,6 +210,8 @@ private:
     Timer m_timer;
     HashSet<RefPtr<Element>> m_elements;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RevalidateStyleAttributeTask);
 
 RevalidateStyleAttributeTask::RevalidateStyleAttributeTask(InspectorDOMAgent* domAgent)
     : m_domAgent(domAgent)
@@ -272,7 +275,7 @@ public:
 
 #if ENABLE(FULLSCREEN_API)
         if (event.type() == eventNames().webkitfullscreenchangeEvent || event.type() == eventNames().fullscreenchangeEvent)
-            data->setBoolean("enabled"_s, !!node->document().fullscreenManager().fullscreenElement());
+            data->setBoolean("enabled"_s, !!node->document().fullscreen().fullscreenElement());
 #endif // ENABLE(FULLSCREEN_API)
 
         auto timestamp = m_domAgent.m_environment.executionStopwatch().elapsedTime().seconds();
@@ -326,10 +329,7 @@ void InspectorDOMAgent::didCreateFrontendAndBackend(Inspector::FrontendRouter*, 
     m_domEditor = makeUnique<DOMEditor>(*m_history);
 
     m_instrumentingAgents.setPersistentDOMAgent(this);
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_inspectedPage.mainFrame());
-    if (!localMainFrame)
-        return;
-    m_document = localMainFrame->document();
+    m_document = m_inspectedPage->localTopDocument();
 
     // Force a layout so that we can collect additional information from the layout process.
     relayoutDocument();
@@ -814,7 +814,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDOMAgent::setAttributesAsText(
     }
 
     bool foundOriginalAttribute = false;
-    for (const Attribute& attribute : childElement->attributesIterator()) {
+    for (auto& attribute : childElement->attributes()) {
         // Add attribute pair
         auto attributeName = attribute.name().toAtomString();
         foundOriginalAttribute = foundOriginalAttribute || attributeName == name;
@@ -1319,7 +1319,7 @@ void InspectorDOMAgent::setSearchingForNode(Inspector::Protocol::ErrorString& er
 
     protectedOverlay()->didSetSearchingForNode(m_searchingForNode);
 
-    if (InspectorClient* client = m_inspectedPage.inspectorController().inspectorClient())
+    if (InspectorClient* client = m_inspectedPage->inspectorController().inspectorClient())
         client->elementSelectionChanged(m_searchingForNode);
 }
 
@@ -2033,7 +2033,7 @@ Ref<JSON::ArrayOf<String>> InspectorDOMAgent::buildArrayForElementAttributes(Ele
     // Go through all attributes and serialize them.
     if (!element->hasAttributes())
         return attributesValue;
-    for (const Attribute& attribute : element->attributesIterator()) {
+    for (auto& attribute : element->attributes()) {
         // Add attribute pair
         attributesValue->addItem(attribute.name().toString());
         attributesValue->addItem(attribute.value());
@@ -2412,9 +2412,9 @@ Ref<Inspector::Protocol::DOM::AccessibilityProperties> InspectorDOMAgent::buildO
             selected = axObject->isSelected();
 
             auto selectedChildren = axObject->selectedChildren();
-            if (selectedChildren && selectedChildren->size()) {
+            if (selectedChildren.size()) {
                 selectedChildNodeIds = JSON::ArrayOf<Inspector::Protocol::DOM::NodeId>::create();
-                for (auto& selectedChildObject : *selectedChildren) {
+                for (auto& selectedChildObject : selectedChildren) {
                     if (Node* selectedChildNode = selectedChildObject->node()) {
                         if (auto selectedChildNodeId = pushNodePathToFrontend(selectedChildNode))
                             selectedChildNodeIds->addItem(selectedChildNodeId);
@@ -2426,7 +2426,7 @@ Ref<Inspector::Protocol::DOM::AccessibilityProperties> InspectorDOMAgent::buildO
             hierarchicalLevel = axObject->hierarchicalLevel();
             
             level = hierarchicalLevel ? hierarchicalLevel : headingLevel;
-            isPopupButton = axObject->isPopUpButton() || axObject->hasPopup();
+            isPopupButton = axObject->isPopUpButton() || axObject->selfOrAncestorLinkHasPopup();
         }
     }
     

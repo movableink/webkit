@@ -53,8 +53,8 @@
 #include "TypeProfilerLog.h"
 #include <wtf/BubbleSort.h>
 #include <wtf/GraphNodeWorklist.h>
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/SimpleStats.h>
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -63,8 +63,6 @@ namespace JSC {
 namespace JITInternal {
 static constexpr const bool verbose = false;
 }
-
-WTF_MAKE_TZONE_ALLOCATED_IMPL(JIT);
 
 Seconds totalBaselineCompileTime;
 Seconds totalDFGCompileTime;
@@ -774,12 +772,14 @@ RefPtr<BaselineJITCode> JIT::compileAndLinkWithoutFinalizing(JITCompilationEffor
     jitAssertCodeBlockMatchesCurrentCalleeCodeBlockOnCallFrame(regT1, regT2, *m_unlinkedCodeBlock);
 
     int frameTopOffset = stackPointerOffsetFor(m_unlinkedCodeBlock) * sizeof(Register);
-    unsigned maxFrameSize = -frameTopOffset;
     addPtr(TrustedImm32(frameTopOffset), callFrameRegister, regT1);
     JumpList stackOverflow;
+#if !CPU(ADDRESS64)
+    unsigned maxFrameSize = -frameTopOffset;
     if (UNLIKELY(maxFrameSize > Options::reservedZoneSize()))
         stackOverflow.append(branchPtr(Above, regT1, callFrameRegister));
-    stackOverflow.append(branchPtr(Above, AbsoluteAddress(m_vm->addressOfSoftStackLimit()), regT1));
+#endif
+    stackOverflow.append(branchPtr(GreaterThan, AbsoluteAddress(m_vm->addressOfSoftStackLimit()), regT1));
 
     move(regT1, stackPointerRegister);
     checkStackPointerAlignment();
@@ -859,12 +859,9 @@ RefPtr<BaselineJITCode> JIT::compileAndLinkWithoutFinalizing(JITCompilationEffor
 
     stackOverflowWithEntry.link(this);
     emitFunctionPrologue();
-    stackOverflow.link(this);
     m_bytecodeIndex = BytecodeIndex(0);
-    if (maxFrameExtentForSlowPathCall)
-        addPtr(TrustedImm32(-static_cast<int32_t>(maxFrameExtentForSlowPathCall)), stackPointerRegister);
-    emitGetFromCallFrameHeaderPtr(CallFrameSlot::codeBlock, regT0);
-    callThrowOperationWithCallFrameRollback(operationThrowStackOverflowError, regT0);
+    stackOverflow.link(this);
+    jumpThunk(CodeLocationLabel(vm().getCTIStub(CommonJITThunkID::ThrowStackOverflowAtPrologue).retaggedCode<NoPtrTag>()));
 
     ASSERT(m_jmpTable.isEmpty());
 
@@ -1028,6 +1025,10 @@ CompilationResult JIT::finalizeOnMainThread(CodeBlock* codeBlock, BaselineJITPla
 
 CompilationResult JIT::compileSync(VM&, CodeBlock* codeBlock, JITCompilationEffort effort)
 {
+#if USE(PROTECTED_JIT)
+    // Must be constructed before we allocate anything using SequesteredArenaMalloc
+    ArenaLifetime saLifetime;
+#endif
     auto plan = adoptRef(*new BaselineJITPlan(codeBlock));
     plan->compileSync(effort);
     return plan->finalize();
@@ -1066,14 +1067,14 @@ UncheckedKeyHashMap<CString, Seconds> JIT::compileTimeStats()
 {
     UncheckedKeyHashMap<CString, Seconds> result;
     if (Options::reportTotalCompileTimes()) {
-        result.add("Total Compile Time", totalCompileTime());
-        result.add("Baseline Compile Time", totalBaselineCompileTime);
+        result.add("Total Compile Time"_s, totalCompileTime());
+        result.add("Baseline Compile Time"_s, totalBaselineCompileTime);
 #if ENABLE(DFG_JIT)
-        result.add("DFG Compile Time", totalDFGCompileTime);
+        result.add("DFG Compile Time"_s, totalDFGCompileTime);
 #if ENABLE(FTL_JIT)
-        result.add("FTL Compile Time", totalFTLCompileTime);
-        result.add("FTL (DFG) Compile Time", totalFTLDFGCompileTime);
-        result.add("FTL (B3) Compile Time", totalFTLB3CompileTime);
+        result.add("FTL Compile Time"_s, totalFTLCompileTime);
+        result.add("FTL (DFG) Compile Time"_s, totalFTLDFGCompileTime);
+        result.add("FTL (B3) Compile Time"_s, totalFTLB3CompileTime);
 #endif // ENABLE(FTL_JIT)
 #endif // ENABLE(DFG_JIT)
     }
@@ -1093,11 +1094,6 @@ void JIT::exceptionCheck(Jump jumpToHandler)
 void JIT::exceptionCheck()
 {
     exceptionCheck(emitExceptionCheck(vm()));
-}
-
-void JIT::exceptionChecksWithCallFrameRollback(Jump jumpToHandler)
-{
-    jumpToHandler.linkThunk(CodeLocationLabel(vm().getCTIStub(CommonJITThunkID::HandleExceptionWithCallFrameRollback).retaggedCode<NoPtrTag>()), this);
 }
 
 } // namespace JSC

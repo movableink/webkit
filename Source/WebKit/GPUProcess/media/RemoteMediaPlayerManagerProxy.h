@@ -35,6 +35,7 @@
 #include <WebCore/MediaPlayer.h>
 #include <WebCore/MediaPlayerIdentifier.h>
 #include <WebCore/ShareableBitmap.h>
+#include <WebCore/VideoTarget.h>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
 #include <wtf/Logger.h>
@@ -50,16 +51,14 @@
 #endif
 
 namespace WebKit {
-class VideoReceiverEndpointMessage;
-}
-
-namespace WebKit {
 
 class RemoteMediaPlayerProxy;
 struct RemoteMediaPlayerConfiguration;
 struct RemoteMediaPlayerProxyConfiguration;
+struct SharedPreferencesForWebProcess;
 class RemoteMediaSourceProxy;
 class VideoReceiverEndpointMessage;
+class VideoReceiverSwapEndpointsMessage;
 
 class RemoteMediaPlayerManagerProxy
     : public RefCounted<RemoteMediaPlayerManagerProxy>, public IPC::MessageReceiver
@@ -80,7 +79,7 @@ public:
     void clear();
 
 #if !RELEASE_LOG_DISABLED
-    Logger& logger();
+    Logger& logger() { return m_logger; }
 #endif
 
     void didReceiveMessageFromWebProcess(IPC::Connection& connection, IPC::Decoder& decoder) { didReceiveMessage(connection, decoder); }
@@ -93,8 +92,10 @@ public:
     std::optional<WebCore::ShareableBitmap::Handle> bitmapImageForCurrentTime(WebCore::MediaPlayerIdentifier);
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
-    WebCore::PlatformVideoTarget videoTargetForMediaElementIdentifier(WebCore::HTMLMediaElementIdentifier);
+    WebCore::PlatformVideoTarget videoTargetForIdentifier(const std::optional<WebCore::VideoReceiverEndpointIdentifier>&);
+    WebCore::PlatformVideoTarget takeVideoTargetForMediaElementIdentifier(WebCore::HTMLMediaElementIdentifier, WebCore::MediaPlayerIdentifier);
     void handleVideoReceiverEndpointMessage(const VideoReceiverEndpointMessage&);
+    void handleVideoReceiverSwapEndpointsMessage(const VideoReceiverSwapEndpointsMessage&);
 #endif
 
 #if ENABLE(MEDIA_SOURCE)
@@ -103,6 +104,7 @@ public:
     void invalidateMediaSource(RemoteMediaSourceIdentifier);
 #endif
 
+    std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const;
 private:
     explicit RemoteMediaPlayerManagerProxy(GPUConnectionToWebProcess&);
 
@@ -118,14 +120,20 @@ private:
     void supportsTypeAndCodecs(WebCore::MediaPlayerEnums::MediaEngineIdentifier, const WebCore::MediaEngineSupportParameters&&, CompletionHandler<void(WebCore::MediaPlayer::SupportsType)>&&);
     void supportsKeySystem(WebCore::MediaPlayerEnums::MediaEngineIdentifier, const String&&, const String&&, CompletionHandler<void(bool)>&&);
 
+#if !RELEASE_LOG_DISABLED
+    ASCIILiteral logClassName() const { return "RemoteMediaPlayerManagerProxy"; }
+    WTFLogChannel& logChannel() const;
+    uint64_t logIdentifier() const { return m_logIdentifier; }
+#endif
+
     HashMap<WebCore::MediaPlayerIdentifier, Ref<RemoteMediaPlayerProxy>> m_proxies;
     ThreadSafeWeakPtr<GPUConnectionToWebProcess> m_gpuConnectionToWebProcess;
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
+    HashMap<WebCore::VideoReceiverEndpointIdentifier, WebCore::PlatformVideoTarget> m_videoTargetCache;
     struct VideoRecevierEndpointCacheEntry {
         Markable<WebCore::MediaPlayerIdentifier> playerIdentifier;
-        WebCore::VideoReceiverEndpoint endpoint;
-        WebCore::PlatformVideoTarget videoTarget;
+        Markable<WebCore::VideoReceiverEndpointIdentifier> endpointIdentifier;
     };
     HashMap<WebCore::HTMLMediaElementIdentifier, VideoRecevierEndpointCacheEntry> m_videoReceiverEndpointCache;
 #endif
@@ -135,7 +143,8 @@ private:
 #endif
 
 #if !RELEASE_LOG_DISABLED
-    RefPtr<Logger> m_logger;
+    uint64_t m_logIdentifier { 0 };
+    Ref<Logger> m_logger;
 #endif
 };
 

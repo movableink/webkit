@@ -27,6 +27,7 @@
 
 #if PLATFORM(MAC)
 
+#include "FrameInfoData.h"
 #include "WebContextMenuProxy.h"
 #include <wtf/RetainPtr.h>
 #include <wtf/WeakObjCPtr.h>
@@ -49,9 +50,9 @@ class WebContextMenuItemData;
 
 class WebContextMenuProxyMac final : public WebContextMenuProxy {
 public:
-    static auto create(NSView *webView, WebPageProxy& page, ContextMenuContextData&& context, const UserData& userData)
+    static auto create(NSView *webView, WebPageProxy& page, FrameInfoData&& frameInfo, ContextMenuContextData&& context, const UserData& userData)
     {
-        return adoptRef(*new WebContextMenuProxyMac(webView, page, WTFMove(context), userData));
+        return adoptRef(*new WebContextMenuProxyMac(webView, page, WTFMove(frameInfo), WTFMove(context), userData));
     }
     ~WebContextMenuProxyMac();
 
@@ -60,6 +61,8 @@ public:
 #if ENABLE(WRITING_TOOLS)
     void handleContextMenuWritingTools(WebCore::WritingTools::RequestedTool);
 #endif
+
+    void handleShareMenuItem();
 
 #if ENABLE(SERVICE_CONTROLS)
     void clearServicesMenu();
@@ -73,7 +76,7 @@ public:
 #endif
 
 private:
-    WebContextMenuProxyMac(NSView *, WebPageProxy&, ContextMenuContextData&&, const UserData&);
+    WebContextMenuProxyMac(NSView *, WebPageProxy&, FrameInfoData&&, ContextMenuContextData&&, const UserData&);
 
     void show() override;
     void showContextMenuWithItems(Vector<Ref<WebContextMenuItem>>&&) override;
@@ -85,7 +88,9 @@ private:
     void getContextMenuFromItems(const Vector<WebContextMenuItemData>&, CompletionHandler<void(NSMenu *)>&&);
 
 #if ENABLE(SERVICE_CONTROLS)
-    void getShareMenuItem(CompletionHandler<void(NSMenuItem *)>&&);
+    enum class ShareMenuItemType : uint8_t { Placeholder, Popover };
+    RetainPtr<NSMenuItem> createShareMenuItem(ShareMenuItemType);
+
     void showServicesMenu();
     void setupServicesMenu();
     void appendRemoveBackgroundItemToControlledImageMenuIfNeeded();
@@ -100,6 +105,7 @@ private:
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
     RetainPtr<CGImageRef> m_copySubjectResult;
 #endif
+    const FrameInfoData m_frameInfo;
 };
 
 } // namespace WebKit

@@ -54,6 +54,7 @@ private:
     JSRetainPtr<JSStringRef> firstRedoLabel() const override;
     JSRetainPtr<JSStringRef> caLayerTreeAsText() const override;
     NSUndoManager *platformUndoManager() const override;
+    JSObjectRef propertiesOfLayerWithID(uint64_t layerID) const final;
 
     JSRetainPtr<JSStringRef> scrollingTreeAsText() const override;
 
@@ -93,6 +94,10 @@ private:
     void requestRenderedTextForFrontmostTarget(int x, int y, JSValueRef callback) final;
     void adjustVisibilityForFrontmostTarget(int x, int y, JSValueRef callback) final;
     void resetVisibilityAdjustments(JSValueRef callback) final;
+
+    void cookiesForDomain(JSStringRef, JSValueRef callback) final;
+
+    JSObjectRef fixedContainerEdgeColors() const final;
 };
 
 } // namespace WTR

@@ -40,11 +40,13 @@
 #import <mach/mach_traps.h>
 #import <mach/vm_map.h>
 #import <sys/mman.h>
+#import <wtf/CheckedArithmetic.h>
 #import <wtf/HexNumber.h>
 #import <wtf/MachSendRight.h>
 #import <wtf/RunLoop.h>
 #import <wtf/spi/darwin/XPCSPI.h>
 #import <wtf/text/MakeString.h>
+#import <wtf/text/ParsingUtilities.h>
 
 #if PLATFORM(IOS_FAMILY)
 #import "ProcessAssertion.h"
@@ -269,10 +271,8 @@ bool Connection::platformCanSendOutgoingMessages() const
 template<typename descriptorType>
 static descriptorType& popDescriptorAndAdvance(std::span<uint8_t>& data)
 {
-    auto& descriptor = reinterpretCastSpanStartTo<descriptorType>(data);
-    data = data.subspan(sizeof(descriptorType));
-    return descriptor;
-};
+    return consumeAndReinterpretCastTo<descriptorType>(data);
+}
 
 bool Connection::sendOutgoingMessage(UniqueRef<Encoder>&& encoder)
 {
@@ -299,22 +299,19 @@ bool Connection::sendOutgoingMessage(UniqueRef<Encoder>&& encoder)
         return false;
 
     auto messageSpan = message->span();
-    auto& header = reinterpretCastSpanStartTo<mach_msg_header_t>(messageSpan);
+    auto& header = consumeAndReinterpretCastTo<mach_msg_header_t>(messageSpan);
     header.msgh_bits = MACH_MSGH_BITS(MACH_MSG_TYPE_COPY_SEND, 0);
     header.msgh_size = safeMessageSize;
     header.msgh_remote_port = m_sendPort;
     header.msgh_local_port = MACH_PORT_NULL;
     header.msgh_id = messageBodyIsOOL ? outOfLineBodyMessageID : inlineBodyMessageID;
 
-    messageSpan = messageSpan.subspan(sizeof(mach_msg_header_t));
-
     bool isComplex = numberOfPortDescriptors || messageBodyIsOOL;
     if (isComplex) {
         header.msgh_bits |= MACH_MSGH_BITS_COMPLEX;
 
-        auto& body = reinterpretCastSpanStartTo<mach_msg_body_t>(messageSpan);
+        auto& body = consumeAndReinterpretCastTo<mach_msg_body_t>(messageSpan);
         body.msgh_descriptor_count = numberOfPortDescriptors + messageBodyIsOOL;
-        messageSpan = messageSpan.subspan(sizeof(mach_msg_body_t));
 
         for (auto& attachment : attachments) {
             auto& descriptor = popDescriptorAndAdvance<mach_msg_port_descriptor_t>(messageSpan);
@@ -403,7 +400,7 @@ static std::unique_ptr<Decoder> createMessageDecoder(mach_msg_header_t* header, 
         return Decoder::create(remaining.first(bodySize), { });
     }
 
-    auto& body = reinterpretCastSpanStartTo<mach_msg_body_t>(remaining);
+    auto& body = consumeAndReinterpretCastTo<mach_msg_body_t>(remaining);
     mach_msg_size_t numberOfPortDescriptors = body.msgh_descriptor_count;
     ASSERT(numberOfPortDescriptors);
     if (UNLIKELY(!numberOfPortDescriptors))
@@ -416,8 +413,6 @@ static std::unique_ptr<Decoder> createMessageDecoder(mach_msg_header_t* header, 
         return nullptr;
     }
 
-    remaining = remaining.subspan(sizeof(mach_msg_body_t));
-
     // If the message body was sent out-of-line, don't treat the last descriptor
     // as an attachment, since it is really the message body.
     bool messageBodyIsOOL = header->msgh_id == outOfLineBodyMessageID;
@@ -427,7 +422,7 @@ static std::unique_ptr<Decoder> createMessageDecoder(mach_msg_header_t* header, 
     Vector<Attachment> attachments(numberOfAttachments);
 
     for (mach_msg_size_t i = 0; i < numberOfAttachments; ++i) {
-        auto& descriptor = reinterpretCastSpanStartTo<mach_msg_port_descriptor_t>(remaining);
+        auto& descriptor = consumeAndReinterpretCastTo<mach_msg_port_descriptor_t>(remaining);
         ASSERT(descriptor.type == MACH_MSG_PORT_DESCRIPTOR);
         if (descriptor.type != MACH_MSG_PORT_DESCRIPTOR)
             return nullptr;
@@ -435,7 +430,6 @@ static std::unique_ptr<Decoder> createMessageDecoder(mach_msg_header_t* header, 
         MachSendRight right = MachSendRight::adopt(descriptor.name);
 
         attachments[numberOfAttachments - i - 1] = Attachment { WTFMove(right) };
-        remaining = remaining.subspan(sizeof(mach_msg_port_descriptor_t));
     }
 
     if (messageBodyIsOOL) {
@@ -482,7 +476,10 @@ static mach_msg_header_t* readFromMachPort(mach_port_t machPort, ReceiveBuffer& 
 
     if (kr == MACH_RCV_TOO_LARGE) {
         // The message was too large, resize the buffer and try again.
-        buffer.resize(header->msgh_size + MAX_TRAILER_SIZE);
+        auto newBufferSize = checkedSum<size_t>(header->msgh_size, MAX_TRAILER_SIZE);
+        if (newBufferSize.hasOverflowed())
+            return nullptr;
+        buffer.resize(newBufferSize);
         header = reinterpret_cast<mach_msg_header_t*>(buffer.data());
 
         kr = mach_msg(header, MACH_RCV_MSG | MACH_RCV_LARGE | MACH_RCV_TIMEOUT | MACH_RCV_VOUCHER, 0, buffer.size(), machPort, 0, MACH_PORT_NULL);

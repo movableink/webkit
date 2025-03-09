@@ -47,7 +47,7 @@
 #include <WebCore/LocalFrameView.h>
 #include <WebCore/Node.h>
 #include <WebCore/Page.h>
-#include <WebCore/Position.h>
+#include <WebCore/PositionInlines.h>
 #include <WebCore/Range.h>
 #include <WebCore/RenderElement.h>
 #include <WebCore/ShareableBitmap.h>

@@ -123,7 +123,7 @@ typedef Vector<PrintRecord> PrintRecordList;
 using MacroAssemblerBase = TARGET_MACROASSEMBLER;
 
 class MacroAssembler : public MacroAssemblerBase {
-    WTF_MAKE_TZONE_ALLOCATED(MacroAssembler);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(MacroAssembler);
 public:
     using Base = MacroAssemblerBase;
 

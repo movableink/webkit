@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -54,16 +54,17 @@
 #import "GraphicsContextCG.h"
 #import "HTMLAttachmentElement.h"
 #import "HTMLButtonElement.h"
+#import "HTMLDataListElement.h"
 #import "HTMLInputElement.h"
 #import "HTMLMeterElement.h"
 #import "HTMLNames.h"
+#import "HTMLOptionElement.h"
 #import "HTMLSelectElement.h"
 #import "HTMLTextAreaElement.h"
 #import "IOSurface.h"
 #import "LocalCurrentTraitCollection.h"
 #import "LocalFrame.h"
 #import "LocalFrameView.h"
-#import "LocalizedDateCache.h"
 #import "NodeRenderStyle.h"
 #import "PaintInfo.h"
 #import "PathUtilities.h"
@@ -87,23 +88,17 @@
 #import <objc/runtime.h>
 #import <pal/spi/cf/CoreTextSPI.h>
 #import <pal/spi/ios/UIKitSPI.h>
+#import <pal/system/ios/UserInterfaceIdiom.h>
 #import <wtf/NeverDestroyed.h>
 #import <wtf/ObjCRuntimeExtras.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
 
-#if ENABLE(DATALIST_ELEMENT)
-#include "HTMLDataListElement.h"
-#include "HTMLOptionElement.h"
-#endif
-
 #if USE(APPLE_INTERNAL_SDK)
-#include <WebKitAdditions/RenderThemeIOSAdditions.mm>
+#import <WebKitAdditions/RenderThemeIOSAdditions.mm>
 #endif
 
 #import <pal/ios/UIKitSoftLink.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -135,6 +130,13 @@ bool RenderThemeIOS::canCreateControlPartForRenderer(const RenderObject& rendere
 
 void RenderThemeIOS::adjustCheckboxStyle(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (adjustCheckboxStyleForCatalyst(style, element))
+        return;
+#else
+    UNUSED_PARAM(element);
+#endif
+
     adjustMinimumIntrinsicSizeForAppearance(StyleAppearance::Checkbox, style);
 
     if (!style.width().isIntrinsicOrAuto() && !style.height().isAuto())
@@ -143,8 +145,6 @@ void RenderThemeIOS::adjustCheckboxStyle(RenderStyle& style, const Element* elem
     auto size = std::max(style.computedFontSize(), 10.f);
     style.setWidth({ size, LengthType::Fixed });
     style.setHeight({ size, LengthType::Fixed });
-
-    UNUSED_PARAM(element);
 }
 
 LayoutRect RenderThemeIOS::adjustedPaintRect(const RenderBox& box, const LayoutRect& paintRect) const
@@ -181,11 +181,6 @@ bool RenderThemeIOS::isControlStyled(const RenderStyle& style, const RenderStyle
     if (style.usedAppearance() == StyleAppearance::TextField || style.usedAppearance() == StyleAppearance::TextArea || style.usedAppearance() == StyleAppearance::SearchField)
         return !style.borderAndBackgroundEqual(userAgentStyle);
 
-#if ENABLE(DATALIST_ELEMENT)
-    if (style.usedAppearance() == StyleAppearance::ListButton)
-        return style.hasContent() || style.hasUsedContentNone();
-#endif
-
     return RenderTheme::isControlStyled(style, userAgentStyle);
 }
 
@@ -200,6 +195,13 @@ void RenderThemeIOS::adjustMinimumIntrinsicSizeForAppearance(StyleAppearance app
 
 void RenderThemeIOS::adjustRadioStyle(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (adjustRadioStyleForCatalyst(style, element))
+        return;
+#else
+    UNUSED_PARAM(element);
+#endif
+
     adjustMinimumIntrinsicSizeForAppearance(StyleAppearance::Radio, style);
 
     if (!style.width().isIntrinsicOrAuto() && !style.height().isAuto())
@@ -209,12 +211,17 @@ void RenderThemeIOS::adjustRadioStyle(RenderStyle& style, const Element* element
     style.setWidth({ size, LengthType::Fixed });
     style.setHeight({ size, LengthType::Fixed });
     style.setBorderRadius({ static_cast<int>(size / 2), static_cast<int>(size / 2) });
-
-    UNUSED_PARAM(element);
 }
 
 void RenderThemeIOS::adjustTextFieldStyle(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (element && element->document().settings().macStyleControlsOnCatalyst()) {
+        RenderThemeCocoa::adjustTextFieldStyle(style, element);
+        return;
+    }
+#endif
+
     if (!element)
         return;
 
@@ -235,8 +242,7 @@ void RenderThemeIOS::adjustTextFieldStyle(RenderStyle& style, const Element* ele
         style.setBackgroundColor(systemColor(CSSValueWebkitControlBackground, styleColorOptions));
     };
 
-    bool useAlternateDesign = element->document().settings().alternateFormControlDesignEnabled();
-    if (useAlternateDesign) {
+    if (PAL::currentUserInterfaceIdiomIsVision()) {
         if (hasTextfieldAppearance)
             style.setBackgroundColor(Color::transparentBlack);
         else
@@ -277,6 +283,11 @@ void RenderThemeIOS::paintTextFieldInnerShadow(const PaintInfo& paintInfo, const
 
 void RenderThemeIOS::paintTextFieldDecorations(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (paintTextFieldDecorationsForCatalyst(box, paintInfo, rect))
+        return;
+#endif
+
     auto& context = paintInfo.context();
     GraphicsContextStateSaver stateSaver(context);
 
@@ -288,8 +299,7 @@ void RenderThemeIOS::paintTextFieldDecorations(const RenderBox& box, const Paint
     } else if (is<HTMLTextAreaElement>(*element))
         shouldPaintFillAndInnerShadow = true;
 
-    auto useAlternateDesign = box.settings().alternateFormControlDesignEnabled();
-    if (useAlternateDesign && shouldPaintFillAndInnerShadow) {
+    if (PAL::currentUserInterfaceIdiomIsVision() && shouldPaintFillAndInnerShadow) {
         auto borderShape = BorderShape::shapeForBorderRect(box.style(), LayoutRect(rect));
         auto path = borderShape.pathForOuterShape(box.document().deviceScaleFactor());
         context.setFillColor(Color::black.colorWithAlphaByte(10));
@@ -301,10 +311,17 @@ void RenderThemeIOS::paintTextFieldDecorations(const RenderBox& box, const Paint
 
 void RenderThemeIOS::adjustTextAreaStyle(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (element && element->document().settings().macStyleControlsOnCatalyst()) {
+        RenderThemeCocoa::adjustTextAreaStyle(style, element);
+        return;
+    }
+#endif
+
     if (!element)
         return;
 
-    if (!element->document().settings().alternateFormControlDesignEnabled())
+    if (!PAL::currentUserInterfaceIdiomIsVision())
         return;
 
     style.setBackgroundColor(Color::transparentBlack);
@@ -313,6 +330,11 @@ void RenderThemeIOS::adjustTextAreaStyle(RenderStyle& style, const Element* elem
 
 void RenderThemeIOS::paintTextAreaDecorations(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (paintTextAreaDecorationsForCatalyst(box, paintInfo, rect))
+        return;
+#endif
+
     paintTextFieldDecorations(box, paintInfo, rect);
 }
 
@@ -324,10 +346,6 @@ const int MenuListMinHeight = 15;
 
 const float MenuListBaseHeight = 20;
 const float MenuListBaseFontSize = 11;
-
-const float MenuListArrowWidth = 7;
-const float MenuListArrowHeight = 6;
-const float MenuListButtonPaddingAfter = 19;
 
 LengthBox RenderThemeIOS::popupInternalPaddingBox(const RenderStyle& style) const
 {
@@ -382,7 +400,7 @@ void RenderThemeIOS::adjustRoundBorderRadius(RenderStyle& style, RenderBox& box)
 static void applyCommonButtonPaddingToStyle(RenderStyle& style, const Element& element)
 {
     Document& document = element.document();
-    auto emSize = CSSPrimitiveValue::create(0.5, CSSUnitType::CSS_EM);
+    Ref emSize = CSSPrimitiveValue::create(0.5, CSSUnitType::CSS_EM);
     // We don't need this element's parent style to calculate `em` units, so it's okay to pass nullptr for it here.
     int pixels = emSize->resolveAsLength<int>({ style, document.renderStyle(), nullptr, document.renderView() });
 
@@ -401,7 +419,7 @@ static void adjustSelectListButtonStyle(RenderStyle& style, const Element& eleme
     // Enforce "line-height: normal".
     style.setLineHeight(Length(LengthType::Normal));
 }
-    
+
 class RenderThemeMeasureTextClient : public MeasureTextClient {
 public:
     RenderThemeMeasureTextClient(const FontCascade& font, const RenderStyle& style)
@@ -440,7 +458,7 @@ static void adjustInputElementButtonStyle(RenderStyle& style, const HTMLInputEle
 
     // Enforce the width and set the box-sizing to content-box to not conflict with the padding.
     FontCascade font = style.fontCascade();
-    
+
     float maximumWidth = localizedDateCache().maximumWidthForDateType(dateType, font, RenderThemeMeasureTextClient(font, style));
 
     ASSERT(maximumWidth >= 0);
@@ -454,6 +472,13 @@ static void adjustInputElementButtonStyle(RenderStyle& style, const HTMLInputEle
 
 void RenderThemeIOS::adjustMenuListButtonStyle(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (element && element->document().settings().macStyleControlsOnCatalyst()) {
+        RenderThemeCocoa::adjustMenuListButtonStyle(style, element);
+        return;
+    }
+#endif
+
     // Set the min-height to be at least MenuListMinHeight.
     if (style.logicalHeight().isAuto())
         style.setLogicalMinHeight(Length(std::max(MenuListMinHeight, static_cast<int>(MenuListBaseHeight / MenuListBaseFontSize * style.fontDescription().computedSize())), LengthType::Fixed));
@@ -476,6 +501,11 @@ void RenderThemeIOS::adjustMenuListButtonStyle(RenderStyle& style, const Element
 
 void RenderThemeIOS::paintMenuListButtonDecorations(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (box.settings().macStyleControlsOnCatalyst())
+        return RenderThemeCocoa::paintMenuListButtonDecorations(box, paintInfo, rect);
+#endif
+
     if (is<HTMLInputElement>(box.element()))
         return;
 
@@ -543,7 +573,7 @@ void RenderThemeIOS::paintMenuListButtonDecorations(const RenderBox& box, const 
 
     FloatPoint glyphOrigin;
     glyphOrigin.setY(logicalRect.center().y() - glyphSize.height() / 2.0f);
-    if (style.isLeftToRightDirection())
+    if (!style.writingMode().isInlineFlipped())
         glyphOrigin.setX(logicalRect.maxX() - glyphSize.width() - box.style().borderEndWidth() - valueForLength(box.style().paddingEnd(), logicalRect.width()));
     else
         glyphOrigin.setX(logicalRect.x() + box.style().borderEndWidth() + valueForLength(box.style().paddingEnd(), logicalRect.width()));
@@ -570,6 +600,13 @@ const int kDefaultSliderThumbSize = 16;
 
 void RenderThemeIOS::adjustSliderTrackStyle(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (element && element->document().settings().macStyleControlsOnCatalyst()) {
+        RenderThemeCocoa::adjustSliderTrackStyle(style, element);
+        return;
+    }
+#endif
+
     RenderTheme::adjustSliderTrackStyle(style, element);
 
     // FIXME: We should not be relying on border radius for the appearance of our controls <rdar://problem/7675493>.
@@ -581,6 +618,11 @@ constexpr auto nativeControlBorderInlineSize = 1.0f;
 
 bool RenderThemeIOS::paintSliderTrack(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (box.settings().macStyleControlsOnCatalyst())
+        return RenderThemeCocoa::paintSliderTrack(box, paintInfo, rect);
+#endif
+
     auto* renderSlider = dynamicDowncast<RenderSlider>(box);
     if (!renderSlider)
         return true;
@@ -629,15 +671,13 @@ bool RenderThemeIOS::paintSliderTrack(const RenderObject& box, const PaintInfo& 
 
     context.fillRoundedRect(innerBorder, systemColor(CSSValueAppleSystemOpaqueFill, styleColorOptions));
 
-#if ENABLE(DATALIST_ELEMENT)
     paintSliderTicks(box, paintInfo, trackClip);
-#endif
 
     double valueRatio = renderSlider->valueRatio();
     if (isHorizontal) {
         double newWidth = trackClip.width() * valueRatio;
 
-        if (!box.style().isLeftToRightDirection())
+        if (box.writingMode().isInlineFlipped())
             trackClip.move(trackClip.width() - newWidth, 0);
 
         trackClip.setWidth(newWidth);
@@ -645,7 +685,7 @@ bool RenderThemeIOS::paintSliderTrack(const RenderObject& box, const PaintInfo& 
         float height = trackClip.height();
         trackClip.setHeight(height * valueRatio);
 
-        if (box.writingMode().isHorizontal() || !box.style().isLeftToRightDirection())
+        if (box.writingMode().isHorizontal() || box.writingMode().isInlineFlipped())
             trackClip.setY(trackClip.y() + height - trackClip.height());
     }
 
@@ -655,8 +695,17 @@ bool RenderThemeIOS::paintSliderTrack(const RenderObject& box, const PaintInfo& 
     return false;
 }
 
-void RenderThemeIOS::adjustSliderThumbSize(RenderStyle& style, const Element*) const
+void RenderThemeIOS::adjustSliderThumbSize(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (element && element->document().settings().macStyleControlsOnCatalyst()) {
+        RenderThemeCocoa::adjustSliderThumbSize(style, element);
+        return;
+    }
+#else
+    UNUSED_PARAM(element);
+#endif
+
     if (style.usedAppearance() != StyleAppearance::SliderThumbHorizontal && style.usedAppearance() != StyleAppearance::SliderThumbVertical)
         return;
 
@@ -673,47 +722,13 @@ void RenderThemeIOS::adjustSliderThumbSize(RenderStyle& style, const Element*) c
 constexpr auto reducedMotionProgressAnimationMinOpacity = 0.3f;
 constexpr auto reducedMotionProgressAnimationMaxOpacity = 0.6f;
 
-#if !USE(APPLE_INTERNAL_SDK)
-constexpr auto logicalSwitchHeight = 31.f;
-constexpr auto logicalSwitchWidth = 51.f;
-
-static bool renderThemePaintSwitchThumb(OptionSet<ControlStyle::State>, const RenderObject&, const PaintInfo&, const FloatRect&, const Color&)
-{
-    return true;
-}
-
-static bool renderThemePaintSwitchTrack(OptionSet<ControlStyle::State>, const RenderObject&, const PaintInfo&, const FloatRect&, const Color&)
-{
-    return true;
-}
-#endif
-
-void RenderThemeIOS::adjustSwitchStyle(RenderStyle& style, const Element*) const
-{
-    // FIXME: Deduplicate sizing with the generic code somehow.
-    if (style.width().isAuto() || style.height().isAuto()) {
-        style.setLogicalWidth({ logicalSwitchWidth * style.usedZoom(), LengthType::Fixed });
-        style.setLogicalHeight({ logicalSwitchHeight * style.usedZoom(), LengthType::Fixed });
-    }
-
-    adjustSwitchStyleDisplay(style);
-
-    if (style.outlineStyleIsAuto() == OutlineIsAuto::On)
-        style.setOutlineStyle(BorderStyle::None);
-}
-
-bool RenderThemeIOS::paintSwitchThumb(const RenderObject& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
-{
-    return renderThemePaintSwitchThumb(extractControlStyleStatesForRenderer(renderer), renderer, paintInfo, rect, systemFocusRingColor());
-}
-
-bool RenderThemeIOS::paintSwitchTrack(const RenderObject& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
-{
-    return renderThemePaintSwitchTrack(extractControlStyleStatesForRenderer(renderer), renderer, paintInfo, rect, systemColor(CSSValueAppleSystemGreen, renderer.styleColorOptions()));
-}
-
 bool RenderThemeIOS::paintProgressBar(const RenderObject& renderer, const PaintInfo& paintInfo, const IntRect& rect)
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (renderer.settings().macStyleControlsOnCatalyst())
+        return RenderThemeCocoa::paintProgressBar(renderer, paintInfo, rect);
+#endif
+
     auto* renderProgress = dynamicDowncast<RenderProgress>(renderer);
     if (!renderProgress)
         return true;
@@ -768,7 +783,7 @@ bool RenderThemeIOS::paintProgressBar(const RenderObject& renderer, const PaintI
     if (renderProgress->isDeterminate()) {
         barInlineSize = clampTo<float>(renderProgress->position(), 0.0f, 1.0f) * trackInlineSize;
 
-        if (!renderProgress->style().isLeftToRightDirection())
+        if (renderProgress->writingMode().isInlineFlipped())
             barInlineStart = trackInlineStart + trackInlineSize - barInlineSize;
     } else {
         Seconds elapsed = MonotonicTime::now() - renderProgress->animationStartTime();
@@ -802,7 +817,6 @@ bool RenderThemeIOS::paintProgressBar(const RenderObject& renderer, const PaintI
     return false;
 }
 
-#if ENABLE(DATALIST_ELEMENT)
 IntSize RenderThemeIOS::sliderTickSize() const
 {
     // FIXME: <rdar://problem/12271791> MERGEBOT: Correct values for slider tick of <input type="range"> elements (requires ENABLE_DATALIST_ELEMENT)
@@ -814,10 +828,16 @@ int RenderThemeIOS::sliderTickOffsetFromTrackCenter() const
     // FIXME: <rdar://problem/12271791> MERGEBOT: Correct values for slider tick of <input type="range"> elements (requires ENABLE_DATALIST_ELEMENT)
     return -9;
 }
-#endif
 
 void RenderThemeIOS::adjustSearchFieldStyle(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (element && element->document().settings().macStyleControlsOnCatalyst()) {
+        RenderThemeCocoa::adjustSearchFieldStyle(style, element);
+        return;
+    }
+#endif
+
     RenderTheme::adjustSearchFieldStyle(style, element);
 
     if (!element)
@@ -835,6 +855,11 @@ void RenderThemeIOS::adjustSearchFieldStyle(RenderStyle& style, const Element* e
 
 void RenderThemeIOS::paintSearchFieldDecorations(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (paintSearchFieldDecorationsForCatalyst(box, paintInfo, rect))
+        return;
+#endif
+
     paintTextFieldDecorations(box, paintInfo, rect);
 }
 
@@ -854,8 +879,7 @@ bool RenderThemeIOS::isSubmitStyleButton(const Element& element) const
 
 void RenderThemeIOS::adjustButtonLikeControlStyle(RenderStyle& style, const Element& element) const
 {
-    // FIXME: Implement button-like control adjustments for the alternate design.
-    if (element.document().settings().alternateFormControlDesignEnabled())
+    if (PAL::currentUserInterfaceIdiomIsVision())
         return;
 
     if (element.isDisabledFormControl())
@@ -883,6 +907,13 @@ void RenderThemeIOS::adjustButtonLikeControlStyle(RenderStyle& style, const Elem
 
 void RenderThemeIOS::adjustButtonStyle(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (element && element->document().settings().macStyleControlsOnCatalyst()) {
+        RenderThemeCocoa::adjustButtonStyle(style, element);
+        return;
+    }
+#endif
+
     // If no size is specified, ensure the height of the button matches ControlBaseHeight scaled
     // with the font size. min-height is used rather than height to avoid clipping the contents of
     // the button in cases where the button contains more than one line of text.
@@ -894,10 +925,8 @@ void RenderThemeIOS::adjustButtonStyle(RenderStyle& style, const Element* elemen
         style.setLogicalMinHeight(Length(minimumHeight, LengthType::Fixed));
     }
 
-#if ENABLE(INPUT_TYPE_COLOR)
     if (style.usedAppearance() == StyleAppearance::ColorWell)
         return;
-#endif
 
     // Set padding: 0 1.0em; on buttons.
     // CSSPrimitiveValue::resolveAsLength only needs the element's style to calculate em lengths.
@@ -1001,8 +1030,15 @@ bool RenderThemeIOS::shouldHaveSpinButton(const HTMLInputElement&) const
     return false;
 }
 
-bool RenderThemeIOS::supportsFocusRing(const RenderStyle&) const
+bool RenderThemeIOS::supportsFocusRing(const RenderObject& renderer, const RenderStyle& style) const
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (renderer.settings().macStyleControlsOnCatalyst())
+        return RenderThemeCocoa::supportsFocusRing(renderer, style);
+#else
+    UNUSED_PARAM(renderer);
+    UNUSED_PARAM(style);
+#endif
     return false;
 }
 
@@ -1194,14 +1230,6 @@ Color RenderThemeIOS::pictureFrameColor(const RenderObject& buttonRenderer)
     return buttonRenderer.style().visitedDependentColor(CSSPropertyBorderTopColor);
 }
 
-Color RenderThemeIOS::controlTintColor(const RenderStyle& style, OptionSet<StyleColorOptions> options) const
-{
-    if (!style.hasAutoAccentColor())
-        return style.usedAccentColor(options);
-
-    return systemColor(CSSValueAppleSystemBlue, options);
-}
-
 #if ENABLE(ATTACHMENT_ELEMENT)
 
 RenderThemeIOS::IconAndSize RenderThemeIOS::iconForAttachment(const String& fileName, const String& attachmentType, const String& title)
@@ -1380,14 +1408,13 @@ Color RenderThemeIOS::checkboxRadioBorderColor(OptionSet<ControlStyle::State> st
     return defaultBorderColor;
 }
 
-Color RenderThemeIOS::checkboxRadioBackgroundColor(bool useAlternateDesign, const RenderStyle& style, OptionSet<ControlStyle::State> states, OptionSet<StyleColorOptions> styleColorOptions)
+Color RenderThemeIOS::checkboxRadioBackgroundColor(const RenderStyle& style, OptionSet<ControlStyle::State> states, OptionSet<StyleColorOptions> styleColorOptions)
 {
     bool isEmpty = !states.containsAny({ ControlStyle::State::Checked, ControlStyle::State::Indeterminate });
     bool isEnabled = states.contains(ControlStyle::State::Enabled);
     bool isPressed = states.contains(ControlStyle::State::Pressed);
 
-    if (useAlternateDesign) {
-        // FIXME (rdar://problem/83895064): The disabled state for the alternate appearance is currently unspecified; this is just a guess.
+    if (PAL::currentUserInterfaceIdiomIsVision()) {
         if (!isEnabled)
             return systemColor(isEmpty ? CSSValueWebkitControlBackground : CSSValueAppleSystemOpaqueTertiaryFill, styleColorOptions);
 
@@ -1474,7 +1501,12 @@ void RenderThemeIOS::paintCheckboxRadioInnerShadow(const PaintInfo& paintInfo, c
 
 bool RenderThemeIOS::paintCheckbox(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
-    bool useAlternateDesign = box.settings().alternateFormControlDesignEnabled();
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (box.settings().macStyleControlsOnCatalyst())
+        return RenderThemeCocoa::paintCheckbox(box, paintInfo, rect);
+#endif
+
+    bool isVision = PAL::currentUserInterfaceIdiomIsVision();
 
     auto& context = paintInfo.context();
     GraphicsContextStateSaver stateSaver { context };
@@ -1487,7 +1519,7 @@ bool RenderThemeIOS::paintCheckbox(const RenderObject& box, const PaintInfo& pai
     auto controlStates = extractControlStyleStatesForRenderer(box);
     auto styleColorOptions = box.styleColorOptions();
 
-    auto backgroundColor = checkboxRadioBackgroundColor(useAlternateDesign, box.style(), controlStates, styleColorOptions);
+    auto backgroundColor = checkboxRadioBackgroundColor(box.style(), controlStates, styleColorOptions);
 
     bool checked = controlStates.contains(ControlStyle::State::Checked);
     bool indeterminate = controlStates.contains(ControlStyle::State::Indeterminate);
@@ -1496,7 +1528,7 @@ bool RenderThemeIOS::paintCheckbox(const RenderObject& box, const PaintInfo& pai
     if (empty) {
         Path path;
         path.addRoundedRect(checkboxRect);
-        if (!useAlternateDesign) {
+        if (!isVision) {
             context.setStrokeColor(checkboxRadioBorderColor(controlStates, styleColorOptions));
             context.setStrokeThickness(checkboxRadioBorderWidth * 2);
             context.setStrokeStyle(StrokeStyle::SolidStroke);
@@ -1506,7 +1538,7 @@ bool RenderThemeIOS::paintCheckbox(const RenderObject& box, const PaintInfo& pai
         context.clipPath(path);
         context.drawPath(path);
 
-        if (useAlternateDesign)
+        if (isVision)
             paintCheckboxRadioInnerShadow(paintInfo, checkboxRect, controlStates);
 
         return false;
@@ -1514,7 +1546,7 @@ bool RenderThemeIOS::paintCheckbox(const RenderObject& box, const PaintInfo& pai
 
     context.fillRoundedRect(checkboxRect, backgroundColor);
 
-    if (useAlternateDesign) {
+    if (isVision) {
         context.clipRoundedRect(checkboxRect);
         paintCheckboxRadioInnerShadow(paintInfo, checkboxRect, controlStates);
     }
@@ -1559,7 +1591,12 @@ bool RenderThemeIOS::paintCheckbox(const RenderObject& box, const PaintInfo& pai
 
 bool RenderThemeIOS::paintRadio(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
-    bool useAlternateDesign = box.settings().alternateFormControlDesignEnabled();
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (box.settings().macStyleControlsOnCatalyst())
+        return RenderThemeCocoa::paintRadio(box, paintInfo, rect);
+#endif
+
+    bool isVision = PAL::currentUserInterfaceIdiomIsVision();
 
     auto& context = paintInfo.context();
     GraphicsContextStateSaver stateSaver(context);
@@ -1567,7 +1604,7 @@ bool RenderThemeIOS::paintRadio(const RenderObject& box, const PaintInfo& paintI
     auto controlStates = extractControlStyleStatesForRenderer(box);
     auto styleColorOptions = box.styleColorOptions();
 
-    auto backgroundColor = checkboxRadioBackgroundColor(useAlternateDesign, box.style(), controlStates, styleColorOptions);
+    auto backgroundColor = checkboxRadioBackgroundColor(box.style(), controlStates, styleColorOptions);
 
     FloatRoundedRect radioRect { rect, FloatRoundedRect::Radii(rect.width() / 2, rect.height() / 2) };
 
@@ -1575,7 +1612,7 @@ bool RenderThemeIOS::paintRadio(const RenderObject& box, const PaintInfo& paintI
         context.setFillColor(backgroundColor);
         context.fillEllipse(rect);
 
-        if (useAlternateDesign) {
+        if (isVision) {
             context.clipRoundedRect(radioRect);
             paintCheckboxRadioInnerShadow(paintInfo, radioRect, controlStates);
         }
@@ -1593,7 +1630,7 @@ bool RenderThemeIOS::paintRadio(const RenderObject& box, const PaintInfo& paintI
     } else {
         Path path;
         path.addEllipseInRect(rect);
-        if (!useAlternateDesign) {
+        if (!isVision) {
             context.setStrokeColor(checkboxRadioBorderColor(controlStates, styleColorOptions));
             context.setStrokeThickness(checkboxRadioBorderWidth * 2);
             context.setStrokeStyle(StrokeStyle::SolidStroke);
@@ -1602,7 +1639,7 @@ bool RenderThemeIOS::paintRadio(const RenderObject& box, const PaintInfo& paintI
         context.clipPath(path);
         context.drawPath(path);
 
-        if (useAlternateDesign)
+        if (isVision)
             paintCheckboxRadioInnerShadow(paintInfo, radioRect, controlStates);
     }
 
@@ -1616,6 +1653,11 @@ bool RenderThemeIOS::supportsMeter(StyleAppearance appearance) const
 
 bool RenderThemeIOS::paintMeter(const RenderObject& renderer, const PaintInfo& paintInfo, const IntRect& rect)
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (renderer.settings().macStyleControlsOnCatalyst())
+        return RenderThemeCocoa::paintMeter(renderer, paintInfo, rect);
+#endif
+
     auto* renderMeter = dynamicDowncast<RenderMeter>(renderer);
     if (!renderMeter)
         return true;
@@ -1645,7 +1687,7 @@ bool RenderThemeIOS::paintMeter(const RenderObject& renderer, const PaintInfo& p
     if (!isHorizontalWritingMode)
         gaugeRegionPosition = gaugeRegionPosition.transposedSize();
 
-    if (!renderer.style().isLeftToRightDirection())
+    if (renderer.writingMode().isInlineFlipped())
         gaugeRegionPosition = -gaugeRegionPosition;
 
     fillRect.move(gaugeRegionPosition);
@@ -1666,14 +1708,19 @@ bool RenderThemeIOS::paintMeter(const RenderObject& renderer, const PaintInfo& p
     return false;
 }
 
-#if ENABLE(DATALIST_ELEMENT)
-
 bool RenderThemeIOS::paintListButton(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
-    auto& context = paintInfo.context();
-    GraphicsContextStateSaver stateSaver(context);
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (box.settings().macStyleControlsOnCatalyst())
+        return RenderThemeCocoa::paintListButton(box, paintInfo, rect);
+#endif
 
     auto& style = box.style();
+    if (style.hasContent() || style.hasUsedContentNone())
+        return false;
+
+    auto& context = paintInfo.context();
+    GraphicsContextStateSaver stateSaver(context);
 
     float paddingTop = floatValueForLength(style.paddingTop(), rect.height());
     float paddingRight = floatValueForLength(style.paddingRight(), rect.width());
@@ -1753,11 +1800,11 @@ void RenderThemeIOS::paintSliderTicks(const RenderObject& box, const PaintInfo& 
     auto deviceScaleFactor = box.document().deviceScaleFactor();
     auto styleColorOptions = box.styleColorOptions();
 
-    bool isReversedInlineDirection = (!isHorizontal && box.writingMode().isHorizontal()) || !box.style().isLeftToRightDirection();
+    bool isInlineFlipped = (!isHorizontal && box.writingMode().isHorizontal()) || box.writingMode().isInlineFlipped();
     for (auto& optionElement : dataList->suggestions()) {
         if (auto optionValue = input->listOptionValueAsDouble(optionElement)) {
             auto tickFraction = (*optionValue - min) / (max - min);
-            auto tickRatio = isReversedInlineDirection ? 1.0 - tickFraction : tickFraction;
+            auto tickRatio = isInlineFlipped ? 1.0 - tickFraction : tickFraction;
             if (isHorizontal)
                 tickRect.setX(rect.x() + tickRatio * (rect.width() - tickRect.width()));
             else
@@ -1769,28 +1816,28 @@ void RenderThemeIOS::paintSliderTicks(const RenderObject& box, const PaintInfo& 
     }
 }
 
-#endif // ENABLE(DATALIST_ELEMENT)
-
-#if ENABLE(INPUT_TYPE_COLOR)
-
-String RenderThemeIOS::colorInputStyleSheet() const
+void RenderThemeIOS::paintColorWellDecorations(const RenderObject& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
 {
-    return "input[type=\"color\"] { appearance: auto; width: 28px; height: 28px; box-sizing: border-box; outline: none; border: initial; border-radius: 50%; } "_s;
-}
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (renderer.settings().macStyleControlsOnCatalyst()) {
+        RenderThemeCocoa::paintColorWellDecorations(renderer, paintInfo, rect);
+        return;
+    }
+#else
+    UNUSED_PARAM(renderer);
+#endif
 
-void RenderThemeIOS::paintColorWellDecorations(const RenderObject&, const PaintInfo& paintInfo, const FloatRect& rect)
-{
     constexpr int strokeThickness = 3;
-    constexpr DisplayP3<float> colorStops[] = {
-        { 1, 1, 0, 1 },
-        { 1, 0.5, 0, 1 },
-        { 1, 0, 0, 1 },
-        { 1, 0, 1, 1},
-        { 0, 0, 1, 1 },
-        { 0, 1, 1, 1 },
-        { 0, 1, 0, 1},
-        { 0.63, 0.88, 0.03, 1 },
-        { 1, 1, 0, 1 }
+    constexpr std::array colorStops {
+        DisplayP3<float> { 1, 1, 0, 1 },
+        DisplayP3<float> { 1, 0.5, 0, 1 },
+        DisplayP3<float> { 1, 0, 0, 1 },
+        DisplayP3<float> { 1, 0, 1, 1 },
+        DisplayP3<float> { 0, 0, 1, 1 },
+        DisplayP3<float> { 0, 1, 1, 1 },
+        DisplayP3<float> { 0, 1, 0, 1 },
+        DisplayP3<float> { 0.63, 0.88, 0.03, 1 },
+        DisplayP3<float> { 1, 1, 0, 1 }
     };
     constexpr int numColorStops = std::size(colorStops);
 
@@ -1810,10 +1857,15 @@ void RenderThemeIOS::paintColorWellDecorations(const RenderObject&, const PaintI
     context.strokeEllipse(strokeRect);
 }
 
-#endif // ENABLE(INPUT_TYPE_COLOR)
-
 void RenderThemeIOS::adjustSearchFieldDecorationPartStyle(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (element && element->document().settings().macStyleControlsOnCatalyst()) {
+        RenderThemeCocoa::adjustSearchFieldDecorationPartStyle(style, element);
+        return;
+    }
+#endif
+
     if (!element)
         return;
 
@@ -1832,6 +1884,11 @@ void RenderThemeIOS::adjustSearchFieldDecorationPartStyle(RenderStyle& style, co
 
 bool RenderThemeIOS::paintSearchFieldDecorationPart(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
 {
+#if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
+    if (box.settings().macStyleControlsOnCatalyst())
+        return RenderThemeCocoa::paintSearchFieldDecorationPart(box, paintInfo, rect);
+#endif
+
     auto& context = paintInfo.context();
     GraphicsContextStateSaver stateSaver(context);
 
@@ -1890,7 +1947,5 @@ bool RenderThemeIOS::paintSearchFieldResultsButton(const RenderBox& box, const P
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif //PLATFORM(IOS_FAMILY)

@@ -124,7 +124,7 @@ bool NetworkProcessConnection::dispatchMessage(IPC::Connection& connection, IPC:
         return true;
     }
     if (decoder.messageReceiverName() == Messages::WebTransportSession::messageReceiverName() && WebProcess::singleton().isWebTransportEnabled()) {
-        if (auto* webTransportSession = WebProcess::singleton().webTransportSession(WebTransportSessionIdentifier(decoder.destinationID())))
+        if (RefPtr webTransportSession = WebProcess::singleton().webTransportSession(WebTransportSessionIdentifier(decoder.destinationID())))
             webTransportSession->didReceiveMessage(connection, decoder);
         return true;
     }
@@ -161,7 +161,7 @@ bool NetworkProcessConnection::dispatchMessage(IPC::Connection& connection, IPC:
     if (decoder.messageReceiverName() == Messages::WebSWContextManagerConnection::messageReceiverName()) {
         ASSERT(SWContextManager::singleton().connection());
         if (auto* contextManagerConnection = SWContextManager::singleton().connection())
-            static_cast<WebSWContextManagerConnection&>(*contextManagerConnection).didReceiveMessage(connection, decoder);
+            downcast<WebSWContextManagerConnection>(*contextManagerConnection).didReceiveMessage(connection, decoder);
         return true;
     }
     if (decoder.messageReceiverName() == Messages::WebSharedWorkerObjectConnection::messageReceiverName()) {
@@ -171,7 +171,7 @@ bool NetworkProcessConnection::dispatchMessage(IPC::Connection& connection, IPC:
     if (decoder.messageReceiverName() == Messages::WebSharedWorkerContextManagerConnection::messageReceiverName()) {
         ASSERT(SharedWorkerContextManager::singleton().connection());
         if (auto* contextManagerConnection = SharedWorkerContextManager::singleton().connection())
-            static_cast<WebSharedWorkerContextManagerConnection&>(*contextManagerConnection).didReceiveMessage(connection, decoder);
+            downcast<WebSharedWorkerContextManagerConnection>(*contextManagerConnection).didReceiveMessage(connection, decoder);
         return true;
     }
 
@@ -190,7 +190,7 @@ bool NetworkProcessConnection::dispatchSyncMessage(IPC::Connection& connection, 
     if (decoder.messageReceiverName() == Messages::WebSWContextManagerConnection::messageReceiverName()) {
         ASSERT(SWContextManager::singleton().connection());
         if (auto* contextManagerConnection = SWContextManager::singleton().connection())
-            return static_cast<WebSWContextManagerConnection&>(*contextManagerConnection).didReceiveSyncMessage(connection, decoder, replyEncoder);
+            return downcast<WebSWContextManagerConnection>(*contextManagerConnection).didReceiveSyncMessage(connection, decoder, replyEncoder);
         return false;
     }
 
@@ -297,7 +297,8 @@ void NetworkProcessConnection::didCacheResource(const ResourceRequest& request, 
 WebIDBConnectionToServer& NetworkProcessConnection::idbConnectionToServer()
 {
     if (!m_webIDBConnection)
-        m_webIDBConnection = WebIDBConnectionToServer::create();
+        m_webIDBConnection = WebIDBConnectionToServer::create(WebProcess::singleton().sessionID());
+
     return *m_webIDBConnection;
 }
 
@@ -306,6 +307,11 @@ WebSWClientConnection& NetworkProcessConnection::serviceWorkerConnection()
     if (!m_swConnection)
         m_swConnection = WebSWClientConnection::create();
     return *m_swConnection;
+}
+
+Ref<WebSWClientConnection> NetworkProcessConnection::protectedServiceWorkerConnection()
+{
+    return serviceWorkerConnection();
 }
 
 WebSharedWorkerObjectConnection& NetworkProcessConnection::sharedWorkerConnection()
@@ -325,9 +331,8 @@ void NetworkProcessConnection::broadcastConsoleMessage(MessageSource source, Mes
     FAST_RETURN_IF_NO_FRONTENDS(void());
 
     Page::forEachPage([&] (auto& page) {
-        if (auto* localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame()))
-            if (RefPtr document = localMainFrame->document())
-                document->addConsoleMessage(source, level, message);
+        if (RefPtr localTopDocument = page.localTopDocument())
+            localTopDocument->addConsoleMessage(source, level, message);
     });
 }
 

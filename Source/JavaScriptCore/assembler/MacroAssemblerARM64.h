@@ -42,7 +42,7 @@ using Assembler = TARGET_ASSEMBLER;
 class Reg;
 
 class MacroAssemblerARM64 : public AbstractMacroAssembler<Assembler> {
-    WTF_MAKE_TZONE_ALLOCATED(MacroAssemblerARM64);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(MacroAssemblerARM64);
 public:
     static constexpr unsigned numGPRs = 32;
     static constexpr unsigned numFPRs = 32;
@@ -399,6 +399,9 @@ public:
 
     void and32(TrustedImm32 imm, RegisterID src, RegisterID dest)
     {
+        if (imm.m_value == -1)
+            return zeroExtend32ToWord(src, dest);
+
         LogicalImmediate logicalImm = LogicalImmediate::create32(imm.m_value);
 
         if (logicalImm.isValid()) {
@@ -429,6 +432,9 @@ public:
 
     void and64(TrustedImm64 imm, RegisterID src, RegisterID dest)
     {
+        if (imm.m_value == -1)
+            return move(src, dest);
+
         LogicalImmediate logicalImm = LogicalImmediate::create64(imm.m_value);
 
         if (logicalImm.isValid()) {
@@ -447,6 +453,9 @@ public:
 
     void and64(TrustedImm32 imm, RegisterID src, RegisterID dest)
     {
+        if (imm.m_value == -1)
+            return move(src, dest);
+
         LogicalImmediate logicalImm = LogicalImmediate::create64(static_cast<intptr_t>(static_cast<int64_t>(imm.m_value)));
 
         if (logicalImm.isValid()) {
@@ -474,6 +483,9 @@ public:
 
     void and64(TrustedImm64 imm, RegisterID dest)
     {
+        if (imm.m_value == -1)
+            return;
+
         LogicalImmediate logicalImm = LogicalImmediate::create64(std::bit_cast<uint64_t>(imm.m_value));
 
         if (logicalImm.isValid()) {
@@ -2639,6 +2651,16 @@ public:
         m_assembler.frintm<32>(dest, src);
     }
 
+    void truncDouble(FPRegisterID src, FPRegisterID dst)
+    {
+        roundTowardZeroDouble(src, dst);
+    }
+
+    void truncFloat(FPRegisterID src, FPRegisterID dst)
+    {
+        roundTowardZeroFloat(src, dst);
+    }
+
     void roundTowardNearestIntDouble(FPRegisterID src, FPRegisterID dest)
     {
         m_assembler.frintn<64>(dest, src);
@@ -3295,6 +3317,16 @@ public:
     void mulFloat(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
     {
         m_assembler.fmul<32>(dest, op1, op2);
+    }
+
+    void multiplyNegDouble(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
+    {
+        m_assembler.fnmul<64>(dest, op1, op2);
+    }
+
+    void multiplyNegFloat(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
+    {
+        m_assembler.fnmul<32>(dest, op1, op2);
     }
 
     void andDouble(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)

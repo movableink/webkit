@@ -67,7 +67,7 @@ void CommandEncoder::generateInvalidEncoderStateError()
 {
     GENERATE_INVALID_ENCODER_STATE_ERROR();
 }
-
+#if !ENABLE(WEBGPU_SWIFT)
 static MTLLoadAction loadAction(WGPULoadOp loadOp)
 {
     switch (loadOp) {
@@ -97,12 +97,20 @@ static MTLStoreAction storeAction(WGPUStoreOp storeOp, bool hasResolveTarget = f
         return MTLStoreActionDontCare;
     }
 }
+#endif
 
 #if ENABLE(WEBGPU_SWIFT)
 
 DEFINE_SWIFTCXX_THUNK(WebGPU::CommandEncoder, copyBufferToTexture, void, const WGPUImageCopyBuffer&, const WGPUImageCopyTexture&, const WGPUExtent3D&);
 DEFINE_SWIFTCXX_THUNK(WebGPU::CommandEncoder, copyTextureToBuffer, void, const WGPUImageCopyTexture&, const WGPUImageCopyBuffer&, const WGPUExtent3D&);
 DEFINE_SWIFTCXX_THUNK(WebGPU::CommandEncoder, copyTextureToTexture, void, const WGPUImageCopyTexture&, const WGPUImageCopyTexture&, const WGPUExtent3D&);
+DEFINE_SWIFTCXX_THUNK(WebGPU::CommandEncoder, beginRenderPass, Ref<RenderPassEncoder>, const WGPURenderPassDescriptor&);
+DEFINE_SWIFTCXX_THUNK(WebGPU::CommandEncoder, beginComputePass, Ref<WebGPU::ComputePassEncoder>, const WGPUComputePassDescriptor&);
+DEFINE_SWIFTCXX_THUNK(WebGPU::CommandEncoder, clearTextureIfNeeded, void, const WGPUImageCopyTexture&, NSUInteger);
+DEFINE_SWIFTCXX_THUNK(WebGPU::CommandEncoder, finish, Ref<CommandBuffer>, const WGPUCommandBufferDescriptor&);
+DEFINE_SWIFTCXX_THUNK(WebGPU::CommandEncoder, runClearEncoder, void, (NSMutableDictionary<NSNumber*, TextureAndClearColor*>*), id<MTLTexture> , bool , bool , float , uint32_t , id<MTLRenderCommandEncoder>);
+
+
 #endif
 
 
@@ -121,19 +129,24 @@ Ref<CommandEncoder> Device::createCommandEncoder(const WGPUCommandEncoderDescrip
 
     commandBuffer.label = fromAPI(descriptor.label);
 
-    return CommandEncoder::create(commandBuffer, *this);
+    return CommandEncoder::create(commandBuffer, *this, m_commandEncoderId++);
 }
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(CommandEncoder);
 
-CommandEncoder::CommandEncoder(id<MTLCommandBuffer> commandBuffer, Device& device)
+CommandEncoder::CommandEncoder(id<MTLCommandBuffer> commandBuffer, Device& device, uint64_t uniqueId)
     : m_commandBuffer(commandBuffer)
     , m_device(device)
+    , m_uniqueId(uniqueId)
 {
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
     m_managedTextures = [NSMutableSet set];
     m_managedBuffers = [NSMutableSet set];
 #endif
+    m_retainedBuffers = [NSMutableSet set];
+    m_retainedTextures = [NSMutableSet set];
+    m_retainedICBs = [NSMutableSet set];
+    m_retainedTimestampBuffers = [NSMutableSet set];
 }
 
 CommandEncoder::CommandEncoder(Device& device)
@@ -141,10 +154,18 @@ CommandEncoder::CommandEncoder(Device& device)
 {
 }
 
+void CommandEncoder::retainTimestampsForOneUpdateLoop()
+{
+    // Workaround for rdar://143905417
+    m_device->protectedQueue()->retainTimestampsForOneUpdate(m_retainedTimestampBuffers);
+}
+
 CommandEncoder::~CommandEncoder()
 {
     finalizeBlitCommandEncoder();
     m_device->protectedQueue()->removeMTLCommandBuffer(m_commandBuffer);
+    retainTimestampsForOneUpdateLoop();
+    m_commandBuffer = nil; // Do not remove, this is needed to workaround rdar://143905417
 }
 
 id<MTLBlitCommandEncoder> CommandEncoder::ensureBlitCommandEncoder()
@@ -185,6 +206,11 @@ static auto timestampWriteIndex(auto writeIndex)
 {
     return writeIndex == WGPU_QUERY_SET_INDEX_UNDEFINED ? 0 : writeIndex;
 }
+#if !ENABLE(WEBGPU_SWIFT)
+static NSUInteger timestampWriteIndex(NSUInteger writeIndex, NSUInteger defaultValue)
+{
+    return writeIndex == WGPU_QUERY_SET_INDEX_UNDEFINED ? defaultValue : writeIndex;
+}
 
 static NSString* errorValidatingTimestampWrites(const auto& timestampWrites, const CommandEncoder& commandEncoder)
 {
@@ -214,7 +240,6 @@ NSString* CommandEncoder::errorValidatingComputePassDescriptor(const WGPUCompute
 {
     return errorValidatingTimestampWrites(descriptor.timestampWrites, *this);
 }
-
 Ref<ComputePassEncoder> CommandEncoder::beginComputePass(const WGPUComputePassDescriptor& descriptor)
 {
     if (descriptor.nextInChain)
@@ -242,13 +267,15 @@ Ref<ComputePassEncoder> CommandEncoder::beginComputePass(const WGPUComputePassDe
     if (auto* wgpuTimestampWrites = descriptor.timestampWrites) {
         Ref timestampWrites = protectedFromAPI(wgpuTimestampWrites->querySet);
         counterSampleBuffer = timestampWrites->counterSampleBuffer();
+        timestampWrites->setCommandEncoder(*this);
     }
 
     if (m_device->enableEncoderTimestamps() || counterSampleBuffer) {
         auto* timestampWrites = descriptor.timestampWrites;
         computePassDescriptor.sampleBufferAttachments[0].sampleBuffer = counterSampleBuffer ?: m_device->timestampsBuffer(m_commandBuffer, 2);
-        computePassDescriptor.sampleBufferAttachments[0].startOfEncoderSampleIndex = timestampWrites ? timestampWrites->beginningOfPassWriteIndex : 0;
-        computePassDescriptor.sampleBufferAttachments[0].endOfEncoderSampleIndex = timestampWrites ? timestampWrites->endOfPassWriteIndex : 1;
+        computePassDescriptor.sampleBufferAttachments[0].startOfEncoderSampleIndex = timestampWrites ? timestampWriteIndex(timestampWrites->beginningOfPassWriteIndex, MTLCounterDontSample) : 0;
+        computePassDescriptor.sampleBufferAttachments[0].endOfEncoderSampleIndex = timestampWrites ? timestampWriteIndex(timestampWrites->endOfPassWriteIndex, MTLCounterDontSample) : 1;
+        m_device->trackTimestampsBuffer(m_commandBuffer, counterSampleBuffer);
     }
 
     id<MTLComputeCommandEncoder> computeCommandEncoder = [m_commandBuffer computeCommandEncoderWithDescriptor:computePassDescriptor];
@@ -257,6 +284,7 @@ Ref<ComputePassEncoder> CommandEncoder::beginComputePass(const WGPUComputePassDe
 
     return ComputePassEncoder::create(computeCommandEncoder, descriptor, *this, m_device);
 }
+#endif
 
 void CommandEncoder::setExistingEncoder(id<MTLCommandEncoder> encoder)
 {
@@ -268,6 +296,7 @@ void CommandEncoder::setExistingEncoder(id<MTLCommandEncoder> encoder)
 void CommandEncoder::discardCommandBuffer()
 {
     if (!m_commandBuffer || m_commandBuffer.status >= MTLCommandBufferStatusCommitted) {
+        retainTimestampsForOneUpdateLoop();
         m_commandBuffer = nil;
         return;
     }
@@ -276,6 +305,7 @@ void CommandEncoder::discardCommandBuffer()
     auto queue = m_device->protectedQueue();
     queue->endEncoding(existingEncoder, m_commandBuffer);
     queue->removeMTLCommandBuffer(m_commandBuffer);
+    retainTimestampsForOneUpdateLoop();
     m_commandBuffer = nil;
 }
 
@@ -298,6 +328,7 @@ void CommandEncoder::endEncoding(id<MTLCommandEncoder> encoder)
         discardCommandBuffer();
 }
 
+#if !ENABLE(WEBGPU_SWIFT)
 NSString* CommandEncoder::errorValidatingRenderPassDescriptor(const WGPURenderPassDescriptor& descriptor) const
 {
     if (auto* wgpuOcclusionQuery = descriptor.occlusionQuerySet) {
@@ -310,6 +341,7 @@ NSString* CommandEncoder::errorValidatingRenderPassDescriptor(const WGPURenderPa
 
     return errorValidatingTimestampWrites(descriptor.timestampWrites, *this);
 }
+#endif
 
 bool Device::isStencilOnlyFormat(MTLPixelFormat format)
 {
@@ -322,6 +354,7 @@ bool Device::isStencilOnlyFormat(MTLPixelFormat format)
     }
 }
 
+#if !ENABLE(WEBGPU_SWIFT)
 static std::pair<id<MTLRenderPipelineState>, id<MTLDepthStencilState>> createSimplePso(NSMutableDictionary<NSNumber*, TextureAndClearColor*> *attachmentsToClear, id<MTLTexture> depthStencilAttachmentToClear, bool depthAttachmentToClear, bool stencilAttachmentToClear, id<MTLDevice> device)
 {
     MTLRenderPipelineDescriptor* mtlRenderPipelineDescriptor = [MTLRenderPipelineDescriptor new];
@@ -352,15 +385,18 @@ static std::pair<id<MTLRenderPipelineState>, id<MTLDepthStencilState>> createSim
 
     static id<MTLFunction> function = nil;
     NSError *error = nil;
-    if (!function) {
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [&] {
         MTLCompileOptions* options = [MTLCompileOptions new];
         ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         options.fastMathEnabled = YES;
         ALLOW_DEPRECATED_DECLARATIONS_END
-        id<MTLLibrary> library = [device newLibraryWithSource:@"[[vertex]] float4 vs() { return (float4)0; }" options:options error:&error];
-        ASSERT_UNUSED(error, !error);
-        function = [library newFunctionWithName:@"vs"];
-    }
+        id<MTLLibrary> library = [device newLibraryWithSource:@"[[vertex]] float4 vsNop() { return (float4)0; }" options:options error:&error];
+        if (error)
+            WTFLogAlways("%@", error); // NOLINT
+        function = [library newFunctionWithName:@"vsNop"];
+    });
+    RELEASE_ASSERT(function);
 
     mtlRenderPipelineDescriptor.vertexFunction = function;
     mtlRenderPipelineDescriptor.fragmentFunction = nil;
@@ -480,18 +516,20 @@ Ref<RenderPassEncoder> CommandEncoder::beginRenderPass(const WGPURenderPassDescr
     id<MTLCounterSampleBuffer> counterSampleBuffer;
     if (auto* wgpuTimestampWrites = descriptor.timestampWrites) {
         Ref timestampWrites = protectedFromAPI(wgpuTimestampWrites->querySet);
+        timestampWrites->setCommandEncoder(*this);
         counterSampleBuffer = timestampWrites->counterSampleBuffer();
     }
 
     if (m_device->enableEncoderTimestamps() || counterSampleBuffer) {
         if (counterSampleBuffer) {
             mtlDescriptor.sampleBufferAttachments[0].sampleBuffer = counterSampleBuffer;
-            mtlDescriptor.sampleBufferAttachments[0].startOfVertexSampleIndex = descriptor.timestampWrites->beginningOfPassWriteIndex;
-            mtlDescriptor.sampleBufferAttachments[0].endOfVertexSampleIndex = descriptor.timestampWrites->endOfPassWriteIndex;
-            mtlDescriptor.sampleBufferAttachments[0].startOfFragmentSampleIndex = descriptor.timestampWrites->endOfPassWriteIndex;
-            mtlDescriptor.sampleBufferAttachments[0].endOfFragmentSampleIndex = descriptor.timestampWrites->endOfPassWriteIndex;
+            mtlDescriptor.sampleBufferAttachments[0].startOfVertexSampleIndex = timestampWriteIndex(descriptor.timestampWrites->beginningOfPassWriteIndex, MTLCounterDontSample);
+            mtlDescriptor.sampleBufferAttachments[0].endOfVertexSampleIndex = timestampWriteIndex(descriptor.timestampWrites->endOfPassWriteIndex, MTLCounterDontSample);
+            mtlDescriptor.sampleBufferAttachments[0].startOfFragmentSampleIndex = timestampWriteIndex(descriptor.timestampWrites->endOfPassWriteIndex, MTLCounterDontSample);
+            mtlDescriptor.sampleBufferAttachments[0].endOfFragmentSampleIndex = timestampWriteIndex(descriptor.timestampWrites->endOfPassWriteIndex, MTLCounterDontSample);
+            m_device->trackTimestampsBuffer(m_commandBuffer, counterSampleBuffer);
         } else {
-            mtlDescriptor.sampleBufferAttachments[0].sampleBuffer = counterSampleBuffer ?: m_device->timestampsBuffer(m_commandBuffer, 4);
+            mtlDescriptor.sampleBufferAttachments[0].sampleBuffer = m_device->timestampsBuffer(m_commandBuffer, 4);
             mtlDescriptor.sampleBufferAttachments[0].startOfVertexSampleIndex = 0;
             mtlDescriptor.sampleBufferAttachments[0].endOfVertexSampleIndex = 1;
             mtlDescriptor.sampleBufferAttachments[0].startOfFragmentSampleIndex = 2;
@@ -735,12 +773,14 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     setExistingEncoder(mtlRenderCommandEncoder);
     return RenderPassEncoder::create(mtlRenderCommandEncoder, descriptor, visibilityResultBufferSize, depthReadOnly, stencilReadOnly, *this, visibilityResultBuffer, maxDrawCount, m_device, mtlDescriptor);
 }
+#endif
 
 id<MTLCommandBuffer> CommandEncoder::commandBuffer() const
 {
     return m_commandBuffer;
 }
 
+#if !ENABLE(WEBGPU_SWIFT)
 NSString* CommandEncoder::errorValidatingCopyBufferToBuffer(const Buffer& source, uint64_t sourceOffset, const Buffer& destination, uint64_t destinationOffset, uint64_t size)
 {
 #define ERROR_STRING(x) (@"GPUCommandEncoder.copyBufferToBuffer: " x)
@@ -788,21 +828,23 @@ NSString* CommandEncoder::errorValidatingCopyBufferToBuffer(const Buffer& source
 #undef ERROR_STRING
     return nil;
 }
+#endif
 
 void CommandEncoder::incrementBufferMapCount()
 {
     ++m_bufferMapCount;
-    if (m_cachedCommandBuffer)
-        m_cachedCommandBuffer->setBufferMapCount(m_bufferMapCount);
+    if (RefPtr commandBuffer = m_cachedCommandBuffer.get())
+        commandBuffer->setBufferMapCount(m_bufferMapCount);
 }
 
 void CommandEncoder::decrementBufferMapCount()
 {
     --m_bufferMapCount;
-    if (m_cachedCommandBuffer)
-        m_cachedCommandBuffer->setBufferMapCount(m_bufferMapCount);
+    if (RefPtr commandBuffer = m_cachedCommandBuffer.get())
+        commandBuffer->setBufferMapCount(m_bufferMapCount);
 }
 
+#if !ENABLE(WEBGPU_SWIFT)
 void CommandEncoder::copyBufferToBuffer(const Buffer& source, uint64_t sourceOffset, Buffer& destination, uint64_t destinationOffset, uint64_t size)
 {
     // https://gpuweb.github.io/gpuweb/#dom-gpucommandencoder-copybuffertobuffer
@@ -818,7 +860,7 @@ void CommandEncoder::copyBufferToBuffer(const Buffer& source, uint64_t sourceOff
 
     source.setCommandEncoder(*this);
     destination.setCommandEncoder(*this);
-    destination.indirectBufferInvalidated();
+    destination.indirectBufferInvalidated(*this);
     if (!size || source.isDestroyed() || destination.isDestroyed())
         return;
 
@@ -826,7 +868,15 @@ void CommandEncoder::copyBufferToBuffer(const Buffer& source, uint64_t sourceOff
 
     [m_blitCommandEncoder copyFromBuffer:source.buffer() sourceOffset:static_cast<NSUInteger>(sourceOffset) toBuffer:destination.buffer() destinationOffset:static_cast<NSUInteger>(destinationOffset) size:static_cast<NSUInteger>(size)];
 }
+#else
+void CommandEncoder::copyBufferToBuffer(const Buffer& source, uint64_t sourceOffset, Buffer& destination, uint64_t destinationOffset, uint64_t size)
+{
+    // FIXME: rdar://138047285
+    WebGPU::CommandEncoder_copyBufferToBuffer_thunk(this, &const_cast<Buffer&>(source), sourceOffset, &destination, destinationOffset, size);
+}
+#endif
 
+#if !ENABLE(WEBGPU_SWIFT)
 NSString* CommandEncoder::errorValidatingImageCopyBuffer(const WGPUImageCopyBuffer& imageCopyBuffer) const
 {
     // https://gpuweb.github.io/gpuweb/#abstract-opdef-validating-gpuimagecopybuffer
@@ -910,13 +960,12 @@ NSString* CommandEncoder::errorValidatingCopyBufferToTexture(const WGPUImageCopy
             return ERROR_STRING(@"source.layout.offset is not a multiple of four for depth stencil format");
     }
 
-    if (!Texture::validateLinearTextureData(source.layout, protectedFromAPI(source.buffer)->initialSize(), aspectSpecificFormat, copySize))
-        return ERROR_STRING(@"source.layout.offset is not a multiple of four for depth stencil format");
+    if (NSString* errorString = Texture::errorValidatingLinearTextureData(source.layout, protectedFromAPI(source.buffer)->initialSize(), aspectSpecificFormat, copySize))
+        return ERROR_STRING(errorString);
 #undef ERROR_STRING
     return nil;
 }
 
-#if !ENABLE(WEBGPU_SWIFT)
 void CommandEncoder::copyBufferToTexture(const WGPUImageCopyBuffer& source, const WGPUImageCopyTexture& destination, const WGPUExtent3D& copySize)
 {
     if (source.nextInChain || source.layout.nextInChain || destination.nextInChain)
@@ -1171,7 +1220,6 @@ void CommandEncoder::copyBufferToTexture(const WGPUImageCopyBuffer& source, cons
         return;
     }
 }
-#endif
 
 NSString* CommandEncoder::errorValidatingCopyTextureToBuffer(const WGPUImageCopyTexture& source, const WGPUImageCopyBuffer& destination, const WGPUExtent3D& copySize) const
 {
@@ -1222,8 +1270,8 @@ NSString* CommandEncoder::errorValidatingCopyTextureToBuffer(const WGPUImageCopy
             return ERROR_STRING(@"destination.layout.offset is not a multiple of 4");
     }
 
-    if (!Texture::validateLinearTextureData(destination.layout, protectedFromAPI(destination.buffer)->initialSize(), aspectSpecificFormat, copySize))
-        return ERROR_STRING(@"validateLinearTextureData fails");
+    if (NSString* errorString = Texture::errorValidatingLinearTextureData(destination.layout, protectedFromAPI(destination.buffer)->initialSize(), aspectSpecificFormat, copySize))
+        return ERROR_STRING(errorString);
 #undef ERROR_STRING
     return nil;
 }
@@ -1233,6 +1281,8 @@ void CommandEncoder::clearTextureIfNeeded(const WGPUImageCopyTexture& destinatio
     clearTextureIfNeeded(destination, slice, m_device, m_blitCommandEncoder);
 }
 
+#endif
+
 void CommandEncoder::clearTextureIfNeeded(const WGPUImageCopyTexture& destination, NSUInteger slice, const Device& device, id<MTLBlitCommandEncoder> blitCommandEncoder)
 {
     Ref texture = fromAPI(destination.texture);
@@ -1240,19 +1290,6 @@ void CommandEncoder::clearTextureIfNeeded(const WGPUImageCopyTexture& destinatio
     CommandEncoder::clearTextureIfNeeded(texture, mipLevel, slice, device, blitCommandEncoder);
 }
 
-bool CommandEncoder::waitForCommandBufferCompletion()
-{
-    if (RefPtr cachedCommandBuffer = m_cachedCommandBuffer.get())
-        return cachedCommandBuffer->waitForCompletion();
-
-    return true;
-}
-
-bool CommandEncoder::encoderIsCurrent(id<MTLCommandEncoder> commandEncoder) const
-{
-    id<MTLCommandEncoder> existingEncoder = m_device->protectedQueue()->encoderForBuffer(m_commandBuffer);
-    return existingEncoder == commandEncoder;
-}
 
 void CommandEncoder::clearTextureIfNeeded(Texture& texture, NSUInteger mipLevel, NSUInteger slice, const Device& device, id<MTLBlitCommandEncoder> blitCommandEncoder)
 {
@@ -1346,6 +1383,20 @@ void CommandEncoder::clearTextureIfNeeded(Texture& texture, NSUInteger mipLevel,
     }
 }
 
+bool CommandEncoder::waitForCommandBufferCompletion()
+{
+    if (RefPtr cachedCommandBuffer = m_cachedCommandBuffer.get())
+        return cachedCommandBuffer->waitForCompletion();
+
+    return true;
+}
+
+bool CommandEncoder::encoderIsCurrent(id<MTLCommandEncoder> commandEncoder) const
+{
+    id<MTLCommandEncoder> existingEncoder = m_device->protectedQueue()->encoderForBuffer(m_commandBuffer);
+    return existingEncoder == commandEncoder;
+}
+
 void CommandEncoder::makeInvalid(NSString* errorString)
 {
     if (!m_commandBuffer || m_commandBuffer.status >= MTLCommandBufferStatusCommitted)
@@ -1358,40 +1409,67 @@ void CommandEncoder::makeInvalid(NSString* errorString)
 
     m_commandBuffer = nil;
     m_lastErrorString = errorString;
-    if (m_cachedCommandBuffer)
-        protectedCachedCommandBuffer()->makeInvalid(errorString);
+    if (RefPtr commandBuffer = m_cachedCommandBuffer.get())
+        commandBuffer->makeInvalid(errorString);
 }
 
-#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+void CommandEncoder::addICB(id<MTLIndirectCommandBuffer> icb)
+{
+    if (!icb)
+        return;
+    [m_retainedICBs addObject:icb];
+}
+void CommandEncoder::addBuffer(id<MTLCounterSampleBuffer> buffer)
+{
+    if (!buffer)
+        return;
+    [m_retainedTimestampBuffers addObject:buffer];
+}
 void CommandEncoder::addBuffer(id<MTLBuffer> buffer)
 {
+    if (!buffer)
+        return;
+
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
     if (buffer.storageMode == MTLStorageModeManaged)
         [m_managedBuffers addObject:buffer];
+    else
+#endif
+        [m_retainedBuffers addObject:buffer];
 }
-void CommandEncoder::addTexture(const Texture& baseTexture)
+void CommandEncoder::addTexture(id<MTLTexture> texture)
 {
-    id<MTLTexture> texture = baseTexture.texture();
+    if (!texture)
+        return;
+
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
     if (texture.storageMode == MTLStorageModeManaged)
         [m_managedTextures addObject:texture];
+    else
+#endif
+        [m_retainedTextures addObject:texture];
 }
-#else
-void CommandEncoder::addBuffer(id<MTLBuffer>)
-{
-}
+
 void CommandEncoder::addTexture(const Texture& baseTexture)
 {
+    addTexture(baseTexture.texture());
+
     if (id<MTLSharedEvent> event = baseTexture.sharedEvent()) {
         m_sharedEvent = event;
         m_sharedEventSignalValue = baseTexture.sharedEventSignalValue();
     }
 }
-#endif
+
+void CommandEncoder::addSampler(const Sampler& sampler)
+{
+    m_retainedSamplers.add(RefPtr { &sampler });
+}
 
 void CommandEncoder::makeSubmitInvalid(NSString* errorString)
 {
     m_makeSubmitInvalid = true;
-    if (m_cachedCommandBuffer)
-        protectedCachedCommandBuffer()->makeInvalid(errorString ?: m_lastErrorString);
+    if (RefPtr commandBuffer = m_cachedCommandBuffer.get())
+        commandBuffer->makeInvalid(errorString ?: m_lastErrorString);
 }
 
 #if !ENABLE(WEBGPU_SWIFT)
@@ -1430,7 +1508,7 @@ void CommandEncoder::copyTextureToBuffer(const WGPUImageCopyTexture& source, con
     Ref apiDestinationBuffer = fromAPI(destination.buffer);
     sourceTexture->setCommandEncoder(*this);
     apiDestinationBuffer->setCommandEncoder(*this);
-    apiDestinationBuffer->indirectBufferInvalidated();
+    apiDestinationBuffer->indirectBufferInvalidated(*this);
     if (sourceTexture->isDestroyed() || apiDestinationBuffer->isDestroyed())
         return;
 
@@ -1642,7 +1720,6 @@ void CommandEncoder::copyTextureToBuffer(const WGPUImageCopyTexture& source, con
         return;
     }
 }
-#endif
 
 static bool areCopyCompatible(WGPUTextureFormat format1, WGPUTextureFormat format2)
 {
@@ -1732,7 +1809,6 @@ NSString* CommandEncoder::errorValidatingCopyTextureToTexture(const WGPUImageCop
     return nil;
 }
 
-#if !ENABLE(WEBGPU_SWIFT)
 void CommandEncoder::copyTextureToTexture(const WGPUImageCopyTexture& source, const WGPUImageCopyTexture& destination, const WGPUExtent3D& copySize)
 {
     if (source.nextInChain || destination.nextInChain)
@@ -1935,7 +2011,7 @@ void CommandEncoder::clearBuffer(Buffer& buffer, uint64_t offset, uint64_t size)
     }
 
     buffer.setCommandEncoder(*this);
-    buffer.indirectBufferInvalidated();
+    buffer.indirectBufferInvalidated(*this);
     auto range = NSMakeRange(static_cast<NSUInteger>(offset), static_cast<NSUInteger>(size));
     if (buffer.isDestroyed() || !size || NSMaxRange(range) > buffer.buffer().length)
         return;
@@ -1953,6 +2029,7 @@ void CommandEncoder::setLastError(NSString* errorString)
     m_lastErrorString = errorString;
 }
 
+#if !ENABLE(WEBGPU_SWIFT)
 NSString* CommandEncoder::validateFinishError() const
 {
     if (!isValid())
@@ -2010,15 +2087,16 @@ Ref<CommandBuffer> CommandEncoder::finish(const WGPUCommandBufferDescriptor& des
     }
 #endif
 
-    auto result = CommandBuffer::create(commandBuffer, m_device, m_sharedEvent, m_sharedEventSignalValue, *this);
+    auto result = CommandBuffer::create(commandBuffer, m_device, m_sharedEvent, m_sharedEventSignalValue, WTFMove(m_onCommitHandlers), *this);
     m_sharedEvent = nil;
-    m_cachedCommandBuffer = result;
-    m_cachedCommandBuffer->setBufferMapCount(m_bufferMapCount);
+    m_cachedCommandBuffer = result.ptr();
+    result->setBufferMapCount(m_bufferMapCount);
     if (m_makeSubmitInvalid)
-        protectedCachedCommandBuffer()->makeInvalid(m_lastErrorString);
+        result->makeInvalid(m_lastErrorString);
 
     return result;
 }
+#endif
 
 void CommandEncoder::insertDebugMarker(String&& markerLabel)
 {
@@ -2125,7 +2203,7 @@ void CommandEncoder::resolveQuerySet(const QuerySet& querySet, uint32_t firstQue
 
     querySet.setCommandEncoder(*this);
     destination.setCommandEncoder(*this);
-    destination.indirectBufferInvalidated();
+    destination.indirectBufferInvalidated(*this);
     if (querySet.isDestroyed() || destination.isDestroyed() || !queryCount)
         return;
 
@@ -2143,7 +2221,7 @@ void CommandEncoder::resolveQuerySet(const QuerySet& querySet, uint32_t firstQue
         [m_commandBuffer encodeSignalEvent:workaround value:1];
         [m_commandBuffer encodeWaitForEvent:workaround value:1];
         ensureBlitCommandEncoder();
-        [m_blitCommandEncoder resolveCounters:querySet.counterSampleBuffer() inRange:NSMakeRange(0, querySet.count()) destinationBuffer:destination.buffer() destinationOffset:destinationOffset];
+        [m_blitCommandEncoder resolveCounters:querySet.counterSampleBuffer() inRange:NSMakeRange(firstQuery, queryCount) destinationBuffer:destination.buffer() destinationOffset:destinationOffset];
         break;
     }
     default:
@@ -2192,6 +2270,12 @@ void CommandEncoder::lock(bool shouldLock)
 void CommandEncoder::trackEncoder(CommandEncoder& commandEncoder, WeakHashSet<CommandEncoder>& encoderHashSet)
 {
     encoderHashSet.add(commandEncoder);
+}
+
+void CommandEncoder::addOnCommitHandler(Function<bool(CommandBuffer&)>&& onCommitHandler)
+{
+    ASSERT(m_commandBuffer);
+    m_onCommitHandlers.append(WTFMove(onCommitHandler));
 }
 
 #undef GENERATE_INVALID_ENCODER_STATE_ERROR

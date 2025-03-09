@@ -194,6 +194,13 @@ void PathSkia::add(PathRoundedRect roundedRect)
         addBeziersForRoundedRect(roundedRect.roundedRect);
 }
 
+void PathSkia::add(PathContinuousRoundedRect continuousRoundedRect)
+{
+    // Continuous rounded rects are unavailable. Paint a normal rounded rect instead.
+    // FIXME: Determine if PreferNative is the optimal strategy here.
+    add(PathRoundedRect { FloatRoundedRect { continuousRoundedRect.rect, FloatRoundedRect::Radii { continuousRoundedRect.cornerWidth, continuousRoundedRect.cornerHeight } }, PathRoundedRect::Strategy::PreferNative });
+}
+
 void PathSkia::add(PathCloseSubpath)
 {
     m_platformPath.close();
@@ -313,7 +320,7 @@ bool PathSkia::contains(const FloatPoint& point, WindRule windRule) const
     return m_platformPath.contains(x, y);
 }
 
-bool PathSkia::strokeContains(const FloatPoint& point, const Function<void(GraphicsContext&)>& strokeStyleApplier) const
+bool PathSkia::strokeContains(const FloatPoint& point, NOESCAPE const Function<void(GraphicsContext&)>& strokeStyleApplier) const
 {
     if (isEmpty() || !std::isfinite(point.x()) || !std::isfinite(point.y()))
         return false;
@@ -339,7 +346,7 @@ FloatRect PathSkia::boundingRect() const
     return m_platformPath.computeTightBounds();
 }
 
-FloatRect PathSkia::strokeBoundingRect(const Function<void(GraphicsContext&)>& strokeStyleApplier) const
+FloatRect PathSkia::strokeBoundingRect(NOESCAPE const Function<void(GraphicsContext&)>& strokeStyleApplier) const
 {
     if (isEmpty())
         return { };

@@ -42,6 +42,7 @@
 #include <WebCore/ImageBuffer.h>
 #include <WebCore/PixelBufferConversion.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/ParsingUtilities.h>
 
 #if ENABLE(VIDEO)
 #include "RemoteVideoFrameObjectHeapProxy.h"
@@ -218,11 +219,11 @@ bool RemoteGraphicsContextGLProxy::copyTextureFromVideoFrame(WebCore::VideoFrame
     if (isContextLost())
         return false;
 
-    auto sharedVideoFrame = m_sharedVideoFrameWriter.write(videoFrame, [this](auto& semaphore) {
+    auto sharedVideoFrame = m_sharedVideoFrameWriter.write(videoFrame, [this, protectedThis = Ref { *this }](auto& semaphore) {
         auto sendResult = send(Messages::RemoteGraphicsContextGL::SetSharedVideoFrameSemaphore { semaphore });
         if (sendResult != IPC::Error::NoError)
             markContextLost();
-    }, [this](SharedMemory::Handle&& handle) {
+    }, [this, protectedThis = Ref { *this }](SharedMemory::Handle&& handle) {
         auto sendResult = send(Messages::RemoteGraphicsContextGL::SetSharedVideoFrameMemory { WTFMove(handle) });
         if (sendResult != IPC::Error::NoError)
             markContextLost();
@@ -308,7 +309,7 @@ void RemoteGraphicsContextGLProxy::getBufferSubData(GCGLenum target, GCGLintptr 
             if (!valid)
                 return;
             std::ranges::copy(replyBuffer->span().subspan(0, transferSize), data.begin());
-            data = data.subspan(transferSize);
+            skip(data, transferSize);
             offset += transferSize;
         }
         return;
@@ -326,7 +327,7 @@ inlineCase:
             return;
         RELEASE_ASSERT(transferSize == inlineBuffer.size());
         std::ranges::copy(inlineBuffer, data.begin());
-        data = data.subspan(transferSize);
+        skip(data, transferSize);
         offset += transferSize;
     }
 }
@@ -364,7 +365,7 @@ void RemoteGraphicsContextGLProxy::readPixels(IntRect rect, GCGLenum format, GCG
         // Will not overflow, because rect.size() * { dataStoreRowBytes, bytesPerGroup } is validated and it will fit to the uint32_t.
         // bottomLeftOutOfBounds must be smaller than rect.size() in case adjusted rect is non-empty.
         unsigned skipRowBytes = bottomLeftOutOfBounds.width() * bytesPerGroup;
-        dataStore = dataStore.subspan(dataStoreRowBytes * bottomLeftOutOfBounds.height() + skipRowBytes);
+        skip(dataStore, dataStoreRowBytes * bottomLeftOutOfBounds.height() + skipRowBytes);
     }
 
     static constexpr size_t readPixelsInlineSizeLimit = 64 * KB; // NOTE: when changing, change the value in RemoteGraphicsContextGL too.

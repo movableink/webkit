@@ -36,6 +36,7 @@
 #include "Settings.h"
 #include "Timer.h"
 #include "WorkerThread.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/OptionSet.h>
 
 namespace WebCore {
@@ -60,7 +61,7 @@ public:
     }
     virtual ~ServiceWorkerThread();
 
-    WorkerObjectProxy& workerObjectProxy() const { return m_workerObjectProxy; }
+    WorkerObjectProxy& workerObjectProxy() const;
 
     void start(Function<void(const String&, bool)>&&);
 
@@ -75,7 +76,7 @@ public:
     void queueTaskToFireActivateEvent();
     void queueTaskToFirePushEvent(std::optional<Vector<uint8_t>>&&, std::optional<NotificationPayload>&&, Function<void(bool, std::optional<NotificationPayload>&&)>&&);
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    void queueTaskToFirePushNotificationEvent(NotificationPayload&&, Function<void(bool, std::optional<NotificationPayload>&&)>&&);
+    void queueTaskToFireDeclarativePushEvent(NotificationPayload&&, Function<void(bool, std::optional<NotificationPayload>&&)>&&);
 #endif
     void queueTaskToFirePushSubscriptionChangeEvent(std::optional<PushSubscriptionData>&& newSubscriptionData, std::optional<PushSubscriptionData>&& oldSubscriptionData);
 #if ENABLE(NOTIFICATION_EVENT)
@@ -119,7 +120,7 @@ private:
     std::optional<ServiceWorkerJobDataIdentifier> m_jobDataIdentifier;
     std::optional<ServiceWorkerContextData> m_contextData; // Becomes std::nullopt after the ServiceWorkerGlobalScope has been created.
     std::optional<ServiceWorkerData> m_workerData; // Becomes std::nullopt after the ServiceWorkerGlobalScope has been created.
-    WorkerObjectProxy& m_workerObjectProxy;
+    const CheckedRef<WorkerObjectProxy> m_workerObjectProxy;
     bool m_doesHandleFetch { false };
 
     bool m_isHandlingFetchEvent { false };

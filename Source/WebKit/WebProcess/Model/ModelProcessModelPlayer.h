@@ -33,6 +33,7 @@
 #import <WebCore/ModelPlayer.h>
 #import <WebCore/ModelPlayerClient.h>
 #import <WebCore/ModelPlayerIdentifier.h>
+#import <WebCore/StageModeOperations.h>
 #import <wtf/Compiler.h>
 
 namespace WebKit {
@@ -77,7 +78,6 @@ private:
     void handleMouseDown(const WebCore::LayoutPoint&, MonotonicTime) final;
     void handleMouseMove(const WebCore::LayoutPoint&, MonotonicTime) final;
     void handleMouseUp(const WebCore::LayoutPoint&, MonotonicTime) final;
-    void setBackgroundColor(WebCore::Color) final;
     void setEntityTransform(WebCore::TransformationMatrix) final;
     bool supportsTransform(WebCore::TransformationMatrix) final;
     void enterFullscreen() final;
@@ -103,6 +103,11 @@ private:
     Seconds currentTime() const final;
     void setCurrentTime(Seconds, CompletionHandler<void()>&&) final;
     void setEnvironmentMap(Ref<WebCore::SharedBuffer>&& data) final;
+    void setHasPortal(bool) final;
+    void setStageMode(WebCore::StageModeOperation) final;
+    void beginStageModeTransform(const WebCore::TransformationMatrix&) final;
+    void updateStageModeTransform(const WebCore::TransformationMatrix&) final;
+    void endStageModeInteraction() final;
 
     WebCore::ModelPlayerIdentifier m_id;
     WeakPtr<WebPage> m_page;
@@ -110,6 +115,7 @@ private:
 
     std::optional<WebCore::LayerHostingContextIdentifier> m_layerHostingContextIdentifier;
 
+    bool m_hasPortal { true };
     bool m_autoplay { false };
     bool m_loop { false };
     double m_requestedPlaybackRate { 1.0 };
@@ -120,6 +126,7 @@ private:
     std::optional<MonotonicTime> m_clockTimestampOfLastCurrentTimeSet;
     std::optional<Seconds> m_lastCachedCurrentTime;
     std::optional<MonotonicTime> m_lastCachedClockTimestamp;
+    WebCore::StageModeOperation m_stageModeOperation { WebCore::StageModeOperation::None };
 };
 
 }

@@ -1,35 +1,35 @@
 
-FAIL --right | --right assert_true: expected true got false
-FAIL --left | --left assert_true: expected true got false
-FAIL --top | --top assert_true: expected true got false
-FAIL --bottom | --bottom assert_true: expected true got false
-FAIL --right, --left, --bottom, --top | --right assert_true: expected true got false
-FAIL normal --right, --left, --bottom, --top | --right assert_true: expected true got false
-FAIL normal --top, --left, --bottom, --right | --top assert_true: expected true got false
-FAIL most-block-size --right, --left | --right assert_true: expected true got false
-FAIL most-height --right, --left | --right assert_true: expected true got false
-FAIL most-inline-size --right, --left | --left assert_true: expected true got false
-FAIL most-width --right, --left | --left assert_true: expected true got false
-FAIL most-inline-size --bottom, --top | --bottom assert_true: expected true got false
-FAIL most-width --bottom, --top | --bottom assert_true: expected true got false
-FAIL most-block-size --bottom, --top | --top assert_true: expected true got false
-FAIL most-height --bottom, --top | --top assert_true: expected true got false
-FAIL most-inline-size --right, --left, --bottom, --top | --bottom assert_true: expected true got false
-FAIL most-inline-size --right, --left, --top, --bottom | --top assert_true: expected true got false
-FAIL most-block-size --bottom, --top, --right, --left | --right assert_true: expected true got false
-FAIL most-block-size --bottom, --top, --left, --right | --left assert_true: expected true got false
-FAIL most-inline-size --left-sweep, --bottom-sweep | --left-sweep assert_true: expected true got false
-FAIL most-inline-size --bottom-sweep, --left-sweep | --bottom-sweep assert_true: expected true got false
-FAIL most-block-size --left-sweep, --bottom-sweep | --left-sweep assert_true: expected true got false
-FAIL most-block-size --bottom-sweep, --left-sweep | --left-sweep assert_true: expected true got false
-FAIL most-inline-size --right-sweep, --left-sweep, --bottom-sweep, --top-sweep | --left-sweep assert_true: expected true got false
-FAIL most-block-size --right-sweep, --left-sweep, --bottom-sweep, --top-sweep | --top-sweep assert_true: expected true got false
+PASS --right | --right
+PASS --left | --left
+PASS --top | --top
+PASS --bottom | --bottom
+PASS --right, --left, --bottom, --top | --right
+PASS normal --right, --left, --bottom, --top | --right
+PASS normal --top, --left, --bottom, --right | --top
+PASS most-block-size --right, --left | --right
+PASS most-height --right, --left | --right
+FAIL most-inline-size --right, --left | --left assert_equals: offsetLeft expected 110 but got 300
+FAIL most-width --right, --left | --left assert_equals: offsetLeft expected 110 but got 300
+PASS most-inline-size --bottom, --top | --bottom
+PASS most-width --bottom, --top | --bottom
+FAIL most-block-size --bottom, --top | --top assert_equals: offsetTop expected 160 but got 350
+FAIL most-height --bottom, --top | --top assert_equals: offsetTop expected 160 but got 350
+FAIL most-inline-size --right, --left, --bottom, --top | --bottom assert_equals: offsetLeft expected 0 but got 300
+FAIL most-inline-size --right, --left, --top, --bottom | --top assert_equals: offsetLeft expected 0 but got 300
+FAIL most-block-size --bottom, --top, --right, --left | --right assert_equals: offsetLeft expected 300 but got 0
+FAIL most-block-size --bottom, --top, --left, --right | --left assert_equals: offsetLeft expected 110 but got 0
+PASS most-inline-size --left-sweep, --bottom-sweep | --left-sweep
+PASS most-inline-size --bottom-sweep, --left-sweep | --bottom-sweep
+PASS most-block-size --left-sweep, --bottom-sweep | --left-sweep
+FAIL most-block-size --bottom-sweep, --left-sweep | --left-sweep assert_equals: offsetLeft expected 110 but got 205
+FAIL most-inline-size --right-sweep, --left-sweep, --bottom-sweep, --top-sweep | --left-sweep assert_equals: offsetLeft expected 110 but got 300
+FAIL most-block-size --right-sweep, --left-sweep, --bottom-sweep, --top-sweep | --top-sweep assert_equals: offsetLeft expected 205 but got 300
 FAIL most-inline-size
   --right-sweep, --left-sweep, --bottom-sweep, --top-sweep,
   --right, --left, --bottom, --top
-   | --left-sweep assert_true: expected true got false
+   | --left-sweep assert_equals: offsetLeft expected 110 but got 300
 FAIL most-block-size
   --right-sweep, --left-sweep, --bottom-sweep, --top-sweep,
   --right, --left, --bottom, --top
-   | --right assert_true: expected true got false
+   | --right assert_equals: offsetTop expected 0 but got 255
 

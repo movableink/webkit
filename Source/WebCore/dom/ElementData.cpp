@@ -34,8 +34,7 @@
 #include "StyleProperties.h"
 #include "StylePropertiesInlines.h"
 #include "XMLNames.h"
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+#include <wtf/ZippedRange.h>
 
 namespace WebCore {
 
@@ -86,16 +85,14 @@ Ref<UniqueElementData> UniqueElementData::create()
 ShareableElementData::ShareableElementData(std::span<const Attribute> attributes)
     : ElementData(attributes.size())
 {
-    unsigned attributeArraySize = arraySize();
-    for (unsigned i = 0; i < attributeArraySize; ++i)
-        new (NotNull, &m_attributeArray[i]) Attribute(attributes[i]);
+    for (auto [sourceAttribute, destinationAttribute] : zippedRange(attributes, this->attributes()))
+        new (NotNull, &destinationAttribute) Attribute(sourceAttribute);
 }
 
 ShareableElementData::~ShareableElementData()
 {
-    unsigned attributeArraySize = arraySize();
-    for (unsigned i = 0; i < attributeArraySize; ++i)
-        m_attributeArray[i].~Attribute();
+    for (auto& attribute : attributes())
+        attribute.~Attribute();
 }
 
 ShareableElementData::ShareableElementData(const UniqueElementData& other)
@@ -108,9 +105,8 @@ ShareableElementData::ShareableElementData(const UniqueElementData& other)
         m_inlineStyle = other.m_inlineStyle->immutableCopyIfNeeded();
     }
 
-    unsigned attributeArraySize = arraySize();
-    for (unsigned i = 0; i < attributeArraySize; ++i)
-        new (NotNull, &m_attributeArray[i]) Attribute(other.m_attributeVector.at(i));
+    for (auto [sourceAttribute, destinationAttribute] : zippedRange(other.m_attributeVector.span(), attributes()))
+        new (NotNull, &destinationAttribute) Attribute(sourceAttribute);
 }
 
 inline uint32_t ElementData::arraySizeAndFlagsFromOther(const ElementData& other, bool isUnique)
@@ -146,7 +142,7 @@ UniqueElementData::UniqueElementData(const UniqueElementData& other)
 
 UniqueElementData::UniqueElementData(const ShareableElementData& other)
     : ElementData(other, true)
-    , m_attributeVector(std::span { other.m_attributeArray, other.length() })
+    , m_attributeVector(other.attributes())
 {
     // An ShareableElementData should never have a mutable inline StyleProperties attached.
     ASSERT(!other.m_inlineStyle || !other.m_inlineStyle->isMutable());
@@ -174,8 +170,8 @@ bool ElementData::isEquivalent(const ElementData* other) const
     if (length() != other->length())
         return false;
 
-    for (const Attribute& attribute : attributesIterator()) {
-        const Attribute* otherAttr = other->findAttributeByName(attribute.name());
+    for (auto& attribute : attributes()) {
+        auto* otherAttr = other->findAttributeByName(attribute.name());
         if (!otherAttr || attribute.value() != otherAttr->value())
             return false;
     }
@@ -193,5 +189,3 @@ Attribute* UniqueElementData::findAttributeByName(const QualifiedName& name)
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

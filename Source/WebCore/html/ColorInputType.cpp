@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,19 +30,14 @@
  */
 
 #include "config.h"
-
-#if ENABLE(INPUT_TYPE_COLOR)
-
 #include "ColorInputType.h"
 
 #include "AXObjectCache.h"
-#include "CSSPropertyNames.h"
 #include "CSSPropertyParserConsumer+Color.h"
 #include "Chrome.h"
 #include "Color.h"
 #include "ColorSerialization.h"
 #include "ColorTypes.h"
-#include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"
 #include "Event.h"
 #include "HTMLDataListElement.h"
@@ -50,6 +45,7 @@
 #include "HTMLInputElement.h"
 #include "HTMLOptionElement.h"
 #include "InputTypeNames.h"
+#include "RenderTheme.h"
 #include "RenderView.h"
 #include "ScopedEventQueue.h"
 #include "ScriptDisallowedScope.h"
@@ -204,6 +200,9 @@ Color ColorInputType::valueAsColor() const
     ASSERT(element());
     auto color = parseColorValue(element()->value(), *element());
     ASSERT(!!color);
+    // FIXME: This is a speculative fix for rdar://144872437.
+    if (!color)
+        return Color::black;
     return *color;
 }
 
@@ -224,6 +223,8 @@ void ColorInputType::createShadowSubtree()
     wrapperElement->appendChild(ContainerNode::ChildChange::Source::Parser, colorSwatch);
     wrapperElement->setUserAgentPart(UserAgentParts::webkitColorSwatchWrapper());
     colorSwatch->setUserAgentPart(UserAgentParts::webkitColorSwatch());
+
+    RenderTheme::singleton().createColorWellSwatchSubtree(colorSwatch.get());
 
     updateColorSwatch();
 }
@@ -335,12 +336,11 @@ void ColorInputType::endColorChooser()
 
 void ColorInputType::updateColorSwatch()
 {
-    RefPtr<HTMLElement> colorSwatch = shadowColorSwatch();
+    RefPtr colorSwatch = shadowColorSwatch();
     if (!colorSwatch)
         return;
 
-    ASSERT(element());
-    colorSwatch->setInlineStyleProperty(CSSPropertyBackgroundColor, element()->value());
+    RenderTheme::singleton().setColorWellSwatchBackground(*colorSwatch, valueAsColor());
 }
 
 HTMLElement* ColorInputType::shadowColorSwatch() const
@@ -350,11 +350,8 @@ HTMLElement* ColorInputType::shadowColorSwatch() const
     if (!shadow)
         return nullptr;
 
-    RefPtr wrapper = childrenOfType<HTMLDivElement>(*shadow).first();
-    if (!wrapper)
-        return nullptr;
-
-    return childrenOfType<HTMLDivElement>(*wrapper).first();
+    RefPtr wrapper = shadow->firstChild();
+    return wrapper ? downcast<HTMLElement>(wrapper->firstChild()) : nullptr;
 }
 
 IntRect ColorInputType::elementRectRelativeToRootView() const
@@ -374,7 +371,6 @@ bool ColorInputType::supportsAlpha() const
 Vector<Color> ColorInputType::suggestedColors() const
 {
     Vector<Color> suggestions;
-#if ENABLE(DATALIST_ELEMENT)
     ASSERT(element());
     if (auto dataList = element()->dataList()) {
         for (auto& option : dataList->suggestions()) {
@@ -382,7 +378,6 @@ Vector<Color> ColorInputType::suggestedColors() const
                 suggestions.append(*color);
         }
     }
-#endif
     return suggestions;
 }
 
@@ -394,5 +389,3 @@ void ColorInputType::selectColor(StringView string)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INPUT_TYPE_COLOR)

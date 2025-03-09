@@ -31,11 +31,12 @@
 #include "ImageBuffer.h"
 #include "NativeImage.h"
 #include <skia/core/SkImage.h>
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-#include <skia/core/SkMatrix.h>
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 #include <skia/core/SkSamplingOptions.h>
 #include <skia/core/SkTileMode.h>
+
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
+#include <skia/core/SkMatrix.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 namespace WebCore {
 

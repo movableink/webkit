@@ -35,8 +35,10 @@
 #import "EndowmentStateTracker.h"
 #import "FrameInfoData.h"
 #import "InteractionInformationAtPosition.h"
+#import "KeyEventInterpretationContext.h"
 #import "NativeWebKeyboardEvent.h"
 #import "NavigationState.h"
+#import "PDFPluginIdentifier.h"
 #import "PlatformXRSystem.h"
 #import "RemoteLayerTreeNode.h"
 #import "RunningBoardServicesSPI.h"
@@ -66,6 +68,7 @@
 #import <WebCore/Cursor.h>
 #import <WebCore/DOMPasteAccess.h>
 #import <WebCore/DictionaryLookup.h>
+#import <WebCore/ElementIdentifier.h>
 #import <WebCore/NotImplemented.h>
 #import <WebCore/PlatformScreen.h>
 #import <WebCore/PromisedAttachmentInfo.h>
@@ -77,6 +80,10 @@
 #import <wtf/BlockPtr.h>
 #import <wtf/cocoa/Entitlements.h>
 #import <wtf/cocoa/SpanCocoa.h>
+
+#if ENABLE(DIGITAL_CREDENTIALS_UI)
+#import <WebCore/DigitalCredentialsRequestData.h>
+#endif
 
 @interface UIWindow ()
 - (BOOL)_isHostedInAnotherProcess;
@@ -162,6 +169,8 @@ bool PageClientImpl::isViewVisible()
 
 void PageClientImpl::viewIsBecomingVisible()
 {
+    PageClientImplCocoa::viewIsBecomingVisible();
+
 #if ENABLE(PAGE_LOAD_OBSERVER)
     if (RetainPtr webView = this->webView())
         [webView _updatePageLoadObserverState];
@@ -236,6 +245,11 @@ void PageClientImpl::didCreateContextInGPUProcessForVisibilityPropagation(LayerH
 void PageClientImpl::didCreateContextInModelProcessForVisibilityPropagation(LayerHostingContextID)
 {
     [m_contentView _modelProcessDidCreateContextForVisibilityPropagation];
+}
+
+void PageClientImpl::didReceiveInteractiveModelElement(std::optional<WebCore::ElementIdentifier> elementID)
+{
+    [m_contentView didReceiveInteractiveModelElement:elementID];
 }
 #endif // ENABLE(MODEL_PROCESS)
 
@@ -327,9 +341,9 @@ void PageClientImpl::disableDoubleTapGesturesDuringTapIfNecessary(WebKit::TapIde
     [contentView() _disableDoubleTapGesturesDuringTapIfNecessary:requestID];
 }
 
-void PageClientImpl::handleSmartMagnificationInformationForPotentialTap(WebKit::TapIdentifier requestID, const WebCore::FloatRect& renderRect, bool fitEntireRect, double viewportMinimumScale, double viewportMaximumScale, bool nodeIsRootLevel)
+void PageClientImpl::handleSmartMagnificationInformationForPotentialTap(WebKit::TapIdentifier requestID, const WebCore::FloatRect& renderRect, bool fitEntireRect, double viewportMinimumScale, double viewportMaximumScale, bool nodeIsRootLevel, bool nodeIsPluginElement)
 {
-    [contentView() _handleSmartMagnificationInformationForPotentialTap:requestID renderRect:renderRect fitEntireRect:fitEntireRect viewportMinimumScale:viewportMinimumScale viewportMaximumScale:viewportMaximumScale nodeIsRootLevel:nodeIsRootLevel];
+    [contentView() _handleSmartMagnificationInformationForPotentialTap:requestID renderRect:renderRect fitEntireRect:fitEntireRect viewportMinimumScale:viewportMinimumScale viewportMaximumScale:viewportMaximumScale nodeIsRootLevel:nodeIsRootLevel nodeIsPluginElement:nodeIsPluginElement];
 }
 
 double PageClientImpl::minimumZoomScale() const
@@ -391,9 +405,9 @@ void PageClientImpl::accessibilityWebProcessTokenReceived(std::span<const uint8_
     [contentView() _setAccessibilityWebProcessToken:toNSData(data).get()];
 }
 
-bool PageClientImpl::interpretKeyEvent(const NativeWebKeyboardEvent& event, bool isCharEvent)
+bool PageClientImpl::interpretKeyEvent(const NativeWebKeyboardEvent& event, KeyEventInterpretationContext&& context)
 {
-    return [contentView() _interpretKeyEvent:event.nativeEvent() isCharEvent:isCharEvent];
+    return [contentView() _interpretKeyEvent:event.nativeEvent() withContext:WTFMove(context)];
 }
 
 void PageClientImpl::positionInformationDidChange(const InteractionInformationAtPosition& info)
@@ -456,6 +470,11 @@ FloatRect PageClientImpl::convertToUserSpace(const FloatRect& rect)
 IntPoint PageClientImpl::screenToRootView(const IntPoint& point)
 {
     return IntPoint([contentView() convertPoint:point fromView:nil]);
+}
+
+IntPoint PageClientImpl::rootViewToScreen(const IntPoint& point)
+{
+    return IntPoint([contentView() convertPoint:point toView:nil]);
 }
 
 IntRect PageClientImpl::rootViewToScreen(const IntRect& rect)
@@ -641,6 +660,8 @@ void PageClientImpl::didGetTapHighlightGeometries(WebKit::TapIdentifier requestI
 
 void PageClientImpl::didCommitLayerTree(const RemoteLayerTreeTransaction& layerTreeTransaction)
 {
+    PageClientImplCocoa::didCommitLayerTree(layerTreeTransaction);
+
     [contentView() _didCommitLayerTree:layerTreeTransaction];
 }
 
@@ -673,6 +694,11 @@ void PageClientImpl::elementDidFocus(const FocusedElementInformation& nodeInform
 void PageClientImpl::updateInputContextAfterBlurringAndRefocusingElement()
 {
     [contentView() _updateInputContextAfterBlurringAndRefocusingElement];
+}
+
+void PageClientImpl::didProgrammaticallyClearFocusedElement(WebCore::ElementContext&& context)
+{
+    [contentView() _didProgrammaticallyClearFocusedElement:WTFMove(context)];
 }
 
 void PageClientImpl::updateFocusedElementInformation(const FocusedElementInformation& information)
@@ -727,6 +753,18 @@ void PageClientImpl::showContactPicker(const WebCore::ContactsRequestData& reque
     [contentView() _showContactPicker:requestData completionHandler:WTFMove(completionHandler)];
 }
 
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+void PageClientImpl::showDigitalCredentialsPicker(const WebCore::DigitalCredentialsRequestData& requestData, WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&& completionHandler)
+{
+    [contentView() _showDigitalCredentialsPicker:requestData completionHandler:WTFMove(completionHandler)];
+}
+
+void PageClientImpl::dismissDigitalCredentialsPicker(CompletionHandler<void(bool)>&& completionHandler)
+{
+    [contentView() _dismissDigitalCredentialsPicker:WTFMove(completionHandler)];
+}
+#endif
+
 void PageClientImpl::showInspectorHighlight(const WebCore::InspectorOverlay::Highlight& highlight)
 {
     [contentView() _showInspectorHighlight:highlight];
@@ -761,6 +799,8 @@ void PageClientImpl::disableInspectorNodeSearch()
 
 WebFullScreenManagerProxyClient& PageClientImpl::fullScreenManagerProxyClient()
 {
+    if (m_fullscreenClientForTesting)
+        return *m_fullscreenClientForTesting;
     return *this;
 }
 
@@ -780,9 +820,11 @@ bool PageClientImpl::isFullScreen()
     return [webView fullScreenWindowController].isFullScreen;
 }
 
-void PageClientImpl::enterFullScreen(FloatSize mediaDimensions)
+void PageClientImpl::enterFullScreen(FloatSize mediaDimensions, CompletionHandler<void(bool)>&& completionHandler)
 {
-    [[webView() fullScreenWindowController] enterFullScreen:mediaDimensions];
+    if (![webView() fullScreenWindowController])
+        return completionHandler(false);
+    [[webView() fullScreenWindowController] enterFullScreen:mediaDimensions completionHandler:WTFMove(completionHandler)];
 }
 
 #if ENABLE(QUICKLOOK_FULLSCREEN)
@@ -792,9 +834,11 @@ void PageClientImpl::updateImageSource()
 }
 #endif
 
-void PageClientImpl::exitFullScreen()
+void PageClientImpl::exitFullScreen(CompletionHandler<void()>&& completionHandler)
 {
-    [[webView() fullScreenWindowController] exitFullScreen];
+    if (![webView() fullScreenWindowController])
+        return completionHandler();
+    [[webView() fullScreenWindowController] exitFullScreen:WTFMove(completionHandler)];
 }
 
 static UIInterfaceOrientationMask toUIInterfaceOrientationMask(WebCore::ScreenOrientationType orientation)
@@ -824,14 +868,18 @@ void PageClientImpl::unlockFullscreenOrientation()
     [[webView() fullScreenWindowController] resetSupportedOrientations];
 }
 
-void PageClientImpl::beganEnterFullScreen(const IntRect& initialFrame, const IntRect& finalFrame)
+void PageClientImpl::beganEnterFullScreen(const IntRect& initialFrame, const IntRect& finalFrame, CompletionHandler<void(bool)>&& completionHandler)
 {
-    [[webView() fullScreenWindowController] beganEnterFullScreenWithInitialFrame:initialFrame finalFrame:finalFrame];
+    if (![webView() fullScreenWindowController])
+        return completionHandler(false);
+    [[webView() fullScreenWindowController] beganEnterFullScreenWithInitialFrame:initialFrame finalFrame:finalFrame completionHandler:WTFMove(completionHandler)];
 }
 
-void PageClientImpl::beganExitFullScreen(const IntRect& initialFrame, const IntRect& finalFrame)
+void PageClientImpl::beganExitFullScreen(const IntRect& initialFrame, const IntRect& finalFrame, CompletionHandler<void()>&& completionHandler)
 {
-    [[webView() fullScreenWindowController] beganExitFullScreenWithInitialFrame:initialFrame finalFrame:finalFrame];
+    if (![webView() fullScreenWindowController])
+        return completionHandler();
+    [[webView() fullScreenWindowController] beganExitFullScreenWithInitialFrame:initialFrame finalFrame:finalFrame completionHandler:WTFMove(completionHandler)];
 }
 
 #endif // ENABLE(FULLSCREEN_API)
@@ -943,6 +991,11 @@ void PageClientImpl::videoControlsManagerDidChange()
     [webView() _videoControlsManagerDidChange];
 }
 
+void PageClientImpl::videosInElementFullscreenChanged()
+{
+    [webView() _videosInElementFullscreenChanged];
+}
+
 void PageClientImpl::refView()
 {
     [m_contentView retain];
@@ -971,26 +1024,10 @@ Ref<ValidationBubble> PageClientImpl::createValidationBubble(const String& messa
     return ValidationBubble::create(m_contentView.getAutoreleased(), message, settings);
 }
 
-#if ENABLE(INPUT_TYPE_COLOR)
-RefPtr<WebColorPicker> PageClientImpl::createColorPicker(WebPageProxy*, const WebCore::Color& initialColor, const WebCore::IntRect&, ColorControlSupportsAlpha, Vector<WebCore::Color>&&)
-{
-    return nullptr;
-}
-#endif
-
-#if ENABLE(DATALIST_ELEMENT)
 RefPtr<WebDataListSuggestionsDropdown> PageClientImpl::createDataListSuggestionsDropdown(WebPageProxy& page)
 {
     return WebDataListSuggestionsDropdownIOS::create(page, m_contentView.getAutoreleased());
 }
-#endif
-
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-RefPtr<WebDateTimePicker> PageClientImpl::createDateTimePicker(WebPageProxy&)
-{
-    return nullptr;
-}
-#endif
 
 #if ENABLE(DRAG_SUPPORT)
 void PageClientImpl::didPerformDragOperation(bool handled)
@@ -1251,17 +1288,44 @@ void PageClientImpl::scheduleVisibleContentRectUpdate()
     [webView() _scheduleVisibleContentRectUpdate];
 }
 
-#if ENABLE(PDF_PLUGIN)
-void PageClientImpl::pluginDidInstallPDFDocument(double initialScale)
-{
-    [webView() _pluginDidInstallPDFDocument:initialScale];
-}
-#endif
-
 bool PageClientImpl::isPotentialTapInProgress() const
 {
     return [m_contentView isPotentialTapInProgress];
 }
+
+bool PageClientImpl::canStartNavigationSwipeAtLastInteractionLocation() const
+{
+    return [m_contentView _canStartNavigationSwipeAtLastInteractionLocation];
+}
+
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+
+void PageClientImpl::createPDFPageNumberIndicator(PDFPluginIdentifier identifier, const IntRect& rect, size_t pageCount)
+{
+    [webView() _createPDFPageNumberIndicator:identifier withFrame:rect pageCount:pageCount];
+}
+
+void PageClientImpl::removePDFPageNumberIndicator(PDFPluginIdentifier identifier)
+{
+    [webView() _removePDFPageNumberIndicator:identifier];
+}
+
+void PageClientImpl::updatePDFPageNumberIndicatorLocation(PDFPluginIdentifier identifier, const IntRect& rect)
+{
+    [webView() _updatePDFPageNumberIndicator:identifier withFrame:rect];
+}
+
+void PageClientImpl::updatePDFPageNumberIndicatorCurrentPage(PDFPluginIdentifier identifier, size_t pageIndex)
+{
+    [webView() _updatePDFPageNumberIndicator:identifier currentPage:pageIndex];
+}
+
+void PageClientImpl::removeAnyPDFPageNumberIndicator()
+{
+    [webView() _removeAnyPDFPageNumberIndicator];
+}
+
+#endif
 
 } // namespace WebKit
 

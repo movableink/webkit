@@ -82,7 +82,7 @@ public:
 
         bool hasCallback() const final { return true; }
 
-        Ref<Observable> m_sourceObservable;
+        const Ref<Observable> m_sourceObservable;
         uint64_t m_amount;
     };
 
@@ -90,7 +90,7 @@ private:
     void next(JSC::JSValue value) final
     {
         if (!m_amount) {
-            m_subscriber->next(value);
+            protectedSubscriber()->next(value);
             return;
         }
 
@@ -99,13 +99,13 @@ private:
 
     void error(JSC::JSValue value) final
     {
-        m_subscriber->error(value);
+        protectedSubscriber()->error(value);
     }
 
     void complete() final
     {
         InternalObserver::complete();
-        m_subscriber->complete();
+        protectedSubscriber()->complete();
     }
 
     void visitAdditionalChildren(JSC::AbstractSlotVisitor& visitor) const final
@@ -113,10 +113,7 @@ private:
         m_subscriber->visitAdditionalChildren(visitor);
     }
 
-    void visitAdditionalChildren(JSC::SlotVisitor& visitor) const final
-    {
-        m_subscriber->visitAdditionalChildren(visitor);
-    }
+    Ref<Subscriber> protectedSubscriber() const { return m_subscriber; }
 
     InternalObserverDrop(ScriptExecutionContext& context, Ref<Subscriber> subscriber, uint64_t amount)
         : InternalObserver(context)
@@ -124,7 +121,7 @@ private:
         , m_amount(amount)
     { }
 
-    Ref<Subscriber> m_subscriber;
+    const Ref<Subscriber> m_subscriber;
     uint64_t m_amount;
 };
 

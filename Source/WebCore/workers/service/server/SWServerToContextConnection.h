@@ -104,7 +104,12 @@ public:
     virtual void terminateDueToUnresponsiveness() = 0;
 
     virtual void setInspectable(ServiceWorkerIsInspectable) = 0;
-    virtual void serviceWorkerNeedsRunning() = 0;
+
+    virtual bool isWebSWServerToContextConnection() const { return false; }
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    virtual void reportNetworkUsageToWorkerClient(const WebCore::ScriptExecutionContextIdentifier, size_t bytesTransferredOverNetworkDelta) = 0;
+#endif
 
 protected:
     WEBCORE_EXPORT SWServerToContextConnection(SWServer&, Site&&, std::optional<ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier);

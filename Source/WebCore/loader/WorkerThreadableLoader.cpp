@@ -45,6 +45,9 @@
 #include "SecurityOrigin.h"
 #include "ServiceWorker.h"
 #include "ServiceWorkerGlobalScope.h"
+#include "ServiceWorkerThread.h"
+#include "SharedWorkerGlobalScope.h"
+#include "SharedWorkerThread.h"
 #include "ThreadableLoader.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerLoaderProxy.h"
@@ -155,8 +158,11 @@ WorkerThreadableLoader::MainThreadBridge::MainThreadBridge(ThreadableLoaderClien
     if (!optionsCopy->options.clientIdentifier)
         optionsCopy->options.clientIdentifier = globalScope.identifier().object();
 
-    if (RefPtr serviceWorkerGlobalScope = dynamicDowncast<ServiceWorkerGlobalScope>(globalScope))
+    if (RefPtr serviceWorkerGlobalScope = dynamicDowncast<ServiceWorkerGlobalScope>(globalScope)) {
         InspectorInstrumentation::willSendRequest(*serviceWorkerGlobalScope, m_workerRequestIdentifier, request);
+        optionsCopy->options.workerIdentifier = serviceWorkerGlobalScope->thread().identifier();
+    } else if (RefPtr sharedWorkerGlobalScope = dynamicDowncast<SharedWorkerGlobalScope>(globalScope))
+        optionsCopy->options.workerIdentifier = sharedWorkerGlobalScope->thread().identifier();
 
     if (!m_loaderProxy)
         return;

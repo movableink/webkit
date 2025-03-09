@@ -124,7 +124,7 @@ public:
     
     void prepareForConservativeScan();
 
-    typedef HashSet<MarkedBlock*>::iterator BlockIterator;
+    typedef UncheckedKeyHashSet<MarkedBlock*>::iterator BlockIterator;
 
     template<typename Functor> void forEachLiveCell(HeapIterationScope&, const Functor&);
     template<typename Functor> void forEachDeadCell(HeapIterationScope&, const Functor&);
@@ -159,10 +159,11 @@ public:
     HeapVersion newlyAllocatedVersion() const { return m_newlyAllocatedVersion; }
     HeapVersion edenVersion() const { return m_edenVersion; }
 
+    void registerPreciseAllocation(PreciseAllocation*, bool isNewAllocation);
     const Vector<PreciseAllocation*>& preciseAllocations() const { return m_preciseAllocations; }
     unsigned preciseAllocationsNurseryOffset() const { return m_preciseAllocationsNurseryOffset; }
     unsigned preciseAllocationsOffsetForThisCollection() const { return m_preciseAllocationsOffsetForThisCollection; }
-    HashSet<HeapCell*>* preciseAllocationSet() const { return m_preciseAllocationSet.get(); }
+    UncheckedKeyHashSet<HeapCell*>* preciseAllocationSet() const { return m_preciseAllocationSet.get(); }
 
     void enablePreciseAllocationTracking();
     
@@ -206,7 +207,7 @@ private:
 
     Vector<Subspace*> m_subspaces;
 
-    std::unique_ptr<HashSet<HeapCell*>> m_preciseAllocationSet;
+    std::unique_ptr<UncheckedKeyHashSet<HeapCell*>> m_preciseAllocationSet;
     Vector<PreciseAllocation*> m_preciseAllocations;
     unsigned m_preciseAllocationsNurseryOffset { 0 };
     unsigned m_preciseAllocationsOffsetForThisCollection { 0 };

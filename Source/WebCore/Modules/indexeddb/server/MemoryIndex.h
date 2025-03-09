@@ -26,6 +26,7 @@
 #pragma once
 
 #include "IDBIndexInfo.h"
+#include "IDBKeyData.h"
 #include "IDBResourceIdentifier.h"
 #include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
@@ -77,14 +78,12 @@ public:
     void removeRecord(const IDBKeyData&, const IndexKey&);
 
     void objectStoreCleared();
-    void clearIndexValueStore();
-    void replaceIndexValueStore(std::unique_ptr<IndexValueStore>&&);
 
     MemoryIndexCursor* maybeOpenCursor(const IDBCursorInfo&);
 
     IndexValueStore* valueStore() { return m_records.get(); }
 
-    WeakPtr<MemoryObjectStore> objectStore();
+    MemoryObjectStore* objectStore();
     RefPtr<MemoryObjectStore> protectedObjectStore();
 
     void cursorDidBecomeClean(MemoryIndexCursor&);
@@ -92,16 +91,25 @@ public:
 
     void notifyCursorsOfValueChange(const IDBKeyData& indexKey, const IDBKeyData& primaryKey);
 
+    void writeTransactionStarted(MemoryBackingStoreTransaction&);
+    void writeTransactionFinished(MemoryBackingStoreTransaction&);
+    void transactionAborted(MemoryBackingStoreTransaction&);
+
 private:
     MemoryIndex(const IDBIndexInfo&, MemoryObjectStore&);
 
     uint64_t recordCountForKey(const IDBKeyData&) const;
 
     void notifyCursorsOfAllRecordsChanged();
+    IDBError addIndexRecord(const IDBKeyData& indexKey, const IDBKeyData& valueKey);
+    void removeIndexRecord(const IDBKeyData& indexKey, const IDBKeyData& valueKey);
+    void removeIndexRecord(const IDBKeyData& indexKey);
 
     IDBIndexInfo m_info;
     WeakPtr<MemoryObjectStore> m_objectStore;
 
+    CheckedPtr<MemoryBackingStoreTransaction> m_writeTransaction;
+    HashMap<IDBKeyData, Vector<IDBKeyData>, IDBKeyDataHash, IDBKeyDataHashTraits> m_transactionModifiedRecords;
     std::unique_ptr<IndexValueStore> m_records;
 
     HashMap<IDBResourceIdentifier, std::unique_ptr<MemoryIndexCursor>> m_cursors;

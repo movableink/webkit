@@ -62,7 +62,7 @@ struct OSRExit;
 #define JIT_COMMENT(jit, ...) do { if (UNLIKELY(Options::needDisassemblySupport())) { (jit).comment(__VA_ARGS__); } else { (void) jit; } } while (0)
 
 class AbstractMacroAssemblerBase {
-    WTF_MAKE_TZONE_ALLOCATED(AbstractMacroAssemblerBase);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(AbstractMacroAssemblerBase);
 public:
     enum StatusCondition {
         Success,
@@ -100,7 +100,7 @@ class AbstractMacroAssembler : public AbstractMacroAssemblerBase {
 public:
     typedef AbstractMacroAssembler<AssemblerType> AbstractMacroAssemblerType;
     typedef AssemblerType AssemblerType_T;
-    friend class SuppressRegisetrAllocationValidation;
+    friend class SuppressRegisterAllocationValidation;
 
     template<PtrTag tag> using CodeRef = MacroAssemblerCodeRef<tag>;
 
@@ -708,6 +708,8 @@ public:
             masm->m_assembler.linkJump(m_label, masm->m_assembler.label());
 #endif
         }
+
+        void link(AbstractMacroAssemblerType& masm) const { link(&masm); }
         
         void linkTo(Label label, AbstractMacroAssemblerType* masm) const
         {
@@ -893,10 +895,10 @@ public:
     }
 
     // DFG register allocation validation is broken in various cases. We need suppression mechanism otherwise, it introduces a new bug rather to bypass the issue.
-    class SuppressRegisetrAllocationValidation {
+    class SuppressRegisterAllocationValidation {
     public:
 #if ENABLE(DFG_REGISTER_ALLOCATION_VALIDATION)
-        SuppressRegisetrAllocationValidation(AbstractMacroAssemblerType& assembler)
+        SuppressRegisterAllocationValidation(AbstractMacroAssemblerType& assembler)
             : m_suppressRegisterValidation(assembler.m_suppressRegisterValidation, true)
         {
         }
@@ -904,7 +906,7 @@ public:
     private:
         SetForScope<bool> m_suppressRegisterValidation;
 #else
-        SuppressRegisetrAllocationValidation(AbstractMacroAssemblerType&) { }
+        SuppressRegisterAllocationValidation(AbstractMacroAssemblerType&) { }
 #endif
     };
 
@@ -945,6 +947,15 @@ public:
 
         for (auto& offset : m_registerAllocationForOffsets)
             offset.checkOffsets(offset1, offset2);
+    }
+
+    void checkRegisterAllocationAgainstSlowPathCall(const JumpList &from)
+    {
+        if (m_suppressRegisterValidation)
+            return;
+
+        for (auto& jump : from.jumps())
+            checkRegisterAllocationAgainstBranchRange(jump.label().m_label.offset(), debugOffset());
     }
 #endif
 

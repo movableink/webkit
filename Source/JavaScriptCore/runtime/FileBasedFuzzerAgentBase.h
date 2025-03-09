@@ -31,7 +31,6 @@
 #include "Opcode.h"
 #include <wtf/Lock.h>
 #include <wtf/TZoneMalloc.h>
-#include <wtf/text/WTFString.h>
 
 namespace JSC {
 

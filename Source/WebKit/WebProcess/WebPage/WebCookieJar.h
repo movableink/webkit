@@ -26,6 +26,7 @@
 #pragma once
 
 #include "WebCookieCache.h"
+#include "WebPageProxyIdentifier.h"
 #include <WebCore/CookieChangeListener.h>
 #include <WebCore/CookieJar.h>
 #include <optional>
@@ -41,6 +42,7 @@ OBJC_CLASS NSHTTPCookieStorage;
 namespace WebCore {
 struct Cookie;
 struct CookieStoreGetOptions;
+enum class ShouldPartitionCookie : bool;
 }
 
 namespace WebKit {
@@ -57,14 +59,14 @@ public:
     void remoteCookiesEnabled(const WebCore::Document&, CompletionHandler<void(bool)>&&) const final;
     std::pair<String, WebCore::SecureCookiesAccessed> cookieRequestHeaderFieldValue(const URL& firstParty, const WebCore::SameSiteInfo&, const URL&, std::optional<WebCore::FrameIdentifier>, std::optional<WebCore::PageIdentifier>, WebCore::IncludeSecureCookies) const final;
     bool getRawCookies(WebCore::Document&, const URL&, Vector<WebCore::Cookie>&) const final;
-    void setRawCookie(const WebCore::Document&, const WebCore::Cookie&) final;
+    void setRawCookie(const WebCore::Document&, const WebCore::Cookie&, WebCore::ShouldPartitionCookie) final;
     void deleteCookie(const WebCore::Document&, const URL&, const String& cookieName, CompletionHandler<void()>&&) final;
 
     void getCookiesAsync(WebCore::Document&, const URL&, const WebCore::CookieStoreGetOptions&, CompletionHandler<void(std::optional<Vector<WebCore::Cookie>>&&)>&&) const final;
     void setCookieAsync(WebCore::Document&, const URL&, const WebCore::Cookie&, CompletionHandler<void(bool)>&&) const final;
 
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
-    void addChangeListenerWithAccess(const URL&, const URL& firstParty, WebCore::FrameIdentifier, WebCore::PageIdentifier, WebCore::ShouldRelaxThirdPartyCookieBlocking, const WebCore::CookieChangeListener&);
+    void addChangeListenerWithAccess(const URL&, const URL& firstParty, WebCore::FrameIdentifier, WebCore::PageIdentifier, WebPageProxyIdentifier, const WebCore::CookieChangeListener&);
     void addChangeListener(const WebCore::Document&, const WebCore::CookieChangeListener&) final;
     void removeChangeListener(const String& host, const WebCore::CookieChangeListener&) final;
 #endif
@@ -74,6 +76,10 @@ public:
     void allCookiesDeleted();
 
     void clearCache() final;
+
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+    void setOptInCookiePartitioningEnabled(bool);
+#endif
 
 private:
     WebCookieJar();

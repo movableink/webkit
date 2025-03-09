@@ -35,6 +35,7 @@
 #include "ExceptionOr.h"
 #include "IDLTypes.h"
 #include "Styleable.h"
+#include "TimelineRange.h"
 #include "WebAnimationTypes.h"
 #include <wtf/Forward.h>
 #include <wtf/Markable.h>
@@ -67,7 +68,7 @@ public:
     static Ref<WebAnimation> create(Document&, AnimationEffect*, AnimationTimeline*);
     ~WebAnimation();
 
-    WEBCORE_EXPORT static HashSet<WebAnimation*>& instances();
+    WEBCORE_EXPORT static UncheckedKeyHashSet<WebAnimation*>& instances();
 
     virtual bool isStyleOriginatedAnimation() const { return false; }
     virtual bool isCSSAnimation() const { return false; }
@@ -99,7 +100,7 @@ public:
 
     enum class ReplaceState : uint8_t { Active, Removed, Persisted };
     ReplaceState replaceState() const { return m_replaceState; }
-    void setReplaceState(ReplaceState replaceState) { m_replaceState = replaceState; }
+    void setReplaceState(ReplaceState);
 
     bool pending() const { return hasPendingPauseTask() || hasPendingPlayTask(); }
 
@@ -144,7 +145,9 @@ public:
     TimelineRangeValue bindingsRangeEnd() const { return m_timelineRange.end.serialize(); }
     virtual void setBindingsRangeStart(TimelineRangeValue&&);
     virtual void setBindingsRangeEnd(TimelineRangeValue&&);
-    void setRange(TimelineRange range) { m_timelineRange = range; }
+    void setRangeStart(SingleTimelineRange);
+    void setRangeEnd(SingleTimelineRange);
+    const TimelineRange& range();
 
     bool needsTick() const;
     virtual void tick();
@@ -172,6 +175,8 @@ public:
     virtual bool canHaveGlobalPosition() { return true; }
 
     std::optional<Seconds> convertAnimationTimeToTimelineTime(Seconds) const;
+
+    void progressBasedTimelineSourceDidChangeMetrics();
 
     // ContextDestructionObserver.
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
@@ -229,6 +234,8 @@ private:
 
     RefPtr<AnimationEffect> m_effect;
     RefPtr<AnimationTimeline> m_timeline;
+    RefPtr<CSSValue> m_specifiedRangeStart;
+    RefPtr<CSSValue> m_specifiedRangeEnd;
     UniqueRef<ReadyPromise> m_readyPromise;
     UniqueRef<FinishedPromise> m_finishedPromise;
     std::optional<WebAnimationTime> m_previousCurrentTime;

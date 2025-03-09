@@ -162,7 +162,7 @@ $architecture = nil
 $forceArchitecture = nil
 $hostOS = nil
 $model = nil
-$runJITlessWasm = false
+$runJITlessWasm = true
 $filter = nil
 $envVars = []
 $mode = "full"
@@ -213,7 +213,7 @@ def usage
     puts "                            \"ruby\" to use ruby scripts for systems without a unix shell."
     puts "--remote                    Specify a remote host on which to run tests from command line argument."
     puts "--remote-config-file        Specify a remote host on which to run tests from JSON file."
-    puts "--report-execution-time     Print execution time for each test."
+    puts "--report-execution-time     Print execution time for each test in ms."
     puts "--child-processes    (-c)   Specify the number of child processes."
     puts "--max-timeout               Specify a cap for the effective timeout"
     puts "--filter                    Only run tests whose name matches the given regular expression."
@@ -1141,7 +1141,8 @@ BASE_MODES = [
         "NoCJIT",
         "ftl-no-cjit",
         [
-            "--validateBytecode=true", "--validateGraphAtEachPhase=true"
+            "--validateBytecode=true", "--validateGraphAtEachPhase=true", "--libpasForcePGMWithRate=#{10 + rand(10)}",
+
         ] +
         FTL_OPTIONS +
         NO_CJIT_OPTIONS +
@@ -1153,6 +1154,7 @@ BASE_MODES = [
         [
             "--useDataICInFTL=true",
             "--allowNonSPTagging=false",
+            "--libpasForcePGMWithRate=#{10 + rand(10)}",
         ] +
         FTL_OPTIONS +
         NO_CJIT_OPTIONS
@@ -1178,6 +1180,7 @@ BASE_MODES = [
             "--validateBCE=true",
             "--useSamplingProfiler=true",
             "--airForceIRCAllocator=true",
+            "--airUseGreedyRegAlloc=false", # FIXME: remove with rdar://144792585
             "--useDataICInFTL=true",
             "--forceUnlinkedDFG=true",
             "--allowNonSPTagging=false",
@@ -1254,7 +1257,9 @@ BASE_MODES = [
         [
             "--validateGraph=true",
             "--validateBCE=true",
-            "--airForceIRCAllocator=true",
+            "--airForceBriggsAllocator=true",
+            "--airUseGreedyRegAlloc=false", # FIXME: remove with rdar://144792585
+            "--libpasForcePGMWithRate=#{10 + rand(10)}",
         ] +
         FTL_OPTIONS +
         NO_CJIT_OPTIONS +
@@ -1354,6 +1359,7 @@ BASE_MODES = [
             "--useZombieMode=true",
             "--allowDoubleShape=false",
             "--alwaysHaveABadTime=true",
+            "--libpasForcePGMWithRate=#{10 + rand(10)}",
         ]
     ],
     [
@@ -1506,6 +1512,9 @@ BASE_MODES.each { |mode|
     cfgKinds.each { |cfgKind|
         methodName = "#{name}#{cfgKind.extension}".to_sym
         define_method(methodName) { |*args|
+            if not kind.nil? and $skipModes.include?(kind.to_sym)
+                return
+            end
             cfg = nil
             if cfgKind.expectCfg
                 # If we're defining a method that expects a cfg
@@ -1648,8 +1657,8 @@ def defaultNoEagerRun(*optionalTestSpecificOptions)
     defaultRunCfg({}, { :skipEager => true }, *optionalTestSpecificOptions)
 end
 
-def defaultNoSamplingProfilerRun
-    defaultRunCfg({}, { :ignoreQuickMode => true })
+def defaultNoSamplingProfilerRun(*optionalTestSpecificOptions)
+    defaultRunCfg({}, { :ignoreQuickMode => true }, *optionalTestSpecificOptions)
 end
 
 def runProfiler
@@ -1823,6 +1832,8 @@ def runWebAssembly
         if $isFTLPlatform
             run("wasm-simd", "-m", "--useWasmSIMD=1", "--forceAllFunctionsToUseSIMD=1", *FTL_OPTIONS) unless !$isSIMDPlatform
             run("wasm-aggressive-inline", "-m", "--maximumWasmCalleeSizeForInlining=2147483647", "--maximumWasmCallerSizeForInlining=2147483647", "--maximumWasmDepthForInlining=5", *(FTL_OPTIONS + EAGER_OPTIONS)) unless $skipModes.include?(:wasm_aggressive_inline)
+            # FIXME: remove with rdar://144792585
+            run("wasm-graph-reg-alloc", "-m", "--airUseGreedyRegAlloc=false", *FTL_OPTIONS)
         end
     end
 end
@@ -1854,6 +1865,8 @@ def runWebAssemblyJetStream2
         if $isFTLPlatform
             run("wasm-simd", "--useWasmSIMD=1", "--forceAllFunctionsToUseSIMD=1", *FTL_OPTIONS) unless !$isSIMDPlatform
             run("wasm-aggressive-inline", "--maximumWasmCalleeSizeForInlining=2147483647", "--maximumWasmCallerSizeForInlining=2147483647", "--maximumWasmDepthForInlining=5", *(FTL_OPTIONS + EAGER_OPTIONS)) unless $skipModes.include?(:wasm_aggressive_inline)
+            # FIXME: remove with rdar://144792585
+            run("wasm-graph-reg-alloc", "--airUseGreedyRegAlloc=false", *FTL_OPTIONS)
         end
     end
 end
@@ -1891,6 +1904,8 @@ def runWebAssemblySuite(*optionalTestSpecificOptions)
         if $isFTLPlatform
             run("wasm-simd", "--useWasmSIMD=1", "--forceAllFunctionsToUseSIMD=1", *(FTL_OPTIONS + optionalTestSpecificOptions)) unless !$isSIMDPlatform
             run("wasm-aggressive-inline", "--maximumWasmCalleeSizeForInlining=2147483647", "--maximumWasmCallerSizeForInlining=2147483647", "--maximumWasmDepthForInlining=5", *(FTL_OPTIONS + EAGER_OPTIONS + optionalTestSpecificOptions)) unless $skipModes.include?(:wasm_aggressive_inline)
+            # FIXME: remove with rdar://144792585
+            run("wasm-graph-reg-alloc", "--airUseGreedyRegAlloc=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
         end
     end
 end
@@ -1911,12 +1926,18 @@ def runV8WebAssemblySuite(*optionalTestSpecificOptions)
         run("wasm-slow-memory", "--useWasmFastMemory=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
         run("wasm-collect-continuously", "--collectContinuously=true", "--verifyGC=true", *(FTL_OPTIONS + optionalTestSpecificOptions)) if shouldCollectContinuously?
         run("wasm-bbq", "--useWasmLLInt=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
+        # FIXME: this is a hacky way to check if we use SIMD rdar://138436830
+        if $runJITlessWasm and not $testSpecificRequiredOptions.include? "--useWasmSIMD=1"
+          run("wasm-no-wasm-jit", "--useWasmJIT=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
+        end
         if $isOMGPlatform
             run("wasm-omg", "--useWasmLLInt=true", "--useBBQJIT=true", "--thresholdForBBQOptimizeAfterWarmUp=0", "--thresholdForBBQOptimizeSoon=0", "--thresholdForOMGOptimizeAfterWarmUp=0", "--thresholdForOMGOptimizeSoon=0", *(FTL_OPTIONS + optionalTestSpecificOptions))
         end        
         if $isFTLPlatform
             run("wasm-simd", "--useWasmSIMD=1", "--forceAllFunctionsToUseSIMD=1", *(FTL_OPTIONS + optionalTestSpecificOptions)) unless !$isSIMDPlatform
             run("wasm-aggressive-inline", "--maximumWasmCalleeSizeForInlining=2147483647", "--maximumWasmCallerSizeForInlining=2147483647", "--maximumWasmDepthForInlining=5", *(FTL_OPTIONS + EAGER_OPTIONS + optionalTestSpecificOptions)) unless $skipModes.include?(:wasm_aggressive_inline)
+            # FIXME: remove with rdar://144792585
+            run("wasm-graph-reg-alloc", "--airUseGreedyRegAlloc=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
         end
     end
 end
@@ -1964,6 +1985,8 @@ def runWebAssemblyWithHarness(*optionalTestSpecificOptions)
         if $isFTLPlatform
             runWasmHarnessTest("wasm-simd", "--useWasmSIMD=1", "--forceAllFunctionsToUseSIMD=1", *FTL_OPTIONS) unless !$isSIMDPlatform
             runWasmHarnessTest("wasm-aggressive-inline", "--maximumWasmCalleeSizeForInlining=2147483647", "--maximumWasmCallerSizeForInlining=2147483647", "--maximumWasmDepthForInlining=5", *(FTL_OPTIONS + EAGER_OPTIONS)) unless $skipModes.include?(:wasm_aggressive_inline)
+            # FIXME: remove with rdar://144792585
+            runWasmHarnessTest("wasm-graph-reg-alloc", "--airUseGreedyRegAlloc=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
         end
     end
 end
@@ -1982,12 +2005,18 @@ def runWebAssemblyEmscripten(mode)
         run("wasm-eager-jettison", "--forceCodeBlockToJettisonDueToOldAge=true", "--useRandomizingExecutableIslandAllocation=true", "--verifyGC=true", *FTL_OPTIONS)
         run("wasm-collect-continuously", "--collectContinuously=true", "--verifyGC=true", *FTL_OPTIONS) if shouldCollectContinuously?
         run("wasm-bbq", "--useWasmLLInt=false", *FTL_OPTIONS) # Doesn't actually depend on FTL, but we enable it on the same platforms for now.
+        # FIXME: this is a hacky way to check if we use SIMD rdar://138436830
+        if $runJITlessWasm and not $testSpecificRequiredOptions.include? "--useWasmSIMD=1"
+          run("wasm-no-wasm-jit", "--useWasmJIT=false", *FTL_OPTIONS)
+        end
         if $isOMGPlatform
             run("wasm-omg", "--useWasmLLInt=true", "--useBBQJIT=false", *FTL_OPTIONS)
         end
         if $isFTLPlatform
             run("wasm-simd", "--useWasmSIMD=1", "--forceAllFunctionsToUseSIMD=1", *FTL_OPTIONS) unless !$isSIMDPlatform
             run("wasm-aggressive-inline", "--maximumWasmCalleeSizeForInlining=2147483647", "--maximumWasmCallerSizeForInlining=2147483647", "--maximumWasmDepthForInlining=5", *(FTL_OPTIONS + EAGER_OPTIONS)) unless $skipModes.include?(:wasm_aggressive_inline)
+            # FIXME: remove with rdar://144792585
+            run("wasm-graph-reg-alloc", "--airUseGreedyRegAlloc=false", *FTL_OPTIONS)
         end
     end
 end
@@ -2031,7 +2060,7 @@ def runWebAssemblyFunctionReferenceSpecTest(mode)
 end
 
 def runWebAssemblyGCSpecTest(mode)
-    runWebAssemblySpecTestBase(mode, "gc-spec-harness", nil, "--useWasmGC=true")
+    runWebAssemblySpecTestBase(mode, "gc-spec-harness", nil)
 end
 
 def runWebAssemblyThreadsSpecTest(mode)
@@ -2102,6 +2131,9 @@ def runLayoutTest(kind, *options)
         kind = "layout-" + kind
     else
         kind = "layout"
+    end
+    if $skipModes.include?(kind.to_sym)
+        return
     end
 
     prepareExtraRelativeFiles(["../#{testName}-expected.txt"], $benchmarkDirectory)
@@ -2334,12 +2366,12 @@ def runNoisyTestWithEnv(kind, *additionalEnv)
     runDefaultCfg(cfg)
 end
 
-def defaultRunNoisyTest
+def defaultRunNoisyTest(*optionalTestSpecificOptions)
     cfg = {
         :outputHandler => noisyOutputHandler,
         :errorHandler => noisyErrorHandler,
     }
-    defaultRunCfg(cfg, {})
+    defaultRunCfg(cfg, {}, *optionalTestSpecificOptions)
 end
 
 def skip

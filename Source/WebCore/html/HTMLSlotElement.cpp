@@ -26,6 +26,7 @@
 #include "config.h"
 #include "HTMLSlotElement.h"
 
+#include "AXObjectCache.h"
 #include "ElementInlines.h"
 #include "Event.h"
 #include "EventNames.h"
@@ -180,7 +181,7 @@ void HTMLSlotElement::assign(FixedVector<ElementOrText>&& nodes)
     }
 
     auto previous = std::exchange(m_manuallyAssignedNodes, { });
-    HashSet<RefPtr<Node>> seenNodes;
+    UncheckedKeyHashSet<RefPtr<Node>> seenNodes;
     m_manuallyAssignedNodes = WTF::compactMap(nodes, [&seenNodes](ElementOrText& node) -> std::optional<WeakPtr<Node, WeakPtrImplWithEventTargetData>> {
         auto mapper = [&seenNodes]<typename T>(RefPtr<T>& node) -> std::optional<WeakPtr<Node, WeakPtrImplWithEventTargetData>> {
             if (seenNodes.contains(node))
@@ -230,6 +231,12 @@ void HTMLSlotElement::dispatchSlotChangeEvent()
     Ref<Event> event = Event::create(eventNames().slotchangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No);
     event->setTarget(Ref { *this });
     dispatchEvent(event);
+}
+
+void HTMLSlotElement::updateAccessibilityOnSlotChange() const
+{
+    if (CheckedPtr cache = protectedDocument()->existingAXObjectCache())
+        cache->onSlottedContentChange(*this);
 }
 
 } // namespace WebCore

@@ -47,7 +47,7 @@ namespace DisplayList {
 class DrawingContext;
 }
 
-class CustomPaintCanvas final : public RefCounted<CustomPaintCanvas>, public CanvasBase, private ContextDestructionObserver {
+class CustomPaintCanvas final : public CanvasBase, public RefCounted<CustomPaintCanvas>, private ContextDestructionObserver {
     WTF_MAKE_TZONE_ALLOCATED(CustomPaintCanvas);
 public:
 
@@ -66,19 +66,17 @@ public:
 
     void replayDisplayList(GraphicsContext&);
 
-    void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) final { };
+    void queueTaskKeepingObjectAlive(TaskSource, Function<void(CanvasBase&)>&&) final { };
     void dispatchEvent(Event&) final { }
 
     const CSSParserContext& cssParserContext() const final;
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
 private:
     CustomPaintCanvas(ScriptExecutionContext&, unsigned width, unsigned height);
 
-    void refCanvasBase() const final { ref(); }
-    void derefCanvasBase() const final { deref(); }
     ScriptExecutionContext* canvasBaseScriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
 
     std::unique_ptr<PaintRenderingContext2D> m_context;

@@ -42,7 +42,7 @@ using namespace WebCore;
 constexpr unsigned maxFireCountWithoutObservers { 20 };
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(DisplayLink);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(DisplayLink, Client);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DisplayLink::Client);
 
 DisplayLink::DisplayLink(PlatformDisplayID displayID)
     : m_displayID(displayID)

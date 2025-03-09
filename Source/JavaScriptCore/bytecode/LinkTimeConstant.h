@@ -86,7 +86,6 @@ class JSGlobalObject;
     v(hostPromiseRejectionTracker, nullptr) \
     v(Set, nullptr) \
     v(Map, nullptr) \
-    v(importMapStatus, nullptr) \
     v(importInRealm, nullptr) \
     v(evalFunction, nullptr) \
     v(evalInRealm, nullptr) \
@@ -133,7 +132,6 @@ class JSGlobalObject;
     v(isRemoteFunction, nullptr) \
     v(arrayFromFastFillWithUndefined, nullptr) \
     v(arrayFromFastFillWithEmpty, nullptr) \
-    v(arraySort, nullptr) \
     v(jsonParse, nullptr) \
     v(jsonStringify, nullptr) \
     v(String, nullptr) \

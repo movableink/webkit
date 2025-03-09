@@ -55,6 +55,7 @@ Queue::Queue(id<MTLCommandQueue> commandQueue, Adapter& adapter, Device& device)
 {
     m_createdNotCommittedBuffers = [NSMutableOrderedSet orderedSet];
     m_openCommandEncoders = [NSMapTable strongToStrongObjectsMapTable];
+    m_retainedCounterSampleBuffers = [NSMutableDictionary dictionary];
 }
 
 Queue::Queue(Adapter& adapter, Device& device)
@@ -145,6 +146,10 @@ id<MTLCommandBuffer> Queue::commandBufferWithDescriptor(MTLCommandBufferDescript
     if (buffer)
         [m_createdNotCommittedBuffers addObject:buffer];
 
+    if (auto instance = m_instance.get()) {
+        if (auto device = m_device.get())
+            instance->retainDevice(*device, buffer);
+    }
     return buffer;
 }
 
@@ -247,6 +252,18 @@ void Queue::removeMTLCommandBufferInternal(id<MTLCommandBuffer> commandBuffer)
     [m_createdNotCommittedBuffers removeObject:commandBuffer];
 }
 
+void Queue::waitForAllCommitedWorkToComplete()
+{
+    id<MTLCommandBuffer> commandBuffer = nil;
+    do {
+        {
+            Locker locker { m_committedNotCompletedBuffersLock };
+            commandBuffer = m_committedNotCompletedBuffers.firstObject;
+        }
+        [commandBuffer waitUntilCompleted];
+    } while (commandBuffer);
+}
+
 void Queue::commitMTLCommandBuffer(id<MTLCommandBuffer> commandBuffer)
 {
     if (!commandBuffer || commandBuffer.status >= MTLCommandBufferStatusCommitted || !isValid()) {
@@ -276,6 +293,11 @@ void Queue::commitMTLCommandBuffer(id<MTLCommandBuffer> commandBuffer)
             }
         }
 
+        {
+            Locker locker { protectedThis->m_committedNotCompletedBuffersLock };
+            [protectedThis->m_committedNotCompletedBuffers removeObject:mtlCommandBuffer];
+        }
+
         protectedThis->scheduleWork([loseTheDevice, protectedThis = protectedThis.copyRef()]() {
             ++(protectedThis->m_completedCommandBufferCount);
             for (auto& callback : protectedThis->m_onSubmittedWorkDoneCallbacks.take(protectedThis->m_completedCommandBufferCount))
@@ -289,6 +311,10 @@ void Queue::commitMTLCommandBuffer(id<MTLCommandBuffer> commandBuffer)
     }];
 
     [commandBuffer commit];
+    {
+        Locker locker { m_committedNotCompletedBuffersLock };
+        [m_committedNotCompletedBuffers addObject:commandBuffer];
+    }
     removeMTLCommandBufferInternal(commandBuffer);
     ++m_submittedCommandBufferCount;
 }
@@ -316,11 +342,13 @@ void Queue::submit(Vector<Ref<WebGPU::CommandBuffer>>&& commands)
     finalizeBlitCommandEncoder();
 
     NSMutableOrderedSet<id<MTLCommandBuffer>> *commandBuffersToSubmit = [NSMutableOrderedSet orderedSetWithCapacity:commands.size()];
+    HashMap<void*, RefPtr<CommandBuffer>> metalCommandBuffersReverseMap;
     NSString* validationError = nil;
     for (Ref command : commands) {
-        if (id<MTLCommandBuffer> mtlBuffer = command->commandBuffer(); mtlBuffer && ![commandBuffersToSubmit containsObject:mtlBuffer])
+        if (id<MTLCommandBuffer> mtlBuffer = command->commandBuffer(); mtlBuffer && ![commandBuffersToSubmit containsObject:mtlBuffer]) {
             [commandBuffersToSubmit addObject:mtlBuffer];
-        else {
+            metalCommandBuffersReverseMap.set((__bridge void*)mtlBuffer, RefPtr { command.ptr() });
+        } else {
             validationError = command->lastError() ?: @"Command buffer appears twice.";
             break;
         }
@@ -334,11 +362,46 @@ void Queue::submit(Vector<Ref<WebGPU::CommandBuffer>>&& commands)
         return;
     }
 
-    for (id<MTLCommandBuffer> commandBuffer in commandBuffersToSubmit)
+    for (id<MTLCommandBuffer> commandBuffer in commandBuffersToSubmit) {
+        RefPtr<CommandBuffer> apiCommandBuffer;
+        if (auto it = metalCommandBuffersReverseMap.find((__bridge void*)commandBuffer); it != metalCommandBuffersReverseMap.end())
+            apiCommandBuffer = it->value;
+#if ASSERT_ENABLED
+        if (!apiCommandBuffer)
+            ASSERT_NOT_REACHED("Always expect command buffer in the container");
+#endif
+        apiCommandBuffer->preCommitHandler();
         commitMTLCommandBuffer(commandBuffer);
+        apiCommandBuffer->postCommitHandler();
+    }
 
     if ([MTLCaptureManager sharedCaptureManager].isCapturing && device->shouldStopCaptureAfterSubmit())
         [[MTLCaptureManager sharedCaptureManager] stopCapture];
+}
+
+uint64_t Queue::retainCounterSampleBuffer(CommandEncoder& encoder)
+{
+    auto encoderHandle = encoder.uniqueId();
+    [m_retainedCounterSampleBuffers setObject:encoder.timestampBuffers() forKey:[NSNumber numberWithUnsignedLongLong:encoderHandle]];
+    return encoderHandle;
+}
+
+void Queue::releaseCounterSampleBuffer(uint64_t encoderHandle)
+{
+    scheduleWork([protectedThis = Ref { *this }, encoderHandle]() {
+        [protectedThis->m_retainedCounterSampleBuffers removeObjectForKey:[NSNumber numberWithUnsignedLongLong:encoderHandle]];
+    });
+}
+
+void Queue::retainTimestampsForOneUpdate(NSMutableSet<id<MTLCounterSampleBuffer>> *timestamps)
+{
+    // Workaround for rdar://143905417
+    if (!timestamps)
+        return;
+
+    scheduleWork([protectedThis = Ref { *this }, timestamps]() {
+        UNUSED_PARAM(timestamps);
+    });
 }
 
 bool Queue::validateWriteBuffer(const Buffer& buffer, uint64_t bufferOffset, size_t size) const
@@ -364,6 +427,22 @@ bool Queue::validateWriteBuffer(const Buffer& buffer, uint64_t bufferOffset, siz
         return false;
 
     return true;
+}
+
+void Queue::synchronizeResourceAndWait(id<MTLBuffer> buffer)
+{
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+    if (buffer.storageMode != MTLStorageModeManaged)
+        return;
+
+    ensureBlitCommandEncoder();
+    [m_blitCommandEncoder synchronizeResource:buffer];
+    id<MTLCommandBuffer> commandBuffer = m_commandBuffer;
+    finalizeBlitCommandEncoder();
+    [commandBuffer waitUntilCompleted];
+#else
+    UNUSED_PARAM(buffer);
+#endif
 }
 
 void Queue::writeBuffer(Buffer& buffer, uint64_t bufferOffset, std::span<uint8_t> data)
@@ -443,6 +522,16 @@ void Queue::writeBuffer(id<MTLBuffer> buffer, uint64_t bufferOffset, std::span<u
         finalizeBlitCommandEncoder();
 }
 
+void Queue::clearBuffer(id<MTLBuffer> buffer, NSUInteger offset, NSUInteger size)
+{
+    if (offset > buffer.length)
+        return;
+
+    ensureBlitCommandEncoder();
+    auto lengthMinusOffset = buffer.length - offset;
+    [m_blitCommandEncoder fillBuffer:buffer range:NSMakeRange(offset, std::min<NSUInteger>(lengthMinusOffset, size)) value:0];
+}
+
 bool Queue::isIdle() const
 {
     return m_submittedCommandBufferCount == m_completedCommandBufferCount && !m_blitCommandEncoder;
@@ -478,8 +567,8 @@ NSString* Queue::errorValidatingWriteTexture(const WGPUImageCopyTexture& destina
         aspectSpecificFormat = Texture::aspectSpecificFormat(texture.format(), destination.aspect);
     }
 
-    if (!Texture::validateLinearTextureData(dataLayout, dataByteSize, aspectSpecificFormat, size))
-        return ERROR_STRING(@"validateLinearTextureData failed");
+    if (NSString* errorString = Texture::errorValidatingLinearTextureData(dataLayout, dataByteSize, aspectSpecificFormat, size))
+        return ERROR_STRING(errorString);
 
 #undef ERROR_STRING
     return nil;
@@ -746,8 +835,7 @@ void Queue::writeTexture(const WGPUImageCopyTexture& destination, std::span<uint
         auto checkedNewBytesPerImageTimesMaxZ = checkedProduct<uint32_t>(newBytesPerImage, maxZ);
         if (checkedNewBytesPerImageTimesMaxZ.hasOverflowed())
             return;
-        newData.resize(checkedNewBytesPerImageTimesMaxZ.value());
-        memset(&newData[0], 0, newData.size());
+        newData = Vector<uint8_t>(checkedNewBytesPerImageTimesMaxZ.value(), 0);
         dataLayoutOffset = 0;
 
         auto verticalOffset = checkedProduct<uint64_t>(maxY ? (maxY - 1) : 0, bytesPerRow);

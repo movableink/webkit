@@ -99,6 +99,11 @@ private:
     MonotonicTime m_lastUseTime;
 };
 
+JSRetainPtr<JSGlobalContextRef> SerializedScriptValue::deserializationContext()
+{
+    return [SharedJSContext::singleton().ensureContext() JSGlobalContextRef];
+}
+
 id SerializedScriptValue::deserialize(WebCore::SerializedScriptValue& serializedScriptValue)
 {
     ASSERT(RunLoop::isMain());

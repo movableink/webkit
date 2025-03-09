@@ -34,6 +34,7 @@
 #include "DFGNodeAbstractValuePair.h"
 #include "DFGStructureClobberState.h"
 #include "Operands.h"
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
@@ -47,8 +48,11 @@ typedef Vector<Node*, 8> BlockNodeList;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(BasicBlock);
 
-struct BasicBlock : RefCounted<BasicBlock> {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(BasicBlock);
+class BasicBlock {
+    WTF_MAKE_NONCOPYABLE(BasicBlock);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(BasicBlock);
+public:
+
     BasicBlock(
         BytecodeIndex bytecodeBegin, unsigned numArguments, unsigned numLocals, unsigned numTmps,
         float executionCount);
@@ -235,7 +239,7 @@ struct BasicBlock : RefCounted<BasicBlock> {
     float executionCount;
     
     struct SSAData {
-        WTF_MAKE_TZONE_ALLOCATED(SSAData);
+        WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SSAData);
     public:
         void invalidate()
         {

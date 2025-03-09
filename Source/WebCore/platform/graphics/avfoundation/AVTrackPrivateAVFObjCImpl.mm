@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 
 #import "AVAssetTrackUtilities.h"
 #import "FormatDescriptionUtilities.h"
+#import "FourCC.h"
 #import "MediaSelectionGroupAVFObjC.h"
 #import "PlatformAudioTrackConfiguration.h"
 #import "PlatformVideoTrackConfiguration.h"
@@ -67,8 +68,8 @@ static AVAssetTrack* assetTrackFor(const AVTrackPrivateAVFObjCImpl& impl)
         return impl.playerItemTrack().assetTrack;
     if (impl.assetTrack())
         return impl.assetTrack();
-    if (impl.mediaSelectionOption() && impl.mediaSelectionOption()->assetTrack())
-        return impl.mediaSelectionOption()->assetTrack();
+    if (RefPtr mediaSelectionOption = impl.mediaSelectionOption())
+        return mediaSelectionOption->assetTrack();
     return nil;
 }
 
@@ -92,9 +93,7 @@ AVTrackPrivateAVFObjCImpl::AVTrackPrivateAVFObjCImpl(MediaSelectionOptionAVFObjC
     initializeAssetTrack();
 }
 
-AVTrackPrivateAVFObjCImpl::~AVTrackPrivateAVFObjCImpl()
-{
-}
+AVTrackPrivateAVFObjCImpl::~AVTrackPrivateAVFObjCImpl() = default;
 
 void AVTrackPrivateAVFObjCImpl::initializeAssetTrack()
 {
@@ -115,8 +114,8 @@ bool AVTrackPrivateAVFObjCImpl::enabled() const
 {
     if (m_playerItemTrack)
         return [m_playerItemTrack isEnabled];
-    if (m_mediaSelectionOption)
-        return m_mediaSelectionOption->selected();
+    if (RefPtr mediaSelectionOption = m_mediaSelectionOption)
+        return mediaSelectionOption->selected();
     ASSERT_NOT_REACHED();
     return false;
 }
@@ -125,8 +124,8 @@ void AVTrackPrivateAVFObjCImpl::setEnabled(bool enabled)
 {
     if (m_playerItemTrack)
         [m_playerItemTrack setEnabled:enabled];
-    else if (m_mediaSelectionOption)
-        m_mediaSelectionOption->setSelected(enabled);
+    else if (RefPtr mediaSelectionOption = m_mediaSelectionOption)
+        mediaSelectionOption->setSelected(enabled);
     else
         ASSERT_NOT_REACHED();
 }
@@ -189,12 +188,76 @@ VideoTrackPrivate::Kind AVTrackPrivateAVFObjCImpl::videoKind() const
     return VideoTrackPrivate::Kind::None;
 }
 
+InbandTextTrackPrivate::Kind AVTrackPrivateAVFObjCImpl::textKindForAVAssetTrack(const AVAssetTrack* track)
+{
+    NSString *mediaType = [track mediaType];
+    if ([mediaType isEqualToString:AVMediaTypeClosedCaption])
+        return InbandTextTrackPrivate::Kind::Captions;
+    if ([mediaType isEqualToString:AVMediaTypeSubtitle]) {
+
+        if ([track hasMediaCharacteristic:AVMediaCharacteristicContainsOnlyForcedSubtitles])
+            return InbandTextTrackPrivate::Kind::Forced;
+
+        // An "SDH" track is a subtitle track created for the deaf or hard-of-hearing. "captions" in WebVTT are
+        // "labeled as appropriate for the hard-of-hearing", so tag SDH sutitles as "captions".
+        if ([track hasMediaCharacteristic:AVMediaCharacteristicTranscribesSpokenDialogForAccessibility])
+            return InbandTextTrackPrivate::Kind::Captions;
+        if ([track hasMediaCharacteristic:AVMediaCharacteristicDescribesMusicAndSoundForAccessibility])
+            return InbandTextTrackPrivate::Kind::Captions;
+
+        return InbandTextTrackPrivate::Kind::Subtitles;
+    }
+
+    NSArray* formatDescriptions = [track formatDescriptions];
+    if ([formatDescriptions count]) {
+        FourCC codec = PAL::softLink_CoreMedia_CMFormatDescriptionGetMediaSubType((__bridge CMFormatDescriptionRef)[formatDescriptions objectAtIndex:0]);
+        if (codec == kCMSubtitleFormatType_WebVTT)
+            return InbandTextTrackPrivate::Kind::Captions;
+    }
+
+    return InbandTextTrackPrivate::Kind::Captions;
+}
+
+InbandTextTrackPrivate::Kind AVTrackPrivateAVFObjCImpl::textKindForAVMediaSelectionOption(const AVMediaSelectionOption *option)
+{
+    NSString *mediaType = [option mediaType];
+    if ([mediaType isEqualToString:AVMediaTypeClosedCaption])
+        return InbandTextTrackPrivate::Kind::Captions;
+    if ([mediaType isEqualToString:AVMediaTypeSubtitle]) {
+
+        if ([option hasMediaCharacteristic:AVMediaCharacteristicContainsOnlyForcedSubtitles])
+            return InbandTextTrackPrivate::Kind::Forced;
+
+        // An "SDH" track is a subtitle track created for the deaf or hard-of-hearing. "captions" in WebVTT are
+        // "labeled as appropriate for the hard-of-hearing", so tag SDH sutitles as "captions".
+        if ([option hasMediaCharacteristic:AVMediaCharacteristicTranscribesSpokenDialogForAccessibility])
+            return InbandTextTrackPrivate::Kind::Captions;
+        if ([option hasMediaCharacteristic:AVMediaCharacteristicDescribesMusicAndSoundForAccessibility])
+            return InbandTextTrackPrivate::Kind::Captions;
+
+        return InbandTextTrackPrivate::Kind::Subtitles;
+    }
+
+    return InbandTextTrackPrivate::Kind::Captions;
+}
+
+InbandTextTrackPrivate::Kind AVTrackPrivateAVFObjCImpl::textKind() const
+{
+    if (m_assetTrack)
+        return textKindForAVAssetTrack(m_assetTrack.get());
+
+    if (m_mediaSelectionOption)
+        return textKindForAVMediaSelectionOption(m_mediaSelectionOption->avMediaSelectionOption());
+
+    return InbandTextTrackPrivate::Kind::None;
+}
+
 int AVTrackPrivateAVFObjCImpl::index() const
 {
     if (m_assetTrack)
         return [[[m_assetTrack asset] tracks] indexOfObject:m_assetTrack.get()];
-    if (m_mediaSelectionOption)
-        return [[[m_playerItem asset] tracks] count] + m_mediaSelectionOption->index();
+    if (RefPtr mediaSelectionOption = m_mediaSelectionOption)
+        return mediaSelectionOption->index();
     ASSERT_NOT_REACHED();
     return 0;
 }
@@ -285,6 +348,7 @@ PlatformVideoTrackConfiguration AVTrackPrivateAVFObjCImpl::videoTrackConfigurati
         framerate(),
         bitrate(),
         spatialVideoMetadata(),
+        isImmersiveVideo(),
     };
 }
 
@@ -385,7 +449,18 @@ uint64_t AVTrackPrivateAVFObjCImpl::bitrate() const
 
 std::optional<SpatialVideoMetadata> AVTrackPrivateAVFObjCImpl::spatialVideoMetadata() const
 {
-    return videoMetadataFromFormatDescription(formatDescriptionFor(*this).get());
+    auto metadata = videoMetadataFromFormatDescription(formatDescriptionFor(*this).get());
+    if (metadata && std::holds_alternative<SpatialVideoMetadata>(*metadata))
+        return std::get<SpatialVideoMetadata>(*metadata);
+    return { };
+}
+
+bool AVTrackPrivateAVFObjCImpl::isImmersiveVideo() const
+{
+    auto metadata = videoMetadataFromFormatDescription(formatDescriptionFor(*this).get());
+    if (metadata && std::holds_alternative<bool>(*metadata))
+        return std::get<bool>(*metadata);
+    return false;
 }
 
 }

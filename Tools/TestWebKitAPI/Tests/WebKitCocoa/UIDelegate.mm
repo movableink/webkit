@@ -85,6 +85,7 @@ TEST(WebKit, WKWebViewIsPlayingAudio)
     [webView synchronouslyLoadTestPageNamed:@"file-with-video"];
     [webView evaluateJavaScript:@"playVideo()" completionHandler:nil];
     TestWebKitAPI::Util::run(&done);
+    [webView removeObserver:observer.get() forKeyPath:@"_isPlayingAudio"];
 }
 
 @interface NoUIDelegate : NSObject <WKNavigationDelegate>
@@ -163,7 +164,7 @@ TEST(WebKit, GeolocationPermission)
     auto pool = adoptNS([[WKProcessPool alloc] init]);
     
     WKGeolocationProviderV1 providerCallback;
-    memset(&providerCallback, 0, sizeof(WKGeolocationProviderV1));
+    zeroBytes(providerCallback);
     providerCallback.base.version = 1;
     providerCallback.startUpdating = [] (WKGeolocationManagerRef manager, const void*) {
         WKGeolocationManagerProviderDidChangePosition(manager, adoptWK(WKGeolocationPositionCreate(0, 50.644358, 3.345453, 2.53)).get());
@@ -278,7 +279,7 @@ TEST(WebKit, GeolocationPermissionInIFrame)
     auto pool = adoptNS([[WKProcessPool alloc] init]);
 
     WKGeolocationProviderV1 providerCallback;
-    memset(&providerCallback, 0, sizeof(WKGeolocationProviderV1));
+    zeroBytes(providerCallback);
     providerCallback.base.version = 1;
     providerCallback.startUpdating = [] (WKGeolocationManagerRef manager, const void*) {
         WKGeolocationManagerProviderDidChangePosition(manager, adoptWK(WKGeolocationPositionCreate(0, 50.644358, 3.345453, 2.53)).get());
@@ -341,7 +342,7 @@ TEST(WebKit, GeolocationPermissionInDisallowedIFrame)
     auto pool = adoptNS([[WKProcessPool alloc] init]);
 
     WKGeolocationProviderV1 providerCallback;
-    memset(&providerCallback, 0, sizeof(WKGeolocationProviderV1));
+    zeroBytes(providerCallback);
     providerCallback.base.version = 1;
     providerCallback.startUpdating = [] (WKGeolocationManagerRef manager, const void*) {
         WKGeolocationManagerProviderDidChangePosition(manager, adoptWK(WKGeolocationPositionCreate(0, 50.644358, 3.345453, 2.53)).get());
@@ -1256,6 +1257,7 @@ TEST(WebKit, PinnedState)
     [webView addObserver:observer.get() forKeyPath:@"_pinnedState" options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld context:nil];
     [webView loadHTMLString:@"<body onload='scroll(100, 100)' style='height:10000vh;'/>" baseURL:[NSURL URLWithString:@"http://example.com/"]];
     TestWebKitAPI::Util::run(&done);
+    [webView removeObserver:observer.get() forKeyPath:@"_pinnedState"];
 }
 
 @interface DidScrollDelegate : NSObject <WKUIDelegatePrivate>

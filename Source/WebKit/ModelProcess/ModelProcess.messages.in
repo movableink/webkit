@@ -22,6 +22,11 @@
 
 #if ENABLE(MODEL_PROCESS)
 
+[
+    DispatchedFrom=UI,
+    DispatchedTo=Model,
+    ExceptionForEnabledBy
+]
 messages -> ModelProcess : AuxiliaryProcess {
     InitializeModelProcess(struct WebKit::ModelProcessCreationParameters processCreationParameters) -> ()
 

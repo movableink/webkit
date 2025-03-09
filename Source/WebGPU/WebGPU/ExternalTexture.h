@@ -66,6 +66,7 @@ public:
     bool isValid() const;
     void update(CVPixelBufferRef);
     size_t openCommandEncoderCount() const;
+    void updateExternalTextures(id<MTLTexture>, id<MTLTexture>);
 
 private:
     ExternalTexture(CVPixelBufferRef, WGPUColorSpace, Device&);
@@ -77,6 +78,8 @@ private:
     WGPUColorSpace m_colorSpace;
     const Ref<Device> m_device;
     bool m_destroyed { false };
+    id<MTLTexture> m_texture0 { nil };
+    id<MTLTexture> m_texture1 { nil };
     mutable WeakHashSet<CommandEncoder> m_commandEncoders;
 };
 

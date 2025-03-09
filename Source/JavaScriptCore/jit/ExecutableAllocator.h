@@ -138,7 +138,9 @@ static NEVER_INLINE NO_RETURN_DUE_TO_CRASH NOT_TAIL_CALLED void dieByJumpingInto
     // even on the former ensures that execution will never continue past the
     // branch out of this function even if it is called improperly.
 #if OS(DARWIN) && CPU(X86_64)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     memset(reinterpret_cast<char*>(targetInstr), 0xF4, 1);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     sys_icache_invalidate(buffer, size);
 #elif OS(DARWIN) && CPU(ARM64)
     memset(reinterpret_cast<char*>(targetInstr), 0, 4);
@@ -310,7 +312,9 @@ static ALWAYS_INLINE void* performJITMemcpy(void *dst, const void *src, size_t n
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 class ExecutableAllocator : private ExecutableAllocatorBase {
-    WTF_MAKE_TZONE_ALLOCATED(ExecutableAllocator);
+    // This does not need to be TZONE_ALLOCATED because it is only used as a singleton, and
+    // is only allocated once long before any script is executed.
+    WTF_MAKE_FAST_ALLOCATED(ExecutableAllocator);
 public:
     using Base = ExecutableAllocatorBase;
 
@@ -359,7 +363,9 @@ private:
 #else
 
 class ExecutableAllocator : public ExecutableAllocatorBase {
-    WTF_MAKE_TZONE_ALLOCATED(ExecutableAllocator);
+    // This does not need to be TZONE_ALLOCATED because it is only used as a singleton, and
+    // is only allocated once long before any script is executed.
+    WTF_MAKE_FAST_ALLOCATED(ExecutableAllocator);
 public:
     static ExecutableAllocator& singleton();
     static void initialize();
@@ -372,7 +378,9 @@ private:
 
 static inline void* performJITMemcpy(void *dst, const void *src, size_t n)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     return memcpy(dst, src, n);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 inline bool isJITPC(void*) { return false; }

@@ -26,11 +26,12 @@
 #include "config.h"
 #include "SessionState.h"
 
+#include <WebCore/BackForwardFrameItemIdentifier.h>
 #include <WebCore/BackForwardItemIdentifier.h>
 
 namespace WebKit {
 
-FrameState::FrameState(const String& urlString, const String& originalURLString, const String& referrer, const AtomString& target, std::optional<WebCore::FrameIdentifier> frameID, std::optional<Vector<uint8_t>> stateObjectData, int64_t documentSequenceNumber, int64_t itemSequenceNumber, WebCore::IntPoint scrollPosition, bool shouldRestoreScrollPosition, float pageScaleFactor, const std::optional<HTTPBody>& httpBody, std::optional<WebCore::BackForwardItemIdentifier> identifier, bool hasCachedPage, const String& title, WebCore::ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy, RefPtr<WebCore::SerializedScriptValue>&& sessionStateObject, bool wasCreatedByJSWithoutUserInteraction, bool wasRestoredFromSession, const std::optional<WebCore::PolicyContainer>& policyContainer,
+FrameState::FrameState(const String& urlString, const String& originalURLString, const String& referrer, const AtomString& target, std::optional<WebCore::FrameIdentifier> frameID, std::optional<Vector<uint8_t>> stateObjectData, int64_t documentSequenceNumber, int64_t itemSequenceNumber, WebCore::IntPoint scrollPosition, bool shouldRestoreScrollPosition, float pageScaleFactor, const std::optional<HTTPBody>& httpBody, std::optional<WebCore::BackForwardItemIdentifier> itemID, std::optional<WebCore::BackForwardFrameItemIdentifier> frameItemID, bool hasCachedPage, const String& title, WebCore::ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy, RefPtr<WebCore::SerializedScriptValue>&& sessionStateObject, bool wasCreatedByJSWithoutUserInteraction, bool wasRestoredFromSession, const std::optional<WebCore::PolicyContainer>& policyContainer,
 #if PLATFORM(IOS_FAMILY)
     WebCore::FloatRect exposedContentRect, WebCore::IntRect unobscuredContentRect, WebCore::FloatSize minimumLayoutSizeInScrollViewCoordinates, WebCore::IntSize contentSize, bool scaleIsInitial, WebCore::FloatBoxExtent obscuredInsets,
 #endif
@@ -48,7 +49,8 @@ FrameState::FrameState(const String& urlString, const String& originalURLString,
     , shouldRestoreScrollPosition(shouldRestoreScrollPosition)
     , pageScaleFactor(pageScaleFactor)
     , httpBody(httpBody)
-    , identifier(identifier)
+    , itemID(itemID)
+    , frameItemID(frameItemID)
     , hasCachedPage(hasCachedPage)
     , title(title)
     , shouldOpenExternalURLsPolicy(shouldOpenExternalURLsPolicy)
@@ -84,7 +86,8 @@ Ref<FrameState> FrameState::copy()
         shouldRestoreScrollPosition,
         pageScaleFactor,
         httpBody,
-        identifier,
+        itemID,
+        frameItemID,
         hasCachedPage,
         title,
         shouldOpenExternalURLsPolicy,
@@ -127,6 +130,17 @@ void FrameState::setDocumentState(const Vector<AtomString>& documentState, Shoul
 
     if (shouldValidate == ShouldValidate::Yes)
         validateDocumentState(m_documentState);
+}
+
+void FrameState::replaceChildFrameState(Ref<FrameState>&& frameState)
+{
+    for (auto& child : children) {
+        if (child->frameID == frameState->frameID) {
+            child = WTFMove(frameState);
+            return;
+        }
+        child->replaceChildFrameState(frameState.copyRef());
+    }
 }
 
 } // namespace WebKit

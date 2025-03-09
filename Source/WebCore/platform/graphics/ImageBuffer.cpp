@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2009 Dirk Schulze <krit@webkit.org>
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@
 #include "FilterResults.h"
 #include "GraphicsContext.h"
 #include "HostWindow.h"
+#include "ImageBufferDisplayListBackend.h"
 #include "ImageBufferPlatformBackend.h"
 #include "MIMETypeRegistry.h"
 #include "ProcessCapabilities.h"
@@ -43,6 +44,7 @@
 #include <wtf/text/MakeString.h>
 
 #if USE(CG)
+#include "ImageBufferCGPDFDocumentBackend.h"
 #include "ImageBufferUtilitiesCG.h"
 #endif
 
@@ -103,8 +105,14 @@ RefPtr<ImageBuffer> ImageBuffer::create(const FloatSize& size, RenderingMode ren
         return create<ImageBufferPlatformBitmapBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, { });
 
     case RenderingMode::PDFDocument:
-    case RenderingMode::DisplayList:
+#if USE(CG)
+        return ImageBuffer::create<ImageBufferCGPDFDocumentBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, { });
+#else
         return nullptr;
+#endif
+
+    case RenderingMode::DisplayList:
+        return ImageBuffer::create<ImageBufferDisplayListBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, { });
     }
 
     ASSERT_NOT_REACHED();
@@ -299,6 +307,13 @@ bool ImageBuffer::flushDrawingContextAsync()
     return true;
 }
 
+void ImageBuffer::prepareForDisplay()
+{
+    flushDrawingContextAsync();
+    if (auto* backend = ensureBackend())
+        backend->prepareForDisplay();
+}
+
 void ImageBuffer::setBackend(std::unique_ptr<ImageBufferBackend>&& backend)
 {
     if (m_backend.get() == backend.get())
@@ -441,10 +456,11 @@ RefPtr<cairo_surface_t> ImageBuffer::createCairoSurface()
 #endif
 
 #if USE(SKIA)
-void ImageBuffer::finishAcceleratedRenderingAndCreateFence()
+bool ImageBuffer::finishAcceleratedRenderingAndCreateFence()
 {
     if (auto* backend = ensureBackend())
-        backend->finishAcceleratedRenderingAndCreateFence();
+        return backend->finishAcceleratedRenderingAndCreateFence();
+    return false;
 }
 
 void ImageBuffer::waitForAcceleratedRenderingFenceCompletion()
@@ -556,6 +572,20 @@ void ImageBuffer::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& 
     auto destinationPointScaled = destinationPoint;
     destinationPointScaled.scale(resolutionScale());
     backend->putPixelBuffer(pixelBuffer, sourceRectScaled, destinationPointScaled, destinationFormat);
+}
+
+RefPtr<SharedBuffer> ImageBuffer::sinkIntoPDFDocument()
+{
+    if (auto* backend = ensureBackend())
+        return backend->sinkIntoPDFDocument();
+    return nullptr;
+}
+
+RefPtr<SharedBuffer> ImageBuffer::sinkIntoPDFDocument(RefPtr<ImageBuffer> source)
+{
+    if (!source)
+        return nullptr;
+    return source->sinkIntoPDFDocument();
 }
 
 bool ImageBuffer::isInUse() const

@@ -79,6 +79,10 @@
 #include "AcceleratedEffectStack.h"
 #endif
 
+#if ENABLE(MODEL_PROCESS)
+#include "ModelContext.h"
+#endif
+
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(GraphicsLayerCA);
@@ -333,8 +337,10 @@ Ref<PlatformCALayer> GraphicsLayerCA::createPlatformCALayer(PlatformCALayer::Lay
 {
     auto result = PlatformCALayerCocoa::create(layerType, owner);
 
-    if (result->canHaveBackingStore())
-        result->setContentsFormat(screenContentsFormat(nullptr, owner));
+    if (result->canHaveBackingStore()) {
+        auto contentsFormat = PlatformCALayer::contentsFormatForLayer(nullptr, owner);
+        result->setContentsFormat(contentsFormat);
+    }
 
     return result;
 }
@@ -344,11 +350,13 @@ Ref<PlatformCALayer> GraphicsLayerCA::createPlatformCALayer(PlatformLayer* platf
     return PlatformCALayerCocoa::create(platformLayer, owner);
 }
 
-Ref<PlatformCALayer> GraphicsLayerCA::createPlatformCALayer(LayerHostingContextIdentifier, PlatformCALayerClient* owner)
+#if ENABLE(MODEL_PROCESS)
+Ref<PlatformCALayer> GraphicsLayerCA::createPlatformCALayer(Ref<ModelContext>, PlatformCALayerClient* owner)
 {
     ASSERT_NOT_REACHED_WITH_MESSAGE("GraphicsLayerCARemote::createPlatformCALayer should always be called instead of this, but this symbol is needed to compile WebKitLegacy.");
     return GraphicsLayerCA::createPlatformCALayer(PlatformCALayer::LayerType::LayerTypeLayer, owner);
 }
+#endif
 
 #if ENABLE(MODEL_ELEMENT)
 Ref<PlatformCALayer> GraphicsLayerCA::createPlatformCALayer(Ref<WebCore::Model>, PlatformCALayerClient* owner)
@@ -722,6 +730,17 @@ void GraphicsLayerCA::setDrawsContent(bool drawsContent)
     noteLayerPropertyChanged(DrawsContentChanged | DebugIndicatorsChanged);
 }
 
+#if HAVE(SUPPORT_HDR_DISPLAY)
+void GraphicsLayerCA::setDrawsHDRContent(bool drawsHDRContent)
+{
+    if (drawsHDRContent == m_drawsHDRContent)
+        return;
+
+    GraphicsLayer::setDrawsHDRContent(drawsHDRContent);
+    noteLayerPropertyChanged(DrawsHDRContentChanged | DebugIndicatorsChanged);
+}
+#endif
+
 void GraphicsLayerCA::setContentsVisible(bool contentsVisible)
 {
     if (contentsVisible == m_contentsVisible)
@@ -772,6 +791,16 @@ void GraphicsLayerCA::setIsSeparated(bool isSeparated)
     noteLayerPropertyChanged(SeparatedChanged);
 }
 
+void GraphicsLayerCA::setIsSeparatedImage(bool isSeparatedImage)
+{
+    if (isSeparatedImage == m_isSeparatedImage)
+        return;
+
+    GraphicsLayer::setIsSeparatedImage(isSeparatedImage);
+    // Impacts layer type not properties.
+    noteLayerPropertyChanged(SeparatedChanged);
+}
+
 #if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)
 void GraphicsLayerCA::setIsSeparatedPortal(bool isSeparatedPortal)
 {
@@ -792,6 +821,24 @@ void GraphicsLayerCA::setIsDescendentOfSeparatedPortal(bool isDescendentOfSepara
     noteLayerPropertyChanged(DescendentOfSeparatedPortalChanged);
 }
 #endif
+#endif
+
+#if HAVE(CORE_MATERIAL)
+void GraphicsLayerCA::setAppleVisualEffectData(AppleVisualEffectData effectData)
+{
+    if (effectData == m_appleVisualEffectData)
+        return;
+
+    bool backdropFiltersChanged = appleVisualEffectNeedsBackdrop(effectData.effect) != appleVisualEffectNeedsBackdrop(m_appleVisualEffectData.effect);
+
+    GraphicsLayer::setAppleVisualEffectData(effectData);
+
+    LayerChangeFlags changes = AppleVisualEffectChanged;
+    if (backdropFiltersChanged)
+        changes |= BackdropFiltersChanged;
+
+    noteLayerPropertyChanged(changes);
+}
 #endif
 
 void GraphicsLayerCA::setBackgroundColor(const Color& color)
@@ -1353,17 +1400,19 @@ void GraphicsLayerCA::setContentsToPlatformLayerHost(LayerHostingContextIdentifi
     noteLayerPropertyChanged(ContentsPlatformLayerChanged);
 }
 
-void GraphicsLayerCA::setContentsToRemotePlatformContext(LayerHostingContextIdentifier identifier, ContentsLayerPurpose purpose)
+#if ENABLE(MODEL_PROCESS)
+void GraphicsLayerCA::setContentsToModelContext(Ref<ModelContext> modelContext, ContentsLayerPurpose purpose)
 {
-    if (m_contentsLayer && m_contentsLayer->hostingContextIdentifier() == identifier)
+    if (m_contentsLayer && m_contentsLayer->hostingContextIdentifier() == modelContext->modelContentsLayerHostingContextIdentifier())
         return;
 
-    m_contentsLayer = createPlatformCALayer(identifier, this);
+    m_contentsLayer = createPlatformCALayer(modelContext, this);
     m_contentsLayerPurpose = purpose;
     m_contentsDisplayDelegate = nullptr;
     noteSublayersChanged();
     noteLayerPropertyChanged(ContentsPlatformLayerChanged);
 }
+#endif
 
 void GraphicsLayerCA::setContentsToVideoElement(HTMLVideoElement& videoElement, ContentsLayerPurpose purpose)
 {
@@ -1489,7 +1538,7 @@ void GraphicsLayerCA::flushCompositingState(const FloatRect& visibleRect)
     // There is no backdrop root above the root layer, and we can just assume the backing
     // will be opaque. RenderLayerBacking will force an explicit backdrop root outside
     // of any filters if needed.
-    commitState.backdropRootIsOpaque = true;
+    commitState.backdropRootIsOpaque = client().backdropRootIsOpaque(this);
     m_previousCommittedVisibleRect = visibleRect;
 
 #if PLATFORM(IOS_FAMILY)
@@ -1898,7 +1947,7 @@ void GraphicsLayerCA::recursiveCommitChanges(CommitState& commitState, const Tra
     }
 
     if (isBackdropRoot())
-        childCommitState.backdropRootIsOpaque = backgroundColor().isOpaque();
+        childCommitState.backdropRootIsOpaque = backgroundColor().isOpaque() || client().backdropRootIsOpaque(this);
 
     if (GraphicsLayerCA* maskLayer = downcast<GraphicsLayerCA>(m_maskLayer.get())) {
         maskLayer->setVisibleAndCoverageRects(rects);
@@ -2053,6 +2102,12 @@ void GraphicsLayerCA::commitLayerTypeChangesBeforeSublayers(CommitState&, float 
 
     if (needTiledLayer)
         neededLayerType = PlatformCALayer::LayerType::LayerTypeTiledBackingLayer;
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+    else if (m_isSeparatedImage)
+        neededLayerType = PlatformCALayer::LayerType::LayerTypeSeparatedImageLayer;
+    else if (currentLayerType == PlatformCALayer::LayerType::LayerTypeSeparatedImageLayer)
+        neededLayerType = PlatformCALayer::LayerType::LayerTypeWebLayer;
+#endif
     else if (currentLayerType == PlatformCALayer::LayerType::LayerTypeTiledBackingLayer)
         neededLayerType = PlatformCALayer::LayerType::LayerTypeWebLayer;
 
@@ -2073,7 +2128,11 @@ void GraphicsLayerCA::commitLayerChangesBeforeSublayers(CommitState& commitState
     }
 
     // Need to handle Preserves3DChanged first, because it affects which layers subsequent properties are applied to
-    if (m_uncommittedChanges & (Preserves3DChanged | ReplicatedLayerChanged | BackdropFiltersChanged)) {
+    LayerChangeFlags structuralLayerUpdateReasons = Preserves3DChanged | ReplicatedLayerChanged | BackdropFiltersChanged;
+#if HAVE(CORE_MATERIAL)
+    structuralLayerUpdateReasons |= AppleVisualEffectChanged;
+#endif
+    if (m_uncommittedChanges & structuralLayerUpdateReasons) {
         if (updateStructuralLayer())
             layerChanged = true;
     }
@@ -2083,6 +2142,11 @@ void GraphicsLayerCA::commitLayerChangesBeforeSublayers(CommitState& commitState
 
     if (m_uncommittedChanges & DrawsContentChanged)
         updateDrawsContent();
+
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    if (m_uncommittedChanges & DrawsHDRContentChanged)
+        updateDrawsHDRContent();
+#endif
 
     if (m_uncommittedChanges & NameChanged)
         updateNames();
@@ -2131,6 +2195,11 @@ void GraphicsLayerCA::commitLayerChangesBeforeSublayers(CommitState& commitState
     // because something up the tree may have changed its usage.
     if (m_uncommittedChanges & BackdropFiltersChanged || needsBackdrop())
         updateBackdropFilters(commitState);
+
+#if HAVE(CORE_MATERIAL)
+    if (m_uncommittedChanges & AppleVisualEffectChanged)
+        updateAppleVisualEffectData();
+#endif
 
     if (m_uncommittedChanges & BackdropRootChanged)
         updateBackdropRoot();
@@ -2257,6 +2326,11 @@ void GraphicsLayerCA::updateNames()
     case StructuralLayerForBackdrop:
         m_structuralLayer->setName(makeString("backdrop hosting: "_s, name));
         break;
+#if HAVE(MATERIAL_HOSTING)
+    case StructuralLayerForMaterial:
+        m_structuralLayer->setName(makeString("material hosting: "_s, name));
+        break;
+#endif
     case NoStructuralLayer:
         break;
     }
@@ -2329,9 +2403,9 @@ void GraphicsLayerCA::updateSublayerList(bool maxLayerDepthReached)
     bool structuralLayerHostsChildren = !clippingLayerHostsChildren && m_structuralLayer && structuralLayerPurpose() != StructuralLayerPurpose::StructuralLayerForBackdrop;
     if (m_contentsClippingLayer) {
         PlatformCALayerList clippingChildren;
+        appendContentsLayer(clippingChildren);
         if (clippingLayerHostsChildren)
             buildChildLayerList(clippingChildren);
-        appendContentsLayer(clippingChildren);
         m_contentsClippingLayer->setSublayers(clippingChildren);
     }
 
@@ -2568,32 +2642,53 @@ void GraphicsLayerCA::updateBackdropFilters(CommitState& commitState)
 
     // If nothing actually changed, no need to touch the layer properties.
     if (!(m_uncommittedChanges & BackdropFiltersChanged) && m_backdropLayer) {
-        // Opaque state depends on ancestor state, and is cheap to set, so just unconditionally update it.
-        m_backdropLayer->setBackdropRootIsOpaque(commitState.backdropRootIsOpaque);
-        return;
+        if (m_backdropLayer->backdropRootIsOpaque() == commitState.backdropRootIsOpaque)
+            return;
     }
 
-    bool madeLayer = !m_backdropLayer;
-    if (!m_backdropLayer) {
-        m_backdropLayer = createPlatformCALayer(PlatformCALayer::LayerType::LayerTypeBackdropLayer, this);
+    auto expectedLayerType = PlatformCALayer::LayerType::LayerTypeBackdropLayer;
+#if HAVE(CORE_MATERIAL)
+    if (appleVisualEffectNeedsBackdrop(m_appleVisualEffectData.effect))
+        expectedLayerType = PlatformCALayer::LayerType::LayerTypeMaterialLayer;
+#endif
+
+    bool makeLayer = !m_backdropLayer || (m_backdropLayer->layerType() != expectedLayerType);
+    if (makeLayer) {
+        m_backdropLayer = createPlatformCALayer(expectedLayerType, this);
         m_backdropLayer->setAnchorPoint(FloatPoint3D());
         m_backdropLayer->setMasksToBounds(true);
-        m_backdropLayer->setName(MAKE_STATIC_STRING_IMPL("backdrop"));
+#if HAVE(CORE_MATERIAL)
+        if (expectedLayerType == PlatformCALayer::LayerType::LayerTypeMaterialLayer)
+            m_backdropLayer->setName(MAKE_STATIC_STRING_IMPL("material"));
+        else
+#endif
+            m_backdropLayer->setName(MAKE_STATIC_STRING_IMPL("backdrop"));
     }
 
     m_backdropLayer->setHidden(!m_contentsVisible);
     m_backdropLayer->setBackdropRootIsOpaque(commitState.backdropRootIsOpaque);
-    m_backdropLayer->setFilters(m_backdropFilters);
+
+    bool shouldSetFilters = true;
+#if HAVE(CORE_MATERIAL)
+    if (m_appleVisualEffectData.effect != AppleVisualEffect::None) {
+        m_backdropLayer->setAppleVisualEffectData(m_appleVisualEffectData);
+        shouldSetFilters = false;
+    }
+#endif
+
+    if (shouldSetFilters)
+        m_backdropLayer->setFilters(m_backdropFilters);
 
     if (m_layerClones) {
         for (auto& clone : m_layerClones->backdropLayerClones.values()) {
             clone->setHidden(!m_contentsVisible);
             clone->setBackdropRootIsOpaque(commitState.backdropRootIsOpaque);
-            clone->setFilters(m_backdropFilters);
+            if (shouldSetFilters)
+                clone->setFilters(m_backdropFilters);
         }
     }
 
-    if (madeLayer) {
+    if (makeLayer) {
         updateBackdropFiltersRect();
         noteSublayersChanged(DontScheduleFlush);
     }
@@ -2690,6 +2785,24 @@ void GraphicsLayerCA::updateIsDescendentOfSeparatedPortal()
 #endif
 #endif
 
+#if HAVE(CORE_MATERIAL)
+void GraphicsLayerCA::updateAppleVisualEffectData()
+{
+    if (m_backdropLayer && (appleVisualEffectNeedsBackdrop(m_backdropLayer->appleVisualEffectData().effect) || appleVisualEffectNeedsBackdrop(m_appleVisualEffectData.effect)))
+        m_backdropLayer->setAppleVisualEffectData(m_appleVisualEffectData);
+
+    if (appleVisualEffectAppliesFilter(m_appleVisualEffectData.effect))
+        m_layer->setAppleVisualEffectData(m_appleVisualEffectData);
+    else
+        m_layer->setAppleVisualEffectData({ });
+
+#if HAVE(MATERIAL_HOSTING)
+    if (m_structuralLayer && appleVisualEffectIsHostedMaterial(m_appleVisualEffectData.effect))
+        m_structuralLayer->setAppleVisualEffectData(m_appleVisualEffectData);
+#endif
+}
+#endif
+
 void GraphicsLayerCA::updateContentsScalingFilters()
 {
     if (!m_contentsLayer)
@@ -2741,7 +2854,19 @@ bool GraphicsLayerCA::ensureStructuralLayer(StructuralLayerPurpose purpose)
         return structuralLayerChanged;
     }
 
+#if HAVE(MATERIAL_HOSTING)
+    if (purpose == StructuralLayerForMaterial) {
+        if (m_structuralLayer && m_structuralLayer->layerType() != PlatformCALayer::LayerType::LayerTypeMaterialHostingLayer)
+            m_structuralLayer = nullptr;
+
+        if (!m_structuralLayer) {
+            m_structuralLayer = createPlatformCALayer(PlatformCALayer::LayerType::LayerTypeMaterialHostingLayer, this);
+            structuralLayerChanged = true;
+        }
+    } else if (purpose == StructuralLayerForPreserves3D) {
+#else
     if (purpose == StructuralLayerForPreserves3D) {
+#endif
         if (m_structuralLayer && m_structuralLayer->layerType() != PlatformCALayer::LayerType::LayerTypeTransformLayer)
             m_structuralLayer = nullptr;
         
@@ -2792,6 +2917,11 @@ bool GraphicsLayerCA::ensureStructuralLayer(StructuralLayerPurpose purpose)
 
 GraphicsLayerCA::StructuralLayerPurpose GraphicsLayerCA::structuralLayerPurpose() const
 {
+#if HAVE(MATERIAL_HOSTING)
+    if (appleVisualEffectIsHostedMaterial(m_appleVisualEffectData.effect))
+        return StructuralLayerForMaterial;
+#endif
+
     if (preserves3D() && m_type != Type::Structural)
         return StructuralLayerForPreserves3D;
     
@@ -3176,6 +3306,14 @@ void GraphicsLayerCA::updateReplicatedLayers()
     else
         m_layer->insertSublayer(*replicaRoot, 0);
 }
+
+#if HAVE(SUPPORT_HDR_DISPLAY)
+void GraphicsLayerCA::updateDrawsHDRContent()
+{
+    auto contentsFormat = PlatformCALayer::contentsFormatForLayer(nullptr, this);
+    m_layer->setContentsFormat(contentsFormat);
+}
+#endif
 
 // For now, this assumes that layers only ever have one replica, so replicaIndices contains only 0 and 1.
 GraphicsLayerCA::CloneID GraphicsLayerCA::ReplicaState::cloneID() const
@@ -4163,9 +4301,11 @@ void GraphicsLayerCA::updateRootRelativeScale()
     };
 
     float rootRelativeScaleFactor = hasNonIdentityTransform() ? computeMaxScaleFromTransform(transform()) : 1;
-
-    if (auto* parentLayer = parent(); parentLayer && parentLayer->hasNonIdentityChildrenTransform())
-        rootRelativeScaleFactor = std::max(rootRelativeScaleFactor, computeMaxScaleFromTransform(parentLayer->childrenTransform()));
+    if (m_parent) {
+        if (m_parent->hasNonIdentityChildrenTransform())
+            rootRelativeScaleFactor *= computeMaxScaleFromTransform(m_parent->childrenTransform());
+        rootRelativeScaleFactor *= downcast<GraphicsLayerCA>(*m_parent).rootRelativeScaleFactor();
+    }
 
     if (rootRelativeScaleFactor != m_rootRelativeScaleFactor) {
         m_rootRelativeScaleFactor = rootRelativeScaleFactor;
@@ -4326,8 +4466,13 @@ ASCIILiteral GraphicsLayerCA::purposeNameForInnerLayer(PlatformCALayer& layer) c
     }
     if (&layer == m_contentsShapeMaskLayer.get())
         return "contents shape mask layer"_s;
-    if (&layer == m_backdropLayer.get())
+    if (&layer == m_backdropLayer.get()) {
+#if HAVE(CORE_MATERIAL)
+        if (m_backdropLayer->appleVisualEffectData().effect != AppleVisualEffect::None)
+            return "backdrop layer (material)"_s;
+#endif
         return "backdrop layer"_s;
+    }
     return "platform layer"_s;
 }
 
@@ -4477,6 +4622,12 @@ ASCIILiteral GraphicsLayerCA::layerChangeAsString(LayerChange layerChange)
     case LayerChange::ContentsScalingFiltersChanged: return "ContentsScalingFiltersChanged"_s;
     case LayerChange::VideoGravityChanged: return "VideoGravityChanged"_s;
     case LayerChange::BackdropRootChanged: return "BackdropRootChanged"_s;
+#if HAVE(CORE_MATERIAL)
+    case LayerChange::AppleVisualEffectChanged: return "AppleVisualEffectChanged"_s;
+#endif
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    case LayerChange::DrawsHDRContentChanged: return "DrawsHDRContentChanged"_s;
+#endif
     }
     ASSERT_NOT_REACHED();
     return ""_s;
@@ -4657,6 +4808,13 @@ void GraphicsLayerCA::changeLayerTypeTo(PlatformCALayer::LayerType newLayerType)
         | EventRegionChanged
         | NameChanged
         | DebugIndicatorsChanged
+#if HAVE(CORE_MATERIAL)
+        | AppleVisualEffectChanged
+#endif
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+        | ContentsRectsChanged
+        | SeparatedChanged
+#endif
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION) || HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
         | CoverageRectChanged);
 #else

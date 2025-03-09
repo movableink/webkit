@@ -26,10 +26,10 @@
 #include "config.h"
 #include "StyleSharingResolver.h"
 
+#include "DocumentFullscreen.h"
 #include "ElementInlines.h"
 #include "ElementRareData.h"
 #include "ElementRuleCollector.h"
-#include "FullscreenManager.h"
 #include "HTMLDialogElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
@@ -304,6 +304,9 @@ bool SharingResolver::canShareStyleWithElement(const Context& context, const Sty
         return false;
 #endif
 
+    if (candidateElement.hasRandomKeyMap())
+        return false;
+
     return true;
 }
 
@@ -313,7 +316,7 @@ bool SharingResolver::styleSharingCandidateMatchesRuleSet(const StyledElement& e
         return false;
 
     ElementRuleCollector collector(element, m_ruleSets, &m_selectorMatchingState);
-    return collector.hasAnyMatchingRules(*ruleSet);
+    return collector.matchesAnyRules(*ruleSet);
 }
 
 bool SharingResolver::sharingCandidateHasIdenticalStyleAffectingAttributes(const Context& context, const StyledElement& sharingCandidate) const

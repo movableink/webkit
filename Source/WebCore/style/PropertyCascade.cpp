@@ -42,29 +42,33 @@ namespace Style {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(PropertyCascade);
 
-PropertyCascade::PropertyCascade(const MatchResult& matchResult, CascadeLevel maximumCascadeLevel, OptionSet<PropertyType> includedProperties, const HashSet<AnimatableCSSProperty>* animatedProperties)
+PropertyCascade::PropertyCascade(const MatchResult& matchResult, CascadeLevel maximumCascadeLevel, OptionSet<PropertyType> includedProperties, const UncheckedKeyHashSet<AnimatableCSSProperty>* animatedProperties, const StyleProperties* positionTryFallbackProperties)
     : m_matchResult(matchResult)
     , m_includedProperties(includedProperties)
     , m_maximumCascadeLevel(maximumCascadeLevel)
     , m_animationLayer(animatedProperties ? std::optional { AnimationLayer { *animatedProperties } } : std::nullopt)
 {
+    if (positionTryFallbackProperties)
+        m_positionTryFallbackProperties = MatchedProperties { *positionTryFallbackProperties };
+
     buildCascade();
 }
 
 PropertyCascade::PropertyCascade(const PropertyCascade& parent, CascadeLevel maximumCascadeLevel, std::optional<ScopeOrdinal> rollbackScope, std::optional<CascadeLayerPriority> maximumCascadeLayerPriorityForRollback)
     : m_matchResult(parent.m_matchResult)
-    , m_includedProperties(parent.m_includedProperties)
+    , m_includedProperties(normalProperties()) // Include all properties to the rollback cascade, lower prority layers may not get included otherwise.
     , m_maximumCascadeLevel(maximumCascadeLevel)
     , m_rollbackScope(rollbackScope)
     , m_maximumCascadeLayerPriorityForRollback(maximumCascadeLayerPriorityForRollback)
     , m_animationLayer(parent.m_animationLayer)
+    , m_positionTryFallbackProperties(parent.m_positionTryFallbackProperties)
 {
     buildCascade();
 }
 
 PropertyCascade::~PropertyCascade() = default;
 
-PropertyCascade::AnimationLayer::AnimationLayer(const HashSet<AnimatableCSSProperty>& properties)
+PropertyCascade::AnimationLayer::AnimationLayer(const UncheckedKeyHashSet<AnimatableCSSProperty>& properties)
     : properties(properties)
 {
     hasCustomProperties = std::find_if(properties.begin(), properties.end(), [](auto& property) {
@@ -87,6 +91,9 @@ void PropertyCascade::buildCascade()
             cascadeLevelsWithImportant.add(cascadeLevel);
     }
 
+    if (m_positionTryFallbackProperties)
+        addPositionTryFallbackProperties();
+
     for (auto cascadeLevel : { CascadeLevel::Author, CascadeLevel::User, CascadeLevel::UserAgent }) {
         if (!cascadeLevelsWithImportant.contains(cascadeLevel))
             continue;
@@ -106,11 +113,18 @@ void PropertyCascade::setPropertyInternal(Property& property, CSSPropertyID id, 
     property.fromStyleAttribute = matchedProperties.fromStyleAttribute;
 
     if (matchedProperties.linkMatchType == SelectorChecker::MatchAll) {
-        property.cssValue[0] = &cssValue;
+        property.cascadeLevels[SelectorChecker::MatchDefault] = cascadeLevel;
+        property.cssValue[SelectorChecker::MatchDefault] = &cssValue;
+
+        property.cascadeLevels[SelectorChecker::MatchLink] = cascadeLevel;
         property.cssValue[SelectorChecker::MatchLink] = &cssValue;
+
+        property.cascadeLevels[SelectorChecker::MatchVisited] = cascadeLevel;
         property.cssValue[SelectorChecker::MatchVisited] = &cssValue;
-    } else
+    } else {
+        property.cascadeLevels[matchedProperties.linkMatchType] = cascadeLevel;
         property.cssValue[matchedProperties.linkMatchType] = &cssValue;
+    }
 }
 
 void PropertyCascade::set(CSSPropertyID id, CSSValue& cssValue, const MatchedProperties& matchedProperties, CascadeLevel cascadeLevel)
@@ -241,11 +255,12 @@ bool PropertyCascade::addMatch(const MatchedProperties& matchedProperties, Casca
                 return false;
             }
 
-            if (m_includedProperties.contains(PropertyType::Inherited) && current.isInherited())
+            bool currentIsInherited = CSSProperty::isInheritedProperty(current.id());
+            if (m_includedProperties.contains(PropertyType::Inherited) && currentIsInherited)
                 return true;
             if (m_includedProperties.contains(PropertyType::ExplicitlyInherited) && isValueID(*current.value(), CSSValueInherit))
                 return true;
-            if (m_includedProperties.contains(PropertyType::NonInherited) && !current.isInherited())
+            if (m_includedProperties.contains(PropertyType::NonInherited) && !currentIsInherited)
                 return true;
 
             // Apply all logical group properties if we have applied any. They may override the ones we already applied.
@@ -305,6 +320,22 @@ bool PropertyCascade::shouldApplyAfterAnimation(const StyleProperties::PropertyR
     }
 
     return false;
+}
+
+void PropertyCascade::addPositionTryFallbackProperties()
+{
+    ASSERT(m_positionTryFallbackProperties);
+
+    // "All of the properties in a @position-try are applied to the box as part of the Position Fallback Origin,
+    // a new cascade origin that lies between the Author Origin and the Animation Origin"
+    // https://drafts.csswg.org/css-anchor-position-1/#fallback-rule
+    // FIXME: Use own cascade origin. This matters for revert-layer.
+    if (m_maximumCascadeLevel < CascadeLevel::Author)
+        return;
+
+    // "It is invalid to use !important on the properties in the <declaration-list>."
+    // FIXME: "Doing so causes the property it is used on to become invalid."
+    addMatch(*m_positionTryFallbackProperties, CascadeLevel::Author, IsImportant::No);
 }
 
 static auto& declarationsForCascadeLevel(const MatchResult& matchResult, CascadeLevel cascadeLevel)
@@ -396,7 +427,7 @@ void PropertyCascade::sortLogicalGroupPropertyIDs()
     });
 }
 
-const HashSet<AnimatableCSSProperty> PropertyCascade::overriddenAnimatedProperties() const
+const UncheckedKeyHashSet<AnimatableCSSProperty> PropertyCascade::overriddenAnimatedProperties() const
 {
     if (m_animationLayer)
         return m_animationLayer->overriddenProperties;

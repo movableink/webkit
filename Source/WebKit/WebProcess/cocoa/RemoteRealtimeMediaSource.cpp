@@ -108,10 +108,8 @@ void RemoteRealtimeMediaSource::configurationChanged(String&& persistentID, WebC
     setSettings(WTFMove(settings));
     setCapabilities(WTFMove(capabilities));
     setName(m_settings.label());
-    
-    forEachObserver([](auto& observer) {
-        observer.sourceConfigurationChanged();
-    });
+
+    RealtimeMediaSource::configurationChanged();
 }
 
 void RemoteRealtimeMediaSource::applyConstraintsSucceeded(WebCore::RealtimeMediaSourceSettings&& settings)

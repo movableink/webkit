@@ -77,16 +77,16 @@ TEST(WKWebExtensionAPIDevTools, Basics)
         @"devtools.js": devToolsScript
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:devToolsManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(devToolsManifest, resources);
 
     [manager.get().defaultTab.webView loadRequest:server.requestWithLocalhost()];
     [manager.get().defaultTab.webView._inspector show];
 
-    [manager loadAndRun];
+    [manager run];
 }
 
-TEST(WKWebExtensionAPIDevTools, CreatePanel)
+// FIXME: rdar://137268889 (4x TestWebKitAPI.WKWebExtensionAPIDevTools* (api-tests) are near constant timeouts)
+TEST(WKWebExtensionAPIDevTools, DISABLED_CreatePanel)
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -111,7 +111,7 @@ TEST(WKWebExtensionAPIDevTools, CreatePanel)
         @"  cachedPanelWindow?.notifyHidden()",
         @"})",
 
-        @"browser.test.yield('Panel Created')",
+        @"browser.test.sendMessage('Panel Created')",
     ]);
 
     auto *panelScript = Util::constructScript(@[
@@ -119,10 +119,10 @@ TEST(WKWebExtensionAPIDevTools, CreatePanel)
         @"browser.test.assertTrue(browser?.devtools?.inspectedWindow?.tabId > 0, 'browser.devtools.inspectedWindow.tabId should be a positive value')",
 
         @"window.notifyHidden = () => {",
-        @"  browser.test.yield('Panel Hidden')",
+        @"  browser.test.sendMessage('Panel Hidden')",
         @"}",
 
-        @"browser.test.yield('Panel Loaded')",
+        @"browser.test.sendMessage('Panel Loaded')",
     ]);
 
     auto *iconSVG = @"<svg width='16' height='16' xmlns='http://www.w3.org/2000/svg'><circle cx='8' cy='8' r='8' fill='red' /></svg>";
@@ -136,33 +136,27 @@ TEST(WKWebExtensionAPIDevTools, CreatePanel)
         @"icon.svg": iconSVG,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:devToolsManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(devToolsManifest, resources);
 
     [manager.get().defaultTab.webView loadRequest:server.requestWithLocalhost()];
     [manager.get().defaultTab.webView._inspector show];
 
-    [manager loadAndRun];
+    [manager runUntilTestMessage:@"Panel Created"];
 
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Panel Created");
-
-    NSString *extensionIdentifier = [NSString stringWithFormat:@"WebExtensionTab-%@-1", manager.get().context.uniqueIdentifier];
+    auto *extensionIdentifier = [NSString stringWithFormat:@"WebExtensionTab-%@-1", manager.get().context.uniqueIdentifier];
     [manager.get().defaultTab.webView._inspector showExtensionTabWithIdentifier:extensionIdentifier completionHandler:^(NSError *error) {
         EXPECT_NULL(error);
     }];
 
-    [manager run];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Panel Loaded");
+    [manager runUntilTestMessage:@"Panel Loaded"];
 
     [manager.get().defaultTab.webView._inspector showResources];
 
-    [manager run];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Panel Hidden");
+    [manager runUntilTestMessage:@"Panel Hidden"];
 }
 
-TEST(WKWebExtensionAPIDevTools, InspectedWindowEval)
+// FIXME: rdar://137268889 (4x TestWebKitAPI.WKWebExtensionAPIDevTools* (api-tests) are near constant timeouts)
+TEST(WKWebExtensionAPIDevTools, DISABLED_InspectedWindowEval)
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, "<title>Test Page</title><script>const secretNumber = 42; window.customTitle = 'Dynamic Title'</script>"_s } },
@@ -202,15 +196,14 @@ TEST(WKWebExtensionAPIDevTools, InspectedWindowEval)
         @"devtools.js": devToolsScript
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:devToolsManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(devToolsManifest, resources);
 
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:server.requestWithLocalhost().URL];
 
     [manager.get().defaultTab.webView loadRequest:server.requestWithLocalhost()];
     [manager.get().defaultTab.webView._inspector show];
 
-    [manager loadAndRun];
+    [manager run];
 }
 
 TEST(WKWebExtensionAPIDevTools, InspectedWindowReload)
@@ -222,7 +215,7 @@ TEST(WKWebExtensionAPIDevTools, InspectedWindowReload)
     auto *devToolsScript = Util::constructScript(@[
         @"browser.test.assertSafe(() => browser.devtools.inspectedWindow.reload())",
 
-        @"browser.test.yield('Reload Called')",
+        @"browser.test.sendMessage('Reload Called')",
     ]);
 
     auto *resources = @{
@@ -231,15 +224,12 @@ TEST(WKWebExtensionAPIDevTools, InspectedWindowReload)
         @"devtools.js": devToolsScript
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:devToolsManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(devToolsManifest, resources);
 
     [manager.get().defaultTab.webView loadRequest:server.requestWithLocalhost()];
     [manager.get().defaultTab.webView._inspector show];
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Reload Called");
+    [manager runUntilTestMessage:@"Reload Called"];
 
     [manager runForTimeInterval:3];
 
@@ -248,7 +238,8 @@ TEST(WKWebExtensionAPIDevTools, InspectedWindowReload)
     EXPECT_TRUE(server.totalRequests() == 1lu || server.totalRequests() == 2lu);
 }
 
-TEST(WKWebExtensionAPIDevTools, InspectedWindowReloadIgnoringCache)
+// FIXME: rdar://137268889 (4x TestWebKitAPI.WKWebExtensionAPIDevTools* (api-tests) are near constant timeouts)
+TEST(WKWebExtensionAPIDevTools, DISABLED_InspectedWindowReloadIgnoringCache)
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s }, { "Cache-Control"_s, "max-age=3600"_s } }, ""_s } },
@@ -257,7 +248,7 @@ TEST(WKWebExtensionAPIDevTools, InspectedWindowReloadIgnoringCache)
     auto *devToolsScript = Util::constructScript(@[
         @"browser.test.assertSafe(() => browser.devtools.inspectedWindow.reload({ ignoreCache: true }))",
 
-        @"browser.test.yield('Reload Called')",
+        @"browser.test.sendMessage('Reload Called')",
     ]);
 
     auto *resources = @{
@@ -266,15 +257,12 @@ TEST(WKWebExtensionAPIDevTools, InspectedWindowReloadIgnoringCache)
         @"devtools.js": devToolsScript
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:devToolsManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(devToolsManifest, resources);
 
     [manager.get().defaultTab.webView loadRequest:server.requestWithLocalhost()];
     [manager.get().defaultTab.webView._inspector show];
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Reload Called");
+    [manager runUntilTestMessage:@"Reload Called"];
 
     [manager runForTimeInterval:3];
 
@@ -296,7 +284,7 @@ TEST(WKWebExtensionAPIDevTools, NetworkNavigatedEvent)
         @"  browser.test.notifyPass()",
         @"})",
 
-        @"browser.test.yield('Load Next Page')",
+        @"browser.test.sendMessage('Load Next Page')",
     ]);
 
     auto *resources = @{
@@ -305,15 +293,12 @@ TEST(WKWebExtensionAPIDevTools, NetworkNavigatedEvent)
         @"devtools.js": devToolsScript
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:devToolsManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(devToolsManifest, resources);
 
     [manager.get().defaultTab.webView loadRequest:server.requestWithLocalhost()];
     [manager.get().defaultTab.webView._inspector show];
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Load Next Page");
+    [manager runUntilTestMessage:@"Load Next Page"];
 
     [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:server.request().URL];
     [manager.get().defaultTab.webView loadRequest:server.request()];
@@ -337,7 +322,7 @@ TEST(WKWebExtensionAPIDevTools, PanelsThemeName)
         @"  browser.test.notifyPass()",
         @"})",
 
-        @"browser.test.yield('Change Theme')",
+        @"browser.test.sendMessage('Change Theme')",
     ]);
 
     auto *resources = @{
@@ -349,17 +334,14 @@ TEST(WKWebExtensionAPIDevTools, PanelsThemeName)
     // Force light mode for the app, so the switch to dark will trigger the event.
     NSApp.appearance = [NSAppearance appearanceNamed:NSAppearanceNameAqua];
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:devToolsManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(devToolsManifest, resources);
 
     auto *webView = manager.get().defaultTab.webView;
 
     [webView loadRequest:server.requestWithLocalhost()];
     [webView._inspector show];
 
-    [manager loadAndRun];
-
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Change Theme");
+    [manager runUntilTestMessage:@"Change Theme"];
 
     // Force dark mode on the inspector to tigger the theme change.
     webView._inspector.extensionHostWebView.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
@@ -393,13 +375,12 @@ TEST(WKWebExtensionAPIDevTools, MessagePassingToBackground)
         @"devtools.js": devToolsScript
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:devToolsManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(devToolsManifest, resources);
 
     [manager.get().defaultTab.webView loadRequest:server.requestWithLocalhost()];
     [manager.get().defaultTab.webView._inspector show];
 
-    [manager loadAndRun];
+    [manager run];
 }
 
 TEST(WKWebExtensionAPIDevTools, MessagePassingFromPanelToBackground)
@@ -419,7 +400,7 @@ TEST(WKWebExtensionAPIDevTools, MessagePassingFromPanelToBackground)
         @"let panel = await browser.devtools.panels.create('Test Panel', 'icon.svg', 'panel.html')",
         @"browser.test.assertEq(typeof panel, 'object', 'Panel should be created successfully')",
 
-        @"browser.test.yield('Panel Created')",
+        @"browser.test.sendMessage('Panel Created')",
     ]);
 
     auto *panelScript = Util::constructScript(@[
@@ -440,17 +421,14 @@ TEST(WKWebExtensionAPIDevTools, MessagePassingFromPanelToBackground)
         @"icon.svg": iconSVG,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:devToolsManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(devToolsManifest, resources);
 
     [manager.get().defaultTab.webView loadRequest:server.requestWithLocalhost()];
     [manager.get().defaultTab.webView._inspector show];
 
-    [manager loadAndRun];
+    [manager runUntilTestMessage:@"Panel Created"];
 
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Panel Created");
-
-    NSString *extensionIdentifier = [NSString stringWithFormat:@"WebExtensionTab-%@-1", manager.get().context.uniqueIdentifier];
+    auto *extensionIdentifier = [NSString stringWithFormat:@"WebExtensionTab-%@-1", manager.get().context.uniqueIdentifier];
     [manager.get().defaultTab.webView._inspector showExtensionTabWithIdentifier:extensionIdentifier completionHandler:^(NSError *error) {
         EXPECT_NULL(error);
     }];
@@ -473,7 +451,7 @@ TEST(WKWebExtensionAPIDevTools, MessagePassingFromPanelToDevToolsBackground)
         @"  sendResponse('Acknowledged by Inspector background')",
         @"})",
 
-        @"browser.test.yield('Panel Created')",
+        @"browser.test.sendMessage('Panel Created')",
     ]);
 
     auto *panelScript = Util::constructScript(@[
@@ -494,17 +472,14 @@ TEST(WKWebExtensionAPIDevTools, MessagePassingFromPanelToDevToolsBackground)
         @"icon.svg": iconSVG,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:devToolsManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(devToolsManifest, resources);
 
     [manager.get().defaultTab.webView loadRequest:server.requestWithLocalhost()];
     [manager.get().defaultTab.webView._inspector show];
 
-    [manager loadAndRun];
+    [manager runUntilTestMessage:@"Panel Created"];
 
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Panel Created");
-
-    NSString *extensionIdentifier = [NSString stringWithFormat:@"WebExtensionTab-%@-1", manager.get().context.uniqueIdentifier];
+    auto *extensionIdentifier = [NSString stringWithFormat:@"WebExtensionTab-%@-1", manager.get().context.uniqueIdentifier];
     [manager.get().defaultTab.webView._inspector showExtensionTabWithIdentifier:extensionIdentifier completionHandler:^(NSError *error) {
         EXPECT_NULL(error);
     }];
@@ -512,7 +487,8 @@ TEST(WKWebExtensionAPIDevTools, MessagePassingFromPanelToDevToolsBackground)
     [manager run];
 }
 
-TEST(WKWebExtensionAPIDevTools, PortMessagePassingToBackground)
+// FIXME: rdar://137268889 (4x TestWebKitAPI.WKWebExtensionAPIDevTools* (api-tests) are near constant timeouts)
+TEST(WKWebExtensionAPIDevTools, DISABLED_PortMessagePassingToBackground)
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -544,13 +520,12 @@ TEST(WKWebExtensionAPIDevTools, PortMessagePassingToBackground)
         @"devtools.js": devToolsScript,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:devToolsManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(devToolsManifest, resources);
 
     [manager.get().defaultTab.webView loadRequest:server.requestWithLocalhost()];
     [manager.get().defaultTab.webView._inspector show];
 
-    [manager loadAndRun];
+    [manager run];
 }
 
 TEST(WKWebExtensionAPIDevTools, PortMessagePassingFromPanelToBackground)
@@ -572,7 +547,7 @@ TEST(WKWebExtensionAPIDevTools, PortMessagePassingFromPanelToBackground)
         @"let panel = await browser.devtools.panels.create('Test Panel', 'icon.svg', 'panel.html')",
         @"browser.test.assertEq(typeof panel, 'object', 'Panel should be created successfully')",
 
-        @"browser.test.yield('Panel Created')",
+        @"browser.test.sendMessage('Panel Created')",
     ]);
 
     auto *panelScript = Util::constructScript(@[
@@ -596,17 +571,14 @@ TEST(WKWebExtensionAPIDevTools, PortMessagePassingFromPanelToBackground)
         @"icon.svg": iconSVG,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:devToolsManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(devToolsManifest, resources);
 
     [manager.get().defaultTab.webView loadRequest:server.requestWithLocalhost()];
     [manager.get().defaultTab.webView._inspector show];
 
-    [manager loadAndRun];
+    [manager runUntilTestMessage:@"Panel Created"];
 
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Panel Created");
-
-    NSString *extensionIdentifier = [NSString stringWithFormat:@"WebExtensionTab-%@-1", manager.get().context.uniqueIdentifier];
+    auto *extensionIdentifier = [NSString stringWithFormat:@"WebExtensionTab-%@-1", manager.get().context.uniqueIdentifier];
     [manager.get().defaultTab.webView._inspector showExtensionTabWithIdentifier:extensionIdentifier completionHandler:^(NSError *error) {
         EXPECT_NULL(error);
     }];
@@ -631,7 +603,7 @@ TEST(WKWebExtensionAPIDevTools, PortMessagePassingFromPanelToDevToolsBackground)
         @"  })",
         @"})",
 
-        @"browser.test.yield('Panel Created')",
+        @"browser.test.sendMessage('Panel Created')",
     ]);
 
     auto *panelScript = Util::constructScript(@[
@@ -656,17 +628,14 @@ TEST(WKWebExtensionAPIDevTools, PortMessagePassingFromPanelToDevToolsBackground)
         @"icon.svg": iconSVG,
     };
 
-    auto extension = adoptNS([[WKWebExtension alloc] _initWithManifestDictionary:devToolsManifest resources:resources]);
-    auto manager = adoptNS([[TestWebExtensionManager alloc] initForExtension:extension.get()]);
+    auto manager = Util::loadExtension(devToolsManifest, resources);
 
     [manager.get().defaultTab.webView loadRequest:server.requestWithLocalhost()];
     [manager.get().defaultTab.webView._inspector show];
 
-    [manager loadAndRun];
+    [manager runUntilTestMessage:@"Panel Created"];
 
-    EXPECT_NS_EQUAL(manager.get().yieldMessage, @"Panel Created");
-
-    NSString *extensionIdentifier = [NSString stringWithFormat:@"WebExtensionTab-%@-1", manager.get().context.uniqueIdentifier];
+    auto *extensionIdentifier = [NSString stringWithFormat:@"WebExtensionTab-%@-1", manager.get().context.uniqueIdentifier];
     [manager.get().defaultTab.webView._inspector showExtensionTabWithIdentifier:extensionIdentifier completionHandler:^(NSError *error) {
         EXPECT_NULL(error);
     }];

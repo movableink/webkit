@@ -51,13 +51,14 @@ public:
     void resolveReferencesIfNeeded();
     bool operator==(const CSSCounterStyleRegistry& other) const;
     void clearAuthorCounterStyles();
+    bool hasAuthorCounterStyles() const { return !m_authorCounterStyles.isEmpty(); }
 
 private:
     static CounterStyleMap& userAgentCounterStyles();
     // If no map is passed on, user-agent counter styles map will be used
     static void resolveFallbackReference(CSSCounterStyle&, CounterStyleMap* = nullptr);
     static void resolveExtendsReference(CSSCounterStyle&, CounterStyleMap* = nullptr);
-    static void resolveExtendsReference(CSSCounterStyle&, HashSet<CSSCounterStyle*>&, CounterStyleMap* = nullptr);
+    static void resolveExtendsReference(CSSCounterStyle&, UncheckedKeyHashSet<CSSCounterStyle*>&, CounterStyleMap* = nullptr);
     static RefPtr<CSSCounterStyle> counterStyle(const AtomString&, CounterStyleMap* = nullptr);
     void invalidate();
 

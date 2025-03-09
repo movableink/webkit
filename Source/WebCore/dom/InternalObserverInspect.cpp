@@ -102,8 +102,8 @@ public:
             , m_inspector(WTFMove(inspector))
         { }
 
-        Ref<Observable> m_sourceObservable;
-        ObservableInspector m_inspector;
+        const Ref<Observable> m_sourceObservable;
+        const ObservableInspector m_inspector;
     };
 
 private:
@@ -173,30 +173,19 @@ private:
         protectedSubscriber()->complete();
     }
 
-    template<typename VisitorType>
-    void visitAdditionalChildrenInternal(VisitorType& visitor) const
-    {
-        protectedSubscriber()->visitAdditionalChildren(visitor);
-        if (RefPtr next = m_inspector.next)
-            next->visitJSFunction(visitor);
-        if (RefPtr error = m_inspector.error)
-            error->visitJSFunction(visitor);
-        if (RefPtr complete = m_inspector.complete)
-            complete->visitJSFunction(visitor);
-        if (RefPtr subscribe = m_inspector.subscribe)
-            subscribe->visitJSFunction(visitor);
-        if (RefPtr abort = m_inspector.abort)
-            abort->visitJSFunction(visitor);
-    }
-
     void visitAdditionalChildren(JSC::AbstractSlotVisitor& visitor) const final
     {
-        visitAdditionalChildrenInternal(visitor);
-    }
-
-    void visitAdditionalChildren(JSC::SlotVisitor& visitor) const final
-    {
-        visitAdditionalChildrenInternal(visitor);
+        m_subscriber->visitAdditionalChildren(visitor);
+        if (m_inspector.next)
+            SUPPRESS_UNCOUNTED_ARG m_inspector.next->visitJSFunction(visitor);
+        if (m_inspector.error)
+            SUPPRESS_UNCOUNTED_ARG m_inspector.error->visitJSFunction(visitor);
+        if (m_inspector.complete)
+            SUPPRESS_UNCOUNTED_ARG m_inspector.complete->visitJSFunction(visitor);
+        if (m_inspector.subscribe)
+            SUPPRESS_UNCOUNTED_ARG m_inspector.subscribe->visitJSFunction(visitor);
+        if (m_inspector.abort)
+            SUPPRESS_UNCOUNTED_ARG m_inspector.abort->visitJSFunction(visitor);
     }
 
     void removeAbortHandler()
@@ -233,8 +222,8 @@ private:
         }
     }
 
-    Ref<Subscriber> m_subscriber;
-    ObservableInspector m_inspector;
+    const Ref<Subscriber> m_subscriber;
+    const ObservableInspector m_inspector;
     std::optional<uint32_t> m_abortAlgorithmHandler;
 };
 

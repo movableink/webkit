@@ -125,7 +125,7 @@ protected:
     RenderFragmentContainer(Type, Document&, RenderStyle&&, RenderFragmentedFlow*);
     virtual ~RenderFragmentContainer();
 
-    void ensureOverflowForBox(const RenderBox&, RefPtr<RenderOverflow>&, bool) const;
+    RenderOverflow* overflowForBox(const RenderBox&) const;
 
     void computePreferredLogicalWidths() override;
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
@@ -144,6 +144,8 @@ private:
     virtual void installFragmentedFlow();
 
     LayoutPoint mapFragmentPointIntoFragmentedFlowCoordinates(const LayoutPoint&);
+    LayoutRect computedVisualOverflowRectForBox(const RenderBox&) const;
+    LayoutRect computedLayoutOverflowRectForBox(const RenderBox&) const;
 
 protected:
     SingleThreadWeakPtr<RenderFragmentedFlow> m_fragmentedFlow;

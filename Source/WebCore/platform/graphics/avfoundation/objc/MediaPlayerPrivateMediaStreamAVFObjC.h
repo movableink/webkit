@@ -106,7 +106,7 @@ private:
 
     void load(const String&) override;
 #if ENABLE(MEDIA_SOURCE)
-    void load(const URL&, const ContentType&, MediaSourcePrivateClient&) override;
+    void load(const URL&, const LoadOptions&, MediaSourcePrivateClient&) override;
 #endif
     void load(MediaStreamPrivate&) override;
     void cancelLoad() override;
@@ -172,6 +172,7 @@ private:
     bool ended() const override { return m_ended; }
 
     void setBufferingPolicy(MediaPlayer::BufferingPolicy) override;
+    void setPlatformDynamicRangeLimit(PlatformDynamicRangeLimit) final;
     void audioOutputDeviceChanged() final;
     std::optional<VideoFrameMetadata> videoFrameMetadata() final;
     void setResourceOwner(const ProcessIdentity&) final { ASSERT_NOT_REACHED(); }
@@ -246,6 +247,8 @@ private:
     LayerHostingContextID hostingContextID() const final;
     void setVideoLayerSizeFenced(const FloatSize&, WTF::MachSendRight&&) final;
     void requestHostingContextID(LayerHostingContextIDCallback&&) final;
+
+    RefPtr<MediaStreamPrivate> protectedMediaStreamPrivate() const;
 
     ThreadSafeWeakPtr<MediaPlayer> m_player;
     RefPtr<MediaStreamPrivate> m_mediaStreamPrivate;

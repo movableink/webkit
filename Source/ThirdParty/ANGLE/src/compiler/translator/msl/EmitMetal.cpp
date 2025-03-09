@@ -181,12 +181,17 @@ class GenMetalTraverser : public TIntermTraverser
 
     void emitSingleConstant(const TConstantUnion *const constUnion);
 
+    void emitForwardProgressStore();
+    void emitForwardProgressSignal();
+    bool shouldEnsureForwardProgress() const { return mForwardProgressStoreNestingCount >= 0; }
+
   private:
     Sink &mOut;
     const TCompiler &mCompiler;
     const PipelineStructs &mPipelineStructs;
     SymbolEnv &mSymbolEnv;
     IdGen &mIdGen;
+    int mForwardProgressStoreNestingCount  = -1; // Negative means forward progress is not ensured.
     int mIndentLevel                  = -1;
     int mLastIndentationPos           = -1;
     int mOpenPointerParenCount        = 0;
@@ -201,8 +206,44 @@ class GenMetalTraverser : public TIntermTraverser
     size_t mDriverUniformsBindingIndex     = 0;
     size_t mUBOArgumentBufferBindingIndex  = 0;
     bool mRasterOrderGroupsSupported       = false;
-    bool mInjectAsmStatementIntoLoopBodies = false;
+    friend class ScopedForwardProgressStore;
 };
+
+class ScopedForwardProgressStore
+{
+public:
+    ScopedForwardProgressStore(GenMetalTraverser& traverser);
+    ~ScopedForwardProgressStore();
+private:
+    GenMetalTraverser& mTraverser;
+};
+
+ScopedForwardProgressStore::ScopedForwardProgressStore(GenMetalTraverser& traverser)
+    : mTraverser(traverser)
+{
+    if (mTraverser.shouldEnsureForwardProgress())
+    {
+        if (mTraverser.mForwardProgressStoreNestingCount == 0)
+        {
+            mTraverser.emitOpenBrace();
+            mTraverser.emitForwardProgressStore();
+        }
+        ++mTraverser.mForwardProgressStoreNestingCount;
+    }
+}
+
+ScopedForwardProgressStore::~ScopedForwardProgressStore()
+{
+    if (mTraverser.shouldEnsureForwardProgress())
+    {
+        --mTraverser.mForwardProgressStoreNestingCount;
+        if (mTraverser.mForwardProgressStoreNestingCount == 0)
+        {
+            mTraverser.emitCloseBrace();
+        }
+    }
+}
+
 }  // anonymous namespace
 
 GenMetalTraverser::~GenMetalTraverser()
@@ -228,9 +269,11 @@ GenMetalTraverser::GenMetalTraverser(const TCompiler &compiler,
       mDriverUniformsBindingIndex(compileOptions.metal.driverUniformsBindingIndex),
       mUBOArgumentBufferBindingIndex(compileOptions.metal.UBOArgumentBufferBindingIndex),
       mRasterOrderGroupsSupported(compileOptions.pls.fragmentSyncType ==
-                                  ShFragmentSynchronizationType::RasterOrderGroups_Metal),
-      mInjectAsmStatementIntoLoopBodies(compileOptions.metal.injectAsmStatementIntoLoopBodies)
-{}
+                                  ShFragmentSynchronizationType::RasterOrderGroups_Metal)
+{
+    if (compileOptions.metal.injectAsmStatementIntoLoopBodies)
+        mForwardProgressStoreNestingCount = 0;
+}
 
 void GenMetalTraverser::emitIndentation()
 {
@@ -335,16 +378,12 @@ static const char *GetOperatorString(TOperator op,
             return "++";
         case TOperator::EOpPreDecrement:
             return "--";
-        case TOperator::EOpVectorTimesScalarAssign:
-            return "*=";
         case TOperator::EOpVectorTimesMatrixAssign:
             return "*=";
         case TOperator::EOpMatrixTimesScalarAssign:
             return "*=";
         case TOperator::EOpMatrixTimesMatrixAssign:
             return "*=";
-        case TOperator::EOpVectorTimesScalar:
-            return "*";
         case TOperator::EOpVectorTimesMatrix:
             return "*";
         case TOperator::EOpMatrixTimesVector:
@@ -366,27 +405,29 @@ static const char *GetOperatorString(TOperator op,
         case TOperator::EOpBitShiftLeft:
         case TOperator::EOpBitShiftLeftAssign:
             // TODO: Check logical vs arithmetic shifting.
-            return resultType.isSignedIntegerValue() ? "ANGLE_ilshift" : "ANGLE_ulshift";
+            return resultType.isSignedInt() ? "ANGLE_ilshift" : "ANGLE_ulshift";
 
         case TOperator::EOpAddAssign:
         case TOperator::EOpAdd:
-            return resultType.isSignedIntegerValue() ? "ANGLE_iadd" : "+";
+            return resultType.isSignedInt() ? "ANGLE_iadd" : "+";
 
         case TOperator::EOpSubAssign:
         case TOperator::EOpSub:
-            return resultType.isSignedIntegerValue() ? "ANGLE_isub" : "-";
+            return resultType.isSignedInt() ? "ANGLE_isub" : "-";
 
         case TOperator::EOpMulAssign:
         case TOperator::EOpMul:
-            return resultType.isSignedIntegerValue() ? "ANGLE_imul" : "*";
+        case TOperator::EOpVectorTimesScalarAssign:
+        case TOperator::EOpVectorTimesScalar:
+            return resultType.isSignedInt() ? "ANGLE_imul" : "*";
 
         case TOperator::EOpDiv:
         case TOperator::EOpDivAssign:
-            return resultType.isSignedIntegerValue() ? "ANGLE_div" : "/";
+            return resultType.isSignedInt() ? "ANGLE_div" : "/";
 
         case TOperator::EOpIMod:
         case TOperator::EOpIModAssign:
-            return resultType.isSignedIntegerValue() ? "ANGLE_imod" : "%";
+            return resultType.isSignedInt() ? "ANGLE_imod" : "%";
 
         case TOperator::EOpEqual:
             if ((argType0->getStruct() && argType1->getStruct()) &&
@@ -884,17 +925,14 @@ void GenMetalTraverser::emitPostQualifier(const EmitVariableDeclarationConfig &e
 
 void GenMetalTraverser::emitLoopBody(TIntermBlock *bodyNode)
 {
-    if (mInjectAsmStatementIntoLoopBodies)
+    const bool emitForwardProgress = shouldEnsureForwardProgress();
+    if (emitForwardProgress)
     {
         emitOpenBrace();
-
-        emitIndentation();
-        mOut << "__asm__(\"\");\n";
+        emitForwardProgressSignal();
     }
-
     bodyNode->traverse(this);
-
-    if (mInjectAsmStatementIntoLoopBodies)
+    if (emitForwardProgress)
     {
         emitCloseBrace();
     }
@@ -1822,6 +1860,7 @@ bool GenMetalTraverser::visitBinary(Visit, TIntermBinary *binaryNode)
         case TOperator::EOpAddAssign:
         case TOperator::EOpSubAssign:
         case TOperator::EOpMulAssign:
+        case TOperator::EOpVectorTimesScalarAssign:
             leftNode.traverse(this);
             mOut << " = ";
             [[fallthrough]];
@@ -2407,6 +2446,26 @@ void GenMetalTraverser::emitCloseBrace()
     mOut << "}";
 }
 
+void GenMetalTraverser::emitForwardProgressStore()
+{
+    // https://eel.is/c++draft/intro.progress
+    // "The implementation may assume that any thread will eventually do one of the following:""
+    //  - ...
+    //  - "perform an access through a volatile glvalue"
+    // Emit a volatile variable which all loops in the stack will access.
+    emitIndentation();
+    mOut << "volatile bool ANGLE_p;\n";
+}
+
+void GenMetalTraverser::emitForwardProgressSignal()
+{
+    // Emit a read though the volatile variable. This marks the loop as making forward progress even
+    // if the compiler can otherwise analyze it to be infinite. This ensures that the loop
+    // has defined behavior.
+    emitIndentation();
+    mOut << "(void) ANGLE_p;\n";
+}
+
 static bool RequiresSemicolonTerminator(TIntermNode &node)
 {
     if (node.getAsBlock())
@@ -2608,6 +2667,8 @@ bool GenMetalTraverser::visitForLoop(TIntermLoop *loopNode)
     TIntermTyped *condNode = loopNode->getCondition();
     TIntermTyped *exprNode = loopNode->getExpression();
 
+    ScopedForwardProgressStore scopedProgress(*this);
+
     mOut << "for (";
 
     if (initNode)
@@ -2650,6 +2711,7 @@ bool GenMetalTraverser::visitWhileLoop(TIntermLoop *loopNode)
     ASSERT(condNode);
     ASSERT(!initNode && !exprNode);
 
+    ScopedForwardProgressStore scopedProgress(*this);
     emitIndentation();
     mOut << "while (";
     condNode->traverse(this);
@@ -2669,6 +2731,7 @@ bool GenMetalTraverser::visitDoWhileLoop(TIntermLoop *loopNode)
     ASSERT(condNode);
     ASSERT(!initNode && !exprNode);
 
+    ScopedForwardProgressStore scopedProgress(*this);
     emitIndentation();
     mOut << "do\n";
     emitLoopBody(loopNode->getBody());

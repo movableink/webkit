@@ -59,7 +59,7 @@ void TextTrackPrivateRemote::setMode(TextTrackMode mode)
     if (mode == InbandTextTrackPrivate::mode())
         return;
 
-    gpuProcessConnection->connection().send(Messages::RemoteMediaPlayerProxy::TextTrackSetMode(m_id, mode), m_playerIdentifier);
+    gpuProcessConnection->protectedConnection()->send(Messages::RemoteMediaPlayerProxy::TextTrackSetMode(m_id, mode), m_playerIdentifier);
     InbandTextTrackPrivate::setMode(mode);
 }
 
@@ -77,7 +77,7 @@ void TextTrackPrivateRemote::updateConfiguration(TextTrackPrivateRemoteConfigura
         m_label = configuration.label;
         if (changed) {
             notifyClients([label = crossThreadCopy(m_label)](auto& client) {
-                client.labelChanged(AtomString { label });
+                client.labelChanged(AtomString { label.isolatedCopy() });
             });
         }
     }
@@ -87,7 +87,7 @@ void TextTrackPrivateRemote::updateConfiguration(TextTrackPrivateRemoteConfigura
         m_language = configuration.language;
         if (changed) {
             notifyClients([language = crossThreadCopy(m_language)](auto& client) {
-                client.languageChanged(AtomString { language });
+                client.languageChanged(AtomString { language.isolatedCopy() });
             });
         }
     }

@@ -78,12 +78,8 @@ public:
 
     void addToLine(LegacyInlineBox* child);
     void deleteLine() final;
-    void extractLine() final;
-    void attachLine() final;
     void adjustPosition(float dx, float dy) override;
 
-    virtual void extractLineBoxFromRenderObject();
-    virtual void attachLineBoxToRenderObject();
     virtual void removeLineBoxFromRenderObject();
 
     void computeOverflow(LayoutUnit lineTop, LayoutUnit lineBottom, GlyphOverflowAndFallbackFontsMap&);
@@ -173,7 +169,7 @@ private:
 #endif
 
 protected:
-    RefPtr<RenderOverflow> m_overflow;
+    std::unique_ptr<RenderOverflow> m_overflow;
 
     LegacyInlineBox* m_firstChild { nullptr };
     LegacyInlineBox* m_lastChild { nullptr };

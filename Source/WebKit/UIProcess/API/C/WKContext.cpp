@@ -256,16 +256,6 @@ void WKContextSetDownloadClient(WKContextRef context, const WKContextDownloadCli
     WebKit::toImpl(context)->setLegacyDownloadClient(adoptRef(*new LegacyDownloadClient(wkClient, context)));
 }
 
-WKDownloadRef WKContextDownloadURLRequest(WKContextRef, WKURLRequestRef)
-{
-    return nullptr;
-}
-
-WKDownloadRef WKContextResumeDownload(WKContextRef, WKDataRef, WKStringRef)
-{
-    return nullptr;
-}
-
 void WKContextSetInitializationUserDataForInjectedBundle(WKContextRef contextRef,  WKTypeRef userDataRef)
 {
     WebKit::toImpl(contextRef)->setInjectedBundleInitializationUserData(WebKit::toImpl(userDataRef));
@@ -538,7 +528,7 @@ void WKContextSetFontAllowList(WKContextRef contextRef, WKArrayRef arrayRef)
 void WKContextTerminateGPUProcess(WKContextRef)
 {
 #if ENABLE(GPU_PROCESS)
-    if (auto* gpuProcess = WebKit::GPUProcessProxy::singletonIfCreated())
+    if (RefPtr gpuProcess = WebKit::GPUProcessProxy::singletonIfCreated())
         gpuProcess->terminateForTesting();
 #endif
 }
@@ -586,5 +576,18 @@ void WKContextClearMockGamepadsForTesting(WKContextRef)
 #if ENABLE(GAMEPAD)
     if (WebCore::GamepadProvider::singleton().isMockGamepadProvider())
         WebCore::GamepadProvider::singleton().clearGamepadsForTesting();
+#endif
+}
+
+void WKContextSetResourceMonitorURLsForTesting(WKContextRef contextRef, WKStringRef rulesText, void* context, WKContextSetResourceMonitorURLsFunction callback)
+{
+#if ENABLE(CONTENT_EXTENSIONS) && PLATFORM(COCOA)
+    WebKit::toImpl(contextRef)->setResourceMonitorURLsForTesting(WebKit::toWTFString(rulesText), [context, callback] {
+        if (callback)
+            callback(context);
+    });
+#else
+    if (callback)
+        callback(context);
 #endif
 }

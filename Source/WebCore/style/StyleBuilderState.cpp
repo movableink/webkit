@@ -44,6 +44,7 @@
 #include "CSSImageValue.h"
 #include "CSSNamedImageValue.h"
 #include "CSSPaintImageValue.h"
+#include "CalculationRandomKeyMap.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "ElementInlines.h"
@@ -161,12 +162,9 @@ Color BuilderState::createStyleColor(const CSSValue& value, ForVisitedLink forVi
     if (!element() || !element()->isLink())
         forVisitedLink = ForVisitedLink::No;
 
-    // FIXME: Figure out an extensible way to pass additional information, like ForVisitedLink, to toStyle() so we can use the normal override.
-    // FIXME: Alternatively, add ForVisitedLink state to BuilderState and push/pop on entry.
-
     if (RefPtr color = dynamicDowncast<CSSColorValue>(value))
-        return toStyleColor(color->color(), document(), m_style, m_cssToLengthConversionData, forVisitedLink);
-    return toStyleColor(CSS::Color { CSS::KeywordColor { value.valueID() } }, document(), m_style, m_cssToLengthConversionData, forVisitedLink);
+        return toStyle(color->color(), *this, forVisitedLink);
+    return toStyle(CSS::Color { CSS::KeywordColor { value.valueID() } }, *this, forVisitedLink);
 }
 
 void BuilderState::registerContentAttribute(const AtomString& attributeLocalName)
@@ -310,5 +308,19 @@ void BuilderState::setCurrentPropertyInvalidAtComputedValueTime()
     m_invalidAtComputedValueTimeProperties.set(cssPropertyID());
 }
 
+Ref<Calculation::RandomKeyMap> BuilderState::randomKeyMap(bool perElement) const
+{
+    if (perElement) {
+        ASSERT(element());
+
+        std::optional<Style::PseudoElementIdentifier> pseudoElementIdentifier;
+        if (style().pseudoElementType() != PseudoId::None)
+            pseudoElementIdentifier = Style::PseudoElementIdentifier { style().pseudoElementType(), style().pseudoElementNameArgument() };
+
+        return element()->randomKeyMap(pseudoElementIdentifier);
+    }
+    return document().randomKeyMap();
 }
-}
+
+} // namespace Style
+} // namespace WebCore

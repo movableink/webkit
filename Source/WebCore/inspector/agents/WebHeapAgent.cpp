@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,7 +46,7 @@ struct GarbageCollectionData {
 };
 
 class SendGarbageCollectionEventsTask final : public CanMakeThreadSafeCheckedPtr<SendGarbageCollectionEventsTask> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(SendGarbageCollectionEventsTask);
+    WTF_MAKE_TZONE_ALLOCATED(SendGarbageCollectionEventsTask);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SendGarbageCollectionEventsTask);
 public:
     SendGarbageCollectionEventsTask(WebHeapAgent&);
@@ -60,6 +60,8 @@ private:
     Vector<GarbageCollectionData> m_collections WTF_GUARDED_BY_LOCK(m_collectionsLock);
     RunLoop::Timer m_timer;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SendGarbageCollectionEventsTask);
 
 SendGarbageCollectionEventsTask::SendGarbageCollectionEventsTask(WebHeapAgent& agent)
     : m_agent(agent)
@@ -108,6 +110,22 @@ WebHeapAgent::WebHeapAgent(WebAgentContext& context)
 }
 
 WebHeapAgent::~WebHeapAgent() = default;
+
+void WebHeapAgent::didCreateFrontendAndBackend(FrontendRouter* frontendRouter, BackendDispatcher* backendDispatcher)
+{
+    InspectorHeapAgent::didCreateFrontendAndBackend(frontendRouter, backendDispatcher);
+
+    ASSERT(m_instrumentingAgents.persistentWebHeapAgent() != this);
+    m_instrumentingAgents.setPersistentWebHeapAgent(this);
+}
+
+void WebHeapAgent::willDestroyFrontendAndBackend(DisconnectReason reason)
+{
+    InspectorHeapAgent::willDestroyFrontendAndBackend(reason);
+
+    ASSERT(m_instrumentingAgents.persistentWebHeapAgent() == this);
+    m_instrumentingAgents.setPersistentWebHeapAgent(nullptr);
+}
 
 Inspector::Protocol::ErrorStringOr<void> WebHeapAgent::enable()
 {

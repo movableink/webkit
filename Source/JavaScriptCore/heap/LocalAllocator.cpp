@@ -138,7 +138,7 @@ void* LocalAllocator::allocateSlowCase(JSC::Heap& heap, size_t cellSize, GCDefer
 
     Subspace* subspace = m_directory->m_subspace;
     if (subspace->isIsoSubspace()) {
-        if (void* result = static_cast<IsoSubspace*>(subspace)->tryAllocatePreciseOrLowerTierPrecise(cellSize))
+        if (void* result = static_cast<IsoSubspace*>(subspace)->tryAllocateLowerTierPrecise(cellSize))
             return result;
     }
 

@@ -25,6 +25,11 @@
 
 // Add project-level Objective-C header files here to be able to access them from within Swift sources.
 
+#import <wtf/Platform.h>
+
+#import "WKMaterialHostingSupport.h"
 #import "WKPreferencesInternal.h"
+#import "WKScrollGeometry.h"
+#import "WKUIDelegateInternal.h"
 #import "WKWebViewConfigurationInternal.h"
 #import "WKWebViewInternal.h"

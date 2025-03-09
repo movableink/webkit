@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -54,16 +54,21 @@
 #include "ShapeDetectionObjectHeap.h"
 #include "SwapBuffersDisplayRequirement.h"
 #include "WebPageProxy.h"
-#if PLATFORM(COCOA)
-#include <pal/cf/CoreTextSoftLink.h>
-#endif
+#include <WebCore/Filter.h>
+#include <WebCore/FontCustomPlatformData.h>
+#include <WebCore/Gradient.h>
 #include <WebCore/HTMLCanvasElement.h>
+#include <WebCore/ImageBufferDisplayListBackend.h>
 #include <WebCore/NullImageBufferBackend.h>
 #include <WebCore/RenderingResourceIdentifier.h>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/RunLoop.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/SystemTracing.h>
+
+#if USE(CG)
+#include <WebCore/ImageBufferCGPDFDocumentBackend.h>
+#endif
 
 #if HAVE(IOSURFACE)
 #include "ImageBufferRemoteIOSurfaceBackend.h"
@@ -83,6 +88,10 @@
 #import "DynamicContentScalingImageBufferBackend.h"
 #endif
 
+#if PLATFORM(COCOA)
+#include <pal/cf/CoreTextSoftLink.h>
+#endif
+
 #define MESSAGE_CHECK(assertion, message) MESSAGE_CHECK_WITH_MESSAGE_BASE(assertion, &m_gpuConnectionToWebProcess->connection(), message);
 
 namespace WebKit {
@@ -92,7 +101,7 @@ bool isSmallLayerBacking(const ImageBufferParameters& parameters)
 {
     const unsigned maxSmallLayerBackingArea = 64u * 64u; // 4096 == 16kb backing store which equals 1 page on AS.
     auto checkedArea = ImageBuffer::calculateBackendSize(parameters.logicalSize, parameters.resolutionScale).area<RecordOverflow>();
-    return (parameters.purpose == RenderingPurpose::LayerBacking || parameters.purpose == RenderingPurpose::BitmapOnlyLayerBacking)
+    return (parameters.purpose == RenderingPurpose::LayerBacking)
         && !checkedArea.hasOverflowed() && checkedArea <= maxSmallLayerBackingArea
         && (parameters.pixelFormat == ImageBufferPixelFormat::BGRA8 || parameters.pixelFormat == ImageBufferPixelFormat::BGRX8);
 }
@@ -119,15 +128,15 @@ RemoteRenderingBackend::~RemoteRenderingBackend() = default;
 
 void RemoteRenderingBackend::startListeningForIPC()
 {
-    dispatch([this] {
-        workQueueInitialize();
+    dispatch([protectedThis = Ref { *this }] {
+        protectedThis->workQueueInitialize();
     });
 }
 
 void RemoteRenderingBackend::stopListeningForIPC()
 {
-    protectedWorkQueue()->stopAndWaitForCompletion([this] {
-        workQueueUninitialize();
+    protectedWorkQueue()->stopAndWaitForCompletion([protectedThis = Ref { *this }] {
+        protectedThis->workQueueUninitialize();
     });
 }
 
@@ -208,10 +217,10 @@ void RemoteRenderingBackend::didCreateImageBuffer(Ref<ImageBuffer> imageBuffer)
 {
     auto imageBufferIdentifier = imageBuffer->renderingResourceIdentifier();
     auto* sharing = imageBuffer->toBackendSharing();
-    auto handle = downcast<ImageBufferBackendHandleSharing>(*sharing).createBackendHandle();
+    auto handle = sharing ? downcast<ImageBufferBackendHandleSharing>(*sharing).createBackendHandle() : std::nullopt;
     m_remoteDisplayLists.add(imageBufferIdentifier, RemoteDisplayListRecorder::create(imageBuffer.get(), imageBufferIdentifier, *this));
     m_remoteImageBuffers.add(imageBufferIdentifier, RemoteImageBuffer::create(WTFMove(imageBuffer), *this));
-    send(Messages::RemoteImageBufferProxy::DidCreateBackend(WTFMove(*handle)), imageBufferIdentifier);
+    send(Messages::RemoteImageBufferProxy::DidCreateBackend(WTFMove(handle)), imageBufferIdentifier);
 }
 
 void RemoteRenderingBackend::moveToSerializedBuffer(RenderingResourceIdentifier identifier)
@@ -253,21 +262,56 @@ void RemoteRenderingBackend::moveToImageBuffer(RenderingResourceIdentifier ident
     didCreateImageBuffer(imageBuffer.releaseNonNull());
 }
 
+#if PLATFORM(COCOA)
+void RemoteRenderingBackend::didDrawRemoteToPDF(PageIdentifier pageID, RenderingResourceIdentifier imageBufferIdentifier, SnapshotIdentifier snapshotIdentifier)
+{
+    assertIsCurrent(workQueue());
+    auto imageBuffer = this->imageBuffer(imageBufferIdentifier);
+    if (!imageBuffer) {
+        ASSERT_IS_TESTING_IPC();
+        return;
+    }
+
+    ASSERT(imageBufferIdentifier == imageBuffer->renderingResourceIdentifier());
+    auto data = imageBuffer->sinkIntoPDFDocument();
+
+    callOnMainRunLoop([pageID, data = WTFMove(data), snapshotIdentifier]() mutable {
+        GPUProcess::singleton().didDrawRemoteToPDF(pageID, WTFMove(data), snapshotIdentifier);
+    });
+}
+#endif
+
 template<typename ImageBufferType>
 static RefPtr<ImageBuffer> allocateImageBufferInternal(const FloatSize& logicalSize, RenderingMode renderingMode, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, ImageBufferPixelFormat pixelFormat, ImageBufferCreationContext& creationContext, RenderingResourceIdentifier imageBufferIdentifier)
 {
     RefPtr<ImageBuffer> imageBuffer;
 
+    switch (renderingMode) {
+    case RenderingMode::Accelerated:
 #if HAVE(IOSURFACE)
-    if (renderingMode == RenderingMode::Accelerated) {
         if (isSmallLayerBacking({ logicalSize, resolutionScale, colorSpace, pixelFormat, purpose }))
             imageBuffer = ImageBuffer::create<ImageBufferShareableMappedIOSurfaceBitmapBackend, ImageBufferType>(logicalSize, resolutionScale, colorSpace, pixelFormat, purpose, creationContext, imageBufferIdentifier);
         if (!imageBuffer)
             imageBuffer = ImageBuffer::create<ImageBufferShareableMappedIOSurfaceBackend, ImageBufferType>(logicalSize, resolutionScale, colorSpace, pixelFormat, purpose, creationContext, imageBufferIdentifier);
-    }
 #endif
-    if (!imageBuffer)
-        imageBuffer = ImageBuffer::create<ImageBufferShareableBitmapBackend, ImageBufferType>(logicalSize, resolutionScale, colorSpace, pixelFormat, purpose, creationContext, imageBufferIdentifier);
+        [[fallthrough]];
+
+    case RenderingMode::Unaccelerated:
+        if (!imageBuffer)
+            imageBuffer = ImageBuffer::create<ImageBufferShareableBitmapBackend, ImageBufferType>(logicalSize, resolutionScale, colorSpace, pixelFormat, purpose, creationContext, imageBufferIdentifier);
+        break;
+
+    case RenderingMode::PDFDocument:
+#if USE(CG)
+        imageBuffer = ImageBuffer::create<ImageBufferCGPDFDocumentBackend, ImageBufferType>(logicalSize, resolutionScale, colorSpace, pixelFormat, purpose, creationContext, imageBufferIdentifier);
+#endif
+        break;
+
+    case RenderingMode::DisplayList:
+        if (auto backend = ImageBufferDisplayListBackend::create(logicalSize, resolutionScale, colorSpace, pixelFormat, purpose, ControlFactory::create()))
+            imageBuffer = ImageBuffer::create<ImageBufferDisplayListBackend, ImageBufferType>(logicalSize, creationContext, WTFMove(backend), imageBufferIdentifier);
+        break;
+    }
 
     return imageBuffer;
 }
@@ -289,7 +333,7 @@ RefPtr<ImageBuffer> RemoteRenderingBackend::allocateImageBuffer(const FloatSize&
     RefPtr<ImageBuffer> imageBuffer;
 
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-    if (m_gpuConnectionToWebProcess->isDynamicContentScalingEnabled() && (purpose == RenderingPurpose::LayerBacking || purpose == RenderingPurpose::DOM))
+    if (m_gpuConnectionToWebProcess->isDynamicContentScalingEnabled() && creationContext.dynamicContentScalingResourceCache)
         imageBuffer = allocateImageBufferInternal<DynamicContentScalingBifurcatedImageBuffer>(logicalSize, renderingMode, purpose, resolutionScale, colorSpace, pixelFormat, creationContext, imageBufferIdentifier);
 #endif
 
@@ -355,6 +399,13 @@ void RemoteRenderingBackend::cacheNativeImage(ShareableBitmap::Handle&& handle, 
     m_remoteResourceCache.cacheNativeImage(image.releaseNonNull());
 }
 
+void RemoteRenderingBackend::releaseNativeImage(RenderingResourceIdentifier identifier)
+{
+    assertIsCurrent(workQueue());
+    bool success = m_remoteResourceCache.releaseNativeImage(identifier);
+    MESSAGE_CHECK(success, "NativeImage released before being cached.");
+}
+
 void RemoteRenderingBackend::cacheFont(const Font::Attributes& fontAttributes, FontPlatformDataAttributes platformData, std::optional<RenderingResourceIdentifier> fontCustomPlatformDataIdentifier)
 {
     ASSERT(!RunLoop::isMain());
@@ -372,6 +423,13 @@ void RemoteRenderingBackend::cacheFont(const Font::Attributes& fontAttributes, F
     m_remoteResourceCache.cacheFont(WTFMove(font));
 }
 
+void RemoteRenderingBackend::releaseFont(WebCore::RenderingResourceIdentifier identifier)
+{
+    assertIsCurrent(workQueue());
+    bool success = m_remoteResourceCache.releaseFont(identifier);
+    MESSAGE_CHECK(success, "Font released before being cached.");
+}
+
 void RemoteRenderingBackend::cacheFontCustomPlatformData(WebCore::FontCustomPlatformSerializedData&& fontCustomPlatformSerializedData)
 {
     ASSERT(!RunLoop::isMain());
@@ -382,10 +440,24 @@ void RemoteRenderingBackend::cacheFontCustomPlatformData(WebCore::FontCustomPlat
     m_remoteResourceCache.cacheFontCustomPlatformData(WTFMove(customPlatformData.value()));
 }
 
+void RemoteRenderingBackend::releaseFontCustomPlatformData(WebCore::RenderingResourceIdentifier identifier)
+{
+    assertIsCurrent(workQueue());
+    bool success = m_remoteResourceCache.releaseFontCustomPlatformData(identifier);
+    MESSAGE_CHECK(success, "FontCustomPlatformData released before being cached.");
+}
+
 void RemoteRenderingBackend::cacheDecomposedGlyphs(Ref<DecomposedGlyphs>&& decomposedGlyphs)
 {
     ASSERT(!RunLoop::isMain());
     m_remoteResourceCache.cacheDecomposedGlyphs(WTFMove(decomposedGlyphs));
+}
+
+void RemoteRenderingBackend::releaseDecomposedGlyphs(RenderingResourceIdentifier identifier)
+{
+    assertIsCurrent(workQueue());
+    bool success = m_remoteResourceCache.releaseDecomposedGlyphs(identifier);
+    MESSAGE_CHECK(success, "DecomposedGlyphs released before being cached.");
 }
 
 void RemoteRenderingBackend::cacheGradient(Ref<Gradient>&& gradient)
@@ -397,6 +469,14 @@ void RemoteRenderingBackend::cacheGradient(Ref<Gradient>&& gradient)
         LOG_WITH_STREAM(DisplayLists, stream << "Received a Gradient without a valid resource identifier");
 }
 
+void RemoteRenderingBackend::releaseGradient(RenderingResourceIdentifier identifier)
+{
+    assertIsCurrent(workQueue());
+    bool success = m_remoteResourceCache.releaseGradient(identifier);
+    MESSAGE_CHECK(success, "Gradient released before being cached.");
+}
+
+
 void RemoteRenderingBackend::cacheFilter(Ref<Filter>&& filter)
 {
     ASSERT(!RunLoop::isMain());
@@ -405,6 +485,14 @@ void RemoteRenderingBackend::cacheFilter(Ref<Filter>&& filter)
     else
         LOG_WITH_STREAM(DisplayLists, stream << "Received a Filter without a valid resource identifier");
 }
+
+void RemoteRenderingBackend::releaseFilter(RenderingResourceIdentifier identifier)
+{
+    assertIsCurrent(workQueue());
+    bool success = m_remoteResourceCache.releaseFilter(identifier);
+    MESSAGE_CHECK(success, "Filter released before being cached.");
+}
+
 
 void RemoteRenderingBackend::releaseAllDrawingResources()
 {
@@ -417,13 +505,6 @@ void RemoteRenderingBackend::releaseAllImageResources()
 {
     ASSERT(!RunLoop::isMain());
     m_remoteResourceCache.releaseAllImageResources();
-}
-
-void RemoteRenderingBackend::releaseRenderingResource(RenderingResourceIdentifier renderingResourceIdentifier)
-{
-    assertIsCurrent(workQueue());
-    bool success = m_remoteResourceCache.releaseRenderingResource(renderingResourceIdentifier);
-    MESSAGE_CHECK(success, "Resource is being released before being cached.");
 }
 
 #if USE(GRAPHICS_LAYER_WC)

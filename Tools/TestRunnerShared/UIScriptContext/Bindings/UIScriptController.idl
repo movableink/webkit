@@ -93,6 +93,7 @@ interface UIScriptController {
 
     readonly attribute unsigned long keyboardWillHideCount;
     readonly attribute boolean keyboardIsAutomaticallyShifted;
+    readonly attribute unsigned long keyboardUpdateForChangedSelectionCount;
 
     undefined rawKeyDown(DOMString key);
     undefined rawKeyUp(DOMString key);
@@ -298,6 +299,9 @@ interface UIScriptController {
 
     undefined setScrollViewKeyboardAvoidanceEnabled(boolean enabled);
 
+    undefined setAlwaysBounceVertical(boolean value);
+    undefined setAlwaysBounceHorizontal(boolean value);
+
     undefined beginInteractiveObscuredInsetsChange();
     undefined endInteractiveObscuredInsetsChange();
     undefined setObscuredInsets(double top, double right, double bottom, double left);
@@ -396,6 +400,10 @@ interface UIScriptController {
 
     undefined setWebViewEditable(boolean editable);
 
+    readonly attribute object fixedContainerEdgeColors;
+
+    undefined cookiesForDomain(DOMString domain, object callback);
+
     // Only affects macOS.
     undefined setWebViewAllowsMagnification(boolean allowsMagnification);
 
@@ -423,4 +431,6 @@ interface UIScriptController {
     undefined requestRenderedTextForFrontmostTarget(long x, long y, object callback);
     undefined adjustVisibilityForFrontmostTarget(long x, long y, object callback);
     undefined resetVisibilityAdjustments(object callback);
+
+    DOMString frontmostViewAtPoint(long x, long y);
 };

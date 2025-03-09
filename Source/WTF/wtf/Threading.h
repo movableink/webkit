@@ -30,13 +30,10 @@
 
 #pragma once
 
-#include <wtf/Compiler.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 #include <mutex>
 #include <stdint.h>
 #include <wtf/Atomics.h>
+#include <wtf/Compiler.h>
 #include <wtf/Expected.h>
 #include <wtf/FastTLS.h>
 #include <wtf/Function.h>
@@ -55,8 +52,6 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include <wtf/Vector.h>
 #include <wtf/WordLock.h>
 #include <wtf/text/AtomStringTable.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #if USE(PTHREADS) && !OS(DARWIN)
 #include <signal.h>
@@ -146,10 +141,10 @@ public:
     WTF_EXPORT_PRIVATE static Ref<Thread> create(ASCIILiteral threadName, Function<void()>&&, ThreadType = ThreadType::Unknown, QOS = QOS::UserInitiated, SchedulingPolicy = SchedulingPolicy::Other);
 
     // Returns Thread object.
-    static Thread& current();
+    static Thread& currentSingleton();
 
     // Set of all WTF::Thread created threads.
-    WTF_EXPORT_PRIVATE static HashSet<Thread*>& allThreads() WTF_REQUIRES_LOCK(allThreadsLock());
+    WTF_EXPORT_PRIVATE static UncheckedKeyHashSet<Thread*>& allThreads() WTF_REQUIRES_LOCK(allThreadsLock());
     WTF_EXPORT_PRIVATE static Lock& allThreadsLock() WTF_RETURNS_LOCK(s_allThreadsLock);
 
     WTF_EXPORT_PRIVATE unsigned numberOfThreadGroups();
@@ -159,7 +154,7 @@ public:
 #if OS(WINDOWS)
     // Returns ThreadIdentifier directly. It is useful if the user only cares about identity
     // of threads. At that time, users should know that holding this ThreadIdentifier does not ensure
-    // that the thread information is alive. While Thread::current() is not safe if it is called
+    // that the thread information is alive. While Thread::currentSingleton() is not safe if it is called
     // from the destructor of the other TLS data, currentID() always returns meaningful thread ID.
     WTF_EXPORT_PRIVATE static ThreadIdentifier currentID();
 
@@ -432,10 +427,10 @@ inline Thread* Thread::currentMayBeNull()
 }
 #endif
 
-inline Thread& Thread::current()
+inline Thread& Thread::currentSingleton()
 {
     // WRT WebCore:
-    //    Thread::current() is used on main thread before it could possibly be used
+    //    Thread::currentSingleton() is used on main thread before it could possibly be used
     //    on secondary ones, so there is no need for synchronization here.
     // WRT JavaScriptCore:
     //    Thread::initializeTLSKey() is initially called from initialize(), ensuring
@@ -444,7 +439,7 @@ inline Thread& Thread::current()
     if (UNLIKELY(Thread::s_key == InvalidThreadSpecificKey))
         WTF::initialize();
 #endif
-    if (auto* thread = currentMayBeNull(); LIKELY(thread))
+    if (SUPPRESS_UNCOUNTED_LOCAL auto* thread = currentMayBeNull(); LIKELY(thread))
         return *thread;
     return initializeCurrentTLS();
 }

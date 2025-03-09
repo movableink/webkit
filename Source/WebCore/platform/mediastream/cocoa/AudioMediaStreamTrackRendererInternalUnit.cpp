@@ -28,12 +28,14 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "AudioMediaStreamTrackRenderer.h"
 #include "AudioSampleDataSource.h"
 #include "AudioSession.h"
 #include "CAAudioStreamDescription.h"
 #include "CoreAudioCaptureDevice.h"
 #include "CoreAudioCaptureDeviceManager.h"
 #include "Logging.h"
+#include "SpanCoreAudio.h"
 #include <Accelerate/Accelerate.h>
 #include <pal/spi/cocoa/AudioToolboxSPI.h>
 #include <wtf/Lock.h>
@@ -42,8 +44,6 @@
 
 #include <pal/cf/AudioToolboxSoftLink.h>
 #include <pal/cf/CoreMediaSoftLink.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -244,18 +244,18 @@ void LocalAudioMediaStreamTrackRendererInternalUnit::createAudioUnitIfNeeded()
     m_remoteIOUnit = remoteIOUnit;
 }
 
-static void clipAudioBuffer(float* vector, size_t size)
+static void clipAudioBuffer(std::span<float> span)
 {
     float minimum = -1;
     float maximum = 1;
-    vDSP_vclip(vector, 1, &minimum, &maximum, vector, 1, size);
+    vDSP_vclip(span.data(), 1, &minimum, &maximum, span.data(), 1, span.size());
 }
 
-static void clipAudioBuffer(double* vector, size_t size)
+static void clipAudioBuffer(std::span<double> span)
 {
     double minimum = -1;
     double maximum = 1;
-    vDSP_vclipD(vector, 1, &minimum, &maximum, vector, 1, size);
+    vDSP_vclipD(span.data(), 1, &minimum, &maximum, span.data(), 1, span.size());
 }
 
 static void clipAudioBufferList(AudioBufferList& list, AudioStreamDescription::PCMFormat format)
@@ -266,12 +266,12 @@ static void clipAudioBufferList(AudioBufferList& list, AudioStreamDescription::P
     case AudioStreamDescription::Int32:
         break;
     case AudioStreamDescription::Float32:
-        for (size_t index = 0; index < list.mNumberBuffers ; ++index)
-            clipAudioBuffer(static_cast<float*>(list.mBuffers[index].mData), list.mBuffers[index].mDataByteSize / sizeof(float));
+        for (auto& buffer : span(list))
+            clipAudioBuffer(mutableSpan<float>(buffer));
         break;
     case AudioStreamDescription::Float64:
-        for (size_t index = 0; index < list.mNumberBuffers ; ++index)
-            clipAudioBuffer(static_cast<double*>(list.mBuffers[index].mData), list.mBuffers[index].mDataByteSize / sizeof(double));
+        for (auto& buffer : span(list))
+            clipAudioBuffer(mutableSpan<double>(buffer));
         break;
     case AudioStreamDescription::Uint8:
     case AudioStreamDescription::Int24:
@@ -318,7 +318,5 @@ Ref<AudioMediaStreamTrackRendererInternalUnit> AudioMediaStreamTrackRendererInte
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(MEDIA_STREAM)

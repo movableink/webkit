@@ -56,7 +56,7 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerRunLoop);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerDedicatedRunLoop);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(WorkerDedicatedRunLoop, Task);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerDedicatedRunLoop::Task);
 
 class WorkerSharedTimer final : public SharedTimer {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(WorkerSharedTimer);
@@ -181,7 +181,7 @@ bool WorkerDedicatedRunLoop::runInMode(WorkerOrWorkletGlobalScope* context, cons
 MessageQueueWaitResult WorkerDedicatedRunLoop::runInMode(WorkerOrWorkletGlobalScope* context, const ModePredicate& predicate)
 {
     ASSERT(context);
-    ASSERT(context->workerOrWorkletThread()->thread() == &Thread::current());
+    ASSERT(context->workerOrWorkletThread()->thread() == &Thread::currentSingleton());
 
     AutodrainedPool pool;
 
@@ -258,7 +258,7 @@ MessageQueueWaitResult WorkerDedicatedRunLoop::runInMode(WorkerOrWorkletGlobalSc
 void WorkerDedicatedRunLoop::runCleanupTasks(WorkerOrWorkletGlobalScope* context)
 {
     ASSERT(context);
-    ASSERT(context->workerOrWorkletThread()->thread() == &Thread::current());
+    ASSERT(context->workerOrWorkletThread()->thread() == &Thread::currentSingleton());
     ASSERT(m_messageQueue.killed());
 
     while (true) {
@@ -333,7 +333,7 @@ void WorkerMainRunLoop::postTaskAndTerminate(ScriptExecutionContext::Task&& task
     if (m_terminated)
         return;
 
-    RunLoop::main().dispatch([weakThis = WeakPtr { *this }, task = WTFMove(task)]() mutable {
+    RunLoop::protectedMain()->dispatch([weakThis = WeakPtr { *this }, task = WTFMove(task)]() mutable {
         if (!weakThis || !weakThis->m_workerOrWorkletGlobalScope || weakThis->m_terminated)
             return;
 
@@ -347,7 +347,7 @@ void WorkerMainRunLoop::postTaskForMode(ScriptExecutionContext::Task&& task, con
     if (m_terminated)
         return;
 
-    RunLoop::main().dispatch([weakThis = WeakPtr { *this }, task = WTFMove(task)]() mutable {
+    RunLoop::protectedMain()->dispatch([weakThis = WeakPtr { *this }, task = WTFMove(task)]() mutable {
         if (!weakThis || !weakThis->m_workerOrWorkletGlobalScope || weakThis->m_terminated)
             return;
 

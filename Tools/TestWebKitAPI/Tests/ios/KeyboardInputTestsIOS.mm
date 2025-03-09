@@ -28,6 +28,7 @@
 #if PLATFORM(IOS_FAMILY)
 
 #import "CGImagePixelReader.h"
+#import "ClassMethodSwizzler.h"
 #import "InstanceMethodSwizzler.h"
 #import "PlatformUtilities.h"
 #import "TestCocoa.h"
@@ -38,6 +39,7 @@
 #import "UIKitSPIForTesting.h"
 #import "UserInterfaceSwizzler.h"
 #import "WKWebViewConfigurationExtras.h"
+#import <WebCore/Color.h>
 #import <WebKit/WKProcessPoolPrivate.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
@@ -755,8 +757,8 @@ TEST(KeyboardInputTests, TestWebViewAdditionalContextForStrongPasswordAssistance
         return expected;
     }];
 
-    [inputDelegate setFocusRequiresStrongPasswordAssistanceHandler:[&] (WKWebView *, id <_WKFocusedElementInfo>) {
-        return YES;
+    [inputDelegate setFocusRequiresStrongPasswordAssistanceHandler:[&] (WKWebView *, id<_WKFocusedElementInfo>, void(^completionHandler)(BOOL)) {
+        completionHandler(YES);
     }];
 
     [webView _setInputDelegate:inputDelegate.get()];
@@ -778,8 +780,8 @@ TEST(KeyboardInputTests, TestWebViewAdditionalContextForNonAutofillCredentialTyp
         return _WKFocusStartsInputSessionPolicyAllow;
     }];
 
-    [inputDelegate setFocusRequiresStrongPasswordAssistanceHandler:[&] (WKWebView *, id<_WKFocusedElementInfo>) {
-        return YES;
+    [inputDelegate setFocusRequiresStrongPasswordAssistanceHandler:^(WKWebView *, id<_WKFocusedElementInfo>, void(^completionHandler)(BOOL)) {
+        completionHandler(YES);
     }];
 
     [webView _setInputDelegate:inputDelegate.get()];
@@ -793,17 +795,49 @@ TEST(KeyboardInputTests, TestWebViewAdditionalContextForNonAutofillCredentialTyp
     EXPECT_WK_STREQ("webauthn", actual[@"_credential_type"]);
 }
 
+TEST(KeyboardInputTests, AsyncFocusRequiresStrongPasswordAssistanceAfterBlurNoStartSession)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
+    auto inputDelegate = adoptNS([[TestInputDelegate alloc] init]);
+
+    [inputDelegate setFocusStartsInputSessionPolicyHandler:[&] (WKWebView *, id<_WKFocusedElementInfo>) -> _WKFocusStartsInputSessionPolicy {
+        return _WKFocusStartsInputSessionPolicyAllow;
+    }];
+
+    __block bool calledCompletionHandler { false };
+    [inputDelegate setFocusRequiresStrongPasswordAssistanceHandler:^(WKWebView *webView, id<_WKFocusedElementInfo>, void(^completionHandler)(BOOL)) {
+        [webView evaluateJavaScript:@"document.getElementById('input').blur()" completionHandler:^(id, NSError *) {
+            [webView evaluateJavaScript:@"let didAnotherRountTrip = true" completionHandler:^(id, NSError *) {
+                completionHandler(YES);
+                calledCompletionHandler = true;
+            }];
+        }];
+    }];
+
+    [inputDelegate setDidStartInputSessionHandler:^(WKWebView *, id<_WKFormInputSession>) {
+        EXPECT_FALSE(true);
+    }];
+
+    [webView _setInputDelegate:inputDelegate.get()];
+
+    [webView synchronouslyLoadHTMLString:@"<input type='text' id='input' autocomplete='username webauthn'>"];
+    [webView evaluateJavaScript:@"document.getElementById('input').focus()" completionHandler:nil];
+
+    Util::run(&calledCompletionHandler);
+    Util::runFor(0.1_s);
+}
+
 TEST(KeyboardInputTests, TestWebViewAccessoryDoneDuringStrongPasswordAssistance)
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
     auto inputDelegate = adoptNS([[TestInputDelegate alloc] init]);
 
-    [inputDelegate setFocusStartsInputSessionPolicyHandler:[&] (WKWebView *, id <_WKFocusedElementInfo>) -> _WKFocusStartsInputSessionPolicy {
+    [inputDelegate setFocusStartsInputSessionPolicyHandler:[&] (WKWebView *, id<_WKFocusedElementInfo>) -> _WKFocusStartsInputSessionPolicy {
         return _WKFocusStartsInputSessionPolicyAllow;
     }];
 
-    [inputDelegate setFocusRequiresStrongPasswordAssistanceHandler:[&] (WKWebView *, id <_WKFocusedElementInfo>) {
-        return YES;
+    [inputDelegate setFocusRequiresStrongPasswordAssistanceHandler:[&] (WKWebView *, id<_WKFocusedElementInfo>, void(^completionHandler)(BOOL)) {
+        completionHandler(YES);
     }];
 
     [webView _setInputDelegate:inputDelegate.get()];
@@ -968,18 +1002,14 @@ TEST(KeyboardInputTests, DoNotCrashWhenFocusingSelectWithoutViewSnapshot)
     [webView waitForNextPresentationUpdate];
 }
 
-static BOOL overrideHardwareKeyboardAttached(id, SEL)
-{
-    return NO;
-}
-
 TEST(KeyboardInputTests, EditableWebViewRequiresKeyboardWhenFirstResponder)
 {
-    InstanceMethodSwizzler swizzler {
-        UIKeyboardImpl.class,
-        @selector(hardwareKeyboardAttached),
-        reinterpret_cast<IMP>(overrideHardwareKeyboardAttached)
-    };
+    auto returnNo = imp_implementationWithBlock(^{
+        return NO;
+    });
+
+    InstanceMethodSwizzler hardwareKeyboardAttachedSwizzler { UIKeyboardImpl.class, @selector(hardwareKeyboardAttached), returnNo };
+    ClassMethodSwizzler hardwareKeyboardModeSwizzler { UIKeyboard.class, @selector(isInHardwareKeyboardMode), returnNo };
 
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
     auto delegate = adoptNS([TestInputDelegate new]);

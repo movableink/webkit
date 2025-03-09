@@ -226,11 +226,11 @@ inline double percentAvailableMemoryInUse()
 BEXPORT void setScavengerThreadQOSClass(qos_class_t overrideClass);
 #endif
 
-BEXPORT void enableMiniMode();
+BEXPORT void enableMiniMode(bool forceMiniMode = false);
 
 // Used for debugging only.
 BEXPORT void disableScavenger();
-BEXPORT void forceEnablePGM();
+BEXPORT void forceEnablePGM(uint16_t guardMallocRate);
 
 #if BENABLE(MALLOC_SIZE)
 inline size_t mallocSize(const void* object)

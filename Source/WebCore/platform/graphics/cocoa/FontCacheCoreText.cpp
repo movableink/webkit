@@ -289,7 +289,7 @@ public:
     static Lock lock;
 
 private:
-    HashSet<String, ASCIICaseInsensitiveHash> m_families;
+    UncheckedKeyHashSet<String, ASCIICaseInsensitiveHash> m_families;
 };
 
 Lock FontCacheAllowlist::lock;
@@ -424,7 +424,7 @@ FontSelectionCapabilities capabilitiesForFontDescriptor(CTFontDescriptorRef font
     }
 
     if (!variationCapabilities.width) {
-        auto value = getCSSAttribute(fontDescriptor, kCTFontCSSWidthAttribute, static_cast<float>(normalStretchValue()));
+        auto value = getCSSAttribute(fontDescriptor, kCTFontCSSWidthAttribute, static_cast<float>(normalWidthValue()));
         variationCapabilities.width = {{ value, value }};
     }
 
@@ -793,7 +793,7 @@ RefPtr<Font> FontCache::systemFallbackForCharacterCluster(const FontDescription&
     return fontForPlatformData(alternateFont);
 }
 
-std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String& familyName)
+ASCIILiteral FontCache::platformAlternateFamilyName(const String& familyName)
 {
     static const UChar heitiString[] = { 0x9ed1, 0x4f53 };
     static const UChar songtiString[] = { 0x5b8b, 0x4f53 };
@@ -839,7 +839,7 @@ std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String&
         break;
     }
 
-    return std::nullopt;
+    return { };
 }
 
 void addAttributesForInstalledFonts(CFMutableDictionaryRef attributes, AllowUserInstalledFonts allowUserInstalledFonts)

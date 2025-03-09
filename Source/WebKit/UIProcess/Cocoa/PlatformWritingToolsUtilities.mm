@@ -130,6 +130,10 @@ WebCore::WritingTools::Action convertToWebAction(WTAction action)
         return WebCore::WritingTools::Action::ShowRewritten;
     case WTActionCompositionRestart:
         return WebCore::WritingTools::Action::Restart;
+
+    // FIXME (rdar://141822568): Handle all Writing Tools actions.
+    default:
+        return WebCore::WritingTools::Action::Restart;
     }
 }
 

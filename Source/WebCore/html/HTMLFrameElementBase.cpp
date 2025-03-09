@@ -100,17 +100,17 @@ void HTMLFrameElementBase::openURL(LockHistory lockHistory, LockBackForwardList 
         frameName = getIdAttribute();
 
     auto completeURL = document().completeURL(m_frameURL);
-    auto finishOpeningURL = [this, weakThis = WeakPtr { *this }, frameName, lockHistory, lockBackForwardList, parentFrame = WTFMove(parentFrame), completeURL] {
-        if (!weakThis)
+    auto finishOpeningURL = [weakThis = WeakPtr { *this }, frameName, lockHistory, lockBackForwardList, parentFrame = WTFMove(parentFrame), completeURL] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
-        Ref protectedThis { *this };
-        if (shouldLoadFrameLazily()) {
-            parentFrame->loader().subframeLoader().createFrameIfNecessary(protectedThis.get(), frameName);
+        if (protectedThis->shouldLoadFrameLazily()) {
+            parentFrame->loader().subframeLoader().createFrameIfNecessary(*protectedThis, frameName);
             return;
         }
 
-        document().willLoadFrameElement(completeURL);
-        parentFrame->loader().subframeLoader().requestFrame(*this, m_frameURL, frameName, lockHistory, lockBackForwardList);
+        protectedThis->document().willLoadFrameElement(completeURL);
+        parentFrame->loader().subframeLoader().requestFrame(*protectedThis, protectedThis->m_frameURL, frameName, lockHistory, lockBackForwardList);
     };
 
     document().quirks().triggerOptionalStorageAccessIframeQuirk(completeURL, WTFMove(finishOpeningURL));
@@ -123,7 +123,7 @@ void HTMLFrameElementBase::attributeChanged(const QualifiedName& name, const Ato
         if (newValue.isNull())
             setLocation(attributeWithoutSynchronization(srcAttr).string().trim(isASCIIWhitespace));
         else
-            setLocation("about:srcdoc"_s);
+            setLocation(aboutSrcDocURL().string());
     } else if (name == srcAttr && !hasAttributeWithoutSynchronization(srcdocAttr))
         setLocation(newValue.string().trim(isASCIIWhitespace));
     else if (name == scrollingAttr && contentFrame())
@@ -155,14 +155,14 @@ void HTMLFrameElementBase::didFinishInsertingNode()
     if (!renderer())
         invalidateStyleAndRenderersForSubtree();
 
-    auto work = [this, weakThis = WeakPtr { *this }] {
-        if (!weakThis)
+    auto work = [weakThis = WeakPtr { *this }] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
-        Ref<HTMLFrameElementBase> protectedThis { *this };
-        m_openingURLAfterInserting = true;
-        if (isConnected())
-            openURL();
-        m_openingURLAfterInserting = false;
+        protectedThis->m_openingURLAfterInserting = true;
+        if (protectedThis->isConnected())
+            protectedThis->openURL();
+        protectedThis->m_openingURLAfterInserting = false;
     };
     if (!m_openingURLAfterInserting)
         work();
@@ -210,7 +210,7 @@ bool HTMLFrameElementBase::supportsFocus() const
 void HTMLFrameElementBase::setFocus(bool received, FocusVisibility visibility)
 {
     HTMLFrameOwnerElement::setFocus(received, visibility);
-    if (Page* page = document().page()) {
+    if (RefPtr page = document().page()) {
         CheckedRef focusController { page->focusController() };
         if (received)
             focusController->setFocusedFrame(contentFrame());

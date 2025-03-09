@@ -40,6 +40,7 @@ media/modern-media-controls/media-documents/media-document-video-ipad-sizing.htm
 
 webkit.org/b/194221 fast/forms/datalist/datalist-textinput-suggestions-order.html [ Failure ]
 webkit.org/b/194221 fast/forms/datalist/datalist-show-hide.html [ Skip ]
+webkit.org/b/194221 fast/forms/datalist/datalist-hide-using-escape-key.html [ Skip ]
 
 webkit.org/b/193970 compositing/ios/overflow-scroll-update-overlap.html [ ImageOnlyFailure ]
 
@@ -92,8 +93,6 @@ media/media-source/media-managedmse-resume-after-stall.html [ Pass ]
 webkit.org/b/228622 [ Debug ] accessibility/ios-simulator/scroll-in-overflow-div.html [ Crash ]
 
 webkit.org/b/228663 fast/canvas/canvas-color-space-display-p3.html [ ImageOnlyFailure ]
-
-webkit.org/b/231611 [ Debug ] imported/w3c/web-platform-tests/webrtc-encoded-transform/sframe-transform-in-worker.https.html [ Pass Failure ]
 
 webkit.org/b/231616 [ Debug ] compositing/layer-creation/scale-rotation-transition-overlap.html [ Pass Failure Timeout ]
 

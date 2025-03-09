@@ -1,3 +1,4 @@
+<!-- webkit-test-runner [ enableMetalDebugDevice=true ] -->
 <script>
 async function run() {
     let adapter = await navigator.gpu.requestAdapter();
@@ -12,7 +13,13 @@ async function run() {
         depthStencilAttachment: { view: textureView, depthClearValue: 0.6744484791866846, depthLoadOp: 'clear', depthStoreOp: 'store', stencilClearValue: 40696, stencilReadOnly: true },
     });
     renderPassEncoder.end()
+    await device.queue.onSubmittedWorkDone();
+    console.log('Pass')
+    globalThis.testRunner?.notifyDone();
 }
+globalThis.testRunner?.dumpAsText();
 globalThis.testRunner?.waitUntilDone();
-run().finally(() => globalThis.testRunner?.notifyDone());
+
+run();
 </script>
+

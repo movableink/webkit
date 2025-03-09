@@ -97,10 +97,6 @@ struct UnresolvedFont {
 // https://drafts.csswg.org/css-fonts-4/#font-prop
 std::optional<UnresolvedFont> parseUnresolvedFont(const String&, const CSSParserContext&);
 
-// MARK: 'font-weight'
-// https://drafts.csswg.org/css-fonts-4/#font-weight-prop
-RefPtr<CSSValue> consumeFontWeight(CSSParserTokenRange&, const CSSParserContext&);
-
 // MARK: 'font-style'
 // https://drafts.csswg.org/css-fonts-4/#font-style-prop
 RefPtr<CSSValue> consumeFontStyle(CSSParserTokenRange&, const CSSParserContext&);
@@ -108,6 +104,9 @@ RefPtr<CSSValue> consumeFontStyle(CSSParserTokenRange&, const CSSParserContext&)
 // MARK: 'font-family'
 // https://drafts.csswg.org/css-fonts-4/#font-family-prop
 RefPtr<CSSValue> consumeFontFamily(CSSParserTokenRange&, const CSSParserContext&);
+// Sub-production of 'font-family': <family-name>
+// https://drafts.csswg.org/css-fonts-4/#family-name-syntax
+RefPtr<CSSValue> consumeFamilyName(CSSParserTokenRange&, const CSSParserContext&);
 // Sub-production of 'font-family': <generic-family>
 // https://drafts.csswg.org/css-fonts-4/#generic-family-name-syntax
 const AtomString& genericFontFamily(CSSValueID);
@@ -185,8 +184,8 @@ RefPtr<CSSValue> consumeVariationTagValue(CSSParserTokenRange&, const CSSParserC
 
 // MARK: @font-face 'font-stretch'
 // https://drafts.csswg.org/css-fonts-4/#font-stretch-desc
-RefPtr<CSSValue> parseFontFaceFontStretch(const String&, ScriptExecutionContext&);
-RefPtr<CSSValue> consumeFontFaceFontStretch(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> parseFontFaceFontWidth(const String&, ScriptExecutionContext&);
+RefPtr<CSSValue> consumeFontFaceFontWidth(CSSParserTokenRange&, const CSSParserContext&);
 
 // MARK: @font-face 'font-weight'
 // https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-weight
@@ -194,9 +193,6 @@ RefPtr<CSSValue> parseFontFaceFontWeight(const String&, ScriptExecutionContext&)
 RefPtr<CSSValue> consumeFontFaceFontWeight(CSSParserTokenRange&, const CSSParserContext&);
 
 // MARK: - @font-palette-values descriptor consumers:
-
-// MARK: @font-palette-values 'font-family'
-RefPtr<CSSValue> consumeFontPaletteValuesFontFamily(CSSParserTokenRange&, const CSSParserContext&);
 
 // MARK: @font-palette-values 'override-colors'
 // https://drafts.csswg.org/css-fonts-4/#descdef-font-palette-values-override-colors

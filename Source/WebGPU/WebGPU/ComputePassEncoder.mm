@@ -66,6 +66,7 @@ ComputePassEncoder::ComputePassEncoder(CommandEncoder& parentEncoder, Device& de
     , m_lastErrorString(errorString)
 {
     protectedParentEncoder()->lock(true);
+    m_parentEncoder->setLastError(errorString);
 }
 
 ComputePassEncoder::~ComputePassEncoder()
@@ -139,12 +140,12 @@ static bool addResourceToActiveResources(const TextureView& texture, OptionSet<B
     return addResourceToActiveResources(&texture.apiParentTexture(), texture.parentTexture(), resourceUsage, usagesForResource, bindGroup, texture.baseMipLevel(), texture.baseArrayLayer(), WGPUTextureAspect_DepthOnly) && addResourceToActiveResources(&texture.apiParentTexture(), texture.parentTexture(), resourceUsage, usagesForResource, bindGroup, texture.baseMipLevel(), texture.baseArrayLayer(), WGPUTextureAspect_StencilOnly);
 }
 
-static bool addResourceToActiveResources(const BindGroupEntryUsageData::Resource& resource, id<MTLResource> mtlResource, OptionSet<BindGroupEntryUsage> resourceUsage, BindGroupId bindGroup, EntryMapContainer& usagesForResource)
+static bool addResourceToActiveResources(const BindGroupEntryUsageData::Resource& resource, id<MTLResource> mtlResource, OptionSet<BindGroupEntryUsage> resourceUsage, BindGroupId bindGroup, EntryMapContainer& usagesForResource, CommandEncoder& parentEncoder)
 {
     return WTF::switchOn(resource, [&](const RefPtr<Buffer>& buffer) {
         if (buffer.get()) {
             if (resourceUsage.contains(BindGroupEntryUsage::Storage))
-                buffer->indirectBufferInvalidated();
+                buffer->indirectBufferInvalidated(parentEncoder);
             return addResourceToActiveResources(buffer.get(), buffer->buffer(), resourceUsage, usagesForResource, bindGroup);
         }
         return true;
@@ -189,7 +190,9 @@ void ComputePassEncoder::executePreDispatchCommands(const Buffer* indirectBuffer
             return;
         }
 
-        group->rebindSamplersIfNeeded();
+        protectedParentEncoder()->addOnCommitHandler([group](CommandBuffer&) {
+            return group ? group->rebindSamplersIfNeeded() : true;
+        });
         const Vector<uint32_t>* dynamicOffsets = nullptr;
         if (auto it = m_bindGroupDynamicOffsets.find(bindGroupIndex); it != m_bindGroupDynamicOffsets.end())
             dynamicOffsets = &it->value;
@@ -220,7 +223,7 @@ void ComputePassEncoder::executePreDispatchCommands(const Buffer* indirectBuffer
                 if (!bindingAccess)
                     continue;
 
-                if (!addResourceToActiveResources(usageData.resource, mtlResource, usageData.usage, BindGroupId { bindGroupIndex }, usagesForResource)) {
+                if (!addResourceToActiveResources(usageData.resource, mtlResource, usageData.usage, BindGroupId { bindGroupIndex }, usagesForResource, protectedParentEncoder())) {
                     makeInvalid();
                     return;
                 }
@@ -244,9 +247,10 @@ void ComputePassEncoder::executePreDispatchCommands(const Buffer* indirectBuffer
         }
     }
 
-    [computeCommandEncoder() setBytes:&m_computeDynamicOffsets[0] length:m_computeDynamicOffsets.size() * sizeof(m_computeDynamicOffsets[0]) atIndex:m_device->maxBuffersForComputeStage()];
-
-    m_bindGroupDynamicOffsets.clear();
+    if (m_computeDynamicOffsets != m_priorComputeDynamicOffsets) {
+        [computeCommandEncoder() setBytes:&m_computeDynamicOffsets[0] length:m_computeDynamicOffsets.size() * sizeof(m_computeDynamicOffsets[0]) atIndex:m_device->maxBuffersForComputeStage()];
+        m_priorComputeDynamicOffsets = m_computeDynamicOffsets;
+    }
 }
 
 void ComputePassEncoder::dispatch(uint32_t x, uint32_t y, uint32_t z)
@@ -269,21 +273,21 @@ id<MTLBuffer> ComputePassEncoder::runPredispatchIndirectCallValidation(const Buf
 {
     static id<MTLFunction> function = nil;
     id<MTLDevice> mtlDevice = m_device->device();
-    if (!function) {
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [&] {
         auto dimensionMax = m_device->limits().maxComputeWorkgroupsPerDimension;
         MTLCompileOptions* options = [MTLCompileOptions new];
         ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         options.fastMathEnabled = YES;
         ALLOW_DEPRECATED_DECLARATIONS_END
         NSError *error = nil;
-        id<MTLLibrary> library = [mtlDevice newLibraryWithSource:[NSString stringWithFormat:@"[[kernel]] void cs(device const uint* indirectBuffer, device uint* dispatchCallBuffer, uint index [[thread_position_in_grid]]) { dispatchCallBuffer[index] = metal::select(indirectBuffer[index], 0u, indirectBuffer[index] > %u); }", dimensionMax] options:options error:&error];
+        id<MTLLibrary> library = [mtlDevice newLibraryWithSource:[NSString stringWithFormat:@"[[kernel]] void csDispatchClamp(device const uint* indirectBuffer, device uint* dispatchCallBuffer, uint index [[thread_position_in_grid]]) { dispatchCallBuffer[index] = metal::select(indirectBuffer[index], 0u, indirectBuffer[index] > %u); }", dimensionMax] options:options error:&error];
         if (error)
-            return nil;
+            WTFLogAlways("%@", error); // NOLINT
 
-        function = [library newFunctionWithName:@"cs"];
-        if (error)
-            return nil;
-    }
+        function = [library newFunctionWithName:@"csDispatchClamp"];
+    });
+    RELEASE_ASSERT(function);
 
     auto device = m_device;
     id<MTLComputePipelineState> computePipelineState = device->dispatchCallPipelineState(function);
@@ -482,6 +486,7 @@ void ComputePassEncoder::setPipeline(const ComputePipeline& pipeline)
 
     m_pipeline = &pipeline;
     m_computeDynamicOffsets.resize(m_pipeline->protectedPipelineLayout()->sizeOfComputeDynamicOffsets());
+    m_computeDynamicOffsets.fill(0);
 
     ASSERT(pipeline.computePipelineState());
     m_threadsPerThreadgroup = pipeline.threadsPerThreadgroup();

@@ -28,6 +28,7 @@
 #include "BitmapImageDescriptor.h"
 #include "ImageFrameWorkQueue.h"
 #include "ImageSource.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/Expected.h>
 #include <wtf/WeakPtr.h>
 
@@ -38,7 +39,9 @@ class ImageDecoder;
 class ImageFrameAnimator;
 class ImageObserver;
 
-class BitmapImageSource : public ImageSource {
+class BitmapImageSource final : public ImageSource, public CanMakeCheckedPtr<BitmapImageSource> {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(BitmapImageSource);
 public:
     static Ref<BitmapImageSource> create(BitmapImage&, AlphaOption, GammaAndColorProfileOption);
 
@@ -84,7 +87,7 @@ public:
     DecodingStatus frameDecodingStatusAtIndex(unsigned index) const final;
 
     // Testing support
-    const char* sourceUTF8() const;
+    CString sourceUTF8() const;
 
 private:
     BitmapImageSource(BitmapImage&, AlphaOption, GammaAndColorProfileOption);
@@ -157,6 +160,7 @@ private:
     ImageOrientation orientation() const final { return m_descriptor.orientation(); }
     DestinationColorSpace colorSpace() const final { return m_descriptor.colorSpace(); }
     std::optional<Color> singlePixelSolidColor() const final { return m_descriptor.singlePixelSolidColor(); }
+    Headroom headroom() const final { return m_descriptor.headroom(); }
 
     String uti() const final { return m_descriptor.uti(); }
     String filenameExtension() const final { return m_descriptor.filenameExtension(); }
@@ -175,7 +179,6 @@ private:
 
     // ImageFrame metadata
     ImageOrientation frameOrientationAtIndex(unsigned index) const final;
-    Headroom frameHeadroomAtIndex(unsigned index) const final;
 
     // BitmapImage metadata
     RefPtr<ImageObserver> imageObserver() const;
@@ -189,6 +192,8 @@ private:
     void setClearDecoderAfterAsyncFrameRequestForTesting(bool enabled) final { m_clearDecoderAfterAsyncFrameRequestForTesting = enabled; }
     void setAsyncDecodingEnabledForTesting(bool enabled) final { m_isAsyncDecodingEnabledForTesting = enabled; }
     bool isAsyncDecodingEnabledForTesting() const final { return m_isAsyncDecodingEnabledForTesting; }
+    void setHeadroomForTesting(Headroom headroom) final { m_headroomForTesting = headroom; }
+    std::optional<Headroom> headroomForTesting() const final { return m_headroomForTesting; }
 
     void dump(TextStream&) const final;
 
@@ -214,6 +219,7 @@ private:
     unsigned m_blankDrawCountForTesting { 0 };
     bool m_isAsyncDecodingEnabledForTesting { false };
     bool m_clearDecoderAfterAsyncFrameRequestForTesting { false };
+    std::optional<Headroom> m_headroomForTesting;
 };
 
 } // namespace WebCore

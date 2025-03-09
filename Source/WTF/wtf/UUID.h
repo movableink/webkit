@@ -75,13 +75,13 @@ public:
 
     explicit UUID(std::span<const uint8_t, 16> span)
     {
-        memcpy(&m_data, span.data(), 16);
+        memcpySpan(asMutableByteSpan(m_data), span);
     }
 
     explicit UUID(std::span<const uint8_t> span)
     {
         RELEASE_ASSERT(span.size() == 16);
-        memcpy(&m_data, span.data(), 16);
+        memcpySpan(asMutableByteSpan(m_data), span);
     }
 
     explicit constexpr UUID(UInt128 data)
@@ -95,7 +95,7 @@ public:
         RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!isHashTableDeletedValue());
     }
 
-    std::span<const uint8_t, 16> span() const
+    std::span<const uint8_t, 16> span() const LIFETIME_BOUND
     {
         return asByteSpan<UInt128, 16>(m_data);
     }

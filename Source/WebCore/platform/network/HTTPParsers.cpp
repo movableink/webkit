@@ -45,6 +45,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/OptionSet.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -54,7 +55,7 @@ namespace WebCore {
 // True if characters which satisfy the predicate are present, incrementing
 // "pos" to the next character which does not satisfy the predicate.
 // Note: might return pos == str.length().
-static inline bool skipWhile(const String& str, unsigned& pos, const Function<bool(const UChar)>& predicate)
+static inline bool skipWhile(const String& str, unsigned& pos, NOESCAPE const Function<bool(const UChar)>& predicate)
 {
     const unsigned start = pos;
     const unsigned len = str.length();
@@ -352,7 +353,8 @@ ContentDispositionType contentDispositionType(const String& contentDisposition)
 
 std::optional<WallTime> parseHTTPDate(const String& value)
 {
-    double dateInMillisecondsSinceEpoch = parseDate(value.utf8().span());
+    // FIXME: parseDate() requires Latin1, but we're passing it UTF-8.
+    double dateInMillisecondsSinceEpoch = parseDate(byteCast<LChar>(value.utf8().span()));
     if (!std::isfinite(dateInMillisecondsSinceEpoch))
         return std::nullopt;
     // This assumes system_clock epoch equals Unix epoch which is true for all implementations but unspecified.
@@ -746,8 +748,8 @@ size_t parseHTTPHeader(std::span<const uint8_t> data, String& failureReason, Str
     nameStr = StringView();
     valueStr = String();
 
-    for (; !p.empty(); p = p.subspan(1)) {
-        switch (p.front()) {
+    for (; !p.empty(); skip(p, 1)) {
+        switch (p[0]) {
         case '\r':
             if (name.isEmpty()) {
                 if (p.size() > 1 && p[1] == '\n')
@@ -763,33 +765,31 @@ size_t parseHTTPHeader(std::span<const uint8_t> data, String& failureReason, Str
         case ':':
             break;
         default:
-            if (!isValidHeaderNameCharacter(p.front())) {
+            if (!isValidHeaderNameCharacter(p[0])) {
                 if (name.size() < 1)
                     failureReason = "Unexpected start character in header name"_s;
                 else
                     failureReason = makeString("Unexpected character in header name at "_s, trimInputSample(name.span()));
                 return 0;
             }
-            name.append(p.front());
+            name.append(p[0]);
             if (!foundFirstNameChar) {
                 namePtr = p;
                 foundFirstNameChar = true;
             }
             continue;
         }
-        if (p.front() == ':') {
-            p = p.subspan(1);
+        if (skipExactly(p, ':'))
             break;
-        }
     }
 
     nameSize = name.size();
     nameStr = namePtr.first(nameSize);
 
-    for (; !p.empty() && p.front() == 0x20; p = p.subspan(1)) { }
+    WTF::skipWhile(p, ' ');
 
-    for (; !p.empty(); p = p.subspan(1)) {
-        switch (p.front()) {
+    for (; !p.empty(); skip(p, 1)) {
+        switch (p[0]) {
         case '\r':
             break;
         case '\n':
@@ -799,14 +799,14 @@ size_t parseHTTPHeader(std::span<const uint8_t> data, String& failureReason, Str
             }
             break;
         default:
-            value.append(p.front());
+            value.append(p[0]);
         }
-        if (p.front() == '\r' || (!strict && p.front() == '\n')) {
-            p = p.subspan(1);
+        if (p[0] == '\r' || (!strict && p[0] == '\n')) {
+            skip(p, 1);
             break;
         }
     }
-    if (p.empty() || (strict && p.front() != '\n')) {
+    if (p.empty() || (strict && p[0] != '\n')) {
         failureReason = makeString("CR doesn't follow LF after header value at "_s, trimInputSample(p));
         return 0;
     }

@@ -82,6 +82,7 @@ public:
     void enableAllExperimentalFeatures();
     void resetAllInternalDebugFeatures();
     void disableRichJavaScriptFeatures();
+    void disableMediaPlaybackRelatedFeatures();
 
     // Exposed for WebKitTestRunner use only.
     void setBoolValueForKey(const String&, bool value, bool ephemeral);
@@ -112,7 +113,7 @@ private:
         }
         
     private:
-        Ref<WebPreferences> m_preferences;
+        const Ref<WebPreferences> m_preferences;
     };
 
     void updateStringValueForKey(const String& key, const String& value, bool ephemeral);

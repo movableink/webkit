@@ -128,7 +128,7 @@ Position nextVisuallyDistinctCandidate(const Position&, SkipDisplayContents = Sk
 Position previousVisuallyDistinctCandidate(const Position&);
 
 Position firstPositionInOrBeforeNode(Node*);
-Position lastPositionInOrAfterNode(Node*);
+inline Position lastPositionInOrAfterNode(Node*);
 
 Position firstEditablePositionAfterPositionInRoot(const Position&, ContainerNode* root);
 Position lastEditablePositionBeforePositionInRoot(const Position&, ContainerNode* root);
@@ -160,6 +160,14 @@ WEBCORE_EXPORT VisiblePosition visiblePositionForIndex(int index, Node* scope, T
 VisiblePosition visiblePositionForIndexUsingCharacterIterator(Node&, int index); // FIXME: Why do we need this version?
 
 WEBCORE_EXPORT VisiblePosition closestEditablePositionInElementForAbsolutePoint(const Element&, const IntPoint&);
+
+enum class SelectionExtentMovement : uint8_t {
+    Closest,
+    Left,
+    Right,
+};
+void adjustVisibleExtentPreservingVisualContiguity(const VisiblePosition& base, VisiblePosition& extent, SelectionExtentMovement);
+WEBCORE_EXPORT bool crossesBidiTextBoundaryInSameLine(const VisiblePosition&, const VisiblePosition& other);
 
 // -------------------------------------------------------------------------
 // HTMLElement
@@ -243,13 +251,6 @@ inline Position firstPositionInOrBeforeNode(Node* node)
     if (!node)
         return { };
     return editingIgnoresContent(*node) ? positionBeforeNode(node) : firstPositionInNode(node);
-}
-
-inline Position lastPositionInOrAfterNode(Node* node)
-{
-    if (!node)
-        return { };
-    return editingIgnoresContent(*node) ? positionAfterNode(node) : lastPositionInNode(node);
 }
 
 }

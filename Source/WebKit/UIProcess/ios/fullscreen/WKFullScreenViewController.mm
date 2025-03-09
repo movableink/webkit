@@ -39,10 +39,11 @@
 #import "WebFullScreenManagerProxy.h"
 #import "WebPageProxy.h"
 #import "WebPreferences.h"
+#import <WebCore/FloatConversion.h>
 #import <WebCore/LocalizedStrings.h>
-#import <WebCore/PlaybackSessionInterfaceAVKit.h>
+#import <WebCore/PlaybackSessionInterfaceAVKitLegacy.h>
 #import <WebCore/PlaybackSessionInterfaceTVOS.h>
-#import <WebCore/VideoPresentationInterfaceAVKit.h>
+#import <WebCore/VideoPresentationInterfaceAVKitLegacy.h>
 #import <WebCore/VideoPresentationInterfaceTVOS.h>
 #import <pal/spi/cocoa/AVKitSPI.h>
 #import <wtf/CheckedRef.h>
@@ -184,6 +185,7 @@ private:
         FullscreenVideo = 1 << 1
     };
     OptionSet<ButtonState> _buttonState;
+    BOOL _viewDidAppear;
 #endif
 }
 
@@ -222,6 +224,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #endif
 #if PLATFORM(VISION)
     _isInteractingWithSystemChrome = NO;
+#endif
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    _viewDidAppear = NO;
 #endif
 
     return self;
@@ -420,11 +425,60 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [_pipButton setHidden:!isPiPEnabled || !isPiPSupported];
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
+    if (auto page = [self._webView _page]; page && !page->preferences().videoFullsceenPrefersMostVisibleHeuristic())
+        [self configureEnvironmentPickerOrFullscreenVideoButtonView];
+#endif
+}
+
+- (void)videosInElementFullscreenChanged
+{
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    if (!_viewDidAppear)
+        return;
     [self configureEnvironmentPickerOrFullscreenVideoButtonView];
 #endif
 }
 
+- (RefPtr<WebCore::PlatformVideoPresentationInterface>) _bestVideoPresentationInterface
+{
+    ASSERT(_valid);
+    RefPtr page = [self._webView _page].get();
+    if (!page)
+        return nullptr;
+
+    RefPtr videoPresentationManager = page->videoPresentationManager();
+    if (!videoPresentationManager)
+        return nullptr;
+
+    if (page->preferences().videoFullsceenPrefersMostVisibleHeuristic())
+        return videoPresentationManager->bestVideoForElementFullscreen();
+    return videoPresentationManager->controlsManagerInterface();
+}
+
 #if ENABLE(LINEAR_MEDIA_PLAYER)
+- (void)_setTopButtonLabel:(const String&)label
+{
+    UIButtonConfiguration *fullscreenButtonConfiguration = [UIButtonConfiguration filledButtonConfiguration];
+    fullscreenButtonConfiguration.imagePadding = 9;
+    fullscreenButtonConfiguration.contentInsets = NSDirectionalEdgeInsetsMake(12, 18, 12, 22);
+    fullscreenButtonConfiguration.titleLineBreakMode = NSLineBreakByClipping;
+
+    RetainPtr imageConfiguration = [[UIImageSymbolConfiguration configurationWithTextStyle:UIFontTextStyleBody] configurationByApplyingConfiguration:[UIImageSymbolConfiguration configurationWithWeight:UIImageSymbolWeightMedium]];
+
+    fullscreenButtonConfiguration.image = [[UIImage systemImageNamed:@"cube" withConfiguration:imageConfiguration.get()] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+
+    RetainPtr descriptor = [UIFontDescriptor preferredFontDescriptorWithTextStyle:UIFontTextStyleBody];
+    descriptor = [descriptor fontDescriptorByAddingAttributes:@{
+        UIFontWeightTrait : [NSNumber numberWithDouble:UIFontWeightMedium]
+    }];
+    RetainPtr buttonTitle = adoptNS([[NSMutableAttributedString alloc] initWithString:label attributes:@{
+        NSFontAttributeName : [UIFont fontWithDescriptor:descriptor.get() size:0]
+    }]);
+    fullscreenButtonConfiguration.attributedTitle = buttonTitle.get();
+    [_enterVideoFullscreenButton setConfiguration:fullscreenButtonConfiguration];
+    [_enterVideoFullscreenButton sizeToFit];
+}
+
 - (void)configureEnvironmentPickerOrFullscreenVideoButtonView
 {
     ASSERT(_valid);
@@ -436,7 +490,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return;
     }
 
-    RefPtr playbackSessionInterface = [self _playbackSessionInterface];
+    RefPtr videoPresentationInterface = [self _bestVideoPresentationInterface];
+    RefPtr playbackSessionInterface = videoPresentationInterface ? &videoPresentationInterface->playbackSessionInterface() : nullptr;
     auto* playbackSessionModel = playbackSessionInterface ? playbackSessionInterface->playbackSessionModel() : nullptr;
     if (!playbackSessionModel || !playbackSessionModel->supportsLinearMediaPlayer()) {
         [self _removeEnvironmentPickerButtonView];
@@ -444,16 +499,16 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return;
     }
 
-    if (RetainPtr mediaPlayer = playbackSessionInterface->linearMediaPlayer(); [mediaPlayer spatialVideoMetadata]) {
+    if (RetainPtr mediaPlayer = playbackSessionInterface->linearMediaPlayer(); [mediaPlayer spatialVideoMetadata] || [mediaPlayer isImmersiveVideo]) {
+        [self _setTopButtonLabel:[mediaPlayer isImmersiveVideo] ? WebCore::fullscreenControllerViewImmersive() : WebCore::fullscreenControllerViewSpatial()];
         if (!_buttonState.contains(FullscreenVideo)) {
             [_centeredStackView addArrangedSubview:_enterVideoFullscreenButton.get()];
             _buttonState.add(FullscreenVideo);
         }
+        [self _removeEnvironmentPickerButtonView];
+        return;
     } else
         [self _removeEnvironmentFullscreenVideoButtonView];
-
-    RefPtr videoPresentationManager = page->videoPresentationManager();
-    RefPtr videoPresentationInterface = videoPresentationManager ? videoPresentationManager->controlsManagerInterface() : nullptr;
 
     LMPlayableViewController *playableViewController = videoPresentationInterface ? videoPresentationInterface->playableViewController() : nil;
     UIViewController *environmentPickerButtonViewController = playableViewController.wks_environmentPickerButtonViewController;
@@ -732,30 +787,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #if ENABLE(LINEAR_MEDIA_PLAYER)
         _enterVideoFullscreenButton = [UIButton buttonWithType:UIButtonTypeSystem];
         [self _setupButton:_enterVideoFullscreenButton.get()];
-
-        UIButtonConfiguration *fullscreenButtonConfiguration = [UIButtonConfiguration filledButtonConfiguration];
-        fullscreenButtonConfiguration.imagePadding = 9;
-        fullscreenButtonConfiguration.contentInsets = NSDirectionalEdgeInsetsMake(12, 18, 12, 22);
-        fullscreenButtonConfiguration.titleLineBreakMode = NSLineBreakByClipping;
-
-        RetainPtr imageConfiguration = [[UIImageSymbolConfiguration configurationWithTextStyle:UIFontTextStyleBody] configurationByApplyingConfiguration:[UIImageSymbolConfiguration configurationWithWeight:UIImageSymbolWeightMedium]];
-
-        fullscreenButtonConfiguration.image = [[UIImage systemImageNamed:@"cube" withConfiguration:imageConfiguration.get()] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-
-        RetainPtr descriptor = [UIFontDescriptor preferredFontDescriptorWithTextStyle:UIFontTextStyleBody];
-        descriptor = [descriptor fontDescriptorByAddingAttributes:@{
-            UIFontWeightTrait : [NSNumber numberWithDouble:UIFontWeightMedium]
-        }];
-        RetainPtr buttonTitle = adoptNS([[NSMutableAttributedString alloc] initWithString:WebCore::fullscreenControllerViewSpatial() attributes:@{
-            NSFontAttributeName : [UIFont fontWithDescriptor:descriptor.get() size:0]
-        }]);
-        fullscreenButtonConfiguration.attributedTitle = buttonTitle.get();
-
-        [_enterVideoFullscreenButton setConfiguration:fullscreenButtonConfiguration];
         [_enterVideoFullscreenButton setContentHorizontalAlignment:UIControlContentHorizontalAlignmentLeft];
-
-        [_enterVideoFullscreenButton sizeToFit];
-
         [_enterVideoFullscreenButton addTarget:self action:@selector(_enterVideoFullscreenAction:) forControlEvents:UIControlEventTouchUpInside];
 
         _centeredStackView = adoptNS([[UIStackView alloc] init]);
@@ -876,6 +908,22 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [super viewWillAppear:animated];
 }
 
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+- (void)viewDidAppear:(BOOL) animated
+{
+    RefPtr page = [self._webView _page].get();
+    if (!page)
+        return;
+
+    page->callAfterNextPresentationUpdate([weakSelf = WeakObjCPtr<WKFullScreenViewController>(self)] {
+        if (RetainPtr strongSelf = weakSelf.get()) {
+            strongSelf->_viewDidAppear = YES;
+            [strongSelf configureEnvironmentPickerOrFullscreenVideoButtonView];
+        }
+    });
+}
+#endif
+
 #if PLATFORM(VISION)
 - (void)viewIsAppearing:(BOOL)animated
 {
@@ -903,7 +951,16 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         [self._webView _setInterfaceOrientationOverride:UIApplication.sharedApplication.statusBarOrientation];
         ALLOW_DEPRECATED_DECLARATIONS_END
-    } completion:nil];
+    } completion:
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+        [weakSelf = WeakObjCPtr<WKFullScreenViewController>(self)](id<UIViewControllerTransitionCoordinatorContext>) {
+            auto strongSelf = weakSelf.get();
+            [strongSelf configureEnvironmentPickerOrFullscreenVideoButtonView];
+        }
+#else
+        nil
+#endif
+    ];
 }
 
 #if !PLATFORM(VISION)
@@ -948,7 +1005,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 {
     ASSERT(_valid);
     auto safeAreaInsets = self.view.safeAreaInsets;
-    WebCore::FloatBoxExtent insets { safeAreaInsets.top, safeAreaInsets.right, safeAreaInsets.bottom, safeAreaInsets.left };
+    WebCore::FloatBoxExtent insets { WebCore::narrowPrecisionToFloatFromCGFloat(safeAreaInsets.top), WebCore::narrowPrecisionToFloatFromCGFloat(safeAreaInsets.right), WebCore::narrowPrecisionToFloatFromCGFloat(safeAreaInsets.bottom), WebCore::narrowPrecisionToFloatFromCGFloat(safeAreaInsets.left) };
 
     CGRect cancelFrame = _cancelButton.get().frame;
     CGPoint maxXY = CGPointMake(CGRectGetMaxX(cancelFrame), CGRectGetMaxY(cancelFrame));
@@ -1013,14 +1070,17 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (void)_enterVideoFullscreenAction:(id)sender
 {
-    ASSERT(_valid);
-    RefPtr page = [self._webView _page].get();
-    if (!page)
+    RefPtr presentationInterface = [self _bestVideoPresentationInterface];
+    if (!presentationInterface)
         return;
 
     [self hideUI];
 
-    page->enterFullscreen();
+    CheckedPtr playbackSessionModel = presentationInterface->playbackSessionModel();
+    if (!playbackSessionModel)
+        return;
+
+    playbackSessionModel->enterFullscreen();
 }
 
 - (void)_touchDetected:(id)sender

@@ -979,12 +979,8 @@ TEST(ResourceLoadStatistics, MigrateDataFromIncorrectCreateTableSchema)
     TestWebKitAPI::Util::run(&doneFlag);
 }
 
-// rdar://136535465
-#if PLATFORM(MAC)
+// FIXME when rdar://136535465 is resolved
 TEST(ResourceLoadStatistics, DISABLED_MigrateDataFromMissingTopFrameUniqueRedirectSameSiteStrictTableSchema)
-#else
-TEST(ResourceLoadStatistics, MigrateDataFromMissingTopFrameUniqueRedirectSameSiteStrictTableSchema)
-#endif
 {
     auto *sharedProcessPool = [WKProcessPool _sharedProcessPool];
 
@@ -1269,12 +1265,8 @@ TEST(ResourceLoadStatistics, BackForwardPerPageData)
     TestWebKitAPI::Util::run(&doneFlag);
 }
 
-// rdar://136535465
-#if PLATFORM(MAC)
+// FIXME when rdar://136535465 is resolved
 TEST(ResourceLoadStatistics, DISABLED_MigrateDistinctDataFromTableWithMissingIndexes)
-#else
-TEST(ResourceLoadStatistics, MigrateDistinctDataFromTableWithMissingIndexes)
-#endif
 {
     auto *sharedProcessPool = [WKProcessPool _sharedProcessPool];
 
@@ -1713,7 +1705,12 @@ TEST(ResourceLoadStatistics, StorageAccessOnRedirectSitesWithOutQuirk)
     TestWebKitAPI::Util::run(&done);
 }
 
+// rdar://136524076
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 150000
+TEST(ResourceLoadStatistics, DISABLED_StorageAccessOnRedirectSitesWithQuirk)
+#else
 TEST(ResourceLoadStatistics, StorageAccessOnRedirectSitesWithQuirk)
+#endif
 {
     using namespace TestWebKitAPI;
     HTTPServer httpServer({
@@ -2004,7 +2001,12 @@ TEST(ResourceLoadStatistics, StorageAccessSupportMultipleSubFrameDomains)
     gotRequestStorageAccessPanelForQuirksForDomain = false;
 }
 
+// rdar://136524076
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 150000
+TEST(ResourceLoadStatistics, DISABLED_StorageAccessGrantMultipleSubFrameDomains)
+#else
 TEST(ResourceLoadStatistics, StorageAccessGrantMultipleSubFrameDomains)
+#endif
 {
     using namespace TestWebKitAPI;
 

@@ -39,6 +39,7 @@
 #import "WebRemoteObjectRegistry.h"
 #import "_WKRemoteObjectInterface.h"
 #import <objc/runtime.h>
+#import <wtf/ObjCRuntimeExtras.h>
 
 extern "C" const char *_protocol_getMethodTypeEncoding(Protocol *p, SEL sel, BOOL isRequiredMethod, BOOL isInstanceMethod);
 extern "C" id __NSMakeSpecialForwardingCaptureBlock(const char *signature, void (^handler)(NSInvocation *inv));
@@ -105,7 +106,7 @@ struct PendingReply {
     return remoteObject.autorelease();
 }
 
-- (id)_initWithWebPage:(NakedRef<WebKit::WebPage>)page
+- (id)_initWithWebPage:(std::reference_wrapper<WebKit::WebPage>)page
 {
     if (!(self = [super init]))
         return nil;
@@ -115,7 +116,7 @@ struct PendingReply {
     return self;
 }
 
-- (id)_initWithWebPageProxy:(NakedRef<WebKit::WebPageProxy>)page
+- (id)_initWithWebPageProxy:(std::reference_wrapper<WebKit::WebPageProxy>)page
 {
     if (!(self = [super init]))
         return nil;
@@ -143,9 +144,9 @@ static uint64_t generateReplyIdentifier()
 
     NSMethodSignature *methodSignature = invocation.methodSignature;
     for (NSUInteger i = 0, count = methodSignature.numberOfArguments; i < count; ++i) {
-        const char *type = [methodSignature getArgumentTypeAtIndex:i];
+        auto type = unsafeSpan([methodSignature getArgumentTypeAtIndex:i]);
 
-        if (strcmp(type, "@?"))
+        if (!equalSpans(type, "@?"_span))
             continue;
 
         if (replyInfo)
@@ -158,7 +159,7 @@ static uint64_t generateReplyIdentifier()
 
         const char* replyBlockSignature = _Block_signature((__bridge void*)replyBlock);
 
-        if (strcmp([NSMethodSignature signatureWithObjCTypes:replyBlockSignature].methodReturnType, "v"))
+        if (!methodHasReturnType<void>([NSMethodSignature signatureWithObjCTypes:replyBlockSignature]))
             [NSException raise:NSInvalidArgumentException format:@"Return value of block argument must be 'void'. (%s)", sel_getName(invocation.selector)];
 
         replyInfo = makeUnique<WebKit::RemoteObjectInvocation::ReplyInfo>(generateReplyIdentifier(), String::fromLatin1(replyBlockSignature));
@@ -229,9 +230,9 @@ static NSString *replyBlockSignature(Protocol *protocol, SEL selector, NSUIntege
 
     // Look for the block argument (if any).
     for (NSUInteger i = 0, count = methodSignature.numberOfArguments; i < count; ++i) {
-        const char *type = [methodSignature getArgumentTypeAtIndex:i];
+        auto type = unsafeSpan([methodSignature getArgumentTypeAtIndex:i]);
 
-        if (strcmp(type, "@?"))
+        if (!equalSpans(type, "@?"_span))
             continue;
 
         // We found the block.
@@ -333,7 +334,7 @@ static NSString *replyBlockSignature(Protocol *protocol, SEL selector, NSUIntege
     auto pendingReply = it->value;
     _pendingReplies.remove(it);
 
-    auto decoder = adoptNS([[WKRemoteObjectDecoder alloc] initWithInterface:pendingReply.interface.get() rootObjectDictionary:static_cast<API::Dictionary*>(encodedInvocation.get()) replyToSelector:pendingReply.selector]);
+    auto decoder = adoptNS([[WKRemoteObjectDecoder alloc] initWithInterface:pendingReply.interface.get() rootObjectDictionary:downcast<API::Dictionary>(encodedInvocation.get()) replyToSelector:pendingReply.selector]);
 
     NSInvocation *replyInvocation = [decoder decodeObjectOfClass:[NSInvocation class] forKey:invocationKey];
 

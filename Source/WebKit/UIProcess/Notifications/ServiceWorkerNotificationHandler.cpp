@@ -27,17 +27,18 @@
 #include "ServiceWorkerNotificationHandler.h"
 
 #include "Logging.h"
+#include "WebProcessProxy.h"
 #include "WebsiteDataStore.h"
 #include <WebCore/NotificationData.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/Scope.h>
 
 namespace WebKit {
 
 ServiceWorkerNotificationHandler& ServiceWorkerNotificationHandler::singleton()
 {
-    ASSERT(isMainRunLoop());
-    static ServiceWorkerNotificationHandler& handler = *new ServiceWorkerNotificationHandler;
-    return handler;
+    static MainThreadNeverDestroyed<Ref<ServiceWorkerNotificationHandler>> handler = adoptRef(*new ServiceWorkerNotificationHandler);
+    return handler.get();
 }
 
 WebsiteDataStore* ServiceWorkerNotificationHandler::dataStoreForNotificationID(const WTF::UUID& notificationID)
@@ -55,7 +56,7 @@ void ServiceWorkerNotificationHandler::showNotification(IPC::Connection& connect
 
     auto scope = makeScopeExit([&callback] { callback(); });
 
-    auto* dataStore = WebsiteDataStore::existingDataStoreForSessionID(data.sourceSession);
+    RefPtr dataStore = WebsiteDataStore::existingDataStoreForSessionID(data.sourceSession);
     if (!dataStore)
         return;
 
@@ -65,21 +66,21 @@ void ServiceWorkerNotificationHandler::showNotification(IPC::Connection& connect
 
 void ServiceWorkerNotificationHandler::cancelNotification(WebCore::SecurityOriginData&&, const WTF::UUID& notificationID)
 {
-    if (auto* dataStore = dataStoreForNotificationID(notificationID))
+    if (RefPtr dataStore = dataStoreForNotificationID(notificationID))
         dataStore->cancelServiceWorkerNotification(notificationID);
 }
 
 void ServiceWorkerNotificationHandler::clearNotifications(const Vector<WTF::UUID>& notificationIDs)
 {
     for (auto& notificationID : notificationIDs) {
-        if (auto* dataStore = dataStoreForNotificationID(notificationID))
+        if (RefPtr dataStore = dataStoreForNotificationID(notificationID))
             dataStore->clearServiceWorkerNotification(notificationID);
     }
 }
 
 void ServiceWorkerNotificationHandler::didDestroyNotification(const WTF::UUID& notificationID)
 {
-    if (auto* dataStore = dataStoreForNotificationID(notificationID))
+    if (RefPtr dataStore = dataStoreForNotificationID(notificationID))
         dataStore->didDestroyServiceWorkerNotification(notificationID);
 }
 
@@ -96,6 +97,15 @@ void ServiceWorkerNotificationHandler::getPermissionState(WebCore::SecurityOrigi
 void ServiceWorkerNotificationHandler::getPermissionStateSync(WebCore::SecurityOriginData&&, CompletionHandler<void(WebCore::PushPermissionState)>&&)
 {
     RELEASE_ASSERT_NOT_REACHED();
+}
+
+std::optional<SharedPreferencesForWebProcess> ServiceWorkerNotificationHandler::sharedPreferencesForWebProcess(const IPC::Connection& connection) const
+{
+    if (auto webProcessProxy = WebProcessProxy::processForConnection(connection))
+        return webProcessProxy->sharedPreferencesForWebProcess();
+
+    ASSERT_NOT_REACHED();
+    return std::nullopt;
 }
 
 } // namespace WebKit

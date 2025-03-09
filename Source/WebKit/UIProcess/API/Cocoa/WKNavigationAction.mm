@@ -105,12 +105,12 @@ static WKSyntheticClickType toWKSyntheticClickType(WebKit::WebMouseEventSyntheti
 
 - (WKFrameInfo *)sourceFrame
 {
-    return wrapper(_navigationAction->sourceFrame());
+    return wrapper(Ref { *_navigationAction }->sourceFrame());
 }
 
 - (WKFrameInfo *)targetFrame
 {
-    return wrapper(_navigationAction->targetFrame());
+    return wrapper(_navigationAction->protectedTargetFrame().get());
 }
 
 - (WKNavigationType)navigationType
@@ -179,7 +179,7 @@ static WKSyntheticClickType toWKSyntheticClickType(WebKit::WebMouseEventSyntheti
 
 - (NSURL *)_originalURL
 {
-    return _navigationAction->originalURL();
+    return Ref { *_navigationAction }->originalURL();
 }
 
 - (BOOL)_isUserInitiated
@@ -214,7 +214,7 @@ static WKSyntheticClickType toWKSyntheticClickType(WebKit::WebMouseEventSyntheti
 
 - (_WKUserInitiatedAction *)_userInitiatedAction
 {
-    return wrapper(_navigationAction->userInitiatedAction());
+    return wrapper(_navigationAction->protectedUserInitiatedAction().get());
 }
 
 - (BOOL)_isRedirect
@@ -224,25 +224,25 @@ static WKSyntheticClickType toWKSyntheticClickType(WebKit::WebMouseEventSyntheti
 
 - (WKNavigation *)_mainFrameNavigation
 {
-    return wrapper(_navigationAction->mainFrameNavigation());
+    return wrapper(_navigationAction->protectedMainFrameNavigation().get());
 }
 
 
 - (void)_storeSKAdNetworkAttribution
 {
-    auto* mainFrameNavigation = _navigationAction->mainFrameNavigation();
+    RefPtr mainFrameNavigation = _navigationAction->mainFrameNavigation();
     if (!mainFrameNavigation)
         return;
     auto& privateClickMeasurement = mainFrameNavigation->privateClickMeasurement();
     if (!privateClickMeasurement || !privateClickMeasurement->isSKAdNetworkAttribution())
         return;
-    auto* sourceFrame = _navigationAction->sourceFrame();
+    RefPtr sourceFrame = _navigationAction->sourceFrame();
     if (!sourceFrame)
         return;
-    auto* page = sourceFrame->page();
+    RefPtr page = sourceFrame->page();
     if (!page)
         return;
-    page->websiteDataStore().storePrivateClickMeasurement(*privateClickMeasurement);
+    page->protectedWebsiteDataStore()->storePrivateClickMeasurement(*privateClickMeasurement);
 }
 
 - (_WKHitTestResult *)_hitTestResult

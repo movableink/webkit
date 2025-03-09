@@ -33,10 +33,10 @@
 #import "WebWindowAnimation.h"
 #import <WebCore/CGWindowUtilities.h>
 #import <WebCore/Document.h>
+#import <WebCore/DocumentFullscreen.h>
 #import <WebCore/DocumentInlines.h>
 #import <WebCore/Element.h>
 #import <WebCore/FloatRect.h>
-#import <WebCore/FullscreenManager.h>
 #import <WebCore/HTMLElement.h>
 #import <WebCore/IntRect.h>
 #import <WebCore/LocalFrame.h>
@@ -66,7 +66,7 @@ static WebCore::IntRect screenRectOfContents(WebCore::Element* element)
 - (void)_updateMenuAndDockForFullScreen;
 - (void)_swapView:(NSView*)view with:(NSView*)otherView;
 - (NakedPtr<WebCore::Document>)_document;
-- (WebCore::FullscreenManager*)_manager;
+- (WebCore::DocumentFullscreen*)_manager;
 - (void)_startEnterFullScreenAnimationWithDuration:(NSTimeInterval)duration;
 - (void)_startExitFullScreenAnimationWithDuration:(NSTimeInterval)duration;
 @end
@@ -187,10 +187,12 @@ static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
 #pragma mark -
 #pragma mark Exposed Interface
 
-- (void)enterFullScreen:(NSScreen *)screen
+- (void)enterFullScreen:(NSScreen *)screen willEnterFullscreen:(CompletionHandler<void(WebCore::ExceptionOr<void>)>&&)willEnterFullscreen didEnterFullscreen:(CompletionHandler<void(bool)>&&)didEnterFullscreen
 {
-    if (_isFullScreen)
-        return;
+    if (_isFullScreen) {
+        willEnterFullscreen({ });
+        return didEnterFullscreen(false);
+    }
     _isFullScreen = YES;
     
     [self _updateMenuAndDockForFullScreen];   
@@ -239,7 +241,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     _savedScale = [_webView _viewScaleFactor];
     [_webView _scaleWebView:1 atOrigin:NSMakePoint(0, 0)];
-    [self _manager]->willEnterFullscreen(*_element);
+    _didEnterFullscreen = WTFMove(didEnterFullscreen);
+    willEnterFullscreen([self _manager]->willEnterFullscreen(*_element, WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard));
     [self _manager]->setAnimatingFullscreen(true);
     [self _document]->updateLayout();
 
@@ -270,8 +273,9 @@ static void setClipRectForWindow(NSWindow *window, NSRect clipRect)
     
     if (completed) {
         [self _manager]->setAnimatingFullscreen(false);
-        [self _manager]->didEnterFullscreen();
-        
+        if (_didEnterFullscreen)
+            _didEnterFullscreen(true);
+
         NSRect windowBounds = [[self window] frame];
         windowBounds.origin = NSZeroPoint;
         setClipRectForWindow(self.window, windowBounds);
@@ -298,13 +302,13 @@ static void setClipRectForWindow(NSWindow *window, NSRect clipRect)
 {
     if (!_element)
         return;
-    _element->document().fullscreenManager().cancelFullscreen();
+    _element->document().fullscreen().fullyExitFullscreen();
 }
 
-- (void)exitFullScreen
+- (void)exitFullScreen:(CompletionHandler<void()>&&)completionHandler
 {
     if (!_isFullScreen)
-        return;
+        return completionHandler();
     _isFullScreen = NO;
 
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
@@ -338,19 +342,18 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [webWindow setAnimationBehavior:animationBehavior];
 
     [self _startExitFullScreenAnimationWithDuration:defaultAnimationDuration];
-    _isExitingFullScreen = YES;    
+    _exitCompletionHandler = WTFMove(completionHandler);
 }
 
 - (void)finishedExitFullScreenAnimation:(bool)completed
 {
-    if (!_isExitingFullScreen)
+    if (!_exitCompletionHandler)
         return;
-    _isExitingFullScreen = NO;
     
     [self _updateMenuAndDockForFullScreen];
 
     [self _manager]->setAnimatingFullscreen(false);
-    [self _manager]->didExitFullscreen();
+    _exitCompletionHandler();
     [_webView _scaleWebView:_savedScale atOrigin:NSMakePoint(0, 0)];
 
     NSResponder *firstResponder = [[self window] firstResponder];
@@ -388,9 +391,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     // normal exit full screen sequence, but don't wait to be called back
     // in response.
     if (_isFullScreen)
-        [self exitFullScreen];
+        [self exitFullScreen:[] { }];
     
-    if (_isExitingFullScreen)
+    if (_exitCompletionHandler)
         [self finishedExitFullScreenAnimation:YES];
     
     [super close];
@@ -439,9 +442,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     return &_element->document();
 }
 
-- (WebCore::FullscreenManager*)_manager
+- (WebCore::DocumentFullscreen*)_manager
 {
-    return &_element->document().fullscreenManager();
+    return &_element->document().fullscreen();
 }
 
 - (void)_swapView:(NSView*)view with:(NSView*)otherView

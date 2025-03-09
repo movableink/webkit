@@ -108,6 +108,7 @@ public:
             gst_query_add_allocation_pool(query, nullptr, size, 3, 0);
         }
 
+#if USE(GSTREAMER_GL)
         // In some platforms (e.g. OpenMAX on the Raspberry Pi) when a resolution change occurs the
         // pipeline has to be drained before a frame with the new resolution can be decoded.
         // In this context, it's important that we don't hold references to any previous frame
@@ -117,6 +118,7 @@ public:
             GST_DEBUG_OBJECT(pad, "Flushing current buffer in response to %" GST_PTR_FORMAT, info->data);
             player->flushCurrentBuffer();
         }
+#endif
 
         return GST_PAD_PROBE_OK;
     }
@@ -157,6 +159,13 @@ void webKitVideoSinkSetMediaPlayerPrivate(GstElement* appSink, MediaPlayerPrivat
     gst_pad_add_probe(pad.get(), static_cast<GstPadProbeType>(GST_PAD_PROBE_TYPE_PUSH | GST_PAD_PROBE_TYPE_QUERY_DOWNSTREAM
         | GST_PAD_PROBE_TYPE_EVENT_FLUSH | GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM),
         WebKitVideoSinkProbe::doProbe, new WebKitVideoSinkProbe(player), WebKitVideoSinkProbe::deleteUserData);
+
+    if (!player->requiresVideoSinkCapsNotifications())
+        return;
+
+    g_signal_connect(pad.get(), "notify::caps", G_CALLBACK(+[](GstPad* videoSinkPad, GParamSpec*, MediaPlayerPrivateGStreamer* player) {
+        player->videoSinkCapsChanged(videoSinkPad);
+    }), player);
 }
 
 #undef GST_CAT_DEFAULT

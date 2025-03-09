@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -89,7 +89,7 @@ public:
 
     template<Kind kind>
     class BlockDirectoryBitVectorWordView {
-        WTF_MAKE_TZONE_ALLOCATED(BlockDirectoryBitVectorWordView);
+        WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(BlockDirectoryBitVectorWordView);
     public:
         using ViewType = BlockDirectoryBitVectorWordView;
 
@@ -229,6 +229,8 @@ private:
     Vector<Segment, 0, CrashOnOverflow, 2> m_segments;
     unsigned m_numBits { 0 };
 };
+
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<BlockDirectoryBits::Kind kind>, BlockDirectoryBits::BlockDirectoryBitVectorWordView<kind>);
 
 } // namespace JSC
 

@@ -49,17 +49,17 @@ void DrawingContext::setTracksDisplayListReplay(bool tracksDisplayListReplay)
     m_replayedDisplayList.reset();
 }
 
-void DrawingContext::replayDisplayList(GraphicsContext& destContext)
+void DrawingContext::replayDisplayList(GraphicsContext& destContext, ControlFactory* controlFactory)
 {
     if (m_displayList.isEmpty())
         return;
 
-    Replayer replayer(destContext, m_displayList);
+    ASSERT_IMPLIES(!controlFactory, isMainThread());
+    Replayer replayer(destContext, m_displayList.items(), m_displayList.resourceHeap(), controlFactory ? *controlFactory : ControlFactory::shared());
     if (m_tracksDisplayListReplay)
         m_replayedDisplayList = replayer.replay({ }, m_tracksDisplayListReplay).trackedDisplayList;
     else
         replayer.replay();
-    m_displayList.clear();
 }
 
 } // DisplayList

@@ -91,7 +91,7 @@ static void reboxAccordingToFormat(
     case DataFormatDouble: {
         jit.moveDoubleTo64(FPRInfo::fpRegT0, scratch1);
         jit.move64ToDouble(value, FPRInfo::fpRegT0);
-        jit.purifyNaN(FPRInfo::fpRegT0);
+        jit.purifyNaN(FPRInfo::fpRegT0, FPRInfo::fpRegT0);
         jit.boxDouble(FPRInfo::fpRegT0, value);
         jit.move64ToDouble(scratch1, FPRInfo::fpRegT0);
         break;
@@ -295,7 +295,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
     // needing another object if the later is needed for the
     // allocation of the former.
 
-    HashSet<ExitTimeObjectMaterialization*> toMaterialize;
+    UncheckedKeyHashSet<ExitTimeObjectMaterialization*> toMaterialize;
     for (ExitTimeObjectMaterialization* materialization : exit.m_descriptor->m_materializations)
         toMaterialize.add(materialization);
 
@@ -633,8 +633,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationCompileFTLOSRExit, void*, (CallFrame* callFrame, unsigned exitID))
 {
-    if (shouldDumpDisassembly() || Options::verboseOSR() || Options::verboseFTLOSRExit())
-        dataLog("Compiling OSR exit with exitID = ", exitID, "\n");
+    dataLogLnIf(shouldDumpDisassembly() || Options::verboseOSR() || Options::verboseFTLOSRExit(), "Compiling OSR exit with exitID = ", exitID);
 
     VM& vm = callFrame->deprecatedVM();
     // Don't need an ActiveScratchBufferScope here because we DeferGCForAWhile below.
@@ -661,19 +660,21 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationCompileFTLOSRExit, void*, (CallFrame*
     OSRExit& exit = jitCode->m_osrExit[exitID];
     
     if (shouldDumpDisassembly() || Options::verboseOSR() || Options::verboseFTLOSRExit()) {
-        dataLog("    Owning block: ", pointerDump(codeBlock), "\n");
-        dataLog("    Origin: ", exit.m_codeOrigin, "\n");
+        dataLogLn(
+            "    Owning block: ", pointerDump(codeBlock), "\n",
+            "    Origin: ", exit.m_codeOrigin);
         if (exit.m_codeOriginForExitProfile != exit.m_codeOrigin)
-            dataLog("    Origin for exit profile: ", exit.m_codeOriginForExitProfile, "\n");
-        dataLog("    Current call site index: ", callFrame->callSiteIndex().bits(), "\n");
-        dataLog("    Exit is exception handler: ", exit.isExceptionHandler(), "\n");
-        dataLog("    Is unwind handler: ", exit.isGenericUnwindHandler(), "\n");
-        dataLog("    Exit values: ", exit.m_descriptor->m_values, "\n");
-        dataLog("    Value reps: ", listDump(exit.m_valueReps), "\n");
+            dataLogLn("    Origin for exit profile: ", exit.m_codeOriginForExitProfile);
+        dataLogLn(
+            "    Current call site index: ", callFrame->callSiteIndex().bits(), "\n",
+            "    Exit is exception handler: ", exit.isExceptionHandler(), "\n",
+            "    Is unwind handler: ", exit.isGenericUnwindHandler(), "\n",
+            "    Exit values: ", exit.m_descriptor->m_values, "\n",
+            "    Value reps: ", listDump(exit.m_valueReps));
         if (!exit.m_descriptor->m_materializations.isEmpty()) {
-            dataLog("    Materializations:\n");
+            dataLogLn("    Materializations:");
             for (ExitTimeObjectMaterialization* materialization : exit.m_descriptor->m_materializations)
-                dataLog("        ", pointerDump(materialization), "\n");
+                dataLogLn("        ", pointerDump(materialization));
         }
     }
 

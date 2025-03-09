@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
-#include "ContextDestructionObserver.h"
 #include "EventHandler.h"
 #include "EventTarget.h"
 #include "HistoryItem.h"
@@ -39,13 +38,14 @@ class JSValue;
 
 namespace WebCore {
 
+class Navigation;
 class SerializedScriptValue;
 
 class NavigationHistoryEntry final : public RefCounted<NavigationHistoryEntry>, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(NavigationHistoryEntry);
 public:
-    static Ref<NavigationHistoryEntry> create(ScriptExecutionContext*, Ref<HistoryItem>&&);
-    static Ref<NavigationHistoryEntry> create(ScriptExecutionContext*, const NavigationHistoryEntry&);
+    static Ref<NavigationHistoryEntry> create(Navigation&, Ref<HistoryItem>&&);
+    static Ref<NavigationHistoryEntry> create(Navigation&, const NavigationHistoryEntry&);
 
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
@@ -61,6 +61,7 @@ public:
     SerializedScriptValue* state() const { return m_state.get(); }
 
     HistoryItem& associatedHistoryItem() const { return m_associatedHistoryItem; }
+    void dispatchDisposeEvent();
 
 private:
     struct DocumentState {
@@ -70,19 +71,27 @@ private:
         ReferrerPolicy referrerPolicy { ReferrerPolicy::Default };
     };
 
-    NavigationHistoryEntry(ScriptExecutionContext*, const DocumentState&, Ref<HistoryItem>&&, String urlString, WTF::UUID key, RefPtr<SerializedScriptValue>&& state = { }, WTF::UUID = WTF::UUID::createVersion4());
+    NavigationHistoryEntry(Navigation&, const DocumentState&, Ref<HistoryItem>&&, String urlString, WTF::UUID key, RefPtr<SerializedScriptValue>&& state = { }, WTF::UUID = WTF::UUID::createVersion4());
 
+    // ActiveDOMObject.
+    bool virtualHasPendingActivity() const final;
+
+    // EventTarget.
     enum EventTargetInterfaceType eventTargetInterface() const final;
     ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
+    void eventListenersDidChange() final;
 
+    WeakPtr<Navigation, WeakPtrImplWithEventTargetData> m_navigation;
     const String m_urlString;
     const WTF::UUID m_key;
     const WTF::UUID m_id;
     RefPtr<SerializedScriptValue> m_state;
     Ref<HistoryItem> m_associatedHistoryItem;
     DocumentState m_originalDocumentState;
+    bool m_hasDisposeEventListener { false };
+    bool m_hasDispatchedDisposeEvent { false };
 };
 
 } // namespace WebCore

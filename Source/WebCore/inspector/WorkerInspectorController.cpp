@@ -47,13 +47,16 @@
 #include "WorkerOrWorkletGlobalScope.h"
 #include "WorkerRuntimeAgent.h"
 #include "WorkerThread.h"
+#include "WorkerTimelineAgent.h"
 #include "WorkerToPageFrontendChannel.h"
 #include "WorkerWorkerAgent.h"
+#include <JavaScriptCore/InspectorAgent.h>
 #include <JavaScriptCore/InspectorAgentBase.h>
 #include <JavaScriptCore/InspectorBackendDispatcher.h>
 #include <JavaScriptCore/InspectorFrontendChannel.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendRouter.h>
+#include <JavaScriptCore/InspectorScriptProfilerAgent.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -99,10 +102,30 @@ void WorkerInspectorController::workerTerminating()
     m_debugger = nullptr;
 }
 
-void WorkerInspectorController::connectFrontend()
+void WorkerInspectorController::frontendInitialized()
+{
+#if ENABLE(REMOTE_INSPECTOR) && ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
+    if (m_pauseAfterInitialization) {
+        m_pauseAfterInitialization = false;
+
+        ensureDebuggerAgent().enable();
+        ensureDebuggerAgent().pause();
+    }
+
+    if (m_isAutomaticInspection && m_frontendInitializedCallback)
+        m_frontendInitializedCallback();
+    m_frontendInitializedCallback = { };
+#endif
+}
+
+void WorkerInspectorController::connectFrontend(bool isAutomaticInspection, bool immediatelyPause, Function<void()>&& frontendInitializedCallback)
 {
     ASSERT(!m_frontendRouter->hasFrontends());
     ASSERT(!m_forwardingChannel);
+
+    m_isAutomaticInspection = isAutomaticInspection;
+    m_pauseAfterInitialization = immediatelyPause;
+    m_frontendInitializedCallback = WTFMove(frontendInitializedCallback);
 
     createLazyAgents();
 
@@ -122,6 +145,10 @@ void WorkerInspectorController::connectFrontend()
 
 void WorkerInspectorController::disconnectFrontend(Inspector::DisconnectReason reason)
 {
+    m_isAutomaticInspection = false;
+    m_pauseAfterInitialization = false;
+    m_frontendInitializedCallback = { };
+
     if (!m_frontendRouter->hasFrontends())
         return;
 
@@ -143,7 +170,7 @@ void WorkerInspectorController::updateServiceWorkerPageFrontendCount()
     if (!is<ServiceWorkerGlobalScope>(m_globalScope))
         return;
 
-    auto serviceWorkerPage = downcast<ServiceWorkerGlobalScope>(m_globalScope).serviceWorkerPage();
+    auto serviceWorkerPage = downcast<ServiceWorkerGlobalScope>(m_globalScope.get()).serviceWorkerPage();
     if (!serviceWorkerPage)
         return;
 
@@ -201,23 +228,38 @@ void WorkerInspectorController::createLazyAgents()
     m_agents.append(makeUnique<WorkerRuntimeAgent>(workerContext));
 
     if (is<ServiceWorkerGlobalScope>(m_globalScope)) {
+        m_agents.append(makeUnique<InspectorAgent>(workerContext));
         m_agents.append(makeUnique<ServiceWorkerAgent>(workerContext));
         m_agents.append(makeUnique<WorkerNetworkAgent>(workerContext));
     }
 
     m_agents.append(makeUnique<WebHeapAgent>(workerContext));
 
-    auto debuggerAgent = makeUnique<WorkerDebuggerAgent>(workerContext);
-    auto debuggerAgentPtr = debuggerAgent.get();
-    m_agents.append(WTFMove(debuggerAgent));
+    ensureDebuggerAgent();
+    m_agents.append(makeUnique<WorkerDOMDebuggerAgent>(workerContext, m_debuggerAgent.get()));
 
-    m_agents.append(makeUnique<WorkerDOMDebuggerAgent>(workerContext, debuggerAgentPtr));
     m_agents.append(makeUnique<WorkerAuditAgent>(workerContext));
     m_agents.append(makeUnique<WorkerCanvasAgent>(workerContext));
+    m_agents.append(makeUnique<WorkerTimelineAgent>(workerContext));
     m_agents.append(makeUnique<WorkerWorkerAgent>(workerContext));
+
+    auto scriptProfilerAgentPtr = makeUnique<InspectorScriptProfilerAgent>(workerContext);
+    m_instrumentingAgents->setPersistentScriptProfilerAgent(scriptProfilerAgentPtr.get());
+    m_agents.append(WTFMove(scriptProfilerAgentPtr));
 
     if (auto& commandLineAPIHost = m_injectedScriptManager->commandLineAPIHost())
         commandLineAPIHost->init(m_instrumentingAgents.copyRef());
+}
+
+WorkerDebuggerAgent& WorkerInspectorController::ensureDebuggerAgent()
+{
+    if (!m_debuggerAgent) {
+        auto workerContext = workerAgentContext();
+        auto debuggerAgent = makeUnique<WorkerDebuggerAgent>(workerContext);
+        m_debuggerAgent = debuggerAgent.get();
+        m_agents.append(WTFMove(debuggerAgent));
+    }
+    return *m_debuggerAgent;
 }
 
 InspectorFunctionCallHandler WorkerInspectorController::functionCallHandler() const
@@ -243,7 +285,7 @@ JSC::Debugger* WorkerInspectorController::debugger()
 
 VM& WorkerInspectorController::vm()
 {
-    return m_globalScope.vm();
+    return m_globalScope->vm();
 }
 
 } // namespace WebCore

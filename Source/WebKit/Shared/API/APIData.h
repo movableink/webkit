@@ -73,7 +73,7 @@ public:
     }
 
 #if PLATFORM(COCOA)
-    static Ref<Data> createWithoutCopying(RetainPtr<NSData>);
+    static Ref<Data> createWithoutCopying(NSData *);
 #endif
 
     ~Data()

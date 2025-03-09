@@ -50,7 +50,7 @@ public:
     constexpr MediaPlayerType mediaPlayerType() const final { return MediaPlayerType::GStreamerMSE; }
 
     void load(const String&) override;
-    void load(const URL&, const ContentType&, MediaSourcePrivateClient&) override;
+    void load(const URL&, const LoadOptions&, MediaSourcePrivateClient&) override;
 
     void updateDownloadBufferingFlag() override { };
 
@@ -118,6 +118,8 @@ private:
     bool isMediaSource() const override { return true; }
 
     void propagateReadyStateToPlayer();
+
+    void emitStreams(const Vector<RefPtr<MediaSourceTrackGStreamer>>&);
 
     RefPtr<MediaSourcePrivateGStreamer> m_mediaSourcePrivate;
     MediaTime m_mediaTimeDuration { MediaTime::invalidTime() };

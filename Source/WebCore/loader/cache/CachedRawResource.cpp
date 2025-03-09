@@ -86,7 +86,7 @@ void CachedRawResource::updateBuffer(const FragmentedSharedBuffer& data)
             loader->setDataBufferingPolicy(DataBufferingPolicy::DoNotBufferData);
         clear();
     } else
-        CachedResource::updateBuffer(*m_data);
+        CachedResource::updateBuffer(data);
 
     if (m_delayedFinishLoading) {
         auto delayedFinishLoading = std::exchange(m_delayedFinishLoading, std::nullopt);

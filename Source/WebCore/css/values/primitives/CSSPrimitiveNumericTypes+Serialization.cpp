@@ -25,18 +25,49 @@
 #include "config.h"
 #include "CSSPrimitiveNumericTypes+Serialization.h"
 
-#include "CSSPrimitiveValue.h"
-#include "CSSValueKeywords.h"
-#include <wtf/text/StringBuilder.h>
+#include <limits>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 namespace CSS {
 
-// MARK: - Serialization
-
-void rawNumericSerialization(StringBuilder& builder, double value, CSSUnitType type)
+static NEVER_INLINE ASCIILiteral formatNonfiniteCSSNumberValuePrefix(double number)
 {
-    formatCSSNumberValue(builder, value, CSSPrimitiveValue::unitTypeString(type));
+    if (number == std::numeric_limits<double>::infinity())
+        return "infinity"_s;
+    if (number == -std::numeric_limits<double>::infinity())
+        return "-infinity"_s;
+    ASSERT(std::isnan(number));
+    return "NaN"_s;
+}
+
+NEVER_INLINE void formatNonfiniteCSSNumberValue(StringBuilder& builder, const SerializableNumber& number)
+{
+    return builder.append(formatNonfiniteCSSNumberValuePrefix(number.value), number.suffix.isEmpty() ? ""_s : " * 1"_s, number.suffix);
+}
+
+NEVER_INLINE String formatNonfiniteCSSNumberValue(const SerializableNumber& number)
+{
+    return makeString(formatNonfiniteCSSNumberValuePrefix(number.value), number.suffix.isEmpty() ? ""_s : " * 1"_s, number.suffix);
+}
+
+NEVER_INLINE void formatCSSNumberValue(StringBuilder& builder, const SerializableNumber& number)
+{
+    if (!std::isfinite(number.value))
+        return formatNonfiniteCSSNumberValue(builder, number);
+    return builder.append(FormattedCSSNumber::create(number.value), number.suffix);
+}
+
+NEVER_INLINE String formatCSSNumberValue(const SerializableNumber& number)
+{
+    if (!std::isfinite(number.value))
+        return formatNonfiniteCSSNumberValue(number);
+    return makeString(FormattedCSSNumber::create(number.value), number.suffix);
+}
+
+void Serialize<SerializableNumber>::operator()(StringBuilder& builder, const SerializationContext&, const SerializableNumber& number)
+{
+    formatCSSNumberValue(builder, number);
 }
 
 } // namespace CSS

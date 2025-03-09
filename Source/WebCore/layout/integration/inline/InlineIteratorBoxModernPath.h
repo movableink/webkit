@@ -53,6 +53,7 @@ public:
     FloatRect visualRectIgnoringBlockDirection() const { return box().visualRectIgnoringBlockDirection(); }
 
     inline bool isHorizontal() const;
+    inline WritingMode writingMode() const;
     bool isLineBreak() const { return box().isLineBreak(); }
 
     unsigned minimumCaretOffset() const { return isText() ? start() : 0; }

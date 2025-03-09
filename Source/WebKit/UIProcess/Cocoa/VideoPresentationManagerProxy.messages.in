@@ -21,9 +21,15 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
+[
+    DispatchedFrom=WebContent,
+    DispatchedTo=UI,
+    EnabledBy=VideoPresentationManagerEnabled || VideoPresentationModeAPIEnabled
+]
 messages -> VideoPresentationManagerProxy {
     SetHasVideo(WebKit::PlaybackSessionContextIdentifier contextId, bool hasVideo)
     SetDocumentVisibility(WebKit::PlaybackSessionContextIdentifier contextId, bool isDocumentVisible)
+    SetIsChildOfElementFullscreen(WebKit::PlaybackSessionContextIdentifier contextId, bool isChildOfElementFullscreen)
     SetVideoDimensions(WebKit::PlaybackSessionContextIdentifier contextId, WebCore::FloatSize videoDimensions)
     SetupFullscreenWithID(WebKit::PlaybackSessionContextIdentifier contextId, WebKit::LayerHostingContextID videoLayerID, WebCore::FloatRect screenRect, WebCore::FloatSize initialSize, WebCore::FloatSize videoDimensions, float hostingScaleFactor, WebCore::MediaPlayerEnums::VideoFullscreenMode videoFullscreenMode, bool allowsPictureInPicture, bool standby, bool blocksReturnToFullscreenFromPictureInPicture)
     SetPlayerIdentifier(WebKit::PlaybackSessionContextIdentifier contextId, std::optional<WebCore::MediaPlayerIdentifier> playerIdentifier)

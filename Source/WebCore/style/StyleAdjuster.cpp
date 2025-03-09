@@ -42,6 +42,7 @@
 #include "HTMLDialogElement.h"
 #include "HTMLDivElement.h"
 #include "HTMLInputElement.h"
+#include "HTMLLabelElement.h"
 #include "HTMLMarqueeElement.h"
 #include "HTMLNames.h"
 #include "HTMLSlotElement.h"
@@ -81,7 +82,7 @@
 #endif
 
 #if ENABLE(FULLSCREEN_API)
-#include "FullscreenManager.h"
+#include "DocumentFullscreen.h"
 #endif
 
 namespace WebCore {
@@ -312,7 +313,7 @@ OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(con
 {
     auto types = parentTypes;
 
-#if ENABLE(WHEEL_EVENT_REGIONS)
+#if ENABLE(WHEEL_EVENT_REGIONS) || ENABLE(TOUCH_EVENT_REGIONS)
     auto findListeners = [&](auto& eventName, auto type, auto nonPassiveType) {
         auto* eventListenerVector = eventTarget.eventTargetData()->eventListenerMap.find(eventName);
         if (!eventListenerVector)
@@ -331,10 +332,32 @@ OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(con
         if (!isPassiveOnly)
             types.add(nonPassiveType);
     };
-
+#endif
+#if ENABLE(WHEEL_EVENT_REGIONS)
     if (eventTarget.hasEventListeners()) {
         findListeners(eventNames().wheelEvent, EventListenerRegionType::Wheel, EventListenerRegionType::NonPassiveWheel);
         findListeners(eventNames().mousewheelEvent, EventListenerRegionType::Wheel, EventListenerRegionType::NonPassiveWheel);
+    }
+#endif
+#if ENABLE(TOUCH_EVENT_REGIONS)
+    if (eventTarget.hasEventListeners()) {
+        findListeners(eventNames().touchstartEvent, EventListenerRegionType::TouchStart, EventListenerRegionType::NonPassiveTouchStart);
+        findListeners(eventNames().touchendEvent, EventListenerRegionType::TouchEnd, EventListenerRegionType::NonPassiveTouchEnd);
+        findListeners(eventNames().touchcancelEvent, EventListenerRegionType::TouchCancel, EventListenerRegionType::NonPassiveTouchCancel);
+        findListeners(eventNames().touchmoveEvent, EventListenerRegionType::TouchMove, EventListenerRegionType::NonPassiveTouchMove);
+
+        findListeners(eventNames().pointerdownEvent, EventListenerRegionType::PointerDown, EventListenerRegionType::NonPassivePointerDown);
+        findListeners(eventNames().pointerenterEvent, EventListenerRegionType::PointerEnter, EventListenerRegionType::NonPassivePointerEnter);
+        findListeners(eventNames().pointerleaveEvent, EventListenerRegionType::PointerLeave, EventListenerRegionType::NonPassivePointerLeave);
+        findListeners(eventNames().pointermoveEvent, EventListenerRegionType::PointerMove, EventListenerRegionType::NonPassivePointerMove);
+        findListeners(eventNames().pointeroutEvent, EventListenerRegionType::PointerOut, EventListenerRegionType::NonPassivePointerOut);
+        findListeners(eventNames().pointeroverEvent, EventListenerRegionType::PointerOver, EventListenerRegionType::NonPassivePointerOver);
+        findListeners(eventNames().pointerupEvent, EventListenerRegionType::PointerUp, EventListenerRegionType::NonPassivePointerUp);
+        if (document.quirks().shouldDispatchSimulatedMouseEvents(&eventTarget)) {
+            findListeners(eventNames().mousedownEvent, EventListenerRegionType::MouseDown, EventListenerRegionType::NonPassiveMouseDown);
+            findListeners(eventNames().mouseupEvent, EventListenerRegionType::MouseUp, EventListenerRegionType::NonPassiveMouseUp);
+            findListeners(eventNames().mousemoveEvent, EventListenerRegionType::MouseMove, EventListenerRegionType::NonPassiveMouseMove);
+        }
     }
 #endif
 
@@ -548,6 +571,9 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             || style.boxReflect()
             || style.hasFilter()
             || style.hasBackdropFilter()
+#if HAVE(CORE_MATERIAL)
+            || style.hasAppleVisualEffect()
+#endif
             || style.hasBlendMode()
             || style.hasIsolation()
             || style.position() == PositionType::Sticky
@@ -598,7 +624,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     else
         style.setTextDecorationsInEffect(style.textDecorationLine());
 
-    bool overflowIsClipOrVisible = isOverflowClipOrVisible(style.overflowX()) && isOverflowClipOrVisible(style.overflowX());
+    bool overflowIsClipOrVisible = isOverflowClipOrVisible(style.overflowY()) && isOverflowClipOrVisible(style.overflowX());
 
     if (!overflowIsClipOrVisible && (style.display() == DisplayType::Table || style.display() == DisplayType::InlineTable)) {
         // Tables only support overflow:hidden and overflow:visible and ignore anything else,
@@ -692,6 +718,9 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             || style.hasIsolation()
             || style.hasMask()
             || style.hasBackdropFilter()
+#if HAVE(CORE_MATERIAL)
+            || style.hasAppleVisualEffect()
+#endif
             || style.hasBlendMode()
             || !style.viewTransitionName().isNone();
         if (RefPtr element = m_element) {
@@ -709,6 +738,13 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     if (m_parentBoxStyle.justifyItems().positionType() == ItemPositionType::Legacy && style.justifyItems().position() == ItemPosition::Legacy)
         style.setJustifyItems(m_parentBoxStyle.justifyItems());
 
+#if HAVE(CORE_MATERIAL)
+    if (appleVisualEffectNeedsBackdrop(style.appleVisualEffect()))
+        style.setUsedAppleVisualEffectForSubtree(style.appleVisualEffect());
+    else
+        style.setUsedAppleVisualEffectForSubtree(m_parentStyle.usedAppleVisualEffectForSubtree());
+#endif
+
     style.setUsedTouchActions(computeUsedTouchActions(style, m_parentStyle.usedTouchActions()));
 
     // Counterparts in Element::addToTopLayer/removeFromTopLayer & SharingResolver::canShareStyleWithElement need to match!
@@ -721,7 +757,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
         if (hasInertAttribute(element))
             return true;
 #if ENABLE(FULLSCREEN_API)
-        if (CheckedPtr fullscreenManager = m_document->fullscreenManagerIfExists(); fullscreenManager && fullscreenManager->fullscreenElement() && element == m_document->documentElement())
+        if (RefPtr documentFullscreen = m_document->fullscreenIfExists(); documentFullscreen && documentFullscreen->fullscreenElement() && element == m_document->documentElement())
             return true;
 #endif
         return false;
@@ -735,7 +771,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             style.setEffectiveInert(false);
 
 #if ENABLE(FULLSCREEN_API)
-        if (CheckedPtr fullscreenManager = m_document->fullscreenManagerIfExists(); fullscreenManager && m_element == fullscreenManager->fullscreenElement() && !hasInertAttribute(m_element.get()))
+        if (RefPtr documentFullscreen = m_document->fullscreenIfExists(); documentFullscreen && m_element == documentFullscreen->fullscreenElement() && !hasInertAttribute(m_element.get()))
             style.setEffectiveInert(false);
 #endif
 
@@ -968,18 +1004,15 @@ void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
             style.setUserSelect(UserSelect::None);
     }
 
-#if PLATFORM(IOS)
-    if (m_document->quirks().hideForbesVolumeSlider()) {
-        static MainThreadNeverDestroyed<const AtomString> localName("cnx-volume-slider"_s);
-        if (m_element->hasLocalName(localName))
-            style.setEffectiveDisplay(DisplayType::None);
+#if PLATFORM(MAC)
+    if (m_document->quirks().needsZomatoEmailLoginLabelQuirk()) {
+        static MainThreadNeverDestroyed<const AtomString> class1("eNjKGZ"_s);
+        if (is<HTMLLabelElement>(*m_element)
+            && m_element->hasClassName(class1)
+            && style.backgroundColor() == Color { WebCore::Color::white })
+            style.setBackgroundColor({ WebCore::Color::transparentBlack });
     }
-    if (m_document->quirks().hideIGNVolumeSlider()) {
-        static MainThreadNeverDestroyed<const AtomString> className("volume-slider"_s);
-        if (is<HTMLDivElement>(*m_element) && m_element->hasClassName(className))
-            style.setEffectiveDisplay(DisplayType::None);
-    }
-#endif // PLATFORM(IOS)
+#endif
 
 #if PLATFORM(IOS_FAMILY)
     if (m_document->quirks().needsGoogleMapsScrollingQuirk()) {
@@ -1005,14 +1038,35 @@ void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
         }
     }
 #if ENABLE(FULLSCREEN_API)
-    if (CheckedPtr fullscreenManager = m_document->fullscreenManagerIfExists(); fullscreenManager && m_document->quirks().needsFullscreenObjectFitQuirk()) {
+    if (RefPtr documentFullscreen = m_document->fullscreenIfExists(); documentFullscreen && m_document->quirks().needsFullscreenObjectFitQuirk()) {
         static MainThreadNeverDestroyed<const AtomString> playerClassName("top-player-video-element"_s);
-        bool isFullscreen = fullscreenManager->isFullscreen();
+        bool isFullscreen = documentFullscreen->isFullscreen();
         if (is<HTMLVideoElement>(*m_element) && isFullscreen && m_element->hasClassName(playerClassName) && style.objectFit() == ObjectFit::Fill)
             style.setObjectFit(ObjectFit::Contain);
     }
 #endif
 #endif
+
+    if (m_document->quirks().needsHotelsAnimationQuirk(*m_element, style)) {
+        // We need to reset animation styles that are mistakenly overridden:
+        //     animation-delay: 0s, 0.06s;
+        //     animation-duration: 0.18s, 0.06s;
+        //     animation-fill-mode: none, forwards;
+        //     animation-name: menu-grow-left, menu-fade-in;
+        auto menuGrowLeftAnimation = Animation::create();
+        menuGrowLeftAnimation->setDuration(.18);
+        menuGrowLeftAnimation->setName({ "menu-grow-left"_s });
+
+        auto menuFadeInAnimation = Animation::create();
+        menuFadeInAnimation->setDelay(.06);
+        menuFadeInAnimation->setDuration(.06);
+        menuFadeInAnimation->setFillMode(AnimationFillMode::Forwards);
+        menuFadeInAnimation->setName({ "menu-fade-in"_s });
+
+        auto& animations = style.ensureAnimations();
+        animations.append(WTFMove(menuGrowLeftAnimation));
+        animations.append(WTFMove(menuFadeInAnimation));
+    }
 }
 
 void Adjuster::propagateToDocumentElementAndInitialContainingBlock(Update& update, const Document& document)

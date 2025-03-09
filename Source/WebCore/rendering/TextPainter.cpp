@@ -2,6 +2,7 @@
  * (C) 1999 Lars Knoll (knoll@kde.org)
  * (C) 2000 Dirk Mueller (mueller@kde.org)
  * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -36,11 +37,12 @@
 #include "RenderLayer.h"
 #include "RenderStyle.h"
 #include "ShadowData.h"
+#include "TextBoxPainter.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
-ShadowApplier::ShadowApplier(const RenderStyle& style, GraphicsContext& context, const ShadowData* shadow, const FilterOperations* colorFilter, const FloatRect& textRect, bool lastShadowIterationShouldDrawText, bool opaque, FontOrientation orientation)
+ShadowApplier::ShadowApplier(const RenderStyle& style, GraphicsContext& context, const ShadowData* shadow, const FilterOperations* colorFilter, const FloatRect& textRect, bool lastShadowIterationShouldDrawText, bool opaque, bool ignoreWritingMode)
     : m_context { context }
     , m_shadow { shadow }
     , m_onlyDrawsShadow { !isLastShadowIteration() || !lastShadowIterationShouldDrawText }
@@ -53,9 +55,7 @@ ShadowApplier::ShadowApplier(const RenderStyle& style, GraphicsContext& context,
         return;
     }
 
-    auto shadowX = orientation == FontOrientation::Horizontal ? shadow->x().value : shadow->y().value;
-    auto shadowY = orientation == FontOrientation::Horizontal ? shadow->y().value : -shadow->x().value;
-    auto shadowOffset = FloatSize(shadowX, shadowY);
+    auto shadowOffset = TextBoxPainter::rotateShadowOffset(shadow->location(), ignoreWritingMode ? WritingMode() : style.writingMode());
     auto shadowRadius = shadow->radius().value;
     auto shadowColor = style.colorResolvingCurrentColor(shadow->color());
     if (colorFilter)
@@ -87,7 +87,10 @@ inline bool ShadowApplier::isLastShadowIteration()
 
 inline bool ShadowApplier::shadowIsCompletelyCoveredByText(bool textIsOpaque)
 {
-    return textIsOpaque && m_shadow && m_shadow->location().isZero() && m_shadow->radius().isZero();
+    return textIsOpaque
+        && m_shadow
+        && Style::isZero(m_shadow->location())
+        && Style::isZero(m_shadow->radius());
 }
 
 ShadowApplier::~ShadowApplier()
@@ -104,6 +107,7 @@ TextPainter::TextPainter(GraphicsContext& context, const FontCascade& font, cons
     : m_context(context)
     , m_font(font)
     , m_renderStyle(renderStyle)
+    , m_writingMode(renderStyle.writingMode())
 {
 }
 
@@ -124,7 +128,10 @@ void TextPainter::paintTextOrEmphasisMarks(const FontCascade& font, const TextRu
         m_context.drawText(font, textRun, textOrigin, startOffset, endOffset);
     else {
         // Replaying back a whole cached glyph run to the GraphicsContext.
-        m_context.drawDisplayListItems(m_glyphDisplayList->items(), m_glyphDisplayList->resourceHeap(), ControlFactory::shared(), textOrigin);
+        m_context.translate(textOrigin);
+        DisplayList::Replayer replayer(m_context, m_glyphDisplayList->items(), m_glyphDisplayList->resourceHeap(), ControlFactory::shared());
+        replayer.replay();
+        m_context.translate(-textOrigin);
     }
     m_glyphDisplayList = nullptr;
 }
@@ -142,7 +149,7 @@ void TextPainter::paintTextWithShadows(const ShadowData* shadow, const FilterOpe
     if (!opaque)
         m_context.setFillColor(Color::black);
     while (shadow) {
-        ShadowApplier shadowApplier(m_renderStyle, m_context, shadow, colorFilter, boxRect, lastShadowIterationShouldDrawText, opaque, (m_textBoxIsHorizontal || m_combinedText) ? FontOrientation::Horizontal : FontOrientation::Vertical);
+        ShadowApplier shadowApplier(m_renderStyle, m_context, shadow, colorFilter, boxRect, lastShadowIterationShouldDrawText, opaque, m_combinedText);
         if (!shadowApplier.nothingToDraw())
             paintTextOrEmphasisMarks(font, textRun, emphasisMark, emphasisMarkOffset, textOrigin + shadowApplier.extraOffset(), startOffset, endOffset);
         shadow = shadow->next();

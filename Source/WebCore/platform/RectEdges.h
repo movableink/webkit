@@ -40,12 +40,17 @@ public:
     {
     }
 
+    RectEdges(const T& value)
+        : m_sides { value, value, value, value }
+    {
+    }
+
     RectEdges(const RectEdges&) = default;
     RectEdges& operator=(const RectEdges&) = default;
 
     template<typename U>
     RectEdges(U&& top, U&& right, U&& bottom, U&& left)
-        : m_sides({ { std::forward<T>(top), std::forward<T>(right), std::forward<T>(bottom), std::forward<T>(left) } })
+        : m_sides({ { std::forward<U>(top), std::forward<U>(right), std::forward<U>(bottom), std::forward<U>(left) } })
     {
     }
 
@@ -124,9 +129,24 @@ public:
         return yFlippedCopy();
     }
 
+    template<typename F> bool anyOf(F&& functor) const
+    {
+        return std::ranges::any_of(m_sides, std::forward<F>(functor));
+    }
+
+    template<typename F> bool allOf(F&& functor) const
+    {
+        return std::ranges::all_of(m_sides, std::forward<F>(functor));
+    }
+
+    template<typename F> bool noneOf(F&& functor) const
+    {
+        return std::ranges::none_of(m_sides, std::forward<F>(functor));
+    }
+
     bool isZero() const
     {
-        return !top() && !right() && !bottom() && !left();
+        return allOf([](auto& edge) { return !edge; });
     }
 
     bool operator==(const RectEdges<T>&) const = default;

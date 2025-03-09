@@ -97,7 +97,7 @@ static WebCore::VideoFrameRotation computeVideoFrameRotation(int rotation)
     String persistentId = [coordinator device].uniqueID;
     auto rotation = computeVideoFrameRotation(clampToInteger([coordinator videoRotationAngleForHorizonLevelPreview]));
 
-    RunLoop::main().dispatch([protectedSelf = retainPtr(self), self, persistentId = WTFMove(persistentId).isolatedCopy(), rotation] {
+    RunLoop::protectedMain()->dispatch([protectedSelf = retainPtr(self), self, persistentId = WTFMove(persistentId).isolatedCopy(), rotation] {
         if (_managerProxy)
             _managerProxy->rotationAngleForCaptureDeviceChanged(persistentId, rotation);
     });
@@ -158,7 +158,7 @@ bool UserMediaPermissionRequestManagerProxy::permittedToCaptureVideo()
 #if ENABLE(MEDIA_STREAM)
 void UserMediaPermissionRequestManagerProxy::requestSystemValidation(const WebPageProxy& page, UserMediaPermissionRequestProxy& request, CompletionHandler<void(bool)>&& callback)
 {
-    if (page.preferences().mockCaptureDevicesEnabled()) {
+    if (page.protectedPreferences()->mockCaptureDevicesEnabled()) {
         callback(true);
         return;
     }

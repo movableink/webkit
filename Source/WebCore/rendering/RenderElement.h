@@ -87,6 +87,7 @@ public:
     Element* element() const { return downcast<Element>(RenderObject::node()); }
     RefPtr<Element> protectedElement() const { return element(); }
     Element* nonPseudoElement() const { return downcast<Element>(RenderObject::nonPseudoNode()); }
+    RefPtr<Element> protectedNonPseudoElement() const { return nonPseudoElement(); }
     Element* generatingElement() const;
 
     RenderObject* firstChild() const { return m_firstChild.get(); }
@@ -141,7 +142,8 @@ public:
     void setOutOfFlowChildNeedsStaticPositionLayout();
     void clearChildNeedsLayout();
     void setNeedsPositionedMovementLayout(const RenderStyle* oldStyle);
-    void setNeedsSimplifiedNormalFlowLayout();
+    void setNeedsLayoutForStyleDifference(StyleDifference, const RenderStyle* oldStyle);
+    void setNeedsLayoutForOverflowChange();
 
     // paintOffset is the offset from the origin of the GraphicsContext at which to paint the current object.
     virtual void paint(PaintInfo&, const LayoutPoint& paintOffset) = 0;
@@ -212,6 +214,11 @@ public:
     inline bool hasBlendMode() const;
     inline bool hasShapeOutside() const;
 
+#if HAVE(CORE_MATERIAL)
+    inline bool hasAppleVisualEffect() const;
+    inline bool hasAppleVisualEffectRequiringBackdropFilter() const;
+#endif
+
     void registerForVisibleInViewportCallback();
     void unregisterForVisibleInViewportCallback();
 
@@ -277,6 +284,7 @@ public:
     Overflow effectiveOverflowY() const;
     inline Overflow effectiveOverflowInlineDirection() const;
     inline Overflow effectiveOverflowBlockDirection() const;
+    virtual bool overflowChangesMayAffectLayout() const { return false; }
 
     bool isWritingModeRoot() const { return !parent() || parent()->style().writingMode().computedWritingMode() != style().writingMode().computedWritingMode(); }
 
@@ -285,9 +293,6 @@ public:
 
     virtual LayoutRect paintRectToClipOutFromBorder(const LayoutRect&) { return { }; }
     void paintFocusRing(const PaintInfo&, const RenderStyle&, const Vector<LayoutRect>& focusRingRects) const;
-
-    virtual bool establishesIndependentFormattingContext() const;
-    bool createsNewFormattingContext() const;
 
     static void markRendererDirtyAfterTopLayerChange(RenderElement* renderer, RenderBlock* containingBlockBeforeStyleResolution);
 
@@ -298,10 +303,8 @@ public:
     bool renderBoxHasShapeOutsideInfo() const { return m_renderBoxHasShapeOutsideInfo; }
     bool hasCachedSVGResource() const { return m_hasCachedSVGResource; }
 
-    using LayoutIdentifier = unsigned;
-    void setLayoutIdentifier(LayoutIdentifier layoutIdentifier) { m_layoutIdentifier = layoutIdentifier; }
-    LayoutIdentifier layoutIdentifier() const { return m_layoutIdentifier; }
-    bool didVisitSinceLayout(LayoutIdentifier) const;
+    const Element* defaultAnchor() const;
+    const RenderElement* defaultAnchorRenderer() const;
 
 protected:
     RenderElement(Type, Element&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);
@@ -349,9 +352,6 @@ protected:
 
     bool shouldApplyLayoutOrPaintContainment(bool) const;
     inline bool shouldApplySizeOrStyleContainment(bool) const;
-
-    const Element* defaultAnchor() const;
-    const RenderElement* defaultAnchorRenderer() const;
 
 private:
     RenderElement(Type, ContainerNode&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);
@@ -420,7 +420,6 @@ private:
     unsigned m_isRegisteredForVisibleInViewportCallback : 1;
     unsigned m_visibleInViewportState : 2;
     unsigned m_didContributeToVisuallyNonEmptyPixelCount : 1;
-    LayoutIdentifier m_layoutIdentifier : 12 { 0 };
 
     RenderStyle m_style;
 };

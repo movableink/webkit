@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Tetsuharu Ohzeki <tetsuharu.ohzeki@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +37,7 @@ public:
     void assertionBOL() { }
     void assertionEOL() { }
     void assertionWordBoundary(bool) { }
-    void atomPatternCharacter(char32_t) { }
+    void atomPatternCharacter(char32_t, bool) { }
     void atomBuiltInCharacterClass(BuiltInCharacterClassID, bool) { }
     void atomCharacterClassBegin(bool = false) { }
     void atomCharacterClassAtom(UChar) { }
@@ -49,6 +50,7 @@ public:
     void atomCharacterClassEnd() { }
     void atomParenthesesSubpatternBegin(bool = true, std::optional<String> = std::nullopt) { }
     void atomParentheticalAssertionBegin(bool, MatchDirection) { }
+    void atomParentheticalModifierBegin(OptionSet<Flags>, OptionSet<Flags>) { }
     void atomParenthesesEnd() { }
     void atomBackReference(unsigned) { }
     void atomNamedBackReference(const String&) { }
@@ -57,6 +59,7 @@ public:
     void disjunction(CreateDisjunctionPurpose) { }
     void resetForReparsing() { }
 };
+static_assert(YarrSyntaxCheckable<SyntaxChecker>);
 
 ErrorCode checkSyntax(StringView pattern, StringView flags)
 {

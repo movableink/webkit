@@ -31,6 +31,7 @@
 #include "AudioSession.h"
 #include "Document.h"
 #include "EventNames.h"
+#include "Page.h"
 #include "PermissionsPolicy.h"
 #include "PlatformMediaSessionManager.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -85,10 +86,14 @@ ExceptionOr<void> DOMAudioSession::setType(Type type)
     if (!document)
         return Exception { ExceptionCode::InvalidStateError };
 
+    RefPtr page = document->protectedPage();
+    if (!page)
+        return Exception { ExceptionCode::InvalidStateError };
+
     if (!PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, *document, PermissionsPolicy::ShouldReportViolation::No))
         return { };
 
-    document->topDocument().setAudioSessionType(type);
+    page->setAudioSessionType(type);
 
     auto categoryOverride = fromDOMAudioSessionType(type);
     AudioSession::protectedSharedSession()->setCategoryOverride(categoryOverride);
@@ -105,7 +110,13 @@ DOMAudioSession::Type DOMAudioSession::type() const
     if (document && !PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, *document, PermissionsPolicy::ShouldReportViolation::No))
         return DOMAudioSession::Type::Auto;
 
-    return document ? document->topDocument().audioSessionType() : DOMAudioSession::Type::Auto;
+    if (!document)
+        return DOMAudioSession::Type::Auto;
+
+    if (RefPtr page = document->protectedPage())
+        return page->audioSessionType();
+
+    return DOMAudioSession::Type::Auto;
 }
 
 static DOMAudioSession::State computeAudioSessionState()
@@ -164,18 +175,18 @@ void DOMAudioSession::scheduleStateChangeEvent()
         return;
 
     m_hasScheduleStateChangeEvent = true;
-    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this] {
-        if (isContextStopped())
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [](auto& session) {
+        if (session.isContextStopped())
             return;
 
-        m_hasScheduleStateChangeEvent = false;
+        session.m_hasScheduleStateChangeEvent = false;
         auto newState = computeAudioSessionState();
 
-        if (m_state && *m_state == newState)
+        if (session.m_state && *session.m_state == newState)
             return;
 
-        m_state = newState;
-        dispatchEvent(Event::create(eventNames().statechangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        session.m_state = newState;
+        session.dispatchEvent(Event::create(eventNames().statechangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
     });
 }
 

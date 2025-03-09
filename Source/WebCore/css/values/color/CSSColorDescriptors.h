@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +27,7 @@
 #pragma once
 
 #include "CSSPrimitiveNumericTypes+EvaluateCalc.h"
+#include "CSSPrimitiveNumericTypes+SymbolReplacement.h"
 #include "CSSPrimitiveNumericTypes.h"
 #include "CSSValueKeywords.h"
 #include "Color.h"
@@ -35,6 +37,7 @@
 #include <variant>
 #include <wtf/Brigand.h>
 #include <wtf/OptionSet.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/ASCIILiteral.h>
 
 namespace WebCore {
@@ -44,7 +47,7 @@ enum class CSSColorFunctionForm { Relative, Absolute };
 
 template<typename... Ts> struct CSSColorComponent {
     using ResultTypeList = brigand::list<Ts...>;
-    using Result = CSS::VariantOrSingle<ResultTypeList>;
+    using Result = VariantOrSingle<ResultTypeList>;
 
     // Symbol used to represent component for relative color form.
     CSSValueID symbol;
@@ -69,15 +72,15 @@ template<typename... Ts> struct CSSColorComponent {
     ColorComponentType type = ColorComponentType::Number;
 };
 
-// e.g. for GetComponent<ColorRGBFunction<SRGB<float>>, 2> -> CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>
+// e.g. for GetComponent<ColorRGBFunction<SRGB<float>>, 2> -> CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>
 template<typename Descriptor, unsigned Index>
 using GetComponent = std::decay_t<decltype(std::get<Index>(Descriptor::components))>;
 
-// e.g. for GetComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> std::variant<CSS::Percentage<>, CSS::Number<>, CSS::None>
+// e.g. for GetComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> std::variant<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>
 template<typename Descriptor, unsigned Index>
 using GetComponentResult = typename GetComponent<Descriptor, Index>::Result;
 
-// e.g. for GetComponentResultTypeList<ColorRGBFunction<SRGB<float>>, 2> -> brigand::list<CSS::Percentage<>, CSS::Number<>, CSS::None>
+// e.g. for GetComponentResultTypeList<ColorRGBFunction<SRGB<float>>, 2> -> brigand::list<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>
 template<typename Descriptor, unsigned Index>
 using GetComponentResultTypeList = typename GetComponent<Descriptor, Index>::ResultTypeList;
 
@@ -91,15 +94,15 @@ using GetColorTypeComponentType = typename GetColorType<Descriptor>::ComponentTy
 
 // MARK: Style resolved parse type (components are std::variants with Style namespaced primitives)
 
-// e.g. for GetStyleColorParseTypeComponentTypeList<ColorRGBFunction<SRGB<float>>, 2> -> brigand::list<Style::Percentage, Style::Number, Style::None>
+// e.g. for GetStyleColorParseTypeComponentTypeList<ColorRGBFunction<SRGB<float>>, 2> -> brigand::list<Style::Percentage, Style::Number, CSS::Keyword::None>
 template<typename Descriptor, unsigned Index>
-using GetStyleColorParseTypeComponentTypeList = CSS::TypeTransform::List::CSSToStyle<typename GetComponent<Descriptor, Index>::ResultTypeList>;
+using GetStyleColorParseTypeComponentTypeList = brigand::transform<typename GetComponent<Descriptor, Index>::ResultTypeList, Style::ToStyleMapping<brigand::_1>>;
 
-// e.g. for GetStyleColorParseTypeComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> std::variant<Style::Percentage, Style::Number, Style::None>
+// e.g. for GetStyleColorParseTypeComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> std::variant<Style::Percentage, Style::Number, CSS::Keyword::None>
 template<typename Descriptor, unsigned Index>
-using GetStyleColorParseTypeComponentResult = CSS::VariantOrSingle<GetStyleColorParseTypeComponentTypeList<Descriptor, Index>>;
+using GetStyleColorParseTypeComponentResult = VariantOrSingle<GetStyleColorParseTypeComponentTypeList<Descriptor, Index>>;
 
-// e.g. for StyleColorParseType<ColorRGBFunction<T>> -> std::tuple<std::variant<Style::Percentage, Style::Number, Style::None>, ...>
+// e.g. for StyleColorParseType<ColorRGBFunction<T>> -> std::tuple<std::variant<Style::Percentage, Style::Number, CSS::Keyword::None>, ...>
 template<typename Descriptor>
 using StyleColorParseType = std::tuple<
     GetStyleColorParseTypeComponentResult<Descriptor, 0>,
@@ -108,27 +111,27 @@ using StyleColorParseType = std::tuple<
     std::optional<GetStyleColorParseTypeComponentResult<Descriptor, 3>>
 >;
 
-template<typename Descriptor> constexpr bool containsUnevaluatedCalc(const StyleColorParseType<Descriptor>&)
+template<typename Descriptor> constexpr bool componentsContainsUnevaluatedCalc(const StyleColorParseType<Descriptor>&)
 {
     return false;
 }
 
-template<typename Descriptor> constexpr bool requiresConversionData(const StyleColorParseType<Descriptor>&)
+template<typename Descriptor> constexpr bool componentsRequireConversionData(const StyleColorParseType<Descriptor>&)
 {
     return false;
 }
 
 // MARK: CSS absolute color parse type (components are std::variants with CSS namespaced primitive, but no symbol values)
 
-// e.g. for GetCSSColorParseTypeWithCalcComponentTypeList<ColorRGBFunction<SRGB<float>>, 2> -> brigand::list<CSS::Percentage<>, CSS::Number<>, CSS::None>
+// e.g. for GetCSSColorParseTypeWithCalcComponentTypeList<ColorRGBFunction<SRGB<float>>, 2> -> brigand::list<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>
 template<typename Descriptor, unsigned Index>
 using GetCSSColorParseTypeWithCalcComponentTypeList = typename GetComponent<Descriptor, Index>::ResultTypeList;
 
-// e.g. for GetCSSColorParseTypeWithCalcComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> std::variant<CSS::Percentage<>, CSS::Number<>, CSS::None>
+// e.g. for GetCSSColorParseTypeWithCalcComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> std::variant<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>
 template<typename Descriptor, unsigned Index>
-using GetCSSColorParseTypeWithCalcComponentResult = CSS::VariantOrSingle<GetCSSColorParseTypeWithCalcComponentTypeList<Descriptor, Index>>;
+using GetCSSColorParseTypeWithCalcComponentResult = VariantOrSingle<GetCSSColorParseTypeWithCalcComponentTypeList<Descriptor, Index>>;
 
-// e.g. for CSSColorParseTypeWithCalc<ColorRGBFunction<T>> -> std::tuple<std::variant<CSS::Percentage<>, CSS::Number<>, CSS::None>, ...>
+// e.g. for CSSColorParseTypeWithCalc<ColorRGBFunction<T>> -> std::tuple<std::variant<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>, ...>
 template<typename Descriptor>
 using CSSColorParseTypeWithCalc = std::tuple<
     GetCSSColorParseTypeWithCalcComponentResult<Descriptor, 0>,
@@ -137,7 +140,7 @@ using CSSColorParseTypeWithCalc = std::tuple<
     std::optional<GetCSSColorParseTypeWithCalcComponentResult<Descriptor, 3>>
 >;
 
-template<typename Descriptor> bool containsUnevaluatedCalc(const CSSColorParseTypeWithCalc<Descriptor>& components)
+template<typename Descriptor> bool componentsContainsUnevaluatedCalc(const CSSColorParseTypeWithCalc<Descriptor>& components)
 {
     return isUnevaluatedCalc(std::get<0>(components))
         || isUnevaluatedCalc(std::get<1>(components))
@@ -145,7 +148,7 @@ template<typename Descriptor> bool containsUnevaluatedCalc(const CSSColorParseTy
         || isUnevaluatedCalc(std::get<3>(components));
 }
 
-template<typename Descriptor> bool requiresConversionData(const CSSColorParseTypeWithCalc<Descriptor>& components)
+template<typename Descriptor> bool componentsRequireConversionData(const CSSColorParseTypeWithCalc<Descriptor>& components)
 {
     return requiresConversionData(std::get<0>(components))
         || requiresConversionData(std::get<1>(components))
@@ -155,15 +158,15 @@ template<typename Descriptor> bool requiresConversionData(const CSSColorParseTyp
 
 // MARK: CSS relative color parse type (components are std::variants with CSS namespaced primitive, includes symbol values)
 
-// e.g. for GetCSSColorParseTypeWithCalcAndSymbolsComponentTypeList<ColorRGBFunction<SRGB<float>>, 2> -> brigand::list<CSS::Percentage<>, CSS::Number<>, CSS::None, CSS::Symbol>
+// e.g. for GetCSSColorParseTypeWithCalcAndSymbolsComponentTypeList<ColorRGBFunction<SRGB<float>>, 2> -> brigand::list<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None, CSS::Symbol>
 template<typename Descriptor, unsigned Index>
-using GetCSSColorParseTypeWithCalcAndSymbolsComponentTypeList = CSS::TypeTransform::List::PlusSymbol<typename GetComponent<Descriptor, Index>::ResultTypeList>;
+using GetCSSColorParseTypeWithCalcAndSymbolsComponentTypeList = CSS::PlusSymbol<typename GetComponent<Descriptor, Index>::ResultTypeList>;
 
-// e.g. for GetCSSColorParseTypeWithCalcAndSymbolsComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> std::variant<CSS::Percentage<>, CSS::Number<>, CSS::None, CSS::Symbol>
+// e.g. for GetCSSColorParseTypeWithCalcAndSymbolsComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> std::variant<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None, CSS::Symbol>
 template<typename Descriptor, unsigned Index>
-using GetCSSColorParseTypeWithCalcAndSymbolsComponentResult = CSS::VariantOrSingle<GetCSSColorParseTypeWithCalcAndSymbolsComponentTypeList<Descriptor, Index>>;
+using GetCSSColorParseTypeWithCalcAndSymbolsComponentResult = VariantOrSingle<GetCSSColorParseTypeWithCalcAndSymbolsComponentTypeList<Descriptor, Index>>;
 
-// e.g. for CSSColorParseTypeWithCalcAndSymbols<ColorRGBFunction<T>> -> std::tuple<std::variant<CSS::Percentage<>, CSS::Number<>, CSS::None, CSS::Symbol>, ...>
+// e.g. for CSSColorParseTypeWithCalcAndSymbols<ColorRGBFunction<T>> -> std::tuple<std::variant<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None, CSS::Symbol>, ...>
 template<typename Descriptor>
 using CSSColorParseTypeWithCalcAndSymbols = std::tuple<
     GetCSSColorParseTypeWithCalcAndSymbolsComponentResult<Descriptor, 0>,
@@ -172,7 +175,7 @@ using CSSColorParseTypeWithCalcAndSymbols = std::tuple<
     std::optional<GetCSSColorParseTypeWithCalcAndSymbolsComponentResult<Descriptor, 3>>
 >;
 
-template<typename Descriptor> bool containsUnevaluatedCalc(const CSSColorParseTypeWithCalcAndSymbols<Descriptor>& components)
+template<typename Descriptor> bool componentsContainsUnevaluatedCalc(const CSSColorParseTypeWithCalcAndSymbols<Descriptor>& components)
 {
     return isUnevaluatedCalc(std::get<0>(components))
         || isUnevaluatedCalc(std::get<1>(components))
@@ -180,7 +183,7 @@ template<typename Descriptor> bool containsUnevaluatedCalc(const CSSColorParseTy
         || isUnevaluatedCalc(std::get<3>(components));
 }
 
-template<typename Descriptor> bool requiresConversionData(const CSSColorParseTypeWithCalcAndSymbols<Descriptor>& components)
+template<typename Descriptor> bool componentsRequireConversionData(const CSSColorParseTypeWithCalcAndSymbols<Descriptor>& components)
 {
     return requiresConversionData(std::get<0>(components))
         || requiresConversionData(std::get<1>(components))
@@ -190,7 +193,7 @@ template<typename Descriptor> bool requiresConversionData(const CSSColorParseTyp
 
 // MARK: - Shared Component Descriptors
 
-constexpr auto AlphaComponent = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None> { .symbol = CSSValueAlpha, .min = 0.0, .max = 1.0 };
+constexpr auto AlphaComponent = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None> { .symbol = CSSValueAlpha, .min = 0.0, .max = 1.0 };
 constexpr auto AlphaLegacyComponent = CSSColorComponent<CSS::Percentage<>, CSS::Number<>> { .symbol = CSSValueAlpha, .min = 0.0, .max = 1.0 };
 
 // MARK: - Color Function Descriptors
@@ -207,9 +210,9 @@ struct RGBFunctionModernAbsolute {
     static constexpr bool usesColorFunctionForSerialization = false;
     static constexpr ASCIILiteral serializationFunctionName = "rgb"_s;
 
-    using R = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
-    using G = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
-    using B = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
+    using R = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
+    using G = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
+    using B = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
 
     static constexpr auto components = std::make_tuple(
         R { .symbol = CSSValueR, .min = 0.0, .max = 255.0, .numberMultiplier = 1.0 / 255.0, .percentMultiplier = 255.0 / 100.0, .symbolMultiplier = 255.0 },
@@ -257,9 +260,9 @@ struct RGBFunctionModernRelative {
     static constexpr bool usesColorFunctionForSerialization = false;
     static constexpr ASCIILiteral serializationFunctionName = "rgb"_s;
 
-    using R = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
-    using G = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
-    using B = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
+    using R = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
+    using G = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
+    using B = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
 
     static constexpr auto components = std::make_tuple(
         R { .symbol = CSSValueR, .numberMultiplier = 1.0 / 255.0, .percentMultiplier = 255.0 / 100.0, .symbolMultiplier = 255.0 },
@@ -282,9 +285,9 @@ struct HSLFunctionModern {
     static constexpr bool usesColorFunctionForSerialization = false;
     static constexpr ASCIILiteral serializationFunctionName = "hsl"_s;
 
-    using H = CSSColorComponent<CSS::Angle<>, CSS::Number<>, CSS::None>;
-    using S = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
-    using L = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
+    using H = CSSColorComponent<CSS::Angle<>, CSS::Number<>, CSS::Keyword::None>;
+    using S = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
+    using L = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
 
     static constexpr auto components = std::make_tuple(
         H { .symbol = CSSValueH, .type = ColorComponentType::Angle    },
@@ -330,9 +333,9 @@ struct HWBFunction {
     static constexpr bool usesColorFunctionForSerialization = false;
     static constexpr ASCIILiteral serializationFunctionName = "hwb"_s;
 
-    using H = CSSColorComponent<CSS::Angle<>, CSS::Number<>, CSS::None>;
-    using W = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
-    using B = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
+    using H = CSSColorComponent<CSS::Angle<>, CSS::Number<>, CSS::Keyword::None>;
+    using W = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
+    using B = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
 
     static constexpr auto components = std::make_tuple(
         H { .symbol = CSSValueH, .type = ColorComponentType::Angle },
@@ -354,9 +357,9 @@ struct LabFunction {
     static constexpr bool usesColorFunctionForSerialization = false;
     static constexpr ASCIILiteral serializationFunctionName = "lab"_s;
 
-    using L = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
-    using A = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
-    using B = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
+    using L = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
+    using A = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
+    using B = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
 
     static constexpr auto components = std::make_tuple(
         L { .symbol = CSSValueL, .min = 0.0, .max = 100.0, .percentMultiplier = 1.0           },
@@ -378,9 +381,9 @@ struct LCHFunction {
     static constexpr bool usesColorFunctionForSerialization = false;
     static constexpr ASCIILiteral serializationFunctionName = "lch"_s;
 
-    using L = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
-    using C = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
-    using H = CSSColorComponent<CSS::Angle<>, CSS::Number<>, CSS::None>;
+    using L = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
+    using C = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
+    using H = CSSColorComponent<CSS::Angle<>, CSS::Number<>, CSS::Keyword::None>;
 
     static constexpr auto components = std::make_tuple(
         L { .symbol = CSSValueL, .min = 0.0, .max = 100.0, .percentMultiplier = 1.0           },
@@ -402,9 +405,9 @@ struct OKLabFunction {
     static constexpr bool usesColorFunctionForSerialization = false;
     static constexpr ASCIILiteral serializationFunctionName = "oklab"_s;
 
-    using L = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
-    using A = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
-    using B = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
+    using L = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
+    using A = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
+    using B = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
 
     static constexpr auto components = std::make_tuple(
         L { .symbol = CSSValueL, .min = 0.0, .max = 1.0                                   },
@@ -426,9 +429,9 @@ struct OKLCHFunction {
     static constexpr bool usesColorFunctionForSerialization = false;
     static constexpr ASCIILiteral serializationFunctionName = "oklch"_s;
 
-    using L = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
-    using C = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
-    using H = CSSColorComponent<CSS::Angle<>, CSS::Number<>, CSS::None>;
+    using L = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
+    using C = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
+    using H = CSSColorComponent<CSS::Angle<>, CSS::Number<>, CSS::Keyword::None>;
 
     static constexpr auto components = std::make_tuple(
         L { .symbol = CSSValueL, .min = 0.0, .max = 1.0                                   },
@@ -452,9 +455,9 @@ template<typename T> struct ColorRGBFunction {
     static constexpr bool usesColorFunctionForSerialization = true;
     static constexpr ASCIILiteral serializationFunctionName = "color"_s;
 
-    using R = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
-    using G = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
-    using B = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
+    using R = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
+    using G = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
+    using B = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
 
     static constexpr auto components = std::make_tuple(
         R { .symbol = CSSValueR },
@@ -478,9 +481,9 @@ template<typename T> struct ColorXYZFunction {
     static constexpr bool usesColorFunctionForSerialization = true;
     static constexpr ASCIILiteral serializationFunctionName = "color"_s;
 
-    using X = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
-    using Y = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
-    using Z = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::None>;
+    using X = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
+    using Y = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
+    using Z = CSSColorComponent<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>;
 
     static constexpr auto components = std::make_tuple(
         X { .symbol = CSSValueX },

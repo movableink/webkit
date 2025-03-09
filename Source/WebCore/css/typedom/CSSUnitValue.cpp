@@ -178,7 +178,7 @@ static bool isValueOutOfRangeForProperty(CSSPropertyID propertyID, double value,
     case CSSPropertyFlexShrink:
     case CSSPropertyFontSize:
     case CSSPropertyFontSizeAdjust:
-    case CSSPropertyFontStretch:
+    case CSSPropertyFontWidth:
     case CSSPropertyGridAutoColumns:
     case CSSPropertyGridAutoRows:
     case CSSPropertyGridTemplateColumns:
@@ -252,7 +252,7 @@ static CSS::Range rangeForProperty(CSSPropertyID propertyID, CSSUnitType)
     case CSSPropertyFlexShrink:
     case CSSPropertyFontSize:
     case CSSPropertyFontSizeAdjust:
-    case CSSPropertyFontStretch:
+    case CSSPropertyFontWidth:
     case CSSPropertyGridAutoColumns:
     case CSSPropertyGridAutoRows:
     case CSSPropertyGridTemplateColumns:
@@ -400,16 +400,14 @@ RefPtr<CSSValue> CSSUnitValue::toCSSValueWithProperty(CSSPropertyID propertyID) 
             return nullptr;
         }
 
-        CSSCalc::Children sumChildren;
+        Vector<CSSCalc::Child> sumChildren;
         sumChildren.append(WTFMove(*node));
         auto sum = CSSCalc::makeChild(CSSCalc::Sum { .children = WTFMove(sumChildren) }, type);
 
-        return CSSPrimitiveValue::create(CSSCalcValue::create(CSSCalc::Tree {
+        return CSSPrimitiveValue::create(CSSCalcValue::create(category, range, CSSCalc::Tree {
             .root = WTFMove(sum),
             .type = type,
-            .category = category,
             .stage = CSSCalc::Stage::Specified,
-            .range = range
         }));
     }
     return toCSSValue();

@@ -177,7 +177,9 @@ void AccessibilityScrollView::removeChildScrollbar(AccessibilityObject* scrollba
     if (!scrollbar)
         return;
 
-    size_t position = m_children.find(Ref { *scrollbar });
+    size_t position = m_children.findIf([&scrollbar] (const Ref<AXCoreObject>& child) {
+        return child.ptr() == scrollbar;
+    });
     if (position != notFound) {
         m_children[position]->detachFromParent();
         m_children.remove(position);
@@ -214,6 +216,10 @@ void AccessibilityScrollView::clearChildren()
 
 bool AccessibilityScrollView::computeIsIgnored() const
 {
+    // Scroll view's that host remote frames won't have web area objects, but shouldn't be ignored so that they are also available in the isolated tree.
+    if (m_remoteFrame)
+        return false;
+
     AccessibilityObject* webArea = webAreaObject();
     if (!webArea)
         return true;
@@ -236,7 +242,7 @@ void AccessibilityScrollView::addRemoteFrameChild()
         m_remoteFrame = downcast<AXRemoteFrame>(cache->create(AccessibilityRole::RemoteFrame));
         m_remoteFrame->setParent(this);
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
         // Generate a new token and pass it back to the other remote frame so it can bind these objects together.
         Ref remoteFrame = remoteFrameView->frame();
         m_remoteFrame->setFrameID(remoteFrame->frameID());
@@ -247,7 +253,7 @@ void AccessibilityScrollView::addRemoteFrameChild()
             auto location = elementRect().location();
             remoteFrame->updateRemoteFrameAccessibilityOffset(flooredIntPoint(location));
         });
-#endif
+#endif // PLATFORM(COCOA)
     } else
         m_remoteFrame->setParent(this);
 

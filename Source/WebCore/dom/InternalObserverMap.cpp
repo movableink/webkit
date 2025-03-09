@@ -83,8 +83,8 @@ public:
 
         bool hasCallback() const final { return true; }
 
-        Ref<Observable> m_sourceObservable;
-        Ref<MapperCallback> m_mapper;
+        const Ref<Observable> m_sourceObservable;
+        const Ref<MapperCallback> m_mapper;
     };
 
 private:
@@ -102,30 +102,30 @@ private:
         JSC::Exception* previousException = nullptr;
         {
             auto catchScope = DECLARE_CATCH_SCOPE(vm);
-            auto result = m_mapper->handleEventRethrowingException(value, m_idx);
+            auto result = protectedMapper()->handleEventRethrowingException(value, m_idx);
             previousException = catchScope.exception();
             if (previousException) {
                 catchScope.clearException();
-                m_subscriber->error(previousException->value());
+                protectedSubscriber()->error(previousException->value());
                 return;
             }
 
             m_idx += 1;
 
             if (result.type() == CallbackResultType::Success)
-                m_subscriber->next(result.releaseReturnValue());
+                protectedSubscriber()->next(result.releaseReturnValue());
         }
     }
 
     void error(JSC::JSValue value) final
     {
-        m_subscriber->error(value);
+        protectedSubscriber()->error(value);
     }
 
     void complete() final
     {
         InternalObserver::complete();
-        m_subscriber->complete();
+        protectedSubscriber()->complete();
     }
 
     void visitAdditionalChildren(JSC::AbstractSlotVisitor& visitor) const final
@@ -134,11 +134,8 @@ private:
         m_mapper->visitJSFunction(visitor);
     }
 
-    void visitAdditionalChildren(JSC::SlotVisitor& visitor) const final
-    {
-        m_subscriber->visitAdditionalChildren(visitor);
-        m_mapper->visitJSFunction(visitor);
-    }
+    Ref<Subscriber> protectedSubscriber() const { return m_subscriber; }
+    Ref<MapperCallback> protectedMapper() const { return m_mapper; }
 
     InternalObserverMap(ScriptExecutionContext& context, Ref<Subscriber> subscriber, Ref<MapperCallback> mapper)
         : InternalObserver(context)
@@ -146,8 +143,8 @@ private:
         , m_mapper(mapper)
     { }
 
-    Ref<Subscriber> m_subscriber;
-    Ref<MapperCallback> m_mapper;
+    const Ref<Subscriber> m_subscriber;
+    const Ref<MapperCallback> m_mapper;
     uint64_t m_idx { 0 };
 };
 

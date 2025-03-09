@@ -43,6 +43,7 @@
 #include "RenderStyleSetters.h"
 #include "ThemeAdwaita.h"
 #include "TimeRanges.h"
+#include "UserAgentScripts.h"
 #include "UserAgentStyleSheets.h"
 #include <wtf/text/Base64.h>
 
@@ -51,12 +52,12 @@
 #include <wtf/FileSystem.h>
 #endif
 
-#if ENABLE(MODERN_MEDIA_CONTROLS)
-#include "UserAgentScripts.h"
-#endif
-
 #if PLATFORM(GTK) || PLATFORM(WPE)
 #include "SystemSettings.h"
+#endif
+
+#if USE(GLIB)
+#include <wtf/glib/GSpanExtras.h>
 #endif
 
 namespace WebCore {
@@ -75,9 +76,7 @@ bool RenderThemeAdwaita::canCreateControlPartForRenderer(const RenderObject& ren
     switch (renderer.style().usedAppearance()) {
     case StyleAppearance::Button:
     case StyleAppearance::Checkbox:
-#if ENABLE(INPUT_TYPE_COLOR)
     case StyleAppearance::ColorWell:
-#endif
     case StyleAppearance::DefaultButton:
     case StyleAppearance::InnerSpinButton:
     case StyleAppearance::Menulist:
@@ -115,7 +114,7 @@ bool RenderThemeAdwaita::canCreateControlPartForDecorations(const RenderObject& 
     return renderer.style().usedAppearance() == StyleAppearance::MenulistButton;
 }
 
-bool RenderThemeAdwaita::supportsFocusRing(const RenderStyle& style) const
+bool RenderThemeAdwaita::supportsFocusRing(const RenderObject&, const RenderStyle& style) const
 {
     switch (style.usedAppearance()) {
     case StyleAppearance::PushButton:
@@ -204,25 +203,15 @@ String RenderThemeAdwaita::extraDefaultStyleSheet()
 
 Vector<String, 2> RenderThemeAdwaita::mediaControlsScripts()
 {
-#if ENABLE(MODERN_MEDIA_CONTROLS)
     return { StringImpl::createWithoutCopying(ModernMediaControlsJavaScript) };
-#else
-    return { };
-#endif
 }
 
-String RenderThemeAdwaita::mediaControlsStyleSheet()
+Vector<String> RenderThemeAdwaita::mediaControlsStyleSheets(const HTMLMediaElement&)
 {
-#if ENABLE(MODERN_MEDIA_CONTROLS)
     if (m_mediaControlsStyleSheet.isEmpty())
         m_mediaControlsStyleSheet = StringImpl::createWithoutCopying(ModernMediaControlsUserAgentStyleSheet);
-    return m_mediaControlsStyleSheet;
-#else
-    return emptyString();
-#endif
+    return { m_mediaControlsStyleSheet };
 }
-
-#if ENABLE(MODERN_MEDIA_CONTROLS)
 
 String RenderThemeAdwaita::mediaControlsBase64StringForIconNameAndType(const String& iconName, const String& iconType)
 {
@@ -231,7 +220,7 @@ String RenderThemeAdwaita::mediaControlsBase64StringForIconNameAndType(const Str
     auto data = adoptGRef(g_resources_lookup_data(path.latin1().data(), G_RESOURCE_LOOKUP_FLAGS_NONE, nullptr));
     if (!data)
         return emptyString();
-    return base64EncodeToString({ static_cast<const uint8_t*>(g_bytes_get_data(data.get(), nullptr)), g_bytes_get_size(data.get()) });
+    return base64EncodeToString(span(data));
 #elif PLATFORM(WIN)
     auto path = webKitBundlePath(iconName, iconType, "media-controls"_s);
     auto data = FileSystem::readEntireFile(path);
@@ -248,7 +237,6 @@ String RenderThemeAdwaita::mediaControlsFormattedStringForDuration(double durati
     // FIXME: Format this somehow, maybe through GDateTime?
     return makeString(durationInSeconds);
 }
-#endif // ENABLE(MODERN_MEDIA_CONTROLS)
 #endif // ENABLE(VIDEO)
 
 Color RenderThemeAdwaita::systemColor(CSSValueID cssValueID, OptionSet<StyleColorOptions> options) const
@@ -273,7 +261,7 @@ Color RenderThemeAdwaita::systemColor(CSSValueID cssValueID, OptionSet<StyleColo
         return { Color::white, Color::Flags::Semantic };
 
     case CSSValueField:
-#if HAVE(OS_DARK_MODE_SUPPORT)
+#if PLATFORM(COCOA)
     case CSSValueWebkitControlBackground:
 #endif
         if (useDarkAppearance)
@@ -367,7 +355,6 @@ void RenderThemeAdwaita::adjustSliderThumbSize(RenderStyle& style, const Element
     style.setHeight(Length(sliderThumbSize, LengthType::Fixed));
 }
 
-#if ENABLE(DATALIST_ELEMENT)
 IntSize RenderThemeAdwaita::sliderTickSize() const
 {
     return { 1, 7 };
@@ -386,7 +373,6 @@ void RenderThemeAdwaita::adjustListButtonStyle(RenderStyle& style, const Element
     else
         style.setMarginLeft(Length(-2, LengthType::Fixed));
 }
-#endif // ENABLE(DATALIST_ELEMENT)
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
 std::optional<Seconds> RenderThemeAdwaita::caretBlinkInterval() const

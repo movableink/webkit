@@ -38,17 +38,17 @@ typedef void *EGLDisplay;
 typedef void *EGLImage;
 typedef unsigned EGLenum;
 
-#if ENABLE(VIDEO) && USE(GSTREAMER)
+#if ENABLE(VIDEO) && USE(GSTREAMER_GL)
 #include "GRefPtrGStreamer.h"
 
 typedef struct _GstGLContext GstGLContext;
 typedef struct _GstGLDisplay GstGLDisplay;
-#endif // ENABLE(VIDEO) && USE(GSTREAMER)
+#endif // ENABLE(VIDEO) && USE(GSTREAMER_GL)
 
 #if USE(SKIA)
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/gpu/ganesh/GrDirectContext.h>
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #include <wtf/ThreadSafeWeakHashSet.h>
 #endif
 
@@ -109,7 +109,7 @@ public:
     EGLContext angleSharingGLContext();
 #endif
 
-#if ENABLE(VIDEO) && USE(GSTREAMER)
+#if ENABLE(VIDEO) && USE(GSTREAMER_GL)
     GstGLDisplay* gstGLDisplay() const;
     GstGLContext* gstGLContext() const;
     void clearGStreamerGLState();
@@ -148,7 +148,7 @@ private:
     EGLContext m_angleSharingGLContext { nullptr };
 #endif
 
-#if ENABLE(VIDEO) && USE(GSTREAMER)
+#if ENABLE(VIDEO) && USE(GSTREAMER_GL)
     mutable GRefPtr<GstGLDisplay> m_gstGLDisplay;
     mutable GRefPtr<GstGLContext> m_gstGLContext;
 #endif

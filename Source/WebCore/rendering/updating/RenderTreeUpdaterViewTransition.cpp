@@ -39,7 +39,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeUpdater, ViewTransition);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeUpdater::ViewTransition);
 
 RenderTreeUpdater::ViewTransition::ViewTransition(RenderTreeUpdater& updater)
     : m_updater(updater)

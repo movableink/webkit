@@ -50,7 +50,6 @@
 #import <pal/spi/cocoa/AVKitSPI.h>
 #import <pal/spi/mac/NSViewSPI.h>
 #import <wtf/BlockPtr.h>
-#import <wtf/NakedRef.h>
 
 @interface WKViewData : NSObject
 @end
@@ -801,7 +800,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 {
 }
 
-- (instancetype)initWithFrame:(NSRect)frame processPool:(NakedRef<WebKit::WebProcessPool>)processPool configuration:(Ref<API::PageConfiguration>&&)configuration
+- (instancetype)initWithFrame:(NSRect)frame processPool:(std::reference_wrapper<WebKit::WebProcessPool>)processPool configuration:(Ref<API::PageConfiguration>&&)configuration
 {
     return nil;
 }
@@ -1253,11 +1252,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 - (_WKOverlayScrollbarStyle)_overlayScrollbarStyle
 {
     return _WKOverlayScrollbarStyleDefault;
-}
-
-- (NSColor *)_pageExtendedBackgroundColor
-{
-    return nil;
 }
 
 - (BOOL)isUsingUISideCompositing

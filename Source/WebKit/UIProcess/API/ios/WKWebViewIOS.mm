@@ -47,6 +47,7 @@
 #import "WKBackForwardListItemInternal.h"
 #import "WKContentViewInteraction.h"
 #import "WKDataDetectorTypesInternal.h"
+#import "WKErrorInternal.h"
 #import "WKPasswordView.h"
 #import "WKProcessPoolPrivate.h"
 #import "WKScrollView.h"
@@ -67,6 +68,7 @@
 #import "_WKWarningView.h"
 #import <WebCore/ColorCocoa.h>
 #import <WebCore/ContentsFormatCocoa.h>
+#import <WebCore/FloatConversion.h>
 #import <WebCore/GraphicsContextCG.h>
 #import <WebCore/IOSurfacePool.h>
 #import <WebCore/LocalCurrentTraitCollection.h>
@@ -100,6 +102,10 @@
 
 #if USE(APPLE_INTERNAL_SDK)
 #import <WebKitAdditions/WKWebViewIOSAdditionsBefore.mm>
+#endif
+
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+#import <UIKit/_UITraitHDRHeadroomUsage.h>
 #endif
 
 #import <pal/ios/ManagedConfigurationSoftLink.h>
@@ -179,6 +185,10 @@ static WebCore::IntDegrees deviceOrientationForUIInterfaceOrientation(UIInterfac
 
 - (void)layoutSubviews
 {
+#if ENABLE(SCREEN_TIME)
+    [self _updateScreenTimeViewGeometry];
+#endif
+
     [_warningView setFrame:self.bounds];
     [super layoutSubviews];
     [self _frameOrBoundsMayHaveChanged];
@@ -232,6 +242,11 @@ static WebCore::IntDegrees deviceOrientationForUIInterfaceOrientation(UIInterfac
 #if HAVE(UIKIT_RESIZABLE_WINDOWS)
     [center addObserver:self selector:@selector(_enhancedWindowingToggled:) name:_UIWindowSceneEnhancedWindowingModeChanged object:nil];
 #endif
+
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+    [self registerForTraitChanges:@[[_UITraitHDRHeadroomUsage class]] withAction:@selector(_UITraitHDRHeadroomUsageDidChange)];
+    [self _UITraitHDRHeadroomUsageDidChange];
+#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS)
 }
 
 - (BOOL)_isShowingVideoPictureInPicture
@@ -698,6 +713,14 @@ static WebCore::Color scrollViewBackgroundColor(WKWebView *webView, AllowPageBac
 #endif
 }
 
+- (void)_videosInElementFullscreenChanged
+{
+#if ENABLE(FULLSCREEN_API)
+    if (_fullScreenWindowController)
+        [_fullScreenWindowController videosInElementFullscreenChanged];
+#endif
+}
+
 - (CGPoint)_initialContentOffsetForScrollView
 {
     // FIXME: Should this use -[_scrollView adjustedContentInset]?
@@ -857,10 +880,9 @@ static WebCore::Color scrollViewBackgroundColor(WKWebView *webView, AllowPageBac
 
 - (void)_didCommitLoadForMainFrame
 {
-    _perProcessState.firstPaintAfterCommitLoadTransactionID = downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*_page->drawingArea()).nextMainFrameLayerTreeTransactionID();
+    _perProcessState.resetViewStateAfterTransactionID = downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*_page->drawingArea()).nextMainFrameLayerTreeTransactionID();
 
     _perProcessState.hasCommittedLoadForMainFrame = YES;
-    _perProcessState.needsResetViewStateAfterCommitLoadForMainFrame = YES;
 
     if (![self _scrollViewIsRubberBandingForRefreshControl])
         [_scrollView _wk_stopScrollingAndZooming];
@@ -948,14 +970,14 @@ static void changeContentOffsetBoundedInValidRange(UIScrollView *scrollView, Web
 - (void)_trackTransactionCommit:(const WebKit::RemoteLayerTreeTransaction&)layerTreeTransaction
 {
     if (_perProcessState.didDeferUpdateVisibleContentRectsForUnstableScrollView) {
-        WKWEBVIEW_RELEASE_LOG("%p (pageProxyID=%llu) -[WKWebView _didCommitLayerTree:] - received a commit (%llu) while deferring visible content rect updates (dynamicViewportUpdateMode %d, needsResetViewStateAfterCommitLoadForMainFrame %d (wants commit %llu), sizeChangedSinceLastVisibleContentRectUpdate %d, [_scrollView isZoomBouncing] %d, currentlyAdjustingScrollViewInsetsForKeyboard %d)",
-        self, _page->identifier().toUInt64(), layerTreeTransaction.transactionID().toUInt64(), enumToUnderlyingType(_perProcessState.dynamicViewportUpdateMode), _perProcessState.needsResetViewStateAfterCommitLoadForMainFrame, _perProcessState.firstPaintAfterCommitLoadTransactionID.toUInt64(), [_contentView sizeChangedSinceLastVisibleContentRectUpdate], [_scrollView isZoomBouncing], _perProcessState.currentlyAdjustingScrollViewInsetsForKeyboard);
+        WKWEBVIEW_RELEASE_LOG("%p (pageProxyID=%llu) -[WKWebView _didCommitLayerTree:] - received a commit (%llu) while deferring visible content rect updates (dynamicViewportUpdateMode %d, resetViewStateAfterTransactionID %llu, sizeChangedSinceLastVisibleContentRectUpdate %d, [_scrollView isZoomBouncing] %d, currentlyAdjustingScrollViewInsetsForKeyboard %d)",
+        self, _page->identifier().toUInt64(), layerTreeTransaction.transactionID().object().toUInt64(), enumToUnderlyingType(_perProcessState.dynamicViewportUpdateMode), _perProcessState.resetViewStateAfterTransactionID ? _perProcessState.resetViewStateAfterTransactionID->object().toUInt64() : 0, [_contentView sizeChangedSinceLastVisibleContentRectUpdate], [_scrollView isZoomBouncing], _perProcessState.currentlyAdjustingScrollViewInsetsForKeyboard);
     }
 
     if (_timeOfFirstVisibleContentRectUpdateWithPendingCommit) {
         auto timeSinceFirstRequestWithPendingCommit = MonotonicTime::now() - *_timeOfFirstVisibleContentRectUpdateWithPendingCommit;
         if (timeSinceFirstRequestWithPendingCommit > delayBeforeNoCommitsLogging)
-            WKWEBVIEW_RELEASE_LOG("%p (pageProxyID=%llu) -[WKWebView _didCommitLayerTree:] - finally received commit %.2fs after visible content rect update request; transactionID %llu", self, _page->identifier().toUInt64(), timeSinceFirstRequestWithPendingCommit.value(), layerTreeTransaction.transactionID().toUInt64());
+            WKWEBVIEW_RELEASE_LOG("%p (pageProxyID=%llu) -[WKWebView _didCommitLayerTree:] - finally received commit %.2fs after visible content rect update request; transactionID %llu", self, _page->identifier().toUInt64(), timeSinceFirstRequestWithPendingCommit.value(), layerTreeTransaction.transactionID().object().toUInt64());
         _timeOfFirstVisibleContentRectUpdateWithPendingCommit = std::nullopt;
     }
 }
@@ -977,7 +999,7 @@ static void changeContentOffsetBoundedInValidRange(UIScrollView *scrollView, Web
 
     [_scrollView setMinimumZoomScale:minimumScaleFactor];
     [_scrollView setMaximumZoomScale:maximumScaleFactor];
-    [_scrollView _setZoomEnabledInternal:allowsUserScaling];
+    [_scrollView _setZoomEnabledInternal:allowsUserScaling && self._allowsMagnification];
     if ([_scrollView showsHorizontalScrollIndicator] && [_scrollView showsVerticalScrollIndicator]) {
         [_scrollView setShowsHorizontalScrollIndicator:(_page->scrollingCoordinatorProxy()->mainFrameScrollbarWidth() != WebCore::ScrollbarWidth::None)];
         [_scrollView setShowsVerticalScrollIndicator:(_page->scrollingCoordinatorProxy()->mainFrameScrollbarWidth() != WebCore::ScrollbarWidth::None)];
@@ -1022,7 +1044,7 @@ static void changeContentOffsetBoundedInValidRange(UIScrollView *scrollView, Web
 
 - (BOOL)_restoreScrollAndZoomStateForTransaction:(const WebKit::RemoteLayerTreeTransaction&)layerTreeTransaction
 {
-    if (!_perProcessState.firstTransactionIDAfterPageRestore || layerTreeTransaction.transactionID() < _perProcessState.firstTransactionIDAfterPageRestore.value())
+    if (!_perProcessState.firstTransactionIDAfterPageRestore || layerTreeTransaction.transactionID().lessThanSameProcess(_perProcessState.firstTransactionIDAfterPageRestore.value()))
         return NO;
 
     _perProcessState.firstTransactionIDAfterPageRestore = std::nullopt;
@@ -1070,71 +1092,73 @@ static void changeContentOffsetBoundedInValidRange(UIScrollView *scrollView, Web
 
 - (void)_didCommitLayerTree:(const WebKit::RemoteLayerTreeTransaction&)layerTreeTransaction
 {
-    [self _trackTransactionCommit:layerTreeTransaction];
+    if (layerTreeTransaction.isMainFrameProcessTransaction()) {
+        [self _trackTransactionCommit:layerTreeTransaction];
 
-    _perProcessState.lastTransactionID = layerTreeTransaction.transactionID();
+        _perProcessState.lastTransactionID = layerTreeTransaction.transactionID();
 
-    if (![self usesStandardContentView])
-        return;
+        if (![self usesStandardContentView])
+            return;
 
-    LOG_WITH_STREAM(VisibleRects, stream << "-[WKWebView " << _page->identifier() << " _didCommitLayerTree:] transactionID " << layerTreeTransaction.transactionID() << " dynamicViewportUpdateMode " << enumToUnderlyingType(_perProcessState.dynamicViewportUpdateMode));
+        LOG_WITH_STREAM(VisibleRects, stream << "-[WKWebView " << _page->identifier() << " _didCommitLayerTree:] transactionID " << layerTreeTransaction.transactionID() << " dynamicViewportUpdateMode " << enumToUnderlyingType(_perProcessState.dynamicViewportUpdateMode));
 
-    bool needUpdateVisibleContentRects = _page->updateLayoutViewportParameters(layerTreeTransaction);
+        bool needUpdateVisibleContentRects = _page->updateLayoutViewportParameters(layerTreeTransaction);
 
-    if (_perProcessState.dynamicViewportUpdateMode != WebKit::DynamicViewportUpdateMode::NotResizing) {
-        [self _didCommitLayerTreeDuringAnimatedResize:layerTreeTransaction];
-        return;
+        if (_perProcessState.dynamicViewportUpdateMode != WebKit::DynamicViewportUpdateMode::NotResizing) {
+            [self _didCommitLayerTreeDuringAnimatedResize:layerTreeTransaction];
+            return;
+        }
+
+        if (_perProcessState.liveResizeParameters)
+            return;
+
+        if (_resizeAnimationView)
+            WKWEBVIEW_RELEASE_LOG("%p -[WKWebView _didCommitLayerTree:] - dynamicViewportUpdateMode is NotResizing, but still have a live resizeAnimationView (unpaired begin/endAnimatedResize?)", self);
+
+        [self _updateScrollViewForTransaction:layerTreeTransaction];
+
+        _perProcessState.viewportMetaTagWidth = layerTreeTransaction.viewportMetaTagWidth();
+        _perProcessState.viewportMetaTagWidthWasExplicit = layerTreeTransaction.viewportMetaTagWidthWasExplicit();
+        _perProcessState.viewportMetaTagCameFromImageDocument = layerTreeTransaction.viewportMetaTagCameFromImageDocument();
+        _perProcessState.initialScaleFactor = layerTreeTransaction.initialScaleFactor();
+
+        if (_page->inStableState() && layerTreeTransaction.isInStableState() && [_stableStatePresentationUpdateCallbacks count]) {
+            for (dispatch_block_t action in _stableStatePresentationUpdateCallbacks.get())
+                action();
+
+            [_stableStatePresentationUpdateCallbacks removeAllObjects];
+            _stableStatePresentationUpdateCallbacks = nil;
+        }
+
+        if (![_contentView _mayDisableDoubleTapGesturesDuringSingleTap])
+            [_contentView _setDoubleTapGesturesEnabled:self._allowsDoubleTapGestures];
+
+        [self _updateScrollViewBackground];
+        [self _setAvoidsUnsafeArea:layerTreeTransaction.avoidsUnsafeArea()];
+
+        if (_gestureController)
+            _gestureController->setRenderTreeSize(layerTreeTransaction.renderTreeSize());
+
+        if (_perProcessState.resetViewStateAfterTransactionID && layerTreeTransaction.transactionID().greaterThanOrEqualSameProcess(*_perProcessState.resetViewStateAfterTransactionID)) {
+            _perProcessState.resetViewStateAfterTransactionID = std::nullopt;
+            if (![self _scrollViewIsRubberBandingForRefreshControl])
+                [self _resetContentOffset];
+
+            if (_observedRenderingProgressEvents & _WKRenderingProgressEventFirstPaint)
+                _navigationState->didFirstPaint();
+
+            needUpdateVisibleContentRects = true;
+        }
+
+        if ([self _restoreScrollAndZoomStateForTransaction:layerTreeTransaction])
+            needUpdateVisibleContentRects = true;
+
+        if (needUpdateVisibleContentRects)
+            [self _scheduleVisibleContentRectUpdate];
+
+        if (WebKit::RemoteLayerTreeScrollingPerformanceData* scrollPerfData =   _page->scrollingPerformanceData())
+            scrollPerfData->didCommitLayerTree([self visibleRectInViewCoordinates]);
     }
-
-    if (_perProcessState.liveResizeParameters)
-        return;
-
-    if (_resizeAnimationView)
-        WKWEBVIEW_RELEASE_LOG("%p -[WKWebView _didCommitLayerTree:] - dynamicViewportUpdateMode is NotResizing, but still have a live resizeAnimationView (unpaired begin/endAnimatedResize?)", self);
-
-    [self _updateScrollViewForTransaction:layerTreeTransaction];
-
-    _perProcessState.viewportMetaTagWidth = layerTreeTransaction.viewportMetaTagWidth();
-    _perProcessState.viewportMetaTagWidthWasExplicit = layerTreeTransaction.viewportMetaTagWidthWasExplicit();
-    _perProcessState.viewportMetaTagCameFromImageDocument = layerTreeTransaction.viewportMetaTagCameFromImageDocument();
-    _perProcessState.initialScaleFactor = layerTreeTransaction.initialScaleFactor();
-
-    if (_page->inStableState() && layerTreeTransaction.isInStableState() && [_stableStatePresentationUpdateCallbacks count]) {
-        for (dispatch_block_t action in _stableStatePresentationUpdateCallbacks.get())
-            action();
-
-        [_stableStatePresentationUpdateCallbacks removeAllObjects];
-        _stableStatePresentationUpdateCallbacks = nil;
-    }
-
-    if (![_contentView _mayDisableDoubleTapGesturesDuringSingleTap])
-        [_contentView _setDoubleTapGesturesEnabled:self._allowsDoubleTapGestures];
-
-    [self _updateScrollViewBackground];
-    [self _setAvoidsUnsafeArea:layerTreeTransaction.avoidsUnsafeArea()];
-
-    if (_gestureController)
-        _gestureController->setRenderTreeSize(layerTreeTransaction.renderTreeSize());
-
-    if (_perProcessState.needsResetViewStateAfterCommitLoadForMainFrame && layerTreeTransaction.transactionID() >= _perProcessState.firstPaintAfterCommitLoadTransactionID) {
-        _perProcessState.needsResetViewStateAfterCommitLoadForMainFrame = NO;
-        if (![self _scrollViewIsRubberBandingForRefreshControl])
-            [self _resetContentOffset];
-
-        if (_observedRenderingProgressEvents & _WKRenderingProgressEventFirstPaint)
-            _navigationState->didFirstPaint();
-
-        needUpdateVisibleContentRects = true;
-    }
-
-    if ([self _restoreScrollAndZoomStateForTransaction:layerTreeTransaction])
-        needUpdateVisibleContentRects = true;
-
-    if (needUpdateVisibleContentRects)
-        [self _scheduleVisibleContentRectUpdate];
-
-    if (WebKit::RemoteLayerTreeScrollingPerformanceData* scrollPerfData = _page->scrollingPerformanceData())
-        scrollPerfData->didCommitLayerTree([self visibleRectInViewCoordinates]);
 
     if (_perProcessState.pendingFindLayerID) {
         CALayer *layer = downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*_page->drawingArea()).remoteLayerTreeHost().layerForID(*_perProcessState.pendingFindLayerID);
@@ -1143,7 +1167,7 @@ static void changeContentOffsetBoundedInValidRange(UIScrollView *scrollView, Web
     }
 
 #if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
-    if ([_configuration _overlayRegionsEnabled])
+    if (_page && _page->preferences().overlayRegionsEnabled())
         [self _updateOverlayRegions:layerTreeTransaction.changedLayerProperties() destroyedLayers:layerTreeTransaction.destroyedLayers()];
 #endif
 }
@@ -1163,7 +1187,7 @@ static void addOverlayEventRegions(WebCore::PlatformLayerIdentifier layerID, con
 
     const auto& layerProperties = *it->value;
     if (layerProperties.changedProperties & WebKit::LayerChange::EventRegionChanged) {
-        CGRect rect = layerProperties.eventRegion.scrollOverlayRegion().bounds();
+        CGRect rect = layerProperties.eventRegion.region().bounds();
         if (!CGRectIsEmpty(rect))
             overlayRegionsIDs.add(layerID);
     }
@@ -1199,6 +1223,34 @@ static void configureScrollViewWithOverlayRegionsIDs(WKBaseScrollView* scrollVie
     HashSet<WebCore::IntRect> overlayRegionRects;
     Vector<WebCore::IntRect> fullWidthRects;
     Vector<WebCore::IntRect> fullHeightRects;
+    constexpr float rectCandidateEpsilon = 0.5;
+    CGRect viewport = CGRectOffset(scrollView.frame, -scrollView.frame.origin.x, -scrollView.frame.origin.y);
+    CGFloat viewportWidth = CGRectGetWidth(viewport);
+    CGFloat viewportHeight = CGRectGetHeight(viewport);
+    CGFloat halfWidth = viewportWidth * 0.5;
+    CGFloat halfHeight = viewportHeight * 0.5;
+
+    auto isValidOverlayRegionRect = [&](auto& rect) {
+        bool fullWidth = std::abs(CGFloat(rect.width()) - viewportWidth) <= rectCandidateEpsilon;
+        bool fullHeight = std::abs(CGFloat(rect.height()) - viewportHeight) <= rectCandidateEpsilon;
+
+        if (fullHeight && CGFloat(rect.width()) > halfWidth) {
+            if (CGFloat(rect.x()) <= rectCandidateEpsilon || CGFloat(rect.maxX()) >= viewportWidth - rectCandidateEpsilon)
+                return false;
+        }
+
+        if (fullWidth && CGFloat(rect.height()) > halfHeight) {
+            if (CGFloat(rect.y()) <= rectCandidateEpsilon || CGFloat(rect.maxY()) >= viewportHeight - rectCandidateEpsilon)
+                return false;
+        }
+
+        return true;
+    };
+
+    auto addOverlayRegionRect = [&](auto&& rect) {
+        if (isValidOverlayRegionRect(rect))
+            overlayRegionRects.add(rect);
+    };
 
     for (auto layerID : overlayRegionsIDs) {
         const auto* node = host.nodeForID(layerID);
@@ -1253,21 +1305,25 @@ static void configureScrollViewWithOverlayRegionsIDs(WKBaseScrollView* scrollVie
 
         // Overlay regions are positioned relative to the viewport of the scrollview,
         // not the frame (external) nor the bounds (origin moves while scrolling).
-        CGRect rect = [overlayView convertRect:node->eventRegion().region().bounds() toView:scrollView.superview];
-        CGRect offsetRect = CGRectOffset(rect, -scrollView.frame.origin.x, -scrollView.frame.origin.y);
-        CGRect viewport = CGRectOffset(scrollView.frame, -scrollView.frame.origin.x, -scrollView.frame.origin.y);
-        CGRect snappedRect = snapRectToScrollViewEdges(offsetRect, viewport);
+        for (auto regionRect : node->eventRegion().region().rects()) {
+            CGRect rect = [overlayView convertRect:regionRect toView:scrollView.superview];
+            CGRect offsetRect = CGRectOffset(rect, -scrollView.frame.origin.x, -scrollView.frame.origin.y);
+            CGRect snappedRect = snapRectToScrollViewEdges(offsetRect, viewport);
 
-        if (CGRectIsEmpty(snappedRect))
-            continue;
+            if (CGRectIsEmpty(snappedRect))
+                continue;
 
-        constexpr float mergeCandidateEpsilon = 0.5;
-        if (std::abs(CGRectGetWidth(snappedRect) - CGRectGetWidth(viewport)) <= mergeCandidateEpsilon)
-            fullWidthRects.append(WebCore::enclosingIntRect(snappedRect));
-        else if (std::abs(CGRectGetHeight(snappedRect) - CGRectGetHeight(viewport)) <= mergeCandidateEpsilon)
-            fullHeightRects.append(WebCore::enclosingIntRect(snappedRect));
-        else
-            overlayRegionRects.add(WebCore::enclosingIntRect(snappedRect));
+            auto rectToAdd = WebCore::enclosingIntRect(snappedRect);
+            if (!isValidOverlayRegionRect(rectToAdd))
+                continue;
+
+            if (std::abs(CGRectGetWidth(snappedRect) - CGRectGetWidth(viewport)) <= rectCandidateEpsilon)
+                fullWidthRects.append(rectToAdd);
+            else if (std::abs(CGRectGetHeight(snappedRect) - CGRectGetHeight(viewport)) <= rectCandidateEpsilon)
+                fullHeightRects.append(rectToAdd);
+            else
+                addOverlayRegionRect(rectToAdd);
+        }
     }
 
     auto mergeAndAdd = [&](auto& vec, const auto& sort, const auto& shouldMerge) {
@@ -1280,11 +1336,11 @@ static void configureScrollViewWithOverlayRegionsIDs(WKBaseScrollView* scrollVie
             else if (shouldMerge(rect, *current))
                 current->unite(rect);
             else
-                overlayRegionRects.add(*std::exchange(current, rect));
+                addOverlayRegionRect(*std::exchange(current, rect));
         }
 
         if (current)
-            overlayRegionRects.add(*current);
+            addOverlayRegionRect(*current);
     };
 
     mergeAndAdd(fullWidthRects, [](const auto& a, const auto& b) {
@@ -1368,7 +1424,7 @@ static void configureScrollViewWithOverlayRegionsIDs(WKBaseScrollView* scrollVie
 
 - (void)_updateOverlayRegionsForCustomContentView
 {
-    if (![_configuration _overlayRegionsEnabled])
+    if (!_page || !_page->preferences().overlayRegionsEnabled())
         return;
 
     if (![self _scrollViewCanHaveOverlayRegions:_scrollView.get()]) {
@@ -1452,7 +1508,7 @@ static void configureScrollViewWithOverlayRegionsIDs(WKBaseScrollView* scrollVie
 
     auto transform = CATransform3DMakeScale(deviceScale, deviceScale, 1);
 
-    auto snapshotFormat = WebCore::convertToIOSurfaceFormat(WebCore::screenContentsFormat());
+    auto snapshotFormat = WebCore::convertToIOSurfaceFormat(WebCore::PlatformCALayer::contentsFormatForLayer());
     auto surface = WebCore::IOSurface::create(nullptr, WebCore::expandedIntSize(snapshotSize), WebCore::DestinationColorSpace::SRGB(), WebCore::IOSurface::Name::Snapshot, snapshotFormat);
     if (!surface)
         return nullptr;
@@ -2073,11 +2129,6 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
     if (scrollView.pinchGestureRecognizer.state == UIGestureRecognizerStateBegan) {
         _page->willStartUserTriggeredZooming();
 
-#if ENABLE(PDF_PLUGIN)
-        if (_page->mainFramePluginHandlesPageScaleGesture())
-            return;
-#endif
-
         [_contentView scrollViewWillStartPanOrPinchGesture];
     }
     [_contentView willStartZoomOrScroll];
@@ -2286,20 +2337,18 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
 
     if (WebKit::RemoteLayerTreeScrollingPerformanceData* scrollPerfData = _page->scrollingPerformanceData())
         scrollPerfData->didScroll([self visibleRectInViewCoordinates]);
+
+    [_contentView updateSelection];
+
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+    [self _updatePDFPageNumberIndicatorIfNeeded];
+#endif
 }
 
 - (void)scrollViewDidZoom:(UIScrollView *)scrollView
 {
     if (![self usesStandardContentView] && [_customContentView respondsToSelector:@selector(web_scrollViewDidZoom:)])
         [_customContentView web_scrollViewDidZoom:scrollView];
-
-#if ENABLE(PDF_PLUGIN)
-    if (_page->mainFramePluginHandlesPageScaleGesture()) {
-        auto gestureOrigin = WebCore::IntPoint([scrollView.pinchGestureRecognizer locationInView:self]);
-        _page->setPluginScaleFactor(contentZoomScale(self), gestureOrigin);
-        return;
-    }
-#endif
 
     [self _updateScrollViewBackground];
     [self _scheduleVisibleContentRectUpdateAfterScrollInView:scrollView];
@@ -2312,13 +2361,6 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
 
     ASSERT(scrollView == _scrollView);
 
-#if ENABLE(PDF_PLUGIN)
-    if (_page->mainFramePluginHandlesPageScaleGesture()) {
-        _page->didEndUserTriggeredZooming();
-        return;
-    }
-#endif
-
     // FIXME: remove when rdar://problem/36065495 is fixed.
     // When rotating with two fingers down, UIScrollView can set a bogus content view position.
     // "Center" is top left because we set the anchorPoint to 0,0.
@@ -2326,6 +2368,8 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
 
     [self _scheduleVisibleContentRectUpdateAfterScrollInView:scrollView];
     [_contentView didZoomToScale:scale];
+
+    _page->didEndUserTriggeredZooming();
 }
 
 - (void)scrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView
@@ -2606,7 +2650,7 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
             *didInvalidateResizeAssertions = true;
         }).get()];
 
-        RunLoop::main().dispatchAfter(1_s, [weakSelf = WeakObjCPtr<WKWebView>(self), didInvalidateResizeAssertions] {
+        RunLoop::protectedMain()->dispatchAfter(1_s, [weakSelf = WeakObjCPtr<WKWebView>(self), didInvalidateResizeAssertions] {
             if (*didInvalidateResizeAssertions)
                 return;
 
@@ -2761,7 +2805,7 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
         return;
     }
 
-    RunLoop::main().dispatch([retainedSelf = retainPtr(self)] {
+    RunLoop::protectedMain()->dispatch([retainedSelf = retainPtr(self)] {
         WKWebView *webView = retainedSelf.get();
         if (![webView _isValid])
             return;
@@ -2854,7 +2898,7 @@ static bool scrollViewCanScroll(UIScrollView *scrollView)
     if (_timeOfFirstVisibleContentRectUpdateWithPendingCommit) {
         auto timeSinceFirstRequestWithPendingCommit = timeNow - *_timeOfFirstVisibleContentRectUpdateWithPendingCommit;
         if (timeSinceFirstRequestWithPendingCommit > delayBeforeNoCommitsLogging)
-            WKWEBVIEW_RELEASE_LOG("%p (pageProxyID=%llu) -[WKWebView _updateVisibleContentRects:] - have not received a commit %.2fs after visible content rect update; lastTransactionID %llu", self, _page->identifier().toUInt64(), timeSinceFirstRequestWithPendingCommit.value(), _perProcessState.lastTransactionID.toUInt64());
+            WKWEBVIEW_RELEASE_LOG("%p (pageProxyID=%llu) -[WKWebView _updateVisibleContentRects:] - have not received a commit %.2fs after visible content rect update; lastTransactionID %llu", self, _page->identifier().toUInt64(), timeSinceFirstRequestWithPendingCommit.value(), _perProcessState.lastTransactionID ? _perProcessState.lastTransactionID->object().toUInt64() : 0);
     }
 
     if (_perProcessState.invokingUIScrollViewDelegateCallback) {
@@ -2868,13 +2912,12 @@ static bool scrollViewCanScroll(UIScrollView *scrollView)
         [self _cancelAnimatedResize];
 
     if (self._shouldDeferGeometryUpdates
-        || (_perProcessState.needsResetViewStateAfterCommitLoadForMainFrame && ![_contentView sizeChangedSinceLastVisibleContentRectUpdate])
+        || (_perProcessState.resetViewStateAfterTransactionID && ![_contentView sizeChangedSinceLastVisibleContentRectUpdate])
         || [_scrollView isZoomBouncing]
         || _perProcessState.currentlyAdjustingScrollViewInsetsForKeyboard) {
         _perProcessState.didDeferUpdateVisibleContentRectsForAnyReason = YES;
         _perProcessState.didDeferUpdateVisibleContentRectsForUnstableScrollView = YES;
-        WKWEBVIEW_RELEASE_LOG("%p (pageProxyID=%llu) -[WKWebView _updateVisibleContentRects:] - scroll view state is non-stable, bailing (shouldDeferGeometryUpdates %d, dynamicViewportUpdateMode %d, needsResetViewStateAfterCommitLoadForMainFrame %d, sizeChangedSinceLastVisibleContentRectUpdate %d, [_scrollView isZoomBouncing] %d, currentlyAdjustingScrollViewInsetsForKeyboard %d)",
-            self, _page->identifier().toUInt64(), self._shouldDeferGeometryUpdates, enumToUnderlyingType(_perProcessState.dynamicViewportUpdateMode), _perProcessState.needsResetViewStateAfterCommitLoadForMainFrame, [_contentView sizeChangedSinceLastVisibleContentRectUpdate], [_scrollView isZoomBouncing], _perProcessState.currentlyAdjustingScrollViewInsetsForKeyboard);
+        WKWEBVIEW_RELEASE_LOG("%p (pageProxyID=%llu) -[WKWebView _updateVisibleContentRects:] - scroll view state is non-stable, bailing (shouldDeferGeometryUpdates %d, dynamicViewportUpdateMode %d, resetViewStateAfterTransactionID %llu, sizeChangedSinceLastVisibleContentRectUpdate %d, [_scrollView isZoomBouncing] %d, currentlyAdjustingScrollViewInsetsForKeyboard %d)", self, _page->identifier().toUInt64(), self._shouldDeferGeometryUpdates, enumToUnderlyingType(_perProcessState.dynamicViewportUpdateMode), _perProcessState.resetViewStateAfterTransactionID ? _perProcessState.resetViewStateAfterTransactionID->object().toUInt64() : 0, [_contentView sizeChangedSinceLastVisibleContentRectUpdate], [_scrollView isZoomBouncing], _perProcessState.currentlyAdjustingScrollViewInsetsForKeyboard);
         return;
     }
 
@@ -2910,7 +2953,7 @@ static bool scrollViewCanScroll(UIScrollView *scrollView)
 
             if (!CGPointEqualToPoint(activePoint, currentPoint)) {
                 RetainPtr<WKScrollView> strongScrollView = _scrollView;
-                RunLoop::main().dispatch([strongScrollView, activePoint] {
+                RunLoop::protectedMain()->dispatch([strongScrollView, activePoint] {
                     [strongScrollView setContentOffset:activePoint animated:NO];
                 });
             }
@@ -2934,6 +2977,10 @@ static bool scrollViewCanScroll(UIScrollView *scrollView)
         auto callback = _visibleContentRectUpdateCallbacks.takeLast();
         callback();
     }
+
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+    [self _updatePDFPageNumberIndicatorIfNeeded];
+#endif
 
     if ((timeNow - _timeOfRequestForVisibleContentRectUpdate) > delayBeforeNoVisibleContentsRectsLogging)
         WKWEBVIEW_RELEASE_LOG("%p -[WKWebView _updateVisibleContentRects:] finally ran %.2fs after being scheduled", self, (timeNow - _timeOfRequestForVisibleContentRectUpdate).value());
@@ -3369,7 +3416,7 @@ static WebCore::IntDegrees activeOrientation(WKWebView *webView)
 {
     RetainPtr<WKWebView> strongSelf = self;
     [self _doAfterNextPresentationUpdate:[strongSelf] {
-        RunLoop::main().dispatch([strongSelf] {
+        RunLoop::protectedMain()->dispatch([strongSelf] {
             if ([strongSelf->_stableStatePresentationUpdateCallbacks count])
                 [strongSelf _firePresentationUpdateForPendingStableStatePresentationCallbacks];
         });
@@ -3460,7 +3507,7 @@ static WebCore::UserInterfaceLayoutDirection toUserInterfaceLayoutDirection(UISe
     }).get()];
 
     // Ensure that the live resize snapshot is eventually removed, even if the webpage is unresponsive.
-    RunLoop::main().dispatchAfter(1_s, [liveResizeSnapshotView] {
+    RunLoop::protectedMain()->dispatchAfter(1_s, [liveResizeSnapshotView] {
         [liveResizeSnapshotView removeFromSuperview];
     });
 }
@@ -3633,6 +3680,14 @@ static WebCore::UserInterfaceLayoutDirection toUserInterfaceLayoutDirection(UISe
 
 #endif // HAVE(UIKIT_RESIZABLE_WINDOWS)
 
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+- (void)_UITraitHDRHeadroomUsageDidChange
+{
+    const _UIHDRHeadroomUsage _headroomUsage = [[self traitCollection] _headroomUsage];
+    _page->setShouldSuppressHDR(_headroomUsage != _UIHDRHeadroomUsageEnabled);
+}
+#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS)
+
 #if ENABLE(LOCKDOWN_MODE_API)
 
 // Note: Use the legacy 'CaptivePortal' string to avoid losing users choice from earlier releases.
@@ -3683,7 +3738,7 @@ static bool isLockdownModeWarningNeeded()
             return;
         }
 
-        RunLoop::main().dispatch([message = retainPtr(message), protectedSelf = WTFMove(protectedSelf)] {
+        RunLoop::protectedMain()->dispatch([message = retainPtr(message), protectedSelf = WTFMove(protectedSelf)] {
             NSString *appDisplayName = [[NSBundle mainBundle] objectForInfoDictionaryKey:(__bridge NSString *)_kCFBundleDisplayNameKey];
             if (!appDisplayName)
                 appDisplayName = [[NSBundle mainBundle] objectForInfoDictionaryKey:(__bridge NSString *)kCFBundleNameKey];
@@ -3866,7 +3921,7 @@ static bool isLockdownModeWarningNeeded()
     _overriddenZoomScaleParameters = { minimumZoomScale, maximumZoomScale, allowUserScaling };
     [_scrollView setMinimumZoomScale:minimumZoomScale];
     [_scrollView setMaximumZoomScale:maximumZoomScale];
-    [_scrollView _setZoomEnabledInternal:allowUserScaling];
+    [_scrollView _setZoomEnabledInternal:allowUserScaling && self._allowsMagnification];
 }
 
 - (void)_clearOverrideZoomScaleParameters
@@ -3874,10 +3929,21 @@ static bool isLockdownModeWarningNeeded()
     _overriddenZoomScaleParameters = std::nullopt;
 }
 
-#if ENABLE(PDF_PLUGIN)
-- (void)_pluginDidInstallPDFDocument:(double)initialScale
+- (BOOL)_allowsMagnification
 {
-    [_scrollView setZoomScale:initialScale];
+    return _allowsMagnification;
+}
+
+- (void)_setAllowsMagnification:(BOOL)allowsMagnification
+{
+    _allowsMagnification = allowsMagnification;
+    [_contentView _updateDoubleTapGestureRecognizerEnablement];
+}
+
+#if ENABLE(MODEL_PROCESS)
+- (void)_willInvalidateDraggedModelWithContainerView:(UIView *)containerView
+{
+    [_contentView _willInvalidateDraggedModelWithContainerView:containerView];
 }
 #endif
 
@@ -4161,7 +4227,7 @@ static bool isLockdownModeWarningNeeded()
 - (void)_doAfterNextStablePresentationUpdate:(dispatch_block_t)updateBlock
 {
     if (![self usesStandardContentView]) {
-        RunLoop::main().dispatch([updateBlock = makeBlockPtr(updateBlock)] {
+        RunLoop::protectedMain()->dispatch([updateBlock = makeBlockPtr(updateBlock)] {
             updateBlock();
         });
         return;
@@ -4347,7 +4413,7 @@ static bool isLockdownModeWarningNeeded()
     CGFloat oldWebViewWidthInContentViewCoordinates = oldUnobscuredContentRect.width();
     _perProcessState.animatedResizeOriginalContentWidth = [&] {
 #if HAVE(UIKIT_RESIZABLE_WINDOWS)
-        if (self._isWindowResizingEnabled)
+        if (self._isWindowResizingEnabled && !self._isDisplayingPDF)
             return contentSizeInContentViewCoordinates.width;
 #endif
         return std::min(contentSizeInContentViewCoordinates.width, oldWebViewWidthInContentViewCoordinates);
@@ -4390,7 +4456,7 @@ static bool isLockdownModeWarningNeeded()
     CGRect unobscuredRectInContentCoordinates = [self convertRect:futureUnobscuredRectInSelfCoordinates toView:_contentView.get()];
 
     UIEdgeInsets unobscuredSafeAreaInsets = [self _computedUnobscuredSafeAreaInset];
-    WebCore::FloatBoxExtent unobscuredSafeAreaInsetsExtent(unobscuredSafeAreaInsets.top, unobscuredSafeAreaInsets.right, unobscuredSafeAreaInsets.bottom, unobscuredSafeAreaInsets.left);
+    WebCore::FloatBoxExtent unobscuredSafeAreaInsetsExtent { WebCore::narrowPrecisionToFloatFromCGFloat(unobscuredSafeAreaInsets.top), WebCore::narrowPrecisionToFloatFromCGFloat(unobscuredSafeAreaInsets.right), WebCore::narrowPrecisionToFloatFromCGFloat(unobscuredSafeAreaInsets.bottom), WebCore::narrowPrecisionToFloatFromCGFloat(unobscuredSafeAreaInsets.left) };
 
     _perProcessState.lastSentViewLayoutSize = newViewLayoutSize;
     _perProcessState.lastSentDeviceOrientation = newOrientation;
@@ -4920,6 +4986,34 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 - (void)_setDefaultSTSLabel:(NSString *)defaultSTSLabel
 {
     _page->setDefaultSpatialTrackingLabel(defaultSTSLabel);
+}
+
+- (void)_enterExternalPlaybackForNowPlayingMediaSessionWithCompletionHandler:(void(^)(UIViewController *, NSError *))completionHandler
+{
+    if (!_page) {
+        completionHandler(nil, [NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]);
+        return;
+    }
+
+    _page->setPlayerIdentifierForVideoElement();
+    _page->enterExternalPlaybackForNowPlayingMediaSession([handler = makeBlockPtr(completionHandler)](bool entered, UIViewController *viewController) {
+        if (entered)
+            handler(viewController, nil);
+        else
+            handler(nil, createNSError(WKErrorUnknown).get());
+    });
+}
+
+- (void)_exitExternalPlaybackWithCompletionHandler:(void (^)(NSError *error))completionHandler
+{
+    if (!_page) {
+        completionHandler([NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]);
+        return;
+    }
+
+    _page->exitExternalPlayback([handler = makeBlockPtr(completionHandler)](bool success) {
+        handler(success ? nil : createNSError(WKErrorUnknown).get());
+    });
 }
 @end
 #endif

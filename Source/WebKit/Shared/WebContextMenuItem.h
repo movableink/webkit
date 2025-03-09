@@ -66,5 +66,9 @@ private:
 
 } // namespace WebKit
 
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebContextMenuItem) \
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::ContextMenuItem; } \
+SPECIALIZE_TYPE_TRAITS_END()
+
 #endif // ENABLE(CONTEXT_MENUS)
 #endif // WebContextMenuItem_h

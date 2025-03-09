@@ -93,6 +93,7 @@ class Page;
 class RenderLayer;
 class RenderView;
 class RenderWidget;
+class ResourceMonitor;
 class ScriptController;
 class SecurityOrigin;
 class VisiblePosition;
@@ -147,11 +148,13 @@ public:
     RefPtr<Document> protectedDocument() const;
     LocalFrameView* view() const;
     inline RefPtr<LocalFrameView> protectedView() const; // Defined in LocalFrameView.h.
+    WEBCORE_EXPORT RefPtr<const LocalFrame> localMainFrame() const;
+    WEBCORE_EXPORT RefPtr<LocalFrame> localMainFrame();
 
-    Editor& editor() { return document()->editor(); }
-    const Editor& editor() const { return document()->editor(); }
+    Editor& editor() { return protectedDocument()->editor(); }
+    const Editor& editor() const { return protectedDocument()->editor(); }
     WEBCORE_EXPORT Ref<Editor> protectedEditor();
-    Ref<const Editor> protectedEditor() const;
+    WEBCORE_EXPORT Ref<const Editor> protectedEditor() const;
 
     EventHandler& eventHandler() { return m_eventHandler; }
     const EventHandler& eventHandler() const { return m_eventHandler; }
@@ -172,16 +175,13 @@ public:
     CheckedRef<const ScriptController> checkedScript() const;
     void resetScript();
 
-    bool isRootFrame() const final { return m_rootFrame.ptr() == this; }
-    const LocalFrame& rootFrame() const { return m_rootFrame.get(); }
-    LocalFrame& rootFrame() { return m_rootFrame.get(); }
+    bool isRootFrame() const final { return m_rootFrame.get() == this; }
+    const LocalFrame& rootFrame() const { return *m_rootFrame; }
+    LocalFrame& rootFrame() { return *m_rootFrame; }
 
     WEBCORE_EXPORT RenderView* contentRenderer() const; // Root of the render tree for the document contained in this frame.
 
     bool documentIsBeingReplaced() const { return m_documentIsBeingReplaced; }
-
-    bool hasHadUserInteraction() const { return m_hasHadUserInteraction; }
-    void setHasHadUserInteraction() { m_hasHadUserInteraction = true; }
 
     bool requestDOMPasteAccess(DOMPasteAccessCategory = DOMPasteAccessCategory::General);
 
@@ -194,9 +194,6 @@ public:
 
     WEBCORE_EXPORT void injectUserScripts(UserScriptInjectionTime);
     WEBCORE_EXPORT void injectUserScriptImmediately(DOMWrapperWorld&, const UserScript&);
-
-    void injectUserScriptsAwaitingNotification();
-    void addUserScriptAwaitingNotification(DOMWrapperWorld&, const UserScript&);
 
     WEBCORE_EXPORT String trackedRepaintRectsAsText() const;
 
@@ -309,7 +306,7 @@ public:
     void selfOnlyRef();
     void selfOnlyDeref();
 
-    void documentURLDidChange(const URL&);
+    void documentURLOrOriginDidChange();
 
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
     void didAccessWindowProxyPropertyViaOpener(WindowProxyProperty);
@@ -331,6 +328,11 @@ public:
     ScrollbarMode scrollingMode() const { return m_scrollingMode; }
     WEBCORE_EXPORT void updateScrollingMode() final;
     WEBCORE_EXPORT void setScrollingMode(ScrollbarMode);
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    WEBCORE_EXPORT void showResourceMonitoringError();
+    WEBCORE_EXPORT void reportResourceMonitoringWarning();
+#endif
 
 protected:
     void frameWasDisconnectedFromOwner() const final;
@@ -356,9 +358,7 @@ private:
 
     WeakHashSet<FrameDestructionObserver> m_destructionObservers;
 
-    Vector<std::pair<Ref<DOMWrapperWorld>, UniqueRef<UserScript>>> m_userScriptsAwaitingNotification;
-
-    UniqueRef<FrameLoader> m_loader;
+    const UniqueRef<FrameLoader> m_loader;
 
     RefPtr<LocalFrameView> m_view;
     RefPtr<Document> m_doc;
@@ -392,7 +392,6 @@ private:
     bool m_documentIsBeingReplaced { false };
     unsigned m_navigationDisableCount { 0 };
     unsigned m_selfOnlyRefCount { 0 };
-    bool m_hasHadUserInteraction { false };
 
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
     OptionSet<WindowProxyProperty> m_accessedWindowProxyPropertiesViaOpener;
@@ -400,10 +399,10 @@ private:
 
     FloatSize m_overrideScreenSize;
 
-    const WeakRef<LocalFrame> m_rootFrame;
+    const WeakPtr<LocalFrame> m_rootFrame;
     SandboxFlags m_sandboxFlags;
     UniqueRef<EventHandler> m_eventHandler;
-    HashSet<RegistrableDomain> m_storageAccessExceptionDomains;
+    UncheckedKeyHashSet<RegistrableDomain> m_storageAccessExceptionDomains;
 };
 
 inline LocalFrameView* LocalFrame::view() const

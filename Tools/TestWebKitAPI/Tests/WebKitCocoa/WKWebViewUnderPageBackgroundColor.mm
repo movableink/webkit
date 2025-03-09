@@ -41,9 +41,9 @@
 
 static RetainPtr<CGColor> defaultBackgroundColor()
 {
-#if HAVE(OS_DARK_MODE_SUPPORT) && PLATFORM(MAC)
+#if PLATFORM(MAC)
     auto color = retainPtr(NSColor.controlBackgroundColor);
-#elif HAVE(OS_DARK_MODE_SUPPORT) && PLATFORM(IOS_FAMILY)
+#elif PLATFORM(IOS_FAMILY)
     auto color = retainPtr(UIColor.systemBackgroundColor);
 #else
     auto color = retainPtr([WebCore::CocoaColor whiteColor]);
@@ -134,6 +134,12 @@ TEST(WKWebViewUnderPageBackgroundColor, MultipleBlendedColors)
     [_webView addObserver:self forKeyPath:@"underPageBackgroundColor" options:NSKeyValueObservingOptionInitial context:nil];
 
     return self;
+}
+
+- (void)dealloc
+{
+    [_webView removeObserver:self forKeyPath:@"underPageBackgroundColor"];
+    [super dealloc];
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context

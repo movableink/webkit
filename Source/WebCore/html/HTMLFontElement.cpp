@@ -33,6 +33,7 @@
 #include "NodeName.h"
 #include "StyleProperties.h"
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
@@ -62,9 +63,8 @@ static bool parseFontSize(std::span<const CharacterType> characters, int& size)
     // Step 2
     // Step 3
     while (!characters.empty()) {
-        if (!isASCIIWhitespace(characters.front()))
+        if (!skipExactly<isASCIIWhitespace>(characters))
             break;
-        characters = characters.subspan(1);
     }
 
     // Step 4
@@ -81,11 +81,11 @@ static bool parseFontSize(std::span<const CharacterType> characters, int& size)
     switch (characters.front()) {
     case '+':
         mode = RelativePlus;
-        characters = characters.subspan(1);
+        skip(characters, 1);
         break;
     case '-':
         mode = RelativeMinus;
-        characters = characters.subspan(1);
+        skip(characters, 1);
         break;
     default:
         mode = Absolute;
@@ -98,8 +98,7 @@ static bool parseFontSize(std::span<const CharacterType> characters, int& size)
     while (!characters.empty()) {
         if (!isASCIIDigit(characters.front()))
             break;
-        digits.append(characters.front());
-        characters = characters.subspan(1);
+        digits.append(consume(characters));
     }
 
     // Step 7
@@ -201,7 +200,7 @@ void HTMLFontElement::collectPresentationalHintsForAttribute(const QualifiedName
     case AttributeNames::faceAttr:
         if (!value.isEmpty()) {
             if (auto fontFaceValue = CSSValuePool::singleton().createFontFaceValue(value))
-                style.setProperty(CSSProperty(CSSPropertyFontFamily, WTFMove(fontFaceValue)));
+                style.setProperty(CSSProperty(CSSPropertyFontFamily, fontFaceValue.releaseNonNull()));
         }
         break;
     default:

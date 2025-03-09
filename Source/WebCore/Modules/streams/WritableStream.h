@@ -49,8 +49,14 @@ public:
     bool locked() const;
 
     void closeIfPossible();
+    void errorIfPossible(Exception&&);
 
     InternalWritableStream& internalWritableStream();
+    enum class Type : bool {
+        Default,
+        FileSystem
+    };
+    virtual Type type() const { return Type::Default; }
 
 protected:
     static ExceptionOr<Ref<WritableStream>> create(JSC::JSGlobalObject&, JSC::JSValue, JSC::JSValue);

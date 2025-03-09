@@ -35,6 +35,7 @@
 #include "RemoteAudioSessionProxyManager.h"
 #include "RemoteAudioSessionProxyMessages.h"
 #include <WebCore/AudioSession.h>
+#include <WebCore/AVAudioSessionCaptureDeviceManager.h>
 #include <wtf/TZoneMalloc.h>
 
 #define MESSAGE_CHECK(assertion) MESSAGE_CHECK_BASE(assertion, protectedConnection().get())
@@ -46,7 +47,7 @@ using namespace WebCore;
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteAudioSessionProxy);
 
 RemoteAudioSessionProxy::RemoteAudioSessionProxy(GPUConnectionToWebProcess& gpuConnection)
-    : m_gpuConnection(gpuConnection)
+: m_gpuConnection(gpuConnection)
 {
 }
 
@@ -72,6 +73,7 @@ RemoteAudioSessionConfiguration RemoteAudioSessionProxy::configuration()
         session->numberOfOutputChannels(),
         session->maximumNumberOfOutputChannels(),
         session->preferredBufferSize(),
+        session->outputLatency(),
         session->isMuted(),
         m_active,
         m_sceneIdentifier,
@@ -106,6 +108,11 @@ void RemoteAudioSessionProxy::tryToSetActive(bool active, SetActiveCompletion&& 
         m_active = active;
         if (m_active)
             m_isInterrupted = false;
+
+#if ENABLE(MEDIA_STREAM) && PLATFORM(IOS_FAMILY)
+        if (m_active)
+            AVAudioSessionCaptureDeviceManager::singleton().setPreferredSpeakerID(m_speakerID);
+#endif
     }
 
     completion(success);
@@ -194,6 +201,22 @@ std::optional<SharedPreferencesForWebProcess> RemoteAudioSessionProxy::sharedPre
 
     return std::nullopt;
 }
+
+#if PLATFORM(IOS_FAMILY)
+void RemoteAudioSessionProxy::setPreferredSpeakerID(const String& speakerID)
+{
+    if (m_speakerID == speakerID)
+        return;
+    
+    m_speakerID = speakerID;
+    if (!m_active)
+        return;
+
+#if ENABLE(MEDIA_STREAM)
+    AVAudioSessionCaptureDeviceManager::singleton().setPreferredSpeakerID(m_speakerID);
+#endif
+}
+#endif
 
 } // namespace WebKit
 

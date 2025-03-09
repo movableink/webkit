@@ -29,6 +29,7 @@
 #include "AutomationProtocolObjects.h"
 #include "CoordinateSystem.h"
 #include "WebAutomationDOMWindowObserver.h"
+#include "WebAutomationSessionMessages.h"
 #include "WebAutomationSessionProxyMessages.h"
 #include "WebAutomationSessionProxyScriptSource.h"
 #include "WebFrame.h"
@@ -36,6 +37,7 @@
 #include "WebPage.h"
 #include "WebProcess.h"
 #include <JavaScriptCore/APICast.h>
+#include <JavaScriptCore/ConsoleMessage.h>
 #include <JavaScriptCore/Exception.h>
 #include <JavaScriptCore/JSObject.h>
 #include <JavaScriptCore/JSStringRefPrivate.h>
@@ -49,6 +51,7 @@
 #include <WebCore/File.h>
 #include <WebCore/FileList.h>
 #include <WebCore/FrameTree.h>
+#include <WebCore/HTMLDataListElement.h>
 #include <WebCore/HTMLFrameElement.h>
 #include <WebCore/HTMLIFrameElement.h>
 #include <WebCore/HTMLInputElement.h>
@@ -65,8 +68,8 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/UUID.h>
 
-#if ENABLE(DATALIST_ELEMENT)
-#include <WebCore/HTMLDataListElement.h>
+#if ENABLE(WEBDRIVER_BIDI)
+#include <WebCore/AutomationInstrumentation.h>
 #endif
 
 namespace WebKit {
@@ -123,6 +126,9 @@ WebAutomationSessionProxy::WebAutomationSessionProxy(const String& sessionIdenti
     , m_scriptObjectIdentifier(JSC::PrivateName::Description, "automationSessionProxy"_s)
 {
     WebProcess::singleton().addMessageReceiver(Messages::WebAutomationSessionProxy::messageReceiverName(), *this);
+#if ENABLE(WEBDRIVER_BIDI)
+    AutomationInstrumentation::setClient(*this);
+#endif
 }
 
 WebAutomationSessionProxy::~WebAutomationSessionProxy()
@@ -130,6 +136,9 @@ WebAutomationSessionProxy::~WebAutomationSessionProxy()
     m_frameObservers.clear();
 
     WebProcess::singleton().removeMessageReceiver(Messages::WebAutomationSessionProxy::messageReceiverName());
+#if ENABLE(WEBDRIVER_BIDI)
+    AutomationInstrumentation::clearClient();
+#endif
 }
 
 static bool isValidNodeHandle(const String& nodeHandle)
@@ -262,7 +271,7 @@ static JSValueRef evaluateJavaScriptCallback(JSContextRef context, JSObjectRef f
 JSObjectRef WebAutomationSessionProxy::scriptObject(JSGlobalContextRef context)
 {
     JSC::JSGlobalObject* globalObject = toJS(context);
-    JSC::VM& vm = globalObject->vm();
+    SUPPRESS_UNCOUNTED_LOCAL JSC::VM& vm = globalObject->vm();
     JSC::JSLockHolder locker(vm);
     auto scriptObjectID = JSC::Identifier::fromUid(m_scriptObjectIdentifier);
     if (!globalObject->hasProperty(globalObject, scriptObjectID))
@@ -274,7 +283,7 @@ JSObjectRef WebAutomationSessionProxy::scriptObject(JSGlobalContextRef context)
 void WebAutomationSessionProxy::setScriptObject(JSGlobalContextRef context, JSObjectRef object)
 {
     JSC::JSGlobalObject* globalObject = toJS(context);
-    JSC::VM& vm = globalObject->vm();
+    SUPPRESS_UNCOUNTED_LOCAL JSC::VM& vm = globalObject->vm();
     JSC::JSLockHolder locker(vm);
     auto scriptObjectID = JSC::Identifier::fromUid(m_scriptObjectIdentifier);
     JSC::PutPropertySlot slot(globalObject);
@@ -384,7 +393,7 @@ void WebAutomationSessionProxy::ensureObserverForFrame(WebFrame& frame)
         return;
 
     auto frameID = frame.frameID();
-    m_frameObservers.set(frameID, WebAutomationDOMWindowObserver::create(*window, [this, frameID] (WebAutomationDOMWindowObserver&) {
+    m_frameObservers.set(frameID, WebAutomationDOMWindowObserver::create(*window, [this, protectedThis = Ref { *this }, frameID] (WebAutomationDOMWindowObserver&) {
         willDestroyGlobalObjectForFrame(frameID);
     }));
 }
@@ -638,10 +647,8 @@ static WebCore::Element* containerElementForElement(WebCore::Element& element)
     // §13. Element State.
     // https://w3c.github.io/webdriver/webdriver-spec.html#dfn-container.
     if (is<WebCore::HTMLOptionElement>(element)) {
-#if ENABLE(DATALIST_ELEMENT)
         if (RefPtr parentElement = WebCore::ancestorsOfType<WebCore::HTMLDataListElement>(element).first())
             return parentElement.get();
-#endif
         if (RefPtr parentElement = downcast<WebCore::HTMLOptionElement>(element).ownerSelectElement())
             return parentElement.get();
 
@@ -955,7 +962,7 @@ void WebAutomationSessionProxy::takeScreenshot(WebCore::PageIdentifier pageID, s
         RefPtr localMainFrame = dynamicDowncast<LocalFrame>(frame->coreFrame()->mainFrame());
         if (!localMainFrame)
             return;
-        auto snapshotRect = WebCore::IntRect(localMainFrame->view()->clientToDocumentRect(rect));
+        auto snapshotRect = WebCore::IntRect(localMainFrame->protectedView()->clientToDocumentRect(rect));
         RefPtr<WebImage> image = page->scaledSnapshotWithOptions(snapshotRect, 1, SnapshotOption::Shareable);
         if (!image)
             return completionHandler(std::nullopt, Inspector::Protocol::AutomationHelpers::getEnumConstantValue(Inspector::Protocol::Automation::ErrorMessage::ScreenshotError));
@@ -1013,7 +1020,7 @@ void WebAutomationSessionProxy::snapshotRectForScreenshot(WebCore::PageIdentifie
         return;
     }
 
-    completionHandler(std::nullopt, WebCore::IntRect(localMainFrame->view()->documentToClientRect(snapshotRect)));
+    completionHandler(std::nullopt, WebCore::IntRect(localMainFrame->protectedView()->documentToClientRect(snapshotRect)));
 }
 
 void WebAutomationSessionProxy::getCookiesForFrame(WebCore::PageIdentifier pageID, std::optional<WebCore::FrameIdentifier> frameID, CompletionHandler<void(std::optional<String>, Vector<WebCore::Cookie>)>&& completionHandler)
@@ -1064,5 +1071,12 @@ void WebAutomationSessionProxy::deleteCookie(WebCore::PageIdentifier pageID, std
         completionHandler(std::nullopt);
     });
 }
+
+#if ENABLE(WEBDRIVER_BIDI)
+void WebAutomationSessionProxy::addMessageToConsole(const JSC::MessageSource& source, const JSC::MessageLevel& level, const String& messageText, const JSC::MessageType& type, const WallTime& timestamp)
+{
+    WebProcess::singleton().protectedParentProcessConnection()->send(Messages::WebAutomationSession::LogEntryAdded(source, level, messageText, type, timestamp), 0);
+}
+#endif
 
 } // namespace WebKit

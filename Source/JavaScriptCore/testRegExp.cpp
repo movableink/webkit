@@ -33,9 +33,9 @@
 #include <wtf/text/StringBuilder.h>
 
 #if OS(WINDOWS)
-#include <crtdbg.h>
 #include <mmsystem.h>
 #include <windows.h>
+#include <wtf/win/WTFCRTDebug.h>
 #endif
 
 #if PLATFORM(QT)
@@ -113,8 +113,6 @@ public:
 
     DECLARE_INFO;
 
-    static constexpr bool needsDestructor = true;
-
     static Structure* createStructure(VM& vm, JSValue prototype)
     {
         return Structure::create(vm, nullptr, prototype, TypeInfo(GlobalObjectType, StructureFlags), info());
@@ -162,14 +160,7 @@ int main(int argc, char** argv)
     // error mode here to work around Cygwin's behavior. See <http://webkit.org/b/55222>.
     ::SetErrorMode(0);
 
-#if defined(_DEBUG)
-    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
-    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
-    _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
-    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
-#endif
+    WTF::disableCRTDebugAssertDialog();
 
     timeBeginPeriod(1);
 #endif

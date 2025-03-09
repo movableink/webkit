@@ -22,6 +22,11 @@
 
 #if ENABLE(WEB_RTC)
 
+[
+    ExceptionForEnabledBy,
+    DispatchedFrom=WebContent,
+    DispatchedTo=Networking
+]
 messages -> RTCDataChannelRemoteManagerProxy {
     // To source
     SendData(struct WebCore::RTCDataChannelIdentifier source, bool isRaw, std::span<const uint8_t> text);

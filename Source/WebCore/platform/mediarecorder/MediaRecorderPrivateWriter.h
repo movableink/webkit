@@ -28,21 +28,20 @@
 
 #include <memory>
 #include <optional>
+#include <wtf/Deque.h>
 #include <wtf/Forward.h>
+#include <wtf/MediaTime.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeWeakPtr.h>
-
-namespace WTF {
-class MediaTime;
-}
 
 typedef const struct opaqueCMFormatDescription* CMFormatDescriptionRef;
 struct CGAffineTransform;
 
 namespace WebCore {
 
-class AudioStreamDescription;
-class MediaSample;
+class MediaSamplesBlock;
+struct AudioInfo;
+struct VideoInfo;
 
 class MediaRecorderPrivateWriterListener : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MediaRecorderPrivateWriterListener> {
 public:
@@ -53,17 +52,25 @@ public:
 class MediaRecorderPrivateWriter {
     WTF_MAKE_TZONE_ALLOCATED(MediaRecorderPrivateWriter);
 public:
-    static std::unique_ptr<MediaRecorderPrivateWriter> create(String type, MediaRecorderPrivateWriterListener&);
+    WEBCORE_EXPORT static std::unique_ptr<MediaRecorderPrivateWriter> create(String type, MediaRecorderPrivateWriterListener&);
 
-    virtual ~MediaRecorderPrivateWriter() = default;
+    WEBCORE_EXPORT MediaRecorderPrivateWriter();
+    WEBCORE_EXPORT virtual ~MediaRecorderPrivateWriter();
 
-    virtual std::optional<uint8_t> addAudioTrack(CMFormatDescriptionRef) = 0;
-    virtual std::optional<uint8_t> addVideoTrack(CMFormatDescriptionRef, const std::optional<CGAffineTransform>&) = 0;
+    virtual std::optional<uint8_t> addAudioTrack(const AudioInfo&) = 0;
+    virtual std::optional<uint8_t> addVideoTrack(const VideoInfo&, const std::optional<CGAffineTransform>&) = 0;
     virtual bool allTracksAdded() = 0;
     enum class Result : uint8_t { Success, Failure, NotReady };
-    virtual Result muxFrame(const MediaSample&, uint8_t) = 0;
-    virtual void forceNewSegment(const WTF::MediaTime&) = 0;
-    virtual Ref<GenericPromise> close(const WTF::MediaTime&) = 0;
+    using WriterPromise = NativePromise<void, Result>;
+    WEBCORE_EXPORT virtual Ref<WriterPromise> writeFrames(Deque<UniqueRef<MediaSamplesBlock>>&&, const MediaTime&);
+    WEBCORE_EXPORT virtual Ref<GenericPromise> close();
+
+private:
+    virtual Result writeFrame(const MediaSamplesBlock&) = 0;
+    virtual void forceNewSegment(const MediaTime&) = 0;
+    virtual Ref<GenericPromise> close(const MediaTime&) = 0;
+    Deque<UniqueRef<MediaSamplesBlock>> m_pendingFrames;
+    MediaTime m_lastEndTime { MediaTime::invalidTime() };
 };
 
 } // namespace WebCore

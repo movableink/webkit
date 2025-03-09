@@ -103,6 +103,7 @@
     macro(constructor) \
     macro(count) \
     macro(counters) \
+    macro(copyWithin) \
     macro(dateStyle) \
     macro(day) \
     macro(days) \
@@ -161,6 +162,7 @@
     macro(id) \
     macro(ignoreCase) \
     macro(ignorePunctuation) \
+    macro(includes) \
     macro(index) \
     macro(indices) \
     macro(inferredName) \
@@ -178,6 +180,7 @@
     macro(isArray) \
     macro(isEnabled) \
     macro(isPrototypeOf) \
+    macro(isRawJSON) \
     macro(isView) \
     macro(isWatchpoint) \
     macro(isWellFormed) \
@@ -241,6 +244,7 @@
     macro(propertyIsEnumerable) \
     macro(prototype) \
     macro(raw) \
+    macro(rawJSON) \
     macro(read) \
     macro(region) \
     macro(replace) \
@@ -286,6 +290,7 @@
     macro(toLocaleString) \
     macro(toPrecision) \
     macro(toReversed) \
+    macro(toSorted) \
     macro(toString) \
     macro(toTemporalInstant) \
     macro(toWellFormed) \
@@ -304,6 +309,7 @@
     macro(weekday) \
     macro(weeks) \
     macro(weeksDisplay) \
+    macro(with) \
     macro(writable) \
     macro(written) \
     macro(year) \

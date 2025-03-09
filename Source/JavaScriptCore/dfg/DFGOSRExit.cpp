@@ -50,7 +50,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC { namespace DFG {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeculationFailureDebugInfo);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(SpeculationFailureDebugInfo);
 
 OSRExit::OSRExit(ExitKind kind, JSValueSource jsValueSource, MethodOfGettingAValueProfile valueProfile, SpeculativeJIT* jit, unsigned streamIndex, unsigned recoveryIndex)
     : OSRExitBase(kind, jit->m_origin.forExit, jit->m_origin.semantic, jit->m_origin.wasHoisted, jit->m_currentNode ? jit->m_currentNode->index() : 0)
@@ -239,7 +239,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMaterializeOSRExitSideState, void, (V
     });
 
     auto addSideState = [&] (CallFrame* frame, BytecodeIndex index, size_t tmpOffset) {
-        std::unique_ptr<CheckpointOSRExitSideState> sideState = WTF::makeUnique<CheckpointOSRExitSideState>(frame);
+        std::unique_ptr<CheckpointOSRExitSideState> sideState = makeUniqueWithoutFastMallocCheck<CheckpointOSRExitSideState>(frame);
 
         sideState->bytecodeIndex = index;
         for (size_t i = 0; i < maxNumCheckpointTmps; ++i)
@@ -644,7 +644,7 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
         case UnboxedDoubleInFPR:
             jit.move(AssemblyHelpers::TrustedImmPtr(scratch + index), GPRInfo::regT1);
             jit.loadDouble(MacroAssembler::Address(GPRInfo::regT1), FPRInfo::fpRegT0);
-            jit.purifyNaN(FPRInfo::fpRegT0);
+            jit.purifyNaN(FPRInfo::fpRegT0, FPRInfo::fpRegT0);
 #if USE(JSVALUE64)
             jit.boxDouble(FPRInfo::fpRegT0, GPRInfo::regT0);
             jit.store64(GPRInfo::regT0, MacroAssembler::Address(GPRInfo::regT1));
@@ -656,7 +656,7 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
         case DoubleDisplacedInJSStack:
             jit.move(AssemblyHelpers::TrustedImmPtr(scratch + index), GPRInfo::regT1);
             jit.loadDouble(AssemblyHelpers::addressFor(recovery.virtualRegister()), FPRInfo::fpRegT0);
-            jit.purifyNaN(FPRInfo::fpRegT0);
+            jit.purifyNaN(FPRInfo::fpRegT0, FPRInfo::fpRegT0);
 #if USE(JSVALUE64)
             jit.boxDouble(FPRInfo::fpRegT0, GPRInfo::regT0);
             jit.store64(GPRInfo::regT0, MacroAssembler::Address(GPRInfo::regT1));
@@ -885,31 +885,33 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationDebugPrintSpeculationFailure, void, (
     VM& vm = codeBlock->vm();
     NativeCallFrameTracer tracer(vm, callFrame);
 
-    dataLog("Speculation failure in ", *codeBlock);
-    dataLog(" @ exit #", debugInfo->exitIndex, " (", debugInfo->bytecodeIndex, ", ", debugInfo->kind, ") with ");
-    if (alternative) {
-        dataLog(
-            "executeCounter = ", alternative->baselineExecuteCounter(),
-            ", reoptimizationRetryCounter = ", alternative->reoptimizationRetryCounter(),
-            ", optimizationDelayCounter = ", alternative->optimizationDelayCounter());
-    } else
-        dataLog("no alternative code block (i.e. we've been jettisoned)");
-    dataLog(", osrExitCounter = ", codeBlock->osrExitCounter(), "\n");
-    dataLog("    GPRs at time of exit:");
-    for (unsigned i = 0; i < GPRInfo::numberOfRegisters; ++i) {
-        GPRReg gpr = GPRInfo::toRegister(i);
-        dataLog(" ", GPRInfo::debugName(gpr), ":", RawPointer(context.gpr<void*>(gpr)));
-    }
-    dataLog("\n");
-    dataLog("    FPRs at time of exit:");
-    for (unsigned i = 0; i < FPRInfo::numberOfRegisters; ++i) {
-        FPRReg fpr = FPRInfo::toRegister(i);
-        dataLog(" ", FPRInfo::debugName(fpr), ":");
-        uint64_t bits = context.fpr<uint64_t>(fpr);
-        double value = std::bit_cast<double>(bits);
-        dataLogF("%llx:%lf", static_cast<long long>(bits), value);
-    }
-    dataLog("\n");
+    WTF::dataFile().atomically([&](auto&) {
+        dataLog("Speculation failure in ", *codeBlock);
+        dataLog(" @ exit #", debugInfo->exitIndex, " (", debugInfo->bytecodeIndex, ", ", debugInfo->kind, ") with ");
+        if (alternative) {
+            dataLog(
+                "executeCounter = ", alternative->baselineExecuteCounter(),
+                ", reoptimizationRetryCounter = ", alternative->reoptimizationRetryCounter(),
+                ", optimizationDelayCounter = ", alternative->optimizationDelayCounter());
+        } else
+            dataLog("no alternative code block (i.e. we've been jettisoned)");
+        dataLogLn(", osrExitCounter = ", codeBlock->osrExitCounter());
+        dataLog("    GPRs at time of exit:");
+        for (unsigned i = 0; i < GPRInfo::numberOfRegisters; ++i) {
+            GPRReg gpr = GPRInfo::toRegister(i);
+            dataLog(" ", GPRInfo::debugName(gpr), ":", RawPointer(context.gpr<void*>(gpr)));
+        }
+        dataLogLn();
+        dataLog("    FPRs at time of exit:");
+        for (unsigned i = 0; i < FPRInfo::numberOfRegisters; ++i) {
+            FPRReg fpr = FPRInfo::toRegister(i);
+            dataLog(" ", FPRInfo::debugName(fpr), ":");
+            uint64_t bits = context.fpr<uint64_t>(fpr);
+            double value = std::bit_cast<double>(bits);
+            dataLogF("%llx:%lf", static_cast<long long>(bits), value);
+        }
+        dataLogLn();
+    });
 }
 
 } } // namespace JSC::DFG

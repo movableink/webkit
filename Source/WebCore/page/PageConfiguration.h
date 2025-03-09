@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -127,7 +127,7 @@ public:
         UniqueRef<SpeechRecognitionProvider>&&,
         Ref<BroadcastChannelRegistry>&&,
         UniqueRef<StorageProvider>&&,
-        UniqueRef<ModelPlayerProvider>&&,
+        Ref<ModelPlayerProvider>&&,
         Ref<BadgeClient>&&,
         Ref<HistoryItemClient>&&,
 #if ENABLE(CONTEXT_MENUS)
@@ -139,6 +139,9 @@ public:
         UniqueRef<ChromeClient>&&,
         UniqueRef<CryptoClient>&&,
         UniqueRef<ProcessSyncClient>&&
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+        , UniqueRef<CredentialRequestCoordinatorClient>&&
+#endif
     );
     WEBCORE_EXPORT ~PageConfiguration();
     PageConfiguration(PageConfiguration&&);
@@ -160,7 +163,6 @@ public:
 
 #if ENABLE(WEB_AUTHN)
     std::unique_ptr<AuthenticatorCoordinatorClient> authenticatorCoordinatorClient;
-    std::unique_ptr<CredentialRequestCoordinatorClient> credentialRequestCoordinatorClient;
 #endif
 
 #if ENABLE(APPLICATION_MANIFEST)
@@ -204,7 +206,6 @@ public:
     // FIXME: These should be all be Settings.
     bool loadsSubresources { true };
     std::optional<MemoryCompactLookupOnlyRobinHoodHashSet<String>> allowedNetworkHosts;
-    bool userScriptsShouldWaitUntilNotification { true };
     ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking { ShouldRelaxThirdPartyCookieBlocking::No };
     bool httpsUpgradeEnabled { true };
     std::optional<std::pair<uint16_t, uint16_t>> portsForUpgradingInsecureSchemeForTesting;
@@ -215,7 +216,7 @@ public:
 
     UniqueRef<StorageProvider> storageProvider;
 
-    UniqueRef<ModelPlayerProvider> modelPlayerProvider;
+    Ref<ModelPlayerProvider> modelPlayerProvider;
 #if ENABLE(ATTACHMENT_ELEMENT)
     std::unique_ptr<AttachmentElementClient> attachmentElementClient;
 #endif
@@ -230,6 +231,18 @@ public:
 
 #if PLATFORM(VISION) && ENABLE(GAMEPAD)
     ShouldRequireExplicitConsentForGamepadAccess gamepadAccessRequiresExplicitConsent { ShouldRequireExplicitConsentForGamepadAccess::No };
+#endif
+
+#if HAVE(AUDIT_TOKEN)
+    std::optional<audit_token_t> presentingApplicationAuditToken;
+#endif
+
+#if PLATFORM(COCOA)
+    String presentingApplicationBundleIdentifier;
+#endif
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+    UniqueRef<CredentialRequestCoordinatorClient> credentialRequestCoordinatorClient;
 #endif
 };
 

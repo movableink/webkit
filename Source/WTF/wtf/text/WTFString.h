@@ -39,12 +39,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include <wtf/text/win/WCharStringExtras.h>
 #endif
 
-#if PLATFORM(QT)
-QT_BEGIN_NAMESPACE
-class QString;
-class QStringView;
-QT_END_NAMESPACE
-#endif
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WTF {
 
@@ -281,7 +276,7 @@ public:
     WTF_EXPORT_PRIVATE static String fromUTF8(std::span<const char8_t>);
     static String fromUTF8(std::span<const LChar> characters) { return fromUTF8(byteCast<char8_t>(characters)); }
     static String fromUTF8(std::span<const char> characters) { return fromUTF8(byteCast<char8_t>(characters)); }
-    static String fromUTF8(const char* string) { return fromUTF8(WTF::span8(string)); }
+    static String fromUTF8(const char* string) { return fromUTF8(unsafeSpan8(string)); }
     static String fromUTF8ReplacingInvalidSequences(std::span<const char8_t>);
     static String fromUTF8ReplacingInvalidSequences(std::span<const LChar> characters) { return fromUTF8ReplacingInvalidSequences(byteCast<char8_t>(characters)); }
 
@@ -374,8 +369,8 @@ static_assert(sizeof(String) == sizeof(StaticString), "String and StaticString m
 extern WTF_EXPORT_PRIVATE const StaticString nullStringData;
 extern WTF_EXPORT_PRIVATE const StaticString emptyStringData;
 
-inline const String& nullString() { return *reinterpret_cast<const String*>(&nullStringData); }
-inline const String& emptyString() { return *reinterpret_cast<const String*>(&emptyStringData); }
+inline const String& nullString() { SUPPRESS_MEMORY_UNSAFE_CAST return *reinterpret_cast<const String*>(&nullStringData); }
+inline const String& emptyString() { SUPPRESS_MEMORY_UNSAFE_CAST return *reinterpret_cast<const String*>(&emptyStringData); }
 
 template<typename> struct DefaultHash;
 template<> struct DefaultHash<String>;
@@ -485,7 +480,7 @@ WTF_EXPORT_PRIVATE String makeStringByJoining(std::span<const String> strings, c
 inline std::optional<UCharDirection> String::defaultWritingDirection() const
 {
     if (m_impl)
-        return m_impl->defaultWritingDirection();
+        SUPPRESS_UNCOUNTED_ARG return m_impl->defaultWritingDirection();
     return std::nullopt;
 }
 
@@ -503,7 +498,7 @@ inline String String::substring(unsigned position, unsigned length) const
     if (!position && length >= m_impl->length())
         return *this;
 
-    return m_impl->substring(position, length);
+    SUPPRESS_UNCOUNTED_ARG return m_impl->substring(position, length);
 }
 
 template<typename Func>
@@ -511,7 +506,7 @@ inline Expected<std::invoke_result_t<Func, std::span<const char8_t>>, UTF8Conver
 {
     if (!m_impl)
         return function(nonNullEmptyUTF8Span());
-    return m_impl->tryGetUTF8(function, mode);
+    SUPPRESS_UNCOUNTED_ARG return m_impl->tryGetUTF8(function, mode);
 }
 
 #if USE(FOUNDATION) && defined(__OBJC__)
@@ -520,7 +515,7 @@ inline String::operator NSString *() const
 {
     if (!m_impl)
         return @"";
-    return *m_impl;
+    SUPPRESS_UNCOUNTED_ARG return *m_impl;
 }
 
 inline NSString * nsStringNilIfEmpty(const String& string)
@@ -547,7 +542,7 @@ inline bool codePointCompareLessThan(const String& a, const String& b)
 template<typename Predicate>
 String String::removeCharacters(const Predicate& findMatch) const
 {
-    return m_impl ? m_impl->removeCharacters(findMatch) : String { };
+    SUPPRESS_UNCOUNTED_ARG return m_impl ? m_impl->removeCharacters(findMatch) : String { };
 }
 
 inline bool equalLettersIgnoringASCIICase(const String& string, ASCIILiteral literal)
@@ -572,20 +567,15 @@ inline bool startsWithLettersIgnoringASCIICase(const String& string, ASCIILitera
 
 inline namespace StringLiterals {
 
-#ifndef __swift__
-// Swift will import this as global and then all literals will be WTF.String
-// instead of Swift.String
 inline String operator""_str(const char* characters, size_t)
 {
     return ASCIILiteral::fromLiteralUnsafe(characters);
 }
 
-// FIXME: rdar://136156228
 inline String operator""_str(const UChar* characters, size_t length)
 {
     return String({ characters, length });
 }
-#endif
 
 } // inline StringLiterals
 

@@ -149,7 +149,7 @@ JSC::JSValue InspectorCanvas::resolveContext(JSC::JSGlobalObject* exec)
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-HashSet<Element*> InspectorCanvas::clientNodes() const
+UncheckedKeyHashSet<Element*> InspectorCanvas::clientNodes() const
 {
     return m_context->canvasBase().cssCanvasClients();
 }
@@ -1395,12 +1395,8 @@ Ref<JSON::ArrayOf<JSON::Value>> InspectorCanvas::buildArrayForCanvasPattern(cons
 
 Ref<JSON::ArrayOf<JSON::Value>> InspectorCanvas::buildArrayForImageData(const ImageData& imageData)
 {
-    auto data = JSON::ArrayOf<int>::create();
-    for (size_t i = 0; i < imageData.data().length(); ++i)
-        data->addItem(imageData.data().item(i));
-
     auto array = JSON::ArrayOf<JSON::Value>::create();
-    array->addItem(WTFMove(data));
+    array->addItem(imageData.data().copyToJSONArray());
     array->addItem(imageData.width());
     array->addItem(imageData.height());
     return array;

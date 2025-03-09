@@ -96,8 +96,8 @@ JSC_DEFINE_JIT_OPERATION(operationJSToWasmEntryWrapperBuildFrame, JSEntrypointCa
     const FunctionSignature& functionSignature = *signature.as<FunctionSignature>();
     CallInformation wasmFrameConvention = wasmCallingConvention().callInformationFor(signature, CallRole::Caller);
 
-    if (UNLIKELY(functionSignature.argumentsOrResultsIncludeV128())) {
-        throwVMTypeError(globalObject, scope, Wasm::errorMessageForExceptionType(Wasm::ExceptionType::TypeErrorInvalidV128Use));
+    if (UNLIKELY(functionSignature.argumentsOrResultsIncludeV128() || functionSignature.argumentsOrResultsIncludeExnref())) {
+        throwVMTypeError(globalObject, scope, Wasm::errorMessageForExceptionType(Wasm::ExceptionType::TypeErrorInvalidValueUse));
         OPERATION_RETURN(scope, callee);
     }
 
@@ -271,11 +271,9 @@ JSC_DEFINE_JIT_OPERATION(operationJSToWasmEntryWrapperBuildReturnFrame, EncodedJ
     OPERATION_RETURN(scope, JSValue::encode(resultArray));
 }
 
-JSC_DEFINE_JIT_OPERATION(operationGetWasmCalleeStackSize, EncodedJSValue, (JSWebAssemblyInstance* instance, Wasm::Callee* callee))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationGetWasmCalleeStackSize, unsigned, (JSWebAssemblyInstance*, WasmCallableFunction* functionInfo))
 {
-    auto& module = instance->module();
-
-    auto typeIndex = module.moduleInformation().typeIndexFromFunctionIndexSpace(callee->index());
+    auto typeIndex = static_cast<WasmOrJSImportableFunctionCallLinkInfo*>(functionInfo)->typeIndex;
     const TypeDefinition& typeDefinition = TypeInformation::get(typeIndex).expand();
     const auto& signature = *typeDefinition.as<FunctionSignature>();
     unsigned argCount = signature.argumentCount();
@@ -290,10 +288,7 @@ JSC_DEFINE_JIT_OPERATION(operationGetWasmCalleeStackSize, EncodedJSValue, (JSWeb
     const unsigned numberOfBytesForSavedResults = savedResultRegisters.sizeOfAreaInBytes();
     const unsigned stackOffset = WTF::roundUpToMultipleOf<stackAlignmentBytes()>(std::max(numberOfBytesForCall, numberOfBytesForSavedResults));
 
-    VM& vm = instance->vm();
-
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    OPERATION_RETURN(scope, stackOffset);
+    return stackOffset;
 }
 
 JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalArguments, bool, (void* sp, CallFrame* cfr, void* argumentRegisters, JSWebAssemblyInstance* instance))
@@ -308,10 +303,10 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalArguments, bool, (void* sp,
     VM& vm = instance->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    Wasm::Callee* callee = *access.operator()<Wasm::Callee*>(cfr, -0x10);
-    auto functionIndex = callee->index();
-    auto& module = instance->module();
-    auto typeIndex = module.moduleInformation().typeIndexFromFunctionIndexSpace(functionIndex);
+    constexpr int codeBlockOffset = -0x18;
+
+    auto* importableFunction = *access.operator()<WasmOrJSImportableFunctionCallLinkInfo*>(cfr, codeBlockOffset);
+    auto typeIndex = importableFunction->typeIndex;
     const TypeDefinition& typeDefinition = TypeInformation::get(typeIndex).expand();
     const auto& signature = *typeDefinition.as<FunctionSignature>();
     unsigned argCount = signature.argumentCount();
@@ -319,7 +314,7 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalArguments, bool, (void* sp,
     const auto& wasmCC = wasmCallingConvention().callInformationFor(typeDefinition, CallRole::Caller);
     const auto& jsCC = jsCallingConvention().callInformationFor(typeDefinition, CallRole::Callee);
 
-    if (Options::useWasmSIMD() && (wasmCC.argumentsOrResultsIncludeV128))
+    if (UNLIKELY(signature.argumentsOrResultsIncludeV128() || signature.argumentsOrResultsIncludeExnref()))
         OPERATION_RETURN(scope, false);
 
     for (unsigned argNum = 0; argNum < argCount; ++argNum) {
@@ -336,6 +331,7 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalArguments, bool, (void* sp,
         case TypeKind::Arrayref:
         case TypeKind::Eqref:
         case TypeKind::Anyref:
+        case TypeKind::Nullexn:
         case TypeKind::Nullref:
         case TypeKind::Nullfuncref:
         case TypeKind::Nullexternref:
@@ -419,11 +415,10 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalArguments, bool, (void* sp,
     }
 
     // store this argument
-    *access.operator()<uint64_t>(calleeFrame, CallFrameSlot::thisArgument* static_cast<int>(sizeof(Register))) = JSValue::encode(jsUndefined());
+    *access.operator()<uint64_t>(calleeFrame, CallFrameSlot::thisArgument * static_cast<int>(sizeof(Register))) = JSValue::encode(jsUndefined());
 
     // materializeImportJSCell and store
-    auto* newCallee = instance->importFunctionInfo(functionIndex);
-    *access.operator()<uintptr_t>(calleeFrame, CallFrameSlot::callee * static_cast<int>(sizeof(Register))) = std::bit_cast<uintptr_t>(newCallee->importFunction);
+    *access.operator()<uintptr_t>(calleeFrame, CallFrameSlot::callee * static_cast<int>(sizeof(Register))) = std::bit_cast<uintptr_t>(importableFunction->importFunction);
     *access.operator()<uint32_t>(calleeFrame, CallFrameSlot::argumentCountIncludingThis * static_cast<int>(sizeof(Register)) + PayloadOffset) = argCount + 1; // including this = +1
 
     // set up codeblock
@@ -434,6 +429,14 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalArguments, bool, (void* sp,
     OPERATION_RETURN(scope, true);
 }
 
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmToJSExitNeedToUnpack, const TypeDefinition*, (WasmOrJSImportableFunctionCallLinkInfo* callableFunction))
+{
+    auto typeIndex = callableFunction->typeIndex;
+    const TypeDefinition* typeDefinition = &TypeInformation::get(typeIndex).expand();
+    const auto& signature = *typeDefinition->as<FunctionSignature>();
+    return signature.returnCount() > 1 ? typeDefinition : nullptr;
+}
+
 JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalReturnValues, void, (void* sp, CallFrame* cfr, JSWebAssemblyInstance* instance))
 {
     auto access = []<typename V>(auto* arr, int i) -> V* {
@@ -441,14 +444,14 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalReturnValues, void, (void* 
     };
 
     void* registerSpace = sp;
-    void* callerStackFrame = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(cfr) + sizeof(CallerFrameAndPC));
 
+    NativeCallFrameTracer tracer(instance->vm(), cfr);
     auto scope = DECLARE_THROW_SCOPE(instance->vm());
 
-    Wasm::Callee* callee = *access.operator()<Wasm::Callee*>(cfr, -0x10);
-    auto functionIndex = callee->index();
-    auto& module = instance->module();
-    auto typeIndex = module.moduleInformation().typeIndexFromFunctionIndexSpace(functionIndex);
+    constexpr int codeBlockOffset = -0x18;
+
+    auto* importableFunction = *access.operator()<WasmOrJSImportableFunctionCallLinkInfo*>(cfr, codeBlockOffset);
+    auto typeIndex = importableFunction->typeIndex;
     const TypeDefinition& typeDefinition = TypeInformation::get(typeIndex).expand();
     const auto& signature = *typeDefinition.as<FunctionSignature>();
 
@@ -458,6 +461,8 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalReturnValues, void, (void* 
     auto jsCC = jsCallingConvention().callInformationFor(typeDefinition, CallRole::Callee);
 
     JSValue returned = *(reinterpret_cast<JSValue*>(registerSpace));
+
+    ASSERT(signature.returnCount() <= 1);
 
     if (signature.returnCount() == 1) {
         const auto& returnType = signature.returnType(0);
@@ -483,7 +488,7 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalReturnValues, void, (void* 
             auto offset = GPRInfo::numberOfArgumentRegisters * sizeof(UCPURegister) + FPRInfo::toArgumentIndex(dest) * bytesForWidth(Width::Width64);
             if (returned.isNumber()) {
                 if (returned.isInt32()) {
-                    float result = static_cast<float>(*access.operator()<uint32_t>(registerSpace, 0));
+                    float result = static_cast<float>(*access.operator()<int32_t>(registerSpace, 0));
                     *access.operator()<float>(registerSpace, offset) = result;
                 } else {
 #if USE(JSVALUE64)
@@ -505,7 +510,7 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalReturnValues, void, (void* 
             auto offset = GPRInfo::numberOfArgumentRegisters * sizeof(UCPURegister) + FPRInfo::toArgumentIndex(dest) * bytesForWidth(Width::Width64);
             if (returned.isNumber()) {
                 if (returned.isInt32()) {
-                    double result = static_cast<float>(*access.operator()<uint32_t>(registerSpace, 0));
+                    double result = static_cast<double>(*access.operator()<int32_t>(registerSpace, 0));
                     *access.operator()<double>(registerSpace, offset) = result;
                 } else {
 #if USE(JSVALUE64)
@@ -526,7 +531,7 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalReturnValues, void, (void* 
             if (Wasm::isRefType(returnType)) {
                 if (Wasm::isExternref(returnType)) {
                     // Do nothing.
-                } else if (Wasm::isFuncref(returnType) || (!Options::useWasmGC() && isRefWithTypeIndex(returnType))) {
+                } else if (Wasm::isFuncref(returnType)) {
                     // operationConvertToFuncref
                     JSValue value = JSValue::decode(std::bit_cast<EncodedJSValue>(returned));
                     WebAssemblyFunction* wasmFunction = nullptr;
@@ -549,7 +554,7 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalReturnValues, void, (void* 
                     JSValue value = JSValue::decode(std::bit_cast<EncodedJSValue>(returned));
                     value = Wasm::internalizeExternref(value);
                     if (UNLIKELY(!Wasm::TypeInformation::castReference(value, returnType.isNullable(), returnType.index))) {
-                        throwTypeError(globalObject, scope, "Argument value did not match reference type"_s);
+                        throwTypeError(globalObject, scope, "Argument value did not match the reference type"_s);
                         OPERATION_RETURN(scope);
                     }
                 }
@@ -558,95 +563,151 @@ JSC_DEFINE_JIT_OPERATION(operationWasmToJSExitMarshalReturnValues, void, (void* 
                 RELEASE_ASSERT_NOT_REACHED();
         }
         }
-    } else if (signature.returnCount() > 1) {
-        // operationIterateResults
-        JSValue result = JSValue::decode(std::bit_cast<EncodedJSValue>(returned));
-
-        unsigned iterationCount = 0;
-        MarkedArgumentBuffer buffer;
-        buffer.ensureCapacity(signature.returnCount());
-        forEachInIterable(globalObject, result, [&](VM&, JSGlobalObject*, JSValue value) -> void {
-            if (buffer.size() < signature.returnCount()) {
-                buffer.append(value);
-                if (UNLIKELY(buffer.hasOverflowed()))
-                    throwOutOfMemoryError(globalObject, scope);
-            }
-            ++iterationCount;
-        });
-
-        OPERATION_RETURN_IF_EXCEPTION(scope);
-        if (buffer.hasOverflowed()) {
-            throwOutOfMemoryError(globalObject, scope, "JS results to Wasm are too large"_s);
-            OPERATION_RETURN(scope);
-        }
-
-        if (iterationCount != signature.returnCount()) {
-            throwVMTypeError(globalObject, scope, "Incorrect number of values returned to Wasm from JS"_s);
-            OPERATION_RETURN(scope);
-        }
-        for (unsigned index = 0; index < buffer.size(); ++index) {
-            JSValue value = buffer.at(index);
-
-            uint64_t unboxedValue = 0;
-            const auto& returnType = signature.returnType(index);
-            switch (returnType.kind) {
-            case TypeKind::I32:
-                unboxedValue = value.toInt32(globalObject);
-                break;
-            case TypeKind::I64:
-                unboxedValue = value.toBigInt64(globalObject);
-                break;
-            case TypeKind::F32:
-                unboxedValue = std::bit_cast<uint32_t>(value.toFloat(globalObject));
-                break;
-            case TypeKind::F64:
-                unboxedValue = std::bit_cast<uint64_t>(value.toNumber(globalObject));
-                break;
-            default: {
-                if (Wasm::isRefType(returnType)) {
-                    if (isExternref(returnType)) {
-                        // Do nothing.
-                    } else if (isFuncref(returnType) || (!Options::useWasmGC() && isRefWithTypeIndex(returnType))) {
-                        WebAssemblyFunction* wasmFunction = nullptr;
-                        WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
-                        if (UNLIKELY(!isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction) && !value.isNull())) {
-                            throwTypeError(globalObject, scope, "Funcref value is not a function"_s);
-                            OPERATION_RETURN(scope);
-                        }
-                        if (Wasm::isRefWithTypeIndex(returnType) && !value.isNull()) {
-                            Wasm::TypeIndex paramIndex = returnType.index;
-                            Wasm::TypeIndex argIndex = wasmFunction ? wasmFunction->typeIndex() : wasmWrapperFunction->typeIndex();
-                            if (paramIndex != argIndex) {
-                                throwTypeError(globalObject, scope, "Argument function did not match the reference type"_s);
-                                OPERATION_RETURN(scope);
-                            }
-                        }
-                    } else {
-                        ASSERT(Options::useWasmGC());
-                        value = Wasm::internalizeExternref(value);
-                        if (UNLIKELY(!Wasm::TypeInformation::castReference(value, returnType.isNullable(), returnType.index))) {
-                            throwTypeError(globalObject, scope, "Argument value did not match reference type"_s);
-                            OPERATION_RETURN(scope);
-                        }
-                    }
-                } else
-                    RELEASE_ASSERT_NOT_REACHED();
-                unboxedValue = std::bit_cast<uint64_t>(value);
-            }
-            }
-            OPERATION_RETURN_IF_EXCEPTION(scope);
-
-            auto rep = wasmCC.results[index];
-            if (rep.location.isGPR())
-                *access.operator()<uint64_t>(registerSpace, GPRInfo::toArgumentIndex(rep.location.jsr().payloadGPR()) * sizeof(UCPURegister)) = unboxedValue;
-            else if (rep.location.isFPR())
-                *access.operator()<uint64_t>(registerSpace, GPRInfo::numberOfArgumentRegisters * sizeof(UCPURegister) + FPRInfo::toArgumentIndex(rep.location.fpr()) * bytesForWidth(Width::Width64)) = unboxedValue;
-            else
-                *access.operator()<uint64_t>(callerStackFrame, rep.location.offsetFromSP()) = unboxedValue;
-        }
     }
 
     OPERATION_RETURN(scope);
+}
+
+static constexpr unsigned gprToIndex(GPRReg r)
+{
+    for (unsigned i = 0; i < GPRInfo::numberOfArgumentRegisters; ++i) {
+        if (GPRInfo::toArgumentRegister(i) == r)
+            return i;
+    }
+    RELEASE_ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
+    return 0;
+}
+
+static constexpr unsigned fprToIndex(FPRReg r)
+{
+    for (unsigned i = 0; i < FPRInfo::numberOfArgumentRegisters; ++i) {
+        if (FPRInfo::toArgumentRegister(i) == r)
+            return i;
+    }
+    RELEASE_ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
+    return 0;
+}
+
+
+ALWAYS_INLINE void assertCalleeIsReferenced(CallFrame* frame, JSWebAssemblyInstance* instance)
+{
+#if ASSERT_ENABLED
+    CalleeGroup& calleeGroup = *instance->calleeGroup();
+    Wasm::Callee* callee = static_cast<Wasm::Callee*>(frame->callee().asNativeCallee());
+    TriState status;
+    {
+        Locker locker { calleeGroup.m_lock };
+        status = calleeGroup.calleeIsReferenced(locker, callee);
+    }
+    if (status == TriState::Indeterminate)
+        ASSERT(instance->vm().heap.isWasmCalleePendingDestruction(*callee));
+    else
+        ASSERT(status == TriState::True);
+#else
+    UNUSED_PARAM(frame);
+    UNUSED_PARAM(instance);
+#endif
+}
+
+
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmToJSExitIterateResults, bool, (JSWebAssemblyInstance* instance, const TypeDefinition* type, uint64_t* registerResults, uint64_t* calleeFramePointer))
+{
+    EncodedJSValue encResult = registerResults[0];
+    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
+    assertCalleeIsReferenced(callFrame, instance);
+    VM& vm = instance->vm();
+    JSGlobalObject* globalObject = instance->globalObject();
+    NativeCallFrameTracer tracer(vm, callFrame);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    const FunctionSignature* signature = type->as<FunctionSignature>();
+
+    auto wasmCallInfo = wasmCallingConvention().callInformationFor(*type, CallRole::Callee);
+
+    unsigned iterationCount = 0;
+    MarkedArgumentBuffer buffer;
+    buffer.ensureCapacity(signature->returnCount());
+    JSValue result = JSValue::decode(encResult);
+    forEachInIterable(globalObject, result, [&](VM&, JSGlobalObject*, JSValue value) -> void {
+        if (buffer.size() < signature->returnCount()) {
+            buffer.append(value);
+            if (UNLIKELY(buffer.hasOverflowed()))
+                throwOutOfMemoryError(globalObject, scope);
+        }
+        ++iterationCount;
+    });
+    RETURN_IF_EXCEPTION(scope, true);
+
+    if (buffer.hasOverflowed()) {
+        throwOutOfMemoryError(globalObject, scope, "JS results to Wasm are too large"_s);
+        return true;
+    }
+
+    if (iterationCount != signature->returnCount()) {
+        throwVMTypeError(globalObject, scope, "Incorrect number of values returned to Wasm from JS"_s);
+        return true;
+    }
+
+    for (unsigned index = 0; index < buffer.size(); ++index) {
+        JSValue value = buffer.at(index);
+
+        uint64_t unboxedValue = 0;
+        const auto& returnType = signature->returnType(index);
+        switch (returnType.kind) {
+        case TypeKind::I32:
+            unboxedValue = value.toInt32(globalObject);
+            break;
+        case TypeKind::I64:
+            unboxedValue = value.toBigInt64(globalObject);
+            break;
+        case TypeKind::F32:
+            unboxedValue = std::bit_cast<uint32_t>(value.toFloat(globalObject));
+            break;
+        case TypeKind::F64:
+            unboxedValue = std::bit_cast<uint64_t>(value.toNumber(globalObject));
+            break;
+        default: {
+            if (Wasm::isRefType(returnType)) {
+                if (isExternref(returnType)) {
+                    // Do nothing.
+                } else if (isFuncref(returnType)) {
+                    WebAssemblyFunction* wasmFunction = nullptr;
+                    WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
+                    if (UNLIKELY(!isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction) && !value.isNull())) {
+                        throwTypeError(globalObject, scope, "Argument value did not match the reference type"_s);
+                        return true;
+                    }
+                    if (Wasm::isRefWithTypeIndex(returnType) && !value.isNull()) {
+                        Wasm::TypeIndex paramIndex = returnType.index;
+                        Wasm::TypeIndex argIndex = wasmFunction ? wasmFunction->typeIndex() : wasmWrapperFunction->typeIndex();
+                        if (paramIndex != argIndex) {
+                            throwTypeError(globalObject, scope, "Argument value did not match the reference type"_s);
+                            return true;
+                        }
+                    }
+                } else {
+                    value = Wasm::internalizeExternref(value);
+                    if (UNLIKELY(!Wasm::TypeInformation::castReference(value, returnType.isNullable(), returnType.index))) {
+                        throwTypeError(globalObject, scope, "Argument value did not match the reference type"_s);
+                        return true;
+                    }
+                }
+            } else
+                RELEASE_ASSERT_NOT_REACHED();
+            unboxedValue = std::bit_cast<uint64_t>(value);
+        }
+        }
+        RETURN_IF_EXCEPTION(scope, true);
+
+        auto rep = wasmCallInfo.results[index];
+        if (rep.location.isGPR())
+            registerResults[gprToIndex(rep.location.jsr().payloadGPR())] = unboxedValue;
+        else if (rep.location.isFPR())
+            registerResults[GPRInfo::numberOfArgumentRegisters + fprToIndex(rep.location.fpr())] = unboxedValue;
+        else
+            calleeFramePointer[rep.location.offsetFromFP() / sizeof(uint64_t)] = unboxedValue;
+    }
+    return false;
 }
 
 #if ENABLE(WEBASSEMBLY_OMGJIT)
@@ -1196,27 +1257,6 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmLoopOSREnterBBQJIT, void, (Probe:
 #endif
 
 
-ALWAYS_INLINE void assertCalleeIsReferenced(CallFrame* frame, JSWebAssemblyInstance* instance)
-{
-#if ASSERT_ENABLED
-    CalleeGroup& calleeGroup = *instance->calleeGroup();
-    Wasm::Callee* callee = static_cast<Wasm::Callee*>(frame->callee().asNativeCallee());
-    TriState status;
-    {
-        Locker locker { calleeGroup.m_lock };
-        status = calleeGroup.calleeIsReferenced(locker, callee);
-    }
-    if (status == TriState::Indeterminate)
-        ASSERT(instance->vm().heap.isWasmCalleePendingDestruction(*callee));
-    else
-        ASSERT(status == TriState::True);
-#else
-    UNUSED_PARAM(frame);
-    UNUSED_PARAM(instance);
-#endif
-}
-
-
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmUnwind, void*, (JSWebAssemblyInstance* instance))
 {
     CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
@@ -1332,7 +1372,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationConvertToBigInt, EncodedJSValue, (JSW
 }
 
 // https://webassembly.github.io/multi-value/js-api/index.html#run-a-host-function
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationIterateResults, void, (JSWebAssemblyInstance* instance, const TypeDefinition* type, EncodedJSValue encResult, uint64_t* registerResults, uint64_t* calleeFramePointer))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationIterateResults, bool, (JSWebAssemblyInstance* instance, const TypeDefinition* type, EncodedJSValue encResult, uint64_t* registerResults, uint64_t* calleeFramePointer))
 {
     CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
     assertCalleeIsReferenced(callFrame, instance);
@@ -1358,16 +1398,16 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationIterateResults, void, (JSWebAssemblyI
         }
         ++iterationCount;
     });
-    RETURN_IF_EXCEPTION(scope, void());
+    RETURN_IF_EXCEPTION(scope, true);
 
     if (buffer.hasOverflowed()) {
         throwOutOfMemoryError(globalObject, scope, "JS results to Wasm are too large"_s);
-        return;
+        return true;
     }
 
     if (iterationCount != signature->returnCount()) {
         throwVMTypeError(globalObject, scope, "Incorrect number of values returned to Wasm from JS"_s);
-        return;
+        return true;
     }
 
     for (unsigned index = 0; index < buffer.size(); ++index) {
@@ -1392,27 +1432,26 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationIterateResults, void, (JSWebAssemblyI
             if (Wasm::isRefType(returnType)) {
                 if (isExternref(returnType)) {
                     // Do nothing.
-                } else if (isFuncref(returnType) || (!Options::useWasmGC() && isRefWithTypeIndex(returnType))) {
+                } else if (isFuncref(returnType)) {
                     WebAssemblyFunction* wasmFunction = nullptr;
                     WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
                     if (UNLIKELY(!isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction) && !value.isNull())) {
                         throwTypeError(globalObject, scope, "Argument value did not match the reference type"_s);
-                        return;
+                        return true;
                     }
                     if (Wasm::isRefWithTypeIndex(returnType) && !value.isNull()) {
                         Wasm::TypeIndex paramIndex = returnType.index;
                         Wasm::TypeIndex argIndex = wasmFunction ? wasmFunction->typeIndex() : wasmWrapperFunction->typeIndex();
                         if (paramIndex != argIndex) {
                             throwTypeError(globalObject, scope, "Argument value did not match the reference type"_s);
-                            return;
+                            return true;
                         }
                     }
                 } else {
-                    ASSERT(Options::useWasmGC());
                     value = Wasm::internalizeExternref(value);
                     if (UNLIKELY(!Wasm::TypeInformation::castReference(value, returnType.isNullable(), returnType.index))) {
                         throwTypeError(globalObject, scope, "Argument value did not match the reference type"_s);
-                        return;
+                        return true;
                     }
                 }
             } else
@@ -1420,7 +1459,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationIterateResults, void, (JSWebAssemblyI
             unboxedValue = std::bit_cast<uint64_t>(value);
         }
         }
-        RETURN_IF_EXCEPTION(scope, void());
+        RETURN_IF_EXCEPTION(scope, true);
 
         auto rep = wasmCallInfo.results[index];
         if (rep.location.isGPR())
@@ -1430,6 +1469,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationIterateResults, void, (JSWebAssemblyI
         else
             calleeFramePointer[rep.location.offsetFromFP() / sizeof(uint64_t)] = unboxedValue;
     }
+    return false;
 }
 
 // FIXME: It would be much easier to inline this when we have a global GC, which could probably mean we could avoid
@@ -1548,15 +1588,6 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmRefFunc, EncodedJSValue, (JSWebAs
     return refFunc(instance, index);
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmStructNew, EncodedJSValue, (JSWebAssemblyInstance* instance, uint32_t typeIndex, bool useDefault, uint64_t* arguments))
-{
-    CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
-    assertCalleeIsReferenced(callFrame, instance);
-    VM& vm = instance->vm();
-    NativeCallFrameTracer tracer(vm, callFrame);
-    return structNew(instance, typeIndex, useDefault, arguments);
-}
-
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmStructNewEmpty, EncodedJSValue, (JSWebAssemblyInstance* instance, uint32_t typeIndex))
 {
     CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
@@ -1565,8 +1596,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmStructNewEmpty, EncodedJSValue, (
     NativeCallFrameTracer tracer(vm, callFrame);
     JSGlobalObject* globalObject = instance->globalObject();
     auto structRTT = instance->module().moduleInformation().rtts[typeIndex];
-    auto newStruct = JSWebAssemblyStruct::tryCreate(globalObject, globalObject->webAssemblyStructStructure(), instance, typeIndex, structRTT);
-    return JSValue::encode(newStruct ? newStruct : jsNull());
+    return JSValue::encode(JSWebAssemblyStruct::create(vm, globalObject->webAssemblyStructStructure(), instance, typeIndex, WTFMove(structRTT)));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmStructGet, EncodedJSValue, (EncodedJSValue encodedStructReference, uint32_t fieldIndex))
@@ -1623,14 +1653,14 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmThrow, void*, (JSWebAssemblyInsta
 
     JSGlobalObject* globalObject = instance->globalObject();
 
-    const Wasm::Tag& tag = instance->tag(exceptionIndex);
+    Ref<const Wasm::Tag> tag = instance->tag(exceptionIndex);
 
-    FixedVector<uint64_t> values(tag.parameterBufferSize());
-    for (unsigned i = 0; i < tag.parameterBufferSize(); ++i)
+    FixedVector<uint64_t> values(tag->parameterBufferSize());
+    for (unsigned i = 0; i < tag->parameterBufferSize(); ++i)
         values[i] = arguments[i];
 
-    ASSERT(tag.type().returnsVoid());
-    JSWebAssemblyException* exception = JSWebAssemblyException::create(vm, globalObject->webAssemblyExceptionStructure(), tag, WTFMove(values));
+    ASSERT(tag->type().returnsVoid());
+    JSWebAssemblyException* exception = JSWebAssemblyException::create(vm, globalObject->webAssemblyExceptionStructure(), WTFMove(tag), WTFMove(values));
     throwException(globalObject, throwScope, exception);
 
     genericUnwind(vm, callFrame);
@@ -1639,7 +1669,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmThrow, void*, (JSWebAssemblyInsta
     return vm.targetMachinePCForThrow;
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmRethrow, void*, (JSWebAssemblyInstance* instance, EncodedJSValue thrownValue))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmRethrow, void*, (JSWebAssemblyInstance* instance, EncodedJSValue encodedThrownValue))
 {
     CallFrame* callFrame = DECLARE_WASM_CALL_FRAME(instance);
     assertCalleeIsReferenced(callFrame, instance);
@@ -1649,7 +1679,13 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmRethrow, void*, (JSWebAssemblyIns
 
     JSGlobalObject* globalObject = instance->globalObject();
 
-    throwException(globalObject, throwScope, JSValue::decode(thrownValue));
+    JSValue thrownValue = JSValue::decode(encodedThrownValue);
+    if (auto* exception = jsDynamicCast<JSWebAssemblyException*>(thrownValue)) {
+        if (&exception->tag() == &Wasm::Tag::jsExceptionTag())
+            thrownValue = JSValue::decode(exception->payload().at(0));
+    }
+
+    throwException(globalObject, throwScope, thrownValue);
 
     genericUnwind(vm, callFrame);
     ASSERT(!!vm.callFrameForCatch);
@@ -1772,7 +1808,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayNewEmpty, EncodedJSValue, (J
     NativeCallFrameTracer tracer(vm, callFrame);
 
     JSGlobalObject* globalObject = instance->globalObject();
-    auto arrayRTT = instance->module().moduleInformation().rtts[typeIndex];
+    RefPtr arrayRTT = instance->module().moduleInformation().rtts[typeIndex];
 
     ASSERT(typeIndex < instance->module().moduleInformation().typeCount());
     const Wasm::TypeDefinition& arraySignature = instance->module().moduleInformation().typeSignatures[typeIndex]->expand();
@@ -1784,59 +1820,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayNewEmpty, EncodedJSValue, (J
         return JSValue::encode(jsNull());
 
     // Create a default-initialized array with the right element type and length
-    JSWebAssemblyArray* array = nullptr;
-    if (fieldType.type.is<PackedType>()) {
-        switch (fieldType.type.as<PackedType>()) {
-        case Wasm::PackedType::I8: {
-            FixedVector<uint8_t> v(size);
-            v.fill(0); // Prevent GC from tracing uninitialized array slots
-            array = JSWebAssemblyArray::tryCreate(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(v), arrayRTT);
-            break;
-        }
-        case Wasm::PackedType::I16: {
-            FixedVector<uint16_t> v(size);
-            v.fill(0);
-            array = JSWebAssemblyArray::tryCreate(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(v), arrayRTT);
-            break;
-        }
-        }
-        return JSValue::encode(array);
-    }
-
-    ASSERT(fieldType.type.is<Type>());
-    switch (fieldType.type.as<Type>().kind) {
-    case Wasm::TypeKind::I32:
-    case Wasm::TypeKind::F32: {
-        FixedVector<uint32_t> v(size);
-        v.fill(0);
-        array = JSWebAssemblyArray::tryCreate(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(v), arrayRTT);
-        break;
-    }
-    case Wasm::TypeKind::I64:
-    case Wasm::TypeKind::F64: {
-        FixedVector<uint64_t> v(size);
-        v.fill(0);
-        array = JSWebAssemblyArray::tryCreate(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(v), arrayRTT);
-        break;
-    }
-    case Wasm::TypeKind::Ref:
-    case Wasm::TypeKind::RefNull: {
-        FixedVector<uint64_t> v(size);
-        v.fill(JSValue::encode(jsNull()));
-        array = JSWebAssemblyArray::tryCreate(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(v), arrayRTT);
-        break;
-    }
-    case Wasm::TypeKind::V128: {
-        FixedVector<v128_t> v(size);
-        v.fill(vectorAllZeros());
-        array = JSWebAssemblyArray::tryCreate(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(v), arrayRTT);
-        break;
-    }
-    default:
-        RELEASE_ASSERT_NOT_REACHED();
-    }
-
-    return JSValue::encode(array ? array : jsNull());
+    return JSValue::encode(JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(arrayRTT)));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayGet, EncodedJSValue, (JSWebAssemblyInstance* instance, uint32_t typeIndex, EncodedJSValue arrayValue, uint32_t index))
@@ -1863,7 +1847,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayFill, UCPUStrictInt32, (JSWe
     assertCalleeIsReferenced(callFrame, instance);
     VM& vm = instance->vm();
     NativeCallFrameTracer tracer(vm, callFrame);
-    return toUCPUStrictInt32(arrayFill(arrayValue, offset, value, size));
+    return toUCPUStrictInt32(arrayFill(vm, arrayValue, offset, value, size));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayFillVector, UCPUStrictInt32, (JSWebAssemblyInstance* instance, EncodedJSValue arrayValue, uint32_t offset, uint64_t lane0, uint64_t lane1, uint32_t size))
@@ -1872,7 +1856,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayFillVector, UCPUStrictInt32,
     assertCalleeIsReferenced(callFrame, instance);
     VM& vm = instance->vm();
     NativeCallFrameTracer tracer(vm, callFrame);
-    return toUCPUStrictInt32(arrayFill(arrayValue, offset, v128_t { lane0, lane1 }, size));
+    return toUCPUStrictInt32(arrayFill(vm, arrayValue, offset, v128_t { lane0, lane1 }, size));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayCopy, UCPUStrictInt32, (JSWebAssemblyInstance* instance, EncodedJSValue dst, uint32_t dstOffset, EncodedJSValue src, uint32_t srcOffset, uint32_t size))
@@ -1890,10 +1874,10 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayInitData, UCPUStrictInt32, (
     return toUCPUStrictInt32(arrayInitData(instance, dst, dstOffset, srcDataIndex, srcOffset, size));
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmIsSubRTT, bool, (RTT * maybeSubRTT, RTT* targetRTT))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmIsStrictSubRTT, bool, (RTT* maybeSubRTT, RTT* targetRTT))
 {
     ASSERT(maybeSubRTT && targetRTT);
-    return maybeSubRTT->isSubRTT(*targetRTT);
+    return maybeSubRTT->isStrictSubRTT(*targetRTT);
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmAnyConvertExtern, EncodedJSValue, (EncodedJSValue reference))

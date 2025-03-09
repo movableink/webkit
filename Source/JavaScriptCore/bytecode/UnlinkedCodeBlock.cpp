@@ -111,8 +111,8 @@ void UnlinkedCodeBlock::visitChildrenImpl(JSCell* cell, Visitor& visitor)
         extraMemory += thisObject->m_instructions->sizeInBytes();
     if (thisObject->hasRareData())
         extraMemory += thisObject->m_rareData->sizeInBytes(locker);
-
-    extraMemory += thisObject->m_expressionInfo->byteSize();
+    if (thisObject->m_expressionInfo)
+        extraMemory += thisObject->m_expressionInfo->byteSize();
     extraMemory += thisObject->m_jumpTargets.byteSize();
     extraMemory += thisObject->m_identifiers.byteSize();
     extraMemory += thisObject->m_constantRegisters.byteSize();
@@ -282,7 +282,7 @@ bool UnlinkedCodeBlock::hasIdentifier(UniquedStringImpl* uid)
     if (numberOfIdentifiers() > 100) {
         if (numberOfIdentifiers() != m_cachedIdentifierUids.size()) {
             Locker locker(m_cachedIdentifierUidsLock);
-            HashSet<UniquedStringImpl*> cachedIdentifierUids;
+            UncheckedKeyHashSet<UniquedStringImpl*> cachedIdentifierUids;
             for (unsigned i = 0; i < numberOfIdentifiers(); ++i) {
                 const Identifier& identifier = this->identifier(i);
                 cachedIdentifierUids.add(identifier.impl());

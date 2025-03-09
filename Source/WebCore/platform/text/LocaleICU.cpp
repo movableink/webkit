@@ -33,8 +33,6 @@
 
 #include "LocaleToScriptMapping.h"
 #include "LocalizedStrings.h"
-#include <hb-icu.h>
-#include <hb.h>
 #include <limits>
 #include <unicode/udatpg.h>
 #include <unicode/uloc.h>
@@ -43,6 +41,11 @@
 #include <wtf/text/StringBuffer.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/icu/ICUHelpers.h>
+
+#if USE(HARFBUZZ)
+#include <hb-icu.h>
+#include <hb.h>
+#endif
 
 
 namespace WebCore {
@@ -63,15 +66,14 @@ LocaleICU::~LocaleICU()
 #if !UCONFIG_NO_FORMATTING
     unum_close(m_numberFormat);
 #endif
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     udat_close(m_shortDateFormat);
     udat_close(m_mediumTimeFormat);
     udat_close(m_shortTimeFormat);
-#endif
 }
 
 Locale::WritingDirection LocaleICU::defaultWritingDirection() const
 {
+#if USE(HARFBUZZ)
     UScriptCode icuScript = localeToScriptCodeForFontSelection(m_locale.span());
     hb_script_t script = hb_icu_script_to_script(icuScript);
 
@@ -83,6 +85,9 @@ Locale::WritingDirection LocaleICU::defaultWritingDirection() const
     default:
         return WritingDirection::Default;
     }
+#else
+    return WritingDirection::Default;
+#endif
 }
 
 #if !UCONFIG_NO_FORMATTING
@@ -147,7 +152,6 @@ void LocaleICU::initializeLocaleData()
 #endif
 }
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 bool LocaleICU::initializeShortDateFormat()
 {
     if (m_didCreateShortDateFormat)
@@ -170,12 +174,12 @@ static String getDateFormatPattern(const UDateFormat* dateFormat)
         return emptyString();
 
     UErrorCode status = U_ZERO_ERROR;
-    int32_t length = udat_toPattern(dateFormat, TRUE, 0, 0, &status);
+    int32_t length = udat_toPattern(dateFormat, true, 0, 0, &status);
     if (!needsToGrowToProduceBuffer(status) || !length)
         return emptyString();
     StringBuffer<UChar> buffer(length);
     status = U_ZERO_ERROR;
-    udat_toPattern(dateFormat, TRUE, buffer.characters(), length, &status);
+    udat_toPattern(dateFormat, true, buffer.characters(), length, &status);
     if (U_FAILURE(status))
         return emptyString();
     return String::adopt(WTFMove(buffer));
@@ -381,8 +385,6 @@ const Vector<String>& LocaleICU::timeAMPMLabels()
     initializeDateTimeFormat();
     return m_timeAMPMLabels;
 }
-
-#endif
 
 } // namespace WebCore
 

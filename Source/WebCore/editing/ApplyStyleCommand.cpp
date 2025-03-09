@@ -29,9 +29,10 @@
 
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSParser.h"
+#include "CSSSerializationContext.h"
 #include "CSSValuePool.h"
 #include "Document.h"
-#include "Editing.h"
+#include "EditingInlines.h"
 #include "Editor.h"
 #include "ElementChildIteratorInlines.h"
 #include "HTMLFontElement.h"
@@ -40,6 +41,7 @@
 #include "HTMLNames.h"
 #include "HTMLSpanElement.h"
 #include "LocalFrame.h"
+#include "NodeInlines.h"
 #include "NodeList.h"
 #include "NodeTraversal.h"
 #include "RenderObject.h"
@@ -115,7 +117,7 @@ Ref<HTMLElement> createStyleSpanElement(Document& document)
     return createHTMLElement(document, spanTag);
 }
 
-ApplyStyleCommand::ApplyStyleCommand(Ref<Document>&& document, const EditingStyle* style, EditAction editingAction, PropertyLevel propertyLevel)
+ApplyStyleCommand::ApplyStyleCommand(Ref<Document>&& document, const EditingStyle* style, EditAction editingAction, ApplyStylePropertyLevel propertyLevel)
     : CompositeEditCommand(WTFMove(document), editingAction)
     , m_style(style->copy())
     , m_propertyLevel(propertyLevel)
@@ -126,7 +128,7 @@ ApplyStyleCommand::ApplyStyleCommand(Ref<Document>&& document, const EditingStyl
 {
 }
 
-ApplyStyleCommand::ApplyStyleCommand(Ref<Document>&& document, const EditingStyle* style, const Position& start, const Position& end, EditAction editingAction, PropertyLevel propertyLevel)
+ApplyStyleCommand::ApplyStyleCommand(Ref<Document>&& document, const EditingStyle* style, const Position& start, const Position& end, EditAction editingAction, ApplyStylePropertyLevel propertyLevel)
     : CompositeEditCommand(WTFMove(document), editingAction)
     , m_style(style->copy())
     , m_propertyLevel(propertyLevel)
@@ -166,9 +168,9 @@ void ApplyStyleCommand::updateStartEnd(const Position& newStart, const Position&
     if (!m_useEndingSelection && (newStart != m_start || newEnd != m_end))
         m_useEndingSelection = true;
 
-    bool wasBaseFirst = startingSelection().isBaseFirst() || !startingSelection().isDirectional();
+    bool wasBaseFirst = startingSelection().isBaseFirst() || startingSelection().directionality() != Directionality::Strong;
     setEndingSelection(VisibleSelection(VisiblePosition(wasBaseFirst ? newStart : newEnd), VisiblePosition(wasBaseFirst ? newEnd : newStart),
-        endingSelection().isDirectional()));
+        endingSelection().directionality()));
     m_start = newStart;
     m_end = newEnd;
 }
@@ -192,7 +194,7 @@ Position ApplyStyleCommand::endPosition()
 void ApplyStyleCommand::doApply()
 {
     switch (m_propertyLevel) {
-    case PropertyLevel::Default: {
+    case ApplyStylePropertyLevel::Default: {
         // Apply the block-centric properties of the style.
         auto blockStyle = m_style->extractAndRemoveBlockProperties();
         if (!blockStyle->isEmpty())
@@ -204,7 +206,7 @@ void ApplyStyleCommand::doApply()
         }
         break;
     }
-    case PropertyLevel::ForceBlock:
+    case ApplyStylePropertyLevel::ForceBlock:
         // Force all properties to be applied as block styles.
         applyBlockStyle(*m_style);
         break;
@@ -415,7 +417,7 @@ void ApplyStyleCommand::applyRelativeFontStyleChange(EditingStyle* style)
         }
         if (currentFontSize != desiredFontSize) {
             inlineStyle->setProperty(CSSPropertyFontSize, CSSPrimitiveValue::create(desiredFontSize, CSSUnitType::CSS_PX));
-            setNodeAttribute(*element, styleAttr, inlineStyle->asTextAtom());
+            setNodeAttribute(*element, styleAttr, inlineStyle->asTextAtom(CSS::defaultSerializationContext()));
         }
         if (inlineStyle->isEmpty()) {
             removeNodeAttribute(*element, styleAttr);
@@ -538,7 +540,7 @@ void ApplyStyleCommand::removeEmbeddingUpToEnclosingBlock(Node* node, Node* unsp
             auto inlineStyle = copyStyleOrCreateEmpty(element->inlineStyle());
             inlineStyle->setProperty(CSSPropertyUnicodeBidi, CSSValueNormal);
             inlineStyle->removeProperty(CSSPropertyDirection);
-            setNodeAttribute(*element, styleAttr, inlineStyle->asTextAtom());
+            setNodeAttribute(*element, styleAttr, inlineStyle->asTextAtom(CSS::defaultSerializationContext()));
             if (isSpanWithoutAttributesOrUnstyledStyleSpan(*element))
                 removeNodePreservingChildren(*element);
         }
@@ -792,7 +794,7 @@ void ApplyStyleCommand::applyInlineStyleToNodeRange(EditingStyle& style, Node& s
                 RefPtr inlineStyle = copyStyleOrCreateEmpty(element->inlineStyle());
                 if (RefPtr otherStyle = style.style())
                     inlineStyle->mergeAndOverrideOnConflict(*otherStyle);
-                setNodeAttribute(*element, styleAttr, inlineStyle->asTextAtom());
+                setNodeAttribute(*element, styleAttr, inlineStyle->asTextAtom(CSS::defaultSerializationContext()));
                 next = NodeTraversal::nextSkippingChildren(*element);
                 continue;
             }
@@ -974,7 +976,7 @@ bool ApplyStyleCommand::removeCSSStyle(EditingStyle& style, HTMLElement& element
     if (newInlineStyle->isEmpty())
         removeNodeAttribute(element, styleAttr);
     else
-        setNodeAttribute(element, styleAttr, newInlineStyle->asTextAtom());
+        setNodeAttribute(element, styleAttr, newInlineStyle->asTextAtom(CSS::defaultSerializationContext()));
 
     if (isSpanWithoutAttributesOrUnstyledStyleSpan(element))
         removeNodePreservingChildren(element);
@@ -1020,7 +1022,7 @@ void ApplyStyleCommand::applyInlineStyleToPushDown(Node& node, EditingStyle* sty
     // FIXME: applyInlineStyleToRange should be used here instead.
     if (node.renderer()->isRenderBlockFlow() || node.hasChildNodes()) {
         if (auto* htmlElement = dynamicDowncast<HTMLElement>(node)) {
-            setNodeAttribute(*htmlElement, styleAttr, newInlineStyle->style()->asTextAtom());
+            setNodeAttribute(*htmlElement, styleAttr, newInlineStyle->style()->asTextAtom(CSS::defaultSerializationContext()));
             return;
         }
     }
@@ -1073,7 +1075,7 @@ void ApplyStyleCommand::pushDownInlineStyleAroundNode(EditingStyle& style, Node*
                 continue;
             if (!child->contains(targetNode) && elementsToPushDown.size()) {
                 for (auto& element : elementsToPushDown) {
-                    auto wrapper = element->cloneElementWithoutChildren(protectedDocument());
+                    auto wrapper = element->cloneElementWithoutChildren(protectedDocument(), nullptr);
                     wrapper->removeAttribute(styleAttr);
                     surroundNodeRangeWithElement(child, child, WTFMove(wrapper));
                 }
@@ -1395,7 +1397,7 @@ void ApplyStyleCommand::addBlockStyle(const StyleChange& styleChange, HTMLElemen
 {
     // Do not check for legacy styles here. Those styles, like <B> and <I>, only apply for inline content.
     ASSERT(styleChange.cssStyle());
-    setNodeAttribute(block, styleAttr, joinWithSpace(styleChange.cssStyle()->asText(), block.getAttribute(styleAttr)));
+    setNodeAttribute(block, styleAttr, joinWithSpace(styleChange.cssStyle()->asText(CSS::defaultSerializationContext()), block.getAttribute(styleAttr)));
 }
 
 void ApplyStyleCommand::addInlineStyleIfNeeded(EditingStyle* style, Node& start, Node& end, AddStyledElement addStyledElement)
@@ -1478,12 +1480,12 @@ void ApplyStyleCommand::applyInlineStyleChange(Node& passedStart, Node& passedEn
             if (RefPtr existingStyle = styleContainer->inlineStyle()) {
                 Ref inlineStyle = EditingStyle::create(existingStyle.get());
                 inlineStyle->overrideWithStyle(*styleToMerge);
-                setNodeAttribute(*styleContainer, styleAttr, inlineStyle->style()->asTextAtom());
+                setNodeAttribute(*styleContainer, styleAttr, inlineStyle->style()->asTextAtom(CSS::defaultSerializationContext()));
             } else
-                setNodeAttribute(*styleContainer, styleAttr, styleToMerge->asTextAtom());
+                setNodeAttribute(*styleContainer, styleAttr, styleToMerge->asTextAtom(CSS::defaultSerializationContext()));
         } else {
             auto styleElement = createStyleSpanElement(document);
-            styleElement->setAttribute(styleAttr, styleToMerge->asTextAtom());
+            styleElement->setAttribute(styleAttr, styleToMerge->asTextAtom(CSS::defaultSerializationContext()));
             surroundNodeRangeWithElement(*startNode, *endNode, WTFMove(styleElement));
         }
     }
@@ -1506,7 +1508,7 @@ void ApplyStyleCommand::applyInlineStyleChange(Node& passedStart, Node& passedEn
         surroundNodeRangeWithElement(*startNode, *endNode, createHTMLElement(document, supTag));
 
     if (m_styledInlineElement && addStyledElement == AddStyledElement::Yes)
-        surroundNodeRangeWithElement(*startNode, *endNode, m_styledInlineElement->cloneElementWithoutChildren(document));
+        surroundNodeRangeWithElement(*startNode, *endNode, m_styledInlineElement->cloneElementWithoutChildren(document, nullptr));
 }
 
 float ApplyStyleCommand::computedFontSize(Node* node)

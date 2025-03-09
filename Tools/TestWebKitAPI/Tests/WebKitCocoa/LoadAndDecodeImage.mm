@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #import "PlatformUtilities.h"
 #import "Test.h"
 #import "TestNavigationDelegate.h"
+#import "TestWKWebView.h"
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <wtf/Expected.h>
@@ -162,6 +163,18 @@ TEST(WebKit, LoadAndDecodeImage)
         done = true;
     }];
     Util::run(&done);
+
+    done = false;
+    RetainPtr syncedWebView = adoptNS([TestWKWebView new]);
+    [syncedWebView synchronouslyLoadHTMLString:@""];
+    [syncedWebView _close];
+    [syncedWebView _loadAndDecodeImage:tlsServer.request() constrainedToSize:CGSizeZero maximumBytesFromNetwork:36541 completionHandler:^(Util::PlatformImage *image, NSError *error) {
+        EXPECT_NULL(image);
+        EXPECT_EQ(error.code, NSURLErrorCannotDecodeContentData);
+        EXPECT_WK_STREQ(error.domain, "NSURLErrorDomain");
+        done = true;
+    }];
+    Util::run(&done);
 }
 
 TEST(WebKit, GetInformationFromImageData)
@@ -219,7 +232,6 @@ TEST(WebKit, CreateIconDataFromImageData)
 {
     RetainPtr webView = adoptNS([WKWebView new]);
     RetainPtr imageData = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"icon" ofType:@"png"]];
-    RetainPtr sizes = adoptNS([[NSMutableArray alloc] init]);
     RetainPtr length1 = [NSNumber numberWithUnsignedInt:16];
     RetainPtr length2 = [NSNumber numberWithUnsignedInt:256];
     NSArray *lengths = @[length1.get(), length2.get()];
@@ -228,6 +240,53 @@ TEST(WebKit, CreateIconDataFromImageData)
     [webView _createIconDataFromImageData:imageData.get() withLengths:lengths completionHandler:^(NSData *result, NSError *error) {
         EXPECT_NULL(error);
         iconData = result;
+        done = true;
+    }];
+    Util::run(&done);
+
+    done = false;
+    [webView _decodeImageData:iconData.get() preferredSize:[NSValue valueWithSize:NSMakeSize(16, 16)] completionHandler:^(CocoaImage *result, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_NOT_NULL(result);
+        EXPECT_EQ(result.size.width, 16);
+        EXPECT_EQ(result.size.height, 16);
+        done = true;
+    }];
+    Util::run(&done);
+
+    done = false;
+    [webView _decodeImageData:iconData.get() preferredSize:[NSValue valueWithSize:NSMakeSize(32, 32)] completionHandler:^(CocoaImage *result, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_NOT_NULL(result);
+        EXPECT_EQ(result.size.width, 256);
+        EXPECT_EQ(result.size.height, 256);
+        done = true;
+    }];
+    Util::run(&done);
+}
+
+TEST(WebKit, CreateIconDataFromImageDataSVG)
+{
+    RetainPtr webView = adoptNS([WKWebView new]);
+    RetainPtr imageData = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"icon" ofType:@"svg"]];
+    RetainPtr length1 = [NSNumber numberWithUnsignedInt:16];
+    RetainPtr length2 = [NSNumber numberWithUnsignedInt:256];
+    NSArray *lengths = @[length1.get(), length2.get()];
+    __block RetainPtr<NSData> iconData;
+    done = false;
+    [webView _createIconDataFromImageData:imageData.get() withLengths:lengths completionHandler:^(NSData *result, NSError *error) {
+        EXPECT_NULL(error);
+        iconData = result;
+        done = true;
+    }];
+    Util::run(&done);
+
+    done = false;
+    [webView _decodeImageData:iconData.get() preferredSize:nil completionHandler:^(CocoaImage *result, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_NOT_NULL(result);
+        EXPECT_EQ(result.size.width, 256);
+        EXPECT_EQ(result.size.height, 256);
         done = true;
     }];
     Util::run(&done);

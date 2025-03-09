@@ -98,11 +98,13 @@ public:
     WebPage* page() const;
     RefPtr<WebPage> protectedPage() const;
 
+    static WebFrame* webFrame(std::optional<WebCore::FrameIdentifier>);
     static RefPtr<WebFrame> fromCoreFrame(const WebCore::Frame&);
     WebCore::LocalFrame* coreLocalFrame() const;
     RefPtr<WebCore::LocalFrame> protectedCoreLocalFrame() const;
     WebCore::RemoteFrame* coreRemoteFrame() const;
     WebCore::Frame* coreFrame() const;
+    RefPtr<WebCore::Frame> protectedCoreFrame() const;
 
     void createProvisionalFrame(ProvisionalFrameCreationParameters&&);
     void commitProvisionalFrame();
@@ -205,11 +207,13 @@ public:
     RefPtr<WebImage> createSelectionSnapshot() const;
 
 #if PLATFORM(IOS_FAMILY)
-    TransactionID firstLayerTreeTransactionIDAfterDidCommitLoad() const { return m_firstLayerTreeTransactionIDAfterDidCommitLoad; }
+    std::optional<TransactionID> firstLayerTreeTransactionIDAfterDidCommitLoad() const { return m_firstLayerTreeTransactionIDAfterDidCommitLoad; }
     void setFirstLayerTreeTransactionIDAfterDidCommitLoad(TransactionID transactionID) { m_firstLayerTreeTransactionIDAfterDidCommitLoad = transactionID; }
 #endif
 
     WebLocalFrameLoaderClient* localFrameLoaderClient() const;
+    RefPtr<WebLocalFrameLoaderClient> protectedLocalFrameLoaderClient() const;
+
     WebRemoteFrameClient* remoteFrameClient() const;
     WebFrameLoaderClient* frameLoaderClient() const;
 
@@ -243,6 +247,8 @@ private:
 
     inline WebCore::DocumentLoader* policySourceDocumentLoader() const;
 
+    RefPtr<WebCore::LocalFrame> localFrame();
+
     WeakPtr<WebCore::Frame> m_coreFrame;
     WeakPtr<WebPage> m_page;
     RefPtr<WebCore::LocalFrame> m_provisionalFrame;
@@ -259,10 +265,14 @@ private:
     bool m_wasRemovedInAnotherProcess { false };
 
 #if PLATFORM(IOS_FAMILY)
-    TransactionID m_firstLayerTreeTransactionIDAfterDidCommitLoad;
+    std::optional<TransactionID> m_firstLayerTreeTransactionIDAfterDidCommitLoad;
 #endif
     std::optional<NavigatingToAppBoundDomain> m_isNavigatingToAppBoundDomain;
     Markable<WebCore::LayerHostingContextIdentifier> m_layerHostingContextIdentifier;
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebFrame) \
+    static bool isType(const API::Object& object) { return object.type() == API::Object::Type::BundleFrame; } \
+SPECIALIZE_TYPE_TRAITS_END()

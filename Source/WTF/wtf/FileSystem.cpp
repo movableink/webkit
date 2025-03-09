@@ -33,6 +33,7 @@
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 
 #if !OS(WINDOWS)
@@ -64,7 +65,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 static String fromStdFileSystemPath(const std::filesystem::path& path)
 {
 #if HAVE(MISSING_U8STRING)
-    return String::fromUTF8(span8(path.u8string().c_str()));
+    return String::fromUTF8(unsafeSpan8(path.u8string().c_str()));
 #else
     return String::fromUTF8(span(path.u8string()));
 #endif
@@ -472,7 +473,7 @@ void finalizeMappedFileData(MappedFileData& mappedFileData, size_t bytesSize)
 #endif
 }
 
-MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(const Function<bool(std::span<const uint8_t>)>&)>&& apply, PlatformFileHandle* outputHandle)
+MappedFileData mapToFile(const String& path, size_t bytesSize, NOESCAPE const Function<void(const Function<bool(std::span<const uint8_t>)>&)>& apply, PlatformFileHandle* outputHandle)
 {
     auto mappedFile = createMappedFileData(path, bytesSize, outputHandle);
     if (!mappedFile)
@@ -481,8 +482,7 @@ MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(con
     auto mapData = mappedFile.mutableSpan();
 
     apply([&mapData](std::span<const uint8_t> chunk) {
-        memcpySpan(mapData, chunk);
-        mapData = mapData.subspan(chunk.size());
+        memcpySpan(consumeSpan(mapData, chunk.size()), chunk);
         return true;
     });
 
@@ -646,6 +646,9 @@ bool moveFile(const String& oldPath, const String& newPath)
     std::filesystem::rename(fsOldPath, fsNewPath, ec);
     if (!ec)
         return true;
+
+    if (isAncestor(oldPath, newPath))
+        return false;
 
     // Fall back to copying and then deleting source as rename() does not work across volumes.
     ec = { };
@@ -834,6 +837,17 @@ String parentPath(const String& path)
 String lexicallyNormal(const String& path)
 {
     return fromStdFileSystemPath(toStdFileSystemPath(path).lexically_normal());
+}
+
+bool isAncestor(const String& possibleAncestor, const String& possibleChild)
+{
+    auto possibleChildLexicallyNormal = lexicallyNormal(possibleChild);
+    auto possibleAncestorLexicallyNormal = lexicallyNormal(possibleAncestor);
+    if (possibleChildLexicallyNormal.endsWith(static_cast<UChar>(std::filesystem::path::preferred_separator)))
+        possibleChildLexicallyNormal = possibleChildLexicallyNormal.left(possibleChildLexicallyNormal.length() - 1);
+    if (possibleAncestorLexicallyNormal.endsWith(static_cast<UChar>(std::filesystem::path::preferred_separator)))
+        possibleAncestorLexicallyNormal = possibleAncestorLexicallyNormal.left(possibleAncestorLexicallyNormal.length() - 1);
+    return possibleChildLexicallyNormal.startsWith(possibleAncestorLexicallyNormal) && possibleChildLexicallyNormal.length() != possibleAncestorLexicallyNormal.length();
 }
 
 String createTemporaryFile(StringView prefix, StringView suffix)

@@ -96,7 +96,7 @@ NetworkSession* WebSharedWorkerServerConnection::session()
 
 void WebSharedWorkerServerConnection::requestSharedWorker(WebCore::SharedWorkerKey&& sharedWorkerKey, WebCore::SharedWorkerObjectIdentifier sharedWorkerObjectIdentifier, WebCore::TransferredMessagePort&& port, WebCore::WorkerOptions&& workerOptions)
 {
-    MESSAGE_CHECK(protectedNetworkProcess()->allowsFirstPartyForCookies(m_webProcessIdentifier, WebCore::RegistrableDomain::uncheckedCreateFromHost(sharedWorkerKey.origin.topOrigin.host())));
+    MESSAGE_CHECK(protectedNetworkProcess()->allowsFirstPartyForCookies(m_webProcessIdentifier, WebCore::RegistrableDomain::uncheckedCreateFromHost(sharedWorkerKey.origin.topOrigin.host())) != NetworkProcess::AllowCookieAccess::Terminate);
     MESSAGE_CHECK(sharedWorkerObjectIdentifier.processIdentifier() == m_webProcessIdentifier);
     MESSAGE_CHECK(sharedWorkerKey.name == workerOptions.name);
     CONNECTION_RELEASE_LOG("requestSharedWorker: sharedWorkerObjectIdentifier=%" PUBLIC_LOG_STRING, sharedWorkerObjectIdentifier.toString().utf8().data());
@@ -145,6 +145,20 @@ void WebSharedWorkerServerConnection::postErrorToWorkerObject(WebCore::SharedWor
     CONNECTION_RELEASE_LOG_ERROR("postErrorToWorkerObject: sharedWorkerObjectIdentifier=%" PUBLIC_LOG_STRING, sharedWorkerObjectIdentifier.toString().utf8().data());
     send(Messages::WebSharedWorkerObjectConnection::PostErrorToWorkerObject { sharedWorkerObjectIdentifier, errorMessage, lineNumber, columnNumber, sourceURL, isErrorEvent });
 }
+
+std::optional<SharedPreferencesForWebProcess> WebSharedWorkerServerConnection::sharedPreferencesForWebProcess(const IPC::Connection& connection) const
+{
+    Ref networkProcess = m_networkProcess;
+    return networkProcess->webProcessConnection(connection)->sharedPreferencesForWebProcess();
+}
+
+#if ENABLE(CONTENT_EXTENSIONS)
+void WebSharedWorkerServerConnection::reportNetworkUsageToWorkerObject(WebCore::SharedWorkerObjectIdentifier sharedWorkerObjectIdentifier, size_t bytesTransferredOverNetworkDelta)
+{
+    CONNECTION_RELEASE_LOG("reportNetworkUsageToWorkerObject: sharedWorkerObjectIdentifier=%" PUBLIC_LOG_STRING ", bytesTransferredOverNetworkDelta=%zu", sharedWorkerObjectIdentifier.toString().utf8().data(), bytesTransferredOverNetworkDelta);
+    send(Messages::WebSharedWorkerObjectConnection::ReportNetworkUsageToWorkerObject { sharedWorkerObjectIdentifier, bytesTransferredOverNetworkDelta });
+}
+#endif
 
 #undef CONNECTION_RELEASE_LOG
 #undef CONNECTION_RELEASE_LOG_ERROR

@@ -62,7 +62,7 @@ Ref<DrawingAreaProxyCoordinatedGraphics> DrawingAreaProxyCoordinatedGraphics::cr
 DrawingAreaProxyCoordinatedGraphics::DrawingAreaProxyCoordinatedGraphics(WebPageProxy& webPageProxy, WebProcessProxy& webProcessProxy)
     : DrawingAreaProxy(DrawingAreaType::CoordinatedGraphics, webPageProxy, webProcessProxy)
 #if !PLATFORM(WPE)
-    , m_discardBackingStoreTimer(RunLoop::current(), this, &DrawingAreaProxyCoordinatedGraphics::discardBackingStore)
+    , m_discardBackingStoreTimer(RunLoop::currentSingleton(), this, &DrawingAreaProxyCoordinatedGraphics::discardBackingStore)
 #endif
 {
 #if USE(GLIB_EVENT_LOOP) && !PLATFORM(WPE)
@@ -175,9 +175,11 @@ void DrawingAreaProxyCoordinatedGraphics::sizeDidChange()
 
 void DrawingAreaProxyCoordinatedGraphics::deviceScaleFactorDidChange(CompletionHandler<void()>&& completionHandler)
 {
-    if (m_webPageProxy)
-        send(Messages::DrawingArea::SetDeviceScaleFactor(m_webPageProxy->deviceScaleFactor()));
-    completionHandler();
+    if (!m_webPageProxy) {
+        completionHandler();
+        return;
+    }
+    sendWithAsyncReply(Messages::DrawingArea::SetDeviceScaleFactor(m_webPageProxy->deviceScaleFactor()), WTFMove(completionHandler));
 }
 
 void DrawingAreaProxyCoordinatedGraphics::setBackingStoreIsDiscardable(bool isBackingStoreDiscardable)
@@ -277,6 +279,14 @@ void DrawingAreaProxyCoordinatedGraphics::updateAcceleratedCompositingMode(const
         page->updateAcceleratedCompositingMode(layerTreeContext);
 }
 
+void DrawingAreaProxyCoordinatedGraphics::dispatchPresentationCallbacksAfterFlushingLayers(IPC::Connection& connection, Vector<IPC::AsyncReplyID>&& callbackIDs)
+{
+    for (auto& callbackID : callbackIDs) {
+        if (auto callback = connection.takeAsyncReplyHandler(callbackID))
+            callback(nullptr);
+    }
+}
+
 void DrawingAreaProxyCoordinatedGraphics::sendUpdateGeometry()
 {
     ASSERT(!m_isWaitingForDidUpdateGeometry);
@@ -325,7 +335,7 @@ void DrawingAreaProxyCoordinatedGraphics::discardBackingStore()
 }
 #endif
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(DrawingAreaProxyCoordinatedGraphics, DrawingMonitor);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DrawingAreaProxyCoordinatedGraphics::DrawingMonitor);
 
 DrawingAreaProxyCoordinatedGraphics::DrawingMonitor::DrawingMonitor(WebPageProxy& webPage)
     : m_timer(RunLoop::main(), this, &DrawingMonitor::stop)

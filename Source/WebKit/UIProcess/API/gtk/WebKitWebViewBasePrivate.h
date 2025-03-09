@@ -57,9 +57,9 @@ void webkitWebViewBasePropagateKeyEvent(WebKitWebViewBase*, GdkEvent*);
 void webkitWebViewBasePropagateWheelEvent(WebKitWebViewBase*, GdkEvent*);
 void webkitWebViewBaseChildMoveResize(WebKitWebViewBase*, GtkWidget*, const WebCore::IntRect&);
 #if ENABLE(FULLSCREEN_API)
-void webkitWebViewBaseWillEnterFullScreen(WebKitWebViewBase*);
+void webkitWebViewBaseWillEnterFullScreen(WebKitWebViewBase*, CompletionHandler<void(bool)>&&);
 void webkitWebViewBaseEnterFullScreen(WebKitWebViewBase*);
-void webkitWebViewBaseWillExitFullScreen(WebKitWebViewBase*);
+void webkitWebViewBaseWillExitFullScreen(WebKitWebViewBase*, CompletionHandler<void()>&&);
 void webkitWebViewBaseExitFullScreen(WebKitWebViewBase*);
 bool webkitWebViewBaseIsFullScreen(WebKitWebViewBase*);
 #endif

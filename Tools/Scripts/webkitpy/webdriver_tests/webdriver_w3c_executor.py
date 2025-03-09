@@ -134,7 +134,7 @@ class WebDriverW3CExecutor(WdspecExecutor):
                          'doc_root': server.document_root()}
         self.runner = TestRunner()
         browser = WebKitDriverBrowser(self.runner.logger, webdriver_binary=driver.binary_path())
-        WdspecExecutor.__init__(self, self.runner.logger, browser, server_config, driver.binary_path(), None, capabilities=driver.capabilities())
+        WdspecExecutor.__init__(self, self.runner.logger, browser, server_config, driver.binary_path(), None, capabilities=driver.capabilities(), target_platform=None)
 
         self._timeout = timeout
         self._expectations = expectations
@@ -182,6 +182,7 @@ class WebDriverW3CExecutor(WdspecExecutor):
                           'webdriver': {'binary': webdriver_binary},
                           'wptserve': server_config,
                           'timeout_multiplier': 10,
+                          'target_platform': sys.platform,
                           }
                 with open(config_path, 'w') as f:
                     json.dump(config, f)

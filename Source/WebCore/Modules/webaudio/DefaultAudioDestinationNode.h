@@ -28,6 +28,10 @@
 #include "AudioDestinationNode.h"
 #include "AudioIOCallback.h"
 
+namespace WTF {
+class MediaTime;
+}
+
 namespace WebCore {
 
 class AudioContext;
@@ -43,7 +47,8 @@ public:
     const AudioContext& context() const;
 
     unsigned framesPerBuffer() const;
-    
+    WTF::MediaTime outputLatency() const;
+
     void startRendering(CompletionHandler<void(std::optional<Exception>&&)>&&) final;
     void resume(CompletionHandler<void(std::optional<Exception>&&)>&&);
     void suspend(CompletionHandler<void(std::optional<Exception>&&)>&&);
@@ -52,6 +57,10 @@ public:
     void setMuted(bool muted) { m_muted = muted; }
     bool isPlayingAudio() const { return m_isEffectivelyPlayingAudio; }
     bool isConnected() const;
+
+#if PLATFORM(IOS_FAMILY)
+    void setSceneIdentifier(const String&) final;
+#endif
 
 private:
     void createDestination();

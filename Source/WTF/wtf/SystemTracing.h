@@ -25,8 +25,6 @@
 
 #pragma once
 
-#include <wtf/Forward.h>
-
 #if USE(APPLE_INTERNAL_SDK)
 #include <sys/kdebug_private.h>
 #define HAVE_KDEBUG_H 1
@@ -264,6 +262,7 @@ WTF_EXTERN_C_END
     M(NavigationAndPaintTiming) \
     M(ExecuteScriptElement) \
     M(RegisterImportMap) \
+    M(JSCGarbageCollector) \
     M(JSCJITCompiler) \
     M(JSCJSGlobalObject) \
     M(IPCConnection) \

@@ -22,12 +22,19 @@
 # THE POSSIBILITY OF SUCH DAMAGE.
 
 #if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
+[
+    DispatchedFrom=UI,
+    DispatchedTo=WebContent
+]
 messages -> PlaybackSessionManager {
     Play(WebKit::PlaybackSessionContextIdentifier contextId)
     Pause(WebKit::PlaybackSessionContextIdentifier contextId)
     TogglePlayState(WebKit::PlaybackSessionContextIdentifier contextId)
     BeginScrubbing(WebKit::PlaybackSessionContextIdentifier contextId)
     EndScrubbing(WebKit::PlaybackSessionContextIdentifier contextId)
+#if HAVE(PIP_SKIP_PREROLL)
+    SkipAd(WebKit::PlaybackSessionContextIdentifier contextId)
+#endif
     SeekToTime(WebKit::PlaybackSessionContextIdentifier contextId, double time, double toleranceBefore, double toleranceAfter)
     FastSeek(WebKit::PlaybackSessionContextIdentifier contextId, double time)
     BeginScanningForward(WebKit::PlaybackSessionContextIdentifier contextId)
@@ -40,6 +47,7 @@ messages -> PlaybackSessionManager {
     HandleControlledElementIDRequest(WebKit::PlaybackSessionContextIdentifier contextId)
     TogglePictureInPicture(WebKit::PlaybackSessionContextIdentifier contextId)
     EnterFullscreen(WebKit::PlaybackSessionContextIdentifier contextId)
+    SetPlayerIdentifierForVideoElement(WebKit::PlaybackSessionContextIdentifier contextId)
     ExitFullscreen(WebKit::PlaybackSessionContextIdentifier contextId)
     EnterInWindow(WebKit::PlaybackSessionContextIdentifier contextId)
     ExitInWindow(WebKit::PlaybackSessionContextIdentifier contextId)

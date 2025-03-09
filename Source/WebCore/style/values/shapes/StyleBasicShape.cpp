@@ -38,9 +38,9 @@ auto ToCSS<BasicShape>::operator()(const BasicShape& value, const RenderStyle& s
     return WTF::switchOn(value, [&](const auto& alternative) { return CSS::BasicShape { toCSS(alternative, style) }; });
 }
 
-auto ToStyle<CSS::BasicShape>::operator()(const CSS::BasicShape& value, const BuilderState& builderState, const CSSCalcSymbolTable& symbolTable) -> BasicShape
+auto ToStyle<CSS::BasicShape>::operator()(const CSS::BasicShape& value, const BuilderState& builderState) -> BasicShape
 {
-    return WTF::switchOn(value, [&](const auto& alternative) { return BasicShape { toStyle(alternative, builderState, symbolTable) }; });
+    return WTF::switchOn(value, [&](const auto& alternative) { return BasicShape { toStyle(alternative, builderState) }; });
 }
 
 // MARK: - Blending

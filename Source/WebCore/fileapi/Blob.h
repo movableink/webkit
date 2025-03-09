@@ -118,7 +118,8 @@ public:
 #endif
 
     // URLRegistrable
-    URLRegistry& registry() const override;
+    URLRegistry& registry() const final;
+    RegistrableType registrableType() const final { return RegistrableType::Blob; }
 
     Ref<Blob> slice(long long start, long long end, const String& contentType) const;
 
@@ -162,9 +163,13 @@ private:
     // into an HTML or for FileRead'ing, public blob URLs must be used for those purposes.
     URL m_internalURL;
 
-    HashSet<std::unique_ptr<BlobLoader>> m_blobLoaders;
+    UncheckedKeyHashSet<std::unique_ptr<BlobLoader>> m_blobLoaders;
 };
 
 WebCoreOpaqueRoot root(Blob*);
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Blob)
+    static bool isType(const WebCore::URLRegistrable& registrable) { return registrable.registrableType() == WebCore::URLRegistrable::RegistrableType::Blob; }
+SPECIALIZE_TYPE_TRAITS_END()

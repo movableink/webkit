@@ -62,7 +62,7 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(DisplayCaptureSourceCocoa);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(DisplayCaptureSourceCocoa, Capturer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DisplayCaptureSourceCocoa::Capturer);
 
 CaptureSourceOrError DisplayCaptureSourceCocoa::create(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, const MediaConstraints* constraints, std::optional<PageIdentifier> pageIdentifier)
 {
@@ -121,7 +121,7 @@ CaptureSourceOrError DisplayCaptureSourceCocoa::create(const std::function<Uniqu
 DisplayCaptureSourceCocoa::DisplayCaptureSourceCocoa(const std::function<UniqueRef<Capturer>(CapturerObserver&)>& createCapturer, const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, std::optional<PageIdentifier> pageIdentifier)
     : RealtimeMediaSource(device, WTFMove(hashSalts), pageIdentifier)
     , m_capturer(createCapturer(*this))
-    , m_timer(RunLoop::current(), this, &DisplayCaptureSourceCocoa::emitFrame)
+    , m_timer(RunLoop::currentSingleton(), this, &DisplayCaptureSourceCocoa::emitFrame)
     , m_userActivity("App nap disabled for screen capture"_s)
 {
 }
@@ -139,6 +139,7 @@ const RealtimeMediaSourceCapabilities& DisplayCaptureSourceCocoa::capabilities()
         capabilities.setWidth({ 1, intrinsicSize.width() });
         capabilities.setHeight({ 1, intrinsicSize.height() });
         capabilities.setFrameRate({ .01, 30.0 });
+        capabilities.setDeviceId(hashedId());
 
         m_capabilities = WTFMove(capabilities);
     }

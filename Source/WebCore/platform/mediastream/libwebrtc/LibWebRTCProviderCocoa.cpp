@@ -34,14 +34,13 @@
 
 #include <webrtc/api/create_peerconnection_factory.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
+
 #include <webrtc/webkit_sdk/WebKit/WebKitDecoder.h>
 #include <webrtc/webkit_sdk/WebKit/WebKitEncoder.h>
-ALLOW_UNUSED_PARAMETERS_END
-ALLOW_COMMA_END
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
+
 #include <wtf/MainThread.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/darwin/WeakLinking.h>
@@ -55,12 +54,6 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCProviderCocoa);
 UniqueRef<WebRTCProvider> WebRTCProvider::create()
 {
     return makeUniqueRef<LibWebRTCProviderCocoa>();
-}
-
-void WebRTCProvider::setH264HardwareEncoderAllowed(bool allowed)
-{
-    if (webRTCAvailable())
-        webrtc::setH264HardwareEncoderAllowed(allowed);
 }
 
 LibWebRTCProviderCocoa::~LibWebRTCProviderCocoa()

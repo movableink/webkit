@@ -39,6 +39,13 @@ template<> struct AsyncReplyError<Expected<WebCore::FileSystemHandleIdentifier, 
     }
 };
 
+template<> struct AsyncReplyError<Expected<WebCore::FileSystemWritableFileStreamIdentifier, WebKit::FileSystemStorageError>> {
+    static Expected<WebCore::FileSystemWritableFileStreamIdentifier, WebKit::FileSystemStorageError> create()
+    {
+        return makeUnexpected(WebKit::FileSystemStorageError::Unknown);
+    }
+};
+
 template<> struct AsyncReplyError<Expected<Vector<String>, WebKit::FileSystemStorageError>> {
     static Expected<Vector<String>, WebKit::FileSystemStorageError> create()
     {
@@ -90,11 +97,15 @@ private:
     void registerSyncAccessHandle(WebCore::FileSystemSyncAccessHandleIdentifier, WebCore::ScriptExecutionContextIdentifier) final;
     void unregisterSyncAccessHandle(WebCore::FileSystemSyncAccessHandleIdentifier) final;
     void invalidateAccessHandle(WebCore::FileSystemSyncAccessHandleIdentifier) final;
-    void createWritable(WebCore::FileSystemHandleIdentifier, bool keepExistingData, WebCore::FileSystemStorageConnection::VoidCallback&&) final;
-    void closeWritable(WebCore::FileSystemHandleIdentifier, bool aborted, WebCore::FileSystemStorageConnection::VoidCallback&&) final;
-    void executeCommandForWritable(WebCore::FileSystemHandleIdentifier, WebCore::FileSystemWriteCommandType, std::optional<uint64_t> position, std::optional<uint64_t> size, std::span<const uint8_t> dataBytes, bool hasDataError, WebCore::FileSystemStorageConnection::VoidCallback&&) final;
+    void createWritable(WebCore::ScriptExecutionContextIdentifier, WebCore::FileSystemHandleIdentifier, bool keepExistingData, StreamCallback&&) final;
+    void closeWritable(WebCore::FileSystemHandleIdentifier, WebCore::FileSystemWritableFileStreamIdentifier, WebCore::FileSystemWriteCloseReason, VoidCallback&&) final;
+    void executeCommandForWritable(WebCore::FileSystemHandleIdentifier, WebCore::FileSystemWritableFileStreamIdentifier, WebCore::FileSystemWriteCommandType, std::optional<uint64_t> position, std::optional<uint64_t> size, std::span<const uint8_t> dataBytes, bool hasDataError, VoidCallback&&) final;
+
+    void invalidateWritable(WebCore::FileSystemWritableFileStreamIdentifier);
+    void errorWritable(WebCore::ScriptExecutionContextIdentifier, WebCore::FileSystemWritableFileStreamIdentifier);
 
     HashMap<WebCore::FileSystemSyncAccessHandleIdentifier, WebCore::ScriptExecutionContextIdentifier> m_syncAccessHandles;
+    HashMap<WebCore::FileSystemWritableFileStreamIdentifier, WebCore::ScriptExecutionContextIdentifier> m_writableIdentifiers;
     RefPtr<IPC::Connection> m_connection;
 };
 

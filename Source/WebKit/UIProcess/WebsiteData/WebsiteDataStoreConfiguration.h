@@ -161,6 +161,11 @@ public:
     const String& deviceIdHashSaltsStorageDirectory() const { return m_directories.deviceIdHashSaltsStorageDirectory; }
     void setDeviceIdHashSaltsStorageDirectory(String&& directory) { m_directories.deviceIdHashSaltsStorageDirectory = WTFMove(directory); }
 
+#if ENABLE(ENCRYPTED_MEDIA)
+    const String& mediaKeysHashSaltsStorageDirectory() const { return m_directories.mediaKeysHashSaltsStorageDirectory; }
+    void setMediaKeysHashSaltsStorageDirectory(String&& directory) { m_directories.mediaKeysHashSaltsStorageDirectory = WTFMove(directory); }
+#endif
+
     const String& cookieStorageFile() const { return m_directories.cookieStorageFile; }
     void setCookieStorageFile(String&& directory) { m_directories.cookieStorageFile = WTFMove(directory); }
     
@@ -197,6 +202,11 @@ public:
     const String& sourceApplicationSecondaryIdentifier() const { return m_sourceApplicationSecondaryIdentifier; }
     void setSourceApplicationSecondaryIdentifier(String&& identifier) { m_sourceApplicationSecondaryIdentifier = WTFMove(identifier); }
     
+#if ENABLE(CONTENT_EXTENSIONS)
+    const String& resourceMonitorThrottlerDirectory() const { return m_directories.resourceMonitorThrottlerDirectory; }
+    void setResourceMonitorThrottlerDirectory(String&& directory) { m_directories.resourceMonitorThrottlerDirectory = WTFMove(directory); }
+#endif
+
     const URL& httpProxy() const { return m_httpProxy; }
     void setHTTPProxy(URL&& proxy) { m_httpProxy = WTFMove(proxy); }
 
@@ -256,6 +266,9 @@ public:
         String cacheStorageDirectory;
         String cookieStorageFile;
         String deviceIdHashSaltsStorageDirectory;
+#if ENABLE(ENCRYPTED_MEDIA)
+        String mediaKeysHashSaltsStorageDirectory;
+#endif
         String generalStorageDirectory;
         String hstsStorageDirectory;
         String indexedDBDatabaseDirectory;
@@ -270,6 +283,9 @@ public:
         String webSQLDatabaseDirectory;
 #if ENABLE(ARKIT_INLINE_PREVIEW)
         String modelElementCacheDirectory;
+#endif
+#if ENABLE(CONTENT_EXTENSIONS)
+        String resourceMonitorThrottlerDirectory;
 #endif
         Directories isolatedCopy() const&;
         Directories isolatedCopy() &&;
@@ -308,7 +324,11 @@ private:
     bool m_deviceManagementRestrictionsEnabled { false };
     bool m_allLoadsBlockedByDeviceManagementRestrictionsForTesting { false };
     bool m_allowsCellularAccess { true };
+#if ENABLE(TLS_1_2_DEFAULT_MINIMUM)
+    bool m_legacyTLSEnabled { false };
+#else
     bool m_legacyTLSEnabled { true };
+#endif
     bool m_fastServerTrustEvaluationEnabled { false };
     bool m_serviceWorkerProcessTerminationDelayEnabled { true };
     bool m_testingSessionEnabled { false };

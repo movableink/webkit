@@ -23,12 +23,15 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if PLATFORM(MAC)
+
 #import <AppKit/AppKit.h>
 
 #if USE(APPLE_INTERNAL_SDK)
 
 #define CGCOLORTAGGEDPOINTER_H_
 
+#import <AppKit/NSApplication_Private.h>
 #import <AppKit/NSInspectorBar.h>
 #import <AppKit/NSMenu_Private.h>
 #import <AppKit/NSPreviewRepresentingActivityItem_Private.h>
@@ -110,3 +113,9 @@ typedef void (^NSWindowSnapshotReadinessHandler) (void);
 - (NSWindowSnapshotReadinessHandler)_holdResizeSnapshotWithReason:(NSString *)reason;
 @end
 #endif
+
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/AppKitSPIAdditions.h>)
+#import <WebKitAdditions/AppKitSPIAdditions.h>
+#endif
+
+#endif // PLATFORM(MAC)

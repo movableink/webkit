@@ -77,8 +77,9 @@ public:
 
     void takeAllChildrenFrom(ContainerNode*);
 
-    void cloneChildNodes(ContainerNode& clone);
+    void cloneChildNodes(Document&, CustomElementRegistry*, ContainerNode& clone, size_t currentDepth = 0);
 
+    enum class CanDelayNodeDeletion : uint8_t { No, Yes, Unknown };
     struct ChildChange {
         enum class Type : uint8_t { ElementInserted, ElementRemoved, TextInserted, TextRemoved, TextChanged, AllChildrenRemoved, NonContentsChildRemoved, NonContentsChildInserted, AllChildrenReplaced };
         enum class Source : uint8_t { Parser, API, Clone };
@@ -161,7 +162,13 @@ private:
     void executePreparedChildrenRemoval();
     enum class DeferChildrenChanged : bool { No, Yes };
     enum class DidRemoveElements : bool { No, Yes };
-    DidRemoveElements removeAllChildrenWithScriptAssertion(ChildChange::Source, NodeVector& children, DeferChildrenChanged = DeferChildrenChanged::No);
+    struct RemoveAllChildrenResult {
+        unsigned subTreeSize;
+        DidRemoveElements didRemoveElements;
+        CanDelayNodeDeletion canBeDelayed;
+    };
+    RemoveAllChildrenResult removeAllChildrenWithScriptAssertionMaybeAsync(ChildChange::Source, NodeVector& children, DeferChildrenChanged = DeferChildrenChanged::No);
+    RemoveAllChildrenResult removeAllChildrenWithScriptAssertion(ChildChange::Source, NodeVector& children, DeferChildrenChanged = DeferChildrenChanged::No);
     bool removeNodeWithScriptAssertion(Node&, ChildChange::Source);
     ExceptionOr<void> removeSelfOrChildNodesForInsertion(Node&, NodeVector&);
 
@@ -185,40 +192,9 @@ inline ContainerNode::ContainerNode(Document& document, NodeType type, OptionSet
     ASSERT(!isTextNode());
 }
 
-inline unsigned Node::countChildNodes() const
-{
-    auto* containerNode = dynamicDowncast<ContainerNode>(*this);
-    return containerNode ? containerNode->countChildNodes() : 0;
-}
-
-inline Node* Node::traverseToChildAt(unsigned index) const
-{
-    auto* containerNode = dynamicDowncast<ContainerNode>(*this);
-    return containerNode ? containerNode->traverseToChildAt(index) : nullptr;
-}
-
-inline Node* Node::firstChild() const
-{
-    auto* containerNode = dynamicDowncast<ContainerNode>(*this);
-    return containerNode ? containerNode->firstChild() : nullptr;
-}
-
-inline Node* Node::lastChild() const
-{
-    auto* containerNode = dynamicDowncast<ContainerNode>(*this);
-    return containerNode ? containerNode->lastChild() : nullptr;
-}
-
 inline ContainerNode& TreeScope::rootNode() const
 {
     return m_rootNode.get();
-}
-
-inline Node& Node::rootNode() const
-{
-    if (isInTreeScope())
-        return treeScope().rootNode();
-    return traverseToRootNode();
 }
 
 inline ContainerNode& ContainerNode::rootNode() const
@@ -226,24 +202,6 @@ inline ContainerNode& ContainerNode::rootNode() const
     if (isInTreeScope())
         return treeScope().rootNode();
     return traverseToRootNode();
-}
-
-inline void collectChildNodes(Node& node, NodeVector& children)
-{
-    for (SUPPRESS_UNCOUNTED_LOCAL Node* child = node.firstChild(); child; child = child->nextSibling())
-        children.append(*child);
-}
-
-inline void Node::setParentNode(ContainerNode* parent)
-{
-    ASSERT(isMainThread());
-    m_parentNode = parent;
-    m_refCountAndParentBit = (m_refCountAndParentBit & s_refCountMask) | !!parent;
-}
-
-inline RefPtr<ContainerNode> Node::protectedParentNode() const
-{
-    return parentNode();
 }
 
 } // namespace WebCore

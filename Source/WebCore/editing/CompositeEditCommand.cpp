@@ -57,6 +57,7 @@
 #include "LocalFrame.h"
 #include "MergeIdenticalElementsCommand.h"
 #include "NodeTraversal.h"
+#include "PositionInlines.h"
 #include "RemoveNodeCommand.h"
 #include "RemoveNodePreservingChildrenCommand.h"
 #include "RenderBlockFlow.h"
@@ -337,7 +338,7 @@ void EditCommandComposition::setRangeDeletedByUnapply(const VisiblePositionIndex
 }
 
 #ifndef NDEBUG
-void EditCommandComposition::getNodesInCommand(HashSet<Ref<Node>>& nodes)
+void EditCommandComposition::getNodesInCommand(NodeSet& nodes)
 {
     for (size_t i = 0; i < m_commands.size(); ++i) {
         RefPtr command = m_commands[i].get();
@@ -507,9 +508,9 @@ void CompositeEditCommand::applyCommandToComposite(Ref<EditCommand>&& command)
 {
     command->setParent(this);
     command->doApply();
-    if (command->isSimpleEditCommand()) {
+    if (auto* simpleCommand = dynamicDowncast<SimpleEditCommand>(command.get())) {
         command->setParent(nullptr);
-        ensureComposition().append(toSimpleEditCommand(command.ptr()));
+        ensureComposition().append(simpleCommand);
     }
     m_commands.append(WTFMove(command));
 }
@@ -530,9 +531,9 @@ void CompositeEditCommand::applyStyle(const EditingStyle* style, EditAction edit
     applyCommandToComposite(ApplyStyleCommand::create(protectedDocument(), style, editingAction));
 }
 
-void CompositeEditCommand::applyStyle(const EditingStyle* style, const Position& start, const Position& end, EditAction editingAction)
+void CompositeEditCommand::applyStyle(const EditingStyle* style, const Position& start, const Position& end, EditAction editingAction, ApplyStylePropertyLevel level)
 {
-    applyCommandToComposite(ApplyStyleCommand::create(protectedDocument(), style, start, end, editingAction));
+    applyCommandToComposite(ApplyStyleCommand::create(protectedDocument(), style, start, end, editingAction, level));
 }
 
 void CompositeEditCommand::applyStyledElement(Ref<Element>&& element)
@@ -1473,7 +1474,7 @@ void CompositeEditCommand::moveParagraphs(const VisiblePosition& startOfParagrap
 
     std::optional<uint64_t> startIndex;
     std::optional<uint64_t> endIndex;
-    bool originalIsDirectional = endingSelection().isDirectional();
+    auto originalDirectionality = endingSelection().directionality();
     if (preserveSelection && !endingSelection().isNone()) {
         auto visibleStart = endingSelection().visibleStart();
         auto visibleEnd = endingSelection().visibleEnd();
@@ -1539,7 +1540,7 @@ void CompositeEditCommand::moveParagraphs(const VisiblePosition& startOfParagrap
     cleanupAfterDeletion(destination);
 
     // FIXME (Bug 211793): We should redesign cleanupAfterDeletion or find another destination when it is removed.
-    if (destination.deepEquivalent().isOrphan() || VisibleSelection(destination, originalIsDirectional).isNone())
+    if (destination.deepEquivalent().isOrphan() || VisibleSelection(destination, originalDirectionality).isNone())
         return;
 
     // Add a br if pruning an empty block level element caused a collapse. For example:
@@ -1564,7 +1565,7 @@ void CompositeEditCommand::moveParagraphs(const VisiblePosition& startOfParagrap
 
     auto destinationIndex = characterCount({ { *editableRoot, 0 }, *makeBoundaryPoint(destination) }, TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions);
 
-    setEndingSelection(VisibleSelection(destination, originalIsDirectional));
+    setEndingSelection(VisibleSelection(destination, originalDirectionality));
     ASSERT(endingSelection().isCaretOrRange());
     OptionSet<ReplaceSelectionCommand::CommandOption> options { ReplaceSelectionCommand::SelectReplacement, ReplaceSelectionCommand::MovingParagraph };
     if (!preserveStyle)
@@ -1586,7 +1587,7 @@ void CompositeEditCommand::moveParagraphs(const VisiblePosition& startOfParagrap
         // of the document (which will return null).
         auto start = makeDeprecatedLegacyPosition(resolveCharacterLocation(makeRangeSelectingNodeContents(*editableRoot), destinationIndex + *startIndex, TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions));
         auto end = makeDeprecatedLegacyPosition(resolveCharacterLocation(makeRangeSelectingNodeContents(*editableRoot), destinationIndex + *endIndex, TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions));
-        setEndingSelection({ start, end, Affinity::Downstream, originalIsDirectional });
+        setEndingSelection({ start, end, Affinity::Downstream, originalDirectionality });
     }
 }
 
@@ -1658,7 +1659,7 @@ bool CompositeEditCommand::breakOutOfEmptyListItem()
     }
 
     appendBlockPlaceholder(*newBlock);
-    setEndingSelection(VisibleSelection(firstPositionInNode(newBlock.get()), Affinity::Downstream, endingSelection().isDirectional()));
+    setEndingSelection(VisibleSelection(firstPositionInNode(newBlock.get()), Affinity::Downstream, endingSelection().directionality()));
 
     style->prepareToApplyAt(endingSelection().start());
     if (!style->isEmpty())
@@ -1697,8 +1698,8 @@ bool CompositeEditCommand::breakOutOfEmptyMailBlockquotedParagraph()
     // a second one.
     if (!isStartOfParagraph(atBR))
         insertNodeBefore(HTMLBRElement::create(document), br.get());
-    setEndingSelection(VisibleSelection(atBR, endingSelection().isDirectional()));
-    
+    setEndingSelection(VisibleSelection(atBR, endingSelection().directionality()));
+
     // If this is an empty paragraph there must be a line break here.
     if (!lineBreakExistsAtVisiblePosition(caret))
         return false;

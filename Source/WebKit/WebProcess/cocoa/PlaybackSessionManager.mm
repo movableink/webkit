@@ -33,6 +33,7 @@
 #import "MessageSenderInlines.h"
 #import "PlaybackSessionManagerMessages.h"
 #import "PlaybackSessionManagerProxyMessages.h"
+#import "VideoPresentationManager.h"
 #import "WebPage.h"
 #import "WebProcess.h"
 #import <WebCore/Color.h>
@@ -40,6 +41,9 @@
 #import <WebCore/Event.h>
 #import <WebCore/EventNames.h>
 #import <WebCore/HTMLMediaElement.h>
+#import <WebCore/Navigator.h>
+#import <WebCore/NavigatorMediaSession.h>
+#import <WebCore/Quirks.h>
 #import <WebCore/Settings.h>
 #import <WebCore/TimeRanges.h>
 #import <WebCore/UserGestureIndicator.h>
@@ -172,6 +176,12 @@ void PlaybackSessionInterfaceContext::spatialVideoMetadataChanged(const std::opt
     if (m_manager)
         m_manager->spatialVideoMetadataChanged(m_contextId, metadata);
 }
+
+void PlaybackSessionInterfaceContext::isImmersiveVideoChanged(bool value)
+{
+    if (m_manager)
+        m_manager->isImmersiveVideoChanged(m_contextId, value);
+}
 #endif
 
 #pragma mark - PlaybackSessionManager
@@ -291,15 +301,28 @@ void PlaybackSessionManager::setUpPlaybackControlsManager(WebCore::HTMLMediaElem
     if (m_controlsManagerContextId == contextId)
         return;
 
-    auto previousContextId = m_controlsManagerContextId;
-    m_controlsManagerContextId = contextId;
-    if (previousContextId)
+    if (auto previousContextId = std::exchange(m_controlsManagerContextId, contextId)) {
+        if (mediaElement.document().quirks().needsNowPlayingFullscreenSwapQuirk()) {
+            RefPtr previousElement = mediaElementWithContextId(*previousContextId);
+            if (mediaElement.isVideo() && previousElement && previousElement->isVideo() && previousElement->fullscreenMode() != HTMLMediaElement::VideoFullscreenModeNone) {
+                m_page->videoPresentationManager().swapFullscreenModes(downcast<HTMLVideoElement>(mediaElement), downcast<HTMLVideoElement>(*previousElement));
+
+                m_page->send(Messages::PlaybackSessionManagerProxy::SwapFullscreenModes(contextId, *previousContextId));
+
+                ensureModel(*previousContextId)->updateAll();
+                ensureModel(contextId)->updateAll();
+            }
+        }
         removeClientForContext(*previousContextId);
+    }
 
     addClientForContext(*m_controlsManagerContextId);
 
     m_page->videoControlsManagerDidChange();
     m_page->send(Messages::PlaybackSessionManagerProxy::SetUpPlaybackControlsManagerWithID(*m_controlsManagerContextId, mediaElement.isVideo()));
+#if HAVE(PIP_SKIP_PREROLL)
+    setMediaSessionAndRegisterAsObserver();
+#endif
 }
 
 void PlaybackSessionManager::clearPlaybackControlsManager()
@@ -347,16 +370,20 @@ PlaybackSessionContextIdentifier PlaybackSessionManager::contextIdForMediaElemen
     return contextId;
 }
 
-WebCore::HTMLMediaElement* PlaybackSessionManager::currentPlaybackControlsElement() const
+WebCore::HTMLMediaElement* PlaybackSessionManager::mediaElementWithContextId(PlaybackSessionContextIdentifier contextId) const
 {
-    if (!m_controlsManagerContextId)
-        return nullptr;
-
-    auto iter = m_contextMap.find(*m_controlsManagerContextId);
+    auto iter = m_contextMap.find(contextId);
     if (iter == m_contextMap.end())
         return nullptr;
 
     return std::get<0>(iter->value)->mediaElement();
+}
+
+WebCore::HTMLMediaElement* PlaybackSessionManager::currentPlaybackControlsElement() const
+{
+    if (m_controlsManagerContextId)
+        return mediaElementWithContextId(*m_controlsManagerContextId);
+    return nullptr;
 }
 
 #pragma mark Interface to PlaybackSessionInterfaceContext:
@@ -457,6 +484,11 @@ void PlaybackSessionManager::spatialVideoMetadataChanged(PlaybackSessionContextI
 {
     m_page->send(Messages::PlaybackSessionManagerProxy::SpatialVideoMetadataChanged(contextId, metadata));
 }
+
+void PlaybackSessionManager::isImmersiveVideoChanged(PlaybackSessionContextIdentifier contextId, bool value)
+{
+    m_page->send(Messages::PlaybackSessionManagerProxy::IsImmersiveVideoChanged(contextId, value));
+}
 #endif
 
 #pragma mark Messages from PlaybackSessionManagerProxy:
@@ -550,6 +582,61 @@ void PlaybackSessionManager::selectLegibleMediaOption(PlaybackSessionContextIden
     legibleMediaSelectionIndexChanged(contextId, model->legibleMediaSelectedIndex());
 }
 
+#if HAVE(PIP_SKIP_PREROLL)
+void PlaybackSessionManager::setMediaSessionAndRegisterAsObserver()
+{
+    if (!m_controlsManagerContextId) {
+        m_mediaSession = nullptr;
+        return;
+    }
+
+    RefPtr mediaElement = ensureModel(*m_controlsManagerContextId)->mediaElement();
+    if (!mediaElement) {
+        m_mediaSession = nullptr;
+        return;
+    }
+
+    RefPtr window = mediaElement->document().domWindow();
+    if (!window) {
+        m_mediaSession = nullptr;
+        return;
+    }
+
+    auto mediaSession = NavigatorMediaSession::mediaSessionIfExists(window->protectedNavigator().get());
+    if (!mediaSession) {
+        m_mediaSession = nullptr;
+        return;
+    }
+
+    if (mediaSession.get() != m_mediaSession.get()) {
+        m_mediaSession = mediaSession;
+        m_mediaSession->addObserver(*this);
+        actionHandlersChanged();
+    }
+}
+
+void PlaybackSessionManager::actionHandlersChanged()
+{
+    if (!m_mediaSession)
+        return;
+
+    if (!m_controlsManagerContextId)
+        return;
+
+    bool canSkipAd = m_mediaSession->hasActionHandler(MediaSessionAction::Skipad);
+    if (RefPtr page = m_page.get())
+        page->send(Messages::PlaybackSessionManagerProxy::CanSkipAdChanged(*m_controlsManagerContextId, canSkipAd));
+}
+
+void PlaybackSessionManager::skipAd(PlaybackSessionContextIdentifier contextId)
+{
+    if (!m_mediaSession)
+        return;
+
+    m_mediaSession->callActionHandler({ .action = MediaSessionAction::Skipad });
+}
+#endif
+
 void PlaybackSessionManager::handleControlledElementIDRequest(PlaybackSessionContextIdentifier contextId)
 {
     if (RefPtr element = ensureModel(contextId)->mediaElement())
@@ -565,6 +652,11 @@ void PlaybackSessionManager::togglePictureInPicture(PlaybackSessionContextIdenti
 void PlaybackSessionManager::enterFullscreen(PlaybackSessionContextIdentifier contextId)
 {
     ensureModel(contextId)->enterFullscreen();
+}
+
+void PlaybackSessionManager::setPlayerIdentifierForVideoElement(PlaybackSessionContextIdentifier contextId)
+{
+    ensureModel(contextId)->setPlayerIdentifierForVideoElement();
 }
 
 void PlaybackSessionManager::exitFullscreen(PlaybackSessionContextIdentifier contextId)

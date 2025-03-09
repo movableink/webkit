@@ -198,7 +198,7 @@ JSBoundFunction* JSBoundFunction::create(VM& vm, JSGlobalObject* globalObject, J
             for (unsigned index = 0, size = args.size(); index < size; ++index)
                 boundArgs[index] = args.at(index);
         } else {
-            JSImmutableButterfly* butterfly = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].get(), args.size());
+            JSImmutableButterfly* butterfly = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), args.size());
             if (UNLIKELY(!butterfly)) {
                 throwOutOfMemoryError(globalObject, scope);
                 return nullptr;
@@ -319,7 +319,7 @@ JSString* JSBoundFunction::nameSlow(VM& vm)
 
 String JSBoundFunction::nameStringWithoutGCSlow(VM& vm)
 {
-    DisallowGC disallowGC;
+    AssertNoGC assertNoGC;
     unsigned nestingCount = 0;
     JSObject* cursor = m_targetFunction.get();
     String terminal;

@@ -47,6 +47,10 @@ struct Counter;
 enum CSSPropertyID : uint16_t;
 enum CSSValueID : uint16_t;
 
+namespace CSS {
+struct SerializationContext;
+}
+
 DECLARE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSValue);
 class CSSValue {
     WTF_MAKE_NONCOPYABLE(CSSValue);
@@ -60,7 +64,7 @@ public:
     unsigned refCount() const { return m_refCount / refCountIncrement; }
     bool hasAtLeastOneRef() const { return m_refCount; }
 
-    WEBCORE_EXPORT String cssText() const;
+    WEBCORE_EXPORT String cssText(const CSS::SerializationContext&) const;
 
     bool isAppleColorFilterPropertyValue() const { return m_classType == ClassType::AppleColorFilterProperty; }
     bool isAttrValue() const { return m_classType == ClassType::Attr; }
@@ -79,9 +83,10 @@ public:
     bool isContentDistributionValue() const { return m_classType == ClassType::ContentDistribution; }
     bool isCounter() const { return m_classType == ClassType::Counter; }
     bool isCrossfadeValue() const { return m_classType == ClassType::Crossfade; }
-    bool isCubicBezierTimingFunctionValue() const { return m_classType == ClassType::CubicBezierTimingFunction; }
     bool isCursorImageValue() const { return m_classType == ClassType::CursorImage; }
     bool isCustomPropertyValue() const { return m_classType == ClassType::CustomProperty; }
+    bool isDynamicRangeLimitValue() const { return m_classType == ClassType::DynamicRangeLimit; }
+    bool isEasingFunctionValue() const { return m_classType == ClassType::EasingFunction; }
     bool isFilterImageValue() const { return m_classType == ClassType::FilterImage; }
     bool isFilterPropertyValue() const { return m_classType == ClassType::FilterProperty; }
     bool isFontFaceSrcLocalValue() const { return m_classType == ClassType::FontFaceSrcLocal; }
@@ -104,7 +109,6 @@ public:
     bool isImageSetValue() const { return m_classType == ClassType::ImageSet; }
     bool isImageValue() const { return m_classType == ClassType::Image; }
     bool isLineBoxContainValue() const { return m_classType == ClassType::LineBoxContain; }
-    bool isLinearTimingFunctionValue() const { return m_classType == ClassType::LinearTimingFunction; }
     bool isNamedImageValue() const { return m_classType == ClassType::NamedImage; }
     bool isOffsetRotateValue() const { return m_classType == ClassType::OffsetRotate; }
     bool isPair() const { return m_classType == ClassType::ValuePair; }
@@ -116,8 +120,6 @@ public:
     bool isRect() const { return m_classType == ClassType::Rect; }
     bool isReflectValue() const { return m_classType == ClassType::Reflect; }
     bool isScrollValue() const { return m_classType == ClassType::Scroll; }
-    bool isSpringTimingFunctionValue() const { return m_classType == ClassType::SpringTimingFunction; }
-    bool isStepsTimingFunctionValue() const { return m_classType == ClassType::StepsTimingFunction; }
     bool isSubgridValue() const { return m_classType == ClassType::Subgrid; }
     bool isTextShadowPropertyValue() const { return m_classType == ClassType::TextShadowProperty; }
     bool isTransformListValue() const { return m_classType == ClassType::TransformList; }
@@ -137,13 +139,11 @@ public:
 
     Ref<DeprecatedCSSOMValue> createDeprecatedCSSOMWrapper(CSSStyleDeclaration&) const;
 
-    // FIXME: These three traversing functions are buggy. It should be rewritten with visitChildren.
+    // FIXME: This traversing function is buggy. It should be rewritten with visitChildren.
     // https://bugs.webkit.org/show_bug.cgi?id=270600
-    bool traverseSubresources(const Function<bool(const CachedResource&)>&) const;
-    void setReplacementURLForSubresources(const UncheckedKeyHashMap<String, String>&);
-    void clearReplacementURLForSubresources();
+    bool traverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>&) const;
 
-    IterationStatus visitChildren(const Function<IterationStatus(CSSValue&)>&) const;
+    IterationStatus visitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 
     bool mayDependOnBaseURL() const;
 
@@ -187,10 +187,8 @@ public:
     inline bool isValueID() const;
     inline CSSValueID valueID() const;
 
-    void customSetReplacementURLForSubresources(const UncheckedKeyHashMap<String, String>&) { }
-    void customClearReplacementURLForSubresources() { }
     bool customMayDependOnBaseURL() const { return false; }
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>&) const { return IterationStatus::Continue; }
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const { return IterationStatus::Continue; }
 
 protected:
     static const size_t ClassTypeBits = 7;
@@ -210,12 +208,6 @@ protected:
         FilterImage,
         Gradient,
 
-        // Timing function classes.
-        LinearTimingFunction,
-        CubicBezierTimingFunction,
-        SpringTimingFunction,
-        StepsTimingFunction,
-
         // Other non-list classes.
         AppleColorFilterProperty,
         AspectRatio,
@@ -233,6 +225,8 @@ protected:
         ContentDistribution,
         Counter,
         CustomProperty,
+        DynamicRangeLimit,
+        EasingFunction,
         FilterProperty,
         Font,
         FontFaceSrcLocal,
@@ -297,7 +291,7 @@ private:
     template<typename Visitor> constexpr decltype(auto) visitDerived(Visitor&&);
     template<typename Visitor> constexpr decltype(auto) visitDerived(Visitor&&) const;
 
-    static inline bool customTraverseSubresources(const Function<bool(const CachedResource&)>&);
+    static inline bool customTraverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>&);
     bool addDerivedHash(Hasher&) const;
 
     mutable unsigned m_refCount { refCountIncrement };

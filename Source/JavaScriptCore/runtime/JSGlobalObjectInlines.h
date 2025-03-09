@@ -42,6 +42,8 @@
 #include "StructureInlines.h"
 #include <wtf/Hasher.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 struct JSGlobalObject::RareData {
@@ -57,7 +59,7 @@ struct JSGlobalObject::GlobalPropertyInfo {
         , value(v)
         , attributes(a)
     {
-        ASSERT(Thread::current().stack().contains(this));
+        ASSERT(Thread::currentSingleton().stack().contains(this));
     }
 
     const Identifier identifier;
@@ -235,7 +237,13 @@ inline JSFunction* JSGlobalObject::performProxyObjectSetByValSloppyFunction() co
 inline JSFunction* JSGlobalObject::performProxyObjectSetByValSloppyFunctionConcurrently() const { return performProxyObjectSetByValSloppyFunction(); }
 inline JSFunction* JSGlobalObject::performProxyObjectSetByValStrictFunction() const { return m_performProxyObjectSetByValStrictFunction.get(); }
 inline JSFunction* JSGlobalObject::performProxyObjectSetByValStrictFunctionConcurrently() const { return performProxyObjectSetByValStrictFunction(); }
+inline GetterSetter* JSGlobalObject::regExpProtoFlagsGetter() const { return std::bit_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoFlagsGetter)); }
+inline GetterSetter* JSGlobalObject::regExpProtoDotAllGetter() const { return std::bit_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoDotAllGetter)); }
 inline GetterSetter* JSGlobalObject::regExpProtoGlobalGetter() const { return std::bit_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoGlobalGetter)); }
+inline GetterSetter* JSGlobalObject::regExpProtoHasIndicesGetter() const { return std::bit_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoHasIndicesGetter)); }
+inline GetterSetter* JSGlobalObject::regExpProtoIgnoreCaseGetter() const { return std::bit_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoIgnoreCaseGetter)); }
+inline GetterSetter* JSGlobalObject::regExpProtoMultilineGetter() const { return std::bit_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoMultilineGetter)); }
+inline GetterSetter* JSGlobalObject::regExpProtoStickyGetter() const { return std::bit_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoStickyGetter)); }
 inline GetterSetter* JSGlobalObject::regExpProtoUnicodeGetter() const { return std::bit_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoUnicodeGetter)); }
 inline GetterSetter* JSGlobalObject::regExpProtoUnicodeSetsGetter() const { return std::bit_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoUnicodeSetsGetter)); }
 
@@ -350,7 +358,10 @@ ALWAYS_INLINE JSArray* tryCreateContiguousArrayWithPattern(JSGlobalObject* globa
     for (unsigned i = initialLength; i < vectorLength; ++i)
         butterfly->contiguous().atUnsafe(i).clear();
 #endif
-    return JSArray::createWithButterfly(vm, nullptr, structure, butterfly);
+    auto* array = JSArray::createWithButterfly(vm, nullptr, structure, butterfly);
+    // Clang can optimize this away, and butterfly doesn't visit anything.
+    ensureStillAliveHere(pattern);
+    return array;
 }
 
 ALWAYS_INLINE JSArray* createPatternFilledArray(JSGlobalObject* globalObject, JSString* pattern, size_t count)
@@ -683,3 +694,5 @@ template<typename Type> inline Type JSGlobalObject::linkTimeConstantConcurrently
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -34,21 +34,19 @@
 namespace WebCore {
 namespace Layout {
 
-static InlineRect flipLogicalLineRectToVisualForWritingMode(const InlineRect& lineLogicalRect, WritingMode writingMode)
+static InlineRect mapLineRectLogicalToVisual(const InlineRect& lineLogicalRect, const LayoutSize containerRenderSize, WritingMode writingMode)
 {
-    switch (writingMode.blockDirection()) {
-    case FlowDirection::TopToBottom:
-    case FlowDirection::BottomToTop:
+    if (writingMode.isHorizontal())
         return lineLogicalRect;
-    case FlowDirection::LeftToRight:
-    case FlowDirection::RightToLeft:
-        // See InlineFormattingUtils for more info.
+    if (writingMode.isLogicalLeftLineLeft())
         return { lineLogicalRect.left(), lineLogicalRect.top(), lineLogicalRect.height(), lineLogicalRect.width() };
-    default:
-        ASSERT_NOT_REACHED();
-        break;
-    }
-    return lineLogicalRect;
+
+    return {
+        containerRenderSize.height() - lineLogicalRect.right(),
+        lineLogicalRect.top(),
+        lineLogicalRect.height(),
+        lineLogicalRect.width()
+    };
 }
 
 InlineDisplayLineBuilder::InlineDisplayLineBuilder(InlineFormattingContext& inlineFormattingContext, const ConstraintsForInlineContent& constraints)
@@ -124,30 +122,30 @@ InlineDisplayLineBuilder::EnclosingLineGeometry InlineDisplayLineBuilder::collec
 InlineDisplay::Line InlineDisplayLineBuilder::build(const LineLayoutResult& lineLayoutResult, const LineBox& lineBox, bool lineIsFullyTruncatedInBlockDirection) const
 {
     auto& constraints = this->constraints();
-    auto& rootInlineBox = lineBox.rootInlineBox();
     auto isLeftToRightDirection = lineLayoutResult.directionality.inlineBaseDirection == TextDirection::LTR;
-    auto lineBoxLogicalRect = lineBox.logicalRect();
-    auto lineBoxVisualLeft = isLeftToRightDirection
-        ? lineBoxLogicalRect.left()
-        : InlineLayoutUnit { constraints.visualLeft() + constraints.horizontal().logicalWidth + constraints.horizontal().logicalLeft  } - lineBoxLogicalRect.right();
 
+    InlineRect lineBoxLogicalRect = lineBox.logicalRect();
+    auto lineBoxLineLeftEdge = isLeftToRightDirection
+        ? lineBoxLogicalRect.left()
+        : InlineLayoutUnit { constraints.visualLeft() + constraints.horizontal().logicalRight()  } - lineBoxLogicalRect.right();
+    lineBoxLogicalRect.setLeft(lineBoxLineLeftEdge);
+    auto enclosingLineGeometry = collectEnclosingLineGeometry(lineLayoutResult, lineBox, lineBoxLogicalRect);
+
+    auto& rootInlineBox = lineBox.rootInlineBox();
     auto rootInlineBoxRect = lineBox.logicalRectForRootInlineBox();
-    auto contentVisualOffsetInInlineDirection = isLeftToRightDirection
+    auto contentLineLeftEdge = isLeftToRightDirection
         ? rootInlineBoxRect.left()
         : lineBoxLogicalRect.width() - lineLayoutResult.contentGeometry.logicalRightIncludingNegativeMargin; // Note that with hanging content lineLayoutResult.contentGeometry.logicalRight is not the same as rootLineBoxRect.right().
 
-    auto lineBoxVisualRectInInlineDirection = InlineRect { lineBoxLogicalRect.top(), lineBoxVisualLeft, lineBoxLogicalRect.width(), lineBoxLogicalRect.height() };
-    auto enclosingLineGeometry = collectEnclosingLineGeometry(lineLayoutResult, lineBox, lineBoxVisualRectInInlineDirection);
-
     auto writingMode = root().writingMode();
     return InlineDisplay::Line { lineBoxLogicalRect
-        , flipLogicalLineRectToVisualForWritingMode(lineBoxVisualRectInInlineDirection, writingMode)
-        , flipLogicalLineRectToVisualForWritingMode(enclosingLineGeometry.contentOverflowRect, writingMode)
+        , mapLineRectLogicalToVisual(lineBoxLogicalRect, constraints.containerRenderSize(), writingMode)
+        , mapLineRectLogicalToVisual(enclosingLineGeometry.contentOverflowRect, constraints.containerRenderSize(), writingMode)
         , enclosingLineGeometry.enclosingTopAndBottom
         , rootInlineBox.logicalTop() + rootInlineBox.ascent()
         , lineBox.baselineType()
         , rootInlineBoxRect.left()
-        , contentVisualOffsetInInlineDirection
+        , contentLineLeftEdge
         , rootInlineBox.logicalWidth()
         , isLeftToRightDirection
         , rootInlineBox.layoutBox().writingMode().isHorizontal()
@@ -280,7 +278,8 @@ static float truncateOverflowingDisplayBoxes(InlineDisplay::Boxes& boxes, size_t
         }
         isFirstContentRun = false;
     }
-    ASSERT_UNUSED(lineEndingTruncationPolicy, lineEndingTruncationPolicy != LineEndingTruncationPolicy::WhenContentOverflowsInInlineDirection || truncateLeft.has_value() || left(boxes.first()) == visualLeftForContentEnd);
+
+    ASSERT_UNUSED(lineEndingTruncationPolicy, lineEndingTruncationPolicy != LineEndingTruncationPolicy::WhenContentOverflowsInInlineDirection || truncateLeft.has_value() || left(boxes.first()) == visualLeftForContentEnd || boxes.first().isInlineBox());
     return truncateLeft.value_or(left(boxes.first())) - ellipsisWidth;
 }
 

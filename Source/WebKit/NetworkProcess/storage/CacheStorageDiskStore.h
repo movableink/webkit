@@ -69,8 +69,8 @@ private:
     String m_cacheName;
     String m_path;
     FileSystem::Salt m_salt;
-    Ref<WorkQueue> m_callbackQueue;
-    Ref<WorkQueue> m_ioQueue;
+    const Ref<WorkQueue> m_callbackQueue;
+    const Ref<WorkQueue> m_ioQueue;
 };
 
 }

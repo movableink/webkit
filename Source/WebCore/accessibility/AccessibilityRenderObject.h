@@ -66,9 +66,9 @@ public:
     bool hasBoldFont() const final;
     bool hasItalicFont() const final;
     bool hasPlainText() const final;
-    bool hasSameFont(const AXCoreObject&) const final;
-    bool hasSameFontColor(const AXCoreObject&) const final;
-    bool hasSameStyle(const AXCoreObject&) const final;
+    bool hasSameFont(AXCoreObject&) final;
+    bool hasSameFontColor(AXCoreObject&) final;
+    bool hasSameStyle(AXCoreObject&) final;
     bool hasUnderline() const final;
 
     void setAccessibleName(const AtomString&) final;
@@ -102,7 +102,9 @@ public:
     String selectedText() const final;
 #if ENABLE(AX_THREAD_TEXT_APIS)
     AXTextRuns textRuns() final;
-#endif
+    AXTextRunLineID listMarkerLineID() const final;
+    String listMarkerText() const final;
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
 
     bool isWidget() const final;
     Widget* widget() const final;

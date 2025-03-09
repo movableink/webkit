@@ -138,7 +138,10 @@
 )
 
 (allow file-read*
-       file-write-data
+    (literal "/dev/null")
+    (literal "/dev/zero"))
+
+(allow file-write-data (with report) (with telemetry)
     (literal "/dev/null")
     (literal "/dev/zero"))
 
@@ -149,11 +152,10 @@
         (literal "/dev/dtracehelper")
         (require-any
             (csr CSR_ALLOW_APPLE_INTERNAL)
-            (csr CSR_ALLOW_UNRESTRICTED_DTRACE)))
-)
+            (csr CSR_ALLOW_UNRESTRICTED_DTRACE))))
 
 ;;; Allow creation of core dumps.
-(allow file-write-create
+(allow file-write-create (with report) (with telemetry)
     (require-all (prefix "/cores/")
         (vnode-type REGULAR-FILE)))
 
@@ -469,6 +471,7 @@
 
 (deny sysctl-read (with no-report)
     (sysctl-name
+        "security.mac.lockdown_mode_state"
         "sysctl.proc_translated"
         "vm.task_no_footprint_for_debug"))
 
@@ -840,7 +843,8 @@
 (define (allow-read-write-directory-and-issue-read-write-extensions path)
     (if path
         (begin
-            (allow file-read* file-write* (subpath path))
+            (allow file-read* (subpath path))
+            (allow file-write* (with report) (with telemetry) (subpath path))
             (allow file-issue-extension (require-all (extension-class "com.apple.app-sandbox.read") (subpath path)))
             (allow file-issue-extension (require-all (extension-class "com.apple.app-sandbox.read-write") (subpath path))))))
 
@@ -943,12 +947,15 @@
 #endif
 
 (read-only-and-issue-extensions (extension "com.apple.app-sandbox.read"))
-(read-write-and-issue-extensions (extension "com.apple.app-sandbox.read-write"))
+(define (read-write-extension-with-telemetry) (with report) (with telemetry) (extension "com.apple.app-sandbox.read-write"))
+(read-write-and-issue-extensions (read-write-extension-with-telemetry))
 
 ;; Allow certain Mach extensions. See <rdar://87850345>.
 (allow mach-lookup
     (require-all
+        (require-not (state-flag "WebProcessDidNotInjectStoreBundle"))
         (extension "com.apple.app-sandbox.mach")
+        (extension "com.apple.webkit.mach-bootstrap")
         (global-name "com.apple.commerce")))
 
 ;; Allow the OpenGL Profiler to attach.
@@ -1110,9 +1117,10 @@
 #endif
 
 #if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
-(allow mach-lookup (with telemetry) (global-name
-    "com.apple.logd"
-    "com.apple.logd.events"))
+(with-filter (require-not (require-entitlement "com.apple.private.disable-log-mach-ports"))
+    (allow mach-lookup (global-name
+        "com.apple.logd"
+        "com.apple.logd.events")))
 #else
 (allow mach-lookup (global-name
     "com.apple.logd"
@@ -1121,7 +1129,12 @@
 
 ; Needed for [CAContext remoteContextWithOptions]
 #if HAVE(SANDBOX_STATE_FLAGS) && PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 140000
-(with-filter (require-not (lockdown-mode))
+(with-filter
+    (require-all
+        (require-not (lockdown-mode))
+        (require-any
+            (require-not (state-flag "UnifiedPDFEnabled"))
+            (require-not (state-flag "BlockIOKitInWebContentSandbox"))))
     (allow mach-lookup
         (require-all
             (extension "com.apple.webkit.extension.mach")
@@ -1352,11 +1365,13 @@
 (deny mach-lookup (with telemetry-backtrace)
     (global-name "com.apple.webinspector"))
 
+#if !ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT)
 (with-filter (require-not (state-flag "BlockWebInspectorInWebContentSandbox"))
     (allow mach-lookup (with telemetry-backtrace)
         (require-all
             (extension "com.apple.webkit.extension.mach")
             (global-name "com.apple.webinspector"))))
+#endif
 
 (deny mach-lookup (with telemetry-backtrace)
     (global-name
@@ -1377,11 +1392,13 @@
             "com.apple.iconservices"
             "com.apple.iconservices.store")))
 
+#if !ENABLE(LAUNCHSERVICES_SANDBOX_EXTENSION_BLOCKING)
 (allow mach-lookup
     (require-all
         (extension "com.apple.webkit.extension.mach")
-        (global-name
-            "com.apple.coreservices.launchservicesd")))
+        (require-not (webcontent-process-launched))
+        (global-name "com.apple.coreservices.launchservicesd")))
+#endif
 
 (deny mach-lookup (with no-report)
     (global-name "com.apple.audio.AudioComponentRegistrar"))
@@ -1680,7 +1697,7 @@
     (message-number 204 207 301 711 800 804))
 
 (define (mach-bootstrap-message-numbers-post-launch)
-    (message-number 207 301 800 804))
+    (message-number 204 207 301 800 804))
 
 (define (allow-mach-bootstrap-with-filter)
     (allow mach-bootstrap

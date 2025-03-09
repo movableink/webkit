@@ -99,7 +99,7 @@ auto ToCSS<Path::Data>::operator()(const Path::Data& value, const RenderStyle&) 
     return { copySVGPathByteStream(value.byteStream, PathConversion::None) };
 }
 
-auto ToStyle<CSS::Path::Data>::operator()(const CSS::Path::Data& value, const BuilderState&, const CSSCalcSymbolTable&) -> Path::Data
+auto ToStyle<CSS::Path::Data>::operator()(const CSS::Path::Data& value, const BuilderState&) -> Path::Data
 {
     return { copySVGPathByteStream(value.byteStream, PathConversion::None) };
 }
@@ -112,11 +112,11 @@ auto ToCSS<Path>::operator()(const Path& value, const RenderStyle& style) -> CSS
     };
 }
 
-auto ToStyle<CSS::Path>::operator()(const CSS::Path& value, const BuilderState& state, const CSSCalcSymbolTable& symbolTable) -> Path
+auto ToStyle<CSS::Path>::operator()(const CSS::Path& value, const BuilderState& state) -> Path
 {
     return {
-        .fillRule = toStyle(value.fillRule, state, symbolTable),
-        .data = toStyle(value.data, state, symbolTable),
+        .fillRule = toStyle(value.fillRule, state),
+        .data = toStyle(value.data, state),
         .zoom = 1
     };
 }

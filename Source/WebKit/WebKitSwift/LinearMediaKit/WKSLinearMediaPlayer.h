@@ -95,6 +95,7 @@ API_AVAILABLE(visionos(1.0))
 - (void)linearMediaPlayer:(WKSLinearMediaPlayer *)player setThumbnailSize:(CGSize)size;
 - (void)linearMediaPlayer:(WKSLinearMediaPlayer *)player seekThumbnailToTime:(NSTimeInterval)time;
 - (void)linearMediaPlayer:(WKSLinearMediaPlayer *)player setVideoReceiverEndpoint:(xpc_object_t)videoReceiverEndpoint;
+- (void)linearMediaPlayerClearVideoReceiverEndpoint:(WKSLinearMediaPlayer *)player;
 @end
 
 API_AVAILABLE(visionos(1.0))
@@ -152,18 +153,20 @@ API_AVAILABLE(visionos(1.0))
 @property (nonatomic) BOOL allowFullScreenFromInline;
 @property (nonatomic) BOOL isLiveStream;
 @property (nonatomic, strong, nullable) NSNumber *recommendedViewingRatio;
-@property (nonatomic) WKSLinearMediaFullscreenBehaviors fullscreenSceneBehaviors;
 @property (nonatomic) double startTime;
 @property (nonatomic) double endTime;
 @property (nonatomic, strong, nullable) NSDate *startDate;
 @property (nonatomic, strong, nullable) NSDate *endDate;
 @property (nonatomic) BOOL spatialImmersive;
 @property (nonatomic, strong, nullable) WKSLinearMediaSpatialVideoMetadata *spatialVideoMetadata;
+@property (nonatomic) BOOL isImmersiveVideo;
 @property (nonatomic, readonly) BOOL enteredFromInline;
 
 - (LMPlayableViewController *)makeViewController;
 - (void)enterFullscreenWithCompletionHandler:(void (^)(BOOL, NSError * _Nullable))completionHandler;
 - (void)exitFullscreenWithCompletionHandler:(void (^)(BOOL, NSError * _Nullable))completionHandler;
+- (void)enterExternalPresentationWithCompletionHandler:(void (^)(BOOL, NSError * _Nullable))completionHandler;
+- (void)exitExternalPresentationWithCompletionHandler:(void (^)(BOOL, NSError * _Nullable))completionHandler;
 @end
 
 NS_ASSUME_NONNULL_END

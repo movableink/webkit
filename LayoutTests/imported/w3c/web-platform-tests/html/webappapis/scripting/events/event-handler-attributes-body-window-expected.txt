@@ -31,6 +31,7 @@ PASS not shadowed canplaythrough (document.body)
 PASS not shadowed change (document.body)
 PASS not shadowed click (document.body)
 PASS not shadowed close (document.body)
+PASS not shadowed command (document.body)
 FAIL not shadowed contextlost (document.body) assert_equals: alternative body should reflect expected (object) null but got (undefined) undefined
 PASS not shadowed contextmenu (document.body)
 FAIL not shadowed contextrestored (document.body) assert_equals: alternative body should reflect expected (object) null but got (undefined) undefined
@@ -159,6 +160,7 @@ PASS not shadowed canplaythrough (document.createElement("body"))
 PASS not shadowed change (document.createElement("body"))
 PASS not shadowed click (document.createElement("body"))
 PASS not shadowed close (document.createElement("body"))
+PASS not shadowed command (document.createElement("body"))
 FAIL not shadowed contextlost (document.createElement("body")) assert_equals: body should reflect expected (object) null but got (undefined) undefined
 PASS not shadowed contextmenu (document.createElement("body"))
 FAIL not shadowed contextrestored (document.createElement("body")) assert_equals: body should reflect expected (object) null but got (undefined) undefined
@@ -267,6 +269,7 @@ PASS not shadowed canplaythrough (window)
 PASS not shadowed change (window)
 PASS not shadowed click (window)
 PASS not shadowed close (window)
+PASS not shadowed command (window)
 FAIL not shadowed contextlost (window) assert_equals: body should reflect expected (object) null but got (undefined) undefined
 PASS not shadowed contextmenu (window)
 FAIL not shadowed contextrestored (window) assert_equals: body should reflect expected (object) null but got (undefined) undefined

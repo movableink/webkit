@@ -60,6 +60,14 @@
 
 #endif // __OBJC__
 
+#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
+typedef NSString * CADynamicRange;
+
+@interface CALayer (Staging_145326880)
+@property (assign) CADynamicRange preferredDynamicRange;
+@end
+#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS)
+
 #else
 
 #ifdef __OBJC__
@@ -155,6 +163,7 @@ typedef struct _CARenderContext CARenderContext;
 @property BOOL needsLayoutOnGeometryChange;
 @property BOOL shadowPathIsBounds;
 @property BOOL continuousCorners;
+@property CGFloat contentsEDRStrength;
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
 @property (getter=isSeparated) BOOL separated;
 #endif
@@ -314,6 +323,7 @@ extern NSString * const kCAFilterColorSaturate;
 extern NSString * const kCAFilterGaussianBlur;
 extern NSString * const kCAFilterPlusD;
 extern NSString * const kCAFilterPlusL;
+extern NSString * const kCAFilterVibrantColorMatrix;
 
 extern NSString * const kCAFilterNormalBlendMode;
 extern NSString * const kCAFilterMultiplyBlendMode;
@@ -331,6 +341,8 @@ extern NSString * const kCAFilterHueBlendMode;
 extern NSString * const kCAFilterSaturationBlendMode;
 extern NSString * const kCAFilterColorBlendMode;
 extern NSString * const kCAFilterLuminosityBlendMode;
+
+extern NSString * const kCAFilterInputColorMatrix;
 
 extern NSString * const kCAContextCIFilterBehavior;
 extern NSString * const kCAContextDisplayName;

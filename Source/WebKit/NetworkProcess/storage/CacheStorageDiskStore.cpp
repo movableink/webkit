@@ -34,6 +34,7 @@
 #include <wtf/PageBlock.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Scope.h>
+#include <wtf/persistence/PersistentCoders.h>
 #include <wtf/persistence/PersistentDecoder.h>
 #include <wtf/persistence/PersistentEncoder.h>
 #include <wtf/text/MakeString.h>

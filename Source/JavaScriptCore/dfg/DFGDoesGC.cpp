@@ -175,7 +175,7 @@ bool doesGC(Graph& graph, Node* node)
     case MapIteratorNext:
     case MapIteratorKey:
     case MapIteratorValue:
-    case MapStorage:
+    case MapStorageOrSentinel:
     case MapIterationNext:
     case MapIterationEntry:
     case MapIterationEntryKey:
@@ -202,6 +202,7 @@ bool doesGC(Graph& graph, Node* node)
     case MultiDeleteByOffset:
     case ValueRep:
     case DoubleRep:
+    case PurifyNaN:
     case Int52Rep:
     case GetGetter:
     case GetSetter:
@@ -223,6 +224,7 @@ bool doesGC(Graph& graph, Node* node)
     case CheckBadValue:
     case BottomValue:
     case PhantomNewObject:
+    case PhantomNewArrayWithConstantSize:
     case PhantomNewFunction:
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncFunction:
@@ -364,6 +366,7 @@ bool doesGC(Graph& graph, Node* node)
     case ResolveScope:
     case ResolveScopeForHoistingFuncDeclInEval:
     case Return:
+    case StringAt:
     case StringCharAt:
     case StringLocaleCompare:
     case TailCall:
@@ -428,6 +431,7 @@ bool doesGC(Graph& graph, Node* node)
     case EnumeratorNextUpdatePropertyName:
     case EnumeratorNextUpdateIndexAndMode:
     case MaterializeNewObject:
+    case MaterializeNewArrayWithConstantSize:
     case MaterializeNewInternalFieldObject:
     case MaterializeCreateActivation:
     case SetFunctionName:
@@ -443,11 +447,13 @@ bool doesGC(Graph& graph, Node* node)
     case CallDOMGetter:
     case CallDOM:
     case ArraySlice:
+    case ArrayIncludes:
     case ArrayIndexOf:
     case ParseInt: // We might resolve a rope even though we don't clobber anything.
     case SetAdd:
     case MapSet:
     case MapOrSetDelete:
+    case MapStorage:
     case ValueBitAnd:
     case ValueBitOr:
     case ValueBitXor:

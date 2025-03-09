@@ -60,7 +60,7 @@ private:
     WGPUBindGroup backing() const { return m_backing.get(); }
 
     void setLabelInternal(const String&) final;
-    bool updateExternalTextures(const ExternalTexture&) final;
+    bool updateExternalTextures(ExternalTexture&) final;
 
     WebGPUPtr<WGPUBindGroup> m_backing;
     Ref<ConvertToBackingContext> m_convertToBackingContext;

@@ -55,6 +55,7 @@
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/unicode/CharacterNames.h>
 
 #if ENABLE(TELEPHONE_NUMBER_DETECTION) && PLATFORM(IOS_FAMILY)
@@ -268,11 +269,11 @@ HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser& parser, HTMLDocument& docum
 #endif
 }
 
-HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser& parser, DocumentFragment& fragment, Element& contextElement, OptionSet<ParserContentPolicy> parserContentPolicy, const HTMLParserOptions& options)
+HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser& parser, DocumentFragment& fragment, Element& contextElement, OptionSet<ParserContentPolicy> parserContentPolicy, const HTMLParserOptions& options, CustomElementRegistry* registry)
     : m_parser(parser)
     , m_options(options)
     , m_fragmentContext(fragment, contextElement)
-    , m_tree(fragment, parserContentPolicy, options.maximumDOMTreeDepth)
+    , m_tree(fragment, parserContentPolicy, options.maximumDOMTreeDepth, registry)
     , m_scriptToProcessStartPosition(uninitializedPositionValue1())
 {
     ASSERT(isMainThread());
@@ -2489,7 +2490,7 @@ void HTMLTreeBuilder::linkifyPhoneNumbers(const String& string)
         m_tree.insertTextNode(string.substring(scannerPosition, relativeStartPosition));
         insertPhoneNumberLink(string.substring(scannerPosition + relativeStartPosition, relativeEndPosition - relativeStartPosition + 1));
 
-        span = span.subspan(relativeEndPosition + 1);
+        skip(span, relativeEndPosition + 1);
     }
 
     // Append the rest as a text node.
@@ -2529,6 +2530,9 @@ static inline bool disallowTelephoneNumberParsing(const ContainerNode& node)
 
 static inline bool shouldParseTelephoneNumbersInNode(const ContainerNode& node)
 {
+    if (node.namespaceURI() != HTMLNames::xhtmlNamespaceURI)
+        return false;
+
     // FIXME: It seems very wasteful to perform a full ancestor walk to check whether we should create
     // telephone number links, when parsing every text node in the document. Ideally, we should maintain
     // the count of elements that disallow telephone number parsing while pushing or popping from the
@@ -3135,6 +3139,16 @@ void HTMLTreeBuilder::finished()
 
 inline void HTMLTreeBuilder::parseError(const AtomHTMLToken&)
 {
+}
+
+bool HTMLTreeBuilder::isOnStackOfOpenElements(Element& element) const
+{
+    return m_tree.openElements().contains(element);
+}
+
+RefPtr<const ScriptElement> HTMLTreeBuilder::protectedScriptToProcess() const
+{
+    return m_scriptToProcess;
 }
 
 }

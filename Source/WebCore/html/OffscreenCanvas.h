@@ -95,7 +95,7 @@ private:
     bool m_originClean;
 };
 
-class OffscreenCanvas final : public ActiveDOMObject, public RefCounted<OffscreenCanvas>, public CanvasBase, public EventTarget {
+class OffscreenCanvas final : public ActiveDOMObject, public CanvasBase, public RefCounted<OffscreenCanvas>, public EventTarget {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(OffscreenCanvas, WEBCORE_EXPORT);
 public:
     void ref() const final { RefCounted::ref(); }
@@ -146,7 +146,7 @@ public:
 
     void commitToPlaceholderCanvas();
 
-    void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) final;
+    void queueTaskKeepingObjectAlive(TaskSource, Function<void(CanvasBase&)>&&) final;
     void dispatchEvent(Event&) final;
     bool isDetached() const { return m_detached; };
 
@@ -161,9 +161,6 @@ private:
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::OffscreenCanvas; }
     void refEventTarget() final { RefCounted::ref(); }
     void derefEventTarget() final { RefCounted::deref(); }
-
-    void refCanvasBase() const final { RefCounted::ref(); }
-    void derefCanvasBase() const final { RefCounted::deref(); }
 
     void setSize(const IntSize&) final;
 

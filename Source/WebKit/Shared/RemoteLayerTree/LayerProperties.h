@@ -49,6 +49,9 @@ enum class LayerChangeIndex : size_t {
     VisibleRectChanged,
 #endif
     ContentsFormatChanged,
+#if HAVE(CORE_MATERIAL)
+    AppleVisualEffectChanged,
+#endif
 };
 
 enum class LayerChange : uint64_t {
@@ -107,6 +110,9 @@ enum class LayerChange : uint64_t {
     VisibleRectChanged                  = 1LLU << static_cast<size_t>(LayerChangeIndex::VisibleRectChanged),
 #endif
     ContentsFormatChanged               = 1LLU << static_cast<size_t>(LayerChangeIndex::ContentsFormatChanged),
+#if HAVE(CORE_MATERIAL)
+    AppleVisualEffectChanged            = 1LLU << static_cast<size_t>(LayerChangeIndex::AppleVisualEffectChanged),
+#endif
 };
 
 struct RemoteLayerBackingStoreOrProperties {
@@ -205,6 +211,9 @@ struct LayerProperties {
     WebCore::FloatRect visibleRect;
 #endif
     WebCore::ContentsFormat contentsFormat { WebCore::ContentsFormat::RGBA8 };
+#if HAVE(CORE_MATERIAL)
+    WebCore::AppleVisualEffectData appleVisualEffectData;
+#endif
 };
 
 }

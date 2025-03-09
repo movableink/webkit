@@ -28,11 +28,13 @@
 
 #import "AutomationClient.h"
 #import "CacheModel.h"
+#import "Connection.h"
 #import "DownloadManager.h"
 #import "GPUProcessProxy.h"
 #import "LegacyDownloadClient.h"
 #import "Logging.h"
 #import "NetworkProcessProxy.h"
+#import "ProcessTerminationReason.h"
 #import "SandboxUtilities.h"
 #import "UIGamepadProvider.h"
 #import "WKAPICast.h"
@@ -388,7 +390,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 - (pid_t)_gpuProcessIdentifier
 {
 #if ENABLE(GPU_PROCESS)
-    auto* gpuProcess = _processPool->gpuProcess();
+    RefPtr gpuProcess = _processPool->gpuProcess();
     return gpuProcess ? gpuProcess->processID() : 0;
 #else
     return 0;
@@ -509,6 +511,11 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
     [self _setLinkedOnOrAfterEverything];
 }
 
++ (void)_crashOnMessageCheckFailureForTesting
+{
+    IPC::Connection::setShouldCrashOnMessageCheckFailure(true);
+}
+
 + (void)_setLinkedOnOrAfterEverything
 {
     enableAllSDKAlignedBehaviors();
@@ -541,14 +548,14 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 
 + (BOOL)_isMetalDebugDeviceEnabledInGPUProcessForTesting
 {
-    if (auto gpuProcess = WebKit::GPUProcessProxy::singletonIfCreated())
+    if (RefPtr gpuProcess = WebKit::GPUProcessProxy::singletonIfCreated())
         return gpuProcess->isMetalDebugDeviceEnabledForTesting();
     return WebKit::GPUProcessProxy::isMetalDebugDeviceEnabledInNewGPUProcessesForTesting();
 }
 
 + (BOOL)_isMetalShaderValidationEnabledInGPUProcessForTesting
 {
-    if (auto gpuProcess = WebKit::GPUProcessProxy::singletonIfCreated())
+    if (RefPtr gpuProcess = WebKit::GPUProcessProxy::singletonIfCreated())
         return gpuProcess->isMetalShaderValidationEnabledForTesting();
     return WebKit::GPUProcessProxy::isMetalShaderValidationEnabledInNewGPUProcessesForTesting();
 }
@@ -577,16 +584,6 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
     _coreLocationProvider = coreLocationProvider;
 }
 #endif // PLATFORM(IOS_FAMILY)
-
-- (_WKDownload *)_downloadURLRequest:(NSURLRequest *)request websiteDataStore:(WKWebsiteDataStore *)dataStore originatingWebView:(WKWebView *)webView
-{
-    return [_WKDownload downloadWithDownload:wrapper(_processPool->download(*dataStore->_websiteDataStore, [webView _page], request)).get()];
-}
-
-- (_WKDownload *)_resumeDownloadFromData:(NSData *)resumeData websiteDataStore:(WKWebsiteDataStore *)dataStore  path:(NSString *)path originatingWebView:(WKWebView *)webView
-{
-    return [_WKDownload downloadWithDownload:wrapper(_processPool->resumeDownload(*dataStore->_websiteDataStore, [webView _page], API::Data::createWithoutCopying(resumeData).get(), path, WebKit::CallDownloadDidStart::No)).get()];
-}
 
 - (void)_getActivePagesOriginsInWebProcessForTesting:(pid_t)pid completionHandler:(void(^)(NSArray<NSString *> *))completionHandler
 {
@@ -651,7 +648,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 {
     RetainPtr<_WKProcessInfo> result;
 
-    if (auto gpuProcess = WebKit::GPUProcessProxy::singletonIfCreated()) {
+    if (RefPtr gpuProcess = WebKit::GPUProcessProxy::singletonIfCreated()) {
         if (auto taskInfo = gpuProcess->taskInfo())
             result = adoptNS([[_WKProcessInfo alloc] initWithTaskInfo:*taskInfo]);
     }

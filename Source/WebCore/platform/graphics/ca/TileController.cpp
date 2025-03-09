@@ -51,8 +51,6 @@
 #include "TileControllerMemoryHandlerIOS.h"
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(TileController);
@@ -316,10 +314,10 @@ void TileController::setScrollability(OptionSet<Scrollability> scrollability)
     notePendingTileSizeChange();
 }
 
-void TileController::setTopContentInset(float topContentInset)
+void TileController::setObscuredContentInsets(const FloatBoxExtent& obscuredContentInsets)
 {
-    m_topContentInset = topContentInset;
-    setTiledScrollingIndicatorPosition(FloatPoint(0, m_topContentInset));
+    m_obscuredContentInsets = obscuredContentInsets;
+    setTiledScrollingIndicatorPosition({ obscuredContentInsets.left(), obscuredContentInsets.top() });
 }
 
 void TileController::setTiledScrollingIndicatorPosition(const FloatPoint& position)
@@ -668,7 +666,7 @@ IntSize TileController::computeTileSize()
     } else if (m_scrollability == Scrollability::VerticallyScrollable)
         tileSize.setWidth(std::min(std::max<int>(ceilf(boundsWithoutMargin().width() * tileGrid().scale()), kDefaultTileSize), maxTileSize.width()));
 
-    LOG_WITH_STREAM(Scrolling, stream << "TileController::tileSize newSize=" << tileSize);
+    LOG_WITH_STREAM(Tiling, stream << "TileController::tileSize newSize=" << tileSize);
 
     m_tileSizeLocked = true;
     return tileSize;
@@ -729,10 +727,8 @@ unsigned TileController::blankPixelCountForTiles(const PlatformLayerList& tiles,
 {
     Region paintedVisibleTiles;
 
-    for (PlatformLayerList::const_iterator it = tiles.begin(), end = tiles.end(); it != end; ++it) {
-        const PlatformLayer* tileLayer = it->get();
-
-        FloatRect visiblePart(CGRectOffset(PlatformCALayer::frameForLayer(tileLayer), tileTranslation.x(), tileTranslation.y()));
+    for (auto& tileLayer : tiles) {
+        FloatRect visiblePart(CGRectOffset(PlatformCALayer::frameForLayer(tileLayer.get()), tileTranslation.x(), tileTranslation.y()));
         visiblePart.intersect(visibleRect);
 
         if (!visiblePart.isEmpty())
@@ -901,8 +897,16 @@ void TileController::logFilledVisibleFreshTile(unsigned blankPixelCount)
         owningGraphicsLayer()->platformCALayerLogFilledVisibleFreshTile(blankPixelCount);
 }
 
-} // namespace WebCore
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+std::optional<DynamicContentScalingDisplayList> TileController::dynamicContentScalingDisplayListForTile(const TileGrid& tileGrid, TileIndex index)
+{
+    if (!m_client)
+        return std::nullopt;
+    return m_client->dynamicContentScalingDisplayListForTile(*this, tileGrid.identifier(), index);
+}
+#endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+} // namespace WebCore
 
 #endif // USE(CG)

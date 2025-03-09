@@ -20,7 +20,7 @@ function runTest() {
         output += `iframe rect: ${iframeRect.x}, ${iframeRect.y}\n`;
 
         setTimeout(async function() {
-            var axElement = accessibilityController.rootElement.elementAtPointResolvingRemoteFrameForTesting(iframeRect.x + 50, iframeRect.y + 50, function (result) {
+            var axElement = accessibilityController.rootElement.elementAtPointResolvingRemoteFrame(iframeRect.x + 50, iframeRect.y + 50, function (result) {
                 output += `Element at (${iframeRect.x + 50}, ${iframeRect.y + 50}): ${result}\n`;
 
                 debug(output);

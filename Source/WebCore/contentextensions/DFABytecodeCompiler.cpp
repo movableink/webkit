@@ -31,8 +31,7 @@
 #include "ContentExtensionRule.h"
 #include "DFA.h"
 #include "DFANode.h"
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore::ContentExtensions {
 
@@ -40,7 +39,7 @@ template <typename IntType>
 void append(Vector<DFABytecode>& bytecode, IntType value)
 {
     bytecode.grow(bytecode.size() + sizeof(IntType));
-    memcpy(&bytecode[bytecode.size() - sizeof(IntType)], &value, sizeof(IntType));
+    memcpySpan(bytecode.mutableSpan().last(sizeof(IntType)), asByteSpan(value));
 }
 
 static void append24BitUnsignedInteger(Vector<DFABytecode>& bytecode, uint32_t value)
@@ -311,9 +310,9 @@ auto DFABytecodeCompiler::transitions(const DFANode& node) -> Transitions
 {
     Transitions transitions;
 
-    uint32_t destinations[128];
-    memset(destinations, 0xff, sizeof(destinations));
-    const uint32_t noDestination = std::numeric_limits<uint32_t>::max();
+    constexpr uint32_t noDestination = std::numeric_limits<uint32_t>::max();
+    std::array<uint32_t, 128> destinations;
+    destinations.fill(noDestination);
 
     transitions.useFallbackTransition = node.canUseFallbackTransition(m_dfa);
     if (transitions.useFallbackTransition)
@@ -569,7 +568,5 @@ void DFABytecodeCompiler::compile()
 }
 
 } // namespace WebCore::ContentExtensions
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(CONTENT_EXTENSIONS)

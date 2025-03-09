@@ -323,6 +323,12 @@ void PathCairo::add(PathRoundedRect roundedRect)
     addBeziersForRoundedRect(roundedRect.roundedRect);
 }
 
+void PathCairo::add(PathContinuousRoundedRect continuousRoundedRect)
+{
+    // Continuous rounded rects are unavailable. Paint a normal rounded rect instead.
+    add(PathRoundedRect { FloatRoundedRect { continuousRoundedRect.rect, FloatRoundedRect::Radii { continuousRoundedRect.cornerWidth, continuousRoundedRect.cornerHeight } }, PathRoundedRect::Strategy::PreferNative });
+}
+
 void PathCairo::add(PathCloseSubpath)
 {
     cairo_close_path(platformPath());
@@ -429,7 +435,7 @@ bool PathCairo::contains(const FloatPoint &point, WindRule rule) const
     return contains;
 }
 
-bool PathCairo::strokeContains(const FloatPoint& point, const Function<void(GraphicsContext&)>& strokeStyleApplier) const
+bool PathCairo::strokeContains(const FloatPoint& point, NOESCAPE const Function<void(GraphicsContext&)>& strokeStyleApplier) const
 {
     ASSERT(strokeStyleApplier);
 
@@ -462,7 +468,7 @@ FloatRect PathCairo::boundingRect() const
     return FloatRect(x0, y0, x1 - x0, y1 - y0);
 }
 
-FloatRect PathCairo::strokeBoundingRect(const Function<void(GraphicsContext&)>& strokeStyleApplier) const
+FloatRect PathCairo::strokeBoundingRect(NOESCAPE const Function<void(GraphicsContext&)>& strokeStyleApplier) const
 {
     if (isEmpty())
         return { };

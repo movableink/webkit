@@ -100,7 +100,7 @@ void BackForwardController::goBackOrForward(int distance)
         return;
 
     Ref page { protectedPage() };
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return;
 
@@ -114,7 +114,7 @@ bool BackForwardController::goBack()
         return false;
 
     Ref page { protectedPage() };
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return false;
 
@@ -129,7 +129,7 @@ bool BackForwardController::goForward()
         return false;
 
     Ref page { protectedPage() };
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return false;
 
@@ -137,29 +137,19 @@ bool BackForwardController::goForward()
     return true;
 }
 
-void BackForwardController::addItem(FrameIdentifier targetFrameID, Ref<HistoryItem>&& item)
+void BackForwardController::addItem(Ref<HistoryItem>&& item)
 {
-    protectedClient()->addItem(targetFrameID, WTFMove(item));
+    protectedClient()->addItem(WTFMove(item));
 }
 
-void BackForwardController::setChildItem(BackForwardItemIdentifier identifier, Ref<HistoryItem>&& item)
+void BackForwardController::setChildItem(BackForwardFrameItemIdentifier frameItemID, Ref<HistoryItem>&& item)
 {
-    protectedClient()->setChildItem(identifier, WTFMove(item));
+    protectedClient()->setChildItem(frameItemID, WTFMove(item));
 }
 
 void BackForwardController::setCurrentItem(HistoryItem& item)
 {
     protectedClient()->goToItem(item);
-}
-
-void BackForwardController::setProvisionalItem(const HistoryItem& item)
-{
-    protectedClient()->goToProvisionalItem(item);
-}
-
-void BackForwardController::clearProvisionalItem(const HistoryItem& item)
-{
-    protectedClient()->clearProvisionalItem(item);
 }
 
 bool BackForwardController::containsItem(const HistoryItem& item) const

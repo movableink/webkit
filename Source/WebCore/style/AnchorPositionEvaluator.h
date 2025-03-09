@@ -28,6 +28,7 @@
 #include "EventTarget.h"
 #include "LayoutUnit.h"
 #include "ScopedName.h"
+#include "WritingMode.h"
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashMap.h>
@@ -40,27 +41,33 @@ class Document;
 class Element;
 class LayoutRect;
 class RenderBlock;
+class RenderBox;
 class RenderBoxModelObject;
+class RenderStyle;
+
+enum CSSPropertyID : uint16_t;
 
 namespace Style {
 
 class BuilderState;
+struct BuilderPositionTryFallback;
 
 enum class AnchorPositionResolutionStage : uint8_t {
-    Initial,
-    FoundAnchors,
+    FindAnchors,
+    ResolveAnchorFunctions,
     Resolved,
     Positioned,
 };
 
-using AnchorElements = HashMap<AtomString, WeakRef<Element, WeakPtrImplWithEventTargetData>>;
+using AnchorElements = HashMap<AtomString, WeakPtr<Element, WeakPtrImplWithEventTargetData>>;
 
 struct AnchorPositionedState {
     WTF_MAKE_TZONE_ALLOCATED(AnchorPositionedState);
 public:
     AnchorElements anchorElements;
-    HashSet<AtomString> anchorNames;
-    AnchorPositionResolutionStage stage;
+    UncheckedKeyHashSet<AtomString> anchorNames;
+    std::optional<AnchorPositionResolutionStage> stage;
+    bool hasAnchorFunctions { false };
 };
 
 using AnchorsForAnchorName = HashMap<AtomString, Vector<SingleThreadWeakRef<const RenderBoxModelObject>>>;
@@ -92,20 +99,32 @@ class AnchorPositionEvaluator {
 public:
     // Find the anchor element indicated by `elementName` and update the associated anchor resolution data.
     // Returns nullptr if the anchor element can't be found.
-    static RefPtr<Element> findAnchorAndAttemptResolution(const BuilderState&, std::optional<ScopedName> elementName);
+    static RefPtr<Element> findAnchorForAnchorFunctionAndAttemptResolution(const BuilderState&, std::optional<ScopedName> elementName);
 
     using Side = std::variant<CSSValueID, double>;
+    static bool propertyAllowsAnchorFunction(CSSPropertyID);
     static std::optional<double> evaluate(const BuilderState&, std::optional<ScopedName> elementName, Side);
+
+    static bool propertyAllowsAnchorSizeFunction(CSSPropertyID);
     static std::optional<double> evaluateSize(const BuilderState&, std::optional<ScopedName> elementName, std::optional<AnchorSizeDimension>);
 
     static void updateAnchorPositioningStatesAfterInterleavedLayout(const Document&);
     static void cleanupAnchorPositionedState(Element&);
     static void updateSnapshottedScrollOffsets(Document&);
+    static void updateAnchorPositionedStateForLayoutTimePositioned(Element&, const RenderStyle&);
 
     static LayoutRect computeAnchorRectRelativeToContainingBlock(CheckedRef<const RenderBoxModelObject> anchorBox, const RenderBlock& containingBlock);
 
+    using AnchorToAnchorPositionedMap = SingleThreadWeakHashMap<const RenderBoxModelObject, Vector<Ref<Element>>>;
+    static AnchorToAnchorPositionedMap makeAnchorPositionedForAnchorMap(Document&);
+
+    static bool isLayoutTimeAnchorPositioned(const RenderStyle&);
+    static CSSPropertyID resolvePositionTryFallbackProperty(CSSPropertyID, WritingMode, const BuilderPositionTryFallback&);
+
+    static bool overflowsContainingBlock(const RenderBox& anchoredBox);
+
 private:
-    static AnchorElements findAnchorsForAnchorPositionedElement(const Element&, const HashSet<AtomString>& anchorNames, const AnchorsForAnchorName&);
+    static AnchorElements findAnchorsForAnchorPositionedElement(const Element&, const UncheckedKeyHashSet<AtomString>& anchorNames, const AnchorsForAnchorName&);
 };
 
 } // namespace Style

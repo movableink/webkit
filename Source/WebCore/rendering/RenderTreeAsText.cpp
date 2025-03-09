@@ -607,7 +607,7 @@ inline void writeLayerUsingGeometryType(TextStream& ts, const RenderLayer& layer
 #if PLATFORM(MAC)
         ScrollbarTheme& scrollbarTheme = ScrollbarTheme::theme();
         if (!scrollbarTheme.isMockTheme() && layer.scrollableArea() && layer.scrollableArea()->hasVerticalScrollbar()) {
-            ScrollbarThemeMac& macTheme = *static_cast<ScrollbarThemeMac*>(&scrollbarTheme);
+            ScrollbarThemeMac& macTheme = *downcast<ScrollbarThemeMac>(&scrollbarTheme);
             if (macTheme.isLayoutDirectionRTL(*layer.scrollableArea()->verticalScrollbar()))
                 ts << " scrollbarHasRTLLayoutDirection";
         }

@@ -57,7 +57,6 @@
 #include "ModelPlayerProvider.h"
 #include "MouseEvent.h"
 #include "Page.h"
-#include "PlatformMouseEvent.h"
 #include "RenderBoxInlines.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
@@ -67,6 +66,10 @@
 #include <wtf/Seconds.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
+
+#if ENABLE(MODEL_PROCESS)
+#include "ModelContext.h"
+#endif
 
 namespace WebCore {
 
@@ -93,6 +96,8 @@ HTMLModelElement::~HTMLModelElement()
         m_resource->removeClient(*this);
         m_resource = nullptr;
     }
+
+    deleteModelPlayer();
 }
 
 Ref<HTMLModelElement> HTMLModelElement::create(const QualifiedName& tagName, Document& document)
@@ -287,7 +292,10 @@ void HTMLModelElement::createModelPlayer()
     m_boundingBoxCenter = DOMPointReadOnly::create({ });
     m_boundingBoxExtents = DOMPointReadOnly::create({ });
 #endif
-    m_modelPlayer = document().page()->modelPlayerProvider().createModelPlayer(*this);
+    if (!m_modelPlayerProvider)
+        m_modelPlayerProvider = document().page()->modelPlayerProvider();
+    if (RefPtr protectedModelPlayerProvider = m_modelPlayerProvider.get())
+        m_modelPlayer = protectedModelPlayerProvider->createModelPlayer(*this);
     if (!m_modelPlayer) {
         if (!m_readyPromise->isFulfilled())
             m_readyPromise->reject(Exception { ExceptionCode::AbortError });
@@ -298,6 +306,8 @@ void HTMLModelElement::createModelPlayer()
     m_modelPlayer->setAutoplay(autoplay());
     m_modelPlayer->setLoop(loop());
     m_modelPlayer->setPlaybackRate(m_playbackRate, [&](double) { });
+    m_modelPlayer->setHasPortal(hasPortal());
+    m_modelPlayer->setStageMode(stageMode());
 #endif
 
     // FIXME: We need to tell the player if the size changes as well, so passing this
@@ -314,8 +324,10 @@ void HTMLModelElement::createModelPlayer()
 
 void HTMLModelElement::deleteModelPlayer()
 {
-    if (m_modelPlayer)
-        document().page()->modelPlayerProvider().deleteModelPlayer(*m_modelPlayer);
+    RefPtr protectedModelPlayerProvider = m_modelPlayerProvider.get();
+    if (protectedModelPlayerProvider && m_modelPlayer)
+        protectedModelPlayerProvider->deleteModelPlayer(*m_modelPlayer);
+
     m_modelPlayer = nullptr;
 }
 
@@ -361,8 +373,8 @@ void HTMLModelElement::didFinishLoading(ModelPlayer& modelPlayer)
 
     if (CheckedPtr renderer = this->renderer())
         renderer->updateFromElement();
-
-    m_readyPromise->resolve(*this);
+    if (!m_readyPromise->isFulfilled())
+        m_readyPromise->resolve(*this);
 }
 
 void HTMLModelElement::didFailLoading(ModelPlayer& modelPlayer, const ResourceError&)
@@ -372,35 +384,54 @@ void HTMLModelElement::didFailLoading(ModelPlayer& modelPlayer, const ResourceEr
         m_readyPromise->reject(Exception { ExceptionCode::AbortError });
 }
 
-std::optional<PlatformLayerIdentifier> HTMLModelElement::platformLayerID()
+RefPtr<GraphicsLayer> HTMLModelElement::graphicsLayer() const
 {
     auto* page = document().page();
     if (!page)
-        return std::nullopt;
+        return nullptr;
 
     auto* renderLayerModelObject = dynamicDowncast<RenderLayerModelObject>(this->renderer());
     if (!renderLayerModelObject)
+        return nullptr;
+
+    if (!renderLayerModelObject->isComposited())
+        return nullptr;
+
+    return renderLayerModelObject->layer()->backing()->graphicsLayer();
+}
+
+std::optional<PlatformLayerIdentifier> HTMLModelElement::layerID() const
+{
+    auto graphicsLayer = this->graphicsLayer();
+    if (!graphicsLayer)
         return std::nullopt;
 
-    if (!renderLayerModelObject->isComposited() || !renderLayerModelObject->layer() || !renderLayerModelObject->layer()->backing())
-        return std::nullopt;
+    return graphicsLayer->primaryLayerID();
+}
 
-    RefPtr graphicsLayer = renderLayerModelObject->layer()->backing()->graphicsLayer();
+std::optional<PlatformLayerIdentifier> HTMLModelElement::modelContentsLayerID() const
+{
+    auto graphicsLayer = this->graphicsLayer();
     if (!graphicsLayer)
         return std::nullopt;
 
     return graphicsLayer->contentsLayerIDForModel();
 }
 
-// MARK: - Background Color support.
-
-void HTMLModelElement::applyBackgroundColor(Color color)
+#if ENABLE(MODEL_PROCESS)
+RefPtr<ModelContext> HTMLModelElement::modelContext() const
 {
-    if (m_modelPlayer)
-        m_modelPlayer->setBackgroundColor(color);
+    auto modelLayerIdentifier = layerID();
+    if (!modelLayerIdentifier)
+        return nullptr;
+
+    auto modelContentsLayerHostingContextIdentifier = layerHostingContextIdentifier();
+    if (!modelContentsLayerHostingContextIdentifier)
+        return nullptr;
+
+    return ModelContext::create(*modelLayerIdentifier, *modelContentsLayerHostingContextIdentifier, contentSize(), hasPortal() ? ModelContextDisablePortal::No : ModelContextDisablePortal::Yes, std::nullopt).ptr();
 }
 
-#if ENABLE(MODEL_PROCESS)
 const DOMMatrixReadOnly& HTMLModelElement::entityTransform() const
 {
     return m_entityTransform.get();
@@ -448,12 +479,35 @@ void HTMLModelElement::didUpdateBoundingBox(ModelPlayer&, const FloatPoint3D& ce
 
 void HTMLModelElement::didFinishEnvironmentMapLoading(bool succeeded)
 {
-    if (!m_environmentMapReadyPromise->isFulfilled()) {
+    if (!m_environmentMapURL.isEmpty() && !m_environmentMapReadyPromise->isFulfilled()) {
         if (succeeded)
             m_environmentMapReadyPromise->resolve();
         else
             m_environmentMapReadyPromise->reject(Exception { ExceptionCode::AbortError });
     }
+}
+
+bool HTMLModelElement::supportsStageModeInteraction() const
+{
+    return stageMode() != StageModeOperation::None;
+}
+
+void HTMLModelElement::beginStageModeTransform(const TransformationMatrix& transform)
+{
+    if (m_modelPlayer)
+        m_modelPlayer->beginStageModeTransform(transform);
+}
+
+void HTMLModelElement::updateStageModeTransform(const TransformationMatrix& transform)
+{
+    if (m_modelPlayer)
+        m_modelPlayer->updateStageModeTransform(transform);
+}
+
+void HTMLModelElement::endStageModeInteraction()
+{
+    if (m_modelPlayer)
+        m_modelPlayer->endStageModeInteraction();
 }
 #endif // ENABLE(MODEL_PROCESS)
 
@@ -500,6 +554,12 @@ void HTMLModelElement::attributeChanged(const QualifiedName& name, const AtomStr
         updateLoop();
     else if (name == environmentmapAttr)
         updateEnvironmentMap();
+    else if (name == stagemodeAttr)
+        updateStageMode();
+#if PLATFORM(VISION)
+    else if (document().settings().modelNoPortalAttributeEnabled() && name == noportalAttr)
+        updateHasPortal();
+#endif
 #endif
     else
         HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
@@ -671,6 +731,21 @@ void HTMLModelElement::updateAutoplay()
         m_modelPlayer->setAutoplay(autoplay());
 }
 
+WebCore::StageModeOperation HTMLModelElement::stageMode() const
+{
+    String attr = attributeWithoutSynchronization(HTMLNames::stagemodeAttr);
+    if (equalLettersIgnoringASCIICase(attr, "orbit"_s))
+        return WebCore::StageModeOperation::Orbit;
+
+    return WebCore::StageModeOperation::None;
+}
+
+void HTMLModelElement::updateStageMode()
+{
+    if (m_modelPlayer)
+        m_modelPlayer->setStageMode(stageMode());
+}
+
 bool HTMLModelElement::loop() const
 {
     return hasAttributeWithoutSynchronization(HTMLNames::loopAttr);
@@ -691,6 +766,24 @@ void HTMLModelElement::setCurrentTime(double currentTime)
 {
     if (m_modelPlayer)
         m_modelPlayer->setCurrentTime(Seconds(currentTime), [&]() { });
+}
+
+bool HTMLModelElement::hasPortal() const
+{
+#if PLATFORM(VISION)
+    return !(document().settings().modelNoPortalAttributeEnabled() && hasAttributeWithoutSynchronization(HTMLNames::noportalAttr));
+#else
+    return true;
+#endif
+}
+
+void HTMLModelElement::updateHasPortal()
+{
+    if (CheckedPtr renderer = this->renderer())
+        renderer->updateFromElement();
+
+    if (RefPtr modelPlayer = m_modelPlayer)
+        modelPlayer->setHasPortal(hasPortal());
 }
 
 const URL& HTMLModelElement::environmentMap() const
@@ -1047,6 +1140,24 @@ bool HTMLModelElement::isURLAttribute(const Attribute& attribute) const
         || attribute.name() == environmentmapAttr
 #endif
         || HTMLElement::isURLAttribute(attribute);
+}
+
+Node::InsertedIntoAncestorResult HTMLModelElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
+{
+    auto insertResult = HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+
+    if (insertionType.connectedToDocument)
+        m_modelPlayerProvider = document().page()->modelPlayerProvider();
+
+    return insertResult;
+}
+
+void HTMLModelElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
+{
+    HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
+
+    if (removalType.disconnectedFromDocument)
+        deleteModelPlayer();
 }
 
 }

@@ -38,7 +38,6 @@
 #define LOCAL_SERVICE_ADDITIONS
 #endif
 
-#import "AppAttestInternalSoftLink.h"
 #import "LocalAuthenticationSoftLink.h"
 
 namespace WebKit {
@@ -67,23 +66,16 @@ LOCAL_SERVICE_ADDITIONS
         return false;
     }
 
-#if HAVE(APPLE_ATTESTATION)
-    if (!AppAttest_WebAuthentication_IsSupported()) {
-        LOG_ERROR("Device is unable to support Apple attestation features.");
-        return false;
-    }
-#else
-    return false;
-#endif
-
     return true;
 }
 
 void LocalService::startDiscoveryInternal()
 {
-    if (!platformStartDiscovery() || !observer())
+    if (!platformStartDiscovery())
         return;
-    observer()->authenticatorAdded(LocalAuthenticator::create(createLocalConnection()));
+
+    if (RefPtr observer = this->observer())
+        observer->authenticatorAdded(LocalAuthenticator::create(createLocalConnection()));
 }
 
 bool LocalService::platformStartDiscovery() const

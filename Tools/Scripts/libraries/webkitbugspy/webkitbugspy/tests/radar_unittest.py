@@ -213,9 +213,11 @@ class TestRadar(unittest.TestCase):
         with wkmocks.Environment(RADAR_USERNAME='tcontributor'), mocks.Radar(issues=mocks.ISSUES):
             issue = radar.Tracker().issue(1)
             self.assertTrue(issue.opened)
+            self.assertEqual(issue.state, 'Analyze')
             self.assertFalse(issue.open())
             self.assertTrue(issue.close())
             self.assertFalse(issue.opened)
+            self.assertEqual(issue.state, 'Verify')
 
             issue = radar.Tracker().issue(1)
             self.assertFalse(issue.opened)
@@ -230,12 +232,16 @@ class TestRadar(unittest.TestCase):
             self.assertTrue(issue.close(why='Fixed in 1234@main'))
             self.assertFalse(issue.opened)
             self.assertEqual(issue.comments[-1].content, 'Fixed in 1234@main')
+            self.assertEqual(issue.state, 'Verify')
 
             issue = radar.Tracker().issue(1)
             self.assertFalse(issue.opened)
             self.assertTrue(issue.open(why='Need to revert, fix broke the build'))
             self.assertTrue(issue.opened)
             self.assertEqual(issue.comments[-1].content, 'Need to revert, fix broke the build')
+            self.assertEqual(issue.state, 'Analyze')
+            issue.set_state(state='Verify')
+            self.assertEqual(issue.state, 'Verify')
 
     def test_duplicate(self):
         with wkmocks.Environment(RADAR_USERNAME='tcontributor'), mocks.Radar(issues=mocks.ISSUES):

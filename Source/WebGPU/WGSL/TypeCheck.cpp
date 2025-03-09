@@ -250,6 +250,7 @@ private:
     Vector<Error> m_errors;
     Vector<BreakTarget> m_breakTargetStack;
     HashMap<String, OverloadedDeclaration> m_overloadedOperations;
+    HashMap<String, AST::IdentifierExpression*> m_arrayCountOverrides;
 };
 
 TypeChecker::TypeChecker(ShaderModule& shaderModule)
@@ -1391,6 +1392,8 @@ void TypeChecker::visit(AST::CallExpression& call)
                 m_shaderModule.setUsesDot4U8Packed();
             else if (targetName == "extractBits"_s)
                 m_shaderModule.setUsesExtractBits();
+            else if (targetName == "insertBits"_s)
+                m_shaderModule.setUsesInsertBits();
             else if (
                 targetName == "textureGather"_s
                 || targetName == "textureGatherCompare"_s
@@ -1769,12 +1772,18 @@ void TypeChecker::visit(AST::ArrayTypeExpression& array)
             }
             size = { static_cast<unsigned>(elementCount) };
         } else {
-            m_shaderModule.addOverrideValidation(*array.maybeElementCount(), [&](const ConstantValue& elementCount) -> std::optional<String> {
+            auto* countExpression = array.maybeElementCount();
+            if (auto* identifier = dynamicDowncast<AST::IdentifierExpression>(countExpression)) {
+                auto result = m_arrayCountOverrides.add(identifier->identifier().id(), identifier);
+                countExpression = result.iterator->value;
+            }
+
+            m_shaderModule.addOverrideValidation(*countExpression, [&](const ConstantValue& elementCount) -> std::optional<String> {
                 if (elementCount.integerValue() < 1)
                     return { "array count must be greater than 0"_s };
                 return std::nullopt;
             });
-            size = { array.maybeElementCount() };
+            size = { countExpression };
         }
     }
 
@@ -1977,6 +1986,9 @@ const Type* TypeChecker::chooseOverload(ASCIILiteral kind, const SourceSpan& spa
             auto& call = uncheckedDowncast<AST::CallExpression>(*expression);
             call.m_isConstructor = it->value.kind == OverloadedDeclaration::Constructor;
             call.m_visibility = it->value.visibility;
+
+            if (call.isFloatToIntConversion(overload->result))
+                m_shaderModule.setUsesFtoi();
         }
 
         unsigned argumentCount = callArguments.size();
@@ -2186,7 +2198,7 @@ Behaviors TypeChecker::analyze(AST::LoopStatement& statement)
         m_breakTargetStack.append(&continuing.value());
         behaviors.add(analyzeStatements(continuing->body));
         m_breakTargetStack.removeLast();
-        if (auto* breakIf = continuing->breakIf)
+        if (continuing->breakIf)
             behaviors.add({ Behavior::Break, Behavior::Continue });
     }
     m_breakTargetStack.removeLast();

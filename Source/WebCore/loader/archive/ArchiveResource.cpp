@@ -32,8 +32,6 @@
 #include "SharedBuffer.h"
 #include <wtf/RunLoop.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 inline ArchiveResource::ArchiveResource(Ref<FragmentedSharedBuffer>&& data, const URL& url, const String& mimeType, const String& textEncoding, const String& frameName, const ResourceResponse& response, const String& relativeFilePath)
@@ -75,7 +73,7 @@ Expected<String, ArchiveError> ArchiveResource::saveToDisk(const String& directo
     auto filePath = FileSystem::pathByAppendingComponent(directory, m_relativeFilePath);
     FileSystem::makeAllDirectories(FileSystem::parentPath(filePath));
     auto fileData = data().extractData();
-    int bytesWritten = FileSystem::overwriteEntireFile(filePath, { fileData.data(), fileData.size() });
+    int bytesWritten = FileSystem::overwriteEntireFile(filePath, fileData.span());
 
     if (bytesWritten < 0)
         return makeUnexpected(ArchiveError::FileSystemError);
@@ -89,5 +87,3 @@ Expected<String, ArchiveError> ArchiveResource::saveToDisk(const String& directo
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -29,7 +29,7 @@
 #include "WPEBufferDMABufFormats.h"
 #include "WPEDisplay.h"
 #include "WPEViewPrivate.h"
-#include <wtf/HashSet.h>
+#include <wtf/ListHashSet.h>
 #include <wtf/glib/GRefPtr.h>
 #include <wtf/glib/GWeakPtr.h>
 #include <wtf/glib/WTFGType.h>
@@ -45,7 +45,7 @@
  */
 struct _WPEToplevelPrivate {
     GWeakPtr<WPEDisplay> display;
-    HashSet<WPEView*> views;
+    ListHashSet<WPEView*> views;
 
     int width;
     int height;

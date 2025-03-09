@@ -42,6 +42,7 @@
 #include "PageConsoleClient.h"
 #include "RealtimeMediaSource.h"
 #include "RenderingMode.h"
+#include "ResourceMonitorChecker.h"
 #include "SleepDisabler.h"
 #include "TextIndicator.h"
 #include "VP9Utilities.h"
@@ -52,6 +53,10 @@
 #if ENABLE(VIDEO)
 #include "MediaElementSession.h"
 #include "MediaUniqueIdentifier.h"
+#endif
+
+#if ENABLE(DAMAGE_TRACKING)
+#include "Damage.h"
 #endif
 
 #if USE(AUDIO_SESSION)
@@ -138,7 +143,6 @@ class TextIterator;
 class TextTrack;
 class TimeRanges;
 class TypeConversions;
-class UnsuspendableActiveDOMObject;
 class VoidCallback;
 class WebAnimation;
 class WebGLRenderingContext;
@@ -266,6 +270,7 @@ public:
     unsigned remoteImagesCountForTesting() const;
     void setAsyncDecodingEnabledForTesting(HTMLImageElement&, bool enabled);
     void setForceUpdateImageDataEnabledForTesting(HTMLImageElement&, bool enabled);
+    void setHeadroomForTesting(HTMLImageElement&, float headroom);
 
 #if ENABLE(WEB_CODECS)
     bool hasPendingActivity(const WebCodecsVideoDecoder&) const;
@@ -365,6 +370,7 @@ public:
     void invalidateFontCache();
 
     ExceptionOr<void> setLowPowerModeEnabled(bool);
+    ExceptionOr<void> setAggressiveThermalMitigationEnabled(bool);
     ExceptionOr<void> setOutsideViewportThrottlingEnabled(bool);
 
     ExceptionOr<void> setScrollViewPosition(int x, int y);
@@ -491,7 +497,7 @@ public:
     bool isOverwriteModeEnabled();
     void toggleOverwriteModeEnabled();
 
-    bool testProcessIncomingSyncMessagesWhenWaitingForSyncReply();
+    ExceptionOr<bool> testProcessIncomingSyncMessagesWhenWaitingForSyncReply();
 
     ExceptionOr<RefPtr<Range>> rangeOfString(const String&, RefPtr<Range>&&, const Vector<String>& findOptions);
     ExceptionOr<unsigned> countMatchesForText(const String&, const Vector<String>& findOptions, const String& markMatches);
@@ -545,6 +551,9 @@ public:
     ExceptionOr<String> horizontalScrollbarState(Node*) const;
     ExceptionOr<String> verticalScrollbarState(Node*) const;
 
+    ExceptionOr<uint64_t> horizontalScrollbarLayerID(Node*) const;
+    ExceptionOr<uint64_t> verticalScrollbarLayerID(Node*) const;
+
     ExceptionOr<String> scrollbarsControllerTypeForNode(Node*) const;
 
     ExceptionOr<String> scrollingStateTreeAsText() const;
@@ -586,6 +595,7 @@ public:
     unsigned numberOfLiveNodes() const;
     unsigned numberOfLiveDocuments() const;
     unsigned referencingNodeCount(const Document&) const;
+    ExceptionOr<void> executeOpportunisticallyScheduledTasks() const;
 
 #if ENABLE(WEB_AUDIO)
     // BaseAudioContext lifetime testing.
@@ -598,7 +608,7 @@ public:
     unsigned numberOfResizeObservers(const Document&) const;
 
     String documentIdentifier(const Document&) const;
-    bool isDocumentAlive(const String& documentIdentifier) const;
+    ExceptionOr<bool> isDocumentAlive(const String& documentIdentifier) const;
 
     uint64_t messagePortIdentifier(const MessagePort&) const;
     bool isMessagePortAlive(uint64_t messagePortIdentifier) const;
@@ -639,14 +649,6 @@ public:
     void setHeaderHeight(float);
     void setFooterHeight(float);
 
-#if ENABLE(FULLSCREEN_API)
-    void webkitWillEnterFullScreenForElement(Element&);
-    void webkitDidEnterFullScreenForElement(Element&);
-    void webkitWillExitFullScreenForElement(Element&);
-    void webkitDidExitFullScreenForElement(Element&);
-    bool isAnimatingFullScreen() const;
-#endif
-
     struct FullscreenInsets {
         float top { 0 };
         float left { 0 };
@@ -654,7 +656,18 @@ public:
         float right { 0 };
     };
     void setFullscreenInsets(FullscreenInsets);
-    void setFullscreenAutoHideDuration(double);
+    ExceptionOr<void> setFullscreenAutoHideDuration(double);
+
+    enum ContentsFormat {
+        RGBA8,
+#if ENABLE(PIXEL_FORMAT_RGB10)
+        RGBA10,
+#endif
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+        RGBA16F,
+#endif
+    };
+    void setScreenContentsFormatsForTesting(const Vector<Internals::ContentsFormat>&);
 
 #if ENABLE(VIDEO)
     bool isChangingPresentationMode(HTMLVideoElement&) const;
@@ -803,7 +816,11 @@ public:
     ExceptionOr<void> setOverridePreferredDynamicRangeMode(HTMLMediaElement&, const String&);
 
     void enableGStreamerHolePunching(HTMLVideoElement&);
+
+    double effectiveDynamicRangeLimitValue(const HTMLMediaElement&);
 #endif
+
+    ExceptionOr<void> setPageShouldSuppressHDR(bool);
 
     ExceptionOr<void> setIsPlayingToBluetoothOverride(std::optional<bool>);
 
@@ -824,10 +841,6 @@ public:
     ExceptionOr<RefPtr<StaticRange>> selectedRange();
     void setSelectionWithoutValidation(Ref<Node> baseNode, unsigned baseOffset, RefPtr<Node> extentNode, unsigned extentOffset);
     void setSelectionFromNone();
-
-    ExceptionOr<bool> isPluginUnavailabilityIndicatorObscured(Element&);
-    ExceptionOr<String> unavailablePluginReplacementText(Element&);
-    bool isPluginSnapshotted(Element&);
 
 #if ENABLE(MEDIA_SOURCE)
     WEBCORE_TESTSUPPORT_EXPORT void initializeMockMediaSource();
@@ -919,6 +932,7 @@ public:
     void setMediaControlsHidePlaybackRates(HTMLMediaElement&, bool);
 #endif // ENABLE(VIDEO)
 
+    float pageMediaVolume();
     void setPageMediaVolume(float);
 
     String userVisibleString(const DOMURL&);
@@ -993,10 +1007,6 @@ public:
     void setPageIsInWindow(bool);
     bool isPageActive() const;
 
-#if ENABLE(WEB_RTC)
-    void setH264HardwareEncoderAllowed(bool allowed);
-#endif
-
 #if ENABLE(MEDIA_STREAM)
     void stopObservingRealtimeMediaSource();
 
@@ -1013,6 +1023,7 @@ public:
     void setMediaStreamTrackIdentifier(MediaStreamTrack&, String&& id);
     void setMediaStreamSourceInterrupted(MediaStreamTrack&, bool);
     const String& mediaStreamTrackPersistentId(const MediaStreamTrack&);
+    size_t audioCaptureSourceCount() const;
     bool isMediaStreamSourceInterrupted(MediaStreamTrack&) const;
     bool isMediaStreamSourceEnded(MediaStreamTrack&) const;
     bool isMockRealtimeMediaSourceCenterEnabled();
@@ -1087,7 +1098,7 @@ public:
     NO_RETURN_DUE_TO_CRASH void terminateWebContentProcess();
 
 #if ENABLE(APPLE_PAY)
-    MockPaymentCoordinator& mockPaymentCoordinator(Document&);
+    ExceptionOr<Ref<MockPaymentCoordinator>> mockPaymentCoordinator(Document&);
 #endif
 
     struct ImageOverlayText {
@@ -1194,6 +1205,7 @@ public:
         bool isVideoAndRequiresUserGestureForVideoRateChange;
         bool isAudioAndRequiresUserGestureForAudioRateChange;
         bool isVideoAndRequiresUserGestureForVideoDueToLowPowerMode;
+        bool isVideoAndRequiresUserGestureForVideoDueToAggressiveThermalMitigation;
         bool noUserGestureRequired;
         bool requiresPlaybackAndIsNotPlaying;
         bool hasEverNotifiedAboutPlaying;
@@ -1237,8 +1249,6 @@ public:
 
     void reloadWithoutContentExtensions();
     void disableContentExtensionsChecks();
-
-    void setUseSystemAppearance(bool);
 
     size_t pluginCount();
     ExceptionOr<unsigned> pluginScrollPositionX(Element&);
@@ -1286,7 +1296,7 @@ public:
         String domain;
         String path;
         // Expiration dates are expressed as milliseconds since the UNIX epoch.
-        double expires { 0 };
+        std::optional<double> expires;
         bool isHttpOnly { false };
         bool isSecure { false };
         bool isSession { false };
@@ -1299,7 +1309,7 @@ public:
             , value(cookie.value)
             , domain(cookie.domain)
             , path(cookie.path)
-            , expires(cookie.expires.value_or(0))
+            , expires(cookie.expires)
             , isHttpOnly(cookie.httpOnly)
             , isSecure(cookie.secure)
             , isSession(cookie.session)
@@ -1313,7 +1323,27 @@ public:
         CookieData()
         {
         }
+
+        static Cookie toCookie(CookieData&& cookieData)
+        {
+            Cookie cookie;
+            cookie.name = WTFMove(cookieData.name);
+            cookie.value = WTFMove(cookieData.value);
+            cookie.domain = WTFMove(cookieData.domain);
+            cookie.path = WTFMove(cookieData.path);
+            cookie.expires = WTFMove(cookieData.expires);
+            if (cookieData.isSameSiteNone)
+                cookie.sameSite = Cookie::SameSitePolicy::None;
+            else if (cookieData.isSameSiteLax)
+                cookie.sameSite = Cookie::SameSitePolicy::Lax;
+            else if (cookieData.isSameSiteStrict)
+                cookie.sameSite = Cookie::SameSitePolicy::Strict;
+
+            return cookie;
+        }
     };
+
+    void setCookie(CookieData&&);
     Vector<CookieData> getCookies() const;
 
     void setAlwaysAllowLocalWebarchive(bool);
@@ -1379,7 +1409,7 @@ public:
 
     String windowLocationHost(DOMWindow&);
 
-    String systemColorForCSSValue(const String& cssValue, bool useDarkModeAppearance, bool useElevatedUserInterfaceLevel);
+    ExceptionOr<String> systemColorForCSSValue(const String& cssValue, bool useDarkModeAppearance, bool useElevatedUserInterfaceLevel);
 
     bool systemHasBattery() const;
 
@@ -1529,6 +1559,24 @@ public:
     void getImageBufferResourceLimits(ImageBufferResourceLimitsPromise&&);
 
     void setResourceCachingDisabledByWebInspector(bool);
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    void setResourceMonitorNetworkUsageThreshold(size_t threshold, double randomness = ResourceMonitorChecker::defaultNetworkUsageThresholdRandomness);
+    bool shouldSkipResourceMonitorThrottling() const;
+    void setShouldSkipResourceMonitorThrottling(bool);
+#endif
+
+#if ENABLE(DAMAGE_TRACKING)
+    using DamagePropagation = Damage::Propagation;
+    struct FrameDamage {
+        unsigned sequenceId { 0 };
+        bool isValid { false };
+        RefPtr<DOMRectReadOnly> bounds;
+        Vector<Ref<DOMRectReadOnly>> rects;
+    };
+    std::optional<DamagePropagation> getCurrentDamagePropagation() const;
+    ExceptionOr<Vector<FrameDamage>> getFrameDamageHistory() const;
+#endif // ENABLE(DAMAGE_TRACKING)
 
 private:
     explicit Internals(Document&);

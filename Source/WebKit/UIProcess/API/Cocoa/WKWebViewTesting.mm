@@ -277,7 +277,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 
 - (pid_t)_networkProcessIdentifier
 {
-    auto* networkProcess = _page->websiteDataStore().networkProcessIfExists();
+    RefPtr networkProcess = _page->websiteDataStore().networkProcessIfExists();
     RELEASE_ASSERT(networkProcess);
     return networkProcess->processID();
 }
@@ -337,12 +337,6 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 #endif
 }
 
-- (void)_setDefersLoadingForTesting:(BOOL)defersLoading
-{
-    if (RefPtr pageForTesting = _page->pageForTesting())
-        pageForTesting->setDefersLoading(defersLoading);
-}
-
 - (void)_setShareSheetCompletesImmediatelyWithResolutionForTesting:(BOOL)resolved
 {
     _resolutionForShareSheetImmediateCompletionForTesting = resolved;
@@ -354,7 +348,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
         completionHandler();
         return;
     }
-    _page->legacyMainFrameProcess().sendPrepareToSuspend(WebKit::IsSuspensionImminent::No, 0.0, [completionHandler = makeBlockPtr(completionHandler)] {
+    _page->protectedLegacyMainFrameProcess()->sendPrepareToSuspend(WebKit::IsSuspensionImminent::No, 0.0, [completionHandler = makeBlockPtr(completionHandler)] {
         completionHandler();
     });
 }
@@ -362,13 +356,13 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 - (void)_processWillSuspendImminentlyForTesting
 {
     if (_page)
-        _page->legacyMainFrameProcess().sendPrepareToSuspend(WebKit::IsSuspensionImminent::Yes, 0.0, [] { });
+        _page->protectedLegacyMainFrameProcess()->sendPrepareToSuspend(WebKit::IsSuspensionImminent::Yes, 0.0, [] { });
 }
 
 - (void)_processDidResumeForTesting
 {
     if (_page)
-        _page->legacyMainFrameProcess().sendProcessDidResume(WebKit::AuxiliaryProcessProxy::ResumeReason::ForegroundActivity);
+        _page->protectedLegacyMainFrameProcess()->sendProcessDidResume(WebKit::AuxiliaryProcessProxy::ResumeReason::ForegroundActivity);
 }
 
 - (void)_setThrottleStateForTesting:(int)value
@@ -376,7 +370,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
     if (!_page)
         return;
 
-    _page->legacyMainFrameProcess().setThrottleStateForTesting(static_cast<WebKit::ProcessThrottleState>(value));
+    _page->protectedLegacyMainFrameProcess()->setThrottleStateForTesting(static_cast<WebKit::ProcessThrottleState>(value));
 }
 
 - (BOOL)_hasServiceWorkerBackgroundActivityForTesting
@@ -896,6 +890,114 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
     RefPtr networkProcess = store ? store->networkProcessIfExists() : nullptr;
     if (networkProcess)
         networkProcess->terminateIdleServiceWorkers(protectedProcessProxy->coreProcessIdentifier(), [] { });
+}
+
+- (void)_getNotifyStateForTesting:(NSString *)notificationName completionHandler:(void(^)(NSNumber *))completionHandler
+{
+#if ENABLE(NOTIFY_BLOCKING)
+    _page->protectedLegacyMainFrameProcess()->getNotifyStateForTesting(notificationName, [completionHandler = WTFMove(completionHandler)](std::optional<uint64_t> result) mutable {
+        if (!result) {
+            completionHandler(nil);
+            return;
+        }
+        completionHandler(@(result.value()));
+    });
+#else
+    completionHandler(nil);
+#endif
+}
+
+- (BOOL)_hasAccessibilityActivityForTesting
+{
+#if ENABLE(WEB_PROCESS_SUSPENSION_DELAY)
+    return _page->hasAccessibilityActivityForTesting();
+#else
+    return NO;
+#endif
+}
+
+- (void)_setMediaVolumeForTesting:(float)mediaVolume
+{
+    _page->setMediaVolume(mediaVolume);
+}
+
+- (NSDictionary<NSString *, id> *)_propertiesOfLayerWithID:(unsigned long long)layerID
+{
+    if (!layerID)
+        return nil;
+    CALayer* layer = downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*_page->drawingArea()).layerWithIDForTesting({ ObjectIdentifier<WebCore::PlatformLayerIdentifierType>(layerID), _page->legacyMainFrameProcess().coreProcessIdentifier() });
+    if (!layer)
+        return nil;
+
+    return @{
+        @"bounds" : @{
+            @"x" : @(layer.bounds.origin.x),
+            @"y" : @(layer.bounds.origin.x),
+            @"width" : @(layer.bounds.size.width),
+            @"height" : @(layer.bounds.size.height),
+
+        },
+        @"position" : @{
+            @"x" : @(layer.position.x),
+            @"y" : @(layer.position.y),
+        },
+        @"zPosition" : @(layer.zPosition),
+        @"anchorPoint" : @{
+            @"x" : @(layer.anchorPoint.x),
+            @"y" : @(layer.anchorPoint.y),
+        },
+        @"anchorPointZ" : @(layer.anchorPointZ),
+        @"transform" : @{
+            @"m11" : @(layer.transform.m11),
+            @"m12" : @(layer.transform.m12),
+            @"m13" : @(layer.transform.m13),
+            @"m14" : @(layer.transform.m14),
+
+            @"m21" : @(layer.transform.m21),
+            @"m22" : @(layer.transform.m22),
+            @"m23" : @(layer.transform.m23),
+            @"m24" : @(layer.transform.m24),
+
+            @"m31" : @(layer.transform.m31),
+            @"m32" : @(layer.transform.m32),
+            @"m33" : @(layer.transform.m33),
+            @"m34" : @(layer.transform.m34),
+
+            @"m41" : @(layer.transform.m41),
+            @"m42" : @(layer.transform.m42),
+            @"m43" : @(layer.transform.m43),
+            @"m44" : @(layer.transform.m44),
+        },
+        @"sublayerTransform" : @{
+            @"m11" : @(layer.sublayerTransform.m11),
+            @"m12" : @(layer.sublayerTransform.m12),
+            @"m13" : @(layer.sublayerTransform.m13),
+            @"m14" : @(layer.sublayerTransform.m14),
+
+            @"m21" : @(layer.sublayerTransform.m21),
+            @"m22" : @(layer.sublayerTransform.m22),
+            @"m23" : @(layer.sublayerTransform.m23),
+            @"m24" : @(layer.sublayerTransform.m24),
+
+            @"m31" : @(layer.sublayerTransform.m31),
+            @"m32" : @(layer.sublayerTransform.m32),
+            @"m33" : @(layer.sublayerTransform.m33),
+            @"m34" : @(layer.sublayerTransform.m34),
+
+            @"m41" : @(layer.sublayerTransform.m41),
+            @"m42" : @(layer.sublayerTransform.m42),
+            @"m43" : @(layer.sublayerTransform.m43),
+            @"m44" : @(layer.sublayerTransform.m44),
+        },
+
+        @"hidden" : @(layer.hidden),
+        @"doubleSided" : @(layer.doubleSided),
+        @"masksToBounds" : @(layer.masksToBounds),
+        @"contentsScale" : @(layer.contentsScale),
+        @"rasterizationScale" : @(layer.rasterizationScale),
+        @"opaque" : @(layer.opaque),
+        @"opacity" : @(layer.opacity),
+    };
 }
 
 @end

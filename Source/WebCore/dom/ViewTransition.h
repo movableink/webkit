@@ -43,6 +43,10 @@ namespace JSC {
 class JSValue;
 }
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 class DOMPromise;
@@ -234,7 +238,7 @@ private:
     FloatSize m_initialLargeViewportSize;
     float m_initialPageZoom;
 
-    RefPtr<ViewTransitionUpdateCallback>  m_updateCallback;
+    RefPtr<ViewTransitionUpdateCallback> m_updateCallback;
     bool m_isCrossDocument { false };
 
     using PromiseAndWrapper = std::pair<Ref<DOMPromise>, Ref<DeferredPromise>>;
@@ -246,4 +250,6 @@ private:
     Ref<ViewTransitionTypeSet> m_types;
 };
 
-}
+WTF::TextStream& operator<<(WTF::TextStream&, ViewTransitionPhase);
+
+} // namespace WebCore

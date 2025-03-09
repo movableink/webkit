@@ -95,9 +95,12 @@ static double parseIntOverflow(std::span<const UChar> s, int radix)
     return number;
 }
 
-ALWAYS_INLINE static bool isStrWhiteSpace(UChar c)
+template<typename CharacterType>
+ALWAYS_INLINE static bool isStrWhiteSpace(CharacterType c)
 {
     // https://tc39.github.io/ecma262/#sec-tonumber-applied-to-the-string-type
+    if constexpr (sizeof(c) == 1)
+        return Lexer<LChar>::isWhiteSpace(c) || Lexer<LChar>::isLineTerminator(c);
     return Lexer<UChar>::isWhiteSpace(c) || Lexer<UChar>::isLineTerminator(c);
 }
 

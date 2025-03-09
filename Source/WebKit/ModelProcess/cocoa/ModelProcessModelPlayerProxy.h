@@ -36,6 +36,7 @@
 #include <WebCore/LayerHostingContextIdentifier.h>
 #include <WebCore/ModelPlayer.h>
 #include <WebCore/ModelPlayerIdentifier.h>
+#include <WebCore/StageModeOperations.h>
 #include <WebKitAdditions/REPtr.h>
 #include <WebKitAdditions/REModelLoaderClient.h>
 #include <simd/simd.h>
@@ -48,6 +49,7 @@
 OBJC_CLASS WKModelProcessModelLayer;
 OBJC_CLASS WKModelProcessModelPlayerProxyObjCAdapter;
 OBJC_CLASS WKSRKEntity;
+OBJC_CLASS WKStageModeInteractionDriver;
 
 namespace WebCore {
 class Model;
@@ -79,7 +81,6 @@ public:
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
     template<typename T> void send(T&& message);
 
-    void updateBackgroundColor();
     void updateTransform();
     void updateOpacity();
     void startAnimating();
@@ -99,7 +100,6 @@ public:
     void sizeDidChange(WebCore::LayoutSize) final;
     PlatformLayer* layer() final;
     std::optional<WebCore::LayerHostingContextIdentifier> layerHostingContextIdentifier() final;
-    void setBackgroundColor(WebCore::Color) final;
     void setEntityTransform(WebCore::TransformationMatrix) final;
     void enterFullscreen() final;
     bool supportsMouseInteraction() final;
@@ -130,12 +130,22 @@ public:
     Seconds currentTime() const final;
     void setCurrentTime(Seconds, CompletionHandler<void()>&&) final;
     void setEnvironmentMap(Ref<WebCore::SharedBuffer>&& data) final;
+    void setHasPortal(bool) final;
+    void setStageMode(WebCore::StageModeOperation) final;
+    void beginStageModeTransform(const WebCore::TransformationMatrix&) final;
+    void updateStageModeTransform(const WebCore::TransformationMatrix&) final;
+    void endStageModeInteraction() final;
+    void stageModeInteractionDidUpdateModel();
+
+    USING_CAN_MAKE_WEAKPTR(WebCore::REModelLoaderClient);
 
 private:
     ModelProcessModelPlayerProxy(ModelProcessModelPlayerManagerProxy&, WebCore::ModelPlayerIdentifier, Ref<IPC::Connection>&&);
 
     void computeTransform();
     void applyEnvironmentMapDataAndRelease();
+    void applyStageModeOperationToDriver();
+    bool stageModeInteractionInProgress() const;
 
     WebCore::ModelPlayerIdentifier m_id;
     Ref<IPC::Connection> m_webProcessConnection;
@@ -147,9 +157,10 @@ private:
     RefPtr<WebCore::REModel> m_model;
     RetainPtr<WKSRKEntity> m_modelRKEntity;
     REPtr<RESceneRef> m_scene;
+    REPtr<REEntityRef> m_hostingEntity;
+    REPtr<REEntityRef> m_containerEntity;
     RetainPtr<WKModelProcessModelPlayerProxyObjCAdapter> m_objCAdapter;
 
-    WebCore::Color m_backgroundColor;
     simd_float3 m_originalBoundingBoxCenter { simd_make_float3(0, 0, 0) };
     simd_float3 m_originalBoundingBoxExtents { simd_make_float3(0, 0, 0) };
     float m_pitch { 0 };
@@ -162,6 +173,11 @@ private:
     double m_playbackRate { 1.0 };
 
     RefPtr<WebCore::SharedBuffer> m_transientEnvironmentMapData;
+    bool m_hasPortal { true };
+
+    // For interactions
+    RetainPtr<WKStageModeInteractionDriver> m_stageModeInteractionDriver;
+    WebCore::StageModeOperation m_stageModeOperation { WebCore::StageModeOperation::None };
 };
 
 } // namespace WebKit

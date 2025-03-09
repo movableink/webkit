@@ -66,19 +66,18 @@ public:
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&);
 
     bool supportsFullScreenForElement(const WebCore::Element&, bool withKeyboard);
-    void enterFullScreenForElement(WebCore::Element*, WebCore::HTMLMediaElementEnums::VideoFullscreenMode);
+    void enterFullScreenForElement(WebCore::Element&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode, CompletionHandler<void(WebCore::ExceptionOr<void>)>&&, CompletionHandler<bool(bool)>&&);
 #if ENABLE(QUICKLOOK_FULLSCREEN)
     void updateImageSource(WebCore::Element&);
 #endif // ENABLE(QUICKLOOK_FULLSCREEN)
-    void exitFullScreenForElement(WebCore::Element*);
+    void exitFullScreenForElement(WebCore::Element*, CompletionHandler<void()>&&);
 
-    void willEnterFullScreen(WebCore::HTMLMediaElementEnums::VideoFullscreenMode = WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard);
-    void didEnterFullScreen();
-    void willExitFullScreen();
-    void didExitFullScreen();
+    void didEnterFullScreen(CompletionHandler<bool(bool)>&&);
+    void willExitFullScreen(CompletionHandler<void()>&&);
+    void didExitFullScreen(CompletionHandler<void()>&&);
 
-    void saveScrollPosition();
-    void restoreScrollPosition();
+    void enterFullScreenForOwnerElements(WebCore::FrameIdentifier, CompletionHandler<void()>&&);
+    void exitFullScreenInMainFrame(CompletionHandler<void()>&&);
 
     WebCore::Element* element();
 
@@ -91,6 +90,7 @@ protected:
 
     void setPIPStandbyElement(WebCore::HTMLVideoElement*);
 
+    void willEnterFullScreen(WebCore::Element&, CompletionHandler<void(WebCore::ExceptionOr<void>)>&&, CompletionHandler<bool(bool)>&&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode = WebCore::HTMLMediaElementEnums::VideoFullscreenModeStandard);
     void setAnimatingFullScreen(bool);
     void requestRestoreFullScreen(CompletionHandler<void(bool)>&&);
     void requestExitFullScreen();
@@ -100,7 +100,6 @@ protected:
     WebCore::IntRect m_initialFrame;
     WebCore::IntRect m_finalFrame;
     WebCore::IntPoint m_scrollPosition;
-    float m_topContentInset { 0 };
     Ref<WebPage> m_page;
     RefPtr<WebCore::Element> m_element;
     WeakPtr<WebCore::Element, WebCore::WeakPtrImplWithEventTargetData> m_elementToRestore;

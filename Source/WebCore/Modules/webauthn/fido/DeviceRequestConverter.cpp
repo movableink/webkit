@@ -33,6 +33,7 @@
 #if ENABLE(WEB_AUTHN)
 
 #include "CBORWriter.h"
+#include "Pin.h"
 #include "PublicKeyCredentialCreationOptions.h"
 #include "PublicKeyCredentialRequestOptions.h"
 #include "PublicKeyCredentialRpEntity.h"
@@ -216,6 +217,33 @@ Vector<uint8_t> encodeGetAssertionRequestAsCBOR(const Vector<uint8_t>& hash, con
     ASSERT(serializedParam);
 
     Vector<uint8_t> cborRequest({ static_cast<uint8_t>(CtapRequestCommand::kAuthenticatorGetAssertion) });
+    cborRequest.appendVector(*serializedParam);
+    return cborRequest;
+}
+
+Vector<uint8_t> encodeBogusRequestForAuthenticatorSelection()
+{
+    CBORValue::MapValue cborMap;
+    cborMap[CBORValue(1)] = CBORValue(Vector<uint8_t>(0, 32));
+    CBORValue::MapValue rpMap;
+    rpMap.emplace(CBORValue(kEntityNameMapKey), CBORValue("notarealwebsite.com"));
+    rpMap.emplace(CBORValue(kEntityIdMapKey), CBORValue("notarealwebsite.com"));
+    cborMap[CBORValue(2)] = CBORValue(rpMap);
+
+    CBORValue::MapValue userMap;
+    userMap.emplace(CBORValue(kEntityNameMapKey), CBORValue("bogus"_s));
+    userMap.emplace(CBORValue(kEntityIdMapKey), CBORValue(Vector<uint8_t> { 0 }));
+    userMap.emplace(CBORValue(kDisplayNameMapKey), CBORValue("bogus"_s));
+
+    cborMap[CBORValue(3)] = CBORValue(userMap);
+    cborMap[CBORValue(4)] = convertParametersToCBOR({ { PublicKeyCredentialType::PublicKey, COSE::ES256 } });
+    cborMap[CBORValue(8)] = CBORValue(Vector<uint8_t> { });
+    cborMap[CBORValue(9)] = CBORValue(pin::kProtocolVersion);
+
+    auto serializedParam = CBORWriter::write(CBORValue(WTFMove(cborMap)));
+    ASSERT(serializedParam);
+
+    Vector<uint8_t> cborRequest({ static_cast<uint8_t>(CtapRequestCommand::kAuthenticatorMakeCredential) });
     cborRequest.appendVector(*serializedParam);
     return cborRequest;
 }

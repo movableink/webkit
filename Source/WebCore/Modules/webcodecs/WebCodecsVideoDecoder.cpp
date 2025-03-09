@@ -31,8 +31,6 @@
 #include "CSSStyleImageValue.h"
 #include "ContextDestructionObserverInlines.h"
 #include "DOMException.h"
-#include "Event.h"
-#include "EventNames.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLVideoElement.h"
@@ -42,16 +40,15 @@
 #include "OffscreenCanvas.h"
 #include "SVGImageElement.h"
 #include "ScriptExecutionContext.h"
-#include <variant>
+#include "WebCodecsControlMessage.h"
 #include "WebCodecsEncodedVideoChunk.h"
 #include "WebCodecsErrorCallback.h"
 #include "WebCodecsUtilities.h"
 #include "WebCodecsVideoFrame.h"
 #include "WebCodecsVideoFrameOutputCallback.h"
+#include <variant>
 #include <wtf/ASCIICType.h>
 #include <wtf/TZoneMallocInlines.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -65,7 +62,7 @@ Ref<WebCodecsVideoDecoder> WebCodecsVideoDecoder::create(ScriptExecutionContext&
 }
 
 WebCodecsVideoDecoder::WebCodecsVideoDecoder(ScriptExecutionContext& context, Init&& init)
-    : ActiveDOMObject(&context)
+    : WebCodecsBase(context)
     , m_output(init.output.releaseNonNull())
     , m_error(init.error.releaseNonNull())
 {
@@ -86,41 +83,48 @@ static bool isSupportedDecoderCodec(const String& codec, const Settings::Values&
 
 static bool isValidDecoderConfig(const WebCodecsVideoDecoderConfig& config)
 {
+    // https://w3c.github.io/webcodecs/#valid-videodecoderconfig
+    // 1. If codec is empty after stripping leading and trailing ASCII whitespace, return false.
     if (StringView(config.codec).trim(isASCIIWhitespace<UChar>).isEmpty())
         return false;
 
-    if (config.description && std::visit([](auto& view) { return view->isDetached(); }, *config.description))
-        return false;
-
+    // 2. If one of codedWidth or codedHeight is provided but the other isn’t, return false.
     if (!!config.codedWidth != !!config.codedHeight)
         return false;
+
+    // 3. If codedWidth = 0 or codedHeight = 0, return false.
     if (config.codedWidth && !*config.codedWidth)
         return false;
     if (config.codedHeight && !*config.codedHeight)
         return false;
 
+    // 4. If one of displayAspectWidth or displayAspectHeight is provided but the other isn’t, return false.
     if (!!config.displayAspectWidth != !!config.displayAspectHeight)
         return false;
+
+    // 5. If displayAspectWidth = 0 or displayAspectHeight = 0, return false.
     if (config.displayAspectWidth && !*config.displayAspectWidth)
         return false;
     if (config.displayAspectHeight && !*config.displayAspectHeight)
         return false;
 
+    // 6. If description is [detached], return false.
+    if (config.description && std::visit([](auto& view) { return view->isDetached(); }, *config.description))
+        return false;
+
+    // 7. Return true.
     return true;
 }
 
 static VideoDecoder::Config createVideoDecoderConfig(const WebCodecsVideoDecoderConfig& config)
 {
-    std::span<const uint8_t> description;
+    Vector<uint8_t> description;
     if (config.description) {
-        auto* data = std::visit([](auto& buffer) -> const uint8_t* {
-            return buffer ? static_cast<const uint8_t*>(buffer->data()) : nullptr;
+        auto data = std::visit([](auto& buffer) {
+            return buffer ? buffer->span() : std::span<const uint8_t> { };
         }, *config.description);
-        auto length = std::visit([](auto& buffer) -> size_t {
-            return buffer ? buffer->byteLength() : 0;
-        }, *config.description);
-        if (length)
-            description = { data, length };
+        if (!data.empty())
+            description = data;
     }
 
     return {
@@ -137,29 +141,29 @@ ExceptionOr<void> WebCodecsVideoDecoder::configure(ScriptExecutionContext& conte
     if (!isValidDecoderConfig(config))
         return Exception { ExceptionCode::TypeError, "Config is not valid"_s };
 
-    if (m_state == WebCodecsCodecState::Closed || !scriptExecutionContext())
+    if (state() == WebCodecsCodecState::Closed || !scriptExecutionContext())
         return Exception { ExceptionCode::InvalidStateError, "VideoDecoder is closed"_s };
 
-    m_state = WebCodecsCodecState::Configured;
+    setState(WebCodecsCodecState::Configured);
     m_isKeyChunkRequired = true;
 
     bool isSupportedCodec = isSupportedDecoderCodec(config.codec, context.settingsValues());
-    queueControlMessageAndProcess({ *this, [this, config = WTFMove(config), isSupportedCodec]() mutable {
+    queueControlMessageAndProcess({ *this, [this, codec = config.codec, config = createVideoDecoderConfig(config), isSupportedCodec]() mutable {
         RefPtr context = scriptExecutionContext();
 
         auto identifier = context->identifier();
 
-        m_isMessageQueueBlocked = true;
+        blockControlMessageQueue();
         if (!isSupportedCodec) {
             postTaskToCodec<WebCodecsVideoDecoder>(identifier, *this, [] (auto& decoder) {
                 decoder.closeDecoder(Exception { ExceptionCode::NotSupportedError, "Codec is not supported"_s });
             });
-            return;
+            return WebCodecsControlMessageOutcome::Processed;
         }
 
-        Ref createDecoderPromise = VideoDecoder::create(config.codec, createVideoDecoderConfig(config), [identifier, weakThis = ThreadSafeWeakPtr { *this }, decoderCount = ++m_decoderCount] (auto&& result) {
+        Ref createDecoderPromise = VideoDecoder::create(codec, WTFMove(config), [identifier, weakThis = ThreadSafeWeakPtr { *this }, decoderCount = ++m_decoderCount] (auto&& result) {
             postTaskToCodec<WebCodecsVideoDecoder>(identifier, weakThis, [result = WTFMove(result), decoderCount] (auto& decoder) mutable {
-                if (decoder.m_state != WebCodecsCodecState::Configured || decoder.m_decoderCount != decoderCount)
+                if (decoder.state() != WebCodecsCodecState::Configured || decoder.m_decoderCount != decoderCount)
                     return;
 
                 if (!result) {
@@ -168,12 +172,14 @@ ExceptionOr<void> WebCodecsVideoDecoder::configure(ScriptExecutionContext& conte
                 }
 
                 auto decodedResult = WTFMove(result).value();
-                WebCodecsVideoFrame::BufferInit init;
-                init.codedWidth = decodedResult.frame->presentationSize().width();
-                init.codedHeight = decodedResult.frame->presentationSize().height();
-                init.timestamp = decodedResult.timestamp;
-                init.duration = decodedResult.duration;
-                init.colorSpace = decodedResult.frame->colorSpace();
+                WebCodecsVideoFrame::BufferInit init {
+                    .format = convertVideoFramePixelFormat(decodedResult.frame->pixelFormat()),
+                    .codedWidth = static_cast<size_t>(decodedResult.frame->presentationSize().width()),
+                    .codedHeight = static_cast<size_t>(decodedResult.frame->presentationSize().height()),
+                    .timestamp = decodedResult.timestamp,
+                    .duration = decodedResult.duration,
+                    .colorSpace = decodedResult.frame->colorSpace()
+                };
 
                 auto videoFrame = WebCodecsVideoFrame::create(*decoder.scriptExecutionContext(), WTFMove(decodedResult.frame), WTFMove(init));
                 decoder.m_output->handleEvent(WTFMove(videoFrame));
@@ -189,16 +195,17 @@ ExceptionOr<void> WebCodecsVideoDecoder::configure(ScriptExecutionContext& conte
                 return;
             }
             protectedThis->setInternalDecoder(WTFMove(*result));
-            protectedThis->m_isMessageQueueBlocked = false;
-            protectedThis->processControlMessageQueue();
+            protectedThis->unblockControlMessageQueue();
         });
+
+        return WebCodecsControlMessageOutcome::Processed;
     } });
     return { };
 }
 
 ExceptionOr<void> WebCodecsVideoDecoder::decode(Ref<WebCodecsEncodedVideoChunk>&& chunk)
 {
-    if (m_state != WebCodecsCodecState::Configured)
+    if (state() != WebCodecsCodecState::Configured)
         return Exception { ExceptionCode::InvalidStateError, "VideoDecoder is not configured"_s };
 
     if (m_isKeyChunkRequired) {
@@ -207,26 +214,28 @@ ExceptionOr<void> WebCodecsVideoDecoder::decode(Ref<WebCodecsEncodedVideoChunk>&
         m_isKeyChunkRequired = false;
     }
 
-    ++m_decodeQueueSize;
-    queueControlMessageAndProcess({ *this, [this, chunk = WTFMove(chunk)]() mutable {
-        --m_decodeQueueSize;
-        scheduleDequeueEvent();
-
+    queueCodecControlMessageAndProcess({ *this, [this, chunk = WTFMove(chunk)]() mutable {
+        incrementCodecOperationCount();
         Ref internalDecoder = *m_internalDecoder;
         protectedScriptExecutionContext()->enqueueTaskWhenSettled(internalDecoder->decode({ chunk->span(), chunk->type() == WebCodecsEncodedVideoChunkType::Key, chunk->timestamp(), chunk->duration() }), TaskSource::MediaElement, [weakThis = ThreadSafeWeakPtr { * this }, pendingActivity = makePendingActivity(*this)] (auto&& result) {
             RefPtr protectedThis = weakThis.get();
-            if (!protectedThis || !!result)
+            if (!protectedThis)
                 return;
 
-            protectedThis->closeDecoder(Exception { ExceptionCode::EncodingError, WTFMove(result.error()) });
+            if (!result) {
+                protectedThis->closeDecoder(Exception { ExceptionCode::EncodingError, WTFMove(result.error()) });
+                return;
+            }
+            protectedThis->decrementCodecOperationCountAndMaybeProcessControlMessageQueue();
         });
+        return WebCodecsControlMessageOutcome::Processed;
     } });
     return { };
 }
 
 ExceptionOr<void> WebCodecsVideoDecoder::flush(Ref<DeferredPromise>&& promise)
 {
-    if (m_state != WebCodecsCodecState::Configured)
+    if (state() != WebCodecsCodecState::Configured)
         return Exception { ExceptionCode::InvalidStateError, "VideoDecoder is not configured"_s };
 
     m_isKeyChunkRequired = true;
@@ -238,6 +247,7 @@ ExceptionOr<void> WebCodecsVideoDecoder::flush(Ref<DeferredPromise>&& promise)
             if (RefPtr protectedThis = weakThis.get())
                 protectedThis->m_pendingFlushPromises.removeFirstMatching([&](auto& flushPromise) { return promise.ptr() == flushPromise.ptr(); });
         });
+        return WebCodecsControlMessageOutcome::Processed;
     } });
     return { };
 }
@@ -275,7 +285,7 @@ ExceptionOr<void> WebCodecsVideoDecoder::closeDecoder(Exception&& exception)
     auto result = resetDecoder(exception);
     if (result.hasException())
         return result;
-    m_state = WebCodecsCodecState::Closed;
+    setState(WebCodecsCodecState::Closed);
     m_internalDecoder = nullptr;
     if (exception.code() != ExceptionCode::AbortError)
         m_error->handleEvent(DOMException::create(WTFMove(exception)));
@@ -285,17 +295,13 @@ ExceptionOr<void> WebCodecsVideoDecoder::closeDecoder(Exception&& exception)
 
 ExceptionOr<void> WebCodecsVideoDecoder::resetDecoder(const Exception& exception)
 {
-    if (m_state == WebCodecsCodecState::Closed)
+    if (state() == WebCodecsCodecState::Closed)
         return Exception { ExceptionCode::InvalidStateError, "VideoDecoder is closed"_s };
 
-    m_state = WebCodecsCodecState::Unconfigured;
+    setState(WebCodecsCodecState::Unconfigured);
     if (RefPtr internalDecoder = std::exchange(m_internalDecoder, { }))
         internalDecoder->reset();
-    m_controlMessageQueue.clear();
-    if (m_decodeQueueSize) {
-        m_decodeQueueSize = 0;
-        scheduleDequeueEvent();
-    }
+    clearControlMessageQueueAndMaybeScheduleDequeueEvent();
 
     auto promises = std::exchange(m_pendingFlushPromises, { });
     for (auto& promise : promises)
@@ -304,42 +310,9 @@ ExceptionOr<void> WebCodecsVideoDecoder::resetDecoder(const Exception& exception
     return { };
 }
 
-void WebCodecsVideoDecoder::scheduleDequeueEvent()
-{
-    if (m_dequeueEventScheduled)
-        return;
-
-    m_dequeueEventScheduled = true;
-    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this]() mutable {
-        dispatchEvent(Event::create(eventNames().dequeueEvent, Event::CanBubble::No, Event::IsCancelable::No));
-        m_dequeueEventScheduled = false;
-    });
-}
-
 void WebCodecsVideoDecoder::setInternalDecoder(Ref<VideoDecoder>&& internalDecoder)
 {
     m_internalDecoder = WTFMove(internalDecoder);
-}
-
-void WebCodecsVideoDecoder::queueControlMessageAndProcess(WebCodecsControlMessage<WebCodecsVideoDecoder>&& message)
-{
-    if (m_isMessageQueueBlocked) {
-        m_controlMessageQueue.append(WTFMove(message));
-        return;
-    }
-    if (m_controlMessageQueue.isEmpty()) {
-        message();
-        return;
-    }
-
-    m_controlMessageQueue.append(WTFMove(message));
-    processControlMessageQueue();
-}
-
-void WebCodecsVideoDecoder::processControlMessageQueue()
-{
-    while (!m_isMessageQueueBlocked && !m_controlMessageQueue.isEmpty())
-        m_controlMessageQueue.takeFirst()();
 }
 
 void WebCore::WebCodecsVideoDecoder::suspend(ReasonForSuspension)
@@ -348,19 +321,12 @@ void WebCore::WebCodecsVideoDecoder::suspend(ReasonForSuspension)
 
 void WebCodecsVideoDecoder::stop()
 {
-    m_state = WebCodecsCodecState::Closed;
+    setState(WebCodecsCodecState::Closed);
     m_internalDecoder = nullptr;
-    m_controlMessageQueue.clear();
+    clearControlMessageQueue();
     m_pendingFlushPromises.clear();
 }
 
-bool WebCodecsVideoDecoder::virtualHasPendingActivity() const
-{
-    return m_state == WebCodecsCodecState::Configured && (m_decodeQueueSize || m_isMessageQueueBlocked);
-}
-
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_CODECS)

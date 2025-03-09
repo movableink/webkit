@@ -1,5 +1,3 @@
 
-Harness Error (TIMEOUT), message = null
-
-TIMEOUT Testing descendent resolution with scopes Test timed out
+PASS Testing descendent resolution with scopes
 

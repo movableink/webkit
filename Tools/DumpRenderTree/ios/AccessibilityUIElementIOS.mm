@@ -149,6 +149,13 @@ static JSRetainPtr<JSStringRef> concatenateAttributeAndValue(NSString *attribute
     return adopt(JSStringCreateWithCharacters(buffer.data(), buffer.size()));
 }
 
+bool AccessibilityUIElement::isEqual(AccessibilityUIElement* otherElement)
+{
+    if (!otherElement)
+        return false;
+    return platformUIElement() == otherElement->platformUIElement();
+}
+
 #pragma mark iPhone Attributes
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::identifier()
@@ -476,6 +483,9 @@ AccessibilityTextMarkerRange AccessibilityUIElement::misspellingTextMarkerRange(
 
 AccessibilityTextMarkerRange AccessibilityUIElement::textMarkerRangeForElement(AccessibilityUIElement* element)
 {
+    if (!element)
+        return nullptr;
+
     id textMarkerRange = [element->platformUIElement() textMarkerRange];
     return AccessibilityTextMarkerRange(textMarkerRange);
 }
@@ -948,7 +958,7 @@ int AccessibilityUIElement::hierarchicalLevel() const
     return 0;
 }
 
-bool AccessibilityUIElement::ariaIsGrabbed() const
+bool AccessibilityUIElement::isGrabbed() const
 {
     return false;
 }

@@ -49,7 +49,8 @@ public:
 
     void setLAContext(LAContext *context) { m_response->setLAContext(context); }
 
-    WebCore::AuthenticatorAssertionResponse* response() { return m_response.ptr(); }
+    WebCore::AuthenticatorAssertionResponse& response() { return m_response.get(); }
+    Ref<WebCore::AuthenticatorAssertionResponse> protectedResponse() { return m_response; }
 
 private:
     WebAuthenticationAssertionResponse(Ref<WebCore::AuthenticatorAssertionResponse>&&);
@@ -58,5 +59,7 @@ private:
 };
 
 } // namespace API
+
+SPECIALIZE_TYPE_TRAITS_API_OBJECT(WebAuthenticationAssertionResponse);
 
 #endif // ENABLE(WEB_AUTHN)

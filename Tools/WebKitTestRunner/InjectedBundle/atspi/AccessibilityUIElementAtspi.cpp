@@ -563,6 +563,8 @@ bool AccessibilityUIElement::boolAttributeValue(JSStringRef attribute)
         return checkElementState(m_element.get(), WebCore::Atspi::State::Modal);
     if (attributeName == "AXSupportsAutoCompletion"_s)
         return checkElementState(m_element.get(), WebCore::Atspi::State::SupportsAutocompletion);
+    if (attributeName == "AXVisited"_s)
+        return checkElementState(m_element.get(), WebCore::Atspi::State::Visited);
     if (attributeName == "AXInterfaceTable"_s)
         return m_element->interfaces().contains(WebCore::AccessibilityObjectAtspi::Interface::Table);
     if (attributeName == "AXInterfaceTableCell"_s)
@@ -1163,7 +1165,7 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::speakAs()
     return JSStringCreateWithCharacters(nullptr, 0);
 }
 
-bool AccessibilityUIElement::ariaIsGrabbed() const
+bool AccessibilityUIElement::isGrabbed() const
 {
     m_element->updateBackingStore();
     return m_element->attributes().get("grabbed"_s) == "true"_s;

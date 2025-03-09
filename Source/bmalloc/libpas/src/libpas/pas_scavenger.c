@@ -44,6 +44,7 @@
 #include "pas_status_reporter.h"
 #include "pas_thread_local_cache.h"
 #include "pas_utility_heap.h"
+#include "pas_utils.h"
 #include <stdio.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -108,6 +109,7 @@ static pas_scavenger_data* ensure_data_instance(pas_lock_hold_mode heap_lock_hol
         
         pthread_mutex_init(&instance->lock, NULL);
         pthread_cond_init(&instance->cond, NULL);
+        pthread_mutex_init(&instance->foreign_work.lock, NULL);
 
         pas_fence();
         
@@ -139,12 +141,12 @@ static void timed_wait(pthread_cond_t* cond, pthread_mutex_t* mutex,
         (uint64_t)(1000. * 1000. * 1000.));
     
     if (verbose) {
-        printf("Doing timed wait with target wake up at %.2lf.\n",
+        pas_log("Doing timed wait with target wake up at %.2lf.\n",
                absolute_timeout_in_milliseconds);
     }
     pthread_cond_timedwait(cond, mutex, &time_to_wake_up);
     if (verbose)
-        printf("Woke up from timed wait at %.2lf.\n", get_time_in_milliseconds());
+        pas_log("Woke up from timed wait at %.2lf.\n", get_time_in_milliseconds());
 }
 
 static bool handle_expendable_memory(pas_expendable_memory_scavenge_kind kind)
@@ -202,6 +204,7 @@ static void* scavenger_thread_main(void* arg)
         uint64_t epoch;
         uint64_t delta;
         uint64_t max_epoch;
+        int installed_foreign_work_descriptors;
         bool did_overflow;
 #if PAS_OS(DARWIN)
         qos_class_t current_qos_class;
@@ -219,7 +222,7 @@ static void* scavenger_thread_main(void* arg)
         should_go_again = false;
         
         if (verbose)
-            printf("Scavenger is running.\n");
+            pas_log("Scavenger is running.\n");
 
 #if PAS_LOCAL_ALLOCATOR_MEASURE_REFILL_EFFICIENCY
         pas_local_allocator_refill_efficiency_lock_lock();
@@ -239,7 +242,7 @@ static void* scavenger_thread_main(void* arg)
         thread_local_cache_decommit_action = pas_thread_local_cache_decommit_no_action;
         if ((pas_scavenger_tick_count % PAS_THREAD_LOCAL_CACHE_DECOMMIT_PERIOD_COUNT) == 0) {
             if (verbose)
-                printf("Attempt to decommit unused TLC\n");
+                pas_log("Attempt to decommit unused TLC\n");
             thread_local_cache_decommit_action = pas_thread_local_cache_decommit_if_possible_action;
         }
         should_go_again |=
@@ -286,13 +289,24 @@ static void* scavenger_thread_main(void* arg)
             break;
         } }
 
+
+        installed_foreign_work_descriptors = data->foreign_work.next_open_descriptor;
+        PAS_ASSERT(installed_foreign_work_descriptors <= PAS_SCAVENGER_MAX_FOREIGN_WORK_DESCRIPTORS);
+        pas_fence();
+        for (int i = 0; i < installed_foreign_work_descriptors; i++) {
+            void* userdata = data->foreign_work.descriptors[i].userdata;
+            uint32_t requested_period_ticks = 1 << data->foreign_work.descriptors[i].period_log2_ticks;
+            if (!requested_period_ticks || pas_scavenger_tick_count % requested_period_ticks == 0)
+                should_go_again |= data->foreign_work.descriptors[i].func(userdata);
+        }
+
         if (verbose) {
             pas_log("%d: %.0lf: scavenger freed %zu bytes (%s, should_go_again = %s).\n",
                     getpid(), get_time_in_milliseconds(), scavenge_result.total_bytes,
                     pas_page_sharing_pool_take_result_get_string(scavenge_result.take_result),
                     should_go_again ? "yes" : "no");
         }
-        
+
         completion_callback = pas_scavenger_completion_callback;
         if (completion_callback)
             completion_callback();
@@ -307,7 +321,7 @@ static void* scavenger_thread_main(void* arg)
         time_in_milliseconds = get_time_in_milliseconds();
         
         if (verbose)
-            printf("Finished a round of scavenging at %.2lf.\n", time_in_milliseconds);
+            pas_log("Finished a round of scavenging at %.2lf.\n", time_in_milliseconds);
         
         /* By default we need to sleep for a short while and then try again. */
         absolute_timeout_in_milliseconds_for_period_sleep =
@@ -315,7 +329,7 @@ static void* scavenger_thread_main(void* arg)
 
         if (should_go_again) {
             if (verbose)
-                printf("Waiting for a period.\n");
+                pas_log("Waiting for a period.\n");
 
             /* This field is accessed a lot by other threads, so don't write to it if we don't
                have to. */
@@ -326,14 +340,14 @@ static void* scavenger_thread_main(void* arg)
             
             if (pas_scavenger_current_state == pas_scavenger_state_polling) {
                 if (verbose)
-                    printf("Will consider deep sleep.\n");
+                    pas_log("Will consider deep sleep.\n");
                 
                 /* do one more round of polling but this time indicating that it's the last
                    chance. */
                 pas_scavenger_current_state = pas_scavenger_state_deep_sleep;
             } else {
                 if (verbose)
-                    printf("Considering deep sleep.\n");
+                    pas_log("Considering deep sleep.\n");
                 
                 PAS_ASSERT(pas_scavenger_current_state == pas_scavenger_state_deep_sleep);
                 
@@ -378,13 +392,43 @@ static void* scavenger_thread_main(void* arg)
                 shut_down_callback();
             
             if (verbose)
-                printf("Killing the scavenger.\n");
+                pas_log("Killing the scavenger.\n");
             return NULL;
         }
     }
 
     PAS_ASSERT(!"Should not be reached");
     return NULL;
+}
+
+bool pas_scavenger_try_install_foreign_work_callback(
+    pas_scavenger_foreign_work_callback callback,
+    uint32_t period_log2_ms,
+    void* userdata)
+{
+    pas_scavenger_data* data;
+
+    PAS_ASSERT(callback);
+
+    data = ensure_data_instance(pas_lock_is_not_held);
+    pthread_mutex_lock(&data->foreign_work.lock);
+
+    int slot = data->foreign_work.next_open_descriptor;
+    if (slot >= PAS_SCAVENGER_MAX_FOREIGN_WORK_DESCRIPTORS)
+        return false;
+
+    double requested_period_ms = pow(2.0, period_log2_ms);
+    uint32_t requested_ticks = (uint32_t)(requested_period_ms / pas_scavenger_period_in_milliseconds);
+
+    data->foreign_work.descriptors[slot].period_log2_ticks = pas_log2(requested_ticks);
+    data->foreign_work.descriptors[slot].func = callback;
+    data->foreign_work.descriptors[slot].userdata = userdata;
+    pas_store_store_fence();
+    data->foreign_work.next_open_descriptor = slot + 1;
+
+    pthread_mutex_unlock(&data->foreign_work.lock);
+
+    return true;
 }
 
 bool pas_scavenger_did_create_eligible(void)
@@ -430,7 +474,7 @@ void pas_scavenger_notify_eligibility_if_needed(void)
         return;
     
     if (verbose)
-        printf("It's not polling so need to do something.\n");
+        pas_log("It's not polling so need to do something.\n");
     
     data = ensure_data_instance(pas_lock_is_not_held);
     pthread_mutex_lock(&data->lock);

@@ -52,6 +52,8 @@ private:
     void logDiagnosticMessageWithValueDictionary(WebPageProxy*, const String& message, const String& description, Ref<API::Dictionary>&&) override;
     void logDiagnosticMessageWithDomain(WebPageProxy*, const String& message, WebCore::DiagnosticLoggingDomain) override;
 
+    bool isWebKitDiagnosticLoggingClient() const final { return true; }
+
     WKWebView *m_webView;
     WeakObjCPtr<id <_WKDiagnosticLoggingDelegate>> m_delegate;
 
@@ -66,3 +68,7 @@ private:
 };
 
 } // WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::DiagnosticLoggingClient) \
+    static bool isType(const API::DiagnosticLoggingClient& client) { return client.isWebKitDiagnosticLoggingClient(); } \
+SPECIALIZE_TYPE_TRAITS_END()

@@ -98,7 +98,7 @@ void WaveShaperProcessor::process(const AudioBus* source, AudioBus* destination,
 
     // For each channel of our input, process using the corresponding WaveShaperDSPKernel into the output channel.
     for (size_t i = 0; i < m_kernels.size(); ++i)
-        static_cast<WaveShaperDSPKernel&>(*m_kernels[i]).process(source->channel(i)->data(), destination->channel(i)->mutableData(), framesToProcess);
+        static_cast<WaveShaperDSPKernel&>(*m_kernels[i]).process(source->channel(i)->span().first(framesToProcess), destination->channel(i)->mutableSpan());
 }
 
 } // namespace WebCore

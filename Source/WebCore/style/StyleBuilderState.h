@@ -28,6 +28,8 @@
 #include "CSSToLengthConversionData.h"
 #include "CSSToStyleMap.h"
 #include "CascadeLevel.h"
+#include "PositionArea.h"
+#include "PositionTryFallback.h"
 #include "PropertyCascade.h"
 #include "RuleSet.h"
 #include "SelectorChecker.h"
@@ -41,6 +43,10 @@ class FontCascadeDescription;
 class RenderStyle;
 class StyleImage;
 class StyleResolver;
+
+namespace Calculation {
+class RandomKeyMap;
+}
 
 namespace CSS {
 struct AppleColorFilterProperty;
@@ -57,11 +63,17 @@ void maybeUpdateFontForLetterSpacing(BuilderState&, CSSValue&);
 
 enum class ApplyValueType : uint8_t { Value, Initial, Inherit };
 
+struct BuilderPositionTryFallback {
+    RefPtr<const StyleProperties> properties;
+    Vector<PositionTryFallback::Tactic> tactics;
+};
+
 struct BuilderContext {
     Ref<const Document> document;
     const RenderStyle& parentStyle;
     const RenderStyle* rootElementStyle = nullptr;
     RefPtr<const Element> element = nullptr;
+    std::optional<BuilderPositionTryFallback> positionTryFallback { };
 };
 
 class BuilderState {
@@ -110,7 +122,7 @@ public:
     void registerContentAttribute(const AtomString& attributeLocalName);
 
     const CSSToLengthConversionData& cssToLengthConversionData() const { return m_cssToLengthConversionData; }
-    const CSSToStyleMap& styleMap() const { return m_styleMap; }
+    CSSToStyleMap& styleMap() { return m_styleMap; }
 
     void setIsBuildingKeyframeStyle() { m_isBuildingKeyframeStyle = true; }
 
@@ -123,6 +135,10 @@ public:
 
     bool isCurrentPropertyInvalidAtComputedValueTime() const;
     void setCurrentPropertyInvalidAtComputedValueTime();
+
+    Ref<Calculation::RandomKeyMap> randomKeyMap(bool perElement) const;
+
+    const std::optional<BuilderPositionTryFallback>& positionTryFallback() const { return m_context.positionTryFallback; }
 
 private:
     // See the comment in maybeUpdateFontForLetterSpacing() about why this needs to be a friend.
@@ -148,11 +164,11 @@ private:
 
     const CSSToLengthConversionData m_cssToLengthConversionData;
 
-    HashSet<AtomString> m_appliedCustomProperties;
-    HashSet<AtomString> m_inProgressCustomProperties;
-    HashSet<AtomString> m_inCycleCustomProperties;
-    WTF::BitSet<numCSSProperties> m_inProgressProperties;
-    WTF::BitSet<numCSSProperties> m_invalidAtComputedValueTimeProperties;
+    UncheckedKeyHashSet<AtomString> m_appliedCustomProperties;
+    UncheckedKeyHashSet<AtomString> m_inProgressCustomProperties;
+    UncheckedKeyHashSet<AtomString> m_inCycleCustomProperties;
+    WTF::BitSet<cssPropertyIDEnumValueCount> m_inProgressProperties;
+    WTF::BitSet<cssPropertyIDEnumValueCount> m_invalidAtComputedValueTimeProperties;
 
     const PropertyCascade::Property* m_currentProperty { nullptr };
     SelectorChecker::LinkMatchMask m_linkMatch { };

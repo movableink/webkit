@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@
 #include "WebExtensionMatchPattern.h"
 #include <WebCore/FloatSize.h>
 #include <WebCore/Icon.h>
+#include <WebCore/UserContentTypes.h>
 #include <WebCore/UserStyleSheetTypes.h>
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
@@ -61,7 +62,7 @@ class WebExtension : public API::ObjectImpl<API::Object::Type::WebExtension>, pu
 public:
     using IconCacheEntry = std::variant<RefPtr<WebCore::Icon>, Vector<double>>;
     using IconsCache = HashMap<String, IconCacheEntry>;
-    using Resources = HashMap<String, Ref<API::Data>>;
+    using Resources = HashMap<String, std::variant<String, Ref<API::Data>>>;
 
     template<typename... Args>
     static Ref<WebExtension> create(Args&&... args)
@@ -76,7 +77,7 @@ public:
 
     explicit WebExtension(Resources&& = { });
 
-    ~WebExtension() { }
+    ~WebExtension();
 
     enum class CacheResult : bool { No, Yes };
     enum class SuppressNotFoundErrors : bool { No, Yes };
@@ -168,11 +169,11 @@ public:
         MatchPatternSet includeMatchPatterns;
         MatchPatternSet excludeMatchPatterns;
 
-        InjectionTime injectionTime = InjectionTime::DocumentIdle;
+        InjectionTime injectionTime { InjectionTime::DocumentIdle };
+        WebCore::UserContentMatchParentFrame matchParentFrame { WebCore::UserContentMatchParentFrame::Never };
 
         String identifier { ""_s };
 
-        bool matchesAboutBlank { false };
         bool injectsIntoAllFrames { false };
         WebExtensionContentWorldType contentWorldType { WebExtensionContentWorldType::ContentScript };
         WebCore::UserStyleLevel styleLevel { WebCore::UserStyleLevel::Author };
@@ -276,17 +277,17 @@ public:
     const String& sidebarTitle();
 #endif
 
-    RefPtr<WebCore::Icon> iconForPath(const String&, RefPtr<API::Error>&, WebCore::FloatSize sizeForResizing = { });
+    RefPtr<WebCore::Icon> iconForPath(const String&, RefPtr<API::Error>&, WebCore::FloatSize sizeForResizing = { }, std::optional<double> displayScale = std::nullopt);
 
     size_t bestIconSize(const JSON::Object&, size_t idealPixelSize);
     String pathForBestImage(const JSON::Object&, size_t idealPixelSize);
 
-    RefPtr<WebCore::Icon> bestIcon(RefPtr<JSON::Object>, WebCore::FloatSize idealSize, const Function<void(Ref<API::Error>)>&);
+    RefPtr<WebCore::Icon> bestIcon(RefPtr<JSON::Object>, WebCore::FloatSize idealSize, NOESCAPE const Function<void(Ref<API::Error>)>&);
     RefPtr<WebCore::Icon> bestIconForManifestKey(const JSON::Object&, const String& manifestKey, WebCore::FloatSize idealSize, IconsCache& cacheLocation, Error, const String& customLocalizedDescription);
 
 #if ENABLE(WK_WEB_EXTENSIONS_ICON_VARIANTS)
     RefPtr<JSON::Object> bestIconVariantJSONObject(RefPtr<JSON::Array>, size_t idealPixelSize, ColorScheme);
-    RefPtr<WebCore::Icon> bestIconVariant(RefPtr<JSON::Array>, WebCore::FloatSize idealSize, const Function<void(Ref<API::Error>)>&);
+    RefPtr<WebCore::Icon> bestIconVariant(RefPtr<JSON::Array>, WebCore::FloatSize idealSize, NOESCAPE const Function<void(Ref<API::Error>)>&);
     RefPtr<WebCore::Icon> bestIconVariantForManifestKey(const JSON::Object&, const String& manifestKey, WebCore::FloatSize idealSize, IconsCache& cacheLocation, Error, const String& customLocalizedDescription);
 #endif
 
@@ -352,6 +353,8 @@ public:
 #endif
 
 private:
+    static String processFileAndExtractZipArchive(const String&);
+
     bool parseManifest(StringView);
 
     void parseWebAccessibleResourcesVersion3();
@@ -398,6 +401,7 @@ private:
 #endif
 
     URL m_resourceBaseURL;
+    bool m_resourcesAreTemporary { false };
     Ref<const JSON::Value> m_manifestJSON;
     Resources m_resources;
 

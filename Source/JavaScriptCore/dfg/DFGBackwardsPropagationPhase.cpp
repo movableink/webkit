@@ -334,6 +334,7 @@ private:
             break;
         }
             
+        case StringAt:
         case StringCharAt:
         case StringCharCodeAt:
         case StringCodePointAt: {
@@ -527,7 +528,9 @@ private:
             
         case ToString:
         case CallStringConstructor: {
-            node->child1()->mergeFlags(NodeBytecodeUsesAsNumber | NodeBytecodeUsesAsOther | NodeBytecodeNeedsNaNOrInfinity);
+            if (typeFilterFor(node->child1().useKind()) & SpecOther)
+                node->child1()->mergeFlags(NodeBytecodeUsesAsOther);
+            node->child1()->mergeFlags(NodeBytecodeUsesAsNumber | NodeBytecodeNeedsNaNOrInfinity);
             break;
         }
             
@@ -614,6 +617,7 @@ private:
             break;
 
         case DoubleRep:
+        case PurifyNaN:
             ASSERT(m_graph.afterFixup());
             // The result of the node is pure unboxed floating point values.
             node->child1()->mergeFlags(NodeBytecodeUsesAsNumber);

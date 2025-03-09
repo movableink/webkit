@@ -59,6 +59,8 @@
 #include "ExtensionCapabilityGrant.h"
 #endif
 
+#include "WebPageProxyMessages.h"
+
 namespace WebKit {
 
 static HashMap<IPC::Connection::UniqueID, WeakPtr<AuxiliaryProcessProxy>>& connectionToProcessMap()
@@ -87,6 +89,9 @@ AuxiliaryProcessProxy::AuxiliaryProcessProxy(ShouldTakeUIBackgroundAssertion sho
 
 AuxiliaryProcessProxy::~AuxiliaryProcessProxy()
 {
+    if (state() != State::Terminated)
+        platformStartConnectionTerminationWatchdog();
+
     protectedThrottler()->didDisconnectFromProcess();
 
     if (RefPtr connection = m_connection)
@@ -185,6 +190,9 @@ void AuxiliaryProcessProxy::terminate()
 {
     RELEASE_LOG(Process, "AuxiliaryProcessProxy::terminate: PID=%d", processID());
 
+    if (state() != State::Terminated)
+        platformStartConnectionTerminationWatchdog();
+
 #if PLATFORM(COCOA) && !USE(EXTENSIONKIT_PROCESS_TERMINATION)
     if (RefPtr connection = m_connection) {
         if (connection->kill())
@@ -276,7 +284,7 @@ bool AuxiliaryProcessProxy::sendMessage(UniqueRef<IPC::Encoder>&& encoder, Optio
     }
 
     if (asyncReplyHandler && asyncReplyHandler->completionHandler) {
-        RunLoop::protectedCurrent()->dispatch([completionHandler = WTFMove(asyncReplyHandler->completionHandler)]() mutable {
+        RunLoop::currentSingleton().dispatch([completionHandler = WTFMove(asyncReplyHandler->completionHandler)]() mutable {
             completionHandler(nullptr);
         });
     }
@@ -396,7 +404,7 @@ void AuxiliaryProcessProxy::wakeUpTemporarilyForIPC()
     // in increased memory usage. To avoid this, we allow the process to stay alive for 1 second after draining
     // its message queue.
     auto completionHandler = [activity = throttler().backgroundActivity("IPC sending due to large outgoing queue"_s)]() mutable {
-        RunLoop::main().dispatchAfter(1_s, [activity = WTFMove(activity)]() { });
+        RunLoop::protectedMain()->dispatchAfter(1_s, [activity = WTFMove(activity)]() { });
     };
     sendWithAsyncReply(Messages::AuxiliaryProcess::MainThreadPing(), WTFMove(completionHandler), 0, { }, ShouldStartProcessThrottlerActivity::No);
 }
@@ -413,8 +421,8 @@ void AuxiliaryProcessProxy::replyToPendingMessages()
 
 void AuxiliaryProcessProxy::shutDownProcess()
 {
-    auto scopeExit = WTF::makeScopeExit([&] {
-        protectedThrottler()->didDisconnectFromProcess();
+    auto scopeExit = WTF::makeScopeExit([protectedThis = Ref { *this }] {
+        protectedThis->protectedThrottler()->didDisconnectFromProcess();
     });
 
     switch (state()) {

@@ -42,12 +42,20 @@ inline float RenderElement::opacity() const { return style().opacity(); }
 inline FloatRect RenderElement::transformReferenceBoxRect() const { return transformReferenceBoxRect(style()); }
 inline FloatRect RenderElement::transformReferenceBoxRect(const RenderStyle& style) const { return referenceBoxRect(transformBoxToCSSBoxType(style.transformBox())); }
 
+#if HAVE(CORE_MATERIAL)
+inline bool RenderElement::hasAppleVisualEffect() const { return style().hasAppleVisualEffect(); }
+inline bool RenderElement::hasAppleVisualEffectRequiringBackdropFilter() const { return style().hasAppleVisualEffectRequiringBackdropFilter(); }
+#endif
+
 inline bool RenderElement::canContainAbsolutelyPositionedObjects() const
 {
     return isRenderView()
         || style().position() != PositionType::Static
         || (canEstablishContainingBlockWithTransform() && hasTransformRelatedProperty())
         || (hasBackdropFilter() && !isDocumentElementRenderer())
+#if HAVE(CORE_MATERIAL)
+        || (hasAppleVisualEffectRequiringBackdropFilter() && !isDocumentElementRenderer())
+#endif
         || (isRenderBlock() && style().willChange() && style().willChange()->createsContainingBlockForAbsolutelyPositioned(isDocumentElementRenderer()))
         || isRenderOrLegacyRenderSVGForeignObject()
         || shouldApplyLayoutContainment()
@@ -59,6 +67,9 @@ inline bool RenderElement::canContainFixedPositionObjects() const
     return isRenderView()
         || (canEstablishContainingBlockWithTransform() && hasTransformRelatedProperty())
         || (hasBackdropFilter() && !isDocumentElementRenderer())
+#if HAVE(CORE_MATERIAL)
+        || (hasAppleVisualEffectRequiringBackdropFilter() && !isDocumentElementRenderer())
+#endif
         || (isRenderBlock() && style().willChange() && style().willChange()->createsContainingBlockForOutOfFlowPositioned(isDocumentElementRenderer()))
         || isRenderOrLegacyRenderSVGForeignObject()
         || shouldApplyLayoutContainment()
@@ -67,7 +78,15 @@ inline bool RenderElement::canContainFixedPositionObjects() const
 
 inline bool RenderElement::createsGroupForStyle(const RenderStyle& style)
 {
-    return style.hasOpacity() || style.hasMask() || style.clipPath() || style.hasFilter() || style.hasBackdropFilter() || style.hasBlendMode();
+    return style.hasOpacity()
+        || style.hasMask()
+        || style.clipPath()
+        || style.hasFilter()
+        || style.hasBackdropFilter()
+#if HAVE(CORE_MATERIAL)
+        || style.hasAppleVisualEffect()
+#endif
+        || style.hasBlendMode();
 }
 
 inline bool RenderElement::shouldApplyAnyContainment() const

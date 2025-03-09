@@ -40,6 +40,7 @@
 #include "GraphicsContextCairo.h"
 #include "ImageBuffer.h"
 #include <type_traits>
+#include <wtf/ZippedRange.h>
 #include <wtf/text/TextStream.h>
 
 #if USE(THEME_ADWAITA)
@@ -515,7 +516,7 @@ void OperationRecorder::clearRect(const FloatRect& rect)
     append(createCommand<ClearRect>(rect));
 }
 
-void OperationRecorder::drawGlyphs(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode fontSmoothing)
+void OperationRecorder::drawGlyphs(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& point, FontSmoothingMode fontSmoothing)
 {
     struct DrawGlyphs final : PaintingOperation, OperationData<Cairo::FillSource, Cairo::StrokeSource, Cairo::ShadowState, FloatPoint, RefPtr<cairo_scaled_font_t>, float, Vector<cairo_glyph_t>, float, TextDrawingModeFlags, float, std::optional<GraphicsDropShadow>, FontSmoothingMode> {
         virtual ~DrawGlyphs() = default;
@@ -536,10 +537,10 @@ void OperationRecorder::drawGlyphs(const Font& font, const GlyphBufferGlyph* gly
         return;
 
     auto xOffset = point.x();
-    Vector<cairo_glyph_t> cairoGlyphs(numGlyphs);
+    Vector<cairo_glyph_t> cairoGlyphs(glyphs.size());
     {
         auto yOffset = point.y();
-        for (size_t i = 0; i < numGlyphs; ++i) {
+        for (size_t i = 0; i < glyphs.size(); ++i) {
             cairoGlyphs[i] = { glyphs[i], xOffset, yOffset };
             xOffset += advances[i].width();
         }
@@ -556,7 +557,7 @@ void OperationRecorder::drawGlyphs(const Font& font, const GlyphBufferGlyph* gly
 void OperationRecorder::drawDecomposedGlyphs(const Font& font, const DecomposedGlyphs& decomposedGlyphs)
 {
     auto positionedGlyphs = decomposedGlyphs.positionedGlyphs();
-    return drawGlyphs(font, positionedGlyphs.glyphs.data(), positionedGlyphs.advances.data(), positionedGlyphs.glyphs.size(), positionedGlyphs.localAnchor, positionedGlyphs.smoothingMode);
+    return drawGlyphs(font, positionedGlyphs.glyphs.span(), positionedGlyphs.advances.span(), positionedGlyphs.localAnchor, positionedGlyphs.smoothingMode);
 }
 
 void OperationRecorder::drawImageBuffer(ImageBuffer& buffer, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
@@ -700,9 +701,9 @@ void OperationRecorder::drawLine(const FloatPoint& point1, const FloatPoint& poi
     append(createCommand<DrawLine>(point1, point2, state.strokeStyle(), state.strokeBrush().color(), state.strokeThickness(), state.shouldAntialias()));
 }
 
-void OperationRecorder::drawLinesForText(const FloatPoint& point, float thickness, const DashArray& widths, bool printing, bool doubleUnderlines, StrokeStyle)
+void OperationRecorder::drawLinesForText(const FloatPoint& point, float thickness, std::span<const FloatSegment> lineSegments, bool printing, bool doubleUnderlines, StrokeStyle)
 {
-    struct DrawLinesForText final : PaintingOperation, OperationData<FloatPoint, float, DashArray, bool, bool, Color> {
+    struct DrawLinesForText final : PaintingOperation, OperationData<FloatPoint, float, Vector<FloatSegment>, bool, bool, Color> {
         virtual ~DrawLinesForText() = default;
 
         void execute(WebCore::GraphicsContextCairo& context) override
@@ -716,11 +717,12 @@ void OperationRecorder::drawLinesForText(const FloatPoint& point, float thicknes
         }
     };
 
-    if (widths.isEmpty())
+    if (lineSegments.empty())
         return;
 
     auto& state = this->state();
-    append(createCommand<DrawLinesForText>(point, thickness, widths, printing, doubleUnderlines, state.strokeBrush().color()));
+    Vector<FloatSegment> segmentVector { WTFMove(lineSegments) };
+    append(createCommand<DrawLinesForText>(point, thickness, WTFMove(segmentVector), printing, doubleUnderlines, state.strokeBrush().color()));
 }
 
 void OperationRecorder::drawDotsForDocumentMarker(const FloatRect& rect, DocumentMarkerLineStyle style)

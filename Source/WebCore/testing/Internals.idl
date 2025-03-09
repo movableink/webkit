@@ -206,6 +206,7 @@ enum AutoplayPolicy {
     boolean isVideoAndRequiresUserGestureForVideoRateChange;
     boolean isAudioAndRequiresUserGestureForAudioRateChange;
     boolean isVideoAndRequiresUserGestureForVideoDueToLowPowerMode;
+    boolean isVideoAndRequiresUserGestureForVideoDueToAggressiveThermalMitigation;
     boolean noUserGestureRequired;
     boolean requiresPlaybackAndIsNotPlaying;
     boolean hasEverNotifiedAboutPlaying;
@@ -337,16 +338,18 @@ enum AV1ConfigurationRange {
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
     JSGenerateToJSObject,
+    JSGenerateToNativeObject
 ] dictionary CookieData {
     DOMString name;
     DOMString value;
-    DOMString domain;
-    double expires;
-    boolean isHttpOnly;
-    boolean isSecure;
-    boolean isSession;
-    boolean isSameSiteLax;
-    boolean isSameSiteStrict;
+    DOMString domain = "";
+    DOMString path = "";
+    double? expires = null;
+    boolean isHttpOnly = false;
+    boolean isSecure = false;
+    boolean isSession = false;
+    boolean isSameSiteLax = false;
+    boolean isSameSiteStrict = false;
 };
 
 [
@@ -464,6 +467,33 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 enum RenderingMode {
     "Unaccelerated",
     "Accelerated"
+};
+
+enum ContentsFormat {
+    "RGBA8",
+#if defined(ENABLE_PIXEL_FORMAT_RGB10)
+    "RGBA10",
+#endif
+#if defined(ENABLE_PIXEL_FORMAT_RGBA16F)
+    "RGBA16F",
+#endif
+};
+
+[Conditional=DAMAGE_TRACKING] enum DamagePropagation {
+    "None",
+    "Region",
+    "Unified"
+};
+
+[
+    Conditional=DAMAGE_TRACKING,
+    ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
+    JSGenerateToJSObject,
+] dictionary FrameDamage {
+    unsigned long sequenceId;
+    boolean isValid = false;
+    DOMRectReadOnly bounds;
+    sequence<DOMRectReadOnly> rects;
 };
 
 [
@@ -720,6 +750,7 @@ enum RenderingMode {
     unsigned long remoteImagesCountForTesting();
     undefined setAsyncDecodingEnabledForTesting(HTMLImageElement element, boolean enabled);
     undefined setForceUpdateImageDataEnabledForTesting(HTMLImageElement element, boolean enabled);
+    undefined setHeadroomForTesting(HTMLImageElement element, float headroom);
 
     [Conditional=WEB_CODECS] boolean hasPendingActivity(WebCodecsVideoDecoder decoder);
 
@@ -735,6 +766,9 @@ enum RenderingMode {
     boolean testProcessIncomingSyncMessagesWhenWaitingForSyncReply();
 
     undefined setResourceCachingDisabledByWebInspector(boolean disabled);
+
+    [Conditional=DAMAGE_TRACKING] DamagePropagation? getCurrentDamagePropagation();
+    [Conditional=DAMAGE_TRACKING] sequence<FrameDamage> getFrameDamageHistory();
 
     // Flags for layerTreeAsText.
     const unsigned short LAYER_TREE_INCLUDES_VISIBLE_RECTS = 1;
@@ -752,6 +786,8 @@ enum RenderingMode {
     DOMString layerTreeAsText(Document document, optional unsigned short flags = 0);
 
     unsigned long long layerIDForElement(Element element);
+    unsigned long long horizontalScrollbarLayerID(optional Node? node = null);
+    unsigned long long verticalScrollbarLayerID(optional Node? node = null);
     
     sequence<unsigned long long> scrollingNodeIDForNode(optional Node? node = null);
 
@@ -812,6 +848,7 @@ enum RenderingMode {
     unsigned long numberOfLiveNodes();
     unsigned long numberOfLiveDocuments();
     unsigned long referencingNodeCount(Document document);
+    undefined executeOpportunisticallyScheduledTasks();
     unsigned long numberOfIntersectionObservers(Document document);
     unsigned long numberOfResizeObservers(Document document);
     WindowProxy? openDummyInspectorFrontend(DOMString url);
@@ -843,14 +880,10 @@ enum RenderingMode {
     undefined setHeaderHeight(unrestricted float height);
     undefined setFooterHeight(unrestricted float height);
 
-    [Conditional=FULLSCREEN_API] undefined webkitWillEnterFullScreenForElement(Element element);
-    [Conditional=FULLSCREEN_API] undefined webkitDidEnterFullScreenForElement(Element element);
-    [Conditional=FULLSCREEN_API] undefined webkitWillExitFullScreenForElement(Element element);
-    [Conditional=FULLSCREEN_API] undefined webkitDidExitFullScreenForElement(Element element);
-    [Conditional=FULLSCREEN_API] readonly attribute boolean isAnimatingFullScreen;
-
     undefined setFullscreenInsets(FullscreenInsets insets);
     undefined setFullscreenAutoHideDuration(double duration);
+
+    undefined setScreenContentsFormatsForTesting(sequence<ContentsFormat> contentsFormats);
 
     [Conditional=VIDEO] boolean isChangingPresentationMode(HTMLVideoElement element);
     [Conditional=VIDEO_PRESENTATION_MODE] undefined setMockVideoPresentationModeEnabled(boolean enabled);
@@ -886,6 +919,7 @@ enum RenderingMode {
     boolean areTimersThrottled();
 
     undefined setLowPowerModeEnabled(boolean enabled);
+    undefined setAggressiveThermalMitigationEnabled(boolean enabled);
     undefined setOutsideViewportThrottlingEnabled(boolean enabled);
     readonly attribute double requestAnimationFrameInterval;
     readonly attribute boolean scriptedAnimationsAreSuspended;
@@ -959,6 +993,9 @@ enum RenderingMode {
 
     [Conditional=VIDEO] undefined enableGStreamerHolePunching(HTMLVideoElement element);
 
+    [Conditional=VIDEO] double effectiveDynamicRangeLimitValue(HTMLMediaElement media);
+    undefined setPageShouldSuppressHDR(boolean shouldSuppressHDR);
+
     undefined setIsPlayingToBluetoothOverride(optional boolean? isPlaying = null);
 
     [Conditional=LEGACY_ENCRYPTED_MEDIA] undefined initializeMockCDM();
@@ -985,10 +1022,6 @@ enum RenderingMode {
     [Conditional=VIDEO] unrestricted double closestTimeToTimeRanges(unrestricted double time, TimeRanges ranges);
 
     boolean isSelectPopupVisible(HTMLSelectElement element);
-
-    boolean isPluginUnavailabilityIndicatorObscured(Element element);
-    DOMString unavailablePluginReplacementText(Element element);
-    boolean isPluginSnapshotted(Element element);
 
     DOMRect selectionBounds();
     StaticRange? selectedRange();
@@ -1079,6 +1112,8 @@ enum RenderingMode {
     [Conditional=VIDEO] undefined setMediaControlsHidePlaybackRates(HTMLMediaElement element, boolean hidePlaybackRates);
 
     DOMString userVisibleString(DOMURL url);
+
+    float pageMediaVolume();
     undefined setPageMediaVolume(float volume);
 
     undefined setShowAllPlugins(boolean showAll);
@@ -1136,7 +1171,6 @@ enum RenderingMode {
     undefined setPageIsInWindow(boolean isInWindow);
     boolean isPageActive();
 
-    [Conditional=WEB_RTC] undefined setH264HardwareEncoderAllowed(boolean allowed);
     [Conditional=WEB_RTC] undefined applyRotationForOutgoingVideoSources(RTCPeerConnection connection);
     [Conditional=WEB_RTC] undefined setWebRTCH265Support(boolean allowed);
     [Conditional=WEB_RTC] undefined setWebRTCVP9Support(boolean supportVP9Profile0, boolean supportVP9Profile2);
@@ -1165,6 +1199,7 @@ enum RenderingMode {
     [Conditional=MEDIA_STREAM] boolean isMockRealtimeMediaSourceCenterEnabled();
     [Conditional=MEDIA_STREAM] boolean shouldAudioTrackPlay(AudioTrack track);
     [Conditional=MEDIA_STREAM] DOMString mediaStreamTrackPersistentId(MediaStreamTrack track);
+    [Conditional=MEDIA_STREAM] unsigned long audioCaptureSourceCount();
 
     [Conditional=WEB_RTC] readonly attribute DOMString rtcNetworkInterfaceName;
 
@@ -1265,8 +1300,6 @@ enum RenderingMode {
     undefined reloadWithoutContentExtensions();
     undefined disableContentExtensionsChecks();
 
-    undefined setUseSystemAppearance(boolean value);
-
     unsigned long pluginCount();
     unsigned long pluginScrollPositionX(Element element);
     unsigned long pluginScrollPositionY(Element element);
@@ -1287,6 +1320,7 @@ enum RenderingMode {
     boolean validateAV1ConfigurationRecord(DOMString codecParameters);
     boolean validateAV1PerLevelConstraints(DOMString codecParameters, VideoConfiguration configuration);
 
+    undefined setCookie(CookieData cookieData);
     sequence<CookieData> getCookies();
 
     undefined setAlwaysAllowLocalWebarchive(boolean alwaysAllowLocalWebarchive);
@@ -1419,4 +1453,9 @@ enum RenderingMode {
     Promise<ImageBufferResourceLimits> getImageBufferResourceLimits();
 
     undefined setTopDocumentURLForQuirks(DOMString urlString);
+
+#if defined(ENABLE_CONTENT_EXTENSIONS) && ENABLE_CONTENT_EXTENSIONS
+    undefined setResourceMonitorNetworkUsageThreshold(unsigned long threshold, double randomness);
+    attribute boolean shouldSkipResourceMonitorThrottling;
+#endif
 };

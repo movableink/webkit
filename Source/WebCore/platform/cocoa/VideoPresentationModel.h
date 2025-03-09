@@ -75,6 +75,7 @@ public:
 
     virtual FloatSize videoDimensions() const = 0;
     virtual bool hasVideo() const = 0;
+    virtual bool isChildOfElementFullscreen() const = 0;
 
     virtual void willEnterPictureInPicture() = 0;
     virtual void didEnterPictureInPicture() = 0;
@@ -129,6 +130,7 @@ public:
     virtual void didExitPictureInPicture() { }
     virtual void setPlayerIdentifier(std::optional<MediaPlayerIdentifier>) { }
     virtual void documentVisibilityChanged(bool) { }
+    virtual void isChildOfElementFullscreenChanged(bool) { }
 };
 
 } // namespace WebCore

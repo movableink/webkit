@@ -545,6 +545,8 @@ class GLSLTest_ES31 : public GLSLTest
 };
 
 // Tests the "init output variables" ANGLE shader translator option.
+class GLSLTest_ES3_InitShaderVariables : public GLSLTest
+{};
 class GLSLTest_ES31_InitShaderVariables : public GLSLTest
 {};
 
@@ -9834,6 +9836,15 @@ void main()
     EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::green);
 }
 
+// Test that *= on boolean vectors fails compilation
+TEST_P(GLSLTest, BVecMultiplyAssign)
+{
+    constexpr char kFS[] = R"(bvec4 c,s;void main(){s*=c;})";
+
+    GLuint fs = CompileShader(GL_FRAGMENT_SHADER, kFS);
+    EXPECT_EQ(fs, 0u);
+}
+
 // Test vector/scalar arithmetic (in this case multiplication and addition).
 TEST_P(GLSLTest, VectorScalarMultiplyAndAddInLoop)
 {
@@ -13055,6 +13066,26 @@ TEST_P(GLSLTest_ES31, ArrayOfArrayOfSamplerDynamicIndexOES)
     // Skip if OES_gpu_shader5 is not enabled.
     ANGLE_SKIP_TEST_IF(!IsGLExtensionEnabled("GL_OES_gpu_shader5"));
     testArrayOfArrayOfSamplerDynamicIndex(APIExtensionVersion::OES);
+}
+
+// Test that array of array of samplers is handled correctly with the comma operator.
+TEST_P(GLSLTest, ArrayOfArrayOfSamplerVsComma)
+{
+    int maxTextureImageUnits = 0;
+    glGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS, &maxTextureImageUnits);
+
+    ANGLE_SKIP_TEST_IF(maxTextureImageUnits < 6);
+
+    constexpr char kVS[] = R"(uniform struct {
+  sampler2D s1, s2[3];
+} s[2];
+
+void main()
+{
+    ++gl_Position, s[1].s1;
+})";
+    ANGLE_GL_PROGRAM(program, kVS, essl1_shaders::fs::Red());
+    EXPECT_GL_NO_ERROR();
 }
 
 // Test that array of array of samplers can be indexed correctly with dynamic indices.  Uses
@@ -19538,6 +19569,8 @@ TEST_P(GLSLTest_ES3, ESSL3ExtensionMacros)
         "GL_OES_texture_3D",
         "GL_OES_sample_variables",
         "GL_OES_shader_multisample_interpolation",
+        // Enabled on ESSL 3+ because ANGLE can support multisample textures with ES 3.0 contexts.
+        "GL_OES_texture_storage_multisample_2d_array",
         "GL_OVR_multiview",
         "GL_OVR_multiview2",
         "GL_WEBGL_video_texture",
@@ -19563,7 +19596,6 @@ TEST_P(GLSLTest_ES3, ESSL3ExtensionMacros)
         "GL_OES_standard_derivatives",
         "GL_OES_texture_buffer",
         "GL_OES_texture_cube_map_array",
-        "GL_OES_texture_storage_multisample_2d_array",
     });
     ANGLE_GL_PROGRAM(program, essl3_shaders::vs::Simple(), fs.c_str());
     ASSERT_GL_NO_ERROR();
@@ -20536,6 +20568,878 @@ void main()
     verifyAttachment2DColor(3, textures[3], GL_TEXTURE_2D, 0, GLColor::white);
 }
 
+// Fuzzer test involving struct samplers and comma operator
+TEST_P(GLSLTest, StructSamplerVsComma)
+{
+    constexpr char kVS[] = R"(uniform struct S1
+{
+    samplerCube ar;
+    vec2 c;
+} a;
+
+struct S2
+{
+    vec3 c;
+} b[2];
+
+void main (void)
+{
+    ++b[0].c,a;
+})";
+
+    GLuint shader = CompileShader(GL_VERTEX_SHADER, kVS);
+    EXPECT_NE(0u, shader);
+    glDeleteShader(shader);
+}
+
+// Make sure there is no name look up clash when initializing output variables
+TEST_P(GLSLTest_ES3_InitShaderVariables, NameLookup)
+{
+    constexpr char kFS[] = R"(#version 300 es
+out highp vec4 color;
+void main()
+{
+    highp vec4 color;
+    color.x = 1.0;
+}
+)";
+    ANGLE_GL_PROGRAM(program, essl3_shaders::vs::Simple(), kFS);
+    drawQuad(program, essl3_shaders::PositionAttrib(), 0);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::transparentBlack);
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test that lowp and mediump varyings can be correctly matched between VS and FS.
+TEST_P(GLSLTest, LowpMediumpVarying)
+{
+    const char kVS[] = R"(varying lowp float lowpVarying;
+attribute vec4 position;
+void main ()
+{
+  lowpVarying = 1.;
+  gl_Position = position;
+})";
+
+    const char kFS[] = R"(varying mediump float lowpVarying;
+void main ()
+{
+  gl_FragColor = vec4(lowpVarying, 0, 0, 1);
+})";
+
+    ANGLE_GL_PROGRAM(program, kVS, kFS);
+    drawQuad(program, "position", 0);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::red);
+}
+
+// Test highp int scalar + vec
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingAdd1)
+{
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = u + ivec4(0, -1, 1, 2147483645);
+    o.r = r.x == 2 ? 1.0 : 0.0;
+    o.g = r.y == 1 ? 1.0 : 0.0;
+    o.b = r.z == 3 ? 1.0 : 0.0;
+    o.a = r.w == 2147483647 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, 2);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int vec + scalar
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingAdd2)
+{
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = ivec4(0, -1, 1, 2147483645) + u;
+    o.r = r.x == 2 ? 1.0 : 0.0;
+    o.g = r.y == 1 ? 1.0 : 0.0;
+    o.b = r.z == 3 ? 1.0 : 0.0;
+    o.a = r.w == 2147483647 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, 2);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int vec += scalar
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingAdd3)
+{
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = ivec4(0, -1, 1, 2147483645);
+    r += u;
+    o.r = r.x == 2 ? 1.0 : 0.0;
+    o.g = r.y == 1 ? 1.0 : 0.0;
+    o.b = r.z == 3 ? 1.0 : 0.0;
+    o.a = r.w == 2147483647 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, 2);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int scalar + vec handles UB
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingAddUB)
+{
+    ANGLE_SKIP_TEST_IF(!IsMetal());
+
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = u + ivec4(0, -1, 1, 2147483647);
+    o.r = r.x == 2 ? 1.0 : 0.0;
+    o.g = r.y == 1 ? 1.0 : 0.0;
+    o.b = r.z == 3 ? 1.0 : 0.0;
+    o.a = r.w == -2147483647 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, 2);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int scalar - vec
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingSub1)
+{
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = u - ivec4(0, -1, 1, 2147483647);
+    o.r = r.x == 2 ? 1.0 : 0.0;
+    o.g = r.y == 3 ? 1.0 : 0.0;
+    o.b = r.z == 1 ? 1.0 : 0.0;
+    o.a = r.w == -2147483645 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, 2);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int vec - scalar
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingSub2)
+{
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = ivec4(0, -1, 1, -2147483646) - u;
+    o.r = r.x == -2 ? 1.0 : 0.0;
+    o.g = r.y == -3 ? 1.0 : 0.0;
+    o.b = r.z == -1 ? 1.0 : 0.0;
+    o.a = r.w == -2147483648 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, 2);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int vec -= scalar
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingSub3)
+{
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = ivec4(0, -1, 1, -2147483646);
+    r -= u;
+    o.r = r.x == -2 ? 1.0 : 0.0;
+    o.g = r.y == -3 ? 1.0 : 0.0;
+    o.b = r.z == -1 ? 1.0 : 0.0;
+    o.a = r.w == -2147483648 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, 2);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+//
+// Test highp int scalar - vec handles UB
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingSubUB)
+{
+    ANGLE_SKIP_TEST_IF(!IsMetal());
+
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = ivec4(0, -1, 1, -2147483648) - u;
+    o.r = r.x == -2 ? 1.0 : 0.0;
+    o.g = r.y == -3 ? 1.0 : 0.0;
+    o.b = r.z == -1 ? 1.0 : 0.0;
+    o.a = r.w == 2147483646 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, 2);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int scalar * vec
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingMul1)
+{
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = u * ivec4(0, -1, 1, 3);
+    o.r = r.x == 0 ? 1.0 : 0.0;
+    o.g = r.y == -2 ? 1.0 : 0.0;
+    o.b = r.z == 2 ? 1.0 : 0.0;
+    o.a = r.w == 6 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, 2);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int vec * scalar
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingMul2)
+{
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = ivec4(0, -1, 1, 3) * u;
+    o.r = r.x == 0 ? 1.0 : 0.0;
+    o.g = r.y == -2 ? 1.0 : 0.0;
+    o.b = r.z == 2 ? 1.0 : 0.0;
+    o.a = r.w == 6 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, 2);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int vec *= scalar
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingMul3)
+{
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = ivec4(0, -1, 1, 3);
+    r *= u;
+    o.r = r.x == 0 ? 1.0 : 0.0;
+    o.g = r.y == -2 ? 1.0 : 0.0;
+    o.b = r.z == 2 ? 1.0 : 0.0;
+    o.a = r.w == 6 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, 2);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int scalar * vector handles UB
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingMulUB)
+{
+    ANGLE_SKIP_TEST_IF(!IsMetal());
+
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = u * ivec4(0, -1, 1, -2147483648);
+    o.r = r.x == 0 ? 1.0 : 0.0;
+    o.g = r.y == 1 ? 1.0 : 0.0;
+    o.b = r.z == -1 ? 1.0 : 0.0;
+    o.a = r.w == -2147483648 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, -1);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int scalar / vec
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingDiv1)
+{
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = u / ivec4(2, -1, 1, 3);
+    o.r = r.x == 1 ? 1.0 : 0.0;
+    o.g = r.y == -2 ? 1.0 : 0.0;
+    o.b = r.z == 2 ? 1.0 : 0.0;
+    o.a = r.w == 0 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, 2);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int vec / scalar
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingDiv2)
+{
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = ivec4(2, -1, 1, 3) / u;
+    o.r = r.x == 1 ? 1.0 : 0.0;
+    o.g = r.y == 0 ? 1.0 : 0.0;
+    o.b = r.z == 0 ? 1.0 : 0.0;
+    o.a = r.w == 1 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, 2);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int vec /= scalar
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingDiv3)
+{
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = ivec4(2, -1, 1, 3);
+    r /= u;
+    o.r = r.x == 1 ? 1.0 : 0.0;
+    o.g = r.y == 0 ? 1.0 : 0.0;
+    o.b = r.z == 0 ? 1.0 : 0.0;
+    o.a = r.w == 1 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, 2);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int scalar / vec handles UB
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingDivUB)
+{
+    ANGLE_SKIP_TEST_IF(!IsMetal());
+
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = u / ivec4(0, -1, 1, 3);
+    o.r = r.x == -2147483648 ? 1.0 : 0.0;
+    // FIXME: ANGLE_div should also handle -INT_MAX / -1
+    // o.g = r.y == -2147483648 ? 1.0 : 0.0;
+    o.g = 1.0;
+    o.b = r.z == -2147483648 ? 1.0 : 0.0;
+    o.a = r.w == -715827882 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, -2147483648);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int scalar % vec
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingMod1)
+{
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = u % ivec4(2, 7, 1, 3);
+    o.r = r.x == 0 ? 1.0 : 0.0;
+    o.g = r.y == 2 ? 1.0 : 0.0;
+    o.b = r.z == 0 ? 1.0 : 0.0;
+    o.a = r.w == 2 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, 2);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int vec % scalar
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingMod2)
+{
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = ivec4(2147483647, 0, 1, 3) % u;
+    o.r = r.x == 1 ? 1.0 : 0.0;
+    o.g = r.y == 0 ? 1.0 : 0.0;
+    o.b = r.z == 1 ? 1.0 : 0.0;
+    o.a = r.w == 1 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, 2);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int vec %= scalar
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingMod3)
+{
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = ivec4(2147483647, 0, 1, 3);
+    r %= u;
+    o.r = r.x == 1 ? 1.0 : 0.0;
+    o.g = r.y == 0 || r.y == 1 ? 1.0 : 0.0;
+    o.b = r.z == 1 ? 1.0 : 0.0;
+    o.a = r.w == 1 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, 2);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int scalar % vec handles UB
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingModUB)
+{
+    ANGLE_SKIP_TEST_IF(!IsMetal());
+
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = u % ivec4(0, -1, 1, 3);
+    o.r = r.x == 0 ? 1.0 : 0.0;
+    o.g = r.y == 0 ? 1.0 : 0.0;
+    o.b = r.z == 0 ? 1.0 : 0.0;
+    o.a = r.w == -2 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform1i(u, -2147483648);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int float to int vector conversion
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingFtoi1)
+{
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform vec4 u;
+out vec4 o;
+void main() {
+    ivec4 r = ivec4(u);
+    o.r = r.x == 0 ? 1.0 : 0.0;
+    o.g = r.y == -1 ? 1.0 : 0.0;
+    o.b = r.z == -2147483648 ? 1.0 : 0.0;
+    o.a = r.w ==  83645 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform4f(u, 0., -1., -2147483648., 83645.);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int float to int scalar conversion
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingFtoi2)
+{
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform vec4 u;
+out vec4 o;
+void main() {
+    int rx = int(u.x);
+    int ry = int(u.y);
+    int rz = int(u.z);
+    int rw = int(u.w);
+    o.r = rx == 0 ? 1.0 : 0.0;
+    o.g = ry == -1 ? 1.0 : 0.0;
+    o.b = rz == -2147483648 ? 1.0 : 0.0;
+    o.a = rw ==  83645 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform4f(u, 0., -1., -2147483648., 83645.);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+//
+// Test highp int float to int vector conversion handles UB
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingFtoiUB1)
+{
+    ANGLE_SKIP_TEST_IF(!IsMetal());
+
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform vec4 u;
+out vec4 o;
+void main() {
+    ivec4 r = ivec4(u);
+    o.r = r.x == 0 ? 1.0 : 0.0;
+    o.g = r.y == -1 ? 1.0 : 0.0;
+    o.b = r.z == -2147483648 ? 1.0 : 0.0;
+    o.a = r.w ==  2147483647 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform4f(u, 0., -1., -2147483649., 2147483648.);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int float to int scalar conversion handles UB
+TEST_P(GLSLTest_ES3, IntVecOperatorOverloadingFtoiUB2)
+{
+    ANGLE_SKIP_TEST_IF(!IsMetal());
+
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform vec4 u;
+out vec4 o;
+void main() {
+    int rx = int(u.x);
+    int ry = int(u.y);
+    int rz = int(u.z);
+    int rw = int(u.w);
+    o.r = rx == 0 ? 1.0 : 0.0;
+    o.g = ry == -1 ? 1.0 : 0.0;
+    o.b = rz == -2147483648 ? 1.0 : 0.0;
+    o.a = rw ==  2147483647 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    glUseProgram(testProgram);
+    GLint u = glGetUniformLocation(testProgram, "u");
+    EXPECT_NE(-1, u);
+    glUniform4f(u, 0., -1., -2147483649., 2147483648.);
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int wrap behavior with plus and minus.
+TEST_P(GLSLTest_ES3, IntVecAdditionSubtractionWrap)
+{
+    ANGLE_SKIP_TEST_IF(!IsMetal());
+
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = ivec4(u) + ivec4(0, -1, 1, 3);
+    r -= ivec4(2147483647, 2147483647, 2147483647, 0);
+    r += ivec4(0, 0, 0, 2147483647);
+    o.r = r.x == -2147483647 ? 1.0 : 0.0;
+    o.g = r.y == -2147483648 ? 1.0 : 0.0;
+    o.b = r.z == -2147483646 ? 1.0 : 0.0;
+    o.a = r.w == -2147483646 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int wrap behavior with multiplication.
+TEST_P(GLSLTest_ES3, IntVecMultiplicationWrap)
+{
+    ANGLE_SKIP_TEST_IF(!IsMetal());
+
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = ivec4(u) + ivec4(-2, 2, 1, -1);
+    r *= ivec4(2147483647, 2147483647, -2147483648, -2147483648);
+    o.r = r.x == 2 ? 1.0 : 0.0;
+    o.g = r.y == -2 ? 1.0 : 0.0;
+    o.b = r.z == -2147483648 ? 1.0 : 0.0;
+    o.a = r.w == -2147483648 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int wrap behavior with division.
+TEST_P(GLSLTest_ES3, IntVecDivisionWrap)
+{
+    ANGLE_SKIP_TEST_IF(!IsMetal());
+
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = ivec4(u) + ivec4(2147483647, 2147483647, -2147483648, -2147483648);
+    r /= ivec4(1, -1, 1, -1);
+    o.r = r.x == 2147483647 ? 1.0 : 0.0;
+    o.g = r.y == -2147483647 ? 1.0 : 0.0;
+    o.b = r.z == -2147483648 ? 1.0 : 0.0;
+    o.a = 1.0;
+
+    // FIXME
+    //o.a = r.w == -2147483648 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int wrap behavior with modulus.
+TEST_P(GLSLTest_ES3, IntScalarModulus)
+{
+    ANGLE_SKIP_TEST_IF(!IsMetal());
+
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = ivec4(u) + ivec4(2147483647, 2147483647, -2147483648, -2147483648);
+    r %= 8;
+    o.r = r.x == 7 ? 1.0 : 0.0;
+    o.g = r.y == 7 ? 1.0 : 0.0;
+    o.b = r.z == 0 ? 1.0 : 0.0;
+    o.a = r.w == 0 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test highp int modulus undefinedness with negative numbers
+TEST_P(GLSLTest_ES3, IntScalarModulusUB1)
+{
+    ANGLE_SKIP_TEST_IF(!IsMetal());
+
+    constexpr char kFS[] = R"(#version 300 es
+precision highp int;
+precision highp float;
+uniform int u;
+out vec4 o;
+void main() {
+    ivec4 r = ivec4(u) + ivec4(-1, 1, -7, 7);
+    r %= 8;
+    o.r = r.x == -1 ? 1.0 : 0.0;
+    o.g = r.y == 1 ? 1.0 : 0.0;
+    o.b = r.z == -7 ? 1.0 : 0.0;
+    o.a = r.w == 7 ? 1.0 : 0.0;
+}
+)";
+    ANGLE_GL_PROGRAM(testProgram, essl3_shaders::vs::Simple(), kFS);
+    ASSERT_GL_NO_ERROR();
+    drawQuad(testProgram, essl31_shaders::PositionAttrib(), 0.5f, 1.0f, true);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor(255, 255, 255, 255));
+    ASSERT_GL_NO_ERROR();
+}
+
 }  // anonymous namespace
 
 ANGLE_INSTANTIATE_TEST_ES2_AND_ES3_AND(
@@ -20545,7 +21449,8 @@ ANGLE_INSTANTIATE_TEST_ES2_AND_ES3_AND(
     ES3_OPENGLES().enable(Feature::ScalarizeVecAndMatConstructorArgs),
     ES3_VULKAN().enable(Feature::AvoidOpSelectWithMismatchingRelaxedPrecision),
     ES3_VULKAN().enable(Feature::ForceInitShaderVariables),
-    ES3_VULKAN().disable(Feature::SupportsSPIRV14));
+    ES3_VULKAN().disable(Feature::SupportsSPIRV14),
+    ES2_VULKAN().enable(Feature::VaryingsRequireMatchingPrecisionInSpirv));
 
 ANGLE_INSTANTIATE_TEST_ES2_AND_ES3(GLSLTestNoValidation);
 
@@ -20571,6 +21476,12 @@ GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(GLSLTest_ES31);
 ANGLE_INSTANTIATE_TEST_ES31_AND(GLSLTest_ES31,
                                 ES31_VULKAN().enable(Feature::ForceInitShaderVariables),
                                 ES31_VULKAN().disable(Feature::SupportsSPIRV14));
+
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(GLSLTest_ES3_InitShaderVariables);
+ANGLE_INSTANTIATE_TEST(
+    GLSLTest_ES3_InitShaderVariables,
+    ES3_VULKAN().enable(Feature::ForceInitShaderVariables),
+    ES3_VULKAN().disable(Feature::SupportsSPIRV14).enable(Feature::ForceInitShaderVariables));
 
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(GLSLTest_ES31_InitShaderVariables);
 ANGLE_INSTANTIATE_TEST(

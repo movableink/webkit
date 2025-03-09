@@ -105,6 +105,7 @@ private:
     // VideoPresentationModelClient
     void hasVideoChanged(bool) override;
     void documentVisibilityChanged(bool) override;
+    void isChildOfElementFullscreenChanged(bool) final;
 
     // CheckedPtr interface
     uint32_t checkedPtrCount() const final { return CanMakeCheckedPtr::checkedPtrCount(); }
@@ -150,11 +151,14 @@ public:
     void setupRemoteLayerHosting(WebCore::HTMLVideoElement&);
     void willRemoveLayerForID(PlaybackSessionContextIdentifier);
 
+    void swapFullscreenModes(WebCore::HTMLVideoElement&, WebCore::HTMLVideoElement&);
+
     // Interface to WebChromeClient
     bool canEnterVideoFullscreen(WebCore::HTMLMediaElementEnums::VideoFullscreenMode) const;
     bool supportsVideoFullscreen(WebCore::HTMLMediaElementEnums::VideoFullscreenMode) const;
     bool supportsVideoFullscreenStandby() const;
     void enterVideoFullscreenForVideoElement(WebCore::HTMLVideoElement&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode, bool standby);
+    void setPlayerIdentifierForVideoElement(WebCore::HTMLVideoElement&);
     void exitVideoFullscreenForVideoElement(WebCore::HTMLVideoElement&, WTF::CompletionHandler<void(bool)>&& = [](bool) { });
     void exitVideoFullscreenToModeWithoutAnimation(WebCore::HTMLVideoElement&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode);
     void setVideoFullscreenMode(WebCore::HTMLVideoElement&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode);
@@ -182,6 +186,7 @@ protected:
     // Interface to VideoPresentationInterfaceContext
     void hasVideoChanged(PlaybackSessionContextIdentifier, bool hasVideo);
     void documentVisibilityChanged(PlaybackSessionContextIdentifier, bool isDocumentVisible);
+    void isChildOfElementFullscreenChanged(PlaybackSessionContextIdentifier, bool);
     void videoDimensionsChanged(PlaybackSessionContextIdentifier, const WebCore::FloatSize&);
     void setPlayerIdentifier(PlaybackSessionContextIdentifier, std::optional<WebCore::MediaPlayerIdentifier>);
 

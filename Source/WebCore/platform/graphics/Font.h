@@ -148,11 +148,19 @@ public:
         return const_cast<Font*>(this);
     }
 
+    RefPtr<const Font> protectedVariantFont(const FontDescription& description, FontVariant variant) const
+    {
+        return variantFont(description, variant);
+    }
+
     bool variantCapsSupportedForSynthesis(FontVariantCaps) const;
 
     const Font& verticalRightOrientationFont() const;
+    Ref<const Font> protectedVerticalRightOrientationFont() const { return verticalRightOrientationFont(); }
     const Font& uprightOrientationFont() const;
+    Ref<const Font> protectedUprightOrientationFont() const { return uprightOrientationFont(); }
     const Font& invisibleFont() const;
+    Ref<const Font> protectedInvisibleFont() const { return invisibleFont(); }
 
     bool hasVerticalGlyphs() const { return m_hasVerticalGlyphs; }
     bool isTextOrientationFallback() const { return m_attributes.isTextOrientationFallback == IsOrientationFallback::Yes; }
@@ -236,9 +244,9 @@ public:
     GlyphBufferAdvance applyTransforms(GlyphBuffer&, unsigned beginningGlyphIndex, unsigned beginningStringIndex, bool enableKerning, bool requiresShaping, const AtomString& locale, StringView text, TextDirection) const;
 
     // Returns nullopt if none of the glyphs are OT-SVG glyphs.
-    std::optional<BitVector> findOTSVGGlyphs(const GlyphBufferGlyph*, unsigned count) const;
+    std::optional<BitVector> findOTSVGGlyphs(std::span<const GlyphBufferGlyph>) const;
 
-    bool hasAnyComplexColorFormatGlyphs(const GlyphBufferGlyph*, unsigned count) const;
+    bool hasAnyComplexColorFormatGlyphs(std::span<const GlyphBufferGlyph>) const;
 
 #if PLATFORM(QT)
     QRawFont getQtRawFont() const { return m_platformData.rawFont(); }

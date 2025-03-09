@@ -31,6 +31,7 @@
 #import "WebFrameProxy.h"
 #import "WebPageProxy.h"
 #import "_WKFrameHandleInternal.h"
+#import <WebCore/CertificateInfo.h>
 #import <WebCore/WebCoreObjCExtras.h>
 
 @implementation WKFrameInfo
@@ -149,6 +150,11 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 - (CGSize)_visibleContentSizeExcludingScrollbars
 {
     return (CGSize)_frameInfo->frameInfoData().frameMetrics.visibleContentSizeExcludingScrollbars;
+}
+
+- (SecTrustRef)_serverTrust
+{
+    return _frameInfo->frameInfoData().certificateInfo.trust().get();
 }
 
 @end

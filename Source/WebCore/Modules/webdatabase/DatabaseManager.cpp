@@ -32,8 +32,8 @@
 #include "DatabaseTask.h"
 #include "DatabaseTracker.h"
 #include "Document.h"
-#include "InspectorInstrumentation.h"
 #include "Logging.h"
+#include "Page.h"
 #include "PlatformStrategies.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
@@ -211,7 +211,6 @@ ExceptionOr<Ref<Database>> DatabaseManager::openDatabase(Document& document, con
 
     auto databaseContext = this->databaseContext(document);
     databaseContext->setHasOpenDatabases();
-    InspectorInstrumentation::didOpenDatabase(*database);
 
     if (database->isNew() && creationCallback.get()) {
         LOG(StorageAPI, "Scheduling DatabaseCreationCallbackTask for database %p\n", database.get());
@@ -258,7 +257,7 @@ DatabaseDetails DatabaseManager::detailsForNameAndOrigin(const String& name, Sec
         Locker locker { m_proposedDatabasesLock };
         for (auto* proposedDatabase : m_proposedDatabases) {
             if (proposedDatabase->details().name() == name && proposedDatabase->origin().equal(origin)) {
-                ASSERT(&proposedDatabase->details().thread() == &Thread::current() || isMainThread());
+                ASSERT(&proposedDatabase->details().thread() == &Thread::currentSingleton() || isMainThread());
                 return proposedDatabase->details();
             }
         }

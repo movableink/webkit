@@ -331,10 +331,11 @@ public:
         WEBCORE_EXPORT bool allowExecutionWhenDisabled() const;
 
     private:
+        RefPtr<LocalFrame> frame() const;
+
         const EditorInternalCommand* m_command { nullptr };
         EditorCommandSource m_source;
         RefPtr<Document> m_document;
-        RefPtr<LocalFrame> m_frame;
     };
     WEBCORE_EXPORT Command command(const String& commandName); // Command source is EditorCommandSource::MenuOrKeyBinding.
     Command command(const String& commandName, EditorCommandSource);
@@ -462,10 +463,10 @@ public:
 #if PLATFORM(IOS_FAMILY)
     WEBCORE_EXPORT void confirmMarkedText();
     WEBCORE_EXPORT void setTextAsChildOfElement(String&&, Element&);
-    WEBCORE_EXPORT void setTextAlignmentForChangedBaseWritingDirection(WritingDirection);
     WEBCORE_EXPORT void insertDictationPhrases(Vector<Vector<String>>&& dictationPhrases, id metadata);
     WEBCORE_EXPORT void setDictationPhrasesAsChildOfElement(const Vector<Vector<String>>& dictationPhrases, id metadata, Element&);
 #endif
+    WEBCORE_EXPORT void setTextAlignmentForChangedBaseWritingDirection(WritingDirection);
     
     enum class KillRingInsertionMode { PrependText, AppendText };
     void addRangeToKillRing(const SimpleRange&, KillRingInsertionMode);

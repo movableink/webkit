@@ -38,6 +38,7 @@
 
 #if ENABLE(MODEL_PROCESS)
 #include "ModelPlayerIdentifier.h"
+#include <WebCore/StageModeOperations.h>
 #endif
 
 namespace WebCore {
@@ -60,7 +61,6 @@ public:
     virtual void sizeDidChange(LayoutSize) = 0;
     virtual PlatformLayer* layer() = 0;
     virtual std::optional<LayerHostingContextIdentifier> layerHostingContextIdentifier() = 0;
-    virtual void setBackgroundColor(Color);
     virtual void setEntityTransform(TransformationMatrix);
     virtual void enterFullscreen() = 0;
     virtual bool supportsMouseInteraction();
@@ -96,6 +96,11 @@ public:
     virtual Seconds currentTime() const;
     virtual void setCurrentTime(Seconds, CompletionHandler<void()>&&);
     virtual void setEnvironmentMap(Ref<SharedBuffer>&& data);
+    virtual void setHasPortal(bool);
+    virtual void setStageMode(StageModeOperation);
+    virtual void beginStageModeTransform(const TransformationMatrix&);
+    virtual void updateStageModeTransform(const TransformationMatrix&);
+    virtual void endStageModeInteraction();
 #endif
 };
 

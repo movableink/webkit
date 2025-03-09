@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,8 +31,10 @@
 
 #import "RemoteLayerTreeNode.h"
 #import "RemoteLayerTreeViews.h"
+#import "UIKitUtilities.h"
 #import "WKContentViewInteraction.h"
 #import <WebCore/TileController.h>
+#import <wtf/TZoneMallocInlines.h>
 
 @interface WKTextInteractionWrapper ()
 
@@ -93,6 +95,8 @@ private:
     __weak WKTextInteractionWrapper *m_wrapper { nil };
     bool m_reactivateSelection { false };
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HideEditMenuScope);
 
 } // namespace WebKit
 
@@ -189,49 +193,58 @@ private:
 #if HAVE(UI_TEXT_SELECTION_DISPLAY_INTERACTION)
     RetainPtr displayInteraction = [self textSelectionDisplayInteraction];
     RetainPtr highlightView = [displayInteraction highlightView];
-    if ([highlightView superview] == newContainer)
-        return;
+    if ([highlightView superview] != newContainer) {
+        NSMutableSet<UIView *> *viewsBeforeInstallingInteraction = [NSMutableSet set];
+        for (UIView *subview in newContainer.subviews)
+            [viewsBeforeInstallingInteraction addObject:subview];
 
-    NSMutableSet<UIView *> *viewsBeforeInstallingInteraction = [NSMutableSet set];
-    for (UIView *subview in newContainer.subviews)
-        [viewsBeforeInstallingInteraction addObject:subview];
+        // Calling these delegate methods tells the display interaction to remove and reparent all internally
+        // managed views (e.g. selection highlight views, selection handles) in the new selection container.
+        [displayInteraction willMoveToView:_view];
+        [displayInteraction didMoveToView:_view];
 
-    // Calling these delegate methods tells the display interaction to remove and reparent all internally
-    // managed views (e.g. selection highlight views, selection handles) in the new selection container.
-    [displayInteraction willMoveToView:_view];
-    [displayInteraction didMoveToView:_view];
-
-    _managedTextSelectionViews = { };
-    for (UIView *subview in newContainer.subviews) {
-        if (![viewsBeforeInstallingInteraction containsObject:subview])
-            _managedTextSelectionViews.append(subview);
+        _managedTextSelectionViews = { };
+        for (UIView *subview in newContainer.subviews) {
+            if (![viewsBeforeInstallingInteraction containsObject:subview])
+                _managedTextSelectionViews.append(subview);
+        }
     }
 
     if (newContainer == _view)
         return;
 
-    RetainPtr<WKCompositingView> tileGridContainer;
+    RetainPtr subviews = [newContainer subviews];
+    __block std::optional<NSUInteger> indexAfterTileGridContainer;
     auto tileGridContainerName = WebCore::TileController::tileGridContainerLayerName();
-    for (UIView *view in newContainer.subviews) {
+    [subviews enumerateObjectsUsingBlock:^(UIView *view, NSUInteger index, BOOL* stop) {
         RetainPtr compositingView = dynamic_objc_cast<WKCompositingView>(view);
         if ([[compositingView layer].name isEqualToString:tileGridContainerName]) {
-            tileGridContainer = WTFMove(compositingView);
-            break;
+            indexAfterTileGridContainer = index + 1;
+            *stop = YES;
         }
-    }
+    }];
 
-    if (!tileGridContainer)
+    if (!indexAfterTileGridContainer)
         return;
 
-    auto reinsertAboveTileGridContainer = [&](UIView *view) {
-        if (newContainer == view.superview)
-            [newContainer insertSubview:view aboveSubview:tileGridContainer.get()];
-    };
+    if (*indexAfterTileGridContainer < [subviews count] && [subviews objectAtIndex:*indexAfterTileGridContainer] == highlightView)
+        return;
 
-    reinsertAboveTileGridContainer(highlightView.get());
-    reinsertAboveTileGridContainer([[[displayInteraction handleViews] firstObject] superview]);
-    reinsertAboveTileGridContainer([displayInteraction cursorView]);
+    // The first managed selection view in the array of subviews should be the highlight view.
+    // If there are any other views between the tile grid container and the highlight view,
+    // reposition the managed selection views above the tile grid container.
+    for (UIView *view in self.managedTextSelectionViews.reverseObjectEnumerator) {
+        if (newContainer == view.superview)
+            [newContainer insertSubview:view atIndex:*indexAfterTileGridContainer];
+    }
 #endif // HAVE(UI_TEXT_SELECTION_DISPLAY_INTERACTION)
+}
+
+- (void)setNeedsSelectionUpdate
+{
+#if HAVE(UI_TEXT_SELECTION_DISPLAY_INTERACTION)
+    [self.textSelectionDisplayInteraction setNeedsSelectionUpdate];
+#endif
 }
 
 - (void)activateSelection
@@ -283,6 +296,11 @@ private:
 {
     if (_hideEditMenuScope)
         return;
+
+#if USE(UICONTEXTMENU)
+    if (self.contextMenuInteraction._wk_isMenuVisible)
+        return;
+#endif
 
     _hideEditMenuScope = WTF::makeUnique<WebKit::HideEditMenuScope>(self, WebKit::DeactivateSelection::Yes);
 }

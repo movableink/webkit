@@ -141,9 +141,9 @@
 #endif
 
 #if OS(WINDOWS)
-#include <crtdbg.h>
 #include <mmsystem.h>
 #include <windows.h>
+#include <wtf/win/WTFCRTDebug.h>
 #endif
 
 #if OS(DARWIN) && CPU(ARM_THUMB2)
@@ -166,6 +166,8 @@
 #elif OS(LINUX)
 #include <wtf/linux/ProcessMemoryFootprint.h>
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 #if OS(DARWIN) || OS(LINUX)
 struct MemoryFootprint : ProcessMemoryFootprint {
@@ -598,11 +600,11 @@ private:
         }
 
         bool contains(UniquedStringImpl* name) const { return m_names.contains(name); }
-        const HashSet<UniquedStringImpl*>& names() const { return m_names; }
+        const UncheckedKeyHashSet<UniquedStringImpl*>& names() const { return m_names; }
 
     private:
         Vector<AtomString> m_strings; // To keep the UniqueStringImpls alive.
-        HashSet<UniquedStringImpl*> m_names;
+        UncheckedKeyHashSet<UniquedStringImpl*> m_names;
     };
 
     void finishCreation(VM& vm, const Vector<String>& arguments)
@@ -631,6 +633,22 @@ private:
 
         Base::finishCreation(vm);
         JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
+
+        // Set loop counts based on enabled engine tiers.
+        unsigned testLoopCount = 10000;
+        if (!Options::useDFGJIT())
+            testLoopCount = 1000;
+        if (!Options::useBaselineJIT())
+            testLoopCount = 100;
+
+        unsigned wasmTestLoopCount = 10000;
+        if (!Options::useOMGJIT())
+            wasmTestLoopCount = 1000;
+        if (!Options::useBBQJIT())
+            wasmTestLoopCount = 100;
+
+        putDirect(vm, Identifier::fromString(vm, "testLoopCount"_s), jsNumber(testLoopCount), DontEnum);
+        putDirect(vm, Identifier::fromString(vm, "wasmTestLoopCount"_s), jsNumber(wasmTestLoopCount), DontEnum);
 
         addFunction(vm, "atob"_s, functionAtob, 1);
         addFunction(vm, "btoa"_s, functionBtoa, 1);
@@ -960,6 +978,7 @@ const GlobalObjectMethodTable GlobalObject::s_globalObjectMethodTable = {
     &deriveShadowRealmGlobalObject,
     &codeForEval,
     &canCompileStrings,
+    &trustedScriptStructure,
 };
 
 GlobalObject::GlobalObject(VM& vm, Structure* structure)
@@ -2085,7 +2104,7 @@ JSC_DEFINE_HOST_FUNCTION(functionWriteFile, (JSGlobalObject* globalObject, CallF
 
     int size = std::visit(WTF::makeVisitor([&](const String& string) {
         CString utf8 = string.utf8();
-        return FileSystem::writeToFile(handle, utf8.span());
+        return FileSystem::writeToFile(handle, byteCast<uint8_t>(utf8.span()));
     }, [&] (const std::span<const uint8_t>& data) {
         return FileSystem::writeToFile(handle, data);
     }), data);
@@ -2606,8 +2625,7 @@ JSC_DEFINE_HOST_FUNCTION(functionDollarAgentReceiveBroadcast, (JSGlobalObject* g
         }
 #if ENABLE(WEBASSEMBLY)
         if (std::holds_alternative<RefPtr<SharedArrayBufferContents>>(content)) {
-            JSWebAssemblyMemory* jsMemory = JSC::JSWebAssemblyMemory::tryCreate(globalObject, vm, globalObject->webAssemblyMemoryStructure());
-            scope.releaseAssertNoException();
+            JSWebAssemblyMemory* jsMemory = JSC::JSWebAssemblyMemory::create(vm, globalObject->webAssemblyMemoryStructure());
             auto handler = [&vm, jsMemory](Wasm::Memory::GrowSuccess, PageCount oldPageCount, PageCount newPageCount) { jsMemory->growSuccessCallback(vm, oldPageCount, newPageCount); };
             RefPtr<Wasm::Memory> memory;
             if (auto shared = std::get<RefPtr<SharedArrayBufferContents>>(WTFMove(content)))
@@ -2952,7 +2970,7 @@ JSC_DEFINE_HOST_FUNCTION(functionSetTimeout, (JSGlobalObject* globalObject, Call
     // it will cause setTimeout starvation problem (see stress test settimeout-starvation.js).
     JSValue timeout = callFrame->argument(1);
     Seconds delay = timeout.isNumber() ? Seconds::fromMilliseconds(timeout.asNumber()) : Seconds(0);
-    RunLoop::current().dispatchAfter(delay, WTFMove(dispatch));
+    RunLoop::currentSingleton().dispatchAfter(delay, WTFMove(dispatch));
 
     return JSValue::encode(jsUndefined());
 }
@@ -3231,15 +3249,19 @@ JSC_DEFINE_HOST_FUNCTION(functionSamplingProfilerStackTraces, (JSGlobalObject* g
     if (!vm.samplingProfiler())
         return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "Sampling profiler was never started"_s)));
 
-    EncodedJSValue result = JSValue::encode(JSONParse(globalObject, vm.samplingProfiler()->stackTracesAsJSONString()));
+    auto json = vm.samplingProfiler()->stackTracesAsJSON();
+    auto jsonString = json->toJSONString();
+    EncodedJSValue result = JSValue::encode(JSONParse(globalObject, WTFMove(jsonString)));
     scope.releaseAssertNoException();
     return result;
 }
 #endif // ENABLE(SAMPLING_PROFILER)
 
-JSC_DEFINE_HOST_FUNCTION(functionMaxArguments, (JSGlobalObject*, CallFrame*))
+JSC_DEFINE_HOST_FUNCTION(functionMaxArguments, (JSGlobalObject* globalObject, CallFrame*))
 {
-    return JSValue::encode(jsNumber(JSC::maxArguments));
+    VM& vm = globalObject->vm();
+    unsigned result = std::min<unsigned>(JSC::maxArguments, static_cast<unsigned>((std::bit_cast<uint8_t*>(Thread::currentSingleton().stack().origin()) - std::bit_cast<uint8_t*>(vm.softStackLimit())) / sizeof(EncodedJSValue)));
+    return JSValue::encode(jsNumber(result));
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionAsyncTestStart, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -3526,14 +3548,7 @@ int main(int argc, char** argv)
     _setmode(_fileno(stdout), _O_BINARY);
     _setmode(_fileno(stderr), _O_BINARY);
 
-#if defined(_DEBUG)
-    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
-    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
-    _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
-    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
-#endif
+    WTF::disableCRTDebugAssertDialog();
 
     timeBeginPeriod(1);
 #endif
@@ -3952,7 +3967,7 @@ static NO_RETURN void printUsageStatement(bool help = false)
     fprintf(stderr, "  --options                  Dumps all JSC VM options and exits\n");
     fprintf(stderr, "  --dumpOptions              Dumps all non-default JSC VM options before continuing\n");
     fprintf(stderr, "  --<jsc VM option>=<value>  Sets the specified JSC VM option\n");
-#if PLATFORM(COCOA)
+#if USE(LIBPAS)
     fprintf(stderr, "  --crash-vm=<value>         Crash VM on startup due to PGM failure. Options PGMOOBLowerGuardPage, PGMOOBUpperGuardPage, or PGMUAF (For Testing Purposes).\n");
 #endif
     fprintf(stderr, "  --destroy-vm               Destroy VM before exiting\n");
@@ -3974,12 +3989,12 @@ static bool isMJSFile(char *filename)
     return false;
 }
 
-#if PLATFORM(COCOA)
+#if USE(LIBPAS)
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 static NEVER_INLINE void crashPGMUAF()
 {
-    WTF::forceEnablePGM();
+    WTF::forceEnablePGM(1);
     size_t allocSize = getpagesize() * 10000;
     char* result = static_cast<char*>(fastMalloc(allocSize));
     fastFree(result);
@@ -3988,7 +4003,7 @@ static NEVER_INLINE void crashPGMUAF()
 
 static NEVER_INLINE void crashPGMUpperGuardPage()
 {
-    WTF::forceEnablePGM();
+    WTF::forceEnablePGM(1);
     size_t allocSize = getpagesize() * 10000;
     char* result = static_cast<char*>(fastMalloc(allocSize));
     result = result + allocSize;
@@ -3997,7 +4012,7 @@ static NEVER_INLINE void crashPGMUpperGuardPage()
 
 static NEVER_INLINE void crashPGMLowerGuardPage()
 {
-    WTF::forceEnablePGM();
+    WTF::forceEnablePGM(1);
     size_t allocSize = getpagesize() * 10000;
     char* result = static_cast<char*>(fastMalloc(allocSize));
     result = result - 1;
@@ -4014,7 +4029,7 @@ void CommandLine::parseArguments(int argc, char** argv)
     Options::AllowUnfinalizedAccessScope scope;
     Options::initialize();
     Options::useSharedArrayBuffer() = true;
-    
+
 #if PLATFORM(IOS_FAMILY) && !PLATFORM(APPLETV) && !PLATFORM(WATCHOS)
     Options::crashIfCantAllocateJITMemory() = true;
 #endif
@@ -4134,7 +4149,7 @@ void CommandLine::parseArguments(int argc, char** argv)
             m_dumpSamplingProfilerData = true;
             continue;
         }
-#if PLATFORM(COCOA)
+#if USE(LIBPAS)
         if (!strcmp(arg, "--crash-vm=PGMOOBLowerGuardPage"))
             crashPGMLowerGuardPage();
         if (!strcmp(arg, "--crash-vm=PGMOOBUpperGuardPage"))
@@ -4399,7 +4414,7 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
         JSLockHolder locker(vm);
         // This is needed because we don't want the worker's main
         // thread to die before its compilation threads finish.
-        vm.deref();
+        vm.derefSuppressingSaferCPPChecking();
     }
 
     return result;
@@ -4529,3 +4544,5 @@ int jscmain(int argc, char** argv)
 
     return result;
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

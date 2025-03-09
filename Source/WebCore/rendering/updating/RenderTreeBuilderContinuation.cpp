@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeBuilder, Continuation);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::Continuation);
 
 RenderTreeBuilder::Continuation::Continuation(RenderTreeBuilder& builder)
     : m_builder(builder)

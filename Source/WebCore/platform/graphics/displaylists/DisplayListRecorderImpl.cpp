@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -200,19 +200,14 @@ void RecorderImpl::recordDrawFilteredImageBuffer(ImageBuffer* sourceImage, const
     append(DrawFilteredImageBuffer(WTFMove(identifier), sourceImageRect, filter));
 }
 
-void RecorderImpl::recordDrawGlyphs(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode mode)
+void RecorderImpl::recordDrawGlyphs(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& localAnchor, FontSmoothingMode mode)
 {
-    append(DrawGlyphs(font, glyphs, advances, count, localAnchor, mode));
+    append(DrawGlyphs(font, glyphs, advances, localAnchor, mode));
 }
 
 void RecorderImpl::recordDrawDecomposedGlyphs(const Font& font, const DecomposedGlyphs& decomposedGlyphs)
 {
     append(DrawDecomposedGlyphs(font.renderingResourceIdentifier(), decomposedGlyphs.renderingResourceIdentifier()));
-}
-
-void RecorderImpl::recordDrawDisplayListItems(const Vector<Item>& items, const FloatPoint& destination)
-{
-    append(DrawDisplayListItems(items, destination));
 }
 
 void RecorderImpl::recordDrawImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
@@ -265,10 +260,10 @@ void RecorderImpl::drawLine(const FloatPoint& point1, const FloatPoint& point2)
     append(DrawLine(point1, point2));
 }
 
-void RecorderImpl::drawLinesForText(const FloatPoint& point, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle style)
+void RecorderImpl::drawLinesForText(const FloatPoint& point, float thickness, std::span<const FloatSegment> lineSegments, bool printing, bool doubleLines, StrokeStyle style)
 {
     appendStateChangeItemIfNecessary();
-    append(DrawLinesForText(point, widths, thickness, printing, doubleLines, style));
+    append(DrawLinesForText(point, lineSegments, thickness, printing, doubleLines, style));
 }
 
 void RecorderImpl::drawDotsForDocumentMarker(const FloatRect& rect, DocumentMarkerLineStyle style)
@@ -487,11 +482,31 @@ void RecorderImpl::applyDeviceScaleFactor(float scaleFactor)
     append(ApplyDeviceScaleFactor(scaleFactor));
 }
 
+void RecorderImpl::beginPage(const IntSize& pageSize)
+{
+    appendStateChangeItemIfNecessary();
+    append(BeginPage({ pageSize }));
+}
+
+void RecorderImpl::endPage()
+{
+    appendStateChangeItemIfNecessary();
+    append(EndPage());
+}
+
+void RecorderImpl::setURLForRect(const URL& link, const FloatRect& destRect)
+{
+    appendStateChangeItemIfNecessary();
+    append(SetURLForRect(link, destRect));
+}
+
 bool RecorderImpl::recordResourceUse(NativeImage& nativeImage)
 {
 #if USE(SKIA)
-    if (m_displayList.replayOptions().contains(ReplayOption::FlushImagesAndWaitForCompletion))
-        nativeImage.backend().finishAcceleratedRenderingAndCreateFence();
+    if (m_displayList.replayOptions().contains(ReplayOption::FlushAcceleratedImagesAndWaitForCompletion)) {
+        if (nativeImage.backend().finishAcceleratedRenderingAndCreateFence())
+            m_usedAcceleratedRendering = true;
+    }
 #endif
 
     m_displayList.cacheNativeImage(nativeImage);
@@ -501,8 +516,10 @@ bool RecorderImpl::recordResourceUse(NativeImage& nativeImage)
 bool RecorderImpl::recordResourceUse(ImageBuffer& imageBuffer)
 {
 #if USE(SKIA)
-    if (m_displayList.replayOptions().contains(ReplayOption::FlushImagesAndWaitForCompletion))
-        imageBuffer.finishAcceleratedRenderingAndCreateFence();
+    if (m_displayList.replayOptions().contains(ReplayOption::FlushAcceleratedImagesAndWaitForCompletion)) {
+        if (imageBuffer.finishAcceleratedRenderingAndCreateFence())
+            m_usedAcceleratedRendering = true;
+    }
 #endif
 
     m_displayList.cacheImageBuffer(imageBuffer);

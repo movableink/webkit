@@ -68,6 +68,10 @@ class QSocketNotifier;
 QT_END_NAMESPACE
 #endif
 
+#if USE(UNIX_DOMAIN_SOCKETS)
+#include <wtf/unix/UnixFileDescriptor.h>
+#endif
+
 #if ENABLE(IPC_TESTING_API)
 #include "MessageObserver.h"
 #endif
@@ -124,10 +128,17 @@ extern ASCIILiteral errorAsString(Error);
 #define CONNECTION_STRINGIFY(line) #line
 #define CONNECTION_STRINGIFY_MACRO(line) CONNECTION_STRINGIFY(line)
 
+#if ENABLE(IPC_TESTING_API)
+#define CRASH_IF_TESTING
+#else
+#define CRASH_IF_TESTING if (IPC::Connection::shouldCrashOnMessageCheckFailure()) { CRASH(); }
+#endif
+
 #define MESSAGE_CHECK_WITH_MESSAGE_BASE(assertion, connection, message) do { \
     if (UNLIKELY(!(assertion))) { \
         RELEASE_LOG_FAULT(IPC, __FILE__ " " CONNECTION_STRINGIFY_MACRO(__LINE__) ": Invalid message dispatched %" PUBLIC_LOG_STRING ": " message, WTF_PRETTY_FUNCTION); \
         (connection)->markCurrentlyDispatchedMessageAsInvalid(); \
+        CRASH_IF_TESTING \
         return; \
     } \
 } while (0)
@@ -139,6 +150,7 @@ extern ASCIILiteral errorAsString(Error);
     if (UNLIKELY(!(assertion))) { \
         RELEASE_LOG_FAULT(IPC, __FILE__ " " CONNECTION_STRINGIFY_MACRO(__LINE__) ": Invalid message dispatched %" PUBLIC_LOG_STRING, WTF_PRETTY_FUNCTION); \
         (connection)->markCurrentlyDispatchedMessageAsInvalid(); \
+        CRASH_IF_TESTING \
         return; \
     } \
 } while (0)
@@ -147,6 +159,7 @@ extern ASCIILiteral errorAsString(Error);
     if (UNLIKELY(!(assertion))) { \
         RELEASE_LOG_FAULT(IPC, __FILE__ " " CONNECTION_STRINGIFY_MACRO(__LINE__) ": Invalid message dispatched %" PUBLIC_LOG_STRING, WTF_PRETTY_FUNCTION); \
         (connection).markCurrentlyDispatchedMessageAsInvalid(); \
+        CRASH_IF_TESTING \
         { completion; } \
         return; \
     } \
@@ -156,6 +169,7 @@ extern ASCIILiteral errorAsString(Error);
     if (UNLIKELY(!(assertion))) { \
         RELEASE_LOG_FAULT(IPC, __FILE__ " " CONNECTION_STRINGIFY_MACRO(__LINE__) ": Invalid message dispatched %" PUBLIC_LOG_STRING, WTF_PRETTY_FUNCTION); \
         (connection).markCurrentlyDispatchedMessageAsInvalid(); \
+        CRASH_IF_TESTING \
         { completion; } \
         co_return { }; \
     } \
@@ -165,6 +179,7 @@ extern ASCIILiteral errorAsString(Error);
     if (UNLIKELY(!(assertion))) { \
         RELEASE_LOG_FAULT(IPC, __FILE__ " " CONNECTION_STRINGIFY_MACRO(__LINE__) ": Invalid message dispatched %" PUBLIC_LOG_STRING, WTF_PRETTY_FUNCTION); \
         (connection).markCurrentlyDispatchedMessageAsInvalid(); \
+        CRASH_IF_TESTING \
         return (returnValue); \
     } \
 } while (0)
@@ -176,7 +191,7 @@ template<typename AsyncReplyResult> struct AsyncReplyError {
 class Decoder;
 class MachMessage;
 class UnixMessage;
-class WorkQueueMessageReceiver;
+class WorkQueueMessageReceiverBase;
 
 struct AsyncReplyIDType;
 using AsyncReplyID = AtomicObjectIdentifier<AsyncReplyIDType>;
@@ -258,15 +273,15 @@ public:
 
 #if USE(UNIX_DOMAIN_SOCKETS)
         explicit Identifier(Handle&& handle)
-            : Identifier(handle.release())
+            : Identifier({ handle.release(), UnixFileDescriptor::Adopt })
         {
         }
-        explicit Identifier(int handle)
-            : handle(handle)
+        explicit Identifier(UnixFileDescriptor&& fd)
+            : handle(WTFMove(fd))
         {
         }
-        operator bool() const { return handle != -1; }
-        int handle { -1 };
+        operator bool() const { return !!handle; }
+        UnixFileDescriptor handle;
 #elif OS(WINDOWS)
         explicit Identifier(Handle&& handle)
             : Identifier(handle.leak())
@@ -347,7 +362,7 @@ public:
     // Adds a message receive queue that dispatches through WorkQueue to WorkQueueMessageReceiver.
     // Keeps the WorkQueue and the WorkQueueMessageReceiver alive. Dispatched tasks keep WorkQueueMessageReceiver alive.
     // destinationID == 0 matches all ids.
-    void addWorkQueueMessageReceiver(ReceiverName, WorkQueue&, WorkQueueMessageReceiver&, uint64_t destinationID = 0);
+    void addWorkQueueMessageReceiver(ReceiverName, WorkQueue&, WorkQueueMessageReceiverBase&, uint64_t destinationID = 0);
     void removeWorkQueueMessageReceiver(ReceiverName, uint64_t destinationID = 0);
 
     // Adds a message receive queue that dispatches through FunctionDispatcher.
@@ -359,7 +374,7 @@ public:
     void addMessageReceiver(FunctionDispatcher&, MessageReceiver&, ReceiverName, uint64_t destinationID = 0);
     void removeMessageReceiver(ReceiverName, uint64_t destinationID = 0);
 
-    bool open(Client&, SerialFunctionDispatcher& = RunLoop::protectedCurrent().get());
+    bool open(Client&, SerialFunctionDispatcher& = RunLoop::currentSingleton());
     // Ensures that messages sent prior to the call are not affected by invalidate() or crash done after the call returns.
     Error flushSentMessages(Timeout);
     void invalidate();
@@ -501,6 +516,9 @@ public:
 #if ENABLE(CORE_IPC_SIGNPOSTS)
     static void* generateSignpostIdentifier();
 #endif
+
+    static bool shouldCrashOnMessageCheckFailure();
+    static void setShouldCrashOnMessageCheckFailure(bool);
 
 private:
     Connection(Identifier&&, bool isServer, Thread::QOS = Thread::QOS::Default);
@@ -672,7 +690,7 @@ private:
     GSocketMonitor m_readSocketMonitor;
     GSocketMonitor m_writeSocketMonitor;
 #else
-    int m_socketDescriptor;
+    UnixFileDescriptor m_socketDescriptor;
 #endif
 #if PLATFORM(PLAYSTATION)
     RefPtr<WTF::Thread> m_socketMonitor;

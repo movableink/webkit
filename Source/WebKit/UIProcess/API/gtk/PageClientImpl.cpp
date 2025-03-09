@@ -37,6 +37,7 @@
 #include "WebColorPickerGtk.h"
 #include "WebContextMenuProxyGtk.h"
 #include "WebDataListSuggestionsDropdownGtk.h"
+#include "WebDateTimePickerGtk.h"
 #include "WebEventFactory.h"
 #include "WebKitClipboardPermissionRequestPrivate.h"
 #include "WebKitColorChooser.h"
@@ -63,10 +64,6 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/unix/UnixFileDescriptor.h>
-
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-#include "WebDateTimePickerGtk.h"
-#endif
 
 namespace WebKit {
 using namespace WebCore;
@@ -249,6 +246,11 @@ IntPoint PageClientImpl::screenToRootView(const IntPoint& point)
     return result;
 }
 
+IntPoint PageClientImpl::rootViewToScreen(const IntPoint& point)
+{
+    return convertWidgetPointToScreenPoint(m_viewWidget, point);
+}
+
 IntRect PageClientImpl::rootViewToScreen(const IntRect& rect)
 {
     return IntRect(convertWidgetPointToScreenPoint(m_viewWidget, rect.location()), rect.size());
@@ -298,34 +300,28 @@ RefPtr<WebPopupMenuProxy> PageClientImpl::createPopupMenuProxy(WebPageProxy& pag
 }
 
 #if ENABLE(CONTEXT_MENUS)
-Ref<WebContextMenuProxy> PageClientImpl::createContextMenuProxy(WebPageProxy& page, ContextMenuContextData&& context, const UserData& userData)
+Ref<WebContextMenuProxy> PageClientImpl::createContextMenuProxy(WebPageProxy& page, FrameInfoData&& frameInfoData, ContextMenuContextData&& context, const UserData& userData)
 {
-    return WebContextMenuProxyGtk::create(m_viewWidget, page, WTFMove(context), userData);
+    return WebContextMenuProxyGtk::create(m_viewWidget, page, WTFMove(frameInfoData), WTFMove(context), userData);
 }
 #endif // ENABLE(CONTEXT_MENUS)
 
-#if ENABLE(INPUT_TYPE_COLOR)
-RefPtr<WebColorPicker> PageClientImpl::createColorPicker(WebPageProxy* page, const WebCore::Color& color, const WebCore::IntRect& rect, ColorControlSupportsAlpha, Vector<WebCore::Color>&&)
+RefPtr<WebColorPicker> PageClientImpl::createColorPicker(WebPageProxy& page, const WebCore::Color& color, const WebCore::IntRect& rect, ColorControlSupportsAlpha, Vector<WebCore::Color>&&)
 {
     if (WEBKIT_IS_WEB_VIEW(m_viewWidget))
-        return WebKitColorChooser::create(*page, color, rect);
-    return WebColorPickerGtk::create(*page, color, rect);
+        return WebKitColorChooser::create(page, color, rect);
+    return WebColorPickerGtk::create(page, color, rect);
 }
-#endif // ENABLE(INPUT_TYPE_COLOR)
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 RefPtr<WebDateTimePicker> PageClientImpl::createDateTimePicker(WebPageProxy& page)
 {
     return WebDateTimePickerGtk::create(page);
 }
-#endif
 
-#if ENABLE(DATALIST_ELEMENT)
 RefPtr<WebDataListSuggestionsDropdown> PageClientImpl::createDataListSuggestionsDropdown(WebPageProxy& page)
 {
     return WebDataListSuggestionsDropdownGtk::create(m_viewWidget, page);
 }
-#endif
 
 Ref<ValidationBubble> PageClientImpl::createValidationBubble(const String& message, const ValidationBubble::Settings& settings)
 {
@@ -396,7 +392,15 @@ void PageClientImpl::didCommitLoadForMainFrame(const String& /* mimeType */, boo
 #if ENABLE(FULLSCREEN_API)
 WebFullScreenManagerProxyClient& PageClientImpl::fullScreenManagerProxyClient()
 {
+    if (m_fullscreenClientForTesting)
+        return *m_fullscreenClientForTesting;
+
     return *this;
+}
+
+void PageClientImpl::setFullScreenClientForTesting(std::unique_ptr<WebFullScreenManagerProxyClient>&& client)
+{
+    m_fullscreenClientForTesting = WTFMove(client);
 }
 
 void PageClientImpl::closeFullScreenManager()
@@ -409,42 +413,43 @@ bool PageClientImpl::isFullScreen()
     return webkitWebViewBaseIsFullScreen(WEBKIT_WEB_VIEW_BASE(m_viewWidget));
 }
 
-void PageClientImpl::enterFullScreen()
+void PageClientImpl::enterFullScreen(WebCore::FloatSize, CompletionHandler<void(bool)>&& completionHandler)
 {
     if (!m_viewWidget)
-        return;
+        return completionHandler(false);
 
     if (isFullScreen())
-        return;
+        return completionHandler(false);
 
-    webkitWebViewBaseWillEnterFullScreen(WEBKIT_WEB_VIEW_BASE(m_viewWidget));
+    webkitWebViewBaseWillEnterFullScreen(WEBKIT_WEB_VIEW_BASE(m_viewWidget), WTFMove(completionHandler));
 
     if (!WEBKIT_IS_WEB_VIEW(m_viewWidget) || !webkitWebViewEnterFullScreen(WEBKIT_WEB_VIEW(m_viewWidget)))
         webkitWebViewBaseEnterFullScreen(WEBKIT_WEB_VIEW_BASE(m_viewWidget));
 }
 
-void PageClientImpl::exitFullScreen()
+void PageClientImpl::exitFullScreen(CompletionHandler<void()>&& completionHandler)
 {
     if (!m_viewWidget)
-        return;
+        return completionHandler();
 
     if (!isFullScreen())
-        return;
+        return completionHandler();
 
-    webkitWebViewBaseWillExitFullScreen(WEBKIT_WEB_VIEW_BASE(m_viewWidget));
+    webkitWebViewBaseWillExitFullScreen(WEBKIT_WEB_VIEW_BASE(m_viewWidget), WTFMove(completionHandler));
 
     if (!WEBKIT_IS_WEB_VIEW(m_viewWidget) || !webkitWebViewExitFullScreen(WEBKIT_WEB_VIEW(m_viewWidget)))
         webkitWebViewBaseExitFullScreen(WEBKIT_WEB_VIEW_BASE(m_viewWidget));
 }
 
-void PageClientImpl::beganEnterFullScreen(const IntRect& /* initialFrame */, const IntRect& /* finalFrame */)
+void PageClientImpl::beganEnterFullScreen(const IntRect& /* initialFrame */, const IntRect& /* finalFrame */, CompletionHandler<void(bool)>&& completionHandler)
 {
     notImplemented();
+    completionHandler(true);
 }
 
-void PageClientImpl::beganExitFullScreen(const IntRect& /* initialFrame */, const IntRect& /* finalFrame */)
+void PageClientImpl::beganExitFullScreen(const IntRect& /* initialFrame */, const IntRect& /* finalFrame */, CompletionHandler<void()>&& completionHandler)
 {
-    notImplemented();
+    completionHandler();
 }
 
 #endif // ENABLE(FULLSCREEN_API)

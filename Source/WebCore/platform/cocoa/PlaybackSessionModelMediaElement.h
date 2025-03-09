@@ -71,6 +71,7 @@ public:
 
     WEBCORE_EXPORT void handleEvent(WebCore::ScriptExecutionContext&, WebCore::Event&) final;
     void updateForEventName(const AtomString&);
+    WEBCORE_EXPORT void updateAll();
 
     WEBCORE_EXPORT void addClient(PlaybackSessionModelClient&);
     WEBCORE_EXPORT void removeClient(PlaybackSessionModelClient&);
@@ -92,6 +93,7 @@ public:
     WEBCORE_EXPORT void enterInWindowFullscreen() final;
     WEBCORE_EXPORT void exitInWindowFullscreen() final;
     WEBCORE_EXPORT void enterFullscreen() final;
+    WEBCORE_EXPORT void setPlayerIdentifierForVideoElement() final;
     WEBCORE_EXPORT void exitFullscreen() final;
     WEBCORE_EXPORT void toggleMuted() final;
     WEBCORE_EXPORT void setMuted(bool) final;
@@ -146,17 +148,19 @@ private:
 
     RefPtr<HTMLMediaElement> m_mediaElement;
     bool m_isListening { false };
-    HashSet<CheckedPtr<PlaybackSessionModelClient>> m_clients;
+    UncheckedKeyHashSet<CheckedPtr<PlaybackSessionModelClient>> m_clients;
     Vector<RefPtr<TextTrack>> m_legibleTracksForMenu;
     Vector<RefPtr<AudioTrack>> m_audioTracksForMenu;
     AudioSessionSoundStageSize m_soundStageSize;
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     std::optional<SpatialVideoMetadata> m_spatialVideoMetadata;
+    bool m_isImmersiveVideo { false };
 #endif
 
     double playbackStartedTime() const;
     void updateMediaSelectionOptions();
     void updateMediaSelectionIndices();
+    void maybeUpdateVideoMetadata();
 };
 
 }

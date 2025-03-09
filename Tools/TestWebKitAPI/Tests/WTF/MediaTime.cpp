@@ -32,7 +32,6 @@
 #include <wtf/Expected.h>
 #include <wtf/MathExtras.h>
 #include <wtf/MediaTime.h>
-#include <wtf/Seconds.h>
 
 namespace WTF {
 

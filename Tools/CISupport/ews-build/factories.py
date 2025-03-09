@@ -31,6 +31,7 @@ class Factory(factory.BuildFactory):
     findModifiedLayoutTests = False
     skipBuildIfNoResult = True
     branches = None
+    requiresUserValidation = False
 
     def __init__(self, platform, configuration=None, architectures=None, buildOnly=True, triggers=None, triggered_by=None, remotes=None, additionalArguments=None, checkRelevance=False, **kwargs):
         factory.BuildFactory.__init__(self)
@@ -51,6 +52,8 @@ class Factory(factory.BuildFactory):
         self.addStep(ShowIdentifier())
         self.addStep(ApplyPatch())
         self.addStep(CheckOutPullRequest())
+        if self.requiresUserValidation:
+            self.addStep(ValidateUserForQueue())
         if self.findModifiedLayoutTests:
             self.addStep(GetUpdatedTestExpectations())
             self.addStep(FindModifiedLayoutTests(skipBuildIfNoResult=self.skipBuildIfNoResult))
@@ -109,6 +112,7 @@ class SaferCPPStaticAnalyzerFactory(factory.BuildFactory):
         self.addStep(CheckOutPullRequest())
         self.addStep(KillOldProcesses())
         self.addStep(ValidateChange(addURLs=False))
+        self.addStep(FindModifiedSaferCPPExpectations())
         self.addStep(ScanBuild())
 
 
@@ -287,6 +291,12 @@ class macOSWK2Factory(TestFactory):
     LayoutTestClass = RunWebKitTests
     findModifiedLayoutTests = True
     willTriggerCrashLogSubmission = True
+
+
+class PlayStationBuildFactory(BuildFactory):
+    branches = [r'main']
+    requiresUserValidation = True
+    skipUpload = True
 
 
 class WinBuildFactory(BuildFactory):

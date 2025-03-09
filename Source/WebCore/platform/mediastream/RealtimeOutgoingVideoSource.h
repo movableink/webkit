@@ -35,15 +35,11 @@
 #include "Timer.h"
 #include <wtf/Lock.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 #include <webrtc/api/media_stream_interface.h>
 
-ALLOW_UNUSED_PARAMETERS_END
-ALLOW_COMMA_END
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 #include <wtf/LoggerHelper.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -116,7 +112,7 @@ private:
 
     // VideoTrackSourceInterface API
     bool is_screencast() const final { return false; }
-    absl::optional<bool> needs_denoising() const final { return absl::optional<bool>(); }
+    std::optional<bool> needs_denoising() const final { return std::optional<bool>(); }
     bool GetStats(Stats*) final { return false; };
     bool SupportsEncodedOutput() const final { return false; }
     void GenerateKeyFrame() final { }
@@ -149,7 +145,7 @@ private:
     rtc::scoped_refptr<webrtc::VideoFrameBuffer> m_blackFrame;
 
     mutable Lock m_sinksLock;
-    HashSet<rtc::VideoSinkInterface<webrtc::VideoFrame>*> m_sinks WTF_GUARDED_BY_LOCK(m_sinksLock);
+    UncheckedKeyHashSet<rtc::VideoSinkInterface<webrtc::VideoFrame>*> m_sinks WTF_GUARDED_BY_LOCK(m_sinksLock);
     bool m_areSinksAskingToApplyRotation { false };
 
     bool m_enabled { true };

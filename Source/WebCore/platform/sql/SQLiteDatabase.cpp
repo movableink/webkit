@@ -58,7 +58,7 @@ static constexpr auto notOpenErrorMessage = "database is not open"_s;
 static void unauthorizedSQLFunction(sqlite3_context *context, int, sqlite3_value **)
 {
     auto* functionName = static_cast<const char*>(sqlite3_user_data(context));
-    sqlite3_result_error(context, makeString("Function "_s, span(functionName), " is unauthorized"_s).utf8().data(), -1);
+    sqlite3_result_error(context, makeString("Function "_s, unsafeSpan(functionName), " is unauthorized"_s).utf8().data(), -1);
 }
 
 static void initializeSQLiteIfNecessary()
@@ -177,7 +177,7 @@ bool SQLiteDatabase::open(const String& filename, OpenMode openMode, OptionSet<O
 
     overrideUnauthorizedFunctions();
 
-    m_openingThread = &Thread::current();
+    m_openingThread = &Thread::currentSingleton();
     if (sqlite3_extended_result_codes(m_db, 1) != SQLITE_OK)
         return false;
 
@@ -296,7 +296,7 @@ void SQLiteDatabase::close()
         ASSERT_WITH_MESSAGE(!m_statementCount, "All SQLiteTransaction objects should be destroyed before closing the database");
 
         // FIXME: This is being called on the main thread during JS GC. <rdar://problem/5739818>
-        // ASSERT(m_openingThread == &Thread::current());
+        // ASSERT(m_openingThread == &Thread::currentSingleton());
         sqlite3* db = m_db;
         {
             Locker locker { m_databaseClosingMutex };
@@ -476,6 +476,11 @@ bool SQLiteDatabase::executeCommand(ASCIILiteral query)
 bool SQLiteDatabase::tableExists(StringView tableName)
 {
     return !tableSQL(tableName).isEmpty();
+}
+
+bool SQLiteDatabase::indexExists(StringView indexName)
+{
+    return !indexSQL(indexName).isEmpty();
 }
 
 String SQLiteDatabase::tableSQL(StringView tableName)

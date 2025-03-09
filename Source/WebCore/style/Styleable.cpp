@@ -30,10 +30,8 @@
 #include "AnimationEffect.h"
 #include "AnimationList.h"
 #include "AnimationTimeline.h"
-#include "AnimationTimelinesController.h"
 #include "CSSAnimation.h"
 #include "CSSCustomPropertyValue.h"
-#include "CSSPropertyAnimation.h"
 #include "CSSTransition.h"
 #include "CommonAtomStrings.h"
 #include "Document.h"
@@ -51,7 +49,9 @@
 #include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include "StyleCustomPropertyData.h"
+#include "StyleInterpolation.h"
 #include "StyleOriginatedAnimation.h"
+#include "StyleOriginatedTimelinesController.h"
 #include "StylePropertyShorthand.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
@@ -239,8 +239,20 @@ bool Styleable::isRunningAcceleratedTransformAnimation() const
 
 bool Styleable::hasRunningAcceleratedAnimations() const
 {
-    if (auto* effectStack = keyframeEffectStack())
-        return effectStack->hasAcceleratedEffects(element.document().settings());
+    if (auto* effectStack = keyframeEffectStack()) {
+        if (effectStack->hasAcceleratedEffects(element.document().settings()))
+            return true;
+    }
+
+    if (auto* animations = this->animations()) {
+        for (const auto& animation : *animations) {
+            if (RefPtr keyframeEffect = dynamicDowncast<KeyframeEffect>(animation->effect())) {
+                if (keyframeEffect->isRunningAccelerated())
+                    return true;
+            }
+        }
+    }
+
     return false;
 }
 
@@ -284,6 +296,8 @@ void Styleable::animationWasRemoved(WebAnimation& animation) const
 void Styleable::elementWasRemoved() const
 {
     cancelStyleOriginatedAnimations();
+    if (CheckedPtr styleOriginatedTimelinesController = element.protectedDocument()->styleOriginatedTimelinesController())
+        styleOriginatedTimelinesController->styleableWasRemoved(*this);
 }
 
 void Styleable::willChangeRenderer() const
@@ -294,11 +308,16 @@ void Styleable::willChangeRenderer() const
     }
 }
 
+OptionSet<AnimationImpact> Styleable::applyKeyframeEffects(RenderStyle& targetStyle, UncheckedKeyHashSet<AnimatableCSSProperty>& affectedProperties, const RenderStyle* previousLastStyleChangeEventStyle, const Style::ResolutionContext& resolutionContext) const
+{
+    return element.ensureKeyframeEffectStack(pseudoElementIdentifier).applyKeyframeEffects(targetStyle, affectedProperties, previousLastStyleChangeEventStyle, resolutionContext);
+}
+
 void Styleable::cancelStyleOriginatedAnimations() const
 {
     cancelStyleOriginatedAnimations({ });
-    if (CheckedPtr timelinesController = element.protectedDocument()->timelinesController())
-        timelinesController->unregisterNamedTimelinesAssociatedWithElement(element);
+    if (CheckedPtr styleOriginatedTimelinesController = element.protectedDocument()->styleOriginatedTimelinesController())
+        styleOriginatedTimelinesController->unregisterNamedTimelinesAssociatedWithElement(*this);
 }
 
 void Styleable::cancelStyleOriginatedAnimations(const WeakStyleOriginatedAnimations& animationsToCancelSilently) const
@@ -442,7 +461,7 @@ static KeyframeEffect* keyframeEffectForElementAndProperty(const Styleable& styl
 static bool propertyInStyleMatchesValueForTransitionInMap(const AnimatableCSSProperty& property, const RenderStyle& style, AnimatableCSSPropertyToTransitionMap& transitions, const Document& document)
 {
     if (auto* transition = transitions.get(property)) {
-        if (CSSPropertyAnimation::propertiesEqual(property, style, transition->targetStyle(), document))
+        if (Style::Interpolation::equals(property, style, transition->targetStyle(), document))
             return true;
     }
     return false;
@@ -488,7 +507,7 @@ static bool transitionMatchesProperty(const Animation& transition, const Animata
     return false;
 }
 
-static void compileTransitionPropertiesInStyle(const RenderStyle& style, CSSPropertiesBitSet& transitionProperties, HashSet<AtomString>& transitionCustomProperties, bool& transitionPropertiesContainAll)
+static void compileTransitionPropertiesInStyle(const RenderStyle& style, CSSPropertiesBitSet& transitionProperties, UncheckedKeyHashSet<AtomString>& transitionCustomProperties, bool& transitionPropertiesContainAll)
 {
     auto* transitions = style.transitions();
     if (!transitions) {
@@ -606,7 +625,7 @@ static void updateCSSTransitionsForStyleableAndProperty(const Styleable& styleab
 
     auto allowsDiscreteTransitions = matchingBackingAnimation && matchingBackingAnimation->allowsDiscreteTransitions();
     auto propertyCanBeInterpolated = [&](const AnimatableCSSProperty& property, const RenderStyle& a, const RenderStyle& b) {
-        return allowsDiscreteTransitions || CSSPropertyAnimation::canPropertyBeInterpolated(property, a, b, document);
+        return allowsDiscreteTransitions || Style::Interpolation::canInterpolate(property, a, b, document);
     };
 
     auto createCSSTransition = [&](const RenderStyle& oldStyle, Seconds delay, Seconds duration, const RenderStyle& reversingAdjustedStartStyle, double reversingShorteningFactor) {
@@ -618,7 +637,7 @@ static void updateCSSTransitionsForStyleableAndProperty(const Styleable& styleab
     bool hasRunningTransition = styleable.hasRunningTransitionForProperty(property);
     if (!hasRunningTransition
         && hasMatchingTransitionProperty && matchingTransitionDuration > 0
-        && !CSSPropertyAnimation::propertiesEqual(property, beforeChangeStyle, afterChangeStyle, document)
+        && !Style::Interpolation::equals(property, beforeChangeStyle, afterChangeStyle, document)
         && propertyCanBeInterpolated(property, beforeChangeStyle, afterChangeStyle)
         && !propertyInStyleMatchesValueForTransitionInMap(property, afterChangeStyle, styleable.ensureCompletedTransitionsByProperty(), document)) {
         // 1. If all of the following are true:
@@ -668,7 +687,7 @@ static void updateCSSTransitionsForStyleableAndProperty(const Styleable& styleab
         auto& previouslyRunningTransitionCurrentStyle = previouslyRunningTransition->currentStyle();
         // 4. If the element has a running transition for the property, there is a matching transition-property value, and the end value of the running
         //    transition is not equal to the value of the property in the after-change style, then:
-        if (CSSPropertyAnimation::propertiesEqual(property, previouslyRunningTransitionCurrentStyle, afterChangeStyle, document) || !propertyCanBeInterpolated(property, currentStyle, afterChangeStyle)) {
+        if (Style::Interpolation::equals(property, previouslyRunningTransitionCurrentStyle, afterChangeStyle, document) || !propertyCanBeInterpolated(property, currentStyle, afterChangeStyle)) {
             // 1. If the current value of the property in the running transition is equal to the value of the property in the after-change style,
             //    or if these two values cannot be interpolated, then implementations must cancel the running transition.
             previouslyRunningTransition->cancelFromStyle();
@@ -676,7 +695,7 @@ static void updateCSSTransitionsForStyleableAndProperty(const Styleable& styleab
             // 2. Otherwise, if the combined duration is less than or equal to 0s, or if the current value of the property in the running transition
             //    cannot be interpolated with the value of the property in the after-change style, then implementations must cancel the running transition.
             previouslyRunningTransition->cancelFromStyle();
-        } else if (CSSPropertyAnimation::propertiesEqual(property, previouslyRunningTransition->reversingAdjustedStartStyle(), afterChangeStyle, document)) {
+        } else if (Style::Interpolation::equals(property, previouslyRunningTransition->reversingAdjustedStartStyle(), afterChangeStyle, document)) {
             // 3. Otherwise, if the reversing-adjusted start value of the running transition is the same as the value of the property in the after-change
             //    style (see the section on reversing of transitions for why these case exists), implementations must cancel the running transition
             //    and start a new transition whose:
@@ -774,7 +793,7 @@ void Styleable::updateCSSTransitions(const RenderStyle& currentStyle, const Rend
     // First, let's compile the list of all CSS properties found in the current style and the after-change style.
     bool transitionPropertiesContainAll = false;
     CSSPropertiesBitSet transitionProperties;
-    HashSet<AtomString> transitionCustomProperties;
+    UncheckedKeyHashSet<AtomString> transitionCustomProperties;
     compileTransitionPropertiesInStyle(currentStyle, transitionProperties, transitionCustomProperties, transitionPropertiesContainAll);
     compileTransitionPropertiesInStyle(newStyle, transitionProperties, transitionCustomProperties, transitionPropertiesContainAll);
 
@@ -864,10 +883,10 @@ void Styleable::updateCSSScrollTimelines(const RenderStyle* currentStyle, const 
     };
 
     auto updateNamedScrollTimelines = [&]() {
-        if (currentStyle && currentStyle->scrollTimelineNames() == afterChangeStyle.scrollTimelineNames())
+        if (currentStyle && currentStyle->scrollTimelineNames() == afterChangeStyle.scrollTimelineNames() && currentStyle->scrollTimelineAxes() == afterChangeStyle.scrollTimelineAxes())
             return;
 
-        CheckedRef timelinesController = element.protectedDocument()->ensureTimelinesController();
+        CheckedRef styleOriginatedTimelinesController = element.protectedDocument()->ensureStyleOriginatedTimelinesController();
 
         auto& currentTimelineNames = afterChangeStyle.scrollTimelineNames();
         auto& currentTimelineAxes = afterChangeStyle.scrollTimelineAxes();
@@ -875,7 +894,7 @@ void Styleable::updateCSSScrollTimelines(const RenderStyle* currentStyle, const 
         for (size_t i = 0; i < currentTimelineNames.size(); ++i) {
             auto& name = currentTimelineNames[i];
             auto axis = numberOfAxes ? currentTimelineAxes[i % numberOfAxes] : ScrollAxis::Block;
-            timelinesController->registerNamedScrollTimeline(name, element, axis);
+            styleOriginatedTimelinesController->registerNamedScrollTimeline(name, *this, axis);
         }
 
         if (!currentStyle)
@@ -883,7 +902,7 @@ void Styleable::updateCSSScrollTimelines(const RenderStyle* currentStyle, const 
 
         for (auto& previousTimelineName : currentStyle->scrollTimelineNames()) {
             if (!currentTimelineNames.contains(previousTimelineName))
-                timelinesController->unregisterNamedTimeline(previousTimelineName, element);
+                styleOriginatedTimelinesController->unregisterNamedTimeline(previousTimelineName, *this);
         }
     };
 
@@ -911,10 +930,10 @@ void Styleable::updateCSSViewTimelines(const RenderStyle* currentStyle, const Re
     };
 
     auto updateNamedViewTimelines = [&]() {
-        if (currentStyle && currentStyle->viewTimelineNames() == afterChangeStyle.viewTimelineNames())
+        if ((currentStyle && currentStyle->viewTimelineNames() == afterChangeStyle.viewTimelineNames()) && (currentStyle && currentStyle->viewTimelineAxes() == afterChangeStyle.viewTimelineAxes()) && (currentStyle && currentStyle->viewTimelineInsets() == afterChangeStyle.viewTimelineInsets()))
             return;
 
-        CheckedRef timelinesController = element.protectedDocument()->ensureTimelinesController();
+        CheckedRef styleOriginatedTimelinesController = element.protectedDocument()->ensureStyleOriginatedTimelinesController();
 
         auto& currentTimelineNames = afterChangeStyle.viewTimelineNames();
         auto& currentTimelineAxes = afterChangeStyle.viewTimelineAxes();
@@ -925,7 +944,7 @@ void Styleable::updateCSSViewTimelines(const RenderStyle* currentStyle, const Re
             auto& name = currentTimelineNames[i];
             auto axis = numberOfAxes ? currentTimelineAxes[i % numberOfAxes] : ScrollAxis::Block;
             auto insets = numberOfInsets ? ViewTimelineInsets(currentTimelineInsets[i % numberOfInsets]) : ViewTimelineInsets();
-            timelinesController->registerNamedViewTimeline(name, element, axis, WTFMove(insets));
+            styleOriginatedTimelinesController->registerNamedViewTimeline(name, *this, axis, WTFMove(insets));
         }
 
         if (!currentStyle)
@@ -933,7 +952,7 @@ void Styleable::updateCSSViewTimelines(const RenderStyle* currentStyle, const Re
 
         for (auto& previousTimelineName : currentStyle->viewTimelineNames()) {
             if (!currentTimelineNames.contains(previousTimelineName))
-                timelinesController->unregisterNamedTimeline(previousTimelineName, element);
+                styleOriginatedTimelinesController->unregisterNamedTimeline(previousTimelineName, *this);
         }
     };
 
@@ -969,6 +988,18 @@ void Styleable::setCapturedInViewTransition(AtomString captureName)
         if (changed)
             element.invalidateStyleAndLayerComposition();
     }
+}
+
+WTF::TextStream& operator<<(WTF::TextStream& ts, const Styleable& styleable)
+{
+    ts << styleable.element << ", " << styleable.pseudoElementIdentifier;
+    return ts;
+}
+
+WTF::TextStream& operator<<(WTF::TextStream& ts, const WeakStyleable& styleable)
+{
+    ts << styleable.element() << ", " << styleable.pseudoElementIdentifier();
+    return ts;
 }
 
 

@@ -36,6 +36,7 @@
 #include "MediaPlayerEnums.h"
 #include "MediaPlayerIdentifier.h"
 #include "MediaPromiseTypes.h"
+#include "PlatformDynamicRangeLimit.h"
 #include "PlatformLayer.h"
 #include "PlatformTextTrack.h"
 #include "ProcessIdentity.h"
@@ -120,6 +121,7 @@ struct MediaEngineSupportParameters {
     bool isMediaSource { false };
     bool isMediaStream { false };
     bool requiresRemotePlayback { false };
+    bool supportsLimitedMatroska { false };
     Vector<ContentType> contentTypesRequiringHardwareSupport;
     std::optional<Vector<String>> allowedMediaContainerTypes;
     std::optional<Vector<String>> allowedMediaCodecTypes;
@@ -178,6 +180,12 @@ enum class MediaPlayerType {
 };
 
 using TrackID = uint64_t;
+
+struct MediaPlayerLoadOptions {
+    ContentType contentType { };
+    bool requiresRemotePlayback { false };
+    bool supportsLimitedMatroska { false };
+};
 
 class MediaPlayerClient : public CanMakeWeakPtr<MediaPlayerClient> {
 public:
@@ -348,7 +356,9 @@ public:
 
     virtual PlatformVideoTarget mediaPlayerVideoTarget() const { return nullptr; }
 
-    virtual std::optional<MediaPlayerClientIdentifier> mediaPlayerClientIdentifier() const { return std::nullopt; }
+    virtual MediaPlayerClientIdentifier mediaPlayerClientIdentifier() const = 0;
+
+    virtual MediaPlayerSoundStageSize mediaPlayerSoundStageSize() const { return MediaPlayerSoundStageSize::Auto; }
 
 #if !RELEASE_LOG_DISABLED
     virtual uint64_t mediaPlayerLogIdentifier() { return 0; }
@@ -425,9 +435,10 @@ public:
     IntSize presentationSize() const { return m_presentationSize; }
     void setPresentationSize(const IntSize& size);
 
-    bool load(const URL&, const ContentType&, const String&, bool);
+    using LoadOptions = MediaPlayerLoadOptions;
+    bool load(const URL&, const LoadOptions&);
 #if ENABLE(MEDIA_SOURCE)
-    bool load(const URL&, const ContentType&, MediaSourcePrivateClient&);
+    bool load(const URL&, const LoadOptions&, MediaSourcePrivateClient&);
 #endif
 #if ENABLE(MEDIA_STREAM)
     bool load(MediaStreamPrivate&);
@@ -523,6 +534,8 @@ public:
     using DidLoadingProgressCompletionHandler = CompletionHandler<void(bool)>;
     void didLoadingProgress(DidLoadingProgressCompletionHandler&&) const;
 
+    void setVolumeLocked(bool);
+
     double volume() const;
     void setVolume(double);
     bool platformVolumeConfigurationRequired() const { return client().mediaPlayerPlatformVolumeConfigurationRequired(); }
@@ -604,8 +617,6 @@ public:
     bool isCrossOrigin(const SecurityOrigin&) const;
 
     MediaTime mediaTimeForTimeValue(const MediaTime&) const;
-
-    double maximumDurationToCacheMediaTime() const;
 
     unsigned decodedFrameCount() const;
     unsigned droppedFrameCount() const;
@@ -694,6 +705,7 @@ public:
     void setShouldDisableSleep(bool);
     bool shouldDisableSleep() const;
 
+    const ContentType& contentType() const { return m_loadOptions.contentType; }
     String contentMIMEType() const;
     String contentTypeCodecs() const;
     bool contentMIMETypeWasInferredFromExtension() const;
@@ -751,6 +763,8 @@ public:
 
     DynamicRangeMode preferredDynamicRangeMode() const { return m_preferredDynamicRangeMode; }
     void setPreferredDynamicRangeMode(DynamicRangeMode);
+    PlatformDynamicRangeLimit platformDynamicRangeLimit() const { return m_platformDynamicRangeLimit; }
+    void setPlatformDynamicRangeLimit(PlatformDynamicRangeLimit);
 
     String audioOutputDeviceId() const;
     String audioOutputDeviceIdOverride() const;
@@ -774,8 +788,6 @@ public:
     void setShouldDisableHDR(bool);
     bool shouldDisableHDR() const { return client().mediaPlayerShouldDisableHDR(); }
 
-    bool requiresRemotePlayback() const { return m_requiresRemotePlayback; }
-
     void setResourceOwner(const ProcessIdentity&);
 
     void setVideoTarget(const PlatformVideoTarget&);
@@ -788,11 +800,19 @@ public:
     void setSpatialTrackingLabel(const String&);
 #endif
 
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    void setPrefersSpatialAudioExperience(bool);
+    bool prefersSpatialAudioExperience() const { return m_prefersSpatialAudioExperience; }
+#endif
+
+    SoundStageSize soundStageSize() const;
+    void soundStageSizeDidChange();
+
     void setInFullscreenOrPictureInPicture(bool);
     bool isInFullscreenOrPictureInPicture() const;
 
     PlatformVideoTarget videoTarget() const { return client().mediaPlayerVideoTarget(); }
-    std::optional<MediaPlayerClientIdentifier> clientIdentifier() const { return client().mediaPlayerClientIdentifier(); }
+    MediaPlayerClientIdentifier clientIdentifier() const { return client().mediaPlayerClientIdentifier(); }
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     bool supportsLinearMediaPlayer() const;
@@ -800,6 +820,8 @@ public:
 
 #if PLATFORM(IOS_FAMILY)
     bool canShowWhileLocked() const;
+    void setSceneIdentifier(const String&);
+    const String& sceneIdentifier() const { return m_sceneIdentifier; }
 #endif
 
 private:
@@ -807,6 +829,8 @@ private:
     MediaPlayer(MediaPlayerClient&, MediaPlayerEnums::MediaEngineIdentifier);
 
     MediaPlayerClient& client() const { return *m_client; }
+
+    RefPtr<MediaPlayerPrivateInterface> protectedPrivate() const;
 
     const MediaPlayerFactory* nextBestMediaEngine(const MediaPlayerFactory*);
     void loadWithNextMediaEngine(const MediaPlayerFactory*);
@@ -819,8 +843,7 @@ private:
     const MediaPlayerFactory* m_currentMediaEngine { nullptr };
     WeakHashSet<const MediaPlayerFactory> m_attemptedEngines;
     URL m_url;
-    ContentType m_contentType;
-    String m_keySystem;
+    LoadOptions m_loadOptions;
     std::optional<MediaPlayerEnums::MediaEngineIdentifier> m_activeEngineIdentifier;
     std::optional<MediaTime> m_pendingSeekRequest;
     IntSize m_presentationSize;
@@ -836,6 +859,7 @@ private:
     bool m_shouldPrepareToRender { false };
     bool m_initializingMediaEngine { false };
     DynamicRangeMode m_preferredDynamicRangeMode;
+    PlatformDynamicRangeLimit m_platformDynamicRangeLimit { PlatformDynamicRangeLimit::constrainedHigh() };
     PitchCorrectionAlgorithm m_pitchCorrectionAlgorithm { PitchCorrectionAlgorithm::BestAllAround };
     RefPtr<PlatformMediaResourceLoader> m_mediaResourceLoader;
 
@@ -849,11 +873,14 @@ private:
     bool m_shouldContinueAfterKeyNeeded { false };
 #endif
     bool m_isGatheringVideoFrameMetadata { false };
-    bool m_requiresRemotePlayback { false };
 
 #if HAVE(SPATIAL_TRACKING_LABEL)
     String m_defaultSpatialTrackingLabel;
     String m_spatialTrackingLabel;
+#endif
+
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    bool m_prefersSpatialAudioExperience { false };
 #endif
 
     bool m_isInFullscreenOrPictureInPicture { false };
@@ -863,6 +890,10 @@ private:
 #if USE(AVFOUNDATION)
     bool m_preferDecompressionSession { false };
     bool m_canFallbackToDecompressionSession { false };
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+    String m_sceneIdentifier;
 #endif
 };
 

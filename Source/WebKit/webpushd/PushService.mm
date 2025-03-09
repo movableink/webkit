@@ -89,7 +89,7 @@ static void performAfterFirstUnlock(Function<void()>&& function)
         RELEASE_LOG(Push, "Device has unlocked. Running initialization.");
 
         for (auto& function : functions.get())
-            WorkQueue::main().dispatch(WTFMove(function));
+            WorkQueue::protectedMain()->dispatch(WTFMove(function));
         functions->clear();
 
         if (notifyToken != NOTIFY_TOKEN_INVALID) {
@@ -147,8 +147,7 @@ void PushService::create(const String& incomingPushServiceName, const String& da
             // the database with the PushServiceConnection/APSConnection. This ensures that we won't
             // service any calls to subscribe/unsubscribe/etc. until after the topic lists are up to
             // date, which APSConnection cares about.
-            auto& serviceRef = service.get();
-            serviceRef.updateTopicLists([transaction, service = WTFMove(service), creationHandler = WTFMove(creationHandler)]() mutable {
+            service->updateTopicLists([transaction, service = service.copyRef(), creationHandler = WTFMove(creationHandler)]() mutable {
                 creationHandler(WTFMove(service));
             });
         });
@@ -461,19 +460,20 @@ void SubscribeRequest::attemptToRecoverFromTopicAlreadyInFilterError(String&& to
 #if !HAVE(APPLE_PUSH_SERVICE_URL_TOKEN_SUPPORT)
     UNUSED_PARAM(topic);
 #else
-    WorkQueue::main().dispatch([this, weakThis = WeakPtr { *this }, topic = WTFMove(topic)]() mutable {
-        if (!weakThis)
+    WorkQueue::protectedMain()->dispatch([weakThis = WeakPtr { *this }, topic = WTFMove(topic)]() mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
 
         // This takes ownership of the paused topic and tells apsd to forget about the topic.
-        Ref connection = this->connection();
+        Ref connection = protectedThis->connection();
         auto originalTopics = connection->ignoredTopics();
         auto augmentedTopics = originalTopics;
         augmentedTopics.append(topic);
         connection->setIgnoredTopics(WTFMove(augmentedTopics));
         connection->setIgnoredTopics(WTFMove(originalTopics));
 
-        WorkQueue::main().dispatch([weakThis = WTFMove(weakThis)]() mutable {
+        WorkQueue::protectedMain()->dispatch([weakThis = WTFMove(weakThis)]() mutable {
             if (RefPtr protectedThis = weakThis.get())
                 protectedThis->startImpl(IsRetry::Yes);
         });
@@ -586,7 +586,7 @@ void PushService::finishedPushServiceRequest(PushServiceRequestMap& map, PushSer
         nextRequest = requestQueue.first().copyRef();
 
     // Even if there's no next request to start, hold on to currentRequest until the next turn of the run loop since we're in the middle of executing the finish() member function of currentRequest.
-    WorkQueue::main().dispatch([currentRequest = WTFMove(currentRequest), nextRequest = WTFMove(nextRequest)] {
+    WorkQueue::protectedMain()->dispatch([currentRequest = WTFMove(currentRequest), nextRequest = WTFMove(nextRequest)] {
         if (nextRequest)
             nextRequest->start();
     });

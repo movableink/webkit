@@ -268,7 +268,7 @@ std::optional<TokenRequest> TokenRequest::tryCreate(const CString& pin, const Cr
 
     // The following calculates a SHA-256 digest of the PIN, and shrink to the left 16 bytes.
     crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
-    crypto->addBytes(pin.span());
+    crypto->addBytes(byteCast<uint8_t>(pin.span()));
     auto pinHash = crypto->computeHash();
     pinHash.shrink(16);
 
@@ -282,12 +282,6 @@ TokenRequest::TokenRequest(Ref<WebCore::CryptoKeyAES>&& sharedKey, cbor::CBORVal
 {
 }
 
-const CryptoKeyAES& TokenRequest::sharedKey() const
-{
-    return m_sharedKey;
-}
-
-
 SetPinRequest::SetPinRequest(Ref<WebCore::CryptoKeyAES>&& sharedKey, cbor::CBORValue::MapValue&& coseKey, Vector<uint8_t>&& newPinEnc, Vector<uint8_t>&& pinUvAuthParam)
     : m_sharedKey(WTFMove(sharedKey))
     , m_coseKey(WTFMove(coseKey))
@@ -296,9 +290,9 @@ SetPinRequest::SetPinRequest(Ref<WebCore::CryptoKeyAES>&& sharedKey, cbor::CBORV
 {
 }
 
-const WebCore::CryptoKeyAES& SetPinRequest::sharedKey() const
+const Vector<uint8_t>& SetPinRequest::pinAuth() const
 {
-    return m_sharedKey;
+    return m_pinUvAuthParam;
 }
 
 std::optional<SetPinRequest> SetPinRequest::tryCreate(const String& inputPin, const WebCore::CryptoKeyEC& peerKey)
@@ -365,7 +359,7 @@ Vector<uint8_t> encodeAsCBOR(const SetPinRequest& request)
     return encodePinCommand(Subcommand::kSetPin, [coseKey = WTFMove(request.m_coseKey), encryptedPin = request.m_newPinEnc, pinUvAuthParam = request.m_pinUvAuthParam] (CBORValue::MapValue* map) mutable {
         map->emplace(static_cast<int64_t>(RequestKey::kKeyAgreement), WTFMove(coseKey));
         map->emplace(static_cast<int64_t>(RequestKey::kNewPinEnc), WTFMove(encryptedPin));
-        map->emplace(static_cast<int64_t>(RequestKey::kPinUvAuthParam), WTFMove(pinUvAuthParam));
+        map->emplace(static_cast<int64_t>(RequestKey::kPinAuth), WTFMove(pinUvAuthParam));
     });
 }
 

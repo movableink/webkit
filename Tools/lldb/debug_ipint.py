@@ -15,14 +15,18 @@ if ARCH == 'arm64':
     PC_REG = 'x26'
     MC_REG = 'x25'
     PL_REG = 'x6'
+elif ARCH == 'x64':
+    PC_REG = 'r13'
+    MC_REG = 'r12'
+    PL_REG = 'r10'
 
 # Read all instruction opcodes from InPlaceInterpreter64.asm
 
 IPINT_INSTRUCTIONS = [
     'unreachable', 'nop', 'block', 'loop', 'if', 'else', 'try', 'catch', 'throw',
-    'rethrow', 'end', 'br', 'br_if', 'br_table', 'return', 'call', 'call_indirect',
+    'rethrow', 'throw_ref', 'end', 'br', 'br_if', 'br_table', 'return', 'call', 'call_indirect',
     'return_call', 'return_call_indirect', 'call_ref', 'return_call_ref', 'delegate',
-    'catch_all', 'drop', 'select', 'select_t', 'local_get', 'local_set', 'local_tee',
+    'catch_all', 'drop', 'select', 'select_t', 'try_table', 'local_get', 'local_set', 'local_tee',
     'global_get', 'global_set', 'table_get', 'table_set', 'i32_load_mem', 'i64_load_mem',
     'f32_load_mem', 'f64_load_mem', 'i32_load8s_mem', 'i32_load8u_mem', 'i32_load16s_mem',
     'i32_load16u_mem', 'i64_load8s_mem', 'i64_load8u_mem', 'i64_load16s_mem',

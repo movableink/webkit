@@ -47,9 +47,10 @@ public:
 
     virtual void sourceCapsChanged(const GstCaps*) { }
     virtual void captureEnded() { }
+    virtual void captureDeviceUpdated(const GStreamerCaptureDevice&) { }
 };
 
-class GStreamerCapturer : public ThreadSafeRefCounted<GStreamerCapturer> {
+class GStreamerCapturer : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<GStreamerCapturer> {
 public:
     GStreamerCapturer(GStreamerCaptureDevice&&, GRefPtr<GstCaps>&&);
     GStreamerCapturer(const char* sourceFactory, GRefPtr<GstCaps>&&, CaptureDevice::DeviceType);
@@ -57,9 +58,11 @@ public:
 
     void tearDown(bool disconnectSignals = true);
 
+    void setDevice(std::optional<GStreamerCaptureDevice>&&);
+
     void addObserver(GStreamerCapturerObserver&);
     void removeObserver(GStreamerCapturerObserver&);
-    void forEachObserver(const Function<void(GStreamerCapturerObserver&)>&);
+    void forEachObserver(NOESCAPE const Function<void(GStreamerCapturerObserver&)>&);
 
     void setupPipeline();
     void start();

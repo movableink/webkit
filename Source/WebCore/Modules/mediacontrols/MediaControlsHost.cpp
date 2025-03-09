@@ -322,10 +322,8 @@ bool MediaControlsHost::inWindowFullscreen() const
 
 bool MediaControlsHost::supportsRewind() const
 {
-#if ENABLE(MODERN_MEDIA_CONTROLS)
     if (auto sourceType = this->sourceType())
         return *sourceType == SourceType::HLS || *sourceType == SourceType::File;
-#endif
     return false;
 }
 
@@ -400,11 +398,11 @@ String MediaControlsHost::generateUUID()
     return createVersion4UUIDString();
 }
 
-#if ENABLE(MODERN_MEDIA_CONTROLS)
-
-String MediaControlsHost::shadowRootCSSText()
+Vector<String> MediaControlsHost::shadowRootStyleSheets() const
 {
-    return RenderTheme::singleton().mediaControlsStyleSheet();
+    if (RefPtr mediaElement = m_mediaElement.get())
+        return RenderTheme::singleton().mediaControlsStyleSheets(*mediaElement);
+    return { };
 }
 
 String MediaControlsHost::base64StringForIconNameAndType(const String& iconName, const String& iconType)
@@ -815,8 +813,6 @@ auto MediaControlsHost::sourceType() const -> std::optional<SourceType>
         return m_mediaElement->sourceType();
     return std::nullopt;
 }
-
-#endif // ENABLE(MODERN_MEDIA_CONTROLS)
 
 
 void MediaControlsHost::presentationModeChanged()

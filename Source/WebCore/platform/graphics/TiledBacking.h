@@ -25,13 +25,17 @@
 
 #pragma once
 
+#include "BoxExtents.h"
 #include "IntPoint.h"
 #include "PlatformLayerIdentifier.h"
 #include "TileGridIdentifier.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/MonotonicTime.h>
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakPtr.h>
+
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+#include "DynamicContentScalingDisplayList.h"
+#endif
 
 namespace WebCore {
 class TiledBackingClient;
@@ -94,11 +98,15 @@ public:
 
     virtual void willRepaintTilesAfterScaleFactorChange(TiledBacking&, TileGridIdentifier) = 0;
     virtual void didRepaintTilesAfterScaleFactorChange(TiledBacking&, TileGridIdentifier) = 0;
+
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    virtual std::optional<DynamicContentScalingDisplayList> dynamicContentScalingDisplayListForTile(TiledBacking&, TileGridIdentifier, TileIndex) = 0;
+#endif
 };
 
 
 class TiledBacking : public CanMakeCheckedPtr<TiledBacking> {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(TiledBacking);
+    WTF_MAKE_TZONE_ALLOCATED(TiledBacking);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TiledBacking);
 public:
     virtual ~TiledBacking() = default;
@@ -123,7 +131,7 @@ public:
     virtual bool tilesWouldChangeForCoverageRect(const FloatRect&) const = 0;
 
     virtual void setTiledScrollingIndicatorPosition(const FloatPoint&) = 0;
-    virtual void setTopContentInset(float) = 0;
+    virtual void setObscuredContentInsets(const FloatBoxExtent&) = 0;
 
     virtual void setVelocity(const VelocityData&) = 0;
 

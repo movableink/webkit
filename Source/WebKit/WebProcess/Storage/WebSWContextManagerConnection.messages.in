@@ -20,6 +20,10 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+// Currently being DispatchedFrom both the UI and Networking Process
+[
+    DispatchedTo=WebContent
+]
 messages -> WebSWContextManagerConnection {
     InstallServiceWorker(struct WebCore::ServiceWorkerContextData contextData, struct WebCore::ServiceWorkerData workerData, String userAgent, enum:bool WebCore::WorkerThreadMode workerThreadMode, enum:bool WebCore::ServiceWorkerIsInspectable inspectable, OptionSet<WebCore::AdvancedPrivacyProtections> protections)
     UpdateAppInitiatedValue(WebCore::ServiceWorkerIdentifier serviceWorkerIdentifier, enum:bool WebCore::LastNavigationWasAppInitiated lastNavigationWasAppInitiated)
@@ -54,4 +58,10 @@ messages -> WebSWContextManagerConnection {
     FireUpdateFoundEvent(WebCore::ServiceWorkerRegistrationIdentifier identifier)
     SetRegistrationLastUpdateTime(WebCore::ServiceWorkerRegistrationIdentifier identifier, WallTime lastUpdateTime)
     SetRegistrationUpdateViaCache(WebCore::ServiceWorkerRegistrationIdentifier identifier, enum:uint8_t WebCore::ServiceWorkerUpdateViaCache updateViaCache)
+
+#if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
+    ConnectToInspector(WebCore::ServiceWorkerIdentifier serviceWorkerIdentifier)
+    DisconnectFromInspector(WebCore::ServiceWorkerIdentifier serviceWorkerIdentifier)
+    DispatchMessageFromInspector(WebCore::ServiceWorkerIdentifier serviceWorkerIdentifier, String message)
+#endif
 }

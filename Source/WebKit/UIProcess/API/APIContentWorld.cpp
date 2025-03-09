@@ -88,16 +88,16 @@ Ref<ContentWorld> ContentWorld::sharedWorldWithName(const WTF::String& name, Opt
     return newContentWorld ? newContentWorld.releaseNonNull() : Ref { result.iterator->value.get() };
 }
 
-ContentWorld& ContentWorld::pageContentWorld()
+ContentWorld& ContentWorld::pageContentWorldSingleton()
 {
-    static NeverDestroyed<RefPtr<ContentWorld>> world(adoptRef(new ContentWorld(WebKit::pageContentWorldIdentifier())));
-    return *world.get();
+    static NeverDestroyed<Ref<ContentWorld>> world(adoptRef(*new ContentWorld(WebKit::pageContentWorldIdentifier())));
+    return world.get();
 }
 
-ContentWorld& ContentWorld::defaultClientWorld()
+ContentWorld& ContentWorld::defaultClientWorldSingleton()
 {
-    static NeverDestroyed<RefPtr<ContentWorld>> world(adoptRef(new ContentWorld(WTF::String { }, { })));
-    return *world.get();
+    static NeverDestroyed<Ref<ContentWorld>> world(adoptRef(*new ContentWorld(WTF::String { }, { })));
+    return world.get();
 }
 
 ContentWorld::~ContentWorld()

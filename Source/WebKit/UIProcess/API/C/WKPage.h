@@ -38,6 +38,7 @@
 #include <WebKit/WKPageFindClient.h>
 #include <WebKit/WKPageFindMatchesClient.h>
 #include <WebKit/WKPageFormClient.h>
+#include <WebKit/WKPageFullScreenClient.h>
 #include <WebKit/WKPageInjectedBundleClient.h>
 #include <WebKit/WKPageLoadTypes.h>
 #include <WebKit/WKPageLoaderClient.h>
@@ -228,6 +229,9 @@ WK_EXPORT void WKPageSetPageFormClient(WKPageRef page, const WKPageFormClientBas
 WK_EXPORT void WKPageSetPageUIClient(WKPageRef page, const WKPageUIClientBase* client);
 WK_EXPORT void WKPageSetPageInjectedBundleClient(WKPageRef page, const WKPageInjectedBundleClientBase* client);
 
+WK_EXPORT void WKPageSetFullScreenClientForTesting(WKPageRef page, const WKPageFullScreenClientBase* client);
+WK_EXPORT void WKPageRequestExitFullScreen(WKPageRef pageRef);
+
 // A client can implement either a navigation client or loader and policy clients, but never both.
 WK_EXPORT void WKPageSetPageLoaderClient(WKPageRef page, const WKPageLoaderClientBase* client) WK_C_API_DEPRECATED_WITH_REPLACEMENT(WKPageSetPageNavigationClient, macos(10.14.4));
 WK_EXPORT void WKPageSetPagePolicyClient(WKPageRef page, const WKPagePolicyClientBase* client) WK_C_API_DEPRECATED_WITH_REPLACEMENT(WKPageSetPageNavigationClient, macos(10.14.4));
@@ -271,7 +275,7 @@ WK_EXPORT void WKPageExecuteCommand(WKPageRef page, WKStringRef command);
 
 WK_EXPORT void WKPagePostMessageToInjectedBundle(WKPageRef page, WKStringRef messageName, WKTypeRef messageBody);
 
-WK_EXPORT void WKPageSelectContextMenuItem(WKPageRef page, WKContextMenuItemRef item);
+WK_EXPORT void WKPageSelectContextMenuItem(WKPageRef page, WKContextMenuItemRef item, WKFrameInfoRef frameInfo);
 
 WK_EXPORT void WKPageClearNotificationPermissionState(WKPageRef page);
 

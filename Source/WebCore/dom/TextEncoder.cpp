@@ -30,8 +30,6 @@
 #include <JavaScriptCore/JSGenericTypedArrayViewInlines.h>
 #include <wtf/StdLibExtras.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 RefPtr<Uint8Array> TextEncoder::encode(String&& input) const
@@ -46,23 +44,22 @@ RefPtr<Uint8Array> TextEncoder::encode(String&& input) const
 
 auto TextEncoder::encodeInto(String&& input, Ref<Uint8Array>&& array) -> EncodeIntoResult
 {
-    auto* destinationBytes = static_cast<uint8_t*>(array->baseAddress());
-    auto capacity = array->byteLength();
+    auto destinationBytes = array->mutableSpan();
 
     uint64_t read = 0;
     uint64_t written = 0;
 
     for (auto token : StringView(input).codePoints()) {
-        if (written >= capacity) {
-            ASSERT(written == capacity);
+        if (written >= destinationBytes.size()) {
+            ASSERT(written == destinationBytes.size());
             break;
         }
         UBool sawError = false;
-        U8_APPEND(destinationBytes, written, capacity, token, sawError);
+        U8_APPEND(destinationBytes, written, destinationBytes.size(), token, sawError);
         if (sawError)
             break;
         if (U_IS_BMP(token))
-            read++;
+            ++read;
         else
             read += 2;
     }
@@ -71,5 +68,3 @@ auto TextEncoder::encodeInto(String&& input, Ref<Uint8Array>&& array) -> EncodeI
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

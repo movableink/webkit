@@ -50,8 +50,8 @@
 #include <wtf/RefPtr.h>
 #include <wtf/glib/GRefPtr.h>
 
-GST_DEBUG_CATEGORY_EXTERN(webkit_mse_debug);
-#define GST_CAT_DEFAULT webkit_mse_debug
+GST_DEBUG_CATEGORY_STATIC(webkit_mse_private_debug);
+#define GST_CAT_DEFAULT webkit_mse_private_debug
 
 namespace WebCore {
 
@@ -70,6 +70,10 @@ MediaSourcePrivateGStreamer::MediaSourcePrivateGStreamer(MediaSourcePrivateClien
     , m_logIdentifier(playerPrivate.mediaPlayerLogIdentifier())
 #endif
 {
+    static std::once_flag debugRegisteredFlag;
+    std::call_once(debugRegisteredFlag, [] {
+        GST_DEBUG_CATEGORY_INIT(webkit_mse_private_debug, "webkitmseprivate", 0, "WebKit MSE Private");
+    });
 }
 
 MediaSourcePrivateGStreamer::~MediaSourcePrivateGStreamer()
@@ -77,7 +81,7 @@ MediaSourcePrivateGStreamer::~MediaSourcePrivateGStreamer()
     ALWAYS_LOG(LOGIDENTIFIER);
 }
 
-MediaSourcePrivateGStreamer::AddStatus MediaSourcePrivateGStreamer::addSourceBuffer(const ContentType& contentType, bool, RefPtr<SourceBufferPrivate>& sourceBufferPrivate)
+MediaSourcePrivateGStreamer::AddStatus MediaSourcePrivateGStreamer::addSourceBuffer(const ContentType& contentType, const MediaSourceConfiguration&, RefPtr<SourceBufferPrivate>& sourceBufferPrivate)
 {
     DEBUG_LOG(LOGIDENTIFIER, contentType);
 
@@ -228,7 +232,8 @@ TrackID MediaSourcePrivateGStreamer::registerTrackId(TrackID preferredId)
     auto maxRegisteredId = std::max_element(m_trackIdRegistry.begin(), m_trackIdRegistry.end());
     auto assignedId = std::max((TrackID) 100, *maxRegisteredId + 1);
 
-    ASSERT(m_trackIdRegistry.add(assignedId).isNewEntry);
+    [[maybe_unused]] auto result = m_trackIdRegistry.add(assignedId);
+    ASSERT(result.isNewEntry);
     if (player)
         GST_DEBUG_OBJECT(player->pipeline(), "Registered new Track ID: %" PRIu64 " (preferred ID would have been %" PRIu64 ")", assignedId, preferredId);
 

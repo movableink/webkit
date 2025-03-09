@@ -24,6 +24,7 @@
  */
 
 #import <WebKit/WebKit.h>
+#import <wtf/Forward.h>
 #import <wtf/RetainPtr.h>
 
 @class _WKFrameTreeNode;
@@ -34,6 +35,8 @@
 @class _WKActivatedElementInfo;
 @class _WKTextInputContext;
 @class UITextSuggestion;
+@class UIWKDocumentContext;
+@class UIWKDocumentRequest;
 @protocol UITextInputInternal;
 @protocol UITextInputMultiDocument;
 @protocol UITextInputPrivate;
@@ -66,6 +69,10 @@ struct AutocorrectionContext {
 
 } // namespace TestWebKitAPI
 
+namespace WebCore {
+class Color;
+}
+
 @interface WKWebView (TestWebKitAPI)
 #if PLATFORM(IOS_FAMILY)
 @property (nonatomic, readonly) CGRect selectionClipRect;
@@ -86,6 +93,7 @@ struct AutocorrectionContext {
 - (void)insertText:(NSString *)primaryString alternatives:(NSArray<NSString *> *)alternatives;
 - (void)handleKeyEvent:(WebEvent *)event completion:(void (^)(WebEvent *theEvent, BOOL handled))completion;
 - (void)selectTextForContextMenuWithLocationInView:(CGPoint)locationInView completion:(void(^)(BOOL shouldPresent))completion;
+- (void)selectTextInGranularity:(UITextGranularity)granularity atPoint:(CGPoint)locationInView;
 - (void)defineSelection;
 - (void)shareSelection;
 - (void)moveSelectionToStartOfParagraph;
@@ -93,6 +101,9 @@ struct AutocorrectionContext {
 - (void)moveSelectionToEndOfParagraph;
 - (void)extendSelectionToEndOfParagraph;
 - (void)insertTextSuggestion:(UITextSuggestion *)textSuggestion;
+#if HAVE(UI_WK_DOCUMENT_CONTEXT)
+- (UIWKDocumentContext *)synchronouslyRequestDocumentContext:(UIWKDocumentRequest *)request;
+#endif
 #endif // PLATFORM(IOS_FAMILY)
 
 @property (nonatomic, readonly) CGImageRef snapshotAfterScreenUpdates;
@@ -165,6 +176,8 @@ struct AutocorrectionContext {
 - (void)waitForPendingMouseEvents;
 - (void)focus;
 - (std::optional<CGPoint>)getElementMidpoint:(NSString *)selector;
+- (Vector<WebCore::Color>)sampleColors;
+- (Vector<WebCore::Color>)sampleColorsWithInterval:(unsigned)interval;
 @end
 
 #if PLATFORM(IOS_FAMILY)
@@ -182,6 +195,7 @@ struct AutocorrectionContext {
 @property (nonatomic) UIEdgeInsets overrideSafeAreaInset;
 @property (nonatomic, readonly) CGRect caretViewRectInContentCoordinates;
 @property (nonatomic, readonly) NSArray<NSValue *> *selectionViewRectsInContentCoordinates;
+@property (nonatomic, readonly) NSString *textForSpeakSelection;
 - (_WKActivatedElementInfo *)activatedElementAtPosition:(CGPoint)position;
 - (void)evaluateJavaScriptAndWaitForInputSessionToChange:(NSString *)script;
 - (WKContentView *)wkContentView;
@@ -217,6 +231,7 @@ struct AutocorrectionContext {
 @interface TestWKWebView (SiteIsolation)
 - (_WKFrameTreeNode *)mainFrame;
 - (WKFrameInfo *)firstChildFrame;
+- (WKFrameInfo *)secondChildFrame;
 - (void)evaluateJavaScript:(NSString *)string inFrame:(WKFrameInfo *)frame completionHandler:(void(^)(id, NSError *))completionHandler;
 - (WKFindResult *)findStringAndWait:(NSString *)string withConfiguration:(WKFindConfiguration *)configuration;
 @end

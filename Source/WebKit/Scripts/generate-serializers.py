@@ -269,11 +269,6 @@ class SerializedEnum(object):
             return 'isValidOptionSet'
         return 'isValidEnum'
 
-    def additional_template_parameter(self):
-        if self.is_option_set():
-            return ''
-        return ', void'
-
     def parameter(self):
         if self.is_option_set():
             return f'OptionSet<{self.namespace_and_name()}>'
@@ -457,9 +452,9 @@ class ConditionalHeader(object):
 
 
 class UsingStatement(object):
-    def __init__(self, name, alias, condition):
+    def __init__(self, name, alias_lines, condition):
         self.name = name
-        self.alias = alias
+        self.alias_lines = alias_lines
         self.condition = condition
 
 
@@ -700,7 +695,7 @@ def generate_header(serialized_types, serialized_enums, additional_forward_decla
             continue
         if enum.condition is not None:
             result.append(f'#if {enum.condition}')
-        result.append(f'template<> bool {enum.function_name()}<{enum.namespace_and_name() + enum.additional_template_parameter()}>({enum.parameter()});')
+        result.append(f'template<> bool {enum.function_name()}<{enum.namespace_and_name()}>({enum.parameter()});')
         if enum.condition is not None:
             result.append('#endif')
     result.append('')
@@ -1174,7 +1169,7 @@ def generate_impl(serialized_types, serialized_enums, headers, generating_webkit
         result.append('')
         if type.condition is not None:
             result.append(f'#if {type.condition}')
-        result.append(f'template<> bool {type.function_name_for_enum()}<IPC::{type.subclass_enum_name()}, void>(IPC::EncodedVariantIndex value)')
+        result.append(f'template<> bool {type.function_name_for_enum()}<IPC::{type.subclass_enum_name()}>(IPC::EncodedVariantIndex value)')
         result.append('{')
         result.append('IGNORE_WARNINGS_BEGIN("switch-unreachable")')
         result.append(f'    switch (static_cast<IPC::{type.subclass_enum_name()}>(value)) {{')
@@ -1195,12 +1190,10 @@ def generate_impl(serialized_types, serialized_enums, headers, generating_webkit
     for enum in serialized_enums:
         if enum.is_webkit_platform() != generating_webkit_platform_impl:
             continue
-        if enum.underlying_type == 'bool':
-            continue
         result.append('')
         if enum.condition is not None:
             result.append(f'#if {enum.condition}')
-        result.append(f'template<> bool {enum.function_name()}<{enum.namespace_and_name()}{enum.additional_template_parameter()}>({enum.parameter()} value)')
+        result.append(f'template<> bool {enum.function_name()}<{enum.namespace_and_name()}>({enum.parameter()} value)')
         result.append('{')
         if enum.is_option_set():
             result.append(f'    constexpr {enum.underlying_type} allValidBitsValue = 0')
@@ -1214,13 +1207,18 @@ def generate_impl(serialized_types, serialized_enums, headers, generating_webkit
             result.append('        | 0;')
             result.append('    return (value.toRaw() | allValidBitsValue) == allValidBitsValue;')
         else:
-            result.append(f'    switch (static_cast<{enum.namespace_and_name()}>(value)) {{')
-            for valid_value in enum.valid_values:
-                if valid_value.condition is not None:
-                    result.append(f'#if {valid_value.condition}')
-                result.append(f'    case {enum.namespace_and_name()}::{valid_value.name}:')
-                if valid_value.condition is not None:
-                    result.append('#endif')
+            if enum.underlying_type == 'bool':
+                result.append('    switch (static_cast<uint8_t>(value)) {')
+                result.append('    case 0:')
+                result.append('    case 1:')
+            else:
+                result.append(f'    switch (static_cast<{enum.namespace_and_name()}>(value)) {{')
+                for valid_value in enum.valid_values:
+                    if valid_value.condition is not None:
+                        result.append(f'#if {valid_value.condition}')
+                    result.append(f'    case {enum.namespace_and_name()}::{valid_value.name}:')
+                    if valid_value.condition is not None:
+                        result.append('#endif')
             result.append('        return true;')
             result.append('    default:')
             result.append('        return false;')
@@ -1237,20 +1235,19 @@ def generate_impl(serialized_types, serialized_enums, headers, generating_webkit
 
 
 def generate_optional_tuple_type_info(type):
-    result = []
-    result.append('            {')
-    result.append('                "OptionalTuple<"')
+    result = ['                "OptionalTuple<"']
     serialized_members = type.serialized_members()
-    for i in range(1, len(serialized_members)):
+    found_first_optional_tuple_bit_member = False
+    for i in range(len(serialized_members)):
         member = serialized_members[i]
-        if member.condition is not None:
-            result.append(f'#if {member.condition}')
-        result.append(f'                    "{", " if i > 1 else ""}{member.type}"')
-        if member.condition is not None:
-            result.append('#endif')
-    result.append('                ">"_s,')
-    result.append('                "optionalTuple"_s')
-    result.append('            },')
+        if member.optional_tuple_bit():
+            if member.condition is not None:
+                result.append(f'#if {member.condition}')
+            result.append(f'                    "{", " if found_first_optional_tuple_bit_member else ""}{member.name}"')
+            found_first_optional_tuple_bit_member = True
+            if member.condition is not None:
+                result.append('#endif')
+    result.append('                ">"_s')
     return result
 
 
@@ -1316,7 +1313,7 @@ def generate_one_serialized_type_info(type):
         else:
             if optional_tuple_state == 'middle':
                 result.append('                ">"_s,')
-                result.append('                "optionalTuple"_s')
+                result = result + generate_optional_tuple_type_info(type)
                 result.append('            },')
                 optional_tuple_state = None
             result.append('            {')
@@ -1333,7 +1330,7 @@ def generate_one_serialized_type_info(type):
             result.append('#endif')
     if optional_tuple_state == 'middle':
         result.append('                ">"_s,')
-        result.append('                "optionalTuple"_s')
+        result = result + generate_optional_tuple_type_info(type)
         result.append('            },')
     result.append('        } },')
     if type.condition is not None:
@@ -1368,7 +1365,13 @@ def generate_serialized_type_info(serialized_types, serialized_enums, headers, u
     for using_statement in using_statements:
         if using_statement.condition is not None:
             result.append(f'#if {using_statement.condition}')
-        result.append(f'static_assert(std::is_same_v<{using_statement.name}, {using_statement.alias}>);')
+        result.append(f'static_assert(std::is_same_v<{using_statement.name},')
+        for alias_line in using_statement.alias_lines:
+            if '#' in alias_line:
+                result.append(f'{alias_line.strip()}')
+            else:
+                result.append(f'    {alias_line}')
+        result.append('>);')
         if using_statement.condition is not None:
             result.append('#endif')
 
@@ -1400,7 +1403,16 @@ def generate_serialized_type_info(serialized_types, serialized_enums, headers, u
         if using_statement.condition is not None:
             result.append(f'#if {using_statement.condition}')
         result.append(f'        {{ "{using_statement.name}"_s, {{')
-        result.append(f'            {{ "{using_statement.alias}"_s, "alias"_s }}')
+        result.append(f'        {{')
+        for line_number in range(len(using_statement.alias_lines)):
+            alias_line = using_statement.alias_lines[line_number]
+            if '#' in alias_line:
+                result.append(f'{alias_line.strip()}')
+            else:
+                underscore_s_after_last_line = '_s' if line_number is len(using_statement.alias_lines) - 1 else ''
+                extra_space_after_comma = ' ' if alias_line.endswith(',') else ''
+                result.append(f'            "{alias_line.strip()}{extra_space_after_comma}"{underscore_s_after_last_line}')
+        result.append(f'            , "alias"_s }}')
         result.append('        } },')
         if using_statement.condition is not None:
             result.append('#endif')
@@ -1485,8 +1497,12 @@ def parse_serialized_types(file):
     metadata = None
     templates = []
 
+    file_lines = []
     for line in file:
-        line = line.strip()
+        file_lines.append(line.strip())
+
+    for line_number in range(len(file_lines)):
+        line = file_lines[line_number]
         if line.startswith('#'):
             if line == '#else':
                 if name is None:
@@ -1632,9 +1648,19 @@ def parse_serialized_types(file):
             declaration = match.groups()[0]
             additional_forward_declarations.append(ConditionalForwardDeclaration(declaration, type_condition))
             continue
+        match = re.search(r'using (.*) = std::variant<$', line)
+        if match:
+            line_number = line_number + 1
+            alias_lines = ['std::variant<']
+            while not file_lines[line_number].startswith('>'):
+                alias_lines.append('    ' + file_lines[line_number])
+                line_number = line_number + 1
+            alias_lines.append('>')
+            using_statements.append(UsingStatement(match.groups()[0], alias_lines, type_condition))
+            continue
         match = re.search(r'using (.*) = ([^;]*)', line)
         if match:
-            using_statements.append(UsingStatement(match.groups()[0], match.groups()[1], type_condition))
+            using_statements.append(UsingStatement(match.groups()[0], [match.groups()[1]], type_condition))
             continue
         if underlying_type is not None:
             members.append(EnumMember(line.strip(' ,'), member_condition))
@@ -1707,9 +1733,9 @@ def generate_webkit_secure_coding_impl(serialized_types, headers):
     result.append('    return [archiver accumulatedDictionary];')
     result.append('}')
     result.append('')
-    result.append('static RetainPtr<NSDictionary> dictionaryForWebKitSecureCodingType(id object)')
+    result.append('[[maybe_unused]] static RetainPtr<NSDictionary> dictionaryForWebKitSecureCodingType(id object)')
     result.append('{')
-    result.append('    if (WebKit::CoreIPCSecureCoding::conformsToWebKitSecureCoding(object))')
+    result.append('    if (WebKit::conformsToWebKitSecureCoding(object))')
     result.append('        return [object _webKitPropertyListData];')
     result.append('')
     result.append('    return dictionaryForWebKitSecureCodingTypeFromWKKeyedCoder(object);')

@@ -41,9 +41,9 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(VerifierSlotVisitor);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(VerifierSlotVisitor, MarkedBlockData);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(VerifierSlotVisitor, OpaqueRootData);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(VerifierSlotVisitor, PreciseAllocationData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(VerifierSlotVisitor::MarkedBlockData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(VerifierSlotVisitor::OpaqueRootData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(VerifierSlotVisitor::PreciseAllocationData);
 
 using MarkerData = VerifierSlotVisitor::MarkerData;
 
@@ -105,7 +105,7 @@ void VerifierSlotVisitor::OpaqueRootData::addMarkerData(MarkerData&& marker)
 }
 
 VerifierSlotVisitor::VerifierSlotVisitor(JSC::Heap& heap)
-    : Base(heap, "Verifier", m_opaqueRootStorage)
+    : Base(heap, "Verifier"_s, m_opaqueRootStorage)
 {
     m_needsExtraOpaqueRootHandling = true;
 }

@@ -82,7 +82,7 @@ void MockHidConnection::send(Vector<uint8_t>&& data, DataSentCallback&& callback
     ASSERT(isInitialized());
     auto task = makeBlockPtr([weakThis = WeakPtr { *this }, data = WTFMove(data), callback = WTFMove(callback)]() mutable {
         ASSERT(!RunLoop::isMain());
-        RunLoop::main().dispatch([weakThis, data = WTFMove(data), callback = WTFMove(callback)]() mutable {
+        RunLoop::protectedMain()->dispatch([weakThis, data = WTFMove(data), callback = WTFMove(callback)]() mutable {
             if (!weakThis) {
                 callback(DataSent::No);
                 return;
@@ -219,9 +219,9 @@ void MockHidConnection::feedReports()
         // FIXME(205839):
         Vector<uint8_t> infoData;
         if (m_configuration.hid->canDowngrade)
-            infoData = encodeAsCBOR(AuthenticatorGetInfoResponse({ ProtocolVersion::kCtap, ProtocolVersion::kU2f }, Vector<uint8_t>(aaguidLength, 0u)));
+            infoData = encodeAsCBOR(AuthenticatorGetInfoResponse({ ProtocolVersion::kCtap2, ProtocolVersion::kU2f }, Vector<uint8_t>(aaguidLength, 0u)));
         else {
-            AuthenticatorGetInfoResponse infoResponse({ ProtocolVersion::kCtap }, Vector<uint8_t>(aaguidLength, 0u));
+            AuthenticatorGetInfoResponse infoResponse({ ProtocolVersion::kCtap2 }, Vector<uint8_t>(aaguidLength, 0u));
             AuthenticatorSupportedOptions options;
             if (m_configuration.hid->supportClientPin) {
                 infoResponse.setPinProtocols({ pin::kProtocolVersion });
@@ -273,7 +273,7 @@ void MockHidConnection::feedReports()
         if (!isFirst && stagesMatch() && m_configuration.hid->error == Mock::HidError::WrongChannelId)
             report = FidoHidContinuationPacket(m_currentChannel - 1, 0, { }).getSerializedData();
         // Packets are feed asynchronously to mimic actual data transmission.
-        RunLoop::main().dispatch([report = WTFMove(report), weakThis = WeakPtr { *this }]() mutable {
+        RunLoop::protectedMain()->dispatch([report = WTFMove(report), weakThis = WeakPtr { *this }]() mutable {
             if (!weakThis)
                 return;
             weakThis->receiveReport(WTFMove(report));
@@ -299,7 +299,7 @@ void MockHidConnection::shouldContinueFeedReports()
 void MockHidConnection::continueFeedReports()
 {
     // Send actual response for the next run.
-    RunLoop::main().dispatch([weakThis = WeakPtr { *this }]() mutable {
+    RunLoop::protectedMain()->dispatch([weakThis = WeakPtr { *this }]() mutable {
         if (!weakThis)
             return;
         weakThis->feedReports();

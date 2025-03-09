@@ -29,6 +29,7 @@
 #include "DrawingArea.h"
 #include "NotificationPermissionRequestManager.h"
 #include "PluginView.h"
+#include "WebBackForwardListProxy.h"
 #include "WebNotificationClient.h"
 #include "WebPage.h"
 #include "WebPageTestingMessages.h"
@@ -61,12 +62,6 @@ WebPageTesting::WebPageTesting(WebPage& page)
 WebPageTesting::~WebPageTesting()
 {
     WebProcess::singleton().removeMessageReceiver(Messages::WebPageTesting::messageReceiverName(), m_pageIdentifier);
-}
-
-void WebPageTesting::setDefersLoading(bool defersLoading)
-{
-    if (RefPtr page = m_page ? m_page->corePage() : nullptr)
-        page->setDefersLoading(defersLoading);
 }
 
 void WebPageTesting::isLayerTreeFrozen(CompletionHandler<void(bool)>&& completionHandler)
@@ -110,7 +105,7 @@ void WebPageTesting::isEditingCommandEnabled(const String& commandName, Completi
 void WebPageTesting::clearNotificationPermissionState()
 {
     RefPtr page = m_page ? m_page->corePage() : nullptr;
-    auto& client = static_cast<WebNotificationClient&>(WebCore::NotificationController::from(page.get())->client());
+    auto& client = downcast<WebNotificationClient>(WebCore::NotificationController::from(page.get())->client());
     client.clearNotificationPermissionState();
 }
 #endif
@@ -124,10 +119,10 @@ void WebPageTesting::clearWheelEventTestMonitor()
     page->clearWheelEventTestMonitor();
 }
 
-void WebPageTesting::setTopContentInset(float contentInset, CompletionHandler<void()>&& completionHandler)
+void WebPageTesting::setObscuredContentInsets(float top, float right, float bottom, float left, CompletionHandler<void()>&& completionHandler)
 {
     if (RefPtr page = m_page.get())
-        page->setTopContentInset(contentInset);
+        page->setObscuredContentInsets({ top, right, bottom, left });
     completionHandler();
 }
 
@@ -153,7 +148,7 @@ void WebPageTesting::clearCachedBackForwardListCounts(CompletionHandler<void()>&
     if (!page)
         return completionHandler();
 
-    Ref backForwardListProxy = static_cast<WebBackForwardListProxy&>(page->backForward().client());
+    Ref backForwardListProxy = downcast<WebBackForwardListProxy>(page->backForward().client());
     backForwardListProxy->clearCachedListCounts();
     completionHandler();
 }

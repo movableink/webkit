@@ -53,9 +53,10 @@ public:
 
     virtual ~WebBackForwardList();
 
-    WebBackForwardListItem* itemForID(const WebCore::BackForwardItemIdentifier&);
+    WebBackForwardListItem* itemForID(WebCore::BackForwardItemIdentifier);
 
     void addItem(Ref<WebBackForwardListItem>&&);
+    void addChildItem(WebCore::FrameIdentifier, Ref<FrameState>&&);
     void goToItem(WebBackForwardListItem&);
     void removeAllItems();
     void clear();
@@ -66,8 +67,8 @@ public:
     WebBackForwardListItem* forwardItem() const;
     WebBackForwardListItem* itemAtIndex(int) const;
 
-    WebBackForwardListItem* goBackItemSkippingItemsWithoutUserGesture() const;
-    WebBackForwardListItem* goForwardItemSkippingItemsWithoutUserGesture() const;
+    RefPtr<WebBackForwardListItem> goBackItemSkippingItemsWithoutUserGesture() const;
+    RefPtr<WebBackForwardListItem> goForwardItemSkippingItemsWithoutUserGesture() const;
 
     const BackForwardListItemVector& entries() const { return m_entries; }
 
@@ -85,10 +86,9 @@ public:
     void restoreFromState(BackForwardListState);
 
     void setItemsAsRestoredFromSession();
-    void setItemsAsRestoredFromSessionIf(Function<bool(WebBackForwardListItem&)>&&);
+    void setItemsAsRestoredFromSessionIf(NOESCAPE Function<bool(WebBackForwardListItem&)>&&);
 
-    void goToProvisionalItem(WebBackForwardListItem&);
-    void clearProvisionalItem(WebBackForwardListFrameItem&);
+    Ref<FrameState> completeFrameStateForNavigation(Ref<FrameState>&&);
 
 #if !LOG_DISABLED
     String loggingString();
@@ -99,17 +99,11 @@ private:
 
     void didRemoveItem(WebBackForwardListItem&);
 
-    void goToItemInternal(WebBackForwardListItem&, std::optional<size_t>& indexToUpdate);
-
-    std::optional<size_t> provisionalOrCurrentIndex() const { return m_provisionalIndex ? m_provisionalIndex : m_currentIndex; }
-    void setProvisionalOrCurrentIndex(size_t);
-
     RefPtr<WebPageProxy> protectedPage();
 
     WeakPtr<WebPageProxy> m_page;
     BackForwardListItemVector m_entries;
     std::optional<size_t> m_currentIndex;
-    std::optional<size_t> m_provisionalIndex;
 };
 
 } // namespace WebKit

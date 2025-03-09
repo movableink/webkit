@@ -335,6 +335,10 @@ unsigned Type::size() const
             CheckedUint32 size = 1;
             if (auto* constantSize = std::get_if<unsigned>(&array.size))
                 size = *constantSize;
+            else if (auto* expression = std::get_if<AST::Expression*>(&array.size)) {
+                if (const auto& maybeConstantValue = (*expression)->constantValue())
+                    size = maybeConstantValue->integerValue();
+            }
             auto elementSize = array.element->size();
             auto stride = WTF::roundUpToMultipleOf(array.element->alignment(), elementSize);
             if (stride < elementSize)

@@ -55,7 +55,7 @@ template<typename T> concept ShapeWithCenterCoordinate = std::same_as<T, CircleF
 // MARK: - Conversion
 
 template<> struct ToCSS<BasicShape> { auto operator()(const BasicShape&, const RenderStyle&) -> CSS::BasicShape; };
-template<> struct ToStyle<CSS::BasicShape> { auto operator()(const CSS::BasicShape&, const BuilderState&, const CSSCalcSymbolTable&) -> BasicShape; };
+template<> struct ToStyle<CSS::BasicShape> { auto operator()(const CSS::BasicShape&, const BuilderState&) -> BasicShape; };
 
 // MARK: - Blending
 

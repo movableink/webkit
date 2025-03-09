@@ -21,6 +21,11 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
+[
+    EnabledBy=VideoPresentationManagerEnabled || VideoPresentationModeAPIEnabled,
+    DispatchedFrom=WebContent,
+    DispatchedTo=UI
+]
 messages -> PlaybackSessionManagerProxy {
     CurrentTimeChanged(WebKit::PlaybackSessionContextIdentifier contextId, double currentTime, double hostTime)
     BufferedTimeChanged(WebKit::PlaybackSessionContextIdentifier contextId, double bufferedTime)
@@ -39,12 +44,18 @@ messages -> PlaybackSessionManagerProxy {
     VolumeChanged(WebKit::PlaybackSessionContextIdentifier contextId, double volume);
     PictureInPictureSupportedChanged(WebKit::PlaybackSessionContextIdentifier contextId, bool pictureInPictureSupported)
     IsInWindowFullscreenActiveChanged(WebKit::PlaybackSessionContextIdentifier contextId, bool isInWindow)
+#if HAVE(PIP_SKIP_PREROLL)
+    CanSkipAdChanged(WebKit::PlaybackSessionContextIdentifier contextId, bool value)
+#endif
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     SupportsLinearMediaPlayerChanged(WebKit::PlaybackSessionContextIdentifier contextId, bool supportsLinearMediaPlayer)
     SpatialVideoMetadataChanged(WebKit::PlaybackSessionContextIdentifier contextId, std::optional<WebCore::SpatialVideoMetadata> metadata);
+    IsImmersiveVideoChanged(WebKit::PlaybackSessionContextIdentifier contextId, bool value);
 #endif
     SetUpPlaybackControlsManagerWithID(WebKit::PlaybackSessionContextIdentifier contextId, bool isVideo)
     ClearPlaybackControlsManager()
+
+    SwapFullscreenModes(WebKit::PlaybackSessionContextIdentifier firstContextId, WebKit::PlaybackSessionContextIdentifier secondContextId)
 
     HandleControlledElementIDResponse(WebKit::PlaybackSessionContextIdentifier contextId, String id)
 

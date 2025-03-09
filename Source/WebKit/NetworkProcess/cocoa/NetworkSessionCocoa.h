@@ -167,6 +167,7 @@ public:
 
     void applyProxyConfigurationToSessionConfiguration(NSURLSessionConfiguration *);
 #endif
+    bool isLegacyTLSAllowed() const { return m_isLegacyTLSAllowed; }
 
 private:
     void invalidateAndCancel() override;
@@ -188,7 +189,7 @@ private:
     void deleteAlternativeServicesForHostNames(const Vector<String>&) override;
     void clearAlternativeServices(WallTime) override;
 
-    std::unique_ptr<WebSocketTask> createWebSocketTask(WebPageProxyIdentifier, std::optional<WebCore::FrameIdentifier>, std::optional<WebCore::PageIdentifier>, NetworkSocketChannel&, const WebCore::ResourceRequest&, const String& protocol, const WebCore::ClientOrigin&, bool hadMainFrameMainResourcePrivateRelayed, bool allowPrivacyProxy, OptionSet<WebCore::AdvancedPrivacyProtections>, WebCore::ShouldRelaxThirdPartyCookieBlocking, WebCore::StoredCredentialsPolicy) final;
+    std::unique_ptr<WebSocketTask> createWebSocketTask(WebPageProxyIdentifier, std::optional<WebCore::FrameIdentifier>, std::optional<WebCore::PageIdentifier>, NetworkSocketChannel&, const WebCore::ResourceRequest&, const String& protocol, const WebCore::ClientOrigin&, bool hadMainFrameMainResourcePrivateRelayed, bool allowPrivacyProxy, OptionSet<WebCore::AdvancedPrivacyProtections>, WebCore::StoredCredentialsPolicy) final;
     void addWebSocketTask(WebPageProxyIdentifier, WebSocketTask&) final;
     void removeWebSocketTask(SessionSet&, WebSocketTask&) final;
 
@@ -201,6 +202,8 @@ private:
 
     void forEachSessionWrapper(Function<void(SessionWrapper&)>&&);
 
+    bool isNetworkSessionCocoa() const final { return true; }
+
     Ref<SessionSet> m_defaultSessionSet;
     HashMap<WebPageProxyIdentifier, Ref<SessionSet>> m_perPageSessionSets;
     HashMap<WebPageNetworkParameters, WeakPtr<SessionSet>> m_perParametersSessionSets;
@@ -208,6 +211,9 @@ private:
     void initializeNSURLSessionsInSet(SessionSet&, NSURLSessionConfiguration *);
     SessionSet& sessionSetForPage(std::optional<WebPageProxyIdentifier>);
     const SessionSet& sessionSetForPage(std::optional<WebPageProxyIdentifier>) const;
+    Ref<SessionSet> protectedSessionSetForPage(std::optional<WebPageProxyIdentifier> identifier) { return sessionSetForPage(identifier); }
+    Ref<const SessionSet> protectedSessionSetForPage(std::optional<WebPageProxyIdentifier> identifier) const { return sessionSetForPage(identifier); }
+
     void invalidateAndCancelSessionSet(SessionSet&);
     
     String m_boundInterfaceIdentifier;
@@ -224,6 +230,7 @@ private:
     bool m_fastServerTrustEvaluationEnabled { false };
     String m_dataConnectionServiceType;
     bool m_preventsSystemHTTPProxyAuthentication { false };
+    bool m_isLegacyTLSAllowed { false };
 #if HAVE(AD_ATTRIBUTION_KIT_PRIVATE_BROWSING)
     Markable<WTF::UUID> m_donatedEphemeralImpressionSessionID;
 #endif
@@ -234,3 +241,7 @@ private:
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::NetworkSessionCocoa)
+    static bool isType(const WebKit::NetworkSession& networkSession) { return networkSession.isNetworkSessionCocoa(); }
+SPECIALIZE_TYPE_TRAITS_END()

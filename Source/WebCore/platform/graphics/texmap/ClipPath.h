@@ -37,6 +37,7 @@ namespace WebCore {
 class ClipPath final {
     WTF_MAKE_TZONE_ALLOCATED(ClipPath);
 public:
+    ClipPath() = default;
     ClipPath(Vector<FloatPoint>&& vertices, unsigned bufferID, unsigned bufferOffsetInBytes);
 
     bool isEmpty() const { return m_vertices.isEmpty(); }
@@ -44,13 +45,13 @@ public:
     const void* bufferDataOffsetAsPtr() const;
     unsigned numberOfVertices() const { return m_vertices.size(); }
 
-    FloatRect bounds() const { return m_bounds; }
+    const FloatRect& bounds() const { return m_bounds; }
 
 private:
 
     const Vector<FloatPoint> m_vertices;
-    unsigned m_bufferID;
-    unsigned m_bufferOffsetInBytes;
+    unsigned m_bufferID { 0 };
+    unsigned m_bufferOffsetInBytes { 0 };
 
     FloatRect m_bounds;
 };

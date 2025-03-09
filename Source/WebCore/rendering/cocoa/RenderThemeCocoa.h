@@ -49,6 +49,82 @@ protected:
     Color platformDictationAlternativesMarkerColor(OptionSet<StyleColorOptions>) const override;
     Color platformGrammarMarkerColor(OptionSet<StyleColorOptions>) const override;
 
+    Color controlTintColor(const RenderStyle&, OptionSet<StyleColorOptions>) const;
+
+    void adjustCheckboxStyle(RenderStyle&, const Element*) const override;
+    bool paintCheckbox(const RenderObject&, const PaintInfo&, const FloatRect&) override;
+
+    void adjustRadioStyle(RenderStyle&, const Element*) const override;
+    bool paintRadio(const RenderObject&, const PaintInfo&, const FloatRect&) override;
+
+    void adjustButtonStyle(RenderStyle&, const Element*) const override;
+    bool paintButton(const RenderObject&, const PaintInfo&, const IntRect&) override;
+
+    void adjustColorWellStyle(RenderStyle&, const Element*) const override;
+    bool paintColorWell(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    void paintColorWellDecorations(const RenderObject&, const PaintInfo&, const FloatRect&) override;
+
+    void adjustInnerSpinButtonStyle(RenderStyle&, const Element*) const override;
+    bool paintInnerSpinButton(const RenderObject&, const PaintInfo&, const FloatRect&) override;
+
+    void adjustTextFieldStyle(RenderStyle&, const Element*) const override;
+    bool paintTextField(const RenderObject&, const PaintInfo&, const FloatRect&) override;
+    void paintTextFieldDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) override;
+
+    void adjustTextAreaStyle(RenderStyle&, const Element*) const override;
+    bool paintTextArea(const RenderObject&, const PaintInfo&, const FloatRect&) override;
+    void paintTextAreaDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) override;
+
+    void adjustMenuListStyle(RenderStyle&, const Element*) const override;
+    bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) override;
+    void paintMenuListDecorations(const RenderObject&, const PaintInfo&, const IntRect&) override;
+
+    void adjustMenuListButtonStyle(RenderStyle&, const Element*) const override;
+    void paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) override;
+    bool paintMenuListButton(const RenderObject&, const PaintInfo&, const IntRect&) final;
+
+    void adjustMeterStyle(RenderStyle&, const Element*) const override;
+    bool paintMeter(const RenderObject&, const PaintInfo&, const IntRect&) override;
+
+    void adjustListButtonStyle(RenderStyle&, const Element*) const override;
+    bool paintListButton(const RenderObject&, const PaintInfo&, const FloatRect&) override;
+
+    void adjustProgressBarStyle(RenderStyle&, const Element*) const override;
+    bool paintProgressBar(const RenderObject&, const PaintInfo&, const IntRect&) override;
+
+    void adjustSliderTrackStyle(RenderStyle&, const Element*) const override;
+    bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
+
+    void adjustSliderThumbSize(RenderStyle&, const Element*) const override;
+    void adjustSliderThumbStyle(RenderStyle&, const Element*) const override;
+    bool paintSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) override;
+
+    void adjustSearchFieldStyle(RenderStyle&, const Element*) const override;
+    bool paintSearchField(const RenderObject&, const PaintInfo&, const FloatRect&) override;
+    void paintSearchFieldDecorations(const RenderBox&, const PaintInfo&, const IntRect&) override;
+
+    void adjustSearchFieldCancelButtonStyle(RenderStyle&, const Element*) const override;
+    bool paintSearchFieldCancelButton(const RenderBox&, const PaintInfo&, const IntRect&) override;
+
+    void adjustSearchFieldDecorationPartStyle(RenderStyle&, const Element*) const override;
+    bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const IntRect&) override;
+
+    void adjustSearchFieldResultsDecorationPartStyle(RenderStyle&, const Element*) const override;
+    bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const IntRect&) override;
+
+    void adjustSearchFieldResultsButtonStyle(RenderStyle&, const Element*) const override;
+    bool paintSearchFieldResultsButton(const RenderBox&, const PaintInfo&, const IntRect&) override;
+
+    void adjustSwitchStyle(RenderStyle&, const Element*) const override;
+    bool paintSwitchThumb(const RenderObject&, const PaintInfo&, const FloatRect&) override;
+    bool paintSwitchTrack(const RenderObject&, const PaintInfo&, const FloatRect&) override;
+
+    bool supportsFocusRing(const RenderObject&, const RenderStyle&) const override;
+
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/RenderThemeCocoaAdditions.h>
+#endif
+
 private:
     void purgeCaches() override;
 
@@ -62,8 +138,8 @@ private:
     void adjustApplePayButtonStyle(RenderStyle&, const Element*) const override;
 #endif
 
-#if ENABLE(VIDEO) && ENABLE(MODERN_MEDIA_CONTROLS)
-    String mediaControlsStyleSheet() override;
+#if ENABLE(VIDEO)
+    Vector<String> mediaControlsStyleSheets(const HTMLMediaElement&) override;
     Vector<String, 2> mediaControlsScripts() override;
     String mediaControlsBase64StringForIconNameAndType(const String&, const String&) override;
     String mediaControlsFormattedStringForDuration(double) override;
@@ -72,7 +148,7 @@ private:
     String m_mediaControlsScript;
     String m_mediaControlsStyleSheet;
     RetainPtr<NSDateComponentsFormatter> m_durationFormatter;
-#endif // ENABLE(VIDEO) && ENABLE(MODERN_MEDIA_CONTROLS)
+#endif // ENABLE(VIDEO)
 };
 
 }

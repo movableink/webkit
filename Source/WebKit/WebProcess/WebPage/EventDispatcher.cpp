@@ -116,13 +116,13 @@ void EventDispatcher::initializeConnection(IPC::Connection& connection)
     connection.addMessageReceiver(m_queue.get(), *this, Messages::EventDispatcher::messageReceiverName());
 }
 
-void EventDispatcher::internalWheelEvent(PageIdentifier pageID, const WebWheelEvent& wheelEvent, RectEdges<bool> rubberBandableEdges, WheelEventOrigin wheelEventOrigin)
+void EventDispatcher::internalWheelEvent(PageIdentifier pageID, const WebWheelEvent& wheelEvent, RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges, WheelEventOrigin wheelEventOrigin)
 {
     auto processingSteps = OptionSet<WebCore::WheelEventProcessingSteps> { WheelEventProcessingSteps::SynchronousScrolling, WheelEventProcessingSteps::BlockingDOMEventDispatch };
 
     ensureOnMainRunLoop([pageID] {
         if (RefPtr webPage = WebProcess::singleton().webPage(pageID)) {
-            if (auto* corePage = webPage->corePage()) {
+            if (RefPtr corePage = webPage->corePage()) {
                 if (auto* keyboardScrollingAnimator = corePage->currentKeyboardScrollingAnimator())
                     keyboardScrollingAnimator->stopScrollingImmediately();
             }
@@ -141,7 +141,7 @@ void EventDispatcher::internalWheelEvent(PageIdentifier pageID, const WebWheelEv
 #endif
 
         Locker locker { m_scrollingTreesLock };
-        auto scrollingTree = m_scrollingTrees.get(pageID);
+        RefPtr scrollingTree = m_scrollingTrees.get(pageID);
         if (!scrollingTree) {
             dispatchWheelEventViaMainThread(pageID, wheelEvent, processingSteps, wheelEventOrigin);
             break;
@@ -166,7 +166,7 @@ void EventDispatcher::internalWheelEvent(PageIdentifier pageID, const WebWheelEv
 
         scrollingTree->willProcessWheelEvent();
 
-        ScrollingThread::dispatch([scrollingTree, wheelEvent, platformWheelEvent, processingSteps, useMainThreadForScrolling, pageID, wheelEventOrigin, this] {
+        ScrollingThread::dispatch([scrollingTree, wheelEvent, platformWheelEvent, processingSteps, useMainThreadForScrolling, pageID, wheelEventOrigin, this, protectedThis = Ref { *this }] {
             if (useMainThreadForScrolling) {
                 scrollingTree->willSendEventToMainThread(platformWheelEvent);
                 dispatchWheelEventViaMainThread(pageID, wheelEvent, processingSteps, wheelEventOrigin);
@@ -195,7 +195,7 @@ void EventDispatcher::internalWheelEvent(PageIdentifier pageID, const WebWheelEv
 #endif
 }
 
-void EventDispatcher::wheelEvent(PageIdentifier pageID, const WebWheelEvent& wheelEvent, RectEdges<bool> rubberBandableEdges)
+void EventDispatcher::wheelEvent(PageIdentifier pageID, const WebWheelEvent& wheelEvent, RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges)
 {
 #if ENABLE(MOMENTUM_EVENT_DISPATCHER)
     if (m_momentumEventDispatcher->handleWheelEvent(pageID, wheelEvent, rubberBandableEdges)) {
@@ -207,10 +207,10 @@ void EventDispatcher::wheelEvent(PageIdentifier pageID, const WebWheelEvent& whe
 }
 
 #if ENABLE(MAC_GESTURE_EVENTS) || ENABLE(QT_GESTURE_EVENTS)
-void EventDispatcher::gestureEvent(FrameIdentifier frameID, PageIdentifier pageID, const WebGestureEvent& gestureEvent)
+void EventDispatcher::gestureEvent(FrameIdentifier frameID, PageIdentifier pageID, const WebGestureEvent& gestureEvent, CompletionHandler<void(std::optional<WebEventType>, bool, std::optional<RemoteUserInputEventData>)>&& completionHandler)
 {
-    RunLoop::main().dispatch([this, frameID, pageID, gestureEvent] mutable {
-        dispatchGestureEvent(frameID, pageID, gestureEvent);
+    RunLoop::protectedMain()->dispatch([this, frameID, pageID, gestureEvent, completionHandler = WTFMove(completionHandler)] mutable {
+        dispatchGestureEvent(frameID, pageID, gestureEvent, WTFMove(completionHandler));
     });
 }
 #endif
@@ -253,7 +253,7 @@ void EventDispatcher::touchEvent(PageIdentifier pageID, FrameIdentifier frameID,
     }
 
     if (updateListWasEmpty) {
-        RunLoop::main().dispatch([this] {
+        RunLoop::protectedMain()->dispatch([this] {
             dispatchTouchEvents();
         });
     }
@@ -279,7 +279,7 @@ void EventDispatcher::dispatchTouchEvents()
 void EventDispatcher::dispatchWheelEventViaMainThread(WebCore::PageIdentifier pageID, const WebWheelEvent& wheelEvent, OptionSet<WheelEventProcessingSteps> processingSteps, WheelEventOrigin wheelEventOrigin)
 {
     ASSERT(!RunLoop::isMain());
-    RunLoop::main().dispatch([this, pageID, wheelEvent, wheelEventOrigin, steps = processingSteps - WheelEventProcessingSteps::AsyncScrolling] {
+    RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }, pageID, wheelEvent, wheelEventOrigin, steps = processingSteps - WheelEventProcessingSteps::AsyncScrolling] {
         dispatchWheelEvent(pageID, wheelEvent, steps, wheelEventOrigin);
     });
 }
@@ -303,21 +303,21 @@ void EventDispatcher::dispatchWheelEvent(PageIdentifier pageID, const WebWheelEv
 }
 
 #if ENABLE(MAC_GESTURE_EVENTS) || ENABLE(QT_GESTURE_EVENTS)
-void EventDispatcher::dispatchGestureEvent(FrameIdentifier frameID, PageIdentifier pageID, const WebGestureEvent& gestureEvent)
+void EventDispatcher::dispatchGestureEvent(FrameIdentifier frameID, PageIdentifier pageID, const WebGestureEvent& gestureEvent, CompletionHandler<void(std::optional<WebEventType>, bool, std::optional<RemoteUserInputEventData>)>&& completionHandler)
 {
     ASSERT(RunLoop::isMain());
 
     RefPtr webPage = WebProcess::singleton().webPage(pageID);
     if (!webPage)
-        return;
+        return completionHandler(gestureEvent.type(), false, std::nullopt);
 
-    webPage->gestureEvent(frameID, gestureEvent);
+    webPage->gestureEvent(frameID, gestureEvent, WTFMove(completionHandler));
 }
 #endif
 
 void EventDispatcher::sendDidReceiveEvent(PageIdentifier pageID, WebEventType eventType, bool didHandleEvent)
 {
-    WebProcess::singleton().parentProcessConnection()->send(Messages::WebPageProxy::DidReceiveEvent(eventType, didHandleEvent, std::nullopt), pageID);
+    WebProcess::singleton().protectedParentProcessConnection()->send(Messages::WebPageProxy::DidReceiveEvent(eventType, didHandleEvent, std::nullopt), pageID);
 }
 
 void EventDispatcher::notifyScrollingTreesDisplayDidRefresh(PlatformDisplayID displayID)
@@ -325,7 +325,7 @@ void EventDispatcher::notifyScrollingTreesDisplayDidRefresh(PlatformDisplayID di
 #if ENABLE(ASYNC_SCROLLING) && ENABLE(SCROLLING_THREAD)
     Locker locker { m_scrollingTreesLock };
     for (auto keyValuePair : m_scrollingTrees)
-        keyValuePair.value->displayDidRefresh(displayID);
+        Ref { *keyValuePair.value }->displayDidRefresh(displayID);
 #endif
 }
 
@@ -345,7 +345,7 @@ void EventDispatcher::displayDidRefresh(PlatformDisplayID displayID, const Displ
     if (!sendToMainThread)
         return;
 
-    RunLoop::main().dispatch([displayID, displayUpdate]() {
+    RunLoop::protectedMain()->dispatch([displayID, displayUpdate]() {
         DisplayRefreshMonitorManager::sharedManager().displayDidRefresh(displayID, displayUpdate);
     });
 }
@@ -367,19 +367,19 @@ void EventDispatcher::setScrollingAccelerationCurve(PageIdentifier pageID, std::
     m_momentumEventDispatcher->setScrollingAccelerationCurve(pageID, curve);
 }
 
-void EventDispatcher::handleSyntheticWheelEvent(WebCore::PageIdentifier pageIdentifier, const WebWheelEvent& event, WebCore::RectEdges<bool> rubberBandableEdges)
+void EventDispatcher::handleSyntheticWheelEvent(WebCore::PageIdentifier pageIdentifier, const WebWheelEvent& event, WebCore::RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges)
 {
     internalWheelEvent(pageIdentifier, event, rubberBandableEdges, WheelEventOrigin::MomentumEventDispatcher);
 }
 
 void EventDispatcher::startDisplayDidRefreshCallbacks(WebCore::PlatformDisplayID displayID)
 {
-    WebProcess::singleton().parentProcessConnection()->send(Messages::WebProcessProxy::StartDisplayLink(m_observerID, displayID, WebCore::FullSpeedFramesPerSecond), 0);
+    WebProcess::singleton().protectedParentProcessConnection()->send(Messages::WebProcessProxy::StartDisplayLink(m_observerID, displayID, WebCore::FullSpeedFramesPerSecond), 0);
 }
 
 void EventDispatcher::stopDisplayDidRefreshCallbacks(WebCore::PlatformDisplayID displayID)
 {
-    WebProcess::singleton().parentProcessConnection()->send(Messages::WebProcessProxy::StopDisplayLink(m_observerID, displayID), 0);
+    WebProcess::singleton().protectedParentProcessConnection()->send(Messages::WebProcessProxy::StopDisplayLink(m_observerID, displayID), 0);
 }
 
 #if ENABLE(MOMENTUM_EVENT_DISPATCHER_TEMPORARY_LOGGING)

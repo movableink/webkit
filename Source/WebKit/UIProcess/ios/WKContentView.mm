@@ -29,7 +29,6 @@
 #if PLATFORM(IOS_FAMILY)
 
 #import "APIPageConfiguration.h"
-#import "AccessibilityIOS.h"
 #import "Connection.h"
 #import "FrameProcess.h"
 #import "FullscreenClient.h"
@@ -61,6 +60,8 @@
 #import "_WKFrameHandleInternal.h"
 #import "_WKWebViewPrintFormatterInternal.h"
 #import <CoreGraphics/CoreGraphics.h>
+#import <WebCore/AccessibilityObject.h>
+#import <WebCore/FloatConversion.h>
 #import <WebCore/FloatQuad.h>
 #import <WebCore/InspectorOverlay.h>
 #import <WebCore/LocalFrameView.h>
@@ -78,6 +79,7 @@
 #import <wtf/UUID.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #import <wtf/cocoa/SpanCocoa.h>
+#import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/MakeString.h>
 #import <wtf/text/TextStream.h>
 #import <wtf/threads/BinarySemaphore.h>
@@ -313,14 +315,20 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #endif
 
 #if HAVE(SPATIAL_TRACKING_LABEL)
-    _spatialTrackingView = adoptNS([[UIView alloc] init]);
-    [_spatialTrackingView layer].separatedState = kCALayerSeparatedStateTracked;
-    _spatialTrackingLabel = makeString("WKContentView Label: "_s, createVersion4UUIDString());
-    [[_spatialTrackingView layer] setValue:(NSString *)_spatialTrackingLabel forKeyPath:@"separatedOptions.STSLabel"];
-    [_spatialTrackingView setAutoresizingMask:UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin];
-    [_spatialTrackingView setFrame:CGRectMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds), 0, 0)];
-    [_spatialTrackingView setUserInteractionEnabled:NO];
-    [self addSubview:_spatialTrackingView.get()];
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    if (!_page->preferences().preferSpatialAudioExperience()) {
+#endif
+        _spatialTrackingView = adoptNS([[UIView alloc] init]);
+        [_spatialTrackingView layer].separatedState = kCALayerSeparatedStateTracked;
+        _spatialTrackingLabel = makeString("WKContentView Label: "_s, createVersion4UUIDString());
+        [[_spatialTrackingView layer] setValue:(NSString *)_spatialTrackingLabel forKeyPath:@"separatedOptions.STSLabel"];
+        [_spatialTrackingView setAutoresizingMask:UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin];
+        [_spatialTrackingView setFrame:CGRectMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds), 0, 0)];
+        [_spatialTrackingView setUserInteractionEnabled:NO];
+        [self addSubview:_spatialTrackingView.get()];
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    }
+#endif
 #endif
 
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_applicationWillResignActive:) name:UIApplicationWillResignActiveNotification object:[UIApplication sharedApplication]];
@@ -482,7 +490,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #endif // ENABLE(MODEL_PROCESS)
 #endif // HAVE(VISIBILITY_PROPAGATION_VIEW)
 
-- (instancetype)initWithFrame:(CGRect)frame processPool:(NakedRef<WebKit::WebProcessPool>)processPool configuration:(Ref<API::PageConfiguration>&&)configuration webView:(WKWebView *)webView
+- (instancetype)initWithFrame:(CGRect)frame processPool:(std::reference_wrapper<WebKit::WebProcessPool>)processPool configuration:(Ref<API::PageConfiguration>&&)configuration webView:(WKWebView *)webView
 {
     if (!(self = [super initWithFrame:frame webView:webView]))
         return nil;
@@ -668,7 +676,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 static WebCore::FloatBoxExtent floatBoxExtent(UIEdgeInsets insets)
 {
-    return WebCore::FloatBoxExtent(insets.top, insets.right, insets.bottom, insets.left);
+    return { WebCore::narrowPrecisionToFloatFromCGFloat(insets.top), WebCore::narrowPrecisionToFloatFromCGFloat(insets.right), WebCore::narrowPrecisionToFloatFromCGFloat(insets.bottom), WebCore::narrowPrecisionToFloatFromCGFloat(insets.left) };
 }
 
 - (CGRect)_computeUnobscuredContentRectRespectingInputViewBounds:(CGRect)unobscuredContentRect inputViewBounds:(CGRect)inputViewBounds
@@ -868,15 +876,16 @@ static void storeAccessibilityRemoteConnectionInformation(id element, pid_t pid,
 - (void)_accessibilityRegisterUIProcessTokens
 {
     auto uuid = [NSUUID UUID];
-    NSData *remoteElementToken = WebKit::newAccessibilityRemoteToken(uuid);
+    if (RetainPtr remoteElementToken = WebCore::Accessibility::newAccessibilityRemoteToken(uuid.UUIDString)) {
+        // Store information about the WebProcess that can later be retrieved by the iOS Accessibility runtime.
+        if (_page->legacyMainFrameProcess().state() == WebKit::WebProcessProxy::State::Running) {
+            [self _updateRemoteAccessibilityRegistration:YES];
+            storeAccessibilityRemoteConnectionInformation(self, _page->legacyMainFrameProcess().processID(), uuid);
 
-    // Store information about the WebProcess that can later be retrieved by the iOS Accessibility runtime.
-    if (_page->legacyMainFrameProcess().state() == WebKit::WebProcessProxy::State::Running) {
-        [self _updateRemoteAccessibilityRegistration:YES];
-        storeAccessibilityRemoteConnectionInformation(self, _page->legacyMainFrameProcess().processID(), uuid);
+            auto elementToken = makeVector(remoteElementToken.get());
+            _page->registerUIProcessAccessibilityTokens(elementToken, elementToken);
+        }
 
-        auto elementToken = span(remoteElementToken);
-        _page->registerUIProcessAccessibilityTokens(elementToken, elementToken);
     }
 }
 

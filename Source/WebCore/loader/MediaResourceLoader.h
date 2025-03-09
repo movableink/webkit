@@ -66,6 +66,8 @@ public:
     WEBCORE_EXPORT Vector<ResourceResponse> responsesForTesting() const;
     void addResponseForTesting(const ResourceResponse&);
 
+    bool verifyMediaResponse(const URL& requestURL, const ResourceResponse&, const SecurityOrigin*);
+
 private:
     WEBCORE_EXPORT MediaResourceLoader(Document&, Element&, const String& crossOriginMode, FetchOptions::Destination);
 
@@ -77,6 +79,13 @@ private:
     SingleThreadWeakHashSet<MediaResource> m_resources WTF_GUARDED_BY_CAPABILITY(mainThread);
     Vector<ResourceResponse> m_responsesForTesting WTF_GUARDED_BY_CAPABILITY(mainThread);
     FetchOptions::Destination m_destination WTF_GUARDED_BY_CAPABILITY(mainThread);
+
+    struct ValidationInformation {
+        RefPtr<const SecurityOrigin> origin;
+        bool usedOpaqueResponse { false };
+        bool usedServiceWorker { false };
+    };
+    HashMap<URL, ValidationInformation> m_validationLoadInformations WTF_GUARDED_BY_CAPABILITY(mainThread);
 };
 
 class MediaResource : public PlatformMediaResource, public CachedRawResourceClient {

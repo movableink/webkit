@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2009-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2020 Alexey Shvayka <shvaikalesh@gmail.com>.
+ * Copyright (C) 2025 Tetsuharu Ohzeki <tetsuharu.ohzeki@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,13 +48,76 @@ enum class CharacterClassSetOp : uint8_t {
     Subtraction
 };
 
+template <class T> concept YarrSyntaxCheckable = requires (T& checker, Vector<Vector<char32_t>>& disjunctionStrings, const String& subpatternName) {
+    { checker.assertionBOL() } -> std::same_as<void>;
+    { checker.assertionEOL() } -> std::same_as<void>;
+    { checker.assertionWordBoundary(bool{}) } -> std::same_as<void>;
+    { checker.atomPatternCharacter(char32_t { }, bool { }) } -> std::same_as<void>;
+    { checker.atomBuiltInCharacterClass(BuiltInCharacterClassID{}, bool{}) } -> std::same_as<void>;
+    { checker.atomCharacterClassBegin(bool{}) } -> std::same_as<void>;
+    { checker.atomCharacterClassBegin() } -> std::same_as<void>;
+    { checker.atomCharacterClassAtom(UChar{}) } -> std::same_as<void>;
+    { checker.atomCharacterClassRange(UChar{}, UChar{}) } -> std::same_as<void>;
+    { checker.atomPatternCharacter(char32_t { }, bool { }) } -> std::same_as<void>;
+    { checker.atomCharacterClassBuiltIn(BuiltInCharacterClassID{}, bool{}) } -> std::same_as<void>;
+    { checker.atomClassStringDisjunction(disjunctionStrings) } -> std::same_as<void>;
+    { checker.atomCharacterClassSetOp(CharacterClassSetOp{}) } -> std::same_as<void>;
+    { checker.atomCharacterClassPushNested() } -> std::same_as<void>;
+    { checker.atomCharacterClassPopNested() } -> std::same_as<void>;
+    { checker.atomCharacterClassEnd() } -> std::same_as<void>;
+    { checker.atomParenthesesSubpatternBegin() } -> std::same_as<void>;
+    { checker.atomParenthesesSubpatternBegin(bool{}) } -> std::same_as<void>;
+    { checker.atomParenthesesSubpatternBegin(bool{}, std::optional<String>{}) } -> std::same_as<void>;
+    { checker.atomParentheticalAssertionBegin(bool{}, MatchDirection{}) } -> std::same_as<void>;
+    { checker.atomParentheticalModifierBegin(OptionSet<Flags>{}, OptionSet<Flags>{})} -> std::same_as<void>;
+    { checker.atomParenthesesEnd() } -> std::same_as<void>;
+    { checker.atomBackReference(unsigned{}) } -> std::same_as<void>;
+    { checker.atomNamedBackReference(subpatternName) } -> std::same_as<void>;
+    { checker.atomNamedForwardReference(subpatternName) } -> std::same_as<void>;
+    { checker.quantifyAtom(unsigned{}, unsigned{}, bool{}) } -> std::same_as<void>;
+    { checker.disjunction(CreateDisjunctionPurpose{}) } -> std::same_as<void>;
+    { checker.resetForReparsing() } -> std::same_as<void>;
+};
+
 // The Parser class should not be used directly - only via the Yarr::parse() method.
-template<class Delegate, typename CharType>
+template<YarrSyntaxCheckable Delegate, typename CharType>
 class Parser {
+public:
+    Parser(Delegate& delegate, StringView pattern, CompileMode compileMode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed)
+        : m_delegate(delegate)
+        , m_data(pattern.span<CharType>().data())
+        , m_size(pattern.length())
+        , m_compileMode(compileMode)
+        , m_backReferenceLimit(backReferenceLimit)
+        , m_isNamedForwardReferenceAllowed(isNamedForwardReferenceAllowed)
+    {
+    }
+
+    /*
+     * parse():
+     *
+     * This method calls parseTokens() to parse over the input and returns error code for a result.
+     */
+    ErrorCode parse()
+    {
+        if (m_size > MAX_PATTERN_SIZE)
+            return ErrorCode::PatternTooLarge;
+
+        parseTokens();
+
+        if (!hasError(m_errorCode)) {
+            ASSERT(atEndOfPattern());
+            handleIllegalReferences();
+            ASSERT(atEndOfPattern());
+        }
+
+        return m_errorCode;
+    }
+
 private:
     static constexpr char32_t errorCodePoint = 0xFFFFFFFFu;
 
-    template<class FriendDelegate>
+    template<YarrSyntaxCheckable FriendDelegate>
     friend ErrorCode parse(FriendDelegate&, StringView pattern, CompileMode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed);
 
     enum class UnicodeParseContext : uint8_t { PatternCodePoint, GroupName };
@@ -69,7 +133,7 @@ private:
     };
 
     class NamedCaptureGroups {
-        typedef HashSet<String> GroupNameHashSet;
+        typedef UncheckedKeyHashSet<String> GroupNameHashSet;
 
     public:
         NamedCaptureGroups()
@@ -184,7 +248,7 @@ private:
          * mode we will allow a hypen to be treated as indicating a range (i.e. /[a-z]/
          * is different to /[a\-z]/).
          */
-        void atomPatternCharacter(char32_t ch, bool hyphenIsRange = false)
+        void atomPatternCharacter(char32_t ch, bool hyphenIsRange)
         {
             switch (m_state) {
             case CharacterClassConstructionState::AfterCharacterClass:
@@ -520,7 +584,7 @@ private:
          * mode we will allow a hypen to be treated as indicating a range (i.e. /[a-z]/
          * is different to /[a\-z]/).
          */
-        void atomPatternCharacter(char32_t ch)
+        void atomPatternCharacter(char32_t ch, bool hyphenIsRange)
         {
             bool unionOpActive = m_setOp == CharacterClassSetOp::Default || m_setOp == CharacterClassSetOp::Union;
             bool processingEscape = m_processingEscape;
@@ -542,7 +606,7 @@ private:
                 // another character or character class will result in syntax error.
                 // A hypen following a character class is itself valid, but only at
                 // the end of a regex.
-                if (unionOpActive && ch == '-') {
+                if (hyphenIsRange && unionOpActive && ch == '-') {
                     m_delegate.atomCharacterClassAtom('-');
                     m_state = ClassSetConstructionState::AfterCharacterClassHyphen;
                     return;
@@ -751,7 +815,7 @@ private:
         {
         }
 
-        void atomPatternCharacter(char32_t ch, bool = false)
+        void atomPatternCharacter(char32_t ch, bool)
         {
             m_stringInProgress.append(ch);
             if (m_stringInProgress.size() > 1)
@@ -792,16 +856,6 @@ private:
         Vector<Vector<char32_t>> m_strings;
     };
 
-    Parser(Delegate& delegate, StringView pattern, CompileMode compileMode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed)
-        : m_delegate(delegate)
-        , m_data(pattern.span<CharType>().data())
-        , m_size(pattern.length())
-        , m_compileMode(compileMode)
-        , m_backReferenceLimit(backReferenceLimit)
-        , m_isNamedForwardReferenceAllowed(isNamedForwardReferenceAllowed)
-    {
-    }
-
     // The handling of IdentityEscapes is different depending on which unicode flag if any is active.
     // For both Unicode and UnicodeSet patterns, IdentityEscapes only include SyntaxCharacters or '/'.
     // For UnicodeSet patterns when parsing ClassSet expressions and ClassStringDisjunctions, escapes include SyntaxCharacters, '/'
@@ -838,7 +892,7 @@ private:
      * following methods:
      *
      *   Required methods:
-     *    void atomPatternCharacter(char32_t ch);
+     *    void atomPatternCharacter(char32_t ch, bool hyphenIsRange);
      *
      *   Optional methods based on parseEscapeMode:
      *    void assertionWordBoundary(bool invert);
@@ -864,7 +918,7 @@ private:
         case 'b':
             consume();
             if (parseEscapeMode != ParseEscapeMode::Normal)
-                delegate.atomPatternCharacter('\b');
+                delegate.atomPatternCharacter('\b', /* hyphenIsRange */ false);
             else {
                 delegate.assertionWordBoundary(false);
                 return TokenType::NotAtom;
@@ -876,7 +930,7 @@ private:
                 if (isIdentityEscapeAnError<parseEscapeMode>('B'))
                     break;
 
-                delegate.atomPatternCharacter('B');
+                delegate.atomPatternCharacter('B', /* hyphenIsRange */ false);
             } else {
                 delegate.assertionWordBoundary(true);
                 return TokenType::NotAtom;
@@ -887,7 +941,7 @@ private:
         case 'd':
             consume();
             if (parseEscapeMode == ParseEscapeMode::ClassStringDisjunction) {
-                delegate.atomPatternCharacter('d');
+                delegate.atomPatternCharacter('d', /* hyphenIsRange */ false);
                 break;
             }
             delegate.atomBuiltInCharacterClass(BuiltInCharacterClassID::DigitClassID, false);
@@ -895,7 +949,7 @@ private:
         case 's':
             consume();
             if (parseEscapeMode == ParseEscapeMode::ClassStringDisjunction) {
-                delegate.atomPatternCharacter('s');
+                delegate.atomPatternCharacter('s', /* hyphenIsRange */ false);
                 break;
             }
             delegate.atomBuiltInCharacterClass(BuiltInCharacterClassID::SpaceClassID, false);
@@ -903,7 +957,7 @@ private:
         case 'w':
             consume();
             if (parseEscapeMode == ParseEscapeMode::ClassStringDisjunction) {
-                delegate.atomPatternCharacter('w');
+                delegate.atomPatternCharacter('w', /* hyphenIsRange */ false);
                 break;
             }
             delegate.atomBuiltInCharacterClass(BuiltInCharacterClassID::WordClassID, false);
@@ -911,7 +965,7 @@ private:
         case 'D':
             consume();
             if (parseEscapeMode == ParseEscapeMode::ClassStringDisjunction) {
-                delegate.atomPatternCharacter('D');
+                delegate.atomPatternCharacter('D', /* hyphenIsRange */ false);
                 break;
             }
             delegate.atomBuiltInCharacterClass(BuiltInCharacterClassID::DigitClassID, true);
@@ -919,7 +973,7 @@ private:
         case 'S':
             consume();
             if (parseEscapeMode == ParseEscapeMode::ClassStringDisjunction) {
-                delegate.atomPatternCharacter('S');
+                delegate.atomPatternCharacter('S', /* hyphenIsRange */ false);
                 break;
             }
             delegate.atomBuiltInCharacterClass(BuiltInCharacterClassID::SpaceClassID, true);
@@ -927,7 +981,7 @@ private:
         case 'W':
             consume();
             if (parseEscapeMode == ParseEscapeMode::ClassStringDisjunction) {
-                delegate.atomPatternCharacter('W');
+                delegate.atomPatternCharacter('W', /* hyphenIsRange */ false);
                 break;
             }
             delegate.atomBuiltInCharacterClass(BuiltInCharacterClassID::WordClassID, true);
@@ -937,7 +991,7 @@ private:
             consume();
 
             if (!peekIsDigit()) {
-                delegate.atomPatternCharacter(0);
+                delegate.atomPatternCharacter(0, /* hyphenIsRange */ false);
                 break;
             }
 
@@ -946,7 +1000,7 @@ private:
                 break;
             }
 
-            delegate.atomPatternCharacter(consumeOctal(2));
+            delegate.atomPatternCharacter(consumeOctal(2), /* hyphenIsRange */ false);
             break;
         }
 
@@ -984,30 +1038,30 @@ private:
                 break;
             }
 
-            delegate.atomPatternCharacter(peek() < '8' ? consumeOctal(3) : consume());
+            delegate.atomPatternCharacter(peek() < '8' ? consumeOctal(3) : consume(), /* hyphenIsRange */ false);
             break;
         }
 
         // ControlEscape
         case 'f':
             consume();
-            delegate.atomPatternCharacter('\f');
+            delegate.atomPatternCharacter('\f', /* hyphenIsRange */ false);
             break;
         case 'n':
             consume();
-            delegate.atomPatternCharacter('\n');
+            delegate.atomPatternCharacter('\n', /* hyphenIsRange */ false);
             break;
         case 'r':
             consume();
-            delegate.atomPatternCharacter('\r');
+            delegate.atomPatternCharacter('\r', /* hyphenIsRange */ false);
             break;
         case 't':
             consume();
-            delegate.atomPatternCharacter('\t');
+            delegate.atomPatternCharacter('\t', /* hyphenIsRange */ false);
             break;
         case 'v':
             consume();
-            delegate.atomPatternCharacter('\v');
+            delegate.atomPatternCharacter('\v', /* hyphenIsRange */ false);
             break;
 
         // ControlLetter
@@ -1018,7 +1072,7 @@ private:
                 char32_t control = consume();
 
                 if (WTF::isASCIIAlpha(control)) {
-                    delegate.atomPatternCharacter(control & 0x1f);
+                    delegate.atomPatternCharacter(control & 0x1f, /* hyphenIsRange */ false);
                     break;
                 }
 
@@ -1029,7 +1083,7 @@ private:
 
                 // https://tc39.es/ecma262/#prod-annexB-ClassControlLetter
                 if (parseEscapeMode != ParseEscapeMode::Normal && (WTF::isASCIIDigit(control) || control == '_')) {
-                    delegate.atomPatternCharacter(control & 0x1f);
+                    delegate.atomPatternCharacter(control & 0x1f, /* hyphenIsRange */ false);
                     break;
                 }
             }
@@ -1040,7 +1094,7 @@ private:
             }
 
             restoreState(state);
-            delegate.atomPatternCharacter('\\');
+            delegate.atomPatternCharacter('\\', /* hyphenIsRange */ false);
             break;
         }
 
@@ -1052,9 +1106,9 @@ private:
                 if (isIdentityEscapeAnError<parseEscapeMode>('x'))
                     break;
 
-                delegate.atomPatternCharacter('x');
+                delegate.atomPatternCharacter('x', /* hyphenIsRange */ false);
             } else
-                delegate.atomPatternCharacter(x);
+                delegate.atomPatternCharacter(x, /* hyphenIsRange */ false);
             break;
         }
 
@@ -1083,7 +1137,7 @@ private:
 
             restoreState(state);
             if (!isIdentityEscapeAnError<parseEscapeMode>('k')) {
-                delegate.atomPatternCharacter('k');
+                delegate.atomPatternCharacter('k', /* hyphenIsRange */ false);
                 m_kIdentityEscapeSeen = true; 
             }
             break;
@@ -1097,7 +1151,7 @@ private:
             if (isLegacyCompilation() || parseEscapeMode == ParseEscapeMode::ClassStringDisjunction) {
                 if (isIdentityEscapeAnError<parseEscapeMode>(escapeChar))
                     break;
-                delegate.atomPatternCharacter(escapeChar);
+                delegate.atomPatternCharacter(escapeChar, /* hyphenIsRange */ false);
                 break;
             }
 
@@ -1138,7 +1192,7 @@ private:
             if (isIdentityEscapeAnError<parseEscapeMode>(escapeChar))
                 break;
 
-            delegate.atomPatternCharacter(escapeChar);
+            delegate.atomPatternCharacter(escapeChar, /* hyphenIsRange */ false);
             break;
         }
 
@@ -1148,7 +1202,7 @@ private:
             if (hasError(m_errorCode))
                 break;
 
-            delegate.atomPatternCharacter(codePoint == errorCodePoint ? 'u' : codePoint);
+            delegate.atomPatternCharacter(codePoint == errorCodePoint ? 'u' : codePoint, /* hyphenIsRange */ false);
             break;
         }
 
@@ -1158,14 +1212,14 @@ private:
 
             if (ch == '-' && isEitherUnicodeCompilation() && parseEscapeMode != ParseEscapeMode::Normal) {
                 // \- is allowed for ClassEscape with unicode flag.
-                delegate.atomPatternCharacter(consume());
+                delegate.atomPatternCharacter(consume(), /* hyphenIsRange */ false);
                 break;
             }
 
             if (isIdentityEscapeAnError<parseEscapeMode>(ch))
                 break;
 
-            delegate.atomPatternCharacter(consume());
+            delegate.atomPatternCharacter(consume(), /* hyphenIsRange */ false);
         }
         
         return TokenType::Atom;
@@ -1274,7 +1328,7 @@ private:
                 break;
 
             default:
-                characterClassConstructor.atomPatternCharacter(consumePossibleSurrogatePair<UnicodeParseContext::PatternCodePoint>(), true);
+                characterClassConstructor.atomPatternCharacter(consumePossibleSurrogatePair<UnicodeParseContext::PatternCodePoint>(), /* hyphenIsRange */ true);
             }
 
             if (hasError(m_errorCode))
@@ -1306,7 +1360,7 @@ private:
             if (ch == errorCodePoint)
                 return;
 
-            classSetConstructor.atomPatternCharacter(static_cast<char32_t>(ch));
+            classSetConstructor.atomPatternCharacter(static_cast<char32_t>(ch), /* hyphenIsRange */ true);
         };
 
         while (!atEndOfPattern()) {
@@ -1438,7 +1492,7 @@ private:
                 if (ch == errorCodePoint)
                     return;
 
-                stringDisjunctionDelegate.atomPatternCharacter(static_cast<char32_t>(ch));
+                stringDisjunctionDelegate.atomPatternCharacter(static_cast<char32_t>(ch), /* hyphenIsRange */ false);
             }
             }
 
@@ -1468,22 +1522,26 @@ private:
                 return;
             }
 
-            switch (consume()) {
+            switch (peek()) {
             case ':':
+                consume();
                 m_delegate.atomParenthesesSubpatternBegin(false);
                 break;
             
             case '=':
+                consume();
                 m_delegate.atomParentheticalAssertionBegin(false, Forward);
                 type = ParenthesesType::Assertion;
                 break;
 
             case '!':
+                consume();
                 m_delegate.atomParentheticalAssertionBegin(true, Forward);
                 type = ParenthesesType::Assertion;
                 break;
 
             case '<': {
+                consume();
                 auto groupName = tryConsumeGroupName();
                 if (hasError(m_errorCode))
                     break;
@@ -1513,6 +1571,67 @@ private:
                     }
                     m_errorCode = ErrorCode::InvalidGroupName;
                 }
+
+                break;
+            }
+
+#define REGEXP_MOD_CASE(key, name, lowerCaseName) \
+            case key:
+
+            // Valid RegularExpressionFlags for regexp modifiers
+            case '-':
+            JSC_REGEXP_MOD_FLAGS(REGEXP_MOD_CASE)
+
+#undef REGEXP_MOD_CASE
+            {
+                // consume characters until :
+                OptionSet<Flags> set;
+                OptionSet<Flags> unset;
+                bool hasHitNegation = false;
+                char32_t c;
+                while (!atEndOfPattern() && (c = consume()) != ':') {
+                    switch (c) {
+                    case '-':
+                        if (hasHitNegation)
+                            m_errorCode = ErrorCode::InvalidRegularExpressionModifier;
+                        hasHitNegation = true;
+                        break;
+
+                    // It is a Syntax Error if the source text matched by RegularExpressionModifiers contains the same code point more than once
+#define HANDLE_REGEXP_MOD_FLAG(key, name, lowerCaseName) \
+                    case key: \
+                        if (hasHitNegation) { \
+                            if (unset.contains(Flags::name)) \
+                                m_errorCode = ErrorCode::InvalidRegularExpressionModifier; \
+                            unset.add(Flags::name); \
+                        } else { \
+                            if (set.contains(Flags::name)) \
+                                m_errorCode = ErrorCode::InvalidRegularExpressionModifier; \
+                            set.add(Flags::name); \
+                        } \
+                        break;
+
+                        JSC_REGEXP_MOD_FLAGS(HANDLE_REGEXP_MOD_FLAG)
+#undef HANDLE_REGEXP_MOD_FLAG
+
+                    default:
+                        m_errorCode = ErrorCode::ParenthesesTypeInvalid;
+                        break;
+                    }
+                }
+
+                if (hasError(m_errorCode))
+                    break;
+
+                // we've consumed (?<flags>:
+
+                // It is a Syntax Error if any code point in the source text matched by the first RegularExpressionModifiers is also contained in the source text matched by the second RegularExpressionModifiers.
+                if (set.containsAny(unset))
+                    m_errorCode = ErrorCode::InvalidRegularExpressionModifier;
+                // It is a Syntax Error if the source text matched by the first RegularExpressionModifiers and the source text matched by the second RegularExpressionModifiers are both empty.
+                if (set.isEmpty() && unset.isEmpty())
+                    m_errorCode = ErrorCode::InvalidRegularExpressionModifier;
+                m_delegate.atomParentheticalModifierBegin(set, unset);
 
                 break;
             }
@@ -1646,7 +1765,7 @@ private:
                     break;
                 }
 
-                m_delegate.atomPatternCharacter(consume());
+                m_delegate.atomPatternCharacter(consume(), /* hyphenIsRange */ false);
                 lastTokenType = TokenType::Atom;
                 break;
 
@@ -1708,7 +1827,7 @@ private:
             }
 
             default:
-                m_delegate.atomPatternCharacter(consumePossibleSurrogatePair<UnicodeParseContext::PatternCodePoint>());
+                m_delegate.atomPatternCharacter(consumePossibleSurrogatePair<UnicodeParseContext::PatternCodePoint>(), /* hyphenIsRange */ false);
                 lastTokenType = TokenType::Atom;
             }
 
@@ -1718,27 +1837,6 @@ private:
 
         if (!m_parenthesesStack.isEmpty())
             m_errorCode = ErrorCode::MissingParentheses;
-    }
-
-    /*
-     * parse():
-     *
-     * This method calls parseTokens() to parse over the input and returns error code for a result.
-     */
-    ErrorCode parse()
-    {
-        if (m_size > MAX_PATTERN_SIZE)
-            return ErrorCode::PatternTooLarge;
-
-        parseTokens();
-
-        if (!hasError(m_errorCode)) {
-            ASSERT(atEndOfPattern());
-            handleIllegalReferences();
-            ASSERT(atEndOfPattern());
-        }
-
-        return m_errorCode;
     }
 
     void handleIllegalReferences()
@@ -2100,7 +2198,7 @@ private:
     bool m_kIdentityEscapeSeen { false };
     Vector<ParenthesesType, 16> m_parenthesesStack;
     NamedCaptureGroups m_namedCaptureGroups;
-    HashSet<String> m_forwardReferenceNames;
+    UncheckedKeyHashSet<String> m_forwardReferenceNames;
 
     // Derived by empirical testing of compile time in PCRE and WREC.
     static constexpr unsigned MAX_PATTERN_SIZE = 1024 * 1024;
@@ -2114,35 +2212,7 @@ private:
  * Yarr::parse() returns null on success, or a const C string providing an error
  * message where a parse error occurs.
  *
- * The Delegate must implement the following interface:
- *
- *    void assertionBOL();
- *    void assertionEOL();
- *    void assertionWordBoundary(bool invert);
- *
- *    void atomPatternCharacter(char32_t ch);
- *    void atomBuiltInCharacterClass(BuiltInCharacterClassID classID, bool invert);
- *    void atomCharacterClassBegin(bool invert)
- *    void atomCharacterClassAtom(char32_t ch)
- *    void atomCharacterClassRange(char32_t begin, char32_t end)
- *    void atomCharacterClassBuiltIn(BuiltInCharacterClassID classID, bool invert)
- *    void atomClassStringDisjunction(Vector<Vector<char32_t>>&)
- *    void atomCharacterClassSetOp(CharacterClassSetOp setOp)
- *    void atomCharacterClassPushNested()
- *    void atomCharacterClassPopNested()
- *    void atomCharacterClassEnd()
- *    void atomParenthesesSubpatternBegin(bool capture = true, std::optional<String> groupName);
- *    void atomParentheticalAssertionBegin(bool invert, MatchDirection matchDirection);
- *    void atomParenthesesEnd();
- *    void atomBackReference(unsigned subpatternId);
- *    void atomNamedBackReference(const String& subpatternName);
- *    void atomNamedForwardReference(const String& subpatternName);
- *
- *    void quantifyAtom(unsigned min, unsigned max, bool greedy);
- *
- *    void disjunction(CreateDisjunctionPurpose purpose);
- *
- *    void resetForReparsing();
+ * The Delegate must implement `YarrSyntaxCheckable` concept.
  *
  * The regular expression is described by a sequence of assertion*() and atom*()
  * callbacks to the delegate, describing the terms in the regular expression.
@@ -2184,7 +2254,7 @@ inline CompileMode compileMode(std::optional<OptionSet<Flags>> flags)
     return CompileMode::Legacy;
 }
 
-template<class Delegate>
+template<YarrSyntaxCheckable Delegate>
 ErrorCode parse(Delegate& delegate, const StringView pattern, CompileMode compileMode, unsigned backReferenceLimit = quantifyInfinite, bool isNamedForwardReferenceAllowed = true)
 {
     if (pattern.is8Bit())

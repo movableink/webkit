@@ -34,6 +34,7 @@
 #include "ModelProcessCreationParameters.h"
 #include "ModelProcessMessages.h"
 #include "ModelProcessProxyMessages.h"
+#include "ProcessTerminationReason.h"
 #include "ProvisionalPageProxy.h"
 #include "WebPageGroup.h"
 #include "WebPageMessages.h"
@@ -89,6 +90,10 @@ ModelProcessProxy::ModelProcessProxy()
     parameters.auxiliaryProcessParameters = auxiliaryProcessParameters();
     parameters.parentPID = getCurrentProcessID();
 
+#if PLATFORM(COCOA)
+    updateModelProcessCreationParameters(parameters);
+#endif
+
     // Initialize the model process.
     sendWithAsyncReply(Messages::ModelProcess::InitializeModelProcess(WTFMove(parameters)), [initializationActivityAndGrant = initializationActivityAndGrant()] () { }, 0);
 
@@ -119,6 +124,10 @@ void ModelProcessProxy::connectionWillOpen(IPC::Connection&)
 void ModelProcessProxy::processWillShutDown(IPC::Connection& connection)
 {
     ASSERT_UNUSED(connection, &this->connection() == &connection);
+
+#if PLATFORM(VISION) && ENABLE(GPU_PROCESS)
+    m_didInitializeSharedSimulationConnection = false;
+#endif
 }
 
 void ModelProcessProxy::createModelProcessConnection(WebProcessProxy& webProcessProxy, IPC::Connection::Handle&& connectionIdentifier, ModelProcessConnectionParameters&& parameters)
@@ -160,6 +169,7 @@ void ModelProcessProxy::modelProcessExited(ProcessTerminationReason reason)
     case ProcessTerminationReason::RequestedByModelProcess:
     case ProcessTerminationReason::GPUProcessCrashedTooManyTimes:
     case ProcessTerminationReason::ModelProcessCrashedTooManyTimes:
+    case ProcessTerminationReason::NonMainFrameWebContentProcessCrash:
         ASSERT_NOT_REACHED();
         break;
     }

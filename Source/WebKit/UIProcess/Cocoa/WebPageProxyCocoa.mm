@@ -66,6 +66,7 @@
 #import "WebScreenOrientationManagerProxy.h"
 #import "WebsiteDataStore.h"
 #import <Foundation/NSURLRequest.h>
+#import <WebCore/AppHighlight.h>
 #import <WebCore/ApplePayAMSUIRequest.h>
 #import <WebCore/DragItem.h>
 #import <WebCore/GeometryUtilities.h>
@@ -76,7 +77,7 @@
 #import <WebCore/NowPlayingInfo.h>
 #import <WebCore/NullPlaybackSessionInterface.h>
 #import <WebCore/PlatformPlaybackSessionInterface.h>
-#import <WebCore/PlaybackSessionInterfaceAVKit.h>
+#import <WebCore/PlaybackSessionInterfaceAVKitLegacy.h>
 #import <WebCore/PlaybackSessionInterfaceMac.h>
 #import <WebCore/PlaybackSessionInterfaceTVOS.h>
 #import <WebCore/RunLoopObserver.h>
@@ -85,6 +86,8 @@
 #import <WebCore/TextAlternativeWithRange.h>
 #import <WebCore/TextAnimationTypes.h>
 #import <WebCore/ValidationBubble.h>
+#import <WebCore/VideoPresentationInterfaceIOS.h>
+#import <pal/spi/cocoa/LaunchServicesSPI.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <pal/spi/ios/BrowserEngineKitSPI.h>
 #import <pal/spi/mac/QuarantineSPI.h>
@@ -156,19 +159,23 @@ static bool exceedsRenderTreeSizeSizeThreshold(uint64_t thresholdSize, uint64_t 
     return committedSize > thresholdSize * thesholdSizeFraction;
 }
 
-void WebPageProxy::didCommitLayerTree(const WebKit::RemoteLayerTreeTransaction& layerTreeTransaction)
+void WebPageProxy::didCommitLayerTree(const RemoteLayerTreeTransaction& layerTreeTransaction)
 {
-    if (layerTreeTransaction.isMainFrameProcessTransaction())
+    if (layerTreeTransaction.isMainFrameProcessTransaction()) {
         themeColorChanged(layerTreeTransaction.themeColor());
-    pageExtendedBackgroundColorDidChange(layerTreeTransaction.pageExtendedBackgroundColor());
-    sampledPageTopColorChanged(layerTreeTransaction.sampledPageTopColor());
+        pageExtendedBackgroundColorDidChange(layerTreeTransaction.pageExtendedBackgroundColor());
+        sampledPageTopColorChanged(layerTreeTransaction.sampledPageTopColor());
+    }
 
-    if (!m_hasUpdatedRenderingAfterDidCommitLoad) {
-        if (layerTreeTransaction.transactionID() >= internals().firstLayerTreeTransactionIdAfterDidCommitLoad) {
-            m_hasUpdatedRenderingAfterDidCommitLoad = true;
-            stopMakingViewBlankDueToLackOfRenderingUpdateIfNecessary();
-            internals().lastVisibleContentRectUpdate = { };
-        }
+    if (!m_hasUpdatedRenderingAfterDidCommitLoad
+        && (internals().firstLayerTreeTransactionIdAfterDidCommitLoad && layerTreeTransaction.transactionID().greaterThanOrEqualSameProcess(*internals().firstLayerTreeTransactionIdAfterDidCommitLoad))) {
+        m_hasUpdatedRenderingAfterDidCommitLoad = true;
+#if ENABLE(SCREEN_TIME)
+        if (RefPtr pageClient = this->pageClient())
+            pageClient->didChangeScreenTimeWebpageControllerURL();
+#endif
+        stopMakingViewBlankDueToLackOfRenderingUpdateIfNecessary();
+        internals().lastVisibleContentRectUpdate = { };
     }
 
     if (RefPtr pageClient = this->pageClient())
@@ -231,6 +238,8 @@ std::optional<IPC::AsyncReplyID> WebPageProxy::grantAccessToCurrentPasteboardDat
 void WebPageProxy::beginSafeBrowsingCheck(const URL& url, bool forMainFrameNavigation, WebFramePolicyListenerProxy& listener)
 {
 #if HAVE(SAFE_BROWSING)
+    if (!url.isValid())
+        return listener.didReceiveSafeBrowsingResults({ });
     SSBLookupContext *context = [SSBLookupContext sharedLookupContext];
     if (!context)
         return listener.didReceiveSafeBrowsingResults({ });
@@ -624,6 +633,40 @@ void WebPageProxy::removeMediaUsageManagerSession(WebCore::MediaSessionIdentifie
 }
 #endif
 
+#if PLATFORM(VISION)
+void WebPageProxy::enterExternalPlaybackForNowPlayingMediaSession(CompletionHandler<void(bool, UIViewController *)>&& completionHandler)
+{
+    if (!m_videoPresentationManager) {
+        completionHandler(false, nil);
+        return;
+    }
+
+    RefPtr videoPresentationInterface = m_videoPresentationManager->controlsManagerInterface();
+    if (!videoPresentationInterface) {
+        completionHandler(false, nil);
+        return;
+    }
+
+    videoPresentationInterface->enterExternalPlayback(WTFMove(completionHandler));
+}
+
+void WebPageProxy::exitExternalPlayback(CompletionHandler<void(bool)>&& completionHandler)
+{
+    if (!m_videoPresentationManager) {
+        completionHandler(false);
+        return;
+    }
+
+    RefPtr videoPresentationInterface = m_videoPresentationManager->controlsManagerInterface();
+    if (!videoPresentationInterface) {
+        completionHandler(false);
+        return;
+    }
+
+    videoPresentationInterface->exitExternalPlayback(WTFMove(completionHandler));
+}
+#endif
+
 #if ENABLE(VIDEO_PRESENTATION_MODE)
 
 void WebPageProxy::didChangePlaybackRate(PlaybackSessionContextIdentifier identifier)
@@ -687,7 +730,6 @@ void WebPageProxy::fullscreenVideoTextRecognitionTimerFired()
 #endif
     });
 }
-
 #endif // ENABLE(VIDEO_PRESENTATION_MODE)
 
 #if HAVE(QUICKLOOK_THUMBNAILING)
@@ -1069,7 +1111,7 @@ bool WebPageProxy::useGPUProcessForDOMRenderingEnabled() const
 
     HashSet<RefPtr<const WebPageProxy>> visitedPages;
     visitedPages.add(this);
-    for (RefPtr page = configuration->relatedPage(); page && !visitedPages.contains(page); page = page->protectedConfiguration()->relatedPage()) {
+    for (RefPtr page = configuration->relatedPage(); page && !visitedPages.contains(page); page = page->configuration().relatedPage()) {
         if (page->protectedPreferences()->useGPUProcessForDOMRenderingEnabled())
             return true;
         visitedPages.add(page);
@@ -1236,7 +1278,7 @@ WebCore::WritingTools::Behavior WebPageProxy::writingToolsBehavior() const
     auto& editorState = this->editorState();
     auto& configuration = this->configuration();
 
-    if (configuration.writingToolsBehavior() == WebCore::WritingTools::Behavior::None || editorState.selectionIsNone || editorState.isInPasswordField)
+    if (configuration.writingToolsBehavior() == WebCore::WritingTools::Behavior::None || editorState.selectionIsNone || editorState.isInPasswordField || editorState.isInPlugin)
         return WebCore::WritingTools::Behavior::None;
 
     if (configuration.writingToolsBehavior() == WebCore::WritingTools::Behavior::Complete && editorState.isContentEditable)
@@ -1275,9 +1317,9 @@ void WebPageProxy::didEndWritingToolsSession(const WebCore::WritingTools::Sessio
     protectedLegacyMainFrameProcess()->send(Messages::WebPage::DidEndWritingToolsSession(session, accepted), webPageIDInMainFrameProcess());
 }
 
-void WebPageProxy::compositionSessionDidReceiveTextWithReplacementRange(const WebCore::WritingTools::Session& session, const WebCore::AttributedString& attributedText, const WebCore::CharacterRange& range, const WebCore::WritingTools::Context& context, bool finished)
+void WebPageProxy::compositionSessionDidReceiveTextWithReplacementRange(const WebCore::WritingTools::Session& session, const WebCore::AttributedString& attributedText, const WebCore::CharacterRange& range, const WebCore::WritingTools::Context& context, bool finished, CompletionHandler<void()>&& completionHandler)
 {
-    protectedLegacyMainFrameProcess()->send(Messages::WebPage::CompositionSessionDidReceiveTextWithReplacementRange(session, attributedText, range, context, finished), webPageIDInMainFrameProcess());
+    protectedLegacyMainFrameProcess()->sendWithAsyncReply(Messages::WebPage::CompositionSessionDidReceiveTextWithReplacementRange(session, attributedText, range, context, finished), WTFMove(completionHandler), webPageIDInMainFrameProcess());
 }
 
 void WebPageProxy::writingToolsSessionDidReceiveAction(const WebCore::WritingTools::Session& session, WebCore::WritingTools::Action action)
@@ -1512,6 +1554,36 @@ void WebPageProxy::decodeImageData(Ref<WebCore::SharedBuffer>&& buffer, std::opt
         completionHandler(WTFMove(result));
     }, webPageIDInMainFrameProcess());
 }
+
+String WebPageProxy::presentingApplicationBundleIdentifier() const
+{
+    if (std::optional auditToken = presentingApplicationAuditToken()) {
+        NSError *error = nil;
+        auto bundleProxy = [LSBundleProxy bundleProxyWithAuditToken:*auditToken error:&error];
+        if (error)
+            RELEASE_LOG_ERROR(WebRTC, "Failed to get attribution bundleID from audit token with error: %@.", error.localizedDescription);
+        else
+            return bundleProxy.bundleIdentifier;
+    }
+#if PLATFORM(MAC)
+    else
+        return [NSRunningApplication currentApplication].bundleIdentifier;
+#endif
+
+    return { };
+}
+
+#if ENABLE(INITIALIZE_ACCESSIBILITY_ON_DEMAND)
+void WebPageProxy::initializeAccessibility()
+{
+    RELEASE_LOG(Process, "WebPageProxy::initializeAccessibility");
+    if (!hasRunningProcess())
+        return;
+
+    auto handleArray = SandboxExtension::createHandlesForMachLookup({ }, protectedLegacyMainFrameProcess()->auditToken(), SandboxExtension::MachBootstrapOptions::EnableMachBootstrap);
+    protectedLegacyMainFrameProcess()->send(Messages::WebPage::InitializeAccessibility(WTFMove(handleArray)), webPageIDInMainFrameProcess());
+}
+#endif
 
 } // namespace WebKit
 

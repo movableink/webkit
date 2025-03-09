@@ -253,9 +253,15 @@ JSValue JSInjectedScriptHost::functionDetails(JSGlobalObject* globalObject, Call
 
     // FIXME: <https://webkit.org/b/87192> Web Inspector: Expose function scope / closure data
 
-    // FIXME: This should provide better details for JSBoundFunctions.
+    auto* targetFunction = function;
+    while (auto* boundFunction = jsDynamicCast<JSBoundFunction*>(targetFunction)) {
+        auto* nextTargetFunction = jsDynamicCast<JSFunction*>(boundFunction->targetFunction());
+        if (UNLIKELY(!nextTargetFunction))
+            break;
+        targetFunction = nextTargetFunction;
+    }
 
-    const SourceCode* sourceCode = function->sourceCode();
+    const SourceCode* sourceCode = targetFunction->sourceCode();
     if (!sourceCode)
         return jsUndefined();
 
@@ -863,10 +869,10 @@ public:
         profiler.vm().heap.collectNow(Sync, CollectionScope::Full);
         profiler.setActiveHeapAnalyzer(nullptr);
 
-        HashSet<JSCell*> queue;
+        UncheckedKeyHashSet<JSCell*> queue;
 
         // Filter `m_holders` based on whether they're reachable from a non-Debugger root.
-        HashSet<JSCell*> visited;
+        UncheckedKeyHashSet<JSCell*> visited;
         for (auto* root : m_rootsToInclude)
             queue.add(root);
         while (auto* from = queue.takeAny()) {
@@ -898,7 +904,7 @@ public:
         });
     }
 
-    HashSet<JSCell*>& holders() { return m_holders; }
+    UncheckedKeyHashSet<JSCell*>& holders() { return m_holders; }
 
     void analyzeEdge(JSCell* from, JSCell* to, RootMarkReason reason) final
     {
@@ -909,11 +915,11 @@ public:
 
         if (from && from != to) {
             m_successors.ensure(from, [] {
-                return HashSet<JSCell*>();
+                return UncheckedKeyHashSet<JSCell*>();
             }).iterator->value.add(to);
 
             m_predecessors.ensure(to, [] {
-                return HashSet<JSCell*>();
+                return UncheckedKeyHashSet<JSCell*>();
             }).iterator->value.add(from);
 
             if (to == m_target)
@@ -939,7 +945,7 @@ public:
     {
         Indentation<4> indent;
 
-        HashSet<JSCell*> visited;
+        UncheckedKeyHashSet<JSCell*> visited;
 
         Function<void(JSCell*)> visit = [&] (auto* from) {
             auto isFirstVisit = visited.add(from).isNewEntry;
@@ -977,11 +983,11 @@ public:
 
 private:
     Lock m_mutex;
-    UncheckedKeyHashMap<JSCell*, HashSet<JSCell*>> m_predecessors;
-    UncheckedKeyHashMap<JSCell*, HashSet<JSCell*>> m_successors;
-    HashSet<JSCell*> m_rootsToInclude;
-    HashSet<JSCell*> m_rootsToIgnore;
-    HashSet<JSCell*> m_holders;
+    UncheckedKeyHashMap<JSCell*, UncheckedKeyHashSet<JSCell*>> m_predecessors;
+    UncheckedKeyHashMap<JSCell*, UncheckedKeyHashSet<JSCell*>> m_successors;
+    UncheckedKeyHashSet<JSCell*> m_rootsToInclude;
+    UncheckedKeyHashSet<JSCell*> m_rootsToIgnore;
+    UncheckedKeyHashSet<JSCell*> m_holders;
     const JSCell* m_target;
 };
 

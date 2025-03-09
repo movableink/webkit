@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -43,8 +43,6 @@
 #include <wtf/text/AtomStringHash.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextStream.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -90,6 +88,7 @@ FontCascade::FontCascade(const FontCascade& other)
     , m_fontDescription(other.m_fontDescription)
     , m_spacing(other.m_spacing)
     , m_fonts(other.m_fonts)
+    , m_fontSelector(other.m_fontSelector)
     , m_generation(other.m_generation)
     , m_useBackslashAsYenSymbol(other.m_useBackslashAsYenSymbol)
     , m_enableKerning(computeEnableKerning())
@@ -106,6 +105,7 @@ FontCascade& FontCascade::operator=(const FontCascade& other)
     m_useBackslashAsYenSymbol = other.m_useBackslashAsYenSymbol;
     m_enableKerning = other.m_enableKerning;
     m_requiresShaping = other.m_requiresShaping;
+    m_fontSelector = other.m_fontSelector;
     return *this;
 }
 
@@ -114,17 +114,17 @@ bool FontCascade::operator==(const FontCascade& other) const
     if (m_fontDescription != other.m_fontDescription || m_spacing != other.m_spacing)
         return false;
 
-    if (m_fonts == other.m_fonts)
-        return true;
+    if (m_fonts != other.m_fonts)
+        return false;
 
     if (!m_fonts || !other.m_fonts)
         return false;
 
-    if (m_fonts->fontSelector() != other.m_fonts->fontSelector())
+    if (fontSelector() != other.fontSelector())
         return false;
 
     // Can these cases actually somehow occur? All fonts should get wiped out by full style recalc.
-    if (m_fonts->fontSelectorVersion() != other.m_fonts->fontSelectorVersion())
+    if (fontSelectorVersion() != other.fontSelectorVersion())
         return false;
 
     if (m_fonts->generation() != other.m_fonts->generation())
@@ -139,10 +139,15 @@ bool FontCascade::isCurrent(const FontSelector& fontSelector) const
         return false;
     if (m_fonts->generation() != FontCache::forCurrentThread().generation())
         return false;
-    if (m_fonts->fontSelectorVersion() != fontSelector.version())
+    if (fontSelectorVersion() != fontSelector.version())
         return false;
 
     return true;
+}
+
+unsigned FontCascade::fontSelectorVersion() const
+{
+    return m_fontSelector ? Ref { *m_fontSelector }->version() : 0;
 }
 
 void FontCascade::updateFonts(Ref<FontCascadeFonts>&& fonts) const
@@ -154,7 +159,8 @@ void FontCascade::updateFonts(Ref<FontCascadeFonts>&& fonts) const
 
 void FontCascade::update(RefPtr<FontSelector>&& fontSelector) const
 {
-    FontCache::forCurrentThread().updateFontCascade(*this, WTFMove(fontSelector));
+    m_fontSelector = WTFMove(fontSelector);
+    FontCache::forCurrentThread().updateFontCascade(*this);
 }
 
 GlyphBuffer FontCascade::layoutText(CodePath codePathToUse, const TextRun& run, unsigned from, unsigned to, ForTextEmphasisOrNot forTextEmphasis) const
@@ -369,7 +375,7 @@ float FontCascade::widthForSimpleTextWithFixedPitch(StringView text, bool whites
     if (text.isEmpty())
         return 0;
 
-    auto monospaceCharacterWidth = primaryFont().spaceWidth();
+    auto monospaceCharacterWidth = primaryFont()->spaceWidth();
     if (whitespaceIsCollapsed)
         return text.length() * monospaceCharacterWidth;
 
@@ -428,7 +434,7 @@ GlyphData FontCascade::glyphDataForCharacter(char32_t c, bool mirror, FontVarian
 
     auto emojiPolicy = resolveEmojiPolicy(m_fontDescription.variantEmoji(), c);
 
-    return protectedFonts()->glyphDataForCharacter(c, m_fontDescription, variant, emojiPolicy);
+    return protectedFonts()->glyphDataForCharacter(c, m_fontDescription, protectedFontSelector().get(), variant, emojiPolicy);
 }
 
 
@@ -525,7 +531,7 @@ bool FontCascade::fastAverageCharWidthIfAvailable(float& width) const
 {
     bool success = hasValidAverageCharWidth();
     if (success)
-        width = roundf(primaryFont().avgCharWidth()); // FIXME: primaryFont() might not correspond to firstFamily().
+        width = roundf(primaryFont()->avgCharWidth()); // FIXME: primaryFont() might not correspond to firstFamily().
     return success;
 }
 
@@ -674,9 +680,8 @@ FontCascade::CodePath FontCascade::characterRangeCodePath(std::span<const UChar>
     CodePath result = CodePath::Simple;
     bool previousCharacterIsEmojiGroupCandidate = false;
     size_t size = span.size();
-    auto* characters = span.data();
     for (size_t i = 0; i < size; ++i) {
-        auto c = characters[i];
+        auto c = span[i];
         if (c == zeroWidthJoiner && previousCharacterIsEmojiGroupCandidate)
             return CodePath::Complex;
         
@@ -800,7 +805,7 @@ FontCascade::CodePath FontCascade::characterRangeCodePath(std::span<const UChar>
             if (i + 1 == size)
                 continue;
 
-            UChar next = characters[++i];
+            UChar next = span[++i];
             if (!U16_IS_TRAIL(next))
                 continue;
 
@@ -1253,15 +1258,41 @@ bool FontCascade::rightExpansionOpportunity(StringView stringView, TextDirection
     return treatAsSpace(finalCharacter) || (canExpandAroundIdeographsInComplexText() && isCJKIdeographOrSymbol(finalCharacter));
 }
 
+// https://www.w3.org/TR/css-text-decor-3/#text-emphasis-style-property
 bool FontCascade::canReceiveTextEmphasis(char32_t c)
 {
-    if (U_GET_GC_MASK(c) & (U_GC_Z_MASK | U_GC_CN_MASK | U_GC_CC_MASK | U_GC_CF_MASK))
+    auto mask = U_GET_GC_MASK(c);
+    if (mask & (U_GC_Z_MASK | U_GC_CN_MASK | U_GC_CC_MASK | U_GC_CF_MASK))
         return false;
 
     // Additional word-separator characters listed in CSS Text Level 3 Editor's Draft 3 November 2010.
+    // https://www.w3.org/TR/css-text-3/#word-separator
     if (c == ethiopicWordspace || c == aegeanWordSeparatorLine || c == aegeanWordSeparatorDot
         || c == ugariticWordDivider || c == tibetanMarkIntersyllabicTsheg || c == tibetanMarkDelimiterTshegBstar)
         return false;
+
+    if (mask & U_GC_P_MASK) {
+        return c == '#' || c == '%' || c == '&' || c == '@'
+            || c == arabicIndicPerMilleSign
+            || c == arabicIndicPerTenThousandSign
+            || c == arabicPercentSign
+            || c == fullwidthAmpersand
+            || c == fullwidthCommercialAt
+            || c == fullwidthNumberSign
+            || c == fullwidthPercentSign
+            || c == partAlternationMark
+            || c == perMilleSign
+            || c == perTenThousandSign
+            || c == pilcrowSign
+            || c == reversedPilcrowSign
+            || c == sectionSign
+            || c == smallAmpersand
+            || c == smallCommercialAt
+            || c == smallNumberSign
+            || c == smallPercentSign
+            || c == swungDash
+            || c == tironianSignEt;
+    }
 
     return true;
 }
@@ -1493,9 +1524,10 @@ void FontCascade::drawGlyphBuffer(GraphicsContext& context, const GlyphBuffer& g
         RefPtr nextFontData = &glyphBuffer.fontAt(nextGlyph);
 
         if (nextFontData != fontData) {
-            if (shouldDrawIfLoading(*fontData, customFontNotReadyAction))
-                context.drawGlyphs(*fontData, glyphBuffer.glyphs(lastFrom), glyphBuffer.advances(lastFrom), nextGlyph - lastFrom, startPoint, m_fontDescription.usedFontSmoothing());
-
+            if (shouldDrawIfLoading(*fontData, customFontNotReadyAction)) {
+                size_t glyphCount = nextGlyph - lastFrom;
+                context.drawGlyphs(*fontData, glyphBuffer.glyphs(lastFrom, glyphCount), glyphBuffer.advances(lastFrom, glyphCount), startPoint, m_fontDescription.usedFontSmoothing());
+            }
             lastFrom = nextGlyph;
             fontData = WTFMove(nextFontData);
             startPoint.setX(nextX);
@@ -1506,8 +1538,10 @@ void FontCascade::drawGlyphBuffer(GraphicsContext& context, const GlyphBuffer& g
         nextGlyph++;
     }
 
-    if (shouldDrawIfLoading(*fontData, customFontNotReadyAction))
-        context.drawGlyphs(*fontData, glyphBuffer.glyphs(lastFrom), glyphBuffer.advances(lastFrom), nextGlyph - lastFrom, startPoint, m_fontDescription.usedFontSmoothing());
+    if (shouldDrawIfLoading(*fontData, customFontNotReadyAction)) {
+        size_t glyphCount = nextGlyph - lastFrom;
+        context.drawGlyphs(*fontData, glyphBuffer.glyphs(lastFrom, glyphCount), glyphBuffer.advances(lastFrom, glyphCount), startPoint, m_fontDescription.usedFontSmoothing());
+    }
     point.setX(nextX);
 }
 
@@ -1523,7 +1557,7 @@ inline static float offsetToMiddleOfGlyph(const Font& fontData, Glyph glyph)
 
 inline static float offsetToMiddleOfGlyphAtIndex(const GlyphBuffer& glyphBuffer, unsigned i)
 {
-    return offsetToMiddleOfGlyph(glyphBuffer.fontAt(i), glyphBuffer.glyphAt(i));
+    return offsetToMiddleOfGlyph(glyphBuffer.protectedFontAt(i), glyphBuffer.glyphAt(i));
 }
 
 void FontCascade::drawEmphasisMarks(GraphicsContext& context, const GlyphBuffer& glyphBuffer, const AtomString& mark, const FloatPoint& point) const
@@ -1572,10 +1606,10 @@ float FontCascade::widthForSimpleText(const TextRun& run, SingleThreadWeakHashSe
     it.finalize(glyphBuffer);
 
     if (glyphOverflow) {
-        glyphOverflow->top = std::max<int>(glyphOverflow->top, ceilf(-it.minGlyphBoundingBoxY()) - (glyphOverflow->computeBounds ? 0 : metricsOfPrimaryFont().intAscent()));
-        glyphOverflow->bottom = std::max<int>(glyphOverflow->bottom, ceilf(it.maxGlyphBoundingBoxY()) - (glyphOverflow->computeBounds ? 0 : metricsOfPrimaryFont().intDescent()));
-        glyphOverflow->left = ceilf(it.firstGlyphOverflow());
-        glyphOverflow->right = ceilf(it.lastGlyphOverflow());
+        glyphOverflow->top = std::max<double>(glyphOverflow->top, -it.minGlyphBoundingBoxY() - (glyphOverflow->computeBounds ? 0 : metricsOfPrimaryFont().ascent()));
+        glyphOverflow->bottom = std::max<double>(glyphOverflow->bottom, it.maxGlyphBoundingBoxY() - (glyphOverflow->computeBounds ? 0 : metricsOfPrimaryFont().descent()));
+        glyphOverflow->left = it.firstGlyphOverflow();
+        glyphOverflow->right = it.lastGlyphOverflow();
     }
 
     return it.runWidthSoFar();
@@ -1585,10 +1619,10 @@ float FontCascade::widthForComplexText(const TextRun& run, SingleThreadWeakHashS
 {
     ComplexTextController controller(*this, run, true, fallbackFonts);
     if (glyphOverflow) {
-        glyphOverflow->top = std::max<int>(glyphOverflow->top, ceilf(-controller.minGlyphBoundingBoxY()) - (glyphOverflow->computeBounds ? 0 : metricsOfPrimaryFont().intAscent()));
-        glyphOverflow->bottom = std::max<int>(glyphOverflow->bottom, ceilf(controller.maxGlyphBoundingBoxY()) - (glyphOverflow->computeBounds ? 0 : metricsOfPrimaryFont().intDescent()));
-        glyphOverflow->left = std::max<int>(0, ceilf(-controller.minGlyphBoundingBoxX()));
-        glyphOverflow->right = std::max<int>(0, ceilf(controller.maxGlyphBoundingBoxX() - controller.totalAdvance().width()));
+        glyphOverflow->top = std::max<double>(glyphOverflow->top, -controller.minGlyphBoundingBoxY() - (glyphOverflow->computeBounds ? 0 : metricsOfPrimaryFont().ascent()));
+        glyphOverflow->bottom = std::max<double>(glyphOverflow->bottom, controller.maxGlyphBoundingBoxY() - (glyphOverflow->computeBounds ? 0 : metricsOfPrimaryFont().descent()));
+        glyphOverflow->left = std::max<double>(0, -controller.minGlyphBoundingBoxX());
+        glyphOverflow->right = std::max<double>(0, controller.maxGlyphBoundingBoxX() - controller.totalAdvance().width());
     }
     return controller.totalAdvance().width();
 }
@@ -1834,19 +1868,18 @@ RefPtr<FontCascadeFonts> FontCascade::protectedFonts() const
     return m_fonts;
 }
 
-DashArray FontCascade::dashesForIntersectionsWithRect(const TextRun& run, const FloatPoint& textOrigin, const FloatRect& lineExtents) const
+Vector<FloatSegment> FontCascade::lineSegmentsForIntersectionsWithRect(const TextRun& run, const FloatPoint& textOrigin, const FloatRect& lineExtents) const
 {
+    Vector<FloatSegment> result;
     if (isLoadingCustomFonts())
-        return DashArray();
+        return result;
 
     auto glyphBuffer = layoutText(codePath(run), run, 0, run.length());
-
     if (!glyphBuffer.size())
-        return DashArray();
+        return result;
 
     FloatPoint origin = textOrigin + WebCore::size(glyphBuffer.initialAdvance());
     GlyphToPathTranslator translator(run, glyphBuffer, origin);
-    DashArray result;
     for (; translator.containsMorePaths(); translator.advance()) {
         GlyphIterationState info = { FloatPoint(0, 0), FloatPoint(0, 0), lineExtents.y(), lineExtents.y() + lineExtents.height(), lineExtents.x() + lineExtents.width(), lineExtents.x() };
         switch (translator.underlineType()) {
@@ -1855,16 +1888,13 @@ DashArray FontCascade::dashesForIntersectionsWithRect(const TextRun& run, const 
             path.applyElements([&](const PathElement& element) {
                 findPathIntersections(info, element);
             });
-            if (info.minX < info.maxX) {
-                result.append(info.minX - lineExtents.x());
-                result.append(info.maxX - lineExtents.x());
-            }
+            if (info.minX < info.maxX)
+                result.append({ info.minX - lineExtents.x(), info.maxX - lineExtents.x() });
             break;
         }
         case GlyphUnderlineType::SkipGlyph: {
             std::pair<float, float> extents = translator.extents();
-            result.append(extents.first - lineExtents.x());
-            result.append(extents.second - lineExtents.x());
+            result.append({ extents.first - lineExtents.x(), extents.second - lineExtents.x() });
             break;
         }
         case GlyphUnderlineType::DrawOverGlyph:
@@ -1908,15 +1938,13 @@ TextStream& operator<<(TextStream& ts, const FontCascade& fontCascade)
 {
     ts << fontCascade.fontDescription();
 
-    if (fontCascade.fonts()) {
-        ts << ", font selector " << fontCascade.fonts()->fontSelector();
-        ts << ", font selector version " << fontCascade.fonts()->fontSelectorVersion();
+    if (fontCascade.fontSelector())
+        ts << ", font selector " << fontCascade.fontSelector();
+
+    if (fontCascade.fonts())
         ts << ", generation " << fontCascade.fonts()->generation();
-    }
 
     return ts;
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

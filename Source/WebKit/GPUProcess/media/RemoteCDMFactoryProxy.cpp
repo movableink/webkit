@@ -67,7 +67,7 @@ static CDMFactory* factoryForKeySystem(const String& keySystem)
     return factories[foundIndex];
 }
 
-void RemoteCDMFactoryProxy::createCDM(const String& keySystem, CompletionHandler<void(std::optional<RemoteCDMIdentifier>&&, RemoteCDMConfiguration&&)>&& completion)
+void RemoteCDMFactoryProxy::createCDM(const String& keySystem, const String& mediaKeysHashSalt, CompletionHandler<void(std::optional<RemoteCDMIdentifier>&&, RemoteCDMConfiguration&&)>&& completion)
 {
     auto factory = factoryForKeySystem(keySystem);
     if (!factory) {
@@ -75,7 +75,7 @@ void RemoteCDMFactoryProxy::createCDM(const String& keySystem, CompletionHandler
         return;
     }
 
-    auto privateCDM = factory->createCDM(keySystem, *this);
+    auto privateCDM = factory->createCDM(keySystem, mediaKeysHashSalt, *this);
     if (!privateCDM) {
         completion(std::nullopt, { });
         return;
@@ -112,7 +112,7 @@ void RemoteCDMFactoryProxy::didReceiveCDMInstanceMessage(IPC::Connection& connec
 void RemoteCDMFactoryProxy::didReceiveCDMInstanceSessionMessage(IPC::Connection& connection, IPC::Decoder& decoder)
 {
     if (ObjectIdentifier<RemoteCDMInstanceSessionIdentifierType>::isValidIdentifier(decoder.destinationID())) {
-        if (auto* session = m_sessions.get(ObjectIdentifier<RemoteCDMInstanceSessionIdentifierType>(decoder.destinationID())))
+        if (RefPtr session = m_sessions.get(ObjectIdentifier<RemoteCDMInstanceSessionIdentifierType>(decoder.destinationID())))
             session->didReceiveMessage(connection, decoder);
     }
 }
@@ -138,7 +138,7 @@ bool RemoteCDMFactoryProxy::didReceiveSyncCDMInstanceMessage(IPC::Connection& co
 bool RemoteCDMFactoryProxy::didReceiveSyncCDMInstanceSessionMessage(IPC::Connection& connection, IPC::Decoder& decoder, UniqueRef<IPC::Encoder>& encoder)
 {
     if (ObjectIdentifier<RemoteCDMInstanceSessionIdentifierType>::isValidIdentifier(decoder.destinationID())) {
-        if (auto* session = m_sessions.get(ObjectIdentifier<RemoteCDMInstanceSessionIdentifierType>(decoder.destinationID())))
+        if (RefPtr session = m_sessions.get(ObjectIdentifier<RemoteCDMInstanceSessionIdentifierType>(decoder.destinationID())))
             return session->didReceiveSyncMessage(connection, decoder, encoder);
     }
     return false;

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2022 Apple Inc. All rights reserved.
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,8 +37,6 @@
 #include "RenderStyleInlines.h"
 #include "StylePrimitiveNumericTypes+Conversions.h"
 #include "StylePrimitiveNumericTypes+Evaluation.h"
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 namespace Style {
@@ -84,27 +82,27 @@ auto ToCSS<GradientDeprecatedColorStop>::operator()(const GradientDeprecatedColo
 
 // MARK: - Conversion: CSS -> Style
 
-template<typename T> decltype(auto) toStyleColorStop(const T& stop, const BuilderState& state, const CSSCalcSymbolTable& symbolTable)
+template<typename T> decltype(auto) toStyleColorStop(const T& stop, const BuilderState& state)
 {
     return GradientColorStop {
-        toStyle(stop.color, state, symbolTable),
-        toStyle(stop.position, state, symbolTable)
+        toStyle(stop.color, state),
+        toStyle(stop.position, state)
     };
 }
 
-auto ToStyle<CSS::GradientAngularColorStop>::operator()(const CSS::GradientAngularColorStop& stop, const BuilderState& state, const CSSCalcSymbolTable& symbolTable) -> GradientAngularColorStop
+auto ToStyle<CSS::GradientAngularColorStop>::operator()(const CSS::GradientAngularColorStop& stop, const BuilderState& state) -> GradientAngularColorStop
 {
-    return toStyleColorStop(stop, state, symbolTable);
+    return toStyleColorStop(stop, state);
 }
 
-auto ToStyle<CSS::GradientLinearColorStop>::operator()(const CSS::GradientLinearColorStop& stop, const BuilderState& state, const CSSCalcSymbolTable& symbolTable) -> GradientLinearColorStop
+auto ToStyle<CSS::GradientLinearColorStop>::operator()(const CSS::GradientLinearColorStop& stop, const BuilderState& state) -> GradientLinearColorStop
 {
-    return toStyleColorStop(stop, state, symbolTable);
+    return toStyleColorStop(stop, state);
 }
 
-auto ToStyle<CSS::GradientDeprecatedColorStop>::operator()(const CSS::GradientDeprecatedColorStop& stop, const BuilderState& state, const CSSCalcSymbolTable& symbolTable) -> GradientDeprecatedColorStop
+auto ToStyle<CSS::GradientDeprecatedColorStop>::operator()(const CSS::GradientDeprecatedColorStop& stop, const BuilderState& state) -> GradientDeprecatedColorStop
 {
-    return toStyleColorStop(stop, state, symbolTable);
+    return toStyleColorStop(stop, state);
 }
 
 // MARK: - Platform Gradient Resolution
@@ -128,19 +126,19 @@ static std::optional<float> resolveColorStopPosition(const GradientLinearColorSt
     if (!position)
         return std::nullopt;
 
-    return position->value.switchOn(
-        [&](Length<> length) -> std::optional<float> {
+    return WTF::switchOn(*position,
+        [&](const typename LengthPercentage<>::Dimension& length) -> std::optional<float> {
             if (gradientLength <= 0)
                 return 0;
             return length.value / gradientLength;
         },
-        [&](Percentage<> percentage) -> std::optional<float> {
+        [&](const typename LengthPercentage<>::Percentage& percentage) -> std::optional<float> {
             return percentage.value / 100.0;
         },
-        [&](const CalculationValue& calc) -> std::optional<float> {
+        [&](const typename LengthPercentage<>::Calc& calc) -> std::optional<float> {
             if (gradientLength <= 0)
                 return 0;
-            return calc.evaluate(gradientLength) / gradientLength;
+            return calc.protectedCalculation()->evaluate(gradientLength) / gradientLength;
         }
     );
 }
@@ -150,15 +148,15 @@ static std::optional<float> resolveColorStopPosition(const GradientAngularColorS
     if (!position)
         return std::nullopt;
 
-    return position->value.switchOn(
-        [](Angle<> angle) -> std::optional<float> {
+    return WTF::switchOn(*position,
+        [](const typename AnglePercentage<>::Dimension& angle) -> std::optional<float> {
             return angle.value / 360.0;
         },
-        [](Percentage<> percentage) -> std::optional<float> {
+        [](const typename AnglePercentage<>::Percentage& percentage) -> std::optional<float> {
             return percentage.value / 100.0;
         },
-        [](const CalculationValue& calc) -> std::optional<float> {
-            return calc.evaluate(100) / 100.0;
+        [&](const typename AnglePercentage<>::Calc& calc) -> std::optional<float> {
+            return calc.protectedCalculation()->evaluate(100) / 100.0;
         }
     );
 }
@@ -494,7 +492,7 @@ template<typename GradientAdapter, typename StyleGradient> GradientColorStops co
         }
 
         float midpoint = (offset - offset1) / (offset2 - offset1);
-        ResolvedGradientStop newStops[9];
+        std::array<ResolvedGradientStop, 9> newStops;
         if (midpoint > .5f) {
             for (size_t y = 0; y < 6; ++y)
                 newStops[y].offset = offset1 + (offset - offset1) * (7 + y) / 13;
@@ -518,7 +516,7 @@ template<typename GradientAdapter, typename StyleGradient> GradientColorStops co
         }
 
         stops.remove(x);
-        stops.insert(x, newStops, 9);
+        stops.insertSpan(x, std::span { newStops });
         x += 9;
     }
 
@@ -1168,7 +1166,7 @@ template<CSSValueID Name> static Ref<WebCore::Gradient> createPlatformGradient(c
     };
 
     auto centerPoint = computeCenterPoint(conic.parameters.gradientBox.position);
-    float angleRadians = conic.parameters.gradientBox.angle ? CSSPrimitiveValue::computeRadians(conic.parameters.gradientBox.angle->unit, conic.parameters.gradientBox.angle->value) : 0;
+    float angleRadians = conic.parameters.gradientBox.angle ? CSS::convertToValueInUnitsOf<CSS::AngleUnit::Rad>(*conic.parameters.gradientBox.angle) : 0;
 
     WebCore::Gradient::ConicData data { centerPoint, angleRadians };
     ConicGradientAdapter adapter;
@@ -1198,7 +1196,7 @@ static bool stopColorIsCacheable(const Markable<Color>& stopColor)
 
 template<typename Gradient> static bool stopsAreCacheable(const Gradient& gradient)
 {
-    return std::ranges::none_of(gradient.parameters.stops, [](auto& stop) {
+    return std::ranges::all_of(gradient.parameters.stops, [](auto& stop) {
         return stopColorIsCacheable(stop.color);
     });
 }
@@ -1226,5 +1224,3 @@ bool isOpaque(const Gradient& gradient, const RenderStyle& style)
 
 } // namespace Style
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

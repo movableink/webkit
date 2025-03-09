@@ -196,6 +196,27 @@ void Instance::requestAdapter(const WGPURequestAdapterOptions& options, Completi
     callback(WGPURequestAdapterStatus_Success, Adapter::create(sortedDevices[0], *this, options.xrCompatible, WTFMove(*deviceCapabilities)), { });
 }
 
+void Instance::retainDevice(Device& device, id<MTLCommandBuffer> commandBuffer)
+{
+    Locker locker(m_lock);
+    CommandBufferContainer* container = nullptr;
+    if (auto it = retainedDeviceInstances.find(&device); it != retainedDeviceInstances.end())
+        container = &it->value;
+    else
+        container = &retainedDeviceInstances.add(&device, CommandBufferContainer { }).iterator->value;
+
+    container->append(commandBuffer);
+
+    for (auto& [device, container] : retainedDeviceInstances) {
+        container.removeAllMatching([&] (auto& pair) {
+            return !pair;
+        });
+    }
+    retainedDeviceInstances.removeIf([&] (auto& pair) {
+        return !pair.value.size();
+    });
+}
+
 } // namespace WebGPU
 
 #pragma mark WGPU Stubs

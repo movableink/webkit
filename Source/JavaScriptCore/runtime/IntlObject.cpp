@@ -351,7 +351,7 @@ Vector<char, 32> canonicalizeUnicodeExtensionsAfterICULocaleCanonicalization(Vec
         end++;
     }
 
-    Vector<char, 32> result(buffer.subspan(0, extensionIndex + 2)); // "-u" is included.
+    Vector<char, 32> result(buffer.span().first(extensionIndex + 2)); // "-u" is included.
     StringView extension = locale.substring(extensionIndex, extensionLength);
     ASSERT(extension.is8Bit());
     auto subtags = unicodeExtensionComponents(extension);
@@ -767,7 +767,7 @@ Vector<String> canonicalizeLocaleList(JSGlobalObject* globalObject, JSValue loca
     uint64_t length = lengthProperty.toLength(globalObject);
     RETURN_IF_EXCEPTION(scope, Vector<String>());
 
-    HashSet<String> seenSet;
+    UncheckedKeyHashSet<String> seenSet;
     for (uint64_t k = 0; k < length; ++k) {
         bool kPresent = localesObject->hasProperty(globalObject, k);
         RETURN_IF_EXCEPTION(scope, Vector<String>());
@@ -1295,7 +1295,7 @@ bool LanguageTagParser::parseUnicodeLanguageId()
             return true;
     }
 
-    HashSet<VariantCode> variantCodes;
+    UncheckedKeyHashSet<VariantCode> variantCodes;
     while (true) {
         if (!isUnicodeVariantSubtag(m_current))
             return true;
@@ -1555,8 +1555,6 @@ std::optional<String> mapICUCalendarKeywordToBCP47(const String& calendar)
 {
     if (calendar == "gregorian"_s)
         return "gregory"_s;
-    // islamicc is deprecated in BCP47, and islamic-civil is preferred.
-    // https://github.com/unicode-org/cldr/blob/master/common/bcp47/calendar.xml
     if (calendar == "ethiopic-amete-alem"_s)
         return "ethioaa"_s;
     return std::nullopt;
@@ -1566,8 +1564,6 @@ std::optional<String> mapBCP47ToICUCalendarKeyword(const String& calendar)
 {
     if (calendar == "gregory"_s)
         return "gregorian"_s;
-    if (calendar == "islamicc"_s)
-        return "islamic-civil"_s;
     if (calendar == "ethioaa"_s)
         return "ethiopic-amete-alem"_s;
     return std::nullopt;

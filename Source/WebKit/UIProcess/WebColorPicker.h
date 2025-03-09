@@ -25,11 +25,9 @@
 
 #pragma once
 
-#if ENABLE(INPUT_TYPE_COLOR)
-
 #include <wtf/CheckedPtr.h>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 class Color;
@@ -50,7 +48,7 @@ protected:
     virtual ~WebColorPickerClient() = default;
 };
 
-class WebColorPicker : public RefCounted<WebColorPicker> {
+class WebColorPicker : public RefCountedAndCanMakeWeakPtr<WebColorPicker> {
 public:
     using Client = WebColorPickerClient;
 
@@ -75,5 +73,3 @@ private:
 };
 
 } // namespace WebKit
-
-#endif // ENABLE(INPUT_TYPE_COLOR)

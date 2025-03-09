@@ -79,6 +79,11 @@ public:
     void willBeginScrubbing();
     void beginScrubbing();
     void endScrubbing();
+#if HAVE(PIP_SKIP_PREROLL)
+    void skipAd();
+#endif
+
+    void swapFullscreenModesWith(PlaybackSessionInterfaceMac&) { }
 
     void invalidate();
 

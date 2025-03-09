@@ -26,6 +26,7 @@
 #pragma once
 
 #include "AffineTransform.h"
+#include "EventTrackingRegions.h"
 #include "FloatRoundedRect.h"
 #include "IntRect.h"
 #include "IntRectHash.h"
@@ -47,6 +48,7 @@ class EventRegion;
 class Path;
 class RenderObject;
 class RenderStyle;
+enum class TrackingType : uint8_t;
 
 class EventRegionContext final : public RegionContext {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(EventRegionContext, WEBCORE_EXPORT);
@@ -75,14 +77,29 @@ private:
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
     Vector<InteractionRegion> m_interactionRegions;
     UncheckedKeyHashMap<IntRect, InteractionRegion::ContentHint> m_interactionRectsAndContentHints;
-    HashSet<IntRect> m_occlusionRects;
+    UncheckedKeyHashSet<IntRect> m_occlusionRects;
     enum class Inflated : bool { No, Yes };
     UncheckedKeyHashMap<IntRect, Inflated> m_guardRects;
-    HashSet<ElementIdentifier> m_containerRemovalCandidates;
-    HashSet<ElementIdentifier> m_containersToRemove;
+    UncheckedKeyHashSet<ElementIdentifier> m_containerRemovalCandidates;
+    UncheckedKeyHashSet<ElementIdentifier> m_containersToRemove;
     UncheckedKeyHashMap<ElementIdentifier, Vector<InteractionRegion>> m_discoveredRegionsByElement;
 #endif
 };
+
+#if ENABLE(TOUCH_EVENT_REGIONS)
+struct TouchEventListenerRegion {
+    bool operator==(const TouchEventListenerRegion&) const = default;
+
+    bool isEmpty() const { return start.isEmpty() && end.isEmpty() && move.isEmpty() && cancel.isEmpty(); }
+
+    Region start;
+    Region end;
+    Region move;
+    Region cancel;
+};
+
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, const TouchEventListenerRegion&);
+#endif
 
 class EventRegion {
 public:
@@ -95,14 +112,14 @@ public:
     , WebCore::Region wheelEventListenerRegion
     , WebCore::Region nonPassiveWheelEventListenerRegion
 #endif
+#if ENABLE(TOUCH_EVENT_REGIONS)
+    , EventTrackingRegions touchEventListenerRegion
+#endif
 #if ENABLE(EDITABLE_REGION)
     , std::optional<WebCore::Region>
 #endif
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
     , Vector<WebCore::InteractionRegion>
-#endif
-#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
-    , WebCore::Region
 #endif
     );
 
@@ -127,6 +144,10 @@ public:
     const Region* regionForTouchAction(TouchAction) const;
 #endif
 
+#if ENABLE(TOUCH_EVENT_REGIONS)
+    WEBCORE_EXPORT TrackingType eventTrackingTypeForPoint(EventTrackingRegionsEventType, const IntPoint&) const;
+#endif
+
 #if ENABLE(WHEEL_EVENT_REGIONS)
     WEBCORE_EXPORT OptionSet<EventListenerRegionType> eventListenerRegionTypesForPoint(const IntPoint&) const;
     const Region& eventListenerRegionForType(EventListenerRegionType) const;
@@ -147,19 +168,12 @@ public:
     void clearInteractionRegions();
 #endif
 
-#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
-    const Region& scrollOverlayRegion() const { return m_scrollOverlayRegion; }
-#endif
-
 private:
     friend struct IPC::ArgumentCoder<EventRegion, void>;
 #if ENABLE(TOUCH_ACTION_REGIONS)
     void uniteTouchActions(const Region&, OptionSet<TouchAction>);
 #endif
     void uniteEventListeners(const Region&, OptionSet<EventListenerRegionType>);
-#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
-    void uniteScrollOverlayRegion(const Region&, const RenderStyle&);
-#endif
 
     Region m_region;
 #if ENABLE(TOUCH_ACTION_REGIONS)
@@ -169,14 +183,14 @@ private:
     Region m_wheelEventListenerRegion;
     Region m_nonPassiveWheelEventListenerRegion;
 #endif
+#if ENABLE(TOUCH_EVENT_REGIONS)
+    EventTrackingRegions m_touchEventListenerRegion;
+#endif
 #if ENABLE(EDITABLE_REGION)
     std::optional<Region> m_editableRegion;
 #endif
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
     Vector<InteractionRegion> m_interactionRegions;
-#endif
-#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
-    Region m_scrollOverlayRegion;
 #endif
 };
 

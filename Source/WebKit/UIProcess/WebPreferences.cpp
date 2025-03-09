@@ -131,8 +131,8 @@ void WebPreferences::update()
         return;
     }
         
-    for (auto& webPageProxy : m_pages)
-        webPageProxy.preferencesDidChange();
+    for (Ref page : m_pages)
+        page->preferencesDidChange();
 }
 
 void WebPreferences::startBatchingUpdates()
@@ -191,16 +191,11 @@ void WebPreferences::updateBoolValueForKey(const String& key, bool value, bool e
         platformUpdateBoolValueForKey(key, value);
     
     if (key == WebPreferencesKey::processSwapOnCrossSiteNavigationEnabledKey()) {
-        for (auto& page : m_pages)
-            page.configuration().processPool().configuration().setProcessSwapsOnNavigation(value);
+        for (Ref page : m_pages)
+            page->configuration().processPool().configuration().setProcessSwapsOnNavigation(value);
 
         return;
     }
-
-#if ENABLE(WEB_PUSH_NOTIFICATIONS)
-    if (key == WebPreferencesKey::builtInNotificationsEnabledKey())
-        WebCore::DeprecatedGlobalSettings::setBuiltInNotificationsEnabled(value);
-#endif
 
     update(); // FIXME: Only send over the changed key and value.
 }

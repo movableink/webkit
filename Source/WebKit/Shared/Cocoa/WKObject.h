@@ -39,16 +39,6 @@ namespace API {
 
 class Object;
 
-template<typename ObjectClass> struct ObjectStorage {
-    ObjectClass* get() { return reinterpret_cast<ObjectClass*>(&data); }
-    ObjectClass& operator*() { return *get(); }
-    ObjectClass* operator->() { return get(); }
-
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    typename std::aligned_storage<sizeof(ObjectClass), std::alignment_of<ObjectClass>::value>::type data;
-    ALLOW_DEPRECATED_DECLARATIONS_END
-};
-
 API::Object* unwrap(void*);
 void* wrap(API::Object*);
 
@@ -144,7 +134,7 @@ WK_OBJECT_DEALLOC_ON_MAIN_THREAD(objcClass); \
 - (void)dealloc \
 { \
     ASSERT(isMainRunLoop()); \
-    storageVar->~implClass(); \
+    SUPPRESS_UNCOUNTED_ARG storageVar->~implClass(); \
 } \
 \
 using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int

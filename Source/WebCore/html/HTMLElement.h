@@ -37,7 +37,7 @@ namespace WebCore {
 class ElementInternals;
 class FormListedElement;
 class FormAssociatedElement;
-class HTMLFormControlElement;
+class HTMLButtonElement;
 class HTMLFormElement;
 class VisibleSelection;
 
@@ -148,11 +148,20 @@ public:
 
     WEBCORE_EXPORT ExceptionOr<Ref<ElementInternals>> attachInternals();
 
+    struct ShowPopoverOptions {
+        RefPtr<HTMLElement> source;
+    };
+
+    struct TogglePopoverOptions : public ShowPopoverOptions {
+        std::optional<bool> force;
+    };
+
     void queuePopoverToggleEventTask(ToggleState oldState, ToggleState newState);
-    ExceptionOr<void> showPopover(const HTMLFormControlElement* = nullptr);
+    ExceptionOr<void> showPopover(const ShowPopoverOptions&);
+    ExceptionOr<void> showPopoverInternal(HTMLElement* = nullptr);
     ExceptionOr<void> hidePopover();
     ExceptionOr<void> hidePopoverInternal(FocusPreviousElement, FireEvents);
-    ExceptionOr<bool> togglePopover(std::optional<bool> force);
+    ExceptionOr<bool> togglePopover(std::optional<std::variant<WebCore::HTMLElement::TogglePopoverOptions, bool>>);
 
     PopoverState popoverState() const;
     const AtomString& popover() const;
@@ -160,7 +169,7 @@ public:
     void popoverAttributeChanged(const AtomString& value);
 
     bool isValidCommandType(const CommandType) override;
-    bool handleCommandInternal(const HTMLFormControlElement& invoker, const CommandType&) override;
+    bool handleCommandInternal(HTMLButtonElement& invoker, const CommandType&) override;
 
 #if PLATFORM(IOS_FAMILY)
     static SelectionRenderingBehavior selectionRenderingBehavior(const Node*);
@@ -199,6 +208,8 @@ protected:
     static const AtomString& eventNameForEventHandlerAttribute(const QualifiedName& attributeName, const EventHandlerNameMap&);
 
 private:
+    void setInvoker(HTMLElement*);
+
     String nodeName() const final;
 
     void mapLanguageAttributeToLocale(const AtomString&, MutableStyleProperties&);

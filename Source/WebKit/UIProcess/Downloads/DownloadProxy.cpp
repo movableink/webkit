@@ -55,14 +55,37 @@
 namespace WebKit {
 using namespace WebCore;
 
-DownloadProxy::DownloadProxy(DownloadProxyMap& downloadProxyMap, WebsiteDataStore& dataStore, API::DownloadClient& client, const ResourceRequest& resourceRequest, const FrameInfoData& frameInfoData, WebPageProxy* originatingPage)
+static FrameInfoData legacyEmptyFrameInfo()
+{
+    constexpr bool isMainFrame { false };
+    constexpr bool isFocused { false };
+    constexpr bool errorOccurred { false };
+
+    return FrameInfoData {
+        isMainFrame,
+        FrameType::Local,
+        ResourceRequest { aboutBlankURL() },
+        SecurityOriginData::createOpaque(),
+        String { },
+        FrameIdentifier::generate(),
+        std::nullopt,
+        std::nullopt,
+        CertificateInfo { },
+        getCurrentProcessID(),
+        isFocused,
+        errorOccurred,
+        WebFrameMetrics { }
+    };
+}
+
+DownloadProxy::DownloadProxy(DownloadProxyMap& downloadProxyMap, WebsiteDataStore& dataStore, API::DownloadClient& client, const ResourceRequest& resourceRequest, const std::optional<FrameInfoData>& frameInfoData, WebPageProxy* originatingPage)
     : m_downloadProxyMap(downloadProxyMap)
     , m_dataStore(&dataStore)
     , m_client(client)
     , m_downloadID(DownloadID::generate())
     , m_request(resourceRequest)
     , m_originatingPage(originatingPage)
-    , m_frameInfo(API::FrameInfo::create(FrameInfoData { frameInfoData }, originatingPage))
+    , m_frameInfo(frameInfoData ? API::FrameInfo::create(FrameInfoData { *frameInfoData }, originatingPage) : API::FrameInfo::create(legacyEmptyFrameInfo(), originatingPage))
 #if HAVE(MODERN_DOWNLOADPROGRESS)
     , m_assertion(ProcessAssertion::create(getCurrentProcessID(), "WebKit DownloadProxy DecideDestination"_s, ProcessAssertionType::FinishTaskInterruptable))
 #endif
@@ -84,6 +107,7 @@ static RefPtr<API::Data> createData(std::span<const uint8_t> data)
 
 void DownloadProxy::cancel(CompletionHandler<void(API::Data*)>&& completionHandler)
 {
+    m_downloadIsCancelled = true;
     if (m_dataStore) {
         protectedDataStore()->protectedNetworkProcess()->sendWithAsyncReply(Messages::NetworkProcess::CancelDownload(m_downloadID), [weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)] (std::span<const uint8_t> resumeData) mutable {
             RefPtr protectedThis = weakThis.get();
@@ -224,6 +248,8 @@ void DownloadProxy::didFinish()
     updateQuarantinePropertiesIfPossible();
 #endif
     m_client->didFinish(*this);
+    if (m_downloadIsCancelled)
+        return;
 
     // This can cause the DownloadProxy object to be deleted.
     if (RefPtr downloadProxyMap = m_downloadProxyMap.get())
@@ -232,6 +258,9 @@ void DownloadProxy::didFinish()
 
 void DownloadProxy::didFail(const ResourceError& error, std::span<const uint8_t> resumeData)
 {
+    if (m_downloadIsCancelled)
+        return;
+
     m_legacyResumeData = createData(resumeData);
 
     m_client->didFail(*this, error, m_legacyResumeData.get());

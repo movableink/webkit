@@ -38,12 +38,15 @@
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "SWRegistrationDatabase.h"
-#include <wtf/persistence/PersistentDecoder.h>
-#include <wtf/persistence/PersistentEncoder.h>
+#include <wtf/persistence/PersistentCoders.h>
 
 #if PLATFORM(COCOA)
 #include <wtf/cf/VectorCF.h>
 #include <wtf/spi/cocoa/SecuritySPI.h>
+#endif
+
+#if USE(GLIB)
+#include <wtf/glib/GSpanExtras.h>
 #endif
 
 namespace WTF::Persistence {
@@ -435,7 +438,7 @@ template<> struct Coder<GRefPtr<GByteArray>> {
     static void encodeForPersistence(Encoder &encoder, const GRefPtr<GByteArray>& byteArray)
     {
         encoder << static_cast<uint32_t>(byteArray->len);
-        encoder.encodeFixedLengthData({ byteArray->data, byteArray->len });
+        encoder.encodeFixedLengthData(span(byteArray));
     }
 
     static std::optional<GRefPtr<GByteArray>> decodeForPersistence(Decoder& decoder)
@@ -447,7 +450,8 @@ template<> struct Coder<GRefPtr<GByteArray>> {
 
         GRefPtr<GByteArray> byteArray = adoptGRef(g_byte_array_sized_new(*size));
         g_byte_array_set_size(byteArray.get(), *size);
-        if (!decoder.decodeFixedLengthData({ byteArray->data, *size }))
+
+        if (!decoder.decodeFixedLengthData(spanConstCast<uint8_t>(span(byteArray))))
             return std::nullopt;
         return byteArray;
     }

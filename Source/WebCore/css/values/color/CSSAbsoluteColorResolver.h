@@ -63,7 +63,7 @@ template<typename D> WebCore::Color resolve(const AbsoluteColorResolver<D>& abso
 // This resolve function should only be called if the components have been checked and don't require conversion data to be resolved.
 template<typename D> WebCore::Color resolveNoConversionDataRequired(const AbsoluteColorResolver<D>& absolute)
 {
-    ASSERT(!requiresConversionData(absolute.components));
+    ASSERT(!componentsRequireConversionData<D>(absolute.components));
 
     // Evaluated any calc values to their corresponding channel value.
     auto components = StyleColorParseType<D> {

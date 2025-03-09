@@ -127,7 +127,7 @@ void CookieJar::setCookies(Document& document, const URL& url, const String& coo
         frameID = frame->frameID();
 
     if (CheckedPtr session = protectedStorageSessionProvider()->storageSession())
-        session->setCookiesFromDOM(document.firstPartyForCookies(), sameSiteInfo(document, IsForDOMCookieAccess::Yes), url, frameID, pageID, ApplyTrackingPrevention::Yes, cookieString, shouldRelaxThirdPartyCookieBlocking(document));
+        session->setCookiesFromDOM(document.firstPartyForCookies(), sameSiteInfo(document, IsForDOMCookieAccess::Yes), url, frameID, pageID, ApplyTrackingPrevention::Yes, RequiresScriptTelemetry::No, cookieString, shouldRelaxThirdPartyCookieBlocking(document));
     else
         ASSERT_NOT_REACHED();
 }
@@ -193,7 +193,7 @@ bool CookieJar::getRawCookies(Document& document, const URL& url, Vector<Cookie>
     return false;
 }
 
-void CookieJar::setRawCookie(const Document&, const Cookie& cookie)
+void CookieJar::setRawCookie(const Document&, const Cookie& cookie, ShouldPartitionCookie)
 {
     if (CheckedPtr session = protectedStorageSessionProvider()->storageSession())
         session->setCookie(cookie);
@@ -201,10 +201,10 @@ void CookieJar::setRawCookie(const Document&, const Cookie& cookie)
         ASSERT_NOT_REACHED();
 }
 
-void CookieJar::deleteCookie(const Document&, const URL& url, const String& cookieName, CompletionHandler<void()>&& completionHandler)
+void CookieJar::deleteCookie(const Document& document, const URL& url, const String& cookieName, CompletionHandler<void()>&& completionHandler)
 {
     if (CheckedPtr session = protectedStorageSessionProvider()->storageSession())
-        session->deleteCookie(url, cookieName, WTFMove(completionHandler));
+        session->deleteCookie(document.firstPartyForCookies(), url, cookieName, WTFMove(completionHandler));
     else {
         ASSERT_NOT_REACHED();
         completionHandler();

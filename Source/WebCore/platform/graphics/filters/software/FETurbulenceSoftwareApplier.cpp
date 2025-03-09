@@ -33,8 +33,6 @@
 #include <wtf/ParallelJobs.h>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(FETurbulenceSoftwareApplier);
@@ -52,7 +50,7 @@ FETurbulenceSoftwareApplier::PaintingData FETurbulenceSoftwareApplier::initPaint
     if (paintingData.seed > s_randMaximum - 1)
         paintingData.seed = s_randMaximum - 1;
 
-    float* gradient;
+    std::span<float> gradient;
     for (int channel = 0; channel < 4; ++channel) {
         for (int i = 0; i < s_blockSize; ++i) {
             paintingData.latticeSelector[i] = i;
@@ -191,7 +189,7 @@ ColorComponents<float, 4> FETurbulenceSoftwareApplier::noise2D(const PaintingDat
         // b00 = uLatticeSelector[i + by0]
         int b00 = paintingData.latticeSelector[latticeIndex + noiseY.index];
         // q = fGradient[nColorChannel][b00]; u = rx0 * q[0] + ry0 * q[1];
-        const float* q = paintingData.gradient[channel][b00];
+        std::span<const float> q = paintingData.gradient[channel][b00];
         float u = noiseX.fraction * q[0] + noiseY.fraction * q[1];
 
         // b10 = uLatticeSelector[j + by0];
@@ -290,7 +288,7 @@ void FETurbulenceSoftwareApplier::applyPlatformGeneric(const IntRect& filterRegi
             point.setX(point.x() + 1);
             FloatPoint localPoint = point.scaled(inverseScale.width(), inverseScale.height());
             auto values = calculateTurbulenceValueForPoint(paintingData, stitchData, localPoint);
-            pixelBuffer.setRange({ values.components.data(), 4 }, indexOfPixelChannel);
+            pixelBuffer.setRange(std::span { values.components }, indexOfPixelChannel);
             indexOfPixelChannel += 4;
         }
     }
@@ -298,7 +296,7 @@ void FETurbulenceSoftwareApplier::applyPlatformGeneric(const IntRect& filterRegi
 
 void FETurbulenceSoftwareApplier::applyPlatformWorker(ApplyParameters* parameters)
 {
-    applyPlatformGeneric(parameters->filterRegion, parameters->filterScale, *parameters->pixelBuffer, *parameters->paintingData, parameters->stitchData, parameters->startY, parameters->endY);
+    applyPlatformGeneric(parameters->filterRegion, parameters->filterScale, Ref { *parameters->pixelBuffer }, *parameters->paintingData, parameters->stitchData, parameters->startY, parameters->endY);
 }
 
 void FETurbulenceSoftwareApplier::applyPlatform(const IntRect& filterRegion, const FloatSize& filterScale, PixelBuffer& pixelBuffer, PaintingData& paintingData, StitchData& stitchData)
@@ -346,7 +344,7 @@ void FETurbulenceSoftwareApplier::applyPlatform(const IntRect& filterRegion, con
 
 bool FETurbulenceSoftwareApplier::apply(const Filter& filter, const FilterImageVector&, FilterImage& result) const
 {
-    auto destinationPixelBuffer = result.pixelBuffer(AlphaPremultiplication::Unpremultiplied);
+    RefPtr destinationPixelBuffer = result.pixelBuffer(AlphaPremultiplication::Unpremultiplied);
     if (!destinationPixelBuffer)
         return false;
 
@@ -361,16 +359,14 @@ bool FETurbulenceSoftwareApplier::apply(const Filter& filter, const FilterImageV
 
     auto tileSize = roundedIntSize(result.primitiveSubregion().size());
 
-    float baseFrequencyX = m_effect.baseFrequencyX();
-    float baseFrequencyY = m_effect.baseFrequencyY();
-    auto stitchData = computeStitching(tileSize, baseFrequencyX, baseFrequencyY, m_effect.stitchTiles());
+    float baseFrequencyX = m_effect->baseFrequencyX();
+    float baseFrequencyY = m_effect->baseFrequencyY();
+    auto stitchData = computeStitching(tileSize, baseFrequencyX, baseFrequencyY, m_effect->stitchTiles());
 
-    auto paintingData = initPaintingData(m_effect.type(), baseFrequencyX, baseFrequencyY, m_effect.numOctaves(), m_effect.seed(), m_effect.stitchTiles(), tileSize);
+    auto paintingData = initPaintingData(m_effect->type(), baseFrequencyX, baseFrequencyY, m_effect->numOctaves(), m_effect->seed(), m_effect->stitchTiles(), tileSize);
 
     applyPlatform(result.absoluteImageRect(), filter.filterScale(), *destinationPixelBuffer, paintingData, stitchData);
     return true;
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 } // namespace WebCore

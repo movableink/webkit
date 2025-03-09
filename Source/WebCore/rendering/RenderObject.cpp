@@ -4,7 +4,7 @@
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
  *           (C) 2004 Allan Sandfeld Jensen (kde@carewolf.com)
  * Copyright (C) 2004-2024 Apple Inc. All rights reserved.
- * Copyright (C) 2009 Google Inc. All rights reserved.
+ * Copyright (C) 2009-2017 Google Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
  * This library is free software; you can redistribute it and/or
@@ -29,7 +29,7 @@
 
 #include "AXObjectCache.h"
 #include "DocumentInlines.h"
-#include "Editing.h"
+#include "EditingInlines.h"
 #include "Editor.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "FloatQuad.h"
@@ -42,6 +42,7 @@
 #include "HTMLTableElement.h"
 #include "HitTestResult.h"
 #include "LayoutBox.h"
+#include "LayoutIntegrationCoverage.h"
 #include "LegacyRenderSVGModelObject.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LocalFrame.h"
@@ -76,6 +77,7 @@
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
 #include "RenderWidget.h"
+#include "RenderedPosition.h"
 #include "SVGRenderSupport.h"
 #include "Settings.h"
 #include "StyleResolver.h"
@@ -96,7 +98,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderObject);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderObject, RenderObjectRareData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderObject::RenderObjectRareData);
 
 #if ASSERT_ENABLED
 
@@ -541,7 +543,7 @@ static inline bool objectIsRelayoutBoundary(const RenderElement* object)
         return true;
 
     if (auto* textControl = dynamicDowncast<RenderTextControl>(*object)) {
-        if (!textControl->isFlexItem() && !textControl->isGridItem()) {
+        if (!textControl->isFlexItem() && !textControl->isGridItem() && object->style().fieldSizing() != FieldSizing::Content) {
             // Flexing type of layout systems may compute different size than what input's preferred width is which won't happen unless they run their layout as well.
             return true;
         }
@@ -559,7 +561,7 @@ static inline bool objectIsRelayoutBoundary(const RenderElement* object)
     if (object->document().settings().layerBasedSVGEngineEnabled() && object->isSVGLayerAwareRenderer())
         return false;
 
-    if (object->style().width().isIntrinsicOrAuto() || object->style().height().isIntrinsicOrAuto() || object->style().height().isPercentOrCalculated())
+    if (object->style().width().isIntrinsicOrAuto() || object->style().height().isIntrinsicOrAuto() || object->style().height().isPercentOrCalculated() || object->style().width().isPercentOrCalculated())
         return false;
 
     // Table parts can't be relayout roots since the table is responsible for layouting all the parts.
@@ -575,12 +577,8 @@ void RenderObject::clearNeedsLayout(HadSkippedLayout hadSkippedLayout)
     setEverHadLayout();
     setHadSkippedLayout(hadSkippedLayout == HadSkippedLayout::Yes);
 
-    if (auto* renderElement = dynamicDowncast<RenderElement>(*this)) {
-        renderElement->setLayoutIdentifier(renderElement->view().frameView().layoutContext().layoutIdentifier());
-
-        if (hasLayer())
-            downcast<RenderLayerModelObject>(*this).layer()->setSelfAndChildrenNeedPositionUpdate();
-    }
+    if (hasLayer())
+        downcast<RenderLayerModelObject>(*this).layer()->setSelfAndChildrenNeedPositionUpdate();
     m_stateBitfields.clearFlag(StateFlag::NeedsLayout);
     setPosChildNeedsLayoutBit(false);
     setNeedsSimplifiedNormalFlowLayoutBit(false);
@@ -599,20 +597,6 @@ void RenderObject::scheduleLayout(RenderElement* layoutRoot)
 
     if (layoutRoot && layoutRoot->isRooted())
         layoutRoot->view().protectedFrameView()->checkedLayoutContext()->scheduleSubtreeLayout(*layoutRoot);
-}
-
-static inline void setIsSimplifiedLayoutRootForLayerIfApplicable(RenderElement& renderElement)
-{
-    ASSERT(renderElement.isOutOfFlowPositioned());
-
-    if (!renderElement.normalChildNeedsLayout())
-        return;
-
-    if (auto* renderer = dynamicDowncast<RenderLayerModelObject>(renderElement)) {
-        if (auto* layer = renderer->layer())
-            return layer->setIsSimplifiedLayoutRoot();
-    }
-    ASSERT_NOT_REACHED();
 }
 
 RenderElement* RenderObject::markContainingBlocksForLayout(RenderElement* layoutRoot)
@@ -637,6 +621,9 @@ RenderElement* RenderObject::markContainingBlocksForLayout(RenderElement* layout
             // Internal render tree shuffle.
             return { };
         }
+
+        if (simplifiedNormalFlowLayout && ancestor->overflowChangesMayAffectLayout())
+            simplifiedNormalFlowLayout = false;
 
         if (hasOutOfFlowPosition) {
             bool willSkipRelativelyPositionedInlines = !ancestor->isRenderBlock() || ancestor->isAnonymousBlock();
@@ -668,8 +655,6 @@ RenderElement* RenderObject::markContainingBlocksForLayout(RenderElement* layout
             return ancestor.get();
 
         hasOutOfFlowPosition = ancestor->isOutOfFlowPositioned();
-        if (hasOutOfFlowPosition)
-            setIsSimplifiedLayoutRootForLayerIfApplicable(*ancestor);
         ancestor = WTFMove(container);
     }
     return { };
@@ -739,7 +724,7 @@ RenderBlock* RenderObject::containingBlockForPositionType(PositionType positionT
     if (positionType == PositionType::Static || positionType == PositionType::Relative || positionType == PositionType::Sticky) {
         auto containingBlockForObjectInFlow = [&] {
             auto* ancestor = renderer.parent();
-            while (ancestor && ((ancestor->isInline() && !ancestor->isReplacedOrInlineBlock()) || !ancestor->isRenderBlock()))
+            while (ancestor && ((ancestor->isInline() && !ancestor->isReplacedOrAtomicInline()) || !ancestor->isRenderBlock()))
                 ancestor = ancestor->parent();
             return downcast<RenderBlock>(ancestor);
         };
@@ -1220,7 +1205,7 @@ std::optional<FloatRect> RenderObject::computeFloatVisibleRectInContainer(const 
 static void outputRenderTreeLegend(TextStream& stream)
 {
     stream.nextLine();
-    stream << "(B)lock/(I)nline/I(N)line-block, (A)bsolute/Fi(X)ed/(R)elative/Stic(K)y, (F)loating, (O)verflow clip, Anon(Y)mous, (G)enerated, has(L)ayer, hasLayer(S)crollableArea, (C)omposited, Content-visibility:(H)idden/(A)uto, (S)kipped content, (+)Dirty style, (+)Dirty layout";
+    stream << "(B)lock/(I)nline Box/(A)tomic inline, (A)bsolute/Fi(X)ed/(R)elative/Stic(K)y, (F)loating, (O)verflow clip, Anon(Y)mous/(P)seudo, has(L)ayer, (C)omposited, Content-visibility:(H)idden/(A)uto, (S)kipped content, (M)odern/(L)egacy/Not(-)applicable layout, (+)Needs style recalc, (+)Needs layout";
     stream.nextLine();
 }
 
@@ -1308,8 +1293,8 @@ void RenderObject::outputRegionsInformation(TextStream& stream) const
 
 void RenderObject::outputRenderObject(TextStream& stream, bool mark, int depth) const
 {
-    if (isInlineBlockOrInlineTable())
-        stream << "N";
+    if (isNonReplacedAtomicInline())
+        stream << "A";
     else if (isInline())
         stream << "I";
     else
@@ -1329,39 +1314,20 @@ void RenderObject::outputRenderObject(TextStream& stream, bool mark, int depth) 
     } else
         stream << "-";
 
-    if (isFloating())
-        stream << "F";
-    else
-        stream << "-";
+    stream << (isFloating() ? "F" : "-");
 
-    if (hasNonVisibleOverflow())
-        stream << "O";
-    else
-        stream << "-";
+    stream << (hasNonVisibleOverflow() ? "O" : "-");
 
     if (isAnonymous())
         stream << "Y";
+    else if (isPseudoElement())
+        stream << "P";
     else
         stream << "-";
 
-    if (isPseudoElement() || isAnonymous())
-        stream << "G";
-    else
-        stream << "-";
+    stream << (hasLayer() ? "L" : "-");
 
-    if (hasLayer()) {
-        stream << "L";
-        if (downcast<RenderLayerModelObject>(*this).layer()->scrollableArea())
-            stream << "S";
-        else
-            stream << "-";
-    } else
-        stream << "--";
-
-    if (isComposited())
-        stream << "C";
-    else
-        stream << "-";
+    stream << (isComposited() ? "C" : "-");
 
     auto contentVisibility = style().contentVisibility();
     if (contentVisibility == ContentVisibility::Hidden)
@@ -1371,22 +1337,23 @@ void RenderObject::outputRenderObject(TextStream& stream, bool mark, int depth) 
     else
         stream << "-";
 
-    if (isSkippedContent())
-        stream << "S";
-    else
+    stream << (isSkippedContent() ? "S" : "-");
+
+    if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(*this); renderBlock && renderBlock->createsNewFormattingContext()) {
+        if (CheckedPtr blockBox = dynamicDowncast<RenderBlockFlow>(*renderBlock))
+            stream << (blockBox->childrenInline() && LayoutIntegration::canUseForLineLayout(*blockBox) ? "M" : "L");
+        else if (CheckedPtr flexBox = dynamicDowncast<RenderFlexibleBox>(*renderBlock))
+            stream << (LayoutIntegration::canUseForFlexLayout(*flexBox) ? "M" : "L");
+        else
+            stream << "L";
+    } else
         stream << "-";
 
     stream << " ";
 
-    if (node() && node()->needsStyleRecalc())
-        stream << "+";
-    else
-        stream << "-";
+    stream << (node() && node()->needsStyleRecalc() ? "+" : "-");
 
-    if (needsLayout())
-        stream << "+";
-    else
-        stream << "-";
+    stream << (needsLayout() ? "+" : "-");
 
     int printedCharacters = 0;
     if (mark) {
@@ -1490,11 +1457,6 @@ void RenderObject::outputRenderObject(TextStream& stream, bool mark, int depth) 
         if (outOfFlowChildNeedsStaticPositionLayout())
             stream << "[out of flow child needs parent layout]";
     }
-    stream << " layout id->";
-    if (auto* renderElement = dynamicDowncast<RenderElement>(*this))
-        stream << "[" << renderElement->layoutIdentifier() << "]";
-    else
-        stream << "[n/a]";
     stream.nextLine();
 }
 
@@ -1991,7 +1953,7 @@ int RenderObject::caretMinOffset() const
 
 int RenderObject::caretMaxOffset() const
 {
-    if (isReplacedOrInlineBlock())
+    if (isReplacedOrAtomicInline())
         return node() ? std::max(1U, node()->countChildNodes()) : 1;
     if (isHR())
         return 1;
@@ -2261,7 +2223,7 @@ void RenderObject::removeRareData()
 RenderObject::RenderObjectRareData::RenderObjectRareData() = default;
 RenderObject::RenderObjectRareData::~RenderObjectRareData() = default;
 
-bool RenderObject::hasNonEmptyVisibleRectRespectingParentFrames() const
+bool RenderObject::hasEmptyVisibleRectRespectingParentFrames() const
 {
     auto enclosingFrameRenderer = [] (const RenderObject& renderer) {
         auto* ownerElement = renderer.document().ownerElement();
@@ -2307,6 +2269,11 @@ static Vector<FloatRect> absoluteRectsForRangeInText(const SimpleRange& range, T
         return { };
 
     auto offsetRange = characterDataOffsetRange(range, node);
+    // Move to surrogate pair start for Range start and past surrogate pair end for Range end in case the trailing surrogate is indexed.
+    if (offsetRange.start < node.data().length() && offsetRange.start && U16_IS_TRAIL(node.data()[offsetRange.start]) && U16_IS_LEAD(node.data()[offsetRange.start - 1]))
+        offsetRange.start--;
+    if (offsetRange.end < node.data().length() && offsetRange.end && U16_IS_TRAIL(node.data()[offsetRange.end]) && U16_IS_LEAD(node.data()[offsetRange.end - 1]))
+        offsetRange.end++;
     auto textQuads = renderer->absoluteQuadsForRange(offsetRange.start, offsetRange.end, behavior);
 
     if (behavior.contains(RenderObject::BoundingRectBehavior::RespectClipping)) {
@@ -2361,7 +2328,7 @@ static Vector<FloatRect> borderAndTextRects(const SimpleRange& range, Coordinate
 
     bool useVisibleBounds = behavior.contains(RenderObject::BoundingRectBehavior::UseVisibleBounds);
 
-    HashSet<RefPtr<Element>> selectedElementsSet;
+    UncheckedKeyHashSet<RefPtr<Element>> selectedElementsSet;
     for (Ref node : intersectingNodesWithDeprecatedZeroOffsetStartQuirk(range)) {
         if (RefPtr element = dynamicDowncast<Element>(WTFMove(node)))
             selectedElementsSet.add(element.releaseNonNull());
@@ -2546,50 +2513,79 @@ static bool areOnSameLine(const SelectionGeometry& a, const SelectionGeometry& b
         && FloatQuad { quadA.p4(), quadA.p3(), quadB.p3(), quadB.p4() }.isEmpty();
 }
 
-static TextDirection directionForFirstLine(const Position& start)
+static bool usesVisuallyContiguousBidiTextSelection(const SimpleRange& range)
 {
-    auto endOfFirstLine = logicalEndOfLine(start).deepEquivalent();
-    return primaryDirectionForSingleLineRange(start, endOfFirstLine);
+    return range.protectedStartContainer()->protectedDocument()->settings().visuallyContiguousBidiTextSelectionEnabled();
 }
 
-static TextDirection directionForLastLine(const Position& end)
+struct SelectionEndpointDirections {
+    TextDirection firstLine { TextDirection::LTR };
+    TextDirection lastLine { TextDirection::LTR };
+    bool isSingleLine { false };
+};
+
+static SelectionEndpointDirections computeSelectionEndpointDirections(const SimpleRange& range)
 {
-    auto startOfLastLine = logicalStartOfLine(end).deepEquivalent();
-    return primaryDirectionForSingleLineRange(startOfLastLine, end);
+    auto [start, end] = positionsForRange(range);
+    if (inSameLine(start, end)) {
+        auto direction = primaryDirectionForSingleLineRange(start, end);
+        return { direction, direction, true };
+    }
+    return { start.primaryDirection(), end.primaryDirection(), false };
 }
 
-enum class TextDirectionsNeedAdjustment : bool { No, Yes };
-static TextDirectionsNeedAdjustment makeBidiSelectionVisuallyContiguousIfNeeded(const SimpleRange& range, Vector<SelectionGeometry>& geometries)
+static void makeBidiSelectionVisuallyContiguousIfNeeded(const SelectionEndpointDirections directions, const SimpleRange& range, Vector<SelectionGeometry>& geometries)
 {
     if (!range.startContainer().document().editor().shouldDrawVisuallyContiguousBidiSelection())
-        return TextDirectionsNeedAdjustment::Yes;
+        return;
 
     FloatPoint selectionStartTop;
     FloatPoint selectionStartBottom;
     FloatPoint selectionEndTop;
     FloatPoint selectionEndBottom;
 
+    auto [start, end] = positionsForRange(range);
+    bool flipEndpointsAtStart = false;
+    bool flipEndpointsAtEnd = false;
+
+    auto anyGeometryHasSameDirectionAsLine = [&](TextDirection direction) {
+        return geometries.containsIf([direction](auto& geometry) {
+            return geometry.direction() == direction;
+        });
+    };
+
+    auto atVisualBoundaryOfBidiRun = [](const Position& position) {
+        RenderedPosition renderedPosition { position };
+        return renderedPosition.atLeftBoundaryOfBidiRun() || renderedPosition.atRightBoundaryOfBidiRun();
+    };
+
+    if (geometries.size() > 1 && directions.isSingleLine && !anyGeometryHasSameDirectionAsLine(directions.firstLine)) {
+        flipEndpointsAtStart = atVisualBoundaryOfBidiRun(start);
+        flipEndpointsAtEnd = atVisualBoundaryOfBidiRun(end);
+    }
+
     std::optional<SelectionGeometry> startGeometry;
     std::optional<SelectionGeometry> endGeometry;
     for (auto& geometry : geometries) {
         if (!geometry.isHorizontal())
-            return TextDirectionsNeedAdjustment::Yes;
+            return;
 
+        bool isRightToLeft = geometry.direction() == TextDirection::RTL;
         if (geometry.containsStart()) {
-            selectionStartTop = geometry.direction() == TextDirection::LTR ? geometry.quad().p1() : geometry.quad().p2();
-            selectionStartBottom = geometry.direction() == TextDirection::LTR ? geometry.quad().p4() : geometry.quad().p3();
+            selectionStartTop = flipEndpointsAtStart == isRightToLeft ? geometry.quad().p1() : geometry.quad().p2();
+            selectionStartBottom = flipEndpointsAtStart == isRightToLeft ? geometry.quad().p4() : geometry.quad().p3();
             startGeometry = { geometry };
         }
 
         if (geometry.containsEnd()) {
-            selectionEndTop = geometry.direction() == TextDirection::LTR ? geometry.quad().p2() : geometry.quad().p1();
-            selectionEndBottom = geometry.direction() == TextDirection::LTR ? geometry.quad().p3() : geometry.quad().p4();
+            selectionEndTop = flipEndpointsAtEnd == isRightToLeft ? geometry.quad().p2() : geometry.quad().p1();
+            selectionEndBottom = flipEndpointsAtEnd == isRightToLeft ? geometry.quad().p3() : geometry.quad().p4();
             endGeometry = { geometry };
         }
     }
 
     if (!startGeometry || !endGeometry)
-        return TextDirectionsNeedAdjustment::Yes;
+        return;
 
     unsigned geometryCountOnFirstLine = 0;
     unsigned geometryCountOnLastLine = 0;
@@ -2617,17 +2613,18 @@ static TextDirectionsNeedAdjustment makeBidiSelectionVisuallyContiguousIfNeeded(
         startGeometry->setQuad({ selectionStartTop, selectionEndTop, selectionEndBottom, selectionStartBottom });
         startGeometry->setContainsEnd(true);
         geometries.append(WTFMove(*startGeometry));
-        return TextDirectionsNeedAdjustment::Yes;
+        return;
     }
 
-    if (geometryCountOnFirstLine == 1 && geometryCountOnLastLine == 1) {
-        geometries.appendList({ WTFMove(*startGeometry), WTFMove(*endGeometry) });
-        return TextDirectionsNeedAdjustment::Yes;
-    }
-
-    auto [start, end] = positionsForRange(range);
-    auto makeSelectionQuad = [](const Position& position, IntRect boundingRect, bool caretIsOnVisualLeftEdge) -> FloatQuad {
-        auto caretRect = VisiblePosition { position }.absoluteCaretBounds();
+    auto makeSelectionQuad = [](const Position& position, const IntRect& selectionBounds, TextDirection lineDirection, bool caretIsOnVisualLeftEdge) -> FloatQuad {
+        VisiblePosition visiblePosition { position };
+        bool reachedBoundary = false;
+        auto visibleExtent = caretIsOnVisualLeftEdge
+            ? rightBoundaryOfLine(visiblePosition, lineDirection, &reachedBoundary)
+            : leftBoundaryOfLine(visiblePosition, lineDirection, &reachedBoundary);
+        auto boundingRect = selectionBounds;
+        boundingRect.uniteIfNonZero(visibleExtent.absoluteCaretBounds());
+        auto caretRect = visiblePosition.absoluteCaretBounds();
         auto rectOnLeftEdge = caretIsOnVisualLeftEdge ? caretRect : boundingRect;
         auto rectOnRightEdge = caretIsOnVisualLeftEdge ? boundingRect : caretRect;
         return {
@@ -2638,40 +2635,60 @@ static TextDirectionsNeedAdjustment makeBidiSelectionVisuallyContiguousIfNeeded(
         };
     };
 
-    auto firstLineDirection = directionForFirstLine(start);
-    auto lastLineDirection = directionForLastLine(end);
-
+    auto firstLineDirection = start.primaryDirection();
+    auto lastLineDirection = end.primaryDirection();
     startGeometry->setDirection(firstLineDirection);
-    if (geometryCountOnFirstLine > 1)
-        startGeometry->setQuad(makeSelectionQuad(start, selectionBoundsOnFirstLine, firstLineDirection == TextDirection::LTR));
+    startGeometry->setQuad(makeSelectionQuad(start, selectionBoundsOnFirstLine, firstLineDirection, firstLineDirection == TextDirection::LTR));
     endGeometry->setDirection(lastLineDirection);
-    if (geometryCountOnLastLine > 1)
-        endGeometry->setQuad(makeSelectionQuad(end, selectionBoundsOnLastLine, lastLineDirection == TextDirection::RTL));
+    endGeometry->setQuad(makeSelectionQuad(end, selectionBoundsOnLastLine, lastLineDirection, lastLineDirection == TextDirection::RTL));
     geometries.appendList({ WTFMove(*startGeometry), WTFMove(*endGeometry) });
-
-    return TextDirectionsNeedAdjustment::No;
 }
 
-static void adjustTextDirectionForCoalescedGeometries(const SimpleRange& range, Vector<SelectionGeometry>& geometries)
+static void adjustTextDirectionForCoalescedGeometries(const SelectionEndpointDirections& directions, const SimpleRange& range, Vector<SelectionGeometry>& geometries)
 {
-    if (!range.protectedStartContainer()->protectedDocument()->settings().visuallyContiguousBidiTextSelectionEnabled())
+    if (!usesVisuallyContiguousBidiTextSelection(range))
         return;
-
-    auto [start, end] = positionsForRange(range);
-    if (inSameLine(start, end)) {
-        auto direction = primaryDirectionForSingleLineRange(start, end);
-        for (auto& geometry : geometries)
-            geometry.setDirection(direction);
-        return;
-    }
 
     for (auto& geometry : geometries) {
         if (geometry.containsStart())
-            geometry.setDirection(directionForFirstLine(start));
-
+            geometry.setDirection(directions.firstLine);
         if (geometry.containsEnd())
-            geometry.setDirection(directionForLastLine(end));
+            geometry.setDirection(directions.lastLine);
     }
+}
+
+static bool currentNodeRequiresToSeparateLines(const RenderObject* currentRenderer)
+{
+    if (!currentRenderer)
+        return false;
+
+    if (currentRenderer->isOutOfFlowPositioned())
+        return true;
+
+    if (CheckedPtr blockFlow = dynamicDowncast<const RenderBlockFlow>(*currentRenderer))
+        return blockFlow->multiColumnFlow();
+
+    return false;
+}
+
+static bool hasAncestorRequiresToSeparateLines(RenderObject* descendant, const RenderObject* stayWithin)
+{
+    for (CheckedPtr current = descendant; current; current = current->parent()) {
+        if (current->isOutOfFlowPositioned())
+            return true;
+        if (current->isRenderMultiColumnFlow())
+            return true;
+        if (current == stayWithin)
+            break;
+    }
+    return false;
+}
+
+static bool previousNodeRequiresToSeparateLines(RenderObject* previousRenderer, const RenderObject* stayWithin)
+{
+    if (!previousRenderer || !stayWithin)
+        return false;
+    return hasAncestorRequiresToSeparateLines(previousRenderer, stayWithin);
 }
 
 auto RenderObject::collectSelectionGeometriesInternal(const SimpleRange& range) -> SelectionGeometries
@@ -2682,10 +2699,19 @@ auto RenderObject::collectSelectionGeometriesInternal(const SimpleRange& range) 
     bool containsDifferentWritingModes = false;
     bool hasLeftToRightText = false;
     bool hasRightToLeftText = false;
+    bool separateFromPreviousLine = false;
+    SingleThreadWeakPtr<RenderObject> previousRenderer;
     for (Ref node : intersectingNodesWithDeprecatedZeroOffsetStartQuirk(range)) {
         CheckedPtr renderer = node->renderer();
+        if (!renderer)
+            continue;
+
+        if (!separateFromPreviousLine)
+            separateFromPreviousLine = currentNodeRequiresToSeparateLines(renderer.get()) || previousNodeRequiresToSeparateLines(previousRenderer.get(), renderer->previousSibling());
+        previousRenderer = renderer.get();
+
         // Only ask leaf render objects for their line box rects.
-        if (renderer && !renderer->firstChildSlow() && renderer->style().usedUserSelect() != UserSelect::None) {
+        if (!renderer->firstChildSlow() && renderer->style().usedUserSelect() != UserSelect::None) {
             bool isStartNode = renderer->node() == range.start.container.ptr();
             bool isEndNode = renderer->node() == range.end.container.ptr();
             if (hasFlippedWritingMode != renderer->writingMode().isBlockFlipped())
@@ -2700,6 +2726,10 @@ auto RenderObject::collectSelectionGeometriesInternal(const SimpleRange& range) 
             int endSelectionOffset = isEndNode ? range.end.offset : std::numeric_limits<int>::max();
             renderer->collectSelectionGeometries(newGeometries, beginSelectionOffset, endSelectionOffset);
             for (auto& selectionGeometry : newGeometries) {
+                if (separateFromPreviousLine) {
+                    selectionGeometry.setSeparateFromPreviousLine(true);
+                    separateFromPreviousLine = false;
+                }
                 if (selectionGeometry.containsStart() && !isStartNode)
                     selectionGeometry.setContainsStart(false);
                 if (selectionGeometry.containsEnd() && !isEndNode)
@@ -2757,7 +2787,12 @@ auto RenderObject::collectSelectionGeometriesInternal(const SimpleRange& range) 
                 lineBottom = std::min(lastLineTop, lineBottom);
         } else {
             adjustLineHeightOfSelectionGeometries(geometries, i, lineNumber, lineTop, lineBottom - lineTop);
-            if (!hasFlippedWritingMode) {
+            if (geometries[i].separateFromPreviousLine()) {
+                lastLineTop = std::numeric_limits<int>::max();
+                lastLineBottom = std::numeric_limits<int>::min();
+                lineTop = currentRectTop;
+                lineBottom = currentRectBottom;
+            } else if (!hasFlippedWritingMode) {
                 lastLineTop = lineTop;
                 if (currentRectBottom >= lastLineTop) {
                     lastLineBottom = lineBottom;
@@ -2808,6 +2843,7 @@ auto RenderObject::collectSelectionGeometriesInternal(const SimpleRange& range) 
         geometries[i] = selectionRect;
     }
 
+    bool visuallyContiguousBidiTextSelection = usesVisuallyContiguousBidiTextSelection(range);
     for (size_t j = 1; j < numberOfGeometries; ++j) {
         if (geometries[j].lineNumber() != geometries[j - 1].lineNumber())
             continue;
@@ -2818,7 +2854,7 @@ auto RenderObject::collectSelectionGeometriesInternal(const SimpleRange& range) 
         if (previousRectMayNotReachRightEdge)
             continue;
         int adjustedWidth = geometries[j].logicalLeft() - previousRect.logicalLeft();
-        if (adjustedWidth > previousRect.logicalWidth())
+        if (adjustedWidth > previousRect.logicalWidth() && (!visuallyContiguousBidiTextSelection || previousRect.direction() == geometries[j].direction()))
             previousRect.setLogicalWidth(adjustedWidth);
     }
 
@@ -2871,6 +2907,24 @@ static bool coalesceSelectionGeometryWithAdjacentQuadsIfPossible(SelectionGeomet
     return true;
 }
 
+static bool canCoalesceGeometries(const SimpleRange& range, const SelectionGeometry& first, const SelectionGeometry& second)
+{
+    auto firstRect = first.rect();
+    auto secondRect = second.rect();
+    if (firstRect.intersects(secondRect))
+        return true;
+
+    if (first.logicalTop() == second.logicalTop() && first.isHorizontal() == second.isHorizontal() && usesVisuallyContiguousBidiTextSelection(range)) {
+        if (first.logicalLeftExtent() == second.logicalLeft())
+            return true;
+
+        if (second.logicalLeftExtent() == first.logicalLeft())
+            return true;
+    }
+
+    return false;
+}
+
 Vector<SelectionGeometry> RenderObject::collectSelectionGeometries(const SimpleRange& range)
 {
     auto [geometries, maxLineNumber, hasBidirectionalText] = RenderObject::collectSelectionGeometriesInternal(range);
@@ -2894,9 +2948,9 @@ Vector<SelectionGeometry> RenderObject::collectSelectionGeometries(const SimpleR
         if (currentGeometry.lineNumber() == 1) {
             ASSERT(interiorUnionRect.isEmpty());
             if (!coalescedGeometries.isEmpty()) {
-                auto& previousRect = coalescedGeometries.last();
-                if (previousRect.rect().intersects(currentGeometry.rect())) {
-                    previousRect = coalesceSelectionGeometries(currentGeometry, previousRect);
+                auto& previousGeometry = coalescedGeometries.last();
+                if (canCoalesceGeometries(range, previousGeometry, currentGeometry)) {
+                    previousGeometry = coalesceSelectionGeometries(currentGeometry, previousGeometry);
                     continue;
                 }
             }
@@ -2906,11 +2960,12 @@ Vector<SelectionGeometry> RenderObject::collectSelectionGeometries(const SimpleR
             if (interiorUnionRect.isEmpty()) {
                 // Start collecting interior rects.
                 interiorUnionRect = currentGeometry.rect();
-            } else if (interiorUnionRect.intersects(currentGeometry.rect())
-                || interiorUnionRect.maxX() == currentGeometry.rect().x()
-                || interiorUnionRect.maxY() == currentGeometry.rect().y()
-                || interiorUnionRect.x() == currentGeometry.rect().maxX()
-                || interiorUnionRect.y() == currentGeometry.rect().maxY()) {
+            } else if (!currentGeometry.separateFromPreviousLine()
+                && (interiorUnionRect.intersects(currentGeometry.rect())
+                    || interiorUnionRect.maxX() == currentGeometry.rect().x()
+                    || interiorUnionRect.maxY() == currentGeometry.rect().y()
+                    || interiorUnionRect.x() == currentGeometry.rect().maxX()
+                    || interiorUnionRect.y() == currentGeometry.rect().maxY())) {
                 // Only union the lines that are attached.
                 // For iBooks, the interior lines may cross multiple horizontal pages.
                 interiorUnionRect.unite(currentGeometry.rect());
@@ -2927,7 +2982,7 @@ Vector<SelectionGeometry> RenderObject::collectSelectionGeometries(const SimpleR
 
             ASSERT(!coalescedGeometries.isEmpty());
             auto& previousGeometry = coalescedGeometries.last();
-            if (previousGeometry.logicalTop() == currentGeometry.logicalTop() && previousGeometry.rect().intersects(currentGeometry.rect())) {
+            if (previousGeometry.logicalTop() == currentGeometry.logicalTop() && canCoalesceGeometries(range, previousGeometry, currentGeometry)) {
                 // previousRect is also on the last line, and intersects the current one.
                 previousGeometry = coalesceSelectionGeometries(currentGeometry, previousGeometry);
                 continue;
@@ -2938,8 +2993,9 @@ Vector<SelectionGeometry> RenderObject::collectSelectionGeometries(const SimpleR
     }
 
     if (hasBidirectionalText) {
-        if (makeBidiSelectionVisuallyContiguousIfNeeded(range, coalescedGeometries) == TextDirectionsNeedAdjustment::Yes)
-            adjustTextDirectionForCoalescedGeometries(range, coalescedGeometries);
+        auto directions = computeSelectionEndpointDirections(range);
+        makeBidiSelectionVisuallyContiguousIfNeeded(directions, range, coalescedGeometries);
+        adjustTextDirectionForCoalescedGeometries(directions, range, coalescedGeometries);
     }
 
     return coalescedGeometries;

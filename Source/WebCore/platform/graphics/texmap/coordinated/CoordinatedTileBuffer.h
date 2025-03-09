@@ -38,12 +38,10 @@
 #include <wtf/ThreadSafeRefCounted.h>
 
 #if USE(SKIA)
-IGNORE_CLANG_WARNINGS_BEGIN("cast-align")
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/core/SkCanvas.h>
 #include <skia/core/SkSurface.h>
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-IGNORE_CLANG_WARNINGS_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #endif
 
 namespace WebCore {
@@ -68,7 +66,7 @@ public:
 
     virtual void beginPainting();
     virtual void completePainting();
-    virtual void waitUntilPaintingComplete();
+    void waitUntilPaintingComplete();
 
 #if USE(SKIA)
     SkCanvas* canvas();
@@ -148,6 +146,7 @@ public:
     WEBCORE_EXPORT virtual ~CoordinatedAcceleratedTileBuffer();
 
     BitmapTexture& texture() const { return m_texture.get(); }
+    void serverWait();
 
 private:
     CoordinatedAcceleratedTileBuffer(Ref<BitmapTexture>&&, Flags);
@@ -157,7 +156,6 @@ private:
 
     bool tryEnsureSurface() final;
     void completePainting() final;
-    void waitUntilPaintingComplete() final;
 
     Ref<BitmapTexture> m_texture;
     std::unique_ptr<GLFence> m_fence;

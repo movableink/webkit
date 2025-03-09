@@ -32,14 +32,16 @@
 #include "BeforeTextInsertedEvent.h"
 #include "BreakBlockquoteCommand.h"
 #include "CSSComputedStyleDeclaration.h"
+#include "CSSPrimitiveValueMappings.h"
+#include "CSSSerializationContext.h"
 #include "CSSStyleDeclaration.h"
 #include "CommonAtomStrings.h"
 #include "DOMWrapperWorld.h"
 #include "DataTransfer.h"
 #include "Document.h"
 #include "DocumentFragment.h"
-#include "Editing.h"
 #include "EditingBehavior.h"
+#include "EditingInlines.h"
 #include "ElementIteratorInlines.h"
 #include "EventNames.h"
 #include "FilterOperations.h"
@@ -71,6 +73,7 @@
 #include "Text.h"
 #include "TextIterator.h"
 #include "TypedElementDescendantIteratorInlines.h"
+#include "UnicodeHelpers.h"
 #include "VisibleUnits.h"
 #include "markup.h"
 #include <wtf/NeverDestroyed.h>
@@ -184,7 +187,7 @@ ReplacementFragment::ReplacementFragment(RefPtr<DocumentFragment>&& inputFragmen
         return;
 
     RefPtr shadowHost { editableRoot->shadowHost() };
-    if (!editableRoot->attributeEventListener(eventNames().webkitBeforeTextInsertedEvent, mainThreadNormalWorld())
+    if (!editableRoot->attributeEventListener(eventNames().webkitBeforeTextInsertedEvent, mainThreadNormalWorldSingleton())
         && !(shadowHost && shadowHost->renderer() && shadowHost->renderer()->isRenderTextControl())
         && editableRoot->hasRichlyEditableStyle()) {
         removeInterchangeNodes(fragment.get());
@@ -192,15 +195,14 @@ ReplacementFragment::ReplacementFragment(RefPtr<DocumentFragment>&& inputFragmen
     }
 
     Ref page = createPageForSanitizingWebContent();
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
-    if (!localMainFrame)
+    RefPtr stagingDocument = page->localTopDocument();
+    if (!stagingDocument)
         return;
 
-    RefPtr stagingDocument { localMainFrame->document() };
     ASSERT(stagingDocument->body());
 
     ComputedStyleExtractor computedStyleOfEditableRoot(editableRoot.get());
-    stagingDocument->body()->setAttributeWithoutSynchronization(styleAttr, computedStyleOfEditableRoot.copyProperties()->asTextAtom());
+    stagingDocument->body()->setAttributeWithoutSynchronization(styleAttr, computedStyleOfEditableRoot.copyProperties()->asTextAtom(CSS::defaultSerializationContext()));
 
     RefPtr holder = insertFragmentForTestRendering(stagingDocument->body());
     if (!holder) {
@@ -254,7 +256,7 @@ void ReplacementFragment::removeContentsWithSideEffects()
             continue;
         }
         if (element->hasAttributes()) {
-            for (auto& attribute : element->attributesIterator()) {
+            for (auto& attribute : element->attributes()) {
                 if (element->isEventHandlerAttribute(attribute) || element->attributeContainsJavaScriptURL(attribute))
                     attributesToRemove.append({ element.copyRef(), attribute.name() });
             }
@@ -660,7 +662,7 @@ void ReplaceSelectionCommand::inverseTransformColor(InsertedNodes& insertedNodes
         if (editingStyle.ptr() == transformedStyle.ptr())
             continue;
 
-        setNodeAttribute(*element, styleAttr, transformedStyle->style()->asTextAtom());
+        setNodeAttribute(*element, styleAttr, transformedStyle->style()->asTextAtom(CSS::defaultSerializationContext()));
     }
 }
 
@@ -721,7 +723,7 @@ void ReplaceSelectionCommand::removeRedundantStylesAndKeepStyleSpanInline(Insert
             }
             removeNodeAttribute(*element, styleAttr);
         } else if (newInlineStyle->style()->propertyCount() != inlineStyle->propertyCount())
-            setNodeAttribute(*element, styleAttr, newInlineStyle->style()->asTextAtom());
+            setNodeAttribute(*element, styleAttr, newInlineStyle->style()->asTextAtom(CSS::defaultSerializationContext()));
 
         // FIXME: Tolerate differences in id, class, and style attributes.
         if (element->parentNode() && isNonTableCellHTMLBlockElement(element.get()) && elementIfEquivalent(*element, *element->parentNode())
@@ -965,7 +967,7 @@ static bool handleStyleSpansBeforeInsertion(ReplacementFragment& fragment, const
 
     Ref wrappingStyleSpan = downcast<HTMLElement>(topNode.releaseNonNull());
     auto styleAtInsertionPos = EditingStyle::create(insertionPos.parentAnchoredEquivalent());
-    String styleText = styleAtInsertionPos->style()->asText();
+    auto styleText = styleAtInsertionPos->style()->asText(CSS::defaultSerializationContext());
 
     // FIXME: This string comparison is a naive way of comparing two styles.
     // We should be taking the diff and check that the diff is empty.
@@ -1030,7 +1032,7 @@ void ReplaceSelectionCommand::handleStyleSpans(InsertedNodes& insertedNodes)
         insertedNodes.willRemoveNodePreservingChildren(wrappingStyleSpan.get());
         removeNodePreservingChildren(*wrappingStyleSpan);
     } else
-        setNodeAttribute(*wrappingStyleSpan, styleAttr, style->style()->asTextAtom());
+        setNodeAttribute(*wrappingStyleSpan, styleAttr, style->style()->asTextAtom(CSS::defaultSerializationContext()));
 }
 
 void ReplaceSelectionCommand::mergeEndIfNeeded()
@@ -1510,7 +1512,10 @@ void ReplaceSelectionCommand::doApply()
     // no style matching is necessary.
     if (plainTextFragment)
         m_matchStyle = false;
-        
+
+    if (selectionStartWasStartOfParagraph && selectionEndWasEndOfParagraph)
+        updateDirectionForStartOfInsertedContentIfNeeded();
+
     completeHTMLReplacement(lastPositionToSelect);
 }
 
@@ -1710,9 +1715,9 @@ void ReplaceSelectionCommand::completeHTMLReplacement(const Position &lastPositi
         m_visibleSelectionForInsertedText = VisibleSelection(start, end);
 
     if (m_selectReplacement)
-        setEndingSelection(VisibleSelection(start, end, VisibleSelection::defaultAffinity, endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(start, end, VisibleSelection::defaultAffinity, endingSelection().directionality()));
     else
-        setEndingSelection(VisibleSelection(end, VisibleSelection::defaultAffinity, endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(end, VisibleSelection::defaultAffinity, endingSelection().directionality()));
 }
 
 void ReplaceSelectionCommand::mergeTextNodesAroundPosition(Position& position, Position& positionOnlyToBeUpdated)
@@ -1898,6 +1903,31 @@ bool ReplaceSelectionCommand::performTrivialReplace(const ReplacementFragment& f
 std::optional<SimpleRange> ReplaceSelectionCommand::insertedContentRange() const
 {
     return makeSimpleRange(m_startOfInsertedContent, m_endOfInsertedContent);
+}
+
+void ReplaceSelectionCommand::updateDirectionForStartOfInsertedContentIfNeeded()
+{
+    if (!document().settings().bidiContentAwarePasteEnabled())
+        return;
+
+    auto editAction = editingAction();
+    if (editAction != EditAction::Paste && editAction != EditAction::InsertFromDrop)
+        return;
+
+    VisiblePosition visibleStartOfInsertedContent { m_startOfInsertedContent };
+    auto firstParagraphRange = makeSimpleRange({ visibleStartOfInsertedContent, endOfParagraph(visibleStartOfInsertedContent) });
+    if (!firstParagraphRange)
+        return;
+
+    auto direction = baseTextDirection(plainText(*firstParagraphRange));
+    if (!direction)
+        return;
+
+    if (direction == directionOfEnclosingBlock(m_startOfInsertedContent))
+        return;
+
+    Ref style = EditingStyle::create(CSSPropertyDirection, toCSSValueID(*direction));
+    applyStyle(style.ptr(), m_startOfInsertedContent, m_startOfInsertedContent, EditAction::SetBlockWritingDirection, ApplyStylePropertyLevel::ForceBlock);
 }
 
 } // namespace WebCore

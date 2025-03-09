@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Eric Seidel <eric@webkit.org>
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -69,8 +69,8 @@
 
 namespace WebCore {
 
-SVGImage::SVGImage(ImageObserver& observer)
-    : Image(&observer)
+SVGImage::SVGImage(ImageObserver* observer)
+    : Image(observer)
     , m_startAnimationTimer(*this, &SVGImage::startAnimationTimerFired)
 {
 }
@@ -89,7 +89,7 @@ RefPtr<SVGSVGElement> SVGImage::rootElement() const
     if (!m_page)
         return nullptr;
 
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    RefPtr localMainFrame = m_page->localMainFrame();
     if (!localMainFrame)
         return nullptr;
 
@@ -124,9 +124,6 @@ bool SVGImage::renderingTaintsOrigin() const
 
 void SVGImage::setContainerSize(const FloatSize& size)
 {
-    if (!usesContainerSize())
-        return;
-
     RefPtr rootElement = this->rootElement();
     if (!rootElement || !rootElement->renderer() || !rootElement->renderer()->isRenderOrLegacyRenderSVGRoot())
         return;
@@ -188,7 +185,6 @@ ImageDrawResult SVGImage::drawForContainer(GraphicsContext& context, const Float
         return ImageDrawResult::DidNothing;
 
     RefPtr observer = imageObserver();
-    ASSERT(observer);
 
     // Temporarily reset image observer, we don't want to receive any changeInRect() calls due to this relayout.
     setImageObserver(nullptr);
@@ -214,6 +210,11 @@ ImageDrawResult SVGImage::drawForContainer(GraphicsContext& context, const Float
 
 RefPtr<NativeImage> SVGImage::nativeImage(const DestinationColorSpace& colorSpace)
 {
+    return nativeImage(size(), colorSpace);
+}
+
+RefPtr<NativeImage> SVGImage::nativeImage(const FloatSize& size, const DestinationColorSpace& colorSpace)
+{
     if (!m_page)
         return nullptr;
 
@@ -223,13 +224,13 @@ RefPtr<NativeImage> SVGImage::nativeImage(const DestinationColorSpace& colorSpac
     if (CheckedPtr contentRenderer = embeddedContentBox())
         hostWindow = contentRenderer->hostWindow();
 
-    RefPtr imageBuffer = ImageBuffer::create(size(), renderingMode, RenderingPurpose::DOM, 1, colorSpace, ImageBufferPixelFormat::BGRA8, hostWindow);
+    RefPtr imageBuffer = ImageBuffer::create(size, renderingMode, RenderingPurpose::DOM, 1, colorSpace, ImageBufferPixelFormat::BGRA8, hostWindow);
     if (!imageBuffer)
         return nullptr;
 
     RefPtr observer = imageObserver();
     setImageObserver(nullptr);
-    setContainerSize(size());
+    setContainerSize(size);
 
     imageBuffer->context().drawImage(*this, FloatPoint(0, 0));
 
@@ -338,7 +339,7 @@ LocalFrameView* SVGImage::frameView() const
     if (!m_page)
         return nullptr;
 
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    RefPtr localMainFrame = m_page->localMainFrame();
     if (!localMainFrame)
         return nullptr;
 
@@ -436,13 +437,13 @@ bool SVGImage::isAnimating() const
 
 void SVGImage::reportApproximateMemoryCost() const
 {
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
-    if (!localMainFrame)
+    RefPtr localTopDocument = m_page->localTopDocument();
+    if (!localTopDocument)
         return;
-    RefPtr document = localMainFrame->document();
+
     size_t decodedImageMemoryCost = 0;
 
-    for (RefPtr<Node> node = document; node; node = NodeTraversal::next(*node))
+    for (RefPtr<Node> node = localTopDocument; node; node = NodeTraversal::next(*node))
         decodedImageMemoryCost += node->approximateMemoryCost();
 
     JSC::VM& vm = commonVM();
@@ -476,10 +477,15 @@ EncodedDataStatus SVGImage::dataChanged(bool allDataReceived)
         m_page->settings().setAcceleratedCompositingEnabled(false);
         m_page->settings().setShouldAllowUserInstalledFonts(false);
 
-        if (RefPtr observer = imageObserver())
-            m_page->settings().setLayerBasedSVGEngineEnabled(observer->layerBasedSVGEngineEnabled());
+        if (RefPtr observer = imageObserver()) {
+            if (RefPtr parentSettings = observer->settings()) {
+                m_page->settings().setLayerBasedSVGEngineEnabled(parentSettings->layerBasedSVGEngineEnabled());
+                m_page->settings().fontGenericFamilies() = parentSettings->fontGenericFamilies();
+                m_page->settings().setCSSDPropertyEnabled(parentSettings->cssDPropertyEnabled());
+            }
+        }
 
-        RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+        RefPtr localMainFrame = m_page->localMainFrame();
         if (!localMainFrame)
             return EncodedDataStatus::Unknown;
 
@@ -527,10 +533,20 @@ bool isInSVGImage(const Element* element)
     return page->chrome().client().isSVGImageChromeClient();
 }
 
+RefPtr<SVGImage> SVGImage::tryCreateFromData(std::span<const uint8_t> data)
+{
+    Ref svgImage = SVGImage::create(nullptr);
+    Ref buffer = FragmentedSharedBuffer::create(data);
+    svgImage->setData(buffer.ptr(), true);
+    if (!svgImage->rootElement())
+        return nullptr;
+    return svgImage;
+}
+
 bool SVGImage::isDataDecodable(const Settings& settings, std::span<const uint8_t> data)
 {
-    auto document = Document::create(settings, aboutBlankURL());
-    auto domParser = DOMParser::create(document.get());
+    Ref document = Document::create(settings, aboutBlankURL());
+    Ref domParser = DOMParser::create(document.get());
     auto parseResult = domParser->parseFromString(String::fromUTF8(data), imageSVGContentTypeAtom());
     if (parseResult.hasException())
         return false;

@@ -459,9 +459,27 @@ void WKWebsiteDataStoreSetResourceLoadStatisticsShouldDowngradeReferrerForTestin
     });
 }
 
-void WKWebsiteDataStoreSetResourceLoadStatisticsShouldBlockThirdPartyCookiesForTesting(WKWebsiteDataStoreRef dataStoreRef, bool enabled, bool onlyOnSitesWithoutUserInteraction, void* context, WKWebsiteDataStoreSetResourceLoadStatisticsShouldBlockThirdPartyCookiesForTestingFunction completionHandler)
+void WKWebsiteDataStoreSetResourceLoadStatisticsShouldBlockThirdPartyCookiesForTesting(WKWebsiteDataStoreRef dataStoreRef, bool enabled, WKThirdPartyCookieBlockingPolicy thirdPartyCookieBlockingPolicy, void* context, WKWebsiteDataStoreSetResourceLoadStatisticsShouldBlockThirdPartyCookiesForTestingFunction completionHandler)
 {
-    WebKit::toImpl(dataStoreRef)->setResourceLoadStatisticsShouldBlockThirdPartyCookiesForTesting(enabled, onlyOnSitesWithoutUserInteraction, [context, completionHandler] {
+    WebCore::ThirdPartyCookieBlockingMode blockingMode = WebCore::ThirdPartyCookieBlockingMode::OnlyAccordingToPerDomainPolicy;
+    if (enabled) {
+        switch (thirdPartyCookieBlockingPolicy) {
+        case kWKThirdPartyCookieBlockingPolicyAllOnlyOnSitesWithoutUserInteraction:
+            blockingMode = WebCore::ThirdPartyCookieBlockingMode::AllOnSitesWithoutUserInteraction;
+            break;
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+        case kWKThirdPartyCookieBlockingPolicyAllExceptPartitioned:
+            blockingMode = WebCore::ThirdPartyCookieBlockingMode::AllExceptPartitioned;
+            break;
+#endif
+        default:
+            blockingMode = WebCore::ThirdPartyCookieBlockingMode::All;
+            break;
+        }
+
+    }
+
+    WebKit::toImpl(dataStoreRef)->setResourceLoadStatisticsShouldBlockThirdPartyCookiesForTesting(enabled, blockingMode, [context, completionHandler] {
         completionHandler(context);
     });
 }
@@ -555,7 +573,7 @@ void WKWebsiteDataStoreStatisticsResetToConsistentState(WKWebsiteDataStoreRef da
     store.resetCacheMaxAgeCapForPrevalentResources([callbackAggregator] { });
     store.resetCrossSiteLoadsWithLinkDecorationForTesting([callbackAggregator] { });
     store.setResourceLoadStatisticsShouldDowngradeReferrerForTesting(true, [callbackAggregator] { });
-    store.setResourceLoadStatisticsShouldBlockThirdPartyCookiesForTesting(false, false, [callbackAggregator] { });
+    store.setResourceLoadStatisticsShouldBlockThirdPartyCookiesForTesting(false, WebCore::ThirdPartyCookieBlockingMode::OnlyAccordingToPerDomainPolicy, [callbackAggregator] { });
     store.setResourceLoadStatisticsShouldEnbleSameSiteStrictEnforcementForTesting(true, [callbackAggregator] { });
     store.setResourceLoadStatisticsFirstPartyWebsiteDataRemovalModeForTesting(false, [callbackAggregator] { });
     store.resetParametersToDefaultValues([callbackAggregator] { });
@@ -763,4 +781,18 @@ void WKWebsiteDataStoreGetAllStorageAccessEntries(WKWebsiteDataStoreRef dataStor
 
         callback(context, domainArrayRef);
     });
+}
+
+void WKWebsiteDataStoreResetResourceMonitorThrottler(WKWebsiteDataStoreRef dataStoreRef, void* context, KWebsiteDataStoreResetResourceMonitorThrottler callback)
+{
+#if ENABLE(CONTENT_EXTENSIONS)
+    WebKit::toImpl(dataStoreRef)->resetResourceMonitorThrottlerForTesting([context, callback] () {
+        if (callback)
+            callback(context);
+    });
+#else
+    UNUSED_PARAM(dataStoreRef);
+    if (callback)
+        callback(context);
+#endif
 }

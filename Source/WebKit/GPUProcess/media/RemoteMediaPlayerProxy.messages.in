@@ -23,12 +23,17 @@
 
 #if ENABLE(GPU_PROCESS) && ENABLE(VIDEO)
 
+[
+    DispatchedFrom=WebContent,
+    DispatchedTo=GPU,
+    EnabledBy=UseGPUProcessForMediaEnabled
+]
 messages -> RemoteMediaPlayerProxy {
-    PrepareForPlayback(bool privateMode, enum:uint8_t WebCore::MediaPlayerPreload preload, bool preservesPitch, enum:uint8_t WebCore::MediaPlayerPitchCorrectionAlgorithm pitchCorrectionAlgorithm, bool prepareToPlay, bool prepareForRendering, WebCore::IntSize presentationSize, float videoContentScale, enum:uint8_t WebCore::DynamicRangeMode mode)
+    PrepareForPlayback(bool privateMode, enum:uint8_t WebCore::MediaPlayerPreload preload, bool preservesPitch, enum:uint8_t WebCore::MediaPlayerPitchCorrectionAlgorithm pitchCorrectionAlgorithm, bool prepareToPlay, bool prepareForRendering, WebCore::IntSize presentationSize, float videoContentScale, enum:uint8_t WebCore::DynamicRangeMode mode, WebCore::PlatformDynamicRangeLimit platformDynamicRangeLimit)
 
-    Load(URL url, std::optional<WebKit::SandboxExtensionHandle> sandboxExtension, WebCore::ContentType contentType, String keySystem, bool requiresRemotePlayback) -> (struct WebKit::RemoteMediaPlayerConfiguration playerConfiguration)
+    Load(URL url, std::optional<WebKit::SandboxExtensionHandle> sandboxExtension, struct WebCore::MediaPlayerLoadOptions options) -> (struct WebKit::RemoteMediaPlayerConfiguration playerConfiguration)
 #if ENABLE(MEDIA_SOURCE)
-    [EnabledBy=MediaSourceEnabled || ManagedMediaSourceEnabled] LoadMediaSource(URL url, WebCore::ContentType contentType, bool webMParserEnabled, WebKit::RemoteMediaSourceIdentifier mediaSourceIdentifier) -> (struct WebKit::RemoteMediaPlayerConfiguration playerConfiguration)
+    [EnabledBy=MediaSourceEnabled || ManagedMediaSourceEnabled] LoadMediaSource(URL url, struct WebCore::MediaPlayerLoadOptions options, WebKit::RemoteMediaSourceIdentifier mediaSourceIdentifier) -> (struct WebKit::RemoteMediaPlayerConfiguration playerConfiguration)
 #endif
     CancelLoad()
 
@@ -37,6 +42,7 @@ messages -> RemoteMediaPlayerProxy {
     Play()
     Pause()
 
+    SetVolumeLocked(bool volumeLocked)
     SetVolume(double volume)
     SetMuted(bool muted)
 
@@ -56,10 +62,10 @@ messages -> RemoteMediaPlayerProxy {
     DidLoadingProgress() -> (bool flag)
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
-    UpdateVideoFullscreenInlineImage()
-    SetVideoFullscreenMode(WebCore::MediaPlayer::VideoFullscreenMode mode)
-    SetVideoFullscreenGravity(enum:uint8_t WebCore::MediaPlayerVideoGravity gravity)
-    VideoFullscreenStandbyChanged(bool standby)
+    [EnabledBy=VideoPresentationManagerEnabled || VideoPresentationModeAPIEnabled] UpdateVideoFullscreenInlineImage()
+    [EnabledBy=VideoPresentationManagerEnabled || VideoPresentationModeAPIEnabled] SetVideoFullscreenMode(WebCore::MediaPlayer::VideoFullscreenMode mode)
+    [EnabledBy=VideoPresentationManagerEnabled || VideoPresentationModeAPIEnabled] SetVideoFullscreenGravity(enum:uint8_t WebCore::MediaPlayerVideoGravity gravity)
+    [EnabledBy=VideoPresentationManagerEnabled || VideoPresentationModeAPIEnabled] VideoFullscreenStandbyChanged(bool standby)
 #endif
 
     SetBufferingPolicy(enum:uint8_t WebCore::MediaPlayerBufferingPolicy policy)
@@ -111,10 +117,12 @@ messages -> RemoteMediaPlayerProxy {
     SetVideoPlaybackMetricsUpdateInterval(double interval)
 
     SetPreferredDynamicRangeMode(enum:uint8_t WebCore::DynamicRangeMode mode)
+    SetPlatformDynamicRangeLimit(WebCore::PlatformDynamicRangeLimit platformDynamicRangeLimit)
 
 #if PLATFORM(IOS_FAMILY)
     ErrorLog() -> (String errorLog) Synchronous
     AccessLog() -> (String accessLog) Synchronous
+    SetSceneIdentifier(String sceneIdentifier)
 #endif
 
 #if ENABLE(WEB_AUDIO)
@@ -147,8 +155,13 @@ messages -> RemoteMediaPlayerProxy {
     SetSpatialTrackingLabel(String spatialTrackingLabel);
 #endif
 
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    SetPrefersSpatialAudioExperience(bool value)
+#endif
+
     AudioOutputDeviceChanged(String deviceId)
     IsInFullscreenOrPictureInPictureChanged(bool value)
+    SetSoundStageSize(enum:uint8_t WebCore::MediaPlayerSoundStageSize value)
 }
 
 #endif

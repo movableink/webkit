@@ -1,0 +1,7 @@
+Input 1 Input 2 A F Input 4
+
+PASS Label for attribute targets a custom element using shadowrootreferencetarget
+PASS Label for attribute targets a custom element using shadowrootreferencetarget inside multiple layers of shadow roots
+PASS Multiple labels targeting a custom element using shadowrootreferencetarget inside multiple layers of shadow roots
+PASS Setting .htmlFor property to target a custom element using shadowrootreferencetarget
+

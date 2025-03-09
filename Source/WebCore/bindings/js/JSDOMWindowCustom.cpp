@@ -32,7 +32,6 @@
 #include "JSDOMConvertNumbers.h"
 #include "JSDOMConvertStrings.h"
 #include "JSDOMGlobalObjectInlines.h"
-#include "JSDOMMicrotask.h"
 #include "JSDatabase.h"
 #include "JSDatabaseCallback.h"
 #include "JSEvent.h"
@@ -50,6 +49,7 @@
 #include "WebCoreJSClientData.h"
 #include "WebCoreOpaqueRootInlines.h"
 #include <JavaScriptCore/BuiltinNames.h>
+#include <JavaScriptCore/GlobalObjectMethodTable.h>
 #include <JavaScriptCore/HeapAnalyzer.h>
 #include <JavaScriptCore/InternalFunction.h>
 #include <JavaScriptCore/JSCInlines.h>
@@ -493,7 +493,7 @@ public:
 private:
     JSGlobalObject& m_globalObject;
     CallFrame& m_callFrame;
-    RefPtr<LocalFrame> m_frame;
+    WeakPtr<LocalFrame> m_frame;
 };
 
 inline void DialogHandler::dialogCreated(DOMWindow& dialog)
@@ -503,6 +503,7 @@ inline void DialogHandler::dialogCreated(DOMWindow& dialog)
         return;
     VM& vm = m_globalObject.vm();
     m_frame = localDOMWindow->frame();
+    RefPtr frame = m_frame.get();
 
     // FIXME: This looks like a leak between the normal world and an isolated
     //        world if dialogArguments comes from an isolated world.
@@ -514,6 +515,9 @@ inline void DialogHandler::dialogCreated(DOMWindow& dialog)
 inline JSValue DialogHandler::returnValue() const
 {
     VM& vm = m_globalObject.vm();
+    RefPtr frame = m_frame.get();
+    if (!frame)
+        return jsUndefined();
     auto* globalObject = toJSDOMWindow(m_frame.get(), normalWorld(vm));
     if (!globalObject)
         return jsUndefined();
@@ -602,7 +606,7 @@ JSValue JSDOMWindow::queueMicrotask(JSGlobalObject& lexicalGlobalObject, CallFra
         return JSValue::decode(throwArgumentMustBeFunctionError(lexicalGlobalObject, scope, 0, "callback"_s, "Window"_s, "queueMicrotask"_s));
 
     scope.release();
-    Base::queueMicrotask(createJSDOMMicrotask(vm, asObject(functionValue)));
+    globalObjectMethodTable()->queueMicrotaskToEventLoop(*this, JSC::QueuedTask { nullptr, this, functionValue, { }, { }, { }, { } });
     return jsUndefined();
 }
 
@@ -719,7 +723,7 @@ JSDOMWindow& mainWorldGlobalObject(LocalFrame& frame)
     // FIXME: What guarantees the result of jsWindowProxy() is non-null?
     // FIXME: What guarantees the result of window() is non-null?
     // FIXME: What guarantees the result of window() a JSDOMWindow?
-    return *jsCast<JSDOMWindow*>(frame.windowProxy().jsWindowProxy(mainThreadNormalWorld())->window());
+    return *jsCast<JSDOMWindow*>(frame.windowProxy().jsWindowProxy(mainThreadNormalWorldSingleton())->window());
 }
 
 } // namespace WebCore

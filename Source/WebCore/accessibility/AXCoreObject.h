@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "AXTextRun.h"
 #include "CharacterRange.h"
 #include "ColorConversion.h"
 #include "HTMLTextFormControlElement.h"
@@ -105,6 +106,8 @@ enum class ClickHandlerFilter : bool {
     ExcludeBody,
     IncludeBody,
 };
+
+enum class PreSortedObjectType : bool { LiveRegion, WebArea };
 
 enum class DateComponentsType : uint8_t;
 
@@ -742,6 +745,7 @@ struct LineDecorationStyle {
         , hasLinethrough(hasLinethrough)
         , linethroughColor(linethroughColor)
     { }
+    bool operator==(const LineDecorationStyle&) const = default;
 
     String debugDescription() const;
 };
@@ -757,6 +761,8 @@ struct AttributedStringStyle {
     bool hasTextShadow { false };
     LineDecorationStyle lineStyle;
 
+    bool operator==(const AttributedStringStyle&) const = default;
+
     bool hasUnderline() const { return lineStyle.hasUnderline; }
     Color underlineColor() const { return lineStyle.underlineColor; }
     bool hasLinethrough() const { return lineStyle.hasLinethrough; }
@@ -768,6 +774,14 @@ enum class AXDebugStringOption {
     IsRemoteFrame,
     RelativeFrame,
     RemoteFrameOffset
+};
+
+enum class TextEmissionBehavior : uint8_t {
+    None,
+    Space,
+    Tab,
+    Newline,
+    DoubleNewline
 };
 
 class AXCoreObject : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<AXCoreObject> {
@@ -804,6 +818,7 @@ public:
     virtual bool isSecureField() const = 0;
     virtual bool isNativeTextControl() const = 0;
     bool isWebArea() const { return roleValue() == AccessibilityRole::WebArea; }
+    bool isRootWebArea() const;
     bool isCheckbox() const { return roleValue() == AccessibilityRole::Checkbox; }
     bool isRadioButton() const { return roleValue() == AccessibilityRole::RadioButton; }
     bool isListBox() const { return roleValue() == AccessibilityRole::ListBox; }
@@ -825,6 +840,7 @@ public:
     // reader announces "link", it doesn't need to announce "clickable" or "pressable" — that
     // is implicit in the concept of a link.
     bool isImplicitlyInteractive() const;
+    bool isReplacedElement() const;
 
     // Table support.
     virtual bool isTable() const = 0;
@@ -866,9 +882,9 @@ public:
     virtual int axRowIndex() const = 0;
 
     // Table column support.
-    virtual bool isTableColumn() const = 0;
+    bool isTableColumn() const { return roleValue() == AccessibilityRole::Column; }
     virtual unsigned columnIndex() const = 0;
-    virtual AXCoreObject* columnHeader() = 0;
+    AXCoreObject* columnHeader();
 
     // Table row support.
     virtual bool isTableRow() const = 0;
@@ -882,6 +898,9 @@ public:
 
     virtual bool isFieldset() const = 0;
     bool isGroup() const;
+#if PLATFORM(MAC)
+    bool isEmptyGroup();
+#endif
 
     // Native spin buttons.
     bool isSpinButton() const { return roleValue() == AccessibilityRole::SpinButton; }
@@ -912,8 +931,6 @@ public:
 
     bool isButton() const;
     bool isMeter() const { return roleValue() == AccessibilityRole::Meter; }
-
-    virtual UncheckedKeyHashMap<String, AXEditingStyleValueVariant> resolvedEditingStyles() const = 0;
 
     bool isListItem() const { return roleValue() == AccessibilityRole::ListItem; }
     bool isCheckboxOrRadio() const { return isCheckbox() || isRadioButton(); }
@@ -964,9 +981,9 @@ public:
     virtual std::optional<SimpleRange> misspellingRange(const SimpleRange& start, AccessibilitySearchDirection) const = 0;
     virtual std::optional<SimpleRange> visibleCharacterRange() const = 0;
     virtual bool hasPlainText() const = 0;
-    virtual bool hasSameFont(const AXCoreObject&) const = 0;
-    virtual bool hasSameFontColor(const AXCoreObject&) const = 0;
-    virtual bool hasSameStyle(const AXCoreObject&) const = 0;
+    virtual bool hasSameFont(AXCoreObject&) = 0;
+    virtual bool hasSameFontColor(AXCoreObject&) = 0;
+    virtual bool hasSameStyle(AXCoreObject&) = 0;
     bool isStaticText() const { return roleValue() == AccessibilityRole::StaticText; }
     virtual bool hasUnderline() const = 0;
     virtual bool hasHighlighting() const = 0;
@@ -1009,6 +1026,7 @@ public:
     virtual String extendedDescription() const = 0;
 
     bool supportsActiveDescendant() const;
+    bool isActiveDescendantOfFocusedContainer() const;
     virtual bool supportsARIAOwns() const = 0;
 
     // Retrieval of related objects.
@@ -1036,6 +1054,7 @@ public:
     virtual AccessibilityChildrenVector radioButtonGroup() const = 0;
 
     bool hasPopup() const;
+    bool selfOrAncestorLinkHasPopup() const;
     virtual String popupValue() const = 0;
     virtual bool supportsHasPopup() const = 0;
     virtual bool pressedIsPresent() const = 0;
@@ -1043,6 +1062,7 @@ public:
     virtual bool supportsExpanded() const = 0;
     virtual bool supportsChecked() const = 0;
     virtual AccessibilitySortDirection sortDirection() const = 0;
+    AccessibilitySortDirection sortDirectionIncludingAncestors() const;
     virtual bool supportsRangeValue() const = 0;
     virtual String identifierAttribute() const = 0;
     virtual String linkRelValue() const = 0;
@@ -1080,6 +1100,7 @@ public:
 
     virtual AccessibilityChildrenVector findMatchingObjects(AccessibilitySearchCriteria&&) = 0;
     virtual bool isDescendantOfRole(AccessibilityRole) const = 0;
+    AXCoreObject* selfOrFirstTextDescendant();
 
     virtual bool hasDocumentRoleAncestor() const = 0;
     virtual bool hasWebApplicationAncestor() const = 0;
@@ -1109,9 +1130,13 @@ public:
     virtual String description() const = 0;
 
     virtual std::optional<String> textContent() const = 0;
+    virtual String textContentPrefixFromListMarker() const = 0;
 #if ENABLE(AX_THREAD_TEXT_APIS)
     virtual bool hasTextRuns() = 0;
-    virtual bool shouldEmitNewlinesBeforeAndAfterNode() const = 0;
+    virtual TextEmissionBehavior textEmissionBehavior() const = 0;
+    bool emitsNewline() const;
+    virtual AXTextRunLineID listMarkerLineID() const = 0;
+    virtual String listMarkerText() const = 0;
 #endif
 
     // Methods for determining accessibility text.
@@ -1123,6 +1148,7 @@ public:
     enum class SpellCheck : bool { No, Yes };
     virtual RetainPtr<NSAttributedString> attributedStringForTextMarkerRange(AXTextMarkerRange&&, SpellCheck) const = 0;
     virtual AttributedStringStyle stylesForAttributedString() const = 0;
+    virtual RetainPtr<CTFontRef> font() const = 0;
 #endif
 
 #if PLATFORM(MAC)
@@ -1138,7 +1164,7 @@ public:
     // Only if isColorWell()
     virtual SRGBA<uint8_t> colorValue() const = 0;
 
-    virtual AccessibilityRole roleValue() const = 0;
+    AccessibilityRole roleValue() const { return m_role; }
     // Non-localized string associated with the object role.
     virtual String rolePlatformString() const = 0;
     // Localized string that describes the object's role.
@@ -1174,7 +1200,6 @@ public:
 #if PLATFORM(MAC)
     virtual FloatRect primaryScreenRect() const = 0;
 #endif
-    virtual FloatRect unobscuredContentRect() const = 0;
     virtual IntSize size() const = 0;
     virtual IntPoint clickPoint() = 0;
     virtual Path elementPath() const = 0;
@@ -1244,9 +1269,15 @@ public:
     };
 #if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
     bool onlyAddsUnignoredChildren() const { return isTableColumn() || roleValue() == AccessibilityRole::TableHeaderContainer; }
-    virtual AccessibilityChildrenVector unignoredChildren(bool updateChildrenIfNeeded = true);
+    AccessibilityChildrenVector unignoredChildren(bool updateChildrenIfNeeded = true);
+    AXCoreObject* firstUnignoredChild();
 #else
     const AccessibilityChildrenVector& unignoredChildren(bool updateChildrenIfNeeded = true) { return children(updateChildrenIfNeeded); }
+    AXCoreObject* firstUnignoredChild()
+    {
+        const auto& children = this->children();
+        return children.size() ? children[0].ptr() : nullptr;
+    }
 #endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
 
     // When ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE) is true, this returns IDs of ignored children.
@@ -1254,17 +1285,23 @@ public:
     // is the default, we should rename this function to childrenIDsIncludingIgnored, as that is what all
     // callers will expect at the time this comment was written.
     Vector<AXID> childrenIDs(bool updateChildrenIfNeeded = true);
-    virtual void updateChildrenIfNecessary() = 0;
-    AXCoreObject* nextInPreOrder(bool updateChildrenIfNeeded, AXCoreObject& stayWithin);
+    AXCoreObject* nextInPreOrder(bool updateChildrenIfNeeded = true, AXCoreObject* stayWithin = nullptr);
     AXCoreObject* nextSiblingIncludingIgnored(bool updateChildrenIfNeeded) const;
-    // In some contexts, we may have already computed the unignored parent for `this`, so take that as an optional
-    // parameter. If nullptr, we will compute it inside the function.
     AXCoreObject* nextUnignoredSibling(bool updateChildrenIfNeeded, AXCoreObject* unignoredParent = nullptr) const;
-    AXCoreObject* nextUnignoredSiblingOrParent() const;
+    AXCoreObject* nextSiblingIncludingIgnoredOrParent() const;
+
+    AXCoreObject* previousInPreOrder(bool updateChildrenIfNeeded = true, AXCoreObject* stayWithin = nullptr);
+    AXCoreObject* previousSiblingIncludingIgnored(bool updateChildrenIfNeeded);
+    AXCoreObject* deepestLastChildIncludingIgnored(bool updateChildrenIfNeeded);
+
     virtual void detachFromParent() = 0;
     virtual bool isDetachedFromParent() = 0;
 
-    virtual std::optional<AccessibilityChildrenVector> selectedChildren() = 0;
+    AccessibilityChildrenVector listboxSelectedChildren();
+    AccessibilityChildrenVector selectedRows();
+    AccessibilityChildrenVector selectedListItems();
+    bool canHaveSelectedChildren() const;
+    AccessibilityChildrenVector selectedChildren();
     virtual void setSelectedChildren(const AccessibilityChildrenVector&) = 0;
     virtual AccessibilityChildrenVector visibleChildren() = 0;
     AccessibilityChildrenVector tabChildren();
@@ -1289,7 +1326,7 @@ public:
     virtual AXTextMarkerRange textMarkerRangeForNSRange(const NSRange&) const = 0;
 #endif
 #if PLATFORM(MAC)
-    virtual AXTextMarkerRange selectedTextMarkerRange() = 0;
+    virtual AXTextMarkerRange selectedTextMarkerRange() const = 0;
 #endif
 
     virtual String stringForRange(const SimpleRange&) const = 0;
@@ -1324,15 +1361,19 @@ public:
 
     // Used by an ARIA tree to get all its rows.
     // FIXME: this should be folded into rows().
-    virtual AccessibilityChildrenVector ariaTreeRows() = 0;
+    AccessibilityChildrenVector ariaTreeRows();
     // Used by an ARIA tree item to get only its content, and not its child tree items and groups.
     AccessibilityChildrenVector ariaTreeItemContent();
 
     // ARIA live-region features.
     static bool liveRegionStatusIsEnabled(const AtomString&);
     bool supportsLiveRegion(bool excludeIfOff = true) const;
+#if PLATFORM(MAC)
+    virtual AccessibilityChildrenVector allSortedLiveRegions() const = 0;
+    virtual AccessibilityChildrenVector allSortedNonRootWebAreas() const = 0;
+    AccessibilityChildrenVector sortedDescendants(size_t limit, PreSortedObjectType) const;
+#endif // PLATFORM(MAC)
     virtual AXCoreObject* liveRegionAncestor(bool excludeIfOff = true) const = 0;
-    bool isInsideLiveRegion(bool excludeIfOff = true) const;
     virtual const String liveRegionStatus() const = 0;
     virtual const String liveRegionRelevant() const = 0;
     virtual bool liveRegionAtomic() const = 0;
@@ -1434,6 +1475,7 @@ public:
 
     virtual AccessibilityChildrenVector documentLinks() = 0;
 
+    virtual bool hasAttachmentTag() const = 0;
     virtual bool hasBodyTag() const = 0;
     virtual bool hasMarkTag() const = 0;
     virtual String innerHTML() const = 0;
@@ -1450,6 +1492,7 @@ protected:
     explicit AXCoreObject(AXID axID)
         : m_id(axID)
     { }
+    AccessibilityRole m_role { AccessibilityRole::Unknown };
 
 private:
     virtual String dbgInternal(bool, OptionSet<AXDebugStringOption>) const = 0;
@@ -1457,6 +1500,8 @@ private:
     // Detaches this object from the objects it references and it is referenced by.
     virtual void detachRemoteParts(AccessibilityDetachmentType) = 0;
     virtual void detachPlatformWrapper(AccessibilityDetachmentType) = 0;
+
+    void ariaTreeRows(AXCoreObject::AccessibilityChildrenVector& rows, AXCoreObject::AccessibilityChildrenVector& ancestors);
 
     AXID m_id;
 #if PLATFORM(COCOA)
@@ -1517,11 +1562,6 @@ inline SpinButtonType AXCoreObject::spinButtonType()
     return incrementButton() || decrementButton() ? SpinButtonType::Composite : SpinButtonType::Standalone;
 }
 
-inline bool AXCoreObject::isInsideLiveRegion(bool excludeIfOff) const
-{
-    return liveRegionAncestor(excludeIfOff);
-}
-
 inline bool AXCoreObject::canSetTextRangeAttributes() const
 {
     return isTextControl();
@@ -1554,6 +1594,14 @@ inline Vector<AXID> AXCoreObject::childrenIDs(bool updateChildrenIfNeeded)
 {
     return axIDs(children(updateChildrenIfNeeded));
 }
+
+#if ENABLE(AX_THREAD_TEXT_APIS)
+inline bool AXCoreObject::emitsNewline() const
+{
+    auto behavior = textEmissionBehavior();
+    return behavior == TextEmissionBehavior::Newline || behavior == TextEmissionBehavior::DoubleNewline;
+}
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
 
 namespace Accessibility {
 
@@ -1678,6 +1726,19 @@ T* exposedTableAncestor(const T& object, bool includeSelf = false)
 }
 
 template<typename T, typename F>
+AXCoreObject* findUnignoredDescendant(T& object, bool includeSelf, const F& matches)
+{
+    if (includeSelf && matches(object) && !object.isIgnored())
+        return &object;
+
+    for (Ref child : object.childrenIncludingIgnored()) {
+        if (auto* descendant = findUnignoredDescendant(child.get(), /* includeSelf */ true, matches))
+            return descendant;
+    }
+    return nullptr;
+}
+
+template<typename T, typename F>
 T* findUnignoredChild(T& object, F&& matches)
 {
     for (auto child : object.unignoredChildren()) {
@@ -1713,7 +1774,10 @@ void enumerateUnignoredDescendants(T& object, bool includeSelf, const F& lambda)
     if (includeSelf)
         lambda(object);
 
-    for (const auto& child : object.unignoredChildren())
+    // We have a reference to unignored children here, so it's possible that it will change when enumerating the unignored
+    // descendants, so copying here ensures they don't change.
+    auto children = object.unignoredChildren();
+    for (const auto& child : children)
         enumerateUnignoredDescendants(child.get(), true, lambda);
 }
 

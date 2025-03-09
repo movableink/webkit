@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -506,7 +506,7 @@ public:
     FontSmoothingMode fontSmoothingMode() const { return m_positionedGlyphs.smoothingMode; }
     const Vector<GlyphBufferGlyph>& glyphs() const { return m_positionedGlyphs.glyphs; }
 
-    WEBCORE_EXPORT DrawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode);
+    WEBCORE_EXPORT DrawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& localAnchor, FontSmoothingMode);
     WEBCORE_EXPORT DrawGlyphs(RenderingResourceIdentifier, PositionedGlyphs&&);
 
     WEBCORE_EXPORT void apply(GraphicsContext&, const Font&) const;
@@ -536,25 +536,6 @@ public:
 private:
     RenderingResourceIdentifier m_fontIdentifier;
     RenderingResourceIdentifier m_decomposedGlyphsIdentifier;
-};
-
-class DrawDisplayListItems {
-public:
-    static constexpr char name[] = "draw-display-list-items";
-
-    DrawDisplayListItems(const Vector<Item>&, const FloatPoint& destination);
-    WEBCORE_EXPORT DrawDisplayListItems(Vector<Item>&&, const FloatPoint& destination);
-
-    const Vector<Item>& items() const { return m_items; }
-    FloatPoint destination() const { return m_destination; }
-
-    WEBCORE_EXPORT void apply(GraphicsContext&, const ResourceHeap&, ControlFactory&) const;
-    NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
-    void dump(TextStream&, OptionSet<AsTextFlag>) const;
-
-private:
-    Vector<Item> m_items;
-    FloatPoint m_destination;
 };
 
 class DrawImageBuffer {
@@ -758,11 +739,11 @@ class DrawLinesForText {
 public:
     static constexpr char name[] = "draw-lines-for-text";
 
-    WEBCORE_EXPORT DrawLinesForText(const FloatPoint&, const DashArray& widths, float thickness, bool printing, bool doubleLines, StrokeStyle);
+    WEBCORE_EXPORT DrawLinesForText(const FloatPoint&, std::span<const FloatSegment> lineSegments, float thickness, bool printing, bool doubleLines, StrokeStyle);
 
     FloatPoint point() const { return m_point; }
     float thickness() const { return m_thickness; }
-    const DashArray& widths() const { return m_widths; }
+    const Vector<FloatSegment>& lineSegments() const { return m_lineSegments; }
     bool isPrinting() const { return m_printing; }
     bool doubleLines() const { return m_doubleLines; }
     StrokeStyle style() const { return m_style; }
@@ -772,7 +753,7 @@ public:
 
 private:
     FloatPoint m_point;
-    DashArray m_widths;
+    Vector<FloatSegment> m_lineSegments;
     float m_thickness;
     bool m_printing;
     bool m_doubleLines;
@@ -1488,6 +1469,53 @@ public:
 
 private:
     float m_scaleFactor { 1 };
+};
+
+class BeginPage {
+public:
+    static constexpr char name[] = "begin-page";
+
+    BeginPage(const IntSize& pageSize)
+        : m_pageSize(pageSize)
+    {
+    }
+
+    const IntSize& pageSize() const { return m_pageSize; }
+
+    WEBCORE_EXPORT void apply(GraphicsContext&) const;
+    void dump(TextStream&, OptionSet<AsTextFlag>) const;
+
+private:
+    IntSize m_pageSize;
+};
+
+class EndPage {
+public:
+    static constexpr char name[] = "end-page";
+
+    WEBCORE_EXPORT void apply(GraphicsContext&) const;
+    void dump(TextStream&, OptionSet<AsTextFlag>) const { }
+};
+
+class SetURLForRect {
+public:
+    static constexpr char name[] = "set-URL-for-rect";
+
+    SetURLForRect(const URL& link, const FloatRect& destRect)
+        : m_link(link)
+        , m_destRect(destRect)
+    {
+    }
+
+    const URL& link() const { return m_link; }
+    const FloatRect& destRect() const { return m_destRect; }
+
+    WEBCORE_EXPORT void apply(GraphicsContext&) const;
+    void dump(TextStream&, OptionSet<AsTextFlag>) const;
+
+private:
+    URL m_link;
+    FloatRect m_destRect;
 };
 
 } // namespace DisplayList

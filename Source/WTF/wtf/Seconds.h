@@ -27,13 +27,18 @@
 
 #include <optional>
 #include <wtf/FastMalloc.h>
-#include <wtf/Forward.h>
 #include <wtf/MathExtras.h>
 
 namespace WTF {
 
 class ApproximateTime;
+class ContinuousApproximateTime;
+class ContinuousTime;
+class MonotonicTime;
+class PrintStream;
+class TextStream;
 class TimeWithDynamicClockType;
+class WallTime;
 
 class Seconds final {
     WTF_MAKE_FAST_ALLOCATED;
@@ -187,11 +192,15 @@ public:
     WTF_EXPORT_PRIVATE WallTime operator+(WallTime) const;
     WTF_EXPORT_PRIVATE MonotonicTime operator+(MonotonicTime) const;
     WTF_EXPORT_PRIVATE ApproximateTime operator+(ApproximateTime) const;
+    WTF_EXPORT_PRIVATE ContinuousTime operator+(ContinuousTime) const;
+    WTF_EXPORT_PRIVATE ContinuousApproximateTime operator+(ContinuousApproximateTime) const;
     WTF_EXPORT_PRIVATE TimeWithDynamicClockType operator+(const TimeWithDynamicClockType&) const;
     
     WTF_EXPORT_PRIVATE WallTime operator-(WallTime) const;
     WTF_EXPORT_PRIVATE MonotonicTime operator-(MonotonicTime) const;
     WTF_EXPORT_PRIVATE ApproximateTime operator-(ApproximateTime) const;
+    WTF_EXPORT_PRIVATE ContinuousTime operator-(ContinuousTime) const;
+    WTF_EXPORT_PRIVATE ContinuousApproximateTime operator-(ContinuousApproximateTime) const;
     WTF_EXPORT_PRIVATE TimeWithDynamicClockType operator-(const TimeWithDynamicClockType&) const;
     
     friend constexpr bool operator==(Seconds, Seconds) = default;
@@ -330,3 +339,4 @@ WTF_EXPORT_PRIVATE TextStream& operator<<(TextStream&, Seconds);
 using WTF::sleep;
 
 using namespace WTF::seconds_literals;
+using WTF::Seconds;

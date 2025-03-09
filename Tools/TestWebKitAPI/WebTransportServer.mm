@@ -26,56 +26,70 @@
 #import "config.h"
 #import "WebTransportServer.h"
 
+#if HAVE(WEB_TRANSPORT)
+
 #import "HTTPServer.h"
 #import "Utilities.h"
-#import <pal/spi/cf/CFNetworkSPI.h>
+#import <pal/spi/cocoa/NetworkSPI.h>
 #import <wtf/BlockPtr.h>
 
 namespace TestWebKitAPI {
 
 struct WebTransportServer::Data : public RefCounted<WebTransportServer::Data> {
-    static Ref<Data> create(Function<Task(Connection)>&& connectionHandler) { return adoptRef(*new Data(WTFMove(connectionHandler))); }
-    Data(Function<Task(Connection)>&& connectionHandler)
-        : connectionHandler(WTFMove(connectionHandler)) { }
+    static Ref<Data> create(Function<Task(ConnectionGroup)>&& connectionGroupHandler) { return adoptRef(*new Data(WTFMove(connectionGroupHandler))); }
+    Data(Function<Task(ConnectionGroup)>&& connectionGroupHandler)
+        : connectionGroupHandler(WTFMove(connectionGroupHandler)) { }
 
-    Function<Task(Connection)> connectionHandler;
+    Function<Task(ConnectionGroup)> connectionGroupHandler;
     RetainPtr<nw_listener_t> listener;
-    Vector<RetainPtr<nw_connection_group_t>> connectionGroups;
-    Vector<RetainPtr<nw_connection_t>> connections;
+    Vector<ConnectionGroup> connectionGroups;
     Vector<CoroutineHandle<Task::promise_type>> coroutineHandles;
 };
 
-WebTransportServer::WebTransportServer(Function<Task(Connection)>&& connectionHandler)
-    : m_data(Data::create(WTFMove(connectionHandler)))
+WebTransportServer::WebTransportServer(Function<Task(ConnectionGroup)>&& connectionGroupHandler)
+    : m_data(Data::create(WTFMove(connectionGroupHandler)))
 {
-    auto configureTLS = [](nw_protocol_options_t options) {
-        RetainPtr securityOptions = adoptNS(nw_quic_connection_copy_sec_protocol_options(options));
-        sec_protocol_options_set_local_identity(securityOptions.get(), adoptNS(sec_identity_create(testIdentity().get())).get());
-        sec_protocol_options_add_tls_application_protocol(securityOptions.get(), "h3");
+    auto configureWebTransport = [](nw_protocol_options_t options) {
+        nw_webtransport_options_set_is_datagram(options, true);
+        nw_webtransport_options_set_is_unidirectional(options, false);
+        // FIXME: Add a call to nw_webtransport_options_set_connection_max_sessions(options, 1)
+        // here when enabling tests after rdar://141009498 is available in OS builds.
     };
 
-    RetainPtr parameters = adoptNS(nw_parameters_create_quic_stream(NW_PARAMETERS_DEFAULT_CONFIGURATION, configureTLS));
+    auto configureTLS = [](nw_protocol_options_t options) {
+        RetainPtr securityOptions = adoptNS(nw_tls_copy_sec_protocol_options(options));
+        sec_protocol_options_set_local_identity(securityOptions.get(), adoptNS(sec_identity_create(testIdentity().get())).get());
+    };
+
+    auto configureQUIC = [](nw_protocol_options_t options) {
+        nw_quic_set_initial_max_streams_bidirectional(options, std::numeric_limits<uint32_t>::max());
+        nw_quic_set_initial_max_streams_unidirectional(options, std::numeric_limits<uint32_t>::max());
+        nw_quic_set_max_datagram_frame_size(options, std::numeric_limits<uint16_t>::max());
+    };
+
+    RetainPtr parameters = adoptNS(nw_parameters_create_webtransport_http(configureWebTransport, configureTLS, configureQUIC, NW_PARAMETERS_DEFAULT_CONFIGURATION));
+    ASSERT(parameters);
+    nw_parameters_set_server_mode(parameters.get(), true);
 
     RetainPtr listener = adoptNS(nw_listener_create(parameters.get()));
 
-    nw_listener_set_new_connection_group_handler(listener.get(), [data = m_data] (nw_connection_group_t connectionGroup) {
-        constexpr uint32_t maximumMessageSize { std::numeric_limits<uint32_t>::max() };
-        constexpr bool rejectOversizedMessages { false };
-        nw_connection_group_set_receive_handler(connectionGroup, maximumMessageSize, rejectOversizedMessages, ^(dispatch_data_t, nw_content_context_t, bool) {
-            // FIXME: Implement and test datagrams with WebTransport.
-        });
-
-        nw_connection_group_set_new_connection_handler(connectionGroup, [data] (nw_connection_t connection) {
-            data->connections.append(connection);
-            nw_connection_set_queue(connection, dispatch_get_main_queue());
-            nw_connection_start(connection);
-            data->coroutineHandles.append(data->connectionHandler(connection).handle);
-        });
-
-        nw_connection_group_set_queue(connectionGroup, dispatch_get_main_queue());
-        nw_connection_group_start(connectionGroup);
+    // FIXME: Verify the incoming CONNECT request has an Origin header once rdar://141457647 is available in OS builds.
+    nw_listener_set_new_connection_group_handler(listener.get(), [data = m_data] (nw_connection_group_t incomingConnectionGroup) {
+        ConnectionGroup connectionGroup = ConnectionGroup(incomingConnectionGroup);
         data->connectionGroups.append(connectionGroup);
+        nw_connection_group_set_state_changed_handler(incomingConnectionGroup, [connectionGroup, data] (nw_connection_group_state_t state, nw_error_t error) mutable {
+            if (state != nw_connection_group_state_ready)
+                return;
+            data->coroutineHandles.append(data->connectionGroupHandler(connectionGroup).handle);
+        });
+
+        nw_connection_group_set_new_connection_handler(incomingConnectionGroup, [connectionGroup] (nw_connection_t incomingConnection) mutable {
+            connectionGroup.receiveIncomingConnection(incomingConnection);
+        });
+        nw_connection_group_set_queue(incomingConnectionGroup, dispatch_get_main_queue());
+        nw_connection_group_start(incomingConnectionGroup);
     });
+
     nw_listener_set_queue(listener.get(), dispatch_get_main_queue());
 
     __block bool ready = false;
@@ -96,5 +110,6 @@ uint16_t WebTransportServer::port() const
 {
     return nw_listener_get_port(m_data->listener.get());
 }
-
 } // namespace TestWebKitAPI
+
+#endif // HAVE(WEB_TRANSPORT)

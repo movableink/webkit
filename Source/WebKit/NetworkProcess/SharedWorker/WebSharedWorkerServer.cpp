@@ -155,7 +155,7 @@ void WebSharedWorkerServer::createContextConnection(const WebCore::Site& site, s
     RELEASE_LOG(SharedWorker, "WebSharedWorkerServer::createContextConnection will create a connection");
 
     m_pendingContextConnectionDomains.add(site.domain());
-    m_session->networkProcess().parentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::EstablishRemoteWorkerContextConnectionToNetworkProcess { RemoteWorkerType::SharedWorker, site, requestingProcessIdentifier, std::nullopt, m_session->sessionID() }, [this, weakThis = WeakPtr { *this }, site] (auto remoteProcessIdentifier) {
+    m_session->networkProcess().protectedParentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::EstablishRemoteWorkerContextConnectionToNetworkProcess { RemoteWorkerType::SharedWorker, site, requestingProcessIdentifier, std::nullopt, m_session->sessionID() }, [this, weakThis = WeakPtr { *this }, site] (auto remoteProcessIdentifier) {
         if (!weakThis)
             return;
 
@@ -315,5 +315,20 @@ void WebSharedWorkerServer::terminateContextConnectionWhenPossible(const WebCore
 
     contextConnection->terminateWhenPossible();
 }
+
+#if ENABLE(CONTENT_EXTENSIONS)
+void WebSharedWorkerServer::reportNetworkUsageToAllSharedWorkerObjects(WebCore::SharedWorkerIdentifier sharedWorkerIdentifier, size_t bytesTransferredOverNetworkDelta)
+{
+    auto* sharedWorker = WebSharedWorker::fromIdentifier(sharedWorkerIdentifier);
+    RELEASE_LOG(SharedWorker, "WebSharedWorkerServer::reportNetworkUsageToAllSharedWorkerObjects: sharedWorkerIdentifier=%" PRIu64 ", sharedWorker=%p, bytesTransferredOverNetworkDelta=%zu", sharedWorkerIdentifier.toUInt64(), sharedWorker, bytesTransferredOverNetworkDelta);
+    if (!sharedWorker)
+        return;
+
+    sharedWorker->forEachSharedWorkerObject([&](auto sharedWorkerObjectIdentifier, auto&) {
+        if (auto* serverConnection = m_connections.get(sharedWorkerObjectIdentifier.processIdentifier()))
+            serverConnection->reportNetworkUsageToWorkerObject(sharedWorkerObjectIdentifier, bytesTransferredOverNetworkDelta);
+    });
+}
+#endif
 
 } // namespace WebKit

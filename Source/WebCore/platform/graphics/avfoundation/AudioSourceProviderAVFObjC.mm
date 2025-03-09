@@ -34,12 +34,14 @@
 #import "CAAudioStreamDescription.h"
 #import "CARingBuffer.h"
 #import "Logging.h"
+#import "SpanCoreAudio.h"
 #import <AVFoundation/AVAssetTrack.h>
 #import <AVFoundation/AVAudioMix.h>
 #import <AVFoundation/AVMediaFormat.h>
 #import <AVFoundation/AVPlayerItem.h>
 #import <objc/runtime.h>
 #import <pal/avfoundation/MediaTimeAVFoundation.h>
+#import <wtf/IndexedRange.h>
 #import <wtf/Lock.h>
 #import <wtf/MainThread.h>
 
@@ -51,8 +53,6 @@
 #import <pal/cf/CoreMediaSoftLink.h>
 #import <pal/cocoa/AVFoundationSoftLink.h>
 #import <pal/cocoa/MediaToolboxSoftLink.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -136,11 +136,11 @@ void AudioSourceProviderAVFObjC::provideInput(AudioBus* bus, size_t framesToProc
 
     ASSERT(bus->numberOfChannels() == m_ringBuffer->channelCount());
 
-    for (unsigned i = 0; i < m_list->mNumberBuffers; ++i) {
+    for (auto [i, buffer] : indexedRange(span(*m_list))) {
         AudioChannel* channel = bus->channel(i);
-        m_list->mBuffers[i].mNumberChannels = 1;
-        m_list->mBuffers[i].mData = channel->mutableData();
-        m_list->mBuffers[i].mDataByteSize = channel->length() * sizeof(float);
+        buffer.mNumberChannels = 1;
+        buffer.mData = channel->mutableData();
+        buffer.mDataByteSize = channel->length() * sizeof(float);
     }
 
     m_ringBuffer->fetch(m_list.get(), framesToProcess, m_readCount);
@@ -334,7 +334,9 @@ void AudioSourceProviderAVFObjC::prepare(CMItemCount maxFrames, const AudioStrea
     // with a custom size, and initialize the struct manually.
     size_t bufferListSize = sizeof(AudioBufferList) + (sizeof(AudioBuffer) * std::max(1, numberOfChannels - 1));
     m_list = std::unique_ptr<AudioBufferList>((AudioBufferList*) ::operator new (bufferListSize));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     memset(m_list.get(), 0, bufferListSize);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     m_list->mNumberBuffers = numberOfChannels;
 
     callOnMainThread([weakThis = m_weakFactory.createWeakPtr(*this), numberOfChannels, sampleRate] {
@@ -390,10 +392,12 @@ void AudioSourceProviderAVFObjC::process(MTAudioProcessingTapRef tap, CMItemCoun
 
     auto [startFrame, endFrame] = m_ringBuffer->getStoreTimeBounds();
 
+    bool needsFlush = false;
+
     // Check to see if the underlying media has seeked, which would require us to "flush"
     // our outstanding buffers.
     if (rangeStart != m_endTimeAtLastProcess)
-        m_seekTo = endFrame;
+        needsFlush = true;
 
     m_startTimeAtLastProcess = rangeStart;
     m_endTimeAtLastProcess = rangeStart + rangeDuration;
@@ -401,19 +405,21 @@ void AudioSourceProviderAVFObjC::process(MTAudioProcessingTapRef tap, CMItemCoun
     // StartOfStream indicates a discontinuity, such as when an AVPlayerItem is re-added
     // to an AVPlayer, so "flush" outstanding buffers.
     if (flagsOut && *flagsOut & kMTAudioProcessingTapFlag_StartOfStream)
+        needsFlush = true;
+
+    if (needsFlush)
         m_seekTo = endFrame;
 
     m_ringBuffer->store(bufferListInOut, itemCount, endFrame);
 
     // Mute the default audio playback by zeroing the tap-owned buffers.
-    for (uint32_t i = 0; i < bufferListInOut->mNumberBuffers; ++i) {
-        AudioBuffer& buffer = bufferListInOut->mBuffers[i];
-        memset(buffer.mData, 0, buffer.mDataByteSize);
-    }
+    for (auto& buffer : span(*bufferListInOut))
+        zeroSpan(mutableSpan<uint8_t>(buffer));
+
     *numberFramesOut = 0;
 
     if (m_audioCallback)
-        m_audioCallback(endFrame, itemCount);
+        m_audioCallback(endFrame, itemCount, needsFlush);
 }
 
 void AudioSourceProviderAVFObjC::setAudioCallback(AudioCallback&& callback)
@@ -429,7 +435,5 @@ void AudioSourceProviderAVFObjC::setConfigureAudioStorageCallback(ConfigureAudio
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO) && USE(MEDIATOOLBOX)

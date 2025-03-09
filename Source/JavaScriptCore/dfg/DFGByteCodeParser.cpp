@@ -108,8 +108,7 @@ static constexpr bool verbose = true;
 } // namespace DFGByteCodeParserInternal
 
 #define VERBOSE_LOG(...) do { \
-if (DFGByteCodeParserInternal::verbose && Options::verboseDFGBytecodeParsing()) \
-dataLog(__VA_ARGS__); \
+    dataLogIf(DFGByteCodeParserInternal::verbose && Options::verboseDFGBytecodeParsing(), __VA_ARGS__); \
 } while (false)
 
 // === ByteCodeParser ===
@@ -1358,8 +1357,8 @@ private:
 BasicBlock* ByteCodeParser::allocateTargetableBlock(BytecodeIndex bytecodeIndex)
 {
     ASSERT(bytecodeIndex);
-    Ref<BasicBlock> block = adoptRef(*new BasicBlock(bytecodeIndex, m_numArguments, m_numLocals, m_numTmps, 1));
-    BasicBlock* blockPtr = block.ptr();
+    auto block = makeUnique<BasicBlock>(bytecodeIndex, m_numArguments, m_numLocals, m_numTmps, 1);
+    BasicBlock* blockPtr = block.get();
     // m_blockLinkingTargets must always be sorted in increasing order of bytecodeBegin
     if (m_inlineStackTop->m_blockLinkingTargets.size())
         ASSERT(m_inlineStackTop->m_blockLinkingTargets.last()->bytecodeBegin.offset() < bytecodeIndex.offset());
@@ -1370,8 +1369,8 @@ BasicBlock* ByteCodeParser::allocateTargetableBlock(BytecodeIndex bytecodeIndex)
 
 BasicBlock* ByteCodeParser::allocateUntargetableBlock()
 {
-    Ref<BasicBlock> block = adoptRef(*new BasicBlock(BytecodeIndex(), m_numArguments, m_numLocals, m_numTmps, 1));
-    BasicBlock* blockPtr = block.ptr();
+    auto block = makeUnique<BasicBlock>(BytecodeIndex(), m_numArguments, m_numLocals, m_numTmps, 1);
+    BasicBlock* blockPtr = block.get();
     m_graph.appendBlock(WTFMove(block));
     VERBOSE_LOG("Adding new untargetable block: ", blockPtr->index, "\n");
     return blockPtr;
@@ -1685,6 +1684,10 @@ std::tuple<unsigned, InlineAttribute> ByteCodeParser::inliningCost(CallVariant c
         return { UINT_MAX, InlineAttribute::None };
     }
 
+    CodeBlock* targetCodeBlock = executable->codeBlockFor(specializationKind);
+    if (!m_graph.m_plan.isFTL())
+        targetCodeBlock = codeBlock;
+
     if (codeBlock->couldBeTainted() != m_codeBlock->couldBeTainted()) {
         VERBOSE_LOG("    Failing because taintedness of callee does not match the caller");
         return { UINT_MAX, InlineAttribute::None };
@@ -1697,14 +1700,14 @@ std::tuple<unsigned, InlineAttribute> ByteCodeParser::inliningCost(CallVariant c
         }
     }
 
-    CapabilityLevel capabilityLevel = inlineFunctionForCapabilityLevel(m_graph.m_plan.jitType(), codeBlock, specializationKind, callee.isClosureCall());
+    CapabilityLevel capabilityLevel = inlineFunctionForCapabilityLevel(m_graph.m_plan.jitType(), targetCodeBlock, specializationKind, callee.isClosureCall());
     VERBOSE_LOG("    Call mode: ", callMode, "\n");
     VERBOSE_LOG("    Is closure call: ", callee.isClosureCall(), "\n");
     VERBOSE_LOG("    Capability level: ", capabilityLevel, "\n");
-    VERBOSE_LOG("    Might inline function: ", mightInlineFunctionFor(m_graph.m_plan.jitType(), codeBlock, specializationKind), "\n");
-    VERBOSE_LOG("    Might compile function: ", mightCompileFunctionFor(codeBlock, specializationKind), "\n");
-    VERBOSE_LOG("    Is supported for inlining: ", isSupportedForInlining(codeBlock), "\n");
-    VERBOSE_LOG("    Is inlining candidate: ", codeBlock->ownerExecutable()->isInliningCandidate(), "\n");
+    VERBOSE_LOG("    Might inline function: ", mightInlineFunctionFor(m_graph.m_plan.jitType(), targetCodeBlock, specializationKind), "\n");
+    VERBOSE_LOG("    Might compile function: ", mightCompileFunctionFor(targetCodeBlock, specializationKind), "\n");
+    VERBOSE_LOG("    Is supported for inlining: ", isSupportedForInlining(targetCodeBlock), "\n");
+    VERBOSE_LOG("    Is inlining candidate: ", targetCodeBlock->ownerExecutable()->isInliningCandidate(), "\n");
     if (!canInline(capabilityLevel)) {
         VERBOSE_LOG("    Failing because the function is not inlineable.\n");
         return { UINT_MAX, InlineAttribute::None };
@@ -1754,7 +1757,7 @@ std::tuple<unsigned, InlineAttribute> ByteCodeParser::inliningCost(CallVariant c
     VERBOSE_LOG("    Inlining should be possible.\n");
     
     // It might be possible to inline.
-    return { codeBlock->bytecodeCost(), codeBlock->ownerExecutable()->inlineAttribute() };
+    return { targetCodeBlock->bytecodeCost(), codeBlock->ownerExecutable()->inlineAttribute() };
 }
 
 template<typename ChecksFunctor>
@@ -2266,11 +2269,15 @@ ByteCodeParser::CallOptimizationResult ByteCodeParser::handleInlining(
     // If the claim is that this did not originate from a stub, then we don't want to emit a switch
     // statement. Whenever the non-stub profiling says that it could take slow path, it really means that
     // it has no idea.
-    if (!Options::usePolymorphicCallInliningForNonStubStatus()
-        && !callLinkStatus.isBasedOnStub()) {
+    if (!Options::usePolymorphicCallInliningForNonStubStatus() && !callLinkStatus.isBasedOnStub()) {
         VERBOSE_LOG("Bailing inlining (non-stub polymorphism).\nStack: ", currentCodeOrigin(), "\n");
         return CallOptimizationResult::DidNothing;
     }
+
+    // Adjusting inlining balance to accept a bit more candidates for polymorphic call inlining.
+    unsigned polyInliningAdjustment = 0;
+    if (callLinkStatus.size())
+        polyInliningAdjustment = static_cast<unsigned>(static_cast<double>(inliningBalance) * (std::sqrt(callLinkStatus.size()) - 1.0));
 
     bool allAreClosureCalls = true;
     bool allAreDirectCalls = true;
@@ -2325,6 +2332,7 @@ ByteCodeParser::CallOptimizationResult ByteCodeParser::handleInlining(
     
     VERBOSE_LOG("About to loop over functions at ", currentCodeOrigin(), ".\n");
 
+    unsigned originalInliningBalance = inliningBalance;
     BytecodeIndex oldIndex = m_currentIndex;
     for (unsigned i = 0; i < callLinkStatus.size(); ++i) {
         m_currentIndex = oldIndex;
@@ -2345,7 +2353,7 @@ ByteCodeParser::CallOptimizationResult ByteCodeParser::handleInlining(
         if (inliningResult == CallOptimizationResult::DidNothing) {
             // That failed so we let the block die. Nothing interesting should have been added to
             // the block. We also give up on inlining any of the (less frequent) callees.
-            ASSERT(m_graph.m_blocks.last() == m_currentBlock);
+            ASSERT(m_graph.m_blocks.last().get() == m_currentBlock);
             m_graph.killBlockAndItsContents(m_currentBlock);
             m_graph.m_blocks.removeLast();
             VERBOSE_LOG("Inlining of a poly call failed, we will have to go through a slow path\n");
@@ -2364,6 +2372,19 @@ ByteCodeParser::CallOptimizationResult ByteCodeParser::handleInlining(
         }
         data.cases.append(SwitchCase(m_graph.freeze(thingToCaseOn), calleeEntryBlock));
         VERBOSE_LOG("Finished optimizing ", callLinkStatus[i], " at ", currentCodeOrigin(), ".\n");
+
+        // Boosting inlining balance a bit for polymorphic calls. But we do not want to increase inliningBalance directly since it can be exhausted for one call.
+        // We refill balance when it is used in the other inlining. And the amount we refill is capped with polyInliningAdjustment.
+        if (inliningBalance < originalInliningBalance) {
+            unsigned usedBudget = originalInliningBalance - inliningBalance;
+            if (usedBudget > polyInliningAdjustment) {
+                inliningBalance += polyInliningAdjustment;
+                polyInliningAdjustment = 0;
+            } else {
+                inliningBalance += usedBudget;
+                polyInliningAdjustment -= usedBudget;
+            }
+        }
     }
 
     // Slow path block
@@ -2728,6 +2749,7 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
             return CallOptimizationResult::Inlined;
         }
 
+        case ArrayIncludesIntrinsic:
         case ArrayIndexOfIntrinsic: {
             if (argumentCountIncludingThis < 2)
                 return CallOptimizationResult::DidNothing;
@@ -2771,7 +2793,9 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
                         addVarArgChild(get(virtualRegisterForArgumentIncludingThis(2, registerOffset))); // Start index.
                     addVarArgChild(nullptr);
 
-                    Node* node = addToGraph(Node::VarArg, ArrayIndexOf, OpInfo(arrayMode.asWord()), OpInfo());
+                    Node* node = intrinsic == ArrayIncludesIntrinsic
+                        ? addToGraph(Node::VarArg, ArrayIncludes, OpInfo(arrayMode.asWord()), OpInfo())
+                        : addToGraph(Node::VarArg, ArrayIndexOf, OpInfo(arrayMode.asWord()), OpInfo());
                     setResult(node);
                     return CallOptimizationResult::Inlined;
                 }
@@ -2915,7 +2939,7 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
         }
 
         case CharCodeAtIntrinsic: {
-            if (argumentCountIncludingThis < 2)
+            if (argumentCountIncludingThis < 1)
                 return CallOptimizationResult::DidNothing;
 
             if (m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, Uncountable) || m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadType))
@@ -2923,8 +2947,10 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
 
             insertChecks();
             VirtualRegister thisOperand = virtualRegisterForArgumentIncludingThis(0, registerOffset);
-            VirtualRegister indexOperand = virtualRegisterForArgumentIncludingThis(1, registerOffset);
-            Node* charCode = addToGraph(StringCharCodeAt, OpInfo(ArrayMode(Array::String, Array::Read).asWord()), get(thisOperand), get(indexOperand));
+            Node* index = argumentCountIncludingThis == 1
+                ? jsConstant(jsNumber(0))
+                : get(virtualRegisterForArgumentIncludingThis(1, registerOffset));
+            Node* charCode = addToGraph(StringCharCodeAt, OpInfo(ArrayMode(Array::String, Array::Read).asWord()), get(thisOperand), index);
 
             setResult(charCode);
             return CallOptimizationResult::Inlined;
@@ -2934,7 +2960,7 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
             if (!is64Bit())
                 return CallOptimizationResult::DidNothing;
 
-            if (argumentCountIncludingThis < 2)
+            if (argumentCountIncludingThis < 1)
                 return CallOptimizationResult::DidNothing;
 
             if (m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, Uncountable) || m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadType))
@@ -2942,8 +2968,10 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
 
             insertChecks();
             VirtualRegister thisOperand = virtualRegisterForArgumentIncludingThis(0, registerOffset);
-            VirtualRegister indexOperand = virtualRegisterForArgumentIncludingThis(1, registerOffset);
-            Node* result = addToGraph(StringCodePointAt, OpInfo(ArrayMode(Array::String, Array::Read).asWord()), get(thisOperand), get(indexOperand));
+            Node* index = argumentCountIncludingThis == 1
+                ? jsConstant(jsNumber(0))
+                : get(virtualRegisterForArgumentIncludingThis(1, registerOffset));
+            Node* result = addToGraph(StringCodePointAt, OpInfo(ArrayMode(Array::String, Array::Read).asWord()), get(thisOperand), index);
 
             setResult(result);
             return CallOptimizationResult::Inlined;
@@ -2972,7 +3000,7 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
         }
 
         case CharAtIntrinsic: {
-            if (argumentCountIncludingThis < 2)
+            if (argumentCountIncludingThis < 1)
                 return CallOptimizationResult::DidNothing;
 
             if (m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadType))
@@ -2980,10 +3008,34 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
 
             insertChecks();
             VirtualRegister thisOperand = virtualRegisterForArgumentIncludingThis(0, registerOffset);
-            VirtualRegister indexOperand = virtualRegisterForArgumentIncludingThis(1, registerOffset);
-            Node* charCode = addToGraph(StringCharAt, OpInfo(ArrayMode(Array::String, Array::Read).asWord()), get(thisOperand), get(indexOperand));
+            Node* index = argumentCountIncludingThis == 1
+                ? jsConstant(jsNumber(0))
+                : get(virtualRegisterForArgumentIncludingThis(1, registerOffset));
+            Node* charCode = addToGraph(StringCharAt, OpInfo(ArrayMode(Array::String, Array::Read).asWord()), get(thisOperand), index);
 
             setResult(charCode);
+            return CallOptimizationResult::Inlined;
+        }
+
+        case StringPrototypeAtIntrinsic: {
+            if (!is64Bit())
+                return CallOptimizationResult::DidNothing;
+
+            if (argumentCountIncludingThis < 1)
+                return CallOptimizationResult::DidNothing;
+
+            if (m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadType))
+                return CallOptimizationResult::DidNothing;
+
+            insertChecks();
+            VirtualRegister thisOperand = virtualRegisterForArgumentIncludingThis(0, registerOffset);
+            Node* index = argumentCountIncludingThis == 1
+                ? jsConstant(jsNumber(0))
+                : get(virtualRegisterForArgumentIncludingThis(1, registerOffset));
+            bool hasOutOfBoundsExitSite = m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, OutOfBounds);
+            Node* node = addToGraph(StringAt, OpInfo(ArrayMode(Array::String, Array::Read, hasOutOfBoundsExitSite ? Array::OutOfBounds : Array::InBounds).asWord()), get(thisOperand), index);
+
+            setResult(node);
             return CallOptimizationResult::Inlined;
         }
 
@@ -3635,7 +3687,7 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
             insertChecks();
             Node* map = get(virtualRegisterForArgumentIncludingThis(1, registerOffset));
             UseKind useKind = intrinsic == JSSetStorageIntrinsic ? SetObjectUse : MapObjectUse;
-            Node* storage = addToGraph(MapStorage, Edge(map, useKind));
+            Node* storage = addToGraph(MapStorageOrSentinel, Edge(map, useKind));
             setResult(storage);
             return CallOptimizationResult::Inlined;
         }
@@ -8313,7 +8365,7 @@ void ByteCodeParser::parseBlock(unsigned limit)
 
             Vector<SpeculatedType> argumentPredictions(m_numArguments);
             Vector<SpeculatedType> localPredictions;
-            HashSet<unsigned, WTF::IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> seenArguments;
+            UncheckedKeyHashSet<unsigned, WTF::IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> seenArguments;
 
             {
                 ConcurrentJSLocker locker(m_inlineStackTop->m_profiledBlock->valueProfileLock());
@@ -10187,24 +10239,28 @@ void ByteCodeParser::parseCodeBlock()
     }
 
     if (UNLIKELY(Options::dumpBytecodeAtDFGTime())) {
-        dataLog("Parsing ", *codeBlock);
-        if (inlineCallFrame()) {
-            dataLog(
-                " for inlining at ", CodeBlockWithJITType(m_codeBlock, JITType::DFGJIT),
-                " ", inlineCallFrame()->directCaller);
-        }
-        dataLogLn();
-        codeBlock->baselineVersion()->dumpBytecode();
+        WTF::dataFile().atomically([&](auto&) {
+            dataLog("Parsing ", *codeBlock);
+            if (inlineCallFrame()) {
+                dataLog(
+                    " for inlining at ", CodeBlockWithJITType(m_codeBlock, JITType::DFGJIT),
+                    " ", inlineCallFrame()->directCaller);
+            }
+            dataLogLn();
+            codeBlock->baselineVersion()->dumpBytecode();
+        });
     }
 
     Vector<JSInstructionStream::Offset, 32> jumpTargets;
     computePreciseJumpTargets(codeBlock, jumpTargets);
     if (UNLIKELY(Options::dumpBytecodeAtDFGTime())) {
-        dataLog("Jump targets: ");
-        CommaPrinter comma;
-        for (unsigned i = 0; i < jumpTargets.size(); ++i)
-            dataLog(comma, jumpTargets[i]);
-        dataLog("\n");
+        WTF::dataFile().atomically([&](auto&) {
+            dataLog("Jump targets: ");
+            CommaPrinter comma;
+            for (unsigned i = 0; i < jumpTargets.size(); ++i)
+                dataLog(comma, jumpTargets[i]);
+            dataLogLn();
+        });
     }
     
     for (unsigned jumpTargetIndex = 0; jumpTargetIndex <= jumpTargets.size(); ++jumpTargetIndex) {

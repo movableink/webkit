@@ -35,6 +35,7 @@
 #import "TestUIDelegate.h"
 #import "TestWKWebView.h"
 #import "UIKitSPIForTesting.h"
+#import "UnifiedPDFTestHelpers.h"
 #import "WKWebViewConfigurationExtras.h"
 #import <SoftLinking/WeakLinking.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
@@ -58,6 +59,7 @@
 
 #if PLATFORM(MAC)
 #import <pal/cocoa/WritingToolsUISoftLink.h>
+#import <pal/spi/mac/NSMenuSPI.h>
 #import <pal/spi/mac/NSTextInputContextSPI.h>
 #endif
 
@@ -301,7 +303,7 @@ using PlatformTextPlaceholder = NSTextPlaceholder;
 - (void)waitForProofreadingSuggestionsToBeReplaced
 {
     // FIXME: Avoid using a hard-coded delay.
-    TestWebKitAPI::Util::runFor(1.0_s);
+    TestWebKitAPI::Util::runFor(3.0_s);
 }
 
 @end
@@ -808,6 +810,42 @@ TEST(WritingTools, ProofreadingWithImage)
     }];
 
     TestWebKitAPI::Util::run(&finished);
+}
+
+TEST(WritingTools, ProofreadingWithUntitledImageAttachment)
+{
+    RetainPtr session = adoptNS([[WTSession alloc] initWithType:WTSessionTypeProofreading textViewDelegate:nil]);
+    RetainPtr markupString = @"<!DOCTYPE html>"
+        "<html>"
+        "  <body contenteditable>"
+        "    <p>Hello<img src='sunset-in-cupertino-200px.png'></img></p>"
+        "  </body>"
+        "</html>";
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:markupString.get() writingToolsBehavior:PlatformWritingToolsBehaviorComplete attachmentElementEnabled:YES]);
+    [webView focusDocumentBodyAndSelectAll];
+    [webView stringByEvaluatingJavaScript:@"HTMLAttachmentElement.getAttachmentIdentifier(document.querySelector('img'))"];
+
+    __block bool finished = false;
+    __block RetainPtr<NSAttributedString> attributedText;
+    [[webView writingToolsDelegate] willBeginWritingToolsSession:session.get() requestContexts:^(NSArray<WTContext *> *contexts) {
+        EXPECT_EQ(1UL, contexts.count);
+        attributedText = contexts.firstObject.attributedText;
+        finished = true;
+    }];
+    TestWebKitAPI::Util::run(&finished);
+
+    __block Vector<std::pair<RetainPtr<NSString>, RetainPtr<NSDictionary>>> textAndAttributes;
+    RetainPtr plainString = [attributedText string];
+    [attributedText enumerateAttributesInRange:NSMakeRange(0, [attributedText length]) options:0 usingBlock:^(NSDictionary<NSAttributedStringKey, id> *attributes, NSRange range, BOOL*) {
+        textAndAttributes.append({ { [plainString substringWithRange:range] }, { attributes } });
+    }];
+
+    EXPECT_EQ(textAndAttributes.size(), 2U);
+    EXPECT_WK_STREQ(@"Hello", textAndAttributes[0].first.get());
+    EXPECT_WK_STREQ(@"<replacement char>", [textAndAttributes[1].first _withVisibleReplacementCharacters]);
+
+    RetainPtr<NSTextAttachment> attachment = [textAndAttributes[1].second objectForKey:NSAttachmentAttributeName];
+    EXPECT_WK_STREQ(@"sunset-in-cupertino-200px.png", [attachment fileWrapper].preferredFilename);
 }
 
 TEST(WritingTools, ProofreadingWithLinks)
@@ -2589,7 +2627,7 @@ static void expectScheduleShowAffordanceForSelectionRectCalled(bool expectation)
         TestWebKitAPI::Util::run(&didCallScheduleShowAffordanceForSelectionRect);
     else {
         bool doneWaiting = false;
-        RunLoop::main().dispatchAfter(300_ms, [&] {
+        RunLoop::protectedMain()->dispatchAfter(300_ms, [&] {
             EXPECT_FALSE(didCallScheduleShowAffordanceForSelectionRect);
             doneWaiting = true;
         });
@@ -2648,6 +2686,9 @@ TEST(WritingTools, APIWithBehaviorDefault)
     // If `PlatformWritingToolsBehaviorDefault` (or `Limited`), there should be a context menu item, but no affordance nor inline editing support.
 
 #if PLATFORM(MAC)
+    if (![PAL::getWTWritingToolsViewControllerClass() isAvailable])
+        return;
+
     InstanceMethodSwizzler swizzler(PAL::getWTWritingToolsClass(), @selector(scheduleShowAffordanceForSelectionRect:ofView:forDelegate:), imp_implementationWithBlock(^(id object, NSRect rect, NSView *view, id delegate) {
         didCallScheduleShowAffordanceForSelectionRect = true;
     }));
@@ -2691,6 +2732,9 @@ TEST(WritingTools, APIWithBehaviorComplete)
     // If `PlatformWritingToolsBehaviorComplete`, there should be a context menu item, an affordance, and inline editing support.
 
 #if PLATFORM(MAC)
+    if (![PAL::getWTWritingToolsViewControllerClass() isAvailable])
+        return;
+
     InstanceMethodSwizzler swizzler(PAL::getWTWritingToolsClass(), @selector(scheduleShowAffordanceForSelectionRect:ofView:forDelegate:), imp_implementationWithBlock(^(id object, NSRect rect, NSView *view, id delegate) {
         didCallScheduleShowAffordanceForSelectionRect = true;
     }));
@@ -2862,6 +2906,9 @@ TEST(WritingTools, PanelHidesInputAccessoryView)
 
 TEST(WritingTools, ShowAffordance)
 {
+    if (![PAL::getWTWritingToolsViewControllerClass() isAvailable])
+        return;
+
     InstanceMethodSwizzler swizzler(PAL::getWTWritingToolsClass(), @selector(scheduleShowAffordanceForSelectionRect:ofView:forDelegate:), imp_implementationWithBlock(^(id object, NSRect rect, NSView *view, id delegate) {
         didCallScheduleShowAffordanceForSelectionRect = true;
     }));
@@ -2891,6 +2938,9 @@ TEST(WritingTools, ShowAffordance)
 
 TEST(WritingTools, ShowAffordanceForMultipleLines)
 {
+    if (![PAL::getWTWritingToolsViewControllerClass() isAvailable])
+        return;
+
     static const Vector<WebCore::IntRect> expectedRects {
         { { 0, 0 }, { 0, 0 } },
         { { 8, 8 }, { 139, 52 } }
@@ -2917,6 +2967,9 @@ TEST(WritingTools, ShowAffordanceForMultipleLines)
 
 TEST(WritingTools, ShowPanelWithNoSelection)
 {
+    if (![PAL::getWTWritingToolsViewControllerClass() isAvailable])
+        return;
+
     __block bool done = false;
     __block WTRequestedTool requestedTool = WTRequestedToolIndex;
     __block NSRect selectionRect = NSZeroRect;
@@ -2940,6 +2993,9 @@ TEST(WritingTools, ShowPanelWithNoSelection)
 
 TEST(WritingTools, ShowPanelWithCaretSelection)
 {
+    if (![PAL::getWTWritingToolsViewControllerClass() isAvailable])
+        return;
+
     __block bool done = false;
     __block WTRequestedTool requestedTool = WTRequestedToolIndex;
     __block NSRect selectionRect = NSZeroRect;
@@ -2979,6 +3035,9 @@ TEST(WritingTools, ShowPanelWithCaretSelection)
 
 TEST(WritingTools, ShowPanelWithRangedSelection)
 {
+    if (![PAL::getWTWritingToolsViewControllerClass() isAvailable])
+        return;
+
     __block bool done = false;
     __block WTRequestedTool requestedTool = WTRequestedToolIndex;
     __block NSRect selectionRect = NSZeroRect;
@@ -3002,7 +3061,8 @@ TEST(WritingTools, ShowPanelWithRangedSelection)
     EXPECT_TRUE(NSEqualRects(expectedRect, selectionRect));
 }
 
-TEST(WritingTools, ShowToolWithRangedSelection)
+// rdar://144725722 (Disable 6x TestWebKitAPI.WritingTools.* (api-tests))
+TEST(WritingTools, DISABLED_ShowToolWithRangedSelection)
 {
     __block bool done = false;
     __block WTRequestedTool requestedTool = WTRequestedToolIndex;
@@ -3029,7 +3089,8 @@ TEST(WritingTools, ShowToolWithRangedSelection)
     EXPECT_TRUE(NSEqualRects(expectedRect, selectionRect));
 }
 
-TEST(WritingTools, ShowInvalidToolWithRangedSelection)
+// rdar://144725722 (Disable 6x TestWebKitAPI.WritingTools.* (api-tests))
+TEST(WritingTools, DISABLED_ShowInvalidToolWithRangedSelection)
 {
     __block bool done = false;
     __block WTRequestedTool requestedTool = WTRequestedToolIndex;
@@ -3144,7 +3205,8 @@ TEST(WritingTools, FocusWebViewAfterProofreadingAnimation)
     EXPECT_EQ([[webView window] firstResponder], webView.get());
 }
 
-TEST(WritingTools, ContextMenuItemsNonEditable)
+// rdar://144725722 (Disable 6x TestWebKitAPI.WritingTools.* (api-tests))
+TEST(WritingTools, DISABLED_ContextMenuItemsNonEditable)
 {
     RetainPtr delegate = adoptNS([[TestUIDelegate alloc] init]);
 
@@ -3179,7 +3241,8 @@ TEST(WritingTools, ContextMenuItemsNonEditable)
     }
 }
 
-TEST(WritingTools, ContextMenuItemsEditable)
+// rdar://144725722 (Disable 6x TestWebKitAPI.WritingTools.* (api-tests))
+TEST(WritingTools, DISABLED_ContextMenuItemsEditable)
 {
     RetainPtr delegate = adoptNS([[TestUIDelegate alloc] init]);
 
@@ -3214,7 +3277,8 @@ TEST(WritingTools, ContextMenuItemsEditable)
     }
 }
 
-TEST(WritingTools, ContextMenuItemsEditableEmpty)
+// rdar://144725722 (Disable 6x TestWebKitAPI.WritingTools.* (api-tests))
+TEST(WritingTools, DISABLED_ContextMenuItemsEditableEmpty)
 {
     RetainPtr delegate = adoptNS([[TestUIDelegate alloc] init]);
 
@@ -3246,6 +3310,66 @@ TEST(WritingTools, ContextMenuItemsEditableEmpty)
             continue;
 
         EXPECT_EQ(subItem.enabled, subItem.tag == WTRequestedToolIndex || subItem.tag == WTRequestedToolCompose);
+    }
+}
+
+TEST(WritingTools, AppMenuNonEditable)
+{
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body><p>AAAA BBBB CCCC</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+
+    [webView focusDocumentBodyAndSelectAll];
+
+    RetainPtr writingToolsMenuItem = [NSMenuItem standardWritingToolsMenuItem];
+    EXPECT_NOT_NULL(writingToolsMenuItem.get());
+
+    RetainPtr items = [[writingToolsMenuItem submenu] itemArray];
+    EXPECT_GT([items count], 0U);
+
+    for (NSMenuItem *subItem in items.get()) {
+        if (subItem.isSeparatorItem)
+            continue;
+
+        EXPECT_EQ([webView validateUserInterfaceItem:subItem], subItem.tag != WTRequestedToolCompose);
+    }
+}
+
+TEST(WritingTools, AppMenuEditable)
+{
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable><p>AAAA BBBB CCCC</p></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+
+    [webView focusDocumentBodyAndSelectAll];
+
+    RetainPtr writingToolsMenuItem = [NSMenuItem standardWritingToolsMenuItem];
+    EXPECT_NOT_NULL(writingToolsMenuItem.get());
+
+    RetainPtr items = [[writingToolsMenuItem submenu] itemArray];
+    EXPECT_GT([items count], 0U);
+
+    for (NSMenuItem *subItem in items.get()) {
+        if (subItem.isSeparatorItem)
+            continue;
+
+        EXPECT_TRUE([webView validateUserInterfaceItem:subItem]);
+    }
+}
+
+TEST(WritingTools, AppMenuEditableEmpty)
+{
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithHTMLString:@"<body contenteditable></body>" writingToolsBehavior:PlatformWritingToolsBehaviorComplete]);
+
+    [webView focusDocumentBodyAndSelectAll];
+
+    RetainPtr writingToolsMenuItem = [NSMenuItem standardWritingToolsMenuItem];
+    EXPECT_NOT_NULL(writingToolsMenuItem.get());
+
+    RetainPtr items = [[writingToolsMenuItem submenu] itemArray];
+    EXPECT_GT([items count], 0U);
+
+    for (NSMenuItem *subItem in items.get()) {
+        if (subItem.isSeparatorItem)
+            continue;
+
+        EXPECT_EQ([webView validateUserInterfaceItem:subItem], subItem.tag == WTRequestedToolIndex || subItem.tag == WTRequestedToolCompose);
     }
 }
 
@@ -3446,7 +3570,8 @@ TEST(WritingTools, ContextRangeFromRangeSelection)
     TestWebKitAPI::Util::run(&finished);
 }
 
-TEST(WritingTools, SuggestedTextIsSelectedAfterSmartReply)
+// rdar://144725722 (Disable 6x TestWebKitAPI.WritingTools.* (api-tests))
+TEST(WritingTools, DISABLED_SuggestedTextIsSelectedAfterSmartReply)
 {
     auto session = adoptNS([[WTSession alloc] initWithType:WTSessionTypeComposition textViewDelegate:nil]);
     [session setCompositionSessionType:WTCompositionSessionTypeSmartReply];
@@ -3726,7 +3851,7 @@ TEST(WritingTools, IntelligenceTextEffectCoordinatorDelegate_RectsForProofreadin
     id<WKIntelligenceTextEffectCoordinatorDelegate> coordinatorDelegate = (id<WKIntelligenceTextEffectCoordinatorDelegate>)webView.get();
 
     // FIXME: Figure out how to use `WebKitSwiftSoftLink` within TestWebKitAPI so that an actual instance can be created.
-    WKIntelligenceTextEffectCoordinator *coordinator = nil;
+    id<WKIntelligenceTextEffectCoordinating> coordinator = nil;
 
     NSRange subrange = NSMakeRange(18, 43); // "I didn't quite hear him.\n\nWho's over there?"
 
@@ -3779,7 +3904,7 @@ TEST(WritingTools, IntelligenceTextEffectCoordinatorDelegate_UpdateTextVisibilit
     finished = false;
 
     id<WKIntelligenceTextEffectCoordinatorDelegate> coordinatorDelegate = (id<WKIntelligenceTextEffectCoordinatorDelegate>)webView.get();
-    WKIntelligenceTextEffectCoordinator *coordinator = nil;
+    id<WKIntelligenceTextEffectCoordinating> coordinator = nil;
 
     __auto_type moveSelectionToFirstNode = ^{
         NSString *setSelectionJavaScript = @""
@@ -3867,7 +3992,7 @@ TEST(WritingTools, IntelligenceTextEffectCoordinatorDelegate_TextPreviewsForRang
     NSRange subrange = NSMakeRange(17, 45); // "I didn't quite here him.\n\nWho's over they're."
 
     id<WKIntelligenceTextEffectCoordinatorDelegate> coordinatorDelegate = (id<WKIntelligenceTextEffectCoordinatorDelegate>)webView.get();
-    WKIntelligenceTextEffectCoordinator *coordinator = nil;
+    id<WKIntelligenceTextEffectCoordinating> coordinator = nil;
 
 #if PLATFORM(MAC)
     __block RetainPtr<NSArray<_WKTextPreview *>> previews;
@@ -3930,6 +4055,34 @@ TEST(WritingTools, AttributedStringWithWebKitLegacy)
     }];
 
     TestWebKitAPI::Util::run(&finished);
+}
+#endif
+
+#if ENABLE(PDF_PLUGIN)
+TEST(WritingTools, PDFTextSelections)
+{
+    if constexpr (!TestWebKitAPI::unifiedPDFForTestingEnabled)
+        return;
+
+    RetainPtr webView = adoptNS([[WritingToolsWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:TestWebKitAPI::configurationForWebViewTestingUnifiedPDF().get()]);
+    RetainPtr request = [NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"test" withExtension:@"pdf"]];
+    [webView synchronouslyLoadRequest:request.get()];
+
+    auto selectAllText = [](TestWKWebView *webView) {
+#if PLATFORM(IOS_FAMILY)
+        [webView selectTextInGranularity:UITextGranularityDocument atPoint:CGPointMake(100, 100)];
+#else
+        [[webView window] makeFirstResponder:webView];
+        [[webView window] makeKeyAndOrderFront:nil];
+        [[webView window] orderFrontRegardless];
+        [webView sendClickAtPoint:NSMakePoint(100, 100)];
+        [webView selectAll:nil];
+#endif
+    };
+
+    selectAllText(webView.get());
+    [webView waitForNextPresentationUpdate];
+    EXPECT_EQ([webView writingToolsBehaviorForTesting], PlatformWritingToolsBehaviorNone);
 }
 #endif
 

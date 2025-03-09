@@ -125,9 +125,10 @@ CVPixelBufferRef RemoteVideoFrameProxy::pixelBuffer() const
         bool canSendSync = isMainRunLoop(); // FIXME: we should be able to sendSync from other threads too.
         bool canUseIOSurface = !WebProcess::singleton().shouldUseRemoteRenderingForWebGL();
         if (!canUseIOSurface || !canSendSync) {
+            Ref protectedThis { *this };
             BinarySemaphore semaphore;
-            videoFrameObjectHeapProxy->getVideoFrameBuffer(*this, canUseIOSurface, [this, &semaphore](auto pixelBuffer) {
-                m_pixelBuffer = WTFMove(pixelBuffer);
+            videoFrameObjectHeapProxy->getVideoFrameBuffer(*this, canUseIOSurface, [&protectedThis, &semaphore](auto pixelBuffer) {
+                protectedThis->m_pixelBuffer = WTFMove(pixelBuffer);
                 semaphore.signal();
             });
             semaphore.wait();

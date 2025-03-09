@@ -217,6 +217,16 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _preferences->setTabsToLinks(tabFocusesLinks);
 }
 
+- (BOOL)_useSystemAppearance
+{
+    return _preferences->useSystemAppearance();
+}
+
+- (void)_setUseSystemAppearance:(BOOL)useSystemAppearance
+{
+    _preferences->setUseSystemAppearance(useSystemAppearance);
+}
+
 #pragma mark WKObject protocol implementation
 
 - (API::Object&)_apiObject
@@ -589,6 +599,11 @@ static _WKStorageBlockingPolicy toAPI(WebCore::StorageBlockingPolicy policy)
 - (void)_disableRichJavaScriptFeatures
 {
     _preferences->disableRichJavaScriptFeatures();
+}
+
+- (void)_disableMediaPlaybackRelatedFeatures
+{
+    _preferences->disableMediaPlaybackRelatedFeatures();
 }
 
 - (BOOL)_applePayCapabilityDisclosureAllowed
@@ -1161,16 +1176,6 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
     return _preferences->applePayEnabled();
 }
 
-- (void)_setDNSPrefetchingEnabled:(BOOL)enabled
-{
-    _preferences->setDNSPrefetchingEnabled(enabled);
-}
-
-- (BOOL)_dnsPrefetchingEnabled
-{
-    return _preferences->dnsPrefetchingEnabled();
-}
-
 - (void)_setInlineMediaPlaybackRequiresPlaysInlineAttribute:(BOOL)enabled
 {
     _preferences->setInlineMediaPlaybackRequiresPlaysInlineAttribute(enabled);
@@ -1209,16 +1214,6 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
 - (BOOL)_mainContentUserGestureOverrideEnabled
 {
     return _preferences->mainContentUserGestureOverrideEnabled();
-}
-
-- (void)_setMediaStreamEnabled:(BOOL)enabled
-{
-    _preferences->setMediaStreamEnabled(enabled);
-}
-
-- (BOOL)_mediaStreamEnabled
-{
-    return _preferences->mediaStreamEnabled();
 }
 
 - (void)_setNeedsStorageAccessFromFileURLsQuirk:(BOOL)enabled
@@ -1672,6 +1667,24 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
     return _preferences->cssTransformStyleSeparatedEnabled();
 }
 
+- (void)_setOverlayRegionsEnabled:(BOOL)enabled
+{
+#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
+    _preferences->setOverlayRegionsEnabled(enabled);
+#else
+    UNUSED_PARAM(enabled);
+#endif
+}
+
+- (BOOL)_overlayRegionsEnabled
+{
+#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
+    return _preferences->overlayRegionsEnabled();
+#else
+    return NO;
+#endif
+}
+
 - (void)_setSpatialVideoEnabled:(BOOL)enabled
 {
 #if ENABLE(LINEAR_MEDIA_PLAYER)
@@ -1689,6 +1702,57 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
     return NO;
 #endif
 }
+
+- (void)_setModelElementEnabled:(BOOL)enabled
+{
+    _preferences->setModelElementEnabled(enabled);
+}
+
+- (BOOL)_modelProcessEnabled
+{
+    return _preferences->modelProcessEnabled();
+}
+
+- (void)_setModelProcessEnabled:(BOOL)enabled
+{
+    _preferences->setModelProcessEnabled(enabled);
+}
+
+- (BOOL)_modelElementEnabled
+{
+    return _preferences->modelElementEnabled();
+}
+
+- (void)_setModelNoPortalAttributeEnabled:(BOOL)enabled
+{
+    _preferences->setModelNoPortalAttributeEnabled(enabled);
+}
+
+- (BOOL)_modelNoPortalAttributeEnabled
+{
+    return _preferences->modelNoPortalAttributeEnabled();
+}
+
+- (void)_setRequiresPageVisibilityForVideoToBeNowPlayingForTesting:(BOOL)enabled
+{
+    _preferences->setRequiresPageVisibilityForVideoToBeNowPlaying(enabled);
+}
+
+- (BOOL)_requiresPageVisibilityForVideoToBeNowPlayingForTesting
+{
+    return _preferences->requiresPageVisibilityForVideoToBeNowPlaying();
+}
+
+- (BOOL)_siteIsolationEnabled
+{
+    return _preferences->siteIsolationEnabled();
+}
+
+- (void)_setSiteIsolationEnabled:(BOOL)enabled
+{
+    _preferences->setSiteIsolationEnabled(enabled);
+}
+
 @end
 
 @implementation WKPreferences (WKDeprecated)
@@ -1730,6 +1794,15 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
 @end
 
 @implementation WKPreferences (WKPrivateDeprecated)
+
+- (void)_setDNSPrefetchingEnabled:(BOOL)enabled
+{
+}
+
+- (BOOL)_dnsPrefetchingEnabled
+{
+    return NO;
+}
 
 - (BOOL)_shouldAllowDesignSystemUIFonts
 {
@@ -1844,5 +1917,18 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
 - (void)_setOfflineApplicationCacheIsEnabled:(BOOL)offlineApplicationCacheIsEnabled
 {
 }
+
+- (void)_setMediaStreamEnabled:(BOOL)enabled
+{
+}
+
+- (BOOL)_mediaStreamEnabled
+{
+    return YES;
+}
+
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WKPreferencesAdditions.mm>)
+#import <WebKitAdditions/WKPreferencesAdditions.mm>
+#endif
 
 @end

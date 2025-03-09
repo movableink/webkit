@@ -62,6 +62,7 @@
 #import <JavaScriptCore/JSObject.h>
 #import <WebCore/AXObjectCache.h>
 #import <WebCore/AccessibilityObject.h>
+#import <WebCore/BoundaryPointInlines.h>
 #import <WebCore/CSSStyleDeclaration.h>
 #import <WebCore/CachedResourceLoader.h>
 #import <WebCore/CaptionUserPreferences.h>
@@ -93,6 +94,7 @@
 #import <WebCore/LocalFrame.h>
 #import <WebCore/LocalFrameView.h>
 #import <WebCore/MIMETypeRegistry.h>
+#import <WebCore/MouseEventTypes.h>
 #import <WebCore/MutableStyleProperties.h>
 #import <WebCore/OriginAccessPatterns.h>
 #import <WebCore/Page.h>
@@ -378,12 +380,12 @@ static NSURL *createUniqueWebDataURL();
     auto& windowProxy = _private->coreFrame->windowProxy();
 
     // Calling ScriptController::globalObject() would create a window proxy, and dispatch corresponding callbacks, which may be premature
-    // if the script debugger is attached before a document is created.  These calls use the debuggerWorld(), we will need to pass a world
+    // if the script debugger is attached before a document is created. These calls use the debuggerWorldSingleton(), we will need to pass a world
     // to be able to debug isolated worlds.
-    if (!windowProxy.existingJSWindowProxy(WebCore::debuggerWorld()))
+    if (!windowProxy.existingJSWindowProxy(WebCore::debuggerWorldSingleton()))
         return;
 
-    auto* globalObject = windowProxy.globalObject(WebCore::debuggerWorld());
+    auto* globalObject = windowProxy.globalObject(WebCore::debuggerWorldSingleton());
     if (!globalObject)
         return;
 
@@ -702,7 +704,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     
 #if PLATFORM(IOS_FAMILY)
     ASSERT(WebThreadIsLockedOrDisabled());
-    JSC::JSGlobalObject* lexicalGlobalObject = _private->coreFrame->script().globalObject(WebCore::mainThreadNormalWorld());
+    auto* lexicalGlobalObject = _private->coreFrame->script().globalObject(WebCore::mainThreadNormalWorldSingleton());
     JSC::JSLockHolder jscLock(lexicalGlobalObject);
 #endif
 
@@ -718,7 +720,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return @"";
 
 #if !PLATFORM(IOS_FAMILY)
-    JSC::JSGlobalObject* lexicalGlobalObject = _private->coreFrame->script().globalObject(WebCore::mainThreadNormalWorld());
+    auto* lexicalGlobalObject = _private->coreFrame->script().globalObject(WebCore::mainThreadNormalWorldSingleton());
     JSC::JSLockHolder lock(lexicalGlobalObject);
 #endif
     return result.toWTFString(lexicalGlobalObject);
@@ -1239,7 +1241,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 {
     ASSERT(!WebThreadIsEnabled() || WebThreadIsLocked());
     auto& frameLoader = _private->coreFrame->loader();
-    auto* item = _private->coreFrame->history().currentItem();
+    auto* item = frameLoader.history().currentItem();
     if (item)
         frameLoader.client().saveViewStateToItem(*item);
 }
@@ -1830,7 +1832,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 {
     ASSERT(WebThreadIsLockedOrDisabled());
     if (auto* view = _private->coreFrame->view())
-        view->setWasScrolledByUser(true);
+        view->setLastUserScrollType(WebCore::LocalFrameView::UserScrollType::Explicit);
 }
 
 - (NSString *)stringByEvaluatingJavaScriptFromString:(NSString *)string forceUserGesture:(BOOL)forceUserGesture
@@ -2070,7 +2072,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
         return @"";
 
     // Start off with some guess at a frame and a global object, we'll try to do better...!
-    auto* anyWorldGlobalObject = _private->coreFrame->script().globalObject(WebCore::mainThreadNormalWorld());
+    auto* anyWorldGlobalObject = _private->coreFrame->script().globalObject(WebCore::mainThreadNormalWorldSingleton());
 
     // The global object is probably a proxy object? - if so, we know how to use this!
     JSC::JSObject* globalObjectObj = toJS(globalObjectRef);
@@ -2096,7 +2098,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
     if (!result || (!result.isBoolean() && !result.isString() && !result.isNumber()))
         return @"";
 
-    JSC::JSGlobalObject* lexicalGlobalObject = anyWorldGlobalObject;
+    auto* lexicalGlobalObject = anyWorldGlobalObject;
     JSC::JSLockHolder lock(lexicalGlobalObject);
     return result.toWTFString(lexicalGlobalObject);
 }
@@ -2149,7 +2151,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
     if (!_private->coreFrame || !_private->coreFrame->document())
         return;
     
-    auto* rootObject = _private->coreFrame->document()->axObjectCache()->rootObject();
+    auto* rootObject = _private->coreFrame->document()->axObjectCache()->rootObjectForFrame(*_private->coreFrame);
     if (rootObject)
         rootObject->setAccessibleName(AtomString { name });
 }
@@ -2191,14 +2193,15 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (!document || !document->axObjectCache())
         return nil;
     
-    auto* rootObject = document->axObjectCache()->rootObjectForFrame(_private->coreFrame);
+    auto* rootObject = document->axObjectCache()->rootObjectForFrame(*_private->coreFrame);
     if (!rootObject)
         return nil;
     
     // The root object will be a WebCore scroll view object. In WK1, scroll views are handled
     // by the system and the root object should be the web area (instead of the scroll view).
-    if (rootObject->isAttachment() && rootObject->firstChild())
-        return rootObject->firstChild()->wrapper();
+    auto* rootAccessibilityObject = dynamicDowncast<WebCore::AccessibilityObject>(rootObject);
+    if (rootAccessibilityObject && rootAccessibilityObject->isAttachment() && rootAccessibilityObject->firstChild())
+        return rootAccessibilityObject->firstChild()->wrapper();
     
     return rootObject->wrapper();
 }
@@ -2309,7 +2312,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return 0;
 
     auto* globalObject = coreFrame->script().globalObject(*core(world));
-    JSC::JSGlobalObject* lexicalGlobalObject = globalObject;
+    auto* lexicalGlobalObject = globalObject;
 
     JSC::JSLockHolder lock(lexicalGlobalObject);
     return toRef(lexicalGlobalObject, toJS(lexicalGlobalObject, globalObject, core(node)));
@@ -2578,7 +2581,7 @@ static NSURL *createUniqueWebDataURL()
     auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return 0;
-    return toGlobalRef(coreFrame->script().globalObject(WebCore::mainThreadNormalWorld()));
+    return toGlobalRef(coreFrame->script().globalObject(WebCore::mainThreadNormalWorldSingleton()));
 }
 
 #if JSC_OBJC_API_ENABLED

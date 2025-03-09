@@ -227,6 +227,24 @@ void MarkedSpace::sweepBlocks()
         });
 }
 
+void MarkedSpace::registerPreciseAllocation(PreciseAllocation* allocation, bool isNewAllocation)
+{
+    // FIXME: This is a bit of a mess we should really consolidate setting all the bits to here.
+    allocation->setIndexInSpace(m_preciseAllocations.size());
+    allocation->m_hasValidCell = true;
+    ASSERT(allocation->isNewlyAllocated());
+    ASSERT(!allocation->isMarked());
+    m_preciseAllocations.append(allocation);
+    if (auto* set = preciseAllocationSet())
+        set->add(allocation->cell());
+    if (isNewAllocation) {
+        // Existing code's ordering is calling `didAllocate` and increasing capacity.
+        size_t size = allocation->cellSize();
+        heap().didAllocate(size);
+        m_capacity += size;
+    }
+}
+
 void MarkedSpace::sweepPreciseAllocations()
 {
     RELEASE_ASSERT(m_preciseAllocationsNurseryOffset == m_preciseAllocations.size());
@@ -270,7 +288,7 @@ void MarkedSpace::prepareForAllocation()
 
 void MarkedSpace::enablePreciseAllocationTracking()
 {
-    m_preciseAllocationSet = makeUnique<HashSet<HeapCell*>>();
+    m_preciseAllocationSet = makeUnique<UncheckedKeyHashSet<HeapCell*>>();
     for (auto* allocation : m_preciseAllocations)
         m_preciseAllocationSet->add(allocation->cell());
 }

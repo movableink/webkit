@@ -37,6 +37,9 @@
 #include "WebProcess.h"
 #include "WebUserContentControllerMessages.h"
 #include "WebUserContentControllerProxyMessages.h"
+#include <JavaScriptCore/APICast.h>
+#include <JavaScriptCore/JSContextRef.h>
+#include <JavaScriptCore/JSRetainPtr.h>
 #include <WebCore/DOMWrapperWorld.h>
 #include <WebCore/FrameDestructionObserverInlines.h>
 #include <WebCore/FrameLoader.h>
@@ -66,7 +69,7 @@ typedef HashMap<ContentWorldIdentifier, std::pair<Ref<InjectedBundleScriptWorld>
 
 static WorldMap& worldMap()
 {
-    static NeverDestroyed<WorldMap> map(std::initializer_list<WorldMap::KeyValuePairType> { { pageContentWorldIdentifier(), std::make_pair(Ref { InjectedBundleScriptWorld::normalWorld() }, 1) } });
+    static NeverDestroyed<WorldMap> map(std::initializer_list<WorldMap::KeyValuePairType> { { pageContentWorldIdentifier(), std::make_pair(Ref { InjectedBundleScriptWorld::normalWorldSingleton() }, 1) } });
 
     return map;
 }
@@ -286,7 +289,7 @@ private:
     }
 
     // WebCore::UserMessageHandlerDescriptor
-    void didPostMessage(WebCore::UserMessageHandler& handler, WebCore::SerializedScriptValue* value, WTF::Function<void(SerializedScriptValue*, const String&)>&& completionHandler) override
+    void didPostMessage(WebCore::UserMessageHandler& handler, JSC::JSGlobalObject& globalObject, JSC::JSValue message, WTF::Function<void(JSC::JSValue, const String&)>&& completionHandler) override
     {
         auto* frame = handler.frame();
         if (!frame)
@@ -300,17 +303,12 @@ private:
         if (!webPage)
             return;
 
-        auto messageReplyHandler = [completionHandler = WTFMove(completionHandler)](std::span<const uint8_t> resultValue, const String& errorMessage) {
-            if (!errorMessage.isNull()) {
-                completionHandler(nullptr, errorMessage);
-                return;
-            }
-
-            auto value = SerializedScriptValue::createFromWireBytes({ resultValue });
-            completionHandler(value.ptr(), { });
-        };
-
-        WebProcess::singleton().parentProcessConnection()->sendWithAsyncReply(Messages::WebUserContentControllerProxy::DidPostMessage(webPage->webPageProxyIdentifier(), webFrame->info(), m_identifier, value->wireBytes()), WTFMove(messageReplyHandler), m_controller->identifier());
+        JSRetainPtr context { JSContextGetGlobalContext(toRef(&globalObject)) };
+        WebProcess::singleton().parentProcessConnection()->sendWithAsyncReply(Messages::WebUserContentControllerProxy::DidPostMessage(webPage->webPageProxyIdentifier(), webFrame->info(), m_identifier, JavaScriptEvaluationResult { context.get(), toRef(&globalObject, message) }), [completionHandler = WTFMove(completionHandler), context](Expected<WebKit::JavaScriptEvaluationResult, String>&& result) {
+            if (!result)
+                return completionHandler(JSC::jsUndefined(), result.error());
+            completionHandler(toJS(toJS(context.get()), result->toJS(context.get())), { });
+        }, m_controller->identifier());
     }
 
     RefPtr<WebUserContentController> m_controller;
@@ -448,7 +446,7 @@ void WebUserContentController::addUserScriptInternal(InjectedBundleScriptWorld& 
             if (&page.userContentProvider() != this)
                 return;
             
-            auto* localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame());
+            RefPtr localMainFrame = page.localMainFrame();
             if (!localMainFrame)
                 return;
 
@@ -457,7 +455,7 @@ void WebUserContentController::addUserScriptInternal(InjectedBundleScriptWorld& 
                 return;
             }
 
-            for (WebCore::Frame* frame = localMainFrame; frame; frame = frame->tree().traverseNext(localMainFrame)) {
+            for (WebCore::Frame* frame = localMainFrame.get(); frame; frame = frame->tree().traverseNext(localMainFrame.get())) {
                 auto* localFrame = dynamicDowncast<LocalFrame>(frame);
                 if (!localFrame)
                     continue;

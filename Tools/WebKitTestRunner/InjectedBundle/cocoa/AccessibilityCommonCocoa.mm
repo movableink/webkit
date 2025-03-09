@@ -32,10 +32,12 @@
 #import "config.h"
 #import "AccessibilityCommonCocoa.h"
 
+#import "AccessibilityTextMarker.h"
 #import "JSWrapper.h"
 #import "StringFunctions.h"
 #import <JavaScriptCore/JSStringRefCF.h>
 #import <objc/runtime.h>
+#import <wtf/ObjCRuntimeExtras.h>
 
 @implementation NSString (JSStringRefAdditions)
 
@@ -89,7 +91,7 @@ JSValueRef makeValueRefForValue(JSContextRef context, id value)
     if ([value isKindOfClass:[NSString class]])
         return JSValueMakeString(context, [value createJSStringRef].get());
     if ([value isKindOfClass:[NSNumber class]]) {
-        if (!strcmp([value objCType], @encode(BOOL)) || !strcmp([value objCType], "c"))
+        if (nsValueHasObjCType<BOOL>((NSValue *)value) || nsValueHasObjCType<char>((NSValue *)value))
             return JSValueMakeBoolean(context, [value boolValue]);
         return JSValueMakeNumber(context, [value doubleValue]);
     }
@@ -99,6 +101,12 @@ JSValueRef makeValueRefForValue(JSContextRef context, id value)
         return makeJSObject(context, value);
     if ([value isKindOfClass:[NSArray class]])
         return makeJSArray(context, value);
+#if PLATFORM(MAC)
+    if (value && CFGetTypeID((__bridge CFTypeRef)value) == AXTextMarkerGetTypeID()) {
+        Ref marker = AccessibilityTextMarker::create(value);
+        return JSObjectMake(context, marker->wrapperClass(), marker.ptr());
+    }
+#endif // PLATFORM(MAC)
     return nullptr;
 }
 

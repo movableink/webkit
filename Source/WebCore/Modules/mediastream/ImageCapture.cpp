@@ -79,16 +79,16 @@ void ImageCapture::takePhoto(PhotoSettings&& settings, DOMPromiseDeferred<IDLInt
         return;
     }
 
-    m_track->takePhoto(WTFMove(settings))->whenSettled(RunLoop::main(), [this, protectedThis = Ref { *this }, promise = WTFMove(promise), identifier = WTFMove(identifier)] (auto&& result) mutable {
-        queueTaskKeepingObjectAlive(*this, TaskSource::ImageCapture, [this, promise = WTFMove(promise), result = WTFMove(result), identifier = WTFMove(identifier)] () mutable {
+    m_track->takePhoto(WTFMove(settings))->whenSettled(RunLoop::protectedMain(), [this, protectedThis = Ref { *this }, promise = WTFMove(promise), identifier = WTFMove(identifier)] (auto&& result) mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::ImageCapture, [promise = WTFMove(promise), result = WTFMove(result), identifier = WTFMove(identifier)](auto& capture) mutable {
             if (!result) {
-                ERROR_LOG(identifier, "rejecting promise: ", result.error().message());
+                ERROR_LOG_WITH_THIS(&capture, identifier, "rejecting promise: ", result.error().message());
                 promise.reject(WTFMove(result.error()));
                 return;
             }
 
-            ALWAYS_LOG(identifier, "resolving promise");
-            promise.resolve(Blob::create(scriptExecutionContext(), WTFMove(get<0>(result.value())), WTFMove(get<1>(result.value()))));
+            ALWAYS_LOG_WITH_THIS(&capture, identifier, "resolving promise");
+            promise.resolve(Blob::create(capture.scriptExecutionContext(), WTFMove(get<0>(result.value())), WTFMove(get<1>(result.value()))));
         });
     });
 }
@@ -108,15 +108,15 @@ void ImageCapture::getPhotoCapabilities(DOMPromiseDeferred<IDLDictionary<PhotoCa
         return;
     }
 
-    m_track->getPhotoCapabilities()->whenSettled(RunLoop::main(), [this, protectedThis = Ref { *this }, promise = WTFMove(promise), identifier = WTFMove(identifier)] (auto&& result) mutable {
-        queueTaskKeepingObjectAlive(*this, TaskSource::ImageCapture, [this, promise = WTFMove(promise), result = WTFMove(result), identifier = WTFMove(identifier)] () mutable {
+    m_track->getPhotoCapabilities()->whenSettled(RunLoop::protectedMain(), [this, protectedThis = Ref { *this }, promise = WTFMove(promise), identifier = WTFMove(identifier)] (auto&& result) mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::ImageCapture, [promise = WTFMove(promise), result = WTFMove(result), identifier = WTFMove(identifier)](auto& capture) mutable {
             if (!result) {
-                ERROR_LOG(identifier, "rejecting promise: ", result.error().message());
+                ERROR_LOG_WITH_THIS(&capture, identifier, "rejecting promise: ", result.error().message());
                 promise.reject(WTFMove(result.error()));
                 return;
             }
 
-            ALWAYS_LOG(identifier, "resolving promise");
+            ALWAYS_LOG_WITH_THIS(&capture, identifier, "resolving promise");
             promise.resolve(WTFMove(result.value()));
         });
     });
@@ -137,15 +137,15 @@ void ImageCapture::getPhotoSettings(DOMPromiseDeferred<IDLDictionary<PhotoSettin
         return;
     }
 
-    m_track->getPhotoSettings()->whenSettled(RunLoop::main(), [this, protectedThis = Ref { *this }, promise = WTFMove(promise), identifier = WTFMove(identifier)] (auto&& result) mutable {
-        queueTaskKeepingObjectAlive(*this, TaskSource::ImageCapture, [this, promise = WTFMove(promise), result = WTFMove(result), identifier = WTFMove(identifier)] () mutable {
+    m_track->getPhotoSettings()->whenSettled(RunLoop::protectedMain(), [this, protectedThis = Ref { *this }, promise = WTFMove(promise), identifier = WTFMove(identifier)] (auto&& result) mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::ImageCapture, [promise = WTFMove(promise), result = WTFMove(result), identifier = WTFMove(identifier)](auto& capture) mutable {
             if (!result) {
-                ERROR_LOG(identifier, "rejecting promise: ", result.error().message());
+                ERROR_LOG_WITH_THIS(&capture, identifier, "rejecting promise: ", result.error().message());
                 promise.reject(WTFMove(result.error()));
                 return;
             }
 
-            ALWAYS_LOG(identifier, "resolving promise");
+            ALWAYS_LOG_WITH_THIS(&capture, identifier, "resolving promise");
             promise.resolve(WTFMove(result.value()));
         });
     });

@@ -99,6 +99,10 @@ public:
 
     void terminateIdleServiceWorkers();
 
+#if ENABLE(CONTENT_EXTENSIONS)
+    void reportNetworkUsageToWorkerClient(const WebCore::ScriptExecutionContextIdentifier, size_t bytesTransferredOverNetworkDelta) final;
+#endif
+
 private:
     WebSWServerToContextConnection(NetworkConnectionToWebProcess&, WebPageProxyIdentifier, WebCore::Site&&, std::optional<WebCore::ScriptExecutionContextIdentifier>, WebCore::SWServer&);
 
@@ -115,6 +119,7 @@ private:
     void skipWaiting(WebCore::ServiceWorkerIdentifier, CompletionHandler<void()>&&);
 
     // Messages back from the SW host process
+    void setAsInspected(WebCore::ServiceWorkerIdentifier, bool);
     void workerTerminated(WebCore::ServiceWorkerIdentifier);
 
     // Messages to the SW host WebProcess
@@ -139,11 +144,8 @@ private:
     void connectionClosed();
 
     void setInspectable(WebCore::ServiceWorkerIsInspectable) final;
-    void serviceWorkerNeedsRunning() final;
 
-    void processAssertionTimerFired();
-    void startProcessAssertionTimer();
-    bool areServiceWorkersIdle() const;
+    bool isWebSWServerToContextConnection() const final { return true; }
 
     WebCore::ProcessIdentifier m_webProcessIdentifier;
     WeakPtr<NetworkConnectionToWebProcess> m_connection;
@@ -151,9 +153,12 @@ private:
     HashMap<WebCore::FetchIdentifier, ThreadSafeWeakPtr<ServiceWorkerDownloadTask>> m_ongoingDownloads;
     bool m_isThrottleable { true };
     WebPageProxyIdentifier m_webPageProxyID;
+    size_t m_processingFunctionalEventCount { 0 };
     WebCore::ServiceWorkerIsInspectable m_isInspectable { WebCore::ServiceWorkerIsInspectable::Yes };
-    bool m_isTakingProcessAssertion { false };
-    WebCore::Timer m_processAssertionTimer;
 }; // class WebSWServerToContextConnection
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebSWServerToContextConnection)
+    static bool isType(const WebCore::SWServerToContextConnection& connection) { return connection.isWebSWServerToContextConnection(); }
+SPECIALIZE_TYPE_TRAITS_END()

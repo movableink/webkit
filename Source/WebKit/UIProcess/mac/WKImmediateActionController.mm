@@ -58,16 +58,16 @@
 
 @implementation WKImmediateActionController
 
-- (instancetype)initWithPage:(NakedRef<WebKit::WebPageProxy>)page view:(NSView *)view viewImpl:(NakedRef<WebKit::WebViewImpl>)viewImpl recognizer:(NSImmediateActionGestureRecognizer *)immediateActionRecognizer
+- (instancetype)initWithPage:(std::reference_wrapper<WebKit::WebPageProxy>)page view:(NSView *)view viewImpl:(std::reference_wrapper<WebKit::WebViewImpl>)viewImpl recognizer:(NSImmediateActionGestureRecognizer *)immediateActionRecognizer
 {
     self = [super init];
 
     if (!self)
         return nil;
 
-    _page = page.ptr();
+    _page = page.get();
     _view = view;
-    _viewImpl = viewImpl.ptr();
+    _viewImpl = viewImpl.get();
     _type = kWKImmediateActionNone;
     _immediateActionRecognizer = immediateActionRecognizer;
     _hasActiveImmediateAction = NO;
@@ -187,7 +187,8 @@
     if (immediateActionRecognizer != _immediateActionRecognizer)
         return;
 
-    if (_state == WebKit::ImmediateActionState::None)
+    Ref mainFrameProcess = RefPtr { _page.get() }->legacyMainFrameProcess();
+    if (_state == WebKit::ImmediateActionState::None || !mainFrameProcess->hasConnection())
         return;
 
     _hasActiveImmediateAction = YES;
@@ -195,7 +196,7 @@
     // FIXME: We need to be able to cancel this if the gesture recognizer is cancelled.
     // FIXME: Connection can be null if the process is closed; we should clean up better in that case.
     if (_state == WebKit::ImmediateActionState::Pending) {
-        Ref connection = RefPtr { _page.get() }->legacyMainFrameProcess().connection();
+        Ref connection = mainFrameProcess->connection();
         bool receivedReply = connection->waitForAndDispatchImmediately<Messages::WebPageProxy::DidPerformImmediateActionHitTest>(RefPtr { _page.get() }->webPageIDInMainFrameProcess(), 500_ms) == IPC::Error::NoError;
         if (!receivedReply)
             _state = WebKit::ImmediateActionState::TimedOut;
@@ -256,10 +257,11 @@
 - (RefPtr<API::HitTestResult>)_webHitTestResult
 {
     RefPtr<API::HitTestResult> hitTestResult;
+    RefPtr page = _page.get();
     if (_state == WebKit::ImmediateActionState::Ready)
-        hitTestResult = API::HitTestResult::create(_hitTestResultData, _page.get());
+        hitTestResult = API::HitTestResult::create(_hitTestResultData, page.get());
     else
-        hitTestResult = RefPtr { _page.get() }->lastMouseMoveHitTestResult();
+        hitTestResult = page->lastMouseMoveHitTestResult();
 
     return hitTestResult;
 }
@@ -301,7 +303,7 @@
             item.delegate = self;
             _currentQLPreviewMenuItem = item;
 
-            if (auto textIndicator = _hitTestResultData.linkTextIndicator.get())
+            if (RefPtr textIndicator = _hitTestResultData.linkTextIndicator)
                 RefPtr { _page.get() }->setTextIndicator(textIndicator->data());
 
             return (id<NSImmediateActionAnimationController>)item;
@@ -426,13 +428,13 @@
     RefPtr<WebKit::WebPageProxy> page = _page.get();
     WebCore::PageOverlay::PageOverlayID overlayID = _hitTestResultData.platformData.detectedDataOriginatingPageOverlay;
     _currentActionContext = (WKDDActionContext *)[actionContext contextForView:_view altMode:YES interactionStartedHandler:^() {
-        page->legacyMainFrameProcess().send(Messages::WebPage::DataDetectorsDidPresentUI(overlayID), page->webPageIDInMainFrameProcess());
+        page->protectedLegacyMainFrameProcess()->send(Messages::WebPage::DataDetectorsDidPresentUI(overlayID), page->webPageIDInMainFrameProcess());
     } interactionChangedHandler:^() {
-        if (_hitTestResultData.platformData.detectedDataTextIndicator)
-            page->setTextIndicator(_hitTestResultData.platformData.detectedDataTextIndicator->data());
-        page->legacyMainFrameProcess().send(Messages::WebPage::DataDetectorsDidChangeUI(overlayID), page->webPageIDInMainFrameProcess());
+        if (RefPtr detectedDataTextIndicator = _hitTestResultData.platformData.detectedDataTextIndicator)
+            page->setTextIndicator(detectedDataTextIndicator->data());
+        page->protectedLegacyMainFrameProcess()->send(Messages::WebPage::DataDetectorsDidChangeUI(overlayID), page->webPageIDInMainFrameProcess());
     } interactionStoppedHandler:^() {
-        page->legacyMainFrameProcess().send(Messages::WebPage::DataDetectorsDidHideUI(overlayID), page->webPageIDInMainFrameProcess());
+        page->protectedLegacyMainFrameProcess()->send(Messages::WebPage::DataDetectorsDidHideUI(overlayID), page->webPageIDInMainFrameProcess());
         [self _clearImmediateActionState];
     }];
 
@@ -461,8 +463,8 @@
     RefPtr<WebKit::WebPageProxy> page = _page.get();
     _currentActionContext = (WKDDActionContext *)[actionContext contextForView:_view altMode:YES interactionStartedHandler:^() {
     } interactionChangedHandler:^() {
-        if (_hitTestResultData.linkTextIndicator)
-            page->setTextIndicator(_hitTestResultData.linkTextIndicator->data());
+        if (RefPtr linkTextIndicator = _hitTestResultData.linkTextIndicator)
+            page->setTextIndicator(linkTextIndicator->data());
     } interactionStoppedHandler:^() {
         [self _clearImmediateActionState];
     }];

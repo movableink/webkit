@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,6 +38,9 @@
 #import "InteractionInformationAtPosition.h"
 #import "PasteboardAccessIntent.h"
 #import "RevealFocusedElementDeferrer.h"
+#if ENABLE(MODEL_PROCESS)
+#import "StageModeInteractionState.h"
+#endif
 #import "SyntheticEditingCommandType.h"
 #import "TextCheckingController.h"
 #import "TransactionID.h"
@@ -99,6 +102,7 @@ class IntSize;
 class SelectionRect;
 struct ContactInfo;
 struct ContactsRequestData;
+struct DigitalCredentialsRequestData;
 struct PromisedAttachmentInfo;
 struct ShareDataWithParsedURL;
 struct TextIndicatorData;
@@ -106,6 +110,7 @@ struct TextRecognitionResult;
 enum class DOMPasteAccessCategory : uint8_t;
 enum class DOMPasteAccessResponse : uint8_t;
 enum class DOMPasteRequiresInteraction : bool;
+enum class ElementIdentifierType;
 enum class MouseEventPolicy : uint8_t;
 enum class RouteSharingPolicy : uint8_t;
 enum class TextIndicatorDismissalAnimation : uint8_t;
@@ -113,6 +118,8 @@ enum class TextIndicatorDismissalAnimation : uint8_t;
 #if ENABLE(DRAG_SUPPORT)
 struct DragItem;
 #endif
+
+using ElementIdentifier = ObjectIdentifier<ElementIdentifierType>;
 }
 
 namespace WebKit {
@@ -120,6 +127,7 @@ class NativeWebTouchEvent;
 class SmartMagnificationController;
 class WebOpenPanelResultListenerProxy;
 class WebPageProxy;
+struct KeyEventInterpretationContext;
 enum class PickerDismissalReason : uint8_t;
 }
 
@@ -144,6 +152,10 @@ enum class PickerDismissalReason : uint8_t;
 @class _WKTextInputContext;
 
 @class WKSTextAnimationManager;
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+@class WKDigitalCredentialsPicker;
+#endif
 
 #if !PLATFORM(WATCHOS)
 @class WKDateTimeInputControl;
@@ -256,7 +268,7 @@ enum class TargetedPreviewPositioning : uint8_t {
 using InputViewUpdateDeferralSources = OptionSet<InputViewUpdateDeferralSource>;
 
 struct WKSelectionDrawingInfo {
-    enum class SelectionType { None, Plugin, Range };
+    enum class SelectionType : bool { None, Range };
     WKSelectionDrawingInfo();
     explicit WKSelectionDrawingInfo(const EditorState&);
     SelectionType type { SelectionType::None };
@@ -344,6 +356,9 @@ struct ImageAnalysisContextMenuActionData {
     RetainPtr<WKHighlightLongPressGestureRecognizer> _highlightLongPressGestureRecognizer;
     RetainPtr<UILongPressGestureRecognizer> _longPressGestureRecognizer;
     RetainPtr<WKSyntheticTapGestureRecognizer> _doubleTapGestureRecognizer;
+#if ENABLE(MODEL_PROCESS)
+    RetainPtr<UIPanGestureRecognizer> _modelInteractionPanGestureRecognizer;
+#endif
     RetainPtr<UITapGestureRecognizer> _nonBlockingDoubleTapGestureRecognizer;
     RetainPtr<UITapGestureRecognizer> _doubleTapGestureRecognizerForDoubleClick;
     RetainPtr<UITapGestureRecognizer> _twoFingerDoubleTapGestureRecognizer;
@@ -403,6 +418,9 @@ struct ImageAnalysisContextMenuActionData {
 #if HAVE(CONTACTSUI)
     RetainPtr<WKContactPicker> _contactPicker;
 #endif
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+    RetainPtr<WKDigitalCredentialsPicker> _digitalCredentialsPicker;
+#endif
     RetainPtr<UIGestureRecognizer> _previewGestureRecognizer;
     RetainPtr<UIGestureRecognizer> _previewSecondaryGestureRecognizer;
     Vector<bool> _focusStateStack;
@@ -437,6 +455,34 @@ struct ImageAnalysisContextMenuActionData {
     RetainPtr<WKSTextAnimationManager> _textAnimationManager;
 #endif
 
+    enum class SelectionInteractionType : uint8_t {
+        None,
+        Touch,
+        ExtentPoint,
+        ExtentPointAndBoundary,
+    };
+    SelectionInteractionType _selectionInteractionType;
+
+    struct LastSelectionTouch {
+        CGPoint point;
+        BOOL baseIsStart;
+        WKBESelectionFlags flags;
+    };
+    LastSelectionTouch _lastSelectionTouch;
+
+    struct LastSelectionExtentPoint {
+        CGPoint point;
+        WebKit::RespectSelectionAnchor respectSelectionAnchor;
+    };
+    LastSelectionExtentPoint _lastSelectionExtentPoint;
+
+    struct LastSelectionExtentPointAndBoundary {
+        CGPoint point;
+        WebCore::TextGranularity granularity;
+        WebKit::TextInteractionSource interactionSource;
+    };
+    LastSelectionExtentPointAndBoundary _lastSelectionExtentPointAndBoundary;
+
     RefPtr<WebKit::SmartMagnificationController> _smartMagnificationController;
 
     WeakObjCPtr<id <UITextInputDelegate>> _inputDelegate;
@@ -458,12 +504,13 @@ struct ImageAnalysisContextMenuActionData {
     WebKit::InteractionInformationAtPosition _positionInformation;
     std::optional<WebCore::TextIndicatorData> _positionInformationLinkIndicator;
     WebKit::FocusedElementInformation _focusedElementInformation;
+    std::optional<WebKit::FocusedElementInformationIdentifier> _pendingFocusedElementIdentifier;
     RetainPtr<NSObject<WKFormPeripheral>> _inputPeripheral;
 
     Vector<WebKit::KeyEventAndCompletionBlock, 1> _keyWebEventHandlers;
 
     CGPoint _lastInteractionLocation;
-    WebKit::TransactionID _layerTreeTransactionIdAtLastInteractionStart;
+    std::optional<WebKit::TransactionID> _layerTreeTransactionIdAtLastInteractionStart;
 
     WebKit::WKSelectionDrawingInfo _lastSelectionDrawingInfo;
     RetainPtr<WKTextRange> _cachedSelectedTextRange;
@@ -479,11 +526,9 @@ struct ImageAnalysisContextMenuActionData {
 
     Vector<BlockPtr<void()>> _actionsToPerformAfterEditorStateUpdate;
 
-#if ENABLE(DATALIST_ELEMENT)
     RetainPtr<UIView <WKFormControl>> _dataListTextSuggestionsInputView;
     RetainPtr<NSArray<WKBETextSuggestion *>> _dataListTextSuggestions;
     WeakObjCPtr<WKDataListSuggestionsControl> _dataListSuggestionsControl;
-#endif
 
     RefPtr<WebKit::RevealFocusedElementDeferrer> _revealFocusedElementDeferrer;
 
@@ -534,6 +579,7 @@ struct ImageAnalysisContextMenuActionData {
     BOOL _isHandlingActivePressesEvent;
     BOOL _isDeferringKeyEventsToInputMethod;
     BOOL _isUpdatingAccessoryView;
+    BOOL _doubleTapGesturesAreDisabledTemporarilyForFastTap;
 
     BOOL _focusRequiresStrongPasswordAssistance;
     BOOL _waitingForEditDragSnapshot;
@@ -566,6 +612,11 @@ struct ImageAnalysisContextMenuActionData {
     RetainPtr<_UITextDragCaretView> _editDropCaretView;
     BlockPtr<void()> _actionToPerformAfterReceivingEditDragSnapshot;
 #endif
+
+#if ENABLE(MODEL_PROCESS)
+    std::optional<WebKit::StageModeSession> _stageModeSession;
+#endif
+
 #if HAVE(UI_TEXT_CURSOR_DROP_POSITION_ANIMATOR)
     RetainPtr<UIView<UITextCursorView>> _editDropTextCursorView;
     RetainPtr<UITextCursorDropPositionAnimator> _editDropCaretAnimator;
@@ -673,11 +724,8 @@ struct ImageAnalysisContextMenuActionData {
 @property (nonatomic, readonly) BOOL isPresentingEditMenu;
 @property (nonatomic, readonly) CGSize sizeForLegacyFormControlPickerViews;
 @property (nonatomic, readonly, getter=isPotentialTapInProgress) BOOL potentialTapInProgress;
-
-#if ENABLE(DATALIST_ELEMENT)
 @property (nonatomic, strong) UIView <WKFormControl> *dataListTextSuggestionsInputView;
 @property (nonatomic, strong) NSArray<WKBETextSuggestion *> *dataListTextSuggestions;
-#endif
 
 - (void)setUpInteraction;
 - (void)cleanUpInteraction;
@@ -709,6 +757,8 @@ struct ImageAnalysisContextMenuActionData {
 - (void)cancelPointersForGestureRecognizer:(UIGestureRecognizer *)gestureRecognizer;
 - (std::optional<unsigned>)activeTouchIdentifierForGestureRecognizer:(UIGestureRecognizer *)gestureRecognizer;
 
+- (void)updateSelection;
+
 #define DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW(_action) \
     - (void)_action ## ForWebView:(id)sender;
 FOR_EACH_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
@@ -737,9 +787,10 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
 
 - (BOOL)_mayDisableDoubleTapGesturesDuringSingleTap;
 - (void)_disableDoubleTapGesturesDuringTapIfNecessary:(WebKit::TapIdentifier)requestID;
-- (void)_handleSmartMagnificationInformationForPotentialTap:(WebKit::TapIdentifier)requestID renderRect:(const WebCore::FloatRect&)renderRect fitEntireRect:(BOOL)fitEntireRect viewportMinimumScale:(double)viewportMinimumScale viewportMaximumScale:(double)viewportMaximumScale nodeIsRootLevel:(BOOL)nodeIsRootLevel;
+- (void)_handleSmartMagnificationInformationForPotentialTap:(WebKit::TapIdentifier)requestID renderRect:(const WebCore::FloatRect&)renderRect fitEntireRect:(BOOL)fitEntireRect viewportMinimumScale:(double)viewportMinimumScale viewportMaximumScale:(double)viewportMaximumScale nodeIsRootLevel:(BOOL)nodeIsRootLevel nodeIsPluginElement:(BOOL)nodeIsPluginElement;
 - (void)_elementDidFocus:(const WebKit::FocusedElementInformation&)information userIsInteracting:(BOOL)userIsInteracting blurPreviousNode:(BOOL)blurPreviousNode activityStateChanges:(OptionSet<WebCore::ActivityState>)activityStateChanges userObject:(NSObject <NSSecureCoding> *)userObject;
 - (void)_updateInputContextAfterBlurringAndRefocusingElement;
+- (void)_didProgrammaticallyClearFocusedElement:(WebCore::ElementContext&&)context;
 - (void)_updateFocusedElementInformation:(const WebKit::FocusedElementInformation&)information;
 - (void)_elementDidBlur;
 - (void)_didUpdateInputMode:(WebCore::InputMode)mode;
@@ -748,7 +799,7 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
 - (void)_hardwareKeyboardAvailabilityChanged;
 - (void)_selectionChanged;
 - (void)_updateChangedSelection;
-- (BOOL)_interpretKeyEvent:(::WebEvent *)theEvent isCharEvent:(BOOL)isCharEvent;
+- (BOOL)_interpretKeyEvent:(::WebEvent *)event withContext:(WebKit::KeyEventInterpretationContext&&)context;
 - (void)_positionInformationDidChange:(const WebKit::InteractionInformationAtPosition&)info;
 - (BOOL)_currentPositionInformationIsValidForRequest:(const WebKit::InteractionInformationRequest&)request;
 - (void)_attemptSyntheticClickAtLocation:(CGPoint)location modifierFlags:(UIKeyModifierFlags)modifierFlags;
@@ -761,6 +812,12 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
 - (void)_showRunOpenPanel:(API::OpenPanelParameters*)parameters frameInfo:(const WebKit::FrameInfoData&)frameInfo resultListener:(WebKit::WebOpenPanelResultListenerProxy*)listener;
 - (void)_showShareSheet:(const WebCore::ShareDataWithParsedURL&)shareData inRect:(std::optional<WebCore::FloatRect>)rect completionHandler:(WTF::CompletionHandler<void(bool)>&&)completionHandler;
 - (void)_showContactPicker:(const WebCore::ContactsRequestData&)requestData completionHandler:(WTF::CompletionHandler<void(std::optional<Vector<WebCore::ContactInfo>>&&)>&&)completionHandler;
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+- (void)_showDigitalCredentialsPicker:(const WebCore::DigitalCredentialsRequestData&)requestData completionHandler:(WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&&)completionHandler;
+- (void)_dismissDigitalCredentialsPicker:(CompletionHandler<void(bool)>&&)completionHandler;
+#endif
+
 - (NSArray<NSString *> *)filePickerAcceptedTypeIdentifiers;
 - (void)dismissFilePicker;
 - (void)_didHandleKeyEvent:(::WebEvent *)event eventWasHandled:(BOOL)eventWasHandled;
@@ -821,11 +878,16 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
 - (void)_didChangeDragCaretRect:(CGRect)previousRect currentRect:(CGRect)rect;
 #endif
 
+#if ENABLE(MODEL_PROCESS)
+- (void)modelInteractionPanGestureDidBeginAtPoint:(CGPoint)inputPoint;
+- (void)modelInteractionPanGestureDidUpdateWithPoint:(CGPoint)inputPoint;
+- (void)modelInteractionPanGestureDidEnd;
+- (void)didReceiveInteractiveModelElement:(std::optional<WebCore::ElementIdentifier>)elementID;
+#endif
+
 - (void)reloadContextViewForPresentedListViewController;
 
-#if ENABLE(DATALIST_ELEMENT)
 - (void)updateTextSuggestionsForInputDelegate;
-#endif
 
 - (void)_updateRuntimeProtocolConformanceIfNeeded;
 
@@ -856,6 +918,7 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
 @property (nonatomic, readonly) BOOL _shouldAvoidScrollingWhenFocusedContentIsVisible;
 @property (nonatomic, readonly) BOOL _shouldUseLegacySelectPopoverDismissalBehavior;
 @property (nonatomic, readonly) BOOL _shouldAvoidSecurityHeuristicScoreUpdates;
+@property (nonatomic, readonly) BOOL _canStartNavigationSwipeAtLastInteractionLocation;
 
 - (void)_didChangeLinkPreviewAvailability;
 - (void)setContinuousSpellCheckingEnabled:(BOOL)enabled;
@@ -922,7 +985,13 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
 
 - (BOOL)_shouldHideSelectionDuringOverflowScroll:(UIScrollView *)scrollView;
 
+- (void)_updateDoubleTapGestureRecognizerEnablement;
+
 @property (nonatomic, readonly) BOOL shouldUseAsyncInteractions;
+
+#if ENABLE(MODEL_PROCESS)
+- (void)_willInvalidateDraggedModelWithContainerView:(UIView *)containerView;
+#endif
 
 @end
 
@@ -943,18 +1012,22 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(DECLARE_WKCONTENTVIEW_ACTION_FOR_WEB_VIEW)
 - (void)_dismissContactPickerWithContacts:(NSArray *)contacts;
 - (void)_simulateSelectionStart;
 
+#if ENABLE(MODEL_PROCESS)
+- (void)_simulateModelInteractionPanGestureBeginAtPoint:(CGPoint)hitPoint;
+- (void)_simulateModelInteractionPanGestureUpdateAtPoint:(CGPoint)hitPoint;
+- (NSDictionary *)_stageModeInfoForTesting;
+#endif
+
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
 - (BOOL)_allowAnimationControls;
 #endif
 
 - (void)dismissFormAccessoryView;
 
-#if ENABLE(DATALIST_ELEMENT)
 - (void)_selectDataListOption:(NSInteger)optionIndex;
 - (void)_setDataListSuggestionsControl:(WKDataListSuggestionsControl *)control;
 
 @property (nonatomic, readonly) BOOL isShowingDataListSuggestions;
-#endif
 
 @property (nonatomic, readonly) NSString *textContentTypeForTesting;
 @property (nonatomic, readonly) NSString *selectFormPopoverTitle;

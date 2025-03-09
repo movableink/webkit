@@ -146,7 +146,7 @@ class DevicePort(DarwinPort):
 
     def supported_device_types(self):
         types = set()
-        for device in self.DEVICE_MANAGER.available_devices(host=self.host):
+        for device in self.DEVICE_MANAGER.available_devices(host=self.host, udids=self.get_option('udids', None)):
             if self.is_simulator() and not device.platform_device.is_booted_or_booting():
                 continue
             if device.device_type in self.DEVICE_TYPE:

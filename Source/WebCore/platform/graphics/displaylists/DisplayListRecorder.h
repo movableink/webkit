@@ -77,7 +77,7 @@ protected:
     virtual void recordClearDropShadow() = 0;
     virtual void recordClipToImageBuffer(ImageBuffer&, const FloatRect& destinationRect) = 0;
     virtual void recordDrawFilteredImageBuffer(ImageBuffer*, const FloatRect& sourceImageRect, Filter&) = 0;
-    virtual void recordDrawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode) = 0;
+    virtual void recordDrawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& localAnchor, FontSmoothingMode) = 0;
     virtual void recordDrawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) = 0;
     virtual void recordDrawImageBuffer(ImageBuffer&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions) = 0;
     virtual void recordDrawNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions) = 0;
@@ -102,7 +102,6 @@ protected:
 #endif
     virtual void recordStrokePathSegment(const PathSegment&) = 0;
     virtual void recordStrokePath(const Path&) = 0;
-    virtual void recordDrawDisplayListItems(const Vector<Item>&, const FloatPoint& destination) = 0;
 
     virtual bool recordResourceUse(NativeImage&) = 0;
     virtual bool recordResourceUse(ImageBuffer&) = 0;
@@ -176,13 +175,13 @@ private:
     WEBCORE_EXPORT const GraphicsContextState& state() const final;
 
     WEBCORE_EXPORT void didUpdateState(GraphicsContextState&) final;
+    WEBCORE_EXPORT void didUpdateSingleState(GraphicsContextState&, GraphicsContextState::ChangeIndex) final;
     WEBCORE_EXPORT void fillPath(const Path&) final;
     WEBCORE_EXPORT void strokePath(const Path&) final;
     WEBCORE_EXPORT void drawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter&, FilterResults&) final;
-    WEBCORE_EXPORT void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint& anchorPoint, FontSmoothingMode) final;
+    WEBCORE_EXPORT void drawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& anchorPoint, FontSmoothingMode) final;
     WEBCORE_EXPORT void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) override;
-    WEBCORE_EXPORT void drawGlyphsAndCacheResources(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode) final;
-    WEBCORE_EXPORT void drawDisplayListItems(const Vector<Item>&, const ResourceHeap&, ControlFactory&, const FloatPoint& destination) final;
+    WEBCORE_EXPORT void drawGlyphsAndCacheResources(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& localAnchor, FontSmoothingMode) final;
     WEBCORE_EXPORT void drawImageBuffer(ImageBuffer&, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions) final;
     WEBCORE_EXPORT void drawConsumingImageBuffer(RefPtr<ImageBuffer>, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions) final;
     WEBCORE_EXPORT void drawNativeImageInternal(NativeImage&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions) final;

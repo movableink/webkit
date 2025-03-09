@@ -47,6 +47,14 @@ unsigned FunctionIPIntMetadataGenerator::addSignature(const TypeDefinition& sign
     return index;
 }
 
+void FunctionIPIntMetadataGenerator::setTailCall(uint32_t functionIndex, bool isImportedFunctionFromFunctionIndexSpace)
+{
+    m_hasTailCallSuccessors = true;
+    m_tailCallSuccessors.set(functionIndex);
+    if (isImportedFunctionFromFunctionIndexSpace)
+        setTailCallClobbersInstance();
+}
+
 void FunctionIPIntMetadataGenerator::addLength(size_t length)
 {
     IPInt::InstructionLengthMetadata instructionLength {
@@ -117,18 +125,8 @@ void FunctionIPIntMetadataGenerator::addLEB128V128Constant(v128_t value, size_t 
     WRITE_TO_METADATA(m_metadata.data() + size, mdConst, IPInt::Const128Metadata);
 }
 
-void FunctionIPIntMetadataGenerator::addReturnData(const FunctionSignature& sig)
+void FunctionIPIntMetadataGenerator::addReturnData(const FunctionSignature& sig, const CallInformation& returnCC)
 {
-    auto fprToIndex = [&](FPRReg r) -> unsigned {
-        for (unsigned i = 0; i < FPRInfo::numberOfArgumentRegisters; ++i) {
-            if (FPRInfo::toArgumentRegister(i) == r)
-                return i;
-        }
-        RELEASE_ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
-        return 0;
-    };
-
-    CallInformation returnCC = wasmCallingConvention().callInformationFor(sig, CallRole::Callee);
     m_uINTBytecode.reserveInitialCapacity(sig.returnCount() + 1);
     // uINT: the interpreter smaller than mINT
     // 0x00-0x07: r0 - r7
@@ -141,20 +139,33 @@ void FunctionIPIntMetadataGenerator::addReturnData(const FunctionSignature& sig)
     ASSERT_UNUSED(NUM_UINT_GPRS, wasmCallingConvention().jsrArgs.size() <= NUM_UINT_GPRS);
     ASSERT_UNUSED(NUM_UINT_FPRS, wasmCallingConvention().fprArgs.size() <= NUM_UINT_FPRS);
 
-    for (size_t i = 0; i < sig.returnCount(); ++i) {
-        auto loc = returnCC.results[i].location;
+    m_uINTBytecode.appendUsingFunctor(returnCC.results.size(),
+        [&](unsigned index) -> uint8_t {
+            auto loc = returnCC.results[index].location;
+            if (loc.isGPR()) {
+#if USE(JSVALUE64)
+                ASSERT_UNUSED(NUM_UINT_GPRS, GPRInfo::toArgumentIndex(loc.jsr().gpr()) < NUM_UINT_GPRS);
+                return static_cast<uint8_t>(IPInt::UIntBytecode::RetGPR) + GPRInfo::toArgumentIndex(loc.jsr().gpr());
+#elif USE(JSVALUE32_64)
+                ASSERT_UNUSED(NUM_UINT_GPRS, GPRInfo::toArgumentIndex(loc.jsr().payloadGPR()) < NUM_UINT_GPRS);
+                ASSERT_UNUSED(NUM_UINT_GPRS, GPRInfo::toArgumentIndex(loc.jsr().tagGPR()) < NUM_UINT_GPRS);
+                return static_cast<uint8_t>(IPInt::UIntBytecode::RetGPR) + GPRInfo::toArgumentIndex(loc.jsr().gpr(WhichValueWord::PayloadWord));
+#endif
+            }
 
-        if (loc.isGPR()) {
-            ASSERT_UNUSED(NUM_UINT_GPRS, loc.jsr().payloadGPR() < NUM_UINT_GPRS);
-            m_uINTBytecode.append(static_cast<uint8_t>(IPInt::UIntBytecode::RetGPR) + loc.jsr().payloadGPR());
-        } else if (loc.isFPR()) {
-            ASSERT_UNUSED(NUM_UINT_FPRS, fprToIndex(loc.fpr()) < NUM_UINT_FPRS);
-            m_uINTBytecode.append(static_cast<uint8_t>(IPInt::UIntBytecode::RetFPR) + fprToIndex(loc.fpr()));
-        } else if (loc.isStack()) {
-            m_highestReturnStackOffset = loc.offsetFromFP();
-            m_uINTBytecode.append(static_cast<uint8_t>(IPInt::UIntBytecode::Stack));
-        }
-    }
+            if (loc.isFPR()) {
+                ASSERT_UNUSED(NUM_UINT_FPRS, FPRInfo::toArgumentIndex(loc.fpr()) < NUM_UINT_FPRS);
+                return static_cast<uint8_t>(IPInt::UIntBytecode::RetFPR) + FPRInfo::toArgumentIndex(loc.fpr());
+            }
+
+            if (loc.isStack()) {
+                m_highestReturnStackOffset = loc.offsetFromFP();
+                return static_cast<uint8_t>(IPInt::UIntBytecode::Stack);
+            }
+
+            return 0;
+        });
+
     m_uINTBytecode.reverse();
     m_uINTBytecode.append(static_cast<uint8_t>(IPInt::UIntBytecode::End));
 }

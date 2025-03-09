@@ -115,7 +115,7 @@ public:
 
     virtual RenderFragmentContainer* mapFromFlowToFragment(TransformState&) const;
 
-    void logicalWidthChangedInFragmentsForBlock(const RenderBlock&, bool&);
+    void logicalWidthChangedInFragmentsForBlock(const RenderBlock&, RelayoutChildren&);
 
     LayoutUnit contentLogicalWidthOfFirstFragment() const;
     LayoutUnit contentLogicalHeightOfFirstFragment() const;
@@ -134,8 +134,6 @@ public:
     
     // Check if the object should be painted in this fragment and if the fragment is part of this flow thread.
     bool objectShouldFragmentInFlowFragment(const RenderObject*, const RenderFragmentContainer*) const;
-
-    void markFragmentsForOverflowLayoutIfNeeded();
 
     virtual bool addForcedFragmentBreak(const RenderBlock*, LayoutUnit, RenderBox* breakChild, bool isBefore, LayoutUnit* offsetBreakAdjustment = 0);
     virtual void applyBreakAfterContent(LayoutUnit) { }

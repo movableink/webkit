@@ -212,7 +212,14 @@ void AudioSessionIOS::setCategory(CategoryType newCategory, Mode newMode, RouteS
         break;
     case CategoryType::PlayAndRecord:
         categoryString = AVAudioSessionCategoryPlayAndRecord;
-        options |= AVAudioSessionCategoryOptionAllowBluetooth | AVAudioSessionCategoryOptionAllowBluetoothA2DP | AVAudioSessionCategoryOptionDefaultToSpeaker | AVAudioSessionCategoryOptionAllowAirPlay;
+        // FIXME: Stop using `AVAudioSessionCategoryOptionAllowBluetooth` as it is deprecated (rdar://145294046).
+        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+        options |= AVAudioSessionCategoryOptionAllowBluetooth | AVAudioSessionCategoryOptionAllowBluetoothA2DP | AVAudioSessionCategoryOptionAllowAirPlay;
+        ALLOW_DEPRECATED_DECLARATIONS_END
+#if ENABLE(MEDIA_STREAM)
+        if (!AVAudioSessionCaptureDeviceManager::singleton().isReceiverPreferredSpeaker())
+#endif
+            options |= AVAudioSessionCategoryOptionDefaultToSpeaker;
         break;
     case CategoryType::AudioProcessing:
         categoryString = AVAudioSessionCategoryAudioProcessing;
@@ -227,6 +234,10 @@ void AudioSessionIOS::setCategory(CategoryType newCategory, Mode newMode, RouteS
         case Mode::MoviePlayback:
             return AVAudioSessionModeMoviePlayback;
         case Mode::VideoChat:
+#if ENABLE(MEDIA_STREAM)
+            if (AVAudioSessionCaptureDeviceManager::singleton().isReceiverPreferredSpeaker())
+                return AVAudioSessionModeVoiceChat;
+#endif
             return AVAudioSessionModeVideoChat;
         case Mode::Default:
             break;
@@ -236,12 +247,12 @@ void AudioSessionIOS::setCategory(CategoryType newCategory, Mode newMode, RouteS
 
     bool needDeviceUpdate = false;
 #if ENABLE(MEDIA_STREAM)
-    auto preferredDeviceUID = AVAudioSessionCaptureDeviceManager::singleton().preferredAudioSessionDeviceUID();
-    if ((newCategory == CategoryType::PlayAndRecord || newCategory == CategoryType::RecordAudio) && !preferredDeviceUID.isEmpty()) {
-        if (m_lastSetPreferredAudioDeviceUID != preferredDeviceUID)
+    auto preferredMicrophoneID = AVAudioSessionCaptureDeviceManager::singleton().preferredMicrophoneID();
+    if ((newCategory == CategoryType::PlayAndRecord || newCategory == CategoryType::RecordAudio) && !preferredMicrophoneID.isEmpty()) {
+        if (m_lastSetPreferredMicrophoneID != preferredMicrophoneID)
             needDeviceUpdate = true;
     } else
-        m_lastSetPreferredAudioDeviceUID = emptyString();
+        m_lastSetPreferredMicrophoneID = emptyString();
 #endif
 
     AVAudioSession *session = [PAL::getAVAudioSessionClass() sharedInstance];
@@ -265,9 +276,9 @@ void AudioSessionIOS::setCategory(CategoryType newCategory, Mode newMode, RouteS
 
 #if ENABLE(MEDIA_STREAM)
     if (needDeviceUpdate) {
-        AVAudioSessionCaptureDeviceManager::singleton().configurePreferredAudioCaptureDevice();
-        m_lastSetPreferredAudioDeviceUID = AVAudioSessionCaptureDeviceManager::singleton().preferredAudioSessionDeviceUID();
-        ALWAYS_LOG(identifier, "prefered device = ", m_lastSetPreferredAudioDeviceUID);
+        AVAudioSessionCaptureDeviceManager::singleton().configurePreferredMicrophone();
+        m_lastSetPreferredMicrophoneID = AVAudioSessionCaptureDeviceManager::singleton().preferredMicrophoneID();
+        ALWAYS_LOG(identifier, "prefered microphone = ", m_lastSetPreferredMicrophoneID);
     }
 #endif
     for (auto& observer : audioSessionCategoryChangedObservers())
@@ -296,7 +307,7 @@ AudioSession::Mode AudioSessionIOS::mode() const
 {
     AVAudioSession *session = [PAL::getAVAudioSessionClass() sharedInstance];
     NSString *modeString = [session mode];
-    if ([modeString isEqual:AVAudioSessionModeVideoChat])
+    if ([modeString isEqual:AVAudioSessionModeVideoChat] || [modeString isEqual:AVAudioSessionModeVoiceChat])
         return Mode::VideoChat;
     if ([modeString isEqual:AVAudioSessionModeMoviePlayback])
         return Mode::MoviePlayback;
@@ -367,6 +378,12 @@ void AudioSessionIOS::setPreferredBufferSize(size_t bufferSize)
     [[PAL::getAVAudioSessionClass() sharedInstance] setPreferredIOBufferDuration:duration error:&error];
     RELEASE_LOG_ERROR_IF(error, Media, "failed to set preferred buffer duration to %f with error: %@", duration, error.localizedDescription);
     ASSERT(!error);
+}
+
+size_t AudioSessionIOS::outputLatency() const
+{
+    auto latency = [[PAL::getAVAudioSessionClass() sharedInstance] outputLatency];
+    return latency * sampleRate();
 }
 
 bool AudioSessionIOS::isMuted() const

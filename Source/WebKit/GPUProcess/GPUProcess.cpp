@@ -269,8 +269,6 @@ void GPUProcess::initializeGPUProcess(GPUProcessCreationParameters&& parameters,
     // Match the QoS of the UIProcess since the GPU process is doing rendering on its behalf.
     WTF::Thread::setCurrentThreadIsUserInteractive(0);
 
-    setPresentingApplicationPID(parameters.parentPID);
-
     if (!parameters.overrideLanguages.isEmpty())
         overrideUserPreferredLanguages(parameters.overrideLanguages);
 
@@ -283,21 +281,6 @@ void GPUProcess::initializeGPUProcess(GPUProcessCreationParameters&& parameters,
 
 void GPUProcess::updateGPUProcessPreferences(GPUProcessPreferences&& preferences)
 {
-#if ENABLE(MEDIA_SOURCE) && ENABLE(VP9)
-    if (updatePreference(m_preferences.webMParserEnabled, preferences.webMParserEnabled))
-        DeprecatedGlobalSettings::setWebMParserEnabled(*m_preferences.webMParserEnabled);
-#endif
-
-#if ENABLE(OPUS)
-    if (updatePreference(m_preferences.opusDecoderEnabled, preferences.opusDecoderEnabled))
-        PlatformMediaSessionManager::setOpusDecoderEnabled(*m_preferences.opusDecoderEnabled);
-#endif
-
-#if ENABLE(VORBIS)
-    if (updatePreference(m_preferences.vorbisDecoderEnabled, preferences.vorbisDecoderEnabled))
-        PlatformMediaSessionManager::setVorbisDecoderEnabled(*m_preferences.vorbisDecoderEnabled);
-#endif
-    
 #if USE(MODERN_AVCONTENTKEYSESSION)
     if (updatePreference(m_preferences.shouldUseModernAVContentKeySession, preferences.shouldUseModernAVContentKeySession))
         MediaSessionManagerCocoa::setShouldUseModernAVContentKeySession(*m_preferences.shouldUseModernAVContentKeySession);
@@ -382,6 +365,13 @@ void GPUProcess::updateSandboxAccess(const Vector<SandboxExtension::Handle>& ext
     for (auto& extension : extensions)
         SandboxExtension::consumePermanently(extension);
 }
+
+#if PLATFORM(COCOA)
+void GPUProcess::didDrawRemoteToPDF(PageIdentifier pageID, RefPtr<SharedBuffer>&& data, SnapshotIdentifier snapshotIdentifier)
+{
+    protectedParentProcessConnection()->send(Messages::GPUProcessProxy::DidDrawRemoteToPDF(pageID, WTFMove(data), snapshotIdentifier), 0);
+}
+#endif
 
 #if ENABLE(MEDIA_STREAM)
 void GPUProcess::setMockCaptureDevicesEnabled(bool isEnabled)
@@ -478,9 +468,9 @@ void GPUProcess::setMockCaptureDevicesInterrupted(bool isCameraInterrupted, bool
     WebCore::MockRealtimeMediaSourceCenter::setMockCaptureDevicesInterrupted(isCameraInterrupted, isMicrophoneInterrupted);
 }
 
-void GPUProcess::triggerMockCaptureConfigurationChange(bool forMicrophone, bool forDisplay)
+void GPUProcess::triggerMockCaptureConfigurationChange(bool forCamera, bool forMicrophone, bool forDisplay)
 {
-    WebCore::MockRealtimeMediaSourceCenter::singleton().triggerMockCaptureConfigurationChange(forMicrophone, forDisplay);
+    WebCore::MockRealtimeMediaSourceCenter::singleton().triggerMockCaptureConfigurationChange(forCamera, forMicrophone, forDisplay);
 }
 
 void GPUProcess::setShouldListenToVoiceActivity(bool shouldListen)
@@ -634,6 +624,14 @@ void GPUProcess::webXRPromptAccepted(std::optional<WebCore::ProcessIdentity> pro
 {
     m_processIdentity = processIdentity;
     completionHandler(true);
+}
+#endif
+
+#if HAVE(AUDIT_TOKEN)
+void GPUProcess::setPresentingApplicationAuditToken(WebCore::ProcessIdentifier processIdentifier, WebCore::PageIdentifier pageIdentifier, std::optional<WebKit::CoreIPCAuditToken>&& auditToken)
+{
+    if (RefPtr connection = m_webProcessConnections.get(processIdentifier))
+        connection->setPresentingApplicationAuditToken(pageIdentifier, WTFMove(auditToken));
 }
 #endif
 

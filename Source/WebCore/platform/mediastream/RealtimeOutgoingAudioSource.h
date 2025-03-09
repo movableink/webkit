@@ -38,9 +38,9 @@
 ALLOW_UNUSED_PARAMETERS_BEGIN
 ALLOW_COMMA_BEGIN
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <webrtc/api/media_stream_interface.h>
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 ALLOW_COMMA_END
 ALLOW_UNUSED_PARAMETERS_END
@@ -133,7 +133,7 @@ private:
     bool m_enabled { true };
 
     mutable Lock m_sinksLock;
-    HashSet<webrtc::AudioTrackSinkInterface*> m_sinks WTF_GUARDED_BY_LOCK(m_sinksLock);
+    UncheckedKeyHashSet<webrtc::AudioTrackSinkInterface*> m_sinks WTF_GUARDED_BY_LOCK(m_sinksLock);
 
 #if !RELEASE_LOG_DISABLED
     size_t m_chunksSent { 0 };

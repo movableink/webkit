@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 2004-2005 Allan Sandfeld Jensen (kde@carewolf.com)
  * Copyright (C) 2006, 2007 Nicholas Shanks (webkit@nickshanks.com)
- * Copyright (C) 2005-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  * Copyright (C) 2007, 2008 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
@@ -33,6 +33,7 @@
 #include "CSSCounterStyleRule.h"
 #include "CSSFontSelector.h"
 #include "CSSKeyframesRule.h"
+#include "CSSPositionTryRule.h"
 #include "CSSSelectorParser.h"
 #include "CSSViewTransitionRule.h"
 #include "CustomPropertyRegistry.h"
@@ -217,6 +218,7 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
     case StyleRuleType::Keyframes:
     case StyleRuleType::Property:
     case StyleRuleType::ViewTransition:
+    case StyleRuleType::PositionTry:
         disallowDynamicMediaQueryEvaluationIfNeeded();
         if (m_resolver)
             m_collectedResolverMutatingRules.append({ rule, m_currentCascadeLayerIdentifier });
@@ -235,7 +237,6 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
     case StyleRuleType::FontFeatureValuesBlock:
         return;
 
-    case StyleRuleType::Unknown:
     case StyleRuleType::Charset:
     case StyleRuleType::Keyframe:
         ASSERT_NOT_REACHED();
@@ -512,10 +513,15 @@ void RuleSetBuilder::addMutatingRulesToResolver()
             registry.registerFromStylesheet(styleRuleProperty->descriptor());
             continue;
         }
-        if (auto* styleRuleViewTransition = dynamicDowncast<StyleRuleViewTransition>(rule.get())) {
-            if (m_ruleSet)
-                m_ruleSet->setViewTransitionRule(*styleRuleViewTransition);
+        if (auto* styleRuleViewTransition = dynamicDowncast<StyleRuleViewTransition>(rule.get()))
+            m_ruleSet->setViewTransitionRule(*styleRuleViewTransition);
+
+        if (auto* positionTryRule = dynamicDowncast<StyleRulePositionTry>(rule.get())) {
+            // "If multiple @position-try rules are declared with the same name, the last one in document order wins."
+            // https://drafts.csswg.org/css-anchor-position-1/#fallback-rule
+            m_ruleSet->m_positionTryRules.set(positionTryRule->name(), positionTryRule);
         }
+
     }
 }
 

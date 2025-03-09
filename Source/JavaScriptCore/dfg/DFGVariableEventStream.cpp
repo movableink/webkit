@@ -40,7 +40,7 @@ namespace JSC { namespace DFG {
 
 void VariableEventStreamBuilder::logEvent(const VariableEvent& event)
 {
-    dataLogF("seq#%u:", static_cast<unsigned>(m_stream.size()));
+    dataLog("seq#", static_cast<unsigned>(m_stream.size()), ":");
     event.dump(WTF::dataFile());
     dataLogLn(" ");
 }

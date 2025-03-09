@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -129,9 +129,7 @@
 - (id)initWithGeolocationPosition:(WebCore::GeolocationPositionData&&)coreGeolocationPosition;
 @end
 
-TestRunner::~TestRunner()
-{
-}
+TestRunner::~TestRunner() = default;
 
 JSContextRef TestRunner::mainFrameJSContext()
 {
@@ -1211,7 +1209,7 @@ bool TestRunner::isSecureEventInputEnabled() const
 
 #endif // PLATFORM(MAC)
 
-void TestRunner::setTopContentInset(double contentInset)
+void TestRunner::setObscuredContentInsets(double top, double right, double bottom, double left)
 {
-    [[mainFrame webView] _setTopContentInsetForTesting:contentInset];
+    [[mainFrame webView] _setObscuredTopContentInsetForTesting:top right:right bottom:bottom left:left];
 }

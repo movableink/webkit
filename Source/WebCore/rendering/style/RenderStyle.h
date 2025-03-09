@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "BoxExtents.h"
 #include "PseudoElementIdentifier.h"
 #include "WritingMode.h"
 #include <unicode/utypes.h>
@@ -73,6 +74,7 @@ class LineClampValue;
 class NinePieceImage;
 class OffsetRotation;
 class PathOperation;
+class PositionArea;
 class PseudoIdSet;
 class QuotesData;
 class RenderObject;
@@ -111,6 +113,7 @@ enum class PaginationMode : uint8_t;
 
 enum class ApplePayButtonStyle : uint8_t;
 enum class ApplePayButtonType : uint8_t;
+enum class AppleVisualEffect : uint8_t;
 enum class AspectRatioType : uint8_t;
 enum class AutoRepeatType : uint8_t;
 enum class BackfaceVisibility : uint8_t;
@@ -147,7 +150,7 @@ enum class CursorType : uint8_t;
 enum class CursorVisibility : bool;
 enum class DisplayType : uint8_t;
 enum class EmptyCell : bool;
-enum class EventListenerRegionType : uint8_t;
+enum class EventListenerRegionType : uint32_t;
 enum class FieldSizing : bool;
 enum class FillAttachment : uint8_t;
 enum class FillBox : uint8_t;
@@ -193,6 +196,7 @@ enum class PaintOrder : uint8_t;
 enum class PaintType : uint8_t;
 enum class PointerEvents : uint8_t;
 enum class PositionType : uint8_t;
+enum class PositionVisibility : uint8_t;
 enum class PrintColorAdjust : bool;
 enum class PseudoId : uint32_t;
 enum class QuoteType : uint8_t;
@@ -234,7 +238,6 @@ enum class TextZoom : bool;
 enum class TouchAction : uint8_t;
 enum class TransformBox : uint8_t;
 enum class TransformStyle3D : uint8_t;
-enum class TypographicMode : bool;
 enum class UnicodeBidi : uint8_t;
 enum class UsedClear : uint8_t;
 enum class UsedFloat : uint8_t;
@@ -248,7 +251,6 @@ enum class WhiteSpaceCollapse : uint8_t;
 enum class WordBreak : uint8_t;
 
 struct BlockEllipsis;
-struct BorderDataRadii;
 struct CounterDirectiveMap;
 struct FillRepeatXY;
 struct FontPalette;
@@ -269,7 +271,7 @@ struct ScrollSnapAlign;
 struct ScrollSnapType;
 struct ScrollbarGutter;
 struct ScrollbarColor;
-struct TimelineScope;
+struct NameScope;
 struct ViewTimelineInsets;
 
 struct TabSize;
@@ -280,19 +282,26 @@ struct TransformOperationData;
 
 template<typename> class FontTaggedSettings;
 template<typename> class RectEdges;
+template<typename> class RectCorners;
 
-using FloatBoxExtent = RectEdges<float>;
 using FontVariationSettings = FontTaggedSettings<float>;
 using IntOutsets = RectEdges<int>;
-using LayoutBoxExtent = RectEdges<LayoutUnit>;
 
 namespace Style {
 class CustomPropertyRegistry;
 class ViewTransitionName;
 struct Color;
 struct ColorScheme;
+struct CornerShapeValue;
+struct DynamicRangeLimit;
+struct PositionTryFallback;
 struct ScopedName;
+struct ScrollMargin;
+struct ScrollMarginEdge;
+struct ScrollPadding;
+struct ScrollPaddingEdge;
 
+enum class Change : uint8_t;
 enum class PositionTryOrder : uint8_t;
 }
 
@@ -400,6 +409,7 @@ public:
 
     inline bool hasBackgroundImage() const;
     inline bool hasAnyFixedBackground() const;
+    bool hasAnyBackgroundClipText() const;
 
     bool hasEntirelyFixedBackground() const;
     inline bool hasAnyLocalBackground() const;
@@ -497,7 +507,7 @@ public:
 
     inline const NinePieceImage& borderImage() const;
     inline StyleImage* borderImageSource() const;
-    inline const LengthBox& borderImageSlices() const;
+    inline const LengthBox& borderImageSlice() const;
     inline const LengthBox& borderImageWidth() const;
     inline const LengthBox& borderImageOutset() const;
     inline NinePieceImageRule borderImageHorizontalRule() const;
@@ -507,7 +517,7 @@ public:
     inline const LengthSize& borderTopRightRadius() const;
     inline const LengthSize& borderBottomLeftRadius() const;
     inline const LengthSize& borderBottomRightRadius() const;
-    inline const BorderDataRadii& borderRadii() const;
+    inline const RectCorners<LengthSize>& borderRadii() const;
     inline bool hasBorderRadius() const;
     inline bool hasExplicitlySetBorderBottomLeftRadius() const;
     inline bool hasExplicitlySetBorderBottomRightRadius() const;
@@ -540,6 +550,16 @@ public:
 
     inline bool borderIsEquivalentForPainting(const RenderStyle&) const;
 
+    inline const Style::CornerShapeValue& cornerBottomLeftShape() const;
+    inline const Style::CornerShapeValue& cornerBottomRightShape() const;
+    inline const Style::CornerShapeValue& cornerTopLeftShape() const;
+    inline const Style::CornerShapeValue& cornerTopRightShape() const;
+
+    void setCornerBottomLeftShape(Style::CornerShapeValue&&);
+    void setCornerBottomRightShape(Style::CornerShapeValue&&);
+    void setCornerTopLeftShape(Style::CornerShapeValue&&);
+    void setCornerTopRightShape(Style::CornerShapeValue&&);
+
     float outlineSize() const { return std::max<float>(0, outlineWidth() + outlineOffset()); }
     float outlineWidth() const;
     inline bool hasOutline() const;
@@ -569,11 +589,15 @@ public:
 
     UnicodeBidi unicodeBidi() const { return static_cast<UnicodeBidi>(m_nonInheritedFlags.unicodeBidi); }
 
-    FieldSizing fieldSizing() const;
+    inline FieldSizing fieldSizing() const;
 
     WEBCORE_EXPORT const FontCascade& fontCascade() const;
+    WEBCORE_EXPORT FontCascade& fontCascade();
     WEBCORE_EXPORT const FontMetrics& metricsOfPrimaryFont() const;
     WEBCORE_EXPORT const FontCascadeDescription& fontDescription() const;
+
+    inline bool fontCascadeEqual(const RenderStyle&) const;
+
     float specifiedFontSize() const;
     float computedFontSize() const;
     std::pair<FontOrientation, NonCJKGlyphOrientation> fontAndGlyphOrientation();
@@ -581,7 +605,7 @@ public:
     inline FontOpticalSizing fontOpticalSizing() const;
     inline FontVariationSettings fontVariationSettings() const;
     inline FontSelectionValue fontWeight() const;
-    inline FontSelectionValue fontStretch() const;
+    inline FontSelectionValue fontWidth() const;
     inline std::optional<FontSelectionValue> fontItalic() const;
     inline const FontPalette& fontPalette() const;
     inline FontSizeAdjust fontSizeAdjust() const;
@@ -626,11 +650,10 @@ public:
     WEBCORE_EXPORT float computedLineHeight() const;
     float computeLineHeight(const Length&) const;
 
-    WhiteSpace whiteSpace() const;
     inline bool autoWrap() const;
-    static constexpr bool preserveNewline(WhiteSpace);
+    static constexpr bool preserveNewline(WhiteSpaceCollapse);
     inline bool preserveNewline() const;
-    static constexpr bool collapseWhiteSpace(WhiteSpace);
+    static constexpr bool collapseWhiteSpace(WhiteSpaceCollapse);
     inline bool collapseWhiteSpace() const;
     inline bool isCollapsibleWhiteSpace(UChar) const;
     inline bool breakOnlyAfterWhiteSpace() const;
@@ -667,7 +690,7 @@ public:
     inline Ref<const FillLayer> protectedMaskLayers() const; // Defined in RenderStyleInlines.h.
     inline const NinePieceImage& maskBorder() const;
     inline StyleImage* maskBorderSource() const;
-    inline const LengthBox& maskBorderSlices() const;
+    inline const LengthBox& maskBorderSlice() const;
     inline const LengthBox& maskBorderWidth() const;
     inline const LengthBox& maskBorderOutset() const;
     inline NinePieceImageRule maskBorderHorizontalRule() const;
@@ -767,6 +790,7 @@ public:
     inline bool containsLayoutOrPaint() const;
     inline ContainerType containerType() const;
     inline const Vector<Style::ScopedName>& containerNames() const;
+    inline bool containerTypeAndNamesEqual(const RenderStyle&) const;
 
     inline ContentVisibility contentVisibility() const;
 
@@ -908,6 +932,7 @@ public:
     inline unsigned short columnRuleWidth() const;
     inline bool columnRuleIsTransparent() const;
     inline ColumnSpan columnSpan() const;
+    inline bool columnSpanEqual(const RenderStyle&) const;
 
     inline const TransformOperations& transform() const;
     inline bool hasTransform() const;
@@ -940,6 +965,8 @@ public:
     inline void setHasExplicitlySetColorScheme();
     inline bool hasExplicitlySetColorScheme() const;
 #endif
+
+    inline const Style::DynamicRangeLimit& dynamicRangeLimit() const;
 
     inline TableLayoutType tableLayout() const;
 
@@ -1009,9 +1036,9 @@ public:
     inline void setViewTimelineInsets(const Vector<ViewTimelineInsets>&);
     inline void setViewTimelineNames(const Vector<AtomString>&);
 
-    static inline const TimelineScope initialTimelineScope();
-    inline const TimelineScope& timelineScope() const;
-    inline void setTimelineScope(const TimelineScope&);
+    static inline const NameScope initialTimelineScope();
+    inline const NameScope& timelineScope() const;
+    inline void setTimelineScope(const NameScope&);
 
     inline const AnimationList* animations() const;
     inline const AnimationList* transitions() const;
@@ -1058,22 +1085,24 @@ public:
 
     inline bool effectiveInert() const;
 
-    const LengthBox& scrollMargin() const;
-    const Length& scrollMarginTop() const;
-    const Length& scrollMarginBottom() const;
-    const Length& scrollMarginLeft() const;
-    const Length& scrollMarginRight() const;
+    const Style::ScrollMargin& scrollMargin() const;
+    const Style::ScrollMarginEdge& scrollMarginTop() const;
+    const Style::ScrollMarginEdge& scrollMarginBottom() const;
+    const Style::ScrollMarginEdge& scrollMarginLeft() const;
+    const Style::ScrollMarginEdge& scrollMarginRight() const;
 
-    const LengthBox& scrollPadding() const;
-    const Length& scrollPaddingTop() const;
-    const Length& scrollPaddingBottom() const;
-    const Length& scrollPaddingLeft() const;
-    const Length& scrollPaddingRight() const;
+    const Style::ScrollPadding& scrollPadding() const;
+    const Style::ScrollPaddingEdge& scrollPaddingTop() const;
+    const Style::ScrollPaddingEdge& scrollPaddingBottom() const;
+    const Style::ScrollPaddingEdge& scrollPaddingLeft() const;
+    const Style::ScrollPaddingEdge& scrollPaddingRight() const;
+    inline bool scrollPaddingEqual(const RenderStyle&) const;
 
     bool hasSnapPosition() const;
     ScrollSnapType scrollSnapType() const;
     const ScrollSnapAlign& scrollSnapAlign() const;
     ScrollSnapStop scrollSnapStop() const;
+    bool scrollSnapDataEquivalent(const RenderStyle&) const;
 
     Color usedScrollbarThumbColor() const;
     Color usedScrollbarTrackColor() const;
@@ -1081,7 +1110,7 @@ public:
     inline const Style::Color& scrollbarThumbColor() const;
     inline const Style::Color& scrollbarTrackColor() const;
     WEBCORE_EXPORT ScrollbarGutter scrollbarGutter() const;
-    WEBCORE_EXPORT ScrollbarWidth scrollbarWidth() const;
+    inline ScrollbarWidth scrollbarWidth() const;
 
 #if ENABLE(TOUCH_EVENTS)
     inline Style::Color tapHighlightColor() const;
@@ -1096,6 +1125,7 @@ public:
 #endif
 
     inline bool useSmoothScrolling() const;
+    inline bool nativeAppearanceDisabled() const;
 
 #if ENABLE(TEXT_AUTOSIZING)
     inline TextSizeAdjustment textSizeAdjust() const;
@@ -1144,6 +1174,14 @@ public:
 #if ENABLE(APPLE_PAY)
     inline ApplePayButtonStyle applePayButtonStyle() const;
     inline ApplePayButtonType applePayButtonType() const;
+#endif
+
+#if HAVE(CORE_MATERIAL)
+    inline AppleVisualEffect appleVisualEffect() const;
+    inline bool hasAppleVisualEffect() const;
+    inline bool hasAppleVisualEffectRequiringBackdropFilter() const;
+
+    inline AppleVisualEffect usedAppleVisualEffectForSubtree() const;
 #endif
 
     inline MathStyle mathStyle() const;
@@ -1204,7 +1242,7 @@ public:
     inline void setBorderImage(const NinePieceImage&);
     void setBorderImageSource(RefPtr<StyleImage>&&);
     void setBorderImageSliceFill(bool);
-    void setBorderImageSlices(LengthBox&&);
+    void setBorderImageSlice(LengthBox&&);
     void setBorderImageWidth(LengthBox&&);
     void setBorderImageWidthOverridesBorderWidths(bool);
     void setBorderImageOutset(LengthBox&&);
@@ -1222,11 +1260,6 @@ public:
     inline void setHasExplicitlySetBorderBottomRightRadius(bool);
     inline void setHasExplicitlySetBorderTopLeftRadius(bool);
     inline void setHasExplicitlySetBorderTopRightRadius(bool);
-
-    RoundedRect getRoundedInnerBorderFor(const LayoutRect& borderRect, bool includeLogicalLeftEdge = true, bool includeLogicalRightEdge = true) const;
-
-    RoundedRect getRoundedInnerBorderFor(const LayoutRect& borderRect, LayoutUnit topWidth, LayoutUnit bottomWidth, LayoutUnit leftWidth, LayoutUnit rightWidth, bool includeLogicalLeftEdge = true, bool includeLogicalRightEdge = true) const;
-    static RoundedRect getRoundedInnerBorderFor(const LayoutRect&, LayoutUnit topWidth, LayoutUnit bottomWidth, LayoutUnit leftWidth, LayoutUnit rightWidth, std::optional<BorderDataRadii>, bool isHorizontal, bool includeLogicalLeftEdge, bool includeLogicalRightEdge);
 
     inline void setBorderLeftWidth(float);
     inline void setBorderLeftStyle(BorderStyle);
@@ -1266,7 +1299,7 @@ public:
 
     void setClear(Clear v) { m_nonInheritedFlags.clear = static_cast<unsigned>(v); }
 
-    void setFieldSizing(FieldSizing);
+    inline void setFieldSizing(FieldSizing);
 
     void setFontCascade(FontCascade&&);
     WEBCORE_EXPORT void setFontDescription(FontCascadeDescription&&);
@@ -1279,7 +1312,7 @@ public:
     void setFontOpticalSizing(FontOpticalSizing);
     void setFontVariationSettings(FontVariationSettings);
     void setFontWeight(FontSelectionValue);
-    void setFontStretch(FontSelectionValue);
+    void setFontWidth(FontSelectionValue);
     void setFontItalic(std::optional<FontSelectionValue>);
     void setFontPalette(const FontPalette&);
 
@@ -1343,7 +1376,7 @@ public:
     inline void setMaskBorder(const NinePieceImage&);
     void setMaskBorderSource(RefPtr<StyleImage>&&);
     void setMaskBorderSliceFill(bool);
-    void setMaskBorderSlices(LengthBox&&);
+    void setMaskBorderSlice(LengthBox&&);
     void setMaskBorderWidth(LengthBox&&);
     void setMaskBorderOutset(LengthBox&&);
     void setMaskBorderHorizontalRule(NinePieceImageRule);
@@ -1396,6 +1429,10 @@ public:
     inline void setPaddingBottom(Length&&);
     inline void setPaddingLeft(Length&&);
     inline void setPaddingRight(Length&&);
+    void setPaddingStart(Length&&);
+    void setPaddingEnd(Length&&);
+    void setPaddingBefore(Length&&);
+    void setPaddingAfter(Length&&);
 
     void setCursor(CursorType c) { m_inheritedFlags.cursor = static_cast<unsigned>(c); }
     void addCursor(RefPtr<StyleImage>&&, const std::optional<IntPoint>& hotSpot);
@@ -1554,6 +1591,8 @@ public:
     inline void setColorScheme(Style::ColorScheme);
 #endif
 
+    inline void setDynamicRangeLimit(Style::DynamicRangeLimit&&);
+
     inline void setTableLayout(TableLayoutType);
 
     inline void setFilter(FilterOperations&&);
@@ -1609,15 +1648,15 @@ public:
 
     inline void setEffectiveInert(bool);
 
-    void setScrollMarginTop(Length&&);
-    void setScrollMarginBottom(Length&&);
-    void setScrollMarginLeft(Length&&);
-    void setScrollMarginRight(Length&&);
+    void setScrollMarginTop(Style::ScrollMarginEdge&&);
+    void setScrollMarginBottom(Style::ScrollMarginEdge&&);
+    void setScrollMarginLeft(Style::ScrollMarginEdge&&);
+    void setScrollMarginRight(Style::ScrollMarginEdge&&);
 
-    void setScrollPaddingTop(Length&&);
-    void setScrollPaddingBottom(Length&&);
-    void setScrollPaddingLeft(Length&&);
-    void setScrollPaddingRight(Length&&);
+    void setScrollPaddingTop(Style::ScrollPaddingEdge&&);
+    void setScrollPaddingBottom(Style::ScrollPaddingEdge&&);
+    void setScrollPaddingLeft(Style::ScrollPaddingEdge&&);
+    void setScrollPaddingRight(Style::ScrollPaddingEdge&&);
 
     void setScrollSnapType(ScrollSnapType);
     void setScrollSnapAlign(const ScrollSnapAlign&);
@@ -1627,7 +1666,7 @@ public:
     inline void setScrollbarThumbColor(const Style::Color&);
     inline void setScrollbarTrackColor(const Style::Color&);
     void setScrollbarGutter(ScrollbarGutter);
-    void setScrollbarWidth(ScrollbarWidth);
+    inline void setScrollbarWidth(ScrollbarWidth);
 
 #if ENABLE(TOUCH_EVENTS)
     inline void setTapHighlightColor(const Style::Color&);
@@ -1642,6 +1681,7 @@ public:
 #endif
 
     inline void setUseSmoothScrolling(bool);
+    inline void setNativeAppearanceDisabled(bool);
 
 #if ENABLE(TEXT_AUTOSIZING)
     inline void setTextSizeAdjust(TextSizeAdjustment);
@@ -1654,6 +1694,11 @@ public:
 #if ENABLE(APPLE_PAY)
     inline void setApplePayButtonStyle(ApplePayButtonStyle);
     inline void setApplePayButtonType(ApplePayButtonType);
+#endif
+
+#if HAVE(CORE_MATERIAL)
+    inline void setAppleVisualEffect(AppleVisualEffect);
+    inline void setUsedAppleVisualEffectForSubtree(AppleVisualEffect);
 #endif
 
     void addCustomPaintWatchProperty(const AtomString&);
@@ -1778,7 +1823,7 @@ public:
     inline bool hasContent() const;
     inline const ContentData* contentData() const;
     void setContent(std::unique_ptr<ContentData>, bool add);
-    inline bool contentDataEquivalent(const RenderStyle*) const;
+    inline bool contentDataEquivalent(const RenderStyle&) const;
     void clearContent();
     inline void setHasContentNone(bool);
     void setContent(const String&, bool add = false);
@@ -1807,6 +1852,7 @@ public:
     const AtomString& hyphenString() const;
 
     bool inheritedEqual(const RenderStyle&) const;
+    bool nonInheritedEqual(const RenderStyle&) const;
     bool fastPathInheritedEqual(const RenderStyle&) const;
     bool nonFastPathInheritedEqual(const RenderStyle&) const;
 
@@ -1832,6 +1878,7 @@ public:
     constexpr bool isDisplayFlexibleBoxIncludingDeprecatedOrGridBox() const;
     constexpr bool isDisplayRegionType() const;
     constexpr bool isDisplayBlockLevel() const;
+    constexpr bool doesDisplayGenerateBlockContainer() const;
     constexpr bool isOriginalDisplayBlockType() const;
     constexpr bool isDisplayTableOrTablePart() const;
     constexpr bool isInternalTableBox() const;
@@ -1858,7 +1905,6 @@ public:
     bool lastChildState() const { return m_nonInheritedFlags.lastChildState; }
     void setLastChildState() { setUnique(); m_nonInheritedFlags.lastChildState = true; }
 
-    Style::Color unresolvedColorForProperty(CSSPropertyID colorProperty, bool visitedLink = false) const;
     Color colorResolvingCurrentColor(CSSPropertyID colorProperty, bool visitedLink) const;
 
     // Resolves the currentColor keyword, but must not be used for the "color" property which has a different semantic.
@@ -1900,6 +1946,7 @@ public:
     static constexpr BorderStyle initialBorderStyle();
     static constexpr OutlineIsAuto initialOutlineStyleIsAuto();
     static inline LengthSize initialBorderRadius();
+    static constexpr Style::CornerShapeValue initialCornerShapeValue();
     static constexpr CaptionSide initialCaptionSide();
     static constexpr ColumnAxis initialColumnAxis();
     static constexpr ColumnProgression initialColumnProgression();
@@ -2061,6 +2108,8 @@ public:
     static inline Style::ColorScheme initialColorScheme();
 #endif
 
+    static inline Style::DynamicRangeLimit initialDynamicRangeLimit();
+
     static constexpr TextIndentLine initialTextIndentLine();
     static constexpr TextIndentType initialTextIndentType();
     static constexpr TextJustify initialTextJustify();
@@ -2078,10 +2127,10 @@ public:
 
     static constexpr TouchAction initialTouchActions();
 
-    static FieldSizing initialFieldSizing();
+    static constexpr FieldSizing initialFieldSizing();
 
-    static inline Length initialScrollMargin();
-    static inline Length initialScrollPadding();
+    static inline Style::ScrollMarginEdge initialScrollMargin();
+    static inline Style::ScrollPaddingEdge initialScrollPadding();
 
     static ScrollSnapType initialScrollSnapType();
     static ScrollSnapAlign initialScrollSnapAlign();
@@ -2096,11 +2145,15 @@ public:
 
     static inline std::optional<ScrollbarColor> initialScrollbarColor();
     static ScrollbarGutter initialScrollbarGutter();
-    static ScrollbarWidth initialScrollbarWidth();
+    static constexpr ScrollbarWidth initialScrollbarWidth();
 
 #if ENABLE(APPLE_PAY)
     static constexpr ApplePayButtonStyle initialApplePayButtonStyle();
     static constexpr ApplePayButtonType initialApplePayButtonType();
+#endif
+
+#if HAVE(CORE_MATERIAL)
+    static constexpr AppleVisualEffect initialAppleVisualEffect();
 #endif
 
     static inline Vector<GridTrackSize> initialGridColumnTrackSizes();
@@ -2160,6 +2213,8 @@ public:
 #endif
 
     static bool initialUseSmoothScrolling() { return false; }
+
+    static bool initialNativeAppearanceDisabled() { return false; }
 
     static inline FilterOperations initialFilter();
     static inline FilterOperations initialAppleColorFilter();
@@ -2278,13 +2333,29 @@ public:
     inline const Vector<Style::ScopedName>& anchorNames() const;
     inline void setAnchorNames(const Vector<Style::ScopedName>&);
 
+    static inline NameScope initialAnchorScope();
+    inline const NameScope& anchorScope() const;
+    inline void setAnchorScope(const NameScope&);
+
     static inline std::optional<Style::ScopedName> initialPositionAnchor();
     inline const std::optional<Style::ScopedName>& positionAnchor() const;
     inline void setPositionAnchor(const std::optional<Style::ScopedName>&);
 
+    static inline std::optional<PositionArea> initialPositionArea();
+    inline std::optional<PositionArea> positionArea() const;
+    inline void setPositionArea(std::optional<PositionArea>);
+
     static constexpr Style::PositionTryOrder initialPositionTryOrder();
     inline Style::PositionTryOrder positionTryOrder() const;
     inline void setPositionTryOrder(Style::PositionTryOrder);
+
+    static Vector<Style::PositionTryFallback> initialPositionTryFallbacks();
+    const Vector<Style::PositionTryFallback>& positionTryFallbacks() const;
+    void setPositionTryFallbacks(const Vector<Style::PositionTryFallback>&);
+
+    static constexpr OptionSet<PositionVisibility> initialPositionVisibility();
+    inline OptionSet<PositionVisibility> positionVisibility() const;
+    inline void setPositionVisibility(OptionSet<PositionVisibility>);
 
 private:
     struct NonInheritedFlags {
@@ -2381,6 +2452,8 @@ private:
     RenderStyle(RenderStyle&, RenderStyle&&);
 
     constexpr DisplayType originalDisplay() const { return static_cast<DisplayType>(m_nonInheritedFlags.originalDisplay); }
+
+    const Style::Color& unresolvedColorForProperty(CSSPropertyID, bool visitedLink = false) const;
 
     inline bool hasAutoLeftAndRight() const;
     inline bool hasAutoTopAndBottom() const;

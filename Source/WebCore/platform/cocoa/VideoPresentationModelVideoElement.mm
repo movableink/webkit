@@ -29,6 +29,7 @@
 #if ENABLE(VIDEO_PRESENTATION_MODE)
 
 #import "AddEventListenerOptions.h"
+#import "DocumentFullscreen.h"
 #import "Event.h"
 #import "EventListener.h"
 #import "EventNames.h"
@@ -76,12 +77,14 @@ void VideoPresentationModelVideoElement::cleanVideoListeners()
     if (!m_isListening)
         return;
     m_isListening = false;
-    if (!m_videoElement)
-        return;
-    for (auto& eventName : observedEventNames())
-        m_videoElement->removeEventListener(eventName, m_videoListener, false);
-    for (auto& eventName : documentObservedEventNames())
-        m_videoElement->document().removeEventListener(eventName, m_videoListener, false);
+    if (m_videoElement) {
+        for (auto& eventName : observedEventNames())
+            m_videoElement->removeEventListener(eventName, m_videoListener, false);
+    }
+    if (RefPtr document = m_document.get()) {
+        for (auto& eventName : documentObservedEventNames())
+            document->removeEventListener(eventName, m_videoListener, false);
+    }
 }
 
 void VideoPresentationModelVideoElement::setVideoElement(HTMLVideoElement* videoElement)
@@ -101,6 +104,7 @@ void VideoPresentationModelVideoElement::setVideoElement(HTMLVideoElement* video
     ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
 
     if (m_videoElement) {
+        m_document = m_videoElement->document();
         for (auto& eventName : observedEventNames())
             m_videoElement->addEventListener(eventName, m_videoListener, false);
         m_isListening = true;
@@ -126,6 +130,11 @@ void VideoPresentationModelVideoElement::updateForEventName(const WTF::AtomStrin
 
     if (all || eventName == eventNames().visibilitychangeEvent)
         documentVisibilityChanged();
+
+#if ENABLE(FULLSCREEN_API)
+    if (all || eventName == eventNames().fullscreenchangeEvent)
+        documentFullscreenChanged();
+#endif
 
     if (all
         || eventName == eventNames().loadedmetadataEvent || eventName == eventNames().loadstartEvent) {
@@ -165,6 +174,35 @@ void VideoPresentationModelVideoElement::documentVisibilityChanged()
     for (auto& client : copyToVector(m_clients))
         client->documentVisibilityChanged(m_documentIsVisible);
 }
+
+#if ENABLE(FULLSCREEN_API)
+void VideoPresentationModelVideoElement::documentFullscreenChanged()
+{
+    RefPtr videoElement = m_videoElement;
+
+    if (!videoElement)
+        return;
+
+    bool isChildOfElementFullscreen = [&] {
+        auto* fullscreen = videoElement->document().fullscreenIfExists();
+        if (!fullscreen)
+            return false;
+        RefPtr fullscreenElement = fullscreen->protectedFullscreenElement();
+        if (!fullscreenElement)
+            return false;
+        ContainerNode* ancestor = videoElement->parentNode();
+        while (ancestor && ancestor != fullscreenElement)
+            ancestor = ancestor->parentNode();
+        return !!ancestor;
+    }();
+
+    if (std::exchange(m_isChildOfElementFullscreen, isChildOfElementFullscreen) == isChildOfElementFullscreen)
+        return;
+
+    for (auto& client : copyToVector(m_clients))
+        client->isChildOfElementFullscreenChanged(m_isChildOfElementFullscreen);
+}
+#endif
 
 void VideoPresentationModelVideoElement::willExitFullscreen()
 {
@@ -277,7 +315,7 @@ std::span<const AtomString> VideoPresentationModelVideoElement::observedEventNam
 
 std::span<const AtomString> VideoPresentationModelVideoElement::documentObservedEventNames()
 {
-    static NeverDestroyed names = std::array { eventNames().visibilitychangeEvent };
+    static NeverDestroyed names = std::array { eventNames().visibilitychangeEvent, eventNames().fullscreenchangeEvent };
     return names.get();
 }
 

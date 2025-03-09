@@ -29,15 +29,12 @@
 
 #include "FidoAuthenticator.h"
 #include <WebCore/AuthenticatorGetInfoResponse.h>
+#include <WebCore/CryptoKeyEC.h>
 
 namespace fido {
 namespace pin {
 class TokenRequest;
 }
-}
-
-namespace WebCore {
-class CryptoKeyEC;
 }
 
 namespace WebKit {
@@ -72,6 +69,13 @@ private:
     Vector<WebCore::AuthenticatorTransport> transports() const;
 
     String aaguidForDebugging() const;
+
+    bool isUVSetup() const;
+
+    void continueSetupPinAfterCommand(Vector<uint8_t>&&, const String& pin, Ref<WebCore::CryptoKeyEC> peerKey);
+    void continueSetupPinAfterGetKeyAgreement(Vector<uint8_t>&&, const String& pin);
+    void performAuthenticatorSelectionForSetupPin();
+    void setupPin();
 
     fido::AuthenticatorGetInfoResponse m_info;
     bool m_isDowngraded { false };

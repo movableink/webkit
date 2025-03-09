@@ -174,12 +174,15 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
     if ((context.paintingDisabled() && !context.detectingContentfulPaint()) || rect.isEmpty())
         return;
 
-    auto [includeLeftEdge, includeRightEdge] = inlineBoxIterator ? inlineBoxIterator->hasClosedLeftAndRightEdge() : std::pair(true, true);
+    auto closedEdges = inlineBoxIterator
+        ? inlineBoxIterator->closedEdges()
+        : RectEdges<bool> { true };
 
     auto& style = m_renderer.style();
     auto layerClip = m_overrideClip.value_or(bgLayer.clip());
 
-    bool hasRoundedBorder = style.hasBorderRadius() && (includeLeftEdge || includeRightEdge);
+    bool hasRoundedBorder = style.hasBorderRadius()
+        && (closedEdges.start(style.writingMode()) || closedEdges.end(style.writingMode()));
     bool clippedWithLocalScrolling = m_renderer.hasNonVisibleOverflow() && bgLayer.attachment() == FillAttachment::LocalBackground;
     bool isBorderFill = layerClip == FillBox::BorderBox;
     bool isRoot = m_renderer.isDocumentElementRenderer();
@@ -206,6 +209,7 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
     if (document().printing()) {
         if (style.printColorAdjust() == PrintColorAdjust::Economy)
             forceBackgroundToWhite = true;
+
         if (document().settings().shouldPrintBackgrounds())
             forceBackgroundToWhite = false;
     }
@@ -224,6 +228,9 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
             bgColor = Color::white;
             shouldPaintBackgroundImage = false;
         }
+
+        if (layerClip == FillBox::Text)
+            layerClip = FillBox::BorderBox;
     }
 
     bool baseBgColorOnly = (baseBgColorUsage == BaseBackgroundColorOnly);
@@ -234,14 +241,14 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
     float deviceScaleFactor = document().deviceScaleFactor();
     FloatRect pixelSnappedRect = snapRectToDevicePixels(rect, deviceScaleFactor);
 
-    auto borderShapeRespectingBleedAvoidance = [&](bool includeLeftEdge, bool includeRightEdge, bool shrinkForBleedAvoidance = true) {
+    auto borderShapeRespectingBleedAvoidance = [&](RectEdges<bool> closedEdges, bool shrinkForBleedAvoidance = true) {
         auto borderRect = rect;
         if (shrinkForBleedAvoidance && bleedAvoidance == BleedAvoidance::ShrinkBackground) {
             // Ideally we'd use the border rect, but add a device pixel of additional inset to preserve corner shape.
             borderRect = shrinkRectByOneDevicePixel(m_paintInfo.context(), borderRect, deviceScaleFactor);
         }
 
-        return BorderShape::shapeForBorderRect(style, borderRect, includeLeftEdge, includeRightEdge);
+        return BorderShape::shapeForBorderRect(style, borderRect, closedEdges);
     };
 
     // Fast path for drawing simple color backgrounds.
@@ -255,7 +262,7 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
             applyBoxShadowForBackground(context, style);
 
         if (hasRoundedBorder && bleedAvoidance != BleedAvoidance::UseTransparencyLayer) {
-            auto borderShape = borderShapeRespectingBleedAvoidance(includeLeftEdge, includeRightEdge);
+            auto borderShape = borderShapeRespectingBleedAvoidance(closedEdges);
             auto previousOperator = context.compositeOperation();
             bool saveRestoreCompositeOp = op != previousOperator;
             if (saveRestoreCompositeOp)
@@ -274,22 +281,33 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
         return;
     }
 
-    // FillBox::BorderBox radius clipping is taken care of by BleedAvoidance::UseTransparencyLayer
-    bool clipToBorderRadius = hasRoundedBorder && !(isBorderFill && bleedAvoidance == BleedAvoidance::UseTransparencyLayer);
-    GraphicsContextStateSaver clipToBorderStateSaver(context, clipToBorderRadius);
-    if (clipToBorderRadius) {
+    auto clipForBorder = [&]() -> std::optional<FillBox> {
+        if (!hasRoundedBorder)
+            return { };
 
-        switch (layerClip) {
+        // FillBox::BorderBox radius clipping is taken care of by BleedAvoidance::UseTransparencyLayer
+        if (layerClip == FillBox::BorderBox && bleedAvoidance == BleedAvoidance::UseTransparencyLayer)
+            return { };
+
+        if (bleedAvoidance == BleedAvoidance::BackgroundOverBorder)
+            return FillBox::PaddingBox;
+
+        return layerClip;
+    }();
+
+    GraphicsContextStateSaver clipToBorderStateSaver(context, clipForBorder.has_value());
+    if (clipForBorder) {
+        switch (*clipForBorder) {
         case FillBox::BorderBox:
         case FillBox::BorderArea:
         case FillBox::Text:
         case FillBox::NoClip: {
-            auto borderShape = borderShapeRespectingBleedAvoidance(includeLeftEdge, includeRightEdge, isBorderFill);
+            auto borderShape = borderShapeRespectingBleedAvoidance(closedEdges, isBorderFill);
             borderShape.clipToOuterShape(context, deviceScaleFactor);
             break;
         }
         case FillBox::PaddingBox: {
-            auto borderShape = borderShapeRespectingBleedAvoidance(includeLeftEdge, includeRightEdge, isBorderFill);
+            auto borderShape = borderShapeRespectingBleedAvoidance(closedEdges, isBorderFill);
             borderShape.clipToInnerShape(context, deviceScaleFactor);
             break;
         }
@@ -301,10 +319,10 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
         }
     }
 
-    LayoutUnit bLeft = includeLeftEdge ? m_renderer.borderLeft() : 0_lu;
-    LayoutUnit bRight = includeRightEdge ? m_renderer.borderRight() : 0_lu;
-    LayoutUnit pLeft = includeLeftEdge ? m_renderer.paddingLeft() : 0_lu;
-    LayoutUnit pRight = includeRightEdge ? m_renderer.paddingRight() : 0_lu;
+    LayoutUnit bLeft = closedEdges.left() ? m_renderer.borderLeft() : 0_lu;
+    LayoutUnit bRight = closedEdges.right() ? m_renderer.borderRight() : 0_lu;
+    LayoutUnit pLeft = closedEdges.left() ? m_renderer.paddingLeft() : 0_lu;
+    LayoutUnit pRight = closedEdges.right() ? m_renderer.paddingRight() : 0_lu;
 
     GraphicsContextStateSaver clipWithScrollingStateSaver(context, clippedWithLocalScrolling);
     LayoutRect scrolledPaintRect = rect;
@@ -324,18 +342,32 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
     auto backgroundClipOuterLayerScope = TransparencyLayerScope(context, 1, false);
     auto backgroundClipInnerLayerScope = TransparencyLayerScope(context, 1, false);
 
-    auto setupMaskingBackgroundClip = [&](const LayoutRect& borderRect, const std::function<void(const LayoutRect&, const FloatRect&)>& paintFunction) {
+    auto setupMaskingBackgroundClip = [&](const LayoutRect& borderRect, const std::function<void(GraphicsContext& context, const LayoutRect&, const FloatRect&)>& paintFunction) {
         auto transparencyLayerBounds = snapRectToDevicePixels(rect, deviceScaleFactor);
         transparencyLayerBounds.intersect(snapRectToDevicePixels(m_paintInfo.rect, deviceScaleFactor));
         transparencyLayerBounds.inflate(1);
 
         backgroundClipStateSaver.save();
         context.clip(transparencyLayerBounds);
-
         backgroundClipOuterLayerScope.beginLayer(1);
-        paintFunction(borderRect, transparencyLayerBounds);
 
-        context.setCompositeOperation(CompositeOperator::SourceIn);
+        if (context.renderingMode() == RenderingMode::PDFDocument) {
+            // CG doesn't support some compositing operations when printing, so clip using an imageBuffer instead.
+            static constexpr auto printBufferResolution = 3.0f; // Chosen to result in output that is not too blurry.
+            RefPtr maskImage = context.createImageBuffer(transparencyLayerBounds.size(), printBufferResolution);
+            if (!maskImage)
+                return;
+
+            auto& maskContext = maskImage->context();
+            maskContext.translate(-transparencyLayerBounds.location());
+
+            paintFunction(maskContext, borderRect, transparencyLayerBounds);
+            context.clipToImageBuffer(*maskImage, transparencyLayerBounds);
+        } else {
+            paintFunction(context, borderRect, transparencyLayerBounds);
+            context.setCompositeOperation(CompositeOperator::SourceIn);
+        }
+
         backgroundClipInnerLayerScope.beginLayer(1);
         context.setCompositeOperation(CompositeOperator::SourceOver);
     };
@@ -346,7 +378,7 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
     case FillBox::PaddingBox:
     case FillBox::ContentBox: {
         // Clip to the padding or content boxes as necessary.
-        if (!clipToBorderRadius) {
+        if (!clipForBorder) {
             bool includePadding = layerClip == FillBox::ContentBox;
             LayoutRect clipRect = LayoutRect(scrolledPaintRect.x() + bLeft + (includePadding ? pLeft : 0_lu),
                 scrolledPaintRect.y() + m_renderer.borderTop() + (includePadding ? m_renderer.paddingTop() : 0_lu),
@@ -361,20 +393,20 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
         // We have to draw our text into a mask that can then be used to clip background drawing.
         // First figure out how big the mask has to be. It should be no bigger than what we need
         // to actually render, so we should intersect the dirty rect with the border box of the background.
-        setupMaskingBackgroundClip(rect, [&](const LayoutRect&, const FloatRect& paintRect) {
+        setupMaskingBackgroundClip(rect, [&](GraphicsContext& context, const LayoutRect&, const FloatRect& paintRect) {
             m_renderer.paintMaskForTextFillBox(context, paintRect, inlineBoxIterator, scrolledPaintRect);
         });
         break;
     }
     case FillBox::BorderArea: {
-        auto borderAreaPath = BorderPainter::pathForBorderArea(rect, style, deviceScaleFactor, includeLeftEdge, includeRightEdge);
+        auto borderAreaPath = BorderPainter::pathForBorderArea(rect, style, deviceScaleFactor, closedEdges);
         if (borderAreaPath) {
             backgroundClipStateSaver.save();
             context.clipPath(borderAreaPath.value());
             break;
         }
 
-        setupMaskingBackgroundClip(rect, [&](const LayoutRect& borderRect, const FloatRect& paintRect) {
+        setupMaskingBackgroundClip(rect, [&](GraphicsContext& context, const LayoutRect& borderRect, const FloatRect& paintRect) {
             auto borderPaintInfo = PaintInfo { context, LayoutRect { paintRect }, PaintPhase::BlockBackground, PaintBehavior::ForceBlackBorder };
             auto borderPainter = BorderPainter { m_renderer, borderPaintInfo };
             borderPainter.paintBorder(borderRect, style);
@@ -453,6 +485,9 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
         if (!geometry.destinationRect.isEmpty() && (image = bgImage->image(backgroundObject ? backgroundObject : &m_renderer, geometry.tileSize, isFirstLine))) {
             context.setDrawLuminanceMask(bgLayer.maskMode() == MaskMode::Luminance);
 
+            // FIXME: <http://webkit.org/b/288163> Allow HDR display for background images when CSS HDR images are able to set GraphicsLayer::drawHDRContent.
+            auto headroom = Headroom::None;
+
             ImagePaintingOptions options = {
                 op == CompositeOperator::SourceOver ? bgLayer.compositeForPainting() : op,
                 bgLayer.blendMode(),
@@ -460,7 +495,8 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
                 ImageOrientation::Orientation::FromImage,
                 m_renderer.chooseInterpolationQuality(context, *image, &bgLayer, geometry.tileSize),
                 document().settings().imageSubsamplingEnabled() ? AllowImageSubsampling::Yes : AllowImageSubsampling::No,
-                document().settings().showDebugBorders() ? ShowDebugBackground::Yes : ShowDebugBackground::No
+                document().settings().showDebugBorders() ? ShowDebugBackground::Yes : ShowDebugBackground::No,
+                headroom
             };
 
             auto drawResult = context.drawTiledImage(*image, geometry.destinationRect, toLayoutPoint(geometry.relativePhase()), geometry.tileSize, geometry.spaceSize, options);
@@ -565,7 +601,7 @@ BackgroundImageGeometry BackgroundPainter::calculateBackgroundImageGeometry(cons
         }
     } else {
         LayoutRect viewportRect;
-        float topContentInset = 0;
+        FloatBoxExtent obscuredContentInsets;
         if (renderer.settings().fixedBackgroundsPaintRelativeToDocument())
             viewportRect = view.unscaledDocumentRect();
         else {
@@ -581,23 +617,24 @@ BackgroundImageGeometry BackgroundPainter::calculateBackgroundImageGeometry(cons
 
             if (renderer.fixedBackgroundPaintsInLocalCoordinates()) {
                 if (!useFixedLayout) {
-                    // Shifting location up by topContentInset is needed for layout tests which expect
-                    // layout to be shifted down when calling window.internals.setTopContentInset().
-                    topContentInset = frameView.topContentInset(ScrollView::TopContentInsetType::WebCoreOrPlatformContentInset);
-                    viewportRect.setLocation(LayoutPoint(0, -topContentInset));
+                    // Shifting location by the content insets is needed for layout tests which expect
+                    // layout to be shifted when calling window.internals.setObscuredContentInsets().
+                    obscuredContentInsets = frameView.obscuredContentInsets(ScrollView::InsetType::WebCoreOrPlatformInset);
+                    viewportRect.setLocation({ -obscuredContentInsets.left(), -obscuredContentInsets.top() });
                 }
             } else if (useFixedLayout || frameView.frameScaleFactor() != 1) {
                 // scrollPositionForFixedPosition() is adjusted for page scale and it does not include
-                // topContentInset so do not add it to the calculation below.
+                // insets so do not add it to the calculation below.
                 viewportRect.setLocation(frameView.scrollPositionForFixedPosition());
             } else {
-                // documentScrollPositionRelativeToViewOrigin() includes -topContentInset in its height
+                // documentScrollPositionRelativeToViewOrigin() is already adjusted for content insets
                 // so we need to account for that in calculating the phase size
-                topContentInset = frameView.topContentInset(ScrollView::TopContentInsetType::WebCoreOrPlatformContentInset);
+                obscuredContentInsets = frameView.obscuredContentInsets(ScrollView::InsetType::WebCoreOrPlatformInset);
                 viewportRect.setLocation(frameView.documentScrollPositionRelativeToViewOrigin());
             }
 
-            top += topContentInset;
+            left += obscuredContentInsets.left();
+            top += obscuredContentInsets.top();
         }
 
         if (paintContainer)
@@ -605,7 +642,8 @@ BackgroundImageGeometry BackgroundPainter::calculateBackgroundImageGeometry(cons
 
         destinationRect = viewportRect;
         positioningAreaSize = destinationRect.size();
-        positioningAreaSize.setHeight(positioningAreaSize.height() - topContentInset);
+        positioningAreaSize.setWidth(positioningAreaSize.width() - obscuredContentInsets.left());
+        positioningAreaSize.setHeight(positioningAreaSize.height() - obscuredContentInsets.top());
         positioningAreaSize = LayoutSize(snapRectToDevicePixels(LayoutRect(destinationRect.location(), positioningAreaSize), deviceScaleFactor).size());
     }
 
@@ -780,28 +818,14 @@ LayoutSize BackgroundPainter::calculateFillTileSize(const RenderBoxModelObject& 
     return { };
 }
 
-static LayoutRect areaCastingShadowInHole(const LayoutRect& holeRect, LayoutUnit shadowExtent, LayoutUnit shadowSpread, const LayoutSize& shadowOffset)
-{
-    LayoutRect bounds(holeRect);
-
-    bounds.inflate(shadowExtent);
-
-    if (shadowSpread < 0)
-        bounds.inflate(-shadowSpread);
-
-    LayoutRect offsetBounds = bounds;
-    offsetBounds.move(-shadowOffset);
-    return unionRect(bounds, offsetBounds);
-}
-
-void BackgroundPainter::paintBoxShadow(const LayoutRect& paintRect, const RenderStyle& style, ShadowStyle shadowStyle, bool includeLogicalLeftEdge, bool includeLogicalRightEdge) const
+void BackgroundPainter::paintBoxShadow(const LayoutRect& paintRect, const RenderStyle& style, ShadowStyle shadowStyle, RectEdges<bool> closedEdges) const
 {
     // FIXME: Deal with border-image. Would be great to use border-image as a mask.
     GraphicsContext& context = m_paintInfo.context();
     if (context.paintingDisabled() || !style.boxShadow())
         return;
 
-    const auto borderShape = BorderShape::shapeForBorderRect(style, paintRect, includeLogicalLeftEdge, includeLogicalRightEdge);
+    const auto borderShape = BorderShape::shapeForBorderRect(style, paintRect, closedEdges);
 
     bool hasBorderRadius = style.hasBorderRadius();
     float deviceScaleFactor = document().deviceScaleFactor();
@@ -850,6 +874,19 @@ void BackgroundPainter::paintBoxShadow(const LayoutRect& paintRect, const Render
             auto shadowRect = paintRect;
             shadowRect.inflate(shadowPaintingExtent + shadowSpread);
             shadowRect.move(shadowOffset);
+
+            if (!closedEdges.left())
+                shadowRect.shiftXEdgeTo(paintRect.x());
+
+            if (!closedEdges.top())
+                shadowRect.shiftYEdgeTo(paintRect.y());
+
+            if (!closedEdges.right())
+                shadowRect.shiftMaxXEdgeTo(paintRect.maxX());
+
+            if (!closedEdges.bottom())
+                shadowRect.shiftMaxYEdgeTo(paintRect.maxY());
+
             auto pixelSnappedShadowRect = snapRectToDevicePixels(shadowRect, deviceScaleFactor);
 
             GraphicsContextStateSaver stateSaver(context);
@@ -886,58 +923,44 @@ void BackgroundPainter::paintBoxShadow(const LayoutRect& paintRect, const Render
                 context.fillRect(pixelSnappedFillRect, Color::black);
         } else {
             // Inset shadow.
-            auto borderRect = borderShape.deprecatedInnerRoundedRect();
-            auto holeRect = borderRect.rect();
-            holeRect.inflate(-shadowSpread);
+            auto borderWidthsWithSpread = borderShape.borderWidths() + RectEdges<LayoutUnit> { shadowSpread };
 
-            bool isHorizontal = style.writingMode().isHorizontal();
-            if (!includeLogicalLeftEdge) {
-                if (isHorizontal)
-                    holeRect.shiftXEdgeBy(-(std::max<LayoutUnit>(shadowOffset.width(), 0) + shadowPaintingExtent + shadowSpread));
-                else
-                    holeRect.shiftYEdgeBy(-(std::max<LayoutUnit>(shadowOffset.height(), 0) + shadowPaintingExtent + shadowSpread));
-            }
+            auto outerRectExpandedToObscureOpenEdges = paintRect;
 
-            if (!includeLogicalRightEdge) {
-                if (isHorizontal)
-                    holeRect.setWidth(holeRect.width() - std::min<LayoutUnit>(shadowOffset.width(), 0) + shadowPaintingExtent + shadowSpread);
-                else
-                    holeRect.setHeight(holeRect.height() - std::min<LayoutUnit>(shadowOffset.height(), 0) + shadowPaintingExtent + shadowSpread);
-            }
+            auto shadowInfluence = shadowPaintingExtent + shadowSpread;
+            if (!closedEdges.left())
+                outerRectExpandedToObscureOpenEdges.shiftXEdgeBy(-(std::max<LayoutUnit>(shadowOffset.width(), 0) + shadowInfluence));
+            if (!closedEdges.top())
+                outerRectExpandedToObscureOpenEdges.shiftYEdgeBy(-(std::max<LayoutUnit>(shadowOffset.height(), 0) + shadowInfluence));
+            if (!closedEdges.right())
+                outerRectExpandedToObscureOpenEdges.setWidth(outerRectExpandedToObscureOpenEdges.width() - std::min<LayoutUnit>(shadowOffset.width(), 0) + shadowInfluence);
+            if (!closedEdges.bottom())
+                outerRectExpandedToObscureOpenEdges.setHeight(outerRectExpandedToObscureOpenEdges.height() - std::min<LayoutUnit>(shadowOffset.height(), 0) + shadowInfluence);
 
-            auto roundedHoleRect = RoundedRect { holeRect, borderRect.radii() };
-            if (shadowSpread && roundedHoleRect.isRounded()) {
-                auto rounedRectCorrectingForSpread = [&]() {
-                    bool horizontal = style.writingMode().isHorizontal();
-                    LayoutUnit leftWidth { (!horizontal || includeLogicalLeftEdge) ? style.borderLeftWidth() + shadowSpread : 0 };
-                    LayoutUnit rightWidth { (!horizontal || includeLogicalRightEdge) ? style.borderRightWidth() + shadowSpread : 0 };
-                    LayoutUnit topWidth { (horizontal || includeLogicalLeftEdge) ? style.borderTopWidth() + shadowSpread : 0 };
-                    LayoutUnit bottomWidth { (horizontal || includeLogicalRightEdge) ? style.borderBottomWidth() + shadowSpread : 0 };
-
-                    return style.getRoundedInnerBorderFor(paintRect, topWidth, bottomWidth, leftWidth, rightWidth, includeLogicalLeftEdge, includeLogicalRightEdge);
-                }();
-                roundedHoleRect.setRadii(rounedRectCorrectingForSpread.radii());
-            }
-
-            auto pixelSnappedHoleRect = roundedHoleRect.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
-            auto pixelSnappedBorderRect = borderRect.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
-            if (pixelSnappedHoleRect.isEmpty()) {
-                if (hasBorderRadius)
-                    context.fillRoundedRect(pixelSnappedBorderRect, shadowColor);
-                else
-                    context.fillRect(pixelSnappedBorderRect.rect(), shadowColor);
+            auto shapeForInnerHole = BorderShape(outerRectExpandedToObscureOpenEdges, borderWidthsWithSpread, borderShape.radii());
+            if (shapeForInnerHole.snappedOuterRect(deviceScaleFactor).isEmpty()) {
+                shapeForInnerHole.fillInnerShape(context, shadowColor, deviceScaleFactor);
                 continue;
             }
 
-            Color fillColor = shadowColor.opaqueColor();
-            auto shadowCastingRect = areaCastingShadowInHole(borderRect.rect(), shadowPaintingExtent, shadowSpread, shadowOffset);
-            auto pixelSnappedOuterRect = snapRectToDevicePixels(shadowCastingRect, deviceScaleFactor);
+            auto areaCastingShadowInHole = [](const LayoutRect& holeRect, LayoutUnit shadowExtent, LayoutUnit shadowSpread, const LayoutSize& shadowOffset) {
+                auto bounds = holeRect;
+                bounds.inflate(shadowExtent);
+
+                if (shadowSpread < 0)
+                    bounds.inflate(-shadowSpread);
+
+                LayoutRect offsetBounds = bounds;
+                offsetBounds.move(-shadowOffset);
+                return unionRect(bounds, offsetBounds);
+            };
+
+            auto fillColor = shadowColor.opaqueColor();
+            auto shadowCastingRect = areaCastingShadowInHole(borderShape.innerEdgeRect(), shadowPaintingExtent, shadowSpread, shadowOffset);
 
             GraphicsContextStateSaver stateSaver(context);
-            if (hasBorderRadius)
-                context.clipRoundedRect(pixelSnappedBorderRect);
-            else
-                context.clip(pixelSnappedBorderRect.rect());
+
+            borderShape.clipToInnerShape(context, deviceScaleFactor);
 
             LayoutUnit xOffset = 2 * paintRect.width() + std::max<LayoutUnit>(0, shadowOffset.width()) + shadowPaintingExtent - 2 * shadowSpread + LayoutUnit(1);
             LayoutSize extraOffset(xOffset.ceil(), 0);
@@ -947,7 +970,8 @@ void BackgroundPainter::paintBoxShadow(const LayoutRect& paintRect, const Render
 
             auto snappedShadowOffset = roundSizeToDevicePixels(shadowOffset, deviceScaleFactor);
             context.setDropShadow({ snappedShadowOffset, shadowRadius, shadowColor, shadow->isWebkitBoxShadow() ? ShadowRadiusMode::Legacy : ShadowRadiusMode::Default });
-            context.fillRectWithRoundedHole(pixelSnappedOuterRect, pixelSnappedHoleRect, fillColor);
+
+            shapeForInnerHole.fillRectWithInnerHoleShape(context, shadowCastingRect, fillColor, deviceScaleFactor);
         }
     }
 }
@@ -997,7 +1021,7 @@ bool BackgroundPainter::boxShadowShouldBeAppliedToBackground(const RenderBoxMode
         // would be clipped out, so it has to be drawn separately).
         if (inlineBox->isRootInlineBox())
             return true;
-        if (!inlineBox->previousInlineBox() && !inlineBox->nextInlineBox())
+        if (!inlineBox->nextInlineBoxLineLeftward() && !inlineBox->nextInlineBoxLineRightward())
             return true;
         auto* image = lastBackgroundLayer->image();
         auto& renderer = inlineBox->renderer();

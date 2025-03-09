@@ -40,26 +40,28 @@
 namespace WebKit {
 using namespace WebCore;
 
-Ref<WebBackForwardListItem> WebBackForwardListItem::create(Ref<FrameState>&& mainFrameState, WebPageProxyIdentifier pageID)
+Ref<WebBackForwardListItem> WebBackForwardListItem::create(Ref<FrameState>&& mainFrameState, WebPageProxyIdentifier pageID, std::optional<FrameIdentifier> navigatedFrameID)
 {
     RELEASE_ASSERT(RunLoop::isMain());
-    return adoptRef(*new WebBackForwardListItem(WTFMove(mainFrameState), pageID));
+    return adoptRef(*new WebBackForwardListItem(WTFMove(mainFrameState), pageID, navigatedFrameID));
 }
 
-WebBackForwardListItem::WebBackForwardListItem(Ref<FrameState>&& mainFrameState, WebPageProxyIdentifier pageID)
-    : m_rootFrameItem(WebBackForwardListFrameItem::create(this, nullptr, WTFMove(mainFrameState)))
+WebBackForwardListItem::WebBackForwardListItem(Ref<FrameState>&& mainFrameState, WebPageProxyIdentifier pageID, std::optional<FrameIdentifier> navigatedFrameID)
+    : m_identifier(*mainFrameState->itemID)
+    , m_mainFrameItem(WebBackForwardListFrameItem::create(*this, nullptr, WTFMove(mainFrameState)))
+    , m_navigatedFrameID(navigatedFrameID)
     , m_pageID(pageID)
-    , m_lastProcessIdentifier(m_rootFrameItem->frameState().identifier->processIdentifier())
+    , m_lastProcessIdentifier(navigatedFrameItem().identifier().processIdentifier())
 {
-    auto result = allItems().add(*m_rootFrameItem->frameState().identifier, *this);
+    auto result = allItems().add(m_identifier, *this);
     ASSERT_UNUSED(result, result.isNewEntry);
 }
 
 WebBackForwardListItem::~WebBackForwardListItem()
 {
     RELEASE_ASSERT(RunLoop::isMain());
-    ASSERT(allItems().get(*m_rootFrameItem->frameState().identifier) == this);
-    allItems().remove(*m_rootFrameItem->frameState().identifier);
+    ASSERT(allItems().get(m_identifier) == this);
+    allItems().remove(m_identifier);
     removeFromBackForwardCache();
 }
 
@@ -70,7 +72,7 @@ HashMap<BackForwardItemIdentifier, WeakRef<WebBackForwardListItem>>& WebBackForw
     return items;
 }
 
-WebBackForwardListItem* WebBackForwardListItem::itemForID(const BackForwardItemIdentifier& identifier)
+WebBackForwardListItem* WebBackForwardListItem::itemForID(BackForwardItemIdentifier identifier)
 {
     return allItems().get(identifier);
 }
@@ -119,8 +121,8 @@ bool WebBackForwardListItem::itemIsInSameDocument(const WebBackForwardListItem& 
 
     // The following logic must be kept in sync with WebCore::HistoryItem::shouldDoSameDocumentNavigationTo().
 
-    Ref mainFrameState = m_rootFrameItem->frameState();
-    Ref otherMainFrameState = other.m_rootFrameItem->frameState();
+    Ref mainFrameState = this->mainFrameState();
+    Ref otherMainFrameState = other.mainFrameState();
 
     if (mainFrameState->stateObjectData || otherMainFrameState->stateObjectData)
         return mainFrameState->documentSequenceNumber == otherMainFrameState->documentSequenceNumber;
@@ -157,10 +159,10 @@ bool WebBackForwardListItem::itemIsClone(const WebBackForwardListItem& other)
     if (this == &other)
         return false;
 
-    const auto& mainFrameState = m_rootFrameItem->frameState();
-    const auto& otherMainFrameState = other.m_rootFrameItem->frameState();
+    Ref mainFrameState = this->mainFrameState();
+    Ref otherMainFrameState = other.mainFrameState();
 
-    if (mainFrameState.itemSequenceNumber != otherMainFrameState.itemSequenceNumber)
+    if (mainFrameState->itemSequenceNumber != otherMainFrameState->itemSequenceNumber)
         return false;
 
     return hasSameFrames(mainFrameState, otherMainFrameState);
@@ -195,61 +197,73 @@ SuspendedPageProxy* WebBackForwardListItem::suspendedPage() const
     return m_backForwardCacheEntry ? m_backForwardCacheEntry->suspendedPage() : nullptr;
 }
 
-WebCore::BackForwardItemIdentifier WebBackForwardListItem::itemID() const
+Ref<FrameState> WebBackForwardListItem::navigatedFrameState() const
 {
-    return *m_rootFrameItem->frameState().identifier;
+    return protectedNavigatedFrameItem()->copyFrameStateWithChildren();
 }
 
-void WebBackForwardListItem::setRootFrameState(Ref<FrameState>&& mainFrameState)
+Ref<FrameState> WebBackForwardListItem::mainFrameState() const
 {
-    protectedRootFrameItem()->setFrameState(WTFMove(mainFrameState));
-}
-
-FrameState& WebBackForwardListItem::rootFrameState() const
-{
-    return m_rootFrameItem->frameState();
+    return m_mainFrameItem->copyFrameStateWithChildren();
 }
 
 const String& WebBackForwardListItem::originalURL() const
 {
     if (m_isRemoteFrameNavigation)
         return emptyString();
-    return m_rootFrameItem->frameState().originalURLString;
+    return mainFrameItem().frameState().originalURLString;
 }
 
 const String& WebBackForwardListItem::url() const
 {
     if (m_isRemoteFrameNavigation)
         return emptyString();
-    return m_rootFrameItem->frameState().urlString;
+    return mainFrameItem().frameState().urlString;
 }
 
 const String& WebBackForwardListItem::title() const
 {
     if (m_isRemoteFrameNavigation)
         return emptyString();
-    return m_rootFrameItem->frameState().title;
+    return mainFrameItem().frameState().title;
 }
 
 bool WebBackForwardListItem::wasCreatedByJSWithoutUserInteraction() const
 {
-    return m_rootFrameItem->frameState().wasCreatedByJSWithoutUserInteraction;
+    return navigatedFrameItem().frameState().wasCreatedByJSWithoutUserInteraction;
 }
 
 void WebBackForwardListItem::setWasRestoredFromSession()
 {
-    protectedRootFrameItem()->setWasRestoredFromSession();
+    m_mainFrameItem->setWasRestoredFromSession();
 }
 
-Ref<WebBackForwardListFrameItem> WebBackForwardListItem::protectedRootFrameItem()
+WebBackForwardListFrameItem& WebBackForwardListItem::navigatedFrameItem() const
 {
-    return m_rootFrameItem.get();
+    if (RefPtr childItem = m_navigatedFrameID ? m_mainFrameItem->childItemForFrameID(*m_navigatedFrameID) : nullptr)
+        return childItem.releaseNonNull();
+    return m_mainFrameItem;
+}
+
+Ref<WebBackForwardListFrameItem> WebBackForwardListItem::protectedNavigatedFrameItem() const
+{
+    return navigatedFrameItem();
+}
+
+WebBackForwardListFrameItem& WebBackForwardListItem::mainFrameItem() const
+{
+    return m_mainFrameItem;
+}
+
+Ref<WebBackForwardListFrameItem> WebBackForwardListItem::protectedMainFrameItem() const
+{
+    return m_mainFrameItem;
 }
 
 #if !LOG_DISABLED
 String WebBackForwardListItem::loggingString()
 {
-    return makeString("Back/forward item ID "_s, itemID().toString(), ", original URL "_s, originalURL(), ", current URL "_s, url(), m_backForwardCacheEntry ? "(has a back/forward cache entry)"_s : ""_s);
+    return makeString("Back/forward item ID "_s, identifier().toString(), ", original URL "_s, originalURL(), ", current URL "_s, url(), m_backForwardCacheEntry ? "(has a back/forward cache entry)"_s : ""_s);
 }
 #endif // !LOG_DISABLED
 

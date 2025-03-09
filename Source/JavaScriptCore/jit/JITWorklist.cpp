@@ -84,6 +84,10 @@ JITWorklist& JITWorklist::ensureGlobalWorklist()
 CompilationResult JITWorklist::enqueue(Ref<JITPlan> plan)
 {
     if (!Options::useConcurrentJIT()) {
+#if USE(PROTECTED_JIT)
+        // Must be constructed before we allocate anything using SequesteredArenaMalloc
+        ArenaLifetime saLifetime;
+#endif
         plan->compileInThread(nullptr);
         return plan->finalize();
     }
@@ -349,7 +353,7 @@ template<typename MatchFunction>
 void JITWorklist::removeMatchingPlansForVM(VM& vm, const MatchFunction& matches)
 {
     Locker locker { *m_lock };
-    HashSet<JITCompilationKey> deadPlanKeys;
+    UncheckedKeyHashSet<JITCompilationKey> deadPlanKeys;
     for (auto& entry : m_plans) {
         JITPlan* plan = entry.value.get();
         if (plan->vm() != &vm)

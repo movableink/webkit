@@ -27,12 +27,14 @@
 
 #include "FileSystemHandle.h"
 #include "FileSystemSyncAccessHandleIdentifier.h"
+#include "FileSystemWritableFileStreamIdentifier.h"
 
 namespace WebCore {
 
 class File;
 class FileSystemSyncAccessHandle;
 class FileSystemWritableFileStream;
+enum class FileSystemWriteCloseReason : bool;
 enum class FileSystemWriteCommandType : uint8_t;
 template<typename> class ExceptionOr;
 
@@ -52,8 +54,9 @@ public:
         bool keepExistingData { false };
     };
     void createWritable(const CreateWritableOptions&, DOMPromiseDeferred<IDLInterface<FileSystemWritableFileStream>>&&);
-    void closeWritable(bool aborted);
-    void executeCommandForWritable(FileSystemWriteCommandType, std::optional<uint64_t> position, std::optional<uint64_t> size, std::span<const uint8_t> dataBytes, bool hasDataError, DOMPromiseDeferred<void>&&);
+
+    void closeWritable(FileSystemWritableFileStreamIdentifier, FileSystemWriteCloseReason);
+    void executeCommandForWritable(FileSystemWritableFileStreamIdentifier, FileSystemWriteCommandType, std::optional<uint64_t> position, std::optional<uint64_t> size, std::span<const uint8_t> dataBytes, bool hasDataError, DOMPromiseDeferred<void>&&);
 
 private:
     FileSystemFileHandle(ScriptExecutionContext&, String&&, FileSystemHandleIdentifier, Ref<FileSystemStorageConnection>&&);

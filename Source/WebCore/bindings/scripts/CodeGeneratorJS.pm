@@ -2474,7 +2474,14 @@ sub GetEnumerationValueName
 
     return "EmptyString" if $name eq "";
     return "WebRTC" if $name eq "webrtc";
-    $name = join("", map { $codeGenerator->WK_ucfirst($_) } split("-", $name));
+
+    my @parts = split("-", $name);
+    @parts = map {
+        my $part = $_;
+        my @dotParts = split(/\./, $part);
+        join("", map { $codeGenerator->WK_ucfirst($_) } @dotParts)
+    } @parts;
+    $name = join("", @parts);
     $name = "_$name" if $name =~ /^\d/;
     return $name;
 }
@@ -6338,20 +6345,20 @@ sub GenerateCallWith
     # Document of current realm (https://html.spec.whatwg.org/multipage/webappapis.html#concept-current-everything)
     if ($codeGenerator->ExtendedAttributeContains($callWith, "CurrentDocument")) {
         AddToImplIncludes("Document.h");
-        push(@$outputArray, $indent . "auto* context = ${scriptExecutionContextAccessor}->scriptExecutionContext();\n");
+        push(@$outputArray, $indent . "RefPtr context = ${scriptExecutionContextAccessor}->scriptExecutionContext();\n");
         push(@$outputArray, $indent . "if (UNLIKELY(!context))\n");
         push(@$outputArray, $indent . "    return" . ($contextMissing ? " " . $contextMissing : "") . ";\n");
-        push(@$outputArray, $indent . "auto& document = downcast<Document>(*context);\n");
-        push(@callWithArgs, "document");
+        push(@$outputArray, $indent . "Ref document = downcast<Document>(*context);\n");
+        push(@callWithArgs, "document.get()");
     }
     # Document of relevant realm (https://html.spec.whatwg.org/multipage/webappapis.html#concept-relevant-everything)
     if ($codeGenerator->ExtendedAttributeContains($callWith, "RelevantDocument")) {
         AddToImplIncludes("Document.h");
-        push(@$outputArray, $indent . "auto* context = ${relevantGlobalObjectPointer}->scriptExecutionContext();\n");
+        push(@$outputArray, $indent . "RefPtr context = ${relevantGlobalObjectPointer}->scriptExecutionContext();\n");
         push(@$outputArray, $indent . "if (UNLIKELY(!context))\n");
         push(@$outputArray, $indent . "    return" . ($contextMissing ? " " . $contextMissing : "") . ";\n");
-        push(@$outputArray, $indent . "auto& document = downcast<Document>(*context);\n");
-        push(@callWithArgs, "document");
+        push(@$outputArray, $indent . "Ref document = downcast<Document>(*context);\n");
+        push(@callWithArgs, "document.get()");
     }
     if ($codeGenerator->ExtendedAttributeContains($callWith, "IncumbentDocument")) {
         AddToImplIncludes("LocalDOMWindow.h");

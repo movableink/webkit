@@ -81,6 +81,20 @@ using GPUShaderValidation = MTLShaderValidation;
 using GPUShaderValidation = uint32_t;
 #endif
 
+#define WEBKIT_DRAW_INDEXED_INDIRECT_STRUCT_TYPE \
+struct WebKitMTLDrawIndexedPrimitivesIndirectArguments { \
+    MTLDrawIndexedPrimitivesIndirectArguments args;         \
+    unsigned lostOrOOBRead;                                 \
+};
+WEBKIT_DRAW_INDEXED_INDIRECT_STRUCT_TYPE
+
+#define WEBKIT_DRAW_INDIRECT_STRUCT_TYPE \
+struct WebKitMTLDrawPrimitivesIndirectArguments { \
+    MTLDrawPrimitivesIndirectArguments args;                \
+    unsigned lostOrOOBRead;                                 \
+};
+WEBKIT_DRAW_INDIRECT_STRUCT_TYPE
+
 // https://gpuweb.github.io/gpuweb/#gpudevice
 class Device : public WGPUDeviceImpl, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Device> {
     WTF_MAKE_TZONE_ALLOCATED(Device);
@@ -205,6 +219,8 @@ public:
     id<MTLCounterSampleBuffer> timestampsBuffer(id<MTLCommandBuffer>, size_t);
     void resolveTimestampsForBuffer(id<MTLCommandBuffer>);
     id<MTLSharedEvent> resolveTimestampsSharedEvent();
+    uint32_t maxVerticesPerDrawCall() const { return m_maxVerticesPerDrawCall; }
+    void trackTimestampsBuffer(id<MTLCommandBuffer>, id<MTLCounterSampleBuffer>);
 
 private:
     Device(id<MTLDevice>, id<MTLCommandQueue> defaultQueue, HardwareCapabilities&&, Adapter&);
@@ -232,7 +248,11 @@ private:
         std::optional<Error> error;
         const WGPUErrorFilter filter;
     };
-
+#if ENABLE(WEBGPU_SWIFT)
+private PUBLIC_IN_WEBGPU_SWIFT:
+    id<MTLFunction> m_nopVertexFunction;
+#endif
+private:
     id<MTLDevice> m_device { nil };
     const Ref<Queue> m_defaultQueue;
 
@@ -277,10 +297,12 @@ private:
 #if HAVE(COREVIDEO_METAL_SUPPORT)
     RetainPtr<CVMetalTextureCacheRef> m_coreVideoTextureCache;
 #endif
-    NSMapTable<id<MTLCommandBuffer>, id<MTLCounterSampleBuffer>>* m_sampleCounterBuffers;
+    NSMapTable<id<MTLCommandBuffer>, NSMutableArray<id<MTLCounterSampleBuffer>>*>* m_sampleCounterBuffers;
     NSMapTable<id<MTLCommandBuffer>, NSMutableArray<id<MTLBuffer>>*>* m_resolvedSampleCounterBuffers;
     id<MTLSharedEvent> m_resolveTimestampsSharedEvent { nil };
+    uint64_t m_commandEncoderId { 0 };
     bool m_supressAllErrors { false };
+    const uint32_t m_maxVerticesPerDrawCall { 0 };
 } SWIFT_SHARED_REFERENCE(refDevice, derefDevice);
 
 } // namespace WebGPU

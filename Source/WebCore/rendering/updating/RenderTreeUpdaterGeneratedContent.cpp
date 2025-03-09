@@ -46,7 +46,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RenderTreeUpdater, GeneratedContent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeUpdater::GeneratedContent);
 
 RenderTreeUpdater::GeneratedContent::GeneratedContent(RenderTreeUpdater& updater)
     : m_updater(updater)
@@ -119,8 +119,7 @@ static void createContentRenderers(RenderTreeBuilder& builder, RenderElement& ps
 {
     if (auto* contentData = style.contentData()) {
         for (const ContentData* content = contentData; content; content = content->next()) {
-            auto child = content->createContentRenderer(pseudoRenderer.document(), style);
-            if (pseudoRenderer.isChildAllowed(*child, style))
+            if (auto child = content->createContentRenderer(pseudoRenderer.document(), style); child && pseudoRenderer.isChildAllowed(*child, style))
                 builder.attach(pseudoRenderer, WTFMove(child));
         }
     } else {

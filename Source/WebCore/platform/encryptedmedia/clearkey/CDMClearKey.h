@@ -44,8 +44,7 @@ namespace ClearKey {
 
 // ClearKey CENC SystemID.
 // https://www.w3.org/TR/eme-initdata-cenc/#common-system
-const uint8_t cencSystemId[] = { 0x10, 0x77, 0xef, 0xec, 0xc0, 0xb2, 0x4d, 0x02, 0xac, 0xe3, 0x3c, 0x1e, 0x52, 0xe2, 0xfb, 0x4b };
-const unsigned cencSystemIdSize = sizeof(cencSystemId);
+constexpr std::array<uint8_t, 16> cencSystemId { 0x10, 0x77, 0xef, 0xec, 0xc0, 0xb2, 0x4d, 0x02, 0xac, 0xe3, 0x3c, 0x1e, 0x52, 0xe2, 0xfb, 0x4b };
 enum {
     AES128CTRBlockSizeInBytes = 16,
     KeyIDSizeInBytes = 16,
@@ -61,7 +60,7 @@ public:
 
     virtual ~CDMFactoryClearKey();
 
-    std::unique_ptr<CDMPrivate> createCDM(const String&, const CDMPrivateClient&) final;
+    std::unique_ptr<CDMPrivate> createCDM(const String& keySystem, const String& mediaKeysHashSalt, const CDMPrivateClient&) final;
     bool supportsKeySystem(const String&) final;
 
 private:
@@ -117,7 +116,7 @@ public:
     void removeSessionData(const String&, LicenseType, RemoveSessionDataCallback&&) final;
     void storeRecordOfKeyUsage(const String&) final;
 private:
-    CDMInstanceClearKey& parentInstance() const;
+    RefPtr<CDMInstanceClearKey> protectedParentInstance() const;
 
     String m_sessionID;
     KeyStore m_keyStore;

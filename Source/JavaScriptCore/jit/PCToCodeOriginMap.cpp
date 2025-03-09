@@ -107,7 +107,7 @@ PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(PCToCodeOriginMapBuilder&& ot
 { }
 
 #if ENABLE(FTL_JIT)
-PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(JSTag, VM& vm, B3::PCToOriginMap b3PCToOriginMap)
+PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(JSTag, VM& vm, const B3::PCToOriginMap& b3PCToOriginMap)
     : m_shouldBuildMapping(vm.shouldBuilderPCToCodeOriginMapping())
 {
     if (!m_shouldBuildMapping)
@@ -123,20 +123,16 @@ PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(JSTag, VM& vm, B3::PCToOrigin
 }
 #endif
 
-#if ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
-PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(WasmTag, B3::PCToOriginMap b3PCToOriginMap)
+#if ENABLE(WEBASSEMBLY_OMGJIT)
+PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(WasmTag, const B3::PCToOriginMap& b3PCToOriginMap)
     : m_shouldBuildMapping(true)
 {
     for (const B3::PCToOriginMap::OriginRange& originRange : b3PCToOriginMap.ranges()) {
         B3::Origin b3Origin = originRange.origin;
         if (b3Origin) {
-#if USE(JSVALUE64)
             Wasm::OpcodeOrigin wasmOrigin { b3Origin };
             // We stash the location into a BytecodeIndex.
             appendItem(originRange.label, CodeOrigin(BytecodeIndex(wasmOrigin.location())));
-#elif USE(JSVALUE32_64)
-            UNREACHABLE_FOR_PLATFORM(); // Needs porting
-#endif
         } else
             appendItem(originRange.label, PCToCodeOriginMapBuilder::defaultCodeOrigin());
     }

@@ -924,15 +924,22 @@ bool Scope::isForUserAgentShadowTree() const
     return m_shadowRoot && m_shadowRoot->mode() == ShadowRootMode::UserAgent;
 }
 
-bool Scope::updateQueryContainerState(QueryContainerUpdateContext& context)
+bool Scope::invalidateForLayoutDependencies(LayoutDependencyUpdateContext& context)
+{
+    return invalidateForContainerDependencies(context)
+        || invalidateForAnchorDependencies(context)
+        || invalidateForPositionTryFallbacks(context);
+}
+
+bool Scope::invalidateForContainerDependencies(LayoutDependencyUpdateContext& context)
 {
     ASSERT(!m_shadowRoot);
 
     if (!m_document->renderView())
         return false;
 
-    auto previousStates = WTFMove(m_queryContainerStates);
-    m_queryContainerStates.clear();
+    auto previousQueryContainerDimensions = WTFMove(m_queryContainerDimensionsOnLastUpdate);
+    m_queryContainerDimensionsOnLastUpdate.clear();
 
     Vector<CheckedPtr<Element>> containersToInvalidate;
 
@@ -960,18 +967,95 @@ bool Scope::updateQueryContainerState(QueryContainerUpdateContext& context)
             RELEASE_ASSERT_NOT_REACHED();
         };
 
-        auto it = previousStates.find(*containerElement);
-        bool changed = it == previousStates.end() || sizeChanged(it->value);
+        auto it = previousQueryContainerDimensions.find(*containerElement);
+        bool changed = it == previousQueryContainerDimensions.end() || sizeChanged(it->value);
         // Protect against unstable layout by invalidating only once per container.
         if (changed && context.invalidatedContainers.add(*containerElement).isNewEntry)
             containersToInvalidate.append(containerElement);
-        m_queryContainerStates.add(*containerElement, size);
+        m_queryContainerDimensionsOnLastUpdate.add(*containerElement, size);
     }
 
     for (auto& toInvalidate : containersToInvalidate)
         toInvalidate->invalidateForQueryContainerSizeChange();
 
     return !containersToInvalidate.isEmpty();
+}
+
+bool Scope::invalidateForAnchorDependencies(LayoutDependencyUpdateContext& context)
+{
+    ASSERT(!m_shadowRoot);
+
+    if (!m_document->renderView())
+        return false;
+
+    auto previousAnchorRects = WTFMove(m_anchorRectsOnLastUpdate);
+    m_anchorRectsOnLastUpdate.clear();
+
+    Vector<CheckedRef<Element>> anchoredElementsToInvalidate;
+
+    if (m_document->renderView()->anchors().isEmptyIgnoringNullReferences())
+        return false;
+
+    auto anchorMap = AnchorPositionEvaluator::makeAnchorPositionedForAnchorMap(m_document);
+
+    for (auto& anchorRenderer : m_document->renderView()->anchors()) {
+        auto rect = anchorRenderer.absoluteBoundingBoxRect();
+
+        auto it = previousAnchorRects.find(anchorRenderer);
+        bool changed = it == previousAnchorRects.end() || it->value != rect;
+        if (!changed)
+            continue;
+
+        auto anchoredElements = anchorMap.getOptional(anchorRenderer);
+        if (!anchoredElements)
+            continue;
+
+        m_anchorRectsOnLastUpdate.add(anchorRenderer, rect);
+
+        for (auto& anchoredElement : *anchoredElements) {
+            if (!context.invalidatedAnchorPositioned.add(anchoredElement.get()).isNewEntry)
+                continue;
+            anchoredElementsToInvalidate.append(anchoredElement);
+        }
+    }
+
+    for (auto& toInvalidate : anchoredElementsToInvalidate) {
+        CheckedPtr renderer = toInvalidate->renderer();
+        if (renderer && AnchorPositionEvaluator::isLayoutTimeAnchorPositioned(renderer->style()))
+            renderer->setNeedsLayout();
+        else
+            toInvalidate->invalidateForAnchorRectChange();
+    }
+
+    return !anchoredElementsToInvalidate.isEmpty();
+}
+
+bool Scope::invalidateForPositionTryFallbacks(LayoutDependencyUpdateContext& context)
+{
+    ASSERT(!m_shadowRoot);
+
+    if (!m_document->renderView())
+        return false;
+
+    bool invalidated = false;
+
+    for (auto& box : m_document->renderView()->positionTryBoxes()) {
+        if (!AnchorPositionEvaluator::overflowsContainingBlock(box))
+            continue;
+
+        CheckedPtr element = box.element();
+        if (auto* pseudoElement = dynamicDowncast<PseudoElement>(element.get()))
+            element = pseudoElement->hostElement();
+
+        if (element) {
+            if (!context.invalidatedAnchorPositioned.add(*element).isNewEntry)
+                continue;
+            element->invalidateForAnchorRectChange();
+            invalidated = true;
+        }
+    }
+
+    return invalidated;
 }
 
 const MatchResult* Scope::cachedMatchResult(const Element& element)
@@ -1033,16 +1117,24 @@ Element* hostForScopeOrdinal(const Element& element, ScopeOrdinal scopeOrdinal)
     return host;
 }
 
-void Scope::clearAnchorPositioningState()
+void Scope::resetAnchorPositioningStateBeforeStyleResolution()
 {
-    for (auto keyAndValue : m_anchorPositionedStates) {
-        CheckedRef element = keyAndValue.key;
-        if (auto* renderer = dynamicDowncast<RenderBox>(element->renderer()); renderer && renderer->layer())
-            renderer->layer()->clearSnapshottedScrollOffsetForAnchorPositioning();
-        keyAndValue.key.invalidateStyle();
+    // FIXME: Move this transient state to TreeResolver.
+    for (auto elementAndState : m_anchorPositionedStates) {
+        elementAndState.value->anchorNames.clear();
+        elementAndState.value->stage = { };
+        elementAndState.value->hasAnchorFunctions = false;
     }
+}
 
-    m_anchorPositionedStates.clear();
+void Scope::updateAnchorPositioningStateAfterStyleResolution()
+{
+    AnchorPositionEvaluator::updateSnapshottedScrollOffsets(m_document);
+
+    m_anchorPositionedStates.removeIf([](auto& elementAndState) {
+        // Remove if we have no anchors after initial resolution.
+        return elementAndState.value->stage && elementAndState.value->anchorNames.isEmpty();
+    });
 }
 
 }

@@ -53,6 +53,14 @@ void WebExtensionContext::addListener(WebCore::FrameIdentifier frameIdentifier, 
 
     auto result = m_eventListenerFrames.add({ listenerType, contentWorldType }, WeakFrameCountedSet { });
     result.iterator->value.add(*frame);
+
+    if (listenerType == WebExtensionEventListenerType::TestOnMessage) {
+        if (!hasTestMessageEventListeners()) {
+            m_testMessageListenersCount++;
+            flushTestMessageQueueIfNeeded();
+        } else
+            m_testMessageListenersCount++;
+    }
 }
 
 void WebExtensionContext::removeListener(WebCore::FrameIdentifier frameIdentifier, WebExtensionEventListenerType listenerType, WebExtensionContentWorldType contentWorldType, size_t removedCount)
@@ -81,6 +89,9 @@ void WebExtensionContext::removeListener(WebCore::FrameIdentifier frameIdentifie
         return;
 
     m_eventListenerFrames.remove(iterator);
+
+    if (listenerType == WebExtensionEventListenerType::TestOnMessage && hasTestMessageEventListeners())
+        m_testMessageListenersCount--;
 }
 
 } // namespace WebKit

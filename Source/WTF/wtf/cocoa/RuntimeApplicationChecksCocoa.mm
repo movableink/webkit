@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -231,7 +231,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
 
     if (linkedBefore(dyld_fall_2024_os_versions, DYLD_IOS_VERSION_18_0, DYLD_MACOSX_VERSION_15_0)) {
         disableBehavior(SDKAlignedBehavior::FullySuspendsBackgroundContentImmediately);
-        disableBehavior(SDKAlignedBehavior::NoGetElementsByNameQuirk);
         disableBehavior(SDKAlignedBehavior::ApplicationStateTrackerDoesNotObserveWindow);
         disableBehavior(SDKAlignedBehavior::ThrowOnKVCInstanceVariableAccess);
         disableBehavior(SDKAlignedBehavior::BlockOptionallyBlockableMixedContent);
@@ -360,22 +359,6 @@ void clearApplicationBundleIdentifierTestingOverride()
 #endif
 }
 
-static String& presentingApplicationBundleIdentifierStorage()
-{
-    static MainThreadNeverDestroyed<String> identifier;
-    return identifier;
-}
-
-void setPresentingApplicationBundleIdentifier(const String& identifier)
-{
-    presentingApplicationBundleIdentifierStorage() = identifier;
-}
-
-const String& presentingApplicationBundleIdentifier()
-{
-    return presentingApplicationBundleIdentifierStorage();
-}
-
 static bool applicationBundleIsEqualTo(const String& bundleIdentifierString)
 {
     return applicationBundleIdentifier() == bundleIdentifierString;
@@ -391,6 +374,12 @@ bool CocoaApplication::isWebkitTestRunner()
 {
     static bool isWebkitTestRunner = applicationBundleIsEqualTo("com.apple.WebKit.WebKitTestRunner"_s);
     return isWebkitTestRunner;
+}
+
+bool CocoaApplication::isAppleApplication()
+{
+    static bool isAppleApplication = applicationBundleIdentifier().startsWith("com.apple."_s);
+    return isAppleApplication;
 }
 
 #if PLATFORM(MAC)
@@ -439,12 +428,6 @@ bool MacApplication::isHRBlock()
     return isHRBlock;
 }
 
-bool MacApplication::isSolidStateNetworksDownloader()
-{
-    static bool isSolidStateNetworksDownloader = applicationBundleIsEqualTo("com.solidstatenetworks.awkhost"_s);
-    return isSolidStateNetworksDownloader;
-}
-
 bool MacApplication::isEpsonSoftwareUpdater()
 {
     static bool isEpsonSoftwareUpdater = applicationBundleIsEqualTo("com.epson.EPSON_Software_Updater"_s);
@@ -461,9 +444,10 @@ bool MacApplication::isMimeoPhotoProject()
 
 #if PLATFORM(IOS_FAMILY)
 
-static bool applicationBundleStartsWith(const String& bundleIdentifierPrefix)
+bool IOSApplication::isAppleWebApp()
 {
-    return applicationBundleIdentifier().startsWith(bundleIdentifierPrefix);
+    static bool isWebApp = applicationBundleIsEqualTo("com.apple.webapp"_s);
+    return isWebApp;
 }
 
 bool IOSApplication::isMobileMail()
@@ -586,12 +570,6 @@ bool IOSApplication::isAmazon()
 {
     static bool isAmazon = applicationBundleIsEqualTo("com.amazon.Amazon"_s);
     return isAmazon;
-}
-
-bool IOSApplication::isAppleApplication()
-{
-    static bool isAppleApplication = applicationBundleStartsWith("com.apple."_s);
-    return isAppleApplication;
 }
 
 bool IOSApplication::isEvernote()

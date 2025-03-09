@@ -42,6 +42,7 @@
 #include "HitTestResult.h"
 #include "IdTargetObserverRegistry.h"
 #include "JSObservableArray.h"
+#include "LegacyRenderSVGResourceContainer.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
@@ -77,7 +78,7 @@ struct SVGResourcesMap {
 
     MemoryCompactRobinHoodHashMap<AtomString, WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>> pendingResources;
     MemoryCompactRobinHoodHashMap<AtomString, WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>> pendingResourcesForRemoval;
-    MemoryCompactRobinHoodHashMap<AtomString, LegacyRenderSVGResourceContainer*> legacyResources;
+    MemoryCompactRobinHoodHashMap<AtomString, SingleThreadWeakPtr<LegacyRenderSVGResourceContainer>> legacyResources;
 };
 
 TreeScope::TreeScope(ShadowRoot& shadowRoot, Document& document, RefPtr<CustomElementRegistry>&& registry)
@@ -142,8 +143,7 @@ void TreeScope::setParentTreeScope(TreeScope& newParentScope)
 
 void TreeScope::setCustomElementRegistry(Ref<CustomElementRegistry>&& registry)
 {
-    if (!m_customElementRegistry)
-        m_customElementRegistry = WTFMove(registry);
+    m_customElementRegistry = WTFMove(registry);
 }
 
 RefPtr<Element> TreeScope::getElementById(const AtomString& elementId) const
@@ -177,6 +177,12 @@ RefPtr<Element> TreeScope::getElementById(StringView elementId) const
     return nullptr;
 }
 
+RefPtr<Element> TreeScope::elementByIdResolvingReferenceTarget(const AtomString& elementId) const
+{
+    RefPtr elementForId = getElementById(elementId);
+    return elementForId ? elementForId->resolveReferenceTarget() : nullptr;
+}
+
 const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* TreeScope::getAllElementsById(const AtomString& elementId) const
 {
     if (elementId.isEmpty())
@@ -192,7 +198,7 @@ void TreeScope::addElementById(const AtomString& elementId, Element& element, bo
         m_elementsById = makeUnique<TreeScopeOrderedMap>();
     m_elementsById->add(elementId, element, *this);
     if (m_idTargetObserverRegistry && notifyObservers)
-        m_idTargetObserverRegistry->notifyObservers(elementId);
+        m_idTargetObserverRegistry->notifyObservers(element, elementId);
 }
 
 void TreeScope::removeElementById(const AtomString& elementId, Element& element, bool notifyObservers)
@@ -201,7 +207,7 @@ void TreeScope::removeElementById(const AtomString& elementId, Element& element,
         return;
     m_elementsById->remove(elementId, element);
     if (m_idTargetObserverRegistry && notifyObservers)
-        m_idTargetObserverRegistry->notifyObservers(elementId);
+        m_idTargetObserverRegistry->notifyObservers(element, elementId);
 }
 
 RefPtr<Element> TreeScope::getElementByName(const AtomString& name) const
@@ -226,7 +232,6 @@ void TreeScope::removeElementByName(const AtomString& name, Element& element)
         return;
     m_elementsByName->remove(name, element);
 }
-
 
 Ref<Node> TreeScope::retargetToScope(Node& node) const
 {
@@ -499,22 +504,28 @@ RefPtr<Element> TreeScope::findAnchor(StringView name)
         return nullptr;
     if (RefPtr element = getElementById(name))
         return element;
-    auto inQuirksMode = documentScope().inQuirksMode();
     Ref rootNode = m_rootNode.get();
     for (Ref anchor : descendantsOfType<HTMLAnchorElement>(rootNode)) {
-        if (inQuirksMode) {
-            // Quirks mode, ASCII case-insensitive comparison of names.
-            // FIXME: This behavior is not mentioned in the HTML specification.
-            // We should either remove this or get this into the specification.
-            if (equalIgnoringASCIICase(anchor->name(), name))
-                return anchor;
-        } else {
-            // Strict mode, names need to match exactly.
-            if (anchor->name() == name)
-                return anchor;
-        }
+        if (isMatchingAnchor(anchor, name))
+            return anchor;
     }
     return nullptr;
+}
+
+bool TreeScope::isMatchingAnchor(HTMLAnchorElement& anchor, StringView name)
+{
+    if (documentScope().inQuirksMode()) {
+        // Quirks mode, ASCII case-insensitive comparison of names.
+        // FIXME: This behavior is not mentioned in the HTML specification.
+        // We should either remove this or get this into the specification.
+        if (equalIgnoringASCIICase(anchor.name(), name))
+            return true;
+    } else {
+        // Strict mode, names need to match exactly.
+        if (anchor.name() == name)
+            return true;
+    }
+    return false;
 }
 
 static Element* focusedFrameOwnerElement(Frame* focusedFrame, LocalFrame* currentFrame)
@@ -650,7 +661,10 @@ LegacyRenderSVGResourceContainer* TreeScope::lookupLegacySVGResoureById(const At
     if (id.isEmpty())
         return nullptr;
 
-    return svgResourcesMap().legacyResources.get(id);
+    if (auto resource = svgResourcesMap().legacyResources.get(id))
+        return resource.get();
+
+    return nullptr;
 }
 
 void TreeScope::addPendingSVGResource(const AtomString& id, SVGElement& element)

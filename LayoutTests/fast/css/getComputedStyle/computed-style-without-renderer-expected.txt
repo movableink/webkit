@@ -196,7 +196,7 @@ transition-delay: 0s
 transition-duration: 0s
 transition-property: all
 transition-timing-function: ease
-unicode-bidi: normal
+unicode-bidi: isolate
 vector-effect: none
 vertical-align: baseline
 visibility: visible
@@ -242,7 +242,7 @@ zoom: 1
 -webkit-user-select: text
 background-position-x: 0%
 background-position-y: 0%
-border-spacing: 0px 0px
+border-spacing: 0px
 overflow: visible
 -webkit-mask-position-x: 0%
 -webkit-mask-position-y: 0%

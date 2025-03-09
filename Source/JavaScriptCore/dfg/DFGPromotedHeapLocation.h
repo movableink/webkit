@@ -47,12 +47,15 @@ struct Node;
 
 enum PromotedLocationKind {
     InvalidPromotedLocationKind,
-    
+
     ActivationScopePLoc,
     ActivationSymbolTablePLoc,
     ArgumentCountPLoc,
     ArgumentPLoc,
     ArgumentsCalleePLoc,
+    ArrayPLoc,
+    ArrayLengthPropertyPLoc,
+    ArrayIndexedPropertyPLoc,
     ClosureVarPLoc,
     InternalFieldObjectPLoc,
     FunctionActivationPLoc,

@@ -85,7 +85,7 @@ Ref<NetworkDataTask> NetworkDataTask::create(NetworkSession& session, NetworkDat
 
 NetworkDataTask::NetworkDataTask(NetworkSession& session, NetworkDataTaskClient& client, const ResourceRequest& requestWithCredentials, StoredCredentialsPolicy storedCredentialsPolicy, bool shouldClearReferrerOnHTTPSToHTTPRedirect, bool dataTaskIsForMainFrameNavigation)
     : m_session(session)
-    , m_client(&client)
+    , m_client(client)
     , m_partition(requestWithCredentials.cachePartition())
     , m_storedCredentialsPolicy(storedCredentialsPolicy)
     , m_lastHTTPMethod(requestWithCredentials.httpMethod())
@@ -126,31 +126,35 @@ NetworkDataTask::~NetworkDataTask()
 void NetworkDataTask::scheduleFailure(FailureType type)
 {
     m_failureScheduled = true;
-    RunLoop::protectedMain()->dispatch([this, weakThis = ThreadSafeWeakPtr { *this }, type] {
+    RunLoop::protectedMain()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, type] {
         auto protectedThis = weakThis.get();
-        if (!protectedThis || !m_client)
+        if (!protectedThis)
+            return;
+
+        RefPtr client = protectedThis->m_client.get();
+        if (!client)
             return;
 
         switch (type) {
         case FailureType::Blocked:
-            m_client->wasBlocked();
+            client->wasBlocked();
             return;
         case FailureType::InvalidURL:
-            m_client->cannotShowURL();
+            client->cannotShowURL();
             return;
         case FailureType::RestrictedURL:
-            m_client->wasBlockedByRestrictions();
+            client->wasBlockedByRestrictions();
             return;
         case FailureType::FTPDisabled:
-            m_client->wasBlockedByDisabledFTP();
+            client->wasBlockedByDisabledFTP();
         }
     });
 }
 
 void NetworkDataTask::didReceiveInformationalResponse(ResourceResponse&& headers)
 {
-    if (m_client)
-        m_client->didReceiveInformationalResponse(WTFMove(headers));
+    if (RefPtr client = m_client.get())
+        client->didReceiveInformationalResponse(WTFMove(headers));
 }
 
 void NetworkDataTask::didReceiveResponse(ResourceResponse&& response, NegotiatedLegacyTLS negotiatedLegacyTLS, PrivateRelayed privateRelayed, std::optional<IPAddress> resolvedIPAddress, ResponseCompletionHandler&& completionHandler)
@@ -161,8 +165,8 @@ void NetworkDataTask::didReceiveResponse(ResourceResponse&& response, Negotiated
         if (port && !WTF::isDefaultPortForProtocol(port.value(), url.protocol())) {
             completionHandler(PolicyAction::Ignore);
             cancel();
-            if (m_client)
-                m_client->didCompleteWithError({ String(), 0, url, makeString("Cancelled load from '"_s, url.stringCenterEllipsizedToLength(), "' because it is using HTTP/0.9."_s) });
+            if (RefPtr client = m_client.get())
+                client->didCompleteWithError({ String(), 0, url, makeString("Cancelled load from '"_s, url.stringCenterEllipsizedToLength(), "' because it is using HTTP/0.9."_s) });
             return;
         }
     }
@@ -175,8 +179,8 @@ void NetworkDataTask::didReceiveResponse(ResourceResponse&& response, Negotiated
         if (resolvedIPAddress && !resolvedIPAddress->isLoopback()) {
             completionHandler(PolicyAction::Ignore);
             cancel();
-            if (m_client)
-                m_client->didCompleteWithError({ String(), 0, url, makeString("Cancelled load from '"_s, url.stringCenterEllipsizedToLength(), "' because localhost did not resolve to a loopback address."_s) });
+            if (RefPtr client = m_client.get())
+                client->didCompleteWithError({ String(), 0, url, makeString("Cancelled load from '"_s, url.stringCenterEllipsizedToLength(), "' because localhost did not resolve to a loopback address."_s) });
             return;
         }
     }
@@ -187,15 +191,16 @@ void NetworkDataTask::didReceiveResponse(ResourceResponse&& response, Negotiated
     if (privateRelayed == PrivateRelayed::Yes)
         response.setWasPrivateRelayed(WasPrivateRelayed::Yes);
 
-    if (m_client)
-        m_client->didReceiveResponse(WTFMove(response), negotiatedLegacyTLS, privateRelayed, WTFMove(completionHandler));
+    if (RefPtr client = m_client.get())
+        client->didReceiveResponse(WTFMove(response), negotiatedLegacyTLS, privateRelayed, WTFMove(completionHandler));
     else
         completionHandler(PolicyAction::Ignore);
 }
 
 bool NetworkDataTask::shouldCaptureExtraNetworkLoadMetrics() const
 {
-    return m_client ? m_client->shouldCaptureExtraNetworkLoadMetrics() : false;
+    RefPtr client = m_client.get();
+    return client && client->shouldCaptureExtraNetworkLoadMetrics();
 }
 
 String NetworkDataTask::description() const

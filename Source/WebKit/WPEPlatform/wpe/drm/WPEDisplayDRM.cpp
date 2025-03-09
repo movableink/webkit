@@ -32,13 +32,17 @@
 #include "WPEDisplayDRMPrivate.h"
 #include "WPEExtensions.h"
 #include "WPEScreenDRMPrivate.h"
+#include "WPESettings.h"
 #include "WPEToplevelDRM.h"
 #include "WPEViewDRM.h"
 #include <fcntl.h>
 #include <gio/gio.h>
 #include <libudev.h>
+#include <wtf/ASCIICType.h>
+#include <wtf/dtoa.h>
 #include <wtf/glib/WTFGType.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/StringView.h>
 #include <wtf/unix/UnixFileDescriptor.h>
 
 /**
@@ -64,6 +68,14 @@ struct _WPEDisplayDRMPrivate {
 WEBKIT_DEFINE_FINAL_TYPE_WITH_CODE(WPEDisplayDRM, wpe_display_drm, WPE_TYPE_DISPLAY, WPEDisplay,
     wpeEnsureExtensionPointsRegistered();
     g_io_extension_point_implement(WPE_DISPLAY_EXTENSION_POINT_NAME, g_define_type_id, "wpe-display-drm", -100))
+
+static void wpeDisplayDRMConstructed(GObject* object)
+{
+    G_OBJECT_CLASS(wpe_display_drm_parent_class)->constructed(object);
+
+    auto* settings = wpe_display_get_settings(WPE_DISPLAY(object));
+    RELEASE_ASSERT(wpe_settings_register(settings, WPE_SETTING_DRM_SCALE, G_VARIANT_TYPE_DOUBLE, g_variant_new_double(1.0), nullptr));
+}
 
 static void wpeDisplayDRMDispose(GObject* object)
 {
@@ -305,7 +317,45 @@ static gboolean wpeDisplayDRMSetup(WPEDisplayDRM* displayDRM, const char* device
     displayDRM->priv->drmRenderNode = renderNodePath.get();
     displayDRM->priv->device = device;
     displayDRM->priv->connector = WTFMove(connector);
+
+    static const auto scaleIsInBounds = [](double scale) {
+        return (scale >= 0.05) && (scale <= 20.0);
+    };
+
+    std::optional<double> scaleFromEnvironment;
+    if (const auto scaleString = StringView::fromLatin1(getenv("WPE_DRM_SCALE"))) {
+        RELEASE_ASSERT(scaleString.is8Bit());
+        auto trimmedScaleString = scaleString.trim(isASCIIWhitespace<LChar>);
+        size_t parsedLength = 0;
+        auto scale = parseDouble(trimmedScaleString, parsedLength);
+        if (parsedLength == trimmedScaleString.length() && scaleIsInBounds(scale))
+            scaleFromEnvironment = scale;
+        else
+            g_warning("Invalid WPE_DRM_SCALE='%*s' value, or out of bounds.", static_cast<int>(scaleString.span8().size()), scaleString.span8().data());
+    }
+
+    int x = crtc->x();
+    int y = crtc->y();
+    int width = crtc->width();
+    int height = crtc->height();
     displayDRM->priv->screen = wpeScreenDRMCreate(WTFMove(crtc), *displayDRM->priv->connector);
+
+    double scale = scaleFromEnvironment.value_or(wpeScreenDRMGuessScale(WPE_SCREEN_DRM(displayDRM->priv->screen.get())));
+    RELEASE_ASSERT(wpe_settings_set_double(wpe_display_get_settings(WPE_DISPLAY(displayDRM)), WPE_SETTING_DRM_SCALE, scale, WPE_SETTINGS_SOURCE_PLATFORM, nullptr));
+
+    GUniqueOutPtr<GError> settingsError;
+    double scaleFromSettings = wpe_settings_get_double(wpe_display_get_settings(WPE_DISPLAY(displayDRM)), WPE_SETTING_DRM_SCALE, &settingsError.outPtr());
+    RELEASE_ASSERT(!settingsError);
+    if (scaleIsInBounds(scaleFromSettings))
+        scale = scaleFromSettings;
+    else
+        g_warning("Ignoring out of bounds WPE_SETTING_DRM_SCALE value '%.2f'.", scaleFromSettings);
+    RELEASE_ASSERT(scaleIsInBounds(scale));
+
+    wpe_screen_set_position(displayDRM->priv->screen.get(), x / scale, y / scale);
+    wpe_screen_set_size(displayDRM->priv->screen.get(), width / scale, height / scale);
+    wpe_screen_set_scale(displayDRM->priv->screen.get(), scale);
+
     displayDRM->priv->primaryPlane = WTFMove(primaryPlane);
     displayDRM->priv->seat = WTFMove(seat);
     if (cursorPlane)
@@ -377,6 +427,7 @@ static gboolean wpeDisplayDRMUseExplicitSync(WPEDisplay* display)
 static void wpe_display_drm_class_init(WPEDisplayDRMClass* displayDRMClass)
 {
     GObjectClass* objectClass = G_OBJECT_CLASS(displayDRMClass);
+    objectClass->constructed = wpeDisplayDRMConstructed;
     objectClass->dispose = wpeDisplayDRMDispose;
 
     WPEDisplayClass* displayClass = WPE_DISPLAY_CLASS(displayDRMClass);

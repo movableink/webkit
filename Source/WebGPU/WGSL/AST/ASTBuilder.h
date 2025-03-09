@@ -29,6 +29,7 @@
 #include <wtf/Noncopyable.h>
 #include <wtf/Nonmovable.h>
 #include <wtf/Vector.h>
+#include <wtf/text/ParsingUtilities.h>
 
 #define WGSL_AST_BUILDER_NODE(Node) \
 protected: \
@@ -68,7 +69,7 @@ public:
             allocateArena();
 
         auto* node = new (m_arena.data()) T(std::forward<Arguments>(arguments)...);
-        m_arena = m_arena.subspan(alignedSize);
+        skip(m_arena, alignedSize);
         m_nodes.append(node);
         return *node;
     }

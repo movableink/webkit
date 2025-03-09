@@ -130,7 +130,7 @@ void HTMLEmbedElement::parametersForPlugin(Vector<AtomString>& paramNames, Vecto
     if (!hasAttributes())
         return;
 
-    for (const Attribute& attribute : attributesIterator()) {
+    for (auto& attribute : attributes()) {
         paramNames.append(attribute.localName());
         paramValues.append(attribute.value());
     }
@@ -216,7 +216,7 @@ void HTMLEmbedElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 {
     HTMLPlugInImageElement::addSubresourceAttributeURLs(urls);
 
-    addSubresourceURL(urls, document().completeURL(attributeWithoutSynchronization(srcAttr)));
+    addSubresourceURL(urls, protectedDocument()->completeURL(attributeWithoutSynchronization(srcAttr)));
 }
 
 }

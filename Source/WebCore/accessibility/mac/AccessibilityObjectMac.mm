@@ -48,6 +48,7 @@
 #import "TextDecorationPainter.h"
 #import "TextIterator.h"
 #import <wtf/cocoa/SpanCocoa.h>
+#import <wtf/cocoa/VectorCocoa.h>
 
 #if PLATFORM(MAC)
 
@@ -204,43 +205,24 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     return Accessibility::roleToPlatformString(role);
 }
 
-static bool isEmptyGroup(AccessibilityObject& object)
+AXCoreObject::AccessibilityChildrenVector AccessibilityObject::allSortedLiveRegions() const
 {
-#if ENABLE(MODEL_ELEMENT)
-    if (object.isModel())
-        return false;
-#endif
-
-    if (object.isRemoteFrame())
-        return false;
-
-    return [object.rolePlatformString() isEqual:NSAccessibilityGroupRole]
-        && object.unignoredChildren().isEmpty()
-        && ![renderWidgetChildren(object) count];
+    CheckedPtr cache = axObjectCache();
+    if (!cache)
+        return { };
+    return cache->sortedLiveRegions();
 }
 
-NSArray *renderWidgetChildren(const AXCoreObject& object)
+AXCoreObject::AccessibilityChildrenVector AccessibilityObject::allSortedNonRootWebAreas() const
 {
-    if (!object.isWidget())
-        return nil;
-
-    id child = Accessibility::retrieveAutoreleasedValueFromMainThread<id>([object = Ref { object }] () -> RetainPtr<id> {
-        auto* widget = object->widget();
-        return widget ? widget->accessibilityObject() : nil;
-    });
-
-    if (child)
-        return @[child];
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    return [object.platformWidget() accessibilityAttributeValue:NSAccessibilityChildrenAttribute];
-ALLOW_DEPRECATED_DECLARATIONS_END
+    CheckedPtr cache = axObjectCache();
+    if (!cache)
+        return { };
+    return cache->sortedNonRootWebAreas();
 }
 
 String AccessibilityObject::subrolePlatformString() const
 {
-    if (isEmptyGroup(*const_cast<AccessibilityObject*>(this)))
-        return @"AXEmptyGroup";
-
     if (isSecureField())
         return NSAccessibilitySecureTextFieldSubrole;
     if (isSearchField())
@@ -499,19 +481,19 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         }
     }
 
-    if ([axRole isEqualToString:@"AXWebArea"])
+    if ([axRole isEqualToString:NSAccessibilityWebAreaRole])
         return AXWebAreaText();
 
-    if ([axRole isEqualToString:@"AXLink"])
+    if ([axRole isEqualToString:NSAccessibilityLinkRole])
         return AXLinkText();
 
-    if ([axRole isEqualToString:@"AXListMarker"])
+    if ([axRole isEqualToString:NSAccessibilityListMarkerRole])
         return AXListMarkerText();
 
-    if ([axRole isEqualToString:@"AXImageMap"])
+    if ([axRole isEqualToString:NSAccessibilityImageMapRole])
         return AXImageMapText();
 
-    if ([axRole isEqualToString:@"AXHeading"])
+    if ([axRole isEqualToString:NSAccessibilityHeadingRole])
         return AXHeadingText();
 
     if ([axRole isEqualToString:NSAccessibilityTextFieldRole]) {
@@ -655,15 +637,14 @@ RetainPtr<NSAttributedString> attributedStringCreate(Node& node, StringView text
     return string;
 }
 
-std::span<const uint8_t> AXRemoteFrame::generateRemoteToken() const
+Vector<uint8_t> AXRemoteFrame::generateRemoteToken() const
 {
     if (auto* parent = parentObject()) {
         // We use the parent's wrapper so that the remote frame acts as a pass through for the remote token bridge.
-        NSData *data = [NSAccessibilityRemoteUIElement remoteTokenForLocalUIElement:parent->wrapper()];
-        return span(data);
+        return makeVector([NSAccessibilityRemoteUIElement remoteTokenForLocalUIElement:parent->wrapper()]);
     }
 
-    return std::span<const uint8_t> { };
+    return { };
 }
 
 void AXRemoteFrame::initializePlatformElementWithRemoteToken(std::span<const uint8_t> token, int processIdentifier)
@@ -717,7 +698,7 @@ PlatformRoleMap createPlatformRoleMap()
         { AccessibilityRole::ProgressIndicator, NSAccessibilityProgressIndicatorRole },
         { AccessibilityRole::Meter, NSAccessibilityLevelIndicatorRole },
         { AccessibilityRole::ComboBox, NSAccessibilityComboBoxRole },
-        { AccessibilityRole::DateTime, @"AXDateTimeArea" },
+        { AccessibilityRole::DateTime, NSAccessibilityDateTimeAreaRole },
         { AccessibilityRole::Splitter, NSAccessibilitySplitterRole },
         { AccessibilityRole::Code, NSAccessibilityGroupRole },
         { AccessibilityRole::ColorWell, NSAccessibilityColorWellRole },
@@ -726,10 +707,10 @@ PlatformRoleMap createPlatformRoleMap()
         { AccessibilityRole::TreeGrid, NSAccessibilityTableRole },
         { AccessibilityRole::WebCoreLink, NSAccessibilityLinkRole },
         { AccessibilityRole::ImageMapLink, NSAccessibilityLinkRole },
-        { AccessibilityRole::ImageMap, @"AXImageMap" },
-        { AccessibilityRole::ListMarker, @"AXListMarker" },
-        { AccessibilityRole::WebArea, @"AXWebArea" },
-        { AccessibilityRole::Heading, @"AXHeading" },
+        { AccessibilityRole::ImageMap, NSAccessibilityImageMapRole },
+        { AccessibilityRole::ListMarker, NSAccessibilityListMarkerRole },
+        { AccessibilityRole::WebArea, NSAccessibilityWebAreaRole },
+        { AccessibilityRole::Heading, NSAccessibilityHeadingRole },
         { AccessibilityRole::ListBox, NSAccessibilityListRole },
         { AccessibilityRole::ListBoxOption, NSAccessibilityStaticTextRole },
         { AccessibilityRole::Cell, NSAccessibilityCellRole },
@@ -776,7 +757,7 @@ PlatformRoleMap createPlatformRoleMap()
         { AccessibilityRole::Form, NSAccessibilityGroupRole },
         { AccessibilityRole::Generic, NSAccessibilityGroupRole },
         { AccessibilityRole::SpinButton, NSAccessibilityIncrementorRole },
-        { AccessibilityRole::SpinButtonPart, @"AXIncrementorArrow" },
+        { AccessibilityRole::SpinButtonPart, NSAccessibilityIncrementorArrowRole },
         { AccessibilityRole::Footer, NSAccessibilityGroupRole },
         { AccessibilityRole::ToggleButton, NSAccessibilityCheckBoxRole },
         { AccessibilityRole::Canvas, NSAccessibilityImageRole },

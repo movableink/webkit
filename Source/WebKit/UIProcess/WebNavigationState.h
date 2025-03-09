@@ -46,6 +46,7 @@ enum class FrameLoadType : uint8_t;
 namespace WebKit {
 
 class WebPageProxy;
+class WebBackForwardListFrameItem;
 class WebBackForwardListItem;
 
 class WebNavigationState : public CanMakeWeakPtr<WebNavigationState> {
@@ -57,7 +58,7 @@ public:
     void ref() const;
     void deref() const;
 
-    Ref<API::Navigation> createBackForwardNavigation(WebCore::ProcessIdentifier, Ref<WebBackForwardListItem>&& targetItem, RefPtr<WebBackForwardListItem>&& currentItem, WebCore::FrameLoadType);
+    Ref<API::Navigation> createBackForwardNavigation(WebCore::ProcessIdentifier, Ref<WebBackForwardListFrameItem>&& targetFrameItem, RefPtr<WebBackForwardListItem>&& currentItem, WebCore::FrameLoadType);
     Ref<API::Navigation> createLoadRequestNavigation(WebCore::ProcessIdentifier, WebCore::ResourceRequest&&, RefPtr<WebBackForwardListItem>&& currentItem);
     Ref<API::Navigation> createReloadNavigation(WebCore::ProcessIdentifier, RefPtr<WebBackForwardListItem>&& currentAndTargetItem);
     Ref<API::Navigation> createLoadDataNavigation(WebCore::ProcessIdentifier, std::unique_ptr<API::SubstituteData>&&);

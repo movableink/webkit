@@ -52,7 +52,7 @@ WebSocketDeflater::WebSocketDeflater(int windowBits, ContextTakeOverMode context
     ASSERT(m_windowBits >= 8);
     ASSERT(m_windowBits <= 15);
     m_stream = makeUniqueWithoutFastMallocCheck<z_stream>();
-    memset(m_stream.get(), 0, sizeof(z_stream));
+    zeroBytes(*m_stream);
 }
 
 bool WebSocketDeflater::initialize()
@@ -138,7 +138,7 @@ WebSocketInflater::WebSocketInflater(int windowBits)
     : m_windowBits(windowBits)
     , m_stream(makeUniqueWithoutFastMallocCheck<z_stream>())
 {
-    memset(m_stream.get(), 0, sizeof(z_stream));
+    zeroBytes(*m_stream);
 }
 
 bool WebSocketInflater::initialize()

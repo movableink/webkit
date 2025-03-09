@@ -29,12 +29,13 @@
 #include "CSSAnimation.h"
 #include "CSSNumericFactory.h"
 #include "CSSNumericValue.h"
-#include "CSSPropertyParserConsumer+TimingFunction.h"
-#include "CSSTimingFunctionValue.h"
+#include "CSSParserContext.h"
+#include "CSSPropertyParserConsumer+Easing.h"
 #include "CommonAtomStrings.h"
 #include "FillMode.h"
 #include "JSComputedEffectTiming.h"
 #include "ScriptExecutionContext.h"
+#include "ScrollTimeline.h"
 #include "WebAnimation.h"
 #include "WebAnimationUtilities.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -53,8 +54,7 @@ void AnimationEffect::setAnimation(WebAnimation* animation)
         return;
 
     m_animation = animation;
-    if (animation)
-        animation->updateRelevance();
+    m_timingDidMutate = true;
 }
 
 EffectTiming AnimationEffect::getBindingsTiming() const
@@ -190,10 +190,23 @@ ExceptionOr<void> AnimationEffect::updateTiming(Document& document, std::optiona
         }
     }
 
+    if (auto iterations = timing->iterations) {
+        // https://github.com/w3c/csswg-drafts/issues/11343
+        if (std::isinf(*iterations)) {
+            if (RefPtr animation = m_animation.get()) {
+                if (RefPtr timeline = animation->timeline()) {
+                    if (timeline->isProgressBased())
+                        return Exception { ExceptionCode::TypeError, "The number of iterations cannot be set to Infinity for progress-based animations"_s };
+                }
+            }
+        }
+    }
+
     // 4. If the easing member of input is present but cannot be parsed using the <timing-function> production [CSS-EASING-1], throw a TypeError and abort this procedure.
     if (!timing->easing.isNull()) {
         CSSParserContext parsingContext(document);
-        auto timingFunctionResult = CSSPropertyParserHelpers::parseTimingFunction(timing->easing, parsingContext);
+        // FIXME: Determine the how calc() and relative units should be resolved and switch to the non-deprecated parsing function.
+        auto timingFunctionResult = CSSPropertyParserHelpers::parseEasingFunctionDeprecated(timing->easing, parsingContext);
         if (!timingFunctionResult)
             return Exception { ExceptionCode::TypeError };
         setTimingFunction(WTFMove(timingFunctionResult));
@@ -403,6 +416,17 @@ void AnimationEffect::animationPlaybackRateDidChange()
     m_timingDidMutate = true;
 }
 
+void AnimationEffect::animationProgressBasedTimelineSourceDidChangeMetrics(const TimelineRange& animationAttachmentRange)
+{
+    if (!animationAttachmentRange.isDefault())
+        m_timingDidMutate = true;
+}
+
+void AnimationEffect::animationRangeDidChange()
+{
+    m_timingDidMutate = true;
+}
+
 void AnimationEffect::updateComputedTimingPropertiesIfNeeded()
 {
     if (!m_timingDidMutate)
@@ -410,21 +434,29 @@ void AnimationEffect::updateComputedTimingPropertiesIfNeeded()
 
     m_timingDidMutate = false;
 
-    auto timelineDuration = [&] -> std::optional<WebAnimationTime> {
-        if (m_animation) {
-            if (RefPtr timeline = m_animation->timeline())
-                return timeline->duration();
-        }
-        return std::nullopt;
-    }();
-
     auto playbackRate = [&] {
         if (m_animation)
             return m_animation->playbackRate();
         return 1.0;
     }();
 
-    m_timing.updateComputedProperties(timelineDuration, playbackRate);
+    auto rangeDuration = [&] -> std::optional<WebAnimationTime> {
+        if (!m_animation)
+            return std::nullopt;
+
+        RefPtr timeline = m_animation->timeline();
+        if (!timeline)
+            return std::nullopt;
+
+        if (RefPtr scrollTimeline = dynamicDowncast<ScrollTimeline>(timeline)) {
+            auto interval = scrollTimeline->intervalForAttachmentRange(m_animation->range());
+            return interval.second - interval.first;
+        }
+
+        return timeline->duration();
+    }();
+
+    m_timing.updateComputedProperties(rangeDuration, playbackRate);
 }
 
 } // namespace WebCore

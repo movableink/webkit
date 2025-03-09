@@ -128,7 +128,7 @@ EventLoopTaskGroup& WorkerOrWorkletGlobalScope::eventLoop()
 bool WorkerOrWorkletGlobalScope::isContextThread() const
 {
     auto* thread = workerOrWorkletThread();
-    return thread && thread->thread() ? thread->thread() == &Thread::current() : isMainThread();
+    return thread && thread->thread() ? thread->thread() == &Thread::currentSingleton() : isMainThread();
 }
 
 void WorkerOrWorkletGlobalScope::postTask(Task&& task)

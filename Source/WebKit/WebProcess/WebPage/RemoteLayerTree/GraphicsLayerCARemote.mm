@@ -41,6 +41,10 @@
 #include <WebCore/RemoteFrame.h>
 #include <wtf/TZoneMallocInlines.h>
 
+#if ENABLE(MODEL_PROCESS)
+#include <WebCore/ModelContext.h>
+#endif
+
 namespace WebKit {
 using namespace WebCore;
 
@@ -71,7 +75,7 @@ Ref<PlatformCALayer> GraphicsLayerCARemote::createPlatformCALayer(PlatformCALaye
 
     if (result->canHaveBackingStore()) {
         auto* localMainFrameView = m_context->webPage().localMainFrameView();
-        result->setContentsFormat(screenContentsFormat(localMainFrameView, owner));
+        result->setContentsFormat(PlatformCALayer::contentsFormatForLayer(localMainFrameView, owner));
     }
 
     return WTFMove(result);
@@ -83,11 +87,13 @@ Ref<PlatformCALayer> GraphicsLayerCARemote::createPlatformCALayer(PlatformLayer*
     return PlatformCALayerRemote::create(platformLayer, owner, *m_context);
 }
 
-Ref<PlatformCALayer> GraphicsLayerCARemote::createPlatformCALayer(WebCore::LayerHostingContextIdentifier layerHostingContextIdentifier, PlatformCALayerClient* owner)
+#if ENABLE(MODEL_PROCESS)
+Ref<PlatformCALayer> GraphicsLayerCARemote::createPlatformCALayer(Ref<WebCore::ModelContext> modelContext, PlatformCALayerClient* owner)
 {
     RELEASE_ASSERT(m_context.get());
-    return PlatformCALayerRemote::create(layerHostingContextIdentifier.toUInt64(), owner, *m_context);
+    return PlatformCALayerRemote::create(modelContext, owner, *m_context);
 }
+#endif
 
 #if ENABLE(MODEL_ELEMENT)
 Ref<PlatformCALayer> GraphicsLayerCARemote::createPlatformCALayer(Ref<WebCore::Model> model, PlatformCALayerClient* owner)
@@ -187,16 +193,21 @@ private:
     Markable<WebCore::RenderingResourceIdentifier> m_surfaceIdentifier WTF_GUARDED_BY_LOCK(m_surfaceLock);
 };
 
+} // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::GraphicsLayerCARemoteAsyncContentsDisplayDelegate)
+static bool isType(const WebCore::GraphicsLayerAsyncContentsDisplayDelegate& delegate) { return delegate.isGraphicsLayerCARemoteAsyncContentsDisplayDelegate(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+namespace WebKit {
+
 RefPtr<WebCore::GraphicsLayerAsyncContentsDisplayDelegate> GraphicsLayerCARemote::createAsyncContentsDisplayDelegate(GraphicsLayerAsyncContentsDisplayDelegate* existing)
 {
     RefPtr protectedContext = m_context.get();
     if (!protectedContext || !protectedContext->drawingAreaIdentifier() || !WebProcess::singleton().parentProcessConnection())
         return nullptr;
 
-    RefPtr<GraphicsLayerCARemoteAsyncContentsDisplayDelegate> delegate;
-    if (existing && existing->isGraphicsLayerCARemoteAsyncContentsDisplayDelegate())
-        delegate = static_cast<GraphicsLayerCARemoteAsyncContentsDisplayDelegate*>(existing);
-
+    RefPtr delegate = dynamicDowncast<GraphicsLayerCARemoteAsyncContentsDisplayDelegate>(existing);
     if (!delegate) {
         ASSERT(!existing);
         delegate = adoptRef(new GraphicsLayerCARemoteAsyncContentsDisplayDelegate(*WebProcess::singleton().parentProcessConnection(), *protectedContext->drawingAreaIdentifier()));

@@ -58,7 +58,7 @@ public:
 
     void startProducingData();
     void stopProducingData();
-    void reconfigure();
+    WEBCORE_EXPORT void reconfigure();
     virtual bool isProducingData() const = 0;
 
     virtual void delaySamples(Seconds) { }
@@ -84,7 +84,7 @@ public:
     void clearClients();
 
     virtual bool hasAudioUnit() const = 0;
-    void setCaptureDevice(String&&, uint32_t);
+    void setCaptureDevice(String&&, uint32_t, bool isDefault);
 
     virtual LongCapabilityRange sampleRateCapacities() const = 0;
     virtual int actualSampleRate() const { return sampleRate(); }
@@ -101,7 +101,7 @@ public:
 protected:
     BaseAudioSharedUnit();
 
-    void forEachClient(const Function<void(CoreAudioCaptureSource&)>&) const;
+    void forEachClient(NOESCAPE const Function<void(CoreAudioCaptureSource&)>&) const;
     void captureFailed();
     void continueStartProducingData();
 
@@ -135,6 +135,8 @@ protected:
 
     void disableVoiceActivityThrottleTimerForTesting() { m_voiceActivityThrottleTimer.stop(); }
     void stopRunning();
+
+    bool isCapturingWithDefaultMicrophone() const { return m_isCapturingWithDefaultMicrophone; }
 
 private:
     OSStatus startUnit();

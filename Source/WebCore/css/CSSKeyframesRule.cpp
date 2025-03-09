@@ -31,13 +31,9 @@
 #include "CSSRuleList.h"
 #include "CSSStyleSheet.h"
 #include "Document.h"
-#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
-
-using CSSKeyframesRuleLiveCSSRuleList = LiveCSSRuleList<CSSKeyframesRule>;
-WTF_MAKE_TZONE_ALLOCATED_IMPL_TEMPLATE(CSSKeyframesRuleLiveCSSRuleList);
 
 StyleRuleKeyframes::StyleRuleKeyframes(const AtomString& name)
     : StyleRuleBase(StyleRuleType::Keyframes)
@@ -83,11 +79,16 @@ void StyleRuleKeyframes::wrapperRemoveKeyframe(unsigned index)
 
 std::optional<size_t> StyleRuleKeyframes::findKeyframeIndex(const String& key) const
 {
-    auto keys = CSSParser::parseKeyframeKeyList(key);
+    auto keys = CSSParser::parseKeyframeKeyList(key, strictCSSParserContext());
     if (keys.isEmpty())
         return std::nullopt;
+
+    auto convertedKeys = keys.map([](auto& pair) -> StyleRuleKeyframe::Key {
+        return { pair.first, pair.second };
+    });
+
     for (auto i = m_keyframes.size(); i--; ) {
-        if (m_keyframes[i]->keys() == keys)
+        if (m_keyframes[i]->keys() == convertedKeys)
             return i;
     }
     return std::nullopt;

@@ -41,7 +41,7 @@ namespace JSC {
 using Assembler = TARGET_ASSEMBLER;
 
 class MacroAssemblerX86_64 : public AbstractMacroAssembler<Assembler> {
-    WTF_MAKE_TZONE_ALLOCATED(MacroAssemblerX86_64);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(MacroAssemblerX86_64);
 public:
     static constexpr size_t nearJumpRange = 2 * GB;
 
@@ -257,6 +257,8 @@ public:
 
     void and32(TrustedImm32 imm, RegisterID dest)
     {
+        if (imm.m_value == -1)
+            return zeroExtend32ToWord(dest, dest);
         m_assembler.andl_ir(imm.m_value, dest);
     }
 
@@ -312,11 +314,15 @@ public:
 
     void and32(TrustedImm32 imm, Address address)
     {
+        if (imm.m_value == -1)
+            return;
         m_assembler.andl_im(imm.m_value, address.offset, address.base);
     }
 
     void and32(TrustedImm32 imm, BaseIndex address)
     {
+        if (imm.m_value == -1)
+            return;
         m_assembler.andl_im(imm.m_value, address.offset, address.base, address.index, address.scale);
     }
 
@@ -372,6 +378,8 @@ public:
 
     void and32(TrustedImm32 imm, RegisterID src, RegisterID dest)
     {
+        if (imm.m_value == -1)
+            return zeroExtend32ToWord(src, dest);
         move32IfNeeded(src, dest);
         and32(imm, dest);
     }
@@ -1295,6 +1303,26 @@ public:
             m_assembler.vroundss_i8mrr(X86Assembler::RoundingType::TowardNegativeInfiniti, src.offset, src.base, dst, dst);
         else
             m_assembler.roundss_mr(src.offset, src.base, dst, X86Assembler::RoundingType::TowardNegativeInfiniti);
+    }
+
+    void truncDouble(FPRegisterID src, FPRegisterID dst)
+    {
+        roundTowardZeroDouble(src, dst);
+    }
+
+    void truncDouble(Address src, FPRegisterID dst)
+    {
+        roundTowardZeroDouble(src, dst);
+    }
+
+    void truncFloat(FPRegisterID src, FPRegisterID dst)
+    {
+        roundTowardZeroFloat(src, dst);
+    }
+
+    void truncFloat(Address src, FPRegisterID dst)
+    {
+        roundTowardZeroFloat(src, dst);
     }
 
     void roundTowardNearestIntDouble(FPRegisterID src, FPRegisterID dst)
@@ -4975,16 +5003,22 @@ public:
 
     void and64(TrustedImm32 imm, RegisterID srcDest)
     {
+        if (imm.m_value == -1)
+            return;
         m_assembler.andq_ir(imm.m_value, srcDest);
     }
 
     void and64(TrustedImm32 imm, Address dest)
     {
+        if (imm.m_value == -1)
+            return;
         m_assembler.andq_im(imm.m_value, dest.offset, dest.base);
     }
 
     void and64(TrustedImm32 imm, BaseIndex dest)
     {
+        if (imm.m_value == -1)
+            return;
         m_assembler.andq_im(imm.m_value, dest.offset, dest.base, dest.index, dest.scale);
     }
 
@@ -4996,6 +5030,9 @@ public:
 
     void and64(TrustedImm64 imm, RegisterID srcDest)
     {
+        if (imm.m_value == -1)
+            return;
+
         int64_t intValue = imm.m_value;
         if (isRepresentableAs<int32_t>(intValue)) {
             and64(TrustedImm32(static_cast<int32_t>(intValue)), srcDest);

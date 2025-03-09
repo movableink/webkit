@@ -25,7 +25,6 @@
 #pragma once
 
 #include "CSSPrimitiveNumericTypes.h"
-#include "CSSUnits.h"
 #include "CSSValueKeywords.h"
 #include "Color.h"
 #include "FilterOperation.h"
@@ -41,8 +40,8 @@ template<> struct CSSFilterFunctionDescriptor<CSSValueBlur> {
     static constexpr bool isColorFilterFunction = false;
 
     static constexpr bool allowsValuesGreaterThanOne = false;
-    static constexpr auto defaultValue = CSS::LengthRaw<> { CSSUnitType::CSS_PX, 0 };
-    static constexpr auto initialLengthValueForInterpolation = CSS::LengthRaw<> { CSSUnitType::CSS_PX, 0 };
+    static constexpr auto defaultValue = CSS::LengthRaw<> { CSS::LengthUnit::Px, 0 };
+    static constexpr auto initialLengthValueForInterpolation = CSS::LengthRaw<> { CSS::LengthUnit::Px, 0 };
 
     static constexpr auto operationType = FilterOperation::Type::Blur;
 };
@@ -77,10 +76,10 @@ template<> struct CSSFilterFunctionDescriptor<CSSValueDropShadow> {
     static constexpr bool isColorFilterFunction = false;
 
     static constexpr auto defaultColorValue = Color::transparentBlack; // FIXME: This should be "currentcolor", but that requires filters to be able to store StyleColors.
-    static constexpr auto defaultStdDeviationValue = CSS::LengthRaw<> { CSSUnitType::CSS_PX, 0 };
+    static constexpr auto defaultStdDeviationValue = CSS::LengthRaw<> { CSS::LengthUnit::Px, 0 };
 
     static constexpr auto initialColorValueForInterpolation = Color::transparentBlack;
-    static constexpr auto initialLengthValueForInterpolation = CSS::LengthRaw<> { CSSUnitType::CSS_PX, 0 };
+    static constexpr auto initialLengthValueForInterpolation = CSS::LengthRaw<> { CSS::LengthUnit::Px, 0 };
 
     static constexpr auto operationType = FilterOperation::Type::DropShadow;
 };
@@ -102,8 +101,8 @@ template<> struct CSSFilterFunctionDescriptor<CSSValueHueRotate> {
     static constexpr bool isPixelFilterFunction = true;
     static constexpr bool isColorFilterFunction = true;
 
-    static constexpr auto defaultValue = CSS::AngleRaw<> { CSSUnitType::CSS_DEG, 0 };
-    static constexpr auto initialValueForInterpolation = CSS::AngleRaw<> { CSSUnitType::CSS_DEG, 0 };
+    static constexpr auto defaultValue = CSS::AngleRaw<> { CSS::AngleUnit::Deg, 0 };
+    static constexpr auto initialValueForInterpolation = CSS::AngleRaw<> { CSS::AngleUnit::Deg, 0 };
 
     static constexpr auto operationType = FilterOperation::Type::HueRotate;
 };

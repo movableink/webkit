@@ -315,13 +315,13 @@ accentcolortext
 -apple-system-find-highlight-background enable-if=WTF_PLATFORM_MAC
 -apple-system-indigo enable-if=WTF_PLATFORM_IOS_FAMILY
 -apple-system-teal enable-if=WTF_PLATFORM_IOS_FAMILY
--apple-system-opaque-fill enable-if=WTF_PLATFORM_IOS_FAMILY
--apple-system-opaque-secondary-fill enable-if=WTF_PLATFORM_IOS_FAMILY
+-apple-system-opaque-fill enable-if=WTF_PLATFORM_COCOA
+-apple-system-opaque-secondary-fill enable-if=WTF_PLATFORM_COCOA
 -apple-system-opaque-secondary-fill-disabled enable-if=WTF_PLATFORM_IOS_FAMILY
 -apple-system-opaque-tertiary-fill enable-if=WTF_PLATFORM_IOS_FAMILY
 -apple-system-quaternary-fill enable-if=WTF_PLATFORM_IOS_FAMILY
 -apple-system-opaque-separator enable-if=WTF_PLATFORM_IOS_FAMILY
--webkit-control-background enable-if=WTF_PLATFORM_COCOA|HAVE_OS_DARK_MODE_SUPPORT
+-webkit-control-background enable-if=WTF_PLATFORM_COCOA
 activebuttontext
 -webkit-activelink
 -webkit-link
@@ -949,6 +949,18 @@ padding-box
 -webkit-text
 
 //
+// Corner-shape
+//
+// round
+scoop
+// bevel
+notch
+straight
+squircle
+superellipse
+// infinity
+
+//
 // CSS_PROP_MASK_CLIP
 //
 // Same as background-clip above, except with some extra values.
@@ -1414,6 +1426,21 @@ spring
 steps
 apple-invert-lightness
 
+// -apple-visual-effect
+-apple-system-blur-material-ultra-thin enable-if=HAVE_CORE_MATERIAL
+-apple-system-blur-material-thin enable-if=HAVE_CORE_MATERIAL
+-apple-system-blur-material enable-if=HAVE_CORE_MATERIAL
+-apple-system-blur-material-thick enable-if=HAVE_CORE_MATERIAL
+-apple-system-blur-material-chrome enable-if=HAVE_CORE_MATERIAL
+-apple-system-vibrancy-label enable-if=HAVE_CORE_MATERIAL
+-apple-system-vibrancy-secondary-label enable-if=HAVE_CORE_MATERIAL
+-apple-system-vibrancy-tertiary-label enable-if=HAVE_CORE_MATERIAL
+-apple-system-vibrancy-quaternary-label enable-if=HAVE_CORE_MATERIAL
+-apple-system-vibrancy-fill enable-if=HAVE_CORE_MATERIAL
+-apple-system-vibrancy-secondary-fill enable-if=HAVE_CORE_MATERIAL
+-apple-system-vibrancy-tertiary-fill enable-if=HAVE_CORE_MATERIAL
+-apple-system-vibrancy-separator enable-if=HAVE_CORE_MATERIAL
+
 // colors
 rgb
 rgba
@@ -1504,8 +1531,11 @@ rem
 to-zero
 // nearest
 // progress
-// from
-// to
+media-progress
+container-progress
+random
+per-element
+// by
 infinity
 -infinity id=NegativeInfinity
 NaN
@@ -1691,6 +1721,12 @@ from-font
 standard
 high
 
+// dynamic-range-limit
+// standard
+constrained-high
+// no-limit
+dynamic-range-limit-mix
+
 // @counter-style `system` descriptor values
 // https://www.w3.org/TR/css-counter-styles-3/#counter-style-system
 cyclic
@@ -1815,3 +1851,55 @@ most-width
 most-height
 most-block-size
 most-inline-size
+// position-try-fallbacks
+// none
+flip-block
+flip-inline
+flip-start
+// position-area
+self-block-end
+self-block-end-start
+self-block-start
+span-all
+span-block-end
+span-block-start
+span-bottom
+span-end
+span-left
+span-right
+span-self-block-end
+span-self-block-start
+span-self-end
+span-self-start
+span-start
+span-top
+span-x-end
+span-x-self-end
+span-x-self-start
+span-x-start
+span-y-end
+span-y-self-end
+span-y-self-start
+span-y-start
+x-end
+x-self-end
+x-self-start
+x-start
+y-end
+y-self-end
+y-self-start
+y-start
+span-inline-start
+span-inline-end
+self-inline-start
+self-inline-end
+span-self-inline-start
+span-self-inline-end
+// position-visibility
+// always
+anchors-valid
+anchors-visible
+no-overflow
+
+// view-transition-name
+match-element

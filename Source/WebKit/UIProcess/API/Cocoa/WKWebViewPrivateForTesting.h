@@ -52,6 +52,7 @@ struct WKAppPrivacyReportTestingData {
 
 @property (nonatomic, readonly) NSString *_caLayerTreeAsText;
 
+- (NSDictionary<NSString *, id> *)_propertiesOfLayerWithID:(unsigned long long)layerID;
 - (NSString*)_scrollbarStateForScrollingNodeID:(uint64_t)scrollingNodeID processID:(uint64_t)processID isVertical:(bool)isVertical;
 
 - (void)_addEventAttributionWithSourceID:(uint8_t)sourceID destinationURL:(NSURL *)destination sourceDescription:(NSString *)sourceDescription purchaser:(NSString *)purchaser reportEndpoint:(NSURL *)reportEndpoint optionalNonce:(nullable NSString *)nonce applicationBundleID:(NSString *)bundleID ephemeral:(BOOL)ephemeral WK_API_AVAILABLE(macos(13.0), ios(16.0));
@@ -80,7 +81,6 @@ struct WKAppPrivacyReportTestingData {
 - (BOOL)_beginBackSwipeForTesting;
 - (BOOL)_completeBackSwipeForTesting;
 - (void)_resetNavigationGestureStateForTesting;
-- (void)_setDefersLoadingForTesting:(BOOL)defersLoading;
 
 - (void)_setShareSheetCompletesImmediatelyWithResolutionForTesting:(BOOL)resolved;
 
@@ -147,6 +147,13 @@ struct WKAppPrivacyReportTestingData {
 @property (nonatomic, readonly) BOOL _isLoggerEnabledForTesting;
 
 - (void)_terminateIdleServiceWorkersForTesting;
+
+- (void)_getNotifyStateForTesting:(NSString *)notificationName completionHandler:(void(^)(NSNumber * _Nullable))completionHandler WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
+
+@property (nonatomic, readonly) BOOL _hasAccessibilityActivityForTesting;
+
+- (void)_setMediaVolumeForTesting:(float)volume;
+
 @end
 
 typedef NS_ENUM(NSInteger, _WKMediaSessionReadyState) {

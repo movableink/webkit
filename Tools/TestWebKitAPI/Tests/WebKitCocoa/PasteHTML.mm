@@ -109,7 +109,12 @@ TEST(PasteHTML, SanitizesHTML)
     EXPECT_FALSE([webView stringByEvaluatingJavaScript:@"clipboardData.values[0].includes('dangerousCode')"].boolValue);
 }
 
+// rdar://138144869
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(PasteHTML, DISABLED_DoesNotSanitizeHTMLWhenCustomPasteboardDataIsDisabled)
+#else
 TEST(PasteHTML, DoesNotSanitizeHTMLWhenCustomPasteboardDataIsDisabled)
+#endif
 {
     auto webView = createWebViewWithCustomPasteboardDataSetting(false);
     [webView synchronouslyLoadTestPageNamed:@"paste-rtfd"];
@@ -150,7 +155,12 @@ TEST(PasteHTML, StripsFileAndJavaScriptURLs)
     EXPECT_FALSE([webView stringByEvaluatingJavaScript:@"clipboardData.values[0].includes('runCode()')"].boolValue);
 }
 
+// rdar://138144869
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(PasteHTML, DISABLED_DoesNotStripFileURLsWhenCustomPasteboardDataIsDisabled)
+#else
 TEST(PasteHTML, DoesNotStripFileURLsWhenCustomPasteboardDataIsDisabled)
+#endif
 {
     auto webView = createWebViewWithCustomPasteboardDataSetting(false);
     [webView synchronouslyLoadTestPageNamed:@"paste-rtfd"];
@@ -455,7 +465,7 @@ TEST(PasteHTML, ReadSelectionFromPasteboard)
 
 #endif // PLATFORM(MAC)
 
-#if ENABLE(DARK_MODE_CSS) && HAVE(OS_DARK_MODE_SUPPORT)
+#if ENABLE(DARK_MODE_CSS)
 
 TEST(PasteHTML, TransformColorsOfDarkContent)
 {
@@ -539,6 +549,6 @@ TEST(PasteHTML, TransformColorsDependsOnUsedInlineStyle)
     EXPECT_WK_STREQ([webView stringByEvaluatingJavaScript:@"rich.querySelector('li').style.color"], @"rgb(0, 0, 0)");
 }
 
-#endif // ENABLE(DARK_MODE_CSS) && HAVE(OS_DARK_MODE_SUPPORT)
+#endif // ENABLE(DARK_MODE_CSS)
 
 #endif // PLATFORM(COCOA)

@@ -46,7 +46,7 @@ template<typename V, size_t inlineCapacity> class VariantList : private VectorBu
     using Base = VectorBuffer<std::byte, inlineCapacity, VectorBufferMalloc>;
 public:
     using Variant = V;
-    using Tag = VariantListTag;
+    using Index = VariantListIndex;
     using Operations = VariantListOperations<Variant>;
     using Proxy = VariantListProxy<Variant>;
     using Sizer = VariantListSizer<Variant>;
@@ -71,7 +71,7 @@ public:
     ~VariantList();
 
     bool operator==(const VariantList&) const
-        requires VariantAllowsEqualityOperator<V>;
+        requires std::equality_comparable<Variant>;
 
     bool isEmpty() const { return m_size == 0; }
 
@@ -79,7 +79,7 @@ public:
     size_t capacityInBytes() const { return static_cast<size_t>(capacity()); }
 
     template<typename Arg> void append(Arg&&)
-        requires VariantAllowsConstructionOfArg<V, std::decay_t<Arg>>;
+        requires std::constructible_from<Variant, Arg>;
 
     void append(const Variant&);
     void append(Variant&&);
@@ -123,7 +123,7 @@ private:
     std::span<const std::byte> spanFromSizeToSize() const { return std::span(buffer(), sizeInBytes()).subspan(sizeInBytes()); }
 
     template<typename Arg> void appendImpl(Arg&&)
-        requires VariantAllowsConstructionOfArg<V, std::decay_t<Arg>>;
+        requires std::constructible_from<V, Arg>;
 
     void reserveCapacity(size_t newCapacityInBytes);
     void expandCapacity(size_t newMinCapacityInBytes);
@@ -256,14 +256,14 @@ template<typename V, size_t inlineCapacity> VariantList<V, inlineCapacity>::~Var
     Operations::destruct(spanToSize());
 }
 
-template<typename V, size_t inlineCapacity> bool VariantList<V, inlineCapacity>::operator==(const VariantList<V, inlineCapacity>& other) const requires VariantAllowsEqualityOperator<V>
+template<typename V, size_t inlineCapacity> bool VariantList<V, inlineCapacity>::operator==(const VariantList<V, inlineCapacity>& other) const requires std::equality_comparable<V>
 {
     return Operations::compare(spanToSize(), other.spanToSize());
 }
 
-template<typename V, size_t inlineCapacity> template<typename Arg> void VariantList<V, inlineCapacity>::appendImpl(Arg&& arg) requires VariantAllowsConstructionOfArg<V, std::decay_t<Arg>>
+template<typename V, size_t inlineCapacity> template<typename Arg> void VariantList<V, inlineCapacity>::appendImpl(Arg&& arg) requires std::constructible_from<V, Arg>
 {
-    using T = std::decay_t<Arg>;
+    using T = typename VariantBestMatch<V, Arg>::type;
 
     auto remainingBuffer = spanFromSizeToCapacity();
     auto newSizeInBytes = m_size + Operations::template sizeRequiredToWriteAt<T>(remainingBuffer.data());
@@ -273,11 +273,11 @@ template<typename V, size_t inlineCapacity> template<typename Arg> void VariantL
         return appendImpl(std::forward<Arg>(arg));
     }
 
-    Operations::write(std::forward<Arg>(arg), remainingBuffer);
+    Operations::template write<T>(std::forward<Arg>(arg), remainingBuffer);
     m_size = newSizeInBytes;
 }
 
-template<typename V, size_t inlineCapacity> template<typename Arg> void VariantList<V, inlineCapacity>::append(Arg&& arg) requires VariantAllowsConstructionOfArg<V, std::decay_t<Arg>>
+template<typename V, size_t inlineCapacity> template<typename Arg> void VariantList<V, inlineCapacity>::append(Arg&& arg) requires std::constructible_from<V, Arg>
 {
     appendImpl(std::forward<Arg>(arg));
 }

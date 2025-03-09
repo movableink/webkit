@@ -29,6 +29,7 @@
 #include "IndexingHeader.h"
 #include "JSCJSValueInlines.h"
 #include "JSCell.h"
+#include "ResourceExhaustion.h"
 #include "Structure.h"
 #include "VirtualRegister.h"
 
@@ -64,10 +65,15 @@ public:
         return result;
     }
 
+    static JSImmutableButterfly* tryCreate(VM& vm, IndexingType indexingType, unsigned length)
+    {
+        return tryCreate(vm, vm.immutableButterflyStructure(indexingType), length);
+    }
+
     static JSImmutableButterfly* create(VM& vm, IndexingType indexingType, unsigned length)
     {
-        auto* array = tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(indexingType) - NumberOfIndexingShapes].get(), length);
-        RELEASE_ASSERT(array);
+        auto* array = tryCreate(vm, indexingType, length);
+        RELEASE_ASSERT_RESOURCE_AVAILABLE(array, MemoryExhaustion, "Crash intentionally because memory is exhausted.");
         return array;
     }
 
@@ -84,7 +90,7 @@ public:
                 return JSImmutableButterfly::fromButterfly(array->butterfly());
         }
 
-        JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].get(), length);
+        JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), length);
         if (UNLIKELY(!result)) {
             throwOutOfMemoryError(globalObject, throwScope);
             return nullptr;
@@ -144,6 +150,10 @@ public:
 
     Butterfly* toButterfly() const { return std::bit_cast<Butterfly*>(std::bit_cast<char*>(this) + offsetOfData()); }
     static JSImmutableButterfly* fromButterfly(Butterfly* butterfly) { return std::bit_cast<JSImmutableButterfly*>(std::bit_cast<char*>(butterfly) - offsetOfData()); }
+    static bool isOnlyAtomStringsStructure(VM& vm, Butterfly* butterfly)
+    {
+        return fromButterfly(butterfly)->structure() == vm.immutableButterflyOnlyAtomStringsStructure.get();
+    }
 
     JSValue get(unsigned index) const
     {

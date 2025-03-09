@@ -26,7 +26,7 @@
 #include "config.h"
 #include "Icon.h"
 
-#if !PLATFORM(IOS_FAMILY) && !PLATFORM(MAC) && !PLATFORM(WIN) && !PLATFORM(QT)
+#if !PLATFORM(GTK) && !PLATFORM(IOS_FAMILY) && !PLATFORM(MAC) && !PLATFORM(WIN) && !PLATFORM(QT)
 
 namespace WebCore {
 

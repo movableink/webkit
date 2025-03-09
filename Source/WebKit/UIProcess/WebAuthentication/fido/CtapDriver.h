@@ -49,6 +49,7 @@ public:
 
     WebCore::AuthenticatorTransport transport() const { return m_transport; }
     fido::ProtocolVersion protocol() const { return m_protocol; }
+    bool isCtap2Protocol() const { return fido::isCtap2Protocol(m_protocol); }
     void setMaxMsgSize(std::optional<uint32_t> maxMsgSize) { m_maxMsgSize = maxMsgSize; }
     bool isValidSize(size_t msgSize) { return !m_maxMsgSize || msgSize <= static_cast<size_t>(*m_maxMsgSize); }
 
@@ -60,7 +61,7 @@ protected:
     { }
 
 private:
-    fido::ProtocolVersion m_protocol { fido::ProtocolVersion::kCtap };
+    fido::ProtocolVersion m_protocol { fido::ProtocolVersion::kCtap2 };
     WebCore::AuthenticatorTransport m_transport;
     std::optional<uint32_t> m_maxMsgSize;
 };

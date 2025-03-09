@@ -63,7 +63,7 @@ void SessionHost::sendWebInspectorEvent(const String& event)
     if (!m_clientID)
         return;
 
-    send(m_clientID.value(), event.utf8().span());
+    send(m_clientID.value(), byteCast<uint8_t>(event.utf8().span()));
 }
 
 #if PLATFORM(WIN)
@@ -263,9 +263,16 @@ void SessionHost::startAutomationSession(Function<void (bool, std::optional<Stri
     m_startSessionCompletionHandler = WTFMove(completionHandler);
     m_sessionID = createVersion4UUIDString();
 
+    auto capabilitiesObject = JSON::Object::create();
+    capabilitiesObject->setBoolean("acceptInsecureCerts"_s, m_capabilities.acceptInsecureCerts.value_or(false));
+
+    auto messageObject = JSON::Object::create();
+    messageObject->setString("sessionID"_s, m_sessionID);
+    messageObject->setObject("capabilities"_s, capabilitiesObject);
+
     auto sendMessageEvent = JSON::Object::create();
     sendMessageEvent->setString("event"_s, "StartAutomationSession"_s);
-    sendMessageEvent->setString("message"_s, m_sessionID);
+    sendMessageEvent->setString("message"_s, messageObject->toJSONString());
     sendWebInspectorEvent(sendMessageEvent->toJSONString());
 }
 

@@ -29,6 +29,8 @@ interface TestRunner {
     readonly attribute boolean isMac;
     readonly attribute boolean isKeyboardImmediatelyAvailable;
     readonly attribute boolean keyboardAppearsOverContent;
+    readonly attribute boolean haveSecureCodingRequest;
+    readonly attribute boolean haveSecureCodingDataDetectors;
 
     // The basics.
     undefined dumpAsText(boolean dumpPixels);
@@ -73,6 +75,8 @@ interface TestRunner {
     undefined dumpPolicyDelegateCallbacks();
     undefined dumpResourceLoadStatistics();
     undefined dumpPrivateClickMeasurement();
+
+    undefined clearStorage();
 
     undefined clearDOMCaches();
     undefined clearDOMCache(DOMString origin);
@@ -150,7 +154,7 @@ interface TestRunner {
     attribute double databaseMaxQuota;
 
     // Text search testing.
-    boolean findString(DOMString target, object optionsArray);
+    Promise<boolean> findString(DOMString target, object optionsArray);
     undefined findStringMatchesInPage(DOMString target, object optionsArray);
     undefined replaceFindMatchesAtIndices(object matchIndicesArray, DOMString replacementText, boolean selectionOnly);
 
@@ -200,11 +204,6 @@ interface TestRunner {
     // Page Visibility API
     undefined setPageVisibility(DOMString state);
     undefined resetPageVisibility();
-
-    // Control full screen behavior.
-    undefined setHasCustomFullScreenBehavior(boolean value);
-    undefined setEnterFullscreenForElementCallback(object callback);
-    undefined setExitFullscreenForElementCallback(object callback);
 
     // Web notifications support
     undefined grantWebNotificationPermission(DOMString origin);
@@ -295,8 +294,6 @@ interface TestRunner {
     undefined runUIScript(DOMString script, object callback);
     undefined runUIScriptImmediately(DOMString script, object callback);
 
-    undefined clearTestRunnerCallbacks();
-
     undefined accummulateLogsForChannel(DOMString channel);
 
     // Contextual menu actions
@@ -358,7 +355,7 @@ interface TestRunner {
     undefined statisticsResetToConsistentState(object completionHandler);
     boolean hasStatisticsIsolatedSession(DOMString hostName);
     undefined setStatisticsShouldDowngradeReferrer(boolean value, object callback);
-    undefined setStatisticsShouldBlockThirdPartyCookies(boolean value, object callback, optional boolean onlyOnSitesWithoutUserInteraction);
+    undefined setStatisticsShouldBlockThirdPartyCookies(boolean value, object callback, optional boolean onlyOnSitesWithoutUserInteraction, optional boolean onlyUnpartitionedCookies);
     undefined setStatisticsFirstPartyWebsiteDataRemovalMode(boolean value, object callback);
     undefined statisticsSetToSameSiteStrictCookies(DOMString hostName, object callback);
     undefined statisticsSetFirstPartyHostCNAMEDomain(DOMString firstPartyURLString, DOMString cnameURLString, object callback);
@@ -411,7 +408,7 @@ interface TestRunner {
     undefined setMockCameraOrientation(unsigned long orientation, DOMString persistentId);
     boolean isMockRealtimeMediaSourceCenterEnabled();
     undefined setMockCaptureDevicesInterrupted(boolean isCameraInterrupted, boolean isMicrophoneInterrupted);
-    undefined triggerMockCaptureConfigurationChange(boolean forMicrophone, boolean forDisplay);
+    undefined triggerMockCaptureConfigurationChange(boolean forCamera, boolean forMicrophone, boolean forDisplay);
 
     undefined setCaptureState(boolean cameraState, boolean microphoneState, boolean displayState);
 
@@ -462,7 +459,16 @@ interface TestRunner {
 
     undefined getAndClearReportedWindowProxyAccessDomains(object callback);
     Promise<undefined> flushConsoleLogs();
+    Promise<undefined> updatePresentation();
 
-    Promise<undefined> setTopContentInset(double contentInset);
+    undefined waitBeforeFinishingFullscreenExit();
+    undefined finishFullscreenExit();
+    undefined requestExitFullscreenFromUIProcess();
+
+    Promise<undefined> setObscuredContentInsets(double top, double right, double bottom, double left);
     Promise<undefined> setPageScaleFactor(unrestricted double scaleFactor, long x, long y);
+
+    // ResourceMonitor
+    readonly attribute boolean canModifyResourceMonitorList;
+    Promise<undefined> setResourceMonitorList(DOMString rulesText);
 };

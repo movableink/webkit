@@ -119,7 +119,6 @@ namespace JSC {
     macro(this) \
     macro(toIntegerOrInfinity) \
     macro(toLength) \
-    macro(importMapStatus) \
     macro(importInRealm) \
     macro(evalFunction) \
     macro(evalInRealm) \
@@ -204,7 +203,6 @@ namespace JSC {
     macro(isRemoteFunction) \
     macro(arrayFromFastFillWithUndefined) \
     macro(arrayFromFastFillWithEmpty) \
-    macro(arraySort) \
     macro(jsonParse) \
     macro(jsonStringify) \
     macro(String) \
@@ -220,6 +218,8 @@ namespace JSC {
     macro(asyncFromSyncIteratorCreate) \
     macro(regExpStringIteratorCreate) \
     macro(iteratorHelperCreate) \
+    macro(syncIterator) \
+    macro(includes) \
 
 
 namespace Symbols {

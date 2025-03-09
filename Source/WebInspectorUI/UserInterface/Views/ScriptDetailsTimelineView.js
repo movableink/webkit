@@ -25,11 +25,13 @@
 
 WI.ScriptDetailsTimelineView = class ScriptDetailsTimelineView extends WI.TimelineView
 {
-    constructor(timeline, extraArguments)
+    constructor(target, timeline)
     {
-        super(timeline, extraArguments);
+        console.assert(timeline.type === WI.TimelineRecord.Type.Script, timeline);
 
-        console.assert(timeline.type === WI.TimelineRecord.Type.Script);
+        super(timeline);
+
+        this._target = target;
 
         let columns = {name: {}, location: {}, callCount: {}, startTime: {}, totalTime: {}, selfTime: {}, averageTime: {}};
 
@@ -77,12 +79,12 @@ WI.ScriptDetailsTimelineView = class ScriptDetailsTimelineView extends WI.Timeli
         this.element.classList.add("script");
         this.addSubview(this._dataGrid);
 
-        timeline.addEventListener(WI.Timeline.Event.RecordAdded, this._scriptTimelineRecordAdded, this);
-        timeline.addEventListener(WI.Timeline.Event.Refreshed, this._scriptTimelineRecordRefreshed, this);
+        this.representedObject.addEventListener(WI.Timeline.Event.RecordAdded, this._scriptTimelineRecordAdded, this);
+        this.representedObject.addEventListener(WI.Timeline.Event.Refreshed, this._scriptTimelineRecordRefreshed, this);
 
         this._pendingRecords = [];
 
-        for (let record of timeline.records)
+        for (let record of this.representedObject.records)
             this._processRecord(record);
     }
 
@@ -96,6 +98,8 @@ WI.ScriptDetailsTimelineView = class ScriptDetailsTimelineView extends WI.Timeli
         this.representedObject.removeEventListener(WI.Timeline.Event.Refreshed, this._scriptTimelineRecordRefreshed, this);
 
         this._dataGrid.closed();
+
+        super.closed();
     }
 
     get selectionPathComponents()
@@ -219,6 +223,9 @@ WI.ScriptDetailsTimelineView = class ScriptDetailsTimelineView extends WI.Timeli
 
     _processRecord(scriptTimelineRecord)
     {
+        if (scriptTimelineRecord.target !== this._target)
+            return;
+
         this._pendingRecords.push(scriptTimelineRecord);
     }
 

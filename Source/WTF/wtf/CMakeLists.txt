@@ -6,6 +6,7 @@ set(WTF_PUBLIC_HEADERS
     AccessibleAddress.h
     AggregateLogger.h
     Algorithms.h
+    AlignedStorage.h
     AnsiColors.h
     ApproximateTime.h
     ArgumentCoder.h
@@ -47,6 +48,8 @@ set(WTF_PUBLIC_HEADERS
     CompactRefPtr.h
     CompactRefPtrTuple.h
     CompactUniquePtrTuple.h
+    CompactVariant.h
+    CompactVariantOperations.h
     CompilationThread.h
     Compiler.h
     CompletionHandler.h
@@ -54,6 +57,8 @@ set(WTF_PUBLIC_HEADERS
     ConcurrentPtrHashSet.h
     ConcurrentVector.h
     Condition.h
+    ContinuousApproximateTime.h
+    ContinuousTime.h
     CountingLock.h
     CrossThreadCopier.h
     CrossThreadQueue.h
@@ -69,7 +74,6 @@ set(WTF_PUBLIC_HEADERS
     DebugUtilities.h
     DeferrableRefCounted.h
     Deque.h
-    DisallowCType.h
     Dominators.h
     DoublyLinkedList.h
     EmbeddedFixedVector.h
@@ -89,6 +93,7 @@ set(WTF_PUBLIC_HEADERS
     FixedBitVector.h
     FixedVector.h
     FixedWidthDouble.h
+    FlatteningVariantAdaptor.h
     FlipBytes.h
     Float16.h
     ForbidHeapAllocation.h
@@ -163,6 +168,7 @@ set(WTF_PUBLIC_HEADERS
     MainThread.h
     MainThreadData.h
     MainThreadDispatcher.h
+    MallocCommon.h
     MallocPtr.h
     MallocSpan.h
     Markable.h
@@ -176,7 +182,6 @@ set(WTF_PUBLIC_HEADERS
     Mmap.h
     MonotonicTime.h
     NakedPtr.h
-    NakedRef.h
     NativePromise.h
     NaturalLoops.h
     NeverDestroyed.h
@@ -273,6 +278,9 @@ set(WTF_PUBLIC_HEADERS
     Seconds.h
     SegmentedVector.h
     SentinelLinkedList.h
+    SequesteredAllocator.h
+    SequesteredImmortalHeap.h
+    SequesteredMalloc.h
     SetForScope.h
     SharedTask.h
     SignedPtr.h
@@ -323,6 +331,7 @@ set(WTF_PUBLIC_HEADERS
     ThreadMessage.h
     ThreadSafetyAnalysis.h
     ThreadSafeRefCounted.h
+    ThreadSafeRefCountedWithSuppressingSaferCPPChecking.h
     ThreadSafeWeakHashSet.h
     ThreadSafeWeakPtr.h
     ThreadSanitizerSupport.h
@@ -352,6 +361,7 @@ set(WTF_PUBLIC_HEADERS
     UniqueRefVector.h
     VMTags.h
     ValueCheck.h
+    VariantExtras.h
     VariantList.h
     VariantListOperations.h
     Vector.h
@@ -446,6 +456,7 @@ set(WTF_PUBLIC_HEADERS
     text/MakeString.h
     text/NullTextBreakIterator.h
     text/OrdinalNumber.h
+    text/ParsingUtilities.h
     text/StringBuffer.h
     text/StringBuilder.h
     text/StringBuilderInternals.h
@@ -502,6 +513,8 @@ set(WTF_SOURCES
     CompilationThread.cpp
     ConcurrentBuffer.cpp
     ConcurrentPtrHashSet.cpp
+    ContinuousApproximateTime.cpp
+    ContinuousTime.cpp
     CountingLock.cpp
     CrossThreadCopier.cpp
     CrossThreadTaskHandler.cpp
@@ -535,6 +548,7 @@ set(WTF_SOURCES
     Logging.cpp
     MainThread.cpp
     MainThreadDispatcher.cpp
+    MallocCommon.cpp
     MediaTime.cpp
     MemoryPressureHandler.cpp
     MetaAllocator.cpp
@@ -563,6 +577,9 @@ set(WTF_SOURCES
     SafeStrerror.cpp
     Seconds.cpp
     SegmentedVector.cpp
+    SequesteredAllocator.cpp
+    SequesteredImmortalHeap.cpp
+    SequesteredMalloc.cpp
     SixCharacterHash.cpp
     SmallSet.cpp
     StackBounds.cpp

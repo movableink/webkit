@@ -32,9 +32,8 @@
 #include "LibWebRTCAudioFormat.h"
 #include "LibWebRTCProvider.h"
 #include "Logging.h"
+#include "SpanCoreAudio.h"
 #include <wtf/TZoneMallocInlines.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -140,9 +139,10 @@ void RealtimeOutgoingAudioSourceCocoa::pullAudioData()
 
     AudioBufferList bufferList;
     bufferList.mNumberBuffers = 1;
-    bufferList.mBuffers[0].mNumberChannels = m_outputStreamDescription->numberOfChannels();
-    bufferList.mBuffers[0].mDataByteSize = bufferSize;
-    bufferList.mBuffers[0].mData = m_audioBuffer.data();
+    auto& firstBuffer = span(bufferList)[0];
+    firstBuffer.mNumberChannels = m_outputStreamDescription->numberOfChannels();
+    firstBuffer.mDataByteSize = bufferSize;
+    firstBuffer.mData = m_audioBuffer.data();
 
     if (isSilenced() !=  m_sampleConverter->muted())
         m_sampleConverter->setMuted(isSilenced());
@@ -161,7 +161,5 @@ void RealtimeOutgoingAudioSourceCocoa::sourceUpdated()
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // USE(LIBWEBRTC)

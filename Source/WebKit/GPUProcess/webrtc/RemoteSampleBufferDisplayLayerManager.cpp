@@ -41,11 +41,15 @@ namespace WebKit {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteSampleBufferDisplayLayerManager);
 
-RemoteSampleBufferDisplayLayerManager::RemoteSampleBufferDisplayLayerManager(GPUConnectionToWebProcess& gpuConnectionToWebProcess)
+RemoteSampleBufferDisplayLayerManager::RemoteSampleBufferDisplayLayerManager(GPUConnectionToWebProcess& gpuConnectionToWebProcess, SharedPreferencesForWebProcess& sharedPreferencesForWebProcess)
     : m_connectionToWebProcess(gpuConnectionToWebProcess)
     , m_connection(gpuConnectionToWebProcess.connection())
+    , m_sharedPreferencesForWebProcess(sharedPreferencesForWebProcess)
     , m_queue(gpuConnectionToWebProcess.protectedGPUProcess()->videoMediaStreamTrackRendererQueue())
 {
+    protectedQueue()->dispatch([this, protectedThis = Ref { *this }, sharedPreferencesForWebProcess] {
+        m_sharedPreferencesForWebProcess = sharedPreferencesForWebProcess;
+    });
 }
 
 void RemoteSampleBufferDisplayLayerManager::startListeningForIPC()
@@ -92,16 +96,16 @@ void RemoteSampleBufferDisplayLayerManager::createLayer(SampleBufferDisplayLayer
         auto connection = m_connectionToWebProcess.get();
         if (!connection)
             return callback({ });
-        auto layer = RemoteSampleBufferDisplayLayer::create(*connection, identifier, m_connection.copyRef());
+        auto layer = RemoteSampleBufferDisplayLayer::create(*connection, identifier, m_connection.copyRef(), protectedThis);
         if (!layer) {
             callback({ });
             return;
         }
         layer->initialize(hideRootLayer, size, shouldMaintainAspectRatio, canShowWhileLocked, [this, protectedThis = Ref { *this }, callback = WTFMove(callback), identifier, layer = Ref { *layer }](auto layerId) mutable {
-            protectedQueue()->dispatch([this, protectedThis = WTFMove(protectedThis), callback = WTFMove(callback), identifier, layer = WTFMove(layer), layerId = WTFMove(layerId)]() mutable {
-                Locker lock(m_layersLock);
-                ASSERT(!m_layers.contains(identifier));
-                m_layers.add(identifier, WTFMove(layer));
+            protectedQueue()->dispatch([protectedThis = Ref { *this }, callback = WTFMove(callback), identifier, layer = WTFMove(layer), layerId = WTFMove(layerId)]() mutable {
+                Locker lock(protectedThis->m_layersLock);
+                ASSERT(!protectedThis->m_layers.contains(identifier));
+                protectedThis->m_layers.add(identifier, WTFMove(layer));
                 callback(WTFMove(layerId));
             });
         });
@@ -111,10 +115,10 @@ void RemoteSampleBufferDisplayLayerManager::createLayer(SampleBufferDisplayLayer
 void RemoteSampleBufferDisplayLayerManager::releaseLayer(SampleBufferDisplayLayerIdentifier identifier)
 {
     callOnMainRunLoop([this, protectedThis = Ref { *this }, identifier]() mutable {
-        protectedQueue()->dispatch([this, protectedThis = WTFMove(protectedThis), identifier] {
-            Locker lock(m_layersLock);
-            ASSERT(m_layers.contains(identifier));
-            callOnMainRunLoop([layer = m_layers.take(identifier)] { });
+        protectedQueue()->dispatch([protectedThis = Ref { *this }, identifier] {
+            Locker lock(protectedThis->m_layersLock);
+            ASSERT(protectedThis->m_layers.contains(identifier));
+            callOnMainRunLoop([layer = protectedThis->m_layers.take(identifier)] { });
         });
     });
 }
@@ -130,6 +134,13 @@ void RemoteSampleBufferDisplayLayerManager::updateSampleBufferDisplayLayerBounds
     Locker lock(m_layersLock);
     if (RefPtr layer = m_layers.get(identifier))
         layer->updateBoundsAndPosition(bounds, WTFMove(sendRight));
+}
+
+void RemoteSampleBufferDisplayLayerManager::updateSharedPreferencesForWebProcess(SharedPreferencesForWebProcess sharedPreferencesForWebProcess)
+{
+    protectedQueue()->dispatch([this, protectedThis = Ref { *this }, sharedPreferencesForWebProcess = WTFMove(sharedPreferencesForWebProcess)] {
+        m_sharedPreferencesForWebProcess = sharedPreferencesForWebProcess;
+    });
 }
 
 }

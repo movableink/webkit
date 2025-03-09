@@ -52,6 +52,7 @@ struct MediaRecorderPrivateOptions;
 class MediaSample;
 class PlatformAudioData;
 class VideoFrame;
+struct AudioInfo;
 struct VideoInfo;
 
 class MediaRecorderPrivateEncoder final : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MediaRecorderPrivateEncoder, WTF::DestructionThread::Main> {
@@ -97,7 +98,6 @@ private:
 
     Ref<FragmentedSharedBuffer> takeData();
 
-    MediaTime nextVideoFrameTime(const MediaTime&);
     MediaTime lastMuxedSampleTime() const;
 
     void generateMIMEType();
@@ -107,7 +107,7 @@ private:
     RefPtr<AudioSampleBufferConverter> audioConverter() const;
     void enqueueCompressedAudioSampleBuffers();
 
-    void appendVideoFrame(const MediaTime&, Ref<VideoFrame>&&);
+    void appendVideoFrame(MediaTime, Ref<VideoFrame>&&);
     Ref<GenericPromise> encodePendingVideoFrames();
     void processVideoEncoderActiveConfiguration(const VideoEncoder::Config&, const VideoEncoderActiveConfiguration&);
     void enqueueCompressedVideoFrame(VideoEncoder::EncodedFrame&&);
@@ -116,9 +116,9 @@ private:
     void partiallyFlushEncodedQueues();
     Ref<GenericPromise> waitForMatchingAudio(const MediaTime&);
     using Result = MediaRecorderPrivateWriter::Result;
-    std::pair<Result, MediaTime> flushToEndSegment(const MediaTime&);
+    MediaTime flushToEndSegment(const MediaTime&);
     void flushAllEncodedQueues();
-    Result muxNextFrame();
+    void interleaveAndEnqueueNextFrame();
 
     void maybeStartWriter();
     bool hasMuxedDataSinceEndSegment() const;
@@ -131,6 +131,7 @@ private:
     bool m_writerIsStarted WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { false };
     bool m_writerIsClosed WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { false };
     MediaTime m_lastMuxedSampleStartTime WTF_GUARDED_BY_CAPABILITY(queueSingleton());
+    bool m_lastMuxedSampleIsVideo WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { false };
     MediaTime m_lastMuxedAudioSampleEndTime WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     bool m_hasMuxedAudioFrameSinceEndSegment WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { false };
     bool m_hasMuxedVideoFrameSinceEndSegment WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { false };
@@ -144,11 +145,11 @@ private:
     String m_audioCodecMimeType WTF_GUARDED_BY_CAPABILITY(mainThread);
     std::optional<uint8_t> m_audioTrackIndex WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     RetainPtr<CMFormatDescriptionRef> m_audioFormatDescription WTF_GUARDED_BY_CAPABILITY(queueSingleton());
-    RetainPtr<CMFormatDescriptionRef> m_audioCompressedFormatDescription WTF_GUARDED_BY_CAPABILITY(queueSingleton());
+    RefPtr<AudioInfo> m_audioCompressedAudioInfo WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     RefPtr<AudioSampleBufferConverter> m_audioConverter WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     bool m_formatChangedOccurred WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { false };
     std::optional<AudioStreamBasicDescription> m_originalOutputDescription WTF_GUARDED_BY_CAPABILITY(queueSingleton());
-    Deque<Ref<MediaSample>> m_encodedAudioFrames WTF_GUARDED_BY_CAPABILITY(queueSingleton());
+    Deque<UniqueRef<MediaSamplesBlock>> m_encodedAudioFrames WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     std::optional<std::pair<const MediaTime, GenericPromise::Producer>> m_pendingAudioFramePromise WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     Lock m_ringBuffersLock;
     Deque<std::unique_ptr<InProcessCARingBuffer>> m_ringBuffers WTF_GUARDED_BY_LOCK(m_ringBuffersLock);
@@ -168,14 +169,14 @@ private:
     RetainPtr<CMFormatDescriptionRef> m_videoFormatDescription WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     RefPtr<VideoEncoder> m_videoEncoder WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     Deque<std::pair<Ref<VideoFrame>, MediaTime>> m_pendingVideoFrames WTF_GUARDED_BY_CAPABILITY(queueSingleton());
-    Deque<Ref<MediaSample>> m_encodedVideoFrames WTF_GUARDED_BY_CAPABILITY(queueSingleton());
+    Deque<UniqueRef<MediaSamplesBlock>> m_encodedVideoFrames WTF_GUARDED_BY_CAPABILITY(queueSingleton());
+    Deque<UniqueRef<MediaSamplesBlock>> m_interleavedFrames WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     bool m_firstVideoFrameProcessed WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { false };
+    std::optional<MonotonicTime> m_currentVideoSegmentStartTime WTF_GUARDED_BY_CAPABILITY(queueSingleton());
+    uint64_t m_previousSegmentVideoDurationUs WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { 0 };
+    MediaTime m_lastRawVideoFrameReceived WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { MediaTime::negativeInfiniteTime() };
     MediaTime m_lastEnqueuedRawVideoFrame WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { MediaTime::negativeInfiniteTime() };
     MediaTime m_lastVideoKeyframeTime WTF_GUARDED_BY_CAPABILITY(queueSingleton());
-    MediaTime m_lastReceivedCompressedVideoFrame WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { MediaTime::negativeInfiniteTime() };
-    MediaTime m_currentVideoDuration WTF_GUARDED_BY_CAPABILITY(queueSingleton());
-    std::optional<MediaTime> m_firstVideoFrameTime WTF_GUARDED_BY_CAPABILITY(queueSingleton());
-    std::optional<MonotonicTime> m_resumeWallTime WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     std::optional<CGAffineTransform> m_videoTransform;
     RefPtr<GenericNonExclusivePromise> m_videoEncoderCreationPromise;
 

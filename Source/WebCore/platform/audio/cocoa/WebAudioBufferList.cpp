@@ -28,11 +28,11 @@
 
 #include "CAAudioStreamDescription.h"
 #include <wtf/CheckedArithmetic.h>
+#include <wtf/IndexedRange.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
 #include <pal/cf/CoreMediaSoftLink.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebCore {
 
@@ -50,10 +50,13 @@ WebAudioBufferList::WebAudioBufferList(const CAAudioStreamDescription& format)
     bufferListSize += CheckedSize { sizeof(AudioBuffer) } * std::max(1U, bufferCount);
     m_listBufferSize = bufferListSize;
     m_canonicalList = std::unique_ptr<AudioBufferList>(static_cast<AudioBufferList*>(::operator new (m_listBufferSize)));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     memset(m_canonicalList.get(), 0, m_listBufferSize);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     m_canonicalList->mNumberBuffers = bufferCount;
+    auto canonicalListBuffers = span(*m_canonicalList);
     for (uint32_t buffer = 0; buffer < bufferCount; ++buffer)
-        m_canonicalList->mBuffers[buffer].mNumberChannels = m_channelCount;
+        canonicalListBuffers[buffer].mNumberChannels = m_channelCount;
 
     reset();
 }
@@ -104,7 +107,7 @@ void WebAudioBufferList::setSampleCount(size_t sampleCount)
     m_sampleCount = sampleCount;
 
     m_flatBuffer.resize(bufferSizes->second);
-    initializeList({ m_flatBuffer.data(), bufferSizes->second }, bufferSizes->first);
+    initializeList(m_flatBuffer.mutableSpan().first(bufferSizes->second), bufferSizes->first);
 }
 
 std::optional<std::pair<UniqueRef<WebAudioBufferList>, RetainPtr<CMBlockBufferRef>>> WebAudioBufferList::createWebAudioBufferListWithBlockBuffer(const CAAudioStreamDescription& description, size_t sampleCount)
@@ -137,25 +140,25 @@ RetainPtr<CMBlockBufferRef> WebAudioBufferList::setSampleCountWithBlockBuffer(si
     }
     RetainPtr block = adoptCF(blockBuffer);
 
-    char* data = { };
-    if (auto error = PAL::CMBlockBufferGetDataPointer(blockBuffer, 0, nullptr, nullptr, &data)) {
-        RELEASE_LOG_ERROR(Media, "WebAudioBufferList::setSampleCountWithBlockBuffer CMBlockBufferGetDataPointer failed with: %d", static_cast<int>(error));
+    auto data = PAL::CMBlockBufferGetDataSpan(blockBuffer);
+    if (!data.data()) {
+        RELEASE_LOG_ERROR(Media, "WebAudioBufferList::setSampleCountWithBlockBuffer CMBlockBufferGetDataSpan failed.");
         return { };
     }
     m_blockBuffer = WTFMove(block);
 
-    initializeList({ reinterpret_cast<uint8_t*>(data), bufferSizes->second }, bufferSizes->first);
+    initializeList(data.first(bufferSizes->second), bufferSizes->first);
 
     return m_blockBuffer;
 }
 
 void WebAudioBufferList::initializeList(std::span<uint8_t> buffer, size_t channelLength)
 {
-    memset(buffer.data(), 0, buffer.size());
+    zeroSpan(buffer);
 
-    for (uint32_t index = 0; index < m_canonicalList->mNumberBuffers; ++index) {
-        m_canonicalList->mBuffers[index].mData = buffer.data() + channelLength * index;
-        m_canonicalList->mBuffers[index].mDataByteSize = channelLength;
+    for (auto [index, canonicalListBuffer] : indexedRange(span(*m_canonicalList))) {
+        canonicalListBuffer.mData = buffer.subspan(channelLength * index).data();
+        canonicalListBuffer.mDataByteSize = channelLength;
     }
 
     reset();
@@ -178,12 +181,15 @@ void WebAudioBufferList::reset()
 {
     if (!m_list)
         m_list = std::unique_ptr<AudioBufferList>(static_cast<AudioBufferList*>(::operator new (m_listBufferSize)));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     memcpy(m_list.get(), m_canonicalList.get(), m_listBufferSize);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 IteratorRange<AudioBuffer*> WebAudioBufferList::buffers() const
 {
-    return WTF::makeIteratorRange(&m_list->mBuffers[0], &m_list->mBuffers[m_list->mNumberBuffers]);
+    auto buffers = span(*m_list);
+    return WTF::makeIteratorRange(std::to_address(buffers.begin()), std::to_address(buffers.end()));
 }
 
 uint32_t WebAudioBufferList::bufferCount() const
@@ -193,17 +199,16 @@ uint32_t WebAudioBufferList::bufferCount() const
 
 AudioBuffer* WebAudioBufferList::buffer(uint32_t index) const
 {
-    ASSERT(index < m_list->mNumberBuffers);
-    if (index < m_list->mNumberBuffers)
-        return &m_list->mBuffers[index];
+    auto buffers = span(*m_list);
+    ASSERT(index < buffers.size());
+    if (index < buffers.size())
+        return &buffers[index];
     return nullptr;
 }
 
 void WebAudioBufferList::zeroFlatBuffer()
 {
-    memset(m_flatBuffer.data(), 0, m_flatBuffer.size());
+    m_flatBuffer.fill(0);
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

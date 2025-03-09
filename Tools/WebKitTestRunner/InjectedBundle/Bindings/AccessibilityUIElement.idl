@@ -29,9 +29,10 @@ interface AccessibilityUIElement {
 
     // Element access.
     AccessibilityUIElement elementAtPoint(long x, long y);
-    AccessibilityUIElement elementAtPointWithRemoteElementForTesting(long x, long y);
-    undefined elementAtPointResolvingRemoteFrameForTesting(long x, long y, object callbackFunction);
+    AccessibilityUIElement elementAtPointWithRemoteElement(long x, long y);
+    undefined elementAtPointResolvingRemoteFrame(long x, long y, object callbackFunction);
     AccessibilityUIElement childAtIndex(unsigned long index);
+    AccessibilityUIElement childAtIndexWithRemoteElement(unsigned long index);
     unsigned long indexOfChild(AccessibilityUIElement child);
     AccessibilityUIElement linkedUIElementAtIndex(unsigned long index);
     readonly attribute AccessibilityUIElement activeElement;
@@ -62,6 +63,7 @@ interface AccessibilityUIElement {
     readonly attribute DOMString orientation;
     readonly attribute unsigned long numberOfCharacters;
     readonly attribute long insertionPointLineNumber;
+    readonly attribute DOMString selectedText;
     readonly attribute DOMString selectedTextRange;
     readonly attribute DOMString intersectionWithSelectionRange;
     readonly attribute DOMString textInputMarkedRange;
@@ -83,6 +85,7 @@ interface AccessibilityUIElement {
 
     readonly attribute DOMString stringValue;
     readonly attribute DOMString dateValue;
+    readonly attribute DOMString dateTimeValue;
     readonly attribute long intValue;
     readonly attribute long minValue;
     readonly attribute long maxValue;
@@ -113,7 +116,7 @@ interface AccessibilityUIElement {
     readonly attribute boolean isOffScreen;
     readonly attribute boolean isValid;
     readonly attribute long hierarchicalLevel;
-    readonly attribute boolean ariaIsGrabbed;
+    readonly attribute boolean isGrabbed;
     readonly attribute DOMString ariaDropEffects;
     readonly attribute DOMString classList;
     readonly attribute DOMString embeddedImageDescription;
@@ -243,6 +246,7 @@ interface AccessibilityUIElement {
     AccessibilityTextMarker previousLineStartTextMarkerForTextMarker(AccessibilityTextMarker textMarker);
     AccessibilityTextMarker nextLineEndTextMarkerForTextMarker(AccessibilityTextMarker textMarker);
     long lineIndexForTextMarker(AccessibilityTextMarker textMarker);
+    AccessibilityTextMarkerRange styleTextMarkerRangeForTextMarker(AccessibilityTextMarker textMarker);
     AccessibilityTextMarkerRange textMarkerRangeForSearchPredicate(AccessibilityTextMarkerRange startRange, boolean forward, object searchKey, DOMString searchText, boolean visibleOnly, boolean immediateDescendantsOnly);
     AccessibilityTextMarkerRange misspellingTextMarkerRange(AccessibilityTextMarkerRange start, boolean forward);
     AccessibilityTextMarkerRange textMarkerRangeForElement(AccessibilityUIElement element);

@@ -34,7 +34,7 @@ namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(CompactTDZEnvironment);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(VariableEnvironment);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(VariableEnvironment, RareData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(VariableEnvironment::RareData);
 
 void VariableEnvironmentEntry::dump(PrintStream& out) const
 {

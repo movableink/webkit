@@ -108,6 +108,9 @@ const TestFeatures& TestOptions::defaults()
             { "GenericCueAPIEnabled", false },
             { "HiddenPageCSSAnimationSuspensionEnabled", false },
             { "HiddenPageDOMTimerThrottlingEnabled", false },
+#if ENABLE(CONTENT_EXTENSIONS)
+            { "IFrameResourceMonitoringEnabled", true },
+#endif
             { "InlineMediaPlaybackRequiresPlaysInlineAttribute", false },
             { "InputTypeDateEnabled", true },
             { "InputTypeDateTimeLocalEnabled", true },
@@ -129,6 +132,7 @@ const TestFeatures& TestOptions::defaults()
             { "NeedsStorageAccessFromFileURLsQuirk", false },
             { "PageVisibilityBasedProcessSuppressionEnabled", false },
             { "PeerConnectionVideoScalingAdaptationDisabled", true },
+            { "PerElementSpeakerSelectionEnabled", true },
             { "PDFJSViewerEnabled", false },
             { "PushAPIEnabled", true },
             { "RequiresUserGestureForAudioPlayback", false },
@@ -137,6 +141,7 @@ const TestFeatures& TestOptions::defaults()
             { "ScrollToTextFragmentIndicatorEnabled", false },
             { "ShowModalDialogEnabled", false },
             { "SpeakerSelectionRequiresUserGesture", false },
+            { "VerifyWindowOpenUserGestureFromUIProcess", false },
             { "TabsToLinks", false },
             { "TextAutosizingEnabled", false },
             { "TextAutosizingUsesIdempotentMode", false },

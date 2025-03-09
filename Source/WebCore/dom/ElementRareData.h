@@ -21,12 +21,15 @@
 
 #pragma once
 
+#include "CalculationRandomKeyMap.h"
 #include "CustomElementDefaultARIA.h"
 #include "CustomElementReactionQueue.h"
 #include "CustomStateSet.h"
 #include "DOMTokenList.h"
 #include "DatasetDOMStringMap.h"
+#include "Element.h"
 #include "ElementAnimationRareData.h"
+#include "EventTarget.h"
 #include "FormAssociatedCustomElement.h"
 #include "IntersectionObserver.h"
 #include "KeyframeEffectStack.h"
@@ -155,6 +158,9 @@ public:
     PopoverData* popoverData() { return m_popoverData.get(); }
     void setPopoverData(std::unique_ptr<PopoverData>&& popoverData) { m_popoverData = WTFMove(popoverData); }
 
+    Element* invokedPopover() const { return m_invokedPopover.get(); }
+    void setInvokedPopover(RefPtr<Element>&& element) { m_invokedPopover = WTFMove(element); }
+
     const std::optional<OptionSet<ContentRelevancy>>& contentRelevancy() const { return m_contentRelevancy; }
     void setContentRelevancy(OptionSet<ContentRelevancy>& contentRelevancy) { m_contentRelevancy = contentRelevancy; }
 
@@ -163,6 +169,9 @@ public:
 
     OptionSet<VisibilityAdjustment> visibilityAdjustment() const { return m_visibilityAdjustment; }
     void setVisibilityAdjustment(OptionSet<VisibilityAdjustment> adjustment) { m_visibilityAdjustment = adjustment; }
+
+    Ref<Calculation::RandomKeyMap> ensureRandomKeyMap(const std::optional<Style::PseudoElementIdentifier>&);
+    bool hasRandomKeyMap() const;
 
 #if DUMP_NODE_STATISTICS
     OptionSet<UseType> useTypes() const
@@ -220,6 +229,8 @@ public:
             result.add(UseType::CustomStateSet);
         if (m_userInfo)
             result.add(UseType::UserInfo);
+        if (m_invokedPopover)
+            result.add(UseType::InvokedPopover);
         return result;
     }
 #endif
@@ -271,9 +282,13 @@ private:
 
     std::unique_ptr<PopoverData> m_popoverData;
 
+    WeakPtr<Element, WeakPtrImplWithEventTargetData> m_invokedPopover;
+
     RefPtr<CustomStateSet> m_customStateSet;
 
     OptionSet<VisibilityAdjustment> m_visibilityAdjustment;
+
+    HashMap<std::optional<Style::PseudoElementIdentifier>, Ref<Calculation::RandomKeyMap>> m_randomKeyMaps;
 };
 
 inline ElementRareData::ElementRareData()
@@ -342,6 +357,18 @@ inline void ElementRareData::setViewTransitionCapturedName(const std::optional<S
     m_viewTransitionCapturedName.set(pseudoElementIdentifier, captureName);
 }
 
+inline Ref<Calculation::RandomKeyMap> ElementRareData::ensureRandomKeyMap(const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier)
+{
+    return m_randomKeyMaps.ensure(pseudoElementIdentifier, [] -> Ref<Calculation::RandomKeyMap> {
+        return Calculation::RandomKeyMap::create();
+    }).iterator->value;
+}
+
+inline bool ElementRareData::hasRandomKeyMap() const
+{
+    return !m_randomKeyMaps.isEmpty();
+}
+
 inline ElementRareData* Element::elementRareData() const
 {
     ASSERT_WITH_SECURITY_IMPLICATION(hasRareData());
@@ -358,6 +385,11 @@ inline ShadowRoot* Node::shadowRoot() const
 inline ShadowRoot* Element::shadowRoot() const
 {
     return hasRareData() ? elementRareData()->shadowRoot() : nullptr;
+}
+
+inline RefPtr<ShadowRoot> Node::protectedShadowRoot() const
+{
+    return shadowRoot();
 }
 
 inline void Element::removeShadowRoot()

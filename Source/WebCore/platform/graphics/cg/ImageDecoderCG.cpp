@@ -50,8 +50,6 @@
 #include "PhotosFormatSoftLink.h"
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ImageDecoderCG);
@@ -63,6 +61,7 @@ const CFStringRef WebCoreCGImagePropertyFrameInfoArray = CFSTR("FrameInfo");
 const CFStringRef WebCoreCGImagePropertyUnclampedDelayTime = CFSTR("UnclampedDelayTime");
 const CFStringRef WebCoreCGImagePropertyDelayTime = CFSTR("DelayTime");
 const CFStringRef WebCoreCGImagePropertyLoopCount = CFSTR("LoopCount");
+const CFStringRef WebCoreCGImagePropertyHeadroom = CFSTR("Headroom");
 
 const CFStringRef kCGImageSourceEnableRestrictedDecoding = CFSTR("kCGImageSourceEnableRestrictedDecoding");
 
@@ -218,6 +217,18 @@ static ImageOrientation orientationFromProperties(CFDictionaryRef imagePropertie
     int exifValue;
     CFNumberGetValue(orientationProperty, kCFNumberIntType, &exifValue);
     return ImageOrientation::fromEXIFValue(exifValue);
+}
+
+static Headroom headroomFromProperties(CFDictionaryRef imageProperties)
+{
+    ASSERT(imageProperties);
+    CFNumberRef headroomProperty = (CFNumberRef)CFDictionaryGetValue(imageProperties, WebCoreCGImagePropertyHeadroom);
+    if (!headroomProperty)
+        return Headroom::None;
+
+    float headroomValue;
+    CFNumberGetValue(headroomProperty, kCFNumberFloatType, &headroomValue);
+    return headroomValue;
 }
 
 static bool mayHaveDensityCorrectedSize(CFDictionaryRef imageProperties)
@@ -561,6 +572,7 @@ bool ImageDecoderCG::fetchFrameMetaDataAtIndex(size_t index, SubsamplingLevel su
     frame.m_decodingOptions = options;
     frame.m_hasAlpha = !frameIsComplete || hasAlpha();
     frame.m_orientation = orientationFromProperties(properties.get());
+    frame.m_headroom = headroomFromProperties(properties.get());
     frame.m_decodingStatus = frameIsComplete ? DecodingStatus::Complete : DecodingStatus::Partial;
     return true;
 }
@@ -626,15 +638,15 @@ String ImageDecoderCG::decodeUTI(CGImageSourceRef imageSource, const SharedBuffe
         return uti;
     }
 
-    static constexpr auto ftypSignature = FourCC("ftyp");
-    static constexpr auto avifBrand = FourCC("avif");
-    static constexpr auto avisBrand = FourCC("avis");
+    static const FourCC ftypSignature = std::span { "ftyp" };
+    static const FourCC avifBrand = std::span { "avif" };
+    static const FourCC avisBrand = std::span { "avis" };
 
     auto boxUnsigned = [span = data.span()](unsigned index) -> unsigned {
         constexpr bool isLittleEndian = false;
-        const unsigned* boxBytes = reinterpret_cast<const unsigned*>(span.data());
+        auto value = reinterpretCastSpanStartTo<const unsigned>(span.subspan(index * sizeof(unsigned)));
         // Numbers in the file are BigEndian.
-        return flipBytesIfLittleEndian(boxBytes[index], isLittleEndian);
+        return flipBytesIfLittleEndian(value, isLittleEndian);
     };
 
     auto checkAVIFBrand = [](unsigned brand) -> std::optional<String> {
@@ -738,7 +750,5 @@ bool ImageDecoderCG::shouldUseQuickLookForFullscreen() const
 #endif // ENABLE(QUICKLOOK_FULLSCREEN)
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // USE(CG)

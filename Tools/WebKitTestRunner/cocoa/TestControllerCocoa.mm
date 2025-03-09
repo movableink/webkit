@@ -118,7 +118,7 @@ static VKImageAnalysisRequestID gCurrentImageAnalysisRequestID = 0;
 
 VKImageAnalysisRequestID swizzledProcessImageAnalysisRequest(id, SEL, VKCImageAnalyzerRequest *, void (^progressHandler)(double), void (^completionHandler)(VKCImageAnalysis *, NSError *))
 {
-    RunLoop::main().dispatchAfter(25_ms, [completionHandler = makeBlockPtr(completionHandler)] {
+    RunLoop::protectedMain()->dispatchAfter(25_ms, [completionHandler = makeBlockPtr(completionHandler)] {
 #if HAVE(VK_IMAGE_ANALYSIS_FOR_MACHINE_READABLE_CODES)
         if (WTR::TestController::singleton().shouldUseFakeMachineReadableCodeResultsForImageAnalysis()) {
             auto result = adoptNS([FakeMachineReadableCodeImageAnalysis new]);
@@ -174,10 +174,6 @@ void initializeWebViewConfiguration(const char* libraryPath, WKStringRef injecte
         [configuration _setAllowUniversalAccessFromFileURLs:YES];
         [configuration _setAllowTopNavigationToDataURLs:YES];
         [configuration _setApplePayEnabled:YES];
-
-#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
-        [configuration _setOverlayRegionsEnabled:YES];
-#endif
 
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
         [configuration _setCSSTransformStyleSeparatedEnabled:YES];
@@ -832,6 +828,13 @@ WKRetainPtr<WKStringRef> TestController::backgroundFetchState(WKStringRef identi
     }];
     platformRunUntil(isDone, noTimeout);
     return toWK(backgroundFetchState);
+}
+
+void TestController::updatePresentation(CompletionHandler<void(WKTypeRef)>&& completionHandler)
+{
+    [m_mainWebView->platformView() _doAfterNextPresentationUpdate:makeBlockPtr([completionHandler = WTFMove(completionHandler)] mutable {
+        completionHandler(nullptr);
+    }).get()];
 }
 
 } // namespace WTR

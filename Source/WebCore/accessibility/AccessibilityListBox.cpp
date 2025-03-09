@@ -86,19 +86,6 @@ void AccessibilityListBox::setSelectedChildren(const AccessibilityChildrenVector
     }
 }
 
-std::optional<AXCoreObject::AccessibilityChildrenVector> AccessibilityListBox::selectedChildren()
-{
-    if (!childrenInitialized())
-        addChildren();
-
-    AccessibilityChildrenVector result;
-    for (const auto& child : unignoredChildren()) {
-        if (child->isSelected())
-            result.append(child.get());
-    }
-    return result;
-}
-
 AXCoreObject::AccessibilityChildrenVector AccessibilityListBox::visibleChildren()
 {
     ASSERT(!m_renderer || is<RenderListBox>(m_renderer.get()));

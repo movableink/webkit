@@ -50,7 +50,7 @@ void BindGroupImpl::setLabelInternal(const String& label)
     wgpuBindGroupSetLabel(m_backing.get(), label.utf8().data());
 }
 
-bool BindGroupImpl::updateExternalTextures(const ExternalTexture& externalTexture)
+bool BindGroupImpl::updateExternalTextures(ExternalTexture& externalTexture)
 {
     return wgpuBindGroupUpdateExternalTextures(m_backing.get(), static_cast<const ExternalTextureImpl&>(externalTexture).backing());
 }

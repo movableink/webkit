@@ -99,6 +99,25 @@ BitmapTexture::BitmapTexture(const IntSize& size, OptionSet<Flags> flags)
     glBindTexture(GL_TEXTURE_2D, boundTexture);
 }
 
+#if USE(GBM)
+BitmapTexture::BitmapTexture(EGLImage image, OptionSet<Flags> flags)
+    : m_flags(flags)
+{
+    GLint boundTexture = 0;
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &boundTexture);
+
+    glGenTextures(1, &m_id);
+    glBindTexture(GL_TEXTURE_2D, m_id);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, image);
+
+    glBindTexture(GL_TEXTURE_2D, boundTexture);
+}
+#endif
+
 void BitmapTexture::swapTexture(BitmapTexture& other)
 {
     RELEASE_ASSERT(m_size == other.m_size);
@@ -143,8 +162,11 @@ void BitmapTexture::reset(const IntSize& size, OptionSet<Flags> flags)
 
     if (m_size != size) {
         m_size = size;
+        GLint boundTexture = 0;
+        glGetIntegerv(GL_TEXTURE_BINDING_2D, &boundTexture);
         glBindTexture(GL_TEXTURE_2D, m_id);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_size.width(), m_size.height(), 0, textureFormat, s_pixelDataType, nullptr);
+        glBindTexture(GL_TEXTURE_2D, boundTexture);
     }
 }
 

@@ -58,7 +58,7 @@ public:
     virtual ~DownloadClient() { }
 
     virtual void legacyDidStart(WebKit::DownloadProxy&) { }
-    virtual void didReceiveAuthenticationChallenge(WebKit::DownloadProxy&, WebKit::AuthenticationChallengeProxy& challenge) { challenge.listener().completeChallenge(WebKit::AuthenticationChallengeDisposition::Cancel); }
+    virtual void didReceiveAuthenticationChallenge(WebKit::DownloadProxy&, WebKit::AuthenticationChallengeProxy& challenge) { challenge.protectedListener()->completeChallenge(WebKit::AuthenticationChallengeDisposition::Cancel); }
     virtual void didReceiveData(WebKit::DownloadProxy&, uint64_t, uint64_t, uint64_t) { }
     virtual void decidePlaceholderPolicy(WebKit::DownloadProxy&, CompletionHandler<void(WebKit::UseDownloadPlaceholder, const WTF::URL&)>&& completionHandler) { completionHandler(WebKit::UseDownloadPlaceholder::No, { }); }
     virtual void decideDestinationWithSuggestedFilename(WebKit::DownloadProxy&, const WebCore::ResourceResponse&, const WTF::String&, CompletionHandler<void(WebKit::AllowOverwrite, WTF::String)>&& completionHandler) { completionHandler(WebKit::AllowOverwrite::No, { }); }

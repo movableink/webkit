@@ -26,16 +26,14 @@
 #include "config.h"
 #include "RFC8941.h"
 
-#include "ParsingUtilities.h"
 #include "RFC7230.h"
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/StringParsingBuffer.h>
 #include <wtf/text/StringView.h>
 
 namespace RFC8941 {
-
-using namespace WebCore;
 
 template<typename CharacterType> constexpr bool isEndOfToken(CharacterType character)
 {

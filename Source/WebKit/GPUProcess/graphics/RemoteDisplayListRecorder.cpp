@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "RemoteDisplayListRecorder.h"
+#include "SharedPreferencesForWebProcess.h"
 
 #if ENABLE(GPU_PROCESS)
 
@@ -335,11 +336,6 @@ void RemoteDisplayListRecorder::drawDecomposedGlyphs(RenderingResourceIdentifier
     handleItem(DisplayList::DrawDecomposedGlyphs(fontIdentifier, decomposedGlyphsIdentifier), *font, *decomposedGlyphs);
 }
 
-void RemoteDisplayListRecorder::drawDisplayListItems(Vector<WebCore::DisplayList::Item>&& items, const FloatPoint& destination)
-{
-    handleItem(DisplayList::DrawDisplayListItems(WTFMove(items), destination), resourceCache().resourceHeap(), protectedControlFactory());
-}
-
 void RemoteDisplayListRecorder::drawImageBuffer(RenderingResourceIdentifier imageBufferIdentifier, const FloatRect& destinationRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
     RefPtr sourceImage = imageBuffer(imageBufferIdentifier);
@@ -631,6 +627,30 @@ void RemoteDisplayListRecorder::applyFillPattern()
 void RemoteDisplayListRecorder::applyDeviceScaleFactor(float scaleFactor)
 {
     handleItem(DisplayList::ApplyDeviceScaleFactor(scaleFactor));
+}
+
+void RemoteDisplayListRecorder::beginPage(const IntSize& pageSize)
+{
+    handleItem(DisplayList::BeginPage(pageSize));
+}
+
+void RemoteDisplayListRecorder::endPage()
+{
+    handleItem(DisplayList::EndPage());
+}
+
+void RemoteDisplayListRecorder::setURLForRect(const URL& link, const FloatRect& destRect)
+{
+    handleItem(DisplayList::SetURLForRect(link, destRect));
+}
+
+std::optional<SharedPreferencesForWebProcess> RemoteDisplayListRecorder::sharedPreferencesForWebProcess() const
+{
+    RefPtr renderingBackend = m_renderingBackend;
+    if (renderingBackend)
+        return renderingBackend->sharedPreferencesForWebProcess();
+
+    return std::nullopt;
 }
 
 } // namespace WebKit

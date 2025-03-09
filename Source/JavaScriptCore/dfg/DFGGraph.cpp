@@ -76,7 +76,7 @@ Graph::Graph(VM& vm, Plan& plan)
     , m_plan(plan)
     , m_codeBlock(m_plan.codeBlock())
     , m_profiledBlock(m_codeBlock->alternative())
-    , m_ssaCFG(makeUnique<SSACFG>(*this))
+    , m_ssaCFG(makeUniqueWithoutFastMallocCheck<SSACFG>(*this))
     , m_nextMachineLocal(0)
     , m_fixpointState(BeforeFixpoint)
     , m_structureRegistrationState(HaveNotStartedRegistering)
@@ -88,8 +88,8 @@ Graph::Graph(VM& vm, Plan& plan)
     
     m_hasDebuggerEnabled = m_profiledBlock->wasCompiledWithDebuggingOpcodes() || Options::forceDebuggerBytecodeGeneration();
     
-    m_indexingCache = makeUnique<FlowIndexing>(*this);
-    m_abstractValuesCache = makeUnique<FlowMap<AbstractValue>>(*this);
+    m_indexingCache = makeUniqueWithoutFastMallocCheck<FlowIndexing>(*this);
+    m_abstractValuesCache = makeUniqueWithoutFastMallocCheck<FlowMap<AbstractValue>>(*this);
 
     registerStructure(vm.structureStructure.get());
     this->stringStructure = registerStructure(vm.stringStructure.get());
@@ -697,8 +697,7 @@ void Graph::dethread()
     if (m_form == LoadStore || m_form == SSA)
         return;
     
-    if (logCompilationChanges())
-        dataLog("Dethreading DFG graph.\n");
+    dataLogLnIf(logCompilationChanges(), "Dethreading DFG graph.");
     
     for (BlockIndex blockIndex = m_blocks.size(); blockIndex--;) {
         BasicBlock* block = m_blocks[blockIndex].get();
@@ -1165,8 +1164,7 @@ bool Graph::isLiveInBytecode(Operand operand, CodeOrigin codeOrigin)
 {
     static constexpr bool verbose = false;
     
-    if (verbose)
-        dataLog("Checking of operand is live: ", operand, "\n");
+    dataLogLnIf(verbose, "Checking of operand is live: ", operand);
     bool isCallerOrigin = false;
 
     CodeOrigin* codeOriginPtr = &codeOrigin;
@@ -1194,8 +1192,7 @@ bool Graph::isLiveInBytecode(Operand operand, CodeOrigin codeOrigin)
 
         VirtualRegister reg = operand.virtualRegister() - codeOriginPtr->stackOffset();
         
-        if (verbose)
-            dataLog("reg = ", reg, "\n");
+        dataLogLnIf(verbose, "reg = ", reg);
 
         if (operand.virtualRegister().offset() < codeOriginPtr->stackOffset() + CallFrame::headerSizeInRegisters) {
             if (reg.isArgument()) {
@@ -1204,23 +1201,20 @@ bool Graph::isLiveInBytecode(Operand operand, CodeOrigin codeOrigin)
 
                 if (inlineCallFrame->isClosureCall
                     && reg == CallFrameSlot::callee) {
-                    if (verbose)
-                        dataLog("Looks like a callee.\n");
+                    dataLogLnIf(verbose, "Looks like a callee.");
                     return true;
                 }
                 
                 if (inlineCallFrame->isVarargs()
                     && reg == CallFrameSlot::argumentCountIncludingThis) {
-                    if (verbose)
-                        dataLog("Looks like the argument count.\n");
+                    dataLogLnIf(verbose, "Looks like the argument count.");
                     return true;
                 }
                 
                 return false;
             }
 
-            if (verbose)
-                dataLog("Asking the bytecode liveness.\n");
+            dataLogLnIf(verbose, "Asking the bytecode liveness.");
             CodeBlock* codeBlock = baselineCodeBlockFor(inlineCallFrame);
             FullBytecodeLiveness& fullLiveness = livenessFor(codeBlock);
             BytecodeIndex bytecodeIndex = codeOriginPtr->bytecodeIndex();
@@ -1231,8 +1225,7 @@ bool Graph::isLiveInBytecode(Operand operand, CodeOrigin codeOrigin)
         // op_call_varargs inlining.
         if (inlineCallFrame && reg.isArgument()
             && static_cast<size_t>(reg.toArgument()) < inlineCallFrame->m_argumentsWithFixup.size()) {
-            if (verbose)
-                dataLog("Argument is live.\n");
+            dataLogLnIf(verbose, "Argument is live.");
             return true;
         }
 
@@ -1242,8 +1235,7 @@ bool Graph::isLiveInBytecode(Operand operand, CodeOrigin codeOrigin)
     if (operand.isTmp())
         return false;
 
-    if (verbose)
-        dataLog("Ran out of stack, returning true.\n");
+    dataLogLnIf(verbose, "Ran out of stack, returning true.");
     return true;    
 }
 
@@ -1672,21 +1664,23 @@ static void logDFGAssertionFailure(
     const char* assertion)
 {
     startCrashing();
-    dataLog("DFG ASSERTION FAILED: ", assertion, "\n");
-    dataLog(file, "(", line, ") : ", function, "\n");
-    dataLog("\n");
-    dataLog(whileText);
-    dataLog("Graph at time of failure:\n");
-    graph.dump();
-    dataLog("\n");
-    dataLog("DFG ASSERTION FAILED: ", assertion, "\n");
-    dataLog(file, "(", line, ") : ", function, "\n");
+    WTF::dataFile().atomically([&](auto&) {
+        dataLogLn("DFG ASSERTION FAILED: ", assertion);
+        dataLogLn(file, "(", line, ") : ", function);
+        dataLogLn();
+        dataLog(whileText);
+        dataLogLn("Graph at time of failure:");
+        dataLog(graph);
+        dataLogLn();
+        dataLogLn("DFG ASSERTION FAILED: ", assertion);
+        dataLogLn(file, "(", line, ") : ", function);
+    });
 }
 
 void Graph::logAssertionFailure(
     std::nullptr_t, const char* file, int line, const char* function, const char* assertion)
 {
-    logDFGAssertionFailure(*this, "", file, line, function, assertion);
+    logDFGAssertionFailure(*this, ""_s, file, line, function, assertion);
 }
 
 void Graph::logAssertionFailure(
@@ -1713,7 +1707,7 @@ CPSDominators& Graph::ensureCPSDominators()
 {
     RELEASE_ASSERT(m_form != SSA && !m_isInSSAConversion);
     if (!m_cpsDominators)
-        m_cpsDominators = makeUnique<CPSDominators>(*this);
+        m_cpsDominators = makeUniqueWithoutFastMallocCheck<CPSDominators>(*this);
     return *m_cpsDominators;
 }
 
@@ -1721,7 +1715,7 @@ SSADominators& Graph::ensureSSADominators()
 {
     RELEASE_ASSERT(m_form == SSA || m_isInSSAConversion);
     if (!m_ssaDominators)
-        m_ssaDominators = makeUnique<SSADominators>(*this);
+        m_ssaDominators = makeUniqueWithoutFastMallocCheck<SSADominators>(*this);
     return *m_ssaDominators;
 }
 
@@ -1730,7 +1724,7 @@ CPSNaturalLoops& Graph::ensureCPSNaturalLoops()
     RELEASE_ASSERT(m_form != SSA && !m_isInSSAConversion);
     ensureCPSDominators();
     if (!m_cpsNaturalLoops)
-        m_cpsNaturalLoops = makeUnique<CPSNaturalLoops>(*this);
+        m_cpsNaturalLoops = makeUniqueWithoutFastMallocCheck<CPSNaturalLoops>(*this);
     return *m_cpsNaturalLoops;
 }
 
@@ -1739,7 +1733,7 @@ SSANaturalLoops& Graph::ensureSSANaturalLoops()
     RELEASE_ASSERT(m_form == SSA);
     ensureSSADominators();
     if (!m_ssaNaturalLoops)
-        m_ssaNaturalLoops = makeUnique<SSANaturalLoops>(*this);
+        m_ssaNaturalLoops = makeUniqueWithoutFastMallocCheck<SSANaturalLoops>(*this);
     return *m_ssaNaturalLoops;
 }
 
@@ -1748,7 +1742,7 @@ BackwardsCFG& Graph::ensureBackwardsCFG()
     // We could easily relax this in the future to work over CPS, but today, it's only used in SSA.
     RELEASE_ASSERT(m_form == SSA); 
     if (!m_backwardsCFG)
-        m_backwardsCFG = makeUnique<BackwardsCFG>(*this);
+        m_backwardsCFG = makeUniqueWithoutFastMallocCheck<BackwardsCFG>(*this);
     return *m_backwardsCFG;
 }
 
@@ -1756,7 +1750,7 @@ BackwardsDominators& Graph::ensureBackwardsDominators()
 {
     RELEASE_ASSERT(m_form == SSA);
     if (!m_backwardsDominators)
-        m_backwardsDominators = makeUnique<BackwardsDominators>(*this);
+        m_backwardsDominators = makeUniqueWithoutFastMallocCheck<BackwardsDominators>(*this);
     return *m_backwardsDominators;
 }
 
@@ -1764,7 +1758,7 @@ ControlEquivalenceAnalysis& Graph::ensureControlEquivalenceAnalysis()
 {
     RELEASE_ASSERT(m_form == SSA);
     if (!m_controlEquivalenceAnalysis)
-        m_controlEquivalenceAnalysis = makeUnique<ControlEquivalenceAnalysis>(*this);
+        m_controlEquivalenceAnalysis = makeUniqueWithoutFastMallocCheck<ControlEquivalenceAnalysis>(*this);
     return *m_controlEquivalenceAnalysis;
 }
 
@@ -1841,6 +1835,7 @@ MethodOfGettingAValueProfile Graph::methodOfGettingAValueProfileFor(Node* curren
         case ValueRep:
         case DoubleRep:
         case Int52Rep:
+        case PurifyNaN:
             node = node->child1().node();
             break;
         default:

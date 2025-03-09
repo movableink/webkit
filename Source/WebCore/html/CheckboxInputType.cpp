@@ -51,6 +51,7 @@
 #include "ScriptDisallowedScope.h"
 #include "ShadowRoot.h"
 #include "UserAgentParts.h"
+#include "UserGestureIndicator.h"
 #include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(IOS_TOUCH_EVENTS)
@@ -90,10 +91,16 @@ void CheckboxInputType::createShadowSubtree()
 
     Ref document = element()->document();
     Ref track = HTMLDivElement::create(document);
-    track->setUserAgentPart(UserAgentParts::track());
+    {
+        ScriptDisallowedScope::EventAllowedScope eventAllowedScopeBeforeAppend { track };
+        track->setUserAgentPart(UserAgentParts::track());
+    }
     shadowRoot->appendChild(ContainerNode::ChildChange::Source::Parser, track);
     Ref thumb = HTMLDivElement::create(document);
-    thumb->setUserAgentPart(UserAgentParts::thumb());
+    {
+        ScriptDisallowedScope::EventAllowedScope eventAllowedScopeBeforeAppend { thumb };
+        thumb->setUserAgentPart(UserAgentParts::thumb());
+    }
     shadowRoot->appendChild(ContainerNode::ChildChange::Source::Parser, thumb);
 }
 
@@ -389,8 +396,13 @@ void CheckboxInputType::performSwitchAnimation(SwitchAnimationType type)
 void CheckboxInputType::performSwitchVisuallyOnAnimation(SwitchTrigger trigger)
 {
     performSwitchAnimation(SwitchAnimationType::VisuallyOn);
+
     if (!RenderTheme::singleton().hasSwitchHapticFeedback(trigger))
         return;
+
+    if (trigger == SwitchTrigger::Click && !UserGestureIndicator::processingUserGesture())
+        return;
+
     if (RefPtr page = element()->document().page())
         page->chrome().client().performSwitchHapticFeedback();
 }

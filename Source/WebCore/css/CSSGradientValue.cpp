@@ -45,22 +45,6 @@ template<typename CSSType> static bool styleImageIsUncacheable(const CSSType& va
     return StyleImageIsUncacheable<CSSType>()(value);
 }
 
-template<> struct StyleImageIsUncacheable<CSSUnitType> {
-    bool operator()(const auto& value) { return conversionToCanonicalUnitRequiresConversionData(value); }
-};
-
-template<RawNumeric CSSType> struct StyleImageIsUncacheable<CSSType> {
-    constexpr bool operator()(const auto& value) { return styleImageIsUncacheable(value.type); }
-};
-
-template<RawNumeric CSSType> struct StyleImageIsUncacheable<UnevaluatedCalc<CSSType>> {
-    constexpr bool operator()(const auto& value) { return value.protectedCalc()->requiresConversionData(); }
-};
-
-template<CSSValueID C> struct StyleImageIsUncacheable<Constant<C>> {
-    constexpr bool operator()(const auto&) { return false; }
-};
-
 template<> struct StyleImageIsUncacheable<GradientColorInterpolationMethod> {
     constexpr bool operator()(const auto&) { return false; }
 };
@@ -69,19 +53,35 @@ template<> struct StyleImageIsUncacheable<Color> {
     bool operator()(const auto& value) { return containsCurrentColor(value) || containsColorSchemeDependentColor(value); }
 };
 
-template<typename CSSType> requires (TreatAsOptionalLike<CSSType>) struct StyleImageIsUncacheable<CSSType> {
+template<CSSValueID C> struct StyleImageIsUncacheable<Constant<C>> {
+    constexpr bool operator()(const auto&) { return false; }
+};
+
+template<UnitEnum CSSType> struct StyleImageIsUncacheable<CSSType> {
+    constexpr bool operator()(const auto& value) { return conversionToCanonicalUnitRequiresConversionData(value); }
+};
+
+template<NumericRaw CSSType> struct StyleImageIsUncacheable<CSSType> {
+    constexpr bool operator()(const auto& value) { return styleImageIsUncacheable(value.unit); }
+};
+
+template<Calc CSSType> struct StyleImageIsUncacheable<CSSType> {
+    constexpr bool operator()(const auto& value) { return value.protectedCalc()->requiresConversionData(); }
+};
+
+template<OptionalLike CSSType> struct StyleImageIsUncacheable<CSSType> {
     bool operator()(const auto& value) { return value && styleImageIsUncacheable(*value); }
 };
 
-template<typename CSSType> requires (TreatAsTupleLike<CSSType>) struct StyleImageIsUncacheable<CSSType> {
+template<TupleLike CSSType> struct StyleImageIsUncacheable<CSSType> {
     bool operator()(const auto& value) { return WTF::apply([&](const auto& ...x) { return (styleImageIsUncacheable(x) || ...); }, value); }
 };
 
-template<typename CSSType> requires (TreatAsRangeLike<CSSType>) struct StyleImageIsUncacheable<CSSType> {
+template<RangeLike CSSType> struct StyleImageIsUncacheable<CSSType> {
     bool operator()(const auto& value) { return std::ranges::any_of(value, [](auto& element) { return styleImageIsUncacheable(element); }); }
 };
 
-template<typename CSSType> requires (TreatAsVariantLike<CSSType>) struct StyleImageIsUncacheable<CSSType> {
+template<VariantLike CSSType> struct StyleImageIsUncacheable<CSSType> {
     bool operator()(const auto& value) { return WTF::switchOn(value, [](const auto& alternative) { return styleImageIsUncacheable(alternative); }); }
 };
 
@@ -104,9 +104,9 @@ RefPtr<StyleImage> CSSGradientValue::createStyleImage(const Style::BuilderState&
     return styleImage;
 }
 
-String CSSGradientValue::customCSSText() const
+String CSSGradientValue::customCSSText(const CSS::SerializationContext& context) const
 {
-    return CSS::serializationForCSS(m_gradient);
+    return CSS::serializationForCSS(context, m_gradient);
 }
 
 bool CSSGradientValue::equals(const CSSGradientValue& other) const
@@ -114,7 +114,7 @@ bool CSSGradientValue::equals(const CSSGradientValue& other) const
     return m_gradient == other.m_gradient;
 }
 
-IterationStatus CSSGradientValue::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+IterationStatus CSSGradientValue::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
     return CSS::visitCSSValueChildren(func, m_gradient);
 }

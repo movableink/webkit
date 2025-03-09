@@ -33,8 +33,6 @@
 #import <pal/spi/mac/CoreUISPI.h>
 #import <pal/spi/mac/NSAppearanceSPI.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore::SwitchMacUtilities {
 
 IntSize cellSize(NSControlSize controlSize)
@@ -59,13 +57,12 @@ FloatSize visualCellSize(IntSize size, const ControlStyle& style)
 
 IntOutsets cellOutsets(NSControlSize controlSize)
 {
-    static const IntOutsets margins[] =
-    {
+    static const std::array margins {
         // top right bottom left
-        { 2, 2, 1, 2 },
-        { 2, 2, 1, 2 },
-        { 1, 1, 0, 1 },
-        { 2, 2, 1, 2 },
+        IntOutsets { 2, 2, 1, 2 },
+        IntOutsets { 2, 2, 1, 2 },
+        IntOutsets { 1, 1, 0, 1 },
+        IntOutsets { 2, 2, 1, 2 },
     };
     return margins[controlSize];
 }
@@ -144,7 +141,5 @@ RefPtr<ImageBuffer> trackMaskImage(GraphicsContext& context, FloatSize trackRect
 }
 
 } // namespace WebCore::SwitchMacUtilities
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // PLATFORM(MAC)

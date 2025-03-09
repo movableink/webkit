@@ -151,7 +151,7 @@ macro argumINTDispatch()
     emit "bx r9"
 end
 
-macro argumINTEnd()
+macro argumINTInitializeDefaultLocals()
     # zero out remaining locals
     bpeq argumINTDest, t6, .ipint_entry_finish_zero
     break
@@ -175,7 +175,7 @@ unimplementedInstruction(_try)
 unimplementedInstruction(_catch)
 unimplementedInstruction(_throw)
 unimplementedInstruction(_rethrow)
-reservedOpcode(0xa)
+unimplementedInstruction(_throw_ref)
 
 
 macro uintDispatch()
@@ -221,7 +221,7 @@ unimplementedInstruction(_select)
 unimplementedInstruction(_select_t)
 reservedOpcode(0x1d)
 reservedOpcode(0x1e)
-reservedOpcode(0x1f)
+unimplementedInstruction(_try_table)
 
     ###################################
     # 0x20 - 0x26: get and set values #
@@ -1115,6 +1115,9 @@ mintAlign(_fr7)
     break
 
 mintAlign(_stack)
+    break
+
+mintAlign(_stack_gap)
     break
 
 mintAlign(_end)

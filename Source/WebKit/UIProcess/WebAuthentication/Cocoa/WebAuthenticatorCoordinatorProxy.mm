@@ -24,7 +24,7 @@
  */
 
 #include <wtf/Assertions.h>
-#if HAVE(UNIFIED_ASC_AUTH_UI) || HAVE(WEB_AUTHN_AS_MODERN)
+#if ENABLE(WEB_AUTHN) && (HAVE(UNIFIED_ASC_AUTH_UI) || HAVE(WEB_AUTHN_AS_MODERN))
 
 #import "config.h"
 #import "WebAuthenticatorCoordinatorProxy.h"
@@ -38,16 +38,19 @@
 #import "WebAuthenticationRequestData.h"
 #import "WebPageProxy.h"
 #import "WebPreferences.h"
+#import <WebCore/AllAcceptedCredentialsOptions.h>
 #import <WebCore/AuthenticatorAttachment.h>
 #import <WebCore/AuthenticatorResponseData.h>
 #import <WebCore/AuthenticatorSelectionCriteria.h>
 #import <WebCore/AuthenticatorTransport.h>
 #import <WebCore/BufferSource.h>
+#import <WebCore/CurrentUserDetailsOptions.h>
 #import <WebCore/ExceptionData.h>
 #import <WebCore/PublicKeyCredentialCreationOptions.h>
 #import <WebCore/PublicKeyCredentialParameters.h>
 #import <WebCore/RegistrableDomain.h>
 #import <WebCore/SecurityOrigin.h>
+#import <WebCore/UnknownCredentialOptions.h>
 #import <WebCore/WebAuthenticationUtils.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/CompletionHandler.h>
@@ -57,6 +60,13 @@
 #import "AuthenticationServicesCoreSoftLink.h"
 #if HAVE(WEB_AUTHN_AS_MODERN)
 #import "AuthenticationServicesSoftLink.h"
+#import "WebKitSwiftSoftLink.h"
+
+@interface CredentialUpdaterShim : NSObject
++ (void)signalUnknownCredentialWithRelyingPartyIdentifier:(NSString *)relyingPartyIdentifier credentialID:(NSData *)credentialID completionHandler:(void (^)(NSError *))completionHandler;
++ (void)signalAllAcceptedCredentialsWithRelyingPartyIdentifier:(NSString *)relyingPartyIdentifier userHandle:(NSData *)userHandle acceptedCredentialIDs:(NSArray<NSData *> *)acceptedCredentialIDs completionHandler:(void (^)(NSError *))completionHandler;
++ (void)signalCurrentUserDetailsWithRelyingPartyIdentifier:(NSString *)relyingPartyIdentifier userHandle:(NSData *)credentialID newName:(NSString *)newName completionHandler:(void (^)(NSError *))completionHandler;
+@end
 
 @interface _WKASDelegate : NSObject {
     RetainPtr<WKWebView> m_view;
@@ -772,7 +782,7 @@ static inline RetainPtr<ASCPublicKeyCredentialDescriptor> toASCDescriptor(Public
 
 static inline RetainPtr<ASCWebAuthenticationExtensionsClientInputs> toASCExtensions(const AuthenticationExtensionsClientInputs& extensions)
 {
-    if ([allocASCWebAuthenticationExtensionsClientInputsInstance() respondsToSelector:@selector(initWithAppID:)])
+    if ([getASCWebAuthenticationExtensionsClientInputsClass() instancesRespondToSelector:@selector(initWithAppID:)])
         return adoptNS([allocASCWebAuthenticationExtensionsClientInputsInstance() initWithAppID:extensions.appid]);
 
     return nil;
@@ -892,7 +902,11 @@ static inline RetainPtr<ASCPublicKeyCredentialAssertionOptions> configureAsserti
     auto topOrigin = parentOrigin ? parentOrigin->toString() : nullString();
     auto clientDataJson = WebCore::buildClientDataJson(ClientDataType::Get, options.challenge, callerOrigin.securityOrigin(), scope, topOrigin);
     RetainPtr nsClientDataJSON = toNSData(clientDataJson->span());
-    auto assertionOptions = adoptNS([allocASCPublicKeyCredentialAssertionOptionsInstance() initWithKind:kind relyingPartyIdentifier:options.rpId clientDataJSON:nsClientDataJSON.get() userVerificationPreference:userVerification.get() allowedCredentials:allowedCredentials.get() origin:callerOrigin.toString()]);
+    RetainPtr<ASCPublicKeyCredentialAssertionOptions> assertionOptions;
+    if ([getASCPublicKeyCredentialAssertionOptionsClass() instancesRespondToSelector:@selector(initWithKind:relyingPartyIdentifier:clientDataJSON:userVerificationPreference:allowedCredentials:origin:)])
+        assertionOptions = adoptNS([allocASCPublicKeyCredentialAssertionOptionsInstance() initWithKind:kind relyingPartyIdentifier:options.rpId clientDataJSON:nsClientDataJSON.get() userVerificationPreference:userVerification.get() allowedCredentials:allowedCredentials.get() origin:callerOrigin.toString()]);
+    else
+        assertionOptions = adoptNS([allocASCPublicKeyCredentialAssertionOptionsInstance() initWithKind:kind relyingPartyIdentifier:options.rpId clientDataJSON:nsClientDataJSON.get() userVerificationPreference:userVerification.get() allowedCredentials:allowedCredentials.get()]);
     if (options.extensions) {
         if ([assertionOptions respondsToSelector:@selector(setExtensionsCBOR:)])
             [assertionOptions setExtensionsCBOR:toNSData(options.extensions->toCBOR()).get()];
@@ -1275,6 +1289,73 @@ void WebAuthenticatorCoordinatorProxy::cancel(CompletionHandler<void()>&& handle
     if (m_controller)
         [m_controller cancel];
 #endif
+}
+
+void WebAuthenticatorCoordinatorProxy::signalUnknownCredential(const WebCore::SecurityOriginData&, WebCore::UnknownCredentialOptions&& options, CompletionHandler<void(std::optional<ExceptionData>)>&& completionHandler)
+{
+    auto decodedCredentialId = base64URLDecode(options.credentialId);
+    if (!decodedCredentialId) {
+        RELEASE_LOG_ERROR(WebAuthn, "Failed to parse credentialId for signalUnknownCredential.");
+        completionHandler(ExceptionData { ExceptionCode::UnknownError, "Unable to parse credential ID."_s });
+        return;
+    }
+
+    [getCredentialUpdaterShimClass() signalUnknownCredentialWithRelyingPartyIdentifier:options.rpId credentialID:WTF::toNSData(*decodedCredentialId).get() completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)](NSError *error) mutable {
+        if (error) {
+            RELEASE_LOG_ERROR(WebAuthn, "Error signaling unknown credential: %@.", error.localizedDescription);
+            completionHandler(ExceptionData { ExceptionCode::UnknownError, "Error signaling unknown credential."_s });
+            return;
+        }
+        completionHandler(std::nullopt);
+    }).get()];
+}
+
+void WebAuthenticatorCoordinatorProxy::signalAllAcceptedCredentials(const WebCore::SecurityOriginData&, WebCore::AllAcceptedCredentialsOptions&& options, CompletionHandler<void(std::optional<ExceptionData>)>&& completionHandler)
+{
+    auto userHandle = base64URLDecode(options.userId);
+    if (!userHandle) {
+        RELEASE_LOG_ERROR(WebAuthn, "Failed to parse userHandle for signalAllAcceptedCredentials.");
+        completionHandler(ExceptionData { ExceptionCode::UnknownError, "Unable to parse credential ID."_s });
+        return;
+    }
+    RetainPtr<NSMutableArray<NSData *>> credentialIds = adoptNS([[NSMutableArray alloc] init]);
+    for (auto& credential : options.allAcceptedCredentialIds) {
+        auto decodedCredentialId = base64URLDecode(credential);
+        if (!decodedCredentialId) {
+            RELEASE_LOG_ERROR(WebAuthn, "Failed to parse credentialId for signalAllAcceptedCredentials.");
+            completionHandler(ExceptionData { ExceptionCode::UnknownError, "Unable to parse credential ID."_s });
+            return;
+        }
+        [credentialIds addObject:toNSData(*decodedCredentialId).leakRef()];
+    }
+
+    [getCredentialUpdaterShimClass() signalAllAcceptedCredentialsWithRelyingPartyIdentifier:options.rpId userHandle:WTF::toNSData(*userHandle).get() acceptedCredentialIDs:credentialIds.get() completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)](NSError *error) mutable {
+        if (error) {
+            RELEASE_LOG_ERROR(WebAuthn, "Error signaling all accepted credentials: %@.", error.localizedDescription);
+            completionHandler(ExceptionData { ExceptionCode::UnknownError, "Error signaling all accepted credentials"_s });
+            return;
+        }
+        completionHandler(std::nullopt);
+    }).get()];
+}
+
+void WebAuthenticatorCoordinatorProxy::signalCurrentUserDetails(const WebCore::SecurityOriginData&, WebCore::CurrentUserDetailsOptions&& options, CompletionHandler<void(std::optional<ExceptionData>)>&& completionHandler)
+{
+    auto userHandle = base64URLDecode(options.userId);
+    if (!userHandle) {
+        RELEASE_LOG_ERROR(WebAuthn, "Failed to parse userHandle for signalAllAcceptedCredentials.");
+        completionHandler(ExceptionData { ExceptionCode::UnknownError, "Unable to parse credential ID."_s });
+        return;
+    }
+
+    [getCredentialUpdaterShimClass() signalCurrentUserDetailsWithRelyingPartyIdentifier:options.rpId userHandle:WTF::toNSData(*userHandle).get() newName:options.name completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)](NSError *error) mutable {
+        if (error) {
+            RELEASE_LOG_ERROR(WebAuthn, "Error signaling current user details: %@.", error.localizedDescription);
+            completionHandler(ExceptionData { ExceptionCode::UnknownError, "Error signaling current user details."_s });
+            return;
+        }
+        completionHandler(std::nullopt);
+    }).get()];
 }
 
 } // namespace WebKit

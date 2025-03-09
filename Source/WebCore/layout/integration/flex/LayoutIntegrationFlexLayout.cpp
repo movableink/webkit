@@ -87,7 +87,7 @@ static inline Layout::ConstraintsForFlexContent constraintsForFlexContent(const 
 
         if (computedValue.isPercent()) {
             if (callRendererForPercentValue)
-                return flexContainerRenderer.computePercentageLogicalHeight(computedValue, RenderBoxModelObject::UpdatePercentageHeightDescendants::No);
+                return flexContainerRenderer.computePercentageLogicalHeight(computedValue, RenderBox::UpdatePercentageHeightDescendants::No);
 
             if (flexContainerRenderer.containingBlock()->style().logicalHeight().isFixed()) {
                 auto value = valueForLength(computedValue, flexContainerRenderer.containingBlock()->style().height().value());
@@ -117,7 +117,7 @@ static inline Layout::ConstraintsForFlexContent constraintsForFlexContent(const 
 void FlexLayout::updateFormattingContexGeometries()
 {
     auto boxGeometryUpdater = BoxGeometryUpdater { layoutState(), flexBox() };
-    boxGeometryUpdater.setFormattingContextRootGeometry(flexBoxRenderer().containingBlock()->availableLogicalWidth());
+    boxGeometryUpdater.setFormattingContextRootGeometry(flexBoxRenderer().containingBlock()->contentBoxLogicalWidth());
     boxGeometryUpdater.setFormattingContextContentGeometry(layoutState().geometryForBox(flexBox()).contentBoxWidth(), { });
 }
 
@@ -140,7 +140,7 @@ void FlexLayout::layout()
     updateRenderers();
 
     auto relayoutFlexItems = [&] {
-        // Flex items need to be laid out now with their final size (and through setOverridingLogicalWidth/Height)
+        // Flex items need to be laid out now with their final size (and through setOverridingBorderBoxLogicalWidth/Height)
         // Note that they may re-size themselves.
         auto flexContainerIsHorizontal = flexBox().writingMode().isHorizontal();
         for (auto& layoutBox : formattingContextBoxes(flexBox())) {
@@ -151,12 +151,12 @@ void FlexLayout::layout()
             renderer.setWidth(LayoutUnit { });
             renderer.setHeight(LayoutUnit { });
             // logical here means width and height constraints for the _content_ of the flex items not the flex items' own dimension inside the flex container.
-            renderer.setOverridingLogicalWidth(isOrthogonal ? borderBox.height() : borderBox.width());
-            renderer.setOverridingLogicalHeight(isOrthogonal ? borderBox.width() : borderBox.height());
+            renderer.setOverridingBorderBoxLogicalWidth(isOrthogonal ? borderBox.height() : borderBox.width());
+            renderer.setOverridingBorderBoxLogicalHeight(isOrthogonal ? borderBox.width() : borderBox.height());
 
             renderer.setChildNeedsLayout(MarkOnlyThis);
             renderer.layoutIfNeeded();
-            renderer.clearOverridingContentSize();
+            renderer.clearOverridingSize();
 
             renderer.setWidth(flexContainerIsHorizontal ? borderBox.width() : borderBox.height());
             renderer.setHeight(flexContainerIsHorizontal ? borderBox.height() : borderBox.width());

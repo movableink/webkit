@@ -34,10 +34,10 @@
 #include "AudioTrackList.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "DocumentFullscreen.h"
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "ElementInlines.h"
-#include "FullscreenManager.h"
 #include "HTMLAudioElement.h"
 #include "HTMLMediaElement.h"
 #include "HTMLNames.h"
@@ -119,6 +119,7 @@ static String restrictionNames(MediaElementSession::BehaviorRestrictions restric
     CASE(RequireUserGestureToControlControlsManager)
     CASE(RequirePlaybackToControlControlsManager)
     CASE(RequireUserGestureForVideoDueToLowPowerMode)
+    CASE(RequireUserGestureForVideoDueToAggressiveThermalMitigation)
 
     return restrictionBuilder.toString();
 }
@@ -134,8 +135,7 @@ static bool pageExplicitlyAllowsElementToAutoplayInline(const HTMLMediaElement& 
 
 #if ENABLE(MEDIA_SESSION)
 class MediaElementSessionObserver : public MediaSessionObserver {
-    WTF_MAKE_TZONE_ALLOCATED_INLINE(MediaElementSessionObserver);
-
+    WTF_MAKE_TZONE_ALLOCATED(MediaElementSessionObserver);
 public:
     MediaElementSessionObserver(MediaElementSession& session, const Ref<MediaSession>& mediaSession)
         : m_session(session), m_mediaSession(mediaSession)
@@ -170,6 +170,8 @@ private:
     WeakPtr<MediaElementSession> m_session;
     Ref<MediaSession> m_mediaSession;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaElementSessionObserver);
 #endif
 
 MediaElementSession::MediaElementSession(HTMLMediaElement& element)
@@ -417,8 +419,13 @@ Expected<void, MediaPlaybackDenialReason> MediaElementSession::playbackStateChan
 #endif
 
     // FIXME: Why are we checking top-level document only for PerDocumentAutoplayBehavior?
-    Ref topDocument = document->topDocument();
-    if (topDocument->quirks().requiresUserGestureToPauseInPictureInPicture()
+    RefPtr mainFrameDocument = document->mainFrameDocument();
+    if (!mainFrameDocument) {
+        LOG_ONCE(SiteIsolation, "Unable to properly calculate MediaElementSession::playbackStateChangePermitted() without access to the main frame document ");
+    }
+
+    if (mainFrameDocument
+        && mainFrameDocument->quirks().requiresUserGestureToPauseInPictureInPicture()
         && m_element.fullscreenMode() & HTMLMediaElementEnums::VideoFullscreenModePictureInPicture
         && !m_element.paused() && state == MediaPlaybackState::Paused
         && !document->processingUserGestureForMedia()) {
@@ -426,7 +433,9 @@ Expected<void, MediaPlaybackDenialReason> MediaElementSession::playbackStateChan
         return makeUnexpected(MediaPlaybackDenialReason::UserGestureRequired);
     }
 
-    if (topDocument->mediaState() & MediaProducerMediaState::HasUserInteractedWithMediaElement && topDocument->quirks().needsPerDocumentAutoplayBehavior())
+    if (mainFrameDocument
+        && mainFrameDocument->mediaState() & MediaProducerMediaState::HasUserInteractedWithMediaElement
+        && mainFrameDocument->quirks().needsPerDocumentAutoplayBehavior())
         return { };
 
     if (m_restrictions & RequireUserGestureForVideoRateChange && m_element.isVideo() && !document->processingUserGestureForMedia()) {
@@ -446,6 +455,11 @@ Expected<void, MediaPlaybackDenialReason> MediaElementSession::playbackStateChan
 
     if (m_restrictions & RequireUserGestureForVideoDueToLowPowerMode && m_element.isVideo() && !document->processingUserGestureForMedia()) {
         ALWAYS_LOG(LOGIDENTIFIER, "Returning FALSE because of video low power mode restriction");
+        return makeUnexpected(MediaPlaybackDenialReason::UserGestureRequired);
+    }
+
+    if (m_restrictions & RequireUserGestureForVideoDueToAggressiveThermalMitigation && m_element.isVideo() && !document->processingUserGestureForMedia()) {
+        ALWAYS_LOG(LOGIDENTIFIER, "Returning FALSE because of video aggressive thermal mitigation restriction");
         return makeUnexpected(MediaPlaybackDenialReason::UserGestureRequired);
     }
 
@@ -564,6 +578,14 @@ bool MediaElementSession::canShowControlsManager(PlaybackControlsPurpose purpose
         return false;
     }
 
+    if (purpose == MediaElementSession::PlaybackControlsPurpose::NowPlaying
+        && hasBehaviorRestriction(RequirePageVisibilityForVideoToBeNowPlaying)
+        && m_element.isVideo()
+        && !m_element.protectedDocument()->protectedPage()->isVisibleAndActive()) {
+        INFO_LOG(LOGIDENTIFIER, "returning FALSE: NowPlaying restricted for video in a page that is not visible");
+        return false;
+    }
+
     if (m_element.isFullscreen()) {
         INFO_LOG(LOGIDENTIFIER, "returning TRUE: is fullscreen");
         return true;
@@ -635,8 +657,8 @@ bool MediaElementSession::canShowControlsManager(PlaybackControlsPurpose purpose
 
 #if ENABLE(FULLSCREEN_API)
     // Elements which are not descendants of the current fullscreen element cannot be main content.
-    if (CheckedPtr fullscreenManager = m_element.document().fullscreenManagerIfExists()) {
-        RefPtr fullscreenElement = fullscreenManager->currentFullscreenElement();
+    if (RefPtr documentFullscreen = m_element.document().fullscreenIfExists()) {
+        RefPtr fullscreenElement = documentFullscreen->fullscreenElement();
         if (fullscreenElement && !m_element.isDescendantOf(*fullscreenElement)) {
             INFO_LOG(LOGIDENTIFIER, "returning FALSE: outside of full screen");
             return false;
@@ -1002,28 +1024,28 @@ static bool isElementMainContentForPurposesOfAutoplay(const HTMLMediaElement& el
     if (!document->frame() || !document->frame()->isMainFrame())
         return false;
 
-    RefPtr mainFrame = dynamicDowncast<LocalFrame>(document->frame()->mainFrame());
-    if (!mainFrame)
+    RefPtr localMainFrame = document->localMainFrame();
+    if (!localMainFrame)
         return false;
 
-    if (!mainFrame->view() || !mainFrame->view()->renderView())
+    if (!localMainFrame->view() || !localMainFrame->view()->renderView())
         return false;
 
     if (!shouldHitTestMainFrame)
         return true;
 
-    if (!mainFrame->document())
+    if (!localMainFrame->document())
         return false;
 
     // Hit test the area of the main frame where the element appears, to determine if the element is being obscured.
     // Elements which are obscured by other elements cannot be main content.
     IntRect rectRelativeToView = element.boundingBoxInRootViewCoordinates();
-    ScrollPosition scrollPosition = mainFrame->view()->documentScrollPositionRelativeToViewOrigin();
+    ScrollPosition scrollPosition = localMainFrame->view()->documentScrollPositionRelativeToViewOrigin();
     IntRect rectRelativeToTopDocument(rectRelativeToView.location() + scrollPosition, rectRelativeToView.size());
     OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AllowChildFrameContent, HitTestRequest::Type::IgnoreClipping, HitTestRequest::Type::DisallowUserAgentShadowContent };
     HitTestResult result(rectRelativeToTopDocument.center());
 
-    mainFrame->protectedDocument()->hitTest(hitType, result);
+    localMainFrame->protectedDocument()->hitTest(hitType, result);
     result.setToNonUserAgentShadowAncestor();
     return result.targetElement() == &element;
 }
@@ -1290,8 +1312,8 @@ std::optional<NowPlayingInfo> MediaElementSession::computeNowPlayingInfo() const
     // FIXME: Eventually, this should be moved into HTMLMediaElement, so all clients
     // will use the same bundle identifier (the presentingApplication, rather than the
     // sourceApplication).
-    if (!presentingApplicationBundleIdentifier().isNull())
-        sourceApplicationIdentifier = presentingApplicationBundleIdentifier();
+    if (!page->presentingApplicationBundleIdentifier().isNull())
+        sourceApplicationIdentifier = page->presentingApplicationBundleIdentifier();
 #endif
 
     NowPlayingInfo info {
@@ -1340,8 +1362,8 @@ void MediaElementSession::updateMediaUsageIfChanged()
 
     bool isOutsideOfFullscreen = false;
 #if ENABLE(FULLSCREEN_API)
-    if (CheckedPtr fullscreenManager = document->fullscreenManagerIfExists()) {
-        if (RefPtr fullscreenElement = document->fullscreenManager().currentFullscreenElement())
+    if (RefPtr documentFullscreen = document->fullscreenIfExists()) {
+        if (RefPtr fullscreenElement = document->fullscreen().fullscreenElement())
             isOutsideOfFullscreen = m_element.isDescendantOf(*fullscreenElement);
     }
 #endif
@@ -1377,6 +1399,7 @@ void MediaElementSession::updateMediaUsageIfChanged()
         isVideo && hasBehaviorRestriction(RequireUserGestureForVideoRateChange) && !processingUserGesture,
         isAudio && hasBehaviorRestriction(RequireUserGestureForAudioRateChange) && !processingUserGesture && !m_element.muted() && m_element.volume(),
         isVideo && hasBehaviorRestriction(RequireUserGestureForVideoDueToLowPowerMode) && !processingUserGesture,
+        isVideo && hasBehaviorRestriction(RequireUserGestureForVideoDueToAggressiveThermalMitigation) && !processingUserGesture,
         !hasBehaviorRestriction(RequireUserGestureToControlControlsManager) || processingUserGesture,
         hasBehaviorRestriction(RequirePlaybackToControlControlsManager) && !isPlaying,
         m_element.hasEverNotifiedAboutPlaying(),

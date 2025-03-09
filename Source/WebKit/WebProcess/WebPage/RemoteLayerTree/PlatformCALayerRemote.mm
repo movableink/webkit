@@ -50,6 +50,10 @@
 #import <WebCore/AcceleratedEffectValues.h>
 #endif
 
+#if ENABLE(MODEL_PROCESS)
+#import <WebCore/ModelContext.h>
+#endif
+
 namespace WebKit {
 using namespace WebCore;
 
@@ -72,10 +76,12 @@ Ref<PlatformCALayerRemote> PlatformCALayerRemote::create(PlatformLayer *platform
     return PlatformCALayerRemoteCustom::create(platformLayer, owner, context);
 }
 
-Ref<PlatformCALayerRemote> PlatformCALayerRemote::create(LayerHostingContextID contextID, WebCore::PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
+#if ENABLE(MODEL_PROCESS)
+Ref<PlatformCALayerRemote> PlatformCALayerRemote::create(Ref<WebCore::ModelContext> modelContext, WebCore::PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
 {
-    return PlatformCALayerRemoteCustom::create(contextID, owner, context);
+    return PlatformCALayerRemoteCustom::create(modelContext, owner, context);
 }
+#endif
 
 #if ENABLE(MODEL_ELEMENT)
 Ref<PlatformCALayerRemote> PlatformCALayerRemote::create(Ref<WebCore::Model> model, WebCore::PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
@@ -286,11 +292,6 @@ void PlatformCALayerRemote::ensureBackingStore()
     updateBackingStore();
 }
 
-bool PlatformCALayerRemote::containsBitmapOnly() const
-{
-    return owner() && owner()->platformCALayerContainsBitmapOnly(this);
-}
-
 DestinationColorSpace PlatformCALayerRemote::displayColorSpace() const
 {
     if (auto displayColorSpace = contentsFormatExtendedColorSpace(contentsFormat()))
@@ -305,13 +306,18 @@ DestinationColorSpace PlatformCALayerRemote::displayColorSpace() const
 }
 
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
-RemoteLayerBackingStore::IncludeDisplayList PlatformCALayerRemote::shouldIncludeDisplayListInBackingStore() const
+bool PlatformCALayerRemote::allowsDynamicContentScaling() const
+{
+    return owner() && owner()->platformCALayerAllowsDynamicContentScaling(this);
+}
+
+IncludeDynamicContentScalingDisplayList PlatformCALayerRemote::shouldIncludeDisplayListInBackingStore() const
 {
     if (m_context && !m_context->useDynamicContentScalingDisplayListsForDOMRendering())
-        return RemoteLayerBackingStore::IncludeDisplayList::No;
-    if (containsBitmapOnly())
-        return RemoteLayerBackingStore::IncludeDisplayList::No;
-    return RemoteLayerBackingStore::IncludeDisplayList::Yes;
+        return IncludeDynamicContentScalingDisplayList::No;
+    if (!allowsDynamicContentScaling())
+        return IncludeDynamicContentScalingDisplayList::No;
+    return IncludeDynamicContentScalingDisplayList::Yes;
 }
 #endif
 
@@ -1110,6 +1116,24 @@ void PlatformCALayerRemote::setIsDescendentOfSeparatedPortal(bool value)
     m_properties.notePropertiesChanged(LayerChange::DescendentOfSeparatedPortalChanged);
 }
 #endif
+#endif
+
+#if HAVE(CORE_MATERIAL)
+
+WebCore::AppleVisualEffectData PlatformCALayerRemote::appleVisualEffectData() const
+{
+    return m_properties.appleVisualEffectData;
+}
+
+void PlatformCALayerRemote::setAppleVisualEffectData(WebCore::AppleVisualEffectData effectData)
+{
+    if (m_properties.appleVisualEffectData == effectData)
+        return;
+
+    m_properties.appleVisualEffectData = effectData;
+    m_properties.notePropertiesChanged(LayerChange::AppleVisualEffectChanged);
+}
+
 #endif
 
 Ref<PlatformCALayer> PlatformCALayerRemote::createCompatibleLayer(PlatformCALayer::LayerType layerType, PlatformCALayerClient* client) const

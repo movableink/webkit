@@ -192,6 +192,9 @@ class Branch(Command):
             args._title = issue.title
         if issue:
             args._bug_urls = Commit.bug_urls(issue)
+        elif not (repository or local.Scm).DEV_BRANCHES.match(args.issue):
+            # Support creating a branch from PR or revert when update_issue is False
+            args.issue = cls.to_branch_name(args.issue)
 
         args.issue = cls.normalize_branch_name(args.issue)
 

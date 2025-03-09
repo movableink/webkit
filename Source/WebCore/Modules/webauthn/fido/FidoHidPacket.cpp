@@ -33,9 +33,8 @@
 #if ENABLE(WEB_AUTHN)
 
 #include <algorithm>
+#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace fido {
 
@@ -106,7 +105,7 @@ Vector<uint8_t> FidoHidInitPacket::getSerializedData() const
     serialized.appendVector(m_data);
     auto offset = serialized.size();
     serialized.grow(kHidPacketSize);
-    memset(serialized.data() + offset, 0, kHidPacketSize - offset);
+    zeroSpan(serialized.mutableSpan().subspan(offset, kHidPacketSize - offset));
 
     return serialized;
 }
@@ -154,13 +153,11 @@ Vector<uint8_t> FidoHidContinuationPacket::getSerializedData() const
     serialized.appendVector(m_data);
     auto offset = serialized.size();
     serialized.grow(kHidPacketSize);
-    memset(serialized.data() + offset, 0, kHidPacketSize - offset);
+    zeroSpan(serialized.mutableSpan().subspan(offset, kHidPacketSize - offset));
 
     return serialized;
 }
 
 } // namespace fido
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUTHN)

@@ -41,7 +41,7 @@ struct ParsedTextDirective {
 
 namespace FragmentDirectiveUtilities {
 
-const Node& nearestBlockAncestor(const Node&);
+Node& nearestBlockAncestor(Node&);
 
 }
 

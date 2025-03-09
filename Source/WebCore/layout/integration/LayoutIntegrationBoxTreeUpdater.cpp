@@ -42,7 +42,9 @@
 #include "RenderListItem.h"
 #include "RenderListMarker.h"
 #include "RenderMenuList.h"
+#include "RenderSVGInline.h"
 #include "RenderSlider.h"
+#include "RenderStyleInlines.h"
 #include "RenderStyleSetters.h"
 #include "RenderTable.h"
 #include "RenderTextControl.h"
@@ -177,7 +179,16 @@ void BoxTreeUpdater::adjustStyleIfNeeded(const RenderElement& renderer, RenderSt
                 styleToAdjust.resetBorderRight();
                 styleToAdjust.setPaddingRight(RenderStyle::initialPadding());
             }
-            if ((styleToAdjust.display() == DisplayType::RubyBase || styleToAdjust.display() == DisplayType::RubyAnnotation) && renderInline->parent()->style().display() != DisplayType::Ruby)
+
+            auto isSupportedInlineDisplay = [&] {
+                auto display = styleToAdjust.display();
+                if (display == DisplayType::RubyBase || display == DisplayType::RubyAnnotation)
+                    return renderInline->parent()->style().display() == DisplayType::Ruby;
+                if (is<RenderSVGInline>(*renderInline))
+                    return display == DisplayType::Inline;
+                return styleToAdjust.isDisplayInlineType();
+            };
+            if (!isSupportedInlineDisplay())
                 styleToAdjust.setDisplay(DisplayType::Inline);
             return;
         }
@@ -235,7 +246,9 @@ UniqueRef<Layout::Box> BoxTreeUpdater::createLayoutBox(RenderObject& renderer)
 
         auto contentCharacteristic = OptionSet<Layout::InlineTextBox::ContentCharacteristic> { };
         if (canUseSimpleFontCodePath)
-            contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpledFontCodepath);
+            contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpleFontCodepath);
+        if (textRenderer->shouldUseSimpleGlyphOverflowCodePath())
+            contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::ShouldUseSimpleGlyphOverflowCodePath);
         if (*canUseSimplifiedTextMeasuring)
             contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimplifiedContentMeasuring);
         if (*hasPositionDependentContentWidth)
@@ -301,14 +314,16 @@ void BoxTreeUpdater::insertChild(UniqueRef<Layout::Box> childBox, RenderObject& 
 static void updateContentCharacteristic(const RenderText& rendererText, Layout::InlineTextBox& inlineTextBox)
 {
     auto& rendererStyle = rendererText.style();
-    auto shouldUpdateContentCharacteristic = rendererStyle.fontCascade() != inlineTextBox.style().fontCascade();
+    auto shouldUpdateContentCharacteristic = !rendererStyle.fontCascadeEqual(inlineTextBox.style());
     if (!shouldUpdateContentCharacteristic)
         return;
 
     auto contentCharacteristic = OptionSet<Layout::InlineTextBox::ContentCharacteristic> { };
     // These may only change when content changes.
     if (inlineTextBox.canUseSimpleFontCodePath())
-        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpledFontCodepath);
+        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpleFontCodepath);
+    if (inlineTextBox.shouldUseSimpleGlyphOverflowCodePath())
+        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::ShouldUseSimpleGlyphOverflowCodePath);
     if (inlineTextBox.hasPositionDependentContentWidth())
         contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::HasPositionDependentContentWidth);
     if (inlineTextBox.hasStrongDirectionalityContent())
@@ -369,9 +384,11 @@ void BoxTreeUpdater::updateContent(const RenderText& textRenderer)
     auto text = style.textSecurity() == TextSecurity::None ? (isCombinedText ? textRenderer.originalText() : String { textRenderer.text() }) : RenderBlock::updateSecurityDiscCharacters(style, isCombinedText ? textRenderer.originalText() : String { textRenderer.text() });
     auto contentCharacteristic = OptionSet<Layout::InlineTextBox::ContentCharacteristic> { };
     if (textRenderer.canUseSimpleFontCodePath())
-        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpledFontCodepath);
+        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpleFontCodepath);
     if (textRenderer.canUseSimpleFontCodePath() && Layout::TextUtil::canUseSimplifiedTextMeasuring(text, style.fontCascade(), style.collapseWhiteSpace(), &inlineTextBox.firstLineStyle()))
         contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimplifiedContentMeasuring);
+    if (textRenderer.shouldUseSimpleGlyphOverflowCodePath())
+        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::ShouldUseSimpleGlyphOverflowCodePath);
     auto hasPositionDependentContentWidth = textRenderer.hasPositionDependentContentWidth();
     if (!hasPositionDependentContentWidth) {
         hasPositionDependentContentWidth = Layout::TextUtil::hasPositionDependentContentWidth(text);
@@ -434,9 +451,9 @@ void showInlineContent(TextStream& stream, const InlineContent& inlineContent, s
         auto addSpacing = [&](auto& streamToUse) {
             size_t printedCharacters = 0;
             if (isDamaged)
-                streamToUse << "            -+";
+                streamToUse << "           -+";
             else
-                streamToUse << "            --";
+                streamToUse << "           --";
             while (++printedCharacters <= depth * 2)
                 streamToUse << " ";
 

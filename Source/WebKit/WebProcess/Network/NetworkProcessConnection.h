@@ -80,6 +80,7 @@ public:
     WebIDBConnectionToServer& idbConnectionToServer();
 
     WebSWClientConnection& serviceWorkerConnection();
+    Ref<WebSWClientConnection> protectedServiceWorkerConnection();
     WebSharedWorkerObjectConnection& sharedWorkerConnection();
 
 #if HAVE(AUDIT_TOKEN)

@@ -52,7 +52,7 @@ public:
     // Creates a NativeImage that is intended to be drawn once or only few times. Signals the platform to avoid generating any caches for the image.
     static WEBCORE_EXPORT RefPtr<NativeImage> createTransient(PlatformImagePtr&&, RenderingResourceIdentifier = RenderingResourceIdentifier::generate());
 
-    virtual ~NativeImage();
+    ~NativeImage();
 
     WEBCORE_EXPORT const PlatformImagePtr& platformImage() const;
 
@@ -68,6 +68,10 @@ public:
     WEBCORE_EXPORT void replaceBackend(UniqueRef<NativeImageBackend>);
     NativeImageBackend& backend() { return m_backend.get(); }
     const NativeImageBackend& backend() const { return m_backend.get(); }
+
+#if USE(COORDINATED_GRAPHICS)
+    uint64_t uniqueID() const;
+#endif
 protected:
     NativeImage(UniqueRef<NativeImageBackend>, RenderingResourceIdentifier);
 
@@ -90,7 +94,7 @@ public:
 #if USE(SKIA)
     // During DisplayList recording a fence is created, so that we can wait until the SkImage finished rendering
     // before we attempt to access the GPU resource from a secondary thread during replay (in threaded GPU painting mode).
-    virtual void finishAcceleratedRenderingAndCreateFence() { }
+    virtual bool finishAcceleratedRenderingAndCreateFence() { return false; }
     virtual void waitForAcceleratedRenderingFenceCompletion() { }
 
     virtual const GrDirectContext* skiaGrContext() const { return nullptr; }
@@ -115,7 +119,7 @@ public:
     WEBCORE_EXPORT Headroom headroom() const final;
 
 #if USE(SKIA)
-    void finishAcceleratedRenderingAndCreateFence() final;
+    bool finishAcceleratedRenderingAndCreateFence() final;
     void waitForAcceleratedRenderingFenceCompletion() final;
 
     const GrDirectContext* skiaGrContext() const final;

@@ -165,7 +165,7 @@ function difference(other)
 
     var result = @setClone(this);
     if (this.@size <= size) {
-        var storage = @setStorage(this);
+        var storage = @setStorage(result);
         var entry = 0;
 
         while (true) {
@@ -185,7 +185,7 @@ function difference(other)
         };
 
         for (var key of wrapper) {
-            if (this.@has(key))
+            if (result.@has(key))
                 result.@delete(key);
         }
     }

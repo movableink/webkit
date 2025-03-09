@@ -41,8 +41,6 @@
 #include <wtf/MainThread.h>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ScriptProcessorNode);
@@ -190,14 +188,14 @@ void ScriptProcessorNode::process(size_t framesToProcess)
         return;
 
     for (unsigned i = 0; i < numberOfInputChannels; i++)
-        m_internalInputBus->setChannelMemory(i, inputBuffer->rawChannelData(i) + m_bufferReadWriteIndex, framesToProcess);
+        m_internalInputBus->setChannelMemory(i, inputBuffer->rawChannelData(i).subspan(m_bufferReadWriteIndex).first(framesToProcess));
 
     if (numberOfInputChannels)
         m_internalInputBus->copyFrom(*inputBus);
 
     // Copy from the output buffer to the output. 
     for (unsigned i = 0; i < numberOfOutputChannels; ++i)
-        memcpy(outputBus->channel(i)->mutableData(), outputBuffer->rawChannelData(i) + m_bufferReadWriteIndex, sizeof(float) * framesToProcess);
+        memcpySpan(outputBus->channel(i)->mutableSpan(), outputBuffer->rawChannelData(i).subspan(m_bufferReadWriteIndex, framesToProcess));
 
     // Update the buffering index.
     m_bufferReadWriteIndex = (m_bufferReadWriteIndex + framesToProcess) % bufferSize();
@@ -303,7 +301,5 @@ bool ScriptProcessorNode::virtualHasPendingActivity() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

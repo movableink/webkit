@@ -25,6 +25,7 @@
 #include "WebResourceLoadScheduler.h"
 
 #include "PingHandle.h"
+#include <WebCore/ArchiveResource.h>
 #include <WebCore/CachedResource.h>
 #include <WebCore/Document.h>
 #include <WebCore/DocumentLoader.h>
@@ -324,7 +325,7 @@ void WebResourceLoadScheduler::requestTimerFired()
     servePendingRequests();
 }
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(WebResourceLoadScheduler, HostInformation);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebResourceLoadScheduler::HostInformation);
 
 WebResourceLoadScheduler::HostInformation::HostInformation(const String& name, unsigned maxRequestsInFlight)
     : m_name(name)
@@ -417,4 +418,3 @@ void WebResourceLoadScheduler::addOnlineStateChangeListener(WTF::Function<void(b
 void WebResourceLoadScheduler::preconnectTo(FrameLoader&, const URL&, StoredCredentialsPolicy, ShouldPreconnectAsFirstParty, PreconnectCompletionHandler&&)
 {
 }
-

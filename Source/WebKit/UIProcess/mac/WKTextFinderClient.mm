@@ -170,14 +170,14 @@ private:
     BOOL _usePlatformFindUI;
 }
 
-- (instancetype)initWithPage:(NakedRef<WebKit::WebPageProxy>)page view:(NSView *)view usePlatformFindUI:(BOOL)usePlatformFindUI
+- (instancetype)initWithPage:(std::reference_wrapper<WebKit::WebPageProxy>)page view:(NSView *)view usePlatformFindUI:(BOOL)usePlatformFindUI
 {
     self = [super init];
 
     if (!self)
         return nil;
 
-    _page = page.ptr();
+    _page = page.get();
     _view = view;
     _usePlatformFindUI = usePlatformFindUI;
     

@@ -37,8 +37,8 @@
 namespace Inspector {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteInspectorSocketEndpoint);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RemoteInspectorSocketEndpoint, BaseConnection);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(RemoteInspectorSocketEndpoint, ClientConnection);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteInspectorSocketEndpoint::BaseConnection);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteInspectorSocketEndpoint::ClientConnection);
 
 RemoteInspectorSocketEndpoint& RemoteInspectorSocketEndpoint::singleton()
 {
@@ -66,7 +66,7 @@ RemoteInspectorSocketEndpoint::RemoteInspectorSocketEndpoint()
 
 RemoteInspectorSocketEndpoint::~RemoteInspectorSocketEndpoint()
 {
-    ASSERT(m_workerThread.get() != &Thread::current());
+    ASSERT(m_workerThread.get() != &Thread::currentSingleton());
 
     m_shouldAbortWorkerThread = true;
     wakeupWorkerThread();
@@ -342,7 +342,7 @@ void RemoteInspectorSocketEndpoint::send(ConnectionID id, std::span<const uint8_
             return;
 
         // Copy remaining data to send later.
-        connection->sendBuffer.appendRange(data.data() + offset, data.data() + data.size());
+        connection->sendBuffer.append(data.subspan(offset));
         Socket::markWaitingWritable(connection->poll);
 
         wakeupWorkerThread();

@@ -101,9 +101,9 @@ void attributedStringSetFont(NSMutableAttributedString *attributedString, CTFont
         [fontAttributes setValue:bridge_cast(postScriptName.get()) forKey:NSAccessibilityFontNameKey];
     auto traits = CTFontGetSymbolicTraits(font);
     if (traits & kCTFontTraitBold)
-        [fontAttributes setValue:@YES forKey:@"AXFontBold"];
+        [fontAttributes setValue:@YES forKey:NSAccessibilityFontBoldAttribute];
     if (traits & kCTFontTraitItalic)
-        [fontAttributes setValue:@YES forKey:@"AXFontItalic"];
+        [fontAttributes setValue:@YES forKey:NSAccessibilityFontItalicAttribute];
 
     [attributedString addAttribute:NSAccessibilityFontTextAttribute value:fontAttributes.get() range:range];
 #endif // PLATFORM(MAC)
@@ -146,7 +146,7 @@ void attributedStringSetNeedsSpellCheck(NSMutableAttributedString *string, const
         return;
 
     // Inform the AT that we want it to spell-check for us by setting AXDidSpellCheck to @NO.
-    attributedStringSetNumber(string, AXDidSpellCheckAttribute, @NO, NSMakeRange(0, string.length));
+    attributedStringSetNumber(string, NSAccessibilityDidSpellCheckAttribute, @NO, NSMakeRange(0, string.length));
 }
 
 void attributedStringSetElement(NSMutableAttributedString *string, NSString *attribute, const AXCoreObject& object, const NSRange& range)
@@ -157,7 +157,7 @@ void attributedStringSetElement(NSMutableAttributedString *string, NSString *att
     id wrapper = object.wrapper();
     if ([attribute isEqualToString:NSAccessibilityAttachmentTextAttribute] && object.isAttachment()) {
         if (id attachmentView = [wrapper attachmentView])
-            wrapper = [wrapper attachmentView];
+            wrapper = attachmentView;
     }
 
     if (RetainPtr axElement = adoptCF(NSAccessibilityCreateAXUIElementRef(wrapper)))
@@ -207,20 +207,20 @@ RetainPtr<NSMutableAttributedString> AXCoreObject::createAttributedString(String
     bool didSetHeadingLevel = false;
     for (RefPtr ancestor = this; ancestor; ancestor = ancestor->parentObject()) {
         if (ancestor->hasMarkTag())
-            attributedStringSetNumber(string.get(), @"AXHighlight", @YES, range);
+            attributedStringSetNumber(string.get(), NSAccessibilityHighlightAttribute, @YES, range);
 
         switch (ancestor->roleValue()) {
         case AccessibilityRole::Insertion:
-            attributedStringSetNumber(string.get(), @"AXIsSuggestedInsertion", @YES, range);
+            attributedStringSetNumber(string.get(), NSAccessibilityIsSuggestedInsertionAttribute, @YES, range);
             break;
         case AccessibilityRole::Deletion:
-            attributedStringSetNumber(string.get(), @"AXIsSuggestedDeletion", @YES, range);
+            attributedStringSetNumber(string.get(), NSAccessibilityIsSuggestedDeletionAttribute, @YES, range);
             break;
         case AccessibilityRole::Suggestion:
-            attributedStringSetNumber(string.get(), @"AXIsSuggestion", @YES, range);
+            attributedStringSetNumber(string.get(), NSAccessibilityIsSuggestionAttribute, @YES, range);
             break;
         case AccessibilityRole::Mark:
-            attributedStringSetNumber(string.get(), @"AXHighlight", @YES, range);
+            attributedStringSetNumber(string.get(), NSAccessibilityHighlightAttribute, @YES, range);
             break;
         default:
             break;
@@ -232,13 +232,13 @@ RetainPtr<NSMutableAttributedString> AXCoreObject::createAttributedString(String
         if (!didSetHeadingLevel) {
             if (unsigned level = ancestor->headingLevel()) {
                 didSetHeadingLevel = true;
-                [string.get() addAttribute:@"AXHeadingLevel" value:@(level) range:range];
+                [string.get() addAttribute:NSAccessibilityHeadingLevelAttribute value:@(level) range:range];
             }
         }
     }
 
     // FIXME: Computing block-quote level is an ancestry walk, so ideally we would just combine that with the
-    // ancestry walk we do above, but we currently cache this as its own property (AXPropertyName::BlockquoteLevel)
+    // ancestry walk we do above, but we currently cache this as its own property (AXProperty::BlockquoteLevel)
     // so just use that for now.
     attributedStringSetBlockquoteLevel(string.get(), *this, range);
     attributedStringSetExpandedText(string.get(), *this, range);
@@ -262,6 +262,53 @@ RetainPtr<NSMutableAttributedString> AXCoreObject::createAttributedString(String
     }
 
     return string;
+}
+
+NSArray *renderWidgetChildren(const AXCoreObject& object)
+{
+    if (LIKELY(!object.isWidget()))
+        return nil;
+
+    id child = Accessibility::retrieveAutoreleasedValueFromMainThread<id>([object = Ref { object }] () -> RetainPtr<id> {
+        RefPtr widget = object->widget();
+        return widget ? widget->accessibilityObject() : nil;
+    });
+
+    if (child)
+        return @[child];
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    return [object.platformWidget() accessibilityAttributeValue:NSAccessibilityChildrenAttribute];
+ALLOW_DEPRECATED_DECLARATIONS_END
+}
+
+bool AXCoreObject::isEmptyGroup()
+{
+#if ENABLE(MODEL_ELEMENT)
+    if (UNLIKELY(isModel()))
+        return false;
+#endif
+
+    if (UNLIKELY(isRemoteFrame()))
+        return false;
+
+    return [rolePlatformString() isEqual:NSAccessibilityGroupRole]
+        && !firstUnignoredChild()
+        && ![renderWidgetChildren(*this) count];
+}
+
+AXCoreObject::AccessibilityChildrenVector AXCoreObject::sortedDescendants(size_t limit, PreSortedObjectType type) const
+{
+    ASSERT(type == PreSortedObjectType::LiveRegion || type == PreSortedObjectType::WebArea);
+    auto sortedObjects = type == PreSortedObjectType::LiveRegion ? allSortedLiveRegions() : allSortedNonRootWebAreas();
+    AXCoreObject::AccessibilityChildrenVector results;
+    for (const Ref<AXCoreObject>& object : sortedObjects) {
+        if (isAncestorOfObject(object)) {
+            results.append(object);
+            if (results.size() >= limit)
+                break;
+        }
+    }
+    return results;
 }
 #endif // PLATFORM(MAC)
 

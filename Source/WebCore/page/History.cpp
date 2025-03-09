@@ -63,7 +63,7 @@ History::History(LocalDOMWindow& window)
 
 static bool isDocumentFullyActive(LocalFrame* frame)
 {
-    return frame && frame->document()->isFullyActive();
+    return frame && frame->protectedDocument()->isFullyActive();
 }
 
 static Exception documentNotFullyActive()
@@ -88,7 +88,7 @@ ExceptionOr<History::ScrollRestoration> History::scrollRestoration() const
     if (!isDocumentFullyActive(frame.get()))
         return documentNotFullyActive();
 
-    auto* historyItem = frame->history().currentItem();
+    auto* historyItem = frame->loader().history().currentItem();
     if (!historyItem)
         return ScrollRestoration::Auto;
     
@@ -101,7 +101,7 @@ ExceptionOr<void> History::setScrollRestoration(ScrollRestoration scrollRestorat
     if (!isDocumentFullyActive(frame.get()))
         return documentNotFullyActive();
 
-    if (RefPtr historyItem = frame->history().currentItem())
+    if (RefPtr historyItem = frame->loader().history().currentItem())
         historyItem->setShouldRestoreScrollPosition(scrollRestoration == ScrollRestoration::Auto);
 
     return { };
@@ -121,7 +121,7 @@ SerializedScriptValue* History::stateInternal() const
     auto* frame = this->frame();
     if (!frame)
         return nullptr;
-    auto* historyItem = frame->history().currentItem();
+    auto* historyItem = frame->loader().history().currentItem();
     if (!historyItem)
         return nullptr;
     return historyItem->stateObject();
@@ -186,7 +186,7 @@ ExceptionOr<void> History::go(Document& document, int distance)
 
     ASSERT(isMainThread());
 
-    if (!document.canNavigate(frame.get()))
+    if (document.canNavigate(frame.get()) != CanNavigateState::Able)
         return { };
 
     frame->protectedNavigationScheduler()->scheduleHistoryNavigation(distance);

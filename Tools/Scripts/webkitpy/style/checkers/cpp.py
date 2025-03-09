@@ -2,7 +2,7 @@
 #
 # Copyright (C) 2009, 2010, 2012 Google Inc. All rights reserved.
 # Copyright (C) 2009 Torch Mobile Inc.
-# Copyright (C) 2009-2023 Apple Inc. All rights reserved.
+# Copyright (C) 2009-2025 Apple Inc. All rights reserved.
 # Copyright (C) 2010 Chris Jerdonek (cjerdonek@webkit.org)
 #
 # Redistribution and use in source and binary forms, with or without
@@ -1200,16 +1200,17 @@ _RE_PATTERN_XCODE_VERSION_MACRO = re.compile(
 _RE_PATTERN_XCODE_MIN_REQUIRED_MACRO = re.compile(
     r'.+?([A-Z_]+)_VERSION_MIN_REQUIRED [><=]+ (\d+)')
 
+_RE_PATTERN_XCODE_MAX_ALLOWED_MACRO = re.compile(
+    r'.+?([A-Z_]+)_VERSION_MAX_ALLOWED [><=]+ (\d+)')
+
 _RE_PATTERN_PLATFORM_HEADER = re.compile(
     r'Source/WTF/wtf/Platform[a-zA-Z]+\.h')
 
 
 def check_os_version_checks(filename, clean_lines, line_number, error):
     """ Checks for mistakes using VERSION_MIN_REQUIRED and VERSION_MAX_ALLOWED macros:
-    1. These should only be used centrally to defined named HAVE, USE or ENABLE style macros.
-    2. VERSION_MIN_REQUIRED never changes for a minor OS version.
-
-    These should be centralized in the wtf/Platform*.h suite of files.
+    1. These should only be used centrally, in the wtf/Platform*.h suite of files, to define named HAVE, USE or ENABLE style macros.
+    2. Tiny versions should not be compared against.
 
     Args:
       filename: Name of the file that is being processed.
@@ -1221,10 +1222,15 @@ def check_os_version_checks(filename, clean_lines, line_number, error):
     line = clean_lines.elided[line_number]
 
     for version_match in _RE_PATTERN_XCODE_MIN_REQUIRED_MACRO.finditer(line):
-        os_prefix = version_match.group(1)
         version_number = int(version_match.group(2))
-        if os_prefix == '__MAC_OS_X' and version_number % 100 != 0 or os_prefix != '__MAC_OS_X' and version_number % 10000 != 0:
-            error(line_number, 'build/version_check', 5, 'Incorrect OS version check. VERSION_MIN_REQUIRED values never include a minor version. You may be looking for a combination of VERSION_MIN_REQUIRED for target OS version check and VERSION_MAX_ALLOWED for SDK check.')
+        if version_number % 100 != 0:
+            error(line_number, 'build/version_check', 5, 'Incorrect OS version check. VERSION_MIN_REQUIRED values never include a tiny version.')
+            break
+
+    for version_match in _RE_PATTERN_XCODE_MAX_ALLOWED_MACRO.finditer(line):
+        version_number = int(version_match.group(2))
+        if version_number % 100 != 0:
+            error(line_number, 'build/version_check', 5, 'Incorrect OS version check. VERSION_MAX_ALLOWED values never include a tiny version.')
             break
 
     if _RE_PATTERN_PLATFORM_HEADER.match(filename):
@@ -1488,11 +1494,11 @@ def check_for_non_standard_constructs(clean_lines, line_number,
     # Remove comments from the line, but leave in strings for now.
     line = clean_lines.lines[line_number]
 
-    if search(r'printf\s*\(.*".*%[-+ ]?\d*q', line):
+    if search(r'PRINTF\s*\(.*".*%[-+ ]?\d*q', line):
         error(line_number, 'runtime/printf_format', 3,
               '%q in format strings is deprecated.  Use %ll instead.')
 
-    if search(r'printf\s*\(.*".*%\d+\$', line):
+    if search(r'PRINTF\s*\(.*".*%\d+\$', line):
         error(line_number, 'runtime/printf_format', 2,
               '%N$ formats are unconventional.  Try rewriting to avoid them.')
 
@@ -3475,6 +3481,98 @@ def check_objc_protocol(clean_lines, line_number, file_extension, error):
     error(line_number, 'spacing/objc-protocol', 2, "Protocol names shouldn't have a space before them.")
 
 
+def check_safer_cpp(clean_lines, line_number, error):
+    """Looks for safer C++ errors.
+
+    Args:
+      clean_lines: A CleansedLines instance containing the file.
+      line_number: The number of the line to check.
+      error: The function to call with any errors found.
+    """
+
+    line = clean_lines.elided[line_number]  # Get rid of comments and strings.
+
+    uses_deprecated_weak_ref_smart_pointer_exception = search(r'struct IsDeprecatedWeakRefSmartPointerException\<.+?\>', line)
+    if uses_deprecated_weak_ref_smart_pointer_exception:
+        error(line_number, 'safercpp/weak_ref_exception', 4, "Do not add IsDeprecatedWeakRefSmartPointerException.")
+
+    uses_deprecated_timer_smart_pointer_exception = search(r'struct IsDeprecatedTimerSmartPointerException\<.+?\>', line)
+    if uses_deprecated_timer_smart_pointer_exception:
+        error(line_number, 'safercpp/timer_exception', 4, "Do not add IsDeprecatedTimerSmartPointerException.")
+
+    uses_atoi = search(r'atoi\(', line)
+    if uses_atoi:
+        error(line_number, 'safercpp/atoi', 4, "Use parseInteger<int>() instead of atoi().")
+
+    uses_memset = search(r'memset\(', line)
+    if uses_memset:
+        error(line_number, 'safercpp/memset', 4, "Use memsetSpan() / zeroSpan() instead of memset().")
+
+    uses_memset_s = search(r'memset_s\(', line)
+    if uses_memset_s:
+        error(line_number, 'safercpp/memset_s', 4, "Use secureMemsetSpan() instead of memset_s().")
+
+    uses_memcpy = search(r'memcpy\(', line)
+    if uses_memcpy:
+        error(line_number, 'safercpp/memcpy', 4, "Use memcpySpan() instead of memcpy().")
+
+    uses_memmove = search(r'memmove\(', line)
+    if uses_memmove:
+        error(line_number, 'safercpp/memmove', 4, "Use memmoveSpan() instead of memmove().")
+
+    uses_memcmp = search(r'memcmp\(', line)
+    if uses_memcmp:
+        error(line_number, 'safercpp/memcmp', 4, "Use equalSpans() / spanHasPrefix() / spanHasSuffix() / compareSpans() instead of memcmp().")
+
+    uses_memmem = search(r'memmem\(', line)
+    if uses_memmem:
+        error(line_number, 'safercpp/memmem', 4, "Use WTF::find() or WTF::contains() instead of memmem().")
+
+    uses_memchr = search(r'memchr\(', line)
+    if uses_memchr:
+        error(line_number, 'safercpp/memchr', 4, "Use WTF::find() or WTF::contains() instead of memchr().")
+
+    uses_strchr = search(r'strchr\(', line)
+    if uses_strchr:
+        error(line_number, 'safercpp/strchr', 4, "Use WTF::find() or WTF::contains() instead of strchr().")
+
+    uses_strstr = search(r'strstr\(', line)
+    if uses_strstr:
+        error(line_number, 'safercpp/strstr', 4, "Use WTF::find() or WTF::contains() instead of strstr().")
+
+    uses_strcmp = search(r'strcmp\(', line)
+    if uses_strcmp:
+        error(line_number, 'safercpp/strcmp', 4, "strcmp() is unsafe.")
+
+    uses_strncmp = search(r'strncmp\(', line)
+    if uses_strncmp:
+        error(line_number, 'safercpp/strncmp', 4, "strncmp() is unsafe.")
+
+    uses_printf = search(r'\bprintf\b', line)
+    if uses_printf:
+        error(line_number, 'safercpp/printf', 4, "printf is unsafe. Use SAFE_PRINTF instead.")
+
+    uses_fprintf = search(r'\bfprintf\b', line)
+    if uses_fprintf:
+        error(line_number, 'safercpp/printf', 4, "fprintf is unsafe. Use SAFE_FPRINTF instead.")
+
+    uses_snprintf = search(r'\bsnprintf\b', line)
+    if uses_snprintf:
+        error(line_number, 'safercpp/printf', 4, "snprintf is unsafe. Use SAFE_SPRINTF instead.")
+
+    uses_xpc_dictionary_get_data = search(r'xpc_dictionary_get_data\(', line)
+    if uses_xpc_dictionary_get_data:
+        error(line_number, 'safercpp/xpc_dictionary_get_data', 4, "Use xpc_dictionary_get_data_span() instead of xpc_dictionary_get_data().")
+
+    uses_xpc_dictionary_get_string = search(r'xpc_dictionary_get_string\(', line)
+    if uses_xpc_dictionary_get_string:
+        error(line_number, 'safercpp/xpc_dictionary_get_string', 4, "Use xpc_dictionary_get_wtfstring() instead of xpc_dictionary_get_string().")
+
+    uses_xpc_string_get_string_ptr = search(r'xpc_string_get_string_ptr\(', line)
+    if uses_xpc_string_get_string_ptr:
+        error(line_number, 'safercpp/xpc_string_get_string_ptr', 4, "Use xpc_string_get_wtfstring() instead of xpc_string_get_string_ptr().")
+
+
 def check_style(clean_lines, line_number, file_extension, class_state, file_state, enum_state, error):
     """Checks rules from the 'C++ style rules' section of cppguide.html.
 
@@ -3558,6 +3656,7 @@ def check_style(clean_lines, line_number, file_extension, class_state, file_stat
     check_once_flag(clean_lines, line_number, error)
     check_arguments_for_wk_api_available(clean_lines, line_number, error)
     check_objc_protocol(clean_lines, line_number, file_extension, error)
+    check_safer_cpp(clean_lines, line_number, error)
 
 
 _RE_PATTERN_INCLUDE_NEW_STYLE = re.compile(r'#(?:include|import) +"[^/]+\.h"')
@@ -3932,13 +4031,6 @@ def check_language(filename, clean_lines, line_number, file_extension, include_s
             error(line_number, 'runtime/int', 4,
                   'Use "unsigned short" for ports, not "short"')
 
-    # When snprintf is used, the second argument shouldn't be a literal.
-    matched = search(r'snprintf\s*\(([^,]*),\s*([0-9]*)\s*,', line)
-    if matched:
-        error(line_number, 'runtime/printf', 3,
-              'If you can, use sizeof(%s) instead of %s as the 2nd arg '
-              'to snprintf.' % (matched.group(1), matched.group(2)))
-
     # Warn when Debug ASSERT_WITH_SECURITY_IMPLICATION() is used.
     if filename != 'Source/WTF/wtf/Assertions.h':
         if search(r'\bASSERT_WITH_SECURITY_IMPLICATION\b\(', line):
@@ -3955,11 +4047,11 @@ def check_language(filename, clean_lines, line_number, file_extension, include_s
     # Check if some verboten C functions are being used.
     if search(r'\bsprintf\b', line):
         error(line_number, 'security/printf', 5,
-              'Never use sprintf.  Use snprintf instead.')
+              'Never use sprintf.  Use SAFE_SPRINTF instead.')
     matched = search(r'\b(strcpy|strcat)\b', line)
     if matched:
         error(line_number, 'security/printf', 4,
-              'Almost always, snprintf is better than %s.' % matched.group(1))
+              'Almost always, SAFE_SPRINTF is better than %s.' % matched.group(1))
 
     if search(r'\bsscanf\b', line):
         error(line_number, 'runtime/printf', 1,
@@ -4013,7 +4105,7 @@ def check_language(filename, clean_lines, line_number, file_extension, include_s
     # Check for potential format string bugs like printf(foo).
     # We constrain the pattern not to pick things like DocidForPrintf(foo).
     # Not perfect but it can catch printf(foo.c_str()) and printf(foo->c_str())
-    matched = re.search(r'\b((?:string)?printf)\s*\(([\w.\->()]+)\)', line, re.I)
+    matched = re.search(r'\b((?:string)?SAFE_PRINTF)\s*\(([\w.\->()]+)\)', line, re.I)
     if matched:
         error(line_number, 'security/printf', 4,
               'Potential format string bug. Do %s("%%s", %s) instead.'
@@ -4824,6 +4916,24 @@ class CppChecker(object):
         'runtime/wtf_make_unique',
         'runtime/wtf_move',
         'runtime/wtf_never_destroyed',
+        'safercpp/atoi',
+        'safercpp/memchr',
+        'safercpp/memcmp',
+        'safercpp/memcpy',
+        'safercpp/memmem',
+        'safercpp/memmove',
+        'safercpp/memset',
+        'safercpp/memset_s',
+        'safercpp/weak_ref_exception',
+        'safercpp/strcmp',
+        'safercpp/strncmp',
+        'safercpp/printf',
+        'safercpp/strchr',
+        'safercpp/strstr',
+        'safercpp/timer_exception',
+        'safercpp/xpc_dictionary_get_data',
+        'safercpp/xpc_dictionary_get_string',
+        'safercpp/xpc_string_get_string_ptr',
         'security/assertion',
         'security/assertion_fallthrough',
         'security/javascriptcore_wtf_blockptr',

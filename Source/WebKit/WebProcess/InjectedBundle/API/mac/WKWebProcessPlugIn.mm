@@ -33,10 +33,12 @@
 #import "WKStringCF.h"
 #import "WKWebProcessPlugInBrowserContextControllerInternal.h"
 #import <WebCore/WebCoreObjCExtras.h>
+#import <wtf/AlignedStorage.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/StdLibExtras.h>
 
 @interface WKWebProcessPlugInController () {
-    API::ObjectStorage<WebKit::InjectedBundle> _bundle;
+    AlignedStorage<WebKit::InjectedBundle> _bundle;
     RetainPtr<id <WKWebProcessPlugIn>> _principalClassInstance;
 }
 @end
@@ -74,7 +76,7 @@ static void willDestroyPage(WKBundleRef bundle, WKBundlePageRef page, const void
 static void setUpBundleClient(WKWebProcessPlugInController *plugInController, WebKit::InjectedBundle& bundle)
 {
     WKBundleClientV1 bundleClient;
-    memset(&bundleClient, 0, sizeof(bundleClient));
+    zeroBytes(bundleClient);
 
     bundleClient.base.version = 1;
     bundleClient.base.clientInfo = (__bridge void*)plugInController;

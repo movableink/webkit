@@ -44,13 +44,15 @@ public:
     std::unique_ptr<AudioDSPKernel> createKernel() final;
 
     // Get the magnitude and phase response of the filter at the given set of frequencies (in Hz). The phase response is in radians.
-    void getFrequencyResponse(unsigned length, const float* frequencyHz, float* magResponse, float* phaseResponse);
+    void getFrequencyResponse(unsigned length, std::span<const float> frequencyHz, std::span<float> magResponse, std::span<float> phaseResponse);
 
     const Vector<double>& feedforward() const { return m_feedforward; }
     const Vector<double>& feedback() const { return m_feedback; }
     bool isFilterStable() const { return m_isFilterStable; }
 
 private:
+    Type processorType() const final { return Type::IIR; }
+
     Vector<double> m_feedforward;
     Vector<double> m_feedback;
     bool m_isFilterStable;
@@ -59,3 +61,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::IIRProcessor) \
+    static bool isType(const WebCore::AudioProcessor& processor) { return processor.processorType() == WebCore::AudioProcessor::Type::IIR; } \
+SPECIALIZE_TYPE_TRAITS_END()

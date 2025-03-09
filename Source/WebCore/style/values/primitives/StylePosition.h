@@ -25,6 +25,7 @@
 #pragma once
 
 #include "CSSPosition.h"
+#include "FloatPoint.h"
 #include "StylePrimitiveNumericTypes.h"
 
 namespace WebCore {
@@ -35,14 +36,14 @@ struct TwoComponentPositionHorizontal {
 
     bool operator==(const TwoComponentPositionHorizontal&) const = default;
 };
-DEFINE_TYPE_WRAPPER(TwoComponentPositionHorizontal, offset);
+DEFINE_TYPE_WRAPPER_GET(TwoComponentPositionHorizontal, offset);
 
 struct TwoComponentPositionVertical {
     LengthPercentage<> offset;
 
     bool operator==(const TwoComponentPositionVertical&) const = default;
 };
-DEFINE_TYPE_WRAPPER(TwoComponentPositionVertical, offset);
+DEFINE_TYPE_WRAPPER_GET(TwoComponentPositionVertical, offset);
 
 struct Position  {
     Position(TwoComponentPositionHorizontal&& x, TwoComponentPositionVertical&& y)
@@ -61,7 +62,7 @@ struct Position  {
     }
 
     Position(FloatPoint point)
-        : value { LengthPercentage<> { Length<> { point.x() } }, LengthPercentage<> { Length<> { point.y() } } }
+        : value { LengthPercentage<>::Dimension { point.x() }, LengthPercentage<>::Dimension { point.y() } }
     {
     }
 
@@ -82,23 +83,21 @@ template<size_t I> const auto& get(const Position& position)
 
 // Specialization is needed for ToStyle to implement resolution of keyword value to <length-percentage>.
 template<> struct ToCSSMapping<TwoComponentPositionHorizontal> { using type = CSS::TwoComponentPositionHorizontal; };
-template<> struct ToStyle<CSS::TwoComponentPositionHorizontal> { auto operator()(const CSS::TwoComponentPositionHorizontal&, const BuilderState&, const CSSCalcSymbolTable&) -> TwoComponentPositionHorizontal; };
+template<> struct ToStyle<CSS::TwoComponentPositionHorizontal> { auto operator()(const CSS::TwoComponentPositionHorizontal&, const BuilderState&) -> TwoComponentPositionHorizontal; };
 template<> struct ToCSSMapping<TwoComponentPositionVertical> { using type = CSS::TwoComponentPositionVertical; };
-template<> struct ToStyle<CSS::TwoComponentPositionVertical> { auto operator()(const CSS::TwoComponentPositionVertical&, const BuilderState&, const CSSCalcSymbolTable&) -> TwoComponentPositionVertical; };
+template<> struct ToStyle<CSS::TwoComponentPositionVertical> { auto operator()(const CSS::TwoComponentPositionVertical&, const BuilderState&) -> TwoComponentPositionVertical; };
 
 // Specialization is needed for both ToCSS and ToStyle due to differences in type structure.
 template<> struct ToCSS<Position> { auto operator()(const Position&, const RenderStyle&) -> CSS::Position; };
-template<> struct ToStyle<CSS::Position> { auto operator()(const CSS::Position&, const BuilderState&, const CSSCalcSymbolTable&) -> Position; };
+template<> struct ToStyle<CSS::Position> { auto operator()(const CSS::Position&, const BuilderState&) -> Position; };
 
 // MARK: - Evaluation
 
-FloatPoint evaluate(const Position&, FloatSize referenceBox);
-float evaluate(const TwoComponentPositionHorizontal&, float referenceWidth);
-float evaluate(const TwoComponentPositionVertical&, float referenceHeight);
+template<> struct Evaluation<Position> { auto operator()(const Position&, FloatSize) -> FloatPoint; };
 
 } // namespace Style
 } // namespace WebCore
 
-STYLE_TUPLE_LIKE_CONFORMANCE(TwoComponentPositionHorizontal, 1)
-STYLE_TUPLE_LIKE_CONFORMANCE(TwoComponentPositionVertical, 1)
-STYLE_TUPLE_LIKE_CONFORMANCE(Position, 2)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::TwoComponentPositionHorizontal, 1)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::TwoComponentPositionVertical, 1)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::Style::Position, 2)

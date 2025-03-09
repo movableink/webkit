@@ -62,6 +62,7 @@ class StyleRuleLayer;
 class StyleRuleMedia;
 class StyleRuleNamespace;
 class StyleRulePage;
+class StyleRulePositionTry;
 class StyleRuleSupports;
 class StyleRuleViewport;
 class StyleRuleViewTransition;
@@ -100,7 +101,7 @@ public:
     static void parseStyleSheet(const String&, const CSSParserContext&, StyleSheetContents&);
     static CSSSelectorList parsePageSelector(CSSParserTokenRange, StyleSheetContents*);
 
-    static Vector<double> parseKeyframeKeyList(const String&);
+    static Vector<std::pair<CSSValueID, double>> parseKeyframeKeyList(const String&, const CSSParserContext&);
 
     bool supportsDeclaration(CSSParserTokenRange&);
     const CSSParserContext& context() const { return m_context; }
@@ -164,6 +165,7 @@ private:
     RefPtr<StyleRuleScope> consumeScopeRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
     RefPtr<StyleRuleStartingStyle> consumeStartingStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
     RefPtr<StyleRuleViewTransition> consumeViewTransitionRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRulePositionTry> consumePositionTryRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
 
     RefPtr<StyleRuleKeyframe> consumeKeyframeStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
     RefPtr<StyleRuleBase> consumeStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
@@ -181,8 +183,6 @@ private:
     void consumeDeclarationValue(CSSParserTokenRange, CSSPropertyID, IsImportant, StyleRuleType);
     void consumeCustomPropertyValue(CSSParserTokenRange, const AtomString& propertyName, IsImportant);
 
-    static Vector<double> consumeKeyframeKeyList(CSSParserTokenRange);
-
     RefPtr<StyleSheetContents> protectedStyleSheet() const;
 
     Ref<StyleRuleBase> createNestedDeclarationsRule();
@@ -195,7 +195,7 @@ private:
 
     bool isStyleNestedContext()
     {
-        return m_styleRuleNestingLevel && context().cssNestingEnabled;
+        return m_styleRuleNestingLevel;
     }
 
     // FIXME: we could unify all those into a single stack data structure.

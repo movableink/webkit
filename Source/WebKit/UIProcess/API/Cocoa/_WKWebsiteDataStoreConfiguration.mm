@@ -595,6 +595,23 @@ static WebKit::UnifiedOriginStorageLevel toUnifiedOriginStorageLevel(_WKUnifiedO
     _configuration->setVolumeCapacityOverride(capacity);
 }
 
+- (NSURL *)_resourceMonitorThrottlerDirectory
+{
+    return [NSURL fileURLWithPath:_configuration->resourceMonitorThrottlerDirectory() isDirectory:YES];
+}
+
+- (void)_setResourceMonitorThrottlerDirectory:(NSURL *)url
+{
+    if (!_configuration->isPersistent())
+        [NSException raise:NSInvalidArgumentException format:@"Cannot set _resourceMonitorThrottlerDirectory on a non-persistent _WKWebsiteDataStoreConfiguration."];
+
+    if (_configuration->identifier())
+        [NSException raise:NSGenericException format:@"Cannot set _resourceMonitorThrottlerDirectory on a _WKWebsiteDataStoreConfiguration created with identifier"];
+
+    checkURLArgument(url);
+    _configuration->setResourceMonitorThrottlerDirectory(url.path);
+}
+
 - (BOOL)isDeclarativeWebPushEnabled
 {
 #if ENABLE(DECLARATIVE_WEB_PUSH)

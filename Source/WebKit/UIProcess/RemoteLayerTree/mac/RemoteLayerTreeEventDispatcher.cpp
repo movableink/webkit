@@ -188,7 +188,7 @@ void RemoteLayerTreeEventDispatcher::willHandleWheelEvent(const WebWheelEvent& w
     m_wheelEventsBeingProcessed.append(wheelEvent);
 }
 
-void RemoteLayerTreeEventDispatcher::handleWheelEvent(const WebWheelEvent& wheelEvent, RectEdges<bool> rubberBandableEdges)
+void RemoteLayerTreeEventDispatcher::handleWheelEvent(const WebWheelEvent& wheelEvent, RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges)
 {
     ASSERT(isMainRunLoop());
 
@@ -208,12 +208,12 @@ void RemoteLayerTreeEventDispatcher::handleWheelEvent(const WebWheelEvent& wheel
     });
 }
 
-void RemoteLayerTreeEventDispatcher::scrollingThreadHandleWheelEvent(const WebWheelEvent& webWheelEvent, RectEdges<bool> rubberBandableEdges)
+void RemoteLayerTreeEventDispatcher::scrollingThreadHandleWheelEvent(const WebWheelEvent& webWheelEvent, RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges)
 {
     ASSERT(ScrollingThread::isCurrentThread());
     
     auto continueEventHandlingOnMainThread = [protectedThis = Ref { *this }](WheelEventHandlingResult handlingResult) {
-        RunLoop::main().dispatch([protectedThis, handlingResult] {
+        RunLoop::protectedMain()->dispatch([protectedThis, handlingResult] {
             protectedThis->continueWheelEventHandling(handlingResult);
         });
     };
@@ -260,7 +260,7 @@ void RemoteLayerTreeEventDispatcher::continueWheelEventHandling(WheelEventHandli
     m_scrollingCoordinator->continueWheelEventHandling(event, handlingResult);
 }
 
-OptionSet<WheelEventProcessingSteps> RemoteLayerTreeEventDispatcher::determineWheelEventProcessing(const PlatformWheelEvent& wheelEvent, RectEdges<bool> rubberBandableEdges)
+OptionSet<WheelEventProcessingSteps> RemoteLayerTreeEventDispatcher::determineWheelEventProcessing(const PlatformWheelEvent& wheelEvent, RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges)
 {
     auto scrollingTree = this->scrollingTree();
     if (!scrollingTree)
@@ -304,9 +304,9 @@ void RemoteLayerTreeEventDispatcher::wheelEventHandlingCompleted(const PlatformW
             return;
 
         auto result = scrollingTree->handleWheelEventAfterDefaultHandling(wheelEvent, scrollingNodeID, gestureState);
-        RunLoop::main().dispatch([protectedThis, wasHandled, result]() {
+        RunLoop::protectedMain()->dispatch([protectedThis, wasHandled, result]() {
             if (auto* scrollingCoordinator = protectedThis->scrollingCoordinator())
-                scrollingCoordinator->webPageProxy().wheelEventHandlingCompleted(wasHandled || result.wasHandled);
+                scrollingCoordinator->protectedWebPageProxy()->wheelEventHandlingCompleted(wasHandled || result.wasHandled);
         });
 
     });
@@ -327,9 +327,12 @@ PlatformWheelEvent RemoteLayerTreeEventDispatcher::filteredWheelEvent(const Plat
 
 RemoteLayerTreeDrawingAreaProxyMac& RemoteLayerTreeEventDispatcher::drawingAreaMac() const
 {
-    auto* drawingArea = dynamicDowncast<RemoteLayerTreeDrawingAreaProxy>(m_scrollingCoordinator->webPageProxy().drawingArea());
-    ASSERT(drawingArea && drawingArea->isRemoteLayerTreeDrawingAreaProxyMac());
-    return *static_cast<RemoteLayerTreeDrawingAreaProxyMac*>(drawingArea);
+    return *downcast<RemoteLayerTreeDrawingAreaProxyMac>(m_scrollingCoordinator->webPageProxy().drawingArea());
+}
+
+Ref<RemoteLayerTreeDrawingAreaProxyMac> RemoteLayerTreeEventDispatcher::protectedDrawingAreaMac() const
+{
+    return drawingAreaMac();
 }
 
 DisplayLink* RemoteLayerTreeEventDispatcher::displayLink() const
@@ -339,7 +342,7 @@ DisplayLink* RemoteLayerTreeEventDispatcher::displayLink() const
     if (!m_scrollingCoordinator)
         return nullptr;
 
-    return &drawingAreaMac().displayLink();
+    return &protectedDrawingAreaMac()->displayLink();
 }
 
 DisplayLink* RemoteLayerTreeEventDispatcher::existingDisplayLink() const
@@ -349,7 +352,7 @@ DisplayLink* RemoteLayerTreeEventDispatcher::existingDisplayLink() const
     if (!m_scrollingCoordinator)
         return nullptr;
 
-    return drawingAreaMac().existingDisplayLink();
+    return protectedDrawingAreaMac()->existingDisplayLink();
 }
 
 void RemoteLayerTreeEventDispatcher::startOrStopDisplayLink()
@@ -359,7 +362,7 @@ void RemoteLayerTreeEventDispatcher::startOrStopDisplayLink()
         return;
     }
 
-    RunLoop::main().dispatch([protectedThis = Ref { *this }] {
+    RunLoop::protectedMain()->dispatch([protectedThis = Ref { *this }] {
         protectedThis->startOrStopDisplayLinkOnMainThread();
     });
 }
@@ -484,7 +487,7 @@ void RemoteLayerTreeEventDispatcher::scheduleDelayedRenderingUpdateDetectionTime
     ASSERT(ScrollingThread::isCurrentThread());
 
     if (!m_delayedRenderingUpdateDetectionTimer)
-        m_delayedRenderingUpdateDetectionTimer = makeUnique<RunLoop::Timer>(RunLoop::current(), [weakThis = ThreadSafeWeakPtr { *this }] {
+        m_delayedRenderingUpdateDetectionTimer = makeUnique<RunLoop::Timer>(RunLoop::currentSingleton(), [weakThis = ThreadSafeWeakPtr { *this }] {
             auto strongThis = weakThis.get();
             if (strongThis)
                 strongThis->delayedRenderingUpdateDetectionTimerFired();
@@ -511,14 +514,15 @@ void RemoteLayerTreeEventDispatcher::waitForRenderingUpdateCompletionOrTimeout()
         m_delayedRenderingUpdateDetectionTimer->stop();
 
     auto currentTime = MonotonicTime::now();
-    auto estimatedNextDisplayRefreshTime = std::max(m_lastDisplayDidRefreshTime + m_scrollingTree->frameDuration(), currentTime);
-    auto timeoutTime = std::min(currentTime + m_scrollingTree->maxAllowableRenderingUpdateDurationForSynchronization(), estimatedNextDisplayRefreshTime);
+    RefPtr scrollingTree = m_scrollingTree;
+    auto estimatedNextDisplayRefreshTime = std::max(m_lastDisplayDidRefreshTime + scrollingTree->frameDuration(), currentTime);
+    auto timeoutTime = std::min(currentTime + scrollingTree->maxAllowableRenderingUpdateDurationForSynchronization(), estimatedNextDisplayRefreshTime);
 
     constexpr auto maximumTimeoutDelay = 32_ms;
     auto maximumTimeoutTime = currentTime + maximumTimeoutDelay;
     if (timeoutTime > maximumTimeoutTime) {
         RELEASE_LOG_ERROR(DisplayLink, "%p - [webPageID=%" PRIu64 "] RemoteLayerTreeEventDispatcher::waitForRenderingUpdateCompletionOrTimeout - bad timeout %.2fms into the future (frame duration %.2fms)", this, m_pageIdentifier.toUInt64(),
-            (timeoutTime - currentTime).milliseconds(), m_scrollingTree->frameDuration().milliseconds());
+            (timeoutTime - currentTime).milliseconds(), scrollingTree->frameDuration().milliseconds());
         timeoutTime = maximumTimeoutTime;
     }
 
@@ -631,7 +635,8 @@ void RemoteLayerTreeEventDispatcher::updateAnimations()
     auto now = MonotonicTime::now();
 
     auto effectStacks = std::exchange(m_effectStacks, { });
-    for (auto& [layerID, effectStack] : effectStacks) {
+    for (auto [layerID, currentEffectStack] : effectStacks) {
+        Ref effectStack = currentEffectStack;
         effectStack->applyEffectsFromScrollingThread(now);
 
         // We can clear the effect stack if it's empty, but the previous
@@ -695,7 +700,7 @@ void RemoteLayerTreeEventDispatcher::endMomentumSignpostInterval()
 }
 
 #if ENABLE(MOMENTUM_EVENT_DISPATCHER)
-void RemoteLayerTreeEventDispatcher::handleSyntheticWheelEvent(PageIdentifier pageID, const WebWheelEvent& event, RectEdges<bool> rubberBandableEdges)
+void RemoteLayerTreeEventDispatcher::handleSyntheticWheelEvent(PageIdentifier pageID, const WebWheelEvent& event, RectEdges<WebCore::RubberBandingBehavior> rubberBandableEdges)
 {
     ASSERT_UNUSED(pageID, m_pageIdentifier == pageID);
 
@@ -740,7 +745,7 @@ void RemoteLayerTreeEventDispatcher::stopDisplayDidRefreshCallbacks(PlatformDisp
 #if ENABLE(MOMENTUM_EVENT_DISPATCHER_TEMPORARY_LOGGING)
 void RemoteLayerTreeEventDispatcher::flushMomentumEventLoggingSoon()
 {
-    RunLoop::current().dispatchAfter(1_s, [protectedThis = Ref { *this }] {
+    RunLoop::currentSingleton().dispatchAfter(1_s, [protectedThis = Ref { *this }] {
         protectedThis->m_momentumEventDispatcher->flushLog();
     });
 }

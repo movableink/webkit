@@ -48,11 +48,12 @@ struct WGPUBufferImpl {
 
 namespace WebGPU {
 
+class CommandBuffer;
 class CommandEncoder;
 class Device;
 
 // https://gpuweb.github.io/gpuweb/#gpubuffer
-class Buffer : public WGPUBufferImpl, public ThreadSafeRefCounted<Buffer> {
+class Buffer : public WGPUBufferImpl, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Buffer> {
     WTF_MAKE_TZONE_ALLOCATED(Buffer);
 public:
     enum class State : uint8_t;
@@ -73,7 +74,7 @@ public:
     ~Buffer();
 
     void destroy();
-    std::span<uint8_t> getMappedRange(size_t offset, size_t);
+    std::span<uint8_t> getMappedRange(size_t offset, size_t) HAS_SWIFTCXX_THUNK;
     void mapAsync(WGPUMapModeFlags, size_t offset, size_t, CompletionHandler<void(WGPUBufferMapAsyncStatus)>&& callback);
     void unmap();
     void setLabel(String&&);
@@ -111,13 +112,17 @@ public:
     void indirectBufferRecomputed(uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount);
     void indirectIndexedBufferRecomputed(MTLIndexType, NSUInteger indexBufferOffsetInBytes, uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount);
 
-    bool canSkipDrawIndexedValidation(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, MTLIndexType) const;
-    void drawIndexedValidated(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, MTLIndexType);
+    bool canSkipDrawIndexedValidation(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, MTLIndexType, uint32_t firstInstance, id<MTLIndirectCommandBuffer> = nil) const;
+    void drawIndexedValidated(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, MTLIndexType, uint32_t firstInstance, id<MTLIndirectCommandBuffer> = nil);
+    void skippedDrawIndexedValidation(CommandEncoder&, uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, uint32_t instanceCount, MTLIndexType, uint32_t firstInstance, uint32_t baseVertex, uint32_t minInstanceCount, uint32_t primitiveOffset, id<MTLIndirectCommandBuffer> = nil);
+    void skippedDrawIndirectIndexedValidation(CommandEncoder&, Buffer*, MTLIndexType, uint32_t indexBufferOffsetInBytes, uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount, MTLPrimitiveType);
+    void skippedDrawIndirectValidation(CommandEncoder&, uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount);
 
-    bool didReadOOB() const { return m_didReadOOB; }
-    void didReadOOB(uint32_t v) { m_didReadOOB = !!v; }
+    bool didReadOOB(id<MTLIndirectCommandBuffer> = nil) const;
+    void didReadOOB(uint32_t v, id<MTLIndirectCommandBuffer> = nil);
 
-    void indirectBufferInvalidated();
+    void indirectBufferInvalidated(CommandEncoder* = nullptr);
+    void indirectBufferInvalidated(CommandEncoder&);
 #if ENABLE(WEBGPU_SWIFT)
     void copyFrom(const std::span<const uint8_t>, const size_t offset) HAS_SWIFTCXX_THUNK;
 #endif
@@ -126,12 +131,20 @@ private:
     Buffer(id<MTLBuffer>, uint64_t initialSize, WGPUBufferUsageFlags, State initialState, MappingRange initialMappingRange, Device&);
     Buffer(Device&);
 
+
+private PUBLIC_IN_WEBGPU_SWIFT:
     bool validateGetMappedRange(size_t offset, size_t rangeSize) const;
+
+private:
     NSString* errorValidatingMapAsync(WGPUMapModeFlags, size_t offset, size_t rangeSize) const;
     bool validateUnmap() const;
     void setState(State);
     void incrementBufferMapCount();
     void decrementBufferMapCount();
+    uint64_t mapGPUAddress(MTLResourceID, uint32_t firstInstance) const;
+    void takeSlowIndexValidationPath(CommandBuffer&, uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, uint32_t instanceCount, MTLIndexType, uint32_t firstInstance, uint32_t baseVertex, uint32_t minInstanceCount, uint32_t primitiveOffset);
+    void takeSlowIndirectIndexValidationPath(CommandBuffer&, Buffer&, MTLIndexType, uint32_t indexBufferOffsetInBytes, uint32_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount, MTLPrimitiveType);
+    void takeSlowIndirectValidationPath(CommandBuffer&, uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount);
 
 private PUBLIC_IN_WEBGPU_SWIFT:
     id<MTLBuffer> m_buffer { nil };
@@ -147,7 +160,9 @@ private:
     // [[mapping]] is unnecessary; we can just use m_device.contents.
     MappingRange m_mappingRange { 0, 0 };
     using MappedRanges = RangeSet<Range<size_t>>;
+private PUBLIC_IN_WEBGPU_SWIFT:
     MappedRanges m_mappedRanges;
+private:
     WGPUMapModeFlags m_mapMode { WGPUMapMode_None };
     struct IndirectArgsCache {
         uint64_t indirectOffset { UINT64_MAX };
@@ -155,16 +170,25 @@ private:
         uint32_t minVertexCount { 0 };
         uint32_t minInstanceCount { 0 };
         MTLIndexType indexType { MTLIndexTypeUInt16 };
+        enum {
+            NoDraw,
+            IndirectDraw,
+            IndirectIndexedDraw
+        } drawType { NoDraw };
     } m_indirectCache;
 
-    HashMap<uint64_t, uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_drawIndexedCache;
+    using DrawIndexCacheContainer = HashMap<uint64_t, uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>>;
+    HashMap<uint64_t, DrawIndexCacheContainer, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_drawIndexedCache;
 
     const Ref<Device> m_device;
     mutable WeakHashSet<CommandEncoder> m_commandEncoders;
+    mutable HashMap<uint64_t, uint32_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_gpuResourceMap;
+    WeakHashSet<CommandEncoder> m_skippedValidationCommandEncoders;
+    bool m_mustTakeSlowIndexValidationPath { false };
 #if CPU(X86_64)
     bool m_mappedAtCreation { false };
 #endif
-    bool m_didReadOOB { false };
+    HashMap<uint64_t, bool, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_didReadOOB;
 } SWIFT_SHARED_REFERENCE(refBuffer, derefBuffer);
 
 } // namespace WebGPU

@@ -65,7 +65,6 @@ private:
     void sendEnterAcceleratedCompositingModeIfNeeded() override;
 
 #if USE(COORDINATED_GRAPHICS) || USE(TEXTURE_MAPPER)
-    void deviceOrPageScaleFactorChanged() override;
     bool enterAcceleratedCompositingModeIfNeeded() override;
     void backgroundColorDidChange() override;
 #endif
@@ -90,9 +89,18 @@ private:
     // IPC message handlers.
     void updateGeometry(const WebCore::IntSize&, CompletionHandler<void()>&&) override;
     void displayDidRefresh() override;
-    void setDeviceScaleFactor(float) override;
+    void setDeviceScaleFactor(float, CompletionHandler<void()>&&) override;
     void forceUpdate() override;
     void didDiscardBackingStore() override;
+
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    void dispatchAfterEnsuringDrawing(IPC::AsyncReplyID) override;
+    void dispatchPendingCallbacksAfterEnsuringDrawing() override;
+#endif
+
+#if ENABLE(DAMAGE_TRACKING)
+    FrameDamageForTesting* frameDamageForTesting() const override;
+#endif
 
 #if PLATFORM(GTK)
     void adjustTransientZoom(double scale, WebCore::FloatPoint origin) override;
@@ -154,6 +162,10 @@ private:
 #if PLATFORM(GTK)
     bool m_transientZoom { false };
     WebCore::FloatPoint m_transientZoomInitialOrigin;
+#endif
+
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    Vector<IPC::AsyncReplyID> m_pendingAfterDrawCallbackIDs;
 #endif
 };
 

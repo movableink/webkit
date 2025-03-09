@@ -106,8 +106,9 @@ CDMFactoryThunder& CDMFactoryThunder::singleton()
     return s_factory;
 }
 
-std::unique_ptr<CDMPrivate> CDMFactoryThunder::createCDM(const String& keySystem, const CDMPrivateClient&)
+std::unique_ptr<CDMPrivate> CDMFactoryThunder::createCDM(const String& keySystem, const String& mediaKeysHashSalt, const CDMPrivateClient&)
 {
+    UNUSED_PARAM(mediaKeysHashSalt);
     ASSERT(supportsKeySystem(keySystem));
     return makeUnique<CDMPrivateThunder>(keySystem);
 }
@@ -275,8 +276,7 @@ CDMInstanceSessionThunder::CDMInstanceSessionThunder(CDMInstanceThunder& instanc
         const uint16_t challengeLength) {
         GST_DEBUG("Got 'challenge' OCDM notification with length %hu", challengeLength);
         ASSERT(challengeLength > 0);
-        callOnMainThread([session = WeakPtr { static_cast<CDMInstanceSessionThunder*>(userData) }, buffer = WebCore::SharedBuffer::create(std::span { challenge,
-            challengeLength })]() mutable {
+        callOnMainThread([session = WeakPtr { static_cast<CDMInstanceSessionThunder*>(userData) }, buffer = WebCore::SharedBuffer::create(unsafeMakeSpan(challenge, challengeLength))]() mutable {
             if (!session)
                 return;
             session->challengeGeneratedCallback(WTFMove(buffer));
@@ -285,7 +285,7 @@ CDMInstanceSessionThunder::CDMInstanceSessionThunder(CDMInstanceThunder& instanc
     m_thunderSessionCallbacks.key_update_callback = [](OpenCDMSession*, void* userData, const uint8_t keyIDData[], const uint8_t keyIDLength) {
         GST_DEBUG("Got 'key updated' OCDM notification");
         KeyIDType keyID;
-        keyID.append(std::span { keyIDData, keyIDLength });
+        keyID.append(unsafeMakeSpan(keyIDData, keyIDLength));
         callOnMainThread([session = WeakPtr { static_cast<CDMInstanceSessionThunder*>(userData) }, keyID = WTFMove(keyID)]() mutable {
             if (!session)
                 return;
@@ -302,7 +302,7 @@ CDMInstanceSessionThunder::CDMInstanceSessionThunder(CDMInstanceThunder& instanc
     };
     m_thunderSessionCallbacks.error_message_callback = [](OpenCDMSession*, void* userData, const char message[]) {
         GST_ERROR("Got 'error' OCDM notification: %s", message);
-        callOnMainThread([session = WeakPtr { static_cast<CDMInstanceSessionThunder*>(userData) }, buffer = WebCore::SharedBuffer::create(span(message))]() mutable {
+        callOnMainThread([session = WeakPtr { static_cast<CDMInstanceSessionThunder*>(userData) }, buffer = WebCore::SharedBuffer::create(unsafeSpan(message))]() mutable {
             if (!session)
                 return;
             session->errorCallback(WTFMove(buffer));

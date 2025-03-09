@@ -54,6 +54,11 @@ PASS onclose: the default value must be null
 PASS onclose: the content attribute must be compiled into a function as the corresponding property
 PASS onclose: dynamic changes on the attribute
 PASS onclose: dispatching an Event at a <math> element must trigger element.onclose
+PASS oncommand: must be on the appropriate locations for GlobalEventHandlers
+PASS oncommand: the default value must be null
+PASS oncommand: the content attribute must be compiled into a function as the corresponding property
+PASS oncommand: dynamic changes on the attribute
+PASS oncommand: dispatching an Event at a <math> element must trigger element.oncommand
 PASS oncontextmenu: must be on the appropriate locations for GlobalEventHandlers
 PASS oncontextmenu: the default value must be null
 PASS oncontextmenu: the content attribute must be compiled into a function as the corresponding property

@@ -47,7 +47,7 @@
 namespace WebKit {
 using namespace WebCore;
 
-void WebBackForwardListProxy::removeItem(const BackForwardItemIdentifier& itemID)
+void WebBackForwardListProxy::removeItem(BackForwardItemIdentifier itemID)
 {
     BackForwardCache::singleton().remove(itemID);
     WebCore::Page::clearPreviousItemFromAllPages(itemID);
@@ -58,21 +58,21 @@ WebBackForwardListProxy::WebBackForwardListProxy(WebPage& page)
 {
 }
 
-void WebBackForwardListProxy::addItem(FrameIdentifier targetFrameID, Ref<HistoryItem>&& item)
+void WebBackForwardListProxy::addItem(Ref<HistoryItem>&& item)
 {
     RefPtr page = m_page.get();
     if (!page)
         return;
 
-    LOG(BackForward, "(Back/Forward) WebProcess pid %i setting item %p for id %s with url %s", getCurrentProcessID(), item.ptr(), item->identifier().toString().utf8().data(), item->urlString().utf8().data());
+    LOG(BackForward, "(Back/Forward) WebProcess pid %i setting item %p for id %s with url %s", getCurrentProcessID(), item.ptr(), item->itemID().toString().utf8().data(), item->urlString().utf8().data());
     m_cachedBackForwardListCounts = std::nullopt;
-    page->send(Messages::WebPageProxy::BackForwardAddItem(targetFrameID, toFrameState(item.get())));
+    page->send(Messages::WebPageProxy::BackForwardAddItem(toFrameState(item.get())));
 }
 
-void WebBackForwardListProxy::setChildItem(BackForwardItemIdentifier identifier, Ref<HistoryItem>&& item)
+void WebBackForwardListProxy::setChildItem(BackForwardFrameItemIdentifier frameItemID, Ref<HistoryItem>&& item)
 {
     if (RefPtr page = m_page.get())
-        page->send(Messages::WebPageProxy::BackForwardSetChildItem(identifier, toFrameState(item)));
+        page->send(Messages::WebPageProxy::BackForwardSetChildItem(frameItemID, toFrameState(item)));
 }
 
 void WebBackForwardListProxy::goToItem(HistoryItem& item)
@@ -80,26 +80,9 @@ void WebBackForwardListProxy::goToItem(HistoryItem& item)
     if (!m_page)
         return;
 
-    auto sendResult = m_page->sendSync(Messages::WebPageProxy::BackForwardGoToItem(item.identifier()));
+    auto sendResult = m_page->sendSync(Messages::WebPageProxy::BackForwardGoToItem(item.itemID()));
     auto [backForwardListCounts] = sendResult.takeReplyOr(WebBackForwardListCounts { });
     m_cachedBackForwardListCounts = backForwardListCounts;
-}
-
-void WebBackForwardListProxy::goToProvisionalItem(const HistoryItem& item)
-{
-    RefPtr page = m_page.get();
-    if (!page)
-        return;
-
-    auto sendResult = page->sendSync(Messages::WebPageProxy::BackForwardGoToProvisionalItem(item.identifier()));
-    auto [backForwardListCounts] = sendResult.takeReplyOr(WebBackForwardListCounts { });
-    m_cachedBackForwardListCounts = backForwardListCounts;
-}
-
-void WebBackForwardListProxy::clearProvisionalItem(const HistoryItem& item)
-{
-    if (RefPtr page = m_page.get())
-        page->send(Messages::WebPageProxy::BackForwardClearProvisionalItem(item.identifier()));
 }
 
 RefPtr<HistoryItem> WebBackForwardListProxy::itemAtIndex(int itemIndex, FrameIdentifier frameID)
@@ -115,7 +98,7 @@ RefPtr<HistoryItem> WebBackForwardListProxy::itemAtIndex(int itemIndex, FrameIde
 
     Ref historyItemClient = page->historyItemClient();
     auto ignoreHistoryItemChangesForScope = historyItemClient->ignoreChangesForScope();
-    return toHistoryItem(historyItemClient, *frameState);
+    return toHistoryItem(historyItemClient, Ref { *frameState });
 }
 
 unsigned WebBackForwardListProxy::backListCount() const
@@ -130,7 +113,7 @@ unsigned WebBackForwardListProxy::forwardListCount() const
 
 bool WebBackForwardListProxy::containsItem(const WebCore::HistoryItem& item) const
 {
-    auto sendResult = m_page->sendSync(Messages::WebPageProxy::BackForwardListContainsItem(item.identifier()), m_page->identifier());
+    auto sendResult = m_page->sendSync(Messages::WebPageProxy::BackForwardListContainsItem(item.itemID()), m_page->identifier());
     auto [contains] = sendResult.takeReplyOr(false);
     return contains;
 }
@@ -140,7 +123,7 @@ const WebBackForwardListCounts& WebBackForwardListProxy::cacheListCountsIfNecess
     if (!m_cachedBackForwardListCounts) {
         WebBackForwardListCounts backForwardListCounts;
         if (m_page) {
-            auto sendResult = WebProcess::singleton().parentProcessConnection()->sendSync(Messages::WebPageProxy::BackForwardListCounts(), m_page->identifier());
+            auto sendResult = WebProcess::singleton().protectedParentProcessConnection()->sendSync(Messages::WebPageProxy::BackForwardListCounts(), m_page->identifier());
             if (sendResult.succeeded())
                 std::tie(backForwardListCounts) = sendResult.takeReply();
         }

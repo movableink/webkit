@@ -21,8 +21,8 @@
 
 #include "config.h"
 #include "QuotesData.h"
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+#include <wtf/StdLibExtras.h>
+#include <wtf/ZippedRange.h>
 
 namespace WebCore {
 
@@ -40,36 +40,46 @@ Ref<QuotesData> QuotesData::create(const Vector<std::pair<String, String>>& quot
 QuotesData::QuotesData(const Vector<std::pair<String, String>>& quotes)
     : m_quoteCount(quotes.size())
 {
-    for (unsigned i = 0; i < m_quoteCount; ++i)
-        new (NotNull, &m_quotePairs[i]) std::pair<String, String>(quotes[i]);
+    for (auto [quotePair, quote] : zippedRange(quotePairs(), quotes))
+        new (NotNull, &quotePair) std::pair<String, String>(quote);
 }
 
 QuotesData::~QuotesData()
 {
-    for (unsigned i = 0; i < m_quoteCount; ++i)
-        m_quotePairs[i].~pair<String, String>();
+    for (auto& quotePair : quotePairs())
+        quotePair.~pair<String, String>();
+}
+
+std::span<const std::pair<String, String>> QuotesData::quotePairs() const
+{
+    return unsafeMakeSpan(m_quotePairs, m_quoteCount);
+}
+
+std::span<std::pair<String, String>> QuotesData::quotePairs()
+{
+    return unsafeMakeSpan(m_quotePairs, m_quoteCount);
 }
 
 const String& QuotesData::openQuote(unsigned index) const
 {
-    if (!m_quoteCount)
+    auto quotePairs = this->quotePairs();
+    if (quotePairs.empty())
         return emptyString();
 
-    if (index >= m_quoteCount)
-        return m_quotePairs[m_quoteCount - 1].first;
-
-    return m_quotePairs[index].first;
+    if (index < quotePairs.size())
+        return quotePairs[index].first;
+    return quotePairs.back().first;
 }
 
 const String& QuotesData::closeQuote(unsigned index) const
 {
-    if (!m_quoteCount)
+    auto quotePairs = this->quotePairs();
+    if (quotePairs.empty())
         return emptyString();
 
-    if (index >= m_quoteCount)
-        return m_quotePairs[m_quoteCount - 1].second;
-
-    return m_quotePairs[index].second;
+    if (index < quotePairs.size())
+        return quotePairs[index].second;
+    return quotePairs.back().second;
 }
 
 bool operator==(const QuotesData& a, const QuotesData& b)
@@ -77,8 +87,8 @@ bool operator==(const QuotesData& a, const QuotesData& b)
     if (a.m_quoteCount != b.m_quoteCount)
         return false;
 
-    for (unsigned i = 0; i < a.m_quoteCount; ++i) {
-        if (a.m_quotePairs[i] != b.m_quotePairs[i])
+    for (auto [aPair, bPair] : zippedRange(a.quotePairs(), b.quotePairs())) {
+        if (aPair != bPair)
             return false;
     }
 
@@ -86,5 +96,3 @@ bool operator==(const QuotesData& a, const QuotesData& b)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

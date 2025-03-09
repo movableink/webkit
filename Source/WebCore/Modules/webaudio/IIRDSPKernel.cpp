@@ -29,8 +29,6 @@
 #include "IIRDSPKernel.h"
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(IIRDSPKernel);
@@ -42,11 +40,11 @@ IIRDSPKernel::IIRDSPKernel(IIRProcessor& processor)
 {
 }
 
-void IIRDSPKernel::getFrequencyResponse(unsigned length, const float* frequencyHz, float* magResponse, float* phaseResponse)
+void IIRDSPKernel::getFrequencyResponse(unsigned length, std::span<const float> frequencyHz, std::span<float> magResponse, std::span<float> phaseResponse)
 {
-    ASSERT(frequencyHz);
-    ASSERT(magResponse);
-    ASSERT(phaseResponse);
+    ASSERT(frequencyHz.data());
+    ASSERT(magResponse.data());
+    ASSERT(phaseResponse.data());
 
     Vector<float> frequency(length);
     double nyquist = this->nyquist();
@@ -55,15 +53,15 @@ void IIRDSPKernel::getFrequencyResponse(unsigned length, const float* frequencyH
     for (unsigned k = 0; k < length; ++k)
         frequency[k] = frequencyHz[k] / nyquist;
 
-    m_iirFilter.getFrequencyResponse(length, frequency.data(), magResponse, phaseResponse);
+    m_iirFilter.getFrequencyResponse(length, frequency.span(), magResponse, phaseResponse);
 }
 
-void IIRDSPKernel::process(const float* source, float* destination, size_t framesToProcess)
+void IIRDSPKernel::process(std::span<const float> source, std::span<float> destination)
 {
-    ASSERT(source);
-    ASSERT(destination);
+    ASSERT(source.data());
+    ASSERT(destination.data());
 
-    m_iirFilter.process(source, destination, framesToProcess);
+    m_iirFilter.process(source, destination);
 }
 
 void IIRDSPKernel::reset()
@@ -78,7 +76,5 @@ bool IIRDSPKernel::requiresTailProcessing() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

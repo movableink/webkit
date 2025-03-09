@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,10 +23,13 @@
 #if PLATFORM(MAC)
 
 #import "BitmapImage.h"
+#import "CSSPropertyNames.h"
 #import "CSSValueKeywords.h"
 #import "CSSValueList.h"
 #import "Color.h"
+#import "ColorBlending.h"
 #import "ColorMac.h"
+#import "ColorSerialization.h"
 #import "Document.h"
 #import "ElementInlines.h"
 #import "FileList.h"
@@ -135,8 +138,12 @@ RenderTheme& RenderTheme::singleton()
     return theme;
 }
 
-bool RenderThemeMac::canPaint(const PaintInfo& paintInfo, const Settings&, StyleAppearance appearance) const
+bool RenderThemeMac::canPaint(const PaintInfo& paintInfo, const Settings& settings, StyleAppearance appearance) const
 {
+#if !ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    UNUSED_PARAM(settings);
+#endif
+
     switch (appearance) {
 #if ENABLE(ATTACHMENT_ELEMENT)
     case StyleAppearance::Attachment:
@@ -147,9 +154,7 @@ bool RenderThemeMac::canPaint(const PaintInfo& paintInfo, const Settings&, Style
 #endif
     case StyleAppearance::Button:
     case StyleAppearance::Checkbox:
-#if ENABLE(INPUT_TYPE_COLOR)
     case StyleAppearance::ColorWell:
-#endif
     case StyleAppearance::DefaultButton:
 #if ENABLE(SERVICE_CONTROLS)
     case StyleAppearance::ImageControlsButton:
@@ -163,6 +168,7 @@ bool RenderThemeMac::canPaint(const PaintInfo& paintInfo, const Settings&, Style
     case StyleAppearance::Radio:
     case StyleAppearance::PushButton:
     case StyleAppearance::SearchField:
+    case StyleAppearance::SearchFieldDecoration:
     case StyleAppearance::SearchFieldCancelButton:
     case StyleAppearance::SearchFieldResultsButton:
     case StyleAppearance::SearchFieldResultsDecoration:
@@ -176,6 +182,10 @@ bool RenderThemeMac::canPaint(const PaintInfo& paintInfo, const Settings&, Style
     case StyleAppearance::TextArea:
     case StyleAppearance::TextField:
         return true;
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    case StyleAppearance::ListButton:
+        return settings.vectorBasedControlsOnMacEnabled();
+#endif
     default:
         break;
     }
@@ -189,15 +199,18 @@ RenderThemeMac::RenderThemeMac()
 
 bool RenderThemeMac::canCreateControlPartForRenderer(const RenderObject& renderer) const
 {
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (renderer.settings().vectorBasedControlsOnMacEnabled())
+        return RenderThemeCocoa::canCreateControlPartForRendererForVectorBasedControls(renderer);
+#endif
+
     auto type = renderer.style().usedAppearance();
     return type == StyleAppearance::Button
         || type == StyleAppearance::Checkbox
 #if ENABLE(APPLE_PAY)
         || type == StyleAppearance::ApplePayButton
 #endif
-#if ENABLE(INPUT_TYPE_COLOR)
         || type == StyleAppearance::ColorWell
-#endif
         || type == StyleAppearance::DefaultButton
 #if ENABLE(SERVICE_CONTROLS)
         || type == StyleAppearance::ImageControlsButton
@@ -223,6 +236,11 @@ bool RenderThemeMac::canCreateControlPartForRenderer(const RenderObject& rendere
 
 bool RenderThemeMac::canCreateControlPartForBorderOnly(const RenderObject& renderer) const
 {
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (renderer.settings().vectorBasedControlsOnMacEnabled())
+        return RenderThemeCocoa::canCreateControlPartForBorderOnlyForVectorBasedControls(renderer);
+#endif
+
     auto appearance = renderer.style().usedAppearance();
     return appearance == StyleAppearance::Listbox
         || appearance == StyleAppearance::TextArea
@@ -231,6 +249,11 @@ bool RenderThemeMac::canCreateControlPartForBorderOnly(const RenderObject& rende
 
 bool RenderThemeMac::canCreateControlPartForDecorations(const RenderObject& renderer) const
 {
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (renderer.settings().vectorBasedControlsOnMacEnabled())
+        return RenderThemeCocoa::canCreateControlPartForDecorationsForVectorBasedControls(renderer);
+#endif
+
     return renderer.style().usedAppearance() == StyleAppearance::MenulistButton;
 }
 
@@ -577,6 +600,10 @@ Color RenderThemeMac::systemColor(CSSValueID cssValueID, OptionSet<StyleColorOpt
             case CSSValueAppleSystemQuaternaryLabel:
                 return @selector(quaternaryLabelColor);
 #if HAVE(NSCOLOR_FILL_COLOR_HIERARCHY)
+            case CSSValueAppleSystemOpaqueFill:
+                return @selector(systemFillColor);
+            case CSSValueAppleSystemOpaqueSecondaryFill:
+                return @selector(secondarySystemFillColor);
             case CSSValueAppleSystemTertiaryFill:
                 return @selector(tertiarySystemFillColor);
 #endif
@@ -903,15 +930,20 @@ static void setFontFromControlSize(RenderStyle& style, NSControlSize controlSize
     style.setFontDescription(WTFMove(fontDescription));
 }
 
-#if ENABLE(DATALIST_ELEMENT)
-
-void RenderThemeMac::adjustListButtonStyle(RenderStyle& style, const Element*) const
+void RenderThemeMac::adjustListButtonStyle(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (element && element->document().settings().vectorBasedControlsOnMacEnabled()) {
+        RenderThemeCocoa::adjustListButtonStyle(style, element);
+        return;
+    }
+#else
+    UNUSED_PARAM(element);
+#endif
+
     // Add a margin to place the button at end of the input field.
     style.setMarginEnd(Length(-4, LengthType::Fixed));
 }
-
-#endif
 
 #if ENABLE(SERVICE_CONTROLS)
 void RenderThemeMac::adjustImageControlsButtonStyle(RenderStyle& style, const Element*) const
@@ -934,6 +966,27 @@ FloatSize RenderThemeMac::meterSizeForBounds(const RenderMeter& renderMeter, con
 bool RenderThemeMac::supportsMeter(StyleAppearance appearance) const
 {
     return appearance == StyleAppearance::Meter;
+}
+
+void RenderThemeMac::createColorWellSwatchSubtree(HTMLElement& swatch)
+{
+    Ref document = swatch.document();
+    Ref div = HTMLDivElement::create(document);
+    swatch.appendChild(ContainerNode::ChildChange::Source::Parser, div);
+    div->setInlineStyleProperty(CSSPropertyHeight, "100%"_s);
+    div->setInlineStyleProperty(CSSPropertyWidth, "100%"_s);
+    div->setInlineStyleProperty(CSSPropertyClipPath, "polygon(0 0, 100% 0, 0 100%)"_s);
+}
+
+void RenderThemeMac::setColorWellSwatchBackground(HTMLElement& swatch, Color color)
+{
+    Ref swatchChild = *downcast<HTMLElement>(swatch.protectedFirstChild());
+
+    auto backgroundColor = color.isOpaque() ? color : blendSourceOver(Color::white, color);
+    auto foregroundColor = color.isOpaque() ? Color::transparentBlack : blendSourceOver(Color::black, color);
+
+    swatch.setInlineStyleProperty(CSSPropertyBackgroundColor, serializationForHTML(backgroundColor));
+    swatchChild->setInlineStyleProperty(CSSPropertyBackgroundColor, serializationForHTML(foregroundColor));
 }
 
 IntRect RenderThemeMac::progressBarRectForBounds(const RenderProgress& renderProgress, const IntRect& bounds) const
@@ -964,7 +1017,7 @@ static std::span<const IntSize, 4> menuListButtonSizes()
 
 void RenderThemeMac::adjustMenuListStyle(RenderStyle& style, const Element* e) const
 {
-    RenderTheme::adjustMenuListStyle(style, e);
+    RenderThemeCocoa::adjustMenuListStyle(style, e);
     NSControlSize controlSize = controlSizeForFont(style);
 
     style.resetBorder();
@@ -1054,14 +1107,15 @@ int RenderThemeMac::minimumMenuListSize(const RenderStyle& style) const
     return sizeForSystemFont(style, menuListSizes()).width();
 }
 
-void RenderThemeMac::adjustSliderTrackStyle(RenderStyle& style, const Element*) const
+void RenderThemeMac::adjustSliderTrackStyle(RenderStyle& style, const Element* element) const
 {
+    RenderThemeCocoa::adjustSliderTrackStyle(style, element);
     style.setBoxShadow(nullptr);
 }
 
 void RenderThemeMac::adjustSliderThumbStyle(RenderStyle& style, const Element* element) const
 {
-    RenderTheme::adjustSliderThumbStyle(style, element);
+    RenderThemeCocoa::adjustSliderThumbStyle(style, element);
     style.setBoxShadow(nullptr);
 }
 
@@ -1081,8 +1135,17 @@ void RenderThemeMac::setSearchFieldSize(RenderStyle& style) const
     setSizeFromFont(style, searchFieldSizes());
 }
 
-void RenderThemeMac::adjustSearchFieldStyle(RenderStyle& style, const Element*) const
+void RenderThemeMac::adjustSearchFieldStyle(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (element && element->document().settings().vectorBasedControlsOnMacEnabled()) {
+        RenderThemeCocoa::adjustSearchFieldStyle(style, element);
+        return;
+    }
+#else
+    UNUSED_PARAM(element);
+#endif
+
     // Override border.
     style.resetBorder();
     const short borderWidth = 2 * style.usedZoom();
@@ -1119,8 +1182,17 @@ std::span<const IntSize, 4> RenderThemeMac::cancelButtonSizes() const
     return sizes;
 }
 
-void RenderThemeMac::adjustSearchFieldCancelButtonStyle(RenderStyle& style, const Element*) const
+void RenderThemeMac::adjustSearchFieldCancelButtonStyle(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (element && element->document().settings().vectorBasedControlsOnMacEnabled()) {
+        RenderThemeCocoa::adjustSearchFieldCancelButtonStyle(style, element);
+        return;
+    }
+#else
+    UNUSED_PARAM(element);
+#endif
+
     IntSize size = sizeForSystemFont(style, cancelButtonSizes());
     style.setWidth(Length(size.width(), LengthType::Fixed));
     style.setHeight(Length(size.height(), LengthType::Fixed));
@@ -1135,8 +1207,17 @@ std::span<const IntSize, 4> RenderThemeMac::resultsButtonSizes() const
 }
 
 const int emptyResultsOffset = 9;
-void RenderThemeMac::adjustSearchFieldDecorationPartStyle(RenderStyle& style, const Element*) const
+void RenderThemeMac::adjustSearchFieldDecorationPartStyle(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (element && element->document().settings().vectorBasedControlsOnMacEnabled()) {
+        RenderThemeCocoa::adjustSearchFieldDecorationPartStyle(style, element);
+        return;
+    }
+#else
+    UNUSED_PARAM(element);
+#endif
+
     IntSize size = sizeForSystemFont(style, resultsButtonSizes());
     int widthOffset = 0;
     int heightOffset = 0;
@@ -1149,23 +1230,40 @@ void RenderThemeMac::adjustSearchFieldDecorationPartStyle(RenderStyle& style, co
     style.setBoxShadow(nullptr);
 }
 
-void RenderThemeMac::adjustSearchFieldResultsDecorationPartStyle(RenderStyle& style, const Element*) const
+void RenderThemeMac::adjustSearchFieldResultsDecorationPartStyle(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (element && element->document().settings().vectorBasedControlsOnMacEnabled()) {
+        RenderThemeCocoa::adjustSearchFieldResultsDecorationPartStyle(style, element);
+        return;
+    }
+#else
+    UNUSED_PARAM(element);
+#endif
+
     IntSize size = sizeForSystemFont(style, resultsButtonSizes());
     style.setWidth(Length(size.width(), LengthType::Fixed));
     style.setHeight(Length(size.height(), LengthType::Fixed));
     style.setBoxShadow(nullptr);
 }
 
-void RenderThemeMac::adjustSearchFieldResultsButtonStyle(RenderStyle& style, const Element*) const
+void RenderThemeMac::adjustSearchFieldResultsButtonStyle(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (element && element->document().settings().vectorBasedControlsOnMacEnabled()) {
+        RenderThemeCocoa::adjustSearchFieldResultsButtonStyle(style, element);
+        return;
+    }
+#else
+    UNUSED_PARAM(element);
+#endif
+
     IntSize size = sizeForSystemFont(style, resultsButtonSizes());
     style.setWidth(Length(size.width() + resultsArrowWidth, LengthType::Fixed));
     style.setHeight(Length(size.height(), LengthType::Fixed));
     style.setBoxShadow(nullptr);
 }
 
-#if ENABLE(DATALIST_ELEMENT)
 IntSize RenderThemeMac::sliderTickSize() const
 {
     return IntSize(1, 3);
@@ -1175,14 +1273,22 @@ int RenderThemeMac::sliderTickOffsetFromTrackCenter() const
 {
     return -9;
 }
-#endif
 
 // FIXME (<rdar://problem/80870479>): Ideally, this constant should be obtained from AppKit using -[NSSliderCell knobThickness].
 // However, the method currently returns an incorrect value, both with and without a control view associated with the cell.
 constexpr int sliderThumbThickness = 17;
 
-void RenderThemeMac::adjustSliderThumbSize(RenderStyle& style, const Element*) const
+void RenderThemeMac::adjustSliderThumbSize(RenderStyle& style, const Element* element) const
 {
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (element && element->document().settings().vectorBasedControlsOnMacEnabled()) {
+        RenderThemeCocoa::adjustSliderThumbSize(style, element);
+        return;
+    }
+#else
+    UNUSED_PARAM(element);
+#endif
+
     float zoomLevel = style.usedZoom();
     if (style.usedAppearance() == StyleAppearance::SliderThumbHorizontal || style.usedAppearance() == StyleAppearance::SliderThumbVertical) {
         style.setWidth(Length(static_cast<int>(sliderThumbThickness * zoomLevel), LengthType::Fixed));

@@ -56,6 +56,7 @@ class RenderStyle;
 struct CSSParserContext;
 struct CSSPropertyParserOptions;
 struct Length;
+struct NoConversionDataRequiredToken;
 
 enum CSSValueID : uint16_t;
 
@@ -66,31 +67,41 @@ public:
     static RefPtr<CSSCalcValue> parse(CSSParserTokenRange&, const CSSParserContext&, Calculation::Category, CSS::Range, CSSCalcSymbolsAllowed, CSSPropertyParserOptions);
 
     static Ref<CSSCalcValue> create(const CalculationValue&, const RenderStyle&);
-    static Ref<CSSCalcValue> create(CSSCalc::Tree&&);
+    static Ref<CSSCalcValue> create(Calculation::Category, CSS::Range, CSSCalc::Tree&&);
 
     ~CSSCalcValue();
 
     // Creates a copy of the CSSCalc::Tree with non-canonical dimensions and any symbols present in the provided symbol table resolved.
+    Ref<CSSCalcValue> copySimplified(const CSSToLengthConversionData&) const;
     Ref<CSSCalcValue> copySimplified(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
+    Ref<CSSCalcValue> copySimplified(NoConversionDataRequiredToken) const;
+    Ref<CSSCalcValue> copySimplified(NoConversionDataRequiredToken, const CSSCalcSymbolTable&) const;
 
-    Calculation::Category category() const { return m_tree.category; }
+    Calculation::Category category() const { return m_category; }
+    CSS::Range range() const { return m_range; }
+
     CSSUnitType primitiveType() const;
 
     // Returns whether the CSSCalc::Tree requires `CSSToLengthConversionData` to fully resolve.
     bool requiresConversionData() const;
 
+    double doubleValue(const CSSToLengthConversionData&) const;
     double doubleValue(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
-    double doubleValueNoConversionDataRequired(const CSSCalcSymbolTable&) const;
-    double doubleValueDeprecated(const CSSCalcSymbolTable&) const;
+    double doubleValue(NoConversionDataRequiredToken) const;
+    double doubleValue(NoConversionDataRequiredToken, const CSSCalcSymbolTable&) const;
+    double doubleValueDeprecated() const;
 
+    double computeLengthPx(const CSSToLengthConversionData&) const;
     double computeLengthPx(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
 
-    Ref<CalculationValue> createCalculationValueNoConversionDataRequired(const CSSCalcSymbolTable&) const;
+    Ref<CalculationValue> createCalculationValue(NoConversionDataRequiredToken) const;
+    Ref<CalculationValue> createCalculationValue(NoConversionDataRequiredToken, const CSSCalcSymbolTable&) const;
+    Ref<CalculationValue> createCalculationValue(const CSSToLengthConversionData&) const;
     Ref<CalculationValue> createCalculationValue(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
 
     void collectComputedStyleDependencies(ComputedStyleDependencies&) const;
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSCalcValue&) const;
 
     void dump(TextStream&) const;
@@ -98,10 +109,12 @@ public:
     const CSSCalc::Tree& tree() const { return m_tree; }
 
 private:
-    explicit CSSCalcValue(CSSCalc::Tree&&);
+    explicit CSSCalcValue(Calculation::Category, CSS::Range, CSSCalc::Tree&&);
 
     double clampToPermittedRange(double) const;
 
+    Calculation::Category m_category;
+    CSS::Range m_range;
     CSSCalc::Tree m_tree;
 };
 

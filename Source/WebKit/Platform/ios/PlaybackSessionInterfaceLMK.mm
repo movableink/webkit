@@ -28,6 +28,7 @@
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
 
+#import "VideoPresentationInterfaceLMK.h"
 #import "WKSLinearMediaPlayer.h"
 #import "WKSLinearMediaTypes.h"
 #import <WebCore/MediaSelectionOption.h>
@@ -215,6 +216,12 @@
         model->setVideoReceiverEndpoint(videoReceiverEndpoint);
 }
 
+- (void)linearMediaPlayerClearVideoReceiverEndpoint:(WKSLinearMediaPlayer *)player
+{
+    if (auto model = _model.get())
+        model->setVideoReceiverEndpoint(nullptr);
+}
+
 @end
 
 namespace WebKit {
@@ -358,6 +365,12 @@ void PlaybackSessionInterfaceLMK::supportsLinearMediaPlayerChanged(bool supports
         if (m_playbackSessionModel)
             m_playbackSessionModel->exitFullscreen();
         break;
+    case WKSLinearMediaPresentationStateExternal:
+        // If the player is in external presentation (which uses LinearMediaPlayer) but the current
+        // media engine does not support it, exit external presentation.
+        if (RefPtr videoPresentationInterface = m_videoPresentationInterface.get())
+            videoPresentationInterface->exitExternalPlayback([](bool) { });
+        break;
     case WKSLinearMediaPresentationStateInline:
     case WKSLinearMediaPresentationStateExitingFullscreen:
         break;
@@ -370,8 +383,13 @@ void PlaybackSessionInterfaceLMK::spatialVideoMetadataChanged(const std::optiona
 {
     RetainPtr<WKSLinearMediaSpatialVideoMetadata> spatialVideoMetadata;
     if (metadata && spatialVideoEnabled())
-        spatialVideoMetadata = [allocWKSLinearMediaSpatialVideoMetadataInstance() initWithWidth:metadata->size.width() height:metadata->size.height() horizontalFOVDegrees:metadata->horizontalFOVDegrees baseline:metadata->baseline disparityAdjustment:metadata->disparityAdjustment];
+        spatialVideoMetadata = adoptNS([allocWKSLinearMediaSpatialVideoMetadataInstance() initWithWidth:metadata->size.width() height:metadata->size.height() horizontalFOVDegrees:metadata->horizontalFOVDegrees baseline:metadata->baseline disparityAdjustment:metadata->disparityAdjustment]);
     [m_player setSpatialVideoMetadata:spatialVideoMetadata.get()];
+}
+
+void PlaybackSessionInterfaceLMK::isImmersiveVideoChanged(bool value)
+{
+    [m_player setIsImmersiveVideo:value];
 }
 
 void PlaybackSessionInterfaceLMK::startObservingNowPlayingMetadata()
@@ -409,9 +427,17 @@ static RetainPtr<NSData> artworkData(const WebCore::NowPlayingMetadata& metadata
 
 void PlaybackSessionInterfaceLMK::nowPlayingMetadataChanged(const WebCore::NowPlayingMetadata& metadata)
 {
-    RetainPtr contentMetadata = [allocWKSLinearMediaContentMetadataInstance() initWithTitle:metadata.title subtitle:metadata.artist];
+    RetainPtr contentMetadata = adoptNS([allocWKSLinearMediaContentMetadataInstance() initWithTitle:metadata.title subtitle:metadata.artist]);
     [m_player setContentMetadata:contentMetadata.get()];
     [m_player setArtwork:artworkData(metadata).get()];
+}
+
+void PlaybackSessionInterfaceLMK::swapFullscreenModesWith(PlaybackSessionInterfaceIOS& otherInterfaceIOS)
+{
+    auto& otherInterface = static_cast<PlaybackSessionInterfaceLMK&>(otherInterfaceIOS);
+    std::swap(m_player, otherInterface.m_player);
+    [m_player setDelegate:m_playerDelegate.get()];
+    [otherInterface.m_player setDelegate:otherInterface.m_playerDelegate.get()];
 }
 
 #if !RELEASE_LOG_DISABLED

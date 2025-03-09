@@ -549,7 +549,7 @@ RetainPtr<NSObject<NSSecureCoding>> Object::toNSObject()
 {
     switch (type()) {
     case Object::Type::Dictionary: {
-        auto& dictionary = static_cast<API::Dictionary&>(*this);
+        auto& dictionary = downcast<API::Dictionary>(*this);
         auto result = adoptNS([[NSMutableDictionary alloc] initWithCapacity:dictionary.size()]);
         for (auto& pair : dictionary.map()) {
             if (auto nsObject = pair.value ? pair.value->toNSObject() : RetainPtr<NSObject<NSSecureCoding>>())
@@ -558,7 +558,7 @@ RetainPtr<NSObject<NSSecureCoding>> Object::toNSObject()
         return result;
     }
     case Object::Type::Array: {
-        auto& array = static_cast<API::Array&>(*this);
+        auto& array = downcast<API::Array>(*this);
         auto result = adoptNS([[NSMutableArray alloc] initWithCapacity:array.size()]);
         for (auto& element : array.elements()) {
             if (auto nsObject = element ? element->toNSObject() : RetainPtr<NSObject<NSSecureCoding>>())
@@ -567,17 +567,17 @@ RetainPtr<NSObject<NSSecureCoding>> Object::toNSObject()
         return result;
     }
     case Object::Type::Double:
-        return adoptNS([[NSNumber alloc] initWithDouble:static_cast<API::Double&>(*this).value()]);
+        return adoptNS([[NSNumber alloc] initWithDouble:downcast<API::Double>(*this).value()]);
     case Object::Type::Boolean:
-        return adoptNS([[NSNumber alloc] initWithBool:static_cast<API::Boolean&>(*this).value()]);
+        return adoptNS([[NSNumber alloc] initWithBool:downcast<API::Boolean>(*this).value()]);
     case Object::Type::UInt64:
-        return adoptNS([[NSNumber alloc] initWithUnsignedLongLong:static_cast<API::UInt64&>(*this).value()]);
+        return adoptNS([[NSNumber alloc] initWithUnsignedLongLong:downcast<API::UInt64>(*this).value()]);
     case Object::Type::Int64:
-        return adoptNS([[NSNumber alloc] initWithLongLong:static_cast<API::Int64&>(*this).value()]);
+        return adoptNS([[NSNumber alloc] initWithLongLong:downcast<API::Int64>(*this).value()]);
     case Object::Type::Data:
-        return API::wrapper(static_cast<API::Data&>(*this));
+        return API::wrapper(downcast<API::Data>(*this));
     case Object::Type::String:
-        return (NSString *)static_cast<API::String&>(*this).string();
+        return (NSString *)downcast<API::String>(*this).string();
     default:
         // Other API::Object::Types are intentionally not supported.
         break;

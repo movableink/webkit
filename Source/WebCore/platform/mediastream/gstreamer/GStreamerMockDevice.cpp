@@ -35,8 +35,7 @@ struct _GStreamerMockDevicePrivate {
 GST_DEBUG_CATEGORY_STATIC(webkitGstMockDeviceDebug);
 #define GST_CAT_DEFAULT webkitGstMockDeviceDebug
 
-#define webkit_mock_device_provider_parent_class parent_class
-WEBKIT_DEFINE_TYPE_WITH_CODE(GStreamerMockDevice, webkit_mock_device, GST_TYPE_DEVICE, GST_DEBUG_CATEGORY_INIT(webkitGstMockDeviceDebug, "webkitmockdevice", 0, "Mock Device"))
+WEBKIT_DEFINE_TYPE(GStreamerMockDevice, webkit_mock_device, GST_TYPE_DEVICE)
 
 static GstElement* webkitMockDeviceCreateElement([[maybe_unused]] GstDevice* device, const char* name)
 {
@@ -54,6 +53,8 @@ static void webkit_mock_device_class_init(GStreamerMockDeviceClass* klass)
 
 GstDevice* webkitMockDeviceCreate(const CaptureDevice& captureDevice)
 {
+    GST_DEBUG_CATEGORY_INIT(webkitGstMockDeviceDebug, "webkitmockdevice", 0, "Mock Device");
+
     const char* deviceClass;
     GRefPtr<GstCaps> caps;
 
@@ -76,7 +77,8 @@ GstDevice* webkitMockDeviceCreate(const CaptureDevice& captureDevice)
 
     auto displayName = captureDevice.label();
     GUniquePtr<GstStructure> properties(gst_structure_new("webkit-mock-device", "persistent-id", G_TYPE_STRING, captureDevice.persistentId().ascii().data(), "is-default", G_TYPE_BOOLEAN, captureDevice.isDefault(), nullptr));
-    auto* device = WEBKIT_MOCK_DEVICE_CAST(g_object_new(GST_TYPE_MOCK_DEVICE, "display-name", displayName.ascii().data(), "device-class", deviceClass, "caps", caps.get(), "properties", properties.get(), nullptr));
+    GST_DEBUG("Creating mock device with name %s and properties %" GST_PTR_FORMAT, displayName.utf8().data(), properties.get());
+    auto* device = WEBKIT_MOCK_DEVICE_CAST(g_object_new(GST_TYPE_MOCK_DEVICE, "display-name", displayName.utf8().data(), "device-class", deviceClass, "caps", caps.get(), "properties", properties.get(), nullptr));
     gst_object_ref_sink(device);
     return GST_DEVICE_CAST(device);
 }

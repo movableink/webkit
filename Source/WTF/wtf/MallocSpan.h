@@ -27,6 +27,7 @@
 
 #include <utility>
 #include <wtf/FastMalloc.h>
+#include <wtf/MallocCommon.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TypeTraits.h>
@@ -37,6 +38,7 @@ namespace WTF {
 
 template<typename T, typename Malloc = FastMalloc> class MallocSpan {
     WTF_MAKE_NONCOPYABLE(MallocSpan);
+    WTF_MAKE_CONFIGURABLE_ALLOCATED(Malloc);
 public:
     MallocSpan() = default;
 
@@ -73,16 +75,16 @@ public:
 
     size_t sizeInBytes() const { return m_span.size_bytes(); }
 
-    std::span<const T> span() const { return spanConstCast<const T>(m_span); }
-    std::span<T> mutableSpan() { return m_span; }
+    std::span<const T> span() const LIFETIME_BOUND { return spanConstCast<const T>(m_span); }
+    std::span<T> mutableSpan() LIFETIME_BOUND { return m_span; }
     std::span<T> leakSpan() WARN_UNUSED_RETURN { return std::exchange(m_span, std::span<T>()); }
 
-    T& operator[](size_t i) { return m_span[i]; }
-    const T& operator[](size_t i) const { return m_span[i]; }
+    T& operator[](size_t i) LIFETIME_BOUND { return m_span[i]; }
+    const T& operator[](size_t i) const LIFETIME_BOUND { return m_span[i]; }
 
     explicit operator bool() const
     {
-        return m_span.data();
+        return !!m_span.data();
     }
 
     bool operator!() const
@@ -98,6 +100,11 @@ public:
     static MallocSpan zeroedMalloc(size_t sizeInBytes)
     {
         return MallocSpan { static_cast<T*>(Malloc::zeroedMalloc(sizeInBytes)), sizeInBytes };
+    }
+
+    static MallocSpan alignedMalloc(size_t alignment, size_t sizeInBytes)
+    {
+        return MallocSpan { static_cast<T*>(Malloc::alignedMalloc(alignment, sizeInBytes)), sizeInBytes };
     }
 
 #if HAVE(MMAP)
@@ -118,6 +125,14 @@ public:
     static MallocSpan tryZeroedMalloc(size_t sizeInBytes)
     {
         auto* ptr = Malloc::tryZeroedMalloc(sizeInBytes);
+        if (!ptr)
+            return { };
+        return MallocSpan { static_cast<T*>(ptr), sizeInBytes };
+    }
+
+    static MallocSpan tryAlignedMalloc(size_t alignment, size_t sizeInBytes)
+    {
+        auto* ptr = Malloc::tryAlignedMalloc(alignment, sizeInBytes);
         if (!ptr)
             return { };
         return MallocSpan { static_cast<T*>(ptr), sizeInBytes };

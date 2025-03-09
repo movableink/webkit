@@ -34,7 +34,7 @@
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakHashSet.h>
-#include <wtf/WeakRef.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -43,7 +43,6 @@ class FrameView;
 class FrameLoaderClient;
 class FrameLoadRequest;
 class HTMLFrameOwnerElement;
-class HistoryController;
 class NavigationScheduler;
 class Page;
 class RenderWidget;
@@ -74,10 +73,13 @@ public:
     FrameIdentifier frameID() const { return m_frameID; }
     inline Page* page() const; // Defined in Page.h.
     inline RefPtr<Page> protectedPage() const; // Defined in Page.h.
-    WEBCORE_EXPORT std::optional<PageIdentifier> pageID() const;
+    inline std::optional<PageIdentifier> pageID() const; // Defined in Page.h.
     Settings& settings() const { return m_settings.get(); }
-    Frame& mainFrame() const { return m_mainFrame.get(); }
-    bool isMainFrame() const { return this == m_mainFrame.ptr(); }
+    Frame& mainFrame() { return *m_mainFrame; }
+    const Frame& mainFrame() const { return *m_mainFrame; }
+    Ref<Frame> protectedMainFrame() { return mainFrame(); }
+    Ref<const Frame> protectedMainFrame() const { return mainFrame(); }
+    bool isMainFrame() const { return this == m_mainFrame.get(); }
     WEBCORE_EXPORT void disownOpener();
     WEBCORE_EXPORT void updateOpener(Frame&, NotifyUIProcess = NotifyUIProcess::Yes);
     WEBCORE_EXPORT void setOpenerForWebKitLegacy(Frame*);
@@ -101,16 +103,13 @@ public:
     Ref<NavigationScheduler> protectedNavigationScheduler() const;
     WEBCORE_EXPORT void takeWindowProxyAndOpenerFrom(Frame&);
 
-    HistoryController& history() const { return m_history.get(); }
-    WEBCORE_EXPORT CheckedRef<HistoryController> checkedHistory() const;
-
     virtual void frameDetached() = 0;
     virtual bool preventsParentFromBeingComplete() const = 0;
     virtual void changeLocation(FrameLoadRequest&&) = 0;
     virtual void didFinishLoadInAnotherProcess() = 0;
 
     virtual FrameView* virtualView() const = 0;
-    RefPtr<FrameView> protectedVirtualView() const;
+    WEBCORE_EXPORT RefPtr<FrameView> protectedVirtualView() const;
     virtual void disconnectView() = 0;
     virtual FrameLoaderClient& loaderClient() = 0;
     virtual void documentURLForConsoleLog(CompletionHandler<void(const URL&)>&&) = 0;
@@ -129,6 +128,8 @@ public:
 
     virtual void updateScrollingMode() = 0;
 
+    void stopForBackForwardCache();
+
 protected:
     Frame(Page&, FrameIdentifier, FrameType, HTMLFrameOwnerElement*, Frame* parent, Frame* opener);
     void resetWindowProxy();
@@ -144,13 +145,12 @@ private:
     mutable FrameTree m_treeNode;
     Ref<WindowProxy> m_windowProxy;
     WeakPtr<HTMLFrameOwnerElement, WeakPtrImplWithEventTargetData> m_ownerElement;
-    const WeakRef<Frame> m_mainFrame;
+    const WeakPtr<Frame> m_mainFrame;
     const Ref<Settings> m_settings;
     FrameType m_frameType;
     mutable UniqueRef<NavigationScheduler> m_navigationScheduler;
     WeakPtr<Frame> m_opener;
     WeakHashSet<Frame> m_openedFrames;
-    mutable UniqueRef<HistoryController> m_history;
     std::optional<OwnerPermissionsPolicyData> m_ownerPermisssionsPolicyOverride;
 };
 

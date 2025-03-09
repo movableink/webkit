@@ -50,6 +50,7 @@ SOFT_LINK_CLASS_OPTIONAL(AVKit, AVValueTiming)
 
 SOFT_LINK_PRIVATE_FRAMEWORK_OPTIONAL(PIP)
 SOFT_LINK_CLASS_OPTIONAL(PIP, PIPViewController)
+SOFT_LINK_CLASS_OPTIONAL(PIP, PIPPrerollAttributes)
 
 @class WebVideoViewContainer;
 
@@ -116,8 +117,11 @@ enum class PIPState {
 // Tracking video playback state
 @property (nonatomic) NSSize videoDimensions;
 @property (nonatomic, getter=isPlaying) BOOL playing;
+#if HAVE(PIP_SKIP_PREROLL)
+@property (nonatomic) BOOL canSkipAd;
+- (void)updateCanSkipAd:(BOOL)canSkipAd;
+#endif
 - (void)updateIsPlaying:(BOOL)isPlaying newPlaybackRate:(float)playbackRate;
-
 // Handling PIP transitions
 @property (nonatomic, getter=isExitingToStandardFullscreen) BOOL exitingToStandardFullscreen;
 
@@ -171,7 +175,9 @@ enum class PIPState {
 {
     _playing = isPlaying && playbackRate;
 
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     [_pipViewController setPlaying:_playing];
+    ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 - (void)setVideoDimensions:(NSSize)videoDimensions
@@ -181,7 +187,27 @@ enum class PIPState {
     [_playerLayer setVideoDimensions:_videoDimensions];
     [_pipViewController setAspectRatio:_videoDimensions];
 }
+#if HAVE(PIP_SKIP_PREROLL)
+- (void)updateCanSkipAd:(BOOL)canSkipAd
+{
+    if (canSkipAd == _canSkipAd)
+        return;
+    _canSkipAd = canSkipAd;
+    [self updatePrerollAttributes];
+}
+- (void)updatePrerollAttributes
+{
+    if (!_pipViewController)
+        return;
 
+    [_pipViewController updatePlaybackStateUsingBlock:^(PIPMutablePlaybackState *playbackState) {
+        if (!_canSkipAd)
+            playbackState.prerollAttributes = nil;
+        else
+            playbackState.prerollAttributes = [getPIPPrerollAttributesClass() prerollAttributesForAdContentWithRequiredLinearPlaybackEndTime:0 preferredTintColor:nil];
+    }];
+}
+#endif
 - (void)setUpPIPForVideoView:(NSView *)videoView withFrame:(NSRect)frame inWindow:(NSWindow *)window
 {
     ASSERT(!_pipViewController);
@@ -191,8 +217,10 @@ enum class PIPState {
 
     _pipViewController = adoptNS([allocPIPViewControllerInstance() init]);
     [_pipViewController setDelegate:self];
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     [_pipViewController setUserCanResize:YES];
     [_pipViewController setPlaying:_playing];
+    ALLOW_DEPRECATED_DECLARATIONS_END
     [self setVideoDimensions:NSEqualSizes(_videoDimensions, NSZeroSize) ? frame.size : _videoDimensions];
     auto model = _videoPresentationInterfaceMac ? _videoPresentationInterfaceMac->videoPresentationModel() : nullptr;
     if (model)
@@ -228,6 +256,9 @@ enum class PIPState {
     [_videoViewContainerController view].layer.backgroundColor = CGColorGetConstantColor(kCGColorBlack);
     [_pipViewController presentViewControllerAsPictureInPicture:_videoViewContainerController.get()];
     _pipState = PIPState::EnteringPIP;
+#if HAVE(PIP_SKIP_PREROLL)
+    [self updatePrerollAttributes];
+#endif
 }
 
 - (void)exitPIP
@@ -245,8 +276,10 @@ enum class PIPState {
     _returningWindow = window;
     _returningRect = rect;
 
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     [_pipViewController setReplacementRect:rect];
     [_pipViewController setReplacementWindow:window];
+    ALLOW_DEPRECATED_DECLARATIONS_END
 
     [self exitPIP];
 }
@@ -308,7 +341,19 @@ enum class PIPState {
 
     return NO;
 }
+#if HAVE(PIP_SKIP_PREROLL)
+- (void)pipActionSkipPreroll:(PIPViewController *)pip
+{
+    ASSERT_UNUSED(pip, pip == _pipViewController);
 
+    if (!_videoPresentationInterfaceMac)
+        return;
+
+    _videoPresentationInterfaceMac->skipAd();
+    [self updateCanSkipAd:NO];
+}
+#endif
+ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
 - (void)pipDidClose:(PIPViewController *)pip
 {
     ASSERT_UNUSED(pip, pip == _pipViewController);
@@ -319,7 +364,9 @@ enum class PIPState {
     if (_pipState != PIPState::ExitingPIP) {
         // We got told to close without going through -pipActionStop, nor by exlicitly being asked to in -exitPiP:.
         // Call -pipActionStop: here in order to set the fullscreen state to an expected value.
+        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         [self pipActionStop:pip];
+        ALLOW_DEPRECATED_DECLARATIONS_END
     }
 
     if (auto model = _videoPresentationInterfaceMac->videoPresentationModel()) {
@@ -372,6 +419,7 @@ enum class PIPState {
     _videoPresentationInterfaceMac->requestHideAndExitPiP();
     _pipState = PIPState::ExitingPIP;
 }
+ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
 @end
 
@@ -423,7 +471,12 @@ void VideoPresentationInterfaceMac::setMode(HTMLMediaElementEnums::VideoFullscre
     if (model)
         model->fullscreenModeChanged(m_mode);
 }
-
+#if HAVE(PIP_SKIP_PREROLL)
+void VideoPresentationInterfaceMac::skipAd()
+{
+    m_playbackSessionInterface->skipAd();
+}
+#endif
 void VideoPresentationInterfaceMac::clearMode(HTMLMediaElementEnums::VideoFullscreenMode mode)
 {
     HTMLMediaElementEnums::VideoFullscreenMode newMode = m_mode & ~mode;
@@ -452,7 +505,12 @@ void VideoPresentationInterfaceMac::ensureControlsManager()
 {
     m_playbackSessionInterface->ensureControlsManager();
 }
-
+#if HAVE(PIP_SKIP_PREROLL)
+void VideoPresentationInterfaceMac::canSkipAdChanged(bool canSkipAd)
+{
+    [videoPresentationInterfaceObjC() updateCanSkipAd:canSkipAd];
+}
+#endif
 WebVideoPresentationInterfaceMacObjC *VideoPresentationInterfaceMac::videoPresentationInterfaceObjC()
 {
     if (!m_webVideoPresentationInterfaceObjC)
@@ -472,7 +530,7 @@ void VideoPresentationInterfaceMac::setupFullscreen(const IntRect& initialRect, 
 
     [videoPresentationInterfaceObjC() setUpPIPForVideoView:layerHostView() withFrame:(NSRect)initialRect inWindow:parentWindow];
 
-    RunLoop::main().dispatch([protectedThis = Ref { *this }, this] {
+    RunLoop::protectedMain()->dispatch([protectedThis = Ref { *this }, this] {
         if (RefPtr model = videoPresentationModel()) {
             model->didSetupFullscreen();
             model->setRequiresTextTrackRepresentation(true);

@@ -77,8 +77,7 @@ public:
             propagateForward();
         } while (m_changed);
 
-        if (verboseFixPointLoops)
-            dataLog("Iterated ", counter, " times in double voting fixpoint.\n");
+        dataLogLnIf(verboseFixPointLoops, "Iterated ", counter, " times in double voting fixpoint.");
         
         return true;
     }
@@ -107,8 +106,7 @@ private:
             propagateBackward();
         } while (m_changed);
 
-        if (verboseFixPointLoops)
-            dataLog("Iterated ", counter, " times in propagateToFixpoint.\n");
+        dataLogLnIf(verboseFixPointLoops, "Iterated ", counter, " times in propagateToFixpoint.");
     }
     
     bool setPrediction(SpeculatedType prediction)
@@ -640,6 +638,14 @@ private:
             }
             break;
         }
+
+        case StringAt: {
+            if (node->arrayMode().isOutOfBounds())
+                changed |= mergePrediction(SpecString | SpecOther);
+            else
+                changed |= mergePrediction(SpecString);
+            break;
+        }
             
         case ToThis: {
             // ToThis in methods for primitive types should speculate primitive types in strict mode.
@@ -1127,6 +1133,7 @@ private:
             break;
 
         case MapStorage:
+        case MapStorageOrSentinel:
         case MapIterationNext:
             setPrediction(SpecCellOther);
             break;
@@ -1134,6 +1141,11 @@ private:
         case GetRestLength:
         case ArrayIndexOf: {
             setPrediction(SpecInt32Only);
+            break;
+        }
+
+        case ArrayIncludes: {
+            setPrediction(SpecBoolean);
             break;
         }
 
@@ -1518,7 +1530,8 @@ private:
         case AtomicsOr:
         case AtomicsStore:
         case AtomicsSub:
-        case AtomicsXor: {
+        case AtomicsXor:
+        case StringAt: {
             m_dependentNodes.append(m_currentNode);
             break;
         }
@@ -1551,10 +1564,12 @@ private:
         case DoubleRep:
         case ValueRep:
         case Int52Rep:
+        case PurifyNaN:
         case Int52Constant:
         case Identity:
         case BooleanToNumber:
         case PhantomNewObject:
+        case PhantomNewArrayWithConstantSize:
         case PhantomNewFunction:
         case PhantomNewGeneratorFunction:
         case PhantomNewAsyncGeneratorFunction:
@@ -1575,6 +1590,7 @@ private:
         case CheckStructureOrEmpty:
         case CheckArrayOrEmpty:
         case MaterializeNewObject:
+        case MaterializeNewArrayWithConstantSize:
         case MaterializeCreateActivation:
         case MaterializeNewInternalFieldObject:
         case PutStack:

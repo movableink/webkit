@@ -35,7 +35,6 @@
 #include <windows.h>
 #include <wtf/HashSet.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/StringView.h>
@@ -591,11 +590,11 @@ static int CALLBACK traitsInFamilyEnumProc(CONST LOGFONT* logFont, CONST TEXTMET
         break;
     }
 
-    FontSelectionValue stretch = normalStretchValue();
+    FontSelectionValue width = normalWidthValue();
 
     FontSelectionCapabilities result;
     result.weight = FontSelectionRange(weight, weight);
-    result.width = FontSelectionRange(stretch, stretch);
+    result.width = FontSelectionRange(width, width);
     result.slope = FontSelectionRange(italic, italic);
     procData->m_capabilities.append(WTFMove(result));
     return 1;
@@ -619,7 +618,7 @@ Vector<FontSelectionCapabilities> FontCache::getFontSelectionCapabilitiesInFamil
     });
 }
 
-std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String& familyName)
+ASCIILiteral FontCache::platformAlternateFamilyName(const String& familyName)
 {
     switch (familyName.length()) {
     // On Windows, we don't support bitmap fonts, but legacy content expects support.
@@ -641,7 +640,7 @@ std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String&
             return "Microsoft Sans Serif"_s;
         break;
     }
-    return std::nullopt;
+    return { };
 }
 
 void FontCache::platformInvalidate()

@@ -67,7 +67,7 @@ public:
     ~LayerTreeHost();
 
     const LayerTreeContext& layerTreeContext() const { return m_layerTreeContext; }
-    void setLayerFlushSchedulingEnabled(bool);
+    void setLayerTreeStateIsFrozen(bool);
     void setShouldNotifyAfterNextScheduledLayerFlush(bool);
     void scheduleLayerFlush();
     void cancelPendingLayerFlush();
@@ -77,13 +77,12 @@ public:
     void scrollNonCompositedContents(const WebCore::IntRect&);
     void forceRepaint();
     void forceRepaintAsync(CompletionHandler<void()>&&);
-    void sizeDidChange(const WebCore::IntSize& newSize);
+    void sizeDidChange();
     void pauseRendering();
     void resumeRendering();
     WebCore::GraphicsLayerFactory* graphicsLayerFactory();
     void contentsSizeChanged(const WebCore::IntSize&);
     void setIsDiscardable(bool);
-    void deviceOrPageScaleFactorChanged();
     void backgroundColorDidChange();
     RefPtr<WebCore::DisplayRefreshMonitor> createDisplayRefreshMonitor(WebCore::PlatformDisplayID);
     WebCore::PlatformDisplayID displayID() const { return m_displayID; }

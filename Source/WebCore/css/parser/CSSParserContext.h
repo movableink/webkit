@@ -81,7 +81,6 @@ struct CSSParserContext {
 #endif
     bool masonryEnabled : 1 { false };
     bool cssAppearanceBaseEnabled : 1 { false };
-    bool cssNestingEnabled : 1 { false };
     bool cssPaintingAPIEnabled : 1 { false };
     bool cssScopeAtRuleEnabled : 1 { false };
     bool cssShapeFunctionEnabled : 1 { false };
@@ -92,7 +91,7 @@ struct CSSParserContext {
     bool cssWordBreakAutoPhraseEnabled : 1 { false };
     bool popoverAttributeEnabled : 1 { false };
     bool sidewaysWritingModesEnabled : 1 { false };
-    bool cssTextWrapPrettyEnabled : 1 { false };
+    bool cssTextWrapPrettyEnabled : 1 { true };
     bool thumbAndTrackPseudoElementsEnabled : 1 { false };
 #if ENABLE(SERVICE_CONTROLS)
     bool imageControlsEnabled : 1 { false };
@@ -103,6 +102,9 @@ struct CSSParserContext {
     bool targetTextPseudoElementEnabled : 1 { false };
     bool viewTransitionTypesEnabled : 1 { false };
     bool cssProgressFunctionEnabled : 1 { false };
+    bool cssMediaProgressFunctionEnabled : 1 { false };
+    bool cssContainerProgressFunctionEnabled : 1 { false };
+    bool cssRandomFunctionEnabled : 1 { false };
 
     // Settings, those affecting properties.
     CSSPropertySettings propertySettings;
@@ -110,7 +112,10 @@ struct CSSParserContext {
     CSSParserContext(CSSParserMode, const URL& baseURL = URL());
     WEBCORE_EXPORT CSSParserContext(const Document&);
     CSSParserContext(const Document&, const URL& baseURL, ASCIILiteral charset = ""_s);
+
     ResolvedURL completeURL(const String&) const;
+
+    void setUASheetMode();
 
     bool operator==(const CSSParserContext&) const = default;
 };

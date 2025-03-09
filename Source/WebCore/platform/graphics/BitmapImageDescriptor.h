@@ -30,6 +30,7 @@
 #include "ImageOrientation.h"
 #include "ImageTypes.h"
 #include "IntPoint.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/OptionSet.h>
 
 namespace WebCore {
@@ -56,6 +57,7 @@ public:
     RepetitionCount repetitionCount() const;
     DestinationColorSpace colorSpace() const;
     std::optional<Color> singlePixelSolidColor() const;
+    Headroom headroom() const;
 
     String uti() const;
     String filenameExtension() const;
@@ -85,12 +87,13 @@ private:
         RepetitionCount             = 1 << 6,
         ColorSpace                  = 1 << 7,
         SinglePixelSolidColor       = 1 << 8,
+        Headroom                    = 1 << 9,
 
-        UTI                         = 1 << 9,
-        FilenameExtension           = 1 << 10,
-        AccessibilityDescription    = 1 << 11,
-        HotSpot                     = 1 << 12,
-        MaximumSubsamplingLevel     = 1 << 13,
+        UTI                         = 1 << 10,
+        FilenameExtension           = 1 << 11,
+        AccessibilityDescription    = 1 << 12,
+        HotSpot                     = 1 << 13,
+        MaximumSubsamplingLevel     = 1 << 14,
     };
 
     template<typename MetadataType>
@@ -113,6 +116,7 @@ private:
     mutable RepetitionCount m_repetitionCount { RepetitionCountNone };
     mutable DestinationColorSpace m_colorSpace { DestinationColorSpace::SRGB() };
     mutable std::optional<Color> m_singlePixelSolidColor;
+    mutable Headroom m_headroom { Headroom::None };
 
     mutable String m_uti;
     mutable String m_filenameExtension;
@@ -120,7 +124,7 @@ private:
     mutable std::optional<IntPoint> m_hotSpot;
     mutable SubsamplingLevel m_maximumSubsamplingLevel { SubsamplingLevel::Default };
 
-    BitmapImageSource& m_source;
+    const CheckedRef<BitmapImageSource> m_source;
 };
 
 } // namespace WebCore

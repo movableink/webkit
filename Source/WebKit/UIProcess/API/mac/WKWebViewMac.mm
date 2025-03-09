@@ -35,6 +35,7 @@
 #import "WebBackForwardList.h"
 #import "WebFrameProxy.h"
 #import "WebPageProxy.h"
+#import "WebPreferences.h"
 #import "WebProcessProxy.h"
 #import "WebViewImpl.h"
 #import "_WKFrameHandleInternal.h"
@@ -211,6 +212,10 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
 - (void)renewGState
 ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 {
+#if ENABLE(SCREEN_TIME)
+    [self _updateScreenTimeViewGeometry];
+#endif
+
     if (_impl)
         _impl->renewGState();
     [super renewGState];
@@ -1116,6 +1121,10 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
 #endif
 
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WKWebViewMacAdditions.mm>)
+#import <WebKitAdditions/WKWebViewMacAdditions.mm>
+#endif
+
 @end
 
 #pragma mark -
@@ -1351,6 +1360,11 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _impl->insertText(string, replacementRange);
 }
 
+- (void)_setContentOffset:(CGPoint)contentOffset animated:(BOOL)animated
+{
+    _page->setContentOffset(WebCore::IntPoint { contentOffset }, animated ? WebCore::ScrollIsAnimated::Yes : WebCore::ScrollIsAnimated::No);
+}
+
 #pragma mark - QLPreviewPanelController
 
 - (BOOL)acceptsPreviewPanelControl:(QLPreviewPanel *)panel
@@ -1431,6 +1445,26 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _impl->setRubberBandingEnabled(state);
 }
 
+- (BOOL)_alwaysBounceVertical
+{
+    return _impl->alwaysBounceVertical();
+}
+
+- (void)_setAlwaysBounceVertical:(BOOL)value
+{
+    _impl->setAlwaysBounceVertical(value);
+}
+
+- (BOOL)_alwaysBounceHorizontal
+{
+    return _impl->alwaysBounceHorizontal();
+}
+
+- (void)_setAlwaysBounceHorizontal:(BOOL)value
+{
+    _impl->setAlwaysBounceHorizontal(value);
+}
+
 - (NSColor *)_backgroundColor
 {
     return _impl->backgroundColor();
@@ -1471,21 +1505,54 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _impl->setDrawsBackground(drawsBackground);
 }
 
-- (void)_setTopContentInset:(CGFloat)contentInset
+- (void)_setTopContentInset:(CGFloat)inset
 {
-    _impl->setTopContentInset(contentInset);
+    auto insets = _impl->obscuredContentInsets();
+    insets.setTop(static_cast<float>(inset));
+    _impl->setObscuredContentInsets(insets);
 }
 
 - (CGFloat)_topContentInset
 {
-    return _impl->topContentInset();
+    return _impl->obscuredContentInsets().top();
 }
 
-- (void)_setTopContentInset:(CGFloat)contentInset immediate:(BOOL)immediate
+- (void)_setTopContentInset:(CGFloat)inset immediate:(BOOL)immediate
 {
-    _impl->setTopContentInset(contentInset);
+    auto insets = _impl->obscuredContentInsets();
+    insets.setTop(static_cast<float>(inset));
+    _impl->setObscuredContentInsets(insets);
     if (immediate)
-        _impl->flushPendingTopContentInset();
+        _impl->flushPendingObscuredContentInsetChanges();
+}
+
+- (void)_setObscuredContentInsets:(NSEdgeInsets)insets immediate:(BOOL)immediate
+{
+    if (insets.top < 0 || insets.left < 0 || insets.bottom < 0 || insets.right < 0) {
+        [NSException raise:NSInvalidArgumentException format:@"Obscured insets cannot be negative: {%f, %f, %f, %f}", insets.top, insets.left, insets.bottom, insets.right];
+        return;
+    }
+
+    _impl->setObscuredContentInsets({
+        static_cast<float>(insets.top),
+        static_cast<float>(insets.right),
+        static_cast<float>(insets.bottom),
+        static_cast<float>(insets.left)
+    });
+
+    if (immediate)
+        _impl->flushPendingObscuredContentInsetChanges();
+}
+
+- (NSEdgeInsets)_obscuredContentInsets
+{
+    auto insets = _impl->obscuredContentInsets();
+    return NSEdgeInsetsMake(
+        static_cast<CGFloat>(insets.top()),
+        static_cast<CGFloat>(insets.left()),
+        static_cast<CGFloat>(insets.bottom()),
+        static_cast<CGFloat>(insets.right())
+    );
 }
 
 - (void)_setAutomaticallyAdjustsContentInsets:(BOOL)automaticallyAdjustsContentInsets
@@ -1581,16 +1648,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 - (void)_setAlwaysShowsVerticalScroller:(BOOL)alwaysShowsVerticalScroller
 {
     _page->setAlwaysShowsVerticalScroller(alwaysShowsVerticalScroller);
-}
-
-- (BOOL)_useSystemAppearance
-{
-    return _impl->useSystemAppearance();
-}
-
-- (void)_setUseSystemAppearance:(BOOL)useSystemAppearance
-{
-    _impl->setUseSystemAppearance(useSystemAppearance);
 }
 
 - (void)_setOverlayScrollbarStyle:(_WKOverlayScrollbarStyle)scrollbarStyle

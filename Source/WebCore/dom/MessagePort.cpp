@@ -278,8 +278,8 @@ void MessagePort::dispatchMessages()
             }
 
             // Per specification, each MessagePort object has a task source called the port message queue.
-            queueTaskKeepingObjectAlive(*this, TaskSource::PostedMessageQueue, [this, event = WTFMove(event)] {
-                dispatchEvent(event.event);
+            queueTaskKeepingObjectAlive(*this, TaskSource::PostedMessageQueue, [event = WTFMove(event)](auto& port) {
+                port.dispatchEvent(event.event);
             });
         }
     };
@@ -327,7 +327,7 @@ ExceptionOr<Vector<TransferredMessagePort>> MessagePort::disentanglePorts(Vector
         return Vector<TransferredMessagePort> { };
 
     // Walk the incoming array - if there are any duplicate ports, or null ports or cloned ports, throw an error (per section 8.3.3 of the HTML5 spec).
-    HashSet<Ref<MessagePort>> portSet;
+    UncheckedKeyHashSet<Ref<MessagePort>> portSet;
     for (auto& port : ports) {
         if (!port->m_entangled || !portSet.add(port).isNewEntry)
             return Exception { ExceptionCode::DataCloneError };

@@ -50,10 +50,10 @@
 #import <wtf/NeverDestroyed.h>
 #import <wtf/RecursiveLockAdapter.h>
 #import <wtf/RunLoop.h>
-#import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/ThreadSpecific.h>
 #import <wtf/Threading.h>
 #import <wtf/WorkQueue.h>
+#import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #import <wtf/spi/cf/CFRunLoopSPI.h>
 #import <wtf/spi/cocoa/objcSPI.h>
 #import <wtf/text/AtomString.h>
@@ -206,7 +206,7 @@ static inline void SendMessage(RetainPtr<NSInvocation>&& invocation)
     if (!WebThreadIsEnabled() || CFRunLoopGetMain() == CFRunLoopGetCurrent())
         return;
 
-    RunLoop::main().dispatch([invocation = WTFMove(invocation)] { });
+    RunLoop::protectedMain()->dispatch([invocation = WTFMove(invocation)] { });
 }
 
 static void HandleDelegateSource(void*)
@@ -313,7 +313,7 @@ void WebThreadRunOnMainThread(void(^delegateBlock)())
     JSC::JSLock::DropAllLocks dropAllLocks(WebCore::commonVM());
     _WebThreadUnlock();
 
-    WorkQueue::main().dispatchSync(makeBlockPtr(delegateBlock).get());
+    WorkQueue::protectedMain()->dispatchSync(makeBlockPtr(delegateBlock).get());
 
     _WebThreadLock();
 }
@@ -329,7 +329,7 @@ void WebThreadAdoptAndRelease(id obj)
 
     Locker locker { webThreadReleaseLock };
 
-    if (webThreadReleaseObjArray() == nil)
+    if (!webThreadReleaseObjArray())
         webThreadReleaseObjArray() = adoptCF(CFArrayCreateMutable(kCFAllocatorSystemDefault, 0, nullptr));
     CFArrayAppendValue(webThreadReleaseObjArray().get(), obj);
     CFRunLoopSourceSignal(webThreadReleaseSource().get());
@@ -457,7 +457,7 @@ void WebThreadPostNotification(NSString* name, id object, id userInfo)
     if (pthread_main_np())
         [[NSNotificationCenter defaultCenter] postNotificationName:name object:object userInfo:userInfo];
     else {
-        RunLoop::main().dispatch([name = retainPtr(name), object = retainPtr(object), userInfo = retainPtr(userInfo)] {
+        RunLoop::protectedMain()->dispatch([name = retainPtr(name), object = retainPtr(object), userInfo = retainPtr(userInfo)] {
             [[NSNotificationCenter defaultCenter] postNotificationName:name.get() object:object.get() userInfo:userInfo.get()];
         });
     }
@@ -947,7 +947,7 @@ WebThreadContext* WebThreadCurrentContext(void)
 void WebThreadEnable(void)
 {
     RELEASE_ASSERT_WITH_MESSAGE(!WTF::IOSApplication::isWebProcess(), "The WebProcess should never run a Web Thread");
-    if (WTF::IOSApplication::isAppleApplication()) {
+    if (WTF::CocoaApplication::isAppleApplication()) {
         using WebCore::LogThreading;
         RELEASE_LOG_FAULT(Threading, "WebThread enabled");
     }

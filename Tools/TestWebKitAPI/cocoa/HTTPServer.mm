@@ -33,9 +33,11 @@
 #import <wtf/CallbackAggregator.h>
 #import <wtf/CompletionHandler.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/ThreadSafeRefCounted.h>
 #import <wtf/text/Base64.h>
 #import <wtf/text/MakeString.h>
+#import <wtf/text/ParsingUtilities.h>
 #import <wtf/text/StringBuilder.h>
 #import <wtf/text/WTFString.h>
 
@@ -131,8 +133,12 @@ RetainPtr<nw_parameters_t> HTTPServer::listenerParameters(Protocol protocol, Cer
         auto options = adoptNS(nw_tls_copy_sec_protocol_options(protocolOptions));
         auto identity = adoptNS(sec_identity_create(testIdentity.get()));
         sec_protocol_options_set_local_identity(options.get(), identity.get());
-        if (protocol == Protocol::HttpsWithLegacyTLS)
+        if (protocol == Protocol::HttpsWithLegacyTLS) {
+#if ENABLE(TLS_1_2_DEFAULT_MINIMUM)
+            sec_protocol_options_set_min_tls_protocol_version(options.get(), tls_protocol_version_TLSv10);
+#endif
             sec_protocol_options_set_max_tls_protocol_version(options.get(), tls_protocol_version_TLSv10);
+        }
         if (verifier) {
             sec_protocol_options_set_peer_authentication_required(options.get(), true);
             sec_protocol_options_set_verify_block(options.get(), makeBlockPtr([verifier = WTFMove(verifier)](sec_protocol_metadata_t metadata, sec_trust_t trust, sec_protocol_verify_complete_t completion) {
@@ -199,9 +205,9 @@ void HTTPServer::terminateAllConnections(CompletionHandler<void()>&& completionH
         connection.terminate([aggregator] { });
 }
 
-HTTPServer::HTTPServer(std::initializer_list<std::pair<String, HTTPResponse>> responses, Protocol protocol, CertificateVerifier&& verifier, RetainPtr<SecIdentityRef>&& identity, std::optional<uint16_t> port)
+HTTPServer::HTTPServer(std::initializer_list<std::pair<String, HTTPResponse>> responses, Protocol protocol, CertificateVerifier&& verifier, SecIdentityRef identity, std::optional<uint16_t> port)
     : m_requestData(adoptRef(*new RequestData(responses)))
-    , m_listener(adoptNS(nw_listener_create(listenerParameters(protocol, WTFMove(verifier), WTFMove(identity), port).get())))
+    , m_listener(adoptNS(nw_listener_create(listenerParameters(protocol, WTFMove(verifier), identity, port).get())))
     , m_protocol(protocol)
 {
     nw_listener_set_queue(m_listener.get(), dispatch_get_main_queue());
@@ -316,6 +322,8 @@ static ASCIILiteral statusText(unsigned statusCode)
         return "Found"_s;
     case 303:
         return "See Other"_s;
+    case 304:
+        return "Not Modified"_s;
     case 404:
         return "Not Found"_s;
     case 503:
@@ -325,9 +333,27 @@ static ASCIILiteral statusText(unsigned statusCode)
     return "Unknown Status Code"_s;
 }
 
-static void appendUTF8ToVector(Vector<uint8_t>& vector, const String& string)
+static Vector<uint8_t> toUTF8Vector(const String& string)
 {
-    vector.append(string.utf8().span());
+    Vector<uint8_t> result;
+    string.tryGetUTF8([&](std::span<const char8_t> utf8) {
+        result.append(byteCast<uint8_t>(utf8));
+        return true;
+    });
+    return result;
+}
+
+static Vector<uint8_t> serialize304Response(const HashMap<String, String>& headerFields)
+{
+    constexpr int statusCode = 304;
+
+    StringBuilder responseBuilder;
+    responseBuilder.append("HTTP/1.1 "_s, statusCode, ' ', statusText(statusCode), "\r\n"_s);
+    for (auto& pair : headerFields)
+        responseBuilder.append(pair.key, ": "_s, pair.value, "\r\n"_s);
+    responseBuilder.append("\r\n"_s);
+
+    return toUTF8Vector(responseBuilder.toString());
 }
 
 String HTTPServer::parsePath(const Vector<char>& request)
@@ -357,6 +383,24 @@ String HTTPServer::parseBody(const Vector<char>& request)
     return request.subspan(headerLength);
 }
 
+static bool isConditionalRequest(std::span<const char> request)
+{
+    auto endOfHeaders = find(request, "\r\n\r\n"_span);
+    if (endOfHeaders == notFound)
+        return false;
+    auto headers = request.first(endOfHeaders);
+    constexpr auto newLine = "\r\n"_span;
+    while (!headers.empty()) {
+        if (spanHasPrefixIgnoringASCIICase(headers, "If-None-Match:"_span))
+            return true;
+        size_t endOfLine = find(headers, newLine);
+        if (endOfLine == notFound)
+            return false;
+        skip(headers, endOfLine + newLine.size());
+    }
+    return false;
+}
+
 void HTTPServer::respondToRequests(Connection connection, Ref<RequestData> requestData)
 {
     connection.receiveHTTPRequest([connection, requestData] (Vector<char>&& request) mutable {
@@ -368,6 +412,14 @@ void HTTPServer::respondToRequests(Connection connection, Ref<RequestData> reque
         ASSERT_WITH_MESSAGE(requestData->requestMap.contains(path), "This HTTPServer does not know how to respond to a request for %s", path.utf8().data());
 
         auto response = requestData->requestMap.get(path);
+        if (response.shouldRespondWith304ToConditionalRequests) {
+            if (isConditionalRequest(request.span())) {
+                return connection.send(serialize304Response(response.headerFieldsFor304), [connection, requestData] {
+                    respondToRequests(connection, requestData);
+                });
+            }
+        }
+
         switch (response.behavior) {
         case HTTPResponse::Behavior::TerminateConnectionAfterReceivingResponse:
             return connection.terminate();
@@ -431,9 +483,7 @@ WKWebViewConfiguration *HTTPServer::httpsProxyConfiguration() const
 
 Vector<uint8_t> HTTPResponse::bodyFromString(const String& string)
 {
-    Vector<uint8_t> vector;
-    appendUTF8ToVector(vector, string);
-    return vector;
+    return toUTF8Vector(string);
 }
 
 Vector<uint8_t> HTTPResponse::serialize(IncludeContentLength includeContentLength) const
@@ -446,8 +496,7 @@ Vector<uint8_t> HTTPResponse::serialize(IncludeContentLength includeContentLengt
         responseBuilder.append(pair.key, ": "_s, pair.value, "\r\n"_s);
     responseBuilder.append("\r\n"_s);
     
-    Vector<uint8_t> bytesToSend;
-    appendUTF8ToVector(bytesToSend, responseBuilder.toString());
+    auto bytesToSend = toUTF8Vector(responseBuilder.toString());
     bytesToSend.appendVector(body);
     return bytesToSend;
 }

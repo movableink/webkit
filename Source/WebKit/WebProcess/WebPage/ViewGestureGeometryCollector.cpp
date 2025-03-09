@@ -240,8 +240,8 @@ void ViewGestureGeometryCollector::computeZoomInformationForNode(Node& node, Flo
 {
     absoluteBoundingRect = node.absoluteBoundingRect(&isReplaced);
     if (node.document().isImageDocument()) {
-        if (HTMLImageElement* imageElement = static_cast<ImageDocument&>(node.document()).imageElement()) {
-            if (&node != imageElement) {
+        if (RefPtr imageElement = downcast<ImageDocument>(node.document()).imageElement()) {
+            if (&node != imageElement.get()) {
                 absoluteBoundingRect = imageElement->absoluteBoundingRect(&isReplaced);
                 FloatPoint newOrigin = origin;
                 if (origin.x() < absoluteBoundingRect.x() || origin.x() > absoluteBoundingRect.maxX())
@@ -252,7 +252,15 @@ void ViewGestureGeometryCollector::computeZoomInformationForNode(Node& node, Flo
             }
             isReplaced = true;
         }
+    }  else {
+#if ENABLE(PDF_PLUGIN)
+        if (RefPtr pluginView = m_webPage->mainFramePlugIn()) {
+            absoluteBoundingRect = pluginView->absoluteBoundingRectForSmartMagnificationAtPoint(origin);
+            isReplaced = false;
+        }
+#endif
     }
+
     computeMinimumAndMaximumViewportScales(viewportMinimumScale, viewportMaximumScale);
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -201,7 +201,7 @@ private:
 
 template <typename T, typename Traits = WriteBarrierTraitsSelect<T>>
 class WriteBarrier : public WriteBarrierBase<T, Traits> {
-    WTF_MAKE_TZONE_ALLOCATED(WriteBarrier);
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(WriteBarrier);
 public:
     WriteBarrier()
     {
@@ -231,11 +231,19 @@ public:
     }
 };
 
+#define TZONE_TEMPLATE_PARAMS template <typename T, typename Traits>
+#define TZONE_TYPE WriteBarrier<T, Traits>
+
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL_WITH_MULTIPLE_OR_SPECIALIZED_PARAMETERS();
+
+#undef TZONE_TEMPLATE_PARAMS
+#undef TZONE_TYPE
+
 enum UndefinedWriteBarrierTagType { UndefinedWriteBarrierTag };
 enum NullWriteBarrierTagType { NullWriteBarrierTag };
 template <>
 class WriteBarrier<Unknown, RawValueTraits<Unknown>> : public WriteBarrierBase<Unknown, RawValueTraits<Unknown>> {
-    WTF_MAKE_TZONE_ALLOCATED(WriteBarrier);
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(WriteBarrier);
 public:
     WriteBarrier()
     {

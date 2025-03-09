@@ -70,10 +70,10 @@ static WTFLogChannel& logChannel() { return LogEME; }
 const Vector<FourCC>& CDMPrivateFairPlayStreaming::validFairPlayStreamingSchemes()
 {
     static NeverDestroyed<Vector<FourCC>> validSchemes = Vector<FourCC>({
-        "cbcs",
-        "cbc2",
-        "cbc1",
-        "cenc",
+        std::span { "cbcs" },
+        std::span { "cbc2" },
+        std::span { "cbc1" },
+        std::span { "cenc" }
     });
 
     return validSchemes;
@@ -297,12 +297,12 @@ CDMFactoryFairPlayStreaming& CDMFactoryFairPlayStreaming::singleton()
 CDMFactoryFairPlayStreaming::CDMFactoryFairPlayStreaming() = default;
 CDMFactoryFairPlayStreaming::~CDMFactoryFairPlayStreaming() = default;
 
-std::unique_ptr<CDMPrivate> CDMFactoryFairPlayStreaming::createCDM(const String& keySystem, const CDMPrivateClient& client)
+std::unique_ptr<CDMPrivate> CDMFactoryFairPlayStreaming::createCDM(const String& keySystem, const String& mediaKeysHashSalt, const CDMPrivateClient& client)
 {
     if (!supportsKeySystem(keySystem))
         return nullptr;
 
-    return makeUnique<CDMPrivateFairPlayStreaming>(client);
+    return makeUnique<CDMPrivateFairPlayStreaming>(mediaKeysHashSalt, client);
 }
 
 bool CDMFactoryFairPlayStreaming::supportsKeySystem(const String& keySystem)
@@ -312,9 +312,10 @@ bool CDMFactoryFairPlayStreaming::supportsKeySystem(const String& keySystem)
     return keySystem == "com.apple.fps"_s || keySystem.startsWith("com.apple.fps."_s);
 }
 
-CDMPrivateFairPlayStreaming::CDMPrivateFairPlayStreaming(const CDMPrivateClient& client)
+CDMPrivateFairPlayStreaming::CDMPrivateFairPlayStreaming(const String& mediaKeysHashSalt, const CDMPrivateClient& client)
+    : m_mediaKeysHashSalt { mediaKeysHashSalt }
 #if !RELEASE_LOG_DISABLED
-    : m_logger(client.logger())
+    , m_logger { client.logger() }
 #endif
 {
 }

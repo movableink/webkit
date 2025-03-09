@@ -42,9 +42,9 @@
 #include "RefPtrCairo.h"
 #elif USE(SKIA)
 #include <hb.h>
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/core/SkFont.h>
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #endif
 
 #if ENABLE(MATHML) && USE(HARFBUZZ)
@@ -456,7 +456,7 @@ public:
     String description() const;
 
     struct CreationData {
-        Ref<SharedBuffer> fontFaceData;
+        const Ref<SharedBuffer> fontFaceData;
         String itemInCollection;
 #if PLATFORM(WIN) && USE(CAIRO)
         Ref<FontMemoryResource> m_fontResource;

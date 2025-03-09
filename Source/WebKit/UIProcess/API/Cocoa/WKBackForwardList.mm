@@ -29,9 +29,10 @@
 #import "WKBackForwardListItemInternal.h"
 #import "WKNSArray.h"
 #import <WebCore/WebCoreObjCExtras.h>
+#import <wtf/AlignedStorage.h>
 
 @implementation WKBackForwardList {
-    API::ObjectStorage<WebKit::WebBackForwardList> _list;
+    AlignedStorage<WebKit::WebBackForwardList> _list;
 }
 
 WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;

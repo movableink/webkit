@@ -201,6 +201,7 @@ public:
         WebsiteDataStoreConfiguration,
         WebsitePolicies,
         WindowFeatures,
+        CompletionListener,
 
 #if ENABLE(WEB_AUTHN)
         WebAuthenticationAssertionResponse,
@@ -250,7 +251,7 @@ public:
         new (&object) T(std::forward<Args>(args)...);
     }
 
-    id <WKObject> wrapper() const { return (__bridge id <WKObject>)m_wrapper; }
+    id wrapper() const { return (__bridge id)m_wrapper; }
 #endif
 
     void ref() const;

@@ -30,8 +30,6 @@
 
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebGLDrawBuffers);
@@ -55,7 +53,7 @@ void WebGLDrawBuffers::drawBuffersWEBGL(const Vector<GCGLenum>& buffers)
         return;
     auto& context = this->context();
     GCGLsizei n = buffers.size();
-    const GCGLenum* bufs = buffers.data();
+    auto bufs = buffers.span();
     if (!context.m_framebufferBinding) {
         if (n != 1) {
             context.synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "drawBuffersWEBGL"_s, "more or fewer than one buffer"_s);
@@ -85,7 +83,5 @@ void WebGLDrawBuffers::drawBuffersWEBGL(const Vector<GCGLenum>& buffers)
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBGL)

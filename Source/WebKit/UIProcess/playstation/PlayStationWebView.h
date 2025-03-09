@@ -59,10 +59,7 @@ public:
 #endif
 
 #if ENABLE(FULLSCREEN_API)
-    void willEnterFullScreen();
-    void didEnterFullScreen();
-    void willExitFullScreen();
-    void didExitFullScreen();
+    void willEnterFullScreen(CompletionHandler<void(bool)>&&);
     void requestExitFullScreen();
 #endif
 
@@ -71,10 +68,10 @@ public:
 #if ENABLE(FULLSCREEN_API)
     bool isFullScreen();
     void closeFullScreenManager();
-    void enterFullScreen();
-    void exitFullScreen();
-    void beganEnterFullScreen(const WebCore::IntRect&, const WebCore::IntRect&);
-    void beganExitFullScreen(const WebCore::IntRect&, const WebCore::IntRect&);
+    void enterFullScreen(CompletionHandler<void(bool)>&&);
+    void exitFullScreen(CompletionHandler<void()>&&);
+    void beganEnterFullScreen(const WebCore::IntRect&, const WebCore::IntRect&, CompletionHandler<void(bool)>&&);
+    void beganExitFullScreen(const WebCore::IntRect&, const WebCore::IntRect&, CompletionHandler<void()>&&);
 #endif
     void setCursor(const WebCore::Cursor&);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,8 +30,6 @@
 #include "PDFPluginIdentifier.h"
 #include "PasteboardAccessIntent.h"
 #include "SameDocumentNavigationType.h"
-#include "WebColorPicker.h"
-#include "WebDateTimePicker.h"
 #include "WebPopupMenuProxy.h"
 #include "WindowKind.h"
 #include <WebCore/ActivityState.h>
@@ -39,8 +37,11 @@
 #include <WebCore/ContactInfo.h>
 #include <WebCore/ContactsRequestData.h>
 #include <WebCore/DataOwnerType.h>
+#include <WebCore/DigitalCredentialsRequestData.h>
+#include <WebCore/DigitalCredentialsResponseData.h>
 #include <WebCore/DragActions.h>
 #include <WebCore/EditorClient.h>
+#include <WebCore/ExceptionData.h>
 #include <WebCore/FocusDirection.h>
 #include <WebCore/FrameIdentifier.h>
 #include <WebCore/InputMode.h>
@@ -118,6 +119,7 @@ class WebMediaSessionManager;
 class SelectionData;
 #endif
 
+enum class ElementIdentifierType;
 enum class MouseEventPolicy : uint8_t;
 enum class RouteSharingPolicy : uint8_t;
 enum class ScrollbarStyle : uint8_t;
@@ -131,11 +133,12 @@ enum class ScrollIsAnimated : bool;
 struct AppHighlight;
 struct DataDetectorElementInfo;
 struct DictionaryPopupInfo;
+struct ElementContext;
+struct FixedContainerEdges;
 struct TextIndicatorData;
 struct ShareDataWithParsedURL;
 
 template <typename> class RectEdges;
-using FloatBoxExtent = RectEdges<float>;
 
 #if ENABLE(DRAG_SUPPORT)
 struct DragItem;
@@ -148,6 +151,8 @@ struct PromisedAttachmentInfo;
 #if HAVE(TRANSLATION_UI_SERVICES) && ENABLE(CONTEXT_MENUS)
 struct TranslationContextMenuInfo;
 #endif
+
+using ElementIdentifier = ObjectIdentifier<ElementIdentifierType>;
 
 #if ENABLE(WRITING_TOOLS)
 namespace WritingTools {
@@ -185,7 +190,10 @@ class BrowsingWarning;
 class UserData;
 class ViewSnapshot;
 class WebBackForwardListItem;
+class WebColorPicker;
 class WebContextMenuProxy;
+class WebDataListSuggestionsDropdown;
+class WebDateTimePicker;
 class WebEditCommandProxy;
 class WebFrameProxy;
 class WebOpenPanelResultListenerProxy;
@@ -199,6 +207,7 @@ struct EditorState;
 struct FocusedElementInformation;
 struct FrameInfoData;
 struct InteractionInformationAtPosition;
+struct KeyEventInterpretationContext;
 struct WebAutocorrectionContext;
 struct WebHitTestResultData;
 
@@ -208,18 +217,6 @@ class WebGestureEvent;
 
 #if ENABLE(TOUCH_EVENTS)
 class NativeWebTouchEvent;
-#endif
-
-#if ENABLE(INPUT_TYPE_COLOR)
-class WebColorPicker;
-#endif
-
-#if ENABLE(DATALIST_ELEMENT)
-class WebDataListSuggestionsDropdown;
-#endif
-
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-class WebDateTimePicker;
 #endif
 
 #if ENABLE(FULLSCREEN_API)
@@ -273,6 +270,9 @@ public:
     // Called when the activity state of the page transitions from non-visible to visible.
     virtual void viewIsBecomingVisible() { }
 
+    // Called when the activity state of the page transitions from visible to non-visible.
+    virtual void viewIsBecomingInvisible() { }
+
 #if PLATFORM(COCOA)
     virtual bool canTakeForegroundAssertions() = 0;
 #endif
@@ -321,21 +321,33 @@ public:
     virtual void removeAllPDFHUDs() = 0;
 #endif
 
-#if ENABLE(PDF_PLUGIN) && PLATFORM(IOS_FAMILY)
-    virtual void pluginDidInstallPDFDocument(double initialScale) { };
+#if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+    virtual void createPDFPageNumberIndicator(PDFPluginIdentifier, const WebCore::IntRect&, size_t pageCount) = 0;
+    virtual void updatePDFPageNumberIndicatorLocation(PDFPluginIdentifier, const WebCore::IntRect&) = 0;
+    virtual void updatePDFPageNumberIndicatorCurrentPage(PDFPluginIdentifier, size_t pageIndex) = 0;
+    virtual void removePDFPageNumberIndicator(PDFPluginIdentifier) = 0;
+    virtual void removeAnyPDFPageNumberIndicator() = 0;
 #endif
 
     virtual bool handleRunOpenPanel(WebPageProxy*, WebFrameProxy*, const FrameInfoData&, API::OpenPanelParameters*, WebOpenPanelResultListenerProxy*) { return false; }
     virtual bool showShareSheet(const WebCore::ShareDataWithParsedURL&, WTF::CompletionHandler<void (bool)>&&) { return false; }
     virtual void showContactPicker(const WebCore::ContactsRequestData&, WTF::CompletionHandler<void(std::optional<Vector<WebCore::ContactInfo>>&&)>&& completionHandler) { completionHandler(std::nullopt); }
 
+    virtual void showDigitalCredentialsPicker(const WebCore::DigitalCredentialsRequestData&, WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&& completionHandler)
+    {
+        completionHandler(makeUnexpected(WebCore::ExceptionData { WebCore::ExceptionCode::NotSupportedError, "Digital credentials are not supported."_s }));
+    }
+    virtual void dismissDigitalCredentialsPicker(WTF::CompletionHandler<void(bool)>&& completionHandler) { completionHandler(true); }
+
     virtual void didChangeContentSize(const WebCore::IntSize&) = 0;
 
-    virtual void topContentInsetDidChange() { }
+    virtual void obscuredContentInsetsDidChange() { }
 
     virtual void showBrowsingWarning(const BrowsingWarning&, CompletionHandler<void(std::variant<ContinueUnsafeLoad, URL>&&)>&& completionHandler) { completionHandler(ContinueUnsafeLoad::Yes); }
     virtual void clearBrowsingWarning() { }
     virtual void clearBrowsingWarningIfForMainFrameNavigation() { }
+
+    virtual bool canStartNavigationSwipeAtLastInteractionLocation() const { return true; }
     
 #if ENABLE(DRAG_SUPPORT)
 #if PLATFORM(GTK) || PLATFORM(QT)
@@ -404,6 +416,7 @@ public:
     virtual WebCore::IntPoint screenToRootView(const WebCore::IntPoint&) = 0;
     virtual WebCore::FloatRect rootViewToWebView(const WebCore::FloatRect& rect) const { return rect; }
     virtual WebCore::FloatPoint webViewToRootView(const WebCore::FloatPoint& point) const { return point; }
+    virtual WebCore::IntPoint rootViewToScreen(const WebCore::IntPoint&) = 0;
     virtual WebCore::IntRect rootViewToScreen(const WebCore::IntRect&) = 0;
     virtual WebCore::IntPoint accessibilityScreenToRootView(const WebCore::IntPoint&) = 0;
     virtual WebCore::IntRect rootViewToAccessibilityScreen(const WebCore::IntRect&) = 0;
@@ -459,22 +472,16 @@ public:
 
     virtual RefPtr<WebPopupMenuProxy> createPopupMenuProxy(WebPageProxy&) = 0;
 #if ENABLE(CONTEXT_MENUS)
-    virtual Ref<WebContextMenuProxy> createContextMenuProxy(WebPageProxy&, ContextMenuContextData&&, const UserData&) = 0;
+    virtual Ref<WebContextMenuProxy> createContextMenuProxy(WebPageProxy&, FrameInfoData&&, ContextMenuContextData&&, const UserData&) = 0;
     virtual void didShowContextMenu() { }
     virtual void didDismissContextMenu() { }
 #endif
 
-#if ENABLE(INPUT_TYPE_COLOR)
-    virtual RefPtr<WebColorPicker> createColorPicker(WebPageProxy*, const WebCore::Color& initialColor, const WebCore::IntRect&, ColorControlSupportsAlpha, Vector<WebCore::Color>&&) = 0;
-#endif
+    virtual RefPtr<WebColorPicker> createColorPicker(WebPageProxy&, const WebCore::Color& initialColor, const WebCore::IntRect&, ColorControlSupportsAlpha, Vector<WebCore::Color>&&) = 0;
 
-#if ENABLE(DATALIST_ELEMENT)
     virtual RefPtr<WebDataListSuggestionsDropdown> createDataListSuggestionsDropdown(WebPageProxy&) = 0;
-#endif
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     virtual RefPtr<WebDateTimePicker> createDateTimePicker(WebPageProxy&) = 0;
-#endif
 
 #if PLATFORM(COCOA) || PLATFORM(GTK)
     virtual Ref<WebCore::ValidationBubble> createValidationBubble(const String& message, const WebCore::ValidationBubble::Settings&) = 0;
@@ -569,18 +576,19 @@ public:
 
     virtual void elementDidFocus(const FocusedElementInformation&, bool userIsInteracting, bool blurPreviousNode, OptionSet<WebCore::ActivityState> activityStateChanges, API::Object* userData) = 0;
     virtual void updateInputContextAfterBlurringAndRefocusingElement() = 0;
+    virtual void didProgrammaticallyClearFocusedElement(WebCore::ElementContext&&) = 0;
     virtual void updateFocusedElementInformation(const FocusedElementInformation&) = 0;
     virtual void elementDidBlur() = 0;
     virtual void focusedElementDidChangeInputMode(WebCore::InputMode) = 0;
     virtual void didUpdateEditorState() = 0;
     virtual bool isFocusingElement() = 0;
-    virtual bool interpretKeyEvent(const NativeWebKeyboardEvent&, bool isCharEvent) = 0;
+    virtual bool interpretKeyEvent(const NativeWebKeyboardEvent&, KeyEventInterpretationContext&&) = 0;
     virtual void positionInformationDidChange(const InteractionInformationAtPosition&) = 0;
     virtual void saveImageToLibrary(Ref<WebCore::SharedBuffer>&&) = 0;
     virtual void showPlaybackTargetPicker(bool hasVideo, const WebCore::IntRect& elementRect, WebCore::RouteSharingPolicy, const String&) = 0;
     virtual void showDataDetectorsUIForPositionInformation(const InteractionInformationAtPosition&) = 0;
     virtual void disableDoubleTapGesturesDuringTapIfNecessary(WebKit::TapIdentifier) = 0;
-    virtual void handleSmartMagnificationInformationForPotentialTap(WebKit::TapIdentifier, const WebCore::FloatRect& renderRect, bool fitEntireRect, double viewportMinimumScale, double viewportMaximumScale, bool nodeIsRootLevel) = 0;
+    virtual void handleSmartMagnificationInformationForPotentialTap(WebKit::TapIdentifier, const WebCore::FloatRect& renderRect, bool fitEntireRect, double viewportMinimumScale, double viewportMaximumScale, bool nodeIsRootLevel, bool nodeIsPluginElement) = 0;
     virtual double minimumZoomScale() const = 0;
     virtual WebCore::FloatRect documentRect() const = 0;
     virtual void scrollingNodeScrollViewWillStartPanGesture(WebCore::ScrollingNodeID) = 0;
@@ -626,6 +634,7 @@ public:
     // Auxiliary Client Creation
 #if ENABLE(FULLSCREEN_API)
     virtual WebFullScreenManagerProxyClient& fullScreenManagerProxyClient() = 0;
+    virtual void setFullScreenClientForTesting(std::unique_ptr<WebFullScreenManagerProxyClient>&&) = 0;
 #endif
 
     // Custom representations.
@@ -648,10 +657,12 @@ public:
 
     virtual void themeColorWillChange() { }
     virtual void themeColorDidChange() { }
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    virtual void spatialBackdropSourceWillChange() { }
+    virtual void spatialBackdropSourceDidChange() { }
+#endif
     virtual void underPageBackgroundColorWillChange() { }
     virtual void underPageBackgroundColorDidChange() { }
-    virtual void pageExtendedBackgroundColorWillChange() { }
-    virtual void pageExtendedBackgroundColorDidChange() { }
     virtual void sampledPageTopColorWillChange() { }
     virtual void sampledPageTopColorDidChange() { }
     virtual void didChangeBackgroundColor() = 0;
@@ -685,7 +696,6 @@ public:
 #if PLATFORM(MAC)
     virtual void didPerformImmediateActionHitTest(const WebHitTestResultData&, bool contentPreventsDefault, API::Object*) = 0;
     virtual NSObject *immediateActionAnimationControllerForHitTestResult(RefPtr<API::HitTestResult>, uint64_t, RefPtr<API::Object>) = 0;
-    virtual void didHandleAcceptedCandidate() = 0;
 #endif
 
     virtual void microphoneCaptureWillChange() { }
@@ -700,6 +710,7 @@ public:
     virtual void systemAudioCaptureChanged() { }
 
     virtual void videoControlsManagerDidChange() { }
+    virtual void videosInElementFullscreenChanged() { }
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS_FAMILY)
     virtual WebCore::WebMediaSessionManager& mediaSessionManager() = 0;
@@ -714,7 +725,7 @@ public:
 
     virtual bool windowIsFrontWindowUnderMouse(const NativeWebMouseEvent&) { return false; }
 
-    virtual std::optional<float> computeAutomaticTopContentInset() { return std::nullopt; }
+    virtual std::optional<float> computeAutomaticTopObscuredInset() { return std::nullopt; }
 
     virtual WebCore::UserInterfaceLayoutDirection userInterfaceLayoutDirection() = 0;
 
@@ -727,6 +738,10 @@ public:
     virtual void didHandleAdditionalDragItemsRequest(bool added) = 0;
     virtual void willReceiveEditDragSnapshot() = 0;
     virtual void didReceiveEditDragSnapshot(std::optional<WebCore::TextIndicatorData>) = 0;
+#endif
+
+#if ENABLE(MODEL_PROCESS)
+    virtual void didReceiveInteractiveModelElement(std::optional<WebCore::ElementIdentifier>) = 0;
 #endif
 
     virtual void requestDOMPasteAccess(WebCore::DOMPasteAccessCategory, WebCore::DOMPasteRequiresInteraction, const WebCore::IntRect& elementRect, const String& originIdentifier, CompletionHandler<void(WebCore::DOMPasteAccessResponse)>&&) = 0;
@@ -827,6 +842,12 @@ public:
     virtual void hasActiveNowPlayingSessionChanged(bool) { }
 
     virtual void scheduleVisibleContentRectUpdate() { }
+
+#if ENABLE(SCREEN_TIME)
+    virtual void didChangeScreenTimeWebpageControllerURL() { };
+    virtual void setURLIsPictureInPictureForScreenTime(bool) { };
+    virtual void setURLIsPlayingVideoForScreenTime(bool) { };
+#endif
 };
 
 } // namespace WebKit

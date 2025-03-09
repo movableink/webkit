@@ -75,6 +75,9 @@ TEST(Fullscreen, AudioLifecycle)
     [webView waitForMessage:@"playing"];
 
     ASSERT_FALSE([webView _canEnterFullscreen]);
+
+    [webView removeObserver:observer.get() forKeyPath:canEnterFullscreenKeyPath];
+    [webView removeObserver:observer.get() forKeyPath:fullscreenStateKeyPath];
 }
 
 static void runTest(WKWebViewConfiguration *configuration)
@@ -121,6 +124,9 @@ static void runTest(WKWebViewConfiguration *configuration)
     });
     ASSERT_FALSE([webView _canEnterFullscreen]);
     ASSERT_TRUE(canEnterFullscreenChanged);
+
+    [webView removeObserver:observer.get() forKeyPath:canEnterFullscreenKeyPath];
+    [webView removeObserver:observer.get() forKeyPath:fullscreenStateKeyPath];
 }
 
 TEST(Fullscreen, VideoLifecycle)

@@ -76,7 +76,7 @@ private:
 
     CheckedRef<NetworkRTCProvider> m_rtcProvider;
     WebCore::LibWebRTCSocketIdentifier m_identifier;
-    Ref<NetworkRTCUDPSocketCocoaConnections> m_connections;
+    const Ref<NetworkRTCUDPSocketCocoaConnections> m_connections;
 };
 
 } // namespace WebKit

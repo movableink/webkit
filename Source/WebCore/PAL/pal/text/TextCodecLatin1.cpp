@@ -29,6 +29,7 @@
 #include "TextCodecASCIIFastPath.h"
 #include <array>
 #include <wtf/text/CString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/WTFString.h>
 
 namespace PAL {
@@ -97,8 +98,6 @@ void TextCodecLatin1::registerCodecs(TextCodecRegistrar registrar)
     });
 }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 String TextCodecLatin1::decode(std::span<const uint8_t> bytes, bool, bool, bool& sawException)
 {
     std::span<LChar> characters;
@@ -111,44 +110,44 @@ String TextCodecLatin1::decode(std::span<const uint8_t> bytes, bool, bool, bool&
     }
     String result = String::createUninitialized(bytes.size(), characters);
 
-    const uint8_t* source = bytes.data();
-    const uint8_t* end = bytes.data() + bytes.size();
-    const uint8_t* alignedEnd = WTF::alignToMachineWord(end);
+    auto source = bytes;
+    const uint8_t* alignedEnd = WTF::alignToMachineWord(std::to_address(source.end()));
     auto destination = characters;
 
-    while (source < end) {
-        if (isASCII(*source)) {
+    while (!source.empty()) {
+        if (isASCII(source[0])) {
             // Fast path for ASCII. Most Latin-1 text will be ASCII.
-            if (WTF::isAlignedToMachineWord(source)) {
-                while (source < alignedEnd) {
-                    auto chunk = *reinterpret_cast_ptr<const WTF::MachineWord*>(source);
+            if (WTF::isAlignedToMachineWord(source.data())) {
+                while (source.data() < alignedEnd) {
+                    auto chunk = reinterpretCastSpanStartTo<WTF::MachineWord>(source);
 
                     if (!WTF::containsOnlyASCII<LChar>(chunk))
                         goto useLookupTable;
 
-                    copyASCIIMachineWord(destination.data(), source);
-                    source += sizeof(WTF::MachineWord);
-                    destination = destination.subspan(sizeof(WTF::MachineWord));
+                    copyASCIIMachineWord(destination, source);
+                    skip(source, sizeof(WTF::MachineWord));
+                    skip(destination, sizeof(WTF::MachineWord));
                 }
 
-                if (source == end)
+                if (source.empty())
                     break;
 
                 // *source may not be ASCII anymore if source moves inside the loop of the fast code path
-                if (!isASCII(*source))
+                if (!isASCII(source[0]))
                     goto useLookupTable;
             }
-            destination[0] = *source;
+            destination[0] = source[0];
         } else {
 useLookupTable:
-            if (!isLatin1(latin1ConversionTable[*source]))
+            auto sourceCharacter = source[0];
+            if (!isLatin1(latin1ConversionTable[sourceCharacter]))
                 goto upConvertTo16Bit;
 
-            destination[0] = latin1ConversionTable[*source];
+            destination[0] = latin1ConversionTable[sourceCharacter];
         }
 
-        ++source;
-        destination = destination.subspan(1);
+        skip(source, 1);
+        skip(destination, 1);
     }
 
     return result;
@@ -160,55 +159,46 @@ upConvertTo16Bit:
     auto destination16 = characters16;
 
     // Zero extend and copy already processed 8 bit data
-    LChar* ptr8 = characters.data();
-    LChar* endPtr8 = destination.data();
-
-    while (ptr8 < endPtr8) {
-        destination16[0] = *ptr8++;
-        destination16 = destination16.subspan(1);
-    }
+    for (auto character : characters.first(destination.data() - characters.data()))
+        consume(destination16) = character;
 
     // Handle the character that triggered the 16 bit path
-    destination16[0] = latin1ConversionTable[*source];
-    ++source;
-    destination16 = destination16.subspan(1);
+    consume(destination16) = latin1ConversionTable[consume(source)];
 
-    while (source < end) {
-        if (isASCII(*source)) {
+    while (!source.empty()) {
+        if (isASCII(source[0])) {
             // Fast path for ASCII. Most Latin-1 text will be ASCII.
-            if (WTF::isAlignedToMachineWord(source)) {
-                while (source < alignedEnd) {
-                    auto chunk = *reinterpret_cast_ptr<const WTF::MachineWord*>(source);
+            if (WTF::isAlignedToMachineWord(source.data())) {
+                while (source.data() < alignedEnd) {
+                    auto chunk = reinterpretCastSpanStartTo<WTF::MachineWord>(source);
                     
                     if (!WTF::containsOnlyASCII<LChar>(chunk))
                         goto useLookupTable16;
                     
-                    copyASCIIMachineWord(destination16.data(), source);
-                    source += sizeof(WTF::MachineWord);
-                    destination16 = destination16.subspan(sizeof(WTF::MachineWord));
+                    copyASCIIMachineWord(destination16, source);
+                    skip(source, sizeof(WTF::MachineWord));
+                    skip(destination16, sizeof(WTF::MachineWord));
                 }
                 
-                if (source == end)
+                if (source.empty())
                     break;
 
                 // *source may not be ASCII anymore if source moves inside the loop of the fast code path
-                if (!isASCII(*source))
+                if (!isASCII(source[0]))
                     goto useLookupTable16;
             }
-            destination16[0] = *source;
+            destination16[0] = source[0];
         } else {
 useLookupTable16:
-            destination16[0] = latin1ConversionTable[*source];
+            destination16[0] = latin1ConversionTable[source[0]];
         }
         
-        ++source;
-        destination16 = destination16.subspan(1);
+        skip(source, 1);
+        skip(destination16, 1);
     }
     
     return result16;
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 static Vector<uint8_t> encodeComplexWindowsLatin1(StringView string, UnencodableHandling handling)
 {
@@ -235,18 +225,16 @@ static Vector<uint8_t> encodeComplexWindowsLatin1(StringView string, Unencodable
     return result;
 }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 Vector<uint8_t> TextCodecLatin1::encode(StringView string, UnencodableHandling handling) const
 {
     {
         Vector<uint8_t> result(string.length());
-        auto* bytes = result.data();
+        size_t index = 0;
 
         // Convert and simultaneously do a check to see if it's all ASCII.
         UChar ored = 0;
         for (auto character : string.codeUnits()) {
-            *bytes++ = character;
+            result[index++] = character;
             ored |= character;
         }
 
@@ -257,7 +245,5 @@ Vector<uint8_t> TextCodecLatin1::encode(StringView string, UnencodableHandling h
     // If it wasn't all ASCII, call the function that handles more-complex cases.
     return encodeComplexWindowsLatin1(string, handling);
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 } // namespace PAL

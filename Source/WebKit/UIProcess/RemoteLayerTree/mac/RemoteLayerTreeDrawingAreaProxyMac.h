@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -73,7 +73,7 @@ private:
     void adjustTransientZoom(double, WebCore::FloatPoint) override;
     void commitTransientZoom(double, WebCore::FloatPoint) override;
 
-    void sendCommitTransientZoom(double, WebCore::FloatPoint, WebCore::ScrollingNodeID);
+    void sendCommitTransientZoom(double, WebCore::FloatPoint, std::optional<WebCore::ScrollingNodeID>);
 
     void applyTransientZoomToLayer();
     void removeTransientZoomFromLayer();
@@ -84,7 +84,7 @@ private:
     void windowScreenDidChange(WebCore::PlatformDisplayID) override;
     std::optional<WebCore::FramesPerSecond> displayNominalFramesPerSecond() override;
 
-    void dispatchSetTopContentInset() override;
+    void dispatchSetObscuredContentInsets() override;
 
     void colorSpaceDidChange() override;
 
@@ -110,7 +110,6 @@ private:
     Markable<WebCore::PlatformLayerIdentifier> m_pageScalingLayerID;
     Markable<WebCore::PlatformLayerIdentifier> m_pageScrollingLayerID;
 
-    bool m_usesOverlayScrollbars { false };
     bool m_shouldLogNextObserverChange { false };
     bool m_shouldLogNextDisplayRefresh { false };
 
@@ -123,5 +122,8 @@ private:
 
 } // namespace WebKit
 
-#endif // #if PLATFORM(MAC)
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::RemoteLayerTreeDrawingAreaProxyMac)
+    static bool isType(const WebKit::DrawingAreaProxy& proxy) { return proxy.isRemoteLayerTreeDrawingAreaProxyMac(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
+#endif // #if PLATFORM(MAC)

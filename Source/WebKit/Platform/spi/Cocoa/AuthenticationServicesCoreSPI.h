@@ -73,6 +73,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)presentError:(NSError *)error forService:(NSString *)service completionHandler:(void (^)(void))completionHandler;
 - (void)updateInterfaceWithLoginChoices:(NSArray<id <ASCLoginChoiceProtocol>> *)loginChoices;
 - (void)presentPINEntryInterface;
+- (void)presentNewPINEntryInterfaceWithMinLength:(NSUInteger)minLength;
 - (void)updateInterfaceForUserVisibleError:(NSError *)userVisibleError;
 - (void)dismissWithError:(nullable NSError *)error;
 
@@ -155,6 +156,8 @@ typedef NS_ENUM(NSUInteger, ASCPublicKeyCredentialKind) {
 - (instancetype)initWithKind:(ASCPublicKeyCredentialKind)credentialKind relyingPartyIdentifier:(NSString *)relyingPartyIdentifier challenge:(NSData *)challenge userVerificationPreference:(nullable NSString *)userVerificationPreference allowedCredentials:(nullable NSArray<ASCPublicKeyCredentialDescriptor *> *)allowedCredentials;
 
 - (instancetype)initWithKind:(ASCPublicKeyCredentialKind)credentialKind relyingPartyIdentifier:(NSString *)relyingPartyIdentifier clientDataHash:(NSData *)clientDataHash userVerificationPreference:(nullable NSString *)userVerificationPreference allowedCredentials:(nullable NSArray<ASCPublicKeyCredentialDescriptor *> *)allowedCredentials;
+
+- (instancetype)initWithKind:(ASCPublicKeyCredentialKind)credentialKind relyingPartyIdentifier:(NSString *)relyingPartyIdentifier clientDataJSON:(NSData *)clientDataJSON userVerificationPreference:(nullable NSString *)userVerificationPreference allowedCredentials:(nullable NSArray<ASCPublicKeyCredentialDescriptor *> *)allowedCredentials;
 
 - (instancetype)initWithKind:(ASCPublicKeyCredentialKind)credentialKind relyingPartyIdentifier:(NSString *)relyingPartyIdentifier clientDataJSON:(NSData *)clientDataJSON userVerificationPreference:(nullable NSString *)userVerificationPreference allowedCredentials:(nullable NSArray<ASCPublicKeyCredentialDescriptor *> *)allowedCredentials origin:(nullable NSString *)origin;
 
@@ -428,6 +431,8 @@ typedef NS_ERROR_ENUM(ASCAuthorizationErrorDomain, ASCAuthorizationError) {
     ASCAuthorizationErrorInvalidResponse = 14,
     ASCAuthorizationErrorNotSupportedInSTP = 16,
     ASCAuthorizationErrorSecurityError = 17,
+    ASCAuthorizationErrorPINTooShort = 18,
+    ASCAuthorizationErrorPINTooLong = 19,
 };
 
 NS_ASSUME_NONNULL_END

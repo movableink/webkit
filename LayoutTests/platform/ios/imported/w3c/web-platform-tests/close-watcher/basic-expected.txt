@@ -1,0 +1,9 @@
+
+FAIL requestClose() with no user activation assert_array_equals: expected property 0 to be "cancel[cancelable=true]" but got "cancel[cancelable=false]" (expected array ["cancel[cancelable=true]", "close"] got ["cancel[cancelable=false]", "close"])
+PASS destroy() then requestClose()
+PASS close() then requestClose()
+FAIL requestClose() then destroy() assert_array_equals: expected property 0 to be "cancel[cancelable=true]" but got "cancel[cancelable=false]" (expected array ["cancel[cancelable=true]", "close"] got ["cancel[cancelable=false]", "close"])
+PASS close() then destroy()
+PASS destroy() then close request
+FAIL Close request then destroy() assert_array_equals: lengths differ, expected array ["cancel[cancelable=false]", "close"] length 2, got [] length 0
+

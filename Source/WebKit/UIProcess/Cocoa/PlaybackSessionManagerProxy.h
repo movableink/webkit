@@ -51,6 +51,7 @@ namespace WebKit {
 class WebPageProxy;
 class PlaybackSessionManagerProxy;
 class VideoReceiverEndpointMessage;
+class VideoReceiverSwapEndpointMessage;
 struct SharedPreferencesForWebProcess;
 
 class PlaybackSessionModelContext final
@@ -94,9 +95,13 @@ public:
     void pictureInPictureSupportedChanged(bool);
     void pictureInPictureActiveChanged(bool);
     void isInWindowFullscreenActiveChanged(bool);
+#if HAVE(PIP_SKIP_PREROLL)
+    void canSkipAdChnged(bool);
+#endif
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     void supportsLinearMediaPlayerChanged(bool);
     void spatialVideoMetadataChanged(const std::optional<WebCore::SpatialVideoMetadata>&);
+    void isImmersiveVideoChanged(bool);
 #endif
 
     bool wirelessVideoPlaybackDisabled() const final { return m_wirelessVideoPlaybackDisabled; }
@@ -116,6 +121,10 @@ private:
     void togglePlayState() final;
     void beginScrubbing() final;
     void endScrubbing() final;
+#if HAVE(PIP_SKIP_PREROLL)
+    void skipAd() final;
+    void canSkipAdChanged(bool);
+#endif
     void seekToTime(double, double, double) final;
     void fastSeek(double time) final;
     void beginScanningForward() final;
@@ -129,6 +138,7 @@ private:
     void enterInWindowFullscreen() final;
     void exitInWindowFullscreen() final;
     void enterFullscreen() final;
+    void setPlayerIdentifierForVideoElement() final;
     void exitFullscreen() final;
     void toggleMuted() final;
     void setMuted(bool) final;
@@ -136,6 +146,9 @@ private:
     void setPlayingOnSecondScreen(bool) final;
     void sendRemoteCommand(WebCore::PlatformMediaSession::RemoteControlCommandType, const WebCore::PlatformMediaSession::RemoteCommandArgument&) final;
     void setVideoReceiverEndpoint(const WebCore::VideoReceiverEndpoint&) final;
+    const WebCore::VideoReceiverEndpoint& videoReceiverEndpoint() const { return m_videoReceiverEndpoint; }
+    const std::optional<WebCore::VideoReceiverEndpointIdentifier>& videoReceiverEndpointIdentifier() const { return m_videoReceiverEndpointIdentifier; }
+
 #if HAVE(SPATIAL_TRACKING_LABEL)
     void setSpatialTrackingLabel(const String&) final;
 #endif
@@ -173,6 +186,8 @@ private:
 
     WebCore::AudioSessionSoundStageSize soundStageSize() const final { return m_soundStageSize; }
     void setSoundStageSize(WebCore::AudioSessionSoundStageSize) final;
+
+    void swapVideoReceiverEndpointsWith(PlaybackSessionModelContext&);
 
 #if !RELEASE_LOG_DISABLED
     void setLogIdentifier(uint64_t identifier) { m_logIdentifier = identifier; }
@@ -213,10 +228,12 @@ private:
     bool m_pictureInPictureActive { false };
     bool m_isInWindowFullscreenActive { false };
     WebCore::VideoReceiverEndpoint m_videoReceiverEndpoint;
+    std::optional<WebCore::VideoReceiverEndpointIdentifier> m_videoReceiverEndpointIdentifier;
     WebCore::AudioSessionSoundStageSize m_soundStageSize { 0 };
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     bool m_supportsLinearMediaPlayer { false };
     std::optional<WebCore::SpatialVideoMetadata> m_spatialVideoMetadata;
+    bool m_isImmersiveVideo { false };
 #endif
 
 #if !RELEASE_LOG_DISABLED
@@ -269,6 +286,7 @@ private:
     // Messages from PlaybackSessionManager
     void setUpPlaybackControlsManagerWithID(PlaybackSessionContextIdentifier, bool isVideo);
     void clearPlaybackControlsManager();
+    void swapFullscreenModes(PlaybackSessionContextIdentifier, PlaybackSessionContextIdentifier);
     void currentTimeChanged(PlaybackSessionContextIdentifier, double currentTime, double hostTime);
     void bufferedTimeChanged(PlaybackSessionContextIdentifier, double bufferedTime);
     void seekableRangesVectorChanged(PlaybackSessionContextIdentifier, Vector<std::pair<double, double>> ranges, double lastModifiedTime, double liveUpdateInterval);
@@ -287,12 +305,19 @@ private:
     void volumeChanged(PlaybackSessionContextIdentifier, double volume);
     void pictureInPictureSupportedChanged(PlaybackSessionContextIdentifier, bool pictureInPictureSupported);
     void isInWindowFullscreenActiveChanged(PlaybackSessionContextIdentifier, bool isInWindow);
+#if HAVE(PIP_SKIP_PREROLL)
+    void canSkipAdChanged(PlaybackSessionContextIdentifier, bool value);
+#endif
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     void supportsLinearMediaPlayerChanged(PlaybackSessionContextIdentifier, bool);
     void spatialVideoMetadataChanged(PlaybackSessionContextIdentifier, const std::optional<WebCore::SpatialVideoMetadata>&);
+    void isImmersiveVideoChanged(PlaybackSessionContextIdentifier, bool);
 #endif
 
     // Messages to PlaybackSessionManager
+#if HAVE(PIP_SKIP_PREROLL)
+    void skipAd(PlaybackSessionContextIdentifier);
+#endif
     void play(PlaybackSessionContextIdentifier);
     void pause(PlaybackSessionContextIdentifier);
     void togglePlayState(PlaybackSessionContextIdentifier);
@@ -309,6 +334,7 @@ private:
     void selectLegibleMediaOption(PlaybackSessionContextIdentifier, uint64_t index);
     void togglePictureInPicture(PlaybackSessionContextIdentifier);
     void enterFullscreen(PlaybackSessionContextIdentifier);
+    void setPlayerIdentifierForVideoElement(PlaybackSessionContextIdentifier);
     void exitFullscreen(PlaybackSessionContextIdentifier);
     void enterInWindow(PlaybackSessionContextIdentifier);
     void exitInWindow(PlaybackSessionContextIdentifier);
@@ -317,7 +343,8 @@ private:
     void setVolume(PlaybackSessionContextIdentifier, double);
     void setPlayingOnSecondScreen(PlaybackSessionContextIdentifier, bool);
     void sendRemoteCommand(PlaybackSessionContextIdentifier, WebCore::PlatformMediaSession::RemoteControlCommandType, const WebCore::PlatformMediaSession::RemoteCommandArgument&);
-    void setVideoReceiverEndpoint(PlaybackSessionContextIdentifier, const WebCore::VideoReceiverEndpoint&);
+    void setVideoReceiverEndpoint(PlaybackSessionContextIdentifier, const WebCore::VideoReceiverEndpoint&, WebCore::VideoReceiverEndpointIdentifier);
+    void swapVideoReceiverEndpoints(PlaybackSessionContextIdentifier, PlaybackSessionContextIdentifier);
 #if HAVE(SPATIAL_TRACKING_LABEL)
     void setSpatialTrackingLabel(PlaybackSessionContextIdentifier, const String&);
 #endif
@@ -325,7 +352,6 @@ private:
     void removeNowPlayingMetadataObserver(PlaybackSessionContextIdentifier, const WebCore::NowPlayingMetadataObserver&);
     void setSoundStageSize(PlaybackSessionContextIdentifier, WebCore::AudioSessionSoundStageSize);
 
-    void uncacheVideoReceiverEndpoint(PlaybackSessionContextIdentifier);
     void updateVideoControlsManager(PlaybackSessionContextIdentifier);
 
 #if !RELEASE_LOG_DISABLED
@@ -333,7 +359,7 @@ private:
 
     const Logger& logger() const { return m_logger; }
     uint64_t logIdentifier() const { return m_logIdentifier; }
-    ASCIILiteral logClassName() const { return "VideoPresentationManagerProxy"_s; }
+    ASCIILiteral logClassName() const { return "PlaybackSessionManagerProxy"_s; }
     WTFLogChannel& logChannel() const;
 #endif
 

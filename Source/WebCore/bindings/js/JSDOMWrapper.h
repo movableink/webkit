@@ -21,17 +21,12 @@
 
 #pragma once
 
-#include <wtf/Compiler.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 #include "JSDOMGlobalObject.h"
 #include "NodeConstants.h"
 #include <JavaScriptCore/JSDestructibleObject.h>
 #include <JavaScriptCore/StructureInlines.h>
+#include <wtf/Compiler.h>
 #include <wtf/SignedPtr.h>
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 namespace WebCore {
 

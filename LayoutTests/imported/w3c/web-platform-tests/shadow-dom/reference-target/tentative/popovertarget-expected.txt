@@ -1,0 +1,6 @@
+Toggle the popover  Toggle the popover  Toggle the popover
+
+PASS Shadow root reference target works with popovertarget attribute.
+PASS Shadow root reference target works with popovertarget attribute via options.
+PASS Shadow root reference target works with .popoverTargetElement property.
+

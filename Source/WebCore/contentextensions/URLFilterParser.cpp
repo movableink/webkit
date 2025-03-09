@@ -76,7 +76,7 @@ public:
         return m_parseStatus;
     }
 
-    void atomPatternCharacter(UChar character)
+    void atomPatternCharacter(UChar character, bool)
     {
         if (hasError())
             return;
@@ -244,6 +244,11 @@ public:
     }
 
     void atomParentheticalAssertionBegin(bool, MatchDirection)
+    {
+        fail(URLFilterParser::Group);
+    }
+
+    void atomParentheticalModifierBegin(OptionSet<JSC::Yarr::Flags>, OptionSet<JSC::Yarr::Flags>)
     {
         fail(URLFilterParser::Group);
     }

@@ -45,6 +45,9 @@ namespace WGSL {
 
 namespace Metal {
 
+#define DECLARE_FORWARD_PROGRESS "volatile uint32_t __wgslEnsureForwardProgress = 0; if (!__wgslEnsureForwardProgress)"
+#define CHECK_FORWARD_PROGRESS "if (++__wgslEnsureForwardProgress == 4294967295u) break;"
+
 class FunctionDefinitionWriter : public AST::Visitor {
 public:
     FunctionDefinitionWriter(ShaderModule& shaderModule, StringBuilder& stringBuilder, PrepareResult& prepareResult, const HashMap<String, ConstantValue>& constantValues)
@@ -509,7 +512,7 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
             IndentationScope scope(m_indent);
             m_stringBuilder.append(m_indent, "auto o = min(offset, 32u);\n"_s,
                 m_indent, "auto c = min(count, 32u - o);\n"_s,
-                m_indent, "return extract_bits(e, o, c);\n"_s);
+                m_indent, "return extract_bits(e, min(o, 31u), c);\n"_s);
         }
         m_stringBuilder.append(m_indent, "}\n"_s);
     }
@@ -523,6 +526,34 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
             m_stringBuilder.append(m_indent, "volatile T va = a;\n"_s,
                 m_indent, "volatile T vb = b;\n"_s,
                 m_indent, "return min(va, vb);\n"_s);
+        }
+        m_stringBuilder.append(m_indent, "}\n\n"_s);
+    }
+
+    if (m_shaderModule.usesFtoi()) {
+        m_stringBuilder.append(m_indent, "template <typename T, typename S>\n"_s,
+            m_indent, "static T __wgslFtoi(S value)\n"_s,
+            m_indent, "{\n"_s);
+        {
+            IndentationScope scope(m_indent);
+            m_stringBuilder.append(m_indent, "if constexpr (is_same_v<make_scalar_t<S>, half>)\n"_s);
+            m_stringBuilder.append(m_indent, "return T(select(clamp(value, max(S(numeric_limits<T>::min()), numeric_limits<S>::lowest()), numeric_limits<S>::max()), S(0), isnan(value)));\n"_s);
+            m_stringBuilder.append(m_indent, "else\n"_s);
+            m_stringBuilder.append(m_indent, "return T(select(clamp(value, S(numeric_limits<T>::min()), S(numeric_limits<T>::max() - ((128 << (!is_signed_v<T>)) - 1))), S(0), isnan(value)));\n"_s);
+        }
+        m_stringBuilder.append(m_indent, "}\n\n"_s);
+    }
+
+    if (m_shaderModule.usesInsertBits()) {
+        m_stringBuilder.append(m_indent, "template <typename T>\n"_s,
+            m_indent, "static T __wgslInsertBits(T e, T newBits, unsigned offset, unsigned count)\n"_s,
+            m_indent, "{\n"_s);
+        {
+            IndentationScope scope(m_indent);
+            m_stringBuilder.append(m_indent, "constexpr unsigned w = 8 * static_cast<unsigned>(sizeof(make_scalar_t<T>));\n"_s);
+            m_stringBuilder.append(m_indent, "const unsigned o = min(offset, w);\n"_s);
+            m_stringBuilder.append(m_indent, "const unsigned c = min(count, w - o);\n"_s);
+            m_stringBuilder.append(m_indent, "return insert_bits(e, newBits, min(o, w - 1), c);\n"_s);
         }
         m_stringBuilder.append(m_indent, "}\n\n"_s);
     }
@@ -604,10 +635,19 @@ void FunctionDefinitionWriter::visit(AST::Structure& structDecl)
             auto& name = member.name();
             auto* type = member.type().inferredType();
             if (isPrimitive(type, Types::Primitive::TextureExternal) || isPrimitiveReference(type, Types::Primitive::TextureExternal))  {
-                m_stringBuilder.append(m_indent, "texture2d<float> __"_s, name, "_FirstPlane;\n"_s,
-                    m_indent, "texture2d<float> __"_s, name, "_SecondPlane;\n"_s,
-                    m_indent, "float3x2 __"_s, name, "_UVRemapMatrix;\n"_s,
-                    m_indent, "float4x3 __"_s, name, "_ColorSpaceConversionMatrix;\n"_s);
+                decltype(std::declval<ConstantValue>().integerValue()) bindingIndex = 0;
+                for (auto& attribute : member.attributes()) {
+                    if (auto* bindingAttribute = dynamicDowncast<AST::BindingAttribute>(attribute)) {
+                        if (auto bindingIndexValue = bindingAttribute->binding().constantValue()) {
+                            bindingIndex = bindingIndexValue->integerValue();
+                            break;
+                        }
+                    }
+                }
+                m_stringBuilder.append(m_indent, "texture2d<float> __"_s, name, "_FirstPlane [[id("_s, bindingIndex, ")]];\n"_s,
+                    m_indent, "texture2d<float> __"_s, name, "_SecondPlane [[id("_s, (bindingIndex + 1), ")]];\n"_s,
+                    m_indent, "float3x2 __"_s, name, "_UVRemapMatrix [[id("_s, (bindingIndex + 2), ")]];\n"_s,
+                    m_indent, "float4x3 __"_s, name, "_ColorSpaceConversionMatrix [[id("_s, (bindingIndex + 3), ")]];\n"_s);
                 continue;
             }
 
@@ -1381,9 +1421,21 @@ static void emitTextureLoad(FunctionDefinitionWriter* writer, AST::CallExpressio
             writer->stringBuilder().append(".FirstPlane.read(__coords).r);\n"_s);
         }
         {
+            writer->stringBuilder().append(writer->indent(), "auto __xAdjustment = "_s);
+            writer->visit(texture);
+            writer->stringBuilder().append(writer->indent(), ".SecondPlane.get_width(0) / static_cast<float>("_s);
+            writer->visit(texture);
+            writer->stringBuilder().append(writer->indent(), ".FirstPlane.get_width(0));"_s);
+
+            writer->stringBuilder().append(writer->indent(), "auto __yAdjustment = "_s);
+            writer->visit(texture);
+            writer->stringBuilder().append(writer->indent(), ".SecondPlane.get_height(0) / static_cast<float>("_s);
+            writer->visit(texture);
+            writer->stringBuilder().append(writer->indent(), ".FirstPlane.get_height(0));"_s);
+
             writer->stringBuilder().append(writer->indent(), "auto __cbcr = float2("_s);
             writer->visit(texture);
-            writer->stringBuilder().append(".SecondPlane.read(__coords).rg);\n"_s);
+            writer->stringBuilder().append(".SecondPlane.read(uint2(uint(__coords.x * __xAdjustment), uint(__coords.y * __yAdjustment))).rg);\n"_s);
         }
         writer->stringBuilder().append(writer->indent(), "auto __ycbcr = float3(__y, __cbcr);\n"_s);
         {
@@ -2005,7 +2057,7 @@ void FunctionDefinitionWriter::visit(const Type* type, AST::CallExpression& call
             { "frexp"_s, "__wgslFrexp"_s },
             { "fwidthCoarse"_s, "fwidth"_s },
             { "fwidthFine"_s, "fwidth"_s },
-            { "insertBits"_s, "insert_bits"_s },
+            { "insertBits"_s, "__wgslInsertBits"_s },
             { "inverseSqrt"_s, "rsqrt"_s },
             { "modf"_s, "__wgslModf"_s },
             { "pack2x16snorm"_s, "pack_float_to_snorm2x16"_s },
@@ -2022,7 +2074,12 @@ void FunctionDefinitionWriter::visit(const Type* type, AST::CallExpression& call
         };
         static constexpr SortedArrayMap mappedNames { directMappings };
         if (call.isConstructor()) {
-            visit(type);
+            if (call.isFloatToIntConversion()) {
+                m_stringBuilder.append("__wgslFtoi<"_s);
+                visit(type);
+                m_stringBuilder.append(">"_s);
+            } else
+                visit(type);
         } else if (auto mappedName = mappedNames.get(targetName))
             m_stringBuilder.append(mappedName);
         else
@@ -2412,7 +2469,7 @@ void FunctionDefinitionWriter::visit(AST::ReturnStatement& statement)
 
 void FunctionDefinitionWriter::visit(AST::ForStatement& statement)
 {
-    m_stringBuilder.append("for ("_s);
+    m_stringBuilder.append("{ " DECLARE_FORWARD_PROGRESS " for ("_s);
     if (auto* initializer = statement.maybeInitializer())
         visit(*initializer);
     m_stringBuilder.append(';');
@@ -2425,14 +2482,15 @@ void FunctionDefinitionWriter::visit(AST::ForStatement& statement)
         m_stringBuilder.append(' ');
         visit(*update);
     }
-    m_stringBuilder.append(") { volatile bool __wgslEnsureForwardProgress = true; "_s);
+    m_stringBuilder.append(") { " CHECK_FORWARD_PROGRESS " "_s);
     visit(statement.body());
+    m_stringBuilder.append('}');
     m_stringBuilder.append('}');
 }
 
 void FunctionDefinitionWriter::visit(AST::LoopStatement& statement)
 {
-    m_stringBuilder.append("while (true) { volatile bool __wgslEnsureForwardProgress = true; \n"_s);
+    m_stringBuilder.append("{ " DECLARE_FORWARD_PROGRESS " while (true) { " CHECK_FORWARD_PROGRESS " \n"_s);
     {
         if (statement.containsSwitch())
             m_stringBuilder.append("bool __continuing = false;\n"_s, m_indent);
@@ -2447,6 +2505,7 @@ void FunctionDefinitionWriter::visit(AST::LoopStatement& statement)
             visit(*continuing);
         }
     }
+    m_stringBuilder.append(m_indent, '}');
     m_stringBuilder.append(m_indent, '}');
 }
 
@@ -2474,10 +2533,11 @@ void FunctionDefinitionWriter::visit(AST::Continuing& continuing)
 
 void FunctionDefinitionWriter::visit(AST::WhileStatement& statement)
 {
-    m_stringBuilder.append("while ("_s);
+    m_stringBuilder.append("{ " DECLARE_FORWARD_PROGRESS " while ("_s);
     visit(statement.test());
-    m_stringBuilder.append(") { volatile bool __wgslEnsureForwardProgress = true; "_s);
+    m_stringBuilder.append(") { " CHECK_FORWARD_PROGRESS " "_s);
     visit(statement.body());
+    m_stringBuilder.append('}');
     m_stringBuilder.append('}');
 }
 
@@ -2695,6 +2755,9 @@ void emitMetalFunctions(StringBuilder& stringBuilder, ShaderModule& shaderModule
     FunctionDefinitionWriter functionDefinitionWriter(shaderModule, stringBuilder, prepareResult, constantValues);
     functionDefinitionWriter.write();
 }
+
+#undef DECLARE_FORWARD_PROGRESS
+#undef CHECK_FORWARD_PROGRESS
 
 } // namespace Metal
 } // namespace WGSL

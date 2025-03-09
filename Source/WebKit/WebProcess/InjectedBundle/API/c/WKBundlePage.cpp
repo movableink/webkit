@@ -53,7 +53,6 @@
 #include "WebContextMenu.h"
 #include "WebContextMenuItem.h"
 #include "WebFrame.h"
-#include "WebFullScreenManager.h"
 #include "WebImage.h"
 #include "WebInspectorInternal.h"
 #include "WebPage.h"
@@ -122,54 +121,6 @@ void WKBundlePageSetUIClient(WKBundlePageRef pageRef, WKBundlePageUIClientBase* 
     WebKit::toImpl(pageRef)->setInjectedBundleUIClient(makeUnique<WebKit::InjectedBundlePageUIClient>(wkClient));
 }
 
-void WKBundlePageSetFullScreenClient(WKBundlePageRef pageRef, WKBundlePageFullScreenClientBase* wkClient)
-{
-#if ENABLE(FULLSCREEN_API)
-    WebKit::toImpl(pageRef)->initializeInjectedBundleFullScreenClient(wkClient);
-#else
-    UNUSED_PARAM(pageRef);
-    UNUSED_PARAM(wkClient);
-#endif
-}
-
-void WKBundlePageWillEnterFullScreen(WKBundlePageRef pageRef)
-{
-#if ENABLE(FULLSCREEN_API)
-    WebKit::toImpl(pageRef)->fullScreenManager()->saveScrollPosition();
-    WebKit::toImpl(pageRef)->fullScreenManager()->willEnterFullScreen();
-#else
-    UNUSED_PARAM(pageRef);
-#endif
-}
-
-void WKBundlePageDidEnterFullScreen(WKBundlePageRef pageRef)
-{
-#if ENABLE(FULLSCREEN_API)
-    WebKit::toImpl(pageRef)->fullScreenManager()->didEnterFullScreen();
-#else
-    UNUSED_PARAM(pageRef);
-#endif
-}
-
-void WKBundlePageWillExitFullScreen(WKBundlePageRef pageRef)
-{
-#if ENABLE(FULLSCREEN_API)
-    WebKit::toImpl(pageRef)->fullScreenManager()->willExitFullScreen();
-#else
-    UNUSED_PARAM(pageRef);
-#endif
-}
-
-void WKBundlePageDidExitFullScreen(WKBundlePageRef pageRef)
-{
-#if ENABLE(FULLSCREEN_API)
-    WebKit::toImpl(pageRef)->fullScreenManager()->didExitFullScreen();
-    WebKit::toImpl(pageRef)->fullScreenManager()->restoreScrollPosition();
-#else
-    UNUSED_PARAM(pageRef);
-#endif
-}
-
 WKBundleFrameRef WKBundlePageGetMainFrame(WKBundlePageRef pageRef)
 {
     return toAPI(&WebKit::toImpl(pageRef)->mainWebFrame());
@@ -219,7 +170,7 @@ WKArrayRef WKBundlePageCopyContextMenuAtPointInWindow(WKBundlePageRef pageRef, W
     if (!page)
         return nullptr;
 
-    WebKit::WebContextMenu* contextMenu = WebKit::toImpl(pageRef)->contextMenuAtPointInWindow(page->mainFrame().frameID(), WebKit::toIntPoint(point));
+    RefPtr contextMenu = WebKit::toImpl(pageRef)->contextMenuAtPointInWindow(page->mainFrame().frameID(), WebKit::toIntPoint(point));
     if (!contextMenu)
         return nullptr;
 
@@ -431,11 +382,6 @@ bool WKBundlePageCanHandleRequest(WKURLRequestRef requestRef)
     return WebKit::WebPage::canHandleRequest(WebKit::toImpl(requestRef)->resourceRequest());
 }
 
-bool WKBundlePageFindString(WKBundlePageRef pageRef, WKStringRef target, WKFindOptions findOptions)
-{
-    return WebKit::toImpl(pageRef)->findStringFromInjectedBundle(WebKit::toWTFString(target), WebKit::toFindOptions(findOptions));
-}
-
 void WKBundlePageReplaceStringMatches(WKBundlePageRef pageRef, WKArrayRef matchIndicesRef, WKStringRef replacementText, bool selectionOnly)
 {
     auto* matchIndices = WebKit::toImpl(matchIndicesRef);
@@ -485,11 +431,6 @@ double WKBundlePageGetBackingScaleFactor(WKBundlePageRef pageRef)
 void WKBundlePageListenForLayoutMilestones(WKBundlePageRef pageRef, WKLayoutMilestones milestones)
 {
     WebKit::toImpl(pageRef)->listenForLayoutMilestones(WebKit::toLayoutMilestones(milestones));
-}
-
-void WKBundlePageShowInspectorForTest(WKBundlePageRef page)
-{
-    WebKit::toImpl(page)->inspector()->show();
 }
 
 void WKBundlePageCloseInspectorForTest(WKBundlePageRef page)
@@ -550,20 +491,20 @@ void WKBundlePageSetComposition(WKBundlePageRef pageRef, WKStringRef text, int f
         auto* highlightDataArray = WebKit::toImpl(highlightData);
         highlights.reserveInitialCapacity(highlightDataArray->size());
         for (auto dictionary : highlightDataArray->elementsOfType<API::Dictionary>()) {
-            auto startOffset = static_cast<API::UInt64*>(dictionary->get("from"_s))->value();
+            auto startOffset = downcast<API::UInt64>(dictionary->get("from"_s))->value();
 
             std::optional<WebCore::Color> backgroundHighlightColor;
             std::optional<WebCore::Color> foregroundHighlightColor;
 
             if (auto backgroundColor = dictionary->get("color"_s))
-                backgroundHighlightColor = WebCore::CSSParser::parseColorWithoutContext(static_cast<API::String*>(backgroundColor)->string());
+                backgroundHighlightColor = WebCore::CSSParser::parseColorWithoutContext(downcast<API::String>(backgroundColor)->string());
 
             if (auto foregroundColor = dictionary->get("foregroundColor"_s))
-                foregroundHighlightColor = WebCore::CSSParser::parseColorWithoutContext(static_cast<API::String*>(foregroundColor)->string());
+                foregroundHighlightColor = WebCore::CSSParser::parseColorWithoutContext(downcast<API::String>(foregroundColor)->string());
 
             highlights.append({
                 static_cast<unsigned>(startOffset),
-                static_cast<unsigned>(startOffset + static_cast<API::UInt64*>(dictionary->get("length"_s))->value()),
+                static_cast<unsigned>(startOffset + downcast<API::UInt64>(dictionary->get("length"_s))->value()),
                 backgroundHighlightColor,
                 foregroundHighlightColor
             });
@@ -574,9 +515,9 @@ void WKBundlePageSetComposition(WKBundlePageRef pageRef, WKStringRef text, int f
     if (annotationData) {
         if (auto* annotationDataArray = WebKit::toImpl(annotationData)) {
             for (auto dictionary : annotationDataArray->elementsOfType<API::Dictionary>()) {
-                auto location = static_cast<API::UInt64*>(dictionary->get("from"_s))->value();
-                auto length = static_cast<API::UInt64*>(dictionary->get("length"_s))->value();
-                auto name = static_cast<API::String*>(dictionary->get("annotation"_s))->string();
+                auto location = downcast<API::UInt64>(dictionary->get("from"_s))->value();
+                auto length = downcast<API::UInt64>(dictionary->get("length"_s))->value();
+                auto name = downcast<API::String>(dictionary->get("annotation"_s))->string();
 
                 auto it = annotations.find(name);
                 if (it == annotations.end())
@@ -743,7 +684,7 @@ bool WKBundlePageIsSuspended(WKBundlePageRef pageRef)
 
 void WKBundlePageAddUserScript(WKBundlePageRef pageRef, WKStringRef source, _WKUserScriptInjectionTime injectionTime, WKUserContentInjectedFrames injectedFrames)
 {
-    WebKit::toImpl(pageRef)->addUserScript(WebKit::toWTFString(source), WebKit::InjectedBundleScriptWorld::normalWorld(), WebKit::toUserContentInjectedFrames(injectedFrames), WebKit::toUserScriptInjectionTime(injectionTime));
+    WebKit::toImpl(pageRef)->addUserScript(WebKit::toWTFString(source), WebKit::InjectedBundleScriptWorld::normalWorldSingleton(), WebKit::toUserContentInjectedFrames(injectedFrames), WebKit::toUserScriptInjectionTime(injectionTime));
 }
 
 void WKBundlePageAddUserScriptInWorld(WKBundlePageRef page, WKStringRef source, WKBundleScriptWorldRef scriptWorld, _WKUserScriptInjectionTime injectionTime, WKUserContentInjectedFrames injectedFrames)

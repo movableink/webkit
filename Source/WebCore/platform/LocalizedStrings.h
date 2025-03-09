@@ -163,23 +163,23 @@ namespace WebCore {
     String contextMenuItemTagCopyAudioLinkToClipboard();
     String contextMenuItemTagCopyMediaLinkToClipboard();
     String contextMenuItemTagToggleMediaControls();
-    String contextMenuItemTagShowMediaControls();
+    WEBCORE_EXPORT String contextMenuItemTagShowMediaControls();
     String contextMenuItemTagHideMediaControls();
     String contextMenuItemTagToggleMediaLoop();
     String contextMenuItemTagEnterVideoFullscreen();
-    String contextMenuItemTagExitVideoFullscreen();
+    WEBCORE_EXPORT String contextMenuItemTagExitVideoFullscreen();
 #if PLATFORM(QT)
     String contextMenuItemTagToggleVideoFullscreen();
     String contextMenuItemTagMediaUnmute();
 #endif
 #if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
     String contextMenuItemTagEnterVideoEnhancedFullscreen();
-    String contextMenuItemTagExitVideoEnhancedFullscreen();
+    WEBCORE_EXPORT String contextMenuItemTagExitVideoEnhancedFullscreen();
     String contextMenuItemTagEnterVideoViewer();
-    String contextMenuItemTagExitVideoViewer();
+    WEBCORE_EXPORT String contextMenuItemTagExitVideoViewer();
 #endif
     String contextMenuItemTagMediaPlay();
-    String contextMenuItemTagMediaPause();
+    WEBCORE_EXPORT String contextMenuItemTagMediaPause();
     String contextMenuItemTagMediaMute();
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
     String contextMenuItemTagPlayAllAnimations();
@@ -386,11 +386,6 @@ namespace WebCore {
     String contextMenuItemTagShowMediaStats();
 #endif // ENABLE(VIDEO)
 
-    String snapshottedPlugInLabelTitle();
-    String snapshottedPlugInLabelSubtitle();
-
-    WEBCORE_EXPORT String useBlockedPlugInContextMenuTitle();
-
 #if PLATFORM(COCOA)
     String webCryptoMasterKeyKeychainLabel(const String& localizedApplicationName);
     String webCryptoMasterKeyKeychainComment();
@@ -442,6 +437,7 @@ namespace WebCore {
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     WEBCORE_EXPORT String fullscreenControllerViewSpatial();
+    WEBCORE_EXPORT String fullscreenControllerViewImmersive();
 #endif
 
 #if PLATFORM(COCOA)

@@ -70,7 +70,7 @@ typedef NSString *AVContentKeySystem;
 @end
 
 @interface WebCDMSessionAVContentKeySessionDelegate : NSObject<AVContentKeySessionDelegate> {
-    WebCore::CDMSessionAVContentKeySession *m_parent;
+    ThreadSafeWeakPtr<WebCore::CDMSessionAVContentKeySession> m_parent;
 }
 - (void)invalidate;
 @end
@@ -93,19 +93,24 @@ typedef NSString *AVContentKeySystem;
 {
     UNUSED_PARAM(session);
 
-    if (m_parent)
-        m_parent->didProvideContentKeyRequest(keyRequest);
+    if (RefPtr parent = m_parent.get())
+        parent->didProvideContentKeyRequest(keyRequest);
 }
 
 - (void)contentKeySessionContentProtectionSessionIdentifierDidChange:(AVContentKeySession *)session
 {
-    if (!m_parent)
+    RefPtr parent = m_parent.get();
+    if (!parent)
         return;
 
     NSData* identifier = [session contentProtectionSessionIdentifier];
     RetainPtr<NSString> sessionIdentifierString = identifier ? adoptNS([[NSString alloc] initWithData:identifier encoding:NSUTF8StringEncoding]) : nil;
     callOnMainThread([self, protectedSelf = RetainPtr { self }, sessionIdentifierString = WTFMove(sessionIdentifierString)] {
-        m_parent->setSessionId(sessionIdentifierString.get());
+        RefPtr parent = m_parent.get();
+        if (!parent)
+            return;
+
+        parent->setSessionId(sessionIdentifierString.get());
     });
 }
 @end
@@ -318,7 +323,11 @@ bool CDMSessionAVContentKeySession::update(Uint8Array* key, RefPtr<Uint8Array>& 
 
         errorCode = MediaPlayer::NoError;
         systemCode = 0;
-        RetainPtr nsIdentifier = m_identifier ? RetainPtr<id>(toNSData(m_identifier->span())) : retainPtr(contentKeyRequest.get().identifier);
+        RetainPtr<id> nsIdentifier;
+        if (m_identifier)
+            nsIdentifier = toNSData(m_identifier->span());
+        else
+            nsIdentifier = contentKeyRequest.get().identifier;
 
         RetainPtr<NSError> error;
         RetainPtr<NSData> requestData;
@@ -433,7 +442,7 @@ RefPtr<Uint8Array> CDMSessionAVContentKeySession::generateKeyReleaseMessage(unsi
 bool CDMSessionAVContentKeySession::hasContentKeyRequest() const
 {
     Locker holder { m_keyRequestLock };
-    return m_keyRequest;
+    return !!m_keyRequest;
 }
 
 RetainPtr<AVContentKeyRequest> CDMSessionAVContentKeySession::contentKeyRequest() const

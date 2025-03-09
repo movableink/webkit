@@ -32,8 +32,6 @@
 #import "config.h"
 #import "WebColorPickerMac.h"
 
-#if ENABLE(INPUT_TYPE_COLOR)
-
 #if USE(APPKIT)
 
 #import <WebCore/Color.h>
@@ -67,7 +65,7 @@ static const CGFloat colorPickerMatrixSwatchWidth = 13.0;
 @interface WKColorPopoverMac : NSObject<WKColorPickerUIMac, WKPopoverColorWellDelegate, NSWindowDelegate> {
 @private
     BOOL _lastChangedByUser;
-    WebKit::WebColorPickerMac *_picker;
+    WeakPtr<WebKit::WebColorPickerMac> _picker;
     RetainPtr<WKPopoverColorWell> _popoverWell;
 }
 - (id)initWithFrame:(const WebCore::IntRect &)rect inView:(NSView *)view;
@@ -269,12 +267,13 @@ void WebColorPickerMac::showColorPicker(const WebCore::Color& color)
 
 - (void)windowWillClose:(NSNotification *)notification
 {
-    if (!_picker)
+    RefPtr picker = _picker.get();
+    if (!picker)
         return;
 
     if (notification.object == [NSColorPanel sharedColorPanel]) {
         _lastChangedByUser = YES;
-        _picker->endPicker();
+        picker->endPicker();
     }
 }
 
@@ -289,7 +288,8 @@ void WebColorPickerMac::showColorPicker(const WebCore::Color& color)
         return;
     }
 
-    _picker->didChooseColor(WebCore::colorFromCocoaColor([_popoverWell color]));
+    if (RefPtr picker = _picker.get())
+        picker->didChooseColor(WebCore::colorFromCocoaColor([_popoverWell color]));
 }
 
 - (void)setColor:(NSColor *)color
@@ -300,15 +300,14 @@ void WebColorPickerMac::showColorPicker(const WebCore::Color& color)
 
 - (void)didClosePopover
 {
-    if (!_picker)
+    RefPtr picker = _picker.get();
+    if (!picker)
         return;
 
     if (![NSColorPanel sharedColorPanel].isVisible)
-        _picker->endPicker();
+        picker->endPicker();
 }
 
 @end
 
 #endif // USE(APPKIT)
-
-#endif // ENABLE(INPUT_TYPE_COLOR)

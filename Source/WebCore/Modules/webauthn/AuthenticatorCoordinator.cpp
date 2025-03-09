@@ -29,11 +29,13 @@
 #if ENABLE(WEB_AUTHN)
 
 #include "AbortSignal.h"
+#include "AllAcceptedCredentialsOptions.h"
 #include "AuthenticatorAssertionResponse.h"
 #include "AuthenticatorAttestationResponse.h"
 #include "AuthenticatorCoordinatorClient.h"
 #include "AuthenticatorResponseData.h"
-#include "Document.h"
+#include "CurrentUserDetailsOptions.h"
+#include "DocumentInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "JSBasicCredential.h"
 #include "JSCredentialCreationOptions.h"
@@ -47,6 +49,7 @@
 #include "PublicKeyCredentialRequestOptions.h"
 #include "RegistrableDomain.h"
 #include "LegacySchemeRegistry.h"
+#include "UnknownCredentialOptions.h"
 #include "WebAuthenticationConstants.h"
 #include "WebAuthenticationUtils.h"
 #include <pal/crypto/CryptoDigest.h>
@@ -98,9 +101,9 @@ static ScopeAndCrossOriginParent scopeAndCrossOriginParent(const Document& docum
     auto url = document.url();
     std::optional<SecurityOriginData> crossOriginParent;
     for (RefPtr parentDocument = document.parentDocument(); parentDocument; parentDocument = parentDocument->parentDocument()) {
-        if (!origin->isSameOriginDomain(parentDocument->securityOrigin()) && !areRegistrableDomainsEqual(url, parentDocument->url()))
+        if (!origin->isSameOriginDomain(parentDocument->protectedSecurityOrigin()) && !areRegistrableDomainsEqual(url, parentDocument->url()))
             isSameSite = false;
-        if (!crossOriginParent && !origin->isSameOriginAs(parentDocument->securityOrigin()))
+        if (!crossOriginParent && !origin->isSameOriginAs(parentDocument->protectedSecurityOrigin()))
             crossOriginParent = parentDocument->securityOrigin().data();
     }
 
@@ -422,6 +425,67 @@ void AuthenticatorCoordinator::getClientCapabilities(const Document& document, D
     };
 
     m_client->getClientCapabilities(document.securityOrigin(), WTFMove(completionHandler));
+}
+
+void AuthenticatorCoordinator::signalUnknownCredential(const Document& document, UnknownCredentialOptions&& options, DOMPromiseDeferred<void>&& promise)
+{
+    if (!m_client) {
+        promise.reject(Exception { ExceptionCode::UnknownError, "Web Authentication client not present."_s });
+        return;
+    }
+    if (RegistrableDomain::uncheckedCreateFromHost(options.rpId) != RegistrableDomain { document.securityOrigin().data() }) {
+        promise.reject(Exception { ExceptionCode::SecurityError, "The origin of the document is not authorized for the provided RP ID."_s });
+        return;
+    }
+
+    auto completionHandler = [promise = WTFMove(promise)] (std::optional<WebCore::ExceptionData> error) mutable {
+        if (error) {
+            promise.reject(error->toException());
+            return;
+        }
+    };
+    m_client->signalUnknownCredential(document.securityOrigin(), WTFMove(options), WTFMove(completionHandler));
+}
+
+void AuthenticatorCoordinator::signalAllAcceptedCredentials(const Document& document, AllAcceptedCredentialsOptions&& options, DOMPromiseDeferred<void>&& promise)
+{
+    if (!m_client)  {
+        promise.reject(Exception { ExceptionCode::UnknownError, "Web Authentication client not present."_s });
+        return;
+    }
+    if (RegistrableDomain::uncheckedCreateFromHost(options.rpId) != RegistrableDomain { document.securityOrigin().data() }) {
+        promise.reject(Exception { ExceptionCode::SecurityError, "The origin of the document is not authorized for the provided RP ID."_s });
+        return;
+    }
+
+    auto completionHandler = [promise = WTFMove(promise)] (std::optional<WebCore::ExceptionData> error) mutable {
+        if (error) {
+            promise.reject(error->toException());
+            return;
+        }
+    };
+    m_client->signalAllAcceptedCredentials(document.securityOrigin(), WTFMove(options), WTFMove(completionHandler));
+}
+
+void AuthenticatorCoordinator::signalCurrentUserDetails(const Document& document, CurrentUserDetailsOptions&& options, DOMPromiseDeferred<void>&& promise)
+{
+    if (!m_client)  {
+        promise.reject(Exception { ExceptionCode::UnknownError, "Web Authentication client not present."_s });
+        return;
+    }
+    if (RegistrableDomain::uncheckedCreateFromHost(options.rpId) != RegistrableDomain { document.securityOrigin().data() }) {
+        promise.reject(Exception { ExceptionCode::SecurityError, "The origin of the document is not authorized for the provided RP ID."_s });
+        return;
+    }
+
+    auto completionHandler = [promise = WTFMove(promise)] (std::optional<WebCore::ExceptionData> error) mutable {
+        if (error) {
+            promise.reject(error->toException());
+            return;
+        }
+        promise.resolve();
+    };
+    m_client->signalCurrentUserDetails(document.securityOrigin(), WTFMove(options), WTFMove(completionHandler));
 }
 
 } // namespace WebCore

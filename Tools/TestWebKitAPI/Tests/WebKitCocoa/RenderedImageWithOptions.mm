@@ -26,6 +26,7 @@
 #import "config.h"
 
 #import "RenderedImageWithOptionsProtocol.h"
+#import "TestNSBundleExtras.h"
 #import "TestNavigationDelegate.h"
 #import "Utilities.h"
 #import "WKWebViewConfigurationExtras.h"

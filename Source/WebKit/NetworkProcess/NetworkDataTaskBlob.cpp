@@ -77,7 +77,7 @@ NetworkDataTaskBlob::NetworkDataTaskBlob(NetworkSession& session, NetworkDataTas
         RELEASE_LOG(Network, "Got request for blob without topOrigin but request specifies firstPartyForCookies");
         topOriginData = SecurityOriginData::fromURLWithoutStrictOpaqueness(request.firstPartyForCookies());
     }
-    m_blobData = session.blobRegistry().getBlobDataFromURL(request.url(), topOriginData);
+    m_blobData = session.blobRegistry().blobDataFromURL(request.url(), topOriginData);
 
     LOG(NetworkSession, "%p - Created NetworkDataTaskBlob for %s", this, request.url().string().utf8().data());
 }
@@ -112,7 +112,7 @@ void NetworkDataTaskBlob::resume()
 
     m_state = State::Running;
 
-    RunLoop::main().dispatch([this, protectedThis = Ref { *this }] {
+    RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }] {
         if (m_state == State::Canceling || m_state == State::Completed || !m_client) {
             clearStream();
             return;
@@ -184,7 +184,7 @@ void NetworkDataTaskBlob::getSizeForNext()
         break;
     case BlobDataItem::Type::File:
         // Files know their sizes, but asking the stream to verify that the file wasn't modified.
-        m_stream->getSize(item.file()->path(), item.file()->expectedModificationTime());
+        m_stream->getSize(item.protectedFile()->path(), item.protectedFile()->expectedModificationTime());
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -278,7 +278,7 @@ void NetworkDataTaskBlob::dispatchDidReceiveResponse()
     // as if the response had a Content-Disposition header with the filename parameter set to the File's name attribute.
     // Notably, this will affect a name suggested in "File Save As".
 
-    didReceiveResponse(WTFMove(response), NegotiatedLegacyTLS::No, PrivateRelayed::No, std::nullopt, [this, protectedThis = WTFMove(protectedThis)](PolicyAction policyAction) {
+    didReceiveResponse(WTFMove(response), NegotiatedLegacyTLS::No, PrivateRelayed::No, std::nullopt, [this, protectedThis = Ref { *this }](PolicyAction policyAction) {
         LOG(NetworkSession, "%p - NetworkDataTaskBlob::didReceiveResponse completionHandler (%u)", this, static_cast<unsigned>(policyAction));
 
         if (m_state == State::Canceling || m_state == State::Completed) {
@@ -331,10 +331,11 @@ void NetworkDataTaskBlob::readData(const BlobDataItem& item)
     if (bytesToRead > m_totalRemainingSize)
         bytesToRead = m_totalRemainingSize;
 
-    auto data = item.data()->span().subspan(item.offset() + m_currentItemReadSize, static_cast<size_t>(bytesToRead));
+    RefPtr data = item.data();
+    auto dataSpan = data->span().subspan(item.offset() + m_currentItemReadSize, static_cast<size_t>(bytesToRead));
     m_currentItemReadSize = 0;
 
-    consumeData(data);
+    consumeData(dataSpan);
 }
 
 void NetworkDataTaskBlob::readFile(const BlobDataItem& item)
@@ -342,14 +343,14 @@ void NetworkDataTaskBlob::readFile(const BlobDataItem& item)
     ASSERT(m_stream);
 
     if (m_fileOpened) {
-        m_stream->read(m_buffer.data(), m_buffer.size());
+        m_stream->read(m_buffer.mutableSpan());
         return;
     }
 
     long long bytesToRead = m_itemLengthList[m_readItemCount] - m_currentItemReadSize;
     if (bytesToRead > m_totalRemainingSize)
         bytesToRead = static_cast<int>(m_totalRemainingSize);
-    m_stream->openForRead(item.file()->path(), item.offset() + m_currentItemReadSize, bytesToRead);
+    m_stream->openForRead(item.protectedFile()->path(), item.offset() + m_currentItemReadSize, bytesToRead);
     m_fileOpened = true;
     m_currentItemReadSize = 0;
 }
@@ -396,7 +397,7 @@ void NetworkDataTaskBlob::consumeData(std::span<const uint8_t> data)
                 return;
         } else {
             ASSERT(m_client);
-            m_client->didReceiveData(SharedBuffer::create(data));
+            protectedClient()->didReceiveData(SharedBuffer::create(data));
         }
     }
 
@@ -424,8 +425,8 @@ void NetworkDataTaskBlob::setPendingDownloadLocation(const String& filename, San
 
     ASSERT(!m_sandboxExtension);
     m_sandboxExtension = SandboxExtension::create(WTFMove(sandboxExtensionHandle));
-    if (m_sandboxExtension)
-        m_sandboxExtension->consume();
+    if (RefPtr extension = m_sandboxExtension)
+        extension->consume();
 
     if (allowOverwrite && FileSystem::fileExists(m_pendingDownloadLocation))
         FileSystem::deleteFile(m_pendingDownloadLocation);
@@ -493,13 +494,11 @@ void NetworkDataTaskBlob::didFailDownload(const ResourceError& error)
     clearStream();
     cleanDownloadFiles();
 
-    if (m_sandboxExtension) {
-        m_sandboxExtension->revoke();
-        m_sandboxExtension = nullptr;
-    }
+    if (RefPtr extension = std::exchange(m_sandboxExtension, nullptr))
+        extension->revoke();
 
-    if (m_client)
-        m_client->didCompleteWithError(error);
+    if (RefPtr client = m_client.get())
+        client->didCompleteWithError(error);
     else {
         RefPtr download = m_networkProcess->downloadManager().download(*m_pendingDownloadID);
         ASSERT(download);
@@ -516,10 +515,8 @@ void NetworkDataTaskBlob::didFinishDownload()
     m_downloadFile = FileSystem::invalidPlatformFileHandle;
 
 #if !HAVE(MODERN_DOWNLOADPROGRESS)
-    if (m_sandboxExtension) {
-        m_sandboxExtension->revoke();
-        m_sandboxExtension = nullptr;
-    }
+    if (RefPtr extension = std::exchange(m_sandboxExtension, nullptr))
+        extension->revoke();
 #endif
 
     clearStream();
@@ -548,7 +545,7 @@ void NetworkDataTaskBlob::didFail(Error errorCode)
 
     clearStream();
     ASSERT(m_client);
-    m_client->didCompleteWithError(ResourceError(webKitBlobResourceDomain, static_cast<int>(errorCode), m_firstRequest.url(), String()));
+    protectedClient()->didCompleteWithError(ResourceError(webKitBlobResourceDomain, static_cast<int>(errorCode), m_firstRequest.url(), String()));
 }
 
 void NetworkDataTaskBlob::didFinish()
@@ -564,7 +561,7 @@ void NetworkDataTaskBlob::didFinish()
 
     clearStream();
     ASSERT(m_client);
-    m_client->didCompleteWithError({ });
+    protectedClient()->didCompleteWithError({ });
 }
 
 } // namespace WebKit

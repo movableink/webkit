@@ -50,8 +50,6 @@
 
 #include <queue>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -216,7 +214,7 @@ bool AccessibilityTable::isDataTable() const
     unsigned cellsWithRightBorder = 0;
 
     UncheckedKeyHashMap<Node*, unsigned> cellCountForEachRow;
-    Color alternatingRowColors[5];
+    std::array<Color, 5> alternatingRowColors;
     int alternatingRowColorCount = 0;
     unsigned rowCount = 0;
     unsigned maxColumnCount = 0;
@@ -624,6 +622,16 @@ unsigned AccessibilityTable::computeCellSlots()
                     colSpan,
                     rowSpan - 1
                 });
+            } else if (!rowSpan) {
+                // Zero is a special value for rowspan that means it spans all remaining rows.
+                // Pass the max rowspan value for DownwardGrowingCell::remainingRowsToSpan, allowing
+                // this cell to span for as long as the table extends.
+                downwardGrowingCells.append({
+                    *currentCell,
+                    xCurrent,
+                    colSpan,
+                    HTMLTableCellElement::maxRowspan - yCurrent
+                });
             }
 
             // Step 15.
@@ -960,5 +968,3 @@ void AccessibilityTable::ensureRowAndColumn(unsigned rowIndex, unsigned columnIn
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -42,12 +42,12 @@ public:
     using Base = Plan;
 
     bool hasWork() const final { return !m_completed; }
-    void work(CompilationEffort) final;
+    void work() final;
     bool multiThreaded() const final { return false; }
     FunctionCodeIndex functionIndex() const { return m_functionIndex; }
 
     // Note: CompletionTask should not hold a reference to the Plan otherwise there will be a reference cycle.
-    StreamingPlan(VM&, Ref<ModuleInformation>&&, Ref<LLIntPlan>&&, FunctionCodeIndex functionIndex, CompletionTask&&);
+    StreamingPlan(VM&, Ref<ModuleInformation>&&, Ref<EntryPlan>&&, FunctionCodeIndex functionIndex, CompletionTask&&);
 
 private:
     // For some reason friendship doesn't extend to parent classes...
@@ -60,7 +60,7 @@ private:
         runCompletionTasks();
     }
 
-    Ref<LLIntPlan> m_plan;
+    Ref<EntryPlan> m_plan;
     FunctionCodeIndex m_functionIndex;
     bool m_completed { false };
 };

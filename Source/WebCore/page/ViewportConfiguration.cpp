@@ -148,7 +148,17 @@ bool ViewportConfiguration::setContentsSize(const IntSize& contentSize)
 bool ViewportConfiguration::setViewLayoutSize(const FloatSize& viewLayoutSize, std::optional<double>&& scaleFactor, std::optional<double>&& minimumEffectiveDeviceWidthFromClient)
 {
     double newScaleFactor = scaleFactor.value_or(m_layoutSizeScaleFactor);
-    double newEffectiveWidth = minimumEffectiveDeviceWidthFromClient.value_or(m_minimumEffectiveDeviceWidthForView);
+    double newEffectiveWidth = [&] {
+        if (!m_configuration.shouldHonorMinimumEffectiveDeviceWidthFromClient)
+            return m_minimumEffectiveDeviceWidthForView;
+
+        if (!minimumEffectiveDeviceWidthFromClient)
+            return m_minimumEffectiveDeviceWidthForView;
+
+        m_minimumEffectiveDeviceWidthWasSetByClient = true;
+        return *minimumEffectiveDeviceWidthFromClient;
+    }();
+
     if (m_viewLayoutSize == viewLayoutSize && m_layoutSizeScaleFactor == newScaleFactor && newEffectiveWidth == m_minimumEffectiveDeviceWidthForView)
         return false;
 
@@ -343,6 +353,9 @@ double ViewportConfiguration::minimumScale() const
     if (m_forceAlwaysUserScalable)
         minimumScale = std::min(minimumScale, forceAlwaysUserScalableMinimumScale());
 
+    if (m_configuration.minimumScaleDoesNotAdaptToContent)
+        return minimumScale;
+
     auto scaleForFittingContentIsApproximatelyEqualToMinimumScale = [] (double viewLength, double contentLength, double minimumScale) {
         if (contentLength <= 1 || viewLength <= 1)
             return false;
@@ -414,22 +427,6 @@ ViewportConfiguration::Parameters ViewportConfiguration::nativeWebpageParameters
     parameters.initialScaleIsSet = false;
     return parameters;
 }
-
-#if ENABLE(PDF_PLUGIN)
-ViewportConfiguration::Parameters ViewportConfiguration::pluginDocumentParameters()
-{
-    Parameters parameters;
-    parameters.width = ViewportArguments::ValueDeviceWidth;
-    parameters.widthIsSet = true;
-    parameters.allowsShrinkToFit = false;
-    parameters.minimumScale = 1;
-    parameters.maximumScale = 1;
-    parameters.initialScale = 1;
-    parameters.initialScaleIgnoringLayoutScaleFactor = 1;
-    parameters.initialScaleIsSet = true;
-    return parameters;
-}
-#endif
 
 ViewportConfiguration::Parameters ViewportConfiguration::webpageParameters()
 {
@@ -537,6 +534,9 @@ void ViewportConfiguration::updateConfiguration()
         m_configuration.heightIsSet = viewportArgumentsOverridesHeight;
     }
 
+    if (!m_configuration.shouldHonorMinimumEffectiveDeviceWidthFromClient && std::exchange(m_minimumEffectiveDeviceWidthWasSetByClient, false))
+        m_minimumEffectiveDeviceWidthForView = 0;
+
     if (m_configuration.initialScaleIsSet && m_minimumEffectiveDeviceWidthForView > m_viewLayoutSize.width())
         m_configuration.ignoreInitialScaleForLayoutWidth = true;
 
@@ -551,7 +551,7 @@ void ViewportConfiguration::updateConfiguration()
     if (canOverrideConfigurationParameters()) {
         if (!viewportArgumentsOverridesWidth)
             m_configuration.width = m_minimumLayoutSize.width();
-        else if (layoutSizeIsExplicitlyScaled())
+        else if (layoutSizeIsExplicitlyScaled() && m_viewportArguments.width > 0)
             m_configuration.width /= effectiveLayoutScale;
     }
 
@@ -717,6 +717,9 @@ TextStream& operator<<(TextStream& ts, const ViewportConfiguration::Parameters& 
     ts.dumpProperty("allowsUserScaling", parameters.allowsUserScaling);
     ts.dumpProperty("allowsShrinkToFit", parameters.allowsShrinkToFit);
     ts.dumpProperty("avoidsUnsafeArea", parameters.avoidsUnsafeArea);
+    ts.dumpProperty("ignoreInitialScaleForLayoutWidth", parameters.ignoreInitialScaleForLayoutWidth);
+    ts.dumpProperty("shouldHonorMinimumEffectiveDeviceWidthFromClient", parameters.shouldHonorMinimumEffectiveDeviceWidthFromClient);
+    ts.dumpProperty("minimumScaleDoesNotAdaptToContent", parameters.minimumScaleDoesNotAdaptToContent);
 
     return ts;
 }

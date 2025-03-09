@@ -46,6 +46,18 @@ struct ContentAlignmentData {
 
 enum class GridAxisPosition : uint8_t { GridAxisStart, GridAxisEnd, GridAxisCenter };
 
+enum class SubgridDidChange : bool { No, Yes };
+
+class GridItemSizeCache {
+public:
+    void setSizeForGridItem(const RenderBox& gridItem, LayoutUnit size);
+    std::optional<LayoutUnit> sizeForItem(const RenderBox& gridItem) const;
+    void invalidateSizeForItem(const RenderBox& gridItem);
+
+private:
+    SingleThreadWeakHashMap<const RenderBox, std::optional<LayoutUnit>> m_sizes;
+};
+
 class RenderGrid final : public RenderBlock {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderGrid);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderGrid);
@@ -56,12 +68,11 @@ public:
     Element& element() const { return downcast<Element>(nodeForNonAnonymous()); }
 
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
-    void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) override;
+    void layoutBlock(RelayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) override;
 
-    bool avoidsFloats() const override { return true; }
     bool canDropAnonymousBlockChild() const override { return false; }
 
-    void dirtyGrid(bool subgridChanged = false);
+    void setNeedsItemPlacement(SubgridDidChange descendantSubgridsNeedItemPlacement = SubgridDidChange::No);
     Vector<LayoutUnit> trackSizesForComputedStyle(GridTrackSizingDirection) const;
 
     const Vector<LayoutUnit>& columnPositions() const { return m_columnPositions; }
@@ -87,13 +98,14 @@ public:
     // the grid is a standard grid or a masonry one. While masonry is an extension of grid,
     // keeping the logic in the same function was leading to a messy amount of if statements being added to handle
     // specific masonry cases.
-    void layoutGrid(bool);
-    void layoutMasonry(bool);
+    void layoutGrid(RelayoutChildren);
+    void layoutMasonry(RelayoutChildren);
 
     // Computes the span relative to this RenderGrid, even if the RenderBox is a grid item
     // of a descendant subgrid.
     GridSpan gridSpanForGridItem(const RenderBox&, GridTrackSizingDirection) const;
 
+    bool isSubgrid() const;
     bool isSubgrid(GridTrackSizingDirection) const;
     bool isSubgridRows() const
     {
@@ -129,6 +141,9 @@ public:
     LayoutUnit masonryContentSize() const;
     Vector<LayoutRect> gridItemsLayoutRects();
 
+    void updateIntrinsicLogicalHeightsForRowSizingFirstPassCacheAvailability();
+    std::optional<GridItemSizeCache>& intrinsicLogicalHeightsForRowSizingFirstPass() const;
+
     bool shouldCheckExplicitIntrinsicInnerLogicalSize(GridTrackSizingDirection) const;
 
 private:
@@ -151,7 +166,7 @@ private:
     bool selfAlignmentChangedToStretch(GridAxis, const RenderStyle& oldStyle, const RenderStyle& newStyle, const RenderBox&) const;
     bool selfAlignmentChangedFromStretch(GridAxis, const RenderStyle& oldStyle, const RenderStyle& newStyle, const RenderBox&) const;
 
-    bool subgridDidChange(const RenderStyle& oldStyle) const;
+    SubgridDidChange subgridDidChange(const RenderStyle& oldStyle) const;
     bool explicitGridDidResize(const RenderStyle&) const;
     bool namedGridLinesDefinitionDidChange(const RenderStyle&) const;
     bool implicitGridLinesDefinitionDidChange(const RenderStyle&) const;
@@ -185,7 +200,7 @@ private:
     bool canPerformSimplifiedLayout() const final;
     void prepareGridItemForPositionedLayout(RenderBox&);
     bool hasStaticPositionForGridItem(const RenderBox&, GridTrackSizingDirection) const;
-    void layoutPositionedObject(RenderBox&, bool relayoutChildren, bool fixedPositionObjectsOnly) override;
+    void layoutPositionedObject(RenderBox&, RelayoutChildren, bool fixedPositionObjectsOnly) override;
 
     void computeTrackSizesForDefiniteSize(GridTrackSizingDirection, LayoutUnit availableSpace, GridLayoutState&);
     void computeTrackSizesForIndefiniteSize(GridTrackSizingAlgorithm&, GridTrackSizingDirection, GridLayoutState&, LayoutUnit* minIntrinsicSize = nullptr, LayoutUnit* maxIntrinsicSize = nullptr) const;
@@ -252,11 +267,10 @@ private:
     LayoutUnit translateRTLCoordinate(LayoutUnit) const;
 
     bool shouldResetLogicalHeightBeforeLayout() const override { return true; }
-    bool establishesIndependentFormattingContext() const override;
 
     bool aspectRatioPrefersInline(const RenderBox& gridItem, bool blockFlowIsColumnAxis);
 
-    Vector<RenderBox*> computeAspectRatioDependentAndBaselineItems();
+    Vector<RenderBox*> computeAspectRatioDependentAndBaselineItems(GridLayoutState&);
 
     GridSpan gridSpanForOutOfFlowGridItem(const RenderBox&, GridTrackSizingDirection) const;
 
@@ -264,6 +278,8 @@ private:
 
     AutoRepeatType autoRepeatColumnsType() const;
     AutoRepeatType autoRepeatRowsType() const;
+
+    bool canCreateIntrinsicLogicalHeightsForRowSizingFirstPassCache() const;
 
     class GridWrapper {
         Grid m_layoutGrid;
@@ -288,9 +304,10 @@ private:
     OutOfFlowPositionsMap m_outOfFlowItemColumn;
     OutOfFlowPositionsMap m_outOfFlowItemRow;
 
-    bool m_hasAspectRatioBlockSizeDependentItem { false };
     bool m_baselineItemsCached {false};
     bool m_hasAnyBaselineAlignmentItem { false };
+
+    mutable std::optional<GridItemSizeCache> m_intrinsicLogicalHeightsForRowSizingFirstPass;
 };
 
 } // namespace WebCore

@@ -1199,9 +1199,8 @@ void BytecodeGenerator::initializeDefaultParameterValuesAndSetupFunctionScopeSta
             else
                 emitGetArgument(temp.get(), i);
             if (parameter.second) {
-                RefPtr<RegisterID> condition = emitIsUndefined(newTemporary(), temp.get());
                 Ref<Label> skipDefaultParameterBecauseNotUndefined = newLabel();
-                emitJumpIfFalse(condition.get(), skipDefaultParameterBecauseNotUndefined.get());
+                emitJumpIfFalse(emitIsUndefined(newTemporary(), temp.get()), skipDefaultParameterBecauseNotUndefined.get());
                 emitNode(temp.get(), parameter.second);
                 emitLabel(skipDefaultParameterBecauseNotUndefined.get());
             }
@@ -2296,11 +2295,8 @@ void BytecodeGenerator::hoistSloppyModeFunctionIfNecessary(FunctionMetadataNode*
         case GlobalCode:
         case EvalCode: {
             RefPtr<RegisterID> scopeId = emitResolveScopeForHoistingFuncDeclInEval(nullptr, functionName);
-            RefPtr<RegisterID> checkResult = emitIsUndefined(newTemporary(), scopeId.get());
-            
             Ref<Label> isNotVarScopeLabel = newLabel();
-            emitJumpIfTrue(checkResult.get(), isNotVarScopeLabel.get());
-
+            emitJumpIfTrue(emitIsUndefined(newTemporary(), scopeId.get()), isNotVarScopeLabel.get());
             // Put to outer scope
             emitPutToScopeDynamic(scopeId.get(), functionName, currentValue.get(), DoNotThrowIfNotFound, InitializationMode::NotInitialization);
             emitLabel(isNotVarScopeLabel.get());
@@ -3255,7 +3251,7 @@ Vector<Identifier> BytecodeGenerator::getParameterNames() const
 std::optional<PrivateNameEnvironment> BytecodeGenerator::getAvailablePrivateAccessNames()
 {
     PrivateNameEnvironment result;
-    HashSet<UniquedStringImpl*> excludedNames;
+    UncheckedKeyHashSet<UniquedStringImpl*> excludedNames;
     for (unsigned i = m_privateNamesStack.size(); i--; ) {
         auto& map = m_privateNamesStack[i];
         for (auto& entry : map)  {

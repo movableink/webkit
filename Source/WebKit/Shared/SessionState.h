@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ViewSnapshotStore.h"
+#include <WebCore/BackForwardFrameItemIdentifier.h>
 #include <WebCore/BackForwardItemIdentifier.h>
 #include <WebCore/FloatRect.h>
 #include <WebCore/FrameIdentifier.h>
@@ -82,6 +83,7 @@ public:
     enum class ShouldValidate : bool { No, Yes };
     void setDocumentState(const Vector<AtomString>&, ShouldValidate = ShouldValidate::No);
     static bool validateDocumentState(const Vector<AtomString>&);
+    void replaceChildFrameState(Ref<FrameState>&&);
 
     String urlString;
     String originalURLString;
@@ -100,7 +102,8 @@ public:
 
     std::optional<HTTPBody> httpBody;
 
-    Markable<WebCore::BackForwardItemIdentifier> identifier;
+    Markable<WebCore::BackForwardItemIdentifier> itemID;
+    Markable<WebCore::BackForwardFrameItemIdentifier> frameItemID;
     bool hasCachedPage { false };
     String title;
     WebCore::ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy { WebCore::ShouldOpenExternalURLsPolicy::ShouldNotAllow };
@@ -122,7 +125,7 @@ public:
     Vector<Ref<FrameState>> children;
 
 private:
-    FrameState(const String& urlString, const String& originalURLString, const String& referrer, const AtomString& target, std::optional<WebCore::FrameIdentifier>, std::optional<Vector<uint8_t>> stateObjectData, int64_t documentSequenceNumber, int64_t itemSequenceNumber, WebCore::IntPoint scrollPosition, bool shouldRestoreScrollPosition, float pageScaleFactor, const std::optional<HTTPBody>&, std::optional<WebCore::BackForwardItemIdentifier>, bool hasCachedPage, const String& title, WebCore::ShouldOpenExternalURLsPolicy, RefPtr<WebCore::SerializedScriptValue>&& sessionStateObject, bool wasCreatedByJSWithoutUserInteraction, bool wasRestoredFromSession, const std::optional<WebCore::PolicyContainer>&,
+    FrameState(const String& urlString, const String& originalURLString, const String& referrer, const AtomString& target, std::optional<WebCore::FrameIdentifier>, std::optional<Vector<uint8_t>> stateObjectData, int64_t documentSequenceNumber, int64_t itemSequenceNumber, WebCore::IntPoint scrollPosition, bool shouldRestoreScrollPosition, float pageScaleFactor, const std::optional<HTTPBody>&, std::optional<WebCore::BackForwardItemIdentifier>, std::optional<WebCore::BackForwardFrameItemIdentifier>, bool hasCachedPage, const String& title, WebCore::ShouldOpenExternalURLsPolicy, RefPtr<WebCore::SerializedScriptValue>&& sessionStateObject, bool wasCreatedByJSWithoutUserInteraction, bool wasRestoredFromSession, const std::optional<WebCore::PolicyContainer>&,
 #if PLATFORM(IOS_FAMILY)
         WebCore::FloatRect exposedContentRect, WebCore::IntRect unobscuredContentRect, WebCore::FloatSize minimumLayoutSizeInScrollViewCoordinates, WebCore::IntSize contentSize, bool scaleIsInitial, WebCore::FloatBoxExtent obscuredInsets,
 #endif

@@ -679,7 +679,7 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
             throwRangeError(globalObject, scope, "calendar is not a well-formed calendar value"_s);
             return;
         }
-        localeOptions[static_cast<unsigned>(RelevantExtensionKey::Ca)] = calendar;
+        localeOptions[static_cast<unsigned>(RelevantExtensionKey::Ca)] = calendar.convertToASCIILowercase();
     }
 
     String numberingSystem = intlStringOption(globalObject, options, vm.propertyNames->numberingSystem, { }, { }, { });
@@ -721,6 +721,9 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
             m_calendar = WTFMove(mapped.value());
         else
             m_calendar = WTFMove(calendar);
+        // Handling "islamicc" candidate for backward compatibility.
+        if (m_calendar == "islamicc"_s)
+            m_calendar = "islamic-civil"_s;
     }
 
     hourCycle = parseHourCycle(resolved.extensions[static_cast<unsigned>(RelevantExtensionKey::Hc)]);

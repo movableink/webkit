@@ -1,5 +1,4 @@
 Modules/webtransport/WebTransportReceiveStream.h
-Modules/webtransport/WebTransportSendStream.h
 css/CSSAppleColorFilterPropertyValue.h
 css/CSSAspectRatioValue.h
 css/CSSAttrValue.h
@@ -17,6 +16,8 @@ css/CSSCounterValue.h
 css/CSSCrossfadeValue.h
 css/CSSCursorImageValue.h
 css/CSSCustomPropertyValue.h
+css/CSSEasingFunctionValue.h
+css/CSSDynamicRangeLimitValue.h
 css/CSSFilterImageValue.h
 css/CSSFilterPropertyValue.h
 css/CSSFontFaceSrcValue.h
@@ -45,6 +46,7 @@ css/CSSOffsetRotateValue.h
 css/CSSPaintImageValue.h
 css/CSSPathValue.h
 css/CSSPendingSubstitutionValue.h
+css/CSSPositionTryRule.h
 css/CSSPrimitiveValue.h
 css/CSSQuadValue.h
 css/CSSRayValue.h
@@ -53,7 +55,6 @@ css/CSSReflectValue.h
 css/CSSScrollValue.h
 css/CSSSubgridValue.h
 css/CSSTextShadowPropertyValue.h
-css/CSSTimingFunctionValue.h
 css/CSSTransformListValue.h
 css/CSSUnicodeRangeValue.h
 css/CSSValueList.h
@@ -76,4 +77,3 @@ dom/DOMRect.h
 dom/Document.h
 dom/ShadowRoot.cpp
 dom/ShadowRoot.h
-platform/SharedBuffer.h

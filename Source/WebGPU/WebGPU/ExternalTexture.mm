@@ -85,8 +85,16 @@ void ExternalTexture::undestroy()
 void ExternalTexture::setCommandEncoder(CommandEncoder& commandEncoder) const
 {
     CommandEncoder::trackEncoder(commandEncoder, m_commandEncoders);
+    commandEncoder.addTexture(m_texture0);
+    commandEncoder.addTexture(m_texture1);
     if (isDestroyed())
         commandEncoder.makeSubmitInvalid();
+}
+
+void ExternalTexture::updateExternalTextures(id<MTLTexture> texture0, id<MTLTexture> texture1)
+{
+    m_texture0 = texture0;
+    m_texture1 = texture1;
 }
 
 bool ExternalTexture::isDestroyed() const

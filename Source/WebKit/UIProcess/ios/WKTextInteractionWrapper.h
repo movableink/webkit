@@ -56,6 +56,7 @@
 - (void)selectAll:(id)sender;
 - (void)translate:(NSString *)text fromRect:(CGRect)presentationRect;
 - (void)prepareToMoveSelectionContainer:(UIView *)newContainer;
+- (void)setNeedsSelectionUpdate;
 
 - (void)willBeginDragLift;
 - (void)didConcludeDrop;

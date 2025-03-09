@@ -44,8 +44,8 @@ RefPtr<CSSPrimitiveValue> consumeLengthPercentage(CSSParserTokenRange& range, co
     };
 
     if (valueRange == ValueRange::All)
-        return CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::All>>::consumeAndResolve(range, context, { }, { }, options);
-    return CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::Nonnegative>>::consumeAndResolve(range, context, { }, { }, options);
+        return CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::All>>::consumeAndResolve(range, context, options);
+    return CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::Nonnegative>>::consumeAndResolve(range, context, options);
 }
 
 RefPtr<CSSPrimitiveValue> consumeLengthPercentage(CSSParserTokenRange& range, const CSSParserContext& context, CSSParserMode overrideParserMode, ValueRange valueRange, UnitlessQuirk unitless, UnitlessZeroQuirk unitlessZero, AnchorPolicy anchorPolicy, AnchorSizePolicy anchorSizePolicy)
@@ -59,8 +59,8 @@ RefPtr<CSSPrimitiveValue> consumeLengthPercentage(CSSParserTokenRange& range, co
     };
 
     if (valueRange == ValueRange::All)
-        return CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::All>>::consumeAndResolve(range, context, { }, { }, options);
-    return CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::Nonnegative>>::consumeAndResolve(range, context, { }, { }, options);
+        return CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::All>>::consumeAndResolve(range, context, options);
+    return CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::Nonnegative>>::consumeAndResolve(range, context, options);
 }
 
 } // namespace CSSPropertyParserHelpers

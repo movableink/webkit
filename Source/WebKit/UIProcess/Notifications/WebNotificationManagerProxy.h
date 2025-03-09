@@ -62,8 +62,7 @@ public:
 
     static Ref<WebNotificationManagerProxy> create(WebProcessPool*);
 
-    static WebNotificationManagerProxy& sharedServiceWorkerManager();
-    static Ref<WebNotificationManagerProxy> protectedSharedServiceWorkerManager();
+    static WebNotificationManagerProxy& serviceWorkerManagerSingleton();
 
     virtual ~WebNotificationManagerProxy();
 

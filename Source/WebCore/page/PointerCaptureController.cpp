@@ -33,6 +33,7 @@
 #include "EventNames.h"
 #include "EventTarget.h"
 #include "HitTestResult.h"
+#include "MouseEventTypes.h"
 #include "Page.h"
 #include "PointerEvent.h"
 #include "Quirks.h"
@@ -562,7 +563,7 @@ void PointerCaptureController::cancelPointer(PointerID pointerId, const IntPoint
         if (capturingData->targetOverride)
             return capturingData->targetOverride;
         constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::DisallowUserAgentShadowContent, HitTestRequest::Type::AllowChildFrameContent };
-        RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+        RefPtr localMainFrame = page->localMainFrame();
         if (!localMainFrame)
             return nullptr;
         return localMainFrame->checkedEventHandler()->hitTestResultAtPoint(documentPoint, hitType).innerNonSharedElement();

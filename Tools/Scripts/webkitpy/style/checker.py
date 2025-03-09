@@ -223,6 +223,12 @@ _PATH_RULES_SPECIFIER = [
      ["-runtime/wtf_make_unique", "-readability/naming/underscores", "-readability/naming/acronym"]),
 
     ([
+        # The MatchPattern API uses a lowercase "url" to match GObject standard naming schemes, and an
+        # underscored private struct similar to other Gtk APIs, yet the style checker only warns about MatchPattern
+        os.path.join('Source', 'WebKit', 'UIProcess', 'API', 'glib', 'WebKitWebExtensionMatchPattern.cpp')],
+     ["-readability/naming/acronym", "-readability/naming/underscores"]),
+
+    ([
       # The GTK+ and WPE APIs use upper case, underscore separated, words in
       # certain types of enums (e.g. signals, properties).
       os.path.join('Source', 'JavaScriptCore', 'API', 'glib'),
@@ -294,6 +300,8 @@ _PATH_RULES_SPECIFIER = [
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'GStreamerSinksWorkarounds.h'),
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'GLVideoSinkGStreamer.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'GLVideoSinkGStreamer.h'),
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'GstAllocatorFastMalloc.cpp'),
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'GstAllocatorFastMalloc.h'),
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'TextCombinerGStreamer.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'TextCombinerGStreamer.h'),
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'TextCombinerPadGStreamer.cpp'),
@@ -331,6 +339,10 @@ _PATH_RULES_SPECIFIER = [
       os.path.join('Source', 'WebCore', 'platform', 'skia', 'SkiaAllocatorFastMalloc.cpp')],
      ["-build/include_order",
       "-readability/naming/underscores"]),
+
+    ([  # This file has >= symbols in templates, which looks like a closing bracket to the style checker
+     os.path.join('Source', 'WebKit', 'Shared', 'Extensions', 'WebExtensionSQLiteHelpers.h')],
+     ["-readability/naming/underscores"]),
 
     # For third-party code, keep only the following checks--
     #

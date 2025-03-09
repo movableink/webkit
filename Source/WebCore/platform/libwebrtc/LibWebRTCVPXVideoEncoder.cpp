@@ -35,9 +35,7 @@
 #include <wtf/WorkQueue.h>
 #include <wtf/text/MakeString.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 #include <webrtc/api/environment/environment_factory.h>
 #include <webrtc/modules/video_coding/codecs/av1/libaom_av1_encoder.h>
@@ -46,11 +44,7 @@ ALLOW_COMMA_BEGIN
 #include <webrtc/system_wrappers/include/cpu_info.h>
 #include <webrtc/webkit_sdk/WebKit/WebKitEncoder.h>
 
-ALLOW_COMMA_END
-ALLOW_UNUSED_PARAMETERS_END
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 namespace WebCore {
 
@@ -60,7 +54,11 @@ static constexpr double defaultFrameRate = 30.0;
 
 static WorkQueue& vpxEncoderQueue()
 {
-    static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("VPX VideoEncoder Queue"_s));
+    static std::once_flag onceKey;
+    static LazyNeverDestroyed<Ref<WorkQueue>> queue;
+    std::call_once(onceKey, [] {
+        queue.construct(WorkQueue::create("VPx VideoEncoder Queue"_s));
+    });
     return queue.get();
 }
 
@@ -311,7 +309,7 @@ webrtc::EncodedImageCallback::Result LibWebRTCVPXInternalVideoEncoder::OnEncoded
     }
 
     VideoEncoder::EncodedFrame encodedFrame {
-        Vector<uint8_t> { std::span { encodedImage.data(), encodedImage.size() } },
+        Vector<uint8_t> { unsafeMakeSpan(encodedImage.data(), encodedImage.size()) },
         encodedImage._frameType == webrtc::VideoFrameType::kVideoFrameKey,
         m_timestamp,
         m_duration,
@@ -327,7 +325,5 @@ void LibWebRTCVPXInternalVideoEncoder::OnDroppedFrame(DropReason)
 }
 
 }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // USE(LIBWEBRTC)

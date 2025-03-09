@@ -51,7 +51,7 @@ void CtapCcidDriver::transact(Vector<uint8_t>&& data, ResponseCallback&& callbac
 {
     // For CTAP2, commands follow:
     // https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html#nfc-command-framing
-    if (protocol() == ProtocolVersion::kCtap) {
+    if (isCtap2Protocol()) {
 
         if (!isValidSize(data.size()))
             RELEASE_LOG(WebAuthn, "CtapCcidDriver::transact Sending data larger than maxSize. msgSize=%ld", data.size());
@@ -60,8 +60,8 @@ void CtapCcidDriver::transact(Vector<uint8_t>&& data, ResponseCallback&& callbac
         command.setIns(kCtapNfcApduIns);
         command.setData(WTFMove(data));
         command.setResponseLength(ApduCommand::kApduMaxResponseLength);
-        auto ncallback = [callback = WTFMove(callback), this](Vector<uint8_t>&& resp) mutable {
-            auto apduResponse = ApduResponse::createFromMessage(resp);
+        auto ncallback = [callback = WTFMove(callback), this, protectedThis = Ref { *this }](Vector<uint8_t>&& resp) mutable {
+            auto apduResponse = ApduResponse::createFromMessage(WTFMove(resp));
             if (!apduResponse) {
                 respondAsync(WTFMove(callback), { });
                 return;
@@ -91,7 +91,7 @@ void CtapCcidDriver::transact(Vector<uint8_t>&& data, ResponseCallback&& callbac
 
 void CtapCcidDriver::respondAsync(ResponseCallback&& callback, Vector<uint8_t>&& response) const
 {
-    RunLoop::main().dispatch([callback = WTFMove(callback), response = WTFMove(response)] () mutable {
+    RunLoop::protectedMain()->dispatch([callback = WTFMove(callback), response = WTFMove(response)] () mutable {
         callback(WTFMove(response));
     });
 }

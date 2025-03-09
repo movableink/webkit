@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 #pragma once
 
 #include "CSSCalcSymbolTable.h"
+#include "CSSNoConversionDataRequiredToken.h"
 #include "CSSValueTypes.h"
 #include <optional>
 #include <tuple>
@@ -42,22 +43,13 @@ namespace Style {
 
 class BuilderState;
 
-// Helper for declaring types in the Style namespace as Tuple-Like.
-#define STYLE_TUPLE_LIKE_CONFORMANCE(t, numberOfArguments) \
-    namespace std { \
-        template<> class tuple_size<WebCore::Style::t> : public std::integral_constant<size_t, numberOfArguments> { }; \
-        template<size_t I> class tuple_element<I, WebCore::Style::t> { \
-        public: \
-            using type = decltype(WebCore::Style::get<I>(std::declval<WebCore::Style::t>())); \
-        }; \
-    } \
-    template<> inline constexpr bool WebCore::TreatAsTupleLike<WebCore::Style::t> = true; \
-\
-
 // Types can specialize this and set the value to true to be treated as "non-converting"
 // for css to style / style to css conversion algorithms. This means the type is identical
 // for both CSS and Style systems (e.g. a constant value or an enum).
 template<typename> inline constexpr bool TreatAsNonConverting = false;
+
+// The `NonConverting` concept can be used to filter to types that specialize `TreatAsNonConverting`.
+template<typename T> concept NonConverting = TreatAsNonConverting<T>;
 
 // Types that are treated as "tuple-like" can have their conversion operations defined
 // automatically by just defining their type mapping.
@@ -77,28 +69,13 @@ template<typename> struct ToCSSMapping;
 //    };
 //
 //    template<> struct WebCore::Style::ToStyle<CSSType> {
-//        StyleType operator()(const CSSType&, const CSSToLengthConversionData&, const CSSCalcSymbolTable&);
-//        StyleType operator()(const CSSType&, const BuilderState&, const CSSCalcSymbolTable&);
-//        StyleType operator()(const CSSType&, NoConversionDataRequiredToken, const CSSCalcSymbolTable&);
+//        StyleType operator()(const CSSType&, const CSSToLengthConversionData&);
+//        StyleType operator()(const CSSType&, const BuilderState&);
+//        StyleType operator()(const CSSType&, NoConversionDataRequiredToken);
 //    };
-
-// Token passed to ToStyle to indicate that the caller has checked that no conversion data is required.
-struct NoConversionDataRequiredToken { };
 
 template<typename> struct ToCSS;
 template<typename> struct ToStyle;
-
-// Types can specialize `PrimaryCSSType` to provided a "primary" type the specialized type should be converted to before conversion to Style. For
-// instance, `CSS::NumberRaw`, would specialize this as `template<> struct ToPrimaryCSSTypeMapping<CSS::NumberRaw> { using type = CSS::Number };` to
-// allow callers to use `toStyle(...)` directly on values of type `CSS::NumberRaw`.
-template<typename CSSType> struct ToPrimaryCSSTypeMapping { using type = CSSType; };
-template<typename CSSType> using PrimaryCSSType = typename ToPrimaryCSSTypeMapping<CSSType>::type;
-
-// MARK: Utility Concepts
-
-template<typename T> concept HasIsZero = requires(T t) {
-    { t.isZero() } -> std::convertible_to<bool>;
-};
 
 // MARK: Common Types.
 
@@ -112,18 +89,21 @@ template<> inline constexpr bool TreatAsNonConverting<CustomIdentifier> = true;
 // MARK: - Conversion from "Style to "CSS"
 
 // Conversion Invoker
-template<typename StyleType> decltype(auto) toCSS(const StyleType& styleType, const RenderStyle& style)
+template<typename StyleType, typename... Rest> decltype(auto) toCSS(const StyleType& styleType, const RenderStyle& style, Rest&&... rest)
 {
-    return ToCSS<StyleType>{}(styleType, style);
+    return ToCSS<StyleType>{}(styleType, style, std::forward<Rest>(rest)...);
 }
 
 // Conversion Utility Types
 template<typename StyleType> using CSSType = std::decay_t<decltype(toCSS(std::declval<const StyleType&>(), std::declval<const RenderStyle&>()))>;
 
-template<typename To, typename From> auto toCSSOnTupleLike(const From& tupleLike, const RenderStyle& style) -> To
+template<typename To, typename From, typename... Rest> auto toCSSOnTupleLike(const From& tupleLike, Rest&&... rest) -> To
 {
-    return WTF::apply([&](const auto& ...x) { return To { toCSS(x, style)... }; }, tupleLike);
+    return WTF::apply([&](const auto& ...x) { return To { toCSS(x, rest...)... }; }, tupleLike);
 }
+
+// Standard NonConverting type mappings (identity mappings):
+template<NonConverting T> struct ToCSSMapping<T> { using type = T; };
 
 // Standard Optional-Like type mappings:
 template<typename T> struct ToCSSMapping<std::optional<T>> { using type = std::optional<CSSType<T>>; };
@@ -149,7 +129,7 @@ template<typename T, size_t N> struct ToCSSMapping<CommaSeparatedVector<T, N>> {
 template<typename... Ts> struct ToCSSMapping<std::variant<Ts...>> { using type = std::variant<CSSType<Ts>...>; };
 
 // Constrained for `TreatAsNonConverting`.
-template<typename StyleType> requires (TreatAsNonConverting<StyleType>) struct ToCSS<StyleType> {
+template<NonConverting StyleType> struct ToCSS<StyleType> {
     constexpr StyleType operator()(const StyleType& value, const RenderStyle&)
     {
         return value;
@@ -157,7 +137,7 @@ template<typename StyleType> requires (TreatAsNonConverting<StyleType>) struct T
 };
 
 // Constrained for `TreatAsOptionalLike`.
-template<typename StyleType> requires (TreatAsOptionalLike<StyleType>) struct ToCSS<StyleType> {
+template<OptionalLike StyleType> struct ToCSS<StyleType> {
     using Result = typename ToCSSMapping<StyleType>::type;
 
     Result operator()(const StyleType& value, const RenderStyle& style)
@@ -169,7 +149,7 @@ template<typename StyleType> requires (TreatAsOptionalLike<StyleType>) struct To
 };
 
 // Constrained for `TreatAsTupleLike`.
-template<typename StyleType> requires (TreatAsTupleLike<StyleType>) struct ToCSS<StyleType> {
+template<TupleLike StyleType> struct ToCSS<StyleType> {
     using Result = typename ToCSSMapping<StyleType>::type;
 
     Result operator()(const StyleType& value, const RenderStyle& style)
@@ -179,7 +159,7 @@ template<typename StyleType> requires (TreatAsTupleLike<StyleType>) struct ToCSS
 };
 
 // Constrained for `TreatAsVariantLike`.
-template<typename StyleType> requires (TreatAsVariantLike<StyleType>) struct ToCSS<StyleType> {
+template<VariantLike StyleType> struct ToCSS<StyleType> {
     using Result = typename ToCSSMapping<StyleType>::type;
 
     Result operator()(const StyleType& value, const RenderStyle& style)
@@ -211,48 +191,42 @@ template<typename StyleType, size_t inlineCapacity> struct ToCSS<CommaSeparatedV
 // MARK: - Conversion from "CSS" to "Style"
 
 // Conversion Invokers
-template<typename CSSType> decltype(auto) toStyle(const CSSType& cssType, const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable)
+template<typename CSSType, typename... Rest> decltype(auto) toStyle(const CSSType& cssType, const CSSToLengthConversionData& conversionData, Rest&&... rest)
 {
-    return ToStyle<PrimaryCSSType<CSSType>>{}(cssType, conversionData, symbolTable);
+    return ToStyle<CSSType>{}(cssType, conversionData, std::forward<Rest>(rest)...);
 }
 
-template<typename CSSType> decltype(auto) toStyle(const CSSType& cssType, const CSSToLengthConversionData& conversionData)
+template<typename CSSType, typename... Rest> decltype(auto) toStyle(const CSSType& cssType, const BuilderState& builderState, Rest&&... rest)
 {
-    return ToStyle<PrimaryCSSType<CSSType>>{}(cssType, conversionData, CSSCalcSymbolTable { });
+    return ToStyle<CSSType>{}(cssType, builderState, std::forward<Rest>(rest)...);
 }
 
-template<typename CSSType> decltype(auto) toStyle(const CSSType& cssType, const BuilderState& builderState, const CSSCalcSymbolTable& symbolTable)
+template<typename CSSType, typename... Rest> decltype(auto) toStyle(const CSSType& cssType, NoConversionDataRequiredToken token, Rest&&... rest)
 {
-    return ToStyle<PrimaryCSSType<CSSType>>{}(cssType, builderState, symbolTable);
+    return ToStyle<CSSType>{}(cssType, token, std::forward<Rest>(rest)...);
 }
 
-template<typename CSSType> decltype(auto) toStyle(const CSSType& cssType, const BuilderState& builderState)
+// Convenience invoker that adds a `NoConversionDataRequiredToken` argument.
+template<typename CSSType, typename... Rest> decltype(auto) toStyleNoConversionDataRequired(const CSSType& cssType, Rest&&... rest)
 {
-    return ToStyle<PrimaryCSSType<CSSType>>{}(cssType, builderState, CSSCalcSymbolTable { });
+    return toStyle(cssType, NoConversionDataRequiredToken { }, std::forward<Rest>(rest)...);
 }
 
-template<typename CSSType> decltype(auto) toStyleNoConversionDataRequired(const CSSType& cssType, const CSSCalcSymbolTable& symbolTable)
+template<typename To, typename From, typename... Rest> auto toStyleOnTupleLike(const From& tupleLike, Rest&&... rest) -> To
 {
-    return ToStyle<PrimaryCSSType<CSSType>>{}(cssType, NoConversionDataRequiredToken { }, symbolTable);
+    return WTF::apply([&](const auto& ...x) { return To { toStyle(x, rest...)... }; }, tupleLike);
 }
 
-template<typename CSSType> decltype(auto) toStyleNoConversionDataRequired(const CSSType& cssType)
+template<typename To, typename From, typename... Rest> auto toStyleNoConversionDataRequiredOnTupleLike(const From& tupleLike, Rest&&... rest) -> To
 {
-    return ToStyle<PrimaryCSSType<CSSType>>{}(cssType, NoConversionDataRequiredToken { }, CSSCalcSymbolTable { });
-}
-
-template<typename To, typename From, typename... Args> auto toStyleOnTupleLike(const From& tupleLike, Args&&... args) -> To
-{
-    return WTF::apply([&](const auto& ...x) { return To { toStyle(x, args...)... }; }, tupleLike);
-}
-
-template<typename To, typename From, typename... Args> auto toStyleNoConversionDataRequiredOnTupleLike(const From& tupleLike, Args&&... args) -> To
-{
-    return WTF::apply([&](const auto& ...x) { return To { toStyleNoConversionDataRequired(x, args...)... }; }, tupleLike);
+    return WTF::apply([&](const auto& ...x) { return To { toStyleNoConversionDataRequired(x, rest...)... }; }, tupleLike);
 }
 
 // Conversion Utility Types
-template<typename CSSType> using StyleType = std::decay_t<decltype(toStyle(std::declval<const CSSType&>(), std::declval<const BuilderState&>(), std::declval<const CSSCalcSymbolTable&>()))>;
+template<typename CSSType> using StyleType = std::decay_t<decltype(toStyle(std::declval<const CSSType&>(), std::declval<const BuilderState&>()))>;
+
+// Standard NonConverting type mappings (identity mappings):
+template<NonConverting T> struct ToStyleMapping<T> { using type = T; };
 
 // Standard Optional-Like type mappings:
 template<typename T> struct ToStyleMapping<std::optional<T>> { using type = std::optional<StyleType<T>>; };
@@ -278,78 +252,42 @@ template<typename T, size_t N> struct ToStyleMapping<CommaSeparatedVector<T, N>>
 template<typename... Ts> struct ToStyleMapping<std::variant<Ts...>> { using type = std::variant<StyleType<Ts>...>; };
 
 // Constrained for `TreatAsNonConverting`.
-template<typename CSSType> requires (TreatAsNonConverting<CSSType>) struct ToStyle<CSSType> {
-    constexpr CSSType operator()(const CSSType& value, const CSSToLengthConversionData&, const CSSCalcSymbolTable&)
-    {
-        return value;
-    }
-    constexpr CSSType operator()(const CSSType& value, const BuilderState&, const CSSCalcSymbolTable&)
-    {
-        return value;
-    }
-    constexpr CSSType operator()(const CSSType& value, NoConversionDataRequiredToken, const CSSCalcSymbolTable&)
+template<NonConverting CSSType> struct ToStyle<CSSType> {
+    template<typename... Rest> constexpr CSSType operator()(const CSSType& value, Rest&&...)
     {
         return value;
     }
 };
 
 // Constrained for `TreatAsOptionalLike`.
-template<typename CSSType> requires (TreatAsOptionalLike<CSSType>) struct ToStyle<CSSType> {
+template<OptionalLike CSSType> struct ToStyle<CSSType> {
     using Result = typename ToStyleMapping<CSSType>::type;
 
-    Result operator()(const CSSType& value, const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable)
+    template<typename... Rest> Result operator()(const CSSType& value, Rest&&... rest)
     {
         if (value)
-            return toStyle(*value, conversionData, symbolTable);
-        return std::nullopt;
-    }
-    Result operator()(const CSSType& value, const BuilderState& builderState, const CSSCalcSymbolTable& symbolTable)
-    {
-        if (value)
-            return toStyle(*value, builderState, symbolTable);
-        return std::nullopt;
-    }
-    Result operator()(const CSSType& value, NoConversionDataRequiredToken, const CSSCalcSymbolTable& symbolTable)
-    {
-        if (value)
-            return toStyleNoConversionDataRequired(*value, symbolTable);
+            return toStyle(*value, std::forward<Rest>(rest)...);
         return std::nullopt;
     }
 };
 
 // Constrained for `TreatAsTupleLike`.
-template<typename CSSType> requires (TreatAsTupleLike<CSSType>) struct ToStyle<CSSType> {
+template<TupleLike CSSType> struct ToStyle<CSSType> {
     using Result = typename ToStyleMapping<CSSType>::type;
 
-    Result operator()(const CSSType& value, const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable)
+    template<typename... Rest> Result operator()(const CSSType& value, Rest&&... rest)
     {
-        return toStyleOnTupleLike<Result>(value, conversionData, symbolTable);
-    }
-    Result operator()(const CSSType& value, const BuilderState& builderState, const CSSCalcSymbolTable& symbolTable)
-    {
-        return toStyleOnTupleLike<Result>(value, builderState, symbolTable);
-    }
-    Result operator()(const CSSType& value, NoConversionDataRequiredToken, const CSSCalcSymbolTable& symbolTable)
-    {
-        return toStyleNoConversionDataRequiredOnTupleLike<Result>(value, symbolTable);
+        return toStyleOnTupleLike<Result>(value, std::forward<Rest>(rest)...);
     }
 };
 
 // Constrained for `TreatAsVariantLike`.
-template<typename CSSType> requires (TreatAsVariantLike<CSSType>) struct ToStyle<CSSType> {
+template<VariantLike CSSType> struct ToStyle<CSSType> {
     using Result = typename ToStyleMapping<CSSType>::type;
 
-    Result operator()(const CSSType& value, const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable)
+    template<typename... Rest> Result operator()(const CSSType& value, Rest&&... rest)
     {
-        return WTF::switchOn(value, [&](const auto& alternative) { return Result { toStyle(alternative, conversionData, symbolTable) }; });
-    }
-    Result operator()(const CSSType& value, const BuilderState& builderState, const CSSCalcSymbolTable& symbolTable)
-    {
-        return WTF::switchOn(value, [&](const auto& alternative) { return Result { toStyle(alternative, builderState, symbolTable) }; });
-    }
-    Result operator()(const CSSType& value, NoConversionDataRequiredToken, const CSSCalcSymbolTable& symbolTable)
-    {
-        return WTF::switchOn(value, [&](const auto& alternative) { return Result { toStyleNoConversionDataRequired(alternative, symbolTable) }; });
+        return WTF::switchOn(value, [&](const auto& alternative) { return Result { toStyle(alternative, std::forward<Rest>(rest)...) }; });
     }
 };
 
@@ -357,17 +295,9 @@ template<typename CSSType> requires (TreatAsVariantLike<CSSType>) struct ToStyle
 template<typename CSSType, size_t inlineCapacity> struct ToStyle<SpaceSeparatedVector<CSSType, inlineCapacity>> {
     using Result = SpaceSeparatedVector<StyleType<CSSType>, inlineCapacity>;
 
-    Result operator()(const SpaceSeparatedVector<CSSType, inlineCapacity>& value, const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable)
+    template<typename... Rest> Result operator()(const SpaceSeparatedVector<CSSType, inlineCapacity>& value, Rest&&... rest)
     {
-        return Result { value.value.template map<typename Result::Vector>([&](const auto& x) { return toStyle(x, conversionData, symbolTable); }) };
-    }
-    Result operator()(const SpaceSeparatedVector<CSSType, inlineCapacity>& value, const BuilderState& builderState, const CSSCalcSymbolTable& symbolTable)
-    {
-        return Result { value.value.template map<typename Result::Vector>([&](const auto& x) { return toStyle(x, builderState, symbolTable); }) };
-    }
-    Result operator()(const SpaceSeparatedVector<CSSType, inlineCapacity>& value, NoConversionDataRequiredToken, const CSSCalcSymbolTable& symbolTable)
-    {
-        return Result { value.value.template map<typename Result::Vector>([&](const auto& x) { return toStyleNoConversionDataRequired(x, symbolTable); }) };
+        return Result { value.value.template map<typename Result::Vector>([&](const auto& x) { return toStyle(x, rest...); }) };
     }
 };
 
@@ -375,17 +305,46 @@ template<typename CSSType, size_t inlineCapacity> struct ToStyle<SpaceSeparatedV
 template<typename CSSType, size_t inlineCapacity> struct ToStyle<CommaSeparatedVector<CSSType, inlineCapacity>> {
     using Result = CommaSeparatedVector<StyleType<CSSType>, inlineCapacity>;
 
-    Result operator()(const CommaSeparatedVector<CSSType, inlineCapacity>& value, const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable)
+    template<typename... Rest> Result operator()(const CommaSeparatedVector<CSSType, inlineCapacity>& value, Rest&&... rest)
     {
-        return Result { value.value.template map<typename Result::Vector>([&](const auto& x) { return toStyle(x, conversionData, symbolTable); }) };
+        return Result { value.value.template map<typename Result::Vector>([&](const auto& x) { return toStyle(x, rest...); }) };
     }
-    Result operator()(const CommaSeparatedVector<CSSType, inlineCapacity>& value, const BuilderState& builderState, const CSSCalcSymbolTable& symbolTable)
+};
+
+// MARK: - Evaluation
+
+// Types that want to participate in evaluation overloading must specialize the following interface:
+//
+//    template<> struct WebCore::Style::Evaluation<StyleType> {
+//        decltype(auto) operator()(const StyleType&, ...);
+//    };
+
+template<typename> struct Evaluation;
+
+// `Evaluation` Invokers
+template<typename StyleType> decltype(auto) evaluate(const StyleType& value)
+{
+    return Evaluation<StyleType>{}(value);
+}
+
+template<typename StyleType, typename Reference> decltype(auto) evaluate(const StyleType& value, Reference&& reference)
+{
+    return Evaluation<StyleType>{}(value, std::forward<Reference>(reference));
+}
+
+// Specialization for `VariantLike`.
+template<VariantLike StyleType> struct Evaluation<StyleType> {
+    template<typename... Rest> decltype(auto) operator()(const StyleType& value, Rest&&... rest)
     {
-        return Result { value.value.template map<typename Result::Vector>([&](const auto& x) { return toStyle(x, builderState, symbolTable); }) };
+        return WTF::switchOn(value, [&](const auto& alternative) { return evaluate(alternative, std::forward<Rest>(rest)...); });
     }
-    Result operator()(const CommaSeparatedVector<CSSType, inlineCapacity>& value, NoConversionDataRequiredToken, const CSSCalcSymbolTable& symbolTable)
+};
+
+// Specialization for `TupleLike` (wrapper).
+template<TupleLike StyleType> requires (std::tuple_size_v<StyleType> == 1) struct Evaluation<StyleType> {
+    template<typename... Rest> decltype(auto) operator()(const StyleType& value, Rest&&... rest)
     {
-        return Result { value.value.template map<typename Result::Vector>([&](const auto& x) { return toStyleNoConversionDataRequired(x, symbolTable); }) };
+        return evaluate(get<0>(value), std::forward<Rest>(rest)...);
     }
 };
 
@@ -488,7 +447,7 @@ template<typename StyleType> auto blendOnTupleLike(const StyleType& a, const Sty
 }
 
 // Constrained for `TreatAsOptionalLike`.
-template<typename StyleType> requires (TreatAsOptionalLike<StyleType>) struct Blending<StyleType> {
+template<OptionalLike StyleType> struct Blending<StyleType> {
     constexpr auto canBlend(const StyleType& a, const StyleType& b) -> bool
     {
         return canBlendOnOptionalLike(a, b);
@@ -508,7 +467,7 @@ template<typename StyleType> requires (TreatAsOptionalLike<StyleType>) struct Bl
 };
 
 // Constrained for `TreatAsTupleLike`.
-template<typename StyleType> requires (TreatAsTupleLike<StyleType>) struct Blending<StyleType> {
+template<TupleLike StyleType> struct Blending<StyleType> {
     constexpr auto canBlend(const StyleType& a, const StyleType& b) -> bool
     {
         return canBlendOnTupleLike(a, b);
@@ -678,6 +637,98 @@ template<typename StyleType, size_t inlineCapacity> struct Blending<CommaSeparat
         return { WTFMove(result) };
     }
 };
+
+// MARK: - IsZero
+
+// All leaf types that want to conform to IsZero must implement
+// the following:
+//
+//    template<> struct WebCore::Style::IsZero<CSSType> {
+//        bool operator()(const CSSType&);
+//    };
+//
+// or have a member function such that the type matches the
+// `HasIsZero` concept.
+
+template<typename> struct IsZero;
+
+// IsZero Invoker
+template<typename T> bool isZero(const T& value)
+{
+    return IsZero<T>{}(value);
+}
+
+template<HasIsZero T> struct IsZero<T> {
+    bool operator()(const T& value)
+    {
+        return value.isZero();
+    }
+};
+
+// Constrained for `TreatAsTupleLike`.
+template<TupleLike T> struct IsZero<T> {
+    bool operator()(const T& value)
+    {
+        return WTF::apply([&](const auto& ...x) { return (isZero(x) && ...); }, value);
+    }
+};
+
+// Constrained for `TreatAsVariantLike`.
+template<VariantLike T> struct IsZero<T> {
+    bool operator()(const T& value)
+    {
+        return WTF::switchOn(value, [&](const auto& alternative) { return isZero(alternative); });
+    }
+};
+
+// MARK: - IsEmpty
+
+// All leaf types that want to conform to IsEmpty must implement
+// the following:
+//
+//    template<> struct WebCore::Style::IsEmpty<CSSType> {
+//        bool operator()(const CSSType&);
+//    };
+//
+// or have a member function such that the type matches the
+// `HasIsEmpty` concept.
+
+template<typename> struct IsEmpty;
+
+// IsEmpty Invoker
+template<typename T> bool isEmpty(const T& value)
+{
+    return IsEmpty<T>{}(value);
+}
+
+template<HasIsEmpty T> struct IsEmpty<T> {
+    bool operator()(const T& value)
+    {
+        return value.isEmpty();
+    }
+};
+
+template<typename T> struct IsEmpty<SpaceSeparatedSize<T>> {
+    bool operator()(const auto& value)
+    {
+        return isZero(value.width()) || isZero(value.height());
+    }
+};
+
+// MARK: - Logging
+
+// Specialization for `VariantLike`.
+template<VariantLike StyleType> TextStream& operator<<(TextStream& ts, const StyleType& value)
+{
+    WTF::switchOn(value, [&](const auto& value) { ts << value; });
+    return ts;
+}
+
+// Specialization for `TupleLike` (wrapper).
+template<TupleLike StyleType> requires (std::tuple_size_v<StyleType> == 1) TextStream& operator<<(TextStream& ts, const StyleType& value)
+{
+    return ts << get<0>(value);
+}
 
 } // namespace Style
 } // namespace WebCore

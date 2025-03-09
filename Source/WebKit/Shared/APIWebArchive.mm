@@ -119,7 +119,7 @@ API::Array* WebArchive::subframeArchives()
 {
     if (!m_cachedSubframeArchives) {
         auto subframeWebArchives = WTF::map(m_legacyWebArchive->subframeArchives(), [](auto& subframeArchive) -> RefPtr<API::Object> {
-            return WebArchive::create(static_cast<LegacyWebArchive*>(subframeArchive.ptr()));
+            return WebArchive::create(downcast<LegacyWebArchive>(subframeArchive.ptr()));
         });
         m_cachedSubframeArchives = API::Array::create(WTFMove(subframeWebArchives));
     }

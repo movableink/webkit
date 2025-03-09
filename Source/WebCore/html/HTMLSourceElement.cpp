@@ -26,6 +26,7 @@
 #include "config.h"
 #include "HTMLSourceElement.h"
 
+#include "CSSSerializationContext.h"
 #include "ElementInlines.h"
 #include "Event.h"
 #include "EventNames.h"
@@ -210,15 +211,15 @@ const MQ::MediaQueryList& HTMLSourceElement::parsedMediaAttribute(Document& docu
     return m_cachedParsedMediaAttribute.value();
 }
 
-Attribute HTMLSourceElement::replaceURLsInAttributeValue(const Attribute& attribute, const UncheckedKeyHashMap<String, String>& replacementURLStrings) const
+Attribute HTMLSourceElement::replaceURLsInAttributeValue(const Attribute& attribute, const CSS::SerializationContext& serializationContext) const
 {
     if (attribute.name() != srcsetAttr)
         return attribute;
 
-    if (replacementURLStrings.isEmpty())
+    if (serializationContext.replacementURLStrings.isEmpty())
         return attribute;
 
-    return Attribute { srcsetAttr, AtomString { replaceURLsInSrcsetAttribute(*this, StringView(attribute.value()), replacementURLStrings) } };
+    return Attribute { srcsetAttr, AtomString { replaceURLsInSrcsetAttribute(*this, StringView(attribute.value()), serializationContext) } };
 }
 
 void HTMLSourceElement::addCandidateSubresourceURLs(ListHashSet<URL>& urls) const
@@ -226,11 +227,11 @@ void HTMLSourceElement::addCandidateSubresourceURLs(ListHashSet<URL>& urls) cons
     getURLsFromSrcsetAttribute(*this, attributeWithoutSynchronization(srcsetAttr), urls);
 }
 
-Ref<Element> HTMLSourceElement::cloneElementWithoutAttributesAndChildren(Document& targetDocument)
+Ref<Element> HTMLSourceElement::cloneElementWithoutAttributesAndChildren(Document& document, CustomElementRegistry*)
 {
-    auto clone = create(targetDocument);
+    Ref clone = create(document);
 #if ENABLE(ATTACHMENT_ELEMENT)
-    cloneAttachmentAssociatedElementWithoutAttributesAndChildren(clone, targetDocument);
+    cloneAttachmentAssociatedElementWithoutAttributesAndChildren(clone, document);
 #endif
     return clone;
 }

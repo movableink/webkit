@@ -92,6 +92,9 @@ private:
     // @view-transition descriptors.
     bool parseViewTransitionDescriptor(CSSPropertyID);
 
+    // @position-try descriptors.
+    bool parsePositionTryDescriptor(CSSPropertyID, bool important);
+
     void addProperty(CSSPropertyID longhand, CSSPropertyID shorthand, RefPtr<CSSValue>&&, bool important, bool implicit = false);
     void addExpandedProperty(CSSPropertyID shorthand, RefPtr<CSSValue>&&, bool important, bool implicit = false);
 
@@ -159,6 +162,7 @@ private:
     bool consumeTextWrapShorthand(bool important);
     bool consumeWhiteSpaceShorthand(bool important);
 
+    bool consumePositionTryShorthand(bool important);
 private:
     // Inputs:
     CSSParserTokenRange m_range;

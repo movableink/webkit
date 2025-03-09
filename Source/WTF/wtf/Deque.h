@@ -105,18 +105,18 @@ public:
     // Remove and return the first element for which the callback returns true. Returns a null version of
     // T if it the callback always returns false.
     template<typename Func>
-    T takeFirst(const Func&);
+    T takeFirst(NOESCAPE const Func&);
 
     // Remove and return the last element for which the callback returns true. Returns a null version of
     // T if it the callback always returns false.
     template<typename Func>
-    T takeLast(const Func&);
+    T takeLast(NOESCAPE const Func&);
 
     void clear();
 
-    template<typename Predicate> iterator findIf(const Predicate&);
-    template<typename Predicate> const_iterator findIf(const Predicate&) const;
-    template<typename Predicate> bool containsIf(const Predicate& predicate) const
+    template<typename Predicate> iterator findIf(NOESCAPE const Predicate&);
+    template<typename Predicate> const_iterator findIf(NOESCAPE const Predicate&) const;
+    template<typename Predicate> bool containsIf(NOESCAPE const Predicate& predicate) const
     {
         return findIf(predicate) != end();
     }
@@ -409,14 +409,14 @@ inline void Deque<T, inlineCapacity>::clear()
 
 template<typename T, size_t inlineCapacity>
 template<typename Predicate>
-inline auto Deque<T, inlineCapacity>::findIf(const Predicate& predicate) -> iterator
+inline auto Deque<T, inlineCapacity>::findIf(NOESCAPE const Predicate& predicate) -> iterator
 {
     return std::find_if(begin(), end(), predicate);
 }
 
 template<typename T, size_t inlineCapacity>
 template<typename Predicate>
-inline auto Deque<T, inlineCapacity>::findIf(const Predicate& predicate) const -> const_iterator
+inline auto Deque<T, inlineCapacity>::findIf(NOESCAPE const Predicate& predicate) const -> const_iterator
 {
     return std::find_if(begin(), end(), predicate);
 }
@@ -616,7 +616,7 @@ inline void Deque<T, inlineCapacity>::appendAndBubble(U&& value, const Func& fun
 
 template<typename T, size_t inlineCapacity>
 template<typename Func>
-inline T Deque<T, inlineCapacity>::takeFirst(const Func& func)
+inline T Deque<T, inlineCapacity>::takeFirst(NOESCAPE const Func& func)
 {
     unsigned count = 0;
     unsigned size = this->size();
@@ -635,7 +635,7 @@ inline T Deque<T, inlineCapacity>::takeFirst(const Func& func)
 
 template<typename T, size_t inlineCapacity>
 template<typename Func>
-inline T Deque<T, inlineCapacity>::takeLast(const Func& func)
+inline T Deque<T, inlineCapacity>::takeLast(NOESCAPE const Func& func)
 {
     unsigned count = 0;
     unsigned size = this->size();

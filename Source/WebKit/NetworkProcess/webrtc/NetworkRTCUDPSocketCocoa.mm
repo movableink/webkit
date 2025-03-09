@@ -40,6 +40,7 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/cocoa/SpanCocoa.h>
+#include <wtf/posix/SocketPOSIX.h>
 
 namespace WebKit {
 
@@ -79,7 +80,7 @@ private:
     void setListeningPort(int);
 
     WebCore::LibWebRTCSocketIdentifier m_identifier;
-    Ref<IPC::Connection> m_connection;
+    const Ref<IPC::Connection> m_connection;
     bool m_isFirstParty { false };
     bool m_isKnownTracker { false };
     bool m_shouldBypassRelay { false };
@@ -181,15 +182,16 @@ static inline bool isNat64IPAddress(const rtc::IPAddress& ip)
         return false;
 
     struct ifaddrs* interfaces;
-    if (auto error = getifaddrs(&interfaces))
+    if (getifaddrs(&interfaces))
         return true;
     std::unique_ptr<struct ifaddrs> toBeFreed(interfaces);
 
     for (auto* interface = interfaces; interface; interface = interface->ifa_next) {
-        if (interface->ifa_addr->sa_family != AF_INET)
+        auto* address = dynamicCastToIPV4SocketAddress(*interface->ifa_addr);
+        if (!address)
             continue;
 
-        rtc::IPAddress interfaceAddress { reinterpret_cast<sockaddr_in*>(interface->ifa_addr)->sin_addr };
+        rtc::IPAddress interfaceAddress { address->sin_addr };
         if (ip != interfaceAddress)
             continue;
 

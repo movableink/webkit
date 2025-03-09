@@ -54,9 +54,10 @@
 #include "WebKitDOMXPathResultPrivate.h"
 #include <WebCore/CSSImportRule.h>
 #include <WebCore/DOMException.h>
+#include <WebCore/DocumentFullscreen.h>
 #include <WebCore/DocumentInlines.h>
-#include <WebCore/FullscreenManager.h>
 #include <WebCore/HitTestSource.h>
+#include <WebCore/ImportNodeOptions.h>
 #include <WebCore/JSDOMPromiseDeferred.h>
 #include <WebCore/JSExecState.h>
 #include <WebCore/SecurityOrigin.h>
@@ -989,7 +990,7 @@ WebKitDOMNode* webkit_dom_document_import_node(WebKitDOMDocument* self, WebKitDO
     g_return_val_if_fail(!error || !*error, 0);
     WebCore::Document* item = WebKit::core(self);
     WebCore::Node* convertedImportedNode = WebKit::core(importedNode);
-    auto result = item->importNode(*convertedImportedNode, deep);
+    auto result = item->importNode(*convertedImportedNode, static_cast<bool>(deep));
     if (result.hasException()) {
         auto description = WebCore::DOMException::description(result.releaseException().code());
         g_set_error_literal(error, g_quark_from_string("WEBKIT_DOM"), description.legacyCode, description.name);
@@ -1313,7 +1314,7 @@ void webkit_dom_document_webkit_cancel_fullscreen(WebKitDOMDocument* self)
     g_return_if_fail(WEBKIT_DOM_IS_DOCUMENT(self));
 #if ENABLE(FULLSCREEN_API)
     WebCore::Document* item = WebKit::core(self);
-    item->fullscreenManager().cancelFullscreen();
+    item->fullscreen().fullyExitFullscreen();
 #endif
 }
 
@@ -1323,7 +1324,7 @@ void webkit_dom_document_webkit_exit_fullscreen(WebKitDOMDocument* self)
     g_return_if_fail(WEBKIT_DOM_IS_DOCUMENT(self));
 #if ENABLE(FULLSCREEN_API)
     WebCore::Document* item = WebKit::core(self);
-    item->fullscreenManager().exitFullscreen(nullptr);
+    item->fullscreen().exitFullscreen(nullptr);
 #endif
 }
 
@@ -1825,7 +1826,7 @@ gboolean webkit_dom_document_get_webkit_is_fullscreen(WebKitDOMDocument* self)
     g_return_val_if_fail(WEBKIT_DOM_IS_DOCUMENT(self), FALSE);
 #if ENABLE(FULLSCREEN_API)
     WebCore::Document* item = WebKit::core(self);
-    gboolean result = item->fullscreenManager().isFullscreen();
+    gboolean result = item->fullscreen().isFullscreen();
     return result;
 #else
     return FALSE;
@@ -1838,7 +1839,7 @@ gboolean webkit_dom_document_get_webkit_fullscreen_keyboard_input_allowed(WebKit
     g_return_val_if_fail(WEBKIT_DOM_IS_DOCUMENT(self), FALSE);
 #if ENABLE(FULLSCREEN_API)
     WebCore::Document* item = WebKit::core(self);
-    gboolean result = item->fullscreenManager().isFullscreenKeyboardInputAllowed();
+    gboolean result = item->fullscreen().isFullscreenKeyboardInputAllowed();
     return result;
 #else
     return FALSE;
@@ -1851,7 +1852,7 @@ WebKitDOMElement* webkit_dom_document_get_webkit_current_fullscreen_element(WebK
     g_return_val_if_fail(WEBKIT_DOM_IS_DOCUMENT(self), 0);
 #if ENABLE(FULLSCREEN_API)
     WebCore::Document* item = WebKit::core(self);
-    RefPtr<WebCore::Element> gobjectResult = WTF::getPtr(item->fullscreenManager().currentFullscreenElement());
+    RefPtr<WebCore::Element> gobjectResult = WTF::getPtr(item->fullscreen().fullscreenElement());
     return WebKit::kit(gobjectResult.get());
 #else
     return NULL;
@@ -1864,7 +1865,7 @@ gboolean webkit_dom_document_get_webkit_fullscreen_enabled(WebKitDOMDocument* se
     g_return_val_if_fail(WEBKIT_DOM_IS_DOCUMENT(self), FALSE);
 #if ENABLE(FULLSCREEN_API)
     WebCore::Document* item = WebKit::core(self);
-    gboolean result = item->fullscreenManager().isFullscreenEnabled();
+    gboolean result = item->fullscreen().enabledByPermissionsPolicy();
     return result;
 #else
     return FALSE;
@@ -1877,7 +1878,7 @@ WebKitDOMElement* webkit_dom_document_get_webkit_fullscreen_element(WebKitDOMDoc
     g_return_val_if_fail(WEBKIT_DOM_IS_DOCUMENT(self), 0);
 #if ENABLE(FULLSCREEN_API)
     WebCore::Document* item = WebKit::core(self);
-    RefPtr<WebCore::Element> gobjectResult = WTF::getPtr(item->fullscreenManager().fullscreenElement());
+    RefPtr<WebCore::Element> gobjectResult = WTF::getPtr(item->fullscreen().fullscreenElement());
     return WebKit::kit(gobjectResult.get());
 #else
     return NULL;

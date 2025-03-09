@@ -75,7 +75,7 @@ WaiterListManager& WaiterListManager::singleton()
 template <typename ValueType>
 WaiterListManager::WaitSyncResult WaiterListManager::waitSyncImpl(VM& vm, ValueType* ptr, ValueType expectedValue, Seconds timeout)
 {
-    dataLogLnIf(WaiterListsManagerInternal::verbose, "<WaiterListManager> <Thread:", Thread::current(), "> waitSyncImpl starts totalWaiterCount=", totalWaiterCount());
+    dataLogLnIf(WaiterListsManagerInternal::verbose, "<WaiterListManager> <Thread:", Thread::currentSingleton(), "> waitSyncImpl starts totalWaiterCount=", totalWaiterCount());
 
     Ref<Waiter> syncWaiter = vm.syncWaiter();
     Ref<WaiterList> list = findOrCreateList(ptr);
@@ -87,7 +87,7 @@ WaiterListManager::WaitSyncResult WaiterListManager::waitSyncImpl(VM& vm, ValueT
             return WaitSyncResult::NotEqual;
 
         list->addLast(listLocker, syncWaiter);
-        dataLogLnIf(WaiterListsManagerInternal::verbose, "<WaiterListManager> <Thread:", Thread::current(), "> added a new SyncWaiter=", syncWaiter.get(), " to a waiterList for ptr ", RawPointer(ptr));
+        dataLogLnIf(WaiterListsManagerInternal::verbose, "<WaiterListManager> <Thread:", Thread::currentSingleton(), "> added a new SyncWaiter=", syncWaiter.get(), " to a waiterList for ptr ", RawPointer(ptr));
 
         while (syncWaiter->isOnList() && time.now() < time && !vm.hasTerminationRequest())
             syncWaiter->condition().waitUntil(list->lock, time.approximateWallTime());
@@ -106,7 +106,7 @@ WaiterListManager::WaitSyncResult WaiterListManager::waitSyncImpl(VM& vm, ValueT
 template <typename ValueType>
 JSValue WaiterListManager::waitAsyncImpl(JSGlobalObject* globalObject, VM& vm, ValueType* ptr, ValueType expectedValue, Seconds timeout)
 {
-    dataLogLnIf(WaiterListsManagerInternal::verbose, "<WaiterListManager> <Thread:", Thread::current(), "> waitAsyncImpl starts totalWaiterCount=", totalWaiterCount());
+    dataLogLnIf(WaiterListsManagerInternal::verbose, "<WaiterListManager> <Thread:", Thread::currentSingleton(), "> waitAsyncImpl starts totalWaiterCount=", totalWaiterCount());
 
     JSObject* object = constructEmptyObject(globalObject);
 
@@ -129,13 +129,13 @@ JSValue WaiterListManager::waitAsyncImpl(JSGlobalObject* globalObject, VM& vm, V
             list->addLast(listLocker, waiter);
 
             if (timeout != Seconds::infinity()) {
-                Ref<RunLoop::DispatchTimer> timer = RunLoop::current().dispatchAfter(timeout, [this, ptr, waiter = waiter.copyRef()]() mutable {
+                Ref<RunLoop::DispatchTimer> timer = RunLoop::currentSingleton().dispatchAfter(timeout, [this, ptr, waiter = waiter.copyRef()]() mutable {
                     timeoutAsyncWaiter(ptr, WTFMove(waiter));
                 });
                 waiter->setTimer(listLocker, WTFMove(timer));
             }
 
-            dataLogLnIf(WaiterListsManagerInternal::verbose, "<WaiterListManager> <Thread:", Thread::current(), "> added a new AsyncWaiter=", *waiter.ptr(), " to a waiterList for ptr ", RawPointer(ptr));
+            dataLogLnIf(WaiterListsManagerInternal::verbose, "<WaiterListManager> <Thread:", Thread::currentSingleton(), "> added a new AsyncWaiter=", *waiter.ptr(), " to a waiterList for ptr ", RawPointer(ptr));
             value = promise;
         }
     }
@@ -167,32 +167,19 @@ WaiterListManager::WaitSyncResult WaiterListManager::waitSync(VM& vm, int64_t* p
 
 void WaiterListManager::timeoutAsyncWaiter(void* ptr, Ref<Waiter>&& waiter)
 {
+    dataLogLnIf(WaiterListsManagerInternal::verbose, "<WaiterListManager> <Thread:", Thread::currentSingleton(), "> timeoutAsyncWaiter ", waiter.get(), ") for ptr ", RawPointer(ptr));
     if (RefPtr<WaiterList> list = findList(ptr)) {
-        // All cases:
-        // 1. Find a list for ptr.
         Locker listLocker { list->lock };
-        if (waiter->ticket(listLocker)) {
-            if (waiter->isOnList()) {
-                // 1.1. The list contains the waiter which must be in the list and hasn't been notified.
-                //      It should have a ticket, then notify it with timeout.
-                bool didGetDequeued = list->findAndRemove(listLocker, waiter);
-                ASSERT_UNUSED(didGetDequeued, didGetDequeued);
-            }
-            // 1.2. The list doesn't contain the waiter.
-            //      1.2.1 It's a new list, then the waiter must be removed from a list which is destructed.
-            //            Then, the waiter may (notify it if it does) or may not have a ticket.
-            notifyWaiterImpl(listLocker,  WTFMove(waiter), ResolveResult::Timeout);
-            return;
+        if (waiter->isOnList()) {
+            bool didGetDequeued = list->findAndRemove(listLocker, waiter);
+            ASSERT_UNUSED(didGetDequeued, didGetDequeued);
         }
-        // 1.2.2 It's the list the waiter used to belong. Then it must be notified by other thread and ignore it.
+        notifyWaiterImpl(listLocker,  WTFMove(waiter), ResolveResult::Timeout);
+        return;
     }
 
-    // 2. Doesn't find a list for ptr, then the waiter must be removed from the list.
-    //      2.1. The waiter has a ticket, then notify it.
-    //      2.2. The waiter doesn't has a ticket, then it's notified and ignore it.
     ASSERT(!waiter->isOnList());
-    if (waiter->ticket(NoLockingNecessary))
-        notifyWaiterImpl(NoLockingNecessary, WTFMove(waiter), ResolveResult::Timeout);
+    notifyWaiterImpl(NoLockingNecessary, WTFMove(waiter), ResolveResult::Timeout);
 }
 
 unsigned WaiterListManager::notifyWaiter(void* ptr, unsigned count)
@@ -208,7 +195,7 @@ unsigned WaiterListManager::notifyWaiter(void* ptr, unsigned count)
         }
     }
 
-    dataLogLnIf(WaiterListsManagerInternal::verbose, "<WaiterListManager> <Thread:", Thread::current(), "> notified waiters (count ", notified, ") for ptr ", RawPointer(ptr));
+    dataLogLnIf(WaiterListsManagerInternal::verbose, "<WaiterListManager> <Thread:", Thread::currentSingleton(), "> notified waiters (count ", notified, ") for ptr ", RawPointer(ptr));
     return notified;
 }
 
@@ -283,7 +270,7 @@ void WaiterListManager::unregister(VM* vm)
         list->removeIf(listLocker, [&](Waiter* waiter) {
             if (waiter->vm() == vm) {
                 dataLogLnIf(WaiterListsManagerInternal::verbose,
-                    "<WaiterListManager> <Thread:", Thread::current(),
+                    "<WaiterListManager> <Thread:", Thread::currentSingleton(),
                     "> unregister VM is cancelling waiter=", *waiter,
                     " in WaiterList for ptr ", RawPointer(entry.key));
 
@@ -308,7 +295,7 @@ void WaiterListManager::unregister(JSGlobalObject* globalObject)
             if (waiter->isAsync()) {
                 if (auto ticket = waiter->ticket(listLocker); ticket && !ticket->isCancelled() && ticket->target()->globalObject() == globalObject) {
                     dataLogLnIf(WaiterListsManagerInternal::verbose,
-                        "<WaiterListManager> <Thread:", Thread::current(),
+                        "<WaiterListManager> <Thread:", Thread::currentSingleton(),
                         "> unregister JSGlobalObject is cancelling waiter=", *waiter,
                         " in WaiterList for ptr ", RawPointer(entry.key));
 
@@ -330,7 +317,7 @@ void WaiterListManager::unregister(uint8_t* arrayPtr, size_t size)
             Locker listLocker { list->lock };
             list->removeIf(listLocker, [&](Waiter* waiter) {
                 dataLogLnIf(WaiterListsManagerInternal::verbose,
-                    "<WaiterListManager> <Thread:", Thread::current(),
+                    "<WaiterListManager> <Thread:", Thread::currentSingleton(),
                     "> unregister SAB is cancelling waiter=", *waiter,
                     " in WaiterList for ptr ", RawPointer(entry.key));
 

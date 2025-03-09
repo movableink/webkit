@@ -38,8 +38,6 @@
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(DynamicsCompressorKernel);
@@ -190,11 +188,9 @@ float DynamicsCompressorKernel::updateStaticCurveParameters(float dbThreshold, f
     return m_K;
 }
 
-void DynamicsCompressorKernel::process(const float* sourceChannels[],
-                                       float* destinationChannels[],
-                                       unsigned numberOfChannels,
+void DynamicsCompressorKernel::process(std::span<std::span<const float>> sourceChannels,
+                                       std::span<std::span<float>> destinationChannels,
                                        unsigned framesToProcess,
-
                                        float dbThreshold,
                                        float dbKnee,
                                        float ratio,
@@ -210,7 +206,7 @@ void DynamicsCompressorKernel::process(const float* sourceChannels[],
                                        float releaseZone4
                                        )
 {
-    ASSERT(m_preDelayBuffers.size() == numberOfChannels);
+    ASSERT(m_preDelayBuffers.size() == sourceChannels.size());
 
     float sampleRate = this->sampleRate();
 
@@ -362,8 +358,8 @@ void DynamicsCompressorKernel::process(const float* sourceChannels[],
                 float compressorInput = 0;
 
                 // Predelay signal, computing compression amount from un-delayed version.
-                for (unsigned i = 0; i < numberOfChannels; ++i) {
-                    float* delayBuffer = m_preDelayBuffers[i]->data();
+                for (unsigned i = 0; i < sourceChannels.size(); ++i) {
+                    auto delayBuffer = m_preDelayBuffers[i]->span();
                     float undelayedSource = sourceChannels[i][frameIndex];
                     delayBuffer[preDelayWriteIndex] = undelayedSource;
 
@@ -428,8 +424,8 @@ void DynamicsCompressorKernel::process(const float* sourceChannels[],
                     m_meteringGain += (dbRealGain - m_meteringGain) * m_meteringReleaseK;
 
                 // Apply final gain.
-                for (unsigned i = 0; i < numberOfChannels; ++i) {
-                    float* delayBuffer = m_preDelayBuffers[i]->data();
+                for (unsigned i = 0; i < destinationChannels.size(); ++i) {
+                    auto delayBuffer = m_preDelayBuffers[i]->span();
                     destinationChannels[i][frameIndex] = delayBuffer[preDelayReadIndex] * totalGain;
                 }
 
@@ -474,7 +470,5 @@ double DynamicsCompressorKernel::tailTime() const
 }
 
 } // namespace WebCore
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEB_AUDIO)

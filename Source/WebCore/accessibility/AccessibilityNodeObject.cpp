@@ -39,7 +39,7 @@
 #include "AccessibilityTable.h"
 #include "ComposedTreeIterator.h"
 #include "DateComponents.h"
-#include "Editing.h"
+#include "EditingInlines.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "Event.h"
@@ -53,12 +53,14 @@
 #include "HTMLDetailsElement.h"
 #include "HTMLFieldSetElement.h"
 #include "HTMLFormElement.h"
+#include "HTMLHtmlElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLLabelElement.h"
 #include "HTMLLegendElement.h"
 #include "HTMLNames.h"
 #include "HTMLOptionElement.h"
+#include "HTMLParagraphElement.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLSelectElement.h"
 #include "HTMLSlotElement.h"
@@ -77,6 +79,7 @@
 #include "NodeTraversal.h"
 #include "ProgressTracker.h"
 #include "RenderImage.h"
+#include "RenderTableCell.h"
 #include "RenderView.h"
 #include "SVGElement.h"
 #include "ShadowRoot.h"
@@ -522,10 +525,8 @@ AccessibilityRole AccessibilityNodeObject::roleFromInputElement(const HTMLInputE
         return AccessibilityRole::DateTime;
     if (input.isFileUpload())
         return AccessibilityRole::Button;
-#if ENABLE(INPUT_TYPE_COLOR)
     if (input.isColorControl())
         return AccessibilityRole::ColorWell;
-#endif
     if (input.isInputTypeHidden())
         return AccessibilityRole::Ignored;
     if (input.isRangeControl())
@@ -600,7 +601,10 @@ void AccessibilityNodeObject::addChildren()
         addChild(cache->getOrCreate(*child));
 #else
     if (auto* containerNode = dynamicDowncast<ContainerNode>(*node)) {
-        for (Ref child : composedTreeChildren(*containerNode))
+        // Specify an InlineContextCapacity template parameter of 0 to avoid allocating ComposedTreeIterator's
+        // internal vector on the stack. See comment in AccessibilityRenderObject::addChildren() for a full
+        // explanation of this behavior.
+        for (Ref child : composedTreeChildren</* InlineContextCapacity */ 0>(*containerNode))
             addChild(cache->getOrCreate(child.get()));
     }
 #endif // USE(ATSPI)
@@ -900,8 +904,10 @@ bool AccessibilityNodeObject::supportsDragging() const
 bool AccessibilityNodeObject::isGrabbed()
 {
 #if ENABLE(DRAG_SUPPORT)
-    if (mainFrame() && mainFrame()->eventHandler().draggingElement() == element())
-        return true;
+    if (RefPtr localMainFrame = this->localMainFrame()) {
+        if (localMainFrame->eventHandler().draggingElement() == element())
+            return true;
+    }
 #endif
 
     return elementAttributeValue(aria_grabbedAttr);
@@ -922,6 +928,12 @@ Vector<String> AccessibilityNodeObject::determineDropEffects() const
     if (!webkitdropzone.isEmpty())
         return Vector<String> { webkitdropzone };
 
+    // FIXME: We should return drop effects for elements with `dragenter` and `dragover` event handlers.
+    // dropzone and webkitdropzone used to serve this purpose, but are deprecated in favor of the
+    // aforementioned event handlers.
+    //
+    // https://html.spec.whatwg.org/dev/obsolete.html:
+    // "dropzone on all elements: Use script to handle the dragenter and dragover events instead."
     return { };
 }
 
@@ -1101,12 +1113,43 @@ AccessibilityButtonState AccessibilityNodeObject::checkboxOrRadioValue() const
 }
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
-bool AccessibilityNodeObject::shouldEmitNewlinesBeforeAndAfterNode() const
+TextEmissionBehavior AccessibilityNodeObject::textEmissionBehavior() const
 {
     RefPtr node = this->node();
-    return node ? WebCore::shouldEmitNewlinesBeforeAndAfterNode(*node) : false;
+    if (!node)
+        return TextEmissionBehavior::None;
+
+    if (is<HTMLParagraphElement>(*node)) {
+        // TextIterator only emits a double-newline for paragraphs conditionally (see shouldEmitExtraNewlineForNode)
+        // based on collapsed margin size. But the spec (https://html.spec.whatwg.org/multipage/dom.html#the-innertext-idl-attribute) says:
+        //   > If node is a p element, then append 2 (a required line break count) at the beginning and end of items.
+        // And Chrome seems to follow the spec: https://chromium.googlesource.com/chromium/src.git/+/8ff781cd5c1aabca068247de9a3f143645e80422
+        // WebKit tried to make this change in TextIterator, but it was reverted:
+        // https://github.com/WebKit/WebKit/commit/d206c2daf7219264b2c9b0cf0ee4cdce2450445b
+        //
+        // It's easier to unconditionally emit a double newline, so let's do that for now, since it's more spec-compliant anyways.
+        return TextEmissionBehavior::DoubleNewline;
+    }
+
+    if (WebCore::shouldEmitNewlinesBeforeAndAfterNode(*node)) {
+        if (is<RenderView>(renderer()) || is<HTMLHtmlElement>(*node)) {
+            // Don't emit newlines for these objects. This is important because sometimes we start traversing
+            // AXTextMarkers from the root, and want to do something for every object that emits a newline,
+            // but there are no known cases where this is correct for these root elements.
+            return TextEmissionBehavior::None;
+        }
+        return TextEmissionBehavior::Newline;
+    }
+
+    if (CheckedPtr cell = dynamicDowncast<RenderTableCell>(node->renderer()); cell && cell->nextCell()) {
+        // https://html.spec.whatwg.org/multipage/dom.html#the-innertext-idl-attribute
+        // > If node's computed value of 'display' is 'table-cell', and node's CSS box is not the last 'table-cell'
+        // > box of its enclosing 'table-row' box, then append a string containing a single U+0009 TAB code point to items.
+        return TextEmissionBehavior::Tab;
+    }
+    return TextEmissionBehavior::None;
 }
-#endif
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
 
 Element* AccessibilityNodeObject::anchorElement() const
 {
@@ -1628,10 +1671,9 @@ String AccessibilityNodeObject::textAsLabelFor(const AccessibilityObject& labele
                 continue;
 
             if (child->isListBox()) {
-                if (auto selectedGrandChildren = child->selectedChildren()) {
-                    for (const auto& selectedGrandChild : *selectedGrandChildren)
-                        appendNameToStringBuilder(builder, accessibleNameForNode(*selectedGrandChild->node()));
-                }
+                auto selectedChildren = child->selectedChildren();
+                for (const auto& selectedGrandChild : selectedChildren)
+                    appendNameToStringBuilder(builder, accessibleNameForNode(*selectedGrandChild->node()));
                 continue;
             }
 
@@ -2402,8 +2444,8 @@ String AccessibilityNodeObject::stringValue() const
             if (!child->isListBox())
                 continue;
 
-            if (auto selection = child->selectedChildren(); selection && selection->size())
-                return selection->first()->stringValue();
+            if (auto selectedChildren = child->selectedChildren(); selectedChildren.size())
+                return selectedChildren.first()->stringValue();
             break;
         }
     }
@@ -2473,7 +2515,7 @@ static String accessibleNameForNode(Node& node, Node* labelledbyNode)
 
         // The Accname specification states that if the name is being calculated for a combobox
         // or listbox inside a labeling element, return the text alternative of the chosen option.
-        std::optional<AXCoreObject::AccessibilityChildrenVector> selectedChildren;
+        AXCoreObject::AccessibilityChildrenVector selectedChildren;
         if (axObject->isListBox())
             selectedChildren = axObject->selectedChildren();
         else if (axObject->isComboBox()) {
@@ -2486,13 +2528,10 @@ static String accessibleNameForNode(Node& node, Node* labelledbyNode)
         }
 
         StringBuilder builder;
-        String childText;
-        if (selectedChildren) {
-            for (const auto& child : *selectedChildren)
-                appendNameToStringBuilder(builder, accessibleNameForNode(*child->node()));
-        }
+        for (const auto& child : selectedChildren)
+            appendNameToStringBuilder(builder, accessibleNameForNode(*child->node()));
 
-        childText = builder.toString();
+        String childText = builder.toString();
         if (!childText.isEmpty())
             return childText;
     }
@@ -2782,9 +2821,16 @@ AccessibilityRole AccessibilityNodeObject::determineAriaRoleAttribute() const
     // In situations where an author has not specified names for the form and
     // region landmarks, it is considered an authoring error. The user agent
     // MUST treat such element as if no role had been provided.
-    if ((role == AccessibilityRole::LandmarkRegion || role == AccessibilityRole::Form) && !hasAccNameAttribute())
-        role = AccessibilityRole::Unknown;
-
+    if ((role == AccessibilityRole::LandmarkRegion || role == AccessibilityRole::Form) && !hasAccNameAttribute()) {
+        // If a region has no label, but it does have a fallback role, use that instead.
+        auto nextRole = ariaRoleToWebCoreRole(ariaRole, [] (const AccessibilityRole& skipRole) {
+            return skipRole == AccessibilityRole::LandmarkRegion;
+        });
+        if (nextRole != role)
+            role = nextRole;
+        else
+            role = AccessibilityRole::Unknown;
+    }
     if (enumToUnderlyingType(role))
         return role;
 

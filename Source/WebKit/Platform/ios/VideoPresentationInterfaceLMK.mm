@@ -112,7 +112,7 @@ void VideoPresentationInterfaceLMK::setupFullscreen(const WebCore::FloatRect& in
 
 void VideoPresentationInterfaceLMK::finalizeSetup()
 {
-    RunLoop::main().dispatch([protectedThis = Ref { *this }] {
+    RunLoop::protectedMain()->dispatch([protectedThis = Ref { *this }] {
         if (RefPtr model = protectedThis->videoPresentationModel())
             model->didSetupFullscreen();
     });
@@ -156,6 +156,57 @@ void VideoPresentationInterfaceLMK::dismissFullscreen(bool animated, Function<vo
     }).get()];
 }
 
+void VideoPresentationInterfaceLMK::enterExternalPlayback(CompletionHandler<void(bool, UIViewController *)>&& completionHandler)
+{
+    ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
+
+    if (linearMediaPlayer().presentationState != WKSLinearMediaPresentationStateInline) {
+        completionHandler(false, nil);
+        return;
+    }
+    setupPlayerViewController();
+
+    playbackSessionInterface().startObservingNowPlayingMetadata();
+    [linearMediaPlayer() enterExternalPresentationWithCompletionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)] (BOOL success, NSError *error) mutable {
+        if (auto* playbackSessionModel = this->playbackSessionModel()) {
+            playbackSessionModel->setSpatialTrackingLabel(m_spatialTrackingLabel);
+            playbackSessionModel->setSoundStageSize(WebCore::AudioSessionSoundStageSize::Large);
+        }
+        completionHandler(success, m_playerViewController.get());
+    }).get()];
+}
+
+void VideoPresentationInterfaceLMK::exitExternalPlayback(CompletionHandler<void(bool)>&& completionHandler)
+{
+    ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
+
+    if (linearMediaPlayer().presentationState != WKSLinearMediaPresentationStateExternal) {
+        completionHandler(false);
+        return;
+    }
+
+    playbackSessionInterface().stopObservingNowPlayingMetadata();
+    [linearMediaPlayer() exitExternalPresentationWithCompletionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)] (BOOL success, NSError *error) mutable {
+        if (auto* playbackSessionModel = this->playbackSessionModel()) {
+            playbackSessionModel->setSpatialTrackingLabel(nullString());
+            playbackSessionModel->setSoundStageSize(WebCore::AudioSessionSoundStageSize::Automatic);
+        }
+        invalidatePlayerViewController();
+        completionHandler(success);
+    }).get()];
+}
+
+bool VideoPresentationInterfaceLMK::cleanupExternalPlayback()
+{
+    if (linearMediaPlayer().presentationState != WKSLinearMediaPresentationStateExternal)
+        return false;
+
+    ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
+
+    exitExternalPlayback([](bool) { });
+    return true;
+}
+
 UIViewController *VideoPresentationInterfaceLMK::playerViewController() const
 {
     return m_playerViewController.get();
@@ -179,13 +230,16 @@ CALayer *VideoPresentationInterfaceLMK::captionsLayer()
     m_captionsLayer = adoptNS([[WKLinearMediaKitCaptionsLayer alloc] initWithParent:*this]);
     [m_captionsLayer setName:@"Captions Layer"];
 
-#if HAVE(SPATIAL_TRACKING_LABEL)
     m_spatialTrackingLayer = adoptNS([[CALayer alloc] init]);
     [m_spatialTrackingLayer setSeparatedState:kCALayerSeparatedStateTracked];
-    m_spatialTrackingLabel = makeString("VideoPresentationInterfaceLMK Label: "_s, createVersion4UUIDString());
-    [m_spatialTrackingLayer setValue:(NSString *)m_spatialTrackingLabel forKeyPath:@"separatedOptions.STSLabel"];
-    [m_captionsLayer addSublayer:m_spatialTrackingLayer.get()];
+    m_spatialTrackingLabel = makeString(createVersion4UUIDString());
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    if (prefersSpatialAudioExperience())
+        [m_spatialTrackingLayer setValue:(NSString *)m_spatialTrackingLabel forKeyPath:@"separatedOptions.AudioTether"];
+    else
 #endif
+        [m_spatialTrackingLayer setValue:(NSString *)m_spatialTrackingLabel forKeyPath:@"separatedOptions.STSLabel"];
+    [m_captionsLayer addSublayer:m_spatialTrackingLayer.get()];
 
     return m_captionsLayer.get();
 }
@@ -223,6 +277,18 @@ void VideoPresentationInterfaceLMK::ensurePlayableViewController()
     ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
     m_playerViewController = [linearMediaPlayer() makeViewController];
     [m_playerViewController view].alpha = 0;
+}
+
+void VideoPresentationInterfaceLMK::swapFullscreenModesWith(VideoPresentationInterfaceIOS& otherInterfaceIOS)
+{
+    auto& otherInterface = static_cast<VideoPresentationInterfaceLMK&>(otherInterfaceIOS);
+    std::swap(m_playerViewController, otherInterface.m_playerViewController);
+
+    auto currentMode = mode();
+    auto previousMode = otherInterface.mode();
+
+    setMode(previousMode, true);
+    otherInterface.setMode(currentMode, true);
 }
 
 } // namespace WebKit

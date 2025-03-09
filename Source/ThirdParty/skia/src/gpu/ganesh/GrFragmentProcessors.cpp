@@ -533,13 +533,7 @@ static std::unique_ptr<GrFragmentProcessor> make_shader_fp(const SkColorFilterSh
 static std::unique_ptr<GrFragmentProcessor> make_shader_fp(const SkColorShader* shader,
                                                            const GrFPArgs& args,
                                                            const SkShaders::MatrixRec& mRec) {
-    return GrFragmentProcessor::MakeColor(SkColorToPMColor4f(shader->color(), *args.fDstColorInfo));
-}
-
-static std::unique_ptr<GrFragmentProcessor> make_shader_fp(const SkColor4Shader* shader,
-                                                           const GrFPArgs& args,
-                                                           const SkShaders::MatrixRec& mRec) {
-    SkColorSpaceXformSteps steps{shader->colorSpace().get(),
+    SkColorSpaceXformSteps steps{sk_srgb_singleton(),
                                  kUnpremul_SkAlphaType,
                                  args.fDstColorInfo->colorSpace(),
                                  kUnpremul_SkAlphaType};
@@ -870,7 +864,7 @@ static std::unique_ptr<GrFragmentProcessor> make_gradient_fp(const SkConicalGrad
             static const SkRuntimeEffect* kEffect =
                 SkMakeRuntimeEffect(SkRuntimeEffect::MakeForShader,
                         "uniform half r0_2;"
-                        "float4 main(float2 p) {"
+                        "half4 main(float2 p) {"
                             // validation flag, set to negative to discard fragment later.
                             "half v = 1;"
                             "float t = r0_2 - p.y * p.y;"
@@ -879,7 +873,7 @@ static std::unique_ptr<GrFragmentProcessor> make_gradient_fp(const SkConicalGrad
                             "} else {"
                                 "v = -1;"
                             "}"
-                            "return float4(t, v, 0, 0);"
+                            "return half4(half(t), v, 0, 0);"
                         "}"
                     );
             float r0 = shader->getStartRadius() / shader->getCenterX1();
@@ -896,11 +890,11 @@ static std::unique_ptr<GrFragmentProcessor> make_gradient_fp(const SkConicalGrad
                 SkMakeRuntimeEffect(SkRuntimeEffect::MakeForShader,
                         "uniform half r0;"
                         "uniform half lengthScale;"
-                        "float4 main(float2 p) {"
+                        "half4 main(float2 p) {"
                             // validation flag, set to negative to discard fragment later
                             "half v = 1;"
                             "float t = length(p) * lengthScale - r0;"
-                            "return float4(t, v, 0, 0);"
+                            "return half4(half(t), v, 0, 0);"
                         "}"
                     );
             float dr = shader->getDiffRadius();
@@ -938,7 +932,7 @@ static std::unique_ptr<GrFragmentProcessor> make_gradient_fp(const SkConicalGrad
                         "uniform half invR1;"  // 1/r1
                         "uniform half fx;"     // focalX = r0/(r0-r1)
 
-                        "float4 main(float2 p) {"
+                        "half4 main(float2 p) {"
                             "float t = -1;"
                             "half v = 1;" // validation flag,set to negative to discard fragment later
 
@@ -995,7 +989,7 @@ static std::unique_ptr<GrFragmentProcessor> make_gradient_fp(const SkConicalGrad
                                 "t = 1 - t;"
                             "}"
 
-                            "return float4(t, v, 0, 0);"
+                            "return half4(half(t), v, 0, 0);"
                         "}"
                     );
 

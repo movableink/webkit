@@ -32,6 +32,7 @@
 #include "APIDataTaskClient.h"
 #include "APIHTTPCookieStore.h"
 #include "APINavigation.h"
+#include "APIPageConfiguration.h"
 #include "AuthenticationChallengeProxy.h"
 #include "AuthenticationManager.h"
 #include "BackgroundFetchState.h"
@@ -52,6 +53,7 @@
 #include "NetworkProcessProxyMessages.h"
 #include "PageClient.h"
 #include "PageLoadState.h"
+#include "ProcessTerminationReason.h"
 #include "RemoteWorkerType.h"
 #include "SandboxExtension.h"
 #include "ShouldGrandfatherStatistics.h"
@@ -76,6 +78,7 @@
 #include <WebCore/PushPermissionState.h>
 #include <WebCore/RegistrableDomain.h>
 #include <WebCore/ResourceError.h>
+#include <WebCore/ShouldRelaxThirdPartyCookieBlocking.h>
 #include <wtf/CallbackAggregator.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -111,6 +114,7 @@
 
 #define MESSAGE_CHECK(assertion) MESSAGE_CHECK_BASE(assertion, connection())
 #define MESSAGE_CHECK_COMPLETION(assertion, completion) MESSAGE_CHECK_COMPLETION_BASE(assertion, connection(), completion)
+#define MESSAGE_CHECK_COMPLETION_WITH_CONNECTION(assertion, connection, completion) MESSAGE_CHECK_COMPLETION_BASE(assertion, connection, completion)
 
 namespace WebKit {
 using namespace WebCore;
@@ -178,8 +182,9 @@ void NetworkProcessProxy::sendCreationParametersToNewProcess()
     // We should remove this once we enforce threading violation check on our APIs.
     // https://bugs.webkit.org/show_bug.cgi?id=200246.
     if (!RunLoop::isMain()) {
-        callOnMainRunLoopAndWait([this] {
-            sendCreationParametersToNewProcess();
+        callOnMainRunLoopAndWait([weakThis = WeakPtr { *this }] {
+            if (RefPtr protectedThis = weakThis.get())
+                protectedThis->sendCreationParametersToNewProcess();
         });
     }
 
@@ -206,9 +211,6 @@ void NetworkProcessProxy::sendCreationParametersToNewProcess()
     parameters.enablePrivateClickMeasurement = false;
 #endif
 
-#if ENABLE(WEB_PUSH_NOTIFICATIONS)
-    parameters.builtInNotificationsEnabled = DeprecatedGlobalSettings::builtInNotificationsEnabled();
-#endif
 #if PLATFORM(COCOA)
     parameters.enableModernDownloadProgress = CFPreferencesGetAppBooleanValue(CFSTR("EnableModernDownloadProgress"), CFSTR("com.apple.WebKit"), nullptr);
 #endif
@@ -317,13 +319,18 @@ void NetworkProcessProxy::getNetworkProcessConnection(WebProcessProxy& webProces
     parameters.ignoreInvalidMessageForTesting = webProcessProxy.ignoreInvalidMessageForTesting();
 #endif
     parameters.sharedPreferencesForWebProcess = *webProcessProxy.sharedPreferencesForWebProcess();
-    sendWithAsyncReply(Messages::NetworkProcess::CreateNetworkConnectionToWebProcess { webProcessProxy.coreProcessIdentifier(), webProcessProxy.sessionID(), parameters }, [this, weakThis = WeakPtr { *this }, reply = WTFMove(reply)](auto&& identifier, auto cookieAcceptPolicy) mutable {
-        if (!weakThis) {
+    for (Ref page : webProcessProxy.mainPages()) {
+        if (page->configuration().shouldRelaxThirdPartyCookieBlocking() == ShouldRelaxThirdPartyCookieBlocking::Yes)
+            parameters.pagesWithRelaxedThirdPartyCookieBlocking.append(page->identifier());
+    }
+    sendWithAsyncReply(Messages::NetworkProcess::CreateNetworkConnectionToWebProcess { webProcessProxy.coreProcessIdentifier(), webProcessProxy.sessionID(), parameters }, [weakThis = WeakPtr { *this }, reply = WTFMove(reply)](auto&& identifier, auto cookieAcceptPolicy) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis) {
             RELEASE_LOG_ERROR(Process, "NetworkProcessProxy::getNetworkProcessConnection: NetworkProcessProxy deallocated during connection establishment");
             return reply({ });
         }
 
-        stopResponsivenessTimer();
+        protectedThis->stopResponsivenessTimer();
         if (!identifier) {
             RELEASE_LOG_ERROR(Process, "NetworkProcessProxy::getNetworkProcessConnection: connection identifier is empty");
             return reply({ });
@@ -331,10 +338,10 @@ void NetworkProcessProxy::getNetworkProcessConnection(WebProcessProxy& webProces
 
 #if USE(UNIX_DOMAIN_SOCKETS) || OS(WINDOWS)
         reply(NetworkProcessConnectionInfo { WTFMove(*identifier), cookieAcceptPolicy });
-        UNUSED_VARIABLE(this);
 #elif OS(DARWIN)
-        MESSAGE_CHECK_COMPLETION(*identifier, reply({ }));
-        reply(NetworkProcessConnectionInfo { WTFMove(*identifier) , cookieAcceptPolicy, protectedConnection()->getAuditToken() });
+        Ref connection = protectedThis->connection();
+        MESSAGE_CHECK_COMPLETION_WITH_CONNECTION(*identifier, connection.get(), reply({ }));
+        reply(NetworkProcessConnectionInfo { WTFMove(*identifier) , cookieAcceptPolicy, connection->getAuditToken() });
 #else
         notImplemented();
 #endif
@@ -354,7 +361,7 @@ void NetworkProcessProxy::synthesizeAppIsBackground(bool background)
         applicationWillEnterForeground();
 }
 
-Ref<DownloadProxy> NetworkProcessProxy::createDownloadProxy(WebsiteDataStore& dataStore, Ref<API::DownloadClient>&& client, const ResourceRequest& resourceRequest, const FrameInfoData& frameInfo, WebPageProxy* originatingPage)
+Ref<DownloadProxy> NetworkProcessProxy::createDownloadProxy(WebsiteDataStore& dataStore, Ref<API::DownloadClient>&& client, const ResourceRequest& resourceRequest, const std::optional<FrameInfoData>& frameInfo, WebPageProxy* originatingPage)
 {
     if (!m_downloadProxyMap)
         m_downloadProxyMap = makeUniqueWithoutRefCountedCheck<DownloadProxyMap>(*this);
@@ -425,9 +432,9 @@ void NetworkProcessProxy::fetchWebsiteData(PAL::SessionID sessionID, OptionSet<W
     sendWithAsyncReply(Messages::NetworkProcess::FetchWebsiteData(sessionID, dataTypes, fetchOptions), WTFMove(completionHandler));
 }
 
-void NetworkProcessProxy::deleteWebsiteData(PAL::SessionID sessionID, OptionSet<WebsiteDataType> dataTypes, WallTime modifiedSince, CompletionHandler<void()>&& completionHandler)
+void NetworkProcessProxy::deleteWebsiteData(PAL::SessionID sessionID, OptionSet<WebsiteDataType> dataTypes, WallTime modifiedSince, const HashSet<WebCore::ProcessIdentifier>& identifiers, CompletionHandler<void()>&& completionHandler)
 {
-    sendWithAsyncReply(Messages::NetworkProcess::DeleteWebsiteData(sessionID, dataTypes, modifiedSince), WTFMove(completionHandler));
+    sendWithAsyncReply(Messages::NetworkProcess::DeleteWebsiteData(sessionID, dataTypes, modifiedSince, identifiers), WTFMove(completionHandler));
 }
 
 void NetworkProcessProxy::deleteWebsiteDataForOrigins(PAL::SessionID sessionID, OptionSet<WebsiteDataType> dataTypes, const Vector<WebCore::SecurityOriginData>& origins, const Vector<String>& cookieHostNames, const Vector<String>& HSTSCacheHostNames, const Vector<RegistrableDomain>& registrableDomains, CompletionHandler<void()>&& completionHandler)
@@ -452,7 +459,7 @@ void NetworkProcessProxy::networkProcessDidTerminate(ProcessTerminationReason re
     if (RefPtr downloadProxyMap = m_downloadProxyMap.get())
         downloadProxyMap->invalidate();
 #if ENABLE(LEGACY_CUSTOM_PROTOCOL_MANAGER)
-    m_customProtocolManagerProxy.invalidate();
+    protectedCustomProtocolManagerProxy()->invalidate();
 #endif
 
     m_uploadActivity = std::nullopt;
@@ -524,15 +531,16 @@ void NetworkProcessProxy::didReceiveAuthenticationChallenge(PAL::SessionID sessi
         return;
     }
 
-    WebPageProxy::forMostVisibleWebPageIfAny(sessionID, *topOrigin, [this, weakThis = WeakPtr { *this }, sessionID, authenticationChallenge = WTFMove(authenticationChallenge), negotiatedLegacyTLS](WebPageProxy* page) mutable {
-        if (!weakThis)
+    WebPageProxy::forMostVisibleWebPageIfAny(sessionID, *topOrigin, [weakThis = WeakPtr { *this }, sessionID, authenticationChallenge = WTFMove(authenticationChallenge), negotiatedLegacyTLS](WebPageProxy* page) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
 
         if (page) {
             page->didReceiveAuthenticationChallengeProxy(WTFMove(authenticationChallenge), negotiatedLegacyTLS ? NegotiatedLegacyTLS::Yes : NegotiatedLegacyTLS::No);
             return;
         }
-        processAuthenticationChallenge(sessionID, WTFMove(authenticationChallenge));
+        protectedThis->processAuthenticationChallenge(sessionID, WTFMove(authenticationChallenge));
     });
 }
 
@@ -594,8 +602,10 @@ void NetworkProcessProxy::terminateWebProcess(WebCore::ProcessIdentifier webProc
 
 void NetworkProcessProxy::processHasUnresponseServiceWorker(WebCore::ProcessIdentifier processIdentifier)
 {
-    if (auto process = WebProcessProxy::processForIdentifier(processIdentifier))
+    if (auto process = WebProcessProxy::processForIdentifier(processIdentifier)) {
+        process->endServiceWorkerBackgroundProcessing();
         process->disableRemoteWorkers(RemoteWorkerType::ServiceWorker);
+    }
 }
 
 void NetworkProcessProxy::terminateIdleServiceWorkers(WebCore::ProcessIdentifier processIdentifier, CompletionHandler<void()>&& callback)
@@ -1574,7 +1584,7 @@ void NetworkProcessProxy::requestStorageSpace(PAL::SessionID sessionID, const We
                 return;
             }
             auto name = makeString(FileSystem::encodeForFileName(origin.topOrigin.host()), " content"_s);
-            page->requestStorageSpace(page->legacyMainFrameProcess().connection(), page->mainFrame()->frameID(), origin.topOrigin.databaseIdentifier(), name, name, currentQuota, currentSize, currentSize, spaceRequired, [completionHandler = WTFMove(completionHandler)](auto quota) mutable {
+            page->requestStorageSpace(page->mainFrame()->frameID(), origin.topOrigin.databaseIdentifier(), name, name, currentQuota, currentSize, currentSize, spaceRequired, [completionHandler = WTFMove(completionHandler)](auto quota) mutable {
                 completionHandler(quota);
             });
         });
@@ -1583,11 +1593,9 @@ void NetworkProcessProxy::requestStorageSpace(PAL::SessionID sessionID, const We
 
 void NetworkProcessProxy::increaseQuota(PAL::SessionID sessionID, const WebCore::ClientOrigin& origin, QuotaIncreaseRequestIdentifier identifier, uint64_t currentQuota, uint64_t currentUsage, uint64_t spaceRequested)
 {
-    requestStorageSpace(sessionID, origin, currentQuota, currentUsage, spaceRequested, [this, weakThis = WeakPtr { *this }, sessionID, origin, identifier](auto result) mutable {
-        if (!weakThis)
-            return;
-
-        send(Messages::NetworkProcess::DidIncreaseQuota(sessionID, origin, identifier, result), 0);
+    requestStorageSpace(sessionID, origin, currentQuota, currentUsage, spaceRequested, [weakThis = WeakPtr { *this }, sessionID, origin, identifier](auto result) mutable {
+        if (RefPtr protectedThis = weakThis.get())
+            protectedThis->send(Messages::NetworkProcess::DidIncreaseQuota(sessionID, origin, identifier, result), 0);
     });
 }
 
@@ -1778,20 +1786,21 @@ void NetworkProcessProxy::getPendingPushMessages(PAL::SessionID sessionID, Compl
 
 void NetworkProcessProxy::processPushMessage(PAL::SessionID sessionID, const WebPushMessage& pushMessage, CompletionHandler<void(bool wasProcessed, std::optional<WebCore::NotificationPayload>&&)>&& callback)
 {
+    bool builtInNotificationsEnabled = false;
     auto permission = PushPermissionState::Granted;
 
 #if ENABLE(WEB_PUSH_NOTIFICATIONS)
+    RefPtr dataStore = websiteDataStoreFromSessionID(sessionID);
+    if (!dataStore)
+        return callback(false, std::nullopt);
+    builtInNotificationsEnabled = dataStore->builtInNotificationsEnabled();
     // When built-in notifications are disabled, the source of permissions is the UIProcess.
     // Since we're already in UIProcess, we look up the permissions here to remove a round trip.
-    if (!DeprecatedGlobalSettings::builtInNotificationsEnabled()) {
+    if (!builtInNotificationsEnabled) {
         permission = PushPermissionState::Prompt;
-        HashMap<String, bool> permissions;
-
-        if (RefPtr dataStore = websiteDataStoreFromSessionID(sessionID))
-            permissions = dataStore->client().notificationPermissions();
-
+        auto permissions = dataStore->client().notificationPermissions();
         if (permissions.isEmpty())
-            permissions = WebNotificationManagerProxy::protectedSharedServiceWorkerManager()->notificationPermissions();
+            permissions = WebNotificationManagerProxy::serviceWorkerManagerSingleton().notificationPermissions();
 
         auto origin = SecurityOriginData::fromURL(pushMessage.registrationURL).toString();
         if (auto it = permissions.find(origin); it != permissions.end())
@@ -1812,7 +1821,7 @@ void NetworkProcessProxy::processPushMessage(PAL::SessionID sessionID, const Web
     auto innerCallback = [callback = WTFMove(callback), assertionTimer = WTFMove(assertionTimer)] (bool wasProcessed, std::optional<WebCore::NotificationPayload>&& resultPayload) mutable {
         callback(wasProcessed, WTFMove(resultPayload));
     };
-    sendWithAsyncReply(Messages::NetworkProcess::ProcessPushMessage { sessionID, pushMessage, permission }, WTFMove(innerCallback));
+    sendWithAsyncReply(Messages::NetworkProcess::ProcessPushMessage { sessionID, pushMessage, permission, builtInNotificationsEnabled }, WTFMove(innerCallback));
 }
 
 void NetworkProcessProxy::processNotificationEvent(const NotificationData& data, NotificationEventType eventType, CompletionHandler<void(bool wasProcessed)>&& callback)
@@ -2003,12 +2012,20 @@ void NetworkProcessProxy::setEmulatedConditions(PAL::SessionID sessionID, std::o
 
 void NetworkProcessProxy::fetchLocalStorage(PAL::SessionID sessionID, CompletionHandler<void(HashMap<WebCore::ClientOrigin, HashMap<String, String>>&&)>&& completionHandler)
 {
-    if (!canSendMessage()) {
-        completionHandler({ });
-    }
-
     sendWithAsyncReply(Messages::NetworkProcess::FetchLocalStorage(sessionID), WTFMove(completionHandler));
 }
+
+void NetworkProcessProxy::restoreLocalStorage(PAL::SessionID sessionID, HashMap<WebCore::ClientOrigin, HashMap<String, String>>&& localStorage, CompletionHandler<void(bool)>&& completionHandler)
+{
+    sendWithAsyncReply(Messages::NetworkProcess::RestoreLocalStorage(sessionID, WTFMove(localStorage)), WTFMove(completionHandler));
+}
+
+#if ENABLE(CONTENT_EXTENSIONS)
+void NetworkProcessProxy::resetResourceMonitorThrottlerForTesting(PAL::SessionID sessionID, CompletionHandler<void()>&& completionHandler)
+{
+    sendWithAsyncReply(Messages::NetworkProcess::ResetResourceMonitorThrottlerForTesting(sessionID), WTFMove(completionHandler));
+}
+#endif
 
 } // namespace WebKit
 

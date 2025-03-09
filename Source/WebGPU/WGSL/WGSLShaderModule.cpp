@@ -27,8 +27,11 @@
 #include "WGSLShaderModule.h"
 
 #include "WGSL.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WGSL {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ShaderModule);
 
 std::optional<Error> ShaderModule::validateOverrides(const HashMap<String, ConstantValue>& constantValues)
 {
@@ -41,7 +44,10 @@ std::optional<Error> ShaderModule::validateOverrides(const HashMap<String, Const
             if (auto maybeError = validator(*maybeValue))
                 return { Error(*maybeError, expression->span()) };
         }
-
+    }
+    for (const auto& validator : m_finalOverrideValidations) {
+        if (auto maybeError = validator())
+            return maybeError;
     }
     return std::nullopt;
 }

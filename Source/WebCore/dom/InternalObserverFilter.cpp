@@ -83,8 +83,8 @@ public:
 
         bool hasCallback() const final { return true; }
 
-        Ref<Observable> m_sourceObservable;
-        Ref<PredicateCallback> m_predicate;
+        const Ref<Observable> m_sourceObservable;
+        const Ref<PredicateCallback> m_predicate;
     };
 
 private:
@@ -104,11 +104,11 @@ private:
         JSC::Exception* previousException = nullptr;
         {
             auto catchScope = DECLARE_CATCH_SCOPE(vm);
-            auto result = m_predicate->handleEventRethrowingException(value, m_idx);
+            auto result = protectedPredicate()->handleEventRethrowingException(value, m_idx);
             previousException = catchScope.exception();
             if (previousException) {
                 catchScope.clearException();
-                m_subscriber->error(previousException->value());
+                protectedSubscriber()->error(previousException->value());
                 return;
             }
 
@@ -119,18 +119,18 @@ private:
         m_idx += 1;
 
         if (matches)
-            m_subscriber->next(value);
+            protectedSubscriber()->next(value);
     }
 
     void error(JSC::JSValue value) final
     {
-        m_subscriber->error(value);
+        protectedSubscriber()->error(value);
     }
 
     void complete() final
     {
         InternalObserver::complete();
-        m_subscriber->complete();
+        protectedSubscriber()->complete();
     }
 
     void visitAdditionalChildren(JSC::AbstractSlotVisitor& visitor) const final
@@ -139,11 +139,8 @@ private:
         m_predicate->visitJSFunction(visitor);
     }
 
-    void visitAdditionalChildren(JSC::SlotVisitor& visitor) const final
-    {
-        m_subscriber->visitAdditionalChildren(visitor);
-        m_predicate->visitJSFunction(visitor);
-    }
+    Ref<Subscriber> protectedSubscriber() const { return m_subscriber; }
+    Ref<PredicateCallback> protectedPredicate() const { return m_predicate; }
 
     InternalObserverFilter(ScriptExecutionContext& context, Ref<Subscriber> subscriber, Ref<PredicateCallback> predicate)
         : InternalObserver(context)
@@ -151,8 +148,8 @@ private:
         , m_predicate(predicate)
     { }
 
-    Ref<Subscriber> m_subscriber;
-    Ref<PredicateCallback> m_predicate;
+    const Ref<Subscriber> m_subscriber;
+    const Ref<PredicateCallback> m_predicate;
     uint64_t m_idx { 0 };
 };
 

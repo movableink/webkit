@@ -303,7 +303,7 @@ public:
 
         UserGestureIndicator gestureIndicator(userGestureToForward());
 
-        if (page->checkedBackForward()->currentItem() && page->checkedBackForward()->currentItem()->identifier() == m_historyItem->identifier()) {
+        if (RefPtr currentItem = page->checkedBackForward()->currentItem(); currentItem && currentItem->itemID() == m_historyItem->itemID()) {
             localFrame->protectedLoader()->changeLocation(localFrame->document()->url(), selfTargetFrameName(), 0, ReferrerPolicy::EmptyString, shouldOpenExternalURLs(), std::nullopt, nullAtom(), std::nullopt, NavigationHistoryBehavior::Reload);
             return;
         }
@@ -336,17 +336,17 @@ public:
 
     std::optional<Ref<HistoryItem>> findBackForwardItemByKey(const LocalFrame& localFrame)
     {
-        RefPtr entry = localFrame.window()->navigation().findEntryByKey(m_key);
+        auto entry = localFrame.window()->navigation().findEntryByKey(m_key);
         if (!entry)
             return std::nullopt;
 
-        Ref historyItem = entry->associatedHistoryItem();
+        Ref historyItem = entry.value()->associatedHistoryItem();
 
         if (localFrame.isMainFrame())
             return historyItem;
 
         // FIXME: heuristic to fix disambigaute-* tests, we should find something more exact.
-        bool backwards = entry->index() < localFrame.window()->navigation().currentEntry()->index();
+        bool backwards = entry.value()->index() < localFrame.window()->navigation().currentEntry()->index();
 
         RefPtr page { localFrame.page() };
         auto items = page->checkedBackForward()->allItems();
@@ -380,15 +380,18 @@ public:
 
         UserGestureIndicator gestureIndicator(userGestureToForward());
 
-        if (page->backForward().currentItem() && page->backForward().currentItem()->identifier() == (*historyItem)->identifier()) {
+        if (RefPtr currentItem = page->checkedBackForward()->currentItem(); currentItem && currentItem->itemID() == (*historyItem)->itemID()) {
             if (RefPtr localFrame = dynamicDowncast<LocalFrame>(frame))
                 localFrame->protectedLoader()->changeLocation(localFrame->document()->url(), selfTargetFrameName(), 0, ReferrerPolicy::EmptyString, shouldOpenExternalURLs(), std::nullopt, nullAtom(), std::nullopt, NavigationHistoryBehavior::Reload);
             return;
         }
 
         auto completionHandler = std::exchange(m_completionHandler, nullptr);
+
         Ref rootFrame = localFrame->rootFrame();
-        page->goToItem(rootFrame, *historyItem, FrameLoadType::IndexedBackForward, ShouldTreatAsContinuingLoad::No);
+        RefPtr upcomingTraverseMethodTracker = localFrame->window()->navigation().upcomingTraverseMethodTracker(m_key);
+        page->goToItemForNavigationAPI(rootFrame, *historyItem, FrameLoadType::IndexedBackForward, *localFrame, upcomingTraverseMethodTracker.get());
+
         completionHandler(ScheduleHistoryNavigationResult::Completed);
     }
 
@@ -411,8 +414,6 @@ public:
     void fire(Frame& frame) final
     {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
-        if (!localFrame)
-            return;
         Ref submission = m_submission;
         if (submission->wasCancelled())
             return;
@@ -424,7 +425,7 @@ public:
         // selecting a target, in case conditions have changed. Other code paths avoid this by targeting
         // without leaving a time window. If we fail the check just silently drop the form submission.
         Ref requestingDocument = submission->state().sourceDocument();
-        if (!requestingDocument->canNavigate(localFrame.get()))
+        if (requestingDocument->canNavigate(&frame) != CanNavigateState::Able)
             return;
         FrameLoadRequest frameLoadRequest { requestingDocument.copyRef(), requestingDocument->protectedSecurityOrigin(), { }, { }, initiatedByMainFrame() };
         frameLoadRequest.setLockHistory(lockHistory());
@@ -435,10 +436,13 @@ public:
         frameLoadRequest.disableShouldReplaceDocumentIfJavaScriptURL();
         submission->populateFrameLoadRequest(frameLoadRequest);
         auto navigationHistoryBehavior = m_navigationHistoryBehavior;
-        if (localFrame->document() != requestingDocument.ptr())
+        if (localFrame && localFrame->document() != requestingDocument.ptr())
             navigationHistoryBehavior = NavigationHistoryBehavior::Push;
         frameLoadRequest.setNavigationHistoryBehavior(navigationHistoryBehavior);
-        localFrame->protectedLoader()->loadFrameRequest(WTFMove(frameLoadRequest), submission->protectedEvent().get(), submission->takeState());
+        if (localFrame)
+            localFrame->protectedLoader()->loadFrameRequest(WTFMove(frameLoadRequest), submission->protectedEvent().get(), submission->takeState());
+        else
+            frame.changeLocation(WTFMove(frameLoadRequest));
     }
 
     void didStartTimer(Frame& frame, Timer& timer) final
@@ -592,17 +596,6 @@ LockBackForwardList NavigationScheduler::mustLockBackForwardList(Frame& targetFr
         && !localTargetFrame->loader().documentLoader()->wasOnloadDispatched())
         return LockBackForwardList::Yes;
     
-    // Navigation of a subframe during loading of an ancestor frame does not create a new back/forward item.
-    // The definition of "during load" is any time before all handlers for the load event have been run.
-    // See https://bugs.webkit.org/show_bug.cgi?id=14957 for the original motivation for this.
-    for (auto* ancestor = targetFrame.tree().parent(); ancestor; ancestor = ancestor->tree().parent()) {
-        RefPtr localAncestor = dynamicDowncast<LocalFrame>(ancestor);
-        if (!localAncestor)
-            continue;
-        RefPtr document = localAncestor->document();
-        if (!localAncestor->loader().isComplete() || (document && document->processingLoadEvent()))
-            return LockBackForwardList::Yes;
-    }
     return LockBackForwardList::No;
 }
 
@@ -655,7 +648,8 @@ void NavigationScheduler::scheduleFormSubmission(Ref<FormSubmission>&& submissio
 
     // Handle a location change of a page with no document as a special case.
     // This may happen when a frame changes the location of another frame.
-    bool duringLoad = !downcast<LocalFrame>(m_frame.get()).loader().stateMachine().committedFirstRealDocumentLoad();
+    RefPtr localFrame = dynamicDowncast<LocalFrame>(m_frame.get());
+    bool duringLoad = localFrame && !localFrame->loader().stateMachine().committedFirstRealDocumentLoad();
 
     // If this is a child frame and the form submission was triggered by a script, lock the back/forward list
     // to match IE and Opera.
@@ -672,7 +666,7 @@ void NavigationScheduler::scheduleFormSubmission(Ref<FormSubmission>&& submissio
 
     // FIXME: We currently run JavaScript URLs synchronously even though this doesn't appear to match the specification.
     if (isJavaScriptURL) {
-        scheduledFormSubmission->fire(downcast<LocalFrame>(protectedFrame()));
+        scheduledFormSubmission->fire(protectedFrame());
         return;
     }
     
@@ -772,7 +766,7 @@ void NavigationScheduler::schedule(std::unique_ptr<ScheduledNavigation> redirect
     ASSERT(m_frame->page());
 
     Ref frame = m_frame.get();
-    auto* localFrame = dynamicDowncast<LocalFrame>(frame.get());
+    RefPtr localFrame = dynamicDowncast<LocalFrame>(frame.get());
 
     // If a redirect was scheduled during a load, then stop the current load.
     // Otherwise when the current load transitions from a provisional to a 

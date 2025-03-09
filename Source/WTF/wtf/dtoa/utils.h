@@ -31,6 +31,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <wtf/Assertions.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/text/StringCommon.h>
 
 #ifndef UNIMPLEMENTED
 #define UNIMPLEMENTED() ASSERT_NOT_REACHED()
@@ -192,7 +194,9 @@ static T Min(T a, T b) {
 
 
 inline int StrLength(const char* string) {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
   size_t length = strlen(string);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
   ASSERT_WITH_SECURITY_IMPLICATION(length == static_cast<size_t>(static_cast<int>(length)));
   return static_cast<int>(length);
 }
@@ -275,8 +279,10 @@ class StringBuilder {
   // builder. The input string must have enough characters.
   void AddSubstring(const char* s, int n) {
     ASSERT_WITH_SECURITY_IMPLICATION(!is_finalized() && position_ + n < static_cast<int>(buffer_.length()));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     ASSERT_WITH_SECURITY_IMPLICATION(static_cast<size_t>(n) <= strnlen(s, n));
-    memmove(&buffer_[position_], s, n * kCharSize);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    memmoveSpan(buffer_.start().subspan(position_), unsafeMakeSpan(s, n));
     position_ += n;
   }
 
@@ -291,7 +297,7 @@ class StringBuilder {
   void RemoveCharacters(size_t start, size_t end) {
     ASSERT_WITH_SECURITY_IMPLICATION(start <= end);
     ASSERT_WITH_SECURITY_IMPLICATION(static_cast<int>(end) <= position_);
-    std::memmove(&buffer_[start], &buffer_[end], position_ - end);
+    memmoveSpan(buffer_.start().subspan(start), buffer_.start().subspan(end, position_ - end));
     position_ -= end - start;
   }
 
@@ -302,7 +308,7 @@ class StringBuilder {
     buffer_[length] = '\0';
     // Make sure nobody managed to add a 0-character to the
     // buffer while building the string.
-    ASSERT(strlen(buffer_.start().data()) == length);
+    ASSERT(strlenSpan(buffer_.start()) == length);
     position_ = -1;
     ASSERT(is_finalized());
     return buffer_.start().first(length);
@@ -353,7 +359,7 @@ inline Dest BitCast(const Source& source) {
 #endif
 
   Dest dest;
-  memmove(&dest, &source, sizeof(dest));
+  memmoveSpan(asMutableByteSpan(dest), asByteSpan(source));
   return dest;
 }
 

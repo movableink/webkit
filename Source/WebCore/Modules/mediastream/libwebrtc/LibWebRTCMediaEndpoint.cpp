@@ -202,6 +202,8 @@ bool LibWebRTCMediaEndpoint::addTrack(LibWebRTCRtpSenderBackend& sender, MediaSt
 {
     ASSERT(m_backend);
 
+    ALWAYS_LOG(LOGIDENTIFIER, "Adding "_s, track.privateTrack().type() == RealtimeMediaSource::Type::Audio ? "audio"_s : "video"_s, " track with id "_s, track.id());
+
     LibWebRTCRtpSenderBackend::Source source;
     rtc::scoped_refptr<webrtc::MediaStreamTrackInterface> rtcTrack;
     switch (track.privateTrack().type()) {
@@ -276,8 +278,7 @@ rtc::scoped_refptr<LibWebRTCStatsCollector> LibWebRTCMediaEndpoint::createStatsC
             return;
 
         Ref peerConnectionBackend = protectedThis->m_peerConnectionBackend.get();
-        Ref peerConnection = peerConnectionBackend->connection();
-        peerConnection->queueTaskKeepingObjectAlive(peerConnection.get(), TaskSource::Networking, [promise = WTFMove(promise), rtcReport = WTFMove(rtcReport)] {
+        ActiveDOMObject::queueTaskKeepingObjectAlive(peerConnectionBackend->protectedConnection().get(), TaskSource::Networking, [promise = WTFMove(promise), rtcReport](auto&) {
             promise->resolve<IDLInterface<RTCStatsReport>>(LibWebRTCStatsCollector::createReport(rtcReport));
         });
     });
@@ -333,7 +334,7 @@ MediaStream& LibWebRTCMediaEndpoint::mediaStreamFromRTCStreamId(const String& id
 {
     auto mediaStream = m_remoteStreamsById.ensure(id, [id, this]() {
         auto& document = downcast<Document>(*protectedPeerConnectionBackend()->connection().scriptExecutionContext());
-        auto stream = MediaStream::create(document, MediaStreamPrivate::create(document.logger(), { }, String(id)));
+        auto stream = MediaStream::create(document, MediaStreamPrivate::create(document.logger(), { }, String(id)), MediaStream::AllowEventTracks::Yes);
         return stream;
     });
     return *mediaStream.iterator->value;
@@ -380,6 +381,8 @@ ExceptionOr<LibWebRTCMediaEndpoint::Backends> LibWebRTCMediaEndpoint::createTran
 
 ExceptionOr<LibWebRTCMediaEndpoint::Backends> LibWebRTCMediaEndpoint::addTransceiver(const String& trackKind, const RTCRtpTransceiverInit& init, PeerConnectionBackend::IgnoreNegotiationNeededFlag ignoreNegotiationNeededFlag)
 {
+    auto direction = convertEnumerationToString(init.direction);
+    ALWAYS_LOG(LOGIDENTIFIER, "Adding "_s, trackKind, " ", direction, " transceiver"_s);
     auto type = trackKind == "audio"_s ? cricket::MediaType::MEDIA_TYPE_AUDIO : cricket::MediaType::MEDIA_TYPE_VIDEO;
     return createTransceiverBackends(type, fromRtpTransceiverInit(init, type), nullptr, ignoreNegotiationNeededFlag);
 }
@@ -412,6 +415,9 @@ std::pair<LibWebRTCRtpSenderBackend::Source, rtc::scoped_refptr<webrtc::MediaStr
 
 ExceptionOr<LibWebRTCMediaEndpoint::Backends> LibWebRTCMediaEndpoint::addTransceiver(MediaStreamTrack& track, const RTCRtpTransceiverInit& init, PeerConnectionBackend::IgnoreNegotiationNeededFlag ignoreNegotiationNeededFlag)
 {
+    auto direction = convertEnumerationToString(init.direction);
+    ALWAYS_LOG(LOGIDENTIFIER, "Adding "_s, track.kind().string(), " ", direction, " transceiver for track "_s, track.id());
+
     auto type = track.source().type() == RealtimeMediaSource::Type::Audio ? cricket::MediaType::MEDIA_TYPE_AUDIO : cricket::MediaType::MEDIA_TYPE_VIDEO;
     auto sourceAndTrack = createSourceAndRTCTrack(track);
     return createTransceiverBackends(WTFMove(sourceAndTrack.second), fromRtpTransceiverInit(init, type), WTFMove(sourceAndTrack.first), ignoreNegotiationNeededFlag);
@@ -468,8 +474,10 @@ void LibWebRTCMediaEndpoint::stop()
 
     m_backend->Close();
     m_backend = nullptr;
+
+    for (RefPtr stream : m_remoteStreamsById.values())
+        stream->inactivate();
     m_remoteStreamsById.clear();
-    m_remoteStreamsFromRemoteTrack.clear();
 }
 
 void LibWebRTCMediaEndpoint::OnNegotiationNeededEvent(uint32_t eventId)
@@ -863,6 +871,8 @@ void LibWebRTCMediaEndpoint::OnStatsDelivered(const rtc::scoped_refptr<const web
                 logger().logAlways(LogWebRTCStats, Logger::LogSiteIdentifier("LibWebRTCMediaEndpoint"_s, "OnStatsDelivered"_s, logIdentifier()), statsLogger);
         }
     });
+#else // !RELEASE_LOG_DISABLED
+    UNUSED_PARAM(report);
 #endif
 }
 

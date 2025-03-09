@@ -845,6 +845,8 @@ void postMessageWithAsyncReply(JSContextRef context, const char* messageName, WK
                 resultJS = stringArrayToJS(context, static_cast<WKArrayRef>(result));
             else if (WKGetTypeID(result) == WKStringGetTypeID())
                 resultJS = JSValueMakeString(context, toJS(static_cast<WKStringRef>(result)).get());
+            else if (WKGetTypeID(result) == WKBooleanGetTypeID())
+                resultJS = JSValueMakeBoolean(context, booleanValue(static_cast<WKBooleanRef>(result)));
             else
                 RELEASE_ASSERT_NOT_REACHED();
             arguments = &resultJS;

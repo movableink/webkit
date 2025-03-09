@@ -77,6 +77,7 @@
 #import <JavaScriptCore/JSContextInternal.h>
 #import <WebCore/AuthenticationMac.h>
 #import <WebCore/BackForwardController.h>
+#import <WebCore/BackForwardItemIdentifier.h>
 #import <WebCore/BitmapImage.h>
 #import <WebCore/CachedFrame.h>
 #import <WebCore/Chrome.h>
@@ -1092,10 +1093,20 @@ void WebFrameLoaderClient::updateGlobalHistoryRedirectLinks()
     }
 }
 
-bool WebFrameLoaderClient::shouldGoToHistoryItem(WebCore::HistoryItem& item) const
+WebCore::ShouldGoToHistoryItem WebFrameLoaderClient::shouldGoToHistoryItem(WebCore::HistoryItem& item, WebCore::IsSameDocumentNavigation) const
 {
     WebView* view = getWebView(m_webFrame.get());
-    return [[view _policyDelegateForwarder] webView:view shouldGoToHistoryItem:kit(&item)];
+    return [[view _policyDelegateForwarder] webView:view shouldGoToHistoryItem:kit(&item)] ? WebCore::ShouldGoToHistoryItem::Yes : WebCore::ShouldGoToHistoryItem::No;
+}
+
+bool WebFrameLoaderClient::supportsAsyncShouldGoToHistoryItem() const
+{
+    return false;
+}
+
+void WebFrameLoaderClient::shouldGoToHistoryItemAsync(WebCore::HistoryItem&, CompletionHandler<void(WebCore::ShouldGoToHistoryItem)>&&) const
+{
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 void WebFrameLoaderClient::didDisplayInsecureContent()
@@ -1114,67 +1125,6 @@ void WebFrameLoaderClient::didRunInsecureContent(WebCore::SecurityOrigin& origin
         RetainPtr<WebSecurityOrigin> webSecurityOrigin = adoptNS([[WebSecurityOrigin alloc] _initWithWebCoreSecurityOrigin:&origin]);
         CallFrameLoadDelegate(implementations->didRunInsecureContentFunc, webView, @selector(webView:didRunInsecureContent:), webSecurityOrigin.get());
     }
-}
-
-WebCore::ResourceError WebFrameLoaderClient::cancelledError(const WebCore::ResourceRequest& request) const
-{
-    return [NSError _webKitErrorWithDomain:NSURLErrorDomain code:NSURLErrorCancelled URL:request.url()];
-}
-    
-WebCore::ResourceError WebFrameLoaderClient::blockedError(const WebCore::ResourceRequest& request) const
-{
-    return [NSError _webKitErrorWithDomain:WebKitErrorDomain code:WebKitErrorCannotUseRestrictedPort URL:request.url()];
-}
-
-WebCore::ResourceError WebFrameLoaderClient::blockedByContentBlockerError(const WebCore::ResourceRequest& request) const
-{
-    RELEASE_ASSERT_NOT_REACHED(); // Content blockers are not enabled in WebKit1.
-}
-
-WebCore::ResourceError WebFrameLoaderClient::cannotShowURLError(const WebCore::ResourceRequest& request) const
-{
-    return [NSError _webKitErrorWithDomain:WebKitErrorDomain code:WebKitErrorCannotShowURL URL:request.url()];
-}
-
-WebCore::ResourceError WebFrameLoaderClient::interruptedForPolicyChangeError(const WebCore::ResourceRequest& request) const
-{
-    return [NSError _webKitErrorWithDomain:WebKitErrorDomain code:WebKitErrorFrameLoadInterruptedByPolicyChange URL:request.url()];
-}
-
-#if ENABLE(CONTENT_FILTERING)
-WebCore::ResourceError WebFrameLoaderClient::blockedByContentFilterError(const WebCore::ResourceRequest& request) const
-{
-    return [NSError _webKitErrorWithDomain:WebKitErrorDomain code:WebKitErrorFrameLoadBlockedByContentFilter URL:request.url()];
-}
-#endif
-
-WebCore::ResourceError WebFrameLoaderClient::cannotShowMIMETypeError(const WebCore::ResourceResponse& response) const
-{
-    return [NSError _webKitErrorWithDomain:NSURLErrorDomain code:WebKitErrorCannotShowMIMEType URL:response.url()];
-}
-
-WebCore::ResourceError WebFrameLoaderClient::fileDoesNotExistError(const WebCore::ResourceResponse& response) const
-{
-    return [NSError _webKitErrorWithDomain:NSURLErrorDomain code:NSURLErrorFileDoesNotExist URL:response.url()];    
-}
-
-WebCore::ResourceError WebFrameLoaderClient::httpsUpgradeRedirectLoopError(const WebCore::ResourceRequest&) const
-{
-    RELEASE_ASSERT_NOT_REACHED(); // This error should never be created in WebKit1 because HTTPSOnly/First aren't available.
-}
-
-WebCore::ResourceError WebFrameLoaderClient::httpNavigationWithHTTPSOnlyError(const WebCore::ResourceRequest&) const
-{
-    RELEASE_ASSERT_NOT_REACHED(); // This error should never be created in WebKit1 because HTTPSOnly/First aren't available.
-}
-
-WebCore::ResourceError WebFrameLoaderClient::pluginWillHandleLoadError(const WebCore::ResourceResponse& response) const
-{
-    return adoptNS([[NSError alloc] _initWithPluginErrorCode:WebKitErrorPlugInWillHandleLoad
-                                                    contentURL:response.url()
-                                                 pluginPageURL:nil
-                                                    pluginName:nil
-                                                      MIMEType:response.mimeType()]).autorelease();
 }
 
 bool WebFrameLoaderClient::shouldFallBack(const WebCore::ResourceError& error) const
@@ -1241,7 +1191,7 @@ void WebFrameLoaderClient::saveViewStateToItem(WebCore::HistoryItem& item)
 
 void WebFrameLoaderClient::restoreViewState()
 {
-    WebCore::HistoryItem* currentItem = core(m_webFrame.get())->history().currentItem();
+    WebCore::HistoryItem* currentItem = core(m_webFrame.get())->loader().history().currentItem();
     ASSERT(currentItem);
 
     // FIXME: As the ASSERT attests, it seems we should always have a currentItem here.
@@ -1896,7 +1846,7 @@ void WebFrameLoaderClient::dispatchDidClearWindowObjectInWorld(WebCore::DOMWrapp
         return;
     }
 
-    if (&world != &WebCore::mainThreadNormalWorld())
+    if (&world != &WebCore::mainThreadNormalWorldSingleton())
         return;
 
     auto* frame = core(m_webFrame.get());
@@ -1925,6 +1875,12 @@ void WebFrameLoaderClient::dispatchDidClearWindowObjectInWorld(WebCore::DOMWrapp
 Ref< WebCore::FrameNetworkingContext> WebFrameLoaderClient::createNetworkingContext()
 {
     return WebFrameNetworkingContext::create(core(m_webFrame.get()));
+}
+
+RefPtr<WebCore::HistoryItem> WebFrameLoaderClient::createHistoryItemTree(bool clipAtTarget, WebCore::BackForwardItemIdentifier itemID) const
+{
+    Ref coreMainFrame = core(m_webFrame.get())->rootFrame();
+    return coreMainFrame->loader().history().createItemTree(*core(m_webFrame.get()), clipAtTarget, itemID);
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -2193,7 +2149,7 @@ void WebFrameLoaderClient::finishedLoadingIcon(WebCore::FragmentedSharedBuffer* 
 #if USE(WEB_THREAD)
             WebThreadRun(^{
 #else
-            RunLoop::main().dispatch([self, strongSelf = retainPtr(self), success] {
+            RunLoop::protectedMain()->dispatch([self, strongSelf = retainPtr(self), success] {
 #endif
                 if (success)
                     [self receivedPolicyDecision:WebCore::PolicyAction::Ignore];
