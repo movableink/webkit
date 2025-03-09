@@ -2290,7 +2290,9 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncCopyWithin, (JSGlobalObject* globalObject
     }
 
     for (uint64_t i = 0; i < count; ++i, from += direction, to += direction) {
-        if (thisObject->hasProperty(globalObject, from)) {
+        bool hasProperty = thisObject->hasProperty(globalObject, from);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (hasProperty) {
             JSValue fromValue = thisObject->getIndex(globalObject, from);
             RETURN_IF_EXCEPTION(scope, { });
             thisObject->putByIndexInline(globalObject, to, fromValue, true);
