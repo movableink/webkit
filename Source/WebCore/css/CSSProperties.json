@@ -999,9 +999,7 @@
                 "font-description-name-for-methods": "VariantLigatures",
                 "font-property": true,
                 "high-priority": true,
-                "parser-function": "consumeFontVariantLigatures",
-                "parser-grammar-unused": "normal | none | [ <common-lig-values> || <discretionary-lig-values> || <historical-lig-values> || <contextual-alt-values> ]",
-                "parser-grammar-unused-reason": "Needs support for '||' groups."
+                "parser-grammar": "normal | none | [ <common-lig-values> || <discretionary-lig-values> || <historical-lig-values> || <contextual-alt-values> ]@(no-single-item-opt)"
             },
             "specification": {
                 "category": "css-fonts-4",
@@ -1078,9 +1076,7 @@
                 "font-description-name-for-methods": "VariantNumeric",
                 "font-property": true,
                 "high-priority": true,
-                "parser-function": "consumeFontVariantNumeric",
-                "parser-grammar-unused": "normal | [ <numeric-figure-values> || <numeric-spacing-values> || <numeric-fraction-values> || ordinal || slashed-zero ]",
-                "parser-grammar-unused-reason": "Needs support for '||' groups."
+                "parser-grammar": "normal | [ <numeric-figure-values> || <numeric-spacing-values> || <numeric-fraction-values> || ordinal || slashed-zero ]@(no-single-item-opt)"
             },
             "specification": {
                 "category": "css-fonts",
@@ -1129,9 +1125,8 @@
                 "font-description-name-for-methods": "VariantEastAsian",
                 "font-property": true,
                 "high-priority": true,
-                "parser-function": "consumeFontVariantEastAsian",
-                "parser-grammar-unused": "normal | [ <east-asian-variant-values> || <east-asian-width-values> || ruby ]",
-                "parser-grammar-unused-reason": "Needs support for '||' groups."
+                "parser-grammar": "normal | [ <east-asian-variant-values> || <east-asian-width-values> || ruby ]@(no-single-item-opt)",
+                "parser-exported": true
             },
             "specification": {
                 "category": "css-fonts-4",
@@ -1458,9 +1453,8 @@
                 "high-priority": true,
                 "sink-priority": true,
                 "style-builder-converter": "TextAutospace",
-                "parser-function": "consumeTextAutospace",
-                "parser-grammar-unused": "normal | auto | no-autospace | [ [ ideograph-alpha || ideograph-numeric || punctuation ] || [ insert | replace ] ]",
-                "parser-grammar-unused-reason": "Needs support for '||' groups."
+                "parser-grammar": "normal | auto | no-autospace | [ ideograph-alpha || ideograph-numeric ]@(no-single-item-opt)",
+                "parser-grammar-comment": "Current spec grammar is 'normal | auto | no-autospace | [ [ ideograph-alpha || ideograph-numeric || punctuation ] || [ insert | replace ] ]'"
             },
             "status": "in development",
             "specification": {
@@ -4345,9 +4339,8 @@
                 "style-builder-custom": "All",
                 "svg": true,
                 "color-property": true,
-                "parser-function": "consumePaint",
-                "parser-grammar-unused": "none | <color> | [ <url> [ none | <color> ]? ] | context-fill | context-stroke",
-                "parser-grammar-unused-reason": "Needs support for ordered groups and optionals. Also spec grammar does not match the current implementation.",
+                "parser-grammar": "none | <color> | [ <url> [ none | <color> ]? ]",
+                "parser-grammar-comment": "Current spec grammar is 'none | <color> | [ <url> [ none | <color> ]? ] | context-fill | context-stroke'",
                 "comment": "Also specified (with different grammar) in CSS Fill and Stroke Module Level 3"
             },
             "specification": {
@@ -4488,9 +4481,7 @@
             ],
             "codegen-properties": {
                 "style-builder-converter": "HangingPunctuation",
-                "parser-function": "consumeHangingPunctuation",
-                "parser-grammar-unused": "none | [ first || [ force-end | allow-end ] || last ]",
-                "parser-grammar-unused-reason": "Needs support for '||' groups."
+                "parser-grammar": "none | [ first || [ force-end | allow-end ] || last ]@(preserve-order no-single-item-opt)"
             },
             "specification": {
                 "category": "css-text",
@@ -7365,9 +7356,8 @@
                 "style-builder-custom": "All",
                 "svg": true,
                 "color-property": true,
-                "parser-function": "consumePaint",
-                "parser-grammar-unused": "none | <color> | [ <url> [ none | <color> ]? ] | context-fill | context-stroke",
-                "parser-grammar-unused-reason": "Needs support for ordered groups and optionals. Also spec grammar does not match the current implementation.",
+                "parser-grammar": "none | <color> | [ <url> [ none | <color> ]? ]",
+                "parser-grammar-comment": "Current spec grammar is 'none | <color> | [ <url> [ none | <color> ]? ] | context-fill | context-stroke'",
                 "comment": "Also specified (with different grammar) in CSS Fill and Stroke Module Level 3"
             },
             "specification": {
@@ -7542,13 +7532,16 @@
                 "spell-out",
                 "digits",
                 "literal-punctuation",
-                "no-punctuation"
+                "no-punctuation",
+                {
+                    "value": "none",
+                    "status": "non-standard"
+                }
             ],
             "codegen-properties": {
                 "style-builder-converter": "SpeakAs",
-                "parser-function": "consumeSpeakAs",
-                "parser-grammar-unused": "normal | [ spell-out || digits || [ literal-punctuation | no-punctuation ] ]",
-                "parser-grammar-unused-reason": "Needs support for '||' groups."
+                "parser-grammar": "none | [ [ normal | spell-out ] || digits || [ literal-punctuation | no-punctuation ] ]@(no-single-item-opt)",
+                "parser-grammar-comment": "Current spec grammar is 'normal | [ spell-out || digits || [ literal-punctuation | no-punctuation ] ]'."
             },
             "specification": {
                 "category": "css-speech",
@@ -7720,9 +7713,7 @@
                 "animation-wrapper": "TextIndentWrapper",
                 "animation-wrapper-requires-override-parameters": [],
                 "style-builder-custom": "All",
-                "parser-function": "consumeTextIndent",
-                "parser-grammar-unused": "[ <length-percentage> ] && hanging? && each-line?",
-                "parser-grammar-unused-reason": "Needs support for '&&' groups and optionals."
+                "parser-grammar": "<length-percentage unitless=allowed> && hanging? && each-line?"
             },
             "specification": {
                 "category": "css-text",
@@ -7804,13 +7795,11 @@
                 "none"
             ],
             "codegen-properties": {
-                "style-builder-converter": "TextTransform",
-                "parser-function": "consumeTextTransform",
-                "parser-grammar-unused": "none | [[capitalize | uppercase | lowercase ] || full-width || full-size-kana]",
-                "parser-grammar-unused-reason": "Needs support for '||' groups.",
                 "aliases": [
                     "-epub-text-transform"
-                ]
+                ],
+                "style-builder-converter": "TextTransform",
+                "parser-grammar": "none | [ [ capitalize | uppercase | lowercase ] || full-width || full-size-kana ]@(no-single-item-opt)"
             },
             "specification": {
                 "category": "css-text",
@@ -8541,10 +8530,7 @@
             "codegen-properties": {
                 "style-builder-converter": "Contain",
                 "render-style-initial": "initialContainment",
-                "parser-function": "consumeContain",
-                "parser-grammar-unused": "none | strict | content | [ size || layout || paint ]",
-                "parser-grammar-unused-reason": "Needs support for '||' groups.",
-                "comment": "Implementation also supports 'inline-size' and 'style'"
+                "parser-grammar": "none | strict | content | [ [size | inline-size] || layout || style || paint ]@(no-single-item-opt)"
             },
             "specification": {
                 "category": "css-contain",
@@ -10554,9 +10540,8 @@
                 "aliases": [
                     "-webkit-text-decoration-line"
                 ],
-                "parser-function": "consumeTextDecorationLine",
-                "parser-grammar-unused": "none | [ underline || overline || line-through || blink ]",
-                "parser-grammar-unused-reason": "Needs support for '||' groups."
+                "parser-grammar": "none | [ underline || overline || line-through || blink ]@(no-single-item-opt)",
+                "parser-exported": true
             },
             "specification": {
                 "category": "css-text-decor",
@@ -10698,9 +10683,7 @@
             "inherited": true,
             "codegen-properties": {
                 "skip-style-builder": true,
-                "parser-function": "consumeTextDecorationLine",
-                "parser-grammar-unused": "none | [ underline || overline || line-through || blink ]",
-                "parser-grammar-unused-reason": "Needs support for '||' groups.",
+                "parser-grammar": "none | [ underline || overline || line-through || blink ]@(no-single-item-opt)",
                 "comment": "FIXME: Should this be an alias of text-decoration-line?"
             },
             "status": "non-standard"
@@ -10762,9 +10745,7 @@
                     "-webkit-text-emphasis-position"
                 ],
                 "style-builder-converter": "TextEmphasisPosition",
-                "parser-function": "consumeTextEmphasisPosition",
-                "parser-grammar-unused": "[ over | under ] && [ right | left ]?",
-                "parser-grammar-unused-reason": "Needs support for '&&' groups and optionals."
+                "parser-grammar": "[ [ over | under ] && [ right | left ]? ]@(no-single-item-opt)"
             },
             "specification": {
                 "category": "css-text-decor",
@@ -10783,9 +10764,7 @@
                 "animation-wrapper": "TextEmphasisStyleWrapper",
                 "animation-wrapper-requires-override-parameters": [],
                 "style-builder-custom": "All",
-                "parser-function": "consumeTextEmphasisStyle",
-                "parser-grammar-unused": "none | [ [ filled | open ] || [ dot | circle | double-circle | triangle | sesame ] ] | <string>",
-                "parser-grammar-unused-reason": "Needs support for '||' groups."
+                "parser-grammar": "none | [ [ filled | open ] || [ dot | circle | double-circle | triangle | sesame ] ] | <string>"
             },
             "specification": {
                 "category": "css-text-decor",
@@ -12091,9 +12070,8 @@
             "codegen-properties": {
                 "render-style-name-for-methods": "TouchActions",
                 "style-builder-converter": "TouchAction",
-                "parser-function": "consumeTouchAction",
-                "parser-grammar-unused": "auto | none | [ pan-x || pan-y || pinch-zoom ] | manipulation",
-                "parser-grammar-unused-reason": "Needs support for '||' groups."
+                "parser-grammar": "auto | none | [ pan-x || pan-y || pinch-zoom ]@(no-single-item-opt) | manipulation",
+                "parser-grammar-comment": "Current spec grammar is 'auto | none | [ [ pan-x | pan-left | pan-right ] || [ pan-y | pan-up | pan-down ] ] | manipulation'"
             },
             "specification": {
                 "url": "https://www.w3.org/TR/pointerevents/#the-touch-action-css-property"
@@ -12378,14 +12356,15 @@
                     {
                         "enable-if": "ENABLE_VARIATION_FONTS",
                         "aliases": ["font-stretch"],
-                        "parser-function": "consumeFontFaceFontWidth",
-                        "parser-grammar-unused": "auto | [ <font-width-absolute> | <percentage [0,inf]> ]{1,2}",
-                        "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers and referencing style properties grammars (actual grammar uses <'font-width'>{1,2})."
+                        "parser-grammar": "<font-width-absolute> | <percentage [0,inf]>{1,2}",
+                        "parser-grammar-comment": "Current spec grammar is 'auto | <'font-width'>{1,2}'",
+                        "parser-exported": true
                     },
                     {
                         "enable-if": "!ENABLE_VARIATION_FONTS",
                         "aliases": ["font-stretch"],
-                        "parser-grammar": "<font-width-absolute>"
+                        "parser-grammar": "<font-width-absolute> | <percentage [0,inf]>",
+                        "parser-exported": true
                     }
                 ],
                 "specification": {
@@ -12480,9 +12459,7 @@
                     "ruby"
                 ],
                 "codegen-properties": {
-                    "parser-function": "consumeFontVariantEastAsian",
-                    "parser-grammar-unused": "normal | [ <east-asian-variant-values> || <east-asian-width-values> || ruby ]",
-                    "parser-grammar-unused-reason": "Needs support for '||' groups."
+                    "parser-grammar": "normal | [ <east-asian-variant-values> || <east-asian-width-values> || ruby ]@(no-single-item-opt)"
                 },
                 "specification": {
                     "category": "css-fonts",
@@ -12503,9 +12480,7 @@
                     "no-contextual"
                 ],
                 "codegen-properties": {
-                    "parser-function": "consumeFontVariantLigatures",
-                    "parser-grammar-unused": "normal | none | [ <common-lig-values> || <discretionary-lig-values> || <historical-lig-values> || <contextual-alt-values> ]",
-                    "parser-grammar-unused-reason": "Needs support for '||' groups."
+                    "parser-grammar": "normal | none | [ <common-lig-values> || <discretionary-lig-values> || <historical-lig-values> || <contextual-alt-values> ]@(no-single-item-opt)"
                 },
                 "specification": {
                     "category": "css-fonts-4",
@@ -12525,9 +12500,7 @@
                     "slashed-zero"
                 ],
                 "codegen-properties": {
-                    "parser-function": "consumeFontVariantNumeric",
-                    "parser-grammar-unused": "normal | [ <numeric-figure-values> || <numeric-spacing-values> || <numeric-fraction-values> || ordinal || slashed-zero ]",
-                    "parser-grammar-unused-reason": "Needs support for '||' groups."
+                    "parser-grammar": "normal | [ <numeric-figure-values> || <numeric-spacing-values> || <numeric-fraction-values> || ordinal || slashed-zero ]@(no-single-item-opt)"
                 },
                 "specification": {
                     "category": "css-fonts",
@@ -12561,15 +12534,14 @@
                 "codegen-properties": [
                     {
                         "enable-if": "ENABLE_VARIATION_FONTS",
-                        "parser-function": "consumeFontFaceFontWeight",
-                        "parser-grammar-unused": "auto | <font-weight-absolute>{1,2}",
-                        "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers and arbitrary ranges on <number>."
+                        "parser-grammar": "normal | bold | <number [1,1000]>{1,2}",
+                        "parser-grammar-comment": "Current spec grammar is 'auto | <font-weight-absolute>{1,2}'",
+                        "parser-exported": true
                     },
                     {
                         "enable-if": "!ENABLE_VARIATION_FONTS",
-                        "parser-function": "consumeFontFaceFontWeight",
-                        "parser-grammar-unused": "<font-weight-absolute>",
-                        "parser-grammar-unused-reason": "Needs support for arbitrary ranges on <number>."
+                        "parser-grammar": "<font-weight-absolute>",
+                        "parser-exported": true
                     }
                 ],
                 "specification": {
@@ -12591,7 +12563,8 @@
             "size-adjust": {
                 "codegen-properties": {
                     "settings-flag": "cssFontFaceSizeAdjustEnabled",
-                    "parser-grammar": "<percentage [0,inf]>"
+                    "parser-grammar": "<percentage [0,inf]>",
+                    "parser-exported": true
                 },
                 "specification": {
                     "category": "css-fonts-5",
@@ -13108,7 +13081,7 @@
             }
         },
         "<east-asian-width-values>": {
-            "grammar": "diagonal-fractions | stacked-fractions",
+            "grammar": "full-width | proportional-width",
             "specification": {
                 "category": "css-fonts-4",
                 "url": "https://drafts.csswg.org/css-fonts-4/#east-asian-width-values"

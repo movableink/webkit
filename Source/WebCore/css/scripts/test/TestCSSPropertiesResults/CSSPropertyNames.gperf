@@ -24,7 +24,7 @@ namespace WebCore {
 
 static_assert(cssPropertyIDEnumValueCount <= (std::numeric_limits<uint16_t>::max() + 1), "CSSPropertyID should fit into uint16_t.");
 
-const std::array<CSSPropertyID, 33> computedPropertyIDs {
+const std::array<CSSPropertyID, 49> computedPropertyIDs {
     CSSPropertyID::CSSPropertyTestAnimationWrapper,
     CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationAlways,
     CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationThreadedOnly,
@@ -44,6 +44,22 @@ const std::array<CSSPropertyID, 33> computedPropertyIDs {
     CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline,
     CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal,
     CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalVertical,
+    CSSPropertyID::CSSPropertyTestMatchAllAnyOrder,
+    CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptional,
+    CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalNoSingleItemOpt,
+    CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalSingleItemOpt,
+    CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalWithPreserveOrder,
+    CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalWithPreserveOrderNoSingleItemOpt,
+    CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithPreserveOrder,
+    CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithPreserveOrderNoSingleItemOpt,
+    CSSPropertyID::CSSPropertyTestMatchAllOrdered,
+    CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptional,
+    CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalNoSingleItemOpt,
+    CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalSingleItemOpt,
+    CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrder,
+    CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderNoSingleItemOpt,
+    CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrder,
+    CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt,
     CSSPropertyID::CSSPropertyTestNumericValueRange,
     CSSPropertyID::CSSPropertyTestProperty,
     CSSPropertyID::CSSPropertyTestSettingsOne,
@@ -79,6 +95,22 @@ constexpr ASCIILiteral propertyNameStrings[numCSSProperties] = {
     "test-bounded-repetition-with-spaces-with-type"_s,
     "test-bounded-repetition-with-spaces-with-type-with-default-previous"_s,
     "test-bounded-repetition-with-spaces-with-type-with-default-previous-two"_s,
+    "test-match-all-any-order"_s,
+    "test-match-all-any-order-with-optional"_s,
+    "test-match-all-any-order-with-optional-no-single-item-opt"_s,
+    "test-match-all-any-order-with-optional-single-item-opt"_s,
+    "test-match-all-any-order-with-optional-with-preserve-order"_s,
+    "test-match-all-any-order-with-optional-with-preserve-order-no-single-item-opt"_s,
+    "test-match-all-any-order-with-preserve-order"_s,
+    "test-match-all-any-order-with-preserve-order-no-single-item-opt"_s,
+    "test-match-all-ordered"_s,
+    "test-match-all-ordered-with-optional"_s,
+    "test-match-all-ordered-with-optional-no-single-item-opt"_s,
+    "test-match-all-ordered-with-optional-single-item-opt"_s,
+    "test-match-one-or-more-any-order"_s,
+    "test-match-one-or-more-any-order-no-single-item-opt"_s,
+    "test-match-one-or-more-any-order-with-preserve-order"_s,
+    "test-match-one-or-more-any-order-with-preserve-order-no-single-item-opt"_s,
     "test-numeric-value-range"_s,
     "test-property"_s,
     "test-settings-one"_s,
@@ -134,6 +166,22 @@ test-bounded-repetition-with-spaces-single-item-opt, CSSPropertyID::CSSPropertyT
 test-bounded-repetition-with-spaces-with-type, CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithType
 test-bounded-repetition-with-spaces-with-type-with-default-previous, CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious
 test-bounded-repetition-with-spaces-with-type-with-default-previous-two, CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo
+test-match-all-any-order, CSSPropertyID::CSSPropertyTestMatchAllAnyOrder
+test-match-all-any-order-with-optional, CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptional
+test-match-all-any-order-with-optional-no-single-item-opt, CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalNoSingleItemOpt
+test-match-all-any-order-with-optional-single-item-opt, CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalSingleItemOpt
+test-match-all-any-order-with-optional-with-preserve-order, CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalWithPreserveOrder
+test-match-all-any-order-with-optional-with-preserve-order-no-single-item-opt, CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalWithPreserveOrderNoSingleItemOpt
+test-match-all-any-order-with-preserve-order, CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithPreserveOrder
+test-match-all-any-order-with-preserve-order-no-single-item-opt, CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithPreserveOrderNoSingleItemOpt
+test-match-all-ordered, CSSPropertyID::CSSPropertyTestMatchAllOrdered
+test-match-all-ordered-with-optional, CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptional
+test-match-all-ordered-with-optional-no-single-item-opt, CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalNoSingleItemOpt
+test-match-all-ordered-with-optional-single-item-opt, CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalSingleItemOpt
+test-match-one-or-more-any-order, CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrder
+test-match-one-or-more-any-order-no-single-item-opt, CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderNoSingleItemOpt
+test-match-one-or-more-any-order-with-preserve-order, CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrder
+test-match-one-or-more-any-order-with-preserve-order-no-single-item-opt, CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt
 test-numeric-value-range, CSSPropertyID::CSSPropertyTestNumericValueRange
 test-property, CSSPropertyID::CSSPropertyTestProperty
 test-settings-one, CSSPropertyID::CSSPropertyTestSettingsOne
@@ -295,6 +343,22 @@ constexpr bool isInheritedPropertyTable[cssPropertyIDEnumValueCount] = {
     false, // CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithType
     false, // CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious
     false, // CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo
+    false, // CSSPropertyID::CSSPropertyTestMatchAllAnyOrder
+    false, // CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptional
+    false, // CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalNoSingleItemOpt
+    false, // CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalSingleItemOpt
+    false, // CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalWithPreserveOrder
+    false, // CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalWithPreserveOrderNoSingleItemOpt
+    false, // CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithPreserveOrder
+    false, // CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithPreserveOrderNoSingleItemOpt
+    false, // CSSPropertyID::CSSPropertyTestMatchAllOrdered
+    false, // CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptional
+    false, // CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalNoSingleItemOpt
+    false, // CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalSingleItemOpt
+    false, // CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrder
+    false, // CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderNoSingleItemOpt
+    false, // CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrder
+    false, // CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt
     false, // CSSPropertyID::CSSPropertyTestNumericValueRange
     false, // CSSPropertyID::CSSPropertyTestProperty
     false, // CSSPropertyID::CSSPropertyTestSettingsOne

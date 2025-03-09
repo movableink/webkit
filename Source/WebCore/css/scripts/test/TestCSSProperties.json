@@ -287,6 +287,119 @@
             "codegen-properties": {
                 "parser-grammar": "<number>#{2}"
             }
+        },
+
+        "test-match-all-ordered": {
+            "animation-type": "discrete",
+            "initial": "0 foo 1px",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> <custom-ident> <length> ]"
+            }
+        },
+        "test-match-all-ordered-with-optional": {
+            "animation-type": "discrete",
+            "initial": "0 foo 1px",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> <custom-ident>? <length> ]"
+            }
+        },
+        "test-match-all-ordered-with-optional-single-item-opt": {
+            "animation-type": "discrete",
+            "initial": "0 foo 1px",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> <custom-ident>? <length>? ]"
+            }
+        },
+        "test-match-all-ordered-with-optional-no-single-item-opt": {
+            "animation-type": "discrete",
+            "initial": "0 foo 1px",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> <custom-ident>? <length>? ]@(no-single-item-opt)"
+            }
+        },
+        "test-match-all-any-order": {
+            "animation-type": "discrete",
+            "initial": "0 foo 1px",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> && <custom-ident> && <length> ]"
+            }
+        },
+        "test-match-all-any-order-with-optional": {
+            "animation-type": "discrete",
+            "initial": "0 foo 1px",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> && <custom-ident>? && <length> ]"
+            }
+        },
+        "test-match-all-any-order-with-optional-single-item-opt": {
+            "animation-type": "discrete",
+            "initial": "0 foo 1px",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> && <custom-ident>? && <length>? ]"
+            }
+        },
+        "test-match-all-any-order-with-optional-no-single-item-opt": {
+            "animation-type": "discrete",
+            "initial": "0 foo 1px",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> && <custom-ident>? && <length>? ]@(no-single-item-opt)"
+            }
+        },
+        "test-match-all-any-order-with-preserve-order": {
+            "animation-type": "discrete",
+            "initial": "0 foo 1px",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> && <custom-ident> && <length> ]@(preserve-order)"
+            }
+        },
+        "test-match-all-any-order-with-preserve-order-no-single-item-opt": {
+            "animation-type": "discrete",
+            "initial": "0 foo 1px",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> && <custom-ident> && <length> ]@(preserve-order no-single-item-opt)"
+            }
+        },
+        "test-match-all-any-order-with-optional-with-preserve-order": {
+            "animation-type": "discrete",
+            "initial": "0 foo 1px",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> && <custom-ident>? && <length>? ]@(preserve-order)"
+            }
+        },
+        "test-match-all-any-order-with-optional-with-preserve-order-no-single-item-opt": {
+            "animation-type": "discrete",
+            "initial": "0 foo 1px",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> && <custom-ident>? && <length>? ]@(preserve-order no-single-item-opt)"
+            }
+        },
+        "test-match-one-or-more-any-order": {
+            "animation-type": "discrete",
+            "initial": "0 foo 1px",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> || <custom-ident> || <length> ]"
+            }
+        },
+        "test-match-one-or-more-any-order-no-single-item-opt": {
+            "animation-type": "discrete",
+            "initial": "0 foo 1px",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> || <custom-ident> || <length> ]@(no-single-item-opt)"
+            }
+        },
+        "test-match-one-or-more-any-order-with-preserve-order": {
+            "animation-type": "discrete",
+            "initial": "0 foo 1px",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> || <custom-ident> || <length> ]@(preserve-order)"
+            }
+        },
+        "test-match-one-or-more-any-order-with-preserve-order-no-single-item-opt": {
+            "animation-type": "discrete",
+            "initial": "0 foo 1px",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> || <custom-ident> || <length> ]@(preserve-order no-single-item-opt)"
+            }
         }
     },
     "descriptors": {

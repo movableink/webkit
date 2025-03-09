@@ -842,7 +842,7 @@ bool CSSPropertyParser::consumeFontVariantShorthand(bool important)
             || numericParseResult == CSSFontVariantNumericParser::ParseResult::DisallowedValue)
             return false;
 
-        if (!eastAsianValue && (eastAsianValue = consumeFontVariantEastAsian(m_range, m_context)))
+        if (!eastAsianValue && (eastAsianValue = CSSPropertyParsing::consumeFontVariantEastAsian(m_range)))
             continue;
 
         if (m_context.propertySettings.cssFontVariantEmojiEnabled && !emojiValue && (emojiValue = CSSPropertyParsing::consumeFontVariantEmoji(m_range)))
@@ -3050,7 +3050,7 @@ bool CSSPropertyParser::parseShorthand(CSSPropertyID property, bool important)
     case CSSPropertyTransition:
         return consumeAnimationShorthand(transitionShorthandForParsing(), important);
     case CSSPropertyTextDecoration: {
-        auto line = consumeTextDecorationLine(m_range, m_context);
+        auto line = CSSPropertyParsing::consumeTextDecorationLine(m_range);
         if (!line || !m_range.atEnd())
             return false;
         addProperty(CSSPropertyTextDecorationLine, property, line.releaseNonNull(), important);

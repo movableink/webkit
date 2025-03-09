@@ -70,8 +70,8 @@ using UnresolvedFontWeightNumber = CSS::Number<CSS::Range{1, 1000}>;
 using UnresolvedFontWeight = std::variant<CSSValueID, UnresolvedFontWeightNumber>;
 
 // normal | <percentage [0,∞]> | ultra-condensed | extra-condensed | condensed | semi-condensed | semi-expanded | expanded | extra-expanded | ultra-expanded
-using UnresolvedFontStretchPercentage = CSS::Percentage<CSS::Nonnegative>;
-using UnresolvedFontStretch = std::variant<CSSValueID, UnresolvedFontStretchPercentage>;
+using UnresolvedFontWidthPercentage = CSS::Percentage<CSS::Nonnegative>;
+using UnresolvedFontWidth = std::variant<CSSValueID, UnresolvedFontWidthPercentage>;
 
 // <absolute-size> | <relative-size> | <length-percentage [0,∞]>
 using UnresolvedFontSize = std::variant<CSSValueID, CSS::LengthPercentage<CSS::Nonnegative>>;
@@ -87,7 +87,7 @@ struct UnresolvedFont {
     UnresolvedFontStyle style;
     UnresolvedFontVariantCaps variantCaps;
     UnresolvedFontWeight weight;
-    UnresolvedFontStretch stretch;
+    UnresolvedFontWidth width;
     UnresolvedFontSize size;
     UnresolvedFontLineHeight lineHeight;
     UnresolvedFontFamily family;
@@ -112,21 +112,9 @@ RefPtr<CSSValue> consumeFamilyName(CSSParserTokenRange&, const CSSParserContext&
 const AtomString& genericFontFamily(CSSValueID);
 WebKitFontFamilyNames::FamilyNamesIndex genericFontFamilyIndex(CSSValueID);
 
-// MARK: 'font-variant-ligatures'
-// https://drafts.csswg.org/css-fonts-4/#propdef-font-variant-ligatures
-RefPtr<CSSValue> consumeFontVariantLigatures(CSSParserTokenRange&, const CSSParserContext&);
-
-// MARK: 'font-variant-east-asian'
-// https://drafts.csswg.org/css-fonts-4/#font-variant-east-asian-prop
-RefPtr<CSSValue> consumeFontVariantEastAsian(CSSParserTokenRange&, const CSSParserContext&);
-
 // MARK: 'font-variant-alternates'
 // https://drafts.csswg.org/css-fonts-4/#font-variant-alternates-prop
 RefPtr<CSSValue> consumeFontVariantAlternates(CSSParserTokenRange&, const CSSParserContext&);
-
-// MARK: 'font-variant-numeric'
-// https://drafts.csswg.org/css-fonts-4/#font-variant-numeric-prop
-RefPtr<CSSValue> consumeFontVariantNumeric(CSSParserTokenRange&, const CSSParserContext&);
 
 // MARK: 'font-size-adjust'
 // https://drafts.csswg.org/css-fonts-4/#font-size-adjust-prop
@@ -182,15 +170,13 @@ RefPtr<CSSValue> parseFontFaceFeatureSettings(const String&, ScriptExecutionCont
 RefPtr<CSSValue> consumeVariationTagValue(CSSParserTokenRange&, const CSSParserContext&);
 #endif
 
-// MARK: @font-face 'font-stretch'
-// https://drafts.csswg.org/css-fonts-4/#font-stretch-desc
+// MARK: @font-face 'font-width'
+// https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-width
 RefPtr<CSSValue> parseFontFaceFontWidth(const String&, ScriptExecutionContext&);
-RefPtr<CSSValue> consumeFontFaceFontWidth(CSSParserTokenRange&, const CSSParserContext&);
 
 // MARK: @font-face 'font-weight'
 // https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-weight
 RefPtr<CSSValue> parseFontFaceFontWeight(const String&, ScriptExecutionContext&);
-RefPtr<CSSValue> consumeFontFaceFontWeight(CSSParserTokenRange&, const CSSParserContext&);
 
 // MARK: - @font-palette-values descriptor consumers:
 

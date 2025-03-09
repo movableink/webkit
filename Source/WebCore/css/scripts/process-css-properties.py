@@ -1424,13 +1424,13 @@ class Term:
                 if len(node.members) == 1:
                     term = Term.from_node(node.members[0])
                 else:
-                    term = GroupTerm.from_node(node)
+                    term = MatchAllOrderedTerm.from_node(node)
             elif node.kind == BNFGroupingNode.Kind.MATCH_ONE:
                 term = MatchOneTerm.from_node(node)
             elif node.kind == BNFGroupingNode.Kind.MATCH_ALL_ANY_ORDER:
-                term = GroupTerm.from_node(node)
+                term = MatchAllAnyOrderTerm.from_node(node)
             elif node.kind == BNFGroupingNode.Kind.MATCH_ONE_OR_MORE_ANY_ORDER:
-                term = GroupTerm.from_node(node)
+                term = MatchOneOrMoreAnyOrderTerm.from_node(node)
             else:
                 raise Exception(f"Unknown grouping kind '{node.kind}' in BNF parse tree node '{node}'")
         elif isinstance(node, BNFReferenceNode):
@@ -1913,48 +1913,210 @@ class MatchOneTerm:
         return any(term.has_non_builtin_reference_terms for term in self.terms)
 
 
-# GroupTerm represents matching a list of provided terms with
-# options for whether the matches are ordered and whether all
-# terms must be matched. The syntax in the CSS specifications
-# uses space separation with square brackets (these can be elided
-# at the root level) as the base syntax for an match all ordered
-# group, and adds '||' and '&&' combinators to indicate 'match
-# one or more + any order' and 'match all + any order' respectively.
+# MatchOneOrMoreAnyOrderTerm represents matching a list of provided terms
+# where one or more terms must match in any order. The syntax in the CSS
+# specifications places the terms in brackets (these can be elided at the
+# root level) with ' || ' between each term.
 #
-#   e.g. "[ <length> <length> ]" or "[ <length> && <string> && <number> ]"
+#   e.g. "[ <length> || <string> || <number> ]"
 #
-class GroupTerm:
+class MatchOneOrMoreAnyOrderTerm:
     def __init__(self, subterms, kind, annotation):
         self.subterms = subterms
         self.kind = kind
+        self.annotation = annotation
 
+        self.type = "CSSValueList"
+        self.preserve_order = False
+        self.single_value_optimization = True
         self._process_annotation(annotation)
 
     def __str__(self):
-        return '[ ' + self.stringified_without_brackets + ' ]'
+        return '[ ' + self.stringified_without_brackets + ' ]' + self.stringified_annotation
 
     def __repr__(self):
         return self.__str__()
 
     @property
     def stringified_without_brackets(self):
-        if self.kind != BNFGroupingNode.Kind.MATCH_ALL_ORDERED:
-            join_string = ' ' + str(self.kind.value) + ' '
-        else:
-            join_string = ' '
-        return join_string.join(stringify_iterable(self.subterms))
+        return ' || '.join(stringify_iterable(self.subterms))
+
+    @property
+    def stringified_annotation(self):
+        if not self.annotation:
+            return ''
+        return str(self.annotation)
 
     def _process_annotation(self, annotation):
         if not annotation:
             return
-        # FIXME: Add initialization of annotation state here if/when group specific annotations are needed.
         for directive in annotation.directives:
-            raise Exception(f"Unknown grouping annotation directive '{directive}'.")
+            if directive.name == 'type':
+                self.type = directive.value[0]
+            elif directive.name == 'preserve-order':
+                self.preserve_order = True
+            elif directive.name == 'no-single-item-opt':
+                self.single_value_optimization = False
+            else:
+                raise Exception(f"Unknown grouping annotation directive '{directive}'.")
 
     @staticmethod
     def from_node(node):
         assert(type(node) is BNFGroupingNode)
-        return GroupTerm(list(compact_map(lambda member: Term.from_node(member), node.members)), node.kind, node.annotation)
+        return MatchOneOrMoreAnyOrderTerm(list(compact_map(lambda member: Term.from_node(member), node.members)), node.kind, node.annotation)
+
+    def perform_fixups(self, all_rules):
+        self.subterms = [subterm.perform_fixups(all_rules) for subterm in self.subterms]
+
+        if len(self.subterms) == 1:
+            return self.subterms[0]
+        return self
+
+    def perform_fixups_for_values_references(self, values):
+        self.subterms = [subterm.perform_fixups_for_values_references(values) for subterm in self.subterms]
+
+        if len(self.subterms) == 1:
+            return self.subterms[0]
+        return self
+
+    @property
+    def supported_keywords(self):
+        result = set()
+        for subterm in self.subterms:
+            result.update(subterm.supported_keywords)
+        return result
+
+    @property
+    def has_non_builtin_reference_terms(self):
+        return any(term.has_non_builtin_reference_terms for term in self.subterms)
+
+
+# MatchAllOrderedTerm represents matching a list of provided terms
+# that all must be matched in the specified order. The syntax in the
+# CSS specifications places the terms in brackets (these can be elided
+# at the root level) with spaces between each term.
+#
+#   e.g. "[ <length> <length> ]"
+#
+class MatchAllOrderedTerm:
+    def __init__(self, subterms, kind, annotation):
+        self.subterms = subterms
+        self.kind = kind
+        self.annotation = annotation
+
+        self.type = "CSSValueList"
+        self.single_value_optimization = True
+        self._process_annotation(annotation)
+
+    def __str__(self):
+        return '[ ' + self.stringified_without_brackets + ' ]' + self.stringified_annotation
+
+    def __repr__(self):
+        return self.__str__()
+
+    @property
+    def stringified_without_brackets(self):
+        return ' '.join(stringify_iterable(self.subterms))
+
+    @property
+    def stringified_annotation(self):
+        if not self.annotation:
+            return ''
+        return str(self.annotation)
+
+    def _process_annotation(self, annotation):
+        if not annotation:
+            return
+        for directive in annotation.directives:
+            if directive.name == 'type':
+                self.type = directive.value[0]
+            elif directive.name == 'no-single-item-opt':
+                self.single_value_optimization = False
+            else:
+                raise Exception(f"Unknown grouping annotation directive '{directive}'.")
+
+    @staticmethod
+    def from_node(node):
+        assert(type(node) is BNFGroupingNode)
+        return MatchAllOrderedTerm(list(compact_map(lambda member: Term.from_node(member), node.members)), node.kind, node.annotation)
+
+    def perform_fixups(self, all_rules):
+        self.subterms = [subterm.perform_fixups(all_rules) for subterm in self.subterms]
+
+        if len(self.subterms) == 1:
+            return self.subterms[0]
+        return self
+
+    def perform_fixups_for_values_references(self, values):
+        self.subterms = [subterm.perform_fixups_for_values_references(values) for subterm in self.subterms]
+
+        if len(self.subterms) == 1:
+            return self.subterms[0]
+        return self
+
+    @property
+    def supported_keywords(self):
+        result = set()
+        for subterm in self.subterms:
+            result.update(subterm.supported_keywords)
+        return result
+
+    @property
+    def has_non_builtin_reference_terms(self):
+        return any(term.has_non_builtin_reference_terms for term in self.subterms)
+
+
+# MatchAllAnyOrderTerm represents matching a list of provided terms
+# that all must be matched, but can be done so in any order. The
+# syntax in the CSS specifications places the terms in brackets (these
+# can be elided at the root level) with ' && ' between each term.
+#
+#   e.g. "[ <foo> && <bar> && <baz> ]"
+#
+class MatchAllAnyOrderTerm:
+    def __init__(self, subterms, kind, annotation):
+        self.subterms = subterms
+        self.kind = kind
+        self.annotation = annotation
+
+        self.type = "CSSValueList"
+        self.preserve_order = False
+        self.single_value_optimization = True
+        self._process_annotation(annotation)
+
+    def __str__(self):
+        return '[ ' + self.stringified_without_brackets + ' ]' + self.stringified_annotation
+
+    def __repr__(self):
+        return self.__str__()
+
+    @property
+    def stringified_without_brackets(self):
+        return ' && '.join(stringify_iterable(self.subterms))
+
+    @property
+    def stringified_annotation(self):
+        if not self.annotation:
+            return ''
+        return str(self.annotation)
+
+    def _process_annotation(self, annotation):
+        if not annotation:
+            return
+        for directive in annotation.directives:
+            if directive.name == 'type':
+                self.type = directive.value[0]
+            elif directive.name == 'preserve-order':
+                self.preserve_order = True
+            elif directive.name == 'no-single-item-opt':
+                self.single_value_optimization = False
+            else:
+                raise Exception(f"Unknown grouping annotation directive '{directive}'.")
+
+    @staticmethod
+    def from_node(node):
+        assert(type(node) is BNFGroupingNode)
+        return MatchAllAnyOrderTerm(list(compact_map(lambda member: Term.from_node(member), node.members)), node.kind, node.annotation)
 
     def perform_fixups(self, all_rules):
         self.subterms = [subterm.perform_fixups(all_rules) for subterm in self.subterms]
@@ -4231,7 +4393,6 @@ class GenerateCSSPropertyParsing:
                     "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h",
                     "CSSPropertyParserConsumer+Color.h",
                     "CSSPropertyParserConsumer+ColorAdjust.h",
-                    "CSSPropertyParserConsumer+Contain.h",
                     "CSSPropertyParserConsumer+Content.h",
                     "CSSPropertyParserConsumer+CounterStyles.h",
                     "CSSPropertyParserConsumer+Display.h",
@@ -4254,7 +4415,6 @@ class GenerateCSSPropertyParsing:
                     "CSSPropertyParserConsumer+Overflow.h",
                     "CSSPropertyParserConsumer+Page.h",
                     "CSSPropertyParserConsumer+PercentageDefinitions.h",
-                    "CSSPropertyParserConsumer+PointerEvents.h",
                     "CSSPropertyParserConsumer+Position.h",
                     "CSSPropertyParserConsumer+PositionTry.h",
                     "CSSPropertyParserConsumer+Primitives.h",
@@ -4265,10 +4425,8 @@ class GenerateCSSPropertyParsing:
                     "CSSPropertyParserConsumer+Scrollbars.h",
                     "CSSPropertyParserConsumer+Shapes.h",
                     "CSSPropertyParserConsumer+Sizing.h",
-                    "CSSPropertyParserConsumer+Speech.h",
                     "CSSPropertyParserConsumer+String.h",
                     "CSSPropertyParserConsumer+Syntax.h",
-                    "CSSPropertyParserConsumer+Text.h",
                     "CSSPropertyParserConsumer+TextDecoration.h",
                     "CSSPropertyParserConsumer+TimeDefinitions.h",
                     "CSSPropertyParserConsumer+Timeline.h",
@@ -4782,16 +4940,20 @@ class FunctionSignature:
         return f"{self._scope_string}{self.name}({', '.join(parameters)})"
 
 
-# The `TermGenerator` classes help generate parser functions by providing
+# The `TermGenerator` classes generate parser functions by providing
 # generation of parsing text for a term or set of terms.
 class TermGenerator(object):
     def make(term, keyword_fast_path_generator=None):
         if isinstance(term, MatchOneTerm):
             return TermGeneratorMatchOneTerm(term, keyword_fast_path_generator)
+        elif isinstance(term, MatchOneOrMoreAnyOrderTerm):
+            return TermGeneratorMatchOneOrMoreAnyOrderTerm(term)
+        elif isinstance(term, MatchAllOrderedTerm):
+            return TermGeneratorMatchAllOrderedTerm(term)
+        elif isinstance(term, MatchAllAnyOrderTerm):
+            return TermGeneratorMatchAllAnyOrderTerm(term)
         elif isinstance(term, OptionalTerm):
             return TermGeneratorOptionalTerm(term)
-        elif isinstance(term, GroupTerm):
-            return TermGeneratorGroupTerm(term)
         elif isinstance(term, UnboundedRepetitionTerm):
             return TermGeneratorUnboundedRepetitionTerm(term)
         elif isinstance(term, BoundedRepetitionTerm):
@@ -4808,21 +4970,6 @@ class TermGenerator(object):
             raise Exception(f"Unknown term type - {type(term)} - {term}")
 
 
-class TermGeneratorGroupTerm(TermGenerator):
-    def __init__(self, term):
-        self.term = term
-        self.subterm_generators = [TermGenerator.make(subterm) for subterm in term.subterms]
-        self.requires_context = any(subterm_generator.requires_context for subterm_generator in self.subterm_generators)
-
-    def generate_conditional(self, *, to, range_string, context_string):
-        # FIXME: Implement generation.
-        pass
-
-    def generate_unconditional(self, *, to, range_string, context_string):
-        # FIXME: Implement generation.
-        pass
-
-
 # Generation support for a single `OptionalTerm`.
 class TermGeneratorOptionalTerm(TermGenerator):
     def __init__(self, optional_term):
@@ -4837,12 +4984,10 @@ class TermGeneratorOptionalTerm(TermGenerator):
         return self.__str__()
 
     def generate_conditional(self, *, to, range_string, context_string):
-        # FIXME: Implement generation.
-        pass
+        self.subterm_generator.generate_conditional(to=to, range_string=range_string, context_string=context_string)
 
     def generate_unconditional(self, *, to, range_string, context_string):
-        # FIXME: Implement generation.
-        pass
+        self.subterm_generator.generate_unconditional(to=to, range_string=range_string, context_string=context_string)
 
 
 # Generation support for a single `FunctionTerm`.
@@ -5094,7 +5239,7 @@ class TermGeneratorBoundedRepetitionTerm(TermGenerator):
                 else:
                     optimization = 'None'
 
-                to.write(f"return consumeListSeparatedBy<'{self.term.separator}', ListBounds({self.term.min}, {self.term.max}), ListOptimization::{optimization}>({', '.join(consumeListParameters)});")
+                to.write(f"return consumeListSeparatedBy<'{self.term.separator}', ListBounds {{ {self.term.min}, {self.term.max} }}, ListOptimization::{optimization}>({', '.join(consumeListParameters)});")
         to.write(f"}};")
 
     def _generate_call_string(self, *, range_string, context_string):
@@ -5127,6 +5272,9 @@ class TermGeneratorMatchOneTerm(TermGenerator):
         function_terms = []
         unbounded_repetition_terms = []
         bounded_repetition_terms = []
+        match_one_or_more_any_order_terms = []
+        match_all_ordered_terms = []
+        match_all_any_order_terms = []
 
         for sub_term in term.terms:
             if isinstance(sub_term, KeywordTerm):
@@ -5142,6 +5290,14 @@ class TermGeneratorMatchOneTerm(TermGenerator):
                 unbounded_repetition_terms.append(sub_term)
             elif isinstance(sub_term, BoundedRepetitionTerm):
                 bounded_repetition_terms.append(sub_term)
+            elif isinstance(sub_term, BoundedRepetitionTerm):
+                repetition_terms.append(sub_term)
+            elif isinstance(sub_term, MatchOneOrMoreAnyOrderTerm):
+                match_one_or_more_any_order_terms.append(sub_term)
+            elif isinstance(sub_term, MatchAllOrderedTerm):
+                match_all_ordered_terms.append(sub_term)
+            elif isinstance(sub_term, MatchAllAnyOrderTerm):
+                match_all_any_order_terms.append(sub_term)
             else:
                 raise Exception(f"Unsupported term '{sub_term}' used inside MatchOneTerm '{term}'")
 
@@ -5160,6 +5316,13 @@ class TermGeneratorMatchOneTerm(TermGenerator):
             term_generators += [TermGenerator.make(sub_term) for sub_term in unbounded_repetition_terms]
         if bounded_repetition_terms:
             term_generators += [TermGenerator.make(sub_term) for sub_term in bounded_repetition_terms]
+        if match_one_or_more_any_order_terms:
+            term_generators += [TermGenerator.make(sub_term) for sub_term in match_one_or_more_any_order_terms]
+        if match_all_ordered_terms:
+            term_generators += [TermGenerator.make(sub_term) for sub_term in match_all_ordered_terms]
+        if match_all_any_order_terms:
+            term_generators += [TermGenerator.make(sub_term) for sub_term in match_all_any_order_terms]
+
         return term_generators
 
     def generate_conditional(self, *, to, range_string, context_string):
@@ -5177,6 +5340,373 @@ class TermGeneratorMatchOneTerm(TermGenerator):
 
         # And finally call that last generator we popped of back.
         last_term_generator.generate_unconditional(to=to, range_string=range_string, context_string=context_string)
+
+
+# Generation support for a single `MatchAllOrderedTerm`.
+class TermGeneratorMatchAllOrderedTerm(TermGenerator):
+    def __init__(self, term):
+        self.term = term
+        self.subterm_generators = [TermGenerator.make(subterm) for subterm in term.subterms]
+        self.requires_context = any(subterm_generator.requires_context for subterm_generator in self.subterm_generators)
+        self.number_of_terms = count_iterable(self.subterm_generators)
+        self.number_of_optional_terms = count_iterable(filter(lambda x: isinstance(x, TermGeneratorOptionalTerm), self.subterm_generators))
+
+    def __str__(self):
+        return str(self.term)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def generate_conditional(self, *, to, range_string, context_string):
+        to.write(f"// {str(self)}")
+        self._generate_lambda(to=to, range_string=range_string, context_string=context_string)
+        to.write(f"if (auto result = {self._generate_call_string(range_string=range_string, context_string=context_string)})")
+        with to.indent():
+            to.write(f"return result;")
+
+    def generate_unconditional(self, *, to, range_string, context_string):
+        to.write(f"// {str(self)}")
+        self._generate_lambda(to=to, range_string=range_string, context_string=context_string)
+        to.write(f"return {self._generate_call_string(range_string=range_string, context_string=context_string)};")
+
+    def _generate_lambda(self, *, to, range_string, context_string):
+        lambda_declaration_parameters = ["CSSParserTokenRange& range"]
+        if self.requires_context:
+            lambda_declaration_parameters += ["const CSSParserContext& context"]
+
+        to.write(f"auto consumeMatchAllOrdered = []({', '.join(lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
+        with to.indent():
+            for (i, subterm_generator) in enumerate(self.subterm_generators):
+                inner_lambda_declaration_parameters = ["CSSParserTokenRange& range"]
+                if subterm_generator.requires_context:
+                    inner_lambda_declaration_parameters += ["const CSSParserContext& context"]
+
+                to.write(f"auto consumeTerm{i} = []({', '.join(inner_lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
+                with to.indent():
+                    subterm_generator.generate_unconditional(to=to, range_string="range", context_string="context")
+                to.write(f"}};")
+
+            if self.term.type == 'CSSValueList':
+                return_type_create = "CSSValueList::createSpaceSeparated"
+            else:
+                return_type_create = f"{self.term.type}::create"
+
+            if self.number_of_optional_terms > 0:
+                to.write(f"CSSValueListBuilder list;")
+
+                for (i, subterm_generator) in enumerate(self.subterm_generators):
+                    inner_lambda_call_parameters = ["range"]
+                    if subterm_generator.requires_context:
+                        inner_lambda_call_parameters += ["context"]
+
+                    to.write(f"// {str(subterm_generator)}")
+                    to.write(f"auto value{i} = consumeTerm{i}({', '.join(inner_lambda_call_parameters)});")
+                    to.write(f"if (value{i})")
+                    with to.indent():
+                        to.write(f"list.append(value{i}.releaseNonNull());")
+
+                    if not isinstance(subterm_generator, TermGeneratorOptionalTerm):
+                        to.write(f"else")
+                        with to.indent():
+                            to.write(f"return nullptr;")
+
+                if self.number_of_terms - self.number_of_optional_terms <= 1 and self.term.single_value_optimization:
+                    # Only attempt the single item optimization if there are enough optional terms that it
+                    # can kick in and it hasn't been explicitly disabled via @(no-single-item-opt).
+                    to.write(f"if (list.size() == 1)")
+                    with to.indent():
+                        to.write(f"return WTFMove(list[0]);")
+
+                to.write(f"return {return_type_create}(WTFMove(list));")
+            else:
+                return_value_strings = []
+
+                for (i, subterm_generator) in enumerate(self.subterm_generators):
+                    inner_lambda_call_parameters = ["range"]
+                    if subterm_generator.requires_context:
+                        inner_lambda_call_parameters += ["context"]
+
+                    to.write(f"// {str(subterm_generator)}")
+                    to.write(f"auto value{i} = consumeTerm{i}({', '.join(inner_lambda_call_parameters)});")
+                    to.write(f"if (!value{i})")
+                    with to.indent():
+                        to.write(f"return nullptr;")
+                    return_value_strings.append(f"value{i}.releaseNonNull()")
+
+                to.write(f"return {return_type_create}({', '.join(return_value_strings)});")
+        to.write(f"}};")
+
+    def _generate_call_string(self, *, range_string, context_string):
+        parameters = [range_string]
+        if self.requires_context:
+            parameters += [context_string]
+        return f"consumeMatchAllOrdered({', '.join(parameters)})"
+
+
+# Generation support for a single `MatchAllAnyOrderTerm`.
+class TermGeneratorMatchAllAnyOrderTerm(TermGenerator):
+    def __init__(self, term):
+        self.term = term
+        self.subterm_generators = [TermGenerator.make(subterm) for subterm in term.subterms]
+        self.requires_context = any(subterm_generator.requires_context for subterm_generator in self.subterm_generators)
+        self.number_of_terms = count_iterable(self.subterm_generators)
+        self.number_of_optional_terms = count_iterable(filter(lambda x: isinstance(x, TermGeneratorOptionalTerm), self.subterm_generators))
+
+    def __str__(self):
+        return str(self.term)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def generate_conditional(self, *, to, range_string, context_string):
+        to.write(f"// {str(self)}")
+        self._generate_lambda(to=to, range_string=range_string, context_string=context_string)
+        to.write(f"if (auto result = {self._generate_call_string(range_string=range_string, context_string=context_string)})")
+        with to.indent():
+            to.write(f"return result;")
+
+    def generate_unconditional(self, *, to, range_string, context_string):
+        to.write(f"// {str(self)}")
+        self._generate_lambda(to=to, range_string=range_string, context_string=context_string)
+        to.write(f"return {self._generate_call_string(range_string=range_string, context_string=context_string)};")
+
+    def _generate_lambda(self, *, to, range_string, context_string):
+        lambda_declaration_parameters = ["CSSParserTokenRange& range"]
+        if self.requires_context:
+            lambda_declaration_parameters += ["const CSSParserContext& context"]
+
+        to.write(f"auto consumeMatchAllAnyOrder = []({', '.join(lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
+        with to.indent():
+            try_consume_strings = []
+
+            if self.term.preserve_order:
+                to.write(f"CSSValueListBuilder list;")
+
+            for (i, subterm_generator) in enumerate(self.subterm_generators):
+                inner_lambda_declaration_parameters = ["CSSParserTokenRange& range"]
+                if subterm_generator.requires_context:
+                    inner_lambda_declaration_parameters += ["const CSSParserContext& context"]
+
+                if self.term.preserve_order:
+                    to.write(f"bool consumedValue{i} = false; // {str(subterm_generator)}")
+                    lambda_capture_list_parameters = [f"&list", f"&consumedValue{i}"]
+                else:
+                    to.write(f"RefPtr<CSSValue> value{i}; // {str(subterm_generator)}")
+                    lambda_capture_list_parameters = [f"&value{i}"]
+
+                to.write(f"auto tryConsumeTerm{i} = [{', '.join(lambda_capture_list_parameters)}]({', '.join(inner_lambda_declaration_parameters)}) -> bool {{")
+                with to.indent():
+                    to.write(f"auto consumeTerm{i} = []({', '.join(inner_lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
+                    with to.indent():
+                        subterm_generator.generate_unconditional(to=to, range_string="range", context_string="context")
+                    to.write(f"}};")
+
+                    inner_lambda_call_parameters = ["range"]
+                    if subterm_generator.requires_context:
+                        inner_lambda_call_parameters += ["context"]
+
+                    try_consume_strings.append(f"tryConsumeTerm{i}({', '.join(inner_lambda_call_parameters)})")
+
+                    if self.term.preserve_order:
+                        to.write(f"if (consumedValue{i})")
+                        with to.indent():
+                            to.write(f"return false;")
+
+                        to.write(f"if (auto value = consumeTerm{i}({', '.join(inner_lambda_call_parameters)})) {{")
+                        with to.indent():
+                            to.write(f"list.append(value.releaseNonNull());")
+                            to.write(f"consumedValue{i} = true;")
+                            to.write(f"return true;")
+                        to.write(f"}}")
+                        to.write(f"return false;")
+                    else:
+                        to.write(f"if (value{i})")
+                        with to.indent():
+                            to.write(f"return false;")
+
+                        to.write(f"value{i} = consumeTerm{i}({', '.join(inner_lambda_call_parameters)});")
+                        to.write(f"return !!value{i};")
+                to.write(f"}};")
+
+            to.write(f"for (size_t i = 0; i < {len(self.subterm_generators)} && !range.atEnd(); ++i) {{")
+            with to.indent():
+                to.write(f"if ({' || '.join(try_consume_strings)})")
+                with to.indent():
+                    to.write(f"continue;")
+                to.write(f"break;")
+            to.write(f"}}")
+
+            if self.term.type == 'CSSValueList':
+                return_type_create = "CSSValueList::createSpaceSeparated"
+            else:
+                return_type_create = f"{self.term.type}::create"
+
+            if self.number_of_optional_terms > 0 or self.term.preserve_order:
+                if self.term.preserve_order:
+                    for (i, subterm_generator) in enumerate(self.subterm_generators):
+                        if not isinstance(subterm_generator, TermGeneratorOptionalTerm):
+                            to.write(f"if (!consumedValue{i}) // {str(subterm_generator)}")
+                            with to.indent():
+                                to.write(f"return nullptr;")
+                else:
+                    to.write(f"CSSValueListBuilder list;")
+                    for (i, subterm_generator) in enumerate(self.subterm_generators):
+                        to.write(f"if (value{i}) // {str(subterm_generator)}")
+                        with to.indent():
+                            to.write(f"list.append(value{i}.releaseNonNull());")
+
+                        if not isinstance(subterm_generator, TermGeneratorOptionalTerm):
+                            to.write(f"else")
+                            with to.indent():
+                                to.write(f"return nullptr;")
+
+                if self.number_of_terms - self.number_of_optional_terms <= 1 and self.term.single_value_optimization:
+                    # Only attempt the single item optimization if there are enough optional terms that it
+                    # can kick in and it hasn't been explicitly disabled via @(no-single-item-opt).
+                    to.write(f"if (list.size() == 1)")
+                    with to.indent():
+                        to.write(f"return WTFMove(list[0]);")
+
+                to.write(f"return {return_type_create}(WTFMove(list));")
+            else:
+                return_value_strings = []
+
+                for (i, subterm_generator) in enumerate(self.subterm_generators):
+                    to.write(f"if (!value{i}) // {str(subterm_generator)}")
+                    with to.indent():
+                        to.write(f"return nullptr;")
+                    return_value_strings.append(f"value{i}.releaseNonNull()")
+
+                to.write(f"return {return_type_create}({', '.join(return_value_strings)});")
+        to.write(f"}};")
+
+    def _generate_call_string(self, *, range_string, context_string):
+        parameters = [range_string]
+        if self.requires_context:
+            parameters += [context_string]
+        return f"consumeMatchAllAnyOrder({', '.join(parameters)})"
+
+
+# Generation support for a single `MatchOneOrMoreAnyOrderTerm`.
+class TermGeneratorMatchOneOrMoreAnyOrderTerm(TermGenerator):
+    def __init__(self, term):
+        self.term = term
+        self.subterm_generators = [TermGenerator.make(subterm) for subterm in term.subterms]
+        self.requires_context = any(subterm_generator.requires_context for subterm_generator in self.subterm_generators)
+
+    def __str__(self):
+        return str(self.term)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def generate_conditional(self, *, to, range_string, context_string):
+        to.write(f"// {str(self)}")
+        self._generate_lambda(to=to, range_string=range_string, context_string=context_string)
+        to.write(f"if (auto result = {self._generate_call_string(range_string=range_string, context_string=context_string)})")
+        with to.indent():
+            to.write(f"return result;")
+
+    def generate_unconditional(self, *, to, range_string, context_string):
+        to.write(f"// {str(self)}")
+        self._generate_lambda(to=to, range_string=range_string, context_string=context_string)
+        to.write(f"return {self._generate_call_string(range_string=range_string, context_string=context_string)};")
+
+    def _generate_lambda(self, *, to, range_string, context_string):
+        lambda_declaration_parameters = ["CSSParserTokenRange& range"]
+        if self.requires_context:
+            lambda_declaration_parameters += ["const CSSParserContext& context"]
+
+        to.write(f"auto consumeMatchOneOrMoreAnyOrder = []({', '.join(lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
+        with to.indent():
+            try_consume_strings = []
+
+            if self.term.preserve_order:
+                to.write(f"CSSValueListBuilder list;")
+
+            for (i, subterm_generator) in enumerate(self.subterm_generators):
+                inner_lambda_declaration_parameters = ["CSSParserTokenRange& range"]
+                if subterm_generator.requires_context:
+                    inner_lambda_declaration_parameters += ["const CSSParserContext& context"]
+
+                if self.term.preserve_order:
+                    to.write(f"bool consumedValue{i} = false; // {str(subterm_generator)}")
+                    lambda_capture_list_parameters = [f"&list", f"&consumedValue{i}"]
+                else:
+                    to.write(f"RefPtr<CSSValue> value{i}; // {str(subterm_generator)}")
+                    lambda_capture_list_parameters = [f"&value{i}"]
+
+                to.write(f"auto tryConsumeTerm{i} = [{', '.join(lambda_capture_list_parameters)}]({', '.join(inner_lambda_declaration_parameters)}) -> bool {{")
+                with to.indent():
+                    to.write(f"auto consumeTerm{i} = []({', '.join(inner_lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
+                    with to.indent():
+                        subterm_generator.generate_unconditional(to=to, range_string="range", context_string="context")
+                    to.write(f"}};")
+
+                    inner_lambda_call_parameters = ["range"]
+                    if subterm_generator.requires_context:
+                        inner_lambda_call_parameters += ["context"]
+
+                    try_consume_strings.append(f"tryConsumeTerm{i}({', '.join(inner_lambda_call_parameters)})")
+
+                    if self.term.preserve_order:
+                        to.write(f"if (consumedValue{i})")
+                        with to.indent():
+                            to.write(f"return false;")
+
+                        to.write(f"if (auto value = consumeTerm{i}({', '.join(inner_lambda_call_parameters)})) {{")
+                        with to.indent():
+                            to.write(f"list.append(value.releaseNonNull());")
+                            to.write(f"consumedValue{i} = true;")
+                            to.write(f"return true;")
+                        to.write(f"}}")
+                        to.write(f"return false;")
+                    else:
+                        to.write(f"if (value{i})")
+                        with to.indent():
+                            to.write(f"return false;")
+
+                        to.write(f"value{i} = consumeTerm{i}({', '.join(inner_lambda_call_parameters)});")
+                        to.write(f"return !!value{i};")
+                to.write(f"}};")
+
+            to.write(f"for (size_t i = 0; i < {len(self.subterm_generators)} && !range.atEnd(); ++i) {{")
+            with to.indent():
+                to.write(f"if ({' || '.join(try_consume_strings)})")
+                with to.indent():
+                    to.write(f"continue;")
+                to.write(f"break;")
+            to.write(f"}}")
+
+            if not self.term.preserve_order:
+                to.write(f"CSSValueListBuilder list;")
+                for (i, subterm_generator) in enumerate(self.subterm_generators):
+                    to.write(f"if (value{i}) // {str(subterm_generator)}")
+                    with to.indent():
+                        to.write(f"list.append(value{i}.releaseNonNull());")
+
+            to.write(f"if (list.isEmpty())")
+            with to.indent():
+                to.write(f"return nullptr;")
+
+            if self.term.single_value_optimization:
+                to.write(f"if (list.size() == 1)")
+                with to.indent():
+                    to.write(f"return WTFMove(list[0]);")
+
+            if self.term.type == 'CSSValueList':
+                return_type_create = "CSSValueList::createSpaceSeparated"
+            else:
+                return_type_create = f"{self.term.type}::create"
+            to.write(f"return {return_type_create}(WTFMove(list));")
+
+        to.write(f"}};")
+
+    def _generate_call_string(self, *, range_string, context_string):
+        parameters = [range_string]
+        if self.requires_context:
+            parameters += [context_string]
+        return f"consumeMatchOneOrMoreAnyOrder({', '.join(parameters)})"
 
 
 # Generation support for a single `ReferenceTerm`.
@@ -5291,9 +5821,11 @@ class TermGeneratorNonFastPathKeywordTerm(TermGenerator):
         return self.__str__()
 
     def generate_conditional(self, *, to, range_string, context_string):
+        to.write(f"// {str(self)}")
         self._generate(to=to, range_string=range_string, context_string=context_string, default_string="break")
 
     def generate_unconditional(self, *, to, range_string, context_string):
+        to.write(f"// {str(self)}")
         self._generate(to=to, range_string=range_string, context_string=context_string, default_string="return nullptr")
 
     def _generate(self, *, to, range_string, context_string, default_string):
@@ -5353,17 +5885,19 @@ class TermGeneratorFastPathKeywordTerms(TermGenerator):
         self.requires_context = keyword_fast_path_generator.requires_context
 
     def __str__(self):
-        return ' | '.join(self.keyword_fast_path_generator.keyword_terms)
+        return ' | '.join(stringify_iterable(self.keyword_fast_path_generator.keyword_terms))
 
     def __repr__(self):
         return self.__str__()
 
     def generate_conditional(self, *, to, range_string, context_string):
+        to.write(f"// {str(self)}")
         to.write(f"if (auto result = {self.generate_call_string(range_string=range_string, context_string=context_string)})")
         with to.indent():
             to.write(f"return result;")
 
     def generate_unconditional(self, *, to, range_string, context_string):
+        to.write(f"// {str(self)}")
         to.write(f"return {self.generate_call_string(range_string=range_string, context_string=context_string)};")
 
     def generate_call_string(self, *, range_string, context_string):
@@ -6175,7 +6709,22 @@ class BNFGroupingNode:
         if self.annotation:
             raise Exception("Invalid to add an annotation to a grouping node that already has an annotation.")
 
-        SUPPORTED_DIRECTIVES = {}
+        SUPPORTED_DIRECTIVES = {
+            'no-single-item-opt': {
+                BNFGroupingNode.Kind.MATCH_ALL_ORDERED,
+                BNFGroupingNode.Kind.MATCH_ALL_ANY_ORDER,
+                BNFGroupingNode.Kind.MATCH_ONE_OR_MORE_ANY_ORDER,
+            },
+            'preserve-order': {
+                BNFGroupingNode.Kind.MATCH_ALL_ANY_ORDER,
+                BNFGroupingNode.Kind.MATCH_ONE_OR_MORE_ANY_ORDER,
+            },
+            'type': {
+                BNFGroupingNode.Kind.MATCH_ALL_ORDERED,
+                BNFGroupingNode.Kind.MATCH_ALL_ANY_ORDER,
+                BNFGroupingNode.Kind.MATCH_ONE_OR_MORE_ANY_ORDER,
+            },
+        }
 
         for directive in annotation.directives:
             if directive.name not in SUPPORTED_DIRECTIVES:

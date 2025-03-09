@@ -93,12 +93,11 @@ static CSSParserMode parserMode(ScriptExecutionContext& context)
     return (document && document->inQuirksMode()) ? HTMLQuirksMode : HTMLStandardMode;
 }
 
-// MARK: - 'font-stretch'
-// FIXME: Rename to 'font-width' to match spec. 'font-stretch' is now a legacy alias.
+// MARK: - 'font-width'
 
-static std::optional<UnresolvedFontStretch> consumeFontStretchUnresolved(CSSParserTokenRange& range, const CSSParserContext&)
+static std::optional<UnresolvedFontWidth> consumeFontWidthUnresolved(CSSParserTokenRange& range, const CSSParserContext&)
 {
-    // <'font-stretch'> = normal | <percentage [0,∞]> | ultra-condensed | extra-condensed | condensed | semi-condensed | semi-expanded | expanded | extra-expanded | ultra-expanded
+    // <'font-width'> = normal | <percentage [0,∞]> | ultra-condensed | extra-condensed | condensed | semi-condensed | semi-expanded | expanded | extra-expanded | ultra-expanded
     // https://drafts.csswg.org/css-fonts-4/#propdef-font-width
 
     // FIXME: Add support for consuming the percentage value.
@@ -414,12 +413,12 @@ static std::optional<UnresolvedFont> consumeUnresolvedFont(CSSParserTokenRange& 
     std::optional<UnresolvedFontStyle> fontStyle;
     std::optional<UnresolvedFontVariantCaps> fontVariantCaps;
     std::optional<UnresolvedFontWeight> fontWeight;
-    std::optional<UnresolvedFontStretch> fontStretch;
+    std::optional<UnresolvedFontWidth> fontWidth;
     std::optional<UnresolvedFontSize> fontSize;
     std::optional<UnresolvedFontLineHeight> fontLineHeight;
     std::optional<UnresolvedFontFamily> fontFamily;
 
-    // Optional font-style, font-variant, font-weight and font-stretch in any order.
+    // Optional font-style, font-variant, font-weight and font-width in any order.
     for (unsigned i = 0; i < 4 && !range.atEnd(); ++i) {
         if (consumeIdentRaw<CSSValueNormal>(range))
             continue;
@@ -429,7 +428,7 @@ static std::optional<UnresolvedFont> consumeUnresolvedFont(CSSParserTokenRange& 
             continue;
         if (!fontWeight && (fontWeight = consumeFontWeightUnresolved(range, context)))
             continue;
-        if (!fontStretch && (fontStretch = consumeFontStretchUnresolved(range, context)))
+        if (!fontWidth && (fontWidth = consumeFontWidthUnresolved(range, context)))
             continue;
         break;
     }
@@ -464,7 +463,7 @@ static std::optional<UnresolvedFont> consumeUnresolvedFont(CSSParserTokenRange& 
         .style = fontStyle.value_or(CSSValueNormal),
         .variantCaps = fontVariantCaps.value_or(CSSValueNormal),
         .weight = fontWeight.value_or(CSSValueNormal),
-        .stretch = fontStretch.value_or(CSSValueNormal),
+        .width = fontWidth.value_or(CSSValueNormal),
         .size = WTFMove(*fontSize),
         .lineHeight = fontLineHeight.value_or(CSSValueNormal),
         .family = WTFMove(*fontFamily),
@@ -478,146 +477,6 @@ std::optional<UnresolvedFont> parseUnresolvedFont(const String& string, const CS
     range.consumeWhitespace();
 
     return consumeUnresolvedFont(range, context);
-}
-
-// MARK: 'font-variant-ligatures'
-
-RefPtr<CSSValue> consumeFontVariantLigatures(CSSParserTokenRange& range, const CSSParserContext&)
-{
-    if (range.peek().id() == CSSValueNormal || range.peek().id() == CSSValueNone)
-        return consumeIdent(range);
-
-    CSSFontVariantLigaturesParser ligaturesParser;
-    do {
-        if (ligaturesParser.consumeLigature(range) != CSSFontVariantLigaturesParser::ParseResult::ConsumedValue)
-            return nullptr;
-    } while (!range.atEnd());
-
-    return ligaturesParser.finalizeValue();
-}
-
-// MARK: 'font-variant-east-asian'
-
-RefPtr<CSSValue> consumeFontVariantEastAsian(CSSParserTokenRange& range, const CSSParserContext&)
-{
-    if (range.peek().id() == CSSValueNormal)
-        return consumeIdent(range);
-
-    std::optional<FontVariantEastAsianVariant> variant;
-    std::optional<FontVariantEastAsianWidth> width;
-    std::optional<FontVariantEastAsianRuby> ruby;
-
-    auto parseSomethingWithoutError = [&range, &variant, &width, &ruby] () {
-        bool hasParsedSomething = false;
-
-        while (true) {
-            if (range.peek().type() != IdentToken)
-                return hasParsedSomething;
-
-            switch (range.peek().id()) {
-            case CSSValueJis78:
-                if (variant)
-                    return false;
-                variant = FontVariantEastAsianVariant::Jis78;
-                break;
-            case CSSValueJis83:
-                if (variant)
-                    return false;
-                variant = FontVariantEastAsianVariant::Jis83;
-                break;
-            case CSSValueJis90:
-                if (variant)
-                    return false;
-                variant = FontVariantEastAsianVariant::Jis90;
-                break;
-            case CSSValueJis04:
-                if (variant)
-                    return false;
-                variant = FontVariantEastAsianVariant::Jis04;
-                break;
-            case CSSValueSimplified:
-                if (variant)
-                    return false;
-                variant = FontVariantEastAsianVariant::Simplified;
-                break;
-            case CSSValueTraditional:
-                if (variant)
-                    return false;
-                variant = FontVariantEastAsianVariant::Traditional;
-                break;
-            case CSSValueFullWidth:
-                if (width)
-                    return false;
-                width = FontVariantEastAsianWidth::Full;
-                break;
-            case CSSValueProportionalWidth:
-                if (width)
-                    return false;
-                width = FontVariantEastAsianWidth::Proportional;
-                break;
-            case CSSValueRuby:
-                if (ruby)
-                    return false;
-                ruby = FontVariantEastAsianRuby::Yes;
-                break;
-            default:
-                return hasParsedSomething;
-            }
-
-            range.consumeIncludingWhitespace();
-            hasParsedSomething = true;
-        }
-    };
-
-    if (!parseSomethingWithoutError())
-        return nullptr;
-
-    CSSValueListBuilder values;
-    switch (variant.value_or(FontVariantEastAsianVariant::Normal)) {
-    case FontVariantEastAsianVariant::Normal:
-        break;
-    case FontVariantEastAsianVariant::Jis78:
-        values.append(CSSPrimitiveValue::create(CSSValueJis78));
-        break;
-    case FontVariantEastAsianVariant::Jis83:
-        values.append(CSSPrimitiveValue::create(CSSValueJis83));
-        break;
-    case FontVariantEastAsianVariant::Jis90:
-        values.append(CSSPrimitiveValue::create(CSSValueJis90));
-        break;
-    case FontVariantEastAsianVariant::Jis04:
-        values.append(CSSPrimitiveValue::create(CSSValueJis04));
-        break;
-    case FontVariantEastAsianVariant::Simplified:
-        values.append(CSSPrimitiveValue::create(CSSValueSimplified));
-        break;
-    case FontVariantEastAsianVariant::Traditional:
-        values.append(CSSPrimitiveValue::create(CSSValueTraditional));
-        break;
-    }
-
-    switch (width.value_or(FontVariantEastAsianWidth::Normal)) {
-    case FontVariantEastAsianWidth::Normal:
-        break;
-    case FontVariantEastAsianWidth::Full:
-        values.append(CSSPrimitiveValue::create(CSSValueFullWidth));
-        break;
-    case FontVariantEastAsianWidth::Proportional:
-        values.append(CSSPrimitiveValue::create(CSSValueProportionalWidth));
-        break;
-    }
-
-    switch (ruby.value_or(FontVariantEastAsianRuby::Normal)) {
-    case FontVariantEastAsianRuby::Normal:
-        break;
-    case FontVariantEastAsianRuby::Yes:
-        values.append(CSSPrimitiveValue::create(CSSValueRuby));
-    }
-
-    if (values.isEmpty())
-        return nullptr;
-
-    return CSSValueList::createSpaceSeparated(WTFMove(values));
 }
 
 // MARK: 'font-variant-alternates'
@@ -710,22 +569,6 @@ RefPtr<CSSValue> consumeFontVariantAlternates(CSSParserTokenRange& range, const 
         return CSSFontVariantAlternatesValue::create(WTFMove(result));
 
     return nullptr;
-}
-
-// MARK: 'font-variant-numeric'
-
-RefPtr<CSSValue> consumeFontVariantNumeric(CSSParserTokenRange& range, const CSSParserContext&)
-{
-    if (range.peek().id() == CSSValueNormal)
-        return consumeIdent(range);
-
-    CSSFontVariantNumericParser numericParser;
-    do {
-        if (numericParser.consumeNumeric(range) != CSSFontVariantNumericParser::ParseResult::ConsumedValue)
-            return nullptr;
-    } while (!range.atEnd());
-
-    return numericParser.finalizeValue();
 }
 
 // MARK: 'font-size-adjust'
@@ -919,7 +762,7 @@ RefPtr<CSSValue> parseFontFaceSizeAdjust(const String& string, ScriptExecutionCo
     if (range.atEnd())
         return nullptr;
 
-    RefPtr parsedValue = consumePercentage(range, parserContext, ValueRange::NonNegative);
+    RefPtr parsedValue = CSSPropertyParsing::consumeFontFaceSizeAdjust(range, parserContext);
     if (!parsedValue || !range.atEnd())
         return nullptr;
 
@@ -1280,12 +1123,11 @@ RefPtr<CSSValue> consumeVariationTagValue(CSSParserTokenRange& range, const CSSP
 
 #endif
 
-// MARK: @font-face 'font-stretch'
-// FIXME: Rename to 'font-width' to match spec. 'font-stretch' is now a legacy alias.
+// MARK: @font-face 'font-width'
 
 RefPtr<CSSValue> parseFontFaceFontWidth(const String& string, ScriptExecutionContext& context)
 {
-    // <font-stretch> = auto | <'font-stretch'>{1,2}
+    // <font-width> = auto | <'font-width'>{1,2}
     // https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-width
 
     CSSParserContext parserContext(parserMode(context));
@@ -1297,58 +1139,12 @@ RefPtr<CSSValue> parseFontFaceFontWidth(const String& string, ScriptExecutionCon
     if (range.atEnd())
         return nullptr;
 
-    RefPtr parsedValue = consumeFontFaceFontWidth(range, parserContext);
+    RefPtr parsedValue = CSSPropertyParsing::consumeFontFaceFontWidth(range, parserContext);
     if (!parsedValue || !range.atEnd())
         return nullptr;
 
     return parsedValue;
 }
-
-#if ENABLE(VARIATION_FONTS)
-
-RefPtr<CSSValue> consumeFontFaceFontWidth(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    // <font-stretch> = auto | <'font-stretch'>{1,2}
-    // https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-width
-
-    // FIXME: Missing support for "auto" identifier.
-    // FIXME: Both stretch values should allow keyword identifiers, not just the first.
-
-    if (RefPtr result = CSSPropertyParsing::consumeFontWidthAbsolute(range))
-        return result;
-
-    RefPtr firstPercent = consumePercentage(range, context, ValueRange::NonNegative);
-    if (!firstPercent)
-        return nullptr;
-
-    if (range.atEnd())
-        return firstPercent;
-
-    RefPtr secondPercent = consumePercentage(range, context, ValueRange::NonNegative);
-    if (!secondPercent)
-        return nullptr;
-
-    return CSSValueList::createSpaceSeparated(
-        firstPercent.releaseNonNull(),
-        secondPercent.releaseNonNull()
-    );
-}
-
-#else
-
-RefPtr<CSSValue> consumeFontFaceFontWidth(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    // <font-stretch> = auto | <'font-stretch'>
-    // NOTE: This is the pre-variation fonts definition.
-
-    if (RefPtr result = CSSPropertyParsing::consumeFontWidthAbsolute(range))
-        return result;
-    if (RefPtr percent = consumePercentage(range, context, ValueRange::NonNegative))
-        return percent;
-    return nullptr;
-}
-
-#endif
 
 // MARK: @font-face 'font-weight'
 
@@ -1366,58 +1162,12 @@ RefPtr<CSSValue> parseFontFaceFontWeight(const String& string, ScriptExecutionCo
     if (range.atEnd())
         return nullptr;
 
-    RefPtr parsedValue = consumeFontFaceFontWeight(range, parserContext);
+    RefPtr parsedValue = CSSPropertyParsing::consumeFontFaceFontWeight(range, parserContext);
     if (!parsedValue || !range.atEnd())
         return nullptr;
 
     return parsedValue;
 }
-
-#if ENABLE(VARIATION_FONTS)
-
-RefPtr<CSSValue> consumeFontFaceFontWeight(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    // <'font-weight'> = auto | <font-weight-absolute>{1,2}
-    // https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-weight
-
-    // FIXME: Missing support for "auto" identifier.
-    // FIXME: Both weight values should allow "normal" and "bold" identifiers, not just the first.
-
-    if (auto keyword = consumeIdentRaw<CSSValueNormal, CSSValueBold>(range))
-        return CSSPrimitiveValue::create(*keyword);
-
-    auto firstNumber = consumeFontWeightNumberUnresolved(range, context);
-    if (!firstNumber)
-        return nullptr;
-
-    if (range.atEnd())
-        return resolveToCSSPrimitiveValue(WTFMove(*firstNumber));
-
-    auto secondNumber = consumeFontWeightNumberUnresolved(range, context);
-    if (!secondNumber)
-        return nullptr;
-
-    return CSSValueList::createSpaceSeparated(
-        resolveToCSSPrimitiveValue(WTFMove(*firstNumber)),
-        resolveToCSSPrimitiveValue(WTFMove(*secondNumber))
-    );
-}
-
-#else
-
-RefPtr<CSSValue> consumeFontFaceFontWeight(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    // <'font-weight'> = <font-weight-absolute>
-    // NOTE: This is the pre-variation fonts definition.
-
-    if (auto keyword = consumeIdentRaw<CSSValueNormal, CSSValueBold>(range))
-        return CSSPrimitiveValue::create(*keyword);
-    if (auto fontWeightNumber = consumeFontWeightNumberUnresolved(range, context))
-        return resolveToCSSPrimitiveValue(WTFMove(*fontWeightNumber));
-    return nullptr;
-}
-
-#endif
 
 // MARK: - @font-palette-values
 

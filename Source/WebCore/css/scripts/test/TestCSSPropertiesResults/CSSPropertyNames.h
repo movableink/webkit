@@ -31,26 +31,42 @@ enum CSSPropertyID : uint16_t {
     CSSPropertyTestBoundedRepetitionWithSpacesWithType = 17,
     CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious = 18,
     CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo = 19,
-    CSSPropertyTestNumericValueRange = 20,
-    CSSPropertyTestProperty = 21,
-    CSSPropertyTestSettingsOne = 22,
-    CSSPropertyTestUnboundedRepetitionWithCommasWithMin = 23,
-    CSSPropertyTestUnboundedRepetitionWithCommasWithMinNoSingleItemOpt = 24,
-    CSSPropertyTestUnboundedRepetitionWithCommasWithMinSingleItemOpt = 25,
-    CSSPropertyTestUnboundedRepetitionWithSpacesNoMin = 26,
-    CSSPropertyTestUnboundedRepetitionWithSpacesNoMinNoSingleItemOpt = 27,
-    CSSPropertyTestUnboundedRepetitionWithSpacesWithMin = 28,
-    CSSPropertyTestUnboundedRepetitionWithSpacesWithMinNoSingleItemOpt = 29,
-    CSSPropertyTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt = 30,
-    CSSPropertyTestUsingSharedRule = 31,
-    CSSPropertyTestSinkPriority = 32,
-    CSSPropertyTestLogicalPropertyGroupLogicalBlock = 33,
-    CSSPropertyTestLogicalPropertyGroupLogicalInline = 34,
-    CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal = 35,
-    CSSPropertyTestLogicalPropertyGroupPhysicalVertical = 36,
-    CSSPropertyFont = 37,
-    CSSPropertyTestShorthandOne = 38,
-    CSSPropertyTestShorthandTwo = 39,
+    CSSPropertyTestMatchAllAnyOrder = 20,
+    CSSPropertyTestMatchAllAnyOrderWithOptional = 21,
+    CSSPropertyTestMatchAllAnyOrderWithOptionalNoSingleItemOpt = 22,
+    CSSPropertyTestMatchAllAnyOrderWithOptionalSingleItemOpt = 23,
+    CSSPropertyTestMatchAllAnyOrderWithOptionalWithPreserveOrder = 24,
+    CSSPropertyTestMatchAllAnyOrderWithOptionalWithPreserveOrderNoSingleItemOpt = 25,
+    CSSPropertyTestMatchAllAnyOrderWithPreserveOrder = 26,
+    CSSPropertyTestMatchAllAnyOrderWithPreserveOrderNoSingleItemOpt = 27,
+    CSSPropertyTestMatchAllOrdered = 28,
+    CSSPropertyTestMatchAllOrderedWithOptional = 29,
+    CSSPropertyTestMatchAllOrderedWithOptionalNoSingleItemOpt = 30,
+    CSSPropertyTestMatchAllOrderedWithOptionalSingleItemOpt = 31,
+    CSSPropertyTestMatchOneOrMoreAnyOrder = 32,
+    CSSPropertyTestMatchOneOrMoreAnyOrderNoSingleItemOpt = 33,
+    CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrder = 34,
+    CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt = 35,
+    CSSPropertyTestNumericValueRange = 36,
+    CSSPropertyTestProperty = 37,
+    CSSPropertyTestSettingsOne = 38,
+    CSSPropertyTestUnboundedRepetitionWithCommasWithMin = 39,
+    CSSPropertyTestUnboundedRepetitionWithCommasWithMinNoSingleItemOpt = 40,
+    CSSPropertyTestUnboundedRepetitionWithCommasWithMinSingleItemOpt = 41,
+    CSSPropertyTestUnboundedRepetitionWithSpacesNoMin = 42,
+    CSSPropertyTestUnboundedRepetitionWithSpacesNoMinNoSingleItemOpt = 43,
+    CSSPropertyTestUnboundedRepetitionWithSpacesWithMin = 44,
+    CSSPropertyTestUnboundedRepetitionWithSpacesWithMinNoSingleItemOpt = 45,
+    CSSPropertyTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt = 46,
+    CSSPropertyTestUsingSharedRule = 47,
+    CSSPropertyTestSinkPriority = 48,
+    CSSPropertyTestLogicalPropertyGroupLogicalBlock = 49,
+    CSSPropertyTestLogicalPropertyGroupLogicalInline = 50,
+    CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal = 51,
+    CSSPropertyTestLogicalPropertyGroupPhysicalVertical = 52,
+    CSSPropertyFont = 53,
+    CSSPropertyTestShorthandOne = 54,
+    CSSPropertyTestShorthandTwo = 55,
 };
 
 // Enum value of the first "real" CSS property, which excludes
@@ -58,11 +74,11 @@ enum CSSPropertyID : uint16_t {
 constexpr uint16_t firstCSSProperty = 2;
 // Total number of enum values in the CSSPropertyID enum. If making an array
 // that can be indexed into using the enum value, use this as the size.
-constexpr uint16_t cssPropertyIDEnumValueCount = 40;
+constexpr uint16_t cssPropertyIDEnumValueCount = 56;
 // Number of "real" CSS properties. This differs from cssPropertyIDEnumValueCount,
 // as this doesn't consider CSSPropertyInvalid and CSSPropertyCustom.
-constexpr uint16_t numCSSProperties = 38;
-constexpr unsigned maxCSSPropertyNameLength = 71;
+constexpr uint16_t numCSSProperties = 54;
+constexpr unsigned maxCSSPropertyNameLength = 77;
 constexpr auto firstTopPriorityProperty = CSSPropertyID::CSSPropertyTestTopPriority;
 constexpr auto lastTopPriorityProperty = CSSPropertyID::CSSPropertyTestTopPriority;
 constexpr auto firstHighPriorityProperty = CSSPropertyID::CSSPropertyTestHighPriority;
@@ -74,7 +90,7 @@ constexpr auto lastLogicalGroupProperty = CSSPropertyID::CSSPropertyTestLogicalP
 constexpr auto firstShorthandProperty = CSSPropertyID::CSSPropertyFont;
 constexpr auto lastShorthandProperty = CSSPropertyID::CSSPropertyTestShorthandTwo;
 constexpr uint16_t numCSSPropertyLonghands = firstShorthandProperty - firstCSSProperty;
-extern const std::array<CSSPropertyID, 33> computedPropertyIDs;
+extern const std::array<CSSPropertyID, 49> computedPropertyIDs;
 
 struct CSSPropertySettings {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
