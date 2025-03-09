@@ -390,13 +390,13 @@ void MediaStreamTrack::applyConstraints(const std::optional<MediaTrackConstraint
     }
 
     m_private->applyConstraints(createMediaConstraints(constraints), [this, protectedThis = Ref { *this }, constraints, promise = WTFMove(promise)](auto&& error) mutable {
-        legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [protectedThis = WTFMove(protectedThis), error = WTFMove(error), constraints, promise = WTFMove(promise)]() mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [error = WTFMove(error), constraints, promise = WTFMove(promise)](auto& track) mutable {
             if (error) {
                 promise.rejectType<IDLInterface<OverconstrainedError>>(OverconstrainedError::create(error->invalidConstraint, WTFMove(error->message)));
                 return;
             }
 
-            protectedThis->m_constraints = valueOrDefault(constraints);
+            track.m_constraints = valueOrDefault(constraints);
             promise.resolve();
         });
     });
@@ -487,19 +487,19 @@ void MediaStreamTrack::trackEnded(MediaStreamTrackPrivate&)
     // http://w3c.github.io/mediacapture-main/#life-cycle
     // When a MediaStreamTrack track ends for any reason other than the stop() method being invoked, the User Agent must
     // queue a task that runs the following steps:
-    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, muted = m_private->muted()] {
+    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [muted = m_private->muted()](auto& track) {
         // 1. If the track's readyState attribute has the value ended already, then abort these steps.
-        if (!isAllowedToRunScript() || m_readyState == State::Ended)
+        if (!track.isAllowedToRunScript() || track.m_readyState == State::Ended)
             return;
 
         // 2. Set track's readyState attribute to ended.
-        m_readyState = State::Ended;
+        track.m_readyState = State::Ended;
 
-        ALWAYS_LOG(LOGIDENTIFIER, "firing 'ended' event");
+        ALWAYS_LOG_WITH_THIS(&track, LOGIDENTIFIER_WITH_THIS(&track), "firing 'ended' event");
 
         // 3. Notify track's source that track is ended so that the source may be stopped, unless other MediaStreamTrack objects depend on it.
         // 4. Fire a simple event named ended at the object.
-        dispatchEvent(Event::create(eventNames().endedEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        track.dispatchEvent(Event::create(eventNames().endedEvent, Event::CanBubble::No, Event::IsCancelable::No));
     });
 
     if (m_ended)
@@ -534,8 +534,11 @@ void MediaStreamTrack::trackMutedChanged(MediaStreamTrackPrivate&)
     };
     if (m_shouldFireMuteEventImmediately)
         updateMuted();
-    else
-        legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, WTFMove(updateMuted));
+    else {
+        queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [updateMuted = WTFMove(updateMuted)](auto&) {
+            updateMuted();
+        });
+    }
 
     configureTrackRendering();
 
@@ -552,11 +555,11 @@ void MediaStreamTrack::trackSettingsChanged(MediaStreamTrackPrivate&)
 
 void MediaStreamTrack::trackConfigurationChanged(MediaStreamTrackPrivate&)
 {
-    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this] {
-        if (!scriptExecutionContext() || scriptExecutionContext()->activeDOMObjectsAreStopped() || m_private->muted() || ended())
+    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [](auto& track) {
+        if (!track.scriptExecutionContext() || track.scriptExecutionContext()->activeDOMObjectsAreStopped() || track.m_private->muted() || track.ended())
             return;
 
-        dispatchEvent(Event::create(eventNames().configurationchangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        track.dispatchEvent(Event::create(eventNames().configurationchangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
     });
 }
 

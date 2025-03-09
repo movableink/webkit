@@ -114,17 +114,6 @@ public:
         });
     }
 
-    // FIXME: Port call sites to queueTaskKeepingObjectAlive() and remove this.
-    template<typename T>
-    static void legacyQueueTaskKeepingObjectAlive(T& object, TaskSource source, Function<void()>&& task)
-    {
-        // Calls the template member function outside of lambda init-captures to work around a MSVC bug.
-        auto activity = object.ActiveDOMObject::makePendingActivity(object);
-        object.queueTaskInEventLoop(source, [protectedObject = Ref { object }, activity = WTFMove(activity), task = WTFMove(task)] () {
-            task();
-        });
-    }
-
     template<typename T, typename Task>
     static void queueCancellableTaskKeepingObjectAlive(T& object, TaskSource source, TaskCancellationGroup& cancellationGroup, Task&& task)
     {

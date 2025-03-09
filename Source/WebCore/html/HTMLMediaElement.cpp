@@ -1146,9 +1146,9 @@ void HTMLMediaElement::removedFromAncestor(RemovalType removalType, ContainerNod
     setInActiveDocument(false);
     if (removalType.disconnectedFromDocument) {
         // Pause asynchronously to let the operation that removed us finish, in case we get inserted back into a document.
-        legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this] {
-            if (!isContextStopped())
-                pauseAfterDetachedTask();
+        queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [](auto& element) {
+            if (!element.isContextStopped())
+                element.pauseAfterDetachedTask();
         });
     }
 
@@ -1197,11 +1197,11 @@ void HTMLMediaElement::didDetachRenderers()
 {
     scheduleUpdateShouldAutoplay();
 
-    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this] {
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [](auto& element) {
         // If we detach a media element from a renderer, we may no longer need the MediaPlayerPrivate
         // to vend a PlatformLayer. However, the renderer may be torn down and re-attached during a
         // single run-loop as a result of layout or due to the element being re-parented.
-        computeAcceleratedRenderingStateAndUpdateMediaPlayer();
+        element.computeAcceleratedRenderingStateAndUpdateMediaPlayer();
     });
 }
 
@@ -1236,9 +1236,9 @@ void HTMLMediaElement::scheduleResolvePendingPlayPromises()
     if (m_pendingPlayPromises.isEmpty())
         return;
 
-    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, pendingPlayPromises = WTFMove(m_pendingPlayPromises)] () mutable {
-        if (!isContextStopped())
-            resolvePendingPlayPromises(WTFMove(pendingPlayPromises));
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [pendingPlayPromises = WTFMove(m_pendingPlayPromises)](auto& element) mutable {
+        if (!element.isContextStopped())
+            element.resolvePendingPlayPromises(WTFMove(pendingPlayPromises));
     });
 }
 
@@ -1247,9 +1247,9 @@ void HTMLMediaElement::scheduleRejectPendingPlayPromises(Ref<DOMException>&& err
     if (m_pendingPlayPromises.isEmpty())
         return;
 
-    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, error = WTFMove(error), pendingPlayPromises = WTFMove(m_pendingPlayPromises)] () mutable {
-        if (!isContextStopped())
-            rejectPendingPlayPromises(WTFMove(pendingPlayPromises), WTFMove(error));
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [error = WTFMove(error), pendingPlayPromises = WTFMove(m_pendingPlayPromises)](auto& element) mutable {
+        if (!element.isContextStopped())
+            element.rejectPendingPlayPromises(WTFMove(pendingPlayPromises), WTFMove(error));
     });
 }
 
@@ -1267,9 +1267,9 @@ void HTMLMediaElement::resolvePendingPlayPromises(PlayPromiseVector&& pendingPla
 
 void HTMLMediaElement::scheduleNotifyAboutPlaying()
 {
-    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, pendingPlayPromises = WTFMove(m_pendingPlayPromises)] () mutable {
-        if (!isContextStopped())
-            notifyAboutPlaying(WTFMove(pendingPlayPromises));
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [pendingPlayPromises = WTFMove(m_pendingPlayPromises)](auto& element) mutable {
+        if (!element.isContextStopped())
+            element.notifyAboutPlaying(WTFMove(pendingPlayPromises));
     });
 }
 
@@ -3020,8 +3020,8 @@ void HTMLMediaElement::mediaPlayerReadyStateChanged()
         }
 
         if (m_remainingReadyStateChangedAttempts.exchangeSub(1)) {
-            legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this] {
-                mediaPlayerReadyStateChanged();
+            queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [](auto& element) {
+                element.mediaPlayerReadyStateChanged();
             });
         }
         return;
@@ -3397,8 +3397,8 @@ void HTMLMediaElement::setMediaKeys(MediaKeys* mediaKeys, Ref<DeferredPromise>&&
 
     // 4. Let promise be a new promise.
     // 5. Run the following steps in parallel:
-    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, mediaKeys = RefPtr { mediaKeys }, promise = WTFMove(promise)]() mutable {
-        if (isContextStopped())
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [mediaKeys = RefPtr { mediaKeys }, promise = WTFMove(promise)](auto& element) mutable {
+        if (element.isContextStopped())
             return;
 
         // 5.1. If all the following conditions hold:
@@ -3409,23 +3409,23 @@ void HTMLMediaElement::setMediaKeys(MediaKeys* mediaKeys, Ref<DeferredPromise>&&
         // FIXME: ^
 
         // 5.2. If the mediaKeys attribute is not null, run the following steps:
-        if (m_mediaKeys) {
+        if (element.m_mediaKeys) {
             // 5.2.1. If the user agent or CDM do not support removing the association, let this object's attaching media keys value be false and reject promise with a NotSupportedError.
             // 5.2.2. If the association cannot currently be removed, let this object's attaching media keys value be false and reject promise with an InvalidStateError.
             // 5.2.3. Stop using the CDM instance represented by the mediaKeys attribute to decrypt media data and remove the association with the media element.
             // 5.2.4. If the preceding step failed, let this object's attaching media keys value be false and reject promise with the appropriate error name.
             // FIXME: ^
 
-            m_mediaKeys->detachCDMClient(*this);
-            if (RefPtr player = m_player)
-                player->cdmInstanceDetached(m_mediaKeys->protectedCDMInstance());
+            element.m_mediaKeys->detachCDMClient(element);
+            if (RefPtr player = element.m_player)
+                player->cdmInstanceDetached(element.m_mediaKeys->protectedCDMInstance());
         }
 
         // 5.3. If mediaKeys is not null, run the following steps:
         if (mediaKeys) {
             // 5.3.1. Associate the CDM instance represented by mediaKeys with the media element for decrypting media data.
-            mediaKeys->attachCDMClient(*this);
-            if (RefPtr player = m_player)
+            mediaKeys->attachCDMClient(element);
+            if (RefPtr player = element.m_player)
                 player->cdmInstanceAttached(mediaKeys->protectedCDMInstance());
 
             // 5.3.2. If the preceding step failed, run the following steps:
@@ -3435,17 +3435,17 @@ void HTMLMediaElement::setMediaKeys(MediaKeys* mediaKeys, Ref<DeferredPromise>&&
             // FIXME: ^
 
             // 5.3.3. Queue a task to run the Attempt to Resume Playback If Necessary algorithm on the media element.
-            legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this] {
-                if (!isContextStopped())
-                    attemptToResumePlaybackIfNecessary();
+            queueTaskKeepingObjectAlive(element, TaskSource::MediaElement, [](auto& element) {
+                if (!element.isContextStopped())
+                    element.attemptToResumePlaybackIfNecessary();
             });
         }
 
         // 5.4. Set the mediaKeys attribute to mediaKeys.
         // 5.5. Let this object's attaching media keys value be false.
         // 5.6. Resolve promise.
-        m_mediaKeys = WTFMove(mediaKeys);
-        m_attachingMediaKeys = false;
+        element.m_mediaKeys = WTFMove(mediaKeys);
+        element.m_attachingMediaKeys = false;
         promise->resolve();
     });
 
@@ -5415,7 +5415,9 @@ void HTMLMediaElement::layoutSizeChanged()
         if (RefPtr mediaControlsHost = m_mediaControlsHost)
             mediaControlsHost->updateCaptionDisplaySizes();
     };
-    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, WTFMove(task));
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [task = WTFMove(task)](auto&) mutable {
+        task();
+    });
 
     if (!m_receivedLayoutSizeChanged) {
         m_receivedLayoutSizeChanged = true;
@@ -6652,10 +6654,10 @@ void HTMLMediaElement::clearMediaPlayer()
     if (m_textTracks)
         configureTextTrackDisplay();
 
-    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this] {
-        if (m_mediaSession) {
-            m_mediaSession->clientCharacteristicsChanged(false);
-            m_mediaSession->canProduceAudioChanged();
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [](auto& element) {
+        if (auto& mediaSession = element.m_mediaSession) {
+            mediaSession->clientCharacteristicsChanged(false);
+            mediaSession->canProduceAudioChanged();
         }
     });
 
@@ -6978,30 +6980,30 @@ void HTMLMediaElement::mediaPlayerCurrentPlaybackTargetIsWirelessChanged(bool is
 void HTMLMediaElement::setIsPlayingToWirelessTarget(bool isPlayingToWirelessTarget)
 {
     auto logSiteIdentifier = LOGIDENTIFIER;
-    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, isPlayingToWirelessTarget, logSiteIdentifier] {
-        if (isContextStopped())
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [isPlayingToWirelessTarget, logSiteIdentifier](auto& element) {
+        if (element.isContextStopped())
             return;
 
-        auto newValue = isPlayingToWirelessTarget && m_player && m_player->isCurrentPlaybackTargetWireless();
-        if (newValue == m_isPlayingToWirelessTarget)
+        auto newValue = isPlayingToWirelessTarget && element.m_player && element.m_player->isCurrentPlaybackTargetWireless();
+        if (newValue == element.m_isPlayingToWirelessTarget)
             return;
 
         UNUSED_PARAM(logSiteIdentifier);
 
-        m_isPlayingToWirelessTarget = newValue;
-        Ref { m_remote }->isPlayingToRemoteTargetChanged(m_isPlayingToWirelessTarget);
-        ALWAYS_LOG(logSiteIdentifier, m_isPlayingToWirelessTarget);
-        configureMediaControls();
-        mediaSession().isPlayingToWirelessPlaybackTargetChanged(m_isPlayingToWirelessTarget);
-        mediaSession().canProduceAudioChanged();
-        scheduleUpdateMediaState();
-        updateSleepDisabling();
+        element.m_isPlayingToWirelessTarget = newValue;
+        Ref { element.m_remote }->isPlayingToRemoteTargetChanged(element.m_isPlayingToWirelessTarget);
+        ALWAYS_LOG_WITH_THIS(&element, logSiteIdentifier, element.m_isPlayingToWirelessTarget);
+        element.configureMediaControls();
+        element.mediaSession().isPlayingToWirelessPlaybackTargetChanged(element.m_isPlayingToWirelessTarget);
+        element.mediaSession().canProduceAudioChanged();
+        element.scheduleUpdateMediaState();
+        element.updateSleepDisabling();
 
-        m_failedToPlayToWirelessTarget = false;
-        m_checkPlaybackTargetCompatibilityTimer.startOneShot(500_ms);
+        element.m_failedToPlayToWirelessTarget = false;
+        element.m_checkPlaybackTargetCompatibilityTimer.startOneShot(500_ms);
 
-        if (!isContextStopped())
-            dispatchEvent(Event::create(eventNames().webkitcurrentplaybacktargetiswirelesschangedEvent, Event::CanBubble::No, Event::IsCancelable::Yes));
+        if (!element.isContextStopped())
+            element.dispatchEvent(Event::create(eventNames().webkitcurrentplaybacktargetiswirelesschangedEvent, Event::CanBubble::No, Event::IsCancelable::Yes));
     });
 }
 
@@ -7356,46 +7358,46 @@ void HTMLMediaElement::enterFullscreen(VideoFullscreenMode mode)
     if (mediaSession().hasBehaviorRestriction(MediaElementSession::RequireUserGestureForFullscreen))
         window->consumeTransientActivation();
 
-    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this, mode, logIdentifier = LOGIDENTIFIER] {
-        if (isContextStopped())
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [mode, logIdentifier = LOGIDENTIFIER](auto& element) {
+        if (element.isContextStopped())
             return;
 
-        if (document().hidden() && mode != HTMLMediaElementEnums::VideoFullscreenModePictureInPicture) {
-            ALWAYS_LOG(logIdentifier, " returning because document is hidden");
-            m_changingVideoFullscreenMode = false;
+        if (element.document().hidden() && mode != HTMLMediaElementEnums::VideoFullscreenModePictureInPicture) {
+            ALWAYS_LOG_WITH_THIS(&element, logIdentifier, " returning because document is hidden");
+            element.m_changingVideoFullscreenMode = false;
             return;
         }
 
-        if (auto* asVideo = dynamicDowncast<HTMLVideoElement>(*this)) {
-            auto& client = document().page()->chrome().client();
+        if (RefPtr asVideo = dynamicDowncast<HTMLVideoElement>(element)) {
+            auto& client = element.document().page()->chrome().client();
             auto supportsFullscreen = client.supportsVideoFullscreen(mode);
             auto canEnterFullscreen = client.canEnterVideoFullscreen(mode);
             if (supportsFullscreen && canEnterFullscreen) {
-                ALWAYS_LOG(logIdentifier, "Entering fullscreen mode ", mode, ", m_videoFullscreenStandby = ", m_videoFullscreenStandby);
+                ALWAYS_LOG_WITH_THIS(&element, logIdentifier, "Entering fullscreen mode ", mode, ", element.m_videoFullscreenStandby = ", element.m_videoFullscreenStandby);
 
-                m_temporarilyAllowingInlinePlaybackAfterFullscreen = false;
+                element.m_temporarilyAllowingInlinePlaybackAfterFullscreen = false;
                 if (isInWindowOrStandardFullscreen(mode))
-                    m_waitingToEnterFullscreen = true;
+                    element.m_waitingToEnterFullscreen = true;
 
-                auto oldMode = m_videoFullscreenMode;
-                setFullscreenMode(mode);
-                configureMediaControls();
+                auto oldMode = element.m_videoFullscreenMode;
+                element.setFullscreenMode(mode);
+                element.configureMediaControls();
 
-                client.enterVideoFullscreenForVideoElement(*asVideo, m_videoFullscreenMode, m_videoFullscreenStandby);
-                if (m_videoFullscreenStandby)
+                client.enterVideoFullscreenForVideoElement(*asVideo, element.m_videoFullscreenMode, element.m_videoFullscreenStandby);
+                if (element.m_videoFullscreenStandby)
                     return;
 
                 if (isInWindowOrStandardFullscreen(mode))
-                    scheduleEvent(eventNames().webkitbeginfullscreenEvent);
-                else if (isInWindowOrStandardFullscreen(oldMode)  && !document().quirks().shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk())
-                    scheduleEvent(eventNames().webkitendfullscreenEvent);
+                    element.scheduleEvent(eventNames().webkitbeginfullscreenEvent);
+                else if (isInWindowOrStandardFullscreen(oldMode)  && !element.document().quirks().shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk())
+                    element.scheduleEvent(eventNames().webkitendfullscreenEvent);
 
                 return;
             }
-            ALWAYS_LOG(logIdentifier, "Could not enter fullscreen mode ", mode, ", support = ", supportsFullscreen, ", canEnter = ", canEnterFullscreen);
+            ALWAYS_LOG_WITH_THIS(&element, logIdentifier, "Could not enter fullscreen mode ", mode, ", support = ", supportsFullscreen, ", canEnter = ", canEnterFullscreen);
         }
 
-        m_changingVideoFullscreenMode = false;
+        element.m_changingVideoFullscreenMode = false;
     });
 }
 
@@ -8809,8 +8811,8 @@ void HTMLMediaElement::setMediaControlsDependOnPageScaleFactor(bool dependsOnPag
 void HTMLMediaElement::pageScaleFactorChanged()
 {
     if (m_mediaControlsDependOnPageScaleFactor) {
-        legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this] {
-            updatePageScaleFactorJSProperty();
+        queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [](auto& element) {
+            element.updatePageScaleFactorJSProperty();
         });
     }
 }
@@ -9446,12 +9448,12 @@ void HTMLMediaElement::isVisibleInViewportChanged()
     if (RefPtr player = m_player)
         player->setVisibleInViewport(isVisibleInViewport());
 
-    legacyQueueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this] {
-        if (isContextStopped())
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [](auto& element) {
+        if (element.isContextStopped())
             return;
-        mediaSession().isVisibleInViewportChanged();
-        updateShouldAutoplay();
-        schedulePlaybackControlsManagerUpdate();
+        element.mediaSession().isVisibleInViewportChanged();
+        element.updateShouldAutoplay();
+        element.schedulePlaybackControlsManagerUpdate();
     });
 }
 

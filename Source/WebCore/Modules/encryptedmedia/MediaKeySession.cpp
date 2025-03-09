@@ -247,7 +247,7 @@ void MediaKeySession::generateRequest(const AtomString& initDataType, const Buff
             }
 
             // 10.10. Queue a task to run the following steps:
-            protectedThis->queueTaskKeepingObjectAlive(*protectedThis, TaskSource::Networking, [promise = WTFMove(promise), message = WTFMove(message), messageType, sessionId, succeeded, identifier = WTFMove(identifier)](auto& session) mutable {
+            queueTaskKeepingObjectAlive(*protectedThis, TaskSource::Networking, [promise = WTFMove(promise), message = WTFMove(message), messageType, sessionId, succeeded, identifier = WTFMove(identifier)](auto& session) mutable {
                 // 10.10.1. If any of the preceding steps failed, reject promise with a new DOMException whose name is the appropriate error name.
                 if (succeeded == CDMInstanceSession::SuccessValue::Failed) {
                     ERROR_LOG_WITH_THIS(&session, identifier, "::task() Rejected: failed to request license");
@@ -367,7 +367,7 @@ void MediaKeySession::load(const String& sessionId, Ref<DeferredPromise>&& promi
             }
 
             // 8.9. Queue a task to run the following steps:
-            protectedThis->queueTaskKeepingObjectAlive(*protectedThis, TaskSource::Networking, [knownKeys = WTFMove(knownKeys), expiration = WTFMove(expiration), message = WTFMove(message), sanitizedSessionId, succeeded, promise = WTFMove(promise), identifier = WTFMove(identifier)](auto& session) mutable {
+            queueTaskKeepingObjectAlive(*protectedThis, TaskSource::Networking, [knownKeys = WTFMove(knownKeys), expiration = WTFMove(expiration), message = WTFMove(message), sanitizedSessionId, succeeded, promise = WTFMove(promise), identifier = WTFMove(identifier)](auto& session) mutable {
                 // 8.9.1. If any of the preceding steps failed, reject promise with a the appropriate error name.
                 if (succeeded == CDMInstanceSession::SuccessValue::Failed) {
                     ERROR_LOG_WITH_THIS(&session, identifier, "::task() Rejected: Other failure");
@@ -482,7 +482,7 @@ void MediaKeySession::update(const BufferSource& response, Ref<DeferredPromise>&
             //   6.7.3.1. Let message be that message.
             //   6.7.3.2. Let message type be the appropriate MediaKeyMessageType for the message.
             // 6.8. Queue a task to run the following steps:
-            protectedThis->queueTaskKeepingObjectAlive(*protectedThis, TaskSource::Networking, [sessionWasClosed, changedKeys = WTFMove(changedKeys), changedExpiration = WTFMove(changedExpiration), message = WTFMove(message), promise = WTFMove(promise), identifier = WTFMove(identifier)](auto& session) mutable {
+            queueTaskKeepingObjectAlive(*protectedThis, TaskSource::Networking, [sessionWasClosed, changedKeys = WTFMove(changedKeys), changedExpiration = WTFMove(changedExpiration), message = WTFMove(message), promise = WTFMove(promise), identifier = WTFMove(identifier)](auto& session) mutable {
                 // 6.8.1.
                 if (sessionWasClosed) {
                     // ↳ If session closed is true:

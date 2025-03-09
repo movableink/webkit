@@ -311,7 +311,7 @@ void WebLockManager::query(Ref<DeferredPromise>&& promise)
         if (!protectedThis)
             return;
 
-        protectedThis->queueTaskKeepingObjectAlive(*protectedThis, TaskSource::DOMManipulation, [promise = WTFMove(promise), snapshot = WTFMove(snapshot)](auto&) mutable {
+        queueTaskKeepingObjectAlive(*protectedThis, TaskSource::DOMManipulation, [promise = WTFMove(promise), snapshot = WTFMove(snapshot)](auto&) mutable {
             promise->resolve<IDLDictionary<Snapshot>>(WTFMove(snapshot));
         });
     });
