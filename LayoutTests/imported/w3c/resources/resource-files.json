@@ -9779,6 +9779,8 @@
         "web-platform-tests/html/rendering/widgets/appearance/appearance-transition-001-ref.html",
         "web-platform-tests/html/rendering/widgets/appearance/appearance-transition-002-ref.html",
         "web-platform-tests/html/rendering/widgets/button-layout/anonymous-button-content-box-ref.html",
+        "web-platform-tests/html/rendering/widgets/button-layout/block-in-inline-ref.html",
+        "web-platform-tests/html/rendering/widgets/button-layout/button-dynamic-content-ref.html",
         "web-platform-tests/html/rendering/widgets/button-layout/display-none-or-contents-ref.html",
         "web-platform-tests/html/rendering/widgets/button-layout/inline-level-ref.html",
         "web-platform-tests/html/rendering/widgets/button-layout/input-type-button-clip-ref.html",
