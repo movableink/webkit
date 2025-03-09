@@ -568,24 +568,7 @@ JSArray* JSArray::fastToReversed(JSGlobalObject* globalObject, uint64_t length)
 
         auto resultData = butterfly->contiguous().data();
         memcpy(resultData, srcData, sizeof(JSValue) * length);
-        if (size_t remaining = vectorLength - length; remaining) {
-            if (hasDouble(type)) {
-#if OS(DARWIN)
-                constexpr double pattern = PNaN;
-                memset_pattern8(static_cast<void*>(butterfly->contiguous().data() + length), &pattern, sizeof(JSValue) * remaining);
-#else
-                for (unsigned i = length; i < vectorLength; ++i)
-                    butterfly->contiguousDouble().atUnsafe(i) = PNaN;
-#endif
-            } else {
-#if USE(JSVALUE64)
-                memset(static_cast<void*>(butterfly->contiguous().data() + length), 0, sizeof(JSValue) * remaining);
-#else
-                for (unsigned i = length; i < vectorLength; ++i)
-                    butterfly->contiguous().atUnsafe(i).clear();
-#endif
-            }
-        }
+        Butterfly::clearOptimalVectorLengthGap(type, butterfly, vectorLength, length);
 
         if (hasDouble(indexingType)) {
             auto data = butterfly->contiguousDouble().data();
@@ -668,25 +651,8 @@ JSArray* JSArray::fastWith(JSGlobalObject* globalObject, uint32_t index, JSValue
 
         auto resultData = butterfly->contiguous().data();
         memcpy(resultData, srcData, sizeof(JSValue) * length);
-        if (size_t remaining = vectorLength - length; remaining) {
-            if (hasDouble(type)) {
-#if OS(DARWIN)
-                constexpr double pattern = PNaN;
-                memset_pattern8(static_cast<void*>(butterfly->contiguous().data() + length), &pattern, sizeof(JSValue) * remaining);
-#else
-                for (unsigned i = length; i < vectorLength; ++i)
-                    butterfly->contiguousDouble().atUnsafe(i) = PNaN;
-#endif
-            } else {
-#if USE(JSVALUE64)
-                memset(static_cast<void*>(butterfly->contiguous().data() + length), 0, sizeof(JSValue) * remaining);
-#else
-                for (unsigned i = length; i < vectorLength; ++i)
-                    butterfly->contiguous().atUnsafe(i).clear();
-#endif
-            }
-        }
 
+        Butterfly::clearOptimalVectorLengthGap(type, butterfly, vectorLength, length);
         JSArray* result = createWithButterfly(vm, nullptr, resultStructure, butterfly);
         result->convertToIndexingTypeIfNeeded(vm, leastUpperBoundOfIndexingTypeAndValue(type, value));
 
@@ -1250,24 +1216,8 @@ JSArray* JSArray::fastSlice(JSGlobalObject* globalObject, JSObject* source, uint
         butterfly->setPublicLength(initialLength);
         // We initialize Butterfly first before setting it to JSArray. In that case, butterfly is not scannoed so that we can safely use memcpy here.
         memcpy(butterfly->contiguous().data(), source->butterfly()->contiguous().data() + startIndex, sizeof(JSValue) * initialLength);
-        if (size_t remaining = vectorLength - initialLength; remaining) {
-            if (hasDouble(indexingType)) {
-#if OS(DARWIN)
-                constexpr double pattern = PNaN;
-                memset_pattern8(static_cast<void*>(butterfly->contiguous().data() + initialLength), &pattern, sizeof(JSValue) * remaining);
-#else
-                for (unsigned i = initialLength; i < vectorLength; ++i)
-                    butterfly->contiguousDouble().atUnsafe(i) = PNaN;
-#endif
-            } else {
-#if USE(JSVALUE64)
-                memset(static_cast<void*>(butterfly->contiguous().data() + initialLength), 0, sizeof(JSValue) * remaining);
-#else
-                for (unsigned i = initialLength; i < vectorLength; ++i)
-                    butterfly->contiguous().atUnsafe(i).clear();
-#endif
-            }
-        }
+
+        Butterfly::clearOptimalVectorLengthGap(indexingType, butterfly, vectorLength, initialLength);
         return createWithButterfly(vm, nullptr, resultStructure, butterfly);
     }
     case ArrayWithArrayStorage: {
@@ -2018,24 +1968,8 @@ JSArray* tryCloneArrayFromFast(JSGlobalObject* globalObject, JSValue arrayValue)
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }
-    if (size_t remaining = vectorLength - resultSize; remaining) {
-        if (hasDouble(resultType)) {
-#if OS(DARWIN)
-            constexpr double pattern = PNaN;
-            memset_pattern8(static_cast<void*>(resultButterfly->contiguous().data() + resultSize), &pattern, sizeof(JSValue) * remaining);
-#else
-            for (unsigned i = resultSize; i < vectorLength; ++i)
-                resultButterfly->contiguousDouble().atUnsafe(i) = PNaN;
-#endif
-        } else {
-#if USE(JSVALUE64)
-            memset(static_cast<void*>(resultButterfly->contiguous().data() + resultSize), 0, sizeof(JSValue) * remaining);
-#else
-            for (unsigned i = resultSize; i < vectorLength; ++i)
-                resultButterfly->contiguous().atUnsafe(i).clear();
-#endif
-        }
-    }
+
+    Butterfly::clearOptimalVectorLengthGap(resultType, resultButterfly, vectorLength, resultSize);
     return JSArray::createWithButterfly(vm, nullptr, resultStructure, resultButterfly);
 }
 

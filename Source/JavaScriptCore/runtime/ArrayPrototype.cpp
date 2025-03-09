@@ -1767,25 +1767,7 @@ static JSArray* concatAppendArray(JSGlobalObject* globalObject, VM& vm, JSArray*
         copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, firstArraySize, secondButterfly->contiguous().data(), secondArraySize, secondType);
     }
 
-    if (size_t remaining = vectorLength - resultSize; remaining) {
-        if (hasDouble(type)) {
-#if OS(DARWIN)
-            constexpr double pattern = PNaN;
-            memset_pattern8(static_cast<void*>(butterfly->contiguous().data() + resultSize), &pattern, sizeof(JSValue) * remaining);
-#else
-            for (unsigned i = resultSize; i < vectorLength; ++i)
-                butterfly->contiguousDouble().atUnsafe(i) = PNaN;
-#endif
-        } else {
-#if USE(JSVALUE64)
-            memset(static_cast<void*>(butterfly->contiguous().data() + resultSize), 0, sizeof(JSValue) * remaining);
-#else
-            for (unsigned i = resultSize; i < vectorLength; ++i)
-                butterfly->contiguous().atUnsafe(i).clear();
-#endif
-        }
-    }
-
+    Butterfly::clearOptimalVectorLengthGap(type, butterfly, vectorLength, resultSize);
     return JSArray::createWithButterfly(vm, nullptr, resultStructure, butterfly);
 }
 

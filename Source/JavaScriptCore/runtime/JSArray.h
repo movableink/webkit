@@ -166,7 +166,7 @@ public:
     JS_EXPORT_PRIVATE bool isIteratorProtocolFastAndNonObservable();
 
     inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue, IndexingType);
-        
+
 protected:
 #if ASSERT_ENABLED
     void finishCreation(VM& vm)
