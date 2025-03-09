@@ -1229,6 +1229,11 @@ JSArray* JSArray::fastSlice(JSGlobalObject* globalObject, JSObject* source, uint
         if (UNLIKELY(hasAnyArrayStorage(indexingType)))
             return nullptr;
 
+        if (isCopyOnWrite(source->indexingMode())) {
+            if (!startIndex && count == source->butterfly()->publicLength())
+                return JSArray::createWithButterfly(vm, nullptr, source->structure(), source->butterfly());
+        }
+
         ASSERT(!globalObject->isHavingABadTime());
         if (UNLIKELY(count > MAX_STORAGE_VECTOR_LENGTH))
             return nullptr;

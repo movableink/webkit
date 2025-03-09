@@ -2929,6 +2929,16 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
 
     case ArraySlice: {
         JSGlobalObject* globalObject = m_graph.globalObjectFor(node->origin.semantic);
+        bool includesCopyOnWrite = true;
+        AbstractValue& source = forNode(m_graph.varArgChild(node, 0));
+        if (source.m_structure.isFinite()) {
+            includesCopyOnWrite = false;
+            source.m_structure.forEach(
+                [&](RegisteredStructure structure) {
+                    if (isCopyOnWrite(structure->indexingMode()))
+                        includesCopyOnWrite = true;
+                });
+        }
 
         // FIXME: We could do better here if we prove that the
         // incoming value has only a single structure.
@@ -2936,6 +2946,11 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         structureSet.add(m_graph.registerStructure(globalObject->originalArrayStructureForIndexingType(ArrayWithInt32)));
         structureSet.add(m_graph.registerStructure(globalObject->originalArrayStructureForIndexingType(ArrayWithContiguous)));
         structureSet.add(m_graph.registerStructure(globalObject->originalArrayStructureForIndexingType(ArrayWithDouble)));
+        if (includesCopyOnWrite) {
+            structureSet.add(m_graph.registerStructure(globalObject->originalArrayStructureForIndexingType(CopyOnWriteArrayWithInt32)));
+            structureSet.add(m_graph.registerStructure(globalObject->originalArrayStructureForIndexingType(CopyOnWriteArrayWithContiguous)));
+            structureSet.add(m_graph.registerStructure(globalObject->originalArrayStructureForIndexingType(CopyOnWriteArrayWithDouble)));
+        }
 
         setForNode(node, structureSet);
         break;
