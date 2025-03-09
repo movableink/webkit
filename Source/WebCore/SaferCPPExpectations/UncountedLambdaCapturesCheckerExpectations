@@ -58,7 +58,6 @@ animation/KeyframeEffect.cpp
 bindings/js/JSDOMPromiseDeferred.cpp
 contentextensions/ContentExtensionsBackend.cpp
 crypto/SubtleCrypto.cpp
-css/CSSFontFace.cpp
 css/CSSPendingSubstitutionValue.cpp
 css/CSSValue.cpp
 css/CSSVariableReferenceValue.cpp
