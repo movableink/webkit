@@ -62,10 +62,6 @@ template<> struct Blending<CornerShapeValue> {
     auto blend(const CornerShapeValue&, const CornerShapeValue&, const BlendingContext&) -> CornerShapeValue;
 };
 
-// MARK: - TextStream
-
-TextStream& operator<<(TextStream&, const CornerShapeValue&);
-
 } // namespace Style
 } // namespace WebCore
 

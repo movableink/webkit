@@ -143,10 +143,6 @@ template<> struct Blending<DynamicRangeLimit> {
     auto blend(const DynamicRangeLimit&, const DynamicRangeLimit&, const BlendingContext&) -> DynamicRangeLimit;
 };
 
-// MARK: Logging
-
-TextStream& operator<<(TextStream&, const DynamicRangeLimit&);
-
 } // namespace Style
 } // namespace WebCore
 

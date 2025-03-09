@@ -29,7 +29,6 @@
 #include "CSSPrimitiveValue.h"
 #include "CSSValuePool.h"
 #include "StylePrimitiveNumericTypes+Blending.h"
-#include "StylePrimitiveNumericTypes+Logging.h"
 
 namespace WebCore {
 namespace Style {
@@ -95,14 +94,6 @@ auto Blending<CornerShapeValue>::blend(const CornerShapeValue& a, const CornerSh
     auto interpolatedValue = Style::blend(aInterpolationValue, bInterpolationValue, context);
 
     return convertInterpolationValueToExponent(interpolatedValue);
-}
-
-
-// MARK: - TextStream
-
-TextStream& operator<<(TextStream& ts, const CornerShapeValue& cornerShapeValue)
-{
-    return ts << cornerShapeValue.superellipse.name << "(" << cornerShapeValue.superellipse->value << ")";
 }
 
 } // namespace Style

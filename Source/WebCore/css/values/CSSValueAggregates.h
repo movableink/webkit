@@ -35,6 +35,7 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
@@ -132,7 +133,12 @@ struct CustomIdentifier {
     bool operator==(const CustomIdentifier&) const = default;
     bool operator==(const AtomString& other) const { return value == other; }
 };
-WTF::TextStream& operator<<(WTF::TextStream&, const CustomIdentifier&);
+TextStream& operator<<(TextStream&, const CustomIdentifier&);
+
+template<CSSValueID C> TextStream& operator<<(TextStream& ts, const Constant<C>&)
+{
+    return ts << nameLiteral(C);
+}
 
 // MARK: - Standard Aggregates
 
@@ -162,6 +168,11 @@ template<CSSValueID C, typename T> bool operator==(const UniqueRef<FunctionNotat
 template<size_t, CSSValueID C, typename T> const auto& get(const FunctionNotation<C, T>& function)
 {
     return function.parameters;
+}
+
+template<CSSValueID C, typename T> TextStream& operator<<(TextStream& ts, const FunctionNotation<C, T>& function)
+{
+    return ts << nameLiteral(function.name) << '(' << function.parameters << ')';
 }
 
 template<CSSValueID C, typename T> inline constexpr auto TreatAsTupleLike<FunctionNotation<C, T>> = true;

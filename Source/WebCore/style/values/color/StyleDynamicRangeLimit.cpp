@@ -31,7 +31,6 @@
 #include "CSSDynamicRangeLimitMix.h"
 #include "PlatformDynamicRangeLimit.h"
 #include "StyleDynamicRangeLimitMix.h"
-#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 namespace Style {
@@ -115,14 +114,6 @@ PlatformDynamicRangeLimit DynamicRangeLimit::toPlatformDynamicRangeLimit() const
         else if constexpr (std::is_same_v<Kind, Style::DynamicRangeLimitMixFunction>)
             return PlatformDynamicRangeLimit(float(kind->standard.value), float(kind->constrainedHigh.value), float(kind->noLimit.value));
     });
-}
-
-// MARK: - Logging
-
-TextStream& operator<<(TextStream& ts, const DynamicRangeLimit& limit)
-{
-    WTF::switchOn(limit, [&](const auto& value) { ts << value; });
-    return ts;
 }
 
 } // namespace Style
