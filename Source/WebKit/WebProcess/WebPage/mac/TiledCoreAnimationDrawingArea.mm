@@ -442,8 +442,8 @@ void TiledCoreAnimationDrawingArea::handleActivityStateChangeCallbacksIfNeeded()
             return;
 
         Ref protectedPage = weakThis->m_webPage.get();
-        auto* drawingArea = static_cast<TiledCoreAnimationDrawingArea*>(protectedPage->drawingArea());
-        ASSERT(weakThis.get() == drawingArea);
+        RefPtr drawingArea = downcast<TiledCoreAnimationDrawingArea>(protectedPage->drawingArea());
+        ASSERT(weakThis.get() == drawingArea.get());
         if (drawingArea != weakThis.get())
             return;
 
@@ -797,7 +797,7 @@ void TiledCoreAnimationDrawingArea::commitTransientZoom(double scale, FloatPoint
         if (shadowCALayer)
             [shadowCALayer removeAllAnimations];
 
-        if (TiledCoreAnimationDrawingArea* drawingArea = static_cast<TiledCoreAnimationDrawingArea*>(webPage->drawingArea()))
+        if (auto* drawingArea = downcast<TiledCoreAnimationDrawingArea>(webPage->drawingArea()))
             drawingArea->applyTransientZoomToPage(scale, origin);
     }];
 

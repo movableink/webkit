@@ -53,7 +53,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollbarsControllerMac);
 static ScrollbarThemeMac* macScrollbarTheme()
 {
     ScrollbarTheme& scrollbarTheme = ScrollbarTheme::theme();
-    return !scrollbarTheme.isMockTheme() ? static_cast<ScrollbarThemeMac*>(&scrollbarTheme) : nullptr;
+    return !scrollbarTheme.isMockTheme() ? downcast<ScrollbarThemeMac>(&scrollbarTheme) : nullptr;
 }
 
 static NSScrollerImp *scrollerImpForScrollbar(Scrollbar& scrollbar)

@@ -199,7 +199,7 @@ RefPtr<WebLocalFrameLoaderClient> WebFrame::protectedLocalFrameLoaderClient() co
 WebRemoteFrameClient* WebFrame::remoteFrameClient() const
 {
     if (auto* remoteFrame = dynamicDowncast<RemoteFrame>(m_coreFrame.get()))
-        return static_cast<WebRemoteFrameClient*>(&remoteFrame->client());
+        return downcast<WebRemoteFrameClient>(&remoteFrame->client());
     return nullptr;
 }
 
@@ -208,7 +208,7 @@ WebFrameLoaderClient* WebFrame::frameLoaderClient() const
     if (auto* localFrame = dynamicDowncast<LocalFrame>(m_coreFrame.get()))
         return dynamicDowncast<WebLocalFrameLoaderClient>(localFrame->loader().client());
     if (auto* remoteFrame = dynamicDowncast<RemoteFrame>(m_coreFrame.get()))
-        return static_cast<WebRemoteFrameClient*>(&remoteFrame->client());
+        return downcast<WebRemoteFrameClient>(&remoteFrame->client());
     return nullptr;
 }
 
@@ -246,7 +246,7 @@ RefPtr<WebFrame> WebFrame::fromCoreFrame(const Frame& frame)
         return &webLocalFrameLoaderClient->webFrame();
     }
     if (auto* remoteFrame = dynamicDowncast<RemoteFrame>(frame)) {
-        auto& client = static_cast<const WebRemoteFrameClient&>(remoteFrame->client());
+        auto& client = downcast<WebRemoteFrameClient>(remoteFrame->client());
         return &client.webFrame();
     }
     return nullptr;
@@ -485,7 +485,7 @@ void WebFrame::commitProvisionalFrame()
     if (parent)
         parent->tree().removeChild(*remoteFrame);
     remoteFrame->disconnectOwnerElement();
-    static_cast<WebRemoteFrameClient&>(remoteFrame->client()).takeFrameInvalidator().release();
+    downcast<WebRemoteFrameClient>(remoteFrame->client()).takeFrameInvalidator().release();
 
     m_coreFrame = localFrame.get();
     remoteFrame->setView(nullptr);

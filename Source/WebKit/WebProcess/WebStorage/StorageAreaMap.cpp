@@ -255,7 +255,7 @@ void StorageAreaMap::dispatchSessionStorageEvent(const std::optional<StorageArea
         return;
 
     StorageEventDispatcher::dispatchSessionStorageEvents(key, oldValue, newValue, *page, m_securityOrigin, urlString, [storageAreaImplID](auto& storage) {
-        return static_cast<StorageAreaImpl&>(storage.area()).identifier() == storageAreaImplID;
+        return downcast<StorageAreaImpl>(storage.area()).identifier() == storageAreaImplID;
     });
 }
 
@@ -264,7 +264,7 @@ void StorageAreaMap::dispatchLocalStorageEvent(const std::optional<StorageAreaIm
     ASSERT(isLocalStorage(type()));
 
     StorageEventDispatcher::dispatchLocalStorageEvents(key, oldValue, newValue, nullptr, m_securityOrigin, urlString, [storageAreaImplID](auto& storage) {
-        return static_cast<StorageAreaImpl&>(storage.area()).identifier() == storageAreaImplID;
+        return downcast<StorageAreaImpl>(storage.area()).identifier() == storageAreaImplID;
     });
 }
 

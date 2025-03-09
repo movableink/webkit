@@ -1193,7 +1193,7 @@ void WebProcess::scrollerStylePreferenceChanged(bool useOverlayScrollbars)
     if (theme.isMockTheme())
         return;
 
-    static_cast<ScrollbarThemeMac&>(theme).preferencesChanged();
+    downcast<ScrollbarThemeMac>(theme).preferencesChanged();
     
     for (auto& page : m_pageMap.values()) {
         if (RefPtr frameView = page->localMainFrameView())

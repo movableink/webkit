@@ -51,7 +51,7 @@ RefPtr<LibWebRTCNetworkManager> LibWebRTCNetworkManager::getOrCreate(WebCore::Sc
     if (!document)
         return nullptr;
 
-    auto* networkManager = static_cast<LibWebRTCNetworkManager*>(document->rtcNetworkManager());
+    auto* networkManager = downcast<LibWebRTCNetworkManager>(document->rtcNetworkManager());
     if (!networkManager) {
         auto newNetworkManager = adoptRef(*new LibWebRTCNetworkManager(identifier));
         networkManager = newNetworkManager.ptr();

@@ -60,6 +60,7 @@ private:
     bool shouldOverrideBaseURL() const final { return false; }
     bool shouldUseMainResourceEncoding() const final { return true; }
     bool shouldUseMainResourceURL() const final { return true; }
+    bool isLegacyWebArchive() const final { return true; }
 
     enum MainResourceStatus { Subresource, MainResource };
 
@@ -75,3 +76,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::LegacyWebArchive)
+static bool isType(const WebCore::Archive& archive) { return archive.isLegacyWebArchive(); }
+SPECIALIZE_TYPE_TRAITS_END()

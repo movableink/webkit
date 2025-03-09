@@ -3408,8 +3408,8 @@ void WKPageLoadedSubresourceDomains(WKPageRef pageRef, WKPageLoadedSubresourceDo
 {
     CRASH_IF_SUSPENDED;
     toImpl(pageRef)->getLoadedSubresourceDomains([callbackContext, callback](Vector<RegistrableDomain>&& domains) {
-        Vector<RefPtr<API::Object>> apiDomains = WTF::map(domains, [](auto& domain) {
-            return RefPtr<API::Object>(API::String::create(String(domain.string())));
+        Vector<RefPtr<API::Object>> apiDomains = WTF::map(domains, [](auto& domain) -> RefPtr<API::Object> {
+            return API::String::create(String(domain.string()));
         });
         callback(toAPI(API::Array::create(WTFMove(apiDomains)).ptr()), callbackContext);
     });
