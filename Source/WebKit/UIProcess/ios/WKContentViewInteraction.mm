@@ -7672,12 +7672,21 @@ static UITextAutocapitalizationType toUITextAutocapitalize(WebCore::Autocapitali
     if (event.type == WebEventKeyUp)
         _isHandlingActiveKeyEvent = NO;
 
-    _keyWebEventHandlers.removeFirstMatching([&](auto& entry) {
-        if (entry.event != event)
-            return false;
-        entry.completionBlock(event, eventWasHandled);
-        return true;
+    auto indexOfHandlerToCall = _keyWebEventHandlers.findIf([event](auto& entry) {
+        return entry.event == event;
     });
+
+    if (indexOfHandlerToCall == notFound)
+        return;
+
+    auto handler = _keyWebEventHandlers[indexOfHandlerToCall].completionBlock;
+    if (!handler) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    _keyWebEventHandlers.remove(indexOfHandlerToCall);
+    handler(event, eventWasHandled);
 }
 
 - (BOOL)_interpretKeyEvent:(::WebEvent *)event withContext:(WebKit::KeyEventInterpretationContext&&)context
