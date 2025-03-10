@@ -377,7 +377,7 @@ void PageConfiguration::setDelaysWebProcessLaunchUntilFirstLoad(bool delaysWebPr
 
 bool PageConfiguration::delaysWebProcessLaunchUntilFirstLoad() const
 {
-    if (preferences().siteIsolationEnabled())
+    if (protectedPreferences()->siteIsolationEnabled())
         return true;
     if (RefPtr processPool = m_data.processPool.getIfExists(); processPool && isInspectorProcessPool(*processPool)) {
         // Never delay process launch for inspector pages as inspector pages do not know how to transition from a terminated process.
@@ -428,7 +428,7 @@ bool PageConfiguration::applePayEnabled() const
     if (auto applePayEnabledOverride = m_data.applePayEnabledOverride)
         return *applePayEnabledOverride;
 
-    return preferences().applePayEnabled();
+    return protectedPreferences()->applePayEnabled();
 }
 
 void PageConfiguration::setApplePayEnabled(bool enabled)

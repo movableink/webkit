@@ -55,19 +55,21 @@
 
 -(void)playbackCoordinator:(AVDelegatingPlaybackCoordinator *)coordinator didIssuePlayCommand:(AVDelegatingPlaybackCoordinatorPlayCommand *)playCommand completionHandler:(void (^)(void))completionHandler {
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (_parent) {
-            _parent->issuePlayCommand(playCommand, [completionHandler = makeBlockPtr(completionHandler)] {
-                completionHandler();
-            });
-        }
+        RefPtr parent = _parent.get();
+        if (!parent)
+            return;
+        parent->issuePlayCommand(playCommand, [completionHandler = makeBlockPtr(completionHandler)] {
+            completionHandler();
+        });
     });
 }
 
 -(void)playbackCoordinator:(AVDelegatingPlaybackCoordinator *)coordinator didIssuePauseCommand:(AVDelegatingPlaybackCoordinatorPauseCommand *)pauseCommand completionHandler:(void (^)(void))completionHandler {
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (!_parent)
+        RefPtr parent = _parent.get();
+        if (!parent)
             return;
-        _parent->issuePauseCommand(pauseCommand, [completionHandler = makeBlockPtr(completionHandler)] {
+        parent->issuePauseCommand(pauseCommand, [completionHandler = makeBlockPtr(completionHandler)] {
             completionHandler();
         });
     });
@@ -75,9 +77,10 @@
 
 -(void)playbackCoordinator:(AVDelegatingPlaybackCoordinator *)coordinator didIssueSeekCommand:(AVDelegatingPlaybackCoordinatorSeekCommand *)seekCommand completionHandler:(void (^)(void))completionHandler {
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (!_parent)
+        RefPtr parent = _parent.get();
+        if (!parent)
             return;
-        _parent->issueSeekCommand(seekCommand, [completionHandler = makeBlockPtr(completionHandler)] {
+        parent->issueSeekCommand(seekCommand, [completionHandler = makeBlockPtr(completionHandler)] {
             completionHandler();
         });
     });
@@ -85,9 +88,10 @@
 
 -(void)playbackCoordinator:(AVDelegatingPlaybackCoordinator *)coordinator didIssueBufferingCommand:(AVDelegatingPlaybackCoordinatorBufferingCommand *)bufferingCommand completionHandler:(void (^)(void))completionHandler {
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (!_parent)
+        RefPtr parent = _parent.get();
+        if (!parent)
             return;
-        _parent->issueBufferingCommand(bufferingCommand, [completionHandler = makeBlockPtr(completionHandler)] {
+        parent->issueBufferingCommand(bufferingCommand, [completionHandler = makeBlockPtr(completionHandler)] {
             completionHandler();
         });
     });
@@ -95,8 +99,10 @@
 
 -(void)playbackCoordinator:(AVDelegatingPlaybackCoordinator *)coordinator didIssuePrepareTransitionCommand:(AVDelegatingPlaybackCoordinatorPrepareTransitionCommand *)prepareTransitionCommand {
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (_parent)
-            _parent->issuePrepareTransitionCommand(prepareTransitionCommand);
+        RefPtr parent = _parent.get();
+        if (!parent)
+            return;
+        parent->issuePrepareTransitionCommand(prepareTransitionCommand);
     });
 }
 @end

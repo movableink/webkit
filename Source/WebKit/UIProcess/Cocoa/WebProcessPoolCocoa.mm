@@ -1235,7 +1235,7 @@ void WebProcessPool::setProcessesShouldSuspend(bool shouldSuspend)
 
     m_processesShouldSuspend = shouldSuspend;
     for (auto& process : m_processes) {
-        process->throttler().setAllowsActivities(!m_processesShouldSuspend);
+        process->protectedThrottler()->setAllowsActivities(!m_processesShouldSuspend);
 
 #if ENABLE(WEBXR) && !USE(OPENXR)
         if (!m_processesShouldSuspend) {

@@ -105,18 +105,18 @@ void LegacyDownloadClient::didReceiveAuthenticationChallenge(DownloadProxy& down
         checker->didCallCompletionHandler();
         switch (disposition) {
         case NSURLSessionAuthChallengeUseCredential:
-            authenticationChallenge->listener().completeChallenge(AuthenticationChallengeDisposition::UseCredential, credential ? WebCore::Credential(credential) : WebCore::Credential());
+            authenticationChallenge->protectedListener()->completeChallenge(AuthenticationChallengeDisposition::UseCredential, credential ? WebCore::Credential(credential) : WebCore::Credential());
             break;
         case NSURLSessionAuthChallengePerformDefaultHandling:
-            authenticationChallenge->listener().completeChallenge(AuthenticationChallengeDisposition::PerformDefaultHandling);
+            authenticationChallenge->protectedListener()->completeChallenge(AuthenticationChallengeDisposition::PerformDefaultHandling);
             break;
             
         case NSURLSessionAuthChallengeCancelAuthenticationChallenge:
-            authenticationChallenge->listener().completeChallenge(AuthenticationChallengeDisposition::Cancel);
+            authenticationChallenge->protectedListener()->completeChallenge(AuthenticationChallengeDisposition::Cancel);
             break;
             
         case NSURLSessionAuthChallengeRejectProtectionSpace:
-            authenticationChallenge->listener().completeChallenge(AuthenticationChallengeDisposition::RejectProtectionSpaceAndContinue);
+            authenticationChallenge->protectedListener()->completeChallenge(AuthenticationChallengeDisposition::RejectProtectionSpaceAndContinue);
             break;
             
         default:

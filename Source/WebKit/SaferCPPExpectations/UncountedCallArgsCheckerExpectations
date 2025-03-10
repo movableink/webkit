@@ -25,10 +25,6 @@ Shared/Cocoa/WKNSString.mm
 Shared/Cocoa/WKNSURL.mm
 Shared/RemoteLayerTree/RemoteLayerWithInProcessRenderingBackingStore.mm
 Shared/RemoteLayerTree/RemoteLayerWithRemoteRenderingBackingStore.mm
-UIProcess/API/APINavigationClient.h
-UIProcess/API/APIPageConfiguration.cpp
-UIProcess/API/APIWebAuthenticationAssertionResponse.cpp
-UIProcess/API/APIWebAuthenticationAssertionResponse.h
 UIProcess/API/C/WKAuthenticationChallenge.cpp
 UIProcess/API/C/WKAuthenticationDecisionListener.cpp
 UIProcess/API/C/WKBackForwardListRef.cpp
@@ -116,10 +112,17 @@ UIProcess/API/Cocoa/_WKUserStyleSheet.mm
 UIProcess/API/Cocoa/_WKWebAuthenticationAssertionResponse.mm
 UIProcess/API/Cocoa/_WKWebAuthenticationPanel.mm
 UIProcess/API/Cocoa/_WKWebsiteDataStoreConfiguration.mm
-UIProcess/BackgroundProcessResponsivenessTimer.cpp
-UIProcess/Cocoa/GroupActivities/GroupActivitiesCoordinator.mm
 UIProcess/Cocoa/LegacyDownloadClient.mm
+<<<<<<< HEAD
 UIProcess/Cocoa/ModelElementControllerCocoa.mm
+=======
+UIProcess/Cocoa/SOAuthorization/NavigationSOAuthorizationSession.mm
+UIProcess/Cocoa/SOAuthorization/PopUpSOAuthorizationSession.mm
+UIProcess/Cocoa/SOAuthorization/SOAuthorizationSession.mm
+UIProcess/Cocoa/SOAuthorization/WKSOAuthorizationDelegate.mm
+UIProcess/Cocoa/UserMediaPermissionRequestManagerProxy.mm
+UIProcess/Cocoa/WKEditCommand.mm
+>>>>>>> db92893ddd84 (More smart pointer adoption in UIProcess [v2])
 UIProcess/Extensions/Cocoa/WebExtensionActionCocoa.mm
 UIProcess/Extensions/Cocoa/WebExtensionCommandCocoa.mm
 UIProcess/Extensions/Cocoa/WebExtensionURLSchemeHandlerCocoa.mm

@@ -495,7 +495,7 @@ static NSMutableArray<NSURL *> *readOnlyAccessPaths()
 
         contentNavigation = loadWebContent(webView.get());
         if (!finished)
-            attributedStringActivity = [webView _page]->protectedLegacyMainFrameProcess()->throttler().foregroundActivity("NSAttributedString serialization"_s);
+            attributedStringActivity = [webView _page]->protectedLegacyMainFrameProcess()->protectedThrottler()->foregroundActivity("NSAttributedString serialization"_s);
 
         ASSERT(contentNavigation);
         ASSERT(webView.get().loading);
