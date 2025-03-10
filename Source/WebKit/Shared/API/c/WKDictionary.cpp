@@ -45,7 +45,7 @@ WK_EXPORT WKDictionaryRef WKDictionaryCreate(const WKStringRef* rawKeys, const W
     for (size_t i = 0; i < numberOfValues; ++i)
         map.add(WebKit::toImpl(keys[i])->string(), WebKit::toImpl(values[i]));
 
-    return WebKit::toAPI(&API::Dictionary::create(WTFMove(map)).leakRef());
+    return WebKit::toAPILeakingRef(API::Dictionary::create(WTFMove(map)));
 }
 
 WKTypeRef WKDictionaryGetItemForKey(WKDictionaryRef dictionaryRef, WKStringRef key)
@@ -60,5 +60,5 @@ size_t WKDictionaryGetSize(WKDictionaryRef dictionaryRef)
 
 WKArrayRef WKDictionaryCopyKeys(WKDictionaryRef dictionaryRef)
 {
-    return WebKit::toAPI(&WebKit::toImpl(dictionaryRef)->keys().leakRef());
+    return WebKit::toAPILeakingRef(WebKit::toImpl(dictionaryRef)->keys());
 }

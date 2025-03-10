@@ -204,7 +204,7 @@ WKPageGroupRef WKPageGetPageGroup(WKPageRef pageRef)
 
 WKPageConfigurationRef WKPageCopyPageConfiguration(WKPageRef pageRef)
 {
-    return toAPI(&toImpl(pageRef)->configuration().copy().leakRef());
+    return toAPILeakingRef(toImpl(pageRef)->configuration().copy());
 }
 
 void WKPageLoadURL(WKPageRef pageRef, WKURLRef URLRef)
@@ -588,9 +588,9 @@ WKTypeRef WKPageCopySessionState(WKPageRef pageRef, void* context, WKPageSession
 
     auto data = encodeLegacySessionState(sessionState);
     if (shouldReturnData)
-        return toAPI(data.leakRef());
+        return toAPILeakingRef(WTFMove(data));
 
-    return toAPI(&API::SessionState::create(WTFMove(sessionState)).leakRef());
+    return toAPILeakingRef(API::SessionState::create(WTFMove(sessionState)));
 }
 
 static void restoreFromSessionState(WKPageRef pageRef, WKTypeRef sessionStateRef, bool navigate)
@@ -3036,7 +3036,7 @@ WKArrayRef WKPageCopyRelatedPages(WKPageRef pageRef)
             relatedPages.append(WTFMove(page));
     }
 
-    return toAPI(&API::Array::create(WTFMove(relatedPages)).leakRef());
+    return toAPILeakingRef(API::Array::create(WTFMove(relatedPages)));
 }
 
 WKFrameRef WKPageLookUpFrameFromHandle(WKPageRef pageRef, WKFrameHandleRef handleRef)

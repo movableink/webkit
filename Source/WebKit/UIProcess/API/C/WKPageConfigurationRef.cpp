@@ -43,7 +43,7 @@ WKTypeID WKPageConfigurationGetTypeID()
 
 WKPageConfigurationRef WKPageConfigurationCreate()
 {
-    return toAPI(&API::PageConfiguration::create().leakRef());
+    return toAPILeakingRef(API::PageConfiguration::create());
 }
 
 WKContextRef WKPageConfigurationGetContext(WKPageConfigurationRef configuration)

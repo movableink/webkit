@@ -182,7 +182,7 @@ inline ProxyingRefPtr<API::String> toAPI(StringImpl* string)
 
 inline WKStringRef toCopiedAPI(const String& string)
 {
-    return toAPI(&API::String::create(string).leakRef());
+    return toAPILeakingRef(API::String::create(string));
 }
 
 inline ProxyingRefPtr<API::URL> toURLRef(StringImpl* string)
@@ -196,7 +196,7 @@ inline WKURLRef toCopiedURLAPI(const String& string)
 {
     if (!string)
         return nullptr;
-    return toAPI(&API::URL::create(string).leakRef());
+    return toAPILeakingRef(API::URL::create(string));
 }
 
 inline WKURLRef toCopiedURLAPI(const URL& url)
@@ -237,7 +237,7 @@ inline WKSecurityOriginRef toCopiedAPI(WebCore::SecurityOrigin* origin)
 {
     if (!origin)
         return nullptr;
-    return toAPI(&API::SecurityOrigin::create(*origin).leakRef());
+    return toAPILeakingRef(API::SecurityOrigin::create(*origin));
 }
 
 /* Geometry conversions */

@@ -244,11 +244,8 @@ public:
     template<typename T, typename... Args>
     static void constructInWrapper(id <WKObject> wrapper, Args&&... args)
     {
-        Object& object = wrapper._apiObject;
-
-        apiObjectsUnderConstruction().add(&object, (__bridge CFTypeRef)wrapper);
-
-        new (&object) T(std::forward<Args>(args)...);
+        apiObjectsUnderConstruction().add(&wrapper._apiObject, (__bridge CFTypeRef)wrapper);
+        new (&wrapper._apiObject) T(std::forward<Args>(args)...);
     }
 
     id wrapper() const { return (__bridge id)m_wrapper; }

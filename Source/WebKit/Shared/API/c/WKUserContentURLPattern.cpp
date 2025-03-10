@@ -37,7 +37,7 @@ WKTypeID WKUserContentURLPatternGetTypeID()
 
 WKUserContentURLPatternRef WKUserContentURLPatternCreate(WKStringRef patternRef)
 {
-    return WebKit::toAPI(&API::UserContentURLPattern::create(WebKit::toImpl(patternRef)->string()).leakRef());
+    return WebKit::toAPILeakingRef(API::UserContentURLPattern::create(WebKit::toImpl(patternRef)->string()));
 }
 
 WKStringRef WKUserContentURLPatternCopyHost(WKUserContentURLPatternRef urlPatternRef)

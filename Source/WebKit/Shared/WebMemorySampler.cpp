@@ -114,10 +114,8 @@ void WebMemorySampler::stop()
     if (m_stopTimer.isActive())
         m_stopTimer.stop();
     
-    if (m_sampleLogSandboxExtension) {
-        m_sampleLogSandboxExtension->revoke();
-        m_sampleLogSandboxExtension = nullptr;
-    }    
+    if (RefPtr extension = std::exchange(m_sampleLogSandboxExtension, nullptr))
+        extension->revoke();
 }
 
 bool WebMemorySampler::isRunning() const
@@ -136,8 +134,8 @@ void WebMemorySampler::initializeTempLogFile()
 void WebMemorySampler::initializeSandboxedLogFile(SandboxExtension::Handle&& sampleLogSandboxHandle, const String& sampleLogFilePath)
 {
     m_sampleLogSandboxExtension = SandboxExtension::create(WTFMove(sampleLogSandboxHandle));
-    if (m_sampleLogSandboxExtension)
-        m_sampleLogSandboxExtension->consume();
+    if (RefPtr extension = m_sampleLogSandboxExtension)
+        extension->consume();
     m_sampleLogFilePath = sampleLogFilePath;
     m_sampleLogFile = FileSystem::openFile(m_sampleLogFilePath, FileSystem::FileOpenMode::Truncate);
     writeHeaders();

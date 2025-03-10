@@ -41,12 +41,12 @@ WKTypeID WKStringGetTypeID()
 
 WKStringRef WKStringCreateWithUTF8CString(const char* string)
 {
-    return WebKit::toAPI(&API::String::create(WTF::String::fromUTF8(string)).leakRef());
+    return WebKit::toAPILeakingRef(API::String::create(WTF::String::fromUTF8(string)));
 }
 
 WKStringRef WKStringCreateWithUTF8CStringWithLength(const char* string, size_t stringLength)
 {
-    return WebKit::toAPI(&API::String::create(WTF::String::fromUTF8(unsafeMakeSpan(string, stringLength))).leakRef());
+    return WebKit::toAPILeakingRef(API::String::create(WTF::String::fromUTF8(unsafeMakeSpan(string, stringLength))));
 }
 
 bool WKStringIsEmpty(WKStringRef stringRef)
@@ -136,7 +136,7 @@ WKStringRef WKStringCreateWithJSString(JSStringRef jsStringRef)
 {
     auto apiString = jsStringRef ? API::String::create(jsStringRef->string()) : API::String::createNull();
 
-    return WebKit::toAPI(&apiString.leakRef());
+    return WebKit::toAPILeakingRef(WTFMove(apiString));
 }
 
 JSStringRef WKStringCopyJSString(WKStringRef stringRef)

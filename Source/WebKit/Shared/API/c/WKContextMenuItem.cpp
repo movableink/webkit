@@ -44,7 +44,7 @@ WKTypeID WKContextMenuItemGetTypeID()
 WKContextMenuItemRef WKContextMenuItemCreateAsAction(WKContextMenuItemTag tag, WKStringRef title, bool enabled)
 {
 #if ENABLE(CONTEXT_MENUS)
-    return WebKit::toAPI(&WebKit::WebContextMenuItem::create(WebKit::WebContextMenuItemData(WebCore::ContextMenuItemType::Action, WebKit::toImpl(tag), WebKit::toImpl(title)->string(), enabled, false)).leakRef());
+    return WebKit::toAPILeakingRef(WebKit::WebContextMenuItem::create(WebKit::WebContextMenuItemData(WebCore::ContextMenuItemType::Action, WebKit::toImpl(tag), WebKit::toImpl(title)->string(), enabled, false)));
 #else
     UNUSED_PARAM(tag);
     UNUSED_PARAM(title);
@@ -56,7 +56,7 @@ WKContextMenuItemRef WKContextMenuItemCreateAsAction(WKContextMenuItemTag tag, W
 WKContextMenuItemRef WKContextMenuItemCreateAsCheckableAction(WKContextMenuItemTag tag, WKStringRef title, bool enabled, bool checked)
 {
 #if ENABLE(CONTEXT_MENUS)
-    return WebKit::toAPI(&WebKit::WebContextMenuItem::create(WebKit::WebContextMenuItemData(WebCore::ContextMenuItemType::CheckableAction, WebKit::toImpl(tag), WebKit::toImpl(title)->string(), enabled, checked)).leakRef());
+    return WebKit::toAPILeakingRef(WebKit::WebContextMenuItem::create(WebKit::WebContextMenuItemData(WebCore::ContextMenuItemType::CheckableAction, WebKit::toImpl(tag), WebKit::toImpl(title)->string(), enabled, checked)));
 #else
     UNUSED_PARAM(tag);
     UNUSED_PARAM(title);
@@ -69,7 +69,7 @@ WKContextMenuItemRef WKContextMenuItemCreateAsCheckableAction(WKContextMenuItemT
 WKContextMenuItemRef WKContextMenuItemCreateAsSubmenu(WKStringRef title, bool enabled, WKArrayRef submenuItems)
 {
 #if ENABLE(CONTEXT_MENUS)
-    return WebKit::toAPI(&WebKit::WebContextMenuItem::create(WebKit::toImpl(title)->string(), enabled, WebKit::toImpl(submenuItems)).leakRef());
+    return WebKit::toAPILeakingRef(WebKit::WebContextMenuItem::create(WebKit::toImpl(title)->string(), enabled, WebKit::toImpl(submenuItems)));
 #else
     UNUSED_PARAM(title);
     UNUSED_PARAM(enabled);
@@ -140,7 +140,7 @@ bool WKContextMenuItemGetChecked(WKContextMenuItemRef itemRef)
 WKArrayRef WKContextMenuCopySubmenuItems(WKContextMenuItemRef itemRef)
 {
 #if ENABLE(CONTEXT_MENUS)
-    return WebKit::toAPI(&WebKit::toImpl(itemRef)->submenuItemsAsAPIArray().leakRef());
+    return WebKit::toAPILeakingRef(WebKit::toImpl(itemRef)->submenuItemsAsAPIArray());
 #else
     UNUSED_PARAM(itemRef);
     return 0;
