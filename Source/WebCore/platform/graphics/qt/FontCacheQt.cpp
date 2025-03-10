@@ -103,9 +103,9 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
     return std::make_unique<FontPlatformData>(fontDescription, family);
 }
 
-std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String&)
+static ASCIILiteral platformAlternateFamilyName(const String&)
 {
-    return std::nullopt;
+    return {};
 }
 
 Vector<FontSelectionCapabilities> FontCache::getFontSelectionCapabilitiesInFamily(const AtomString&, AllowUserInstalledFonts)
