@@ -919,7 +919,7 @@ bool MediaElementSession::requiresFullscreenForVideoPlayback() const
     if (!m_element.document().settings().inlineMediaPlaybackRequiresPlaysInlineAttribute())
         return false;
 
-#if PLATFORM(MEDIA_STREAM)
+#if ENABLE(MEDIA_STREAM)
     if (m_element.hasMediaStreamSrcObject())
         return false;
 #endif

@@ -15051,10 +15051,8 @@ void WebPageProxy::gpuProcessExited(ProcessTerminationReason)
 #if PLATFORM(IOS_FAMILY)
         gpuProcess->setOrientationForMediaCapture(m_orientationForMediaCapture);
 #endif
-#if PLATFORM(MEDIA_STREAM)
         if (m_shouldListenToVoiceActivity)
             gpuProcess->setShouldListenToVoiceActivity(*this, m_shouldListenToVoiceActivity);
-#endif
     }
 #endif
 }
