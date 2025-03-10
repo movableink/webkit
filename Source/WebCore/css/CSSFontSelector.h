@@ -31,6 +31,7 @@
 #include "CachedResourceHandle.h"
 #include "Font.h"
 #include "FontSelector.h"
+#include "ScriptExecutionContext.h"
 #include "Timer.h"
 #include "WebKitFontFamilyNames.h"
 #include <memory>
