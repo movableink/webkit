@@ -880,7 +880,6 @@ input[type="file"]::file-selector-button {
 }
 
 input:is([type="button"], [type="submit"], [type="reset"]), input[type="file"]::file-selector-button, button {
-    align-items: flex-start;
     text-align: center;
     cursor: default;
     padding-inline: 6px;
