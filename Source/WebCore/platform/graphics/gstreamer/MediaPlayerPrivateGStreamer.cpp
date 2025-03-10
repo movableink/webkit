@@ -25,7 +25,6 @@
 
 #include "config.h"
 #include "MediaPlayerPrivateGStreamer.h"
-#include "VideoFrameGStreamer.h"
 
 #if ENABLE(VIDEO) && USE(GSTREAMER)
 
@@ -1263,29 +1262,6 @@ bool MediaPlayerPrivateGStreamer::requiresVideoSinkCapsNotifications() const
     return player->isVideoPlayer();
 }
 
-#if USE(COORDINATED_GRAPHICS)
-void MediaPlayerPrivateGStreamer::updateVideoInfoFromCaps(GstCaps* caps)
-{
-#if USE(GBM) && GST_CHECK_VERSION(1, 24, 0)
-    GstVideoInfoDmaDrm drmVideoInfo;
-    gst_video_info_dma_drm_init(&drmVideoInfo);
-    if (gst_video_is_dma_drm_caps(caps)) {
-        if (!gst_video_info_dma_drm_from_caps(&drmVideoInfo, caps))
-            return;
-
-        if (!gst_video_info_dma_drm_to_video_info(&drmVideoInfo, &m_videoInfo))
-            return;
-
-        m_dmabufFormat = { drmVideoInfo.drm_fourcc, drmVideoInfo.drm_modifier };
-    }
-#endif // USE(GBM) && GST_CHECK_VERSION(1, 24, 0)
-    if (!m_dmabufFormat) {
-        if (!gst_video_info_from_caps(&m_videoInfo, caps))
-            return;
-    }
-}
-#endif // USE(COORDINATED_GRAPHICS)
-
 void MediaPlayerPrivateGStreamer::videoSinkCapsChanged(GstPad* videoSinkPad)
 {
     GRefPtr<GstCaps> caps = adoptGRef(gst_pad_get_current_caps(videoSinkPad));
@@ -1299,9 +1275,7 @@ void MediaPlayerPrivateGStreamer::videoSinkCapsChanged(GstPad* videoSinkPad)
 
     GST_DEBUG_OBJECT(videoSinkPad, "Received new caps: %" GST_PTR_FORMAT, caps.get());
 
-#if USE(COORDINATED_GRAPHICS)
-    updateVideoInfoFromCaps(caps.get());
-#endif // USE(COORDINATED_GRAPHICS)
+    m_videoInfo = VideoFrameGStreamer::infoFromCaps(caps);
 
     if (!hasFirstVideoSampleReachedSink()) {
         // We want to wait for the sink to receive the first buffer before emitting dimensions, since only by then we
@@ -3510,12 +3484,10 @@ void MediaPlayerPrivateGStreamer::pushTextureToCompositor(bool isDuplicateSample
     if (!isDuplicateSample)
         ++m_sampleCount;
 
-    if (!GST_VIDEO_INFO_FORMAT(&m_videoInfo)) {
-        auto caps = gst_sample_get_caps(m_sample.get());
-        updateVideoInfoFromCaps(caps);
-    }
+    if (!m_videoInfo)
+        m_videoInfo = VideoFrameGStreamer::infoFromCaps(GRefPtr(gst_sample_get_caps(m_sample.get())));
 
-    m_contentsBufferProxy->setDisplayBuffer(CoordinatedPlatformLayerBufferVideo::create(m_sample.get(), &m_videoInfo, m_dmabufFormat, m_videoDecoderPlatform, !m_isUsingFallbackVideoSink, m_textureMapperFlags));
+    m_contentsBufferProxy->setDisplayBuffer(CoordinatedPlatformLayerBufferVideo::create(m_sample.get(), &m_videoInfo->info, m_videoInfo->dmaBufFormat, m_videoDecoderPlatform, !m_isUsingFallbackVideoSink, m_textureMapperFlags));
 }
 #endif // USE(COORDINATED_GRAPHICS)
 
@@ -3902,7 +3874,7 @@ void MediaPlayerPrivateGStreamer::paint(GraphicsContext& context, const FloatRec
     if (!presentationSize)
         return;
 
-    auto frame = VideoFrameGStreamer::create(WTFMove(sample), IntSize(*presentationSize));
+    auto frame = VideoFrameGStreamer::create(WTFMove(sample), { *m_videoInfo }, IntSize(*presentationSize));
     frame->draw(context, rect, m_videoSourceOrientation, false);
 }
 

@@ -37,6 +37,7 @@
 #include "PlatformLayer.h"
 #include "PlatformMediaResourceLoader.h"
 #include "TrackPrivateBaseGStreamer.h"
+#include "VideoFrameGStreamer.h"
 #include <glib.h>
 #include <gst/gst.h>
 #include <gst/pbutils/install-plugins.h>
@@ -665,12 +666,7 @@ private:
 
     MediaTime m_estimatedVideoFrameDuration { MediaTime::zeroTime() };
 
-#if USE(COORDINATED_GRAPHICS)
-    void updateVideoInfoFromCaps(GstCaps*);
-
-    std::optional<DMABufFormat> m_dmabufFormat;
-    GstVideoInfo m_videoInfo;
-#endif
+    std::optional<VideoFrameGStreamer::Info> m_videoInfo;
 };
 
 } // namespace WebCore

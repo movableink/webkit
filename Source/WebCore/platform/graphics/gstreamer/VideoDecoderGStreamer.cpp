@@ -83,6 +83,7 @@ private:
     std::optional<uint64_t> m_duration;
     bool m_isClosed { false };
     GRefPtr<GstCaps> m_inputCaps;
+    std::optional<VideoFrameGStreamer::Info> m_videoInfo;
 };
 
 void GStreamerVideoDecoder::create(const String& codecName, const Config& config, CreateCallback&& callback, OutputCallback&& outputCallback)
@@ -240,8 +241,11 @@ GStreamerInternalVideoDecoder::GStreamerInternalVideoDecoder(const String& codec
         if (timestamp == -1)
             timestamp = m_timestamp;
 
+        if (!m_videoInfo)
+            m_videoInfo = VideoFrameGStreamer::infoFromCaps(GRefPtr(gst_sample_get_caps(outputSample.get())));
+
         GST_TRACE_OBJECT(m_harness->element(), "Handling decoded frame with PTS: %" GST_TIME_FORMAT " and duration: %" GST_TIME_FORMAT, GST_TIME_ARGS(timestamp), GST_TIME_ARGS(duration));
-        auto videoFrame = VideoFrameGStreamer::create(WTFMove(outputSample), IntSize(m_presentationSize), fromGstClockTime(timestamp));
+        auto videoFrame = VideoFrameGStreamer::create(WTFMove(outputSample), { *m_videoInfo }, IntSize(m_presentationSize), fromGstClockTime(timestamp));
         m_outputCallback(VideoDecoder::DecodedFrame { WTFMove(videoFrame), timestamp, duration });
     }, std::nullopt, WTFMove(allowedSinkCaps));
 

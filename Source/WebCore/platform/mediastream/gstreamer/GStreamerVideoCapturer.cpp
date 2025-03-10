@@ -72,7 +72,7 @@ void GStreamerVideoCapturer::setSinkVideoFrameCallback(SinkVideoFrameCallback&& 
             presentationTime = fromGstClockTime(GST_BUFFER_PTS(buffer));
 
         auto& size = capturer->size();
-        capturer->m_sinkVideoFrameCallback.second(VideoFrameGStreamer::create(WTFMove(sample), size, presentationTime, VideoFrameGStreamer::Rotation::None, false, WTFMove(metadata)));
+        capturer->m_sinkVideoFrameCallback.second(VideoFrameGStreamer::create(WTFMove(sample), std::nullopt, size, presentationTime, VideoFrameGStreamer::Rotation::None, false, WTFMove(metadata)));
         return GST_FLOW_OK;
     }), this);
 }
