@@ -2739,7 +2739,7 @@ void WKPageEvaluateJavaScriptInMainFrame(WKPageRef pageRef, WKStringRef scriptRe
         std::nullopt,
         WebCore::ForceUserGesture::Yes,
         RemoveTransientActivation::Yes
-    }, [context, callback] (auto&& result) {
+    }, !!callback, [context, callback] (auto&& result) {
         if (!callback)
             return;
         if (result)

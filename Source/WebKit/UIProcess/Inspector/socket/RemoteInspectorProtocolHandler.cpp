@@ -151,6 +151,7 @@ Ref<WebPageProxy> RemoteInspectorProtocolHandler::protectedPage() const
 
 void RemoteInspectorProtocolHandler::runScript(const String& script)
 {
+    constexpr bool wantsResult = true;
     protectedPage()->runJavaScriptInMainFrame(WebKit::RunJavaScriptParameters {
         script,
         JSC::SourceTaintedOrigin::Untainted,
@@ -159,7 +160,7 @@ void RemoteInspectorProtocolHandler::runScript(const String& script)
         std::nullopt,
         WebCore::ForceUserGesture::No,
         RemoveTransientActivation::Yes
-    }, [] (auto&& result) {
+    }, wantsResult, [] (auto&& result) {
         if (!result && result.error())
             LOG_ERROR("Exception running script \"%s\"", result.error()->message.utf8().data());
     });

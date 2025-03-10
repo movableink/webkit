@@ -1421,7 +1421,7 @@ static WKMediaPlaybackState toWKMediaPlaybackState(WebKit::MediaPlaybackState me
         WTFMove(argumentsMap),
         forceUserGesture ? WebCore::ForceUserGesture::Yes : WebCore::ForceUserGesture::No,
         removeTransientActivation
-    }, frameID, Ref { *world->_contentWorld }, [handler] (auto&& result) {
+    }, frameID, Ref { *world->_contentWorld }, !!handler, [handler] (auto&& result) {
         if (!handler)
             return;
 
