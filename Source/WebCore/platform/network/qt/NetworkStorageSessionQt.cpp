@@ -55,7 +55,7 @@ NetworkStorageSession::~NetworkStorageSession()
 {
 }
 
-void NetworkStorageSession::setCookiesFromDOM(const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, std::optional<FrameIdentifier> frameID, std::optional<PageIdentifier> pageID, ApplyTrackingPrevention, const String& value, ShouldRelaxThirdPartyCookieBlocking) const
+void NetworkStorageSession::setCookiesFromDOM(const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, std::optional<FrameIdentifier> frameID, std::optional<PageIdentifier> pageID, ApplyTrackingPrevention, RequiresScriptTelemetry requiresScriptTelemetry, const String& value, ShouldRelaxThirdPartyCookieBlocking) const
 {
     QNetworkCookieJar* jar = cookieJar();
     if (!jar)
@@ -125,7 +125,7 @@ void NetworkStorageSession::deleteCookie(const Cookie&, CompletionHandler<void()
     handler();
 }
 
-void NetworkStorageSession::deleteCookie(const URL& url, const String& cookie, CompletionHandler<void()>&& handler) const
+void NetworkStorageSession::deleteCookie(const URL&, const URL& url, const String& name, CompletionHandler<void()>&& handler) const
 {
     // FIXME: Implement for WebKit to use.
     handler();
