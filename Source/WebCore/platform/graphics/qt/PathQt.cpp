@@ -318,6 +318,11 @@ void PathQt::add(PathCloseSubpath)
     m_path.closeSubpath();
 }
 
+void PathQt::add(PathContinuousRoundedRect continuousRoundedRect)
+{
+    m_path.addRoundedRect(continuousRoundedRect.rect, continuousRoundedRect.cornerWidth, continuousRoundedRect.cornerHeight, Qt::AbsoluteSize);
+}
+
 static void addEllipticArc(QPainterPath &path, qreal xc, qreal yc, qreal radiusX, qreal radiusY,  float sar, float ear, RotationDirection rotationDirection)
 {
     //### HACK
