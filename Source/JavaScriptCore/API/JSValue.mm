@@ -845,6 +845,9 @@ private:
 
 inline id JSContainerConvertor::convert(JSValueRef value)
 {
+    if (!value)
+        return nil;
+
     auto iter = m_objectMap.find(value);
     if (iter != m_objectMap.end())
         return iter->value;

@@ -62,7 +62,11 @@ TEST(WebKit, EvaluateJavaScriptThatThrowsAnException)
 
 static void didCreateBlob(WKTypeRef result, WKErrorRef error, void* context)
 {
+#if PLATFORM(COCOA)
+    EXPECT_EQ(WKGetTypeID(result), WKDictionaryGetTypeID());
+#else
     EXPECT_NULL(result);
+#endif
     testDone = true;
 }
 

@@ -98,6 +98,7 @@ enum class SDKAlignedBehavior {
     SessionCleanupByDefault,
     SharedNetworkProcess,
     SiteSpecificQuirksAreEnabledByDefault,
+    SkipsSerializedScriptValueRoundtripOfJavaScriptEvaluationResults,
     SnapshotAfterScreenUpdates,
     SupportsDeviceOrientationAndMotionPermissionAPI,
     SupportsInitConstructors,
