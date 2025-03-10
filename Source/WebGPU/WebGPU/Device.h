@@ -194,9 +194,15 @@ public:
     id<MTLRenderPipelineState> indirectBufferClampPipeline(NSUInteger rasterSampleCount);
     id<MTLRenderPipelineState> icbCommandClampPipeline(MTLIndexType, NSUInteger rasterSampleCount);
     id<MTLFunction> icbCommandClampFunction(MTLIndexType);
-    id<MTLRenderPipelineState> copyIndexIndirectArgsPipeline(NSUInteger rasterSampleCount);
     id<MTLBuffer> safeCreateBuffer(NSUInteger length, MTLStorageMode, MTLCPUCacheMode = MTLCPUCacheModeDefaultCache, MTLHazardTrackingMode = MTLHazardTrackingModeDefault) const;
     id<MTLBuffer> safeCreateBuffer(NSUInteger) const;
+    template<typename T>
+    id<MTLBuffer> safeCreateBufferWithData(const T& data) const
+    {
+        id<MTLBuffer> buffer = [m_device newBufferWithBytes:static_cast<const void*>(&data) length:sizeof(data) options:MTLResourceStorageModeShared];
+        setOwnerWithIdentity(buffer);
+        return buffer;
+    }
     void loseTheDevice(WGPUDeviceLostReason);
     int bufferIndexForICBContainer() const;
     void setOwnerWithIdentity(id<MTLResource>) const;
@@ -288,9 +294,6 @@ private:
     id<MTLRenderPipelineState> m_icbCommandClampUshortPSO { nil };
     id<MTLRenderPipelineState> m_icbCommandClampUintPSOMS { nil };
     id<MTLRenderPipelineState> m_icbCommandClampUshortPSOMS { nil };
-
-    id<MTLRenderPipelineState> m_copyIndexedIndirectArgsPSO { nil };
-    id<MTLRenderPipelineState> m_copyIndexedIndirectArgsPSOMS { nil };
 
     const Ref<Adapter> m_adapter;
     const ThreadSafeWeakPtr<Instance> m_instance;

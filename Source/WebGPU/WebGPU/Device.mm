@@ -671,60 +671,6 @@ id<MTLComputePipelineState> Device::dispatchCallPipelineState(id<MTLFunction> fu
     return m_dispatchCallPipelineState;
 }
 
-id<MTLRenderPipelineState> Device::copyIndexIndirectArgsPipeline(NSUInteger rasterSampleCount)
-{
-    if (!m_device)
-        return nil;
-
-    id<MTLRenderPipelineState> result = rasterSampleCount > 1 ? m_copyIndexedIndirectArgsPSOMS : m_copyIndexedIndirectArgsPSO;
-    if (result)
-        return result;
-
-    static id<MTLFunction> function = nil;
-    NSError *error = nil;
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [&] {
-        MTLCompileOptions* options = [MTLCompileOptions new];
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        options.fastMathEnabled = YES;
-        ALLOW_DEPRECATED_DECLARATIONS_END
-        /* NOLINT */ id<MTLLibrary> library = [m_device newLibraryWithSource:@R"(
-    using namespace metal;
-    [[vertex]] void vsCopyIndexedIndirect(device MTLDrawIndexedPrimitivesIndirectArguments& indexedOutput [[buffer(0)]], constant const MTLDrawIndexedPrimitivesIndirectArguments& indirectArguments [[buffer(1)]], const constant uint* instanceCount [[buffer(2)]])
-    {
-        bool condition = indirectArguments.baseInstance + indirectArguments.instanceCount > instanceCount[0] || indirectArguments.baseInstance >= instanceCount[0];
-        indexedOutput.indexCount = metal::select(indirectArguments.indexCount, 0u, condition);
-        indexedOutput.instanceCount = metal::select(indirectArguments.instanceCount, 0u, condition);
-        indexedOutput.indexStart = indirectArguments.indexStart;
-        indexedOutput.baseVertex = indirectArguments.baseVertex;
-        indexedOutput.baseInstance = indirectArguments.baseInstance;
-    })" /* NOLINT */ options:options error:&error];
-        if (error)
-            WTFLogAlways("%@", error);
-
-        function = [library newFunctionWithName:@"vsCopyIndexedIndirect"];
-    });
-
-    RELEASE_ASSERT(function);
-    MTLRenderPipelineDescriptor* mtlRenderPipelineDescriptor = [MTLRenderPipelineDescriptor new];
-    mtlRenderPipelineDescriptor.vertexFunction = function;
-    mtlRenderPipelineDescriptor.rasterizationEnabled = false;
-    mtlRenderPipelineDescriptor.rasterSampleCount = rasterSampleCount;
-    mtlRenderPipelineDescriptor.fragmentFunction = nil;
-    mtlRenderPipelineDescriptor.inputPrimitiveTopology = MTLPrimitiveTopologyClassPoint;
-
-    if (rasterSampleCount > 1)
-        result = m_copyIndexedIndirectArgsPSOMS = [m_device newRenderPipelineStateWithDescriptor:mtlRenderPipelineDescriptor error:&error];
-    else
-        result = m_copyIndexedIndirectArgsPSO = [m_device newRenderPipelineStateWithDescriptor:mtlRenderPipelineDescriptor error:&error];
-
-    if (error) {
-        WTFLogAlways("%@", error);
-        return nil;
-    }
-    return result;
-}
-
 id<MTLRenderPipelineState> Device::indexBufferClampPipeline(MTLIndexType indexType, NSUInteger rasterSampleCount)
 {
     if (!m_device)

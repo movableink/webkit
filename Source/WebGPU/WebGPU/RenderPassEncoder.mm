@@ -699,12 +699,11 @@ std::pair<RenderPassEncoder::IndexCall, id<MTLBuffer>> RenderPassEncoder::clampI
     if (!minVertexCount || !minInstanceCount || indexBufferOffsetInBytes >= indexBuffer.length || -baseVertex > static_cast<int64_t>(minVertexCount))
         return std::make_pair(IndexCall::Skip, nil);
 
-    id<MTLBuffer> indexedIndirectBuffer = apiIndexBuffer->indirectIndexedBuffer();
     auto primitiveOffset = primitiveType == MTLPrimitiveTypeLineStrip || primitiveType == MTLPrimitiveTypeTriangleStrip ? 1u : 0u;
     auto effectiveMinVertexCount = minVertexCount == RenderBundleEncoder::invalidVertexInstanceCount ? (minVertexCount - primitiveOffset) : (baseVertex + minVertexCount);
     if (apiIndexBuffer->canSkipDrawIndexedValidation(firstIndex, indexCount, effectiveMinVertexCount, indexType, firstInstance)) {
         if (apiIndexBuffer->didReadOOB())
-            return std::make_pair(IndexCall::CachedIndirectDraw, indexedIndirectBuffer);
+            return std::make_pair(IndexCall::Skip, nil);
 
         apiIndexBuffer->skippedDrawIndexedValidation(encoder.protectedParentEncoder(), firstIndex, indexCount, effectiveMinVertexCount, instanceCount, indexType, firstInstance, baseVertex, minInstanceCount, primitiveOffset);
         return std::make_pair(IndexCall::Draw, nil);
@@ -715,22 +714,21 @@ std::pair<RenderPassEncoder::IndexCall, id<MTLBuffer>> RenderPassEncoder::clampI
     if (indexCountInBytes.hasOverflowed() || indexCountPlusOffsetInBytes.hasOverflowed() || indexCountPlusOffsetInBytes > indexBuffer.length)
         return std::make_pair(IndexCall::Skip, nil);
 
-    MTLDrawIndexedPrimitivesIndirectArguments indirectArguments {
-        .indexCount = indexCount,
-        .instanceCount = instanceCount,
-        .indexStart = firstIndex,
-        .baseVertex = baseVertex,
-        .baseInstance = firstInstance
+    auto baseInstancePlusInstanceCount = checkedSum<NSUInteger>(firstInstance, instanceCount);
+    bool failedCondition = baseInstancePlusInstanceCount.hasOverflowed() || baseInstancePlusInstanceCount.value() > minInstanceCount || firstInstance >= minInstanceCount;
+    WebKitMTLDrawIndexedPrimitivesIndirectArguments indirectArguments {
+        .args = MTLDrawIndexedPrimitivesIndirectArguments {
+            .indexCount = failedCondition ? 0u : indexCount,
+            .instanceCount = failedCondition ? 0u : instanceCount,
+            .indexStart = firstIndex,
+            .baseVertex = baseVertex,
+            .baseInstance = firstInstance
+        },
+        .lostOrOOBRead = 0u
     };
 
     id<MTLRenderCommandEncoder> renderCommandEncoder = encoder.renderCommandEncoder();
-    CHECKED_SET_PSO(renderCommandEncoder, device.copyIndexIndirectArgsPipeline(rasterSampleCount), std::make_pair(IndexCall::Skip, nil));
-    [renderCommandEncoder setVertexBuffer:indexedIndirectBuffer offset:0 atIndex:0];
-    [renderCommandEncoder setVertexBytes:&indirectArguments length:sizeof(indirectArguments) atIndex:1];
-    [renderCommandEncoder setVertexBytes:&minInstanceCount length:sizeof(minInstanceCount) atIndex:2];
-    [renderCommandEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:1];
-    [renderCommandEncoder memoryBarrierWithScope:MTLBarrierScopeBuffers afterStages:MTLRenderStageVertex beforeStages:MTLRenderStageVertex];
-
+    id<MTLBuffer> indexedIndirectBuffer = device.safeCreateBufferWithData(indirectArguments);
     CHECKED_SET_PSO(renderCommandEncoder, device.indexBufferClampPipeline(indexType, rasterSampleCount), std::make_pair(IndexCall::Skip, nil));
     [renderCommandEncoder setVertexBuffer:indexBuffer offset:indexBufferOffsetInBytes atIndex:0];
     [renderCommandEncoder setVertexBuffer:indexedIndirectBuffer offset:0 atIndex:1];

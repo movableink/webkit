@@ -177,10 +177,10 @@ Buffer::Buffer(id<MTLBuffer> buffer, uint64_t initialSize, WGPUBufferUsageFlags 
     , m_mappedAtCreation(m_state == State::MappedAtCreation)
 #endif
 {
-    if (m_usage & WGPUBufferUsage_Indirect)
+    if (m_usage & WGPUBufferUsage_Indirect) {
         m_indirectBuffer = device.safeCreateBuffer(sizeof(WebKitMTLDrawPrimitivesIndirectArguments), MTLStorageModeShared);
-    if (m_usage & (WGPUBufferUsage_Indirect | WGPUBufferUsage_Index))
         m_indirectIndexedBuffer = device.safeCreateBuffer(sizeof(WebKitMTLDrawIndexedPrimitivesIndirectArguments), MTLStorageModeShared);
+    }
 }
 
 Buffer::Buffer(Device& device)
