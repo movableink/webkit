@@ -57,7 +57,7 @@ public:
     String extraDefaultStyleSheet() override;
 
     bool supportsHover() const override;
-    bool supportsFocusRing(const RenderStyle&) const override;
+    bool supportsFocusRing(const RenderObject&, const RenderStyle&) const override;
 
     int baselinePosition(const RenderBox&) const override;
 
@@ -94,10 +94,10 @@ public:
     bool isControlStyled(const RenderStyle&, const RenderStyle&) const override;
 
 #if 0 //ENABLE(VIDEO)
-    virtual String extraMediaControlsStyleSheet();
+    virtual String extraMediaControlsStyleSheet(const HTMLMediaElement&);
 #endif
 #if ENABLE(VIDEO)
-    String mediaControlsStyleSheet() override;
+    Vector<String> mediaControlsStyleSheet(const HTMLMediaElement&) override;
     Vector<String, 2> mediaControlsScripts() override;
 #endif
 
@@ -122,7 +122,7 @@ protected:
 
     void adjustSliderThumbStyle(RenderStyle&, const Element*) const override;
 
-    bool paintSearchField(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintSearchField(const RenderObject&, const PaintInfo&, const FloatRect&) override;
     void adjustSearchFieldStyle(RenderStyle&, const Element*) const override;
 
     void adjustSearchFieldCancelButtonStyle(RenderStyle&, const Element*) const override;

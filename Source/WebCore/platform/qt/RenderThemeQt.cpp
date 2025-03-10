@@ -133,7 +133,7 @@ bool RenderThemeQt::supportsHover() const
     return true;
 }
 
-bool RenderThemeQt::supportsFocusRing(const RenderStyle& style) const
+bool RenderThemeQt::supportsFocusRing(const RenderObject&, const RenderStyle& style) const
 {
     switch (style.usedAppearance()) {
     case StyleAppearance::Checkbox:
@@ -385,8 +385,7 @@ int RenderThemeQt::sliderTickOffsetFromTrackCenter() const
 }
 #endif
 
-bool RenderThemeQt::paintSearchField(const RenderObject& o, const PaintInfo& pi,
-                                     const IntRect& r)
+bool RenderThemeQt::paintSearchField(const RenderObject& o, const PaintInfo& pi, const FloatRect& r)
 {
     return paintTextField(o, pi, r);
 }
@@ -510,14 +509,14 @@ bool RenderThemeQt::supportsFocus(StyleAppearance appearance) const
 }
 
 #if ENABLE(VIDEO)
-String RenderThemeQt::mediaControlsStyleSheet()
+Vector<String> RenderThemeQt::mediaControlsStyleSheet(const HTMLMediaElement&)
 {
 #if ENABLE(MODERN_MEDIA_CONTROLS)
     if (m_mediaControlsStyleSheet.isEmpty())
         m_mediaControlsStyleSheet = StringImpl::createWithoutCopying(ModernMediaControlsUserAgentStyleSheet, sizeof(ModernMediaControlsUserAgentStyleSheet));
-    return m_mediaControlsStyleSheet;
+    return { m_mediaControlsStyleSheet };
 #else
-    return emptyString();
+    return {};
 #endif
 }
 
