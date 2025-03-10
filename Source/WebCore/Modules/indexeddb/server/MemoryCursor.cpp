@@ -27,6 +27,7 @@
 #include "MemoryCursor.h"
 
 #include "IDBResourceIdentifier.h"
+#include "MemoryBackingStoreTransaction.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
 
