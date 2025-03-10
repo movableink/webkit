@@ -40,7 +40,7 @@
 OBJC_CLASS AVSampleBufferDisplayLayer;
 OBJC_CLASS WebAVSampleBufferStatusChangeListener;
 
-typedef struct __CVBuffer* CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer* CVPixelBufferRef;
 
 namespace WebCore {
 

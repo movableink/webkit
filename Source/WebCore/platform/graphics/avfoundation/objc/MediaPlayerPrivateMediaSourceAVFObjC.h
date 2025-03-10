@@ -48,7 +48,7 @@ OBJC_CLASS AVSampleBufferVideoRenderer;
 OBJC_PROTOCOL(WebSampleBufferVideoRendering);
 
 typedef struct OpaqueCMTimebase* CMTimebaseRef;
-typedef struct __CVBuffer *CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVPixelBufferRef;
 typedef struct __CVBuffer *CVOpenGLTextureRef;
 typedef struct OpaqueFigVideoTarget *FigVideoTargetRef;
 

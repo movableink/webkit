@@ -41,7 +41,7 @@ OBJC_PROTOCOL(WebSampleBufferVideoRendering);
 typedef struct opaqueCMBufferQueue *CMBufferQueueRef;
 typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
 typedef struct OpaqueCMTimebase* CMTimebaseRef;
-typedef struct __CVBuffer* CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer* CVPixelBufferRef;
 
 namespace WTF {
 class WorkQueue;

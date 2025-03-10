@@ -32,7 +32,7 @@
 #import <wtf/WeakHashSet.h>
 #import <wtf/WeakPtr.h>
 
-using CVPixelBufferRef = struct __CVBuffer*;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer* CVPixelBufferRef;
 
 struct WGPUExternalTextureImpl {
 };

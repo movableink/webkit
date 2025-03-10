@@ -56,7 +56,7 @@ OBJC_CLASS WebCoreAVFMovieObserver;
 OBJC_CLASS WebCoreAVFPullDelegate;
 
 typedef struct CGImage *CGImageRef;
-typedef struct __CVBuffer *CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVPixelBufferRef;
 typedef struct OpaqueFigVideoTarget *FigVideoTargetRef;
 typedef NSString *AVMediaCharacteristic;
 typedef double NSTimeInterval;

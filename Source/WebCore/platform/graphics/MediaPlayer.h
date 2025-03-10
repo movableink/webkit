@@ -72,7 +72,7 @@ template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::MediaPlayerF
 }
 
 #if USE(AVFOUNDATION)
-typedef struct __CVBuffer* CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer* CVPixelBufferRef;
 #endif
 
 namespace WTF {
