@@ -479,21 +479,35 @@ bool RenderBlock::isSelfCollapsingBlock() const
         || style().logicalMinHeight().isPositive())
         return false;
 
-    Length logicalHeightLength = style().logicalHeight();
-    bool hasAutoHeight = logicalHeightLength.isAuto();
-    if (logicalHeightLength.isPercentOrCalculated() && !document().inQuirksMode()) {
-        hasAutoHeight = true;
-        for (RenderBlock* cb = containingBlock(); cb && !is<RenderView>(*cb); cb = cb->containingBlock()) {
-            if (cb->style().logicalHeight().isFixed() || cb->isRenderTableCell())
-                hasAutoHeight = false;
+    auto heightIsZeroOrAuto = [&] {
+        auto logicalHeightLength = style().logicalHeight();
+        if (logicalHeightLength.isAuto())
+            return true;
+
+        if (logicalHeightLength.isFixed())
+            return logicalHeightLength.isZero();
+
+        if (logicalHeightLength.isPercentOrCalculated()) {
+            if (logicalHeightLength.isZero())
+                return true;
+            // While in quirks mode there's always a fixed height ancestor to resolve percent value against (ICB),
+            // in standards mode we can only use the containing block.
+            if (document().inQuirksMode())
+                return false;
+            CheckedPtr containingBlock = this->containingBlock();
+            if (!containingBlock) {
+                ASSERT_NOT_REACHED();
+                return false;
+            }
+            return is<RenderView>(*containingBlock) || !containingBlock->style().logicalHeight().isFixed();
         }
-    }
-
-    // If the height is 0 or auto, then whether or not we are a self-collapsing block depends
-    // on whether we have content that is all self-collapsing or not.
-    if (hasAutoHeight || ((logicalHeightLength.isFixed() || logicalHeightLength.isPercentOrCalculated()) && logicalHeightLength.isZero()))
+        return false;
+    };
+    if (heightIsZeroOrAuto()) {
+        // If the height is 0 or auto, then whether or not we are a self-collapsing block depends
+        // on whether we have content that is all self-collapsing or not.
         return !createsNewFormattingContext() && !childrenPreventSelfCollapsing();
-
+    }
 
     return false;
 }
