@@ -177,7 +177,7 @@
 #include "JSWeakObjectRefInlines.h"
 #include "JSWeakSetInlines.h"
 #include "JSWebAssembly.h"
-#include "JSWebAssemblyArray.h"
+#include "JSWebAssemblyArrayInlines.h"
 #include "JSWebAssemblyCompileError.h"
 #include "JSWebAssemblyException.h"
 #include "JSWebAssemblyGlobal.h"

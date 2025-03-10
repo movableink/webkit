@@ -39,7 +39,7 @@
 #include "CompilerTimingScope.h"
 #include "GPRInfo.h"
 #include "JSCast.h"
-#include "JSWebAssemblyArray.h"
+#include "JSWebAssemblyArrayInlines.h"
 #include "JSWebAssemblyException.h"
 #include "JSWebAssemblyStruct.h"
 #include "MacroAssembler.h"

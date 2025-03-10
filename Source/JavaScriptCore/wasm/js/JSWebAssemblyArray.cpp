@@ -32,6 +32,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #if ENABLE(WEBASSEMBLY)
 
 #include "JSCInlines.h"
+#include "JSWebAssemblyArrayInlines.h"
 #include "TypeError.h"
 #include "WasmFormat.h"
 #include "WasmTypeDefinition.h"

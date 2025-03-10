@@ -34,7 +34,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include "BytecodeStructs.h"
 #include "FrameTracers.h"
 #include "JITExceptions.h"
-#include "JSWebAssemblyArray.h"
+#include "JSWebAssemblyArrayInlines.h"
 #include "JSWebAssemblyException.h"
 #include "JSWebAssemblyInstance.h"
 #include "LLIntCommon.h"

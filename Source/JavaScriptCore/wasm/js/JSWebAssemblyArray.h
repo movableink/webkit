@@ -70,17 +70,7 @@ public:
     size_t size() const { return m_size; }
     size_t sizeInBytes() const { return size() * elementType().type.elementSize(); }
 
-    template<typename T>
-    std::span<T> span() LIFETIME_BOUND
-    {
-        ASSERT(sizeof(T) == elementType().type.elementSize());
-        uint8_t* data = this->data();
-        if constexpr (std::is_same_v<T, v128_t>)
-            data += isPreciseAllocation() ? PreciseAllocation::halfAlignment : 0;
-        else
-            ASSERT(!needsAlignmentCheck(elementType().type));
-        return { std::bit_cast<T*>(data), size() };
-    }
+    template<typename T> inline std::span<T> span() LIFETIME_BOUND;
 
     template<typename T>
     std::span<const T> span() const LIFETIME_BOUND { return const_cast<JSWebAssemblyArray*>(this)->span<T>(); }
@@ -90,11 +80,7 @@ public:
         return Wasm::isRefType(m_elementType.type.unpacked());
     }
 
-    std::span<uint64_t> refTypeSpan() LIFETIME_BOUND
-    {
-        ASSERT(elementsAreRefTypes());
-        return span<uint64_t>();
-    }
+    inline std::span<uint64_t> refTypeSpan() LIFETIME_BOUND;
 
     ALWAYS_INLINE auto visitSpan(auto functor)
     {
@@ -120,57 +106,11 @@ public:
         }
     }
 
-    ALWAYS_INLINE auto visitSpanNonVector(auto functor)
-    {
-        // Ideally this would have just been:
-        // return visitSpan([&][&]<typename T>(std::span<T> span) { RELEASE_ASSERT(!std::is_same<T, v128_t>::value); ... });
-        // but that causes weird compiler errors...
+    ALWAYS_INLINE auto visitSpanNonVector(auto functor);
 
-        if (m_elementType.type.is<Wasm::PackedType>()) {
-            switch (m_elementType.type.as<Wasm::PackedType>()) {
-            case Wasm::PackedType::I8:
-                return functor(span<uint8_t>());
-            case Wasm::PackedType::I16:
-                return functor(span<uint16_t>());
-            }
-        }
-
-        // m_element_type must be a type, so we can get its kind
-        ASSERT(m_elementType.type.is<Wasm::Type>());
-        switch (m_elementType.type.as<Wasm::Type>().kind) {
-        case Wasm::TypeKind::I32:
-        case Wasm::TypeKind::F32:
-            return functor(span<uint32_t>());
-        case Wasm::TypeKind::V128:
-            RELEASE_ASSERT_NOT_REACHED();
-        default:
-            return functor(span<uint64_t>());
-        }
-    }
-
-    uint64_t get(uint32_t index)
-    {
-        // V128 is not supported in LLInt.
-        return visitSpanNonVector([&](auto span) ALWAYS_INLINE_LAMBDA -> uint64_t {
-            return span[index];
-        });
-    }
-
-    void set(VM& vm, uint32_t index, uint64_t value)
-    {
-        visitSpanNonVector([&]<typename T>(std::span<T> span) ALWAYS_INLINE_LAMBDA {
-            span[index] = static_cast<T>(value);
-            if (elementsAreRefTypes())
-                vm.writeBarrier(this);
-        });
-    }
-
-    void set(VM&, uint32_t index, v128_t value)
-    {
-        ASSERT(m_elementType.type.is<Wasm::Type>());
-        ASSERT(m_elementType.type.as<Wasm::Type>().kind == Wasm::TypeKind::V128);
-        span<v128_t>()[index] = value;
-    }
+    inline uint64_t get(uint32_t index);
+    inline void set(VM&, uint32_t index, uint64_t value);
+    inline void set(VM&, uint32_t index, v128_t value);
 
     void fill(VM&, uint32_t, uint64_t, uint32_t);
     void fill(VM&, uint32_t, v128_t, uint32_t);
@@ -185,7 +125,7 @@ public:
 
 private:
     friend class LLIntOffsetsExtractor;
-    std::span<uint8_t> bytes() { return { isPreciseAllocation() ? data() + PreciseAllocation::halfAlignment : data(), sizeInBytes() }; }
+    inline std::span<uint8_t> bytes();
     uint8_t* data() { return reinterpret_cast<uint8_t*>(this) + offsetOfData(); }
     const uint8_t* data() const { return const_cast<JSWebAssemblyArray*>(this)->data(); }
 

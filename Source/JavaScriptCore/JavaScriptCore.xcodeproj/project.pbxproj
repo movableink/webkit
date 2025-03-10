@@ -898,6 +898,7 @@
 		278D26082A70CF21007F5BC3 /* CustomGetterSetterInlines.h in Headers */ = {isa = PBXBuildFile; fileRef = 278D26052A70CF20007F5BC3 /* CustomGetterSetterInlines.h */; };
 		278D26092A70CF21007F5BC3 /* StringObjectInlines.h in Headers */ = {isa = PBXBuildFile; fileRef = 278D26062A70CF21007F5BC3 /* StringObjectInlines.h */; };
 		27C241492A71F29000FCDA68 /* JSGlobalProxyInlines.h in Headers */ = {isa = PBXBuildFile; fileRef = 276B390A2A71D2B400252F4E /* JSGlobalProxyInlines.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		27FE2FF52D7E77EA0058B288 /* JSWebAssemblyArrayInlines.h in Headers */ = {isa = PBXBuildFile; fileRef = 27FE2FF42D7E77EA0058B288 /* JSWebAssemblyArrayInlines.h */; };
 		2A05ABD61961DF2400341750 /* JSPropertyNameEnumerator.h in Headers */ = {isa = PBXBuildFile; fileRef = 2A05ABD41961DF2400341750 /* JSPropertyNameEnumerator.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		2A111246192FCE79005EE18D /* CustomGetterSetter.h in Headers */ = {isa = PBXBuildFile; fileRef = 2A111244192FCE79005EE18D /* CustomGetterSetter.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		2A48D1911772365B00C65A5F /* APICallbackFunction.h in Headers */ = {isa = PBXBuildFile; fileRef = C211B574176A224D000E2A23 /* APICallbackFunction.h */; };
@@ -3965,6 +3966,7 @@
 		278D26042A70CF20007F5BC3 /* DOMAttributeGetterSetterInlines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DOMAttributeGetterSetterInlines.h; sourceTree = "<group>"; };
 		278D26052A70CF20007F5BC3 /* CustomGetterSetterInlines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CustomGetterSetterInlines.h; sourceTree = "<group>"; };
 		278D26062A70CF21007F5BC3 /* StringObjectInlines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StringObjectInlines.h; sourceTree = "<group>"; };
+		27FE2FF42D7E77EA0058B288 /* JSWebAssemblyArrayInlines.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = JSWebAssemblyArrayInlines.h; path = js/JSWebAssemblyArrayInlines.h; sourceTree = "<group>"; };
 		28806E21155E478A93FA7B02 /* MachineContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MachineContext.h; sourceTree = "<group>"; };
 		2A05ABD31961DF2400341750 /* JSPropertyNameEnumerator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSPropertyNameEnumerator.cpp; sourceTree = "<group>"; };
 		2A05ABD41961DF2400341750 /* JSPropertyNameEnumerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSPropertyNameEnumerator.h; sourceTree = "<group>"; };
@@ -10055,6 +10057,7 @@
 				ADD09AF31F62482E001313C2 /* JSWebAssembly.h */,
 				55F5DFAD28DA9A2000595620 /* JSWebAssemblyArray.cpp */,
 				55F5DFAE28DA9A2000595620 /* JSWebAssemblyArray.h */,
+				27FE2FF42D7E77EA0058B288 /* JSWebAssemblyArrayInlines.h */,
 				AD2FCBA61DB58DA400B3E736 /* JSWebAssemblyCompileError.cpp */,
 				AD2FCBA71DB58DA400B3E736 /* JSWebAssemblyCompileError.h */,
 				14D01BDC26DEEF3700CAE0D0 /* JSWebAssemblyException.cpp */,
@@ -11540,6 +11543,7 @@
 				7A9774A8206B82E4008D03D0 /* JSWeakValue.h in Headers */,
 				AD5C36EB1F75AD73000BCAAF /* JSWebAssembly.h in Headers */,
 				55F5DFB128DA9A2000595620 /* JSWebAssemblyArray.h in Headers */,
+				27FE2FF52D7E77EA0058B288 /* JSWebAssemblyArrayInlines.h in Headers */,
 				AD2FCBE31DB58DAD00B3E736 /* JSWebAssemblyCompileError.h in Headers */,
 				14D01BED26DEEF3800CAE0D0 /* JSWebAssemblyException.h in Headers */,
 				E3BF3C4D2390D1E8008BC752 /* JSWebAssemblyGlobal.h in Headers */,
