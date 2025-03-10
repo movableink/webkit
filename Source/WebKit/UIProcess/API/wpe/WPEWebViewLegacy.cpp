@@ -405,7 +405,9 @@ WebKit::WebPageProxy* ViewLegacy::platformWebPageProxyForGamepadInput()
 
 void ViewLegacy::callAfterNextPresentationUpdate(CompletionHandler<void()>&& callback)
 {
-    RELEASE_ASSERT(m_pageProxy->drawingArea());
+    if (!m_pageProxy->drawingArea())
+        return callback();
+
     downcast<DrawingAreaProxyCoordinatedGraphics>(*m_pageProxy->drawingArea()).dispatchAfterEnsuringDrawing(WTFMove(callback));
 }
 
