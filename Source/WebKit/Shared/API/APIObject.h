@@ -71,7 +71,6 @@ public:
         ResourceLoadInfo,
         SecurityOrigin,
         SessionState,
-        SerializedScriptValue,
         String,
         TargetedElementInfo,
         TargetedElementRequest,

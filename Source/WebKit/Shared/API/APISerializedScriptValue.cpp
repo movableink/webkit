@@ -97,6 +97,8 @@ private:
     MonotonicTime m_lastUseTime;
 };
 
+#if !PLATFORM(COCOA)
+
 static WKRetainPtr<WKTypeRef> valueToWKObject(JSContextRef context, JSValueRef value)
 {
     auto jsToWKString = [] (JSStringRef input) {
@@ -164,6 +166,8 @@ WKRetainPtr<WKTypeRef> SerializedScriptValue::deserializeWK(WebCore::SerializedS
 
     return valueToWKObject(context.get(), value);
 }
+
+#endif // !PLATFORM(COCOA)
 
 Vector<uint8_t> SerializedScriptValue::serializeCryptoKey(const WebCore::CryptoKey& key)
 {
