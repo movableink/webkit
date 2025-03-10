@@ -188,7 +188,13 @@ private:
 
         RetainPtr webHistory = adoptNS([PAL::allocSTWebHistoryInstance() initWithProfileIdentifier:profileIdentifier]);
 
-        [webHistory fetchAllHistoryWithCompletionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)](NSSet<NSURL *> *urls, NSError *error) mutable {
+        // STWebHistory.fetchAllHistoryWithCompletionHandler sometimes deallocates its block instead of calling it.
+        // FIXME: Remove this once rdar://145889845 is widely available.
+        auto completionHandlerWithFinalizer = CompletionHandlerWithFinalizer<void(HashSet<URL>&&)>(WTFMove(completionHandler), [] (Function<void(HashSet<URL>&&)>& completionHandler) {
+            completionHandler({ });
+        });
+
+        [webHistory fetchAllHistoryWithCompletionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandlerWithFinalizer)](NSSet<NSURL *> *urls, NSError *error) mutable {
             ensureOnMainRunLoop([completionHandler = WTFMove(completionHandler), urls = retainPtr(urls), error = retainPtr(error)] mutable {
                 if (error) {
                     completionHandler({ });

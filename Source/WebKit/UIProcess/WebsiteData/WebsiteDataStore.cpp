@@ -774,12 +774,8 @@ private:
     if (dataTypes.contains(WebsiteDataType::ScreenTime) && isPersistent()) {
         m_client->getScreenTimeURLs(configuration().identifier(), [callbackAggregator](HashSet<URL> urls) {
             WebsiteData websiteData;
-            Vector<WebCore::SecurityOriginData> origins;
-            for (auto url : urls)
-                origins.append(SecurityOriginData::fromURL(url));
-
-            websiteData.entries = WTF::map(origins, [](auto& origin) {
-                return WebsiteData::Entry { origin, WebsiteDataType::ScreenTime, 0 };
+            websiteData.entries = WTF::map(urls, [](auto& url) {
+                return WebsiteData::Entry { SecurityOriginData::fromURL(url), WebsiteDataType::ScreenTime, 0 };
             });
             callbackAggregator->addWebsiteData(WTFMove(websiteData));
         });
