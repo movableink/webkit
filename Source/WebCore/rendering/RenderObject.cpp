@@ -536,36 +536,43 @@ RenderBox* RenderObject::enclosingScrollableContainer() const
     return document().documentElement() ? document().documentElement()->renderBox() : nullptr;
 }
 
-static inline bool objectIsRelayoutBoundary(const RenderElement* object)
+static inline bool isLayoutBoundary(const RenderElement& renderer)
 {
     // FIXME: In future it may be possible to broaden these conditions in order to improve performance.
-    if (object->isRenderView())
+    if (renderer.isRenderView())
         return true;
 
-    if (auto* textControl = dynamicDowncast<RenderTextControl>(*object)) {
-        if (!textControl->isFlexItem() && !textControl->isGridItem() && object->style().fieldSizing() != FieldSizing::Content) {
+    auto& style = renderer.style();
+    if (CheckedPtr textControl = dynamicDowncast<RenderTextControl>(renderer)) {
+        if (!textControl->isFlexItem() && !textControl->isGridItem() && style.fieldSizing() != FieldSizing::Content) {
             // Flexing type of layout systems may compute different size than what input's preferred width is which won't happen unless they run their layout as well.
             return true;
         }
     }
 
-    if (object->shouldApplyLayoutContainment() && object->shouldApplySizeContainment())
+    if (renderer.shouldApplyLayoutContainment() && renderer.shouldApplySizeContainment())
         return true;
 
-    if (object->isRenderOrLegacyRenderSVGRoot())
+    if (renderer.isRenderOrLegacyRenderSVGRoot())
         return true;
 
-    if (!object->hasNonVisibleOverflow())
+    if (!renderer.hasNonVisibleOverflow()) {
+        // While createsNewFormattingContext (a few lines below) covers this case, overflow visible is a super common value so we should be able
+        // to bail out here fast.
+        return false;
+    }
+
+    if (style.width().isIntrinsicOrAuto() || style.height().isIntrinsicOrAuto() || style.height().isPercentOrCalculated() || style.width().isPercentOrCalculated())
         return false;
 
-    if (object->document().settings().layerBasedSVGEngineEnabled() && object->isSVGLayerAwareRenderer())
-        return false;
-
-    if (object->style().width().isIntrinsicOrAuto() || object->style().height().isIntrinsicOrAuto() || object->style().height().isPercentOrCalculated() || object->style().width().isPercentOrCalculated())
+    if (renderer.document().settings().layerBasedSVGEngineEnabled() && renderer.isSVGLayerAwareRenderer())
         return false;
 
     // Table parts can't be relayout roots since the table is responsible for layouting all the parts.
-    if (object->isTablePart())
+    if (renderer.isTablePart())
+        return false;
+
+    if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(renderer); !renderBlock->createsNewFormattingContext())
         return false;
 
     return true;
@@ -651,7 +658,7 @@ RenderElement* RenderObject::markContainingBlocksForLayout(RenderElement* layout
             // Having a valid layout root also mean we should not stop at layout boundaries.
             if (ancestor == layoutRoot)
                 return layoutRoot;
-        } else if (objectIsRelayoutBoundary(ancestor.get()))
+        } else if (isLayoutBoundary(*ancestor))
             return ancestor.get();
 
         hasOutOfFlowPosition = ancestor->isOutOfFlowPositioned();
