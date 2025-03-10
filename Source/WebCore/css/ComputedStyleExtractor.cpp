@@ -1359,11 +1359,9 @@ static Ref<CSSValueList> valueForScrollSnapType(const ScrollSnapType& type)
         createConvertingToCSSValueID(type.strictness));
 }
 
-static Ref<CSSValueList> valueForScrollSnapAlignment(const ScrollSnapAlign& alignment)
+static Ref<CSSValue> valueForScrollSnapAlignment(const ScrollSnapAlign& alignment)
 {
-    if (alignment.inlineAlign == alignment.blockAlign)
-        return CSSValueList::createSpaceSeparated(createConvertingToCSSValueID(alignment.blockAlign));
-    return CSSValueList::createSpaceSeparated(createConvertingToCSSValueID(alignment.blockAlign),
+    return CSSValuePair::create(createConvertingToCSSValueID(alignment.blockAlign),
         createConvertingToCSSValueID(alignment.inlineAlign));
 }
 

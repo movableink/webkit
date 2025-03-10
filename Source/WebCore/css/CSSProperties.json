@@ -9995,10 +9995,8 @@
             ],
             "codegen-properties": {
                 "style-builder-converter": "InitialLetter",
-                "parser-function": "consumeWebkitInitialLetter",
-                "parser-grammar-unused": "normal | <number [0,inf]>{1,2}",
-                "parser-grammar-comment": "Spec does not match our implementation. Spec is 'normal | [ <number [1,inf]> <integer [1,inf]> ] | [ <number [1,inf]> && [ drop | raise ]? ]'",
-                "parser-grammar-unused-reason": "Needs support for ordered groups, '&&' groups and additional range restrictions for number and integer."
+                "parser-grammar": "normal | <number [0,inf]>{1,2}@(type=CSSValuePair default=previous)",
+                "parser-grammar-comment": "Spec does not match our implementation. Spec is 'normal | [ <number [1,inf]> <integer [1,inf]> ] | [ <number [1,inf]> && [ drop | raise ]? ]'"
             },
             "status": {
                 "status": "experimental"
@@ -11519,9 +11517,7 @@
             ],
             "codegen-properties": {
                 "style-builder-converter": "ScrollSnapAlign",
-                "parser-function": "consumeScrollSnapAlign",
-                "parser-grammar-unused": "[ none | start | end | center ]{1,2}",
-                "parser-grammar-unused-reason": "Needs support for '{A,B}' multipliers."
+                "parser-grammar": "[ none | start | end | center ]{1,2}@(type=CSSValuePair default=previous)"
             },
             "specification": {
                 "category": "css-scroll-snap",

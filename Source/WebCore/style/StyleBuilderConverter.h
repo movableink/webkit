@@ -1166,8 +1166,8 @@ inline IntSize BuilderConverter::convertInitialLetter(BuilderState& builderState
         return { };
 
     return {
-        pair->first.resolveAsNumber<int>(conversionData),
-        pair->second.resolveAsNumber<int>(conversionData)
+        pair->second.resolveAsNumber<int>(conversionData),
+        pair->first.resolveAsNumber<int>(conversionData)
     };
 }
 
@@ -1273,17 +1273,14 @@ inline ScrollSnapType BuilderConverter::convertScrollSnapType(BuilderState& buil
 
 inline ScrollSnapAlign BuilderConverter::convertScrollSnapAlign(BuilderState& builderState, const CSSValue& value)
 {
-    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
-    if (!list)
+    auto pair = requiredPairDowncast<CSSPrimitiveValue>(builderState, value);
+    if (!pair)
         return { };
 
-    ScrollSnapAlign alignment;
-    alignment.blockAlign = fromCSSValue<ScrollSnapAxisAlignType>(list->item(0));
-    if (list->size() == 1)
-        alignment.inlineAlign = alignment.blockAlign;
-    else
-        alignment.inlineAlign = fromCSSValue<ScrollSnapAxisAlignType>(list->item(1));
-    return alignment;
+    return {
+        fromCSSValue<ScrollSnapAxisAlignType>(pair->first),
+        fromCSSValue<ScrollSnapAxisAlignType>(pair->second)
+    };
 }
 
 inline ScrollSnapStop BuilderConverter::convertScrollSnapStop(BuilderState&, const CSSValue& value)
