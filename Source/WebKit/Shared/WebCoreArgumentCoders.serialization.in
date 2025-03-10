@@ -5566,8 +5566,8 @@ header: <WebCore/ServiceWorkerRoute.h>
 [CustomHeader] struct WebCore::ServiceWorkerRouteCondition {
     std::optional<WebCore::ServiceWorkerRoutePattern> urlPattern;
     String requestMethod;
-    std::optional<WebCore::FetchRequestMode> requestMode;
-    std::optional<WebCore::FetchRequestDestination> requestDestination;
+    std::optional<WebCore::FetchOptionsMode> requestMode;
+    std::optional<WebCore::FetchOptionsDestination> requestDestination;
     std::optional<WebCore::RunningStatus> runningStatus;
 
     Vector<WebCore::ServiceWorkerRouteCondition> orConditions;

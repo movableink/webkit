@@ -115,3 +115,5 @@ class WebKit::NetworkResourceLoadParameters : WebKit::NetworkLoadParameters {
     bool linkPreconnectEarlyHintsEnabled;
     bool shouldRecordFrameLoadForStorageAccess;
 };
+
+using WebCore::FetchingWorkerIdentifier = std::variant<std::monostate, WebCore::SharedWorkerIdentifier, WebCore::ServiceWorkerIdentifier>;
