@@ -237,7 +237,8 @@ static void swizzledSetAnalysis(VKCImageAnalysisInteraction *, SEL, VKCImageAnal
 namespace TestWebKitAPI {
 
 // FIXME: Re-enable this test for iOS once webkit.org/b/248094 is resolved
-#if PLATFORM(IOS) || PLATFORM(VISION)
+// FIXME: Re-enable this test in Sonoma once webkit.org/b/289025 is resolved.
+#if PLATFORM(IOS) || PLATFORM(VISION) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED > 140000 && __MAC_OS_X_VERSION_MIN_REQUIRED < 150000)
 TEST(FullscreenVideoTextRecognition, DISABLED_TogglePlaybackInElementFullscreen)
 #else
 TEST(FullscreenVideoTextRecognition, TogglePlaybackInElementFullscreen)
