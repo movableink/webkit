@@ -270,8 +270,7 @@ void TZoneHeapManager::init()
     if constexpr (verbose)
         TZONE_LOG_DEBUG("using static seed\n");
 
-    const unsigned char defaultSeed[CC_SHA1_DIGEST_LENGTH] = { "DefaultSeed\x12\x34\x56\x78\x9a\xbc\xde\xf0" };
-    memcpy(m_tzoneKey.seed, defaultSeed, CC_SHA1_DIGEST_LENGTH);
+    alignas(8) unsigned char seed[CC_SHA1_DIGEST_LENGTH] = { "DefaultSeed\x12\x34\x56\x78\x9a\xbc\xde\xf0" };
 #endif // OS(DARWIN) => !OS(DARWIN)
 
     uint64_t* seedPtr = reinterpret_cast<uint64_t*>(seed);
