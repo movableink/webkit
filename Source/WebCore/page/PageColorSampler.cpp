@@ -291,13 +291,14 @@ Color PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteR
     if (!document)
         return { };
 
-    auto colorSpace = DestinationColorSpace::SRGB();
-    auto snapshot = snapshotFrameRect(*frame, snappedIntRect(absoluteRect), {
-        { SnapshotFlags::ExcludeSelectionHighlighting, SnapshotFlags::PaintEverythingExcludingSelection },
-        ImageBufferPixelFormat::BGRA8,
-        colorSpace
-    });
+    static constexpr OptionSet snapshotFlags {
+        SnapshotFlags::ExcludeSelectionHighlighting,
+        SnapshotFlags::PaintEverythingExcludingSelection,
+        SnapshotFlags::ExcludeReplacedContent,
+    };
 
+    auto colorSpace = DestinationColorSpace::SRGB();
+    auto snapshot = snapshotFrameRect(*frame, snappedIntRect(absoluteRect), { snapshotFlags, ImageBufferPixelFormat::BGRA8, colorSpace });
     if (!snapshot)
         return { };
 
@@ -305,7 +306,7 @@ Color PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteR
     if (!pixelBuffer)
         return { };
 
-    static constexpr auto sampleCount = 17;
+    static constexpr auto sampleCount = 29;
     static constexpr auto minimumSampleCountForPredominantColor = 0.5 * sampleCount;
     static constexpr auto bytesPerPixel = 4;
 
@@ -318,7 +319,7 @@ Color PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteR
     auto pixels = pixelBuffer->bytes();
     HashCountedSet<Color> colorDistribution;
     for (uint64_t i = 0; i < numberOfBytes; i += byteSamplingInterval) {
-        if (auto color = Color { SRGBA<uint8_t> { pixels[i + 2], pixels[i + 1], pixels[i], pixels[i + 3] } }; color.isValid())
+        if (auto color = Color { SRGBA<uint8_t> { pixels[i + 2], pixels[i + 1], pixels[i], pixels[i + 3] } }; color.isVisible())
             colorDistribution.add(WTFMove(color));
     }
 
