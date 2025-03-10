@@ -702,6 +702,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case LogShadowChickenPrologue:
     case LogShadowChickenTail:
     case NewTypedArray:
+    case NewTypedArrayBuffer:
     case Unreachable:
     case ClearCatchLocals:
     case CheckTierUpInLoop:

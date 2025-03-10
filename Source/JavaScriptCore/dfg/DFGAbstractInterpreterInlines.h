@@ -2270,6 +2270,19 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                 break;
             }
         }
+
+        if (node->isBinaryUseKind(DoubleRepUse)) {
+            auto isInt32ConvertedToDouble = [&](Edge& edge) {
+                if (edge->op() == DoubleConstant)
+                    return edge->constant()->value().isInt32AsAnyInt();
+                if (edge->op() == DoubleRep)
+                    return forNode(edge->child1()).isType(SpecInt32Only);
+                return false;
+            };
+
+            if (isInt32ConvertedToDouble(node->child1()) && isInt32ConvertedToDouble(node->child2()))
+                m_state.setShouldTryConstantFolding(true);
+        }
         
         if (node->op() == CompareEq) {
             SpeculatedType leftType = forNode(node->child1()).m_type;
@@ -3501,6 +3514,10 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         }
         break;
     }
+
+    case NewTypedArrayBuffer:
+        setForNode(node, node->structure());
+        break;
 
     case NewRegexp:
         setForNode(node, m_graph.globalObjectFor(node->origin.semantic)->regExpStructure());

@@ -85,6 +85,7 @@ inline CapabilityLevel canCompile(Node* node)
     case Spread:
     case NewArrayBuffer:
     case NewTypedArray:
+    case NewTypedArrayBuffer:
     case GetByOffset:
     case GetGetterSetterByOffset:
     case GetGetter:

@@ -1751,6 +1751,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         return;
 
     case NewTypedArray:
+    case NewTypedArrayBuffer:
         switch (node->child1().useKind()) {
         case Int32Use:
         case Int52RepUse:

@@ -1757,6 +1757,7 @@ public:
     void compileNewArrayWithSpecies(Node*);
     void compileNewArrayWithSizeAndStructure(Node*);
     void compileNewTypedArray(Node*);
+    void compileNewTypedArrayBuffer(Node*);
     void compileToThis(Node*);
     void compileOwnPropertyKeysVariant(Node*);
     void compileObjectAssign(Node*);

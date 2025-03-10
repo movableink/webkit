@@ -995,6 +995,7 @@ public:
 
     inline JSObject* arrayBufferPrototype(ArrayBufferSharingMode) const;
     inline Structure* arrayBufferStructure(ArrayBufferSharingMode) const;
+    inline Structure* arrayBufferStructureConcurrently(ArrayBufferSharingMode) const;
     template<ArrayBufferSharingMode sharingMode> Structure* arrayBufferStructureWithSharingMode() const { return arrayBufferStructure(sharingMode); }
     inline JSObject* arrayBufferConstructor(ArrayBufferSharingMode) const;
     inline GetterSetter* arrayBufferSpeciesGetterSetter(ArrayBufferSharingMode) const;

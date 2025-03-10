@@ -3196,7 +3196,12 @@ void SpeculativeJIT::compile(Node* node)
         compileNewTypedArray(node);
         break;
     }
-        
+
+    case NewTypedArrayBuffer: {
+        compileNewTypedArrayBuffer(node);
+        break;
+    }
+
     case NewRegexp: {
         compileNewRegexp(node);
         break;

@@ -424,6 +424,7 @@ bool doesGC(Graph& graph, Node* node)
     case NewAsyncFunction:
     case NewBoundFunction:
     case NewTypedArray:
+    case NewTypedArrayBuffer:
     case ThrowStaticError:
     case GetPropertyEnumerator:
     case EnumeratorInByVal:

@@ -133,9 +133,38 @@ private:
                 break;
             }
 
+            case CompareLess:
+            case CompareLessEq:
+            case CompareGreater:
+            case CompareGreaterEq:
             case CompareEq: {
                 // FIXME: We should add back the broken folding phase here for comparisions where we prove at least one side has type SpecOther.
                 // See: https://bugs.webkit.org/show_bug.cgi?id=174844
+                if (node->isBinaryUseKind(DoubleRepUse)) {
+                    auto isInt32ConvertedToDouble = [&](Edge& edge) {
+                        if (edge->op() == DoubleConstant)
+                            return edge->constant()->value().isInt32AsAnyInt();
+                        if (edge->op() == DoubleRep)
+                            return m_state.forNode(edge->child1()).isType(SpecInt32Only);
+                        return false;
+                    };
+
+                    auto convertToInt32 = [&](Edge& edge) -> Node* {
+                        if (edge->op() == DoubleConstant)
+                            return m_insertionSet.insertConstant(indexInBlock, node->origin, jsNumber(edge->constant()->value().asInt32AsAnyInt()));
+                        ASSERT(edge->op() == DoubleRep);
+                        return edge->child1().node();
+                    };
+
+                    if (isInt32ConvertedToDouble(node->child1()) && isInt32ConvertedToDouble(node->child2())) {
+                        m_interpreter.execute(indexInBlock); // Push CFA over this node after we get the state before.
+                        alreadyHandled = true; // Don't allow the default constant folder to do things to this.
+                        node->child1() = Edge(convertToInt32(node->child1()), Int32Use);
+                        node->child2() = Edge(convertToInt32(node->child2()), Int32Use);
+                        changed = true;
+                        break;
+                    }
+                }
                 break;
             }
 

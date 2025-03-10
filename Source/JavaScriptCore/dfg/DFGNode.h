@@ -2357,6 +2357,7 @@ public:
         case NewMap:
         case NewSet:
         case NewArrayWithSizeAndStructure:
+        case NewTypedArrayBuffer:
             return true;
         default:
             return false;
@@ -2925,6 +2926,11 @@ public:
     {
         return isInt32OrBooleanSpeculation(prediction());
     }
+
+    bool shouldSpeculateInt32OrOther()
+    {
+        return isInt32OrOtherSpeculation(prediction());
+    }
     
     bool shouldSpeculateInt32ForArithmetic()
     {
@@ -2974,7 +2980,12 @@ public:
         //
         return enableInt52() && isInt32OrInt52Speculation(prediction());
     }
-    
+
+    bool shouldSpeculateInt52OrOther()
+    {
+        return enableInt52() && isInt32OrInt52OrOtherSpeculation(prediction());
+    }
+
     bool shouldSpeculateDouble()
     {
         return isDoubleSpeculation(prediction());

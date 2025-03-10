@@ -444,6 +444,18 @@ inline Structure* JSGlobalObject::arrayBufferStructure(ArrayBufferSharingMode sh
     return nullptr;
 }
 
+inline Structure* JSGlobalObject::arrayBufferStructureConcurrently(ArrayBufferSharingMode sharingMode) const
+{
+    switch (sharingMode) {
+    case ArrayBufferSharingMode::Default:
+        return m_arrayBufferStructure.getConcurrently();
+    case ArrayBufferSharingMode::Shared:
+        return m_sharedArrayBufferStructure.getConcurrently();
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
+}
+
 inline JSObject* JSGlobalObject::arrayBufferConstructor(ArrayBufferSharingMode sharingMode) const
 {
     switch (sharingMode) {

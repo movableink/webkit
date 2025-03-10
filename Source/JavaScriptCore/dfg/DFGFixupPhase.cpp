@@ -1926,6 +1926,35 @@ private:
             break;
         }
 
+        case NewTypedArrayBuffer: {
+            watchHavingABadTime(node);
+            if (node->child1()->shouldSpeculateInt32()) {
+                fixEdge<Int32Use>(node->child1());
+                node->clearFlags(NodeMustGenerate);
+                break;
+            }
+            if (node->child1()->shouldSpeculateInt52()) {
+                fixEdge<Int52RepUse>(node->child1());
+                node->clearFlags(NodeMustGenerate);
+                break;
+            }
+
+            if (!m_graph.hasExitSite(node->origin.semantic, BadType)) {
+                if (node->child1()->shouldSpeculateInt32OrOther() && !node->child1()->shouldSpeculateOther()) {
+                    fixEdge<Int32Use>(node->child1());
+                    node->clearFlags(NodeMustGenerate);
+                    break;
+                }
+
+                if (node->child1()->shouldSpeculateInt52OrOther() && !node->child1()->shouldSpeculateOther()) {
+                    fixEdge<Int52RepUse>(node->child1());
+                    node->clearFlags(NodeMustGenerate);
+                    break;
+                }
+            }
+            break;
+        }
+
         case NewArrayWithSize: {
             watchHavingABadTime(node);
             fixEdge<Int32Use>(node->child1());

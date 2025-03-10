@@ -1240,6 +1240,9 @@ private:
         case NewTypedArray:
             compileNewTypedArray();
             break;
+        case NewTypedArrayBuffer:
+            compileNewTypedArrayBuffer();
+            break;
         case GetTypedArrayByteOffset:
             compileGetTypedArrayByteOffset();
             break;
@@ -9581,6 +9584,34 @@ IGNORE_CLANG_WARNINGS_END
             LValue argument = lowJSValue(m_node->child1());
             LValue result = vmCall(pointerType(), operationNewTypedArrayWithOneArgumentForType(typedArrayType), weakPointer(globalObject), argument);
             setJSValue(result);
+            return;
+        }
+
+        default:
+            DFG_CRASH(m_graph, m_node, "Bad use kind");
+            return;
+        }
+    }
+
+    void compileNewTypedArrayBuffer()
+    {
+        JSGlobalObject* globalObject = m_graph.globalObjectFor(m_origin.semantic);
+        switch (m_node->child1().useKind()) {
+        case Int32Use: {
+            LValue size = m_out.signExt32To64(lowInt32(m_node->child1()));
+            setJSValue(vmCall(pointerType(), operationNewTypedArrayBufferWithSize, weakPointer(globalObject), weakStructure(m_node->structure()), size));
+            return;
+        }
+
+        case Int52RepUse: {
+            LValue size = lowStrictInt52(m_node->child1());
+            setJSValue(vmCall(pointerType(), operationNewTypedArrayBufferWithSize, weakPointer(globalObject), weakStructure(m_node->structure()), size));
+            return;
+        }
+
+        case UntypedUse: {
+            LValue argument = lowJSValue(m_node->child1());
+            setJSValue(vmCall(pointerType(), operationNewTypedArrayBuffer, weakPointer(globalObject), weakStructure(m_node->structure()), argument));
             return;
         }
 

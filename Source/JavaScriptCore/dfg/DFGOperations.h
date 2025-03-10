@@ -165,6 +165,8 @@ JSC_DECLARE_JIT_OPERATION(operationNewBigInt64ArrayWithSize, char*, (JSGlobalObj
 JSC_DECLARE_JIT_OPERATION(operationNewBigInt64ArrayWithOneArgument, char*, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationNewBigUint64ArrayWithSize, char*, (JSGlobalObject*, Structure*, intptr_t, char*));
 JSC_DECLARE_JIT_OPERATION(operationNewBigUint64ArrayWithOneArgument, char*, (JSGlobalObject*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationNewTypedArrayBuffer, JSObject*, (JSGlobalObject*, Structure*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationNewTypedArrayBufferWithSize, JSObject*, (JSGlobalObject*, Structure*, intptr_t));
 JSC_DECLARE_JIT_OPERATION(operationNewArrayIterator, JSCell*, (VM*, Structure*));
 JSC_DECLARE_JIT_OPERATION(operationNewMapIterator, JSCell*, (VM*, Structure*));
 JSC_DECLARE_JIT_OPERATION(operationNewSetIterator, JSCell*, (VM*, Structure*));

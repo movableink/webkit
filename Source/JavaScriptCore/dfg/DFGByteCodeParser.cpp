@@ -61,6 +61,7 @@
 #include "InByStatus.h"
 #include "InlineCacheCompiler.h"
 #include "InstanceOfStatus.h"
+#include "JSArrayBufferConstructor.h"
 #include "JSArrayIterator.h"
 #include "JSBoundFunction.h"
 #include "JSCInlines.h"
@@ -5037,6 +5038,23 @@ bool ByteCodeParser::handleConstantFunction(
         if (argumentCountIncludingThis <= 1 && structure) {
             insertChecks();
             Node* resultNode = addToGraph(NewSet, OpInfo(m_graph.registerStructure(structure)));
+            set(result, resultNode);
+            return true;
+        }
+    }
+
+    if ((function->classInfo() == JSArrayBufferConstructor::info() || function->classInfo() == JSSharedArrayBufferConstructor::info()) && kind == CodeForConstruct) {
+        Node* newTargetNode = get(virtualRegisterForArgumentIncludingThis(0, registerOffset));
+        // We cannot handle the case where new.target != callee (i.e. a construct from a super call) because we
+        // don't know what the prototype of the constructed object will be.
+        // FIXME: If we have inlined super calls up to the call site, however, we should be able to figure out the structure. https://bugs.webkit.org/show_bug.cgi?id=152700
+        if (newTargetNode != callTargetNode)
+            return false;
+
+        auto* structure = function->globalObject()->arrayBufferStructureConcurrently(function->classInfo() == JSArrayBufferConstructor::info() ? ArrayBufferSharingMode::Default : ArrayBufferSharingMode::Shared);
+        if (argumentCountIncludingThis == 2 && structure) {
+            insertChecks();
+            Node* resultNode = addToGraph(NewTypedArrayBuffer, OpInfo(m_graph.registerStructure(structure)), get(virtualRegisterForArgumentIncludingThis(1, registerOffset)));
             set(result, resultNode);
             return true;
         }

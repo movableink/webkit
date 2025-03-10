@@ -14516,6 +14516,71 @@ void SpeculativeJIT::compileNewTypedArray(Node* node)
     }
 }
 
+void SpeculativeJIT::compileNewTypedArrayBuffer(Node* node)
+{
+    switch (node->child1().useKind()) {
+    case Int32Use: {
+#if USE(LARGE_TYPED_ARRAYS)
+        // The operations we call on the slow path expect a intptr_t, so int64_t on 64 bit platforms
+        SpeculateInt32Operand size(this, node->child1());
+        GPRTemporary scratch(this);
+        GPRReg sizeGPR = size.gpr();
+        GPRReg scratchGPR = scratch.gpr();
+        signExtend32ToPtr(sizeGPR, scratchGPR);
+
+        flushRegisters();
+
+        GPRFlushedCallResult result(this);
+        GPRReg resultGPR = result.gpr();
+        callOperation(operationNewTypedArrayBufferWithSize, resultGPR, LinkableConstant::globalObject(*this, node), TrustedImmPtr(node->structure()), scratchGPR);
+        cellResult(resultGPR, node);
+#else
+        SpeculateInt32Operand size(this, node->child1());
+        GPRReg sizeGPR = size.gpr();
+
+        flushRegisters();
+
+        GPRFlushedCallResult result(this);
+        GPRReg resultGPR = result.gpr();
+        callOperation(operationNewTypedArrayBufferWithSize, resultGPR, LinkableConstant::globalObject(*this, node), TrustedImmPtr(node->structure()), sizeGPR);
+        cellResult(resultGPR, node);
+#endif
+        break;
+    }
+
+#if USE(LARGE_TYPED_ARRAYS)
+    case Int52RepUse: {
+        SpeculateStrictInt52Operand size(this, node->child1());
+        GPRReg sizeGPR = size.gpr();
+
+        flushRegisters();
+
+        GPRFlushedCallResult result(this);
+        GPRReg resultGPR = result.gpr();
+        callOperation(operationNewTypedArrayBufferWithSize, resultGPR, LinkableConstant::globalObject(*this, node), TrustedImmPtr(node->structure()), sizeGPR);
+        cellResult(resultGPR, node);
+        break;
+    }
+#endif
+    case UntypedUse: {
+        JSValueOperand argument(this, node->child1());
+        JSValueRegs argumentRegs = argument.jsValueRegs();
+
+        flushRegisters();
+
+        GPRFlushedCallResult result(this);
+        GPRReg resultGPR = result.gpr();
+
+        callOperation(operationNewTypedArrayBuffer, resultGPR, LinkableConstant::globalObject(*this, node), TrustedImmPtr(node->structure()), argumentRegs);
+        cellResult(resultGPR, node);
+        break;
+    }
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
+    }
+}
+
 void SpeculativeJIT::compileToThis(Node* node)
 {
     ASSERT(node->child1().useKind() == UntypedUse);

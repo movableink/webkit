@@ -405,6 +405,7 @@ namespace JSC { namespace DFG {
     macro(NewArrayBuffer, NodeResultJS) \
     macro(NewInternalFieldObject, NodeResultJS) \
     macro(NewTypedArray, NodeResultJS | NodeMustGenerate) \
+    macro(NewTypedArrayBuffer, NodeResultJS | NodeMustGenerate) \
     macro(NewRegexp, NodeResultJS) \
     macro(NewSymbol, NodeResultJS | NodeMustGenerate) \
     macro(NewStringObject, NodeResultJS) \

@@ -1342,6 +1342,11 @@ private:
             setPrediction(speculationFromTypedArrayType(m_currentNode->typedArrayType()));
             break;
         }
+
+        case NewTypedArrayBuffer: {
+            setPrediction(SpecObjectOther);
+            break;
+        }
             
         case NewRegexp: {
             setPrediction(SpecRegExpObject);

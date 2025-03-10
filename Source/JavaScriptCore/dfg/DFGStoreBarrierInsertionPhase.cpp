@@ -386,6 +386,7 @@ private:
             case NewArrayBuffer:
             case NewInternalFieldObject:
             case NewTypedArray:
+            case NewTypedArrayBuffer:
             case NewRegexp:
             case NewStringObject:
             case NewMap:
