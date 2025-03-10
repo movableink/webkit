@@ -209,12 +209,12 @@ void ImageBufferQtBackend::platformTransformColorSpace(const std::array<uint8_t,
 
 void ImageBufferQtBackend::getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination)
 {
-    ImageBufferBackend::getPixelBuffer(srcRect, m_nativeImage->bits(), destination);
+    ImageBufferBackend::getPixelBuffer(srcRect, std::span<const uint8_t>(m_nativeImage->bits(), m_nativeImage->sizeInBytes()), destination);
 }
 
 void ImageBufferQtBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
-    ImageBufferBackend::putPixelBuffer(pixelBuffer, srcRect, destPoint, destFormat, const_cast<uint8_t *>(reinterpret_cast<const uint8_t *>(m_nativeImage->bits())));
+    ImageBufferBackend::putPixelBuffer(pixelBuffer, srcRect, destPoint, destFormat, std::span<uint8_t>(m_nativeImage->bits(), m_nativeImage->sizeInBytes()));
 }
 
 unsigned ImageBufferQtBackend::bytesPerRow() const
