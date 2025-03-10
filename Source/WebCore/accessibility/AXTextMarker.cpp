@@ -30,6 +30,7 @@
 #include "AXObjectCache.h"
 #include "AXTreeStore.h"
 #include "HTMLInputElement.h"
+#include "Logging.h"
 #include "RenderObject.h"
 #include "TextBoundaries.h"
 #include "TextIterator.h"
