@@ -100,8 +100,8 @@ void MicrotaskQueue::runJSMicrotask(JSC::JSGlobalObject* globalObject, JSC::VM& 
 
     NakedPtr<JSC::Exception> returnedException = nullptr;
     if (LIKELY(!vm.hasPendingTerminationException())) {
-        JSExecState::profiledCall(lexicalGlobalObject, JSC::ProfilingReason::Microtask, job, callData, JSC::jsUndefined(), JSC::ArgList { std::bit_cast<JSC::EncodedJSValue*>(task.arguments().data()), count }, returnedException);
-        if (returnedException)
+        JSC::profiledCall(lexicalGlobalObject, JSC::ProfilingReason::Microtask, job, callData, JSC::jsUndefined(), JSC::ArgList { std::bit_cast<JSC::EncodedJSValue*>(task.arguments().data()), count }, returnedException);
+        if (UNLIKELY(returnedException))
             reportException(lexicalGlobalObject, returnedException);
         scope.clearExceptionExceptTermination();
     }
