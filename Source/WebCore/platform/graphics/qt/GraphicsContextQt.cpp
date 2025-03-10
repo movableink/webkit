@@ -1203,27 +1203,27 @@ void GraphicsContextQt::drawLineForText(const FloatRect& rect, bool printing, bo
 }
 
 // NOTE: this code is based on GraphicsContextCG implementation
-void GraphicsContextQt::drawLinesForText(const FloatPoint& origin, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle strokeStyle)
+void GraphicsContextQt::drawLinesForText(const FloatPoint& origin, float thickness, std::span<const FloatSegment> lineSegments, bool isPrinting, bool doubleLines, StrokeStyle strokeStyle)
 {
-    if (widths.size() <= 0)
+    if (lineSegments.size() <= 0)
         return;
 
     Color localStrokeColor(strokeColor());
 
-    FloatRect bounds = computeLineBoundsAndAntialiasingModeForText(FloatRect(origin, FloatSize(widths.last(), thickness)), printing, localStrokeColor);
+    FloatRect bounds = computeLineBoundsAndAntialiasingModeForText(FloatRect(origin, FloatSize(lineSegments.back().length(), thickness)), isPrinting, localStrokeColor);
     bool fillColorIsNotEqualToStrokeColor = fillColor() != localStrokeColor;
 
     // FIXME: drawRects() is significantly slower than drawLine() for thin lines (<= 1px)
     Vector<QRectF, 4> dashBounds;
-    ASSERT(!(widths.size() % 2));
+    ASSERT(!(lineSegments.size() % 2));
     dashBounds.reserveInitialCapacity(dashBounds.size() / 2);
-    for (size_t i = 0; i < widths.size(); i += 2)
-        dashBounds.append(QRectF(bounds.x() + widths[i], bounds.y(), widths[i+1] - widths[i], bounds.height()));
+    for (size_t i = 0; i < lineSegments.size(); i += 2)
+        dashBounds.append(QRectF(bounds.x() + lineSegments[i].length(), bounds.y(), lineSegments[i + 1].length() - lineSegments[i].length(), bounds.height()));
 
     if (doubleLines) {
         // The space between double underlines is equal to the height of the underline
-        for (size_t i = 0; i < widths.size(); i += 2)
-            dashBounds.append(QRectF(bounds.x() + widths[i], bounds.y() + 2 * bounds.height(), widths[i+1] - widths[i], bounds.height()));
+        for (size_t i = 0; i < lineSegments.size(); i += 2)
+            dashBounds.append(QRectF(bounds.x() + lineSegments[i].length(), bounds.y() + 2 * bounds.height(), lineSegments[i + 1].length() - lineSegments[i].length(), bounds.height()));
     }
 
     QPainter* p = m_data->p();

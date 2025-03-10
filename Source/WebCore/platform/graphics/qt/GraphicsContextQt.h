@@ -123,7 +123,7 @@ public:
 
     void drawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint&, FontSmoothingMode) final;
 
-    void drawLinesForText(const FloatPoint&, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle) final;
+    void drawLinesForText(const FloatPoint&, float thickness, std::span<const FloatSegment> lineSegments, bool isPrinting, bool doubleLines, StrokeStyle) final;
     void drawLineForText(const FloatRect&, bool printing, bool doubleLines = false, StrokeStyle = StrokeStyle::SolidStroke);
     void drawDotsForDocumentMarker(const FloatRect&, DocumentMarkerLineStyle) final;
 
