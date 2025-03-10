@@ -147,12 +147,12 @@ public:
     {
         auto encoderFactory = adoptGRef(gst_element_factory_find(name));
         if (!encoderFactory) {
-            GST_WARNING("Encoder %s not found, will not be used", name.characters());
+            GST_DEBUG("Encoder %s not found, will not be used", name.characters());
             return;
         }
 
         if (gst_plugin_feature_get_rank(GST_PLUGIN_FEATURE_CAST(encoderFactory.get())) < GST_RANK_MARGINAL) {
-            GST_WARNING("Encoder %s rank is below MARGINAL, will not be used.", name.characters());
+            GST_DEBUG("Encoder %s rank is below MARGINAL, will not be used.", name.characters());
             return;
         }
 
