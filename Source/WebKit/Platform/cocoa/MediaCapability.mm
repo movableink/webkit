@@ -31,6 +31,7 @@
 #import "XPCUtilities.h"
 #import <BrowserEngineKit/BECapability.h>
 #import <WebCore/SecurityOrigin.h>
+#import <wtf/darwin/XPCExtras.h>
 #import <wtf/text/WTFString.h>
 
 namespace WebKit {
@@ -75,7 +76,7 @@ String MediaCapability::environmentIdentifier() const
     xpc_object_t xpcObject = [m_mediaEnvironment createXPCRepresentation];
     if (!xpcObject)
         return emptyString();
-    return xpc_dictionary_get_wtfstring(xpcObject, "identifier"_s);
+    return xpcDictionaryGetString(xpcObject, "identifier"_s);
 #endif
 
     return { };

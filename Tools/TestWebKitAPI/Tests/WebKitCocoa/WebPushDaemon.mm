@@ -62,7 +62,7 @@
 #import <wtf/UUID.h>
 #import <wtf/UniqueRef.h>
 #import <wtf/cocoa/SpanCocoa.h>
-#import <wtf/spi/darwin/XPCSPI.h>
+#import <wtf/darwin/XPCExtras.h>
 #import <wtf/text/Base64.h>
 #import <wtf/text/MakeString.h>
 
@@ -292,7 +292,7 @@ bool WebPushXPCConnectionMessageSender::performSendWithAsyncReplyWithoutUsingIPC
             return completionHandler(nullptr);
         }
 
-        auto data = xpc_dictionary_get_data_span(reply, WebKit::WebPushD::protocolEncodedMessageKey);
+        auto data = xpcDictionaryGetData(reply, WebKit::WebPushD::protocolEncodedMessageKey);
         auto decoder = IPC::Decoder::create(data, { });
         ASSERT(decoder);
 

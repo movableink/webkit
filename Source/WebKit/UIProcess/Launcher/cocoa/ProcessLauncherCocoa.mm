@@ -48,8 +48,8 @@
 #import <wtf/SoftLinking.h>
 #import <wtf/Threading.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#import <wtf/darwin/XPCExtras.h>
 #import <wtf/spi/cf/CFBundleSPI.h>
-#import <wtf/spi/darwin/XPCSPI.h>
 #import <wtf/text/CString.h>
 #import <wtf/text/WTFString.h>
 
@@ -450,7 +450,7 @@ void ProcessLauncher::finishLaunchingProcess(ASCIILiteral name)
 #endif
 
         if (event)
-            LOG_ERROR("Error while launching %s: %s", logName.data(), xpc_dictionary_get_wtfstring(event, xpcErrorDescriptionKey).utf8().data());
+            LOG_ERROR("Error while launching %s: %s", logName.data(), xpcDictionaryGetString(event, xpcErrorDescriptionKey).utf8().data());
         else
             LOG_ERROR("Error while launching %s: No xpc_object_t event available.", logName.data());
 
@@ -509,7 +509,7 @@ void ProcessLauncher::finishLaunchingProcess(ASCIILiteral name)
         // launching and we already took care of cleaning things up.
         if (isLaunching() && xpc_get_type(reply) != XPC_TYPE_ERROR) {
             ASSERT(xpc_get_type(reply) == XPC_TYPE_DICTIONARY);
-            ASSERT(xpc_dictionary_get_wtfstring(reply, "message-name"_s) == "process-finished-launching"_s);
+            ASSERT(xpcDictionaryGetString(reply, "message-name"_s) == "process-finished-launching"_s);
 
 #if ASSERT_ENABLED
             mach_port_urefs_t sendRightCount = 0;

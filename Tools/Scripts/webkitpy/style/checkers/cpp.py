@@ -3561,15 +3561,15 @@ def check_safer_cpp(clean_lines, line_number, error):
 
     uses_xpc_dictionary_get_data = search(r'xpc_dictionary_get_data\(', line)
     if uses_xpc_dictionary_get_data:
-        error(line_number, 'safercpp/xpc_dictionary_get_data', 4, "Use xpc_dictionary_get_data_span() instead of xpc_dictionary_get_data().")
+        error(line_number, 'safercpp/xpc_dictionary_get_data', 4, "Use xpcDictionaryGetData() instead of xpc_dictionary_get_data().")
 
     uses_xpc_dictionary_get_string = search(r'xpc_dictionary_get_string\(', line)
     if uses_xpc_dictionary_get_string:
-        error(line_number, 'safercpp/xpc_dictionary_get_string', 4, "Use xpc_dictionary_get_wtfstring() instead of xpc_dictionary_get_string().")
+        error(line_number, 'safercpp/xpc_dictionary_get_string', 4, "Use xpcDictionaryGetString() instead of xpc_dictionary_get_string().")
 
     uses_xpc_string_get_string_ptr = search(r'xpc_string_get_string_ptr\(', line)
     if uses_xpc_string_get_string_ptr:
-        error(line_number, 'safercpp/xpc_string_get_string_ptr', 4, "Use xpc_string_get_wtfstring() instead of xpc_string_get_string_ptr().")
+        error(line_number, 'safercpp/xpc_string_get_string_ptr', 4, "Use xpcStringGetString() instead of xpc_string_get_string_ptr().")
 
 
 def check_style(clean_lines, line_number, file_extension, class_state, file_state, enum_state, error):

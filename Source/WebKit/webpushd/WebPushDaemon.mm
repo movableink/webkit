@@ -56,7 +56,7 @@
 #import <wtf/URL.h>
 #import <wtf/WorkQueue.h>
 #import <wtf/cocoa/SpanCocoa.h>
-#import <wtf/spi/darwin/XPCSPI.h>
+#import <wtf/darwin/XPCExtras.h>
 #import <wtf/text/MakeString.h>
 
 #if HAVE(MOBILE_KEY_BAG)
@@ -306,7 +306,7 @@ void WebPushDaemon::connectionEventHandler(xpc_object_t request)
         return;
     }
 
-    auto data = xpc_dictionary_get_data_span(request, protocolEncodedMessageKey);
+    auto data = xpcDictionaryGetData(request, protocolEncodedMessageKey);
     if (!data.data()) {
         RELEASE_LOG_ERROR(Push, "WebPushDaemon::connectionEventHandler - No encoded message data in xpc message");
         tryCloseRequestConnection(request);

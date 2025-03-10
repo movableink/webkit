@@ -78,6 +78,7 @@ list(APPEND WTF_PUBLIC_HEADERS
 
     darwin/OSLogPrintStream.h
     darwin/WeakLinking.h
+    darwin/XPCExtras.h
 
     spi/cf/CFBundleSPI.h
     spi/cf/CFStringSPI.h
