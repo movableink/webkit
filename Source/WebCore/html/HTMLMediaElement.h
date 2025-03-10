@@ -122,7 +122,10 @@ class VideoTrackList;
 class VideoTrackPrivate;
 class WebKitMediaKeys;
 
+enum class AudioSessionCategory : uint8_t;
+enum class AudioSessionMode : uint8_t;
 enum class DynamicRangeMode : uint8_t;
+enum class RouteSharingPolicy : uint8_t;
 
 template<typename> class DOMPromiseDeferred;
 template<typename, typename> class PODInterval;
@@ -155,6 +158,14 @@ using MediaProvider = std::optional < std::variant <
     RefPtr<MediaSourceHandle>,
 #endif
     RefPtr<Blob>>>;
+
+class HTMLMediaElementClient
+    : public AbstractRefCountedAndCanMakeWeakPtr<HTMLMediaElementClient> {
+public:
+    virtual ~HTMLMediaElementClient() = default;
+
+    virtual void audioSessionCategoryChanged(AudioSessionCategory, AudioSessionMode, RouteSharingPolicy) { }
+};
 
 class HTMLMediaElement
     : public HTMLElement
@@ -703,6 +714,11 @@ public:
 
     void mediaSourceWasDetached();
     WEBCORE_EXPORT void setFullscreenMode(VideoFullscreenMode);
+
+    void addClient(HTMLMediaElementClient&);
+    void removeClient(const HTMLMediaElementClient&);
+
+    void audioSessionCategoryChanged(AudioSessionCategory, AudioSessionMode, RouteSharingPolicy);
 
 protected:
     HTMLMediaElement(const QualifiedName&, Document&, bool createdByParser);
@@ -1446,6 +1462,8 @@ private:
 
     bool m_ignoreFullscreenPermissionsPolicy { false };
     SoundStageSize m_soundStageSize { SoundStageSize::Auto };
+
+    WeakHashSet<HTMLMediaElementClient> m_clients;
 };
 
 String convertEnumerationToString(HTMLMediaElement::AutoplayEventPlaybackState);

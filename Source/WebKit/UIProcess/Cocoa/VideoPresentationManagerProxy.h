@@ -78,6 +78,7 @@ private:
     VideoPresentationModelContext(VideoPresentationManagerProxy&, PlaybackSessionModelContext&, PlaybackSessionContextIdentifier);
 
     void setVideoDimensions(const WebCore::FloatSize&);
+    void audioSessionCategoryChanged(WebCore::AudioSessionCategory, WebCore::AudioSessionMode, WebCore::RouteSharingPolicy);
 
     // VideoPresentationModel
     void addClient(WebCore::VideoPresentationModelClient&) override;
@@ -222,6 +223,7 @@ private:
     void setHasVideo(PlaybackSessionContextIdentifier, bool);
     void setDocumentVisibility(PlaybackSessionContextIdentifier, bool);
     void setIsChildOfElementFullscreen(PlaybackSessionContextIdentifier, bool);
+    void audioSessionCategoryChanged(PlaybackSessionContextIdentifier, WebCore::AudioSessionCategory, WebCore::AudioSessionMode, WebCore::RouteSharingPolicy);
     void setVideoDimensions(PlaybackSessionContextIdentifier, const WebCore::FloatSize&);
     void enterFullscreen(PlaybackSessionContextIdentifier);
     void exitFullscreen(PlaybackSessionContextIdentifier, WebCore::FloatRect finalRect, CompletionHandler<void(bool)>&&);

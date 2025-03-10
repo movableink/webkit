@@ -249,6 +249,21 @@ void VideoPresentationInterfaceIOS::setPlayerIdentifier(std::optional<MediaPlaye
     m_playbackSessionInterface->setPlayerIdentifier(WTFMove(identifier));
 }
 
+void VideoPresentationInterfaceIOS::audioSessionCategoryChanged(WebCore::AudioSessionCategory, WebCore::AudioSessionMode, WebCore::RouteSharingPolicy)
+{
+    auto model = videoPresentationModel();
+    if (!model)
+        return;
+
+    // Re-request the routeContextUUID in case it also changed when the category did.
+    model->requestRouteSharingPolicyAndContextUID([this, protectedThis = Ref { *this }] (RouteSharingPolicy policy, String contextUID) {
+        m_routeSharingPolicy = policy;
+        m_routingContextUID = contextUID;
+
+        updateRouteSharingPolicy();
+    });
+}
+
 void VideoPresentationInterfaceIOS::requestHideAndExitFullscreen()
 {
     if (m_currentMode.hasPictureInPicture())
