@@ -140,6 +140,7 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , appleVisualEffect(static_cast<unsigned>(RenderStyle::initialAppleVisualEffect()))
 #endif
     , scrollbarWidth(static_cast<unsigned>(RenderStyle::initialScrollbarWidth()))
+    , usesAnchorFunctions(false)
 {
 }
 
@@ -247,6 +248,7 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , appleVisualEffect(o.appleVisualEffect)
 #endif
     , scrollbarWidth(o.scrollbarWidth)
+    , usesAnchorFunctions(o.usesAnchorFunctions)
 {
 }
 
@@ -360,7 +362,8 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
 #if HAVE(CORE_MATERIAL)
         && appleVisualEffect == o.appleVisualEffect
 #endif
-        && scrollbarWidth == o.scrollbarWidth;
+        && scrollbarWidth == o.scrollbarWidth
+        && usesAnchorFunctions == o.usesAnchorFunctions;
 }
 
 OptionSet<Containment> StyleRareNonInheritedData::usedContain() const
@@ -536,6 +539,8 @@ void StyleRareNonInheritedData::dumpDifferences(TextStream& ts, const StyleRareN
 #endif
 
     LOG_IF_DIFFERENT(scrollbarWidth);
+
+    LOG_IF_DIFFERENT_WITH_CAST(bool, usesAnchorFunctions);
 }
 #endif // !LOG_DISABLED
 

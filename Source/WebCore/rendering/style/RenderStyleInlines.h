@@ -846,6 +846,7 @@ constexpr Isolation RenderStyle::initialIsolation() { return Isolation::Auto; }
 inline bool RenderStyle::isInSubtreeWithBlendMode() const { return m_rareInheritedData->isInSubtreeWithBlendMode; }
 inline bool RenderStyle::isInVisibilityAdjustmentSubtree() const { return m_rareInheritedData->isInVisibilityAdjustmentSubtree; }
 inline Isolation RenderStyle::isolation() const { return static_cast<Isolation>(m_nonInheritedData->rareData->isolation); }
+inline bool RenderStyle::usesAnchorFunctions() const { return m_nonInheritedData->rareData->usesAnchorFunctions; }
 
 inline Visibility RenderStyle::usedVisibility() const
 {

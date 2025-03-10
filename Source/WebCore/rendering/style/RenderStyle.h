@@ -395,6 +395,8 @@ public:
     bool usesViewportUnits() const { return m_nonInheritedFlags.usesViewportUnits; }
     void setUsesContainerUnits() { m_nonInheritedFlags.usesContainerUnits = true; }
     bool usesContainerUnits() const { return m_nonInheritedFlags.usesContainerUnits; }
+    void setUsesAnchorFunctions();
+    bool usesAnchorFunctions() const;
 
     void setColumnStylesFromPaginationMode(PaginationMode);
     

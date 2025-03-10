@@ -1641,18 +1641,24 @@ const Element* RenderElement::defaultAnchor() const
 {
     if (!element())
         return nullptr;
-    auto& anchorPositionedStates = document().styleScope().anchorPositionedStates();
-    auto anchoringStateLookupResult = anchorPositionedStates.find(*element());
-    if (anchoringStateLookupResult == anchorPositionedStates.end() || !anchoringStateLookupResult->value)
+
+    auto& anchorPositionedMap = document().styleScope().anchorPositionedToAnchorMap();
+    auto it = anchorPositionedMap.find(*element());
+    if (it == anchorPositionedMap.end())
         return nullptr;
-    const auto& anchoringState = *anchoringStateLookupResult->value;
     const auto& anchorName = style().positionAnchor();
     if (!anchorName)
         return nullptr;
-    auto defaultAnchorLookupResult = anchoringState.anchorElements.find(anchorName->name);
-    if (defaultAnchorLookupResult == anchoringState.anchorElements.end())
-        return nullptr;
-    return defaultAnchorLookupResult->value.get();
+
+    for (auto& anchor : it->value) {
+        if (!anchor)
+            continue;
+        for (auto& name : anchor->style().anchorNames()) {
+            if (name.name == anchorName->name)
+                return anchor->element();
+        }
+    }
+    return nullptr;
 }
 
 const RenderElement* RenderElement::defaultAnchorRenderer() const

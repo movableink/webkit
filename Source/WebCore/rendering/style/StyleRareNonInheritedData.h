@@ -283,6 +283,8 @@ public:
 
     unsigned scrollbarWidth : 2; // ScrollbarWidth
 
+    unsigned usesAnchorFunctions : 1;
+
 private:
     StyleRareNonInheritedData();
     StyleRareNonInheritedData(const StyleRareNonInheritedData&);

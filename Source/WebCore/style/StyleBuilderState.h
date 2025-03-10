@@ -34,6 +34,7 @@
 #include "RuleSet.h"
 #include "SelectorChecker.h"
 #include "StyleForVisitedLink.h"
+#include "TreeResolutionState.h"
 #include <wtf/BitSet.h>
 
 namespace WebCore {
@@ -73,6 +74,7 @@ struct BuilderContext {
     const RenderStyle& parentStyle;
     const RenderStyle* rootElementStyle = nullptr;
     RefPtr<const Element> element = nullptr;
+    CheckedPtr<TreeResolutionState> treeResolutionState { };
     std::optional<BuilderPositionTryFallback> positionTryFallback { };
 };
 
@@ -138,6 +140,7 @@ public:
 
     Ref<Calculation::RandomKeyMap> randomKeyMap(bool perElement) const;
 
+    AnchorPositionedStates* anchorPositionedStates() { return m_context.treeResolutionState ? &m_context.treeResolutionState->anchorPositionedStates : nullptr; }
     const std::optional<BuilderPositionTryFallback>& positionTryFallback() const { return m_context.positionTryFallback; }
 
 private:
@@ -160,7 +163,7 @@ private:
     CSSToStyleMap m_styleMap;
 
     RenderStyle& m_style;
-    const BuilderContext m_context;
+    BuilderContext m_context;
 
     const CSSToLengthConversionData m_cssToLengthConversionData;
 
