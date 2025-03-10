@@ -1383,14 +1383,20 @@ static WKMediaPlaybackState toWKMediaPlaybackState(WebKit::MediaPlaybackState me
     NSString *errorMessage = nil;
 
     for (id key in arguments) {
-        id value = [arguments objectForKey:key];
+        NSString *keyString = dynamic_objc_cast<NSString>(key);
+        if (!keyString) {
+            errorMessage = @"Key value must be NSString";
+            break;
+        }
+
+        id value = [arguments objectForKey:keyString];
         auto serializedValue = WebKit::JavaScriptEvaluationResult::extract(value);
         if (!serializedValue) {
             errorMessage = @"Function argument values must be one of the following types, or contain only the following types: NSNumber, NSNull, NSDate, NSString, NSArray, and NSDictionary";
             break;
         }
 
-        argumentsMap->append({ key, WTFMove(*serializedValue) });
+        argumentsMap->append({ keyString, WTFMove(*serializedValue) });
     }
 
     if (errorMessage && handler) {
