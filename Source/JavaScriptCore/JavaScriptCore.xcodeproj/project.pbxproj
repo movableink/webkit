@@ -12419,7 +12419,7 @@
 				A55DEAA416703DF7003DB841 /* Check For Inappropriate Macros in External Headers */,
 				1A02D9A81B34A882000D1522 /* Add Symlink in /System/Library/PrivateFrameworks */,
 				53609F9021DFFA9C008FA60A /* Check .xcfilelists */,
-				6577FFC6276AC8D20011AEC8 /* Create Symlink to Alt Root Path */,
+				6577FFC6276AC8D20011AEC8 /* Create Symlink to Cryptex Path */,
 				DD9C4CC52A05D4FB00D52E2E /* Fix up SDKROOT path in TAPI filelists (install only) */,
 				DDA8F1542A15BEEA00BE8D11 /* Work around rdar://109484516 */,
 			);
@@ -12715,7 +12715,7 @@
 			shellPath = /bin/sh;
 			shellScript = "set -e\n\n# Skip for Production builds.\nif [[ ${CONFIGURATION:=Debug} == \"Production\" ]]; then\n    exit\nfi\n\nmkdir -p \"${BUILT_PRODUCTS_DIR}/${JAVASCRIPTCORE_HELPERS_DIR}\"\nditto \"${BUILT_PRODUCTS_DIR}/jsc\" \"${BUILT_PRODUCTS_DIR}/${JAVASCRIPTCORE_HELPERS_DIR}/jsc\"\n";
 		};
-		6577FFC6276AC8D20011AEC8 /* Create Symlink to Alt Root Path */ = {
+		6577FFC6276AC8D20011AEC8 /* Create Symlink to Cryptex Path */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 8;
 			files = (
@@ -12724,14 +12724,14 @@
 			);
 			inputPaths = (
 			);
-			name = "Create Symlink to Alt Root Path";
+			name = "Create Symlink to Cryptex Path";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/zsh;
-			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-altroot.sh\"\n";
+			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-cryptex.sh\"\n";
 		};
 		65FB3F6509D11E9100F49DEB /* Generate Derived Sources */ = {
 			isa = PBXShellScriptBuildPhase;

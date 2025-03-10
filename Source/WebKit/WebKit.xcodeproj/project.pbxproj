@@ -18261,7 +18261,7 @@
 				07275C4B2D00C934002315A5 /* Sources */,
 				07275C4C2D00C934002315A5 /* Frameworks */,
 				07275C4D2D00C934002315A5 /* Resources */,
-				07275CBE2D014A44002315A5 /* Create Symlink to Alt Root Path */,
+				07275CBE2D014A44002315A5 /* Create Symlink to Cryptex Path */,
 			);
 			buildRules = (
 			);
@@ -18283,7 +18283,7 @@
 				2D56C1C728A367A00081BD25 /* Resources */,
 				2D56C1CA28A367A00081BD25 /* Unlock keychain */,
 				2D56C1CB28A367A00081BD25 /* Process Model entitlements */,
-				2D56C1CC28A367A00081BD25 /* Create Symlink to Alt Root Path */,
+				2D56C1CC28A367A00081BD25 /* Create Symlink to Cryptex Path */,
 			);
 			buildRules = (
 			);
@@ -18305,7 +18305,7 @@
 				2D9FB221237523830049F936 /* Resources */,
 				2D9FB222237523830049F936 /* Unlock keychain */,
 				2D9FB223237523830049F936 /* Process GPU entitlements */,
-				6577FFBF2769C7550011AEC8 /* Create Symlink to Alt Root Path */,
+				6577FFBF2769C7550011AEC8 /* Create Symlink to Cryptex Path */,
 				3AB34B6528D4F098009DAAB6 /* Update Info.plist for RunningBoard management */,
 			);
 			buildRules = (
@@ -18327,7 +18327,7 @@
 				372EBB3D2017E64300085064 /* Frameworks */,
 				372EBB402017E64300085064 /* Resources */,
 				7AFCBD5520B8917D00F55C9C /* Process WebContent entitlements */,
-				6577FFBD2769C70F0011AEC8 /* Create Symlink to Alt Root Path */,
+				6577FFBD2769C70F0011AEC8 /* Create Symlink to Cryptex Path */,
 			);
 			buildRules = (
 			);
@@ -18488,7 +18488,7 @@
 				7A7E8DEB2748392500DCC97A /* Frameworks */,
 				7A7E8DEE2748392500DCC97A /* Resources */,
 				7A7E8DF22748392500DCC97A /* Process WebContent entitlements */,
-				6577FFBC2769C6D90011AEC8 /* Create Symlink to Alt Root Path */,
+				6577FFBC2769C6D90011AEC8 /* Create Symlink to Cryptex Path */,
 				3AB34B6228D4F01C009DAAB6 /* Update Info.plist for RunningBoard management */,
 			);
 			buildRules = (
@@ -18545,7 +18545,7 @@
 				5379C7AC21E5288500E4A8F6 /* Check .xcfilelists */,
 				933170072234674500B32554 /* Create symlinks to XPC services and dylibs */,
 				0FB94836239F31B700926A8F /* Copy Testing Headers */,
-				6577FFB92769C1460011AEC8 /* Create Symlink to Alt Root Path */,
+				6577FFB92769C1460011AEC8 /* Create Symlink to Cryptex Path */,
 				EBE4D2AD28A2F3BD00C0FAE7 /* Copy Signpost Plists */,
 				DD00C28D2A37908400CBB4D9 /* Work around rdar://109484516 */,
 				DD4BDE9F2CAB1275001A3339 /* Create legacy Swift overlay symlink */,
@@ -18578,7 +18578,7 @@
 				BC3DE46415A91763008D26FC /* Resources */,
 				7AFCBD5420B8911D00F55C9C /* Process WebContent entitlements */,
 				4157853721279CC600DD3800 /* Copy Custom WebContent Resources to Framework Private Headers */,
-				6577FFBB2769C6AA0011AEC8 /* Create Symlink to Alt Root Path */,
+				6577FFBB2769C6AA0011AEC8 /* Create Symlink to Cryptex Path */,
 				3AFFC9A428D43977006D6076 /* Update Info.plist for RunningBoard management */,
 			);
 			buildRules = (
@@ -18601,7 +18601,7 @@
 				BC8283AF16B4BF7700A278FE /* Resources */,
 				41D0FC8020E43B4500076AE8 /* Unlock keychain */,
 				41D0FC8120E43B7000076AE8 /* Process Network entitlements */,
-				6577FFBE2769C7370011AEC8 /* Create Symlink to Alt Root Path */,
+				6577FFBE2769C7370011AEC8 /* Create Symlink to Cryptex Path */,
 				3AB34B6428D4F092009DAAB6 /* Update Info.plist for RunningBoard management */,
 			);
 			buildRules = (
@@ -18623,7 +18623,7 @@
 				CD95493126159004008372D9 /* Headers */,
 				CD95493226159004008372D9 /* Sources */,
 				CD95493326159004008372D9 /* Frameworks */,
-				6577FFBA2769C64A0011AEC8 /* Create Symlink to Alt Root Path */,
+				6577FFBA2769C64A0011AEC8 /* Create Symlink to Cryptex Path */,
 			);
 			buildRules = (
 			);
@@ -18829,7 +18829,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		07275CBE2D014A44002315A5 /* Create Symlink to Alt Root Path */ = {
+		07275CBE2D014A44002315A5 /* Create Symlink to Cryptex Path */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 8;
 			files = (
@@ -18838,14 +18838,14 @@
 			);
 			inputPaths = (
 			);
-			name = "Create Symlink to Alt Root Path";
+			name = "Create Symlink to Cryptex Path";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/zsh;
-			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-altroot.sh\"\n";
+			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-cryptex.sh\"\n";
 		};
 		1A07D2F51919AA8A00ECDA16 /* Make Frameworks Symbolic Link */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -18906,7 +18906,7 @@
 			shellPath = /bin/sh;
 			shellScript = "Scripts/process-entitlements.sh\n";
 		};
-		2D56C1CC28A367A00081BD25 /* Create Symlink to Alt Root Path */ = {
+		2D56C1CC28A367A00081BD25 /* Create Symlink to Cryptex Path */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 8;
 			files = (
@@ -18915,14 +18915,14 @@
 			);
 			inputPaths = (
 			);
-			name = "Create Symlink to Alt Root Path";
+			name = "Create Symlink to Cryptex Path";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/zsh;
-			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-altroot.sh\"\n";
+			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-cryptex.sh\"\n";
 		};
 		2D7DEBDF21269C9F00B9F73C /* Generate Unified Sources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -19300,7 +19300,7 @@
 			shellPath = /bin/sh;
 			shellScript = "Scripts/copy-launchd-plist-and-create-symlink.sh\n";
 		};
-		6577FFB92769C1460011AEC8 /* Create Symlink to Alt Root Path */ = {
+		6577FFB92769C1460011AEC8 /* Create Symlink to Cryptex Path */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 8;
 			files = (
@@ -19309,16 +19309,16 @@
 			);
 			inputPaths = (
 			);
-			name = "Create Symlink to Alt Root Path";
+			name = "Create Symlink to Cryptex Path";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/zsh;
-			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-altroot.sh\"\n";
+			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-cryptex.sh\"\n";
 		};
-		6577FFBA2769C64A0011AEC8 /* Create Symlink to Alt Root Path */ = {
+		6577FFBA2769C64A0011AEC8 /* Create Symlink to Cryptex Path */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 8;
 			files = (
@@ -19327,16 +19327,16 @@
 			);
 			inputPaths = (
 			);
-			name = "Create Symlink to Alt Root Path";
+			name = "Create Symlink to Cryptex Path";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/zsh;
-			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-altroot.sh\"\n";
+			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-cryptex.sh\"\n";
 		};
-		6577FFBB2769C6AA0011AEC8 /* Create Symlink to Alt Root Path */ = {
+		6577FFBB2769C6AA0011AEC8 /* Create Symlink to Cryptex Path */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 8;
 			files = (
@@ -19345,16 +19345,16 @@
 			);
 			inputPaths = (
 			);
-			name = "Create Symlink to Alt Root Path";
+			name = "Create Symlink to Cryptex Path";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/zsh;
-			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-altroot.sh\"\n";
+			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-cryptex.sh\"\n";
 		};
-		6577FFBC2769C6D90011AEC8 /* Create Symlink to Alt Root Path */ = {
+		6577FFBC2769C6D90011AEC8 /* Create Symlink to Cryptex Path */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 8;
 			files = (
@@ -19363,16 +19363,16 @@
 			);
 			inputPaths = (
 			);
-			name = "Create Symlink to Alt Root Path";
+			name = "Create Symlink to Cryptex Path";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/zsh;
-			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-altroot.sh\"\n";
+			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-cryptex.sh\"\n";
 		};
-		6577FFBD2769C70F0011AEC8 /* Create Symlink to Alt Root Path */ = {
+		6577FFBD2769C70F0011AEC8 /* Create Symlink to Cryptex Path */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 8;
 			files = (
@@ -19381,16 +19381,16 @@
 			);
 			inputPaths = (
 			);
-			name = "Create Symlink to Alt Root Path";
+			name = "Create Symlink to Cryptex Path";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/zsh;
-			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-altroot.sh\"\n";
+			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-cryptex.sh\"\n";
 		};
-		6577FFBE2769C7370011AEC8 /* Create Symlink to Alt Root Path */ = {
+		6577FFBE2769C7370011AEC8 /* Create Symlink to Cryptex Path */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 8;
 			files = (
@@ -19399,16 +19399,16 @@
 			);
 			inputPaths = (
 			);
-			name = "Create Symlink to Alt Root Path";
+			name = "Create Symlink to Cryptex Path";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/zsh;
-			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-altroot.sh\"\n";
+			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-cryptex.sh\"\n";
 		};
-		6577FFBF2769C7550011AEC8 /* Create Symlink to Alt Root Path */ = {
+		6577FFBF2769C7550011AEC8 /* Create Symlink to Cryptex Path */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 8;
 			files = (
@@ -19417,14 +19417,14 @@
 			);
 			inputPaths = (
 			);
-			name = "Create Symlink to Alt Root Path";
+			name = "Create Symlink to Cryptex Path";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/zsh;
-			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-altroot.sh\"\n";
+			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-cryptex.sh\"\n";
 		};
 		7A7E8DF22748392500DCC97A /* Process WebContent entitlements */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -19753,7 +19753,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/zsh;
-			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-altroot.sh\"\n";
+			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-cryptex.sh\"\n";
 		};
 		E311D2AA2B770DB80074BC7E /* Create symlink */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -19771,7 +19771,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/zsh;
-			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-altroot.sh\"\n";
+			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-cryptex.sh\"\n";
 		};
 		E311D2AB2B770DDD0074BC7E /* Create symlink */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -19789,7 +19789,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/zsh;
-			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-altroot.sh\"\n";
+			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-cryptex.sh\"\n";
 		};
 		E311D2AD2B770E020074BC7E /* Create symlink */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -19807,7 +19807,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/zsh;
-			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-altroot.sh\"\n";
+			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-cryptex.sh\"\n";
 		};
 		E352B54F2AB25EA8006F6B0D /* Process entitlements */ = {
 			isa = PBXShellScriptBuildPhase;
