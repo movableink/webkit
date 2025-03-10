@@ -661,8 +661,8 @@ ElementUpdate TreeResolver::createAnimatedElementUpdate(ResolvedStyle&& resolved
     std::unique_ptr<RenderStyle> startingStyle;
 
     auto* oldStyle = [&]() -> const RenderStyle* {
-        if (currentStyle)
-            return currentStyle;
+        if (auto* styleBefore = beforeResolutionStyle(element, styleable.pseudoElementIdentifier))
+            return styleBefore;
 
         if (resolvedStyle.style->hasTransitions()) {
             // https://drafts.csswg.org/css-transitions-2/#at-ruledef-starting-style
@@ -674,11 +674,15 @@ ElementUpdate TreeResolver::createAnimatedElementUpdate(ResolvedStyle&& resolved
     }();
 
     auto unanimatedDisplay = resolvedStyle.style->display();
+    auto hasUnresolvedAnchorPosition = this->hasUnresolvedAnchorPosition(element);
 
     WeakStyleOriginatedAnimations newStyleOriginatedAnimations;
 
     auto updateAnimations = [&] {
         if (document.backForwardCacheState() != Document::NotInBackForwardCache || document.printing())
+            return;
+
+        if (hasUnresolvedAnchorPosition)
             return;
 
         if (oldStyle && (oldStyle->hasTransitions() || resolvedStyle.style->hasTransitions()))
@@ -707,6 +711,9 @@ ElementUpdate TreeResolver::createAnimatedElementUpdate(ResolvedStyle&& resolved
     };
 
     auto applyAnimations = [&]() -> std::pair<std::unique_ptr<RenderStyle>, OptionSet<AnimationImpact>> {
+        if (hasUnresolvedAnchorPosition)
+            return { WTFMove(resolvedStyle.style), OptionSet<AnimationImpact> { } };
+
         if (!styleable.hasKeyframeEffects()) {
             // FIXME: Push after-change style into parent stack instead.
             styleable.setLastStyleChangeEventStyle(resolveAfterChangeStyleForNonAnimated(resolvedStyle, styleable, resolutionContext));
@@ -1286,8 +1293,10 @@ std::unique_ptr<Update> TreeResolver::resolve()
 
     for (auto elementAndState : m_treeResolutionState.anchorPositionedStates) {
         // Ensure that style resolution visits any unresolved anchor-positioned elements.
-        if (elementAndState.value->stage < AnchorPositionResolutionStage::Resolved)
+        if (elementAndState.value->stage < AnchorPositionResolutionStage::Resolved) {
             elementAndState.key.invalidateForResumingAnchorPositionedElementResolution();
+            saveBeforeResolutionStyleForInterleaving(elementAndState.key);
+        }
 
         Vector<SingleThreadWeakPtr<RenderBoxModelObject>> anchors;
         for (auto& anchorElement : elementAndState.value->anchorElements.values())
@@ -1300,6 +1309,7 @@ std::unique_ptr<Update> TreeResolver::resolve()
         if (!elementAndOptions.value.chosen) {
             elementAndOptions.key->invalidateForResumingAnchorPositionedElementResolution();
             m_hasUnresolvedAnchorPositionedElements = true;
+            saveBeforeResolutionStyleForInterleaving(elementAndOptions.key);
         }
     }
 
@@ -1323,17 +1333,13 @@ auto TreeResolver::updateAnchorPositioningState(Element& element, const RenderSt
         m_hasUnresolvedAnchorPositionedElements = true;
     }
 
-    auto* anchorPositionedState = m_treeResolutionState.anchorPositionedStates.get(element);
-    if (!anchorPositionedState)
-        return AnchorPositionedElementAction::None;
+    auto needsInterleavedLayout = hasUnresolvedAnchorPosition(element);
+    if (needsInterleavedLayout) {
+        m_hasUnresolvedAnchorPositionedElements = true;
+        return AnchorPositionedElementAction::SkipDescendants;
+    }
 
-    auto needsInterleavedLayout = anchorPositionedState->stage < AnchorPositionResolutionStage::Resolved;
-    if (!needsInterleavedLayout)
-        return AnchorPositionedElementAction::None;
-
-    m_hasUnresolvedAnchorPositionedElements = true;
-
-    return AnchorPositionedElementAction::SkipDescendants;
+    return AnchorPositionedElementAction::None;
 }
 
 void TreeResolver::generatePositionOptionsIfNeeded(const ResolvedStyle& resolvedStyle, const Styleable& styleable, const ResolutionContext& resolutionContext)
@@ -1361,8 +1367,7 @@ void TreeResolver::generatePositionOptionsIfNeeded(const ResolvedStyle& resolved
     auto options = generatePositionOptions();
 
     // If the fallbacks contain anchor references we need to resolve the anchors first and regenerate the options.
-    auto* anchorPositionedState = m_treeResolutionState.anchorPositionedStates.get(styleable.element);
-    if (anchorPositionedState && anchorPositionedState->stage < AnchorPositionResolutionStage::Resolved)
+    if (hasUnresolvedAnchorPosition(styleable.element))
         return;
 
     m_positionOptions.add(styleable.element, WTFMove(options));
@@ -1452,6 +1457,40 @@ std::optional<ResolvedStyle> TreeResolver::tryChoosePositionOption(const Styleab
     return ResolvedStyle { RenderStyle::clonePtr(*optionStyle) };
 }
 
+const RenderStyle* TreeResolver::beforeResolutionStyle(const Element& element, std::optional<PseudoElementIdentifier> pseudo)
+{
+    auto resolvePseudoStyle = [&](auto* style) -> const RenderStyle* {
+        if (!pseudo)
+            return style;
+        if (!style)
+            return nullptr;
+        return style->getCachedPseudoStyle(*pseudo);
+    };
+
+    auto it = m_savedBeforeResolutionStylesForInterleaving.find(element);
+    if (it != m_savedBeforeResolutionStylesForInterleaving.end())
+        return resolvePseudoStyle(it->value.get());
+
+    return resolvePseudoStyle(element.renderOrDisplayContentsStyle());
+}
+
+void TreeResolver::saveBeforeResolutionStyleForInterleaving(const Element& element)
+{
+    m_savedBeforeResolutionStylesForInterleaving.ensure(element, [&]() -> std::unique_ptr<RenderStyle> {
+        if (auto* style = element.renderOrDisplayContentsStyle())
+            return makeUnique<RenderStyle>(RenderStyle::cloneIncludingPseudoElements(*style));
+        return { };
+    });
+}
+
+bool TreeResolver::hasUnresolvedAnchorPosition(const Element& element) const
+{
+    auto* anchorPositionedState = m_treeResolutionState.anchorPositionedStates.get(element);
+    if (anchorPositionedState && anchorPositionedState->stage < AnchorPositionResolutionStage::Resolved)
+        return true;
+
+    return false;
+};
 
 static Vector<Function<void ()>>& postResolutionCallbackQueue()
 {

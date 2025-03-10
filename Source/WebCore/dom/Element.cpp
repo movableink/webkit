@@ -4474,9 +4474,6 @@ const RenderStyle* Element::renderOrDisplayContentsStyle() const
 const RenderStyle* Element::renderOrDisplayContentsStyle(const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier) const
 {
     if (pseudoElementIdentifier) {
-        if (RefPtr pseudoElement = beforeOrAfterPseudoElement(*this, pseudoElementIdentifier->pseudoId))
-            return pseudoElement->renderOrDisplayContentsStyle();
-
         if (auto* style = renderOrDisplayContentsStyle()) {
             if (auto* cachedPseudoStyle = style->getCachedPseudoStyle(*pseudoElementIdentifier))
                 return cachedPseudoStyle;

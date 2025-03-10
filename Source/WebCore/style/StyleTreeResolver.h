@@ -155,6 +155,13 @@ private:
     std::unique_ptr<RenderStyle> generatePositionOption(const PositionTryFallback&, const ResolvedStyle&, const Styleable&, const ResolutionContext&);
     std::optional<ResolvedStyle> tryChoosePositionOption(const Styleable&, const RenderStyle* existingStyle);
 
+    // This returns the style that was in effect (applied to the render tree) before we started the style resolution.
+    // Layout interleaving may cause different styles to be applied during the style resolution.
+    const RenderStyle* beforeResolutionStyle(const Element&, std::optional<PseudoElementIdentifier>);
+    void saveBeforeResolutionStyleForInterleaving(const Element&);
+
+    bool hasUnresolvedAnchorPosition(const Element&) const;
+
     struct QueryContainerState {
         Change change { Change::None };
         DescendantsToResolve descendantsToResolve { DescendantsToResolve::None };
@@ -173,6 +180,7 @@ private:
 
     // This state gets passes to the style builder and holds state for a single tree resolution, including over any interleaving.
     TreeResolutionState m_treeResolutionState;
+    HashMap<Ref<const Element>, std::unique_ptr<RenderStyle>> m_savedBeforeResolutionStylesForInterleaving;
 
     struct PositionOptions {
         std::unique_ptr<RenderStyle> originalStyle;
