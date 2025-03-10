@@ -340,9 +340,10 @@ Seconds RenderThemeAdwaita::animationRepeatIntervalForProgressBar(const RenderPr
     return renderer.page().preferredRenderingUpdateInterval();
 }
 
-IntRect RenderThemeAdwaita::progressBarRectForBounds(const RenderProgress&, const IntRect& bounds) const
+IntRect RenderThemeAdwaita::progressBarRectForBounds(const RenderProgress& renderer, const IntRect& bounds) const
 {
-    return { bounds.x(), bounds.y(), bounds.width(), progressBarSize };
+    bool isHorizontal = renderer.isHorizontalWritingMode();
+    return { bounds.x(), bounds.y(), isHorizontal ? bounds.width() : progressBarSize, isHorizontal ? progressBarSize : bounds.height() };
 }
 
 void RenderThemeAdwaita::adjustSliderThumbSize(RenderStyle& style, const Element*) const
