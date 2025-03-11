@@ -255,6 +255,12 @@ ExceptionOr<void> MediaRecorder::requestDataInternal(ReturnDataIfEmpty returnDat
         if (!m_isActive)
             return;
 
+        //  As per W3C spec, if no data has been captured, the MediaRecorder will still fire the dataavailable event, but the Blob associated with that event will be empty.
+        if (!buffer) {
+            dispatchEvent(createDataAvailableEvent(scriptExecutionContext(), { }, { }, timeCode));
+            return;
+        }
+
         if (returnDataIfEmpty == ReturnDataIfEmpty::Yes || !buffer->isEmpty())
             dispatchEvent(createDataAvailableEvent(scriptExecutionContext(), WTFMove(buffer), mimeType, timeCode));
 
