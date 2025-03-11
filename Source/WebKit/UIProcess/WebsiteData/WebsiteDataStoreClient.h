@@ -64,7 +64,7 @@ public:
 
     virtual void didReceiveAuthenticationChallenge(Ref<AuthenticationChallengeProxy>&& challenge)
     {
-        challenge->protectedListener()->completeChallenge(AuthenticationChallengeDisposition::PerformDefaultHandling);
+        challenge->listener().completeChallenge(AuthenticationChallengeDisposition::PerformDefaultHandling);
     }
 
     virtual void openWindowFromServiceWorker(const String&, const WebCore::SecurityOriginData&, CompletionHandler<void(WebPageProxy*)>&& completionHandler)
