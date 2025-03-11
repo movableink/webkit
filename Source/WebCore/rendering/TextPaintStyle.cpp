@@ -104,6 +104,16 @@ TextPaintStyle computeTextPaintStyle(const RenderText& renderer, const RenderSty
 
     paintStyle.fillColor = lineStyle.visitedDependentColorWithColorFilter(CSSPropertyWebkitTextFillColor, paintInfo.paintBehavior);
 
+    if (lineStyle.shouldApplyColorFilterWhenInactive()) {
+        auto usingDarkAppearance = renderer.styleColorOptions().contains(StyleColorOptions::UseDarkAppearance);
+        RefPtr page = renderer.frame().page();
+        if (page && !usingDarkAppearance && !page->focusController().isActive()) {
+            auto color = paintStyle.fillColor;
+            paintStyle.fillColor = color.invertedColorWithAlpha(color.alphaAsFloat());
+            return paintStyle;
+        }
+    }
+
     bool forceBackgroundToWhite = false;
     if (frame.document() && frame.document()->printing()) {
         if (lineStyle.printColorAdjust() == PrintColorAdjust::Economy)

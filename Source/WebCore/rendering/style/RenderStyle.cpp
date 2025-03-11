@@ -206,7 +206,6 @@ RenderStyle::RenderStyle(CreateDefaultStyleTag)
     m_inheritedFlags.printColorAdjust = static_cast<unsigned>(initialPrintColorAdjust());
     m_inheritedFlags.pointerEvents = static_cast<unsigned>(initialPointerEvents());
     m_inheritedFlags.insideLink = static_cast<unsigned>(InsideLink::NotInside);
-    m_inheritedFlags.insideDefaultButton = false;
 #if ENABLE(TEXT_AUTOSIZING)
     m_inheritedFlags.autosizeStatus = 0;
 #endif
@@ -1281,6 +1280,7 @@ static bool rareInheritedDataChangeRequiresRepaint(const StyleRareInheritedData&
         || first.appleColorFilter != second.appleColorFilter
         || first.imageRendering != second.imageRendering
         || first.accentColor != second.accentColor
+        || first.insideDefaultButton != second.insideDefaultButton
 #if ENABLE(DARK_MODE_CSS)
         || first.colorScheme != second.colorScheme
 #endif
@@ -1346,8 +1346,7 @@ bool RenderStyle::changeRequiresRepaint(const RenderStyle& other, OptionSet<Styl
 
     if (m_inheritedFlags.visibility != other.m_inheritedFlags.visibility
         || m_inheritedFlags.printColorAdjust != other.m_inheritedFlags.printColorAdjust
-        || m_inheritedFlags.insideLink != other.m_inheritedFlags.insideLink
-        || m_inheritedFlags.insideDefaultButton != other.m_inheritedFlags.insideDefaultButton)
+        || m_inheritedFlags.insideLink != other.m_inheritedFlags.insideLink)
         return true;
 
 
@@ -1588,7 +1587,6 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
         // cursorVisibility
         // boxDirection
         // rtlOrdering
-        // insideDefaultButton
         // autosizeStatus
         // hasExplicitlySetColor
     };
@@ -2223,6 +2221,8 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
         // lineAlign
         // cursorData
         // textEmphasisCustomMark
+        // insideDefaultButton
+        // shouldApplyColorFilterWhenInactive
     };
 
     if (m_inheritedFlags != other.m_inheritedFlags)
@@ -4097,7 +4097,6 @@ void RenderStyle::InheritedFlags::dumpDifferences(TextStream& ts, const Inherite
     LOG_IF_DIFFERENT_WITH_CAST(bool, hasExplicitlySetColor);
     LOG_IF_DIFFERENT_WITH_CAST(PrintColorAdjust, printColorAdjust);
     LOG_IF_DIFFERENT_WITH_CAST(InsideLink, insideLink);
-    LOG_IF_DIFFERENT_WITH_CAST(bool, insideDefaultButton);
 
 #if ENABLE(TEXT_AUTOSIZING)
     LOG_IF_DIFFERENT_WITH_CAST(unsigned, autosizeStatus);

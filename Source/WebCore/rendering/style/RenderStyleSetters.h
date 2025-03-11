@@ -402,6 +402,9 @@ inline void RenderStyle::setTextSizeAdjust(TextSizeAdjustment adjustment) { SET(
 inline void RenderStyle::setTapHighlightColor(const Style::Color& color) { SET(m_rareInheritedData, tapHighlightColor, color); }
 #endif
 
+inline void RenderStyle::setInsideDefaultButton(bool value) { SET(m_rareInheritedData, insideDefaultButton, value); }
+inline void RenderStyle::setShouldApplyColorFilterWhenInactive(bool value) { SET(m_rareInheritedData, shouldApplyColorFilterWhenInactive, value); }
+
 inline void RenderStyle::NonInheritedFlags::setHasPseudoStyles(PseudoIdSet pseudoIdSet)
 {
     ASSERT(pseudoIdSet);

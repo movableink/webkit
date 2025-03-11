@@ -182,6 +182,9 @@ public:
 
     unsigned usedContentVisibility : 2; // ContentVisibility
 
+    unsigned insideDefaultButton : 1;
+    unsigned shouldApplyColorFilterWhenInactive : 1;
+
 #if HAVE(CORE_MATERIAL)
     unsigned usedAppleVisualEffectForSubtree : 4; // AppleVisualEffect
 #endif

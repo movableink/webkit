@@ -145,6 +145,8 @@ StyleRareInheritedData::StyleRareInheritedData()
     , isInSubtreeWithBlendMode(false)
     , isInVisibilityAdjustmentSubtree(false)
     , usedContentVisibility(static_cast<unsigned>(ContentVisibility::Visible))
+    , insideDefaultButton(false)
+    , shouldApplyColorFilterWhenInactive(false)
 #if HAVE(CORE_MATERIAL)
     , usedAppleVisualEffectForSubtree(static_cast<unsigned>(AppleVisualEffect::None))
 #endif
@@ -245,6 +247,8 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , isInSubtreeWithBlendMode(o.isInSubtreeWithBlendMode)
     , isInVisibilityAdjustmentSubtree(o.isInVisibilityAdjustmentSubtree)
     , usedContentVisibility(o.usedContentVisibility)
+    , insideDefaultButton(o.insideDefaultButton)
+    , shouldApplyColorFilterWhenInactive(o.shouldApplyColorFilterWhenInactive)
 #if HAVE(CORE_MATERIAL)
     , usedAppleVisualEffectForSubtree(o.usedAppleVisualEffectForSubtree)
 #endif
@@ -379,6 +383,8 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && eventListenerRegionTypes == o.eventListenerRegionTypes
         && effectiveInert == o.effectiveInert
         && usedContentVisibility == o.usedContentVisibility
+        && insideDefaultButton == o.insideDefaultButton
+        && shouldApplyColorFilterWhenInactive == o.shouldApplyColorFilterWhenInactive
 #if HAVE(CORE_MATERIAL)
         && usedAppleVisualEffectForSubtree == o.usedAppleVisualEffectForSubtree
 #endif
@@ -503,6 +509,9 @@ void StyleRareInheritedData::dumpDifferences(TextStream& ts, const StyleRareInhe
     LOG_IF_DIFFERENT_WITH_CAST(bool, isInVisibilityAdjustmentSubtree);
 
     LOG_IF_DIFFERENT_WITH_CAST(ContentVisibility, usedContentVisibility);
+
+    LOG_IF_DIFFERENT_WITH_CAST(bool, insideDefaultButton);
+    LOG_IF_DIFFERENT_WITH_CAST(bool, shouldApplyColorFilterWhenInactive);
 
 #if HAVE(CORE_MATERIAL)
     LOG_IF_DIFFERENT_WITH_CAST(AppleVisualEffect, usedAppleVisualEffectForSubtree);

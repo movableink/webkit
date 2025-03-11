@@ -893,6 +893,9 @@ inline TextSizeAdjustment RenderStyle::textSizeAdjust() const { return m_rareInh
 inline Style::Color RenderStyle::tapHighlightColor() const { return m_rareInheritedData->tapHighlightColor; }
 #endif
 
+inline bool RenderStyle::insideDefaultButton() const { return m_rareInheritedData->insideDefaultButton; }
+inline bool RenderStyle::shouldApplyColorFilterWhenInactive() const { return m_rareInheritedData->shouldApplyColorFilterWhenInactive; }
+
 inline bool RenderStyle::NonInheritedFlags::hasPseudoStyle(PseudoId pseudo) const
 {
     ASSERT(pseudo > PseudoId::None);
