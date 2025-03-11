@@ -55,7 +55,6 @@ class WebFullScreenManagerProxy;
 class WebPageProxy;
 class WebProcessProxy;
 struct SharedPreferencesForWebProcess;
-template<typename> class Awaitable;
 
 class WebFullScreenManagerProxyClient : public CanMakeCheckedPtr<WebFullScreenManagerProxyClient> {
     WTF_MAKE_FAST_ALLOCATED;

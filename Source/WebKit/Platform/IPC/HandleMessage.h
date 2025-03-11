@@ -26,12 +26,12 @@
 #pragma once
 
 #include "ArgumentCoders.h"
-#include "CoroutineUtilities.h"
 #include "Logging.h"
 #include "MessageArgumentDescriptions.h"
 #include "MessageNames.h"
 #include "StreamServerConnection.h"
 #include <wtf/CompletionHandler.h>
+#include <wtf/CoroutineUtilities.h>
 #include <wtf/ProcessID.h>
 #include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/StdLibExtras.h>
@@ -175,7 +175,7 @@ void callMemberFunction(T* object, MF U::* function, Connection& connection, Arg
 template<typename T, typename U, typename MF, typename ArgsTuple, typename CH>
 void callMemberFunctionCoroutine(T* object, MF U::* function, ArgsTuple&& tuple, CompletionHandler<CH>&& completionHandler)
 {
-    [&] (auto completionHandler) -> WebKit::Task {
+    [&] (auto completionHandler) -> Task {
         Ref protectedObject { *object };
         // Use of object without protection is safe here since std::apply() runs synchronously and object is protected for the lifetime of the Task.
         completionHandler(co_await std::apply([&](auto&&... args) {
@@ -187,7 +187,7 @@ void callMemberFunctionCoroutine(T* object, MF U::* function, ArgsTuple&& tuple,
 template<typename T, typename U, typename MF, typename ArgsTuple, typename CH>
 void callMemberFunctionCoroutine(T* object, MF U::* function, Connection& connection, ArgsTuple&& tuple, CompletionHandler<CH>&& completionHandler)
 {
-    [&] (auto completionHandler) -> WebKit::Task {
+    [&] (auto completionHandler) -> Task {
         Ref protectedObject { *object };
         // Use of object without protection is safe here since std::apply() runs synchronously and object is protected for the lifetime of the Task.
         completionHandler(co_await std::apply([&](auto&&... args) {
@@ -199,7 +199,7 @@ void callMemberFunctionCoroutine(T* object, MF U::* function, Connection& connec
 template<typename T, typename U, typename MF, typename ArgsTuple, typename CH>
 void callMemberFunctionCoroutineVoid(T* object, MF U::* function, ArgsTuple&& tuple, CompletionHandler<CH>&& completionHandler)
 {
-    [&] (auto completionHandler) -> WebKit::Task {
+    [&] (auto completionHandler) -> Task {
         Ref protectedObject { *object };
         // Use of object without protection is safe here since std::apply() runs synchronously and object is protected for the lifetime of the Task.
         co_await std::apply([&](auto&&... args) {
@@ -212,7 +212,7 @@ void callMemberFunctionCoroutineVoid(T* object, MF U::* function, ArgsTuple&& tu
 template<typename T, typename U, typename MF, typename ArgsTuple, typename CH>
 void callMemberFunctionCoroutineVoid(T* object, MF U::* function, Connection& connection, ArgsTuple&& tuple, CompletionHandler<CH>&& completionHandler)
 {
-    [&] (auto completionHandler) -> WebKit::Task {
+    [&] (auto completionHandler) -> Task {
         Ref protectedObject { *object };
         // Use of object without protection is safe here since std::apply() runs synchronously and object is protected for the lifetime of the Task.
         co_await std::apply([&](auto&&... args) {
@@ -277,11 +277,11 @@ struct MethodSignatureValidation<R(MethodArgumentTypes...) const>
 };
 
 template<typename> struct AwaitableReturnTuple;
-template<> struct AwaitableReturnTuple<WebKit::Awaitable<void>> {
+template<> struct AwaitableReturnTuple<Awaitable<void>> {
     using Type = std::tuple<>;
     static constexpr bool hasParameters = false;
 };
-template<typename... T> struct AwaitableReturnTuple<WebKit::Awaitable<T...>> {
+template<typename... T> struct AwaitableReturnTuple<Awaitable<T...>> {
     using Type = std::tuple<T...>;
     static constexpr bool hasParameters = true;
 };

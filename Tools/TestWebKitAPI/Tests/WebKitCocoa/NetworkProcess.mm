@@ -516,7 +516,7 @@ TEST(_WKDataTask, Basic)
     constexpr auto html = "<script>document.cookie='testkey=value'</script>"_s;
     constexpr auto secondResponse = "second response"_s;
     Vector<char> secondRequest;
-    auto server = HTTPServer(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> Task {
+    auto server = HTTPServer(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> ConnectionTask {
         while (1) {
             auto request = co_await connection.awaitableReceiveHTTPRequest();
             auto path = HTTPServer::parsePath(request);
@@ -845,7 +845,7 @@ TEST(WKWebView, CrossOriginDoubleRedirectAuthentication)
         return memmem(request.data(), request.size(), field, strlen(field));
     };
 
-    HTTPServer server(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> Task {
+    HTTPServer server(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> ConnectionTask {
         while (true) {
             auto request = co_await connection.awaitableReceiveHTTPRequest();
             auto path = HTTPServer::parsePath(request);

@@ -617,7 +617,6 @@ enum class WebEventModifier : uint8_t;
 enum class WebEventType : uint8_t;
 enum class WindowKind : uint8_t;
 
-template<typename> class Awaitable;
 template<typename> class MonotonicObjectIdentifier;
 
 using ActivityStateChangeID = uint64_t;

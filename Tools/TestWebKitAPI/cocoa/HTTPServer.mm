@@ -55,7 +55,7 @@ struct HTTPServer::RequestData : public ThreadSafeRefCounted<RequestData, WTF::D
     size_t requestCount { 0 };
     HashMap<String, HTTPResponse> requestMap;
     Vector<Connection> connections;
-    Vector<CoroutineHandle<Task::promise_type>> coroutineHandles;
+    Vector<CoroutineHandle<ConnectionTask::promise_type>> coroutineHandles;
 };
 
 static RetainPtr<nw_protocol_definition_t> proxyDefinition(HTTPServer::Protocol protocol)
@@ -235,7 +235,7 @@ HTTPServer::HTTPServer(Function<void(Connection)>&& connectionHandler, Protocol 
     startListening(m_listener.get());
 }
 
-HTTPServer::HTTPServer(UseCoroutines, WTF::Function<Task(Connection)>&& connectionHandler, Protocol protocol)
+HTTPServer::HTTPServer(UseCoroutines, Function<ConnectionTask(Connection)>&& connectionHandler, Protocol protocol)
     : m_requestData(adoptRef(*new RequestData({ })))
     , m_listener(adoptNS(nw_listener_create(listenerParameters(protocol, nullptr, nullptr, { }).get())))
     , m_protocol(protocol)

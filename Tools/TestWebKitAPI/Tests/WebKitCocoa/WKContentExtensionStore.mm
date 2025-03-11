@@ -362,7 +362,7 @@ TEST_F(WKContentRuleListStoreTest, CrossOriginCookieBlocking)
 
         std::optional<bool> requestHadCookieResult;
 
-        HTTPServer server(HTTPServer::UseCoroutines::Yes, [&] (Connection connection) -> Task {
+        HTTPServer server(HTTPServer::UseCoroutines::Yes, [&] (Connection connection) -> ConnectionTask {
             while (true) {
                 auto request = co_await connection.awaitableReceiveHTTPRequest();
                 auto path = HTTPServer::parsePath(request);

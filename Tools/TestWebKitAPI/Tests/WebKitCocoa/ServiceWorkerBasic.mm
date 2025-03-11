@@ -4201,7 +4201,7 @@ TEST(ServiceWorker, FocusNotYetLoadedClient)
     auto dataStoreDelegate = adoptNS([[ServiceWorkerOpenWindowWebsiteDataStoreDelegate alloc] initWithConfiguration:configuration.get()]);
     [[configuration websiteDataStore] set_delegate:dataStoreDelegate.get()];
 
-    TestWebKitAPI::HTTPServer server(TestWebKitAPI::HTTPServer::UseCoroutines::Yes, [&](auto connection) -> TestWebKitAPI::Task {
+    TestWebKitAPI::HTTPServer server(TestWebKitAPI::HTTPServer::UseCoroutines::Yes, [&](auto connection) -> TestWebKitAPI::ConnectionTask {
         while (1) {
             auto request = co_await connection.awaitableReceiveHTTPRequest();
             auto path = TestWebKitAPI::HTTPServer::parsePath(request);
@@ -4448,7 +4448,7 @@ TEST(ServiceWorker, ServiceWorkerProcessSwapWithNoDelay)
     }).get();
     webView2.get().navigationDelegate = navigationDelegate.get();
 
-    TestWebKitAPI::HTTPServer server(TestWebKitAPI::HTTPServer::UseCoroutines::Yes, [&](auto connection) -> TestWebKitAPI::Task {
+    TestWebKitAPI::HTTPServer server(TestWebKitAPI::HTTPServer::UseCoroutines::Yes, [&](auto connection) -> TestWebKitAPI::ConnectionTask {
         while (1) {
             auto request = co_await connection.awaitableReceiveHTTPRequest();
             auto path = TestWebKitAPI::HTTPServer::parsePath(request);

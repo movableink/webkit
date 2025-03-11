@@ -4056,7 +4056,7 @@ PrivateTokenTestSetupState setupWebViewForPrivateTokenTests(bool& didDecideServi
         return requestView.substring(headerValueStart, headerEnd - headerValueStart).toStringWithoutCopying();
     };
 
-    auto server = makeUnique<HTTPServer>(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> Task {
+    auto server = makeUnique<HTTPServer>(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> ConnectionTask {
         while (1) {
             auto request = co_await connection.awaitableReceiveHTTPRequest();
 

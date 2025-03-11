@@ -30,7 +30,6 @@
 
 #include "APIFullscreenClient.h"
 #include "APIPageConfiguration.h"
-#include "CoroutineUtilities.h"
 #include "MessageSenderInlines.h"
 #include "RemotePageFullscreenManagerProxy.h"
 #include "WebAutomationSession.h"
@@ -44,6 +43,7 @@
 #include <WebCore/MIMETypeRegistry.h>
 #include <WebCore/ScreenOrientationType.h>
 #include <wtf/CallbackAggregator.h>
+#include <wtf/CoroutineUtilities.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>

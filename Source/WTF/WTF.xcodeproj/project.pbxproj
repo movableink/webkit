@@ -906,6 +906,7 @@
 		EBEE51132D2DF488004FEC23 /* ContinuousApproximateTime.h in Headers */ = {isa = PBXBuildFile; fileRef = EBEE51112D2DF488004FEC23 /* ContinuousApproximateTime.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		EBEE51142D2DF488004FEC23 /* ContinuousApproximateTime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = EBEE51122D2DF488004FEC23 /* ContinuousApproximateTime.cpp */; };
 		FA0C387B2BEAD56B00583842 /* SmallMap.h in Headers */ = {isa = PBXBuildFile; fileRef = FA0C387A2BEAD56B00583842 /* SmallMap.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		FAC31B9D2D80083D006CCA20 /* CoroutineUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = FAC31B9C2D80083D006CCA20 /* CoroutineUtilities.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		FE032AD22463E43B0012D7C7 /* WTFConfig.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FE032AD02463E43B0012D7C7 /* WTFConfig.cpp */; };
 		FE03831C2ABC04F700A576A2 /* TZoneMallocInlines.h in Headers */ = {isa = PBXBuildFile; fileRef = FE03831A2ABC04F700A576A2 /* TZoneMallocInlines.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		FE03831D2ABC04F700A576A2 /* TZoneMalloc.h in Headers */ = {isa = PBXBuildFile; fileRef = FE03831B2ABC04F700A576A2 /* TZoneMalloc.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -1943,6 +1944,7 @@
 		F6D67D3226F90142006E0349 /* Int128.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Int128.h; sourceTree = "<group>"; };
 		F72BBDB107FA424886178B9E /* SymbolImpl.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SymbolImpl.cpp; sourceTree = "<group>"; };
 		FA0C387A2BEAD56B00583842 /* SmallMap.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SmallMap.h; sourceTree = "<group>"; };
+		FAC31B9C2D80083D006CCA20 /* CoroutineUtilities.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CoroutineUtilities.h; sourceTree = "<group>"; };
 		FE032AD02463E43B0012D7C7 /* WTFConfig.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WTFConfig.cpp; sourceTree = "<group>"; };
 		FE032AD12463E43B0012D7C7 /* WTFConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WTFConfig.h; sourceTree = "<group>"; };
 		FE03831A2ABC04F700A576A2 /* TZoneMallocInlines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TZoneMallocInlines.h; sourceTree = "<group>"; };
@@ -2246,6 +2248,7 @@
 				EBEE51112D2DF488004FEC23 /* ContinuousApproximateTime.h */,
 				EB33ED2D2D2DD91B00521B7B /* ContinuousTime.cpp */,
 				EB33ED2C2D2DD91B00521B7B /* ContinuousTime.h */,
+				FAC31B9C2D80083D006CCA20 /* CoroutineUtilities.h */,
 				0F8E85DA1FD485B000691889 /* CountingLock.cpp */,
 				0FFBCBFA1FD37E0F0072AAF0 /* CountingLock.h */,
 				E38C41261EB4E0680042957D /* CPUTime.cpp */,
@@ -3355,6 +3358,7 @@
 				EBEE51132D2DF488004FEC23 /* ContinuousApproximateTime.h in Headers */,
 				EB33ED2E2D2DD91B00521B7B /* ContinuousTime.h in Headers */,
 				DDF307C627C086DF006A526F /* ConversionMode.h in Headers */,
+				FAC31B9D2D80083D006CCA20 /* CoroutineUtilities.h in Headers */,
 				DD3DC8D127A4BF8E007E5B61 /* CountingLock.h in Headers */,
 				DD3DC92627A4BF8E007E5B61 /* CPUTime.h in Headers */,
 				DDF3071127C086CC006A526F /* CrashReporter.h in Headers */,

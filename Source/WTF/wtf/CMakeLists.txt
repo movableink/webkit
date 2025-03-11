@@ -59,6 +59,7 @@ set(WTF_PUBLIC_HEADERS
     Condition.h
     ContinuousApproximateTime.h
     ContinuousTime.h
+    CoroutineUtilities.h
     CountingLock.h
     CrossThreadCopier.h
     CrossThreadQueue.h

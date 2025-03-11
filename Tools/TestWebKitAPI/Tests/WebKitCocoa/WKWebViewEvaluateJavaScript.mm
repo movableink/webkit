@@ -362,7 +362,7 @@ TEST(WebKit, EvaluateJavaScriptInAttachments)
     // Evaluating JavaScript in such a document should fail and result in an error.
 
     using namespace TestWebKitAPI;
-    HTTPServer server(HTTPServer::UseCoroutines::Yes, [](Connection connection) -> Task {
+    HTTPServer server(HTTPServer::UseCoroutines::Yes, [](Connection connection) -> ConnectionTask {
         co_await connection.awaitableReceiveHTTPRequest();
         co_await connection.awaitableSend("HTTP/1.1 200 OK\r\n"
             "Content-Length: 12\r\n"

@@ -447,7 +447,7 @@ String longString(LChar c)
 
 TEST(WKWebExtensionAPIWebNavigation, ErrorOccurredEventDuringLoad)
 {
-    TestWebKitAPI::HTTPServer server(TestWebKitAPI::HTTPServer::UseCoroutines::Yes, [&](auto connection) -> TestWebKitAPI::Task {
+    TestWebKitAPI::HTTPServer server(TestWebKitAPI::HTTPServer::UseCoroutines::Yes, [&](auto connection) -> TestWebKitAPI::ConnectionTask {
         while (1) {
             auto request = co_await connection.awaitableReceiveHTTPRequest();
             auto path = TestWebKitAPI::HTTPServer::parsePath(request);

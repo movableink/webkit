@@ -259,7 +259,7 @@ TEST(SiteIsolation, LoadingCallbacksAndPostMessage)
 
     bool finishedLoading { false };
     size_t framesCommitted { 0 };
-    HTTPServer server(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> Task {
+    HTTPServer server(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> ConnectionTask {
         while (1) {
             auto request = co_await connection.awaitableReceiveHTTPRequest();
             auto path = HTTPServer::parsePath(request);
@@ -686,7 +686,7 @@ TEST(SiteIsolation, PostMessageWithNotAllowedTargetOrigin)
     "</script>"_s;
 
     bool finishedLoading { false };
-    HTTPServer server(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> Task {
+    HTTPServer server(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> ConnectionTask {
         while (1) {
             auto request = co_await connection.awaitableReceiveHTTPRequest();
             auto path = HTTPServer::parsePath(request);
@@ -2696,7 +2696,7 @@ TEST(SiteIsolation, ApplicationNameForUserAgent)
     auto mainframeHTML = "<iframe src='https://domain2.com/subframe'></iframe>"_s;
     auto subframeHTML = "<script src='https://domain3.com/request_from_subframe'></script>"_s;
     bool receivedRequestFromSubframe = false;
-    HTTPServer server(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> Task {
+    HTTPServer server(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> ConnectionTask {
         while (1) {
             auto request = co_await connection.awaitableReceiveHTTPRequest();
             auto path = HTTPServer::parsePath(request);
@@ -2736,7 +2736,7 @@ TEST(SiteIsolation, WebsitePoliciesCustomUserAgent)
     auto subframeHTML = "<script src='https://domain3.com/request_from_subframe'></script>"_s;
     bool receivedRequestFromSubframe = false;
     bool firstRequest = true;
-    HTTPServer server(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> Task {
+    HTTPServer server(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> ConnectionTask {
         while (1) {
             auto request = co_await connection.awaitableReceiveHTTPRequest();
             auto path = HTTPServer::parsePath(request);
@@ -2797,7 +2797,7 @@ TEST(SiteIsolation, WebsitePoliciesCustomUserAgentDuringCrossSiteProvisionalNavi
     auto mainframeHTML = "<iframe id='frame' src='https://domain2.com/subframe'></iframe>"_s;
     auto subframeHTML = "<script src='https://domain2.com/request_from_subframe'></script>"_s;
     bool receivedRequestFromSubframe = false;
-    HTTPServer server(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> Task {
+    HTTPServer server(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> ConnectionTask {
         while (1) {
             auto request = co_await connection.awaitableReceiveHTTPRequest();
             auto path = HTTPServer::parsePath(request);
@@ -2901,7 +2901,7 @@ TEST(SiteIsolation, WebsitePoliciesCustomUserAgentDuringSameSiteProvisionalNavig
     auto mainframeHTML = "<iframe id='frame' src='https://domain2.com/subframe'></iframe>"_s;
     auto subframeHTML = "<script src='https://domain2.com/request_from_subframe'></script>"_s;
     bool receivedRequestFromSubframe = false;
-    HTTPServer server(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> Task {
+    HTTPServer server(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> ConnectionTask {
         while (1) {
             auto request = co_await connection.awaitableReceiveHTTPRequest();
             auto path = HTTPServer::parsePath(request);
@@ -3592,7 +3592,7 @@ TEST(SiteIsolation, SandboxFlags)
 TEST(SiteIsolation, SandboxFlagsDuringNavigation)
 {
     bool receivedIframe2Request { false };
-    HTTPServer server { HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> Task {
+    HTTPServer server { HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> ConnectionTask {
         while (true) {
             auto path = HTTPServer::parsePath(co_await connection.awaitableReceiveHTTPRequest());
             if (path == "/example"_s) {

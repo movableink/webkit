@@ -25,12 +25,10 @@
 
 #pragma once
 
-#include <concepts>
 #include <coroutine>
 #include <wtf/CompletionHandler.h>
-#include <wtf/TZoneMallocInlines.h>
 
-namespace WebKit {
+namespace WTF {
 
 template<typename PromiseType>
 class CoroutineHandle {
@@ -60,11 +58,14 @@ private:
 
 template<typename T>
 class [[nodiscard]] Awaitable {
+    WTF_FORBID_HEAP_ALLOCATION;
 public:
     class PromiseBase {
         WTF_MAKE_FAST_ALLOCATED;
     public:
         struct final_awaitable {
+            WTF_FORBID_HEAP_ALLOCATION;
+        public:
             bool await_ready() const noexcept { return false; }
             template<typename Promise>
             std::coroutine_handle<> await_suspend(std::coroutine_handle<Promise> coroutine) noexcept { return coroutine.promise().handle(); }
@@ -98,6 +99,7 @@ public:
     using promise_type = Promise<T>;
 
     class AwaitableHelper {
+        WTF_FORBID_HEAP_ALLOCATION;
     public:
         AwaitableHelper(std::coroutine_handle<promise_type> coroutine)
             : m_coroutine(coroutine) { }
@@ -119,6 +121,8 @@ private:
 };
 
 struct Task {
+    WTF_FORBID_HEAP_ALLOCATION;
+public:
     struct promise_type {
         WTF_MAKE_STRUCT_FAST_ALLOCATED;
         Task get_return_object() { return { }; }
@@ -130,6 +134,7 @@ struct Task {
 };
 
 template<typename T> class [[nodiscard]] AwaitableFromCompletionHandler {
+    WTF_FORBID_HEAP_ALLOCATION;
 public:
     using Callback = CompletionHandler<void(CompletionHandler<void(T&&)>)>;
     AwaitableFromCompletionHandler(Callback&& callback)
@@ -148,6 +153,7 @@ private:
     std::optional<T> m_result;
 };
 template<> class [[nodiscard]] AwaitableFromCompletionHandler<void> {
+    WTF_FORBID_HEAP_ALLOCATION;
 public:
     using Callback = CompletionHandler<void(CompletionHandler<void(void)>)>;
     AwaitableFromCompletionHandler(Callback&& callback)
@@ -165,3 +171,8 @@ private:
 };
 
 }
+
+using WTF::Awaitable;
+using WTF::AwaitableFromCompletionHandler;
+using WTF::CoroutineHandle;
+using WTF::Task;
