@@ -1724,10 +1724,10 @@ static JSArray* concatAppendArray(JSGlobalObject* globalObject, VM& vm, JSArray*
 
         if (!secondArraySize) {
             if (isCopyOnWrite(firstArray->indexingMode()))
-                return JSArray::createWithButterfly(vm, nullptr, firstArray->structure(), firstArray->butterfly());
+                return JSArray::createWithButterfly(vm, nullptr, globalObject->originalArrayStructureForIndexingType(firstArray->indexingMode()), firstArray->butterfly());
         } else if (!firstArraySize) {
             if (isCopyOnWrite(secondArray->indexingMode()))
-                return JSArray::createWithButterfly(vm, nullptr, secondArray->structure(), secondArray->butterfly());
+                return JSArray::createWithButterfly(vm, nullptr, globalObject->originalArrayStructureForIndexingType(secondArray->indexingMode()), secondArray->butterfly());
         }
     }
 

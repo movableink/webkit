@@ -1197,7 +1197,7 @@ JSArray* JSArray::fastSlice(JSGlobalObject* globalObject, JSObject* source, uint
 
         if (isCopyOnWrite(source->indexingMode())) {
             if (!startIndex && count == source->butterfly()->publicLength())
-                return JSArray::createWithButterfly(vm, nullptr, source->structure(), source->butterfly());
+                return JSArray::createWithButterfly(vm, nullptr, globalObject->originalArrayStructureForIndexingType(source->indexingMode()), source->butterfly());
         }
 
         ASSERT(!globalObject->isHavingABadTime());
@@ -1898,7 +1898,7 @@ JSArray* tryCloneArrayFromFast(JSGlobalObject* globalObject, JSValue arrayValue)
     if (LIKELY(!globalObject->isHavingABadTime())) {
         if constexpr (fillMode == ArrayFillMode::Empty) {
             if (isCopyOnWrite(array->indexingMode()))
-                return JSArray::createWithButterfly(vm, nullptr, array->structure(), array->butterfly());
+                return JSArray::createWithButterfly(vm, nullptr, globalObject->originalArrayStructureForIndexingType(array->indexingMode()), array->butterfly());
         }
 
         if (!resultSize)
