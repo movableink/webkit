@@ -61,8 +61,7 @@ static void validateChallenge(NSURLAuthenticationChallenge *challenge, uint16_t 
     verifyCertificateAndPublicKey(challenge.protectionSpace.serverTrust);
 }
 
-// FIXME: Fix WebTransportServer constructor and re-enable these tests once rdar://141009498 is available in OS builds.
-TEST(WebTransport, DISABLED_ClientBidirectional)
+TEST(WebTransport, ClientBidirectional)
 {
     WebTransportServer echoServer([](ConnectionGroup group) -> Task {
         auto connection = co_await group.receiveIncomingConnection();
@@ -106,8 +105,7 @@ TEST(WebTransport, DISABLED_ClientBidirectional)
     EXPECT_TRUE(challenged);
 }
 
-// FIXME: Fix WebTransportServer constructor and re-enable these tests once rdar://141009498 is available in OS builds.
-TEST(WebTransport, DISABLED_Datagram)
+TEST(WebTransport, Datagram)
 {
     WebTransportServer echoServer([](ConnectionGroup group) -> Task {
         auto datagramConnection = group.createWebTransportConnection(ConnectionGroup::ConnectionType::Datagram);
@@ -150,8 +148,7 @@ TEST(WebTransport, DISABLED_Datagram)
     EXPECT_TRUE(challenged);
 }
 
-// FIXME: Fix WebTransportServer constructor and re-enable these tests once rdar://141009498 is available in OS builds.
-TEST(WebTransport, DISABLED_Unidirectional)
+TEST(WebTransport, Unidirectional)
 {
     WebTransportServer echoServer([](ConnectionGroup group) -> Task {
         auto connection = co_await group.receiveIncomingConnection();
@@ -198,7 +195,7 @@ TEST(WebTransport, DISABLED_Unidirectional)
     EXPECT_TRUE(challenged);
 }
 
-// FIXME: Fix WebTransportServer constructor and re-enable these tests once rdar://141009498 is available in OS builds.
+// FIXME: Fix and enable this test.
 TEST(WebTransport, DISABLED_ServerBidirectional)
 {
     WebTransportServer echoServer([](ConnectionGroup group) -> Task {
@@ -248,8 +245,7 @@ TEST(WebTransport, DISABLED_ServerBidirectional)
     EXPECT_TRUE(challenged);
 }
 
-// FIXME: Fix WebTransportServer constructor and re-enable these tests once rdar://141009498 is available in OS builds.
-TEST(WebTransport, DISABLED_NetworkProcessCrash)
+TEST(WebTransport, NetworkProcessCrash)
 {
     WebTransportServer echoServer([](ConnectionGroup group) -> Task {
         auto datagramConnection = group.createWebTransportConnection(ConnectionGroup::ConnectionType::Datagram);
@@ -421,8 +417,7 @@ TEST(WebTransport, DISABLED_NetworkProcessCrash)
     EXPECT_EQ(obj, nil);
 }
 
-// FIXME: Fix WebTransportServer constructor and re-enable these tests once rdar://141009498 is available in OS builds.
-TEST(WebTransport, DISABLED_Worker)
+TEST(WebTransport, Worker)
 {
     WebTransportServer transportServer([](ConnectionGroup group) -> Task {
         auto connection = co_await group.receiveIncomingConnection();

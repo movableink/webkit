@@ -52,8 +52,7 @@ WebTransportServer::WebTransportServer(Function<Task(ConnectionGroup)>&& connect
     auto configureWebTransport = [](nw_protocol_options_t options) {
         nw_webtransport_options_set_is_datagram(options, true);
         nw_webtransport_options_set_is_unidirectional(options, false);
-        // FIXME: Add a call to nw_webtransport_options_set_connection_max_sessions(options, 1)
-        // here when enabling tests after rdar://141009498 is available in OS builds.
+        nw_webtransport_options_set_connection_max_sessions(options, 1);
     };
 
     auto configureTLS = [](nw_protocol_options_t options) {
