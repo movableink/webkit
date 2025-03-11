@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,29 +23,28 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
-#import "CoreIPCArray.h"
-#import "CoreIPCCFType.h"
-#import "CoreIPCColor.h"
-#import "CoreIPCContacts.h"
-#import "CoreIPCData.h"
-#import "CoreIPCDate.h"
-#import "CoreIPCDateComponents.h"
-#import "CoreIPCDictionary.h"
-#import "CoreIPCError.h"
-#import "CoreIPCFont.h"
-#import "CoreIPCLocale.h"
-#import "CoreIPCNSShadow.h"
-#import "CoreIPCNSValue.h"
-#import "CoreIPCNull.h"
-#import "CoreIPCNumber.h"
+#import "config.h"
 #import "CoreIPCPKPaymentSetupFeature.h"
-#import "CoreIPCPKSecureElementPass.h"
-#import "CoreIPCPassKit.h"
-#import "CoreIPCPersonNameComponents.h"
-#import "CoreIPCPresentationIntent.h"
-#import "CoreIPCSecureCoding.h"
-#import "CoreIPCString.h"
-#import "CoreIPCURL.h"
-#import "GeneratedWebKitSecureCoding.h"
+
+#if USE(PASSKIT)
+
+#import <wtf/RuntimeApplicationChecks.h>
+#import <wtf/cocoa/VectorCocoa.h>
+
+#import <pal/cocoa/PassKitSoftLink.h>
+
+namespace WebKit {
+
+CoreIPCPKPaymentSetupFeature::CoreIPCPKPaymentSetupFeature(PKPaymentSetupFeature *feature)
+    : m_data(makeVector([NSKeyedArchiver archivedDataWithRootObject:feature requiringSecureCoding:YES error:nil])) { }
+
+RetainPtr<id> CoreIPCPKPaymentSetupFeature::toID() const
+{
+    RetainPtr data = adoptNS([[NSData alloc] initWithBytesNoCopy:const_cast<uint8_t*>(m_data.data()) length:m_data.size() freeWhenDone:NO]);
+    RELEASE_ASSERT(isInWebProcess());
+    return [NSKeyedUnarchiver unarchivedObjectOfClass:PAL::getPKPaymentSetupFeatureClass() fromData:data.get() error:nil];
+}
+
+} // namespace WebKit
+
+#endif // USE(PASSKIT)

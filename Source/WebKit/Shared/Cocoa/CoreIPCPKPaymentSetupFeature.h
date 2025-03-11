@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,27 +25,28 @@
 
 #pragma once
 
-#import "CoreIPCArray.h"
-#import "CoreIPCCFType.h"
-#import "CoreIPCColor.h"
-#import "CoreIPCContacts.h"
-#import "CoreIPCData.h"
-#import "CoreIPCDate.h"
-#import "CoreIPCDateComponents.h"
-#import "CoreIPCDictionary.h"
-#import "CoreIPCError.h"
-#import "CoreIPCFont.h"
-#import "CoreIPCLocale.h"
-#import "CoreIPCNSShadow.h"
-#import "CoreIPCNSValue.h"
-#import "CoreIPCNull.h"
-#import "CoreIPCNumber.h"
-#import "CoreIPCPKPaymentSetupFeature.h"
-#import "CoreIPCPKSecureElementPass.h"
-#import "CoreIPCPassKit.h"
-#import "CoreIPCPersonNameComponents.h"
-#import "CoreIPCPresentationIntent.h"
-#import "CoreIPCSecureCoding.h"
-#import "CoreIPCString.h"
-#import "CoreIPCURL.h"
-#import "GeneratedWebKitSecureCoding.h"
+#if USE(PASSKIT)
+
+#include <wtf/RetainPtr.h>
+#include <wtf/Vector.h>
+
+OBJC_CLASS PKPaymentSetupFeature;
+
+namespace WebKit {
+
+class CoreIPCPKPaymentSetupFeature {
+public:
+    CoreIPCPKPaymentSetupFeature(PKPaymentSetupFeature *);
+    CoreIPCPKPaymentSetupFeature(Vector<uint8_t>&& data)
+        : m_data(WTFMove(data)) { }
+
+    RetainPtr<id> toID() const;
+    const Vector<uint8_t>& ipcData() const { return m_data; }
+
+private:
+    Vector<uint8_t> m_data;
+};
+
+} // namespace WebKit
+
+#endif // USE(PASSKIT)

@@ -1560,7 +1560,7 @@ void WebPageProxy::didAttachToRunningProcess()
         videoPresentationManager->setMockVideoPresentationModeEnabled(m_mockVideoPresentationModeEnabled);
 #endif
 
-#if ENABLE(APPLE_PAY) && !ENABLE(APPLE_PAY_REMOTE_UI)
+#if ENABLE(APPLE_PAY)
     ASSERT(!internals().paymentCoordinator);
     internals().paymentCoordinator = WebPaymentCoordinatorProxy::create(internals());
 #endif

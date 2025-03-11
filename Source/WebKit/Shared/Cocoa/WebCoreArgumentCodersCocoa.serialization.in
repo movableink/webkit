@@ -475,6 +475,7 @@ AVOutputContext wrapped by CoreIPCAVOutputContext
 #if USE(PASSKIT)
 PKPaymentMethod wrapped by CoreIPCPKPaymentMethod
 PKPaymentMerchantSession wrapped by CoreIPCPKPaymentMerchantSession
+PKPaymentSetupFeature wrapped by CoreIPCPKPaymentSetupFeature
 PKContact wrapped by CoreIPCPKContact
 PKSecureElementPass wrapped by CoreIPCPKSecureElementPass
 PKPayment wrapped by CoreIPCPKPayment

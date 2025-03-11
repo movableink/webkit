@@ -310,6 +310,10 @@ template<> Class getClass<PKPaymentMerchantSession>()
 {
     return PAL::getPKPaymentMerchantSessionClass();
 }
+template<> Class getClass<PKPaymentSetupFeature>()
+{
+    return PAL::getPKPaymentSetupFeatureClass();
+}
 template<> Class getClass<PKPayment>()
 {
     return PAL::getPKPaymentClass();
@@ -380,6 +384,8 @@ NSType typeFromObject(id object)
         return NSType::PKPaymentMethod;
     if ([object isKindOfClass:getClass<PKPaymentMerchantSession>()])
         return NSType::PKPaymentMerchantSession;
+    if ([object isKindOfClass:getClass<PKPaymentSetupFeature>()])
+        return NSType::PKPaymentSetupFeature;
     if ([object isKindOfClass:getClass<PKContact>()])
         return NSType::PKContact;
     if ([object isKindOfClass:getClass<PKSecureElementPass>()])
