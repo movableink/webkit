@@ -184,9 +184,11 @@ void RemoteRenderingBackendProxy::didClose(IPC::Connection&)
     // Note: The cache will call back to this to setup a new connection.
     m_remoteResourceCacheProxy.remoteResourceCacheWasDestroyed();
 
-    for (auto bufferSet : m_bufferSets) {
-        bufferSet.value->remoteBufferSetWasDestroyed();
-        send(Messages::RemoteRenderingBackend::CreateRemoteImageBufferSet(bufferSet.value->identifier(), bufferSet.value->displayListResourceIdentifier()));
+    for (auto weakBufferSet : m_bufferSets.values()) {
+        if (RefPtr bufferSet = weakBufferSet.get()) {
+            bufferSet->remoteBufferSetWasDestroyed();
+            send(Messages::RemoteRenderingBackend::CreateRemoteImageBufferSet(bufferSet->identifier(), bufferSet->displayListResourceIdentifier()));
+        }
     }
 }
 
@@ -520,7 +522,7 @@ void RemoteRenderingBackendProxy::didMarkLayersAsVolatile(MarkSurfacesAsVolatile
         return;
 
     for (auto& bufferSetIdentifierAndType : markedBufferSets) {
-        auto bufferSet = m_bufferSets.get(bufferSetIdentifierAndType.first);
+        auto bufferSet = m_bufferSets.get(bufferSetIdentifierAndType.first).get();
         if (!bufferSet)
             continue;
 

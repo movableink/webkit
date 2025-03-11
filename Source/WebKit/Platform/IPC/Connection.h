@@ -492,7 +492,7 @@ public:
     DecoderOrError waitForMessageForTesting(MessageName, uint64_t destinationID, Timeout, OptionSet<WaitForOption>);
 #endif
 
-    void dispatchMessageReceiverMessage(MessageReceiver&, UniqueRef<Decoder>&&);
+    template<typename MessageReceiverType> void dispatchMessageReceiverMessage(MessageReceiverType&, UniqueRef<Decoder>&&);
     // Can be called from any thread.
     void dispatchDidReceiveInvalidMessage(MessageName, int32_t indexOfObjectFailingDecoding);
     void dispatchDidCloseAndInvalidate();

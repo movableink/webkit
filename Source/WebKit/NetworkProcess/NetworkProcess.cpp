@@ -620,7 +620,7 @@ void NetworkProcess::destroySession(PAL::SessionID sessionID, CompletionHandler<
         Ref storageManager = session->storageManager();
         m_closingStorageManagers.add(storageManager.copyRef());
         storageManager->close([this, protectedThis = Ref { *this }, storageManager, completionHandler = std::exchange(completionHandler, { })]() mutable {
-            m_closingStorageManagers.remove(storageManager.ptr());
+            m_closingStorageManagers.remove(storageManager);
             completionHandler();
             stopRunLoopIfNecessary();
         });

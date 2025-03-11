@@ -394,7 +394,7 @@ protected:
         double currentMovingAverage { 0 };
     } m_recentHTTPSConnectionTiming;
 
-    Ref<NetworkStorageManager> m_storageManager;
+    const Ref<NetworkStorageManager> m_storageManager;
     String m_cacheStorageDirectory;
 
 #if PLATFORM(COCOA)

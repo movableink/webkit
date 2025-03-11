@@ -461,7 +461,8 @@ void Connection::removeMessageReceiver(ReceiverName receiverName, uint64_t desti
     removeMessageReceiveQueue(ReceiverMatcher::createWithZeroAsAnyDestination(receiverName, destinationID));
 }
 
-void Connection::dispatchMessageReceiverMessage(MessageReceiver& messageReceiver, UniqueRef<Decoder>&& decoder)
+template<typename MessageReceiverType>
+void Connection::dispatchMessageReceiverMessage(MessageReceiverType& messageReceiver, UniqueRef<Decoder>&& decoder)
 {
     if (decoder->isSyncMessage()) {
         auto replyEncoder = makeUniqueRef<Encoder>(MessageName::SyncMessageReply, decoder->syncRequestID().toUInt64());
@@ -481,6 +482,9 @@ void Connection::dispatchMessageReceiverMessage(MessageReceiver& messageReceiver
     if (!decoder->isValid())
         dispatchDidReceiveInvalidMessage(decoder->messageName(), decoder->indexOfObjectFailingDecoding());
 }
+
+template void Connection::dispatchMessageReceiverMessage<MessageReceiver>(MessageReceiver&, UniqueRef<Decoder>&&);
+template void Connection::dispatchMessageReceiverMessage<WorkQueueMessageReceiverBase>(WorkQueueMessageReceiverBase&, UniqueRef<Decoder>&&);
 
 void Connection::setDidCloseOnConnectionWorkQueueCallback(DidCloseOnConnectionWorkQueueCallback callback)
 {

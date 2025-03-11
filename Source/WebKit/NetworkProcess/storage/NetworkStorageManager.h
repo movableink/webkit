@@ -97,9 +97,8 @@ class ServiceWorkerStorageManager;
 class StorageAreaBase;
 class StorageAreaRegistry;
 
-class NetworkStorageManager final : public IPC::WorkQueueMessageReceiver<WTF::DestructionThread::MainRunLoop>, public CanMakeCheckedPtr<NetworkStorageManager> {
+class NetworkStorageManager final : public IPC::WorkQueueMessageReceiver<WTF::DestructionThread::MainRunLoop> {
     WTF_MAKE_TZONE_ALLOCATED(NetworkStorageManager);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(NetworkStorageManager);
 public:
     static Ref<NetworkStorageManager> create(NetworkProcess&, PAL::SessionID, Markable<WTF::UUID>, std::optional<IPC::Connection::UniqueID>, const String& path, const String& customLocalStoragePath, const String& customIDBStoragePath, const String& customCacheStoragePath, const String& customServiceWorkerStoragePath, uint64_t defaultOriginQuota, std::optional<double> originQuotaRatio, std::optional<double> totalQuotaRatio, std::optional<uint64_t> standardVolumeCapacity, std::optional<uint64_t> volumeCapacityOverride, UnifiedOriginStorageLevel, bool storageSiteValidationEnabled);
     static bool canHandleTypes(OptionSet<WebsiteDataType>);

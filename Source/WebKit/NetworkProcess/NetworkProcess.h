@@ -631,7 +631,7 @@ private:
     Seconds m_serviceWorkerFetchTimeout { defaultServiceWorkerFetchTimeout };
 
     HashMap<WebCore::PageIdentifier, Vector<WebCore::UserContentURLPattern>> m_extensionCORSDisablingPatterns;
-    HashSet<RefPtr<NetworkStorageManager>> m_closingStorageManagers;
+    HashSet<Ref<NetworkStorageManager>> m_closingStorageManagers;
     HashSet<String> m_localhostAliasesForTesting;
     HashSet<WebPageProxyIdentifier> m_pagesWithRelaxedThirdPartyCookieBlocking;
 

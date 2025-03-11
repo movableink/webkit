@@ -187,13 +187,6 @@ bool NetworkProcessConnection::dispatchMessage(IPC::Connection& connection, IPC:
 
 bool NetworkProcessConnection::dispatchSyncMessage(IPC::Connection& connection, IPC::Decoder& decoder, UniqueRef<IPC::Encoder>& replyEncoder)
 {
-    if (decoder.messageReceiverName() == Messages::WebSWContextManagerConnection::messageReceiverName()) {
-        ASSERT(SWContextManager::singleton().connection());
-        if (auto* contextManagerConnection = SWContextManager::singleton().connection())
-            return downcast<WebSWContextManagerConnection>(*contextManagerConnection).didReceiveSyncMessage(connection, decoder, replyEncoder);
-        return false;
-    }
-
 #if ENABLE(APPLE_PAY_REMOTE_UI)
     if (decoder.messageReceiverName() == Messages::WebPaymentCoordinator::messageReceiverName()) {
         if (auto webPage = WebProcess::singleton().webPage(ObjectIdentifier<PageIdentifierType>(decoder.destinationID())))
