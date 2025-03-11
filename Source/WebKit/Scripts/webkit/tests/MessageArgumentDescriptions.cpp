@@ -42,6 +42,7 @@
 #include "IPCStreamTesterIdentifier.h"
 #include "IdentifierTypes.h"
 #include "JSIPCBinding.h"
+#include "JavaScriptEvaluationResult.h"
 #include "LegacyCustomProtocolID.h"
 #include "LibWebRTCResolverIdentifier.h"
 #include "LogStreamIdentifier.h"
@@ -616,6 +617,7 @@ Vector<ASCIILiteral> serializedIdentifiers()
     static_assert(sizeof(uint64_t) == sizeof(WebKit::GraphicsContextGLIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::IPCConnectionTesterIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::IPCStreamTesterIdentifier));
+    static_assert(sizeof(uint64_t) == sizeof(WebKit::JSObjectID));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::LegacyCustomProtocolID));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::LibWebRTCResolverIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::LogStreamIdentifier));
@@ -769,6 +771,7 @@ Vector<ASCIILiteral> serializedIdentifiers()
         "WebKit::GraphicsContextGLIdentifier"_s,
         "WebKit::IPCConnectionTesterIdentifier"_s,
         "WebKit::IPCStreamTesterIdentifier"_s,
+        "WebKit::JSObjectID"_s,
         "WebKit::LegacyCustomProtocolID"_s,
         "WebKit::LibWebRTCResolverIdentifier"_s,
         "WebKit::LogStreamIdentifier"_s,
