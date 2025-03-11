@@ -2496,8 +2496,10 @@ fast/images/animated-jpegxl-loop-count.html [ Skip ]
 compositing/hdr/hdr-basic-canvas.html [ Skip ]
 compositing/hdr/hdr-basic-image.html [ Skip ]
 compositing/hdr/hdr-css-image.html [ Skip ]
+compositing/hdr/hdr-svg-inline-image.html [ Skip ]
 fast/images/hdr-basic-image.html [ Skip ]
 fast/images/hdr-css-image.html [ Skip ]
+fast/images/hdr-svg-inline-image.html [ Skip ]
 
 # Experimental H265 support.
 webrtc/h265.html [ Pass Failure ]

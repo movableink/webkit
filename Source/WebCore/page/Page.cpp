@@ -4659,6 +4659,11 @@ void Page::didFinishLoadingImageForElement(HTMLImageElement& element)
     });
 }
 
+void Page::didFinishLoadingImageForSVGImage(SVGImageElement& element)
+{
+    chrome().client().didFinishLoadingImageForSVGImage(element);
+}
+
 #if ENABLE(TEXT_AUTOSIZING)
 
 void Page::recomputeTextAutoSizingInAllFrames()

@@ -1496,8 +1496,10 @@ webkit.org/b/260113 [ arm64 ] http/wpt/webauthn/ctap-hid-failure.https.html [ Pa
 [ Sequoia+ ] compositing/hdr/hdr-basic-canvas.html [ Pass ]
 [ Sequoia+ ] compositing/hdr/hdr-basic-image.html [ Pass ]
 [ Sequoia+ ] compositing/hdr/hdr-css-image.html [ Pass ]
+[ Sequoia+ ] compositing/hdr/hdr-svg-inline-image.html [ Pass ]
 [ Sequoia+ ] fast/images/hdr-basic-image.html [ Pass ]
 [ Sequoia+ ] fast/images/hdr-css-image.html [ Pass ]
+[ Sequoia+ ] fast/images/hdr-svg-inline-image.html [ Pass ]
 
 # The direct image codepath is not used with the remote layer tree.
 [ Sonoma+ ] compositing/images/direct-image-object-fit.html [ Skip ]

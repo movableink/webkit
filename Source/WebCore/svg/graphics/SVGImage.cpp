@@ -208,6 +208,15 @@ ImageDrawResult SVGImage::drawForContainer(GraphicsContext& context, const Float
     return result;
 }
 
+bool SVGImage::hasPaintedHDRContent() const
+{
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    if (RefPtr localTopDocument = m_page->localTopDocument())
+        return localTopDocument->hasPaintedHDRContent();
+#endif
+    return false;
+}
+
 RefPtr<NativeImage> SVGImage::nativeImage(const DestinationColorSpace& colorSpace)
 {
     return nativeImage(size(), colorSpace);

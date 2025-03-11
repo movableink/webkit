@@ -435,7 +435,7 @@ void RenderImage::notifyFinished(CachedResource& newImage, const NetworkLoadMetr
         page().didFinishLoadingImageForElement(*image);
 #if HAVE(SUPPORT_HDR_DISPLAY)
         if (!document().hasPaintedHDRContent()) {
-            if (cachedImage() && cachedImage()->isHDR())
+            if (cachedImage() && cachedImage()->hasPaintedHDRContent())
                 document().setHasPaintedHDRContent();
         }
 #endif

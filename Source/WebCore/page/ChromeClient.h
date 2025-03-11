@@ -115,6 +115,7 @@ class PopupMenu;
 class PopupMenuClient;
 class RegistrableDomain;
 class SearchPopupMenu;
+class SVGImageElement;
 class ScrollingCoordinator;
 class SecurityOrigin;
 class SecurityOriginData;
@@ -260,6 +261,7 @@ public:
 #endif
 
     virtual void didFinishLoadingImageForElement(HTMLImageElement&) = 0;
+    virtual void didFinishLoadingImageForSVGImage(SVGImageElement&) { }
 
     virtual PlatformPageClient platformPageClient() const = 0;
 

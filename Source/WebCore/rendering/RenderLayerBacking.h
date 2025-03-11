@@ -393,7 +393,7 @@ private:
     bool isUnscaledBitmapOnly() const;
     bool isBitmapOnly() const;
 #if HAVE(SUPPORT_HDR_DISPLAY)
-    bool isReplacedElementWithHDR() const;
+    bool isRenderElementWithHDR() const;
 #endif
 
     void updateDirectlyCompositedBoxDecorations(PaintedContentsInfo&, bool& didUpdateContentsRect);

@@ -153,7 +153,7 @@ public:
 #if HAVE(SUPPORT_HDR_DISPLAY)
         if (m_backing.renderer().document().canDrawHDRContent()) {
             m_hdrContent = RequestState::Unknown;
-            m_isReplacedElementWithHDR = RequestState::Unknown;
+            m_isRenderElementWithHDR = RequestState::Unknown;
         }
 #endif
     }
@@ -193,7 +193,7 @@ public:
     bool isContentsTypeSatisfied() const
     {
 #if HAVE(SUPPORT_HDR_DISPLAY)
-        if (m_isReplacedElementWithHDR == RequestState::Unknown)
+        if (m_isRenderElementWithHDR == RequestState::Unknown)
             return false;
 #endif
         return m_contentsType != ContentsType::Unknown;
@@ -219,10 +219,10 @@ public:
     }
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
-    bool isReplacedElementWithHDR()
+    bool isRenderElementWithHDR()
     {
         determineContentsType();
-        return m_isReplacedElementWithHDR == RequestState::True;
+        return m_isRenderElementWithHDR == RequestState::True;
     }
 #endif
 
@@ -231,7 +231,7 @@ public:
     RequestState m_content { RequestState::Unknown };
 #if HAVE(SUPPORT_HDR_DISPLAY)
     RequestState m_hdrContent { RequestState::DontCare };
-    RequestState m_isReplacedElementWithHDR { RequestState::DontCare };
+    RequestState m_isRenderElementWithHDR { RequestState::DontCare };
 #endif
 
     ContentsType m_contentsType { ContentsType::Unknown };
@@ -274,8 +274,8 @@ void PaintedContentsInfo::determineContentsType()
         m_contentsType = ContentsType::Painted;
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
-    if (m_isReplacedElementWithHDR == RequestState::Unknown)
-        m_isReplacedElementWithHDR = m_backing.isReplacedElementWithHDR() ? RequestState::True : RequestState::False;
+    if (m_isRenderElementWithHDR == RequestState::Unknown)
+        m_isRenderElementWithHDR = m_backing.isRenderElementWithHDR() ? RequestState::True : RequestState::False;
 #endif
 }
 
@@ -2024,7 +2024,7 @@ void RenderLayerBacking::updateDrawsContent(PaintedContentsInfo& contentsInfo)
         m_backgroundLayer->setDrawsContent(m_backgroundLayerPaintsFixedRootBackground ? hasPaintedContent : contentsInfo.paintsBoxDecorations());
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
-    if (contentsInfo.paintsHDRContent() || contentsInfo.isReplacedElementWithHDR())
+    if (contentsInfo.paintsHDRContent() || contentsInfo.isRenderElementWithHDR())
         m_graphicsLayer->setDrawsHDRContent(true);
 #endif
 }
@@ -3365,9 +3365,9 @@ bool RenderLayerBacking::isUnscaledBitmapOnly() const
 }
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
-bool RenderLayerBacking::isReplacedElementWithHDR() const
+bool RenderLayerBacking::isRenderElementWithHDR() const
 {
-    return m_owningLayer.isReplacedElementWithHDR();
+    return m_owningLayer.isRenderElementWithHDR();
 }
 #endif
 

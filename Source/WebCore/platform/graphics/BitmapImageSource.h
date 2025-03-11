@@ -192,8 +192,8 @@ private:
     void setClearDecoderAfterAsyncFrameRequestForTesting(bool enabled) final { m_clearDecoderAfterAsyncFrameRequestForTesting = enabled; }
     void setAsyncDecodingEnabledForTesting(bool enabled) final { m_isAsyncDecodingEnabledForTesting = enabled; }
     bool isAsyncDecodingEnabledForTesting() const final { return m_isAsyncDecodingEnabledForTesting; }
-    void setHeadroomForTesting(Headroom headroom) final { m_headroomForTesting = headroom; }
-    std::optional<Headroom> headroomForTesting() const final { return m_headroomForTesting; }
+    void setHasPaintedHDRContentForTesting() final { m_hasPaintedHDRContentForTesting = true; }
+    bool hasPaintedHDRContentForTesting() const final { return m_hasPaintedHDRContentForTesting; }
 
     void dump(TextStream&) const final;
 
@@ -219,7 +219,7 @@ private:
     unsigned m_blankDrawCountForTesting { 0 };
     bool m_isAsyncDecodingEnabledForTesting { false };
     bool m_clearDecoderAfterAsyncFrameRequestForTesting { false };
-    std::optional<Headroom> m_headroomForTesting;
+    bool m_hasPaintedHDRContentForTesting { false };
 };
 
 } // namespace WebCore

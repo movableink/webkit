@@ -1712,6 +1712,21 @@ void RenderElement::didRemoveCachedImageClient(CachedImage& cachedImage)
         checkedView()->removeRendererWithPausedImageAnimations(*this, cachedImage);
 }
 
+void RenderElement::imageContentChanged(CachedImage& cachedImage)
+{
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    if (!document().hasPaintedHDRContent()) {
+        if (cachedImage.hasPaintedHDRContent())
+            document().setHasPaintedHDRContent();
+    }
+#else
+    UNUSED_PARAM(cachedImage);
+#endif
+
+    if (auto layer = layerParent())
+        layer->contentChanged(ContentChangeType::Image);
+}
+
 void RenderElement::scheduleRenderingUpdateForImage(CachedImage&)
 {
     if (RefPtr page = document().page())

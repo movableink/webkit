@@ -65,6 +65,25 @@ CheckedRef<RenderImageResource> LegacyRenderSVGImage::checkedImageResource() con
     return *m_imageResource;
 }
 
+void LegacyRenderSVGImage::notifyFinished(CachedResource& newImage, const NetworkLoadMetrics& metrics, LoadWillContinueInAnotherProcess loadWillContinueInAnotherProcess)
+{
+    if (renderTreeBeingDestroyed())
+        return;
+
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    if (!document().hasPaintedHDRContent()) {
+        CachedImage* cachedImage = imageResource().cachedImage();
+
+        if (cachedImage && cachedImage->hasPaintedHDRContent()) {
+            document().setHasPaintedHDRContent();
+            page().didFinishLoadingImageForSVGImage(imageElement());
+        }
+    }
+#endif
+
+    LegacyRenderSVGModelObject::notifyFinished(newImage, metrics, loadWillContinueInAnotherProcess);
+}
+
 void LegacyRenderSVGImage::willBeDestroyed()
 {
     imageResource().shutdown();

@@ -10,10 +10,9 @@
 </style>
 <body>
     <div style="position: fixed; top: 10px; left: 10px;">
-        <img class="image-box">
-    </div>
-    <div style="position: fixed; top: 10px; left: 220px;">
-        <div class="image-box"></div>
+        <svg class="image-box">
+            <image width="100%" height="100%"/>
+        </svg>
     </div>
     <script>
         if (window.internals && window.testRunner) {
@@ -27,11 +26,8 @@
             if (window.internals)
                 internals.setHasPaintedHDRContentForTesting(image);
 
-            var divElement = document.querySelector("div.image-box");
-            divElement.style.backgroundImage = 'url(' + image.src + ')';
-
-            var imgElement = document.querySelector("img.image-box");
-            imgElement.src = image.src;
+            var imageElement = document.querySelector("svg.image-box image");
+            imageElement.setAttribute("href", image.src);
 
             if (window.testRunner)
                 testRunner.notifyDone();

@@ -43,7 +43,7 @@
                     let image = new Image;
                     image.onload = (e) => {
                         if (window.internals)
-                            internals.setHeadroomForTesting(image, 5);
+                            internals.setHasPaintedHDRContentForTesting(image);
 
                         resolve({ width: image.width, height: image.height });
                     };

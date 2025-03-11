@@ -85,6 +85,7 @@
 #include "ImageDocument.h"
 #include "InspectorInstrumentation.h"
 #include "LegacyRenderSVGForeignObject.h"
+#include "LegacyRenderSVGImage.h"
 #include "LegacyRenderSVGResourceClipper.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LocalFrame.h"
@@ -5782,11 +5783,19 @@ static bool hasVisibleBoxDecorationsOrBackground(const RenderElement& renderer)
 }
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
-static bool isReplacedElementWithHDR(const RenderElement& renderer)
+static bool isRenderElementWithHDR(const RenderElement& renderer)
 {
     if (CheckedPtr imageRenderer = dynamicDowncast<RenderImage>(renderer)) {
         if (auto* cachedImage = imageRenderer->cachedImage()) {
-            if (cachedImage->isHDR())
+            if (cachedImage->hasPaintedHDRContent())
+                return true;
+        }
+        return false;
+    }
+
+    if (CheckedPtr imageRenderer = dynamicDowncast<LegacyRenderSVGImage>(renderer)) {
+        if (auto* cachedImage = imageRenderer->imageResource().cachedImage()) {
+            if (cachedImage->hasPaintedHDRContent())
                 return true;
         }
         return false;
@@ -5854,7 +5863,7 @@ static void determineNonLayerDescendantsPaintedContent(const RenderElement& rend
         }
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
-        if (!request.isPaintedHDRContentSatisfied() && isReplacedElementWithHDR(*childElement)) {
+        if (!request.isPaintedHDRContentSatisfied() && isRenderElementWithHDR(*childElement)) {
             request.setHasPaintedHDRContent();
 
             if (request.isSatisfied())
@@ -5875,11 +5884,11 @@ void RenderLayer::determineNonLayerDescendantsPaintedContent(PaintedContentReque
 }
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
-bool RenderLayer::isReplacedElementWithHDR() const
+bool RenderLayer::isRenderElementWithHDR() const
 {
     if (auto* imageDocument = dynamicDowncast<ImageDocument>(renderer().document()))
         return imageDocument->hasPaintedHDRContent();
-    return WebCore::isReplacedElementWithHDR(renderer());
+    return WebCore::isRenderElementWithHDR(renderer());
 }
 #endif
 

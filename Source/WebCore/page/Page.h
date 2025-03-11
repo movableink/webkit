@@ -161,6 +161,7 @@ class RTCController;
 class RenderObject;
 class ResourceUsageOverlay;
 class RenderingUpdateScheduler;
+class SVGImageElement;
 class ScreenOrientationManager;
 class ScrollLatchingController;
 class ScrollingCoordinator;
@@ -870,6 +871,7 @@ public:
     WEBCORE_EXPORT void resumeAnimatingImages();
 
     void didFinishLoadingImageForElement(HTMLImageElement&);
+    void didFinishLoadingImageForSVGImage(SVGImageElement&);
 
     WEBCORE_EXPORT void addLayoutMilestones(OptionSet<LayoutMilestone>);
     WEBCORE_EXPORT void removeLayoutMilestones(OptionSet<LayoutMilestone>);

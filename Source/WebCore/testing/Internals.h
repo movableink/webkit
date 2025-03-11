@@ -270,7 +270,7 @@ public:
     unsigned remoteImagesCountForTesting() const;
     void setAsyncDecodingEnabledForTesting(HTMLImageElement&, bool enabled);
     void setForceUpdateImageDataEnabledForTesting(HTMLImageElement&, bool enabled);
-    void setHeadroomForTesting(HTMLImageElement&, float headroom);
+    void setHasPaintedHDRContentForTesting(HTMLImageElement&);
 
 #if ENABLE(WEB_CODECS)
     bool hasPendingActivity(const WebCodecsVideoDecoder&) const;

@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html>
-<meta name="fuzzy" content="maxDifference=0-6; totalPixels=0-40000" />
 <style>
     .image-box {
         width: 200px;
@@ -9,34 +8,34 @@
     }
 </style>
 <body>
+    <pre id="layers">Layer tree goes here in DRT</pre>
     <div style="position: fixed; top: 10px; left: 10px;">
-        <img class="image-box">
-    </div>
-    <div style="position: fixed; top: 10px; left: 220px;">
-        <div class="image-box"></div>
+        <svg class="image-box">
+            <image width="100%" height="100%"/>
+        </svg>
     </div>
     <script>
         if (window.internals && window.testRunner) {
             internals.clearMemoryCache();
             internals.setScreenContentsFormatsForTesting(["RGBA8", "RGBA16F"]);
+            testRunner.dumpAsText();
             testRunner.waitUntilDone();
         }
-
+ 
         var image = new Image;
         image.onload = (() => {
             if (window.internals)
                 internals.setHasPaintedHDRContentForTesting(image);
 
-            var divElement = document.querySelector("div.image-box");
-            divElement.style.backgroundImage = 'url(' + image.src + ')';
+            var imageElement = document.querySelector("svg.image-box image");
+            imageElement.setAttribute("href", image.src);
 
-            var imgElement = document.querySelector("img.image-box");
-            imgElement.src = image.src;
-
-            if (window.testRunner)
+            if (window.testRunner) {
+                document.getElementById("layers").textContent = internals.layerTreeAsText(document);
                 testRunner.notifyDone();
+            }
         });
-        image.src = "resources/green-400x400.png";
+        image.src = "../../fast/images/resources/green-400x400.png";
     </script>
 </body>
 </html>
