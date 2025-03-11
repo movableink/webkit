@@ -14,7 +14,6 @@ UIProcess/API/Cocoa/WKNSURLAuthenticationChallenge.mm
 UIProcess/API/Cocoa/WKWebViewTesting.mm
 UIProcess/API/Cocoa/_WKDataTask.mm
 UIProcess/API/Cocoa/_WKDownload.mm
-UIProcess/Cocoa/GroupActivities/GroupActivitiesSessionNotifier.mm
 UIProcess/mac/WebContextMenuProxyMac.mm
 WebProcess/Automation/WebAutomationSessionProxy.cpp
 WebProcess/EncryptedMedia/MediaKeySystemPermissionRequestManager.cpp
