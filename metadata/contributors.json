@@ -231,6 +231,15 @@
    },
    {
       "emails" : [
+         "adrian_taylor@apple.com"
+      ],
+      "name" : "Adrian Taylor",
+      "nicks" : [
+         "adetaylor"
+      ]
+   },
+   {
+      "emails" : [
          "enne@google.com",
          "enne@chromium.org"
       ],
