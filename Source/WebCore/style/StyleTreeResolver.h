@@ -65,8 +65,7 @@ public:
 
     std::unique_ptr<Update> resolve();
 
-    bool hasUnresolvedQueryContainers() const { return m_hasUnresolvedQueryContainers; }
-    bool hasUnresolvedAnchorPositionedElements() const { return m_hasUnresolvedAnchorPositionedElements; }
+    bool needsInterleavedLayout() const { return m_needsInterleavedLayout; }
 
 private:
     enum class ResolutionType : uint8_t { RebuildUsingExisting, AnimationOnly, FastPathInherit, FullWithMatchResultCache, Full };
@@ -76,11 +75,10 @@ private:
 
     const RenderStyle* existingStyle(const Element&);
 
-    enum class AnchorPositionedElementAction : bool { None, SkipDescendants };
-    enum class QueryContainerAction : uint8_t { None, Resolve, Continue };
+    enum class LayoutInterleavingAction : uint8_t { None, SkipDescendants };
     enum class DescendantsToResolve : uint8_t { None, RebuildAllUsingExisting, ChildrenWithExplicitInherit, Children, All };
 
-    QueryContainerAction updateStateForQueryContainer(Element&, const RenderStyle*, Change&, DescendantsToResolve&);
+    LayoutInterleavingAction updateStateForQueryContainer(Element&, const RenderStyle*, Change&, DescendantsToResolve&);
 
     std::pair<ElementUpdate, DescendantsToResolve> resolveElement(Element&, const RenderStyle* existingStyle, ResolutionType);
 
@@ -149,7 +147,7 @@ private:
     const RenderStyle* parentBoxStyle() const;
     const RenderStyle* parentBoxStyleForPseudoElement(const ElementUpdate&) const;
 
-    AnchorPositionedElementAction updateAnchorPositioningState(Element&, const RenderStyle*, Change);
+    LayoutInterleavingAction updateAnchorPositioningState(Element&, const RenderStyle*, Change);
 
     void generatePositionOptionsIfNeeded(const ResolvedStyle&, const Styleable&, const ResolutionContext&);
     std::unique_ptr<RenderStyle> generatePositionOption(const PositionTryFallback&, const ResolvedStyle&, const Styleable&, const ResolutionContext&);
@@ -165,6 +163,7 @@ private:
     struct QueryContainerState {
         Change change { Change::None };
         DescendantsToResolve descendantsToResolve { DescendantsToResolve::None };
+        bool invalidated { false };
     };
 
     CheckedRef<Document> m_document;
@@ -175,8 +174,7 @@ private:
     bool m_didSeePendingStylesheet { false };
 
     UncheckedKeyHashMap<Ref<Element>, std::optional<QueryContainerState>> m_queryContainerStates;
-    bool m_hasUnresolvedQueryContainers { false };
-    bool m_hasUnresolvedAnchorPositionedElements { false };
+    bool m_needsInterleavedLayout { false };
 
     // This state gets passes to the style builder and holds state for a single tree resolution, including over any interleaving.
     TreeResolutionState m_treeResolutionState;

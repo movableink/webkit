@@ -1168,7 +1168,6 @@ void TreeResolver::resolveComposedTree()
             resetStyleForNonRenderedDescendants(element);
 
         auto queryContainerAction = updateStateForQueryContainer(element, style, change, descendantsToResolve);
-
         auto anchorPositionedElementAction = updateAnchorPositioningState(element, style, change);
 
         bool shouldIterateChildren = [&] {
@@ -1176,10 +1175,10 @@ void TreeResolver::resolveComposedTree()
             if (!style)
                 return false;
             // Style resolution will be resumed after the container has been resolved.
-            if (queryContainerAction == QueryContainerAction::Resolve)
+            if (queryContainerAction == LayoutInterleavingAction::SkipDescendants)
                 return false;
             // Style resolution will be resumed after the anchor-positioned element has been resolved.
-            if (anchorPositionedElementAction == AnchorPositionedElementAction::SkipDescendants)
+            if (anchorPositionedElementAction == LayoutInterleavingAction::SkipDescendants)
                 return false;
             return element.childNeedsStyleRecalc() || descendantsToResolve != DescendantsToResolve::None;
         }();
@@ -1221,10 +1220,10 @@ const RenderStyle* TreeResolver::existingStyle(const Element& element)
     return style;
 }
 
-auto TreeResolver::updateStateForQueryContainer(Element& element, const RenderStyle* style, Change& change, DescendantsToResolve& descendantsToResolve) -> QueryContainerAction
+auto TreeResolver::updateStateForQueryContainer(Element& element, const RenderStyle* style, Change& change, DescendantsToResolve& descendantsToResolve) -> LayoutInterleavingAction
 {
     if (!style)
-        return QueryContainerAction::None;
+        return LayoutInterleavingAction::None;
 
     auto tryRestoreState = [&](auto& state) {
         if (!state)
@@ -1236,7 +1235,7 @@ auto TreeResolver::updateStateForQueryContainer(Element& element, const RenderSt
 
     if (auto it = m_queryContainerStates.find(element); it != m_queryContainerStates.end()) {
         tryRestoreState(it->value);
-        return QueryContainerAction::Continue;
+        return LayoutInterleavingAction::None;
     }
 
     auto* existingStyle = element.renderOrDisplayContentsStyle();
@@ -1245,17 +1244,15 @@ auto TreeResolver::updateStateForQueryContainer(Element& element, const RenderSt
         if (styleChangeAffectsRelativeUnits(*style, existingStyle))
             descendantsToResolve = DescendantsToResolve::All;
         m_queryContainerStates.add(element, QueryContainerState { change, descendantsToResolve });
-        m_hasUnresolvedQueryContainers = true;
-        return QueryContainerAction::Resolve;
+        return LayoutInterleavingAction::SkipDescendants;
     }
 
-    return QueryContainerAction::None;
+    return LayoutInterleavingAction::None;
 }
 
 std::unique_ptr<Update> TreeResolver::resolve()
 {
-    m_hasUnresolvedQueryContainers = false;
-    auto hadUnresolvedAnchorPositionedElements = std::exchange(m_hasUnresolvedAnchorPositionedElements, false);
+    auto didInterleavedLayout = std::exchange(m_needsInterleavedLayout, false);
 
     Element* documentElement = m_document->documentElement();
     if (!documentElement) {
@@ -1263,11 +1260,11 @@ std::unique_ptr<Update> TreeResolver::resolve()
         return nullptr;
     }
 
+    if (didInterleavedLayout)
+        AnchorPositionEvaluator::updateAnchorPositioningStatesAfterInterleavedLayout(m_document, m_treeResolutionState.anchorPositionedStates);
+
     if (!documentElement->childNeedsStyleRecalc() && !documentElement->needsStyleRecalc())
         return WTFMove(m_update);
-
-    if (hadUnresolvedAnchorPositionedElements)
-        AnchorPositionEvaluator::updateAnchorPositioningStatesAfterInterleavedLayout(m_document, m_treeResolutionState.anchorPositionedStates);
 
     m_didSeePendingStylesheet = m_document->styleScope().hasPendingSheetsBeforeBody();
 
@@ -1283,11 +1280,12 @@ std::unique_ptr<Update> TreeResolver::resolve()
     m_parentStack.clear();
     popScope();
 
-    if (m_hasUnresolvedQueryContainers) {
-        for (auto& containerAndState : m_queryContainerStates) {
-            // Ensure that resumed resolution reaches the container.
-            if (containerAndState.value)
-                containerAndState.key->invalidateForResumingQueryContainerResolution();
+    for (auto& containerAndState : m_queryContainerStates) {
+        // Ensure that resumed resolution reaches the container.
+        if (containerAndState.value && !containerAndState.value->invalidated) {
+            containerAndState.key->invalidateForResumingQueryContainerResolution();
+            containerAndState.value->invalidated = true;
+            m_needsInterleavedLayout = true;
         }
     }
 
@@ -1295,6 +1293,7 @@ std::unique_ptr<Update> TreeResolver::resolve()
         // Ensure that style resolution visits any unresolved anchor-positioned elements.
         if (elementAndState.value->stage < AnchorPositionResolutionStage::Resolved) {
             elementAndState.key.invalidateForResumingAnchorPositionedElementResolution();
+            m_needsInterleavedLayout = true;
             saveBeforeResolutionStyleForInterleaving(elementAndState.key);
         }
 
@@ -1308,7 +1307,7 @@ std::unique_ptr<Update> TreeResolver::resolve()
     for (auto& elementAndOptions : m_positionOptions) {
         if (!elementAndOptions.value.chosen) {
             elementAndOptions.key->invalidateForResumingAnchorPositionedElementResolution();
-            m_hasUnresolvedAnchorPositionedElements = true;
+            m_needsInterleavedLayout = true;
             saveBeforeResolutionStyleForInterleaving(elementAndOptions.key);
         }
     }
@@ -1321,25 +1320,23 @@ std::unique_ptr<Update> TreeResolver::resolve()
     return WTFMove(m_update);
 }
 
-auto TreeResolver::updateAnchorPositioningState(Element& element, const RenderStyle* style, Change change) -> AnchorPositionedElementAction
+auto TreeResolver::updateAnchorPositioningState(Element& element, const RenderStyle* style, Change change) -> LayoutInterleavingAction
 {
     if (!style)
-        return AnchorPositionedElementAction::None;
+        return LayoutInterleavingAction::None;
 
     AnchorPositionEvaluator::updateAnchorPositionedStateForLayoutTimePositioned(element, *style, m_treeResolutionState.anchorPositionedStates);
 
     if (change != Change::None && !style->anchorNames().isEmpty()) {
         // Existing anchor positions may change due to a style change. We need a round of interleaving.
-        m_hasUnresolvedAnchorPositionedElements = true;
+        m_needsInterleavedLayout = true;
     }
 
     auto needsInterleavedLayout = hasUnresolvedAnchorPosition(element);
-    if (needsInterleavedLayout) {
-        m_hasUnresolvedAnchorPositionedElements = true;
-        return AnchorPositionedElementAction::SkipDescendants;
-    }
+    if (needsInterleavedLayout)
+        return LayoutInterleavingAction::SkipDescendants;
 
-    return AnchorPositionedElementAction::None;
+    return LayoutInterleavingAction::None;
 }
 
 void TreeResolver::generatePositionOptionsIfNeeded(const ResolvedStyle& resolvedStyle, const Styleable& styleable, const ResolutionContext& resolutionContext)
