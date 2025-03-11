@@ -184,27 +184,6 @@ RefPtr<CSSValue> consumeBorderImageSlice(CSSParserTokenRange& range, const CSSPa
     return CSSBorderImageSliceValue::create({ slices[0].releaseNonNull(), slices[1].releaseNonNull(), slices[2].releaseNonNull(), slices[3].releaseNonNull() }, fill);
 }
 
-RefPtr<CSSValue> consumeBorderImageOutset(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    // <'border-image-outset'> = [ <length [0,∞]> | <number [0,∞]> ]{1,4}
-    // https://drafts.csswg.org/css-backgrounds/#propdef-border-image-outset
-
-    std::array<RefPtr<CSSPrimitiveValue>, 4> outsets;
-
-    for (auto& value : outsets) {
-        value = consumeNumber(range, context, ValueRange::NonNegative);
-        if (!value)
-            value = consumeLength(range, context, HTMLStandardMode, ValueRange::NonNegative);
-        if (!value)
-            break;
-    }
-    if (!outsets[0])
-        return nullptr;
-    complete4Sides(outsets);
-
-    return CSSQuadValue::create({ outsets[0].releaseNonNull(), outsets[1].releaseNonNull(), outsets[2].releaseNonNull(), outsets[3].releaseNonNull() });
-}
-
 RefPtr<CSSValue> consumeBorderImageWidth(CSSParserTokenRange& range, const CSSParserContext& context, CSSPropertyID currentShorthand)
 {
     // <'border-image-width'> = [ <length-percentage [0,∞]> | <number [0,∞]> | auto ]{1,4}
@@ -263,7 +242,7 @@ bool consumeBorderImageComponents(CSSParserTokenRange& range, const CSSParserCon
                 if (consumeSlashIncludingWhitespace(range)) {
                     width = consumeBorderImageWidth(range, context, property);
                     if (consumeSlashIncludingWhitespace(range)) {
-                        outset = consumeBorderImageOutset(range, context);
+                        outset = CSSPropertyParsing::consumeBorderImageOutset(range, context);
                         if (!outset)
                             return false;
                     } else if (!width)

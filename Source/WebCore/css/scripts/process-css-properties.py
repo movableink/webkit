@@ -1833,11 +1833,11 @@ class KeywordTerm:
 #   e.g. "auto" | "reverse" | "<angle unitless-allowed unitless-zero-allowed>"
 #
 class MatchOneTerm:
-    def __init__(self, terms):
-        self.terms = terms
+    def __init__(self, subterms):
+        self.subterms = subterms
 
     def __str__(self):
-        return f"[ {' | '.join(stringify_iterable(self.terms))} ]"
+        return f"[ {' | '.join(stringify_iterable(self.subterms))} ]"
 
     def __repr__(self):
         return self.__str__()
@@ -1854,63 +1854,63 @@ class MatchOneTerm:
         return MatchOneTerm(list(compact_map(lambda value: value.keyword_term, values)))
 
     def perform_fixups(self, all_rules):
-        self.terms = MatchOneTerm.simplify(term.perform_fixups(all_rules) for term in self.terms)
+        self.subterms = MatchOneTerm.simplify(subterm.perform_fixups(all_rules) for subterm in self.subterms)
 
-        if len(self.terms) == 1:
-            return self.terms[0]
+        if len(self.subterms) == 1:
+            return self.subterms[0]
         return self
 
     def perform_fixups_for_values_references(self, values):
-        self.terms = MatchOneTerm.simplify(term.perform_fixups_for_values_references(values) for term in self.terms)
+        self.subterms = MatchOneTerm.simplify(subterm.perform_fixups_for_values_references(values) for subterm in self.subterms)
 
-        if len(self.terms) == 1:
-            return self.terms[0]
+        if len(self.subterms) == 1:
+            return self.subterms[0]
         return self
 
     @staticmethod
-    def simplify(terms):
-        simplified_terms = []
-        for term in terms:
-            if isinstance(term, MatchOneTerm):
-                simplified_terms += term.terms
+    def simplify(subterms):
+        simplified_subterms = []
+        for subterm in subterms:
+            if isinstance(subterm, MatchOneTerm):
+                simplified_subterms += subterm.subterms
             else:
-                simplified_terms += [term]
-        return simplified_terms
+                simplified_subterms += [subterm]
+        return simplified_subterms
 
     @property
     def has_keyword_term(self):
-        return any(isinstance(term, KeywordTerm) for term in self.terms)
+        return any(isinstance(subterm, KeywordTerm) for subterm in self.subterms)
 
     @property
     def has_only_keyword_terms(self):
-        return all(isinstance(term, KeywordTerm) for term in self.terms)
+        return all(isinstance(subterm, KeywordTerm) for subterm in self.subterms)
 
     @property
     def keyword_terms(self):
-        return (term for term in self.terms if isinstance(term, KeywordTerm))
+        return (subterm for subterm in self.subterms if isinstance(subterm, KeywordTerm))
 
     @property
     def fast_path_keyword_terms(self):
-        return (term for term in self.keyword_terms if term.is_eligible_for_fast_path)
+        return (subterm for subterm in self.keyword_terms if subterm.is_eligible_for_fast_path)
 
     @property
     def has_fast_path_keyword_terms(self):
-        return any(term.is_eligible_for_fast_path for term in self.keyword_terms)
+        return any(subterm.is_eligible_for_fast_path for subterm in self.keyword_terms)
 
     @property
     def has_only_fast_path_keyword_terms(self):
-        return all(isinstance(term, KeywordTerm) and term.is_eligible_for_fast_path for term in self.terms)
+        return all(isinstance(subterm, KeywordTerm) and subterm.is_eligible_for_fast_path for subterm in self.subterms)
 
     @property
     def supported_keywords(self):
         result = set()
-        for term in self.terms:
-            result.update(term.supported_keywords)
+        for subterm in self.subterms:
+            result.update(subterm.supported_keywords)
         return result
 
     @property
     def has_non_builtin_reference_terms(self):
-        return any(term.has_non_builtin_reference_terms for term in self.terms)
+        return any(subterm.has_non_builtin_reference_terms for subterm in self.subterms)
 
 
 # MatchOneOrMoreAnyOrderTerm represents matching a list of provided terms
@@ -3159,16 +3159,42 @@ class GenerateCSSPropertyNames:
             """)
 
     def _term_matches_number_or_integer(self, term):
-        if isinstance(term, ReferenceTerm):
-            if term.name.name == "number" or term.name.name == "integer":
-                return True
-        elif isinstance(term, MatchOneTerm):
-            for inner_term in term.terms:
+        if isinstance(term, MatchOneTerm):
+            return any(self._term_matches_number_or_integer(inner_term) for inner_term in term.subterms)
+        elif isinstance(term, MatchOneOrMoreAnyOrderTerm):
+            return any(self._term_matches_number_or_integer(inner_term) for inner_term in term.subterms)
+        elif isinstance(term, MatchAllOrderedTerm):
+            any_term_matches = False
+            for inner_term in term.subterms:
                 if self._term_matches_number_or_integer(inner_term):
-                    return True
+                    any_term_matches = True
+                elif not isinstance(inner_term, OptionalTerm):
+                    return False
+            return any_term_matches
+        elif isinstance(term, MatchAllAnyOrderTerm):
+            any_term_matches = False
+            for inner_term in term.subterms:
+                if self._term_matches_number_or_integer(inner_term):
+                    any_term_matches = True
+                elif not isinstance(inner_term, OptionalTerm):
+                    return False
+            return any_term_matches
+        elif isinstance(term, OptionalTerm):
+            return self._term_matches_number_or_integer(term.subterm)
         elif isinstance(term, UnboundedRepetitionTerm):
-            return self._term_matches_number_or_integer(term.repeated_term)
-        return False
+            return self._term_matches_number_or_integer(term.repeated_term) and term.min < 2
+        elif isinstance(term, BoundedRepetitionTerm):
+            return self._term_matches_number_or_integer(term.repeated_term) and term.min < 2
+        elif isinstance(term, ReferenceTerm):
+            return term.name.name == "number" or term.name.name == "integer"
+        elif isinstance(term, FunctionTerm):
+            return False
+        elif isinstance(term, LiteralTerm):
+            return False
+        elif isinstance(term, KeywordTerm):
+            return False
+        else:
+            raise Exception(f"Unknown term type - {type(term)} - {term}")
 
     def _property_matches_number_or_integer(self, p):
         if p.codegen_properties.parser_function_allows_number_or_integer_input:
@@ -4436,6 +4462,7 @@ class GenerateCSSPropertyParsing:
                     "CSSPropertyParserConsumer+URL.h",
                     "CSSPropertyParserConsumer+ViewTransition.h",
                     "CSSPropertyParserConsumer+WillChange.h",
+                    "CSSQuadValue.h",
                     "CSSValuePair.h",
                     "CSSValuePool.h",
                     "DeprecatedGlobalSettings.h",
@@ -5276,7 +5303,7 @@ class TermGeneratorMatchOneTerm(TermGenerator):
         match_all_ordered_terms = []
         match_all_any_order_terms = []
 
-        for sub_term in term.terms:
+        for sub_term in term.subterms:
             if isinstance(sub_term, KeywordTerm):
                 if keyword_fast_path_generator and sub_term.is_eligible_for_fast_path:
                     fast_path_keyword_terms.append(sub_term)

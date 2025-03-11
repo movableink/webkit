@@ -2818,10 +2818,8 @@
                 "animation-wrapper": "LengthBoxWrapper",
                 "style-builder-custom": "All",
                 "disables-native-appearance": true,
-                "parser-function": "consumeBorderImageOutset",
-                "parser-function-allows-number-or-integer-input": true,
-                "parser-grammar-unused": "[ <length [0,inf]> | <number [0,inf]> ]{1,4}",
-                "parser-grammar-unused-reason": "Needs support for quad/complete4Side style defaulting."
+                "parser-grammar": "[ <number [0,inf]> | <length [0,inf]> ]{1,4}@(type=CSSQuadValue)",
+                "parser-exported": true
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -5434,9 +5432,7 @@
                 ],
                 "animation-wrapper": "LengthBoxWrapper",
                 "style-builder-custom": "All",
-                "parser-function": "consumeBorderImageOutset",
-                "parser-grammar-unused": "[ <number [0,inf]> | <length [0,inf]> ]{1,4}",
-                "parser-grammar-unused-reason": "Needs support for quad/complete4Side style defaulting."
+                "parser-grammar": "[ <number [0,inf]> | <length [0,inf]> ]{1,4}@(type=CSSQuadValue)"
 
             },
             "specification": {

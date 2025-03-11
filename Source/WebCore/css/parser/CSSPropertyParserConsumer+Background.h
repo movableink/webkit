@@ -56,10 +56,6 @@ std::optional<CSS::BorderRadius> consumeUnresolvedWebKitBorderRadius(CSSParserTo
 // https://drafts.csswg.org/css-backgrounds/#propdef-border-image-slice
 RefPtr<CSSValue> consumeBorderImageSlice(CSSParserTokenRange&, const CSSParserContext&, CSSPropertyID currentProperty);
 
-// <'border-image-outset'> = [ <length [0,∞]> | <number [0,∞]> ]{1,4}
-// https://drafts.csswg.org/css-backgrounds/#propdef-border-image-outset
-RefPtr<CSSValue> consumeBorderImageOutset(CSSParserTokenRange&, const CSSParserContext&);
-
 // <'border-image-width'> = [ <length-percentage [0,∞]> | <number [0,∞]> | auto ]{1,4}
 // https://drafts.csswg.org/css-backgrounds/#propdef-border-image-width
 RefPtr<CSSValue> consumeBorderImageWidth(CSSParserTokenRange&, const CSSParserContext&, CSSPropertyID currentProperty);
