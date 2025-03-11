@@ -157,6 +157,10 @@ void VideoPresentationModelVideoElement::updateForEventName(const WTF::AtomStrin
             return std::nullopt;
         }());
     }
+
+    // FIXME: We should only tag a media element as having been interacting with if those events were trigger by a user gesture.
+    if (eventName == eventNames().playEvent || eventName == eventNames().pauseEvent)
+        videoInteractedWith();
 }
 
 void VideoPresentationModelVideoElement::documentVisibilityChanged()
@@ -205,6 +209,21 @@ void VideoPresentationModelVideoElement::documentFullscreenChanged()
         client->isChildOfElementFullscreenChanged(m_isChildOfElementFullscreen);
 }
 #endif
+
+void VideoPresentationModelVideoElement::videoInteractedWith()
+{
+    RefPtr videoElement = m_videoElement;
+
+    if (!videoElement)
+        return;
+
+    CheckedPtr mediaSession = videoElement->mediaSessionIfExists();
+    if (!mediaSession || (!mediaSession->mostRecentUserInteractionTime() && mediaSession->hasBehaviorRestriction(MediaElementSession::RequireUserGestureForAudioRateChange)))
+        return;
+
+    for (auto& client : copyToVector(m_clients))
+        client->hasBeenInteractedWith();
+}
 
 void VideoPresentationModelVideoElement::willExitFullscreen()
 {
@@ -311,7 +330,7 @@ void VideoPresentationModelVideoElement::setVideoLayerGravity(MediaPlayer::Video
 
 std::span<const AtomString> VideoPresentationModelVideoElement::observedEventNames()
 {
-    static NeverDestroyed names = std::array { eventNames().resizeEvent, eventNames().loadstartEvent, eventNames().loadedmetadataEvent };
+    static NeverDestroyed names = std::array { eventNames().resizeEvent, eventNames().loadstartEvent, eventNames().loadedmetadataEvent, eventNames().playEvent, eventNames().pauseEvent };
     return names.get();
 }
 

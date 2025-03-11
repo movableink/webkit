@@ -708,7 +708,7 @@ bool MediaElementSession::isMainContentForPurposesOfAutoplayEvents() const
     return isElementMainContentForPurposesOfAutoplay(m_element, false);
 }
 
-MonotonicTime MediaElementSession::mostRecentUserInteractionTime() const
+Markable<MonotonicTime> MediaElementSession::mostRecentUserInteractionTime() const
 {
     return m_mostRecentUserInteractionTime;
 }
@@ -968,7 +968,7 @@ void MediaElementSession::mediaEngineUpdated()
 
 void MediaElementSession::resetPlaybackSessionState()
 {
-    m_mostRecentUserInteractionTime = MonotonicTime();
+    m_mostRecentUserInteractionTime.reset();
     addBehaviorRestriction(RequireUserGestureToControlControlsManager | RequirePlaybackToControlControlsManager);
 }
 

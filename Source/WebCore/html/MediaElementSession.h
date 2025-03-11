@@ -33,6 +33,7 @@
 #include "PlatformMediaSession.h"
 #include "Timer.h"
 #include <memory>
+#include <wtf/Markable.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/TypeCasts.h>
 
@@ -161,7 +162,7 @@ public:
     bool isLargeEnoughForMainContent(MediaSessionMainContentPurpose) const;
     bool isLongEnoughForMainContent() const final;
     bool isMainContentForPurposesOfAutoplayEvents() const;
-    MonotonicTime mostRecentUserInteractionTime() const;
+    Markable<MonotonicTime> mostRecentUserInteractionTime() const;
 
     bool allowsPlaybackControlsForAutoplayingAudio() const;
 
@@ -238,7 +239,7 @@ private:
     bool m_hasPlaybackTargetAvailabilityListeners { false };
 #endif
 
-    MonotonicTime m_mostRecentUserInteractionTime;
+    Markable<MonotonicTime> m_mostRecentUserInteractionTime;
 
     mutable bool m_isMainContent { false };
     Timer m_mainContentCheckTimer;

@@ -133,6 +133,7 @@ private:
 #if ENABLE(FULLSCREEN_API)
     void documentFullscreenChanged();
 #endif
+    void videoInteractedWith();
 
     // HTMLMediaElementClient
     void audioSessionCategoryChanged(AudioSessionCategory, AudioSessionMode, RouteSharingPolicy) final;

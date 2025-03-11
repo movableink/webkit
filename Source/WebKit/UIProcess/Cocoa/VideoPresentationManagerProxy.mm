@@ -277,6 +277,14 @@ void VideoPresentationManagerProxy::setIsChildOfElementFullscreen(PlaybackSessio
         videosInElementFullscreenChanged();
 }
 
+void VideoPresentationManagerProxy::hasBeenInteractedWith(PlaybackSessionContextIdentifier contextId)
+{
+    Ref model = ensureModel(contextId);
+
+    if (std::exchange(m_lastInteractedWithVideo, contextId) != contextId && model->isChildOfElementFullscreen())
+        videosInElementFullscreenChanged();
+}
+
 void VideoPresentationManagerProxy::videosInElementFullscreenChanged()
 {
     if (RefPtr page = m_page.get())
@@ -1569,6 +1577,10 @@ Ref<PlaybackSessionManagerProxy> VideoPresentationManagerProxy::protectedPlaybac
 
 RefPtr<PlatformVideoPresentationInterface> VideoPresentationManagerProxy::bestVideoForElementFullscreen()
 {
+    if (m_lastInteractedWithVideo) {
+        if (auto* modelAndInterface = findModelAndInterface(*m_lastInteractedWithVideo); modelAndInterface && modelAndInterface->first->isChildOfElementFullscreen())
+            return Ref { modelAndInterface->second };
+    }
 #if PLATFORM(IOS_FAMILY)
     if (!m_page)
         return nullptr;
