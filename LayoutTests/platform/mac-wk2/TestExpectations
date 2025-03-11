@@ -1971,8 +1971,6 @@ webkit.org/b/288660 [ Sonoma Release x86_64 ] media/media-hevc-video-as-img.html
 # webkit.org/b/280219 [EWS] imported/w3c/web-platform-t ests/css/css-view-transitio ns/massive-element-below-vi ewport-offscreen-old.html is a constant failure on Ventura+ Intel 
 [ Sonoma Release x86_64 ] imported/w3c/web-platform-tests/css/css-view-transitions/massive-element-below-viewport-offscreen-old.html [ Skip ]
 
-webkit.org/b/288670 [ Release x86_64 ] media/media-source/media-source-vp8-hiddenframes.html [ Pass ImageOnlyFailure ]
-
 webkit.org/b/288742 [ Debug ] ipc/media-player-invalid-test.html [ Crash ]
 
 webkit.org/b/288878 media/modern-media-controls/tracks-support/audio-multiple-tracks.html [ Pass Timeout ]
