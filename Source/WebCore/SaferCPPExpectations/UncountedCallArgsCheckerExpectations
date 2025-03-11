@@ -744,7 +744,6 @@ html/ValidatedFormListedElement.h
 html/ValidationMessage.cpp
 html/canvas/CanvasFilterContextSwitcher.cpp
 html/canvas/CanvasGradient.cpp
-html/canvas/CanvasPattern.cpp
 html/canvas/CanvasRenderingContext.cpp
 html/canvas/CanvasRenderingContext2D.cpp
 html/canvas/CanvasRenderingContext2DBase.cpp
