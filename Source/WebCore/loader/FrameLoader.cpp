@@ -1712,6 +1712,7 @@ void FrameLoader::load(FrameLoadRequest&& request)
         loader->setOriginatorAdvancedPrivacyProtections(*advancedPrivacyProtections);
     addSameSiteInfoToRequestIfNeeded(loader->request());
     applyShouldOpenExternalURLsPolicyToNewDocumentLoader(protectedFrame(), loader, request);
+    loader->setIsHandledByAboutSchemeHandler(request.isHandledByAboutSchemeHandler());
 
     if (request.shouldTreatAsContinuingLoad() != ShouldTreatAsContinuingLoad::No) {
         loader->setClientRedirectSourceForHistory(request.clientRedirectSourceForHistory());

@@ -2088,6 +2088,9 @@ bool DocumentLoader::maybeLoadEmpty()
     if (!shouldLoadEmpty && !frameLoaderClient->representationExistsForURLScheme(m_request.url().protocol()))
         return false;
 
+    if (m_request.url().protocolIsAbout() && isHandledByAboutSchemeHandler())
+        return false;
+
     if (m_request.url().isEmpty() && !protectedFrameLoader()->stateMachine().creatingInitialEmptyDocument()) {
         m_request.setURL(aboutBlankURL());
         if (isLoadingMainResource())
@@ -2134,12 +2137,12 @@ static bool canUseServiceWorkers(LocalFrame* frame)
     return !ownerElement || !is<HTMLPlugInElement>(ownerElement);
 }
 
-static bool shouldCancelLoadingAboutURL(const URL& url)
+bool DocumentLoader::shouldCancelLoadingAboutURL(const URL& url) const
 {
     if (!url.protocolIsAbout())
         return false;
 
-    if (url.isAboutBlank() || url.isAboutSrcDoc())
+    if (url.isAboutBlank() || url.isAboutSrcDoc() || isHandledByAboutSchemeHandler())
         return false;
 
     if (!url.hasOpaquePath())

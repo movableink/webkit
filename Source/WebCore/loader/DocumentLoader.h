@@ -525,6 +525,9 @@ public:
     bool loadStartedDuringSwipeAnimation() const { return m_loadStartedDuringSwipeAnimation; }
     void setLoadStartedDuringSwipeAnimation() { m_loadStartedDuringSwipeAnimation = true; }
 
+    bool isHandledByAboutSchemeHandler() const { return m_isHandledByAboutSchemeHandler; }
+    void setIsHandledByAboutSchemeHandler(bool isHandledByAboutSchemeHandler) { m_isHandledByAboutSchemeHandler = isHandledByAboutSchemeHandler; }
+
     bool isInFinishedLoadingOfEmptyDocument() const { return m_isInFinishedLoadingOfEmptyDocument; }
 #if ENABLE(CONTENT_FILTERING)
     bool contentFilterWillHandleProvisionalLoadFailure(const ResourceError&);
@@ -630,6 +633,8 @@ private:
 
     bool disallowWebArchive() const;
     bool disallowDataRequest() const;
+
+    bool shouldCancelLoadingAboutURL(const URL&) const;
 
     const Ref<CachedResourceLoader> m_cachedResourceLoader;
 
@@ -764,6 +769,8 @@ private:
     PushAndNotificationsEnabledPolicy m_pushAndNotificationsEnabledPolicy { PushAndNotificationsEnabledPolicy::UseGlobalPolicy };
     InlineMediaPlaybackPolicy m_inlineMediaPlaybackPolicy { InlineMediaPlaybackPolicy::Default };
 
+    Function<void(Document*)> m_whenDocumentIsCreatedCallback;
+
     bool m_idempotentModeAutosizingOnlyHonorsPercentages { false };
 
     bool m_isRequestFromClientOrUserInput { false };
@@ -803,11 +810,11 @@ private:
 
     bool m_canUseServiceWorkers { true };
 
-    Function<void(Document*)> m_whenDocumentIsCreatedCallback;
-
 #if ASSERT_ENABLED
     bool m_hasEverBeenAttached { false };
 #endif
+
+    bool m_isHandledByAboutSchemeHandler { false };
 };
 
 inline void DocumentLoader::recordMemoryCacheLoadForFutureClientNotification(const ResourceRequest& request)

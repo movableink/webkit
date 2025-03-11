@@ -387,6 +387,7 @@ Shared/WebsiteData/WebsiteData.cpp
 
 Shared/XR/XRDeviceProxy.cpp
 
+UIProcess/AboutSchemeHandler.cpp
 UIProcess/AuxiliaryProcessProxy.cpp
 UIProcess/BackgroundProcessResponsivenessTimer.cpp
 UIProcess/BrowsingContextGroup.cpp

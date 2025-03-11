@@ -292,6 +292,9 @@ bool WebLoaderStrategy::tryLoadingUsingURLSchemeHandler(ResourceLoader& resource
     if (!webPage || !webFrame)
         return false;
 
+    if (resourceLoader.request().url().protocolIsAbout() && is<SubresourceLoader>(resourceLoader))
+        return false;
+
     auto* handler = webPage->urlSchemeHandlerForScheme(resourceLoader.request().url().protocol());
     if (!handler)
         return false;

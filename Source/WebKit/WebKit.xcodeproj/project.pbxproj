@@ -2446,8 +2446,10 @@
 		EB44A69B2C8A4F6E006595BF /* WebClipCache.mm in Sources */ = {isa = PBXBuildFile; fileRef = EB44A69A2C8A4F6E006595BF /* WebClipCache.mm */; };
 		EB44A69C2C8A4F6E006595BF /* WebClipCache.h in Headers */ = {isa = PBXBuildFile; fileRef = EB44A6992C8A4F6E006595BF /* WebClipCache.h */; };
 		EB450E0F2996C7B6009724B1 /* WKWebsiteDataStoreRefPrivateMac.h in Headers */ = {isa = PBXBuildFile; fileRef = EB450E0D2996C7A1009724B1 /* WKWebsiteDataStoreRefPrivateMac.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		EB517B802D7C09690019E451 /* AboutSchemeHandlerCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = EB517B7A2D7BC03B0019E451 /* AboutSchemeHandlerCocoa.mm */; };
 		EB579C3729AEBD0800894C1C /* EarlyHintsResourceLoader.h in Headers */ = {isa = PBXBuildFile; fileRef = EB579C3629AEBCF100894C1C /* EarlyHintsResourceLoader.h */; };
 		EB7D252B27B31B77009CB586 /* com.apple.WebKit.webpushd.mac.sb in Resources */ = {isa = PBXBuildFile; fileRef = EB7D252A27B31B3F009CB586 /* com.apple.WebKit.webpushd.mac.sb */; };
+		EB8322162D72600C009515DA /* AboutSchemeHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = EB8322132D72600C009515DA /* AboutSchemeHandler.h */; };
 		EBA8D3AB27A5E31300CB7900 /* ApplePushServiceSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = EBA8D3AA27A5E31300CB7900 /* ApplePushServiceSPI.h */; };
 		EBA8D3B227A5E33F00CB7900 /* ApplePushServiceConnection.mm in Sources */ = {isa = PBXBuildFile; fileRef = EBA8D3AC27A5E33E00CB7900 /* ApplePushServiceConnection.mm */; };
 		EBA8D3B327A5E33F00CB7900 /* MockPushServiceConnection.h in Headers */ = {isa = PBXBuildFile; fileRef = EBA8D3AD27A5E33E00CB7900 /* MockPushServiceConnection.h */; };
@@ -8239,10 +8241,13 @@
 		EB44A69A2C8A4F6E006595BF /* WebClipCache.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WebClipCache.mm; sourceTree = "<group>"; };
 		EB450E0D2996C7A1009724B1 /* WKWebsiteDataStoreRefPrivateMac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = WKWebsiteDataStoreRefPrivateMac.h; path = mac/WKWebsiteDataStoreRefPrivateMac.h; sourceTree = "<group>"; };
 		EB450E0E2996C7A1009724B1 /* WKWebsiteDataStoreRefPrivateMac.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = WKWebsiteDataStoreRefPrivateMac.mm; path = mac/WKWebsiteDataStoreRefPrivateMac.mm; sourceTree = "<group>"; };
+		EB517B7A2D7BC03B0019E451 /* AboutSchemeHandlerCocoa.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AboutSchemeHandlerCocoa.mm; sourceTree = "<group>"; };
 		EB579C3529AEBCF100894C1C /* EarlyHintsResourceLoader.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = EarlyHintsResourceLoader.cpp; sourceTree = "<group>"; };
 		EB579C3629AEBCF100894C1C /* EarlyHintsResourceLoader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EarlyHintsResourceLoader.h; sourceTree = "<group>"; };
 		EB7D252927B316A6009CB586 /* com.apple.WebKit.webpushd.mac.sb.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = com.apple.WebKit.webpushd.mac.sb.in; sourceTree = "<group>"; };
 		EB7D252A27B31B3F009CB586 /* com.apple.WebKit.webpushd.mac.sb */ = {isa = PBXFileReference; lastKnownFileType = file; path = com.apple.WebKit.webpushd.mac.sb; sourceTree = "<group>"; };
+		EB8322132D72600C009515DA /* AboutSchemeHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AboutSchemeHandler.h; sourceTree = "<group>"; };
+		EB8322142D72600C009515DA /* AboutSchemeHandler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AboutSchemeHandler.cpp; sourceTree = "<group>"; };
 		EBA8D3AA27A5E31300CB7900 /* ApplePushServiceSPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ApplePushServiceSPI.h; sourceTree = "<group>"; };
 		EBA8D3AC27A5E33E00CB7900 /* ApplePushServiceConnection.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ApplePushServiceConnection.mm; sourceTree = "<group>"; };
 		EBA8D3AD27A5E33E00CB7900 /* MockPushServiceConnection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MockPushServiceConnection.h; sourceTree = "<group>"; };
@@ -9823,6 +9828,7 @@
 				57FD316B22B3367E008D0E8B /* SOAuthorization */,
 				5CA26D80217ABBB600F97A35 /* _WKWarningView.h */,
 				5CA26D7F217ABBB600F97A35 /* _WKWarningView.mm */,
+				EB517B7A2D7BC03B0019E451 /* AboutSchemeHandlerCocoa.mm */,
 				F404455A2D5CFB56000E587E /* AppKitSoftLink.h */,
 				F404455B2D5CFB56000E587E /* AppKitSoftLink.mm */,
 				99C81D551C20DFBE005C4C82 /* AutomationClient.h */,
@@ -14424,6 +14430,8 @@
 				57608294202BD84900116678 /* WebAuthentication */,
 				1A53C2A31A325691004E8C70 /* WebsiteData */,
 				118502592673B07100A6425E /* XR */,
+				EB8322142D72600C009515DA /* AboutSchemeHandler.cpp */,
+				EB8322132D72600C009515DA /* AboutSchemeHandler.h */,
 				E1513C64166EABB200149FCB /* AuxiliaryProcessProxy.cpp */,
 				E1513C65166EABB200149FCB /* AuxiliaryProcessProxy.h */,
 				46A2B6061E5675A200C3DEDA /* BackgroundProcessResponsivenessTimer.cpp */,
@@ -16628,6 +16636,7 @@
 				A115DC72191D82DA00DA8072 /* _WKWebViewPrintFormatter.h in Headers */,
 				A19DD3C01D07D16800AC823B /* _WKWebViewPrintFormatterInternal.h in Headers */,
 				07E4BDC72A3A7089000D5509 /* _WKWebViewTextInputNotifications.h in Headers */,
+				EB8322162D72600C009515DA /* AboutSchemeHandler.h in Headers */,
 				E3CAAA442413279900CED2E2 /* AccessibilitySupportSPI.h in Headers */,
 				E3B8F7F82BA8AC4D006E97B6 /* AccessibilityUtilitiesSPI.h in Headers */,
 				A7D792D81767CCA300881CBE /* ActivityAssertion.h in Headers */,
@@ -20128,6 +20137,7 @@
 				337822432947F679002106BB /* _WKWebExtensionWebNavigationURLFilter.mm in Sources */,
 				3370420A2B58A8390077FF78 /* _WKWebExtensionWebRequestFilter.mm in Sources */,
 				07E4BDC82A3A7089000D5509 /* _WKWebViewTextInputNotifications.mm in Sources */,
+				EB517B802D7C09690019E451 /* AboutSchemeHandlerCocoa.mm in Sources */,
 				E37AE22D2D5E7A100010402E /* AdditionalFonts.mm in Sources */,
 				EBA8D3B227A5E33F00CB7900 /* ApplePushServiceConnection.mm in Sources */,
 				A1D615722B06C7C2002D0E19 /* AssertionCapability.mm in Sources */,
