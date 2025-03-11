@@ -173,12 +173,7 @@ void* prepareOSREntry(VM& vm, CallFrame* callFrame, CodeBlock* codeBlock, Byteco
     //    OSR at this time.
     
     for (size_t argument = 0; argument < entry->m_expectedValues.numberOfArguments(); ++argument) {
-        JSValue value;
-        if (!argument)
-            value = callFrame->thisValue();
-        else
-            value = callFrame->argument(argument - 1);
-        
+        JSValue value = callFrame->r(virtualRegisterForArgumentIncludingThis(argument)).asanUnsafeJSValue();
         if (!entry->m_expectedValues.argument(argument).validateOSREntryValue(value, FlushedJSValue)) {
             dataLogLnIf(Options::verboseOSR(),
                 "    OSR failed because argument ", argument, " is ", value,
