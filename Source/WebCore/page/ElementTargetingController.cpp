@@ -1917,6 +1917,9 @@ uint64_t ElementTargetingController::numberOfVisibilityAdjustmentRects()
     if (!page)
         return 0;
 
+    if (!page->hasEverSetVisibilityAdjustment() && !m_shouldRecomputeAdjustedElements)
+        return 0;
+
     RefPtr mainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
     if (!mainFrame)
         return 0;
