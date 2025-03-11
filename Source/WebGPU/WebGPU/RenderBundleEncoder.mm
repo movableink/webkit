@@ -706,7 +706,7 @@ void RenderBundleEncoder::storeVertexBufferCountsForValidation(uint32_t indexCou
             .firstIndex = firstIndex,
             .baseVertex = baseVertex,
             .firstInstance = firstInstance,
-            .primitiveType = m_primitiveType,
+            .primitiveType = static_cast<decltype(IndexData::primitiveType)>(m_primitiveType),
         }
     });
 }

@@ -938,7 +938,7 @@ id<MTLFunction> Device::icbCommandClampFunction(MTLIndexType indexType)
         ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         options.fastMathEnabled = YES;
         ALLOW_DEPRECATED_DECLARATIONS_END
-        /* NOLINT */ id<MTLLibrary> library = [m_device newLibraryWithSource:@R"(
+        /* NOLINT */ id<MTLLibrary> library = [m_device newLibraryWithSource:[NSString stringWithFormat:@R"(
     using namespace metal;
     struct ICBContainer {
         device uint* outOfBoundsRead [[ id(0) ]];
@@ -968,6 +968,10 @@ id<MTLFunction> Device::icbCommandClampFunction(MTLIndexType indexType)
         uint32_t baseInstance { 0 };
         primitive_type primitiveType { primitive_type::triangle };
     };
+
+    static_assert(sizeof(primitive_type) == sizeof(uint32_t), "API assumes primitive type is sizeof uint32_t");
+    static_assert(sizeof(IndexDataUshort) == %lu, "sizeof(IndexDataUshort) in shader mismatches the API size");
+    static_assert(sizeof(IndexDataUint) == %lu, "sizeof(IndexDataUint) in shader mismatches the API size");
 
     [[vertex]] void vsICB(device const IndexDataUint* indexData [[buffer(0)]],
         device ICBContainer *icb_container [[buffer()" OBJC_STRINGIFY(DEVICE_BUFFER_INDEX_FOR_ICB_CONTAINER) @R"()]],
@@ -1010,7 +1014,7 @@ id<MTLFunction> Device::icbCommandClampFunction(MTLIndexType indexType)
                 data.baseInstance);
         }
 
-    })" /* NOLINT */ options:options error:&error];
+    })", sizeof(IndexData), sizeof(IndexData)] /* NOLINT */ options:options error:&error];
         if (error)
             WTFLogAlways("%@", error);
 
