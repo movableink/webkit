@@ -2029,3 +2029,5 @@ webkit.org/b/289370 [ Debug arm64 ] media/video-webm-seek-singlekeyframe.html [ 
 webkit.org/b/289487 [ Sequoia Release x86_64 ] fast/webgpu/nocrash/RenderBundle_WRITE.html [ Pass Timeout ]
 
 webkit.org/b/289556 [ Sequoia Release x86_64 ] fast/events/page-visibility-transition-test.html [ Pass Timeout ]
+
+webkit.org/b/289576 [ Release ] imported/w3c/web-platform-tests/html/semantics/interactive-elements/the-dialog-element/top-layer-remove-popover-attribute.html [ Pass Failure ]
