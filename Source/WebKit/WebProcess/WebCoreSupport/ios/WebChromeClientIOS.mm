@@ -52,10 +52,7 @@ using namespace WebCore;
 
 void WebChromeClient::didPreventDefaultForEvent()
 {
-    RefPtr page = m_page.get();
-    if (!page)
-        return;
-    RefPtr localMainFrame = page->localMainFrame();
+    RefPtr localMainFrame = page().localMainFrame();
     if (!localMainFrame)
         return;
     ContentChangeObserver::didPreventDefaultForEvent(*localMainFrame);
@@ -65,8 +62,7 @@ void WebChromeClient::didPreventDefaultForEvent()
 
 void WebChromeClient::didReceiveMobileDocType(bool isMobileDoctype)
 {
-    if (RefPtr page = m_page.get())
-        page->didReceiveMobileDocType(isMobileDoctype);
+    protectedPage()->didReceiveMobileDocType(isMobileDoctype);
 }
 
 void WebChromeClient::setNeedsScrollNotifications(WebCore::LocalFrame&, bool)
@@ -76,14 +72,12 @@ void WebChromeClient::setNeedsScrollNotifications(WebCore::LocalFrame&, bool)
 
 void WebChromeClient::didFinishContentChangeObserving(WebCore::LocalFrame&, WKContentChange observedContentChange)
 {
-    if (RefPtr page = m_page.get())
-        page->didFinishContentChangeObserving(observedContentChange);
+    protectedPage()->didFinishContentChangeObserving(observedContentChange);
 }
 
 void WebChromeClient::notifyRevealedSelectionByScrollingFrame(WebCore::LocalFrame&)
 {
-    if (RefPtr page = m_page.get())
-        page->didScrollSelection();
+    protectedPage()->didScrollSelection();
 }
 
 bool WebChromeClient::isStopping()
@@ -94,29 +88,25 @@ bool WebChromeClient::isStopping()
 
 void WebChromeClient::didLayout(LayoutType type)
 {
-    if (RefPtr page = m_page.get(); page && type == Scroll)
-        page->didScrollSelection();
+    if (type == Scroll)
+        protectedPage()->didScrollSelection();
 }
 
 void WebChromeClient::didStartOverflowScroll()
 {
     // FIXME: This is only relevant for legacy touch-driven overflow in the web process (see ScrollAnimatorIOS::handleTouchEvent), and should be removed.
-    if (RefPtr page = m_page.get())
-        page->send(Messages::WebPageProxy::ScrollingNodeScrollWillStartScroll(std::nullopt));
+    protectedPage()->send(Messages::WebPageProxy::ScrollingNodeScrollWillStartScroll(std::nullopt));
 }
 
 void WebChromeClient::didEndOverflowScroll()
 {
     // FIXME: This is only relevant for legacy touch-driven overflow in the web process (see ScrollAnimatorIOS::handleTouchEvent), and should be removed.
-    if (RefPtr page = m_page.get())
-        page->send(Messages::WebPageProxy::ScrollingNodeScrollDidEndScroll(std::nullopt));
+    protectedPage()->send(Messages::WebPageProxy::ScrollingNodeScrollDidEndScroll(std::nullopt));
 }
 
 bool WebChromeClient::hasStablePageScaleFactor() const
 {
-    if (RefPtr page = m_page.get())
-        return page->hasStablePageScaleFactor();
-    return false;
+    return protectedPage()->hasStablePageScaleFactor();
 }
 
 void WebChromeClient::suppressFormNotifications()
@@ -146,23 +136,19 @@ void WebChromeClient::webAppOrientationsUpdated()
 
 void WebChromeClient::showPlaybackTargetPicker(bool hasVideo, WebCore::RouteSharingPolicy policy, const String& routingContextUID)
 {
-    if (RefPtr page = m_page.get())
-        page->send(Messages::WebPageProxy::ShowPlaybackTargetPicker(hasVideo, page->rectForElementAtInteractionLocation(), policy, routingContextUID));
+    auto page = protectedPage();
+    page->send(Messages::WebPageProxy::ShowPlaybackTargetPicker(hasVideo, page->rectForElementAtInteractionLocation(), policy, routingContextUID));
 }
 
 Seconds WebChromeClient::eventThrottlingDelay()
 {
-    if (RefPtr page = m_page.get())
-        return page->eventThrottlingDelay();
-    return { };
+    return protectedPage()->eventThrottlingDelay();
 }
 
 #if ENABLE(ORIENTATION_EVENTS)
 IntDegrees WebChromeClient::deviceOrientation() const
 {
-    if (RefPtr page = m_page.get())
-        return page->deviceOrientation();
-    return { };
+    return protectedPage()->deviceOrientation();
 }
 #endif
 
@@ -183,13 +169,10 @@ bool WebChromeClient::showDataDetectorsUIForElement(const Element& element, cons
     if (!mouseEvent)
         return false;
 
-    RefPtr page = m_page.get();
-    if (!page)
-        return false;
-
     // FIXME: Ideally, we would be able to generate InteractionInformationAtPosition without re-hit-testing the element.
     auto request = InteractionInformationRequest { roundedIntPoint(mouseEvent->locationInRootViewCoordinates()) };
     request.includeLinkIndicator = true;
+    auto page = protectedPage();
     auto positionInformation = page->positionInformation(request);
     page->send(Messages::WebPageProxy::ShowDataDetectorsUIForPositionInformation(positionInformation));
     return true;
@@ -197,8 +180,7 @@ bool WebChromeClient::showDataDetectorsUIForElement(const Element& element, cons
 
 void WebChromeClient::relayAccessibilityNotification(const String& notificationName, const RetainPtr<NSData>& notificationData) const
 {
-    if (RefPtr page = m_page.get())
-        page->relayAccessibilityNotification(notificationName, notificationData);
+    return protectedPage()->relayAccessibilityNotification(notificationName, notificationData);
 }
 
 } // namespace WebKit
