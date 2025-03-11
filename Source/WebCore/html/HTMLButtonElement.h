@@ -40,6 +40,9 @@ public:
     
     const AtomString& value() const;
 
+    const AtomString& command() const;
+    void setCommand(const AtomString&);
+
     RefPtr<Element> commandForElement() const;
 
     bool willRespondToMouseClickEventsWithEditability(Editability) const final;

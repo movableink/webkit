@@ -149,30 +149,55 @@ RefPtr<Element> HTMLButtonElement::commandForElement() const
     return elementForAttributeInternal(commandforAttr);
 }
 
-constexpr ASCIILiteral togglePopoverLiteral = "toggle-popover"_s;
-constexpr ASCIILiteral showPopoverLiteral = "show-popover"_s;
-constexpr ASCIILiteral hidePopoverLiteral = "hide-popover"_s;
-constexpr ASCIILiteral showModalLiteral = "show-modal"_s;
-constexpr ASCIILiteral closeLiteral = "close"_s;
+static const AtomString& togglePopoverAtom()
+{
+    static MainThreadNeverDestroyed<const AtomString> identifier("toggle-popover"_s);
+    return identifier;
+}
+
+static const AtomString& showPopoverAtom()
+{
+    static MainThreadNeverDestroyed<const AtomString> identifier("show-popover"_s);
+    return identifier;
+}
+
+static const AtomString& hidePopoverAtom()
+{
+    static MainThreadNeverDestroyed<const AtomString> identifier("hide-popover"_s);
+    return identifier;
+}
+
+static const AtomString& closeAtom()
+{
+    static MainThreadNeverDestroyed<const AtomString> identifier("close"_s);
+    return identifier;
+}
+
+static const AtomString& showModalAtom()
+{
+    static MainThreadNeverDestroyed<const AtomString> identifier("show-modal"_s);
+    return identifier;
+}
+
 CommandType HTMLButtonElement::commandType() const
 {
     auto action = attributeWithoutSynchronization(HTMLNames::commandAttr);
     if (action.isNull() || action.isEmpty())
         return CommandType::Invalid;
 
-    if (equalLettersIgnoringASCIICase(action, togglePopoverLiteral))
+    if (equalIgnoringASCIICase(action, togglePopoverAtom()))
         return CommandType::TogglePopover;
 
-    if (equalLettersIgnoringASCIICase(action, showPopoverLiteral))
+    if (equalIgnoringASCIICase(action, showPopoverAtom()))
         return CommandType::ShowPopover;
 
-    if (equalLettersIgnoringASCIICase(action, hidePopoverLiteral))
+    if (equalIgnoringASCIICase(action, hidePopoverAtom()))
         return CommandType::HidePopover;
 
-    if (equalLettersIgnoringASCIICase(action, showModalLiteral))
+    if (equalIgnoringASCIICase(action, showModalAtom()))
         return CommandType::ShowModal;
 
-    if (equalLettersIgnoringASCIICase(action, closeLiteral))
+    if (equalIgnoringASCIICase(action, closeAtom()))
         return CommandType::Close;
 
     if (action.startsWith("--"_s))
@@ -209,6 +234,34 @@ void HTMLButtonElement::handleCommand()
 
     if (!event->defaultPrevented() && command != CommandType::Custom)
         invokee->handleCommandInternal(*this, command);
+}
+
+const AtomString& HTMLButtonElement::command() const
+{
+    switch (commandType()) {
+    case CommandType::TogglePopover:
+        return togglePopoverAtom();
+    case CommandType::ShowPopover:
+        return showPopoverAtom();
+    case CommandType::HidePopover:
+        return hidePopoverAtom();
+    case CommandType::Close:
+        return closeAtom();
+    case CommandType::ShowModal:
+        return showModalAtom();
+    case CommandType::Custom:
+        return attributeWithoutSynchronization(HTMLNames::commandAttr);
+    case CommandType::Invalid:
+        return emptyAtom();
+    }
+
+    ASSERT_NOT_REACHED();
+    return nullAtom();
+}
+
+void HTMLButtonElement::setCommand(const AtomString& value)
+{
+    setAttributeWithoutSynchronization(HTMLNames::commandAttr, value);
 }
 
 void HTMLButtonElement::defaultEventHandler(Event& event)
