@@ -1364,3 +1364,15 @@ TEST_F(WKContentRuleListStoreTest, ExtensionPath)
         TestWebKitAPI::Util::spinRunLoop();
     EXPECT_WK_STREQ([redirectedURL absoluteString], "extension-scheme://extension-host/redirected-to-extension%3Fno-query%23no-fragment");
 }
+
+TEST_F(WKContentRuleListStoreTest, NonASCIIEscaped)
+{
+    NSString *source = @"[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\"t,[{`\\\\\\\\\\\\20442=OvI6\",\"\":[\"\"]}}]";
+    __block bool done { false };
+    [[WKContentRuleListStore defaultStore] compileContentRuleListForIdentifier:@"test" encodedContentRuleList:source completionHandler:^(WKContentRuleList *filter, NSError *error) {
+        EXPECT_NULL(filter);
+        EXPECT_NOT_NULL(error);
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+}
