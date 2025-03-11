@@ -118,9 +118,11 @@ bool MediaSourceInterfaceMainThread::detachable() const
     return m_mediaSource->detachable();
 }
 
-void MediaSourceInterfaceMainThread::setLogIdentifier(uint64_t identifier)
+void MediaSourceInterfaceMainThread::setLogIdentifier([[maybe_unused]] uint64_t identifier)
 {
+#if !RELEASE_LOG_DISABLED
     m_mediaSource->setLogIdentifier(identifier);
+#endif
 }
 
 } // namespace WebCore

@@ -151,11 +151,13 @@ bool MediaSourceInterfaceWorker::detachable() const
     return m_handle->detachable();
 }
 
-void MediaSourceInterfaceWorker::setLogIdentifier(uint64_t identifier)
+void MediaSourceInterfaceWorker::setLogIdentifier([[maybe_unused]] uint64_t identifier)
 {
+#if !RELEASE_LOG_DISABLED
     m_handle->ensureOnDispatcher([identifier](MediaSource& mediaSource) {
         mediaSource.setLogIdentifier(identifier);
     });
+#endif
 }
 
 } // namespace WebCore
