@@ -1080,7 +1080,8 @@ void VideoPresentationManagerProxy::setPlayerIdentifier(PlaybackSessionContextId
 
 void VideoPresentationManagerProxy::audioSessionCategoryChanged(PlaybackSessionContextIdentifier contextId, WebCore::AudioSessionCategory category, WebCore::AudioSessionMode mode, WebCore::RouteSharingPolicy policy)
 {
-    Ref { ensureModel(contextId) }->audioSessionCategoryChanged(category, mode, policy);
+    // FIXME: This is a false positive in the static analyzer. See rdar://146719371
+    SUPPRESS_UNCOUNTED_ARG Ref { ensureModel(contextId) }->audioSessionCategoryChanged(category, mode, policy);
 }
 
 void VideoPresentationManagerProxy::setHasVideo(PlaybackSessionContextIdentifier contextId, bool hasVideo)
