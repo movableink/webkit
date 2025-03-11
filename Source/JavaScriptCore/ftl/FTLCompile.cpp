@@ -60,7 +60,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
     VM& vm = graph.m_vm;
 
     if (shouldDumpDisassembly() || vm.m_perBytecodeProfiler)
-        state.proc->code().setDisassembler(makeUnique<B3::Air::Disassembler>());
+        state.proc->code().setDisassembler(makeUniqueWithoutFastMallocCheck<B3::Air::Disassembler>());
 
     if (!shouldDumpDisassembly() && !verboseCompilationEnabled() && !Options::verboseValidationFailure() && !Options::asyncDisassembly() && !graph.compilation() && !state.proc->needsPCToOriginMap())
         graph.freeDFGIRAfterLowering();

@@ -43,7 +43,7 @@ namespace Air {
 
 class StackSlot {
     WTF_MAKE_NONCOPYABLE(StackSlot);
-    WTF_MAKE_TZONE_ALLOCATED(StackSlot);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(StackSlot);
 public:
     unsigned byteSize() const { return m_byteSize; }
     StackSlotKind kind() const { return m_kind; }

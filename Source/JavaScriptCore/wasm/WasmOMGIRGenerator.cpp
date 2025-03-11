@@ -5847,7 +5847,7 @@ Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileOMG(Compilati
 
     {
         if (shouldDumpDisassemblyFor(compilationMode))
-            procedure.code().setDisassembler(makeUnique<B3::Air::Disassembler>());
+            procedure.code().setDisassembler(makeUniqueWithoutFastMallocCheck<B3::Air::Disassembler>());
         B3::prepareForGeneration(procedure);
         B3::generate(procedure, *compilationContext.wasmEntrypointJIT);
         compilationContext.wasmEntrypointByproducts = procedure.releaseByproducts();
