@@ -2172,6 +2172,12 @@ void NetworkSessionCocoa::dataTaskWithRequest(WebPageProxyIdentifier pageID, Web
     }
 
     auto nsRequest = request.nsURLRequest(WebCore::HTTPBodyUpdatePolicy::UpdateHTTPBody);
+    if (![nsRequest URL]) {
+        completionHandler(identifier);
+        networkProcess().protectedParentProcessConnection()->send(Messages::NetworkProcessProxy::DataTaskDidCompleteWithError(identifier, cannotShowURLError(request)), 0);
+        return;
+    }
+
     auto session = sessionWrapperForTask(pageID, request, WebCore::StoredCredentialsPolicy::Use, std::nullopt).session;
     auto task = [session dataTaskWithRequest:nsRequest];
     auto delegate = adoptNS([[WKURLSessionTaskDelegate alloc] initWithTask:task identifier:identifier session:*this]);

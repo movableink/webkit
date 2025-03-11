@@ -593,6 +593,19 @@ TEST(_WKDataTask, Basic)
     Util::run(&done);
     EXPECT_NOT_NULL(retainedTask.get());
     EXPECT_NULL(retainedTask.get().delegate);
+
+    done = false;
+    [webView _dataTaskWithRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://webkit.org<>/"]] completionHandler:^(_WKDataTask *task) {
+        retainedTask = task;
+        auto delegate = adoptNS([TestDataTaskDelegate new]);
+        task.delegate = delegate.get();
+        delegate.get().didCompleteWithError = ^(_WKDataTask *task, NSError *error) {
+            EXPECT_WK_STREQ(error.domain, WebKitErrorDomain);
+            EXPECT_EQ(error.code, _WKErrorCodeCannotShowURL);
+            done = true;
+        };
+    }];
+    Util::run(&done);
 }
 
 TEST(_WKDataTask, Challenge)
