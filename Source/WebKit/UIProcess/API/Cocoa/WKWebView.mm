@@ -722,9 +722,6 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
     preferences->setSystemLayoutDirection(static_cast<uint32_t>(WebCore::TextDirection::LTR));
     preferences->setAllowSettingAnyXHRHeaderFromFileURLs(shouldAllowSettingAnyXHRHeaderFromFileURLs());
     preferences->setShouldDecidePolicyBeforeLoadingQuickLookPreview(!![_configuration _shouldDecidePolicyBeforeLoadingQuickLookPreview]);
-#if ENABLE(DEVICE_ORIENTATION)
-    preferences->setDeviceOrientationPermissionAPIEnabled(linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::SupportsDeviceOrientationAndMotionPermissionAPI));
-#endif
 #if USE(SYSTEM_PREVIEW)
     preferences->setSystemPreviewEnabled(!![_configuration _systemPreviewEnabled]);
 #endif

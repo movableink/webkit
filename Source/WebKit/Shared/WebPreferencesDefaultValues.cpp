@@ -337,6 +337,17 @@ bool defaultBuiltInNotificationsEnabled()
 }
 #endif
 
+#if ENABLE(DEVICE_ORIENTATION)
+bool defaultDeviceOrientationPermissionAPIEnabled()
+{
+#if PLATFORM(IOS_FAMILY)
+    return linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::SupportsDeviceOrientationAndMotionPermissionAPI);
+#else
+    return false;
+#endif
+}
+#endif
+
 bool defaultRequiresPageVisibilityForVideoToBeNowPlaying()
 {
 #if USE(APPLE_INTERNAL_SDK)
