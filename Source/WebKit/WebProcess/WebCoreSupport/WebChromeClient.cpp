@@ -111,6 +111,7 @@
 #include <WebCore/WindowFeatures.h>
 #include <wtf/JSONValues.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/Unexpected.h>
 
 #if HAVE(WEBGPU_IMPLEMENTATION)
 #import <WebCore/WebGPUCreateImpl.h>
