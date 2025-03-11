@@ -346,7 +346,12 @@ Color RenderThemeCocoa::controlTintColor(const RenderStyle& style, OptionSet<Sty
     if (!style.hasAutoAccentColor())
         return style.usedAccentColor(options);
 
-    return systemColor(CSSValueAppleSystemBlue, options);
+#if PLATFORM(MAC)
+    auto cssColorValue = CSSValueAppleSystemControlAccent;
+#else
+    auto cssColorValue = CSSValueAppleSystemBlue;
+#endif
+    return systemColor(cssColorValue, options | StyleColorOptions::UseSystemAppearance);
 }
 
 #if USE(APPLE_INTERNAL_SDK)
