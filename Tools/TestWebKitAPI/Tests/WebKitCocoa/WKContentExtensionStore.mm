@@ -263,6 +263,33 @@ TEST_F(WKContentRuleListStoreTest, CorruptHeaderRandom)
     TestWebKitAPI::Util::run(&doneGettingSource);
 }
 
+TEST_F(WKContentRuleListStoreTest, CorruptURLFilter)
+{
+    NSString* contentBlocker = @"[{\"action\":{\"type\":\"css-display-none\",\"selector\":\".hidden\"},\"trigger\":{\"url-filter\":\".*\"}}]";
+    __block bool doneCompiling = false;
+    [[WKContentRuleListStore defaultStore] compileContentRuleListForIdentifier:@"CorruptURLFilter" encodedContentRuleList:contentBlocker completionHandler:^(WKContentRuleList *filter, NSError *error) {
+
+        EXPECT_NOT_NULL(filter);
+        EXPECT_NULL(error);
+
+        doneCompiling = true;
+    }];
+    TestWebKitAPI::Util::run(&doneCompiling);
+    [[WKContentRuleListStore defaultStore] _corruptContentRuleListActionsMatchingEverythingForIdentifier:@"CorruptURLFilter"];
+
+    __block bool doneLookingUp = false;
+    [[WKContentRuleListStore defaultStore] lookUpContentRuleListForIdentifier:@"CorruptURLFilter" completionHandler:^(WKContentRuleList *filter, NSError *error) {
+        EXPECT_NULL(filter);
+        EXPECT_NOT_NULL(error);
+        checkDomain(error);
+        EXPECT_EQ(error.code, WKErrorContentRuleListStoreLookUpFailed);
+        EXPECT_NS_EQUAL(error.helpAnchor, @"Rule list lookup failed: Unspecified error during lookup.");
+
+        doneLookingUp = true;
+    }];
+    TestWebKitAPI::Util::run(&doneLookingUp);
+}
+
 TEST_F(WKContentRuleListStoreTest, InvalidHeader)
 {
     __block bool doneCompiling = false;
