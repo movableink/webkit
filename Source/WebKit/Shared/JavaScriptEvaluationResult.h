@@ -124,20 +124,3 @@ private:
 };
 
 }
-
-namespace IPC {
-
-template<typename> struct AsyncReplyError;
-template<> struct AsyncReplyError<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>> {
-    static Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>> create();
-};
-
-template<> struct AsyncReplyError<Expected<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>, String>> {
-    static Expected<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>, String> create();
-};
-
-template<> struct AsyncReplyError<Expected<WebKit::JavaScriptEvaluationResult, String>> {
-    static Expected<WebKit::JavaScriptEvaluationResult, String> create();
-};
-
-}

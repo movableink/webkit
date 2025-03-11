@@ -69,22 +69,3 @@ JavaScriptEvaluationResult& JavaScriptEvaluationResult::operator=(JavaScriptEval
 JavaScriptEvaluationResult::~JavaScriptEvaluationResult() = default;
 
 } // namespace WebKit
-
-namespace IPC {
-
-Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>> AsyncReplyError<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>>::create()
-{
-    return makeUnexpected(std::nullopt);
-}
-
-Expected<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>, String> AsyncReplyError<Expected<Expected<WebKit::JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>, String>>::create()
-{
-    return makeUnexpected(String());
-}
-
-Expected<WebKit::JavaScriptEvaluationResult, String> AsyncReplyError<Expected<WebKit::JavaScriptEvaluationResult, String>>::create()
-{
-    return makeUnexpected(String());
-}
-
-} // namespace IPC

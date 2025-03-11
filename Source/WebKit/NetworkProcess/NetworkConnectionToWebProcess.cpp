@@ -221,11 +221,11 @@ void NetworkConnectionToWebProcess::hasUploadStateChanged(bool hasUpload)
     m_networkProcess->protectedParentProcessConnection()->send(Messages::NetworkProcessProxy::SetWebProcessHasUploads(m_webProcessIdentifier, hasUpload), 0);
 }
 
-void NetworkConnectionToWebProcess::loadImageForDecoding(WebCore::ResourceRequest&& request, WebPageProxyIdentifier pageID, size_t maximumBytesFromNetwork, CompletionHandler<void(std::variant<WebCore::ResourceError, Ref<WebCore::FragmentedSharedBuffer>>&&)>&& completionHandler)
+void NetworkConnectionToWebProcess::loadImageForDecoding(WebCore::ResourceRequest&& request, WebPageProxyIdentifier pageID, size_t maximumBytesFromNetwork, CompletionHandler<void(Expected<Ref<WebCore::FragmentedSharedBuffer>, WebCore::ResourceError>&&)>&& completionHandler)
 {
     CheckedPtr networkSession = this->networkSession();
     if (!networkSession)
-        return completionHandler({ });
+        return completionHandler(makeUnexpected<WebCore::ResourceError>({ }));
     networkSession->loadImageForDecoding(WTFMove(request), pageID, maximumBytesFromNetwork, WTFMove(completionHandler));
 }
 

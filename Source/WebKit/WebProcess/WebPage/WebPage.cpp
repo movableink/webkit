@@ -8060,39 +8060,38 @@ void WebPage::scheduleFullEditorStateUpdate()
     protectedCorePage()->scheduleRenderingUpdate(RenderingUpdateStep::LayerFlush);
 }
 
-void WebPage::loadAndDecodeImage(WebCore::ResourceRequest&& request, std::optional<WebCore::FloatSize> sizeConstraint, size_t maximumBytesFromNetwork, CompletionHandler<void(std::variant<WebCore::ResourceError, Ref<WebCore::ShareableBitmap>>&&)>&& completionHandler)
+void WebPage::loadAndDecodeImage(WebCore::ResourceRequest&& request, std::optional<WebCore::FloatSize> sizeConstraint, size_t maximumBytesFromNetwork, CompletionHandler<void(Expected<Ref<WebCore::ShareableBitmap>, WebCore::ResourceError>&&)>&& completionHandler)
 {
     URL url = request.url();
-    WebProcess::singleton().ensureNetworkProcessConnection().protectedConnection()->sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::LoadImageForDecoding(WTFMove(request), m_webPageProxyIdentifier, maximumBytesFromNetwork), [completionHandler = WTFMove(completionHandler), sizeConstraint, url] (std::variant<WebCore::ResourceError, Ref<WebCore::FragmentedSharedBuffer>>&& result) mutable {
-        WTF::switchOn(WTFMove(result), [&] (WebCore::ResourceError&& error) {
-            completionHandler(WTFMove(error));
-        }, [&] (Ref<WebCore::FragmentedSharedBuffer>&& buffer) {
-            Ref bitmapImage = WebCore::BitmapImage::create(nullptr);
-            bitmapImage->setData(buffer.ptr(), true);
-            RefPtr nativeImage = bitmapImage->primaryNativeImage();
-            if (!nativeImage)
-                return completionHandler(decodeError(url));
+    WebProcess::singleton().ensureNetworkProcessConnection().protectedConnection()->sendWithAsyncReply(Messages::NetworkConnectionToWebProcess::LoadImageForDecoding(WTFMove(request), m_webPageProxyIdentifier, maximumBytesFromNetwork), [completionHandler = WTFMove(completionHandler), sizeConstraint, url] (Expected<Ref<WebCore::FragmentedSharedBuffer>, WebCore::ResourceError>&& result) mutable {
+        if (!result)
+            return completionHandler(makeUnexpected(WTFMove(result.error())));
 
-            FloatSize sourceSize = nativeImage->size();
-            FloatSize destinationSize = sourceSize;
-            if (sizeConstraint)
-                destinationSize = largestRectWithAspectRatioInsideRect(sourceSize.aspectRatio(), FloatRect({ }, sizeConstraint->shrunkTo(sourceSize))).size();
+        Ref bitmapImage = WebCore::BitmapImage::create(nullptr);
+        bitmapImage->setData(result->ptr(), true);
+        RefPtr nativeImage = bitmapImage->primaryNativeImage();
+        if (!nativeImage)
+            return completionHandler(makeUnexpected(decodeError(url)));
 
-            IntSize roundedDestinationSize = flooredIntSize(destinationSize);
-            auto sourceColorSpace = nativeImage->colorSpace();
-            auto destinationColorSpace = sourceColorSpace.supportsOutput() ? sourceColorSpace : DestinationColorSpace::SRGB();
-            auto bitmap = ShareableBitmap::create({ roundedDestinationSize, destinationColorSpace });
-            if (!bitmap)
-                return completionHandler({ });
+        FloatSize sourceSize = nativeImage->size();
+        FloatSize destinationSize = sourceSize;
+        if (sizeConstraint)
+            destinationSize = largestRectWithAspectRatioInsideRect(sourceSize.aspectRatio(), FloatRect({ }, sizeConstraint->shrunkTo(sourceSize))).size();
 
-            auto context = bitmap->createGraphicsContext();
-            if (!context)
-                return completionHandler({ });
+        IntSize roundedDestinationSize = flooredIntSize(destinationSize);
+        auto sourceColorSpace = nativeImage->colorSpace();
+        auto destinationColorSpace = sourceColorSpace.supportsOutput() ? sourceColorSpace : DestinationColorSpace::SRGB();
+        auto bitmap = ShareableBitmap::create({ roundedDestinationSize, destinationColorSpace });
+        if (!bitmap)
+            return completionHandler(makeUnexpected<ResourceError>({ }));
 
-            context->drawNativeImage(*nativeImage, FloatRect({ }, roundedDestinationSize), FloatRect({ }, sourceSize), { CompositeOperator::Copy });
+        auto context = bitmap->createGraphicsContext();
+        if (!context)
+            return completionHandler(makeUnexpected<ResourceError>({ }));
 
-            completionHandler(bitmap.releaseNonNull());
-        });
+        context->drawNativeImage(*nativeImage, FloatRect({ }, roundedDestinationSize), FloatRect({ }, sourceSize), { CompositeOperator::Copy });
+
+        completionHandler(bitmap.releaseNonNull());
     });
 }
 
