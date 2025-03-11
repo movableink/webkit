@@ -392,10 +392,12 @@ void MediaDevices::enumerateDevices(EnumerateDevicesPromise&& promise)
         return;
     }
 
-    controller->enumerateMediaDevices(*document, [this, weakThis = WeakPtr { *this }, promise = WTFMove(promise)](Vector<CaptureDeviceWithCapabilities>&& newDevices, MediaDeviceHashSalts&& deviceIDHashSalts) mutable {
-        if (!weakThis)
+    controller->enumerateMediaDevices(*document, [weakThis = WeakPtr { *this }, promise = WTFMove(promise)](Vector<CaptureDeviceWithCapabilities>&& newDevices, MediaDeviceHashSalts&& deviceIDHashSalts) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
-        exposeDevices(WTFMove(newDevices), WTFMove(deviceIDHashSalts), WTFMove(promise));
+
+        protectedThis->exposeDevices(WTFMove(newDevices), WTFMove(deviceIDHashSalts), WTFMove(promise));
     });
 }
 
@@ -410,7 +412,7 @@ void MediaDevices::scheduledEventTimerFired()
     if (!document)
         return;
 
-    document->whenVisible([protectedThis = makePendingActivity(*this), this] {
+    document->whenVisible([activity = makePendingActivity(*this), this, protectedThis = Ref { *this }] {
         queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, Event::create(eventNames().devicechangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
     });
 }
@@ -435,11 +437,12 @@ void MediaDevices::listenForDeviceChanges()
 
     m_listeningForDeviceChanges = true;
 
-    m_deviceChangeToken = controller->addDeviceChangeObserver([weakThis = WeakPtr { *this }, this]() {
-        if (!weakThis || isContextStopped() || m_scheduledEventTimer.isActive())
+    m_deviceChangeToken = controller->addDeviceChangeObserver([weakThis = WeakPtr { *this }]() {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis || protectedThis->isContextStopped() || protectedThis->m_scheduledEventTimer.isActive())
             return;
 
-        m_scheduledEventTimer.startOneShot(Seconds(cryptographicallyRandomUnitInterval() / 2));
+        protectedThis->m_scheduledEventTimer.startOneShot(Seconds(cryptographicallyRandomUnitInterval() / 2));
     });
 }
 
