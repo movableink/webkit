@@ -90,7 +90,6 @@ html/canvas/GPUCanvasContextCocoa.mm
 html/canvas/WebGLRenderingContextBase.cpp
 html/track/LoadableTextTrack.cpp
 html/track/TrackBase.cpp
-html/track/VTTCue.cpp
 inspector/InspectorOverlay.cpp
 inspector/agents/page/PageDOMDebuggerAgent.cpp
 loader/FrameLoader.cpp
