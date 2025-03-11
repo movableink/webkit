@@ -2372,8 +2372,12 @@ void WebExtension::populateCommandsIfNeeded()
         else if (hasPageAction())
             commandIdentifier = "_execute_page_action"_s;
 
-        if (!commandIdentifier.isEmpty())
-            m_commands.append({ commandIdentifier, displayActionLabel(), emptyString(), { } });
+        if (!commandIdentifier.isEmpty()) {
+            auto description = displayActionLabel();
+            if (description.isEmpty())
+                description = displayShortName();
+            m_commands.append({ commandIdentifier, description, emptyString(), { } });
+        }
     }
 }
 
