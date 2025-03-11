@@ -904,7 +904,9 @@ void Adjuster::adjustSVGElementStyle(RenderStyle& style, const SVGElement& svgEl
         style.setUsedZoom(RenderStyle::initialZoom());
 
     // SVG text layout code expects us to be a block-level style element.
-    if ((svgElement.hasTagName(SVGNames::foreignObjectTag) || svgElement.hasTagName(SVGNames::textTag)) && style.isDisplayInlineType())
+    // While in theory any block level element would work (flex, grid etc), since we construct RenderBlockFlow for both foreign object and svg text,
+    // in practice only block layout happens here.
+    if ((svgElement.hasTagName(SVGNames::foreignObjectTag) || svgElement.hasTagName(SVGNames::textTag)) && generatesBox(style))
         style.setEffectiveDisplay(DisplayType::Block);
 }
 
