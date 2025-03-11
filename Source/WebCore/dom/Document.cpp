@@ -2995,7 +2995,8 @@ auto Document::updateLayout(OptionSet<LayoutOptions> layoutOptions, const Elemen
         if (RefPtr frameView = view())
             frameView->updateScrollAnchoringPositionForScrollableAreas();
     }
-
+    if (RefPtr frame = this->frame())
+        frame->eventHandler().scheduleCursorUpdate();
     m_ignorePendingStylesheets = oldIgnore;
     return result;
 }
