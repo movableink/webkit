@@ -33,6 +33,7 @@
 #include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PrintStream.h>
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace JSC { namespace B3 {
