@@ -239,7 +239,7 @@ AppendPipeline::~AppendPipeline()
 #if ENABLE(ENCRYPTED_MEDIA)
         gst_pad_remove_probe(appsinkPad.get(), track->appsinkPadEventProbeInformation.probeId);
 #endif
-        m_sourceBufferPrivate.tryUnregisterTrackId(track->trackId);
+        m_sourceBufferPrivate.unregisterTrack(track->trackId);
     }
 
     // We can tear down the pipeline safely now.
@@ -297,7 +297,7 @@ void AppendPipeline::handleNeedContextSyncMessage(GstMessage* message)
     m_playerPrivate->handleNeedContextMessage(message);
 }
 
-std::tuple<GRefPtr<GstCaps>, AppendPipeline::StreamType, FloatSize> AppendPipeline::parseDemuxerSrcPadCaps(GstCaps* demuxerSrcPadCaps)
+std::tuple<GRefPtr<GstCaps>, StreamType, FloatSize> AppendPipeline::parseDemuxerSrcPadCaps(GstCaps* demuxerSrcPadCaps)
 {
     ASSERT(isMainThread());
 
@@ -378,7 +378,7 @@ void AppendPipeline::appsinkNewSample(const Track& track, GRefPtr<GstSample>&& s
 
     auto* buffer = gst_sample_get_buffer(sample.get());
     auto hasValidPTS = GST_BUFFER_PTS_IS_VALID(buffer);
-    if (!hasValidPTS && track.streamType != Text) {
+    if (!hasValidPTS && track.streamType != StreamType::Text) {
         // When demuxing Vorbis, matroskademux creates several PTS-less frames with header information. We don't need those.
         // However, for text tracks, that's likely our WebVTT header, which is required for WebVTTParser.
         GST_DEBUG_OBJECT(pipeline(), "Ignoring sample without PTS: %" GST_PTR_FORMAT, buffer);
@@ -415,7 +415,7 @@ void AppendPipeline::appsinkNewSample(const Track& track, GRefPtr<GstSample>&& s
         mediaSample->extendToTheBeginning();
     }
 
-    if (track.streamType == Text) {
+    if (track.streamType == StreamType::Text) {
         const auto textTrack = static_cast<InbandTextTrackPrivateGStreamer*>(track.webKitTrack.get());
         textTrack->handleSample(GRefPtr(mediaSample->sample()));
     }
@@ -526,7 +526,7 @@ void AppendPipeline::didReceiveInitializationSegment()
         GST_DEBUG_OBJECT(pipeline(), "Adding track to initialization with segment type %s, id %" PRIu64 ".", streamTypeToString(track->streamType), track->trackId);
 #endif // GST_DISABLE_GST_DEBUG
         switch (track->streamType) {
-        case Audio: {
+        case StreamType::Audio: {
             ASSERT(track->webKitTrack);
             SourceBufferPrivateClient::InitializationSegment::AudioTrackInformation info;
             info.track = static_cast<AudioTrackPrivateGStreamer*>(track->webKitTrack.get());
@@ -534,7 +534,7 @@ void AppendPipeline::didReceiveInitializationSegment()
             initializationSegment.audioTracks.append(WTFMove(info));
             break;
         }
-        case Video: {
+        case StreamType::Video: {
             ASSERT(track->webKitTrack);
             SourceBufferPrivateClient::InitializationSegment::VideoTrackInformation info;
             info.track = static_cast<VideoTrackPrivateGStreamer*>(track->webKitTrack.get());
@@ -542,7 +542,7 @@ void AppendPipeline::didReceiveInitializationSegment()
             initializationSegment.videoTracks.append(WTFMove(info));
             break;
         }
-        case Text: {
+        case StreamType::Text: {
             ASSERT(track->webKitTrack);
             SourceBufferPrivateClient::InitializationSegment::TextTrackInformation info;
             info.track = static_cast<InbandTextTrackPrivateGStreamer*>(track->webKitTrack.get());
@@ -839,23 +839,16 @@ std::pair<AppendPipeline::CreateTrackResult, AppendPipeline::Track*> AppendPipel
     }
 
     size_t newTrackIndex = m_tracks.size();
-    size_t webkitTrackIndex = std::count_if(m_tracks.begin(), m_tracks.end(), [streamType](std::unique_ptr<Track>& other) -> bool {
-        return other->streamType == streamType;
-    });
 
-    TrackID preferredTrackId = getStreamIdFromPad(demuxerSrcPad).value_or((static_cast<TrackID>(newTrackIndex)));
-    auto assignedTrackId = m_sourceBufferPrivate.tryRegisterTrackId(preferredTrackId);
-    TrackID trackId = assignedTrackId.value_or(preferredTrackId);
+    auto preferredTrackId = getStreamIdFromPad(demuxerSrcPad).value_or((static_cast<TrackID>(newTrackIndex)));
+    auto trackInfo = m_sourceBufferPrivate.registerTrack(preferredTrackId, streamType);
 
-    if (!assignedTrackId)
-        GST_WARNING_OBJECT(pipeline(), "Failed to register track ID %" PRIu64 ", this could cause ID collisions", preferredTrackId);
-
-    GST_DEBUG_OBJECT(pipeline(), "Creating new AppendPipeline::Track with type %s, index %" PRIu64" and id '%" PRIu64 "'", streamTypeToString(streamType), webkitTrackIndex, trackId);
-    m_tracks.append(makeUnique<Track>(trackId, streamType, parsedCaps, presentationSize));
+    GST_DEBUG_OBJECT(pipeline(), "Creating new AppendPipeline::Track with type %s, index %" PRIu64" and id '%" PRIu64 "'", streamTypeToString(streamType), trackInfo.index, trackInfo.id);
+    m_tracks.append(makeUnique<Track>(trackInfo.id, streamType, parsedCaps, presentationSize));
     Track& track = *m_tracks.at(newTrackIndex);
 
     track.initializeElements(this, GST_BIN(m_pipeline.get()));
-    track.webKitTrack = makeWebKitTrack(track, webkitTrackIndex, trackId);
+    track.webKitTrack = makeWebKitTrack(track, trackInfo.index, trackInfo.id);
     hookTrackEvents(track);
     return { CreateTrackResult::TrackCreated, &track };
 }
