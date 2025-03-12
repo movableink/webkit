@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Igalia S.L.
+ * Copyright (C) 2025 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,21 +25,12 @@
 
 #pragma once
 
-#include "WPEToplevel.h"
-#include "WPEView.h"
-#include <wtf/glib/GRefPtr.h>
-
 #if USE(ATK)
-typedef struct _AtkObject AtkObject;
-#endif
 
-GList* wpeToplevelList();
-void wpeToplevelAddView(WPEToplevel*, WPEView*);
-void wpeToplevelRemoveView(WPEToplevel*, WPEView*);
-GRefPtr<WPEView> wpeToplevelGetView(WPEToplevel*, size_t);
+namespace WPE {
 
+void accessibilityAtkInit();
 
-#if USE(ATK)
-AtkObject* wpeToplevelGetOrCreateAccessibleAtk(WPEToplevel*);
-AtkObject* wpeToplevelGetAccessibleAtk(WPEToplevel*);
-#endif
+} // namespace WPE
+
+#endif // USE(ATK)

@@ -39,6 +39,10 @@
 #include <wtf/glib/GRefPtr.h>
 #include <wtf/glib/WTFGType.h>
 
+#if USE(ATK)
+#include "WPEViewAccessibleAtk.h"
+#endif
+
 /**
  * WPEView:
  *
@@ -63,6 +67,10 @@ struct _WPEViewPrivate {
         guint32 time { 0 };
     } lastButtonPress;
     std::optional<GRefPtr<WPEGestureController>> gestureController;
+
+#if USE(ATK)
+    GRefPtr<WPEViewAccessible> accessible;
+#endif
 };
 
 WEBKIT_DEFINE_ABSTRACT_TYPE(WPEView, wpe_view, G_TYPE_OBJECT)
@@ -186,6 +194,15 @@ static void wpeViewDispose(GObject* object)
     G_OBJECT_CLASS(wpe_view_parent_class)->dispose(object);
 }
 
+#if USE(ATK)
+static WPEViewAccessible* wpeViewGetAccessible(WPEView* view)
+{
+    if (!view->priv->accessible)
+        view->priv->accessible = adoptGRef(wpeViewAccessibleAtkNew(view));
+    return view->priv->accessible.get();
+}
+#endif
+
 static void wpe_view_class_init(WPEViewClass* viewClass)
 {
     GObjectClass* objectClass = G_OBJECT_CLASS(viewClass);
@@ -193,6 +210,10 @@ static void wpe_view_class_init(WPEViewClass* viewClass)
     objectClass->get_property = wpeViewGetProperty;
     objectClass->constructed = wpeViewConstructed;
     objectClass->dispose = wpeViewDispose;
+
+#if USE(ATK)
+    viewClass->get_accessible = wpeViewGetAccessible;
+#endif
 
     /**
      * WPEView:display:

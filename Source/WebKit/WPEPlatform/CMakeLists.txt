@@ -113,6 +113,24 @@ elseif (USE_LIBDRM)
     list(APPEND WPEPlatform_LIBRARIES LibDRM::LibDRM)
 endif ()
 
+if (USE_ATK)
+    list(APPEND WPEPlatform_SYSTEM_INCLUDE_DIRECTORIES
+        ${ATK_INCLUDE_DIRS}
+    )
+
+    list(APPEND WPEPlatform_LIBRARIES
+        ATK::Bridge
+        ${ATK_LIBRARIES}
+    )
+
+    list(APPEND WPEPlatform_SOURCES
+        ${WEBKIT_DIR}/WPEPlatform/wpe/WPEAccessibilityAtk.cpp
+        ${WEBKIT_DIR}/WPEPlatform/wpe/WPEApplicationAccessibleAtk.cpp
+        ${WEBKIT_DIR}/WPEPlatform/wpe/WPEToplevelAccessibleAtk.cpp
+        ${WEBKIT_DIR}/WPEPlatform/wpe/WPEViewAccessibleAtk.cpp
+    )
+endif ()
+
 if (NOT USE_SYSTEM_MALLOC)
    list(APPEND WPEPlatform_LIBRARIES bmalloc)
 endif ()

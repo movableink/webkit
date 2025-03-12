@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Igalia S.L.
+ * Copyright (C) 2025 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,23 +23,48 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
-#include "WPEToplevel.h"
-#include "WPEView.h"
-#include <wtf/glib/GRefPtr.h>
+#include "config.h"
+#include "WPEAccessibilityAtk.h"
 
 #if USE(ATK)
-typedef struct _AtkObject AtkObject;
-#endif
+#include "WPEApplicationAccessibleAtk.h"
+#include <atk-bridge.h>
+#include <mutex>
 
-GList* wpeToplevelList();
-void wpeToplevelAddView(WPEToplevel*, WPEView*);
-void wpeToplevelRemoveView(WPEToplevel*, WPEView*);
-GRefPtr<WPEView> wpeToplevelGetView(WPEToplevel*, size_t);
+namespace WPE {
 
+static void initializeAtkUtil()
+{
+    auto* atkUtilClass = ATK_UTIL_CLASS(g_type_class_ref(ATK_TYPE_UTIL));
+    if (atkUtilClass->get_root)
+        return;
 
-#if USE(ATK)
-AtkObject* wpeToplevelGetOrCreateAccessibleAtk(WPEToplevel*);
-AtkObject* wpeToplevelGetAccessibleAtk(WPEToplevel*);
-#endif
+    atkUtilClass->get_root = []() -> AtkObject* {
+        static AtkObject* accessible = nullptr;
+        if (!accessible)
+            accessible = wpeApplicationAccessibleAtkNew();
+        return accessible;
+    };
+
+    atkUtilClass->get_toolkit_name = []() -> const gchar* {
+        return "WPEPlatform";
+    };
+
+    atkUtilClass->get_toolkit_version = []() -> const gchar* {
+        return "";
+    };
+
+    atk_bridge_adaptor_init(nullptr, nullptr);
+}
+
+void accessibilityAtkInit()
+{
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        initializeAtkUtil();
+    });
+}
+
+} // namespace WPE
+
+#endif // USE(ATK)
