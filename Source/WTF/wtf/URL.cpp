@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Research In Motion Limited. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -491,7 +491,10 @@ static bool slashHashOrQuestionMark(UChar c)
 
 void URL::setHost(StringView newHost)
 {
-    if (!m_isValid)
+    if (!m_isValid || hasOpaquePath())
+        return;
+
+    if (newHost.contains('@'))
         return;
 
     if (newHost.contains(':') && !newHost.startsWith('['))
@@ -543,7 +546,10 @@ static unsigned countASCIIDigits(StringView string)
 
 void URL::setHostAndPort(StringView hostAndPort)
 {
-    if (!m_isValid)
+    if (!m_isValid || hasOpaquePath())
+        return;
+
+    if (hostAndPort.contains('@'))
         return;
 
     if (auto index = hostAndPort.find(hasSpecialScheme() ? slashHashOrQuestionMark : forwardSlashHashOrQuestionMark); index != notFound)

@@ -105,6 +105,11 @@ PASS URL: Setting <https://example.com/>.host = 'a%C2%ADb'
 PASS URL: Setting <https://example.com/>.host = '­'
 PASS URL: Setting <https://example.com/>.host = '%C2%AD'
 PASS URL: Setting <https://example.com/>.host = 'xn--'
+PASS URL: Setting <https://test.invalid/>.host = '*'
+PASS URL: Setting <https://test.invalid/>.host = 'x@x'
+PASS URL: Setting <https://test.invalid/>.host = 'foo	\r
+bar'
+PASS URL: Setting <https://test.invalid/>.host = '><'
 PASS URL: Setting <sc://x/>.hostname = '\0' Non-special scheme
 PASS URL: Setting <sc://x/>.hostname = '	'
 PASS URL: Setting <sc://x/>.hostname = '
@@ -144,6 +149,11 @@ PASS URL: Setting <https://example.com/>.hostname = 'a%C2%ADb'
 PASS URL: Setting <https://example.com/>.hostname = '­'
 PASS URL: Setting <https://example.com/>.hostname = '%C2%AD'
 PASS URL: Setting <https://example.com/>.hostname = 'xn--'
+PASS URL: Setting <https://test.invalid/>.hostname = '*'
+PASS URL: Setting <https://test.invalid/>.hostname = 'x@x'
+PASS URL: Setting <https://test.invalid/>.hostname = 'foo	\r
+bar'
+PASS URL: Setting <https://test.invalid/>.hostname = '><'
 PASS URL: Setting <http://example.net>.port = '8080'
 PASS URL: Setting <http://example.net:8080>.port = '' Port number is removed if empty is the new value
 PASS URL: Setting <http://example.net:8080>.port = '80' Default port number is removed
