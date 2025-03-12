@@ -243,7 +243,8 @@ LineLayout::~LineLayout()
 {
     auto& rootRenderer = flow();
     auto shouldPopulateBreakingPositionCache = [&] {
-        if (rootRenderer.document().renderTreeBeingDestroyed() || isDamaged())
+        auto mayHaveInvalidContent = isDamaged() || !m_inlineContent;
+        if (rootRenderer.document().renderTreeBeingDestroyed() || mayHaveInvalidContent)
             return false;
         return !m_inlineContentCache.inlineItems().isPopulatedFromCache();
     };
