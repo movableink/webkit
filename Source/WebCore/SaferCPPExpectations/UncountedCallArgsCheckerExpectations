@@ -415,7 +415,6 @@ css/CSSCursorImageValue.cpp
 css/CSSFontFace.cpp
 css/CSSFontFaceRule.cpp
 css/CSSFontFaceSet.cpp
-css/CSSFontFaceSource.cpp
 css/CSSFontFeatureValue.cpp
 css/CSSFontSelector.cpp
 css/CSSFontStyleRangeValue.cpp

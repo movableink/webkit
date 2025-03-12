@@ -13,7 +13,6 @@ accessibility/AXCoreObject.h
 accessibility/AXSearchManager.h
 bindings/js/JSEventTargetCustom.h
 bindings/js/JSLazyEventListener.cpp
-css/CSSFontFaceSource.h
 css/CSSFontSelector.h
 css/CSSPrimitiveValueMappings.h
 css/CSSRuleList.h
