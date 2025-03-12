@@ -3727,15 +3727,18 @@ bool UnifiedPDFPlugin::shouldShowPageNumberIndicator() const
     return true;
 }
 
-void UnifiedPDFPlugin::updatePageNumberIndicatorVisibility()
+auto UnifiedPDFPlugin::updatePageNumberIndicatorVisibility() -> IndicatorVisible
 {
     if (!m_frame || !m_frame->page())
-        return;
+        return IndicatorVisible::No;
 
-    if (shouldShowPageNumberIndicator())
+    if (shouldShowPageNumberIndicator()) {
         m_frame->protectedPage()->createPDFPageNumberIndicator(*this, frameForPageNumberIndicatorInRootViewCoordinates(), m_documentLayout.pageCount());
-    else
-        m_frame->protectedPage()->removePDFPageNumberIndicator(*this);
+        return IndicatorVisible::Yes;
+    }
+
+    m_frame->protectedPage()->removePDFPageNumberIndicator(*this);
+    return IndicatorVisible::No;
 }
 
 void UnifiedPDFPlugin::updatePageNumberIndicatorLocation()
@@ -3772,7 +3775,8 @@ void UnifiedPDFPlugin::updatePageNumberIndicatorCurrentPage(const std::optional<
 
 void UnifiedPDFPlugin::updatePageNumberIndicator(const std::optional<IntRect>& maybeUnobscuredContentRectInRootView)
 {
-    updatePageNumberIndicatorVisibility();
+    if (updatePageNumberIndicatorVisibility() == IndicatorVisible::No)
+        return;
     updatePageNumberIndicatorLocation();
     updatePageNumberIndicatorCurrentPage(maybeUnobscuredContentRectInRootView);
 }

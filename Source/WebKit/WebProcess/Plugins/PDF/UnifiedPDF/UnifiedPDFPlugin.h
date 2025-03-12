@@ -542,7 +542,9 @@ private:
     WebCore::IntRect frameForPageNumberIndicatorInRootViewCoordinates() const;
     bool pageNumberIndicatorEnabled() const;
     bool shouldShowPageNumberIndicator() const;
-    void updatePageNumberIndicatorVisibility();
+
+    enum class IndicatorVisible : bool { No, Yes };
+    IndicatorVisible updatePageNumberIndicatorVisibility();
     void updatePageNumberIndicatorLocation();
     void updatePageNumberIndicatorCurrentPage(const std::optional<WebCore::IntRect>& unobscuredContentRectInRootView);
     void updatePageNumberIndicator(const std::optional<WebCore::IntRect>& unobscuredContentRectInRootView = { });
