@@ -232,10 +232,10 @@ TextStream& operator<<(TextStream& ts, const Item& item)
 TextStream& operator<<(TextStream& ts, StopReplayReason reason)
 {
     switch (reason) {
-    case StopReplayReason::ReplayedAllItems: ts << "ReplayedAllItems"; break;
-    case StopReplayReason::MissingCachedResource: ts << "MissingCachedResource"; break;
-    case StopReplayReason::InvalidItemOrExtent: ts << "InvalidItemOrExtent"; break;
-    case StopReplayReason::OutOfMemory: ts << "OutOfMemory"; break;
+    case StopReplayReason::ReplayedAllItems: ts << "ReplayedAllItems"_s; break;
+    case StopReplayReason::MissingCachedResource: ts << "MissingCachedResource"_s; break;
+    case StopReplayReason::InvalidItemOrExtent: ts << "InvalidItemOrExtent"_s; break;
+    case StopReplayReason::OutOfMemory: ts << "OutOfMemory"_s; break;
     }
     return ts;
 }

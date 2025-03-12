@@ -3055,14 +3055,14 @@ TextStream& operator<<(TextStream& ts, const WebProcessProxy& process)
 {
     auto appendCount = [&ts](unsigned value, ASCIILiteral description) {
         if (value)
-            ts << ", " << description << ": " << value;
+            ts << ", "_s << description << ": "_s << value;
     };
     auto appendIf = [&ts](bool value, ASCIILiteral description) {
         if (value)
-            ts << ", " << description;
+            ts << ", "_s << description;
     };
 
-    ts << "pid: " << process.processID();
+    ts << "pid: "_s << process.processID();
     appendCount(process.pageCount(), "pages"_s);
     appendCount(process.visiblePageCount(), "visible-pages"_s);
     appendCount(process.provisionalPageCount(), "provisional-pages"_s);
@@ -3073,7 +3073,7 @@ TextStream& operator<<(TextStream& ts, const WebProcessProxy& process)
     appendIf(process.isRunningSharedWorkers(), "has-shared-worker"_s);
     appendIf(process.memoryPressureStatus() == SystemMemoryPressureStatus::Warning, "warning-memory-pressure"_s);
     appendIf(process.memoryPressureStatus() == SystemMemoryPressureStatus::Critical, "critical-memory-pressure"_s);
-    ts << ", " << process.protectedThrottler().get();
+    ts << ", "_s << process.protectedThrottler().get();
 
 #if PLATFORM(COCOA)
     auto description = [](ProcessThrottleState state) -> ASCIILiteral {
@@ -3086,8 +3086,8 @@ TextStream& operator<<(TextStream& ts, const WebProcessProxy& process)
     };
 
     if (auto taskInfo = process.taskInfo()) {
-        ts << ", state: " << description(taskInfo->state);
-        ts << ", phys_footprint_mb: " << (taskInfo->physicalFootprint / MB) << " MB";
+        ts << ", state: "_s << description(taskInfo->state);
+        ts << ", phys_footprint_mb: "_s << (taskInfo->physicalFootprint / MB) << " MB"_s;
     }
 #endif
 

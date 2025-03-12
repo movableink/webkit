@@ -42,13 +42,13 @@ TextStream& operator<<(TextStream& ts, const PositionTryFallback& positionTryFal
         ts << std::exchange(separator, " "_s);
         switch (tactic) {
         case PositionTryFallback::Tactic::FlipBlock:
-            ts << "flip-block";
+            ts << "flip-block"_s;
             break;
         case PositionTryFallback::Tactic::FlipInline:
-            ts << "flip-inline";
+            ts << "flip-inline"_s;
             break;
         case PositionTryFallback::Tactic::FlipStart:
-            ts << "flip-start";
+            ts << "flip-start"_s;
             break;
         }
     }
@@ -58,7 +58,7 @@ TextStream& operator<<(TextStream& ts, const PositionTryFallback& positionTryFal
 TextStream& operator<<(TextStream& ts, const Vector<PositionTryFallback>& positionTryFallbacks)
 {
     if (positionTryFallbacks.isEmpty()) {
-        ts << "none";
+        ts << "none"_s;
         return ts;
     }
     auto separator = ""_s;

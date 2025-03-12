@@ -658,7 +658,7 @@ TextStream& operator<<(TextStream& ts, const Path& path)
     bool isFirst = true;
     path.applySegments([&ts, &isFirst](const PathSegment& segment) {
         if (!isFirst)
-            ts << ", ";
+            ts << ", "_s;
         else
             isFirst = false;
         ts << segment;

@@ -1091,11 +1091,11 @@ bool AnchorPositionEvaluator::overflowsContainingBlock(const RenderBox& anchored
 WTF::TextStream& operator<<(WTF::TextStream& ts, PositionTryOrder order)
 {
     switch (order) {
-    case PositionTryOrder::Normal: ts << "normal"; break;
-    case PositionTryOrder::MostWidth: ts << "most-width"; break;
-    case PositionTryOrder::MostHeight: ts << "most-height"; break;
-    case PositionTryOrder::MostBlockSize: ts << "most-block-size"; break;
-    case PositionTryOrder::MostInlineSize: ts << "most-inline-size"; break;
+    case PositionTryOrder::Normal: ts << "normal"_s; break;
+    case PositionTryOrder::MostWidth: ts << "most-width"_s; break;
+    case PositionTryOrder::MostHeight: ts << "most-height"_s; break;
+    case PositionTryOrder::MostBlockSize: ts << "most-block-size"_s; break;
+    case PositionTryOrder::MostInlineSize: ts << "most-inline-size"_s; break;
     }
 
     return ts;

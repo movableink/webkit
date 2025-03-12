@@ -102,7 +102,7 @@ LayoutUnit StyleSelfAlignmentData::adjustmentFromStartEdge(LayoutUnit extraSpace
 
 TextStream& operator<<(TextStream& ts, const StyleSelfAlignmentData& o)
 {
-    return ts << o.position() << " " << o.positionType() << " " << o.overflow();
+    return ts << o.position() << ' ' << o.positionType() << ' ' << o.overflow();
 }
 
 }

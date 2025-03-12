@@ -907,16 +907,16 @@ void GraphicsLayer::setTileCoverage(TileCoverage coverage)
 
 void GraphicsLayer::dumpLayer(TextStream& ts, OptionSet<LayerTreeAsTextOptions> options) const
 {
-    ts << indent << "(" << "GraphicsLayer";
+    ts << indent << '(' << "GraphicsLayer"_s;
 
     if (options & LayerTreeAsTextOptions::Debug) {
-        ts << " " << static_cast<void*>(const_cast<GraphicsLayer*>(this));
-        ts << " \"" << m_name << "\"";
+        ts << ' ' << static_cast<void*>(const_cast<GraphicsLayer*>(this));
+        ts << " \"" << m_name << '"';
     }
 
-    ts << "\n";
+    ts << '\n';
     dumpProperties(ts, options);
-    ts << indent << ")\n";
+    ts << indent << ")\n"_s;
 }
 
 static void dumpChildren(TextStream& ts, const Vector<Ref<GraphicsLayer>>& children, unsigned& totalChildCount, OptionSet<LayerTreeAsTextOptions> options)
@@ -955,7 +955,7 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
     if (client().shouldDumpPropertyForLayer(this, "anchorPoint"_s, options)) {
         ts << indent << "(anchor "_s << m_anchorPoint.x() << ' ' << m_anchorPoint.y();
         if (m_anchorPoint.z())
-            ts << " " << m_anchorPoint.z();
+            ts << ' ' << m_anchorPoint.z();
         ts << ")\n"_s;
     }
 
@@ -1100,7 +1100,7 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
         dumpChildren(childrenStream, m_children, totalChildCount, options);
 
         if (totalChildCount) {
-            ts << indent << "(children "_s << totalChildCount << "\n"_s;
+            ts << indent << "(children "_s << totalChildCount << '\n';
             ts << childrenStream.release();
             ts << indent << ")\n"_s;
         }
@@ -1113,7 +1113,7 @@ TextStream& operator<<(TextStream& ts, const Vector<PlatformLayerIdentifier>& la
 {
     for (size_t i = 0; i < layers.size(); ++i) {
         if (i)
-            ts << " ";
+            ts << ' ';
         ts << layers[i];
     }
 
@@ -1123,13 +1123,13 @@ TextStream& operator<<(TextStream& ts, const Vector<PlatformLayerIdentifier>& la
 TextStream& operator<<(TextStream& ts, GraphicsLayerPaintingPhase phase)
 {
     switch (phase) {
-    case GraphicsLayerPaintingPhase::Background: ts << "background"; break;
-    case GraphicsLayerPaintingPhase::Foreground: ts << "foreground"; break;
-    case GraphicsLayerPaintingPhase::Mask: ts << "mask"; break;
-    case GraphicsLayerPaintingPhase::ClipPath: ts << "clip-path"; break;
-    case GraphicsLayerPaintingPhase::OverflowContents: ts << "overflow-contents"; break;
-    case GraphicsLayerPaintingPhase::CompositedScroll: ts << "composited-scroll"; break;
-    case GraphicsLayerPaintingPhase::ChildClippingMask: ts << "child-clipping-mask"; break;
+    case GraphicsLayerPaintingPhase::Background: ts << "background"_s; break;
+    case GraphicsLayerPaintingPhase::Foreground: ts << "foreground"_s; break;
+    case GraphicsLayerPaintingPhase::Mask: ts << "mask"_s; break;
+    case GraphicsLayerPaintingPhase::ClipPath: ts << "clip-path"_s; break;
+    case GraphicsLayerPaintingPhase::OverflowContents: ts << "overflow-contents"_s; break;
+    case GraphicsLayerPaintingPhase::CompositedScroll: ts << "composited-scroll"_s; break;
+    case GraphicsLayerPaintingPhase::ChildClippingMask: ts << "child-clipping-mask"_s; break;
     }
 
     return ts;
@@ -1138,8 +1138,8 @@ TextStream& operator<<(TextStream& ts, GraphicsLayerPaintingPhase phase)
 TextStream& operator<<(TextStream& ts, const GraphicsLayer::CustomAppearance& customAppearance)
 {
     switch (customAppearance) {
-    case GraphicsLayer::CustomAppearance::None: ts << "none"; break;
-    case GraphicsLayer::CustomAppearance::ScrollingShadow: ts << "scrolling-shadow"; break;
+    case GraphicsLayer::CustomAppearance::None: ts << "none"_s; break;
+    case GraphicsLayer::CustomAppearance::ScrollingShadow: ts << "scrolling-shadow"_s; break;
     }
     return ts;
 }

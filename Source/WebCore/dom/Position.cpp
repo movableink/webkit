@@ -1555,16 +1555,16 @@ static TextStream& operator<<(TextStream& stream, Position::AnchorType anchorTyp
     return stream;
 }
 
-TextStream& operator<<(TextStream& stream, const Position& position)
+TextStream& operator<<(TextStream& ts, const Position& position)
 {
-    TextStream::GroupScope scope(stream);
-    stream << "Position " << &position;
+    TextStream::GroupScope scope(ts);
+    ts  << "Position "_s << &position;
 
-    stream.dumpProperty("anchor node", position.anchorNode());
-    stream.dumpProperty("offset", position.offsetInContainerNode());
-    stream.dumpProperty("anchor type", position.anchorType());
+    ts.dumpProperty("anchor node"_s, position.anchorNode());
+    ts.dumpProperty("offset"_s, position.offsetInContainerNode());
+    ts.dumpProperty("anchor type"_s, position.anchorType());
 
-    return stream;
+    return ts;
 }
 
 Node* commonInclusiveAncestor(const Position& a, const Position& b)

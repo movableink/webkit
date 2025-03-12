@@ -1937,10 +1937,10 @@ TextStream& operator<<(TextStream& ts, const FontCascade& fontCascade)
     ts << fontCascade.fontDescription();
 
     if (fontCascade.fontSelector())
-        ts << ", font selector " << fontCascade.fontSelector();
+        ts << ", font selector "_s << fontCascade.fontSelector();
 
     if (fontCascade.fonts())
-        ts << ", generation " << fontCascade.fonts()->generation();
+        ts << ", generation "_s << fontCascade.fonts()->generation();
 
     return ts;
 }

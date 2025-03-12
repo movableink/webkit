@@ -5747,23 +5747,23 @@ void WebViewImpl::flagsChanged(NSEvent *event)
 static TextStream& operator<<(TextStream& ts, NSEventType eventType)
 {
     switch (eventType) {
-    case NSEventTypeLeftMouseDown: ts << "NSEventTypeLeftMouseDown"; break;
-    case NSEventTypeLeftMouseUp: ts << "NSEventTypeLeftMouseUp"; break;
-    case NSEventTypeRightMouseDown: ts << "NSEventTypeRightMouseDown"; break;
-    case NSEventTypeRightMouseUp: ts << "NSEventTypeRightMouseUp"; break;
-    case NSEventTypeMouseMoved: ts << "NSEventTypeMouseMoved"; break;
-    case NSEventTypeLeftMouseDragged: ts << "NSEventTypeLeftMouseDragged"; break;
-    case NSEventTypeRightMouseDragged: ts << "NSEventTypeRightMouseDragged"; break;
-    case NSEventTypeMouseEntered: ts << "NSEventTypeMouseEntered"; break;
-    case NSEventTypeMouseExited: ts << "NSEventTypeMouseExited"; break;
-    case NSEventTypeKeyDown: ts << "NSEventTypeKeyDown"; break;
-    case NSEventTypeKeyUp: ts << "NSEventTypeKeyUp"; break;
-    case NSEventTypeScrollWheel: ts << "NSEventTypeScrollWheel"; break;
-    case NSEventTypeOtherMouseDown: ts << "NSEventTypeOtherMouseDown"; break;
-    case NSEventTypeOtherMouseUp: ts << "NSEventTypeOtherMouseUp"; break;
-    case NSEventTypeOtherMouseDragged: ts << "NSEventTypeOtherMouseDragged"; break;
+    case NSEventTypeLeftMouseDown: ts << "NSEventTypeLeftMouseDown"_s; break;
+    case NSEventTypeLeftMouseUp: ts << "NSEventTypeLeftMouseUp"_s; break;
+    case NSEventTypeRightMouseDown: ts << "NSEventTypeRightMouseDown"_s; break;
+    case NSEventTypeRightMouseUp: ts << "NSEventTypeRightMouseUp"_s; break;
+    case NSEventTypeMouseMoved: ts << "NSEventTypeMouseMoved"_s; break;
+    case NSEventTypeLeftMouseDragged: ts << "NSEventTypeLeftMouseDragged"_s; break;
+    case NSEventTypeRightMouseDragged: ts << "NSEventTypeRightMouseDragged"_s; break;
+    case NSEventTypeMouseEntered: ts << "NSEventTypeMouseEntered"_s; break;
+    case NSEventTypeMouseExited: ts << "NSEventTypeMouseExited"_s; break;
+    case NSEventTypeKeyDown: ts << "NSEventTypeKeyDown"_s; break;
+    case NSEventTypeKeyUp: ts << "NSEventTypeKeyUp"_s; break;
+    case NSEventTypeScrollWheel: ts << "NSEventTypeScrollWheel"_s; break;
+    case NSEventTypeOtherMouseDown: ts << "NSEventTypeOtherMouseDown"_s; break;
+    case NSEventTypeOtherMouseUp: ts << "NSEventTypeOtherMouseUp"_s; break;
+    case NSEventTypeOtherMouseDragged: ts << "NSEventTypeOtherMouseDragged"_s; break;
     default:
-        ts << "Other";
+        ts << "Other"_s;
     }
 
     return ts;

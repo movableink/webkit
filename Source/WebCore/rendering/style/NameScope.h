@@ -63,13 +63,13 @@ inline TextStream& operator<<(TextStream& ts, const NameScope& scope)
 {
     switch (scope.type) {
     case NameScope::Type::None:
-        ts << "none";
+        ts << "none"_s;
         break;
     case NameScope::Type::All:
-        ts << "all";
+        ts << "all"_s;
         break;
     case NameScope::Type::Ident:
-        ts << "ident: " << scope.names;
+        ts << "ident: "_s << scope.names;
         break;
     }
     return ts;

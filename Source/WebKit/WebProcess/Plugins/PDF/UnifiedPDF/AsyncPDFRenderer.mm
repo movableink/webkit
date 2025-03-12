@@ -861,19 +861,19 @@ DynamicContentScalingResourceCache AsyncPDFRenderer::dynamicContentScalingResour
 
 TextStream& operator<<(TextStream& ts, const TileForGrid& tileInfo)
 {
-    ts << "[" << tileInfo.gridIdentifier << ":" << tileInfo.tileIndex << "]";
+    ts << '[' << tileInfo.gridIdentifier << ':' << tileInfo.tileIndex << ']';
     return ts;
 }
 
 TextStream& operator<<(TextStream& ts, const TileRenderInfo& renderInfo)
 {
-    ts << "[tileRect:" << renderInfo.tileRect << ", renderRect:" << renderInfo.renderRect << "]";
+    ts << "[tileRect:"_s << renderInfo.tileRect << ", renderRect:"_s << renderInfo.renderRect << ']';
     return ts;
 }
 
 TextStream& operator<<(TextStream& ts, const TileRenderData& renderData)
 {
-    ts << "[" << renderData.renderIdentifier << ":" << renderData.renderInfo << "]";
+    ts << '[' << renderData.renderIdentifier << ':' << renderData.renderInfo << ']';
     return ts;
 }
 

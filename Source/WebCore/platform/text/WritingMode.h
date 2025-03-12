@@ -443,8 +443,8 @@ inline TextStream& operator<<(TextStream& stream, StyleWritingMode writingMode)
 inline TextStream& operator<<(TextStream& ts, TextDirection textDirection)
 {
     switch (textDirection) {
-    case TextDirection::LTR: ts << "ltr"; break;
-    case TextDirection::RTL: ts << "rtl"; break;
+    case TextDirection::LTR: ts << "ltr"_s; break;
+    case TextDirection::RTL: ts << "rtl"_s; break;
     }
     return ts;
 }

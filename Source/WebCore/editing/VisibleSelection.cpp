@@ -759,17 +759,17 @@ void VisibleSelection::showTreeForThis() const
 
 #endif
 
-TextStream& operator<<(TextStream& stream, const VisibleSelection& v)
+TextStream& operator<<(TextStream& ts, const VisibleSelection& v)
 {
-    TextStream::GroupScope scope(stream);
-    stream << "VisibleSelection " << &v;
+    TextStream::GroupScope scope(ts);
+    ts << "VisibleSelection "_s << &v;
 
-    stream.dumpProperty("base", v.base());
-    stream.dumpProperty("extent", v.extent());
-    stream.dumpProperty("start", v.start());
-    stream.dumpProperty("end", v.end());
+    ts.dumpProperty("base"_s, v.base());
+    ts.dumpProperty("extent"_s, v.extent());
+    ts.dumpProperty("start"_s, v.start());
+    ts.dumpProperty("end"_s, v.end());
 
-    return stream;
+    return ts;
 }
 
 } // namespace WebCore

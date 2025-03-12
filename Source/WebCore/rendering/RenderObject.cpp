@@ -3045,9 +3045,9 @@ TextStream& operator<<(TextStream& ts, const RenderObject& renderer)
 
 TextStream& operator<<(TextStream& ts, const RenderObject::RepaintRects& repaintRects)
 {
-    ts << " (clipped overflow " << repaintRects.clippedOverflowRect << ")";
+    ts << " (clipped overflow "_s << repaintRects.clippedOverflowRect << ')';
     if (repaintRects.outlineBoundsRect && repaintRects.outlineBoundsRect != repaintRects.clippedOverflowRect)
-        ts << " (outline bounds " << repaintRects.outlineBoundsRect << ")";
+        ts << " (outline bounds "_s << repaintRects.outlineBoundsRect << ')';
     return ts;
 }
 

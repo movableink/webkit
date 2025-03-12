@@ -247,11 +247,11 @@ static void dumpUIView(TextStream& ts, UIView *view)
     };
 
 
-    ts << "view [class: " << allowListedClassToString(view) << "]";
+    ts << "view [class: "_s << allowListedClassToString(view) << ']';
 
 #if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
     if ([view isKindOfClass:[WKBaseScrollView class]]) {
-        ts.dumpProperty("scrolling behavior", makeString([(WKBaseScrollView *)view _scrollingBehavior]));
+        ts.dumpProperty("scrolling behavior"_s, makeString([(WKBaseScrollView *)view _scrollingBehavior]));
 
         auto rects = [(WKBaseScrollView *)view overlayRegionsForTesting];
         auto overlaysAsStrings = adoptNS([[NSMutableArray alloc] initWithCapacity:rects.size()]);
@@ -260,31 +260,31 @@ static void dumpUIView(TextStream& ts, UIView *view)
 
         [overlaysAsStrings sortUsingSelector:@selector(localizedCaseInsensitiveCompare:)];
         for (NSString *overlayAsString in overlaysAsStrings.get())
-            ts.dumpProperty("overlay region", overlayAsString);
+            ts.dumpProperty("overlay region"_s, overlayAsString);
     }
 #endif
 
-    ts.dumpProperty("layer bounds", rectToString(view.layer.bounds));
+    ts.dumpProperty("layer bounds"_s, rectToString(view.layer.bounds));
     
     if (view.layer.position.x != 0 || view.layer.position.y != 0)
-        ts.dumpProperty("layer position", pointToString(view.layer.position));
+        ts.dumpProperty("layer position"_s, pointToString(view.layer.position));
     
     if (view.layer.zPosition != 0)
-        ts.dumpProperty("layer zPosition", makeString(view.layer.zPosition));
+        ts.dumpProperty("layer zPosition"_s, makeString(view.layer.zPosition));
     
     if (view.layer.anchorPoint.x != 0.5 || view.layer.anchorPoint.y != 0.5)
-        ts.dumpProperty("layer anchorPoint", pointToString(view.layer.anchorPoint));
+        ts.dumpProperty("layer anchorPoint"_s, pointToString(view.layer.anchorPoint));
     
     if (view.layer.anchorPointZ != 0)
-        ts.dumpProperty("layer anchorPointZ", makeString(view.layer.anchorPointZ));
+        ts.dumpProperty("layer anchorPointZ"_s, makeString(view.layer.anchorPointZ));
 
     if (view.layer.cornerRadius != 0.0)
-        ts.dumpProperty("layer cornerRadius", makeString(view.layer.cornerRadius));
+        ts.dumpProperty("layer cornerRadius"_s, makeString(view.layer.cornerRadius));
 
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
     if (view.layer.separated) {
         TextStream::GroupScope scope(ts);
-        ts << "separated";
+        ts << "separated"_s;
         if (shouldDumpSeparatedDetails(view))
             dumpSeparatedLayerProperties(ts, view.layer);
     }
@@ -292,7 +292,7 @@ static void dumpUIView(TextStream& ts, UIView *view)
 
     if (view.subviews.count > 0) {
         TextStream::GroupScope scope(ts);
-        ts << "subviews";
+        ts << "subviews"_s;
         for (UIView *subview in view.subviews) {
             TextStream::GroupScope scope(ts);
             dumpUIView(ts, subview);
@@ -306,7 +306,7 @@ static void dumpUIView(TextStream& ts, UIView *view)
 
     {
         TextStream::GroupScope scope(ts);
-        ts << "UIView tree root ";
+        ts << "UIView tree root "_s;
         dumpUIView(ts, self);
     }
 

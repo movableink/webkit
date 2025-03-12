@@ -4558,30 +4558,30 @@ double RenderLayerBacking::backingStoreMemoryEstimate() const
 
 TextStream& operator<<(TextStream& ts, const RenderLayerBacking& backing)
 {
-    ts << "RenderLayerBacking " << &backing << " bounds " << backing.compositedBounds();
+    ts << "RenderLayerBacking "_s << &backing << " bounds "_s << backing.compositedBounds();
 
     if (backing.isFrameLayerWithTiledBacking())
-        ts << " frame layer tiled backing";
+        ts << " frame layer tiled backing"_s;
     if (backing.paintsIntoWindow())
-        ts << " paintsIntoWindow";
+        ts << " paintsIntoWindow"_s;
     if (backing.paintsIntoCompositedAncestor())
-        ts << " paintsIntoCompositedAncestor";
+        ts << " paintsIntoCompositedAncestor"_s;
 
-    ts << " primary layer ID " << (backing.graphicsLayer()->primaryLayerID() ? backing.graphicsLayer()->primaryLayerID()->object().toUInt64() : 0);
+    ts << " primary layer ID "_s << (backing.graphicsLayer()->primaryLayerID() ? backing.graphicsLayer()->primaryLayerID()->object().toUInt64() : 0);
     if (auto nodeID = backing.scrollingNodeIDForRole(ScrollCoordinationRole::ViewportConstrained))
-        ts << " viewport constrained scrolling node " << nodeID;
+        ts << " viewport constrained scrolling node "_s << nodeID;
     if (auto nodeID = backing.scrollingNodeIDForRole(ScrollCoordinationRole::Scrolling))
-        ts << " scrolling node " << nodeID;
+        ts << " scrolling node "_s << nodeID;
 
     if (backing.ancestorClippingStack())
-        ts << " ancestor clip stack " << *backing.ancestorClippingStack();
+        ts << " ancestor clip stack "_s << *backing.ancestorClippingStack();
 
     if (auto nodeID = backing.scrollingNodeIDForRole(ScrollCoordinationRole::FrameHosting))
-        ts << " frame hosting node " << nodeID;
+        ts << " frame hosting node "_s << nodeID;
     if (auto nodeID = backing.scrollingNodeIDForRole(ScrollCoordinationRole::PluginHosting))
-        ts << " plugin hosting node " << nodeID;
+        ts << " plugin hosting node "_s << nodeID;
     if (auto nodeID = backing.scrollingNodeIDForRole(ScrollCoordinationRole::Positioning))
-        ts << " positioning node " << nodeID;
+        ts << " positioning node "_s << nodeID;
     return ts;
 }
 

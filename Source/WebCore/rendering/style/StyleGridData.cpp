@@ -234,13 +234,13 @@ WTF::TextStream& operator<<(WTF::TextStream& ts, const GridTrackEntry& entry)
     }, [&](const Vector<String>& names) {
         ts << names;
     }, [&](const GridTrackEntryRepeat& repeat) {
-        ts << "repeat(" << repeat.repeats << ", " << repeat.list << ")";
+        ts << "repeat("_s << repeat.repeats << ", "_s << repeat.list << ')';
     }, [&](const GridTrackEntryAutoRepeat& repeat) {
-        ts << "repeat(" << repeat.type << ", " << repeat.list << ")";
+        ts << "repeat("_s << repeat.type << ", "_s << repeat.list << ')';
     }, [&](const GridTrackEntrySubgrid&) {
-        ts << "subgrid";
+        ts << "subgrid"_s;
     }, [&](const GridTrackEntryMasonry&) {
-        ts << "masonry";
+        ts << "masonry"_s;
     });
 
     std::visit(visitor, entry);

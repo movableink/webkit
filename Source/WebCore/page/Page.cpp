@@ -4801,37 +4801,37 @@ SpeechRecognitionConnection& Page::speechRecognitionConnection()
 WTF::TextStream& operator<<(WTF::TextStream& ts, RenderingUpdateStep step)
 {
     switch (step) {
-    case RenderingUpdateStep::Reveal: ts << "Reveal"; break;
-    case RenderingUpdateStep::FlushAutofocusCandidates: ts << "FlushAutofocusCandidates"; break;
-    case RenderingUpdateStep::Resize: ts << "Resize"; break;
-    case RenderingUpdateStep::Scroll: ts << "Scroll"; break;
-    case RenderingUpdateStep::MediaQueryEvaluation: ts << "MediaQueryEvaluation"; break;
-    case RenderingUpdateStep::Animations: ts << "Animations"; break;
-    case RenderingUpdateStep::Fullscreen: ts << "Fullscreen"; break;
-    case RenderingUpdateStep::AnimationFrameCallbacks: ts << "AnimationFrameCallbacks"; break;
-    case RenderingUpdateStep::PerformPendingViewTransitions: ts << "PerformPendingViewTransitions"; break;
-    case RenderingUpdateStep::IntersectionObservations: ts << "IntersectionObservations"; break;
-    case RenderingUpdateStep::UpdateContentRelevancy: ts << "UpdateContentRelevancy"; break;
-    case RenderingUpdateStep::ResizeObservations: ts << "ResizeObservations"; break;
-    case RenderingUpdateStep::Images: ts << "Images"; break;
-    case RenderingUpdateStep::WheelEventMonitorCallbacks: ts << "WheelEventMonitorCallbacks"; break;
-    case RenderingUpdateStep::CursorUpdate: ts << "CursorUpdate"; break;
-    case RenderingUpdateStep::EventRegionUpdate: ts << "EventRegionUpdate"; break;
-    case RenderingUpdateStep::LayerFlush: ts << "LayerFlush"; break;
+    case RenderingUpdateStep::Reveal: ts << "Reveal"_s; break;
+    case RenderingUpdateStep::FlushAutofocusCandidates: ts << "FlushAutofocusCandidates"_s; break;
+    case RenderingUpdateStep::Resize: ts << "Resize"_s; break;
+    case RenderingUpdateStep::Scroll: ts << "Scroll"_s; break;
+    case RenderingUpdateStep::MediaQueryEvaluation: ts << "MediaQueryEvaluation"_s; break;
+    case RenderingUpdateStep::Animations: ts << "Animations"_s; break;
+    case RenderingUpdateStep::Fullscreen: ts << "Fullscreen"_s; break;
+    case RenderingUpdateStep::AnimationFrameCallbacks: ts << "AnimationFrameCallbacks"_s; break;
+    case RenderingUpdateStep::PerformPendingViewTransitions: ts << "PerformPendingViewTransitions"_s; break;
+    case RenderingUpdateStep::IntersectionObservations: ts << "IntersectionObservations"_s; break;
+    case RenderingUpdateStep::UpdateContentRelevancy: ts << "UpdateContentRelevancy"_s; break;
+    case RenderingUpdateStep::ResizeObservations: ts << "ResizeObservations"_s; break;
+    case RenderingUpdateStep::Images: ts << "Images"_s; break;
+    case RenderingUpdateStep::WheelEventMonitorCallbacks: ts << "WheelEventMonitorCallbacks"_s; break;
+    case RenderingUpdateStep::CursorUpdate: ts << "CursorUpdate"_s; break;
+    case RenderingUpdateStep::EventRegionUpdate: ts << "EventRegionUpdate"_s; break;
+    case RenderingUpdateStep::LayerFlush: ts << "LayerFlush"_s; break;
 #if ENABLE(ASYNC_SCROLLING)
-    case RenderingUpdateStep::ScrollingTreeUpdate: ts << "ScrollingTreeUpdate"; break;
+    case RenderingUpdateStep::ScrollingTreeUpdate: ts << "ScrollingTreeUpdate"_s; break;
 #endif
-    case RenderingUpdateStep::VideoFrameCallbacks: ts << "VideoFrameCallbacks"; break;
-    case RenderingUpdateStep::PrepareCanvasesForDisplayOrFlush: ts << "PrepareCanvasesForDisplayOrFlush"; break;
-    case RenderingUpdateStep::CaretAnimation: ts << "CaretAnimation"; break;
-    case RenderingUpdateStep::FocusFixup: ts << "FocusFixup"; break;
-    case RenderingUpdateStep::UpdateValidationMessagePositions: ts << "UpdateValidationMessagePositions"; break;
+    case RenderingUpdateStep::VideoFrameCallbacks: ts << "VideoFrameCallbacks"_s; break;
+    case RenderingUpdateStep::PrepareCanvasesForDisplayOrFlush: ts << "PrepareCanvasesForDisplayOrFlush"_s; break;
+    case RenderingUpdateStep::CaretAnimation: ts << "CaretAnimation"_s; break;
+    case RenderingUpdateStep::FocusFixup: ts << "FocusFixup"_s; break;
+    case RenderingUpdateStep::UpdateValidationMessagePositions: ts << "UpdateValidationMessagePositions"_s; break;
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    case RenderingUpdateStep::AccessibilityRegionUpdate: ts << "AccessibilityRegionUpdate"; break;
+    case RenderingUpdateStep::AccessibilityRegionUpdate: ts << "AccessibilityRegionUpdate"_s; break;
 #endif
-    case RenderingUpdateStep::RestoreScrollPositionAndViewState: ts << "RestoreScrollPositionAndViewState"; break;
-    case RenderingUpdateStep::AdjustVisibility: ts << "AdjustVisibility"; break;
-    case RenderingUpdateStep::SnapshottedScrollOffsets: ts << "SnapshottedScrollOffsets"; break;
+    case RenderingUpdateStep::RestoreScrollPositionAndViewState: ts << "RestoreScrollPositionAndViewState"_s; break;
+    case RenderingUpdateStep::AdjustVisibility: ts << "AdjustVisibility"_s; break;
+    case RenderingUpdateStep::SnapshottedScrollOffsets: ts << "SnapshottedScrollOffsets"_s; break;
     }
     return ts;
 }

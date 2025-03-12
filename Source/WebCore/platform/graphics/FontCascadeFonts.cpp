@@ -572,7 +572,7 @@ void FontCascadeFonts::pruneSystemFallbacks()
 
 TextStream& operator<<(TextStream& ts, const FontCascadeFonts& fontCascadeFonts)
 {
-    ts << "FontCascadeFonts " << &fontCascadeFonts << " " << " generation " << fontCascadeFonts.generation();
+    ts << "FontCascadeFonts "_s << &fontCascadeFonts << ' ' << " generation "_s << fontCascadeFonts.generation();
     return ts;
 }
 

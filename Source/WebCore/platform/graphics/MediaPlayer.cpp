@@ -2146,13 +2146,13 @@ WTF::TextStream& operator<<(TextStream& ts, MediaPlayerEnums::VideoGravity gravi
 {
     switch (gravity) {
     case MediaPlayerEnums::VideoGravity::Resize:
-        ts << "resize";
+        ts << "resize"_s;
         break;
     case MediaPlayerEnums::VideoGravity::ResizeAspect:
-        ts << "resize-aspect";
+        ts << "resize-aspect"_s;
         break;
     case MediaPlayerEnums::VideoGravity::ResizeAspectFill:
-        ts << "resize-aspect-fill";
+        ts << "resize-aspect-fill"_s;
         break;
     }
     return ts;

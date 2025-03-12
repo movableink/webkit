@@ -87,7 +87,7 @@
 
     {
         TextStream::GroupScope scope(ts);
-        ts << "CALayer tree root ";
+        ts << "CALayer tree root "_s;
 #if PLATFORM(IOS_FAMILY)
         dumpCALayer(ts, [_contentView layer], true);
 #else
@@ -113,48 +113,48 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
     if (interactionRegionLayerType) {
         traverse = false;
 
-        ts.dumpProperty("type", interactionRegionLayerType);
+        ts.dumpProperty("type"_s, interactionRegionLayerType);
 
         if (layer.mask) {
             TextStream::GroupScope scope(ts);
-            ts << "mask";
-            ts.dumpProperty("frame", rectToString(layer.mask.frame));
+            ts << "mask"_s;
+            ts.dumpProperty("frame"_s, rectToString(layer.mask.frame));
         }
     }
 #endif
 
-    ts.dumpProperty("layer bounds", rectToString(layer.bounds));
+    ts.dumpProperty("layer bounds"_s, rectToString(layer.bounds));
 
     if (layer.position.x || layer.position.y)
-        ts.dumpProperty("layer position", pointToString(layer.position));
+        ts.dumpProperty("layer position"_s, pointToString(layer.position));
 
     if (layer.zPosition)
-        ts.dumpProperty("layer zPosition", makeString(layer.zPosition));
+        ts.dumpProperty("layer zPosition"_s, makeString(layer.zPosition));
 
     if (layer.anchorPoint.x != 0.5 || layer.anchorPoint.y != 0.5)
-        ts.dumpProperty("layer anchorPoint", pointToString(layer.anchorPoint));
+        ts.dumpProperty("layer anchorPoint"_s, pointToString(layer.anchorPoint));
 
     if (layer.anchorPointZ)
-        ts.dumpProperty("layer anchorPointZ", makeString(layer.anchorPointZ));
+        ts.dumpProperty("layer anchorPointZ"_s, makeString(layer.anchorPointZ));
 
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
     if (layer.separated)
-        ts.dumpProperty("separated", true);
+        ts.dumpProperty("separated"_s, true);
 #endif
 
     if (layer.opacity != 1.0)
-        ts.dumpProperty("layer opacity", makeString(layer.opacity));
+        ts.dumpProperty("layer opacity"_s, makeString(layer.opacity));
 
     if (layer.cornerRadius != 0.0)
-        ts.dumpProperty("layer cornerRadius", makeString(layer.cornerRadius));
+        ts.dumpProperty("layer cornerRadius"_s, makeString(layer.cornerRadius));
 
     constexpr CACornerMask allCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner | kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
     if (layer.maskedCorners != allCorners)
-        ts.dumpProperty("layer masked corners", makeString(layer.maskedCorners));
+        ts.dumpProperty("layer masked corners"_s, makeString(layer.maskedCorners));
     
     if (traverse && layer.sublayers.count > 0) {
         TextStream::GroupScope scope(ts);
-        ts << "sublayers";
+        ts << "sublayers"_s;
         for (CALayer *sublayer in layer.sublayers) {
             TextStream::GroupScope scope(ts);
             dumpCALayer(ts, sublayer, true);

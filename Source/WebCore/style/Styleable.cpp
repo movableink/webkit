@@ -992,13 +992,13 @@ void Styleable::setCapturedInViewTransition(AtomString captureName)
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, const Styleable& styleable)
 {
-    ts << styleable.element << ", " << styleable.pseudoElementIdentifier;
+    ts << styleable.element << ", "_s << styleable.pseudoElementIdentifier;
     return ts;
 }
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, const WeakStyleable& styleable)
 {
-    ts << styleable.element() << ", " << styleable.pseudoElementIdentifier();
+    ts << styleable.element() << ", "_s << styleable.pseudoElementIdentifier();
     return ts;
 }
 

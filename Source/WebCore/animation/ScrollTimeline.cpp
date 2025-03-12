@@ -365,9 +365,9 @@ void ScrollTimeline::animationTimingDidChange(WebAnimation& animation)
 TextStream& operator<<(TextStream& ts, Scroller scroller)
 {
     switch (scroller) {
-    case Scroller::Nearest: ts << "nearest"; break;
-    case Scroller::Root: ts << "root"; break;
-    case Scroller::Self: ts << "self"; break;
+    case Scroller::Nearest: ts << "nearest"_s; break;
+    case Scroller::Root: ts << "root"_s; break;
+    case Scroller::Self: ts << "self"_s; break;
     }
     return ts;
 }

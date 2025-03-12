@@ -6004,10 +6004,10 @@ Ref<Page> RenderLayerCompositor::protectedPage() const
 TextStream& operator<<(TextStream& ts, CompositingUpdateType updateType)
 {
     switch (updateType) {
-    case CompositingUpdateType::AfterStyleChange: ts << "after style change"; break;
-    case CompositingUpdateType::AfterLayout: ts << "after layout"; break;
-    case CompositingUpdateType::OnScroll: ts << "on scroll"; break;
-    case CompositingUpdateType::OnCompositedScroll: ts << "on composited scroll"; break;
+    case CompositingUpdateType::AfterStyleChange: ts << "after style change"_s; break;
+    case CompositingUpdateType::AfterLayout: ts << "after layout"_s; break;
+    case CompositingUpdateType::OnScroll: ts << "on scroll"_s; break;
+    case CompositingUpdateType::OnCompositedScroll: ts << "on composited scroll"_s; break;
     }
     return ts;
 }
@@ -6015,8 +6015,8 @@ TextStream& operator<<(TextStream& ts, CompositingUpdateType updateType)
 TextStream& operator<<(TextStream& ts, CompositingPolicy compositingPolicy)
 {
     switch (compositingPolicy) {
-    case CompositingPolicy::Normal: ts << "normal"; break;
-    case CompositingPolicy::Conservative: ts << "conservative"; break;
+    case CompositingPolicy::Normal: ts << "normal"_s; break;
+    case CompositingPolicy::Conservative: ts << "conservative"_s; break;
     }
     return ts;
 }
@@ -6028,12 +6028,12 @@ TextStream& operator<<(TextStream& ts, CompositingReason compositingReason)
 
 TextStream& operator<<(TextStream& ts, const RenderLayerCompositor::BackingSharingState::Provider& provider)
 {
-    ts << "provider " << provider.providerLayer.get() << ", sharing layers ";
+    ts << "provider "_s << provider.providerLayer.get() << ", sharing layers "_s;
 
     bool outputComma = false;
     for (auto& layer : provider.sharingLayers) {
         if (outputComma)
-            ts << ", ";
+            ts << ", "_s;
 
         ts << &layer;
         outputComma = true;

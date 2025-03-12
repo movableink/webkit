@@ -89,10 +89,10 @@ namespace WebCore {
 static TextStream& operator<<(TextStream& ts, LazyImageLoadState state)
 {
     switch (state) {
-    case LazyImageLoadState::None: ts << "None"; break;
-    case LazyImageLoadState::Deferred: ts << "Deferred"; break;
-    case LazyImageLoadState::LoadImmediately: ts << "LoadImmediately"; break;
-    case LazyImageLoadState::FullImage: ts << "FullImage"; break;
+    case LazyImageLoadState::None: ts << "None"_s; break;
+    case LazyImageLoadState::Deferred: ts << "Deferred"_s; break;
+    case LazyImageLoadState::LoadImmediately: ts << "LoadImmediately"_s; break;
+    case LazyImageLoadState::FullImage: ts << "FullImage"_s; break;
     }
 
     return ts;
@@ -101,8 +101,8 @@ static TextStream& operator<<(TextStream& ts, LazyImageLoadState state)
 static TextStream& operator<<(TextStream& ts, ImageLoading loading)
 {
     switch (loading) {
-    case ImageLoading::Immediate: ts << "Immediate"; break;
-    case ImageLoading::DeferredUntilVisible: ts << "DeferredUntilVisible"; break;
+    case ImageLoading::Immediate: ts << "Immediate"_s; break;
+    case ImageLoading::DeferredUntilVisible: ts << "DeferredUntilVisible"_s; break;
     }
 
     return ts;

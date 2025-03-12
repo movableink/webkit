@@ -4419,7 +4419,7 @@ String GraphicsLayerCA::replayDisplayListAsText(OptionSet<DisplayList::AsTextFla
         TextStream stream(TextStream::LineMode::MultipleLine, TextStream::Formatting::SVGStyleRect);
         
         TextStream::GroupScope scope(stream);
-        stream.dumpProperty("clip", it->value.first);
+        stream.dumpProperty("clip"_s, it->value.first);
         stream << it->value.second->asText(flags);
         return stream.release();
         
@@ -4523,7 +4523,7 @@ void GraphicsLayerCA::dumpInnerLayer(TextStream& ts, PlatformCALayer* layer, Opt
         if (!flags.contains(PlatformLayerTreeAsTextFlags::IgnoreChildren)) {
             auto sublayers = layer->sublayersForLogging();
             if (sublayers.size()) {
-                ts << indent << "(children "_s << "\n"_s;
+                ts << indent << "(children "_s << '\n';
 
                 {
                     TextStream::IndentScope indentScope(ts);

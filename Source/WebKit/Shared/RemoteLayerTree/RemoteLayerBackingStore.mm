@@ -210,7 +210,7 @@ void RemoteLayerBackingStoreProperties::dump(TextStream& ts) const
 {
     auto dumpBuffer = [&](ASCIILiteral name, const std::optional<BufferAndBackendInfo>& bufferInfo) {
         ts.startGroup();
-        ts << name << " "_s;
+        ts << name << ' ';
         if (bufferInfo)
             ts << bufferInfo->resourceIdentifier << " backend generation "_s << bufferInfo->backendGeneration;
         else
@@ -672,11 +672,11 @@ TextStream& operator<<(TextStream& ts, const RemoteLayerBackingStoreProperties& 
 TextStream& operator<<(TextStream& ts, BackingStoreNeedsDisplayReason reason)
 {
     switch (reason) {
-    case BackingStoreNeedsDisplayReason::None: ts << "none"; break;
-    case BackingStoreNeedsDisplayReason::NoFrontBuffer: ts << "no front buffer"; break;
-    case BackingStoreNeedsDisplayReason::FrontBufferIsVolatile: ts << "volatile front buffer"; break;
-    case BackingStoreNeedsDisplayReason::FrontBufferHasNoSharingHandle: ts << "no front buffer sharing handle"; break;
-    case BackingStoreNeedsDisplayReason::HasDirtyRegion: ts << "has dirty region"; break;
+    case BackingStoreNeedsDisplayReason::None: ts << "none"_s; break;
+    case BackingStoreNeedsDisplayReason::NoFrontBuffer: ts << "no front buffer"_s; break;
+    case BackingStoreNeedsDisplayReason::FrontBufferIsVolatile: ts << "volatile front buffer"_s; break;
+    case BackingStoreNeedsDisplayReason::FrontBufferHasNoSharingHandle: ts << "no front buffer sharing handle"_s; break;
+    case BackingStoreNeedsDisplayReason::HasDirtyRegion: ts << "has dirty region"_s; break;
     }
 
     return ts;

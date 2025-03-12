@@ -52,47 +52,47 @@ bool BorderData::isEquivalentForPainting(const BorderData& other, bool currentCo
 
 TextStream& operator<<(TextStream& ts, const BorderValue& borderValue)
 {
-    ts << borderValue.width() << " " << borderValue.style() << " " << borderValue.color();
+    ts << borderValue.width() << ' ' << borderValue.style() << ' ' << borderValue.color();
     return ts;
 }
 
 TextStream& operator<<(TextStream& ts, const OutlineValue& outlineValue)
 {
     ts << static_cast<const BorderValue&>(outlineValue);
-    ts.dumpProperty("outline-offset", outlineValue.offset());
+    ts.dumpProperty("outline-offset"_s, outlineValue.offset());
     return ts;
 }
 
 void BorderData::dump(TextStream& ts, DumpStyleValues behavior) const
 {
     if (behavior == DumpStyleValues::All || left() != BorderValue())
-        ts.dumpProperty("left", left());
+        ts.dumpProperty("left"_s, left());
     if (behavior == DumpStyleValues::All || right() != BorderValue())
-        ts.dumpProperty("right", right());
+        ts.dumpProperty("right"_s, right());
     if (behavior == DumpStyleValues::All || top() != BorderValue())
-        ts.dumpProperty("top", top());
+        ts.dumpProperty("top"_s, top());
     if (behavior == DumpStyleValues::All || bottom() != BorderValue())
-        ts.dumpProperty("bottom", bottom());
+        ts.dumpProperty("bottom"_s, bottom());
 
     if (behavior == DumpStyleValues::All || topLeftCornerShape() != Style::CornerShapeValue::round())
-        ts.dumpProperty("top-left corner shape", topLeftCornerShape());
+        ts.dumpProperty("top-left corner shape"_s, topLeftCornerShape());
     if (behavior == DumpStyleValues::All || topRightCornerShape() != Style::CornerShapeValue::round())
-        ts.dumpProperty("top-right corner shape", topRightCornerShape());
+        ts.dumpProperty("top-right corner shape"_s, topRightCornerShape());
     if (behavior == DumpStyleValues::All || bottomLeftCornerShape() != Style::CornerShapeValue::round())
-        ts.dumpProperty("bottom-left corner shape", bottomLeftCornerShape());
+        ts.dumpProperty("bottom-left corner shape"_s, bottomLeftCornerShape());
     if (behavior == DumpStyleValues::All || bottomRightCornerShape() != Style::CornerShapeValue::round())
-        ts.dumpProperty("bottom-right corner shape", bottomRightCornerShape());
+        ts.dumpProperty("bottom-right corner shape"_s, bottomRightCornerShape());
 
-    ts.dumpProperty("image", image());
+    ts.dumpProperty("image"_s, image());
 
     if (behavior == DumpStyleValues::All || !topLeftRadius().isZero())
-        ts.dumpProperty("top-left", topLeftRadius());
+        ts.dumpProperty("top-left"_s, topLeftRadius());
     if (behavior == DumpStyleValues::All || !topRightRadius().isZero())
-        ts.dumpProperty("top-right", topRightRadius());
+        ts.dumpProperty("top-right"_s, topRightRadius());
     if (behavior == DumpStyleValues::All || !bottomLeftRadius().isZero())
-        ts.dumpProperty("bottom-left", bottomLeftRadius());
+        ts.dumpProperty("bottom-left"_s, bottomLeftRadius());
     if (behavior == DumpStyleValues::All || !bottomRightRadius().isZero())
-        ts.dumpProperty("bottom-right", bottomRightRadius());
+        ts.dumpProperty("bottom-right"_s, bottomRightRadius());
 }
 
 TextStream& operator<<(TextStream& ts, const BorderData& borderData)

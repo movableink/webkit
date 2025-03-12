@@ -1020,11 +1020,11 @@ UniqueRef<ViewTransitionParams> ViewTransition::takeViewTransitionParams()
 TextStream& operator<<(TextStream& ts, ViewTransitionPhase phase)
 {
     switch (phase) {
-    case ViewTransitionPhase::PendingCapture: ts << "PendingCapture"; break;
-    case ViewTransitionPhase::CapturingOldState: ts << "CapturingOldState"; break;
-    case ViewTransitionPhase::UpdateCallbackCalled: ts << "UpdateCallbackCalled"; break;
-    case ViewTransitionPhase::Animating: ts << "Animating"; break;
-    case ViewTransitionPhase::Done: ts << "Done"; break;
+    case ViewTransitionPhase::PendingCapture: ts << "PendingCapture"_s; break;
+    case ViewTransitionPhase::CapturingOldState: ts << "CapturingOldState"_s; break;
+    case ViewTransitionPhase::UpdateCallbackCalled: ts << "UpdateCallbackCalled"_s; break;
+    case ViewTransitionPhase::Animating: ts << "Animating"_s; break;
+    case ViewTransitionPhase::Done: ts << "Done"_s; break;
     }
     return ts;
 }

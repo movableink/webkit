@@ -755,47 +755,47 @@ void EventRegion::dump(TextStream& ts) const
 #if ENABLE(TOUCH_ACTION_REGIONS)
     if (!m_touchActionRegions.isEmpty()) {
         TextStream::IndentScope indentScope(ts);
-        ts << indent << "(touch-action\n";
+        ts << indent << "(touch-action\n"_s;
         for (unsigned i = 0; i < m_touchActionRegions.size(); ++i) {
             if (m_touchActionRegions[i].isEmpty())
                 continue;
             TextStream::IndentScope indentScope(ts);
-            ts << indent << "(" << toTouchAction(i);
+            ts << indent << '(' << toTouchAction(i);
             ts << indent << m_touchActionRegions[i];
-            ts << indent << ")\n";
+            ts << indent << ")\n"_s;
         }
-        ts << indent << ")\n";
+        ts << indent << ")\n"_s;
     }
 #endif
 
 #if ENABLE(WHEEL_EVENT_REGIONS)
     if (!m_wheelEventListenerRegion.isEmpty()) {
-        ts << indent << "(wheel event listener region" << m_wheelEventListenerRegion;
+        ts << indent << "(wheel event listener region"_s << m_wheelEventListenerRegion;
         if (!m_nonPassiveWheelEventListenerRegion.isEmpty()) {
             TextStream::IndentScope indentScope(ts);
-            ts << indent << "(non-passive" << m_nonPassiveWheelEventListenerRegion;
-            ts << indent << ")\n";
+            ts << indent << "(non-passive"_s << m_nonPassiveWheelEventListenerRegion;
+            ts << indent << ")\n"_s;
         }
-        ts << indent << ")\n";
+        ts << indent << ")\n"_s;
     }
 #endif
 
 #if ENABLE(TOUCH_EVENT_REGIONS)
     if (!m_touchEventListenerRegion.isEmpty())
-        ts << indent << "(touch event listener region:" << m_touchEventListenerRegion << ")\n";
+        ts << indent << "(touch event listener region:"_s << m_touchEventListenerRegion << '\n';
 #endif
 
 #if ENABLE(EDITABLE_REGION)
     if (m_editableRegion && !m_editableRegion->isEmpty()) {
-        ts << indent << "(editable region" << *m_editableRegion;
-        ts << indent << ")\n";
+        ts << indent << "(editable region"_s << *m_editableRegion;
+        ts << indent << ")\n"_s;
     }
 #endif
     
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
     if (!m_interactionRegions.isEmpty()) {
-        ts.dumpProperty("interaction regions", m_interactionRegions);
-        ts << "\n";
+        ts.dumpProperty("interaction regions"_s, m_interactionRegions);
+        ts << '\n';
     }
 #endif
 }
@@ -804,13 +804,13 @@ void EventRegion::dump(TextStream& ts) const
 TextStream& operator<<(TextStream& ts, const TouchEventListenerRegion& region)
 {
     if (!region.start.isEmpty())
-        ts << " touchStart: " << region.start;
+        ts << " touchStart: "_s << region.start;
     if (!region.end.isEmpty())
-        ts << " touchEnd: " << region.end;
+        ts << " touchEnd: "_s << region.end;
     if (!region.cancel.isEmpty())
-        ts << " touchCancel: " << region.cancel;
+        ts << " touchCancel: "_s << region.cancel;
     if (!region.move.isEmpty())
-        ts << " touchMove: " << region.move;
+        ts << " touchMove: "_s << region.move;
     return ts;
 }
 #endif
@@ -819,17 +819,17 @@ TextStream& operator<<(TextStream& ts, TouchAction touchAction)
 {
     switch (touchAction) {
     case TouchAction::None:
-        return ts << "none";
+        return ts << "none"_s;
     case TouchAction::Manipulation:
-        return ts << "manipulation";
+        return ts << "manipulation"_s;
     case TouchAction::PanX:
-        return ts << "pan-x";
+        return ts << "pan-x"_s;
     case TouchAction::PanY:
-        return ts << "pan-y";
+        return ts << "pan-y"_s;
     case TouchAction::PinchZoom:
-        return ts << "pinch-zoom";
+        return ts << "pinch-zoom"_s;
     case TouchAction::Auto:
-        return ts << "auto";
+        return ts << "auto"_s;
     }
     ASSERT_NOT_REACHED();
     return ts;

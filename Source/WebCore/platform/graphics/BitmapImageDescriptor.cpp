@@ -265,15 +265,15 @@ bool BitmapImageDescriptor::isSpatial() const
 
 void BitmapImageDescriptor::dump(TextStream& ts) const
 {
-    ts.dumpProperty("size", size());
-    ts.dumpProperty("density-corrected-size", densityCorrectedSize());
-    ts.dumpProperty("primary-frame-index", primaryFrameIndex());
-    ts.dumpProperty("frame-count", frameCount());
-    ts.dumpProperty("repetition-count", repetitionCount());
+    ts.dumpProperty("size"_s, size());
+    ts.dumpProperty("density-corrected-size"_s, densityCorrectedSize());
+    ts.dumpProperty("primary-frame-index"_s, primaryFrameIndex());
+    ts.dumpProperty("frame-count"_s, frameCount());
+    ts.dumpProperty("repetition-count"_s, repetitionCount());
 
-    ts.dumpProperty("uti", uti());
-    ts.dumpProperty("filename-extension", filenameExtension());
-    ts.dumpProperty("accessibility-description", accessibilityDescription());
+    ts.dumpProperty("uti"_s, uti());
+    ts.dumpProperty("filename-extension"_s, filenameExtension());
+    ts.dumpProperty("accessibility-description"_s, accessibilityDescription());
 }
 
 } // namespace WebCore

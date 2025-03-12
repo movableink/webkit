@@ -152,7 +152,7 @@ Ref<WebCore::VideoFrame> RemoteVideoFrameProxy::clone()
 
 TextStream& operator<<(TextStream& ts, const RemoteVideoFrameProxy::Properties& properties)
 {
-    ts << "{ reference=" << properties.reference
+    ts << "{ reference="_s << properties.reference
         << ", presentationTime=" << properties.presentationTime
         << ", isMirrored=" << properties.isMirrored
         << ", rotation=" << static_cast<int>(properties.rotation)

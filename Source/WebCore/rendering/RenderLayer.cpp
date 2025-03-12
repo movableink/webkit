@@ -292,10 +292,10 @@ void makeMatrixRenderable(TransformationMatrix& matrix, bool has3DRendering)
 static TextStream& operator<<(TextStream& ts, const ClipRects& clipRects)
 {
     TextStream::GroupScope scope(ts);
-    ts << indent << "ClipRects\n";
-    ts << indent << "  overflow  : " << clipRects.overflowClipRect() << "\n";
-    ts << indent << "  fixed     : " << clipRects.fixedClipRect() << "\n";
-    ts << indent << "  positioned: " << clipRects.posClipRect() << "\n";
+    ts << indent << "ClipRects\n"_s;
+    ts << indent << "  overflow  : "_s << clipRects.overflowClipRect() << '\n';
+    ts << indent << "  fixed     : "_s << clipRects.fixedClipRect() << '\n';
+    ts << indent << "  positioned: "_s << clipRects.posClipRect() << '\n';
 
     return ts;
 }
@@ -6350,10 +6350,10 @@ CheckedPtr<RenderLayerScrollableArea> RenderLayer::checkedScrollableArea() const
 static TextStream& operator<<(TextStream& ts, RenderLayer::EventRegionInvalidationReason reason)
 {
     switch (reason) {
-    case RenderLayer::EventRegionInvalidationReason::Paint: ts << "Paint"; break;
-    case RenderLayer::EventRegionInvalidationReason::SettingDidChange: ts << "SettingDidChange"; break;
-    case RenderLayer::EventRegionInvalidationReason::Style: ts << "Style"; break;
-    case RenderLayer::EventRegionInvalidationReason::NonCompositedFrame: ts << "NonCompositedFrame"; break;
+    case RenderLayer::EventRegionInvalidationReason::Paint: ts << "Paint"_s; break;
+    case RenderLayer::EventRegionInvalidationReason::SettingDidChange: ts << "SettingDidChange"_s; break;
+    case RenderLayer::EventRegionInvalidationReason::Style: ts << "Style"_s; break;
+    case RenderLayer::EventRegionInvalidationReason::NonCompositedFrame: ts << "NonCompositedFrame"_s; break;
     }
     return ts;
 }
@@ -6411,13 +6411,13 @@ bool RenderLayer::invalidateEventRegion(EventRegionInvalidationReason reason)
 TextStream& operator<<(WTF::TextStream& ts, ClipRectsType clipRectsType)
 {
     switch (clipRectsType) {
-    case PaintingClipRects: ts << "painting"; break;
-    case RootRelativeClipRects: ts << "root-relative"; break;
-    case AbsoluteClipRects: ts << "absolute"; break;
-    case TemporaryClipRects: ts << "temporary"; break;
+    case PaintingClipRects: ts << "painting"_s; break;
+    case RootRelativeClipRects: ts << "root-relative"_s; break;
+    case AbsoluteClipRects: ts << "absolute"_s; break;
+    case TemporaryClipRects: ts << "temporary"_s; break;
     case NumCachedClipRectsTypes:
     case AllClipRectTypes:
-        ts << "?";
+        ts << '?';
         break;
     }
     return ts;
@@ -6431,9 +6431,9 @@ TextStream& operator<<(TextStream& ts, const RenderLayer& layer)
 
 TextStream& operator<<(TextStream& ts, const RenderLayer::ClipRectsContext& context)
 {
-    ts.dumpProperty("root layer:", context.rootLayer);
-    ts.dumpProperty("type:", context.clipRectsType);
-    ts.dumpProperty("overflow-clip:", context.respectOverflowClip() ? "respect" : "ignore");
+    ts.dumpProperty("root layer:"_s, context.rootLayer);
+    ts.dumpProperty("type:"_s, context.clipRectsType);
+    ts.dumpProperty("overflow-clip:"_s, context.respectOverflowClip() ? "respect"_s : "ignore"_s);
     
     return ts;
 }
@@ -6441,15 +6441,15 @@ TextStream& operator<<(TextStream& ts, const RenderLayer::ClipRectsContext& cont
 TextStream& operator<<(TextStream& ts, IndirectCompositingReason reason)
 {
     switch (reason) {
-    case IndirectCompositingReason::None: ts << "none"; break;
-    case IndirectCompositingReason::Clipping: ts << "clipping"; break;
-    case IndirectCompositingReason::Stacking: ts << "stacking"; break;
-    case IndirectCompositingReason::OverflowScrollPositioning: ts << "overflow positioning"; break;
-    case IndirectCompositingReason::Overlap: ts << "overlap"; break;
-    case IndirectCompositingReason::BackgroundLayer: ts << "background layer"; break;
-    case IndirectCompositingReason::GraphicalEffect: ts << "graphical effect"; break;
-    case IndirectCompositingReason::Perspective: ts << "perspective"; break;
-    case IndirectCompositingReason::Preserve3D: ts << "preserve-3d"; break;
+    case IndirectCompositingReason::None: ts << "none"_s; break;
+    case IndirectCompositingReason::Clipping: ts << "clipping"_s; break;
+    case IndirectCompositingReason::Stacking: ts << "stacking"_s; break;
+    case IndirectCompositingReason::OverflowScrollPositioning: ts << "overflow positioning"_s; break;
+    case IndirectCompositingReason::Overlap: ts << "overlap"_s; break;
+    case IndirectCompositingReason::BackgroundLayer: ts << "background layer"_s; break;
+    case IndirectCompositingReason::GraphicalEffect: ts << "graphical effect"_s; break;
+    case IndirectCompositingReason::Perspective: ts << "perspective"_s; break;
+    case IndirectCompositingReason::Preserve3D: ts << "preserve-3d"_s; break;
     }
 
     return ts;
@@ -6458,29 +6458,29 @@ TextStream& operator<<(TextStream& ts, IndirectCompositingReason reason)
 TextStream& operator<<(TextStream& ts, PaintBehavior behavior)
 {
     switch (behavior) {
-    case PaintBehavior::Normal: ts << "Normal"; break;
-    case PaintBehavior::SelectionOnly: ts << "SelectionOnly"; break;
-    case PaintBehavior::SkipSelectionHighlight: ts << "SkipSelectionHighlight"; break;
-    case PaintBehavior::ForceBlackText: ts << "ForceBlackText"; break;
-    case PaintBehavior::ForceWhiteText: ts << "ForceWhiteText"; break;
-    case PaintBehavior::ForceBlackBorder: ts << "ForceBlackBorder"; break;
-    case PaintBehavior::RenderingSVGClipOrMask: ts << "RenderingSVGClipOrMask"; break;
-    case PaintBehavior::SkipRootBackground: ts << "SkipRootBackground"; break;
-    case PaintBehavior::RootBackgroundOnly: ts << "RootBackgroundOnly"; break;
-    case PaintBehavior::SelectionAndBackgroundsOnly: ts << "SelectionAndBackgroundsOnly"; break;
-    case PaintBehavior::ExcludeSelection: ts << "ExcludeSelection"; break;
-    case PaintBehavior::FlattenCompositingLayers: ts << "FlattenCompositingLayers"; break;
-    case PaintBehavior::ForceSynchronousImageDecode: ts << "ForceSynchronousImageDecode"; break;
-    case PaintBehavior::DefaultAsynchronousImageDecode: ts << "DefaultAsynchronousImageDecode"; break;
-    case PaintBehavior::CompositedOverflowScrollContent: ts << "CompositedOverflowScrollContent"; break;
-    case PaintBehavior::AnnotateLinks: ts << "AnnotateLinks"; break;
-    case PaintBehavior::EventRegionIncludeForeground: ts << "EventRegionIncludeForeground"; break;
-    case PaintBehavior::EventRegionIncludeBackground: ts << "EventRegionIncludeBackground"; break;
-    case PaintBehavior::Snapshotting: ts << "Snapshotting"; break;
-    case PaintBehavior::DontShowVisitedLinks: ts << "DontShowVisitedLinks"; break;
-    case PaintBehavior::ExcludeReplacedContentExceptForIFrames: ts << "ExcludeReplacedContentExceptForIFrames"; break;
-    case PaintBehavior::ExcludeText: ts << "ExcludeText"; break;
-    case PaintBehavior::FixedAndStickyLayersOnly: ts << "FixedAndStickyLayersOnly"; break;
+    case PaintBehavior::Normal: ts << "Normal"_s; break;
+    case PaintBehavior::SelectionOnly: ts << "SelectionOnly"_s; break;
+    case PaintBehavior::SkipSelectionHighlight: ts << "SkipSelectionHighlight"_s; break;
+    case PaintBehavior::ForceBlackText: ts << "ForceBlackText"_s; break;
+    case PaintBehavior::ForceWhiteText: ts << "ForceWhiteText"_s; break;
+    case PaintBehavior::ForceBlackBorder: ts << "ForceBlackBorder"_s; break;
+    case PaintBehavior::RenderingSVGClipOrMask: ts << "RenderingSVGClipOrMask"_s; break;
+    case PaintBehavior::SkipRootBackground: ts << "SkipRootBackground"_s; break;
+    case PaintBehavior::RootBackgroundOnly: ts << "RootBackgroundOnly"_s; break;
+    case PaintBehavior::SelectionAndBackgroundsOnly: ts << "SelectionAndBackgroundsOnly"_s; break;
+    case PaintBehavior::ExcludeSelection: ts << "ExcludeSelection"_s; break;
+    case PaintBehavior::FlattenCompositingLayers: ts << "FlattenCompositingLayers"_s; break;
+    case PaintBehavior::ForceSynchronousImageDecode: ts << "ForceSynchronousImageDecode"_s; break;
+    case PaintBehavior::DefaultAsynchronousImageDecode: ts << "DefaultAsynchronousImageDecode"_s; break;
+    case PaintBehavior::CompositedOverflowScrollContent: ts << "CompositedOverflowScrollContent"_s; break;
+    case PaintBehavior::AnnotateLinks: ts << "AnnotateLinks"_s; break;
+    case PaintBehavior::EventRegionIncludeForeground: ts << "EventRegionIncludeForeground"_s; break;
+    case PaintBehavior::EventRegionIncludeBackground: ts << "EventRegionIncludeBackground"_s; break;
+    case PaintBehavior::Snapshotting: ts << "Snapshotting"_s; break;
+    case PaintBehavior::DontShowVisitedLinks: ts << "DontShowVisitedLinks"_s; break;
+    case PaintBehavior::ExcludeReplacedContentExceptForIFrames: ts << "ExcludeReplacedContentExceptForIFrames"_s; break;
+    case PaintBehavior::ExcludeText: ts << "ExcludeText"_s; break;
+    case PaintBehavior::FixedAndStickyLayersOnly: ts << "FixedAndStickyLayersOnly"_s; break;
     }
 
     return ts;
@@ -6489,24 +6489,24 @@ TextStream& operator<<(TextStream& ts, PaintBehavior behavior)
 TextStream& operator<<(TextStream& ts, RenderLayer::PaintLayerFlag flag)
 {
     switch (flag) {
-    case RenderLayer::PaintLayerFlag::HaveTransparency: ts << "HaveTransparency"; break;
-    case RenderLayer::PaintLayerFlag::AppliedTransform: ts << "AppliedTransform"; break;
-    case RenderLayer::PaintLayerFlag::TemporaryClipRects: ts << "TemporaryClipRects"; break;
-    case RenderLayer::PaintLayerFlag::PaintingReflection: ts << "PaintingReflection"; break;
-    case RenderLayer::PaintLayerFlag::PaintingOverlayScrollbars: ts << "PaintingOverlayScrollbars"; break;
-    case RenderLayer::PaintLayerFlag::PaintingCompositingBackgroundPhase: ts << "PaintingCompositingBackgroundPhase"; break;
-    case RenderLayer::PaintLayerFlag::PaintingCompositingForegroundPhase: ts << "PaintingCompositingForegroundPhase"; break;
-    case RenderLayer::PaintLayerFlag::PaintingCompositingMaskPhase: ts << "PaintingCompositingMaskPhase"; break;
-    case RenderLayer::PaintLayerFlag::PaintingCompositingClipPathPhase: ts << "PaintingCompositingClipPathPhase"; break;
-    case RenderLayer::PaintLayerFlag::PaintingOverflowContainer: ts << "PaintingOverflowContainer"; break;
-    case RenderLayer::PaintLayerFlag::PaintingOverflowContents: ts << "PaintingOverflowContents"; break;
-    case RenderLayer::PaintLayerFlag::PaintingOverflowContentsRoot: ts << "PaintingOverflowContentsRoot"; break;
-    case RenderLayer::PaintLayerFlag::PaintingRootBackgroundOnly: ts << "PaintingRootBackgroundOnly"; break;
-    case RenderLayer::PaintLayerFlag::PaintingSkipRootBackground: ts << "PaintingSkipRootBackground"; break;
-    case RenderLayer::PaintLayerFlag::PaintingChildClippingMaskPhase: ts << "PaintingChildClippingMaskPhase"; break;
-    case RenderLayer::PaintLayerFlag::PaintingSVGClippingMask: ts << "PaintingSVGClippingMask"; break;
-    case RenderLayer::PaintLayerFlag::CollectingEventRegion: ts << "CollectingEventRegion"; break;
-    case RenderLayer::PaintLayerFlag::PaintingSkipDescendantViewTransition: ts << "PaintingSkipDescendantViewTransition"; break;
+    case RenderLayer::PaintLayerFlag::HaveTransparency: ts << "HaveTransparency"_s; break;
+    case RenderLayer::PaintLayerFlag::AppliedTransform: ts << "AppliedTransform"_s; break;
+    case RenderLayer::PaintLayerFlag::TemporaryClipRects: ts << "TemporaryClipRects"_s; break;
+    case RenderLayer::PaintLayerFlag::PaintingReflection: ts << "PaintingReflection"_s; break;
+    case RenderLayer::PaintLayerFlag::PaintingOverlayScrollbars: ts << "PaintingOverlayScrollbars"_s; break;
+    case RenderLayer::PaintLayerFlag::PaintingCompositingBackgroundPhase: ts << "PaintingCompositingBackgroundPhase"_s; break;
+    case RenderLayer::PaintLayerFlag::PaintingCompositingForegroundPhase: ts << "PaintingCompositingForegroundPhase"_s; break;
+    case RenderLayer::PaintLayerFlag::PaintingCompositingMaskPhase: ts << "PaintingCompositingMaskPhase"_s; break;
+    case RenderLayer::PaintLayerFlag::PaintingCompositingClipPathPhase: ts << "PaintingCompositingClipPathPhase"_s; break;
+    case RenderLayer::PaintLayerFlag::PaintingOverflowContainer: ts << "PaintingOverflowContainer"_s; break;
+    case RenderLayer::PaintLayerFlag::PaintingOverflowContents: ts << "PaintingOverflowContents"_s; break;
+    case RenderLayer::PaintLayerFlag::PaintingOverflowContentsRoot: ts << "PaintingOverflowContentsRoot"_s; break;
+    case RenderLayer::PaintLayerFlag::PaintingRootBackgroundOnly: ts << "PaintingRootBackgroundOnly"_s; break;
+    case RenderLayer::PaintLayerFlag::PaintingSkipRootBackground: ts << "PaintingSkipRootBackground"_s; break;
+    case RenderLayer::PaintLayerFlag::PaintingChildClippingMaskPhase: ts << "PaintingChildClippingMaskPhase"_s; break;
+    case RenderLayer::PaintLayerFlag::PaintingSVGClippingMask: ts << "PaintingSVGClippingMask"_s; break;
+    case RenderLayer::PaintLayerFlag::CollectingEventRegion: ts << "CollectingEventRegion"_s; break;
+    case RenderLayer::PaintLayerFlag::PaintingSkipDescendantViewTransition: ts << "PaintingSkipDescendantViewTransition"_s; break;
     }
 
     return ts;

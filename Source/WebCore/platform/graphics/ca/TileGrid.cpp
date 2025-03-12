@@ -52,8 +52,8 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(TileGrid);
 static TextStream& operator<<(TextStream& ts, TileGrid::ValidationPolicyFlag flag)
 {
     switch (flag) {
-    case TileGrid::ValidationPolicyFlag::PruneSecondaryTiles: ts << "prune secondary"; break;
-    case TileGrid::ValidationPolicyFlag::UnparentAllTiles: ts << "unparent all"; break;
+    case TileGrid::ValidationPolicyFlag::PruneSecondaryTiles: ts << "prune secondary"_s; break;
+    case TileGrid::ValidationPolicyFlag::UnparentAllTiles: ts << "unparent all"_s; break;
     }
     return ts;
 }

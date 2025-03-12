@@ -223,14 +223,14 @@ CSSValueID SingleTimelineRange::valueID(SingleTimelineRange::Name range)
 WTF::TextStream& operator<<(WTF::TextStream& ts, const SingleTimelineRange& range)
 {
     switch (range.name) {
-    case SingleTimelineRange::Name::Normal: ts << "Normal "; break;
-    case SingleTimelineRange::Name::Omitted: ts << "Omitted "; break;
-    case SingleTimelineRange::Name::Cover: ts << "Cover "; break;
-    case SingleTimelineRange::Name::Contain: ts << "Contain "; break;
-    case SingleTimelineRange::Name::Entry: ts << "Entry "; break;
-    case SingleTimelineRange::Name::Exit: ts << "Exit "; break;
-    case SingleTimelineRange::Name::EntryCrossing: ts << "EntryCrossing "; break;
-    case SingleTimelineRange::Name::ExitCrossing: ts << "ExitCrossing "; break;
+    case SingleTimelineRange::Name::Normal: ts << "Normal "_s; break;
+    case SingleTimelineRange::Name::Omitted: ts << "Omitted "_s; break;
+    case SingleTimelineRange::Name::Cover: ts << "Cover "_s; break;
+    case SingleTimelineRange::Name::Contain: ts << "Contain "_s; break;
+    case SingleTimelineRange::Name::Entry: ts << "Entry "_s; break;
+    case SingleTimelineRange::Name::Exit: ts << "Exit "_s; break;
+    case SingleTimelineRange::Name::EntryCrossing: ts << "EntryCrossing "_s; break;
+    case SingleTimelineRange::Name::ExitCrossing: ts << "ExitCrossing "_s; break;
     }
     ts << range.offset;
     return ts;

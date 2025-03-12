@@ -470,12 +470,12 @@ static TextStream& operator<<(TextStream& stream, WKSelectionDrawingInfo::Select
 TextStream& operator<<(TextStream& stream, const WKSelectionDrawingInfo& info)
 {
     TextStream::GroupScope group(stream);
-    stream.dumpProperty("type", info.type);
-    stream.dumpProperty("caret rect", info.caretRect);
-    stream.dumpProperty("caret color", info.caretColor);
-    stream.dumpProperty("selection geometries", info.selectionGeometries);
-    stream.dumpProperty("selection clip rect", info.selectionClipRect);
-    stream.dumpProperty("layer", info.enclosingLayerID);
+    stream.dumpProperty("type"_s, info.type);
+    stream.dumpProperty("caret rect"_s, info.caretRect);
+    stream.dumpProperty("caret color"_s, info.caretColor);
+    stream.dumpProperty("selection geometries"_s, info.selectionGeometries);
+    stream.dumpProperty("selection clip rect"_s, info.selectionClipRect);
+    stream.dumpProperty("layer"_s, info.enclosingLayerID);
     return stream;
 }
 

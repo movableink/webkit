@@ -185,8 +185,8 @@ private:
 static inline WTF::TextStream& operator<<(WTF::TextStream& ts, const Damage& damage)
 {
     if (damage.isInvalid())
-        return ts << "Damage[invalid]";
-    return ts << "Damage" << damage.rects();
+        return ts << "Damage[invalid]"_s;
+    return ts << "Damage"_s << damage.rects();
 }
 
 };

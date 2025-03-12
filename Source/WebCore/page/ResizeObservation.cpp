@@ -160,10 +160,10 @@ size_t ResizeObservation::targetElementDepth() const
 
 TextStream& operator<<(TextStream& ts, const ResizeObservation& observation)
 {
-    ts.dumpProperty("target", ValueOrNull(observation.target()));
-    ts.dumpProperty("border box", observation.borderBoxSize());
-    ts.dumpProperty("content box", observation.contentBoxSize());
-    ts.dumpProperty("snapped content box", observation.snappedContentBoxSize());
+    ts.dumpProperty("target"_s, ValueOrNull(observation.target()));
+    ts.dumpProperty("border box"_s, observation.borderBoxSize());
+    ts.dumpProperty("content box"_s, observation.contentBoxSize());
+    ts.dumpProperty("snapped content box"_s, observation.snappedContentBoxSize());
     return ts;
 }
 

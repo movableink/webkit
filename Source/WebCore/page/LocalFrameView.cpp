@@ -5448,10 +5448,10 @@ String LocalFrameView::trackedRepaintRectsAsText() const
 
     TextStream ts;
     if (!m_trackedRepaintRects.isEmpty()) {
-        ts << "(repaint rects\n";
+        ts << "(repaint rects\n"_s;
         for (auto& rect : m_trackedRepaintRects)
-            ts << "  (rect " << LayoutUnit(rect.x()) << " " << LayoutUnit(rect.y()) << " " << LayoutUnit(rect.width()) << " " << LayoutUnit(rect.height()) << ")\n";
-        ts << ")\n";
+            ts << "  (rect "_s << LayoutUnit(rect.x()) << ' ' << LayoutUnit(rect.y()) << ' ' << LayoutUnit(rect.width()) << ' ' << LayoutUnit(rect.height()) << ")\n"_s;
+        ts << ")\n"_s;
     }
     return ts.release();
 }

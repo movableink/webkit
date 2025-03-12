@@ -270,10 +270,10 @@ void RemoteLayerWithInProcessRenderingBackingStore::encodeBufferAndBackendInfos(
 
 void RemoteLayerWithInProcessRenderingBackingStore::dump(WTF::TextStream& ts) const
 {
-    ts.dumpProperty("front buffer", m_bufferSet.m_frontBuffer);
-    ts.dumpProperty("back buffer", m_bufferSet.m_backBuffer);
-    ts.dumpProperty("secondaryBack buffer", m_bufferSet.m_secondaryBackBuffer);
-    ts.dumpProperty("is opaque", isOpaque());
+    ts.dumpProperty("front buffer"_s, m_bufferSet.m_frontBuffer);
+    ts.dumpProperty("back buffer"_s, m_bufferSet.m_backBuffer);
+    ts.dumpProperty("secondaryBack buffer"_s, m_bufferSet.m_secondaryBackBuffer);
+    ts.dumpProperty("is opaque"_s, isOpaque());
 }
 
 } // namespace WebKit

@@ -1805,15 +1805,15 @@ FloatRect UnifiedPDFPlugin::convertFromPaintingToContents(const FloatRect& rect,
 static TextStream& operator<<(TextStream& ts, UnifiedPDFPlugin::PDFElementType elementType)
 {
     switch (elementType) {
-    case UnifiedPDFPlugin::PDFElementType::Page: ts << "page"; break;
-    case UnifiedPDFPlugin::PDFElementType::Text: ts << "text"; break;
-    case UnifiedPDFPlugin::PDFElementType::Annotation: ts << "annotation"; break;
-    case UnifiedPDFPlugin::PDFElementType::Link: ts << "link"; break;
-    case UnifiedPDFPlugin::PDFElementType::Control: ts << "control"; break;
-    case UnifiedPDFPlugin::PDFElementType::TextField: ts << "text field"; break;
-    case UnifiedPDFPlugin::PDFElementType::Icon: ts << "icon"; break;
-    case UnifiedPDFPlugin::PDFElementType::Popup: ts << "popup"; break;
-    case UnifiedPDFPlugin::PDFElementType::Image: ts << "image"; break;
+    case UnifiedPDFPlugin::PDFElementType::Page: ts << "page"_s; break;
+    case UnifiedPDFPlugin::PDFElementType::Text: ts << "text"_s; break;
+    case UnifiedPDFPlugin::PDFElementType::Annotation: ts << "annotation"_s; break;
+    case UnifiedPDFPlugin::PDFElementType::Link: ts << "link"_s; break;
+    case UnifiedPDFPlugin::PDFElementType::Control: ts << "control"_s; break;
+    case UnifiedPDFPlugin::PDFElementType::TextField: ts << "text field"_s; break;
+    case UnifiedPDFPlugin::PDFElementType::Icon: ts << "icon"_s; break;
+    case UnifiedPDFPlugin::PDFElementType::Popup: ts << "popup"_s; break;
+    case UnifiedPDFPlugin::PDFElementType::Image: ts << "image"_s; break;
     }
     return ts;
 }
@@ -4675,13 +4675,13 @@ TextStream& operator<<(TextStream& ts, RepaintRequirement requirement)
 {
     switch (requirement) {
     case RepaintRequirement::PDFContent:
-        ts << "PDFContent";
+        ts << "PDFContent"_s;
         break;
     case RepaintRequirement::Selection:
-        ts << "Selection";
+        ts << "Selection"_s;
         break;
     case RepaintRequirement::HoverOverlay:
-        ts << "HoverOverlay";
+        ts << "HoverOverlay"_s;
         break;
     }
     return ts;

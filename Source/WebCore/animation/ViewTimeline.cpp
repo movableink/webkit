@@ -633,18 +633,18 @@ Ref<CSSNumericValue> ViewTimeline::endOffset() const
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, const StickinessAdjustmentData& stickiness)
 {
-    ts << "[ TopOrLeftAdjustment: " << stickiness.stickyTopOrLeftAdjustment << ", TopOrLeftLocation: " << stickiness.topOrLeftAdjustmentLocation << ", BottomOrRightAdjustment: " << stickiness.stickyBottomOrRightAdjustment << ", BottomOrRightLocation: " << stickiness.bottomOrRightAdjustmentLocation << " ]";
+    ts << "[ TopOrLeftAdjustment: "_s << stickiness.stickyTopOrLeftAdjustment << ", TopOrLeftLocation: "_s << stickiness.topOrLeftAdjustmentLocation << ", BottomOrRightAdjustment: "_s << stickiness.stickyBottomOrRightAdjustment << ", BottomOrRightLocation: "_s << stickiness.bottomOrRightAdjustmentLocation << " ]"_s;
     return ts;
 }
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, const StickinessAdjustmentData::StickinessLocation& stickiness)
 {
     switch (stickiness) {
-    case StickinessAdjustmentData::StickinessLocation::BeforeEntry: ts << "BeforeEntry"; break;
-    case StickinessAdjustmentData::StickinessLocation::DuringEntry: ts << "DuringEntry"; break;
-    case StickinessAdjustmentData::StickinessLocation::WhileContained: ts << "WhileContained"; break;
-    case StickinessAdjustmentData::StickinessLocation::DuringExit: ts << "DuringExit"; break;
-    case StickinessAdjustmentData::StickinessLocation::AfterExit: ts << "AfterExit"; break;
+    case StickinessAdjustmentData::StickinessLocation::BeforeEntry: ts << "BeforeEntry"_s; break;
+    case StickinessAdjustmentData::StickinessLocation::DuringEntry: ts << "DuringEntry"_s; break;
+    case StickinessAdjustmentData::StickinessLocation::WhileContained: ts << "WhileContained"_s; break;
+    case StickinessAdjustmentData::StickinessLocation::DuringExit: ts << "DuringExit"_s; break;
+    case StickinessAdjustmentData::StickinessLocation::AfterExit: ts << "AfterExit"_s; break;
     }
     return ts;
 }
