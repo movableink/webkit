@@ -28,9 +28,11 @@
 #include "ProcessIdentity.h"
 #include "SampleMap.h"
 #include <CoreMedia/CMTime.h>
+#include <wtf/Deque.h>
 #include <wtf/Function.h>
 #include <wtf/Lock.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/OSObjectPtr.h>
 #include <wtf/Ref.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/ThreadSafeWeakPtr.h>

@@ -41,6 +41,7 @@
 #import <wtf/MainThreadDispatcher.h>
 #import <wtf/MonotonicTime.h>
 #import <wtf/NativePromise.h>
+#import <wtf/cf/TypeCastsCF.h>
 
 #pragma mark - Soft Linking
 

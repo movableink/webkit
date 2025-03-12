@@ -4031,12 +4031,7 @@ void MediaPlayerPrivateAVFoundationObjC::setPlatformDynamicRangeLimit(PlatformDy
 {
     assertIsMainThread();
 
-#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
-    if ([m_videoLayer respondsToSelector:@selector(setPreferredDynamicRange:)])
-        [m_videoLayer setPreferredDynamicRange:platformDynamicRangeLimitString(platformDynamicRangeLimit)];
-#else // HAVE(SUPPORT_HDR_DISPLAY_APIS)
-    UNUSED_PARAM(platformDynamicRangeLimit);
-#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS)
+    setLayerDynamicRangeLimit(m_videoLayer.get(), platformDynamicRangeLimit);
 }
 
 void MediaPlayerPrivateAVFoundationObjC::audioOutputDeviceChanged()

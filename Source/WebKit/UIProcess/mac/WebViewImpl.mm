@@ -111,6 +111,7 @@
 #import <WebCore/LocalizedStrings.h>
 #import <WebCore/NowPlayingInfo.h>
 #import <WebCore/Pasteboard.h>
+#import <WebCore/PlatformDynamicRangeLimitCocoa.h>
 #import <WebCore/PlatformEventFactoryMac.h>
 #import <WebCore/PlatformPlaybackSessionInterface.h>
 #import <WebCore/PlatformScreen.h>
@@ -1254,36 +1255,29 @@ static bool isInRecoveryOS()
 }
 
 #if HAVE(SUPPORT_HDR_DISPLAY_APIS)
-static void setEDRStrengthRecursive(CALayer* layer, float strength, bool animate)
+static void setDynamicRangeLimitRecursive(CALayer* layer, LayerDynamicRangeLimitSetter layerDynamicRangeLimitSetter)
 {
     ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    if ([layer wantsExtendedDynamicRangeContent] && [layer respondsToSelector:@selector(setContentsEDRStrength:)]) {
+    if ([layer wantsExtendedDynamicRangeContent]) {
     ALLOW_DEPRECATED_DECLARATIONS_END
-        if (animate) {
-            CASpringAnimation* animation = [[CASpringAnimation alloc] initWithPerceptualDuration:3.f bounce:0];
-            animation.keyPath = @"contentsEDRStrength";
-            animation.fromValue = @([layer contentsEDRStrength]);
-            animation.toValue = @(strength);
-            [layer addAnimation:animation forKey:@"contentsEDRStrength"];
-            [animation release];
-        }
-        [layer setContentsEDRStrength:strength];
+        layerDynamicRangeLimitSetter(layer);
     }
     for (CALayer* sublayer in [layer sublayers])
-        setEDRStrengthRecursive(sublayer, strength, animate);
+        setDynamicRangeLimitRecursive(sublayer, layerDynamicRangeLimitSetter);
 }
 #endif
 
-static void setEDRStrength(CALayer* layer, float strength, bool animate)
+static void setDynamicRangeLimit(CALayer* layer, PlatformDynamicRangeLimit platformDynamicRangeLimit, bool animate)
 {
 #if HAVE(SUPPORT_HDR_DISPLAY_APIS)
-    [CATransaction begin];
-    [CATransaction setDisableActions:YES];
-    setEDRStrengthRecursive(layer, strength, animate);
-    [CATransaction commit];
+    if (animate)
+        [CATransaction begin];
+    setDynamicRangeLimitRecursive(layer, layerDynamicRangeLimitSetter(platformDynamicRangeLimit));
+    if (animate)
+        [CATransaction commit];
 #else
     UNUSED_PARAM(layer);
-    UNUSED_PARAM(strength);
+    UNUSED_PARAM(platformDynamicRangeLimit);
     UNUSED_PARAM(animate);
 #endif
 }
@@ -2193,7 +2187,7 @@ void WebViewImpl::screenDidChangeColorSpace()
 
 void WebViewImpl::updateHDRState()
 {
-    setEDRStrength(m_rootLayer.get(), (m_hdrAllowed && m_page->isViewWindowActive()) ? 1.f : 0.f, true);
+    setDynamicRangeLimit(m_rootLayer.get(), (m_hdrAllowed && m_page->isViewWindowActive()) ? PlatformDynamicRangeLimit::noLimit() : PlatformDynamicRangeLimit::standard(), true);
 }
 
 void WebViewImpl::applicationShouldSuppressHDR()
