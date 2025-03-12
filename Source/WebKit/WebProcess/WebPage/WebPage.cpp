@@ -321,6 +321,7 @@
 #include <WebCore/WritingDirection.h>
 #include <WebCore/markup.h>
 #include <pal/SessionID.h>
+#include <wtf/CoroutineUtilities.h>
 #include <wtf/ProcessID.h>
 #include <wtf/RunLoop.h>
 #include <wtf/Scope.h>
@@ -1206,9 +1207,9 @@ void WebPage::getFrameInfo(WebCore::FrameIdentifier frameID, CompletionHandler<v
     completionHandler(frame->info());
 }
 
-void WebPage::getFrameTree(CompletionHandler<void(FrameTreeNodeData&&)>&& completionHandler)
+Awaitable<std::optional<FrameTreeNodeData>> WebPage::getFrameTree()
 {
-    completionHandler(m_mainFrame->frameTreeData());
+    co_return m_mainFrame->frameTreeData();
 }
 
 void WebPage::didFinishLoadInAnotherProcess(WebCore::FrameIdentifier frameID)

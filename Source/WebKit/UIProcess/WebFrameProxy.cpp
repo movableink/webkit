@@ -452,11 +452,11 @@ void WebFrameProxy::commitProvisionalFrame(IPC::Connection& connection, FrameIde
     protectedPage()->didCommitLoadForFrame(connection, frameID, WTFMove(frameInfo), WTFMove(request), navigationID, mimeType, frameHasCustomContentProvider, frameLoadType, certificateInfo, usedLegacyTLS, privateRelayed, proxyName, source, containsPluginDocument, hasInsecureContent, mouseEventPolicy, userData);
 }
 
-void WebFrameProxy::getFrameInfo(CompletionHandler<void(FrameTreeNodeData&&)>&& completionHandler)
+void WebFrameProxy::getFrameInfo(CompletionHandler<void(std::optional<FrameTreeNodeData>&&)>&& completionHandler)
 {
     class FrameInfoCallbackAggregator : public RefCounted<FrameInfoCallbackAggregator> {
     public:
-        static Ref<FrameInfoCallbackAggregator> create(CompletionHandler<void(FrameTreeNodeData&&)>&& completionHandler, size_t childCount) { return adoptRef(*new FrameInfoCallbackAggregator(WTFMove(completionHandler), childCount)); }
+        static Ref<FrameInfoCallbackAggregator> create(CompletionHandler<void(std::optional<FrameTreeNodeData>&&)>&& completionHandler, size_t childCount) { return adoptRef(*new FrameInfoCallbackAggregator(WTFMove(completionHandler), childCount)); }
         void setCurrentFrameData(FrameInfoData&& data) { m_currentFrameData = WTFMove(data); }
         void addChildFrameData(size_t index, FrameTreeNodeData&& data) { m_childFrameData[index] = WTFMove(data); }
         ~FrameInfoCallbackAggregator()
@@ -466,19 +466,19 @@ void WebFrameProxy::getFrameInfo(CompletionHandler<void(FrameTreeNodeData&&)>&& 
             auto nonEmptyChildFrameData = WTF::compactMap(WTFMove(m_childFrameData), [](std::optional<FrameTreeNodeData>&& data) {
                 return std::forward<decltype(data)>(data);
             });
-            m_completionHandler(FrameTreeNodeData {
-                WTFMove(m_currentFrameData),
+            m_completionHandler(m_currentFrameData ? std::optional(FrameTreeNodeData {
+                WTFMove(*m_currentFrameData),
                 WTFMove(nonEmptyChildFrameData)
-            });
+            }) : std::nullopt);
         }
 
     private:
-        FrameInfoCallbackAggregator(CompletionHandler<void(FrameTreeNodeData&&)>&& completionHandler, size_t childCount)
+        FrameInfoCallbackAggregator(CompletionHandler<void(std::optional<FrameTreeNodeData>&&)>&& completionHandler, size_t childCount)
             : m_completionHandler(WTFMove(completionHandler))
             , m_childFrameData(childCount, { }) { }
 
-        CompletionHandler<void(FrameTreeNodeData&&)> m_completionHandler;
-        FrameInfoData m_currentFrameData;
+        CompletionHandler<void(std::optional<FrameTreeNodeData>&&)> m_completionHandler;
+        std::optional<FrameInfoData> m_currentFrameData;
         Vector<std::optional<FrameTreeNodeData>> m_childFrameData;
     };
 
@@ -492,18 +492,18 @@ void WebFrameProxy::getFrameInfo(CompletionHandler<void(FrameTreeNodeData&&)>&& 
     bool isSiteIsolationEnabled = page && page->protectedPreferences()->siteIsolationEnabled();
     size_t index = 0;
     for (Ref childFrame : m_childFrames) {
-        childFrame->getFrameInfo([aggregator, index = index++, frameID = this->frameID(), isSiteIsolationEnabled] (FrameTreeNodeData&& data) {
-            if (!data.info.frameID)
-                return; // No WebFrame with the requested frameID in the WebProcess.
+        childFrame->getFrameInfo([aggregator, index = index++, frameID = this->frameID(), isSiteIsolationEnabled] (std::optional<FrameTreeNodeData>&& data) {
+            if (!data)
+                return;
 
             // FIXME: m_childFrames currently contains iframes that are in the back/forward cache, not currently
             // connected to this parent frame. They should really not be part of m_childFrames anymore.
             // FIXME: With site isolation enabled, remote frames currently don't have a parentFrameID so we temporarily
             // ignore this check.
-            if (data.info.parentFrameID != frameID && !isSiteIsolationEnabled)
+            if (data->info.parentFrameID != frameID && !isSiteIsolationEnabled)
                 return;
 
-            aggregator->addChildFrameData(index, WTFMove(data));
+            aggregator->addChildFrameData(index, WTFMove(*data));
         });
     }
 }

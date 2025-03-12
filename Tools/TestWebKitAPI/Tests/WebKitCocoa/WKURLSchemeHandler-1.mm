@@ -1585,7 +1585,7 @@ TEST(URLSchemeHandler, Frames)
     done = false;
     auto emptyWebView = adoptNS([WKWebView new]);
     [emptyWebView _frames:^(_WKFrameTreeNode *mainFrame) {
-        EXPECT_NOT_NULL(mainFrame.info._handle);
+        EXPECT_NULL(mainFrame);
 #if PLATFORM(MAC)
         EXPECT_EQ(mainFrame.info._handle.frameID, 0u);
 #endif
