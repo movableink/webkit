@@ -549,10 +549,6 @@
 #define ENABLE_LOCKDOWN_MODE_API 1
 #endif
 
-#if !defined(ENABLE_LOCKDOWN_MODE_TELEMETRY) && PLATFORM(MAC)
-#define ENABLE_LOCKDOWN_MODE_TELEMETRY 1
-#endif
-
 #if !defined(ENABLE_VIDEO)
 #define ENABLE_VIDEO 1
 #endif
