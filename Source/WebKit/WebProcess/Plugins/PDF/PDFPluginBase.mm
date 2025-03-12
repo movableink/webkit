@@ -171,7 +171,7 @@ void PDFPluginBase::teardown()
 
     if (auto existingCompletionHandler = std::exchange(m_pendingOpenCompletionHandler, { })) {
         // FrameInfo can't be default-constructed; the receiving process will ASSERT if it is.
-        FrameInfoData frameInfo;
+        std::optional<FrameInfoData> frameInfo;
         if (m_frame)
             frameInfo = m_frame->info();
         existingCompletionHandler({ }, WTFMove(frameInfo), { }, { });
@@ -1191,9 +1191,9 @@ void PDFPluginBase::save(CompletionHandler<void(const String&, const URL&, std::
     completionHandler(m_suggestedFilename, url, span(data));
 }
 
-void PDFPluginBase::openWithPreview(CompletionHandler<void(const String&, FrameInfoData&&, std::span<const uint8_t>, const String&)>&& completionHandler)
+void PDFPluginBase::openWithPreview(CompletionHandler<void(const String&, std::optional<FrameInfoData>&&, std::span<const uint8_t>, const String&)>&& completionHandler)
 {
-    FrameInfoData frameInfo;
+    std::optional<FrameInfoData> frameInfo;
     if (m_frame)
         frameInfo = m_frame->info();
 

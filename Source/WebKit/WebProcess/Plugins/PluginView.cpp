@@ -1141,7 +1141,7 @@ PDFPluginIdentifier PluginView::pdfPluginIdentifier() const
     return protectedPlugin()->identifier();
 }
 
-void PluginView::openWithPreview(CompletionHandler<void(const String&, FrameInfoData&&, std::span<const uint8_t>, const String&)>&& completionHandler)
+void PluginView::openWithPreview(CompletionHandler<void(const String&, std::optional<FrameInfoData>&&, std::span<const uint8_t>, const String&)>&& completionHandler)
 {
     protectedPlugin()->openWithPreview(WTFMove(completionHandler));
 }

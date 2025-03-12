@@ -155,7 +155,7 @@ public:
 
     PDFPluginIdentifier pdfPluginIdentifier() const;
 
-    void openWithPreview(CompletionHandler<void(const String&, FrameInfoData&&, std::span<const uint8_t>, const String&)>&&);
+    void openWithPreview(CompletionHandler<void(const String&, std::optional<FrameInfoData>&&, std::span<const uint8_t>, const String&)>&&);
 
     void focusPluginElement();
 

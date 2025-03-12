@@ -782,8 +782,10 @@ void WebPageProxy::pdfSaveToPDF(PDFPluginIdentifier identifier)
 
 void WebPageProxy::pdfOpenWithPreview(PDFPluginIdentifier identifier)
 {
-    protectedLegacyMainFrameProcess()->sendWithAsyncReply(Messages::WebPage::OpenPDFWithPreview(identifier), [this, protectedThis = Ref { *this }] (String&& suggestedFilename, FrameInfoData&& frameInfo, std::span<const uint8_t> data, const String& pdfUUID) {
-        savePDFToTemporaryFolderAndOpenWithNativeApplication(WTFMove(suggestedFilename), WTFMove(frameInfo), data, pdfUUID);
+    protectedLegacyMainFrameProcess()->sendWithAsyncReply(Messages::WebPage::OpenPDFWithPreview(identifier), [this, protectedThis = Ref { *this }] (String&& suggestedFilename, std::optional<FrameInfoData>&& frameInfo, std::span<const uint8_t> data, const String& pdfUUID) {
+        if (!frameInfo)
+            return;
+        savePDFToTemporaryFolderAndOpenWithNativeApplication(WTFMove(suggestedFilename), WTFMove(*frameInfo), data, pdfUUID);
     }, webPageIDInMainFrameProcess());
 }
 
