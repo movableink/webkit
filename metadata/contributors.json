@@ -7644,6 +7644,13 @@
    },
    {
       "emails" : [
+         "taher_ali@apple.com"
+      ],
+      "github" : "nullhook",
+      "name" : "Taher Ali"
+   },
+   {
+      "emails" : [
          "tzik@chromium.org"
       ],
       "name" : "Taiju Tsuiki",
