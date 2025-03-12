@@ -7034,6 +7034,17 @@
    },
    {
       "emails" : [
+         "ronan_turner@apple.com",
+         "ronan.turner@apple.com"
+      ],
+      "github" : "ronan-apple",
+      "name" : "Ronan Turner",
+      "nicks" : [
+         "ronan-apple"
+      ]
+   },
+   {
+      "emails" : [
          "ross.kirsling@sony.com",
          "rkirsling@gmail.com"
       ],
