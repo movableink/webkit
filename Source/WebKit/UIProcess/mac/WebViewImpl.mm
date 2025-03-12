@@ -2393,15 +2393,23 @@ void WebViewImpl::activeSpaceDidChange()
     m_page->activityStateDidChange(WebCore::ActivityState::IsVisible);
 }
 
-void WebViewImpl::pageDidScroll(const WebCore::IntPoint& scrollPosition)
+void WebViewImpl::pageDidScroll(const IntPoint& scrollPosition)
 {
 #if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
-    if ((scrollPosition.y() <= 0) != m_pageIsScrolledToTop) {
-        [m_view willChangeValueForKey:@"hasScrolledContentsUnderTitlebar"];
-        m_pageIsScrolledToTop = !m_pageIsScrolledToTop;
-        [m_view didChangeValueForKey:@"hasScrolledContentsUnderTitlebar"];
-    }
+    bool pageIsScrolledToTop = scrollPosition.y() <= 0;
+    if (pageIsScrolledToTop == m_pageIsScrolledToTop)
+        return;
+
+    [m_view willChangeValueForKey:@"hasScrolledContentsUnderTitlebar"];
+
+    m_pageIsScrolledToTop = pageIsScrolledToTop;
+
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    updateContentInsetFillViews();
 #endif
+
+    [m_view didChangeValueForKey:@"hasScrolledContentsUnderTitlebar"];
+#endif // HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
 }
 
 #if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
