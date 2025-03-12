@@ -38,7 +38,7 @@ public final class WebPageWebView: WKWebView {
     }
 
     override func findInteraction(_ interaction: UIFindInteraction, didEnd session: UIFindSession) {
-        super.findInteraction(interaction, didBegin: session)
+        super.findInteraction(interaction, didEnd: session)
         delegate?.findInteraction(interaction, didEnd: session)
     }
 
