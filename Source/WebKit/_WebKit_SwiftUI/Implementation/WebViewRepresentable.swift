@@ -113,6 +113,10 @@ struct WebViewRepresentable {
         // issues manifest.
         return CGSize(width: width.rounded(.down), height: height.rounded(.down));
     }
+
+    static func dismantlePlatformView(_ platformView: CocoaWebViewAdapter, coordinator: WebViewCoordinator) {
+        coordinator.configuration.owner.page.isBoundToWebView = false
+    }
 }
 
 @MainActor
@@ -195,6 +199,10 @@ extension WebViewRepresentable: UIViewRepresentable {
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: CocoaWebViewAdapter, context: Context) -> CGSize? {
         sizeThatFits(proposal, platformView: uiView, context: context)
     }
+
+    static func dismantleUIView(_ uiView: CocoaWebViewAdapter, coordinator: WebViewCoordinator) {
+        dismantlePlatformView(uiView, coordinator: coordinator)
+    }
 }
 #else
 extension WebViewRepresentable: NSViewRepresentable {
@@ -208,6 +216,10 @@ extension WebViewRepresentable: NSViewRepresentable {
 
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: CocoaWebViewAdapter, context: Context) -> CGSize? {
         sizeThatFits(proposal, platformView: nsView, context: context)
+    }
+
+    static func dismantleNSView(_ nsView: CocoaWebViewAdapter, coordinator: WebViewCoordinator) {
+        dismantlePlatformView(nsView, coordinator: coordinator)
     }
 }
 #endif
