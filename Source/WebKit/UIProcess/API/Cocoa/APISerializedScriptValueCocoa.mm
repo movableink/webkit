@@ -45,7 +45,6 @@ public:
     static SharedJSContext& singleton()
     {
         ASSERT(isInWebProcess());
-        ASSERT(!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::SkipsSerializedScriptValueRoundtripOfJavaScriptEvaluationResults));
 
         static MainThreadNeverDestroyed<SharedJSContext> sharedContext;
         return sharedContext.get();

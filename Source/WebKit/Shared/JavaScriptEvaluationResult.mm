@@ -38,7 +38,6 @@
 #include <WebCore/ExceptionDetails.h>
 #include <WebCore/SerializedScriptValue.h>
 #include <wtf/RunLoop.h>
-#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 
 namespace WebKit {
 
@@ -224,15 +223,12 @@ static RetainPtr<id> convertToObjC(JSGlobalContextRef context, JSValueRef value)
 
 Expected<JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>> JavaScriptEvaluationResult::extract(JSGlobalContextRef context, JSValueRef value)
 {
-    if (!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::SkipsSerializedScriptValueRoundtripOfJavaScriptEvaluationResults)) {
-        JSRetainPtr deserializationContext = API::SerializedScriptValue::deserializationContext();
-        auto result = roundTripThroughSerializedScriptValue(context, deserializationContext.get(), value);
-        if (!result)
-            return makeUnexpected(std::nullopt);
-        return JavaScriptEvaluationResult { deserializationContext.get(), *result };
-    }
+    JSRetainPtr deserializationContext = API::SerializedScriptValue::deserializationContext();
 
-    return JavaScriptEvaluationResult { context, value };
+    auto result = roundTripThroughSerializedScriptValue(context, deserializationContext.get(), value);
+    if (!result)
+        return makeUnexpected(std::nullopt);
+    return { JavaScriptEvaluationResult { deserializationContext.get(), *result } };
 }
 
 static bool isSerializable(id argument)
