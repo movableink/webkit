@@ -3582,7 +3582,30 @@ void RenderLayer::paintLayerContents(GraphicsContext& context, const LayerPainti
         return m_enclosingSVGHiddenOrResourceContainer->layer()->isPaintingSVGResourceLayer();
     };
 
-    bool shouldPaintContent = hasVisibleContent() && isSelfPaintingLayer && !isPaintingOverlayScrollbars && !isCollectingEventRegion && !isCollectingAccessibilityRegion;
+    auto shouldSkipNonFixedTopDocumentContent = [&] {
+        if (!paintingInfo.paintBehavior.contains(PaintBehavior::FixedAndStickyLayersOnly))
+            return false;
+
+        // FIXME: This should also account for stickily-positioned ancestors.
+        if (hasFixedAncestor())
+            return false;
+
+        CheckedRef renderer = this->renderer();
+        if (renderer->isFixedPositioned() || renderer->isStickilyPositioned())
+            return false;
+
+        if (!renderer->document().isTopDocument())
+            return false;
+
+        return true;
+    };
+
+    bool shouldPaintContent = hasVisibleContent()
+        && isSelfPaintingLayer
+        && !isPaintingOverlayScrollbars
+        && !isCollectingEventRegion
+        && !isCollectingAccessibilityRegion
+        && !shouldSkipNonFixedTopDocumentContent();
 
     bool shouldPaintOutline = [&]() {
         if (!isSelfPaintingLayer)
@@ -3668,7 +3691,14 @@ void RenderLayer::paintLayerContents(GraphicsContext& context, const LayerPainti
     RenderObject* subtreePaintRootForRenderer = nullptr;
 
     auto paintBehavior = [&]() {
-        constexpr OptionSet<PaintBehavior> flagsToCopy = { PaintBehavior::FlattenCompositingLayers, PaintBehavior::Snapshotting, PaintBehavior::ExcludeSelection, PaintBehavior::ExcludeReplacedContent };
+        static constexpr OptionSet flagsToCopy {
+            PaintBehavior::FlattenCompositingLayers,
+            PaintBehavior::Snapshotting,
+            PaintBehavior::ExcludeSelection,
+            PaintBehavior::ExcludeReplacedContentExceptForIFrames,
+            PaintBehavior::ExcludeText,
+            PaintBehavior::FixedAndStickyLayersOnly,
+        };
         OptionSet<PaintBehavior> paintBehavior = paintingInfo.paintBehavior & flagsToCopy;
 
         if (localPaintFlags.contains(PaintLayerFlag::PaintingSkipRootBackground))
@@ -4153,7 +4183,16 @@ void RenderLayer::paintForegroundForFragments(const LayerFragments& layerFragmen
         localPaintBehavior = paintBehavior;
 
     // FIXME: It's unclear if this flag copying is necessary.
-    constexpr OptionSet<PaintBehavior> flagsToCopy { PaintBehavior::ExcludeSelection, PaintBehavior::Snapshotting, PaintBehavior::DefaultAsynchronousImageDecode, PaintBehavior::CompositedOverflowScrollContent, PaintBehavior::ForceSynchronousImageDecode, PaintBehavior::ExcludeReplacedContent };
+    static constexpr OptionSet flagsToCopy {
+        PaintBehavior::ExcludeSelection,
+        PaintBehavior::Snapshotting,
+        PaintBehavior::DefaultAsynchronousImageDecode,
+        PaintBehavior::CompositedOverflowScrollContent,
+        PaintBehavior::ForceSynchronousImageDecode,
+        PaintBehavior::ExcludeReplacedContentExceptForIFrames,
+        PaintBehavior::ExcludeText,
+        PaintBehavior::FixedAndStickyLayersOnly,
+    };
     localPaintBehavior.add(localPaintingInfo.paintBehavior & flagsToCopy);
 
     if (localPaintingInfo.paintBehavior & PaintBehavior::DontShowVisitedLinks)
@@ -6439,7 +6478,9 @@ TextStream& operator<<(TextStream& ts, PaintBehavior behavior)
     case PaintBehavior::EventRegionIncludeBackground: ts << "EventRegionIncludeBackground"; break;
     case PaintBehavior::Snapshotting: ts << "Snapshotting"; break;
     case PaintBehavior::DontShowVisitedLinks: ts << "DontShowVisitedLinks"; break;
-    case PaintBehavior::ExcludeReplacedContent: ts << "ExcludeReplacedContent"; break;
+    case PaintBehavior::ExcludeReplacedContentExceptForIFrames: ts << "ExcludeReplacedContentExceptForIFrames"; break;
+    case PaintBehavior::ExcludeText: ts << "ExcludeText"; break;
+    case PaintBehavior::FixedAndStickyLayersOnly: ts << "FixedAndStickyLayersOnly"; break;
     }
 
     return ts;

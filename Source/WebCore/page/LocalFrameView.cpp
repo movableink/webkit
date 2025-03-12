@@ -4767,7 +4767,15 @@ void LocalFrameView::willPaintContents(GraphicsContext& context, const IntRect&,
     paintingState.paintBehavior = m_paintBehavior;
     
     if (auto* parentView = parentFrameView()) {
-        constexpr OptionSet<PaintBehavior> flagsToCopy { PaintBehavior::FlattenCompositingLayers, PaintBehavior::Snapshotting, PaintBehavior::DefaultAsynchronousImageDecode, PaintBehavior::ForceSynchronousImageDecode, PaintBehavior::ExcludeReplacedContent };
+        static constexpr OptionSet flagsToCopy {
+            PaintBehavior::FlattenCompositingLayers,
+            PaintBehavior::Snapshotting,
+            PaintBehavior::DefaultAsynchronousImageDecode,
+            PaintBehavior::ForceSynchronousImageDecode,
+            PaintBehavior::ExcludeReplacedContentExceptForIFrames,
+            PaintBehavior::ExcludeText,
+            PaintBehavior::FixedAndStickyLayersOnly,
+        };
         m_paintBehavior.add(parentView->paintBehavior() & flagsToCopy);
     }
 

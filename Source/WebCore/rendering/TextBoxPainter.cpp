@@ -98,6 +98,9 @@ InlineIterator::TextBoxIterator TextBoxPainter::makeIterator() const
 
 void TextBoxPainter::paint()
 {
+    if (m_paintInfo.paintBehavior.contains(PaintBehavior::ExcludeText))
+        return;
+
     if (m_paintInfo.phase == PaintPhase::Selection && !m_haveSelection)
         return;
 

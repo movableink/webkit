@@ -294,7 +294,9 @@ Color PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteR
     static constexpr OptionSet snapshotFlags {
         SnapshotFlags::ExcludeSelectionHighlighting,
         SnapshotFlags::PaintEverythingExcludingSelection,
-        SnapshotFlags::ExcludeReplacedContent,
+        SnapshotFlags::ExcludeReplacedContentExceptForIFrames,
+        SnapshotFlags::ExcludeText,
+        SnapshotFlags::FixedAndStickyLayersOnly,
     };
 
     auto colorSpace = DestinationColorSpace::SRGB();
@@ -305,6 +307,11 @@ Color PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteR
     auto pixelBuffer = snapshot->getPixelBuffer({ AlphaPremultiplication::Unpremultiplied, PixelFormat::BGRA8, colorSpace }, { { }, snapshot->truncatedLogicalSize() });
     if (!pixelBuffer)
         return { };
+
+    auto isNearlyTransparent = [](const Color& color) {
+        static constexpr auto nearlyTransparentAlphaThreshold = 0.33;
+        return color.alphaAsFloat() < nearlyTransparentAlphaThreshold;
+    };
 
     static constexpr auto sampleCount = 29;
     static constexpr auto minimumSampleCountForPredominantColor = 0.5 * sampleCount;
@@ -325,7 +332,7 @@ Color PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteR
 
     for (auto& [color, count] : colorDistribution) {
         if (count > minimumSampleCountForPredominantColor)
-            return color;
+            return isNearlyTransparent(color) ? Color { } : color;
     }
 
     auto colorsAreSimilar = [](const Color& a, const Color& b) {
@@ -362,7 +369,7 @@ Color PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteR
         mostFrequentColorCount += count;
 
         if (mostFrequentColorCount > minimumSampleCountForPredominantColor)
-            return WTFMove(*mostFrequentColor);
+            return isNearlyTransparent(*mostFrequentColor) ? Color { } : WTFMove(*mostFrequentColor);
     }
 
     return { };
