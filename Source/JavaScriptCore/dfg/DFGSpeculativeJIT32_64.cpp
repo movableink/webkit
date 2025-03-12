@@ -3430,6 +3430,11 @@ void SpeculativeJIT::compile(Node* node)
         compileGetArrayLength(node);
         break;
 
+    case DataViewGetByteLength:
+        compileDataViewGetByteLength(node);
+        break;
+
+    case DataViewGetByteLengthAsInt52:
     case GetTypedArrayLengthAsInt52:
         // We do not support typed arrays larger than 2GB on 32-bit platforms.
         RELEASE_ASSERT_NOT_REACHED();

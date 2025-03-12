@@ -2465,6 +2465,12 @@ private:
             break;
         }
 
+        case DataViewGetByteLength:
+        case DataViewGetByteLengthAsInt52: {
+            fixEdge<DataViewObjectUse>(node->child1());
+            break;
+        }
+
         case GetTypedArrayByteOffsetAsInt52: {
             ArrayMode arrayMode = node->arrayMode().refine(m_graph, node, node->child1()->prediction(), ArrayMode::unusedIndexSpeculatedType);
             if (arrayMode.type() == Array::Generic)

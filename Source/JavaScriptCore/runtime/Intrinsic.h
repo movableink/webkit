@@ -195,6 +195,7 @@ namespace JSC {
     /* Getter intrinsics. */ \
     macro(TypedArrayLengthIntrinsic) \
     macro(TypedArrayByteLengthIntrinsic) \
+    macro(DataViewByteLengthIntrinsic) \
     macro(TypedArrayByteOffsetIntrinsic) \
     macro(UnderscoreProtoIntrinsic) \
     macro(SpeciesGetterIntrinsic) \

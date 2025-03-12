@@ -2622,6 +2622,12 @@ public:
         return true;
     }
 
+    bool mayBeResizableOrGrowableSharedArrayBuffer()
+    {
+        ASSERT(op() == DataViewGetByteLength || op() == DataViewGetByteLengthAsInt52);
+        return m_opInfo.as<bool>();
+    }
+
     bool hasECMAMode()
     {
         switch (op()) {

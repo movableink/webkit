@@ -297,6 +297,8 @@ bool doesGC(Graph& graph, Node* node)
     case Construct:
     case ConstructForwardVarargs:
     case ConstructVarargs:
+    case DataViewGetByteLength:
+    case DataViewGetByteLengthAsInt52:
     case DefineDataProperty:
     case DefineAccessorProperty:
     case DeleteById:
