@@ -673,7 +673,7 @@ static std::optional<CookieList> lookupCookies(const NetworkStorageSession& sess
     CookieList cookies(soup_cookie_jar_get_cookie_list_with_same_site_info(session.cookieStorage(), uri.get(), firstPartyURI.get(), cookieURI.get(), forHTTPHeader == ForHTTPHeader::Yes,
         sameSiteInfo.isSafeHTTPMethod, sameSiteInfo.isTopSite));
 #else
-    CookieList cookies(soup_cookie_jar_get_cookie_list(cookieStorage(), uri.get(), forHTTPHeader == ForHTTPHeader::Yes));
+    CookieList cookies(soup_cookie_jar_get_cookie_list(session.cookieStorage(), uri.get(), forHTTPHeader == ForHTTPHeader::Yes));
 #endif
     if (!cookies)
         return nullptr;
