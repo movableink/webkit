@@ -1549,18 +1549,18 @@ void RenderFlexibleBox::prepareOrderIteratorAndMargins()
 {
     OrderIteratorPopulator populator(m_orderIterator);
 
-    for (RenderBox* flexItem = firstChildBox(); flexItem; flexItem = flexItem->nextSiblingBox()) {
-        if (!populator.collectChild(*flexItem))
+    for (auto& flexItem : childrenOfType<RenderBox>(*this)) {
+        if (!populator.collectChild(flexItem))
             continue;
 
         // Before running the flex algorithm, 'auto' has a margin of 0.
         // Also, if we're not auto sizing, we don't do a layout that computes the start/end margins.
         if (isHorizontalFlow()) {
-            flexItem->setMarginLeft(computeFlexItemMarginValue(flexItem->style().marginLeft()));
-            flexItem->setMarginRight(computeFlexItemMarginValue(flexItem->style().marginRight()));
+            flexItem.setMarginLeft(computeFlexItemMarginValue(flexItem.style().marginLeft()));
+            flexItem.setMarginRight(computeFlexItemMarginValue(flexItem.style().marginRight()));
         } else {
-            flexItem->setMarginTop(computeFlexItemMarginValue(flexItem->style().marginTop()));
-            flexItem->setMarginBottom(computeFlexItemMarginValue(flexItem->style().marginBottom()));
+            flexItem.setMarginTop(computeFlexItemMarginValue(flexItem.style().marginTop()));
+            flexItem.setMarginBottom(computeFlexItemMarginValue(flexItem.style().marginBottom()));
         }
     }
 }
