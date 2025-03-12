@@ -420,7 +420,8 @@ ALWAYS_INLINE void JIT::emitPutVirtualRegister(VirtualRegister dst, RegisterID f
 
 ALWAYS_INLINE JIT::Jump JIT::emitJumpIfNotInt(RegisterID reg1, RegisterID reg2, RegisterID scratch)
 {
-    and64(reg1, reg2, scratch);
+    move(reg1, scratch);
+    and64(reg2, scratch);
     return branchIfNotInt32(scratch);
 }
 

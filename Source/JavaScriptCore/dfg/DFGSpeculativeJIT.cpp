@@ -5140,18 +5140,15 @@ void SpeculativeJIT::compileArithSub(Node* node)
             int32_t imm2 = node->child2()->asInt32();
             GPRTemporary result(this);
 
-            GPRReg op1GPR = op1.gpr();
-            GPRReg resultGPR = result.gpr();
-
-            if (!shouldCheckOverflow(node->arithMode()))
-                sub32(op1GPR, Imm32(imm2), resultGPR);
-            else {
+            if (!shouldCheckOverflow(node->arithMode())) {
+                move(op1.gpr(), result.gpr());
+                sub32(Imm32(imm2), result.gpr());
+            } else {
                 GPRTemporary scratch(this);
-                GPRReg scratchGPR = scratch.gpr();
-                speculationCheck(ExitKind::Overflow, JSValueRegs(), nullptr, branchSub32(Overflow, op1GPR, Imm32(imm2), resultGPR, scratchGPR));
+                speculationCheck(ExitKind::Overflow, JSValueRegs(), nullptr, branchSub32(Overflow, op1.gpr(), Imm32(imm2), result.gpr(), scratch.gpr()));
             }
 
-            strictInt32Result(resultGPR, node);
+            strictInt32Result(result.gpr(), node);
             return;
         }
             
@@ -5159,15 +5156,12 @@ void SpeculativeJIT::compileArithSub(Node* node)
             int32_t imm1 = node->child1()->asInt32();
             SpeculateInt32Operand op2(this, node->child2());
             GPRTemporary result(this);
-
-            GPRReg op2GPR = op2.gpr();
-            GPRReg resultGPR = result.gpr();
                 
-            move(Imm32(imm1), resultGPR);
+            move(Imm32(imm1), result.gpr());
             if (!shouldCheckOverflow(node->arithMode()))
-                sub32(op2GPR, resultGPR);
+                sub32(op2.gpr(), result.gpr());
             else
-                speculationCheck(ExitKind::Overflow, JSValueRegs(), nullptr, branchSub32(Overflow, op2GPR, resultGPR));
+                speculationCheck(ExitKind::Overflow, JSValueRegs(), nullptr, branchSub32(Overflow, op2.gpr(), result.gpr()));
                 
             strictInt32Result(result.gpr(), node);
             return;
@@ -5177,16 +5171,13 @@ void SpeculativeJIT::compileArithSub(Node* node)
         SpeculateInt32Operand op2(this, node->child2());
         GPRTemporary result(this);
 
-        GPRReg op1GPR = op1.gpr();
-        GPRReg op2GPR = op2.gpr();
-        GPRReg resultGPR = result.gpr();
+        if (!shouldCheckOverflow(node->arithMode())) {
+            move(op1.gpr(), result.gpr());
+            sub32(op2.gpr(), result.gpr());
+        } else
+            speculationCheck(ExitKind::Overflow, JSValueRegs(), nullptr, branchSub32(Overflow, op1.gpr(), op2.gpr(), result.gpr()));
 
-        if (!shouldCheckOverflow(node->arithMode()))
-            sub32(op1GPR, op2GPR, resultGPR);
-        else
-            speculationCheck(ExitKind::Overflow, JSValueRegs(), nullptr, branchSub32(Overflow, op1GPR, op2GPR, resultGPR));
-
-        strictInt32Result(resultGPR, node);
+        strictInt32Result(result.gpr(), node);
         return;
     }
         
@@ -5202,31 +5193,20 @@ void SpeculativeJIT::compileArithSub(Node* node)
             SpeculateWhicheverInt52Operand op1(this, node->child1());
             SpeculateWhicheverInt52Operand op2(this, node->child2(), op1);
             GPRTemporary result(this, Reuse, op1);
-
-            GPRReg op1GPR = op1.gpr();
-            GPRReg op2GPR = op2.gpr();
-            GPRReg resultGPR = result.gpr();
-
-            sub64(op1GPR, op2GPR, resultGPR);
-            int52Result(resultGPR, node, op1.format());
+            move(op1.gpr(), result.gpr());
+            sub64(op2.gpr(), result.gpr());
+            int52Result(result.gpr(), node, op1.format());
             return;
         }
         
         SpeculateInt52Operand op1(this, node->child1());
         SpeculateInt52Operand op2(this, node->child2());
         GPRTemporary result(this);
-
-        GPRReg op1GPR = op1.gpr();
-        GPRReg op2GPR = op2.gpr();
-        GPRReg resultGPR = result.gpr();
-
-#if CPU(ARM64)
-        speculationCheck(Int52Overflow, JSValueRegs(), nullptr, branchSub64(Overflow, op1GPR, op2GPR, resultGPR));
-#else
-        move(op1GPR, resultGPR);
-        speculationCheck(Int52Overflow, JSValueRegs(), nullptr, branchSub64(Overflow, op2GPR, resultGPR));
-#endif
-        int52Result(resultGPR, node);
+        move(op1.gpr(), result.gpr());
+        speculationCheck(
+            Int52Overflow, JSValueRegs(), nullptr,
+            branchSub64(Overflow, op2.gpr(), result.gpr()));
+        int52Result(result.gpr(), node);
         return;
     }
 #endif // USE(JSVALUE64)
@@ -5236,12 +5216,11 @@ void SpeculativeJIT::compileArithSub(Node* node)
         SpeculateDoubleOperand op2(this, node->child2());
         FPRTemporary result(this, op1);
 
-        FPRReg op1FPR = op1.fpr();
-        FPRReg op2FPR = op2.fpr();
-        FPRReg resultFPR = result.fpr();
+        FPRReg reg1 = op1.fpr();
+        FPRReg reg2 = op2.fpr();
+        subDouble(reg1, reg2, result.fpr());
 
-        subDouble(op1FPR, op2FPR, resultFPR);
-        doubleResult(resultFPR, node);
+        doubleResult(result.fpr(), node);
         return;
     }
 

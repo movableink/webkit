@@ -855,15 +855,18 @@ void emitRandomThunkImpl(AssemblyHelpers& jit, GPRReg scratch0, GPRReg scratch1,
     storeToLow(scratch1);
 
     // x ^= x << 23;
-    jit.lshift64(scratch0, AssemblyHelpers::TrustedImm32(23), scratch2);
+    jit.move(scratch0, scratch2);
+    jit.lshift64(AssemblyHelpers::TrustedImm32(23), scratch2);
     jit.xor64(scratch2, scratch0);
 
     // x ^= x >> 17;
-    jit.rshift64(scratch0, AssemblyHelpers::TrustedImm32(17), scratch2);
+    jit.move(scratch0, scratch2);
+    jit.rshift64(AssemblyHelpers::TrustedImm32(17), scratch2);
     jit.xor64(scratch2, scratch0);
 
     // x ^= y ^ (y >> 26);
-    jit.rshift64(scratch1, AssemblyHelpers::TrustedImm32(26), scratch2);
+    jit.move(scratch1, scratch2);
+    jit.rshift64(AssemblyHelpers::TrustedImm32(26), scratch2);
     jit.xor64(scratch1, scratch2);
     jit.xor64(scratch2, scratch0);
 
@@ -874,7 +877,8 @@ void emitRandomThunkImpl(AssemblyHelpers& jit, GPRReg scratch0, GPRReg scratch1,
     jit.add64(scratch1, scratch0);
 
     // Extract random 53bit. [0, 53] bit is safe integer number ranges in double representation.
-    jit.and64(AssemblyHelpers::TrustedImm64((1ULL << 53) - 1), scratch0);
+    jit.move(AssemblyHelpers::TrustedImm64((1ULL << 53) - 1), scratch1);
+    jit.and64(scratch1, scratch0);
     // Now, scratch0 is always in range of int64_t. Safe to convert it to double with cvtsi2sdq.
     jit.convertInt64ToDouble(scratch0, result);
 
@@ -1236,31 +1240,39 @@ void AssemblyHelpers::wangsInt64Hash(GPRReg inputAndResult, GPRReg scratch)
 {
     GPRReg input = inputAndResult;
     // key += ~(key << 32);
-    lshift64(input, TrustedImm32(32), scratch);
+    move(input, scratch);
+    lshift64(TrustedImm32(32), scratch);
     not64(scratch);
     add64(scratch, input);
     // key ^= (key >> 22);
-    urshift64(input, TrustedImm32(22), scratch);
+    move(input, scratch);
+    urshift64(TrustedImm32(22), scratch);
     xor64(scratch, input);
     // key += ~(key << 13);
-    lshift64(input, TrustedImm32(13), scratch);
+    move(input, scratch);
+    lshift64(TrustedImm32(13), scratch);
     not64(scratch);
     add64(scratch, input);
     // key ^= (key >> 8);
-    urshift64(input, TrustedImm32(8), scratch);
+    move(input, scratch);
+    urshift64(TrustedImm32(8), scratch);
     xor64(scratch, input);
     // key += (key << 3);
-    lshift64(input, TrustedImm32(3), scratch);
+    move(input, scratch);
+    lshift64(TrustedImm32(3), scratch);
     add64(scratch, input);
     // key ^= (key >> 15);
-    urshift64(input, TrustedImm32(15), scratch);
+    move(input, scratch);
+    urshift64(TrustedImm32(15), scratch);
     xor64(scratch, input);
     // key += ~(key << 27);
-    lshift64(input, TrustedImm32(27), scratch);
+    move(input, scratch);
+    lshift64(TrustedImm32(27), scratch);
     not64(scratch);
     add64(scratch, input);
     // key ^= (key >> 31);
-    urshift64(input, TrustedImm32(31), scratch);
+    move(input, scratch);
+    urshift64(TrustedImm32(31), scratch);
     xor64(scratch, input);
 
     // return static_cast<unsigned>(result)

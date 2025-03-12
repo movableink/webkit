@@ -801,18 +801,6 @@ public:
         rshift32(imm, dest);
     }
 
-    void rshift32(TrustedImm32 imm, RegisterID shiftAmount, RegisterID dest)
-    {
-        if (shiftAmount == dest) {
-            move(imm, scratchRegister());
-            rshift32(shiftAmount, scratchRegister());
-            move(scratchRegister(), dest);
-        } else {
-            move(imm, dest);
-            rshift32(shiftAmount, dest);
-        }
-    }
-
     void urshift32(RegisterID shift_amount, RegisterID dest)
     {
         if (shift_amount == X86Registers::ecx)
@@ -846,18 +834,6 @@ public:
     {
         move32IfNeeded(src, dest);
         urshift32(imm, dest);
-    }
-
-    void urshift32(TrustedImm32 imm, RegisterID shiftAmount, RegisterID dest)
-    {
-        if (shiftAmount == dest) {
-            move(imm, scratchRegister());
-            urshift32(shiftAmount, scratchRegister());
-            move(scratchRegister(), dest);
-        } else {
-            move(imm, dest);
-            urshift32(shiftAmount, dest);
-        }
     }
 
     void rotateRight32(TrustedImm32 imm, RegisterID dest)
@@ -936,10 +912,6 @@ public:
         if (dest == right) {
             neg32(dest);
             add32(left, dest);
-            return;
-        }
-        if (left == right) {
-            move(TrustedImm32(0), dest);
             return;
         }
         move(left, dest);
@@ -5567,19 +5539,16 @@ public:
         m_assembler.subq_rr(src, dest);
     }
     
-    void sub64(RegisterID left, RegisterID right, RegisterID dest)
+    void sub64(RegisterID a, RegisterID b, RegisterID dest)
     {
-        if (dest == right) {
-            neg64(dest);
-            add64(left, dest);
-            return;
-        }
-        if (left == right) {
+        if (b != dest) {
+            move(a, dest);
+            sub64(b, dest);
+        } else if (a != b) {
+            neg64(b);
+            add64(a, b);
+        } else
             move(TrustedImm32(0), dest);
-            return;
-        }
-        move(left, dest);
-        sub64(right, dest);
     }
 
     void sub64(TrustedImm32 imm, RegisterID dest)

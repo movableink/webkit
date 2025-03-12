@@ -262,7 +262,8 @@ void SpeculativeJIT::nonSpeculativeNonPeepholeCompareNullOrUndefined(Edge operan
     }
  
     if (!isKnownNotOther(operand.node())) {
-        and64(TrustedImm32(~JSValue::UndefinedTag), argGPR, resultGPR);
+        move(argGPR, resultGPR);
+        and64(TrustedImm32(~JSValue::UndefinedTag), resultGPR);
         compare64(Equal, resultGPR, TrustedImm32(JSValue::ValueNull), resultGPR);
     }
 
@@ -323,7 +324,8 @@ void SpeculativeJIT::nonSpeculativePeepholeBranchNullOrUndefined(Edge operand, N
             condition = NotEqual;
             std::swap(taken, notTaken);
         }
-        and64(TrustedImm32(~JSValue::UndefinedTag), argGPR, resultGPR);
+        move(argGPR, resultGPR);
+        and64(TrustedImm32(~JSValue::UndefinedTag), resultGPR);
         branch64(condition, resultGPR, TrustedImm64(JSValue::ValueNull), taken);
         jump(notTaken);
     }
@@ -1798,7 +1800,8 @@ void SpeculativeJIT::compileObjectToObjectOrOtherEquality(Edge leftChild, Edge r
     // We know that within this branch, rightChild must not be a cell. Check if that is enough to
     // prove that it is either null or undefined.
     if (needsTypeCheck(rightChild, SpecCellCheck | SpecOther)) {
-        and64(TrustedImm32(~JSValue::UndefinedTag), op2GPR, resultGPR);
+        move(op2GPR, resultGPR);
+        and64(TrustedImm32(~JSValue::UndefinedTag), resultGPR);
         
         typeCheck(
             JSValueRegs(op2GPR), rightChild, SpecCellCheck | SpecOther,
@@ -1873,7 +1876,8 @@ void SpeculativeJIT::compilePeepHoleObjectToObjectOrOtherEquality(Edge leftChild
         jump(notTaken, ForceJump);
         
         rightNotCell.link(this);
-        and64(TrustedImm32(~JSValue::UndefinedTag), op2GPR, resultGPR);
+        move(op2GPR, resultGPR);
+        and64(TrustedImm32(~JSValue::UndefinedTag), resultGPR);
         
         typeCheck(
             JSValueRegs(op2GPR), rightChild, SpecCellCheck | SpecOther, branch64(
@@ -2056,7 +2060,8 @@ void SpeculativeJIT::compileToBooleanObjectOrOther(Edge nodeUse, bool invert)
     notCell.link(this);
 
     if (needsTypeCheck(nodeUse, SpecCellCheck | SpecOther)) {
-        and64(TrustedImm32(~JSValue::UndefinedTag), valueGPR, resultGPR);
+        move(valueGPR, resultGPR);
+        and64(TrustedImm32(~JSValue::UndefinedTag), resultGPR);
         typeCheck(
             JSValueRegs(valueGPR), nodeUse, SpecCellCheck | SpecOther, branch64(
                 NotEqual,
@@ -2116,18 +2121,16 @@ void SpeculativeJIT::compileToBoolean(Node* node, bool invert)
         
         JSValueOperand value(this, node->child1(), ManualOperandSpeculation);
         GPRTemporary result(this); // FIXME: We could reuse, but on speculation fail would need recovery to restore tag (akin to add).
-
-        GPRReg valueGPR = value.gpr();
-        GPRReg resultGPR = result.gpr();
-
-        xor64(TrustedImm32(JSValue::ValueFalse), valueGPR, resultGPR);
+        
+        move(value.gpr(), result.gpr());
+        xor64(TrustedImm32(JSValue::ValueFalse), result.gpr());
         typeCheck(
-            JSValueRegs(valueGPR), node->child1(), SpecBoolean, branchTest64(
-                NonZero, resultGPR, TrustedImm32(static_cast<int32_t>(~1))));
-        xor64(invert ? TrustedImm32(JSValue::ValueTrue) : TrustedImm32(JSValue::ValueFalse), resultGPR);
+            JSValueRegs(value.gpr()), node->child1(), SpecBoolean, branchTest64(
+                NonZero, result.gpr(), TrustedImm32(static_cast<int32_t>(~1))));
+        xor64(invert ? TrustedImm32(JSValue::ValueTrue) : TrustedImm32(JSValue::ValueFalse), result.gpr());
         
         // If we add a DataFormatBool, we should use it here.
-        jsValueResult(resultGPR, node, DataFormatJSBoolean);
+        jsValueResult(result.gpr(), node, DataFormatJSBoolean);
         return;
     }
         
@@ -2211,7 +2214,8 @@ void SpeculativeJIT::emitObjectOrOtherBranch(Edge nodeUse, BasicBlock* taken, Ba
     notCell.link(this);
     
     if (needsTypeCheck(nodeUse, SpecCellCheck | SpecOther)) {
-        and64(TrustedImm32(~JSValue::UndefinedTag), valueGPR, scratchGPR);
+        move(valueGPR, scratchGPR);
+        and64(TrustedImm32(~JSValue::UndefinedTag), scratchGPR);
         typeCheck(
             JSValueRegs(valueGPR), nodeUse, SpecCellCheck | SpecOther, branch64(
                 NotEqual, scratchGPR, TrustedImm64(JSValue::ValueNull)));
@@ -4338,41 +4342,39 @@ void SpeculativeJIT::compile(Node* node)
         case BooleanUse: {
             JSValueOperand value(this, node->child1(), ManualOperandSpeculation);
             GPRTemporary result(this); // FIXME: We could reuse, but on speculation fail would need recovery to restore tag (akin to add).
-
-            GPRReg valueGPR = value.gpr();
-            GPRReg resultGPR = result.gpr();
             
-            xor64(TrustedImm32(JSValue::ValueFalse), valueGPR, resultGPR);
+            move(value.gpr(), result.gpr());
+            xor64(TrustedImm32(JSValue::ValueFalse), result.gpr());
             DFG_TYPE_CHECK(
-                JSValueRegs(valueGPR), node->child1(), SpecBoolean, branchTest64(
-                    NonZero, resultGPR, TrustedImm32(static_cast<int32_t>(~1))));
+                JSValueRegs(value.gpr()), node->child1(), SpecBoolean, branchTest64(
+                    NonZero, result.gpr(), TrustedImm32(static_cast<int32_t>(~1))));
 
-            strictInt32Result(resultGPR, node);
+            strictInt32Result(result.gpr(), node);
             break;
         }
             
         case UntypedUse: {
             JSValueOperand value(this, node->child1());
             GPRTemporary result(this);
-
-            GPRReg valueGPR = value.gpr();
-            GPRReg resultGPR = result.gpr();
             
             if (!m_interpreter.needsTypeCheck(node->child1(), SpecBoolInt32 | SpecBoolean)) {
-                and32(TrustedImm32(1), valueGPR, resultGPR);
-                strictInt32Result(resultGPR, node);
+                move(value.gpr(), result.gpr());
+                and32(TrustedImm32(1), result.gpr());
+                strictInt32Result(result.gpr(), node);
                 break;
             }
             
-            xor64(TrustedImm32(JSValue::ValueFalse), valueGPR, resultGPR);
-            Jump isBoolean = branchTest64(Zero, resultGPR, TrustedImm32(static_cast<int32_t>(~1)));
-            move(valueGPR, resultGPR);
+            move(value.gpr(), result.gpr());
+            xor64(TrustedImm32(JSValue::ValueFalse), result.gpr());
+            Jump isBoolean = branchTest64(
+                Zero, result.gpr(), TrustedImm32(static_cast<int32_t>(~1)));
+            move(value.gpr(), result.gpr());
             Jump done = jump();
             isBoolean.link(this);
-            or64(GPRInfo::numberTagRegister, resultGPR);
+            or64(GPRInfo::numberTagRegister, result.gpr());
             done.link(this);
             
-            jsValueResult(resultGPR, node);
+            jsValueResult(result.gpr(), node);
             break;
         }
             
@@ -5165,7 +5167,8 @@ void SpeculativeJIT::compile(Node* node)
         GPRReg valueGPR = value.gpr();
         GPRReg resultGPR = result.gpr();
 
-        and64(TrustedImm32(~JSValue::UndefinedTag), valueGPR, resultGPR);
+        move(valueGPR, resultGPR);
+        and64(TrustedImm32(~JSValue::UndefinedTag), resultGPR);
         compare64(Equal, resultGPR, TrustedImm32(JSValue::ValueNull), resultGPR);
 
         unblessedBooleanResult(resultGPR, node);
@@ -5175,14 +5178,12 @@ void SpeculativeJIT::compile(Node* node)
     case IsBoolean: {
         JSValueOperand value(this, node->child1());
         GPRTemporary result(this, Reuse, value);
-
-        GPRReg valueGPR = value.gpr();
-        GPRReg resultGPR = result.gpr();
         
-        xor64(TrustedImm32(JSValue::ValueFalse), valueGPR, resultGPR);
-        test64(Zero, resultGPR, TrustedImm32(static_cast<int32_t>(~1)), resultGPR);
-        or32(TrustedImm32(JSValue::ValueFalse), resultGPR);
-        jsValueResult(resultGPR, node, DataFormatJSBoolean);
+        move(value.gpr(), result.gpr());
+        xor64(TrustedImm32(JSValue::ValueFalse), result.gpr());
+        test64(Zero, result.gpr(), TrustedImm32(static_cast<int32_t>(~1)), result.gpr());
+        or32(TrustedImm32(JSValue::ValueFalse), result.gpr());
+        jsValueResult(result.gpr(), node, DataFormatJSBoolean);
         break;
     }
         
