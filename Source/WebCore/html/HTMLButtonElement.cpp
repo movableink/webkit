@@ -118,20 +118,11 @@ bool HTMLButtonElement::hasPresentationalHintsForAttribute(const QualifiedName& 
 
 void HTMLButtonElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == typeAttr) {
-        Type oldType = m_type;
-        if (equalLettersIgnoringASCIICase(newValue, "reset"_s))
-            m_type = RESET;
-        else if (equalLettersIgnoringASCIICase(newValue, "button"_s))
-            m_type = BUTTON;
-        else
-            m_type = SUBMIT;
-        if (oldType != m_type) {
-            updateWillValidateAndValidity();
-            if (form() && (oldType == SUBMIT || m_type == SUBMIT))
-                form()->resetDefaultButton();
-        }
-    } else
+    if (name == typeAttr)
+        computeType(newValue);
+    else if ((name == commandAttr || name == commandforAttr) && document().settings().invokerAttributesEnabled())
+        computeType(attributeWithoutSynchronization(HTMLNames::typeAttr));
+    else
         HTMLFormControlElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
@@ -276,15 +267,7 @@ void HTMLButtonElement::defaultEventHandler(Event& event)
 #endif
     auto& eventNames = WebCore::eventNames();
     if (event.type() == eventNames.DOMActivateEvent && !isDisabledFormControl()) {
-        RefPtr<HTMLFormElement> protectedForm(form());
-
-        if (commandForElement()) {
-            if (m_type != BUTTON && form())
-                return;
-
-            handleCommand();
-
-        } else if (protectedForm) {
+        if (form()) {
             // Update layout before processing form actions in case the style changes
             // the Form or button relationships.
             protectedDocument()->updateLayoutIgnorePendingStylesheets();
@@ -297,13 +280,21 @@ void HTMLButtonElement::defaultEventHandler(Event& event)
                     currentForm->reset();
             }
 
-            if (m_type == SUBMIT || m_type == RESET)
+            if (m_type == SUBMIT || m_type == RESET) {
                 event.setDefaultHandled();
+                return;
+            }
+
+            if (m_type == BUTTON && !equalLettersIgnoringASCIICase(attributeWithoutSynchronization(HTMLNames::typeAttr), "button"_s))
+                return;
         }
 
-        if (!(protectedForm && m_type == SUBMIT))
-            handlePopoverTargetAction(event.target());
+        if (commandForElement()) {
+            handleCommand();
+            return;
+        }
 
+        handlePopoverTargetAction(event.target());
     }
 
     if (RefPtr keyboardEvent = dynamicDowncast<KeyboardEvent>(event)) {
@@ -393,6 +384,29 @@ bool HTMLButtonElement::isSubmitButton() const
 bool HTMLButtonElement::isExplicitlySetSubmitButton() const
 {
     return isSubmitButton() && hasAttributeWithoutSynchronization(HTMLNames::typeAttr);
+}
+
+void HTMLButtonElement::computeType(const AtomString& typeAttrValue)
+{
+    auto oldType = m_type;
+    if (equalLettersIgnoringASCIICase(typeAttrValue, "reset"_s))
+        m_type = RESET;
+    else if (equalLettersIgnoringASCIICase(typeAttrValue, "button"_s))
+        m_type = BUTTON;
+    else if (equalLettersIgnoringASCIICase(typeAttrValue, "submit"_s))
+        m_type = SUBMIT;
+    else if (document().settings().invokerAttributesEnabled()) {
+        if (hasAttributeWithoutSynchronization(HTMLNames::commandAttr) || hasAttributeWithoutSynchronization(HTMLNames::commandforAttr))
+            m_type = BUTTON;
+        else
+            m_type = SUBMIT;
+    } else
+        m_type = SUBMIT;
+    if (oldType != m_type) {
+        updateWillValidateAndValidity();
+        if (RefPtr currentForm = form(); currentForm && (oldType == SUBMIT || m_type == SUBMIT))
+            currentForm->resetDefaultButton();
+    }
 }
 
 } // namespace

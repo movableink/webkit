@@ -91,6 +91,8 @@ private:
 
     bool isSubmitButton() const final;
 
+    void computeType(const AtomString& typeAttrValue);
+
     Type m_type;
     bool m_isActivatedSubmit;
 };
