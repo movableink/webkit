@@ -1149,35 +1149,35 @@ void RenderGrid::populateExplicitGridAndOrderIterator()
     unsigned maximumRowIndex = GridPositionsResolver::explicitGridRowCount(*this);
     unsigned maximumColumnIndex = GridPositionsResolver::explicitGridColumnCount(*this);
 
-    for (RenderBox* gridItem = firstChildBox(); gridItem; gridItem = gridItem->nextSiblingBox()) {
-        if (!populator.collectChild(*gridItem))
+    for (auto& gridItem : childrenOfType<RenderBox>(*this)) {
+        if (!populator.collectChild(gridItem))
             continue;
 
-        GridSpan rowPositions = GridPositionsResolver::resolveGridPositionsFromStyle(*this, *gridItem, GridTrackSizingDirection::ForRows);
+        GridSpan rowPositions = GridPositionsResolver::resolveGridPositionsFromStyle(*this, gridItem, GridTrackSizingDirection::ForRows);
         if (!isSubgridRows()) {
             if (!rowPositions.isIndefinite()) {
                 explicitRowStart = std::max<int>(explicitRowStart, -rowPositions.untranslatedStartLine());
                 maximumRowIndex = std::max<int>(maximumRowIndex, rowPositions.untranslatedEndLine());
             } else {
                 // Grow the grid for items with a definite row span, getting the largest such span.
-                unsigned spanSize = GridPositionsResolver::spanSizeForAutoPlacedItem(*gridItem, GridTrackSizingDirection::ForRows);
+                unsigned spanSize = GridPositionsResolver::spanSizeForAutoPlacedItem(gridItem, GridTrackSizingDirection::ForRows);
                 maximumRowIndex = std::max(maximumRowIndex, spanSize);
             }
         }
 
-        GridSpan columnPositions = GridPositionsResolver::resolveGridPositionsFromStyle(*this, *gridItem, GridTrackSizingDirection::ForColumns);
+        GridSpan columnPositions = GridPositionsResolver::resolveGridPositionsFromStyle(*this, gridItem, GridTrackSizingDirection::ForColumns);
         if (!isSubgridColumns()) {
             if (!columnPositions.isIndefinite()) {
                 explicitColumnStart = std::max<int>(explicitColumnStart, -columnPositions.untranslatedStartLine());
                 maximumColumnIndex = std::max<int>(maximumColumnIndex, columnPositions.untranslatedEndLine());
             } else {
                 // Grow the grid for items with a definite column span, getting the largest such span.
-                unsigned spanSize = GridPositionsResolver::spanSizeForAutoPlacedItem(*gridItem, GridTrackSizingDirection::ForColumns);
+                unsigned spanSize = GridPositionsResolver::spanSizeForAutoPlacedItem(gridItem, GridTrackSizingDirection::ForColumns);
                 maximumColumnIndex = std::max(maximumColumnIndex, spanSize);
             }
         }
 
-        currentGrid().setGridItemArea(*gridItem, { rowPositions, columnPositions });
+        currentGrid().setGridItemArea(gridItem, { rowPositions, columnPositions });
     }
 
     currentGrid().setExplicitGridStart(explicitRowStart, explicitColumnStart);
@@ -1419,43 +1419,43 @@ void RenderGrid::layoutGridItems(GridLayoutState& gridLayoutState)
     populateGridPositionsForDirection(m_trackSizingAlgorithm, GridTrackSizingDirection::ForColumns);
     populateGridPositionsForDirection(m_trackSizingAlgorithm, GridTrackSizingDirection::ForRows);
 
-    for (RenderBox* gridItem = firstChildBox(); gridItem; gridItem = gridItem->nextSiblingBox()) {
-        if (currentGrid().orderIterator().shouldSkipChild(*gridItem)) {
-            if (gridItem->isOutOfFlowPositioned())
-                prepareGridItemForPositionedLayout(*gridItem);
+    for (auto& gridItem : childrenOfType<RenderBox>(*this)) {
+        if (currentGrid().orderIterator().shouldSkipChild(gridItem)) {
+            if (gridItem.isOutOfFlowPositioned())
+                prepareGridItemForPositionedLayout(gridItem);
             continue;
         }
 
         auto* renderGrid = dynamicDowncast<RenderGrid>(gridItem);
         if (renderGrid && (renderGrid->isSubgridColumns() || renderGrid->isSubgridRows()))
-            gridItem->setNeedsLayout(MarkOnlyThis);
+            gridItem.setNeedsLayout(MarkOnlyThis);
 
         // Setting the definite grid area's sizes. It may imply that the
         // item must perform a layout if its area differs from the one
         // used during the track sizing algorithm.
-        updateGridAreaLogicalSize(*gridItem, gridAreaBreadthForGridItemIncludingAlignmentOffsets(*gridItem, GridTrackSizingDirection::ForColumns), gridAreaBreadthForGridItemIncludingAlignmentOffsets(*gridItem, GridTrackSizingDirection::ForRows));
+        updateGridAreaLogicalSize(gridItem, gridAreaBreadthForGridItemIncludingAlignmentOffsets(gridItem, GridTrackSizingDirection::ForColumns), gridAreaBreadthForGridItemIncludingAlignmentOffsets(gridItem, GridTrackSizingDirection::ForRows));
 
-        LayoutRect oldGridItemRect = gridItem->frameRect();
+        LayoutRect oldGridItemRect = gridItem.frameRect();
 
         // Stretching logic might force a grid item layout, so we need to run it before the layoutIfNeeded
         // call to avoid unnecessary relayouts. This might imply that grid item margins, needed to correctly
         // determine the available space before stretching, are not set yet.
-        applyStretchAlignmentToGridItemIfNeeded(*gridItem, gridLayoutState);
-        applySubgridStretchAlignmentToGridItemIfNeeded(*gridItem);
+        applyStretchAlignmentToGridItemIfNeeded(gridItem, gridLayoutState);
+        applySubgridStretchAlignmentToGridItemIfNeeded(gridItem);
 
-        gridItem->layoutIfNeeded();
+        gridItem.layoutIfNeeded();
 
         // We need pending layouts to be done in order to compute auto-margins properly.
-        updateAutoMarginsInColumnAxisIfNeeded(*gridItem);
-        updateAutoMarginsInRowAxisIfNeeded(*gridItem);
+        updateAutoMarginsInColumnAxisIfNeeded(gridItem);
+        updateAutoMarginsInRowAxisIfNeeded(gridItem);
 
-        setLogicalPositionForGridItem(*gridItem);
+        setLogicalPositionForGridItem(gridItem);
 
         // If the grid item moved, we have to repaint it as well as any floating/positioned
         // descendants. An exception is if we need a layout. In this case, we know we're going to
         // repaint ourselves (and the grid item) anyway.
-        if (!selfNeedsLayout() && gridItem->checkForRepaintDuringLayout())
-            gridItem->repaintDuringLayoutIfMoved(oldGridItemRect);
+        if (!selfNeedsLayout() && gridItem.checkForRepaintDuringLayout())
+            gridItem.repaintDuringLayoutIfMoved(oldGridItemRect);
     }
 }
 
@@ -1464,43 +1464,43 @@ void RenderGrid::layoutMasonryItems(GridLayoutState& gridLayoutState)
     populateGridPositionsForDirection(m_trackSizingAlgorithm, GridTrackSizingDirection::ForColumns);
     populateGridPositionsForDirection(m_trackSizingAlgorithm, GridTrackSizingDirection::ForRows);
 
-    for (RenderBox* gridItem = firstChildBox(); gridItem; gridItem = gridItem->nextSiblingBox()) {
-        if (currentGrid().orderIterator().shouldSkipChild(*gridItem)) {
-            if (gridItem->isOutOfFlowPositioned())
-                prepareGridItemForPositionedLayout(*gridItem);
+    for (auto& gridItem : childrenOfType<RenderBox>(*this)) {
+        if (currentGrid().orderIterator().shouldSkipChild(gridItem)) {
+            if (gridItem.isOutOfFlowPositioned())
+                prepareGridItemForPositionedLayout(gridItem);
             continue;
         }
 
         auto* renderGrid = dynamicDowncast<RenderGrid>(gridItem);
         if (renderGrid && (renderGrid->isSubgridColumns() || renderGrid->isSubgridRows()))
-            gridItem->setNeedsLayout(MarkOnlyThis);
+            gridItem.setNeedsLayout(MarkOnlyThis);
 
         // Setting the definite grid area's sizes. It may imply that the
         // item must perform a layout if its area differs from the one
         // used during the track sizing algorithm.
-        updateGridAreaLogicalSize(*gridItem, gridAreaBreadthForGridItemIncludingAlignmentOffsets(*gridItem, GridTrackSizingDirection::ForColumns), gridAreaBreadthForGridItemIncludingAlignmentOffsets(*gridItem, GridTrackSizingDirection::ForRows));
+        updateGridAreaLogicalSize(gridItem, gridAreaBreadthForGridItemIncludingAlignmentOffsets(gridItem, GridTrackSizingDirection::ForColumns), gridAreaBreadthForGridItemIncludingAlignmentOffsets(gridItem, GridTrackSizingDirection::ForRows));
 
-        LayoutRect oldGridItemRect = gridItem->frameRect();
+        LayoutRect oldGridItemRect = gridItem.frameRect();
 
         // Stretching logic might force a grid item layout, so we need to run it before the layoutIfNeeded
         // call to avoid unnecessary relayouts. This might imply that grid item margins, needed to correctly
         // determine the available space before stretching, are not set yet.
-        applyStretchAlignmentToGridItemIfNeeded(*gridItem, gridLayoutState);
-        applySubgridStretchAlignmentToGridItemIfNeeded(*gridItem);
+        applyStretchAlignmentToGridItemIfNeeded(gridItem, gridLayoutState);
+        applySubgridStretchAlignmentToGridItemIfNeeded(gridItem);
 
-        gridItem->layoutIfNeeded();
+        gridItem.layoutIfNeeded();
 
         // We need pending layouts to be done in order to compute auto-margins properly.
-        updateAutoMarginsInColumnAxisIfNeeded(*gridItem);
-        updateAutoMarginsInRowAxisIfNeeded(*gridItem);
+        updateAutoMarginsInColumnAxisIfNeeded(gridItem);
+        updateAutoMarginsInRowAxisIfNeeded(gridItem);
 
-        setLogicalPositionForGridItem(*gridItem);
+        setLogicalPositionForGridItem(gridItem);
 
         // If the grid item moved, we have to repaint it as well as any floating/positioned
         // descendants. An exception is if we need a layout. In this case, we know we're going to
         // repaint ourselves (and the grid item) anyway.
-        if (!selfNeedsLayout() && gridItem->checkForRepaintDuringLayout())
-            gridItem->repaintDuringLayoutIfMoved(oldGridItemRect);
+        if (!selfNeedsLayout() && gridItem.checkForRepaintDuringLayout())
+            gridItem.repaintDuringLayoutIfMoved(oldGridItemRect);
     }
 }
 
