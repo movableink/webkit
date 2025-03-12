@@ -69,12 +69,13 @@ void WebExtensionURLSchemeHandler::platformStartTask(WebPageProxy& page, WebURLS
         URL frameDocumentURL = task->frameInfo().request().url().isEmpty() ? task->request().firstPartyForCookies() : task->frameInfo().request().url();
         URL requestURL = task->request().url();
 
-        if (!m_webExtensionController) {
+        RefPtr webExtensionController = m_webExtensionController.get();
+        if (!webExtensionController) {
             task->didComplete([NSError errorWithDomain:NSURLErrorDomain code:noPermissionErrorCode userInfo:nil]);
             return;
         }
 
-        RefPtr extensionContext = m_webExtensionController->extensionContext(requestURL);
+        RefPtr extensionContext = webExtensionController->extensionContext(requestURL);
         if (!extensionContext) {
             // We need to return the same error here, as we do below for URLs that don't match web_accessible_resources.
             // Otherwise, a page tracking extension injected content and watching extension UUIDs across page loads can fingerprint
@@ -83,6 +84,8 @@ void WebExtensionURLSchemeHandler::platformStartTask(WebPageProxy& page, WebURLS
             return;
         }
 
+        Ref extension = extensionContext->extension();
+
 #if ENABLE(INSPECTOR_EXTENSIONS)
         // Chrome does not require devtools extensions to explicitly list resources as web_accessible_resources.
         if (!frameDocumentURL.protocolIs("inspector-resource"_s) && !protocolHostAndPortAreEqual(frameDocumentURL, requestURL))
@@ -90,7 +93,7 @@ void WebExtensionURLSchemeHandler::platformStartTask(WebPageProxy& page, WebURLS
         if (!protocolHostAndPortAreEqual(frameDocumentURL, requestURL))
 #endif
         {
-            if (!extensionContext->extension().isWebAccessibleResource(requestURL, frameDocumentURL)) {
+            if (!extension->isWebAccessibleResource(requestURL, frameDocumentURL)) {
                 task->didComplete([NSError errorWithDomain:NSURLErrorDomain code:noPermissionErrorCode userInfo:nil]);
                 return;
             }
@@ -107,7 +110,7 @@ void WebExtensionURLSchemeHandler::platformStartTask(WebPageProxy& page, WebURLS
         }
 
         RefPtr<API::Error> error;
-        RefPtr resourceData = extensionContext->extension().resourceDataForPath(requestURL.path().toString(), error);
+        RefPtr resourceData = extension->resourceDataForPath(requestURL.path().toString(), error);
         if (!resourceData || error) {
             extensionContext->recordErrorIfNeeded(wrapper(error));
             task->didComplete([NSError errorWithDomain:NSURLErrorDomain code:NSURLErrorFileDoesNotExist userInfo:nil]);
@@ -119,12 +122,12 @@ void WebExtensionURLSchemeHandler::platformStartTask(WebPageProxy& page, WebURLS
                 extensionContext->addExtensionTabPage(page, *tab);
         }
 
-        auto mimeType = extensionContext->extension().resourceMIMETypeForPath(requestURL.path().toString());
+        auto mimeType = extension->resourceMIMETypeForPath(requestURL.path().toString());
         resourceData = extensionContext->localizedResourceData(resourceData, mimeType);
 
         auto *urlResponse = [[NSHTTPURLResponse alloc] initWithURL:requestURL statusCode:200 HTTPVersion:nil headerFields:@{
             @"Access-Control-Allow-Origin": @"*",
-            @"Content-Security-Policy": extensionContext->extension().contentSecurityPolicy(),
+            @"Content-Security-Policy": extension->contentSecurityPolicy(),
             @"Content-Length": @(resourceData->size()).stringValue,
             @"Content-Type": mimeType
         }];
