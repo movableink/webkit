@@ -56,8 +56,11 @@
 -(void)playbackCoordinator:(AVDelegatingPlaybackCoordinator *)coordinator didIssuePlayCommand:(AVDelegatingPlaybackCoordinatorPlayCommand *)playCommand completionHandler:(void (^)(void))completionHandler {
     dispatch_async(dispatch_get_main_queue(), ^{
         RefPtr parent = _parent.get();
-        if (!parent)
+        if (!parent) {
+            completionHandler();
             return;
+        }
+
         parent->issuePlayCommand(playCommand, [completionHandler = makeBlockPtr(completionHandler)] {
             completionHandler();
         });
@@ -67,8 +70,11 @@
 -(void)playbackCoordinator:(AVDelegatingPlaybackCoordinator *)coordinator didIssuePauseCommand:(AVDelegatingPlaybackCoordinatorPauseCommand *)pauseCommand completionHandler:(void (^)(void))completionHandler {
     dispatch_async(dispatch_get_main_queue(), ^{
         RefPtr parent = _parent.get();
-        if (!parent)
+        if (!parent) {
+            completionHandler();
             return;
+        }
+
         parent->issuePauseCommand(pauseCommand, [completionHandler = makeBlockPtr(completionHandler)] {
             completionHandler();
         });
@@ -78,8 +84,11 @@
 -(void)playbackCoordinator:(AVDelegatingPlaybackCoordinator *)coordinator didIssueSeekCommand:(AVDelegatingPlaybackCoordinatorSeekCommand *)seekCommand completionHandler:(void (^)(void))completionHandler {
     dispatch_async(dispatch_get_main_queue(), ^{
         RefPtr parent = _parent.get();
-        if (!parent)
+        if (!parent) {
+            completionHandler();
             return;
+        }
+
         parent->issueSeekCommand(seekCommand, [completionHandler = makeBlockPtr(completionHandler)] {
             completionHandler();
         });
@@ -89,8 +98,11 @@
 -(void)playbackCoordinator:(AVDelegatingPlaybackCoordinator *)coordinator didIssueBufferingCommand:(AVDelegatingPlaybackCoordinatorBufferingCommand *)bufferingCommand completionHandler:(void (^)(void))completionHandler {
     dispatch_async(dispatch_get_main_queue(), ^{
         RefPtr parent = _parent.get();
-        if (!parent)
+        if (!parent) {
+            completionHandler();
             return;
+        }
+
         parent->issueBufferingCommand(bufferingCommand, [completionHandler = makeBlockPtr(completionHandler)] {
             completionHandler();
         });
