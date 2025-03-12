@@ -4417,6 +4417,12 @@
    },
    {
       "emails" : [
+         "jonbutler@apple.com"
+      ],
+      "name" : "Jon Butler"
+   },
+   {
+      "emails" : [
          "jchoukroun@apple.com"
       ],
       "github" : "jonchoukroun",
