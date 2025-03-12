@@ -593,6 +593,7 @@ public:
     WEBCORE_EXPORT ExceptionOr<Element*> closest(const String& selectors);
 
     WEBCORE_EXPORT DOMTokenList& classList();
+    WEBCORE_EXPORT Ref<DOMTokenList> protectedClassList();
 
     SpaceSplitString partNames() const;
     DOMTokenList& part();

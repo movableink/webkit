@@ -4830,6 +4830,11 @@ DOMTokenList& Element::classList()
     return *data.classList();
 }
 
+Ref<DOMTokenList> Element::protectedClassList()
+{
+    return classList();
+}
+
 SpaceSplitString Element::partNames() const
 {
     return hasRareData() ? elementRareData()->partNames() : SpaceSplitString();

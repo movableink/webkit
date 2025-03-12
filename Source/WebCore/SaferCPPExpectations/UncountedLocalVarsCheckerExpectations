@@ -427,7 +427,6 @@ html/track/TextTrackCueGeneric.cpp
 html/track/TextTrackList.cpp
 html/track/TrackBase.cpp
 html/track/VTTCue.cpp
-html/track/VTTRegion.cpp
 html/track/VideoTrackList.cpp
 inspector/CommandLineAPIHost.cpp
 inspector/DOMPatchSupport.cpp
