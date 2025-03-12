@@ -7912,14 +7912,16 @@ void HTMLMediaElement::markCaptionAndSubtitleTracksAsUnconfigured(ReconfigureMod
 
 PlatformDynamicRangeLimit HTMLMediaElement::computePlayerDynamicRangeLimit() const
 {
+    constexpr auto maxLimitWhenSuppressingHDR = PlatformDynamicRangeLimit::defaultWhenSuppressingHDRInVideos();
+    if (m_platformDynamicRangeLimit <= maxLimitWhenSuppressingHDR)
+        return m_platformDynamicRangeLimit;
+
     bool shouldSuppressHDR = [this]() {
         if (Page* page = document().page())
             return page->shouldSuppressHDR();
         return false;
     }();
-    if (!shouldSuppressHDR)
-        return m_platformDynamicRangeLimit;
-    return std::min(m_platformDynamicRangeLimit, PlatformDynamicRangeLimit::constrainedHigh());
+    return shouldSuppressHDR ? maxLimitWhenSuppressingHDR : m_platformDynamicRangeLimit;
 }
 
 // Use WTF_IGNORES_THREAD_SAFETY_ANALYSIS because this function does conditional locking of m_audioSourceNode->processLock()

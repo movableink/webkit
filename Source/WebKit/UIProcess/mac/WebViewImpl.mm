@@ -2097,25 +2097,25 @@ void WebViewImpl::windowDidOrderOnScreen()
 
 void WebViewImpl::windowDidBecomeKey(NSWindow *keyWindow)
 {
-    updateHDRState();
     if (keyWindow == [m_view window] || keyWindow == [m_view window].attachedSheet) {
 #if ENABLE(GAMEPAD)
         UIGamepadProvider::singleton().viewBecameActive(m_page.get());
 #endif
         updateSecureInputState();
         m_page->activityStateDidChange(WebCore::ActivityState::WindowIsActive);
+        updateHDRState(HDRConstrainingReasonAction::Remove, HDRConstrainingReason::WindowIsNotActive);
     }
 }
 
 void WebViewImpl::windowDidResignKey(NSWindow *formerKeyWindow)
 {
-    updateHDRState();
     if (formerKeyWindow == [m_view window] || formerKeyWindow == [m_view window].attachedSheet) {
 #if ENABLE(GAMEPAD)
         UIGamepadProvider::singleton().viewBecameInactive(m_page.get());
 #endif
         updateSecureInputState();
         m_page->activityStateDidChange(WebCore::ActivityState::WindowIsActive);
+        updateHDRState(HDRConstrainingReasonAction::Add, HDRConstrainingReason::WindowIsNotActive);
     }
 }
 
@@ -2185,21 +2185,27 @@ void WebViewImpl::screenDidChangeColorSpace()
     m_page->configuration().protectedProcessPool()->screenPropertiesChanged();
 }
 
-void WebViewImpl::updateHDRState()
+void WebViewImpl::updateHDRState(HDRConstrainingReasonAction action, HDRConstrainingReason reason)
 {
-    setDynamicRangeLimit(m_rootLayer.get(), (m_hdrAllowed && m_page->isViewWindowActive()) ? PlatformDynamicRangeLimit::noLimit() : PlatformDynamicRangeLimit::standard(), true);
+    auto wasEmpty = m_hdrConstrainingReason.isEmpty();
+
+    if (action == HDRConstrainingReasonAction::Add)
+        m_hdrConstrainingReason.add(reason);
+    else
+        m_hdrConstrainingReason.remove(reason);
+
+    if (m_hdrConstrainingReason.isEmpty() != wasEmpty)
+        setDynamicRangeLimit(m_rootLayer.get(), m_hdrConstrainingReason.isEmpty() ? PlatformDynamicRangeLimit::noLimit() : PlatformDynamicRangeLimit::defaultWhenSuppressingHDR(), true);
 }
 
 void WebViewImpl::applicationShouldSuppressHDR()
 {
-    m_hdrAllowed = false;
-    updateHDRState();
+    updateHDRState(HDRConstrainingReasonAction::Add, HDRConstrainingReason::ShouldSuppressHDR);
 }
 
 void WebViewImpl::applicationShouldAllowHDR()
 {
-    m_hdrAllowed = true;
-    updateHDRState();
+    updateHDRState(HDRConstrainingReasonAction::Remove, HDRConstrainingReason::ShouldSuppressHDR);
 }
 
 bool WebViewImpl::mightBeginDragWhileInactive()

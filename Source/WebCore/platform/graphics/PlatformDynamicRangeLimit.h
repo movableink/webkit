@@ -46,6 +46,9 @@ public:
     static constexpr PlatformDynamicRangeLimit constrainedHigh() { return PlatformDynamicRangeLimit(constrainedHighValue); }
     static constexpr PlatformDynamicRangeLimit noLimit() { return PlatformDynamicRangeLimit(noLimitValue); }
 
+    static constexpr PlatformDynamicRangeLimit defaultWhenSuppressingHDR() { return standard(); }
+    static constexpr PlatformDynamicRangeLimit defaultWhenSuppressingHDRInVideos() { return constrainedHigh(); }
+
     // `dynamic-range-limit` mapped to PlatformDynamicRangeLimit.value():
     // ["standard", "constrainedHigh"] -> [standard().value(), constrainedHigh().value()],
     // ["constrainedHigh", "noLimit"] -> [constrainedHigh().value(), noLimit().value()]

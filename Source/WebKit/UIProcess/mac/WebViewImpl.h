@@ -329,7 +329,13 @@ public:
     bool windowResizeMouseLocationIsInVisibleScrollerThumb(CGPoint);
     void applicationShouldSuppressHDR();
     void applicationShouldAllowHDR();
-    void updateHDRState();
+
+    enum class HDRConstrainingReasonAction : bool { Remove, Add };
+    enum class HDRConstrainingReason : uint8_t {
+        WindowIsNotActive = 1 << 0,
+        ShouldSuppressHDR = 1 << 1,
+    };
+    void updateHDRState(HDRConstrainingReasonAction, HDRConstrainingReason);
 
     void accessibilitySettingsDidChange();
 
@@ -1070,9 +1076,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #if HAVE(INLINE_PREDICTIONS)
     bool m_inlinePredictionsEnabled { false };
 #endif
-    bool m_hdrAllowed { true };
+    OptionSet<HDRConstrainingReason> m_hdrConstrainingReason;
 };
-    
+
 } // namespace WebKit
 
 #endif // PLATFORM(MAC)
