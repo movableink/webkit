@@ -73,7 +73,6 @@ platform/graphics/avfoundation/objc/WebCoreAVFResourceLoader.mm
 platform/graphics/ca/TileController.h
 platform/graphics/controls/PlatformControl.h
 platform/graphics/cv/GraphicsContextGLCVCocoa.h
-platform/graphics/mac/controls/ControlMac.h
 platform/mediarecorder/MediaRecorderPrivate.h
 platform/mediastream/AudioMediaStreamTrackRenderer.h
 platform/mediastream/MediaStreamPrivate.h

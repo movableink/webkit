@@ -584,7 +584,6 @@ platform/graphics/displaylists/DisplayListItems.cpp
 platform/graphics/displaylists/DisplayListRecorder.cpp
 platform/graphics/displaylists/DisplayListRecorderImpl.cpp
 platform/graphics/filters/FilterOperations.cpp
-platform/graphics/mac/controls/ImageControlsButtonMac.mm
 platform/graphics/mac/controls/MeterMac.mm
 platform/graphics/mac/controls/ProgressBarMac.mm
 platform/graphics/mac/controls/SliderTrackMac.mm

@@ -1048,7 +1048,6 @@ platform/graphics/displaylists/DisplayListItem.cpp
 platform/graphics/filters/FEDisplacementMap.cpp
 platform/graphics/filters/software/FELightingSoftwareApplier.cpp
 platform/graphics/mac/PDFDocumentImageMac.mm
-platform/graphics/mac/controls/ControlMac.mm
 platform/graphics/opentype/OpenTypeMathData.cpp
 platform/graphics/transforms/TransformOperations.cpp
 platform/libwebrtc/LibWebRTCVPXVideoEncoder.cpp
