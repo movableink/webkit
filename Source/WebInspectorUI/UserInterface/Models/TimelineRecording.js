@@ -71,7 +71,8 @@ WI.TimelineRecording = class TimelineRecording extends WI.Object
 
     static async import(identifier, json, displayName)
     {
-        const target = WI.assumingMainTarget();
+        // FIXME: <https://webkit.org/b/287738> support exporting and importing data from worker targets
+        let target = WI.assumingMainTarget();
 
         let {startTime, endTime, discontinuities, instrumentTypes, records, markers, memoryPressureEvents, sampleStackTraces, sampleDurations} = json;
         let importedDisplayName = WI.UIString("Imported - %s").format(displayName);
