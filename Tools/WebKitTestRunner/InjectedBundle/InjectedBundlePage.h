@@ -108,15 +108,9 @@ private:
     // UI Client
     static void willAddMessageToConsole(WKBundlePageRef, WKStringRef message, uint32_t lineNumber, const void* clientInfo);
     static void willSetStatusbarText(WKBundlePageRef, WKStringRef statusbarText, const void* clientInfo);
-    static void willRunJavaScriptAlert(WKBundlePageRef, WKStringRef message, WKBundleFrameRef frame, const void* clientInfo);
-    static void willRunJavaScriptConfirm(WKBundlePageRef, WKStringRef message, WKBundleFrameRef frame, const void* clientInfo);
-    static void willRunJavaScriptPrompt(WKBundlePageRef, WKStringRef message, WKStringRef defaultValue, WKBundleFrameRef frame, const void* clientInfo);
     static uint64_t didExceedDatabaseQuota(WKBundlePageRef, WKSecurityOriginRef, WKStringRef databaseName, WKStringRef databaseDisplayName, uint64_t currentQuotaBytes, uint64_t currentOriginUsageBytes, uint64_t currentDatabaseUsageBytes, uint64_t expectedUsageBytes, const void* clientInfo);
     void willAddMessageToConsole(WKStringRef message);
     void willSetStatusbarText(WKStringRef statusbarText);
-    void willRunJavaScriptAlert(WKStringRef message, WKBundleFrameRef);
-    void willRunJavaScriptConfirm(WKStringRef message, WKBundleFrameRef);
-    void willRunJavaScriptPrompt(WKStringRef message, WKStringRef defaultValue, WKBundleFrameRef);
     uint64_t didExceedDatabaseQuota(WKSecurityOriginRef, WKStringRef databaseName, WKStringRef databaseDisplayName, uint64_t currentQuotaBytes, uint64_t currentOriginUsageBytes, uint64_t currentDatabaseUsageBytes, uint64_t expectedUsageBytes);
 
     // Editor client

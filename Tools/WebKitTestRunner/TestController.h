@@ -393,7 +393,9 @@ public:
     uint64_t serverTrustEvaluationCallbackCallsCount() const { return m_serverTrustEvaluationCallbackCallsCount; }
 
     void setShouldDismissJavaScriptAlertsAsynchronously(bool);
-    void handleJavaScriptAlert(WKPageRunJavaScriptAlertResultListenerRef);
+    void handleJavaScriptAlert(WKStringRef, WKPageRunJavaScriptAlertResultListenerRef);
+    void handleJavaScriptConfirm(WKStringRef, WKPageRunJavaScriptConfirmResultListenerRef);
+    void handleJavaScriptPrompt(WKStringRef, WKStringRef, WKPageRunJavaScriptPromptResultListenerRef);
     void abortModal();
 
     bool isDoingMediaCapture() const;

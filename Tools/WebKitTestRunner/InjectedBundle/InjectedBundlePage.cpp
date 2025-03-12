@@ -52,8 +52,6 @@
 #include <wtf/RunLoop.h>
 #include <wtf/URL.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/MakeString.h>
-#include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
 
 #if USE(CF)
@@ -284,9 +282,9 @@ InjectedBundlePage::InjectedBundlePage(WKBundlePageRef page)
         { 2, this },
         willAddMessageToConsole,
         willSetStatusbarText,
-        willRunJavaScriptAlert,
-        willRunJavaScriptConfirm,
-        willRunJavaScriptPrompt,
+        0, /*willRunJavaScriptAlert*/
+        0, /*willRunJavaScriptConfirm*/
+        0, /*willRunJavaScriptPrompt*/
         0, /*mouseDidMoveOverElement*/
         0, /*pageDidScroll*/
         0, /*paintCustomOverhangArea*/
@@ -1116,41 +1114,9 @@ void InjectedBundlePage::willSetStatusbarText(WKBundlePageRef page, WKStringRef 
     static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->willSetStatusbarText(statusbarText);
 }
 
-void InjectedBundlePage::willRunJavaScriptAlert(WKBundlePageRef page, WKStringRef message, WKBundleFrameRef frame, const void *clientInfo)
-{
-    static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->willRunJavaScriptAlert(message, frame);
-}
-
-void InjectedBundlePage::willRunJavaScriptConfirm(WKBundlePageRef page, WKStringRef message, WKBundleFrameRef frame, const void *clientInfo)
-{
-    return static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->willRunJavaScriptConfirm(message, frame);
-}
-
-void InjectedBundlePage::willRunJavaScriptPrompt(WKBundlePageRef page, WKStringRef message, WKStringRef defaultValue, WKBundleFrameRef frame, const void *clientInfo)
-{
-    static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->willRunJavaScriptPrompt(message, defaultValue, frame);
-}
-
 uint64_t InjectedBundlePage::didExceedDatabaseQuota(WKBundlePageRef page, WKSecurityOriginRef origin, WKStringRef databaseName, WKStringRef databaseDisplayName, uint64_t currentQuotaBytes, uint64_t currentOriginUsageBytes, uint64_t currentDatabaseUsageBytes, uint64_t expectedUsageBytes, const void* clientInfo)
 {
     return static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->didExceedDatabaseQuota(origin, databaseName, databaseDisplayName, currentQuotaBytes, currentOriginUsageBytes, currentDatabaseUsageBytes, expectedUsageBytes);
-}
-
-static WTF::String stripTrailingSpacesAddNewline(const WTF::String& string)
-{
-    StringBuilder builder;
-    for (auto line : StringView(string).splitAllowingEmptyEntries('\n')) {
-        while (line.endsWith(' '))
-            line = line.left(line.length() - 1);
-        builder.append(line, '\n');
-    }
-    return builder.toString();
-}
-
-static WTF::String addLeadingSpaceStripTrailingSpacesAddNewline(const WTF::String& string)
-{
-    auto result = stripTrailingSpacesAddNewline(string);
-    return (result.isEmpty() || result.startsWith('\n')) ? result : makeString(' ', result);
 }
 
 static StringView lastFileURLPathComponent(StringView path)
@@ -1206,29 +1172,6 @@ void InjectedBundlePage::willSetStatusbarText(WKStringRef statusbarText)
         return;
 
     injectedBundle.outputText(makeString("UI DELEGATE STATUS CALLBACK: setStatusText:"_s, statusbarText, '\n'));
-}
-
-void InjectedBundlePage::willRunJavaScriptAlert(WKStringRef message, WKBundleFrameRef)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    if (!injectedBundle.isTestRunning())
-        return;
-
-    injectedBundle.outputText(makeString("ALERT:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(toWTFString(message))));
-}
-
-void InjectedBundlePage::willRunJavaScriptConfirm(WKStringRef message, WKBundleFrameRef)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    if (!injectedBundle.isTestRunning())
-        return;
-
-    injectedBundle.outputText(makeString("CONFIRM:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(toWTFString(message))));
-}
-
-void InjectedBundlePage::willRunJavaScriptPrompt(WKStringRef message, WKStringRef defaultValue, WKBundleFrameRef)
-{
-    InjectedBundle::singleton().outputText(makeString("PROMPT: "_s, message, ", default text:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(toWTFString(defaultValue))));
 }
 
 uint64_t InjectedBundlePage::didExceedDatabaseQuota(WKSecurityOriginRef origin, WKStringRef databaseName, WKStringRef databaseDisplayName, uint64_t currentQuotaBytes, uint64_t currentOriginUsageBytes, uint64_t currentDatabaseUsageBytes, uint64_t expectedUsageBytes)

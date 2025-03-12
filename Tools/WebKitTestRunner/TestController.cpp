@@ -320,7 +320,17 @@ static void decidePolicyForUserMediaPermissionRequest(WKPageRef, WKFrameRef fram
 
 static void runJavaScriptAlert(WKPageRef page, WKStringRef alertText, WKFrameRef frame, WKSecurityOriginRef securityOrigin, WKPageRunJavaScriptAlertResultListenerRef listener, const void *clientInfo)
 {
-    TestController::singleton().handleJavaScriptAlert(listener);
+    TestController::singleton().handleJavaScriptAlert(alertText, listener);
+}
+
+static void runJavaScriptPrompt(WKPageRef page, WKStringRef message, WKStringRef defaultValue, WKFrameRef frame, WKSecurityOriginRef securityOrigin, WKPageRunJavaScriptPromptResultListenerRef listener, const void *clientInfo)
+{
+    TestController::singleton().handleJavaScriptPrompt(message, defaultValue, listener);
+}
+
+static void runJavaScriptConfirm(WKPageRef page, WKStringRef message, WKFrameRef frame, WKSecurityOriginRef securityOrigin, WKPageRunJavaScriptConfirmResultListenerRef listener, const void *clientInfo)
+{
+    TestController::singleton().handleJavaScriptConfirm(message, listener);
 }
 
 static void checkUserMediaPermissionForOrigin(WKPageRef, WKFrameRef frame, WKSecurityOriginRef userMediaDocumentOrigin, WKSecurityOriginRef topLevelDocumentOrigin, WKUserMediaPermissionCheckRef checkRequest, const void*)
@@ -606,14 +616,14 @@ PlatformWebView* TestController::createOtherPlatformWebView(PlatformWebView* par
         nullptr, // isPlayingAudioDidChange
         decidePolicyForUserMediaPermissionRequest,
         nullptr, // didClickAutofillButton
-        nullptr, // runJavaScriptAlert
-        nullptr, // runJavaScriptConfirm
-        nullptr, // runJavaScriptPrompt
+        nullptr, // runJavaScriptAlert_deprecatedForUseWithV5
+        nullptr, // runJavaScriptConfirm_deprecatedForUseWithV5
+        nullptr, // runJavaScriptPrompt_deprecatedForUseWithV5
         nullptr, // unused5
         createOtherPage,
         runJavaScriptAlert,
-        nullptr, // runJavaScriptConfirm
-        nullptr, // runJavaScriptPrompt
+        runJavaScriptConfirm,
+        runJavaScriptPrompt,
         checkUserMediaPermissionForOrigin,
         nullptr, // runBeforeUnloadConfirmPanel
         nullptr, // fullscreenMayReturnToInline
@@ -1067,14 +1077,14 @@ void TestController::createWebViewWithOptions(const TestOptions& options)
         0, // isPlayingAudioDidChange
         decidePolicyForUserMediaPermissionRequest,
         0, // didClickAutofillButton
-        0, // runJavaScriptAlert
-        0, // runJavaScriptConfirm
-        0, // runJavaScriptPrompt
+        0, // runJavaScriptAlert_deprecatedForUseWithV5
+        0, // runJavaScriptConfirm_deprecatedForUseWithV5
+        0, // runJavaScriptPrompt_deprecatedForUseWithV5
         0, // unused5
         createOtherPage,
         runJavaScriptAlert,
-        0, // runJavaScriptConfirm
-        0, // runJavaScriptPrompt
+        runJavaScriptConfirm,
+        runJavaScriptPrompt,
         checkUserMediaPermissionForOrigin,
         0, // runBeforeUnloadConfirmPanel
         0, // fullscreenMayReturnToInline
@@ -3108,8 +3118,10 @@ void TestController::setShouldDismissJavaScriptAlertsAsynchronously(bool value)
     m_shouldDismissJavaScriptAlertsAsynchronously = value;
 }
 
-void TestController::handleJavaScriptAlert(WKPageRunJavaScriptAlertResultListenerRef listener)
+void TestController::handleJavaScriptAlert(WKStringRef alertText, WKPageRunJavaScriptAlertResultListenerRef listener)
 {
+    protectedCurrentInvocation()->outputText(makeString("ALERT:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(toWTFString(alertText))));
+
     if (!m_shouldDismissJavaScriptAlertsAsynchronously) {
         WKPageRunJavaScriptAlertResultListenerCall(listener);
         return;
@@ -3120,6 +3132,20 @@ void TestController::handleJavaScriptAlert(WKPageRunJavaScriptAlertResultListene
         WKPageRunJavaScriptAlertResultListenerCall(listener);
         WKRelease(listener);
     });
+}
+
+void TestController::handleJavaScriptPrompt(WKStringRef message, WKStringRef defaultValue, WKPageRunJavaScriptPromptResultListenerRef listener)
+{
+    protectedCurrentInvocation()->outputText(makeString("PROMPT: "_s, toWTFString(message), ", default text:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(toWTFString(defaultValue))));
+
+    WKPageRunJavaScriptPromptResultListenerCall(listener, defaultValue);
+}
+
+void TestController::handleJavaScriptConfirm(WKStringRef message, WKPageRunJavaScriptConfirmResultListenerRef listener)
+{
+    protectedCurrentInvocation()->outputText(makeString("CONFIRM:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(toWTFString(message))));
+
+    WKPageRunJavaScriptConfirmResultListenerCall(listener, true);
 }
 
 class OriginSettings : public RefCounted<OriginSettings> {
