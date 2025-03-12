@@ -44,3 +44,8 @@ struct FindContext {
 struct ScrollPositionContext {
     var position: Binding<ScrollPosition>?
 }
+
+struct ScrollInputBehaviorContext {
+    let behavior: ScrollInputBehavior
+    let input: ScrollInputKind
+}

@@ -86,7 +86,7 @@ struct WebViewRepresentable {
         }
 
         webView.configuration.preferences.isTextInteractionEnabled = environment.webViewTextSelection
-        webView.configuration.preferences.isElementFullscreenEnabled = environment.webViewAllowsElementFullscreen
+        webView.configuration.preferences.isElementFullscreenEnabled = environment.webViewElementFullscreenBehavior.value == .enabled // automatic -> false
 
         platformView.onScrollGeometryChange = environment.webViewOnScrollGeometryChange
 

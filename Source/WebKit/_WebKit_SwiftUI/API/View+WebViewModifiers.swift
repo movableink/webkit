@@ -30,12 +30,15 @@ extension View {
     @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
     @available(watchOS, unavailable)
     @available(tvOS, unavailable)
-    public func webViewBackForwardNavigationGestures(_ value: WebView.BackForwardNavigationGesturesBehavior = .automatic) -> some View {
+    public nonisolated func webViewBackForwardNavigationGestures(_ value: WebView.BackForwardNavigationGesturesBehavior) -> some View {
         environment(\.webViewAllowsBackForwardNavigationGestures, value)
     }
 
-    @_spi(Private)
-    public func webViewMagnificationGestures(_ value: WebView.MagnificationGesturesBehavior) -> some View {
+    /// Determines whether magnify gestures change the view’s magnification.
+    @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
+    @available(watchOS, unavailable)
+    @available(tvOS, unavailable)
+    public nonisolated func webViewMagnificationGestures(_ value: WebView.MagnificationGesturesBehavior) -> some View {
         environment(\.webViewMagnificationGestures, value)
     }
 
@@ -43,37 +46,40 @@ extension View {
     @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
     @available(watchOS, unavailable)
     @available(tvOS, unavailable)
-    public func webViewLinkPreviews(_ value: WebView.LinkPreviewBehavior = .automatic) -> some View {
+    public nonisolated func webViewLinkPreviews(_ value: WebView.LinkPreviewBehavior) -> some View {
         environment(\.webViewAllowsLinkPreview, value)
     }
 
     @_spi(Private)
-    public func webViewTextSelection<S>(_ selectability: S) -> some View where S : TextSelectability {
+    public nonisolated func webViewTextSelection<S>(_ selectability: S) -> some View where S : TextSelectability {
         environment(\.webViewTextSelection, S.allowsSelection)
     }
 
-    @_spi(Private)
-    public func webViewAllowsElementFullscreen(_ value: Bool = true) -> some View {
-        environment(\.webViewAllowsElementFullscreen, value)
+    /// Determines whether a web view can display content full screen.
+    @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
+    @available(watchOS, unavailable)
+    @available(tvOS, unavailable)
+    public nonisolated func webViewElementFullscreenBehavior(_ value: WebView.ElementFullscreenBehavior) -> some View {
+        environment(\.webViewElementFullscreenBehavior, value)
     }
 
     @_spi(Private)
-    public func webViewFindNavigator(isPresented: Binding<Bool>) -> some View {
+    public nonisolated func webViewFindNavigator(isPresented: Binding<Bool>) -> some View {
         environment(\.webViewFindContext, .init(isPresented: isPresented))
     }
 
     @_spi(Private)
-    public func webViewFindDisabled(_ isDisabled: Bool = true) -> some View {
+    public nonisolated func webViewFindDisabled(_ isDisabled: Bool = true) -> some View {
         transformEnvironment(\.webViewFindContext) { $0.canFind = !isDisabled }
     }
 
     @_spi(Private)
-    public func webViewReplaceDisabled(_ isDisabled: Bool = true) -> some View {
+    public nonisolated func webViewReplaceDisabled(_ isDisabled: Bool = true) -> some View {
         transformEnvironment(\.webViewFindContext) { $0.canReplace = !isDisabled }
     }
 
     @_spi(Private)
-    public func webViewContextMenu<M>(@ViewBuilder menuItems: @escaping (WebPage.ElementInfo) -> M) -> some View where M: View {
+    public nonisolated func webViewContextMenu<M>(@ViewBuilder menuItems: @escaping (WebPage.ElementInfo) -> M) -> some View where M: View {
 #if os(macOS)
         let converted = { (info: WebPage.ElementInfo) in
             let menuView = menuItems(info)
@@ -87,12 +93,22 @@ extension View {
     }
 
     @_spi(Private)
-    public func webViewContentBackground(_ visibility: Visibility) -> some View {
+    public nonisolated func webViewContentBackground(_ visibility: Visibility) -> some View {
         environment(\.webViewContentBackground, visibility)
     }
 
-    @_spi(Private)
-    public func webViewOnScrollGeometryChange<T>(
+    /// Adds an action to be performed when a value, created from a scroll geometry, changes.
+    ///
+    /// - Parameters:
+    ///   - type: The type of value transformed from a ``ScrollGeometry``.
+    ///   - transform: A closure that transforms a ``ScrollGeometry`` to your type.
+    ///   - action: A closure to run when the transformed data changes.
+    ///
+    /// - Note: The content size of web content may exceed the current size of the view's frame, however it will never be smaller than it.
+    @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
+    @available(watchOS, unavailable)
+    @available(tvOS, unavailable)
+    public nonisolated func webViewOnScrollGeometryChange<T>(
         for type: T.Type,
         of transform: @escaping (ScrollGeometry) -> T,
         action: @escaping (T, T) -> Void
@@ -106,8 +122,25 @@ extension View {
         return environment(\.webViewOnScrollGeometryChange, change)
     }
 
-    @_spi(Private)
-    public func webViewScrollPosition(_ position: Binding<ScrollPosition>) -> some View {
+    /// Associates a binding to a scroll position with the web view.
+    ///
+    /// - Note: ``WebView`` does not support scrolling to a view with an identity. It only supports scrolling to a concrete offset, or to an edge.
+    @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
+    @available(watchOS, unavailable)
+    @available(tvOS, unavailable)
+    public nonisolated func webViewScrollPosition(_ position: Binding<ScrollPosition>) -> some View {
         environment(\.webViewScrollPositionContext, .init(position: position))
+    }
+
+    /// Enables or disables scrolling in web views when using particular inputs.
+    ///
+    /// - Parameters:
+    ///   - behavior: Whether scrolling should be enabled or disabled for this input.
+    ///   - input: The input for which to enable or disable scrolling.
+    @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
+    @available(watchOS, unavailable)
+    @available(tvOS, unavailable)
+    public nonisolated func webViewScrollInputBehavior(_ behavior: ScrollInputBehavior, for input: ScrollInputKind) -> some View {
+        environment(\.webViewScrollInputBehaviorContext, .init(behavior: behavior, input: input))
     }
 }

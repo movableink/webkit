@@ -39,7 +39,7 @@ extension EnvironmentValues {
     var webViewTextSelection = true
 
     @Entry
-    var webViewAllowsElementFullscreen = false
+    var webViewElementFullscreenBehavior = WebView.ElementFullscreenBehavior.automatic
 
     @Entry
     var webViewFindContext: FindContext = .init()
@@ -55,4 +55,7 @@ extension EnvironmentValues {
 
     @Entry
     var webViewScrollPositionContext = ScrollPositionContext()
+
+    @Entry
+    var webViewScrollInputBehaviorContext: ScrollInputBehaviorContext? = nil
 }
