@@ -92,7 +92,7 @@ void RemotePageProxy::injectPageIntoNewProcess()
 
     m_drawingArea = RemotePageDrawingAreaProxy::create(*drawingArea, m_process);
 #if ENABLE(FULLSCREEN_API)
-    m_fullscreenManager = RemotePageFullscreenManagerProxy::create(pageID(), page->fullScreenManager(), m_process);
+    m_fullscreenManager = RemotePageFullscreenManagerProxy::create(pageID(), page->protectedFullScreenManager().get(), m_process);
 #endif
     m_visitedLinkStoreRegistration = makeUnique<RemotePageVisitedLinkStoreRegistration>(*page, m_process);
 

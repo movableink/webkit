@@ -9505,6 +9505,11 @@ WebFullScreenManagerProxy* WebPageProxy::fullScreenManager()
     return m_fullScreenManager.get();
 }
 
+RefPtr<WebFullScreenManagerProxy> WebPageProxy::protectedFullScreenManager()
+{
+    return fullScreenManager();
+}
+
 void WebPageProxy::setFullscreenClient(std::unique_ptr<API::FullscreenClient>&& client)
 {
     if (!client) {
