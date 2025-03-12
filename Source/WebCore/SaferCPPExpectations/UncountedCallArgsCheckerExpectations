@@ -114,8 +114,6 @@ Modules/mediastream/ImageCapture.cpp
 Modules/mediastream/MediaDevices.cpp
 Modules/mediastream/MediaStream.cpp
 Modules/mediastream/MediaStream.h
-Modules/mediastream/MediaStreamTrack.cpp
-Modules/mediastream/MediaStreamTrack.h
 Modules/mediastream/MediaStreamTrackProcessor.cpp
 Modules/mediastream/NavigatorMediaDevices.cpp
 Modules/mediastream/PeerConnectionBackend.cpp

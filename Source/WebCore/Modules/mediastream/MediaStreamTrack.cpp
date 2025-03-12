@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2011, 2015 Ericsson AB. All rights reserved.
- * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  *
  * Redistribution and use in source and binary forms, with or without
@@ -217,7 +217,7 @@ RefPtr<MediaStreamTrack> MediaStreamTrack::clone()
 
     ALWAYS_LOG(LOGIDENTIFIER);
 
-    auto clone = MediaStreamTrack::create(*scriptExecutionContext(), m_private->clone(), RegisterCaptureTrackToOwner::No);
+    auto clone = MediaStreamTrack::create(*protectedScriptExecutionContext(), m_private->clone(), RegisterCaptureTrackToOwner::No);
 
     clone->m_readyState = m_readyState;
     if (clone->ended() && clone->m_readyState == State::Live)
@@ -482,7 +482,7 @@ void MediaStreamTrack::trackEnded(MediaStreamTrackPrivate&)
     ALWAYS_LOG(LOGIDENTIFIER);
 
     if (m_isCaptureTrack && m_private->captureDidFail() && m_readyState != State::Ended)
-        scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, "A MediaStreamTrack ended due to a capture failure"_s);
+        protectedScriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, "A MediaStreamTrack ended due to a capture failure"_s);
 
     // http://w3c.github.io/mediacapture-main/#life-cycle
     // When a MediaStreamTrack track ends for any reason other than the stop() method being invoked, the User Agent must
@@ -517,7 +517,7 @@ void MediaStreamTrack::trackMutedChanged(MediaStreamTrackPrivate&)
     if (scriptExecutionContext()->activeDOMObjectsAreStopped() || m_ended)
         return;
 
-    Function<void()> updateMuted = [this, muted = m_private->muted()] {
+    Function<void()> updateMuted = [this, protectedThis = Ref { *this }, muted = m_private->muted()] {
         RefPtr context = scriptExecutionContext();
         if (!context || context->activeDOMObjectsAreStopped())
             return;
@@ -532,6 +532,7 @@ void MediaStreamTrack::trackMutedChanged(MediaStreamTrackPrivate&)
 
         dispatchEvent(Event::create(muted ? eventNames().muteEvent : eventNames().unmuteEvent, Event::CanBubble::No, Event::IsCancelable::No));
     };
+
     if (m_shouldFireMuteEventImmediately)
         updateMuted();
     else {
