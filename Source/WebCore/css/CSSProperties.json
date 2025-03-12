@@ -1114,8 +1114,8 @@
                 "jis04",
                 "simplified",
                 "traditional",
-                "diagonal-fractions",
-                "stacked-fractions",
+                "full-width",
+                "proportional-width",
                 "ruby"
             ],
             "codegen-properties": {
@@ -12456,8 +12456,8 @@
                     "jis04",
                     "simplified",
                     "traditional",
-                    "diagonal-fractions",
-                    "stacked-fractions",
+                    "full-width",
+                    "proportional-width",
                     "ruby"
                 ],
                 "codegen-properties": {

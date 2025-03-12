@@ -2427,10 +2427,10 @@ class Grammar:
         mark = "'"
         keywords_only_in_grammar = keywords_supported_by_grammar - keywords_listed_as_values
         if keywords_only_in_grammar:
-            print(f"WARNING: '{self.name}' Found some keywords in parser grammar not list in 'values' array: ({ ', '.join(quote_iterable((keyword for keyword in keywords_only_in_grammar), mark=mark)) })")
+            raise Exception(f"ERROR: '{self.name}' Found some keywords in parser grammar not list in 'values' array: ({ ', '.join(quote_iterable((keyword for keyword in keywords_only_in_grammar), mark=mark)) })")
         keywords_only_in_values = keywords_listed_as_values - keywords_supported_by_grammar
         if keywords_only_in_values:
-            print(f"WARNING: '{self.name}' Found some keywords in 'values' array not supported by the parser grammar: ({ ', '.join(quote_iterable((keyword for keyword in keywords_only_in_values), mark=mark)) })")
+            raise Exception(f"ERROR: '{self.name}' Found some keywords in 'values' array not supported by the parser grammar: ({ ', '.join(quote_iterable((keyword for keyword in keywords_only_in_values), mark=mark)) })")
 
     @property
     def has_fast_path_keyword_terms(self):
