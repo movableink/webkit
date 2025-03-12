@@ -870,6 +870,8 @@ LayoutRect AccessibilityRenderObject::boundingBoxRect() const
     if (isWebArea())
         result.setSize(renderer->view().frameView().contentsSize());
 
+    if (result.isEmpty())
+        return nonEmptyAncestorBoundingBox();
     return result;
 }
 

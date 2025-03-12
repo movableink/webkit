@@ -259,6 +259,11 @@ LayoutRect AccessibilityNodeObject::boundingBoxRect() const
     // Instead, let's return a box at the position of an ancestor that does have a position, make it
     // the width of that ancestor, and about the height of a line of text, so it's clear this object is
     // a descendant of that ancestor.
+    return nonEmptyAncestorBoundingBox();
+}
+
+LayoutRect AccessibilityNodeObject::nonEmptyAncestorBoundingBox() const
+{
     for (RefPtr<AccessibilityObject> ancestor = parentObject(); ancestor; ancestor = ancestor->parentObject()) {
         if (!ancestor->renderer())
             continue;
@@ -271,7 +276,8 @@ LayoutRect AccessibilityNodeObject::boundingBoxRect() const
             LayoutSize(ancestorRect.width(), LayoutUnit(std::min(10.0f, ancestorRect.height().toFloat())))
         };
     }
-    return { };
+    // Fallback to returning a default, non-empty rect at 0, 0.
+    return { 0, 0, 1, 1 };
 }
 
 Document* AccessibilityNodeObject::document() const

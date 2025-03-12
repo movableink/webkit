@@ -195,6 +195,7 @@ protected:
     Vector<Ref<Element>> ariaLabeledByElements() const;
     String descriptionForElements(const Vector<Ref<Element>>&) const;
     LayoutRect boundingBoxRect() const override;
+    LayoutRect nonEmptyAncestorBoundingBox() const;
     String ariaDescribedByAttribute() const final;
 
     AccessibilityObject* captionForFigure() const;
