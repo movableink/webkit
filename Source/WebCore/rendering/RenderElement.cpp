@@ -1723,7 +1723,7 @@ void RenderElement::imageContentChanged(CachedImage& cachedImage)
     UNUSED_PARAM(cachedImage);
 #endif
 
-    if (auto layer = layerParent())
+    if (auto layer = enclosingLayer())
         layer->contentChanged(ContentChangeType::Image);
 }
 
