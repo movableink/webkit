@@ -51,6 +51,10 @@
 #include <WebCore/RemoteUserInputEventData.h>
 #include <wtf/TZoneMallocInlines.h>
 
+#if ENABLE(FULLSCREEN_API)
+#include "WebFullScreenManagerProxy.h"
+#endif
+
 namespace WebKit {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RemotePageProxy);
