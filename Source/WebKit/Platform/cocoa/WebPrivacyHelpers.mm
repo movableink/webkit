@@ -428,7 +428,7 @@ void ResourceMonitorURLsController::prepare(CompletionHandler<void(WKContentRule
 
     [[PAL::getWPResourcesClass() sharedInstance] prepareResouceMonitorRulesForStore:store completionHandler:^(WKContentRuleList *list, bool updated, NSError *error) {
         if (error)
-            RELEASE_LOG_ERROR(ResourceLoadStatistics, "Failed to request resource monitor urls from WebPrivacy");
+            RELEASE_LOG_ERROR(ResourceMonitoring, "Failed to request resource monitor urls from WebPrivacy: %@", error);
 
         for (auto& completionHandler : std::exchange(lookupCompletionHandlers.get(), { }))
             completionHandler(list, updated);

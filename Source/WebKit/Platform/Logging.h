@@ -149,6 +149,7 @@ extern "C" {
     M(RemoteLayerTree) \
     M(Resize) \
     M(ResourceLoadStatistics) \
+    M(ResourceMonitoring) \
     M(Sandbox) \
     M(ScreenTime) \
     M(ScrollAnimations) \

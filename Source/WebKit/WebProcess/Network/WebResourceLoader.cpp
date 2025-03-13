@@ -390,8 +390,13 @@ void WebResourceLoader::updateBytesTransferredOverNetwork(uint64_t bytesTransfer
 
     if (delta) {
         RefPtr coreLoader = m_coreLoader;
-        if (RefPtr resourceMonitor = coreLoader ? coreLoader->resourceMonitorIfExists() : nullptr)
+        if (RefPtr resourceMonitor = coreLoader ? coreLoader->resourceMonitorIfExists() : nullptr) {
+            auto oldLevel = resourceMonitor->networkUsageLevel();
             resourceMonitor->addNetworkUsage(delta);
+            auto newLevel = resourceMonitor->networkUsageLevel();
+            if (oldLevel != newLevel)
+                RELEASE_LOG(ResourceMonitoring, "(WebProcess) WebResourceLoader::updateBytesTransferredOverNetwork level=%d%% of %zu bytes", static_cast<int>(newLevel), resourceMonitor->networkUsageThreshold());
+        }
     }
 #endif
 

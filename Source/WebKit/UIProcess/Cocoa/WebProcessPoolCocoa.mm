@@ -1409,12 +1409,17 @@ static RefPtr<WebCompiledContentRuleList> createCompiledContentRuleList(WKConten
 
 void WebProcessPool::platformLoadResourceMonitorRuleList(CompletionHandler<void(RefPtr<WebCompiledContentRuleList>)>&& completionHandler)
 {
+    RELEASE_LOG(ResourceMonitoring, "WebProcessPool::platformLoadResourceMonitorRuleList request to load rule list.");
+
     ResourceMonitorURLsController::singleton().prepare([weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)](WKContentRuleList *list, bool updated) mutable {
         RefPtr<WebCompiledContentRuleList> ruleList;
 
         if (RefPtr protectedThis = weakThis.get()) {
-            if (list && (updated || !protectedThis->m_resourceMonitorRuleListCache))
+            if (list && (updated || !protectedThis->m_resourceMonitorRuleListCache)) {
+                RELEASE_LOG(ResourceMonitoring, "WebProcessPool::platformLoadResourceMonitorRuleList rule list is loaded.");
                 ruleList = createCompiledContentRuleList(list);
+            } else
+                RELEASE_LOG_ERROR(ResourceMonitoring, "WebProcessPool::platformLoadResourceMonitorRuleList failed to load rule list.");
         }
         completionHandler(WTFMove(ruleList));
     });

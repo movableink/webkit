@@ -1786,7 +1786,7 @@ void NetworkConnectionToWebProcess::updateSharedPreferencesForWebProcess(SharedP
 #if ENABLE(CONTENT_EXTENSIONS)
 void NetworkConnectionToWebProcess::shouldOffloadIFrameForHost(const String& host, CompletionHandler<void(bool)>&& completionHandler)
 {
-    CONNECTION_RELEASE_LOG(Loading, "shouldOffloadIFrameForHost: (host=%" SENSITIVE_LOG_STRING ")", host.utf8().data());
+    CONNECTION_RELEASE_LOG(ResourceMonitoring, "shouldOffloadIFrameForHost: (host=%" SENSITIVE_LOG_STRING ")", host.utf8().data());
     if (CheckedPtr session = networkSession())
         session->protectedResourceMonitorThrottler()->tryAccess(host, ContinuousApproximateTime::now(), WTFMove(completionHandler));
     else

@@ -154,6 +154,25 @@ void ResourceMonitor::addNetworkUsage(size_t bytes)
         checkNetworkUsageExcessIfNecessary();
 }
 
+ResourceMonitor::UsageLevel ResourceMonitor::networkUsageLevel() const
+{
+    if (m_networkUsage.hasOverflowed() || m_networkUsage > m_networkUsageThreshold)
+        return UsageLevel::Critical;
+
+    if (!m_networkUsage)
+        return UsageLevel::Empty;
+
+    auto percentage = static_cast<unsigned>(100.0 * m_networkUsage.value() / m_networkUsageThreshold);
+
+    if (percentage <= static_cast<unsigned>(UsageLevel::Low))
+        return UsageLevel::Low;
+    if (percentage <= static_cast<unsigned>(UsageLevel::Medium))
+        return UsageLevel::Medium;
+    if (percentage <= static_cast<unsigned>(UsageLevel::High))
+        return UsageLevel::High;
+    return UsageLevel::Critical;
+}
+
 void ResourceMonitor::updateNetworkUsageThreshold(size_t threshold)
 {
     if (m_networkUsageThreshold == threshold)

@@ -2573,9 +2573,11 @@ Ref<WebCookieJar> WebProcess::protectedCookieJar()
 #if ENABLE(CONTENT_EXTENSIONS)
 void WebProcess::setResourceMonitorContentRuleList(WebCompiledContentRuleListData&& ruleListData)
 {
+    WEBPROCESS_RELEASE_LOG(ResourceMonitoring, "setResourceMonitorContentRuleList");
+
     RefPtr compiledContentRuleList = WebCompiledContentRuleList::create(WTFMove(ruleListData));
     if (!compiledContentRuleList) {
-        WEBPROCESS_RELEASE_LOG_ERROR(ResourceLoadStatistics, "setResourceMonitorContentRuleList: Failed to create rule list");
+        WEBPROCESS_RELEASE_LOG_ERROR(ResourceMonitoring, "setResourceMonitorContentRuleList: Failed to create rule list");
         return;
     }
 
@@ -2588,6 +2590,7 @@ void WebProcess::setResourceMonitorContentRuleList(WebCompiledContentRuleListDat
 
 void WebProcess::setResourceMonitorContentRuleListAsync(WebCompiledContentRuleListData&& ruleListData, CompletionHandler<void()>&& completionHandler)
 {
+    WEBPROCESS_RELEASE_LOG(ResourceMonitoring, "setResourceMonitorContentRuleListAsync");
     setResourceMonitorContentRuleList(WTFMove(ruleListData));
     completionHandler();
 }

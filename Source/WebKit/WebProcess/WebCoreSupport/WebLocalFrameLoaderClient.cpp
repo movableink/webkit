@@ -2040,6 +2040,8 @@ void WebLocalFrameLoaderClient::didExceedNetworkUsageThreshold()
     if (url.isEmpty())
         return;
 
+    WebLocalFrameLoaderClient_RELEASE_LOG(ResourceMonitoring, "didExceedNetworkUsageThreshold host=%" SENSITIVE_LOG_STRING, url.host().utf8().data());
+
     auto action = [weakFrame = WeakPtr { m_frame->coreLocalFrame() }](bool wasGranted) {
         RefPtr frame = weakFrame.get();
         if (!frame)
