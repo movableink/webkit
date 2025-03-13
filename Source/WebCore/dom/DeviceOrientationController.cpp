@@ -66,10 +66,10 @@ void DeviceOrientationController::suspendUpdates()
     m_client->stopUpdating();
 }
 
-void DeviceOrientationController::resumeUpdates()
+void DeviceOrientationController::resumeUpdates(const SecurityOriginData& origin)
 {
     if (!m_listeners.isEmpty())
-        m_client->startUpdating();
+        m_client->startUpdating(origin);
 }
 
 #else

@@ -3538,10 +3538,11 @@ void Document::resumeDeviceMotionAndOrientationUpdates()
         return;
     m_areDeviceMotionAndOrientationUpdatesSuspended = false;
 #if ENABLE(DEVICE_ORIENTATION) && PLATFORM(IOS_FAMILY)
+    auto origin = securityOrigin().data();
     if (m_deviceMotionController)
-        m_deviceMotionController->resumeUpdates();
+        m_deviceMotionController->resumeUpdates(origin);
     if (m_deviceOrientationController)
-        m_deviceOrientationController->resumeUpdates();
+        m_deviceOrientationController->resumeUpdates(origin);
 #endif
 }
 

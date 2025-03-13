@@ -12449,6 +12449,7 @@ void WebPageProxy::requestMediaKeySystemPermissionForFrame(IPC::Connection& conn
 }
 
 #if ENABLE(DEVICE_ORIENTATION)
+
 void WebPageProxy::shouldAllowDeviceOrientationAndMotionAccess(IPC::Connection& connection, FrameIdentifier frameID, FrameInfoData&& frameInfo, bool mayPrompt, CompletionHandler<void(DeviceOrientationOrMotionPermissionState)>&& completionHandler)
 {
     RefPtr frame = WebFrameProxy::webFrame(frameID);
@@ -12457,6 +12458,13 @@ void WebPageProxy::shouldAllowDeviceOrientationAndMotionAccess(IPC::Connection& 
 
     protectedWebsiteDataStore()->protectedDeviceOrientationAndMotionAccessController()->shouldAllowAccess(*this, *frame, WTFMove(frameInfo), mayPrompt, WTFMove(completionHandler));
 }
+
+bool WebPageProxy::originHasDeviceOrientationAndMotionAccess(const WebCore::SecurityOriginData& origin)
+{
+    // FIXME: implement this.
+    return true;
+}
+
 #endif
 
 

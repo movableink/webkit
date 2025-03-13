@@ -51,7 +51,7 @@ public:
     // FIXME: We should look to reconcile the iOS and OpenSource differences with this class
     // so that we can either remove these methods or remove the PLATFORM(IOS_FAMILY)-guard.
     void suspendUpdates();
-    void resumeUpdates();
+    void resumeUpdates(const SecurityOriginData&);
 #else
     bool hasLastData() override;
     RefPtr<Event> getLastEvent() override;

@@ -31,6 +31,7 @@
 
 namespace WebCore {
 class DeviceClient;
+class SecurityOriginData;
 }
 
 namespace WTF {
@@ -45,7 +46,7 @@ class DeviceClient : public CanMakeWeakPtr<DeviceClient> {
 public:
     virtual ~DeviceClient() = default;
 
-    virtual void startUpdating() = 0;
+    virtual void startUpdating(const SecurityOriginData&) = 0;
     virtual void stopUpdating() = 0;
 
     virtual bool isDeviceMotionClient() const { return false; }
