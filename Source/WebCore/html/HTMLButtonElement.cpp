@@ -120,7 +120,7 @@ void HTMLButtonElement::attributeChanged(const QualifiedName& name, const AtomSt
 {
     if (name == typeAttr)
         computeType(newValue);
-    else if ((name == commandAttr || name == commandforAttr) && document().settings().invokerAttributesEnabled())
+    else if ((name == commandAttr || name == commandforAttr) && document().settings().commandAttributesEnabled())
         computeType(attributeWithoutSynchronization(HTMLNames::typeAttr));
     else
         HTMLFormControlElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
@@ -129,7 +129,7 @@ void HTMLButtonElement::attributeChanged(const QualifiedName& name, const AtomSt
 RefPtr<Element> HTMLButtonElement::commandForElement() const
 {
     auto canInvoke = [](const HTMLFormControlElement& element) -> bool {
-        if (!element.document().settings().invokerAttributesEnabled())
+        if (!element.document().settings().commandAttributesEnabled())
             return false;
         return is<HTMLButtonElement>(element);
     };
@@ -395,7 +395,7 @@ void HTMLButtonElement::computeType(const AtomString& typeAttrValue)
         m_type = BUTTON;
     else if (equalLettersIgnoringASCIICase(typeAttrValue, "submit"_s))
         m_type = SUBMIT;
-    else if (document().settings().invokerAttributesEnabled()) {
+    else if (document().settings().commandAttributesEnabled()) {
         if (hasAttributeWithoutSynchronization(HTMLNames::commandAttr) || hasAttributeWithoutSynchronization(HTMLNames::commandforAttr))
             m_type = BUTTON;
         else

@@ -2032,6 +2032,20 @@ ColorFilterEnabled:
     WebCore:
       default: false
 
+CommandAttributesEnabled:
+  type: bool
+  status: preview
+  category: html
+  humanReadableName: "HTML command & commandfor attributes"
+  humanReadableDescription: "Enable HTML command & commandfor attribute support"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 # FIXME: WebKit has an alternate name for this called 'ShowDebugBorders'. We should standardize on one name.
 CompositingBordersVisible:
   type: bool
@@ -3991,20 +4005,6 @@ InvisibleAutoplayNotPermitted:
       default: false
     WebKit:
       "PLATFORM(IOS_FAMILY)": true
-      default: false
-    WebCore:
-      default: false
-
-InvokerAttributesEnabled:
-  type: bool
-  status: testable
-  category: html
-  humanReadableName: "HTML command & commandfor attributes"
-  humanReadableDescription: "Enable HTML command & commandfor attribute support"
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
       default: false
     WebCore:
       default: false
