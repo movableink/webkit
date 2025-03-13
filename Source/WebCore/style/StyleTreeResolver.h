@@ -151,6 +151,8 @@ private:
 
     void generatePositionOptionsIfNeeded(const ResolvedStyle&, const Styleable&, const ResolutionContext&);
     std::unique_ptr<RenderStyle> generatePositionOption(const PositionTryFallback&, const ResolvedStyle&, const Styleable&, const ResolutionContext&);
+    struct PositionOptions;
+    void sortPositionOptionsIfNeeded(PositionOptions&, const Styleable&);
     std::optional<ResolvedStyle> tryChoosePositionOption(const Styleable&, const RenderStyle* existingStyle);
 
     // This returns the style that was in effect (applied to the render tree) before we started the style resolution.
@@ -184,6 +186,7 @@ private:
         std::unique_ptr<RenderStyle> originalStyle;
         Vector<std::unique_ptr<RenderStyle>> optionStyles { };
         size_t index { 0 };
+        bool sorted { false };
         bool chosen { false };
     };
     HashMap<Ref<Element>, PositionOptions> m_positionOptions;

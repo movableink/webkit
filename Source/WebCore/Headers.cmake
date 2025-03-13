@@ -2628,6 +2628,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     rendering/style/OutlineValue.h
     rendering/style/PositionArea.h
     rendering/style/PositionTryFallback.h
+    rendering/style/PositionTryOrder.h
     rendering/style/RenderStyle.h
     rendering/style/RenderStyleConstants.h
     rendering/style/RenderStyleInlines.h

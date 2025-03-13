@@ -48,6 +48,8 @@
 #include "Page.h"
 #include "PlatformStrategies.h"
 #include "PositionTryFallback.h"
+#include "PositionTryOrder.h"
+#include "PositionedLayoutConstraints.h"
 #include "Quirks.h"
 #include "RenderElement.h"
 #include "RenderStyleSetters.h"
@@ -1296,12 +1298,6 @@ std::unique_ptr<Update> TreeResolver::resolve()
             m_needsInterleavedLayout = true;
             saveBeforeResolutionStyleForInterleaving(elementAndState.key);
         }
-
-        Vector<SingleThreadWeakPtr<RenderBoxModelObject>> anchors;
-        for (auto& anchorElement : elementAndState.value->anchorElements.values())
-            anchors.append(dynamicDowncast<RenderBoxModelObject>(anchorElement->renderer()));
-
-        m_document->styleScope().anchorPositionedToAnchorMap().set(elementAndState.key, WTFMove(anchors));
     }
 
     for (auto& elementAndOptions : m_positionOptions) {
@@ -1345,6 +1341,8 @@ void TreeResolver::generatePositionOptionsIfNeeded(const ResolvedStyle& resolved
 
     if (!resolvedStyle.style || resolvedStyle.style->positionTryFallbacks().isEmpty())
         return;
+    if (!resolvedStyle.style->hasOutOfFlowPosition())
+        return;
 
     if (m_positionOptions.contains(styleable.element))
         return;
@@ -1362,6 +1360,7 @@ void TreeResolver::generatePositionOptionsIfNeeded(const ResolvedStyle& resolved
     };
 
     auto options = generatePositionOptions();
+
 
     // If the fallbacks contain anchor references we need to resolve the anchors first and regenerate the options.
     if (hasUnresolvedAnchorPosition(styleable.element))
@@ -1403,6 +1402,46 @@ std::unique_ptr<RenderStyle> TreeResolver::generatePositionOption(const Position
     return resolveAgainInDifferentContext(resolvedStyle, styleable, *resolutionContext.parentStyle, PropertyCascade::normalProperties(), WTFMove(builderFallback), resolutionContext);
 }
 
+void TreeResolver::sortPositionOptionsIfNeeded(PositionOptions& options, const Styleable& styleable)
+{
+    if (options.sorted)
+        return;
+    options.sorted = true;
+
+    auto order = options.originalStyle->positionTryOrder();
+    if (order == PositionTryOrder::Normal)
+        return;
+
+    CheckedPtr box = dynamicDowncast<RenderBox>(styleable.renderer());
+    if (!box || !box->isOutOfFlowPositioned())
+        return;
+
+    auto boxAxis = boxAxisForPositionTryOrder(order, options.originalStyle->writingMode());
+
+    struct SizeValue {
+        LayoutUnit size;
+        size_t index;
+    };
+    Vector<SizeValue> sizes;
+    sizes.reserveInitialCapacity(options.optionStyles.size());
+
+    size_t index = 0;
+    for (auto& optionStyle : options.optionStyles) {
+        auto constraints = PositionedLayoutConstraints { *box, *optionStyle, boxAxis };
+        sizes.append({ constraints.availableContentSpace(), index++ });
+    }
+
+    std::ranges::stable_sort(sizes, [](auto& a, auto& b) {
+        return a.size > b.size;
+    });
+
+    Vector<std::unique_ptr<RenderStyle>> sortedOptionStyles;
+    for (size_t i = 0; i < options.optionStyles.size(); ++i)
+        sortedOptionStyles.append(WTFMove(options.optionStyles[sizes[i].index]));
+
+    options.optionStyles = WTFMove(sortedOptionStyles);
+}
+
 std::optional<ResolvedStyle> TreeResolver::tryChoosePositionOption(const Styleable& styleable, const RenderStyle* existingStyle)
 {
     // https://drafts.csswg.org/css-anchor-position-1/#fallback-apply
@@ -1413,12 +1452,14 @@ std::optional<ResolvedStyle> TreeResolver::tryChoosePositionOption(const Styleab
 
     auto& options = optionIt->value;
 
+    sortPositionOptionsIfNeeded(options, styleable);
+
     if (!existingStyle) {
         options.chosen = true;
         return ResolvedStyle { RenderStyle::clonePtr(*options.originalStyle) };
     }
 
-    auto renderer = dynamicDowncast<RenderBox>(styleable.element.renderer());
+    auto renderer = dynamicDowncast<RenderBox>(styleable.renderer());
     if (!renderer) {
         options.chosen = true;
         return ResolvedStyle { RenderStyle::clonePtr(*options.originalStyle) };

@@ -71,7 +71,8 @@ private:
 // Convenience struct to package constraints and inputs.
 struct PositionedLayoutConstraints {
 public:
-    PositionedLayoutConstraints(const RenderBox&, const RenderBoxModelObject& container, LogicalBoxAxis);
+    PositionedLayoutConstraints(const RenderBox&, const RenderStyle&, LogicalBoxAxis);
+    PositionedLayoutConstraints(const RenderBox&, LogicalBoxAxis);
 
     // Logical top or left wrt containing block.
     Length marginBefore() const { return m_marginBefore; }
@@ -101,9 +102,6 @@ public:
     LayoutUnit insetAfterValue() const { return minimumValueForLength(m_insetAfter, containingSize()); }
     LayoutUnit availableContentSpace() const { return containingSize() - insetBeforeValue() - marginBeforeValue() - bordersPlusPadding() - marginAfterValue() - insetAfterValue(); } // This may be negative.
 
-    void computeInlineStaticDistance(const RenderBox&);
-    void computeBlockStaticDistance(const RenderBox&);
-
     void convertLogicalLeftValue(LayoutUnit&) const;
     void convertLogicalTopValue(LayoutUnit&, const RenderBox&, const LayoutUnit logicalHeightValue) const;
 
@@ -116,6 +114,9 @@ private:
     void captureInsets(const RenderBox&, const LogicalBoxAxis selfAxis);
     void computeAnchorGeometry(const RenderBox&);
     LayoutRange adjustForPositionArea(const LayoutRange rangeToAdjust, const LayoutRange anchorArea, const BoxAxis containerAxis);
+
+    void computeInlineStaticDistance(const RenderBox&);
+    void computeBlockStaticDistance(const RenderBox&);
 
 private:
     // These values are captured by the constructor and may be tweaked by the user.

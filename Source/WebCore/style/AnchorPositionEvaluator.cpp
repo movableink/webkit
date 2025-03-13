@@ -876,7 +876,7 @@ AnchorElements AnchorPositionEvaluator::findAnchorsForAnchorPositionedElement(co
     return anchorElements;
 }
 
-void AnchorPositionEvaluator::updateAnchorPositioningStatesAfterInterleavedLayout(const Document& document, AnchorPositionedStates& anchorPositionedStates)
+void AnchorPositionEvaluator::updateAnchorPositioningStatesAfterInterleavedLayout(Document& document, AnchorPositionedStates& anchorPositionedStates)
 {
     if (anchorPositionedStates.isEmptyIgnoringNullReferences())
         return;
@@ -889,9 +889,16 @@ void AnchorPositionEvaluator::updateAnchorPositioningStatesAfterInterleavedLayou
             Ref element { elementAndState.key };
             CheckedPtr renderer = element->renderer();
             if (renderer) {
+                // FIXME: Remove the redundant anchorElements member. The mappings are available in anchorPositionedToAnchorMap.
                 state.anchorElements = findAnchorsForAnchorPositionedElement(element, state.anchorNames, anchorsForAnchorName);
                 if (isLayoutTimeAnchorPositioned(renderer->style()))
                     renderer->setNeedsLayout();
+
+                Vector<SingleThreadWeakPtr<RenderBoxModelObject>> anchors;
+                for (auto& anchorElement : state.anchorElements.values())
+                    anchors.append(dynamicDowncast<RenderBoxModelObject>(anchorElement->renderer()));
+
+                document.styleScope().anchorPositionedToAnchorMap().set(element.get(), WTFMove(anchors));
             }
             state.stage = renderer && renderer->style().usesAnchorFunctions() ? AnchorPositionResolutionStage::ResolveAnchorFunctions : AnchorPositionResolutionStage::Resolved;
             continue;
@@ -1086,19 +1093,6 @@ bool AnchorPositionEvaluator::overflowsContainingBlock(const RenderBox& anchored
     marginRect.moveBy(anchoredBox.location());
 
     return !containingBlockRect.contains(marginRect);
-}
-
-WTF::TextStream& operator<<(WTF::TextStream& ts, PositionTryOrder order)
-{
-    switch (order) {
-    case PositionTryOrder::Normal: ts << "normal"_s; break;
-    case PositionTryOrder::MostWidth: ts << "most-width"_s; break;
-    case PositionTryOrder::MostHeight: ts << "most-height"_s; break;
-    case PositionTryOrder::MostBlockSize: ts << "most-block-size"_s; break;
-    case PositionTryOrder::MostInlineSize: ts << "most-inline-size"_s; break;
-    }
-
-    return ts;
 }
 
 } // namespace WebCore::Style

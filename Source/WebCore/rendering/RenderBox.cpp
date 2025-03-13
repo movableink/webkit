@@ -4008,10 +4008,7 @@ void RenderBox::computePositionedLogicalWidth(LogicalExtentComputedValues& compu
 
     // We don't use containingBlock(), since we may be positioned by an enclosing
     // relative positioned inline.
-    PositionedLayoutConstraints inlineConstraints(*this, downcast<RenderBoxModelObject>(*container()), LogicalBoxAxis::Inline);
-
-    // Calculate the static distance if needed.
-    inlineConstraints.computeInlineStaticDistance(*this);
+    PositionedLayoutConstraints inlineConstraints(*this, LogicalBoxAxis::Inline);
 
     // Calculate the used width. See CSS2 § 10.3.7.
     const RenderStyle& styleToUse = style();
@@ -4138,10 +4135,7 @@ void RenderBox::computePositionedLogicalHeight(LogicalExtentComputedValues& comp
     }
 
     // We don't use containingBlock(), since we may be positioned by an enclosing relpositioned inline.
-    PositionedLayoutConstraints blockConstraints(*this, downcast<RenderBoxModelObject>(*container()), LogicalBoxAxis::Block);
-
-    // Calculate the static distance if needed.
-    blockConstraints.computeBlockStaticDistance(*this);
+    PositionedLayoutConstraints blockConstraints(*this, LogicalBoxAxis::Block);
 
     // Calculate the used height. See CSS2 § 10.6.4.
     const RenderStyle& styleToUse = style();
@@ -4239,8 +4233,7 @@ void RenderBox::computePositionedLogicalWidthReplaced(LogicalExtentComputedValue
 {
     // We don't use containingBlock(), since we may be positioned by an enclosing
     // relative positioned inline.
-    PositionedLayoutConstraints inlineConstraints(*this, downcast<RenderBoxModelObject>(*container()), LogicalBoxAxis::Inline);
-    inlineConstraints.computeInlineStaticDistance(*this);
+    PositionedLayoutConstraints inlineConstraints(*this, LogicalBoxAxis::Inline);
 
     // NOTE: This value of width is final in that the min/max width calculations
     // are dealt with in computeReplacedWidth(). This means that the steps to produce
@@ -4264,8 +4257,7 @@ void RenderBox::computePositionedLogicalWidthReplaced(LogicalExtentComputedValue
 void RenderBox::computePositionedLogicalHeightReplaced(LogicalExtentComputedValues& computedValues) const
 {
     // We don't use containingBlock(), since we may be positioned by an enclosing relpositioned inline.
-    PositionedLayoutConstraints blockConstraints(*this, downcast<RenderBoxModelObject>(*container()), LogicalBoxAxis::Block);
-    blockConstraints.computeBlockStaticDistance(*this);
+    PositionedLayoutConstraints blockConstraints(*this, LogicalBoxAxis::Block);
 
     // NOTE: This value of height is final in that the min/max height calculations
     // are dealt with in computeReplacedHeight(). This means that the steps to produce

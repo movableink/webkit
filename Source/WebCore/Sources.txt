@@ -2955,6 +2955,7 @@ rendering/style/OffsetRotation.cpp
 rendering/style/QuotesData.cpp
 rendering/style/PositionArea.cpp
 rendering/style/PositionTryFallback.cpp
+rendering/style/PositionTryOrder.cpp
 rendering/style/RenderStyle.cpp
 rendering/style/RenderStyleConstants.cpp
 rendering/style/SVGRenderStyle.cpp

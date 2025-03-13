@@ -27,6 +27,7 @@
 #include "CSSValueKeywords.h"
 #include "EventTarget.h"
 #include "LayoutUnit.h"
+#include "PositionTryOrder.h"
 #include "ScopedName.h"
 #include "WritingMode.h"
 #include <wtf/HashMap.h>
@@ -83,17 +84,6 @@ enum class AnchorSizeDimension : uint8_t {
 
 using AnchorPositionedStates = WeakHashMap<Element, std::unique_ptr<AnchorPositionedState>, WeakPtrImplWithEventTargetData>;
 
-// https://drafts.csswg.org/css-anchor-position-1/#position-try-order-property
-enum class PositionTryOrder : uint8_t {
-    Normal,
-    MostWidth,
-    MostHeight,
-    MostBlockSize,
-    MostInlineSize
-};
-
-WTF::TextStream& operator<<(WTF::TextStream&, PositionTryOrder);
-
 using AnchorPositionedToAnchorMap = WeakHashMap<Element, Vector<SingleThreadWeakPtr<RenderBoxModelObject>>, WeakPtrImplWithEventTargetData>;
 using AnchorToAnchorPositionedMap = SingleThreadWeakHashMap<const RenderBoxModelObject, Vector<Ref<Element>>>;
 
@@ -110,7 +100,7 @@ public:
     static bool propertyAllowsAnchorSizeFunction(CSSPropertyID);
     static std::optional<double> evaluateSize(BuilderState&, std::optional<ScopedName> elementName, std::optional<AnchorSizeDimension>);
 
-    static void updateAnchorPositioningStatesAfterInterleavedLayout(const Document&, AnchorPositionedStates&);
+    static void updateAnchorPositioningStatesAfterInterleavedLayout(Document&, AnchorPositionedStates&);
     static void updateSnapshottedScrollOffsets(Document&);
     static void updateAnchorPositionedStateForLayoutTimePositioned(Element&, const RenderStyle&, AnchorPositionedStates&);
 

@@ -34,6 +34,7 @@
 #include "HitTestRequest.h"
 #include "ImageOrientation.h"
 #include "PositionArea.h"
+#include "PositionTryOrder.h"
 #include "RenderStyle.h"
 #include "ScrollTypes.h"
 #include "ScrollbarColor.h"

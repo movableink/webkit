@@ -51,27 +51,37 @@ static bool shouldFlipStaticPositionInParent(const RenderBox& outOfFlowBox, cons
     return parent->writingMode().isBlockFlipped() && parent->isWritingModeRoot();
 }
 
-PositionedLayoutConstraints::PositionedLayoutConstraints(const RenderBox& renderer, const RenderBoxModelObject& container, LogicalBoxAxis logicalAxis)
-    : m_container(container)
-    , m_containingWritingMode(container.writingMode())
-    , m_writingMode(renderer.style().writingMode())
+PositionedLayoutConstraints::PositionedLayoutConstraints(const RenderBox& renderer, const RenderStyle& style, LogicalBoxAxis logicalAxis)
+    : m_container(downcast<RenderBoxModelObject>(*renderer.container()))
+    , m_containingWritingMode(m_container->writingMode())
+    , m_writingMode(style.writingMode())
     , m_physicalAxis(logicalAxis == LogicalBoxAxis::Inline ? m_writingMode.inlineAxis() : m_writingMode.blockAxis())
     , m_containingAxis(!isOrthogonal() ? logicalAxis : oppositeAxis(logicalAxis))
-    , m_alignment(m_containingAxis == LogicalBoxAxis::Inline ? renderer.style().justifySelf() : renderer.style().alignSelf())
-    , m_style(renderer.style())
+    , m_alignment(m_containingAxis == LogicalBoxAxis::Inline ? style.justifySelf() : style.alignSelf())
+    , m_style(style)
     , m_defaultAnchorBox(needsAnchor() ? dynamicDowncast<const RenderBoxModelObject>(renderer.defaultAnchorRenderer()) : nullptr)
 {
     // Compute the baseline containing block info.
-    auto containingWidth = renderer.containingBlockLogicalWidthForPositioned(container, false);
+    auto containingWidth = renderer.containingBlockLogicalWidthForPositioned(*m_container, false);
     if (LogicalBoxAxis::Inline == m_containingAxis)
         m_containingRange.set(m_container->borderLogicalLeft(), containingWidth);
     else
-        m_containingRange.set(m_container->borderBefore(), renderer.containingBlockLogicalHeightForPositioned(container, false));
+        m_containingRange.set(m_container->borderBefore(), renderer.containingBlockLogicalHeightForPositioned(*m_container, false));
     m_marginPercentageBasis = containingWidth;
 
     computeAnchorGeometry(renderer);
 
     captureInsets(renderer, logicalAxis);
+
+    if (logicalAxis == LogicalBoxAxis::Inline)
+        computeInlineStaticDistance(renderer);
+    else
+        computeBlockStaticDistance(renderer);
+}
+
+PositionedLayoutConstraints::PositionedLayoutConstraints(const RenderBox& renderer, LogicalBoxAxis logicalAxis)
+    : PositionedLayoutConstraints(renderer, renderer.style(), logicalAxis)
+{
 }
 
 bool PositionedLayoutConstraints::needsAnchor() const
