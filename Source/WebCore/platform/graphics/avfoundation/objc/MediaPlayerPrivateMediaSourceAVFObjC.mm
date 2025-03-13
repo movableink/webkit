@@ -1743,6 +1743,9 @@ void MediaPlayerPrivateMediaSourceAVFObjC::setShouldDisableHDR(bool shouldDisabl
 
 void MediaPlayerPrivateMediaSourceAVFObjC::setPlatformDynamicRangeLimit(PlatformDynamicRangeLimit platformDynamicRangeLimit)
 {
+    if (!m_sampleBufferDisplayLayer)
+        return;
+
     if (RetainPtr displayLayer = m_sampleBufferDisplayLayer->as<AVSampleBufferDisplayLayer>())
         setLayerDynamicRangeLimit(displayLayer.get(), platformDynamicRangeLimit);
 }
