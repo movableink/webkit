@@ -428,7 +428,6 @@ css/CSSImportRule.cpp
 css/CSSKeyframeRule.cpp
 css/CSSKeyframeRule.h
 css/CSSKeyframesRule.cpp
-css/CSSMediaRule.cpp
 css/CSSNestedDeclarations.cpp
 css/CSSOffsetRotateValue.cpp
 css/CSSOffsetRotateValue.h
