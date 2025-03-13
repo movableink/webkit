@@ -303,7 +303,7 @@ endif ()
 
 find_package(GIDocgen)
 if (ENABLE_DOCUMENTATION AND NOT GIDocgen_FOUND)
-    message(FATAL_ERROR "ENABLE_DOCUMENTATION is needed for gi-docgen.")
+    message(FATAL_ERROR "gi-docgen is needed for ENABLE_DOCUMENTATION.")
 endif ()
 
 if (ENABLE_WEBDRIVER)
