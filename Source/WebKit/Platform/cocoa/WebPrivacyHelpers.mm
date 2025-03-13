@@ -435,6 +435,28 @@ void ResourceMonitorURLsController::prepare(CompletionHandler<void(WKContentRule
     }];
 }
 
+void ResourceMonitorURLsController::getSource(CompletionHandler<void(String&&)>&& completionHandler)
+{
+    ASSERT(RunLoop::isMain());
+    if (!PAL::isWebPrivacyFrameworkAvailable() || ![PAL::getWPResourcesClass() instancesRespondToSelector:@selector(requestResouceMonitorRulesSource:completionHandler:)]) {
+        completionHandler({ });
+        return;
+    }
+
+    static MainThreadNeverDestroyed<Vector<CompletionHandler<void(NSString *)>, 1>> lookupCompletionHandlers;
+    lookupCompletionHandlers->append(WTFMove(completionHandler));
+    if (lookupCompletionHandlers->size() > 1)
+        return;
+
+    [[PAL::getWPResourcesClass() sharedInstance] requestResouceMonitorRulesSource:nil completionHandler:^(NSString *source, NSError *error) {
+        if (error)
+            RELEASE_LOG_ERROR(ResourceMonitoring, "Failed to request resource monitor urls source from WebPrivacy");
+
+        for (auto& completionHandler : std::exchange(lookupCompletionHandlers.get(), { }))
+            completionHandler(String { source });
+    }];
+}
+
 #if HAVE(SYSTEM_SUPPORT_FOR_ADVANCED_PRIVACY_PROTECTIONS)
 
 inline static std::optional<WebCore::IPAddress> ipAddress(const struct sockaddr* address)

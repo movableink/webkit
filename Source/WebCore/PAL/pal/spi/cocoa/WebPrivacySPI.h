@@ -172,6 +172,12 @@ typedef void (^WPRuleListPreparationCompletionHandler)(WKContentRuleList *, bool
 @interface WPResources (Staging_141646051)
 - (void)prepareResouceMonitorRulesForStore:(WKContentRuleListStore *)store completionHandler:(WPRuleListPreparationCompletionHandler)completionHandler;
 @end
+
+typedef void (^WPRuleListGetSourceCompletionHandler)(NSString *, NSError *);
+
+@interface WPResources (Staging_146076707)
+- (void)requestResouceMonitorRulesSource:(WPResourceRequestOptions *)options completionHandler:(WPRuleListGetSourceCompletionHandler)completion;
+@end
 #endif
 
 WTF_EXTERN_C_BEGIN

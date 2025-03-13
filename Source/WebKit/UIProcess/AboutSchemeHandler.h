@@ -37,7 +37,7 @@ public:
         WTF_MAKE_FAST_ALLOCATED;
     public:
         virtual ~OpaquePathHandler() = default;
-        virtual void loadContent(URL, CompletionHandler<void(WebCore::ResourceResponse&&, Ref<WebCore::SharedBuffer>&&)>) = 0;
+        virtual void loadContent(URL, CompletionHandler<void(WebCore::ResourceResponse&&, Ref<WebCore::SharedBuffer>&&)>&&) = 0;
     };
 
     static AboutSchemeHandler& singleton();
