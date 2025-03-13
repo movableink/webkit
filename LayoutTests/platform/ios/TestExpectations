@@ -7023,7 +7023,7 @@ media/video-mouse-focus.html [ Failure ]
 
 # --- Imported from ios-simulator ---
 
-accessibility/img-no-alt-not-ignored-with-title.html [ Pass ]
+accessibility/img-with-empty-alt-is-ignored-without-fallbacks.html [ Pass ]
 accessibility/insert-newline.html [ Pass ]
 accessibility/keyevents-posted-for-dismiss-action.html [ Pass ]
 accessibility/embedded-image-description.html [ Pass ]
