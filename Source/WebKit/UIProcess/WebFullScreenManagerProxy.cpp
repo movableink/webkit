@@ -298,11 +298,11 @@ void WebFullScreenManagerProxy::prepareQuickLookImageURL(CompletionHandler<void(
     sharedQuickLookFileQueue().dispatch([buffer = m_imageBuffer, mimeType = crossThreadCopy(m_imageMIMEType), completionHandler = WTFMove(completionHandler)]() mutable {
         auto suffix = makeString('.', WebCore::MIMETypeRegistry::preferredExtensionForMIMEType(mimeType));
         auto [filePath, fileHandle] = FileSystem::openTemporaryFile("QuickLook"_s, suffix);
-        ASSERT(FileSystem::isHandleValid(fileHandle));
+        ASSERT(fileHandle);
 
-        size_t byteCount = FileSystem::writeToFile(fileHandle, buffer->span());
+        size_t byteCount = fileHandle.write(buffer->span());
         ASSERT_UNUSED(byteCount, byteCount == buffer->size());
-        FileSystem::closeFile(fileHandle);
+        fileHandle = { };
 
         RunLoop::protectedMain()->dispatch([filePath, completionHandler = WTFMove(completionHandler)]() mutable {
             completionHandler(URL::fileURLWithFileSystemPath(filePath));

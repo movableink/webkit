@@ -1,0 +1,158 @@
+/*
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include "config.h"
+#include "FileHandle.h"
+
+#include <wtf/FileSystem.h>
+
+namespace WTF::FileSystemImpl {
+
+FileHandle::FileHandle() = default;
+
+FileHandle::FileHandle(FileHandle&& other)
+    : m_handle(std::exchange(other.m_handle, std::nullopt))
+#if USE(FILE_LOCK)
+    , m_isLocked(std::exchange(other.m_isLocked, false))
+#endif
+{ }
+
+FileHandle::~FileHandle()
+{
+    closeIfNecessary();
+}
+
+FileHandle& FileHandle::operator=(FileHandle&& other)
+{
+    closeIfNecessary();
+    m_handle = std::exchange(other.m_handle, std::nullopt);
+#if USE(FILE_LOCK)
+    m_isLocked = std::exchange(other.m_isLocked, false);
+#endif
+    return *this;
+}
+
+std::optional<Vector<uint8_t>> FileHandle::readAll()
+{
+    if (!isValid())
+        return { };
+
+    auto size = this->size().value_or(0);
+    if (!size)
+        return std::nullopt;
+
+    size_t bytesToRead;
+    if (!WTF::convertSafely(size, bytesToRead))
+        return std::nullopt;
+
+    Vector<uint8_t> buffer(bytesToRead);
+    size_t totalBytesRead = 0;
+    int bytesRead;
+
+    while ((bytesRead = read(buffer.mutableSpan().subspan(totalBytesRead))) > 0)
+        totalBytesRead += bytesRead;
+
+    if (totalBytesRead != bytesToRead)
+        return std::nullopt;
+
+    return buffer;
+}
+
+int FileHandle::read(std::span<uint8_t> data)
+{
+    if (!isValid())
+        return -1;
+    return readFromFile(platformHandle(), data);
+}
+
+int FileHandle::write(std::span<const uint8_t> data)
+{
+    if (!isValid())
+        return -1;
+    return writeToFile(platformHandle(), data);
+}
+
+void FileHandle::lock(OptionSet<FileLockMode> lockMode)
+{
+#if USE(FILE_LOCK)
+    RELEASE_ASSERT(!m_isLocked);
+    m_isLocked = FileSystemImpl::lockFile(platformHandle(), lockMode);
+    ASSERT(m_isLocked);
+#else
+    UNUSED_PARAM(lockMode);
+#endif
+}
+
+bool FileHandle::truncate(long long offset)
+{
+    if (!isValid())
+        return false;
+    return truncateFile(platformHandle(), offset);
+}
+
+void FileHandle::closeIfNecessary()
+{
+    if (!isValid())
+        return;
+
+    auto handle = std::exchange(m_handle, std::nullopt).unsafeValue();
+#if USE(FILE_LOCK)
+    if (std::exchange(m_isLocked, false)) {
+        bool unlocked = unlockFile(handle);
+        ASSERT_UNUSED(unlocked, unlocked);
+    }
+#endif
+    closeFile(handle);
+}
+
+std::optional<uint64_t> FileHandle::size()
+{
+    if (!isValid())
+        return { };
+    return fileSize(platformHandle());
+}
+
+long long FileHandle::seek(long long offset, FileSeekOrigin origin)
+{
+    if (!isValid())
+        return -1;
+    return seekFile(platformHandle(), offset, origin);
+}
+
+bool FileHandle::flush()
+{
+    if (!isValid())
+        return false;
+    return flushFile(platformHandle());
+}
+
+std::optional<PlatformFileID> FileHandle::id()
+{
+    if (!isValid())
+        return { };
+    return fileID(platformHandle());
+}
+
+} // namespace WTF::FileSystemImpl

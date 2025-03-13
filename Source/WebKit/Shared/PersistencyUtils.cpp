@@ -54,13 +54,11 @@ void writeToDisk(std::unique_ptr<KeyedEncoder>&& encoder, String&& path)
     if (!rawData)
         return;
 
-    FileSystem::PlatformFileHandle handle = FileSystem::openAndLockFile(path, FileSystem::FileOpenMode::Truncate);
-    if (handle == FileSystem::invalidPlatformFileHandle)
+    auto handle = FileSystem::openAndLockFile(path, FileSystem::FileOpenMode::Truncate);
+    if (!handle)
         return;
 
-    auto writtenBytes = FileSystem::writeToFile(handle, rawData->span());
-    FileSystem::unlockAndCloseFile(handle);
-
+    auto writtenBytes = handle.write(rawData->span());
     if (writtenBytes != static_cast<int64_t>(rawData->size()))
         RELEASE_LOG_ERROR(DiskPersistency, "Disk persistency: We only wrote %d out of %zu bytes to disk", static_cast<unsigned>(writtenBytes), rawData->size());
 }

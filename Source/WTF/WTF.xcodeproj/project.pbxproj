@@ -96,6 +96,8 @@
 		466D69112BA4E433005D43F4 /* SpanCocoa.h in Headers */ = {isa = PBXBuildFile; fileRef = 466D69102BA4E433005D43F4 /* SpanCocoa.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		466E7A7A2D66E57E0096FDA4 /* AlignedStorage.h in Headers */ = {isa = PBXBuildFile; fileRef = 466E7A792D66E57E0096FDA4 /* AlignedStorage.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		467DCD532CD4689A0040C644 /* UnicodeExtras.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 467DCD522CD4689A0040C644 /* UnicodeExtras.cpp */; };
+		468742F12D7F8A0100F4BE74 /* FileHandle.h in Headers */ = {isa = PBXBuildFile; fileRef = 468742EF2D7F8A0100F4BE74 /* FileHandle.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		468742F22D7F8A0100F4BE74 /* FileHandle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 468742F02D7F8A0100F4BE74 /* FileHandle.cpp */; };
 		468EAFD42D5B1E37005069CF /* SocketPOSIX.h in Headers */ = {isa = PBXBuildFile; fileRef = 468EAFD32D5B1E37005069CF /* SocketPOSIX.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		46B0FB5D2D24BFBA0012184C /* ParsingUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 46B0FB5C2D24BFBA0012184C /* ParsingUtilities.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		46B4C53C2D4F2D0A00BAA3FE /* NSStringExtras.h in Headers */ = {isa = PBXBuildFile; fileRef = 46B4C53B2D4F2D0A00BAA3FE /* NSStringExtras.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -1259,6 +1261,8 @@
 		466D69102BA4E433005D43F4 /* SpanCocoa.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SpanCocoa.h; sourceTree = "<group>"; };
 		466E7A792D66E57E0096FDA4 /* AlignedStorage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AlignedStorage.h; sourceTree = "<group>"; };
 		467DCD522CD4689A0040C644 /* UnicodeExtras.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = UnicodeExtras.cpp; sourceTree = "<group>"; };
+		468742EF2D7F8A0100F4BE74 /* FileHandle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FileHandle.h; sourceTree = "<group>"; };
+		468742F02D7F8A0100F4BE74 /* FileHandle.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FileHandle.cpp; sourceTree = "<group>"; };
 		468EAFD32D5B1E37005069CF /* SocketPOSIX.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SocketPOSIX.h; sourceTree = "<group>"; };
 		46B0FB5C2D24BFBA0012184C /* ParsingUtilities.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ParsingUtilities.h; sourceTree = "<group>"; };
 		46B4C53B2D4F2D0A00BAA3FE /* NSStringExtras.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NSStringExtras.h; sourceTree = "<group>"; };
@@ -2295,6 +2299,8 @@
 				A8A472A1151A825A004123FF /* FastMalloc.cpp */,
 				A8A472A2151A825A004123FF /* FastMalloc.h */,
 				0F79C7C31E73511800EB34D1 /* FastTLS.h */,
+				468742F02D7F8A0100F4BE74 /* FileHandle.cpp */,
+				468742EF2D7F8A0100F4BE74 /* FileHandle.h */,
 				0F9D335B165DBA73005AD387 /* FilePrintStream.cpp */,
 				0F9D335C165DBA73005AD387 /* FilePrintStream.h */,
 				A331D95A21F24992009F02AA /* FileSystem.cpp */,
@@ -3411,6 +3417,7 @@
 				E361DB542891159C00B2A2B8 /* FastFloat.h in Headers */,
 				DD3DC8A727A4BF8E007E5B61 /* FastMalloc.h in Headers */,
 				DD3DC8AF27A4BF8E007E5B61 /* FastTLS.h in Headers */,
+				468742F12D7F8A0100F4BE74 /* FileHandle.h in Headers */,
 				DD3DC96E27A4BF8E007E5B61 /* FilePrintStream.h in Headers */,
 				DD3DC8F827A4BF8E007E5B61 /* FileSystem.h in Headers */,
 				DDF306FB27C086CC006A526F /* fixed-dtoa.h in Headers */,
@@ -4242,6 +4249,7 @@
 				0F7C5FB61D885CF20044F5E2 /* FastBitVector.cpp in Sources */,
 				E361DB532891159C00B2A2B8 /* FastFloat.cpp in Sources */,
 				A8A473C3151A825B004123FF /* FastMalloc.cpp in Sources */,
+				468742F22D7F8A0100F4BE74 /* FileHandle.cpp in Sources */,
 				0F9D3360165DBA73005AD387 /* FilePrintStream.cpp in Sources */,
 				A331D95B21F24992009F02AA /* FileSystem.cpp in Sources */,
 				A331D95D21F249E4009F02AA /* FileSystemCF.cpp in Sources */,

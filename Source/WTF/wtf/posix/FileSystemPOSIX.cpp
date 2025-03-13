@@ -57,12 +57,12 @@ namespace WTF {
 
 namespace FileSystemImpl {
 
-PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission permission, bool failIfFileExists)
+FileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission permission, bool failIfFileExists)
 {
     CString fsRep = fileSystemRepresentation(path);
 
     if (fsRep.isNull())
-        return invalidPlatformFileHandle;
+        return { };
 
     int platformFlag = O_CLOEXEC;
     switch (mode) {
@@ -91,7 +91,7 @@ PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPer
     else if (permission == FileAccessPermission::All)
         permissionFlag |= (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 
-    return open(fsRep.data(), platformFlag, permissionFlag);
+    return FileHandle::adopt(open(fsRep.data(), platformFlag, permissionFlag));
 }
 
 void closeFile(PlatformFileHandle& handle)
@@ -262,9 +262,8 @@ static const char* temporaryFileDirectory()
 #endif
 }
 
-std::pair<String, PlatformFileHandle> openTemporaryFile(StringView prefix, StringView suffix)
+std::pair<String, FileHandle> openTemporaryFile(StringView prefix, StringView suffix)
 {
-    PlatformFileHandle handle = invalidPlatformFileHandle;
     // Suffix is not supported because that's incompatible with mkostemp, mkostemps would be needed for that.
     // This is OK for now since the code using it is built on macOS only.
     ASSERT_UNUSED(suffix, suffix.isEmpty());
@@ -275,15 +274,11 @@ std::pair<String, PlatformFileHandle> openTemporaryFile(StringView prefix, Strin
     auto buffer = MallocSpan<char>::malloc(length);
     snprintf(buffer.mutableSpan().data(), length, "%s/%s-XXXXXX", directory, prefixUTF8.data());
 
-    handle = mkostemp(buffer.mutableSpan().data(), O_CLOEXEC);
-    if (handle < 0)
-        goto end;
+    auto handle = FileHandle::adopt(mkostemp(buffer.mutableSpan().data(), O_CLOEXEC));
+    if (!handle)
+        return { String(), FileHandle() };
 
-    return { String::fromUTF8(buffer.span().data()), handle };
-
-end:
-    handle = invalidPlatformFileHandle;
-    return { String(), handle };
+    return { String::fromUTF8(buffer.span().data()), WTFMove(handle) };
 }
 #endif // !PLATFORM(COCOA)
 

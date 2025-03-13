@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "FileHandle.h"
 #include "FileSystemHandleIdentifier.h"
 #include "FileSystemSyncAccessHandleIdentifier.h"
 #include "FileSystemWritableFileStreamIdentifier.h"
@@ -34,6 +33,7 @@
 #include "ProcessQualified.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include <wtf/CompletionHandler.h>
+#include <wtf/FileHandle.h>
 #include <wtf/HashMap.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
@@ -41,7 +41,6 @@ namespace WebCore {
 
 class FileSystemDirectoryHandle;
 class FileSystemFileHandle;
-class FileHandle;
 class FileSystemHandleCloseScope;
 class FileSystemSyncAccessHandle;
 class FileSystemWritableFileStream;
@@ -56,9 +55,9 @@ public:
     using ResolveCallback = CompletionHandler<void(ExceptionOr<Vector<String>>&&)>;
     struct SyncAccessHandleInfo {
         FileSystemSyncAccessHandleIdentifier identifier;
-        FileHandle file;
+        FileSystem::FileHandle file;
         uint64_t capacity { 0 };
-        SyncAccessHandleInfo isolatedCopy() && { return { identifier, WTFMove(file).isolatedCopy(), capacity }; }
+        SyncAccessHandleInfo isolatedCopy() && { return { identifier, WTFMove(file), capacity }; }
     };
     using GetAccessHandleCallback = CompletionHandler<void(ExceptionOr<SyncAccessHandleInfo>&&)>;
     using VoidCallback = CompletionHandler<void(ExceptionOr<void>&&)>;

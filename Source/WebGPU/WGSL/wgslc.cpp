@@ -108,17 +108,13 @@ static int runWGSL(const CommandLine& options)
 {
     WGSL::Configuration configuration;
 
-
     String fileName = String::fromLatin1(options.file());
-    auto handle = FileSystem::openFile(fileName, FileSystem::FileOpenMode::Read);
-    if (!FileSystem::isHandleValid(handle)) {
-        FileSystem::closeFile(handle);
+    auto readResult = FileSystem::readEntireFile(fileName);
+    if (!readResult) {
         dataLogLn("Failed to open ", fileName);
         return EXIT_FAILURE;
     }
 
-    auto readResult = FileSystem::readEntireFile(handle);
-    FileSystem::closeFile(handle);
     auto source = emptyString();
     if (readResult.has_value())
 #pragma clang diagnostic push

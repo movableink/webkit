@@ -185,27 +185,27 @@ static String generateTemporaryPath(const Function<bool(const String&)>& action)
     return proposedPath;
 }
 
-std::pair<String, PlatformFileHandle> openTemporaryFile(StringView, StringView suffix)
+std::pair<String, FileHandle> openTemporaryFile(StringView, StringView suffix)
 {
     // FIXME: Suffix is not supported, but OK for now since the code using it is macOS-port-only.
     ASSERT_UNUSED(suffix, suffix.isEmpty());
 
-    PlatformFileHandle handle = INVALID_HANDLE_VALUE;
+    FileHandle handle;
 
     String proposedPath = generateTemporaryPath([&handle](const String& proposedPath) {
         // use CREATE_NEW to avoid overwriting an existing file with the same name
-        handle = ::CreateFileW(proposedPath.wideCharacters().data(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+        handle = FileHandle::adopt(::CreateFileW(proposedPath.wideCharacters().data(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr));
 
-        return isHandleValid(handle) || GetLastError() == ERROR_ALREADY_EXISTS;
+        return handle || GetLastError() == ERROR_ALREADY_EXISTS;
     });
 
-    if (!isHandleValid(handle))
-        return { String(), handle };
+    if (!handle)
+        return { String(), FileHandle() };
 
-    return { proposedPath, handle };
+    return { proposedPath, WTFMove(handle) };
 }
 
-PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission, bool failIfFileExists)
+FileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission, bool failIfFileExists)
 {
     DWORD desiredAccess = 0;
     DWORD creationDisposition = 0;
@@ -230,7 +230,7 @@ PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPer
         creationDisposition = CREATE_NEW;
 
     String destination = path;
-    return CreateFile(destination.wideCharacters().data(), desiredAccess, shareMode, nullptr, creationDisposition, FILE_ATTRIBUTE_NORMAL, nullptr);
+    return FileHandle::adopt(CreateFile(destination.wideCharacters().data(), desiredAccess, shareMode, nullptr, creationDisposition, FILE_ATTRIBUTE_NORMAL, nullptr));
 }
 
 void closeFile(PlatformFileHandle& handle)
@@ -314,16 +314,12 @@ String roamingUserSpecificStorageDirectory()
 std::optional<int32_t> getFileDeviceId(const String& fsFile)
 {
     auto handle = openFile(fsFile, FileOpenMode::Read);
-    if (!isHandleValid(handle))
+    if (!handle)
         return std::nullopt;
 
     BY_HANDLE_FILE_INFORMATION fileInformation = { };
-    if (!::GetFileInformationByHandle(handle, &fileInformation)) {
-        closeFile(handle);
+    if (!::GetFileInformationByHandle(handle.platformHandle(), &fileInformation))
         return std::nullopt;
-    }
-
-    closeFile(handle);
 
     return fileInformation.dwVolumeSerialNumber;
 }

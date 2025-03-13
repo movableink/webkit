@@ -89,6 +89,7 @@ set(WTF_PUBLIC_HEADERS
     FastFloat.h
     FastMalloc.h
     FastTLS.h
+    FileHandle.h
     FilePrintStream.h
     FileSystem.h
     FixedBitVector.h
@@ -528,6 +529,7 @@ set(WTF_SOURCES
     FastBitVector.cpp
     FastFloat.cpp
     FastMalloc.cpp
+    FileHandle.cpp
     FilePrintStream.cpp
     FileSystem.cpp
     FunctionDispatcher.cpp

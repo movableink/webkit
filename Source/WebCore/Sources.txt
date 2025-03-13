@@ -2279,7 +2279,6 @@ platform/DragData.cpp
 platform/DragImage.cpp
 platform/EventTrackingRegions.cpp
 platform/FileChooser.cpp
-platform/FileHandle.cpp
 platform/FileMonitor.cpp
 platform/FileStream.cpp
 platform/FrameRateMonitor.cpp

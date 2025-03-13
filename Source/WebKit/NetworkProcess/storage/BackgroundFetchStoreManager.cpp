@@ -222,13 +222,11 @@ void BackgroundFetchStoreManager::storeFetchResponseBodyChunk(const String& iden
     auto filePath = FileSystem::pathByAppendingComponent(m_path, createFetchResponseBodyFile(identifier, index));
     m_ioQueue->dispatch([queue = Ref { m_taskQueue }, filePath = WTFMove(filePath).isolatedCopy(), data = Ref { data }, callback = WTFMove(callback)]() mutable {
         auto result = StoreResult::InternalError;
-        FileSystem::PlatformFileHandle handle = FileSystem::openFile(filePath, FileSystem::FileOpenMode::ReadWrite);
-        if (FileSystem::isHandleValid(handle)) {
+        if (auto handle = FileSystem::openFile(filePath, FileSystem::FileOpenMode::ReadWrite); handle) {
             // FIXME: Cover the case of partial write.
-            auto writtenSize = FileSystem::writeToFile(handle, data->span());
+            auto writtenSize = handle.write(data->span());
             if (static_cast<size_t>(writtenSize) == data->size())
                 result = StoreResult::OK;
-            FileSystem::closeFile(handle);
         }
 
         RELEASE_LOG_ERROR_IF(result == StoreResult::InternalError, ServiceWorker, "BackgroundFetchStoreManager::storeFetchResponseBodyChunk failed writing");

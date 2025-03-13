@@ -1286,15 +1286,16 @@ bool ApplicationCacheStorage::writeDataToUniqueFileInDirectory(FragmentedSharedB
         fullPath = FileSystem::pathByAppendingComponent(directory, path);
     } while (FileSystem::parentPath(fullPath) != directory || FileSystem::fileExists(fullPath));
     
-    FileSystem::PlatformFileHandle handle = FileSystem::openFile(fullPath, FileSystem::FileOpenMode::Truncate);
-    if (!handle)
-        return false;
-    
     int64_t writtenBytes = 0;
-    data.forEachSegment([&](auto segment) {
-        writtenBytes += FileSystem::writeToFile(handle, segment);
-    });
-    FileSystem::closeFile(handle);
+    {
+        auto handle = FileSystem::openFile(fullPath, FileSystem::FileOpenMode::Truncate);
+        if (!handle)
+            return false;
+
+        data.forEachSegment([&](auto segment) {
+            writtenBytes += handle.write(segment);
+        });
+    }
     
     if (writtenBytes != static_cast<int64_t>(data.size())) {
         FileSystem::deleteFile(fullPath);

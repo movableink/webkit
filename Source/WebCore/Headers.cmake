@@ -1849,7 +1849,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/DragItem.h
     platform/EventTrackingRegions.h
     platform/FileChooser.h
-    platform/FileHandle.h
     platform/FileMonitor.h
     platform/FileStreamClient.h
     platform/FixedContainerEdges.h

@@ -392,7 +392,7 @@ void NetworkDataTaskBlob::consumeData(std::span<const uint8_t> data)
     m_totalRemainingSize -= data.size();
 
     if (!data.empty()) {
-        if (m_downloadFile != FileSystem::invalidPlatformFileHandle) {
+        if (m_downloadFile) {
             if (!writeDownload(data))
                 return;
         } else {
@@ -446,7 +446,7 @@ void NetworkDataTaskBlob::download()
     LOG(NetworkSession, "%p - NetworkDataTaskBlob::download to %s", this, m_pendingDownloadLocation.utf8().data());
 
     m_downloadFile = FileSystem::openFile(m_pendingDownloadLocation, FileSystem::FileOpenMode::Truncate);
-    if (m_downloadFile == FileSystem::invalidPlatformFileHandle) {
+    if (!m_downloadFile) {
         didFailDownload(cancelledError(m_firstRequest));
         return;
     }
@@ -465,7 +465,7 @@ void NetworkDataTaskBlob::download()
 bool NetworkDataTaskBlob::writeDownload(std::span<const uint8_t> data)
 {
     ASSERT(isDownload());
-    int bytesWritten = FileSystem::writeToFile(m_downloadFile, data);
+    int bytesWritten = m_downloadFile.write(data);
     if (static_cast<size_t>(bytesWritten) != data.size()) {
         didFailDownload(cancelledError(m_firstRequest));
         return false;
@@ -480,10 +480,7 @@ bool NetworkDataTaskBlob::writeDownload(std::span<const uint8_t> data)
 
 void NetworkDataTaskBlob::cleanDownloadFiles()
 {
-    if (m_downloadFile != FileSystem::invalidPlatformFileHandle) {
-        FileSystem::closeFile(m_downloadFile);
-        m_downloadFile = FileSystem::invalidPlatformFileHandle;
-    }
+    m_downloadFile = { };
     FileSystem::deleteFile(m_pendingDownloadLocation);
 }
 
@@ -511,8 +508,7 @@ void NetworkDataTaskBlob::didFinishDownload()
     LOG(NetworkSession, "%p - NetworkDataTaskBlob::didFinishDownload", this);
 
     ASSERT(isDownload());
-    FileSystem::closeFile(m_downloadFile);
-    m_downloadFile = FileSystem::invalidPlatformFileHandle;
+    m_downloadFile = { };
 
 #if !HAVE(MODERN_DOWNLOADPROGRESS)
     if (RefPtr extension = std::exchange(m_sandboxExtension, nullptr))
@@ -550,7 +546,7 @@ void NetworkDataTaskBlob::didFail(Error errorCode)
 
 void NetworkDataTaskBlob::didFinish()
 {
-    if (m_downloadFile != FileSystem::invalidPlatformFileHandle) {
+    if (m_downloadFile) {
         didFinishDownload();
         return;
     }

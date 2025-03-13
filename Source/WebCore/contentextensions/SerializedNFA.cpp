@@ -35,11 +35,11 @@ namespace WebCore {
 namespace ContentExtensions {
 
 template<typename T>
-bool writeAllToFile(FileSystem::PlatformFileHandle file, const T& container)
+bool writeAllToFile(FileSystem::FileHandle& file, const T& container)
 {
     auto bytes = spanReinterpretCast<const uint8_t>(container.span());
     while (!bytes.empty()) {
-        auto written = FileSystem::writeToFile(file, bytes);
+        auto written = file.write(bytes);
         if (written == -1)
             return false;
         skip(bytes, written);
@@ -50,7 +50,7 @@ bool writeAllToFile(FileSystem::PlatformFileHandle file, const T& container)
 std::optional<SerializedNFA> SerializedNFA::serialize(NFA&& nfa)
 {
     auto [filename, file] = FileSystem::openTemporaryFile("SerializedNFA"_s);
-    if (!FileSystem::isHandleValid(file))
+    if (!file)
         return std::nullopt;
 
     bool wroteSuccessfully = writeAllToFile(file, nfa.nodes)
@@ -59,14 +59,14 @@ std::optional<SerializedNFA> SerializedNFA::serialize(NFA&& nfa)
         && writeAllToFile(file, nfa.epsilonTransitionsTargets)
         && writeAllToFile(file, nfa.actions);
     if (!wroteSuccessfully) {
-        FileSystem::closeFile(file);
+        file = { };
         FileSystem::deleteFile(filename);
         return std::nullopt;
     }
 
     bool mappedSuccessfully = false;
-    FileSystem::MappedFileData mappedFile(file, FileSystem::MappedFileMode::Private, mappedSuccessfully);
-    FileSystem::closeFile(file);
+    FileSystem::MappedFileData mappedFile(file.platformHandle(), FileSystem::MappedFileMode::Private, mappedSuccessfully);
+    file = { };
     FileSystem::deleteFile(filename);
     if (!mappedSuccessfully)
         return std::nullopt;

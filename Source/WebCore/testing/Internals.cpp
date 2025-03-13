@@ -5579,13 +5579,10 @@ String Internals::createTemporaryFile(const String& name, const String& contents
         return nullString();
 
     auto [path, file] = FileSystem::openTemporaryFile(makeString("WebCoreTesting-"_s, name));
-    if (!FileSystem::isHandleValid(file))
+    if (!file)
         return nullString();
 
-    FileSystem::writeToFile(file, byteCast<uint8_t>(contents.utf8().span()));
-
-    FileSystem::closeFile(file);
-
+    file.write(byteCast<uint8_t>(contents.utf8().span()));
     return path;
 }
 

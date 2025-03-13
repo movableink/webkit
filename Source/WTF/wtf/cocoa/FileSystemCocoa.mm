@@ -130,13 +130,11 @@ String extractTemporaryZipArchive(const String& path)
     return temporaryDirectory;
 }
 
-std::pair<String, PlatformFileHandle> openTemporaryFile(StringView prefix, StringView suffix)
+std::pair<String, FileHandle> openTemporaryFile(StringView prefix, StringView suffix)
 {
-    PlatformFileHandle platformFileHandle = invalidPlatformFileHandle;
-
     Vector<char> temporaryFilePath(PATH_MAX);
     if (!confstr(_CS_DARWIN_USER_TEMP_DIR, temporaryFilePath.data(), temporaryFilePath.size()))
-        return { String(), invalidPlatformFileHandle };
+        return { String(), FileHandle() };
 
     // Shrink the vector.
     temporaryFilePath.shrink(strlenSpan(temporaryFilePath.span()));
@@ -151,11 +149,11 @@ std::pair<String, PlatformFileHandle> openTemporaryFile(StringView prefix, Strin
     CString suffixUTF8 = suffix.utf8();
     temporaryFilePath.append(suffixUTF8.spanIncludingNullTerminator());
 
-    platformFileHandle = mkostemps(temporaryFilePath.data(), suffixUTF8.length(), O_CLOEXEC);
-    if (platformFileHandle == invalidPlatformFileHandle)
-        return { nullString(), invalidPlatformFileHandle };
+    auto fileHandle = FileHandle::adopt(mkostemps(temporaryFilePath.data(), suffixUTF8.length(), O_CLOEXEC));
+    if (!fileHandle)
+        return { nullString(), FileHandle() };
 
-    return { String::fromUTF8(temporaryFilePath.data()), platformFileHandle };
+    return { String::fromUTF8(temporaryFilePath.data()), WTFMove(fileHandle) };
 }
 
 NSString *createTemporaryDirectory(NSString *directoryPrefix)

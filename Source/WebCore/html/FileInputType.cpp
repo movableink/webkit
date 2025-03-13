@@ -389,10 +389,9 @@ void FileInputType::filesChosen(const Vector<FileChooserFileInfo>& paths, const 
     auto* document = element() ? &element()->document() : nullptr;
     if (!allowsDirectories()) {
         auto files = paths.map([document](auto& fileInfo) {
-            auto handle = FileSystem::openFile(fileInfo.path, FileSystem::FileOpenMode::Read);
-            auto fileID = FileSystem::fileID(handle);
-            FileSystem::closeFile(handle);
-
+            std::optional<FileSystem::PlatformFileID> fileID;
+            if (auto handle = FileSystem::openFile(fileInfo.path, FileSystem::FileOpenMode::Read); handle)
+                fileID = handle.id();
             return File::create(document, fileInfo.path, fileInfo.replacementPath, fileInfo.displayName, fileID);
         });
         didCreateFileList(FileList::create(WTFMove(files)), icon);

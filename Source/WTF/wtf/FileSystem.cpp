@@ -252,28 +252,22 @@ String lastComponentOfPathIgnoringTrailingSlash(const String& path)
     return path.substring(position + 1, endOfSubstring - position);
 }
 
-bool appendFileContentsToFileHandle(const String& path, PlatformFileHandle& target)
+bool appendFileContentsToFileHandle(const String& path, FileHandle& target)
 {
     auto source = openFile(path, FileOpenMode::Read);
-
-    if (!isHandleValid(source))
+    if (!source)
         return false;
 
     static int bufferSize = 1 << 19;
     Vector<uint8_t> buffer(bufferSize);
 
-    auto fileCloser = WTF::makeScopeExit([source]() {
-        PlatformFileHandle handle = source;
-        closeFile(handle);
-    });
-
     do {
-        int readBytes = readFromFile(source, buffer.mutableSpan());
+        int readBytes = source.read(buffer.mutableSpan());
 
         if (readBytes < 0)
             return false;
 
-        if (writeToFile(target, buffer.span().first(readBytes)) != readBytes)
+        if (target.write(buffer.span().first(readBytes)) != readBytes)
             return false;
 
         if (readBytes < bufferSize)
@@ -310,9 +304,8 @@ void setMetadataURL(const String&, const String&, const String&)
 
 MappedFileData::MappedFileData(const String& filePath, MappedFileMode mapMode, bool& success)
 {
-    auto fd = openFile(filePath, FileSystem::FileOpenMode::Read);
-    success = mapFileHandle(fd, FileSystem::FileOpenMode::Read, mapMode);
-    closeFile(fd);
+    auto handle = openFile(filePath, FileSystem::FileOpenMode::Read);
+    success = mapFileHandle(handle.platformHandle(), FileSystem::FileOpenMode::Read, mapMode);
 }
 
 #if HAVE(MMAP)
@@ -363,29 +356,11 @@ bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openM
 }
 #endif
 
-PlatformFileHandle openAndLockFile(const String& path, FileOpenMode openMode, OptionSet<FileLockMode> lockMode)
+FileHandle openAndLockFile(const String& path, FileOpenMode openMode, OptionSet<FileLockMode> lockMode)
 {
     auto handle = openFile(path, openMode);
-    if (handle == invalidPlatformFileHandle)
-        return invalidPlatformFileHandle;
-
-#if USE(FILE_LOCK)
-    bool locked = lockFile(handle, lockMode);
-    ASSERT_UNUSED(locked, locked);
-#else
-    UNUSED_PARAM(lockMode);
-#endif
-
+    handle.lock(lockMode);
     return handle;
-}
-
-void unlockAndCloseFile(PlatformFileHandle handle)
-{
-#if USE(FILE_LOCK)
-    bool unlocked = unlockFile(handle);
-    ASSERT_UNUSED(unlocked, unlocked);
-#endif
-    closeFile(handle);
 }
 
 #if !PLATFORM(IOS_FAMILY)
@@ -424,19 +399,15 @@ bool markPurgeable(const String&)
 
 #endif
 
-MappedFileData createMappedFileData(const String& path, size_t bytesSize, PlatformFileHandle* outputHandle)
+MappedFileData createMappedFileData(const String& path, size_t bytesSize, FileHandle* outputHandle)
 {
     constexpr bool failIfFileExists = true;
     auto handle = FileSystem::openFile(path, FileSystem::FileOpenMode::ReadWrite, FileSystem::FileAccessPermission::User, failIfFileExists);
 
-    auto fileCloser = WTF::makeScopeExit([&handle]() {
-        FileSystem::closeFile(handle);
-    });
-
-    if (!FileSystem::isHandleValid(handle))
+    if (!handle)
         return { };
 
-    if (!FileSystem::truncateFile(handle, bytesSize)) {
+    if (!handle.truncate(bytesSize)) {
         RELEASE_LOG_FAULT(MemoryPressure, "Unable to truncate file");
         return { };
     }
@@ -445,14 +416,12 @@ MappedFileData createMappedFileData(const String& path, size_t bytesSize, Platfo
         return { };
 
     bool success;
-    FileSystem::MappedFileData mappedFile(handle, FileSystem::FileOpenMode::ReadWrite, FileSystem::MappedFileMode::Shared, success);
+    FileSystem::MappedFileData mappedFile(handle.platformHandle(), FileSystem::FileOpenMode::ReadWrite, FileSystem::MappedFileMode::Shared, success);
     if (!success)
         return { };
 
-    if (outputHandle) {
-        fileCloser.release();
-        *outputHandle = handle;
-    }
+    if (outputHandle)
+        *outputHandle = WTFMove(handle);
 
     return mappedFile;
 }
@@ -473,7 +442,7 @@ void finalizeMappedFileData(MappedFileData& mappedFileData, size_t bytesSize)
 #endif
 }
 
-MappedFileData mapToFile(const String& path, size_t bytesSize, NOESCAPE const Function<void(const Function<bool(std::span<const uint8_t>)>&)>& apply, PlatformFileHandle* outputHandle)
+MappedFileData mapToFile(const String& path, size_t bytesSize, NOESCAPE const Function<void(const Function<bool(std::span<const uint8_t>)>&)>& apply, FileHandle* outputHandle)
 {
     auto mappedFile = createMappedFileData(path, bytesSize, outputHandle);
     if (!mappedFile)
@@ -501,76 +470,41 @@ static Salt makeSalt()
 std::optional<Salt> readOrMakeSalt(const String& path)
 {
     if (FileSystem::fileExists(path)) {
-        auto file = FileSystem::openFile(path, FileSystem::FileOpenMode::Read);
-        Salt salt;
-        auto bytesRead = static_cast<std::size_t>(FileSystem::readFromFile(file, salt));
-        FileSystem::closeFile(file);
-        if (bytesRead == salt.size())
-            return salt;
-
+        if (auto handle = FileSystem::openFile(path, FileSystem::FileOpenMode::Read); handle) {
+            Salt salt;
+            auto bytesRead = static_cast<std::size_t>(handle.read(salt));
+            if (bytesRead == salt.size())
+                return salt;
+        }
         FileSystem::deleteFile(path);
     }
 
     Salt salt = makeSalt();
     FileSystem::makeAllDirectories(FileSystem::parentPath(path));
-    auto file = FileSystem::openFile(path, FileSystem::FileOpenMode::Truncate, FileSystem::FileAccessPermission::User);
-    if (!FileSystem::isHandleValid(file))
+    auto handle = FileSystem::openFile(path, FileSystem::FileOpenMode::Truncate, FileSystem::FileAccessPermission::User);
+    if (!handle)
         return { };
 
-    bool success = static_cast<std::size_t>(FileSystem::writeToFile(file, salt)) == salt.size();
-    FileSystem::closeFile(file);
+    bool success = static_cast<std::size_t>(handle.write(salt)) == salt.size();
     if (!success)
         return { };
 
     return salt;
 }
 
-std::optional<Vector<uint8_t>> readEntireFile(PlatformFileHandle handle)
-{
-    if (!FileSystem::isHandleValid(handle))
-        return std::nullopt;
-
-    auto size = FileSystem::fileSize(handle).value_or(0);
-    if (!size)
-        return std::nullopt;
-
-    size_t bytesToRead;
-    if (!WTF::convertSafely(size, bytesToRead))
-        return std::nullopt;
-
-    Vector<uint8_t> buffer(bytesToRead);
-    size_t totalBytesRead = 0;
-    int bytesRead;
-
-    while ((bytesRead = FileSystem::readFromFile(handle, buffer.mutableSpan().subspan(totalBytesRead))) > 0)
-        totalBytesRead += bytesRead;
-
-    if (totalBytesRead != bytesToRead)
-        return std::nullopt;
-
-    return buffer;
-}
-
 std::optional<Vector<uint8_t>> readEntireFile(const String& path)
 {
     auto handle = FileSystem::openFile(path, FileSystem::FileOpenMode::Read);
-    auto contents = readEntireFile(handle);
-    FileSystem::closeFile(handle);
-
-    return contents;
+    return handle.readAll();
 }
 
 int overwriteEntireFile(const String& path, std::span<const uint8_t> span)
 {
     auto fileHandle = FileSystem::openFile(path, FileSystem::FileOpenMode::Truncate);
-    auto closeFile = makeScopeExit([&] {
-        FileSystem::closeFile(fileHandle);
-    });
-
-    if (!FileSystem::isHandleValid(fileHandle))
+    if (!fileHandle)
         return -1;
 
-    return FileSystem::writeToFile(fileHandle, span);
+    return fileHandle.write(span);
 }
 
 void deleteAllFilesModifiedSince(const String& directory, WallTime time)
@@ -853,7 +787,6 @@ bool isAncestor(const String& possibleAncestor, const String& possibleChild)
 String createTemporaryFile(StringView prefix, StringView suffix)
 {
     auto [path, handle] = openTemporaryFile(prefix, suffix);
-    closeFile(handle);
     return path;
 }
 

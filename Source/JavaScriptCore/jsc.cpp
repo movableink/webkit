@@ -1331,15 +1331,11 @@ public:
         });
 
         String filename = cachePath();
-        auto fd = FileSystem::openAndLockFile(filename, FileSystem::FileOpenMode::ReadWrite, { FileSystem::FileLockMode::Exclusive, FileSystem::FileLockMode::Nonblocking });
-        if (!FileSystem::isHandleValid(fd))
+        auto handle = FileSystem::openAndLockFile(filename, FileSystem::FileOpenMode::ReadWrite, { FileSystem::FileLockMode::Exclusive, FileSystem::FileLockMode::Nonblocking });
+        if (!handle)
             return;
 
-        auto closeFD = makeScopeExit([&] {
-            FileSystem::unlockAndCloseFile(fd);
-        });
-
-        auto fileSize = FileSystem::fileSize(fd);
+        auto fileSize = handle.size();
         if (!fileSize)
             return;
 
@@ -1349,13 +1345,13 @@ public:
             return;
         }
 
-        if (!FileSystem::truncateFile(fd, m_cachedBytecode->sizeForUpdate()))
+        if (!handle.truncate(m_cachedBytecode->sizeForUpdate()))
             return;
 
         m_cachedBytecode->commitUpdates([&] (off_t offset, std::span<const uint8_t> data) {
-            long long result = FileSystem::seekFile(fd, offset, FileSystem::FileSeekOrigin::Beginning);
+            long long result = handle.seek(offset, FileSystem::FileSeekOrigin::Beginning);
             ASSERT_UNUSED(result, result != -1);
-            size_t bytesWritten = static_cast<size_t>(FileSystem::writeToFile(fd, data));
+            size_t bytesWritten = static_cast<size_t>(handle.write(data));
             ASSERT_UNUSED(bytesWritten, bytesWritten == data.size());
         });
     }
@@ -1379,16 +1375,12 @@ private:
         if (filename.isNull())
             return;
 
-        auto fd = FileSystem::openAndLockFile(filename, FileSystem::FileOpenMode::Read, {FileSystem::FileLockMode::Shared, FileSystem::FileLockMode::Nonblocking});
-        if (!FileSystem::isHandleValid(fd))
+        auto handle = FileSystem::openAndLockFile(filename, FileSystem::FileOpenMode::Read, { FileSystem::FileLockMode::Shared, FileSystem::FileLockMode::Nonblocking });
+        if (!handle)
             return;
 
-        auto closeFD = makeScopeExit([&] {
-            FileSystem::unlockAndCloseFile(fd);
-        });
-
         bool success;
-        FileSystem::MappedFileData mappedFileData(fd, FileSystem::MappedFileMode::Private, success);
+        FileSystem::MappedFileData mappedFileData(handle.platformHandle(), FileSystem::MappedFileMode::Private, success);
 
         if (!success)
             return;
@@ -2095,17 +2087,15 @@ JSC_DEFINE_HOST_FUNCTION(functionWriteFile, (JSGlobalObject* globalObject, CallF
     }
 
     auto handle = FileSystem::openFile(fileName, FileSystem::FileOpenMode::Truncate);
-    if (!FileSystem::isHandleValid(handle))
+    if (!handle)
         return throwVMError(globalObject, scope, "Could not open file."_s);
 
     int size = std::visit(WTF::makeVisitor([&](const String& string) {
         CString utf8 = string.utf8();
-        return FileSystem::writeToFile(handle, byteCast<uint8_t>(utf8.span()));
+        return handle.write(byteCast<uint8_t>(utf8.span()));
     }, [&] (const std::span<const uint8_t>& data) {
-        return FileSystem::writeToFile(handle, data);
+        return handle.write(data);
     }), data);
-
-    FileSystem::closeFile(handle);
 
     return JSValue::encode(jsNumber(size));
 }

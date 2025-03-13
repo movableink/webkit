@@ -57,13 +57,11 @@ public:
         // create temp file
         auto result = FileSystem::openTemporaryFile("tempTestFile"_s);
         m_tempFilePath = result.first;
-        auto handle = result.second;
-        ASSERT_NE(handle, FileSystem::invalidPlatformFileHandle);
+        auto handle = WTFMove(result.second);
+        ASSERT_TRUE(!!handle);
 
-        int rc = FileSystem::writeToFile(handle, byteCast<uint8_t>(FileMonitorTestData.utf8().span()));
+        int rc = handle.write(byteCast<uint8_t>(FileMonitorTestData.utf8().span()));
         ASSERT_NE(rc, -1);
-        
-        FileSystem::closeFile(handle);
     }
     
     void TearDown() override
@@ -346,9 +344,9 @@ TEST_F(FileMonitorTest, DetectDeleteButNotSubsequentChange)
         EXPECT_FALSE(FileSystem::fileExists(tempFilePath()));
 
         auto handle = FileSystem::openFile(tempFilePath(), FileSystem::FileOpenMode::Truncate);
-        ASSERT_NE(handle, FileSystem::invalidPlatformFileHandle);
+        ASSERT_FALSE(!handle);
 
-        int rc = FileSystem::writeToFile(handle, byteCast<uint8_t>(FileMonitorTestData.utf8().span()));
+        int rc = handle.write(byteCast<uint8_t>(FileMonitorTestData.utf8().span()));
         ASSERT_NE(rc, -1);
 
         auto firstCommand = createCommand(tempFilePath(), FileMonitorRevisedData);

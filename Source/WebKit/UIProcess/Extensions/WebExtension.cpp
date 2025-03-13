@@ -176,16 +176,12 @@ static String convertChromeExtensionToTemporaryZipFile(const String& inputFilePa
     // are not found or any file operations fail.
 
     auto inputFileHandle = FileSystem::openFile(inputFilePath, FileSystem::FileOpenMode::Read);
-    if (!FileSystem::isHandleValid(inputFileHandle))
+    if (!inputFileHandle)
         return nullString();
-
-    auto closeFile = makeScopeExit([&] {
-        FileSystem::unlockAndCloseFile(inputFileHandle);
-    });
 
     // Read the magic signature.
     std::array<uint8_t, 4> signature;
-    auto bytesRead = FileSystem::readFromFile(inputFileHandle, signature);
+    auto bytesRead = inputFileHandle.read(signature);
     if (bytesRead < 0 || static_cast<size_t>(bytesRead) != signature.size())
         return nullString();
 
@@ -196,18 +192,14 @@ static String convertChromeExtensionToTemporaryZipFile(const String& inputFilePa
 
     // Create a temporary ZIP file.
     auto [temporaryFilePath, temporaryFileHandle] = FileSystem::openTemporaryFile("WebKitExtension-"_s, ".zip"_s);
-    if (!FileSystem::isHandleValid(temporaryFileHandle))
+    if (!temporaryFileHandle)
         return nullString();
-
-    auto closeTempFile = makeScopeExit([fileHandle = temporaryFileHandle] {
-        FileSystem::unlockAndCloseFile(fileHandle);
-    });
 
     std::array<uint8_t, 4096> buffer;
     bool signatureFound = false;
 
     while (true) {
-        bytesRead = FileSystem::readFromFile(inputFileHandle, buffer);
+        bytesRead = inputFileHandle.read(buffer);
 
         // Error reading file.
         if (bytesRead < 0)
@@ -238,7 +230,7 @@ static String convertChromeExtensionToTemporaryZipFile(const String& inputFilePa
         }
 
         auto bytesToWrite = std::span(buffer).subspan(bufferOffset, bytesRead - bufferOffset);
-        auto bytesWritten = FileSystem::writeToFile(temporaryFileHandle, bytesToWrite);
+        auto bytesWritten = temporaryFileHandle.write(bytesToWrite);
         if (bytesWritten != static_cast<int64_t>(bytesToWrite.size()))
             return nullString();
     }

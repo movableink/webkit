@@ -55,10 +55,8 @@ RefPtr<FileSystemStorageHandle> FileSystemStorageHandle::create(FileSystemStorag
         canAccess = FileSystem::makeAllDirectories(path);
         break;
     case FileSystemStorageHandle::Type::File:
-        if (auto handle = FileSystem::openFile(path, FileSystem::FileOpenMode::ReadWrite); FileSystem::isHandleValid(handle)) {
-            FileSystem::closeFile(handle);
+        if (auto handle = FileSystem::openFile(path, FileSystem::FileOpenMode::ReadWrite); handle)
             canAccess = true;
-        }
         break;
     case FileSystemStorageHandle::Type::Any:
         ASSERT_NOT_REACHED();
@@ -208,14 +206,12 @@ Expected<FileSystemSyncAccessHandleInfo, FileSystemStorageError> FileSystemStora
         return makeUnexpected(FileSystemStorageError::InvalidState);
 
     auto handle = FileSystem::openFile(m_path, FileSystem::FileOpenMode::ReadWrite);
-    if (handle == FileSystem::invalidPlatformFileHandle)
+    if (!handle)
         return makeUnexpected(FileSystemStorageError::Unknown);
 
-    auto ipcHandle = IPC::SharedFileHandle::create(std::exchange(handle, FileSystem::invalidPlatformFileHandle));
-    if (!ipcHandle) {
-        FileSystem::closeFile(handle);
+    auto ipcHandle = IPC::SharedFileHandle::create(WTFMove(handle));
+    if (!ipcHandle)
         return makeUnexpected(FileSystemStorageError::BackendNotSupported);
-    }
 
     ASSERT(!m_activeSyncAccessHandle);
     m_activeSyncAccessHandle = SyncAccessHandleInfo { WebCore::FileSystemSyncAccessHandleIdentifier::generate() };
@@ -255,12 +251,11 @@ Expected<WebCore::FileSystemWritableFileStreamIdentifier, FileSystemStorageError
     auto streamIdentifier = WebCore::FileSystemWritableFileStreamIdentifier::generate();
     ASSERT(!m_activeWritableFiles.contains(streamIdentifier));
 
-    WebCore::FileHandle activeWritableFile;
-    activeWritableFile.open(path, FileSystem::FileOpenMode::ReadWrite);
+    auto activeWritableFile = FileSystem::openFile(path, FileSystem::FileOpenMode::ReadWrite);
     if (!activeWritableFile)
         return makeUnexpected(FileSystemStorageError::Unknown);
 
-    m_activeWritableFiles.add(streamIdentifier, WTFMove(activeWritableFile));
+    m_activeWritableFiles.add(streamIdentifier, FileHandleWithPath { WTFMove(activeWritableFile), WTFMove(path) });
     return streamIdentifier;
 }
 
@@ -278,13 +273,13 @@ std::optional<FileSystemStorageError> FileSystemStorageHandle::closeWritable(Web
     manager->releaseLockForFile(m_path);
 
     if (reason == WebCore::FileSystemWriteCloseReason::Aborted) {
-        activeWritableFile.close();
-        FileSystem::deleteFile(activeWritableFile.path());
+        activeWritableFile.handle = { };
+        FileSystem::deleteFile(activeWritableFile.path);
         return std::nullopt;
     }
 
-    ASSERT(!activeWritableFile.path().isEmpty());
-    if (!FileSystem::copyFile(m_path, activeWritableFile.path()))
+    ASSERT(!activeWritableFile.path.isEmpty());
+    if (!FileSystem::copyFile(m_path, activeWritableFile.path))
         return FileSystemStorageError::Unknown;
 
     return std::nullopt;
@@ -304,12 +299,12 @@ std::optional<FileSystemStorageError> FileSystemStorageHandle::executeCommandFor
     switch (type) {
     case WebCore::FileSystemWriteCommandType::Write: {
         if (position) {
-            auto result = FileSystem::seekFile(activeWritableFile.handle(), *position, FileSystem::FileSeekOrigin::Beginning);
+            auto result = activeWritableFile.handle.seek(*position, FileSystem::FileSeekOrigin::Beginning);
             if (result == -1)
                 return FileSystemStorageError::Unknown;
         }
 
-        int result = FileSystem::writeToFile(activeWritableFile.handle(), dataBytes);
+        int result = activeWritableFile.handle.write(dataBytes);
         if (result == -1)
             return FileSystemStorageError::Unknown;
 
@@ -319,7 +314,7 @@ std::optional<FileSystemStorageError> FileSystemStorageHandle::executeCommandFor
         if (!position)
             return FileSystemStorageError::MissingArgument;
 
-        auto result = FileSystem::seekFile(activeWritableFile.handle(), *position, FileSystem::FileSeekOrigin::Beginning);
+        auto result = activeWritableFile.handle.seek(*position, FileSystem::FileSeekOrigin::Beginning);
         if (result == -1)
             return FileSystemStorageError::Unknown;
 
@@ -329,13 +324,13 @@ std::optional<FileSystemStorageError> FileSystemStorageHandle::executeCommandFor
         if (!size)
             return FileSystemStorageError::MissingArgument;
 
-        bool truncated = FileSystem::truncateFile(activeWritableFile.handle(), *size);
+        bool truncated = activeWritableFile.handle.truncate(*size);
         if (!truncated)
             return FileSystemStorageError::Unknown;
 
-        auto currentOffset = FileSystem::seekFile(activeWritableFile.handle(), 0, FileSystem::FileSeekOrigin::Current);
+        auto currentOffset = activeWritableFile.handle.seek(0, FileSystem::FileSeekOrigin::Current);
         if (currentOffset == -1 || static_cast<unsigned long long>(currentOffset) > *size)
-            FileSystem::seekFile(activeWritableFile.handle(), *size, FileSystem::FileSeekOrigin::Beginning);
+            activeWritableFile.handle.seek(*size, FileSystem::FileSeekOrigin::Beginning);
 
         return std::nullopt;
     }
@@ -366,7 +361,7 @@ std::optional<size_t> FileSystemStorageHandle::computeCommandSpace(WebCore::File
         return *size > *fileSize ? *size - *fileSize : 0;
 
     uint64_t finalSize;
-    auto currentOffset = FileSystem::seekFile(activeWritableFile.handle(), position.value_or(0), FileSystem::FileSeekOrigin::Current);
+    auto currentOffset = activeWritableFile.handle.seek(position.value_or(0), FileSystem::FileSeekOrigin::Current);
     if (currentOffset == -1)
         return { };
 

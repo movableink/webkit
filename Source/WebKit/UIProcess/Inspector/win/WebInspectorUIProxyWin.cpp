@@ -104,20 +104,19 @@ void WebInspectorUIProxy::showSavePanelForSingleFile(HWND parentWindow, Vector<W
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
 
     if (GetSaveFileName(&ofn)) {
-        auto fd = FileSystem::openFile(filePath.data(), FileSystem::FileOpenMode::ReadWrite);
-        if (!FileSystem::isHandleValid(fd))
+        auto fileHandle = FileSystem::openFile(filePath.data(), FileSystem::FileOpenMode::ReadWrite);
+        if (!fileHandle)
             return;
 
         auto content = saveDatas[0].content.utf8();
         auto contentSize = content.length();
-        auto bytesWritten = FileSystem::writeToFile(fd, byteCast<uint8_t>(content.span()));
+        auto bytesWritten = fileHandle.write(byteCast<uint8_t>(content.span()));
         if (bytesWritten == -1 || static_cast<size_t>(bytesWritten) != contentSize) {
             auto message = systemErrorMessage(GetLastError());
             if (message.isEmpty())
                 message = makeString("Error: writeToFile returns "_s, bytesWritten, ", contentLength = "_s, content.length());
             MessageBox(parentWindow, message.wideCharacters().data(), L"Export HAR", MB_OK | MB_ICONEXCLAMATION);
         }
-        FileSystem::closeFile(fd);
     } else {
         auto errorCode = CommDlgExtendedError();
         if (errorCode) {

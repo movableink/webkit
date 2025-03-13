@@ -245,13 +245,15 @@ void BlobResourceHandle::getSizeForNext()
     case BlobDataItem::Type::Data:
         didGetSize(item.length());
         break;
-    case BlobDataItem::Type::File:
+    case BlobDataItem::Type::File: {
         // Files know their sizes, but asking the stream to verify that the file wasn't modified.
+        RefPtr file = item.file();
         if (m_async)
-            m_asyncStream->getSize(item.protectedFile()->path(), item.file()->expectedModificationTime());
+            m_asyncStream->getSize(file->path(), file->expectedModificationTime());
         else
-            didGetSize(m_stream->getSize(item.protectedFile()->path(), item.file()->expectedModificationTime()));
+            didGetSize(m_stream->getSize(file->path(), file->expectedModificationTime()));
         break;
+    }
     default:
         ASSERT_NOT_REACHED();
     }

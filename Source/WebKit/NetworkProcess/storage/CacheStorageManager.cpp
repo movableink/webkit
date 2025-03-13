@@ -59,14 +59,7 @@ static std::optional<Vector<std::pair<String, String>>> readCachesList(const Str
     if (!FileSystem::fileExists(cachesListFilePath))
         return result;
 
-    auto cachesListHandle = FileSystem::openFile(cachesListFilePath, FileSystem::FileOpenMode::ReadWrite);
-    if (!FileSystem::isHandleValid(cachesListHandle))
-        return std::nullopt;
-    auto closeFileOnExit = makeScopeExit([&cachesListHandle]() mutable {
-        FileSystem::closeFile(cachesListHandle);
-    });
-
-    auto cachesList = FileSystem::readEntireFile(cachesListHandle);
+    auto cachesList = FileSystem::readEntireFile(cachesListFilePath);
     if (!cachesList)
         return std::nullopt;
 

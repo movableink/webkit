@@ -111,10 +111,7 @@ void ServiceWorkerDownloadTask::cancel()
     ASSERT(isMainRunLoop());
 
     serviceWorkerDownloadTaskQueueSingleton().dispatch([this, protectedThis = Ref { *this }] {
-        if (m_downloadFile != FileSystem::invalidPlatformFileHandle) {
-            FileSystem::closeFile(m_downloadFile);
-            m_downloadFile = FileSystem::invalidPlatformFileHandle;
-        }
+        m_downloadFile = { };
     });
 
     if (RefPtr sandboxExtension = std::exchange(m_sandboxExtension, nullptr))
@@ -167,7 +164,7 @@ void ServiceWorkerDownloadTask::setPendingDownloadLocation(const WTF::String& fi
         }
 
         m_downloadFile = FileSystem::openFile(m_pendingDownloadLocation, FileSystem::FileOpenMode::Truncate);
-        if (m_downloadFile == FileSystem::invalidPlatformFileHandle)
+        if (!m_downloadFile)
             didFailDownload();
     });
 }
@@ -195,10 +192,10 @@ void ServiceWorkerDownloadTask::didReceiveData(const IPC::SharedBufferReference&
 {
     ASSERT(!isMainRunLoop());
 
-    if (m_downloadFile == FileSystem::invalidPlatformFileHandle)
+    if (!m_downloadFile)
         return;
 
-    size_t bytesWritten = FileSystem::writeToFile(m_downloadFile, data.span());
+    size_t bytesWritten = m_downloadFile.write(data.span());
 
     if (bytesWritten != data.size()) {
         didFailDownload();
@@ -225,8 +222,7 @@ void ServiceWorkerDownloadTask::didFinish()
 {
     ASSERT(!isMainRunLoop());
 
-    FileSystem::closeFile(m_downloadFile);
-    m_downloadFile = FileSystem::invalidPlatformFileHandle;
+    m_downloadFile = { };
 
     callOnMainRunLoop([this, protectedThis = Ref { *this }] {
         m_state = State::Completed;
@@ -261,10 +257,7 @@ void ServiceWorkerDownloadTask::didFailDownload(std::optional<ResourceError>&& e
 {
     ASSERT(!isMainRunLoop());
 
-    if (m_downloadFile != FileSystem::invalidPlatformFileHandle) {
-        FileSystem::closeFile(m_downloadFile);
-        m_downloadFile = FileSystem::invalidPlatformFileHandle;
-    }
+    m_downloadFile = { };
 
     callOnMainRunLoop([this, protectedThis = Ref { *this }, error = crossThreadCopy(WTFMove(error))] {
         if (m_state == State::Completed)
