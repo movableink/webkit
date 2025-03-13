@@ -53,7 +53,7 @@ using CascadeLayerName = Vector<AtomString>;
     
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRuleBase);
 class StyleRuleBase : public RefCounted<StyleRuleBase> {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRuleBase);
+    WTF_MAKE_STRUCT_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRuleBase);
 public:
     StyleRuleType type() const { return static_cast<StyleRuleType>(m_type); }
 
@@ -116,7 +116,7 @@ private:
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRule);
 class StyleRule : public StyleRuleBase {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRule);
+    WTF_MAKE_STRUCT_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRule);
 public:
     static Ref<StyleRule> create(Ref<StyleProperties>&&, bool hasDocumentSecurityOrigin, CSSSelectorList&&);
     Ref<StyleRule> copy() const;
@@ -166,7 +166,7 @@ private:
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRuleWithNesting);
 class StyleRuleWithNesting final : public StyleRule {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRuleWithNesting);
+    WTF_MAKE_STRUCT_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRuleWithNesting);
 public:
     static Ref<StyleRuleWithNesting> create(Ref<StyleProperties>&&, bool hasDocumentSecurityOrigin, CSSSelectorList&&, Vector<Ref<StyleRuleBase>>&& nestedRules);
     static Ref<StyleRuleWithNesting> create(StyleRule&&);
@@ -190,7 +190,9 @@ private:
     CSSSelectorList m_originalSelectorList;
 };
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRuleNestedDeclarations);
 class StyleRuleNestedDeclarations final : public StyleRule {
+    WTF_MAKE_STRUCT_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRuleNestedDeclarations);
 public:
     static Ref<StyleRuleNestedDeclarations> create(Ref<StyleProperties>&& properties) { return adoptRef(*new StyleRuleNestedDeclarations(WTFMove(properties))); }
     ~StyleRuleNestedDeclarations() = default;
