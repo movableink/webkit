@@ -70,11 +70,11 @@
 #import "PathUtilities.h"
 #import "PlatformLocale.h"
 #import "RenderAttachment.h"
+#import "RenderBox.h"
 #import "RenderBoxInlines.h"
 #import "RenderButton.h"
 #import "RenderMenuList.h"
 #import "RenderMeter.h"
-#import "RenderObject.h"
 #import "RenderSlider.h"
 #import "RenderStyleSetters.h"
 #import "RenderView.h"
@@ -117,7 +117,7 @@ RenderTheme& RenderTheme::singleton()
     return theme;
 }
 
-bool RenderThemeIOS::canCreateControlPartForRenderer(const RenderObject& renderer) const
+bool RenderThemeIOS::canCreateControlPartForRenderer(const RenderBox& renderer) const
 {
     auto type = renderer.style().usedAppearance();
 #if ENABLE(APPLE_PAY)
@@ -616,7 +616,7 @@ void RenderThemeIOS::adjustSliderTrackStyle(RenderStyle& style, const Element* e
 
 constexpr auto nativeControlBorderInlineSize = 1.0f;
 
-bool RenderThemeIOS::paintSliderTrack(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeIOS::paintSliderTrack(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (box.settings().macStyleControlsOnCatalyst())
@@ -722,7 +722,7 @@ void RenderThemeIOS::adjustSliderThumbSize(RenderStyle& style, const Element* el
 constexpr auto reducedMotionProgressAnimationMinOpacity = 0.3f;
 constexpr auto reducedMotionProgressAnimationMaxOpacity = 0.6f;
 
-bool RenderThemeIOS::paintProgressBar(const RenderObject& renderer, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeIOS::paintProgressBar(const RenderBox& renderer, const PaintInfo& paintInfo, const IntRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (renderer.settings().macStyleControlsOnCatalyst())
@@ -1030,7 +1030,7 @@ bool RenderThemeIOS::shouldHaveSpinButton(const HTMLInputElement&) const
     return false;
 }
 
-bool RenderThemeIOS::supportsFocusRing(const RenderObject& renderer, const RenderStyle& style) const
+bool RenderThemeIOS::supportsFocusRing(const RenderElement& renderer, const RenderStyle& style) const
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (renderer.settings().macStyleControlsOnCatalyst())
@@ -1225,7 +1225,7 @@ Color RenderThemeIOS::systemColor(CSSValueID cssValueID, OptionSet<StyleColorOpt
     return color;
 }
 
-Color RenderThemeIOS::pictureFrameColor(const RenderObject& buttonRenderer)
+Color RenderThemeIOS::pictureFrameColor(const RenderBox& buttonRenderer)
 {
     return buttonRenderer.style().visitedDependentColor(CSSPropertyBorderTopColor);
 }
@@ -1334,7 +1334,7 @@ static void paintAttachmentBorder(GraphicsContext& context, Path& borderPath)
     context.strokePath(borderPath);
 }
 
-bool RenderThemeIOS::paintAttachment(const RenderObject& renderer, const PaintInfo& paintInfo, const IntRect& paintRect)
+bool RenderThemeIOS::paintAttachment(const RenderBox& renderer, const PaintInfo& paintInfo, const IntRect& paintRect)
 {
     auto* attachment = dynamicDowncast<RenderAttachment>(renderer);
     if (!attachment)
@@ -1499,7 +1499,7 @@ void RenderThemeIOS::paintCheckboxRadioInnerShadow(const PaintInfo& paintInfo, c
     context.fillPath(innerShadowPath);
 }
 
-bool RenderThemeIOS::paintCheckbox(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
+bool RenderThemeIOS::paintCheckbox(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (box.settings().macStyleControlsOnCatalyst())
@@ -1589,7 +1589,7 @@ bool RenderThemeIOS::paintCheckbox(const RenderObject& box, const PaintInfo& pai
     return false;
 }
 
-bool RenderThemeIOS::paintRadio(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
+bool RenderThemeIOS::paintRadio(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (box.settings().macStyleControlsOnCatalyst())
@@ -1651,7 +1651,7 @@ bool RenderThemeIOS::supportsMeter(StyleAppearance appearance) const
     return appearance == StyleAppearance::Meter;
 }
 
-bool RenderThemeIOS::paintMeter(const RenderObject& renderer, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeIOS::paintMeter(const RenderBox& renderer, const PaintInfo& paintInfo, const IntRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (renderer.settings().macStyleControlsOnCatalyst())
@@ -1708,7 +1708,7 @@ bool RenderThemeIOS::paintMeter(const RenderObject& renderer, const PaintInfo& p
     return false;
 }
 
-bool RenderThemeIOS::paintListButton(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
+bool RenderThemeIOS::paintListButton(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (box.settings().macStyleControlsOnCatalyst())
@@ -1760,9 +1760,9 @@ bool RenderThemeIOS::paintListButton(const RenderObject& box, const PaintInfo& p
     return false;
 }
 
-void RenderThemeIOS::paintSliderTicks(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
+void RenderThemeIOS::paintSliderTicks(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
-    RefPtr input = dynamicDowncast<HTMLInputElement>(box.node());
+    RefPtr input = dynamicDowncast<HTMLInputElement>(box.element());
     if (!input || !input->isRangeControl())
         return;
 
@@ -1816,7 +1816,7 @@ void RenderThemeIOS::paintSliderTicks(const RenderObject& box, const PaintInfo& 
     }
 }
 
-void RenderThemeIOS::paintColorWellDecorations(const RenderObject& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
+void RenderThemeIOS::paintColorWellDecorations(const RenderBox& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (renderer.settings().macStyleControlsOnCatalyst()) {
@@ -1882,7 +1882,7 @@ void RenderThemeIOS::adjustSearchFieldDecorationPartStyle(RenderStyle& style, co
     style.setMarginEnd({ searchFieldDecorationMargin, LengthType::Fixed });
 }
 
-bool RenderThemeIOS::paintSearchFieldDecorationPart(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeIOS::paintSearchFieldDecorationPart(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (box.settings().macStyleControlsOnCatalyst())

@@ -128,7 +128,7 @@ void SpinButtonElement::defaultEventHandler(Event& event)
                 }
             }
             UpDownState oldUpDownState = m_upDownState;
-            switch (renderer()->theme().innerSpinButtonLayout(*renderer())) {
+            switch (box->theme().innerSpinButtonLayout(*box)) {
             case RenderTheme::InnerSpinButtonLayout::Vertical:
                 m_upDownState = local.y() < box->height() / 2 ? Up : Down;
                 break;

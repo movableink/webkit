@@ -1350,11 +1350,11 @@ IntRect AccessibilityObject::boundingBoxForQuads(RenderObject* obj, const Vector
     
     FloatRect result;
     for (const auto& quad : quads) {
-        FloatRect r = quad.enclosingBoundingBox();
-        if (!r.isEmpty()) {
-            if (obj->style().hasUsedAppearance())
-                obj->theme().inflateRectForControlRenderer(*obj, r);
-            result.unite(r);
+        auto enclosingRect = FloatRect { quad.enclosingBoundingBox() };
+        if (!enclosingRect.isEmpty()) {
+            if (CheckedPtr renderBox = dynamicDowncast<RenderBox>(*obj); renderBox && renderBox->style().hasUsedAppearance())
+                renderBox->theme().inflateRectForControlRenderer(*renderBox, enclosingRect);
+            result.unite(enclosingRect);
         }
     }
     return snappedIntRect(LayoutRect(result));
