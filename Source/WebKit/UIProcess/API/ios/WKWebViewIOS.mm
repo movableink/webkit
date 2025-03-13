@@ -4988,32 +4988,31 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     _page->setDefaultSpatialTrackingLabel(defaultSTSLabel);
 }
 
-- (void)_enterExternalPlaybackForNowPlayingMediaSessionWithCompletionHandler:(void(^)(UIViewController *, NSError *))completionHandler
+- (void)_enterExternalPlaybackForNowPlayingMediaSessionWithEnterCompletionHandler:(void (^)(UIViewController *nowPlayingViewController, NSError *error))enterHandler exitCompletionHandler:(void (^)(NSError *error))exitHandler
 {
     if (!_page) {
-        completionHandler(nil, [NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]);
+        enterHandler(nil, [NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]);
+        exitHandler([NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]);
         return;
     }
 
     _page->setPlayerIdentifierForVideoElement();
-    _page->enterExternalPlaybackForNowPlayingMediaSession([handler = makeBlockPtr(completionHandler)](bool entered, UIViewController *viewController) {
+    _page->enterExternalPlaybackForNowPlayingMediaSession([handler = makeBlockPtr(enterHandler)](bool entered, UIViewController *viewController) {
         if (entered)
             handler(viewController, nil);
         else
             handler(nil, createNSError(WKErrorUnknown).get());
+    }, [handler = makeBlockPtr(exitHandler)](bool success) {
+        handler(success ? nil : createNSError(WKErrorUnknown).get());
     });
 }
 
-- (void)_exitExternalPlaybackWithCompletionHandler:(void (^)(NSError *error))completionHandler
+- (void)_exitExternalPlayback
 {
-    if (!_page) {
-        completionHandler([NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]);
+    if (!_page)
         return;
-    }
 
-    _page->exitExternalPlayback([handler = makeBlockPtr(completionHandler)](bool success) {
-        handler(success ? nil : createNSError(WKErrorUnknown).get());
-    });
+    _page->exitExternalPlayback();
 }
 @end
 #endif

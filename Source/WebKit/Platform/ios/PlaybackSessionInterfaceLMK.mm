@@ -369,7 +369,7 @@ void PlaybackSessionInterfaceLMK::supportsLinearMediaPlayerChanged(bool supports
         // If the player is in external presentation (which uses LinearMediaPlayer) but the current
         // media engine does not support it, exit external presentation.
         if (RefPtr videoPresentationInterface = m_videoPresentationInterface.get())
-            videoPresentationInterface->exitExternalPlayback([](bool) { });
+            videoPresentationInterface->exitExternalPlayback();
         break;
     case WKSLinearMediaPresentationStateInline:
     case WKSLinearMediaPresentationStateExitingFullscreen:

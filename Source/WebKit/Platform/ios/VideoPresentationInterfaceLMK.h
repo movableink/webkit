@@ -65,8 +65,8 @@ private:
     void setupPlayerViewController() final;
     void invalidatePlayerViewController() final;
     UIViewController *playerViewController() const final;
-    void enterExternalPlayback(CompletionHandler<void(bool, UIViewController *)> &&) final;
-    void exitExternalPlayback(CompletionHandler<void(bool)>&&) final;
+    void enterExternalPlayback(CompletionHandler<void(bool, UIViewController *)> &&, CompletionHandler<void(bool)>&&) final;
+    void exitExternalPlayback() final;
     void tryToStartPictureInPicture() final { }
     void stopPictureInPicture() final { }
     void presentFullscreen(bool animated, Function<void(BOOL, NSError *)>&&) final;
@@ -93,6 +93,8 @@ private:
     String m_spatialTrackingLabel;
     RetainPtr<CALayer> m_spatialTrackingLayer;
 #endif
+
+    CompletionHandler<void(bool)> m_exitExternalPlaybackHandler;
 };
 
 } // namespace WebKit

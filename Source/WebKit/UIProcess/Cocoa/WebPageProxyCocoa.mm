@@ -634,36 +634,34 @@ void WebPageProxy::removeMediaUsageManagerSession(WebCore::MediaSessionIdentifie
 #endif
 
 #if PLATFORM(VISION)
-void WebPageProxy::enterExternalPlaybackForNowPlayingMediaSession(CompletionHandler<void(bool, UIViewController *)>&& completionHandler)
+void WebPageProxy::enterExternalPlaybackForNowPlayingMediaSession(CompletionHandler<void(bool, UIViewController *)>&& enterHandler, CompletionHandler<void(bool)>&& exitHandler)
 {
     if (!m_videoPresentationManager) {
-        completionHandler(false, nil);
+        enterHandler(false, nil);
+        exitHandler(false);
         return;
     }
 
     RefPtr videoPresentationInterface = m_videoPresentationManager->controlsManagerInterface();
     if (!videoPresentationInterface) {
-        completionHandler(false, nil);
+        enterHandler(false, nil);
+        exitHandler(false);
         return;
     }
 
-    videoPresentationInterface->enterExternalPlayback(WTFMove(completionHandler));
+    videoPresentationInterface->enterExternalPlayback(WTFMove(enterHandler), WTFMove(exitHandler));
 }
 
-void WebPageProxy::exitExternalPlayback(CompletionHandler<void(bool)>&& completionHandler)
+void WebPageProxy::exitExternalPlayback()
 {
-    if (!m_videoPresentationManager) {
-        completionHandler(false);
+    if (!m_videoPresentationManager)
         return;
-    }
 
     RefPtr videoPresentationInterface = m_videoPresentationManager->controlsManagerInterface();
-    if (!videoPresentationInterface) {
-        completionHandler(false);
+    if (!videoPresentationInterface)
         return;
-    }
 
-    videoPresentationInterface->exitExternalPlayback(WTFMove(completionHandler));
+    videoPresentationInterface->exitExternalPlayback();
 }
 #endif
 

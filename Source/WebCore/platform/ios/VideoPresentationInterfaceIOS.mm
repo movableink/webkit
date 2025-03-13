@@ -389,14 +389,14 @@ void VideoPresentationInterfaceIOS::externalPlaybackChanged(bool enabled, Playba
     [playerLayerView() setHidden:enabled];
 }
 
-void VideoPresentationInterfaceIOS::enterExternalPlayback(CompletionHandler<void(bool, UIViewController *)>&& completionHandler)
+void VideoPresentationInterfaceIOS::enterExternalPlayback(CompletionHandler<void(bool, UIViewController *)>&& enterHandler, CompletionHandler<void(bool)>&& exitHandler)
 {
-    completionHandler(false, nil);
+    enterHandler(false, nil);
+    exitHandler(false);
 }
 
-void VideoPresentationInterfaceIOS::exitExternalPlayback(CompletionHandler<void(bool)>&& completionHandler)
+void VideoPresentationInterfaceIOS::exitExternalPlayback()
 {
-    completionHandler(false);
 }
 
 void VideoPresentationInterfaceIOS::setInlineRect(const FloatRect& inlineRect, bool visible)

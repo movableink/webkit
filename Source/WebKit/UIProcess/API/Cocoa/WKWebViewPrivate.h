@@ -759,8 +759,8 @@ typedef NS_OPTIONS(NSUInteger, _WKWebViewDataType) {
 @interface WKWebView (WKPrivateVision)
 @property (copy, setter=_setDefaultSTSLabel:) NSString *_defaultSTSLabel;
 
-- (void)_enterExternalPlaybackForNowPlayingMediaSessionWithCompletionHandler:(void (^)(UIViewController *nowPlayingViewController, NSError *error))completionHandler WK_API_AVAILABLE(visionos(WK_XROS_TBA));
-- (void)_exitExternalPlaybackWithCompletionHandler:(void (^)(NSError *error))completionHandler WK_API_AVAILABLE(visionos(WK_XROS_TBA));
+- (void)_enterExternalPlaybackForNowPlayingMediaSessionWithEnterCompletionHandler:(void (^)(UIViewController *nowPlayingViewController, NSError *error))enterHandler exitCompletionHandler:(void (^)(NSError *error))exitHandler WK_API_AVAILABLE(visionos(WK_XROS_TBA));
+- (void)_exitExternalPlayback WK_API_AVAILABLE(visionos(WK_XROS_TBA));
 @end
 #endif
 

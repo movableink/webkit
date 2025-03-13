@@ -110,8 +110,8 @@ public:
     WEBCORE_EXPORT void preparedToReturnToStandby();
     bool changingStandbyOnly() { return m_changingStandbyOnly; }
     WEBCORE_EXPORT void failedToRestoreFullscreen();
-    WEBCORE_EXPORT virtual void enterExternalPlayback(CompletionHandler<void(bool, UIViewController *)>&&);
-    WEBCORE_EXPORT virtual void exitExternalPlayback(CompletionHandler<void(bool)>&&);
+    WEBCORE_EXPORT virtual void enterExternalPlayback(CompletionHandler<void(bool, UIViewController *)>&&, CompletionHandler<void(bool)>&&);
+    WEBCORE_EXPORT virtual void exitExternalPlayback();
 
     enum class ExitFullScreenReason {
         DoneButtonTapped,

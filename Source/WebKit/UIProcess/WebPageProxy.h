@@ -2306,8 +2306,8 @@ public:
 #endif
 
 #if PLATFORM(VISION)
-    void enterExternalPlaybackForNowPlayingMediaSession(CompletionHandler<void(bool, UIViewController *)>&&);
-    void exitExternalPlayback(CompletionHandler<void(bool)>&&);
+    void enterExternalPlaybackForNowPlayingMediaSession(CompletionHandler<void(bool, UIViewController *)>&&, CompletionHandler<void(bool)>&&);
+    void exitExternalPlayback();
 #endif
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
