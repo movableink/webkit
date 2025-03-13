@@ -1416,30 +1416,30 @@ void TreeResolver::sortPositionOptionsIfNeeded(PositionOptions& options, const S
     if (!box || !box->isOutOfFlowPositioned())
         return;
 
+    // "For each entry in the position options list, apply that position option to the box, and find
+    // the specified inset-modified containing block size that results from those styles."
+    // https://drafts.csswg.org/css-anchor-position-1/#position-try-order-property
     auto boxAxis = boxAxisForPositionTryOrder(order, options.originalStyle->writingMode());
 
-    struct SizeValue {
-        LayoutUnit size;
-        size_t index;
+    struct SortingOption {
+        std::unique_ptr<RenderStyle> style;
+        LayoutUnit containingBlockSize;
     };
-    Vector<SizeValue> sizes;
-    sizes.reserveInitialCapacity(options.optionStyles.size());
+    Vector<SortingOption> optionsForSorting;
+    optionsForSorting.reserveInitialCapacity(options.optionStyles.size());
 
-    size_t index = 0;
     for (auto& optionStyle : options.optionStyles) {
         auto constraints = PositionedLayoutConstraints { *box, *optionStyle, boxAxis };
-        sizes.append({ constraints.availableContentSpace(), index++ });
+        optionsForSorting.append({ WTFMove(optionStyle), constraints.availableContentSpace() });
     }
 
-    std::ranges::stable_sort(sizes, [](auto& a, auto& b) {
-        return a.size > b.size;
+    // "Stably sort the position options list according to this size, with the largest coming first."
+    std::ranges::stable_sort(optionsForSorting, [](auto& a, auto& b) {
+        return a.containingBlockSize > b.containingBlockSize;
     });
 
-    Vector<std::unique_ptr<RenderStyle>> sortedOptionStyles;
-    for (size_t i = 0; i < options.optionStyles.size(); ++i)
-        sortedOptionStyles.append(WTFMove(options.optionStyles[sizes[i].index]));
-
-    options.optionStyles = WTFMove(sortedOptionStyles);
+    for (size_t i = 0; i < optionsForSorting.size(); ++i)
+        options.optionStyles[i] = WTFMove(optionsForSorting[i].style);
 }
 
 std::optional<ResolvedStyle> TreeResolver::tryChoosePositionOption(const Styleable& styleable, const RenderStyle* existingStyle)
