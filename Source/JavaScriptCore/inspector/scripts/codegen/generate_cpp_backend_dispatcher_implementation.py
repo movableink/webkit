@@ -341,11 +341,13 @@ class CppBackendDispatcherImplementationGenerator(CppGenerator):
                     result_type_alias = 'CommandResult'
                     type_arguments = ['void']
 
+                # Immediately send an error message since this is an async response with a single error.
                 thunkLines = [
                     '[backendDispatcher = m_backendDispatcher.copyRef(), protocol_requestId](%s<%s> result) {' % (result_type_alias, ", ".join(type_arguments)),
                     '        if (!result) {',
                     '           ASSERT(!result.error().isEmpty());',
-                    '           backendDispatcher->reportProtocolError(BackendDispatcher::ServerError, result.error());',
+                    '           backendDispatcher->reportProtocolError(protocol_requestId, BackendDispatcher::ServerError, result.error());',
+                    '           backendDispatcher->sendPendingErrors();',
                     '           return;',
                     '        }',
                 ]
