@@ -536,7 +536,7 @@ static NSString *pathToPDFOnDisk(const String& suggestedFilename)
     return path;
 }
 
-void WebPageProxy::savePDFToTemporaryFolderAndOpenWithNativeApplication(const String& suggestedFilename, FrameInfoData&& frameInfo, std::span<const uint8_t> data, const String& pdfUUID)
+void WebPageProxy::savePDFToTemporaryFolderAndOpenWithNativeApplication(const String& suggestedFilename, FrameInfoData&& frameInfo, std::span<const uint8_t> data)
 {
     if (data.empty()) {
         WTFLogAlways("Cannot save empty PDF file to the temporary directory.");
@@ -563,9 +563,6 @@ void WebPageProxy::savePDFToTemporaryFolderAndOpenWithNativeApplication(const St
     }
     auto originatingURLString = frameInfo.request.url().string();
     FileSystem::setMetadataURL(nsPath.get(), originatingURLString);
-
-    if (TemporaryPDFFileMap::isValidKey(pdfUUID))
-        m_temporaryPDFFiles.add(pdfUUID, nsPath.get());
 
     auto pdfFileURL = URL::fileURLWithFileSystemPath(String(nsPath.get()));
     m_uiClient->confirmPDFOpening(*this, pdfFileURL, WTFMove(frameInfo), [pdfFileURL] (bool allowed) {
@@ -782,10 +779,10 @@ void WebPageProxy::pdfSaveToPDF(PDFPluginIdentifier identifier)
 
 void WebPageProxy::pdfOpenWithPreview(PDFPluginIdentifier identifier)
 {
-    protectedLegacyMainFrameProcess()->sendWithAsyncReply(Messages::WebPage::OpenPDFWithPreview(identifier), [this, protectedThis = Ref { *this }] (String&& suggestedFilename, std::optional<FrameInfoData>&& frameInfo, std::span<const uint8_t> data, const String& pdfUUID) {
+    protectedLegacyMainFrameProcess()->sendWithAsyncReply(Messages::WebPage::OpenPDFWithPreview(identifier), [this, protectedThis = Ref { *this }](String&& suggestedFilename, std::optional<FrameInfoData>&& frameInfo, std::span<const uint8_t> data) {
         if (!frameInfo)
             return;
-        savePDFToTemporaryFolderAndOpenWithNativeApplication(WTFMove(suggestedFilename), WTFMove(*frameInfo), data, pdfUUID);
+        savePDFToTemporaryFolderAndOpenWithNativeApplication(WTFMove(suggestedFilename), WTFMove(*frameInfo), data);
     }, webPageIDInMainFrameProcess());
 }
 

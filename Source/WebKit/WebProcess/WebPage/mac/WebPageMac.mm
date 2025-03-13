@@ -1037,14 +1037,14 @@ void WebPage::savePDF(PDFPluginIdentifier identifier, CompletionHandler<void(con
     pdfPlugin->save(WTFMove(completionHandler));
 }
 
-void WebPage::openPDFWithPreview(PDFPluginIdentifier identifier, CompletionHandler<void(const String&, std::optional<FrameInfoData>&&, std::span<const uint8_t>, const String&)>&& completionHandler)
+void WebPage::openPDFWithPreview(PDFPluginIdentifier identifier, CompletionHandler<void(const String&, std::optional<FrameInfoData>&&, std::span<const uint8_t>)>&& completionHandler)
 {
     for (Ref pluginView : m_pluginViews) {
         if (pluginView->pdfPluginIdentifier() == identifier)
             return pluginView->openWithPreview(WTFMove(completionHandler));
     }
 
-    completionHandler({ }, { }, { }, { });
+    completionHandler({ }, { }, { });
 }
 
 void WebPage::createPDFHUD(PDFPluginBase& plugin, const IntRect& boundingBox)

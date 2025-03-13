@@ -262,7 +262,7 @@ public:
     void save(CompletionHandler<void(const String&, const URL&, std::span<const uint8_t>)>&&);
 #endif
 
-    void openWithPreview(CompletionHandler<void(const String&, std::optional<FrameInfoData>&&, std::span<const uint8_t>, const String&)>&&);
+    void openWithPreview(CompletionHandler<void(const String&, std::optional<FrameInfoData>&&, std::span<const uint8_t>)>&&);
 
     void notifyCursorChanged(WebCore::PlatformCursorType);
 
@@ -511,7 +511,7 @@ protected:
 
 #if ENABLE(PDF_HUD)
     CompletionHandler<void(const String&, const URL&, std::span<const uint8_t>)> m_pendingSaveCompletionHandler;
-    CompletionHandler<void(const String&, std::optional<FrameInfoData>&&, std::span<const uint8_t>, const String&)> m_pendingOpenCompletionHandler;
+    CompletionHandler<void(const String&, std::optional<FrameInfoData>&&, std::span<const uint8_t>)> m_pendingOpenCompletionHandler;
 #endif
 };
 
