@@ -86,11 +86,12 @@ template<typename> class ArrayOf;
 #if ENABLE(MALLOC_HEAP_BREAKDOWN)
 struct VectorBufferMalloc;
 struct EmbeddedFixedVectorMalloc;
+struct SegmentedVectorMalloc;
 #else
 using VectorBufferMalloc = FastMalloc;
 using EmbeddedFixedVectorMalloc = FastMalloc;
-#endif
 using SegmentedVectorMalloc = FastMalloc;
+#endif
 
 template<typename> struct DefaultRefDerefTraits;
 
