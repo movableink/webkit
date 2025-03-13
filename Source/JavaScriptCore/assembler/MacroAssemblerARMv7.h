@@ -606,6 +606,14 @@ public:
         rshift32(dest, imm, dest);
     }
 
+    void rshift32(TrustedImm32 imm, RegisterID shiftAmount, RegisterID dest)
+    {
+        // Clamp the shift to the range 0..31
+        m_assembler.ARM_and(dest, shiftAmount, ARMThumbImmediate::makeEncodedImm(0x1f));
+        move(imm, getCachedDataTempRegisterIDAndInvalidate());
+        m_assembler.asr(dest, dataTempRegister, dest);
+    }
+
     void urshift32(RegisterID src, RegisterID shiftAmount, RegisterID dest)
     {
         RegisterID scratch = getCachedDataTempRegisterIDAndInvalidate();
@@ -633,6 +641,14 @@ public:
     void urshift32(TrustedImm32 imm, RegisterID dest)
     {
         urshift32(dest, imm, dest);
+    }
+
+    void urshift32(TrustedImm32 imm, RegisterID shiftAmount, RegisterID dest)
+    {
+        // Clamp the shift to the range 0..31
+        m_assembler.ARM_and(dest, shiftAmount, ARMThumbImmediate::makeEncodedImm(0x1f));
+        move(imm, getCachedDataTempRegisterIDAndInvalidate());
+        m_assembler.lsr(dest, dataTempRegister, dest);
     }
 
     void addUnsignedRightShift32(RegisterID src1, RegisterID src2, TrustedImm32 amount, RegisterID dest)

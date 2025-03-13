@@ -1321,6 +1321,12 @@ public:
         m_assembler.asr<32>(dest, src, imm.m_value & 0x1f);
     }
 
+    void rshift32(TrustedImm32 imm, RegisterID shiftAmount, RegisterID dest)
+    {
+        move(imm, getCachedDataTempRegisterIDAndInvalidate());
+        m_assembler.asr<32>(dest, dataTempRegister, shiftAmount);
+    }
+
     void rshift32(RegisterID shiftAmount, RegisterID dest)
     {
         rshift32(dest, shiftAmount, dest);
@@ -1483,6 +1489,12 @@ public:
     void urshift32(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
         m_assembler.lsr<32>(dest, src, imm.m_value & 0x1f);
+    }
+
+    void urshift32(TrustedImm32 imm, RegisterID shiftAmount, RegisterID dest)
+    {
+        move(imm, getCachedDataTempRegisterIDAndInvalidate());
+        m_assembler.lsr<32>(dest, dataTempRegister, shiftAmount);
     }
 
     void urshift32(RegisterID shiftAmount, RegisterID dest)
