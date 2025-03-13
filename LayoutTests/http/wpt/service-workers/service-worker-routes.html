@@ -60,6 +60,18 @@ promise_test(async (test) => {
     worker.postMessage("addRoutes");
     assert_equals(await new Promise(resolve => navigator.serviceWorker.onmessage = e => resolve(e.data)), "OK");
 }, "add route when not installing");
+
+promise_test(async (test) => {
+    let registration = await navigator.serviceWorker.getRegistration("4");
+    if (registration)
+        await registration.unregister();
+    registration = await navigator.serviceWorker.register("service-worker-add-routes-delay-install-worker.js", { scope : "4" });
+    const worker = registration.installing;
+
+    await waitForState(worker, "activated");
+    worker.postMessage("getResult");
+    assert_equals(await new Promise(resolve => navigator.serviceWorker.onmessage = e => resolve(e.data)), "OK");
+}, "add route extend installation of service worker");
 </script>
 </body>
 </html>

@@ -168,15 +168,16 @@ static std::optional<Exception> addServiceWorkerRoute(Vector<ServiceWorkerRoute>
 }
 
 // https://w3c.github.io/ServiceWorker/#dom-installevent-addroutes
-void InstallEvent::addRoutes(ScriptExecutionContext& context, std::variant<RouterRule, Vector<RouterRule>>&& rules, Ref<DeferredPromise>&& promise)
+void InstallEvent::addRoutes(JSC::JSGlobalObject& globalObject, std::variant<RouterRule, Vector<RouterRule>>&& rules, Ref<DeferredPromise>&& promise)
 {
-    RefPtr serviceWorkerGlobalScope = dynamicDowncast<ServiceWorkerGlobalScope>(context);
+    auto& jsDOMGlobalObject = *JSC::jsCast<JSDOMGlobalObject*>(&globalObject);
+    RefPtr serviceWorkerGlobalScope = dynamicDowncast<ServiceWorkerGlobalScope>(jsDOMGlobalObject.scriptExecutionContext());
 
     auto rulesVector = switchOn(WTFMove(rules), [](RouterRule&& rule) -> Vector<RouterRule> {
         return Vector<RouterRule>::from(WTFMove(rule));
     }, [](Vector<RouterRule>&& rules) -> Vector<RouterRule> {
         return { WTFMove(rules) };
-    });;
+    });
 
     Vector<ServiceWorkerRoute> routes;
     for (auto& rule : rulesVector) {
@@ -196,14 +197,21 @@ void InstallEvent::addRoutes(ScriptExecutionContext& context, std::variant<Route
         return;
     }
 
-    // FIXME: We should delay installing the service worker until addRoutes async task is finished.
+    RefPtr delayPromise = DeferredPromise::create(jsDOMGlobalObject);
+    if (delayPromise) {
+        auto& jsPromise = *JSC::jsCast<JSC::JSPromise*>(delayPromise->promise());
+        waitUntil(DOMPromise::create(jsDOMGlobalObject, jsPromise));
+    }
+
     Ref<SWClientConnection> connection = serviceWorkerGlobalScope->swClientConnection();
-    serviceWorkerGlobalScope->enqueueTaskWhenSettled(connection->addRoutes(serviceWorkerGlobalScope->registration().identifier(), WTFMove(routes)), TaskSource::Networking, [promise = WTFMove(promise)](auto&& result) mutable {
+    serviceWorkerGlobalScope->enqueueTaskWhenSettled(connection->addRoutes(serviceWorkerGlobalScope->registration().identifier(), WTFMove(routes)), TaskSource::Networking, [promise = WTFMove(promise), delayPromise = WTFMove(delayPromise)](auto&& result) mutable {
         if (!result) {
             promise->reject(result.error().toException());
+            delayPromise->resolve();
             return;
         }
         promise->resolve();
+        delayPromise->resolve();
     });
 }
 
