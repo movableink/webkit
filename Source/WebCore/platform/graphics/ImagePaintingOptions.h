@@ -126,7 +126,7 @@ private:
 #endif
     ShowDebugBackground m_showDebugBackground : 1 { ShowDebugBackground::No };
     Headroom m_headroom { Headroom::FromImage };
-    PlatformDynamicRangeLimit m_dynamicRangeLimit { PlatformDynamicRangeLimit::noLimit() };
+    PlatformDynamicRangeLimit m_dynamicRangeLimit { PlatformDynamicRangeLimit::initialValue() };
 };
 
 WEBCORE_EXPORT TextStream& operator<<(TextStream&, ImagePaintingOptions);

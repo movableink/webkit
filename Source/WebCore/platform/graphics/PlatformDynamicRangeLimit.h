@@ -40,11 +40,12 @@ struct DynamicRangeLimit;
 
 class PlatformDynamicRangeLimit {
 public:
-    constexpr PlatformDynamicRangeLimit() = default;
-
     static constexpr PlatformDynamicRangeLimit standard() { return PlatformDynamicRangeLimit(standardValue); }
     static constexpr PlatformDynamicRangeLimit constrainedHigh() { return PlatformDynamicRangeLimit(constrainedHighValue); }
     static constexpr PlatformDynamicRangeLimit noLimit() { return PlatformDynamicRangeLimit(noLimitValue); }
+
+    static constexpr PlatformDynamicRangeLimit initialValue() { return constrainedHigh(); }
+    static constexpr PlatformDynamicRangeLimit initialValueForVideos() { return noLimit(); }
 
     static constexpr PlatformDynamicRangeLimit defaultWhenSuppressingHDR() { return standard(); }
     static constexpr PlatformDynamicRangeLimit defaultWhenSuppressingHDRInVideos() { return constrainedHigh(); }
