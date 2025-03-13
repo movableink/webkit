@@ -165,6 +165,8 @@ protected:
     macro(ColumnCountChanged) \
     macro(ColumnIndexChanged) \
     macro(ColumnSpanChanged) \
+    macro(CommandChanged) \
+    macro(CommandForChanged) \
     macro(ContentEditableAttributeChanged) \
     macro(ControlledObjectsChanged) \
     macro(CurrentStateChanged) \

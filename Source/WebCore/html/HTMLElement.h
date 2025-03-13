@@ -46,7 +46,6 @@ struct TextRecognitionResult;
 
 enum class EnterKeyHint : uint8_t;
 enum class PageIsEditable : bool;
-enum class PopoverVisibilityState : bool;
 enum class ToggleState : bool;
 
 #if PLATFORM(IOS_FAMILY)
@@ -55,11 +54,6 @@ enum class SelectionRenderingBehavior : bool;
 
 enum class FireEvents : bool { No, Yes };
 enum class FocusPreviousElement : bool { No, Yes };
-enum class PopoverState : uint8_t {
-    None,
-    Auto,
-    Manual,
-};
 
 class HTMLElement : public StyledElement {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLElement);
@@ -163,7 +157,6 @@ public:
     ExceptionOr<void> hidePopoverInternal(FocusPreviousElement, FireEvents);
     ExceptionOr<bool> togglePopover(std::optional<std::variant<WebCore::HTMLElement::TogglePopoverOptions, bool>>);
 
-    PopoverState popoverState() const;
     const AtomString& popover() const;
     void setPopover(const AtomString& value) { setAttributeWithoutSynchronization(HTMLNames::popoverAttr, value); };
     void popoverAttributeChanged(const AtomString& value);

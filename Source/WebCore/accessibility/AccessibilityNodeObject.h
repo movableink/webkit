@@ -116,6 +116,8 @@ public:
     Element* actionElement() const override;
     Element* anchorElement() const override;
     RefPtr<Element> popoverTargetElement() const final;
+    RefPtr<Element> commandForElement() const final;
+    CommandType commandType() const final;
     AccessibilityObject* internalLinkElement() const final;
     AccessibilityChildrenVector radioButtonGroup() const final;
    

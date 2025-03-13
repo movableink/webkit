@@ -1345,11 +1345,6 @@ const AtomString& HTMLElement::popover() const
     return nullAtom();
 }
 
-PopoverState HTMLElement::popoverState() const
-{
-    return popoverData() ? popoverData()->popoverState() : PopoverState::None;
-}
-
 #if PLATFORM(IOS_FAMILY)
 
 SelectionRenderingBehavior HTMLElement::selectionRenderingBehavior(const Node* node)

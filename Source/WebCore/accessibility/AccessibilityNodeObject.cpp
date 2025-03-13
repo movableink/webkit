@@ -49,6 +49,7 @@
 #include "FrameLoader.h"
 #include "FrameSelection.h"
 #include "HTMLAudioElement.h"
+#include "HTMLButtonElement.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLDetailsElement.h"
 #include "HTMLFieldSetElement.h"
@@ -1181,6 +1182,18 @@ RefPtr<Element> AccessibilityNodeObject::popoverTargetElement() const
 {
     WeakPtr formControlElement = dynamicDowncast<HTMLFormControlElement>(node());
     return formControlElement ? formControlElement->popoverTargetElement() : nullptr;
+}
+
+RefPtr<Element> AccessibilityNodeObject::commandForElement() const
+{
+    RefPtr element = dynamicDowncast<HTMLButtonElement>(node());
+    return element ? element->commandForElement() : nullptr;
+}
+
+CommandType AccessibilityNodeObject::commandType() const
+{
+    RefPtr element = dynamicDowncast<HTMLButtonElement>(node());
+    return element ? element->commandType() : CommandType::Invalid;
 }
 
 AccessibilityObject* AccessibilityNodeObject::internalLinkElement() const

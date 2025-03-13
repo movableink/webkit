@@ -61,6 +61,8 @@ class IntPoint;
 class IntSize;
 class ScrollableArea;
 
+enum class CommandType: uint8_t;
+
 class AccessibilityObject : public AXCoreObject, public CanMakeWeakPtr<AccessibilityObject> {
 public:
     virtual ~AccessibilityObject();
@@ -442,6 +444,7 @@ public:
     static AccessibilityObject* headingElementForNode(Node*);
     virtual Element* anchorElement() const { return nullptr; }
     virtual RefPtr<Element> popoverTargetElement() const { return nullptr; }
+    virtual RefPtr<Element> commandForElement() const { return nullptr; }
     Element* actionElement() const override { return nullptr; }
     virtual LayoutRect boundingBoxRect() const { return { }; }
     LayoutRect elementRect() const override = 0;
@@ -931,6 +934,8 @@ private:
 
     // Special handling of click point for links.
     IntPoint linkClickPoint();
+
+    virtual CommandType commandType() const;
 
 protected: // FIXME: Make the data members private.
     AccessibilityChildrenVector m_children;

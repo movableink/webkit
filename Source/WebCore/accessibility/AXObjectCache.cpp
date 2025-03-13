@@ -2811,7 +2811,11 @@ void AXObjectCache::handleAttributeChange(Element* element, const QualifiedName&
     } else if (attrName == colspanAttr) {
         postNotification(element, AXNotification::ColumnSpanChanged);
         recomputeParentTableProperties(element, TableProperty::CellSlots);
-    } else if (attrName == popovertargetAttr)
+    } else if (attrName == commandAttr)
+        postNotification(element, AXNotification::CommandChanged);
+    else if (attrName == commandforAttr)
+        postNotification(element, AXNotification::CommandForChanged);
+    else if (attrName == popovertargetAttr)
         postNotification(element, AXNotification::PopoverTargetChanged);
     else if (attrName == scopeAttr)
         postNotification(element, AXNotification::CellScopeChanged);
@@ -4717,6 +4721,10 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
         case AXNotification::ColumnSpanChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::ColumnIndexRange });
             break;
+        case AXNotification::CommandChanged:
+        case AXNotification::CommandForChanged:
+            tree->queueNodeUpdate(notification.first->objectID(), { { AXProperty::SupportsExpanded, AXProperty::IsExpanded } });
+            break;
         case AXNotification::DatetimeChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::DatetimeAttributeValue });
             break;
@@ -5064,6 +5072,7 @@ Vector<QualifiedName>& AXObjectCache::relationAttributes()
         aria_labelledbyAttr,
         aria_labeledbyAttr,
         aria_ownsAttr,
+        commandforAttr,
         headersAttr,
         popovertargetAttr,
     };
@@ -5119,7 +5128,7 @@ AXRelationType AXObjectCache::attributeToRelationType(const QualifiedName& attri
 {
     if (attribute == aria_activedescendantAttr)
         return AXRelationType::ActiveDescendant;
-    if (attribute == aria_controlsAttr || attribute == popovertargetAttr)
+    if (attribute == aria_controlsAttr || attribute == commandforAttr || attribute == popovertargetAttr)
         return AXRelationType::ControllerFor;
     if (attribute == aria_describedbyAttr)
         return AXRelationType::DescribedBy;
@@ -5451,6 +5460,10 @@ void AXObjectCache::updateRelations(Element& origin, const QualifiedName& attrib
         ASSERT_NOT_REACHED();
         return;
     }
+
+    // `commandfor` is only valid for button elements.
+    if (UNLIKELY(attribute == commandforAttr) && !is<HTMLButtonElement>(origin))
+        return;
 
     // `popovertarget` is only valid for input and button elements.
     if (UNLIKELY(attribute == popovertargetAttr) && !is<HTMLInputElement>(origin) && !is<HTMLButtonElement>(origin))

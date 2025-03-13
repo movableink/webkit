@@ -3151,6 +3151,11 @@ AXObjectCache* AccessibilityObject::axObjectCache() const
     return document ? document->axObjectCache() : nullptr;
 }
 
+CommandType AccessibilityObject::commandType() const
+{
+    return CommandType::Invalid;
+}
+
 AccessibilityObject* AccessibilityObject::focusedUIElement() const
 {
     auto* page = this->page();
@@ -3258,7 +3263,7 @@ bool AccessibilityObject::supportsRangeValue() const
         || (isSplitter() && canSetFocusAttribute())
         || hasAttachmentTag();
 }
-    
+
 bool AccessibilityObject::supportsHasPopup() const
 {
     return hasAttribute(aria_haspopupAttr) || isComboBox();
@@ -3353,8 +3358,27 @@ bool AccessibilityObject::supportsPressed() const
 
 bool AccessibilityObject::supportsExpanded() const
 {
-    // If this object can toggle an HTML popover, it supports the reporting of its expanded state (which is based on the expanded / collapsed state of that popover).
-    if (popoverTargetElement())
+    // commandfor attribute takes precedence over popovertarget attribute.
+    if (RefPtr targetElement = commandForElement()) {
+        // If the target element is a popover then check command is popover related.
+        if (targetElement->popoverState() != PopoverState::None) {
+            switch (commandType()) {
+            // Expose an expanded state if the command is valid for a popover.
+            case CommandType::ShowPopover:
+            case CommandType::HidePopover:
+            case CommandType::TogglePopover:
+                return true;
+            case CommandType::Invalid:
+            case CommandType::Custom:
+            case CommandType::ShowModal:
+            case CommandType::Close:
+                break;
+            default:
+                ASSERT_NOT_REACHED();
+                break;
+            }
+        }
+    } else if (popoverTargetElement())
         return true;
 
     if (is<HTMLDetailsElement>(node()))
@@ -3413,6 +3437,8 @@ bool AccessibilityObject::isExpanded() const
     }
 
     if (supportsExpanded()) {
+        if (RefPtr commandForElement = this->commandForElement())
+            return commandForElement->isPopoverShowing();
         if (RefPtr popoverTargetElement = this->popoverTargetElement())
             return popoverTargetElement->isPopoverShowing();
         return equalLettersIgnoringASCIICase(getAttribute(aria_expandedAttr), "true"_s);

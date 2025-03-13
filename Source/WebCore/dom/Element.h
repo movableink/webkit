@@ -102,6 +102,7 @@ enum class FullscreenNavigationUI : uint8_t;
 enum class FullscreenKeyboardLock : uint8_t;
 enum class IsSyntheticClick : bool { No, Yes };
 enum class ParserContentPolicy : uint8_t;
+enum class PopoverState : uint8_t { None, Auto, Manual };
 enum class ResolveURLs : uint8_t { No, NoExcludingURLsForPrivacy, Yes, YesExcludingURLsForPrivacy };
 enum class SelectionRestorationMode : uint8_t;
 enum class ShadowRootDelegatesFocus : bool { No, Yes };
@@ -676,6 +677,7 @@ public:
     PopoverData& ensurePopoverData();
     void clearPopoverData();
     bool isPopoverShowing() const;
+    PopoverState popoverState() const;
 
     Element* invokedPopover() const;
     void setInvokedPopover(RefPtr<Element>&&);
