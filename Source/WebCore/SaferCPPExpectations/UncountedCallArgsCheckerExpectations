@@ -418,7 +418,6 @@ css/CSSFontSelector.cpp
 css/CSSFontStyleRangeValue.cpp
 css/CSSFontStyleRangeValue.h
 css/CSSFontValue.cpp
-css/CSSFontVariationValue.cpp
 css/CSSGridIntegerRepeatValue.cpp
 css/CSSGridLineValue.cpp
 css/CSSGroupingRule.cpp
