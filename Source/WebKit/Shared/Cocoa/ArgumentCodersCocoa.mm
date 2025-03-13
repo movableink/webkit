@@ -428,6 +428,7 @@ NSType typeFromObject(id object)
         return NSType::SecureCoding;
 #endif
 
+    RELEASE_LOG_FAULT(IPC, "WebKit::typeFromObject: Unknown NSType inferred from object of type '%s'", class_getName(object_getClass(object)));
     ASSERT_NOT_REACHED();
     return NSType::Unknown;
 }
