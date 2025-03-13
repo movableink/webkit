@@ -415,7 +415,6 @@ html/canvas/WebGLUtilities.h
 html/parser/HTMLConstructionSite.cpp
 html/shadow/DateTimeEditElement.cpp
 html/shadow/MediaControlTextTrackContainerElement.cpp
-html/shadow/SliderThumbElement.cpp
 html/shadow/SpinButtonElement.cpp
 html/track/AudioTrackList.cpp
 html/track/DataCue.cpp
