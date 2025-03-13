@@ -3517,6 +3517,17 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
     }
 
     case NewTypedArrayBuffer:
+        switch (node->child1().useKind()) {
+        case Int32Use:
+        case Int52RepUse:
+            break;
+        case UntypedUse:
+            clobberWorld();
+            break;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+            break;
+        }
         setForNode(node, node->structure());
         break;
 
