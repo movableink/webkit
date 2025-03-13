@@ -1375,7 +1375,6 @@ testing/js/WebCoreTestSupport.cpp
 workers/DedicatedWorkerGlobalScope.cpp
 workers/WorkerAnimationController.cpp
 workers/WorkerConsoleClient.cpp
-workers/WorkerFontLoadRequest.cpp
 workers/WorkerGlobalScope.cpp
 workers/WorkerInspectorProxy.cpp
 workers/WorkerMessagingProxy.cpp
