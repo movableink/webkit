@@ -215,7 +215,7 @@ void MediaRecorderPrivateBackend::fetchData(MediaRecorderPrivate::FetchDataCallb
     callOnMainThread([this, weakThis = ThreadSafeWeakPtr { *this }, completionHandler = WTFMove(completionHandler), mimeType = this->mimeType()]() mutable {
         auto protectedThis = weakThis.get();
         if (!protectedThis) {
-            completionHandler(nullptr, mimeType, 0);
+            completionHandler(FragmentedSharedBuffer::create(), mimeType, 0);
             return;
         }
         double timeCode = 0;
@@ -226,7 +226,7 @@ void MediaRecorderPrivateBackend::fetchData(MediaRecorderPrivate::FetchDataCallb
             buffer = m_data.take();
             timeCode = m_timeCode;
         }
-        completionHandler(WTFMove(buffer), mimeType, timeCode);
+        completionHandler(buffer.releaseNonNull(), mimeType, timeCode);
         {
             Locker locker { m_dataLock };
             if (m_position.isValid())
