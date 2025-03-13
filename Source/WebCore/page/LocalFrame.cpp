@@ -1490,7 +1490,7 @@ void LocalFrame::showResourceMonitoringError()
         colorScheme = document->resolvedColorScheme(style.get());
 #endif
 
-    iframeElement->setSrcdoc(generateResourceMonitorErrorHTML(colorScheme));
+    iframeElement->setSrcdoc(generateResourceMonitorErrorHTML(colorScheme), SubstituteData::SessionHistoryVisibility::Hidden);
 }
 
 void LocalFrame::reportResourceMonitoringWarning()

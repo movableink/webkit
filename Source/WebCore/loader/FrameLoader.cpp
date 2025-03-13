@@ -72,6 +72,7 @@
 #include "FrameTree.h"
 #include "GCController.h"
 #include "HTMLFormElement.h"
+#include "HTMLIFrameElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
@@ -1663,12 +1664,16 @@ SubstituteData FrameLoader::defaultSubstituteDataForURL(const URL& url)
 {
     if (!shouldTreatURLAsSrcdocDocument(url))
         return SubstituteData();
-    auto& srcdoc = m_frame->ownerElement()->attributeWithoutSynchronization(srcdocAttr);
+    RefPtr iframeElement = dynamicDowncast<HTMLIFrameElement>(m_frame->ownerElement());
+    if (!iframeElement)
+        return SubstituteData();
+
+    auto& srcdoc = iframeElement->attributeWithoutSynchronization(srcdocAttr);
     ASSERT(!srcdoc.isNull());
     CString encodedSrcdoc = srcdoc.string().utf8();
 
     ResourceResponse response(URL(), textHTMLContentTypeAtom(), encodedSrcdoc.length(), "UTF-8"_s);
-    return SubstituteData(SharedBuffer::create(encodedSrcdoc.span()), URL(), response, SubstituteData::SessionHistoryVisibility::Visible);
+    return SubstituteData(SharedBuffer::create(encodedSrcdoc.span()), URL(), response, iframeElement->srcdocSessionHistoryVisibility());
 }
 
 void FrameLoader::load(FrameLoadRequest&& request)
