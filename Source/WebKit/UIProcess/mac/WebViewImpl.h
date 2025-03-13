@@ -1076,7 +1076,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #if HAVE(INLINE_PREDICTIONS)
     bool m_inlinePredictionsEnabled { false };
 #endif
-    OptionSet<HDRConstrainingReason> m_hdrConstrainingReason;
+    OptionSet<HDRConstrainingReason> m_hdrConstrainingReason { HDRConstrainingReason::WindowIsNotActive };
 };
 
 } // namespace WebKit

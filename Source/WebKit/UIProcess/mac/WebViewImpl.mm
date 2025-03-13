@@ -2187,15 +2187,18 @@ void WebViewImpl::screenDidChangeColorSpace()
 
 void WebViewImpl::updateHDRState(HDRConstrainingReasonAction action, HDRConstrainingReason reason)
 {
-    auto wasEmpty = m_hdrConstrainingReason.isEmpty();
+    auto didHaveReasonToConstrain = !m_hdrConstrainingReason.isEmpty();
 
     if (action == HDRConstrainingReasonAction::Add)
         m_hdrConstrainingReason.add(reason);
     else
         m_hdrConstrainingReason.remove(reason);
 
-    if (m_hdrConstrainingReason.isEmpty() != wasEmpty)
-        setDynamicRangeLimit(m_rootLayer.get(), m_hdrConstrainingReason.isEmpty() ? PlatformDynamicRangeLimit::noLimit() : PlatformDynamicRangeLimit::defaultWhenSuppressingHDR(), true);
+    auto haveReasonToConstrain = !m_hdrConstrainingReason.isEmpty();
+    if (haveReasonToConstrain != didHaveReasonToConstrain) {
+        m_page->setShouldSuppressHDR(haveReasonToConstrain);
+        setDynamicRangeLimit(m_rootLayer.get(), haveReasonToConstrain ? PlatformDynamicRangeLimit::defaultWhenSuppressingHDR() : PlatformDynamicRangeLimit::noLimit(), true);
+    }
 }
 
 void WebViewImpl::applicationShouldSuppressHDR()

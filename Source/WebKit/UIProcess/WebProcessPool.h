@@ -839,13 +839,6 @@ private:
     RetainPtr<WKProcessPoolWeakObserver> m_weakObserver;
 #endif
 
-#if HAVE(SUPPORT_HDR_DISPLAY_APIS)
-#if PLATFORM(MAC)
-    RetainPtr<NSObject> m_beginSuppressingHDRObserver;
-    RetainPtr<NSObject> m_endSuppressingHDRObserver;
-#endif // PLATFORM(MAC)
-#endif // HAVE(SUPPORT_HDR_DISPLAY_APIS)
-
     bool m_processTerminationEnabled { true };
 
     bool m_memoryCacheDisabled { false };
