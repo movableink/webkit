@@ -492,6 +492,7 @@ public:
     const CommandsVector& commands();
     WebExtensionCommand* command(const String& identifier);
     void performCommand(WebExtensionCommand&, UserTriggered = UserTriggered::No);
+    void resetCommands();
 
 #if TARGET_OS_IPHONE
     WebExtensionCommand* commandMatchingKeyCommand(UIKeyCommand *);

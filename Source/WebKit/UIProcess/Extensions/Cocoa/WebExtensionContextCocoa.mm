@@ -2980,6 +2980,12 @@ void WebExtensionContext::performCommand(WebExtensionCommand& command, UserTrigg
     fireCommandEventIfNeeded(command, activeTab.get());
 }
 
+void WebExtensionContext::resetCommands()
+{
+    m_commands.clear();
+    m_populatedCommands = false;
+}
+
 #if TARGET_OS_IPHONE
 WebExtensionCommand* WebExtensionContext::commandMatchingKeyCommand(UIKeyCommand *keyCommand)
 {
