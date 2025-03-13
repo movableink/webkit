@@ -1,4 +1,5 @@
 [submitproject "filter"]
+    includedSubdirectoryPatterns = Source/ThirdParty/gtest
     includedSubdirectoryPatterns = Tools/DumpRenderTree
     includedSubdirectoryPatterns = Tools/ImageDiff
     includedSubdirectoryPatterns = Tools/MiniBrowser
