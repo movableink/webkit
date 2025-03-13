@@ -727,13 +727,17 @@ void ModelProcessModelPlayerProxy::applyEnvironmentMapDataAndRelease()
     if (m_transientEnvironmentMapData) {
         if (m_transientEnvironmentMapData->size() > 0) {
             [m_modelRKEntity applyIBLData:m_transientEnvironmentMapData->createNSData().get() withCompletion:^(BOOL succeeded) {
+                if (!succeeded)
+                    [m_modelRKEntity applyDefaultIBL];
                 send(Messages::ModelProcessModelPlayer::DidFinishEnvironmentMapLoading(succeeded));
             }];
         } else {
-            [m_modelRKEntity removeIBL];
+            [m_modelRKEntity applyDefaultIBL];
             send(Messages::ModelProcessModelPlayer::DidFinishEnvironmentMapLoading(true));
         }
         m_transientEnvironmentMapData = nullptr;
+    } else {
+        [m_modelRKEntity applyDefaultIBL];
     }
 }
 

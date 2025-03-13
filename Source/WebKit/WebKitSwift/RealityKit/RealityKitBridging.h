@@ -65,8 +65,8 @@ typedef struct {
 - (void)setParentCoreEntity:(REEntityRef)parentCoreEntity preservingWorldTransform:(BOOL)preservingWorldTransform NS_SWIFT_NAME(setParent(_:preservingWorldTransform:));
 - (void)setUpAnimationWithAutoPlay:(BOOL)autoPlay;
 - (void)applyIBLData:(NSData *)data withCompletion:(void (^)(BOOL success))completion;
-- (void)removeIBL;
 - (void)interactionContainerDidRecenterFromTransform:(simd_float4x4)transform NS_SWIFT_NAME(interactionContainerDidRecenter(_:));
+- (void)applyDefaultIBL NS_SWIFT_NAME(applyDefaultIBL());
 @end
 
 NS_ASSUME_NONNULL_END
