@@ -135,7 +135,7 @@ struct _WPEInputMethodContextClass
                                      GList                 **underlines,
                                      guint                 *cursor_offset);
     gboolean (* filter_key_event)   (WPEInputMethodContext *context,
-			                         WPEEvent              *event);
+                                     WPEEvent              *event);
     void     (* focus_in)           (WPEInputMethodContext *context);
     void     (* focus_out)          (WPEInputMethodContext *context);
     void     (* set_cursor_area)    (WPEInputMethodContext *context,

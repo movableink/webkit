@@ -431,16 +431,16 @@ static WPEView* wpeDisplayWaylandCreateView(WPEDisplay* display)
     return view;
 }
 
-static WPEInputMethodContext* wpeDisplayWaylandCreateInputMethodContext(WPEDisplay* display)
+static WPEInputMethodContext* wpeDisplayWaylandCreateInputMethodContext(WPEDisplay* display, WPEView* view)
 {
     auto* priv = WPE_DISPLAY_WAYLAND(display)->priv;
     if (!priv->wlDisplay || !priv->wlCompositor)
         return nullptr;
 
     if (priv->textInputManagerV3)
-        return wpe_im_context_wayland_v3_new(WPE_DISPLAY_WAYLAND(display));
+        return wpe_im_context_wayland_v3_new(WPE_DISPLAY_WAYLAND(display), view);
     if (priv->textInputManagerV1)
-        return wpe_im_context_wayland_v1_new(WPE_DISPLAY_WAYLAND(display));
+        return wpe_im_context_wayland_v1_new(WPE_DISPLAY_WAYLAND(display), view);
 
     return nullptr;
 }
