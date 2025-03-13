@@ -3218,13 +3218,14 @@ JITCompiler::Jump SpeculativeJIT::jumpForTypedArrayOutOfBounds(Node* node, GPRRe
         if (indexNode->isAnyIntConstant() && static_cast<uint64_t>(indexNode->asAnyInt()) < length)
             return Jump();
 #if USE(LARGE_TYPED_ARRAYS)
+        if (length <= INT32_MAX)
+            return branch32(AboveOrEqual, indexGPR, Imm32(length));
+
         signExtend32ToPtr(indexGPR, scratchGPR);
-        return branch64(
-            AboveOrEqual, scratchGPR, Imm64(length));
+        return branch64(AboveOrEqual, scratchGPR, Imm64(length));
 #else
         UNUSED_PARAM(scratchGPR);
-        return branch32(
-            AboveOrEqual, indexGPR, Imm32(length));
+        return branch32(AboveOrEqual, indexGPR, Imm32(length));
 #endif
     }
 
