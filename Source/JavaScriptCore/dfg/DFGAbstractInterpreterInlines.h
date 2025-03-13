@@ -822,6 +822,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             break;
         }
 
+        case Int32Use:
         case Int52RepUse:
         case NumberUse:
         case RealNumberUse:
@@ -2276,7 +2277,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                 if (edge->op() == DoubleConstant)
                     return edge->constant()->value().isInt32AsAnyInt();
                 if (edge->op() == DoubleRep)
-                    return forNode(edge->child1()).isType(SpecInt32Only);
+                    return edge->child1().useKind() == Int32Use;
                 return false;
             };
 

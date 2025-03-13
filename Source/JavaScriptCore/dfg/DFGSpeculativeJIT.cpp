@@ -2948,7 +2948,19 @@ void SpeculativeJIT::compileDoubleRep(Node* node)
         doubleResult(resultFPR, node);
         return;
     }
-    
+
+    case Int32Use: {
+        SpeculateInt32Operand op1(this, node->child1());
+        FPRTemporary result(this);
+
+        GPRReg op1GPR = op1.gpr();
+        FPRReg resultFPR = result.fpr();
+
+        convertInt32ToDouble(op1GPR, resultFPR);
+        doubleResult(resultFPR, node);
+        return;
+    }
+
     case NotCellNorBigIntUse:
     case NumberUse: {
         SpeculatedType possibleTypes = m_state.forNode(node->child1()).m_type;

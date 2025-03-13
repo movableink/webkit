@@ -145,7 +145,7 @@ private:
                         if (edge->op() == DoubleConstant)
                             return edge->constant()->value().isInt32AsAnyInt();
                         if (edge->op() == DoubleRep)
-                            return m_state.forNode(edge->child1()).isType(SpecInt32Only);
+                            return edge->child1().useKind() == Int32Use;
                         return false;
                     };
 
@@ -1514,6 +1514,24 @@ private:
                             changed = true;
                             break;
                         }
+                    }
+                    break;
+                }
+                default:
+                    break;
+                }
+                break;
+            }
+
+            case DoubleRep: {
+                switch (node->child1().useKind()) {
+                case NotCellNorBigIntUse:
+                case NumberUse: {
+                    auto& abstractValue = m_state.forNode(node->child1());
+                    if (abstractValue.isType(SpecInt32Only)) {
+                        node->child1() = Edge(node->child1().node(), Int32Use);
+                        changed = true;
+                        break;
                     }
                     break;
                 }

@@ -2023,6 +2023,11 @@ private:
             return;
         }
 
+        case Int32Use: {
+            setDouble(m_out.intToDouble(lowInt32(m_node->child1())));
+            return;
+        }
+
         case NotCellNorBigIntUse:
         case NumberUse: {
             bool shouldConvertNonNumber = m_node->child1().useKind() == NotCellNorBigIntUse;
