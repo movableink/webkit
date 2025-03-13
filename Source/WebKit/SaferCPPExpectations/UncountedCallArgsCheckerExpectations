@@ -111,9 +111,6 @@ UIProcess/API/Cocoa/_WKUserStyleSheet.mm
 UIProcess/API/Cocoa/_WKWebAuthenticationAssertionResponse.mm
 UIProcess/API/Cocoa/_WKWebAuthenticationPanel.mm
 UIProcess/API/Cocoa/_WKWebsiteDataStoreConfiguration.mm
-UIProcess/Inspector/Cocoa/InspectorExtensionDelegate.mm
-UIProcess/Inspector/WebPageInspectorController.cpp
-UIProcess/Inspector/mac/WKInspectorViewController.mm
 UIProcess/mac/WKSharingServicePickerDelegate.mm
 UIProcess/mac/WKTextFinderClient.mm
 UIProcess/mac/WKViewLayoutStrategy.mm
