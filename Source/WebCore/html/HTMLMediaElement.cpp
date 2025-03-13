@@ -8547,6 +8547,7 @@ void HTMLMediaElement::removeBehaviorRestrictionsAfterFirstUserGesture(MediaElem
 {
     MediaElementSession::BehaviorRestrictions restrictionsToRemove = mask &
         (MediaElementSession::RequireUserGestureForLoad
+        | MediaElementSession::AutoPreloadingNotPermitted
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
         | MediaElementSession::RequireUserGestureToShowPlaybackTargetPicker
         | MediaElementSession::RequireUserGestureToAutoplayToExternalDevice
