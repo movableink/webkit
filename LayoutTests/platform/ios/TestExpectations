@@ -7746,3 +7746,6 @@ imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-basic-004.svg
 imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-basic-005.svg [ Failure ]
 imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-bicubic-001.svg [ Failure ]
 imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-complex-001.svg [ Failure ]
+
+# webkit.org/b/289656 ([iOS-18-Simulator-WK2-Tests-EWS] fast/forms/ios/focus-input-via-button-no-scaling.html is crashing
+fast/forms/ios/focus-input-via-button-no-scaling.html [ Pass Crash ]
