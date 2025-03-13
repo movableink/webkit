@@ -1348,6 +1348,44 @@ private:
             break;
         }
 
+        case CheckInBounds: {
+            auto isInt32OrKnownInt32Use = [](UseKind useKind) {
+                return useKind == Int32Use || useKind == KnownInt32Use;
+            };
+
+            if (!isInt32OrKnownInt32Use(m_node->child1().useKind()) || !isInt32OrKnownInt32Use(m_node->child2().useKind()))
+                break;
+
+            if (m_node->child2()->isInt32Constant()) {
+                int32_t length = m_node->child2()->asInt32();
+                if (length < 0)
+                    break;
+
+                switch (m_node->child1()->op()) {
+                case ArithBitRShift: {
+                    if (!m_node->child1()->isBinaryUseKind(Int32Use))
+                        break;
+                    if (m_node->child1()->child2()->isInt32Constant()) {
+                        int32_t shiftAmount = m_node->child1()->child2()->asInt32();
+                        if (shiftAmount < 0 || shiftAmount > 31)
+                            break;
+                        auto result = static_cast<int64_t>(length) << shiftAmount;
+                        if (result > INT32_MAX)
+                            break;
+                        m_node->child1() = Edge(m_node->child1()->child1().node(), Int32Use);
+                        m_node->child2() = Edge(m_insertionSet.insertConstant(m_nodeIndex, m_node->origin, jsNumber(static_cast<int32_t>(result))), KnownInt32Use);
+                        m_changed = true;
+                        break;
+                    }
+                    break;
+                }
+                default:
+                    break;
+                }
+            }
+            break;
+        }
+
         case Call:
         case Construct:
         case TailCallInlinedCaller:

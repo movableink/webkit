@@ -3727,7 +3727,10 @@ public:
 
     void zeroExtend32ToWord(RegisterID src, RegisterID dest)
     {
-        and64(TrustedImm64(0xffffffffU), src, dest);
+        if (src == ARM64Registers::zr && dest != ARM64Registers::sp)
+            m_assembler.movz<32>(dest, 0);
+        else
+            m_assembler.mov<32>(dest, src);
     }
 
     void zeroExtend48ToWord(RegisterID src, RegisterID dest)
