@@ -34,7 +34,6 @@
 #include "CSSCounterStyleRule.h"
 #include "CSSCustomPropertyValue.h"
 #include "CSSFontFeatureValuesRule.h"
-#include "CSSFontPaletteValuesOverrideColorsValue.h"
 #include "CSSKeyframeRule.h"
 #include "CSSKeyframesRule.h"
 #include "CSSParser.h"
@@ -60,6 +59,7 @@
 #include "CSSSupportsParser.h"
 #include "CSSTokenizer.h"
 #include "CSSValueList.h"
+#include "CSSValuePair.h"
 #include "CSSVariableParser.h"
 #include "CSSViewTransitionRule.h"
 #include "ComputedStyleDependencies.h"
@@ -936,19 +936,18 @@ RefPtr<StyleRuleFontPaletteValues> CSSParserImpl::consumeFontPaletteValuesRule(C
 
     Vector<FontPaletteValues::OverriddenColor> overrideColors;
     if (auto overrideColorsValue = properties->getPropertyCSSValue(CSSPropertyOverrideColors)) {
-        const auto& list = downcast<CSSValueList>(*overrideColorsValue);
-        for (Ref item : list) {
-            Ref pair = downcast<CSSFontPaletteValuesOverrideColorsValue>(item);
-            auto& pairKey = pair->key();
-            if (!pairKey.isInteger())
-                continue;
-            auto key = pairKey.resolveAsIntegerDeprecated<unsigned>();
-            auto color = CSSColorValue::absoluteColor(pair->color());
-            // Ignore non absolute color https://drafts.csswg.org/css-fonts/#override-color
+        overrideColors = WTF::compactMap(downcast<CSSValueList>(*overrideColorsValue), [](const auto& item) -> std::optional<FontPaletteValues::OverriddenColor> {
+            Ref pair = downcast<CSSValuePair>(item);
+            Ref first = pair->protectedFirst();
+            Ref second = pair->protectedSecond();
+
+            auto key = downcast<CSSPrimitiveValue>(first)->template resolveAsIntegerDeprecated<unsigned>();
+            auto color = CSSColorValue::absoluteColor(second);
             if (!color.isValid())
-                continue;
-            overrideColors.append(std::make_pair(key, color));
-        }
+                return { };
+
+            return { { key, WTFMove(color) } };
+        });
     }
 
     return StyleRuleFontPaletteValues::create(AtomString { name->stringValue() }, WTFMove(fontFamilies), WTFMove(basePalette), WTFMove(overrideColors));

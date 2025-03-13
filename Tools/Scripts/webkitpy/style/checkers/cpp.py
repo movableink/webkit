@@ -133,6 +133,17 @@ _WEBKIT_ADDITIONS_HEADER = 6
 _AUTO_GENERATED_FILES = [
     # VisualStudio resource files
     'Tools/MiniBrowser/win/MiniBrowserLibResource.h',
+
+    # Generated Test Results
+    'Source/WebCore/css/scripts/test/TestCSSPropertiesResults/CSSPropertyNames.gperf',
+    'Source/WebCore/css/scripts/test/TestCSSPropertiesResults/CSSPropertyNames.h',
+    'Source/WebCore/css/scripts/test/TestCSSPropertiesResults/CSSPropertyParsing.cpp',
+    'Source/WebCore/css/scripts/test/TestCSSPropertiesResults/CSSPropertyParsing.h',
+    'Source/WebCore/css/scripts/test/TestCSSPropertiesResults/StyleBuilderGenerated.cpp',
+    'Source/WebCore/css/scripts/test/TestCSSPropertiesResults/StyleInterpolationWrapperMap.cpp',
+    'Source/WebCore/css/scripts/test/TestCSSPropertiesResults/StyleInterpolationWrapperMap.h',
+    'Source/WebCore/css/scripts/test/TestCSSPropertiesResults/StylePropertyShorthandFunctions.cpp',
+    'Source/WebCore/css/scripts/test/TestCSSPropertiesResults/StylePropertyShorthandFunctions.h',
 ]
 
 

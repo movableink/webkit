@@ -284,8 +284,8 @@ RefPtr<CSSValue> consumeBorderColor(CSSParserTokenRange& range, const CSSParserC
     // <'border-*-color'> = <color>
     // https://drafts.csswg.org/css-backgrounds/#propdef-border-top-color
 
-    bool acceptQuirkyColors = (context.mode == HTMLQuirksMode) && (currentShorthand == CSSPropertyInvalid || currentShorthand == CSSPropertyBorderColor);
-    return consumeColor(range, context, { .acceptQuirkyColors = acceptQuirkyColors });
+    bool acceptQuirkyColors = (currentShorthand == CSSPropertyInvalid || currentShorthand == CSSPropertyBorderColor);
+    return consumeColor(range, context, { .acceptQuirkyColorsInQuirksMode = acceptQuirkyColors });
 }
 
 // MARK: - Background Size

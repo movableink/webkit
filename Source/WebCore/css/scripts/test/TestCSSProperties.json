@@ -417,7 +417,6 @@
                 "parser-grammar": "[ <number> || <custom-ident> || <length> ]@(preserve-order no-single-item-opt)"
             }
         },
-
         "test-function-no-parameters": {
             "animation-type": "discrete",
             "initial": "foo()",
@@ -507,6 +506,34 @@
             "initial": "foo(1, 2)",
             "codegen-properties": {
                 "parser-grammar": "foo( <number> || <string> )"
+            }
+        },
+        "test-color": {
+            "animation-type": "discrete",
+            "initial": "currentColor",
+            "codegen-properties": {
+                "parser-grammar": "<color>"
+            }
+        },
+        "test-color-quirky-colors": {
+            "animation-type": "discrete",
+            "initial": "currentColor",
+            "codegen-properties": {
+                "parser-grammar": "<color quirky-colors-in-quirks-mode=allowed>"
+            }
+        },
+        "test-color-allows-types-absolute": {
+            "animation-type": "discrete",
+            "initial": "currentColor",
+            "codegen-properties": {
+                "parser-grammar": "<color allowed-types=absolute>"
+            }
+        },
+        "test-color-allows-types-absolute-plus-quirky-colors": {
+            "animation-type": "discrete",
+            "initial": "currentColor",
+            "codegen-properties": {
+                "parser-grammar": "<color allowed-types=absolute quirky-colors-in-quirks-mode=allowed>"
             }
         }
     },

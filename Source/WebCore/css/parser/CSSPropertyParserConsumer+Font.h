@@ -174,12 +174,6 @@ RefPtr<CSSValue> parseFontFaceFontWidth(const String&, ScriptExecutionContext&);
 // https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-weight
 RefPtr<CSSValue> parseFontFaceFontWeight(const String&, ScriptExecutionContext&);
 
-// MARK: - @font-palette-values descriptor consumers:
-
-// MARK: @font-palette-values 'override-colors'
-// https://drafts.csswg.org/css-fonts-4/#descdef-font-palette-values-override-colors
-RefPtr<CSSValue> consumeFontPaletteValuesOverrideColors(CSSParserTokenRange&, const CSSParserContext&);
-
 // MARK: - @font-feature-values descriptor consumers
 
 // MARK: @font-feature-values 'prelude family name list'

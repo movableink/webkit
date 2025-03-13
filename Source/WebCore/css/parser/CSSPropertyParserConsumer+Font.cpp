@@ -32,7 +32,6 @@
 #include "CSSCalcSymbolTable.h"
 #include "CSSFontFaceSrcValue.h"
 #include "CSSFontFeatureValue.h"
-#include "CSSFontPaletteValuesOverrideColorsValue.h"
 #include "CSSFontStyleWithAngleValue.h"
 #include "CSSFontVariantLigaturesParser.h"
 #include "CSSFontVariantNumericParser.h"
@@ -1099,29 +1098,6 @@ RefPtr<CSSValue> parseFontFaceFontWeight(const String& string, ScriptExecutionCo
         return nullptr;
 
     return parsedValue;
-}
-
-// MARK: - @font-palette-values
-
-// MARK: @font-palette-values 'override-colors'
-
-RefPtr<CSSValue> consumeFontPaletteValuesOverrideColors(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    // <'override-colors'> = [ <integer [0,∞]> <color> ]#
-    // https://drafts.csswg.org/css-fonts/#descdef-font-palette-values-override-colors
-
-    auto list = consumeListSeparatedBy<',', OneOrMore>(range, [](auto& range, auto& context) -> RefPtr<CSSValue> {
-        auto key = consumeNonNegativeInteger(range, context);
-        if (!key)
-            return nullptr;
-        auto color = consumeColor(range, context, { .allowedColorTypes = CSS::ColorType::Absolute });
-        if (!color)
-            return nullptr;
-        return CSSFontPaletteValuesOverrideColorsValue::create(key.releaseNonNull(), color.releaseNonNull());
-    }, context);
-    if (!range.atEnd() || !list || !list->length())
-        return nullptr;
-    return list;
 }
 
 // MARK: - @font-feature-values

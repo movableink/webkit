@@ -12592,9 +12592,7 @@
             },
             "override-colors": {
                 "codegen-properties": {
-                    "parser-function": "consumeFontPaletteValuesOverrideColors",
-                    "parser-grammar-unused": "[ <integer [0,inf]> <absolute-color> ]#",
-                    "parser-grammar-unused-reason": "Needs support for using custom types for order groups and absolute attribute for <color>."
+                    "parser-grammar": "[ <integer [0,inf]> <color allowed-types=absolute> ]@(type=CSSValuePair)#@(no-single-item-opt)"
                 },
                 "specification": {
                     "category": "css-fonts-4",

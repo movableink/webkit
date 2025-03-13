@@ -24,7 +24,7 @@ namespace WebCore {
 
 static_assert(cssPropertyIDEnumValueCount <= (std::numeric_limits<uint16_t>::max() + 1), "CSSPropertyID should fit into uint16_t.");
 
-const std::array<CSSPropertyID, 64> computedPropertyIDs {
+const std::array<CSSPropertyID, 68> computedPropertyIDs {
     CSSPropertyID::CSSPropertyTestAnimationWrapper,
     CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationAlways,
     CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationThreadedOnly,
@@ -39,6 +39,10 @@ const std::array<CSSPropertyID, 64> computedPropertyIDs {
     CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithType,
     CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious,
     CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo,
+    CSSPropertyID::CSSPropertyTestColor,
+    CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolute,
+    CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolutePlusQuirkyColors,
+    CSSPropertyID::CSSPropertyTestColorQuirkyColors,
     CSSPropertyID::CSSPropertyTestFunctionBoundedParameters,
     CSSPropertyID::CSSPropertyTestFunctionFixedParameters,
     CSSPropertyID::CSSPropertyTestFunctionNoParameters,
@@ -110,6 +114,10 @@ constexpr ASCIILiteral propertyNameStrings[numCSSProperties] = {
     "test-bounded-repetition-with-spaces-with-type"_s,
     "test-bounded-repetition-with-spaces-with-type-with-default-previous"_s,
     "test-bounded-repetition-with-spaces-with-type-with-default-previous-two"_s,
+    "test-color"_s,
+    "test-color-allows-types-absolute"_s,
+    "test-color-allows-types-absolute-plus-quirky-colors"_s,
+    "test-color-quirky-colors"_s,
     "test-function-bounded-parameters"_s,
     "test-function-fixed-parameters"_s,
     "test-function-no-parameters"_s,
@@ -196,6 +204,10 @@ test-bounded-repetition-with-spaces-single-item-opt, CSSPropertyID::CSSPropertyT
 test-bounded-repetition-with-spaces-with-type, CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithType
 test-bounded-repetition-with-spaces-with-type-with-default-previous, CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious
 test-bounded-repetition-with-spaces-with-type-with-default-previous-two, CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo
+test-color, CSSPropertyID::CSSPropertyTestColor
+test-color-allows-types-absolute, CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolute
+test-color-allows-types-absolute-plus-quirky-colors, CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolutePlusQuirkyColors
+test-color-quirky-colors, CSSPropertyID::CSSPropertyTestColorQuirkyColors
 test-function-bounded-parameters, CSSPropertyID::CSSPropertyTestFunctionBoundedParameters
 test-function-fixed-parameters, CSSPropertyID::CSSPropertyTestFunctionFixedParameters
 test-function-no-parameters, CSSPropertyID::CSSPropertyTestFunctionNoParameters
@@ -388,6 +400,10 @@ constexpr bool isInheritedPropertyTable[cssPropertyIDEnumValueCount] = {
     false, // CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithType
     false, // CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious
     false, // CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo
+    false, // CSSPropertyID::CSSPropertyTestColor
+    false, // CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolute
+    false, // CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolutePlusQuirkyColors
+    false, // CSSPropertyID::CSSPropertyTestColorQuirkyColors
     false, // CSSPropertyID::CSSPropertyTestFunctionBoundedParameters
     false, // CSSPropertyID::CSSPropertyTestFunctionFixedParameters
     false, // CSSPropertyID::CSSPropertyTestFunctionNoParameters

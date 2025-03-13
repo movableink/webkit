@@ -1882,6 +1882,14 @@ RefPtr<CSSValue> CSSPropertyParsing::parseStyleProperty(CSSParserTokenRange& ran
         return consumeTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious(range, context);
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo:
         return consumeTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo(range, context);
+    case CSSPropertyID::CSSPropertyTestColor:
+        return consumeColor(range, context, { .acceptQuirkyColorsInQuirksMode = false, .allowedColorTypes = { CSS::ColorType::Absolute, CSS::ColorType::Current, CSS::ColorType::System } });
+    case CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolute:
+        return consumeColor(range, context, { .acceptQuirkyColorsInQuirksMode = false, .allowedColorTypes = { CSS::ColorType::Absolute } });
+    case CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolutePlusQuirkyColors:
+        return consumeColor(range, context, { .acceptQuirkyColorsInQuirksMode = true, .allowedColorTypes = { CSS::ColorType::Absolute } });
+    case CSSPropertyID::CSSPropertyTestColorQuirkyColors:
+        return consumeColor(range, context, { .acceptQuirkyColorsInQuirksMode = true, .allowedColorTypes = { CSS::ColorType::Absolute, CSS::ColorType::Current, CSS::ColorType::System } });
     case CSSPropertyID::CSSPropertyTestFunctionBoundedParameters:
         return consumeTestFunctionBoundedParameters(range, context);
     case CSSPropertyID::CSSPropertyTestFunctionFixedParameters:

@@ -92,7 +92,6 @@ public:
     bool isFontFaceSrcLocalValue() const { return m_classType == ClassType::FontFaceSrcLocal; }
     bool isFontFaceSrcResourceValue() const { return m_classType == ClassType::FontFaceSrcResource; }
     bool isFontFeatureValue() const { return m_classType == ClassType::FontFeature; }
-    bool isFontPaletteValuesOverrideColorsValue() const { return m_classType == ClassType::FontPaletteValuesOverrideColors; }
     bool isFontStyleRangeValue() const { return m_classType == ClassType::FontStyleRange; }
     bool isFontStyleWithAngleValue() const { return m_classType == ClassType::FontStyleWithAngle; }
     bool isFontValue() const { return m_classType == ClassType::Font; }
@@ -231,7 +230,6 @@ protected:
         FontFaceSrcLocal,
         FontFaceSrcResource,
         FontFeature,
-        FontPaletteValuesOverrideColors,
         FontStyleRange,
         FontStyleWithAngle,
         FontVariation,

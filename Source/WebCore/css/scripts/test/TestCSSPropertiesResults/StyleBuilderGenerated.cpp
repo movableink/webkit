@@ -212,6 +212,54 @@ public:
     {
         builderState.style().setTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo(fromCSSValueDeducingType(builderState, value));
     }
+    static void applyInitialTestColor(BuilderState& builderState)
+    {
+        builderState.style().setTestColor(RenderStyle::initialTestColor());
+    }
+    static void applyInheritTestColor(BuilderState& builderState)
+    {
+        builderState.style().setTestColor(forwardInheritedValue(builderState.parentStyle().testColor()));
+    }
+    static void applyValueTestColor(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestColor(fromCSSValueDeducingType(builderState, value));
+    }
+    static void applyInitialTestColorAllowsTypesAbsolute(BuilderState& builderState)
+    {
+        builderState.style().setTestColorAllowsTypesAbsolute(RenderStyle::initialTestColorAllowsTypesAbsolute());
+    }
+    static void applyInheritTestColorAllowsTypesAbsolute(BuilderState& builderState)
+    {
+        builderState.style().setTestColorAllowsTypesAbsolute(forwardInheritedValue(builderState.parentStyle().testColorAllowsTypesAbsolute()));
+    }
+    static void applyValueTestColorAllowsTypesAbsolute(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestColorAllowsTypesAbsolute(fromCSSValueDeducingType(builderState, value));
+    }
+    static void applyInitialTestColorAllowsTypesAbsolutePlusQuirkyColors(BuilderState& builderState)
+    {
+        builderState.style().setTestColorAllowsTypesAbsolutePlusQuirkyColors(RenderStyle::initialTestColorAllowsTypesAbsolutePlusQuirkyColors());
+    }
+    static void applyInheritTestColorAllowsTypesAbsolutePlusQuirkyColors(BuilderState& builderState)
+    {
+        builderState.style().setTestColorAllowsTypesAbsolutePlusQuirkyColors(forwardInheritedValue(builderState.parentStyle().testColorAllowsTypesAbsolutePlusQuirkyColors()));
+    }
+    static void applyValueTestColorAllowsTypesAbsolutePlusQuirkyColors(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestColorAllowsTypesAbsolutePlusQuirkyColors(fromCSSValueDeducingType(builderState, value));
+    }
+    static void applyInitialTestColorQuirkyColors(BuilderState& builderState)
+    {
+        builderState.style().setTestColorQuirkyColors(RenderStyle::initialTestColorQuirkyColors());
+    }
+    static void applyInheritTestColorQuirkyColors(BuilderState& builderState)
+    {
+        builderState.style().setTestColorQuirkyColors(forwardInheritedValue(builderState.parentStyle().testColorQuirkyColors()));
+    }
+    static void applyValueTestColorQuirkyColors(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestColorQuirkyColors(fromCSSValueDeducingType(builderState, value));
+    }
     static void applyInitialTestFunctionBoundedParameters(BuilderState& builderState)
     {
         builderState.style().setTestFunctionBoundedParameters(RenderStyle::initialTestFunctionBoundedParameters());
@@ -987,6 +1035,58 @@ void BuilderGenerated::applyProperty(CSSPropertyID id, BuilderState& builderStat
             break;
         case ApplyValueType::Value:
             BuilderFunctions::applyValueTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo(builderState, value);
+            break;
+        }
+        break;
+    case CSSPropertyID::CSSPropertyTestColor:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestColor(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestColor(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestColor(builderState, value);
+            break;
+        }
+        break;
+    case CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolute:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestColorAllowsTypesAbsolute(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestColorAllowsTypesAbsolute(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestColorAllowsTypesAbsolute(builderState, value);
+            break;
+        }
+        break;
+    case CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolutePlusQuirkyColors:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestColorAllowsTypesAbsolutePlusQuirkyColors(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestColorAllowsTypesAbsolutePlusQuirkyColors(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestColorAllowsTypesAbsolutePlusQuirkyColors(builderState, value);
+            break;
+        }
+        break;
+    case CSSPropertyID::CSSPropertyTestColorQuirkyColors:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestColorQuirkyColors(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestColorQuirkyColors(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestColorQuirkyColors(builderState, value);
             break;
         }
         break;

@@ -22,7 +22,6 @@ css/CSSFilterImageValue.h
 css/CSSFilterPropertyValue.h
 css/CSSFontFaceSrcValue.h
 css/CSSFontFeatureValue.h
-css/CSSFontPaletteValuesOverrideColorsValue.h
 css/CSSFontStyleRangeValue.h
 css/CSSFontStyleWithAngleValue.h
 css/CSSFontValue.h

@@ -1591,7 +1591,8 @@ UNITLESS_MAPPINGS = {'allowed': 'UnitlessQuirk::Allow', 'forbidden': 'UnitlessQu
 UNITLESS_ZERO_MAPPINGS = {'allowed': 'UnitlessZeroQuirk::Allow', 'forbidden': 'UnitlessZeroQuirk::Forbid'}
 ANCHOR_MAPPINGS = {'allowed': 'AnchorPolicy::Allow', 'forbidden': 'AnchorPolicy::Forbid'}
 ANCHOR_SIZE_MAPPINGS = {'allowed': 'AnchorSizePolicy::Allow', 'forbidden': 'AnchorSizePolicy::Forbid'}
-QUIRKY_COLORS_MAPPINGS = {'allowed': True, 'forbidden': False}
+QUIRKY_COLORS_MAPPINGS = {'allowed': 'true', 'forbidden': 'false'}
+ALLOWED_COLOR_TYPES_MAPPINGS = {'all': 'CSS::ColorType::Absolute, CSS::ColorType::Current, CSS::ColorType::System', 'absolute': 'CSS::ColorType::Absolute' }
 
 class ReferenceTerm:
     builtins = BuiltinSchema(
@@ -1625,7 +1626,8 @@ class ReferenceTerm:
         BuiltinSchema.Entry('position',
             BuiltinSchema.StringParameter('unitless', mappings=UNITLESS_MAPPINGS, default='forbidden')),
         BuiltinSchema.Entry('color',
-            BuiltinSchema.StringParameter('quirky-colors-in-quirks-mode', mappings=QUIRKY_COLORS_MAPPINGS, default='forbidden')),
+            BuiltinSchema.StringParameter('quirky-colors-in-quirks-mode', mappings=QUIRKY_COLORS_MAPPINGS, default='forbidden'),
+            BuiltinSchema.StringParameter('allowed-types', mappings=ALLOWED_COLOR_TYPES_MAPPINGS, default='all')),
         BuiltinSchema.Entry('string'),
         BuiltinSchema.Entry('custom-ident',
             BuiltinSchema.StringParameter('excluding')),
@@ -6031,9 +6033,7 @@ class TermGeneratorReferenceTerm(TermGenerator):
             elif isinstance(builtin, BuiltinPositionConsumer):
                 return f"consumePosition({range_string}, {context_string}, {builtin.unitless}, PositionSyntax::Position)"
             elif isinstance(builtin, BuiltinColorConsumer):
-                if builtin.quirky_colors_in_quirks_mode:
-                    return f"consumeColor({range_string}, {context_string}, {{ .acceptQuirkyColors = ({context_string}.mode == HTMLQuirksMode) }})"
-                return f"consumeColor({range_string}, {context_string})"
+                return f"consumeColor({range_string}, {context_string}, {{ .acceptQuirkyColorsInQuirksMode = {builtin.quirky_colors_in_quirks_mode}, .allowedColorTypes = {{ {builtin.allowed_types} }} }})"
             elif isinstance(builtin, BuiltinCustomIdentConsumer):
                 if builtin.excluding:
                     return f"consumeCustomIdentExcluding({range_string}, {{ { ', '.join(ValueKeywordName(id).id for id in builtin.excluding)} }})"
