@@ -196,6 +196,7 @@
 		45F3A5F72D822261002B4550 /* CrossThreadTask.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51714EB91D087416004723C4 /* CrossThreadTask.cpp */; };
 		45F3A5FF2D82228B002B4550 /* Function.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83DB79671EF63B3C00BFA5E5 /* Function.cpp */; };
 		45F3A6002D8222CD002B4550 /* WorkerPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E388887020C9098100E632BC /* WorkerPool.cpp */; };
+		45F3A5E52D81F955002B4550 /* DateMath.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7AA021BA1AB09EA70052953F /* DateMath.cpp */; };
 		4628C8E92367ABD100B073F0 /* WKSecurityOrigin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4628C8E82367ABBC00B073F0 /* WKSecurityOrigin.cpp */; };
 		46397B951DC2C850009A78AE /* DOMNode.mm in Sources */ = {isa = PBXBuildFile; fileRef = 46397B941DC2C850009A78AE /* DOMNode.mm */; };
 		4647B1261EBA3B850041D7EF /* ProcessDidTerminate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4647B1251EBA3B730041D7EF /* ProcessDidTerminate.cpp */; };
@@ -6895,6 +6896,7 @@
 				5C2C01A82734883600F89D37 /* CrossThreadCopierTests.cpp in Sources */,
 				45F3A5F72D822261002B4550 /* CrossThreadTask.cpp in Sources */,
 				7C83DEA91D0A590C00FEBCF3 /* CString.cpp in Sources */,
+				45F3A5E52D81F955002B4550 /* DateMath.cpp in Sources */,
 				7C83DEAD1D0A590C00FEBCF3 /* Deque.cpp in Sources */,
 				FFD3FF372AF9BD8F0057C508 /* DragonBoxTest.cpp in Sources */,
 				E36B87A3276221870059D2F9 /* EmbeddedFixedVector.cpp in Sources */,
