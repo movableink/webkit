@@ -313,7 +313,7 @@ void ProvisionalPageProxy::loadData(API::Navigation& navigation, Ref<WebCore::Sh
     ASSERT(shouldTreatAsContinuingLoad != WebCore::ShouldTreatAsContinuingLoad::No);
 
     if (RefPtr page = m_page.get())
-        page->loadDataWithNavigationShared(protectedProcess(), m_webPageID, navigation, WTFMove(data), mimeType, encoding, baseURL, userData, shouldTreatAsContinuingLoad, isNavigatingToAppBoundDomain, WTFMove(websitePolicies), navigation.lastNavigationAction().shouldOpenExternalURLsPolicy, sessionHistoryVisibility);
+        page->loadDataWithNavigationShared(protectedProcess(), m_webPageID, navigation, WTFMove(data), mimeType, encoding, baseURL, userData, shouldTreatAsContinuingLoad, isNavigatingToAppBoundDomain, WTFMove(websitePolicies), navigation.shouldOpenExternalURLsPolicy(), sessionHistoryVisibility);
 }
 
 void ProvisionalPageProxy::loadRequest(API::Navigation& navigation, WebCore::ResourceRequest&& request, API::Object* userData, WebCore::ShouldTreatAsContinuingLoad shouldTreatAsContinuingLoad, std::optional<NavigatingToAppBoundDomain> isNavigatingToAppBoundDomain, std::optional<WebsitePoliciesData>&& websitePolicies, std::optional<NetworkResourceLoadIdentifier> existingNetworkResourceLoadIdentifierToResume, IsPerformingHTTPFallback isPerformingHTTPFallback)
@@ -328,7 +328,7 @@ void ProvisionalPageProxy::loadRequest(API::Navigation& navigation, WebCore::Res
         navigation.fromItem()->setLastProcessIdentifier(process().coreProcessIdentifier());
 
     if (RefPtr page = m_page.get())
-        page->loadRequestWithNavigationShared(protectedProcess(), m_webPageID, navigation, WTFMove(request), navigation.lastNavigationAction().shouldOpenExternalURLsPolicy, isPerformingHTTPFallback, userData, shouldTreatAsContinuingLoad, isNavigatingToAppBoundDomain, WTFMove(websitePolicies), existingNetworkResourceLoadIdentifierToResume);
+        page->loadRequestWithNavigationShared(protectedProcess(), m_webPageID, navigation, WTFMove(request), navigation.shouldOpenExternalURLsPolicy(), isPerformingHTTPFallback, userData, shouldTreatAsContinuingLoad, isNavigatingToAppBoundDomain, WTFMove(websitePolicies), existingNetworkResourceLoadIdentifierToResume);
 }
 
 void ProvisionalPageProxy::goToBackForwardItem(API::Navigation& navigation, WebBackForwardListItem& item, RefPtr<API::WebsitePolicies>&& websitePolicies, WebCore::ShouldTreatAsContinuingLoad shouldTreatAsContinuingLoad, std::optional<NetworkResourceLoadIdentifier> existingNetworkResourceLoadIdentifierToResume)
