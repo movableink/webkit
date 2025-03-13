@@ -153,13 +153,13 @@ static bool& contentFilterInDocumentLoader()
 
 static void cancelAll(const ResourceLoaderMap& loaders)
 {
-    for (auto& loader : copyToVector(loaders.values()))
+    for (auto& loader : copyToVector(loaders))
         loader->cancel();
 }
 
 static void setAllDefersLoading(const ResourceLoaderMap& loaders, bool defers)
 {
-    for (auto& loader : copyToVector(loaders.values()))
+    for (auto& loader : copyToVector(loaders))
         loader->setDefersLoading(defers);
 }
 
@@ -2023,7 +2023,7 @@ void DocumentLoader::addSubresourceLoader(SubresourceLoader& loader)
     if (!m_gotFirstByte)
         return;
 
-    ASSERT(!m_subresourceLoaders.contains(*loader.identifier()));
+    ASSERT(!m_subresourceLoaders.contains(&loader));
     ASSERT(!mainResourceLoader() || mainResourceLoader() != &loader);
 
     // Application Cache loaders are handled by their ApplicationCacheGroup directly.
@@ -2049,12 +2049,12 @@ void DocumentLoader::addSubresourceLoader(SubresourceLoader& loader)
     }
 #endif
 
-    m_subresourceLoaders.add(*loader.identifier(), &loader);
+    m_subresourceLoaders.add(&loader);
 }
 
 void DocumentLoader::removeSubresourceLoader(LoadCompletionType type, SubresourceLoader& loader)
 {
-    if (!m_subresourceLoaders.remove(*loader.identifier()))
+    if (!m_subresourceLoaders.remove(&loader))
         return;
     checkLoadComplete();
     if (RefPtr frame = m_frame.get())
@@ -2063,16 +2063,16 @@ void DocumentLoader::removeSubresourceLoader(LoadCompletionType type, Subresourc
 
 void DocumentLoader::addPlugInStreamLoader(ResourceLoader& loader)
 {
-    ASSERT(!m_plugInStreamLoaders.contains(*loader.identifier()));
+    ASSERT(!m_plugInStreamLoaders.contains(&loader));
 
-    m_plugInStreamLoaders.add(*loader.identifier(), &loader);
+    m_plugInStreamLoaders.add(&loader);
 }
 
 void DocumentLoader::removePlugInStreamLoader(ResourceLoader& loader)
 {
-    ASSERT(&loader == m_plugInStreamLoaders.get(*loader.identifier()));
+    ASSERT(m_plugInStreamLoaders.contains(&loader));
 
-    m_plugInStreamLoaders.remove(*loader.identifier());
+    m_plugInStreamLoaders.remove(&loader);
     checkLoadComplete();
 }
 
@@ -2431,14 +2431,11 @@ void DocumentLoader::clearMainResource()
 
 void DocumentLoader::subresourceLoaderFinishedLoadingOnePart(ResourceLoader& loader)
 {
-    auto identifier = *loader.identifier();
-
-    if (!m_multipartSubresourceLoaders.add(identifier, &loader).isNewEntry) {
-        ASSERT(m_multipartSubresourceLoaders.get(identifier) == &loader);
-        ASSERT(!m_subresourceLoaders.contains(identifier));
-    } else {
-        ASSERT(m_subresourceLoaders.contains(identifier));
-        m_subresourceLoaders.remove(identifier);
+    if (!m_multipartSubresourceLoaders.add(&loader).isNewEntry)
+        ASSERT(!m_subresourceLoaders.contains(&loader));
+    else {
+        ASSERT(m_subresourceLoaders.contains(&loader));
+        m_subresourceLoaders.remove(&loader);
     }
 
     checkLoadComplete();

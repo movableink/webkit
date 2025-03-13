@@ -111,7 +111,7 @@ enum class ClearSiteDataValue : uint8_t;
 enum class LoadWillContinueInAnotherProcess : bool;
 enum class ShouldContinue;
 
-using ResourceLoaderMap = HashMap<ResourceLoaderIdentifier, RefPtr<ResourceLoader>>;
+using ResourceLoaderMap = HashSet<RefPtr<ResourceLoader>>;
 
 enum class AutoplayPolicy : uint8_t {
     Default, // Uses policies specified in document settings.
