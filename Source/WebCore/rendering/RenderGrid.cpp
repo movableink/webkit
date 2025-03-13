@@ -729,7 +729,7 @@ void RenderGrid::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, Layo
         auto gridAxisTracksCountBeforeAutoPlacement = currentGrid().numTracks(GridTrackSizingDirection::ForRows);
 
         // To determine the width of the grid when we have a masonry layout in the column direction we need to perform a layout with the min and max
-        // conent sizes. We will override the grid items widths to accomplish this and then calculate the final grid content size after placement.
+        // content sizes. We will override the grid items widths to accomplish this and then calculate the final grid content size after placement.
         m_masonryLayout.performMasonryPlacement(algorithm, gridAxisTracksCountBeforeAutoPlacement, GridTrackSizingDirection::ForColumns, GridMasonryLayout::MasonryLayoutPhase::MinContentPhase);
         minLogicalWidth = m_masonryLayout.gridContentSize();
 
