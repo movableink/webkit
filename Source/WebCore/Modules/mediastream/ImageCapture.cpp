@@ -80,7 +80,7 @@ void ImageCapture::takePhoto(PhotoSettings&& settings, DOMPromiseDeferred<IDLInt
     }
 
     m_track->takePhoto(WTFMove(settings))->whenSettled(RunLoop::protectedMain(), [this, protectedThis = Ref { *this }, promise = WTFMove(promise), identifier = WTFMove(identifier)] (auto&& result) mutable {
-        queueTaskKeepingObjectAlive(*this, TaskSource::ImageCapture, [promise = WTFMove(promise), result = WTFMove(result), identifier = WTFMove(identifier)](auto& capture) mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::ImageCapture, [promise = WTFMove(promise), result = WTFMove(result), identifier = WTFMove(identifier)](ImageCapture& capture) mutable {
             if (!result) {
                 ERROR_LOG_WITH_THIS(&capture, identifier, "rejecting promise: ", result.error().message());
                 promise.reject(WTFMove(result.error()));
