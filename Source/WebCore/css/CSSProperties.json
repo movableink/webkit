@@ -1093,9 +1093,8 @@
                 "font-description-name-for-methods": "VariantAlternates",
                 "font-property": true,
                 "high-priority": true,
-                "parser-function": "consumeFontVariantAlternates",
-                "parser-grammar-unused": "normal | [ stylistic(<feature-value-name>) || historical-forms || styleset(<feature-value-name>#) || character-variant(<feature-value-name>#) || swash(<feature-value-name>) || ornaments(<feature-value-name>) || annotation(<feature-value-name>) ]",
-                "parser-grammar-unused-reason": "Needs support for functional notation with more than one parameter."
+                "parser-grammar": "normal | [ stylistic(<feature-value-name>) || historical-forms || styleset(<feature-value-name>#) || character-variant(<feature-value-name>#) || swash(<feature-value-name>) || ornaments(<feature-value-name>) || annotation(<feature-value-name>) ]@(no-single-item-opt)",
+                "parser-exported": true
             },
             "specification": {
                 "category": "css-fonts-4",
@@ -1890,9 +1889,7 @@
                 "animation-property": true,
                 "animation-name-for-methods": "RangeStart",
                 "separator": ",",
-                "parser-function": "consumeAnimationRangeStart",
-                "parser-grammar-unused": "[ normal | <length-percentage> | [ <timeline-range-name> <length-percentage>? ] ]#",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and default values on optionals.",
+                "parser-grammar": "<single-animation-range-start>#",
                 "settings-flag": "scrollDrivenAnimationsEnabled"
             },
             "specification": {
@@ -1916,9 +1913,7 @@
                 "animation-property": true,
                 "animation-name-for-methods": "RangeEnd",
                 "separator": ",",
-                "parser-function": "consumeAnimationRangeEnd",
-                "parser-grammar-unused": "[ normal | <length-percentage> | [ <timeline-range-name> <length-percentage>? ] ]#",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and default values on optionals.",
+                "parser-grammar": "<single-animation-range-end>#",
                 "settings-flag": "scrollDrivenAnimationsEnabled"
             },
             "specification": {
@@ -1938,9 +1933,7 @@
                 "animation-name-for-methods": "Timeline",
                 "style-builder-converter": "AnimationTimeline",
                 "settings-flag": "scrollDrivenAnimationsEnabled",
-                "parser-function": "consumeAnimationTimeline",
-                "parser-grammar-unused": "auto | none | <dashed-ident> | <scroll()> | <view()>",
-                "parser-grammar-unused-reason": "Needs support for functional notation with more than one parameter."
+                "parser-grammar": "<single-animation-timeline>#"
             },
             "specification": {
                 "category": "css-animations",
@@ -3794,9 +3787,7 @@
                 "animation-wrapper": "ClipWrapper",
                 "animation-wrapper-requires-override-parameters": [],
                 "style-builder-custom": "All",
-                "parser-function": "consumeClip",
-                "parser-grammar-unused": "<rect()> | auto",
-                "parser-grammar-unused-reason": "Needs support for functional notation with more than one parameter."
+                "parser-grammar": "<rect()> | auto"
             },
             "specification": {
                 "category": "css-masking",
@@ -6350,7 +6341,7 @@
                 "settings-flag": "cssMotionPathEnabled",
                 "parser-function": "consumeOffsetPath",
                 "parser-grammar-unused": "none | <ray()> | <path()> | <url> | [ <basic-shape> && <coord-box>? ] | <coord-box>",
-                "parser-grammar-unused-reason": "Needs support for transforming parsed input to minimal form and functional notation with more than one parameter."
+                "parser-grammar-unused-reason": "Needs support for transforming parsed input to minimal form and the strong value representation."
             },
             "specification": {
                 "category": "css-motion-path",
@@ -9239,7 +9230,7 @@
                 "style-builder-converter": "FilterOperations",
                 "parser-function": "consumeFilter",
                 "parser-grammar-unused": "none | <filter-value-list>",
-                "parser-grammar-unused-reason": "Needs support for the strong value representation and functional notation with more than one parameter."
+                "parser-grammar-unused-reason": "Needs support for the strong value representation."
             },
             "specification":  {
                 "category": "css-filters",
@@ -9259,7 +9250,7 @@
                 "style-builder-converter": "AppleColorFilterOperations",
                 "parser-function": "consumeAppleColorFilter",
                 "parser-grammar-unused": "none | <-apple-color-filter-value-list>",
-                "parser-grammar-unused-reason": "Needs support for the strong value representation and functional notation with more than one parameter."
+                "parser-grammar-unused-reason": "Needs support for the strong value representation."
             },
             "status": {
                 "status": "non-standard"
@@ -9574,7 +9565,7 @@
                 "animation-wrapper": "FilterWrapper",
                 "parser-function": "consumeFilter",
                 "parser-grammar-unused": "none | <filter-value-list>",
-                "parser-grammar-unused-reason": "Needs support for the strong value representation and functional notation with more than one parameter."
+                "parser-grammar-unused-reason": "Needs support for the strong value representation."
             },
             "status": {
                 "status": "experimental"
@@ -9593,7 +9584,7 @@
                 "style-builder-converter": "FilterOperations",
                 "parser-function": "consumeFilter",
                 "parser-grammar-unused": "none | <filter-value-list>",
-                "parser-grammar-unused-reason": "Needs support for the strong value representation and functional notation with more than one parameter.",
+                "parser-grammar-unused-reason": "Needs support for the strong value representation.",
                 "settings-flag": "cssUnprefixedBackdropFilterEnabled"
             },
             "status": {
@@ -9721,7 +9712,7 @@
                 "parser-function": "consumeGridTrackList",
                 "parser-function-requires-additional-parameters": ["GridAuto"],
                 "parser-grammar-unused": "<track-size>+",
-                "parser-grammar-unused-reason": "Needs support for functional notation with more than one parameter and likely more."
+                "parser-grammar-unused-reason": "Needs investigation."
             },
             "specification": {
                 "category": "css-grid",
@@ -9738,7 +9729,7 @@
                 "parser-function": "consumeGridTrackList",
                 "parser-function-requires-additional-parameters": ["GridAuto"],
                 "parser-grammar-unused": "<track-size>+",
-                "parser-grammar-unused-reason": "Needs support for functional notation with more than one parameter and likely more."
+                "parser-grammar-unused-reason": "Needs investigation."
             },
             "specification": {
                 "category": "css-grid",
@@ -9797,7 +9788,7 @@
                 "style-builder-conditional-converter": "GridTrackList",
                 "parser-function": "consumeGridTemplatesRowsOrColumns",
                 "parser-grammar-unused": "none | <track-list> | <auto-track-list>",
-                "parser-grammar-unused-reason": "Needs support for functional notation with more than one parameter and likely more."
+                "parser-grammar-unused-reason": "Needs investigation."
             },
             "specification": {
                 "category": "css-grid",
@@ -9813,7 +9804,7 @@
                 "style-builder-conditional-converter": "GridTrackList",
                 "parser-function": "consumeGridTemplatesRowsOrColumns",
                 "parser-grammar-unused": "none | <track-list> | <auto-track-list>",
-                "parser-grammar-unused-reason": "Needs support for functional notation with more than one parameter and likely more."
+                "parser-grammar-unused-reason": "Needs investigation."
             },
             "specification": {
                 "category": "css-grid",
@@ -10861,9 +10852,8 @@
                 "animation-wrapper-requires-override-parameters": [],
                 "animation-wrapper-acceleration": "always",
                 "style-builder-converter": "Transform",
-                "parser-function": "consumeTransform",
-                "parser-grammar-unused": "none | <transform-list>",
-                "parser-grammar-unused-reason": "Needs support for functional notation with more than one parameter."
+                "parser-grammar": "none | <transform-list>",
+                "parser-exported": true
             },
             "specification": {
                 "category": "css-transforms",
@@ -11013,7 +11003,7 @@
                 "animation-wrapper-acceleration": "always",
                 "style-builder-converter": "Scale",
                 "parser-function": "consumeScale",
-                "parser-grammar-unused": "none | [ <number> | <percentage> ]{1,3}",
+                "parser-grammar-unused": "none | [ <number-or-percentage-resolved-to-number> ]{1,3}",
                 "parser-grammar-unused-reason": "Needs support for transforming parsed input to minimal form."
             },
             "specification": {
@@ -11702,7 +11692,7 @@
                 "style-builder-converter": "ShapeValue",
                 "parser-function": "consumeShapeOutside",
                 "parser-grammar-unused": "none | [ <basic-shape> || <shape-box> ] | <image>",
-                "parser-grammar-unused-reason": "Needs support for transforming parsed input to minimal form and functional notation with more than one parameter."
+                "parser-grammar-unused-reason": "Needs support for transforming parsed input to minimal form and the strong value representation."
             },
             "specification": {
                 "category": "css-shapes",
@@ -11804,9 +11794,7 @@
             "codegen-properties": {
                 "style-builder-converter": "ViewTimelineInset",
                 "render-style-name-for-methods": "ViewTimelineInsets",
-                "parser-function": "consumeViewTimelineInset",
-                "parser-grammar-unused": "[ <single-view-timeline-inset>{1,2} ]#",
-                "parser-grammar-unused-reason": "Needs support for {1,2} combined with #.",
+                "parser-grammar": "<single-view-timeline-inset-item>#@(no-single-item-opt)",
                 "settings-flag": "scrollDrivenAnimationsEnabled"
             },
             "specification": {
@@ -12420,9 +12408,7 @@
             },
             "font-variant-alternates": {
                 "codegen-properties": {
-                    "parser-function": "consumeFontVariantAlternates",
-                    "parser-grammar-unused": "normal | [ stylistic(<feature-value-name>) || historical-forms || styleset(<feature-value-name>#) || character-variant(<feature-value-name>#) || swash(<feature-value-name>) || ornaments(<feature-value-name>) || annotation(<feature-value-name>) ]",
-                    "parser-grammar-unused-reason": "Needs support for functional notation with more than one parameter."
+                    "parser-grammar": "normal | [ stylistic(<feature-value-name>) || historical-forms || styleset(<feature-value-name>#) || character-variant(<feature-value-name>#) || swash(<feature-value-name>) || ornaments(<feature-value-name>) || annotation(<feature-value-name>) ]@(no-single-item-opt)"
                 },
                 "specification": {
                     "category": "css-fonts",
@@ -12555,7 +12541,7 @@
                 "codegen-properties": {
                     "parser-function": "consumeFontFaceSrc",
                     "parser-grammar-unused": "<font-src-list>",
-                    "parser-grammar-unused-reason": "Needs support for functional notation with more than one parameter."
+                    "parser-grammar-unused-reason": "Needs support for primitive <family-name>."
                 },
                 "specification": {
                     "category": "css-fonts-4",
@@ -13269,7 +13255,9 @@
             }
         },
         "<rect()>": {
-            "grammar": "rect( [ <length> | auto ]#{4} )",
+            "grammar-unused": "rect( [ <length> | auto ]#{4} | [ <length> | auto ]{4} )",
+            "grammar-unused-reason": "Needs support for custom types for functional notation.",
+            "grammar-function": "consumeClipRectFunction",
             "specification": {
                 "category": "css-masking",
                 "url": "https://drafts.fxtf.org/css-masking-1/#funcdef-clip-rect"
@@ -13717,9 +13705,9 @@
                 "url": "https://www.w3.org/TR/css-grid-1/#typedef-grid-row-start-grid-line"
             }
         },
-        
         "<transform-list>": {
-            "grammar": "<transform-function>+",
+            "grammar": "<transform-function>+@(type=CSSTransformListValue no-single-item-opt)",
+            "exported": true,
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-1/#typedef-transform-list"
@@ -13727,21 +13715,23 @@
         },
         "<transform-function>": {
             "grammar": "<matrix()> | <translate()> | <translateX()> | <translateY()> | <scale()> | <scaleX()> | <scaleY()> | <rotate()> | <skew()> | <skewX()> | <skewY()> | <matrix3d()> | <translate3d()> | <translateZ()> | <scale3d()> | <scaleZ()> | <rotate3d()> | <rotateX()> | <rotateY()> | <rotateZ()> | <perspective()>",
+            "exported": true,
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-1/#typedef-transform-function"
             }
         },
-
         "<matrix()>": {
-            "grammar": "matrix( <number>#{6}  )",
+            "grammar": "matrix( <number>#{6} )",
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-1/#funcdef-transform-matrix"
             }
         },
         "<translate()>": {
-            "grammar": "translate( <length-percentage>#{1,2} )",
+            "grammar-unused": "translate( <length-percentage>#{1,2} )",
+            "grammar-unused-reason": "Needs support for transforming parsed input to minimal form",
+            "grammar-function": "consumeTranslateFunction",
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-1/#funcdef-transform-translate"
@@ -13762,49 +13752,49 @@
             }
         },
         "<scale()>": {
-            "grammar": "scaleX( [ <number> | <percentage> ]#{1,2} )",
+            "grammar": "scale( [ <number-or-percentage-resolved-to-number> ]#{1,2} )",
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-2/#funcdef-scale"
             }
         },
         "<scaleX()>": {
-            "grammar": "scaleX( [ <number> | <percentage> ] )",
+            "grammar": "scaleX( [ <number-or-percentage-resolved-to-number> ] )",
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-2/#funcdef-scalex"
             }
         },
         "<scaleY()>": {
-            "grammar": "scaleY( [ <number> | <percentage> ] )",
+            "grammar": "scaleY( [ <number-or-percentage-resolved-to-number> ] )",
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-2/#funcdef-scaley"
             }
         },
         "<rotate()>": {
-            "grammar": "rotate( [ <angle> | <zero> ] )",
+            "grammar": "rotate( [ <angle unitless-zero=allowed> ] )",
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-1/#funcdef-transform-rotate"
             }
         },
         "<skew()>": {
-            "grammar": "skew( [ <angle> | <zero> ]#{1,2} )",
+            "grammar": "skew( [ <angle unitless-zero=allowed> ]#{1,2} )",
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-1/#funcdef-transform-skew"
             }
         },
         "<skewX()>": {
-            "grammar": "skewX( [ <angle> | <zero> ] )",
+            "grammar": "skewX( [ <angle unitless-zero=allowed> ] )",
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-1/#funcdef-transform-skewx"
             }
         },
         "<skewY()>": {
-            "grammar": "skewY( [ <angle> | <zero> ] )",
+            "grammar": "skewY( [ <angle unitless-zero=allowed> ] )",
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-1/#funcdef-transform-skewy"
@@ -13818,7 +13808,9 @@
             }
         },
         "<translate3d()>": {
-            "grammar": "translate3d( <length-percentage> , <length-percentage> , <length> )",
+            "grammar-unused": "translate3d( <length-percentage> , <length-percentage> , <length> )",
+            "grammar-unused-reason": "Needs support for ordered groups with a keyword/literal first term differentiator.",
+            "grammar-function": "consumeTranslate3dFunction",
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-2/#funcdef-translate3d"
@@ -13832,49 +13824,52 @@
             }
         },
         "<scale3d()>": {
-            "grammar": "scale3d( [ <number> | <percentage> ]#{3} )",
+            "grammar": "scale3d( [ <number-or-percentage-resolved-to-number> ]#{3} )",
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-2/#funcdef-scale3d"
             }
         },
         "<scaleZ()>": {
-            "grammar": "scaleZ( [ <number> | <percentage> ] )",
+            "grammar": "scaleZ( [ <number-or-percentage-resolved-to-number> ] )",
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-2/#funcdef-scalez"
             }
         },
         "<rotate3d()>": {
-            "grammar": "rotate3d( <number> , <number> , <number> , [ <angle> | <zero> ] )",
+            "grammar-unused": "rotate3d( <number> , <number> , <number> , [ <angle unitless-zero=allowed> ] )",
+            "grammar-unused-reason": "Needs support for ordered groups with a keyword/literal first term differentiator.",
+            "grammar-function": "consumeRotate3dFunction",
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-2/#funcdef-rotate3d"
             }
         },
         "<rotateX()>": {
-            "grammar": "rotateX( [ <angle> | <zero> ] )",
+            "grammar": "rotateX( [ <angle unitless-zero=allowed> ] )",
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-2/#funcdef-rotatex"
             }
         },
         "<rotateY()>": {
-            "grammar": "rotateY( [ <angle> | <zero> ] )",
+            "grammar": "rotateY( [ <angle unitless-zero=allowed> ] )",
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-2/#funcdef-rotatey"
             }
         },
         "<rotateZ()>": {
-            "grammar": "rotateZ( [ <angle> | <zero> ] )",
+            "grammar": "rotateZ( [ <angle unitless-zero=allowed> ] )",
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-2/#funcdef-rotatez"
             }
         },
         "<perspective()>": {
-            "grammar": "perspective( <length [0,inf]> | none )",
+            "grammar": "perspective( <length [0,inf]> | <number [0,inf]> | none )",
+            "grammar-comment": "Current spec grammar is 'perspective( <length [0,inf]> | none )'",
             "specification": {
                 "category": "css-transforms",
                 "url": "https://www.w3.org/TR/css-transforms-2/#funcdef-perspective"
@@ -13933,22 +13928,6 @@
             "grammar": "-webkit-inline-flex | -webkit-box | -webkit-inline-box | -webkit-flex",
             "status": "non-standard"
         },
-        "<axis>": {
-            "grammar": "block | inline | x | y",
-            "exported": true,
-            "specification": {
-                "category": "scroll-animations",
-                "url": "https://drafts.csswg.org/scroll-animations-1/#scroll-notation"
-            }
-        },
-        "<scroller>": {
-            "grammar": "root | nearest | self",
-            "exported": true,
-            "specification": {
-                "category": "scroll-animations",
-                "url": "https://drafts.csswg.org/scroll-animations-1/#scroll-notation"
-            }
-        },
         "<single-scroll-timeline-name>": {
             "grammar": "none | <dashed-ident>",
             "exported": true,
@@ -13965,12 +13944,81 @@
                 "url": "https://drafts.csswg.org/scroll-animations-1/#propdef-view-timeline-inset"
             }
         },
+        "<single-view-timeline-inset-item>": {
+            "grammar-function": "consumeSingleViewTimelineInsetItem",
+            "grammar-unused": "<single-view-timeline-inset>{1,2}",
+            "grammar-unused-reason": "Needs support for non-coalescing CSSValuePair.",
+            "specification": {
+                "category": "scroll-animations",
+                "url": "https://drafts.csswg.org/scroll-animations-1/#propdef-view-timeline-inset"
+            }
+        },
+        "<axis>": {
+            "grammar": "block | inline | x | y",
+            "exported": true,
+            "specification": {
+                "category": "scroll-animations",
+                "url": "https://drafts.csswg.org/scroll-animations-1/#typedef-axis"
+            }
+        },
+        "<scroller>": {
+            "grammar": "root | nearest | self",
+            "exported": true,
+            "specification": {
+                "category": "scroll-animations",
+                "url": "https://drafts.csswg.org/scroll-animations-1/#typedef-scroller"
+            }
+        },
+        "<scroll()>": {
+            "grammar-function": "consumeAnimationTimelineScroll",
+            "grammar-unused": "scroll( [ <scroller> || <axis> ]? )",
+            "grammar-unused-reason": "Needs support for custom types for functional notation.",
+            "specification": {
+                "category": "scroll-animations",
+                "url": "https://drafts.csswg.org/scroll-animations-1/#funcdef-scroll"
+            }
+        },
+        "<view()>": {
+            "grammar-function": "consumeAnimationTimelineView",
+            "grammar-unused": "view( [ <axis> || <single-view-timeline-inset-item> ]? )",
+            "grammar-unused-reason": "Needs support for custom types for functional notation.",
+            "grammar-comment": "Current spec grammar is 'view( [ <axis> || <'view-timeline-inset'> ]? )'",
+            "specification": {
+                "category": "scroll-animations",
+                "url": "https://drafts.csswg.org/scroll-animations-1/#funcdef-view"
+            }
+        },
         "<timeline-range-name>": {
             "grammar": "cover | contain | entry | exit | entry-crossing | exit-crossing",
             "exported": true,
             "specification": {
                 "category": "scroll-animations",
                 "url": "https://drafts.csswg.org/scroll-animations-1/#typedef-timeline-range-name"
+            }
+        },
+        "<single-animation-range-start>": {
+            "grammar-function": "consumeSingleAnimationRangeStart",
+            "grammar-unused": "[ normal | <length-percentage> | [ <timeline-range-name> <length-percentage>? ] ]",
+            "grammar-unused-reason": "Needs support for using custom types for order groups and default values on optionals.",
+            "specification": {
+                "category": "scroll-animations",
+                "url": "https://drafts.csswg.org/scroll-animations-1/#propdef-animation-range-start"
+            }
+        },
+        "<single-animation-range-end>": {
+            "grammar-function": "consumeSingleAnimationRangeEnd",
+            "grammar-unused": "[ normal | <length-percentage> | [ <timeline-range-name> <length-percentage>? ] ]",
+            "grammar-unused-reason": "Needs support for using custom types for order groups and default values on optionals.",
+            "specification": {
+                "category": "scroll-animations",
+                "url": "https://drafts.csswg.org/scroll-animations-1/#propdef-animation-range-end"
+            }
+        },
+        "<single-animation-timeline>": {
+            "grammar": "auto | none | <dashed-ident> | <scroll()> | <view()>",
+            "specification": {
+                "category": "css-animations",
+                "url": "https://drafts.csswg.org/css-animations-2/#typedef-single-animation-timeline"
             }
         },
         "<single-container-name>": {
@@ -14035,6 +14083,14 @@
             "specification": {
                 "category": "css-fonts-4",
                 "url": "https://drafts.csswg.org/css-fonts-4/#color-font-tech-values"
+            }
+        },
+        "<feature-value-name>": {
+            "grammar": "<custom-ident>",
+            "grammar-comment": "Current spec grammar is '<ident>'",
+            "specification": {
+                "category": "css-fonts-4",
+                "url": "https://drafts.csswg.org/css-fonts-4/#feature-value-name-value"
             }
         }
     }

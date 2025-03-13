@@ -33,7 +33,6 @@
 #include "CSSCounterValue.h"
 #include "CSSCursorImageValue.h"
 #include "CSSFontValue.h"
-#include "CSSFontVariantAlternatesValue.h"
 #include "CSSGradientValue.h"
 #include "CSSGridTemplateAreasValue.h"
 #include "CSSPropertyParserConsumer+Font.h"
@@ -1526,32 +1525,13 @@ inline void BuilderCustom::applyInitialFontVariantAlternates(BuilderState& build
 
 inline void BuilderCustom::applyValueFontVariantAlternates(BuilderState& builderState, CSSValue& value)
 {
-    auto setAlternates = [&builderState](const FontVariantAlternates& alternates) {
-        auto fontDescription = builderState.fontDescription();
-        fontDescription.setVariantAlternates(alternates);
-        builderState.setFontDescription(WTFMove(fontDescription));
-    };
-
-    if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
-        if (primitiveValue->valueID() == CSSValueNormal || CSSPropertyParserHelpers::isSystemFontShorthand(primitiveValue->valueID())) {
-            setAlternates(FontVariantAlternates::Normal());
-            return;
-        }
-        if (primitiveValue->valueID() == CSSValueHistoricalForms) {
-            auto alternates = FontVariantAlternates::Normal();
-            alternates.valuesRef().historicalForms = true;
-            setAlternates(alternates);
-            return;
-        }
+    if (CSSPropertyParserHelpers::isSystemFontShorthand(value.valueID())) {
+        applyInitialFontVariantAlternates(builderState);
         return;
     }
-
-    if (auto* alternatesValues = dynamicDowncast<CSSFontVariantAlternatesValue>(value)) {
-        setAlternates(alternatesValues->value());
-        return;
-    }
-
-    ASSERT_NOT_REACHED();
+    auto fontDescription = builderState.fontDescription();
+    fontDescription.setVariantAlternates(extractFontVariantAlternates(value, builderState));
+    builderState.setFontDescription(WTFMove(fontDescription));
 }
 
 inline void BuilderCustom::applyInitialFontSize(BuilderState& builderState)

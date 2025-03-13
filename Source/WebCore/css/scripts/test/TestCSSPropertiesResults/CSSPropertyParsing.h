@@ -31,6 +31,9 @@ struct CSSPropertyParsing {
     static bool isKeywordFastPathEligibleSecondAtRuleDescriptor(CSSPropertyID);
 
     // Direct consumers.
+
+    // Exported shared consumers.
+    static RefPtr<CSSValue> consumeSharedRuleExported(CSSParserTokenRange&, const CSSParserContext&);
 };
 
 } // namespace WebCore

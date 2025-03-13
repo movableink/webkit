@@ -102,7 +102,7 @@ ExceptionOr<ViewTimeline::SpecifiedViewTimelineInsets> ViewTimeline::validateSpe
         CSSTokenizer tokenizer(*insetString);
         auto tokenRange = tokenizer.tokenRange();
         tokenRange.consumeWhitespace();
-        auto consumedInset = CSSPropertyParserHelpers::consumeViewTimelineInsetListItem(tokenRange, Ref { document }->cssParserContext());
+        auto consumedInset = CSSPropertyParserHelpers::consumeSingleViewTimelineInsetItem(tokenRange, Ref { document }->cssParserContext());
         if (!consumedInset)
             return Exception { ExceptionCode::TypeError };
 

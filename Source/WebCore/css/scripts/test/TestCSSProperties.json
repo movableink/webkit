@@ -16,6 +16,22 @@
                 "parser-grammar": "auto | <shared-rule-one>"
             }
         },
+        "test-using-shared-rule-exported": {
+            "animation-type": "discrete",
+            "initial": "0",
+            "values": [ "auto" ],
+            "codegen-properties": {
+                "parser-grammar": "auto | <shared-rule-exported>"
+            }
+        },
+        "test-using-shared-rule-with-override-function": {
+            "animation-type": "discrete",
+            "initial": "0",
+            "values": [ "auto" ],
+            "codegen-properties": {
+                "parser-grammar": "auto | <shared-rule-with-override-function>"
+            }
+        },
         "test-sink-priority": {
             "animation-type": "discrete",
             "initial": "0",
@@ -400,6 +416,98 @@
             "codegen-properties": {
                 "parser-grammar": "[ <number> || <custom-ident> || <length> ]@(preserve-order no-single-item-opt)"
             }
+        },
+
+        "test-function-no-parameters": {
+            "animation-type": "discrete",
+            "initial": "foo()",
+            "codegen-properties": {
+                "parser-grammar": "foo()"
+            }
+        },
+        "test-function-single-parameter": {
+            "animation-type": "discrete",
+            "initial": "foo(1)",
+            "codegen-properties": {
+                "parser-grammar": "foo( <number> )"
+            }
+        },
+        "test-function-single-parameter-match-one": {
+            "animation-type": "discrete",
+            "initial": "foo(1)",
+            "codegen-properties": {
+                "parser-grammar": "foo( <number> | <string> | bar | baz )"
+            }
+        },
+        "test-function-single-parameter-optional": {
+            "animation-type": "discrete",
+            "initial": "foo()",
+            "codegen-properties": {
+                "parser-grammar": "foo( <number>? )"
+            }
+        },
+        "test-function-bounded-parameters": {
+            "animation-type": "discrete",
+            "initial": "foo(1, 2)",
+            "codegen-properties": {
+                "parser-grammar": "foo( <number>#{1,4} )"
+            }
+        },
+        "test-function-fixed-parameters": {
+            "animation-type": "discrete",
+            "initial": "foo(1, 2, 3)",
+            "codegen-properties": {
+                "parser-grammar": "foo( <number>#{3} )"
+            }
+        },
+        "test-function-unbounded-parameters-no-min": {
+            "animation-type": "discrete",
+            "initial": "foo(1, 2)",
+            "codegen-properties": {
+                "parser-grammar": "foo( <number># )"
+            }
+        },
+        "test-function-unbounded-parameters-with-minimum": {
+            "animation-type": "discrete",
+            "initial": "foo(1, 2)",
+            "codegen-properties": {
+                "parser-grammar": "foo( <number>#{2,} )"
+            }
+        },
+        "test-function-parameters-match-all-ordered": {
+            "animation-type": "discrete",
+            "initial": "foo(1, 2)",
+            "codegen-properties": {
+                "parser-grammar": "foo( <number> <string> )"
+            }
+        },
+        "test-function-parameters-match-all-ordered-with-optional": {
+            "animation-type": "discrete",
+            "initial": "foo(1, 2)",
+            "codegen-properties": {
+                "parser-grammar": "foo( <number> <string>? )"
+            }
+        },
+        "test-function-parameters-match-all-any-order": {
+            "animation-type": "discrete",
+            "initial": "foo(1, 2)",
+            "codegen-properties": {
+                "parser-grammar": "foo( <number> && <string> )"
+            }
+        },
+        "test-function-parameters-match-all-any-order-with-optional": {
+            "animation-type": "discrete",
+            "initial": "foo(1, 2)",
+            "codegen-properties": {
+                "parser-grammar": "foo( <number> && <string>? )"
+            }
+        },
+        "test-function-parameters-match-one-or-more-any-order": {
+            "animation-type": "discrete",
+            "initial": "foo(1, 2)",
+            "codegen-properties": {
+                "parser-grammar": "foo( <number> || <string> )"
+            }
         }
     },
     "descriptors": {
@@ -429,6 +537,15 @@
     "shared-grammar-rules": {
         "<shared-rule-one>": {
             "grammar": "<number> | <percentage>"
+        },
+        "<shared-rule-exported>": {
+            "grammar": "<length> | <string>",
+            "exported": true
+        },
+        "<shared-rule-with-override-function>": {
+            "grammar-unused": "<number> | <percentage>",
+            "grammar-unused-reason": "justification string",
+            "grammar-function": "consumeFunctionForSharedRule"
         }
     }
 }

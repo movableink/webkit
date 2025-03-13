@@ -179,6 +179,10 @@ class JSONCSSPropertiesChecker(JSONChecker):
             'comment': self.validate_comment,
             'exported': self.validate_boolean,
             'grammar': self.validate_string,
+            'grammar-comment': self.validate_comment,
+            'grammar-function': self.validate_string,
+            'grammar-unused': self.validate_string,
+            'grammar-unused-reason': self.validate_string,
             'specification': self.validate_specification,
             'status': self.validate_status,
         }

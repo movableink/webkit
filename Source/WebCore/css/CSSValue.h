@@ -96,7 +96,6 @@ public:
     bool isFontStyleRangeValue() const { return m_classType == ClassType::FontStyleRange; }
     bool isFontStyleWithAngleValue() const { return m_classType == ClassType::FontStyleWithAngle; }
     bool isFontValue() const { return m_classType == ClassType::Font; }
-    bool isFontVariantAlternatesValue() const { return m_classType == ClassType::FontVariantAlternates; }
     bool isFontVariationValue() const { return m_classType == ClassType::FontVariation; }
     bool isFunctionValue() const { return m_classType == ClassType::Function; }
     bool isGradientValue() const { return m_classType == ClassType::Gradient; }
@@ -235,7 +234,6 @@ protected:
         FontPaletteValuesOverrideColors,
         FontStyleRange,
         FontStyleWithAngle,
-        FontVariantAlternates,
         FontVariation,
         GridLineNames,
         GridLineValue,

@@ -38,7 +38,6 @@
 #include "CSSFontFeatureValue.h"
 #include "CSSFontStyleWithAngleValue.h"
 #include "CSSFontValue.h"
-#include "CSSFontVariantAlternatesValue.h"
 #include "CSSFontVariationValue.h"
 #include "CSSFunctionValue.h"
 #include "CSSGridAutoRepeatValue.h"
@@ -1475,21 +1474,46 @@ static Ref<CSSValue> fontVariantNumericPropertyValue(FontVariantNumericFigure fi
     return CSSValueList::createSpaceSeparated(WTFMove(valueList));
 }
 
-static FontVariantAlternatesValues historicalFormsValues()
-{
-    FontVariantAlternatesValues values;
-    values.historicalForms = true;
-    return values;
-}
-
-static Ref<CSSValue> fontVariantAlternatesPropertyValue(FontVariantAlternates alternates)
+static Ref<CSSValue> fontVariantAlternatesPropertyValue(const FontVariantAlternates& alternates)
 {
     if (alternates.isNormal())
         return CSSPrimitiveValue::create(CSSValueNormal);
-    if (alternates.values() == historicalFormsValues())
-        return CSSPrimitiveValue::create(CSSValueHistoricalForms);
 
-    return CSSFontVariantAlternatesValue::create(WTFMove(alternates));
+    CSSValueListBuilder valueList;
+
+    if (!alternates.values().stylistic.isNull())
+        valueList.append(CSSFunctionValue::create(CSSValueStylistic, CSSPrimitiveValue::createCustomIdent(alternates.values().stylistic)));
+
+    if (alternates.values().historicalForms)
+        valueList.append(CSSPrimitiveValue::create(CSSValueHistoricalForms));
+
+    if (!alternates.values().styleset.isEmpty()) {
+        CSSValueListBuilder stylesetArguments;
+        for (auto& argument : alternates.values().styleset)
+            stylesetArguments.append(CSSPrimitiveValue::createCustomIdent(argument));
+        valueList.append(CSSFunctionValue::create(CSSValueStyleset, WTFMove(stylesetArguments)));
+    }
+
+    if (!alternates.values().characterVariant.isEmpty()) {
+        CSSValueListBuilder characterVariantArguments;
+        for (auto& argument : alternates.values().characterVariant)
+            characterVariantArguments.append(CSSPrimitiveValue::createCustomIdent(argument));
+        valueList.append(CSSFunctionValue::create(CSSValueCharacterVariant, WTFMove(characterVariantArguments)));
+    }
+
+    if (!alternates.values().swash.isNull())
+        valueList.append(CSSFunctionValue::create(CSSValueSwash, CSSPrimitiveValue::createCustomIdent(alternates.values().swash)));
+
+    if (!alternates.values().ornaments.isNull())
+        valueList.append(CSSFunctionValue::create(CSSValueOrnaments, CSSPrimitiveValue::createCustomIdent(alternates.values().ornaments)));
+
+    if (!alternates.values().annotation.isNull())
+        valueList.append(CSSFunctionValue::create(CSSValueAnnotation, CSSPrimitiveValue::createCustomIdent(alternates.values().annotation)));
+
+    if (valueList.size() == 1)
+        return WTFMove(valueList[0]);
+
+    return CSSValueList::createSpaceSeparated(WTFMove(valueList));
 }
 
 static Ref<CSSValue> fontVariantEastAsianPropertyValue(FontVariantEastAsianVariant variant, FontVariantEastAsianWidth width, FontVariantEastAsianRuby ruby)

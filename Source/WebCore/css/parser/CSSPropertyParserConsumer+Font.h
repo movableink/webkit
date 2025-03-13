@@ -112,10 +112,6 @@ RefPtr<CSSValue> consumeFamilyName(CSSParserTokenRange&, const CSSParserContext&
 const AtomString& genericFontFamily(CSSValueID);
 WebKitFontFamilyNames::FamilyNamesIndex genericFontFamilyIndex(CSSValueID);
 
-// MARK: 'font-variant-alternates'
-// https://drafts.csswg.org/css-fonts-4/#font-variant-alternates-prop
-RefPtr<CSSValue> consumeFontVariantAlternates(CSSParserTokenRange&, const CSSParserContext&);
-
 // MARK: 'font-size-adjust'
 // https://drafts.csswg.org/css-fonts-4/#font-size-adjust-prop
 RefPtr<CSSValue> consumeFontSizeAdjust(CSSParserTokenRange&, const CSSParserContext&);

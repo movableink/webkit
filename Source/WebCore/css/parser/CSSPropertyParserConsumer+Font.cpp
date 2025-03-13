@@ -34,7 +34,6 @@
 #include "CSSFontFeatureValue.h"
 #include "CSSFontPaletteValuesOverrideColorsValue.h"
 #include "CSSFontStyleWithAngleValue.h"
-#include "CSSFontVariantAlternatesValue.h"
 #include "CSSFontVariantLigaturesParser.h"
 #include "CSSFontVariantNumericParser.h"
 #include "CSSParserIdioms.h"
@@ -479,98 +478,6 @@ std::optional<UnresolvedFont> parseUnresolvedFont(const String& string, const CS
     return consumeUnresolvedFont(range, context);
 }
 
-// MARK: 'font-variant-alternates'
-
-RefPtr<CSSValue> consumeFontVariantAlternates(CSSParserTokenRange& range, const CSSParserContext&)
-{
-    if (range.atEnd())
-        return nullptr;
-
-    if (range.peek().id() == CSSValueNormal) {
-        consumeIdent<CSSValueNormal>(range);
-        return CSSPrimitiveValue::create(CSSValueNormal);
-    }
-
-    auto result = FontVariantAlternates::Normal();
-
-    auto parseSomethingWithoutError = [&range, &result]() {
-        bool hasParsedSomething = false;
-        auto parseAndSetArgument = [&range, &hasParsedSomething] (String& value) {
-            if (!value.isNull())
-                return false;
-
-            CSSParserTokenRange args = consumeFunction(range);
-            auto ident = consumeCustomIdent(args);
-            if (!args.atEnd())
-                return false;
-
-            if (!ident)
-                return false;
-
-            hasParsedSomething = true;
-            value = ident->stringValue();
-            return true;
-        };
-        auto parseListAndSetArgument = [&range, &hasParsedSomething] (Vector<String>& value) {
-            if (!value.isEmpty())
-                return false;
-
-            CSSParserTokenRange args = consumeFunction(range);
-            do {
-                auto ident = consumeCustomIdent(args);
-                if (!ident)
-                    return false;
-                value.append(ident->stringValue());
-            } while (consumeCommaIncludingWhitespace(args));
-
-            if (!args.atEnd())
-                return false;
-
-            hasParsedSomething = true;
-            return true;
-        };
-        while (true) {
-            const CSSParserToken& token = range.peek();
-            if (token.id() == CSSValueHistoricalForms) {
-                consumeIdent<CSSValueHistoricalForms>(range);
-
-                if (result.valuesRef().historicalForms)
-                    return false;
-
-                if (result.isNormal())
-                    result.setValues();
-
-                hasParsedSomething = true;
-                result.valuesRef().historicalForms = true;
-            } else if (token.functionId() == CSSValueSwash) {
-                if (!parseAndSetArgument(result.valuesRef().swash))
-                    return false;
-            } else if (token.functionId() == CSSValueStylistic) {
-                if (!parseAndSetArgument(result.valuesRef().stylistic))
-                    return false;
-            } else if (token.functionId() == CSSValueStyleset) {
-                if (!parseListAndSetArgument(result.valuesRef().styleset))
-                    return false;
-            } else if (token.functionId() == CSSValueCharacterVariant) {
-                if (!parseListAndSetArgument(result.valuesRef().characterVariant))
-                    return false;
-            } else if (token.functionId() == CSSValueOrnaments) {
-                if (!parseAndSetArgument(result.valuesRef().ornaments))
-                    return false;
-            } else if (token.functionId() == CSSValueAnnotation) {
-                if (!parseAndSetArgument(result.valuesRef().annotation))
-                    return false;
-            } else
-                return hasParsedSomething;
-        }
-    };
-
-    if (parseSomethingWithoutError())
-        return CSSFontVariantAlternatesValue::create(WTFMove(result));
-
-    return nullptr;
-}
-
 // MARK: 'font-size-adjust'
 
 RefPtr<CSSValue> consumeFontSizeAdjust(CSSParserTokenRange& range, const CSSParserContext& context)
@@ -664,6 +571,15 @@ String consumeFontFormat(CSSParserTokenRange& range, const CSSParserContext&, bo
 
 static RefPtr<CSSFontFaceSrcResourceValue> consumeFontFaceSrcURI(CSSParserTokenRange& range, const CSSParserContext& context)
 {
+    // <font-src-uri>       = <url> [ format( <font-format> ) ]? [ tech( <font-tech># ) ]?
+
+    // <font-format>        = <string> | collection | embedded-opentype | opentype | svg | truetype | woff | woff2
+    // <font-tech>          = <font-features-tech> | <color-font-tech> | variations | palettes | incremental
+    // <font-features-tech> = features-opentype | features-aat | features-graphite
+    // <color-font-tech>    = color-COLRv0 | color-COLRv1 | color-SVG | color-sbix | color-CBDT
+
+    // https://drafts.csswg.org/css-fonts-4/#typedef-font-src
+
     StringView parsedURL = consumeURLRaw(range);
     String urlString = !parsedURL.is8Bit() && parsedURL.containsOnlyASCII() ? String::make8Bit(parsedURL.span16()) : parsedURL.toString();
     auto location = context.completeURL(urlString);
@@ -690,6 +606,9 @@ static RefPtr<CSSFontFaceSrcResourceValue> consumeFontFaceSrcURI(CSSParserTokenR
 
 static RefPtr<CSSValue> consumeFontFaceSrcLocal(CSSParserTokenRange& range, const CSSParserContext&)
 {
+    // <font-src-local>     = local( <family-name> )
+    // https://drafts.csswg.org/css-fonts-4/#typedef-font-src
+
     CSSParserTokenRange args = consumeFunction(range);
     if (args.peek().type() == StringToken) {
         auto& arg = args.consumeIncludingWhitespace();
@@ -708,6 +627,19 @@ static RefPtr<CSSValue> consumeFontFaceSrcLocal(CSSParserTokenRange& range, cons
 
 RefPtr<CSSValueList> consumeFontFaceSrc(CSSParserTokenRange& range, const CSSParserContext& context)
 {
+    // <font-src-list>      = <font-src>#
+
+    // <font-src>           = <font-src-uri> | <font-src-local>
+    // <font-src-uri>       = <url> [ format( <font-format> ) ]? [ tech( <font-tech># ) ]?
+    // <font-src-local>     = local( <family-name> )
+
+    // <font-format>        = <string> | collection | embedded-opentype | opentype | svg | truetype | woff | woff2
+    // <font-tech>          = <font-features-tech> | <color-font-tech> | variations | palettes | incremental
+    // <font-features-tech> = features-opentype | features-aat | features-graphite
+    // <color-font-tech>    = color-COLRv0 | color-COLRv1 | color-SVG | color-sbix | color-CBDT
+
+    // https://drafts.csswg.org/css-fonts-4/#typedef-font-src
+
     CSSValueListBuilder values;
     auto consumeSrcListComponent = [&](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
         const CSSParserToken& token = range.peek();

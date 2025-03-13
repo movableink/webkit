@@ -39,6 +39,7 @@
 #include "CSSPropertyParserConsumer+NumberDefinitions.h"
 #include "CSSPropertyParserConsumer+Overflow.h"
 #include "CSSPropertyParserConsumer+Page.h"
+#include "CSSPropertyParserConsumer+Percentage.h"
 #include "CSSPropertyParserConsumer+PercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+Position.h"
 #include "CSSPropertyParserConsumer+PositionTry.h"
@@ -62,6 +63,7 @@
 #include "CSSPropertyParserConsumer+ViewTransition.h"
 #include "CSSPropertyParserConsumer+WillChange.h"
 #include "CSSQuadValue.h"
+#include "CSSTransformListValue.h"
 #include "CSSValuePair.h"
 #include "CSSValuePool.h"
 #include "DeprecatedGlobalSettings.h"
@@ -71,6 +73,26 @@ namespace WebCore {
 using namespace CSSPropertyParserHelpers;
 
 static bool isKeywordValidForTestUsingSharedRule(CSSValueID keyword)
+{
+    switch (keyword) {
+    case CSSValueID::CSSValueAuto:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool isKeywordValidForTestUsingSharedRuleExported(CSSValueID keyword)
+{
+    switch (keyword) {
+    case CSSValueID::CSSValueAuto:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool isKeywordValidForTestUsingSharedRuleWithOverrideFunction(CSSValueID keyword)
 {
     switch (keyword) {
     case CSSValueID::CSSValueAuto:
@@ -195,7 +217,7 @@ static RefPtr<CSSValue> consumeTestBoundedRepetitionWithSpacesWithType(CSSParser
         CSSParserTokenRange rangeCopy = range;
         auto term0 = consumeRepeatedTerm(rangeCopy, context);
         if (!term0)
-            return nullptr;
+            return { };
         auto term1 = consumeRepeatedTerm(rangeCopy, context);
         if (!term1) {
             range = rangeCopy;
@@ -218,7 +240,7 @@ static RefPtr<CSSValue> consumeTestBoundedRepetitionWithSpacesWithTypeWithDefaul
         CSSParserTokenRange rangeCopy = range;
         auto term0 = consumeRepeatedTerm(rangeCopy, context);
         if (!term0)
-            return nullptr;
+            return { };
         auto term1 = consumeRepeatedTerm(rangeCopy, context);
         if (!term1) {
             term1 = term0;
@@ -242,7 +264,7 @@ static RefPtr<CSSValue> consumeTestBoundedRepetitionWithSpacesWithTypeWithDefaul
         CSSParserTokenRange rangeCopy = range;
         auto term0 = consumeRepeatedTerm(rangeCopy, context);
         if (!term0)
-            return nullptr;
+            return { };
         auto term1 = consumeRepeatedTerm(rangeCopy, context);
         if (!term1) {
             term1 = term0;
@@ -265,6 +287,526 @@ static RefPtr<CSSValue> consumeTestBoundedRepetitionWithSpacesWithTypeWithDefaul
         return CSSValuePair::create(term0.releaseNonNull(), term1.releaseNonNull(), term2.releaseNonNull(), term3.releaseNonNull());
     };
     return consumeBoundedRepetition(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestFunctionBoundedParameters(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // foo(<number>#{1,4})
+    auto consumeFooFunction = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeParameters = [](CSSParserTokenRange& args, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+            // <number>#{1,4}
+            auto consumeBoundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+                auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+                    // <number>
+                    return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+                };
+                return consumeListSeparatedByIntoBuilder<',', ListBounds { 1, 4 }>(range, consumeRepeatedTerm, context);
+            };
+            return consumeBoundedRepetition(args, context);
+        };
+        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+            return { };
+        CSSParserTokenRange rangeCopy = range;
+        CSSParserTokenRange args = consumeFunction(rangeCopy);
+        auto result = consumeParameters(args, context);
+        if (!result)
+            return { };
+        if (!args.atEnd())
+            return { };
+        range = rangeCopy;
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+    };
+    return consumeFooFunction(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestFunctionFixedParameters(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // foo(<number>#{3})
+    auto consumeFooFunction = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeParameters = [](CSSParserTokenRange& args, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+            // <number>#{3}
+            auto consumeBoundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+                auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+                    // <number>
+                    return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+                };
+                return consumeListSeparatedByIntoBuilder<',', ListBounds { 3, 3 }>(range, consumeRepeatedTerm, context);
+            };
+            return consumeBoundedRepetition(args, context);
+        };
+        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+            return { };
+        CSSParserTokenRange rangeCopy = range;
+        CSSParserTokenRange args = consumeFunction(rangeCopy);
+        auto result = consumeParameters(args, context);
+        if (!result)
+            return { };
+        if (!args.atEnd())
+            return { };
+        range = rangeCopy;
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+    };
+    return consumeFooFunction(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestFunctionNoParameters(CSSParserTokenRange& range)
+{
+    // foo([  ])
+    auto consumeFooFunction = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+        auto consumeParameters = [](CSSParserTokenRange& args) -> std::optional<CSSValueListBuilder> {
+            // [  ]
+            auto consumeMatchAllOrdered = [](CSSParserTokenRange& range) -> std::optional<CSSValueListBuilder> {
+                CSSValueListBuilder list;
+                return { WTFMove(list) };
+            };
+            return consumeMatchAllOrdered(args);
+        };
+        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+            return { };
+        CSSParserTokenRange rangeCopy = range;
+        CSSParserTokenRange args = consumeFunction(rangeCopy);
+        auto result = consumeParameters(args);
+        if (!result)
+            return { };
+        if (!args.atEnd())
+            return { };
+        range = rangeCopy;
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+    };
+    return consumeFooFunction(range);
+}
+
+static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllAnyOrder(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // foo([ <number> && <string> ])
+    auto consumeFooFunction = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeParameters = [](CSSParserTokenRange& args, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+            // [ <number> && <string> ]
+            auto consumeMatchAllAnyOrder = [](CSSParserTokenRange& range, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+                RefPtr<CSSValue> value0; // <number>
+                auto tryConsumeTerm0 = [&value0](CSSParserTokenRange& range, const CSSParserContext& context) -> bool {
+                    auto consumeTerm0 = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+                        // <number>
+                        return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+                    };
+                    if (value0)
+                        return false;
+                    value0 = consumeTerm0(range, context);
+                    return !!value0;
+                };
+                RefPtr<CSSValue> value1; // <string>
+                auto tryConsumeTerm1 = [&value1](CSSParserTokenRange& range) -> bool {
+                    auto consumeTerm1 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+                        // <string>
+                        return consumeString(range);
+                    };
+                    if (value1)
+                        return false;
+                    value1 = consumeTerm1(range);
+                    return !!value1;
+                };
+                for (size_t i = 0; i < 2 && !range.atEnd(); ++i) {
+                    if (tryConsumeTerm0(range, context) || tryConsumeTerm1(range))
+                        continue;
+                    break;
+                }
+                CSSValueListBuilder list;
+                if (value0) // <number>
+                    list.append(value0.releaseNonNull());
+                else
+                    return { };
+                if (value1) // <string>
+                    list.append(value1.releaseNonNull());
+                else
+                    return { };
+                return { WTFMove(list) };
+            };
+            return consumeMatchAllAnyOrder(args, context);
+        };
+        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+            return { };
+        CSSParserTokenRange rangeCopy = range;
+        CSSParserTokenRange args = consumeFunction(rangeCopy);
+        auto result = consumeParameters(args, context);
+        if (!result)
+            return { };
+        if (!args.atEnd())
+            return { };
+        range = rangeCopy;
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+    };
+    return consumeFooFunction(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllAnyOrderWithOptional(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // foo([ <number> && <string>? ])
+    auto consumeFooFunction = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeParameters = [](CSSParserTokenRange& args, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+            // [ <number> && <string>? ]
+            auto consumeMatchAllAnyOrder = [](CSSParserTokenRange& range, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+                RefPtr<CSSValue> value0; // <number>
+                auto tryConsumeTerm0 = [&value0](CSSParserTokenRange& range, const CSSParserContext& context) -> bool {
+                    auto consumeTerm0 = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+                        // <number>
+                        return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+                    };
+                    if (value0)
+                        return false;
+                    value0 = consumeTerm0(range, context);
+                    return !!value0;
+                };
+                RefPtr<CSSValue> value1; // <string>?
+                auto tryConsumeTerm1 = [&value1](CSSParserTokenRange& range) -> bool {
+                    auto consumeTerm1 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+                        // <string>
+                        return consumeString(range);
+                    };
+                    if (value1)
+                        return false;
+                    value1 = consumeTerm1(range);
+                    return !!value1;
+                };
+                for (size_t i = 0; i < 2 && !range.atEnd(); ++i) {
+                    if (tryConsumeTerm0(range, context) || tryConsumeTerm1(range))
+                        continue;
+                    break;
+                }
+                CSSValueListBuilder list;
+                if (value0) // <number>
+                    list.append(value0.releaseNonNull());
+                else
+                    return { };
+                if (value1) // <string>?
+                    list.append(value1.releaseNonNull());
+                return { WTFMove(list) };
+            };
+            return consumeMatchAllAnyOrder(args, context);
+        };
+        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+            return { };
+        CSSParserTokenRange rangeCopy = range;
+        CSSParserTokenRange args = consumeFunction(rangeCopy);
+        auto result = consumeParameters(args, context);
+        if (!result)
+            return { };
+        if (!args.atEnd())
+            return { };
+        range = rangeCopy;
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+    };
+    return consumeFooFunction(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllOrdered(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // foo([ <number> <string> ])
+    auto consumeFooFunction = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeParameters = [](CSSParserTokenRange& args, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+            // [ <number> <string> ]
+            auto consumeMatchAllOrdered = [](CSSParserTokenRange& range, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+                auto consumeTerm0 = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+                    // <number>
+                    return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+                };
+                auto consumeTerm1 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+                    // <string>
+                    return consumeString(range);
+                };
+                CSSValueListBuilder list;
+                // <number>
+                auto value0 = consumeTerm0(range, context);
+                if (value0)
+                    list.append(value0.releaseNonNull());
+                else
+                    return { };
+                // <string>
+                auto value1 = consumeTerm1(range);
+                if (value1)
+                    list.append(value1.releaseNonNull());
+                else
+                    return { };
+                return { WTFMove(list) };
+            };
+            return consumeMatchAllOrdered(args, context);
+        };
+        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+            return { };
+        CSSParserTokenRange rangeCopy = range;
+        CSSParserTokenRange args = consumeFunction(rangeCopy);
+        auto result = consumeParameters(args, context);
+        if (!result)
+            return { };
+        if (!args.atEnd())
+            return { };
+        range = rangeCopy;
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+    };
+    return consumeFooFunction(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllOrderedWithOptional(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // foo([ <number> <string>? ])
+    auto consumeFooFunction = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeParameters = [](CSSParserTokenRange& args, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+            // [ <number> <string>? ]
+            auto consumeMatchAllOrdered = [](CSSParserTokenRange& range, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+                auto consumeTerm0 = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+                    // <number>
+                    return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+                };
+                auto consumeTerm1 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+                    // <string>
+                    return consumeString(range);
+                };
+                CSSValueListBuilder list;
+                // <number>
+                auto value0 = consumeTerm0(range, context);
+                if (value0)
+                    list.append(value0.releaseNonNull());
+                else
+                    return { };
+                // <string>?
+                auto value1 = consumeTerm1(range);
+                if (value1)
+                    list.append(value1.releaseNonNull());
+                return { WTFMove(list) };
+            };
+            return consumeMatchAllOrdered(args, context);
+        };
+        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+            return { };
+        CSSParserTokenRange rangeCopy = range;
+        CSSParserTokenRange args = consumeFunction(rangeCopy);
+        auto result = consumeParameters(args, context);
+        if (!result)
+            return { };
+        if (!args.atEnd())
+            return { };
+        range = rangeCopy;
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+    };
+    return consumeFooFunction(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestFunctionParametersMatchOneOrMoreAnyOrder(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // foo([ <number> || <string> ])
+    auto consumeFooFunction = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeParameters = [](CSSParserTokenRange& args, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+            // [ <number> || <string> ]
+            auto consumeMatchOneOrMoreAnyOrder = [](CSSParserTokenRange& range, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+                RefPtr<CSSValue> value0; // <number>
+                auto tryConsumeTerm0 = [&value0](CSSParserTokenRange& range, const CSSParserContext& context) -> bool {
+                    auto consumeTerm0 = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+                        // <number>
+                        return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+                    };
+                    if (value0)
+                        return false;
+                    value0 = consumeTerm0(range, context);
+                    return !!value0;
+                };
+                RefPtr<CSSValue> value1; // <string>
+                auto tryConsumeTerm1 = [&value1](CSSParserTokenRange& range) -> bool {
+                    auto consumeTerm1 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+                        // <string>
+                        return consumeString(range);
+                    };
+                    if (value1)
+                        return false;
+                    value1 = consumeTerm1(range);
+                    return !!value1;
+                };
+                for (size_t i = 0; i < 2 && !range.atEnd(); ++i) {
+                    if (tryConsumeTerm0(range, context) || tryConsumeTerm1(range))
+                        continue;
+                    break;
+                }
+                CSSValueListBuilder list;
+                if (value0) // <number>
+                    list.append(value0.releaseNonNull());
+                if (value1) // <string>
+                    list.append(value1.releaseNonNull());
+                if (list.isEmpty())
+                    return { };
+                return { WTFMove(list) };
+            };
+            return consumeMatchOneOrMoreAnyOrder(args, context);
+        };
+        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+            return { };
+        CSSParserTokenRange rangeCopy = range;
+        CSSParserTokenRange args = consumeFunction(rangeCopy);
+        auto result = consumeParameters(args, context);
+        if (!result)
+            return { };
+        if (!args.atEnd())
+            return { };
+        range = rangeCopy;
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+    };
+    return consumeFooFunction(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestFunctionSingleParameter(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // foo(<number>)
+    auto consumeFooFunction = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeParameters = [](CSSParserTokenRange& args, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+            auto consumeParameter = [](CSSParserTokenRange& args, const CSSParserContext& context) -> RefPtr<CSSValue> {
+                // <number>
+                return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(args, context, { .parserMode = context.mode });
+            };
+            auto parameter = consumeParameter(args, context);
+            if (!parameter)
+                return { };
+            return CSSValueListBuilder { parameter.releaseNonNull() };
+        };
+        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+            return { };
+        CSSParserTokenRange rangeCopy = range;
+        CSSParserTokenRange args = consumeFunction(rangeCopy);
+        auto result = consumeParameters(args, context);
+        if (!result)
+            return { };
+        if (!args.atEnd())
+            return { };
+        range = rangeCopy;
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+    };
+    return consumeFooFunction(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestFunctionSingleParameterMatchOne(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // foo([ <number> | <string> | bar | baz ])
+    auto consumeFooFunction = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeParameters = [](CSSParserTokenRange& args, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+            auto consumeParameter = [](CSSParserTokenRange& args, const CSSParserContext& context) -> RefPtr<CSSValue> {
+                // bar | baz
+                switch (auto keyword = args.peek().id(); keyword) {
+                case CSSValueID::CSSValueBar:
+                case CSSValueID::CSSValueBaz:
+                    args.consumeIncludingWhitespace();
+                    return CSSPrimitiveValue::create(keyword);
+                default:
+                    break;
+                }
+                // <number>
+                if (auto result = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(args, context, { .parserMode = context.mode }))
+                    return result;
+                // <string>
+                return consumeString(args);
+            };
+            auto parameter = consumeParameter(args, context);
+            if (!parameter)
+                return { };
+            return CSSValueListBuilder { parameter.releaseNonNull() };
+        };
+        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+            return { };
+        CSSParserTokenRange rangeCopy = range;
+        CSSParserTokenRange args = consumeFunction(rangeCopy);
+        auto result = consumeParameters(args, context);
+        if (!result)
+            return { };
+        if (!args.atEnd())
+            return { };
+        range = rangeCopy;
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+    };
+    return consumeFooFunction(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestFunctionSingleParameterOptional(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // foo(<number>?)
+    auto consumeFooFunction = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeParameters = [](CSSParserTokenRange& args, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+            auto consumeParameter = [](CSSParserTokenRange& args, const CSSParserContext& context) -> RefPtr<CSSValue> {
+                // <number>
+                return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(args, context, { .parserMode = context.mode });
+            };
+            auto parameter = consumeParameter(args, context);
+            if (!parameter)
+                return CSSValueListBuilder { };
+            return CSSValueListBuilder { parameter.releaseNonNull() };
+        };
+        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+            return { };
+        CSSParserTokenRange rangeCopy = range;
+        CSSParserTokenRange args = consumeFunction(rangeCopy);
+        auto result = consumeParameters(args, context);
+        if (!result)
+            return { };
+        if (!args.atEnd())
+            return { };
+        range = rangeCopy;
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+    };
+    return consumeFooFunction(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestFunctionUnboundedParametersNoMin(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // foo(<number>#)
+    auto consumeFooFunction = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeParameters = [](CSSParserTokenRange& args, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+            // <number>#
+            auto consumeUnboundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+                auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+                    // <number>
+                    return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+                };
+                return consumeListSeparatedByIntoBuilder<',', ListBounds::minimumOf(1)>(range, consumeRepeatedTerm, context);
+            };
+            return consumeUnboundedRepetition(args, context);
+        };
+        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+            return { };
+        CSSParserTokenRange rangeCopy = range;
+        CSSParserTokenRange args = consumeFunction(rangeCopy);
+        auto result = consumeParameters(args, context);
+        if (!result)
+            return { };
+        if (!args.atEnd())
+            return { };
+        range = rangeCopy;
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+    };
+    return consumeFooFunction(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestFunctionUnboundedParametersWithMinimum(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // foo(<number>#{2,})
+    auto consumeFooFunction = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        auto consumeParameters = [](CSSParserTokenRange& args, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+            // <number>#{2,}
+            auto consumeUnboundedRepetition = [](CSSParserTokenRange& range, const CSSParserContext& context) -> std::optional<CSSValueListBuilder> {
+                auto consumeRepeatedTerm = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+                    // <number>
+                    return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+                };
+                return consumeListSeparatedByIntoBuilder<',', ListBounds::minimumOf(2)>(range, consumeRepeatedTerm, context);
+            };
+            return consumeUnboundedRepetition(args, context);
+        };
+        if (range.peek().functionId() != CSSValueID::CSSValueFoo)
+            return { };
+        CSSParserTokenRange rangeCopy = range;
+        CSSParserTokenRange args = consumeFunction(rangeCopy);
+        auto result = consumeParameters(args, context);
+        if (!result)
+            return { };
+        if (!args.atEnd())
+            return { };
+        range = rangeCopy;
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+    };
+    return consumeFooFunction(range, context);
 }
 
 static RefPtr<CSSValue> consumeTestMatchAllAnyOrder(CSSParserTokenRange& range, const CSSParserContext& context)
@@ -310,11 +852,11 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrder(CSSParserTokenRange& range, 
             break;
         }
         if (!value0) // <number>
-            return nullptr;
+            return { };
         if (!value1) // <custom-ident>
-            return nullptr;
+            return { };
         if (!value2) // <length>
-            return nullptr;
+            return { };
         return CSSValueList::createSpaceSeparated(value0.releaseNonNull(), value1.releaseNonNull(), value2.releaseNonNull());
     };
     return consumeMatchAllAnyOrder(range, context);
@@ -366,13 +908,13 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithOptional(CSSParserTokenRa
         if (value0) // <number>
             list.append(value0.releaseNonNull());
         else
-            return nullptr;
+            return { };
         if (value1) // <custom-ident>?
             list.append(value1.releaseNonNull());
         if (value2) // <length>
             list.append(value2.releaseNonNull());
         else
-            return nullptr;
+            return { };
         return CSSValueList::createSpaceSeparated(WTFMove(list));
     };
     return consumeMatchAllAnyOrder(range, context);
@@ -424,7 +966,7 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithOptionalNoSingleItemOpt(C
         if (value0) // <number>
             list.append(value0.releaseNonNull());
         else
-            return nullptr;
+            return { };
         if (value1) // <custom-ident>?
             list.append(value1.releaseNonNull());
         if (value2) // <length>?
@@ -480,7 +1022,7 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithOptionalSingleItemOpt(CSS
         if (value0) // <number>
             list.append(value0.releaseNonNull());
         else
-            return nullptr;
+            return { };
         if (value1) // <custom-ident>?
             list.append(value1.releaseNonNull());
         if (value2) // <length>?
@@ -548,7 +1090,7 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithOptionalWithPreserveOrder
             break;
         }
         if (!consumedValue0) // <number>
-            return nullptr;
+            return { };
         if (list.size() == 1)
             return WTFMove(list[0]);
         return CSSValueList::createSpaceSeparated(WTFMove(list));
@@ -612,7 +1154,7 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithOptionalWithPreserveOrder
             break;
         }
         if (!consumedValue0) // <number>
-            return nullptr;
+            return { };
         return CSSValueList::createSpaceSeparated(WTFMove(list));
     };
     return consumeMatchAllAnyOrder(range, context);
@@ -674,11 +1216,11 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithPreserveOrder(CSSParserTo
             break;
         }
         if (!consumedValue0) // <number>
-            return nullptr;
+            return { };
         if (!consumedValue1) // <custom-ident>
-            return nullptr;
+            return { };
         if (!consumedValue2) // <length>
-            return nullptr;
+            return { };
         return CSSValueList::createSpaceSeparated(WTFMove(list));
     };
     return consumeMatchAllAnyOrder(range, context);
@@ -740,11 +1282,11 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithPreserveOrderNoSingleItem
             break;
         }
         if (!consumedValue0) // <number>
-            return nullptr;
+            return { };
         if (!consumedValue1) // <custom-ident>
-            return nullptr;
+            return { };
         if (!consumedValue2) // <length>
-            return nullptr;
+            return { };
         return CSSValueList::createSpaceSeparated(WTFMove(list));
     };
     return consumeMatchAllAnyOrder(range, context);
@@ -769,15 +1311,15 @@ static RefPtr<CSSValue> consumeTestMatchAllOrdered(CSSParserTokenRange& range, c
         // <number>
         auto value0 = consumeTerm0(range, context);
         if (!value0)
-            return nullptr;
+            return { };
         // <custom-ident>
         auto value1 = consumeTerm1(range);
         if (!value1)
-            return nullptr;
+            return { };
         // <length>
         auto value2 = consumeTerm2(range, context);
         if (!value2)
-            return nullptr;
+            return { };
         return CSSValueList::createSpaceSeparated(value0.releaseNonNull(), value1.releaseNonNull(), value2.releaseNonNull());
     };
     return consumeMatchAllOrdered(range, context);
@@ -805,7 +1347,7 @@ static RefPtr<CSSValue> consumeTestMatchAllOrderedWithOptional(CSSParserTokenRan
         if (value0)
             list.append(value0.releaseNonNull());
         else
-            return nullptr;
+            return { };
         // <custom-ident>?
         auto value1 = consumeTerm1(range);
         if (value1)
@@ -815,7 +1357,7 @@ static RefPtr<CSSValue> consumeTestMatchAllOrderedWithOptional(CSSParserTokenRan
         if (value2)
             list.append(value2.releaseNonNull());
         else
-            return nullptr;
+            return { };
         return CSSValueList::createSpaceSeparated(WTFMove(list));
     };
     return consumeMatchAllOrdered(range, context);
@@ -843,7 +1385,7 @@ static RefPtr<CSSValue> consumeTestMatchAllOrderedWithOptionalNoSingleItemOpt(CS
         if (value0)
             list.append(value0.releaseNonNull());
         else
-            return nullptr;
+            return { };
         // <custom-ident>?
         auto value1 = consumeTerm1(range);
         if (value1)
@@ -879,7 +1421,7 @@ static RefPtr<CSSValue> consumeTestMatchAllOrderedWithOptionalSingleItemOpt(CSSP
         if (value0)
             list.append(value0.releaseNonNull());
         else
-            return nullptr;
+            return { };
         // <custom-ident>?
         auto value1 = consumeTerm1(range);
         if (value1)
@@ -945,7 +1487,7 @@ static RefPtr<CSSValue> consumeTestMatchOneOrMoreAnyOrder(CSSParserTokenRange& r
         if (value2) // <length>
             list.append(value2.releaseNonNull());
         if (list.isEmpty())
-            return nullptr;
+            return { };
         if (list.size() == 1)
             return WTFMove(list[0]);
         return CSSValueList::createSpaceSeparated(WTFMove(list));
@@ -1003,7 +1545,7 @@ static RefPtr<CSSValue> consumeTestMatchOneOrMoreAnyOrderNoSingleItemOpt(CSSPars
         if (value2) // <length>
             list.append(value2.releaseNonNull());
         if (list.isEmpty())
-            return nullptr;
+            return { };
         return CSSValueList::createSpaceSeparated(WTFMove(list));
     };
     return consumeMatchOneOrMoreAnyOrder(range, context);
@@ -1065,7 +1607,7 @@ static RefPtr<CSSValue> consumeTestMatchOneOrMoreAnyOrderWithPreserveOrder(CSSPa
             break;
         }
         if (list.isEmpty())
-            return nullptr;
+            return { };
         if (list.size() == 1)
             return WTFMove(list[0]);
         return CSSValueList::createSpaceSeparated(WTFMove(list));
@@ -1129,7 +1671,7 @@ static RefPtr<CSSValue> consumeTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSing
             break;
         }
         if (list.isEmpty())
-            return nullptr;
+            return { };
         return CSSValueList::createSpaceSeparated(WTFMove(list));
     };
     return consumeMatchOneOrMoreAnyOrder(range, context);
@@ -1158,7 +1700,7 @@ static RefPtr<CSSValue> consumeTestUnboundedRepetitionWithCommasWithMin(CSSParse
             // <number>
             return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
         };
-        return consumeListSeparatedBy<',', ListBounds::minimumOf(2), ListOptimization::None>(range, consumeRepeatedTerm, context);
+        return consumeListSeparatedBy<',', ListBounds::minimumOf(2), ListOptimization::None, CSSValueList>(range, consumeRepeatedTerm, context);
     };
     return consumeUnboundedRepetition(range, context);
 }
@@ -1171,7 +1713,7 @@ static RefPtr<CSSValue> consumeTestUnboundedRepetitionWithCommasWithMinNoSingleI
             // <number>
             return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
         };
-        return consumeListSeparatedBy<',', ListBounds::minimumOf(1), ListOptimization::None>(range, consumeRepeatedTerm, context);
+        return consumeListSeparatedBy<',', ListBounds::minimumOf(1), ListOptimization::None, CSSValueList>(range, consumeRepeatedTerm, context);
     };
     return consumeUnboundedRepetition(range, context);
 }
@@ -1184,7 +1726,7 @@ static RefPtr<CSSValue> consumeTestUnboundedRepetitionWithCommasWithMinSingleIte
             // <number>
             return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
         };
-        return consumeListSeparatedBy<',', ListBounds::minimumOf(1), ListOptimization::SingleValue>(range, consumeRepeatedTerm, context);
+        return consumeListSeparatedBy<',', ListBounds::minimumOf(1), ListOptimization::SingleValue, CSSValueList>(range, consumeRepeatedTerm, context);
     };
     return consumeUnboundedRepetition(range, context);
 }
@@ -1197,7 +1739,7 @@ static RefPtr<CSSValue> consumeTestUnboundedRepetitionWithSpacesNoMin(CSSParserT
             // <number>
             return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
         };
-        return consumeListSeparatedBy<' ', ListBounds::minimumOf(0), ListOptimization::SingleValue>(range, consumeRepeatedTerm, context);
+        return consumeListSeparatedBy<' ', ListBounds::minimumOf(0), ListOptimization::SingleValue, CSSValueList>(range, consumeRepeatedTerm, context);
     };
     return consumeUnboundedRepetition(range, context);
 }
@@ -1210,7 +1752,7 @@ static RefPtr<CSSValue> consumeTestUnboundedRepetitionWithSpacesNoMinNoSingleIte
             // <number>
             return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
         };
-        return consumeListSeparatedBy<' ', ListBounds::minimumOf(0), ListOptimization::None>(range, consumeRepeatedTerm, context);
+        return consumeListSeparatedBy<' ', ListBounds::minimumOf(0), ListOptimization::None, CSSValueList>(range, consumeRepeatedTerm, context);
     };
     return consumeUnboundedRepetition(range, context);
 }
@@ -1223,7 +1765,7 @@ static RefPtr<CSSValue> consumeTestUnboundedRepetitionWithSpacesWithMin(CSSParse
             // <number>
             return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
         };
-        return consumeListSeparatedBy<' ', ListBounds::minimumOf(2), ListOptimization::None>(range, consumeRepeatedTerm, context);
+        return consumeListSeparatedBy<' ', ListBounds::minimumOf(2), ListOptimization::None, CSSValueList>(range, consumeRepeatedTerm, context);
     };
     return consumeUnboundedRepetition(range, context);
 }
@@ -1236,7 +1778,7 @@ static RefPtr<CSSValue> consumeTestUnboundedRepetitionWithSpacesWithMinNoSingleI
             // <number>
             return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
         };
-        return consumeListSeparatedBy<' ', ListBounds::minimumOf(1), ListOptimization::None>(range, consumeRepeatedTerm, context);
+        return consumeListSeparatedBy<' ', ListBounds::minimumOf(1), ListOptimization::None, CSSValueList>(range, consumeRepeatedTerm, context);
     };
     return consumeUnboundedRepetition(range, context);
 }
@@ -1249,7 +1791,7 @@ static RefPtr<CSSValue> consumeTestUnboundedRepetitionWithSpacesWithMinSingleIte
             // <number>
             return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
         };
-        return consumeListSeparatedBy<' ', ListBounds::minimumOf(1), ListOptimization::SingleValue>(range, consumeRepeatedTerm, context);
+        return consumeListSeparatedBy<' ', ListBounds::minimumOf(1), ListOptimization::SingleValue, CSSValueList>(range, consumeRepeatedTerm, context);
     };
     return consumeUnboundedRepetition(range, context);
 }
@@ -1266,13 +1808,43 @@ static RefPtr<CSSValue> consumeTestUsingSharedRule(CSSParserTokenRange& range, c
     return CSSPrimitiveValueResolver<CSS::Percentage<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
 }
 
+static RefPtr<CSSValue> consumeTestUsingSharedRuleExported(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // auto
+    if (auto result = consumeIdent(range, isKeywordValidForTestUsingSharedRuleExported))
+        return result;
+    // <length>
+    if (auto result = CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitless = UnitlessQuirk::Forbid, .unitlessZero = UnitlessZeroQuirk::Allow }))
+        return result;
+    // <string>
+    return consumeString(range);
+}
+
+static RefPtr<CSSValue> consumeTestUsingSharedRuleWithOverrideFunction(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // auto
+    if (auto result = consumeIdent(range, isKeywordValidForTestUsingSharedRuleWithOverrideFunction))
+        return result;
+    // <shared-rule-with-override-function-override-function>
+    return consumeFunctionForSharedRule(range, context);
+}
+
+RefPtr<CSSValue> CSSPropertyParsing::consumeSharedRuleExported(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <length>
+    if (auto result = CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitless = UnitlessQuirk::Forbid, .unitlessZero = UnitlessZeroQuirk::Allow }))
+        return result;
+    // <string>
+    return consumeString(range);
+}
+
 RefPtr<CSSValue> CSSPropertyParsing::parseStyleProperty(CSSParserTokenRange& range, CSSPropertyID id, CSSPropertyID currentShorthand, const CSSParserContext& context)
 {
     if (!isExposed(id, context.propertySettings) && !isInternal(id)) {
         // Allow internal properties as we use them to parse several internal-only-shorthands (e.g. background-repeat),
         // and to handle certain DOM-exposed values (e.g. -webkit-font-size-delta from execCommand('FontSizeDelta')).
         ASSERT_NOT_REACHED();
-        return nullptr;
+        return { };
     }
     switch (id) {
     case CSSPropertyID::CSSPropertyTestTopPriority:
@@ -1310,6 +1882,32 @@ RefPtr<CSSValue> CSSPropertyParsing::parseStyleProperty(CSSParserTokenRange& ran
         return consumeTestBoundedRepetitionWithSpacesWithTypeWithDefaultPrevious(range, context);
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo:
         return consumeTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo(range, context);
+    case CSSPropertyID::CSSPropertyTestFunctionBoundedParameters:
+        return consumeTestFunctionBoundedParameters(range, context);
+    case CSSPropertyID::CSSPropertyTestFunctionFixedParameters:
+        return consumeTestFunctionFixedParameters(range, context);
+    case CSSPropertyID::CSSPropertyTestFunctionNoParameters:
+        return consumeTestFunctionNoParameters(range);
+    case CSSPropertyID::CSSPropertyTestFunctionParametersMatchAllAnyOrder:
+        return consumeTestFunctionParametersMatchAllAnyOrder(range, context);
+    case CSSPropertyID::CSSPropertyTestFunctionParametersMatchAllAnyOrderWithOptional:
+        return consumeTestFunctionParametersMatchAllAnyOrderWithOptional(range, context);
+    case CSSPropertyID::CSSPropertyTestFunctionParametersMatchAllOrdered:
+        return consumeTestFunctionParametersMatchAllOrdered(range, context);
+    case CSSPropertyID::CSSPropertyTestFunctionParametersMatchAllOrderedWithOptional:
+        return consumeTestFunctionParametersMatchAllOrderedWithOptional(range, context);
+    case CSSPropertyID::CSSPropertyTestFunctionParametersMatchOneOrMoreAnyOrder:
+        return consumeTestFunctionParametersMatchOneOrMoreAnyOrder(range, context);
+    case CSSPropertyID::CSSPropertyTestFunctionSingleParameter:
+        return consumeTestFunctionSingleParameter(range, context);
+    case CSSPropertyID::CSSPropertyTestFunctionSingleParameterMatchOne:
+        return consumeTestFunctionSingleParameterMatchOne(range, context);
+    case CSSPropertyID::CSSPropertyTestFunctionSingleParameterOptional:
+        return consumeTestFunctionSingleParameterOptional(range, context);
+    case CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersNoMin:
+        return consumeTestFunctionUnboundedParametersNoMin(range, context);
+    case CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersWithMinimum:
+        return consumeTestFunctionUnboundedParametersWithMinimum(range, context);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrder:
         return consumeTestMatchAllAnyOrder(range, context);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptional:
@@ -1362,8 +1960,12 @@ RefPtr<CSSValue> CSSPropertyParsing::parseStyleProperty(CSSParserTokenRange& ran
         return consumeTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt(range, context);
     case CSSPropertyID::CSSPropertyTestUsingSharedRule:
         return consumeTestUsingSharedRule(range, context);
+    case CSSPropertyID::CSSPropertyTestUsingSharedRuleExported:
+        return consumeTestUsingSharedRuleExported(range, context);
+    case CSSPropertyID::CSSPropertyTestUsingSharedRuleWithOverrideFunction:
+        return consumeTestUsingSharedRuleWithOverrideFunction(range, context);
     default:
-        return nullptr;
+        return { };
     }
 }
 
@@ -1372,6 +1974,10 @@ bool CSSPropertyParsing::isKeywordValidForStyleProperty(CSSPropertyID id, CSSVal
     switch (id) {
     case CSSPropertyID::CSSPropertyTestUsingSharedRule:
         return isKeywordValidForTestUsingSharedRule(keyword);
+    case CSSPropertyID::CSSPropertyTestUsingSharedRuleExported:
+        return isKeywordValidForTestUsingSharedRuleExported(keyword);
+    case CSSPropertyID::CSSPropertyTestUsingSharedRuleWithOverrideFunction:
+        return isKeywordValidForTestUsingSharedRuleWithOverrideFunction(keyword);
     default:
         return false;
     }
@@ -1381,6 +1987,8 @@ bool CSSPropertyParsing::isKeywordFastPathEligibleStyleProperty(CSSPropertyID id
 {
     switch (id) {
     case CSSPropertyID::CSSPropertyTestUsingSharedRule:
+    case CSSPropertyID::CSSPropertyTestUsingSharedRuleExported:
+    case CSSPropertyID::CSSPropertyTestUsingSharedRuleWithOverrideFunction:
         return true;
     default:
         return false;
@@ -1393,13 +2001,13 @@ RefPtr<CSSValue> CSSPropertyParsing::parseFirstAtRuleDescriptor(CSSParserTokenRa
         // Allow internal properties as we use them to parse several internal-only-shorthands (e.g. background-repeat),
         // and to handle certain DOM-exposed values (e.g. -webkit-font-size-delta from execCommand('FontSizeDelta')).
         ASSERT_NOT_REACHED();
-        return nullptr;
+        return { };
     }
     switch (id) {
     case CSSPropertyID::CSSPropertyFirstTestDescriptorForFirstDescriptor:
         return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
     default:
-        return nullptr;
+        return { };
     }
 }
 
@@ -1419,13 +2027,13 @@ RefPtr<CSSValue> CSSPropertyParsing::parseSecondAtRuleDescriptor(CSSParserTokenR
         // Allow internal properties as we use them to parse several internal-only-shorthands (e.g. background-repeat),
         // and to handle certain DOM-exposed values (e.g. -webkit-font-size-delta from execCommand('FontSizeDelta')).
         ASSERT_NOT_REACHED();
-        return nullptr;
+        return { };
     }
     switch (id) {
     case CSSPropertyID::CSSPropertyFirstTestDescriptorForSecondDescriptor:
         return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
     default:
-        return nullptr;
+        return { };
     }
 }
 
