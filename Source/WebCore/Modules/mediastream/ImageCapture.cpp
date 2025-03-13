@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -88,7 +88,9 @@ void ImageCapture::takePhoto(PhotoSettings&& settings, DOMPromiseDeferred<IDLInt
             }
 
             ALWAYS_LOG_WITH_THIS(&capture, identifier, "resolving promise");
-            promise.resolve(Blob::create(capture.scriptExecutionContext(), WTFMove(get<0>(result.value())), WTFMove(get<1>(result.value()))));
+
+            // FIXME: This is a static analysis false positive (rdar://146889777).
+            SUPPRESS_UNCOUNTED_ARG promise.resolve(Blob::create(capture.scriptExecutionContext(), WTFMove(get<0>(result.value())), WTFMove(get<1>(result.value()))));
         });
     });
 }

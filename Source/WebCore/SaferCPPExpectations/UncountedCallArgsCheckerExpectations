@@ -110,7 +110,6 @@ Modules/mediasource/MediaSourceRegistry.cpp
 Modules/mediasource/SampleMap.cpp
 Modules/mediasource/SourceBuffer.cpp
 Modules/mediastream/CanvasCaptureMediaStreamTrack.cpp
-Modules/mediastream/ImageCapture.cpp
 Modules/mediastream/MediaDevices.cpp
 Modules/mediastream/MediaStream.cpp
 Modules/mediastream/MediaStream.h
