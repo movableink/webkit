@@ -3570,8 +3570,7 @@ TEST(WritingTools, ContextRangeFromRangeSelection)
     TestWebKitAPI::Util::run(&finished);
 }
 
-// rdar://144725722 (Disable 6x TestWebKitAPI.WritingTools.* (api-tests))
-TEST(WritingTools, DISABLED_SuggestedTextIsSelectedAfterSmartReply)
+TEST(WritingTools, SuggestedTextIsSelectedAfterSmartReply)
 {
     auto session = adoptNS([[WTSession alloc] initWithType:WTSessionTypeComposition textViewDelegate:nil]);
     [session setCompositionSessionType:WTCompositionSessionTypeSmartReply];
@@ -3594,6 +3593,8 @@ TEST(WritingTools, DISABLED_SuggestedTextIsSelectedAfterSmartReply)
     __block bool finished = false;
     [[webView writingToolsDelegate] willBeginWritingToolsSession:session.get() requestContexts:^(NSArray<WTContext *> *contexts) {
         EXPECT_EQ(1UL, contexts.count);
+
+        [[webView writingToolsDelegate] didBeginWritingToolsSession:session.get() contexts:contexts];
 
         [[webView writingToolsDelegate] writingToolsSession:session.get() didReceiveAction:WTActionCompositionRestart];
 
