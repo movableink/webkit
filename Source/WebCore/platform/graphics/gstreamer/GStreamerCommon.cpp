@@ -1747,7 +1747,7 @@ std::optional<unsigned> gstGetAutoplugSelectResult(ASCIILiteral nick)
 
 bool gstStructureForeach(const GstStructure* structure, Function<bool(GstId, const GValue*)>&& callback)
 {
-#if GST_CHECK_VERSION(1, 25, 0)
+#if GST_CHECK_VERSION(1, 26, 0)
     return gst_structure_foreach_id_str(structure, [](GstId id, const GValue* value, gpointer userData) -> gboolean {
         auto& callback = *reinterpret_cast<Function<bool(GstId, const GValue*)>*>(userData);
         return callback(id, value);
@@ -1762,7 +1762,7 @@ bool gstStructureForeach(const GstStructure* structure, Function<bool(GstId, con
 
 void gstStructureIdSetValue(GstStructure* structure, GstId id, const GValue* value)
 {
-#if GST_CHECK_VERSION(1, 25, 0)
+#if GST_CHECK_VERSION(1, 26, 0)
     gst_structure_id_str_set_value(structure, id, value);
 #else
     gst_structure_set_value(structure, g_quark_to_string(id), value);
@@ -1771,7 +1771,7 @@ void gstStructureIdSetValue(GstStructure* structure, GstId id, const GValue* val
 
 bool gstStructureMapInPlace(GstStructure* structure, Function<bool(GstId, GValue*)>&& callback)
 {
-#if GST_CHECK_VERSION(1, 25, 0)
+#if GST_CHECK_VERSION(1, 26, 0)
     return gst_structure_map_in_place_id_str(structure, [](GstId id, GValue* value, gpointer userData) -> gboolean {
         auto& callback = *reinterpret_cast<Function<bool(GstId, GValue*)>*>(userData);
         return callback(id, value);
@@ -1786,7 +1786,7 @@ bool gstStructureMapInPlace(GstStructure* structure, Function<bool(GstId, GValue
 
 StringView gstIdToString(GstId id)
 {
-#if GST_CHECK_VERSION(1, 25, 0)
+#if GST_CHECK_VERSION(1, 26, 0)
     return StringView::fromLatin1(gst_id_str_as_str(id));
 #else
     return StringView::fromLatin1(g_quark_to_string(id));
@@ -1795,7 +1795,7 @@ StringView gstIdToString(GstId id)
 
 void gstStructureFilterAndMapInPlace(GstStructure* structure, Function<bool(GstId, GValue*)>&& callback)
 {
-#if GST_CHECK_VERSION(1, 25, 0)
+#if GST_CHECK_VERSION(1, 26, 0)
     gst_structure_filter_and_map_in_place_id_str(structure, [](GstId id, GValue* value, gpointer userData) -> gboolean {
         auto& callback = *reinterpret_cast<Function<bool(GstId, GValue*)>*>(userData);
         return callback(id, value);

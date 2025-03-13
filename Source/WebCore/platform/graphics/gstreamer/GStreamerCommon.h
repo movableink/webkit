@@ -344,7 +344,7 @@ private:
     Atomic<uint64_t> m_totalObservers;
 };
 
-#if GST_CHECK_VERSION(1, 25, 0)
+#if GST_CHECK_VERSION(1, 26, 0)
 using GstId = const GstIdStr*;
 #else
 using GstId = GQuark;
