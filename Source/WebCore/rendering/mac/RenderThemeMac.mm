@@ -197,7 +197,7 @@ RenderThemeMac::RenderThemeMac()
 {
 }
 
-bool RenderThemeMac::canCreateControlPartForRenderer(const RenderBox& renderer) const
+bool RenderThemeMac::canCreateControlPartForRenderer(const RenderObject& renderer) const
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
     if (renderer.settings().vectorBasedControlsOnMacEnabled())
@@ -234,7 +234,7 @@ bool RenderThemeMac::canCreateControlPartForRenderer(const RenderBox& renderer) 
         || type == StyleAppearance::SwitchTrack;
 }
 
-bool RenderThemeMac::canCreateControlPartForBorderOnly(const RenderBox& renderer) const
+bool RenderThemeMac::canCreateControlPartForBorderOnly(const RenderObject& renderer) const
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
     if (renderer.settings().vectorBasedControlsOnMacEnabled())
@@ -247,7 +247,7 @@ bool RenderThemeMac::canCreateControlPartForBorderOnly(const RenderBox& renderer
         || appearance == StyleAppearance::TextField;
 }
 
-bool RenderThemeMac::canCreateControlPartForDecorations(const RenderBox& renderer) const
+bool RenderThemeMac::canCreateControlPartForDecorations(const RenderObject& renderer) const
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
     if (renderer.settings().vectorBasedControlsOnMacEnabled())
@@ -809,7 +809,7 @@ static std::span<const int, 4> popupButtonPadding(NSControlSize size, bool isRTL
     return isRTL ? paddingRTL[size] : paddingLTR[size];
 }
 
-void RenderThemeMac::inflateRectForControlRenderer(const RenderBox& renderer, FloatRect& rect)
+void RenderThemeMac::inflateRectForControlRenderer(const RenderObject& renderer, FloatRect& rect)
 {
     auto appearance = renderer.style().usedAppearance();
 
@@ -845,19 +845,19 @@ void RenderThemeMac::adjustRepaintRect(const RenderBox& renderer, FloatRect& rec
     rect = repaintRect;
 }
 
-bool RenderThemeMac::controlSupportsTints(const RenderBox& renderer) const
+bool RenderThemeMac::controlSupportsTints(const RenderObject& o) const
 {
     // An alternate way to implement this would be to get the appropriate cell object
     // and call the private _needRedrawOnWindowChangedKeyState method. An advantage of
     // that would be that we would match AppKit behavior more closely, but a disadvantage
     // would be that we would rely on an AppKit SPI method.
 
-    if (!isEnabled(renderer))
+    if (!isEnabled(o))
         return false;
 
     // Checkboxes only have tint when checked.
-    if (renderer.style().usedAppearance() == StyleAppearance::Checkbox)
-        return isChecked(renderer);
+    if (o.style().usedAppearance() == StyleAppearance::Checkbox)
+        return isChecked(o);
 
     // For now assume other controls have tint if enabled.
     return true;
@@ -1571,7 +1571,7 @@ static void paintAttachmentPlaceholderBorder(const RenderAttachment& attachment,
     context.strokePath(borderPath);
 }
 
-bool RenderThemeMac::paintAttachment(const RenderBox& renderer, const PaintInfo& paintInfo, const IntRect& paintRect)
+bool RenderThemeMac::paintAttachment(const RenderObject& renderer, const PaintInfo& paintInfo, const IntRect& paintRect)
 {
     auto* attachment = dynamicDowncast<RenderAttachment>(renderer);
     if (!attachment)

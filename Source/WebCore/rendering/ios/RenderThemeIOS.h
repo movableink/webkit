@@ -67,7 +67,7 @@ public:
     WEBCORE_EXPORT static IconAndSize iconForAttachment(const String& fileName, const String& attachmentType, const String& title);
 
 private:
-    bool canCreateControlPartForRenderer(const RenderBox&) const final;
+    bool canCreateControlPartForRenderer(const RenderObject&) const final;
 
     LengthBox popupInternalPaddingBox(const RenderStyle&) const override;
 
@@ -97,7 +97,7 @@ private:
     void paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) override;
 
     void adjustSliderTrackStyle(RenderStyle&, const Element*) const override;
-    bool paintSliderTrack(const RenderBox&, const PaintInfo&, const IntRect&) override;
+    bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
 
     void adjustSliderThumbSize(RenderStyle&, const Element*) const override;
 
@@ -107,7 +107,7 @@ private:
     bool hasSwitchHapticFeedback(SwitchTrigger) const final { return true; }
 #endif
 
-    bool paintProgressBar(const RenderBox&, const PaintInfo&, const IntRect&) override;
+    bool paintProgressBar(const RenderObject&, const PaintInfo&, const IntRect&) override;
 
     IntSize sliderTickSize() const override;
     int sliderTickOffsetFromTrackCenter() const override;
@@ -120,22 +120,22 @@ private:
     RefPtr<Gradient> checkboxRadioBackgroundGradient(const FloatRect&, OptionSet<ControlStyle::State>);
     Color checkboxRadioIndicatorColor(OptionSet<ControlStyle::State>, OptionSet<StyleColorOptions>);
 
-    bool paintCheckbox(const RenderBox&, const PaintInfo&, const FloatRect&) override;
-    bool paintRadio(const RenderBox&, const PaintInfo&, const FloatRect&) override;
+    bool paintCheckbox(const RenderObject&, const PaintInfo&, const FloatRect&) override;
+    bool paintRadio(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void paintCheckboxRadioInnerShadow(const PaintInfo&, const FloatRoundedRect&, OptionSet<ControlStyle::State>);
 
     bool supportsMeter(StyleAppearance) const final;
-    bool paintMeter(const RenderBox&, const PaintInfo&, const IntRect&) final;
+    bool paintMeter(const RenderObject&, const PaintInfo&, const IntRect&) final;
 
-    bool paintListButton(const RenderBox&, const PaintInfo&, const FloatRect&) final;
+    bool paintListButton(const RenderObject&, const PaintInfo&, const FloatRect&) final;
 
-    void paintSliderTicks(const RenderBox&, const PaintInfo&, const FloatRect&) final;
+    void paintSliderTicks(const RenderObject&, const PaintInfo&, const FloatRect&) final;
 
-    void paintColorWellDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) final;
+    void paintColorWellDecorations(const RenderObject&, const PaintInfo&, const FloatRect&) final;
 
     void adjustSearchFieldDecorationPartStyle(RenderStyle&, const Element*) const final;
-    bool paintSearchFieldDecorationPart(const RenderBox&, const PaintInfo&, const IntRect&) final;
+    bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const IntRect&) final;
 
     void adjustSearchFieldResultsDecorationPartStyle(RenderStyle&, const Element*) const final;
     bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const IntRect&) final;
@@ -143,7 +143,7 @@ private:
     void adjustSearchFieldResultsButtonStyle(RenderStyle&, const Element*) const final;
     bool paintSearchFieldResultsButton(const RenderBox&, const PaintInfo&, const IntRect&) final;
 
-    bool supportsFocusRing(const RenderElement&, const RenderStyle&) const final;
+    bool supportsFocusRing(const RenderObject&, const RenderStyle&) const final;
 
     bool supportsBoxShadow(const RenderStyle&) const final;
 
@@ -167,7 +167,7 @@ private:
     LayoutSize attachmentIntrinsicSize(const RenderAttachment&) const override;
     bool attachmentShouldAllowWidthToShrink(const RenderAttachment&) const override { return true; }
     String attachmentStyleSheet() const final;
-    bool paintAttachment(const RenderBox&, const PaintInfo&, const IntRect&) override;
+    bool paintAttachment(const RenderObject&, const PaintInfo&, const IntRect&) override;
 #endif
 
 private:
@@ -184,7 +184,7 @@ private:
 
     Color systemColor(CSSValueID, OptionSet<StyleColorOptions>) const override;
 
-    Color pictureFrameColor(const RenderBox&) override;
+    Color pictureFrameColor(const RenderObject&) override;
 
     void adjustMinimumIntrinsicSizeForAppearance(StyleAppearance, RenderStyle&) const;
 };

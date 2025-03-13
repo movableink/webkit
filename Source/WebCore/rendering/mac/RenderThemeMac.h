@@ -37,12 +37,12 @@ public:
     friend NeverDestroyed<RenderThemeMac>;
 
     // A method asking if the control changes its tint when the window has focus or not.
-    bool controlSupportsTints(const RenderBox&) const final;
+    bool controlSupportsTints(const RenderObject&) const final;
 
     // A general method asking if any control tinting is supported at all.
     bool supportsControlTints() const final { return true; }
 
-    void inflateRectForControlRenderer(const RenderBox&, FloatRect&) final;
+    void inflateRectForControlRenderer(const RenderObject&, FloatRect&) final;
     void adjustRepaintRect(const RenderBox&, FloatRect&) final;
 
     bool isControlStyled(const RenderStyle&, const RenderStyle& userAgentStyle) const final;
@@ -95,9 +95,9 @@ private:
     RenderThemeMac();
 
     bool canPaint(const PaintInfo&, const Settings&, StyleAppearance) const final;
-    bool canCreateControlPartForRenderer(const RenderBox&) const final;
-    bool canCreateControlPartForBorderOnly(const RenderBox&) const final;
-    bool canCreateControlPartForDecorations(const RenderBox&) const final;
+    bool canCreateControlPartForRenderer(const RenderObject&) const final;
+    bool canCreateControlPartForBorderOnly(const RenderObject&) const final;
+    bool canCreateControlPartForDecorations(const RenderObject&) const final;
 
     int baselinePosition(const RenderBox&) const final;
 
@@ -132,7 +132,7 @@ private:
 
 #if ENABLE(ATTACHMENT_ELEMENT)
     LayoutSize attachmentIntrinsicSize(const RenderAttachment&) const final;
-    bool paintAttachment(const RenderBox&, const PaintInfo&, const IntRect&) final;
+    bool paintAttachment(const RenderObject&, const PaintInfo&, const IntRect&) final;
 #endif
 
 private:
