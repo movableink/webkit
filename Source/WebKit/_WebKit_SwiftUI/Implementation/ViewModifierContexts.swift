@@ -22,7 +22,7 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 
 internal import SwiftUI
-@_spi(Private) @_spi(CrossImportOverlay) internal import WebKit
+@_spi(Private) internal import WebKit
 
 struct ContextMenuContext {
 #if os(macOS)

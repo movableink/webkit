@@ -184,8 +184,7 @@ final public class WebPage {
     @_spi(Private)
     public let downloads: Downloads
 
-    @_spi(Private)
-    public let configuration: Configuration
+    let configuration: Configuration
 
     /// The webpage's back-forward list.
     public internal(set) var backForwardList: BackForwardList = BackForwardList()
@@ -515,8 +514,15 @@ final public class WebPage {
     ///
     /// - Returns: The result of the script evaluation. If your function body doesn't return an explicit value, `nil` is returned.
     ///  If your function body explicitly returns `null`, then `NSNull` is returned.
-    public func callJavaScript(_ functionBody: String, arguments: [String : Any] = [:], in frame: FrameInfo? = nil, contentWorld: WKContentWorld? = nil) async throws -> Any? {
-        try await backingWebView.callAsyncJavaScript(functionBody, arguments: arguments, in: frame?.wrapped, contentWorld: contentWorld ?? .page)
+    @discardableResult
+    public func callJavaScript(_ functionBody: String, arguments: [String : Any] = [:], in frame: FrameInfo? = nil, contentWorld: WKContentWorld? = nil) async throws -> sending Any? {
+        let result = try await backingWebView.callAsyncJavaScript(functionBody, arguments: arguments, in: frame?.wrapped, contentWorld: contentWorld ?? .page)
+
+        guard let result else {
+            return nil
+        }
+
+        return result as! any Sendable
     }
 
     /// Generates PDF data from the webpage's contents

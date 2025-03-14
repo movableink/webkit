@@ -23,7 +23,6 @@
 
 import Foundation
 public import SwiftUI
-@_spi(Private) @_spi(CrossImportOverlay) import WebKit
 
 extension EnvironmentValues {
     @Entry

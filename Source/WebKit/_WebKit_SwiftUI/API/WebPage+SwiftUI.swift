@@ -23,7 +23,7 @@
 
 import Foundation
 public import SwiftUI
-@_spi(Private) @_spi(CrossImportOverlay) import WebKit
+@_spi(CrossImportOverlay) import WebKit
 
 extension WebPage {
     /// The theme color that the system gets from the first valid meta tag in the webpage.
