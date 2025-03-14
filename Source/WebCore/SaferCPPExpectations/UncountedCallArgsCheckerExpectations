@@ -106,7 +106,6 @@ Modules/mediasource/MediaSource.cpp
 Modules/mediasource/MediaSourceHandle.cpp
 Modules/mediasource/MediaSourceInterfaceMainThread.cpp
 Modules/mediasource/MediaSourceInterfaceWorker.cpp
-Modules/mediasource/MediaSourceRegistry.cpp
 Modules/mediasource/SampleMap.cpp
 Modules/mediasource/SourceBuffer.cpp
 Modules/mediastream/CanvasCaptureMediaStreamTrack.cpp

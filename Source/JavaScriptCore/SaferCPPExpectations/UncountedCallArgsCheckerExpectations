@@ -128,7 +128,6 @@ runtime/CacheableIdentifierInlines.h
 runtime/CachedTypes.cpp
 runtime/CodeCache.cpp
 runtime/Completion.cpp
-runtime/DeferredWorkTimer.cpp
 runtime/DirectEvalExecutable.cpp
 runtime/ErrorInstance.cpp
 runtime/FunctionExecutable.cpp

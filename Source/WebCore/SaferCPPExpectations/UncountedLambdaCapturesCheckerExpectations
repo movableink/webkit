@@ -6,7 +6,6 @@ Modules/applepay/ApplePaySetup.cpp
 Modules/applepay/PaymentCoordinator.cpp
 Modules/cache/DOMCache.cpp
 Modules/cache/DOMCacheStorage.cpp
-Modules/cookie-store/CookieStore.cpp
 Modules/encryptedmedia/MediaKeySession.cpp
 Modules/encryptedmedia/NavigatorEME.cpp
 Modules/entriesapi/DOMFileSystem.cpp
@@ -74,7 +73,6 @@ dom/ViewportArguments.cpp
 editing/Editor.cpp
 fileapi/Blob.cpp
 fileapi/FileReader.cpp
-html/DirectoryFileListCreator.cpp
 html/FileInputType.cpp
 html/FormAssociatedCustomElement.cpp
 html/HTMLImageElement.cpp
@@ -92,7 +90,6 @@ inspector/InspectorOverlay.cpp
 inspector/agents/page/PageDOMDebuggerAgent.cpp
 loader/FrameLoader.cpp
 loader/NetscapePlugInStreamLoader.cpp
-loader/ResourceLoader.cpp
 page/EventSource.cpp
 page/ImageAnalysisQueue.cpp
 page/LocalDOMWindow.cpp
