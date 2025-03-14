@@ -216,12 +216,12 @@ public:
     void unregisterPositionTryBox(const RenderBox&);
     const SingleThreadWeakHashSet<const RenderBox>& positionTryBoxes() const { return m_positionTryBoxes; }
 
-    SingleThreadWeakPtr<RenderElement> viewTransitionRoot() const;
-    void setViewTransitionRoot(RenderElement& renderer);
+    SingleThreadWeakPtr<RenderBlockFlow> viewTransitionRoot() const;
+    void setViewTransitionRoot(RenderBlockFlow& renderer);
 
-    void addViewTransitionGroup(const AtomString&, RenderElement&);
+    void addViewTransitionGroup(const AtomString&, RenderBox&);
     void removeViewTransitionGroup(const AtomString&);
-    RenderElement* viewTransitionGroupForName(const AtomString&);
+    RenderBox* viewTransitionGroupForName(const AtomString&);
 
 private:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
@@ -293,8 +293,8 @@ private:
     SingleThreadWeakHashSet<const RenderBoxModelObject> m_anchors;
     SingleThreadWeakHashSet<const RenderBox> m_positionTryBoxes;
 
-    SingleThreadWeakPtr<RenderElement> m_viewTransitionRoot;
-    HashMap<AtomString, SingleThreadWeakPtr<RenderElement>> m_viewTransitionGroups;
+    SingleThreadWeakPtr<RenderBlockFlow> m_viewTransitionRoot;
+    HashMap<AtomString, SingleThreadWeakPtr<RenderBox>> m_viewTransitionGroups;
 };
 
 } // namespace WebCore
