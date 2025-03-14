@@ -1776,6 +1776,16 @@ void URLParser::parse(std::span<const CharacterType> input, const URL& base, con
                 appendToASCIIBuffer('/');
                 ++c;
                 m_url.m_pathAfterLastSlash = currentPosition(c);
+            } else if (*c == ' ') {
+                auto nextC = c;
+                advance<CharacterType, ReportSyntaxViolation::No>(nextC);
+                ASSERT(!nextC.atEnd());
+                if (*nextC == '?' || *nextC == '#') {
+                    syntaxViolation(c);
+                    percentEncodeByte(' ');
+                } else
+                    appendToASCIIBuffer(' ');
+                ++c;
             } else {
                 utf8PercentEncode<isInC0ControlEncodeSet>(c);
                 ++c;

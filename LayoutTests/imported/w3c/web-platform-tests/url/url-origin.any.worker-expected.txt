@@ -212,6 +212,14 @@ PASS Origin parsing: <//www.example2.com> against <http://www.example.com/test>
 PASS Origin parsing: <http://ExAmPlE.CoM> against <http://other.com/>
 PASS Origin parsing: <http://GOO​⁠﻿goo.com> against <http://other.com/>
 PASS Origin parsing: <\0 http://example.com/ \r > without base
+PASS Origin parsing: <non-special:opaque  > without base
+PASS Origin parsing: <non-special:opaque  ?hi> without base
+PASS Origin parsing: <non-special:opaque  #hi> without base
+PASS Origin parsing: <non-special:opaque  x?hi> without base
+PASS Origin parsing: <non-special:opaque  x#hi> without base
+PASS Origin parsing: <non-special:opaque 		  	#hi> without base
+PASS Origin parsing: <non-special:opaque 		  #hi> without base
+PASS Origin parsing: <non-special:opaque		  \r #hi> without base
 PASS Origin parsing: <http://www.foo。bar.com> against <http://other.com/>
 PASS Origin parsing: <https://x/�?�#�> without base
 PASS Origin parsing: <http://Ｇｏ.com> against <http://other.com/>

@@ -262,8 +262,6 @@ private:
     void parse(String&&);
     void parseAllowingC0AtEnd(String&&);
 
-    void maybeTrimTrailingSpacesFromOpaquePath();
-
     friend WTF_EXPORT_PRIVATE bool protocolHostAndPortAreEqual(const URL&, const URL&);
 
 #if USE(CF)
