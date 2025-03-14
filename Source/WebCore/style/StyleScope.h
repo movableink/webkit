@@ -129,6 +129,7 @@ public:
 #endif
 
     WEBCORE_EXPORT Resolver& resolver();
+    Ref<Resolver> protectedResolver();
     Resolver* resolverIfExists() { return m_resolver.get(); }
     void clearResolver();
     void releaseMemory();

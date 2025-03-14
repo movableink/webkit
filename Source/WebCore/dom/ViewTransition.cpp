@@ -564,7 +564,7 @@ bool ViewTransition::updatePropertiesForRenderer(CapturedElement& capturedElemen
         // group styles rule
         if (!capturedElement.groupStyleProperties) {
             capturedElement.groupStyleProperties = properties;
-            Ref { protectedDocument()->styleScope().resolver() }->setViewTransitionStyles(CSSSelector::PseudoElement::ViewTransitionGroup, name, *properties);
+            protectedDocument()->styleScope().protectedResolver()->setViewTransitionStyles(CSSSelector::PseudoElement::ViewTransitionGroup, name, *properties);
             changed = true;
         } else
             changed |= RefPtr { capturedElement.groupStyleProperties }->mergeAndOverrideOnConflict(*properties);

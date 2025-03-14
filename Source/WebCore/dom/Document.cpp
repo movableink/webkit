@@ -8476,7 +8476,7 @@ std::variant<Document::SkipTransition, Vector<AtomString>> Document::resolveView
     if (hidden())
         return SkipTransition { };
 
-    auto rule = styleScope().resolver().viewTransitionRule();
+    RefPtr rule = styleScope().protectedResolver()->viewTransitionRule();
     if (rule && rule->computedNavigation() == ViewTransitionNavigation::Auto)
         return rule->types();
     return SkipTransition { };
@@ -11252,8 +11252,8 @@ ViewTransition* Document::activeViewTransition() const
 
 bool Document::activeViewTransitionCapturedDocumentElement() const
 {
-    if (m_activeViewTransition)
-        return m_activeViewTransition->documentElementIsCaptured();
+    if (RefPtr activeViewTransition = m_activeViewTransition)
+        return activeViewTransition->documentElementIsCaptured();
     return false;
 }
 
@@ -11261,9 +11261,9 @@ void Document::setActiveViewTransition(RefPtr<ViewTransition>&& viewTransition)
 {
     std::optional<Style::PseudoClassChangeInvalidation> activeViewTransitionInvalidation;
     std::optional<Style::PseudoClassChangeInvalidation> activeViewTransitionTypeInvalidation;
-    if (documentElement()) {
-        activeViewTransitionInvalidation.emplace(*documentElement(), CSSSelector::PseudoClass::ActiveViewTransition, !!viewTransition);
-        activeViewTransitionTypeInvalidation.emplace(*documentElement(), CSSSelector::PseudoClass::ActiveViewTransitionType, Style::PseudoClassChangeInvalidation::AnyValue);
+    if (RefPtr documentElement = this->documentElement()) {
+        activeViewTransitionInvalidation.emplace(*documentElement, CSSSelector::PseudoClass::ActiveViewTransition, !!viewTransition);
+        activeViewTransitionTypeInvalidation.emplace(*documentElement, CSSSelector::PseudoClass::ActiveViewTransitionType, Style::PseudoClassChangeInvalidation::AnyValue);
     }
 
     clearRenderingIsSuppressedForViewTransition();

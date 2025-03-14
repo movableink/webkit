@@ -110,6 +110,11 @@ Resolver& Scope::resolver()
     return *m_resolver;
 }
 
+Ref<Resolver> Scope::protectedResolver()
+{
+    return resolver();
+}
+
 void Scope::createDocumentResolver()
 {
     ASSERT(!m_resolver);
