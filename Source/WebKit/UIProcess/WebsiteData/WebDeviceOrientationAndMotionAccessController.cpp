@@ -79,6 +79,23 @@ DeviceOrientationOrMotionPermissionState WebDeviceOrientationAndMotionAccessCont
     return it->value ? DeviceOrientationOrMotionPermissionState::Granted : DeviceOrientationOrMotionPermissionState::Denied;
 }
 
+void WebDeviceOrientationAndMotionAccessController::setCachedDeviceOrientationPermission(const WebCore::SecurityOriginData& origin, DeviceOrientationOrMotionPermissionState state)
+{
+    if (!m_deviceOrientationPermissionDecisions.isValidKey(origin))
+        return;
+
+    switch (state) {
+    case DeviceOrientationOrMotionPermissionState::Granted:
+        m_deviceOrientationPermissionDecisions.set(origin, true);
+        return;
+    case DeviceOrientationOrMotionPermissionState::Denied:
+        m_deviceOrientationPermissionDecisions.set(origin, false);
+        return;
+    case DeviceOrientationOrMotionPermissionState::Prompt:
+        m_deviceOrientationPermissionDecisions.remove(origin);
+    }
+}
+
 void WebDeviceOrientationAndMotionAccessController::ref() const
 {
     m_websiteDataStore->ref();

@@ -226,6 +226,7 @@
 #include <WebCore/GlobalFrameIdentifier.h>
 #include <WebCore/GlobalWindowIdentifier.h>
 #include <WebCore/ImageBuffer.h>
+#include <WebCore/LegacySchemeRegistry.h>
 #include <WebCore/LengthBox.h>
 #include <WebCore/LinkDecorationFilteringData.h>
 #include <WebCore/MIMETypeRegistry.h>
@@ -4812,12 +4813,25 @@ void WebPageProxy::receivedNavigationActionPolicyDecision(WebProcessProxy& proce
     }
 
 #if ENABLE(DEVICE_ORIENTATION)
-    if (navigation && (!navigation->websitePolicies() || navigation->websitePolicies()->deviceOrientationAndMotionAccessState() == WebCore::DeviceOrientationOrMotionPermissionState::Prompt)) {
-        auto deviceOrientationPermission = websiteDataStore->protectedDeviceOrientationAndMotionAccessController()->cachedDeviceOrientationPermission(SecurityOriginData::fromURLWithoutStrictOpaqueness(navigation->currentRequest().url()));
-        if (deviceOrientationPermission != WebCore::DeviceOrientationOrMotionPermissionState::Prompt) {
-            if (!navigation->websitePolicies())
+    if (navigation) {
+        bool isPermissionSet = false;
+        auto origin = SecurityOriginData::fromURL(navigation->currentRequest().url());
+        Ref deviceOrientationAndMotionAccessController = websiteDataStore->deviceOrientationAndMotionAccessController();
+        RefPtr websitePolicies = navigation->websitePolicies();
+        if (websitePolicies) {
+            // Update cache with permission in navigation policy as this is the most recent decision.
+            if (auto permission = websitePolicies->deviceOrientationAndMotionAccessState()) {
+                deviceOrientationAndMotionAccessController->setCachedDeviceOrientationPermission(origin, *permission);
+                isPermissionSet = true;
+            }
+        }
+        if (!isPermissionSet) {
+            if (!websitePolicies) {
                 navigation->setWebsitePolicies(API::WebsitePolicies::create());
-            navigation->protectedWebsitePolicies()->setDeviceOrientationAndMotionAccessState(deviceOrientationPermission);
+                websitePolicies = navigation->websitePolicies();
+            }
+            auto cachedPermission = deviceOrientationAndMotionAccessController->cachedDeviceOrientationPermission(origin);
+            websitePolicies->setDeviceOrientationAndMotionAccessState(cachedPermission);
         }
     }
 #endif
@@ -12460,8 +12474,10 @@ void WebPageProxy::shouldAllowDeviceOrientationAndMotionAccess(IPC::Connection& 
 
 bool WebPageProxy::originHasDeviceOrientationAndMotionAccess(const WebCore::SecurityOriginData& origin)
 {
-    // FIXME: implement this.
-    return true;
+    if (!protectedPreferences()->deviceOrientationPermissionAPIEnabled())
+        return true;
+
+    return protectedWebsiteDataStore()->protectedDeviceOrientationAndMotionAccessController()->cachedDeviceOrientationPermission(origin) == DeviceOrientationOrMotionPermissionState::Granted;
 }
 
 #endif
@@ -14153,6 +14169,7 @@ void WebPageProxy::setURLSchemeHandlerForScheme(Ref<WebURLSchemeHandler>&& handl
     auto handlerIdentifierResult = internals().urlSchemeHandlersByIdentifier.add(handlerIdentifier, WTFMove(handler));
     ASSERT_UNUSED(handlerIdentifierResult, handlerIdentifierResult.isNewEntry);
 
+    WebCore::LegacySchemeRegistry::registerURLSchemeAsHandledBySchemeHandler(scheme);
     send(Messages::WebPage::RegisterURLSchemeHandler(handlerIdentifier, canonicalizedScheme.value()));
 }
 
@@ -14653,6 +14670,14 @@ void WebPageProxy::willAcquireUniversalFileReadSandboxExtension(WebProcessProxy&
 
 void WebPageProxy::simulateDeviceOrientationChange(double alpha, double beta, double gamma)
 {
+#if ENABLE(DEVICE_ORIENTATION)
+    auto origin = SecurityOrigin::createFromString(protectedPageLoadState()->activeURL())->data();
+    if (!originHasDeviceOrientationAndMotionAccess(origin)) {
+        WEBPAGEPROXY_RELEASE_LOG_ERROR(Process, "simulateDeviceOrientationChange: Not sending simulated orientation change to page because origin %" SENSITIVE_LOG_STRING " does not have access.", origin.toString().utf8().data());
+        return;
+    }
+#endif
+
     send(Messages::WebPage::SimulateDeviceOrientationChange(alpha, beta, gamma));
 }
 
