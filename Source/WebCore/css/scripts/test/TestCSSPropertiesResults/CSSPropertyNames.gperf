@@ -24,7 +24,7 @@ namespace WebCore {
 
 static_assert(cssPropertyIDEnumValueCount <= (std::numeric_limits<uint16_t>::max() + 1), "CSSPropertyID should fit into uint16_t.");
 
-const std::array<CSSPropertyID, 70> computedPropertyIDs {
+const std::array<CSSPropertyID, 77> computedPropertyIDs {
     CSSPropertyID::CSSPropertyTestAnimationWrapper,
     CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationAlways,
     CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationThreadedOnly,
@@ -57,6 +57,8 @@ const std::array<CSSPropertyID, 70> computedPropertyIDs {
     CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersNoMin,
     CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersWithMinimum,
     CSSPropertyID::CSSPropertyTestHighPriority,
+    CSSPropertyID::CSSPropertyTestImage,
+    CSSPropertyID::CSSPropertyTestImageNoImageSet,
     CSSPropertyID::CSSPropertyTestKeyword,
     CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo,
     CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock,
@@ -75,10 +77,15 @@ const std::array<CSSPropertyID, 70> computedPropertyIDs {
     CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptional,
     CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalNoSingleItemOpt,
     CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalSingleItemOpt,
+    CSSPropertyID::CSSPropertyTestMatchOne,
     CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrder,
     CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderNoSingleItemOpt,
     CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrder,
     CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt,
+    CSSPropertyID::CSSPropertyTestMatchOneWithGroupWithSettingsFlag,
+    CSSPropertyID::CSSPropertyTestMatchOneWithKeywordWithSettingsFlag,
+    CSSPropertyID::CSSPropertyTestMatchOneWithMultipleKeywords,
+    CSSPropertyID::CSSPropertyTestMatchOneWithReferenceWithSettingsFlag,
     CSSPropertyID::CSSPropertyTestNumericValueRange,
     CSSPropertyID::CSSPropertyTestProperty,
     CSSPropertyID::CSSPropertyTestSettingsOne,
@@ -133,6 +140,8 @@ constexpr ASCIILiteral propertyNameStrings[numCSSProperties] = {
     "test-function-single-parameter-optional"_s,
     "test-function-unbounded-parameters-no-min"_s,
     "test-function-unbounded-parameters-with-minimum"_s,
+    "test-image"_s,
+    "test-image-no-image-set"_s,
     "test-keyword"_s,
     "test-keyword-with-aliased-to"_s,
     "test-match-all-any-order"_s,
@@ -147,10 +156,15 @@ constexpr ASCIILiteral propertyNameStrings[numCSSProperties] = {
     "test-match-all-ordered-with-optional"_s,
     "test-match-all-ordered-with-optional-no-single-item-opt"_s,
     "test-match-all-ordered-with-optional-single-item-opt"_s,
+    "test-match-one"_s,
     "test-match-one-or-more-any-order"_s,
     "test-match-one-or-more-any-order-no-single-item-opt"_s,
     "test-match-one-or-more-any-order-with-preserve-order"_s,
     "test-match-one-or-more-any-order-with-preserve-order-no-single-item-opt"_s,
+    "test-match-one-with-group-with-settings-flag"_s,
+    "test-match-one-with-keyword-with-settings-flag"_s,
+    "test-match-one-with-multiple-keywords"_s,
+    "test-match-one-with-reference-with-settings-flag"_s,
     "test-numeric-value-range"_s,
     "test-property"_s,
     "test-settings-one"_s,
@@ -225,6 +239,8 @@ test-function-single-parameter-match-one, CSSPropertyID::CSSPropertyTestFunction
 test-function-single-parameter-optional, CSSPropertyID::CSSPropertyTestFunctionSingleParameterOptional
 test-function-unbounded-parameters-no-min, CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersNoMin
 test-function-unbounded-parameters-with-minimum, CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersWithMinimum
+test-image, CSSPropertyID::CSSPropertyTestImage
+test-image-no-image-set, CSSPropertyID::CSSPropertyTestImageNoImageSet
 test-keyword, CSSPropertyID::CSSPropertyTestKeyword
 test-keyword-with-aliased-to, CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo
 test-match-all-any-order, CSSPropertyID::CSSPropertyTestMatchAllAnyOrder
@@ -239,10 +255,15 @@ test-match-all-ordered, CSSPropertyID::CSSPropertyTestMatchAllOrdered
 test-match-all-ordered-with-optional, CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptional
 test-match-all-ordered-with-optional-no-single-item-opt, CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalNoSingleItemOpt
 test-match-all-ordered-with-optional-single-item-opt, CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalSingleItemOpt
+test-match-one, CSSPropertyID::CSSPropertyTestMatchOne
 test-match-one-or-more-any-order, CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrder
 test-match-one-or-more-any-order-no-single-item-opt, CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderNoSingleItemOpt
 test-match-one-or-more-any-order-with-preserve-order, CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrder
 test-match-one-or-more-any-order-with-preserve-order-no-single-item-opt, CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt
+test-match-one-with-group-with-settings-flag, CSSPropertyID::CSSPropertyTestMatchOneWithGroupWithSettingsFlag
+test-match-one-with-keyword-with-settings-flag, CSSPropertyID::CSSPropertyTestMatchOneWithKeywordWithSettingsFlag
+test-match-one-with-multiple-keywords, CSSPropertyID::CSSPropertyTestMatchOneWithMultipleKeywords
+test-match-one-with-reference-with-settings-flag, CSSPropertyID::CSSPropertyTestMatchOneWithReferenceWithSettingsFlag
 test-numeric-value-range, CSSPropertyID::CSSPropertyTestNumericValueRange
 test-property, CSSPropertyID::CSSPropertyTestProperty
 test-settings-one, CSSPropertyID::CSSPropertyTestSettingsOne
@@ -423,6 +444,8 @@ constexpr bool isInheritedPropertyTable[cssPropertyIDEnumValueCount] = {
     false, // CSSPropertyID::CSSPropertyTestFunctionSingleParameterOptional
     false, // CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersNoMin
     false, // CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersWithMinimum
+    false, // CSSPropertyID::CSSPropertyTestImage
+    false, // CSSPropertyID::CSSPropertyTestImageNoImageSet
     false, // CSSPropertyID::CSSPropertyTestKeyword
     false, // CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo
     false, // CSSPropertyID::CSSPropertyTestMatchAllAnyOrder
@@ -437,10 +460,15 @@ constexpr bool isInheritedPropertyTable[cssPropertyIDEnumValueCount] = {
     false, // CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptional
     false, // CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalNoSingleItemOpt
     false, // CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalSingleItemOpt
+    false, // CSSPropertyID::CSSPropertyTestMatchOne
     false, // CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrder
     false, // CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderNoSingleItemOpt
     false, // CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrder
     false, // CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt
+    false, // CSSPropertyID::CSSPropertyTestMatchOneWithGroupWithSettingsFlag
+    false, // CSSPropertyID::CSSPropertyTestMatchOneWithKeywordWithSettingsFlag
+    false, // CSSPropertyID::CSSPropertyTestMatchOneWithMultipleKeywords
+    false, // CSSPropertyID::CSSPropertyTestMatchOneWithReferenceWithSettingsFlag
     false, // CSSPropertyID::CSSPropertyTestNumericValueRange
     false, // CSSPropertyID::CSSPropertyTestProperty
     false, // CSSPropertyID::CSSPropertyTestSettingsOne
@@ -530,10 +558,15 @@ bool CSSProperty::allowsNumberOrIntegerInput(CSSPropertyID id)
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalWithPreserveOrderNoSingleItemOpt:
     case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalNoSingleItemOpt:
     case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalSingleItemOpt:
+    case CSSPropertyID::CSSPropertyTestMatchOne:
     case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrder:
     case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderNoSingleItemOpt:
     case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrder:
     case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt:
+    case CSSPropertyID::CSSPropertyTestMatchOneWithGroupWithSettingsFlag:
+    case CSSPropertyID::CSSPropertyTestMatchOneWithKeywordWithSettingsFlag:
+    case CSSPropertyID::CSSPropertyTestMatchOneWithMultipleKeywords:
+    case CSSPropertyID::CSSPropertyTestMatchOneWithReferenceWithSettingsFlag:
     case CSSPropertyID::CSSPropertyTestNumericValueRange:
     case CSSPropertyID::CSSPropertyTestProperty:
     case CSSPropertyID::CSSPropertyTestSettingsOne:

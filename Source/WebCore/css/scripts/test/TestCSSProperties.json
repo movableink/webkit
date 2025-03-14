@@ -305,6 +305,42 @@
             }
         },
 
+        "test-match-one": {
+            "animation-type": "discrete",
+            "initial": "0",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> | <custom-ident> | <length> ]"
+            }
+        },
+        "test-match-one-with-multiple-keywords": {
+            "animation-type": "discrete",
+            "initial": "0",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> | foo | bar | baz | [ <custom-ident> && <dashed-ident> ] ]"
+            }
+        },
+        "test-match-one-with-keyword-with-settings-flag": {
+            "animation-type": "discrete",
+            "initial": "0",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> | foo@(settings-flag=cssSettingsFooDisabled) | bar | baz | [ <custom-ident> && <dashed-ident> ] ]"
+            }
+        },
+        "test-match-one-with-reference-with-settings-flag": {
+            "animation-type": "discrete",
+            "initial": "0",
+            "codegen-properties": {
+                "parser-grammar": "[ <number>@(settings-flag=cssSettingsReferenceDisabled) | foo | bar | baz | [ <custom-ident> && <dashed-ident> ] ]"
+            }
+        },
+        "test-match-one-with-group-with-settings-flag": {
+            "animation-type": "discrete",
+            "initial": "0",
+            "codegen-properties": {
+                "parser-grammar": "[ <number> | foo | bar | baz | [ <custom-ident> && <dashed-ident> ]@(settings-flag=cssSettingsGroupDisabled) ]"
+            }
+        },
+
         "test-match-all-ordered": {
             "animation-type": "discrete",
             "initial": "0 foo 1px",
@@ -534,6 +570,20 @@
             "initial": "currentColor",
             "codegen-properties": {
                 "parser-grammar": "<color allowed-types=absolute quirky-colors-in-quirks-mode=allowed>"
+            }
+        },
+        "test-image": {
+            "animation-type": "discrete",
+            "initial": "url(about:blank)",
+            "codegen-properties": {
+                "parser-grammar": "<image>"
+            }
+        },
+        "test-image-no-image-set": {
+            "animation-type": "discrete",
+            "initial": "url(about:blank)",
+            "codegen-properties": {
+                "parser-grammar": "<image allowed-types=url,generated>"
             }
         },
         "test-keyword": {

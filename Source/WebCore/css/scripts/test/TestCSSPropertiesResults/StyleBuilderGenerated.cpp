@@ -416,6 +416,30 @@ public:
     {
         builderState.style().setTestFunctionUnboundedParametersWithMinimum(fromCSSValueDeducingType(builderState, value));
     }
+    static void applyInitialTestImage(BuilderState& builderState)
+    {
+        builderState.style().setTestImage(RenderStyle::initialTestImage());
+    }
+    static void applyInheritTestImage(BuilderState& builderState)
+    {
+        builderState.style().setTestImage(forwardInheritedValue(builderState.parentStyle().testImage()));
+    }
+    static void applyValueTestImage(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestImage(fromCSSValueDeducingType(builderState, value));
+    }
+    static void applyInitialTestImageNoImageSet(BuilderState& builderState)
+    {
+        builderState.style().setTestImageNoImageSet(RenderStyle::initialTestImageNoImageSet());
+    }
+    static void applyInheritTestImageNoImageSet(BuilderState& builderState)
+    {
+        builderState.style().setTestImageNoImageSet(forwardInheritedValue(builderState.parentStyle().testImageNoImageSet()));
+    }
+    static void applyValueTestImageNoImageSet(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestImageNoImageSet(fromCSSValueDeducingType(builderState, value));
+    }
     static void applyInitialTestKeyword(BuilderState& builderState)
     {
         builderState.style().setTestKeyword(RenderStyle::initialTestKeyword());
@@ -584,6 +608,18 @@ public:
     {
         builderState.style().setTestMatchAllOrderedWithOptionalSingleItemOpt(fromCSSValueDeducingType(builderState, value));
     }
+    static void applyInitialTestMatchOne(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchOne(RenderStyle::initialTestMatchOne());
+    }
+    static void applyInheritTestMatchOne(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchOne(forwardInheritedValue(builderState.parentStyle().testMatchOne()));
+    }
+    static void applyValueTestMatchOne(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestMatchOne(fromCSSValueDeducingType(builderState, value));
+    }
     static void applyInitialTestMatchOneOrMoreAnyOrder(BuilderState& builderState)
     {
         builderState.style().setTestMatchOneOrMoreAnyOrder(RenderStyle::initialTestMatchOneOrMoreAnyOrder());
@@ -631,6 +667,54 @@ public:
     static void applyValueTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt(BuilderState& builderState, CSSValue& value)
     {
         builderState.style().setTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt(fromCSSValueDeducingType(builderState, value));
+    }
+    static void applyInitialTestMatchOneWithGroupWithSettingsFlag(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchOneWithGroupWithSettingsFlag(RenderStyle::initialTestMatchOneWithGroupWithSettingsFlag());
+    }
+    static void applyInheritTestMatchOneWithGroupWithSettingsFlag(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchOneWithGroupWithSettingsFlag(forwardInheritedValue(builderState.parentStyle().testMatchOneWithGroupWithSettingsFlag()));
+    }
+    static void applyValueTestMatchOneWithGroupWithSettingsFlag(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestMatchOneWithGroupWithSettingsFlag(fromCSSValueDeducingType(builderState, value));
+    }
+    static void applyInitialTestMatchOneWithKeywordWithSettingsFlag(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchOneWithKeywordWithSettingsFlag(RenderStyle::initialTestMatchOneWithKeywordWithSettingsFlag());
+    }
+    static void applyInheritTestMatchOneWithKeywordWithSettingsFlag(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchOneWithKeywordWithSettingsFlag(forwardInheritedValue(builderState.parentStyle().testMatchOneWithKeywordWithSettingsFlag()));
+    }
+    static void applyValueTestMatchOneWithKeywordWithSettingsFlag(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestMatchOneWithKeywordWithSettingsFlag(fromCSSValueDeducingType(builderState, value));
+    }
+    static void applyInitialTestMatchOneWithMultipleKeywords(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchOneWithMultipleKeywords(RenderStyle::initialTestMatchOneWithMultipleKeywords());
+    }
+    static void applyInheritTestMatchOneWithMultipleKeywords(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchOneWithMultipleKeywords(forwardInheritedValue(builderState.parentStyle().testMatchOneWithMultipleKeywords()));
+    }
+    static void applyValueTestMatchOneWithMultipleKeywords(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestMatchOneWithMultipleKeywords(fromCSSValueDeducingType(builderState, value));
+    }
+    static void applyInitialTestMatchOneWithReferenceWithSettingsFlag(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchOneWithReferenceWithSettingsFlag(RenderStyle::initialTestMatchOneWithReferenceWithSettingsFlag());
+    }
+    static void applyInheritTestMatchOneWithReferenceWithSettingsFlag(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchOneWithReferenceWithSettingsFlag(forwardInheritedValue(builderState.parentStyle().testMatchOneWithReferenceWithSettingsFlag()));
+    }
+    static void applyValueTestMatchOneWithReferenceWithSettingsFlag(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestMatchOneWithReferenceWithSettingsFlag(fromCSSValueDeducingType(builderState, value));
     }
     static void applyInitialTestNumericValueRange(BuilderState& builderState)
     {
@@ -1283,6 +1367,32 @@ void BuilderGenerated::applyProperty(CSSPropertyID id, BuilderState& builderStat
             break;
         }
         break;
+    case CSSPropertyID::CSSPropertyTestImage:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestImage(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestImage(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestImage(builderState, value);
+            break;
+        }
+        break;
+    case CSSPropertyID::CSSPropertyTestImageNoImageSet:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestImageNoImageSet(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestImageNoImageSet(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestImageNoImageSet(builderState, value);
+            break;
+        }
+        break;
     case CSSPropertyID::CSSPropertyTestKeyword:
         switch (valueType) {
         case ApplyValueType::Initial:
@@ -1465,6 +1575,19 @@ void BuilderGenerated::applyProperty(CSSPropertyID id, BuilderState& builderStat
             break;
         }
         break;
+    case CSSPropertyID::CSSPropertyTestMatchOne:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestMatchOne(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestMatchOne(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestMatchOne(builderState, value);
+            break;
+        }
+        break;
     case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrder:
         switch (valueType) {
         case ApplyValueType::Initial:
@@ -1514,6 +1637,58 @@ void BuilderGenerated::applyProperty(CSSPropertyID id, BuilderState& builderStat
             break;
         case ApplyValueType::Value:
             BuilderFunctions::applyValueTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt(builderState, value);
+            break;
+        }
+        break;
+    case CSSPropertyID::CSSPropertyTestMatchOneWithGroupWithSettingsFlag:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestMatchOneWithGroupWithSettingsFlag(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestMatchOneWithGroupWithSettingsFlag(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestMatchOneWithGroupWithSettingsFlag(builderState, value);
+            break;
+        }
+        break;
+    case CSSPropertyID::CSSPropertyTestMatchOneWithKeywordWithSettingsFlag:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestMatchOneWithKeywordWithSettingsFlag(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestMatchOneWithKeywordWithSettingsFlag(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestMatchOneWithKeywordWithSettingsFlag(builderState, value);
+            break;
+        }
+        break;
+    case CSSPropertyID::CSSPropertyTestMatchOneWithMultipleKeywords:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestMatchOneWithMultipleKeywords(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestMatchOneWithMultipleKeywords(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestMatchOneWithMultipleKeywords(builderState, value);
+            break;
+        }
+        break;
+    case CSSPropertyID::CSSPropertyTestMatchOneWithReferenceWithSettingsFlag:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestMatchOneWithReferenceWithSettingsFlag(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestMatchOneWithReferenceWithSettingsFlag(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestMatchOneWithReferenceWithSettingsFlag(builderState, value);
             break;
         }
         break;

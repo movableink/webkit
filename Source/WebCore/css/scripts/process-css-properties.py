@@ -1503,14 +1503,11 @@ class BuiltinSchema:
                             if not parameter.value:
                                 raise Exception(f"'{parameter}' passed to <{self.entry.name.name}> has no value associated with it. Supported values are {', '.join(quote_iterable(descriptor.mappings.keys()))}.")
 
-                            if len(parameter.value) != 1:
-                                raise Exception(f"'{parameter}' passed to <{self.entry.name.name}> has more than one value associated with it, but only one is allowed. Supported values are {', '.join(quote_iterable(descriptor.mappings.keys()))}.")
+                            for value in parameter.value:
+                                if value not in descriptor.mappings:
+                                    raise Exception(f"'{parameter}' passed to <{self.entry.name.name}> does not match any of the supported mappings. Supported mappings are {', '.join(quote_iterable(descriptor.mappings.keys()))}.")
 
-                            value = parameter.value[0]
-                            if value not in descriptor.mappings:
-                                raise Exception(f"'{parameter}' passed to <{self.entry.name.name}> does not match any of the supported mappings. Supported mappings are {', '.join(quote_iterable(descriptor.mappings.keys()))}.")
-
-                            self.parameter_map[descriptor.name] = descriptor.mappings[value]
+                            self.parameter_map[descriptor.name] = ', '.join(map(lambda x: descriptor.mappings[x], parameter.value))
                         else:
                             self.parameter_map[descriptor.name] = parameter.value
                     elif type(parameter) is ReferenceTerm.RangeParameter:
@@ -1535,7 +1532,7 @@ class BuiltinSchema:
                     if descriptor.name in self.parameter_map:
                         self.results[descriptor.name] = self.parameter_map[descriptor.name]
                     elif descriptor.mappings and descriptor.default:
-                        self.results[descriptor.name] = descriptor.mappings[descriptor.default]
+                        self.results[descriptor.name] = ', '.join(map(lambda x: descriptor.mappings[x], descriptor.default if isinstance(descriptor.default, list) else [descriptor.default]))
                     else:
                         self.results[descriptor.name] = None
 
@@ -1586,13 +1583,13 @@ class BuiltinSchema:
 #
 
 # BuiltinSchema.StringParameter Mappings
-MODE_MAPPINGS = {'svg': 'SVGAttributeMode', 'strict': 'HTMLStandardMode'}
 UNITLESS_MAPPINGS = {'allowed': 'UnitlessQuirk::Allow', 'forbidden': 'UnitlessQuirk::Forbid'}
 UNITLESS_ZERO_MAPPINGS = {'allowed': 'UnitlessZeroQuirk::Allow', 'forbidden': 'UnitlessZeroQuirk::Forbid'}
 ANCHOR_MAPPINGS = {'allowed': 'AnchorPolicy::Allow', 'forbidden': 'AnchorPolicy::Forbid'}
 ANCHOR_SIZE_MAPPINGS = {'allowed': 'AnchorSizePolicy::Allow', 'forbidden': 'AnchorSizePolicy::Forbid'}
 QUIRKY_COLORS_MAPPINGS = {'allowed': 'true', 'forbidden': 'false'}
-ALLOWED_COLOR_TYPES_MAPPINGS = {'all': 'CSS::ColorType::Absolute, CSS::ColorType::Current, CSS::ColorType::System', 'absolute': 'CSS::ColorType::Absolute' }
+ALLOWED_COLOR_TYPES_MAPPINGS = {'absolute': 'CSS::ColorType::Absolute', 'current': 'CSS::ColorType::Current', 'system': 'CSS::ColorType::System'}
+ALLOWED_IMAGE_TYPES_MAPPINGS = {'url': 'AllowedImageType::URLFunction', 'image-set': 'AllowedImageType::ImageSet', 'generated': 'AllowedImageType::GeneratedImage'}
 
 class ReferenceTerm:
     builtins = BuiltinSchema(
@@ -1602,7 +1599,6 @@ class ReferenceTerm:
             BuiltinSchema.StringParameter('unitless-zero', mappings=UNITLESS_ZERO_MAPPINGS, default='forbidden')),
         BuiltinSchema.Entry('length',
             BuiltinSchema.RangeParameter('value-range'),
-            BuiltinSchema.StringParameter('mode', mappings=MODE_MAPPINGS),
             BuiltinSchema.StringParameter('unitless', mappings=UNITLESS_MAPPINGS, default='forbidden'),
             BuiltinSchema.StringParameter('unitless-zero', mappings=UNITLESS_ZERO_MAPPINGS, default='allowed')),
         BuiltinSchema.Entry('length-percentage',
@@ -1627,7 +1623,9 @@ class ReferenceTerm:
             BuiltinSchema.StringParameter('unitless', mappings=UNITLESS_MAPPINGS, default='forbidden')),
         BuiltinSchema.Entry('color',
             BuiltinSchema.StringParameter('quirky-colors-in-quirks-mode', mappings=QUIRKY_COLORS_MAPPINGS, default='forbidden'),
-            BuiltinSchema.StringParameter('allowed-types', mappings=ALLOWED_COLOR_TYPES_MAPPINGS, default='all')),
+            BuiltinSchema.StringParameter('allowed-types', mappings=ALLOWED_COLOR_TYPES_MAPPINGS, default=['absolute', 'current', 'system'])),
+        BuiltinSchema.Entry('image',
+            BuiltinSchema.StringParameter('allowed-types', mappings=ALLOWED_IMAGE_TYPES_MAPPINGS, default=['url', 'image-set', 'generated'])),
         BuiltinSchema.Entry('string'),
         BuiltinSchema.Entry('custom-ident',
             BuiltinSchema.StringParameter('excluding')),
@@ -1685,6 +1683,8 @@ class ReferenceTerm:
 
         # Additional annotations defined on the reference.
         self.annotation = annotation
+
+        self.settings_flag = None
         self._process_annotation(annotation)
 
     def __str__(self):
@@ -1709,7 +1709,11 @@ class ReferenceTerm:
     def _process_annotation(self, annotation):
         if not annotation:
             return
-        raise Exception(f"Unknown reference annotation directive '{directive}'.")
+        for directive in annotation.directives:
+            if directive.name == 'settings-flag':
+                self.settings_flag = directive.value[0]
+            else:
+                raise Exception(f"Unknown reference annotation directive '{directive}'.")
 
     @staticmethod
     def from_node(node):
@@ -1953,6 +1957,7 @@ class MatchOneOrMoreAnyOrderTerm:
         self.type = "CSSValueList"
         self.preserve_order = False
         self.single_value_optimization = True
+        self.settings_flag = None
         self._process_annotation(annotation)
 
     def __str__(self):
@@ -1981,6 +1986,8 @@ class MatchOneOrMoreAnyOrderTerm:
                 self.preserve_order = True
             elif directive.name == 'no-single-item-opt':
                 self.single_value_optimization = False
+            elif directive.name == 'settings-flag':
+                self.settings_flag = directive.value[0]
             else:
                 raise Exception(f"Unknown grouping annotation directive '{directive}'.")
 
@@ -2030,6 +2037,7 @@ class MatchAllOrderedTerm:
 
         self.type = "CSSValueList"
         self.single_value_optimization = True
+        self.settings_flag = None
         self._process_annotation(annotation)
 
     def __str__(self):
@@ -2056,6 +2064,8 @@ class MatchAllOrderedTerm:
                 self.type = directive.value[0]
             elif directive.name == 'no-single-item-opt':
                 self.single_value_optimization = False
+            elif directive.name == 'settings-flag':
+                self.settings_flag = directive.value[0]
             else:
                 raise Exception(f"Unknown grouping annotation directive '{directive}'.")
 
@@ -2106,6 +2116,7 @@ class MatchAllAnyOrderTerm:
         self.type = "CSSValueList"
         self.preserve_order = False
         self.single_value_optimization = True
+        self.settings_flag = None
         self._process_annotation(annotation)
 
     def __str__(self):
@@ -2134,6 +2145,8 @@ class MatchAllAnyOrderTerm:
                 self.preserve_order = True
             elif directive.name == 'no-single-item-opt':
                 self.single_value_optimization = False
+            elif directive.name == 'settings-flag':
+                self.settings_flag = directive.value[0]
             else:
                 raise Exception(f"Unknown grouping annotation directive '{directive}'.")
 
@@ -2236,6 +2249,7 @@ class UnboundedRepetitionTerm:
 
         self.type = "CSSValueList"
         self.single_value_optimization = True
+        self.settings_flag = None
         self._process_annotation(annotation)
 
     def __str__(self):
@@ -2274,6 +2288,8 @@ class UnboundedRepetitionTerm:
                 self.type = directive.value[0]
             elif directive.name == 'no-single-item-opt':
                 self.single_value_optimization = False
+            elif directive.name == 'settings-flag':
+                self.settings_flag = directive.value[0]
             else:
                 raise Exception(f"Unknown multiplier annotation directive '{directive}'.")
 
@@ -2319,6 +2335,7 @@ class BoundedRepetitionTerm:
         self.type = "CSSValueList"
         self.single_value_optimization = True
         self.default = None
+        self.settings_flag = None
         self._process_annotation(annotation)
 
     def __str__(self):
@@ -2355,6 +2372,8 @@ class BoundedRepetitionTerm:
                 self.single_value_optimization = False
             elif directive.name == 'default':
                 self.default = directive.value[0]
+            elif directive.name == 'settings-flag':
+                self.settings_flag = directive.value[0]
             else:
                 raise Exception(f"Unknown bounded repetition term annotation directive '{directive}'.")
 
@@ -2387,20 +2406,39 @@ class BoundedRepetitionTerm:
 #   e.g. "rect(<length>#{4})" or "ray()"
 #
 class FunctionTerm:
-    def __init__(self, name, parameter_group_term):
+    def __init__(self, name, parameter_group_term, *, annotation):
         self.name = name
         self.parameter_group_term = parameter_group_term
+        self.annotation = annotation
+
+        self.settings_flag = None
+        self._process_annotation(annotation)
 
     def __str__(self):
-        return str(self.name) + '(' + str(self.parameter_group_term) + ')'
+        return str(self.name) + '(' + str(self.parameter_group_term) + ')' + self.stringified_annotation
 
     def __repr__(self):
         return self.__str__()
 
+    @property
+    def stringified_annotation(self):
+        if not self.annotation:
+            return ''
+        return str(self.annotation)
+
+    def _process_annotation(self, annotation):
+        if not annotation:
+            return
+        for directive in annotation.directives:
+            if directive.name == 'settings-flag':
+                self.settings_flag = directive.value[0]
+            else:
+                raise Exception(f"Unknown function term annotation directive '{directive}'.")
+
     @staticmethod
     def from_node(node):
         assert(type(node) is BNFFunctionNode)
-        return FunctionTerm(ValueKeywordName(node.name), Term.from_node(node.parameter_group))
+        return FunctionTerm(ValueKeywordName(node.name), Term.from_node(node.parameter_group), annotation=node.annotation)
 
     def perform_fixups(self, all_rules):
         self.parameter_group_term = self.parameter_group_term.perform_fixups(all_rules)
@@ -5100,6 +5138,11 @@ class TermGeneratorFunctionTerm(TermGenerator):
 
         to.write(f"auto consume{self.term.name.id_without_prefix}Function = []({', '.join(lambda_declaration_paramaters)}) -> RefPtr<CSSValue> {{")
         with to.indent():
+            if self.term.settings_flag:
+                to.write(f"if (!context.{self.term.settings_flag})")
+                with to.indent():
+                    to.write(f"return nullptr;")
+
             inner_lambda_declaration_paramaters = ["CSSParserTokenRange& args"]
             inner_lambda_declaration_calling_parameters = ["args"]
             if self.parameter_group_generator.requires_context:
@@ -5228,6 +5271,11 @@ class TermGeneratorUnboundedRepetitionTerm(TermGenerator):
 
         to.write(f"auto consumeUnboundedRepetition = []({', '.join(lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
         with to.indent():
+            if self.term.settings_flag:
+                to.write(f"if (!context.{self.term.settings_flag})")
+                with to.indent():
+                    to.write(f"return nullptr;")
+
             self._generate_consume_repeated_term_lambda(to=to)
 
             parameters = ["range", "consumeRepeatedTerm"]
@@ -5316,6 +5364,11 @@ class TermGeneratorBoundedRepetitionTerm(TermGenerator):
 
         to.write(f"auto consumeBoundedRepetition = []({', '.join(lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
         with to.indent():
+            if self.term.settings_flag:
+                to.write(f"if (!context.{self.term.settings_flag})")
+                with to.indent():
+                    to.write(f"return nullptr;")
+
             self._generate_consume_repeated_term_lambda(to=to)
 
             if self.term.type != 'CSSValueList':
@@ -5472,7 +5525,6 @@ class TermGeneratorMatchOneTerm(TermGenerator):
         return term_generators
 
     def generate_conditional(self, *, to, range_string, context_string):
-        # For any remaining generators, call the consume function and return the result if non-null.
         for term_generator in self.term_generators:
             term_generator.generate_conditional(to=to, range_string=range_string, context_string=context_string)
 
@@ -5542,6 +5594,11 @@ class TermGeneratorMatchAllOrderedTerm(TermGenerator):
 
         to.write(f"auto consumeMatchAllOrdered = []({', '.join(lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
         with to.indent():
+            if self.term.settings_flag:
+                to.write(f"if (!context.{self.term.settings_flag})")
+                with to.indent():
+                    to.write(f"return nullptr;")
+
             self._generate_consume_subterm_lambdas(to=to)
 
             if self.term.type == 'CSSValueList':
@@ -5735,6 +5792,11 @@ class TermGeneratorMatchAllAnyOrderTerm(TermGenerator):
 
         to.write(f"auto consumeMatchAllAnyOrder = []({', '.join(lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
         with to.indent():
+            if self.term.settings_flag:
+                to.write(f"if (!context.{self.term.settings_flag})")
+                with to.indent():
+                    to.write(f"return nullptr;")
+
             self._generate_consume_subterm_lambdas(to=to)
 
             if self.term.type == 'CSSValueList':
@@ -5919,6 +5981,11 @@ class TermGeneratorMatchOneOrMoreAnyOrderTerm(TermGenerator):
 
         to.write(f"auto consumeMatchOneOrMoreAnyOrder = []({', '.join(lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
         with to.indent():
+            if self.term.settings_flag:
+                to.write(f"if (!context.{self.term.settings_flag})")
+                with to.indent():
+                    to.write(f"return nullptr;")
+
             self._generate_consume_subterm_lambdas(to=to)
 
             if not self.term.preserve_order:
@@ -5991,15 +6058,24 @@ class TermGeneratorReferenceTerm(TermGenerator):
 
     def generate_conditional(self, *, to, range_string, context_string):
         to.write(f"// {str(self)}")
+        if self.term.settings_flag is not None:
+            self._generate_lambda(to=to)
         to.write(f"if (auto result = {self.generate_call_string(range_string=range_string, context_string=context_string)})")
         with to.indent():
             to.write(f"return result;")
 
     def generate_unconditional(self, *, to, range_string, context_string):
         to.write(f"// {str(self)}")
+        if self.term.settings_flag is not None:
+            self._generate_lambda(to=to)
         to.write(f"return {self.generate_call_string(range_string=range_string, context_string=context_string)};")
 
     def generate_call_string(self, *, range_string, context_string):
+        if self.term.settings_flag is not None:
+            return f"consume{self.term.name.id_without_prefix}Reference({range_string}, {context_string})"
+        return self._generate_call_reference_string(range_string=range_string, context_string=context_string)
+
+    def _generate_call_reference_string(self, *, range_string, context_string):
         if self.term.override_function:
             return f"{self.term.override_function}({range_string}, {context_string})"
         elif self.term.is_builtin:
@@ -6009,8 +6085,6 @@ class TermGeneratorReferenceTerm(TermGenerator):
             elif isinstance(builtin, BuiltinTimeConsumer):
                 return f"CSSPrimitiveValueResolver<CSS::Time<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {context_string}.mode }})"
             elif isinstance(builtin, BuiltinLengthConsumer):
-                if builtin.mode:
-                    return f"CSSPrimitiveValueResolver<CSS::Length<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {builtin.mode}, .unitless = {builtin.unitless}, .unitlessZero = {builtin.unitless_zero} }})"
                 return f"CSSPrimitiveValueResolver<CSS::Length<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {context_string}.mode, .unitless = {builtin.unitless}, .unitlessZero = {builtin.unitless_zero} }})"
             elif isinstance(builtin, BuiltinLengthPercentageConsumer):
                 return f"CSSPrimitiveValueResolver<CSS::LengthPercentage<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {context_string}.mode, .anchorPolicy = {builtin.anchor}, .anchorSizePolicy = {builtin.anchor_size}, .unitless = {builtin.unitless}, .unitlessZero = {builtin.unitless_zero} }})"
@@ -6026,6 +6100,8 @@ class TermGeneratorReferenceTerm(TermGenerator):
                 return f"consumePosition({range_string}, {context_string}, {builtin.unitless}, PositionSyntax::Position)"
             elif isinstance(builtin, BuiltinColorConsumer):
                 return f"consumeColor({range_string}, {context_string}, {{ .acceptQuirkyColorsInQuirksMode = {builtin.quirky_colors_in_quirks_mode}, .allowedColorTypes = {{ {builtin.allowed_types} }} }})"
+            elif isinstance(builtin, BuiltinImageConsumer):
+                return f"consumeImage({range_string}, {context_string}, {{ {builtin.allowed_types} }})"
             elif isinstance(builtin, BuiltinCustomIdentConsumer):
                 if builtin.excluding:
                     return f"consumeCustomIdentExcluding({range_string}, {{ { ', '.join(ValueKeywordName(id).id for id in builtin.excluding)} }})"
@@ -6036,6 +6112,18 @@ class TermGeneratorReferenceTerm(TermGenerator):
                 return f"consume{self.term.name.id_without_prefix}({range_string})"
         else:
             return f"consume{self.term.name.id_without_prefix}({range_string}, {context_string})"
+
+    def _generate_lambda(self, *, to):
+        lambda_declaration_parameters = ["CSSParserTokenRange& range, const CSSParserContext& context"]
+
+        to.write(f"auto consume{self.term.name.id_without_prefix}Reference = []({', '.join(lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
+        with to.indent():
+            if self.term.settings_flag:
+                to.write(f"if (!context.{self.term.settings_flag})")
+                with to.indent():
+                    to.write(f"return nullptr;")
+            to.write(f"return {self._generate_call_reference_string(range_string='range', context_string='context')};")
+        to.write(f"}};")
 
     @property
     def requires_context(self):
@@ -6062,6 +6150,8 @@ class TermGeneratorReferenceTerm(TermGenerator):
             elif isinstance(builtin, BuiltinPositionConsumer):
                 return True
             elif isinstance(builtin, BuiltinColorConsumer):
+                return True
+            elif isinstance(builtin, BuiltinImageConsumer):
                 return True
             elif isinstance(builtin, BuiltinResolutionConsumer):
                 return True
@@ -6944,12 +7034,13 @@ class BNFNodeMultiplier:
                 BNFNodeMultiplier.Kind.SPACE_SEPARATED_BETWEEN,
                 BNFNodeMultiplier.Kind.COMMA_SEPARATED_BETWEEN,
             },
+            'settings-flag' : '*',
         }
 
         for directive in annotation.directives:
             if directive.name not in SUPPORTED_DIRECTIVES:
                 raise Exception(f"Unknown annotation directive '{directive}' for multiplier '{self}'.")
-            if self.kind not in SUPPORTED_DIRECTIVES[directive.name]:
+            if SUPPORTED_DIRECTIVES[directive.name] != '*' and self.kind not in SUPPORTED_DIRECTIVES[directive.name]:
                 raise Exception(f"Unsupported annotation directive '{directive}' for multiplier '{self}'.")
 
         self.annotation = annotation
@@ -7010,12 +7101,13 @@ class BNFGroupingNode:
                 BNFGroupingNode.Kind.MATCH_ALL_ANY_ORDER,
                 BNFGroupingNode.Kind.MATCH_ONE_OR_MORE_ANY_ORDER,
             },
+            'settings-flag' : '*',
         }
 
         for directive in annotation.directives:
             if directive.name not in SUPPORTED_DIRECTIVES:
                 raise Exception(f"Unknown annotation directive '{directive}' for grouping '{self}'.")
-            if self.kind not in SUPPORTED_DIRECTIVES[directive.name]:
+            if SUPPORTED_DIRECTIVES[directive.name] != '*' and self.kind not in SUPPORTED_DIRECTIVES[directive.name]:
                 raise Exception(f"Unsupported annotation directive '{directive}' for grouping '{self}'.")
 
         self.annotation = annotation
@@ -7051,7 +7143,9 @@ class BNFFunctionNode:
         if self.annotation:
             raise Exception("Invalid to add an annotation to a function node that already has an annotation.")
 
-        SUPPORTED_DIRECTIVES = {}
+        SUPPORTED_DIRECTIVES = {
+            'settings-flag'
+        }
 
         for directive in annotation.directives:
             if directive.name not in SUPPORTED_DIRECTIVES:
@@ -7115,7 +7209,9 @@ class BNFReferenceNode:
         if self.annotation:
             raise Exception("Invalid to add an annotation to a reference node that already has an annotation.")
 
-        SUPPORTED_DIRECTIVES = {}
+        SUPPORTED_DIRECTIVES = {
+            'settings-flag'
+        }
 
         for directive in annotation.directives:
             if directive.name not in SUPPORTED_DIRECTIVES:

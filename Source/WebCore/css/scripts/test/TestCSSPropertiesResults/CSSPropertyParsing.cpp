@@ -92,6 +92,55 @@ static bool isKeywordValidForTestKeywordWithAliasedTo(CSSValueID keyword)
     }
 }
 
+static bool isKeywordValidForTestMatchOneWithGroupWithSettingsFlag(CSSValueID keyword)
+{
+    switch (keyword) {
+    case CSSValueID::CSSValueBar:
+    case CSSValueID::CSSValueBaz:
+    case CSSValueID::CSSValueFoo:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool isKeywordValidForTestMatchOneWithKeywordWithSettingsFlag(CSSValueID keyword, const CSSParserContext& context)
+{
+    switch (keyword) {
+    case CSSValueID::CSSValueBar:
+    case CSSValueID::CSSValueBaz:
+        return true;
+    case CSSValueID::CSSValueFoo:
+        return context.cssSettingsFooDisabled;
+    default:
+        return false;
+    }
+}
+
+static bool isKeywordValidForTestMatchOneWithMultipleKeywords(CSSValueID keyword)
+{
+    switch (keyword) {
+    case CSSValueID::CSSValueBar:
+    case CSSValueID::CSSValueBaz:
+    case CSSValueID::CSSValueFoo:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool isKeywordValidForTestMatchOneWithReferenceWithSettingsFlag(CSSValueID keyword)
+{
+    switch (keyword) {
+    case CSSValueID::CSSValueBar:
+    case CSSValueID::CSSValueBaz:
+    case CSSValueID::CSSValueFoo:
+        return true;
+    default:
+        return false;
+    }
+}
+
 static bool isKeywordValidForTestUsingSharedRule(CSSValueID keyword)
 {
     switch (keyword) {
@@ -1472,6 +1521,18 @@ static RefPtr<CSSValue> consumeTestMatchAllOrderedWithOptionalSingleItemOpt(CSSP
     return consumeMatchAllOrdered(range, context);
 }
 
+static RefPtr<CSSValue> consumeTestMatchOne(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // <number>
+    if (auto result = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode }))
+        return result;
+    // <custom-ident>
+    if (auto result = consumeCustomIdent(range))
+        return result;
+    // <length>
+    return CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitless = UnitlessQuirk::Forbid, .unitlessZero = UnitlessZeroQuirk::Allow });
+}
+
 static RefPtr<CSSValue> consumeTestMatchOneOrMoreAnyOrder(CSSParserTokenRange& range, const CSSParserContext& context)
 {
     // [ <number> || <custom-ident> || <length> ]
@@ -1710,6 +1771,197 @@ static RefPtr<CSSValue> consumeTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSing
         return CSSValueList::createSpaceSeparated(WTFMove(list));
     };
     return consumeMatchOneOrMoreAnyOrder(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestMatchOneWithGroupWithSettingsFlag(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // bar | baz | foo
+    if (auto result = consumeIdent(range, isKeywordValidForTestMatchOneWithGroupWithSettingsFlag))
+        return result;
+    // <number>
+    if (auto result = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode }))
+        return result;
+    // [ <custom-ident> && <dashed-ident> ]@(settings-flag=cssSettingsGroupDisabled)
+    auto consumeMatchAllAnyOrder = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+        if (!context.cssSettingsGroupDisabled)
+            return nullptr;
+        RefPtr<CSSValue> value0; // <custom-ident>
+        auto tryConsumeTerm0 = [&value0](CSSParserTokenRange& range) -> bool {
+            auto consumeTerm0 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+                // <custom-ident>
+                return consumeCustomIdent(range);
+            };
+            if (value0)
+                return false;
+            value0 = consumeTerm0(range);
+            return !!value0;
+        };
+        RefPtr<CSSValue> value1; // <dashed-ident>
+        auto tryConsumeTerm1 = [&value1](CSSParserTokenRange& range) -> bool {
+            auto consumeTerm1 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+                // <dashed-ident>
+                return consumeDashedIdent(range);
+            };
+            if (value1)
+                return false;
+            value1 = consumeTerm1(range);
+            return !!value1;
+        };
+        for (size_t i = 0; i < 2 && !range.atEnd(); ++i) {
+            if (tryConsumeTerm0(range) || tryConsumeTerm1(range))
+                continue;
+            break;
+        }
+        if (!value0) // <custom-ident>
+            return { };
+        if (!value1) // <dashed-ident>
+            return { };
+        return CSSValueList::createSpaceSeparated(value0.releaseNonNull(), value1.releaseNonNull());
+    };
+    return consumeMatchAllAnyOrder(range);
+}
+
+static RefPtr<CSSValue> consumeTestMatchOneWithKeywordWithSettingsFlag(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // bar | baz | foo@(settings-flag=cssSettingsFooDisabled)
+    if (auto result = consumeIdent(range, isKeywordValidForTestMatchOneWithKeywordWithSettingsFlag, context))
+        return result;
+    // <number>
+    if (auto result = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode }))
+        return result;
+    // [ <custom-ident> && <dashed-ident> ]
+    auto consumeMatchAllAnyOrder = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+        RefPtr<CSSValue> value0; // <custom-ident>
+        auto tryConsumeTerm0 = [&value0](CSSParserTokenRange& range) -> bool {
+            auto consumeTerm0 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+                // <custom-ident>
+                return consumeCustomIdent(range);
+            };
+            if (value0)
+                return false;
+            value0 = consumeTerm0(range);
+            return !!value0;
+        };
+        RefPtr<CSSValue> value1; // <dashed-ident>
+        auto tryConsumeTerm1 = [&value1](CSSParserTokenRange& range) -> bool {
+            auto consumeTerm1 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+                // <dashed-ident>
+                return consumeDashedIdent(range);
+            };
+            if (value1)
+                return false;
+            value1 = consumeTerm1(range);
+            return !!value1;
+        };
+        for (size_t i = 0; i < 2 && !range.atEnd(); ++i) {
+            if (tryConsumeTerm0(range) || tryConsumeTerm1(range))
+                continue;
+            break;
+        }
+        if (!value0) // <custom-ident>
+            return { };
+        if (!value1) // <dashed-ident>
+            return { };
+        return CSSValueList::createSpaceSeparated(value0.releaseNonNull(), value1.releaseNonNull());
+    };
+    return consumeMatchAllAnyOrder(range);
+}
+
+static RefPtr<CSSValue> consumeTestMatchOneWithMultipleKeywords(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // bar | baz | foo
+    if (auto result = consumeIdent(range, isKeywordValidForTestMatchOneWithMultipleKeywords))
+        return result;
+    // <number>
+    if (auto result = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode }))
+        return result;
+    // [ <custom-ident> && <dashed-ident> ]
+    auto consumeMatchAllAnyOrder = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+        RefPtr<CSSValue> value0; // <custom-ident>
+        auto tryConsumeTerm0 = [&value0](CSSParserTokenRange& range) -> bool {
+            auto consumeTerm0 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+                // <custom-ident>
+                return consumeCustomIdent(range);
+            };
+            if (value0)
+                return false;
+            value0 = consumeTerm0(range);
+            return !!value0;
+        };
+        RefPtr<CSSValue> value1; // <dashed-ident>
+        auto tryConsumeTerm1 = [&value1](CSSParserTokenRange& range) -> bool {
+            auto consumeTerm1 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+                // <dashed-ident>
+                return consumeDashedIdent(range);
+            };
+            if (value1)
+                return false;
+            value1 = consumeTerm1(range);
+            return !!value1;
+        };
+        for (size_t i = 0; i < 2 && !range.atEnd(); ++i) {
+            if (tryConsumeTerm0(range) || tryConsumeTerm1(range))
+                continue;
+            break;
+        }
+        if (!value0) // <custom-ident>
+            return { };
+        if (!value1) // <dashed-ident>
+            return { };
+        return CSSValueList::createSpaceSeparated(value0.releaseNonNull(), value1.releaseNonNull());
+    };
+    return consumeMatchAllAnyOrder(range);
+}
+
+static RefPtr<CSSValue> consumeTestMatchOneWithReferenceWithSettingsFlag(CSSParserTokenRange& range, const CSSParserContext& context)
+{
+    // bar | baz | foo
+    if (auto result = consumeIdent(range, isKeywordValidForTestMatchOneWithReferenceWithSettingsFlag))
+        return result;
+    // <number>@(settings-flag=cssSettingsReferenceDisabled)
+    auto consumeNumberReference = [](CSSParserTokenRange& range, const CSSParserContext& context) -> RefPtr<CSSValue> {
+        if (!context.cssSettingsReferenceDisabled)
+            return nullptr;
+        return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+    };
+    if (auto result = consumeNumberReference(range, context))
+        return result;
+    // [ <custom-ident> && <dashed-ident> ]
+    auto consumeMatchAllAnyOrder = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+        RefPtr<CSSValue> value0; // <custom-ident>
+        auto tryConsumeTerm0 = [&value0](CSSParserTokenRange& range) -> bool {
+            auto consumeTerm0 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+                // <custom-ident>
+                return consumeCustomIdent(range);
+            };
+            if (value0)
+                return false;
+            value0 = consumeTerm0(range);
+            return !!value0;
+        };
+        RefPtr<CSSValue> value1; // <dashed-ident>
+        auto tryConsumeTerm1 = [&value1](CSSParserTokenRange& range) -> bool {
+            auto consumeTerm1 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+                // <dashed-ident>
+                return consumeDashedIdent(range);
+            };
+            if (value1)
+                return false;
+            value1 = consumeTerm1(range);
+            return !!value1;
+        };
+        for (size_t i = 0; i < 2 && !range.atEnd(); ++i) {
+            if (tryConsumeTerm0(range) || tryConsumeTerm1(range))
+                continue;
+            break;
+        }
+        if (!value0) // <custom-ident>
+            return { };
+        if (!value1) // <dashed-ident>
+            return { };
+        return CSSValueList::createSpaceSeparated(value0.releaseNonNull(), value1.releaseNonNull());
+    };
+    return consumeMatchAllAnyOrder(range);
 }
 
 static RefPtr<CSSValue> consumeTestNumericValueRange(CSSParserTokenRange& range, const CSSParserContext& context)
@@ -1951,6 +2203,10 @@ RefPtr<CSSValue> CSSPropertyParsing::parseStyleProperty(CSSParserTokenRange& ran
         return consumeTestFunctionUnboundedParametersNoMin(range, context);
     case CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersWithMinimum:
         return consumeTestFunctionUnboundedParametersWithMinimum(range, context);
+    case CSSPropertyID::CSSPropertyTestImage:
+        return consumeImage(range, context, { AllowedImageType::URLFunction, AllowedImageType::ImageSet, AllowedImageType::GeneratedImage });
+    case CSSPropertyID::CSSPropertyTestImageNoImageSet:
+        return consumeImage(range, context, { AllowedImageType::URLFunction, AllowedImageType::GeneratedImage });
     case CSSPropertyID::CSSPropertyTestKeyword:
         return consumeIdent(range, isKeywordValidForTestKeyword);
     case CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo:
@@ -1979,6 +2235,8 @@ RefPtr<CSSValue> CSSPropertyParsing::parseStyleProperty(CSSParserTokenRange& ran
         return consumeTestMatchAllOrderedWithOptionalNoSingleItemOpt(range, context);
     case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalSingleItemOpt:
         return consumeTestMatchAllOrderedWithOptionalSingleItemOpt(range, context);
+    case CSSPropertyID::CSSPropertyTestMatchOne:
+        return consumeTestMatchOne(range, context);
     case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrder:
         return consumeTestMatchOneOrMoreAnyOrder(range, context);
     case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderNoSingleItemOpt:
@@ -1987,6 +2245,14 @@ RefPtr<CSSValue> CSSPropertyParsing::parseStyleProperty(CSSParserTokenRange& ran
         return consumeTestMatchOneOrMoreAnyOrderWithPreserveOrder(range, context);
     case CSSPropertyID::CSSPropertyTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt:
         return consumeTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSingleItemOpt(range, context);
+    case CSSPropertyID::CSSPropertyTestMatchOneWithGroupWithSettingsFlag:
+        return consumeTestMatchOneWithGroupWithSettingsFlag(range, context);
+    case CSSPropertyID::CSSPropertyTestMatchOneWithKeywordWithSettingsFlag:
+        return consumeTestMatchOneWithKeywordWithSettingsFlag(range, context);
+    case CSSPropertyID::CSSPropertyTestMatchOneWithMultipleKeywords:
+        return consumeTestMatchOneWithMultipleKeywords(range, context);
+    case CSSPropertyID::CSSPropertyTestMatchOneWithReferenceWithSettingsFlag:
+        return consumeTestMatchOneWithReferenceWithSettingsFlag(range, context);
     case CSSPropertyID::CSSPropertyTestNumericValueRange:
         return consumeTestNumericValueRange(range, context);
     case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMin:
@@ -2016,13 +2282,21 @@ RefPtr<CSSValue> CSSPropertyParsing::parseStyleProperty(CSSParserTokenRange& ran
     }
 }
 
-bool CSSPropertyParsing::isKeywordValidForStyleProperty(CSSPropertyID id, CSSValueID keyword, const CSSParserContext&)
+bool CSSPropertyParsing::isKeywordValidForStyleProperty(CSSPropertyID id, CSSValueID keyword, const CSSParserContext& context)
 {
     switch (id) {
     case CSSPropertyID::CSSPropertyTestKeyword:
         return isKeywordValidForTestKeyword(keyword);
     case CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo:
         return isKeywordValidForTestKeywordWithAliasedTo(keyword);
+    case CSSPropertyID::CSSPropertyTestMatchOneWithGroupWithSettingsFlag:
+        return isKeywordValidForTestMatchOneWithGroupWithSettingsFlag(keyword);
+    case CSSPropertyID::CSSPropertyTestMatchOneWithKeywordWithSettingsFlag:
+        return isKeywordValidForTestMatchOneWithKeywordWithSettingsFlag(keyword, context);
+    case CSSPropertyID::CSSPropertyTestMatchOneWithMultipleKeywords:
+        return isKeywordValidForTestMatchOneWithMultipleKeywords(keyword);
+    case CSSPropertyID::CSSPropertyTestMatchOneWithReferenceWithSettingsFlag:
+        return isKeywordValidForTestMatchOneWithReferenceWithSettingsFlag(keyword);
     case CSSPropertyID::CSSPropertyTestUsingSharedRule:
         return isKeywordValidForTestUsingSharedRule(keyword);
     case CSSPropertyID::CSSPropertyTestUsingSharedRuleExported:
@@ -2039,6 +2313,10 @@ bool CSSPropertyParsing::isKeywordFastPathEligibleStyleProperty(CSSPropertyID id
     switch (id) {
     case CSSPropertyID::CSSPropertyTestKeyword:
     case CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo:
+    case CSSPropertyID::CSSPropertyTestMatchOneWithGroupWithSettingsFlag:
+    case CSSPropertyID::CSSPropertyTestMatchOneWithKeywordWithSettingsFlag:
+    case CSSPropertyID::CSSPropertyTestMatchOneWithMultipleKeywords:
+    case CSSPropertyID::CSSPropertyTestMatchOneWithReferenceWithSettingsFlag:
     case CSSPropertyID::CSSPropertyTestUsingSharedRule:
     case CSSPropertyID::CSSPropertyTestUsingSharedRuleExported:
     case CSSPropertyID::CSSPropertyTestUsingSharedRuleWithOverrideFunction:
