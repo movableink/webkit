@@ -367,7 +367,8 @@ wasm/WasmLLIntPlan.h
 wasm/WasmNameSectionParser.h
 wasm/WasmOMGIRGenerator.cpp
 wasm/WasmParser.h
-wasm/WasmStreamingCompiler.hwasm/WasmStreamingParser.h
+wasm/WasmStreamingCompiler.h
+wasm/WasmStreamingParser.h
 wasm/WasmTable.h
 wasm/WasmTypeDefinition.h
 wasm/WasmWorklist.cpp
