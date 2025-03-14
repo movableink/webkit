@@ -788,8 +788,6 @@ html/parser/HTMLTreeBuilder.cpp
 html/shadow/DateTimeEditElement.cpp
 html/shadow/DateTimeFieldElement.cpp
 html/shadow/MediaControlTextTrackContainerElement.cpp
-html/shadow/SpinButtonElement.cpp
-html/shadow/SpinButtonElement.h
 html/shadow/TextControlInnerElements.cpp
 html/track/AudioTrack.cpp
 html/track/DataCue.cpp

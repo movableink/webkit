@@ -266,6 +266,7 @@ public:
 
     // If this node is in a shadow tree, returns its shadow host. Otherwise, returns null.
     WEBCORE_EXPORT Element* shadowHost() const;
+    RefPtr<Element> protectedShadowHost() const;
     ShadowRoot* containingShadowRoot() const;
     RefPtr<ShadowRoot> protectedContainingShadowRoot() const;
     inline ShadowRoot* shadowRoot() const; // Defined in ElementRareData.h
