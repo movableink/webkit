@@ -12,7 +12,7 @@ struct __ArgumentBufferT_0 {
 [[fragment]] vec<float, 4> function1(constant __ArgumentBufferT_0& __ArgumentBuffer_0 [[buffer(0)]])
 {
     texture1d<float, access::sample> global0 = __ArgumentBuffer_0.global0;
-    (void)(global0.get_width(1));
+    (void)(global0.get_width(min(global0.get_num_mip_levels(), 1)));
     return vec<float, 4>(0., 0., 0., 0.);
 }
 
