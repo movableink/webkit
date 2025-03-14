@@ -101,7 +101,7 @@ public:
                     break;
                 }
                 case ConstantStoragePointer: {
-                    auto result = storagePointerValues.add(node->constant(), node);
+                    auto result = storagePointerValues.add(node->storagePointer(), node);
                     if (result.isNewEntry)
                         node->origin = m_graph.block(0)->at(0)->origin;
                     else {
