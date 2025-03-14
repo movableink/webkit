@@ -196,7 +196,7 @@ private:
         }
 
         bool success;
-        FileSystem::MappedFileData mappedFileData(m_fileHandle.platformHandle(), FileSystem::MappedFileMode::Private, success);
+        FileSystem::MappedFileData mappedFileData(m_fileHandle, FileSystem::MappedFileMode::Private, success);
         if (!success) {
             error = BytecodeCacheError::StandardError(errno);
             return nullptr;

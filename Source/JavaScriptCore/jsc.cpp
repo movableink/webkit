@@ -1380,7 +1380,7 @@ private:
             return;
 
         bool success;
-        FileSystem::MappedFileData mappedFileData(handle.platformHandle(), FileSystem::MappedFileMode::Private, success);
+        FileSystem::MappedFileData mappedFileData(handle, FileSystem::MappedFileMode::Private, success);
 
         if (!success)
             return;

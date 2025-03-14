@@ -166,7 +166,7 @@ static bool validateBytecodeCachePath(NSURL* cachePath, NSError** error)
         return;
 
     bool success;
-    FileSystem::MappedFileData mappedFile(handle.platformHandle(), FileSystem::MappedFileMode::Private, success);
+    FileSystem::MappedFileData mappedFile(handle, FileSystem::MappedFileMode::Private, success);
     if (!success)
         return;
 

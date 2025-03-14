@@ -305,19 +305,19 @@ void setMetadataURL(const String&, const String&, const String&)
 MappedFileData::MappedFileData(const String& filePath, MappedFileMode mapMode, bool& success)
 {
     auto handle = openFile(filePath, FileSystem::FileOpenMode::Read);
-    success = mapFileHandle(handle.platformHandle(), FileSystem::FileOpenMode::Read, mapMode);
+    success = mapFileHandle(handle, FileSystem::FileOpenMode::Read, mapMode);
 }
 
 #if HAVE(MMAP)
 
 MappedFileData::~MappedFileData() = default;
 
-bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openMode, MappedFileMode mapMode)
+bool MappedFileData::mapFileHandle(FileHandle& handle, FileOpenMode openMode, MappedFileMode mapMode)
 {
-    if (!isHandleValid(handle))
+    if (!handle)
         return false;
 
-    int fd = posixFileDescriptor(handle);
+    int fd = posixFileDescriptor(handle.platformHandle());
 
     struct stat fileStat;
     if (fstat(fd, &fileStat))
@@ -416,7 +416,7 @@ MappedFileData createMappedFileData(const String& path, size_t bytesSize, FileHa
         return { };
 
     bool success;
-    FileSystem::MappedFileData mappedFile(handle.platformHandle(), FileSystem::FileOpenMode::ReadWrite, FileSystem::MappedFileMode::Shared, success);
+    FileSystem::MappedFileData mappedFile(handle, FileSystem::FileOpenMode::ReadWrite, FileSystem::MappedFileMode::Shared, success);
     if (!success)
         return { };
 

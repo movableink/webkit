@@ -41,12 +41,13 @@ FileHandle::FileHandle(FileHandle&& other)
 
 FileHandle::~FileHandle()
 {
-    closeIfNecessary();
+    close();
 }
 
 FileHandle& FileHandle::operator=(FileHandle&& other)
 {
-    closeIfNecessary();
+    close();
+
     m_handle = std::exchange(other.m_handle, std::nullopt);
 #if USE(FILE_LOCK)
     m_isLocked = std::exchange(other.m_isLocked, false);
@@ -78,81 +79,6 @@ std::optional<Vector<uint8_t>> FileHandle::readAll()
         return std::nullopt;
 
     return buffer;
-}
-
-int FileHandle::read(std::span<uint8_t> data)
-{
-    if (!isValid())
-        return -1;
-    return readFromFile(platformHandle(), data);
-}
-
-int FileHandle::write(std::span<const uint8_t> data)
-{
-    if (!isValid())
-        return -1;
-    return writeToFile(platformHandle(), data);
-}
-
-void FileHandle::lock(OptionSet<FileLockMode> lockMode)
-{
-#if USE(FILE_LOCK)
-    RELEASE_ASSERT(!m_isLocked);
-    m_isLocked = FileSystemImpl::lockFile(platformHandle(), lockMode);
-    ASSERT(m_isLocked);
-#else
-    UNUSED_PARAM(lockMode);
-#endif
-}
-
-bool FileHandle::truncate(long long offset)
-{
-    if (!isValid())
-        return false;
-    return truncateFile(platformHandle(), offset);
-}
-
-void FileHandle::closeIfNecessary()
-{
-    if (!isValid())
-        return;
-
-    auto handle = std::exchange(m_handle, std::nullopt).unsafeValue();
-#if USE(FILE_LOCK)
-    if (std::exchange(m_isLocked, false)) {
-        bool unlocked = unlockFile(handle);
-        ASSERT_UNUSED(unlocked, unlocked);
-    }
-#endif
-    closeFile(handle);
-}
-
-std::optional<uint64_t> FileHandle::size()
-{
-    if (!isValid())
-        return { };
-    return fileSize(platformHandle());
-}
-
-long long FileHandle::seek(long long offset, FileSeekOrigin origin)
-{
-    if (!isValid())
-        return -1;
-    return seekFile(platformHandle(), offset, origin);
-}
-
-bool FileHandle::flush()
-{
-    if (!isValid())
-        return false;
-    return flushFile(platformHandle());
-}
-
-std::optional<PlatformFileID> FileHandle::id()
-{
-    if (!isValid())
-        return { };
-    return fileID(platformHandle());
 }
 
 } // namespace WTF::FileSystemImpl

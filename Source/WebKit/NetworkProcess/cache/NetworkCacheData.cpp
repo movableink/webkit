@@ -70,7 +70,7 @@ Data adoptAndMapFile(FileSystem::FileHandle&& handle, size_t offset, size_t size
         return Data::empty();
 
     bool success;
-    FileSystem::MappedFileData mappedFile(handle.platformHandle(), FileSystem::FileOpenMode::Read, FileSystem::MappedFileMode::Private, success);
+    FileSystem::MappedFileData mappedFile(handle, FileSystem::FileOpenMode::Read, FileSystem::MappedFileMode::Private, success);
     if (!success)
         return { };
 

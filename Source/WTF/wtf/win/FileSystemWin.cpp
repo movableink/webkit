@@ -58,18 +58,6 @@ static bool getFindData(String path, WIN32_FIND_DATAW& findData)
     return true;
 }
 
-static std::optional<uint64_t> getFileSizeFromByHandleFileInformationStructure(const BY_HANDLE_FILE_INFORMATION& fileInformation)
-{
-    ULARGE_INTEGER fileSize;
-    fileSize.HighPart = fileInformation.nFileSizeHigh;
-    fileSize.LowPart = fileInformation.nFileSizeLow;
-
-    if (fileSize.QuadPart > static_cast<ULONGLONG>(std::numeric_limits<long long>::max()))
-        return std::nullopt;
-
-    return fileSize.QuadPart;
-}
-
 static void fileCreationTimeFromFindData(const WIN32_FIND_DATAW& findData, time_t& time)
 {
     ULARGE_INTEGER fileTime;
@@ -78,22 +66,6 @@ static void fileCreationTimeFromFindData(const WIN32_FIND_DATAW& findData, time_
 
     // Information about converting time_t to FileTime is available at http://msdn.microsoft.com/en-us/library/ms724228%28v=vs.85%29.aspx
     time = fileTime.QuadPart / 10000000 - kSecondsFromFileTimeToTimet;
-}
-
-
-std::optional<uint64_t> fileSize(PlatformFileHandle fileHandle)
-{
-    BY_HANDLE_FILE_INFORMATION fileInformation;
-    if (!::GetFileInformationByHandle(fileHandle, &fileInformation))
-        return std::nullopt;
-
-    return getFileSizeFromByHandleFileInformationStructure(fileInformation);
-}
-
-std::optional<PlatformFileID> fileID(PlatformFileHandle)
-{
-    // FIXME (246118): Implement this function properly.
-    return std::nullopt;
 }
 
 bool fileIDsAreEqual(std::optional<PlatformFileID>, std::optional<PlatformFileID>)
@@ -233,74 +205,6 @@ FileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission,
     return FileHandle::adopt(CreateFile(destination.wideCharacters().data(), desiredAccess, shareMode, nullptr, creationDisposition, FILE_ATTRIBUTE_NORMAL, nullptr));
 }
 
-void closeFile(PlatformFileHandle& handle)
-{
-    if (isHandleValid(handle)) {
-        ::CloseHandle(handle);
-        handle = invalidPlatformFileHandle;
-    }
-}
-
-long long seekFile(PlatformFileHandle handle, long long offset, FileSeekOrigin origin)
-{
-    DWORD moveMethod = FILE_BEGIN;
-
-    if (origin == FileSeekOrigin::Current)
-        moveMethod = FILE_CURRENT;
-    else if (origin == FileSeekOrigin::End)
-        moveMethod = FILE_END;
-
-    LARGE_INTEGER largeOffset;
-    largeOffset.QuadPart = offset;
-
-    largeOffset.LowPart = SetFilePointer(handle, largeOffset.LowPart, &largeOffset.HighPart, moveMethod);
-
-    if (largeOffset.LowPart == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR)
-        return -1;
-
-    return largeOffset.QuadPart;
-}
-
-bool truncateFile(PlatformFileHandle handle, long long offset)
-{
-    FILE_END_OF_FILE_INFO eofInfo;
-    eofInfo.EndOfFile.QuadPart = offset;
-
-    return SetFileInformationByHandle(handle, FileEndOfFileInfo, &eofInfo, sizeof(FILE_END_OF_FILE_INFO));
-}
-
-bool flushFile(PlatformFileHandle)
-{
-    // Not implemented.
-    return false;
-}
-
-int64_t writeToFile(PlatformFileHandle handle, std::span<const uint8_t> data)
-{
-    if (!isHandleValid(handle))
-        return -1;
-
-    DWORD bytesWritten;
-    bool success = WriteFile(handle, data.data(), data.size(), &bytesWritten, nullptr);
-
-    if (!success)
-        return -1;
-    return static_cast<int64_t>(bytesWritten);
-}
-
-int64_t readFromFile(PlatformFileHandle handle, std::span<uint8_t> data)
-{
-    if (!isHandleValid(handle))
-        return -1;
-
-    DWORD bytesRead;
-    bool success = ::ReadFile(handle, data.data(), data.size(), &bytesRead, nullptr);
-
-    if (!success)
-        return -1;
-    return static_cast<int64_t>(bytesRead);
-}
-
 String localUserSpecificStorageDirectory()
 {
     return cachedStorageDirectory(CSIDL_LOCAL_APPDATA);
@@ -346,12 +250,12 @@ MappedFileData::~MappedFileData()
         UnmapViewOfFile(m_fileData.data());
 }
 
-bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openMode, MappedFileMode)
+bool MappedFileData::mapFileHandle(FileHandle& handle, FileOpenMode openMode, MappedFileMode)
 {
-    if (!isHandleValid(handle))
+    if (!handle)
         return false;
 
-    auto size = fileSize(handle);
+    auto size = handle.size();
     if (!size || *size > std::numeric_limits<size_t>::max())
         return false;
 
@@ -375,7 +279,7 @@ bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openM
         break;
     }
 
-    m_fileMapping = Win32Handle::adopt(CreateFileMapping(handle, nullptr, pageProtection, 0, 0, nullptr));
+    m_fileMapping = Win32Handle::adopt(CreateFileMapping(handle.platformHandle(), nullptr, pageProtection, 0, 0, nullptr));
     if (!m_fileMapping)
         return false;
 

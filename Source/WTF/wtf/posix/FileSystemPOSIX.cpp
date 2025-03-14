@@ -94,93 +94,9 @@ FileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission 
     return FileHandle::adopt(open(fsRep.data(), platformFlag, permissionFlag));
 }
 
-void closeFile(PlatformFileHandle& handle)
-{
-    if (isHandleValid(handle)) {
-        close(handle);
-        handle = invalidPlatformFileHandle;
-    }
-}
-
 int posixFileDescriptor(PlatformFileHandle handle)
 {
     return handle;
-}
-
-long long seekFile(PlatformFileHandle handle, long long offset, FileSeekOrigin origin)
-{
-    int whence = SEEK_SET;
-    switch (origin) {
-    case FileSeekOrigin::Beginning:
-        whence = SEEK_SET;
-        break;
-    case FileSeekOrigin::Current:
-        whence = SEEK_CUR;
-        break;
-    case FileSeekOrigin::End:
-        whence = SEEK_END;
-        break;
-    default:
-        ASSERT_NOT_REACHED();
-    }
-    return static_cast<long long>(lseek(handle, offset, whence));
-}
-
-bool truncateFile(PlatformFileHandle handle, long long offset)
-{
-    // ftruncate returns 0 to indicate the success.
-    return !ftruncate(handle, offset);
-}
-
-bool flushFile(PlatformFileHandle handle)
-{
-    return !fsync(handle);
-}
-
-int64_t writeToFile(PlatformFileHandle handle, std::span<const uint8_t> data)
-{
-    do {
-        auto bytesWritten = write(handle, data.data(), data.size());
-        if (bytesWritten >= 0)
-            return bytesWritten;
-    } while (errno == EINTR);
-    return -1;
-}
-
-int64_t readFromFile(PlatformFileHandle handle, std::span<uint8_t> data)
-{
-    do {
-        auto bytesRead = read(handle, data.data(), data.size());
-        if (bytesRead >= 0)
-            return bytesRead;
-    } while (errno == EINTR);
-    return -1;
-}
-
-#if USE(FILE_LOCK)
-bool lockFile(PlatformFileHandle handle, OptionSet<FileLockMode> lockMode)
-{
-    static_assert(LOCK_SH == WTF::enumToUnderlyingType(FileLockMode::Shared), "LockSharedEncoding is as expected");
-    static_assert(LOCK_EX == WTF::enumToUnderlyingType(FileLockMode::Exclusive), "LockExclusiveEncoding is as expected");
-    static_assert(LOCK_NB == WTF::enumToUnderlyingType(FileLockMode::Nonblocking), "LockNonblockingEncoding is as expected");
-    int result = flock(handle, lockMode.toRaw());
-    return (result != -1);
-}
-
-bool unlockFile(PlatformFileHandle handle)
-{
-    int result = flock(handle, LOCK_UN);
-    return (result != -1);
-}
-#endif
-
-std::optional<uint64_t> fileSize(PlatformFileHandle handle)
-{
-    struct stat fileInfo;
-    if (fstat(handle, &fileInfo))
-        return std::nullopt;
-
-    return fileInfo.st_size;
 }
 
 std::optional<WallTime> fileCreationTime(const String& path)
@@ -209,15 +125,6 @@ std::optional<WallTime> fileCreationTime(const String& path)
 
     UNUSED_PARAM(path);
     return std::nullopt;
-}
-
-std::optional<PlatformFileID> fileID(PlatformFileHandle handle)
-{
-    struct stat fileInfo;
-    if (fstat(handle, &fileInfo))
-        return std::nullopt;
-
-    return fileInfo.st_ino;
 }
 
 bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFileID> b)

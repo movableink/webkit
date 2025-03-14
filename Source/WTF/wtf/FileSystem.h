@@ -86,10 +86,8 @@ WTF_EXPORT_PRIVATE void deleteAllFilesModifiedSince(const String&, WallTime);
 WTF_EXPORT_PRIVATE bool deleteEmptyDirectory(const String&);
 WTF_EXPORT_PRIVATE bool moveFile(const String& oldPath, const String& newPath);
 WTF_EXPORT_PRIVATE std::optional<uint64_t> fileSize(const String&); // Follows symlinks.
-WTF_EXPORT_PRIVATE std::optional<uint64_t> fileSize(PlatformFileHandle);
 WTF_EXPORT_PRIVATE std::optional<uint64_t> directorySize(const String&);
 WTF_EXPORT_PRIVATE std::optional<WallTime> fileModificationTime(const String&);
-WTF_EXPORT_PRIVATE std::optional<PlatformFileID> fileID(PlatformFileHandle);
 WTF_EXPORT_PRIVATE bool fileIDsAreEqual(std::optional<PlatformFileID>, std::optional<PlatformFileID>);
 WTF_EXPORT_PRIVATE bool updateFileModificationTime(const String& path); // Sets modification time to now.
 WTF_EXPORT_PRIVATE std::optional<WallTime> fileCreationTime(const String&); // Not all platforms store file creation time.
@@ -139,15 +137,6 @@ WTF_EXPORT_PRIVATE String createTemporaryFile(StringView prefix, StringView suff
 WTF_EXPORT_PRIVATE std::pair<PlatformFileHandle, CString> createTemporaryFileInDirectory(const String& directory, const String& suffix);
 #endif
 WTF_EXPORT_PRIVATE FileHandle openFile(const String& path, FileOpenMode, FileAccessPermission = FileAccessPermission::All, bool failIfFileExists = false);
-WTF_EXPORT_PRIVATE void closeFile(PlatformFileHandle&);
-// Returns the resulting offset from the beginning of the file if successful, -1 otherwise.
-WTF_EXPORT_PRIVATE long long seekFile(PlatformFileHandle, long long offset, FileSeekOrigin);
-WTF_EXPORT_PRIVATE bool truncateFile(PlatformFileHandle, long long offset);
-WTF_EXPORT_PRIVATE bool flushFile(PlatformFileHandle);
-// Returns number of bytes actually read if successful, -1 otherwise.
-WTF_EXPORT_PRIVATE int64_t writeToFile(PlatformFileHandle, std::span<const uint8_t> data);
-// Returns number of bytes actually written if successful, -1 otherwise.
-WTF_EXPORT_PRIVATE int64_t readFromFile(PlatformFileHandle, std::span<uint8_t> data);
 
 WTF_EXPORT_PRIVATE FileHandle openAndLockFile(const String&, FileOpenMode, OptionSet<FileLockMode> = FileLockMode::Exclusive);
 
@@ -160,11 +149,6 @@ WTF_EXPORT_PRIVATE bool hardLink(const String& targetPath, const String& linkPat
 WTF_EXPORT_PRIVATE bool hardLinkOrCopyFile(const String& targetPath, const String& linkPath);
 WTF_EXPORT_PRIVATE std::optional<uint64_t> hardLinkCount(const String& path);
 WTF_EXPORT_PRIVATE bool copyFile(const String& targetPath, const String& sourcePath);
-
-#if USE(FILE_LOCK)
-WTF_EXPORT_PRIVATE bool lockFile(PlatformFileHandle, OptionSet<FileLockMode>);
-WTF_EXPORT_PRIVATE bool unlockFile(PlatformFileHandle);
-#endif
 
 // Encode a string for use within a file name.
 WTF_EXPORT_PRIVATE String encodeForFileName(const String&);
@@ -225,11 +209,11 @@ public:
     MappedFileData() = default;
     MappedFileData(MappedFileData&&);
     static std::optional<MappedFileData> create(const String& filePath, MappedFileMode);
-    static std::optional<MappedFileData> create(PlatformFileHandle, MappedFileMode);
-    static std::optional<MappedFileData> create(PlatformFileHandle, FileOpenMode, MappedFileMode);
+    static std::optional<MappedFileData> create(FileHandle&, MappedFileMode);
+    static std::optional<MappedFileData> create(FileHandle&, FileOpenMode, MappedFileMode);
     WTF_EXPORT_PRIVATE MappedFileData(const String& filePath, MappedFileMode, bool& success);
-    WTF_EXPORT_PRIVATE MappedFileData(PlatformFileHandle, MappedFileMode, bool& success);
-    WTF_EXPORT_PRIVATE MappedFileData(PlatformFileHandle, FileOpenMode, MappedFileMode, bool& success);
+    WTF_EXPORT_PRIVATE MappedFileData(FileHandle&, MappedFileMode, bool& success);
+    WTF_EXPORT_PRIVATE MappedFileData(FileHandle&, FileOpenMode, MappedFileMode, bool& success);
     WTF_EXPORT_PRIVATE ~MappedFileData();
     MappedFileData& operator=(MappedFileData&&);
 
@@ -248,7 +232,7 @@ public:
 #endif
 
 private:
-    WTF_EXPORT_PRIVATE bool mapFileHandle(PlatformFileHandle, FileOpenMode, MappedFileMode);
+    WTF_EXPORT_PRIVATE bool mapFileHandle(FileHandle&, FileOpenMode, MappedFileMode);
 
 #if HAVE(MMAP)
     MallocSpan<uint8_t, Mmap> m_fileData;
@@ -268,7 +252,7 @@ inline std::optional<MappedFileData> MappedFileData::create(const String& filePa
     return result;
 }
 
-inline std::optional<MappedFileData> MappedFileData::create(PlatformFileHandle handle, MappedFileMode mode)
+inline std::optional<MappedFileData> MappedFileData::create(FileHandle& handle, MappedFileMode mode)
 {
     std::optional<MappedFileData> result;
     bool success = false;
@@ -278,7 +262,7 @@ inline std::optional<MappedFileData> MappedFileData::create(PlatformFileHandle h
     return result;
 }
 
-inline std::optional<MappedFileData> MappedFileData::create(PlatformFileHandle handle, FileOpenMode openMode, MappedFileMode mappedFileMode)
+inline std::optional<MappedFileData> MappedFileData::create(FileHandle& handle, FileOpenMode openMode, MappedFileMode mappedFileMode)
 {
     std::optional<MappedFileData> result;
     bool success = false;
@@ -288,12 +272,12 @@ inline std::optional<MappedFileData> MappedFileData::create(PlatformFileHandle h
     return result;
 }
 
-inline MappedFileData::MappedFileData(PlatformFileHandle handle, MappedFileMode mapMode, bool& success)
+inline MappedFileData::MappedFileData(FileHandle& handle, MappedFileMode mapMode, bool& success)
 {
     success = mapFileHandle(handle, FileOpenMode::Read, mapMode);
 }
 
-inline MappedFileData::MappedFileData(PlatformFileHandle handle, FileOpenMode openMode, MappedFileMode mapMode, bool& success)
+inline MappedFileData::MappedFileData(FileHandle& handle, FileOpenMode openMode, MappedFileMode mapMode, bool& success)
 {
     success = mapFileHandle(handle, openMode, mapMode);
 }

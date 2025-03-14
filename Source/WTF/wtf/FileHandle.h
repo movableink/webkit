@@ -28,6 +28,7 @@
 #include <optional>
 #include <wtf/Forward.h>
 #include <wtf/Markable.h>
+#include <wtf/OptionSet.h>
 
 #if OS(WINDOWS)
 #include <wtf/win/Win32Handle.h>
@@ -84,13 +85,20 @@ public:
     bool isValid() const { return !!m_handle; }
     explicit operator bool() const { return isValid(); }
 
-    WTF_EXPORT_PRIVATE int write(std::span<const uint8_t>);
-    WTF_EXPORT_PRIVATE int read(std::span<uint8_t>);
+    // Returns number of bytes actually written if successful, -1 otherwise.
+    WTF_EXPORT_PRIVATE int64_t write(std::span<const uint8_t>);
+    // Returns number of bytes actually read if successful, -1 otherwise.
+    WTF_EXPORT_PRIVATE int64_t read(std::span<uint8_t>);
+
     WTF_EXPORT_PRIVATE std::optional<Vector<uint8_t>> readAll();
-    WTF_EXPORT_PRIVATE void lock(OptionSet<FileLockMode>);
-    WTF_EXPORT_PRIVATE bool truncate(long long offset);
+    WTF_EXPORT_PRIVATE bool lock(OptionSet<FileLockMode>);
+    WTF_EXPORT_PRIVATE bool unlock();
+    WTF_EXPORT_PRIVATE bool truncate(int64_t offset);
     WTF_EXPORT_PRIVATE std::optional<uint64_t> size();
-    WTF_EXPORT_PRIVATE long long seek(long long offset, FileSeekOrigin);
+
+    // Returns the resulting offset from the beginning of the file if successful, -1 otherwise.
+    WTF_EXPORT_PRIVATE int64_t seek(int64_t offset, FileSeekOrigin);
+
     WTF_EXPORT_PRIVATE bool flush();
     WTF_EXPORT_PRIVATE std::optional<PlatformFileID> id();
 
@@ -100,7 +108,7 @@ private:
     {
     }
 
-    WTF_EXPORT_PRIVATE void closeIfNecessary();
+    void close();
 
     Markable<PlatformFileHandle, PlatformHandleTraits> m_handle;
 #if USE(FILE_LOCK)
