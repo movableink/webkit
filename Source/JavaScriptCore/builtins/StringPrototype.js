@@ -281,6 +281,7 @@ function replace(search, replace)
     return thisString.@replaceUsingStringSearch(searchString, replace);
 }
 
+@intrinsic=StringPrototypeReplaceAllIntrinsic
 function replaceAll(search, replace)
 {
     "use strict";

@@ -1018,6 +1018,7 @@ private:
         case RegExpMatchFast:
         case RegExpMatchFastGlobal:
         case StringReplace:
+        case StringReplaceAll:
         case StringReplaceRegExp:
         case StringReplaceString:
         case GetById:
