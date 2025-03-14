@@ -7,8 +7,6 @@ UIProcess/API/C/WKPage.cpp
 UIProcess/API/C/WKUserScriptRef.cpp
 UIProcess/API/C/WKWebsiteDataStoreRef.cpp
 UIProcess/API/C/mac/WKPagePrivateMac.mm
-UIProcess/API/Cocoa/WKBackForwardListItem.mm
-UIProcess/API/Cocoa/WKBrowsingContextController.mm
 UIProcess/API/Cocoa/WKDownload.mm
 UIProcess/API/Cocoa/WKFrameInfo.mm
 UIProcess/API/Cocoa/WKNSURLAuthenticationChallenge.mm

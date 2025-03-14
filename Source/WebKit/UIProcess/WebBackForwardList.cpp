@@ -277,11 +277,21 @@ WebBackForwardListItem* WebBackForwardList::backItem() const
     return m_page && m_currentIndex && *m_currentIndex ? m_entries[*m_currentIndex - 1].ptr() : nullptr;
 }
 
+RefPtr<WebBackForwardListItem> WebBackForwardList::protectedBackItem() const
+{
+    return backItem();
+}
+
 WebBackForwardListItem* WebBackForwardList::forwardItem() const
 {
     ASSERT(!m_currentIndex || *m_currentIndex < m_entries.size());
 
     return m_page && m_currentIndex && m_entries.size() && *m_currentIndex < m_entries.size() - 1 ? m_entries[*m_currentIndex + 1].ptr() : nullptr;
+}
+
+RefPtr<WebBackForwardListItem> WebBackForwardList::protectedForwardItem() const
+{
+    return forwardItem();
 }
 
 WebBackForwardListItem* WebBackForwardList::itemAtIndex(int index) const
@@ -299,6 +309,11 @@ WebBackForwardListItem* WebBackForwardList::itemAtIndex(int index) const
         return nullptr;
 
     return m_entries[index + *m_currentIndex].ptr();
+}
+
+RefPtr<WebBackForwardListItem> WebBackForwardList::protectedItemAtIndex(int index) const
+{
+    return itemAtIndex(index);
 }
 
 unsigned WebBackForwardList::backListCount() const

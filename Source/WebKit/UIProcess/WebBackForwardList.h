@@ -64,8 +64,11 @@ public:
     WebBackForwardListItem* currentItem() const;
     RefPtr<WebBackForwardListItem> protectedCurrentItem() const;
     WebBackForwardListItem* backItem() const;
+    RefPtr<WebBackForwardListItem> protectedBackItem() const;
     WebBackForwardListItem* forwardItem() const;
+    RefPtr<WebBackForwardListItem> protectedForwardItem() const;
     WebBackForwardListItem* itemAtIndex(int) const;
+    RefPtr<WebBackForwardListItem> protectedItemAtIndex(int) const;
 
     RefPtr<WebBackForwardListItem> goBackItemSkippingItemsWithoutUserGesture() const;
     RefPtr<WebBackForwardListItem> goForwardItemSkippingItemsWithoutUserGesture() const;
