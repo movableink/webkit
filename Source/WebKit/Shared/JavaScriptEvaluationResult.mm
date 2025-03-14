@@ -26,18 +26,20 @@
 #import "config.h"
 #import "JavaScriptEvaluationResult.h"
 
-#include "APIArray.h"
-#include "APIDictionary.h"
-#include "APINumber.h"
-#include "APISerializedScriptValue.h"
-#include "APIString.h"
-#include "CoreIPCNumber.h"
-#include "WKSharedAPICast.h"
-#include <JavaScriptCore/JSContext.h>
-#include <JavaScriptCore/JSValue.h>
-#include <WebCore/ExceptionDetails.h>
-#include <WebCore/SerializedScriptValue.h>
-#include <wtf/RunLoop.h>
+#import "APIArray.h"
+#import "APIDictionary.h"
+#import "APINumber.h"
+#import "APISerializedScriptValue.h"
+#import "APIString.h"
+#import "CoreIPCNumber.h"
+#import "WKSharedAPICast.h"
+#import <JavaScriptCore/JSCJSValue.h>
+#import <JavaScriptCore/JSContext.h>
+#import <JavaScriptCore/JSStringRefCF.h>
+#import <JavaScriptCore/JSValue.h>
+#import <WebCore/ExceptionDetails.h>
+#import <WebCore/SerializedScriptValue.h>
+#import <wtf/RunLoop.h>
 
 namespace WebKit {
 
@@ -184,7 +186,7 @@ auto JavaScriptEvaluationResult::toVariant(id object) -> Variant
         return { WTFMove(map) };
     }
 
-    // This object has been null checked and came from JSC::valueToObject which only supports these types.
+    // This object has been null checked and went through isSerializable which only supports these types.
     ASSERT_NOT_REACHED();
     return NullType::NullPointer;
 }
@@ -214,11 +216,6 @@ static std::optional<JSValueRef> roundTripThroughSerializedScriptValue(JSGlobalC
     if (RefPtr serialized = WebCore::SerializedScriptValue::create(serializationContext, value, nullptr))
         return serialized->deserialize(deserializationContext, nullptr);
     return std::nullopt;
-}
-
-static RetainPtr<id> convertToObjC(JSGlobalContextRef context, JSValueRef value)
-{
-    return [JSValue valueWithJSValueRef:value inContext:[JSContext contextWithJSGlobalContextRef:context]].toObject;
 }
 
 Expected<JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>> JavaScriptEvaluationResult::extract(JSGlobalContextRef context, JSValueRef value)
@@ -282,11 +279,84 @@ JavaScriptEvaluationResult::JavaScriptEvaluationResult(id object)
     m_nullObjectID = std::nullopt;
 }
 
-JavaScriptEvaluationResult::JavaScriptEvaluationResult(JSGlobalContextRef context, JSValueRef value)
-    : JavaScriptEvaluationResult(convertToObjC(context, value).get())
+// Similar to JSValue's valueToObjectWithoutCopy.
+auto JavaScriptEvaluationResult::toVariant(JSGlobalContextRef context, JSValueRef value) -> Variant
 {
-    // FIXME: This does not need to roundtrip through ObjC.
-    // As a performance improvement we could make a converter directly from JS.
+    if (!JSValueIsObject(context, value)) {
+        if (JSValueIsBoolean(context, value))
+            return JSValueToBoolean(context, value);
+        if (JSValueIsNumber(context, value)) {
+            value = JSValueMakeNumber(context, JSValueToNumber(context, value, 0));
+            return CoreIPCNumber(JSValueToNumber(context, value, 0));
+        }
+        if (JSValueIsString(context, value)) {
+            auto* globalObject = ::toJS(context);
+            JSC::JSValue jsValue = ::toJS(globalObject, value);
+            return jsValue.toWTFString(globalObject);
+        }
+        if (JSValueIsNull(context, value))
+            return NullType::NSNull;
+        return NullType::NullPointer;
+    }
+
+    JSObjectRef object = JSValueToObject(context, value, 0);
+
+    if (JSValueIsDate(context, object))
+        return Seconds(JSValueToNumber(context, object, 0) / 1000.0);
+
+    if (JSValueIsArray(context, object)) {
+        JSValueRef lengthPropertyName = JSValueMakeString(context, adopt(JSStringCreateWithUTF8CString("length")).get());
+        JSValueRef lengthValue = JSObjectGetPropertyForKey(context, object, lengthPropertyName, nullptr);
+        double lengthDouble = JSValueToNumber(context, lengthValue, nullptr);
+        if (lengthDouble < 0 || lengthDouble > static_cast<double>(std::numeric_limits<size_t>::max()))
+            return NullType::NullPointer;
+
+        size_t length = lengthDouble;
+        Vector<JSObjectID> vector;
+        if (!vector.tryReserveInitialCapacity(length))
+            return NullType::NullPointer;
+
+        for (size_t i = 0; i < length; ++i)
+            vector.append(addObjectToMap(context, JSObjectGetPropertyAtIndex(context, object, i, nullptr)));
+        return WTFMove(vector);
+    }
+
+    JSPropertyNameArrayRef names = JSObjectCopyPropertyNames(context, object);
+    size_t length = JSPropertyNameArrayGetCount(names);
+    HashMap<JSObjectID, JSObjectID> map;
+    for (size_t i = 0; i < length; i++) {
+        JSStringRef key = JSPropertyNameArrayGetNameAtIndex(names, i);
+        map.add(addObjectToMap(context, JSValueMakeString(context, key)), addObjectToMap(context, JSObjectGetPropertyForKey(context, object, JSValueMakeString(context, key), nullptr)));
+    }
+    JSPropertyNameArrayRelease(names);
+    return WTFMove(map);
+}
+
+JSObjectID JavaScriptEvaluationResult::addObjectToMap(JSGlobalContextRef context, JSValueRef object)
+{
+    if (!object) {
+        if (!m_nullObjectID) {
+            m_nullObjectID = JSObjectID::generate();
+            m_map.add(*m_nullObjectID, Variant { NullType::NullPointer });
+        }
+        return *m_nullObjectID;
+    }
+
+    auto it = m_jsObjectsInMap.find(object);
+    if (it != m_jsObjectsInMap.end())
+        return it->value;
+
+    auto identifier = JSObjectID::generate();
+    m_jsObjectsInMap.set(object, identifier);
+    m_map.add(identifier, toVariant(context, object));
+    return identifier;
+}
+
+JavaScriptEvaluationResult::JavaScriptEvaluationResult(JSGlobalContextRef context, JSValueRef value)
+    : m_root(addObjectToMap(context, value))
+{
+    m_jsObjectsInMap.clear();
+    m_nullObjectID = std::nullopt;
 }
 
 JSValueRef JavaScriptEvaluationResult::toJS(JSGlobalContextRef context)

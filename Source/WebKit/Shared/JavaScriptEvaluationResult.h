@@ -100,6 +100,9 @@ private:
     Variant toVariant(id);
     JSObjectID addObjectToMap(id);
 
+    Variant toVariant(JSGlobalContextRef, JSValueRef);
+    JSObjectID addObjectToMap(JSGlobalContextRef, JSValueRef);
+
     // Used for deserializing from IPC to ObjC
     HashMap<JSObjectID, RetainPtr<id>> m_instantiatedNSObjects;
     Vector<std::pair<HashMap<JSObjectID, JSObjectID>, RetainPtr<NSMutableDictionary>>> m_nsDictionaries;
@@ -111,6 +114,7 @@ private:
     Vector<std::pair<Vector<JSObjectID>, Ref<API::Array>>> m_arrays;
 
     // Used for serializing to IPC
+    HashMap<JSValueRef, JSObjectID> m_jsObjectsInMap;
     HashMap<RetainPtr<id>, JSObjectID> m_objectsInMap;
     std::optional<JSObjectID> m_nullObjectID;
 
