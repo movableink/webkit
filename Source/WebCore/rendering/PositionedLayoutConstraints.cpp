@@ -52,7 +52,7 @@ static bool shouldFlipStaticPositionInParent(const RenderBox& outOfFlowBox, cons
 }
 
 PositionedLayoutConstraints::PositionedLayoutConstraints(const RenderBox& renderer, const RenderStyle& style, LogicalBoxAxis logicalAxis)
-    : m_container(downcast<RenderBoxModelObject>(*renderer.container()))
+    : m_container(downcast<RenderBoxModelObject>(*renderer.container())) // Using containingBlock() would be wrong for relpositioned inlines.
     , m_containingWritingMode(m_container->writingMode())
     , m_writingMode(style.writingMode())
     , m_physicalAxis(logicalAxis == LogicalBoxAxis::Inline ? m_writingMode.inlineAxis() : m_writingMode.blockAxis())

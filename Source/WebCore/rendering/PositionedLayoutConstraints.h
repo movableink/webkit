@@ -101,6 +101,7 @@ public:
     LayoutUnit insetBeforeValue() const { return minimumValueForLength(m_insetBefore, containingSize()); }
     LayoutUnit insetAfterValue() const { return minimumValueForLength(m_insetAfter, containingSize()); }
     LayoutUnit availableContentSpace() const { return containingSize() - insetBeforeValue() - marginBeforeValue() - bordersPlusPadding() - marginAfterValue() - insetAfterValue(); } // This may be negative.
+    LayoutUnit insetModifiedContainingBlockSize() const { return containingSize() - insetBeforeValue() - insetAfterValue(); }
 
     void convertLogicalLeftValue(LayoutUnit&) const;
     void convertLogicalTopValue(LayoutUnit&, const RenderBox&, const LayoutUnit logicalHeightValue) const;

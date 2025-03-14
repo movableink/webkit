@@ -4006,8 +4006,6 @@ void RenderBox::computePositionedLogicalWidth(LogicalExtentComputedValues& compu
     // (block-style-comments in this function and in computePositionedLogicalWidthUsing()
     // correspond to text from the spec)
 
-    // We don't use containingBlock(), since we may be positioned by an enclosing
-    // relative positioned inline.
     PositionedLayoutConstraints inlineConstraints(*this, LogicalBoxAxis::Inline);
 
     // Calculate the used width. See CSS2 § 10.3.7.
@@ -4134,7 +4132,6 @@ void RenderBox::computePositionedLogicalHeight(LogicalExtentComputedValues& comp
         return;
     }
 
-    // We don't use containingBlock(), since we may be positioned by an enclosing relpositioned inline.
     PositionedLayoutConstraints blockConstraints(*this, LogicalBoxAxis::Block);
 
     // Calculate the used height. See CSS2 § 10.6.4.
@@ -4231,8 +4228,6 @@ LayoutUnit RenderBox::computePositionedLogicalHeightUsing(SizeType heightType, L
 
 void RenderBox::computePositionedLogicalWidthReplaced(LogicalExtentComputedValues& computedValues) const
 {
-    // We don't use containingBlock(), since we may be positioned by an enclosing
-    // relative positioned inline.
     PositionedLayoutConstraints inlineConstraints(*this, LogicalBoxAxis::Inline);
 
     // NOTE: This value of width is final in that the min/max width calculations
@@ -4256,7 +4251,6 @@ void RenderBox::computePositionedLogicalWidthReplaced(LogicalExtentComputedValue
 
 void RenderBox::computePositionedLogicalHeightReplaced(LogicalExtentComputedValues& computedValues) const
 {
-    // We don't use containingBlock(), since we may be positioned by an enclosing relpositioned inline.
     PositionedLayoutConstraints blockConstraints(*this, LogicalBoxAxis::Block);
 
     // NOTE: This value of height is final in that the min/max height calculations

@@ -1409,7 +1409,7 @@ void TreeResolver::sortPositionOptionsIfNeeded(PositionOptions& options, const S
     options.sorted = true;
 
     auto order = options.originalStyle->positionTryOrder();
-    if (order == PositionTryOrder::Normal)
+    if (order == PositionTryOrder::Normal || options.optionStyles.size() < 2)
         return;
 
     CheckedPtr box = dynamicDowncast<RenderBox>(styleable.renderer());
@@ -1430,7 +1430,7 @@ void TreeResolver::sortPositionOptionsIfNeeded(PositionOptions& options, const S
 
     for (auto& optionStyle : options.optionStyles) {
         auto constraints = PositionedLayoutConstraints { *box, *optionStyle, boxAxis };
-        optionsForSorting.append({ WTFMove(optionStyle), constraints.availableContentSpace() });
+        optionsForSorting.append({ WTFMove(optionStyle), constraints.insetModifiedContainingBlockSize() });
     }
 
     // "Stably sort the position options list according to this size, with the largest coming first."
