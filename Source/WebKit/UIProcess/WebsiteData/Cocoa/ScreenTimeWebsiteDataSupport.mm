@@ -29,6 +29,7 @@
 #if ENABLE(SCREEN_TIME)
 
 #import "WebsiteDataStoreConfiguration.h"
+#import <wtf/BlockPtr.h>
 #import <wtf/HashSet.h>
 #import <wtf/URL.h>
 #import <wtf/UUID.h>
