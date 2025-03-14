@@ -535,6 +535,20 @@
             "codegen-properties": {
                 "parser-grammar": "<color allowed-types=absolute quirky-colors-in-quirks-mode=allowed>"
             }
+        },
+        "test-keyword": {
+            "animation-type": "discrete",
+            "initial": "foo",
+            "codegen-properties": {
+                "parser-grammar": "foo | bar"
+            }
+        },
+        "test-keyword-with-aliased-to": {
+            "animation-type": "discrete",
+            "initial": "foo",
+            "codegen-properties": {
+                "parser-grammar": "foo@(aliased-to=baz) | bar"
+            }
         }
     },
     "descriptors": {

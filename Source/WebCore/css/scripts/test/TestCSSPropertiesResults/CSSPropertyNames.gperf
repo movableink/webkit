@@ -24,7 +24,7 @@ namespace WebCore {
 
 static_assert(cssPropertyIDEnumValueCount <= (std::numeric_limits<uint16_t>::max() + 1), "CSSPropertyID should fit into uint16_t.");
 
-const std::array<CSSPropertyID, 68> computedPropertyIDs {
+const std::array<CSSPropertyID, 70> computedPropertyIDs {
     CSSPropertyID::CSSPropertyTestAnimationWrapper,
     CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationAlways,
     CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationThreadedOnly,
@@ -57,6 +57,8 @@ const std::array<CSSPropertyID, 68> computedPropertyIDs {
     CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersNoMin,
     CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersWithMinimum,
     CSSPropertyID::CSSPropertyTestHighPriority,
+    CSSPropertyID::CSSPropertyTestKeyword,
+    CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo,
     CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock,
     CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline,
     CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal,
@@ -131,6 +133,8 @@ constexpr ASCIILiteral propertyNameStrings[numCSSProperties] = {
     "test-function-single-parameter-optional"_s,
     "test-function-unbounded-parameters-no-min"_s,
     "test-function-unbounded-parameters-with-minimum"_s,
+    "test-keyword"_s,
+    "test-keyword-with-aliased-to"_s,
     "test-match-all-any-order"_s,
     "test-match-all-any-order-with-optional"_s,
     "test-match-all-any-order-with-optional-no-single-item-opt"_s,
@@ -221,6 +225,8 @@ test-function-single-parameter-match-one, CSSPropertyID::CSSPropertyTestFunction
 test-function-single-parameter-optional, CSSPropertyID::CSSPropertyTestFunctionSingleParameterOptional
 test-function-unbounded-parameters-no-min, CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersNoMin
 test-function-unbounded-parameters-with-minimum, CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersWithMinimum
+test-keyword, CSSPropertyID::CSSPropertyTestKeyword
+test-keyword-with-aliased-to, CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo
 test-match-all-any-order, CSSPropertyID::CSSPropertyTestMatchAllAnyOrder
 test-match-all-any-order-with-optional, CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptional
 test-match-all-any-order-with-optional-no-single-item-opt, CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalNoSingleItemOpt
@@ -417,6 +423,8 @@ constexpr bool isInheritedPropertyTable[cssPropertyIDEnumValueCount] = {
     false, // CSSPropertyID::CSSPropertyTestFunctionSingleParameterOptional
     false, // CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersNoMin
     false, // CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersWithMinimum
+    false, // CSSPropertyID::CSSPropertyTestKeyword
+    false, // CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo
     false, // CSSPropertyID::CSSPropertyTestMatchAllAnyOrder
     false, // CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptional
     false, // CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptionalNoSingleItemOpt

@@ -1810,7 +1810,9 @@ class KeywordTerm:
         if not annotation:
             return
         for directive in annotation.directives:
-            if directive.name == 'settings-flag':
+            if directive.name == 'aliased-to':
+                self.aliased_to = ValueKeywordName(directive.value[0])
+            elif directive.name == 'settings-flag':
                 self.settings_flag = directive.value[0]
             else:
                 raise Exception(f"Unknown keyword annotation directive '{directive}'.")
@@ -2499,7 +2501,6 @@ class Grammar:
 # A shared grammar rule and metadata describing it. Part of the set of rules tracked by SharedGrammarRules.
 class SharedGrammarRule:
     schema = Schema(
-        Schema.Entry("aliased-to", allowed_types=[str], convert_to=ValueKeywordName),
         Schema.Entry("exported", allowed_types=[bool], default_value=False),
         Schema.Entry("grammar", allowed_types=[str]),
         Schema.Entry("grammar-unused", allowed_types=[str]),
@@ -2529,22 +2530,14 @@ class SharedGrammarRule:
             for entry_name in ["grammar-function"]:
                 if entry_name in json_value:
                     raise Exception(f"{key_path} can't have both 'parser-grammar' and '{entry_name}.")
-            grammar = Grammar.from_string(parsing_context, f"{key_path}.{name}", name, json_value["grammar"])
-
-            if "aliased-to" in json_value:
-                if not isinstance(grammar.root_term, KeywordTerm):
-                    raise Exception(f"Invalid use of 'aliased-to' found at '{key_path}'. 'aliased-to' can only be used with grammars that consist of a single keyword term.")
-                grammar.root_term.aliased_to = json_value["aliased-to"]
-
-            json_value["grammar"] = grammar
+            json_value["grammar"] = Grammar.from_string(parsing_context, f"{key_path}.{name}", name, json_value["grammar"])
 
         if json_value.get("grammar-unused"):
             if "grammar-unused-reason" not in json_value:
                 raise Exception(f"{key_path} must have 'grammar-unused-reason' specified when using 'grammar-unused'.")
             # If we have a "grammar-unused" specified, we still process it to ensure that at least it is syntactically valid, we just
             # won't actually use it for generation.
-            grammar = Grammar.from_string(parsing_context, f"{key_path}.{name}", name, json_value["grammar-unused"])
-            json_value["grammar-unused"] = grammar
+            json_value["grammar-unused"] = Grammar.from_string(parsing_context, f"{key_path}.{name}", name, json_value["grammar-unused"])
 
         if json_value.get("grammar-unused-reason"):
             if "grammar-unused" not in json_value:
@@ -4495,7 +4488,6 @@ class GenerateCSSPropertyParsing:
                     "CSSPropertyParserConsumer+PositionTry.h",
                     "CSSPropertyParserConsumer+Primitives.h",
                     "CSSPropertyParserConsumer+ResolutionDefinitions.h",
-                    "CSSPropertyParserConsumer+Ruby.h",
                     "CSSPropertyParserConsumer+SVG.h",
                     "CSSPropertyParserConsumer+ScrollSnap.h",
                     "CSSPropertyParserConsumer+Scrollbars.h",
@@ -7149,9 +7141,10 @@ class BNFKeywordNode:
         if self.annotation:
             raise Exception("Invalid to add an annotation to a keyword node that already has an annotation.")
 
-        SUPPORTED_DIRECTIVES = [
-            'settings-flag'
-        ]
+        SUPPORTED_DIRECTIVES = {
+            'aliased-to',
+            'settings-flag',
+        }
 
         for directive in annotation.directives:
             if directive.name not in SUPPORTED_DIRECTIVES:

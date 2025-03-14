@@ -416,6 +416,30 @@ public:
     {
         builderState.style().setTestFunctionUnboundedParametersWithMinimum(fromCSSValueDeducingType(builderState, value));
     }
+    static void applyInitialTestKeyword(BuilderState& builderState)
+    {
+        builderState.style().setTestKeyword(RenderStyle::initialTestKeyword());
+    }
+    static void applyInheritTestKeyword(BuilderState& builderState)
+    {
+        builderState.style().setTestKeyword(forwardInheritedValue(builderState.parentStyle().testKeyword()));
+    }
+    static void applyValueTestKeyword(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestKeyword(fromCSSValueDeducingType(builderState, value));
+    }
+    static void applyInitialTestKeywordWithAliasedTo(BuilderState& builderState)
+    {
+        builderState.style().setTestKeywordWithAliasedTo(RenderStyle::initialTestKeywordWithAliasedTo());
+    }
+    static void applyInheritTestKeywordWithAliasedTo(BuilderState& builderState)
+    {
+        builderState.style().setTestKeywordWithAliasedTo(forwardInheritedValue(builderState.parentStyle().testKeywordWithAliasedTo()));
+    }
+    static void applyValueTestKeywordWithAliasedTo(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestKeywordWithAliasedTo(fromCSSValueDeducingType(builderState, value));
+    }
     static void applyInitialTestMatchAllAnyOrder(BuilderState& builderState)
     {
         builderState.style().setTestMatchAllAnyOrder(RenderStyle::initialTestMatchAllAnyOrder());
@@ -1256,6 +1280,32 @@ void BuilderGenerated::applyProperty(CSSPropertyID id, BuilderState& builderStat
             break;
         case ApplyValueType::Value:
             BuilderFunctions::applyValueTestFunctionUnboundedParametersWithMinimum(builderState, value);
+            break;
+        }
+        break;
+    case CSSPropertyID::CSSPropertyTestKeyword:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestKeyword(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestKeyword(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestKeyword(builderState, value);
+            break;
+        }
+        break;
+    case CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestKeywordWithAliasedTo(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestKeywordWithAliasedTo(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestKeywordWithAliasedTo(builderState, value);
             break;
         }
         break;

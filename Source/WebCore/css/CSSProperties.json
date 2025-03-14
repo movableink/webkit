@@ -1604,9 +1604,8 @@
                 "cascade-alias": "ruby-position",
                 "skip-style-builder": true,
                 "render-style-name-for-methods": "RubyPosition",
-                "parser-function": "consumeWebKitRubyPosition",
-                "parser-grammar-unused": "before | after | inter-character",
-                "parser-grammar-unused-reason": "Needs support for transforming a parsed keyword into a different keyword."
+                "parser-grammar": "before | after | inter-character@(aliased-to=legacy-inter-character)",
+                "parser-grammar-comment": "Current spec grammar is '[ alternate || [ over | under ] ] | inter-character'."
             },
             "specification": {
                 "category": "css-ruby",
@@ -4188,7 +4187,7 @@
                 "style-builder-custom": "All",
                 "parser-function": "consumeCursor",
                 "parser-grammar-unused": "[ [ <url> [ <x> <y> ]? ]#{0,} [ <<values>> ] ]",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups, for transforming a parsed keyword into a different keyword, and for different parsing based on the current mode."
+                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and for different parsing based on the current mode."
             },
             "specification": {
                 "category": "css-ui",
@@ -12980,8 +12979,7 @@
             }
         },
         "<-webkit-absolute-size>": {
-            "grammar": "-webkit-xxx-large",
-            "aliased-to": "xxx-large",
+            "grammar": "-webkit-xxx-large@(aliased-to=xxx-large)",
             "status": "non-standard"
         },
         "<relative-size>": {

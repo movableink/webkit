@@ -1061,7 +1061,6 @@ css/parser/CSSPropertyParserConsumer+Position.cpp
 css/parser/CSSPropertyParserConsumer+PositionTry.cpp
 css/parser/CSSPropertyParserConsumer+Primitives.cpp
 css/parser/CSSPropertyParserConsumer+Resolution.cpp
-css/parser/CSSPropertyParserConsumer+Ruby.cpp
 css/parser/CSSPropertyParserConsumer+SVG.cpp
 css/parser/CSSPropertyParserConsumer+ScrollSnap.cpp
 css/parser/CSSPropertyParserConsumer+Scrollbars.cpp

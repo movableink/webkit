@@ -45,7 +45,6 @@
 #include "CSSPropertyParserConsumer+PositionTry.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParserConsumer+ResolutionDefinitions.h"
-#include "CSSPropertyParserConsumer+Ruby.h"
 #include "CSSPropertyParserConsumer+SVG.h"
 #include "CSSPropertyParserConsumer+ScrollSnap.h"
 #include "CSSPropertyParserConsumer+Scrollbars.h"
@@ -71,6 +70,27 @@
 namespace WebCore {
 
 using namespace CSSPropertyParserHelpers;
+
+static bool isKeywordValidForTestKeyword(CSSValueID keyword)
+{
+    switch (keyword) {
+    case CSSValueID::CSSValueBar:
+    case CSSValueID::CSSValueFoo:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool isKeywordValidForTestKeywordWithAliasedTo(CSSValueID keyword)
+{
+    switch (keyword) {
+    case CSSValueID::CSSValueBar:
+        return true;
+    default:
+        return false;
+    }
+}
 
 static bool isKeywordValidForTestUsingSharedRule(CSSValueID keyword)
 {
@@ -807,6 +827,21 @@ static RefPtr<CSSValue> consumeTestFunctionUnboundedParametersWithMinimum(CSSPar
         return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
     };
     return consumeFooFunction(range, context);
+}
+
+static RefPtr<CSSValue> consumeTestKeywordWithAliasedTo(CSSParserTokenRange& range)
+{
+    // bar
+    if (auto result = consumeIdent(range, isKeywordValidForTestKeywordWithAliasedTo))
+        return result;
+    // foo@(aliased-to=baz)
+    switch (auto keyword = range.peek().id(); keyword) {
+    case CSSValueID::CSSValueFoo:
+        range.consumeIncludingWhitespace();
+        return CSSPrimitiveValue::create(CSSValueID::CSSValueBaz);
+    default:
+        return nullptr;
+    }
 }
 
 static RefPtr<CSSValue> consumeTestMatchAllAnyOrder(CSSParserTokenRange& range, const CSSParserContext& context)
@@ -1916,6 +1951,10 @@ RefPtr<CSSValue> CSSPropertyParsing::parseStyleProperty(CSSParserTokenRange& ran
         return consumeTestFunctionUnboundedParametersNoMin(range, context);
     case CSSPropertyID::CSSPropertyTestFunctionUnboundedParametersWithMinimum:
         return consumeTestFunctionUnboundedParametersWithMinimum(range, context);
+    case CSSPropertyID::CSSPropertyTestKeyword:
+        return consumeIdent(range, isKeywordValidForTestKeyword);
+    case CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo:
+        return consumeTestKeywordWithAliasedTo(range);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrder:
         return consumeTestMatchAllAnyOrder(range, context);
     case CSSPropertyID::CSSPropertyTestMatchAllAnyOrderWithOptional:
@@ -1980,6 +2019,10 @@ RefPtr<CSSValue> CSSPropertyParsing::parseStyleProperty(CSSParserTokenRange& ran
 bool CSSPropertyParsing::isKeywordValidForStyleProperty(CSSPropertyID id, CSSValueID keyword, const CSSParserContext&)
 {
     switch (id) {
+    case CSSPropertyID::CSSPropertyTestKeyword:
+        return isKeywordValidForTestKeyword(keyword);
+    case CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo:
+        return isKeywordValidForTestKeywordWithAliasedTo(keyword);
     case CSSPropertyID::CSSPropertyTestUsingSharedRule:
         return isKeywordValidForTestUsingSharedRule(keyword);
     case CSSPropertyID::CSSPropertyTestUsingSharedRuleExported:
@@ -1994,6 +2037,8 @@ bool CSSPropertyParsing::isKeywordValidForStyleProperty(CSSPropertyID id, CSSVal
 bool CSSPropertyParsing::isKeywordFastPathEligibleStyleProperty(CSSPropertyID id)
 {
     switch (id) {
+    case CSSPropertyID::CSSPropertyTestKeyword:
+    case CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo:
     case CSSPropertyID::CSSPropertyTestUsingSharedRule:
     case CSSPropertyID::CSSPropertyTestUsingSharedRuleExported:
     case CSSPropertyID::CSSPropertyTestUsingSharedRuleWithOverrideFunction:
