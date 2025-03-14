@@ -412,14 +412,14 @@ void RenderLayerScrollableArea::scrollTo(const ScrollPosition& position)
         requiresRepaint = m_layer.backing()->needsRepaintOnCompositedScroll();
     }
 
-    auto isScrolledBy = [](RenderObject& renderer, RenderLayer& scrollableLayer) {
-        auto layer = renderer.enclosingLayer();
-        return layer && layer->ancestorLayerIsInContainingBlockChain(scrollableLayer);
-    };
-
     // Just schedule a full repaint of our object.
     if (requiresRepaint) {
         renderer.repaintUsingContainer(repaintContainer.get(), rectForRepaint);
+
+        auto isScrolledBy = [](auto& renderer, auto& scrollableLayer) {
+            auto layer = renderer.enclosingLayer();
+            return layer && layer->ancestorLayerIsInContainingBlockChain(scrollableLayer);
+        };
 
         // We also have to repaint any descendant composited layers that have fixed backgrounds.
         if (auto slowRepaintObjects = view.frameView().slowRepaintObjects()) {

@@ -96,7 +96,7 @@ auto LegacyRenderSVGResourceClipper::pathOnlyClipping(GraphicsContext& context, 
     WindRule clipRule = WindRule::NonZero;
     Path clipPath;
 
-    auto rendererRequiresMaskClipping = [&clipPath](RenderObject& renderer) {
+    auto rendererRequiresMaskClipping = [&clipPath](auto& renderer) {
         // Only shapes or paths are supported for direct clipping. We need to fall back to masking for texts.
         if (is<RenderSVGText>(renderer))
             return true;

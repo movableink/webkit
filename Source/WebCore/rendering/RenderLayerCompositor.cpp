@@ -5890,7 +5890,7 @@ void RenderLayerCompositor::updateSynchronousScrollingNodes()
         return;
     }
 
-    auto relevantScrollingScope = [](const RenderObject& renderer, const RenderLayer& layer) {
+    auto relevantScrollingScope = [](auto& renderer, const RenderLayer& layer) {
         if (&layer.renderer() == &renderer)
             return layer.boxScrollingScope();
         return layer.contentsScrollingScope();

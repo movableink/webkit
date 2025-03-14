@@ -116,7 +116,7 @@ RefPtr<SVGGraphicsElement> SVGClipPathElement::shouldApplyPathClipping() const
     if (renderer() && renderer()->style().clipPath())
         return nullptr;
 
-    auto rendererRequiresMaskClipping = [](const RenderObject& renderer) -> bool {
+    auto rendererRequiresMaskClipping = [](auto& renderer) -> bool {
         // Only shapes or paths are supported for direct clipping. We need to fall back to masking for texts.
         if (is<RenderSVGText>(renderer))
             return true;
