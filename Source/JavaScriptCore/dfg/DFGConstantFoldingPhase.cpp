@@ -447,7 +447,7 @@ private:
                 ArrayMode arrayMode = node->arrayMode();
                 AbstractValue& abstractValue = m_state.forNode(node->child1());
                 if (arrayMode.type() != Array::AnyTypedArray && arrayMode.isSomeTypedArrayView() && !arrayMode.mayBeResizableOrGrowableSharedTypedArray()) {
-                    if ((abstractValue.m_type && !(abstractValue.m_type & ~SpecObject)) && abstractValue.m_structure.isFinite()) {
+                    if (abstractValue.m_type && abstractValue.isType(SpecObject) && abstractValue.m_structure.isFinite()) {
                         bool canFold = !abstractValue.m_structure.isClear();
                         JSGlobalObject* globalObject = m_graph.globalObjectFor(node->origin.semantic);
                         abstractValue.m_structure.forEach([&](RegisteredStructure structure) {
@@ -474,6 +474,31 @@ private:
                 }
                 break;
             }
+
+            case CheckDetached: {
+                AbstractValue& abstractValue = m_state.forNode(node->child1());
+                if (abstractValue.m_type && abstractValue.isType(SpecObject) && abstractValue.m_structure.isFinite()) {
+                    bool canFold = !abstractValue.m_structure.isClear();
+                    JSGlobalObject* globalObject = m_graph.globalObjectFor(node->origin.semantic);
+                    abstractValue.m_structure.forEach([&](RegisteredStructure structure) {
+                        if (structure->globalObject() != globalObject) {
+                            canFold = false;
+                            return;
+                        }
+                    });
+
+                    if (canFold) {
+                        if (m_graph.isWatchingArrayBufferDetachWatchpoint(node)) {
+                            m_interpreter.execute(indexInBlock); // Catch the fact that we may filter on cell.
+                            node->remove(m_graph);
+                            eliminated = true;
+                            break;
+                        }
+                    }
+                }
+                break;
+            }
+
 
             case GetMyArgumentByVal:
             case GetMyArgumentByValOutOfBounds: {
