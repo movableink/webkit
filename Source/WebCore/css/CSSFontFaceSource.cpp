@@ -71,12 +71,12 @@ inline void CSSFontFaceSource::setStatus(Status newStatus)
 
 CSSFontFaceSource::CSSFontFaceSource(CSSFontFace& owner, AtomString fontFaceName)
     : m_fontFaceName(WTFMove(fontFaceName))
-    , m_face(owner)
+    , m_owningCSSFontFace(owner)
 {
 }
 
 CSSFontFaceSource::CSSFontFaceSource(CSSFontFace& owner, CSSFontSelector& fontSelector, UniqueRef<FontLoadRequest> request)
-    : m_face(owner)
+    : m_owningCSSFontFace(owner)
     , m_fontSelector(fontSelector)
     , m_fontRequest(request.moveToUniquePtr())
 {
@@ -96,14 +96,14 @@ CSSFontFaceSource::CSSFontFaceSource(CSSFontFace& owner, CSSFontSelector& fontSe
 
 CSSFontFaceSource::CSSFontFaceSource(CSSFontFace& owner, AtomString fontFaceName, SVGFontFaceElement& fontFace)
     : m_fontFaceName(WTFMove(fontFaceName))
-    , m_face(owner)
+    , m_owningCSSFontFace(owner)
     , m_svgFontFaceElement(fontFace)
     , m_hasSVGFontFaceElement(true)
 {
 }
 
 CSSFontFaceSource::CSSFontFaceSource(CSSFontFace& owner, Ref<JSC::ArrayBufferView>&& arrayBufferView)
-    : m_face(owner)
+    : m_owningCSSFontFace(owner)
     , m_immediateSource(WTFMove(arrayBufferView))
 {
 }
@@ -246,7 +246,7 @@ bool CSSFontFaceSource::isSVGFontFaceSource() const
 
 Ref<CSSFontFace> CSSFontFaceSource::protectedCSSFontFace() const
 {
-    return m_face.get();
+    return m_owningCSSFontFace.get();
 }
 
 }
