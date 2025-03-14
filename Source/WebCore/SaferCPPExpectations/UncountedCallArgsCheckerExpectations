@@ -707,7 +707,6 @@ html/HTMLOptionElement.cpp
 html/HTMLOptionsCollection.cpp
 html/HTMLPlugInElement.cpp
 html/HTMLPlugInImageElement.cpp
-html/HTMLProgressElement.cpp
 html/HTMLTableCellElement.cpp
 html/HTMLTableElement.cpp
 html/HTMLTablePartElement.cpp
