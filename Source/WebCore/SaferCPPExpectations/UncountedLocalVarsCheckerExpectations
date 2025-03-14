@@ -368,7 +368,6 @@ html/HTMLMediaElement.cpp
 html/HTMLOptGroupElement.cpp
 html/HTMLOptionElement.cpp
 html/HTMLPictureElement.cpp
-html/HTMLSelectElement.cpp
 html/HTMLSlotElement.cpp
 html/HTMLTableElement.cpp
 html/HTMLTableRowElement.cpp
