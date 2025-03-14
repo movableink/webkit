@@ -91,6 +91,8 @@ public:
             --(m_thisObject->m_pendingActivityInstanceCount);
         }
 
+        T& object() { return m_thisObject.get(); }
+
     private:
         Ref<T> m_thisObject;
     };
