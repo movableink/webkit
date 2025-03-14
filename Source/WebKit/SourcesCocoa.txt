@@ -639,6 +639,7 @@ UIProcess/WebAuthentication/Mock/MockLocalService.mm
 UIProcess/WebAuthentication/Mock/MockNfcService.mm
 UIProcess/WebAuthentication/Mock/MockCcidService.mm
 
+UIProcess/WebsiteData/Cocoa/ScreenTimeWebsiteDataSupport.mm
 UIProcess/WebsiteData/Cocoa/WebsiteDataStoreCocoa.mm
 
 UIProcess/XR/ios/PlatformXRARKit.mm

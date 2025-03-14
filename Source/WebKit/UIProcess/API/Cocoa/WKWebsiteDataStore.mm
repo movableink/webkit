@@ -176,43 +176,6 @@ private:
         [m_delegate.getAutoreleased() didReceiveAuthenticationChallenge:nsURLChallenge completionHandler:completionHandler.get()];
     }
 
-#if ENABLE(SCREEN_TIME)
-    void getScreenTimeURLs(std::optional<WTF::UUID> identifier, CompletionHandler<void(HashSet<URL>&&)>&& completionHandler) const final
-    {
-        if (![PAL::getSTWebHistoryClass() instancesRespondToSelector:@selector(fetchAllHistoryWithCompletionHandler:)])
-            return completionHandler({ });
-
-        STWebHistoryProfileIdentifier profileIdentifier = nil;
-        if (identifier)
-            profileIdentifier = identifier->toString();
-
-        RetainPtr webHistory = adoptNS([PAL::allocSTWebHistoryInstance() initWithProfileIdentifier:profileIdentifier]);
-
-        // STWebHistory.fetchAllHistoryWithCompletionHandler sometimes deallocates its block instead of calling it.
-        // FIXME: Remove this once rdar://145889845 is widely available.
-        auto completionHandlerWithFinalizer = CompletionHandlerWithFinalizer<void(HashSet<URL>&&)>(WTFMove(completionHandler), [] (Function<void(HashSet<URL>&&)>& completionHandler) {
-            completionHandler({ });
-        });
-
-        [webHistory fetchAllHistoryWithCompletionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandlerWithFinalizer)](NSSet<NSURL *> *urls, NSError *error) mutable {
-            ensureOnMainRunLoop([completionHandler = WTFMove(completionHandler), urls = retainPtr(urls), error = retainPtr(error)] mutable {
-                if (error) {
-                    completionHandler({ });
-                    return;
-                }
-
-                HashSet<URL> result;
-                for (NSURL *site in urls.get()) {
-                    URL url { site };
-                    if (url.isValid())
-                        result.add(WTFMove(url));
-                }
-                completionHandler(WTFMove(result));
-            });
-        }).get()];
-    }
-#endif
-
     void openWindowFromServiceWorker(const String& url, const WebCore::SecurityOriginData& serviceWorkerOrigin, CompletionHandler<void(WebKit::WebPageProxy*)>&& callback)
     {
         if (!m_hasOpenWindowSelector || !m_delegate || !m_dataStore) {

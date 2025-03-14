@@ -94,6 +94,10 @@ static void testSuppressUsageRecordingWithDataStore(RetainPtr<WKWebsiteDataStore
 @property (nonatomic, copy) NSString *profileIdentifier;
 @end
 
+@interface STWebHistory (Staging_140439004)
+- (void)fetchAllHistoryWithCompletionHandler:(void (^)(NSSet<NSURL *> *urls, NSError *error))completionHandler;
+@end
+
 @interface WKWebView (Internal)
 - (STWebpageController *)_screenTimeWebpageController;
 #if PLATFORM(MAC)
@@ -545,6 +549,40 @@ TEST(ScreenTime, WebContentIsNotClickableBehindBlurredBlockingView)
 }
 
 #endif
+
+TEST(ScreenTime, FetchData)
+{
+    if (![PAL::getSTWebHistoryClass() instancesRespondToSelector:@selector(fetchAllHistoryWithCompletionHandler:)])
+        return;
+
+    __block RetainPtr<NSSet<NSURL *>> urls;
+    InstanceMethodSwizzler swizzler {
+        PAL::getSTWebHistoryClass(),
+        @selector(fetchAllHistoryWithCompletionHandler:),
+        imp_implementationWithBlock(^(id object, void (^completionHandler)(NSSet<NSURL *> *urls, NSError *error)) {
+            urls = [NSSet setWithArray:@[ adoptNS([[NSURL alloc] initWithString:@"https://www.webkit.org/"]).get() ]];
+            completionHandler(urls.get(), nil);
+        })
+    };
+
+    RetainPtr dataTypeScreenTime = adoptNS([[NSSet alloc] initWithArray:@[ _WKWebsiteDataTypeScreenTime ]]);
+
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+
+    RetainPtr websiteDataStore = [WKWebsiteDataStore defaultDataStore];
+    [configuration setWebsiteDataStore:websiteDataStore.get()];
+
+    RetainPtr webView = webViewForScreenTimeTests(configuration.get());
+    [webView synchronouslyLoadHTMLString:@"https://www.webkit.org/"];
+
+    __block bool done = false;
+    [websiteDataStore fetchDataRecordsOfTypes:dataTypeScreenTime.get() completionHandler:^(NSArray<WKWebsiteDataRecord *> *dataRecords) {
+        EXPECT_WK_STREQ([[dataRecords firstObject] displayName], "webkit.org");
+        done = true;
+    }];
+
+    TestWebKitAPI::Util::run(&done);
+}
 
 TEST(ScreenTime, RemoveDataWithTimeInterval)
 {
