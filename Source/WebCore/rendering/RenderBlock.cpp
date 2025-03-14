@@ -719,9 +719,9 @@ void RenderBlock::clearLayoutOverflow()
 
 void RenderBlock::addOverflowFromBlockChildren()
 {
-    for (auto* child = firstChildBox(); child; child = child->nextSiblingBox()) {
-        if (!child->isFloatingOrOutOfFlowPositioned())
-            addOverflowFromChild(*child);
+    for (auto& child : childrenOfType<RenderBox>(*this)) {
+        if (!child.isFloatingOrOutOfFlowPositioned())
+            addOverflowFromChild(child);
     }
 }
 
@@ -841,9 +841,9 @@ void RenderBlock::simplifiedNormalFlowLayout()
 {
     ASSERT(!childrenInline());
 
-    for (auto* box = firstChildBox(); box; box = box->nextSiblingBox()) {
-        if (!box->isOutOfFlowPositioned())
-            box->layoutIfNeeded();
+    for (auto& box : childrenOfType<RenderBox>(*this)) {
+        if (!box.isOutOfFlowPositioned())
+            box.layoutIfNeeded();
     }
 }
 
@@ -1132,8 +1132,8 @@ void RenderBlock::paintContents(PaintInfo& paintInfo, const LayoutPoint& paintOf
 
 void RenderBlock::paintChildren(PaintInfo& paintInfo, const LayoutPoint& paintOffset, PaintInfo& paintInfoForChild, bool usePrintRect)
 {
-    for (auto* child = firstChildBox(); child; child = child->nextSiblingBox()) {
-        if (!paintChild(*child, paintInfo, paintOffset, paintInfoForChild, usePrintRect))
+    for (auto& child : childrenOfType<RenderBox>(*this)) {
+        if (!paintChild(child, paintInfo, paintOffset, paintInfoForChild, usePrintRect))
             return;
     }
 }
@@ -2322,15 +2322,15 @@ VisiblePosition RenderBlock::positionForPoint(const LayoutPoint& point, HitTestS
             || (!blocksAreFlipped && pointInLogicalContents.y() == logicalTopForChild(*lastCandidateBox)))
             return positionForPointRespectingEditingBoundaries(*this, *lastCandidateBox, pointInContents, source);
 
-        for (auto* childBox = firstChildBox(); childBox; childBox = childBox->nextSiblingBox()) {
-            if (!isChildHitTestCandidate(*childBox, fragment, pointInLogicalContents, source))
+        for (auto& childBox : childrenOfType<RenderBox>(*this)) {
+            if (!isChildHitTestCandidate(childBox, fragment, pointInLogicalContents, source))
                 continue;
-            auto childLogicalBottom = logicalTopForChild(*childBox) + logicalHeightForChild(*childBox);
+            auto childLogicalBottom = logicalTopForChild(childBox) + logicalHeightForChild(childBox);
             if (auto* blockFlow = dynamicDowncast<RenderBlockFlow>(childBox))
                 childLogicalBottom = std::max(childLogicalBottom, blockFlow->lowestFloatLogicalBottom());
             // We hit child if our click is above the bottom of its padding box (like IE6/7 and FF3).
             if (pointInLogicalContents.y() < childLogicalBottom || (blocksAreFlipped && pointInLogicalContents.y() == childLogicalBottom))
-                return positionForPointRespectingEditingBoundaries(*this, *childBox, pointInContents, source);
+                return positionForPointRespectingEditingBoundaries(*this, childBox, pointInContents, source);
         }
     }
 
