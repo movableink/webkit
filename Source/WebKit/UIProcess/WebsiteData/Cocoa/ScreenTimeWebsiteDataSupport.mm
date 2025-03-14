@@ -32,7 +32,9 @@
 #import <wtf/BlockPtr.h>
 #import <wtf/HashSet.h>
 #import <wtf/URL.h>
+#import <wtf/URLHash.h>
 #import <wtf/UUID.h>
+#import <wtf/WallTime.h>
 
 #import <pal/cocoa/ScreenTimeSoftLink.h>
 
@@ -90,7 +92,7 @@ void removeScreenTimeData(const HashSet<URL>& websitesToRemove, const WebsiteDat
         [webHistory deleteHistoryForURL:url];
 }
 
-void removeScreenTimeDataWithInterval(WallTime modifiedSince, const WebsiteDataStoreConfiguration& configuration)
+void removeScreenTimeDataWithInterval(WTF::WallTime modifiedSince, const WebsiteDataStoreConfiguration& configuration)
 {
     STWebHistoryProfileIdentifier profileIdentifier = nil;
     if (configuration.identifier())

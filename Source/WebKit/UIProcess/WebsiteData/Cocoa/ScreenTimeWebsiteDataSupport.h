@@ -39,7 +39,7 @@ void getScreenTimeURLs(std::optional<WTF::UUID>, CompletionHandler<void(HashSet<
 
 void removeScreenTimeData(const HashSet<URL>& websitesToRemove, const WebsiteDataStoreConfiguration&);
 
-void removeScreenTimeDataWithInterval(WallTime, const WebsiteDataStoreConfiguration&);
+void removeScreenTimeDataWithInterval(WTF::WallTime, const WebsiteDataStoreConfiguration&);
 
 } // namespace ScreenTimeWebsiteDataSupport
 
