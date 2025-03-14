@@ -1,3 +1,6 @@
+NetworkProcess/NetworkProcess.cpp
+UIProcess/Launcher/cocoa/ProcessLauncherCocoa.mm
+UIProcess/WebProcessPool.cpp
 WebProcess/FullScreen/WebFullScreenManager.cpp
 WebProcess/Inspector/WebInspectorInternal.cpp
 WebProcess/Plugins/PDF/PDFPluginAnnotation.mm
@@ -7,6 +10,7 @@ WebProcess/Plugins/PDF/PDFPluginTextAnnotation.mm
 WebProcess/Plugins/PDF/UnifiedPDF/PDFDiscretePresentationController.mm
 WebProcess/Plugins/PDF/UnifiedPDF/PDFPresentationController.mm
 WebProcess/Plugins/PDF/UnifiedPDF/PDFScrollingPresentationController.mm
+WebProcess/Plugins/PluginView.cpp
 WebProcess/WebCoreSupport/WebPopupMenu.cpp
 WebProcess/WebCoreSupport/mac/WebPopupMenuMac.mm
 WebProcess/WebPage/DrawingArea.cpp

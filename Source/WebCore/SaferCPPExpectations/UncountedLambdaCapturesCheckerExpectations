@@ -103,6 +103,8 @@ page/csp/ContentSecurityPolicy.cpp
 page/scrolling/AsyncScrollingCoordinator.cpp
 page/scrolling/ThreadedScrollingCoordinator.cpp
 page/scrolling/mac/ScrollerPairMac.mm
+platform/RemoteCommandListener.cpp
+platform/ScrollableArea.cpp
 platform/Timer.h
 platform/encryptedmedia/CDMProxy.cpp
 platform/encryptedmedia/clearkey/CDMClearKey.cpp

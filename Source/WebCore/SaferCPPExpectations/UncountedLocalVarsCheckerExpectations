@@ -209,6 +209,7 @@ css/CSSComputedStyleDeclaration.cpp
 css/CSSCounterStyleDescriptors.cpp
 css/CSSFontFace.cpp
 css/CSSFontFaceSet.cpp
+css/CSSFontFaceSource.cpp
 css/CSSFontSelector.cpp
 css/CSSGroupingRule.cpp
 css/CSSImageSetValue.cpp
@@ -307,6 +308,7 @@ dom/TextNodeTraversal.h
 dom/TreeScope.cpp
 dom/TrustedType.cpp
 dom/TypedElementDescendantIteratorInlines.h
+dom/UIEventWithKeyState.cpp
 editing/ApplyStyleCommand.cpp
 editing/ChangeListTypeCommand.cpp
 editing/Editing.cpp
@@ -398,6 +400,7 @@ html/canvas/EXTDisjointTimerQueryWebGL2.cpp
 html/canvas/EXTPolygonOffsetClamp.cpp
 html/canvas/GPUBasedCanvasRenderingContext.cpp
 html/canvas/GPUCanvasContextCocoa.mm
+html/canvas/ImageBitmapRenderingContext.cpp
 html/canvas/OESDrawBuffersIndexed.cpp
 html/canvas/OESVertexArrayObject.cpp
 html/canvas/OffscreenCanvasRenderingContext2D.cpp
@@ -463,6 +466,7 @@ layout/formattingContexts/inline/InlineLineBoxBuilder.cpp
 layout/integration/inline/LayoutIntegrationLineLayout.cpp
 layout/layouttree/LayoutTreeBuilder.cpp
 loader/ApplicationManifestLoader.cpp
+loader/DocumentLoader.cpp
 loader/FrameLoader.cpp
 loader/NavigationAction.cpp
 loader/NavigationScheduler.cpp
@@ -511,6 +515,7 @@ page/PageGroupLoadDeferrer.cpp
 page/PageOverlayController.cpp
 page/PageSerializer.cpp
 page/Performance.cpp
+page/PerformanceLogging.cpp
 page/PerformanceMark.cpp
 page/PerformanceNavigation.cpp
 page/PerformanceObserver.cpp
@@ -543,6 +548,7 @@ page/mac/ServicesOverlayController.mm
 page/scrolling/AsyncScrollingCoordinator.cpp
 page/scrolling/ScrollAnchoringController.cpp
 page/scrolling/ScrollingCoordinator.cpp
+page/scrolling/ScrollingStateStickyNode.cpp
 page/scrolling/ScrollingTreeFixedNode.cpp
 page/scrolling/ScrollingTreeOverflowScrollProxyNode.cpp
 page/scrolling/ScrollingTreePositionedNode.cpp
@@ -551,7 +557,10 @@ page/text-extraction/TextExtraction.cpp
 platform/CaretAnimator.cpp
 platform/DictationCaretAnimator.cpp
 platform/KeyboardScrollingAnimator.cpp
+platform/ScrollAnimator.cpp
 platform/ScrollView.cpp
+platform/ScrollableArea.cpp
+platform/ScrollbarsController.cpp
 platform/ThreadGlobalData.cpp
 platform/ThreadGlobalData.h
 platform/animation/AcceleratedEffect.cpp
@@ -573,6 +582,7 @@ platform/graphics/avfoundation/AudioSourceProviderAVFObjC.mm
 platform/graphics/avfoundation/objc/CDMInstanceFairPlayStreamingAVFObjC.mm
 platform/graphics/avfoundation/objc/MediaSourcePrivateAVFObjC.mm
 platform/graphics/avfoundation/objc/WebCoreAVFResourceLoader.mm
+platform/graphics/ca/GraphicsLayerCA.cpp
 platform/graphics/ca/TileGrid.cpp
 platform/graphics/ca/cocoa/PlatformCALayerCocoa.mm
 platform/graphics/cocoa/controls/ApplePayButtonCocoa.mm
@@ -586,6 +596,7 @@ platform/graphics/mac/controls/MeterMac.mm
 platform/graphics/mac/controls/ProgressBarMac.mm
 platform/graphics/mac/controls/SliderTrackMac.mm
 platform/graphics/transforms/RotateTransformOperation.cpp
+platform/mac/ScrollAnimatorMac.mm
 platform/mac/ScrollbarsControllerMac.mm
 platform/mac/WidgetMac.mm
 platform/mediastream/mac/RealtimeIncomingVideoSourceCocoa.mm
@@ -616,6 +627,7 @@ rendering/RenderImage.cpp
 rendering/RenderImageResource.cpp
 rendering/RenderLayer.cpp
 rendering/RenderLayerBacking.cpp
+rendering/RenderLayerCompositor.cpp
 rendering/RenderLayerFilters.cpp
 rendering/RenderLayerModelObject.cpp
 rendering/RenderListBox.cpp
@@ -656,6 +668,7 @@ rendering/svg/RenderSVGShape.cpp
 rendering/svg/RenderSVGTransformableContainer.cpp
 rendering/svg/SVGRenderSupport.cpp
 rendering/svg/SVGRenderTreeAsText.cpp
+rendering/svg/SVGRenderingContext.cpp
 rendering/svg/SVGTextBoxPainter.cpp
 rendering/svg/SVGTextChunk.cpp
 rendering/svg/SVGTextLayoutEngine.cpp
@@ -729,11 +742,13 @@ svg/SVGMPathElement.cpp
 svg/SVGMaskElement.cpp
 svg/SVGSVGElement.cpp
 svg/SVGSwitchElement.cpp
+svg/SVGTextContentElement.cpp
 svg/SVGToOTFFontConversion.cpp
 svg/SVGUseElement.cpp
 svg/graphics/SVGImage.cpp
 svg/graphics/SVGImageCache.cpp
 svg/properties/SVGAnimatedString.cpp
+svg/properties/SVGPropertyOwnerRegistry.h
 testing/InternalSettings.cpp
 testing/Internals.cpp
 testing/Internals.mm

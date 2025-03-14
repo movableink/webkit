@@ -54,6 +54,7 @@ platform/KeyboardScrollingAnimator.cpp
 platform/ScrollAnimator.cpp
 platform/ScrollView.cpp
 platform/Scrollbar.cpp
+platform/ScrollbarsController.cpp
 platform/Widget.cpp
 platform/cocoa/WebAVPlayerLayer.mm
 platform/ios/PlaybackSessionInterfaceIOS.mm
@@ -71,6 +72,7 @@ rendering/RenderElement.cpp
 rendering/RenderEmbeddedObject.cpp
 rendering/RenderLayer.cpp
 rendering/RenderLayerBacking.cpp
+rendering/RenderLayerCompositor.cpp
 rendering/RenderLayerModelObject.cpp
 rendering/RenderListBox.cpp
 rendering/RenderMenuList.cpp

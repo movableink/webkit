@@ -1,3 +1,4 @@
+WebKitBuild/Release/usr/local/include/wtf/text/StringHash.h
 wtf/AutomaticThread.cpp
 wtf/JSONValues.cpp
 wtf/MemoryPressureHandler.cpp
