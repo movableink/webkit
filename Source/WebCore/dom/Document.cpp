@@ -9567,14 +9567,6 @@ void Document::didLoadResourceSynchronously(const URL& url)
         page->cookieJar().clearCacheForHost(url.host().toString());
 }
 
-std::optional<Vector<uint8_t>> Document::wrapCryptoKey(const Vector<uint8_t>& key)
-{
-    RefPtr page = this->page();
-    if (!page)
-        return std::nullopt;
-    return page->cryptoClient().wrapCryptoKey(key);
-}
-
 std::optional<Vector<uint8_t>> Document::serializeAndWrapCryptoKey(CryptoKeyData&& keyData)
 {
     RefPtr page = this->page();

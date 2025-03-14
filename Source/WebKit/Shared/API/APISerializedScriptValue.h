@@ -28,7 +28,6 @@
 #include "APIObject.h"
 #include "WKRetainPtr.h"
 #include <JavaScriptCore/JSRetainPtr.h>
-#include <WebCore/CryptoKey.h>
 #include <WebCore/SerializedScriptValue.h>
 #include <wtf/RefPtr.h>
 
@@ -72,8 +71,6 @@ public:
 
     static WKRetainPtr<WKTypeRef> deserializeWK(WebCore::SerializedScriptValue&);
 #endif
-
-    static Vector<uint8_t> serializeCryptoKey(const WebCore::CryptoKey&);
 
 #if PLATFORM(COCOA)
     static JSRetainPtr<JSGlobalContextRef> deserializationContext();

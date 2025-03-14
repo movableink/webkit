@@ -29,7 +29,6 @@
 #include "APIFrameHandle.h"
 #include "APIPageConfiguration.h"
 #include "APIPageHandle.h"
-#include "APISerializedScriptValue.h"
 #include "APIUIClient.h"
 #include "AuthenticatorManager.h"
 #include "DownloadProxyMap.h"
@@ -87,6 +86,7 @@
 #include "WebsiteData.h"
 #include "WebsiteDataFetchOption.h"
 #include <WebCore/AudioSession.h>
+#include <WebCore/CryptoKey.h>
 #include <WebCore/DiagnosticLoggingKeys.h>
 #include <WebCore/MediaProducer.h>
 #include <WebCore/PermissionName.h>
@@ -97,6 +97,7 @@
 #include <WebCore/ResourceResponse.h>
 #include <WebCore/SecurityOriginData.h>
 #include <WebCore/SerializedCryptoKeyWrap.h>
+#include <WebCore/SerializedScriptValue.h>
 #include <WebCore/SharedMemory.h>
 #include <WebCore/SuddenTermination.h>
 #include <WebCore/WrappedCryptoKey.h>
@@ -2840,8 +2841,9 @@ void WebProcessProxy::serializeAndWrapCryptoKey(WebCore::CryptoKeyData&& keyData
 {
     auto key = WebCore::CryptoKey::create(WTFMove(keyData));
     MESSAGE_CHECK_COMPLETION(key, completionHandler(std::nullopt));
+    MESSAGE_CHECK_COMPLETION(key->isValid(), completionHandler(std::nullopt));
 
-    auto serializedKey = API::SerializedScriptValue::serializeCryptoKey(*key);
+    auto serializedKey = WebCore::SerializedScriptValue::serializeCryptoKey(*key);
     wrapCryptoKey(WTFMove(serializedKey), WTFMove(completionHandler));
 }
 

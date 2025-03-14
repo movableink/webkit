@@ -1036,7 +1036,7 @@ static void validateSerializedResult(CloneSerializer&, SerializationReturnCode, 
 class CloneSerializer : public CloneBase {
     WTF_FORBID_HEAP_ALLOCATION;
 public:
-    static Vector<uint8_t> serializeCryptoKey(JSC::JSGlobalObject& globalObject, const CryptoKey& key)
+    static Vector<uint8_t> serializeCryptoKey(const CryptoKey& key)
     {
         Vector<uint8_t> serializedKey;
         Vector<URLKeepingBlobAlive> dummyBlobHandles;
@@ -1060,7 +1060,7 @@ public:
         Vector<RefPtr<OffscreenCanvas>> dummyInMemoryOffscreenCanvases;
 #endif
         Vector<Ref<MessagePort>> dummyInMemoryMessagePorts;
-        CloneSerializer rawKeySerializer(&globalObject, dummyMessagePorts, dummyArrayBuffers, { },
+        CloneSerializer rawKeySerializer(nullptr, dummyMessagePorts, dummyArrayBuffers, { },
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
             { },
             dummyInMemoryOffscreenCanvases,
@@ -1212,7 +1212,6 @@ private:
         : CloneBase(lexicalGlobalObject)
         , m_buffer(out)
         , m_blobHandles(blobHandles)
-        , m_emptyIdentifier(Identifier::fromString(lexicalGlobalObject->vm(), emptyAtom()))
         , m_context(context)
         , m_sharedBuffers(sharedBuffers)
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
@@ -2278,7 +2277,7 @@ private:
             write(static_cast<uint32_t>(i));
     }
 
-    void write(const Identifier& ident)
+    void write(const AtomString& ident)
     {
         const String& str = ident.string();
         StringConstantPool::AddResult addResult = m_constantPool.add(ident.impl(), m_constantPool.size());
@@ -2315,9 +2314,9 @@ private:
     void write(const String& str)
     {
         if (str.isNull())
-            write(m_emptyIdentifier);
+            write(emptyAtom());
         else
-            write(Identifier::fromString(m_lexicalGlobalObject->vm(), str));
+            write(AtomString(str));
     }
 
     void writeNullableString(const String& str)
@@ -2325,7 +2324,7 @@ private:
         bool isNull = str.isNull();
         write(isNull);
         if (!isNull)
-            write(Identifier::fromString(m_lexicalGlobalObject->vm(), str));
+            write(AtomString(str));
     }
 
     void write(const Vector<uint8_t>& vector)
@@ -2658,11 +2657,10 @@ private:
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
     ObjectPoolMap m_transferredMediaSourceHandles;
 #endif
-    typedef UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, uint32_t, IdentifierRepHash> StringConstantPool;
+    typedef UncheckedKeyHashMap<RefPtr<AtomStringImpl>, uint32_t, IdentifierRepHash> StringConstantPool;
     StringConstantPool m_constantPool;
     using ImageDataPool = UncheckedKeyHashMap<Ref<ImageData>, uint32_t>;
     ImageDataPool m_imageDataPool;
-    Identifier m_emptyIdentifier;
     SerializationContext m_context;
     ArrayBufferContentsArray& m_sharedBuffers;
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
@@ -2816,7 +2814,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                     indexStack.last()++;
                     goto startVisitNamedMember;
                 }
-                write(properties[index]);
+                write(properties[index].string());
 
                 if (UNLIKELY(scope.exception()))
                     return SerializationReturnCode::ExistingExceptionError;
@@ -6314,13 +6312,9 @@ RefPtr<SerializedScriptValue> SerializedScriptValue::create(JSContextRef originC
     return serializedValue;
 }
 
-Vector<uint8_t> SerializedScriptValue::serializeCryptoKey(JSContextRef context, const WebCore::CryptoKey& key)
+Vector<uint8_t> SerializedScriptValue::serializeCryptoKey(const WebCore::CryptoKey& key)
 {
-    JSGlobalObject* lexicalGlobalObject = toJS(context);
-    VM& vm = lexicalGlobalObject->vm();
-    JSLockHolder locker(vm);
-
-    return CloneSerializer::serializeCryptoKey(*lexicalGlobalObject, key);
+    return CloneSerializer::serializeCryptoKey(key);
 }
 
 String SerializedScriptValue::toString() const

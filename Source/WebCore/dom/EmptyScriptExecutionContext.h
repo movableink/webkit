@@ -79,7 +79,6 @@ public:
     void postTask(Task&&) final { ASSERT_NOT_REACHED(); }
     EventTarget* errorEventTarget() final { return nullptr; };
 
-    std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>&) final { return std::nullopt; }
     std::optional<Vector<uint8_t>> serializeAndWrapCryptoKey(CryptoKeyData&&) final { return std::nullopt; }
     std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>&) final { return std::nullopt; }
 
