@@ -161,7 +161,11 @@ void RemoteRealtimeMediaSource::gpuProcessConnectionDidClose(GPUProcessConnectio
 
     if (isProducingData())
         startProducingData();
-
+    else if (isAudio() && !interrupted()) {
+        // To be able to reenable voice detection, we have to restart the source.
+        startProducingData();
+        stopProducingData();
+    }
 }
 #endif
 
