@@ -99,6 +99,7 @@
 #include "Quirks.h"
 #include "Range.h"
 #include "RemoveFormatCommand.h"
+#include "RenderAncestorIterator.h"
 #include "RenderBlock.h"
 #include "RenderBlockFlow.h"
 #include "RenderImage.h"
@@ -846,22 +847,14 @@ bool Editor::hasBidiSelection() const
     } else
         startNode = document->selection().selection().visibleStart().deepEquivalent().protectedDeprecatedNode();
 
-    if (!startNode)
+    if (!startNode || !startNode->renderer())
         return false;
 
     ScriptDisallowedScope::InMainThread scriptDisallowedScope;
 
-    CheckedPtr renderer = startNode->renderer();
-    while (renderer && !is<RenderBlockFlow>(*renderer))
-        renderer = renderer->parent();
-
-    if (!renderer)
-        return false;
-
-    if (!renderer->style().isLeftToRightDirection())
-        return true;
-
-    return downcast<RenderBlockFlow>(*renderer).containsNonZeroBidiLevel();
+    if (CheckedPtr renderBlockFlow = ancestorsOfType<RenderBlockFlow>(*startNode->renderer()).first())
+        return !renderBlockFlow->style().isLeftToRightDirection() || renderBlockFlow->containsNonZeroBidiLevel();
+    return false;
 }
 
 TriState Editor::selectionUnorderedListState() const

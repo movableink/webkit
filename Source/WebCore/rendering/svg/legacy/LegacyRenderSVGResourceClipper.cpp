@@ -301,8 +301,8 @@ void LegacyRenderSVGResourceClipper::calculateClipContentRepaintRect(RepaintRect
 {
     // This is a rough heuristic to appraise the clip size and doesn't consider clip on clip.
     for (Node* childNode = clipPathElement().firstChild(); childNode; childNode = childNode->nextSibling()) {
-        RenderObject* renderer = childNode->renderer();
-        if (!childNode->isSVGElement() || !renderer)
+        CheckedPtr renderer = dynamicDowncast<RenderElement>(childNode->renderer());
+        if (!renderer || !childNode->isSVGElement())
             continue;
         if (!renderer->isRenderOrLegacyRenderSVGShape() && !renderer->isRenderSVGText() && !childNode->hasTagName(SVGNames::useTag))
             continue;

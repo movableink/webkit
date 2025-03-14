@@ -78,7 +78,7 @@ static bool isValidSampleLocation(Document& document, const IntPoint& location)
             return false;
 
         // Skip images (both `<img>` and CSS `background-image`) as they're likely not a solid color.
-        if (is<RenderImage>(renderer) || renderer->style().hasBackgroundImage())
+        if (CheckedPtr imageRenderer = dynamicDowncast<RenderImage>(renderer); imageRenderer && imageRenderer->style().hasBackgroundImage())
             return false;
 
         RefPtr element = dynamicDowncast<Element>(node);

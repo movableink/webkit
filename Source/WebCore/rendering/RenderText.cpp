@@ -2174,9 +2174,8 @@ std::optional<bool> RenderText::emphasisMarkExistsAndIsAbove(const RenderText& r
             if (!baseCandidate->isInline())
                 return nullptr;
             if (baseCandidate->style().display() == DisplayType::RubyBase) {
-                auto* annotationCandidate = baseCandidate->nextSibling();
-                if (annotationCandidate && annotationCandidate->style().display() == DisplayType::RubyAnnotation)
-                    return dynamicDowncast<RenderBlockFlow>(annotationCandidate);
+                if (auto* annotationCandidate = dynamicDowncast<RenderBlockFlow>(baseCandidate->nextSibling()); annotationCandidate && annotationCandidate->style().display() == DisplayType::RubyAnnotation)
+                    return annotationCandidate;
                 return nullptr;
             }
         }

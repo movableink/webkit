@@ -77,7 +77,7 @@ class PathOperation;
 class PositionArea;
 class PseudoIdSet;
 class QuotesData;
-class RenderObject;
+class RenderElement;
 class RenderStyle;
 class RotateTransformOperation;
 class RoundedRect;
@@ -468,9 +468,9 @@ public:
     inline bool hasInFlowPosition() const;
     inline bool hasViewportConstrainedPosition() const;
     Float floating() const { return static_cast<Float>(m_nonInheritedFlags.floating); }
-    static UsedFloat usedFloat(const RenderObject&); // Returns logical left/right (block-relative).
+    static UsedFloat usedFloat(const RenderElement&); // Returns logical left/right (block-relative).
     Clear clear() const { return static_cast<Clear>(m_nonInheritedFlags.clear); }
-    static UsedClear usedClear(const RenderObject&); // Returns logical left/right (block-relative).
+    static UsedClear usedClear(const RenderElement&); // Returns logical left/right (block-relative).
 
     inline const Length& width() const;
     inline const Length& height() const;

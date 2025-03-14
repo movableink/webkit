@@ -180,8 +180,8 @@ FloatRect SVGClipPathElement::calculateClipContentRepaintRect(RepaintRectCalcula
     FloatRect clipContentRepaintRect;
     // This is a rough heuristic to appraise the clip size and doesn't consider clip on clip.
     for (auto* childNode = firstChild(); childNode; childNode = childNode->nextSibling()) {
-        CheckedPtr renderer = childNode->renderer();
-        if (!childNode->isSVGElement() || !renderer)
+        CheckedPtr renderer = dynamicDowncast<RenderElement>(childNode->renderer());
+        if (!renderer || !childNode->isSVGElement())
             continue;
         if (!renderer->isRenderSVGShape() && !renderer->isRenderSVGText() && !childNode->hasTagName(SVGNames::useTag))
             continue;

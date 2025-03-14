@@ -374,7 +374,9 @@ inline void InlineBidiResolver::incrementInternal()
 
 static inline bool isIsolatedInline(RenderObject& object)
 {
-    return object.isRenderInline() && isIsolated(object.style().unicodeBidi());
+    if (CheckedPtr inlineBox = dynamicDowncast<RenderInline>(object))
+        return isIsolated(inlineBox->style().unicodeBidi());
+    return false;
 }
 
 static inline RenderObject* highestContainingIsolateWithinRoot(RenderObject& initialObject, RenderObject* root)

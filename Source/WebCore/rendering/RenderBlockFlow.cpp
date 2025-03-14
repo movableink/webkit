@@ -4615,7 +4615,7 @@ void RenderBlockFlow::computeInlinePreferredLogicalWidths(LayoutUnit& minLogical
         // (that's exactly to what we try to contribute here) unless the computed value is fixed.
         textIndent = minimumValueForLength(styleToUse.textIndent(), containingBlock->style().logicalWidth().value());
     }
-    RenderObject* previousFloat = 0;
+    CheckedPtr<RenderBox> previousFloat;
     bool isPrevChildInlineFlow = false;
     bool shouldBreakLineAfterText = false;
     bool canHangPunctuationAtStart = styleToUse.hangingPunctuation().contains(HangingPunctuation::First);
@@ -4761,18 +4761,18 @@ void RenderBlockFlow::computeInlinePreferredLogicalWidths(LayoutUnit& minLogical
                 childMax += childMaxPreferredLogicalWidth.ceilToFloat();
 
                 bool clearPreviousFloat = false;
-                if (child->isFloating()) {
-                    auto childClearValue = RenderStyle::usedClear(*child);
+                if (box->isFloating()) {
+                    auto childClearValue = RenderStyle::usedClear(*box);
                     if (previousFloat) {
                         auto previousFloatValue = RenderStyle::usedFloat(*previousFloat);
                         clearPreviousFloat =
                             (previousFloatValue == UsedFloat::Left && (childClearValue == UsedClear::Left || childClearValue == UsedClear::Both))
                             || (previousFloatValue == UsedFloat::Right && (childClearValue == UsedClear::Right || childClearValue == UsedClear::Both));
                     }
-                    previousFloat = child;
+                    previousFloat = box;
                 }
 
-                bool canBreakReplacedElement = !child->isImage() || allowImagesToBreak;
+                bool canBreakReplacedElement = !box->isImage() || allowImagesToBreak;
                 if (((canBreakReplacedElement && (autoWrap || oldAutoWrap) && (!isPrevChildInlineFlow || shouldBreakLineAfterText)) || clearPreviousFloat)) {
                     minLogicalWidth = preferredWidth(minLogicalWidth, inlineMin);
                     inlineMin = 0;
@@ -4785,7 +4785,7 @@ void RenderBlockFlow::computeInlinePreferredLogicalWidths(LayoutUnit& minLogical
                 }
 
                 // Add in text-indent. This is added in only once.
-                if (!addedTextIndent && !child->isFloating()) {
+                if (!addedTextIndent && !box->isFloating()) {
                     LayoutUnit ceiledIndent { textIndent.ceilToFloat() };
                     childMin += ceiledIndent;
                     childMax += ceiledIndent;
@@ -4796,14 +4796,14 @@ void RenderBlockFlow::computeInlinePreferredLogicalWidths(LayoutUnit& minLogical
                         addedTextIndent = true;
                 }
                 
-                if (canHangPunctuationAtStart && !addedStartPunctuationHang && !child->isFloating())
+                if (canHangPunctuationAtStart && !addedStartPunctuationHang && !box->isFloating())
                     addedStartPunctuationHang = true;
 
                 // Add our width to the max.
                 inlineMax += std::max<float>(0, childMax);
 
                 if ((!autoWrap || !canBreakReplacedElement || (isPrevChildInlineFlow && !shouldBreakLineAfterText))) {
-                    if (child->isFloating())
+                    if (box->isFloating())
                         minLogicalWidth = preferredWidth(minLogicalWidth, childMin);
                     else
                         inlineMin += childMin;
@@ -4821,7 +4821,7 @@ void RenderBlockFlow::computeInlinePreferredLogicalWidths(LayoutUnit& minLogical
                 }
 
                 // We are no longer stripping whitespace at the start of a line.
-                if (!child->isFloating()) {
+                if (!box->isFloating()) {
                     stripFrontSpaces = false;
                     trailingSpaceChild = nullptr;
                     lastText = nullptr;
