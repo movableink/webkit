@@ -629,33 +629,3 @@ function split(string, limit)
     return result;
 }
 
-// ES 21.2.5.13 RegExp.prototype.test(string)
-@intrinsic=RegExpTestIntrinsic
-function test(strArg)
-{
-    "use strict";
-
-    var regexp = this;
-
-    // Check for observable side effects and call the fast path if there aren't any.
-    if (@isRegExpObject(regexp)
-        && @tryGetById(regexp, "exec") === @regExpBuiltinExec
-        && typeof regexp.lastIndex === "number")
-        return @regExpTestFast.@call(regexp, strArg);
-
-    // 1. Let R be the this value.
-    // 2. If Type(R) is not Object, throw a TypeError exception.
-    if (!@isObject(regexp))
-        @throwTypeError("RegExp.prototype.test requires that |this| be an Object");
-
-    // 3. Let string be ? ToString(S).
-    var str = @toString(strArg);
-
-    // 4. Let match be ? RegExpExec(R, string).
-    var match = @regExpExec(regexp, str);
-
-    // 5. If match is not null, return true; else return false.
-    if (match !== null)
-        return true;
-    return false;
-}
