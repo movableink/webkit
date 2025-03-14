@@ -193,16 +193,10 @@ static void wpeInputMethodContextSetProperty(GObject* object, guint propId, cons
         ime->priv->view.reset(WPE_VIEW(g_value_get_object(value)));
         break;
     case PROP_INPUT_PURPOSE:
-        if (ime->priv->purpose != g_value_get_enum(value)) {
-            ime->priv->purpose = static_cast<WPEInputPurpose>(g_value_get_enum(value));
-            g_object_notify_by_pspec(object, paramSpec);
-        }
+        wpe_input_method_context_set_input_purpose(ime, static_cast<WPEInputPurpose>(g_value_get_enum(value)));
         break;
     case PROP_INPUT_HINTS:
-        if (ime->priv->hints != g_value_get_flags(value))  {
-            ime->priv->hints =  static_cast<WPEInputHints>(g_value_get_flags(value));
-            g_object_notify_by_pspec(object, paramSpec);
-        }
+        wpe_input_method_context_set_input_hints(ime, static_cast<WPEInputHints>(g_value_get_flags(value)));
         break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, paramSpec);
@@ -218,10 +212,10 @@ static void wpeInputMethodContextGetProperty(GObject* object, guint propId, GVal
         g_value_set_object(value, wpe_input_method_context_get_view(ime));
         break;
     case PROP_INPUT_PURPOSE:
-        g_value_set_enum(value, ime->priv->purpose);
+        g_value_set_enum(value, wpe_input_method_context_get_input_purpose(ime));
         break;
     case PROP_INPUT_HINTS:
-        g_value_set_flags(value, ime->priv->hints);
+        g_value_set_flags(value, wpe_input_method_context_get_input_hints(ime));
         break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, paramSpec);
@@ -404,6 +398,72 @@ WPEDisplay* wpe_input_method_context_get_display(WPEInputMethodContext* context)
     g_return_val_if_fail(WPE_IS_INPUT_METHOD_CONTEXT(context), nullptr);
 
     return context->priv->view ? wpe_view_get_display(context->priv->view.get()) : nullptr;
+}
+
+/**
+ * wpe_input_method_context_get_input_purpose:
+ * @context: a #WPEInputMethodContext
+ *
+ * Get the purpose of the text field that @context is connected to.
+ *
+ * Returns: a #WPEInputPurpose
+ */
+WPEInputPurpose wpe_input_method_context_get_input_purpose(WPEInputMethodContext* context)
+{
+    g_return_val_if_fail(WPE_IS_INPUT_METHOD_CONTEXT(context), WPE_INPUT_PURPOSE_FREE_FORM);
+
+    return context->priv->purpose;
+}
+
+/**
+ * wpe_input_method_context_set_input_purpose:
+ * @context: a #WPEInputMethodContext
+ * @purpose: a #WPEInputPurpose
+ *
+ * Set the purpose of the text field that @context is connected to.
+ */
+void wpe_input_method_context_set_input_purpose(WPEInputMethodContext* context, WPEInputPurpose purpose)
+{
+    g_return_if_fail(WPE_IS_INPUT_METHOD_CONTEXT(context));
+
+    if (context->priv->purpose == purpose)
+        return;
+
+    context->priv->purpose = purpose;
+    g_object_notify_by_pspec(G_OBJECT(context), sObjProperties[PROP_INPUT_PURPOSE]);
+}
+
+/**
+ * wpe_input_method_context_get_input_hints:
+ * @context: a #WPEInputMethodContext
+ *
+ * Get hints of @context that allow input methods to fine-tune their behaviour.
+ *
+ * Returns: a #WPEInputHints
+ */
+WPEInputHints wpe_input_method_context_get_input_hints(WPEInputMethodContext* context)
+{
+    g_return_val_if_fail(WPE_IS_INPUT_METHOD_CONTEXT(context), WPE_INPUT_HINT_NONE);
+
+    return context->priv->hints;
+}
+
+/**
+ * wpe_input_method_context_set_input_hints:
+ * @context: a #WPEInputMethodContext
+ * @hints: a #WPEInputHints
+ *
+ * Set hints of @context that allow input methods to fine-tune their behaviour.
+ */
+void wpe_input_method_context_set_input_hints(WPEInputMethodContext* context, WPEInputHints hints)
+{
+    g_return_if_fail(WPE_IS_INPUT_METHOD_CONTEXT(context));
+
+    if (context->priv->hints == hints)
+        return;
+
+    context->priv->hints = hints;
+    g_object_notify_by_pspec(G_OBJECT(context), sObjProperties[PROP_INPUT_HINTS]);
 }
 
 /**

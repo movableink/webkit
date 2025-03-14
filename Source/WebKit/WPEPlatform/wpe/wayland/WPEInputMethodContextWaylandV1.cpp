@@ -557,8 +557,7 @@ static void wpeIMContextWaylandV1FocusIn(WPEInputMethodContext* context)
     if (global->textInput == nullptr)
         return;
 
-    WPEInputHints hints;
-    g_object_get(context, "input-hints", &hints, nullptr);
+    WPEInputHints hints = wpe_input_method_context_get_input_hints(context);
     if (!(hints & WPE_INPUT_HINT_INHIBIT_OSK)) {
         zwp_text_input_v1_show_input_panel(global->textInput);
         zwp_text_input_v1_activate(global->textInput,

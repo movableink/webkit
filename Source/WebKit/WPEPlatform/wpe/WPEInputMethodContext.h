@@ -156,6 +156,12 @@ struct _WPEInputMethodContextClass
 WPE_API WPEInputMethodContext   *wpe_input_method_context_new                (WPEView                 *view);
 WPE_API WPEView                 *wpe_input_method_context_get_view           (WPEInputMethodContext   *context);
 WPE_API WPEDisplay              *wpe_input_method_context_get_display        (WPEInputMethodContext   *context);
+WPE_API WPEInputPurpose          wpe_input_method_context_get_input_purpose  (WPEInputMethodContext   *context);
+WPE_API void                     wpe_input_method_context_set_input_purpose  (WPEInputMethodContext   *context,
+                                                                              WPEInputPurpose          purpose);
+WPE_API WPEInputHints            wpe_input_method_context_get_input_hints    (WPEInputMethodContext   *context);
+WPE_API void                     wpe_input_method_context_set_input_hints    (WPEInputMethodContext   *context,
+                                                                              WPEInputHints            hints);
 WPE_API void                     wpe_input_method_context_get_preedit_string (WPEInputMethodContext   *context,
                                                                               char                    **text,
                                                                               GList                   **underlines,
