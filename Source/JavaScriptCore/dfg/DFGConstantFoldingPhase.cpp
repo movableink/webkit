@@ -1862,6 +1862,7 @@ private:
             case JSConstant:
             case DoubleConstant:
             case Int52Constant:
+            case ConstantStoragePointer:
                 node->remove(m_graph);
                 break;
             default:
