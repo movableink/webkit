@@ -27,6 +27,7 @@
 #include "InstallEvent.h"
 
 #include "HTTPParsers.h"
+#include "JSDOMPromise.h"
 #include "JSDOMPromiseDeferred.h"
 #include "ServiceWorkerGlobalScope.h"
 #include "ServiceWorkerRoute.h"
