@@ -439,6 +439,9 @@ const DOMMatrixReadOnly& HTMLModelElement::entityTransform() const
 
 ExceptionOr<void> HTMLModelElement::setEntityTransform(const DOMMatrixReadOnly& transform)
 {
+    if (supportsStageModeInteraction())
+        return { };
+
     auto player = m_modelPlayer;
     if (!player) {
         ASSERT_NOT_REACHED();
