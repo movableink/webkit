@@ -119,3 +119,7 @@ protected:
 };
 
 } // namespace WKWPE
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WKWPE::View)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::View; }
+SPECIALIZE_TYPE_TRAITS_END()

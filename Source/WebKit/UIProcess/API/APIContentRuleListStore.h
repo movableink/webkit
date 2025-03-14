@@ -104,6 +104,8 @@ inline std::error_code make_error_code(ContentRuleListStore::Error error)
 
 } // namespace API
 
+SPECIALIZE_TYPE_TRAITS_API_OBJECT(ContentRuleListStore);
+
 namespace std {
 template<> struct is_error_code_enum<API::ContentRuleListStore::Error> : public true_type { };
 }

@@ -76,3 +76,7 @@ private:
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::AuthenticationChallengeProxy)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::AuthenticationChallenge; }
+SPECIALIZE_TYPE_TRAITS_END()

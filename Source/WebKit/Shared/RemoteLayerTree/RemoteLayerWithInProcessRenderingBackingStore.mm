@@ -61,9 +61,8 @@ bool RemoteLayerWithInProcessRenderingBackingStore::hasFrontBuffer() const
 
 bool RemoteLayerWithInProcessRenderingBackingStore::frontBufferMayBeVolatile() const
 {
-    if (!m_bufferSet.m_frontBuffer)
-        return false;
-    return m_bufferSet.m_frontBuffer->volatilityState() == WebCore::VolatilityState::Volatile;
+    RefPtr frontBuffer = m_bufferSet.m_frontBuffer;
+    return frontBuffer && frontBuffer->volatilityState() == WebCore::VolatilityState::Volatile;
 }
 
 void RemoteLayerWithInProcessRenderingBackingStore::clearBackingStore()
@@ -105,17 +104,18 @@ DynamicContentScalingResourceCache RemoteLayerWithInProcessRenderingBackingStore
 
 void RemoteLayerWithInProcessRenderingBackingStore::createContextAndPaintContents()
 {
-    if (!m_bufferSet.m_frontBuffer) {
+    RefPtr frontBuffer = m_bufferSet.m_frontBuffer;
+    if (!frontBuffer) {
         ASSERT(m_layer->owner()->platformCALayerDelegatesDisplay(m_layer.ptr()));
         return;
     }
 
-    GraphicsContext& context = m_bufferSet.m_frontBuffer->context();
+    GraphicsContext& context = frontBuffer->context();
     GraphicsContextStateSaver outerSaver(context);
     WebCore::FloatRect layerBounds { { }, m_parameters.size };
 
     m_bufferSet.prepareBufferForDisplay(layerBounds, m_dirtyRegion, m_paintingRects, drawingRequiresClearedPixels());
-    drawInContext(m_bufferSet.m_frontBuffer->context());
+    drawInContext(frontBuffer->context());
 }
 
 class ImageBufferBackingStoreFlusher final : public ThreadSafeImageBufferSetFlusher {
@@ -145,8 +145,9 @@ std::unique_ptr<ThreadSafeImageBufferSetFlusher> RemoteLayerWithInProcessRenderi
 {
     if (flushType == ThreadSafeImageBufferSetFlusher::FlushType::BackendHandlesOnly)
         return nullptr;
-    m_bufferSet.m_frontBuffer->flushDrawingContextAsync();
-    return ImageBufferBackingStoreFlusher::create(m_bufferSet.m_frontBuffer->createFlusher());
+    RefPtr frontBuffer = m_bufferSet.m_frontBuffer;
+    frontBuffer->flushDrawingContextAsync();
+    return ImageBufferBackingStoreFlusher::create(frontBuffer->createFlusher());
 }
 
 bool RemoteLayerWithInProcessRenderingBackingStore::setBufferVolatile(RefPtr<WebCore::ImageBuffer>& buffer, bool forcePurge)
@@ -164,13 +165,14 @@ bool RemoteLayerWithInProcessRenderingBackingStore::setBufferVolatile(RefPtr<Web
 
 SetNonVolatileResult RemoteLayerWithInProcessRenderingBackingStore::setBufferNonVolatile(Buffer& buffer)
 {
-    if (!buffer.imageBuffer)
+    RefPtr imageBuffer = buffer.imageBuffer;
+    if (!imageBuffer)
         return SetNonVolatileResult::Valid; // Not really valid but the caller only checked the Empty state.
 
-    if (buffer.imageBuffer->volatilityState() == VolatilityState::NonVolatile)
+    if (imageBuffer->volatilityState() == VolatilityState::NonVolatile)
         return SetNonVolatileResult::Valid;
 
-    return buffer.imageBuffer->setNonVolatile();
+    return imageBuffer->setNonVolatile();
 }
 
 bool RemoteLayerWithInProcessRenderingBackingStore::setBufferVolatile(BufferType bufferType, bool forcePurge)

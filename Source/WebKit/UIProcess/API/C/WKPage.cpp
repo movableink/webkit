@@ -1186,6 +1186,10 @@ private:
     CompletionHandler<void()> m_completionHandler;
 };
 
+SPECIALIZE_TYPE_TRAITS_BEGIN(CompletionListener)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::CompletionListener; }
+SPECIALIZE_TYPE_TRAITS_END()
+
 namespace WebKit {
 WK_ADD_API_MAPPING(WKCompletionListenerRef, CompletionListener);
 }
@@ -1642,6 +1646,26 @@ WK_ADD_API_MAPPING(WKPageRunJavaScriptPromptResultListenerRef, RunJavaScriptProm
 WK_ADD_API_MAPPING(WKPageRequestStorageAccessConfirmResultListenerRef, RequestStorageAccessConfirmResultListener)
 
 }
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::RunBeforeUnloadConfirmPanelResultListener)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::RunBeforeUnloadConfirmPanelResultListener; }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::RunJavaScriptAlertResultListener)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::RunJavaScriptAlertResultListener; }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::RunJavaScriptConfirmResultListener)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::RunJavaScriptConfirmResultListener; }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::RunJavaScriptPromptResultListener)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::RunJavaScriptPromptResultListener; }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::RequestStorageAccessConfirmResultListener)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::RequestStorageAccessConfirmResultListener; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 WKTypeID WKPageRunBeforeUnloadConfirmPanelResultListenerGetTypeID()
 {

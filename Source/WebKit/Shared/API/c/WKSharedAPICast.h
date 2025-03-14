@@ -133,7 +133,7 @@ auto toAPI(T* t) -> APIType
 template<typename T, typename APIType = typename ImplTypeInfo<T>::APIType>
 auto toAPILeakingRef(RefPtr<T>&& t) -> APIType
 {
-    return reinterpret_cast<APIType>(API::Object::wrap(t.leakRef()));
+    SUPPRESS_UNCOUNTED_ARG return reinterpret_cast<APIType>(API::Object::wrap(t.leakRef()));
 }
 
 template<typename T, typename APIType = typename ImplTypeInfo<T>::APIType>
@@ -145,13 +145,22 @@ auto toAPI(T& t) -> APIType
 template<typename T, typename APIType = typename ImplTypeInfo<T>::APIType>
 auto toAPILeakingRef(Ref<T>&& t) -> APIType
 {
-    return reinterpret_cast<APIType>(API::Object::wrap(&t.leakRef()));
+    SUPPRESS_UNCOUNTED_ARG return reinterpret_cast<APIType>(API::Object::wrap(&t.leakRef()));
 }
 
 template<typename T, typename ImplType = typename APITypeInfo<T>::ImplType>
 auto toImpl(T t) -> ImplType*
 {
-    return static_cast<ImplType*>(API::Object::unwrap(static_cast<void*>(const_cast<typename std::remove_const<typename std::remove_pointer<T>::type>::type*>(t))));
+    if constexpr (std::is_same_v<ImplType, API::Object>)
+        return API::Object::unwrap(static_cast<void*>(const_cast<typename std::remove_const<typename std::remove_pointer<T>::type>::type*>(t)));
+    else
+        return downcast<ImplType>(API::Object::unwrap(static_cast<void*>(const_cast<typename std::remove_const<typename std::remove_pointer<T>::type>::type*>(t))));
+}
+
+template<typename T, typename ImplType = typename APITypeInfo<T>::ImplType>
+auto toProtectedImpl(T t) -> RefPtr<ImplType>
+{
+    return toImpl<T>(t);
 }
 
 template<typename ImplType, typename APIType = typename ImplTypeInfo<ImplType>::APIType>
@@ -208,14 +217,14 @@ inline String toWTFString(WKStringRef stringRef)
 {
     if (!stringRef)
         return String();
-    return toImpl(stringRef)->string();
+    return toProtectedImpl(stringRef)->string();
 }
 
 inline String toWTFString(WKURLRef urlRef)
 {
     if (!urlRef)
         return String();
-    return toImpl(urlRef)->string();
+    return toProtectedImpl(urlRef)->string();
 }
 
 inline ProxyingRefPtr<API::Error> toAPI(const WebCore::ResourceError& error)

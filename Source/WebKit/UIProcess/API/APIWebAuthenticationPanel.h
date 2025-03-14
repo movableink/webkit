@@ -96,4 +96,6 @@ private:
 
 } // namespace API
 
+SPECIALIZE_TYPE_TRAITS_API_OBJECT(WebAuthenticationPanel);
+
 #endif // ENABLE(WEB_AUTHN)

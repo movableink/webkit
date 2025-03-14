@@ -668,3 +668,7 @@ private:
 };
 
 }
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebsiteDataStore)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::WebsiteDataStore; }
+SPECIALIZE_TYPE_TRAITS_END()

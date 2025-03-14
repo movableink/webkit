@@ -51,12 +51,12 @@ WKStringRef WKStringCreateWithUTF8CStringWithLength(const char* string, size_t s
 
 bool WKStringIsEmpty(WKStringRef stringRef)
 {
-    return WebKit::toImpl(stringRef)->stringView().isEmpty();
+    return WebKit::toProtectedImpl(stringRef)->stringView().isEmpty();
 }
 
 size_t WKStringGetLength(WKStringRef stringRef)
 {
-    return WebKit::toImpl(stringRef)->stringView().length();
+    return WebKit::toProtectedImpl(stringRef)->stringView().length();
 }
 
 size_t WKStringGetCharacters(WKStringRef stringRef, WKChar* buffer, size_t bufferLength)
@@ -64,7 +64,7 @@ size_t WKStringGetCharacters(WKStringRef stringRef, WKChar* buffer, size_t buffe
     static_assert(sizeof(WKChar) == sizeof(UChar), "Size of WKChar must match size of UChar");
 
     unsigned unsignedBufferLength = std::min<size_t>(bufferLength, std::numeric_limits<unsigned>::max());
-    auto substring = WebKit::toImpl(stringRef)->stringView().left(unsignedBufferLength);
+    auto substring = WebKit::toProtectedImpl(stringRef)->stringView().left(unsignedBufferLength);
 
     substring.getCharacters(unsafeMakeSpan(reinterpret_cast<UChar*>(buffer), bufferLength));
     return substring.length();
@@ -72,7 +72,7 @@ size_t WKStringGetCharacters(WKStringRef stringRef, WKChar* buffer, size_t buffe
 
 size_t WKStringGetMaximumUTF8CStringSize(WKStringRef stringRef)
 {
-    return static_cast<size_t>(WebKit::toImpl(stringRef)->stringView().length()) * 3 + 1;
+    return static_cast<size_t>(WebKit::toProtectedImpl(stringRef)->stringView().length()) * 3 + 1;
 }
 
 enum StrictType { NonStrict = false, Strict = true };
@@ -83,7 +83,7 @@ size_t WKStringGetUTF8CStringImpl(WKStringRef stringRef, char* buffer, size_t bu
     if (!bufferSize)
         return 0;
 
-    auto string = WebKit::toImpl(stringRef)->stringView();
+    auto string = WebKit::toProtectedImpl(stringRef)->stringView();
 
     auto target = unsafeMakeSpan(byteCast<char8_t>(buffer), bufferSize);
     WTF::Unicode::ConversionResult<char8_t> result;
@@ -115,21 +115,21 @@ size_t WKStringGetUTF8CStringNonStrict(WKStringRef stringRef, char* buffer, size
 
 bool WKStringIsEqual(WKStringRef aRef, WKStringRef bRef)
 {
-    return WebKit::toImpl(aRef)->stringView() == WebKit::toImpl(bRef)->stringView();
+    return WebKit::toProtectedImpl(aRef)->stringView() == WebKit::toProtectedImpl(bRef)->stringView();
 }
 
 bool WKStringIsEqualToUTF8CString(WKStringRef aRef, const char* b)
 {
     // FIXME: Should we add a fast path that avoids memory allocation when the string is all ASCII?
     // FIXME: We can do even the general case more efficiently if we write a function in StringView that understands UTF-8 C strings.
-    return WebKit::toImpl(aRef)->stringView() == WTF::String::fromUTF8(b);
+    return WebKit::toProtectedImpl(aRef)->stringView() == WTF::String::fromUTF8(b);
 }
 
 bool WKStringIsEqualToUTF8CStringIgnoringCase(WKStringRef aRef, const char* b)
 {
     // FIXME: Should we add a fast path that avoids memory allocation when the string is all ASCII?
     // FIXME: We can do even the general case more efficiently if we write a function in StringView that understands UTF-8 C strings.
-    return equalIgnoringASCIICase(WebKit::toImpl(aRef)->stringView(), WTF::String::fromUTF8(b));
+    return equalIgnoringASCIICase(WebKit::toProtectedImpl(aRef)->stringView(), WTF::String::fromUTF8(b));
 }
 
 WKStringRef WKStringCreateWithJSString(JSStringRef jsStringRef)
@@ -143,5 +143,5 @@ JSStringRef WKStringCopyJSString(WKStringRef stringRef)
 {
     JSC::initialize();
     WebCore::populateJITOperations();
-    return OpaqueJSString::tryCreate(WebKit::toImpl(stringRef)->string()).leakRef();
+    return OpaqueJSString::tryCreate(WebKit::toProtectedImpl(stringRef)->string()).leakRef();
 }

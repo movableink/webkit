@@ -105,3 +105,7 @@ private:
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebNotificationManagerProxy)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::NotificationManager; }
+SPECIALIZE_TYPE_TRAITS_END()

@@ -151,3 +151,7 @@ private:
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebPreferences)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::Preferences; }
+SPECIALIZE_TYPE_TRAITS_END()

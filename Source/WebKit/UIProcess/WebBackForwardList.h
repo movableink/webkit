@@ -107,3 +107,7 @@ private:
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebBackForwardList)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::BackForwardList; }
+SPECIALIZE_TYPE_TRAITS_END()

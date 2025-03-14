@@ -55,6 +55,8 @@ public:
         return m_map.get(key);
     }
 
+    RefPtr<Object> getProtected(const WTF::String& key) const { return get(key); }
+
     Object* get(const WTF::String& key, bool& exists) const
     {
         auto it = m_map.find(key);

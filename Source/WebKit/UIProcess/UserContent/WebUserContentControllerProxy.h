@@ -163,3 +163,8 @@ private:
 };
 
 } // namespace WebKit
+
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebUserContentControllerProxy)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::UserContentController; }
+SPECIALIZE_TYPE_TRAITS_END()

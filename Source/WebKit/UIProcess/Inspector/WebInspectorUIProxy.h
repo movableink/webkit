@@ -369,3 +369,7 @@ private:
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebKit::WebInspectorUIProxy)
+static bool isType(const API::Object& object) { return object.type() == API::Object::Type::Inspector; }
+SPECIALIZE_TYPE_TRAITS_END()
