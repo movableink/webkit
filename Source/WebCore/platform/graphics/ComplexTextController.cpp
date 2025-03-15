@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -165,9 +165,15 @@ std::pair<float, float> ComplexTextController::enclosingGlyphBoundsForTextRun(co
         auto& complexTextRun = *textController.m_complexTextRuns[runIndex];
         auto& font = complexTextRun.font();
         auto glyphs = complexTextRun.glyphs();
+        ASSERT(glyphs.size() == complexTextRun.glyphCount());
 
-        for (size_t glyphIndex = 0; glyphIndex < complexTextRun.glyphCount(); ++glyphIndex) {
-            auto bounds = font.boundsForGlyph(glyphs[glyphIndex]);
+#if USE(CORE_TEXT)
+        auto glyphBounds = font.boundsForGlyphs(glyphs);
+        for (auto& bounds : glyphBounds) {
+#else
+        for (auto& glyph : glyphs) {
+            auto bounds = font.boundsForGlyph(glyph);
+#endif
             enclosingAscent = std::min(enclosingAscent.value_or(bounds.y()), bounds.y());
             enclosingDescent = std::max(enclosingDescent.value_or(bounds.maxY()), bounds.maxY());
         }
@@ -698,6 +704,10 @@ void ComplexTextController::adjustGlyphsAndAdvances()
         unsigned previousCharacterIndex = m_run.ltr() ? std::numeric_limits<unsigned>::min() : std::numeric_limits<unsigned>::max();
         bool isMonotonic = true;
 
+#if USE(CORE_TEXT)
+        auto boundsForGlyphs = font.boundsForGlyphs(glyphs);
+#endif
+
         for (unsigned glyphIndex = 0; glyphIndex < glyphCount; glyphIndex++) {
             unsigned characterIndex = complexTextRun.indexAt(glyphIndex);
             if (m_run.ltr()) {
@@ -718,13 +728,22 @@ void ComplexTextController::adjustGlyphsAndAdvances()
                 // Like simple text path in WidthIterator::applyCSSVisibilityRules,
                 // make tabCharacter glyph invisible after advancing.
                 glyph = deletedGlyph;
+#if USE(CORE_TEXT)
+                boundsForGlyphs[glyphIndex] = font.boundsForGlyph(glyph);
+#endif
             } else if (character == zeroWidthNonJoiner) {
                 // zeroWidthNonJoiner is rendered as deletedGlyph for compatibility with other engines: https://bugs.webkit.org/show_bug.cgi?id=285959
                 advance.setWidth(0);
                 glyph = deletedGlyph;
+#if USE(CORE_TEXT)
+                boundsForGlyphs[glyphIndex] = font.boundsForGlyph(glyph);
+#endif
             } else if (FontCascade::treatAsZeroWidthSpace(character) && !treatAsSpace) {
                 advance.setWidth(0);
                 glyph = font.spaceGlyph();
+#if USE(CORE_TEXT)
+                boundsForGlyphs[glyphIndex] = font.boundsForGlyph(glyph);
+#endif
             }
 
             // https://www.w3.org/TR/css-text-3/#white-space-processing
@@ -733,6 +752,9 @@ void ComplexTextController::adjustGlyphsAndAdvances()
             if (character != newlineCharacter && character != carriageReturn && character != noBreakSpace && character != tabCharacter && character != nullCharacter && isControlCharacter(character)) {
                 // Let's assume that .notdef is visible.
                 glyph = 0;
+#if USE(CORE_TEXT)
+                boundsForGlyphs[glyphIndex] = font.boundsForGlyph(glyph);
+#endif
                 advance.setWidth(font.widthForGlyph(glyph));
             }
 
@@ -823,8 +845,12 @@ void ComplexTextController::adjustGlyphsAndAdvances()
                 if (U16_IS_SURROGATE(character))
                     U16_GET(charactersSpan, 0, characterIndex, complexTextRun.stringLength(), ch32);
                 // FIXME: Combining marks should receive a text emphasis mark if they are combine with a space.
-                if (!FontCascade::canReceiveTextEmphasis(ch32) || (U_GET_GC_MASK(character) & U_GC_M_MASK))
+                if (!FontCascade::canReceiveTextEmphasis(ch32) || (U_GET_GC_MASK(character) & U_GC_M_MASK)) {
                     glyph = deletedGlyph;
+#if USE(CORE_TEXT)
+                    boundsForGlyphs[glyphIndex] = font.boundsForGlyph(glyph);
+#endif
+                }
             }
 
             m_adjustedBaseAdvances.append(advance);
@@ -836,7 +862,11 @@ void ComplexTextController::adjustGlyphsAndAdvances()
             }
             m_adjustedGlyphs.append(glyph);
 
-            FloatRect glyphBounds = font.boundsForGlyph(glyph);
+#if USE(CORE_TEXT)
+            auto& glyphBounds = boundsForGlyphs[glyphIndex];
+#else
+            auto glyphBounds = font.boundsForGlyph(glyph);
+#endif
             glyphBounds.move(glyphOrigin.x(), glyphOrigin.y());
             m_minGlyphBoundingBoxX = std::min(m_minGlyphBoundingBoxX, glyphBounds.x());
             m_maxGlyphBoundingBoxX = std::max(m_maxGlyphBoundingBoxX, glyphBounds.maxX());
