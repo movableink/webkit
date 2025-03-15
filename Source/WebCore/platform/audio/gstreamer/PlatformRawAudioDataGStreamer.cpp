@@ -227,11 +227,11 @@ void PlatformRawAudioData::copyTo(std::span<uint8_t> destination, AudioSampleFor
     auto sourceFormat = audioData.format();
     const auto& sourceSample = audioData.sample();
     bool isDestinationInterleaved = isAudioSampleFormatInterleaved(format);
+    auto sourceOffset = frameOffset.value_or(0);
 
 #ifndef GST_DISABLE_GST_DEBUG
     [[maybe_unused]] auto [gstSourceFormat, sourceLayout] = convertAudioSampleFormatToGStreamerFormat(sourceFormat);
     auto [gstDestinationFormat, destinationLayout] = convertAudioSampleFormatToGStreamerFormat(format);
-    auto sourceOffset = frameOffset.value_or(0);
     const char* destinationFormatDescription = gst_audio_format_to_string(gstDestinationFormat);
     GST_TRACE("Copying %s %s data at planeIndex %zu, destination format is %s %s, source offset: %zu", layoutToString(sourceLayout), gst_audio_format_to_string(gstSourceFormat), planeIndex, layoutToString(destinationLayout), destinationFormatDescription, sourceOffset);
 #endif

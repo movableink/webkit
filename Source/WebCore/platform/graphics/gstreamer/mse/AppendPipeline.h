@@ -62,8 +62,8 @@ public:
 private:
 #ifndef GST_DISABLE_GST_DEBUG
     static const char * streamTypeToString(StreamType);
-    static const char * streamTypeToStringLower(StreamType);
 #endif
+    static const char * streamTypeToStringLower(StreamType);
 
     struct Track {
         // Track objects are created on pad-added for the first initialization segment, and destroyed after
