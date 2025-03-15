@@ -6028,8 +6028,17 @@ void WebPage::computeEnclosingLayerID(EditorState& state, const VisibleSelection
         if (!layer->isComposited())
             continue;
 
-        auto* layerBacking = layer->backing();
-        RefPtr graphicsLayer = layerBacking->scrolledContentsLayer() ?: layerBacking->graphicsLayer();
+        RefPtr graphicsLayer = [layer] -> RefPtr<GraphicsLayer> {
+            auto* backing = layer->backing();
+            if (RefPtr scrolledContentsLayer = backing->scrolledContentsLayer())
+                return scrolledContentsLayer;
+
+            if (RefPtr foregroundLayer = backing->foregroundLayer())
+                return foregroundLayer;
+
+            return backing->graphicsLayer();
+        }();
+
         if (!graphicsLayer)
             continue;
 
