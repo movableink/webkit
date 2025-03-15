@@ -698,7 +698,6 @@ html/HTMLMapElement.cpp
 html/HTMLMaybeFormAssociatedCustomElement.cpp
 html/HTMLMediaElement.cpp
 html/HTMLMetaElement.cpp
-html/HTMLMeterElement.cpp
 html/HTMLNameCollectionInlines.h
 html/HTMLObjectElement.cpp
 html/HTMLOptionsCollection.cpp
