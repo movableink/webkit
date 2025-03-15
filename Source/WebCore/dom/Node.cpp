@@ -3135,7 +3135,7 @@ std::partial_ordering treeOrderForTesting(TreeType type, const Node& a, const No
 
 TextStream& operator<<(TextStream& ts, const Node& node)
 {
-    ts << "node "_s << &node << ' ' << node.debugDescription();
+    ts << node.debugDescription();
     return ts;
 }
 

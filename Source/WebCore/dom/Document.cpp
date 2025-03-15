@@ -461,10 +461,15 @@ static void CallbackForContainIntrinsicSize(const Vector<Ref<ResizeObserverEntry
             ASSERT(box->style().hasAutoLengthContainIntrinsicSize());
 
             auto contentBoxSize = entry->contentBoxSize().at(0);
-            if (box->style().containIntrinsicLogicalWidthHasAuto())
-                target->setLastRememberedLogicalWidth(LayoutUnit(contentBoxSize->inlineSize()));
-            if (box->style().containIntrinsicLogicalHeightHasAuto())
-                target->setLastRememberedLogicalHeight(LayoutUnit(contentBoxSize->blockSize()));
+            if (box->style().containIntrinsicLogicalWidthHasAuto()) {
+                auto adjustedWidth = LayoutUnit { applyZoom(contentBoxSize->inlineSize(), box->style()) };
+                target->setLastRememberedLogicalWidth(adjustedWidth);
+            }
+
+            if (box->style().containIntrinsicLogicalHeightHasAuto()) {
+                auto adjustedHeight = LayoutUnit { applyZoom(contentBoxSize->blockSize(), box->style()) };
+                target->setLastRememberedLogicalHeight(adjustedHeight);
+            }
         }
     }
 }
@@ -9850,8 +9855,6 @@ void Document::updateIntersectionObservations(const Vector<WeakPtr<IntersectionO
         return;
     }
 
-    LOG_WITH_STREAM(IntersectionObserver, stream << "Document " << this << " updateIntersectionObservations - notifying observers");
-
     Vector<WeakPtr<IntersectionObserver>> intersectionObserversWithPendingNotifications;
 
     for (auto& weakObserver : intersectionObservers) {
@@ -9863,6 +9866,9 @@ void Document::updateIntersectionObservations(const Vector<WeakPtr<IntersectionO
         if (needNotify == IntersectionObserver::NeedNotify::Yes)
             intersectionObserversWithPendingNotifications.append(observer);
     }
+
+    if (intersectionObserversWithPendingNotifications.size())
+        LOG_WITH_STREAM(IntersectionObserver, stream << "Document " << this << " updateIntersectionObservations - notifying observers");
 
     for (auto& weakObserver : intersectionObserversWithPendingNotifications) {
         if (RefPtr observer = weakObserver.get())
