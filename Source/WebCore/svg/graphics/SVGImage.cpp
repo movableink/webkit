@@ -211,6 +211,9 @@ ImageDrawResult SVGImage::drawForContainer(GraphicsContext& context, const Float
 bool SVGImage::hasPaintedHDRContent() const
 {
 #if HAVE(SUPPORT_HDR_DISPLAY)
+    if (!m_page)
+        return false;
+
     if (RefPtr localTopDocument = m_page->localTopDocument())
         return localTopDocument->hasPaintedHDRContent();
 #endif
