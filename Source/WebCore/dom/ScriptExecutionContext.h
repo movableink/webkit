@@ -56,6 +56,7 @@ class Exception;
 class JSPromise;
 class VM;
 enum class ScriptExecutionStatus;
+enum class TrustedTypesEnforcement;
 }
 
 namespace Inspector {
@@ -142,7 +143,7 @@ public:
 
     virtual void disableEval(const String& errorMessage) = 0;
     virtual void disableWebAssembly(const String& errorMessage) = 0;
-    virtual void setRequiresTrustedTypes(bool required) = 0;
+    virtual void setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement) = 0;
 
     virtual IDBClient::IDBConnectionProxy* idbConnectionProxy() = 0;
 

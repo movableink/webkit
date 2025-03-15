@@ -480,7 +480,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
     if (programSource.isNull())
         return JSValue::encode(x);
 
-    if (Options::useTrustedTypes() && globalObject->requiresTrustedTypes() && !isTrusted) {
+    if (globalObject->trustedTypesEnforcement() != TrustedTypesEnforcement::None && !isTrusted) {
         bool canCompileStrings = globalObject->globalObjectMethodTable()->canCompileStrings(globalObject, CompilationType::IndirectEval, programSource, *vm.emptyList);
         RETURN_IF_EXCEPTION(scope, { });
         if (!canCompileStrings) {
@@ -489,7 +489,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
         }
     }
 
-    if (!globalObject->evalEnabled()) {
+    if (!globalObject->evalEnabled() && globalObject->trustedTypesEnforcement() != TrustedTypesEnforcement::EnforcedWithEvalEnabled) {
         globalObject->globalObjectMethodTable()->reportViolationForUnsafeEval(globalObject, programSource);
         throwException(globalObject, scope, createEvalError(globalObject, globalObject->evalDisabledErrorMessage()));
         return JSValue::encode(jsUndefined());

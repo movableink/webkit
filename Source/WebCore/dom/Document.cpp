@@ -328,6 +328,7 @@
 #include "XPathNSResolver.h"
 #include "XPathResult.h"
 #include <JavaScriptCore/ConsoleMessage.h>
+#include <JavaScriptCore/JSGlobalObject.h>
 #include <JavaScriptCore/RegularExpression.h>
 #include <JavaScriptCore/ScriptCallStack.h>
 #include <JavaScriptCore/VM.h>
@@ -4594,7 +4595,7 @@ void Document::disableWebAssembly(const String& errorMessage)
     frame->checkedScript()->setWebAssemblyEnabled(false, errorMessage);
 }
 
-void Document::setRequiresTrustedTypes(bool required)
+void Document::setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement enforcement)
 {
     if (!settings().trustedTypesEnabled())
         return;
@@ -4603,8 +4604,8 @@ void Document::setRequiresTrustedTypes(bool required)
     if (!frame)
         return;
 
-    frame->checkedScript()->setRequiresTrustedTypes(required);
-    m_requiresTrustedTypes = required;
+    frame->checkedScript()->setTrustedTypesEnforcement(enforcement);
+    m_requiresTrustedTypes = enforcement != JSC::TrustedTypesEnforcement::None;
 }
 
 IDBClient::IDBConnectionProxy* Document::idbConnectionProxy()
