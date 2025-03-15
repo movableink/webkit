@@ -57,7 +57,6 @@
 #include "RenderMenuList.h"
 #include "RenderTheme.h"
 #include "Settings.h"
-#include "SpatialNavigation.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
@@ -1144,7 +1143,7 @@ bool HTMLSelectElement::platformHandleKeydownEvent(KeyboardEvent* event)
     if (!RenderTheme::singleton().popsMenuByArrowKeys())
         return false;
 
-    if (!isSpatialNavigationEnabled(document().protectedFrame().get())) {
+    if (!document().settings().spatialNavigationEnabled()) {
         if (event->keyIdentifier() == "Down"_s || event->keyIdentifier() == "Up"_s) {
             focus();
             protectedDocument()->updateStyleIfNeeded();
@@ -1188,7 +1187,7 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
         // When using spatial navigation, we want to be able to navigate away
         // from the select element when the user hits any of the arrow keys,
         // instead of changing the selection.
-        if (isSpatialNavigationEnabled(document().protectedFrame().get())) {
+        if (document().settings().spatialNavigationEnabled()) {
             if (!m_activeSelectionState)
                 return;
         }
@@ -1237,7 +1236,7 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
         int keyCode = keyboardEvent->keyCode();
         bool handled = false;
 
-        if (keyCode == ' ' && isSpatialNavigationEnabled(document().protectedFrame().get())) {
+        if (keyCode == ' ' && document().settings().spatialNavigationEnabled()) {
             // Use space to toggle arrow key handling for selection change or spatial navigation.
             m_activeSelectionState = !m_activeSelectionState;
             keyboardEvent->setDefaultHandled();
@@ -1498,7 +1497,7 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
             handled = true;
         }
 
-        if (isSpatialNavigationEnabled(frame.get())) {
+        if (document().settings().spatialNavigationEnabled()) {
             // Check if the selection moves to the boundary.
             if (keyIdentifier == "Left"_s || keyIdentifier == "Right"_s || ((keyIdentifier == "Down"_s || keyIdentifier == "Up"_s) && endIndex == m_activeSelectionEndIndex))
                 return;
@@ -1514,9 +1513,9 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
             setActiveSelectionEndIndex(endIndex);
 
 #if PLATFORM(COCOA)
-            m_allowsNonContiguousSelection = m_multiple && isSpatialNavigationEnabled(frame.get());
+            m_allowsNonContiguousSelection = m_multiple && document().settings().spatialNavigationEnabled();
 #else
-            m_allowsNonContiguousSelection = m_multiple && (isSpatialNavigationEnabled(frame.get()) || keyboardEvent->ctrlKey());
+            m_allowsNonContiguousSelection = m_multiple && (document().settings().spatialNavigationEnabled() || keyboardEvent->ctrlKey());
 #endif
             bool selectNewItem = keyboardEvent->shiftKey() || !m_allowsNonContiguousSelection;
 

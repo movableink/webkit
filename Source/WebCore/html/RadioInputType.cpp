@@ -32,7 +32,6 @@
 #include "LocalizedStrings.h"
 #include "MouseEvent.h"
 #include "NodeTraversal.h"
-#include "SpatialNavigation.h"
 #include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -136,7 +135,7 @@ auto RadioInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBaseE
     // Tested in WinIE, and even for RTL, left still means previous radio button (and so moves
     // to the right).  Seems strange, but we'll match it.
     // However, when using Spatial Navigation, we need to be able to navigate without changing the selection.
-    if (isSpatialNavigationEnabled(element->document().frame()))
+    if (element->document().settings().spatialNavigationEnabled())
         return ShouldCallBaseEventHandler::Yes;
     bool forward = (key == "Down"_s || key == "Right"_s);
 
@@ -190,7 +189,7 @@ bool RadioInputType::isKeyboardFocusable(KeyboardEvent* event) const
     RefPtr element = this->element();
     ASSERT(element);
     // When using Spatial Navigation, every radio button should be focusable.
-    if (isSpatialNavigationEnabled(element->document().frame()))
+    if (element->document().settings().spatialNavigationEnabled())
         return true;
 
     // Never allow keyboard tabbing to leave you in the same radio group.  Always

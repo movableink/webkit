@@ -86,11 +86,6 @@ FocusCandidate::FocusCandidate(Node* node, FocusDirection direction)
     isOffscreenAfterScrolling = hasOffscreenRect(protectedVisibleNode.get(), direction);
 }
 
-bool isSpatialNavigationEnabled(const LocalFrame* frame)
-{
-    return (frame && frame->settings().spatialNavigationEnabled());
-}
-
 static RectsAlignment alignmentForRects(FocusDirection direction, const LayoutRect& curRect, const LayoutRect& targetRect, const LayoutSize& viewSize)
 {
     // If we found a node in full alignment, but it is too far away, ignore it.

@@ -119,7 +119,6 @@
 #include "SelectionRestorationMode.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
-#include "SpatialNavigation.h"
 #include "StaticPasteboard.h"
 #include "StyleCachedImage.h"
 #include "TextEvent.h"
@@ -4909,7 +4908,7 @@ void EventHandler::defaultArrowEventHandler(FocusDirection focusDirection, Keybo
 {
     ASSERT(event.type() == eventNames().keydownEvent);
 
-    if (!isSpatialNavigationEnabled(protectedFrame().ptr())) {
+    if (!m_frame->document()->settings().spatialNavigationEnabled()) {
         ScrollLogicalDirection direction;
         switch (focusDirection) {
         case FocusDirection::Down:
