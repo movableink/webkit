@@ -29,6 +29,7 @@
 #include "FloatQuad.h"
 #include "GraphicsContext.h"
 #include "HitTestResult.h"
+#include "ImageQualityController.h"
 #include "LayoutRepainter.h"
 #include "LegacyRenderSVGResource.h"
 #include "PointerEventsHitRules.h"
@@ -232,7 +233,12 @@ void LegacyRenderSVGImage::paintForeground(PaintInfo& paintInfo)
 
     imageElement().preserveAspectRatio().transformRect(destRect, srcRect);
 
-    paintInfo.context().drawImage(*image, destRect, srcRect);
+    ImagePaintingOptions options = {
+        imageOrientation(),
+        ImageQualityController::chooseInterpolationQualityForSVG(paintInfo.context(), this, *image)
+    };
+
+    paintInfo.context().drawImage(*image, destRect, srcRect, options);
 }
 
 void LegacyRenderSVGImage::invalidateBufferedForeground()
