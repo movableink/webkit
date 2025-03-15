@@ -642,7 +642,7 @@ inline bool RenderStyle::setWritingMode(StyleWritingMode mode)
 
 inline bool RenderStyle::setZoom(float zoomLevel)
 {
-    setUsedZoom(usedZoom() * zoomLevel);
+    setUsedZoom(std::max(std::numeric_limits<float>::epsilon(), usedZoom() * zoomLevel));
     if (compareEqual(m_nonInheritedData->rareData->zoom, zoomLevel))
         return false;
     m_nonInheritedData.access().rareData.access().zoom = zoomLevel;
