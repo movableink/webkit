@@ -365,8 +365,6 @@ html/HTMLInputElement.cpp
 html/HTMLLabelElement.cpp
 html/HTMLMapElement.cpp
 html/HTMLMediaElement.cpp
-html/HTMLOptGroupElement.cpp
-html/HTMLOptionElement.cpp
 html/HTMLPictureElement.cpp
 html/HTMLSlotElement.cpp
 html/HTMLTableElement.cpp

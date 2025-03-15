@@ -702,8 +702,6 @@ html/HTMLMetaElement.cpp
 html/HTMLMeterElement.cpp
 html/HTMLNameCollectionInlines.h
 html/HTMLObjectElement.cpp
-html/HTMLOptGroupElement.cpp
-html/HTMLOptionElement.cpp
 html/HTMLOptionsCollection.cpp
 html/HTMLPlugInElement.cpp
 html/HTMLPlugInImageElement.cpp
