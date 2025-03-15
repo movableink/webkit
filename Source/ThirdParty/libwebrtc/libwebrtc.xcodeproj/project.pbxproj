@@ -27,6 +27,7 @@
 			buildPhases = (
 			);
 			dependencies = (
+				312616A02D7BC33B00A29134 /* PBXTargetDependency */,
 				448C3AA12D4C48C400AA535D /* PBXTargetDependency */,
 				4469C10E2B5F24DA00E32E5A /* PBXTargetDependency */,
 				44D88ACE2AF0495A005C956E /* PBXTargetDependency */,
@@ -61,6 +62,8 @@
 		2D6BFF62280A93F400A1A74F /* video_codec_interface.h in Headers */ = {isa = PBXBuildFile; fileRef = 4131C45F234C81720028A615 /* video_codec_interface.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		2D6BFF63280A93FA00A1A74F /* video_coding_defines.h in Headers */ = {isa = PBXBuildFile; fileRef = 4131C45D234C81720028A615 /* video_coding_defines.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		2D6BFF64280A93FE00A1A74F /* video_error_codes.h in Headers */ = {isa = PBXBuildFile; fileRef = 4131C45C234C81720028A615 /* video_error_codes.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		3178AB2D2D80C9A8002F8CF9 /* libgmock.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3178AB2C2D80C9A8002F8CF9 /* libgmock.a */; };
+		3178AB2F2D810582002F8CF9 /* libgtest.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3178AB2E2D810582002F8CF9 /* libgtest.a */; };
 		410091DB242E0BBC00C5EDA2 /* video_codec_constants.h in Headers */ = {isa = PBXBuildFile; fileRef = 410091D6242E0BBA00C5EDA2 /* video_codec_constants.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		410091DC242E0BBC00C5EDA2 /* video_codec_type.h in Headers */ = {isa = PBXBuildFile; fileRef = 410091D7242E0BBB00C5EDA2 /* video_codec_type.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		410091DD242E0BBC00C5EDA2 /* recordable_encoded_frame.h in Headers */ = {isa = PBXBuildFile; fileRef = 410091D8242E0BBB00C5EDA2 /* recordable_encoded_frame.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -5380,6 +5383,13 @@
 /* End PBXBuildRule section */
 
 /* Begin PBXContainerItemProxy section */
+		3126169F2D7BC33B00A29134 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FB39D0701200ED9200088E69 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 44ABBE882AC63F0C006B44DD;
+			remoteInfo = sdp_integration_fuzzer;
+		};
 		31339FA62CEEFED90054D8D5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = FB39D0701200ED9200088E69 /* Project object */;
@@ -5906,6 +5916,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		3178AB2C2D80C9A8002F8CF9 /* libgmock.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libgmock.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		3178AB2E2D810582002F8CF9 /* libgtest.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libgtest.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		410091CD242CFD5E00C5EDA2 /* aes_nohw.c.inc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.pascal; path = aes_nohw.c.inc; sourceTree = "<group>"; };
 		410091D0242CFD8200C5EDA2 /* gcm_nohw.c.inc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.pascal; path = gcm_nohw.c.inc; sourceTree = "<group>"; };
 		410091D6242E0BBA00C5EDA2 /* video_codec_constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = video_codec_constants.h; sourceTree = "<group>"; };
@@ -11585,6 +11597,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3178AB2D2D80C9A8002F8CF9 /* libgmock.a in Frameworks */,
+				3178AB2F2D810582002F8CF9 /* libgtest.a in Frameworks */,
 				446CFE442AC694AB00F870D9 /* libwebrtc.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -18454,6 +18468,8 @@
 				5C00730C1E5513E70042215A /* CoreMedia.framework */,
 				5C00730D1E5513E70042215A /* CoreVideo.framework */,
 				5C316D8A1E66333C008BE64D /* Foundation.framework */,
+				3178AB2C2D80C9A8002F8CF9 /* libgmock.a */,
+				3178AB2E2D810582002F8CF9 /* libgtest.a */,
 				4417F7EE2ADE112D00A7254F /* libgtest.a */,
 				44FD16852AEA37E6003636CB /* OpenGL.framework */,
 				5C0073421E552C800042215A /* Security.framework */,
@@ -27114,6 +27130,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		312616A02D7BC33B00A29134 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 44ABBE882AC63F0C006B44DD /* sdp_integration_fuzzer */;
+			targetProxy = 3126169F2D7BC33B00A29134 /* PBXContainerItemProxy */;
+		};
 		31339FA72CEEFED90054D8D5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = FB39D0D01200F0E300088E69 /* libwebrtc.dylib */;
