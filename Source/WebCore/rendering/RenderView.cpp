@@ -520,7 +520,7 @@ void RenderView::repaintViewRectangle(const LayoutRect& repaintRect) const
         // and the Renderer that contains the iframe. This transformation must account for a
         // left scrollbar (if one exists).
         Ref frameView = this->frameView();
-        if (frameView->shouldPlaceVerticalScrollbarOnLeft() && frameView->verticalScrollbar())
+        if (frameView->verticalScrollbar() && frameView->shouldPlaceVerticalScrollbarOnLeft())
             adjustedRect.move(LayoutSize(frameView->protectedVerticalScrollbar()->occupiedWidth(), 0));
 
         ownerBox->repaintRectangle(adjustedRect);

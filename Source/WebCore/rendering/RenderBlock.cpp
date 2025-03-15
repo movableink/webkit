@@ -2000,7 +2000,7 @@ LayoutUnit RenderBlock::textIndentOffset() const
 LayoutUnit RenderBlock::logicalLeftOffsetForContent() const
 {
     LayoutUnit logicalLeftOffset = writingMode().isHorizontal() ? borderLeft() + paddingLeft() : borderTop() + paddingTop();
-    if (shouldPlaceVerticalScrollbarOnLeft() && isHorizontalWritingMode())
+    if (isHorizontalWritingMode() && shouldPlaceVerticalScrollbarOnLeft())
         logicalLeftOffset += verticalScrollbarWidth();
     return logicalLeftOffset;
 }
@@ -2008,7 +2008,7 @@ LayoutUnit RenderBlock::logicalLeftOffsetForContent() const
 LayoutUnit RenderBlock::logicalRightOffsetForContent() const
 {
     LayoutUnit logicalRightOffset = writingMode().isHorizontal() ? borderLeft() + paddingLeft() : borderTop() + paddingTop();
-    if (shouldPlaceVerticalScrollbarOnLeft() && isHorizontalWritingMode())
+    if (isHorizontalWritingMode() && shouldPlaceVerticalScrollbarOnLeft())
         logicalRightOffset += verticalScrollbarWidth();
     logicalRightOffset += contentBoxLogicalWidth();
     return logicalRightOffset;

@@ -4058,8 +4058,8 @@ void RenderBox::computePositionedLogicalWidth(LogicalExtentComputedValues& compu
     else
         inlineConstraints.convertLogicalLeftValue(computedValues.m_position);
 
-    if (auto* container = dynamicDowncast<RenderBox>(inlineConstraints.container())) {
-        if (container->shouldPlaceVerticalScrollbarOnLeft() && isHorizontalWritingMode())
+    if (isHorizontalWritingMode()) {
+        if (auto* container = dynamicDowncast<RenderBox>(inlineConstraints.container()); container && container->shouldPlaceVerticalScrollbarOnLeft())
             computedValues.m_position += container->verticalScrollbarWidth();
     }
 
@@ -4737,7 +4737,7 @@ LayoutRect RenderBox::flippedClientBoxRect() const
     if (hasNonVisibleOverflow()) {
         // Subtract space occupied by scrollbars. They are at their physical edge in this coordinate
         // system, so order is important here: first flip, then subtract scrollbars.
-        if (shouldPlaceVerticalScrollbarOnLeft() && isHorizontalWritingMode())
+        if (isHorizontalWritingMode() && shouldPlaceVerticalScrollbarOnLeft())
             rect.move(verticalScrollbarWidth(), 0);
         rect.contract(verticalScrollbarWidth(), horizontalScrollbarHeight());
     }
