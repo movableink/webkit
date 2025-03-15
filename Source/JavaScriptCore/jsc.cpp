@@ -1331,7 +1331,7 @@ public:
         });
 
         String filename = cachePath();
-        auto handle = FileSystem::openAndLockFile(filename, FileSystem::FileOpenMode::ReadWrite, { FileSystem::FileLockMode::Exclusive, FileSystem::FileLockMode::Nonblocking });
+        auto handle = FileSystem::openFile(filename, FileSystem::FileOpenMode::ReadWrite, FileSystem::FileAccessPermission::All, { FileSystem::FileLockMode::Exclusive, FileSystem::FileLockMode::Nonblocking });
         if (!handle)
             return;
 
@@ -1375,7 +1375,7 @@ private:
         if (filename.isNull())
             return;
 
-        auto handle = FileSystem::openAndLockFile(filename, FileSystem::FileOpenMode::Read, { FileSystem::FileLockMode::Shared, FileSystem::FileLockMode::Nonblocking });
+        auto handle = FileSystem::openFile(filename, FileSystem::FileOpenMode::Read, FileSystem::FileAccessPermission::All, { FileSystem::FileLockMode::Shared, FileSystem::FileLockMode::Nonblocking });
         if (!handle)
             return;
 

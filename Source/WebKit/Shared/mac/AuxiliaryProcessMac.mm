@@ -194,7 +194,7 @@ static OSStatus enableSandboxStyleFileQuarantine()
 #if USE(CACHE_COMPILED_SANDBOX)
 static std::optional<Vector<uint8_t>> fileContents(const String& path, bool shouldLock = false, OptionSet<FileSystem::FileLockMode> lockMode = FileSystem::FileLockMode::Exclusive)
 {
-    auto fileHandle = shouldLock ? FileSystem::openAndLockFile(path, FileSystem::FileOpenMode::Read, lockMode) : FileSystem::openFile(path, FileSystem::FileOpenMode::Read);
+    auto fileHandle = FileSystem::openFile(path, FileSystem::FileOpenMode::Read, FileSystem::FileAccessPermission::All, lockMode);
     if (!fileHandle)
         return std::nullopt;
 

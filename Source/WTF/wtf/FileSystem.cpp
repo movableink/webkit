@@ -354,13 +354,6 @@ bool MappedFileData::mapFileHandle(FileHandle& handle, FileOpenMode openMode, Ma
 }
 #endif
 
-FileHandle openAndLockFile(const String& path, FileOpenMode openMode, OptionSet<FileLockMode> lockMode)
-{
-    auto handle = openFile(path, openMode);
-    handle.lock(lockMode);
-    return handle;
-}
-
 #if !PLATFORM(IOS_FAMILY)
 bool isSafeToUseMemoryMapForPath(const String&)
 {
@@ -400,7 +393,7 @@ bool markPurgeable(const String&)
 MappedFileData createMappedFileData(const String& path, size_t bytesSize, FileHandle* outputHandle)
 {
     constexpr bool failIfFileExists = true;
-    auto handle = FileSystem::openFile(path, FileSystem::FileOpenMode::ReadWrite, FileSystem::FileAccessPermission::User, failIfFileExists);
+    auto handle = FileSystem::openFile(path, FileSystem::FileOpenMode::ReadWrite, FileSystem::FileAccessPermission::User, { }, failIfFileExists);
 
     if (!handle)
         return { };

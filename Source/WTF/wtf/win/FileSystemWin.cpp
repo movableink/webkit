@@ -177,7 +177,7 @@ std::pair<String, FileHandle> openTemporaryFile(StringView, StringView suffix)
     return { proposedPath, WTFMove(handle) };
 }
 
-FileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission, bool failIfFileExists)
+FileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission, OptionSet<FileLockMode> lockMode, bool failIfFileExists)
 {
     DWORD desiredAccess = 0;
     DWORD creationDisposition = 0;
@@ -202,7 +202,7 @@ FileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission,
         creationDisposition = CREATE_NEW;
 
     String destination = path;
-    return FileHandle::adopt(CreateFile(destination.wideCharacters().data(), desiredAccess, shareMode, nullptr, creationDisposition, FILE_ATTRIBUTE_NORMAL, nullptr));
+    return FileHandle::adopt(CreateFile(destination.wideCharacters().data(), desiredAccess, shareMode, nullptr, creationDisposition, FILE_ATTRIBUTE_NORMAL, nullptr), lockMode);
 }
 
 String localUserSpecificStorageDirectory()

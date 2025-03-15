@@ -308,7 +308,7 @@ void NetworkDataTaskCurl::invokeDidReceiveResponse()
             invalidateAndCancel();
             break;
         case PolicyAction::Download: {
-            m_downloadDestinationFile = FileSystem::openFile(m_pendingDownloadLocation, FileSystem::FileOpenMode::Truncate, FileSystem::FileAccessPermission::All, !m_allowOverwriteDownload);
+            m_downloadDestinationFile = FileSystem::openFile(m_pendingDownloadLocation, FileSystem::FileOpenMode::Truncate, FileSystem::FileAccessPermission::All, { }, !m_allowOverwriteDownload);
             if (!m_downloadDestinationFile) {
                 if (m_client)
                     m_client->didCompleteWithError(ResourceError(CURLE_WRITE_ERROR, m_response.url()));

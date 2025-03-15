@@ -54,7 +54,7 @@ void writeToDisk(std::unique_ptr<KeyedEncoder>&& encoder, String&& path)
     if (!rawData)
         return;
 
-    auto handle = FileSystem::openAndLockFile(path, FileSystem::FileOpenMode::Truncate);
+    auto handle = FileSystem::openFile(path, FileSystem::FileOpenMode::Truncate, FileSystem::FileAccessPermission::All, { FileSystem::FileLockMode::Exclusive });
     if (!handle)
         return;
 

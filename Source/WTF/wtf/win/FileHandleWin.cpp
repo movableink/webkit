@@ -124,11 +124,8 @@ std::optional<PlatformFileID> FileHandle::id()
 
 void FileHandle::close()
 {
-    if (!m_handle)
-        return;
-
-    unlock();
-    ::CloseHandle(*std::exchange(m_handle, std::nullopt));
+    if (auto handle = std::exchange(m_handle, std::nullopt))
+        ::CloseHandle(*handle);
 }
 
 std::optional<uint64_t> FileHandle::size()
@@ -141,18 +138,6 @@ std::optional<uint64_t> FileHandle::size()
         return std::nullopt;
 
     return getFileSizeFromByHandleFileInformationStructure(fileInformation);
-}
-
-bool FileHandle::lock(OptionSet<FileLockMode>)
-{
-    // Not implemented.
-    return false;
-}
-
-bool FileHandle::unlock()
-{
-    // Not implemented.
-    return false;
 }
 
 } // WTF::FileSystemImpl

@@ -161,7 +161,7 @@ static bool validateBytecodeCachePath(NSURL* cachePath, NSError** error)
 
     String cacheFilename = [m_cachePath path];
 
-    auto handle = FileSystem::openAndLockFile(cacheFilename, FileSystem::FileOpenMode::Read, { FileSystem::FileLockMode::Exclusive, FileSystem::FileLockMode::Nonblocking });
+    auto handle = FileSystem::openFile(cacheFilename, FileSystem::FileOpenMode::Read, FileSystem::FileAccessPermission::All, { FileSystem::FileLockMode::Exclusive, FileSystem::FileLockMode::Nonblocking });
     if (!handle)
         return;
 

@@ -134,9 +134,7 @@ WTF_EXPORT_PRIVATE String createTemporaryFile(StringView prefix, StringView suff
 #if PLATFORM(COCOA)
 WTF_EXPORT_PRIVATE std::pair<FileHandle, CString> createTemporaryFileInDirectory(const String& directory, const String& suffix);
 #endif
-WTF_EXPORT_PRIVATE FileHandle openFile(const String& path, FileOpenMode, FileAccessPermission = FileAccessPermission::All, bool failIfFileExists = false);
-
-WTF_EXPORT_PRIVATE FileHandle openAndLockFile(const String&, FileOpenMode, OptionSet<FileLockMode> = FileLockMode::Exclusive);
+WTF_EXPORT_PRIVATE FileHandle openFile(const String& path, FileOpenMode, FileAccessPermission = FileAccessPermission::All, OptionSet<FileLockMode> = { }, bool failIfFileExists = false);
 
 // Appends the contents of the file found at 'path' to the open FileHandle.
 // Returns true if the write was successful, false if it was not.

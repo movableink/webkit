@@ -57,7 +57,7 @@ namespace WTF {
 
 namespace FileSystemImpl {
 
-FileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission permission, bool failIfFileExists)
+FileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission permission, OptionSet<FileLockMode> lockMode, bool failIfFileExists)
 {
     CString fsRep = fileSystemRepresentation(path);
 
@@ -91,7 +91,7 @@ FileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission 
     else if (permission == FileAccessPermission::All)
         permissionFlag |= (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 
-    return FileHandle::adopt(open(fsRep.data(), platformFlag, permissionFlag));
+    return FileHandle::adopt(open(fsRep.data(), platformFlag, permissionFlag), lockMode);
 }
 
 std::optional<WallTime> fileCreationTime(const String& path)
