@@ -734,14 +734,12 @@ html/OffscreenCanvas.cpp
 html/PermissionsPolicy.cpp
 html/PluginDocument.cpp
 html/PublicURLManager.cpp
-html/RadioInputType.cpp
 html/RadioNodeList.cpp
 html/RangeInputType.cpp
 html/ResetInputType.cpp
 html/SearchInputType.cpp
 html/SubmitInputType.cpp
 html/TextFieldInputType.cpp
-html/URLInputType.cpp
 html/ValidatedFormListedElement.cpp
 html/ValidatedFormListedElement.h
 html/ValidationMessage.cpp

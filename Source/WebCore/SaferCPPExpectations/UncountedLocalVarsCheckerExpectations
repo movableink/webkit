@@ -380,7 +380,6 @@ html/NumberInputType.cpp
 html/OffscreenCanvas.cpp
 html/PermissionsPolicy.cpp
 html/PluginDocument.cpp
-html/RadioInputType.cpp
 html/RangeInputType.cpp
 html/SearchInputType.cpp
 html/TextFieldInputType.cpp

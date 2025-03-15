@@ -62,7 +62,7 @@ bool RadioInputType::valueMissing(const String&) const
 
     bool isRequired = false;
     bool foundCheckedRadio = false;
-    forEachButtonInDetachedGroup(element->rootNode(), name, [&](auto& input) {
+    forEachButtonInDetachedGroup(element->protectedRootNode(), name, [&](auto& input) {
         if (input.checked()) {
             foundCheckedRadio = true;
             return false;
@@ -78,20 +78,23 @@ void RadioInputType::forEachButtonInDetachedGroup(ContainerNode& rootNode, const
 {
     ASSERT(!groupName.isEmpty());
 
-    for (auto* descendant = Traversal<HTMLElement>::inclusiveFirstWithin(rootNode); descendant;) {
-        if (is<HTMLFormElement>(*descendant)) {
+    auto next = [&](auto& current) {
+        if (is<HTMLFormElement>(current)) {
             // No need to consider the descendants of a <form> since they will have a form owner and we're only
             // interested in <input> elements without a form owner.
-            descendant = Traversal<HTMLElement>::nextSkippingChildren(*descendant, &rootNode);
-            continue;
+            return Traversal<HTMLElement>::nextSkippingChildren(current, &rootNode);
         }
+        return Traversal<HTMLElement>::next(current, &rootNode);
+    };
+    for (RefPtr descendant = Traversal<HTMLElement>::inclusiveFirstWithin(rootNode); descendant; descendant = next(*descendant)) {
+        if (is<HTMLFormElement>(*descendant))
+            continue;
         auto* input = dynamicDowncast<HTMLInputElement>(*descendant);
         if (input && input->isRadioButton() && !input->form() && input->name() == groupName) {
             bool shouldContinue = apply(*input);
             if (!shouldContinue)
                 return;
         }
-        descendant = Traversal<HTMLElement>::next(*descendant, &rootNode);
     }
 }
 
@@ -194,8 +197,7 @@ bool RadioInputType::isKeyboardFocusable(KeyboardEvent* event) const
 
     // Never allow keyboard tabbing to leave you in the same radio group.  Always
     // skip any other elements in the group.
-    RefPtr currentFocusedNode = element->document().focusedElement();
-    if (auto* focusedInput = dynamicDowncast<HTMLInputElement>(currentFocusedNode.get())) {
+    if (RefPtr focusedInput = dynamicDowncast<HTMLInputElement>(element->document().focusedElement())) {
         if (focusedInput->isRadioButton() && focusedInput->form() == element->form() && focusedInput->name() == element->name())
             return false;
     }
