@@ -143,10 +143,9 @@ RefPtr<WebCore::SharedMemory> Data::tryCreateSharedMemory() const
     if (isNull() || !isMap())
         return nullptr;
 
-    int fd = FileSystem::posixFileDescriptor(m_fileHandle->platformHandle());
     gsize length;
     const auto* data = g_bytes_get_data(m_buffer.get(), &length);
-    return WebCore::SharedMemory::wrapMap(const_cast<void*>(data), length, fd);
+    return WebCore::SharedMemory::wrapMap(const_cast<void*>(data), length, m_fileHandle->platformHandle());
 }
 
 } // namespace NetworkCache

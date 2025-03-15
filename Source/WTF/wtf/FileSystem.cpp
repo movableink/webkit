@@ -317,10 +317,8 @@ bool MappedFileData::mapFileHandle(FileHandle& handle, FileOpenMode openMode, Ma
     if (!handle)
         return false;
 
-    int fd = posixFileDescriptor(handle.platformHandle());
-
     struct stat fileStat;
-    if (fstat(fd, &fileStat))
+    if (fstat(handle.platformHandle(), &fileStat))
         return false;
 
     size_t size;
@@ -347,7 +345,7 @@ bool MappedFileData::mapFileHandle(FileHandle& handle, FileOpenMode openMode, Ma
 #endif
     }
 
-    auto fileData = MallocSpan<uint8_t, Mmap>::mmap(size, pageProtection, MAP_FILE | (mapMode == MappedFileMode::Shared ? MAP_SHARED : MAP_PRIVATE), fd);
+    auto fileData = MallocSpan<uint8_t, Mmap>::mmap(size, pageProtection, MAP_FILE | (mapMode == MappedFileMode::Shared ? MAP_SHARED : MAP_PRIVATE), handle.platformHandle());
     if (!fileData)
         return false;
 

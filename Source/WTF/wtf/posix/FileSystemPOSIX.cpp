@@ -94,11 +94,6 @@ FileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission 
     return FileHandle::adopt(open(fsRep.data(), platformFlag, permissionFlag));
 }
 
-int posixFileDescriptor(PlatformFileHandle handle)
-{
-    return handle;
-}
-
 std::optional<WallTime> fileCreationTime(const String& path)
 {
 #if (OS(LINUX) && HAVE(STATX)) || OS(DARWIN) || OS(OPENBSD) || OS(NETBSD) || OS(FREEBSD)

@@ -184,13 +184,13 @@ NSString *createTemporaryDirectory(NSString *directoryPrefix)
     return [[NSFileManager defaultManager] stringWithFileSystemRepresentation:path.data() length:length];
 }
 
-std::pair<PlatformFileHandle, CString> createTemporaryFileInDirectory(const String& directory, const String& suffix)
+std::pair<FileHandle, CString> createTemporaryFileInDirectory(const String& directory, const String& suffix)
 {
     auto fsSuffix = fileSystemRepresentation(suffix);
     auto templatePath = pathByAppendingComponents(directory, { StringView { "XXXXXX"_s }, StringView { suffix } });
     auto fsTemplatePath = fileSystemRepresentation(templatePath);
-    int fd = mkstemps(fsTemplatePath.mutableSpanIncludingNullTerminator().data(), fsSuffix.length());
-    return { fd, WTFMove(fsTemplatePath) };
+    auto fileHandle = FileHandle::adopt(mkstemps(fsTemplatePath.mutableSpanIncludingNullTerminator().data(), fsSuffix.length()));
+    return { WTFMove(fileHandle), WTFMove(fsTemplatePath) };
 }
 
 #ifdef IOPOL_TYPE_VFS_MATERIALIZE_DATALESS_FILES

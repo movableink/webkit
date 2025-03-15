@@ -123,8 +123,6 @@ WTF_EXPORT_PRIVATE CString fileSystemRepresentation(const String&);
 WTF_EXPORT_PRIVATE String stringFromFileSystemRepresentation(const char*);
 #endif
 
-inline bool isHandleValid(const PlatformFileHandle& handle) { return handle != invalidPlatformFileHandle; }
-
 using Salt = std::array<uint8_t, 8>;
 WTF_EXPORT_PRIVATE std::optional<Salt> readOrMakeSalt(const String& path);
 WTF_EXPORT_PRIVATE std::optional<Vector<uint8_t>> readEntireFile(const String& path);
@@ -134,13 +132,13 @@ WTF_EXPORT_PRIVATE int overwriteEntireFile(const String& path, std::span<const u
 WTF_EXPORT_PRIVATE std::pair<String, FileHandle> openTemporaryFile(StringView prefix, StringView suffix = { });
 WTF_EXPORT_PRIVATE String createTemporaryFile(StringView prefix, StringView suffix = { });
 #if PLATFORM(COCOA)
-WTF_EXPORT_PRIVATE std::pair<PlatformFileHandle, CString> createTemporaryFileInDirectory(const String& directory, const String& suffix);
+WTF_EXPORT_PRIVATE std::pair<FileHandle, CString> createTemporaryFileInDirectory(const String& directory, const String& suffix);
 #endif
 WTF_EXPORT_PRIVATE FileHandle openFile(const String& path, FileOpenMode, FileAccessPermission = FileAccessPermission::All, bool failIfFileExists = false);
 
 WTF_EXPORT_PRIVATE FileHandle openAndLockFile(const String&, FileOpenMode, OptionSet<FileLockMode> = FileLockMode::Exclusive);
 
-// Appends the contents of the file found at 'path' to the open PlatformFileHandle.
+// Appends the contents of the file found at 'path' to the open FileHandle.
 // Returns true if the write was successful, false if it was not.
 WTF_EXPORT_PRIVATE bool appendFileContentsToFileHandle(const String& path, FileHandle&);
 
@@ -155,10 +153,6 @@ WTF_EXPORT_PRIVATE String encodeForFileName(const String&);
 WTF_EXPORT_PRIVATE String decodeFromFilename(const String&);
 
 WTF_EXPORT_PRIVATE bool filesHaveSameVolume(const String&, const String&);
-
-#if !OS(WINDOWS)
-WTF_EXPORT_PRIVATE int posixFileDescriptor(PlatformFileHandle);
-#endif
 
 #if USE(CF)
 WTF_EXPORT_PRIVATE RetainPtr<CFURLRef> pathAsURL(const String&);
