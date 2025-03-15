@@ -3030,8 +3030,12 @@ private:
                 fixEdge<Int32Use>(node->child1());
             else if (node->child1()->shouldSpeculateInt52())
                 fixEdge<Int52RepUse>(node->child1());
-            else
+            else {
+                m_insertionSet.insertNode(
+                    m_indexInBlock, SpecNone, Check, node->origin,
+                    Edge(node->child1().node(), NumberUse));
                 fixEdge<DoubleRepUse>(node->child1());
+            }
 
             if (op == NumberToStringWithRadix)
                 fixEdge<Int32Use>(node->child2());
