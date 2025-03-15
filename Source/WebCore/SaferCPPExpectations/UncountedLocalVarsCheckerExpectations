@@ -349,7 +349,6 @@ html/CanvasBase.cpp
 html/CollectionTraversalInlines.h
 html/ColorInputType.cpp
 html/CustomPaintImage.cpp
-html/FileInputType.cpp
 html/FormAssociatedCustomElement.cpp
 html/FormListedElement.cpp
 html/HTMLAnchorElement.cpp

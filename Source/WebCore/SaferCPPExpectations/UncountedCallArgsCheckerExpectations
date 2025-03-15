@@ -672,7 +672,6 @@ html/DOMURL.cpp
 html/DirectoryFileListCreator.cpp
 html/EmailInputType.cpp
 html/FTPDirectoryDocument.cpp
-html/FileInputType.cpp
 html/FormAssociatedCustomElement.cpp
 html/FormAssociatedElement.cpp
 html/FormListedElement.cpp

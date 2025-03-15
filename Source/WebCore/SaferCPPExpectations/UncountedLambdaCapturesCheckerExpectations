@@ -72,7 +72,6 @@ dom/ViewportArguments.cpp
 editing/Editor.cpp
 fileapi/Blob.cpp
 fileapi/FileReader.cpp
-html/FileInputType.cpp
 html/FormAssociatedCustomElement.cpp
 html/HTMLImageElement.cpp
 html/HTMLMediaElement.cpp
