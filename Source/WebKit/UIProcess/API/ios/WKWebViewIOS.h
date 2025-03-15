@@ -232,6 +232,8 @@ enum class TapHandlingResult : uint8_t;
 - (void)_willInvalidateDraggedModelWithContainerView:(UIView *)containerView;
 #endif
 
+- (UIEdgeInsets)currentlyVisibleContentInsetsWithScale:(CGFloat)scaleFactor obscuredInsets:(UIEdgeInsets)obscuredInsets;
+
 @end
 
 _WKTapHandlingResult wkTapHandlingResult(WebKit::TapHandlingResult);
