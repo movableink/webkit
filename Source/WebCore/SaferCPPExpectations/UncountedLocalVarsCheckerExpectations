@@ -392,7 +392,6 @@ html/ValidatedFormListedElement.cpp
 html/ValidationMessage.cpp
 html/canvas/ANGLEInstancedArrays.cpp
 html/canvas/CanvasRenderingContext2D.cpp
-html/canvas/CanvasRenderingContext2DBase.cpp
 html/canvas/EXTClipControl.cpp
 html/canvas/EXTDisjointTimerQuery.cpp
 html/canvas/EXTDisjointTimerQueryWebGL2.cpp
