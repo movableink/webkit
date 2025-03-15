@@ -657,7 +657,6 @@ html/AttachmentAssociatedElement.cpp
 html/BaseButtonInputType.cpp
 html/BaseCheckableInputType.cpp
 html/BaseClickableWithKeyInputType.cpp
-html/BaseDateAndTimeInputType.cpp
 html/BaseTextInputType.cpp
 html/CachedHTMLCollection.h
 html/CachedHTMLCollectionInlines.h

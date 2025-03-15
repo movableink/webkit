@@ -343,7 +343,6 @@ history/CachedPage.cpp
 history/HistoryItem.cpp
 html/Autofill.cpp
 html/BaseCheckableInputType.cpp
-html/BaseDateAndTimeInputType.cpp
 html/CachedHTMLCollectionInlines.h
 html/CanvasBase.cpp
 html/CollectionTraversalInlines.h
