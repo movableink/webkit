@@ -76,6 +76,8 @@ bool AboutSchemeHandler::canHandleURL(const URL& url) const
 
 void AboutSchemeHandler::platformInitialize()
 {
+    registerHandler(blank, makeUnique<EmptyPathHandler>());
+
 #if PLATFORM(COCOA) && HAVE(CUSTOM_ABOUT_SCHEME_HANDLER)
     registerCocoaAboutHandlers(*this);
 #endif
