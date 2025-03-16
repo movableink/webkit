@@ -37,30 +37,30 @@
 
 namespace WTF::FileSystemImpl {
 
-int64_t FileHandle::read(std::span<uint8_t> data)
+std::optional<uint64_t> FileHandle::read(std::span<uint8_t> data)
 {
     if (!m_handle)
-        return -1;
+        return { };
 
     do {
         auto bytesRead = ::read(*m_handle, data.data(), data.size());
         if (bytesRead >= 0)
             return bytesRead;
     } while (errno == EINTR);
-    return -1;
+    return { };
 }
 
-int64_t FileHandle::write(std::span<const uint8_t> data)
+std::optional<uint64_t> FileHandle::write(std::span<const uint8_t> data)
 {
     if (!m_handle)
-        return -1;
+        return { };
 
     do {
         auto bytesWritten = ::write(*m_handle, data.data(), data.size());
         if (bytesWritten >= 0)
             return bytesWritten;
     } while (errno == EINTR);
-    return -1;
+    return { };
 }
 
 bool FileHandle::truncate(int64_t offset)

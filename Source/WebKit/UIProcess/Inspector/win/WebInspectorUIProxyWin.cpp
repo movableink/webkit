@@ -111,10 +111,10 @@ void WebInspectorUIProxy::showSavePanelForSingleFile(HWND parentWindow, Vector<W
         auto content = saveDatas[0].content.utf8();
         auto contentSize = content.length();
         auto bytesWritten = fileHandle.write(byteCast<uint8_t>(content.span()));
-        if (bytesWritten == -1 || static_cast<size_t>(bytesWritten) != contentSize) {
+        if (bytesWritten != contentSize) {
             auto message = systemErrorMessage(GetLastError());
             if (message.isEmpty())
-                message = makeString("Error: writeToFile returns "_s, bytesWritten, ", contentLength = "_s, content.length());
+                message = makeString("Error: writeToFile returns "_s, bytesWritten ? static_cast<int64_t>(*bytesWritten) : -1, ", contentLength = "_s, content.length());
             MessageBox(parentWindow, message.wideCharacters().data(), L"Export HAR", MB_OK | MB_ICONEXCLAMATION);
         }
     } else {

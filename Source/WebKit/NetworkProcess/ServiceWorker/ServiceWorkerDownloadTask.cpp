@@ -195,14 +195,14 @@ void ServiceWorkerDownloadTask::didReceiveData(const IPC::SharedBufferReference&
     if (!m_downloadFile)
         return;
 
-    size_t bytesWritten = m_downloadFile.write(data.span());
+    auto bytesWritten = m_downloadFile.write(data.span());
 
     if (bytesWritten != data.size()) {
         didFailDownload();
         return;
     }
 
-    callOnMainRunLoop([this, protectedThis = Ref { *this }, bytesWritten] {
+    callOnMainRunLoop([this, protectedThis = Ref { *this }, bytesWritten = *bytesWritten] {
         m_downloadBytesWritten += bytesWritten;
         if (RefPtr download = protectedNetworkProcess()->downloadManager().download(*m_pendingDownloadID))
             download->didReceiveData(bytesWritten, m_downloadBytesWritten, std::max(m_expectedContentLength.value_or(0), m_downloadBytesWritten));

@@ -465,16 +465,16 @@ void NetworkDataTaskBlob::download()
 bool NetworkDataTaskBlob::writeDownload(std::span<const uint8_t> data)
 {
     ASSERT(isDownload());
-    int bytesWritten = m_downloadFile.write(data);
-    if (static_cast<size_t>(bytesWritten) != data.size()) {
+    auto bytesWritten = m_downloadFile.write(data);
+    if (bytesWritten != data.size()) {
         didFailDownload(cancelledError(m_firstRequest));
         return false;
     }
 
-    m_downloadBytesWritten += bytesWritten;
+    m_downloadBytesWritten += *bytesWritten;
     RefPtr download = m_networkProcess->downloadManager().download(*m_pendingDownloadID);
     ASSERT(download);
-    download->didReceiveData(bytesWritten, m_downloadBytesWritten, m_totalSize);
+    download->didReceiveData(*bytesWritten, m_downloadBytesWritten, m_totalSize);
     return true;
 }
 

@@ -40,9 +40,9 @@ bool writeAllToFile(FileSystem::FileHandle& file, const T& container)
     auto bytes = spanReinterpretCast<const uint8_t>(container.span());
     while (!bytes.empty()) {
         auto written = file.write(bytes);
-        if (written == -1)
+        if (!written)
             return false;
-        skip(bytes, written);
+        skip(bytes, *written);
     }
     return true;
 }

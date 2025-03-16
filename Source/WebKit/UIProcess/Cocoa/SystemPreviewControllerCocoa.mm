@@ -365,7 +365,7 @@ static NSString * const _WKARQLWebsiteURLParameterKey = @"ARQLWebsiteURLParamete
 - (void)completeLoad
 {
     ASSERT(_fileHandle);
-    size_t byteCount = _fileHandle.write(span(_data.get()));
+    auto byteCount = _fileHandle.write(span(_data.get()));
     _fileHandle = { };
 
     if (byteCount != _data.get().length) {

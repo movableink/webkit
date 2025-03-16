@@ -60,8 +60,8 @@ public:
         auto handle = WTFMove(result.second);
         ASSERT_TRUE(!!handle);
 
-        int rc = handle.write(byteCast<uint8_t>(FileMonitorTestData.utf8().span()));
-        ASSERT_NE(rc, -1);
+        auto rc = handle.write(byteCast<uint8_t>(FileMonitorTestData.utf8().span()));
+        ASSERT_TRUE(!!rc);
     }
     
     void TearDown() override
@@ -346,8 +346,8 @@ TEST_F(FileMonitorTest, DetectDeleteButNotSubsequentChange)
         auto handle = FileSystem::openFile(tempFilePath(), FileSystem::FileOpenMode::Truncate);
         ASSERT_FALSE(!handle);
 
-        int rc = handle.write(byteCast<uint8_t>(FileMonitorTestData.utf8().span()));
-        ASSERT_NE(rc, -1);
+        auto rc = handle.write(byteCast<uint8_t>(FileMonitorTestData.utf8().span()));
+        ASSERT_TRUE(!!rc);
 
         auto firstCommand = createCommand(tempFilePath(), FileMonitorRevisedData);
         rc = system(firstCommand.utf8().data());

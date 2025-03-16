@@ -85,11 +85,8 @@ public:
     bool isValid() const { return !!m_handle; }
     explicit operator bool() const { return isValid(); }
 
-    // Returns number of bytes actually written if successful, -1 otherwise.
-    WTF_EXPORT_PRIVATE int64_t write(std::span<const uint8_t>);
-    // Returns number of bytes actually read if successful, -1 otherwise.
-    WTF_EXPORT_PRIVATE int64_t read(std::span<uint8_t>);
-
+    WTF_EXPORT_PRIVATE std::optional<uint64_t> write(std::span<const uint8_t>);
+    WTF_EXPORT_PRIVATE std::optional<uint64_t> read(std::span<uint8_t>);
     WTF_EXPORT_PRIVATE std::optional<Vector<uint8_t>> readAll();
     WTF_EXPORT_PRIVATE bool truncate(int64_t offset);
     WTF_EXPORT_PRIVATE std::optional<uint64_t> size();

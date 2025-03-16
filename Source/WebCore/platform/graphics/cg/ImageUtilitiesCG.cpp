@@ -75,7 +75,7 @@ static String transcodeImage(const String& path, const String& destinationUTI, c
     CGDataConsumerCallbacks callbacks = {
         [](void* info, const void* buffer, size_t count) -> size_t {
             auto& handle = *static_cast<FileSystem::FileHandle*>(info);
-            return handle.write(unsafeMakeSpan(static_cast<const uint8_t*>(buffer), count));
+            return handle.write(unsafeMakeSpan(static_cast<const uint8_t*>(buffer), count)).value_or(0);
         },
         nullptr
     };

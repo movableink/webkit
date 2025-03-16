@@ -40,8 +40,9 @@ constexpr auto FileSystemTestData = "This is a test"_s;
 
 static void createTestFile(const String& path)
 {
-    int written = FileSystem::overwriteEntireFile(path, FileSystemTestData.span8());
-    EXPECT_GE(written, 0);
+    auto written = FileSystem::overwriteEntireFile(path, FileSystemTestData.span8());
+    EXPECT_TRUE(written);
+    EXPECT_GE(*written, 0u);
 }
 
 // FIXME: Refactor FileSystemTest and FragmentedSharedBufferTest as a single class.

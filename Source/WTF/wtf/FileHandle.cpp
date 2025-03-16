@@ -75,9 +75,9 @@ std::optional<Vector<uint8_t>> FileHandle::readAll()
 
     Vector<uint8_t> buffer(bytesToRead);
     size_t totalBytesRead = 0;
-    int bytesRead;
+    uint64_t bytesRead;
 
-    while ((bytesRead = read(buffer.mutableSpan().subspan(totalBytesRead))) > 0)
+    while ((bytesRead = read(buffer.mutableSpan().subspan(totalBytesRead)).value_or(0)))
         totalBytesRead += bytesRead;
 
     if (totalBytesRead != bytesToRead)

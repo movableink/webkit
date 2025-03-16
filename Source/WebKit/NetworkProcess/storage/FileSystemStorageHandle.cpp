@@ -304,8 +304,7 @@ std::optional<FileSystemStorageError> FileSystemStorageHandle::executeCommandFor
                 return FileSystemStorageError::Unknown;
         }
 
-        int result = activeWritableFile.handle.write(dataBytes);
-        if (result == -1)
+        if (!activeWritableFile.handle.write(dataBytes))
             return FileSystemStorageError::Unknown;
 
         return std::nullopt;

@@ -136,11 +136,11 @@ ExceptionOr<unsigned long long> FileSystemSyncAccessHandle::read(BufferSource&& 
             return Exception { ExceptionCode::InvalidStateError, "Failed to read at offset"_s };
     }
 
-    int result = m_file.read(buffer.mutableSpan());
-    if (result == -1)
+    auto result = m_file.read(buffer.mutableSpan());
+    if (!result)
         return Exception { ExceptionCode::InvalidStateError, "Failed to read from file"_s };
 
-    return result;
+    return *result;
 }
 
 ExceptionOr<unsigned long long> FileSystemSyncAccessHandle::write(BufferSource&& buffer, FileSystemSyncAccessHandle::FilesystemReadWriteOptions options)
@@ -162,11 +162,11 @@ ExceptionOr<unsigned long long> FileSystemSyncAccessHandle::write(BufferSource&&
     if (!requestSpaceForWrite(*options.at, buffer.length()))
         return Exception { ExceptionCode::QuotaExceededError };
 
-    int result = m_file.write(buffer.span());
-    if (result == -1)
+    auto result = m_file.write(buffer.span());
+    if (!result)
         return Exception { ExceptionCode::InvalidStateError, "Failed to write to file"_s };
 
-    return result;
+    return *result;
 }
 
 void FileSystemSyncAccessHandle::stop()

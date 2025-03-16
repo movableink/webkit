@@ -300,7 +300,7 @@ void WebFullScreenManagerProxy::prepareQuickLookImageURL(CompletionHandler<void(
         auto [filePath, fileHandle] = FileSystem::openTemporaryFile("QuickLook"_s, suffix);
         ASSERT(fileHandle);
 
-        size_t byteCount = fileHandle.write(buffer->span());
+        auto byteCount = fileHandle.write(buffer->span());
         ASSERT_UNUSED(byteCount, byteCount == buffer->size());
         fileHandle = { };
 

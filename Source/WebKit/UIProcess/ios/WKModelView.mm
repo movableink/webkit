@@ -109,7 +109,7 @@ SOFT_LINK_CLASS(AssetViewer, ASVInlinePreview);
     if (!fileHandle)
         return NO;
 
-    auto byteCount = static_cast<std::size_t>(fileHandle.write(model.data()->span()));
+    auto byteCount = fileHandle.write(model.data()->span());
     ASSERT_UNUSED(byteCount, byteCount == model.data()->size());
     _filePath = filePath;
 

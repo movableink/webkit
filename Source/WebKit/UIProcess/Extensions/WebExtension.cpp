@@ -182,7 +182,7 @@ static String convertChromeExtensionToTemporaryZipFile(const String& inputFilePa
     // Read the magic signature.
     std::array<uint8_t, 4> signature;
     auto bytesRead = inputFileHandle.read(signature);
-    if (bytesRead < 0 || static_cast<size_t>(bytesRead) != signature.size())
+    if (bytesRead != signature.size())
         return nullString();
 
     // Verify Chrome extension magic signature.
@@ -202,21 +202,21 @@ static String convertChromeExtensionToTemporaryZipFile(const String& inputFilePa
         bytesRead = inputFileHandle.read(buffer);
 
         // Error reading file.
-        if (bytesRead < 0)
+        if (!bytesRead)
             return nullString();
 
         // Done reading file.
-        if (!bytesRead)
+        if (!*bytesRead)
             break;
 
         size_t bufferOffset = 0;
         if (!signatureFound) {
             // Not enough bytes for the signature.
-            if (bytesRead < 4)
+            if (*bytesRead < 4)
                 return nullString();
 
             // Search for the ZIP file magic signature in the buffer.
-            for (ssize_t i = 0; i < bytesRead - 3; ++i) {
+            for (size_t i = 0; i < *bytesRead - 3; ++i) {
                 if (buffer[i] == 'P' && buffer[i + 1] == 'K' && buffer[i + 2] == 0x03 && buffer[i + 3] == 0x04) {
                     signatureFound = true;
                     bufferOffset = i;
@@ -229,9 +229,9 @@ static String convertChromeExtensionToTemporaryZipFile(const String& inputFilePa
                 continue;
         }
 
-        auto bytesToWrite = std::span(buffer).subspan(bufferOffset, bytesRead - bufferOffset);
+        auto bytesToWrite = std::span(buffer).subspan(bufferOffset, *bytesRead - bufferOffset);
         auto bytesWritten = temporaryFileHandle.write(bytesToWrite);
-        if (bytesWritten != static_cast<int64_t>(bytesToWrite.size()))
+        if (bytesWritten != bytesToWrite.size())
             return nullString();
     }
 

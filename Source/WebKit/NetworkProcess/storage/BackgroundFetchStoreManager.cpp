@@ -186,7 +186,7 @@ void BackgroundFetchStoreManager::storeFetchAfterQuotaCheck(const String& identi
     m_ioQueue->dispatch([queue = Ref { m_taskQueue }, filePath = WTFMove(filePath).isolatedCopy(), responseBodyIndexToClear, data = WTFMove(data), callback = WTFMove(callback)]() mutable {
         // FIXME: Cover the case of partial write.
         auto writtenSize = FileSystem::overwriteEntireFile(filePath, data);
-        auto result = static_cast<size_t>(writtenSize) == data.size() ? StoreResult::OK : StoreResult::InternalError;
+        auto result = writtenSize == data.size() ? StoreResult::OK : StoreResult::InternalError;
         if (result == StoreResult::OK && responseBodyIndexToClear)
             FileSystem::deleteFile(makeString(filePath, '-', *responseBodyIndexToClear));
         RELEASE_LOG_ERROR_IF(result == StoreResult::InternalError, ServiceWorker, "BackgroundFetchStoreManager::storeFetch failed writing");
@@ -225,7 +225,7 @@ void BackgroundFetchStoreManager::storeFetchResponseBodyChunk(const String& iden
         if (auto handle = FileSystem::openFile(filePath, FileSystem::FileOpenMode::ReadWrite); handle) {
             // FIXME: Cover the case of partial write.
             auto writtenSize = handle.write(data->span());
-            if (static_cast<size_t>(writtenSize) == data->size())
+            if (writtenSize == data->size())
                 result = StoreResult::OK;
         }
 

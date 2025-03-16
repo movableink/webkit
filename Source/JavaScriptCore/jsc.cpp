@@ -1351,7 +1351,7 @@ public:
         m_cachedBytecode->commitUpdates([&] (off_t offset, std::span<const uint8_t> data) {
             long long result = handle.seek(offset, FileSystem::FileSeekOrigin::Beginning);
             ASSERT_UNUSED(result, result != -1);
-            size_t bytesWritten = static_cast<size_t>(handle.write(data));
+            auto bytesWritten = handle.write(data);
             ASSERT_UNUSED(bytesWritten, bytesWritten == data.size());
         });
     }
@@ -2090,14 +2090,16 @@ JSC_DEFINE_HOST_FUNCTION(functionWriteFile, (JSGlobalObject* globalObject, CallF
     if (!handle)
         return throwVMError(globalObject, scope, "Could not open file."_s);
 
-    int size = std::visit(WTF::makeVisitor([&](const String& string) {
+    auto size = std::visit(WTF::makeVisitor([&](const String& string) {
         CString utf8 = string.utf8();
         return handle.write(byteCast<uint8_t>(utf8.span()));
     }, [&] (const std::span<const uint8_t>& data) {
         return handle.write(data);
     }), data);
 
-    return JSValue::encode(jsNumber(size));
+    if (!size)
+        return JSValue::encode(jsNumber(-1));
+    return JSValue::encode(jsNumber(*size));
 }
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -199,7 +199,7 @@ void NetworkDataTaskCurl::curlDidReceiveData(CurlRequest&, Ref<SharedBuffer>&& b
         RELEASE_ASSERT(download);
         uint64_t bytesWritten = 0;
         for (auto& segment : buffer.get()) {
-            if (m_downloadDestinationFile.write(segment.segment->span()) == -1) {
+            if (!m_downloadDestinationFile.write(segment.segment->span())) {
                 download->didFail(ResourceError(CURLE_WRITE_ERROR, m_response.url()), { });
                 invalidateAndCancel();
                 return;

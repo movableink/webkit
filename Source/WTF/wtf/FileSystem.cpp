@@ -258,19 +258,19 @@ bool appendFileContentsToFileHandle(const String& path, FileHandle& target)
     if (!source)
         return false;
 
-    static int bufferSize = 1 << 19;
+    static size_t bufferSize = 1 << 19;
     Vector<uint8_t> buffer(bufferSize);
 
     do {
-        int readBytes = source.read(buffer.mutableSpan());
+        auto readBytes = source.read(buffer.mutableSpan());
 
-        if (readBytes < 0)
+        if (!readBytes)
             return false;
 
-        if (target.write(buffer.span().first(readBytes)) != readBytes)
+        if (target.write(buffer.span().first(*readBytes)) != readBytes)
             return false;
 
-        if (readBytes < bufferSize)
+        if (*readBytes < bufferSize)
             return true;
     } while (true);
 
@@ -463,7 +463,7 @@ std::optional<Salt> readOrMakeSalt(const String& path)
     if (FileSystem::fileExists(path)) {
         if (auto handle = FileSystem::openFile(path, FileSystem::FileOpenMode::Read); handle) {
             Salt salt;
-            auto bytesRead = static_cast<std::size_t>(handle.read(salt));
+            auto bytesRead = handle.read(salt);
             if (bytesRead == salt.size())
                 return salt;
         }
@@ -476,7 +476,7 @@ std::optional<Salt> readOrMakeSalt(const String& path)
     if (!handle)
         return { };
 
-    bool success = static_cast<std::size_t>(handle.write(salt)) == salt.size();
+    bool success = handle.write(salt) == salt.size();
     if (!success)
         return { };
 
@@ -489,11 +489,11 @@ std::optional<Vector<uint8_t>> readEntireFile(const String& path)
     return handle.readAll();
 }
 
-int overwriteEntireFile(const String& path, std::span<const uint8_t> span)
+std::optional<uint64_t> overwriteEntireFile(const String& path, std::span<const uint8_t> span)
 {
     auto fileHandle = FileSystem::openFile(path, FileSystem::FileOpenMode::Truncate);
     if (!fileHandle)
-        return -1;
+        return { };
 
     return fileHandle.write(span);
 }
