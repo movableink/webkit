@@ -2557,7 +2557,7 @@ private:
     HashMap<PDFPluginIdentifier, WeakPtr<PDFPluginBase>> m_pdfPlugInsWithHUD;
 #endif
 #if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
-    HashMap<PDFPluginIdentifier, WeakPtr<PDFPluginBase>> m_pdfPlugInsWithPageNumberIndicator;
+    std::pair<Markable<PDFPluginIdentifier>, WeakPtr<PDFPluginBase>> m_pdfPlugInWithPageNumberIndicator;
 #endif
 
     WTF::Function<void()> m_selectionChangedHandler;
