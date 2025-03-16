@@ -1487,6 +1487,31 @@ private:
                 break;
             }
 
+            case ValuePow: {
+                bool isBigIntBinaryUsedKind = node->isBinaryUseKind(HeapBigIntUse) || node->isBinaryUseKind(AnyBigIntUse) || node->isBinaryUseKind(BigInt32Use);
+                if (node->mustGenerate() && isBigIntBinaryUsedKind) {
+                    JSValue right = m_state.forNode(node->child2()).value();
+                    if (right && right.isBigInt() && !right.isNegativeBigInt()) {
+                        node->clearFlags(NodeMustGenerate);
+                        changed = true;
+                    }
+                }
+                break;
+            }
+
+            case ValueMod:
+            case ValueDiv: {
+                bool isBigIntBinaryUsedKind = node->isBinaryUseKind(HeapBigIntUse) || node->isBinaryUseKind(AnyBigIntUse) || node->isBinaryUseKind(BigInt32Use);
+                if (node->mustGenerate() && isBigIntBinaryUsedKind) {
+                    JSValue right = m_state.forNode(node->child2()).value();
+                    if (right && right.isBigInt() && !right.isZeroBigInt()) {
+                        node->clearFlags(NodeMustGenerate);
+                        changed = true;
+                    }
+                }
+                break;
+            }
+
             case ArithAdd: {
                 JSValue left = m_state.forNode(node->child1()).value();
                 JSValue right = m_state.forNode(node->child2()).value();
