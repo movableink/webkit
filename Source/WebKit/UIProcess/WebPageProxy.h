@@ -2266,6 +2266,8 @@ public:
     void disableURLSchemeCheckInDataDetectors() const;
 
     void setIsTakingSnapshotsForApplicationSuspension(bool);
+    bool isTakingSnapshotsForApplicationSuspension() const { return m_isTakingSnapshotsForApplicationSuspension; }
+
     void setNeedsDOMWindowResizeEvent();
 
 #if ENABLE(APP_BOUND_DOMAINS)
@@ -3466,6 +3468,8 @@ RefPtr<SpeechRecognitionPermissionManager> protectedSpeechRecognitionPermissionM
     bool m_isScrollingOrZooming { false };
     bool m_isAutoscrolling { false };
 #endif
+
+    bool m_isTakingSnapshotsForApplicationSuspension { false };
 
 #if PLATFORM(MAC)
     bool m_acceptsFirstMouse { false };

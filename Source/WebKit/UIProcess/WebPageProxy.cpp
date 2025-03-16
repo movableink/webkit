@@ -14963,6 +14963,7 @@ void WebPageProxy::setOverriddenMediaType(const String& mediaType)
 
 void WebPageProxy::setIsTakingSnapshotsForApplicationSuspension(bool isTakingSnapshotsForApplicationSuspension)
 {
+    m_isTakingSnapshotsForApplicationSuspension = isTakingSnapshotsForApplicationSuspension;
     send(Messages::WebPage::SetIsTakingSnapshotsForApplicationSuspension(isTakingSnapshotsForApplicationSuspension));
 }
 

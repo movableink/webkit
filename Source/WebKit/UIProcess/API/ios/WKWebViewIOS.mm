@@ -3100,11 +3100,11 @@ static WebCore::IntDegrees activeOrientation(WKWebView *webView)
     contentLayer.transform = contentLayerTransform;
 
     CGPoint currentScrollOffset = [_scrollView contentOffset];
-    double horizontalScrollAdjustement = _resizeAnimationTransformAdjustments.m41 * animatingScaleTarget;
+    double horizontalScrollAdjustment = _resizeAnimationTransformAdjustments.m41 * animatingScaleTarget;
     double verticalScrollAdjustment = _resizeAnimationTransformAdjustments.m42 * animatingScaleTarget;
 
     [_scrollView setContentSize:roundScrollViewContentSize(*_page, [_contentView frame].size)];
-    [_scrollView setContentOffset:CGPointMake(currentScrollOffset.x - horizontalScrollAdjustement, currentScrollOffset.y - verticalScrollAdjustment)];
+    [_scrollView setContentOffset:CGPointMake(currentScrollOffset.x - horizontalScrollAdjustment, currentScrollOffset.y - verticalScrollAdjustment)];
 
     [_resizeAnimationView removeFromSuperview];
     _resizeAnimationView = nil;
@@ -4322,7 +4322,29 @@ static bool isLockdownModeWarningNeeded()
     WebCore::FloatRect oldUnobscuredContentRect = _page->unobscuredContentRect();
 
     auto isOldBoundsValid = !CGRectIsEmpty(oldBounds) || !CGRectIsEmpty(_perProcessState.animatedResizeOldBounds);
-    if (![self usesStandardContentView] || !_perProcessState.hasCommittedLoadForMainFrame || !isOldBoundsValid || oldUnobscuredContentRect.isEmpty() || _perProcessState.liveResizeParameters) {
+    bool shouldPerformAnimatedResize = [&] {
+        if (![self usesStandardContentView])
+            return false;
+
+        if (!_perProcessState.hasCommittedLoadForMainFrame)
+            return false;
+
+        if (!isOldBoundsValid)
+            return false;
+
+        if (oldUnobscuredContentRect.isEmpty())
+            return false;
+
+        if (_perProcessState.liveResizeParameters)
+            return false;
+
+        if (_page->isTakingSnapshotsForApplicationSuspension() && self._isDisplayingPDF)
+            return false;
+
+        return true;
+    }();
+
+    if (!shouldPerformAnimatedResize) {
         if ([_customContentView respondsToSelector:@selector(web_beginAnimatedResizeWithUpdates:)])
             [_customContentView web_beginAnimatedResizeWithUpdates:updateBlock];
         else
