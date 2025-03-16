@@ -684,7 +684,6 @@ rendering/updating/RenderTreeUpdater.cpp
 rendering/updating/RenderTreeUpdaterGeneratedContent.cpp
 storage/Storage.cpp
 style/AttributeChangeInvalidation.cpp
-style/ChildChangeInvalidation.cpp
 style/ClassChangeInvalidation.cpp
 style/CustomPropertyRegistry.cpp
 style/ElementRuleCollector.cpp
