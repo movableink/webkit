@@ -379,7 +379,6 @@ html/OffscreenCanvas.cpp
 html/PermissionsPolicy.cpp
 html/PluginDocument.cpp
 html/RangeInputType.cpp
-html/SearchInputType.cpp
 html/TextFieldInputType.cpp
 html/UserActivation.cpp
 html/ValidatedFormListedElement.cpp

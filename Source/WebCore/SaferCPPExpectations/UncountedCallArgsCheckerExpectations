@@ -726,7 +726,6 @@ html/MediaController.cpp
 html/MediaDocument.cpp
 html/MediaElementSession.cpp
 html/ModelDocument.cpp
-html/MonthInputType.cpp
 html/NumberInputType.cpp
 html/OffscreenCanvas.cpp
 html/PermissionsPolicy.cpp
@@ -735,7 +734,6 @@ html/PublicURLManager.cpp
 html/RadioNodeList.cpp
 html/RangeInputType.cpp
 html/ResetInputType.cpp
-html/SearchInputType.cpp
 html/SubmitInputType.cpp
 html/TextFieldInputType.cpp
 html/ValidatedFormListedElement.cpp
