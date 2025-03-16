@@ -73,7 +73,7 @@ bool FileStream::openForRead(const String& path, long long offset, long long len
 
     // Jump to the beginning position if the file has been sliced.
     if (offset > 0) {
-        if (m_handle.seek(offset, FileSystem::FileSeekOrigin::Beginning) < 0)
+        if (!m_handle.seek(offset, FileSystem::FileSeekOrigin::Beginning))
             return false;
     }
 

@@ -91,8 +91,7 @@ public:
     WTF_EXPORT_PRIVATE bool truncate(int64_t offset);
     WTF_EXPORT_PRIVATE std::optional<uint64_t> size();
 
-    // Returns the resulting offset from the beginning of the file if successful, -1 otherwise.
-    WTF_EXPORT_PRIVATE int64_t seek(int64_t offset, FileSeekOrigin);
+    WTF_EXPORT_PRIVATE std::optional<uint64_t> seek(int64_t offset, FileSeekOrigin);
 
     WTF_EXPORT_PRIVATE bool flush();
     WTF_EXPORT_PRIVATE std::optional<PlatformFileID> id();

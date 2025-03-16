@@ -93,10 +93,10 @@ bool FileHandle::truncate(int64_t offset)
     return SetFileInformationByHandle(*m_handle, FileEndOfFileInfo, &eofInfo, sizeof(FILE_END_OF_FILE_INFO));
 }
 
-int64_t FileHandle::seek(int64_t offset, FileSeekOrigin origin)
+std::optional<uint64_t> FileHandle::seek(int64_t offset, FileSeekOrigin origin)
 {
     if (!m_handle)
-        return -1;
+        return { };
 
     DWORD moveMethod = FILE_BEGIN;
 
@@ -111,7 +111,7 @@ int64_t FileHandle::seek(int64_t offset, FileSeekOrigin origin)
     largeOffset.LowPart = SetFilePointer(*m_handle, largeOffset.LowPart, &largeOffset.HighPart, moveMethod);
 
     if (largeOffset.LowPart == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR)
-        return -1;
+        return { };
 
     return largeOffset.QuadPart;
 }

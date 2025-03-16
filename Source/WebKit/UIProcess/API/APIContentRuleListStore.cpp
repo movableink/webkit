@@ -351,7 +351,7 @@ static Expected<MappedData, std::error_code> compiledToFile(WTF::String&& json, 
             m_metaData.frameURLFiltersBytecodeSize = m_frameURLFiltersBytecodeWritten;
 
             WebKit::NetworkCache::Data header = encodeContentRuleListMetaData(m_metaData);
-            if (!m_fileError && m_fileHandle.seek(0ll, FileSeekOrigin::Beginning) == -1) {
+            if (!m_fileError && !m_fileHandle.seek(0ll, FileSeekOrigin::Beginning)) {
                 m_fileHandle = { };
                 m_fileError = true;
             }
@@ -650,7 +650,7 @@ void ContentRuleListStore::invalidateContentRuleListVersion(const WTF::String& i
     // Invalidate the version by setting it to one less than the current version.
     header.version = CurrentContentRuleListFileVersion - 1;
 
-    if (fileHandle.seek(0, FileSeekOrigin::Beginning) == -1)
+    if (!fileHandle.seek(0, FileSeekOrigin::Beginning))
         return;
 
     auto bytesWritten = fileHandle.write(asByteSpan(header));
@@ -695,7 +695,7 @@ void ContentRuleListStore::corruptContentRuleListActionsMatchingEverything(const
     size_t dfaFirstInstructionOffset = urlFiltersOffset + sizeof(WebCore::ContentExtensions::DFAHeader);
     size_t urlFilterLocationOffset = dfaFirstInstructionOffset + 1;
 
-    if (fileHandle.seek(urlFilterLocationOffset, FileSeekOrigin::Beginning) == -1)
+    if (!fileHandle.seek(urlFilterLocationOffset, FileSeekOrigin::Beginning))
         return;
 
     // FIXME: we should check data[dfaFirstInstructionOffset] & DFABytecodeActionSizeMask) to decide how many bytes

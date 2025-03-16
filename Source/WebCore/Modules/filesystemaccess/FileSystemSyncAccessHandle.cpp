@@ -72,11 +72,11 @@ ExceptionOr<void> FileSystemSyncAccessHandle::truncate(unsigned long long size)
         return Exception { ExceptionCode::QuotaExceededError };
 
     auto oldOffset = m_file.seek(0, FileSystem::FileSeekOrigin::Current);
-    if (oldOffset < 0)
+    if (!oldOffset)
         return Exception { ExceptionCode::InvalidStateError, "Failed to get current offset"_s };
 
     if (m_file.truncate(size)) {
-        if (static_cast<uint64_t>(oldOffset) > size)
+        if (*oldOffset > size)
             m_file.seek(size, FileSystem::FileSeekOrigin::Beginning);
 
         return { };
@@ -132,7 +132,7 @@ ExceptionOr<unsigned long long> FileSystemSyncAccessHandle::read(BufferSource&& 
 
     if (options.at) {
         auto result = m_file.seek(options.at.value(), FileSystem::FileSeekOrigin::Beginning);
-        if (result == -1)
+        if (!result)
             return Exception { ExceptionCode::InvalidStateError, "Failed to read at offset"_s };
     }
 
@@ -150,13 +150,13 @@ ExceptionOr<unsigned long long> FileSystemSyncAccessHandle::write(BufferSource&&
 
     if (options.at) {
         auto result = m_file.seek(options.at.value(), FileSystem::FileSeekOrigin::Beginning);
-        if (result == -1)
+        if (!result)
             return Exception { ExceptionCode::InvalidStateError, "Failed to write at offset"_s };
     } else {
         auto result = m_file.seek(0, FileSystem::FileSeekOrigin::Current);
-        if (result == -1)
+        if (!result)
             return Exception { ExceptionCode::InvalidStateError, "Failed to get offset"_s };
-        options.at = result;
+        options.at = *result;
     }
 
     if (!requestSpaceForWrite(*options.at, buffer.length()))

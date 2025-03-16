@@ -74,10 +74,10 @@ bool FileHandle::flush()
     return m_handle && !fsync(*m_handle);
 }
 
-int64_t FileHandle::seek(int64_t offset, FileSeekOrigin origin)
+std::optional<uint64_t> FileHandle::seek(int64_t offset, FileSeekOrigin origin)
 {
     if (!m_handle)
-        return -1;
+        return { };
 
     int whence = SEEK_SET;
     switch (origin) {
@@ -94,7 +94,10 @@ int64_t FileHandle::seek(int64_t offset, FileSeekOrigin origin)
         ASSERT_NOT_REACHED();
         break;
     }
-    return static_cast<int64_t>(lseek(*m_handle, offset, whence));
+    auto result = lseek(*m_handle, offset, whence);
+    if (result < 0)
+        return { };
+    return static_cast<uint64_t>(result);
 }
 
 std::optional<PlatformFileID> FileHandle::id()

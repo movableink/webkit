@@ -1349,8 +1349,8 @@ public:
             return;
 
         m_cachedBytecode->commitUpdates([&] (off_t offset, std::span<const uint8_t> data) {
-            long long result = handle.seek(offset, FileSystem::FileSeekOrigin::Beginning);
-            ASSERT_UNUSED(result, result != -1);
+            auto result = handle.seek(offset, FileSystem::FileSeekOrigin::Beginning);
+            ASSERT_UNUSED(result, !!result);
             auto bytesWritten = handle.write(data);
             ASSERT_UNUSED(bytesWritten, bytesWritten == data.size());
         });

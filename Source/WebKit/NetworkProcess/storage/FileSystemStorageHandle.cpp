@@ -300,7 +300,7 @@ std::optional<FileSystemStorageError> FileSystemStorageHandle::executeCommandFor
     case WebCore::FileSystemWriteCommandType::Write: {
         if (position) {
             auto result = activeWritableFile.handle.seek(*position, FileSystem::FileSeekOrigin::Beginning);
-            if (result == -1)
+            if (!result)
                 return FileSystemStorageError::Unknown;
         }
 
@@ -314,7 +314,7 @@ std::optional<FileSystemStorageError> FileSystemStorageHandle::executeCommandFor
             return FileSystemStorageError::MissingArgument;
 
         auto result = activeWritableFile.handle.seek(*position, FileSystem::FileSeekOrigin::Beginning);
-        if (result == -1)
+        if (!result)
             return FileSystemStorageError::Unknown;
 
         return std::nullopt;
@@ -328,7 +328,7 @@ std::optional<FileSystemStorageError> FileSystemStorageHandle::executeCommandFor
             return FileSystemStorageError::Unknown;
 
         auto currentOffset = activeWritableFile.handle.seek(0, FileSystem::FileSeekOrigin::Current);
-        if (currentOffset == -1 || static_cast<unsigned long long>(currentOffset) > *size)
+        if (!currentOffset || *currentOffset > *size)
             activeWritableFile.handle.seek(*size, FileSystem::FileSeekOrigin::Beginning);
 
         return std::nullopt;
@@ -361,10 +361,10 @@ std::optional<size_t> FileSystemStorageHandle::computeCommandSpace(WebCore::File
 
     uint64_t finalSize;
     auto currentOffset = activeWritableFile.handle.seek(position.value_or(0), FileSystem::FileSeekOrigin::Current);
-    if (currentOffset == -1)
+    if (!currentOffset)
         return { };
 
-    if (!WTF::safeAdd(static_cast<uint64_t>(currentOffset), dataBytes.size(), finalSize))
+    if (!WTF::safeAdd(*currentOffset, dataBytes.size(), finalSize))
         return { };
 
     return finalSize > *fileSize ? finalSize - *fileSize : 0;
