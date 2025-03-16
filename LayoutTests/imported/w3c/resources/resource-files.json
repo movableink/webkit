@@ -9838,6 +9838,7 @@
         "web-platform-tests/html/semantics/embedded-content/the-audio-element/audio_content-ref.htm",
         "web-platform-tests/html/semantics/embedded-content/the-embed-element/embed-hidden-attribute-ref.html",
         "web-platform-tests/html/semantics/embedded-content/the-embed-element/embed-iframe.html",
+        "web-platform-tests/html/semantics/embedded-content/the-embed-element/embed-in-object-fallback-image-ref.html",
         "web-platform-tests/html/semantics/embedded-content/the-embed-element/embed-in-object-fallback-subdocument.html",
         "web-platform-tests/html/semantics/embedded-content/the-embed-element/embed-represent-nothing-ref.html",
         "web-platform-tests/html/semantics/embedded-content/the-iframe-element/change_child.html",
