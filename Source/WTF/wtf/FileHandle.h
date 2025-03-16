@@ -97,6 +97,10 @@ public:
     WTF_EXPORT_PRIVATE bool flush();
     WTF_EXPORT_PRIVATE std::optional<PlatformFileID> id();
 
+    // Appends the contents of the file found at 'path' to the FileHandle.
+    // Returns true if the write was successful, false if it was not.
+    WTF_EXPORT_PRIVATE bool appendFileContents(const String& path);
+
 private:
     WTF_EXPORT_PRIVATE FileHandle(PlatformFileHandle, OptionSet<FileLockMode>);
 

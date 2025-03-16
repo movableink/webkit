@@ -136,10 +136,6 @@ WTF_EXPORT_PRIVATE std::pair<FileHandle, CString> createTemporaryFileInDirectory
 #endif
 WTF_EXPORT_PRIVATE FileHandle openFile(const String& path, FileOpenMode, FileAccessPermission = FileAccessPermission::All, OptionSet<FileLockMode> = { }, bool failIfFileExists = false);
 
-// Appends the contents of the file found at 'path' to the open FileHandle.
-// Returns true if the write was successful, false if it was not.
-WTF_EXPORT_PRIVATE bool appendFileContentsToFileHandle(const String& path, FileHandle&);
-
 WTF_EXPORT_PRIVATE bool hardLink(const String& targetPath, const String& linkPath);
 // Hard links a file if possible, copies it if not.
 WTF_EXPORT_PRIVATE bool hardLinkOrCopyFile(const String& targetPath, const String& linkPath);

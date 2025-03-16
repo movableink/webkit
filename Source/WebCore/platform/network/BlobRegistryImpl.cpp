@@ -370,7 +370,7 @@ bool BlobRegistryImpl::populateBlobsForFileWriting(const Vector<String>& blobURL
     return true;
 }
 
-static bool writeFilePathsOrDataBuffersToFile(const Vector<std::pair<String, RefPtr<DataSegment>>>& filePathsOrDataBuffers, FileSystem::FileHandle&& file, const String& path)
+static bool writeFilePathsOrDataBuffersToFile(const Vector<std::pair<String, RefPtr<DataSegment>>>& filePathsOrDataBuffers, FileSystem::FileHandle& file, const String& path)
 {
     if (path.isEmpty() || !file) {
         LOG_ERROR("Failed to open temporary file for writing a Blob");
@@ -386,7 +386,7 @@ static bool writeFilePathsOrDataBuffersToFile(const Vector<std::pair<String, Ref
             }
         } else {
             ASSERT(!part.first.isEmpty());
-            if (!FileSystem::appendFileContentsToFileHandle(part.first, file)) {
+            if (!file.appendFileContents(part.first)) {
                 LOG_ERROR("Failed copying File contents to a Blob temporary file (%s to %s)", part.first.utf8().data(), path.utf8().data());
                 return false;
             }
@@ -407,7 +407,7 @@ void BlobRegistryImpl::writeBlobsToTemporaryFilesForIndexedDB(const Vector<Strin
         Vector<String> filePaths;
         for (auto& blob : blobsForWriting) {
             auto [tempFilePath, file] = FileSystem::openTemporaryFile("Blob"_s);
-            if (!writeFilePathsOrDataBuffersToFile(blob.filePathsOrDataBuffers, WTFMove(file), tempFilePath)) {
+            if (!writeFilePathsOrDataBuffersToFile(blob.filePathsOrDataBuffers, file, tempFilePath)) {
                 filePaths.clear();
                 break;
             }

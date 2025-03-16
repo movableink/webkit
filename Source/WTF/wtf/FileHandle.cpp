@@ -86,4 +86,29 @@ std::optional<Vector<uint8_t>> FileHandle::readAll()
     return buffer;
 }
 
+bool FileHandle::appendFileContents(const String& path)
+{
+    auto source = openFile(path, FileOpenMode::Read);
+    if (!source)
+        return false;
+
+    static size_t bufferSize = 1 << 19;
+    Vector<uint8_t> buffer(bufferSize);
+
+    do {
+        auto readBytes = source.read(buffer.mutableSpan());
+
+        if (!readBytes)
+            return false;
+
+        if (write(buffer.span().first(*readBytes)) != readBytes)
+            return false;
+
+        if (*readBytes < bufferSize)
+            return true;
+    } while (true);
+
+    ASSERT_NOT_REACHED();
+}
+
 } // namespace WTF::FileSystemImpl

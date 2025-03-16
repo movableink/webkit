@@ -252,32 +252,6 @@ String lastComponentOfPathIgnoringTrailingSlash(const String& path)
     return path.substring(position + 1, endOfSubstring - position);
 }
 
-bool appendFileContentsToFileHandle(const String& path, FileHandle& target)
-{
-    auto source = openFile(path, FileOpenMode::Read);
-    if (!source)
-        return false;
-
-    static size_t bufferSize = 1 << 19;
-    Vector<uint8_t> buffer(bufferSize);
-
-    do {
-        auto readBytes = source.read(buffer.mutableSpan());
-
-        if (!readBytes)
-            return false;
-
-        if (target.write(buffer.span().first(*readBytes)) != readBytes)
-            return false;
-
-        if (*readBytes < bufferSize)
-            return true;
-    } while (true);
-
-    ASSERT_NOT_REACHED();
-}
-
-
 bool filesHaveSameVolume(const String& fileA, const String& fileB)
 {
     if (fileA.isNull() || fileB.isNull())
