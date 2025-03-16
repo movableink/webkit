@@ -165,6 +165,33 @@ private:
                         break;
                     }
                 }
+
+                if (node->isBinaryUseKind(Int52RepUse)) {
+                    auto isInt32ConvertedToInt52 = [&](Edge& edge) {
+                        if (edge->op() == Int52Constant)
+                            return edge->constant()->value().isInt32AsAnyInt();
+                        if (edge->op() == Int52Rep)
+                            return edge->child1().useKind() == Int32Use;
+                        return false;
+                    };
+
+                    auto convertToInt32 = [&](Edge& edge) -> Node* {
+                        if (edge->op() == Int52Constant)
+                            return m_insertionSet.insertConstant(indexInBlock, node->origin, jsNumber(edge->constant()->value().asInt32AsAnyInt()));
+                        ASSERT(edge->op() == Int52Rep);
+                        return edge->child1().node();
+                    };
+
+                    if (isInt32ConvertedToInt52(node->child1()) && isInt32ConvertedToInt52(node->child2())) {
+                        m_interpreter.execute(indexInBlock); // Push CFA over this node after we get the state before.
+                        alreadyHandled = true; // Don't allow the default constant folder to do things to this.
+                        node->child1() = Edge(convertToInt32(node->child1()), Int32Use);
+                        node->child2() = Edge(convertToInt32(node->child2()), Int32Use);
+                        changed = true;
+                        break;
+                    }
+                }
+
                 break;
             }
 
