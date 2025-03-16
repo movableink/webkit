@@ -45,6 +45,7 @@ class Exception;
 class JSGlobalObject;
 class JSModuleRecord;
 class VM;
+enum class TrustedTypesEnforcement;
 }
 
 namespace WebCore {

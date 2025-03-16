@@ -26,7 +26,11 @@
 #include "config.h"
 #include "CSSPropertyParserConsumer+Ratio.h"
 
+#include "CSSParserContext.h"
+#include "CSSParserTokenRange.h"
+#include "CSSPropertyParserConsumer+MetaConsumer.h"
 #include "CSSPropertyParserConsumer+Number.h"
+#include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSRatioValue.h"
 
 namespace WebCore {
