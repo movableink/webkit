@@ -31,50 +31,11 @@
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSPropertyParserConsumer+Length.h"
-#include "CSSPropertyParserConsumer+Number.h"
-#include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSValueKeywords.h"
-#include "CSSValueList.h"
 #include "CSSValuePair.h"
 
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
-
-static RefPtr<CSSValueList> consumeAspectRatioValue(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    auto leftValue = consumeNumber(range, context, ValueRange::NonNegative);
-    if (!leftValue)
-        return nullptr;
-
-    auto rightValue = consumeSlashIncludingWhitespace(range)
-        ? consumeNumber(range, context, ValueRange::NonNegative)
-        : CSSPrimitiveValue::create(1);
-    if (!rightValue)
-        return nullptr;
-
-    return CSSValueList::createSlashSeparated(leftValue.releaseNonNull(), rightValue.releaseNonNull());
-}
-
-RefPtr<CSSValue> consumeAspectRatio(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    // <'aspect-ratio'> = auto || <ratio>
-    // https://drafts.csswg.org/css-sizing-4/#aspect-ratio
-
-    RefPtr<CSSPrimitiveValue> autoValue;
-    if (range.peek().type() == IdentToken)
-        autoValue = consumeIdent<CSSValueAuto>(range);
-    if (range.atEnd())
-        return autoValue;
-    auto ratioList = consumeAspectRatioValue(range, context);
-    if (!ratioList)
-        return nullptr;
-    if (!autoValue) {
-        autoValue = consumeIdent<CSSValueAuto>(range);
-        if (!autoValue)
-            return ratioList;
-    }
-    return CSSValueList::createSpaceSeparated(autoValue.releaseNonNull(), ratioList.releaseNonNull());
-}
 
 RefPtr<CSSValue> consumeContainIntrinsicSize(CSSParserTokenRange& range, const CSSParserContext& context)
 {

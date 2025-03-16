@@ -44,6 +44,7 @@
 #include "CSSPropertyParserConsumer+Position.h"
 #include "CSSPropertyParserConsumer+PositionTry.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
+#include "CSSPropertyParserConsumer+Ratio.h"
 #include "CSSPropertyParserConsumer+ResolutionDefinitions.h"
 #include "CSSPropertyParserConsumer+SVG.h"
 #include "CSSPropertyParserConsumer+ScrollSnap.h"

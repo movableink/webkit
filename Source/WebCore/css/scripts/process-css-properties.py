@@ -4526,6 +4526,7 @@ class GenerateCSSPropertyParsing:
                     "CSSPropertyParserConsumer+Position.h",
                     "CSSPropertyParserConsumer+PositionTry.h",
                     "CSSPropertyParserConsumer+Primitives.h",
+                    "CSSPropertyParserConsumer+Ratio.h",
                     "CSSPropertyParserConsumer+ResolutionDefinitions.h",
                     "CSSPropertyParserConsumer+SVG.h",
                     "CSSPropertyParserConsumer+ScrollSnap.h",

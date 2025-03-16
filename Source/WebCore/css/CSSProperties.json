@@ -8406,9 +8406,7 @@
                 "animation-wrapper": "AspectRatioWrapper",
                 "animation-wrapper-requires-override-parameters": [],
                 "style-builder-custom": "All",
-                "parser-function": "consumeAspectRatio",
-                "parser-grammar-unused": "auto || <ratio>",
-                "parser-grammar-unused-reason": "Needs support for primitive <ratio>."
+                "parser-grammar": "auto || <ratio>"
             },
             "specification": {
                 "category": "css-sizing",

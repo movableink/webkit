@@ -35,10 +35,6 @@ struct CSSParserContext;
 
 namespace CSSPropertyParserHelpers {
 
-// MARK: <'aspect-ratio'> consuming
-// https://drafts.csswg.org/css-sizing-4/#aspect-ratio
-RefPtr<CSSValue> consumeAspectRatio(CSSParserTokenRange&, const CSSParserContext&);
-
 // MARK: <contain-intrinsic-size> consuming
 // https://drafts.csswg.org/css-sizing-4/#intrinsic-size-override
 RefPtr<CSSValue> consumeContainIntrinsicSize(CSSParserTokenRange&, const CSSParserContext&);
