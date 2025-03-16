@@ -663,7 +663,6 @@ html/CachedHTMLCollectionInlines.h
 html/CanvasBase.cpp
 html/CheckboxInputType.cpp
 html/CollectionTraversalInlines.h
-html/ColorInputType.cpp
 html/CustomPaintCanvas.cpp
 html/DOMFormData.cpp
 html/DOMTokenList.cpp

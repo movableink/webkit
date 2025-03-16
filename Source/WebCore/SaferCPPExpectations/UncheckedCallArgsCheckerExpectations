@@ -19,7 +19,6 @@ editing/FrameSelection.cpp
 editing/TextManipulationController.cpp
 history/BackForwardCache.cpp
 history/CachedFrame.cpp
-html/ColorInputType.cpp
 html/HTMLLinkElement.cpp
 html/HTMLVideoElement.cpp
 html/ImageDocument.cpp
