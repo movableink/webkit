@@ -1339,9 +1339,27 @@ public:
     NodeFlags arithNodeFlags()
     {
         NodeFlags result = m_flags & NodeArithFlagsMask;
-        if (op() == ArithMul || op() == ArithDiv || op() == ValueDiv || op() == ArithMod || op() == ArithNegate || op() == ArithPow || op() == ArithRound || op() == ArithFloor || op() == ArithCeil || op() == ArithTrunc || op() == DoubleAsInt32 || op() == ValueNegate || op() == ValueMul || op() == ValueDiv)
+        switch (op()) {
+        case ArithMul:
+        case ArithDiv:
+        case ArithMod:
+        case ArithNegate:
+        case ArithPow:
+        case ArithRound:
+        case ArithFloor:
+        case ArithCeil:
+        case ArithTrunc:
+        case ValueMul:
+        case ValueDiv:
+        case ValueMod:
+        case ValueNegate:
+        case ValuePow:
+        case DoubleAsInt32:
+        case Int52Rep:
             return result;
-        return result & ~NodeBytecodeNeedsNegZero;
+        default:
+            return result & ~NodeBytecodeNeedsNegZero;
+        }
     }
 
     bool mayHaveNonIntResult()

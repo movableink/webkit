@@ -1518,14 +1518,28 @@ public:
         done.link(this);
     }
 
-    void branchConvertDoubleToInt52(FPRegisterID srcFPR, RegisterID destGPR, JumpList& failureCases, RegisterID scratch1GPR, FPRegisterID scratch2FPR)
+    void branchConvertDoubleToInt52(FPRegisterID srcFPR, RegisterID destGPR, JumpList& failureCases, RegisterID scratch1GPR, FPRegisterID scratch2FPR, bool canIgnoreNegativeZero)
     {
         JumpList doneCases;
 
         truncateDoubleToInt64(srcFPR, destGPR);
-        convertInt64ToDouble(destGPR, scratch2FPR);
+
+        bool convertedBack = false;
+#if CPU(ARM64)
+        if (supportsRoundFloatToIntegerFloat()) {
+            convertedBack = true;
+            roundTowardZeroInt64Double(srcFPR, scratch2FPR);
+        }
+#endif
+        if (!convertedBack)
+            convertInt64ToDouble(destGPR, scratch2FPR);
+
         failureCases.append(branchDouble(DoubleNotEqualOrUnordered, srcFPR, scratch2FPR));
-        auto isZero = branchTest64(Zero, destGPR);
+
+        Jump isZero;
+        if (!canIgnoreNegativeZero)
+            isZero = branchTest64(Zero, destGPR);
+
         // This moves the checking range (fail if N >= (1 << (52 - 1)) or N < -(1 << (52 - 1))) by subtracting a value.
         // So, valid value region starts with -1 and lower. In unsigned form, which means,
         // 0xffffffffffffffff to 0xfff0000000000000. So, by shifting 52, we can extract 0xfff part, and we can check whether it is below than that (<= 4094).
@@ -1533,11 +1547,13 @@ public:
         add64(destGPR, scratch1GPR);
         urshift64(TrustedImm32(52), scratch1GPR);
         failureCases.append(branch64(BelowOrEqual, scratch1GPR, TrustedImm32(4094)));
-        doneCases.append(jump());
 
-        isZero.link(this);
-        moveDoubleTo64(srcFPR, scratch1GPR);
-        failureCases.append(branchTest64(NonZero, scratch1GPR, TrustedImm64(1ULL << 63)));
+        if (isZero.isSet()) {
+            doneCases.append(jump());
+            isZero.link(this);
+            moveDoubleTo64(srcFPR, scratch1GPR);
+            failureCases.append(branchTest64(NonZero, scratch1GPR, TrustedImm64(1ULL << 63)));
+        }
 
         doneCases.link(this);
     }

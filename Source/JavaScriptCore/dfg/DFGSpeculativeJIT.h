@@ -1895,7 +1895,7 @@ public:
     void speculateInt32(Edge);
     void speculateInt32(Edge, JSValueRegs);
 #if USE(JSVALUE64)
-    void convertAnyInt(Edge, GPRReg resultGPR);
+    void convertAnyInt(Edge, GPRReg resultGPR, bool canIgnoreNegativeZero);
     void speculateAnyInt(Edge);
     void speculateDoubleRepAnyInt(Edge);
 #endif // USE(JSVALUE64)

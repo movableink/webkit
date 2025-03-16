@@ -3515,7 +3515,8 @@ void SpeculativeJIT::compile(Node* node)
             GPRTemporary result(this);
             GPRReg resultGPR = result.gpr();
             
-            convertAnyInt(node->child1(), resultGPR);
+            bool canIgnoreNegativeZero = bytecodeCanIgnoreNegativeZero(node->arithNodeFlags());
+            convertAnyInt(node->child1(), resultGPR, canIgnoreNegativeZero);
             
             strictInt52Result(resultGPR, node);
             break;
@@ -3533,7 +3534,8 @@ void SpeculativeJIT::compile(Node* node)
             FPRReg scratch2FPR = scratch2.fpr();
 
             JumpList failureCases;
-            branchConvertDoubleToInt52(valueFPR, resultGPR, failureCases, scratch1GPR, scratch2FPR);
+            bool canIgnoreNegativeZero = bytecodeCanIgnoreNegativeZero(node->arithNodeFlags());
+            branchConvertDoubleToInt52(valueFPR, resultGPR, failureCases, scratch1GPR, scratch2FPR, canIgnoreNegativeZero);
 
             DFG_TYPE_CHECK_WITH_EXIT_KIND(Int52Overflow, JSValueRegs(), node->child1(), SpecAnyIntAsDouble, failureCases);
 
@@ -6582,7 +6584,7 @@ void SpeculativeJIT::blessBoolean(GPRReg gpr)
     or32(TrustedImm32(JSValue::ValueFalse), gpr);
 }
 
-void SpeculativeJIT::convertAnyInt(Edge valueEdge, GPRReg resultGPR)
+void SpeculativeJIT::convertAnyInt(Edge valueEdge, GPRReg resultGPR, bool canIgnoreNegativeZero)
 {
     JSValueOperand value(this, valueEdge, ManualOperandSpeculation);
     GPRTemporary scratch1(this);
@@ -6603,7 +6605,7 @@ void SpeculativeJIT::convertAnyInt(Edge valueEdge, GPRReg resultGPR)
 
     notInt32.link(this);
     unboxDouble(valueGPR, resultGPR, scratch2FPR);
-    branchConvertDoubleToInt52(scratch2FPR, resultGPR, failureCases, scratch1GPR, scratch3FPR);
+    branchConvertDoubleToInt52(scratch2FPR, resultGPR, failureCases, scratch1GPR, scratch3FPR, canIgnoreNegativeZero);
     done.link(this);
     DFG_TYPE_CHECK(JSValueRegs(valueGPR), valueEdge, SpecInt32Only | SpecAnyIntAsDouble, failureCases);
 }
@@ -6612,9 +6614,10 @@ void SpeculativeJIT::speculateAnyInt(Edge edge)
 {
     if (!needsTypeCheck(edge, SpecInt32Only | SpecAnyIntAsDouble))
         return;
-    
+
+    constexpr bool canIgnoreNegativeZero = false;
     GPRTemporary temp(this);
-    convertAnyInt(edge, temp.gpr());
+    convertAnyInt(edge, temp.gpr(), canIgnoreNegativeZero);
 }
 
 void SpeculativeJIT::speculateInt32(Edge edge, JSValueRegs regs)
@@ -6638,7 +6641,8 @@ void SpeculativeJIT::speculateDoubleRepAnyInt(Edge edge)
     FPRReg scratch2FPR = scratch2.fpr();
 
     JumpList failureCases;
-    branchConvertDoubleToInt52(valueFPR, resultGPR, failureCases, scratch1GPR, scratch2FPR);
+    constexpr bool canIgnoreNegativeZero = false;
+    branchConvertDoubleToInt52(valueFPR, resultGPR, failureCases, scratch1GPR, scratch2FPR, canIgnoreNegativeZero);
     DFG_TYPE_CHECK(JSValueRegs(), edge, SpecAnyIntAsDouble, failureCases);
 }
 
