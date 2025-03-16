@@ -717,7 +717,6 @@ html/HiddenInputType.cpp
 html/ImageBitmap.cpp
 html/ImageDocument.cpp
 html/ImageInputType.cpp
-html/InputType.cpp
 html/LabelsNodeList.cpp
 html/LazyLoadFrameObserver.cpp
 html/LazyLoadImageObserver.cpp
