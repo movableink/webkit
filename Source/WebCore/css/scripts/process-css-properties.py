@@ -1632,7 +1632,8 @@ class ReferenceTerm:
         BuiltinSchema.Entry('dashed-ident'),
         BuiltinSchema.Entry('url'),
         BuiltinSchema.Entry('feature-tag-value'),
-        BuiltinSchema.Entry('variation-tag-value')
+        BuiltinSchema.Entry('variation-tag-value'),
+        BuiltinSchema.Entry('unicode-range-token'),
     )
 
     class StringParameter:
@@ -4540,6 +4541,7 @@ class GenerateCSSPropertyParsing:
                     "CSSPropertyParserConsumer+Transitions.h",
                     "CSSPropertyParserConsumer+UI.h",
                     "CSSPropertyParserConsumer+URL.h",
+                    "CSSPropertyParserConsumer+UnicodeRange.h",
                     "CSSPropertyParserConsumer+ViewTransition.h",
                     "CSSPropertyParserConsumer+WillChange.h",
                     "CSSQuadValue.h",
@@ -6167,6 +6169,8 @@ class TermGeneratorReferenceTerm(TermGenerator):
                 return True
             elif isinstance(builtin, BuiltinVariationTagValueConsumer):
                 return True
+            elif isinstance(builtin, BuiltinUnicodeRangeTokenConsumer):
+                return False
             else:
                 raise Exception(f"Unknown builtin type used: {builtin.name.name}")
         else:

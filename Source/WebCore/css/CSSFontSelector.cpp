@@ -184,7 +184,7 @@ void CSSFontSelector::addFontFaceRule(StyleRuleFontFace& fontFaceRule, bool isIn
     RefPtr fontWidth = style.getPropertyCSSValue(CSSPropertyFontWidth);
     RefPtr srcList = dynamicDowncast<CSSValueList>(style.getPropertyCSSValue(CSSPropertySrc));
     RefPtr unicodeRange = style.getPropertyCSSValue(CSSPropertyUnicodeRange);
-    CSSValueList* rangeList = downcast<CSSValueList>(unicodeRange.get());
+    RefPtr rangeList = downcast<CSSValueList>(unicodeRange.get());
     RefPtr featureSettings = style.getPropertyCSSValue(CSSPropertyFontFeatureSettings);
     RefPtr display = style.getPropertyCSSValue(CSSPropertyFontDisplay);
     RefPtr sizeAdjust = style.getPropertyCSSValue(CSSPropertySizeAdjust);

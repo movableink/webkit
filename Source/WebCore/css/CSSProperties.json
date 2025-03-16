@@ -12547,9 +12547,8 @@
             },
             "unicode-range": {
                 "codegen-properties": {
-                    "parser-function": "consumeFontFaceUnicodeRange",
-                    "parser-grammar-unused": "<urange>#",
-                    "parser-grammar-unused-reason": "Needs support for primitive <urange>."
+                    "parser-grammar": "<unicode-range-token>#@(no-single-item-opt)",
+                    "parser-exported": true
                 },
                 "specification": {
                     "category": "css-fonts",

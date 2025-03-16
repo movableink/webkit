@@ -1076,6 +1076,7 @@ css/parser/CSSPropertyParserConsumer+Transform.cpp
 css/parser/CSSPropertyParserConsumer+Transitions.cpp
 css/parser/CSSPropertyParserConsumer+UI.cpp
 css/parser/CSSPropertyParserConsumer+URL.cpp
+css/parser/CSSPropertyParserConsumer+UnicodeRange.cpp
 css/parser/CSSPropertyParserConsumer+ViewTransition.cpp
 css/parser/CSSPropertyParserConsumer+WillChange.cpp
 css/parser/CSSSelectorParser.cpp

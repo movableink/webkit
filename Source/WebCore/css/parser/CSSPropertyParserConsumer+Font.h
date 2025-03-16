@@ -141,7 +141,6 @@ RefPtr<CSSValue> parseFontFaceSizeAdjust(const String&, ScriptExecutionContext&)
 // MARK: @font-face 'unicode-range'
 // https://drafts.csswg.org/css-fonts-4/#unicode-range-desc
 RefPtr<CSSValueList> parseFontFaceUnicodeRange(const String&, ScriptExecutionContext&);
-RefPtr<CSSValueList> consumeFontFaceUnicodeRange(CSSParserTokenRange&, const CSSParserContext&);
 
 // MARK: @font-face 'font-display'
 // https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-display

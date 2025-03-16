@@ -59,6 +59,7 @@
 #include "CSSPropertyParserConsumer+Transitions.h"
 #include "CSSPropertyParserConsumer+UI.h"
 #include "CSSPropertyParserConsumer+URL.h"
+#include "CSSPropertyParserConsumer+UnicodeRange.h"
 #include "CSSPropertyParserConsumer+ViewTransition.h"
 #include "CSSPropertyParserConsumer+WillChange.h"
 #include "CSSQuadValue.h"
