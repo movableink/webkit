@@ -84,6 +84,11 @@ static bool urlRequiresFirefoxBrowser(const String& domain)
     if (domain == "bugzilla.redhat.com"_s)
         return true;
 
+    // www.bilibili.com uses "NativePlayer" which only supports 720P with
+    // WebKitGTK's standard user agent.
+    if (domain == "www.bilibili.com"_s)
+        return true;
+
 #if ENABLE(THUNDER)
     if (domain == "www.netflix.com"_s)
         return true;
