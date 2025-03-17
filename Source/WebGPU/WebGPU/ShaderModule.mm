@@ -1111,6 +1111,8 @@ String wgpuAdapterFeatureName(WGPUFeatureName feature)
         return "float16-renderable"_s;
     case WGPUFeatureName_Float32Renderable:
         return "float32-renderable"_s;
+    case WGPUFeatureName_CoreFeaturesAndLimits:
+        return "core-features-and-limits"_s;
     case WGPUFeatureName_Force32:
         return emptyString();
     }
