@@ -3148,6 +3148,11 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
+    case NewRegExpUntyped: {
+        compileNewRegExpUntyped(node);
+        break;
+    }
+
     case NewSymbol: {
         compileNewSymbol(node);
         break;
@@ -3203,8 +3208,8 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
-    case NewRegexp: {
-        compileNewRegexp(node);
+    case NewRegExp: {
+        compileNewRegExp(node);
         break;
     }
 
@@ -4372,7 +4377,7 @@ void SpeculativeJIT::compile(Node* node)
     case PhantomNewAsyncGeneratorFunction:
     case PhantomCreateActivation:
     case PhantomNewInternalFieldObject:
-    case PhantomNewRegexp:
+    case PhantomNewRegExp:
     case PutHint:
     case CheckStructureImmediate:
     case MaterializeCreateActivation:

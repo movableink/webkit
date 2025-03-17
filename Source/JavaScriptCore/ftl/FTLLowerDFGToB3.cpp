@@ -1204,6 +1204,9 @@ private:
         case NewStringObject:
             compileNewStringObject();
             break;
+        case NewRegExpUntyped:
+            compileNewRegExpUntyped();
+            break;
         case NewSymbol:
             compileNewSymbol();
             break;
@@ -1744,8 +1747,8 @@ private:
         case RegExpMatchFastGlobal:
             compileRegExpMatchFastGlobal();
             break;
-        case NewRegexp:
-            compileNewRegexp();
+        case NewRegExp:
+            compileNewRegExp();
             break;
         case NewMap:
             compileNewMap();
@@ -1866,7 +1869,7 @@ private:
         case PhantomNewArrayWithSpread:
         case PhantomNewArrayBuffer:
         case PhantomClonedArguments:
-        case PhantomNewRegexp:
+        case PhantomNewRegExp:
         case PutHint:
         case BottomValue:
         case KillStack:
@@ -8805,6 +8808,16 @@ IGNORE_CLANG_WARNINGS_END
 
         m_out.appendTo(continuation, lastNext);
         setJSValue(m_out.phi(pointerType(), fastResult, slowResult));
+    }
+
+    void compileNewRegExpUntyped()
+    {
+        JSGlobalObject* globalObject = m_graph.globalObjectFor(m_origin.semantic);
+        if (m_node->child1().useKind() == StringUse && m_node->child2().useKind() == StringUse) {
+            setJSValue(vmCall(pointerType(), operationNewRegExpString, weakPointer(globalObject), lowString(m_node->child1()), lowString(m_node->child2())));
+            return;
+        }
+        setJSValue(vmCall(pointerType(), operationNewRegExpUntyped, weakPointer(globalObject), lowJSValue(m_node->child1()), lowJSValue(m_node->child2())));
     }
 
     void compileNewSymbol()
@@ -17156,7 +17169,7 @@ IGNORE_CLANG_WARNINGS_END
         setJSValue(result);
     }
 
-    void compileNewRegexp()
+    void compileNewRegExp()
     {
         JSGlobalObject* globalObject = m_graph.globalObjectFor(m_origin.semantic);
         FrozenValue* regexp = m_node->cellOperand();
@@ -17182,7 +17195,7 @@ IGNORE_CLANG_WARNINGS_END
         LValue slowResultValue = lazySlowPath(
             [=, &vm] (const Vector<Location>& locations) -> RefPtr<LazySlowPath::Generator> {
                 return createLazyCallGenerator(vm,
-                    operationNewRegexpWithLastIndex, locations[0].directGPR(), CCallHelpers::TrustedImmPtr(globalObject),
+                    operationNewRegExpWithLastIndex, locations[0].directGPR(), CCallHelpers::TrustedImmPtr(globalObject),
                     CCallHelpers::TrustedImmPtr(regexpCell), locations[1].directGPR());
             }, lastIndex);
         ValueFromBlock slowResult = m_out.anchor(slowResultValue);

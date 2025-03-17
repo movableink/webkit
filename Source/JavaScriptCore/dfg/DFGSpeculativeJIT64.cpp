@@ -4483,6 +4483,11 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
+    case NewRegExpUntyped: {
+        compileNewRegExpUntyped(node);
+        break;
+    }
+
     case NewSymbol: {
         compileNewSymbol(node);
         break;
@@ -4532,14 +4537,13 @@ void SpeculativeJIT::compile(Node* node)
         compileNewTypedArray(node);
         break;
     }
-
     case NewTypedArrayBuffer: {
         compileNewTypedArrayBuffer(node);
         break;
     }
 
-    case NewRegexp: {
-        compileNewRegexp(node);
+    case NewRegExp: {
+        compileNewRegExp(node);
         break;
     }
 
@@ -6540,7 +6544,7 @@ void SpeculativeJIT::compile(Node* node)
     case PhantomNewAsyncGeneratorFunction:
     case PhantomNewInternalFieldObject:
     case PhantomCreateActivation:
-    case PhantomNewRegexp:
+    case PhantomNewRegExp:
     case GetMyArgumentByVal:
     case GetMyArgumentByValOutOfBounds:
     case GetVectorLength:

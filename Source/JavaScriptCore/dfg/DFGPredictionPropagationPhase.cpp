@@ -1351,7 +1351,7 @@ private:
             break;
         }
             
-        case NewRegexp: {
+        case NewRegExp: {
             setPrediction(SpecRegExpObject);
             break;
         }
@@ -1400,6 +1400,10 @@ private:
         }
         case NewStringObject: {
             setPrediction(SpecStringObject);
+            break;
+        }
+        case NewRegExpUntyped: {
+            setPrediction(SpecRegExpObject);
             break;
         }
         case NewSymbol: {
@@ -1590,7 +1594,7 @@ private:
         case PhantomNewArrayBuffer:
         case PhantomNewInternalFieldObject:
         case PhantomClonedArguments:
-        case PhantomNewRegexp:
+        case PhantomNewRegExp:
         case GetMyArgumentByVal:
         case GetMyArgumentByValOutOfBounds:
         case PutHint:

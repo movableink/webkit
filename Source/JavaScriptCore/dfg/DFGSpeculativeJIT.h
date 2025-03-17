@@ -1454,6 +1454,7 @@ public:
     void compileNewSymbol(Node*);
     void compileNewMap(Node*);
     void compileNewSet(Node*);
+    void compileNewRegExpUntyped(Node*);
 
     void emitNewTypedArrayWithSizeInRegister(Node*, TypedArrayType, RegisteredStructure, GPRReg sizeGPR);
     void compileNewTypedArrayWithSize(Node*);
@@ -1664,7 +1665,7 @@ public:
     void compileNewFunction(Node*);
     void compileSetFunctionName(Node*);
     void compileNewBoundFunction(Node*);
-    void compileNewRegexp(Node*);
+    void compileNewRegExp(Node*);
     void compileForwardVarargs(Node*);
     void compileVarargsLength(Node*);
     void compileLoadVarargs(Node*);

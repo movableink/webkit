@@ -39,6 +39,7 @@
 #include "JSWebAssemblyInstance.h"
 #include "MathCommon.h"
 #include "NumberPrototype.h"
+#include "RegExpCache.h"
 #include "RegExpObject.h"
 #include "StringPrototypeInlines.h"
 #include "WasmCallingConvention.h"
@@ -600,6 +601,31 @@ private:
             break;
         }
 
+        case NewRegExpUntyped: {
+            if (m_node->child1().useKind() != StringUse || m_node->child2().useKind() != StringUse)
+                break;
+
+            String pattern = m_node->child1()->tryGetString(m_graph);
+            if (!pattern)
+                break;
+
+            String flagsString = m_node->child2()->tryGetString(m_graph);
+            if (!flagsString)
+                break;
+
+            auto flags = Yarr::parseFlags(flagsString);
+            if (!flags)
+                break;
+
+            auto* regExp = vm().regExpCache()->lookup(vm(), pattern, flags.value());
+            if (!regExp)
+                break;
+
+            m_node->convertToNewRegExp(m_graph.freezeStrong(regExp), m_insertionSet.insertConstantForUse(m_nodeIndex, m_node->origin, jsNumber(0), UntypedUse));
+            m_changed = true;
+            break;
+        }
+
         case RegExpExec:
         case RegExpTest:
         case RegExpMatchFast:
@@ -634,7 +660,7 @@ private:
                     m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpointSet());
                     regExp = regExpObject->regExp();
                     regExpObjectNodeIsConstant = true;
-                } else if (regExpObjectNode->op() == NewRegexp) {
+                } else if (regExpObjectNode->op() == NewRegExp) {
                     JSGlobalObject* globalObject = m_graph.globalObjectFor(regExpObjectNode->origin.semantic);
                     if (globalObject->isRegExpRecompiled()) {
                         dataLogLnIf(verbose, "Giving up because RegExp recompile happens.");
@@ -1054,7 +1080,7 @@ private:
                 }
                 m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpointSet());
                 regExp = regExpObject->regExp();
-            } else if (regExpObjectNode->op() == NewRegexp) {
+            } else if (regExpObjectNode->op() == NewRegExp) {
                 JSGlobalObject* globalObject = m_graph.globalObjectFor(regExpObjectNode->origin.semantic);
                 if (m_graph.m_plan.isUnlinked() && globalObject != m_graph.globalObjectFor(m_node->origin.semantic)) {
                     dataLogLnIf(verbose, "Giving up because unlinked DFG requires globalObject is the same to the node's origin.");

@@ -648,7 +648,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case NewArrayWithSpread:
     case NewInternalFieldObject:
     case Spread:
-    case NewRegexp:
+    case NewRegExp:
     case NewMap:
     case NewSet:
     case NewSymbol:
@@ -668,6 +668,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case NumberToStringWithRadix:
     case SetFunctionName:
     case NewStringObject:
+    case NewRegExpUntyped:
     case InByVal:
     case InByValMegamorphic:
     case InById:
@@ -728,7 +729,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case PhantomNewAsyncFunction:
     case PhantomNewInternalFieldObject:
     case PhantomCreateActivation:
-    case PhantomNewRegexp:
+    case PhantomNewRegExp:
     case PutHint:
     case MaterializeNewObject:
     case MaterializeNewArrayWithConstantSize:

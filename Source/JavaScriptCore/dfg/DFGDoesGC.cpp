@@ -237,7 +237,7 @@ bool doesGC(Graph& graph, Node* node)
     case PhantomNewArrayBuffer:
     case PhantomSpread:
     case PhantomClonedArguments:
-    case PhantomNewRegexp:
+    case PhantomNewRegExp:
     case GetMyArgumentByVal:
     case GetMyArgumentByValOutOfBounds:
     case ForwardVarargs:
@@ -413,7 +413,8 @@ bool doesGC(Graph& graph, Node* node)
     case NewArrayWithSpecies:
     case NewArrayWithSizeAndStructure:
     case NewArrayBuffer:
-    case NewRegexp:
+    case NewRegExp:
+    case NewRegExpUntyped:
     case NewStringObject:
     case NewMap:
     case NewSet:

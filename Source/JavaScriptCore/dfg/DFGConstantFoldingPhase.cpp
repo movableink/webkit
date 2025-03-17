@@ -1632,7 +1632,7 @@ private:
             case PhantomSpread:
             case PhantomNewArrayWithSpread:
             case PhantomNewArrayBuffer:
-            case PhantomNewRegexp:
+            case PhantomNewRegExp:
             case BottomValue:
                 alreadyHandled = true;
                 break;

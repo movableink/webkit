@@ -2861,7 +2861,7 @@ JSC_DEFINE_JIT_OPERATION(operationNewAsyncGenerator, JSCell*, (VM* vmPointer, St
     OPERATION_RETURN(scope, JSAsyncGenerator::create(vm, structure));
 }
 
-JSC_DEFINE_JIT_OPERATION(operationNewRegexp, JSCell*, (JSGlobalObject* globalObject, JSCell* regexpPtr))
+JSC_DEFINE_JIT_OPERATION(operationNewRegExp, JSCell*, (JSGlobalObject* globalObject, JSCell* regexpPtr))
 {
     SuperSamplerScope superSamplerScope(false);
     VM& vm = globalObject->vm();

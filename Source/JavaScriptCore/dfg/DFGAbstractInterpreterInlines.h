@@ -3423,6 +3423,12 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         break;
     }
 
+    case NewRegExpUntyped: {
+        ASSERT(node->structure()->classInfoForCells() == RegExpObject::info());
+        setForNode(node, node->structure());
+        break;
+    }
+
     case NewSymbol: {
         if (node->child1() && node->child1().useKind() != StringUse)
             clobberWorld();
@@ -3566,7 +3572,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         setForNode(node, node->structure());
         break;
 
-    case NewRegexp:
+    case NewRegExp:
         setForNode(node, m_graph.globalObjectFor(node->origin.semantic)->regExpStructure());
         break;
 
@@ -3801,7 +3807,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
     case PhantomNewArrayWithSpread:
     case PhantomNewArrayBuffer:
     case PhantomNewInternalFieldObject:
-    case PhantomNewRegexp:
+    case PhantomNewRegExp:
     case BottomValue: {
         clearForNode(node);
         break;

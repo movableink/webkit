@@ -655,10 +655,10 @@ LLINT_SLOW_PATH_DECL(slow_path_new_array_with_size)
     LLINT_RETURN(constructArrayWithSizeQuirk(globalObject, &metadata.m_arrayAllocationProfile, getOperand(callFrame, bytecode.m_length)));
 }
 
-LLINT_SLOW_PATH_DECL(slow_path_new_regexp)
+LLINT_SLOW_PATH_DECL(slow_path_new_reg_exp)
 {
     LLINT_BEGIN();
-    auto bytecode = pc->as<OpNewRegexp>();
+    auto bytecode = pc->as<OpNewRegExp>();
     RegExp* regExp = jsCast<RegExp*>(getOperand(callFrame, bytecode.m_regexp));
     static constexpr bool areLegacyFeaturesEnabled = true;
     LLINT_RETURN(RegExpObject::create(vm, globalObject->regExpStructure(), regExp, areLegacyFeaturesEnabled));

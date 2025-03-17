@@ -11248,6 +11248,39 @@ void SpeculativeJIT::compileNewSet(Node* node)
     cellResult(resultGPR, node);
 }
 
+void SpeculativeJIT::compileNewRegExpUntyped(Node* node)
+{
+    if (node->child1().useKind() == StringUse && node->child2().useKind() == StringUse) {
+        SpeculateCellOperand pattern(this, node->child1());
+        SpeculateCellOperand flags(this, node->child2());
+
+        GPRReg patternGPR = pattern.gpr();
+        GPRReg flagsGPR = flags.gpr();
+
+        speculateString(node->child1(), patternGPR);
+        speculateString(node->child2(), flagsGPR);
+
+        flushRegisters();
+        GPRFlushedCallResult result(this);
+        GPRReg resultGPR = result.gpr();
+        callOperation(operationNewRegExpString, resultGPR, LinkableConstant::globalObject(*this, node), patternGPR, flagsGPR);
+        cellResult(resultGPR, node);
+        return;
+    }
+
+    JSValueOperand pattern(this, node->child1());
+    JSValueOperand flags(this, node->child2());
+
+    JSValueRegs patternRegs = pattern.jsValueRegs();
+    JSValueRegs flagsRegs = flags.jsValueRegs();
+
+    flushRegisters();
+    GPRFlushedCallResult result(this);
+    GPRReg resultGPR = result.gpr();
+    callOperation(operationNewRegExpUntyped, resultGPR, LinkableConstant::globalObject(*this, node), patternRegs, flagsRegs);
+    cellResult(resultGPR, node);
+}
+
 void SpeculativeJIT::compileNewTypedArrayWithSize(Node* node)
 {
     JSGlobalObject* globalObject = m_graph.globalObjectFor(node->origin.semantic);
@@ -11364,7 +11397,7 @@ void SpeculativeJIT::emitNewTypedArrayWithSizeInRegister(Node* node, TypedArrayT
     cellResult(resultGPR, node);
 }
 
-void SpeculativeJIT::compileNewRegexp(Node* node)
+void SpeculativeJIT::compileNewRegExp(Node* node)
 {
     RegExp* regexp = node->castOperand<RegExp*>();
 
@@ -11388,7 +11421,7 @@ void SpeculativeJIT::compileNewRegexp(Node* node)
     storeValue(lastIndexRegs, Address(resultGPR, RegExpObject::offsetOfLastIndex()));
     mutatorFence(vm());
 
-    addSlowPathGenerator(slowPathCall(slowPath, this, operationNewRegexpWithLastIndex, resultGPR, LinkableConstant::globalObject(*this, node), LinkableConstant(*this, regexp), lastIndexRegs));
+    addSlowPathGenerator(slowPathCall(slowPath, this, operationNewRegExpWithLastIndex, resultGPR, LinkableConstant::globalObject(*this, node), LinkableConstant(*this, regexp), lastIndexRegs));
 
     cellResult(resultGPR, node);
 }

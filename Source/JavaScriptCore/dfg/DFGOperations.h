@@ -136,7 +136,9 @@ JSC_DECLARE_JIT_OPERATION(operationEnumeratorHasOwnProperty, EncodedJSValue, (JS
 JSC_DECLARE_JIT_OPERATION(operationEnumeratorRecoverNameAndGetByVal, EncodedJSValue, (JSGlobalObject*, EncodedJSValue, uint32_t, JSPropertyNameEnumerator*));
 JSC_DECLARE_JIT_OPERATION(operationEnumeratorRecoverNameAndPutByVal, void, (JSGlobalObject*, EncodedJSValue, EncodedJSValue, bool, uint32_t, JSPropertyNameEnumerator*));
 
-JSC_DECLARE_JIT_OPERATION(operationNewRegexpWithLastIndex, JSCell*, (JSGlobalObject*, JSCell*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationNewRegExpWithLastIndex, JSCell*, (JSGlobalObject*, JSCell*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationNewRegExpUntyped, JSObject*, (JSGlobalObject*, EncodedJSValue, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationNewRegExpString, JSObject*, (JSGlobalObject*, JSString*, JSString*));
 JSC_DECLARE_JIT_OPERATION(operationNewArray, char*, (JSGlobalObject*, Structure*, void*, size_t));
 JSC_DECLARE_JIT_OPERATION(operationNewEmptyArray, char*, (VM*, Structure*));
 JSC_DECLARE_JIT_OPERATION(operationNewArrayWithSize, char*, (JSGlobalObject*, Structure*, int32_t, Butterfly*));

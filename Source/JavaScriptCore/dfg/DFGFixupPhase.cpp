@@ -1832,6 +1832,14 @@ private:
             break;
         }
 
+        case NewRegExpUntyped: {
+            if (node->child1()->shouldSpeculateString() && node->child2()->shouldSpeculateString()) {
+                fixEdge<StringUse>(node->child1());
+                fixEdge<StringUse>(node->child2());
+            }
+            break;
+        }
+
         case NewSymbol: {
             if (node->child1() && node->child1()->shouldSpeculateString())
                 fixEdge<StringUse>(node->child1());
@@ -2552,7 +2560,7 @@ private:
         case PhantomNewArrayWithSpread:
         case PhantomNewArrayBuffer:
         case PhantomClonedArguments:
-        case PhantomNewRegexp:
+        case PhantomNewRegExp:
         case GetMyArgumentByVal:
         case GetMyArgumentByValOutOfBounds:
         case GetVectorLength:
@@ -3322,7 +3330,7 @@ private:
         case NewGenerator:
         case NewAsyncGenerator:
         case NewInternalFieldObject:
-        case NewRegexp:
+        case NewRegExp:
         case NewMap:
         case NewSet:
         case IsTypedArrayView:

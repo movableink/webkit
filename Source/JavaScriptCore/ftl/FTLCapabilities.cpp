@@ -78,6 +78,7 @@ inline CapabilityLevel canCompile(Node* node)
     case NewGenerator:
     case NewAsyncGenerator:
     case NewStringObject:
+    case NewRegExpUntyped:
     case NewSymbol:
     case NewArray:
     case NewArrayWithSpread:
@@ -344,7 +345,7 @@ inline CapabilityLevel canCompile(Node* node)
     case PhantomNewAsyncFunction:
     case PhantomNewInternalFieldObject:
     case PhantomCreateActivation:
-    case PhantomNewRegexp:
+    case PhantomNewRegExp:
     case PutHint:
     case CheckStructureImmediate:
     case MaterializeNewObject:
@@ -383,7 +384,7 @@ inline CapabilityLevel canCompile(Node* node)
     case RegExpTestInline:
     case RegExpMatchFast:
     case RegExpMatchFastGlobal:
-    case NewRegexp:
+    case NewRegExp:
     case NewMap:
     case NewSet:
     case StringReplace:

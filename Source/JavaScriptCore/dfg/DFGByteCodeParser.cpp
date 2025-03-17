@@ -83,6 +83,7 @@
 #include "PrivateFieldPutKind.h"
 #include "PutByIdFlags.h"
 #include "PutByStatus.h"
+#include "RegExpConstructor.h"
 #include "RegExpPrototype.h"
 #include "SetConstructor.h"
 #include "SetPrivateBrandStatus.h"
@@ -5035,6 +5036,27 @@ bool ByteCodeParser::handleConstantFunction(
         return true;
     }
 
+    if (function->classInfo() == RegExpConstructor::info()) {
+        Node* newTargetNode = get(virtualRegisterForArgumentIncludingThis(0, registerOffset));
+        // We cannot handle the case where new.target != callee (i.e. a construct from a super call) because we
+        // don't know what the prototype of the constructed object will be.
+        // FIXME: If we have inlined super calls up to the call site, however, we should be able to figure out the structure. https://bugs.webkit.org/show_bug.cgi?id=152700
+        if (newTargetNode != callTargetNode)
+            return false;
+
+        auto* structure = function->globalObject()->regExpStructure();
+        if (structure) {
+            if (argumentCountIncludingThis >= 3) {
+                insertChecks();
+                auto* content = get(virtualRegisterForArgumentIncludingThis(1, registerOffset));
+                auto* flags = get(virtualRegisterForArgumentIncludingThis(2, registerOffset));
+                Node* resultNode = addToGraph(NewRegExpUntyped, OpInfo(m_graph.registerStructure(structure)), content, flags);
+                set(result, resultNode);
+                return true;
+            }
+        }
+    }
+
     if (function->classInfo() == MapConstructor::info() && kind == CodeForConstruct) {
         Node* newTargetNode = get(virtualRegisterForArgumentIncludingThis(0, registerOffset));
         // We cannot handle the case where new.target != callee (i.e. a construct from a super call) because we
@@ -6888,12 +6910,12 @@ void ByteCodeParser::parseBlock(unsigned limit)
             NEXT_OPCODE(op_new_array_buffer);
         }
             
-        case op_new_regexp: {
-            auto bytecode = currentInstruction->as<OpNewRegexp>();
+        case op_new_reg_exp: {
+            auto bytecode = currentInstruction->as<OpNewRegExp>();
             ASSERT(bytecode.m_regexp.isConstant());
             FrozenValue* frozenRegExp = m_graph.freezeStrong(m_inlineStackTop->m_codeBlock->getConstant(bytecode.m_regexp));
-            set(bytecode.m_dst, addToGraph(NewRegexp, OpInfo(frozenRegExp), jsConstant(jsNumber(0))));
-            NEXT_OPCODE(op_new_regexp);
+            set(bytecode.m_dst, addToGraph(NewRegExp, OpInfo(frozenRegExp), jsConstant(jsNumber(0))));
+            NEXT_OPCODE(op_new_reg_exp);
         }
 
         case op_get_rest_length: {
