@@ -27,6 +27,7 @@
 #include "ServiceWorkerDebuggableProxy.h"
 
 #include "Logging.h"
+#include "WebProcessPool.h"
 #include "WebProcessProxy.h"
 #include "WebSWContextManagerConnectionMessages.h"
 #include <JavaScriptCore/RemoteConnectionToTarget.h>
@@ -51,6 +52,7 @@ ServiceWorkerDebuggableProxy::ServiceWorkerDebuggableProxy(const String& url, We
     , m_identifier(identifier)
     , m_webProcessProxy(webProcessProxy)
 {
+    setPresentingApplicationPID(webProcessProxy.processPool().configuration().presentingApplicationPID());
 }
 
 void ServiceWorkerDebuggableProxy::connect(FrontendChannel& channel, bool, bool)
