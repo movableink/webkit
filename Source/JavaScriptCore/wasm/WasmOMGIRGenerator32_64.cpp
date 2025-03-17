@@ -4103,7 +4103,7 @@ Value* OMGIRGenerator::emitLoadRTTFromFuncref(Value* funcref)
 
 Value* OMGIRGenerator::emitLoadRTTFromObject(Value* reference)
 {
-    return append<MemoryValue>(heapTop(), m_proc, B3::Load, toB3Type(Types::Ref), origin(), reference, safeCast<int32_t>(WebAssemblyGCObjectBase::offsetOfRTT()));
+    return append<MemoryValue>(heapTop(), m_proc, B3::Load, toB3Type(Types::Ref), origin(), reference, safeCast<int32_t>(WebAssemblyGCStructure::offsetOfRTT()));
 }
 
 Value* OMGIRGenerator::emitNotRTTKind(Value* rtt, RTTKind targetKind)
