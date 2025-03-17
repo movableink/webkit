@@ -148,6 +148,12 @@ function spawnNewElementWithClass(elementName, className, lambda = (el) => {}) {
     return newElement;
 }
 
+async function takeCanvasSnapshotAsBlobURL(canvas) {
+    return new Promise(resolve =>
+        canvas.toBlob(blob => resolve(URL.createObjectURL(blob)))
+    );
+}
+
 function contains(containerRect, allegedContainee) {
     return (
         containerRect[0] <= allegedContainee[0]
