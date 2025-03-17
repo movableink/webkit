@@ -1273,13 +1273,8 @@ static void emitTextureDimensions(FunctionDefinitionWriter* writer, AST::CallExp
     const auto& get = [&](ASCIILiteral property) {
         writer->visit(call.arguments()[0]);
         writer->stringBuilder().append(".get_"_s, property, '(');
-        if (call.arguments().size() > 1) {
-            writer->stringBuilder().append("min("_s);
-            writer->visit(call.arguments()[0]);
-            writer->stringBuilder().append(".get_num_mip_levels(), "_s);
+        if (call.arguments().size() > 1)
             writer->visit(call.arguments()[1]);
-            writer->stringBuilder().append(')');
-        }
         writer->stringBuilder().append(')');
     };
 
