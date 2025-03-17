@@ -1600,9 +1600,8 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmStructNewEmpty, EncodedJSValue, (
     assertCalleeIsReferenced(callFrame, instance);
     VM& vm = instance->vm();
     NativeCallFrameTracer tracer(vm, callFrame);
-    JSGlobalObject* globalObject = instance->globalObject();
-    auto structRTT = instance->module().moduleInformation().rtts[typeIndex];
-    return JSValue::encode(JSWebAssemblyStruct::create(vm, globalObject->webAssemblyStructStructure(), instance, typeIndex, WTFMove(structRTT)));
+    WebAssemblyGCStructure* structure = instance->gcObjectStructure(typeIndex).get();
+    return JSValue::encode(JSWebAssemblyStruct::create(vm, structure));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmStructGet, EncodedJSValue, (EncodedJSValue encodedStructReference, uint32_t fieldIndex))
@@ -1813,20 +1812,16 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayNewEmpty, EncodedJSValue, (J
     VM& vm = instance->vm();
     NativeCallFrameTracer tracer(vm, callFrame);
 
-    JSGlobalObject* globalObject = instance->globalObject();
-    RefPtr arrayRTT = instance->module().moduleInformation().rtts[typeIndex];
-
     ASSERT(typeIndex < instance->module().moduleInformation().typeCount());
-    const Wasm::TypeDefinition& arraySignature = instance->module().moduleInformation().typeSignatures[typeIndex]->expand();
-    ASSERT(arraySignature.is<ArrayType>());
-    Wasm::FieldType fieldType = arraySignature.as<ArrayType>()->elementType();
+    WebAssemblyGCStructure* structure = instance->gcObjectStructure(typeIndex).get();
+    Wasm::FieldType fieldType = structure->typeDefinition().as<ArrayType>()->elementType();
 
     size_t elementSize = fieldType.type.elementSize();
     if (UNLIKELY(productOverflows<uint32_t>(elementSize, size) || elementSize * size > maxArraySizeInBytes))
         return JSValue::encode(jsNull());
 
     // Create a default-initialized array with the right element type and length
-    return JSValue::encode(JSWebAssemblyArray::create(vm, globalObject->webAssemblyArrayStructure(), fieldType, size, WTFMove(arrayRTT)));
+    return JSValue::encode(JSWebAssemblyArray::create(vm, structure, size));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayGet, EncodedJSValue, (JSWebAssemblyInstance* instance, uint32_t typeIndex, EncodedJSValue arrayValue, uint32_t index))

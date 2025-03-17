@@ -150,9 +150,18 @@ class Heap;
     v(structureRareDataSpace, destructibleCellHeapCellType, StructureRareData) \
     v(symbolTableSpace, destructibleCellHeapCellType, SymbolTable)
     
+
+#if ENABLE(WEBASSEMBLY)
+#define FOR_EACH_JSC_WEBASSEMBLY_STRUCTURE_ISO_SUBSPACE(v) \
+    v(webAssemblyGCStructureSpace, destructibleCellHeapCellType, WebAssemblyGCStructure)
+#else
+#define FOR_EACH_JSC_WEBASSEMBLY_STRUCTURE_ISO_SUBSPACE(v)
+#endif
+
 #define FOR_EACH_JSC_STRUCTURE_ISO_SUBSPACE(v) \
     v(structureSpace, destructibleCellHeapCellType, Structure) \
     v(brandedStructureSpace, destructibleCellHeapCellType, BrandedStructure) \
+    FOR_EACH_JSC_WEBASSEMBLY_STRUCTURE_ISO_SUBSPACE(v)
 
 #define FOR_EACH_JSC_ISO_SUBSPACE(v) \
     FOR_EACH_JSC_COMMON_ISO_SUBSPACE(v) \

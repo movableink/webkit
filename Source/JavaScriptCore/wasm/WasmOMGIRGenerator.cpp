@@ -835,6 +835,8 @@ private:
     Value* emitAtomicBinaryRMWOp(ExtAtomicOpType, Type, Value* pointer, Value*, uint32_t offset);
     Value* emitAtomicCompareExchange(ExtAtomicOpType, Type, Value* pointer, Value* expected, Value*, uint32_t offset);
 
+    Value* decodeNonNullStructure(Value* structureID);
+
     Value* emitGetArrayPayloadBase(Wasm::StorageType, Value*);
     void emitArrayNullCheck(Value*, ExceptionType);
     void emitArraySetUnchecked(uint32_t, Value*, Value*, Value*);
@@ -3268,8 +3270,8 @@ Value* OMGIRGenerator::emitGetArrayPayloadBase(Wasm::StorageType fieldType, Valu
     if (JSWebAssemblyArray::needsAlignmentCheck(fieldType)) {
         auto isPreciseAllocation = m_currentBlock->appendNew<Value>(m_proc, BitAnd, origin(), arrayref, constant(pointerType(), PreciseAllocation::halfAlignment));
         return m_currentBlock->appendNew<Value>(m_proc, B3::Select, origin(), isPreciseAllocation,
-            m_currentBlock->appendNew<Value>(m_proc, Add, origin(), payloadBase, constant(pointerType(), PreciseAllocation::halfAlignment)),
-            payloadBase);
+            payloadBase,
+            m_currentBlock->appendNew<Value>(m_proc, Add, origin(), payloadBase, constant(pointerType(), JSWebAssemblyArray::v128AlignmentShift)));
     }
     return payloadBase;
 }
@@ -3596,7 +3598,7 @@ auto OMGIRGenerator::addRefCast(ExpressionType reference, bool allowNull, int32_
     return { };
 }
 
-void OMGIRGenerator::emitRefTestOrCast(CastKind castKind, ExpressionType reference, bool allowNull, int32_t heapType, bool shouldNegate, ExpressionType& result)
+void OMGIRGenerator::emitRefTestOrCast(CastKind castKind, ExpressionType reference, bool allowNull, int32_t toHeapType, bool shouldNegate, ExpressionType& result)
 {
     if (castKind == CastKind::Cast)
         result = push(get(reference));
@@ -3646,8 +3648,8 @@ void OMGIRGenerator::emitRefTestOrCast(CastKind castKind, ExpressionType referen
         m_currentBlock = nonNullCase;
     }
 
-    if (typeIndexIsType(static_cast<Wasm::TypeIndex>(heapType))) {
-        switch (static_cast<TypeKind>(heapType)) {
+    if (typeIndexIsType(static_cast<Wasm::TypeIndex>(toHeapType))) {
+        switch (static_cast<TypeKind>(toHeapType)) {
         case Wasm::TypeKind::Funcref:
         case Wasm::TypeKind::Externref:
         case Wasm::TypeKind::Anyref:
@@ -3701,14 +3703,14 @@ void OMGIRGenerator::emitRefTestOrCast(CastKind castKind, ExpressionType referen
             Value* jsType = m_currentBlock->appendNew<MemoryValue>(m_proc, Load8Z, Int32, origin(), get(reference), safeCast<int32_t>(JSCell::typeInfoTypeOffset()));
             emitCheckOrBranchForCast(castKind, m_currentBlock->appendNew<Value>(m_proc, NotEqual, origin(), jsType, constant(Int32, JSType::WebAssemblyGCObjectType)), castFailure, falseBlock);
             Value* rtt = emitLoadRTTFromObject(get(reference));
-            emitCheckOrBranchForCast(castKind, emitNotRTTKind(rtt, static_cast<TypeKind>(heapType) == Wasm::TypeKind::Arrayref ? RTTKind::Array : RTTKind::Struct), castFailure, falseBlock);
+            emitCheckOrBranchForCast(castKind, emitNotRTTKind(rtt, static_cast<TypeKind>(toHeapType) == Wasm::TypeKind::Arrayref ? RTTKind::Array : RTTKind::Struct), castFailure, falseBlock);
             break;
         }
         default:
             RELEASE_ASSERT_NOT_REACHED();
         }
     } else {
-        Wasm::TypeDefinition& signature = m_info.typeSignatures[heapType];
+        Wasm::TypeDefinition& signature = m_info.typeSignatures[toHeapType];
         BasicBlock* slowPath = m_proc.addBlock();
 
         Value* rtt;
@@ -3716,6 +3718,7 @@ void OMGIRGenerator::emitRefTestOrCast(CastKind castKind, ExpressionType referen
             rtt = emitLoadRTTFromFuncref(get(reference));
         else {
             // The cell check is only needed for non-functions, as the typechecker does not allow non-Cell values for funcref casts.
+            // FIXME: We only need this check if reference has a type that could include non-cells.
             emitCheckOrBranchForCast(castKind, m_currentBlock->appendNew<Value>(m_proc, BitAnd, origin(), get(reference), constant(Int64, JSValue::NotCellMask)), castFailure, falseBlock);
             Value* jsType = m_currentBlock->appendNew<MemoryValue>(m_proc, Load8Z, Int32, origin(), get(reference), safeCast<int32_t>(JSCell::typeInfoTypeOffset()));
             emitCheckOrBranchForCast(castKind, m_currentBlock->appendNew<Value>(m_proc, NotEqual, origin(), jsType, constant(Int32, JSType::WebAssemblyGCObjectType)), castFailure, falseBlock);
@@ -3723,9 +3726,8 @@ void OMGIRGenerator::emitRefTestOrCast(CastKind castKind, ExpressionType referen
             emitCheckOrBranchForCast(castKind, emitNotRTTKind(rtt, signature.expand().is<Wasm::ArrayType>() ? RTTKind::Array : RTTKind::Struct), castFailure, falseBlock);
         }
 
-        Value* targetRTT = m_currentBlock->appendNew<ConstPtrValue>(m_proc, origin(), m_info.rtts[heapType].get());
-        Value* rttsAreEqual = m_currentBlock->appendNew<Value>(m_proc, Equal, origin(),
-            rtt, targetRTT);
+        Value* targetRTT = m_currentBlock->appendNew<ConstPtrValue>(m_proc, origin(), m_info.rtts[toHeapType].get());
+        Value* rttsAreEqual = m_currentBlock->appendNew<Value>(m_proc, Equal, origin(), rtt, targetRTT);
         BasicBlock* equalBlock;
         if (castKind == CastKind::Cast)
             equalBlock = continuation;
@@ -3793,9 +3795,28 @@ Value* OMGIRGenerator::emitLoadRTTFromFuncref(Value* funcref)
     return patch;
 }
 
+Value* OMGIRGenerator::decodeNonNullStructure(Value* structureID)
+{
+#if ENABLE(STRUCTURE_ID_WITH_SHIFT)
+    return m_currentBlock->appendNew<Value>(m_proc, B3::Shl, pointerType(), origin(),
+        m_currentBlock->appendNew<Value>(m_proc, ZExt32, origin(), structureID),
+        constant(pointerType(), StructureID::encodeShiftAmount));
+#else
+    if constexpr (structureHeapAddressSize < 4 * GB) {
+        static_assert(static_cast<uint32_t>(StructureID::structureIDMask) == StructureID::structureIDMask);
+        structureID = m_currentBlock->appendNew<Value>(m_proc, B3::BitAnd, origin(), structureID, constant(Int32, static_cast<uint32_t>(StructureID::structureIDMask)));
+    }
+    return m_currentBlock->appendNew<Value>(m_proc, B3::BitOr, origin(),
+        m_currentBlock->appendNew<Value>(m_proc, ZExt32, origin(), structureID),
+        constant(pointerType(), startOfStructureHeap()));
+#endif
+}
+
 Value* OMGIRGenerator::emitLoadRTTFromObject(Value* reference)
 {
-    return m_currentBlock->appendNew<MemoryValue>(m_proc, B3::Load, toB3Type(Types::Ref), origin(), reference, safeCast<int32_t>(WebAssemblyGCObjectBase::offsetOfRTT()));
+    Value* structureID = m_currentBlock->appendNew<MemoryValue>(m_proc, B3::Load, Int32, origin(), reference, safeCast<int32_t>(JSCell::structureIDOffset()));
+    Value* structure = decodeNonNullStructure(structureID);
+    return m_currentBlock->appendNew<MemoryValue>(m_proc, B3::Load, pointerType(), origin(), structure, safeCast<int32_t>(WebAssemblyGCStructure::offsetOfRTT()));
 }
 
 Value* OMGIRGenerator::emitNotRTTKind(Value* rtt, RTTKind targetKind)

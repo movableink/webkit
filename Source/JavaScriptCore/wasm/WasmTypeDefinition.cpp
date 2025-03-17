@@ -1149,7 +1149,7 @@ bool TypeInformation::castReference(JSValue refValue, bool allowNull, TypeIndex 
             if (!arrayRef)
                 return false;
             auto arrayRTT = arrayRef->rtt();
-            if (arrayRTT.get() == signatureRTT.get())
+            if (arrayRTT.ptr() == signatureRTT.get())
                 return true;
             return arrayRTT->isStrictSubRTT(*signatureRTT);
         }
@@ -1158,7 +1158,7 @@ bool TypeInformation::castReference(JSValue refValue, bool allowNull, TypeIndex 
         if (!structRef)
             return false;
         auto structRTT = structRef->rtt();
-        if (structRTT.get() == signatureRTT.get())
+        if (structRTT.ptr() == signatureRTT.get())
             return true;
         return structRTT->isStrictSubRTT(*signatureRTT);
     }

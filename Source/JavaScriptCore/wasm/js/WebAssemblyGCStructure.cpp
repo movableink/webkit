@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
- * Copyright (C) 2021 Igalia S.A. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,35 +24,29 @@
  */
 
 #include "config.h"
-#include "BrandedStructure.h"
+#include "WebAssemblyGCStructure.h"
 
 #include "JSCInlines.h"
 
+#if ENABLE(WEBASSEMBLY)
+
 namespace JSC {
 
-BrandedStructure::BrandedStructure(VM& vm, Structure* previous, UniquedStringImpl* brandUid)
-    : Structure(vm, StructureVariant::Branded, previous)
-    , m_brand(brandUid)
-    , m_parentBrand(previous->isBrandedStructure() ? previous : nullptr, WriteBarrierEarlyInit)
-{
-    ASSERT(isBrandedStructure());
-}
+WebAssemblyGCStructure::WebAssemblyGCStructure(VM& vm, JSGlobalObject* globalObject, const TypeInfo& typeInfo, const ClassInfo* classInfo, Ref<const Wasm::TypeDefinition>&& type, Ref<const Wasm::RTT>&& rtt)
+    : Structure(vm, StructureVariant::WebAssemblyGC, globalObject, typeInfo, classInfo)
+    , m_rtt(WTFMove(rtt))
+    , m_type(WTFMove(type))
+{ }
 
-BrandedStructure::BrandedStructure(VM& vm, BrandedStructure* previous)
-    : Structure(vm, StructureVariant::Branded, previous)
-    , m_brand(previous->m_brand)
-    , m_parentBrand(previous->m_parentBrand.get(), WriteBarrierEarlyInit)
-{
-    ASSERT(isBrandedStructure());
-}
-
-Structure* BrandedStructure::create(VM& vm, Structure* previous, UniquedStringImpl* brandUid, DeferredStructureTransitionWatchpointFire* deferred)
+WebAssemblyGCStructure* WebAssemblyGCStructure::create(VM& vm, JSGlobalObject* globalObject, const TypeInfo& typeInfo, const ClassInfo* classInfo, Ref<const Wasm::TypeDefinition>&& type, Ref<const Wasm::RTT>&& rtt)
 {
     ASSERT(vm.structureStructure);
-    BrandedStructure* newStructure = new (NotNull, allocateCell<BrandedStructure>(vm)) BrandedStructure(vm, previous, brandUid);
-    newStructure->finishCreation(vm, previous, deferred);
+    WebAssemblyGCStructure* newStructure = new (NotNull, allocateCell<WebAssemblyGCStructure>(vm)) WebAssemblyGCStructure(vm, globalObject, typeInfo, classInfo, WTFMove(type), WTFMove(rtt));
+    newStructure->finishCreation(vm);
     ASSERT(newStructure->type() == StructureType);
     return newStructure;
 }
 
 } // namespace JSC
+
+#endif

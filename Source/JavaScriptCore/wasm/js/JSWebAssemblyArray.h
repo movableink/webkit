@@ -42,9 +42,6 @@ namespace JSC {
 class JSWebAssemblyArray final : public WebAssemblyGCObjectBase {
 public:
     using Base = WebAssemblyGCObjectBase;
-    static constexpr DestructionMode needsDestruction = NeedsDestruction;
-
-    static void destroy(JSCell*);
 
     template<typename CellType, SubspaceAccess mode>
     static CompleteSubspace* subspaceFor(VM& vm)
@@ -52,20 +49,21 @@ public:
         return vm.heap.webAssemblyArraySpace<mode>();
     }
 
-    DECLARE_EXPORT_INFO;
+    DECLARE_INFO;
 
-    static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
+    static inline WebAssemblyGCStructure* createStructure(VM&, JSGlobalObject*, Ref<const Wasm::TypeDefinition>&&, Ref<const Wasm::RTT>&&);
 
-    static JSWebAssemblyArray* create(VM& vm, Structure* structure, Wasm::FieldType elementType, unsigned size, RefPtr<const Wasm::RTT>&& rtt)
+    static JSWebAssemblyArray* create(VM& vm, WebAssemblyGCStructure* structure, unsigned size)
     {
-        auto* object = new (NotNull, allocateCell<JSWebAssemblyArray>(vm, allocationSizeInBytes(elementType, size))) JSWebAssemblyArray(vm, structure, elementType, size, WTFMove(rtt));
+        auto* object = new (NotNull, allocateCell<JSWebAssemblyArray>(vm, allocationSizeInBytes(elementType(structure), size))) JSWebAssemblyArray(vm, structure, size);
         object->finishCreation(vm);
         return object;
     }
 
     DECLARE_VISIT_CHILDREN;
 
-    Wasm::FieldType elementType() const { return m_elementType; }
+    static Wasm::FieldType elementType(const WebAssemblyGCStructure* structure) { return structure->typeDefinition().as<Wasm::ArrayType>()->elementType(); }
+    Wasm::FieldType elementType() const { return elementType(gcStructure()); }
     static bool needsAlignmentCheck(Wasm::StorageType type) { return type.unpacked().isV128(); }
     size_t size() const { return m_size; }
     size_t sizeInBytes() const { return size() * elementType().type.elementSize(); }
@@ -77,35 +75,12 @@ public:
 
     bool elementsAreRefTypes() const
     {
-        return Wasm::isRefType(m_elementType.type.unpacked());
+        return Wasm::isRefType(elementType().type.unpacked());
     }
 
     inline std::span<uint64_t> refTypeSpan() LIFETIME_BOUND;
 
-    ALWAYS_INLINE auto visitSpan(auto functor)
-    {
-        if (m_elementType.type.is<Wasm::PackedType>()) {
-            switch (m_elementType.type.as<Wasm::PackedType>()) {
-            case Wasm::PackedType::I8:
-                return functor(span<uint8_t>());
-            case Wasm::PackedType::I16:
-                return functor(span<uint16_t>());
-            }
-        }
-
-        // m_element_type must be a type, so we can get its kind
-        ASSERT(m_elementType.type.is<Wasm::Type>());
-        switch (m_elementType.type.as<Wasm::Type>().kind) {
-        case Wasm::TypeKind::I32:
-        case Wasm::TypeKind::F32:
-            return functor(span<uint32_t>());
-        case Wasm::TypeKind::V128:
-            return functor(span<v128_t>());
-        default:
-            return functor(span<uint64_t>());
-        }
-    }
-
+    ALWAYS_INLINE auto visitSpan(auto functor);
     ALWAYS_INLINE auto visitSpanNonVector(auto functor);
 
     inline uint64_t get(uint32_t index);
@@ -116,30 +91,38 @@ public:
     void fill(VM&, uint32_t, v128_t, uint32_t);
     void copy(VM&, JSWebAssemblyArray&, uint32_t, uint32_t, uint32_t);
 
-    // We add 8 bytes for v128 arrays since a PreciseAllocation will have the wrong alignment as the base pointer for a PreciseAllocation is shifted by 8.
-    // Note: Technically this isn't needed since the GC/malloc always allocates 16 byte chunks so for precise allocations
+    // We add 8 bytes for v128 arrays since a non-PreciseAllocation will have the wrong alignment as the base pointer for a PreciseAllocation is shifted by 8.
+    // Note: Technically this isn't needed since the GC/malloc always allocates 16 byte chunks so for non-precise v128 allocations
     // there will be a 8 spare bytes at the end. This is just a bit more explicit and shouldn't make a difference.
-    static size_t allocationSizeInBytes(Wasm::FieldType fieldType, unsigned size) { return sizeof(JSWebAssemblyArray) + size * fieldType.type.elementSize() + (needsAlignmentCheck(fieldType.type) * 8); }
+    static constexpr ptrdiff_t v128AlignmentShift = 8;
+    static size_t allocationSizeInBytes(Wasm::FieldType fieldType, unsigned size) { return sizeof(JSWebAssemblyArray) + size * fieldType.type.elementSize() + (needsAlignmentCheck(fieldType.type) * v128AlignmentShift); }
     static constexpr ptrdiff_t offsetOfSize() { return OBJECT_OFFSETOF(JSWebAssemblyArray, m_size); }
     static constexpr ptrdiff_t offsetOfData() { return sizeof(JSWebAssemblyArray); }
 
 private:
     friend class LLIntOffsetsExtractor;
     inline std::span<uint8_t> bytes();
+
+    // NB: It's *HIGHLY* recommended that you don't use these directly since you'll have to remember to clean up the alignment for v128.
     uint8_t* data() { return reinterpret_cast<uint8_t*>(this) + offsetOfData(); }
     const uint8_t* data() const { return const_cast<JSWebAssemblyArray*>(this)->data(); }
 
-    JSWebAssemblyArray(VM&, Structure*, Wasm::FieldType, unsigned, RefPtr<const Wasm::RTT>&&);
+    JSWebAssemblyArray(VM&, WebAssemblyGCStructure*, unsigned);
 
     DECLARE_DEFAULT_FINISH_CREATION;
 
-    Wasm::FieldType m_elementType;
     unsigned m_size;
+
+    // FIXME: We shouldn't need this padding but otherwise all the calculations about v128AlignmentShifts are wrong.
+#if USE(JSVALUE32_64)
+    unsigned m_padding;
+#endif
 };
 
 static_assert(std::is_final_v<JSWebAssemblyArray>, "JSWebAssemblyArray is a TrailingArray-like object so must know about all members");
-// We still have to check for PreciseAllocations since those are shifted by 8 bytes for v128 but this asserts our shifted offset will be correct.
-static_assert(!(JSWebAssemblyArray::offsetOfData() % alignof(v128_t)), "JSWebAssemblyArray storage needs to be aligned for v128_t");
+// We still have to check for PreciseAllocations since those are correctly aligned for v128 but this asserts our shifted offset will be correct.
+// FIXME: Fix this check for 32-bit.
+static_assert(isAddress32Bit() || !((JSWebAssemblyArray::offsetOfData() + JSWebAssemblyArray::v128AlignmentShift) % 16), "JSWebAssemblyArray storage needs to be aligned for v128_t");
 
 } // namespace JSC
 

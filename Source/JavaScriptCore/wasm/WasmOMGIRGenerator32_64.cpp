@@ -3565,8 +3565,8 @@ Value* OMGIRGenerator::emitGetArrayPayloadBase(Wasm::StorageType fieldType, Valu
     if (JSWebAssemblyArray::needsAlignmentCheck(fieldType)) {
         auto isPreciseAllocation = m_currentBlock->appendNew<Value>(m_proc, BitAnd, origin(), arrayref, constant(pointerType(), PreciseAllocation::halfAlignment));
         return m_currentBlock->appendNew<Value>(m_proc, B3::Select, origin(), isPreciseAllocation,
-            m_currentBlock->appendNew<Value>(m_proc, Add, origin(), payloadBase, constant(pointerType(), PreciseAllocation::halfAlignment)),
-            payloadBase);
+            payloadBase,
+            m_currentBlock->appendNew<Value>(m_proc, Add, origin(), payloadBase, constant(pointerType(), JSWebAssemblyArray::v128AlignmentShift)));
     }
     return payloadBase;
 }

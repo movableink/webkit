@@ -93,7 +93,7 @@ void validateWasmValue(uint64_t wasmValue, Type expectedType)
                 return;
             }
             auto objectPtr = jsCast<WebAssemblyGCObjectBase*>(value);
-            RefPtr<const RTT> objectRTT = objectPtr->rtt();
+            auto objectRTT = objectPtr->rtt();
             ASSERT(objectRTT->isSubRTT(*expectedRTT.get()));
         }
     }

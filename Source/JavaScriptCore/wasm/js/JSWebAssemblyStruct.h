@@ -42,9 +42,7 @@ public:
     using Base = WebAssemblyGCObjectBase;
     using TrailingArrayType = TrailingArray<JSWebAssemblyStruct, uint8_t>;
     friend TrailingArrayType;
-    static constexpr DestructionMode needsDestruction = NeedsDestruction;
-
-    static void destroy(JSCell*);
+    static_assert(StructureFlags == WebAssemblyGCObjectBase::StructureFlags, "WebAssemblyGCObjectBase must have the same StructureFlags as us");
 
     template<typename CellType, SubspaceAccess mode>
     static CompleteSubspace* subspaceFor(VM& vm)
@@ -52,19 +50,18 @@ public:
         return vm.heap.webAssemblyStructSpace<mode>();
     }
 
-    DECLARE_EXPORT_INFO;
+    DECLARE_INFO;
 
-    static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
-
-    static JSWebAssemblyStruct* create(VM&, Structure*, JSWebAssemblyInstance*, uint32_t, RefPtr<const Wasm::RTT>&&);
+    static inline WebAssemblyGCStructure* createStructure(VM&, JSGlobalObject*, Ref<const Wasm::TypeDefinition>&&, Ref<const Wasm::RTT>&&);
+    static JSWebAssemblyStruct* create(VM&, WebAssemblyGCStructure*);
 
     DECLARE_VISIT_CHILDREN;
 
     uint64_t get(uint32_t) const;
     void set(uint32_t, uint64_t);
     void set(uint32_t, v128_t);
-    const Wasm::TypeDefinition& typeDefinition() const { return m_type.get(); }
-    const Wasm::StructType& structType() const { return *m_type->as<Wasm::StructType>(); }
+    const Wasm::TypeDefinition& typeDefinition() const { return gcStructure()->typeDefinition(); }
+    const Wasm::StructType& structType() const { return *typeDefinition().as<Wasm::StructType>(); }
     Wasm::FieldType fieldType(uint32_t fieldIndex) const { return structType().field(fieldIndex); }
 
     uint8_t* fieldPointer(uint32_t fieldIndex) { return &at(structType().offsetOfFieldInPayload(fieldIndex)); }
@@ -73,13 +70,16 @@ public:
     using TrailingArrayType::offsetOfData;
 
 protected:
-    JSWebAssemblyStruct(VM&, Structure*, Ref<const Wasm::TypeDefinition>&&, RefPtr<const Wasm::RTT>&&);
+    JSWebAssemblyStruct(VM&, WebAssemblyGCStructure*);
     DECLARE_DEFAULT_FINISH_CREATION;
-
-    // FIXME: It is possible to encode the type information in the structure field of Wasm.Struct and remove this field.
-    // https://bugs.webkit.org/show_bug.cgi?id=244838
-    Ref<const Wasm::TypeDefinition> m_type;
 };
+
+WebAssemblyGCStructure* JSWebAssemblyStruct::createStructure(VM& vm, JSGlobalObject* globalObject, Ref<const Wasm::TypeDefinition>&& type, Ref<const Wasm::RTT>&& rtt)
+{
+    RELEASE_ASSERT(rtt->kind() == Wasm::RTTKind::Struct);
+    RELEASE_ASSERT(type->is<Wasm::StructType>());
+    return WebAssemblyGCStructure::create(vm, globalObject, TypeInfo(WebAssemblyGCObjectType, StructureFlags), info(), WTFMove(type), WTFMove(rtt));
+}
 
 } // namespace JSC
 

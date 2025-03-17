@@ -33,6 +33,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 #include "JSCInlines.h"
 #include "JSWebAssemblyArrayInlines.h"
+#include "JSWebAssemblyInstance.h"
 #include "TypeError.h"
 #include "WasmFormat.h"
 #include "WasmTypeDefinition.h"
@@ -42,21 +43,14 @@ namespace JSC {
 
 const ClassInfo JSWebAssemblyArray::s_info = { "WebAssembly.Array"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyArray) };
 
-Structure* JSWebAssemblyArray::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-{
-    return Structure::create(vm, globalObject, prototype, TypeInfo(WebAssemblyGCObjectType, StructureFlags), info());
-}
-
-JSWebAssemblyArray::JSWebAssemblyArray(VM& vm, Structure* structure, Wasm::FieldType elementType, unsigned size, RefPtr<const Wasm::RTT>&& rtt)
-    : Base(vm, structure, WTFMove(rtt))
-    , m_elementType(elementType)
+JSWebAssemblyArray::JSWebAssemblyArray(VM& vm, WebAssemblyGCStructure* structure, unsigned size)
+    : Base(vm, structure)
     , m_size(size)
 {
     if (elementsAreRefTypes())
         std::fill(span<uint64_t>().begin(), span<uint64_t>().end(), JSValue::encode(jsNull()));
-    else {
+    else
         zeroSpan(bytes());
-    }
 }
 
 void JSWebAssemblyArray::fill(VM& vm, uint32_t offset, uint64_t value, uint32_t size)
@@ -77,7 +71,7 @@ void JSWebAssemblyArray::fill(VM& vm, uint32_t offset, uint64_t value, uint32_t 
 
 void JSWebAssemblyArray::fill(VM&, uint32_t offset, v128_t value, uint32_t size)
 {
-    ASSERT(m_elementType.type.unpacked().isV128());
+    ASSERT(elementType().type.unpacked().isV128());
     auto payload = span<v128_t>().subspan(offset, size);
     std::fill(payload.begin(), payload.end(), value);
 }
@@ -96,11 +90,6 @@ void JSWebAssemblyArray::copy(VM& vm, JSWebAssemblyArray& dst, uint32_t dstOffse
         auto dstSpan = dst.span<T>().subspan(dstOffset, size);
         memmoveSpan(dstSpan, srcSpan);
     });
-}
-
-void JSWebAssemblyArray::destroy(JSCell* cell)
-{
-    static_cast<JSWebAssemblyArray*>(cell)->JSWebAssemblyArray::~JSWebAssemblyArray();
 }
 
 template<typename Visitor>

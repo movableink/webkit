@@ -35,15 +35,23 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
+WebAssemblyGCStructure* JSWebAssemblyArray::createStructure(VM& vm, JSGlobalObject* globalObject, Ref<const Wasm::TypeDefinition>&& type, Ref<const Wasm::RTT>&& rtt)
+{
+    RELEASE_ASSERT(type->is<Wasm::ArrayType>());
+    RELEASE_ASSERT(rtt->kind() == Wasm::RTTKind::Array);
+    return WebAssemblyGCStructure::create(vm, globalObject, TypeInfo(WebAssemblyGCObjectType, StructureFlags), info(), WTFMove(type), WTFMove(rtt));
+}
+
 template<typename T>
 std::span<T> JSWebAssemblyArray::span()
 {
     ASSERT(sizeof(T) == elementType().type.elementSize());
     uint8_t* data = this->data();
     if constexpr (std::is_same_v<T, v128_t>)
-        data += isPreciseAllocation() ? PreciseAllocation::halfAlignment : 0;
+        data += isPreciseAllocation() ? 0 : v128AlignmentShift;
     else
         ASSERT(!needsAlignmentCheck(elementType().type));
+    ASSERT(data == this->bytes().data());
     return { std::bit_cast<T*>(data), size() };
 }
 
@@ -55,17 +63,16 @@ std::span<uint64_t> JSWebAssemblyArray::refTypeSpan()
 
 std::span<uint8_t> JSWebAssemblyArray::bytes()
 {
-    return { isPreciseAllocation() ? data() + PreciseAllocation::halfAlignment : data(), sizeInBytes() };
+    if (!needsAlignmentCheck(elementType().type) || isPreciseAllocation())
+        return { data(), sizeInBytes() };
+    return { data() + v128AlignmentShift, sizeInBytes() };
 }
 
-auto JSWebAssemblyArray::visitSpanNonVector(auto functor)
+auto JSWebAssemblyArray::visitSpan(auto functor)
 {
-    // Ideally this would have just been:
-    // return visitSpan([&][&]<typename T>(std::span<T> span) { RELEASE_ASSERT(!std::is_same<T, v128_t>::value); ... });
-    // but that causes weird compiler errors...
-
-    if (m_elementType.type.is<Wasm::PackedType>()) {
-        switch (m_elementType.type.as<Wasm::PackedType>()) {
+    Wasm::StorageType type = elementType().type;
+    if (type.is<Wasm::PackedType>()) {
+        switch (type.as<Wasm::PackedType>()) {
         case Wasm::PackedType::I8:
             return functor(span<uint8_t>());
         case Wasm::PackedType::I16:
@@ -74,8 +81,37 @@ auto JSWebAssemblyArray::visitSpanNonVector(auto functor)
     }
 
     // m_element_type must be a type, so we can get its kind
-    ASSERT(m_elementType.type.is<Wasm::Type>());
-    switch (m_elementType.type.as<Wasm::Type>().kind) {
+    ASSERT(type.is<Wasm::Type>());
+    switch (type.as<Wasm::Type>().kind) {
+    case Wasm::TypeKind::I32:
+    case Wasm::TypeKind::F32:
+        return functor(span<uint32_t>());
+    case Wasm::TypeKind::V128:
+        return functor(span<v128_t>());
+    default:
+        return functor(span<uint64_t>());
+    }
+}
+
+auto JSWebAssemblyArray::visitSpanNonVector(auto functor)
+{
+    // Ideally this would have just been:
+    // return visitSpan([&][&]<typename T>(std::span<T> span) { RELEASE_ASSERT(!std::is_same<T, v128_t>::value); ... });
+    // but that causes weird compiler errors...
+
+    Wasm::StorageType type = elementType().type;
+    if (type.is<Wasm::PackedType>()) {
+        switch (type.as<Wasm::PackedType>()) {
+        case Wasm::PackedType::I8:
+            return functor(span<uint8_t>());
+        case Wasm::PackedType::I16:
+            return functor(span<uint16_t>());
+        }
+    }
+
+    // m_element_type must be a type, so we can get its kind
+    ASSERT(type.is<Wasm::Type>());
+    switch (type.as<Wasm::Type>().kind) {
     case Wasm::TypeKind::I32:
     case Wasm::TypeKind::F32:
         return functor(span<uint32_t>());
@@ -105,11 +141,9 @@ void JSWebAssemblyArray::set(VM& vm, uint32_t index, uint64_t value)
 
 void JSWebAssemblyArray::set(VM&, uint32_t index, v128_t value)
 {
-    ASSERT(m_elementType.type.is<Wasm::Type>());
-    ASSERT(m_elementType.type.as<Wasm::Type>().kind == Wasm::TypeKind::V128);
+    ASSERT(elementType().type.as<Wasm::Type>().kind == Wasm::TypeKind::V128);
     span<v128_t>()[index] = value;
 }
-
 
 } // namespace JSC
 
