@@ -1535,7 +1535,8 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncIndexOf, (JSGlobalObject* globalObject, C
 #if ASSERT_ENABLED
             JSValue expected = fastIndexOf<IndexOfDirection::Forward>(globalObject, vm, array, length, searchElement, index);
             RETURN_IF_EXCEPTION(scope, { });
-            ASSERT(expected.asNumber() == result.asNumber());
+            if (expected)
+                ASSERT(expected.asNumber() == result.asNumber());
 #endif
             return JSValue::encode(result);
         }
