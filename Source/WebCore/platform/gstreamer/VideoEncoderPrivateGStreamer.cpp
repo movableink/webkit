@@ -354,9 +354,10 @@ static bool videoEncoderSetEncoder(WebKitVideoEncoder* self, EncoderId encoderId
         gst_bin_add(GST_BIN_CAST(self), priv->inputCapsFilter.get());
     }
 
-    bool useVideoConvertScale = webkitGstCheckVersion(1, 22, 0);
-
-    if (useVideoConvertScale) {
+    // Keep videoconvertscale disabled for now due to some performance issues.
+    // https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/3815
+    auto useVideoConvertScale = StringView::fromLatin1(std::getenv("WEBKIT_GST_USE_VIDEOCONVERT_SCALE"));
+    if (useVideoConvertScale == "1"_s) {
         if (!priv->videoConvert) {
             priv->videoConvert = makeGStreamerElement("videoconvertscale", nullptr);
             gst_bin_add(GST_BIN_CAST(self), priv->videoConvert.get());
