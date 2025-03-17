@@ -348,7 +348,7 @@ class Tracker(GenericTracker):
 
         return issue
 
-    def set(self, issue, assignee=None, opened=None, why=None, project=None, component=None, version=None, original=None, keywords=None, source_changes=None, state=None, **properties):
+    def set(self, issue, assignee=None, opened=None, why=None, project=None, component=None, version=None, original=None, keywords=None, source_changes=None, state=None, substate=None, **properties):
         update_dict = dict()
 
         if properties:
@@ -442,7 +442,7 @@ class Tracker(GenericTracker):
             sys.stderr.write('Bugzilla does not support source changes at this time\n')
             return None
 
-        if state:
+        if state or substate:
             sys.stderr.write('Bugzilla does not support state at this time\n')
             return None
 

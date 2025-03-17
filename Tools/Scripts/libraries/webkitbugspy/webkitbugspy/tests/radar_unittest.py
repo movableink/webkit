@@ -225,6 +225,14 @@ class TestRadar(unittest.TestCase):
             self.assertTrue(issue.open())
             self.assertTrue(issue.opened)
 
+    def test_substate(self):
+        with wkmocks.Environment(RADAR_USERNAME='tcontributor'), mocks.Radar(issues=mocks.ISSUES):
+            issue = radar.Tracker().issue(1)
+            self.assertEqual(issue.state, 'Analyze')
+            self.assertTrue(issue.set_state(state='Analyze', substate='Fix'))
+            self.assertEqual(issue.state, 'Analyze')
+            self.assertEqual(issue.substate, 'Fix')
+
     def test_state_why(self):
         with wkmocks.Environment(RADAR_USERNAME='tcontributor'), mocks.Radar(issues=mocks.ISSUES):
             issue = radar.Tracker().issue(1)
