@@ -377,7 +377,7 @@ static bool decompose4(const TransformationMatrix::Matrix4& mat, TransformationM
         perspectiveMatrix[i][3] = 0;
     perspectiveMatrix[3][3] = 1;
 
-    if (determinant4x4(perspectiveMatrix) == 0)
+    if (!std::isnormal(determinant4x4(perspectiveMatrix)))
         return false;
 
     // First, isolate perspective. This is the messiest.
