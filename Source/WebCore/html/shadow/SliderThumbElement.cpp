@@ -267,6 +267,10 @@ void SliderThumbElement::setPositionFromPoint(const LayoutPoint& absolutePoint)
         position -= !isInlineFlipped ? thumbRenderer->marginLeft() : thumbRenderer->marginRight();
     }
 
+    inputRenderer = nullptr;
+    thumbRenderer = nullptr;
+    trackRenderer = nullptr;
+
     position = std::max<LayoutUnit>(0, std::min(position, trackLength));
     auto ratio = Decimal::fromDouble(static_cast<double>(position) / trackLength);
     auto fraction = isInlineFlipped ? Decimal(1) - ratio : ratio;
