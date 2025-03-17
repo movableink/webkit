@@ -1176,7 +1176,7 @@ void webkitMediaStreamSrcAddTrack(WebKitMediaStreamSrc* self, MediaStreamTrackPr
     GST_DEBUG_OBJECT(self, "%s Ghosting %" GST_PTR_FORMAT, objectPath.get(), pad.get());
 #endif
 
-    auto ghostPad = webkitGstGhostPadFromStaticTemplate(padTemplate, padName.ascii().data(), pad.get());
+    auto* ghostPad = webkitGstGhostPadFromStaticTemplate(padTemplate, ASCIILiteral::fromLiteralUnsafe(padName.ascii().data()), pad.get());
     gst_pad_store_sticky_event(ghostPad, stickyStreamStartEvent.get());
     gst_pad_set_active(ghostPad, TRUE);
     gst_element_add_pad(GST_ELEMENT_CAST(self), ghostPad);

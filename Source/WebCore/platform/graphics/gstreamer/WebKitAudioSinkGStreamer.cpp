@@ -64,7 +64,7 @@ static bool webKitAudioSinkConfigure(WebKitAudioSink* sink)
 
         gst_bin_add(GST_BIN_CAST(sink), sink->priv->interAudioSink.get());
         auto targetPad = adoptGRef(gst_element_get_static_pad(sink->priv->interAudioSink.get(), "sink"));
-        gst_element_add_pad(GST_ELEMENT_CAST(sink), webkitGstGhostPadFromStaticTemplate(&audioSinkTemplate, "sink", targetPad.get()));
+        gst_element_add_pad(GST_ELEMENT_CAST(sink), webkitGstGhostPadFromStaticTemplate(&audioSinkTemplate, "sink"_s, targetPad.get()));
         return true;
     }
     return false;

@@ -116,17 +116,15 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(WebCoreLogObserver);
 
 static GstClockTime s_webkitGstInitTime;
 
-GstPad* webkitGstGhostPadFromStaticTemplate(GstStaticPadTemplate* staticPadTemplate, const gchar* name, GstPad* target)
+WARN_UNUSED_RETURN GstPad* webkitGstGhostPadFromStaticTemplate(GstStaticPadTemplate* staticPadTemplate, ASCIILiteral name, GstPad* target)
 {
     GstPad* pad;
-    GstPadTemplate* padTemplate = gst_static_pad_template_get(staticPadTemplate);
+    GRefPtr padTemplate = gst_static_pad_template_get(staticPadTemplate);
 
     if (target)
-        pad = gst_ghost_pad_new_from_template(name, target, padTemplate);
+        pad = gst_ghost_pad_new_from_template(name.characters(), target, padTemplate.get());
     else
-        pad = gst_ghost_pad_new_no_target_from_template(name, padTemplate);
-
-    gst_object_unref(padTemplate);
+        pad = gst_ghost_pad_new_no_target_from_template(name.characters(), padTemplate.get());
 
     return pad;
 }

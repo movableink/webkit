@@ -68,7 +68,7 @@ inline bool webkitGstCheckVersion(guint major, guint minor, guint micro)
 #define GST_AUDIO_CAPS_TYPE_PREFIX  "audio/"
 #define GST_TEXT_CAPS_TYPE_PREFIX   "text/"
 
-GstPad* webkitGstGhostPadFromStaticTemplate(GstStaticPadTemplate*, const gchar* name, GstPad* target);
+WARN_UNUSED_RETURN GstPad* webkitGstGhostPadFromStaticTemplate(GstStaticPadTemplate*, ASCIILiteral name, GstPad* target);
 #if ENABLE(VIDEO)
 bool getVideoSizeAndFormatFromCaps(const GstCaps*, WebCore::IntSize&, GstVideoFormat&, int& pixelAspectRatioNumerator, int& pixelAspectRatioDenominator, int& stride, double& frameRate, PlatformVideoColorSpace&);
 std::optional<FloatSize> getVideoResolutionFromCaps(const GstCaps*);
