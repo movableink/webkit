@@ -6915,6 +6915,69 @@ void WebViewImpl::fulfillDeferredImageAnalysisOverlayViewHierarchyTask()
 
 #endif // ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
 
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+
+void WebViewImpl::updateFixedContentExtensionViews()
+{
+    if (!page().protectedPreferences()->contentInsetBackgroundFillEnabled())
+        return;
+
+    RetainPtr webView = view();
+    auto& fixedContainerEdges = [webView _coreFixedContainerEdges];
+    auto insets = obscuredContentInsets();
+    auto bounds = [webView bounds];
+
+    auto updateExtensionView = [&](BoxSide side, Function<NSRect()>&& computeFrame) {
+        BOOL needsView = insets.at(side) > 0 && fixedContainerEdges.fixedEdges.at(side);
+        RetainPtr extensionView = m_fixedColorExtensionViews.at(side);
+        if (needsView) {
+            if (!extensionView) {
+                extensionView = adoptNS([NSView new]);
+                [extensionView setWantsLayer:YES];
+                [extensionView layer].name = [NSString stringWithFormat:@"Fixed color extension fill (%s)", [side] {
+                    switch (side) {
+                    case BoxSide::Top:
+                        return "Top";
+                    case BoxSide::Right:
+                        return "Right";
+                    case BoxSide::Bottom:
+                        return "Bottom";
+                    case BoxSide::Left:
+                        return "Left";
+                    default:
+                        ASSERT_NOT_REACHED();
+                        return "";
+                    }
+                }()];
+                m_fixedColorExtensionViews.setAt(side, extensionView);
+                [webView addSubview:extensionView.get()];
+            }
+            RetainPtr predominantColor = cocoaColorOrNil(fixedContainerEdges.predominantColors.at(side));
+            [extensionView setBackgroundColor:predominantColor.get() ?: [webView underPageBackgroundColor]];
+            [extensionView setFrame:computeFrame()];
+        }
+        [extensionView setHidden:!needsView];
+    };
+
+    updateExtensionView(BoxSide::Top, [insets, bounds] {
+        return NSMakeRect(insets.left(), 0, NSWidth(bounds) - insets.left(), insets.top());
+    });
+
+    updateExtensionView(BoxSide::Left, [insets, bounds] {
+        return NSMakeRect(0, 0, insets.left(), NSHeight(bounds));
+    });
+
+    updateExtensionView(BoxSide::Right, [insets, bounds] {
+        return NSMakeRect(NSWidth(bounds) - insets.right(), 0, insets.right(), NSHeight(bounds));
+    });
+
+    updateExtensionView(BoxSide::Bottom, [insets, bounds] {
+        return NSMakeRect(insets.left(), NSHeight(bounds) - insets.bottom(), NSWidth(bounds) - insets.left(), insets.bottom());
+    });
+}
+
+#endif // ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+
 } // namespace WebKit
 
 #if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WebViewImplAdditions.mm>)

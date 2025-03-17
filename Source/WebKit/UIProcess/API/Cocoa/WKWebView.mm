@@ -1932,6 +1932,7 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
 
 #if PLATFORM(MAC) && ENABLE(CONTENT_INSET_BACKGROUND_FILL)
     _impl->updateContentInsetFillViews();
+    _impl->updateFixedContentExtensionViews();
 #endif
 
     auto maximumViewportInsetSize = WebCore::FloatSize(maximumViewportInset.left + additionalInsets.left() + maximumViewportInset.right, maximumViewportInset.top + additionalInsets.top() + maximumViewportInset.bottom);
@@ -2892,6 +2893,11 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
 #endif // PLATFORM(VISION)
 #endif // ENABLE(GAMEPAD)
 
+- (const WebCore::FixedContainerEdges&)_coreFixedContainerEdges
+{
+    return _fixedContainerEdges;
+}
+
 - (_WKRectEdge)_fixedContainerEdges
 {
     _WKRectEdge edges = _WKRectEdgeNone;
@@ -3023,6 +3029,10 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
         [self willChangeValueForKey:NSStringFromSelector(selector)];
 
     _fixedContainerEdges = edges;
+
+#if PLATFORM(MAC) && ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    _impl->updateFixedContentExtensionViews();
+#endif
 
     for (auto selector : changedSelectors)
         [self didChangeValueForKey:NSStringFromSelector(selector)];

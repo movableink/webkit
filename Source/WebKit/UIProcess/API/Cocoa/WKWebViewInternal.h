@@ -507,6 +507,8 @@ struct PerWebProcessState {
 - (void)_clearWarningViewIfForMainFrameNavigation;
 - (void)_clearBrowsingWarningIfForMainFrameNavigation;
 
+- (const WebCore::FixedContainerEdges&)_coreFixedContainerEdges;
+
 - (std::optional<BOOL>)_resolutionForShareSheetImmediateCompletionForTesting;
 
 - (void)_didAccessBackForwardList NS_DIRECT;
