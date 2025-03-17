@@ -1785,19 +1785,41 @@
     io_registry_get_root_entry
     io_service_close))
 
-(define (allow-mach-exceptions)
+(define (allow-mach-exceptions operation)
 #if HAVE(HARDENED_MACH_EXCEPTIONS)
     (when (equal? (param "CPU") "arm64")
         (with-filter (require-not (webcontent-process-launched))
-            (allow mach-message-send (kernel-mig-routine task_register_hardened_exception_handler)))
-        (allow mach-message-send (kernel-mig-routine thread_adopt_exception_handler)))
+            (allow operation (kernel-mig-routine task_register_hardened_exception_handler)))
+        (allow operation (kernel-mig-routine thread_adopt_exception_handler)))
     (when (not (equal? (param "CPU") "arm64"))
-        (allow mach-message-send (kernel-mig-routine thread_set_exception_ports))))
+        (allow operation (kernel-mig-routine thread_set_exception_ports))))
 #else
-    (allow mach-message-send (kernel-mig-routine thread_set_exception_ports)))
+    (allow operation (kernel-mig-routine thread_set_exception_ports)))
 #endif
 
-(if (and (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES") (defined? 'mach-kernel-endpoint))
+(when (defined? 'syscall-mig)
+    (deny syscall-mig)
+    (with-filter (require-not (lockdown-mode))
+        (allow-mach-exceptions syscall-mig)
+        (allow syscall-mig (kernel-mig-routines-blocked-in-lockdown-mode)))
+    (with-filter (lockdown-mode)
+        (deny syscall-mig (with telemetry) (kernel-mig-routines-blocked-in-lockdown-mode)))
+    (allow syscall-mig (kernel-mig-routines-in-use))
+#if HAVE(MACH_RANGE_CREATE)
+    (with-filter (require-not (webcontent-process-launched))
+        (when (defined? 'mach_vm_range_create)
+            (allow syscall-mig (kernel-mig-routine mach_vm_range_create))))
+#endif
+    (with-filter (require-not (state-flag "BlockIOKitInWebContentSandbox"))
+        (allow syscall-mig (kernel-mig-routines-downlevels))
+        (allow syscall-mig (kernel-mig-routines-iokit))
+        (allow syscall-mig (kernel-mig-routines-iokit-service)))
+    (with-filter (state-flag "BlockIOKitInWebContentSandbox")
+        (deny syscall-mig (with no-report) (kernel-mig-routines-iokit-service)))
+    (with-filter (require-all (require-not (lockdown-mode)) (require-not (state-flag "BlockIOKitInWebContentSandbox")))
+        (allow syscall-mig (kernel-mig-routines-downlevels-blocked-in-lockdown-mode))))
+
+(if (and (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES") (and (defined? 'mach-kernel-endpoint) (not (defined? 'syscall-mig))))
     (allow mach-kernel-endpoint
         (apply-message-filter
             (deny mach-message-send)
@@ -1806,7 +1828,7 @@
             (with-filter (lockdown-mode)
                 (deny mach-message-send (with telemetry) (kernel-mig-routines-blocked-in-lockdown-mode)))
             (with-filter (require-not (lockdown-mode))
-                (allow-mach-exceptions))
+                (allow-mach-exceptions mach-message-send))
 
             (allow mach-message-send (kernel-mig-routines-in-use))
 #if !PLATFORM(MAC) || __MAC_OS_X_VERSION_MIN_REQUIRED <= 140000
