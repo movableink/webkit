@@ -434,9 +434,9 @@ void RenderImage::notifyFinished(CachedResource& newImage, const NetworkLoadMetr
     if (RefPtr image = dynamicDowncast<HTMLImageElement>(element())) {
         page().didFinishLoadingImageForElement(*image);
 #if HAVE(SUPPORT_HDR_DISPLAY)
-        if (!document().hasPaintedHDRContent()) {
-            if (cachedImage() && cachedImage()->hasPaintedHDRContent())
-                document().setHasPaintedHDRContent();
+        if (!document().hasHDRContent()) {
+            if (cachedImage() && cachedImage()->hasHDRContent())
+                document().setHasHDRContent();
         }
 #endif
     }

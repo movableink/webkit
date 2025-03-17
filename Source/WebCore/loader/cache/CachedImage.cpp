@@ -363,9 +363,9 @@ void CachedImage::computeIntrinsicDimensions(Length& intrinsicWidth, Length& int
         image->computeIntrinsicDimensions(intrinsicWidth, intrinsicHeight, intrinsicRatio);
 }
 
-bool CachedImage::hasPaintedHDRContent() const
+bool CachedImage::hasHDRContent() const
 {
-    return m_image && m_image->hasPaintedHDRContent();
+    return m_image && m_image->hasHDRContent();
 }
 
 void CachedImage::notifyObservers(const IntRect* changeRect)

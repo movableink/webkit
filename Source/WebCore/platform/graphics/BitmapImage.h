@@ -72,7 +72,7 @@ public:
     FloatSize size(ImageOrientation orientation = ImageOrientation::Orientation::FromImage) const final { return m_source->size(orientation); }
     FloatSize sourceSize(ImageOrientation orientation = ImageOrientation::Orientation::FromImage) const { return m_source->sourceSize(orientation); }
     DestinationColorSpace colorSpace() final { return m_source->colorSpace(); }
-    bool hasPaintedHDRContent() const final { return hasPaintedHDRContentForTesting() || m_source->headroom() > Headroom::None; }
+    bool hasHDRContent() const final { return hasHDRContentForTesting() || m_source->headroom() > Headroom::None; }
     ImageOrientation orientation() const final { return m_source->orientation(); }
     unsigned frameCount() const final { return m_source->frameCount(); }
 #if ASSERT_ENABLED
@@ -91,8 +91,8 @@ public:
     bool isAsyncDecodingEnabledForTesting() const { return m_source->isAsyncDecodingEnabledForTesting(); }
     void setMinimumDecodingDurationForTesting(Seconds duration) { m_source->setMinimumDecodingDurationForTesting(duration); }
     void setClearDecoderAfterAsyncFrameRequestForTesting(bool enabled) { m_source->setClearDecoderAfterAsyncFrameRequestForTesting(enabled); }
-    void setHasPaintedHDRContentForTesting() { m_source->setHasPaintedHDRContentForTesting(); }
-    bool hasPaintedHDRContentForTesting() const { return m_source->hasPaintedHDRContentForTesting(); }
+    void setHasHDRContentForTesting() { m_source->setHasHDRContentForTesting(); }
+    bool hasHDRContentForTesting() const { return m_source->hasHDRContentForTesting(); }
     unsigned decodeCountForTesting() const { return m_source->decodeCountForTesting(); }
     unsigned blankDrawCountForTesting() const { return m_source->blankDrawCountForTesting(); }
 

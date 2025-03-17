@@ -72,11 +72,11 @@ void LegacyRenderSVGImage::notifyFinished(CachedResource& newImage, const Networ
         return;
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
-    if (!document().hasPaintedHDRContent()) {
+    if (!document().hasHDRContent()) {
         CachedImage* cachedImage = imageResource().cachedImage();
 
-        if (cachedImage && cachedImage->hasPaintedHDRContent()) {
-            document().setHasPaintedHDRContent();
+        if (cachedImage && cachedImage->hasHDRContent()) {
+            document().setHasHDRContent();
             page().didFinishLoadingImageForSVGImage(imageElement());
         }
     }

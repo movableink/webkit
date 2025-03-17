@@ -111,8 +111,8 @@ public:
     virtual void setClearDecoderAfterAsyncFrameRequestForTesting(bool) { RELEASE_ASSERT_NOT_REACHED(); }
     virtual void setAsyncDecodingEnabledForTesting(bool) { RELEASE_ASSERT_NOT_REACHED(); }
     virtual bool isAsyncDecodingEnabledForTesting() const { return false; }
-    virtual void setHasPaintedHDRContentForTesting() { RELEASE_ASSERT_NOT_REACHED(); }
-    virtual bool hasPaintedHDRContentForTesting() const { return false; }
+    virtual void setHasHDRContentForTesting() { RELEASE_ASSERT_NOT_REACHED(); }
+    virtual bool hasHDRContentForTesting() const { return false; }
 
     virtual void dump(WTF::TextStream&) const { }
 };

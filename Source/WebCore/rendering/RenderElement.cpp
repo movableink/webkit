@@ -1715,9 +1715,9 @@ void RenderElement::didRemoveCachedImageClient(CachedImage& cachedImage)
 void RenderElement::imageContentChanged(CachedImage& cachedImage)
 {
 #if HAVE(SUPPORT_HDR_DISPLAY)
-    if (!document().hasPaintedHDRContent()) {
-        if (cachedImage.hasPaintedHDRContent())
-            document().setHasPaintedHDRContent();
+    if (!document().hasHDRContent()) {
+        if (cachedImage.hasHDRContent())
+            document().setHasHDRContent();
     }
 #else
     UNUSED_PARAM(cachedImage);

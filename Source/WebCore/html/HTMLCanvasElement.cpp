@@ -370,7 +370,7 @@ CanvasRenderingContext2D* HTMLCanvasElement::createContext2d(const String& type,
 
 #if ENABLE(PIXEL_FORMAT_RGBA16F) && HAVE(SUPPORT_HDR_DISPLAY)
     if (m_context->pixelFormat() == ImageBufferPixelFormat::RGBA16F)
-        document().setHasPaintedHDRContent();
+        document().setHasHDRContent();
 #endif
 
 #if USE(CA) || USE(SKIA)

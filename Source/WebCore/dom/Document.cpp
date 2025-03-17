@@ -7713,12 +7713,12 @@ bool Document::hasSVGRootNode() const
 }
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
-bool Document::canDrawHDRContent() const
+bool Document::drawsHDRContent() const
 {
     if (!(settings().supportHDRDisplayEnabled() || settings().canvasPixelFormatEnabled()))
         return false;
 
-    if (!hasPaintedHDRContent())
+    if (!hasHDRContent())
         return false;
 
     if (RefPtr frameView = view())

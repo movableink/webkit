@@ -121,7 +121,7 @@ public:
     WEBCORE_EXPORT RefPtr<FragmentedSharedBuffer> protectedData() const;
 
     virtual DestinationColorSpace colorSpace();
-    virtual bool hasPaintedHDRContent() const { return false; }
+    virtual bool hasHDRContent() const { return false; }
 
     // Animation begins whenever someone draws the image, so startAnimation() is not normally called.
     // It will automatically pause once all observers no longer want to render the image anywhere.

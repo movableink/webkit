@@ -151,9 +151,9 @@ public:
         : m_backing(inBacking)
     {
 #if HAVE(SUPPORT_HDR_DISPLAY)
-        if (m_backing.renderer().document().canDrawHDRContent()) {
-            m_hdrContent = RequestState::Unknown;
-            m_isRenderElementWithHDR = RequestState::Unknown;
+        if (m_backing.renderer().document().drawsHDRContent()) {
+            m_hasHDRContent = RequestState::Unknown;
+            m_rendererHasHDRContent = RequestState::Unknown;
         }
 #endif
     }
@@ -169,7 +169,7 @@ public:
     bool isPaintsContentSatisfied() const
     {
 #if HAVE(SUPPORT_HDR_DISPLAY)
-        if (m_hdrContent == RequestState::Unknown)
+        if (m_hasHDRContent == RequestState::Unknown)
             return false;
 #endif
         return m_content != RequestState::Unknown;
@@ -186,14 +186,14 @@ public:
     bool paintsHDRContent()
     {
         determinePaintsContent();
-        return m_hdrContent == RequestState::True;
+        return m_hasHDRContent == RequestState::True;
     }
 #endif
 
     bool isContentsTypeSatisfied() const
     {
 #if HAVE(SUPPORT_HDR_DISPLAY)
-        if (m_isRenderElementWithHDR == RequestState::Unknown)
+        if (m_rendererHasHDRContent == RequestState::Unknown)
             return false;
 #endif
         return m_contentsType != ContentsType::Unknown;
@@ -219,10 +219,10 @@ public:
     }
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
-    bool isRenderElementWithHDR()
+    bool rendererHasHDRContent()
     {
         determineContentsType();
-        return m_isRenderElementWithHDR == RequestState::True;
+        return m_rendererHasHDRContent == RequestState::True;
     }
 #endif
 
@@ -230,8 +230,8 @@ public:
     RequestState m_boxDecorations { RequestState::Unknown };
     RequestState m_content { RequestState::Unknown };
 #if HAVE(SUPPORT_HDR_DISPLAY)
-    RequestState m_hdrContent { RequestState::DontCare };
-    RequestState m_isRenderElementWithHDR { RequestState::DontCare };
+    RequestState m_hasHDRContent { RequestState::DontCare };
+    RequestState m_rendererHasHDRContent { RequestState::DontCare };
 #endif
 
     ContentsType m_contentsType { ContentsType::Unknown };
@@ -255,7 +255,7 @@ void PaintedContentsInfo::determinePaintsContent()
     m_backing.determinePaintsContent(contentRequest);
     m_content = contentRequest.hasPaintedContent;
 #if HAVE(SUPPORT_HDR_DISPLAY)
-    m_hdrContent = contentRequest.hasPaintedHDRContent;
+    m_hasHDRContent = contentRequest.hasHDRContent;
 #endif
 }
 
@@ -274,8 +274,8 @@ void PaintedContentsInfo::determineContentsType()
         m_contentsType = ContentsType::Painted;
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
-    if (m_isRenderElementWithHDR == RequestState::Unknown)
-        m_isRenderElementWithHDR = m_backing.isRenderElementWithHDR() ? RequestState::True : RequestState::False;
+    if (m_rendererHasHDRContent == RequestState::Unknown)
+        m_rendererHasHDRContent = m_backing.rendererHasHDRContent() ? RequestState::True : RequestState::False;
 #endif
 }
 
@@ -2024,7 +2024,7 @@ void RenderLayerBacking::updateDrawsContent(PaintedContentsInfo& contentsInfo)
         m_backgroundLayer->setDrawsContent(m_backgroundLayerPaintsFixedRootBackground ? hasPaintedContent : contentsInfo.paintsBoxDecorations());
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
-    if (contentsInfo.paintsHDRContent() || contentsInfo.isRenderElementWithHDR())
+    if (contentsInfo.paintsHDRContent() || contentsInfo.rendererHasHDRContent())
         m_graphicsLayer->setDrawsHDRContent(true);
 #endif
 }
@@ -3069,7 +3069,7 @@ void RenderLayerBacking::determinePaintsContent(RenderLayer::PaintedContentReque
     bool shouldScanDescendants = m_owningLayer.hasVisibleContent();
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
-    if (!request.isPaintedHDRContentSatisfied())
+    if (!request.isHDRContentSatisfied())
         shouldScanDescendants = true;
 #endif
 
@@ -3099,8 +3099,8 @@ void RenderLayerBacking::determinePaintsContent(RenderLayer::PaintedContentReque
         request.hasPaintedContent = RequestState::False;
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
-    if (request.hasPaintedHDRContent == RequestState::Unknown)
-        request.hasPaintedHDRContent = RequestState::False;
+    if (request.hasHDRContent == RequestState::Unknown)
+        request.hasHDRContent = RequestState::False;
 #endif
 }
 
@@ -3213,7 +3213,7 @@ void RenderLayerBacking::determineNonCompositedLayerDescendantsPaintedContent(Re
         }
 #if HAVE(SUPPORT_HDR_DISPLAY)
         if (localRequest.probablyHasPaintedContent())
-            request.hasPaintedHDRContent = localRequest.hasPaintedHDRContent;
+            request.hasHDRContent = localRequest.hasHDRContent;
 #endif
         return (hasPaintingDescendant && request.isSatisfied()) ? LayerTraversal::Stop : LayerTraversal::Continue;
     });
@@ -3365,9 +3365,9 @@ bool RenderLayerBacking::isUnscaledBitmapOnly() const
 }
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
-bool RenderLayerBacking::isRenderElementWithHDR() const
+bool RenderLayerBacking::rendererHasHDRContent() const
 {
-    return m_owningLayer.isRenderElementWithHDR();
+    return m_owningLayer.rendererHasHDRContent();
 }
 #endif
 

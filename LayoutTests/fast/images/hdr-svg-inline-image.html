@@ -24,7 +24,7 @@
         var image = new Image;
         image.onload = (() => {
             if (window.internals)
-                internals.setHasPaintedHDRContentForTesting(image);
+                internals.setHasHDRContentForTesting(image);
 
             var imageElement = document.querySelector("svg.image-box image");
             imageElement.setAttribute("href", image.src);
