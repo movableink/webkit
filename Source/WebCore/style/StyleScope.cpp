@@ -1045,7 +1045,7 @@ bool Scope::invalidateForPositionTryFallbacks(LayoutDependencyUpdateContext& con
     bool invalidated = false;
 
     for (auto& box : m_document->renderView()->positionTryBoxes()) {
-        if (!AnchorPositionEvaluator::overflowsContainingBlock(box))
+        if (!AnchorPositionEvaluator::overflowsInsetModifiedContainingBlock(box))
             continue;
 
         CheckedPtr element = box.element();

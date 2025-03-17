@@ -111,7 +111,7 @@ public:
     static bool isLayoutTimeAnchorPositioned(const RenderStyle&);
     static CSSPropertyID resolvePositionTryFallbackProperty(CSSPropertyID, WritingMode, const BuilderPositionTryFallback&);
 
-    static bool overflowsContainingBlock(const RenderBox& anchoredBox);
+    static bool overflowsInsetModifiedContainingBlock(const RenderBox& anchoredBox);
 
 private:
     static AnchorElements findAnchorsForAnchorPositionedElement(const Element&, const UncheckedKeyHashSet<AtomString>& anchorNames, const AnchorsForAnchorName&);

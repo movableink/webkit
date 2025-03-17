@@ -33,6 +33,7 @@
 #include "Element.h"
 #include "Node.h"
 #include "NodeRenderStyle.h"
+#include "PositionedLayoutConstraints.h"
 #include "RenderBoxInlines.h"
 #include "RenderBlock.h"
 #include "RenderBoxModelObjectInlines.h"
@@ -1085,14 +1086,19 @@ CSSPropertyID AnchorPositionEvaluator::resolvePositionTryFallbackProperty(CSSPro
     return propertyID;
 }
 
-bool AnchorPositionEvaluator::overflowsContainingBlock(const RenderBox& anchoredBox)
+bool AnchorPositionEvaluator::overflowsInsetModifiedContainingBlock(const RenderBox& anchoredBox)
 {
-    auto containingBlockRect = anchoredBox.containingBlock()->contentBoxRect();
+    if (!anchoredBox.isOutOfFlowPositioned())
+        return false;
 
-    auto marginRect = anchoredBox.marginBoxRect();
-    marginRect.moveBy(anchoredBox.location());
+    auto inlineConstraints = PositionedLayoutConstraints { anchoredBox, LogicalBoxAxis::Inline };
+    auto blockConstraints = PositionedLayoutConstraints { anchoredBox, LogicalBoxAxis::Block };
 
-    return !containingBlockRect.contains(marginRect);
+    auto anchorInlineSize = anchoredBox.logicalWidth() + anchoredBox.marginStart() + anchoredBox.marginEnd();
+    auto anchorBlockSize = anchoredBox.logicalHeight() + anchoredBox.marginBefore() + anchoredBox.marginAfter();
+
+    return inlineConstraints.insetModifiedContainingBlockSize() < anchorInlineSize
+        || blockConstraints.insetModifiedContainingBlockSize() < anchorBlockSize;
 }
 
 } // namespace WebCore::Style

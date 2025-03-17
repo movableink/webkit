@@ -1470,7 +1470,7 @@ std::optional<ResolvedStyle> TreeResolver::tryChoosePositionOption(const Styleab
     if (anchorPositionedState && anchorPositionedState->stage < AnchorPositionResolutionStage::Positioned)
         return ResolvedStyle { RenderStyle::clonePtr(*existingStyle) };
 
-    if (!AnchorPositionEvaluator::overflowsContainingBlock(*renderer)) {
+    if (!AnchorPositionEvaluator::overflowsInsetModifiedContainingBlock(*renderer)) {
         // We don't overflow anymore so this is a good style.
         options.chosen = true;
         return ResolvedStyle { RenderStyle::clonePtr(*existingStyle) };
