@@ -143,6 +143,7 @@ void RemoteAudioDestinationProxy::stopRenderingThread()
     m_renderSemaphore.signal();
     renderThread->waitForCompletion();
     m_renderThread = nullptr;
+    m_shouldStopThread = false;
 
     if (m_isRealtimeThread) {
         ASSERT(s_realtimeThreadCount);
