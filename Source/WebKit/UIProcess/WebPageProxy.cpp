@@ -13290,6 +13290,7 @@ void WebPageProxy::serializeAndWrapCryptoKey(IPC::Connection& connection, WebCor
     auto key = WebCore::CryptoKey::create(WTFMove(keyData));
     MESSAGE_CHECK_COMPLETION_BASE(key, connection, completionHandler(std::nullopt));
     MESSAGE_CHECK_COMPLETION_BASE(key->isValid(), connection, completionHandler(std::nullopt));
+    MESSAGE_CHECK_COMPLETION_BASE(key->algorithmIdentifier() != CryptoAlgorithmIdentifier::DEPRECATED_SHA_224, connection, completionHandler(std::nullopt));
 
     auto serializedKey = WebCore::SerializedScriptValue::serializeCryptoKey(*key);
     wrapCryptoKey(WTFMove(serializedKey), WTFMove(completionHandler));

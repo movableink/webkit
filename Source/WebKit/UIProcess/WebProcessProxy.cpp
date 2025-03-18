@@ -2842,6 +2842,7 @@ void WebProcessProxy::serializeAndWrapCryptoKey(WebCore::CryptoKeyData&& keyData
     auto key = WebCore::CryptoKey::create(WTFMove(keyData));
     MESSAGE_CHECK_COMPLETION(key, completionHandler(std::nullopt));
     MESSAGE_CHECK_COMPLETION(key->isValid(), completionHandler(std::nullopt));
+    MESSAGE_CHECK_COMPLETION(key->algorithmIdentifier() != CryptoAlgorithmIdentifier::DEPRECATED_SHA_224, completionHandler(std::nullopt));
 
     auto serializedKey = WebCore::SerializedScriptValue::serializeCryptoKey(*key);
     wrapCryptoKey(WTFMove(serializedKey), WTFMove(completionHandler));
