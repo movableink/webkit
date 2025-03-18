@@ -86,7 +86,7 @@ void webKitTextCombinerHandleCaps(WebKitTextCombiner* combiner, GstPad* pad, con
             gst_pad_link(srcPad.get(), internalPad.get());
         } // Else: pipeline is already correct.
     } else if (gst_caps_can_intersect(cea608Caps.get(), caps)) {
-        if (!isGStreamerPluginAvailable("rsclosedcaption") || !isGStreamerPluginAvailable("closedcaption")) {
+        if (!isGStreamerPluginAvailable("rsclosedcaption"_s) || !isGStreamerPluginAvailable("closedcaption"_s)) {
             WTFLogAlways("GStreamer closedcaption plugins are missing. Please install gst-plugins-bad and gst-plugins-rs");
             return;
         }
@@ -217,7 +217,7 @@ static void webkit_text_combiner_class_init(WebKitTextCombinerClass* klass)
 GstElement* webkitTextCombinerNew()
 {
     // The combiner relies on webvttenc, fail early if it's not there.
-    if (!isGStreamerPluginAvailable("subenc")) {
+    if (!isGStreamerPluginAvailable("subenc"_s)) {
         WTFLogAlways("WebKit wasn't able to find a WebVTT encoder. Subtitles handling will be degraded unless gst-plugins-bad is installed.");
         return nullptr;
     }

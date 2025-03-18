@@ -227,7 +227,7 @@ bool webKitGLVideoSinkProbePlatform()
     initializeDMABufAvailability();
 #endif
 
-    return isGStreamerPluginAvailable("app") && isGStreamerPluginAvailable("opengl");
+    return isGStreamerPluginAvailable("app"_s) && isGStreamerPluginAvailable("opengl"_s);
 }
 
 #undef GST_CAT_DEFAULT

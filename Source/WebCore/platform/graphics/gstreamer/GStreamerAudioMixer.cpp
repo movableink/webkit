@@ -32,7 +32,7 @@ GST_DEBUG_CATEGORY_STATIC(webkit_media_gst_audio_mixer_debug);
 
 bool GStreamerAudioMixer::isAvailable()
 {
-    return isGStreamerPluginAvailable("inter") && isGStreamerPluginAvailable("audiomixer");
+    return isGStreamerPluginAvailable("inter"_s) && isGStreamerPluginAvailable("audiomixer"_s);
 }
 
 GStreamerAudioMixer& GStreamerAudioMixer::singleton()
