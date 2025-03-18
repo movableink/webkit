@@ -119,7 +119,7 @@ static bool isEmptyOriginDirectory(const String& directory)
     if (children.isEmpty())
         return true;
 
-    if (children.size() >= 2)
+    if (children.size() > 2)
         return false;
 
     HashSet<String> invalidFileNames {
@@ -139,7 +139,7 @@ static void deleteEmptyOriginDirectory(const String& directory)
         return;
 
     if (isEmptyOriginDirectory(directory))
-        FileSystem::deleteFile(originFilePath(directory));
+        FileSystem::deleteNonEmptyDirectory(directory);
 
     FileSystem::deleteEmptyDirectory(directory);
     FileSystem::deleteEmptyDirectory(FileSystem::parentPath(directory));
