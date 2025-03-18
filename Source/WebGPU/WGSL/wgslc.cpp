@@ -73,7 +73,6 @@ void CommandLine::parseArguments(int argc, char** argv)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
         const char* arg = argv[i];
-#pragma clang diagnostic pop
         if (!strcmp(arg, "-h") || !strcmp(arg, "--help"))
             printUsageStatement(true);
 
@@ -91,6 +90,7 @@ void CommandLine::parseArguments(int argc, char** argv)
             m_dumpGeneratedCode = true;
             continue;
         }
+#pragma clang diagnostic pop
 
         if (!m_file)
             m_file = arg;
@@ -175,8 +175,11 @@ static int runWGSL(const CommandLine& options)
     if (options.dumpASTAtEnd())
         WGSL::AST::dumpAST(shaderModule);
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
     if (options.dumpGeneratedCode())
         printf("%s", msl.utf8().data());
+#pragma clang diagnostic pop
 
     return EXIT_SUCCESS;
 }
