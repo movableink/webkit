@@ -496,11 +496,12 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     // This will be in a race with the closing of the Launch Services connection, so call it synchronously here.
     // The cost of calling this should be small, and it is not expected to have any impact on performance.
     _LSSetApplicationInformationItem(kLSDefaultSessionID, _LSGetCurrentApplicationASN(), _kLSPersistenceSuppressRelaunchAtLoginKey, kCFBooleanTrue, nullptr);
-#endif
 
-#if PLATFORM(MAC)
     // App nap must be manually enabled when not running the NSApplication run loop.
     __CFRunLoopSetOptionsReason(__CFRunLoopOptionsEnableAppNap, CFSTR("Finished checkin as application - enable app nap"));
+
+    // Initialize the shared application so method calls using `NSApp` are not no-ops.
+    [NSApplication sharedApplication];
 #endif
 
 #if !ENABLE(CFPREFS_DIRECT_MODE)
