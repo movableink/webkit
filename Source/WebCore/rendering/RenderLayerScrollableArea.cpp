@@ -119,9 +119,6 @@ void RenderLayerScrollableArea::clear()
     destroyScrollbar(ScrollbarOrientation::Horizontal);
     destroyScrollbar(ScrollbarOrientation::Vertical);
 
-    if (RefPtr scrollingCoordinator = renderer.protectedPage()->scrollingCoordinator())
-        scrollingCoordinator->willDestroyScrollableArea(*this);
-
     clearScrollCorner();
     clearResizer();
 }
