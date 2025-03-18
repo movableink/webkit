@@ -436,10 +436,10 @@ ALWAYS_INLINE FloatRect Font::boundsForGlyph(Glyph glyph) const
 ALWAYS_INLINE Vector<FloatRect, Font::inlineGlyphRunCapacity> Font::boundsForGlyphs(std::span<const Glyph> glyphs) const
 {
     const auto glyphCount = glyphs.size();
-    if (!glyphCount)
+    if (UNLIKELY(!glyphCount))
         return { };
 
-    if (glyphCount == 1)
+    if (UNLIKELY(glyphCount == 1))
         return { boundsForGlyph(glyphs[0]) };
 
     Vector<Glyph, inlineGlyphRunCapacity> glyphsNeedingMeasurement;
