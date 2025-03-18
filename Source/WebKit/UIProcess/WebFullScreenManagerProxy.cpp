@@ -229,6 +229,9 @@ Awaitable<bool> WebFullScreenManagerProxy::enterFullScreen(IPC::Connection& conn
         enterFullScreenForOwnerElementsInOtherProcesses(frameID, WTFMove(completionHandler));
     } };
 
+    if (RefPtr page = m_page.get(); page && page->preferences().siteIsolationEnabled())
+        co_await page->nextPresentationUpdate();
+
     co_return true;
 }
 
