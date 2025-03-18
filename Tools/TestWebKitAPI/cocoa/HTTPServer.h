@@ -85,7 +85,7 @@ private:
 struct HTTPResponse {
     enum class Behavior : uint8_t {
         SendResponseNormally,
-        TerminateConnectionAfterReceivingResponse,
+        TerminateConnectionAfterReceivingRequest,
         NeverSendResponse
     };
 

@@ -404,7 +404,7 @@ TEST(WKWebExtensionAPIWebNavigation, ErrorOccurredEventDuringProvisionalLoad)
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, "<iframe src='/frame.html'></iframe>"_s } },
-        { "/frame.html"_s, { HTTPResponse::Behavior::TerminateConnectionAfterReceivingResponse } },
+        { "/frame.html"_s, { HTTPResponse::Behavior::TerminateConnectionAfterReceivingRequest } },
     }, TestWebKitAPI::HTTPServer::Protocol::Http);
 
     auto *backgroundScript = Util::constructScript(@[
@@ -667,7 +667,7 @@ TEST(WKWebExtensionAPIWebNavigation, ErrorOccurred)
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, "<iframe src='/frame.html'></iframe>"_s } },
-        { "/frame.html"_s, { HTTPResponse::Behavior::TerminateConnectionAfterReceivingResponse } },
+        { "/frame.html"_s, { HTTPResponse::Behavior::TerminateConnectionAfterReceivingRequest } },
     }, TestWebKitAPI::HTTPServer::Protocol::Http);
 
     auto *backgroundScript = Util::constructScript(@[

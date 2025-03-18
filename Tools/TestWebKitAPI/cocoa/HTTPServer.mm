@@ -421,7 +421,7 @@ void HTTPServer::respondToRequests(Connection connection, Ref<RequestData> reque
         }
 
         switch (response.behavior) {
-        case HTTPResponse::Behavior::TerminateConnectionAfterReceivingResponse:
+        case HTTPResponse::Behavior::TerminateConnectionAfterReceivingRequest:
             return connection.terminate();
         case HTTPResponse::Behavior::SendResponseNormally:
             return connection.send(response.serialize(), [connection, requestData] {

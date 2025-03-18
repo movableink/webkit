@@ -1396,7 +1396,7 @@ TEST(SiteIsolation, ProvisionalLoadFailure)
 {
     HTTPServer server({
         { "/example"_s, { "<iframe src='https://webkit.org/webkit'></iframe>"_s } },
-        { "/webkit"_s, { HTTPResponse::Behavior::TerminateConnectionAfterReceivingResponse } },
+        { "/webkit"_s, { HTTPResponse::Behavior::TerminateConnectionAfterReceivingRequest } },
         { "/apple"_s,  { "hello"_s } }
     }, HTTPServer::Protocol::HttpsProxy);
 
@@ -2446,7 +2446,7 @@ TEST(SiteIsolation, NavigateOpenerToProvisionalNavigationFailure)
     HTTPServer server({
         { "/example"_s, { "<script>w = window.open('https://webkit.org/webkit')</script>"_s } },
         { "/webkit"_s, { "hi"_s } },
-        { "/terminate"_s, { HTTPResponse::Behavior::TerminateConnectionAfterReceivingResponse } }
+        { "/terminate"_s, { HTTPResponse::Behavior::TerminateConnectionAfterReceivingRequest } }
     }, HTTPServer::Protocol::HttpsProxy);
 
     auto [opener, opened] = openerAndOpenedViews(server);
@@ -2476,7 +2476,7 @@ TEST(SiteIsolation, OpenProvisionalFailure)
 {
     HTTPServer server({
         { "/example"_s, { "<script>w = window.open('https://webkit.org/webkit')</script>"_s } },
-        { "/webkit"_s, { HTTPResponse::Behavior::TerminateConnectionAfterReceivingResponse } }
+        { "/webkit"_s, { HTTPResponse::Behavior::TerminateConnectionAfterReceivingRequest } }
     }, HTTPServer::Protocol::HttpsProxy);
 
     auto [opener, opened] = openerAndOpenedViews(server, @"https://example.com/example", false);
@@ -2493,7 +2493,7 @@ TEST(SiteIsolation, NavigateIframeToProvisionalNavigationFailure)
         { "/redirect_to_example_terminate"_s, { 302, { { "Location"_s, "https://example.com/terminate"_s } }, "redirecting..."_s } },
         { "/redirect_to_webkit_terminate"_s, { 302, { { "Location"_s, "https://webkit.org/terminate"_s } }, "redirecting..."_s } },
         { "/redirect_to_apple_terminate"_s, { 302, { { "Location"_s, "https://apple.com/terminate"_s } }, "redirecting..."_s } },
-        { "/terminate"_s, { HTTPResponse::Behavior::TerminateConnectionAfterReceivingResponse } }
+        { "/terminate"_s, { HTTPResponse::Behavior::TerminateConnectionAfterReceivingRequest } }
     }, HTTPServer::Protocol::HttpsProxy);
 
     auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
@@ -2960,7 +2960,7 @@ TEST(SiteIsolation, ProvisionalLoadFailureOnCrossSiteRedirect)
         { "/example"_s, { "<iframe id='webkit_frame' src='https://webkit.org/webkit'></iframe>"_s } },
         { "/webkit"_s, { ""_s } },
         { "/redirect"_s, { 302, { { "Location"_s, "https://example.com/terminate"_s } }, "redirecting..."_s } },
-        { "/terminate"_s, { HTTPResponse::Behavior::TerminateConnectionAfterReceivingResponse } }
+        { "/terminate"_s, { HTTPResponse::Behavior::TerminateConnectionAfterReceivingRequest } }
     }, HTTPServer::Protocol::HttpsProxy);
 
     auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
