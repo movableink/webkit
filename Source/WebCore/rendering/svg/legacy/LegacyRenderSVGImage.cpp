@@ -71,16 +71,8 @@ void LegacyRenderSVGImage::notifyFinished(CachedResource& newImage, const Networ
     if (renderTreeBeingDestroyed())
         return;
 
-#if HAVE(SUPPORT_HDR_DISPLAY)
-    if (!document().hasHDRContent()) {
-        CachedImage* cachedImage = imageResource().cachedImage();
-
-        if (cachedImage && cachedImage->hasHDRContent()) {
-            document().setHasHDRContent();
-            page().didFinishLoadingImageForSVGImage(imageElement());
-        }
-    }
-#endif
+    if (RefPtr image = dynamicDowncast<SVGImageElement>(LegacyRenderSVGModelObject::element()))
+        page().didFinishLoadingImageForSVGImage(*image);
 
     LegacyRenderSVGModelObject::notifyFinished(newImage, metrics, loadWillContinueInAnotherProcess);
 }

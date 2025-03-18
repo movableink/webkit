@@ -6,25 +6,27 @@
         height: 200px;
         will-change: transform;
     }
-    .element {
-        width: 100px;
-        height: 100px;
+    .sdr {
+        background-image: url('../../fast/images/resources/green-400x400.png');
+    }
+    .hdr {
+        background-image: url('../../fast/images/resources/red-100x100.png');
+    }
+    .hdr-sdr {
+        background-image: url('../../fast/images/resources/red-100x100.png'), url('../../fast/images/resources/green-400x400.png');
+        background-repeat: no-repeat;
     }
 </style>
 <body>
     <pre id="layers">Layer tree goes here in DRT</pre>
     <div style="position: fixed; top: 10px; left: 10px;">
-        <img class="container">
+        <div class="container">&nbsp;</div>
     </div>
     <div style="position: fixed; top: 10px; left: 220px;">
-        <div class="container">
-            <img class="element">
-        </div>
+        <div class="container"></div>
     </div>
-    <div style="position: fixed; top: 10px; left: 440px;">
-        <div class="container">
-            <img class="element">
-        </div>
+    <div style="position: fixed; top: 10px; left: 430px;">
+        <div class="container"></div>
     </div>
     <script>
         if (window.internals && window.testRunner) {
@@ -42,9 +44,6 @@
                 return new Promise((resolve) => {
                     let image = new Image;
                     image.onload = (e) => {
-                        if (window.internals)
-                            internals.setHasHDRContentForTesting(image);
-
                         resolve({ width: image.width, height: image.height });
                     };
                     image.src = imageSource;
@@ -56,16 +55,14 @@
         (async () => {
             await Promise.all(loadImages());
 
-            const imageElements = document.querySelectorAll("img");
-
-            imageElements[0].src = images[0].src;
-            imageElements[1].src = images[1].src;
-            imageElements[2].src = images[1].src;
+            if (window.internals)
+                internals.setHasHDRContentForTesting(images[1]);
 
             const containerElements = document.querySelectorAll("div.container");
 
-            containerElements[0].style.backgroundImage = 'url(' + images[0].src + ')';
-            containerElements[1].style.borderImage = 'url(' + images[0].src + ') 30 fill';
+            containerElements[0].classList.add("sdr");
+            containerElements[1].classList.add("hdr");
+            containerElements[2].classList.add("hdr-sdr");
 
             if (window.testRunner) {
                 document.getElementById("layers").textContent = internals.layerTreeAsText(document);

@@ -4518,10 +4518,14 @@ fast/images/pagewide-play-pause-offscreen-animations.html [ Pass ]
 # Only applicable on platforms with HDR support
 compositing/hdr/hdr-basic-canvas.html [ Pass ]
 compositing/hdr/hdr-basic-image.html [ Pass ]
-compositing/hdr/hdr-css-image.html [ Pass ]
+compositing/hdr/hdr-background-image.html [ Pass ]
+compositing/hdr/hdr-border-image.html [ Pass ]
+compositing/hdr/hdr-pseudo-before-image.html [ Pass ]
 compositing/hdr/hdr-svg-inline-image.html [ Pass ]
 fast/images/hdr-basic-image.html [ Pass ]
-fast/images/hdr-css-image.html [ Pass ]
+fast/images/hdr-background-image.html [ Pass ]
+fast/images/hdr-border-image.html [ Pass ]
+fast/images/hdr-pseudo-before-image.html [ Pass ]
 fast/images/hdr-svg-inline-image.html [ Pass ]
 
 # Re-enabling tests fixed by DocumentManager in iOS16+ rdar://102159271

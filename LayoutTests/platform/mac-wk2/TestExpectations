@@ -1495,10 +1495,14 @@ webkit.org/b/260113 [ arm64 ] http/wpt/webauthn/ctap-hid-failure.https.html [ Pa
 # Only applicable on platforms with HDR support
 [ Sequoia+ ] compositing/hdr/hdr-basic-canvas.html [ Pass ]
 [ Sequoia+ ] compositing/hdr/hdr-basic-image.html [ Pass ]
-[ Sequoia+ ] compositing/hdr/hdr-css-image.html [ Pass ]
+[ Sequoia+ ] compositing/hdr/hdr-background-image.html [ Pass ]
+[ Sequoia+ ] compositing/hdr/hdr-border-image.html [ Pass ]
+[ Sequoia+ ] compositing/hdr/hdr-pseudo-before-image.html [ Pass ]
 [ Sequoia+ ] compositing/hdr/hdr-svg-inline-image.html [ Pass ]
 [ Sequoia+ ] fast/images/hdr-basic-image.html [ Pass ]
-[ Sequoia+ ] fast/images/hdr-css-image.html [ Pass ]
+[ Sequoia+ ] fast/images/hdr-background-image.html [ Pass ]
+[ Sequoia+ ] fast/images/hdr-border-image.html [ Pass ]
+[ Sequoia+ ] fast/images/hdr-pseudo-before-image.html [ Pass ]
 [ Sequoia+ ] fast/images/hdr-svg-inline-image.html [ Pass ]
 
 # The direct image codepath is not used with the remote layer tree.

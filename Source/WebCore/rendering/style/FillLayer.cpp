@@ -396,6 +396,18 @@ bool FillLayer::hasImageWithAttachment(FillAttachment attachment) const
     return false;
 }
 
+bool FillLayer::hasHDRContent() const
+{
+    for (auto* layer = this; layer; layer = layer->m_next.get()) {
+        auto image = layer->image();
+        if (auto* cachedImage = image ? image->cachedImage() : nullptr) {
+            if (cachedImage->hasHDRContent())
+                return true;
+        }
+    }
+    return false;
+}
+
 TextStream& operator<<(TextStream& ts, FillSize fillSize)
 {
     return ts << fillSize.type << ' ' << fillSize.size;

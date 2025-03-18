@@ -5,18 +5,17 @@
     (GraphicsLayer
       (bounds 800.00 600.00)
       (contentsOpaque 1)
-      (children 2
+      (children 3
         (GraphicsLayer
           (position 10.00 10.00)
           (preserves3D 1)
           (children 1
             (GraphicsLayer
-              (bounds 200.00 204.00)
+              (bounds 200.00 200.00)
               (children 1
                 (GraphicsLayer
                   (bounds 200.00 200.00)
                   (drawsContent 1)
-                  (drawsHDRContent 1)
                 )
               )
             )
@@ -38,9 +37,25 @@
             )
           )
         )
+        (GraphicsLayer
+          (position 430.00 10.00)
+          (preserves3D 1)
+          (children 1
+            (GraphicsLayer
+              (bounds 200.00 200.00)
+              (children 1
+                (GraphicsLayer
+                  (bounds 200.00 200.00)
+                  (drawsContent 1)
+                  (drawsHDRContent 1)
+                )
+              )
+            )
+          )
+        )
       )
     )
   )
 )
-
+ 
 

@@ -5829,28 +5829,48 @@ static bool rendererHasHDRContent(const RenderElement& renderer)
             if (cachedImage->hasHDRContent())
                 return true;
         }
-        return false;
-    }
-
-    if (CheckedPtr imageRenderer = dynamicDowncast<LegacyRenderSVGImage>(renderer)) {
+    } else if (CheckedPtr imageRenderer = dynamicDowncast<LegacyRenderSVGImage>(renderer)) {
         if (auto* cachedImage = imageRenderer->imageResource().cachedImage()) {
             if (cachedImage->hasHDRContent())
                 return true;
         }
-        return false;
-    }
-
 #if ENABLE(PIXEL_FORMAT_RGBA16F)
-    if (CheckedPtr canavsRenderer = dynamicDowncast<RenderHTMLCanvas>(renderer)) {
+    } else if (CheckedPtr canavsRenderer = dynamicDowncast<RenderHTMLCanvas>(renderer)) {
         if (auto* renderingContext = canavsRenderer->canvasElement().renderingContext()) {
             if (renderingContext->isHDR())
                 return true;
         }
-        return false;
-    }
 #endif
+    }
 
-    return false;
+    auto styleHasHDRContent = [](const auto* style) {
+        if (!style)
+            return false;
+
+        if (style->hasBackgroundImage()) {
+            if (style->backgroundLayers().hasHDRContent())
+                return true;
+        }
+
+        if (style->hasBorderImage()) {
+            auto image = style->borderImage().image();
+            if (auto* cachedImage = image ? image->cachedImage() : nullptr) {
+                if (cachedImage->hasHDRContent())
+                    return true;
+            }
+        }
+
+        if (auto image = style->listStyleImage()) {
+            if (auto* cachedImage = image->cachedImage()) {
+                if (cachedImage->hasHDRContent())
+                    return true;
+            }
+        }
+
+        return false;
+    };
+
+    return styleHasHDRContent(&renderer.style());
 }
 #endif
 

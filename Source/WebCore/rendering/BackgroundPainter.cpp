@@ -485,9 +485,6 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
         if (!geometry.destinationRect.isEmpty() && (image = bgImage->image(backgroundObject ? backgroundObject : &m_renderer, geometry.tileSize, isFirstLine))) {
             context.setDrawLuminanceMask(bgLayer.maskMode() == MaskMode::Luminance);
 
-            // FIXME: <http://webkit.org/b/288163> Allow HDR display for background images when CSS HDR images are able to set GraphicsLayer::drawHDRContent.
-            auto headroom = Headroom::None;
-
             ImagePaintingOptions options = {
                 op == CompositeOperator::SourceOver ? bgLayer.compositeForPainting() : op,
                 bgLayer.blendMode(),
@@ -495,8 +492,7 @@ void BackgroundPainter::paintFillLayer(const Color& color, const FillLayer& bgLa
                 ImageOrientation::Orientation::FromImage,
                 m_renderer.chooseInterpolationQuality(context, *image, &bgLayer, geometry.tileSize),
                 document().settings().imageSubsamplingEnabled() ? AllowImageSubsampling::Yes : AllowImageSubsampling::No,
-                document().settings().showDebugBorders() ? ShowDebugBackground::Yes : ShowDebugBackground::No,
-                headroom
+                document().settings().showDebugBorders() ? ShowDebugBackground::Yes : ShowDebugBackground::No
             };
 
             auto drawResult = context.drawTiledImage(*image, geometry.destinationRect, toLayoutPoint(geometry.relativePhase()), geometry.tileSize, geometry.spaceSize, options);

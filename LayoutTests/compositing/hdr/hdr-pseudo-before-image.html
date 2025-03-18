@@ -1,49 +1,50 @@
 <!DOCTYPE html>
 <html>
-<meta name="fuzzy" content="maxDifference=0-14; totalPixels=0-120000" />
 <style>
     .container {
         width: 200px;
         height: 200px;
         will-change: transform;
     }
-    .element {
+    .sdr:before {
+        content: url('../../fast/images/resources/green-400x400.png');
+        width: 200px;
+        height: 200px;
+        display: inline-block;
+        overflow: hidden;
+    }
+    .hdr {
+        content: url('../../fast/images/resources/red-100x100.png');
         width: 100px;
         height: 100px;
+        display: inline-block;
+        overflow: hidden;
     }
 </style>
 <body>
+    <pre id="layers">Layer tree goes here in DRT</pre>
     <div style="position: fixed; top: 10px; left: 10px;">
-        <img class="container">
+        <div class="container">&nbsp;</div>
     </div>
     <div style="position: fixed; top: 10px; left: 220px;">
-        <div class="container">
-            <img class="element">
-        </div>
-    </div>
-    <div style="position: fixed; top: 10px; left: 440px;">
-        <div class="container">
-            <img class="element">
-        </div>
+        <div class="container"></div></div>
     </div>
     <script>
         if (window.internals && window.testRunner) {
             internals.clearMemoryCache();
             internals.setScreenContentsFormatsForTesting(["RGBA8", "RGBA16F"]);
+            testRunner.dumpAsText();
             testRunner.waitUntilDone();
         }
 
         let images = [];
-        let imageSources = ["resources/green-400x400.png", "resources/red-100x100.png"];
+        let imageSources = ["../../fast/images/resources/green-400x400.png", "../../fast/images/resources/red-100x100.png"];
 
         function loadImages() {
             return imageSources.map((imageSource) => {
                 return new Promise((resolve) => {
                     let image = new Image;
                     image.onload = (e) => {
-                        if (window.internals)
-                            internals.setHasHDRContentForTesting(image);
-
                         resolve({ width: image.width, height: image.height });
                     };
                     image.src = imageSource;
@@ -55,19 +56,18 @@
         (async () => {
             await Promise.all(loadImages());
 
-            const imageElements = document.querySelectorAll("img");
-
-            imageElements[0].src = images[0].src;
-            imageElements[1].src = images[1].src;
-            imageElements[2].src = images[1].src;
+            if (window.internals)
+                internals.setHasHDRContentForTesting(images[1]);
 
             const containerElements = document.querySelectorAll("div.container");
 
-            containerElements[0].style.backgroundImage = 'url(' + images[0].src + ')';
-            containerElements[1].style.borderImage = 'url(' + images[0].src + ') 30 fill';
+            containerElements[0].classList.add("sdr");
+            containerElements[1].classList.add("hdr");
 
-            if (window.testRunner)
+            if (window.testRunner) {
+                document.getElementById("layers").textContent = internals.layerTreeAsText(document);
                 testRunner.notifyDone();
+            }
         })();
     </script>
 </body>

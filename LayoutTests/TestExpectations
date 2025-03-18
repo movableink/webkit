@@ -2507,10 +2507,14 @@ fast/images/animated-jpegxl-loop-count.html [ Skip ]
 # Only applicable on platforms with HDR support
 compositing/hdr/hdr-basic-canvas.html [ Skip ]
 compositing/hdr/hdr-basic-image.html [ Skip ]
-compositing/hdr/hdr-css-image.html [ Skip ]
+compositing/hdr/hdr-background-image.html [ Skip ]
+compositing/hdr/hdr-border-image.html [ Skip ]
+compositing/hdr/hdr-pseudo-before-image.html [ Skip ]
 compositing/hdr/hdr-svg-inline-image.html [ Skip ]
 fast/images/hdr-basic-image.html [ Skip ]
-fast/images/hdr-css-image.html [ Skip ]
+fast/images/hdr-background-image.html [ Skip ]
+fast/images/hdr-border-image.html [ Skip ]
+fast/images/hdr-pseudo-before-image.html [ Skip ]
 fast/images/hdr-svg-inline-image.html [ Skip ]
 
 # Experimental H265 support.
