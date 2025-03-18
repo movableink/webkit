@@ -391,7 +391,7 @@ public:
     void computeStackCheckSize(bool& needsOverflowCheck, int32_t& checkSize);
 
     // SIMD
-    bool usesSIMD() { return m_info.usesSIMD(m_functionIndex); }
+    bool usesSIMD() { return m_info.usesSIMD(m_functionIndex) || m_didInlineSIMDFunction; }
     void notifyFunctionUsesSIMD() { ASSERT(m_info.usesSIMD(m_functionIndex)); }
     PartialResult WARN_UNUSED_RETURN addSIMDLoad(ExpressionType pointer, uint32_t offset, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addSIMDStore(ExpressionType value, ExpressionType pointer, uint32_t offset);
@@ -958,6 +958,7 @@ private:
     const CompilationMode m_compilationMode;
     const FunctionCodeIndex m_functionIndex;
     const unsigned m_loopIndexForOSREntry { UINT_MAX };
+    bool m_didInlineSIMDFunction { false };
 
     Procedure& m_proc;
     Vector<BasicBlock*> m_rootBlocks;
@@ -1355,10 +1356,10 @@ void OMGIRGenerator::insertEntrySwitch()
 {
     m_proc.setNumEntrypoints(m_rootBlocks.size());
 
-    Ref<B3::Air::PrologueGenerator> catchPrologueGenerator = createSharedTask<B3::Air::PrologueGeneratorFunction>([] (CCallHelpers& jit, B3::Air::Code& code) {
+    Ref<B3::Air::PrologueGenerator> catchPrologueGenerator = createSharedTask<B3::Air::PrologueGeneratorFunction>([didInlineSIMD = m_didInlineSIMDFunction] (CCallHelpers& jit, B3::Air::Code& code) {
         AllowMacroScratchRegisterUsage allowScratch(jit);
         jit.addPtr(CCallHelpers::TrustedImm32(-code.frameSize()), GPRInfo::callFrameRegister, CCallHelpers::stackPointerRegister);
-        jit.probe(tagCFunction<JITProbePtrTag>(code.usesSIMD() ? buildEntryBufferForCatchSIMD : buildEntryBufferForCatchNoSIMD), nullptr, code.usesSIMD() ? SavedFPWidth::SaveVectors : SavedFPWidth::DontSaveVectors);
+        jit.probe(tagCFunction<JITProbePtrTag>(code.usesSIMD() || didInlineSIMD ? buildEntryBufferForCatchSIMD : buildEntryBufferForCatchNoSIMD), nullptr, code.usesSIMD() ? SavedFPWidth::SaveVectors : SavedFPWidth::DontSaveVectors);
     });
 
     m_proc.code().setPrologueForEntrypoint(0, Ref<B3::Air::PrologueGenerator>(*m_prologueGenerator));
@@ -5450,6 +5451,9 @@ auto OMGIRGenerator::emitInlineDirectCall(FunctionCodeIndex calleeFunctionIndex,
 
     dataLogLnIf(WasmOMGIRGeneratorInternal::verboseInlining, "Inlining CallSiteIndex range: ", firstInlineCallSiteIndex, " -> ", lastInlineCallSiteIndex, " [", m_inlineDepth, "]");
 
+    // If we inlined a SIMD function (this handles transitively), mark ourselves as SIMD.
+    if (irGenerator.usesSIMD())
+        m_didInlineSIMDFunction = true;
 
     return { };
 }
