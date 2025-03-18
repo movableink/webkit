@@ -1318,10 +1318,11 @@ static void visitArguments(FunctionDefinitionWriter* writer, AST::CallExpression
 
 static void emitTextureDimensions(FunctionDefinitionWriter* writer, AST::CallExpression& call)
 {
+    const auto* vector = std::get_if<Types::Vector>(call.inferredType());
     const auto& get = [&](ASCIILiteral property) {
         writer->visit(call.arguments()[0]);
         writer->stringBuilder().append(".get_"_s, property, '(');
-        if (call.arguments().size() > 1) {
+        if (vector && call.arguments().size() > 1) {
             writer->stringBuilder().append("min("_s);
             writer->visit(call.arguments()[0]);
             writer->stringBuilder().append(".get_num_mip_levels(), uint("_s);
@@ -1332,7 +1333,6 @@ static void emitTextureDimensions(FunctionDefinitionWriter* writer, AST::CallExp
         writer->stringBuilder().append(')');
     };
 
-    const auto* vector = std::get_if<Types::Vector>(call.inferredType());
     if (!vector) {
         get("width"_s);
         return;
