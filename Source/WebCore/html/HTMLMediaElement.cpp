@@ -6793,7 +6793,7 @@ bool HTMLMediaElement::virtualHasPendingActivity() const
 
     // A paused media element may become a playing media element
     // if it was paused due to an interruption:
-    bool isPlayingOrPossbilyCouldPlay = [&] {
+    bool isPlayingOrPossiblyCouldPlay = [&] {
         if (isPlaying())
             return true;
 
@@ -6810,12 +6810,12 @@ bool HTMLMediaElement::virtualHasPendingActivity() const
     }();
 
     // * It is playing, and is audible to the user:
-    if (isPlayingOrPossbilyCouldPlay && canProduceAudio())
+    if (isPlayingOrPossiblyCouldPlay && canProduceAudio())
         return true;
 
     // If a media element is not directly observable by the user, it cannot
     // have pending activity if it does not have event listeners:
-    if (!hasEventListeners())
+    if (!hasEventListeners() && (!m_player || !m_player->isGatheringVideoFrameMetadata()))
         return false;
 
     // A media element has pending activity if it has event listeners and:
@@ -6826,7 +6826,7 @@ bool HTMLMediaElement::virtualHasPendingActivity() const
     // * It has a media engine and:
     if (m_player && m_player->hasMediaEngine()) {
         // * It is playing, and will thus fire "timeupdate" and "ended" events:
-        if (isPlayingOrPossbilyCouldPlay)
+        if (isPlayingOrPossiblyCouldPlay)
             return true;
 
         // * It is seeking, and will thus fire "seeked" events:

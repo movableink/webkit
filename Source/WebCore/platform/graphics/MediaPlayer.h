@@ -762,6 +762,7 @@ public:
     std::optional<VideoFrameMetadata> videoFrameMetadata();
     void startVideoFrameMetadataGathering();
     void stopVideoFrameMetadataGathering();
+    bool isGatheringVideoFrameMetadata() const { return m_isGatheringVideoFrameMetadata; }
 
     void playerContentBoxRectChanged(const LayoutRect&);
 
@@ -858,7 +859,7 @@ private:
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA) && ENABLE(ENCRYPTED_MEDIA)
     bool m_shouldContinueAfterKeyNeeded { false };
 #endif
-    bool m_isGatheringVideoFrameMetadata { false };
+    std::atomic<bool> m_isGatheringVideoFrameMetadata { false };
 
 #if HAVE(SPATIAL_TRACKING_LABEL)
     String m_defaultSpatialTrackingLabel;
