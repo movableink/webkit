@@ -101,8 +101,8 @@ messages -> WebProcessProxy WantsDispatchMessage {
 #endif
 
 #if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
-    CreateServiceWorkerDebuggable(WebCore::ServiceWorkerIdentifier identifier, URL url)
+    CreateServiceWorkerDebuggable(WebCore::ServiceWorkerIdentifier identifier, URL url, enum:bool WebCore::ServiceWorkerIsInspectable isInspectable) -> (bool shouldWaitForAutoInspection) Async
     DeleteServiceWorkerDebuggable(WebCore::ServiceWorkerIdentifier identifier)
-    SendMessageToInspector(WebCore::ServiceWorkerIdentifier identifier, String message));
+    SendMessageToInspector(WebCore::ServiceWorkerIdentifier identifier, String message)
 #endif
 }

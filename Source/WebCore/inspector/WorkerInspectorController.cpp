@@ -32,6 +32,7 @@
 #include "InstrumentingAgents.h"
 #include "JSExecState.h"
 #include "Page.h"
+#include "SWContextManager.h"
 #include "ServiceWorkerAgent.h"
 #include "ServiceWorkerGlobalScope.h"
 #include "WebHeapAgent.h"
@@ -112,20 +113,20 @@ void WorkerInspectorController::frontendInitialized()
         ensureDebuggerAgent().pause();
     }
 
-    if (m_isAutomaticInspection && m_frontendInitializedCallback)
-        m_frontendInitializedCallback();
-    m_frontendInitializedCallback = { };
+    if (m_isAutomaticInspection && is<ServiceWorkerGlobalScope>(m_globalScope)) {
+        auto serviceWorkerIdentifier = downcast<ServiceWorkerGlobalScope>(m_globalScope.get()).thread().identifier();
+        SWContextManager::singleton().stopRunningDebuggerTasksOnServiceWorker(serviceWorkerIdentifier);
+    }
 #endif
 }
 
-void WorkerInspectorController::connectFrontend(bool isAutomaticInspection, bool immediatelyPause, Function<void()>&& frontendInitializedCallback)
+void WorkerInspectorController::connectFrontend(bool isAutomaticInspection, bool immediatelyPause)
 {
     ASSERT(!m_frontendRouter->hasFrontends());
     ASSERT(!m_forwardingChannel);
 
     m_isAutomaticInspection = isAutomaticInspection;
     m_pauseAfterInitialization = immediatelyPause;
-    m_frontendInitializedCallback = WTFMove(frontendInitializedCallback);
 
     createLazyAgents();
 
@@ -147,7 +148,6 @@ void WorkerInspectorController::disconnectFrontend(Inspector::DisconnectReason r
 {
     m_isAutomaticInspection = false;
     m_pauseAfterInitialization = false;
-    m_frontendInitializedCallback = { };
 
     if (!m_frontendRouter->hasFrontends())
         return;

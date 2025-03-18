@@ -59,18 +59,17 @@ bool RemoteConnectionToTarget::setup(bool isAutomaticInspection, bool automatica
         RemoteInspector::singleton().setupFailed(targetIdentifier);
         Locker locker { m_targetMutex };
         m_target = nullptr;
-    } else if (auto* inspectionTarget = dynamicDowncast<RemoteInspectionTarget>(*target)) {
-        inspectionTarget->connect(*this, isAutomaticInspection, automaticallyPause);
-        m_connected = true;
-
-        RemoteInspector::singleton().updateTargetListing(targetIdentifier);
-    } else if (auto* inspectionTarget = dynamicDowncast<RemoteAutomationTarget>(*target)) {
-        inspectionTarget->connect(*this);
-        m_connected = true;
-
-        RemoteInspector::singleton().updateTargetListing(targetIdentifier);
+        return true;
     }
 
+    if (auto* inspectionTarget = dynamicDowncast<RemoteInspectionTarget>(*target))
+        inspectionTarget->connect(*this, isAutomaticInspection, automaticallyPause);
+    else if (auto* automationTarget = dynamicDowncast<RemoteAutomationTarget>(*target))
+        automationTarget->connect(*this);
+
+    m_connected = true;
+    RemoteInspector::singleton().updateTargetListing(targetIdentifier);
+    RemoteInspector::singleton().setupCompleted(targetIdentifier);
     return true;
 }
 

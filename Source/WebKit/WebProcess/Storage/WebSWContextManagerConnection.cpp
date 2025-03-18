@@ -184,9 +184,8 @@ void WebSWContextManagerConnection::installServiceWorker(ServiceWorkerContextDat
             } }, SandboxFlags { }
         };
 
-#if !RELEASE_LOG_DISABLED || ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA) && ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT)
-        auto serviceWorkerIdentifier = contextData.serviceWorkerIdentifier;
-#endif
+        [[maybe_unused]] auto serviceWorkerIdentifier = contextData.serviceWorkerIdentifier;
+        [[maybe_unused]] auto scopeURL = contextData.registration.scopeURL;
 
         auto lastNavigationWasAppInitiated = contextData.lastNavigationWasAppInitiated;
         Ref page = Page::create(WTFMove(pageConfiguration));
@@ -207,10 +206,6 @@ void WebSWContextManagerConnection::installServiceWorker(ServiceWorkerContextDat
         notificationClient = makeUnique<WebNotificationClient>(nullptr);
 #endif
 
-#if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA) && ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT)
-        WebProcess::singleton().send(Messages::WebProcessProxy::CreateServiceWorkerDebuggable(serviceWorkerIdentifier, contextData.registration.scopeURL));
-#endif
-
         auto serviceWorkerThreadProxy = ServiceWorkerThreadProxy::create(Ref { page }, WTFMove(contextData), WTFMove(workerData), WTFMove(effectiveUserAgent), workerThreadMode, WebProcess::singleton().cacheStorageProvider(), WTFMove(notificationClient));
 
         auto workerClient = WebWorkerClient::create(WTFMove(page), serviceWorkerThreadProxy->thread());
@@ -219,7 +214,48 @@ void WebSWContextManagerConnection::installServiceWorker(ServiceWorkerContextDat
         if (lastNavigationWasAppInitiated)
             serviceWorkerThreadProxy->setLastNavigationWasAppInitiated(lastNavigationWasAppInitiated == WebCore::LastNavigationWasAppInitiated::Yes);
 
-        SWContextManager::singleton().registerServiceWorkerThreadForInstall(WTFMove(serviceWorkerThreadProxy));
+        // Set the service worker's inspectability and potentially provide automatic inspection support.
+        //
+        // REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT means we should use a ServiceWorkerDebuggableProxy in the
+        // UI process as the debuggable, instead of the traditional ServiceWorkerDebuggable owned by the thread proxy.
+        //
+        // REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION means the ServiceWorkerThread starts in the WaitForInspector
+        // mode, and script evaluation should be prevented until automatic inspection is resolved.
+
+        Function<void()> handleThreadDebuggerTasksStarted = { };
+
+#if ENABLE(REMOTE_INSPECTOR)
+#if PLATFORM(COCOA) && ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT)
+
+#if ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
+        handleThreadDebuggerTasksStarted = [serviceWorkerIdentifier, scopeURL, inspectable] {
+            CompletionHandler<void(bool)> handleDebuggableCreated = [serviceWorkerIdentifier](bool shouldWait) {
+                if (!shouldWait)
+                    SWContextManager::singleton().stopRunningDebuggerTasksOnServiceWorker(serviceWorkerIdentifier);
+                // Otherwise, let the worker remain paused until the auto-launched inspector's frontendInitialized.
+            };
+            WebProcess::singleton().sendWithAsyncReply(Messages::WebProcessProxy::CreateServiceWorkerDebuggable(serviceWorkerIdentifier, scopeURL, inspectable), WTFMove(handleDebuggableCreated));
+        };
+#else
+        WebProcess::singleton().send(Messages::WebProcessProxy::CreateServiceWorkerDebuggable(serviceWorkerIdentifier, scopeURL, inspectable));
+#endif
+
+#else // not (PLATFORM(COCOA) && ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT))
+
+#if ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
+        handleThreadDebuggerTasksStarted = [serviceWorkerThreadProxy, serviceWorkerIdentifier, inspectable] {
+            serviceWorkerThreadProxy->remoteDebuggable().setInspectable(inspectable == ServiceWorkerIsInspectable::Yes);
+            // setInspectable will block until automatic inspection is resolved (rejected or frontend-initialized).
+            SWContextManager::singleton().stopRunningDebuggerTasksOnServiceWorker(serviceWorkerIdentifier);
+        };
+#else
+        serviceWorkerThreadProxy->remoteDebuggable().setInspectable(inspectable == ServiceWorkerIsInspectable::Yes);
+#endif
+
+#endif // not (PLATFORM(COCOA) && ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT))
+#endif // ENABLE(REMOTE_INSPECTOR)
+
+        SWContextManager::singleton().registerServiceWorkerThreadForInstall(WTFMove(serviceWorkerThreadProxy), WTFMove(handleThreadDebuggerTasksStarted));
 
         RELEASE_LOG(ServiceWorker, "Created service worker %" PRIu64 " in process PID %i", serviceWorkerIdentifier.toUInt64(), getCurrentProcessID());
     });
@@ -604,12 +640,12 @@ void WebSWContextManagerConnection::removeNavigationFetch(WebCore::SWServerConne
 }
 
 #if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
-void WebSWContextManagerConnection::connectToInspector(WebCore::ServiceWorkerIdentifier serviceWorkerIdentifier)
+void WebSWContextManagerConnection::connectToInspector(WebCore::ServiceWorkerIdentifier serviceWorkerIdentifier, bool isAutomaticConnection, bool immediatelyPause)
 {
     Ref channel = ServiceWorkerDebuggableFrontendChannel::create(serviceWorkerIdentifier);
     m_channels.add(serviceWorkerIdentifier, channel);
     if (RefPtr serviceWorkerThreadProxy = SWContextManager::singleton().serviceWorkerThreadProxy(serviceWorkerIdentifier))
-        serviceWorkerThreadProxy->inspectorProxy().connectToWorker(channel);
+        serviceWorkerThreadProxy->inspectorProxy().connectToWorker(channel, isAutomaticConnection, immediatelyPause);
 }
 
 void WebSWContextManagerConnection::disconnectFromInspector(WebCore::ServiceWorkerIdentifier serviceWorkerIdentifier)
@@ -624,6 +660,13 @@ void WebSWContextManagerConnection::dispatchMessageFromInspector(WebCore::Servic
     if (RefPtr serviceWorkerThreadProxy = SWContextManager::singleton().serviceWorkerThreadProxy(identifier))
         serviceWorkerThreadProxy->inspectorProxy().sendMessageToWorker(WTFMove(message));
 }
+
+#if ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
+void WebSWContextManagerConnection::unpauseServiceWorkerForRejectedAutomaticInspection(WebCore::ServiceWorkerIdentifier identifier)
+{
+    SWContextManager::singleton().stopRunningDebuggerTasksOnServiceWorker(identifier);
+}
 #endif
+#endif // ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
 
 } // namespace WebCore

@@ -55,7 +55,7 @@ public:
 
     void workerTerminating();
 
-    void connectFrontend(bool isAutomaticInspection = false, bool immediatelyPause = false, Function<void()>&& frontendInitializedCallback = { });
+    void connectFrontend(bool isAutomaticInspection = false, bool immediatelyPause = false);
     void disconnectFrontend(Inspector::DisconnectReason);
 
     void dispatchMessageFromFrontend(const String&);
