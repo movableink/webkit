@@ -494,14 +494,14 @@ void URL::setHost(StringView newHost)
     if (!m_isValid || hasOpaquePath())
         return;
 
+    if (auto index = newHost.find(hasSpecialScheme() ? slashHashOrQuestionMark : forwardSlashHashOrQuestionMark); index != notFound)
+        newHost = newHost.left(index);
+
     if (newHost.contains('@'))
         return;
 
     if (newHost.contains(':') && !newHost.startsWith('['))
         return;
-
-    if (auto index = newHost.find(hasSpecialScheme() ? slashHashOrQuestionMark : forwardSlashHashOrQuestionMark); index != notFound)
-        newHost = newHost.left(index);
 
     Vector<UChar, 512> encodedHostName;
     if (hasSpecialScheme() && !appendEncodedHostname(encodedHostName, newHost))
@@ -549,9 +549,6 @@ void URL::setHostAndPort(StringView hostAndPort)
     if (!m_isValid || hasOpaquePath())
         return;
 
-    if (hostAndPort.contains('@'))
-        return;
-
     if (auto index = hostAndPort.find(hasSpecialScheme() ? slashHashOrQuestionMark : forwardSlashHashOrQuestionMark); index != notFound)
         hostAndPort = hostAndPort.left(index);
 
@@ -567,6 +564,8 @@ void URL::setHostAndPort(StringView hostAndPort)
 
     auto portString = hostAndPort.substring(colonIndex + 1);
     auto hostName = hostAndPort.left(colonIndex);
+    if (hostName.contains('@'))
+        return;
     // Multiple colons are acceptable only in case of IPv6.
     if (hostName.contains(':') && ipv6Separator == notFound)
         return;

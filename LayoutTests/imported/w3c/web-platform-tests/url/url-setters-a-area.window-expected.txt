@@ -258,6 +258,10 @@ PASS <area>: Setting <https://test.invalid/>.host = 'foo	\r
 bar'
 PASS <a>: Setting <https://test.invalid/>.host = '><'
 PASS <area>: Setting <https://test.invalid/>.host = '><'
+PASS <a>: Setting <https://test.invalid/>.host = 'test/@aaa'
+PASS <area>: Setting <https://test.invalid/>.host = 'test/@aaa'
+PASS <a>: Setting <https://test.invalid/>.host = 'test/:aaa'
+PASS <area>: Setting <https://test.invalid/>.host = 'test/:aaa'
 PASS <a>: Setting <sc://x/>.hostname = '\0' Non-special scheme
 PASS <area>: Setting <sc://x/>.hostname = '\0' Non-special scheme
 PASS <a>: Setting <sc://x/>.hostname = '	'
@@ -354,6 +358,10 @@ PASS <area>: Setting <https://test.invalid/>.hostname = 'foo	\r
 bar'
 PASS <a>: Setting <https://test.invalid/>.hostname = '><'
 PASS <area>: Setting <https://test.invalid/>.hostname = '><'
+PASS <a>: Setting <https://test.invalid/>.hostname = 'test/@aaa'
+PASS <area>: Setting <https://test.invalid/>.hostname = 'test/@aaa'
+PASS <a>: Setting <https://test.invalid/>.hostname = 'test/:aaa'
+PASS <area>: Setting <https://test.invalid/>.hostname = 'test/:aaa'
 PASS <a>: Setting <http://example.net>.port = '8080'
 PASS <area>: Setting <http://example.net>.port = '8080'
 PASS <a>: Setting <http://example.net:8080>.port = '' Port number is removed if empty is the new value
