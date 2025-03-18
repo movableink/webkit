@@ -375,7 +375,7 @@ ALWAYS_INLINE void URLParser::advance(CodePointIterator<CharacterType>& iterator
 {
     ++iterator;
     while (UNLIKELY(!iterator.atEnd() && isTabOrNewline(*iterator))) {
-        if (reportSyntaxViolation == ReportSyntaxViolation::Yes)
+        if constexpr (reportSyntaxViolation == ReportSyntaxViolation::Yes)
             syntaxViolation(iteratorForSyntaxViolationPosition);
         ++iterator;
     }
