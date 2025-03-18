@@ -102,7 +102,9 @@ struct SlidingWidth {
 
 private:
     const InlineContentConstrainer& m_inlineContentConstrainer;
+#if ASSERT_ENABLED
     const InlineItemList& m_inlineItemList;
+#endif
     size_t m_start { 0 };
     size_t m_end { 0 };
     bool m_useFirstLineStyle { false };

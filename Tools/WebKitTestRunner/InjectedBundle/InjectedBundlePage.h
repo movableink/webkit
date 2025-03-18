@@ -149,14 +149,6 @@ private:
     WKBundlePageRef m_page;
     WKRetainPtr<WKBundleScriptWorldRef> m_world;
     bool m_didCommitMainFrameLoad { false };
-
-    enum FullscreenState {
-        NotInFullscreen,
-        EnteringFullscreen,
-        ExitingFullscreen,
-        InFullscreen,
-    };
-    FullscreenState m_fullscreenState { NotInFullscreen };
 };
 
 } // namespace WTR

@@ -711,9 +711,11 @@ bool InlineContentConstrainer::shouldTrimTrailing(size_t inlineItemIndex, bool u
     return false;
 }
 
-SlidingWidth::SlidingWidth(const InlineContentConstrainer& inlineContentConstrainer, const InlineItemList& inlineItemList, size_t start, size_t end, bool useFirstLineStyle, bool isFirstLineInChunk)
+SlidingWidth::SlidingWidth(const InlineContentConstrainer& inlineContentConstrainer, [[maybe_unused]] const InlineItemList& inlineItemList, size_t start, size_t end, bool useFirstLineStyle, bool isFirstLineInChunk)
     : m_inlineContentConstrainer(inlineContentConstrainer)
+#if ASSERT_ENABLED
     , m_inlineItemList(inlineItemList)
+#endif
     , m_start(start)
     , m_end(start)
     , m_useFirstLineStyle(useFirstLineStyle)
