@@ -572,6 +572,18 @@ public:
     {
         builderState.style().setTestMatchAllOrdered(fromCSSValueDeducingType(builderState, value));
     }
+    static void applyInitialTestMatchAllOrderedWithCustomType(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchAllOrderedWithCustomType(RenderStyle::initialTestMatchAllOrderedWithCustomType());
+    }
+    static void applyInheritTestMatchAllOrderedWithCustomType(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchAllOrderedWithCustomType(forwardInheritedValue(builderState.parentStyle().testMatchAllOrderedWithCustomType()));
+    }
+    static void applyValueTestMatchAllOrderedWithCustomType(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestMatchAllOrderedWithCustomType(fromCSSValueDeducingType(builderState, value));
+    }
     static void applyInitialTestMatchAllOrderedWithOptional(BuilderState& builderState)
     {
         builderState.style().setTestMatchAllOrderedWithOptional(RenderStyle::initialTestMatchAllOrderedWithOptional());
@@ -583,6 +595,54 @@ public:
     static void applyValueTestMatchAllOrderedWithOptional(BuilderState& builderState, CSSValue& value)
     {
         builderState.style().setTestMatchAllOrderedWithOptional(fromCSSValueDeducingType(builderState, value));
+    }
+    static void applyInitialTestMatchAllOrderedWithOptionalAndCustomType(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchAllOrderedWithOptionalAndCustomType(RenderStyle::initialTestMatchAllOrderedWithOptionalAndCustomType());
+    }
+    static void applyInheritTestMatchAllOrderedWithOptionalAndCustomType(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchAllOrderedWithOptionalAndCustomType(forwardInheritedValue(builderState.parentStyle().testMatchAllOrderedWithOptionalAndCustomType()));
+    }
+    static void applyValueTestMatchAllOrderedWithOptionalAndCustomType(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestMatchAllOrderedWithOptionalAndCustomType(fromCSSValueDeducingType(builderState, value));
+    }
+    static void applyInitialTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt(RenderStyle::initialTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt());
+    }
+    static void applyInheritTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt(forwardInheritedValue(builderState.parentStyle().testMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt()));
+    }
+    static void applyValueTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt(fromCSSValueDeducingType(builderState, value));
+    }
+    static void applyInitialTestMatchAllOrderedWithOptionalAndMultipleRequired(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchAllOrderedWithOptionalAndMultipleRequired(RenderStyle::initialTestMatchAllOrderedWithOptionalAndMultipleRequired());
+    }
+    static void applyInheritTestMatchAllOrderedWithOptionalAndMultipleRequired(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchAllOrderedWithOptionalAndMultipleRequired(forwardInheritedValue(builderState.parentStyle().testMatchAllOrderedWithOptionalAndMultipleRequired()));
+    }
+    static void applyValueTestMatchAllOrderedWithOptionalAndMultipleRequired(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestMatchAllOrderedWithOptionalAndMultipleRequired(fromCSSValueDeducingType(builderState, value));
+    }
+    static void applyInitialTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType(RenderStyle::initialTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType());
+    }
+    static void applyInheritTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType(BuilderState& builderState)
+    {
+        builderState.style().setTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType(forwardInheritedValue(builderState.parentStyle().testMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType()));
+    }
+    static void applyValueTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType(fromCSSValueDeducingType(builderState, value));
     }
     static void applyInitialTestMatchAllOrderedWithOptionalNoSingleItemOpt(BuilderState& builderState)
     {
@@ -1536,6 +1596,19 @@ void BuilderGenerated::applyProperty(CSSPropertyID id, BuilderState& builderStat
             break;
         }
         break;
+    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithCustomType:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestMatchAllOrderedWithCustomType(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestMatchAllOrderedWithCustomType(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestMatchAllOrderedWithCustomType(builderState, value);
+            break;
+        }
+        break;
     case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptional:
         switch (valueType) {
         case ApplyValueType::Initial:
@@ -1546,6 +1619,58 @@ void BuilderGenerated::applyProperty(CSSPropertyID id, BuilderState& builderStat
             break;
         case ApplyValueType::Value:
             BuilderFunctions::applyValueTestMatchAllOrderedWithOptional(builderState, value);
+            break;
+        }
+        break;
+    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalAndCustomType:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestMatchAllOrderedWithOptionalAndCustomType(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestMatchAllOrderedWithOptionalAndCustomType(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestMatchAllOrderedWithOptionalAndCustomType(builderState, value);
+            break;
+        }
+        break;
+    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestMatchAllOrderedWithOptionalAndCustomTypeAndNoSingleItemOpt(builderState, value);
+            break;
+        }
+        break;
+    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalAndMultipleRequired:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestMatchAllOrderedWithOptionalAndMultipleRequired(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestMatchAllOrderedWithOptionalAndMultipleRequired(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestMatchAllOrderedWithOptionalAndMultipleRequired(builderState, value);
+            break;
+        }
+        break;
+    case CSSPropertyID::CSSPropertyTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestMatchAllOrderedWithOptionalAndMultipleRequiredAndCustomType(builderState, value);
             break;
         }
         break;

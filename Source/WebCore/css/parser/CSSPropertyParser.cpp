@@ -65,7 +65,6 @@
 #include "CSSPropertyParserConsumer+Percentage.h"
 #include "CSSPropertyParserConsumer+Position.h"
 #include "CSSPropertyParserConsumer+Resolution.h"
-#include "CSSPropertyParserConsumer+Sizing.h"
 #include "CSSPropertyParserConsumer+String.h"
 #include "CSSPropertyParserConsumer+TextDecoration.h"
 #include "CSSPropertyParserConsumer+Time.h"
@@ -2575,7 +2574,7 @@ bool CSSPropertyParser::consumeContainIntrinsicSizeShorthand(bool important)
     if (m_range.atEnd())
         return false;
 
-    RefPtr containIntrinsicWidth = consumeContainIntrinsicSize(m_range, m_context);
+    RefPtr containIntrinsicWidth = CSSPropertyParsing::consumeContainIntrinsicWidth(m_range, m_context);
     if (!containIntrinsicWidth)
         return false;
 
@@ -2584,7 +2583,7 @@ bool CSSPropertyParser::consumeContainIntrinsicSizeShorthand(bool important)
     if (m_range.atEnd())
         containIntrinsicHeight = containIntrinsicWidth;
     else {
-        containIntrinsicHeight = consumeContainIntrinsicSize(m_range, m_context);
+        containIntrinsicHeight = CSSPropertyParsing::consumeContainIntrinsicHeight(m_range, m_context);
         m_range.consumeWhitespace();
         if (!m_range.atEnd() || !containIntrinsicHeight)
             return false;

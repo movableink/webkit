@@ -688,7 +688,7 @@
                 "parser-function": "consumeFontSizeAdjust",
                 "parser-function-allows-number-or-integer-input": true,
                 "parser-grammar-unused": "none | [ [ ex-height | cap-height | ch-width | ic-width | ic-height ]? [ from-font | <number [0,inf]> ] ]",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and default values on optionals.",
+                "parser-grammar-unused-reason": "Needs support for default values on optionals.",
                 "parser-grammar-comment": "Current spec grammar is 'none | <number [0,inf]>'"
             },
             "specification": {
@@ -4079,7 +4079,7 @@
                 "style-builder-custom": "All",
                 "parser-function": "consumeCounterIncrement",
                 "parser-grammar-unused": "[ <counter-name> <integer>? ]+ | none",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and default values on optionals."
+                "parser-grammar-unused-reason": "Needs support for default values on optionals."
             },
             "specification": {
                 "category": "css-lists",
@@ -4098,7 +4098,7 @@
                 "style-builder-custom": "All",
                 "parser-function": "consumeCounterReset",
                 "parser-grammar-unused": "[ <counter-name> <integer>? ]+ | none",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and default values on optionals.",
+                "parser-grammar-unused-reason": "Needs support for default values on optionals.",
                 "parser-grammar-comment": "Current spec grammar is '[ <counter-name> <integer>? | <reversed-counter-name> <integer>? ]+ | none'"
             },
             "specification": {
@@ -4118,7 +4118,7 @@
                 "style-builder-custom": "All",
                 "parser-function": "consumeCounterSet",
                 "parser-grammar-unused": "[ <counter-name> <integer>? ]+ | none",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and default values on optionals."
+                "parser-grammar-unused-reason": "Needs support for default values on optionals."
             },
             "specification": {
                 "category": "css-lists",
@@ -4187,7 +4187,7 @@
                 "style-builder-custom": "All",
                 "parser-function": "consumeCursor",
                 "parser-grammar-unused": "[ [ <url> [ <x> <y> ]? ]#{0,} [ <<values>> ] ]",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and for different parsing based on the current mode."
+                "parser-grammar-unused-reason": "Needs support for different parsing based on the current mode."
             },
             "specification": {
                 "category": "css-ui",
@@ -8440,9 +8440,8 @@
                     "name": "contain-intrinsic-size",
                     "resolver": "vertical"
                 },
-                "parser-function": "consumeContainIntrinsicSize",
-                "parser-grammar-unused": "auto? [ none | <length> ]",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups."
+                "parser-grammar": "[ auto? [ none | <length [0,inf]> ] ]@(type=CSSValuePair)",
+                "parser-exported": true
             },
             "specification": {
                 "category": "css-sizing",
@@ -8464,10 +8463,9 @@
                     "name": "contain-intrinsic-size",
                     "resolver": "horizontal"
                 },
-                "parser-function": "consumeContainIntrinsicSize",
-                "parser-grammar-unused": "auto? [ none | <length> ]",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups."
-            },
+                "parser-grammar": "[ auto? [ none | <length [0,inf]> ] ]@(type=CSSValuePair)",
+                "parser-exported": true
+             },
             "specification": {
                 "category": "css-sizing",
                 "url": "https://drafts.csswg.org/css-sizing-4/#intrinsic-size-override"
@@ -8486,9 +8484,7 @@
                     "name": "contain-intrinsic-size",
                     "resolver": "block"
                 },
-                "parser-function": "consumeContainIntrinsicSize",
-                "parser-grammar-unused": "auto? [ none | <length> ]",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups."
+                "parser-grammar": "[ auto? [ none | <length [0,inf]> ] ]@(type=CSSValuePair)"
             },
             "specification": {
                 "category": "css-sizing",
@@ -8508,9 +8504,7 @@
                     "name": "contain-intrinsic-size",
                     "resolver": "inline"
                 },
-                "parser-function": "consumeContainIntrinsicSize",
-                "parser-grammar-unused": "auto? [ none | <length> ]",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups."
+                "parser-grammar": "[ auto? [ none | <length [0,inf]> ] ]@(type=CSSValuePair)"
             },
             "specification": {
                 "category": "css-sizing",
@@ -9280,7 +9274,7 @@
                 "style-builder-converter": "ContentAlignmentData",
                 "parser-function": "consumeAlignContent",
                 "parser-grammar-unused": "normal | <baseline-position> | <content-distribution> | [ <overflow-position>? <content-position> ]",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and default values on optionals.",
+                "parser-grammar-unused-reason": "Needs support for default values on optionals.",
                 "comment": "Alternate definition in css-flexbox - flex-start | flex-end | center | space-between | space-around | stretch"
             },
             "specification": {
@@ -9315,7 +9309,7 @@
                 "style-builder-converter": "SelfOrDefaultAlignmentData",
                 "parser-function": "consumeAlignItems",
                 "parser-grammar-unused": "normal | stretch | <baseline-position> | [ <overflow-position>? <self-position> ]",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and default values on optionals.",
+                "parser-grammar-unused-reason": "Needs support for default values on optionals.",
                 "comment": "Alternate definition in css-flexbox - flex-start | flex-end | center | baseline | stretch"
             },
             "specification": {
@@ -9352,7 +9346,7 @@
                 "style-builder-converter": "SelfOrDefaultAlignmentData",
                 "parser-function": "consumeAlignSelf",
                 "parser-grammar-unused": "auto | normal | stretch | <baseline-position> | [ <overflow-position>? <self-position> ]",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and default values on optionals.",
+                "parser-grammar-unused-reason": "Needs support for default values on optionals.",
                 "comment": "Alternate definition in css-flexbox - auto | flex-start | flex-end | center | baseline | stretch"
             },
             "specification": {
@@ -9545,7 +9539,7 @@
                 "style-builder-converter": "ContentAlignmentData",
                 "parser-function": "consumeJustifyContent",
                 "parser-grammar-unused": "normal | <content-distribution> | [ <overflow-position>? [ <content-position> | left | right ] ]",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and default values on optionals.",
+                "parser-grammar-unused-reason": "Needs support for default values on optionals.",
                 "comment": "Alternate definition in css-flexbox - flex-start | flex-end | center | space-between | space-around"
             },
             "specification": {
@@ -9608,7 +9602,7 @@
                 "style-builder-converter": "SelfOrDefaultAlignmentData",
                 "parser-function": "consumeJustifySelf",
                 "parser-grammar-unused": "auto | normal | stretch | <baseline-position> | [ <overflow-position>? [ <self-position> | left | right ] ]",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and default values on optionals."
+                "parser-grammar-unused-reason": "Needs support for default values on optionals."
             },
             "specification": {
                 "category": "css-align",
@@ -9625,7 +9619,7 @@
                 "style-builder-converter": "SelfOrDefaultAlignmentData",
                 "parser-function": "consumeJustifyItems",
                 "parser-grammar-unused": "[ normal | stretch | <baseline-position> | [ <overflow-position>? [ <self-position> | left | right ] ] | legacy | legacy ] && [ left | right | center ]",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and default values on optionals."
+                "parser-grammar-unused-reason": "Needs support for default values on optionals."
             },
             "specification": {
                 "category": "css-align",
@@ -9740,7 +9734,7 @@
                 "style-builder-converter": "GridPosition",
                 "parser-function": "consumeGridLine",
                 "parser-grammar-unused": "<grid-line>",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and ordered groups with a keyword/literal first term differentiator."
+                "parser-grammar-unused-reason": "Needs support for ordered groups with a keyword/literal first term differentiator."
             },
             "specification": {
                 "category": "css-grid",
@@ -9755,7 +9749,7 @@
                 "style-builder-converter": "GridPosition",
                 "parser-function": "consumeGridLine",
                 "parser-grammar-unused": "<grid-line>",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and ordered groups with a keyword/literal first term differentiator."
+                "parser-grammar-unused-reason": "Needs support for ordered groups with a keyword/literal first term differentiator."
             },
             "specification": {
                 "category": "css-grid",
@@ -9815,7 +9809,7 @@
                 "style-builder-converter": "GridPosition",
                 "parser-function": "consumeGridLine",
                 "parser-grammar-unused": "<grid-line>",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and ordered groups with a keyword/literal first term differentiator."
+                "parser-grammar-unused-reason": "Needs support for ordered groups with a keyword/literal first term differentiator."
             },
             "specification": {
                 "category": "css-grid",
@@ -9830,7 +9824,7 @@
                 "style-builder-converter": "GridPosition",
                 "parser-function": "consumeGridLine",
                 "parser-grammar-unused": "<grid-line>",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and ordered groups with a keyword/literal first term differentiator."
+                "parser-grammar-unused-reason": "Needs support for ordered groups with a keyword/literal first term differentiator."
             },
             "specification": {
                 "category": "css-grid",
@@ -11533,7 +11527,7 @@
                 "style-builder-converter": "ScrollSnapType",
                 "parser-function": "consumeScrollSnapType",
                 "parser-grammar-unused": "none | [ [ x | y | block | inline | both ] [ mandatory | proximity ]? ]",
-                "parser-grammar-unused-reason": "Needs support for using custom types for order groups and default values on optionals."
+                "parser-grammar-unused-reason": "Needs support for default values on optionals."
             },
             "specification": {
                 "category": "css-scroll-snap",
@@ -14014,7 +14008,7 @@
         "<single-animation-range-start>": {
             "grammar-function": "consumeSingleAnimationRangeStart",
             "grammar-unused": "[ normal | <length-percentage> | [ <timeline-range-name> <length-percentage>? ] ]",
-            "grammar-unused-reason": "Needs support for using custom types for order groups and default values on optionals.",
+            "grammar-unused-reason": "Needs support for default values on optionals.",
             "specification": {
                 "category": "scroll-animations",
                 "url": "https://drafts.csswg.org/scroll-animations-1/#propdef-animation-range-start"
@@ -14023,7 +14017,7 @@
         "<single-animation-range-end>": {
             "grammar-function": "consumeSingleAnimationRangeEnd",
             "grammar-unused": "[ normal | <length-percentage> | [ <timeline-range-name> <length-percentage>? ] ]",
-            "grammar-unused-reason": "Needs support for using custom types for order groups and default values on optionals.",
+            "grammar-unused-reason": "Needs support for default values on optionals.",
             "specification": {
                 "category": "scroll-animations",
                 "url": "https://drafts.csswg.org/scroll-animations-1/#propdef-animation-range-end"

@@ -1066,7 +1066,6 @@ css/parser/CSSPropertyParserConsumer+SVG.cpp
 css/parser/CSSPropertyParserConsumer+ScrollSnap.cpp
 css/parser/CSSPropertyParserConsumer+Scrollbars.cpp
 css/parser/CSSPropertyParserConsumer+Shapes.cpp
-css/parser/CSSPropertyParserConsumer+Sizing.cpp
 css/parser/CSSPropertyParserConsumer+String.cpp
 css/parser/CSSPropertyParserConsumer+Symbol.cpp
 css/parser/CSSPropertyParserConsumer+Syntax.cpp

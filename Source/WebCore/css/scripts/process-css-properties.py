@@ -4532,7 +4532,6 @@ class GenerateCSSPropertyParsing:
                     "CSSPropertyParserConsumer+ScrollSnap.h",
                     "CSSPropertyParserConsumer+Scrollbars.h",
                     "CSSPropertyParserConsumer+Shapes.h",
-                    "CSSPropertyParserConsumer+Sizing.h",
                     "CSSPropertyParserConsumer+String.h",
                     "CSSPropertyParserConsumer+Syntax.h",
                     "CSSPropertyParserConsumer+TextDecoration.h",
@@ -5628,14 +5627,36 @@ class TermGeneratorMatchAllOrderedTerm(TermGenerator):
                         with to.indent():
                             to.write(f"return {{ }};")
 
-                if self.number_of_terms - self.number_of_optional_terms <= 1 and self.term.single_value_optimization:
-                    # Only attempt the single item optimization if there are enough optional terms that it
-                    # can kick in and it hasn't been explicitly disabled via @(no-single-item-opt).
-                    to.write(f"if (list.size() == 1)")
-                    with to.indent():
-                        to.write(f"return WTFMove(list[0]);")
+                if self.term.type == 'CSSValueList':
+                    if self.number_of_terms - self.number_of_optional_terms <= 1 and self.term.single_value_optimization:
+                        # Only attempt the single item optimization if there are enough optional terms that it
+                        # can kick in and it hasn't been explicitly disabled via @(no-single-item-opt).
+                        to.write(f"if (list.size() == 1)")
+                        with to.indent():
+                            to.write(f"return WTFMove(list[0]); // single item optimization")
+                    to.write(f"return {return_type_create}(WTFMove(list));")
+                else:
+                    min_values = self.number_of_terms - self.number_of_optional_terms
+                    max_values = self.number_of_terms
 
-                to.write(f"return {return_type_create}(WTFMove(list));")
+                    list_value_strings = []
+                    for list_index in range(0, min_values - 1):
+                        list_value_strings.append(f"WTFMove(list[{list_index}])")
+
+                    for list_index in range(min_values - 1, max_values - 1):
+                        list_value_strings.append(f"WTFMove(list[{list_index}])")
+
+                        to.write(f"if (list.size() == {list_index + 1})")
+                        with to.indent():
+                            if list_index == 0 and self.term.single_value_optimization:
+                                # Only attempt the single item optimization if there are enough optional terms that it
+                                # can kick in and it hasn't been explicitly disabled via @(no-single-item-opt).
+                                to.write(f"return WTFMove(list[0]); // single item optimization")
+                            else:
+                                to.write(f"return {return_type_create}({', '.join(list_value_strings)});")
+
+                    list_value_strings.append(f"WTFMove(list[{max_values - 1}])")
+                    to.write(f"return {return_type_create}({', '.join(list_value_strings)});")
             else:
                 return_value_strings = []
 
@@ -5831,7 +5852,7 @@ class TermGeneratorMatchAllAnyOrderTerm(TermGenerator):
                     # can kick in and it hasn't been explicitly disabled via @(no-single-item-opt).
                     to.write(f"if (list.size() == 1)")
                     with to.indent():
-                        to.write(f"return WTFMove(list[0]);")
+                        to.write(f"return WTFMove(list[0]); // single item optimization")
 
                 to.write(f"return {return_type_create}(WTFMove(list));")
             else:
@@ -6005,7 +6026,7 @@ class TermGeneratorMatchOneOrMoreAnyOrderTerm(TermGenerator):
             if self.term.single_value_optimization:
                 to.write(f"if (list.size() == 1)")
                 with to.indent():
-                    to.write(f"return WTFMove(list[0]);")
+                    to.write(f"return WTFMove(list[0]); // single item optimization")
 
             if self.term.type == 'CSSValueList':
                 return_type_create = "CSSValueList::createSpaceSeparated"
