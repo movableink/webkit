@@ -2664,7 +2664,7 @@ static void adjustTextDirectionForCoalescedGeometries(const SelectionEndpointDir
     }
 }
 
-static bool currentNodeRequiresToSeparateLines(const RenderObject* currentRenderer)
+static bool shouldRenderSelectionOnSeparateLine(const RenderObject* currentRenderer)
 {
     if (!currentRenderer)
         return false;
@@ -2678,7 +2678,7 @@ static bool currentNodeRequiresToSeparateLines(const RenderObject* currentRender
     return false;
 }
 
-static bool hasAncestorRequiresToSeparateLines(RenderObject* descendant, const RenderObject* stayWithin)
+static bool hasAncestorWithSelectionOnSeparateLine(RenderObject* descendant, const RenderObject* stayWithin)
 {
     for (CheckedPtr current = descendant; current; current = current->parent()) {
         if (current->isOutOfFlowPositioned())
@@ -2691,11 +2691,11 @@ static bool hasAncestorRequiresToSeparateLines(RenderObject* descendant, const R
     return false;
 }
 
-static bool previousNodeRequiresToSeparateLines(RenderObject* previousRenderer, const RenderObject* stayWithin)
+static bool shouldRenderPreviousSelectionOnSeparateLine(RenderObject* previousRenderer, const RenderObject* stayWithin)
 {
     if (!previousRenderer || !stayWithin)
         return false;
-    return hasAncestorRequiresToSeparateLines(previousRenderer, stayWithin);
+    return hasAncestorWithSelectionOnSeparateLine(previousRenderer, stayWithin);
 }
 
 auto RenderObject::collectSelectionGeometriesInternal(const SimpleRange& range) -> SelectionGeometries
@@ -2714,7 +2714,7 @@ auto RenderObject::collectSelectionGeometriesInternal(const SimpleRange& range) 
             continue;
 
         if (!separateFromPreviousLine)
-            separateFromPreviousLine = currentNodeRequiresToSeparateLines(renderer.get()) || previousNodeRequiresToSeparateLines(previousRenderer.get(), renderer->previousSibling());
+            separateFromPreviousLine = shouldRenderSelectionOnSeparateLine(renderer.get()) || shouldRenderPreviousSelectionOnSeparateLine(previousRenderer.get(), renderer->previousSibling());
         previousRenderer = renderer.get();
 
         // Only ask leaf render objects for their line box rects.
