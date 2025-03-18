@@ -1192,9 +1192,6 @@ private:
             if (!replace)
                 break;
 
-            // String/String/String case.
-            // FIXME: Extract these operations and share it with runtime code.
-
             size_t matchStart = string.find(searchString);
             if (matchStart == notFound) {
                 m_changed = true;
@@ -1205,18 +1202,7 @@ private:
 
             size_t searchStringLength = searchString.length();
             size_t matchEnd = matchStart + searchStringLength;
-
-            size_t dollarSignPosition = replace.find('$');
-            if (dollarSignPosition != WTF::notFound) {
-                StringBuilder builder(OverflowPolicy::RecordOverflow);
-                int ovector[2] = { static_cast<int>(matchStart),  static_cast<int>(matchEnd) };
-                substituteBackreferencesSlow(builder, replace, string, ovector, nullptr, dollarSignPosition);
-                if (UNLIKELY(builder.hasOverflowed()))
-                    break;
-                replace = builder.toString();
-            }
-
-            auto result = tryMakeString(StringView(string).substring(0, matchStart), replace, StringView(string).substring(matchEnd, string.length() - matchEnd));
+            String result = tryMakeReplacedString<StringReplaceSubstitutions::Yes>(string, replace, matchStart, matchEnd);
             if (UNLIKELY(!result))
                 break;
 
