@@ -300,6 +300,13 @@ function mac_process_webpushd_entitlements()
     plistbuddy Add :com.apple.private.aps-connection-initiate bool YES
     plistbuddy Add :com.apple.private.launchservices.entitledtoaccessothersessions bool YES
     plistbuddy Add :com.apple.usernotification.notificationschedulerproxy bool YES
+
+    if [[ "${WK_RELOCATABLE_WEBPUSHD}" == NO ]]; then
+        plistbuddy Add :com.apple.security.application-groups array
+        plistbuddy Add :com.apple.security.application-groups:0 string group.com.apple.webkit.webpushd
+        plistbuddy Add :com.apple.private.security.restricted-application-groups array
+        plistbuddy Add :com.apple.private.security.restricted-application-groups:0 string group.com.apple.webkit.webpushd
+    fi
 }
 
 # ========================================
