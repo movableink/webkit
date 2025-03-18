@@ -209,7 +209,6 @@ WebProcess/Plugins/PDF/WKAccessibilityPDFDocumentObject.mm
 WebProcess/Plugins/PluginView.cpp
 WebProcess/Speech/SpeechRecognitionRealtimeMediaSourceManager.cpp
 WebProcess/Storage/WebSWClientConnection.cpp
-WebProcess/Storage/WebSWContextManagerConnection.cpp
 WebProcess/Storage/WebServiceWorkerProvider.cpp
 WebProcess/UserContent/WebUserContentController.cpp
 WebProcess/WebCoreSupport/ShareableBitmapUtilities.cpp

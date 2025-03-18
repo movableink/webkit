@@ -50,7 +50,6 @@ WebProcess/Plugins/PDF/PDFPluginTextAnnotation.mm
 WebProcess/Plugins/PDF/UnifiedPDF/UnifiedPDFPlugin.mm
 WebProcess/Plugins/WebPluginInfoProvider.cpp
 WebProcess/Storage/WebSWClientConnection.cpp
-WebProcess/Storage/WebSWContextManagerConnection.cpp
 WebProcess/Storage/WebServiceWorkerProvider.cpp
 WebProcess/UserContent/WebUserContentController.cpp
 WebProcess/WebCoreSupport/SessionStateConversion.cpp
