@@ -794,7 +794,6 @@ public:
 
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
     void updateContentInsetFillViews();
-    void updateFixedContentExtensionViews();
 #endif
 
 private:
@@ -1072,7 +1071,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 #if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
     RetainPtr<WKNSContentInsetFillView> m_topContentInsetFillView;
-    WebCore::RectEdges<RetainPtr<NSView>> m_fixedColorExtensionViews;
 #endif
 
 #if HAVE(INLINE_PREDICTIONS)

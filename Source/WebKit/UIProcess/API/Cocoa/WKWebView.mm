@@ -240,6 +240,7 @@
 #import "WKTextFinderClient.h"
 #import "WKViewInternal.h"
 #import <WebCore/ColorMac.h>
+#import <pal/spi/mac/NSViewSPI.h>
 #endif
 
 #import "WebKitSwiftSoftLink.h"
@@ -1930,9 +1931,8 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
     WebCore::FloatBoxExtent additionalInsets;
 #endif
 
-#if PLATFORM(MAC) && ENABLE(CONTENT_INSET_BACKGROUND_FILL)
-    _impl->updateContentInsetFillViews();
-    _impl->updateFixedContentExtensionViews();
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    [self _updateFixedColorExtensionViews];
 #endif
 
     auto maximumViewportInsetSize = WebCore::FloatSize(maximumViewportInset.left + additionalInsets.left() + maximumViewportInset.right, maximumViewportInset.top + additionalInsets.top() + maximumViewportInset.bottom);
@@ -2893,11 +2893,6 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
 #endif // PLATFORM(VISION)
 #endif // ENABLE(GAMEPAD)
 
-- (const WebCore::FixedContainerEdges&)_coreFixedContainerEdges
-{
-    return _fixedContainerEdges;
-}
-
 - (_WKRectEdge)_fixedContainerEdges
 {
     _WKRectEdge edges = _WKRectEdgeNone;
@@ -3030,8 +3025,8 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
 
     _fixedContainerEdges = edges;
 
-#if PLATFORM(MAC) && ENABLE(CONTENT_INSET_BACKGROUND_FILL)
-    _impl->updateFixedContentExtensionViews();
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    [self _updateFixedColorExtensionViews];
 #endif
 
     for (auto selector : changedSelectors)
@@ -3080,7 +3075,114 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
         [self _removePDFPageNumberIndicator:*pluginIdentifier];
 }
 
+#endif // ENABLE(PDF_PAGE_NUMBER_INDICATOR)
+
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+
+- (WebCore::FloatBoxExtent)_obscuredInsetsForFixedColorExtension
+{
+#if PLATFORM(MAC)
+    return _impl->obscuredContentInsets();
+#else
+    auto obscuredInsets = [self _obscuredInsets];
+    return WebCore::FloatBoxExtent {
+        static_cast<float>(obscuredInsets.top),
+        static_cast<float>(obscuredInsets.right),
+        static_cast<float>(obscuredInsets.bottom),
+        static_cast<float>(obscuredInsets.left)
+    };
 #endif
+}
+
+- (CocoaView *)_containerForFixedColorExtension
+{
+#if PLATFORM(MAC)
+    return self;
+#else
+    return _scrollView.get();
+#endif
+}
+
+- (void)_updateFixedColorExtensionViews
+{
+    if (!_page || !_page->protectedPreferences()->contentInsetBackgroundFillEnabled())
+        return;
+
+    RetainPtr parentView = [self _containerForFixedColorExtension];
+    auto insets = [self _obscuredInsetsForFixedColorExtension];
+    auto updateExtensionView = [&](WebCore::BoxSide side) {
+        BOOL needsView = insets.at(side) > 0 && _fixedContainerEdges.fixedEdges.at(side);
+        RetainPtr extensionView = _fixedColorExtensionViews.at(side);
+        if (!needsView) {
+            [extensionView setHidden:YES];
+            return;
+        }
+
+        if (!extensionView) {
+            extensionView = adoptNS([CocoaView new]);
+#if PLATFORM(MAC)
+            [extensionView setWantsLayer:YES];
+#endif
+            [extensionView layer].name = [NSString stringWithFormat:@"Fixed color extension fill (%s)", [side] {
+                switch (side) {
+                case WebCore::BoxSide::Top:
+                    return "Top";
+                case WebCore::BoxSide::Right:
+                    return "Right";
+                case WebCore::BoxSide::Bottom:
+                    return "Bottom";
+                case WebCore::BoxSide::Left:
+                    return "Left";
+                default:
+                    ASSERT_NOT_REACHED();
+                    return "";
+                }
+            }()];
+            [parentView addSubview:extensionView.get()];
+            _fixedColorExtensionViews.setAt(side, extensionView);
+        }
+
+        RetainPtr predominantColor = cocoaColorOrNil(_fixedContainerEdges.predominantColors.at(side));
+        [extensionView setBackgroundColor:predominantColor.get() ?: [self underPageBackgroundColor]];
+        [extensionView setHidden:NO];
+    };
+
+    static constexpr std::array allBoxSides {
+        WebCore::BoxSide::Top,
+        WebCore::BoxSide::Left,
+        WebCore::BoxSide::Right,
+        WebCore::BoxSide::Bottom
+    };
+
+    for (auto side : allBoxSides)
+        updateExtensionView(side);
+
+    [self _updateFixedColorExtensionViewFrames];
+}
+
+- (void)_updateFixedColorExtensionViewFrames
+{
+    if (!_page || !_page->protectedPreferences()->contentInsetBackgroundFillEnabled())
+        return;
+
+    RetainPtr parentView = [self _containerForFixedColorExtension];
+    auto insets = [self _obscuredInsetsForFixedColorExtension];
+    WebCore::FloatRect bounds = self.bounds;
+
+    if (RetainPtr view = _fixedColorExtensionViews.top(); view && ![view isHidden])
+        [view setFrame:[parentView convertRect:CGRectMake(insets.left(), 0, bounds.width() - insets.left() - insets.right(), insets.top()) fromView:self]];
+
+    if (RetainPtr view = _fixedColorExtensionViews.left(); view && ![view isHidden])
+        [view setFrame:[parentView convertRect:CGRectMake(0, 0, insets.left(), bounds.height()) fromView:self]];
+
+    if (RetainPtr view = _fixedColorExtensionViews.right(); view && ![view isHidden])
+        [view setFrame:[parentView convertRect:CGRectMake(bounds.width() - insets.right(), 0, insets.right(), bounds.height()) fromView:self]];
+
+    if (RetainPtr view = _fixedColorExtensionViews.bottom(); view && ![view isHidden])
+        [view setFrame:[parentView convertRect:CGRectMake(insets.left(), bounds.height() - insets.bottom(), bounds.width() - insets.left() - insets.right(), insets.bottom()) fromView:self]];
+}
+
+#endif // ENABLE(CONTENT_INSET_BACKGROUND_FILL)
 
 @end
 

@@ -2323,8 +2323,12 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
 
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView
 {
-    if (scrollView == _scrollView)
+    if (scrollView == _scrollView) {
         [_scrollView updateInteractiveScrollVelocity];
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+        [self _updateFixedColorExtensionViewFrames];
+#endif
+    }
 
     if (![self usesStandardContentView] && [_customContentView respondsToSelector:@selector(web_scrollViewDidScroll:)])
         [_customContentView web_scrollViewDidScroll:(UIScrollView *)scrollView];
@@ -4070,6 +4074,9 @@ static bool isLockdownModeWarningNeeded()
     _obscuredInsets = obscuredInsets;
 
     [self _scheduleVisibleContentRectUpdate];
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    [self _updateFixedColorExtensionViewFrames];
+#endif
     [_warningView setContentInset:[self _computedObscuredInsetForWarningView]];
 }
 
@@ -4086,6 +4093,9 @@ static bool isLockdownModeWarningNeeded()
     _obscuredInsetEdgesAffectedBySafeArea = edges;
 
     [self _scheduleVisibleContentRectUpdate];
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    [self _updateFixedColorExtensionViewFrames];
+#endif
 }
 
 - (UIEdgeInsets)_unobscuredSafeAreaInsets
