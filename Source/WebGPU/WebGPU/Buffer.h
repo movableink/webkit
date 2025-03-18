@@ -181,7 +181,7 @@ private:
     HashMap<uint64_t, DrawIndexCacheContainer, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_drawIndexedCache;
 
     const Ref<Device> m_device;
-    mutable WeakHashSet<CommandEncoder> m_commandEncoders;
+    mutable Vector<uint64_t> m_commandEncoders; // NOLINT - https://bugs.webkit.org/show_bug.cgi?id=289718
     mutable HashMap<uint64_t, uint32_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_gpuResourceMap;
     WeakHashSet<CommandEncoder> m_skippedValidationCommandEncoders;
     bool m_mustTakeSlowIndexValidationPath { false };

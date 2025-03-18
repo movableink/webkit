@@ -160,6 +160,7 @@ public:
 #else
     bool hasUnifiedMemory() const { return m_device.hasUnifiedMemory; }
 #endif
+    bool isShaderValidationEnabled() const { return m_shaderValidationEnabled; }
 
     uint32_t maxBuffersPlusVertexBuffersForVertexStage() const
     {
@@ -176,8 +177,8 @@ public:
         return WGSL::vertexBufferIndexForBindGroup(groupIndex, maxBuffersPlusVertexBuffersForVertexStage() - 1);
     }
 
-    id<MTLBuffer> newBufferWithBytes(const void*, size_t, MTLResourceOptions) const;
-    id<MTLBuffer> newBufferWithBytesNoCopy(void*, size_t, MTLResourceOptions) const;
+    id<MTLBuffer> newBufferWithBytes(const void*, size_t, MTLResourceOptions, bool skipMemoryAttribution = false) const;
+    id<MTLBuffer> newBufferWithBytesNoCopy(void*, size_t, MTLResourceOptions, bool skipMemoryAttribution = false) const;
     id<MTLTexture> newTextureWithDescriptor(MTLTextureDescriptor *, IOSurfaceRef = nullptr, NSUInteger plane = 0) const;
 
     static bool isStencilOnlyFormat(MTLPixelFormat);
@@ -194,8 +195,9 @@ public:
     id<MTLRenderPipelineState> indirectBufferClampPipeline(NSUInteger rasterSampleCount);
     id<MTLRenderPipelineState> icbCommandClampPipeline(MTLIndexType, NSUInteger rasterSampleCount);
     id<MTLFunction> icbCommandClampFunction(MTLIndexType);
-    id<MTLBuffer> safeCreateBuffer(NSUInteger length, MTLStorageMode, MTLCPUCacheMode = MTLCPUCacheModeDefaultCache, MTLHazardTrackingMode = MTLHazardTrackingModeDefault) const;
-    id<MTLBuffer> safeCreateBuffer(NSUInteger) const;
+    id<MTLRenderPipelineState> copyIndexIndirectArgsPipeline(NSUInteger rasterSampleCount);
+    id<MTLBuffer> safeCreateBuffer(NSUInteger length, MTLStorageMode, bool skipMemoryAttribution = false, MTLCPUCacheMode = MTLCPUCacheModeDefaultCache, MTLHazardTrackingMode = MTLHazardTrackingModeDefault) const;
+    id<MTLBuffer> safeCreateBuffer(NSUInteger, bool skipMemoryAttribution = false) const;
     template<typename T>
     id<MTLBuffer> safeCreateBufferWithData(const T& data) const
     {
@@ -228,6 +230,19 @@ public:
     uint32_t maxVerticesPerDrawCall() const { return m_maxVerticesPerDrawCall; }
     void trackTimestampsBuffer(id<MTLCommandBuffer>, id<MTLCounterSampleBuffer>);
 
+    const CommandEncoder* commandEncoderFromIdentifier(uint64_t identifier) const
+    {
+        return m_commandEncoderMap.get(identifier);
+    }
+    CommandEncoder* commandEncoderFromIdentifier(uint64_t identifier)
+    {
+        return m_commandEncoderMap.get(identifier);
+    }
+    void removeCommandEncoder(uint64_t identifier)
+    {
+        m_commandEncoderMap.remove(identifier);
+    }
+    bool supportsResidencySets() { return m_capabilities.baseCapabilities.supportsResidencySets; }
 private:
     Device(id<MTLDevice>, id<MTLCommandQueue> defaultQueue, HardwareCapabilities&&, Adapter&);
     Device(Adapter&);
@@ -303,9 +318,11 @@ private:
     NSMapTable<id<MTLCommandBuffer>, NSMutableArray<id<MTLCounterSampleBuffer>>*>* m_sampleCounterBuffers;
     NSMapTable<id<MTLCommandBuffer>, NSMutableArray<id<MTLBuffer>>*>* m_resolvedSampleCounterBuffers;
     id<MTLSharedEvent> m_resolveTimestampsSharedEvent { nil };
+    HashMap<uint64_t, CommandEncoder*, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_commandEncoderMap;
     uint64_t m_commandEncoderId { 0 };
     bool m_supressAllErrors { false };
     const uint32_t m_maxVerticesPerDrawCall { 0 };
+    bool m_shaderValidationEnabled { true };
 } SWIFT_SHARED_REFERENCE(refDevice, derefDevice);
 
 } // namespace WebGPU

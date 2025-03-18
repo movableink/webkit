@@ -103,6 +103,7 @@ static HardwareCapabilities::BaseCapabilities baseCapabilities(id<MTLDevice> dev
         .timestampCounterSet = timestampCounterSet,
         .statisticCounterSet = statisticCounterSet,
         .canPresentRGB10A2PixelFormats = false, // To be filled in by the caller.
+        .supportsResidencySets = false,
     };
 }
 
@@ -198,6 +199,7 @@ static HardwareCapabilities apple6(id<MTLDevice> device)
 
     baseCapabilities.supportsNonPrivateDepthStencilTextures = true;
     baseCapabilities.canPresentRGB10A2PixelFormats = false;
+    baseCapabilities.supportsResidencySets = false;
 
     auto features = WebGPU::baseFeatures(device, baseCapabilities);
 
@@ -257,6 +259,7 @@ static HardwareCapabilities apple7(id<MTLDevice> device)
 
     baseCapabilities.supportsNonPrivateDepthStencilTextures = true;
     baseCapabilities.canPresentRGB10A2PixelFormats = false;
+    baseCapabilities.supportsResidencySets = false;
 
     auto features = WebGPU::baseFeatures(device, baseCapabilities);
 
@@ -444,6 +447,7 @@ static HardwareCapabilities::BaseCapabilities mergeBaseCapabilities(const Hardwa
         previous.timestampCounterSet,
         previous.statisticCounterSet,
         previous.canPresentRGB10A2PixelFormats || next.canPresentRGB10A2PixelFormats,
+        previous.supportsResidencySets || next.supportsResidencySets,
     };
 }
 

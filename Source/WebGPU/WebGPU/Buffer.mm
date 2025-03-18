@@ -120,17 +120,18 @@ static MTLStorageMode storageMode(bool deviceHasUnifiedMemory, WGPUBufferUsageFl
     return MTLStorageModePrivate;
 }
 
-id<MTLBuffer> Device::safeCreateBuffer(NSUInteger length, MTLStorageMode storageMode, MTLCPUCacheMode cpuCacheMode, MTLHazardTrackingMode hazardTrackingMode) const
+id<MTLBuffer> Device::safeCreateBuffer(NSUInteger length, MTLStorageMode storageMode, bool skipAttribution, MTLCPUCacheMode cpuCacheMode, MTLHazardTrackingMode hazardTrackingMode) const
 {
     MTLResourceOptions resourceOptions = (cpuCacheMode << MTLResourceCPUCacheModeShift) | (storageMode << MTLResourceStorageModeShift) | (hazardTrackingMode << MTLResourceHazardTrackingModeShift);
     id<MTLBuffer> buffer = [m_device newBufferWithLength:std::max<NSUInteger>(1, length) options:resourceOptions];
-    setOwnerWithIdentity(buffer);
+    if (!skipAttribution)
+        setOwnerWithIdentity(buffer);
     return buffer;
 }
 
-id<MTLBuffer> Device::safeCreateBuffer(NSUInteger length) const
+id<MTLBuffer> Device::safeCreateBuffer(NSUInteger length, bool skipAttribution) const
 {
-    return safeCreateBuffer(length, MTLStorageModeShared);
+    return safeCreateBuffer(length, MTLStorageModeShared, skipAttribution);
 }
 
 Ref<Buffer> Device::createBuffer(const WGPUBufferDescriptor& descriptor)
@@ -192,21 +193,29 @@ Buffer::~Buffer() = default;
 
 void Buffer::incrementBufferMapCount()
 {
-    for (Ref commandEncoder : m_commandEncoders)
-        commandEncoder->incrementBufferMapCount();
+    for (auto commandEncoder : m_commandEncoders) {
+        if (RefPtr ptr = m_device->commandEncoderFromIdentifier(commandEncoder))
+            ptr->incrementBufferMapCount();
+    }
 }
 
 void Buffer::decrementBufferMapCount()
 {
-    for (Ref commandEncoder : m_commandEncoders)
-        commandEncoder->decrementBufferMapCount();
+    for (auto commandEncoder : m_commandEncoders) {
+        if (RefPtr ptr = m_device->commandEncoderFromIdentifier(commandEncoder))
+            ptr->decrementBufferMapCount();
+    }
 }
 
 void Buffer::setCommandEncoder(CommandEncoder& commandEncoder, bool mayModifyBuffer) const
 {
     UNUSED_PARAM(mayModifyBuffer);
     CommandEncoder::trackEncoder(commandEncoder, m_commandEncoders);
-    commandEncoder.addBuffer(m_buffer);
+#if !CPU(X86_64)
+    if (m_device->isShaderValidationEnabled())
+#endif
+        commandEncoder.addBuffer(m_buffer);
+
     if (m_state == State::Mapped || m_state == State::MappedAtCreation)
         commandEncoder.incrementBufferMapCount();
     if (isDestroyed())
@@ -223,8 +232,10 @@ void Buffer::destroy()
     }
 
     setState(State::Destroyed);
-    for (Ref commandEncoder : m_commandEncoders)
-        commandEncoder->makeSubmitInvalid();
+    for (auto commandEncoder : m_commandEncoders) {
+        if (RefPtr ptr = m_device->commandEncoderFromIdentifier(commandEncoder))
+            ptr->makeSubmitInvalid();
+    }
 
     m_commandEncoders.clear();
     m_buffer = protectedDevice()->placeholderBuffer();

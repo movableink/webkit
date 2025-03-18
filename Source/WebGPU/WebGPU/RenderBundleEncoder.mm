@@ -264,7 +264,7 @@ bool RenderBundleEncoder::addResource(RenderBundle::ResourcesContainer* resource
         if (resource.renderStages && mtlResource)
             [renderPassEncoder->renderCommandEncoder() useResource:mtlResource usage:resource.usage stages:resource.renderStages];
         ASSERT(resource.entryUsage.hasExactlyOneBitSet());
-        renderPassEncoder->addResourceToActiveResources(resource.resource, mtlResource, resource.entryUsage);
+        renderPassEncoder->addResourceToActiveResources(resource.resource, resource.entryUsage);
         renderPassEncoder->setCommandEncoder(resource.resource);
         return renderPassEncoder->renderCommandEncoder();
     }

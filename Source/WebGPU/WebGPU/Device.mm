@@ -356,6 +356,13 @@ Device::Device(id<MTLDevice> device, id<MTLCommandQueue> defaultQueue, HardwareC
     m_placeholderDepthStencilTexture = [m_device newTextureWithDescriptor:desc];
     m_sampleCounterBuffers = [NSMapTable weakToStrongObjectsMapTable];
     m_resolvedSampleCounterBuffers = [NSMapTable weakToStrongObjectsMapTable];
+
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        // Workaround for rdar://141660277
+        if ((m_shaderValidationEnabled = [NSStringFromClass([m_device class]) containsString:@"Debug"]))
+            WTFLogAlways("WebGPU: Using DEBUG Metal device: retaining references"); // NOLINT
+    });
 }
 
 Device::Device(Adapter& adapter)
@@ -544,17 +551,19 @@ void Device::generateAnInternalError(String&& message)
     }
 }
 
-id<MTLBuffer> Device::newBufferWithBytes(const void* pointer, size_t length, MTLResourceOptions options) const
+id<MTLBuffer> Device::newBufferWithBytes(const void* pointer, size_t length, MTLResourceOptions options, bool skipAttribution) const
 {
     id<MTLBuffer> buffer = [m_device newBufferWithBytes:pointer length:length options:options];
-    setOwnerWithIdentity(buffer);
+    if (!skipAttribution)
+        setOwnerWithIdentity(buffer);
     return buffer;
 }
 
-id<MTLBuffer> Device::newBufferWithBytesNoCopy(void* pointer, size_t length, MTLResourceOptions options) const
+id<MTLBuffer> Device::newBufferWithBytesNoCopy(void* pointer, size_t length, MTLResourceOptions options, bool skipAttribution) const
 {
     id<MTLBuffer> buffer = [m_device newBufferWithBytesNoCopy:pointer length:length options:options deallocator:nil];
-    setOwnerWithIdentity(buffer);
+    if (!skipAttribution)
+        setOwnerWithIdentity(buffer);
     return buffer;
 }
 
