@@ -123,7 +123,7 @@ AudioSourceProviderGStreamer::AudioSourceProviderGStreamer(MediaStreamTrackPriva
 
     g_signal_connect_swapped(decodebin, "pad-added", G_CALLBACK(+[](AudioSourceProviderGStreamer* provider, GstPad* pad) {
         auto padCaps = adoptGRef(gst_pad_query_caps(pad, nullptr));
-        bool isAudio = doCapsHaveType(padCaps.get(), "audio");
+        bool isAudio = doCapsHaveType(padCaps.get(), "audio"_s);
         RELEASE_ASSERT(isAudio);
 
         auto sinkPad = adoptGRef(gst_element_get_static_pad(provider->m_audioSinkBin.get(), "sink"));

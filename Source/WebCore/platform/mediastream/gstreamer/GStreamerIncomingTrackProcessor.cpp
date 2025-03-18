@@ -52,7 +52,7 @@ void GStreamerIncomingTrackProcessor::configure(ThreadSafeWeakPtr<GStreamerMedia
         caps = adoptGRef(gst_pad_query_caps(m_pad.get(), nullptr));
 
     ASCIILiteral typeName;
-    if (doCapsHaveType(caps.get(), "audio")) {
+    if (doCapsHaveType(caps.get(), "audio"_s)) {
         typeName = "audio"_s;
         m_data.type = RealtimeMediaSource::Type::Audio;
     } else {

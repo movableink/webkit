@@ -308,14 +308,14 @@ StringView capsMediaType(const GstCaps* caps)
     return gstStructureGetName(structure);
 }
 
-bool doCapsHaveType(const GstCaps* caps, const char* type)
+bool doCapsHaveType(const GstCaps* caps, ASCIILiteral type)
 {
     auto mediaType = capsMediaType(caps);
     if (!mediaType) {
         GST_WARNING("Failed to get MediaType");
         return false;
     }
-    return mediaType.startsWith(unsafeSpan(type));
+    return mediaType.startsWith(type);
 }
 
 bool areEncryptedCaps(const GstCaps* caps)

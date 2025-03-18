@@ -347,7 +347,7 @@ void AudioFileReader::plugDeinterleave(GstPad* pad)
         return;
 
     auto padCaps = adoptGRef(gst_pad_query_caps(pad, nullptr));
-    if (!doCapsHaveType(padCaps.get(), "audio/x-raw"))
+    if (!doCapsHaveType(padCaps.get(), "audio/x-raw"_s))
         return;
 
     // A decodebin pad was added, plug in a deinterleave element to

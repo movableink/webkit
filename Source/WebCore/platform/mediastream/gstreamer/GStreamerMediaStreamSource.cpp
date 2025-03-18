@@ -411,7 +411,7 @@ public:
 
         if (m_isVideoTrack && drop) {
             auto* caps = gst_sample_get_caps(sample.get());
-            drop = doCapsHaveType(caps, "video") || GST_BUFFER_FLAG_IS_SET(buffer, GST_BUFFER_FLAG_DELTA_UNIT);
+            drop = doCapsHaveType(caps, "video"_s) || GST_BUFFER_FLAG_IS_SET(buffer, GST_BUFFER_FLAG_DELTA_UNIT);
         }
 
         if (drop) {

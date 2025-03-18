@@ -64,9 +64,9 @@ inline bool webkitGstCheckVersion(guint major, guint minor, guint micro)
     return true;
 }
 
-#define GST_VIDEO_CAPS_TYPE_PREFIX  "video/"
-#define GST_AUDIO_CAPS_TYPE_PREFIX  "audio/"
-#define GST_TEXT_CAPS_TYPE_PREFIX   "text/"
+#define GST_VIDEO_CAPS_TYPE_PREFIX  "video/"_s
+#define GST_AUDIO_CAPS_TYPE_PREFIX  "audio/"_s
+#define GST_TEXT_CAPS_TYPE_PREFIX   "text/"_s
 
 WARN_UNUSED_RETURN GstPad* webkitGstGhostPadFromStaticTemplate(GstStaticPadTemplate*, ASCIILiteral name, GstPad* target);
 #if ENABLE(VIDEO)
@@ -78,7 +78,7 @@ StringView capsMediaType(const GstCaps*);
 std::optional<TrackID> getStreamIdFromPad(const GRefPtr<GstPad>&);
 std::optional<TrackID> getStreamIdFromStream(const GRefPtr<GstStream>&);
 std::optional<TrackID> parseStreamId(StringView stringId);
-bool doCapsHaveType(const GstCaps*, const char*);
+bool doCapsHaveType(const GstCaps*, ASCIILiteral);
 bool areEncryptedCaps(const GstCaps*);
 Vector<String> extractGStreamerOptionsFromCommandLine();
 void setGStreamerOptionsFromUIProcess(Vector<String>&&);
