@@ -1462,6 +1462,50 @@ void RenderTheme::paintSliderTicks(const RenderObject& renderer, const PaintInfo
     }
 }
 
+void RenderTheme::paintPlatformResizer(const RenderLayerModelObject& renderer, GraphicsContext& context, const LayoutRect& resizerCornerRect)
+{
+    RefPtr<Image> resizeCornerImage;
+    FloatSize cornerResizerSize;
+    Ref document = renderer.document();
+    if (document->deviceScaleFactor() >= 2) {
+        static NeverDestroyed<Image*> resizeCornerImageHiRes(&ImageAdapter::loadPlatformResource("textAreaResizeCorner@2x").leakRef());
+        resizeCornerImage = resizeCornerImageHiRes;
+        cornerResizerSize = resizeCornerImage->size();
+        cornerResizerSize.scale(0.5f);
+    } else {
+        static NeverDestroyed<Image*> resizeCornerImageLoRes(&ImageAdapter::loadPlatformResource("textAreaResizeCorner").leakRef());
+        resizeCornerImage = resizeCornerImageLoRes;
+        cornerResizerSize = resizeCornerImage->size();
+    }
+
+    if (renderer.shouldPlaceVerticalScrollbarOnLeft()) {
+        GraphicsContextStateSaver stateSaver(context);
+        context.translate(resizerCornerRect.x() + cornerResizerSize.width(), resizerCornerRect.y() + resizerCornerRect.height() - cornerResizerSize.height());
+        context.scale(FloatSize(-1.0, 1.0));
+        if (resizeCornerImage)
+            context.drawImage(*resizeCornerImage, FloatRect(FloatPoint(), cornerResizerSize));
+        return;
+    }
+
+    if (!resizeCornerImage)
+        return;
+    FloatRect imageRect = snapRectToDevicePixels(LayoutRect(resizerCornerRect.maxXMaxYCorner() - cornerResizerSize, cornerResizerSize), document->deviceScaleFactor());
+    context.drawImage(*resizeCornerImage, imageRect);
+}
+
+void RenderTheme::paintPlatformResizerFrame(const RenderLayerModelObject&, GraphicsContext& context, const LayoutRect& resizerAbsRect)
+{
+    // Clipping will exclude the right and bottom edges of this frame.
+    GraphicsContextStateSaver stateSaver(context);
+    context.clip(resizerAbsRect);
+    LayoutRect largerCorner = resizerAbsRect;
+    largerCorner.setSize(LayoutSize(largerCorner.width() + 1_lu, largerCorner.height() + 1_lu));
+    context.setStrokeColor(SRGBA<uint8_t> { 217, 217, 217 });
+    context.setStrokeThickness(1.0f);
+    context.setFillColor(Color::transparentBlack);
+    context.drawRect(snappedIntRect(largerCorner));
+}
+
 bool RenderTheme::shouldHaveSpinButton(const HTMLInputElement& inputElement) const
 {
     return inputElement.isSteppable() && !inputElement.isRangeControl();

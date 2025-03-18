@@ -863,6 +863,24 @@ bool RenderThemeCocoa::paintSwitchTrack(const RenderObject& renderer, const Pain
     return renderThemePaintSwitchTrack(extractControlStyleStatesForRenderer(renderer), renderer, paintInfo, rect);
 }
 
+void RenderThemeCocoa::paintPlatformResizer(const RenderLayerModelObject& renderer, GraphicsContext& context, const LayoutRect& resizerCornerRect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintPlatformResizerForVectorBasedControls(renderer, context, resizerCornerRect))
+        return;
+#endif
+    RenderTheme::paintPlatformResizer(renderer, context, resizerCornerRect);
+}
+
+void RenderThemeCocoa::paintPlatformResizerFrame(const RenderLayerModelObject& renderer, GraphicsContext& context, const LayoutRect& resizerCornerRect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintPlatformResizerFrameForVectorBasedControls(renderer, context, resizerCornerRect))
+        return;
+#endif
+    RenderTheme::paintPlatformResizerFrame(renderer, context, resizerCornerRect);
+}
+
 bool RenderThemeCocoa::supportsFocusRing(const RenderObject& renderer, const RenderStyle& style) const
 {
 #if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)

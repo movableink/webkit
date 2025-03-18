@@ -244,6 +244,9 @@ public:
     virtual bool hasSwitchHapticFeedback(SwitchTrigger) const { return false; }
     OptionSet<ControlStyle::State> extractControlStyleStatesForRenderer(const RenderObject&) const;
 
+    virtual void paintPlatformResizer(const RenderLayerModelObject&, GraphicsContext&, const LayoutRect&);
+    virtual void paintPlatformResizerFrame(const RenderLayerModelObject&, GraphicsContext&, const LayoutRect&);
+
 protected:
     ControlStyle extractControlStyleForRenderer(const RenderObject&) const;
 

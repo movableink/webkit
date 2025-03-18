@@ -119,6 +119,9 @@ protected:
     bool paintSwitchThumb(const RenderObject&, const PaintInfo&, const FloatRect&) override;
     bool paintSwitchTrack(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
+    void paintPlatformResizer(const RenderLayerModelObject&, GraphicsContext&, const LayoutRect&) override;
+    void paintPlatformResizerFrame(const RenderLayerModelObject&, GraphicsContext&, const LayoutRect&) override;
+
     bool supportsFocusRing(const RenderObject&, const RenderStyle&) const override;
 
 #if USE(APPLE_INTERNAL_SDK)
