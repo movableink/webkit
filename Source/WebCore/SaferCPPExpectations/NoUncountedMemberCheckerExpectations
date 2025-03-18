@@ -242,7 +242,6 @@ platform/ScrollingEffectsController.h
 platform/ThreadGlobalData.h
 platform/ThreadTimers.h
 platform/Timer.cpp
-platform/audio/AudioDSPKernel.h
 platform/audio/AudioDestination.h
 platform/audio/AudioHardwareListener.h
 platform/audio/AudioResamplerKernel.h
