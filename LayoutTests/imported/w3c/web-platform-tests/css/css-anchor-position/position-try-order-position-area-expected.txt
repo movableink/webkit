@@ -24,12 +24,14 @@ PASS most-block-size --left-sweep, --bottom-sweep | --left-sweep
 PASS most-block-size --bottom-sweep, --left-sweep | --left-sweep
 PASS most-inline-size --right-sweep, --left-sweep, --bottom-sweep, --top-sweep | --left-sweep
 PASS most-block-size --right-sweep, --left-sweep, --bottom-sweep, --top-sweep | --top-sweep
-FAIL most-inline-size
+PASS most-inline-size
   --right-sweep, --left-sweep, --bottom-sweep, --top-sweep,
-  --right, --left, --bottom, --top
-   | --left-sweep assert_equals: offsetTop expected 200 but got 350
+  /* --right, --left, --bottom, --top */
+  --bottom
+   | --bottom
 PASS most-block-size
   --right-sweep, --left-sweep, --bottom-sweep, --top-sweep,
-  --right, --left, --bottom, --top
+  /* --right, --left, --bottom, --top */
+  --right
    | --right
 

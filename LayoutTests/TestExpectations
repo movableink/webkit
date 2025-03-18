@@ -7596,10 +7596,13 @@ webkit.org/b/282024 fast/text/text-box-edge-with-margin-padding-border-simple.ht
 # -- Anchor Positioning -- #
 
 # general failures
+webkit.org/b/289743 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-multicol-007.html [ ImageOnlyFailure ]
+webkit.org/b/289743 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-multicol-008.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-top-layer-001.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-top-layer-003.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-top-layer-005.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-position-top-layer-006.html [ ImageOnlyFailure ]
+webkit.org/b/289743 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scope-scroll.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-chained-001.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-chained-002.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-chained-003.html [ ImageOnlyFailure ]
@@ -7614,6 +7617,7 @@ imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-to-sticky-
 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-update-003.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-update-007.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/position-area-inline-container.html [ ImageOnlyFailure ]
+webkit.org/b/289743 imported/w3c/web-platform-tests/css/css-anchor-position/position-area-scrolling-004.tentative.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/position-area-scroll-adjust.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/position-anchor-002.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-anchor-position/position-try-switch-to-fixed-anchor.html [ ImageOnlyFailure ]
