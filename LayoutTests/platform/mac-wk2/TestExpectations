@@ -2053,3 +2053,5 @@ webkit.org/b/289487 [ Sequoia Release x86_64 ] fast/webgpu/nocrash/RenderBundle_
 webkit.org/b/289556 [ Sequoia Release x86_64 ] fast/events/page-visibility-transition-test.html [ Pass Timeout ]
 
 webkit.org/b/289576 [ Release ] imported/w3c/web-platform-tests/html/semantics/interactive-elements/the-dialog-element/top-layer-remove-popover-attribute.html [ Pass Failure ]
+
+webkit.org/b/289975 fast/css/mac/focus-ring-color-should-not-expose-accent-color.html [ Failure ]
