@@ -4499,8 +4499,7 @@ Ref<HitTestingTransformState> RenderLayer::createLocalTransformState(RenderLayer
     }
     offset += translationOffset;
 
-    RenderObject* containerRenderer = containerLayer ? &containerLayer->renderer() : nullptr;
-    if (renderer().shouldUseTransformFromContainer(containerRenderer)) {
+    if (renderer().shouldUseTransformFromContainer(containerLayer ? &containerLayer->renderer() : nullptr)) {
         TransformationMatrix containerTransform;
         renderer().getTransformFromContainer(offset, containerTransform);
         transformState->applyTransform(containerTransform, HitTestingTransformState::AccumulateTransform);

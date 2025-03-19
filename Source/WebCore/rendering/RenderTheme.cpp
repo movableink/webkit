@@ -1407,9 +1407,8 @@ void RenderTheme::paintSliderTicks(const RenderObject& renderer, const PaintInfo
     bool isHorizontal = appearance == StyleAppearance::SliderHorizontal;
 
     IntSize thumbSize;
-    const RenderObject* thumbRenderer = input->sliderThumbElement()->renderer();
-    if (thumbRenderer) {
-        const RenderStyle& thumbStyle = thumbRenderer->style();
+    if (CheckedPtr thumbRenderer = input->sliderThumbElement()->renderer()) {
+        auto& thumbStyle = thumbRenderer->style();
         int thumbWidth = thumbStyle.width().intValue();
         int thumbHeight = thumbStyle.height().intValue();
         thumbSize.setWidth(isHorizontal ? thumbWidth : thumbHeight);

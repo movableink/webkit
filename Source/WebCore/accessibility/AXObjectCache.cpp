@@ -441,13 +441,13 @@ void AXObjectCache::updateCurrentModalNode()
     }
 }
 
-bool AXObjectCache::isNodeVisible(Node* node) const
+bool AXObjectCache::isNodeVisible(const Node* node) const
 {
     RefPtr element = dynamicDowncast<Element>(node);
     if (!element)
         return false;
 
-    RenderObject* renderer = node->renderer();
+    auto* renderer = element->renderer();
     if (!renderer)
         return false;
 
@@ -462,8 +462,8 @@ bool AXObjectCache::isNodeVisible(Node* node) const
     // Check whether this object or any of its ancestors has opacity 0.
     // The resulting opacity of a RenderObject is computed as the multiplication
     // of its opacity times the opacities of its ancestors.
-    for (auto* renderObject = renderer; renderObject; renderObject = renderObject->parent()) {
-        if (!renderObject->style().opacity())
+    for (auto* ancestor = renderer; ancestor; ancestor = ancestor->parent()) {
+        if (!ancestor->style().opacity())
             return false;
     }
 

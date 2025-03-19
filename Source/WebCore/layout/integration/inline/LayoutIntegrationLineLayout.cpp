@@ -115,8 +115,8 @@ static bool shouldInvalidateLineLayoutPathAfterChangeFor(const RenderBlockFlow& 
             }
             return *hasStrongDirectionalityContent;
         }
-        if (is<RenderInline>(renderer)) {
-            auto& style = renderer.style();
+        if (CheckedPtr renderInline = dynamicDowncast<RenderInline>(renderer)) {
+            auto& style = renderInline->style();
             return style.writingMode().isBidiRTL() || (style.rtlOrdering() == Order::Logical && style.unicodeBidi() != UnicodeBidi::Normal);
         }
         return false;

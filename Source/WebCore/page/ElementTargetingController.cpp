@@ -568,9 +568,9 @@ static inline Vector<FrameIdentifier> collectChildFrameIdentifiers(const Element
     return identifiers;
 }
 
-static FloatRect computeClientRect(RenderObject& renderer)
+static FloatRect computeClientRect(const RenderElement& renderer)
 {
-    FloatRect rect = renderer.absoluteBoundingBoxRect();
+    auto rect = FloatRect { renderer.absoluteBoundingBoxRect() };
     renderer.document().convertAbsoluteToClientRect(rect, renderer.style());
     return rect;
 }

@@ -891,15 +891,15 @@ Path AccessibilityRenderObject::elementPath() const
     if (!m_renderer)
         return AccessibilityNodeObject::elementPath();
 
-    if (auto* renderText = dynamicDowncast<RenderText>(*m_renderer)) {
+    if (CheckedPtr renderText = dynamicDowncast<RenderText>(*m_renderer)) {
         Vector<LayoutRect> rects;
-        renderText->boundingRects(rects, flooredLayoutPoint(m_renderer->localToAbsolute()));
+        renderText->boundingRects(rects, flooredLayoutPoint(renderText->localToAbsolute()));
         // If only 1 rect, don't compute path since the bounding rect will be good enough.
         if (rects.size() < 2)
             return { };
 
         // Compute the path only if this is the last part of a line followed by the beginning of the next line.
-        const auto& style = m_renderer->style();
+        auto& style = renderText->style();
         bool rightToLeftText = style.writingMode().isBidiRTL();
         static const auto xTolerance = 5_lu;
         static const auto yTolerance = 5_lu;
@@ -919,7 +919,7 @@ Path AccessibilityRenderObject::elementPath() const
             return { };
 
         float outlineOffset = style.outlineOffset();
-        float deviceScaleFactor = m_renderer->document().deviceScaleFactor();
+        float deviceScaleFactor = renderText->document().deviceScaleFactor();
         Vector<FloatRect> pixelSnappedRects;
         for (auto rect : rects) {
             rect.inflate(outlineOffset);

@@ -753,7 +753,7 @@ private:
     bool isModalElement(Element&) const;
     void findModalNodes();
     void updateCurrentModalNode();
-    bool isNodeVisible(Node*) const;
+    bool isNodeVisible(const Node*) const;
     bool modalElementHasAccessibleContent(Element&);
 
     // Relationships between objects.

@@ -366,10 +366,12 @@ bool canUseForPreferredWidthComputation(const RenderBlockFlow& blockContainer)
             if (!allowImagesToBreak)
                 return true;
             // FIXME: See RenderReplaced::computePreferredLogicalWidths where m_minPreferredLogicalWidth is set to 0.
-            auto isReplacedWithSpecialIntrinsicWidth = is<RenderReplaced>(renderer) && renderer.style().logicalMaxWidth().isPercentOrCalculated();
-            if (isReplacedWithSpecialIntrinsicWidth)
-                return true;
-            return false;
+            auto isReplacedWithSpecialIntrinsicWidth = [&] {
+                if (CheckedPtr renderReplaced = dynamicDowncast<RenderReplaced>(renderer))
+                    return renderReplaced->style().logicalMaxWidth().isPercentOrCalculated();
+                return false;
+            };
+            return isReplacedWithSpecialIntrinsicWidth();
         };
         if (isNonSupportedFixedWidthContent())
             return false;

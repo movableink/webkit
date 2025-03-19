@@ -261,7 +261,7 @@ UniqueRef<Layout::Box> BoxTreeUpdater::createLayoutBox(RenderObject& renderer)
 
     auto& renderElement = downcast<RenderElement>(renderer);
 
-    auto style = RenderStyle::clone(renderer.style());
+    auto style = RenderStyle::clone(renderElement.style());
     adjustStyleIfNeeded(renderElement, style, firstLineStyle.get());
 
     if (auto* listMarkerRenderer = dynamicDowncast<RenderListMarker>(renderElement)) {

@@ -923,7 +923,7 @@ bool lineBreakExistsAtPosition(const Position& position)
         return false;
 
     RefPtr textNode = dynamicDowncast<Text>(*position.anchorNode());
-    if (!textNode || !position.anchorNode()->renderer()->style().preserveNewline())
+    if (!textNode || !textNode->renderer()->style().preserveNewline())
         return false;
 
     unsigned offset = position.offsetInContainerNode();

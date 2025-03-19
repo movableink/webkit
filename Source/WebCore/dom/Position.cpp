@@ -895,34 +895,35 @@ unsigned Position::positionCountBetweenPositions(const Position& a, const Positi
     return posCount;
 }
 
-static int boundingBoxLogicalHeight(RenderObject *o, const IntRect &rect)
-{
-    return o->writingMode().isHorizontal() ? rect.height() : rect.width();
-}
-
 bool Position::hasRenderedNonAnonymousDescendantsWithHeight(const RenderElement& renderer)
 {
-    RenderObject* stop = renderer.nextInPreOrderAfterChildren();
-    for (RenderObject* o = renderer.firstChild(); o && o != stop; o = o->nextInPreOrder()) {
-        if (!o->nonPseudoNode())
+    auto isHorizontal = renderer.isHorizontalWritingMode();
+    auto* stop = renderer.nextInPreOrderAfterChildren();
+    for (CheckedPtr descendant = renderer.firstChild(); descendant && descendant != stop; descendant = descendant->nextInPreOrder()) {
+        if (!descendant->nonPseudoNode())
             continue;
-        if (auto* renderText = dynamicDowncast<RenderText>(*o)) {
-            if (boundingBoxLogicalHeight(o, renderText->linesBoundingBox()))
+
+        auto boundingBoxLogicalHeight = [&](auto rect) {
+            return isHorizontal ? rect.height() : rect.width();
+        };
+
+        if (CheckedPtr renderText = dynamicDowncast<RenderText>(*descendant)) {
+            if (boundingBoxLogicalHeight(renderText->linesBoundingBox()))
                 return true;
             continue;
         }
-        if (auto* renderLineBreak = dynamicDowncast<RenderLineBreak>(*o)) {
-            if (boundingBoxLogicalHeight(o, renderLineBreak->linesBoundingBox()))
+        if (CheckedPtr renderLineBreak = dynamicDowncast<RenderLineBreak>(*descendant)) {
+            if (boundingBoxLogicalHeight(renderLineBreak->linesBoundingBox()))
                 return true;
             continue;
         }
-        if (auto* renderBox = dynamicDowncast<RenderBox>(*o)) {
+        if (CheckedPtr renderInline = dynamicDowncast<RenderInline>(*descendant)) {
+            if (isEmptyInline(*renderInline) && boundingBoxLogicalHeight(renderInline->linesBoundingBox()))
+                return true;
+            continue;
+        }
+        if (CheckedPtr renderBox = dynamicDowncast<RenderBox>(*descendant)) {
             if (roundToInt(renderBox->logicalHeight()))
-                return true;
-            continue;
-        }
-        if (auto* renderInline = dynamicDowncast<RenderInline>(*o)) {
-            if (isEmptyInline(*renderInline) && boundingBoxLogicalHeight(o, renderInline->linesBoundingBox()))
                 return true;
             continue;
         }

@@ -1851,7 +1851,7 @@ LayoutRect Element::absoluteEventHandlerBounds(bool& includesFixedPositionElemen
     return absoluteEventBoundsOfElementAndDescendants(includesFixedPositionElements);
 }
 
-static std::optional<std::pair<CheckedRef<RenderObject>, LayoutRect>> listBoxElementBoundingBox(const Element& element)
+static std::optional<std::pair<CheckedRef<RenderListBox>, LayoutRect>> listBoxElementBoundingBox(const Element& element)
 {
     auto owningSelectElement = [](const Element& element) -> HTMLSelectElement* {
         if (auto* optionElement = dynamicDowncast<HTMLOptionElement>(element))
@@ -1880,14 +1880,14 @@ static std::optional<std::pair<CheckedRef<RenderObject>, LayoutRect>> listBoxEle
     if (!boundingBox)
         return { };
 
-    return std::pair<CheckedRef<RenderObject>, LayoutRect> { listBoxRenderer.releaseNonNull(), boundingBox.value() };
+    return std::pair<CheckedRef<RenderListBox>, LayoutRect> { listBoxRenderer.releaseNonNull(), boundingBox.value() };
 }
 
 Ref<DOMRectList> Element::getClientRects()
 {
     protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
 
-    CheckedPtr<RenderObject> renderer = this->renderer();
+    CheckedPtr renderer = this->renderer();
 
     Vector<FloatQuad> quads;
 
@@ -1911,7 +1911,7 @@ Ref<DOMRectList> Element::getClientRects()
 
 std::optional<std::pair<CheckedPtr<RenderObject>, FloatRect>> Element::boundingAbsoluteRectWithoutLayout() const
 {
-    CheckedPtr<RenderObject> renderer = this->renderer();
+    CheckedPtr renderer = this->renderer();
     Vector<FloatQuad> quads;
     if (RefPtr svgElement = elementWithSVGLayoutBox(*this)) {
         if (auto localRect = svgElement->getBoundingBox())

@@ -448,19 +448,23 @@ bool canScrollInDirection(const Node* container, FocusDirection direction)
     if (!isScrollableNode(container))
         return false;
 
-    switch (direction) {
-    case FocusDirection::Left:
-        return (container->renderer()->style().overflowX() != Overflow::Hidden && container->renderBox()->scrollLeft() > 0);
-    case FocusDirection::Up:
-        return (container->renderer()->style().overflowY() != Overflow::Hidden && container->renderBox()->scrollTop() > 0);
-    case FocusDirection::Right:
-        return (container->renderer()->style().overflowX() != Overflow::Hidden && container->renderBox()->scrollLeft() + container->renderBox()->clientWidth() < container->renderBox()->scrollWidth());
-    case FocusDirection::Down:
-        return (container->renderer()->style().overflowY() != Overflow::Hidden && container->renderBox()->scrollTop() + container->renderBox()->clientHeight() < container->renderBox()->scrollHeight());
-    default:
-        ASSERT_NOT_REACHED();
-        return false;
+    if (CheckedPtr renderBox = container->renderBox()) {
+        switch (direction) {
+        case FocusDirection::Left:
+            return renderBox->style().overflowX() != Overflow::Hidden && renderBox->scrollLeft() > 0;
+        case FocusDirection::Up:
+            return renderBox->style().overflowY() != Overflow::Hidden && renderBox->scrollTop() > 0;
+        case FocusDirection::Right:
+            return renderBox->style().overflowX() != Overflow::Hidden && renderBox->scrollLeft() + renderBox->clientWidth() < renderBox->scrollWidth();
+        case FocusDirection::Down:
+            return renderBox->style().overflowY() != Overflow::Hidden && renderBox->scrollTop() + renderBox->clientHeight() < renderBox->scrollHeight();
+        default:
+            ASSERT_NOT_REACHED();
+            return false;
+        }
     }
+    ASSERT_NOT_REACHED();
+    return false;
 }
 
 bool canScrollInDirection(const LocalFrame* frame, FocusDirection direction)
