@@ -737,6 +737,17 @@ void FunctionDefinitionWriter::visit(AST::Structure& structDecl)
     }
     m_body.append(m_indent, "};\n\n"_s);
     m_structRole = std::nullopt;
+
+    if (structDecl.role() == AST::StructureRole::BindGroup) {
+        for (auto& member : structDecl.members()) {
+            auto* type = member.type().inferredType();
+            if (auto* reference = std::get_if<Types::Reference>(type))
+                type = reference->element;
+            if (auto maybeSize = type->maybeSize(); maybeSize && *maybeSize < std::numeric_limits<unsigned>::max())
+                m_body.append(m_indent, "static_assert(sizeof("_s, structDecl.name(), "::"_s, member.name(), ") == "_s, *maybeSize, ");\n\n"_s);
+        }
+    }
+
 }
 
 void FunctionDefinitionWriter::generatePackingHelpers(AST::Structure& structure)
