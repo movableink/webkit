@@ -270,11 +270,6 @@ Vector<RenderBox*> RenderGrid::computeAspectRatioDependentAndBaselineItems(GridL
     m_baselineItemsCached = true;
 
     auto computeOrthogonalAndDependentItems = [&](RenderBox* gridItem) {
-        // Grid's layout logic controls the grid item's override content size, hence we need to
-        // clear any override set previously, so it doesn't interfere in current layout
-        // execution.
-        gridItem->clearOverridingSize();
-
         // For a grid item that has an aspect-ratio and block-constraints such as the relative logical height,
         // when the grid width is auto, we may need get the real grid width before laying out the item.
         if (GridLayoutFunctions::isAspectRatioBlockSizeDependentGridItem(*gridItem) && (style().logicalWidth().isAuto() || style().logicalWidth().isMinContent() || style().logicalWidth().isMaxContent())) {
@@ -332,6 +327,18 @@ void RenderGrid::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit)
         layoutMasonry(relayoutChildren);
 }
 
+static void clearGridItemOverridingSizesBeforeLayout(RenderGrid& renderGrid)
+{
+    // Grid's layout logic controls the grid item's override content size, hence we need to
+    // clear any override set previously, so it doesn't interfere in current layout
+    // execution.
+    for (auto& gridItem : childrenOfType<RenderBox>(renderGrid)) {
+        if (gridItem.isOutOfFlowPositioned() || gridItem.isLegend())
+            continue;
+        gridItem.clearOverridingSize();
+    }
+}
+
 void RenderGrid::layoutGrid(RelayoutChildren relayoutChildren)
 {
     LayoutRepainter repainter(*this);
@@ -341,6 +348,7 @@ void RenderGrid::layoutGrid(RelayoutChildren relayoutChildren)
         GridLayoutState gridLayoutState;
 
         updateIntrinsicLogicalHeightsForRowSizingFirstPassCacheAvailability();
+        clearGridItemOverridingSizesBeforeLayout(*this);
         computeLayoutRequirementsForItemsBeforeLayout(gridLayoutState);
 
         preparePaginationBeforeBlockLayout(relayoutChildren);
@@ -474,6 +482,8 @@ void RenderGrid::layoutMasonry(RelayoutChildren relayoutChildren)
     {
         LayoutStateMaintainer statePusher(*this, locationOffset(), isTransformed() || hasReflection() || writingMode().isBlockFlipped());
         GridLayoutState gridLayoutState;
+
+        clearGridItemOverridingSizesBeforeLayout(*this);
 
         preparePaginationBeforeBlockLayout(relayoutChildren);
         beginUpdateScrollInfoAfterLayoutTransaction();
