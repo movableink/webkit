@@ -20,6 +20,7 @@
       setupTestCase({disableConsoleLog: true});
 
       var layer = document.getElementsByClassName("layer")[0];
+      var damageHistorySizeDuringPreviousFrame = null
 
       processAnimationFrameSequence({skipFirstFrameToEnsureInitialPaintingDone: true}, [
           () => {
@@ -29,14 +30,14 @@
               var damage = latestFrameDamage();
               assertValid(damage);
               assertRectsEq(damage.rects, [[7, 3, 50, 50]]);
+              damageHistorySizeDuringPreviousFrame = allFramesDamages().length;
           },
           () => {
               layer.style.backgroundColor = "red";
           },
           () => {
-              var damage = latestFrameDamage();
-              assertValid(damage);
-              assertRectsEq(damage.rects, []);
+              // Expect nothing was rendered.
+              assertEq(allFramesDamages().length, damageHistorySizeDuringPreviousFrame, "unxpected damage history size");
           },
           () => {
               layer.style.visibility = "visible";
@@ -52,15 +53,16 @@
           () => {
               var damage = latestFrameDamage();
               assertValid(damage);
-              assertRectsEq(damage.rects, [[7, 3, 50, 50]]);
+              // 'display' property invalidates the structure of the document so full damage is issued (due to layout).
+              assertRectsEq(damage.rects, [[0, 0, window.innerWidth, window.innerHeight]]);
+              damageHistorySizeDuringPreviousFrame = allFramesDamages().length;
           },
           () => {
               layer.style.backgroundColor = "green";
           },
           () => {
-              var damage = latestFrameDamage();
-              assertValid(damage);
-              assertRectsEq(damage.rects, []);
+              // Expect nothing was rendered.
+              assertEq(allFramesDamages().length, damageHistorySizeDuringPreviousFrame, "unxpected damage history size");
           },
           () => {
               layer.style.display = "block";

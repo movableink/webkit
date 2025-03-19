@@ -193,6 +193,8 @@ private:
     void collectDamageSelf(TextureMapperPaintOptions&, Damage&);
     void collectDamageSelfChildrenReplicaFilterAndMask(TextureMapperPaintOptions&, Damage&);
     void collectDamageSelfChildrenFilterAndMask(TextureMapperPaintOptions&, Damage&);
+    void collectDamageFromLayerAboutToBeRemoved(Damage&, TextureMapperLayer&);
+    inline void damageWholeLayer();
     void damageWholeLayerIncludingItsRectFromPreviousFrame();
 #endif
 

@@ -532,9 +532,14 @@ void TextureMapperLayer::collectDamageSelfChildrenFilterAndMask(TextureMapperPai
         damage.add(m_accumulatedOverlapRegionDamage);
 }
 
-void TextureMapperLayer::damageWholeLayerIncludingItsRectFromPreviousFrame()
+void TextureMapperLayer::damageWholeLayer()
 {
     m_damageInLayerCoordinateSpace.add(layerRect());
+}
+
+void TextureMapperLayer::damageWholeLayerIncludingItsRectFromPreviousFrame()
+{
+    damageWholeLayer();
 
     // In many cases, damaging the whole layer in the "new" state is not enough.
     // When e.g. changing size, transform, etc. the layer (or its parts) effectively disappears from one place
@@ -1236,6 +1241,16 @@ void TextureMapperLayer::addChild(TextureMapperLayer* childLayer)
     m_children.append(childLayer);
 }
 
+#if ENABLE(DAMAGE_TRACKING)
+void TextureMapperLayer::collectDamageFromLayerAboutToBeRemoved(Damage& damageInGlobalCoordinateSpace, TextureMapperLayer& node)
+{
+    if (node.m_previousLayerRectInGlobalCoordinateSpace)
+        damageInGlobalCoordinateSpace.add(*node.m_previousLayerRectInGlobalCoordinateSpace);
+    for (const auto& child : node.m_children)
+        collectDamageFromLayerAboutToBeRemoved(damageInGlobalCoordinateSpace, *child);
+}
+#endif
+
 void TextureMapperLayer::removeFromParent()
 {
     if (m_parent) {
@@ -1243,8 +1258,11 @@ void TextureMapperLayer::removeFromParent()
         ASSERT(index != notFound);
         m_parent->m_children.remove(index);
 #if ENABLE(DAMAGE_TRACKING)
-        if (m_parent->canInferDamage() && m_previousLayerRectInGlobalCoordinateSpace)
-            m_parent->m_damageInGlobalCoordinateSpace.add(*m_previousLayerRectInGlobalCoordinateSpace);
+        if (m_parent->canInferDamage()) {
+            collectDamageFromLayerAboutToBeRemoved(m_damageInGlobalCoordinateSpace, *this);
+            if (!m_damageInGlobalCoordinateSpace.isEmpty())
+                m_parent->m_damageInGlobalCoordinateSpace.add(m_damageInGlobalCoordinateSpace);
+        }
 #endif
     }
 
@@ -1386,11 +1404,19 @@ void TextureMapperLayer::setBackfaceVisibility(bool backfaceVisibility)
 
 void TextureMapperLayer::setOpacity(float opacity)
 {
+#if ENABLE(DAMAGE_TRACKING)
+    if (canInferDamage() && m_state.opacity != opacity)
+        damageWholeLayer();
+#endif
     m_state.opacity = opacity;
 }
 
 void TextureMapperLayer::setSolidColor(const Color& color)
 {
+#if ENABLE(DAMAGE_TRACKING)
+    if (canInferDamage() && m_state.solidColor != color)
+        damageWholeLayer();
+#endif
     m_state.solidColor = color;
 }
 

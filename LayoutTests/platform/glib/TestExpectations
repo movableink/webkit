@@ -4374,12 +4374,6 @@ imported/w3c/web-platform-tests/upgrade-insecure-requests/gen/top.meta/unset/img
 
 fullscreen/full-screen-enter-while-exiting-mid-completion-handler.html [ Skip ]
 
-webkit.org/b/289331 platform/glib/damage/layer-color-change.html [ Failure ]
-webkit.org/b/289331 platform/glib/damage/layer-opacity-change.html [ Failure ]
-webkit.org/b/289331 platform/glib/damage/layer-overlaps-with-opacity.html [ Failure ]
-webkit.org/b/289331 platform/glib/damage/layer-text-change.html [ Failure ]
-webkit.org/b/289331 platform/glib/damage/layer-visibility-change.html [ Failure ]
-
 # End: Common failures between GTK and WPE.
 
 #////////////////////////////////////////////////////////////////////////////////////////
