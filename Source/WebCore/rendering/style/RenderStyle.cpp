@@ -2222,7 +2222,6 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
         // cursorData
         // textEmphasisCustomMark
         // insideDefaultButton
-        // shouldApplyColorFilterWhenInactive
     };
 
     if (m_inheritedFlags != other.m_inheritedFlags)

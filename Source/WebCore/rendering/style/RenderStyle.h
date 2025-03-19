@@ -2357,9 +2357,6 @@ public:
     inline bool insideDefaultButton() const;
     inline void setInsideDefaultButton(bool);
 
-    inline bool shouldApplyColorFilterWhenInactive() const;
-    inline void setShouldApplyColorFilterWhenInactive(bool);
-
 private:
     struct NonInheritedFlags {
         friend bool operator==(const NonInheritedFlags&, const NonInheritedFlags&) = default;
