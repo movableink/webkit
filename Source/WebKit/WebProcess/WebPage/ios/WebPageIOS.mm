@@ -608,7 +608,7 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent& event)
     auto* platformEvent = event.underlyingPlatformEvent();
     if (!platformEvent)
         return false;
-    
+
     // Don't send synthetic events to the UIProcess. They are only
     // used for interacting with JavaScript.
     if (platformEvent->isSyntheticEvent())
@@ -1369,13 +1369,25 @@ void WebPage::commitPotentialTap(OptionSet<WebEventModifier> modifiers, Transact
             targetRenders = shadowRoot->host()->renderOrDisplayContentsStyle();
         invalidTargetForSingleClick = !targetRenders && !is<HTMLAreaElement>(m_potentialTapNode);
     }
+
+    RefPtr localMainFrame = m_page->localMainFrame();
+
     if (invalidTargetForSingleClick) {
+        if (localMainFrame) {
+            constexpr OptionSet hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AllowVisibleChildFrameContentOnly };
+            auto roundedPoint = IntPoint { m_potentialTapLocation };
+            auto result = localMainFrame->eventHandler().hitTestResultAtPoint(roundedPoint, hitType);
+            localMainFrame->eventHandler().setLastTouchedNode(result.innerNode());
+        }
+
         commitPotentialTapFailed();
         return;
     }
 
+    if (localMainFrame)
+        localMainFrame->eventHandler().setLastTouchedNode(nullptr);
+
     FloatPoint adjustedPoint;
-    RefPtr localMainFrame = m_page->localMainFrame();
     Node* nodeRespondingToClick = localMainFrame ? localMainFrame->nodeRespondingToClickEvents(m_potentialTapLocation, adjustedPoint, m_potentialTapSecurityOrigin.get()) : nullptr;
     auto* frameRespondingToClick = nodeRespondingToClick ? nodeRespondingToClick->document().frame() : nullptr;
 

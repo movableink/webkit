@@ -210,7 +210,7 @@ enum class TapHandlingResult : uint8_t;
 #endif
 
 @property (nonatomic, readonly) BOOL _isSimulatingCompatibilityPointerTouches;
-@property (nonatomic, readonly) WKVelocityTrackingScrollView *_scrollViewInternal;
+@property (nonatomic, readonly) WKBaseScrollView *_scrollViewInternal;
 @property (nonatomic, readonly) CGRect _contentRectForUserInteraction;
 
 @property (nonatomic, readonly) BOOL _haveSetUnobscuredSafeAreaInsets;

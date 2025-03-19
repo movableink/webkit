@@ -2690,7 +2690,7 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
     return [self convertRect:unobscuredRect toView:self._currentContentView];
 }
 
-- (WKVelocityTrackingScrollView *)_scrollViewInternal
+- (WKBaseScrollView *)_scrollViewInternal
 {
     return _scrollView.get();
 }

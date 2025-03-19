@@ -4837,6 +4837,9 @@ ScrollableArea* EventHandler::focusedScrollableArea() const
     if (!node)
         node = m_mousePressNode;
 
+    if (!node)
+        node = lastTouchedNode();
+
     return enclosingScrollableArea(node.get());
 }
 
