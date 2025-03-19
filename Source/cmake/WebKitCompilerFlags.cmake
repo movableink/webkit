@@ -187,8 +187,8 @@ if (COMPILER_IS_GCC_OR_CLANG)
         WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-uninitialized)
     endif ()
 
-    # GCC < 14.0 gives false warnings for subobject-linkage <https://gcc.gnu.org/bugzilla/show_bug.cgi?id=70413>
-    if ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "14.0.0"))
+    # GCC gives false warnings for subobject-linkage <https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105595>
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-subobject-linkage)
     endif ()
 
