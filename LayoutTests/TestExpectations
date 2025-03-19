@@ -6050,17 +6050,16 @@ webkit.org/b/261849 imported/w3c/web-platform-tests/css/css-scroll-anchoring/zer
 webkit.org/b/261849 imported/w3c/web-platform-tests/css/css-scroll-anchoring/start-edge-in-block-layout-direction.html [ Skip ]
 
 # Some Trusted Types tests are flaky due to subtest ordering
-webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/WorkerGlobalScope-importScripts.html [ Pass Failure ]
-webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/WorkerGlobalScope-worker-constructor.html [ Pass Failure ]
 webkit.org/b/274089 imported/w3c/web-platform-tests/trusted-types/trusted-types-from-literal.tentative.html [ Pass Failure ]
 webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/trusted-types-navigation.html [ Pass Failure ]
 webkit.org/b/274088 imported/w3c/web-platform-tests/trusted-types/Element-setAttribute-respects-Elements-node-documents-globals-CSP-after-adoption-from-non-TT-realm.html [ Pass Failure ]
 webkit.org/b/274088 imported/w3c/web-platform-tests/trusted-types/Element-setAttribute-respects-Elements-node-documents-globals-CSP-after-adoption-from-TT-realm.html [ Pass Failure ]
-webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/WorkerGlobalScope-eval.html [ Pass Failure ]
-webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/DOMWindowTimers-setTimeout-setInterval.html [ Pass Failure ]
-webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/block-eval-function-constructor.html [ Pass Failure ]
-webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/block-string-assignment-to-DOMWindowTimers-setTimeout-setInterval.html [ Pass Failure ]
-webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register-from-Worker.https.html [ Pass Failure ]
+
+webkit.org/b/289904 imported/w3c/web-platform-tests/trusted-types/should-sink-type-mismatch-violation-be-blocked-by-csp-001.html [ Skip ]
+
+# WebKit doesn't support CSP violation reporting inside Workers
+imported/w3c/web-platform-tests/trusted-types/trusted-types-reporting-for-DedicatedWorker-setTimeout-setInterval.html [ Skip ]
+imported/w3c/web-platform-tests/trusted-types/trusted-types-reporting-for-SharedWorker-setTimeout-setInterval.html [ Skip ]
 
 # Close watchers aren't implemented yet
 webkit.org/b/263305 imported/w3c/web-platform-tests/close-watcher/user-activation/n-activate-preventDefault.html?dialog [ Skip ]

@@ -1919,6 +1919,9 @@ webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/trusted-types-
 webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/trusted-types-eval-reporting-report-only.html [ Skip ]
 webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/trusted-types-eval-reporting-no-unsafe-eval.html [ Skip ]
 webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/trusted-types-eval-reporting.html [ Skip ]
+webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/should-trusted-type-policy-creation-be-blocked-by-csp-001.html [ Skip ]
+webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/should-trusted-type-policy-creation-be-blocked-by-csp-002.html [ Skip ]
+webkit.org/b/266630 imported/w3c/web-platform-tests/trusted-types/should-trusted-type-policy-creation-be-blocked-by-csp-003.html [ Skip ]
 
 # Failing with non-English keyboard
 webkit.org/b/267251 imported/w3c/web-platform-tests/css/selectors/invalidation/user-valid-user-invalid.html [ Failure Pass ]

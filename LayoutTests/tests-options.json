@@ -5657,6 +5657,18 @@
     "imported/w3c/web-platform-tests/trusted-types/TrustedTypePolicyFactory-metadata.tentative.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/trusted-types/should-sink-type-mismatch-violation-be-blocked-by-csp-001.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/trusted-types/should-trusted-type-policy-creation-be-blocked-by-csp-001.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/trusted-types/should-trusted-type-policy-creation-be-blocked-by-csp-002.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/trusted-types/should-trusted-type-policy-creation-be-blocked-by-csp-003.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/trusted-types/trusted-types-reporting.html": [
         "slow"
     ],
