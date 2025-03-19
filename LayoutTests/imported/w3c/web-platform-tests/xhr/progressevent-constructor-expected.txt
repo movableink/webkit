@@ -3,5 +3,10 @@ PASS Default event values.
 PASS There must not be a initProgressEvent().
 PASS Basic test.
 PASS ECMAScript value conversion test.
+PASS Positive integer number test.
+PASS Zero test.
+FAIL Decimal number test. assert_equals: expected 1.5 but got 1
+FAIL Mixed integer and decimal number test. assert_equals: expected 1.5 but got 1
+FAIL Negative number. assert_equals: expected -1 but got 18446744073709552000
 PASS ProgressEventInit members must be matched case-sensitively.
 
