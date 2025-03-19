@@ -4022,25 +4022,6 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
 
         return CSSValueList::createSpaceSeparated(WTFMove(list));
     }
-    case CSSPropertyMasonryAutoFlow: {
-        CSSValueListBuilder list;
-        // MasonryAutoFlow information is stored in a struct that should always
-        // hold 2 pieces of information. It should contain both Pack/Next inside
-        // the MasonryAutoFlowPlacementAlgorithm enum class and DefiniteFirst/Ordered
-        // inside the MasonryAutoFlowPlacementOrder enum class
-        ASSERT((style.masonryAutoFlow().placementAlgorithm == MasonryAutoFlowPlacementAlgorithm::Pack || style.masonryAutoFlow().placementAlgorithm == MasonryAutoFlowPlacementAlgorithm::Next) && (style.masonryAutoFlow().placementOrder == MasonryAutoFlowPlacementOrder::DefiniteFirst || style.masonryAutoFlow().placementOrder == MasonryAutoFlowPlacementOrder::Ordered));
-
-        if (style.masonryAutoFlow().placementAlgorithm == MasonryAutoFlowPlacementAlgorithm::Next)
-            list.append(CSSPrimitiveValue::create(CSSValueNext));
-        // Since we know that placementAlgorithm is not Next, it must be Packed. If the PlacementOrder
-        // is DefiniteFirst, then the canonical form of the computed style is just Pack (DefiniteFirst is implicit)
-        else if (style.masonryAutoFlow().placementOrder == MasonryAutoFlowPlacementOrder::DefiniteFirst)
-            list.append(CSSPrimitiveValue::create(CSSValuePack));
-
-        if (style.masonryAutoFlow().placementOrder == MasonryAutoFlowPlacementOrder::Ordered)
-            list.append(CSSPrimitiveValue::create(CSSValueOrdered));
-        return CSSValueList::createSpaceSeparated(WTFMove(list));
-    }
 
     // Specs mention that getComputedStyle() should return the used value of the property instead of the computed
     // one for grid-template-{rows|columns} but not for the grid-auto-{rows|columns} as things like

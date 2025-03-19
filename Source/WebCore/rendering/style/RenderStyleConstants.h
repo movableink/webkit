@@ -1054,16 +1054,6 @@ enum GridAutoFlow : uint8_t {
     AutoFlowColumnDense = InternalAutoFlowAlgorithmDense | InternalAutoFlowDirectionColumn
 };
 
-enum class MasonryAutoFlowPlacementAlgorithm {
-    Pack,
-    Next
-};
-
-enum class MasonryAutoFlowPlacementOrder {
-    DefiniteFirst,
-    Ordered
-};
-
 enum class AutoRepeatType : uint8_t {
     None,
     Fill,

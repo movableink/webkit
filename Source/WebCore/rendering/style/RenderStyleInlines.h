@@ -446,7 +446,6 @@ constexpr OptionSet<MarginTrimType> RenderStyle::initialMarginTrim() { return { 
 constexpr MarqueeBehavior RenderStyle::initialMarqueeBehavior() { return MarqueeBehavior::Scroll; }
 constexpr MarqueeDirection RenderStyle::initialMarqueeDirection() { return MarqueeDirection::Auto; }
 inline Length RenderStyle::initialMarqueeIncrement() { return { 6, LengthType::Fixed }; }
-constexpr MasonryAutoFlow RenderStyle::initialMasonryAutoFlow() { return { MasonryAutoFlowPlacementAlgorithm::Pack, MasonryAutoFlowPlacementOrder::DefiniteFirst }; }
 constexpr MathStyle RenderStyle::initialMathStyle() { return MathStyle::Normal; }
 inline Length RenderStyle::initialMaxSize() { return LengthType::Undefined; }
 inline Length RenderStyle::initialMinSize() { return LengthType::Auto; }
@@ -649,7 +648,6 @@ inline const LengthSize& RenderStyle::maskSizeLength() const { return maskLayers
 inline FillSizeType RenderStyle::maskSizeType() const { return maskLayers().sizeType(); }
 inline const Length& RenderStyle::maskXPosition() const { return maskLayers().xPosition(); }
 inline const Length& RenderStyle::maskYPosition() const { return maskLayers().yPosition(); }
-inline MasonryAutoFlow RenderStyle::masonryAutoFlow() const { return m_nonInheritedData->rareData->grid->masonryAutoFlow; }
 inline MathStyle RenderStyle::mathStyle() const { return static_cast<MathStyle>(m_rareInheritedData->mathStyle); }
 inline const Length& RenderStyle::maxHeight() const { return m_nonInheritedData->boxData->maxHeight(); }
 inline size_t RenderStyle::maxLines() const { return m_nonInheritedData->rareData->maxLines; }

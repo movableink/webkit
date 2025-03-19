@@ -37,7 +37,6 @@ StyleGridData::StyleGridData()
     : implicitNamedGridColumnLines(RenderStyle::initialNamedGridColumnLines())
     , implicitNamedGridRowLines(RenderStyle::initialNamedGridRowLines())
     , gridAutoFlow(RenderStyle::initialGridAutoFlow())
-    , masonryAutoFlow(RenderStyle::initialMasonryAutoFlow())
     , gridAutoRows(RenderStyle::initialGridAutoRows())
     , gridAutoColumns(RenderStyle::initialGridAutoColumns())
     , namedGridArea(RenderStyle::initialNamedGridArea())
@@ -71,7 +70,6 @@ inline StyleGridData::StyleGridData(const StyleGridData& o)
     , implicitNamedGridColumnLines(o.implicitNamedGridColumnLines)
     , implicitNamedGridRowLines(o.implicitNamedGridRowLines)
     , gridAutoFlow(o.gridAutoFlow)
-    , masonryAutoFlow(o.masonryAutoFlow)
     , gridAutoRows(o.gridAutoRows)
     , gridAutoColumns(o.gridAutoColumns)
     , namedGridArea(o.namedGridArea)
@@ -115,8 +113,7 @@ bool StyleGridData::operator==(const StyleGridData& o) const
         && namedGridAreaRowCount == o.namedGridAreaRowCount
         && namedGridAreaColumnCount == o.namedGridAreaColumnCount
         && m_masonryRows == o.m_masonryRows
-        && m_masonryColumns == o.m_masonryColumns
-        && masonryAutoFlow == o.masonryAutoFlow;
+        && m_masonryColumns == o.m_masonryColumns;
 }
 
 void StyleGridData::setRows(const GridTrackList& list)

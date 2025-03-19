@@ -1560,12 +1560,6 @@ minmax
 subgrid
 masonry
 
-// masonry-auto-flow
-pack
-next
-definite-first
-ordered
-
 // grid-auto-flow
 auto-flow
 dense

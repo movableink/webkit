@@ -171,7 +171,6 @@ public:
     static GridPosition convertGridPosition(BuilderState&, const CSSValue&);
     static GridAutoFlow convertGridAutoFlow(BuilderState&, const CSSValue&);
     static Vector<StyleContentAlignmentData> convertContentAlignmentDataList(BuilderState&, const CSSValue&);
-    static MasonryAutoFlow convertMasonryAutoFlow(BuilderState&, const CSSValue&);
     static std::optional<float> convertPerspective(BuilderState&, const CSSValue&);
     static std::optional<WebCore::Length> convertMarqueeIncrement(BuilderState&, const CSSValue&);
     static FilterOperations convertFilterOperations(BuilderState&, const CSSValue&);
@@ -1610,41 +1609,6 @@ inline Vector<StyleContentAlignmentData> BuilderConverter::convertContentAlignme
     return WTF::map(*list, [&](auto& value) {
         return convertContentAlignmentData(builderState, value);
     });
-}
-
-inline MasonryAutoFlow BuilderConverter::convertMasonryAutoFlow(BuilderState& builderState, const CSSValue& value)
-{
-    auto list = requiredListDowncast<CSSValueList, CSSPrimitiveValue>(builderState, value);
-    if (!list)
-        return { };
-
-    if (!(list->size() == 1 || list->size() == 2))
-        return RenderStyle::initialMasonryAutoFlow();
-
-    auto& firstValue = list->item(0);
-    auto* secondValue = list->size() == 2 ? &list->item(1) : nullptr;
-    MasonryAutoFlow masonryAutoFlow;
-    if (secondValue) {
-        ASSERT(firstValue.valueID() == CSSValueID::CSSValuePack || firstValue.valueID() == CSSValueID::CSSValueNext);
-        ASSERT(secondValue->valueID() == CSSValueID::CSSValueOrdered);
-        if (firstValue.valueID() == CSSValueID::CSSValuePack)
-            masonryAutoFlow = { MasonryAutoFlowPlacementAlgorithm::Pack, MasonryAutoFlowPlacementOrder::Ordered };
-        else
-            masonryAutoFlow = { MasonryAutoFlowPlacementAlgorithm::Next, MasonryAutoFlowPlacementOrder::Ordered };
-
-    } else  {
-        if (firstValue.valueID() == CSSValueID::CSSValuePack)
-            masonryAutoFlow = { MasonryAutoFlowPlacementAlgorithm::Pack, MasonryAutoFlowPlacementOrder::DefiniteFirst };
-        else if (firstValue.valueID() == CSSValueID::CSSValueNext)
-            masonryAutoFlow = { MasonryAutoFlowPlacementAlgorithm::Next, MasonryAutoFlowPlacementOrder::DefiniteFirst };
-        else if (firstValue.valueID() == CSSValueID::CSSValueOrdered)
-            masonryAutoFlow = { MasonryAutoFlowPlacementAlgorithm::Pack, MasonryAutoFlowPlacementOrder::Ordered };
-        else {
-            ASSERT_NOT_REACHED();
-            return RenderStyle::initialMasonryAutoFlow();
-        }
-    }
-    return masonryAutoFlow;
 }
 
 inline float zoomWithTextZoomFactor(BuilderState& builderState)

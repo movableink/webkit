@@ -261,7 +261,6 @@ struct Length;
 struct LengthPoint;
 struct LengthSize;
 struct ListStyleType;
-struct MasonryAutoFlow;
 struct NamedGridAreaMap;
 struct NamedGridLinesMap;
 struct OrderedNamedGridLinesMap;
@@ -864,7 +863,6 @@ public:
     inline size_t namedGridAreaRowCount() const;
     inline size_t namedGridAreaColumnCount() const;
     inline GridAutoFlow gridAutoFlow() const;
-    inline MasonryAutoFlow masonryAutoFlow() const;
     inline bool gridSubgridRows() const;
     inline bool gridSubgridColumns() const;
     inline bool gridMasonryRows() const;
@@ -1521,8 +1519,6 @@ public:
     inline void setGridItemRowStart(const GridPosition&);
     inline void setGridItemRowEnd(const GridPosition&);
 
-    inline void setMasonryAutoFlow(MasonryAutoFlow);
-
     inline void setMarqueeIncrement(Length&&);
     inline void setMarqueeSpeed(int);
     inline void setMarqueeDirection(MarqueeDirection);
@@ -2161,7 +2157,6 @@ public:
     static constexpr AutoRepeatType initialGridAutoRepeatType();
 
     static constexpr GridAutoFlow initialGridAutoFlow();
-    static constexpr MasonryAutoFlow initialMasonryAutoFlow();
 
     static inline Vector<GridTrackSize> initialGridAutoColumns();
     static inline Vector<GridTrackSize> initialGridAutoRows();

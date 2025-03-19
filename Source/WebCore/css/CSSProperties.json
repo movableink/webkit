@@ -5782,28 +5782,6 @@
                 "url": "https://drafts.fxtf.org/css-masking-1/#propdef-mask-type"
             }
         },
-        "masonry-auto-flow": {
-            "animation-type": "not animatable (needs triage)",
-            "initial": "pack definite-first",
-            "values": [
-                "pack",
-                "next",
-                "definite-first",
-                "ordered"
-            ],
-            "codegen-properties": {
-                "style-builder-converter": "MasonryAutoFlow",
-                "settings-flag": "masonryEnabled",
-                "parser-function": "consumeMasonryAutoFlow",
-                "parser-grammar-unused": "[ pack | next ] || [ definite-first | ordered ]",
-                "parser-grammar-unused-reason": "Needs support for '||' groups."
-            },
-            "specification": {
-                "category": "css-grid",
-                "url": "https://drafts.csswg.org/css-grid-3/#masonry-auto-flow"
-            },
-            "status": "experimental"
-        },
         "math-style": {
             "animation-type": "not animatable",
             "inherited": true,
