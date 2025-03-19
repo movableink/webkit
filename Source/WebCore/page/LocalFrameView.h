@@ -861,7 +861,7 @@ private:
     void contentsResized() final;
 
 #if ENABLE(DARK_MODE_CSS)
-    RenderObject* rendererForColorScheme() const;
+    RenderElement* rendererForColorScheme() const;
 #endif
 
     bool usesCompositedScrolling() const final;

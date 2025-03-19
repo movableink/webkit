@@ -337,27 +337,24 @@ AccessibilityObject* AccessibilityRenderObject::previousSibling() const
     // last child is our previous sibling (or further back in the continuation chain)
     RenderInline* startOfConts;
     WeakPtr renderBlock = dynamicDowncast<RenderBlock>(*m_renderer);
-    if (renderBlock && (startOfConts = startOfContinuations(*m_renderer)))
-        previousSibling = childBeforeConsideringContinuations(startOfConts, renderer());
-
-    // Case 2: Anonymous block parent of the end of a continuation - skip all the way to before
-    // the parent of the start, since everything in between will be linked up via the continuation.
-    else if (renderBlock && m_renderer->isAnonymousBlock() && firstChildIsInlineContinuation(*renderBlock)) {
+    if (renderBlock && (startOfConts = startOfContinuations(*renderBlock)))
+        previousSibling = childBeforeConsideringContinuations(startOfConts, renderBlock.get());
+    else if (renderBlock && renderBlock->isAnonymousBlock() && firstChildIsInlineContinuation(*renderBlock)) {
+        // Case 2: Anonymous block parent of the end of a continuation - skip all the way to before
+        // the parent of the start, since everything in between will be linked up via the continuation.
         auto* firstParent = startOfContinuations(*renderBlock->firstChild())->parent();
         ASSERT(firstParent);
         while (firstChildIsInlineContinuation(*firstParent))
             firstParent = startOfContinuations(*firstParent->firstChild())->parent();
         previousSibling = firstParent->previousSibling();
-    }
-
-    // Case 3: The node has an actual previous sibling
-    else if (RenderObject* ps = m_renderer->previousSibling())
+    } else if (RenderObject* ps = m_renderer->previousSibling()) {
+        // Case 3: The node has an actual previous sibling
         previousSibling = ps;
-
-    // Case 4: This node has no previous siblings, but its parent is an inline,
-    // and is another node's inline continutation. Follow the continuation chain.
-    else if (is<RenderInline>(m_renderer->parent()) && (startOfConts = startOfContinuations(*m_renderer->parent())))
+    } else if (is<RenderInline>(m_renderer->parent()) && (startOfConts = startOfContinuations(*m_renderer->parent()))) {
+        // Case 4: This node has no previous siblings, but its parent is an inline,
+        // and is another node's inline continutation. Follow the continuation chain.
         previousSibling = childBeforeConsideringContinuations(startOfConts, m_renderer->parent()->firstChild());
+    }
 
     if (!previousSibling)
         return nullptr;

@@ -707,7 +707,7 @@ public:
 #endif
 
     OptionSet<StyleColorOptions> styleColorOptions(const RenderStyle*) const;
-    CompositeOperator compositeOperatorForBackgroundColor(const Color&, const RenderObject&) const;
+    CompositeOperator compositeOperatorForBackgroundColor(const Color&, const RenderElement&) const;
 
     WEBCORE_EXPORT Ref<Range> createRange();
 

@@ -2157,14 +2157,14 @@ bool LocalFrameView::shouldSetCursor() const
 }
 
 #if ENABLE(DARK_MODE_CSS)
-RenderObject* LocalFrameView::rendererForColorScheme() const
+RenderElement* LocalFrameView::rendererForColorScheme() const
 {
     auto* document = m_frame->document();
     auto* documentElement = document ? document->documentElement() : nullptr;
     auto* documentElementRenderer = documentElement ? documentElement->renderer() : nullptr;
     if (documentElementRenderer && documentElementRenderer->style().hasExplicitlySetColorScheme())
         return documentElementRenderer;
-    return nullptr;
+    return { };
 }
 #endif
 
