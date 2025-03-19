@@ -2055,3 +2055,5 @@ webkit.org/b/289556 [ Sequoia Release x86_64 ] fast/events/page-visibility-trans
 webkit.org/b/289975 fast/css/mac/focus-ring-color-should-not-expose-accent-color.html [ Failure ]
 
 webkit.org/b/290012 [ Debug ] html5lib/generated/run-entities01-data.html [ Skip ]
+
+webkit.org/b/290020 [ Sonoma+ Release ] fast/webgpu/nocrash/fuzz-275228.html [ Skip ]
