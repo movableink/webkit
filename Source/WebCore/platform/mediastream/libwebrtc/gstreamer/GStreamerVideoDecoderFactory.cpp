@@ -39,6 +39,7 @@
 #include <wtf/StdMap.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/glib/RunLoopSourcePriority.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 GST_DEBUG_CATEGORY(webkit_webrtcdec_debug);
@@ -74,7 +75,7 @@ public:
     GstElement* makeElement(ASCIILiteral factoryName)
     {
         static Atomic<uint32_t> elementId;
-        auto name = makeString(Name(), "-dec-"_s, factoryName, "-"_s, elementId.exchangeAdd(1));
+        auto name = makeString(ASCIILiteral::fromLiteralUnsafe(Name()), "-dec-"_s, factoryName, "-"_s, elementId.exchangeAdd(1));
         return makeGStreamerElement(factoryName, name);
     }
 
