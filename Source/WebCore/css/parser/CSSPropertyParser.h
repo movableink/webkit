@@ -72,7 +72,6 @@ private:
 
     // @font-face descriptors.
     bool parseFontFaceDescriptor(CSSPropertyID);
-    bool parseFontFaceDescriptorShorthand(CSSPropertyID);
 
     // @font-palette-values descriptors.
     bool parseFontPaletteValuesDescriptor(CSSPropertyID);

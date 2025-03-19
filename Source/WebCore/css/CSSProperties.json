@@ -12270,7 +12270,7 @@
                 },
                 "specification": {
                     "category": "css-fonts-4",
-                    "url": "https://www.w3.org/TR/css-fonts-4/#font-family-desc"
+                    "url": "https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-family"
                 }
             },
             "font-display": {
@@ -12287,7 +12287,7 @@
                 },
                 "specification": {
                     "category": "css-fonts-4",
-                    "url": "https://drafts.csswg.org/css-fonts-4/#font-display-desc"
+                    "url": "https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-display"
                 }
             },
             "font-feature-settings": {
@@ -12300,7 +12300,7 @@
                 },
                 "specification": {
                     "category": "css-fonts-4",
-                    "url": "https://www.w3.org/TR/css-fonts-4/#descdef-font-face-font-feature-settings"
+                    "url": "https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-feature-settings"
                 }
             },
             "font-width": {
@@ -12337,7 +12337,7 @@
                 ],
                 "specification": {
                     "category": "css-fonts-4",
-                    "url": "https://www.w3.org/TR/css-fonts-4/#descdef-font-face-font-stretch"
+                    "url": "https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-width"
                 }
             },
             "font-style": {
@@ -12365,126 +12365,7 @@
                 ],
                 "specification": {
                     "category": "css-fonts-4",
-                    "url": "https://www.w3.org/TR/css-fonts-4/#descdef-font-face-font-style"
-                }
-            },
-            "font-variant": {
-                "codegen-properties": {
-                    "longhands": [
-                        "font-variant-ligatures",
-                        "font-variant-caps",
-                        "font-variant-alternates",
-                        "font-variant-numeric",
-                        "font-variant-east-asian",
-                        "font-variant-position"
-                    ]
-                },
-                "specification": {
-                    "category": "css-fonts",
-                    "url": "https://drafts.csswg.org/css-fonts-4/#propdef-font-variant"
-                }
-            },
-            "font-variant-alternates": {
-                "codegen-properties": {
-                    "parser-grammar": "normal | [ stylistic(<feature-value-name>) || historical-forms || styleset(<feature-value-name>#) || character-variant(<feature-value-name>#) || swash(<feature-value-name>) || ornaments(<feature-value-name>) || annotation(<feature-value-name>) ]@(no-single-item-opt)"
-                },
-                "specification": {
-                    "category": "css-fonts",
-                    "url": "https://drafts.csswg.org/css-fonts-3/#font-variant-alternates-prop"
-                }
-            },
-            "font-variant-caps": {
-                "values": [
-                    "normal",
-                    "small-caps",
-                    "all-small-caps",
-                    "petite-caps",
-                    "all-petite-caps",
-                    "unicase",
-                    "titling-caps"
-                ],
-                "codegen-properties": {
-                    "parser-grammar": "<<values>>"
-                },
-                "specification": {
-                    "category": "css-fonts",
-                    "url": "https://drafts.csswg.org/css-fonts-3/#font-variant-caps-prop"
-                }
-            },
-            "font-variant-east-asian": {
-                "values": [
-                    "normal",
-                    "jis78",
-                    "jis83",
-                    "jis90",
-                    "jis04",
-                    "simplified",
-                    "traditional",
-                    "full-width",
-                    "proportional-width",
-                    "ruby"
-                ],
-                "codegen-properties": {
-                    "parser-grammar": "normal | [ <east-asian-variant-values> || <east-asian-width-values> || ruby ]@(no-single-item-opt)"
-                },
-                "specification": {
-                    "category": "css-fonts",
-                    "url": "https://drafts.csswg.org/css-fonts-3/#font-variant-east-asian-prop"
-                }
-            },
-            "font-variant-ligatures": {
-                "values": [
-                    "normal",
-                    "none",
-                    "common-ligatures",
-                    "no-common-ligatures",
-                    "discretionary-ligatures",
-                    "no-discretionary-ligatures",
-                    "historical-ligatures",
-                    "no-historical-ligatures",
-                    "contextual",
-                    "no-contextual"
-                ],
-                "codegen-properties": {
-                    "parser-grammar": "normal | none | [ <common-lig-values> || <discretionary-lig-values> || <historical-lig-values> || <contextual-alt-values> ]@(no-single-item-opt)"
-                },
-                "specification": {
-                    "category": "css-fonts-4",
-                    "url": "https://drafts.csswg.org/css-fonts-4/#font-variant-ligatures-prop"
-                }
-            },
-            "font-variant-numeric": {
-                "values": [
-                    "normal",
-                    "lining-nums",
-                    "oldstyle-nums",
-                    "proportional-nums",
-                    "tabular-nums",
-                    "diagonal-fractions",
-                    "stacked-fractions",
-                    "ordinal",
-                    "slashed-zero"
-                ],
-                "codegen-properties": {
-                    "parser-grammar": "normal | [ <numeric-figure-values> || <numeric-spacing-values> || <numeric-fraction-values> || ordinal || slashed-zero ]@(no-single-item-opt)"
-                },
-                "specification": {
-                    "category": "css-fonts",
-                    "url": "https://drafts.csswg.org/css-fonts-3/#font-variant-numeric-prop"
-                }
-            },
-            "font-variant-position": {
-                "values": [
-                    "normal",
-                    "sub",
-                    "super"
-                ],
-                "codegen-properties": {
-                    "parser-grammar": "<<values>>"
-                },
-                "specification": {
-                    "category": "css-fonts-4",
-                    "url": "https://drafts.csswg.org/css-fonts-4/#propdef-font-variant-position"
+                    "url": "https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-style"
                 }
             },
             "font-weight": {
@@ -12512,7 +12393,7 @@
                 ],
                 "specification": {
                     "category": "css-fonts-4",
-                    "url": "https://www.w3.org/TR/css-fonts-4/#descdef-font-face-font-weight"
+                    "url": "https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-weight"
                 }
             },
             "src": {
@@ -12523,7 +12404,7 @@
                 },
                 "specification": {
                     "category": "css-fonts-4",
-                    "url": "https://www.w3.org/TR/css-fonts-4/#src-desc"
+                    "url": "https://drafts.csswg.org/css-fonts-4/#descdef-font-face-src"
                 }
             },
             "size-adjust": {
@@ -12534,7 +12415,7 @@
                 },
                 "specification": {
                     "category": "css-fonts-5",
-                    "url": "https://www.w3.org/TR/css-fonts-5/#size-adjust-desc"
+                    "url": "https://drafts.csswg.org/css-fonts-5/#descdef-font-face-size-adjust"
                 }
             },
             "unicode-range": {
@@ -12544,7 +12425,7 @@
                 },
                 "specification": {
                     "category": "css-fonts",
-                    "url": "https://drafts.csswg.org/css-fonts-4/#descdef-unicode-range"
+                    "url": "https://drafts.csswg.org/css-fonts-4/#descdef-font-face-unicode-range"
                 }
             }
         },
@@ -12555,7 +12436,7 @@
                 },
                 "specification": {
                     "category": "css-fonts-4",
-                    "url": "https://drafts.csswg.org/css-fonts-4/#font-family-2-desc"
+                    "url": "https://drafts.csswg.org/css-fonts-4/#descdef-font-palette-values-font-family"
                 }
             },
             "base-palette": {
@@ -12564,7 +12445,7 @@
                 },
                 "specification": {
                     "category": "css-fonts-4",
-                    "url": "https://www.w3.org/TR/css-fonts-4/#font-family-2-desc"
+                    "url": "https://drafts.csswg.org/css-fonts-4/#descdef-font-palette-values-base-palette"
                 }
             },
             "override-colors": {
@@ -12573,7 +12454,7 @@
                 },
                 "specification": {
                     "category": "css-fonts-4",
-                    "url": "https://www.w3.org/TR/css-fonts-4/#override-color"
+                    "url": "https://drafts.csswg.org/css-fonts-4/#descdef-font-palette-values-override-colors"
                 }
             }
         },

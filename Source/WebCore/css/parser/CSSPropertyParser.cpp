@@ -615,27 +615,12 @@ bool CSSPropertyParser::parsePositionTryDescriptor(CSSPropertyID property, bool 
 
 bool CSSPropertyParser::parseFontFaceDescriptor(CSSPropertyID property)
 {
-    if (isShorthand(property))
-        return parseFontFaceDescriptorShorthand(property);
-
     RefPtr parsedValue = CSSPropertyParsing::parseFontFaceDescriptor(m_range, property, m_context);
     if (!parsedValue || !m_range.atEnd())
         return false;
 
     addProperty(property, CSSPropertyInvalid, WTFMove(parsedValue), false);
     return true;
-}
-
-bool CSSPropertyParser::parseFontFaceDescriptorShorthand(CSSPropertyID property)
-{
-    ASSERT(isExposed(property, m_context.propertySettings));
-
-    switch (property) {
-    case CSSPropertyFontVariant:
-        return consumeFontVariantShorthand(false);
-    default:
-        return false;
-    }
 }
 
 bool CSSPropertyParser::parseKeyframeDescriptor(CSSPropertyID propertyID, bool important)
