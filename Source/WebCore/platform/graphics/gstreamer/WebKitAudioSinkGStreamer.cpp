@@ -135,8 +135,10 @@ static GstStateChangeReturn webKitAudioSinkChangeState(GstElement* element, GstS
 static void webKitAudioSinkConstructed(GObject* object)
 {
     G_OBJECT_CLASS(webkit_audio_sink_parent_class)->constructed(object);
+IGNORE_WARNINGS_BEGIN("cast-align")
     GST_OBJECT_FLAG_SET(GST_OBJECT_CAST(object), GST_ELEMENT_FLAG_SINK);
     gst_bin_set_suppressed_flags(GST_BIN_CAST(object), static_cast<GstElementFlags>(GST_ELEMENT_FLAG_SOURCE | GST_ELEMENT_FLAG_SINK));
+IGNORE_WARNINGS_END
 }
 
 static void webkit_audio_sink_class_init(WebKitAudioSinkClass* klass)

@@ -1103,7 +1103,9 @@ static GstPadProbeReturn webkitMediaStreamSrcPadProbeCb(GstPad* pad, GstPadProbe
             GST_DEBUG_OBJECT(self, "Replacing stream-start event");
             auto sequenceNumber = gst_event_get_seqnum(event);
             gst_event_unref(event);
+            IGNORE_WARNINGS_BEGIN("cast-align")
             data->streamStartEvent = adoptGRef(gst_event_make_writable(data->streamStartEvent.leakRef()));
+            IGNORE_WARNINGS_END
             gst_event_set_seqnum(data->streamStartEvent.get(), sequenceNumber);
             info->data = gst_event_ref(data->streamStartEvent.get());
         }

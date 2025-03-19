@@ -200,7 +200,9 @@ GRefPtr<GstSample> GStreamerVideoFrameConverter::convert(const GRefPtr<GstSample
     gst_sample_set_caps(convertedSample.get(), destinationCaps.get());
 
     GRefPtr buffer = gst_sample_get_buffer(convertedSample.get());
+IGNORE_WARNINGS_BEGIN("cast-align")
     auto writableBuffer = adoptGRef(gst_buffer_make_writable(buffer.leakRef()));
+IGNORE_WARNINGS_END
 
     if (auto meta = gst_buffer_get_video_meta(writableBuffer.get()))
         gst_buffer_remove_meta(writableBuffer.get(), GST_META_CAST(meta));

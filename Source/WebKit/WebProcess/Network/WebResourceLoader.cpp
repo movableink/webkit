@@ -230,7 +230,7 @@ void WebResourceLoader::didReceiveResponse(ResourceResponse&& response, PrivateR
 void WebResourceLoader::didReceiveData(IPC::SharedBufferReference&& data, uint64_t encodedDataLength, uint64_t bytesTransferredOverNetwork)
 {
     RefPtr coreLoader = m_coreLoader;
-    LOG(Network, "(WebProcess) WebResourceLoader::didReceiveData of size %lu for '%s'", data.size(), coreLoader->url().string().latin1().data());
+    LOG(Network, "(WebProcess) WebResourceLoader::didReceiveData of size %zu for '%s'", data.size(), coreLoader->url().string().latin1().data());
     ASSERT_WITH_MESSAGE(!m_isProcessingNetworkResponse, "Network process should not send data until we've validated the response");
 
     if (UNLIKELY(m_interceptController.isIntercepting(*coreLoader->identifier()))) {

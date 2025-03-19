@@ -240,7 +240,7 @@ MediaSourcePrivateGStreamer::RegisteredTrack MediaSourcePrivateGStreamer::regist
     ASSERT(result.isNewEntry);
 
     if (player)
-        GST_DEBUG_OBJECT(player->pipeline(), "Registered new Track with index %" PRIu64 " and ID %" PRIu64 " (preferred ID was %" PRIu64 ")", assignedIndex, assignedId, preferredId);
+        GST_DEBUG_OBJECT(player->pipeline(), "Registered new Track with index %" PRIu64 " and ID %" PRIu64 " (preferred ID was %" PRIu64 ")", static_cast<uint64_t>(assignedIndex), static_cast<uint64_t>(assignedId), static_cast<uint64_t>(preferredId));
 
     return info;
 }

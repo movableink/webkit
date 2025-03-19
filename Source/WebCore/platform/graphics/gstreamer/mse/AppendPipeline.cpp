@@ -843,7 +843,7 @@ std::pair<AppendPipeline::CreateTrackResult, AppendPipeline::Track*> AppendPipel
     auto preferredTrackId = getStreamIdFromPad(demuxerSrcPad).value_or((static_cast<TrackID>(newTrackIndex)));
     auto trackInfo = m_sourceBufferPrivate.registerTrack(preferredTrackId, streamType);
 
-    GST_DEBUG_OBJECT(pipeline(), "Creating new AppendPipeline::Track with type %s, index %" PRIu64" and id '%" PRIu64 "'", streamTypeToString(streamType), trackInfo.index, trackInfo.id);
+    GST_DEBUG_OBJECT(pipeline(), "Creating new AppendPipeline::Track with type %s, index %" PRIu64" and id '%" PRIu64"'", streamTypeToString(streamType), static_cast<uint64_t>(trackInfo.index), static_cast<uint64_t>(trackInfo.id));
     m_tracks.append(makeUnique<Track>(trackInfo.id, streamType, parsedCaps, presentationSize));
     Track& track = *m_tracks.at(newTrackIndex);
 

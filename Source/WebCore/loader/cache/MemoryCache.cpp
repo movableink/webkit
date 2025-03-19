@@ -365,7 +365,7 @@ void MemoryCache::pruneDeadResourcesToSize(unsigned targetSize)
         // destroyDecodedData() can alter the LRUList.
         auto lruList = copyToVector(*m_allResources[i]);
 
-        LOG(ResourceLoading, " lru list (size %lu) - flushing stage", lruList.size());
+        LOG(ResourceLoading, " lru list (size %zu) - flushing stage", lruList.size());
 
         // First flush all the decoded data in this queue.
         // Remove from the head, since this is the least frequently accessed of the objects.
@@ -392,7 +392,7 @@ void MemoryCache::pruneDeadResourcesToSize(unsigned targetSize)
             }
         }
 
-        LOG(ResourceLoading, " lru list (size %lu) - eviction stage", lruList.size());
+        LOG(ResourceLoading, " lru list (size %zu) - eviction stage", lruList.size());
 
         // Now evict objects from this list.
         // Remove from the head, since this is the least frequently accessed of the objects.

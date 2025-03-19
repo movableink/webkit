@@ -47,7 +47,7 @@ enum class PropertyNamePrefix { None, Epub, WebKit };
 
 static inline bool matchesCSSPropertyNamePrefix(const StringImpl& propertyName, ASCIILiteral prefix)
 {
-    ASSERT(toASCIILower(propertyName[0]) == prefix[0]);
+    ASSERT(toASCIILower(propertyName[0]) == prefix[0zu]);
     const size_t offset = 1;
 
 #ifndef NDEBUG

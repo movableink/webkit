@@ -995,7 +995,9 @@ GstElement* createAutoAudioSink(const String& role)
         if (role && g_object_class_find_property(objectClass, "stream-properties")) {
             GUniquePtr<GstStructure> properties(gst_structure_new("stream-properties", "media.role", G_TYPE_STRING, role->utf8().data(), nullptr));
             g_object_set(object, "stream-properties", properties.get(), nullptr);
+IGNORE_WARNINGS_BEGIN("cast-align")
             GST_DEBUG("Set media.role as %s on %" GST_PTR_FORMAT, role->utf8().data(), GST_ELEMENT_CAST(object));
+IGNORE_WARNINGS_END
         }
         if (g_object_class_find_property(objectClass, "client-name")) {
             auto& clientName = getApplicationName();

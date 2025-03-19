@@ -48,11 +48,11 @@ void CoordinatedBackingStoreTile::processPendingUpdates(TextureMapper& textureMa
     if (!updatesCount)
         return;
 
-    WTFBeginSignpost(this, CoordinatedSwapBuffers, "%lu updates", updatesCount);
+    WTFBeginSignpost(this, CoordinatedSwapBuffers, "%zu updates", updatesCount);
     for (unsigned updateIndex = 0; updateIndex < updatesCount; ++updateIndex) {
         auto& update = updates[updateIndex];
 
-        WTFBeginSignpost(this, CoordinatedSwapBuffer, "%u/%lu, rect %ix%i+%i+%i", updateIndex + 1, updatesCount, update.tileRect.x(), update.tileRect.y(), update.tileRect.width(), update.tileRect.height());
+        WTFBeginSignpost(this, CoordinatedSwapBuffer, "%u/%zu, rect %ix%i+%i+%i", updateIndex + 1, updatesCount, update.tileRect.x(), update.tileRect.y(), update.tileRect.width(), update.tileRect.height());
 
         ASSERT(textureMapper.maxTextureSize().width() >= update.tileRect.size().width());
         ASSERT(textureMapper.maxTextureSize().height() >= update.tileRect.size().height());
