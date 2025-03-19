@@ -165,17 +165,17 @@ void WebPageProxy::didCommitLayerTree(const RemoteLayerTreeTransaction& layerTre
         themeColorChanged(layerTreeTransaction.themeColor());
         pageExtendedBackgroundColorDidChange(layerTreeTransaction.pageExtendedBackgroundColor());
         sampledPageTopColorChanged(layerTreeTransaction.sampledPageTopColor());
-    }
 
-    if (!m_hasUpdatedRenderingAfterDidCommitLoad
-        && (internals().firstLayerTreeTransactionIdAfterDidCommitLoad && layerTreeTransaction.transactionID().greaterThanOrEqualSameProcess(*internals().firstLayerTreeTransactionIdAfterDidCommitLoad))) {
-        m_hasUpdatedRenderingAfterDidCommitLoad = true;
+        if (!m_hasUpdatedRenderingAfterDidCommitLoad
+            && (internals().firstLayerTreeTransactionIdAfterDidCommitLoad && layerTreeTransaction.transactionID().greaterThanOrEqualSameProcess(*internals().firstLayerTreeTransactionIdAfterDidCommitLoad))) {
+            m_hasUpdatedRenderingAfterDidCommitLoad = true;
 #if ENABLE(SCREEN_TIME)
-        if (RefPtr pageClient = this->pageClient())
-            pageClient->didChangeScreenTimeWebpageControllerURL();
+            if (RefPtr pageClient = this->pageClient())
+                pageClient->didChangeScreenTimeWebpageControllerURL();
 #endif
-        stopMakingViewBlankDueToLackOfRenderingUpdateIfNecessary();
-        internals().lastVisibleContentRectUpdate = { };
+            stopMakingViewBlankDueToLackOfRenderingUpdateIfNecessary();
+            internals().lastVisibleContentRectUpdate = { };
+        }
     }
 
     if (RefPtr pageClient = this->pageClient())
