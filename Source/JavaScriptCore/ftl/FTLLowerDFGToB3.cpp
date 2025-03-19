@@ -5809,8 +5809,8 @@ IGNORE_CLANG_WARNINGS_END
                     RefPtr<FTL::JITCode> jitCode = state->jitCode;
 
                     auto [outOfBounds, doneCases] = jit.loadDataViewByteLength(baseGPR, resultGPR, scratch1GPR, scratch2GPR, TypeDataView);
-                    jit.addLinkTask([=, protectedJitCode = jitCode](LinkBuffer& linkBuffer) {
-                        linkBuffer.link(outOfBounds, linkBuffer.locationOf<NoPtrTag>(handle->label));
+                    jit.addLinkTask([=, protectedJitCode = jitCode, outOfBoundsJump = outOfBounds](LinkBuffer& linkBuffer) {
+                        linkBuffer.link(outOfBoundsJump, linkBuffer.locationOf<NoPtrTag>(handle->label));
                     });
                     doneCases.link(&jit);
                 });
