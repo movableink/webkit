@@ -92,7 +92,7 @@ void removeScreenTimeData(const HashSet<URL>& websitesToRemove, const WebsiteDat
         [webHistory deleteHistoryForURL:url];
 }
 
-void removeScreenTimeDataWithInterval(WTF::WallTime modifiedSince, const WebsiteDataStoreConfiguration& configuration)
+void removeScreenTimeDataWithInterval(WallTime modifiedSince, const WebsiteDataStoreConfiguration& configuration)
 {
     STWebHistoryProfileIdentifier profileIdentifier = nil;
     if (configuration.identifier())

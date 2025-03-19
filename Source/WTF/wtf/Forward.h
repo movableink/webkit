@@ -255,6 +255,7 @@ using WTF::UncheckedKeyHashMap;
 using WTF::UncheckedKeyHashSet;
 using WTF::UniqueRef;
 using WTF::Vector;
+using WTF::WallTime;
 using WTF::WeakPtr;
 using WTF::WeakRef;
 
