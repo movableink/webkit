@@ -26,6 +26,7 @@
 #include "config.h"
 #include "PositionedLayoutConstraints.h"
 
+#include "InlineIteratorBoxInlines.h"
 #include "InlineIteratorInlineBox.h"
 #include "PositionArea.h"
 #include "RenderGrid.h"
