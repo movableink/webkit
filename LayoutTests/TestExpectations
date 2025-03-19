@@ -7772,3 +7772,10 @@ imported/w3c/web-platform-tests/css/CSS2/floats/float-nowrap-hyphen-rewind-1.htm
 webkit.org/b/288689 svg/text/bidi-text-query.svg [ Skip ]
 
 webkit.org/b/289782 http/tests/security/contentSecurityPolicy/script-src-strict-dynamic-and-script-src-elem.html [ Pass Failure ]
+
+imported/w3c/web-platform-tests/css/css-align/abspos/align-items-static-position.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-align/blocks/align-content-block-break-content-010.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-align/blocks/align-content-block-break-content-020.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-align/blocks/align-content-block-overflow-000.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-align/blocks/justify-self-text-align.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/css/css-align/self-alignment/block-justify-self.html [ ImageOnlyFailure ]
