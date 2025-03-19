@@ -490,6 +490,8 @@ void AuthenticatorManager::runPanel()
     RefPtr frame = WebFrameProxy::webFrame(m_pendingRequestData.globalFrameID->frameID);
     if (!frame)
         return;
+    if (!m_pendingRequestData.frameInfo)
+        return;
 
     // Get available transports and start discovering authenticators on them.
     auto& options = m_pendingRequestData.options;
@@ -501,7 +503,7 @@ void AuthenticatorManager::runPanel()
 
     m_pendingRequestData.panel = API::WebAuthenticationPanel::create(*this, getRpId(options), transports, getClientDataType(options), getUserName(options));
     Ref panel = *m_pendingRequestData.panel;
-    page->uiClient().runWebAuthenticationPanel(*page, panel, *frame, FrameInfoData { m_pendingRequestData.frameInfo }, [transports = WTFMove(transports), weakPanel = WeakPtr { panel.get() }, weakThis = WeakPtr { *this }] (WebAuthenticationPanelResult result) {
+    page->uiClient().runWebAuthenticationPanel(*page, panel, *frame, FrameInfoData { *m_pendingRequestData.frameInfo }, [transports = WTFMove(transports), weakPanel = WeakPtr { panel.get() }, weakThis = WeakPtr { *this }] (WebAuthenticationPanelResult result) {
         // The panel address is used to determine if the current pending request is still the same.
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis || !weakPanel
