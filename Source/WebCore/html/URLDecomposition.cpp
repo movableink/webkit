@@ -121,7 +121,7 @@ String URLDecomposition::port() const
 }
 
 // Outer optional is whether we could parse at all. Inner optional is "no port specified".
-static std::optional<std::optional<uint16_t>> parsePort(StringView string, StringView protocol)
+std::optional<std::optional<uint16_t>> URLDecomposition::parsePort(StringView string, StringView protocol)
 {
     // https://url.spec.whatwg.org/#port-state with state override given.
     uint32_t port { 0 };
@@ -152,7 +152,7 @@ void URLDecomposition::setPort(StringView value)
     auto fullURL = this->fullURL();
     if (fullURL.host().isEmpty() || fullURL.protocolIsFile())
         return;
-    auto port = parsePort(value, fullURL.protocol());
+    auto port = URLDecomposition::parsePort(value, fullURL.protocol());
     if (!port)
         return;
     fullURL.setPort(*port);

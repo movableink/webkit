@@ -195,7 +195,7 @@ public:
     WTF_EXPORT_PRIVATE bool isMatchingDomain(StringView) const;
 
     WTF_EXPORT_PRIVATE bool setProtocol(StringView);
-    WTF_EXPORT_PRIVATE void setHost(StringView);
+    WTF_EXPORT_PRIVATE bool setHost(StringView);
 
     WTF_EXPORT_PRIVATE void setPort(std::optional<uint16_t>);
 

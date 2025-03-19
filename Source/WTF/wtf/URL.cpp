@@ -489,23 +489,23 @@ static bool slashHashOrQuestionMark(UChar c)
     return forwardSlashHashOrQuestionMark(c) || c == '\\';
 }
 
-void URL::setHost(StringView newHost)
+bool URL::setHost(StringView newHost)
 {
     if (!m_isValid || hasOpaquePath())
-        return;
+        return false;
 
     if (auto index = newHost.find(hasSpecialScheme() ? slashHashOrQuestionMark : forwardSlashHashOrQuestionMark); index != notFound)
         newHost = newHost.left(index);
 
     if (newHost.contains('@'))
-        return;
+        return false;
 
     if (newHost.contains(':') && !newHost.startsWith('['))
-        return;
+        return false;
 
     Vector<UChar, 512> encodedHostName;
     if (hasSpecialScheme() && !appendEncodedHostname(encodedHostName, newHost))
-        return;
+        return false;
 
     bool slashSlashNeeded = m_userStart == m_schemeEnd + 1U;
     parse(makeString(
@@ -514,6 +514,8 @@ void URL::setHost(StringView newHost)
         hasSpecialScheme() ? StringView(encodedHostName.span()) : newHost,
         StringView(m_string).substring(m_hostEnd)
     ));
+
+    return m_isValid;
 }
 
 void URL::setPort(std::optional<uint16_t> port)
