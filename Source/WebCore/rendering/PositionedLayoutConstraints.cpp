@@ -26,8 +26,10 @@
 #include "config.h"
 #include "PositionedLayoutConstraints.h"
 
+#include "InlineIteratorInlineBox.h"
 #include "PositionArea.h"
 #include "RenderGrid.h"
+#include "RenderInline.h"
 #include "RenderLayer.h"
 #include "RenderStyle.h"
 #include "RenderTableRow.h"
@@ -77,6 +79,10 @@ PositionedLayoutConstraints::PositionedLayoutConstraints(const RenderBox& render
         computeInlineStaticDistance(renderer);
     else
         computeBlockStaticDistance(renderer);
+
+    m_insetModifiedContainingRange = m_containingRange;
+    m_insetModifiedContainingRange.shiftMinEdgeBy(insetBeforeValue());
+    m_insetModifiedContainingRange.shiftMaxEdgeBy(-insetAfterValue());
 }
 
 PositionedLayoutConstraints::PositionedLayoutConstraints(const RenderBox& renderer, LogicalBoxAxis logicalAxis)
@@ -204,16 +210,14 @@ void PositionedLayoutConstraints::resolvePosition(RenderBox::LogicalExtentComput
     // Static position should have resolved one of our insets by now.
     ASSERT(!(m_insetBefore.isAuto() && m_insetAfter.isAuto()));
 
-    auto position = insetBeforeValue();
+    auto position = m_insetModifiedContainingRange.min();
     auto usedMarginBefore = marginBeforeValue();
     auto usedMarginAfter = marginAfterValue();
 
-    auto remainingSpace = containingSize()
-        - insetBeforeValue()
-        - marginBeforeValue()
+    auto remainingSpace = insetModifiedContainingSize()
+        - usedMarginBefore
         - computedValues.m_extent
-        - marginAfterValue()
-        - insetAfterValue();
+        - usedMarginAfter;
 
     // See CSS2 § 10.3.7-8 and 10.6.4-5.
     if (!m_insetBefore.isAuto() && !m_insetAfter.isAuto()) {
@@ -357,11 +361,6 @@ void PositionedLayoutConstraints::computeInlineStaticDistance(const RenderBox& r
     }
 }
 
-void PositionedLayoutConstraints::convertLogicalLeftValue(LayoutUnit& logicalLeftPos) const
-{
-    logicalLeftPos += m_containingRange.min();
-}
-
 void PositionedLayoutConstraints::computeBlockStaticDistance(const RenderBox& renderer)
 {
     if (!m_useStaticPosition)
@@ -397,10 +396,46 @@ void PositionedLayoutConstraints::computeBlockStaticDistance(const RenderBox& re
         m_insetBefore.setValue(LengthType::Fixed, staticLogicalTop);
 }
 
+void PositionedLayoutConstraints::fixupLogicalLeftPosition(RenderBox::LogicalExtentComputedValues& computedValues) const
+{
+    if (m_writingMode.isHorizontal()) {
+        CheckedPtr containingBox = dynamicDowncast<RenderBox>(container());
+        if (containingBox && containingBox->shouldPlaceVerticalScrollbarOnLeft())
+            computedValues.m_position += containingBox->verticalScrollbarWidth();
+    }
+
+    // FIXME: This hack is needed to calculate the logical left position for a 'rtl' relatively
+    // positioned, inline because right now, it is using the logical left position
+    // of the first line box when really it should use the last line box. When
+    // this is fixed elsewhere, this adjustment should be removed.
+
+    CheckedPtr renderInline = dynamicDowncast<RenderInline>(container());
+    if (!renderInline || m_containingWritingMode.isLogicalLeftInlineStart())
+        return;
+
+    auto firstInlineBox = InlineIterator::lineLeftmostInlineBoxFor(*renderInline);
+    if (!firstInlineBox)
+        return;
+
+    auto lastInlineBox = [&] {
+        auto inlineBox = firstInlineBox;
+        for (; inlineBox->nextInlineBoxLineRightward(); inlineBox.traverseInlineBoxLineRightward()) { }
+        return inlineBox;
+    }();
+    if (firstInlineBox == lastInlineBox)
+        return;
+
+    auto lastInlineBoxPaddingBoxVisualRight = lastInlineBox->logicalLeftIgnoringInlineDirection() + renderInline->borderLogicalLeft();
+    // FIXME: This does not work with decoration break clone.
+    auto firstInlineBoxPaddingBoxVisualRight = firstInlineBox->logicalLeftIgnoringInlineDirection();
+    auto adjustment = lastInlineBoxPaddingBoxVisualRight - firstInlineBoxPaddingBoxVisualRight;
+    computedValues.m_position += adjustment - m_containingRange.min();
+}
+
 // The |containerLogicalHeightForPositioned| is already aware of orthogonal flows.
 // The logicalTop concept is confusing here. It's the logical top from the child's POV. This means that is the physical
 // y if the child is vertical or the physical x if the child is horizontal.
-void PositionedLayoutConstraints::convertLogicalTopValue(LayoutUnit& logicalTopPos, const RenderBox& renderer, LayoutUnit logicalHeightValue) const
+void PositionedLayoutConstraints::fixupLogicalTopPosition(RenderBox::LogicalExtentComputedValues& computedValues, const RenderBox& renderer) const
 {
     // Deal with differing writing modes here. Our offset needs to be in the containing block's coordinate space. If the containing block is flipped
     // along this axis, then we need to flip the coordinate. This can only happen if the containing block is both a flipped mode and perpendicular to us.
@@ -408,12 +443,14 @@ void PositionedLayoutConstraints::convertLogicalTopValue(LayoutUnit& logicalTopP
         if (shouldFlipStaticPositionInParent(renderer, *m_container)) {
             // Let's finish computing static top postion inside parents with flipped writing mode now that we've got final height value.
             // see details in computeBlockStaticDistance.
-            logicalTopPos -= logicalHeightValue;
+            computedValues.m_position -= computedValues.m_extent;
         }
-        if (isBlockOpposing())
-            logicalTopPos = containingSize() - logicalHeightValue - logicalTopPos;
+        if (isBlockOpposing()) {
+            computedValues.m_position = m_containingRange.max() - computedValues.m_extent - computedValues.m_position;
+            computedValues.m_position += m_containingRange.min();
+        }
+
     }
-    logicalTopPos += m_containingRange.min();
 }
 
 }

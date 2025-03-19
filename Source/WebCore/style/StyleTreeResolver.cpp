@@ -1430,7 +1430,7 @@ void TreeResolver::sortPositionOptionsIfNeeded(PositionOptions& options, const S
 
     for (auto& optionStyle : options.optionStyles) {
         auto constraints = PositionedLayoutConstraints { *box, *optionStyle, boxAxis };
-        optionsForSorting.append({ WTFMove(optionStyle), constraints.insetModifiedContainingBlockSize() });
+        optionsForSorting.append({ WTFMove(optionStyle), constraints.insetModifiedContainingSize() });
     }
 
     // "Stably sort the position options list according to this size, with the largest coming first."

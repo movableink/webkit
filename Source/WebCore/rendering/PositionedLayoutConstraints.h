@@ -94,22 +94,22 @@ public:
     bool isBlockFlipped() const { return m_containingWritingMode.isBlockFlipped(); }
     bool isLogicalLeftInlineStart() const { return m_containingWritingMode.isLogicalLeftInlineStart(); }
     bool containingCoordsAreFlipped() const;
-    LayoutUnit containingSize() const { return m_containingRange.size(); }
 
+    LayoutUnit containingSize() const { return m_containingRange.size(); }
     LayoutUnit marginBeforeValue() const { return minimumValueForLength(m_marginBefore, m_marginPercentageBasis); }
     LayoutUnit marginAfterValue() const { return minimumValueForLength(m_marginAfter, m_marginPercentageBasis); }
     LayoutUnit insetBeforeValue() const { return minimumValueForLength(m_insetBefore, containingSize()); }
     LayoutUnit insetAfterValue() const { return minimumValueForLength(m_insetAfter, containingSize()); }
-    LayoutUnit availableContentSpace() const { return containingSize() - insetBeforeValue() - marginBeforeValue() - bordersPlusPadding() - marginAfterValue() - insetAfterValue(); } // This may be negative.
-    LayoutUnit insetModifiedContainingBlockSize() const { return containingSize() - insetBeforeValue() - insetAfterValue(); }
-
-    void convertLogicalLeftValue(LayoutUnit&) const;
-    void convertLogicalTopValue(LayoutUnit&, const RenderBox&, const LayoutUnit logicalHeightValue) const;
+    LayoutUnit insetModifiedContainingSize() const { return m_insetModifiedContainingRange.size(); }
+    LayoutUnit availableContentSpace() const { return insetModifiedContainingSize() - marginBeforeValue() - bordersPlusPadding() - marginAfterValue(); } // This may be negative.
 
     void resolvePosition(RenderBox::LogicalExtentComputedValues&) const;
     LayoutUnit resolveAlignmentAdjustment(const LayoutUnit unusedSpace) const;
     ItemPosition resolveAlignmentPosition() const;
     bool alignmentAppliesStretch(ItemPosition normalAlignment) const;
+
+    void fixupLogicalLeftPosition(RenderBox::LogicalExtentComputedValues&) const;
+    void fixupLogicalTopPosition(RenderBox::LogicalExtentComputedValues&, const RenderBox& renderer) const;
 
 private:
     void captureInsets(const RenderBox&, const LogicalBoxAxis selfAxis);
@@ -128,6 +128,7 @@ private:
 
     // These values are calculated by the constructor.
     LayoutRange m_containingRange;
+    LayoutRange m_insetModifiedContainingRange;
     LayoutUnit m_marginPercentageBasis;
     CheckedPtr<const RenderBoxModelObject> m_container;
     const WritingMode m_containingWritingMode;

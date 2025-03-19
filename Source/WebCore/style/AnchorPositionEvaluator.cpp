@@ -1097,8 +1097,8 @@ bool AnchorPositionEvaluator::overflowsInsetModifiedContainingBlock(const Render
     auto anchorInlineSize = anchoredBox.logicalWidth() + anchoredBox.marginStart() + anchoredBox.marginEnd();
     auto anchorBlockSize = anchoredBox.logicalHeight() + anchoredBox.marginBefore() + anchoredBox.marginAfter();
 
-    return inlineConstraints.insetModifiedContainingBlockSize() < anchorInlineSize
-        || blockConstraints.insetModifiedContainingBlockSize() < anchorBlockSize;
+    return inlineConstraints.insetModifiedContainingSize() < anchorInlineSize
+        || blockConstraints.insetModifiedContainingSize() < anchorBlockSize;
 }
 
 } // namespace WebCore::Style

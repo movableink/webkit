@@ -3859,6 +3859,8 @@ LayoutUnit RenderBox::constrainBlockMarginInAvailableSpaceOrTrim(const RenderBox
         : minimumValueForLength(style().marginAfter(containingBlock.writingMode()), availableSpace);
 }
 
+// MARK: - Positioned Layout
+
 LayoutUnit RenderBox::containingBlockLogicalWidthForPositioned(const RenderBoxModelObject& containingBlock, bool checkForPerpendicularWritingMode) const
 {
     ASSERT(containingBlock.canContainAbsolutelyPositionedObjects() || containingBlock.canContainFixedPositionObjects());
@@ -3957,33 +3959,6 @@ LayoutUnit RenderBox::containingBlockLogicalHeightForPositioned(const RenderBoxM
     return { };
 }
 
-static std::optional<float> adjustmentForRTLInlineBoxContainingBlock(const RenderElement& containingBlock)
-{
-    CheckedPtr renderInline = dynamicDowncast<RenderInline>(containingBlock);
-    if (!renderInline || containingBlock.writingMode().isLogicalLeftInlineStart())
-        return { };
-
-    auto firstInlineBox = InlineIterator::lineLeftmostInlineBoxFor(*renderInline);
-    if (!firstInlineBox)
-        return { };
-
-    auto lastInlineBox = [&] {
-        auto inlineBox = firstInlineBox;
-        for (; inlineBox->nextInlineBoxLineRightward(); inlineBox.traverseInlineBoxLineRightward()) { }
-        return inlineBox;
-    }();
-    if (firstInlineBox == lastInlineBox)
-        return { };
-
-    auto lastInlineBoxPaddingBoxVisualRight = lastInlineBox->logicalLeftIgnoringInlineDirection() + renderInline->borderLogicalLeft();
-    // FIXME: This does not work with decoration break clone.
-    auto firstInlineBoxPaddingBoxVisualRight = firstInlineBox->logicalLeftIgnoringInlineDirection();
-    auto distance = lastInlineBoxPaddingBoxVisualRight - firstInlineBoxPaddingBoxVisualRight;
-    return distance;
-}
-
-// Positioned layout.
-
 void RenderBox::computePositionedLogicalWidth(LogicalExtentComputedValues& computedValues) const
 {
     if (isReplacedOrAtomicInline()) {
@@ -4049,19 +4024,7 @@ void RenderBox::computePositionedLogicalWidth(LogicalExtentComputedValues& compu
 
     // Calculate the position.
     inlineConstraints.resolvePosition(computedValues);
-    // FIXME: This hack is needed to calculate the logical left position for a 'rtl' relatively
-    // positioned, inline because right now, it is using the logical left position
-    // of the first line box when really it should use the last line box. When
-    // this is fixed elsewhere, this block should be removed.
-    if (auto adjustment = adjustmentForRTLInlineBoxContainingBlock(inlineConstraints.container()))
-        computedValues.m_position += *adjustment;
-    else
-        inlineConstraints.convertLogicalLeftValue(computedValues.m_position);
-
-    if (isHorizontalWritingMode()) {
-        if (auto* container = dynamicDowncast<RenderBox>(inlineConstraints.container()); container && container->shouldPlaceVerticalScrollbarOnLeft())
-            computedValues.m_position += container->verticalScrollbarWidth();
-    }
+    inlineConstraints.fixupLogicalLeftPosition(computedValues);
 
     // Perform alignment.
     if (inlineConstraints.defaultAnchorBox() && inlineConstraints.resolveAlignmentPosition() == ItemPosition::AnchorCenter)
@@ -4162,7 +4125,7 @@ void RenderBox::computePositionedLogicalHeight(LogicalExtentComputedValues& comp
 
     // Calculate the position.
     blockConstraints.resolvePosition(computedValues);
-    blockConstraints.convertLogicalTopValue(computedValues.m_position, *this, computedValues.m_extent);
+    blockConstraints.fixupLogicalTopPosition(computedValues, *this);
 
     // Perform alignment.
     if (blockConstraints.defaultAnchorBox() && blockConstraints.resolveAlignmentPosition() == ItemPosition::AnchorCenter)
@@ -4236,17 +4199,7 @@ void RenderBox::computePositionedLogicalWidthReplaced(LogicalExtentComputedValue
     computedValues.m_extent = computeReplacedLogicalWidth() + borderAndPaddingLogicalWidth();
 
     inlineConstraints.resolvePosition(computedValues);
-
-    // FIXME: This hack is needed to calculate the logical left position for a 'rtl' relatively
-    // positioned, inline containing block because right now, it is using the logical left position
-    // of the first line box when really it should use the last line box. When
-    // this is fixed elsewhere, this block should be removed.
-    if (auto adjustment = adjustmentForRTLInlineBoxContainingBlock(inlineConstraints.container())) {
-        computedValues.m_position += *adjustment;
-        return;
-    }
-
-    inlineConstraints.convertLogicalLeftValue(computedValues.m_position);
+    inlineConstraints.fixupLogicalLeftPosition(computedValues);
 }
 
 void RenderBox::computePositionedLogicalHeightReplaced(LogicalExtentComputedValues& computedValues) const
@@ -4259,8 +4212,7 @@ void RenderBox::computePositionedLogicalHeightReplaced(LogicalExtentComputedValu
     computedValues.m_extent = computeReplacedLogicalHeight() + borderAndPaddingLogicalHeight();
 
     blockConstraints.resolvePosition(computedValues);
-
-    blockConstraints.convertLogicalTopValue(computedValues.m_position, *this, computedValues.m_extent);
+    blockConstraints.fixupLogicalTopPosition(computedValues, *this);
 }
 
 VisiblePosition RenderBox::positionForPoint(const LayoutPoint& point, HitTestSource source, const RenderFragmentContainer* fragment)
