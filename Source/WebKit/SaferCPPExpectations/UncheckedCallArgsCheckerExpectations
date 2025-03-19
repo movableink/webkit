@@ -1,6 +1,4 @@
-NetworkProcess/NetworkProcess.cpp
 UIProcess/Launcher/cocoa/ProcessLauncherCocoa.mm
-UIProcess/WebProcessPool.cpp
 WebProcess/FullScreen/WebFullScreenManager.cpp
 WebProcess/Inspector/WebInspectorInternal.cpp
 WebProcess/Plugins/PDF/PDFPluginAnnotation.mm

@@ -12,7 +12,6 @@ GPUProcess/media/RemoteVideoTrackProxy.h
 GeneratedSerializers.mm
 NetworkProcess/NetworkConnectionToWebProcess.cpp
 NetworkProcess/NetworkLoad.cpp
-NetworkProcess/NetworkProcess.cpp
 NetworkProcess/ServiceWorker/ServiceWorkerFetchTask.cpp
 Platform/IPC/ArgumentCoders.h
 Platform/IPC/Connection.cpp
@@ -106,16 +105,9 @@ UIProcess/API/Cocoa/_WKUserStyleSheet.mm
 UIProcess/API/Cocoa/_WKWebAuthenticationAssertionResponse.mm
 UIProcess/API/Cocoa/_WKWebAuthenticationPanel.mm
 UIProcess/API/Cocoa/_WKWebsiteDataStoreConfiguration.mm
-UIProcess/Cocoa/SOAuthorization/NavigationSOAuthorizationSession.mm
-UIProcess/Cocoa/SOAuthorization/PopUpSOAuthorizationSession.mm
-UIProcess/Cocoa/SOAuthorization/RedirectSOAuthorizationSession.mm
-UIProcess/Cocoa/SOAuthorization/SOAuthorizationSession.mm
-UIProcess/Cocoa/SOAuthorization/SubFrameSOAuthorizationSession.mm
 UIProcess/Downloads/DownloadProxy.cpp
-UIProcess/ProcessThrottler.cpp
 UIProcess/RemoteLayerTree/RemoteScrollingTree.h
 UIProcess/RemotePageDrawingAreaProxy.cpp
-UIProcess/WebProcessPool.cpp
 UIProcess/WebsiteData/WebsiteDataStore.cpp
 UIProcess/mac/WebContextMenuProxyMac.mm
 WebDriverBidiBackendDispatchers.cpp
@@ -224,7 +216,6 @@ WebProcess/WebCoreSupport/WebDragClient.cpp
 WebProcess/WebCoreSupport/WebEditorClient.cpp
 WebProcess/WebCoreSupport/WebFileSystemStorageConnection.cpp
 WebProcess/WebCoreSupport/WebGeolocationClient.cpp
-WebProcess/WebCoreSupport/WebLocalFrameLoaderClient.cpp
 WebProcess/WebCoreSupport/WebMessagePortChannelProvider.cpp
 WebProcess/WebCoreSupport/WebNotificationClient.cpp
 WebProcess/WebCoreSupport/WebPlatformStrategies.cpp
