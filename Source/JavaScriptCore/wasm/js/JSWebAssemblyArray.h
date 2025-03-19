@@ -53,9 +53,14 @@ public:
 
     static inline WebAssemblyGCStructure* createStructure(VM&, JSGlobalObject*, Ref<const Wasm::TypeDefinition>&&, Ref<const Wasm::RTT>&&);
 
-    static JSWebAssemblyArray* create(VM& vm, WebAssemblyGCStructure* structure, unsigned size)
+    static JSWebAssemblyArray* tryCreate(VM& vm, WebAssemblyGCStructure* structure, unsigned size)
     {
-        auto* object = new (NotNull, allocateCell<JSWebAssemblyArray>(vm, allocationSizeInBytes(elementType(structure), size))) JSWebAssemblyArray(vm, structure, size);
+        auto allocationSize = allocationSizeInBytes(elementType(structure), size);
+#if USE(JSVALUE32_64)
+        if (allocationSize.hasOverflowed())
+            return nullptr;
+#endif
+        auto* object = new (NotNull, allocateCell<JSWebAssemblyArray>(vm, allocationSize)) JSWebAssemblyArray(vm, structure, size);
         object->finishCreation(vm);
         return object;
     }
@@ -95,7 +100,17 @@ public:
     // Note: Technically this isn't needed since the GC/malloc always allocates 16 byte chunks so for non-precise v128 allocations
     // there will be a 8 spare bytes at the end. This is just a bit more explicit and shouldn't make a difference.
     static constexpr ptrdiff_t v128AlignmentShift = 8;
-    static size_t allocationSizeInBytes(Wasm::FieldType fieldType, unsigned size) { return sizeof(JSWebAssemblyArray) + size * fieldType.type.elementSize() + (needsAlignmentCheck(fieldType.type) * v128AlignmentShift); }
+#if USE(JSVALUE64)
+    static size_t allocationSizeInBytes(Wasm::FieldType fieldType, unsigned size)
+    {
+        return sizeof(JSWebAssemblyArray) + size * fieldType.type.elementSize() + (needsAlignmentCheck(fieldType.type) * v128AlignmentShift);
+    }
+#else
+    static CheckedSize allocationSizeInBytes(Wasm::FieldType fieldType, unsigned size)
+    {
+        return CheckedSize(sizeof(JSWebAssemblyArray)) + size * fieldType.type.elementSize() + (needsAlignmentCheck(fieldType.type) * v128AlignmentShift);
+    }
+#endif
     static constexpr ptrdiff_t offsetOfSize() { return OBJECT_OFFSETOF(JSWebAssemblyArray, m_size); }
     static constexpr ptrdiff_t offsetOfData() { return sizeof(JSWebAssemblyArray); }
 

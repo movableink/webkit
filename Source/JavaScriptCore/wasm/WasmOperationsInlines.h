@@ -53,12 +53,13 @@ inline EncodedJSValue refFunc(JSWebAssemblyInstance* instance, uint32_t index)
 }
 
 template <typename T>
-JSWebAssemblyArray* fillArray(JSWebAssemblyInstance* instance, WebAssemblyGCStructure* structure, uint32_t size, T value)
+JSWebAssemblyArray* tryFillArray(JSWebAssemblyInstance* instance, WebAssemblyGCStructure* structure, uint32_t size, T value)
 {
     VM& vm = instance->vm();
 
-    auto* array = JSWebAssemblyArray::create(vm, structure, size);
-    array->fill(vm, 0, static_cast<T>(value), size);
+    auto* array = JSWebAssemblyArray::tryCreate(vm, structure, size);
+    if (LIKELY(array))
+        array->fill(vm, 0, static_cast<T>(value), size);
     return array;
 }
 
@@ -80,25 +81,26 @@ inline JSValue arrayNew(JSWebAssemblyInstance* instance, uint32_t typeIndex, uin
 
     switch (elementSize) {
     case sizeof(uint8_t): {
-        array = fillArray<uint8_t>(instance, structure, size, static_cast<uint8_t>(encValue));
+        array = tryFillArray<uint8_t>(instance, structure, size, static_cast<uint8_t>(encValue));
         break;
     }
     case sizeof(uint16_t): {
-        array = fillArray<uint16_t>(instance, structure, size, static_cast<uint16_t>(encValue));
+        array = tryFillArray<uint16_t>(instance, structure, size, static_cast<uint16_t>(encValue));
         break;
     }
     case sizeof(uint32_t): {
-        array = fillArray<uint32_t>(instance, structure, size, static_cast<uint32_t>(encValue));
+        array = tryFillArray<uint32_t>(instance, structure, size, static_cast<uint32_t>(encValue));
         break;
     }
     case sizeof(uint64_t): {
-        array = fillArray<uint64_t>(instance, structure, size, encValue);
+        array = tryFillArray<uint64_t>(instance, structure, size, encValue);
         break;
     }
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }
-    ASSERT(array);
+    if (UNLIKELY(!array))
+        return jsNull();
     return array;
 }
 
@@ -120,17 +122,21 @@ inline JSValue arrayNew(JSWebAssemblyInstance* instance, uint32_t typeIndex, uin
     if (UNLIKELY(productOverflows<uint32_t>(elementSize, size) || elementSize * size > maxArraySizeInBytes))
         return jsNull();
 
-    auto* array = JSWebAssemblyArray::create(vm, structure, size);
+    auto* array = JSWebAssemblyArray::tryCreate(vm, structure, size);
+    if (UNLIKELY(!array))
+        return jsNull();
     array->fill(vm, 0, value, size);
     return array;
 }
 
 template <typename T>
-JSWebAssemblyArray* copyElementsInReverse(JSWebAssemblyInstance* instance, WebAssemblyGCStructure* structure, uint32_t size, uint64_t* arguments)
+JSWebAssemblyArray* tryCopyElementsInReverse(JSWebAssemblyInstance* instance, WebAssemblyGCStructure* structure, uint32_t size, uint64_t* arguments)
 {
     VM& vm = instance->vm();
 
-    auto* array = JSWebAssemblyArray::create(vm, structure, size);
+    auto* array = JSWebAssemblyArray::tryCreate(vm, structure, size);
+    if (UNLIKELY(!array))
+        return array;
     if (!size)
         return array;
 
@@ -161,24 +167,26 @@ inline JSValue arrayNewFixed(JSWebAssemblyInstance* instance, uint32_t typeIndex
     JSWebAssemblyArray* array = nullptr;
     switch (elementSize) {
     case sizeof(uint8_t): {
-        array = copyElementsInReverse<uint8_t>(instance, structure, size, arguments);
+        array = tryCopyElementsInReverse<uint8_t>(instance, structure, size, arguments);
         break;
     }
     case sizeof(uint16_t): {
-        array = copyElementsInReverse<uint16_t>(instance, structure, size, arguments);
+        array = tryCopyElementsInReverse<uint16_t>(instance, structure, size, arguments);
         break;
     }
     case sizeof(uint32_t): {
-        array = copyElementsInReverse<uint32_t>(instance, structure, size, arguments);
+        array = tryCopyElementsInReverse<uint32_t>(instance, structure, size, arguments);
         break;
     }
     case sizeof(uint64_t): {
-        array = copyElementsInReverse<uint64_t>(instance, structure, size, arguments);
+        array = tryCopyElementsInReverse<uint64_t>(instance, structure, size, arguments);
         break;
     }
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }
+    if (UNLIKELY(!array))
+        return jsNull();
     return array;
 }
 
@@ -187,7 +195,9 @@ EncodedJSValue createArrayFromDataSegment(JSWebAssemblyInstance* instance, WebAs
 {
     JSGlobalObject* globalObject = instance->globalObject();
     VM& vm = globalObject->vm();
-    auto* array = JSWebAssemblyArray::create(vm, structure, arraySize);
+    auto* array = JSWebAssemblyArray::tryCreate(vm, structure, arraySize);
+    if (UNLIKELY(!array))
+        return JSValue::encode(jsNull());
 
     ASSERT(!array->elementsAreRefTypes());
     auto span = array->span<T>();
@@ -283,7 +293,9 @@ inline EncodedJSValue arrayNewElem(JSWebAssemblyInstance* instance, uint32_t typ
     VM& vm = instance->vm();
     StorageType arrayType = structure->typeDefinition().as<ArrayType>()->elementType().type;
     ASSERT_UNUSED(arrayType, isSubtype(storageType, arrayType));
-    auto* array = JSWebAssemblyArray::create(vm, structure, arraySize);
+    auto* array = JSWebAssemblyArray::tryCreate(vm, structure, arraySize);
+    if (UNLIKELY(!array))
+        return JSValue::encode(jsNull());
     instance->copyElementSegment(array, instance->module().moduleInformation().elements[elemSegmentIndex], offset, arraySize, array->span<uint64_t>().data());
     ASSERT(Wasm::isRefType(storageType.unpacked()));
     vm.writeBarrier(array);

@@ -1820,8 +1820,11 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayNewEmpty, EncodedJSValue, (J
     if (UNLIKELY(productOverflows<uint32_t>(elementSize, size) || elementSize * size > maxArraySizeInBytes))
         return JSValue::encode(jsNull());
 
+    auto* array = JSWebAssemblyArray::tryCreate(vm, structure, size);
+    if (UNLIKELY(!array))
+        return JSValue::encode(jsNull());
     // Create a default-initialized array with the right element type and length
-    return JSValue::encode(JSWebAssemblyArray::create(vm, structure, size));
+    return JSValue::encode(array);
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmArrayGet, EncodedJSValue, (JSWebAssemblyInstance* instance, uint32_t typeIndex, EncodedJSValue arrayValue, uint32_t index))
