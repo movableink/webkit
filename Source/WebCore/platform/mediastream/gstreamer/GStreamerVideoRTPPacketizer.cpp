@@ -64,12 +64,12 @@ RefPtr<GStreamerVideoRTPPacketizer> GStreamerVideoRTPPacketizer::create(RefPtr<U
 
     auto codec = emptyString();
     if (encoding == "vp8"_s) {
-        if (gstObjectHasProperty(payloader.get(), "picture-id-mode"))
+        if (gstObjectHasProperty(payloader.get(), "picture-id-mode"_s))
             gst_util_set_object_arg(G_OBJECT(payloader.get()), "picture-id-mode", "15-bit");
 
         codec = "vp8"_s;
     } else if (encoding == "vp9"_s) {
-        if (gstObjectHasProperty(payloader.get(), "picture-id-mode"))
+        if (gstObjectHasProperty(payloader.get(), "picture-id-mode"_s))
             gst_util_set_object_arg(G_OBJECT(payloader.get()), "picture-id-mode", "15-bit");
 
         VPCodecConfigurationRecord record;

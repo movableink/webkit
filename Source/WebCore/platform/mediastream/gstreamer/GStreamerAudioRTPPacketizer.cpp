@@ -116,7 +116,7 @@ RefPtr<GStreamerAudioRTPPacketizer> GStreamerAudioRTPPacketizer::create(RefPtr<U
 
     if (auto minPTime = gstStructureGetString(structure.get(), "minptime"_s)) {
         if (auto value = parseIntegerAllowingTrailingJunk<int64_t>(minPTime)) {
-            if (gstObjectHasProperty(payloader.get(), "min-ptime"))
+            if (gstObjectHasProperty(payloader.get(), "min-ptime"_s))
                 g_object_set(payloader.get(), "min-ptime", *value * GST_MSECOND, nullptr);
             else
                 GST_WARNING_OBJECT(payloader.get(), "min-ptime property not supported");

@@ -187,7 +187,7 @@ bool GStreamerMediaEndpoint::initializePipeline()
         return false;
     }
 
-    if (gstObjectHasProperty(rtpBin.get(), "add-reference-timestamp-meta")) {
+    if (gstObjectHasProperty(rtpBin.get(), "add-reference-timestamp-meta"_s)) {
         auto disableCaptureTimeTracking = StringView::fromLatin1(g_getenv("WEBKIT_GST_DISABLE_WEBRTC_CAPTURE_TIME_TRACKING"));
         if (disableCaptureTimeTracking.isEmpty() || disableCaptureTimeTracking == "0"_s)
             g_object_set(rtpBin.get(), "add-reference-timestamp-meta", TRUE, nullptr);
@@ -1104,7 +1104,7 @@ GRefPtr<GstPad> GStreamerMediaEndpoint::requestPad(const GRefPtr<GstCaps>& allow
 
     if (!mediaStreamID.isEmpty()) {
         GST_DEBUG_OBJECT(m_pipeline.get(), "Setting msid to %s on sink pad %" GST_PTR_FORMAT, mediaStreamID.ascii().data(), sinkPad.get());
-        if (gstObjectHasProperty(sinkPad.get(), "msid"))
+        if (gstObjectHasProperty(sinkPad.get(), "msid"_s))
             g_object_set(sinkPad.get(), "msid", mediaStreamID.ascii().data(), nullptr);
     }
 

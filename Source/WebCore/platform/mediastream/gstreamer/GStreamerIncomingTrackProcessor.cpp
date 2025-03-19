@@ -125,7 +125,7 @@ String GStreamerIncomingTrackProcessor::mediaStreamIdFromPad()
 {
     // Look-up the mediastream ID, using the msid attribute, fall back to pad name if there is no msid.
     String mediaStreamId;
-    if (gstObjectHasProperty(m_pad.get(), "msid")) {
+    if (gstObjectHasProperty(m_pad.get(), "msid"_s)) {
         GUniqueOutPtr<char> msid;
         g_object_get(m_pad.get(), "msid", &msid.outPtr(), nullptr);
         if (msid) {

@@ -409,7 +409,7 @@ void MediaRecorderPrivateBackend::setSink(GstElement* element)
 
 void MediaRecorderPrivateBackend::configureAudioEncoder(GstElement* element)
 {
-    if (!gstObjectHasProperty(element, "bitrate")) {
+    if (!gstObjectHasProperty(element, "bitrate"_s)) {
         GST_WARNING_OBJECT(m_pipeline.get(), "Audio encoder %" GST_PTR_FORMAT " has no bitrate property, skipping configuration", element);
         return;
     }

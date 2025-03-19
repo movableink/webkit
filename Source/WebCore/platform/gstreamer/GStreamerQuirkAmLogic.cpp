@@ -50,12 +50,12 @@ GstElement* GStreamerQuirkAmLogic::createWebAudioSink()
 
 void GStreamerQuirkAmLogic::configureElement(GstElement* element, const OptionSet<ElementRuntimeCharacteristics>& characteristics)
 {
-    if (gstObjectHasProperty(element, "disable-xrun")) {
+    if (gstObjectHasProperty(element, "disable-xrun"_s)) {
         GST_INFO("Set property disable-xrun to TRUE");
         g_object_set(element, "disable-xrun", TRUE, nullptr);
     }
 
-    if (characteristics.contains(ElementRuntimeCharacteristics::HasVideo) && gstObjectHasProperty(element, "wait-video")) {
+    if (characteristics.contains(ElementRuntimeCharacteristics::HasVideo) && gstObjectHasProperty(element, "wait-video"_s)) {
         GST_INFO("Set property wait-video to TRUE");
         g_object_set(element, "wait-video", TRUE, nullptr);
     }

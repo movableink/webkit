@@ -973,7 +973,7 @@ static void webkit_video_encoder_class_init(WebKitVideoEncoderClass* klass)
                     break;
                 }
             }, [](GstElement* encoder, LatencyMode mode) {
-                if (!gstObjectHasProperty(encoder, "usage-profile"))
+                if (!gstObjectHasProperty(encoder, "usage-profile"_s))
                     return;
                 switch (mode) {
                 case REALTIME_LATENCY_MODE:
