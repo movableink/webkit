@@ -2914,6 +2914,9 @@ fast/canvas/image-buffer-resource-limits.html [ Skip ]
 platform/mac/media/media-source/is-type-supported-vp9-codec-check.html [ Skip ]
 platform/mac/media/mediacapabilities/vp9-decodingInfo-sw.html [ Skip ]
 
+# no VP9 decoder on WK1
+media/vp9.html [ Skip ]
+
 # webkit.org/b/235733 Skip 2 editing/execCommand tests for making subsequent tests fail on wk1 Apple Silicon macs.
 [ Release ] editing/execCommand/insert-newline-in-quoted-content-crash.html [ Skip ]
 [ Release ] editing/execCommand/paste-as-quotation-disconnected-paragraph-ancestor-crash.html [ Skip ]

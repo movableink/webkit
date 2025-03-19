@@ -4560,8 +4560,8 @@ imported/w3c/web-platform-tests/webaudio/idlharness.https.window.html [ Pass Cra
 imported/w3c/web-platform-tests/webaudio/the-audio-api/the-audionode-interface/audionode-connect-method-chaining.html [ Pass Crash ]
 storage/indexeddb/modern/deleteindex-4-private.html [ Pass Crash ]
 
-# rdar://104694723 ([ iOS16+ debug ] media/vp9.html is a consistent timeout)
-[ Debug ] media/vp9.html [ Timeout ]
+# No VP9 decoder on simulator and no ability to load VideoToolbox plugins.
+media/vp9.html [ Skip ]
 
 # Requires specific encoder behavior.
 http/wpt/webcodecs/encoder-task-failing.html [ Failure ]
