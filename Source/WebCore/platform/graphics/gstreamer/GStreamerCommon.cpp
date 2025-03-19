@@ -1919,11 +1919,11 @@ static std::optional<GRefPtr<GstContext>> requestGLContext(const char* contextTy
     return std::nullopt;
 }
 
-bool setGstElementGLContext(GstElement* element, const char* contextType)
+bool setGstElementGLContext(GstElement* element, ASCIILiteral contextType)
 {
-    GRefPtr<GstContext> oldContext = adoptGRef(gst_element_get_context(element, contextType));
+    GRefPtr<GstContext> oldContext = adoptGRef(gst_element_get_context(element, contextType.characters()));
     if (!oldContext) {
-        auto newContext = requestGLContext(contextType);
+        auto newContext = requestGLContext(contextType.characters());
         if (!newContext)
             return false;
         gst_element_set_context(element, newContext->get());

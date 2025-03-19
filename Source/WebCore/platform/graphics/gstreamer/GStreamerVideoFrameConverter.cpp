@@ -90,9 +90,10 @@ GRefPtr<GstSample> GStreamerVideoFrameConverter::Pipeline::run(const GRefPtr<Gst
 {
 #if USE(GSTREAMER_GL)
     if (m_type == Type::GLMemory || m_type == Type::DMABufMemory) {
-        if (!setGstElementGLContext(m_pipeline.get(), GST_GL_DISPLAY_CONTEXT_TYPE))
+        static ASCIILiteral gstGlDisplayContextyType = ASCIILiteral::fromLiteralUnsafe(GST_GL_DISPLAY_CONTEXT_TYPE);
+        if (!setGstElementGLContext(m_pipeline.get(), gstGlDisplayContextyType))
             return nullptr;
-        if (!setGstElementGLContext(m_pipeline.get(), "gst.gl.app_context"))
+        if (!setGstElementGLContext(m_pipeline.get(), "gst.gl.app_context"_s))
             return nullptr;
 
         if (m_type == Type::DMABufMemory) {

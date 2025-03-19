@@ -159,9 +159,10 @@ static GstStateChangeReturn webKitGLVideoSinkChangeState(GstElement* element, Gs
     case GST_STATE_CHANGE_NULL_TO_READY:
     case GST_STATE_CHANGE_READY_TO_READY:
     case GST_STATE_CHANGE_READY_TO_PAUSED: {
-        if (!setGstElementGLContext(element, GST_GL_DISPLAY_CONTEXT_TYPE))
+        static ASCIILiteral gstGlDisplayContextyType = ASCIILiteral::fromLiteralUnsafe(GST_GL_DISPLAY_CONTEXT_TYPE);
+        if (!setGstElementGLContext(element, gstGlDisplayContextyType))
             return GST_STATE_CHANGE_FAILURE;
-        if (!setGstElementGLContext(element, "gst.gl.app_context"))
+        if (!setGstElementGLContext(element, "gst.gl.app_context"_s))
             return GST_STATE_CHANGE_FAILURE;
         break;
     }

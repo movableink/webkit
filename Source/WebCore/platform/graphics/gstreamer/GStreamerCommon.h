@@ -360,7 +360,7 @@ WARN_UNUSED_RETURN GRefPtr<GstCaps> buildDMABufCaps();
 #endif
 
 #if USE(GSTREAMER_GL)
-bool setGstElementGLContext(GstElement*, const char* contextType);
+bool setGstElementGLContext(GstElement*, ASCIILiteral contextType);
 #endif
 } // namespace WebCore
 
