@@ -95,11 +95,11 @@ void RemoteLegacyCDMSession::invalidate()
 
 RefPtr<Uint8Array> RemoteLegacyCDMSession::generateKeyRequest(const String& mimeType, Uint8Array* initData, String& destinationURL, unsigned short& errorCode, uint32_t& systemCode)
 {
-    if (!m_factory || !initData)
+    if (!m_factory || !initData || !m_client)
         return nullptr;
 
     auto ipcInitData = convertToSharedBuffer(initData);
-    auto sendResult = m_factory->gpuProcessConnection().protectedConnection()->sendSync(Messages::RemoteLegacyCDMSessionProxy::GenerateKeyRequest(mimeType, ipcInitData), m_identifier);
+    auto sendResult = m_factory->gpuProcessConnection().protectedConnection()->sendSync(Messages::RemoteLegacyCDMSessionProxy::GenerateKeyRequest(mimeType, ipcInitData, m_client->mediaKeysHashSalt()), m_identifier);
 
     RefPtr<SharedBuffer> ipcNextMessage;
     if (sendResult.succeeded())

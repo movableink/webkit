@@ -29,6 +29,7 @@
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA) && ENABLE(MEDIA_SOURCE)
 
 #import "CDMFairPlayStreaming.h"
+#import "CDMInstanceFairPlayStreamingAVFObjC.h"
 #import "CDMPrivateMediaSourceAVFObjC.h"
 #import "LegacyCDM.h"
 #import "Logging.h"
@@ -314,11 +315,15 @@ bool CDMSessionAVContentKeySession::update(Uint8Array* key, RefPtr<Uint8Array>& 
         ASSERT(contentKeyRequest);
         RetainPtr certificateData = toNSData(m_certificate->span());
 
-        RetainPtr<NSDictionary> options;
+        RetainPtr options = CDMInstanceSessionFairPlayStreamingAVFObjC::optionsForKeyRequestWithHashSalt(m_client->mediaKeysHashSalt());
+
         if (!m_protocolVersions.isEmpty() && PAL::canLoad_AVFoundation_AVContentKeyRequestProtocolVersionsKey()) {
-            options = @{ AVContentKeyRequestProtocolVersionsKey: createNSArray(m_protocolVersions, [] (int version) -> NSNumber * {
+            RetainPtr mutableOptions = adoptNS([[NSMutableDictionary alloc] init]);
+            [mutableOptions addEntriesFromDictionary:options.get()];
+            [mutableOptions setValue:createNSArray(m_protocolVersions, [] (int version) -> NSNumber * {
                 return version ? @(version) : nil;
-            }).get() };
+            }).get() forKey:AVContentKeyRequestProtocolVersionsKey];
+            options = WTFMove(mutableOptions);
         }
 
         errorCode = MediaPlayer::NoError;
