@@ -40,7 +40,7 @@ WEBKIT_DEFINE_TYPE(GStreamerMockDevice, webkit_mock_device, GST_TYPE_DEVICE)
 static GstElement* webkitMockDeviceCreateElement([[maybe_unused]] GstDevice* device, const char* name)
 {
     GST_INFO_OBJECT(device, "Creating source element for device %s", name);
-    auto* element = makeGStreamerElement("appsrc", name);
+    auto* element = makeGStreamerElement("appsrc"_s, String::fromLatin1(name));
     g_object_set(element, "format", GST_FORMAT_TIME, "is-live", TRUE, "do-timestamp", TRUE, nullptr);
     return element;
 }

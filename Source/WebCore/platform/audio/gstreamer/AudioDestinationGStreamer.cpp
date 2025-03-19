@@ -150,8 +150,8 @@ AudioDestinationGStreamer::AudioDestinationGStreamer(const CreationOptions& opti
         }
     }
 
-    GstElement* audioConvert = makeGStreamerElement("audioconvert", nullptr);
-    GstElement* audioResample = makeGStreamerElement("audioresample", nullptr);
+    GstElement* audioConvert = makeGStreamerElement("audioconvert"_s);
+    GstElement* audioResample = makeGStreamerElement("audioresample"_s);
 
     auto queue = gst_element_factory_make("queue", nullptr);
     g_object_set(queue, "max-size-buffers", 2, "max-size-bytes", 0, "max-size-time", 0, nullptr);
@@ -167,7 +167,7 @@ AudioDestinationGStreamer::AudioDestinationGStreamer(const CreationOptions& opti
         // 1) Some platform sinks don't support non-interleaved audio without special caps (rialtowebaudiosink).
         // 2) Interaudio sink/src doesn't fully support non-interleaved audio (webkit audio sink)
         // 3) audiomixer doesn't support non-interleaved audio in output pipeline (webkit audio sink)
-        GstElement* capsFilter = makeGStreamerElement("capsfilter", nullptr);
+        GstElement* capsFilter = makeGStreamerElement("capsfilter"_s);
         GRefPtr<GstCaps> caps = adoptGRef(gst_caps_new_simple("audio/x-raw", "layout", G_TYPE_STRING, "interleaved", nullptr));
         g_object_set(capsFilter, "caps", caps.get(), nullptr);
         gst_bin_add(GST_BIN_CAST(m_pipeline.get()), capsFilter);

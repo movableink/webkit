@@ -49,7 +49,7 @@ GStreamerQuirkRealtek::GStreamerQuirkRealtek()
 
 GstElement* GStreamerQuirkRealtek::createWebAudioSink()
 {
-    auto sink = makeGStreamerElement("rtkaudiosink", nullptr);
+    auto sink = makeGStreamerElement("rtkaudiosink"_s);
     RELEASE_ASSERT_WITH_MESSAGE(sink, "rtkaudiosink should be available in the system but it is not");
     g_object_set(sink, "media-tunnel", FALSE, "audio-service", TRUE, nullptr);
     return sink;

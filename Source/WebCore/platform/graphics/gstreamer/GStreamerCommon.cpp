@@ -988,7 +988,7 @@ bool gstElementFactoryEquals(GstElement* element, ASCIILiteral name)
 
 GstElement* createAutoAudioSink(const String& role)
 {
-    auto* audioSink = makeGStreamerElement("autoaudiosink", nullptr);
+    auto* audioSink = makeGStreamerElement("autoaudiosink"_s);
     g_signal_connect_data(audioSink, "child-added", G_CALLBACK(+[](GstChildProxy*, GObject* object, gchar*, gpointer userData) {
         auto* role = reinterpret_cast<StringImpl*>(userData);
         auto* objectClass = G_OBJECT_GET_CLASS(object);
@@ -1074,31 +1074,18 @@ GstBuffer* gstBufferNewWrappedFast(void* data, size_t length)
     return gst_buffer_new_wrapped_full(static_cast<GstMemoryFlags>(0), data, length, 0, length, data, fastFree);
 }
 
-GstElement* makeGStreamerElement(const char* factoryName, const char* name)
+GstElement* makeGStreamerElement(ASCIILiteral factoryName, const String& name)
 {
     static Lock lock;
-    static Vector<const char*> cache WTF_GUARDED_BY_LOCK(lock);
-    auto* element = gst_element_factory_make(factoryName, name);
+    static Vector<String> cache WTF_GUARDED_BY_LOCK(lock);
+    auto* element = gst_element_factory_make(factoryName.characters(), name.isEmpty() ? nullptr : name.ascii().data());
     Locker locker { lock };
     if (!element && !cache.contains(factoryName)) {
         cache.append(factoryName);
-        WTFLogAlways("GStreamer element %s not found. Please install it", factoryName);
+        WTFLogAlways("GStreamer element %s not found. Please install it", factoryName.characters());
+        ASSERT_NOT_REACHED_WITH_MESSAGE("GStreamer element %s not found. Please install it", factoryName.characters());
     }
     return element;
-}
-
-GstElement* makeGStreamerBin(const char* description, bool ghostUnlinkedPads)
-{
-    static Lock lock;
-    static Vector<const char*> cache WTF_GUARDED_BY_LOCK(lock);
-    GUniqueOutPtr<GError> error;
-    auto* bin = gst_parse_bin_from_description(description, ghostUnlinkedPads, &error.outPtr());
-    Locker locker { lock };
-    if (!bin && !cache.contains(description)) {
-        cache.append(description);
-        WTFLogAlways("Unable to create bin for description: \"%s\". Error: %s", description, error->message);
-    }
-    return bin;
 }
 
 #if USE(GSTREAMER_WEBRTC)

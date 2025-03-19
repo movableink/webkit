@@ -59,7 +59,7 @@ static bool webKitAudioSinkConfigure(WebKitAudioSink* sink)
             return false;
         }
 
-        sink->priv->interAudioSink = makeGStreamerElement("interaudiosink", nullptr);
+        sink->priv->interAudioSink = makeGStreamerElement("interaudiosink"_s);
         RELEASE_ASSERT(sink->priv->interAudioSink);
 
         gst_bin_add(GST_BIN_CAST(sink), sink->priv->interAudioSink.get());

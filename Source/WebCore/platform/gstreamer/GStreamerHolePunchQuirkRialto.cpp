@@ -42,7 +42,7 @@ GstElement* GStreamerHolePunchQuirkRialto::createHolePunchVideoSink(bool isLegac
         return nullptr;
 
     // Rialto using holepunch.
-    GstElement* videoSink = makeGStreamerElement("rialtomsevideosink", nullptr);
+    GstElement* videoSink = makeGStreamerElement("rialtomsevideosink"_s);
     if (isPIPRequested)
         g_object_set(G_OBJECT(videoSink), "maxVideoWidth", 640, "maxVideoHeight", 480, "has-drm", FALSE, nullptr);
     return videoSink;

@@ -42,7 +42,7 @@ GstElement* GStreamerQuirkAmLogic::createWebAudioSink()
     // that causes resource acquisition in some cases interrupting any playback already running.
     // On Amlogic we need to set direct-mode=false prop before changing state to READY
     // but this is not possible with autoaudiosink.
-    auto sink = makeGStreamerElement("amlhalasink", nullptr);
+    auto sink = makeGStreamerElement("amlhalasink"_s);
     RELEASE_ASSERT_WITH_MESSAGE(sink, "amlhalasink should be available in the system but it is not");
     g_object_set(sink, "direct-mode", FALSE, nullptr);
     return sink;

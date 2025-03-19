@@ -47,14 +47,14 @@ static const Seconds s_releaseUnusedPipelinesTimerInterval = 30_s;
 
 GStreamerVideoFrameConverter::Pipeline::Pipeline(Type type)
     : m_type(type)
-    , m_src(makeGStreamerElement("appsrc", nullptr))
-    , m_sink(makeGStreamerElement("appsink", nullptr))
+    , m_src(makeGStreamerElement("appsrc"_s))
+    , m_sink(makeGStreamerElement("appsink"_s))
 {
     g_object_set(m_sink.get(), "enable-last-sample", FALSE, "max-buffers", 1, nullptr);
     switch (m_type) {
     case Type::SystemMemory: {
-        auto videoconvert = makeGStreamerElement("videoconvert", nullptr);
-        auto videoscale = makeGStreamerElement("videoscale", nullptr);
+        auto videoconvert = makeGStreamerElement("videoconvert"_s);
+        auto videoscale = makeGStreamerElement("videoscale"_s);
         m_pipeline = gst_element_factory_make("pipeline", "video-frame-converter");
         gst_bin_add_many(GST_BIN_CAST(m_pipeline.get()), m_src.get(), videoconvert, videoscale, m_sink.get(), nullptr);
         gst_element_link_many(m_src.get(), videoconvert, videoscale, m_sink.get(), nullptr);
@@ -62,20 +62,20 @@ GStreamerVideoFrameConverter::Pipeline::Pipeline(Type type)
     }
 #if USE(GSTREAMER_GL)
     case Type::GLMemory: {
-        auto glcolorconvert = makeGStreamerElement("glcolorconvert", nullptr);
-        auto gldownload = makeGStreamerElement("gldownload", nullptr);
-        auto videoscale = makeGStreamerElement("videoscale", nullptr);
+        auto glcolorconvert = makeGStreamerElement("glcolorconvert"_s);
+        auto gldownload = makeGStreamerElement("gldownload"_s);
+        auto videoscale = makeGStreamerElement("videoscale"_s);
         m_pipeline = gst_element_factory_make("pipeline", "video-frame-converter-gl");
         gst_bin_add_many(GST_BIN_CAST(m_pipeline.get()), m_src.get(), glcolorconvert, gldownload, videoscale, m_sink.get(), nullptr);
         gst_element_link_many(m_src.get(), glcolorconvert, gldownload, videoscale, m_sink.get(), nullptr);
         break;
     }
     case Type::DMABufMemory: {
-        auto glupload = makeGStreamerElement("glupload", nullptr);
-        m_capsfilter = makeGStreamerElement("capsfilter", nullptr);
-        auto glcolorconvert = makeGStreamerElement("glcolorconvert", nullptr);
-        auto gldownload = makeGStreamerElement("gldownload", nullptr);
-        auto videoscale = makeGStreamerElement("videoscale", nullptr);
+        auto glupload = makeGStreamerElement("glupload"_s);
+        m_capsfilter = makeGStreamerElement("capsfilter"_s);
+        auto glcolorconvert = makeGStreamerElement("glcolorconvert"_s);
+        auto gldownload = makeGStreamerElement("gldownload"_s);
+        auto videoscale = makeGStreamerElement("videoscale"_s);
         m_pipeline = gst_element_factory_make("pipeline", "video-frame-converter-gl");
         gst_bin_add_many(GST_BIN_CAST(m_pipeline.get()), m_src.get(), glupload, m_capsfilter.get(), glcolorconvert, gldownload, videoscale, m_sink.get(), nullptr);
         gst_element_link_many(m_src.get(), glupload, m_capsfilter.get(), glcolorconvert, gldownload, videoscale, m_sink.get(), nullptr);

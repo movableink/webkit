@@ -163,7 +163,7 @@ public:
         }
 
         bool isCaptureTrack = track.isCaptureTrack();
-        m_src = makeGStreamerElement("appsrc", elementName.ascii().data());
+        m_src = makeGStreamerElement("appsrc"_s, elementName);
 
         g_object_set(m_src.get(), "is-live", TRUE, "format", GST_FORMAT_TIME, "min-percent", 100,
             "do-timestamp", isCaptureTrack, "handle-segment-change", TRUE, nullptr);

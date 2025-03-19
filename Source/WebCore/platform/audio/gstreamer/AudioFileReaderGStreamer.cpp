@@ -294,7 +294,7 @@ void AudioFileReader::handleNewDeinterleavePad(GstPad* pad)
     // in an appsink so we can pull the data from each
     // channel. Pipeline looks like:
     // ... deinterleave ! appsink.
-    GstElement* sink = makeGStreamerElement("appsink", nullptr);
+    GstElement* sink = makeGStreamerElement("appsink"_s);
 
     if (!m_firstChannelType) {
         auto caps = adoptGRef(gst_pad_query_caps(pad, nullptr));
@@ -353,10 +353,10 @@ void AudioFileReader::plugDeinterleave(GstPad* pad)
     // A decodebin pad was added, plug in a deinterleave element to
     // separate each planar channel. Sub pipeline looks like
     // ... decodebin2 ! audioconvert ! audioresample ! capsfilter ! deinterleave.
-    GstElement* audioConvert  = makeGStreamerElement("audioconvert", nullptr);
-    GstElement* audioResample = makeGStreamerElement("audioresample", nullptr);
+    GstElement* audioConvert  = makeGStreamerElement("audioconvert"_s);
+    GstElement* audioResample = makeGStreamerElement("audioresample"_s);
     GstElement* capsFilter = gst_element_factory_make("capsfilter", nullptr);
-    m_deInterleave = makeGStreamerElement("deinterleave", "deinterleave");
+    m_deInterleave = makeGStreamerElement("deinterleave"_s, "deinterleave"_s);
 
     g_object_set(m_deInterleave.get(), "keep-positions", TRUE, nullptr);
     g_signal_connect_swapped(m_deInterleave.get(), "pad-added", G_CALLBACK(deinterleavePadAddedCallback), this);
@@ -410,11 +410,11 @@ void AudioFileReader::decodeAudioForBusCreation()
     }, this, nullptr);
 
     ASSERT(!m_data.empty());
-    auto* source = makeGStreamerElement("giostreamsrc", nullptr);
+    auto* source = makeGStreamerElement("giostreamsrc"_s);
     auto memoryStream = adoptGRef(g_memory_input_stream_new_from_data(m_data.data(), m_data.size(), nullptr));
     g_object_set(source, "stream", memoryStream.get(), nullptr);
 
-    m_decodebin = makeGStreamerElement("decodebin", "decodebin");
+    m_decodebin = makeGStreamerElement("decodebin"_s, "decodebin"_s);
     g_signal_connect(m_decodebin.get(), "autoplug-select", G_CALLBACK(decodebinAutoplugSelectCallback), nullptr);
     g_signal_connect_swapped(m_decodebin.get(), "pad-added", G_CALLBACK(decodebinPadAddedCallback), this);
 

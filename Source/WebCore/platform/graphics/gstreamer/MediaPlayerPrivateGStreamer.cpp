@@ -3185,14 +3185,14 @@ void MediaPlayerPrivateGStreamer::createGSTPlayBin(const URL& url)
         return;
 
     GST_INFO("Creating pipeline for %s player", player->isVideoPlayer() ? "video" : "audio");
-    const char* playbinName = "playbin";
+    ASCIILiteral playbinName = "playbin"_s;
 
     // MSE and Mediastream require playbin3. Regular playback can use playbin3 on-demand with the
     // WEBKIT_GST_USE_PLAYBIN3 environment variable.
     const char* usePlaybin3 = g_getenv("WEBKIT_GST_USE_PLAYBIN3");
     bool isMediaStream = url.protocolIs("mediastream"_s);
     if (isMediaSource() || isMediaStream || (usePlaybin3 && !strcmp(usePlaybin3, "1")))
-        playbinName = "playbin3";
+        playbinName = "playbin3"_s;
 
     ASSERT(!m_pipeline);
 
@@ -3202,13 +3202,13 @@ void MediaPlayerPrivateGStreamer::createGSTPlayBin(const URL& url)
 
     auto type = isMediaSource() ? "MSE-"_s : isMediaStream ? "mediastream-"_s : ""_s;
 
-    m_isLegacyPlaybin = !g_strcmp0(playbinName, "playbin");
+    m_isLegacyPlaybin = playbinName == "playbin"_s;
 
     static Atomic<uint32_t> pipelineId;
 
-    m_pipeline = makeGStreamerElement(playbinName, makeString(type, elementId, '-', pipelineId.exchangeAdd(1)).ascii().data());
+    m_pipeline = makeGStreamerElement(playbinName, makeString(type, elementId, '-', pipelineId.exchangeAdd(1)));
     if (!m_pipeline) {
-        GST_WARNING("%s not found, make sure to install gst-plugins-base", playbinName);
+        GST_WARNING("%s not found, make sure to install gst-plugins-base", playbinName.characters());
         loadingFailed(MediaPlayer::NetworkState::FormatError, MediaPlayer::ReadyState::HaveNothing, true);
         return;
     }
@@ -3292,7 +3292,7 @@ void MediaPlayerPrivateGStreamer::createGSTPlayBin(const URL& url)
     g_object_set(m_pipeline.get(), "audio-sink", m_audioSink.get(), "video-sink", createVideoSink(), nullptr);
 
     if (m_shouldPreservePitch && !isMediaStream) {
-        if (auto* scale = makeGStreamerElement("scaletempo", nullptr))
+        if (auto* scale = makeGStreamerElement("scaletempo"_s))
             g_object_set(m_pipeline.get(), "audio-filter", scale, nullptr);
     }
 }
@@ -3959,7 +3959,7 @@ GstElement* MediaPlayerPrivateGStreamer::createVideoSinkGL()
 
     const char* desiredVideoSink = g_getenv("WEBKIT_GST_CUSTOM_VIDEO_SINK");
     if (desiredVideoSink)
-        return makeGStreamerElement(desiredVideoSink, nullptr);
+        return makeGStreamerElement(ASCIILiteral::fromLiteralUnsafe(desiredVideoSink));
 
     if (!webKitGLVideoSinkProbePlatform()) {
         g_warning("WebKit wasn't able to find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin.");
@@ -4048,7 +4048,7 @@ GstElement* MediaPlayerPrivateGStreamer::createVideoSink()
 
     RefPtr player = m_player.get();
     if (player && !player->isVideoPlayer()) {
-        m_videoSink = makeGStreamerElement("fakevideosink", nullptr);
+        m_videoSink = makeGStreamerElement("fakevideosink"_s);
         if (!m_videoSink) {
             GST_DEBUG_OBJECT(m_pipeline.get(), "Falling back to fakesink for video rendering");
             m_videoSink = gst_element_factory_make("fakesink", nullptr);

@@ -165,32 +165,32 @@ GStreamerInternalVideoDecoder::GStreamerInternalVideoDecoder(const String& codec
     configureVideoDecoderForHarnessing(element);
 
     auto* factory = gst_element_get_factory(element.get());
-    const char* parser = nullptr;
+    ASCIILiteral parser;
     if (codecName.startsWith("avc1"_s)) {
         m_inputCaps = adoptGRef(gst_caps_new_simple("video/x-h264", "stream-format", G_TYPE_STRING, "avc", "alignment", G_TYPE_STRING, "au", nullptr));
         if (auto codecData = wrapSpanData(config.description))
             gst_caps_set_simple(m_inputCaps.get(), "codec_data", GST_TYPE_BUFFER, codecData.get(), nullptr);
         if (!gst_element_factory_can_sink_all_caps(factory, m_inputCaps.get()))
-            parser = "h264parse";
+            parser = "h264parse"_s;
     } else if (codecName.startsWith("av01"_s))
         m_inputCaps = adoptGRef(gst_caps_new_simple("video/x-av1", "stream-format", G_TYPE_STRING, "obu-stream", "alignment", G_TYPE_STRING, "frame", nullptr));
     else if (codecName.startsWith("vp8"_s))
         m_inputCaps = adoptGRef(gst_caps_new_empty_simple("video/x-vp8"));
     else if (codecName.startsWith("vp09"_s)) {
         m_inputCaps = adoptGRef(gst_caps_new_empty_simple("video/x-vp9"));
-        parser = "vp9parse";
+        parser = "vp9parse"_s;
     } else if (codecName.startsWith("hvc1"_s)) {
         m_inputCaps = adoptGRef(gst_caps_new_simple("video/x-h265", "stream-format", G_TYPE_STRING, "hvc1", "alignment", G_TYPE_STRING, "au", nullptr));
         if (auto codecData = wrapSpanData(config.description))
             gst_caps_set_simple(m_inputCaps.get(), "codec_data", GST_TYPE_BUFFER, codecData.get(), nullptr);
         if (!gst_element_factory_can_sink_all_caps(factory, m_inputCaps.get()))
-            parser = "h265parse";
+            parser = "h265parse"_s;
     } else if (codecName.startsWith("hev1"_s)) {
         m_inputCaps = adoptGRef(gst_caps_new_simple("video/x-h265", "stream-format", G_TYPE_STRING, "hev1", "alignment", G_TYPE_STRING, "au", nullptr));
         if (auto codecData = wrapSpanData(config.description))
             gst_caps_set_simple(m_inputCaps.get(), "codec_data", GST_TYPE_BUFFER, codecData.get(), nullptr);
         if (!gst_element_factory_can_sink_all_caps(factory, m_inputCaps.get()))
-            parser = "h265parse";
+            parser = "h265parse"_s;
     } else {
         WTFLogAlways("Codec %s not wired in yet", codecName.ascii().data());
         return;
@@ -200,11 +200,11 @@ GStreamerInternalVideoDecoder::GStreamerInternalVideoDecoder(const String& codec
         gst_caps_set_simple(m_inputCaps.get(), "width", G_TYPE_INT, config.width, "height", G_TYPE_INT, config.height, nullptr);
 
     GRefPtr<GstElement> harnessedElement;
-    if (parser) {
+    if (!parser.isEmpty()) {
         // The decoder won't accept the input caps, so put a parser in front.
-        auto* parserElement = makeGStreamerElement(parser, nullptr);
+        auto* parserElement = makeGStreamerElement(parser);
         if (!parserElement) {
-            GST_WARNING_OBJECT(element.get(), "Required parser %s not found, decoding will fail", parser);
+            GST_WARNING_OBJECT(element.get(), "Required parser %s not found, decoding will fail", parser.characters());
             m_inputCaps.clear();
             return;
         }

@@ -124,7 +124,7 @@ void GStreamerMediaEndpoint::maybeInsertNetSimForElement(GstBin* bin, GstElement
 
     gst_pad_unlink(pad.get(), peer.get());
 
-    auto netsim = makeGStreamerElement("netsim", nullptr);
+    auto netsim = makeGStreamerElement("netsim"_s);
     gst_bin_add(GST_BIN_CAST(bin), netsim);
 
     GST_DEBUG_OBJECT(m_pipeline.get(), "Configuring %" GST_PTR_FORMAT " for transport element %" GST_PTR_FORMAT, netsim, element);
@@ -160,7 +160,7 @@ bool GStreamerMediaEndpoint::initializePipeline()
     });
 
     auto binName = makeString("webkit-webrtcbin-"_s, nPipeline++);
-    m_webrtcBin = makeGStreamerElement("webrtcbin", binName.ascii().data());
+    m_webrtcBin = makeGStreamerElement("webrtcbin"_s, binName);
     if (!m_webrtcBin)
         return false;
 

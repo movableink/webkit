@@ -56,7 +56,7 @@ public:
     std::pair<GstClockTime, GstClockTime> queryCaptureLatency() const final;
 
 protected:
-    GStreamerVideoCaptureSource(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&&, const gchar* source_factory, CaptureDevice::DeviceType, const NodeAndFD&);
+    GStreamerVideoCaptureSource(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&&, ASCIILiteral sourceFactory, CaptureDevice::DeviceType, const NodeAndFD&);
     GStreamerVideoCaptureSource(GStreamerCaptureDevice&&, MediaDeviceHashSalts&&);
     virtual ~GStreamerVideoCaptureSource();
     void startProducingData() final;

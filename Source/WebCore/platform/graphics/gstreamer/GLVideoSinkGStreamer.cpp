@@ -87,7 +87,7 @@ static void webKitGLVideoSinkConstructed(GObject* object)
     GST_OBJECT_FLAG_SET(GST_OBJECT_CAST(sink), GST_ELEMENT_FLAG_SINK);
     gst_bin_set_suppressed_flags(GST_BIN_CAST(sink), static_cast<GstElementFlags>(GST_ELEMENT_FLAG_SOURCE | GST_ELEMENT_FLAG_SINK));
 
-    sink->priv->appSink = makeGStreamerElement("appsink", "webkit-gl-video-appsink");
+    sink->priv->appSink = makeGStreamerElement("appsink"_s, "webkit-gl-video-appsink"_s);
     ASSERT(sink->priv->appSink);
     g_object_set(sink->priv->appSink.get(), "enable-last-sample", FALSE, "emit-signals", TRUE, "max-buffers", 1, nullptr);
 
@@ -102,8 +102,8 @@ static void webKitGLVideoSinkConstructed(GObject* object)
     if (imxVideoConvertG2D)
         gst_bin_add(GST_BIN_CAST(sink), imxVideoConvertG2D);
 
-    GstElement* upload = makeGStreamerElement("glupload", nullptr);
-    GstElement* colorconvert = makeGStreamerElement("glcolorconvert", nullptr);
+    GstElement* upload = makeGStreamerElement("glupload"_s);
+    GstElement* colorconvert = makeGStreamerElement("glcolorconvert"_s);
 
     ASSERT(upload);
     ASSERT(colorconvert);

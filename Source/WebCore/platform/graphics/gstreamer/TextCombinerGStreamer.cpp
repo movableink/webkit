@@ -67,7 +67,7 @@ void webKitTextCombinerHandleCaps(WebKitTextCombiner* combiner, GstPad* pad, con
         // Caps are plain text, we want a WebVTT encoder between the ghostpad and the combinerElement.
         if (!target || gstElementFactoryEquals(targetParent.get(), "webvttenc"_s)) {
             GST_DEBUG_OBJECT(combiner, "Setting up a WebVTT encoder");
-            auto* encoder = makeGStreamerElement("webvttenc", nullptr);
+            auto* encoder = makeGStreamerElement("webvttenc"_s);
             ASSERT(encoder);
 
             gst_bin_add(GST_BIN_CAST(combiner), encoder);
@@ -94,9 +94,9 @@ void webKitTextCombinerHandleCaps(WebKitTextCombiner* combiner, GstPad* pad, con
         GST_DEBUG_OBJECT(combiner, "Converting CEA-608 closed captions to WebVTT.");
         auto* encoder = gst_bin_new(nullptr);
         auto* queue = gst_element_factory_make("queue", nullptr);
-        auto* converter = makeGStreamerElement("ccconverter", nullptr);
+        auto* converter = makeGStreamerElement("ccconverter"_s);
         auto* rawCapsFilter = gst_element_factory_make("capsfilter", nullptr);
-        auto* webvttEncoder = makeGStreamerElement("cea608tott", nullptr);
+        auto* webvttEncoder = makeGStreamerElement("cea608tott"_s);
         auto* vttCapsFilter = gst_element_factory_make("capsfilter", nullptr);
 
         auto rawCaps = adoptGRef(gst_caps_new_simple("closedcaption/x-cea-608", "format", G_TYPE_STRING, "raw", nullptr));
