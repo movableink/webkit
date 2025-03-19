@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(DAMAGE_TRACKING)
+#if PLATFORM(GTK) || PLATFORM(WPE)
 #include "FloatRect.h"
 #include "Region.h"
 #include <wtf/ForbidHeapAllocation.h>
@@ -44,7 +44,15 @@ public:
         Unified,
     };
 
-    Damage() = default;
+    static constexpr int s_tileSize { 256 };
+
+    Damage()
+        : m_tileSize(s_tileSize, s_tileSize)
+    {
+        // FIXME: Add a constructor to pass the size.
+        resize({ 2048, 1024 });
+    }
+
     Damage(Damage&&) = default;
     Damage(const Damage&) = default;
     Damage& operator=(const Damage&) = default;
@@ -64,23 +72,29 @@ public:
         return region;
     }
 
-    ALWAYS_INLINE IntRect bounds() const { return m_minimumBoundingRectangle; }
+    ALWAYS_INLINE const IntRect& bounds() const { return m_minimumBoundingRectangle; }
 
     // May return both empty and overlapping rects.
     ALWAYS_INLINE const Rects& rects() const { return m_rects; }
     ALWAYS_INLINE bool isEmpty() const  { return !m_invalid && m_rects.isEmpty(); }
     ALWAYS_INLINE bool isInvalid() const { return m_invalid; }
 
-    void invalidate()
+    void resize(const IntSize& size)
     {
-        m_invalid = true;
-        m_rects = { };
+        if (m_size == size)
+            return;
+
+        m_size = size;
+        m_gridSize = { std::max(1, m_size.width() / m_tileSize.width()), std::max(1, m_size.height() / m_tileSize.height()) };
+        m_rects.clear();
+        m_shouldUnite = m_gridSize.width() == 1 && m_gridSize.height() == 1;
     }
 
     ALWAYS_INLINE void add(const Region& region)
     {
-        if (isInvalid())
+        if (isInvalid() || region.isEmpty())
             return;
+
         for (const auto& rect : region.rects())
             add(rect);
     }
@@ -91,53 +105,76 @@ public:
             return;
 
         if (rect.contains(m_minimumBoundingRectangle)) {
-            m_rects = { rect };
+            m_rects.clear();
+            m_rects.append(rect);
             m_minimumBoundingRectangle = rect;
             return;
         }
 
-        if (m_rects.size() == 1 && m_minimumBoundingRectangle.contains(rect))
+        const auto rectsCount = m_rects.size();
+        if (rectsCount == 1 && m_minimumBoundingRectangle.contains(rect))
             return;
 
         m_minimumBoundingRectangle.unite(rect);
 
-        if (!shouldUnite()) {
-            m_rects.append(rect);
-            if (shouldUnite())
-                uniteExistingRects();
-        } else
+        if (m_shouldUnite) {
             unite(rect);
+            return;
+        }
+
+        if (rectsCount == m_gridSize.unclampedArea()) {
+            m_shouldUnite = true;
+            uniteExistingRects();
+            unite(rect);
+            return;
+        }
+
+        m_rects.append(rect);
     }
 
     ALWAYS_INLINE void add(const FloatRect& rect)
     {
+        if (isInvalid() || rect.isEmpty())
+            return;
+
         add(enclosingIntRect(rect));
     }
 
     ALWAYS_INLINE void add(const Damage& other)
     {
         m_invalid = other.isInvalid();
+        if (isInvalid()) {
+            m_rects.clear();
+            return;
+        }
+
         for (const auto& rect : other.rects())
             add(rect);
     }
 
 private:
-    // Artificial NxM grid is used to direct input rectangles into proper buckets (cells)
-    // used to create minimum bounding rectangles that approximate the damaged area -
-    // potentially with overlaps.
-    static constexpr size_t s_gridCols { 8 };
-    static constexpr size_t s_gridRows { 4 };
-    static constexpr size_t s_gridCells { s_gridCols * s_gridRows };
-
-    bool shouldUnite() const { return m_rects.size() >= s_gridCells; }
+    explicit Damage(bool invalid)
+        : m_invalid(invalid)
+    {
+    }
 
     void uniteExistingRects()
     {
-        const Rects rectsCopy = m_rects;
-        for (auto& rect : m_rects)
-            rect = { };
+        Rects rectsCopy(m_rects.size());
+        m_rects.swap(rectsCopy);
+
         for (const auto& rect : rectsCopy)
             unite(rect);
+    }
+
+    ALWAYS_INLINE size_t tileIndexForRect(const IntRect& rect) const
+    {
+        if (m_rects.size() == 1)
+            return 0;
+
+        const auto rectCenter = rect.center();
+        const auto rectCell = flooredIntPoint(FloatPoint { static_cast<float>(rectCenter.x()) / m_tileSize.width(), static_cast<float>(rectCenter.y()) / m_tileSize.height() });
+        return std::clamp(rectCell.x(), 0, m_gridSize.width() - 1) + std::clamp(rectCell.y(), 0, m_gridSize.height() - 1) * m_gridSize.width();
     }
 
     void unite(const IntRect& rect)
@@ -145,27 +182,18 @@ private:
         // When merging cannot be avoided, we use m_rects to store minimal bounding rectangles
         // and perform merging while trying to keep minimal bounding rectangles small and
         // separated from each other.
-
-        // FIXME: Figure out a way to pass viewport size here for better results.
-        const IntSize viewportSize { 2048, 1024 };
-        const IntSize gridSize { s_gridCols, s_gridRows };
-        const auto tileSize = IntSize(viewportSize / gridSize);
-        const auto rectCenter = rect.center();
-        const auto rectCell = ceiledIntPoint(FloatPoint { static_cast<float>(rectCenter.x()) / tileSize.width(), static_cast<float>(rectCenter.y()) / tileSize.height() });
-        const size_t index = std::clamp(rectCell.x(), 0, static_cast<int>(s_gridCols - 1)) + std::clamp(rectCell.y(), 0, static_cast<int>(s_gridRows - 1)) * s_gridCols;
+        const auto index = tileIndexForRect(rect);
+        ASSERT(index < m_rects.size());
         m_rects[index].unite(rect);
     }
 
+    IntSize m_size;
     bool m_invalid { false };
+    bool m_shouldUnite { false };
+    IntSize m_tileSize;
+    IntSize m_gridSize;
     Rects m_rects;
     IntRect m_minimumBoundingRectangle;
-
-    explicit Damage(bool invalid)
-        : m_invalid(invalid)
-    {
-    }
-
-    friend struct IPC::ArgumentCoder<Damage, void>;
 
     friend bool operator==(const Damage&, const Damage&) = default;
 };
@@ -189,6 +217,6 @@ static inline WTF::TextStream& operator<<(WTF::TextStream& ts, const Damage& dam
     return ts << "Damage"_s << damage.rects();
 }
 
-};
+} // namespace WebCore
 
-#endif // ENABLE(DAMAGE_TRACKING)
+#endif // PLATFORM(GTK) || PLATFORM(WPE)

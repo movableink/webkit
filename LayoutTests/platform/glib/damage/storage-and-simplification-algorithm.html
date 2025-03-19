@@ -18,7 +18,7 @@
       processAnimationFrameSequence({skipFirstFrameToEnsureInitialPaintingDone: true}, [
           () => {
               // Draw few enough rects to avoid merging.
-              for (let i = 0; i < mergingThreshold - 1; i++) {
+              for (let i = 0; i < mergingThreshold; i++) {
                   ctx.fillRect(1 + (i % 25) * 4, 1 + Math.floor(i / 25) * 4, 1, 1);
               }
           },
@@ -27,14 +27,14 @@
               var damage = latestFrameDamage();
               assertValid(damage);
               var expectedRects = [];
-              for (let i = 0; i < mergingThreshold - 1; i++) {
+              for (let i = 0; i < mergingThreshold; i++) {
                   expectedRects.push([(i % 25) * 4, Math.floor(i / 25) * 4, 3, 3]);
               }
               assertRectsEq(damage.rects, expectedRects);
           },
           () => {
               // Draw enough rects to trigger merging.
-              for (let i = 0; i < mergingThreshold; i++) {
+              for (let i = 0; i <= mergingThreshold; i++) {
                   ctx.fillRect(1 + (i % 25) * 4, 1 + Math.floor(i / 25) * 4, 1, 1);
               }
           },
