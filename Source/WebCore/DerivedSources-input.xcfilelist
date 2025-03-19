@@ -1258,6 +1258,7 @@ $(PROJECT_DIR)/crypto/parameters/X25519Params.idl
 $(PROJECT_DIR)/css/CSSConditionRule.idl
 $(PROJECT_DIR)/css/CSSContainerRule.idl
 $(PROJECT_DIR)/css/CSSCounterStyleRule.idl
+$(PROJECT_DIR)/css/CSSFontFaceDescriptors.idl
 $(PROJECT_DIR)/css/CSSFontFaceRule.idl
 $(PROJECT_DIR)/css/CSSFontFeatureValuesRule.idl
 $(PROJECT_DIR)/css/CSSFontPaletteValuesRule.idl
@@ -1282,6 +1283,7 @@ $(PROJECT_DIR)/css/CSSRuleList.idl
 $(PROJECT_DIR)/css/CSSScopeRule.idl
 $(PROJECT_DIR)/css/CSSStartingStyleRule.idl
 $(PROJECT_DIR)/css/CSSStyleDeclaration.idl
+$(PROJECT_DIR)/css/CSSStyleProperties.idl
 $(PROJECT_DIR)/css/CSSStyleRule.idl
 $(PROJECT_DIR)/css/CSSStyleSheet.idl
 $(PROJECT_DIR)/css/CSSSupportsRule.idl

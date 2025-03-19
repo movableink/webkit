@@ -25,6 +25,7 @@
 ] interface CSSPageRule : CSSRule {
     attribute DOMString selectorText;
     // FIXME: Add [SameObject] below after https://webkit.org/b/163414
-    [PutForwards=cssText] readonly attribute CSSStyleDeclaration style;
+    // FIXME: Should use `CSSPageDescriptors` type.
+    [PutForwards=cssText] readonly attribute CSSStyleProperties style;
 };
 

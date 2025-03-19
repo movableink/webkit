@@ -50,11 +50,12 @@ crypto/cocoa/CryptoAlgorithmEd25519Cocoa.cpp
 crypto/cocoa/CryptoKeyOKPCocoa.cpp
 crypto/cocoa/CryptoUtilitiesCocoa.cpp
 css/CSSCustomPropertyValue.cpp
+css/CSSFontFaceDescriptors.h
 css/CSSFontSelector.h
 css/CSSImageValue.cpp
+css/CSSStyleProperties.h
 css/CSSToLengthConversionData.h
 css/MediaList.h
-css/PropertySetCSSStyleDeclaration.h
 css/StyleSheetContents.cpp
 css/StyleSheetContents.h
 css/calc/CSSCalcTree+ContainerProgressEvaluator.cpp

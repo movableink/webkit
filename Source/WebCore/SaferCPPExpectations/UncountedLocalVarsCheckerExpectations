@@ -207,6 +207,7 @@ crypto/algorithms/CryptoAlgorithmX25519.cpp
 css/CSSComputedStyleDeclaration.cpp
 css/CSSCounterStyleDescriptors.cpp
 css/CSSFontFace.cpp
+css/CSSFontFaceDescriptors.cpp
 css/CSSFontFaceSet.cpp
 css/CSSFontFaceSource.cpp
 css/CSSFontSelector.cpp
@@ -218,6 +219,7 @@ css/CSSLayerBlockRule.cpp
 css/CSSPageRule.cpp
 css/CSSPrimitiveValue.cpp
 css/CSSRule.cpp
+css/CSSStyleProperties.cpp
 css/CSSStyleRule.cpp
 css/CSSStyleSheet.cpp
 css/CSSStyleSheetObservableArray.cpp
@@ -233,7 +235,6 @@ css/FontVariantBuilder.cpp
 css/ImmutableStyleProperties.cpp
 css/MediaList.cpp
 css/MediaQueryMatcher.cpp
-css/PropertySetCSSStyleDeclaration.cpp
 css/SVGCSSComputedStyleDeclaration.cpp
 css/SelectorChecker.cpp
 css/SelectorFilter.cpp

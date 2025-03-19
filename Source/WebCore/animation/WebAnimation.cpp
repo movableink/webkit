@@ -30,7 +30,7 @@
 #include "AnimationPlaybackEvent.h"
 #include "AnimationTimeline.h"
 #include "CSSSerializationContext.h"
-#include "CSSStyleDeclaration.h"
+#include "CSSStyleProperties.h"
 #include "CSSUnitValue.h"
 #include "CSSUnits.h"
 #include "Chrome.h"

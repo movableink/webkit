@@ -448,7 +448,7 @@ EditingStyle::EditingStyle(const Position& position, PropertiesToInclude propert
     init(position.protectedDeprecatedNode().get(), propertiesToInclude);
 }
 
-EditingStyle::EditingStyle(const CSSStyleDeclaration* style)
+EditingStyle::EditingStyle(const CSSStyleProperties* style)
     : EditingStyle()
 {
     if (style)

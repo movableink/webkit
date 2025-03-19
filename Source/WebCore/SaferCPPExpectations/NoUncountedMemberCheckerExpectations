@@ -68,10 +68,12 @@ contentextensions/MutableRangeList.h
 contentextensions/NFAToDFA.cpp
 contentextensions/SerializedNFA.h
 contentextensions/URLFilterParser.h
+css/CSSFontFaceDescriptors.h
 css/CSSFontSelector.h
 css/CSSPrimitiveValueMappings.h
 css/CSSRuleList.h
 css/CSSSelectorList.h
+css/CSSStyleProperties.h
 css/CSSStyleSheet.cpp
 css/CSSStyleSheet.h
 css/CSSToLengthConversionData.h
@@ -79,7 +81,6 @@ css/CSSToStyleMap.h
 css/CSSValueList.h
 css/ComputedStyleExtractor.cpp
 css/MediaList.h
-css/PropertySetCSSStyleDeclaration.h
 css/SelectorChecker.cpp
 css/SelectorChecker.h
 css/SelectorFilter.h

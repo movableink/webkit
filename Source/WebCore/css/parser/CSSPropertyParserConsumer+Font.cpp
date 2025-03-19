@@ -829,7 +829,7 @@ RefPtr<CSSValue> consumeFontFaceFontStyle(CSSParserTokenRange& range, const CSSP
 
 #endif
 
-// MARK: 'opentype-tag'
+// MARK: @font-face 'font-feature-settings'
 
 static std::optional<FontTag> consumeFontOpenTypeTag(CSSParserTokenRange& range)
 {
@@ -858,8 +858,6 @@ static std::optional<FontTag> consumeFontOpenTypeTag(CSSParserTokenRange& range)
     return { tag };
 }
 
-// MARK: @font-face 'feature-tag-value'
-
 RefPtr<CSSValue> consumeFeatureTagValue(CSSParserTokenRange& range, const CSSParserContext& context)
 {
     // <feature-tag-value> = <opentype-tag> [ <integer [0,∞]> | on | off ]?
@@ -883,8 +881,6 @@ RefPtr<CSSValue> consumeFeatureTagValue(CSSParserTokenRange& range, const CSSPar
 
     return CSSFontFeatureValue::create(WTFMove(*tag), tagValue.releaseNonNull());
 }
-
-// MARK: @font-face 'font-feature-settings'
 
 RefPtr<CSSValue> parseFontFaceFeatureSettings(const String& string, ScriptExecutionContext& context)
 {

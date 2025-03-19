@@ -116,7 +116,6 @@ WebKitFontFamilyNames::FamilyNamesIndex genericFontFamilyIndex(CSSValueID);
 // https://drafts.csswg.org/css-fonts-4/#font-size-adjust-prop
 RefPtr<CSSValue> consumeFontSizeAdjust(CSSParserTokenRange&, const CSSParserContext&);
 
-
 // MARK: - @font-face descriptor consumers
 
 // MARK: @font-face 'font-family'
@@ -135,11 +134,11 @@ Vector<FontTechnology> consumeFontTech(CSSParserTokenRange&, const CSSParserCont
 String consumeFontFormat(CSSParserTokenRange&, const CSSParserContext&, bool rejectStringValues = false);
 
 // MARK: @font-face 'size-adjust'
-// https://drafts.csswg.org/css-fonts-5/#size-adjust-desc
+// https://drafts.csswg.org/css-fonts-5/#descdef-font-face-size-adjust
 RefPtr<CSSValue> parseFontFaceSizeAdjust(const String&, ScriptExecutionContext&);
 
 // MARK: @font-face 'unicode-range'
-// https://drafts.csswg.org/css-fonts-4/#unicode-range-desc
+// https://drafts.csswg.org/css-fonts-4/#descdef-font-face-unicode-range
 RefPtr<CSSValueList> parseFontFaceUnicodeRange(const String&, ScriptExecutionContext&);
 
 // MARK: @font-face 'font-display'
@@ -151,17 +150,17 @@ RefPtr<CSSValue> parseFontFaceDisplay(const String&, ScriptExecutionContext&);
 RefPtr<CSSValue> parseFontFaceFontStyle(const String&, ScriptExecutionContext&);
 RefPtr<CSSValue> consumeFontFaceFontStyle(CSSParserTokenRange&, const CSSParserContext&);
 
-// MARK: @font-face 'font-feature-tag'
-// https://drafts.csswg.org/css-fonts-4/#feature-tag-value
-RefPtr<CSSValue> consumeFeatureTagValue(CSSParserTokenRange&, const CSSParserContext&);
-
 // MARK: @font-face 'font-feature-settings'
 // https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-feature-settings
 RefPtr<CSSValue> parseFontFaceFeatureSettings(const String&, ScriptExecutionContext&);
+// Sub-production of 'font-feature-settings': <feature-tag-value>
+// https://drafts.csswg.org/css-fonts-4/#feature-tag-value
+RefPtr<CSSValue> consumeFeatureTagValue(CSSParserTokenRange&, const CSSParserContext&);
 
 // MARK: @font-face 'font-variation-settings'
 // https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-variation-settings
 #if ENABLE(VARIATION_FONTS)
+// Sub-production of 'font-variation-settings': <variation-tag-value>
 RefPtr<CSSValue> consumeVariationTagValue(CSSParserTokenRange&, const CSSParserContext&);
 #endif
 

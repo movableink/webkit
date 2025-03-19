@@ -901,6 +901,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/CSSCounterStyleRule.h
     css/CSSCounterValue.h
     css/CSSCustomPropertyValue.h
+    css/CSSFontFaceDescriptors.h
     css/CSSFontFaceRule.h
     css/CSSFontPaletteValuesRule.h
     css/CSSGridIntegerRepeatValue.h
@@ -920,6 +921,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/CSSSelector.h
     css/CSSSelectorList.h
     css/CSSStyleDeclaration.h
+    css/CSSStyleProperties.h
     css/CSSStyleRule.h
     css/CSSStyleSheet.h
     css/CSSSubgridValue.h

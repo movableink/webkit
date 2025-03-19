@@ -980,6 +980,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/css/CSSConditionRule.idl \
     $(WebCore)/css/CSSContainerRule.idl \
     $(WebCore)/css/CSSCounterStyleRule.idl \
+    $(WebCore)/css/CSSFontFaceDescriptors.idl \
     $(WebCore)/css/CSSFontFaceRule.idl \
     $(WebCore)/css/CSSFontFeatureValuesRule.idl \
     $(WebCore)/css/CSSFontPaletteValuesRule.idl \
@@ -1002,6 +1003,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/css/CSSScopeRule.idl \
     $(WebCore)/css/CSSStartingStyleRule.idl \
     $(WebCore)/css/CSSStyleDeclaration.idl \
+    $(WebCore)/css/CSSStyleProperties.idl \
     $(WebCore)/css/CSSStyleRule.idl \
     $(WebCore)/css/CSSStyleSheet.idl \
     $(WebCore)/css/CSSSupportsRule.idl \
@@ -1816,7 +1818,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/xml/XPathResult.idl \
     $(WebCore)/xml/XSLTProcessor.idl \
     InternalSettingsGenerated.idl \
-    CSSStyleDeclaration+PropertyNames.idl \
+    CSSStyleProperties+PropertyNames.idl \
 #
 
 # --------
@@ -1930,7 +1932,7 @@ all : \
     StylePropertyShorthandFunctions.h \
     TagName.cpp \
     TagName.h \
-    CSSStyleDeclaration+PropertyNames.idl \
+    CSSStyleProperties+PropertyNames.idl \
     WebKitFontFamilyNames.cpp \
     WebKitFontFamilyNames.h \
     MathMLElementFactory.cpp \
@@ -1964,7 +1966,7 @@ CSS_PROPERTY_NAME_FILES = \
     CSSPropertyNames.h \
     CSSPropertyParsing.cpp \
     CSSPropertyParsing.h \
-    CSSStyleDeclaration+PropertyNames.idl \
+    CSSStyleProperties+PropertyNames.idl \
     StyleBuilderGenerated.cpp \
     StyleInterpolationWrapperMap.cpp \
     StyleInterpolationWrapperMap.h \

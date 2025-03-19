@@ -41,7 +41,7 @@
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParserConsumer+ColorAdjust.h"
 #include "CSSSerializationContext.h"
-#include "CSSStyleDeclaration.h"
+#include "CSSStyleProperties.h"
 #include "CSSStyleSheet.h"
 #include "CSSViewTransitionRule.h"
 #include "CachedCSSStyleSheet.h"
@@ -1594,10 +1594,10 @@ Ref<Text> Document::createEditingTextNode(String&& text)
     return Text::createEditingText(*this, WTFMove(text));
 }
 
-Ref<CSSStyleDeclaration> Document::createCSSStyleDeclaration()
+Ref<CSSStyleProperties> Document::createCSSStyleDeclaration()
 {
     Ref propertySet = MutableStyleProperties::create();
-    return propertySet->ensureCSSStyleDeclaration();
+    return propertySet->ensureCSSStyleProperties();
 }
 
 ExceptionOr<Ref<Node>> Document::importNode(Node& nodeToImport, std::variant<bool, ImportNodeOptions>&& argument)

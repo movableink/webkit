@@ -3669,8 +3669,8 @@ class GenerateCSSPropertyNames:
             )
 
 
-# Generates `CSSStyleDeclaration+PropertyNames.idl`.
-class GenerateCSSStyleDeclarationPropertyNames:
+# Generates `CSSStyleProperties+PropertyNames.idl`.
+class GenerateCSSStylePropertiesPropertyNames:
     def __init__(self, generation_context):
         self.generation_context = generation_context
 
@@ -3681,7 +3681,7 @@ class GenerateCSSStyleDeclarationPropertyNames:
     def generate(self):
         self.generate_css_style_declaration_property_names_idl()
 
-    # MARK: - Helper generator functions for CSSStyleDeclaration+PropertyNames.idl
+    # MARK: - Helper generator functions for CSSStyleProperties+PropertyNames.idl
 
     def _generate_css_style_declaration_property_names_idl_typedefs(self, *, to):
         to.write_block("""\
@@ -3689,7 +3689,7 @@ class GenerateCSSStyleDeclarationPropertyNames:
             """)
 
     def _generate_css_style_declaration_property_names_idl_open_interface(self, *, to):
-        to.write("partial interface CSSStyleDeclaration {")
+        to.write("partial interface CSSStyleProperties {")
 
     def _generate_css_style_declaration_property_names_idl_close_interface(self, *, to):
         to.write("};")
@@ -3718,7 +3718,7 @@ class GenerateCSSStyleDeclarationPropertyNames:
 
         for name_or_alias, property in names_and_aliases_with_properties:
             if convert_to_idl_attribute:
-                idl_attribute_name = GenerateCSSStyleDeclarationPropertyNames._convert_css_property_to_idl_attribute(name_or_alias, lowercase_first=lowercase_first)
+                idl_attribute_name = GenerateCSSStylePropertiesPropertyNames._convert_css_property_to_idl_attribute(name_or_alias, lowercase_first=lowercase_first)
             else:
                 idl_attribute_name = name_or_alias
 
@@ -3729,7 +3729,7 @@ class GenerateCSSStyleDeclarationPropertyNames:
             to.write(f"[CEReactions=Needed, {', '.join(extended_attributes_values)}] attribute [LegacyNullToEmptyString] CSSOMString {idl_attribute_name};")
 
     def generate_css_style_declaration_property_names_idl(self):
-        with open('CSSStyleDeclaration+PropertyNames.idl', 'w') as output_file:
+        with open('CSSStyleProperties+PropertyNames.idl', 'w') as output_file:
             writer = Writer(output_file)
 
             self.generation_context.generate_heading(
@@ -8135,7 +8135,7 @@ def main():
     generators = [
         GenerateCSSPropertyNames,
         GenerateCSSPropertyParsing,
-        GenerateCSSStyleDeclarationPropertyNames,
+        GenerateCSSStylePropertiesPropertyNames,
         GenerateStyleBuilderGenerated,
         GenerateStyleInterpolationWrapperMap,
         GenerateStylePropertyShorthandFunctions,

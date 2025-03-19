@@ -63,7 +63,7 @@
 #import <WebCore/AXObjectCache.h>
 #import <WebCore/AccessibilityObject.h>
 #import <WebCore/BoundaryPointInlines.h>
-#import <WebCore/CSSStyleDeclaration.h>
+#import <WebCore/CSSStyleProperties.h>
 #import <WebCore/CachedResourceLoader.h>
 #import <WebCore/CaptionUserPreferences.h>
 #import <WebCore/Chrome.h>
@@ -941,15 +941,20 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     RefPtr<WebCore::MutableStyleProperties> typingStyle = _private->coreFrame->selection().copyTypingStyle();
     if (!typingStyle)
         return nil;
-    return kit(&typingStyle->ensureCSSStyleDeclaration());
+    return kit(&typingStyle->ensureCSSStyleProperties());
 }
 
 - (void)_setTypingStyle:(DOMCSSStyleDeclaration *)style withUndoAction:(WebCore::EditAction)undoAction
 {
     if (!_private->coreFrame || !style)
         return;
+
+    RefPtr styleProperties = dynamicDowncast<WebCore::CSSStyleProperties>(core(style));
+    if (!styleProperties)
+        return;
+
     // FIXME: We shouldn't have to create a copy here.
-    Ref<WebCore::MutableStyleProperties> properties(core(style)->copyProperties());
+    Ref<WebCore::MutableStyleProperties> properties(styleProperties->copyProperties());
     _private->coreFrame->editor().computeAndSetTypingStyle(properties.get(), undoAction);
 }
 

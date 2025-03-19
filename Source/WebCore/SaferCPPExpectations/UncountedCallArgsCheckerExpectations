@@ -415,6 +415,7 @@ css/CSSCounterValue.h
 css/CSSCrossfadeValue.cpp
 css/CSSCursorImageValue.cpp
 css/CSSFontFace.cpp
+css/CSSFontFaceDescriptors.cpp
 css/CSSFontFaceRule.cpp
 css/CSSFontFaceSet.cpp
 css/CSSFontFeatureValue.cpp
@@ -449,6 +450,7 @@ css/CSSScrollValue.cpp
 css/CSSScrollValue.h
 css/CSSSegmentedFontFace.cpp
 css/CSSSelector.cpp
+css/CSSStyleProperties.cpp
 css/CSSStyleRule.cpp
 css/CSSStyleSheet.cpp
 css/CSSStyleSheetObservableArray.cpp
@@ -469,7 +471,6 @@ css/MediaList.cpp
 css/MediaQueryList.cpp
 css/MediaQueryMatcher.cpp
 css/MutableStyleProperties.cpp
-css/PropertySetCSSStyleDeclaration.cpp
 css/Quad.h
 css/Rect.h
 css/SVGCSSComputedStyleDeclaration.cpp

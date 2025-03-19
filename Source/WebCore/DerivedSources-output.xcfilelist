@@ -12,7 +12,7 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/CSSPropertyParsing.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/CSSPropertyParsing.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/CSSSelectorEnums.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/CSSSelectorInlines.h
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/CSSStyleDeclaration+PropertyNames.idl
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/CSSStyleProperties+PropertyNames.idl
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/CSSValueKeywords.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/CSSValueKeywords.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/ColorData.cpp
@@ -388,6 +388,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSContainerRule.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSContainerRule.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSCounterStyleRule.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSCounterStyleRule.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSFontFaceDescriptors.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSFontFaceDescriptors.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSFontFaceRule.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSFontFaceRule.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSFontFeatureValuesRule.cpp
@@ -494,12 +496,14 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSSkewY.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSSkewY.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStartingStyleRule.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStartingStyleRule.h
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleDeclaration+PropertyNames.cpp
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleDeclaration+PropertyNames.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleDeclaration.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleDeclaration.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleImageValue.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleImageValue.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleProperties.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleProperties.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleProperties+PropertyNames.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleProperties+PropertyNames.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleRule.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleRule.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleSheet.cpp

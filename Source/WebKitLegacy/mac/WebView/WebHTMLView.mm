@@ -72,7 +72,7 @@
 #import "WebViewInternal.h"
 #import <JavaScriptCore/InitializeThreading.h>
 #import <QuartzCore/QuartzCore.h>
-#import <WebCore/CSSStyleDeclaration.h>
+#import <WebCore/CSSStyleProperties.h>
 #import <WebCore/CachedImage.h>
 #import <WebCore/CachedResourceClient.h>
 #import <WebCore/CachedResourceLoader.h>
@@ -5210,7 +5210,11 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (void)_applyStyleToSelection:(DOMCSSStyleDeclaration *)style withUndoAction:(WebCore::EditAction)undoAction
 {
-    [self _applyEditingStyleToSelection:WebCore::EditingStyle::create(core(style)) withUndoAction:undoAction];
+    RefPtr styleProperties = dynamicDowncast<WebCore::CSSStyleProperties>(core(style));
+    if (!styleProperties)
+        return;
+
+    [self _applyEditingStyleToSelection:WebCore::EditingStyle::create(styleProperties.get()) withUndoAction:undoAction];
 }
 
 - (void)_applyEditingStyleToSelection:(Ref<WebCore::EditingStyle>&&)editingStyle withUndoAction:(WebCore::EditAction)undoAction
@@ -5351,9 +5355,11 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     WebView *webView = [self _webView];
     if ([[webView _editingDelegateForwarder] webView:webView shouldApplyStyle:style toElementsInDOMRange:range]) {
         if (auto* coreFrame = core([self _frame])) {
-            // FIXME: We shouldn't have to make a copy here.
-            Ref<WebCore::MutableStyleProperties> properties(core(style)->copyProperties());
-            coreFrame->editor().applyStyle(properties.ptr(), [self _undoActionFromColorPanelWithSelector:selector]);
+            if (RefPtr styleProperties = dynamicDowncast<WebCore::CSSStyleProperties>(core(style))) {
+                // FIXME: We shouldn't have to make a copy here.
+                Ref<WebCore::MutableStyleProperties> properties(styleProperties->copyProperties());
+                coreFrame->editor().applyStyle(properties.ptr(), [self _undoActionFromColorPanelWithSelector:selector]);
+            }
         }
     }
 

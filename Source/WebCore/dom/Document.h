@@ -103,7 +103,7 @@ class CanvasBase;
 class CDATASection;
 class CSSCounterStyleRegistry;
 class CSSFontSelector;
-class CSSStyleDeclaration;
+class CSSStyleProperties;
 class CSSStyleSheet;
 class CachedCSSStyleSheet;
 class CachedFrameBase;
@@ -718,7 +718,7 @@ public:
     WEBCORE_EXPORT Ref<TreeWalker> createTreeWalker(Node& root, unsigned long whatToShow = 0xFFFFFFFF, RefPtr<NodeFilter>&& = nullptr, bool = false);
 
     // Special support for editing
-    WEBCORE_EXPORT Ref<CSSStyleDeclaration> createCSSStyleDeclaration();
+    WEBCORE_EXPORT Ref<CSSStyleProperties> createCSSStyleDeclaration();
     Ref<Text> createEditingTextNode(String&&);
 
     enum class ResolveStyleType : bool { Normal, Rebuild };

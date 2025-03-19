@@ -27,6 +27,7 @@
 
 #if PLATFORM(IOS_FAMILY)
 
+#import "CSSStyleProperties.h"
 #import "CommonVM.h"
 #import "ComposedTreeIterator.h"
 #import "Document.h"
@@ -55,7 +56,6 @@
 #import "Page.h"
 #import "PageTransitionEvent.h"
 #import "PlatformScreen.h"
-#import "PropertySetCSSStyleDeclaration.h"
 #import "Range.h"
 #import "RenderLayer.h"
 #import "RenderLayerCompositor.h"

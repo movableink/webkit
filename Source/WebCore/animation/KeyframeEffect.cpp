@@ -37,7 +37,7 @@
 #include "CSSPropertyParserConsumer+Easing.h"
 #include "CSSSelector.h"
 #include "CSSSerializationContext.h"
-#include "CSSStyleDeclaration.h"
+#include "CSSStyleProperties.h"
 #include "CSSTransition.h"
 #include "CSSUnitValue.h"
 #include "CSSValue.h"
@@ -144,7 +144,7 @@ static inline CSSPropertyID IDLAttributeNameToAnimationPropertyName(const AtomSt
         return CSSPropertyFontWidth;
 
     // 4. Otherwise, return the result of applying the IDL attribute to CSS property algorithm [CSSOM] to attribute.
-    auto cssPropertyId = CSSStyleDeclaration::getCSSPropertyIDFromJavaScriptPropertyName(idlAttributeName);
+    auto cssPropertyId = CSSStyleProperties::getCSSPropertyIDFromJavaScriptPropertyName(idlAttributeName);
 
     if (cssPropertyId == CSSPropertyInvalid && isCustomPropertyName(idlAttributeName))
         return CSSPropertyCustom;

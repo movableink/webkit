@@ -884,6 +884,7 @@ css/CSSEasingFunctionValue.cpp
 css/CSSFilterImageValue.cpp
 css/CSSFilterPropertyValue.cpp
 css/CSSFontFace.cpp
+css/CSSFontFaceDescriptors.cpp
 css/CSSFontFaceRule.cpp
 css/CSSFontFaceSet.cpp
 css/CSSFontFaceSource.cpp
@@ -943,6 +944,7 @@ css/CSSSelector.cpp
 css/CSSSelectorList.cpp
 css/CSSStartingStyleRule.cpp
 css/CSSStyleDeclaration.cpp
+css/CSSStyleProperties.cpp
 css/CSSStyleRule.cpp
 css/CSSStyleSheet.cpp
 css/CSSStyleSheetObservableArray.cpp
@@ -985,7 +987,6 @@ css/MediaQueryListEvent.cpp
 css/MediaQueryMatcher.cpp
 css/MediaQueryParserContext.cpp
 css/MutableStyleProperties.cpp
-css/PropertySetCSSStyleDeclaration.cpp
 css/SVGCSSComputedStyleDeclaration.cpp
 css/SelectorChecker.cpp
 css/SelectorFilter.cpp
@@ -3577,6 +3578,7 @@ JSCSSAnimationEvent.cpp
 JSCSSConditionRule.cpp
 JSCSSContainerRule.cpp
 JSCSSCounterStyleRule.cpp
+JSCSSFontFaceDescriptors.cpp
 JSCSSFontFaceRule.cpp
 JSCSSFontFeatureValuesRule.cpp
 JSCSSFontPaletteValuesRule.cpp
@@ -3596,9 +3598,10 @@ JSCSSPositionTryRule.cpp
 JSCSSPropertyRule.cpp
 JSCSSRule.cpp
 JSCSSRuleList.cpp
-JSCSSStyleDeclaration.cpp
 JSCSSScopeRule.cpp
 JSCSSStartingStyleRule.cpp
+JSCSSStyleDeclaration.cpp
+JSCSSStyleProperties.cpp
 JSCSSStyleRule.cpp
 JSCSSStyleSheet.cpp
 JSCSSSupportsRule.cpp
