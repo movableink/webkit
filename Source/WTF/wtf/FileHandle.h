@@ -40,12 +40,12 @@ namespace FileSystemImpl {
 
 #if OS(WINDOWS)
 typedef HANDLE PlatformFileHandle;
-const PlatformFileHandle invalidPlatformFileHandle = reinterpret_cast<HANDLE>(-1);
+const PlatformFileHandle invalidPlatformFileHandle = INVALID_HANDLE_VALUE;
 typedef FILE_ID_128 PlatformFileID;
 
 struct Win32HandleMarkableTraits {
-    constexpr static bool isEmptyValue(HANDLE value) { return value == invalidPlatformFileHandle; }
-    constexpr static HANDLE emptyValue() { return invalidPlatformFileHandle; }
+    static bool isEmptyValue(HANDLE value) { return value == invalidPlatformFileHandle; }
+    static HANDLE emptyValue() { return invalidPlatformFileHandle; }
 };
 using PlatformHandleTraits = Win32HandleMarkableTraits;
 #else
