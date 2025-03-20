@@ -266,6 +266,10 @@ void RewriteGlobalVariables::visitCallee(const CallGraph::Callee& callee)
             lengthType.m_inferredType = m_shaderModule.types().u32Type();
 
             for (auto& lengthParameter : it->value) {
+                auto lengthName = makeString("__"_s, lengthParameter, "_ArrayLength"_s);
+                if (m_reads.contains(lengthName))
+                    continue;
+
                 unsigned index = 0;
                 for (auto& parameter : callee.target->parameters()) {
                     if (parameter.name() == lengthParameter)
@@ -282,14 +286,27 @@ void RewriteGlobalVariables::visitCallee(const CallGraph::Callee& callee)
                     result.iterator->value.add(identifier);
 
                     auto lengthName = makeString("__"_s, identifier, "_ArrayLength"_s);
-                    if (m_reads.contains(lengthName))
-                        continue;
                     auto& length = m_shaderModule.astBuilder().construct<AST::IdentifierExpression>(
                         SourceSpan::empty(),
                         AST::Identifier::make(lengthName)
                     );
                     length.m_inferredType = m_shaderModule.types().u32Type();
-                    m_shaderModule.append(call->arguments(), length);
+                    AST::Expression* lhs = &length;
+                    if (arrayOffset) {
+                        auto& arrayOffsetExpression = m_shaderModule.astBuilder().construct<AST::Unsigned32Literal>(
+                            SourceSpan::empty(),
+                            arrayOffset
+                        );
+                        arrayOffsetExpression.m_inferredType = m_shaderModule.types().u32Type();
+                        lhs = &m_shaderModule.astBuilder().construct<AST::BinaryExpression>(
+                            SourceSpan::empty(),
+                            length,
+                            arrayOffsetExpression,
+                            AST::BinaryOperation::Subtract
+                        );
+                        lhs->m_inferredType = m_shaderModule.types().u32Type();
+                    }
+                    m_shaderModule.append(call->arguments(), *lhs);
                 }
             }
         }
