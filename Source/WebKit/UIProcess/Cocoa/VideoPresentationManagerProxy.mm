@@ -685,6 +685,10 @@ VideoPresentationManagerProxy::ModelInterfacePair VideoPresentationManagerProxy:
     Ref playbackSessionInterface = playbackSessionManagerProxy->ensureInterface(contextId);
     Ref interface = videoPresentationInterface(page.get(), playbackSessionInterface.get());
 
+#if HAVE(PIP_SKIP_PREROLL)
+    interface->setPlaybackStateEnabled(page->preferences().pictureInPicturePlaybackStateEnabled());
+#endif
+
 #if HAVE(SPATIAL_AUDIO_EXPERIENCE)
     interface->setPrefersSpatialAudioExperience(page->preferences().preferSpatialAudioExperience());
 #endif

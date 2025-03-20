@@ -70,7 +70,14 @@ public:
     PlaybackSessionModel* playbackSessionModel() const { return m_playbackSessionInterface->playbackSessionModel(); }
     WEBCORE_EXPORT void setVideoPresentationModel(VideoPresentationModel*);
 
+#if HAVE(PIP_SKIP_PREROLL)
+    WEBCORE_EXPORT void setPlaybackStateEnabled(bool);
+    bool isPlaybackStateEnabled() const { return m_playbackStateEnabled; }
+#endif
+
     // PlaybackSessionModelClient
+    WEBCORE_EXPORT void durationChanged(double) final;
+    WEBCORE_EXPORT void currentTimeChanged(double /* currentTime */, double /* anchorTime */) final;
     WEBCORE_EXPORT void rateChanged(OptionSet<PlaybackSessionModel::PlaybackState>, double playbackRate, double defaultPlaybackRate) override;
     WEBCORE_EXPORT void externalPlaybackChanged(bool  enabled, PlaybackSessionModel::ExternalPlaybackTargetType, const String& localizedDeviceName) override;
     WEBCORE_EXPORT void ensureControlsManager() override;
@@ -137,6 +144,10 @@ private:
     RetainPtr<WebVideoPresentationInterfaceMacObjC> m_webVideoPresentationInterfaceObjC;
     bool m_documentIsVisible { true };
     Function<void()> m_documentBecameVisibleCallback;
+
+#if HAVE(PIP_SKIP_PREROLL)
+    bool m_playbackStateEnabled { false };
+#endif
 };
 
 } // namespace WebCore

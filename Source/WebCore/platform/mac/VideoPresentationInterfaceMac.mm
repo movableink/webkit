@@ -108,6 +108,11 @@ enum class PIPState {
     NSRect _returningRect;
     BOOL _playing;
     BOOL _exitingToStandardFullscreen;
+    double _rate;
+    AVPlayerTimeControlStatus _timeControlStatus;
+    NSTimeInterval _duration;
+    NSTimeInterval _anchorTime;
+    NSTimeInterval _elapsedTime;
 }
 
 - (instancetype)initWithVideoPresentationInterfaceMac:(WebCore::VideoPresentationInterfaceMac*)videoPresentationInterfaceMac;
@@ -118,10 +123,10 @@ enum class PIPState {
 @property (nonatomic) NSSize videoDimensions;
 @property (nonatomic, getter=isPlaying) BOOL playing;
 #if HAVE(PIP_SKIP_PREROLL)
+@property (readonly, getter=isPlaybackStateEnabled) BOOL playbackStateEnabled;
 @property (nonatomic) BOOL canSkipAd;
 - (void)updateCanSkipAd:(BOOL)canSkipAd;
 #endif
-- (void)updateIsPlaying:(BOOL)isPlaying newPlaybackRate:(float)playbackRate;
 // Handling PIP transitions
 @property (nonatomic, getter=isExitingToStandardFullscreen) BOOL exitingToStandardFullscreen;
 
@@ -129,7 +134,7 @@ enum class PIPState {
 - (void)enterPIP;
 - (void)exitPIP;
 - (void)exitPIPAnimatingToRect:(NSRect)rect inWindow:(NSWindow *)window;
-
+@property (readonly, nonatomic) NSTimeInterval estimatedElapsedTime;
 @end
 
 @implementation WebVideoPresentationInterfaceMacObjC
@@ -171,9 +176,27 @@ enum class PIPState {
     _videoDimensions = NSZeroSize;
 }
 
-- (void)updateIsPlaying:(BOOL)isPlaying newPlaybackRate:(float)playbackRate
+- (void)updateRate:(double)rate andTimeControlStatus:(AVPlayerTimeControlStatus)timeControlStatus
 {
-    _playing = isPlaying && playbackRate;
+    if (_rate == rate
+        && _timeControlStatus == timeControlStatus)
+        return;
+
+    _elapsedTime = self.estimatedElapsedTime;
+    _anchorTime = [[NSProcessInfo processInfo] systemUptime];
+
+    _rate = rate;
+    _timeControlStatus = timeControlStatus;
+    _playing = (timeControlStatus == AVPlayerTimeControlStatusPlaying) && _rate;
+
+#if HAVE(PIP_SKIP_PREROLL)
+    if (self.isPlaybackStateEnabled) {
+        [_pipViewController updatePlaybackStateUsingBlock:^(PIPMutablePlaybackState *playbackState) {
+            [playbackState setPlaybackRate:_rate elapsedTime:_elapsedTime timeControlStatus:_timeControlStatus];
+        }];
+        return;
+    }
+#endif
 
     ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     [_pipViewController setPlaying:_playing];
@@ -188,6 +211,11 @@ enum class PIPState {
     [_pipViewController setAspectRatio:_videoDimensions];
 }
 #if HAVE(PIP_SKIP_PREROLL)
+- (BOOL)isPlaybackStateEnabled
+{
+    return _videoPresentationInterfaceMac && _videoPresentationInterfaceMac->isPlaybackStateEnabled();
+}
+
 - (void)updateCanSkipAd:(BOOL)canSkipAd
 {
     if (canSkipAd == _canSkipAd)
@@ -208,6 +236,72 @@ enum class PIPState {
     }];
 }
 #endif
+
+- (void)setDuration:(NSTimeInterval)duration
+{
+    if (duration == _duration)
+        return;
+
+    _duration = duration;
+
+#if HAVE(PIP_SKIP_PREROLL)
+    if (!self.isPlaybackStateEnabled)
+        return;
+
+    [_pipViewController updatePlaybackStateUsingBlock:^(PIPMutablePlaybackState *playbackState) {
+        playbackState.contentDuration = _duration;
+    }];
+#endif
+}
+
+- (void)updateRate:(double)rate currentTime:(NSTimeInterval)currentTime atAnchorTime:(NSTimeInterval)anchorTime
+{
+    if (rate == _rate
+        && currentTime == _elapsedTime
+        && anchorTime == _anchorTime)
+        return;
+
+    _rate = rate;
+    _elapsedTime = currentTime;
+    _anchorTime = anchorTime;
+
+#if HAVE(PIP_SKIP_PREROLL)
+    if (!self.isPlaybackStateEnabled)
+        return;
+
+    [_pipViewController updatePlaybackStateUsingBlock:^(PIPMutablePlaybackState *playbackState) {
+        [playbackState setPlaybackRate:_rate elapsedTime:_elapsedTime timeControlStatus:_timeControlStatus];
+    }];
+#endif
+}
+
+- (void)updateCurrentTime:(NSTimeInterval)currentTime atAnchorTime:(NSTimeInterval)anchorTime
+{
+    if (currentTime == _elapsedTime
+        && anchorTime == _anchorTime)
+        return;
+
+    _elapsedTime = currentTime;
+    _anchorTime = anchorTime;
+
+#if HAVE(PIP_SKIP_PREROLL)
+    if (!self.isPlaybackStateEnabled)
+        return;
+
+    [_pipViewController updatePlaybackStateUsingBlock:^(PIPMutablePlaybackState *playbackState) {
+        [playbackState setPlaybackRate:_rate elapsedTime:_elapsedTime timeControlStatus:_timeControlStatus];
+    }];
+#endif
+}
+
+- (NSTimeInterval)estimatedElapsedTime
+{
+    auto currentHostTime = [[NSProcessInfo processInfo] systemUptime];
+    if (_timeControlStatus != AVPlayerTimeControlStatusPlaying)
+        return _elapsedTime;
+    return _elapsedTime + _rate * (currentHostTime - _anchorTime);
+}
+
 - (void)setUpPIPForVideoView:(NSView *)videoView withFrame:(NSRect)frame inWindow:(NSWindow *)window
 {
     ASSERT(!_pipViewController);
@@ -219,7 +313,6 @@ enum class PIPState {
     [_pipViewController setDelegate:self];
     ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     [_pipViewController setUserCanResize:YES];
-    [_pipViewController setPlaying:_playing];
     ALLOW_DEPRECATED_DECLARATIONS_END
     [self setVideoDimensions:NSEqualSizes(_videoDimensions, NSZeroSize) ? frame.size : _videoDimensions];
     auto model = _videoPresentationInterfaceMac ? _videoPresentationInterfaceMac->videoPresentationModel() : nullptr;
@@ -246,6 +339,22 @@ enum class PIPState {
     _videoViewContainerController = adoptNS([[NSViewController alloc] init]);
     [_videoViewContainerController setView:_videoViewContainer.get()];
     [window.contentView addSubview:_videoViewContainer.get() positioned:NSWindowAbove relativeTo:nil];
+
+#if HAVE(PIP_SKIP_PREROLL)
+    [self updatePrerollAttributes];
+    if (self.isPlaybackStateEnabled) {
+        [_pipViewController updatePlaybackStateUsingBlock:^(PIPMutablePlaybackState *playbackState) {
+            playbackState.contentType = PIPContentTypeVideoOnDemand;
+            playbackState.contentDuration = _duration;
+            [playbackState setPlaybackRate:_rate elapsedTime:_elapsedTime timeControlStatus:_timeControlStatus];
+        }];
+        return;
+    }
+#endif
+
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    [_pipViewController setPlaying:_playing];
+    ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 - (void)enterPIP
@@ -420,7 +529,22 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
     _pipState = PIPState::ExitingPIP;
 }
 ALLOW_DEPRECATED_IMPLEMENTATIONS_END
+@end
 
+@interface WebSeekableVideoPresentationInterfaceMacObjC : WebVideoPresentationInterfaceMacObjC
+@end
+
+@implementation WebSeekableVideoPresentationInterfaceMacObjC
+- (void)pipAction:(PIPViewController *)pip skipInterval:(NSTimeInterval)interval
+{
+    ASSERT_UNUSED(pip, pip == _pipViewController);
+
+    if (!_videoPresentationInterfaceMac)
+        return;
+
+    if (PlaybackSessionModel* playbackSessionModel = _videoPresentationInterfaceMac->playbackSessionModel())
+        playbackSessionModel->seekToTime(self.estimatedElapsedTime + interval);
+}
 @end
 
 namespace WebCore {
@@ -433,7 +557,6 @@ VideoPresentationInterfaceMac::VideoPresentationInterfaceMac(PlaybackSessionInte
     ASSERT(m_playbackSessionInterface->playbackSessionModel());
     auto model = m_playbackSessionInterface->playbackSessionModel();
     model->addClient(*this);
-    [videoPresentationInterfaceObjC() updateIsPlaying:model->isPlaying() newPlaybackRate:model->playbackRate()];
 }
 
 VideoPresentationInterfaceMac::~VideoPresentationInterfaceMac()
@@ -496,9 +619,25 @@ void VideoPresentationInterfaceMac::clearMode(HTMLMediaElementEnums::VideoFullsc
         model->fullscreenModeChanged(m_mode);
 }
 
+void VideoPresentationInterfaceMac::durationChanged(double duration)
+{
+    [videoPresentationInterfaceObjC() setDuration:duration];
+}
+
+void VideoPresentationInterfaceMac::currentTimeChanged(double currentTime, double anchorTime)
+{
+    [videoPresentationInterfaceObjC() updateCurrentTime:currentTime atAnchorTime:anchorTime];
+}
+
 void VideoPresentationInterfaceMac::rateChanged(OptionSet<PlaybackSessionModel::PlaybackState> playbackState, double playbackRate, double /* defaultPlaybackRate */)
 {
-    [videoPresentationInterfaceObjC() updateIsPlaying:playbackState.contains(PlaybackSessionModel::PlaybackState::Playing) newPlaybackRate:playbackRate];
+    AVPlayerTimeControlStatus timeControlStatus = AVPlayerTimeControlStatusPaused;
+    if (playbackState.containsAll({ PlaybackSessionModel::PlaybackState::Stalled, PlaybackSessionModel::PlaybackState::Playing }))
+        timeControlStatus = AVPlayerTimeControlStatusWaitingToPlayAtSpecifiedRate;
+    else if (playbackState.contains(PlaybackSessionModel::PlaybackState::Playing))
+        timeControlStatus = AVPlayerTimeControlStatusPlaying;
+
+    [videoPresentationInterfaceObjC() updateRate:playbackRate andTimeControlStatus:timeControlStatus];
 }
 
 void VideoPresentationInterfaceMac::ensureControlsManager()
@@ -506,6 +645,15 @@ void VideoPresentationInterfaceMac::ensureControlsManager()
     m_playbackSessionInterface->ensureControlsManager();
 }
 #if HAVE(PIP_SKIP_PREROLL)
+void VideoPresentationInterfaceMac::setPlaybackStateEnabled(bool enabled)
+{
+    if (m_playbackStateEnabled == enabled)
+        return;
+
+    m_playbackStateEnabled = enabled;
+    m_webVideoPresentationInterfaceObjC = nil;
+}
+
 void VideoPresentationInterfaceMac::canSkipAdChanged(bool canSkipAd)
 {
     [videoPresentationInterfaceObjC() updateCanSkipAd:canSkipAd];
@@ -513,8 +661,28 @@ void VideoPresentationInterfaceMac::canSkipAdChanged(bool canSkipAd)
 #endif
 WebVideoPresentationInterfaceMacObjC *VideoPresentationInterfaceMac::videoPresentationInterfaceObjC()
 {
-    if (!m_webVideoPresentationInterfaceObjC)
-        m_webVideoPresentationInterfaceObjC = adoptNS([[WebVideoPresentationInterfaceMacObjC alloc] initWithVideoPresentationInterfaceMac:this]);
+    if (!m_webVideoPresentationInterfaceObjC) {
+#if HAVE(PIP_SKIP_PREROLL)
+        if (isPlaybackStateEnabled())
+            m_webVideoPresentationInterfaceObjC = adoptNS([[WebSeekableVideoPresentationInterfaceMacObjC alloc] initWithVideoPresentationInterfaceMac:this]);
+        else
+#endif
+            m_webVideoPresentationInterfaceObjC = adoptNS([[WebVideoPresentationInterfaceMacObjC alloc] initWithVideoPresentationInterfaceMac:this]);
+
+        auto model = m_playbackSessionInterface->playbackSessionModel();
+
+        AVPlayerTimeControlStatus timeControlStatus = AVPlayerTimeControlStatusPaused;
+        if (model->isStalled() && model->isPlaying())
+            timeControlStatus = AVPlayerTimeControlStatusWaitingToPlayAtSpecifiedRate;
+        else if (model->isPlaying())
+            timeControlStatus = AVPlayerTimeControlStatusPlaying;
+
+        [videoPresentationInterfaceObjC() updateRate:model->playbackRate() andTimeControlStatus:timeControlStatus];
+
+        durationChanged(model->duration());
+        currentTimeChanged(model->currentTime(), [[NSProcessInfo processInfo] systemUptime]);
+        rateChanged({ }, model->playbackRate(), model->defaultPlaybackRate());
+    }
 
     return m_webVideoPresentationInterfaceObjC.get();
 }

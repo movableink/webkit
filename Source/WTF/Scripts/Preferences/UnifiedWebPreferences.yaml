@@ -5894,6 +5894,21 @@ PictureInPictureAPIEnabled:
       default: true
   disableInLockdownMode: true
 
+PictureInPicturePlaybackStateEnabled:
+  type: bool
+  status: internal
+  humanReadableName: "Picture-in-Picture Playback State Enabled"
+  humanReadableDescription: "Picture-in-Picture Playback State Enabled"
+  condition: HAVE(PIP_SKIP_PREROLL)
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+  disableInLockdownMode: true
+
 PitchCorrectionAlgorithm:
   type: uint32_t
   refinedType: WebCore::MediaPlayerEnums::PitchCorrectionAlgorithm
