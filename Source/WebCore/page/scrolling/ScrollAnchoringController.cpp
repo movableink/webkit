@@ -32,6 +32,7 @@
 #include "Logging.h"
 #include "RenderBox.h"
 #include "RenderLayerScrollableArea.h"
+#include "RenderElementInlines.h"
 #include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "TypedElementDescendantIteratorInlines.h"

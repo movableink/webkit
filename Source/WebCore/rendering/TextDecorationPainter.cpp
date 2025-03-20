@@ -30,6 +30,7 @@
 #include "InlineIteratorLineBox.h"
 #include "InlineTextBoxStyle.h"
 #include "RenderBlock.h"
+#include "RenderElementInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderText.h"
 #include "ShadowData.h"
