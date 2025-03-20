@@ -193,7 +193,9 @@ private:
     void collectDamageSelf(TextureMapperPaintOptions&, Damage&);
     void collectDamageSelfChildrenReplicaFilterAndMask(TextureMapperPaintOptions&, Damage&);
     void collectDamageSelfChildrenFilterAndMask(TextureMapperPaintOptions&, Damage&);
-    void collectDamageFromLayerAboutToBeRemoved(Damage&, TextureMapperLayer&);
+    void collectDamageFromLayerAboutToBeRemoved(TextureMapperLayer&);
+    ALWAYS_INLINE Damage& ensureDamageInLayerCoordinateSpace();
+    ALWAYS_INLINE Damage& ensureDamageInGlobalCoordinateSpace();
     inline void damageWholeLayer();
     void damageWholeLayerIncludingItsRectFromPreviousFrame();
 #endif
@@ -288,8 +290,8 @@ private:
 
 #if ENABLE(DAMAGE_TRACKING)
     bool m_damagePropagation { false };
-    Damage m_damageInLayerCoordinateSpace;
-    Damage m_damageInGlobalCoordinateSpace;
+    std::optional<Damage> m_damageInLayerCoordinateSpace;
+    std::optional<Damage> m_damageInGlobalCoordinateSpace;
     FloatRect m_accumulatedOverlapRegionDamage;
     std::optional<FloatRect> m_previousLayerRectInGlobalCoordinateSpace;
 #endif

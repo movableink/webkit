@@ -372,10 +372,27 @@ void TextureMapperLayer::paint(TextureMapper& textureMapper)
 }
 
 #if ENABLE(DAMAGE_TRACKING)
+Damage& TextureMapperLayer::ensureDamageInLayerCoordinateSpace()
+{
+    if (!m_damageInLayerCoordinateSpace)
+        m_damageInLayerCoordinateSpace = Damage();
+    return *m_damageInLayerCoordinateSpace;
+}
+
+Damage& TextureMapperLayer::ensureDamageInGlobalCoordinateSpace()
+{
+    if (!m_damageInGlobalCoordinateSpace)
+        m_damageInGlobalCoordinateSpace = Damage();
+    return *m_damageInGlobalCoordinateSpace;
+}
+
 void TextureMapperLayer::setDamage(const Damage& damage)
 {
     // The damage is added not to override the damage that could be inferred from other set* operations.
-    m_damageInLayerCoordinateSpace.add(damage);
+    if (m_damageInLayerCoordinateSpace)
+        m_damageInLayerCoordinateSpace->add(damage);
+    else
+        m_damageInLayerCoordinateSpace = damage;
 }
 
 void TextureMapperLayer::collectDamage(TextureMapper& textureMapper, Damage& damage)
@@ -445,14 +462,14 @@ void TextureMapperLayer::collectDamageSelf(TextureMapperPaintOptions& options, D
 
     m_previousLayerRectInGlobalCoordinateSpace = std::nullopt;
     auto cleanup = WTF::makeScopeExit([&]() {
-        m_damageInLayerCoordinateSpace = { };
-        m_damageInGlobalCoordinateSpace = { };
+        m_damageInLayerCoordinateSpace = std::nullopt;
+        m_damageInGlobalCoordinateSpace = std::nullopt;
     });
 
     if (!m_state.visible || !m_state.contentsVisible)
         return;
 
-    auto targetRect = layerRect();
+    const auto targetRect = layerRect();
     if (targetRect.isEmpty())
         return;
 
@@ -468,31 +485,32 @@ void TextureMapperLayer::collectDamageSelf(TextureMapperPaintOptions& options, D
     if (m_contentsLayer) {
         // Layers with content layer are fully damaged for now.
         // FIXME: Remove that special case.
-        m_damageInLayerCoordinateSpace.add(targetRect);
+        damageWholeLayer();
     }
 
     TransformationMatrix transform;
     transform.translate(options.offset.width(), options.offset.height());
     transform.multiply(options.transform);
     transform.multiply(m_layerTransforms.combined);
-
-    ASSERT(!m_damageInLayerCoordinateSpace.isInvalid());
-    ASSERT(!m_damageInGlobalCoordinateSpace.isInvalid());
+    m_previousLayerRectInGlobalCoordinateSpace = transformRectFromLayerToGlobalCoordinateSpace(targetRect, transform, options);
 
     // Use the damage information we received from the GraphicsLayer
     // along with damage information we inferred while performing
     // layer-level operations such as resizes, transformations, etc.
     const auto& clipBounds = options.textureMapper.clipBounds();
-    for (const auto& rect : m_damageInGlobalCoordinateSpace.rects()) {
-        if (!rect.isEmpty())
-            damage.add(intersection(rect, clipBounds));
-    }
-    for (const auto& rect : m_damageInLayerCoordinateSpace.rects()) {
-        if (!rect.isEmpty())
-            damage.add(intersection(transformRectFromLayerToGlobalCoordinateSpace(rect, transform, options), clipBounds));
+    if (m_damageInGlobalCoordinateSpace) {
+        for (const auto& rect : m_damageInGlobalCoordinateSpace->rects()) {
+            if (!rect.isEmpty())
+                damage.add(intersection(rect, clipBounds));
+        }
     }
 
-    m_previousLayerRectInGlobalCoordinateSpace = transformRectFromLayerToGlobalCoordinateSpace(targetRect, transform, options);
+    if (m_damageInLayerCoordinateSpace) {
+        for (const auto& rect : m_damageInLayerCoordinateSpace->rects()) {
+            if (!rect.isEmpty())
+                damage.add(intersection(transformRectFromLayerToGlobalCoordinateSpace(rect, transform, options), clipBounds));
+        }
+    }
 }
 
 void TextureMapperLayer::collectDamageSelfChildrenReplicaFilterAndMask(TextureMapperPaintOptions& options, Damage& damage)
@@ -534,7 +552,7 @@ void TextureMapperLayer::collectDamageSelfChildrenFilterAndMask(TextureMapperPai
 
 void TextureMapperLayer::damageWholeLayer()
 {
-    m_damageInLayerCoordinateSpace.add(layerRect());
+    ensureDamageInLayerCoordinateSpace().add(layerRect());
 }
 
 void TextureMapperLayer::damageWholeLayerIncludingItsRectFromPreviousFrame()
@@ -545,7 +563,7 @@ void TextureMapperLayer::damageWholeLayerIncludingItsRectFromPreviousFrame()
     // When e.g. changing size, transform, etc. the layer (or its parts) effectively disappears from one place
     // and re-appears in another. Therefore the damaging of a layer in the "old" state is required as well.
     if (m_previousLayerRectInGlobalCoordinateSpace)
-        m_damageInGlobalCoordinateSpace.add(*m_previousLayerRectInGlobalCoordinateSpace);
+        ensureDamageInGlobalCoordinateSpace().add(*m_previousLayerRectInGlobalCoordinateSpace);
 }
 #endif
 
@@ -1242,12 +1260,13 @@ void TextureMapperLayer::addChild(TextureMapperLayer* childLayer)
 }
 
 #if ENABLE(DAMAGE_TRACKING)
-void TextureMapperLayer::collectDamageFromLayerAboutToBeRemoved(Damage& damageInGlobalCoordinateSpace, TextureMapperLayer& node)
+void TextureMapperLayer::collectDamageFromLayerAboutToBeRemoved(TextureMapperLayer& node)
 {
     if (node.m_previousLayerRectInGlobalCoordinateSpace)
-        damageInGlobalCoordinateSpace.add(*node.m_previousLayerRectInGlobalCoordinateSpace);
+        ensureDamageInGlobalCoordinateSpace().add(*node.m_previousLayerRectInGlobalCoordinateSpace);
+
     for (const auto& child : node.m_children)
-        collectDamageFromLayerAboutToBeRemoved(damageInGlobalCoordinateSpace, *child);
+        collectDamageFromLayerAboutToBeRemoved(*child);
 }
 #endif
 
@@ -1259,9 +1278,9 @@ void TextureMapperLayer::removeFromParent()
         m_parent->m_children.remove(index);
 #if ENABLE(DAMAGE_TRACKING)
         if (m_parent->canInferDamage()) {
-            collectDamageFromLayerAboutToBeRemoved(m_damageInGlobalCoordinateSpace, *this);
-            if (!m_damageInGlobalCoordinateSpace.isEmpty())
-                m_parent->m_damageInGlobalCoordinateSpace.add(m_damageInGlobalCoordinateSpace);
+            collectDamageFromLayerAboutToBeRemoved(*this);
+            if (m_damageInGlobalCoordinateSpace)
+                m_parent->ensureDamageInGlobalCoordinateSpace().add(*m_damageInGlobalCoordinateSpace);
         }
 #endif
     }
