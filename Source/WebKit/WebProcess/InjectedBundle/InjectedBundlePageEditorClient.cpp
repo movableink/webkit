@@ -50,7 +50,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(InjectedBundlePageEditorClient);
 
 static RefPtr<InjectedBundleCSSStyleDeclarationHandle> createHandle(const StyleProperties& style)
 {
-    return InjectedBundleCSSStyleDeclarationHandle::getOrCreate(&style.mutableCopy()->ensureCSSStyleProperties());
+    return InjectedBundleCSSStyleDeclarationHandle::getOrCreate(Ref { style.mutableCopy()->ensureCSSStyleProperties() }.ptr());
 }
 
 InjectedBundlePageEditorClient::InjectedBundlePageEditorClient(const WKBundlePageEditorClientBase& client)
