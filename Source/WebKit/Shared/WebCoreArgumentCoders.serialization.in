@@ -486,12 +486,7 @@ struct WebCore::CharacterRange {
 }
 
 [AdditionalEncoder=StreamConnectionEncoder] class WebCore::AffineTransform {
-    double a()
-    double b()
-    double c()
-    double d()
-    double e()
-    double f()
+    std::span<const double, 6> span();
 }
 
 [AdditionalEncoder=StreamConnectionEncoder] class WebCore::FloatPoint {
