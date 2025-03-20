@@ -27,7 +27,6 @@
           },
           () => {
               var damage = latestFrameDamage();
-              assertValid(damage);
               assertEq(damage.rects.length, 1, "number of damage rects is not correct");
           },
           () => {
@@ -35,7 +34,6 @@
           },
           () => {
               var damage = latestFrameDamage();
-              assertValid(damage);
               assertEq(damage.rects.length, 1, "number of damage rects is not correct");
           },
       ], 0);

@@ -25,7 +25,6 @@
           () => {
               // Excpect the same rects yet with 1px margin each.
               var damage = latestFrameDamage();
-              assertValid(damage);
               var expectedRects = [];
               for (let i = 0; i < mergingThreshold; i++) {
                   expectedRects.push([(i % 25) * 4, Math.floor(i / 25) * 4, 3, 3]);
@@ -42,7 +41,6 @@
               // Expect the single damage rectangle being a minimum bounding rectangle containg
               // all the small rects (taking 1px margin for each into account).
               var damage = latestFrameDamage();
-              assertValid(damage);
               assertRectsEq(damage.rects, [[0, 0, 99, 7]]);
           },
       ], 0);

@@ -25,7 +25,6 @@
           },
           () => {
               var damage = latestFrameDamage();
-              assertValid(damage);
               // The expected area that changed on the screen is the union of canvas rect with old size and new size.
               assertRectsEq(damage.rects, [[0, 0, 55, 45], [0, 45, 50, 5]]);
           },

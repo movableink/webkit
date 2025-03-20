@@ -30,7 +30,6 @@
           },
           () => {
               var damage = latestFrameDamage();
-              assertValid(damage);
               assertRectsEq(damage.rects, [[25, 73, 74, 80]]);
           },
           () => {
@@ -38,7 +37,6 @@
           },
           () => {
               var damage = latestFrameDamage();
-              assertValid(damage);
               assertRectsEq(damage.rects, [[25, 73, 74, 80], [30, 70, 64, 3], [30, 153, 64, 3]]);
           },
           () => {
@@ -46,7 +44,6 @@
           },
           () => {
               var damage = latestFrameDamage();
-              assertValid(damage);
               assertRectsEq(damage.rects, [[25, 73, 74, 80], [30, 70, 64, 3], [30, 153, 64, 3]]);
           },
       ], 0);

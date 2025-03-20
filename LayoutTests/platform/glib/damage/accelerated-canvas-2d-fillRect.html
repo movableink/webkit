@@ -24,7 +24,6 @@
           },
           () => {
               var damage = latestFrameDamage();
-              assertValid(damage);
               assertRectsEq(damage.rects, [[0, 0, Math.min(window.innerWidth, 2000), Math.min(window.innerHeight, 2000)]]);
           },
           () => {
@@ -33,7 +32,6 @@
           },
           () => {
               var damage = latestFrameDamage();
-              assertValid(damage);
               assertRectsEq(damage.rects, [[0, 0, Math.min(window.innerWidth, 2000), Math.min(window.innerHeight, 2000)]]);
           },
       ], 0);

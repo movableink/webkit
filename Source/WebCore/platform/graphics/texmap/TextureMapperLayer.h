@@ -120,7 +120,7 @@ public:
 
 #if ENABLE(DAMAGE_TRACKING)
     void setDamagePropagation(bool enabled) { m_damagePropagation = enabled; }
-    void setDamage(const Damage&);
+    void setDamage(Damage&&);
     void collectDamage(TextureMapper&, Damage&);
 #endif
 

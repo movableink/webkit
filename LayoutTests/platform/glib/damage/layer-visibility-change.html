@@ -28,7 +28,6 @@
           },
           () => {
               var damage = latestFrameDamage();
-              assertValid(damage);
               assertRectsEq(damage.rects, [[7, 3, 50, 50]]);
               damageHistorySizeDuringPreviousFrame = allFramesDamages().length;
           },
@@ -44,7 +43,6 @@
           },
           () => {
               var damage = latestFrameDamage();
-              assertValid(damage);
               assertRectsEq(damage.rects, [[7, 3, 50, 50]]);
           },
           () => {
@@ -52,7 +50,6 @@
           },
           () => {
               var damage = latestFrameDamage();
-              assertValid(damage);
               // 'display' property invalidates the structure of the document so full damage is issued (due to layout).
               assertRectsEq(damage.rects, [[0, 0, window.innerWidth, window.innerHeight]]);
               damageHistorySizeDuringPreviousFrame = allFramesDamages().length;
@@ -69,7 +66,6 @@
           },
           () => {
               var damage = latestFrameDamage();
-              assertValid(damage);
               assertRectsEq(damage.rects, [[7, 3, 50, 50]]);
           },
       ], 0);

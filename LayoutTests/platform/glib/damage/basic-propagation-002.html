@@ -35,7 +35,6 @@
           () => {
               // Verify damage contains just a bounds of parent rect.
               var damage = latestFrameDamage();
-              assertValid(damage);
               assertRectsEq(damage.rects, [[0, 0, 25, 25]]);
 
               // Mutate children.
@@ -45,7 +44,6 @@
           () => {
               // Verify only children produced damage.
               var damage = latestFrameDamage();
-              assertValid(damage);
               assertRectsEq(damage.rects, [[15, 15, 10, 10], [0, 0, 10, 10]]);
           },
       ], 0);

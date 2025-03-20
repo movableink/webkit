@@ -17,7 +17,6 @@
           },
           () => {
               var damage = latestFrameDamage();
-              assertValid(damage);
               // Height is 54 as in case of block, the RenderBox adds extra 2+2.
               assertRectsEq(damage.rects, [[0, 0, window.innerWidth, 54]]);
           },

@@ -58,26 +58,11 @@ public:
     Damage& operator=(const Damage&) = default;
     Damage& operator=(Damage&&) = default;
 
-    static const Damage& invalid()
-    {
-        static const Damage invalidDamage(true);
-        return invalidDamage;
-    }
-
-    Region region() const
-    {
-        Region region;
-        for (const auto& rect : rects())
-            region.unite(rect);
-        return region;
-    }
-
     ALWAYS_INLINE const IntRect& bounds() const { return m_minimumBoundingRectangle; }
 
     // May return both empty and overlapping rects.
     ALWAYS_INLINE const Rects& rects() const { return m_rects; }
-    ALWAYS_INLINE bool isEmpty() const  { return !m_invalid && m_rects.isEmpty(); }
-    ALWAYS_INLINE bool isInvalid() const { return m_invalid; }
+    ALWAYS_INLINE bool isEmpty() const  { return m_rects.isEmpty(); }
 
     void resize(const IntSize& size)
     {
@@ -92,7 +77,7 @@ public:
 
     ALWAYS_INLINE void add(const Region& region)
     {
-        if (isInvalid() || region.isEmpty())
+        if (region.isEmpty())
             return;
 
         for (const auto& rect : region.rects())
@@ -101,7 +86,7 @@ public:
 
     void add(const IntRect& rect)
     {
-        if (isInvalid() || rect.isEmpty())
+        if (rect.isEmpty())
             return;
 
         const auto rectsCount = m_rects.size();
@@ -134,7 +119,7 @@ public:
 
     ALWAYS_INLINE void add(const FloatRect& rect)
     {
-        if (isInvalid() || rect.isEmpty())
+        if (rect.isEmpty())
             return;
 
         add(enclosingIntRect(rect));
@@ -142,22 +127,11 @@ public:
 
     ALWAYS_INLINE void add(const Damage& other)
     {
-        m_invalid = other.isInvalid();
-        if (isInvalid()) {
-            m_rects.clear();
-            return;
-        }
-
         for (const auto& rect : other.rects())
             add(rect);
     }
 
 private:
-    explicit Damage(bool invalid)
-        : m_invalid(invalid)
-    {
-    }
-
     void uniteExistingRects()
     {
         Rects rectsCopy(m_rects.size());
@@ -188,7 +162,6 @@ private:
     }
 
     IntSize m_size;
-    bool m_invalid { false };
     bool m_shouldUnite { false };
     IntSize m_tileSize;
     IntSize m_gridSize;
@@ -201,19 +174,23 @@ private:
 class FrameDamageHistory {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FrameDamageHistory);
 public:
-    using SimplifiedDamage = std::pair<bool, Region>;
+    const Vector<Region>& damageInformation() const { return m_damageInfo; }
 
-    const Vector<SimplifiedDamage>& damageInformation() const { return m_damageInfo; }
-    void addDamage(const SimplifiedDamage& damage) { m_damageInfo.append(damage); }
+    void addDamage(const Damage& damage)
+    {
+        Region region;
+        for (const auto& rect : damage.rects())
+            region.unite(rect);
+        m_damageInfo.append(WTFMove(region));
+    }
 
 private:
-    Vector<SimplifiedDamage> m_damageInfo;
+    // Use a Region to remove overlaps so that Damage rects are more predictable from the testing perspective.
+    Vector<Region> m_damageInfo;
 };
 
 static inline WTF::TextStream& operator<<(WTF::TextStream& ts, const Damage& damage)
 {
-    if (damage.isInvalid())
-        return ts << "Damage[invalid]"_s;
     return ts << "Damage"_s << damage.rects();
 }
 

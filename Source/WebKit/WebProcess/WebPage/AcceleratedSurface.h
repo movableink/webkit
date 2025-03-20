@@ -63,7 +63,8 @@ public:
     virtual void didRenderFrame() { }
 
 #if ENABLE(DAMAGE_TRACKING)
-    virtual const WebCore::Damage& addDamage(const WebCore::Damage&) { return WebCore::Damage::invalid(); };
+    virtual const std::optional<WebCore::Damage>& addDamage(WebCore::Damage&&) { return m_frameDamage; }
+    const std::optional<WebCore::Damage>& frameDamage() const { return m_frameDamage; }
 #endif
 
     virtual void didCreateCompositingRunLoop(WTF::RunLoop&) { }
@@ -87,6 +88,9 @@ protected:
     Function<void()> m_frameCompleteHandler;
     WebCore::IntSize m_size;
     std::atomic<bool> m_isOpaque { true };
+#if ENABLE(DAMAGE_TRACKING)
+    std::optional<WebCore::Damage> m_frameDamage;
+#endif
 };
 
 } // namespace WebKit

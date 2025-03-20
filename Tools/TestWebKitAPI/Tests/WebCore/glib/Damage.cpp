@@ -35,9 +35,35 @@ using namespace WebCore;
 TEST(Damage, Basics)
 {
     Damage damage;
-    EXPECT_FALSE(damage.isInvalid());
     EXPECT_TRUE(damage.isEmpty());
     EXPECT_EQ(damage.rects().size(), 0);
+}
+
+TEST(Damage, Move)
+{
+    Damage damage;
+    damage.add(IntRect { 100, 100, 200, 200 });
+    damage.add(IntRect { 300, 300, 200, 200 });
+    EXPECT_FALSE(damage.isEmpty());
+    EXPECT_EQ(damage.rects().size(), 2);
+    EXPECT_EQ(damage.bounds().x(), 100);
+    EXPECT_EQ(damage.bounds().y(), 100);
+    EXPECT_EQ(damage.bounds().width(), 400);
+    EXPECT_EQ(damage.bounds().height(), 400);
+
+    Damage other = WTFMove(damage);
+    EXPECT_FALSE(other.isEmpty());
+    EXPECT_EQ(other.rects().size(), 2);
+    EXPECT_EQ(other.bounds().x(), 100);
+    EXPECT_EQ(other.bounds().y(), 100);
+    EXPECT_EQ(other.bounds().width(), 400);
+    EXPECT_EQ(other.bounds().height(), 400);
+    EXPECT_TRUE(damage.isEmpty());
+    EXPECT_EQ(damage.rects().size(), 0);
+    EXPECT_EQ(damage.bounds().x(), 100);
+    EXPECT_EQ(damage.bounds().y(), 100);
+    EXPECT_EQ(damage.bounds().width(), 400);
+    EXPECT_EQ(damage.bounds().height(), 400);
 }
 
 TEST(Damage, AddRect)
@@ -112,11 +138,6 @@ TEST(Damage, AddDamage)
     EXPECT_EQ(damage.bounds().y(), 100);
     EXPECT_EQ(damage.bounds().width(), 400);
     EXPECT_EQ(damage.bounds().height(), 400);
-
-    // Adding an invalid Damage invalidates the Damage.
-    damage.add(Damage::invalid());
-    EXPECT_TRUE(damage.isInvalid());
-    EXPECT_EQ(damage.rects().size(), 0);
 }
 
 TEST(Damage, Unite)

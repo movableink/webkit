@@ -71,9 +71,10 @@ void CoordinatedBackingStore::paintToTextureMapper(TextureMapper& textureMapper,
         ASSERT(tile.scale() == m_scale);
         const auto allEdgesExposed = allTileEdgesExposed(layerRect, tile.rect()) ? TextureMapper::AllEdgesExposed::Yes : TextureMapper::AllEdgesExposed::No;
 #if ENABLE(DAMAGE_TRACKING)
+        const auto& frameDamage = textureMapper.damage();
         const auto canUseDamageToDrawTextureFragment = [&]() {
-            return !textureMapper.damage().isInvalid()
-                && !textureMapper.damage().isEmpty()
+            return frameDamage
+                && !frameDamage->isEmpty()
                 && adjustedTransform.isIdentity()
                 && allEdgesExposed == TextureMapper::AllEdgesExposed::No
                 && opacity == 1.0
@@ -84,7 +85,7 @@ void CoordinatedBackingStore::paintToTextureMapper(TextureMapper& textureMapper,
             // We define damagedTileRect as a minimum bounding rectangle of all damage rects that intersect tile.rect()
             // - this way we can keep a single texture draw call yet with potentially smaller sourceRect.
             FloatRect damagedTileRect;
-            for (const auto& damageRect : textureMapper.damage().rects()) {
+            for (const auto& damageRect : frameDamage->rects()) {
                 if (!damageRect.isEmpty())
                     damagedTileRect.unite(intersection(tile.rect(), damageRect));
             }

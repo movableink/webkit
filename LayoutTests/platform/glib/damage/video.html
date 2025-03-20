@@ -12,8 +12,7 @@
       var video = document.getElementsByTagName("video")[0];
       video.ontimeupdate = () => {
           var damage = latestFrameDamage();
-          if (!assertValid(damage)
-              || !assertRectsEq(damage.rects, [[0, 0, 160, 120]]))
+          if (!assertRectsEq(damage.rects, [[0, 0, 160, 120]]))
               failTest(failure);
           else
               passTest();

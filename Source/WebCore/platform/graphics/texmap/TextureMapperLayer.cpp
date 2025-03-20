@@ -386,13 +386,13 @@ Damage& TextureMapperLayer::ensureDamageInGlobalCoordinateSpace()
     return *m_damageInGlobalCoordinateSpace;
 }
 
-void TextureMapperLayer::setDamage(const Damage& damage)
+void TextureMapperLayer::setDamage(Damage&& damage)
 {
     // The damage is added not to override the damage that could be inferred from other set* operations.
     if (m_damageInLayerCoordinateSpace)
         m_damageInLayerCoordinateSpace->add(damage);
     else
-        m_damageInLayerCoordinateSpace = damage;
+        m_damageInLayerCoordinateSpace = WTFMove(damage);
 }
 
 void TextureMapperLayer::collectDamage(TextureMapper& textureMapper, Damage& damage)

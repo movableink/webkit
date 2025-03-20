@@ -491,7 +491,6 @@ enum ContentsFormat {
     JSGenerateToJSObject,
 ] dictionary FrameDamage {
     unsigned long sequenceId;
-    boolean isValid = false;
     DOMRectReadOnly bounds;
     sequence<DOMRectReadOnly> rects;
 };

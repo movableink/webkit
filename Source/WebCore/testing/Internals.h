@@ -1570,7 +1570,6 @@ public:
     using DamagePropagation = Damage::Propagation;
     struct FrameDamage {
         unsigned sequenceId { 0 };
-        bool isValid { false };
         RefPtr<DOMRectReadOnly> bounds;
         Vector<Ref<DOMRectReadOnly>> rects;
     };

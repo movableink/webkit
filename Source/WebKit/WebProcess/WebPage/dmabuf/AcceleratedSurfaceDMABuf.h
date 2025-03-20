@@ -91,7 +91,7 @@ private:
     void didRenderFrame() override;
 
 #if ENABLE(DAMAGE_TRACKING)
-    const WebCore::Damage& addDamage(const WebCore::Damage&) override;
+    const std::optional<WebCore::Damage>& addDamage(WebCore::Damage&&) override;
 #endif
 
     void didCreateCompositingRunLoop(WTF::RunLoop&) override;
@@ -120,8 +120,8 @@ private:
 
         uint64_t id() const { return m_id; }
 #if ENABLE(DAMAGE_TRACKING)
-        const WebCore::Damage& damage() { return m_damage; }
-        void addDamage(const WebCore::Damage&);
+        const std::optional<WebCore::Damage>& damage() { return m_damage; }
+        void addDamage(const std::optional<WebCore::Damage>&);
 #endif
 
         virtual void willRenderFrame();
@@ -141,7 +141,7 @@ private:
         unsigned m_depthStencilBuffer { 0 };
         UnixFileDescriptor m_releaseFenceFD;
 #if ENABLE(DAMAGE_TRACKING)
-        WebCore::Damage m_damage { WebCore::Damage::invalid() };
+        std::optional<WebCore::Damage> m_damage;
 #endif
     };
 
@@ -240,7 +240,7 @@ private:
         void releaseUnusedBuffers();
 
 #if ENABLE(DAMAGE_TRACKING)
-        void addDamage(const WebCore::Damage&);
+        void addDamage(const std::optional<WebCore::Damage>&);
 #endif
 
         unsigned size() const { return m_freeTargets.size() + m_lockedTargets.size(); }
@@ -272,9 +272,6 @@ private:
     RenderTarget* m_target { nullptr };
     bool m_isVisible { false };
     bool m_useExplicitSync { false };
-#if ENABLE(DAMAGE_TRACKING)
-    WebCore::Damage m_frameDamage;
-#endif
     std::unique_ptr<RunLoop::Timer> m_releaseUnusedBuffersTimer;
 };
 
