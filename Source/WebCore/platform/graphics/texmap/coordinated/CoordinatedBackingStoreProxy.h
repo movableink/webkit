@@ -106,6 +106,7 @@ private:
         void addDirtyRect(const IntRect& dirty)
         {
             auto tileDirtyRect = intersection(dirty, rect);
+            ASSERT(!tileDirtyRect.isEmpty());
             dirtyRect.unite(tileDirtyRect);
         }
 

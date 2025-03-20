@@ -202,6 +202,8 @@ void CoordinatedBackingStoreProxy::invalidateRegion(const Vector<IntRect, 1>& di
 
         // Only iterate on the part of the rect that we know we might have tiles.
         IntRect coveredDirtyRect = intersection(dirtyRect, keepRectFitToTileSize);
+        if (coveredDirtyRect.isEmpty())
+            continue;
         forEachTilePositionInRect(coveredDirtyRect, [&](IntPoint&& position) {
             auto it = m_tiles.find(position);
             if (it == m_tiles.end())
