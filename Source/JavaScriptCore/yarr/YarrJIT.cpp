@@ -2067,12 +2067,18 @@ class YarrGenerator final : public YarrJITInfo {
 
         // Prune list after first hole and check for 16 bit characters. Also mark "dead" terms that will be checked as part of this term's processing.
         bool foundFirstCharTerm = opList[0]->m_term->type == PatternTerm::Type::PatternCharacter;
+        size_t firstCharTermIndex = 0;
         for (size_t i = 1; i < opList.size(); ++i) {
             YarrOp* currOp = opList[i];
 
             if (!currOp) {
-                opList.resize(i);
-                break;
+                // If we have characters, break out
+                if (foundFirstCharTerm) {
+                    opList.resize(i);
+                    break;
+                }
+                // Otherwise, we're still in the non-character prefix
+                continue;
             }
 
             if (currOp->m_term->type == PatternTerm::Type::PatternCharacter) {
@@ -2081,11 +2087,19 @@ class YarrGenerator final : public YarrJITInfo {
                 ASSERT(!currOp->m_term->ignoreCase() || isASCIIAlpha(currOp->m_term->patternCharacter) || isCanonicallyUnique(currOp->m_term->patternCharacter, m_canonicalMode));
                 if (foundFirstCharTerm)
                     currOp->m_isDeadCode = true;
-                else
+                else {
                     foundFirstCharTerm = true;
+                    firstCharTermIndex = i;
+                }
                 have16BitCharacter |= !isLatin1(currOp->m_term->patternCharacter);
             }
         }
+
+        // We definitely should have a PatternCharacter, otherwise we shouldn't have gotten here
+        // This assertion also checks that firstCharTermIndex is correct
+        ASSERT(foundFirstCharTerm);
+        if (firstCharTermIndex)
+            opList.remove(0, firstCharTermIndex);
 
         if (have16BitCharacter && (m_charSize == CharSize::Char8)) {
             // Have a 16 bit pattern character and an 8 bit string - short circuit
@@ -2094,8 +2108,10 @@ class YarrGenerator final : public YarrJITInfo {
         }
 
         // Remove all trailing character class terms.
-        while (opList.last()->m_term->type == PatternTerm::Type::CharacterClass)
+        while (!opList.isEmpty() && opList.last()->m_term->type == PatternTerm::Type::CharacterClass)
             opList.removeLast();
+
+        RELEASE_ASSERT(!opList.isEmpty());
 
         auto checkedOffset = opList[0]->m_checkedOffset;
 
