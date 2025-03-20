@@ -6031,11 +6031,28 @@ void WebPage::computeEnclosingLayerID(EditorState& state, const VisibleSelection
         return renderer->enclosingLayer();
     };
 
-    CheckedPtr startLayer = findEnclosingLayer(selection.start());
+    auto [startLayer, endLayer] = [&] -> std::pair<CheckedPtr<RenderLayer>, CheckedPtr<RenderLayer>> {
+        if (RefPtr container = selection.start().containerNode(); container && ImageOverlay::isInsideOverlay(*container)) {
+            RefPtr host = container->shadowHost();
+            if (!host) {
+                ASSERT_NOT_REACHED();
+                return { };
+            }
+
+            CheckedPtr renderer = host->renderer();
+            if (!renderer)
+                return { };
+
+            CheckedPtr enclosingLayer = renderer->enclosingLayer();
+            return { enclosingLayer, enclosingLayer };
+        }
+
+        return { findEnclosingLayer(selection.start()), findEnclosingLayer(selection.end()) };
+    }();
+
     if (!startLayer)
         return;
 
-    CheckedPtr endLayer = findEnclosingLayer(selection.end());
     if (!endLayer)
         return;
 

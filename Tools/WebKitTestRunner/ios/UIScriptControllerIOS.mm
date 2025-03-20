@@ -971,30 +971,48 @@ CGRect UIScriptControllerIOS::selectionViewBoundsClippedToContentView(UIView *vi
     return rect;
 }
 
+#if HAVE(UI_TEXT_SELECTION_DISPLAY_INTERACTION)
+
+static void sanityCheckCustomHandlePath(UIView<UITextSelectionHandleView> *handle)
+{
+    RetainPtr bezierPath = [handle customShape];
+    if (!bezierPath)
+        return;
+
+    if (auto customPathBounds = CGPathGetBoundingBox([bezierPath CGPath]); !CGRectIntersectsRect(handle.bounds, customPathBounds))
+        RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("Selection handle path %@ does not intersect %@", bezierPath.get(), handle);
+}
+
+#endif // HAVE(UI_TEXT_SELECTION_DISPLAY_INTERACTION)
+
 JSObjectRef UIScriptControllerIOS::selectionStartGrabberViewRect() const
 {
-    UIView *handleView = nil;
+    RetainPtr<UIView> handleView;
 
 #if HAVE(UI_TEXT_SELECTION_DISPLAY_INTERACTION)
-    if (auto view = textSelectionDisplayInteraction().handleViews.firstObject; !isHiddenOrHasHiddenAncestor(view))
-        handleView = view;
+    if (RetainPtr view = [textSelectionDisplayInteraction().handleViews firstObject]; !isHiddenOrHasHiddenAncestor(view.get())) {
+        sanityCheckCustomHandlePath(view.get());
+        handleView = WTFMove(view);
+    }
 #endif
 
-    auto frameInContentViewCoordinates = selectionViewBoundsClippedToContentView(handleView);
+    auto frameInContentViewCoordinates = selectionViewBoundsClippedToContentView(handleView.get());
     auto jsContext = m_context->jsContext();
     return JSValueToObject(jsContext, [JSValue valueWithObject:toNSDictionary(frameInContentViewCoordinates) inContext:[JSContext contextWithJSGlobalContextRef:jsContext]].JSValueRef, nullptr);
 }
 
 JSObjectRef UIScriptControllerIOS::selectionEndGrabberViewRect() const
 {
-    UIView *handleView = nil;
+    RetainPtr<UIView> handleView;
 
 #if HAVE(UI_TEXT_SELECTION_DISPLAY_INTERACTION)
-    if (auto view = textSelectionDisplayInteraction().handleViews.lastObject; !isHiddenOrHasHiddenAncestor(view))
-        handleView = view;
+    if (RetainPtr view = [textSelectionDisplayInteraction().handleViews lastObject]; !isHiddenOrHasHiddenAncestor(view.get())) {
+        sanityCheckCustomHandlePath(view.get());
+        handleView = WTFMove(view);
+    }
 #endif
 
-    auto frameInContentViewCoordinates = selectionViewBoundsClippedToContentView(handleView);
+    auto frameInContentViewCoordinates = selectionViewBoundsClippedToContentView(handleView.get());
     auto jsContext = m_context->jsContext();
     return JSValueToObject(jsContext, [JSValue valueWithObject:toNSDictionary(frameInContentViewCoordinates) inContext:[JSContext contextWithJSGlobalContextRef:jsContext]].JSValueRef, nullptr);
 }

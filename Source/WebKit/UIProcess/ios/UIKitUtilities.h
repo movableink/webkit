@@ -30,6 +30,10 @@
 #import <UIKit/UIKit.h>
 #import <wtf/Forward.h>
 
+namespace WebCore {
+class FloatQuad;
+}
+
 @interface UIScrollView (WebKitInternal)
 @property (readonly, nonatomic) BOOL _wk_isInterruptingDeceleration;
 @property (readonly, nonatomic) BOOL _wk_isScrolledBeyondExtents;
@@ -55,6 +59,7 @@
 @interface UIView (WebKitInternal)
 - (void)_wk_collectDescendantsIncludingSelf:(Vector<RetainPtr<UIView>>&)descendants matching:(NS_NOESCAPE BOOL(^)(UIView *))block;
 - (BOOL)_wk_isAncestorOf:(UIView *)view;
+- (WebCore::FloatQuad)_wk_convertQuad:(const WebCore::FloatQuad&)quad toCoordinateSpace:(id<UICoordinateSpace>)destination;
 @property (nonatomic, readonly) UIScrollView *_wk_parentScrollView;
 @property (nonatomic, readonly) UIViewController *_wk_viewControllerForFullScreenPresentation;
 @end

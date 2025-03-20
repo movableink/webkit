@@ -1100,6 +1100,13 @@ window.UIHelper = class UIHelper {
         return { x: rect.left + (rect.width / 2), y: rect.top + (rect.height / 2) };
     }
 
+    static rectContainsOtherRect(rect, otherRect) {
+        return rect.left <= otherRect.left
+            && rect.top <= otherRect.top
+            && (rect.left + rect.width) >= (otherRect.left + otherRect.width)
+            && (rect.top + rect.height) >= (otherRect.top + otherRect.height);
+    }
+
     static computeLineBounds(element, firstRunIndex, lastRunIndex = undefined) {
         const range = document.createRange();
         range.selectNodeContents(element);
