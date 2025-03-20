@@ -80,6 +80,40 @@ NetworkStorageSession::~NetworkStorageSession()
     g_signal_handlers_disconnect_matched(m_cookieStorage.get(), G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
 }
 
+#if HAVE(COOKIE_CHANGE_LISTENER_API)
+void NetworkStorageSession::notifyCookie(SoupCookie* cookie, bool added)
+{
+    if (soup_cookie_get_http_only(cookie))
+        return;
+
+    for (const auto& host : m_cookieChangeObservers.keys()) {
+        if (!soup_cookie_domain_matches(cookie, host.utf8().data()))
+            continue;
+
+        auto observers = m_cookieChangeObservers.getOptional(host);
+        if (!observers)
+            continue;
+
+        for (auto& observer : *observers) {
+            if (added)
+                observer.cookiesAdded(host, { Cookie(cookie) });
+            else
+                observer.cookiesDeleted(host, { Cookie(cookie) });
+        }
+    }
+}
+
+void NetworkStorageSession::notifyCookieAdded(SoupCookie* newCookie)
+{
+    notifyCookie(newCookie, true);
+}
+
+void NetworkStorageSession::notifyCookieDeleted(SoupCookie* oldCookie)
+{
+    notifyCookie(oldCookie, false);
+}
+#endif
+
 void NetworkStorageSession::cookiesDidChange(NetworkStorageSession* session, SoupCookie* oldCookie, SoupCookie* newCookie, SoupCookieJar*)
 {
     if (session->m_cookieObserverHandler)
@@ -94,31 +128,12 @@ void NetworkStorageSession::cookiesDidChange(NetworkStorageSession* session, Sou
     // In the case of a new cookie *or* an updated cookie we notify the observer.
     // Adding a cookie that matches (name & path) the old one to the cookie-jar replaces it.
     if (newCookie) {
-        if (soup_cookie_get_http_only(newCookie))
-            return;
-
-        auto host = String::fromUTF8(soup_cookie_get_domain(newCookie));
-        auto observers = session->m_cookieChangeObservers.getOptional(host);
-        if (!observers)
-            return;
-
-        for (auto& observer : *observers)
-            observer.cookiesAdded(host, { Cookie(newCookie) });
-
+        session->notifyCookieAdded(newCookie);
         return;
     }
 
     if (oldCookie) {
-        if (soup_cookie_get_http_only(oldCookie))
-            return;
-
-        auto host = String::fromUTF8(soup_cookie_get_domain(oldCookie));
-        auto observers = session->m_cookieChangeObservers.getOptional(host);
-        if (!observers)
-            return;
-
-        for (auto& observer : *observers)
-            observer.cookiesDeleted(host, { Cookie(oldCookie) });
+        session->notifyCookieDeleted(oldCookie);
         return;
     }
 
@@ -137,10 +152,18 @@ void NetworkStorageSession::setCookieStorage(GRefPtr<SoupCookieJar>&& jar)
     m_cookieStorage = WTFMove(jar);
     g_signal_connect_swapped(m_cookieStorage.get(), "changed", G_CALLBACK(cookiesDidChange), this);
 
+#if HAVE(COOKIE_CHANGE_LISTENER_API)
     for (auto& [host, observers] : m_cookieChangeObservers) {
         for (auto& observer : observers)
             observer.allCookiesDeleted();
     }
+
+    CookieList cookies(soup_cookie_jar_all_cookies(m_cookieStorage.get()));
+    for (GSList* item = cookies.get(); item; item = g_slist_next(item)) {
+        auto* soupCookie = static_cast<SoupCookie*>(item->data);
+        notifyCookieAdded(soupCookie);
+    }
+#endif
 }
 
 void NetworkStorageSession::setCookieObserverHandler(Function<void ()>&& handler)
@@ -567,10 +590,12 @@ void NetworkStorageSession::deleteAllCookies(CompletionHandler<void()>&& complet
         soup_cookie_jar_delete_cookie(cookieJar, cookie);
     }
 
+#if HAVE(COOKIE_CHANGE_LISTENER_API)
     for (auto& [host, observers] : m_cookieChangeObservers) {
         for (auto& observer : observers)
             observer.allCookiesDeleted();
     }
+#endif
 
     completionHandler();
 }

@@ -344,6 +344,10 @@ private:
 #if PLATFORM(COCOA)
     RetainPtr<NSMutableSet> m_subscribedDomainsForCookieChanges;
     bool m_didRegisterCookieListeners { false };
+#elif USE(SOUP)
+    void notifyCookie(SoupCookie*, bool added);
+    void notifyCookieAdded(SoupCookie*);
+    void notifyCookieDeleted(SoupCookie*);
 #endif
     MemoryCompactRobinHoodHashMap<String, WeakHashSet<CookieChangeObserver>> m_cookieChangeObservers;
 #endif // HAVE(COOKIE_CHANGE_LISTENER_API)
