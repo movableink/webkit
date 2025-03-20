@@ -461,16 +461,24 @@ WKPageRef TestController::createOtherPage(PlatformWebView* parentView, WKPageCon
     return page;
 }
 
-bool TestController::willEnterFullScreen(WKPageRef page, const void* clientInfo)
+void TestController::willEnterFullScreen(WKPageRef page, WKCompletionListenerRef listener, const void* clientInfo)
 {
-    return static_cast<TestController*>(const_cast<void*>(clientInfo))->willEnterFullScreen(page);
+    return static_cast<TestController*>(const_cast<void*>(clientInfo))->willEnterFullScreen(page, listener);
 }
 
-bool TestController::willEnterFullScreen(WKPageRef page)
+void TestController::willEnterFullScreen(WKPageRef page, WKCompletionListenerRef listener)
 {
     if (m_dumpFullScreenCallbacks)
         protectedCurrentInvocation()->outputText("supportsFullScreen() == true\nenterFullScreenForElement()\n"_s);
-    return true;
+    if (!m_scrollDuringEnterFullscreen)
+        return WKCompletionListenerComplete(listener);
+
+    // The amount we scroll isn't important, but it should be nonzero to verify it is gone after restoring scroll position.
+    WKPageEvaluateJavaScriptInMainFrame(page, toWK("scrollBy(5,7)").get(), (void*)WKRetain(listener), [] (WKTypeRef, WKErrorRef, void* context) {
+        auto listener = (WKCompletionListenerRef)context;
+        WKCompletionListenerComplete(listener);
+        WKRelease(listener);
+    });
 }
 
 void TestController::beganEnterFullScreen(WKPageRef page, WKRect initialFrame, WKRect finalFrame, const void* clientInfo)
@@ -1446,6 +1454,7 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
     m_dumpPolicyDelegateCallbacks = false;
     m_dumpFullScreenCallbacks = false;
     m_waitBeforeFinishingFullscreenExit = false;
+    m_scrollDuringEnterFullscreen = false;
     if (m_finishExitFullscreenHandler)
         m_finishExitFullscreenHandler();
 

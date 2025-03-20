@@ -2106,6 +2106,11 @@ void TestRunner::waitBeforeFinishingFullscreenExit()
     postPageMessage("WaitBeforeFinishingFullscreenExit");
 }
 
+void TestRunner::scrollDuringEnterFullscreen()
+{
+    postPageMessage("ScrollDuringEnterFullscreen");
+}
+
 void TestRunner::finishFullscreenExit()
 {
     postPageMessage("FinishFullscreenExit");

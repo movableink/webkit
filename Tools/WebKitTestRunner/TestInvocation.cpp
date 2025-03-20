@@ -707,6 +707,11 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
         return;
     }
 
+    if (WKStringIsEqualToUTF8CString(messageName, "ScrollDuringEnterFullscreen")) {
+        TestController::singleton().scrollDuringEnterFullscreen();
+        return;
+    }
+
     if (WKStringIsEqualToUTF8CString(messageName, "FinishFullscreenExit")) {
         TestController::singleton().finishFullscreenExit();
         return;

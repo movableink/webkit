@@ -566,6 +566,7 @@ public:
 
     void flushConsoleLogs(JSContextRef, JSValueRef callback);
     void updatePresentation(JSContextRef, JSValueRef callback);
+    void scrollDuringEnterFullscreen();
     void waitBeforeFinishingFullscreenExit();
     void finishFullscreenExit();
     void requestExitFullscreenFromUIProcess();

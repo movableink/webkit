@@ -309,6 +309,12 @@ void WebFullScreenManager::enterFullScreenForElement(Element& element, HTMLMedia
         willEnterFullScreen(element, WTFMove(willEnterFullScreenCallback), WTFMove(didEnterFullScreenCallback), mode);
         m_inWindowFullScreenMode = true;
     } else {
+
+        if (RefPtr page = m_page->corePage()) {
+            if (RefPtr view = page->mainFrame().virtualView())
+                m_scrollPosition = view->scrollPosition();
+        }
+
         m_page->sendWithAsyncReply(Messages::WebFullScreenManagerProxy::EnterFullScreen(frameID, m_element->document().quirks().blocksReturnToFullscreenFromPictureInPictureQuirk(), WTFMove(mediaDetails)), [
             this,
             protectedThis = Ref { *this },
@@ -317,7 +323,6 @@ void WebFullScreenManager::enterFullScreenForElement(Element& element, HTMLMedia
             didEnterFullScreenCallback = WTFMove(didEnterFullScreenCallback)
         ] (bool success) mutable {
             if (success) {
-                m_scrollPosition = m_page->corePage()->mainFrame().virtualView()->scrollPosition();
                 willEnterFullScreen(element, WTFMove(willEnterFullScreenCallback), WTFMove(didEnterFullScreenCallback));
                 return;
             }
