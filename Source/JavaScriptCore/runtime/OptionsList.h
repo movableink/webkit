@@ -607,6 +607,7 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, freeRetiredWasmCode, true, Normal, "free BBQ/OMG-OSR wasm code once it's no longer reachable."_s) \
     v(Bool, useArrayAllocationSinking, true, Normal, "free BBQ/OMG-OSR wasm code once it's no longer reachable."_s) \
     v(Bool, dumpFTLCodeSize, false, Normal, nullptr) \
+    v(Unsigned, markedBlockDumpInfoCount, 0, Normal, nullptr) /* FIXME: rdar://139998916 */ \
     \
     /* Feature Flags */\
     \
@@ -625,7 +626,6 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, useWasmSIMD, true, Normal, "Allow the new simd instructions and types from the wasm simd spec."_s) \
     v(Bool, useWasmRelaxedSIMD, false, Normal, "Allow the relaxed simd instructions and types from the wasm relaxed simd spec."_s) \
     v(Bool, useWasmTailCalls, true, Normal, "Allow the new instructions from the wasm tail calls spec."_s) \
-    v(Unsigned, markedBlockDumpInfoCount, 0, Normal, nullptr) /* FIXME: rdar://139998916 */ \
 
 
 
