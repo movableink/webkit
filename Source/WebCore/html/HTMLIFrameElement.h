@@ -82,6 +82,7 @@ private:
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
     bool isReplaced(const RenderStyle&) const final { return true; }
 
+    ReferrerPolicy referrerPolicyFromAttribute() const;
     bool shouldLoadFrameLazily() final;
     bool isLazyLoadObserverActive() const final;
 

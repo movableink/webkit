@@ -181,7 +181,7 @@ ReferrerPolicy HTMLIFrameElement::referrerPolicy() const
 {
     if (m_lazyLoadFrameObserver)
         return m_lazyLoadFrameObserver->referrerPolicy();
-    return parseReferrerPolicy(attributeWithoutSynchronization(referrerpolicyAttr), ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
+    return referrerPolicyFromAttribute();
 }
 
 const AtomString& HTMLIFrameElement::loading() const
@@ -211,6 +211,11 @@ ExceptionOr<void> HTMLIFrameElement::setSrcdoc(std::variant<RefPtr<TrustedHTML>,
     return { };
 }
 
+ReferrerPolicy HTMLIFrameElement::referrerPolicyFromAttribute() const
+{
+    return parseReferrerPolicy(attributeWithoutSynchronization(referrerpolicyAttr), ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
+}
+
 static bool isFrameLazyLoadable(const Document& document, const URL& url, const AtomString& loadingAttributeValue)
 {
     if (!url.isValid() || url.isAboutBlank())
@@ -224,14 +229,17 @@ static bool isFrameLazyLoadable(const Document& document, const URL& url, const 
 
 bool HTMLIFrameElement::shouldLoadFrameLazily()
 {
-    if (!m_lazyLoadFrameObserver && document().settings().lazyIframeLoadingEnabled() && !document().quirks().shouldDisableLazyIframeLoadingQuirk()) {
-        URL completeURL = document().completeURL(frameURL());
+    if (!document().settings().lazyIframeLoadingEnabled() || document().quirks().shouldDisableLazyIframeLoadingQuirk())
+        return false;
+    URL completeURL = document().completeURL(frameURL());
+    auto referrerPolicy = referrerPolicyFromAttribute();
+    if (!m_lazyLoadFrameObserver) {
         if (isFrameLazyLoadable(document(), completeURL, attributeWithoutSynchronization(HTMLNames::loadingAttr))) {
-            auto currentReferrerPolicy = referrerPolicy();
-            lazyLoadFrameObserver().observe(AtomString { completeURL.string() }, currentReferrerPolicy);
+            lazyLoadFrameObserver().observe(AtomString { completeURL.string() }, referrerPolicy);
             return true;
         }
-    }
+    } else
+        m_lazyLoadFrameObserver->update(AtomString { completeURL.string() }, referrerPolicy);
     return false;
 }
 

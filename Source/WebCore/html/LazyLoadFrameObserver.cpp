@@ -99,6 +99,12 @@ void LazyLoadFrameObserver::unobserve()
     frameObserver.m_observer->unobserve(m_element);
 }
 
+void LazyLoadFrameObserver::update(const AtomString& frameURL, const ReferrerPolicy& referrerPolicy)
+{
+    m_frameURL = frameURL;
+    m_referrerPolicy = referrerPolicy;
+}
+
 IntersectionObserver* LazyLoadFrameObserver::intersectionObserver(Document& document)
 {
     if (!m_observer) {
