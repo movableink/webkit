@@ -1901,6 +1901,9 @@ imported/w3c/web-platform-tests/html/canvas/offscreen/wide-gamut-canvas/2d.color
 imported/w3c/web-platform-tests/webcodecs/videoFrame-createImageBitmap.any.worker.html [ Pass ]
 imported/w3c/web-platform-tests/webcodecs/videoFrame-drawImage.any.worker.html [ Pass ]
 
+[ x86_64 ] imported/w3c/web-platform-tests/webcodecs/audioDecoder-codec-specific.https.any.html?mp3 [ Failure ]
+[ x86_64 ] imported/w3c/web-platform-tests/webcodecs/audioDecoder-codec-specific.https.any.worker.html?mp3 [ Failure ]
+
 webkit.org/b/229521 pointer-lock/lock-already-locked.html [ Pass Failure ]
 
 webkit.org/b/230327 imported/w3c/web-platform-tests/css/css-transforms/crashtests/transform-marquee-resize-div-image-001.html [ Pass Failure ]

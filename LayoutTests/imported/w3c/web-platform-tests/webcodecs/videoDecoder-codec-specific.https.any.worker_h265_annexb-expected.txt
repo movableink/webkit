@@ -5,8 +5,6 @@ PASS Test that isConfigSupported() returns a parsed configuration
 PASS Test invalid configs
 PASS Test configure()
 PASS Decode a key frame
-PASS Decode a key frame with different coded size
-PASS Decode a key frame without coded size
 PASS Decode a non key frame first fails
 PASS Verify reset() suppresses outputs
 PASS Test unconfigured VideoDecoder operations
@@ -17,6 +15,8 @@ PASS Close while decoding corrupt frame
 PASS Test decoding after flush
 PASS Test decoding a with negative timestamp
 PASS Test reset during flush
+PASS Test new flush after reset in a flush callback
+PASS Test decoding a corrupt frame after reset in a flush callback
 PASS Test low-latency decoding
 PASS VideoDecoder decodeQueueSize test
 

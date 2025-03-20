@@ -33,12 +33,14 @@ PASS Test that AudioEncoder.isConfigSupported() doesn't support config: Sample r
 PASS Test that AudioEncoder.isConfigSupported() doesn't support config: Way too many channels
 PASS Test that AudioEncoder.isConfigSupported() doesn't support config: Possible future opus codec string
 PASS Test that AudioEncoder.isConfigSupported() doesn't support config: Possible future aac codec string
+PASS Test that AudioEncoder.isConfigSupported() doesn't support config: codec with spaces
 PASS Test that AudioEncoder.configure() doesn't support config: Unrecognized codec
 PASS Test that AudioEncoder.configure() doesn't support config: Sample rate is too small
 PASS Test that AudioEncoder.configure() doesn't support config: Sample rate is too large
 PASS Test that AudioEncoder.configure() doesn't support config: Way too many channels
 PASS Test that AudioEncoder.configure() doesn't support config: Possible future opus codec string
 PASS Test that AudioEncoder.configure() doesn't support config: Possible future aac codec string
+PASS Test that AudioEncoder.configure() doesn't support config: codec with spaces
 PASS AudioEncoder.isConfigSupported() supports: {"codec":"opus","sampleRate":8000,"numberOfChannels":1}
 PASS AudioEncoder.isConfigSupported() supports: {"codec":"opus","sampleRate":48000,"numberOfChannels":2}
 PASS AudioEncoder.isConfigSupported() supports: {"codec":"opus","sampleRate":48000,"numberOfChannels":2,"bitrate":128000,"bitrateMode":"constant","bogus":123}

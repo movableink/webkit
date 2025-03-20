@@ -53,7 +53,7 @@ function validateBlackDots(frame, count) {
   const width = frame.displayWidth;
   const height = frame.displayHeight;
   let cnv = new OffscreenCanvas(width, height);
-  var ctx = cnv.getContext('2d');
+  var ctx = cnv.getContext('2d', {willReadFrequently: true});
   ctx.drawImage(frame, 0, 0);
   const dot_size = 20;
   const step = dot_size * 2;
@@ -100,4 +100,23 @@ function createDottedFrame(width, height, dots, ts) {
   fourColorsFrame(ctx, width, height, text);
   putBlackDots(ctx, width, height, dots);
   return new VideoFrame(cnv, { timestamp: ts, duration });
+}
+
+function createVideoEncoder(t, callbacks) {
+  return new VideoEncoder({
+    output(chunk, metadata) {
+      if (callbacks && callbacks.output) {
+        t.step(() => callbacks.output(chunk, metadata));
+      } else {
+        t.unreached_func('unexpected output()');
+      }
+    },
+    error(e) {
+      if (callbacks && callbacks.error) {
+        t.step(() => callbacks.error(e));
+      } else {
+        t.unreached_func('unexpected error()');
+      }
+    }
+  });
 }
