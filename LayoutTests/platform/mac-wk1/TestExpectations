@@ -245,6 +245,8 @@ imported/w3c/web-platform-tests/encoding/textdecoder-streaming.any.sharedworker.
 imported/w3c/web-platform-tests/eventsource/eventsource-constructor-empty-url.any.sharedworker.html [ Skip ]
 imported/w3c/web-platform-tests/eventsource/eventsource-constructor-url-bogus.any.sharedworker.html [ Skip ]
 imported/w3c/web-platform-tests/eventsource/shared-worker [ Skip ]
+imported/w3c/web-platform-tests/event-timing/idlharness.any.serviceworker.html [ Skip ]
+imported/w3c/web-platform-tests/event-timing/idlharness.any.sharedworker.html [ Skip ]
 imported/w3c/web-platform-tests/fetch/api/abort/cache.https.any.serviceworker.html [ Skip ]
 imported/w3c/web-platform-tests/fetch/api/abort/cache.https.any.sharedworker.html [ Skip ]
 imported/w3c/web-platform-tests/fetch/api/abort/cache.https.any.worker.html [ Skip ]

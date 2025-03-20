@@ -1346,6 +1346,11 @@ imported/w3c/web-platform-tests/resource-timing/TAO-match.html [ Pass Failure ]
 imported/w3c/web-platform-tests/resource-timing/iframe-failed-commit.html [ Pass Failure ]
 imported/w3c/web-platform-tests/resource-timing/fetch-cross-origin-redirect.https.html [ Pass Failure ]
 
+# event timing tests which time out.
+imported/w3c/web-platform-tests/event-timing/interactionid-keyboard-event-simulated-click-checkbox-space.html [ Skip ]
+imported/w3c/web-platform-tests/event-timing/interactionid-keyboard-event-simulated-click-link-enter.html [ Skip ]
+imported/w3c/web-platform-tests/event-timing/interactionid-keyboard-event-simulated-click-button-space.html [ Skip ]
+
 imported/w3c/web-platform-tests/mediacapture-streams/MediaStream-default-feature-policy.https.html [ DumpJSConsoleLogInStdErr ]
 imported/w3c/web-platform-tests/mediacapture-streams/MediaStreamTrack-MediaElement-disabled-video-is-black.https.html [ Pass Failure ]
 imported/w3c/web-platform-tests/mediacapture-streams/MediaDevices-enumerateDevices-per-origin-ids.sub.https.html [ Skip ]

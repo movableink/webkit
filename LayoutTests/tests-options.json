@@ -2876,6 +2876,33 @@
     "imported/w3c/web-platform-tests/encrypted-media/drm-temporary-license-type.https.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/event-timing/crossiframe.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/event-timing/event-click-visibilitychange.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/event-timing/interactionid-keypress.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/event-timing/interactionid-press-key-as-input.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/event-timing/interactionid-press-key-no-effect.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/event-timing/mousedown.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/event-timing/pointerdown.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/event-timing/retrievability.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/event-timing/timingconditions.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/eventsource/dedicated-worker/eventsource-constructor-non-same-origin.htm": [
         "slow"
     ],
