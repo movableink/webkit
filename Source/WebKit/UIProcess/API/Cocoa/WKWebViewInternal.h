@@ -469,11 +469,11 @@ struct PerWebProcessState {
 #endif
 
 #if ENABLE(SCREEN_TIME)
-- (void)_installScreenTimeWebpageController;
+- (void)_installScreenTimeWebpageControllerIfNeeded;
 - (void)_uninstallScreenTimeWebpageController;
 
 - (void)_updateScreenTimeViewGeometry;
-- (void)_updateScreenTimeShieldVisibilityForWindow;
+- (void)_updateScreenTimeBasedOnWindowVisibility;
 #endif
 
 #if ENABLE(WRITING_TOOLS)

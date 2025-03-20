@@ -335,17 +335,16 @@ void PageClientImplCocoa::updateScreenTimeWebpageControllerURL(WKWebView *webVie
     if (!PAL::isScreenTimeFrameworkAvailable())
         return;
 
-    if (![webView _screenTimeWebpageController])
-        [webView _installScreenTimeWebpageController];
-
-    RetainPtr screenTimeWebpageController = [webView _screenTimeWebpageController];
-
     RefPtr pageProxy = [webView _page].get();
     if (pageProxy && !pageProxy->preferences().screenTimeEnabled()) {
         [webView _uninstallScreenTimeWebpageController];
         return;
     }
 
+    if ([webView window])
+        [webView _installScreenTimeWebpageControllerIfNeeded];
+
+    RetainPtr screenTimeWebpageController = [webView _screenTimeWebpageController];
     [screenTimeWebpageController setURL:[webView _mainFrameURL]];
 }
 
@@ -372,14 +371,14 @@ void PageClientImplCocoa::setURLIsPlayingVideoForScreenTime(bool value)
 void PageClientImplCocoa::viewIsBecomingVisible()
 {
 #if ENABLE(SCREEN_TIME)
-    [m_webView _updateScreenTimeShieldVisibilityForWindow];
+    [m_webView _updateScreenTimeBasedOnWindowVisibility];
 #endif
 }
 
 void PageClientImplCocoa::viewIsBecomingInvisible()
 {
 #if ENABLE(SCREEN_TIME)
-    [m_webView _updateScreenTimeShieldVisibilityForWindow];
+    [m_webView _updateScreenTimeBasedOnWindowVisibility];
 #endif
 }
 

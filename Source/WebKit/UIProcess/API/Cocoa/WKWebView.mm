@@ -403,34 +403,35 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
 
 #if ENABLE(SCREEN_TIME)
 
-- (void)_installScreenTimeWebpageController
+- (void)_installScreenTimeWebpageControllerIfNeeded
 {
+    if (_screenTimeWebpageController)
+        return;
+
     if (!PAL::isScreenTimeFrameworkAvailable())
         return;
 
     if (_page && !_page->preferences().screenTimeEnabled())
         return;
 
-    if (!_screenTimeWebpageController) {
-        _screenTimeWebpageController = adoptNS([PAL::allocSTWebpageControllerInstance() init]);
-        [_screenTimeWebpageController addObserver:self forKeyPath:@"URLIsBlocked" options:(NSKeyValueObservingOptionOld | NSKeyValueObservingOptionNew) context:&screenTimeWebpageControllerBlockedKVOContext];
-        _isBlockedByScreenTime = NO;
+    _screenTimeWebpageController = adoptNS([PAL::allocSTWebpageControllerInstance() init]);
+    [_screenTimeWebpageController addObserver:self forKeyPath:@"URLIsBlocked" options:(NSKeyValueObservingOptionOld | NSKeyValueObservingOptionNew) context:&screenTimeWebpageControllerBlockedKVOContext];
+    _isBlockedByScreenTime = NO;
 
-        if ([_screenTimeWebpageController respondsToSelector:@selector(setProfileIdentifier:)])
-            [_screenTimeWebpageController setProfileIdentifier:[_configuration websiteDataStore].identifier.UUIDString];
+    if ([_screenTimeWebpageController respondsToSelector:@selector(setProfileIdentifier:)])
+        [_screenTimeWebpageController setProfileIdentifier:[_configuration websiteDataStore].identifier.UUIDString];
 
-        [_screenTimeWebpageController setSuppressUsageRecording:![_configuration websiteDataStore].isPersistent];
+    [_screenTimeWebpageController setSuppressUsageRecording:![_configuration websiteDataStore].isPersistent];
 
-        // Observing changes to URLIsBlocked is set up in STWebpageController's loadView function.
-        // Thus, we have to instantiate its view for URLIsBlocked to update properly.
-        RetainPtr screenTimeView = [_screenTimeWebpageController view];
+    // Observing changes to URLIsBlocked is set up in STWebpageController's loadView function.
+    // Thus, we have to instantiate its view for URLIsBlocked to update properly.
+    RetainPtr screenTimeView = [_screenTimeWebpageController view];
 
-        if ([_configuration _showsSystemScreenTimeBlockingView]) {
-            [screenTimeView setFrame:self.bounds];
-            [self addSubview:screenTimeView.get()];
-        }
-        RELEASE_LOG(ScreenTime, "Screen Time controller was installed.");
+    if ([_configuration _showsSystemScreenTimeBlockingView]) {
+        [screenTimeView setFrame:self.bounds];
+        [self addSubview:screenTimeView.get()];
     }
+    RELEASE_LOG(ScreenTime, "Screen Time controller was installed.");
 }
 
 - (void)_uninstallScreenTimeWebpageController
@@ -456,13 +457,21 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
     [[_screenTimeWebpageController view] setFrame:bounds];
 }
 
-- (void)_updateScreenTimeShieldVisibilityForWindow
+- (void)_updateScreenTimeBasedOnWindowVisibility
 {
     BOOL viewIsInWindow = !!self.window;
+    BOOL viewIsVisible = viewIsInWindow;
+#if PLATFORM(MAC)
+    viewIsVisible = viewIsVisible && ((self.window.occlusionState & NSWindowOcclusionStateVisible) == NSWindowOcclusionStateVisible);
+#endif
 
     BOOL showsSystemScreenTimeBlockingView = [_configuration _showsSystemScreenTimeBlockingView];
 
     if (viewIsInWindow) {
+        BOOL previouslyInstalledScreenTimeWebpageController = !!_screenTimeWebpageController;
+        [self _installScreenTimeWebpageControllerIfNeeded];
+        if (!previouslyInstalledScreenTimeWebpageController && _screenTimeWebpageController)
+            [_screenTimeWebpageController setURL:[self _mainFrameURL]];
         if (!showsSystemScreenTimeBlockingView && _screenTimeBlurredSnapshot) {
             [_screenTimeBlurredSnapshot setHidden:NO];
             RELEASE_LOG(ScreenTime, "Screen Time has updated visibility to show blurred view.");
@@ -480,10 +489,6 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
         }
     }
 
-    BOOL viewIsVisible = viewIsInWindow;
-#if PLATFORM(MAC)
-    viewIsVisible &= ((self.window.occlusionState & NSWindowOcclusionStateVisible) == NSWindowOcclusionStateVisible);
-#endif
     [_screenTimeWebpageController setSuppressUsageRecording:(![_configuration websiteDataStore].isPersistent || !viewIsVisible)];
 }
 
