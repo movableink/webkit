@@ -40,7 +40,7 @@ public:
         virtual void loadContent(URL, CompletionHandler<void(WebCore::ResourceResponse&&, Ref<WebCore::SharedBuffer>&&)>&&) = 0;
     };
 
-    static AboutSchemeHandler& singleton();
+    static Ref<AboutSchemeHandler> create();
 
     void registerHandler(const String& opaquePath, std::unique_ptr<OpaquePathHandler>&&);
     bool canHandleURL(const URL&) const;
@@ -49,8 +49,6 @@ public:
     static constexpr auto blank = "blank"_s;
 
 private:
-    friend MainThreadNeverDestroyed<AboutSchemeHandler>;
-
     class EmptyPathHandler final : public OpaquePathHandler {
         WTF_MAKE_FAST_ALLOCATED;
     public:

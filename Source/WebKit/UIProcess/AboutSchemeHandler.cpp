@@ -34,10 +34,9 @@
 
 namespace WebKit {
 
-AboutSchemeHandler& AboutSchemeHandler::singleton()
+Ref<AboutSchemeHandler> AboutSchemeHandler::create()
 {
-    static MainThreadNeverDestroyed<AboutSchemeHandler> globalHandler;
-    return globalHandler;
+    return adoptRef(*new AboutSchemeHandler());
 }
 
 AboutSchemeHandler::AboutSchemeHandler()

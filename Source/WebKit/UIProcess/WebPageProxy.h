@@ -424,6 +424,7 @@ using ElementIdentifier = ObjectIdentifier<ElementIdentifierType>;
 
 namespace WebKit {
 
+class AboutSchemeHandler;
 class AudioSessionRoutingArbitratorProxy;
 class AuthenticationChallengeProxy;
 class BrowsingContextGroup;
@@ -2720,6 +2721,8 @@ public:
     bool hasAccessibilityActivityForTesting();
 #endif
 
+    Ref<AboutSchemeHandler> protectedAboutSchemeHandler();
+
 private:
     WebPageProxy(PageClient&, WebProcessProxy&, Ref<API::PageConfiguration>&&);
     void platformInitialize();
@@ -3371,7 +3374,7 @@ private:
     bool hasValidOpeningAppLinkActivity() const;
 #endif
 
-RefPtr<SpeechRecognitionPermissionManager> protectedSpeechRecognitionPermissionManager();
+    RefPtr<SpeechRecognitionPermissionManager> protectedSpeechRecognitionPermissionManager();
 
 #if PLATFORM(COCOA)
     String presentingApplicationBundleIdentifier() const;
@@ -3895,6 +3898,7 @@ RefPtr<SpeechRecognitionPermissionManager> protectedSpeechRecognitionPermissionM
     std::optional<audit_token_t> m_presentingApplicationAuditToken;
 #endif
 
+    Ref<AboutSchemeHandler> m_aboutSchemeHandler;
     RefPtr<WebPageProxyTesting> m_pageForTesting;
 };
 

@@ -831,6 +831,7 @@ WebPageProxy::WebPageProxy(PageClient& pageClient, WebProcessProxy& process, Ref
 #if HAVE(AUDIT_TOKEN)
     , m_presentingApplicationAuditToken(process.processPool().configuration().presentingApplicationProcessToken())
 #endif
+    , m_aboutSchemeHandler(AboutSchemeHandler::create())
     , m_pageForTesting(WebPageProxyTesting::create(*this))
 {
     WEBPAGEPROXY_RELEASE_LOG(Loading, "constructor:");
@@ -915,8 +916,6 @@ WebPageProxy::WebPageProxy(PageClient& pageClient, WebProcessProxy& process, Ref
     if (RefPtr gpuProcess = GPUProcessProxy::singletonIfCreated())
         gpuProcess->setPresentingApplicationAuditToken(process.coreProcessIdentifier(), m_webPageID, m_presentingApplicationAuditToken);
 #endif
-
-    setURLSchemeHandlerForScheme(AboutSchemeHandler::singleton(), AboutSchemeHandler::scheme);
 }
 
 WebPageProxy::~WebPageProxy()
@@ -1606,6 +1605,9 @@ void WebPageProxy::didAttachToRunningProcess()
 #if PLATFORM(IOS_FAMILY) && ENABLE(MODEL_PROCESS)
     internals().modelPresentationManagerProxy = ModelPresentationManagerProxy::create(*this);
 #endif
+
+    if (!urlSchemeHandlerForScheme(AboutSchemeHandler::scheme))
+        setURLSchemeHandlerForScheme(m_aboutSchemeHandler, AboutSchemeHandler::scheme);
 }
 
 RefPtr<API::Navigation> WebPageProxy::launchProcessForReload()
@@ -2099,7 +2101,7 @@ void WebPageProxy::loadRequestWithNavigationShared(Ref<WebProcessProxy>&& proces
     loadParameters.advancedPrivacyProtections = navigation.originatorAdvancedPrivacyProtections();
     loadParameters.isRequestFromClientOrUserInput = navigation.isRequestFromClientOrUserInput();
     loadParameters.isPerformingHTTPFallback = isPerformingHTTPFallback == IsPerformingHTTPFallback::Yes;
-    loadParameters.isHandledByAboutSchemeHandler = AboutSchemeHandler::singleton().canHandleURL(url);
+    loadParameters.isHandledByAboutSchemeHandler = protectedAboutSchemeHandler()->canHandleURL(url);
 
 #if ENABLE(CONTENT_EXTENSIONS)
     if (protectedPreferences()->iFrameResourceMonitoringEnabled())
@@ -2323,7 +2325,7 @@ RefPtr<API::Navigation> WebPageProxy::loadSimulatedRequest(WebCore::ResourceRequ
     loadParameters.lockBackForwardList = navigation->lockBackForwardList();
     loadParameters.clientRedirectSourceForHistory = navigation->clientRedirectSourceForHistory();
     loadParameters.isNavigatingToAppBoundDomain = isNavigatingToAppBoundDomain();
-    loadParameters.isHandledByAboutSchemeHandler = AboutSchemeHandler::singleton().canHandleURL(loadParameters.request.url());
+    loadParameters.isHandledByAboutSchemeHandler = protectedAboutSchemeHandler()->canHandleURL(loadParameters.request.url());
 
     simulatedResponse.setExpectedContentLength(loadParameters.data->size());
     simulatedResponse.includeCertificateInfo();
@@ -4981,7 +4983,7 @@ void WebPageProxy::receivedNavigationActionPolicyDecision(WebProcessProxy& proce
             loadParameters.navigationID = navigation->navigationID();
             loadParameters.ownerPermissionsPolicy = navigation->ownerPermissionsPolicy();
             loadParameters.isPerformingHTTPFallback = navigationAction->data().isPerformingHTTPFallback;
-            loadParameters.isHandledByAboutSchemeHandler = AboutSchemeHandler::singleton().canHandleURL(loadParameters.request.url());
+            loadParameters.isHandledByAboutSchemeHandler = protectedAboutSchemeHandler()->canHandleURL(loadParameters.request.url());
             processNavigatingTo->send(Messages::WebPage::LoadRequest(WTFMove(loadParameters)), webPageIDInProcess(processNavigatingTo));
         }
 
@@ -5170,7 +5172,7 @@ void WebPageProxy::continueNavigationInNewProcess(API::Navigation& navigation, W
         loadParameters.lockBackForwardList = !!navigation.backForwardFrameLoadType() ? LockBackForwardList::Yes : LockBackForwardList::No;
         loadParameters.ownerPermissionsPolicy = navigation.ownerPermissionsPolicy();
         loadParameters.isPerformingHTTPFallback = isPerformingHTTPFallback == IsPerformingHTTPFallback::Yes;
-        loadParameters.isHandledByAboutSchemeHandler = AboutSchemeHandler::singleton().canHandleURL(loadParameters.request.url());
+        loadParameters.isHandledByAboutSchemeHandler = protectedAboutSchemeHandler()->canHandleURL(loadParameters.request.url());
 
         if (navigation.isInitialFrameSrcLoad())
             frame.setIsPendingInitialHistoryItem(true);
@@ -16301,6 +16303,11 @@ bool WebPageProxy::canStartNavigationSwipeAtLastInteractionLocation() const
 {
     RefPtr client = pageClient();
     return !client || client->canStartNavigationSwipeAtLastInteractionLocation();
+}
+
+Ref<AboutSchemeHandler> WebPageProxy::protectedAboutSchemeHandler()
+{
+    return m_aboutSchemeHandler;
 }
 
 } // namespace WebKit
