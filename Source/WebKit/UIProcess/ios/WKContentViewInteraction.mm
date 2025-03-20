@@ -1214,12 +1214,13 @@ static WKDragSessionContext *ensureLocalDragSessionContext(id <UIDragSession> se
 {
     Vector<RetainPtr<UIView>> viewsToRestore;
     for (UIView *view in [_textInteractionWrapper managedTextSelectionViews]) {
-        if (!view.userInteractionEnabled)
-            continue;
-
-        viewsToRestore.append(view);
-        view.userInteractionEnabled = NO;
+        [view _wk_collectDescendantsIncludingSelf:viewsToRestore matching:^(UIView *view) {
+            return view.userInteractionEnabled;
+        }];
     }
+
+    for (RetainPtr view : viewsToRestore)
+        [view setUserInteractionEnabled:NO];
 
     return makeScopeExit(Function<void()> { [viewsToRestore = WTFMove(viewsToRestore)] {
         for (RetainPtr view : viewsToRestore)
