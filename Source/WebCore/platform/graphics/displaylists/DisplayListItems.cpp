@@ -566,7 +566,7 @@ FillRectWithGradientAndSpaceTransform::FillRectWithGradientAndSpaceTransform(Flo
 
 void FillRectWithGradientAndSpaceTransform::apply(GraphicsContext& context) const
 {
-    context.fillRect(m_rect, m_gradient, m_gradientSpaceTransform);
+    context.fillRect(m_rect, m_gradient, m_gradientSpaceTransform, m_requiresClipToRect);
 }
 
 void FillRectWithGradientAndSpaceTransform::dump(TextStream& ts, OptionSet<AsTextFlag>) const

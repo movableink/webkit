@@ -178,6 +178,7 @@
 #endif
 #include "TestWithoutUsingIPCConnectionMessages.h" // NOLINT
 #include "TestWithSemaphoreMessages.h" // NOLINT
+#include "TestWithSpanOfConstMessages.h" // NOLINT
 #include "TestWithStreamMessages.h" // NOLINT
 #include "TestWithStreamBatchedMessages.h" // NOLINT
 #include "TestWithStreamBufferMessages.h" // NOLINT
@@ -375,6 +376,10 @@ std::optional<JSC::JSValue> jsValueForArguments(JSC::JSGlobalObject* globalObjec
         return jsValueForDecodedMessage<MessageName::TestWithSemaphore_SendSemaphore>(globalObject, decoder);
     case MessageName::TestWithSemaphore_ReceiveSemaphore:
         return jsValueForDecodedMessage<MessageName::TestWithSemaphore_ReceiveSemaphore>(globalObject, decoder);
+    case MessageName::TestWithSpanOfConst_TestSpanOfConstFloat:
+        return jsValueForDecodedMessage<MessageName::TestWithSpanOfConst_TestSpanOfConstFloat>(globalObject, decoder);
+    case MessageName::TestWithSpanOfConst_TestSpanOfConstFloatSegments:
+        return jsValueForDecodedMessage<MessageName::TestWithSpanOfConst_TestSpanOfConstFloatSegments>(globalObject, decoder);
     case MessageName::TestWithStream_SendString:
         return jsValueForDecodedMessage<MessageName::TestWithStream_SendString>(globalObject, decoder);
     case MessageName::TestWithStream_SendStringAsync:
@@ -1167,6 +1172,14 @@ std::optional<Vector<ArgumentDescription>> messageArgumentDescriptions(MessageNa
         };
     case MessageName::TestWithSemaphore_ReceiveSemaphore:
         return Vector<ArgumentDescription> { };
+    case MessageName::TestWithSpanOfConst_TestSpanOfConstFloat:
+        return Vector<ArgumentDescription> {
+            { "floats"_s, "std::span<const float>"_s },
+        };
+    case MessageName::TestWithSpanOfConst_TestSpanOfConstFloatSegments:
+        return Vector<ArgumentDescription> {
+            { "floatSegments"_s, "std::span<const WebCore::FloatSegment>"_s },
+        };
     case MessageName::TestWithStream_SendString:
         return Vector<ArgumentDescription> {
             { "url"_s, "String"_s },

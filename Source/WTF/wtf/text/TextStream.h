@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <span>
 #include <wtf/Forward.h>
 #include <wtf/HexNumber.h>
 #include <wtf/Markable.h>
@@ -283,6 +284,12 @@ template<typename T, size_t size>
 TextStream& operator<<(TextStream& ts, const std::array<T, size>& array)
 {
     return streamSizedContainer(ts, array);
+}
+
+template<typename T, size_t Extent>
+TextStream& operator<<(TextStream& ts, std::span<T, Extent> items)
+{
+    return streamSizedContainer(ts, items);
 }
 
 template<typename T, typename Counter>
