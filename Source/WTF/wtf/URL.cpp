@@ -413,7 +413,6 @@ StringView URL::path() const
 
 bool URL::setProtocol(StringView newProtocol)
 {
-    // Firefox and IE remove everything after the first ':'.
     auto newProtocolPrefix = newProtocol.left(newProtocol.find(':'));
     auto newProtocolCanonicalized = URLParser::maybeCanonicalizeScheme(newProtocolPrefix);
     if (!newProtocolCanonicalized)
@@ -424,8 +423,7 @@ bool URL::setProtocol(StringView newProtocol)
         return true;
     }
 
-    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=229427
-    if (URLParser::isSpecialScheme(this->protocol()) && !URLParser::isSpecialScheme(*newProtocolCanonicalized))
+    if (URLParser::isSpecialScheme(this->protocol()) != URLParser::isSpecialScheme(*newProtocolCanonicalized))
         return true;
 
     if ((m_passwordEnd != m_userStart || port()) && *newProtocolCanonicalized == "file"_s)
