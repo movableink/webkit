@@ -5838,7 +5838,7 @@ imported/w3c/web-platform-tests/webcodecs/videoFrame-construction.any.html [ Pas
 imported/w3c/web-platform-tests/webcodecs/videoFrame-copyTo-rgb.any.html [ Pass Failure ]
 imported/w3c/web-platform-tests/webcodecs/videoFrame-copyTo-rgb.any.worker.html [ Pass Failure ]
 imported/w3c/web-platform-tests/webcodecs/videoFrame-drawImage.any.html [ Pass Failure ]
-imported/w3c/web-platform-tests/webcodecs/videoFrame-drawImage.any.worker.html [Pass Failure ]
+imported/w3c/web-platform-tests/webcodecs/videoFrame-drawImage.any.worker.html [ Pass Failure ]
 imported/w3c/web-platform-tests/webcodecs/video-encoder-rescaling.https.any.html?av1 [ Failure ]
 imported/w3c/web-platform-tests/webcodecs/video-encoder-rescaling.https.any.html?h264_annexb [ Failure ]
 imported/w3c/web-platform-tests/webcodecs/video-encoder-rescaling.https.any.html?h264_avc [ Failure ]
