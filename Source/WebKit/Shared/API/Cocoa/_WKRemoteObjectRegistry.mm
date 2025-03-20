@@ -39,6 +39,7 @@
 #import "WebRemoteObjectRegistry.h"
 #import "_WKRemoteObjectInterface.h"
 #import <objc/runtime.h>
+#import <wtf/MainThread.h>
 #import <wtf/ObjCRuntimeExtras.h>
 
 extern "C" const char *_protocol_getMethodTypeEncoding(Protocol *p, SEL sel, BOOL isRequiredMethod, BOOL isInstanceMethod);
@@ -140,6 +141,8 @@ static uint64_t generateReplyIdentifier()
 
 - (void)_sendInvocation:(NSInvocation *)invocation interface:(_WKRemoteObjectInterface *)interface
 {
+    RELEASE_ASSERT(isMainRunLoop());
+
     std::unique_ptr<WebKit::RemoteObjectInvocation::ReplyInfo> replyInfo;
 
     NSMethodSignature *methodSignature = invocation.methodSignature;
