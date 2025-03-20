@@ -140,7 +140,6 @@ Plan::Plan(CodeBlock* passedCodeBlock, CodeBlock* profiledDFGCodeBlock,
         , m_compilation(UNLIKELY(m_vm->m_perBytecodeProfiler) ? adoptRef(new Profiler::Compilation(m_vm->m_perBytecodeProfiler->ensureBytecodesFor(m_codeBlock), profilerCompilationKindForMode(mode))) : nullptr)
         , m_inlineCallFrames(adoptRef(new InlineCallFrameSet()))
         , m_identifiers(m_codeBlock)
-        , m_weakReferences(m_codeBlock)
         , m_transitions(m_codeBlock)
 {
     RELEASE_ASSERT(m_codeBlock->alternative()->jitCode());

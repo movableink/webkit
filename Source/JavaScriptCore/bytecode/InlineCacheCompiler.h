@@ -314,12 +314,14 @@ inline AccessGenerationResult::AccessGenerationResult(Kind kind, Ref<InlineCache
 
 class InlineCacheCompiler {
 public:
-    InlineCacheCompiler(JITType jitType, VM& vm, JSGlobalObject* globalObject, ECMAMode ecmaMode, StructureStubInfo& stubInfo)
+    InlineCacheCompiler([[maybe_unused]] JITType jitType, VM& vm, JSGlobalObject* globalObject, ECMAMode ecmaMode, StructureStubInfo& stubInfo)
         : m_vm(vm)
         , m_globalObject(globalObject)
         , m_stubInfo(stubInfo)
         , m_ecmaMode(ecmaMode)
+#if ASSERT_ENABLED
         , m_jitType(jitType)
+#endif
     {
     }
 
@@ -431,7 +433,9 @@ private:
     JSGlobalObject* const m_globalObject;
     StructureStubInfo& m_stubInfo;
     const ECMAMode m_ecmaMode { ECMAMode::sloppy() };
+#if ASSERT_ENABLED
     JITType m_jitType;
+#endif
     CCallHelpers* m_jit { nullptr };
     ScratchRegisterAllocator* m_allocator { nullptr };
     MacroAssembler::JumpList m_success;
