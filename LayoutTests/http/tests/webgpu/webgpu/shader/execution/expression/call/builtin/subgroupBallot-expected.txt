@@ -1,17 +1,27 @@
-layer at (0,0) size 800x600
-  RenderView at (0,0) size 800x600
-layer at (0,0) size 800x182
-  RenderBlock {HTML} at (0,0) size 800x182
-    RenderBody {BODY} at (8,21) size 784x145
-      RenderBlock {H1} at (0,0) size 784x37
-        RenderText {#text} at (0,0) size 206x37
-          text run at (0,0) width 206: "Error response"
-      RenderBlock {P} at (0,58) size 784x19
-        RenderText {#text} at (0,0) size 101x18
-          text run at (0,0) width 101: "Error code: 404"
-      RenderBlock {P} at (0,92) size 784x19
-        RenderText {#text} at (0,0) size 160x18
-          text run at (0,0) width 160: "Message: File not found."
-      RenderBlock {P} at (0,126) size 784x19
-        RenderText {#text} at (0,0) size 556x18
-          text run at (0,0) width 556: "Error code explanation: HTTPStatus.NOT_FOUND - Nothing matches the given URI."
+
+PASS :compute,split:case="every_even"
+PASS :compute,split:case="every_odd"
+PASS :compute,split:case="lower_half"
+PASS :compute,split:case="upper_half"
+PASS :compute,split:case="first_two"
+PASS :fragment,split:
+PASS :fragment:predicate="odd_row"
+PASS :fragment:predicate="even_row"
+PASS :fragment:predicate="odd_col"
+PASS :fragment:predicate="even_col"
+PASS :fragment:predicate="odd_id"
+PASS :fragment:predicate="even_id"
+PASS :fragment:predicate="upper_half"
+PASS :fragment:predicate="lower_half"
+PASS :fragment:predicate="first_two_or_diagonal"
+PASS :predicate:case="every_even"
+PASS :predicate:case="every_odd"
+PASS :predicate:case="lower_half"
+PASS :predicate:case="upper_half"
+PASS :predicate:case="first_two"
+PASS :predicate_and_control_flow:case="empty"
+PASS :predicate_and_control_flow:case="full"
+PASS :predicate_and_control_flow:case="one_in_four"
+PASS :predicate_and_control_flow:case="middle_half"
+PASS :predicate_and_control_flow:case="middle_half_every_other"
+

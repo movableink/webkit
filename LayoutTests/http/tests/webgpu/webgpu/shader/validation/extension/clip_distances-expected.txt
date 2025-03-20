@@ -1,17 +1,6 @@
-layer at (0,0) size 800x600
-  RenderView at (0,0) size 800x600
-layer at (0,0) size 800x182
-  RenderBlock {HTML} at (0,0) size 800x182
-    RenderBody {BODY} at (8,21) size 784x145
-      RenderBlock {H1} at (0,0) size 784x37
-        RenderText {#text} at (0,0) size 206x37
-          text run at (0,0) width 206: "Error response"
-      RenderBlock {P} at (0,58) size 784x19
-        RenderText {#text} at (0,0) size 101x18
-          text run at (0,0) width 101: "Error code: 404"
-      RenderBlock {P} at (0,92) size 784x19
-        RenderText {#text} at (0,0) size 160x18
-          text run at (0,0) width 160: "Message: File not found."
-      RenderBlock {P} at (0,126) size 784x19
-        RenderText {#text} at (0,0) size 556x18
-          text run at (0,0) width 556: "Error code explanation: HTTPStatus.NOT_FOUND - Nothing matches the given URI."
+
+PASS :use_clip_distances_requires_extension_enabled:requireExtension=true;enableExtension=true
+PASS :use_clip_distances_requires_extension_enabled:requireExtension=true;enableExtension=false
+PASS :use_clip_distances_requires_extension_enabled:requireExtension=false;enableExtension=true
+PASS :use_clip_distances_requires_extension_enabled:requireExtension=false;enableExtension=false
+
