@@ -395,6 +395,9 @@ public:
     bool showsSystemScreenTimeBlockingView() const { return m_data.showsSystemScreenTimeBlockingView; }
     void setShowsSystemScreenTimeBlockingView(bool shows) { m_data.showsSystemScreenTimeBlockingView = shows; }
 
+    bool shouldSendConsoleLogsToUIProcessForTesting() const { return m_data.shouldSendConsoleLogsToUIProcessForTesting; }
+    void setShouldSendConsoleLogsToUIProcessForTesting(bool should) { m_data.shouldSendConsoleLogsToUIProcessForTesting = should; }
+
     bool shouldDeferAsynchronousScriptsUntilAfterDocumentLoad() const { return m_data.shouldDeferAsynchronousScriptsUntilAfterDocumentLoad; }
     void setShouldDeferAsynchronousScriptsUntilAfterDocumentLoad(bool defer) { m_data.shouldDeferAsynchronousScriptsUntilAfterDocumentLoad = defer; }
 
@@ -634,6 +637,7 @@ private:
         bool scrollToTextFragmentIndicatorEnabled { true };
         bool scrollToTextFragmentMarkingEnabled { true };
         bool showsSystemScreenTimeBlockingView { true };
+        bool shouldSendConsoleLogsToUIProcessForTesting { false };
 #if PLATFORM(VISION)
 
 #if ENABLE(GAMEPAD)

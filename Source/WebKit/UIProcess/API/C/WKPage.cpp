@@ -1926,6 +1926,13 @@ void WKPageSetPageUIClient(WKPageRef pageRef, const WKPageUIClientBase* wkClient
             completionHandler(String());
         }
 
+        void addMessageToConsoleForTesting(WebPageProxy& page, String&& message) final
+        {
+            if (!m_client.addMessageToConsole)
+                return;
+            m_client.addMessageToConsole(toAPI(&page), toAPI(message.impl()), m_client.base.clientInfo);
+        }
+
         void setStatusText(WebPageProxy* page, const String& text) final
         {
             if (!m_client.setStatusText)

@@ -276,6 +276,7 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
 #endif
 
     bool hasReceivedAXRequestInUIProcess;
+    bool shouldSendConsoleLogsToUIProcessForTesting;
 }
 
 [Nested] struct WebKit::RemotePageParameters {

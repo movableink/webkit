@@ -57,6 +57,8 @@ public:
 
     void setCustomTimeout(Seconds duration) { m_timeout = duration; }
     void setDumpJSConsoleLogInStdErr(bool value) { m_dumpJSConsoleLogInStdErr = value; }
+    bool shouldDumpJSConsoleLogInStdErr() const { return m_dumpJSConsoleLogInStdErr; }
+    bool gotFinalMessage() const { return m_gotFinalMessage; }
 
     Seconds shortTimeout() const;
 

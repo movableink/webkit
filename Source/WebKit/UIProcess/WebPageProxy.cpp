@@ -11544,6 +11544,7 @@ WebPageCreationParameters WebPageProxy::creationParameters(WebProcessProxy& proc
         .mainFrameIdentifier = mainFrameIdentifier,
         .openedMainFrameName = m_openedMainFrameName,
         .initialSandboxFlags = m_mainFrame ? m_mainFrame->effectiveSandboxFlags() : SandboxFlags { },
+        .shouldSendConsoleLogsToUIProcessForTesting = m_configuration->shouldSendConsoleLogsToUIProcessForTesting()
     };
 
     parameters.processDisplayName = m_configuration->processDisplayName();
@@ -15971,6 +15972,11 @@ void WebPageProxy::layerTreeAsTextForTesting(FrameIdentifier frameID, size_t bas
 
     auto [result] = sendResult.takeReply();
     completionHandler(WTFMove(result));
+}
+
+void WebPageProxy::addMessageToConsoleForTesting(String&& message)
+{
+    m_uiClient->addMessageToConsoleForTesting(*this, WTFMove(message));
 }
 
 void WebPageProxy::frameTextForTesting(WebCore::FrameIdentifier frameID, CompletionHandler<void(String&&)>&& completionHandler)

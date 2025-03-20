@@ -1978,6 +1978,8 @@ public:
     bool hasActiveContextMenuInteraction() const { return m_hasActiveContextMenuInteraction; }
 #endif
 
+    bool shouldSendConsoleLogsToUIProcessForTesting() const { return m_shouldSendConsoleLogsToUIProcessForTesting; }
+
 private:
     WebPage(WebCore::PageIdentifier, WebPageCreationParameters&&);
 
@@ -2583,6 +2585,7 @@ private:
 #if ENABLE(APP_BOUND_DOMAINS)
     bool m_needsInAppBrowserPrivacyQuirks { false };
 #endif
+    const bool m_shouldSendConsoleLogsToUIProcessForTesting { false };
 
 #if PLATFORM(COCOA)
     bool m_pdfPluginEnabled { false };

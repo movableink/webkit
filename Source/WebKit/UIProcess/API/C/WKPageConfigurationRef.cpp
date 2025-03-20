@@ -120,6 +120,11 @@ void WKPageConfigurationSetAllowTestOnlyIPC(WKPageConfigurationRef configuration
     toImpl(configuration)->setAllowTestOnlyIPC(allowTestOnlyIPC);
 }
 
+void WKPageConfigurationSetShouldSendConsoleLogsToUIProcessForTesting(WKPageConfigurationRef configuration, bool should)
+{
+    toImpl(configuration)->setShouldSendConsoleLogsToUIProcessForTesting(should);
+}
+
 void WKPageConfigurationSetPortsForUpgradingInsecureSchemeForTesting(WKPageConfigurationRef configuration, uint16_t upgradeFromInsecurePort, uint16_t upgradeToSecurePort)
 {
     toImpl(configuration)->setPortsForUpgradingInsecureSchemeForTesting(upgradeFromInsecurePort, upgradeToSecurePort);

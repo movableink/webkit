@@ -97,6 +97,7 @@
 #include <wtf/WTFProcess.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/unicode/CharacterNames.h>
 
 #if PLATFORM(COCOA)
 #include <WebKit/WKContextPrivateMac.h>
@@ -433,6 +434,51 @@ static void unlockScreenOrientationCallback(WKPageRef)
 }
 #endif
 
+static StringView lastFileURLPathComponent(StringView path)
+{
+    auto pos = path.find("file://"_s);
+    ASSERT(WTF::notFound != pos);
+
+    auto tmpPath = path.substring(pos + 7);
+    if (tmpPath.length() < 2) // Keep the lone slash to avoid empty output.
+        return tmpPath;
+
+    // Remove the trailing delimiter
+    if (tmpPath[tmpPath.length() - 1] == '/')
+        tmpPath = tmpPath.left(tmpPath.length() - 1);
+
+    pos = tmpPath.reverseFind('/');
+    if (WTF::notFound != pos)
+        return tmpPath.substring(pos + 1);
+
+    return tmpPath;
+}
+
+static void addMessageToConsole(WKPageRef, WKStringRef message, const void*)
+{
+    auto messageString = toWTFString(message);
+    messageString = messageString.left(messageString.find(nullCharacter));
+
+    size_t fileProtocolStart = messageString.find("file://"_s);
+    if (fileProtocolStart != WTF::notFound) {
+        StringView messageStringView { messageString };
+        // FIXME: The code below does not handle additional text after url nor multiple urls. This matches DumpRenderTree implementation.
+        messageString = makeString(messageStringView.left(fileProtocolStart), lastFileURLPathComponent(messageStringView.substring(fileProtocolStart)));
+    }
+    messageString = makeString("CONSOLE MESSAGE:"_s, addLeadingSpaceStripTrailingSpacesAddNewline(messageString));
+
+    RefPtr invocation = TestController::singleton().currentInvocation();
+    if (!invocation || invocation->gotFinalMessage())
+        return;
+    if (invocation->shouldDumpJSConsoleLogInStdErr()) {
+        if (auto string = messageString.tryGetUTF8())
+            SAFE_FPRINTF(stderr, "%s", *string);
+        else
+            SAFE_FPRINTF(stderr, "Out of memory\n");
+    } else
+        invocation->outputText(messageString);
+}
+
 void TestController::closeOtherPage(WKPageRef page, PlatformWebView* view)
 {
     WKPageClose(page);
@@ -569,8 +615,8 @@ PlatformWebView* TestController::createOtherPlatformWebView(PlatformWebView* par
 
     view->resizeTo(800, 600);
 
-    WKPageUIClientV8 otherPageUIClient = {
-        { 8, view.ptr() },
+    WKPageUIClientV19 otherPageUIClient = {
+        { 19, view.ptr() },
         nullptr, // createNewPage_deprecatedForUseWithV0
         nullptr, // showPage
         closeOtherPage,
@@ -637,6 +683,19 @@ PlatformWebView* TestController::createOtherPlatformWebView(PlatformWebView* par
         nullptr, // fullscreenMayReturnToInline
         requestPointerLock,
         nullptr, // didLosePointerLock
+        nullptr, // handleAutoplayEvent
+        nullptr, // hasVideoInPictureInPictureDidChange
+        nullptr, // didExceedBackgroundResourceLimitWhileInForeground
+        nullptr, // didResignInputElementStrongPasswordAppearance
+        nullptr, // requestStorageAccessConfirm
+        nullptr, // shouldAllowDeviceOrientationAndMotionAccess
+        nullptr, // runWebAuthenticationPanel
+        nullptr, // decidePolicyForSpeechRecognitionPermissionRequest
+        nullptr, // decidePolicyForMediaKeySystemPermissionRequest
+        nullptr, // queryPermission
+        nullptr, // lockScreenOrientationCallback,
+        nullptr, // unlockScreenOrientationCallback,
+        addMessageToConsole
     };
     WKPageSetPageUIClient(newPage, &otherPageUIClient.base);
 
@@ -920,6 +979,7 @@ WKRetainPtr<WKPageConfigurationRef> TestController::generatePageConfiguration(co
 
     if (options.allowTestOnlyIPC())
         WKPageConfigurationSetAllowTestOnlyIPC(pageConfiguration.get(), true);
+    WKPageConfigurationSetShouldSendConsoleLogsToUIProcessForTesting(pageConfiguration.get(), true);
 
     m_userContentController = adoptWK(WKUserContentControllerCreate());
     WKPageConfigurationSetUserContentController(pageConfiguration.get(), userContentController());
@@ -1032,89 +1092,90 @@ void TestController::createWebViewWithOptions(const TestOptions& options)
     platformCreateWebView(configuration.get(), options);
     WKPageUIClientV19 pageUIClient = {
         { 19, m_mainWebView.get() },
-        0, // createNewPage_deprecatedForUseWithV0
-        0, // showPage
-        0, // close
-        0, // takeFocus
+        nullptr, // createNewPage_deprecatedForUseWithV0
+        nullptr, // showPage
+        nullptr, // close
+        nullptr, // takeFocus
         focus,
         unfocus,
-        0, // runJavaScriptAlert_deprecatedForUseWithV0
-        0, // runJavaScriptAlert_deprecatedForUseWithV0
-        0, // runJavaScriptAlert_deprecatedForUseWithV0
-        0, // setStatusText
-        0, // mouseDidMoveOverElement_deprecatedForUseWithV0
-        0, // missingPluginButtonClicked
-        0, // didNotHandleKeyEvent
-        0, // didNotHandleWheelEvent
-        0, // toolbarsAreVisible
-        0, // setToolbarsAreVisible
-        0, // menuBarIsVisible
-        0, // setMenuBarIsVisible
-        0, // statusBarIsVisible
-        0, // setStatusBarIsVisible
-        0, // isResizable
-        0, // setIsResizable
+        nullptr, // runJavaScriptAlert_deprecatedForUseWithV0
+        nullptr, // runJavaScriptAlert_deprecatedForUseWithV0
+        nullptr, // runJavaScriptAlert_deprecatedForUseWithV0
+        nullptr, // setStatusText
+        nullptr, // mouseDidMoveOverElement_deprecatedForUseWithV0
+        nullptr, // missingPluginButtonClicked
+        nullptr, // didNotHandleKeyEvent
+        nullptr, // didNotHandleWheelEvent
+        nullptr, // toolbarsAreVisible
+        nullptr, // setToolbarsAreVisible
+        nullptr, // menuBarIsVisible
+        nullptr, // setMenuBarIsVisible
+        nullptr, // statusBarIsVisible
+        nullptr, // setStatusBarIsVisible
+        nullptr, // isResizable
+        nullptr, // setIsResizable
         getWindowFrame,
         setWindowFrame,
         runBeforeUnloadConfirmPanel,
-        0, // didDraw
-        0, // pageDidScroll
-        0, // exceededDatabaseQuota,
-        options.shouldHandleRunOpenPanel() ? runOpenPanel : 0,
+        nullptr, // didDraw
+        nullptr, // pageDidScroll
+        nullptr, // exceededDatabaseQuota,
+        options.shouldHandleRunOpenPanel() ? runOpenPanel : nullptr,
         decidePolicyForGeolocationPermissionRequest,
-        0, // headerHeight
-        0, // footerHeight
-        0, // drawHeader
-        0, // drawFooter
+        nullptr, // headerHeight
+        nullptr, // footerHeight
+        nullptr, // drawHeader
+        nullptr, // drawFooter
         printFrame,
         runModal,
-        0, // didCompleteRubberBandForMainFrame
-        0, // saveDataToFileInDownloadsFolder
-        0, // shouldInterruptJavaScript
-        0, // createNewPage_deprecatedForUseWithV1
-        0, // mouseDidMoveOverElement
+        nullptr, // didCompleteRubberBandForMainFrame
+        nullptr, // saveDataToFileInDownloadsFolder
+        nullptr, // shouldInterruptJavaScript
+        nullptr, // createNewPage_deprecatedForUseWithV1
+        nullptr, // mouseDidMoveOverElement
         decidePolicyForNotificationPermissionRequest, // decidePolicyForNotificationPermissionRequest
-        0, // unavailablePluginButtonClicked_deprecatedForUseWithV1
-        0, // showColorPicker
-        0, // hideColorPicker
+        nullptr, // unavailablePluginButtonClicked_deprecatedForUseWithV1
+        nullptr, // showColorPicker
+        nullptr, // hideColorPicker
         unavailablePluginButtonClicked,
-        0, // pinnedStateDidChange
-        0, // didBeginTrackingPotentialLongMousePress
-        0, // didRecognizeLongMousePress
-        0, // didCancelTrackingPotentialLongMousePress
-        0, // isPlayingAudioDidChange
+        nullptr, // pinnedStateDidChange
+        nullptr, // didBeginTrackingPotentialLongMousePress
+        nullptr, // didRecognizeLongMousePress
+        nullptr, // didCancelTrackingPotentialLongMousePress
+        nullptr, // isPlayingAudioDidChange
         decidePolicyForUserMediaPermissionRequest,
-        0, // didClickAutofillButton
-        0, // runJavaScriptAlert_deprecatedForUseWithV5
-        0, // runJavaScriptConfirm_deprecatedForUseWithV5
-        0, // runJavaScriptPrompt_deprecatedForUseWithV5
-        0, // unused5
+        nullptr, // didClickAutofillButton
+        nullptr, // runJavaScriptAlert_deprecatedForUseWithV5
+        nullptr, // runJavaScriptConfirm_deprecatedForUseWithV5
+        nullptr, // runJavaScriptPrompt_deprecatedForUseWithV5
+        nullptr, // unused5
         createOtherPage,
         runJavaScriptAlert,
         runJavaScriptConfirm,
         runJavaScriptPrompt,
         checkUserMediaPermissionForOrigin,
-        0, // runBeforeUnloadConfirmPanel
-        0, // fullscreenMayReturnToInline
+        nullptr, // runBeforeUnloadConfirmPanel
+        nullptr, // fullscreenMayReturnToInline
         requestPointerLock,
-        0, // didLosePointerLock
-        0, // handleAutoplayEvent
-        0, // hasVideoInPictureInPictureDidChange
-        0, // didExceedBackgroundResourceLimitWhileInForeground
-        0, // didResignInputElementStrongPasswordAppearance
-        0, // requestStorageAccessConfirm
+        nullptr, // didLosePointerLock
+        nullptr, // handleAutoplayEvent
+        nullptr, // hasVideoInPictureInPictureDidChange
+        nullptr, // didExceedBackgroundResourceLimitWhileInForeground
+        nullptr, // didResignInputElementStrongPasswordAppearance
+        nullptr, // requestStorageAccessConfirm
         shouldAllowDeviceOrientationAndMotionAccess,
         runWebAuthenticationPanel,
-        0,
+        nullptr, // decidePolicyForSpeechRecognitionPermissionRequest
         decidePolicyForMediaKeySystemPermissionRequest,
         queryPermission,
 #if PLATFORM(IOS) || PLATFORM(VISION)
         lockScreenOrientationCallback,
-        unlockScreenOrientationCallback
+        unlockScreenOrientationCallback,
 #else
-        0, // lockScreenOrientation
-        0 // unlockScreenOrientation
+        nullptr, // lockScreenOrientation
+        nullptr, // unlockScreenOrientation
 #endif
+        addMessageToConsole
     };
     WKPageSetPageUIClient(m_mainWebView->page(), &pageUIClient.base);
 

@@ -356,6 +356,7 @@ struct WebPageCreationParameters {
     String presentingApplicationBundleIdentifier;
 #endif
     bool hasReceivedAXRequestInUIProcess { false };
+    bool shouldSendConsoleLogsToUIProcessForTesting { false };
 };
 
 } // namespace WebKit
