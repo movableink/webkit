@@ -38,6 +38,7 @@ namespace WebKit {
 
 struct ProvisionalFrameCreationParameters {
     WebCore::FrameIdentifier frameID;
+    std::optional<WebCore::FrameIdentifier> frameIDBeforeProvisionalNavigation;
     std::optional<WebCore::LayerHostingContextIdentifier> layerHostingContextIdentifier;
     WebCore::SandboxFlags effectiveSandboxFlags;
     WebCore::ScrollbarMode scrollingMode;

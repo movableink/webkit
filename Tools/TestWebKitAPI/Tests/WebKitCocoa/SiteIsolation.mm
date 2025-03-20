@@ -2434,11 +2434,32 @@ TEST(SiteIsolation, NavigateOpener)
     }, HTTPServer::Protocol::HttpsProxy);
 
     auto [opener, opened] = openerAndOpenedViews(server);
+    [opened.webView evaluateJavaScript:@"const originalOpener = window.opener;" completionHandler:nil];
     [opened.webView evaluateJavaScript:@"opener.location = '/webkit2'" completionHandler:nil];
     [opener.navigationDelegate waitForDidFinishNavigation];
     EXPECT_EQ(opened.webView.get()._webProcessIdentifier, opener.webView.get()._webProcessIdentifier);
     checkFrameTreesInProcesses(opener.webView.get(), { { "https://webkit.org"_s } });
     checkFrameTreesInProcesses(opened.webView.get(), { { "https://webkit.org"_s } });
+
+    __block bool done { false };
+    [opened.webView evaluateJavaScript:@"originalOpener === window.opener" completionHandler:^(id result, NSError *) {
+        EXPECT_TRUE([result boolValue]);
+        done = true;
+    }];
+    Util::run(&done);
+
+    [opened.webView evaluateJavaScript:@"opener.location = '/webkit'" completionHandler:nil];
+    [opener.navigationDelegate waitForDidFinishNavigation];
+    EXPECT_EQ(opened.webView.get()._webProcessIdentifier, opener.webView.get()._webProcessIdentifier);
+    checkFrameTreesInProcesses(opener.webView.get(), { { "https://webkit.org"_s } });
+    checkFrameTreesInProcesses(opened.webView.get(), { { "https://webkit.org"_s } });
+
+    done = false;
+    [opened.webView evaluateJavaScript:@"originalOpener === window.opener" completionHandler:^(id result, NSError *) {
+        EXPECT_TRUE([result boolValue]);
+        done = true;
+    }];
+    Util::run(&done);
 }
 
 TEST(SiteIsolation, NavigateOpenerToProvisionalNavigationFailure)

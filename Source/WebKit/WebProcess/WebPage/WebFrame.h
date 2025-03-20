@@ -270,6 +270,7 @@ private:
 #endif
     std::optional<NavigatingToAppBoundDomain> m_isNavigatingToAppBoundDomain;
     Markable<WebCore::LayerHostingContextIdentifier> m_layerHostingContextIdentifier;
+    Markable<WebCore::FrameIdentifier> m_frameIDBeforeProvisionalNavigation;
 };
 
 } // namespace WebKit

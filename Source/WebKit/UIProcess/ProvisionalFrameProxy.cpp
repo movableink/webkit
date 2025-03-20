@@ -47,6 +47,7 @@ ProvisionalFrameProxy::ProvisionalFrameProxy(WebFrameProxy& frame, Ref<FrameProc
     process->markProcessAsRecentlyUsed();
     process->send(Messages::WebPage::CreateProvisionalFrame(ProvisionalFrameCreationParameters {
         frame.frameID(),
+        std::nullopt,
         frame.layerHostingContextIdentifier(),
         frame.effectiveSandboxFlags(),
         frame.scrollingMode()

@@ -443,6 +443,7 @@ void WebFrame::createProvisionalFrame(ProvisionalFrameCreationParameters&& param
     };
     auto localFrame = parent ? LocalFrame::createProvisionalSubframe(*corePage, WTFMove(clientCreator), m_frameID, parameters.effectiveSandboxFlags, parameters.scrollingMode, *parent, Ref { remoteFrame->frameTreeSyncData() }) : LocalFrame::createMainFrame(*corePage, WTFMove(clientCreator), m_frameID, parameters.effectiveSandboxFlags, nullptr, Ref { remoteFrame->frameTreeSyncData() });
     m_provisionalFrame = localFrame.ptr();
+    m_frameIDBeforeProvisionalNavigation = parameters.frameIDBeforeProvisionalNavigation;
     localFrame->init();
     localFrame->protectedDocument()->setURL(aboutBlankURL());
 
@@ -459,6 +460,7 @@ void WebFrame::destroyProvisionalFrame()
             parent->tree().removeChild(*frame);
         frame->loader().detachFromParent();
         frame->setView(nullptr);
+        m_frameIDBeforeProvisionalNavigation = std::nullopt;
     }
 }
 
@@ -478,6 +480,11 @@ void WebFrame::commitProvisionalFrame()
     if (!corePage) {
         ASSERT_NOT_REACHED();
         return;
+    }
+
+    if (RefPtr frame = WebProcess::singleton().webFrame(std::exchange(m_frameIDBeforeProvisionalNavigation, { }))) {
+        if (RefPtr coreFrame = frame->coreFrame())
+            remoteFrame->takeWindowProxyAndOpenerFrom(*coreFrame);
     }
 
     RefPtr parent = remoteFrame->tree().parent();

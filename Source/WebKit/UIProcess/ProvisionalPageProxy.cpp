@@ -291,6 +291,7 @@ void ProvisionalPageProxy::initializeWebPage(RefPtr<API::WebsitePolicies>&& webs
         };
         creationParameters.provisionalFrameCreationParameters = ProvisionalFrameCreationParameters {
             m_mainFrame->frameID(),
+            page->mainFrame() && !m_isProcessSwappingForNewWindow ? std::optional(page->mainFrame()->frameID()) : std::nullopt,
             std::nullopt,
             mainFrame->effectiveSandboxFlags(),
             mainFrame->scrollingMode(),
