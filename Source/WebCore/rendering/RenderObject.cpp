@@ -38,8 +38,6 @@
 #include "GraphicsContext.h"
 #include "HTMLBRElement.h"
 #include "HTMLNames.h"
-#include "HTMLTableCellElement.h"
-#include "HTMLTableElement.h"
 #include "HitTestResult.h"
 #include "LayoutBox.h"
 #include "LayoutIntegrationCoverage.h"
@@ -55,7 +53,6 @@
 #include "RenderCounter.h"
 #include "RenderElementInlines.h"
 #include "RenderFragmentedFlow.h"
-#include "RenderGeometryMap.h"
 #include "RenderInline.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
@@ -1527,24 +1524,6 @@ void RenderObject::mapLocalToContainer(const RenderLayerModelObject* ancestorCon
     parent->mapLocalToContainer(ancestorContainer, transformState, mode, wasFixed);
 }
 
-const RenderObject* RenderObject::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
-{
-    ASSERT_UNUSED(ancestorToStopAt, ancestorToStopAt != this);
-
-    CheckedPtr container = parent();
-    if (!container)
-        return nullptr;
-
-    // FIXME: this should call offsetFromContainer to share code, but I'm not sure it's ever called.
-    LayoutSize offset;
-    if (auto* box = dynamicDowncast<RenderBox>(*container))
-        offset = -toLayoutSize(box->scrollPosition());
-
-    geometryMap.push(this, offset, false);
-    
-    return container.get();
-}
-
 void RenderObject::mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode> mode, TransformState& transformState) const
 {
     if (CheckedPtr parent = this->parent()) {
@@ -1605,32 +1584,6 @@ void RenderObject::pushOntoTransformState(TransformState& transformState, Option
         // to just subtract the delta between the repaintContainer and container.
         LayoutSize containerOffset = repaintContainer->offsetFromAncestorContainer(*container);
         transformState.move(-containerOffset.width(), -containerOffset.height(), preserve3D ? TransformState::AccumulateTransform : TransformState::FlattenTransform);
-    }
-}
-
-void RenderObject::pushOntoGeometryMap(RenderGeometryMap& geometryMap, const RenderLayerModelObject* repaintContainer, RenderElement* container, bool containerSkipped) const
-{
-    bool isFixedPos = isFixedPositioned();
-    LayoutSize adjustmentForSkippedAncestor;
-    if (containerSkipped) {
-        // There can't be a transform between repaintContainer and container, because transforms create containers, so it should be safe
-        // to just subtract the delta between the ancestor and container.
-        adjustmentForSkippedAncestor = -repaintContainer->offsetFromAncestorContainer(*container);
-    }
-
-    bool offsetDependsOnPoint = false;
-    LayoutSize containerOffset = offsetFromContainer(*container, LayoutPoint(), &offsetDependsOnPoint);
-
-    bool preserve3D = participatesInPreserve3D();
-    if (shouldUseTransformFromContainer(container) && (geometryMap.mapCoordinatesFlags() & UseTransforms)) {
-        TransformationMatrix t;
-        getTransformFromContainer(containerOffset, t);
-        t.translateRight(adjustmentForSkippedAncestor.width(), adjustmentForSkippedAncestor.height());
-
-        geometryMap.push(this, t, preserve3D, offsetDependsOnPoint, isFixedPos, isTransformed());
-    } else {
-        containerOffset += adjustmentForSkippedAncestor;
-        geometryMap.push(this, containerOffset, preserve3D, offsetDependsOnPoint, isFixedPos, isTransformed());
     }
 }
 
@@ -1968,46 +1921,6 @@ int RenderObject::nextOffset(int current) const
 void RenderObject::imageChanged(CachedImage* image, const IntRect* rect)
 {
     imageChanged(static_cast<WrappedImagePtr>(image), rect);
-}
-
-RenderBoxModelObject* RenderObject::offsetParent() const
-{
-    // If any of the following holds true return null and stop this algorithm:
-    // A is the root element.
-    // A is the HTML body element.
-    // The computed value of the position property for element A is fixed.
-    if (isDocumentElementRenderer() || isBody() || isFixedPositioned())
-        return nullptr;
-
-    // If A is an area HTML element which has a map HTML element somewhere in the ancestor
-    // chain return the nearest ancestor map HTML element and stop this algorithm.
-    // FIXME: Implement!
-    
-    // Return the nearest ancestor element of A for which at least one of the following is
-    // true and stop this algorithm if such an ancestor is found:
-    //     * The element is a containing block of absolutely-positioned descendants (regardless
-    //       of whether there are any absolutely-positioned descendants).
-    //     * It is the HTML body element.
-    //     * The computed value of the position property of A is static and the ancestor
-    //       is one of the following HTML elements: td, th, or table.
-    //     * Our own extension: if there is a difference in the effective zoom
-
-    bool skipTables = isPositioned();
-    float currZoom = style().usedZoom();
-    CheckedPtr current = parent();
-    while (current && (!current->element() || (!current->canContainAbsolutelyPositionedObjects() && !current->isBody()))) {
-        RefPtr element = current->element();
-        if (!skipTables && element && (is<HTMLTableElement>(*element) || is<HTMLTableCellElement>(*element)))
-            break;
- 
-        float newZoom = current->style().usedZoom();
-        if (currZoom != newZoom)
-            break;
-        currZoom = newZoom;
-        current = current->parent();
-    }
-
-    return dynamicDowncast<RenderBoxModelObject>(current.get());
 }
 
 VisiblePosition RenderObject::createVisiblePosition(int offset, Affinity affinity) const

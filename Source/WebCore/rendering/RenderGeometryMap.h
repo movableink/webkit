@@ -34,6 +34,7 @@
 
 namespace WebCore {
 
+class RenderElement;
 class RenderFragmentedFlow;
 class RenderLayer;
 class RenderLayerModelObject;
@@ -97,7 +98,7 @@ public:
     // Called by code walking the renderer or layer trees.
     void pushMappingsToAncestor(const RenderLayer*, const RenderLayer* ancestorLayer, bool respectTransforms = true);
     void popMappingsToAncestor(const RenderLayer*);
-    void pushMappingsToAncestor(const RenderObject*, const RenderLayerModelObject* ancestorRenderer);
+    void pushMappingsToAncestor(const RenderElement*, const RenderLayerModelObject* ancestorRenderer);
     void popMappingsToAncestor(const RenderLayerModelObject*);
     
     // The following methods should only be called by renderers inside a call to pushMappingsToAncestor().
