@@ -281,7 +281,7 @@ TEST(Damage, Unite)
     damage.resize({ 128, 128 });
 
     // Add several rects and check that unite works for single tile grid.
-    damage.add(IntRect { 0, 0, 4, 4 });
+    damage.add(IntRect { 10, 10, 4, 4 });
     EXPECT_EQ(damage.rects().size(), 1);
     damage.add(IntRect { 60, 60, 4, 4 });
     EXPECT_EQ(damage.rects().size(), 1);

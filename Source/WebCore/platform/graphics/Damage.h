@@ -104,14 +104,14 @@ public:
         if (isInvalid() || rect.isEmpty())
             return;
 
-        if (rect.contains(m_minimumBoundingRectangle)) {
+        const auto rectsCount = m_rects.size();
+        if (!rectsCount || rect.contains(m_minimumBoundingRectangle)) {
             m_rects.clear();
             m_rects.append(rect);
             m_minimumBoundingRectangle = rect;
             return;
         }
 
-        const auto rectsCount = m_rects.size();
         if (rectsCount == 1 && m_minimumBoundingRectangle.contains(rect))
             return;
 
