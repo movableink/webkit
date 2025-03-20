@@ -158,6 +158,12 @@ static inline void*& stackPointerImpl(mcontext_t& machineContext)
 {
 #if OS(DARWIN)
     return stackPointerImpl(machineContext->__ss);
+#elif OS(HAIKU)
+#if CPU(X86_64)
+    return reinterpret_cast<void*&>(machineContext.rsp);
+#else
+#error Unknown Architecture
+#endif
 #elif OS(FREEBSD)
 
 #if CPU(X86_64)
@@ -281,6 +287,12 @@ static inline void*& framePointerImpl(mcontext_t& machineContext)
 {
 #if OS(DARWIN)
     return framePointerImpl(machineContext->__ss);
+#elif OS(HAIKU)
+#if CPU(X86_64)
+    return reinterpret_cast<void*&>(machineContext.rbp);
+#else
+#error Unknown Architecture
+#endif
 #elif OS(FREEBSD)
 
 #if CPU(X86_64)
@@ -443,6 +455,12 @@ static inline void*& instructionPointerImpl(mcontext_t& machineContext)
 {
 #if OS(DARWIN)
     return instructionPointerImpl(machineContext->__ss);
+#elif OS(HAIKU)
+#if CPU(X86_64)
+    return reinterpret_cast<void*&>((uintptr_t&) machineContext.rip);
+#else
+#error Unknown Architecture
+#endif
 #elif OS(FREEBSD)
 
 #if CPU(X86_64)
@@ -631,6 +649,12 @@ inline void*& argumentPointer<1>(mcontext_t& machineContext)
 {
 #if OS(DARWIN)
     return argumentPointer<1>(machineContext->__ss);
+#elif OS(HAIKU)
+#if CPU(X86_64)
+    return reinterpret_cast<void*&>((uintptr_t&) machineContext.rsi);
+#else
+#error Unknown Architecture
+#endif
 #elif OS(FREEBSD)
 
 #if CPU(X86_64)
@@ -810,6 +834,12 @@ inline void*& llintInstructionPointer(mcontext_t& machineContext)
     // LLInt uses regT4 as PC.
 #if OS(DARWIN)
     return llintInstructionPointer(machineContext->__ss);
+#elif OS(HAIKU)
+#if CPU(X86_64)
+    return reinterpret_cast<void*&>((uintptr_t&) machineContext.r8);
+#else
+#error Unknown Architecture
+#endif
 #elif OS(FREEBSD)
 
 #if CPU(X86_64)
