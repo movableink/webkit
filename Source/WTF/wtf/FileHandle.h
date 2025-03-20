@@ -32,6 +32,8 @@
 
 #if OS(WINDOWS)
 #include <wtf/win/Win32Handle.h>
+#elif OS(LINUX)
+#include <sys/types.h>
 #endif
 
 namespace WTF {
