@@ -1137,6 +1137,7 @@ public:
     bool emitsNewline() const;
     virtual AXTextRunLineID listMarkerLineID() const = 0;
     virtual String listMarkerText() const = 0;
+    virtual FontOrientation fontOrientation() const = 0;
 #endif
 
     // Methods for determining accessibility text.

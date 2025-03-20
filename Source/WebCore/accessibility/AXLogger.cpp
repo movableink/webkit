@@ -758,6 +758,9 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::Font:
         stream << "Font";
         break;
+    case AXProperty::FontOrientation:
+        stream << "FontOrientation";
+        break;
 #endif // PLATFORM(COCOA)
     case AXProperty::TextColor:
         stream << "TextColor";

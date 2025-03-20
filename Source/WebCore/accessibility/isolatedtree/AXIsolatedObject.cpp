@@ -630,6 +630,7 @@ void AXIsolatedObject::setProperty(AXProperty propertyName, AXPropertyValueVaria
 #if ENABLE(AX_THREAD_TEXT_APIS)
         [](AXTextRuns& runs) { return !runs.size(); },
         [](RetainPtr<CTFontRef>& typedValue) { return !typedValue; },
+        [](FontOrientation typedValue) { return typedValue == FontOrientation::Horizontal; },
         [](TextEmissionBehavior typedValue) { return typedValue == TextEmissionBehavior::None; },
         [](AXTextRunLineID typedValue) { return !typedValue; },
 #endif // ENABLE(AX_THREAD_TEXT_APIS)

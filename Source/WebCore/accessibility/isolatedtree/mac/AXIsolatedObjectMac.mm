@@ -61,6 +61,8 @@ void AXIsolatedObject::initializePlatformProperties(const Ref<const Accessibilit
         // Resolve this FIXME before shipping AX_THREAD_TEXT_APIS.
         setProperty(AXProperty::TextColor, WTFMove(style.textColor));
         setProperty(AXProperty::UnderlineColor, style.underlineColor());
+
+        setProperty(AXProperty::FontOrientation, object->fontOrientation());
     }
     // FIXME: Can we compute this off the main-thread with our cached text runs?
     setProperty(AXProperty::StringValue, object->stringValue().isolatedCopy());

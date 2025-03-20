@@ -396,6 +396,7 @@ public:
     TextEmissionBehavior textEmissionBehavior() const override { return TextEmissionBehavior::None; }
     AXTextRunLineID listMarkerLineID() const override { return { }; }
     String listMarkerText() const override { return { }; }
+    FontOrientation fontOrientation() const final;
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
 #if PLATFORM(COCOA)
     // Returns an array of strings and AXObject wrappers corresponding to the

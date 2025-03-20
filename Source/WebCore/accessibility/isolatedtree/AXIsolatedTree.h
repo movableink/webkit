@@ -131,6 +131,7 @@ enum class AXProperty : uint16_t {
     ExtendedDescription,
 #if PLATFORM(COCOA)
     Font,
+    FontOrientation,
 #endif
     TextColor,
     HasApplePDFAnnotationAttribute,
@@ -305,6 +306,7 @@ using AXPropertyValueVariant = std::variant<std::nullptr_t, Markable<AXID>, Stri
 #endif // PLATFORM(COCOA)
 #if ENABLE(AX_THREAD_TEXT_APIS)
     , RetainPtr<CTFontRef>
+    , FontOrientation
     , AXTextRuns
     , TextEmissionBehavior
     , AXTextRunLineID
