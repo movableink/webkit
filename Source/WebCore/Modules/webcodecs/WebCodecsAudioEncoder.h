@@ -82,7 +82,6 @@ private:
 
     WebCodecsEncodedAudioChunkMetadata createEncodedChunkMetadata();
 
-    size_t m_encodeQueueSize { 0 };
     Ref<WebCodecsEncodedAudioChunkOutputCallback> m_output;
     Ref<WebCodecsErrorCallback> m_error;
     RefPtr<AudioEncoder> m_internalEncoder;

@@ -245,10 +245,6 @@ private:
     Timer m_mainContentCheckTimer;
     Timer m_clientDataBufferingTimer;
 
-#if !RELEASE_LOG_DISABLED
-    uint64_t m_logIdentifier { 0 };
-#endif
-
 #if ENABLE(MEDIA_USAGE)
     bool m_haveAddedMediaUsageManagerSession { false };
 #endif
