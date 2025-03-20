@@ -89,6 +89,8 @@ private struct MaterialHostingView<P: MaterialHostingProvider>: View {
             return Material._hostedThinBlurMaterial
         case .mediaControls:
             return Material._hostedMediaControlsMaterial
+        case .thinMediaControls:
+            return Material._hostedThinMediaControlsMaterial
         @unknown default:
             return nil
         }

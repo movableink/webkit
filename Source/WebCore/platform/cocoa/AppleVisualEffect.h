@@ -46,6 +46,7 @@ enum class AppleVisualEffect : uint8_t {
     HostedBlurMaterial,
     HostedThinBlurMaterial,
     HostedMediaControlsMaterial,
+    HostedThinMediaControlsMaterial,
 #endif
     VibrancyLabel,
     VibrancySecondaryLabel,

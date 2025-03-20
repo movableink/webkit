@@ -46,6 +46,7 @@ bool appleVisualEffectNeedsBackdrop(AppleVisualEffect effect)
     case AppleVisualEffect::HostedBlurMaterial:
     case AppleVisualEffect::HostedThinBlurMaterial:
     case AppleVisualEffect::HostedMediaControlsMaterial:
+    case AppleVisualEffect::HostedThinMediaControlsMaterial:
 #endif
     case AppleVisualEffect::VibrancyLabel:
     case AppleVisualEffect::VibrancySecondaryLabel:
@@ -75,6 +76,7 @@ bool appleVisualEffectAppliesFilter(AppleVisualEffect effect)
     case AppleVisualEffect::HostedBlurMaterial:
     case AppleVisualEffect::HostedThinBlurMaterial:
     case AppleVisualEffect::HostedMediaControlsMaterial:
+    case AppleVisualEffect::HostedThinMediaControlsMaterial:
 #endif
         return false;
     case AppleVisualEffect::VibrancyLabel:
@@ -99,6 +101,7 @@ bool appleVisualEffectIsHostedMaterial(AppleVisualEffect effect)
     case AppleVisualEffect::HostedBlurMaterial:
     case AppleVisualEffect::HostedThinBlurMaterial:
     case AppleVisualEffect::HostedMediaControlsMaterial:
+    case AppleVisualEffect::HostedThinMediaControlsMaterial:
         return true;
     case AppleVisualEffect::None:
     case AppleVisualEffect::BlurUltraThinMaterial:
@@ -152,6 +155,9 @@ TextStream& operator<<(TextStream& ts, AppleVisualEffect effect)
         break;
     case AppleVisualEffect::HostedMediaControlsMaterial:
         ts << "hosted-media-controls-material";
+        break;
+    case AppleVisualEffect::HostedThinMediaControlsMaterial:
+        ts << "hosted-thin-media-controls-material";
         break;
 #endif
     case AppleVisualEffect::VibrancyLabel:

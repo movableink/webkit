@@ -40,6 +40,7 @@ typedef NS_ENUM(NSInteger, WKHostedMaterialEffectType) {
     WKHostedMaterialEffectTypeBlur,
     WKHostedMaterialEffectTypeThinBlur,
     WKHostedMaterialEffectTypeMediaControls,
+    WKHostedMaterialEffectTypeThinMediaControls,
 };
 
 typedef NS_ENUM(NSInteger, WKHostedMaterialColorScheme) {

@@ -8106,6 +8106,7 @@ enum class WebCore::AppleVisualEffect : uint8_t {
     HostedBlurMaterial,
     HostedThinBlurMaterial,
     HostedMediaControlsMaterial,
+    HostedThinMediaControlsMaterial,
 #endif
     VibrancyLabel,
     VibrancySecondaryLabel,
