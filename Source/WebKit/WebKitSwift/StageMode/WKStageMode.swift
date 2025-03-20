@@ -37,9 +37,9 @@ import simd
 @objc(WKStageModeInteractionDriver)
 final public class WKStageModeInteractionDriver: NSObject {
     private let kDragToRotationMultiplier: Float = 3.0
-    private let kPitchSettleAnimationDuration: Double = 0.2
+    private let kPitchSettleAnimationDuration: Double = 0.4
     private let kMaxDecelerationDuration: Double = 2.0
-    private let kDecelerationDampeningFactor: Float = 0.9
+    private let kDecelerationDampeningFactor: Float = 0.95
     private let kOrbitVelocityTerminationThreshold: Float = 0.0001
     
     private var stageModeOperation: WKStageModeOperation = .none
@@ -181,7 +181,7 @@ final public class WKStageModeInteractionDriver: NSObject {
         previousManipulationPose = .identity
         
         // Settle the pitch of the interaction container
-        pitchSettleAnimationController = self.interactionContainer.move(to: initialTargetPose, relativeTo: self.interactionContainer.parent, duration: kPitchSettleAnimationDuration, timingFunction: .easeOut)
+        pitchSettleAnimationController = self.interactionContainer.move(to: initialTargetPose, relativeTo: self.interactionContainer.parent, duration: kPitchSettleAnimationDuration, timingFunction: .cubicBezier(controlPoint1: .init(0.08, 0.6), controlPoint2: .init(0.4, 1.0)))
         subscribeToPitchChanges()
         pitchAnimationCompletionSubscription = self.interactionContainer.scene?.subscribe(to: AnimationEvents.PlaybackCompleted.self, on: self.interactionContainer) { [weak self] _ in
             guard let self else {
