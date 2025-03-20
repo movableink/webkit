@@ -122,9 +122,9 @@ using NodeQualifier = Function<Node* (const HitTestResult&, Node* terminationNod
 class LocalFrame final : public Frame {
 public:
     using ClientCreator = CompletionHandler<UniqueRef<LocalFrameLoaderClient>(LocalFrame&, FrameLoader&)>;
-    WEBCORE_EXPORT static Ref<LocalFrame> createMainFrame(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, Frame* opener);
-    WEBCORE_EXPORT static Ref<LocalFrame> createSubframe(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, HTMLFrameOwnerElement&);
-    WEBCORE_EXPORT static Ref<LocalFrame> createProvisionalSubframe(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, ScrollbarMode, Frame& parent);
+    WEBCORE_EXPORT static Ref<LocalFrame> createMainFrame(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, Frame* opener, Ref<FrameTreeSyncData>&&);
+    WEBCORE_EXPORT static Ref<LocalFrame> createSubframe(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, HTMLFrameOwnerElement&, Ref<FrameTreeSyncData>&&);
+    WEBCORE_EXPORT static Ref<LocalFrame> createProvisionalSubframe(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, ScrollbarMode, Frame& parent, Ref<FrameTreeSyncData>&&);
 
     WEBCORE_EXPORT void init();
 #if PLATFORM(IOS_FAMILY)
@@ -334,13 +334,15 @@ public:
     WEBCORE_EXPORT void reportResourceMonitoringWarning();
 #endif
 
+    bool frameCanCreatePaymentSession() const final;
+
 protected:
     void frameWasDisconnectedFromOwner() const final;
 
 private:
     friend class NavigationDisabler;
 
-    LocalFrame(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, std::optional<ScrollbarMode>, HTMLFrameOwnerElement*, Frame* parent, Frame* opener);
+    LocalFrame(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, std::optional<ScrollbarMode>, HTMLFrameOwnerElement*, Frame* parent, Frame* opener, Ref<FrameTreeSyncData>&&);
 
     void dropChildren();
 

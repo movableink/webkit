@@ -22,43 +22,31 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
 
-#include <wtf/TZoneMallocInlines.h>
-#include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
-#include "DOMAudioSession.h"
+#include "config.h"
+#include "FrameTreeSyncData.h"
+
+#include "ProcessSyncData.h"
+#include <wtf/EnumTraits.h>
 
 namespace WebCore {
 
-struct ProcessSyncData;
-
-class DocumentSyncData : public RefCounted<DocumentSyncData> {
-WTF_MAKE_TZONE_ALLOCATED_INLINE(DocumentSyncData);
-public:
-    template<typename... Args>
-    static Ref<DocumentSyncData> create(Args&&... args)
-    {
-        return adoptRef(*new DocumentSyncData(std::forward<Args>(args)...));
+void FrameTreeSyncData::update(const ProcessSyncData& data)
+{
+    switch (data.type) {
+    case ProcessSyncDataType::AnotherOne:
+        anotherOne = std::get<enumToUnderlyingType(ProcessSyncDataType::AnotherOne)>(data.value);
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
     }
-    static Ref<DocumentSyncData> create() { return adoptRef(*new DocumentSyncData); }
-    void update(const ProcessSyncData&);
+}
 
-    bool isAutofocusProcessed = { };
-#if ENABLE(DOM_AUDIO_SESSION)
-    WebCore::DOMAudioSessionType audioSessionType = { };
-#endif
-    bool userDidInteractWithPage = { };
-
-private:
-    DocumentSyncData() = default;
-    WEBCORE_EXPORT DocumentSyncData(
-        bool
-#if ENABLE(DOM_AUDIO_SESSION)
-      , WebCore::DOMAudioSessionType
-#endif
-      , bool
-    );
-};
+FrameTreeSyncData::FrameTreeSyncData(
+      StringifyThis anotherOne
+)
+    : anotherOne(anotherOne)
+{
+}
 
 } // namespace WebCore

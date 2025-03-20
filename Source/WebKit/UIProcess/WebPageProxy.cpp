@@ -7006,6 +7006,7 @@ void WebPageProxy::didFailProvisionalLoadForFrameShared(Ref<WebProcessProxy>&& p
         ASSERT(!frame.isMainFrame());
         ASSERT_UNUSED(provisionalFrame, provisionalFrame->process().coreProcessIdentifier() != frame.process().coreProcessIdentifier());
         frame.notifyParentOfLoadCompletion(process);
+        frame.broadcastFrameTreeSyncData(FrameTreeSyncData::create());
     }
 }
 
@@ -7272,7 +7273,7 @@ void WebPageProxy::observeAndCreateRemoteSubframesInOtherProcesses(WebFrameProxy
     forEachWebContentProcess([&](auto& webProcess, auto pageID) {
         if (webProcess.processID() == newFrame.process().processID())
             return;
-        webProcess.send(Messages::WebPage::CreateRemoteSubframe(parent->frameID(), newFrame.frameID(), frameName), pageID);
+        webProcess.send(Messages::WebPage::CreateRemoteSubframe(parent->frameID(), newFrame.frameID(), frameName, newFrame.calculateFrameTreeSyncData()), pageID);
     });
 }
 
@@ -7336,6 +7337,9 @@ void WebPageProxy::didFinishLoadForFrame(IPC::Connection& connection, FrameIdent
 
         protectedPageLoadState->commitChanges();
     }
+
+    if (protectedPreferences()->siteIsolationEnabled())
+        frame->broadcastFrameTreeSyncData(frame->calculateFrameTreeSyncData());
 
     if (m_loaderClient)
         m_loaderClient->didFinishLoadForFrame(*this, *frame, navigation.get(), protectedLegacyMainFrameProcess()->transformHandlesToObjects(userData.protectedObject().get()).get());
@@ -7417,8 +7421,12 @@ void WebPageProxy::didFailLoadForFrame(IPC::Connection& connection, FrameIdentif
 
     RefPtr process = dynamicDowncast<WebProcessProxy>(AuxiliaryProcessProxy::fromConnection(connection));
     RefPtr parentFrame = frame->parentFrame();
-    if (protectedPreferences()->siteIsolationEnabled() && parentFrame && parentFrame->process().coreProcessIdentifier() != process->coreProcessIdentifier())
-        frame->notifyParentOfLoadCompletion(*process);
+    if (protectedPreferences()->siteIsolationEnabled()) {
+        if (parentFrame && parentFrame->process().coreProcessIdentifier() != process->coreProcessIdentifier())
+            frame->notifyParentOfLoadCompletion(*process);
+
+        frame->broadcastFrameTreeSyncData(FrameTreeSyncData::create());
+    }
 }
 
 void WebPageProxy::didSameDocumentNavigationForFrame(IPC::Connection& connection, FrameIdentifier frameID, std::optional<WebCore::NavigationIdentifier> navigationID, SameDocumentNavigationType navigationType, URL&& url, const UserData& userData)
