@@ -20,7 +20,7 @@ async function getOutboundRTPStatsNumberOfEncodedFrames(connection)
     var report = await connection.getStats();
     var framesEncoded;
     report.forEach((statItem) => {
-        if (statItem.type === "outbound-rtp") {
+        if (statItem.type === "outbound-rtp" && statItem.kind === "video") {
             framesEncoded = statItem.framesEncoded;
         }
     });

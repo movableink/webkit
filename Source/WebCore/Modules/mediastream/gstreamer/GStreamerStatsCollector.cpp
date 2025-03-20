@@ -33,6 +33,7 @@
 #include <wtf/MainThread.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/glib/WTFGType.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 GST_DEBUG_CATEGORY(webkit_webrtc_stats_debug);
 #define GST_CAT_DEFAULT webkit_webrtc_stats_debug
@@ -360,9 +361,16 @@ WEBKIT_DEFINE_ASYNC_DATA_STRUCT(CallbackHolder)
 
 void GStreamerStatsCollector::getStats(CollectorCallback&& callback, const GRefPtr<GstPad>& pad, PreprocessCallback&& preprocessCallback)
 {
+    static auto s_maximumReportAge = 300_ms;
     static std::once_flag debugRegisteredFlag;
     std::call_once(debugRegisteredFlag, [] {
         GST_DEBUG_CATEGORY_INIT(webkit_webrtc_stats_debug, "webkitwebrtcstats", 0, "WebKit WebRTC Stats");
+        auto expirationTime = StringView::fromLatin1(std::getenv("WEBKIT_GST_WEBRTC_STATS_CACHE_EXPIRATION_TIME_MS"));
+        if (expirationTime.isEmpty())
+            return;
+
+        if (auto milliseconds = WTF::parseInteger<int>(expirationTime))
+            s_maximumReportAge = Seconds::fromMilliseconds(*milliseconds);
     });
 
     if (!m_webrtcBin) {
@@ -370,7 +378,6 @@ void GStreamerStatsCollector::getStats(CollectorCallback&& callback, const GRefP
         return;
     }
 
-    static const auto s_maximumReportAge = 300_ms;
     auto now = MonotonicTime::now();
     if (!pad) {
         if (m_cachedGlobalReport && (now - m_cachedGlobalReport->generationTime < s_maximumReportAge)) {

@@ -117,6 +117,9 @@ class GLibPort(Port):
         environment['WEBKIT_GST_ALLOW_PLAYBACK_OF_INVISIBLE_VIDEOS'] = '1'
         environment['WEBKIT_GST_WEBRTC_FORCE_EARLY_VIDEO_DECODING'] = '1'
 
+        # Match our WebRTC stats cache expiration time with LibWebRTC, since some tests actually expect this.
+        environment['WEBKIT_GST_WEBRTC_STATS_CACHE_EXPIRATION_TIME_MS'] = '50'
+
         # Disable SIMD optimization in GStreamer's ORC. Some bots (WPE release) crash in ORC's optimizations.
         environment['ORC_CODE'] = 'backup'
 

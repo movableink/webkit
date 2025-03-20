@@ -2175,6 +2175,11 @@ GUniquePtr<GstStructure> GStreamerMediaEndpoint::preprocessStats(const GRefPtr<G
         mergeStructureInAdditionalStats(stats);
     }
 
+    bool hasInboundAudioStats = false;
+    bool hasOutboundAudioStats = false;
+    bool hasInboundVideoStats = false;
+    bool hasOutboundVideoStats = false;
+    Seconds convertedTimestamp;
     GUniquePtr<GstStructure> result(gst_structure_copy(stats));
     gstStructureMapInPlace(result.get(), [&](auto, auto value) -> bool {
         if (!GST_VALUE_HOLDS_STRUCTURE(value))
@@ -2198,6 +2203,11 @@ GUniquePtr<GstStructure> GStreamerMediaEndpoint::preprocessStats(const GRefPtr<G
             auto trackIdentifier = gstStructureGetString(additionalStats.get(), "track-identifier"_s);
             if (!trackIdentifier.isEmpty())
                 gst_structure_set(structure.get(), "track-identifier", G_TYPE_STRING, trackIdentifier.toStringWithoutCopying().utf8().data(), nullptr);
+            auto kind = gstStructureGetString(structure.get(), "kind"_s);
+            if (kind == "audio"_s)
+                hasInboundAudioStats = true;
+            else if (kind == "video"_s)
+                hasInboundVideoStats = true;
             break;
         }
         case GST_WEBRTC_STATS_OUTBOUND_RTP: {
@@ -2235,6 +2245,11 @@ GUniquePtr<GstStructure> GStreamerMediaEndpoint::preprocessStats(const GRefPtr<G
                 gst_structure_set(structure.get(), "mid", G_TYPE_STRING, midValue.toString().ascii().data(), nullptr);
             if (auto ridValue = gstStructureGetString(ssrcStats.get(), "rid"_s))
                 gst_structure_set(structure.get(), "rid", G_TYPE_STRING, ridValue.toString().ascii().data(), nullptr);
+            auto kind = gstStructureGetString(structure.get(), "kind"_s);
+            if (kind == "audio"_s)
+                hasOutboundAudioStats = true;
+            else if (kind == "video"_s)
+                hasOutboundVideoStats = true;
             break;
         }
         default:
@@ -2244,6 +2259,7 @@ GUniquePtr<GstStructure> GStreamerMediaEndpoint::preprocessStats(const GRefPtr<G
         auto timestamp = gstStructureGet<double>(structure.get(), "timestamp"_s);
         if (LIKELY(timestamp)) {
             auto newTimestamp = StatsTimestampConverter::singleton().convertFromMonotonicTime(Seconds::fromMilliseconds(*timestamp));
+            convertedTimestamp = newTimestamp;
             gst_structure_set(structure.get(), "timestamp", G_TYPE_DOUBLE, newTimestamp.microseconds(), nullptr);
         }
 
@@ -2251,6 +2267,33 @@ GUniquePtr<GstStructure> GStreamerMediaEndpoint::preprocessStats(const GRefPtr<G
         return TRUE;
     });
 
+    if (!hasInboundVideoStats) {
+        GUniquePtr<GstStructure> emptyInboundStats(gst_structure_new_empty("rtp-inbound-video-stream-stats"));
+        gst_structure_set(emptyInboundStats.get(), "type", GST_TYPE_WEBRTC_STATS_TYPE, GST_WEBRTC_STATS_INBOUND_RTP, "timestamp",
+            G_TYPE_DOUBLE, convertedTimestamp.microseconds(), "id", G_TYPE_STRING, "rtp-inbound-video-stream-stats", "kind", G_TYPE_STRING, "video", "frames-decoded", G_TYPE_UINT64, 0, nullptr);
+        gst_structure_set(result.get(), "rtp-inbound-video-stream-stats", GST_TYPE_STRUCTURE, emptyInboundStats.get(), nullptr);
+    }
+
+    if (!hasInboundAudioStats) {
+        GUniquePtr<GstStructure> emptyInboundStats(gst_structure_new_empty("rtp-inbound-audio-stream-stats"));
+        gst_structure_set(emptyInboundStats.get(), "type", GST_TYPE_WEBRTC_STATS_TYPE, GST_WEBRTC_STATS_INBOUND_RTP, "timestamp",
+            G_TYPE_DOUBLE, convertedTimestamp.microseconds(), "id", G_TYPE_STRING, "rtp-inbound-audio-stream-stats", "kind", G_TYPE_STRING, "audio", nullptr);
+        gst_structure_set(result.get(), "rtp-inbound-audio-stream-stats", GST_TYPE_STRUCTURE, emptyInboundStats.get(), nullptr);
+    }
+
+    if (!hasOutboundVideoStats) {
+        GUniquePtr<GstStructure> emptyOutboundStats(gst_structure_new_empty("rtp-outbound-video-stream-stats"));
+        gst_structure_set(emptyOutboundStats.get(), "type", GST_TYPE_WEBRTC_STATS_TYPE, GST_WEBRTC_STATS_OUTBOUND_RTP, "timestamp",
+            G_TYPE_DOUBLE, convertedTimestamp.microseconds(), "id", G_TYPE_STRING, "rtp-outbound-video-stream-stats", "kind", G_TYPE_STRING, "video", "frames-encoded", G_TYPE_UINT64, 0, nullptr);
+        gst_structure_set(result.get(), "rtp-outbound-video-stream-stats", GST_TYPE_STRUCTURE, emptyOutboundStats.get(), nullptr);
+    }
+
+    if (!hasOutboundAudioStats) {
+        GUniquePtr<GstStructure> emptyOutboundStats(gst_structure_new_empty("rtp-outbound-audio-stream-stats"));
+        gst_structure_set(emptyOutboundStats.get(), "type", GST_TYPE_WEBRTC_STATS_TYPE, GST_WEBRTC_STATS_OUTBOUND_RTP, "timestamp",
+            G_TYPE_DOUBLE, convertedTimestamp.microseconds(), "id", G_TYPE_STRING, "rtp-outbound-audio-stream-stats", "kind", G_TYPE_STRING, "audio", nullptr);
+        gst_structure_set(result.get(), "rtp-outbound-audio-stream-stats", GST_TYPE_STRUCTURE, emptyOutboundStats.get(), nullptr);
+    }
     return result;
 }
 
