@@ -41,6 +41,7 @@
 #include "RenderCounter.h"
 #include "RenderDescendantIterator.h"
 #include "RenderElement.h"
+#include "RenderElementInlines.h"
 #include "RenderEmbeddedObject.h"
 #include "RenderGrid.h"
 #include "RenderHTMLCanvas.h"
@@ -717,8 +718,8 @@ void RenderTreeBuilder::normalizeTreeAfterStyleChange(RenderElement& renderer, R
                 removeFloatingObjects(*blockFlow);
                 // Fresh floats need to be reparented if they actually belong to the previous anonymous block.
                 // It copies the logic of RenderBlock::addChildIgnoringContinuation
-                if (blockFlow->previousSibling() && blockFlow->previousSibling()->isAnonymousBlock())
-                    move(downcast<RenderBoxModelObject>(parent), downcast<RenderBoxModelObject>(*blockFlow->previousSibling()), renderer, RenderTreeBuilder::NormalizeAfterInsertion::No);
+                if (auto* previousSibling = dynamicDowncast<RenderBoxModelObject>(blockFlow->previousSibling()); previousSibling && previousSibling->isAnonymousBlock())
+                    move(downcast<RenderBoxModelObject>(parent), *previousSibling, renderer, RenderTreeBuilder::NormalizeAfterInsertion::No);
             }
         }
     }
@@ -848,10 +849,14 @@ void RenderTreeBuilder::removeAnonymousWrappersForInlineChildrenIfNeeded(RenderE
     for (auto* current = blockParent->firstChild(); current; current = current->nextSibling()) {
         if (current->style().isFloating() || current->style().hasOutOfFlowPosition())
             continue;
-        if (!current->isAnonymousBlock() || downcast<RenderBlock>(*current).isContinuation())
+
+        if (!is<RenderBlock>(*current))
+            return;
+        CheckedPtr renderBlockChild = dynamicDowncast<RenderBlock>(*current);
+        if (!renderBlockChild->isAnonymousBlock() || renderBlockChild->isContinuation())
             return;
         // Anonymous block not in continuation. Check if it holds a set of inline or block children and try not to mix them.
-        auto* firstChild = current->firstChildSlow();
+        auto* firstChild = renderBlockChild->firstChild();
         if (!firstChild)
             continue;
         auto isInlineLevelBox = firstChild->isInline();
@@ -867,8 +872,8 @@ void RenderTreeBuilder::removeAnonymousWrappersForInlineChildrenIfNeeded(RenderE
     RenderObject* next = nullptr;
     for (auto* current = blockParent->firstChild(); current; current = next) {
         next = current->nextSibling();
-        if (current->isAnonymousBlock())
-            blockBuilder().dropAnonymousBoxChild(*blockParent, downcast<RenderBlock>(*current));
+        if (auto* block = dynamicDowncast<RenderBlock>(*current); block && block->isAnonymousBlock())
+            blockBuilder().dropAnonymousBoxChild(*blockParent, *block);
     }
 }
 

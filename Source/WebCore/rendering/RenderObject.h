@@ -651,11 +651,6 @@ public:
 
     virtual bool hasIntrinsicAspectRatio() const { return isReplacedOrAtomicInline() && (isImage() || isRenderVideo() || isRenderHTMLCanvas() || isRenderViewTransitionCapture()); }
     bool isAnonymous() const { return m_typeFlags.contains(TypeFlag::IsAnonymous); }
-    bool isAnonymousBlock() const;
-    bool isAnonymousForPercentageResolution() const { return isAnonymous() && !isViewTransitionPseudo(); }
-    bool isBlockBox() const;
-    inline bool isBlockLevelBox() const;
-    bool isBlockContainer() const;
 
     bool isFloating() const { return m_stateBitfields.hasFlag(StateFlag::Floating); }
 
@@ -1450,24 +1445,6 @@ inline RenderFragmentedFlow* RenderObject::enclosingFragmentedFlow() const
         return nullptr;
 
     return locateEnclosingFragmentedFlow();
-}
-
-inline bool RenderObject::isAnonymousBlock() const
-{
-    // This function must be kept in sync with anonymous block creation conditions in RenderBlock::createAnonymousBlock().
-    // FIXME: That seems difficult. Can we come up with a simpler way to make behavior correct?
-    // FIXME: Does this relatively long function benefit from being inlined?
-    return isAnonymous()
-        && (style().display() == DisplayType::Block || style().display() == DisplayType::Box)
-        && style().pseudoElementType() == PseudoId::None
-        && isRenderBlock()
-#if ENABLE(MATHML)
-        && !isRenderMathMLBlock()
-#endif
-        && !isRenderListMarker()
-        && !isRenderFragmentedFlow()
-        && !isRenderMultiColumnSet()
-        && !isRenderView();
 }
 
 inline bool RenderObject::needsLayout() const

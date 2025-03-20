@@ -306,6 +306,12 @@ public:
     const Element* defaultAnchor() const;
     const RenderElement* defaultAnchorRenderer() const;
 
+    bool isAnonymousBlock() const;
+    bool isAnonymousForPercentageResolution() const { return isAnonymous() && !isViewTransitionPseudo(); }
+    inline bool isBlockBox() const;
+    inline bool isBlockLevelBox() const;
+    inline bool isBlockContainer() const;
+
 protected:
     RenderElement(Type, Element&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);
     RenderElement(Type, Document&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);

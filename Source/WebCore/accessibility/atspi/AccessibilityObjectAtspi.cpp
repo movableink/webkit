@@ -1430,7 +1430,7 @@ AccessibilityObjectInclusion AccessibilityObject::accessibilityPlatformIncludesO
         return AccessibilityObjectInclusion::DefaultBehavior;
     }
 
-    if (renderObject->isAnonymousBlock()) {
+    if (auto* renderBlock = dynamicDowncast<RenderBlock>(renderObject); renderBlock && renderBlock->isAnonymousBlock()) {
         // The text displayed by an ARIA menu item is exposed through the accessible name.
         if (parent->isMenuItem())
             return AccessibilityObjectInclusion::IgnoreObject;

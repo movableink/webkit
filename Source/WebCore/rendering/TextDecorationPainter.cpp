@@ -318,9 +318,8 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
             return;
 
         current = current->parent();
-        if (current && current->isAnonymousBlock()) {
-            auto& currentBlock = downcast<RenderBlock>(*current);
-            if (auto* continuation = currentBlock.continuation())
+        if (CheckedPtr currentBlock = dynamicDowncast<RenderBlock>(current); currentBlock && currentBlock->isAnonymousBlock()) {
+            if (auto* continuation = currentBlock->continuation())
                 current = continuation;
         }
 
