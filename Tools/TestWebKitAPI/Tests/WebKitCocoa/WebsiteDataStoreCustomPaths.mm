@@ -1813,6 +1813,15 @@ TEST(WKWebsiteDataStore, RemoveServiceWorkerDataByOrigin)
     });
     auto websiteDataStore = createCustomWebsiteDataStoreForServiceWorker(&server);
 
+    __block RetainPtr<NSString> serviceWorkerDirectoryString;
+    RetainPtr url = [server.request() URL];
+    done = false;
+    [websiteDataStore.get() _originDirectoryForTesting:url.get() topOrigin:url.get() type:WKWebsiteDataTypeServiceWorkerRegistrations completionHandler:^(NSString *result) {
+        serviceWorkerDirectoryString = result;
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+
     // Fetch origin record.
     auto dataTypes = [NSSet setWithObjects:WKWebsiteDataTypeServiceWorkerRegistrations, nil];
     __block RetainPtr<NSArray<WKWebsiteDataRecord *>> records;
@@ -1847,6 +1856,50 @@ TEST(WKWebsiteDataStore, RemoveServiceWorkerDataByOrigin)
     }];
     TestWebKitAPI::Util::run(&done);
     EXPECT_EQ([records count], 0u);
+
+    // Verify directory is deleted.
+    EXPECT_FALSE([[NSFileManager defaultManager] fileExistsAtPath:serviceWorkerDirectoryString.get()]);
+}
+
+TEST(WKWebsiteDataStore, DeleteEmptyServiceWorkerDirectory)
+{
+    RetainPtr resourceSalt = [NSBundle.test_resourcesBundle URLForResource:@"general-storage-directory" withExtension:@"salt"];
+    RetainPtr resourceOriginFile = [NSBundle.test_resourcesBundle URLForResource:@"general-storage-directory" withExtension:@"origin"];
+    RetainPtr resourceServiceWorkerDatabase = [NSBundle.test_resourcesBundle URLForResource:@"empty-service-worker-registrations" withExtension:@"sqlite3"];
+    RetainPtr generalStorageDirectory = [NSURL fileURLWithPath:[@"~/Library/WebKit/com.apple.WebKit.TestWebKitAPI/CustomWebsiteData/Default" stringByExpandingTildeInPath] isDirectory:YES];
+    RetainPtr topOriginDirectory = [generalStorageDirectory.get() URLByAppendingPathComponent:@"YUn_wgR51VLVo9lc5xiivAzZ8TMmojoa0IbW323qibs"];
+    RetainPtr originDirectory = [topOriginDirectory.get() URLByAppendingPathComponent:@"YUn_wgR51VLVo9lc5xiivAzZ8TMmojoa0IbW323qibs"];
+    RetainPtr serviceWorkerDirectory = [originDirectory.get() URLByAppendingPathComponent:@"ServiceWorkers"];
+    RetainPtr serviceWorkerDatabase = [serviceWorkerDirectory.get() URLByAppendingPathComponent:@"ServiceWorkerRegistrations-8.sqlite3"];
+    RetainPtr serviceWorkerScriptsDirectory = [serviceWorkerDirectory.get() URLByAppendingPathComponent:@"Scripts"];
+
+    RetainPtr fileManager = [NSFileManager defaultManager];
+    [fileManager removeItemAtURL:generalStorageDirectory.get() error:nil];
+    [fileManager createDirectoryAtURL:generalStorageDirectory.get() withIntermediateDirectories:YES attributes:nil error:nil];
+    [fileManager copyItemAtURL:resourceSalt.get() toURL:[generalStorageDirectory.get() URLByAppendingPathComponent:@"salt"] error:nil];
+    [fileManager createDirectoryAtURL:originDirectory.get() withIntermediateDirectories:YES attributes:nil error:nil];
+    [fileManager copyItemAtURL:resourceOriginFile.get() toURL:[originDirectory URLByAppendingPathComponent:@"origin"] error:nil];
+    [fileManager createDirectoryAtURL:serviceWorkerDirectory.get() withIntermediateDirectories:YES attributes:nil error:nil];
+    [fileManager copyItemAtURL:resourceServiceWorkerDatabase.get() toURL:serviceWorkerDatabase.get() error:nil];
+    [fileManager createDirectoryAtURL:serviceWorkerScriptsDirectory.get() withIntermediateDirectories:YES attributes:nil error:nil];
+
+    RetainPtr websiteDataStoreConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] init]);
+    websiteDataStoreConfiguration.get().generalStorageDirectory = generalStorageDirectory.get();
+    RetainPtr websiteDataStore = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:websiteDataStoreConfiguration.get()]);
+
+    // Verify record does not exist with empty database.
+    __block RetainPtr<NSArray<WKWebsiteDataRecord *>> records;
+    RetainPtr dataTypes = [NSSet setWithObjects:WKWebsiteDataTypeServiceWorkerRegistrations, nil];
+    done = false;
+    [websiteDataStore fetchDataRecordsOfTypes:dataTypes.get() completionHandler:^(NSArray<WKWebsiteDataRecord *> * dataRecords) {
+        records = dataRecords;
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+    EXPECT_EQ([records count], 0u);
+
+    // Verify directory is deleted.
+    EXPECT_FALSE([fileManager fileExistsAtPath:[serviceWorkerDirectory path]]);
 }
 
 TEST(WKWebsiteDataStore, FetchAndDeleteMediaKeysData)
