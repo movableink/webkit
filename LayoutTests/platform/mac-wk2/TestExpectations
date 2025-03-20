@@ -2086,3 +2086,5 @@ imported/w3c/web-platform-tests/css/css-position/sticky/position-sticky-escape-s
 imported/w3c/web-platform-tests/css/css-position/sticky/position-sticky-scrolled-remove-sibling-002.html [ Pass ImageOnlyFailure ]
 
 webkit.org/b/289986 [ Debug ] imported/w3c/web-platform-tests/html/infrastructure/safe-passing-of-structured-data/shared-array-buffers/no-coop-coep.https.any.html [ Crash ]
+
+webkit.org/b/290123 [ Debug ] fast/page-color-sampling/color-sampling-ignores-non-fixed-content.html [ Failure ]
