@@ -465,9 +465,10 @@ void AudioSourceProviderGStreamer::handleRemovedDeinterleavePad(GstPad* pad)
 
     g_signal_handlers_disconnect_by_data(sink.get(), sink.get());
 
-    gst_pad_unlink(srcPad.get(), sinkSinkPad.get());
-    gst_element_set_state(queue.get(), GST_STATE_NULL);
     gst_element_set_state(sink.get(), GST_STATE_NULL);
+    gst_element_set_state(queue.get(), GST_STATE_NULL);
+    gst_pad_unlink(srcPad.get(), sinkSinkPad.get());
+    gst_pad_unlink(pad, sinkPad);
     gst_bin_remove_many(GST_BIN_CAST(m_audioSinkBin.get()), queue.get(), sink.get(), nullptr);
 }
 
