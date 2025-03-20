@@ -2086,3 +2086,5 @@ imported/w3c/web-platform-tests/css/css-position/backdrop-inherit-rendered.html 
 imported/w3c/web-platform-tests/css/css-position/block-axis-constraint-changes-for-out-of-flow-box.html [ Pass ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-position/sticky/position-sticky-escape-scroller-001.html [ Pass ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-position/sticky/position-sticky-scrolled-remove-sibling-002.html [ Pass ImageOnlyFailure ]
+
+webkit.org/b/289986 [ Debug ] imported/w3c/web-platform-tests/html/infrastructure/safe-passing-of-structured-data/shared-array-buffers/no-coop-coep.https.any.html [ Crash ]
