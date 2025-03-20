@@ -73,9 +73,13 @@ void setPermissionsOfConfigPage()
     std::call_once(onceFlag, [] {
         mach_vm_address_t addr = std::bit_cast<uintptr_t>(static_cast<void*>(WebConfig::g_config));
         auto flags = VM_FLAGS_FIXED | VM_FLAGS_OVERWRITE | VM_FLAGS_PERMANENT;
+        auto prot = VM_PROT_READ | VM_PROT_WRITE;
 
         auto attemptVMMapping = [&] {
-            return mach_vm_map(mach_task_self(), &addr, ConfigSizeToProtect, pageSize() - 1, flags, MEMORY_OBJECT_NULL, 0, false, VM_PROT_READ | VM_PROT_WRITE, VM_PROT_READ | VM_PROT_WRITE, VM_INHERIT_DEFAULT);
+            // We use remap instead of map here to avoid zeroing the config,
+            // since WebKit components like bmalloc can potentially use the
+            // config prior to WTF initialization.
+            return mach_vm_remap(mach_task_self(), &addr, ConfigSizeToProtect, pageSize() - 1, flags, mach_task_self(), addr, false, &prot, &prot, VM_INHERIT_DEFAULT);
         };
 
         auto result = attemptVMMapping();
@@ -120,8 +124,6 @@ void Config::initialize()
     SignalHandlers::initialize();
 
     uint8_t* reservedConfigBytes = reinterpret_cast_ptr<uint8_t*>(WebConfig::g_config + WebConfig::reservedSlotsForExecutableAllocator);
-    reservedConfigBytes[WebConfig::ReservedByteForAllocationProfiling] = 0;
-    reservedConfigBytes[WebConfig::ReservedByteForAllocationProfilingMode] = 0;
 
 #if USE(APPLE_INTERNAL_SDK)
     WTF_INITIALIZE_ADDITIONAL_CONFIG();
