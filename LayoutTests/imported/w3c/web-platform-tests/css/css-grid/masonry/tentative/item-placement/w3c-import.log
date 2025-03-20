@@ -14,9 +14,6 @@ Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
 List of files:
-/LayoutTests/imported/w3c/web-platform-tests/css/css-grid/masonry/tentative/item-placement/masonry-columns-item-placement-auto-flow-next-001-expected.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-grid/masonry/tentative/item-placement/masonry-columns-item-placement-auto-flow-next-001-ref.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-grid/masonry/tentative/item-placement/masonry-columns-item-placement-auto-flow-next-001.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/masonry/tentative/item-placement/masonry-item-placement-001-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/masonry/tentative/item-placement/masonry-item-placement-001-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/masonry/tentative/item-placement/masonry-item-placement-001.html
@@ -41,9 +38,6 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/masonry/tentative/item-placement/masonry-item-placement-008-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/masonry/tentative/item-placement/masonry-item-placement-008-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/masonry/tentative/item-placement/masonry-item-placement-008.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-grid/masonry/tentative/item-placement/masonry-rows-item-placement-auto-flow-next-001-expected.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-grid/masonry/tentative/item-placement/masonry-rows-item-placement-auto-flow-next-001-ref.html
-/LayoutTests/imported/w3c/web-platform-tests/css/css-grid/masonry/tentative/item-placement/masonry-rows-item-placement-auto-flow-next-001.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/masonry/tentative/item-placement/masonry-rows-with-grid-width-changed-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/masonry/tentative/item-placement/masonry-rows-with-grid-width-changed-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/masonry/tentative/item-placement/masonry-rows-with-grid-width-changed.html

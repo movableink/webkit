@@ -61,6 +61,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/parsing/grid-template-rows-invalid.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/parsing/grid-template-rows-valid.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/parsing/grid-template-shorthand-areas-valid.html
+/LayoutTests/imported/w3c/web-platform-tests/css/css-grid/parsing/grid-template-shorthand-composition.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/parsing/grid-template-shorthand-invalid.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/parsing/grid-template-shorthand-valid.html
 /LayoutTests/imported/w3c/web-platform-tests/css/css-grid/parsing/grid-template-shorthand.html
