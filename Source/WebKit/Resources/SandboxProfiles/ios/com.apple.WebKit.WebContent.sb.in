@@ -490,7 +490,8 @@
             (allow mach-message-send (notifyd-message-numbers)))))
 
 #if ENABLE(NOTIFY_BLOCKING)
-(deny mach-lookup (global-name "com.apple.system.notification_center"))
+(with-filter (require-not (notify-blocking))
+    (allow-notifyd))
 #else
 (allow-notifyd)
 #endif
