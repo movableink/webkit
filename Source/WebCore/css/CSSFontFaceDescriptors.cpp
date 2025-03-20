@@ -30,9 +30,12 @@
 #include "CSSPropertyParser.h"
 #include "CSSSerializationContext.h"
 #include "CSSStyleSheet.h"
+#include "DeprecatedCSSOMValueList.h"
 #include "Document.h"
+#include "MutableStyleProperties.h"
 #include "Settings.h"
 #include "StyleAttributeMutationScope.h"
+#include "StyleSheetContents.h"
 #include "StyledElement.h"
 #include <wtf/TZoneMallocInlines.h>
 

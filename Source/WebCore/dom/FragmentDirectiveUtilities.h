@@ -30,6 +30,7 @@
 
 namespace WebCore {
 
+class ContainerNode;
 class Node;
 
 struct ParsedTextDirective {

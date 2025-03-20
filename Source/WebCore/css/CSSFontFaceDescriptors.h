@@ -31,6 +31,7 @@
 namespace WebCore {
 
 class CSSFontFaceRule;
+struct CSSParserContext;
 
 class CSSFontFaceDescriptors final : public CSSStyleDeclaration, public RefCounted<CSSFontFaceDescriptors> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSFontFaceDescriptors);
