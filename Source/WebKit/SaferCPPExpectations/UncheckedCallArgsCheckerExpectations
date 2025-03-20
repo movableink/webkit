@@ -14,7 +14,6 @@ WebProcess/WebCoreSupport/mac/WebPopupMenuMac.mm
 WebProcess/WebPage/DrawingArea.cpp
 WebProcess/WebPage/FindController.cpp
 WebProcess/WebPage/RemoteLayerTree/RemoteScrollbarsController.mm
-WebProcess/WebPage/WebFoundTextRangeController.cpp
 WebProcess/WebPage/WebFrame.cpp
 WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm
 WebProcess/cocoa/PlaybackSessionManager.mm

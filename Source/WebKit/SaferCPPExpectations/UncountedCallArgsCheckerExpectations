@@ -238,7 +238,6 @@ WebProcess/WebPage/ViewGestureGeometryCollector.cpp
 WebProcess/WebPage/VisitedLinkTableController.cpp
 WebProcess/WebPage/WebContextMenu.cpp
 WebProcess/WebPage/WebDisplayRefreshMonitor.cpp
-WebProcess/WebPage/WebFoundTextRangeController.cpp
 WebProcess/WebPage/WebFrame.cpp
 WebProcess/WebPage/WebOpenPanelResultListener.cpp
 WebProcess/WebPage/WebPage.cpp
