@@ -52,6 +52,8 @@ public:
     // Note: Assumes the PaintInfo context has had all local transforms applied.
     void paintForeground(PaintInfo&);
 
+    bool isObjectBoundingBoxValid() const { return !m_objectBoundingBox.isEmpty(); }
+
 private:
     void willBeDestroyed() override;
 
