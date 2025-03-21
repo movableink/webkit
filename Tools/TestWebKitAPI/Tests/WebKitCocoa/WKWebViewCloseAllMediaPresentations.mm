@@ -260,3 +260,11 @@ TEST(WKWebViewCloseAllMediaPresentations, RemovedCloseAllMediaPresentationAPIs)
 }
 
 #endif // ENABLE(FULLSCREEN_API)
+
+TEST(WKWebViewCloseAllMediaPresentations, NilCompletionHandler)
+{
+    RetainPtr configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get() addToWindow:YES]);
+
+    [webView closeAllMediaPresentationsWithCompletionHandler:nil];
+}
