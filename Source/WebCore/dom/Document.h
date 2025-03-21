@@ -853,7 +853,7 @@ public:
     void disableWebAssembly(const String& errorMessage) final;
     void setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement) final;
 
-    bool requiresTrustedTypes() const { return m_requiresTrustedTypes; }
+    bool requiresTrustedTypes() const { return m_requiresTrustedTypes && !shouldBypassMainWorldContentSecurityPolicy(); }
 
     IDBClient::IDBConnectionProxy* idbConnectionProxy() final;
     StorageConnection* storageConnection();

@@ -1655,6 +1655,43 @@ TEST(WKWebExtensionAPIScripting, RemoveAllUserStyleSheetsDoesNotRemoveWebExtensi
     [manager run];
 }
 
+TEST(WKWebExtensionAPIScripting, InjectScriptWithTrustedTypesCSP)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { { { "Content-Type"_s, "text/html"_s }, { "Content-Security-Policy"_s, "require-trusted-types-for 'script'"_s } }, ""_s } },
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto *manifest = @{
+        @"manifest_version": @3,
+
+        @"name": @"Scripting Test",
+        @"description": @"Scripting Test",
+        @"version": @"1.0",
+
+        @"content_scripts": @[ @{
+            @"matches": @[ @"*://localhost/*" ],
+            @"js": @[ @"content.js" ]
+        } ]
+    };
+
+    auto *contentScript = Util::constructScript(@[
+        @"try {",
+        @"  document.body.innerHTML = '<p>Injected</p>'",
+        @"  browser.test.notifyPass()",
+        @"} catch (error) {",
+        @"  browser.test.notifyFail('CSP blocked innerHTML: ' + error.message)",
+        @"}",
+    ]);
+
+    auto manager = Util::loadExtension(manifest, @{ @"content.js": contentScript });
+
+    auto *urlRequest = server.requestWithLocalhost();
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
+    [manager.get().defaultTab.webView loadRequest:urlRequest];
+
+    [manager run];
+}
+
 } // namespace TestWebKitAPI
 
 #endif // ENABLE(WK_WEB_EXTENSIONS)
