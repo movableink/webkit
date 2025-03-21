@@ -127,6 +127,7 @@ private:
     void didCancelPaymentSession(PaymentSessionError&&) override;
 
     PaymentCoordinator& paymentCoordinator() const;
+    Ref<PaymentCoordinator> protectedPaymentCoordinator() const;
 
     bool canBegin() const;
     bool canAbort() const;

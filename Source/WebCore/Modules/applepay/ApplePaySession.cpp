@@ -612,14 +612,13 @@ ExceptionOr<void> ApplePaySession::begin(Document& document)
     if (!canBegin())
         return Exception { ExceptionCode::InvalidAccessError, "Payment session is already active."_s };
 
-    if (paymentCoordinator().hasActiveSession())
+    Ref paymentCoordinator = this->paymentCoordinator();
+    if (paymentCoordinator->hasActiveSession())
         return Exception { ExceptionCode::InvalidAccessError, "Page already has an active payment session."_s };
-
-    if (!paymentCoordinator().beginPaymentSession(document, *this, m_paymentRequest))
+    if (!paymentCoordinator->beginPaymentSession(document, *this, m_paymentRequest))
         return Exception { ExceptionCode::InvalidAccessError, "There is already has an active payment session."_s };
 
     m_state = State::Active;
-
     return { };
 }
 
@@ -629,7 +628,7 @@ ExceptionOr<void> ApplePaySession::abort()
         return Exception { ExceptionCode::InvalidAccessError };
 
     m_state = State::Aborted;
-    paymentCoordinator().abortPaymentSession();
+    protectedPaymentCoordinator()->abortPaymentSession();
 
     return { };
 }
@@ -654,11 +653,12 @@ ExceptionOr<void> ApplePaySession::completeMerchantValidation(JSC::JSGlobalObjec
 
     // PaymentMerchantSession::fromJS() may run JS, which may abort the request so we need to
     // make sure we still have an active session.
-    if (!paymentCoordinator().hasActiveSession())
+    Ref paymentCoordinator = this->paymentCoordinator();
+    if (!paymentCoordinator->hasActiveSession())
         return Exception { ExceptionCode::InvalidStateError };
 
     m_merchantValidationState = MerchantValidationState::ValidationComplete;
-    paymentCoordinator().completeMerchantValidation(*merchantSession);
+    paymentCoordinator->completeMerchantValidation(*merchantSession);
 
     return { };
 }
@@ -673,7 +673,7 @@ ExceptionOr<void> ApplePaySession::completeShippingMethodSelection(ApplePayShipp
         return convertedUpdate.releaseException();
 
     m_state = State::Active;
-    paymentCoordinator().completeShippingMethodSelection(convertedUpdate.releaseReturnValue());
+    protectedPaymentCoordinator()->completeShippingMethodSelection(convertedUpdate.releaseReturnValue());
 
     return { };
 }
@@ -688,7 +688,7 @@ ExceptionOr<void> ApplePaySession::completeShippingContactSelection(ApplePayShip
         return convertedUpdate.releaseException();
 
     m_state = State::Active;
-    paymentCoordinator().completeShippingContactSelection(convertedUpdate.releaseReturnValue());
+    protectedPaymentCoordinator()->completeShippingContactSelection(convertedUpdate.releaseReturnValue());
 
     return { };
 }
@@ -703,7 +703,7 @@ ExceptionOr<void> ApplePaySession::completePaymentMethodSelection(ApplePayPaymen
         return convertedUpdate.releaseException();
 
     m_state = State::Active;
-    paymentCoordinator().completePaymentMethodSelection(convertedUpdate.releaseReturnValue());
+    protectedPaymentCoordinator()->completePaymentMethodSelection(convertedUpdate.releaseReturnValue());
 
     return { };
 }
@@ -720,7 +720,7 @@ ExceptionOr<void> ApplePaySession::completeCouponCodeChange(ApplePayCouponCodeUp
         return convertedUpdate.releaseException();
 
     m_state = State::Active;
-    paymentCoordinator().completeCouponCodeChange(convertedUpdate.releaseReturnValue());
+    protectedPaymentCoordinator()->completeCouponCodeChange(convertedUpdate.releaseReturnValue());
 
     return { };
 }
@@ -739,7 +739,7 @@ ExceptionOr<void> ApplePaySession::completePayment(ApplePayPaymentAuthorizationR
     auto&& convertedResult = convertedResultOrException.releaseReturnValue();
     bool isFinalState = convertedResult.isFinalState();
 
-    paymentCoordinator().completePaymentSession(WTFMove(convertedResult));
+    protectedPaymentCoordinator()->completePaymentSession(WTFMove(convertedResult));
 
     if (!isFinalState) {
         m_state = State::Active;
@@ -768,7 +768,7 @@ ExceptionOr<void> ApplePaySession::completeShippingMethodSelection(unsigned shor
     case ApplePaySession::STATUS_PIN_LOCKOUT:
         // This is a fatal error. Cancel the request.
         m_state = State::CancelRequested;
-        paymentCoordinator().cancelPaymentSession();
+        protectedPaymentCoordinator()->cancelPaymentSession();
         return { };
 
     default:
@@ -886,7 +886,7 @@ void ApplePaySession::didSelectShippingMethod(const ApplePayShippingMethod& ship
     ASSERT(m_state == State::Active);
 
     if (!hasEventListeners(eventNames().shippingmethodselectedEvent)) {
-        paymentCoordinator().completeShippingMethodSelection({ });
+        protectedPaymentCoordinator()->completeShippingMethodSelection({ });
         return;
     }
 
@@ -900,7 +900,7 @@ void ApplePaySession::didSelectShippingContact(const PaymentContact& shippingCon
     ASSERT(m_state == State::Active);
 
     if (!hasEventListeners(eventNames().shippingcontactselectedEvent)) {
-        paymentCoordinator().completeShippingContactSelection({ });
+        protectedPaymentCoordinator()->completeShippingContactSelection({ });
         return;
     }
 
@@ -914,7 +914,7 @@ void ApplePaySession::didSelectPaymentMethod(const PaymentMethod& paymentMethod)
     ASSERT(m_state == State::Active);
 
     if (!hasEventListeners(eventNames().paymentmethodselectedEvent)) {
-        paymentCoordinator().completePaymentMethodSelection({ });
+        protectedPaymentCoordinator()->completePaymentMethodSelection({ });
         return;
     }
 
@@ -930,7 +930,7 @@ void ApplePaySession::didChangeCouponCode(String&& couponCode)
     ASSERT(m_state == State::Active);
 
     if (!hasEventListeners(eventNames().couponcodechangedEvent)) {
-        paymentCoordinator().completeCouponCodeChange({ });
+        protectedPaymentCoordinator()->completeCouponCodeChange({ });
         return;
     }
 
@@ -979,7 +979,7 @@ void ApplePaySession::stop()
         return;
 
     m_state = State::Aborted;
-    paymentCoordinator().abortPaymentSession();
+    protectedPaymentCoordinator()->abortPaymentSession();
 }
 
 void ApplePaySession::suspend(ReasonForSuspension reason)
@@ -992,13 +992,18 @@ void ApplePaySession::suspend(ReasonForSuspension reason)
 
     auto jsWrapperProtector = makePendingActivity(*this);
     m_state = State::Canceled;
-    paymentCoordinator().abortPaymentSession();
+    protectedPaymentCoordinator()->abortPaymentSession();
     queueTaskToDispatchEvent(*this, TaskSource::UserInteraction, ApplePayCancelEvent::create(eventNames().cancelEvent, { }));
 }
 
 PaymentCoordinator& ApplePaySession::paymentCoordinator() const
 {
     return downcast<Document>(*scriptExecutionContext()).page()->paymentCoordinator();
+}
+
+Ref<PaymentCoordinator> ApplePaySession::protectedPaymentCoordinator() const
+{
+    return paymentCoordinator();
 }
 
 bool ApplePaySession::canBegin() const
