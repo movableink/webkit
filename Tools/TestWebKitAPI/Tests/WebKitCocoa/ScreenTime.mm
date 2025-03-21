@@ -121,7 +121,7 @@ static void testSuppressUsageRecordingWithDataStore(RetainPtr<WKWebsiteDataStore
         return nil;
 
     _webView = webView;
-    [_webView addObserver:self forKeyPath:@"_isBlockedByScreenTime" options:(NSKeyValueObservingOptionOld | NSKeyValueObservingOptionNew) context:&blockedStateObserverChangeKVOContext];
+    [_webView addObserver:self forKeyPath:@"isBlockedByScreenTime" options:(NSKeyValueObservingOptionOld | NSKeyValueObservingOptionNew) context:&blockedStateObserverChangeKVOContext];
     return self;
 }
 
@@ -172,7 +172,7 @@ static BOOL systemScreenTimeBlockingViewIsPresent(TestWKWebView *webView)
 static RetainPtr<TestWKWebView> testShowsSystemScreenTimeBlockingView(bool showsSystemScreenTimeBlockingView)
 {
     RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
-    [configuration _setShowsSystemScreenTimeBlockingView:showsSystemScreenTimeBlockingView];
+    [configuration setShowsSystemScreenTimeBlockingView:showsSystemScreenTimeBlockingView];
 
     RetainPtr webView = webViewForScreenTimeTests(configuration.get());
     [webView synchronouslyLoadHTMLString:@""];
@@ -182,7 +182,7 @@ static RetainPtr<TestWKWebView> testShowsSystemScreenTimeBlockingView(bool shows
     RetainPtr controller = [webView _screenTimeWebpageController];
     [controller setURLIsBlocked:YES];
 
-    EXPECT_EQ(showsSystemScreenTimeBlockingView, [configuration _showsSystemScreenTimeBlockingView]);
+    EXPECT_EQ(showsSystemScreenTimeBlockingView, [configuration showsSystemScreenTimeBlockingView]);
 
     // Check if ScreenTime's blocking view is hidden or not.
     EXPECT_EQ(showsSystemScreenTimeBlockingView, systemScreenTimeBlockingViewIsPresent(webView.get()));
@@ -197,7 +197,7 @@ static RetainPtr<TestWKWebView> testShowsSystemScreenTimeBlockingView(bool shows
 static void testWebContentIsNotClickableShowingSystemScreenTimeBlockingView(bool showsSystemScreenTimeBlockingView)
 {
     RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
-    [configuration _setShowsSystemScreenTimeBlockingView:showsSystemScreenTimeBlockingView];
+    [configuration setShowsSystemScreenTimeBlockingView:showsSystemScreenTimeBlockingView];
 
     RetainPtr webView = webViewForScreenTimeTests(configuration.get());
     RetainPtr observer = adoptNS([[BlockedStateObserver alloc] initWithWebView:webView.get()]);
@@ -250,7 +250,7 @@ TEST(ScreenTime, IsBlockedByScreenTimeTrue)
     RetainPtr controller = [webView _screenTimeWebpageController];
     [controller setURLIsBlocked:YES];
 
-    EXPECT_TRUE([webView _isBlockedByScreenTime]);
+    EXPECT_TRUE([webView isBlockedByScreenTime]);
 }
 
 TEST(ScreenTime, IsBlockedByScreenTimeFalse)
@@ -263,7 +263,7 @@ TEST(ScreenTime, IsBlockedByScreenTimeFalse)
     RetainPtr controller = [webView _screenTimeWebpageController];
     [controller setURLIsBlocked:NO];
 
-    EXPECT_FALSE([webView _isBlockedByScreenTime]);
+    EXPECT_FALSE([webView isBlockedByScreenTime]);
 }
 
 TEST(ScreenTime, IsBlockedByScreenTimeMultiple)
@@ -277,7 +277,7 @@ TEST(ScreenTime, IsBlockedByScreenTimeMultiple)
 
     [webView waitForNextPresentationUpdate];
 
-    EXPECT_FALSE([webView _isBlockedByScreenTime]);
+    EXPECT_FALSE([webView isBlockedByScreenTime]);
 }
 
 TEST(ScreenTime, IsBlockedByScreenTimeKVO)
@@ -294,7 +294,7 @@ TEST(ScreenTime, IsBlockedByScreenTimeKVO)
 
     TestWebKitAPI::Util::run(&stateDidChange);
 
-    EXPECT_TRUE([webView _isBlockedByScreenTime]);
+    EXPECT_TRUE([webView isBlockedByScreenTime]);
 
     stateDidChange = false;
 
@@ -302,7 +302,7 @@ TEST(ScreenTime, IsBlockedByScreenTimeKVO)
 
     TestWebKitAPI::Util::run(&stateDidChange);
 
-    EXPECT_FALSE([webView _isBlockedByScreenTime]);
+    EXPECT_FALSE([webView isBlockedByScreenTime]);
 
     stateDidChange = false;
 
@@ -310,7 +310,7 @@ TEST(ScreenTime, IsBlockedByScreenTimeKVO)
 
     TestWebKitAPI::Util::run(&stateDidChange);
 
-    EXPECT_TRUE([webView _isBlockedByScreenTime]);
+    EXPECT_TRUE([webView isBlockedByScreenTime]);
 }
 
 TEST(ScreenTime, IdentifierNil)
@@ -396,7 +396,7 @@ TEST(ScreenTime, ShowSystemScreenTimeBlockingFalseAndRemoved)
     RetainPtr webView = testShowsSystemScreenTimeBlockingView(false);
     RetainPtr controller = [webView _screenTimeWebpageController];
     [controller setURLIsBlocked:NO];
-    EXPECT_FALSE([[webView configuration] _showsSystemScreenTimeBlockingView]);
+    EXPECT_FALSE([[webView configuration] showsSystemScreenTimeBlockingView]);
     // Check if blurred blocking view is removed when URLIsBlocked is false.
     EXPECT_FALSE(blurredViewIsPresent(webView.get()));
 }
@@ -565,7 +565,7 @@ TEST(ScreenTime, FetchData)
         })
     };
 
-    RetainPtr dataTypeScreenTime = adoptNS([[NSSet alloc] initWithArray:@[ _WKWebsiteDataTypeScreenTime ]]);
+    RetainPtr dataTypeScreenTime = adoptNS([[NSSet alloc] initWithArray:@[ WKWebsiteDataTypeScreenTime ]]);
 
     RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
 
@@ -598,7 +598,7 @@ TEST(ScreenTime, RemoveDataWithTimeInterval)
         })
     };
 
-    RetainPtr dataTypeScreenTime = adoptNS([[NSSet alloc] initWithArray:@[_WKWebsiteDataTypeScreenTime]]);
+    RetainPtr dataTypeScreenTime = adoptNS([[NSSet alloc] initWithArray:@[ WKWebsiteDataTypeScreenTime ]]);
 
     RetainPtr uuid = [NSUUID UUID];
     RetainPtr websiteDataStore = [WKWebsiteDataStore dataStoreForIdentifier:uuid.get()];
@@ -647,7 +647,7 @@ TEST(ScreenTime, OffscreenSystemScreenTimeBlockingView)
 TEST(ScreenTime, OffscreenBlurredScreenTimeBlockingView)
 {
     RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
-    [configuration _setShowsSystemScreenTimeBlockingView:NO];
+    [configuration setShowsSystemScreenTimeBlockingView:NO];
 
     RetainPtr webView = webViewForScreenTimeTests(configuration.get());
     [webView synchronouslyLoadHTMLString:@""];

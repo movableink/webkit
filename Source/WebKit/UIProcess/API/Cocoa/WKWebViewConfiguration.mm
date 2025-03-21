@@ -498,6 +498,16 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     self._protectedPageConfiguration->setWebsiteDataStore(websiteDataStore ? websiteDataStore->_websiteDataStore.get() : nullptr);
 }
 
+- (BOOL)showsSystemScreenTimeBlockingView
+{
+    return _pageConfiguration->showsSystemScreenTimeBlockingView();
+}
+
+- (void)setShowsSystemScreenTimeBlockingView:(BOOL)shows
+{
+    _pageConfiguration->setShowsSystemScreenTimeBlockingView(shows);
+}
+
 - (WKWebpagePreferences *)defaultWebpagePreferences
 {
     return wrapper(self._protectedPageConfiguration->protectedDefaultWebsitePolicies().get());
@@ -737,12 +747,12 @@ static NSString *defaultApplicationNameForUserAgent()
 
 - (BOOL)_showsSystemScreenTimeBlockingView
 {
-    return _pageConfiguration->showsSystemScreenTimeBlockingView();
+    return [self showsSystemScreenTimeBlockingView];
 }
 
 - (void)_setShowsSystemScreenTimeBlockingView:(BOOL)shows
 {
-    _pageConfiguration->setShowsSystemScreenTimeBlockingView(shows);
+    [self setShowsSystemScreenTimeBlockingView:shows];
 }
 
 - (BOOL)_allowTopNavigationToDataURLs

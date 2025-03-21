@@ -540,6 +540,10 @@ The uniform type identifier kUTTypeWebArchive can be used get the related pasteb
 */
 @property (nonatomic, nullable, copy) id interactionState WK_API_AVAILABLE(macos(12.0), ios(15.0));
 
+/*! @abstract A Boolean value indicating whether Screen Time blocking has occurred.
+ */
+@property (nonatomic, readonly) BOOL isBlockedByScreenTime WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+
 /*! @abstract Sets the webpage contents from the passed data as if it was the
  response to the supplied request. The request is never actually sent to the
  supplied URL, though loads of resources defined in the NSData object would

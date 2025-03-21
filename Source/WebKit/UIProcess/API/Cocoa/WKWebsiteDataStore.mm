@@ -491,7 +491,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
             WKWebsiteDataTypeSearchFieldRecentSearches,
             WKWebsiteDataTypeMediaKeys,
 #if ENABLE(SCREEN_TIME)
-            _WKWebsiteDataTypeScreenTime,
+            WKWebsiteDataTypeScreenTime,
 #endif
             WKWebsiteDataTypeHashSalt ]]);
     });

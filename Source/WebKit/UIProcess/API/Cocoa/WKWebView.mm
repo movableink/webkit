@@ -427,7 +427,7 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
     // Thus, we have to instantiate its view for URLIsBlocked to update properly.
     RetainPtr screenTimeView = [_screenTimeWebpageController view];
 
-    if ([_configuration _showsSystemScreenTimeBlockingView]) {
+    if ([_configuration showsSystemScreenTimeBlockingView]) {
         [screenTimeView setFrame:self.bounds];
         [self addSubview:screenTimeView.get()];
     }
@@ -465,7 +465,7 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
     viewIsVisible = viewIsVisible && ((self.window.occlusionState & NSWindowOcclusionStateVisible) == NSWindowOcclusionStateVisible);
 #endif
 
-    BOOL showsSystemScreenTimeBlockingView = [_configuration _showsSystemScreenTimeBlockingView];
+    BOOL showsSystemScreenTimeBlockingView = [_configuration showsSystemScreenTimeBlockingView];
 
     if (viewIsInWindow) {
         BOOL previouslyInstalledScreenTimeWebpageController = !!_screenTimeWebpageController;
@@ -504,16 +504,16 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
 
         if (urlWasBlocked != urlIsBlocked) {
             [self setAllMediaPlaybackSuspended:urlIsBlocked completionHandler:nil];
-            [self willChangeValueForKey:@"_isBlockedByScreenTime"];
+            [self willChangeValueForKey:@"isBlockedByScreenTime"];
             _isBlockedByScreenTime = urlIsBlocked;
-            [self didChangeValueForKey:@"_isBlockedByScreenTime"];
+            [self didChangeValueForKey:@"isBlockedByScreenTime"];
             if (urlIsBlocked)
                 RELEASE_LOG(ScreenTime, "Screen Time is blocking the URL.");
             else
                 RELEASE_LOG(ScreenTime, "Screen Time is not blocking the URL.");
         }
         if (wasBlockedByScreenTime != _isBlockedByScreenTime) {
-            if (!_screenTimeBlurredSnapshot && ![_configuration _showsSystemScreenTimeBlockingView]) {
+            if (!_screenTimeBlurredSnapshot && ![_configuration showsSystemScreenTimeBlockingView]) {
 #if PLATFORM(MAC)
                 _screenTimeBlurredSnapshot = adoptNS([[NSVisualEffectView alloc] init]);
                 [_screenTimeBlurredSnapshot setMaterial:NSVisualEffectMaterialUnderWindowBackground];
@@ -3299,15 +3299,6 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(FORWARD_ACTION_TO_WKCONTENTVIEW)
 - (BOOL)_isBeingInspected
 {
     return _page && _page->hasInspectorFrontend();
-}
-
-- (BOOL)_isBlockedByScreenTime
-{
-#if ENABLE(SCREEN_TIME)
-    return _isBlockedByScreenTime;
-#else
-    return NO;
-#endif
 }
 
 - (_WKInspector *)_inspector

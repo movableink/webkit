@@ -288,7 +288,6 @@ struct PerWebProcessState {
 #else
     RetainPtr<UIVisualEffectView> _screenTimeBlurredSnapshot;
 #endif
-    BOOL _isBlockedByScreenTime;
 #endif
 
 #if PLATFORM(MAC)
