@@ -28,8 +28,10 @@
 
 #include "Test.h"
 #include "Utilities.h"
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
+#include <wtf/MappedFileData.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/StringExtras.h>
 #include <wtf/text/MakeString.h>
@@ -112,28 +114,23 @@ private:
 
 TEST_F(FileSystemTest, MappingMissingFile)
 {
-    bool success;
-    FileSystem::MappedFileData mappedFileData(String("not_existing_file"_s), FileSystem::MappedFileMode::Shared, success);
-    EXPECT_FALSE(success);
-    EXPECT_TRUE(!mappedFileData);
+    auto mappedFileData = FileSystem::mapFile(String("not_existing_file"_s), FileSystem::MappedFileMode::Shared);
+    EXPECT_FALSE(!!mappedFileData);
 }
 
 TEST_F(FileSystemTest, MappingExistingFile)
 {
-    bool success;
-    FileSystem::MappedFileData mappedFileData(tempFilePath(), FileSystem::MappedFileMode::Shared, success);
-    EXPECT_TRUE(success);
+    auto mappedFileData = FileSystem::mapFile(tempFilePath(), FileSystem::MappedFileMode::Shared);
     EXPECT_TRUE(!!mappedFileData);
-    EXPECT_TRUE(mappedFileData.size() == strlen(FileSystemTestData));
-    EXPECT_TRUE(contains(FileSystemTestData.span(), mappedFileData.span()));
+    EXPECT_TRUE(mappedFileData->size() == strlen(FileSystemTestData));
+    EXPECT_TRUE(contains(FileSystemTestData.span(), mappedFileData->span()));
 }
 
 TEST_F(FileSystemTest, MappingExistingEmptyFile)
 {
-    bool success;
-    FileSystem::MappedFileData mappedFileData(tempEmptyFilePath(), FileSystem::MappedFileMode::Shared, success);
-    EXPECT_TRUE(success);
-    EXPECT_TRUE(!mappedFileData);
+    auto mappedFileData = FileSystem::mapFile(tempEmptyFilePath(), FileSystem::MappedFileMode::Shared);
+    EXPECT_TRUE(!!mappedFileData);
+    EXPECT_TRUE(!*mappedFileData);
 }
 
 TEST_F(FileSystemTest, FilesHaveSameVolume)

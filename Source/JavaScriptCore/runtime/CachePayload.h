@@ -27,8 +27,8 @@
 
 #include "VM.h"
 #include <variant>
-#include <wtf/FileSystem.h>
 #include <wtf/MallocSpan.h>
+#include <wtf/MappedFileData.h>
 
 namespace JSC {
 

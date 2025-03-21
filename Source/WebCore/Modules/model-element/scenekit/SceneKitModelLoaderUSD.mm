@@ -35,6 +35,7 @@
 #import "SceneKitModelLoader.h"
 #import "SceneKitModelLoaderClient.h"
 #import <pal/spi/cocoa/SceneKitSPI.h>
+#import <wtf/FileHandle.h>
 
 namespace WebCore {
 

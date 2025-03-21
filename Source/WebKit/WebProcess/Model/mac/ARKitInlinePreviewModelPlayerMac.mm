@@ -36,6 +36,7 @@
 #import <WebCore/Model.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <pal/spi/mac/SystemPreviewSPI.h>
+#import <wtf/FileHandle.h>
 #import <wtf/MachSendRight.h>
 #import <wtf/SoftLinking.h>
 #import <wtf/UUID.h>

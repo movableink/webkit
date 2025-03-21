@@ -33,7 +33,7 @@
 
 #include "NetworkDataTask.h"
 #include <WebCore/FileStreamClient.h>
-#include <wtf/FileSystem.h>
+#include <wtf/FileHandle.h>
 
 namespace WebCore {
 class AsyncFileStream;

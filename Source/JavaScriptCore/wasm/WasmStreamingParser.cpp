@@ -33,6 +33,7 @@
 #include "WasmParser.h"
 #include "WasmSectionParser.h"
 #include "WasmTypeDefinitionInlines.h"
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/UnalignedAccess.h>
 #include <wtf/text/MakeString.h>

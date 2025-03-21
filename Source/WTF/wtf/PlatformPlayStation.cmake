@@ -12,6 +12,7 @@ list(APPEND WTF_SOURCES
     posix/CPUTimePOSIX.cpp
     posix/FileHandlePOSIX.cpp
     posix/FileSystemPOSIX.cpp
+    posix/MappedFileDataPOSIX.cpp
     posix/ThreadingPOSIX.cpp
 
     text/unix/TextBreakIteratorInternalICUUnix.cpp

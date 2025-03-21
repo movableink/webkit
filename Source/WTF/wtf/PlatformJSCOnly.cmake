@@ -14,6 +14,7 @@ if (WIN32)
         win/LanguageWin.cpp
         win/LoggingWin.cpp
         win/MainThreadWin.cpp
+        win/MappedFileDataWin.cpp
         win/OSAllocatorWin.cpp
         win/PathWalker.cpp
         win/SignalsWin.cpp
@@ -57,6 +58,7 @@ else ()
     list(APPEND WTF_SOURCES
         posix/FileHandlePOSIX.cpp
         posix/FileSystemPOSIX.cpp
+        posix/MappedFileDataPOSIX.cpp
 
         unix/UniStdExtrasUnix.cpp
     )

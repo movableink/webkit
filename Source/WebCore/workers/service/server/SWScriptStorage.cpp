@@ -30,6 +30,7 @@
 #include "ScriptBuffer.h"
 #include "ServiceWorkerRegistrationKey.h"
 #include <pal/crypto/CryptoDigest.h>
+#include <wtf/FileHandle.h>
 #include <wtf/MainThread.h>
 #include <wtf/PageBlock.h>
 #include <wtf/TZoneMallocInlines.h>

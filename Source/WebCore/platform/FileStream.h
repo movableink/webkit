@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/TZoneMalloc.h>
 

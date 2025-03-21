@@ -31,6 +31,7 @@
 #include "config.h"
 #include "FileStream.h"
 
+#include <wtf/FileHandle.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/WTFString.h>
 

@@ -11,6 +11,7 @@ list(APPEND WTF_SOURCES
     win/LanguageWin.cpp
     win/LoggingWin.cpp
     win/MainThreadWin.cpp
+    win/MappedFileDataWin.cpp
     win/MemoryFootprintWin.cpp
     win/MemoryPressureHandlerWin.cpp
     win/OSAllocatorWin.cpp

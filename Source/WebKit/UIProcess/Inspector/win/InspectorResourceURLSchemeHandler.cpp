@@ -48,17 +48,16 @@ void InspectorResourceURLSchemeHandler::platformStartTask(WebPageProxy&, WebURLS
     if (requestPath.startsWith("\\"_s))
         requestPath = requestPath.substring(1);
     auto path = WebCore::webKitBundlePath({ "WebInspectorUI"_s, requestPath });
-    bool success;
-    FileSystem::MappedFileData file(path, FileSystem::MappedFileMode::Private, success);
-    if (!success) {
+    auto file = FileSystem::mapFile(path, FileSystem::MappedFileMode::Private);
+    if (!file) {
         task.didComplete(WebCore::ResourceError(CURLE_READ_ERROR, requestURL));
         return;
     }
     auto contentType = WebCore::File::contentTypeForFile(path);
     if (contentType.isEmpty())
         contentType = "application/octet-stream"_s;
-    WebCore::ResourceResponse response(requestURL, contentType, file.size(), "UTF-8"_s);
-    auto data = WebCore::SharedBuffer::create(file.span());
+    WebCore::ResourceResponse response(requestURL, contentType, file->size(), "UTF-8"_s);
+    auto data = WebCore::SharedBuffer::create(file->span());
 
     task.didReceiveResponse(response);
     task.didReceiveData(WTFMove(data));

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,35 +25,16 @@
 
 #pragma once
 
-#include <fcntl.h>
-#include <wtf/FileHandle.h>
+namespace WTF {
 
-namespace IPC {
+namespace FileSystemImpl {
 
-class Decoder;
-class Encoder;
-
-class SharedFileHandle {
-public:
-    static std::optional<SharedFileHandle> create(FileSystem::FileHandle&&);
-
-#if PLATFORM(COCOA)
-    explicit SharedFileHandle(MachSendRight&&);
-    MachSendRight toMachSendRight() const;
-#endif
-
-    SharedFileHandle() = default;
-    FileSystem::FileHandle release() { return std::exchange(m_handle, { }); }
-
-private:
-    explicit SharedFileHandle(FileSystem::FileHandle&& handle)
-        : m_handle(WTFMove(handle))
-    {
-    }
-
-    FileSystem::FileHandle m_handle;
+enum class FileLockMode {
+    Shared = 1 << 0,
+    Exclusive = 1 << 1,
+    Nonblocking = 1 << 2,
 };
 
-} // namespace IPC
+} // namespace FileSystemImpl
 
-
+} // namespace WTF

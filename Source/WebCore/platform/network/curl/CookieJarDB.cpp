@@ -32,6 +32,7 @@
 #include "RegistrableDomain.h"
 #include "SQLiteFileSystem.h"
 #include <wtf/DateMath.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/TZoneMallocInlines.h>

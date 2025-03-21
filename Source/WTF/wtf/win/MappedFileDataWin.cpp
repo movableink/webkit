@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,37 +23,23 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "config.h"
+#include "MappedFileData.h"
 
-#include <fcntl.h>
-#include <wtf/FileHandle.h>
+#include <windows.h>
 
-namespace IPC {
+namespace WTF::FileSystemImpl {
 
-class Decoder;
-class Encoder;
+MappedFileData::MappedFileData(std::span<uint8_t> fileData, Win32Handle&& fileMapping)
+    : m_fileData(fileData)
+    , m_fileMapping(WTFMove(fileMapping))
+{
+}
 
-class SharedFileHandle {
-public:
-    static std::optional<SharedFileHandle> create(FileSystem::FileHandle&&);
+MappedFileData::~MappedFileData()
+{
+    if (m_fileData.data())
+        UnmapViewOfFile(m_fileData.data());
+}
 
-#if PLATFORM(COCOA)
-    explicit SharedFileHandle(MachSendRight&&);
-    MachSendRight toMachSendRight() const;
-#endif
-
-    SharedFileHandle() = default;
-    FileSystem::FileHandle release() { return std::exchange(m_handle, { }); }
-
-private:
-    explicit SharedFileHandle(FileSystem::FileHandle&& handle)
-        : m_handle(WTFMove(handle))
-    {
-    }
-
-    FileSystem::FileHandle m_handle;
-};
-
-} // namespace IPC
-
-
+} // namespace WTF::FileSystemImpl

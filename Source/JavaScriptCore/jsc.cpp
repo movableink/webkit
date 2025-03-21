@@ -95,6 +95,7 @@
 #include <wtf/CPUTime.h>
 #include <wtf/CommaPrinter.h>
 #include <wtf/FastMalloc.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
 #include <wtf/MemoryPressureHandler.h>
@@ -1379,13 +1380,11 @@ private:
         if (!handle)
             return;
 
-        bool success;
-        FileSystem::MappedFileData mappedFileData(handle, FileSystem::MappedFileMode::Private, success);
-
-        if (!success)
+        auto mappedFileData = handle.map(FileSystem::MappedFileMode::Private);
+        if (!mappedFileData)
             return;
 
-        m_cachedBytecode = CachedBytecode::create(WTFMove(mappedFileData));
+        m_cachedBytecode = CachedBytecode::create(WTFMove(*mappedFileData));
     }
 
     ShellSourceProvider(const String& source, const SourceOrigin& sourceOrigin, String&& sourceURL, const TextPosition& startPosition, SourceProviderSourceType sourceType)

@@ -69,6 +69,7 @@
 #import <mach-o/dyld.h>
 #import <pal/spi/mac/NSApplicationSPI.h>
 #import <pal/spi/mac/NSMenuSPI.h>
+#import <wtf/FileHandle.h>
 #import <wtf/FileSystem.h>
 #import <wtf/ProcessPrivilege.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>

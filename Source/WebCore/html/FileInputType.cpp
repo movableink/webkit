@@ -46,6 +46,7 @@
 #include "ShadowRoot.h"
 #include "UserAgentParts.h"
 #include "UserGestureIndicator.h"
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/TypeCasts.h>

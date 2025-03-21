@@ -359,7 +359,7 @@ void CacheStorageDiskStore::readAllRecordInfosInternal(ReadAllRecordInfosCallbac
                     continue;
 
                 auto recordFile = FileSystem::pathByAppendingComponent(cacheDirectory, recordName);
-                auto fileData = FileSystem::MappedFileData::create(recordFile, FileSystem::MappedFileMode::Private);
+                auto fileData = FileSystem::mapFile(recordFile, FileSystem::MappedFileMode::Private);
                 if (!fileData)
                     continue;
 
@@ -384,8 +384,8 @@ void CacheStorageDiskStore::readRecordsInternal(const Vector<CacheStorageRecordI
         Vector<std::optional<CacheStorageRecord>> records;
         for (auto& recordInfo : recordInfos) {
             auto recordFile = recordFilePathWithDirectory(directory, recordInfo.key());
-            auto fileData = valueOrDefault(FileSystem::MappedFileData::create(recordFile, FileSystem::MappedFileMode::Private));
-            auto blobData = !fileData.size() ? FileSystem::MappedFileData { } : valueOrDefault(FileSystem::MappedFileData::create(recordBlobFilePath(recordFile), FileSystem::MappedFileMode::Private));
+            auto fileData = valueOrDefault(FileSystem::mapFile(recordFile, FileSystem::MappedFileMode::Private));
+            auto blobData = !fileData.size() ? FileSystem::MappedFileData { } : valueOrDefault(FileSystem::mapFile(recordBlobFilePath(recordFile), FileSystem::MappedFileMode::Private));
             auto record = readRecordFromFileData(fileData.span(), WTFMove(blobData));
             if (!record) {
                 RELEASE_LOG(CacheStorage, "%p - CacheStorageDiskStore::readRecordsInternal fails to decode record from file", this);

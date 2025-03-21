@@ -30,6 +30,7 @@
 #import <dispatch/dispatch.h>
 #import <sys/mman.h>
 #import <sys/stat.h>
+#import <wtf/FileHandle.h>
 #import <wtf/cocoa/SpanCocoa.h>
 
 namespace WebKit {

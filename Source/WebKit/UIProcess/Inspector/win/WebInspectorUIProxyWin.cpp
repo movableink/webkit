@@ -47,6 +47,7 @@
 #include <WebCore/WebCoreBundleWin.h>
 #include <WebCore/WindowMessageBroadcaster.h>
 #include <WebKit/WKPage.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/text/MakeString.h>
 

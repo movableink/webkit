@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include <wtf/FileSystem.h>
+#include <wtf/FileHandle.h>
 #include <wtf/Lock.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/WTFString.h>

@@ -53,6 +53,7 @@
 
 #include "SandboxExtension.h"
 #include <WebCore/Timer.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>

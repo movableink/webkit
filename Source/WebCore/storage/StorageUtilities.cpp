@@ -29,6 +29,7 @@
 #include "ClientOrigin.h"
 #include "WebCorePersistentCoders.h"
 #include <pal/crypto/CryptoDigest.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/Scope.h>
 #include <wtf/persistence/PersistentCoders.h>

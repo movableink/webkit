@@ -99,11 +99,14 @@
 		468742F12D7F8A0100F4BE74 /* FileHandle.h in Headers */ = {isa = PBXBuildFile; fileRef = 468742EF2D7F8A0100F4BE74 /* FileHandle.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		468742F22D7F8A0100F4BE74 /* FileHandle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 468742F02D7F8A0100F4BE74 /* FileHandle.cpp */; };
 		468EAFD42D5B1E37005069CF /* SocketPOSIX.h in Headers */ = {isa = PBXBuildFile; fileRef = 468EAFD32D5B1E37005069CF /* SocketPOSIX.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		46A6D0D62D8A166D00FC76C8 /* MappedFileDataPOSIX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 46A6D0D52D8A166D00FC76C8 /* MappedFileDataPOSIX.cpp */; };
+		46A6D0DA2D8A168400FC76C8 /* MappedFileData.h in Headers */ = {isa = PBXBuildFile; fileRef = 46A6D0D72D8A168400FC76C8 /* MappedFileData.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		46B0FB5D2D24BFBA0012184C /* ParsingUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 46B0FB5C2D24BFBA0012184C /* ParsingUtilities.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		46B4C53C2D4F2D0A00BAA3FE /* NSStringExtras.h in Headers */ = {isa = PBXBuildFile; fileRef = 46B4C53B2D4F2D0A00BAA3FE /* NSStringExtras.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		46BEB6EB22FFE24900269867 /* RefCounted.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 46BEB6E922FFDDD500269867 /* RefCounted.cpp */; };
 		46BEB6EB22FFE24900269868 /* RefTrackerMixin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 46BEB6E922FFDDD500269868 /* RefTrackerMixin.cpp */; };
 		46CA183A2D83C17A00B68573 /* FileHandlePOSIX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 46CA18392D83C17A00B68573 /* FileHandlePOSIX.cpp */; };
+		46CE0CB62D8BD18500B8A1DD /* FileLockMode.h in Headers */ = {isa = PBXBuildFile; fileRef = 46CE0CB52D8BD18500B8A1DD /* FileLockMode.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		46CEA3FA2CC2D39B00FE325C /* SpanCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = 46CEA3F92CC2D39B00FE325C /* SpanCocoa.mm */; };
 		46E915222CD2E26C00C437B7 /* UnicodeExtras.h in Headers */ = {isa = PBXBuildFile; fileRef = 46E915212CD2E26C00C437B7 /* UnicodeExtras.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		46E93049271F1205005BA6E5 /* SafeStrerror.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 46E43647271F10AA00C88C90 /* SafeStrerror.cpp */; };
@@ -1265,6 +1268,8 @@
 		468742EF2D7F8A0100F4BE74 /* FileHandle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FileHandle.h; sourceTree = "<group>"; };
 		468742F02D7F8A0100F4BE74 /* FileHandle.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FileHandle.cpp; sourceTree = "<group>"; };
 		468EAFD32D5B1E37005069CF /* SocketPOSIX.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SocketPOSIX.h; sourceTree = "<group>"; };
+		46A6D0D52D8A166D00FC76C8 /* MappedFileDataPOSIX.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MappedFileDataPOSIX.cpp; sourceTree = "<group>"; };
+		46A6D0D72D8A168400FC76C8 /* MappedFileData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MappedFileData.h; sourceTree = "<group>"; };
 		46B0FB5C2D24BFBA0012184C /* ParsingUtilities.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ParsingUtilities.h; sourceTree = "<group>"; };
 		46B4C53B2D4F2D0A00BAA3FE /* NSStringExtras.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NSStringExtras.h; sourceTree = "<group>"; };
 		46BA9EAB1F4CD61E009A2BBC /* CompletionHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CompletionHandler.h; sourceTree = "<group>"; };
@@ -1272,6 +1277,7 @@
 		46BEB6E922FFDDD500269868 /* RefTrackerMixin.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RefTrackerMixin.cpp; sourceTree = "<group>"; };
 		46BEB6E922FFDDD50026DEAD /* RefTrackerMixin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = RefTrackerMixin.h; sourceTree = "<group>"; };
 		46CA18392D83C17A00B68573 /* FileHandlePOSIX.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FileHandlePOSIX.cpp; sourceTree = "<group>"; };
+		46CE0CB52D8BD18500B8A1DD /* FileLockMode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FileLockMode.h; sourceTree = "<group>"; };
 		46CEA3F92CC2D39B00FE325C /* SpanCocoa.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SpanCocoa.mm; sourceTree = "<group>"; };
 		46E43646271F10AA00C88C90 /* SafeStrerror.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SafeStrerror.h; sourceTree = "<group>"; };
 		46E43647271F10AA00C88C90 /* SafeStrerror.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SafeStrerror.cpp; sourceTree = "<group>"; };
@@ -2126,6 +2132,7 @@
 				EB2C86D8267B275C0052CB9A /* CPUTimePOSIX.cpp */,
 				46CA18392D83C17A00B68573 /* FileHandlePOSIX.cpp */,
 				A331D96621F24ABD009F02AA /* FileSystemPOSIX.cpp */,
+				46A6D0D52D8A166D00FC76C8 /* MappedFileDataPOSIX.cpp */,
 				A3EE5C3921FFAC5E00FABD61 /* OSAllocatorPOSIX.cpp */,
 				468EAFD32D5B1E37005069CF /* SocketPOSIX.h */,
 				A32D8FA421FFFAB400780662 /* ThreadingPOSIX.cpp */,
@@ -2304,6 +2311,7 @@
 				0F79C7C31E73511800EB34D1 /* FastTLS.h */,
 				468742F02D7F8A0100F4BE74 /* FileHandle.cpp */,
 				468742EF2D7F8A0100F4BE74 /* FileHandle.h */,
+				46CE0CB52D8BD18500B8A1DD /* FileLockMode.h */,
 				0F9D335B165DBA73005AD387 /* FilePrintStream.cpp */,
 				0F9D335C165DBA73005AD387 /* FilePrintStream.h */,
 				A331D95A21F24992009F02AA /* FileSystem.cpp */,
@@ -2408,6 +2416,7 @@
 				BBEA08032CCFDB33000AC148 /* MallocCommon.h */,
 				1A233C7C17DAA6E300A93ACF /* MallocPtr.h */,
 				465005D72CD2840A00950C5F /* MallocSpan.h */,
+				46A6D0D72D8A168400FC76C8 /* MappedFileData.h */,
 				304CA4E41375437EBE931D03 /* Markable.h */,
 				A8A472C9151A825B004123FF /* MathExtras.h */,
 				CD5497AA15857D0300B5BC30 /* MediaTime.cpp */,
@@ -3421,6 +3430,7 @@
 				DD3DC8A727A4BF8E007E5B61 /* FastMalloc.h in Headers */,
 				DD3DC8AF27A4BF8E007E5B61 /* FastTLS.h in Headers */,
 				468742F12D7F8A0100F4BE74 /* FileHandle.h in Headers */,
+				46CE0CB62D8BD18500B8A1DD /* FileLockMode.h in Headers */,
 				DD3DC96E27A4BF8E007E5B61 /* FilePrintStream.h in Headers */,
 				DD3DC8F827A4BF8E007E5B61 /* FileSystem.h in Headers */,
 				DDF306FB27C086CC006A526F /* fixed-dtoa.h in Headers */,
@@ -3521,6 +3531,7 @@
 				BBEA08042CCFDB33000AC148 /* MallocCommon.h in Headers */,
 				DD3DC8D427A4BF8E007E5B61 /* MallocPtr.h in Headers */,
 				465005D82CD2840A00950C5F /* MallocSpan.h in Headers */,
+				46A6D0DA2D8A168400FC76C8 /* MappedFileData.h in Headers */,
 				DD3DC89727A4BF8E007E5B61 /* Markable.h in Headers */,
 				DD3DC89427A4BF8E007E5B61 /* MathExtras.h in Headers */,
 				DD3DC96A27A4BF8E007E5B61 /* MediaTime.h in Headers */,
@@ -4289,6 +4300,7 @@
 				A8A473E4151A825B004123FF /* MainThreadCocoa.mm in Sources */,
 				5187AC952C08570600549EFE /* MainThreadDispatcher.cpp in Sources */,
 				BBFA08042CCFDB33000AC148 /* MallocCommon.cpp in Sources */,
+				46A6D0D62D8A166D00FC76C8 /* MappedFileDataPOSIX.cpp in Sources */,
 				CD5497AC15857D0300B5BC30 /* MediaTime.cpp in Sources */,
 				ADF2CE671E39F106006889DB /* MemoryFootprintCocoa.cpp in Sources */,
 				AD89B6B71E6415080090707F /* MemoryPressureHandler.cpp in Sources */,

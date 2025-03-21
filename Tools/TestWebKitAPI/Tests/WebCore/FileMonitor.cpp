@@ -28,6 +28,7 @@
 #include "Test.h"
 #include "Utilities.h"
 #include <WebCore/FileMonitor.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
 #include <wtf/RunLoop.h>

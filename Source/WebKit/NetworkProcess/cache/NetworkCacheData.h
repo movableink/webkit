@@ -27,7 +27,9 @@
 
 #include <span>
 #include <wtf/Box.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
+#include <wtf/MappedFileData.h>
 #include <wtf/SHA1.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/WTFString.h>

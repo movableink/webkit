@@ -42,6 +42,7 @@
 #include "UnlinkedMetadataTableInlines.h"
 #include "UnlinkedModuleProgramCodeBlock.h"
 #include "UnlinkedProgramCodeBlock.h"
+#include <wtf/FileHandle.h>
 #include <wtf/MallocPtr.h>
 #include <wtf/MallocSpan.h>
 #include <wtf/Packed.h>
@@ -195,14 +196,13 @@ private:
             }
         }
 
-        bool success;
-        FileSystem::MappedFileData mappedFileData(m_fileHandle, FileSystem::MappedFileMode::Private, success);
-        if (!success) {
+        auto mappedFileData = m_fileHandle.map(FileSystem::MappedFileMode::Private);
+        if (!mappedFileData) {
             error = BytecodeCacheError::StandardError(errno);
             return nullptr;
         }
 
-        return CachedBytecode::create(WTFMove(mappedFileData), WTFMove(m_leafExecutables));
+        return CachedBytecode::create(WTFMove(*mappedFileData), WTFMove(m_leafExecutables));
     }
 
     class Page {

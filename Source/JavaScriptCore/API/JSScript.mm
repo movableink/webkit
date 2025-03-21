@@ -41,6 +41,7 @@
 #import "JSVirtualMachineInternal.h"
 #import "Symbol.h"
 #import <sys/stat.h>
+#import <wtf/FileHandle.h>
 #import <wtf/FileSystem.h>
 #import <wtf/SHA1.h>
 #import <wtf/SafeStrerror.h>
@@ -134,20 +135,19 @@ static bool validateBytecodeCachePath(NSURL* cachePath, NSError** error)
     if (!filePathURL.protocolIsFile())
         return createError([NSString stringWithFormat:@"File path %@ is not a local file", static_cast<NSURL *>(filePathURL)], error);
 
-    bool success = false;
     String systemPath = filePathURL.fileSystemPath();
-    FileSystem::MappedFileData fileData(systemPath, FileSystem::MappedFileMode::Shared, success);
-    if (!success)
+    auto fileData = FileSystem::mapFile(systemPath, FileSystem::MappedFileMode::Shared);
+    if (!fileData)
         return createError([NSString stringWithFormat:@"File at path %@ could not be mapped.", static_cast<NSString *>(systemPath)], error);
 
-    if (!charactersAreAllASCII(fileData.span()))
+    if (!charactersAreAllASCII(fileData->span()))
         return createError([NSString stringWithFormat:@"Not all characters in file at %@ are ASCII.", static_cast<NSString *>(systemPath)], error);
 
     auto result = adoptNS([[JSScript alloc] init]);
     result->m_virtualMachine = vm;
     result->m_type = type;
-    result->m_source = String(StringImpl::createWithoutCopying(fileData.span()));
-    result->m_mappedSource = WTFMove(fileData);
+    result->m_source = String(StringImpl::createWithoutCopying(fileData->span()));
+    result->m_mappedSource = WTFMove(*fileData);
     result->m_sourceURL = sourceURL;
     result->m_cachePath = cachePath;
     [result readCache];
@@ -165,12 +165,11 @@ static bool validateBytecodeCachePath(NSURL* cachePath, NSError** error)
     if (!handle)
         return;
 
-    bool success;
-    FileSystem::MappedFileData mappedFile(handle, FileSystem::MappedFileMode::Private, success);
-    if (!success)
+    auto mappedFile = handle.map(FileSystem::MappedFileMode::Private);
+    if (!mappedFile)
         return;
 
-    auto fileData = mappedFile.span();
+    auto fileData = mappedFile->span();
 
     // Ensure we at least have a SHA1::Digest to read.
     if (fileData.size() < sizeof(SHA1::Digest)) {
@@ -194,7 +193,7 @@ static bool validateBytecodeCachePath(NSURL* cachePath, NSError** error)
         return;
     }
 
-    Ref<JSC::CachedBytecode> cachedBytecode = JSC::CachedBytecode::create(WTFMove(mappedFile));
+    Ref cachedBytecode = JSC::CachedBytecode::create(WTFMove(*mappedFile));
 
     JSC::VM& vm = *toJS([m_virtualMachine JSContextGroupRef]);
     JSC::SourceCode sourceCode = [self sourceCode];

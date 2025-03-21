@@ -45,6 +45,7 @@
 #import <pal/spi/cocoa/FoundationSPI.h>
 #import <pal/spi/ios/QuickLookSPI.h>
 #import <wtf/BlockPtr.h>
+#import <wtf/FileHandle.h>
 #import <wtf/WeakObjCPtr.h>
 #import <wtf/cocoa/SpanCocoa.h>
 

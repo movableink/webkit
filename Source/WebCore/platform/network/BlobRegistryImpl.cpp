@@ -44,6 +44,7 @@
 #include "ResourceResponse.h"
 #include "SecurityOriginData.h"
 #include <wtf/CompletionHandler.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>

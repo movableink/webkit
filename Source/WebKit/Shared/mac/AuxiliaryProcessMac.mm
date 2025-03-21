@@ -47,6 +47,7 @@
 #import <sys/sysctl.h>
 #import <sysexits.h>
 #import <wtf/DataLog.h>
+#import <wtf/FileHandle.h>
 #import <wtf/FileSystem.h>
 #import <wtf/SafeStrerror.h>
 #import <wtf/Scope.h>

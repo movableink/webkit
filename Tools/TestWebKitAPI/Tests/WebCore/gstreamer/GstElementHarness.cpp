@@ -31,6 +31,7 @@
 #include "Test.h"
 #include <WebCore/GStreamerCommon.h>
 #include <WebCore/GStreamerElementHarness.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 
 using namespace WebCore;

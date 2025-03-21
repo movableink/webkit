@@ -28,8 +28,10 @@
 #include <wtf/FileSystem.h>
 
 #include <wtf/CryptographicallyRandomNumber.h>
+#include <wtf/FileHandle.h>
 #include <wtf/HexNumber.h>
 #include <wtf/Logging.h>
+#include <wtf/MappedFileData.h>
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
@@ -276,58 +278,6 @@ void setMetadataURL(const String&, const String&, const String&)
 
 #endif
 
-MappedFileData::MappedFileData(const String& filePath, MappedFileMode mapMode, bool& success)
-{
-    auto handle = openFile(filePath, FileSystem::FileOpenMode::Read);
-    success = mapFileHandle(handle, FileSystem::FileOpenMode::Read, mapMode);
-}
-
-#if HAVE(MMAP)
-
-MappedFileData::~MappedFileData() = default;
-
-bool MappedFileData::mapFileHandle(FileHandle& handle, FileOpenMode openMode, MappedFileMode mapMode)
-{
-    if (!handle)
-        return false;
-
-    struct stat fileStat;
-    if (fstat(handle.platformHandle(), &fileStat))
-        return false;
-
-    size_t size;
-    if (!WTF::convertSafely(fileStat.st_size, size))
-        return false;
-
-    if (!size)
-        return true;
-
-    int pageProtection = PROT_READ;
-    switch (openMode) {
-    case FileOpenMode::Read:
-        pageProtection = PROT_READ;
-        break;
-    case FileOpenMode::Truncate:
-        pageProtection = PROT_WRITE;
-        break;
-    case FileOpenMode::ReadWrite:
-        pageProtection = PROT_READ | PROT_WRITE;
-        break;
-#if OS(DARWIN)
-    case FileOpenMode::EventsOnly:
-        ASSERT_NOT_REACHED();
-#endif
-    }
-
-    auto fileData = MallocSpan<uint8_t, Mmap>::mmap(size, pageProtection, MAP_FILE | (mapMode == MappedFileMode::Shared ? MAP_SHARED : MAP_PRIVATE), handle.platformHandle());
-    if (!fileData)
-        return false;
-
-    m_fileData = WTFMove(fileData);
-    return true;
-}
-#endif
-
 #if !PLATFORM(IOS_FAMILY)
 bool isSafeToUseMemoryMapForPath(const String&)
 {
@@ -364,6 +314,14 @@ bool markPurgeable(const String&)
 
 #endif
 
+std::optional<MappedFileData> mapFile(const String& filePath, MappedFileMode mode)
+{
+    auto handle = openFile(filePath, FileSystem::FileOpenMode::Read);
+    if (!handle)
+        return { };
+    return handle.map(mode);
+}
+
 MappedFileData createMappedFileData(const String& path, size_t bytesSize, FileHandle* outputHandle)
 {
     constexpr bool failIfFileExists = true;
@@ -380,15 +338,14 @@ MappedFileData createMappedFileData(const String& path, size_t bytesSize, FileHa
     if (!FileSystem::makeSafeToUseMemoryMapForPath(path))
         return { };
 
-    bool success;
-    FileSystem::MappedFileData mappedFile(handle, FileSystem::FileOpenMode::ReadWrite, FileSystem::MappedFileMode::Shared, success);
-    if (!success)
+    auto mappedFile = handle.map(FileSystem::MappedFileMode::Shared, FileSystem::FileOpenMode::ReadWrite);
+    if (!mappedFile)
         return { };
 
     if (outputHandle)
         *outputHandle = WTFMove(handle);
 
-    return mappedFile;
+    return WTFMove(*mappedFile);
 }
 
 void finalizeMappedFileData(MappedFileData& mappedFileData, size_t bytesSize)

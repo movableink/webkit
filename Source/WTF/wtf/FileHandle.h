@@ -26,6 +26,7 @@
 #pragma once
 
 #include <optional>
+#include <wtf/FileLockMode.h>
 #include <wtf/Forward.h>
 #include <wtf/Markable.h>
 #include <wtf/OptionSet.h>
@@ -39,6 +40,11 @@
 namespace WTF {
 
 namespace FileSystemImpl {
+
+class MappedFileData;
+
+enum class FileOpenMode : uint8_t;
+enum class MappedFileMode : bool;
 
 #if OS(WINDOWS)
 typedef HANDLE PlatformFileHandle;
@@ -61,12 +67,6 @@ enum class FileSeekOrigin {
     Beginning,
     Current,
     End,
-};
-
-enum class FileLockMode {
-    Shared = 1 << 0,
-    Exclusive = 1 << 1,
-    Nonblocking = 1 << 2,
 };
 
 class FileHandle {
@@ -101,6 +101,9 @@ public:
     // Appends the contents of the file found at 'path' to the FileHandle.
     // Returns true if the write was successful, false if it was not.
     WTF_EXPORT_PRIVATE bool appendFileContents(const String& path);
+
+    WTF_EXPORT_PRIVATE std::optional<MappedFileData> map(MappedFileMode);
+    WTF_EXPORT_PRIVATE std::optional<MappedFileData> map(MappedFileMode, FileOpenMode);
 
 private:
     WTF_EXPORT_PRIVATE FileHandle(PlatformFileHandle, OptionSet<FileLockMode>);

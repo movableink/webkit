@@ -28,6 +28,7 @@
 
 #include "Logging.h"
 #include <WebCore/SharedBuffer.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/RunLoop.h>
 

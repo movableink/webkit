@@ -66,6 +66,7 @@
 #import <WebCore/SimpleRange.h>
 #import <WebCore/WebNSAttributedStringExtras.h>
 #import <wtf/Assertions.h>
+#import <wtf/FileHandle.h>
 #import <wtf/FileSystem.h>
 #import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/URL.h>

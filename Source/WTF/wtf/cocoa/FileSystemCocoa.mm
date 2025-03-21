@@ -30,6 +30,7 @@
 #import <wtf/FileSystem.h>
 
 #import <sys/resource.h>
+#import <wtf/FileHandle.h>
 #import <wtf/SoftLinking.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>

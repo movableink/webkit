@@ -33,7 +33,7 @@
 #include <WebCore/ProtectionSpace.h>
 #include <WebCore/ResourceResponse.h>
 #include <WebCore/ShouldRelaxThirdPartyCookieBlocking.h>
-#include <wtf/FileSystem.h>
+#include <wtf/FileHandle.h>
 #include <wtf/MonotonicTime.h>
 
 namespace WebCore {

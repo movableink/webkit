@@ -28,6 +28,7 @@
 
 #import "Logging.h"
 #import <wtf/BlockPtr.h>
+#import <wtf/FileHandle.h>
 #import <wtf/FileSystem.h>
 
 namespace WebCore {

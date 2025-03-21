@@ -90,6 +90,7 @@ set(WTF_PUBLIC_HEADERS
     FastMalloc.h
     FastTLS.h
     FileHandle.h
+    FileLockMode.h
     FilePrintStream.h
     FileSystem.h
     FixedBitVector.h
@@ -173,6 +174,7 @@ set(WTF_PUBLIC_HEADERS
     MallocCommon.h
     MallocPtr.h
     MallocSpan.h
+    MappedFileData.h
     Markable.h
     MathExtras.h
     MediaTime.h

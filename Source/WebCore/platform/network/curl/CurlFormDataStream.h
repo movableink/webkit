@@ -27,7 +27,7 @@
 #pragma once
 
 #include "FormData.h"
-#include <wtf/FileSystem.h>
+#include <wtf/FileHandle.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {

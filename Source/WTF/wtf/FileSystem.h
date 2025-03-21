@@ -34,7 +34,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include <utility>
-#include <wtf/FileHandle.h>
+#include <wtf/FileLockMode.h>
 #include <wtf/Forward.h>
 #include <wtf/MallocSpan.h>
 #include <wtf/OptionSet.h>
@@ -44,10 +44,6 @@
 
 #if USE(CF)
 #include <wtf/RetainPtr.h>
-#endif
-
-#if HAVE(MMAP)
-#include <wtf/Mmap.h>
 #endif
 
 #if USE(CF)
@@ -61,7 +57,18 @@ namespace WTF {
 
 namespace FileSystemImpl {
 
-enum class FileOpenMode {
+class FileHandle;
+class MappedFileData;
+
+enum class MappedFileMode : bool;
+
+#if OS(WINDOWS)
+typedef FILE_ID_128 PlatformFileID;
+#else
+typedef ino_t PlatformFileID;
+#endif
+
+enum class FileOpenMode : uint8_t {
     Read,
     Truncate,
     ReadWrite,
@@ -73,11 +80,6 @@ enum class FileOpenMode {
 enum class FileAccessPermission : bool {
     User,
     All
-};
-
-enum class MappedFileMode {
-    Shared,
-    Private,
 };
 
 WTF_EXPORT_PRIVATE bool fileExists(const String&);
@@ -191,101 +193,7 @@ WTF_EXPORT_PRIVATE String realPath(const String&);
 WTF_EXPORT_PRIVATE bool isSafeToUseMemoryMapForPath(const String&);
 WTF_EXPORT_PRIVATE WARN_UNUSED_RETURN bool makeSafeToUseMemoryMapForPath(const String&);
 
-class MappedFileData {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    MappedFileData() = default;
-    MappedFileData(MappedFileData&&);
-    static std::optional<MappedFileData> create(const String& filePath, MappedFileMode);
-    static std::optional<MappedFileData> create(FileHandle&, MappedFileMode);
-    static std::optional<MappedFileData> create(FileHandle&, FileOpenMode, MappedFileMode);
-    WTF_EXPORT_PRIVATE MappedFileData(const String& filePath, MappedFileMode, bool& success);
-    WTF_EXPORT_PRIVATE MappedFileData(FileHandle&, MappedFileMode, bool& success);
-    WTF_EXPORT_PRIVATE MappedFileData(FileHandle&, FileOpenMode, MappedFileMode, bool& success);
-    WTF_EXPORT_PRIVATE ~MappedFileData();
-    MappedFileData& operator=(MappedFileData&&);
-
-#if HAVE(MMAP)
-    std::span<uint8_t> leakHandle() { return m_fileData.leakSpan(); }
-    explicit operator bool() const { return !!m_fileData; }
-    size_t size() const { return m_fileData.span().size(); }
-    std::span<const uint8_t> span() const LIFETIME_BOUND { return m_fileData.span(); }
-    std::span<uint8_t> mutableSpan() LIFETIME_BOUND { return m_fileData.mutableSpan(); }
-#elif OS(WINDOWS)
-    const Win32Handle& fileMapping() const { return m_fileMapping; }
-    explicit operator bool() const { return !!m_fileData.data(); }
-    size_t size() const { return m_fileData.size(); }
-    std::span<const uint8_t> span() const { return m_fileData; }
-    std::span<uint8_t> mutableSpan() { return m_fileData; }
-#endif
-
-private:
-    WTF_EXPORT_PRIVATE bool mapFileHandle(FileHandle&, FileOpenMode, MappedFileMode);
-
-#if HAVE(MMAP)
-    MallocSpan<uint8_t, Mmap> m_fileData;
-#elif OS(WINDOWS)
-    std::span<uint8_t> m_fileData;
-    Win32Handle m_fileMapping;
-#endif
-};
-
-inline std::optional<MappedFileData> MappedFileData::create(const String& filePath, MappedFileMode mode)
-{
-    std::optional<MappedFileData> result;
-    bool success = false;
-    auto data = MappedFileData { filePath, mode, success };
-    if (success)
-        result = WTFMove(data);
-    return result;
-}
-
-inline std::optional<MappedFileData> MappedFileData::create(FileHandle& handle, MappedFileMode mode)
-{
-    std::optional<MappedFileData> result;
-    bool success = false;
-    auto data = MappedFileData { handle, mode, success };
-    if (success)
-        result = WTFMove(data);
-    return result;
-}
-
-inline std::optional<MappedFileData> MappedFileData::create(FileHandle& handle, FileOpenMode openMode, MappedFileMode mappedFileMode)
-{
-    std::optional<MappedFileData> result;
-    bool success = false;
-    auto data = MappedFileData { handle, openMode, mappedFileMode, success };
-    if (success)
-        result = WTFMove(data);
-    return result;
-}
-
-inline MappedFileData::MappedFileData(FileHandle& handle, MappedFileMode mapMode, bool& success)
-{
-    success = mapFileHandle(handle, FileOpenMode::Read, mapMode);
-}
-
-inline MappedFileData::MappedFileData(FileHandle& handle, FileOpenMode openMode, MappedFileMode mapMode, bool& success)
-{
-    success = mapFileHandle(handle, openMode, mapMode);
-}
-
-inline MappedFileData::MappedFileData(MappedFileData&& other)
-    : m_fileData(std::exchange(other.m_fileData, { }))
-#if OS(WINDOWS)
-    , m_fileMapping(WTFMove(other.m_fileMapping))
-#endif
-{
-}
-
-inline MappedFileData& MappedFileData::operator=(MappedFileData&& other)
-{
-    m_fileData = std::exchange(other.m_fileData, { });
-#if OS(WINDOWS)
-    m_fileMapping = WTFMove(other.m_fileMapping);
-#endif
-    return *this;
-}
+WTF_EXPORT_PRIVATE std::optional<MappedFileData> mapFile(const String& path, MappedFileMode);
 
 // This creates the destination file, maps it, write the provided data to it and returns the mapped file.
 // This function fails if there is already a file at the destination path.

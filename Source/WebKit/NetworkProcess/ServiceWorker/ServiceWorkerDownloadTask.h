@@ -30,7 +30,7 @@
 #include "NetworkConnectionToWebProcess.h"
 #include "NetworkDataTask.h"
 #include <WebCore/FetchIdentifier.h>
-#include <wtf/FileSystem.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FunctionDispatcher.h>
 #include <wtf/TZoneMalloc.h>
 

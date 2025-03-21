@@ -39,6 +39,7 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <ImageIO/ImageIO.h>
 #include <WebCore/ShareableBitmap.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/cf/VectorCF.h>
 #include <wtf/text/CString.h>

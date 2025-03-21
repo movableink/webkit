@@ -30,6 +30,7 @@
 #include <WebCore/ResourceError.h>
 #include <WebCore/SharedBuffer.h>
 #include <wtf/CrossThreadCopier.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/PageBlock.h>
 #include <wtf/TZoneMallocInlines.h>

@@ -546,10 +546,8 @@ SharedBuffer::SharedBuffer(FileSystem::MappedFileData&& data)
 RefPtr<SharedBuffer> SharedBuffer::createWithContentsOfFile(const String& filePath, FileSystem::MappedFileMode mappedFileMode, MayUseFileMapping mayUseFileMapping)
 {
     if (mayUseFileMapping == MayUseFileMapping::Yes) {
-        bool mappingSuccess;
-        FileSystem::MappedFileData mappedFileData(filePath, mappedFileMode, mappingSuccess);
-        if (mappingSuccess)
-            return adoptRef(new SharedBuffer(WTFMove(mappedFileData)));
+        if (auto mappedFileData = FileSystem::mapFile(filePath, mappedFileMode))
+            return adoptRef(new SharedBuffer(WTFMove(*mappedFileData)));
     }
 
     auto buffer = FileSystem::readEntireFile(filePath);

@@ -37,6 +37,7 @@
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <pal/spi/ios/SystemPreviewSPI.h>
 #import <wtf/Assertions.h>
+#import <wtf/FileHandle.h>
 #import <wtf/FileSystem.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/SoftLinking.h>

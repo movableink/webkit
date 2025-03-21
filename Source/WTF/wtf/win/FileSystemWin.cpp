@@ -36,7 +36,9 @@
 #include <sys/stat.h>
 #include <windows.h>
 #include <wtf/CryptographicallyRandomNumber.h>
+#include <wtf/FileHandle.h>
 #include <wtf/HashMap.h>
+#include <wtf/MappedFileData.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
@@ -242,53 +244,6 @@ std::optional<uint32_t> volumeFileBlockSize(const String& path)
         return std::nullopt;
 
     return sectorsPerCluster * bytesPerSector;
-}
-
-MappedFileData::~MappedFileData()
-{
-    if (m_fileData.data())
-        UnmapViewOfFile(m_fileData.data());
-}
-
-bool MappedFileData::mapFileHandle(FileHandle& handle, FileOpenMode openMode, MappedFileMode)
-{
-    if (!handle)
-        return false;
-
-    auto size = handle.size();
-    if (!size || *size > std::numeric_limits<size_t>::max())
-        return false;
-
-    if (!*size)
-        return true;
-
-    DWORD pageProtection = PAGE_READONLY;
-    DWORD desiredAccess = FILE_MAP_READ;
-    switch (openMode) {
-    case FileOpenMode::Read:
-        pageProtection = PAGE_READONLY;
-        desiredAccess = FILE_MAP_READ;
-        break;
-    case FileOpenMode::Truncate:
-        pageProtection = PAGE_READWRITE;
-        desiredAccess = FILE_MAP_WRITE;
-        break;
-    case FileOpenMode::ReadWrite:
-        pageProtection = PAGE_READWRITE;
-        desiredAccess = FILE_MAP_WRITE | FILE_MAP_READ;
-        break;
-    }
-
-    m_fileMapping = Win32Handle::adopt(CreateFileMapping(handle.platformHandle(), nullptr, pageProtection, 0, 0, nullptr));
-    if (!m_fileMapping)
-        return false;
-
-    auto* data = MapViewOfFile(m_fileMapping.get(), desiredAccess, 0, 0, *size);
-    if (!data)
-        return false;
-
-    m_fileData = { static_cast<uint8_t*>(data), static_cast<size_t>(*size) };
-    return true;
 }
 
 } // namespace FileSystemImpl

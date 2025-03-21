@@ -28,13 +28,15 @@
  */
 
 #include "config.h"
-#include "FileSystem.h"
+#include "FileHandle.h"
 
 #include <io.h>
 #include <shlobj.h>
 #include <shlwapi.h>
 #include <sys/stat.h>
 #include <windows.h>
+#include <wtf/FileSystem.h>
+#include <wtf/MappedFileData.h>
 
 namespace WTF::FileSystemImpl {
 
@@ -138,6 +140,47 @@ std::optional<uint64_t> FileHandle::size()
         return std::nullopt;
 
     return getFileSizeFromByHandleFileInformationStructure(fileInformation);
+}
+
+std::optional<MappedFileData> FileHandle::map(MappedFileMode, FileOpenMode openMode)
+{
+    if (!m_handle)
+        return { };
+
+    auto size = this->size();
+    if (!size || *size > std::numeric_limits<size_t>::max())
+        return { };
+
+    if (!*size)
+        return MappedFileData { };
+
+    DWORD pageProtection = PAGE_READONLY;
+    DWORD desiredAccess = FILE_MAP_READ;
+    switch (openMode) {
+    case FileOpenMode::Read:
+        pageProtection = PAGE_READONLY;
+        desiredAccess = FILE_MAP_READ;
+        break;
+    case FileOpenMode::Truncate:
+        pageProtection = PAGE_READWRITE;
+        desiredAccess = FILE_MAP_WRITE;
+        break;
+    case FileOpenMode::ReadWrite:
+        pageProtection = PAGE_READWRITE;
+        desiredAccess = FILE_MAP_WRITE | FILE_MAP_READ;
+        break;
+    }
+
+    Win32Handle fileMapping = Win32Handle::adopt(CreateFileMapping(platformHandle(), nullptr, pageProtection, 0, 0, nullptr));
+    if (!fileMapping)
+        return { };
+
+    auto* data = MapViewOfFile(fileMapping.get(), desiredAccess, 0, 0, *size);
+    if (!data)
+        return { };
+
+    std::span fileData = { static_cast<uint8_t*>(data), static_cast<size_t>(*size) };
+    return MappedFileData { fileData, WTFMove(fileMapping) };
 }
 
 } // WTF::FileSystemImpl

@@ -41,7 +41,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <wtf/EnumTraits.h>
+#include <wtf/FileHandle.h>
 #include <wtf/MallocSpan.h>
+#include <wtf/MappedFileData.h>
 #include <wtf/SafeStrerror.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>

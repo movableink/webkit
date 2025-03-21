@@ -27,6 +27,7 @@
 #include "FileHandle.h"
 
 #include <wtf/FileSystem.h>
+#include <wtf/MappedFileData.h>
 
 namespace WTF::FileSystemImpl {
 
@@ -109,6 +110,11 @@ bool FileHandle::appendFileContents(const String& path)
     } while (true);
 
     ASSERT_NOT_REACHED();
+}
+
+std::optional<MappedFileData> FileHandle::map(MappedFileMode fileMode)
+{
+    return map(fileMode, FileOpenMode::Read);
 }
 
 } // namespace WTF::FileSystemImpl

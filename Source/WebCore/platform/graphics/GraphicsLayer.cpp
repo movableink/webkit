@@ -34,6 +34,7 @@
 #include "LayoutRect.h"
 #include "MediaPlayerEnums.h"
 #include "RotateTransformOperation.h"
+#include <wtf/FileHandle.h>
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>

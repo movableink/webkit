@@ -34,6 +34,10 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
+#include <wtf/CheckedArithmetic.h>
+#include <wtf/FileSystem.h>
+#include <wtf/MallocSpan.h>
+#include <wtf/MappedFileData.h>
 
 namespace WTF::FileSystemImpl {
 
@@ -142,7 +146,48 @@ bool FileHandle::lock(OptionSet<FileLockMode> lockMode)
 
     return flock(*m_handle, lockMode.toRaw()) != -1;
 }
-
 #endif // USE(FILE_LOCK)
+
+#if HAVE(MMAP)
+std::optional<MappedFileData> FileHandle::map(MappedFileMode mapMode, FileOpenMode openMode)
+{
+    if (!m_handle)
+        return { };
+
+    struct stat fileStat;
+    if (fstat(platformHandle(), &fileStat))
+        return { };
+
+    size_t size;
+    if (!WTF::convertSafely(fileStat.st_size, size))
+        return { };
+
+    if (!size)
+        return MappedFileData { };
+
+    int pageProtection = PROT_READ;
+    switch (openMode) {
+    case FileOpenMode::Read:
+        pageProtection = PROT_READ;
+        break;
+    case FileOpenMode::Truncate:
+        pageProtection = PROT_WRITE;
+        break;
+    case FileOpenMode::ReadWrite:
+        pageProtection = PROT_READ | PROT_WRITE;
+        break;
+#if OS(DARWIN)
+    case FileOpenMode::EventsOnly:
+        ASSERT_NOT_REACHED();
+#endif
+    }
+
+    auto fileData = MallocSpan<uint8_t, Mmap>::mmap(size, pageProtection, MAP_FILE | (mapMode == MappedFileMode::Shared ? MAP_SHARED : MAP_PRIVATE), platformHandle());
+    if (!fileData)
+        return { };
+
+    return MappedFileData { WTFMove(fileData) };
+}
+#endif // HAVE(MMAP)
 
 } // WTF::FileSystemImpl

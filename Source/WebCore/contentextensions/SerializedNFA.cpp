@@ -27,6 +27,8 @@
 #include "SerializedNFA.h"
 
 #include "NFA.h"
+#include <wtf/FileHandle.h>
+#include <wtf/FileSystem.h>
 #include <wtf/text/ParsingUtilities.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -64,11 +66,10 @@ std::optional<SerializedNFA> SerializedNFA::serialize(NFA&& nfa)
         return std::nullopt;
     }
 
-    bool mappedSuccessfully = false;
-    FileSystem::MappedFileData mappedFile(fileHandle, FileSystem::MappedFileMode::Private, mappedSuccessfully);
+    auto mappedFile = fileHandle.map(FileSystem::MappedFileMode::Private);
     fileHandle = { };
     FileSystem::deleteFile(filename);
-    if (!mappedSuccessfully)
+    if (!mappedFile)
         return std::nullopt;
 
     Metadata metadata {
@@ -92,7 +93,7 @@ std::optional<SerializedNFA> SerializedNFA::serialize(NFA&& nfa)
 
     nfa.clear();
 
-    return {{ WTFMove(mappedFile), WTFMove(metadata) }};
+    return { { WTFMove(*mappedFile), WTFMove(metadata) } };
 }
 
 SerializedNFA::SerializedNFA(FileSystem::MappedFileData&& file, Metadata&& metadata)
