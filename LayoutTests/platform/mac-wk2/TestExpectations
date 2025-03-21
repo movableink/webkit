@@ -2078,8 +2078,6 @@ webkit.org/b/289975 fast/css/mac/focus-ring-color-should-not-expose-accent-color
 
 webkit.org/b/290012 [ Debug ] html5lib/generated/run-entities01-data.html [ Skip ]
 
-webkit.org/b/290020 [ Sonoma+ Release ] fast/webgpu/nocrash/fuzz-275228.html [ Skip ]
-
 imported/w3c/web-platform-tests/css/css-position/backdrop-inherit-rendered.html [ Pass ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-position/block-axis-constraint-changes-for-out-of-flow-box.html [ Pass ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-position/sticky/position-sticky-escape-scroller-001.html [ Pass ImageOnlyFailure ]
