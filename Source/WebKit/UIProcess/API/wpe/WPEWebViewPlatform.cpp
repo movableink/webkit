@@ -354,7 +354,7 @@ gboolean ViewPlatform::handleEvent(WPEEvent* event)
     case WPE_EVENT_TOUCH_DOWN:
 #if ENABLE(TOUCH_EVENTS)
         m_touchEvents.set(wpe_event_touch_get_sequence_id(event), event);
-        page().handleTouchEvent(NativeWebTouchEvent(event, touchPointsForEvent(event)));
+        page().handleTouchEvent(nullptr, NativeWebTouchEvent(event, touchPointsForEvent(event)));
 #endif
         handleGesture(event);
         return TRUE;
@@ -364,7 +364,7 @@ gboolean ViewPlatform::handleEvent(WPEEvent* event)
         m_touchEvents.set(wpe_event_touch_get_sequence_id(event), event);
         auto points = touchPointsForEvent(event);
         m_touchEvents.remove(wpe_event_touch_get_sequence_id(event));
-        page().handleTouchEvent(NativeWebTouchEvent(event, WTFMove(points)));
+        page().handleTouchEvent(nullptr, NativeWebTouchEvent(event, WTFMove(points)));
 #endif
         handleGesture(event);
         return TRUE;
@@ -372,7 +372,7 @@ gboolean ViewPlatform::handleEvent(WPEEvent* event)
     case WPE_EVENT_TOUCH_MOVE:
 #if ENABLE(TOUCH_EVENTS)
         m_touchEvents.set(wpe_event_touch_get_sequence_id(event), event);
-        page().handleTouchEvent(NativeWebTouchEvent(event, touchPointsForEvent(event)));
+        page().handleTouchEvent(nullptr, NativeWebTouchEvent(event, touchPointsForEvent(event)));
 #endif
         handleGesture(event);
         return TRUE;

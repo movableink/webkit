@@ -283,7 +283,7 @@ void DrawingAreaProxyCoordinatedGraphics::dispatchPresentationCallbacksAfterFlus
 {
     for (auto& callbackID : callbackIDs) {
         if (auto callback = connection.takeAsyncReplyHandler(callbackID))
-            callback(nullptr);
+            callback(nullptr, nullptr);
     }
 }
 

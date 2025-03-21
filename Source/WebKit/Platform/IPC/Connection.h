@@ -132,7 +132,7 @@ extern ASCIILiteral errorAsString(Error);
 #define MESSAGE_CHECK_WITH_MESSAGE_BASE(assertion, connection, message) do { \
     if (UNLIKELY(!(assertion))) { \
         RELEASE_LOG_FAULT(IPC, __FILE__ " " CONNECTION_STRINGIFY_MACRO(__LINE__) ": Invalid message dispatched %" PUBLIC_LOG_STRING ": " message, WTF_PRETTY_FUNCTION); \
-        (connection)->markCurrentlyDispatchedMessageAsInvalid(); \
+        IPC::Connection::markCurrentlyDispatchedMessageAsInvalid(connection); \
         CRASH_IF_TESTING \
         return; \
     } \
@@ -144,7 +144,7 @@ extern ASCIILiteral errorAsString(Error);
 #define MESSAGE_CHECK_OPTIONAL_CONNECTION_BASE(assertion, connection) do { \
     if (UNLIKELY(!(assertion))) { \
         RELEASE_LOG_FAULT(IPC, __FILE__ " " CONNECTION_STRINGIFY_MACRO(__LINE__) ": Invalid message dispatched %" PUBLIC_LOG_STRING, WTF_PRETTY_FUNCTION); \
-        (connection)->markCurrentlyDispatchedMessageAsInvalid(); \
+        IPC::Connection::markCurrentlyDispatchedMessageAsInvalid(connection); \
         CRASH_IF_TESTING \
         return; \
     } \
@@ -153,7 +153,7 @@ extern ASCIILiteral errorAsString(Error);
 #define MESSAGE_CHECK_COMPLETION_BASE(assertion, connection, completion) do { \
     if (UNLIKELY(!(assertion))) { \
         RELEASE_LOG_FAULT(IPC, __FILE__ " " CONNECTION_STRINGIFY_MACRO(__LINE__) ": Invalid message dispatched %" PUBLIC_LOG_STRING, WTF_PRETTY_FUNCTION); \
-        (connection).markCurrentlyDispatchedMessageAsInvalid(); \
+        IPC::Connection::markCurrentlyDispatchedMessageAsInvalid(connection); \
         CRASH_IF_TESTING \
         { completion; } \
         return; \
@@ -163,7 +163,7 @@ extern ASCIILiteral errorAsString(Error);
 #define MESSAGE_CHECK_COMPLETION_BASE_COROUTINE(assertion, connection, completion) do { \
     if (UNLIKELY(!(assertion))) { \
         RELEASE_LOG_FAULT(IPC, __FILE__ " " CONNECTION_STRINGIFY_MACRO(__LINE__) ": Invalid message dispatched %" PUBLIC_LOG_STRING, WTF_PRETTY_FUNCTION); \
-        (connection).markCurrentlyDispatchedMessageAsInvalid(); \
+        IPC::Connection::markCurrentlyDispatchedMessageAsInvalid(connection); \
         CRASH_IF_TESTING \
         { completion; } \
         co_return { }; \
@@ -173,7 +173,7 @@ extern ASCIILiteral errorAsString(Error);
 #define MESSAGE_CHECK_WITH_RETURN_VALUE_BASE(assertion, connection, returnValue) do { \
     if (UNLIKELY(!(assertion))) { \
         RELEASE_LOG_FAULT(IPC, __FILE__ " " CONNECTION_STRINGIFY_MACRO(__LINE__) ": Invalid message dispatched %" PUBLIC_LOG_STRING, WTF_PRETTY_FUNCTION); \
-        (connection).markCurrentlyDispatchedMessageAsInvalid(); \
+        IPC::Connection::markCurrentlyDispatchedMessageAsInvalid(connection); \
         CRASH_IF_TESTING \
         return (returnValue); \
     } \
@@ -240,7 +240,7 @@ private:
 };
 
 struct ConnectionAsyncReplyHandler {
-    CompletionHandler<void(Decoder*)> completionHandler;
+    CompletionHandler<void(Connection*, Decoder*)> completionHandler;
     Markable<AsyncReplyID> replyID;
 };
 
@@ -377,7 +377,13 @@ public:
     // Ensures that messages sent prior to the call are not affected by invalidate() or crash done after the call returns.
     Error flushSentMessages(Timeout);
     void invalidate();
-    inline void markCurrentlyDispatchedMessageAsInvalid();
+    static void markCurrentlyDispatchedMessageAsInvalid(Connection* connection)
+    {
+        if (connection)
+            markCurrentlyDispatchedMessageAsInvalid(*connection);
+    }
+    static void markCurrentlyDispatchedMessageAsInvalid(const RefPtr<Connection>& connection) { markCurrentlyDispatchedMessageAsInvalid(connection.get()); }
+    static void markCurrentlyDispatchedMessageAsInvalid(Connection& connection) { connection.markCurrentlyDispatchedMessageAsInvalid(); }
 
     template<typename PC, typename BasePromise>
     struct ConvertedPromise {
@@ -507,10 +513,10 @@ public:
 
     template<typename T, typename C> static AsyncReplyHandler makeAsyncReplyHandler(C&& completionHandler, ThreadLikeAssertion callThread = CompletionHandlerCallThread::AnyThread);
 
-    CompletionHandler<void(Decoder*)> takeAsyncReplyHandler(AsyncReplyID);
+    CompletionHandler<void(Connection*, Decoder*)> takeAsyncReplyHandler(AsyncReplyID);
 
-    template<typename T, typename C> static void callReply(IPC::Decoder&, C&& completionHandler);
-    template<typename T, typename C> static void cancelReply(C&& completionHandler);
+    template<typename T, typename C> static void callReply(Connection*, Decoder&, C&&);
+    template<typename T, typename C> static void cancelReply(C&&);
 
 #if ENABLE(CORE_IPC_SIGNPOSTS)
     static void* generateSignpostIdentifier();
@@ -521,27 +527,29 @@ public:
 
 private:
     Connection(Identifier&&, bool isServer, Thread::QOS = Thread::QOS::Default);
+    Connection();
     void platformInitialize(Identifier&&);
     bool platformPrepareForOpen();
     void platformOpen();
     void platformInvalidate();
 
     struct AsyncReplyHandlerWithDispatcher {
-        CompletionHandler<void(std::unique_ptr<Decoder>&&)> completionHandler;
+        CompletionHandler<void(Connection*, std::unique_ptr<Decoder>&&)> completionHandler;
         Markable<AsyncReplyID> replyID;
     };
 
     bool isAsyncReplyHandlerWithDispatcher(AsyncReplyID);
-    CompletionHandler<void(std::unique_ptr<Decoder>&&)> takeAsyncReplyHandlerWithDispatcher(AsyncReplyID);
+    CompletionHandler<void(Connection*, std::unique_ptr<Decoder>&&)> takeAsyncReplyHandlerWithDispatcher(AsyncReplyID);
     template<typename T, typename C> static AsyncReplyHandlerWithDispatcher makeAsyncReplyHandlerWithDispatcher(C&& completionHandler, GuaranteedSerialFunctionDispatcher&);
     template<typename T, typename PC, typename Promise> static AsyncReplyHandlerWithDispatcher makeAsyncReplyHandlerWithDispatcher(typename Promise::Producer&&);
 
     Error sendMessageWithAsyncReplyWithDispatcher(UniqueRef<Encoder>&&, AsyncReplyHandlerWithDispatcher&&, OptionSet<SendOption> sendOptions, std::optional<Thread::QOS> = std::nullopt);
     // Utility methods to avoid code duplication.
-    template<typename T, typename C> static CompletionHandler<void(Decoder*)> makeAsyncReplyCompletionHandler(C&& completionHandler, ThreadLikeAssertion);
+    template<typename T, typename C> static CompletionHandler<void(Connection*, Decoder*)> makeAsyncReplyCompletionHandler(C&& completionHandler, ThreadLikeAssertion);
     template<typename T> static CompletionHandler<void(Decoder*)> makeAsyncReplyCompletionHandler(typename T::Promise::Producer&&, ThreadLikeAssertion);
 
     bool isIncomingMessagesThrottlingEnabled() const { return m_incomingMessagesThrottlingLevel.has_value(); }
+    inline void markCurrentlyDispatchedMessageAsInvalid();
 
     DecoderOrError waitForMessage(MessageName, uint64_t destinationID, Timeout, OptionSet<WaitForOption>);
 
@@ -574,10 +582,9 @@ private:
     // Can be called on any thread.
     void enqueueIncomingMessage(UniqueRef<Decoder>) WTF_REQUIRES_LOCK(m_incomingMessagesLock);
     size_t incomingMessagesDispatchingBatchSize() const;
-    CompletionHandler<void(std::unique_ptr<Decoder>&&)> takeAsyncReplyHandlerWithDispatcherWithLockHeld(AsyncReplyID);
+    CompletionHandler<void(Connection*, std::unique_ptr<Decoder>&&)> takeAsyncReplyHandlerWithDispatcherWithLockHeld(AsyncReplyID);
 
     Timeout timeoutRespectingIgnoreTimeoutsForTesting(Timeout) const;
-    Ref<WorkQueue> protectedConnectionQueue() const { return m_connectionQueue; }
 
     Error sendMessageImpl(UniqueRef<Encoder>&&, OptionSet<SendOption> sendOptions, std::optional<Thread::QOS> = std::nullopt);
 
@@ -618,7 +625,7 @@ private:
     OutgoingMessageQueueIsGrowingLargeCallback m_outgoingMessageQueueIsGrowingLargeCallback;
     MonotonicTime m_lastOutgoingMessageQueueIsGrowingLargeCallbackCallTime WTF_GUARDED_BY_LOCK(m_outgoingMessagesLock);
 
-    Ref<WorkQueue> m_connectionQueue;
+    const Ref<WorkQueue> m_connectionQueue;
     bool m_isConnected { false };
 
     unsigned m_inSendSyncCount { 0 };
@@ -662,9 +669,9 @@ private:
     RefPtr<WorkQueue> m_incomingSyncMessageCallbackQueue WTF_GUARDED_BY_LOCK(m_incomingSyncMessageCallbackLock);
     uint64_t m_nextIncomingSyncMessageCallbackID WTF_GUARDED_BY_LOCK(m_incomingSyncMessageCallbackLock) { 0 };
 
-    using AsyncReplyHandlerMap = HashMap<AsyncReplyID, CompletionHandler<void(Decoder*)>>;
+    using AsyncReplyHandlerMap = HashMap<AsyncReplyID, CompletionHandler<void(Connection*, Decoder*)>>;
     AsyncReplyHandlerMap m_asyncReplyHandlers WTF_GUARDED_BY_LOCK(m_incomingMessagesLock);
-    using AsyncReplyHandlerWithDispatcherMap = HashMap<AsyncReplyID, CompletionHandler<void(std::unique_ptr<Decoder>&&)>>;
+    using AsyncReplyHandlerWithDispatcherMap = HashMap<AsyncReplyID, CompletionHandler<void(Connection*, std::unique_ptr<Decoder>&&)>>;
     AsyncReplyHandlerWithDispatcherMap m_asyncReplyHandlerWithDispatchers WTF_GUARDED_BY_LOCK(m_incomingMessagesLock);
 
 #if ENABLE(IPC_TESTING_API)
@@ -872,7 +879,7 @@ template<typename T> Error Connection::waitForAsyncReplyAndDispatchImmediately(A
         ASSERT_NOT_REACHED();
         return Error::FailedToFindReplyHandler;
     }
-    handler(&decoderOrError.value().get());
+    handler(this, &decoderOrError.value().get());
     return Error::NoError;
 }
 
@@ -884,14 +891,17 @@ inline auto Connection::waitForMessageForTesting(MessageName messageName, uint64
 #endif
 
 template<typename T, typename C>
-CompletionHandler<void(Decoder*)> Connection::makeAsyncReplyCompletionHandler(C&& completionHandler, ThreadLikeAssertion callThread)
+CompletionHandler<void(Connection*, Decoder*)> Connection::makeAsyncReplyCompletionHandler(C&& completionHandler, ThreadLikeAssertion callThread)
 {
     return {
-        [completionHandler = WTFMove(completionHandler)] (Decoder* decoder) mutable {
-            if (decoder && decoder->isValid())
-                callReply<T>(*decoder, WTFMove(completionHandler));
-            else
+        [completionHandler = WTFMove(completionHandler)] (Connection* connection, Decoder* decoder) mutable {
+            if (decoder && decoder->isValid()) {
+                ASSERT(connection);
+                callReply<T>(connection, *decoder, WTFMove(completionHandler));
+            } else {
+                ASSERT(!connection);
                 cancelReply<T>(WTFMove(completionHandler));
+            }
         }, callThread
     };
 }
@@ -915,9 +925,9 @@ Connection::AsyncReplyHandlerWithDispatcher Connection::makeAsyncReplyHandlerWit
     // where it's been created.
     return {
         {
-            [completionHandler = makeAsyncReplyCompletionHandler<T, C>(std::forward<C>(completionHandler), CompletionHandlerCallThread::AnyThread), dispatcher = Ref { dispatcher }](std::unique_ptr<Decoder>&& decoder) mutable {
-                dispatcher->dispatch([completionHandler = WTFMove(completionHandler), decoder = WTFMove(decoder)]() mutable {
-                    completionHandler(decoder.get());
+            [completionHandler = makeAsyncReplyCompletionHandler<T, C>(std::forward<C>(completionHandler), CompletionHandlerCallThread::AnyThread), dispatcher = Ref { dispatcher }](Connection* connection, std::unique_ptr<Decoder>&& decoder) mutable {
+                dispatcher->dispatch([connection = RefPtr { connection }, completionHandler = WTFMove(completionHandler), decoder = WTFMove(decoder)]() mutable {
+                    completionHandler(connection.get(), decoder.get());
                 });
             }, CompletionHandlerCallThread::AnyThread
         },
@@ -930,7 +940,7 @@ Connection::AsyncReplyHandlerWithDispatcher Connection::makeAsyncReplyHandlerWit
 {
     return {
         {
-            [producer = WTFMove(producer)](std::unique_ptr<Decoder>&& decoder) mutable {
+            [producer = WTFMove(producer)](Connection*, std::unique_ptr<Decoder>&& decoder) mutable {
                 producer.settleWithFunction([decoder = WTFMove(decoder)]() mutable -> typename Promise::Result {
                     if (!decoder)
                         return PC::convertError(Error::InvalidConnection);
@@ -953,30 +963,48 @@ Connection::AsyncReplyHandlerWithDispatcher Connection::makeAsyncReplyHandlerWit
     };
 }
 
-template<typename T, typename C>
-void Connection::callReply(Decoder& decoder, C&& completionHandler)
-{
-    if constexpr (!std::tuple_size_v<typename T::ReplyArguments>) {
-        // Nothing to decode in case of no reply arguments, so just invoke the completion handler in that case.
-        completionHandler();
-    } else {
-        if (auto arguments = decoder.decode<typename T::ReplyArguments>()) {
-            std::apply(std::forward<C>(completionHandler), WTFMove(*arguments));
-            return;
-        }
+template<typename, typename> struct CanApplyImpl;
+template<typename C, typename... T> struct CanApplyImpl<C, std::tuple<T...>> {
+    static constexpr bool value = std::is_invocable_v<C, T...>;
+};
+template<typename C, typename Tuple>
+struct CanApply {
+    static constexpr bool value = CanApplyImpl<C, Tuple>::value;
+};
 
-        ASSERT_NOT_REACHED();
-        cancelReply<T>(std::forward<C>(completionHandler));
+template<typename C, typename T>
+void callWithConnectionAndArgsTuple(C&& completionHandler, Connection* connection, T&& tuple)
+{
+    return std::apply([&](auto&&... args) {
+        // Use of object without protection is safe here since std::apply() runs synchronously.
+        SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE completionHandler(connection, std::forward<decltype(args)>(args)...);
+    }, std::forward<T>(tuple));
+}
+
+template<typename T, typename C>
+void Connection::callReply(Connection* connection, Decoder& decoder, C&& completionHandler)
+{
+    if (auto arguments = decoder.decode<typename T::ReplyArguments>()) {
+        if constexpr (CanApply<C, typename T::ReplyArguments>::value)
+            return std::apply(std::forward<C>(completionHandler), WTFMove(*arguments));
+        else
+            return callWithConnectionAndArgsTuple(std::forward<C>(completionHandler), connection, WTFMove(*arguments));
     }
+    cancelReply<T>(std::forward<C>(completionHandler));
 }
 
 template<typename T, typename C>
 void Connection::cancelReply(C&& completionHandler)
 {
-    [&]<size_t... Indices>(std::index_sequence<Indices...>)
+    auto emptyReplyTuple = []<size_t... Indices>(std::index_sequence<Indices...>)
     {
-        completionHandler(AsyncReplyError<std::tuple_element_t<Indices, typename T::ReplyArguments>>::create()...);
+        return std::make_tuple(AsyncReplyError<std::tuple_element_t<Indices, typename T::ReplyArguments>>::create()...);
     }(std::make_index_sequence<std::tuple_size_v<typename T::ReplyArguments>> { });
+
+    if constexpr (CanApply<C, typename T::ReplyArguments>::value)
+        std::apply(std::forward<C>(completionHandler), WTFMove(emptyReplyTuple));
+    else
+        callWithConnectionAndArgsTuple(std::forward<C>(completionHandler), nullptr, WTFMove(emptyReplyTuple));
 }
 
 inline void Connection::markCurrentlyDispatchedMessageAsInvalid()

@@ -2208,7 +2208,7 @@ typedef NS_ENUM(NSInteger, EndEditingReason) {
     [self _handleTouchActionsForTouchEvent:nativeWebTouchEvent];
 
     if (_touchEventsCanPreventNativeGestures)
-        _page->handlePreventableTouchEvent(nativeWebTouchEvent);
+        _page->handlePreventableTouchEvent(nullptr, nativeWebTouchEvent);
     else
         _page->handleUnpreventableTouchEvent(nativeWebTouchEvent);
 

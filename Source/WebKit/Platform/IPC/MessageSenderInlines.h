@@ -67,6 +67,27 @@ template<typename MessageType> inline bool MessageSender::sendWithoutUsingIPCCon
     return performSendWithoutUsingIPCConnection(WTFMove(encoder));
 }
 
+template<typename T, typename C>
+static void cancelReplyWithoutUsingConnection(C&& completionHandler)
+{
+    [&]<size_t... Indices>(std::index_sequence<Indices...>)
+    {
+        completionHandler(AsyncReplyError<std::tuple_element_t<Indices, typename T::ReplyArguments>>::create()...);
+    }(std::make_index_sequence<std::tuple_size_v<typename T::ReplyArguments>> { });
+}
+
+template<typename T, typename C>
+static void callReplyWithoutUsingConnection(Decoder& decoder, C&& completionHandler)
+{
+    if constexpr (!std::tuple_size_v<typename T::ReplyArguments>)
+        completionHandler();
+    else {
+        if (auto arguments = decoder.decode<typename T::ReplyArguments>())
+            return std::apply(std::forward<C>(completionHandler), WTFMove(*arguments));
+        cancelReplyWithoutUsingConnection<T>(std::forward<C>(completionHandler));
+    }
+}
+
 template<typename MessageType, typename C> inline bool MessageSender::sendWithAsyncReplyWithoutUsingIPCConnection(MessageType&& message, C&& completionHandler) const
 {
     static_assert(!MessageType::isSync);
@@ -75,9 +96,9 @@ template<typename MessageType, typename C> inline bool MessageSender::sendWithAs
 
     auto asyncHandler = [completionHandler = std::forward<C>(completionHandler)] (Decoder* decoder) mutable {
         if (decoder && decoder->isValid())
-            Connection::callReply<MessageType>(*decoder, WTFMove(completionHandler));
+            callReplyWithoutUsingConnection<MessageType>(*decoder, WTFMove(completionHandler));
         else
-            Connection::cancelReply<MessageType>(WTFMove(completionHandler));
+            cancelReplyWithoutUsingConnection<MessageType>(WTFMove(completionHandler));
     };
 
     return performSendWithAsyncReplyWithoutUsingIPCConnection(WTFMove(encoder), WTFMove(asyncHandler));

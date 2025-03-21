@@ -418,7 +418,7 @@ void RemoteLayerTreeDrawingAreaProxy::commitLayerTreeTransaction(IPC::Connection
 
     for (auto& callbackID : layerTreeTransaction.callbackIDs()) {
         if (auto callback = connection.takeAsyncReplyHandler(callbackID))
-            callback(nullptr);
+            callback(nullptr, nullptr);
     }
 }
 

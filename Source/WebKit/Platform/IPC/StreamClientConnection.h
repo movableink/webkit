@@ -223,7 +223,7 @@ std::optional<StreamClientConnection::AsyncReplyID> StreamClientConnection::send
         // is called on the connection run loop.
         // This does not make sense. However, this needs a change that is done later.
         RunLoop::protectedMain()->dispatch([completionHandler = WTFMove(replyHandlerToCancel)]() mutable {
-            completionHandler(nullptr);
+            completionHandler(nullptr, nullptr);
         });
     }
     return std::nullopt;

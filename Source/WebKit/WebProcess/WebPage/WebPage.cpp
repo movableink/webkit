@@ -3582,7 +3582,7 @@ void WebPage::mouseEvent(FrameIdentifier frameID, const WebMouseEvent& mouseEven
 #endif
 
     if (!shouldHandleEvent) {
-        send(Messages::WebPageProxy::DidReceiveEvent(mouseEvent.type(), false, std::nullopt));
+        send(Messages::WebPageProxy::DidReceiveEventIPC(mouseEvent.type(), false, std::nullopt));
         return;
     }
 
@@ -3604,7 +3604,7 @@ void WebPage::mouseEvent(FrameIdentifier frameID, const WebMouseEvent& mouseEven
         auto mouseEventResult = frame->handleMouseEvent(mouseEvent);
         if (auto remoteMouseEventData = mouseEventResult.remoteUserInputEventData()) {
             revokeSandboxExtensions(mouseEventSandboxExtensions);
-            send(Messages::WebPageProxy::DidReceiveEvent(mouseEvent.type(), false, *remoteMouseEventData));
+            send(Messages::WebPageProxy::DidReceiveEventIPC(mouseEvent.type(), false, *remoteMouseEventData));
             return;
         }
         handled = mouseEventResult.wasHandled();
@@ -3642,7 +3642,7 @@ void WebPage::mouseEvent(FrameIdentifier frameID, const WebMouseEvent& mouseEven
         return;
     }
 
-    send(Messages::WebPageProxy::DidReceiveEvent(mouseEvent.type(), handled, std::nullopt));
+    send(Messages::WebPageProxy::DidReceiveEventIPC(mouseEvent.type(), handled, std::nullopt));
 
 #if PLATFORM(IOS_FAMILY)
     if (mouseEvent.type() == WebEventType::MouseUp)
@@ -3682,7 +3682,7 @@ void WebPage::flushDeferredScrollEvents()
 void WebPage::flushDeferredDidReceiveMouseEvent()
 {
     if (auto info = std::exchange(m_deferredDidReceiveMouseEvent, std::nullopt))
-        send(Messages::WebPageProxy::DidReceiveEvent(*info->type, info->handled, std::nullopt));
+        send(Messages::WebPageProxy::DidReceiveEventIPC(*info->type, info->handled, std::nullopt));
 }
 
 void WebPage::performHitTestForMouseEvent(const WebMouseEvent& event, CompletionHandler<void(WebHitTestResultData&&, OptionSet<WebEventModifier>, UserData&&)>&& completionHandler)
@@ -3778,7 +3778,7 @@ void WebPage::keyEvent(FrameIdentifier frameID, const WebKeyboardEvent& keyboard
     if (RefPtr frame = WebProcess::singleton().webFrame(frameID))
         handled = frame->handleKeyEvent(keyboardEvent);
 
-    send(Messages::WebPageProxy::DidReceiveEvent(keyboardEvent.type(), handled, std::nullopt));
+    send(Messages::WebPageProxy::DidReceiveEventIPC(keyboardEvent.type(), handled, std::nullopt));
 }
 
 bool WebPage::handleKeyEventByRelinquishingFocusToChrome(const KeyboardEvent& event)

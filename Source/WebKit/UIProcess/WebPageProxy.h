@@ -1344,11 +1344,11 @@ public:
 
 #if ENABLE(IOS_TOUCH_EVENTS)
     void didBeginTouchPoint(WebCore::FloatPoint locationInRootView);
-    void handlePreventableTouchEvent(NativeWebTouchEvent&);
+    void handlePreventableTouchEvent(IPC::Connection*, NativeWebTouchEvent&);
     void handleUnpreventableTouchEvent(const NativeWebTouchEvent&);
 
 #elif ENABLE(TOUCH_EVENTS)
-    void handleTouchEvent(const NativeWebTouchEvent&);
+    void handleTouchEvent(IPC::Connection*, const NativeWebTouchEvent&);
 #endif
 
 #if PLATFORM(MAC)
@@ -3047,7 +3047,8 @@ private:
 
     void mouseEventHandlingCompleted(std::optional<WebEventType>, bool handled, std::optional<WebCore::RemoteUserInputEventData>);
     void keyEventHandlingCompleted(std::optional<WebEventType>, bool handled);
-    void didReceiveEvent(WebEventType, bool handled, std::optional<WebCore::RemoteUserInputEventData>);
+    void didReceiveEvent(IPC::Connection*, WebEventType, bool handled, std::optional<WebCore::RemoteUserInputEventData>&&);
+    void didReceiveEventIPC(IPC::Connection&, WebEventType, bool handled, std::optional<WebCore::RemoteUserInputEventData>&&);
     void didUpdateRenderingAfterCommittingLoad();
 #if PLATFORM(IOS_FAMILY)
     void interpretKeyEvent(EditorState&&, KeyEventInterpretationContext&&, CompletionHandler<void(bool)>&&);

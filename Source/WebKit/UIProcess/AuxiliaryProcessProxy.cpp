@@ -258,8 +258,8 @@ bool AuxiliaryProcessProxy::sendMessage(UniqueRef<IPC::Encoder>&& encoder, Optio
 
     if (asyncReplyHandler && canSendMessage() && shouldStartProcessThrottlerActivity == ShouldStartProcessThrottlerActivity::Yes) {
         auto completionHandler = WTFMove(asyncReplyHandler->completionHandler);
-        asyncReplyHandler->completionHandler = [activity = protectedThrottler()->quietBackgroundActivity(description(encoder->messageName())), completionHandler = WTFMove(completionHandler)](IPC::Decoder* decoder) mutable {
-            completionHandler(decoder);
+        asyncReplyHandler->completionHandler = [activity = protectedThrottler()->quietBackgroundActivity(description(encoder->messageName())), completionHandler = WTFMove(completionHandler)](IPC::Connection* connection, IPC::Decoder* decoder) mutable {
+            completionHandler(connection, decoder);
         };
     }
 
@@ -285,10 +285,10 @@ bool AuxiliaryProcessProxy::sendMessage(UniqueRef<IPC::Encoder>&& encoder, Optio
 
     if (asyncReplyHandler && asyncReplyHandler->completionHandler) {
         RunLoop::currentSingleton().dispatch([completionHandler = WTFMove(asyncReplyHandler->completionHandler)]() mutable {
-            completionHandler(nullptr);
+            completionHandler(nullptr, nullptr);
         });
     }
-    
+
     return false;
 }
 
@@ -410,7 +410,7 @@ void AuxiliaryProcessProxy::replyToPendingMessages()
     ASSERT(isMainRunLoop());
     for (auto& pendingMessage : std::exchange(m_pendingMessages, { })) {
         if (pendingMessage.asyncReplyHandler)
-            pendingMessage.asyncReplyHandler->completionHandler(nullptr);
+            pendingMessage.asyncReplyHandler->completionHandler(nullptr, nullptr);
     }
 }
 

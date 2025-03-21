@@ -317,7 +317,7 @@ void EventDispatcher::dispatchGestureEvent(FrameIdentifier frameID, PageIdentifi
 
 void EventDispatcher::sendDidReceiveEvent(PageIdentifier pageID, WebEventType eventType, bool didHandleEvent)
 {
-    WebProcess::singleton().protectedParentProcessConnection()->send(Messages::WebPageProxy::DidReceiveEvent(eventType, didHandleEvent, std::nullopt), pageID);
+    WebProcess::singleton().protectedParentProcessConnection()->send(Messages::WebPageProxy::DidReceiveEventIPC(eventType, didHandleEvent, std::nullopt), pageID);
 }
 
 void EventDispatcher::notifyScrollingTreesDisplayDidRefresh(PlatformDisplayID displayID)

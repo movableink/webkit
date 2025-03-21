@@ -549,7 +549,7 @@ static JSValueRef jsSendWithAsyncReply(IPC::Connection& connection, uint64_t des
     JSGlobalContextRetain(JSContextGetGlobalContext(context));
     JSValueProtect(context, callback);
     IPC::Connection::AsyncReplyHandler handler = {
-        [messageName, context, callback](IPC::Decoder* replyDecoder) {
+        [messageName, context, callback](IPC::Connection*, IPC::Decoder* replyDecoder) {
             auto* globalObject = toJS(context);
             auto& vm = globalObject->vm();
             JSC::JSLockHolder lock(vm);
@@ -629,9 +629,10 @@ static JSValueRef jsWaitForAsyncReplyAndDispatchImmediately(IPC::Connection& con
     auto decoderOrError = connection.waitForMessageForTesting(messageName, destinationID, timeout, { });
     if (!decoderOrError.has_value()) {
         *exception = createErrorFromIPCError(context, decoderOrError.error());
+        handler(nullptr, nullptr);
         return JSValueMakeUndefined(context);
     }
-    handler(&decoderOrError.value().get());
+    handler(&connection, &decoderOrError.value().get());
     return JSValueMakeUndefined(context);
 }
 

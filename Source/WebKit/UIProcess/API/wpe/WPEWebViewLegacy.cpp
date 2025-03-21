@@ -239,7 +239,7 @@ ViewLegacy::ViewLegacy(struct wpe_view_backend* backend, const API::PageConfigur
                     });
             }
 
-            page.handleTouchEvent(touchEvent);
+            page.handleTouchEvent(nullptr, touchEvent);
 #endif
         },
         // padding
