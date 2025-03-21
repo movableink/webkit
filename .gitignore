@@ -35,6 +35,7 @@ tags
 .sw[a-p]
 .*.sw[a-p]
 .cache
+.clang-tidy
 .clangd
 compile_commands.json
 __pycache__
