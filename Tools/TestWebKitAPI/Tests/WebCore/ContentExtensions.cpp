@@ -196,19 +196,19 @@ void static testRequestImpl(int line, const ContentExtensions::ContentExtensions
     EXPECT_EQ(actions.second.size(), stylesheets);
 }
 
-static ResourceLoadInfo mainDocumentRequest(ASCIILiteral urlString, ResourceType resourceType = ResourceType::Document)
+static ResourceLoadInfo mainDocumentRequest(ASCIILiteral urlString, ResourceType resourceType = ResourceType::TopDocument)
 {
     URL url { urlString };
     return { url, url, url, resourceType };
 }
 
-static ResourceLoadInfo subResourceRequest(ASCIILiteral url, ASCIILiteral mainDocumentURLString, ResourceType resourceType = ResourceType::Document)
+static ResourceLoadInfo subResourceRequest(ASCIILiteral url, ASCIILiteral mainDocumentURLString, ResourceType resourceType = ResourceType::ChildDocument)
 {
     URL mainDocumentURL { mainDocumentURLString };
     return { URL { url }, mainDocumentURL, mainDocumentURL, resourceType };
 }
 
-static ResourceLoadInfo requestInTopAndFrameURLs(ASCIILiteral url, ASCIILiteral topURL, ASCIILiteral frameURL, ResourceType resourceType = ResourceType::Document)
+static ResourceLoadInfo requestInTopAndFrameURLs(ASCIILiteral url, ASCIILiteral topURL, ASCIILiteral frameURL, ResourceType resourceType = ResourceType::TopDocument)
 {
     return { URL { url }, URL { topURL }, URL { frameURL }, resourceType };
 }
@@ -848,7 +848,7 @@ TEST_F(ContentExtensionTest, TopURL)
         "{\"action\":{\"type\":\"block-cookies\"},\"trigger\":{\"resource-type\":[\"document\"], \"url-filter\":\"test\\\\.html\", \"unless-top-url\":[\"^http://web.*kit.org\"]}}]"_s);
     testRequest(mixedConditions, mainDocumentRequest("http://webkit.org/test.html"_s), blockLoad);
     testRequest(mixedConditions, mainDocumentRequest("http://not_webkit.org/test.html"_s), blockCookies);
-    testRequest(mixedConditions, subResourceRequest("http://webkit.org/test.html"_s, "http://not_webkit.org"_s, ResourceType::Document), blockCookies);
+    testRequest(mixedConditions, subResourceRequest("http://webkit.org/test.html"_s, "http://not_webkit.org"_s), blockCookies);
     testRequest(mixedConditions, subResourceRequest("http://webkit.org/test.html"_s, "http://not_webkit.org"_s, ResourceType::Image), { });
 
     auto caseSensitive = makeBackend("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\"test\\\\.html\", \"if-top-url\":[\"^http://web.*kit.org/test\"], \"top-url-filter-is-case-sensitive\":true}}]"_s);
@@ -1142,13 +1142,13 @@ TEST_F(ContentExtensionTest, LoadType)
         "{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\"alwaysblock.pdf\"}}]"_s);
     
     testRequest(backend, mainDocumentRequest("http://webkit.org"_s), { });
-    testRequest(backend, { URL { "http://webkit.org"_str }, URL { "http://not_webkit.org"_str }, URL { "http://not_webkit.org"_str }, ResourceType::Document }, { variantIndex<ContentExtensions::BlockLoadAction> });
+    testRequest(backend, { URL { "http://webkit.org"_str }, URL { "http://not_webkit.org"_str }, URL { "http://not_webkit.org"_str }, ResourceType::TopDocument }, { variantIndex<ContentExtensions::BlockLoadAction> });
         
     testRequest(backend, mainDocumentRequest("http://whatwg.org"_s), { variantIndex<ContentExtensions::BlockLoadAction> });
-    testRequest(backend, { URL { "http://whatwg.org"_str }, URL { "http://not_whatwg.org"_str }, URL { "http://not_whatwg.org"_str }, ResourceType::Document }, { });
+    testRequest(backend, { URL { "http://whatwg.org"_str }, URL { "http://not_whatwg.org"_str }, URL { "http://not_whatwg.org"_str }, ResourceType::TopDocument }, { });
     
     testRequest(backend, mainDocumentRequest("http://foobar.org/alwaysblock.pdf"_s), { variantIndex<ContentExtensions::BlockLoadAction> });
-    testRequest(backend, { URL { "http://foobar.org/alwaysblock.pdf"_str }, URL { "http://not_foobar.org/alwaysblock.pdf"_str }, URL { "http://not_foobar.org/alwaysblock.pdf"_str }, ResourceType::Document }, { variantIndex<ContentExtensions::BlockLoadAction> });
+    testRequest(backend, { URL { "http://foobar.org/alwaysblock.pdf"_str }, URL { "http://not_foobar.org/alwaysblock.pdf"_str }, URL { "http://not_foobar.org/alwaysblock.pdf"_str }, ResourceType::TopDocument }, { variantIndex<ContentExtensions::BlockLoadAction> });
 }
 
 TEST_F(ContentExtensionTest, ResourceType)
@@ -1156,7 +1156,7 @@ TEST_F(ContentExtensionTest, ResourceType)
     auto backend = makeBackend("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\"block_all_types.org\",\"resource-type\":[\"document\",\"image\",\"style-sheet\",\"script\",\"font\",\"raw\",\"svg-document\",\"media\",\"popup\"]}},"
         "{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\"block_only_images\",\"resource-type\":[\"image\"]}}]"_s);
 
-    testRequest(backend, mainDocumentRequest("http://block_all_types.org"_s, ResourceType::Document), { variantIndex<ContentExtensions::BlockLoadAction> });
+    testRequest(backend, mainDocumentRequest("http://block_all_types.org"_s), { variantIndex<ContentExtensions::BlockLoadAction> });
     testRequest(backend, mainDocumentRequest("http://block_all_types.org"_s, ResourceType::Image), { variantIndex<ContentExtensions::BlockLoadAction> });
     testRequest(backend, mainDocumentRequest("http://block_all_types.org"_s, ResourceType::StyleSheet), { variantIndex<ContentExtensions::BlockLoadAction> });
     testRequest(backend, mainDocumentRequest("http://block_all_types.org"_s, ResourceType::Script), { variantIndex<ContentExtensions::BlockLoadAction> });
@@ -1166,7 +1166,7 @@ TEST_F(ContentExtensionTest, ResourceType)
     testRequest(backend, mainDocumentRequest("http://block_all_types.org"_s, ResourceType::Media), { variantIndex<ContentExtensions::BlockLoadAction> });
     testRequest(backend, mainDocumentRequest("http://block_all_types.org"_s, ResourceType::Popup), { variantIndex<ContentExtensions::BlockLoadAction> });
     testRequest(backend, mainDocumentRequest("http://block_only_images.org"_s, ResourceType::Image), { variantIndex<ContentExtensions::BlockLoadAction> });
-    testRequest(backend, mainDocumentRequest("http://block_only_images.org"_s, ResourceType::Document), { });
+    testRequest(backend, mainDocumentRequest("http://block_only_images.org"_s), { });
 }
 
 TEST_F(ContentExtensionTest, ResourceAndLoadType)
@@ -1185,7 +1185,7 @@ TEST_F(ContentExtensionTest, ResourceOrLoadTypeMatchingEverything)
         "{\"action\":{\"type\":\"ignore-previous-rules\"},\"trigger\":{\"url-filter\":\".*\",\"load-type\":[\"first-party\"]}}]"_s);
     
     testRequest(backend, mainDocumentRequest("http://webkit.org"_s), { }, 0);
-    testRequest(backend, { URL { "http://webkit.org"_str }, URL { "http://not_webkit.org"_str }, URL { "http://not_webkit.org"_str }, ResourceType::Document }, { variantIndex<ContentExtensions::BlockCookiesAction> });
+    testRequest(backend, { URL { "http://webkit.org"_str }, URL { "http://not_webkit.org"_str }, URL { "http://not_webkit.org"_str }, ResourceType::TopDocument }, { variantIndex<ContentExtensions::BlockCookiesAction> });
     testRequest(backend, { URL { "http://webkit.org"_str }, URL { "http://not_webkit.org"_str }, URL { "http://not_webkit.org"_str }, ResourceType::Image }, { variantIndex<ContentExtensions::BlockCookiesAction>, variantIndex<ContentExtensions::BlockLoadAction> });
 }
     
@@ -1442,14 +1442,14 @@ TEST_F(ContentExtensionTest, MatchesEverything)
     testRequest(backend6, mainDocumentRequest("http://sub.whatwg.org/ignore"_s), { });
     testRequest(backend6, subResourceRequest("http://example.com/image.png"_s, "http://webkit.org/"_s, ResourceType::Image), { });
     testRequest(backend6, subResourceRequest("http://example.com/image.png"_s, "http://w3c.org/"_s, ResourceType::Image), { variantIndex<ContentExtensions::BlockCookiesAction> });
-    testRequest(backend6, subResourceRequest("http://example.com/doc.html"_s, "http://webkit.org/"_s, ResourceType::Document), { variantIndex<ContentExtensions::BlockLoadAction> });
+    testRequest(backend6, subResourceRequest("http://example.com/doc.html"_s, "http://webkit.org/"_s), { variantIndex<ContentExtensions::BlockLoadAction> });
     testRequest(backend6, subResourceRequest("http://example.com/script.js"_s, "http://webkit.org/"_s, ResourceType::Script), { variantIndex<ContentExtensions::BlockLoadAction> });
     testRequest(backend6, subResourceRequest("http://example.com/script.js"_s, "http://w3c.org/"_s, ResourceType::Script), { variantIndex<ContentExtensions::BlockCookiesAction>, variantIndex<ContentExtensions::BlockLoadAction> });
     testRequest(backend6, subResourceRequest("http://example.com/script.js"_s, "http://example.com/"_s, ResourceType::Script), { });
     testRequest(backend6, subResourceRequest("http://example.com/ignore/image.png"_s, "http://webkit.org/"_s, ResourceType::Image), { }, 0);
     testRequest(backend6, subResourceRequest("http://example.com/ignore/image.png"_s, "http://example.com/"_s, ResourceType::Image), { });
     testRequest(backend6, subResourceRequest("http://example.com/ignore/image.png"_s, "http://example.org/"_s, ResourceType::Image), { variantIndex<ContentExtensions::BlockCookiesAction> });
-    testRequest(backend6, subResourceRequest("http://example.com/doc.html"_s, "http://example.org/"_s, ResourceType::Document), { });
+    testRequest(backend6, subResourceRequest("http://example.com/doc.html"_s, "http://example.org/"_s), { });
     testRequest(backend6, subResourceRequest("http://example.com/"_s, "http://example.com/"_s, ResourceType::Font), { });
     testRequest(backend6, subResourceRequest("http://example.com/ignore"_s, "http://webkit.org/"_s, ResourceType::Image), { }, 0);
     testRequest(backend6, subResourceRequest("http://example.com/ignore"_s, "http://webkit.org/"_s, ResourceType::Font), { }, 0);
@@ -3099,7 +3099,7 @@ TEST_F(ContentExtensionTest, IfFrameURL)
     testRequest(caseSensitivity, caseSensitivityRequest, { });
 
     auto otherFlags = makeBackend("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\"https\", \"if-frame-url\":[\"whatwg\"],\"resource-type\":[\"image\"]}}]"_s);
-    testRequest(otherFlags, requestInTopAndFrameURLs("https://example.com/"_s, "https://webkit.org/"_s, "https://whatwg.org/"_s, ResourceType::Document), { });
+    testRequest(otherFlags, requestInTopAndFrameURLs("https://example.com/"_s, "https://webkit.org/"_s, "https://whatwg.org/"_s, ResourceType::TopDocument), { });
     testRequest(otherFlags, requestInTopAndFrameURLs("https://example.com/"_s, "https://webkit.org/"_s, "https://whatwg.org/"_s, ResourceType::Image), { variantIndex<BlockLoadAction> });
 
     auto otherRulesWithConditions = makeBackend("["
@@ -3127,9 +3127,9 @@ TEST_F(ContentExtensionTest, UnlessFrameURL)
     testRequest(caseSensitivity, caseSensitivityRequest, { variantIndex<BlockLoadAction> });
 
     auto otherFlags = makeBackend("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\"https\", \"unless-frame-url\":[\"whatwg\"],\"resource-type\":[\"image\"]}}]"_s);
-    testRequest(otherFlags, requestInTopAndFrameURLs("https://example.com/"_s, "https://webkit.org/"_s, "https://whatwg.org/"_s, ResourceType::Document), { });
+    testRequest(otherFlags, requestInTopAndFrameURLs("https://example.com/"_s, "https://webkit.org/"_s, "https://whatwg.org/"_s, ResourceType::TopDocument), { });
     testRequest(otherFlags, requestInTopAndFrameURLs("https://example.com/"_s, "https://webkit.org/"_s, "https://whatwg.org/"_s, ResourceType::Image), { });
-    testRequest(otherFlags, requestInTopAndFrameURLs("https://example.com/"_s, "https://webkit.org/"_s, "https://www.w3.org/"_s, ResourceType::Document), { });
+    testRequest(otherFlags, requestInTopAndFrameURLs("https://example.com/"_s, "https://webkit.org/"_s, "https://www.w3.org/"_s, ResourceType::TopDocument), { });
     testRequest(otherFlags, requestInTopAndFrameURLs("https://example.com/"_s, "https://webkit.org/"_s, "https://www.w3.org/"_s, ResourceType::Image), { variantIndex<BlockLoadAction> });
 
     auto otherRulesWithConditions = makeBackend("["

@@ -1175,7 +1175,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
         const auto& resourceRequest = request.resourceRequest();
         if (request.options().shouldEnableContentExtensionsCheck == ShouldEnableContentExtensionsCheck::Yes) {
             RegistrableDomain originalDomain { resourceRequest.url() };
-            auto results = page->protectedUserContentProvider()->processContentRuleListsForLoad(page, resourceRequest.url(), ContentExtensions::toResourceType(type, request.resourceRequest().requester()), *documentLoader);
+            auto results = page->protectedUserContentProvider()->processContentRuleListsForLoad(page, resourceRequest.url(), ContentExtensions::toResourceType(type, request.resourceRequest().requester(), frame->isMainFrame()), *documentLoader);
             bool blockedLoad = results.summary.blockedLoad;
             madeHTTPS = results.summary.madeHTTPS;
             request.applyResults(WTFMove(results), page.ptr());
