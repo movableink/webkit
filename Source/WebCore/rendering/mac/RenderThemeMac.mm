@@ -1015,9 +1015,17 @@ static std::span<const IntSize, 4> menuListButtonSizes()
     return sizes;
 }
 
-void RenderThemeMac::adjustMenuListStyle(RenderStyle& style, const Element* e) const
+void RenderThemeMac::adjustMenuListStyle(RenderStyle& style, const Element* element) const
 {
-    RenderThemeCocoa::adjustMenuListStyle(style, e);
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (element && element->document().settings().vectorBasedControlsOnMacEnabled()) {
+        RenderThemeCocoa::adjustMenuListStyle(style, element);
+        return;
+    }
+#endif
+
+    RenderTheme::adjustMenuListStyle(style, element);
+
     NSControlSize controlSize = controlSizeForFont(style);
 
     style.resetBorder();
