@@ -24,6 +24,7 @@
 #if os(visionOS)
 
 import Combine
+import CoreGraphics
 import Foundation
  @_spi(RealityKit) import RealityKit
 import WebKitSwift
@@ -232,13 +233,82 @@ public final class WKSRKEntity: NSObject {
         }
     }
 
+    private func resizedImage(_ imageSource: CGImageSource) -> CGImage? {
+        guard let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [CFString: Any] else {
+            Logger.realityKitEntity.error("Resizing IBL image: image source properties are not valid")
+            return nil
+        }
+
+        guard let imageWidth = properties[kCGImagePropertyPixelWidth] as? CGFloat,
+              let imageHeight = properties[kCGImagePropertyPixelHeight] as? CGFloat else {
+            Logger.realityKitEntity.error("Resizing IBL image: width and height properties are not valid")
+            return nil
+        }
+
+        // Use a max of 2k resolution for images to create IBL with.
+        let maxSize: CGFloat = 2048
+        var scaleFactor: CGFloat = max(imageWidth / maxSize, imageHeight / maxSize)
+        var subsampleFactor: CGFloat = 8.0
+        switch scaleFactor {
+        case ...1:
+            return CGImageSourceCreateImageAtIndex(imageSource, 0, nil)
+        case ...2:
+            subsampleFactor = 2.0
+        case ...4:
+            subsampleFactor = 4.0
+        case ...8:
+            subsampleFactor = 8.0
+        default:
+            Logger.realityKitEntity.error("Resizing IBL image: IBL source image is too large")
+            return nil
+        }
+
+        let options: [CFString: Any] = [
+            kCGImageSourceSubsampleFactor: subsampleFactor
+        ]
+
+        guard let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) else {
+            Logger.realityKitEntity.error("Resizing IBL image: cannot create CGImage")
+            return nil
+        }
+
+        // Not all image formats support kCGImageSourceSubsampleFactor. If that doesn't work, do an actual resize.
+        scaleFactor = max(CGFloat(image.width) / maxSize, CGFloat(image.height) / maxSize)
+        if scaleFactor <= 1 {
+            return image
+        }
+
+        let targetWidth = Int(CGFloat(image.width) / scaleFactor)
+        let targetHeight = Int(CGFloat(image.height) / scaleFactor)
+        Logger.realityKitEntity.info("Resizing IBL image: doing an actual resize for image with size: (\(image.width), \(image.height)) to target size: (\(targetWidth), \(targetHeight)), bitsPerComponent: \(image.bitsPerComponent), colorSpace: \(String(describing: image.colorSpace)), bitmapInfo: \(String(describing: image.bitmapInfo))")
+
+        var imageBitmapInfoRawValue = image.bitmapInfo.rawValue
+        // CGBitmapContext will not render to any non-premultiplied alpha format.
+        switch image.bitmapInfo.intersection(.alphaInfoMask).rawValue {
+        case CGImageAlphaInfo.first.rawValue:
+            imageBitmapInfoRawValue = (imageBitmapInfoRawValue & ~CGBitmapInfo.alphaInfoMask.rawValue) | CGImageAlphaInfo.noneSkipFirst.rawValue
+        case CGImageAlphaInfo.last.rawValue:
+            imageBitmapInfoRawValue = (imageBitmapInfoRawValue & ~CGBitmapInfo.alphaInfoMask.rawValue) | CGImageAlphaInfo.noneSkipLast.rawValue
+        default:
+            break
+        }
+        
+        guard let context = CGContext.init(data: nil, width: targetWidth, height: targetHeight, bitsPerComponent: image.bitsPerComponent, bytesPerRow: 0, space: image.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: imageBitmapInfoRawValue) else {
+            Logger.realityKitEntity.error("Resizing IBL image: Unable to create CGContext for image resizing")
+            return nil
+        }
+        context.draw(image, in: CGRect(origin: .zero, size: .init(width: targetWidth, height: targetHeight)))
+        return context.makeImage()
+    }
+
     @objc(applyIBLData:withCompletion:) public func applyIBL(data: Data, completion: @escaping (Bool) -> Void) {
         guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil) else {
             Logger.realityKitEntity.error("Cannot get CGImageSource from IBL image data.")
             completion(false)
             return
         }
-        guard let cgImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) else {
+
+        guard let cgImage = resizedImage(imageSource) else {
             Logger.realityKitEntity.error("Cannot get CGImage from CGImageSource.")
             completion(false)
             return
@@ -253,6 +323,7 @@ public final class WKSRKEntity: NSObject {
                     entity.components[ImageBasedLightComponent.self] = .init(source: .single(environment))
                     entity.components[ImageBasedLightReceiverComponent.self] = .init(imageBasedLight: entity)
                 }
+                Logger.realityKitEntity.info("Successfully applied IBL to entity")
                 completion(true)
             } catch {
                 Logger.realityKitEntity.error("Cannot load environment resource from CGImage.")
