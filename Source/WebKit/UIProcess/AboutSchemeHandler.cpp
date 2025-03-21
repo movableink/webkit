@@ -55,17 +55,19 @@ AboutSchemeHandler::OpaquePathHandler* AboutSchemeHandler::handlerForURL(URL& ur
 void AboutSchemeHandler::platformStartTask(WebPageProxy&, WebURLSchemeTask& task)
 {
     auto url = task.request().url();
-    auto* handler = handlerForURL(url);
-    if (!handler) {
-        task.didComplete(WebCore::ResourceError { WebCore::errorDomainWebKitInternal, 0, url, "Cannot handle this URL"_s, WebCore::ResourceError::Type::General });
+
+    if (auto* handler = handlerForURL(url)) {
+        handler->loadContent(url, [task = Ref { task }](auto&& response, auto&& buffer) mutable {
+            task->didReceiveResponse(response);
+            task->didReceiveData(WTFMove(buffer));
+            task->didComplete({ });
+        });
         return;
     }
 
-    handler->loadContent(url, [task = Ref { task }](auto&& response, auto&& buffer) mutable {
-        task->didReceiveResponse(response);
-        task->didReceiveData(WTFMove(buffer));
-        task->didComplete({ });
-    });
+    WebCore::ResourceResponse response(url, "text/html"_s, 0, "UTF-8"_s);
+    task.didReceiveResponse(response);
+    task.didComplete({ });
 }
 
 bool AboutSchemeHandler::canHandleURL(const URL& url) const
@@ -75,8 +77,6 @@ bool AboutSchemeHandler::canHandleURL(const URL& url) const
 
 void AboutSchemeHandler::platformInitialize()
 {
-    registerHandler(blank, makeUnique<EmptyPathHandler>());
-
 #if PLATFORM(COCOA) && HAVE(CUSTOM_ABOUT_SCHEME_HANDLER)
     registerCocoaAboutHandlers(*this);
 #endif

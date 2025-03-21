@@ -46,19 +46,8 @@ public:
     bool canHandleURL(const URL&) const;
 
     static constexpr auto scheme = "about"_s;
-    static constexpr auto blank = "blank"_s;
 
 private:
-    class EmptyPathHandler final : public OpaquePathHandler {
-        WTF_MAKE_FAST_ALLOCATED;
-    public:
-        void loadContent(URL url, CompletionHandler<void(WebCore::ResourceResponse&&, Ref<WebCore::SharedBuffer>&&)>&& handler)
-        {
-            WebCore::ResourceResponse response(url, "text/html"_s, 0, "UTF-8"_s);
-            handler(WTFMove(response), WebCore::SharedBuffer::create());
-        }
-    };
-
     AboutSchemeHandler();
 
     void platformInitialize();
