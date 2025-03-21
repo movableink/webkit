@@ -939,6 +939,10 @@ void run(const TestConfig* config)
             RUN(testVectorFmulByElementFloat());
             RUN(testVectorFmulByElementDouble());
         }
+        RUN(testMulHigh32());
+        RUN(testMulHigh64());
+        RUN(testUMulHigh32());
+        RUN(testUMulHigh64());
     }
 
     Lock lock;

@@ -1391,4 +1391,9 @@ void testSShrCompare64(int64_t);
 void testInt52RoundTripUnary(int32_t);
 void testInt52RoundTripBinary();
 
+void testMulHigh32();
+void testMulHigh64();
+void testUMulHigh32();
+void testUMulHigh64();
+
 #endif // ENABLE(B3_JIT)

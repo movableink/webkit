@@ -214,6 +214,8 @@ public:
     virtual Value* addConstant(Procedure&, const Value* other) const;
     virtual Value* subConstant(Procedure&, const Value* other) const;
     virtual Value* mulConstant(Procedure&, const Value* other) const;
+    virtual Value* mulHighConstant(Procedure&, const Value* other) const;
+    virtual Value* uMulHighConstant(Procedure&, const Value* other) const;
     virtual Value* checkAddConstant(Procedure&, const Value* other) const;
     virtual Value* checkSubConstant(Procedure&, const Value* other) const;
     virtual Value* checkMulConstant(Procedure&, const Value* other) const;
@@ -481,6 +483,8 @@ protected:
         case Add:
         case Sub:
         case Mul:
+        case MulHigh:
+        case UMulHigh:
         case Div:
         case UDiv:
         case Mod:
@@ -724,6 +728,8 @@ private:
         case Add:
         case Sub:
         case Mul:
+        case MulHigh:
+        case UMulHigh:
         case Div:
         case UDiv:
         case Mod:

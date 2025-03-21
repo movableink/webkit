@@ -2589,6 +2589,24 @@ private:
         append(div, m_eax, m_edx, tmp(m_value->child(1)));
         append(Move, result, tmp(m_value));
     }
+
+    void appendX86MulHigh()
+    {
+        using namespace Air;
+        Air::Opcode opcode = m_value->type() == Int32 ? X86MulHigh32 : X86MulHigh64;
+        append(Move, tmp(m_value->child(1)), m_eax);
+        append(opcode, tmp(m_value->child(0)), m_eax, m_edx);
+        append(Move, m_edx, tmp(m_value));
+    }
+
+    void appendX86UMulHigh()
+    {
+        using namespace Air;
+        Air::Opcode opcode = m_value->type() == Int32 ? X86UMulHigh32 : X86UMulHigh64;
+        append(Move, tmp(m_value->child(1)), m_eax);
+        append(opcode, tmp(m_value->child(0)), m_eax, m_edx);
+        append(Move, m_edx, tmp(m_value));
+    }
     
     Air::Opcode loadLinkOpcode(Width width, bool fence)
     {
@@ -3276,6 +3294,24 @@ private:
             return;
         }
 
+        case MulHigh: {
+            if constexpr (isX86()) {
+                appendX86MulHigh();
+                return;
+            }
+            appendBinOp<MulHigh32, MulHigh64, Air::Oops, Air::Oops>(m_value->child(0), m_value->child(1));
+            return;
+        }
+
+        case UMulHigh: {
+            if constexpr (isX86()) {
+                appendX86UMulHigh();
+                return;
+            }
+            appendBinOp<UMulHigh32, UMulHigh64, Air::Oops, Air::Oops>(m_value->child(0), m_value->child(1));
+            return;
+        }
+
         case Div: {
             if (m_value->isChill())
                 RELEASE_ASSERT(isARM64());
@@ -3869,6 +3905,39 @@ private:
             if (tryAppendSBFX())
                 return;
 
+            auto tryAppendMultiplySignExtend32 = [&] () -> bool {
+                if (m_value->type() != Int32)
+                    return false;
+
+                if (!isValidForm(MultiplySignExtend32, Arg::Tmp, Arg::Tmp, Arg::Tmp))
+                    return false;
+
+                if (left->opcode() != MulHigh)
+                    return false;
+
+                if (!canBeInternal(left))
+                    return false;
+
+                if (!imm(right))
+                    return false;
+
+                if (right->asInt() < 0)
+                    return false;
+
+                int64_t shiftAmount = 0;
+                if (!WTF::safeAdd<int64_t>(right->asInt(), 32, shiftAmount) || shiftAmount >= 64)
+                    return false;
+
+                Tmp beforeShift = m_code.newTmp(GP);
+                append(MultiplySignExtend32, tmp(left->child(0)), tmp(left->child(1)), beforeShift);
+                append(Rshift64, beforeShift, imm(shiftAmount), tmp(m_value));
+                commitInternal(left);
+                return true;
+            };
+
+            if (tryAppendMultiplySignExtend32())
+                return;
+
             appendShift<Rshift32, Rshift64>(left, right);
             return;
         }
@@ -3876,6 +3945,39 @@ private:
         case ZShr: {
             Value* left = m_value->child(0);
             Value* right = m_value->child(1);
+
+            auto tryAppendMultiplyZeroExtend32 = [&] () -> bool {
+                if (m_value->type() != Int32)
+                    return false;
+
+                if (!isValidForm(MultiplyZeroExtend32, Arg::Tmp, Arg::Tmp, Arg::Tmp))
+                    return false;
+
+                if (left->opcode() != UMulHigh)
+                    return false;
+
+                if (!canBeInternal(left))
+                    return false;
+
+                if (!imm(right))
+                    return false;
+
+                if (right->asInt() < 0)
+                    return false;
+
+                int64_t shiftAmount = 0;
+                if (!WTF::safeAdd<int64_t>(right->asInt(), 32, shiftAmount) || shiftAmount >= 64)
+                    return false;
+
+                Tmp beforeShift = m_code.newTmp(GP);
+                append(MultiplyZeroExtend32, tmp(left->child(0)), tmp(left->child(1)), beforeShift);
+                append(Urshift64, beforeShift, imm(shiftAmount), tmp(m_value));
+                commitInternal(left);
+                return true;
+            };
+
+            if (tryAppendMultiplyZeroExtend32())
+                return;
 
             appendShift<Urshift32, Urshift64>(left, right);
             return;

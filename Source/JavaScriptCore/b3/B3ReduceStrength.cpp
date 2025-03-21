@@ -925,7 +925,28 @@ private:
                     break;
                 }
             }
+            break;
 
+        case MulHigh:
+            handleCommutativity();
+
+            // Turn this: MulHigh(constant1, constant2)
+            // Into this: (constant1 * constant2) >> shift
+            if (Value* value = m_value->child(0)->mulHighConstant(m_proc, m_value->child(1))) {
+                replaceWithNewValue(value);
+                break;
+            }
+            break;
+
+        case UMulHigh:
+            handleCommutativity();
+
+            // Turn this: UMulHigh(constant1, constant2)
+            // Into this: (constant1 * constant2) >> shift
+            if (Value* value = m_value->child(0)->uMulHighConstant(m_proc, m_value->child(1))) {
+                replaceWithNewValue(value);
+                break;
+            }
             break;
 
         case Div:
@@ -974,30 +995,35 @@ private:
 
                     int32_t divisor = m_value->child(1)->asInt32();
                     DivisionMagic<int32_t> magic = computeDivisionMagic(divisor);
+                    Value* dividend = m_value->child(0);
 
-                    // Perform the "high" multiplication. We do it just to get the high bits.
-                    // This is sort of like multiplying by the reciprocal, just more gnarly. It's
-                    // from Hacker's Delight and I don't claim to understand it.
-                    Value* magicQuotient = m_insertionSet.insert<Value>(
-                        m_index, Trunc, m_value->origin(),
-                        m_insertionSet.insert<Value>(
-                            m_index, ZShr, m_value->origin(),
+                    Value* magicQuotient = nullptr;
+                    if constexpr (isARM64() || isX86()) {
+                        magicQuotient = m_insertionSet.insert<Value>(m_index, MulHigh, m_value->origin(),
+                            dividend,
+                            m_insertionSet.insert<Const32Value>(m_index, m_value->origin(), magic.magicMultiplier));
+                    } else {
+                        magicQuotient = m_insertionSet.insert<Value>(
+                            m_index, Trunc, m_value->origin(),
                             m_insertionSet.insert<Value>(
-                                m_index, Mul, m_value->origin(),
+                                m_index, ZShr, m_value->origin(),
                                 m_insertionSet.insert<Value>(
-                                    m_index, SExt32, m_value->origin(), m_value->child(0)),
-                                m_insertionSet.insert<Const64Value>(
-                                    m_index, m_value->origin(), magic.magicMultiplier)),
-                            m_insertionSet.insert<Const32Value>(
-                                m_index, m_value->origin(), 32)));
+                                    m_index, Mul, m_value->origin(),
+                                    m_insertionSet.insert<Value>(
+                                        m_index, SExt32, m_value->origin(), dividend),
+                                    m_insertionSet.insert<Const64Value>(
+                                        m_index, m_value->origin(), magic.magicMultiplier)),
+                                m_insertionSet.insert<Const32Value>(
+                                    m_index, m_value->origin(), 32)));
+                    }
 
                     if (divisor > 0 && magic.magicMultiplier < 0) {
                         magicQuotient = m_insertionSet.insert<Value>(
-                            m_index, Add, m_value->origin(), magicQuotient, m_value->child(0));
+                            m_index, Add, m_value->origin(), magicQuotient, dividend);
                     }
                     if (divisor < 0 && magic.magicMultiplier > 0) {
                         magicQuotient = m_insertionSet.insert<Value>(
-                            m_index, Sub, m_value->origin(), magicQuotient, m_value->child(0));
+                            m_index, Sub, m_value->origin(), magicQuotient, dividend);
                     }
                     if (magic.shift > 0) {
                         magicQuotient = m_insertionSet.insert<Value>(

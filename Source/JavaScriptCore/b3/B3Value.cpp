@@ -329,6 +329,16 @@ Value* Value::mulConstant(Procedure&, const Value*) const
     return nullptr;
 }
 
+Value* Value::mulHighConstant(Procedure&, const Value*) const
+{
+    return nullptr;
+}
+
+Value* Value::uMulHighConstant(Procedure&, const Value*) const
+{
+    return nullptr;
+}
+
 Value* Value::checkAddConstant(Procedure&, const Value*) const
 {
     return nullptr;
@@ -656,6 +666,8 @@ Effects Value::effects() const
     case Add:
     case Sub:
     case Mul:
+    case MulHigh:
+    case UMulHigh:
     case Neg:
     case PurifyNaN:
     case BitAnd:
@@ -909,6 +921,8 @@ ValueKey Value::key() const
     case Add:
     case Sub:
     case Mul:
+    case MulHigh:
+    case UMulHigh:
     case Div:
     case UDiv:
     case Mod:
@@ -1088,6 +1102,8 @@ Type Value::typeFor(Kind kind, Value* firstChild, Value* secondChild)
     case Add:
     case Sub:
     case Mul:
+    case MulHigh:
+    case UMulHigh:
     case Div:
     case UDiv:
     case Mod:

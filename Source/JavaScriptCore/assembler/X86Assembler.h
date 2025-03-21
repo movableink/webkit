@@ -506,6 +506,8 @@ private:
         GROUP3_OP_TEST = 0,
         GROUP3_OP_NOT  = 2,
         GROUP3_OP_NEG  = 3,
+        GROUP3_OP_MUL  = 4,
+        GROUP3_OP_IMUL = 5,
         GROUP3_OP_DIV = 6,
         GROUP3_OP_IDIV = 7,
 
@@ -1858,6 +1860,26 @@ public:
     void rolq_CLr(RegisterID dst)
     {
         m_formatter.oneByteOp64(OP_GROUP2_EvCL, GROUP2_OP_ROL, dst);
+    }
+
+    void mull_r(RegisterID reg)
+    {
+        m_formatter.oneByteOp(OP_GROUP3_Ev, GROUP3_OP_MUL, reg);
+    }
+
+    void mulq_r(RegisterID reg)
+    {
+        m_formatter.oneByteOp64(OP_GROUP3_Ev, GROUP3_OP_MUL, reg);
+    }
+
+    void imull_r(RegisterID reg)
+    {
+        m_formatter.oneByteOp(OP_GROUP3_Ev, GROUP3_OP_IMUL, reg);
+    }
+
+    void imulq_r(RegisterID reg)
+    {
+        m_formatter.oneByteOp64(OP_GROUP3_Ev, GROUP3_OP_IMUL, reg);
     }
 
     void imull_rr(RegisterID src, RegisterID dst)

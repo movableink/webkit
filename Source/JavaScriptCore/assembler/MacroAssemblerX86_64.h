@@ -561,6 +561,34 @@ public:
         m_assembler.imull_i32r(src, imm.m_value, dest);
     }
 
+    void x86MulHigh32(RegisterID src, RegisterID eax, RegisterID edx)
+    {
+        ASSERT_UNUSED(eax, eax == X86Registers::eax);
+        ASSERT_UNUSED(edx, edx == X86Registers::edx);
+        m_assembler.imull_r(src);
+    }
+
+    void x86MulHigh64(RegisterID src, RegisterID eax, RegisterID edx)
+    {
+        ASSERT_UNUSED(eax, eax == X86Registers::eax);
+        ASSERT_UNUSED(edx, edx == X86Registers::edx);
+        m_assembler.imulq_r(src);
+    }
+
+    void x86UMulHigh32(RegisterID src, RegisterID eax, RegisterID edx)
+    {
+        ASSERT_UNUSED(eax, eax == X86Registers::eax);
+        ASSERT_UNUSED(edx, edx == X86Registers::edx);
+        m_assembler.mull_r(src);
+    }
+
+    void x86UMulHigh64(RegisterID src, RegisterID eax, RegisterID edx)
+    {
+        ASSERT_UNUSED(eax, eax == X86Registers::eax);
+        ASSERT_UNUSED(edx, edx == X86Registers::edx);
+        m_assembler.mulq_r(src);
+    }
+
     void x86ConvertToDoubleWord32()
     {
         m_assembler.cdq();

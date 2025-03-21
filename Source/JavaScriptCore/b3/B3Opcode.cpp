@@ -150,6 +150,12 @@ void printInternal(PrintStream& out, Opcode opcode)
     case Mul:
         out.print("Mul");
         return;
+    case MulHigh:
+        out.print("MulHigh");
+        return;
+    case UMulHigh:
+        out.print("UMulHigh");
+        return;
     case Div:
         out.print("Div");
         return;

@@ -93,6 +93,8 @@ namespace JSC { namespace B3 {
     case Add: \
     case Sub: \
     case Mul: \
+    case MulHigh: \
+    case UMulHigh: \
     case Div: \
     case UDiv: \
     case Mod: \

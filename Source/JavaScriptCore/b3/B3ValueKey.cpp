@@ -90,6 +90,8 @@ Value* ValueKey::materialize(Procedure& proc, Origin origin) const
     case Add:
     case Sub:
     case Mul:
+    case MulHigh:
+    case UMulHigh:
     case Div:
     case UDiv:
     case Mod:

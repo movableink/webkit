@@ -1079,6 +1079,28 @@ public:
         m_assembler.umull(dest, left, right);
     }
 
+    void mulHigh32(RegisterID left, RegisterID right, RegisterID dest)
+    {
+        m_assembler.smull(dest, left, right);
+        m_assembler.asr<64>(dest, dest, 32);
+    }
+
+    void mulHigh64(RegisterID left, RegisterID right, RegisterID dest)
+    {
+        m_assembler.smulh(dest, left, right);
+    }
+
+    void uMulHigh32(RegisterID left, RegisterID right, RegisterID dest)
+    {
+        m_assembler.umull(dest, left, right);
+        m_assembler.lsr<64>(dest, dest, 32);
+    }
+
+    void uMulHigh64(RegisterID left, RegisterID right, RegisterID dest)
+    {
+        m_assembler.umulh(dest, left, right);
+    }
+
     void div32(RegisterID dividend, RegisterID divisor, RegisterID dest)
     {
         m_assembler.sdiv<32>(dest, dividend, divisor);
