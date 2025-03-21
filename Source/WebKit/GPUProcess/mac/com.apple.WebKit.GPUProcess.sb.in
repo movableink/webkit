@@ -828,6 +828,26 @@
             (extension "com.apple.webkit.extension.iokit")
             (iokit-user-client-class "H11ANEInDirectPathClient"))))
 
+(if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
+    (allow IOKIT_OPEN_USER_CLIENT
+        (require-all
+            (extension "com.apple.webkit.extension.iokit")
+            (iokit-user-client-class "H1xANELoadBalancerDirectPathClient"))
+        (apply-message-filter
+            (allow iokit-async-external-method
+                (iokit-method-number 2))
+            (allow iokit-external-method
+                (iokit-method-number 0 1))
+            (allow (with report) (with telemetry)
+                iokit-async-external-method
+                iokit-external-method
+                iokit-external-trap)))
+    ;; else
+    (allow IOKIT_OPEN_USER_CLIENT
+        (require-all
+            (extension "com.apple.webkit.extension.iokit")
+            (iokit-user-client-class "H1xANELoadBalancerDirectPathClient"))))
+
 (allow iokit-open-service
     (require-all
         (extension "com.apple.webkit.extension.iokit")
