@@ -691,8 +691,12 @@ WI.TreeOutline = class TreeOutline extends WI.Object
         this._virtualizedAttachedTreeElements = new Set;
         this._virtualizedScrollContainer = scrollContainer;
         this._virtualizedTreeItemHeight = treeItemHeight;
+
         this._virtualizedTopSpacer = document.createElement("div");
+        this._virtualizedTopSpacer.classList.add("virtualized-spacer");
+
         this._virtualizedBottomSpacer = document.createElement("div");
+        this._virtualizedBottomSpacer.classList.add("virtualized-spacer");
 
         let throttler = new Throttler(boundUpdateVirtualizedElements, 1000 / 16);
         this._virtualizedScrollContainer.addEventListener("scroll", (event) => {
@@ -908,27 +912,6 @@ WI.TreeOutline = class TreeOutline extends WI.Object
 
         this._virtualizedDebouncer.cancel();
 
-        function walk(parent, callback, count = 0) {
-            let shouldReturn = false;
-            for (let child of parent.children) {
-                if (!child.revealed(false))
-                    continue;
-
-                shouldReturn = callback(child, count);
-                if (shouldReturn)
-                    break;
-
-                ++count;
-                if (child.expanded) {
-                    let result = walk(child, callback, count);
-                    count = result.count;
-                    if (result.shouldReturn)
-                        break;
-                }
-            }
-            return {count, shouldReturn};
-        }
-
         function calculateOffsetFromContainer(node, target) {
             let top = 0;
             while (node !== target) {
@@ -941,42 +924,57 @@ WI.TreeOutline = class TreeOutline extends WI.Object
         }
 
         let offsetFromContainer = calculateOffsetFromContainer(this._virtualizedTopSpacer.parentNode ? this._virtualizedTopSpacer : this.element, this._virtualizedScrollContainer);
-        let numberVisible = Math.ceil(Math.max(0, this._virtualizedScrollContainer.offsetHeight - offsetFromContainer) / this._virtualizedTreeItemHeight);
-        let extraRows = Math.max(numberVisible * 5, 50);
-        let firstItem = Math.max(0, Math.floor((this._virtualizedScrollContainer.scrollTop - offsetFromContainer) / this._virtualizedTreeItemHeight) - extraRows);
-        let lastItem = firstItem + numberVisible + (extraRows * 2);
+        let scrollTop = Math.max(0, this._virtualizedScrollContainer.scrollTop - offsetFromContainer);
+        let scrollBottom = scrollTop + this._virtualizedScrollContainer.offsetHeight;
+
+        let firstVisibleIndex = Math.floor(scrollTop / this._virtualizedTreeItemHeight);
+        let lastVisibleIndex = Math.ceil(scrollBottom / this._virtualizedTreeItemHeight);
+        let numberVisible = lastVisibleIndex - firstVisibleIndex + 1;
+
+        const skipUnrevealed = true;
+        const stayWithin = null;
+        const dontPopulate = true;
+        const ignoreHidden = true;
+
+        let firstChild = this.children[0];
+        if (firstChild && !firstChild.revealed(ignoreHidden))
+            firstChild = firstChild.traverseNextTreeElement(skipUnrevealed, stayWithin, dontPopulate);
 
         let shouldScroll = false;
         if (focusedTreeElement && focusedTreeElement.revealed(false)) {
-            let index = walk(this, (treeElement) => treeElement === focusedTreeElement).count;
-            if (index < firstItem) {
-                firstItem = index - extraRows;
-                lastItem = index + numberVisible + extraRows;
-            } else if (index > lastItem) {
-                firstItem = index - numberVisible - extraRows;
-                lastItem = index + extraRows;
-            }
+            let index = 0;
+            for (let child = firstChild; child && child !== focusedTreeElement; child = child.traverseNextTreeElement(skipUnrevealed, stayWithin, dontPopulate))
+                ++index;
 
-            // Only scroll if the `focusedTreeElement` is outside the visible items, not including
-            // the added buffer `extraRows`.
-            shouldScroll = (index < firstItem + extraRows) || (index > lastItem - extraRows);
+            if (index < firstVisibleIndex) {
+                firstVisibleIndex = index;
+                lastVisibleIndex = index + numberVisible;
+                shouldScroll = true;
+            } else if (index > lastVisibleIndex) {
+                firstVisibleIndex = index - numberVisible;
+                lastVisibleIndex = index;
+                shouldScroll = true;
+            }
         }
 
-        console.assert(firstItem < lastItem);
+        let extraAttachedCount = Math.max(numberVisible * 5, 50);
+        let firstAttachedIndex = firstVisibleIndex - extraAttachedCount;
+        let lastAttachedIndex = lastVisibleIndex + extraAttachedCount;
 
         let visibleTreeElements = new Set;
         let treeElementsToAttach = new Set;
         let treeElementsToDetach = new Set;
-        let totalItems = walk(this, (treeElement, count) => {
-            if (count >= firstItem && count <= lastItem) {
-                treeElementsToAttach.add(treeElement);
-                if (count >= firstItem + extraRows && count <= lastItem - extraRows)
-                    visibleTreeElements.add(treeElement);
-            } else if (treeElement._listItemNode.parentNode)
-                treeElementsToDetach.add(treeElement);
+        let childrenCount = 0;
+        for (let child = firstChild; child; child = child.traverseNextTreeElement(skipUnrevealed, stayWithin, dontPopulate)) {
+            if (childrenCount >= firstAttachedIndex && childrenCount <= lastAttachedIndex) {
+                treeElementsToAttach.add(child);
+                if (childrenCount >= firstVisibleIndex && childrenCount <= lastVisibleIndex)
+                    visibleTreeElements.add(child);
+            } else if (child._listItemNode.parentNode)
+                treeElementsToDetach.add(child);
 
-            return false;
-        }).count;
+            ++childrenCount;
+        }
 
         // Redraw if we are about to scroll.
         if (!shouldScroll) {
@@ -1003,16 +1001,20 @@ WI.TreeOutline = class TreeOutline extends WI.Object
                 treeElement.parent._childrenListNode.appendChild(treeElement._childrenListNode);
         }
 
-        this._virtualizedTopSpacer.style.height = (Number.constrain(firstItem, 0, totalItems) * this._virtualizedTreeItemHeight) + "px";
+        let attachedCount = treeElementsToAttach.size;
+
+        let beforeAttachedCount = Number.constrain(firstAttachedIndex, 0, childrenCount);
+        this._virtualizedTopSpacer.style.height = (beforeAttachedCount * this._virtualizedTreeItemHeight) + "px";
         if (this.element.previousElementSibling !== this._virtualizedTopSpacer)
             this.element.parentNode.insertBefore(this._virtualizedTopSpacer, this.element);
 
-        this._virtualizedBottomSpacer.style.height = (Number.constrain(totalItems - lastItem, 0, totalItems) * this._virtualizedTreeItemHeight) + "px";
+        let afterAttachedCount = Number.constrain(childrenCount - attachedCount - beforeAttachedCount, 0, childrenCount);
+        this._virtualizedBottomSpacer.style.height = (afterAttachedCount * this._virtualizedTreeItemHeight) + "px";
         if (this.element.nextElementSibling !== this._virtualizedBottomSpacer)
             this.element.parentNode.insertBefore(this._virtualizedBottomSpacer, this.element.nextElementSibling);
 
         if (shouldScroll)
-            this._virtualizedScrollContainer.scrollTop = offsetFromContainer + ((firstItem + extraRows) * this._virtualizedTreeItemHeight);
+            this._virtualizedScrollContainer.scrollTop = offsetFromContainer + (firstVisibleIndex * this._virtualizedTreeItemHeight);
     }
 
     _handleContextmenu(event)
