@@ -84,7 +84,7 @@ WebExtensionFrameIdentifier toWebExtensionFrameIdentifier(const FrameInfoData& f
     if (frameInfoData.isMainFrame)
         return WebExtensionFrameConstants::MainFrameIdentifier;
 
-    return toWebExtensionFrameIdentifier(frameInfoData.frameID);
+    return toWebExtensionFrameIdentifier(std::optional(frameInfoData.frameID));
 }
 
 std::optional<WebExtensionFrameIdentifier> toWebExtensionFrameIdentifier(double identifier)

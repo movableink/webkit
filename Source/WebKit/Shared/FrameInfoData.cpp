@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,36 +23,32 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
-#include "WebFrameMetrics.h"
-#include <WebCore/CertificateInfo.h>
-#include <WebCore/FrameIdentifier.h>
-#include <WebCore/ResourceRequest.h>
-#include <WebCore/ScriptExecutionContextIdentifier.h>
-#include <WebCore/SecurityOriginData.h>
-#include <wtf/ProcessID.h>
+#include "config.h"
+#include "FrameInfoData.h"
 
 namespace WebKit {
 
-enum class FrameType : bool { Local, Remote };
+FrameInfoData legacyEmptyFrameInfo(WebCore::ResourceRequest&& request)
+{
+    constexpr bool isMainFrame { true };
+    constexpr bool isFocused { false };
+    constexpr bool errorOccurred { false };
 
-struct FrameInfoData {
-    bool isMainFrame { false };
-    FrameType frameType { FrameType::Local };
-    WebCore::ResourceRequest request;
-    WebCore::SecurityOriginData securityOrigin;
-    String frameName;
-    WebCore::FrameIdentifier frameID;
-    Markable<WebCore::FrameIdentifier> parentFrameID;
-    Markable<WebCore::ScriptExecutionContextIdentifier> documentID;
-    WebCore::CertificateInfo certificateInfo;
-    ProcessID processID;
-    bool isFocused { false };
-    bool errorOccurred { false };
-    WebFrameMetrics frameMetrics { };
-};
-
-FrameInfoData legacyEmptyFrameInfo(WebCore::ResourceRequest&&);
+    return FrameInfoData {
+        isMainFrame,
+        FrameType::Local,
+        WTFMove(request),
+        WebCore::SecurityOriginData::createOpaque(),
+        String { },
+        WebCore::FrameIdentifier::generate(),
+        std::nullopt,
+        std::nullopt,
+        WebCore::CertificateInfo { },
+        getCurrentProcessID(),
+        isFocused,
+        errorOccurred,
+        WebFrameMetrics { }
+    };
+}
 
 }

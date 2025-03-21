@@ -2069,11 +2069,11 @@ void WebPageProxy::loadRequestWithNavigationShared(Ref<WebProcessProxy>&& proces
 #if PLATFORM(COCOA)
     bool urlIsInvalidButNotEmpty = !url.isValid() && !url.isEmpty();
     if (urlIsInvalidButNotEmpty && WTF::linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ConvertsInvalidURLsToNull)) {
-        RunLoop::protectedMain()->dispatch([weakThis = WeakPtr { *this }, request, navigation = Ref { navigation }] {
+        RunLoop::protectedMain()->dispatch([weakThis = WeakPtr { *this }, request, navigation = Ref { navigation }] mutable {
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis)
                 return;
-            protectedThis->m_navigationClient->didFailProvisionalNavigationWithError(*protectedThis, FrameInfoData { true, FrameType::Local, request }, navigation.ptr(), request.url(), cannotShowURLError(request), nullptr);
+            protectedThis->m_navigationClient->didFailProvisionalNavigationWithError(*protectedThis, legacyEmptyFrameInfo(WTFMove(request)), navigation.ptr(), request.url(), cannotShowURLError(request), nullptr);
         });
         return;
     }
@@ -7483,7 +7483,7 @@ void WebPageProxy::didSameDocumentNavigationForFrameViaJS(IPC::Connection& conne
 
     MESSAGE_CHECK_URL(m_legacyMainFrameProcess, url);
 
-    WEBPAGEPROXY_RELEASE_LOG(Loading, "didSameDocumentNavigationForFrameViaJS: frameID=%" PRIu64 ", isMainFrame=%d, type=%u", frameID->object().toUInt64(), frame->isMainFrame(), enumToUnderlyingType(navigationType));
+    WEBPAGEPROXY_RELEASE_LOG(Loading, "didSameDocumentNavigationForFrameViaJS: frameID=%" PRIu64 ", isMainFrame=%d, type=%u", frameID.object().toUInt64(), frame->isMainFrame(), enumToUnderlyingType(navigationType));
 
     // FIXME: We should message check that navigationID is not zero here, but it's currently zero for some navigations through the back/forward cache.
     RefPtr<API::Navigation> navigation;
@@ -8539,7 +8539,7 @@ void WebPageProxy::createNewPage(IPC::Connection& connection, WindowFeatures&& w
     if (RefPtr openerFrame = WebFrameProxy::webFrame(originatingFrameInfoData.frameID); navigationActionData.hasOpener && openerFrame) {
         configuration->setOpenerInfo({ {
             openerFrame->frameProcess().process(),
-            *originatingFrameInfoData.frameID
+            originatingFrameInfoData.frameID
         } });
         configuration->setOpenedSite(openerFrame->frameProcess().site());
         configuration->setBrowsingContextGroup(m_browsingContextGroup.copyRef());
@@ -13834,7 +13834,7 @@ void WebPageProxy::didPerformImmediateActionHitTest(WebHitTestResultData&& resul
             return;
         }
         if (auto parentFrameID = result.frameInfo->parentFrameID) {
-            sendWithAsyncReplyToProcessContainingFrame(parentFrameID, Messages::WebPage::RemoteDictionaryPopupInfoToRootView(*result.frameInfo->frameID, result.dictionaryPopupInfo), [protectedThis = Ref { *this }, this, userData, result = WTFMove(result), contentPreventsDefault](WebCore::DictionaryPopupInfo popupInfo) mutable {
+            sendWithAsyncReplyToProcessContainingFrame(parentFrameID, Messages::WebPage::RemoteDictionaryPopupInfoToRootView(result.frameInfo->frameID, result.dictionaryPopupInfo), [protectedThis = Ref { *this }, this, userData, result = WTFMove(result), contentPreventsDefault](WebCore::DictionaryPopupInfo popupInfo) mutable {
                 result.dictionaryPopupInfo = popupInfo;
                 if (RefPtr pageClient = protectedThis->pageClient())
                     pageClient->didPerformImmediateActionHitTest(result, contentPreventsDefault, protectedLegacyMainFrameProcess()->transformHandlesToObjects(userData.protectedObject().get()).get());

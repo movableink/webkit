@@ -9569,7 +9569,7 @@ static bool canUseQuickboardControllerFor(UITextContentType type)
     auto webView = _webView.get();
     id <WKUIDelegatePrivate> uiDelegate = static_cast<id <WKUIDelegatePrivate>>([webView UIDelegate]);
     return [uiDelegate respondsToSelector:@selector(_webView:fileUploadPanelContentIsManagedWithInitiatingFrame:)]
-        && [uiDelegate _webView:webView.get() fileUploadPanelContentIsManagedWithInitiatingFrame:wrapper(API::FrameInfo::create(WTFMove(_frameInfoForFileUploadPanel), _page.get())).get()];
+        && [uiDelegate _webView:webView.get() fileUploadPanelContentIsManagedWithInitiatingFrame:_frameInfoForFileUploadPanel ? wrapper(API::FrameInfo::create(*std::exchange(_frameInfoForFileUploadPanel, std::nullopt), _page.get())).get() : nil];
 }
 
 #if HAVE(PHOTOS_UI)

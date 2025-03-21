@@ -220,6 +220,7 @@ Shared/ContextMenuContextData.cpp
 Shared/DebuggableInfoData.cpp
 Shared/EditingRange.cpp
 Shared/EditorState.cpp
+Shared/FrameInfoData.cpp
 Shared/InspectorExtensionTypes.cpp
 Shared/IPCConnectionTester.cpp
 Shared/IPCStreamTester.cpp

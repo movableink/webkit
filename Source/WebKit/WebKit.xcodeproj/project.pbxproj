@@ -8470,6 +8470,7 @@
 		FA6DCE722BAAB3AB0043109B /* WebPagePreferencesLockdownModeObserver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebPagePreferencesLockdownModeObserver.h; sourceTree = "<group>"; };
 		FA7036C32D72882A00083D04 /* RunJavaScriptParameters.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RunJavaScriptParameters.h; sourceTree = "<group>"; };
 		FA8262722B2193EA00BB8236 /* APINumber.serialization.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = APINumber.serialization.in; sourceTree = "<group>"; };
+		FA87D9B42D8BDC2B00B609D4 /* FrameInfoData.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FrameInfoData.cpp; sourceTree = "<group>"; };
 		FA94F2A12D07800D006373E0 /* WebPageInternals.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebPageInternals.h; sourceTree = "<group>"; };
 		FA96E4AC2AA90A1E0090C5A3 /* WebHistoryItemClient.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = WebHistoryItemClient.cpp; sourceTree = "<group>"; };
 		FA96E4AD2AA90A1E0090C5A3 /* WebHistoryItemClient.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WebHistoryItemClient.h; sourceTree = "<group>"; };
@@ -9418,6 +9419,7 @@
 				86BAAFD829A3D4040013F9A9 /* FileSystemSyncAccessHandleInfo.serialization.in */,
 				C59C4A5718B81174007BDCB6 /* FocusedElementInformation.h */,
 				86DA60C628EAE9C00044FE4D /* FocusedElementInformation.serialization.in */,
+				FA87D9B42D8BDC2B00B609D4 /* FrameInfoData.cpp */,
 				1A14F8E01D74C834006CBEC6 /* FrameInfoData.h */,
 				5C4AB4AF28BD65A50059E6CD /* FrameInfoData.serialization.in */,
 				5C2FEF0F29B665AF0005AB95 /* FrameTreeCreationParameters.h */,

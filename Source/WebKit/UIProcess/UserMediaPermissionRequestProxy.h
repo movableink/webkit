@@ -78,7 +78,7 @@ public:
     std::optional<WebCore::UserMediaRequestIdentifier> userMediaID() const { return m_userMediaID; }
     WebCore::FrameIdentifier mainFrameID() const { return m_mainFrameID; }
     const FrameInfoData& frameInfo() const { return m_frameInfo; }
-    WebCore::FrameIdentifier frameID() const { return *m_frameInfo.frameID; }
+    WebCore::FrameIdentifier frameID() const { return m_frameInfo.frameID; }
 
     WebCore::SecurityOrigin& topLevelDocumentSecurityOrigin() { return m_topLevelDocumentSecurityOrigin.get(); }
     WebCore::SecurityOrigin& userMediaDocumentSecurityOrigin() { return m_userMediaDocumentSecurityOrigin.get(); }

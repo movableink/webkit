@@ -429,11 +429,10 @@ void ProvisionalPageProxy::didStartProvisionalLoadForFrame(FrameIdentifier frame
 
 void ProvisionalPageProxy::didFailProvisionalLoadForFrame(FrameInfoData&& frameInfo, ResourceRequest&& request, std::optional<WebCore::NavigationIdentifier> navigationID, const String& provisionalURL, const WebCore::ResourceError& error, WebCore::WillContinueLoading willContinueLoading, const UserData& userData, WebCore::WillInternallyHandleFailure willInternallyHandleFailure)
 {
-    MESSAGE_CHECK(frameInfo.frameID);
-    if (!validateInput(*frameInfo.frameID, navigationID))
+    if (!validateInput(frameInfo.frameID, navigationID))
         return;
 
-    PROVISIONALPAGEPROXY_RELEASE_LOG_ERROR(ProcessSwapping, "didFailProvisionalLoadForFrame: frameID=%" PRIu64, frameInfo.frameID->object().toUInt64());
+    PROVISIONALPAGEPROXY_RELEASE_LOG_ERROR(ProcessSwapping, "didFailProvisionalLoadForFrame: frameID=%" PRIu64, frameInfo.frameID.object().toUInt64());
     ASSERT(!m_provisionalLoadURL.isNull());
     m_provisionalLoadURL = { };
 
@@ -453,7 +452,7 @@ void ProvisionalPageProxy::didFailProvisionalLoadForFrame(FrameInfoData&& frameI
     } else if (RefPtr pageMainFrame = page->mainFrame())
         pageMainFrame->didFailProvisionalLoad();
 
-    RefPtr frame = WebFrameProxy::webFrame(*frameInfo.frameID);
+    RefPtr frame = WebFrameProxy::webFrame(frameInfo.frameID);
     MESSAGE_CHECK(frame);
     page->didFailProvisionalLoadForFrameShared(protectedProcess(), *frame, WTFMove(frameInfo), WTFMove(request), navigationID, provisionalURL, error, willContinueLoading, userData, willInternallyHandleFailure); // May delete |this|.
 }
@@ -506,8 +505,7 @@ void ProvisionalPageProxy::didChangeProvisionalURLForFrame(FrameIdentifier frame
 
 void ProvisionalPageProxy::decidePolicyForNavigationActionAsync(NavigationActionData&& data, CompletionHandler<void(PolicyDecision&&)>&& completionHandler)
 {
-    MESSAGE_CHECK(data.frameInfo.frameID);
-    if (!validateInput(*data.frameInfo.frameID, data.navigationID))
+    if (!validateInput(data.frameInfo.frameID, data.navigationID))
         return completionHandler({ });
 
     if (RefPtr page = m_page.get())
@@ -518,8 +516,7 @@ void ProvisionalPageProxy::decidePolicyForNavigationActionAsync(NavigationAction
 
 void ProvisionalPageProxy::decidePolicyForResponse(FrameInfoData&& frameInfo, std::optional<WebCore::NavigationIdentifier> navigationID, const WebCore::ResourceResponse& response, const WebCore::ResourceRequest& request, bool canShowMIMEType, const String& downloadAttribute, bool isShowingInitialAboutBlank, WebCore::CrossOriginOpenerPolicyValue activeDocumentCOOPValue, CompletionHandler<void(PolicyDecision&&)>&& completionHandler)
 {
-    MESSAGE_CHECK(frameInfo.frameID);
-    if (!validateInput(*frameInfo.frameID, navigationID))
+    if (!validateInput(frameInfo.frameID, navigationID))
         return completionHandler({ });
 
     if (RefPtr page = m_page.get())

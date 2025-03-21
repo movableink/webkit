@@ -3821,7 +3821,7 @@ static RetainPtr<NSArray> wkTextManipulationErrors(NSArray<_WKTextManipulationIt
     if (!frame)
         [NSException raise:NSInternalInconsistencyException format:@"frame must be non-null"];
 
-    _page->convertPointToMainFrameCoordinates(point, frame->_frameInfo->frameInfoData().frameID.asOptional(), [completionHandler = makeBlockPtr(completionHandler)] (std::optional<WebCore::FloatPoint> result) {
+    _page->convertPointToMainFrameCoordinates(point, frame->_frameInfo->frameInfoData().frameID, [completionHandler = makeBlockPtr(completionHandler)] (std::optional<WebCore::FloatPoint> result) {
         if (result)
             completionHandler(*result, nil);
         else
@@ -3834,7 +3834,7 @@ static RetainPtr<NSArray> wkTextManipulationErrors(NSArray<_WKTextManipulationIt
     if (!frame)
         [NSException raise:NSInternalInconsistencyException format:@"frame must be non-null"];
 
-    _page->convertRectToMainFrameCoordinates(rect, frame->_frameInfo->frameInfoData().frameID.asOptional(), [completionHandler = makeBlockPtr(completionHandler)] (std::optional<WebCore::FloatRect> result) {
+    _page->convertRectToMainFrameCoordinates(rect, frame->_frameInfo->frameInfoData().frameID, [completionHandler = makeBlockPtr(completionHandler)] (std::optional<WebCore::FloatRect> result) {
         if (result)
             completionHandler(*result, nil);
         else
