@@ -48,7 +48,10 @@ final class WKNavigationDelegateAdapter: NSObject, WKNavigationDelegate {
 
     private func yieldNavigationProgress(kind: WebPage.NavigationEvent.Kind, cocoaNavigation: WKNavigation!) {
         let navigation = WebPage.NavigationEvent(kind: kind, navigationID: .init(cocoaNavigation))
-        owner?.currentNavigationEvent = navigation
+
+        owner?.backingWebView._do(afterNextPresentationUpdate: { [weak owner] in
+            owner?.currentNavigationEvent = navigation
+        })
     }
 
     private func yieldDownloadProgress(kind: WebPage.DownloadEvent.Kind, download: WKDownload) {
