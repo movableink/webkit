@@ -31,6 +31,7 @@
 #include "SharedFileHandle.h"
 #include <WebCore/FileSystemWriteCloseReason.h>
 #include <WebCore/FileSystemWriteCommandType.h>
+#include <wtf/FileSystem.h>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
 
