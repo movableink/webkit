@@ -7725,9 +7725,6 @@ webkit.org/b/289090 imported/w3c/web-platform-tests/dom/nodes/remove-from-shadow
 
 webkit.org/b/289097 imported/w3c/web-platform-tests/css/css-position/sticky/position-sticky-fixed-ancestor.html [ Pass Failure ]
 
-# webkit.org/b/289620 ipc/large-vector-allocate-failure-crash.html should be a macOS only test
-[ Debug ] ipc/large-vector-allocate-failure-crash.html [ Skip ]
-
 webkit.org/b/289094 imported/w3c/web-platform-tests/webcodecs/audio-data.crossOriginIsolated.https.any.html [ Pass Timeout ]
 
 webkit.org/b/289109 imported/w3c/web-platform-tests/css/css-view-transitions/transition-skipped-after-animation-started.html [ Pass Crash ]

@@ -42,6 +42,7 @@ http/tests/swipe [ Pass ]
 http/tests/pdf [ Pass ]
 [ Sonoma+ ] pdf [ Pass ]
 tiled-drawing [ Pass ]
+ipc/mac [ Pass ]
 ipc/restrictedendpoints/mac [ Pass ]
 fast/page-color-sampling [ Pass ]
 
@@ -2027,9 +2028,6 @@ webkit.org/b/288878 media/modern-media-controls/tracks-support/audio-multiple-tr
 webkit.org/b/289090 [ Debug arm64 ] imported/w3c/web-platform-tests/dom/nodes/remove-from-shadow-host-and-adopt-into-iframe.html [ Pass Timeout ]
 
 webkit.org/b/289092 http/wpt/background-fetch/background-fetch-abort.window.html [ Pass Failure ]
-
-# webkit.org/b/289620 ipc/large-vector-allocate-failure-crash.html should be a macOS only test
-[ Debug ] ipc/large-vector-allocate-failure-crash.html [ Skip ]
 
 webkit.org/b/289094 [ Sequoia Debug ] imported/w3c/web-platform-tests/webcodecs/audio-data.crossOriginIsolated.https.any.html [ Pass Timeout ]
 
