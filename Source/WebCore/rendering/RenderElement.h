@@ -317,6 +317,21 @@ public:
     // Returns the renderer which was mapped to (container or ancestorToStopAt).
     virtual const RenderElement* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const;
 
+    bool isFixedPositioned() const { return isOutOfFlowPositioned() && style().position() == PositionType::Fixed; }
+    bool isAbsolutelyPositioned() const { return isOutOfFlowPositioned() && style().position() == PositionType::Absolute; }
+
+    bool isViewTransitionContainer() const { return style().pseudoElementType() == PseudoId::ViewTransition || style().pseudoElementType() == PseudoId::ViewTransitionGroup || style().pseudoElementType() == PseudoId::ViewTransitionImagePair; }
+    bool isViewTransitionPseudo() const { return isRenderViewTransitionCapture() || isViewTransitionContainer(); }
+
+    inline bool hasPotentiallyScrollableOverflow() const;
+
+    inline bool isBeforeContent() const;
+    inline bool isAfterContent() const;
+    inline bool isBeforeOrAfterContent() const;
+    static bool isBeforeContent(const RenderElement*);
+    static bool isAfterContent(const RenderElement*);
+    static bool isBeforeOrAfterContent(const RenderElement*);
+
 protected:
     RenderElement(Type, Element&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);
     RenderElement(Type, Document&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);

@@ -178,7 +178,7 @@ void RenderTreeBuilder::Inline::insertChildToContinuation(RenderInline& parent, 
 void RenderTreeBuilder::Inline::attachIgnoringContinuation(RenderInline& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
 {
     // Make sure we don't append things after :after-generated content if we have it.
-    if (!beforeChild && parent.isAfterContent(parent.lastChild()))
+    if (!beforeChild && RenderElement::isAfterContent(dynamicDowncast<RenderElement>(parent.lastChild())))
         beforeChild = parent.lastChild();
 
     bool childInline = newChildIsInline(parent, *child);

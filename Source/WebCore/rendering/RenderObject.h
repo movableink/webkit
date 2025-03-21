@@ -458,7 +458,6 @@ public:
     bool isRenderModel() const { return type() == Type::Model; }
 #endif
     bool isRenderFragmentContainer() const { return isRenderBlockFlow() && m_typeSpecificFlags.blockFlowFlags().contains(BlockFlowFlag::IsFragmentContainer); }
-    bool isViewTransitionContainer() const { return style().pseudoElementType() == PseudoId::ViewTransition || style().pseudoElementType() == PseudoId::ViewTransitionGroup || style().pseudoElementType() == PseudoId::ViewTransitionImagePair; }
     bool isRenderReplica() const { return type() == Type::Replica; }
 
     bool isRenderSlider() const { return type() == Type::Slider; }
@@ -498,15 +497,6 @@ public:
     bool isHTMLMarquee() const;
 
     bool isTablePart() const { return isRenderTableCell() || isRenderTableCol() || isRenderTableCaption() || isRenderTableRow() || isRenderTableSection(); }
-
-    bool isViewTransitionPseudo() const { return isRenderViewTransitionCapture() || isViewTransitionContainer(); }
-
-    inline bool isBeforeContent() const;
-    inline bool isAfterContent() const;
-    inline bool isBeforeOrAfterContent() const;
-    static inline bool isBeforeContent(const RenderObject* obj) { return obj && obj->isBeforeContent(); }
-    static inline bool isAfterContent(const RenderObject* obj) { return obj && obj->isAfterContent(); }
-    static inline bool isBeforeOrAfterContent(const RenderObject* obj) { return obj && obj->isBeforeOrAfterContent(); }
 
     bool beingDestroyed() const { return m_stateBitfields.hasFlag(StateFlag::BeingDestroyed); }
 
@@ -657,11 +647,8 @@ public:
     bool isPositioned() const { return m_stateBitfields.isPositioned(); }
     bool isInFlowPositioned() const { return m_stateBitfields.isRelativelyPositioned() || m_stateBitfields.isStickilyPositioned(); }
     bool isOutOfFlowPositioned() const { return m_stateBitfields.isOutOfFlowPositioned(); } // absolute or fixed positioning
-    bool isFixedPositioned() const { return isOutOfFlowPositioned() && style().position() == PositionType::Fixed; }
-    bool isAbsolutelyPositioned() const { return isOutOfFlowPositioned() && style().position() == PositionType::Absolute; }
     bool isRelativelyPositioned() const { return m_stateBitfields.isRelativelyPositioned(); }
     bool isStickilyPositioned() const { return m_stateBitfields.isStickilyPositioned(); }
-    bool shouldUsePositionedClipping() const { return isAbsolutelyPositioned() || isRenderSVGForeignObject(); }
 
     bool isRenderText() const { return m_typeFlags.contains(TypeFlag::IsText); }
     bool isRenderLineBreak() const { return type() == Type::LineBreak; }
@@ -713,8 +700,6 @@ public:
     bool isSelectionBorder() const;
 
     bool hasNonVisibleOverflow() const { return m_stateBitfields.hasFlag(StateFlag::HasNonVisibleOverflow); }
-
-    bool hasPotentiallyScrollableOverflow() const;
 
     bool hasTransformRelatedProperty() const { return m_stateBitfields.hasFlag(StateFlag::HasTransformRelatedProperty); } // Transform, perspective or transform-style: preserve-3d.
     inline bool isTransformed() const;
@@ -1354,31 +1339,6 @@ inline bool RenderObject::renderTreeBeingDestroyed() const
     return document().renderTreeBeingDestroyed();
 }
 
-inline bool RenderObject::isBeforeContent() const
-{
-    // Text nodes don't have their own styles, so ignore the style on a text node.
-    if (isRenderText())
-        return false;
-    if (style().pseudoElementType() != PseudoId::Before)
-        return false;
-    return true;
-}
-
-inline bool RenderObject::isAfterContent() const
-{
-    // Text nodes don't have their own styles, so ignore the style on a text node.
-    if (isRenderText())
-        return false;
-    if (style().pseudoElementType() != PseudoId::After)
-        return false;
-    return true;
-}
-
-inline bool RenderObject::isBeforeOrAfterContent() const
-{
-    return isBeforeContent() || isAfterContent();
-}
-
 inline void RenderObject::setNeedsLayout(MarkingBehavior markParents)
 {
     ASSERT(!isSetNeedsLayoutForbidden());
@@ -1529,13 +1489,6 @@ inline RenderObject* RenderObject::nextInFlowSibling() const
     while (nextSibling && !nextSibling->isInFlow())
         nextSibling = nextSibling->nextSibling();
     return nextSibling;
-}
-
-inline bool RenderObject::hasPotentiallyScrollableOverflow() const
-{
-    // We only need to test one overflow dimension since 'visible' and 'clip' always get accompanied
-    // with 'clip' or 'visible' in the other dimension (see Style::Adjuster::adjust).
-    return hasNonVisibleOverflow() && style().overflowX() != Overflow::Clip && style().overflowX() != Overflow::Visible;
 }
 
 #if ENABLE(MATHML)

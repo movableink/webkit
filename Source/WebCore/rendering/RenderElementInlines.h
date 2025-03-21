@@ -125,6 +125,38 @@ inline bool RenderElement::createsGroupForStyle(const RenderStyle& style)
         || style.hasBlendMode();
 }
 
+inline bool RenderElement::hasPotentiallyScrollableOverflow() const
+{
+    // We only need to test one overflow dimension since 'visible' and 'clip' always get accompanied
+    // with 'clip' or 'visible' in the other dimension (see Style::Adjuster::adjust).
+    return hasNonVisibleOverflow() && style().overflowX() != Overflow::Clip && style().overflowX() != Overflow::Visible;
+}
+
+inline bool RenderElement::isBeforeContent() const
+{
+    // Text nodes don't have their own styles, so ignore the style on a text node.
+    // if (isRenderText())
+    //     return false;
+    if (style().pseudoElementType() != PseudoId::Before)
+        return false;
+    return true;
+}
+
+inline bool RenderElement::isAfterContent() const
+{
+    // Text nodes don't have their own styles, so ignore the style on a text node.
+    // if (isRenderText())
+    //     return false;
+    if (style().pseudoElementType() != PseudoId::After)
+        return false;
+    return true;
+}
+
+inline bool RenderElement::isBeforeOrAfterContent() const
+{
+    return isBeforeContent() || isAfterContent();
+}
+
 inline bool RenderElement::shouldApplyAnyContainment() const
 {
     return shouldApplyLayoutContainment() || shouldApplySizeContainment() || shouldApplyInlineSizeContainment() || shouldApplyStyleContainment() || shouldApplyPaintContainment();

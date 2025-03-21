@@ -731,7 +731,7 @@ bool AccessibilityRenderObject::shouldGetTextFromNode(const TextUnderElementMode
 
     // AccessibilityRenderObject::textUnderElement() calls rangeOfContents() to create the text
     // range. rangeOfContents() does not include CSS-generated content.
-    if (m_renderer->isBeforeOrAfterContent())
+    if (CheckedPtr renderElement = dynamicDowncast<RenderElement>(m_renderer.get()); renderElement && renderElement->isBeforeOrAfterContent())
         return true;
     if (Node* node = m_renderer->node()) {
         Node* firstChild = node->pseudoAwareFirstChild();

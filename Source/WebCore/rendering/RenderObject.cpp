@@ -1293,7 +1293,7 @@ void RenderObject::outputRenderObject(TextStream& stream, bool mark, int depth) 
         else if (isStickilyPositioned())
             stream << "K";
         else if (isOutOfFlowPositioned()) {
-            if (isAbsolutelyPositioned())
+            if (downcast<RenderElement>(*this).isAbsolutelyPositioned())
                 stream << "A";
             else
                 stream << "X";

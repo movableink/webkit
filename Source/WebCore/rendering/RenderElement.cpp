@@ -2280,6 +2280,21 @@ bool RenderElement::hasViewTransitionName() const
     return !style().viewTransitionName().isNone();
 }
 
+bool RenderElement::isBeforeContent(const RenderElement* renderer)
+{
+    return renderer && renderer->isBeforeContent();
+}
+
+bool RenderElement::isAfterContent(const RenderElement* renderer)
+{
+    return renderer && renderer->isAfterContent();
+}
+
+bool RenderElement::isBeforeOrAfterContent(const RenderElement* renderer)
+{
+    return renderer && renderer->isBeforeOrAfterContent();
+}
+
 bool RenderElement::requiresRenderingConsolidationForViewTransition() const
 {
     return hasViewTransitionName() || capturedInViewTransition();
