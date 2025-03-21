@@ -312,6 +312,16 @@ RefPtr<FilterImage> SVGFilter::apply(FilterImage* sourceImage, FilterResults& re
     return stack.takeLast();
 }
 
+bool SVGFilter::isValidSVGFilterExpression(const SVGFilterExpression& expression, const FilterEffectVector& effects)
+{
+    for (const auto& term : expression) {
+        if (term.index >= effects.size())
+            return false;
+    }
+
+    return true;
+}
+
 FilterStyleVector SVGFilter::createFilterStyles(GraphicsContext& context, const Filter&, const FilterStyle& sourceStyle) const
 {
     return createFilterStyles(context, sourceStyle);

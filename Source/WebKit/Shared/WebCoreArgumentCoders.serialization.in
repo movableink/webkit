@@ -7714,7 +7714,7 @@ class WebCore::FilterOperations {
     WebCore::FloatRect targetBoundingBox();
     WebCore::SVGUnitTypes::SVGUnitType primitiveUnits();
     WebCore::SVGFilterExpression expression();
-    Vector<Ref<WebCore::FilterEffect>> effects();
+    [Validator='WebCore::SVGFilter::isValidSVGFilterExpression(*expression, *effects)'] Vector<Ref<WebCore::FilterEffect>> effects();
     std::optional<WebCore::RenderingResourceIdentifier> renderingResourceIdentifierIfExists();
 
     OptionSet<WebCore::FilterRenderingMode> filterRenderingModes();
