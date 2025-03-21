@@ -1,4 +1,4 @@
-<!DOCTYPE html> <!-- webkit-test-runner [ FixedContainerEdgeSamplingEnabled=true useFlexibleViewport=true ] -->
+<!DOCTYPE html> <!-- webkit-test-runner [ ContentInsetBackgroundFillEnabled=true useFlexibleViewport=true ] -->
 <html>
 <head>
     <meta charset="utf-8">
@@ -52,6 +52,7 @@
     jsTestIsAsync = true;
 
     addEventListener("load", async () => {
+        await UIHelper.setObscuredInsets(75, 0, 75, 0);
         await UIHelper.ensurePresentationUpdate();
         sampledColors = [];
         for (i = 0; i < 5; ++i) {

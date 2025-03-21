@@ -2146,7 +2146,7 @@ ContentInsetBackgroundFillEnabled:
   status: internal
   humanReadableName: "Content Inset Background Fill"
   humanReadableDescription: "Fill content insets with background colors"
-  condition: ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+  condition: PLATFORM(COCOA)
   defaultValue:
     WebKit:
       default: WebKit::defaultContentInsetBackgroundFillEnabled()
@@ -3093,20 +3093,6 @@ FilterLinkDecorationByDefaultEnabled:
       default: true
     WebCore:
       default: true
-
-FixedContainerEdgeSamplingEnabled:
-  type: bool
-  status: internal
-  humanReadableName: "Fixed container edge sampling"
-  humanReadableDescription: "Enable fixed container edge sampling"
-  condition: PLATFORM(COCOA)
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
-      default: WebKit::defaultFixedContainerEdgeSamplingEnabled()
-    WebCore:
-      default: false
 
 FixedFontFamily:
   type: String

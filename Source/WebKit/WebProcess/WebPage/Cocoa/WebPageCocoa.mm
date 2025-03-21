@@ -1331,6 +1331,34 @@ void WebPage::drawPagesToPDFFromPDFDocument(CGContextRef, PDFDocument *, const P
 
 #endif
 
+BoxSideSet WebPage::sidesRequiringFixedContainerEdges() const
+{
+    if (!m_page->settings().contentInsetBackgroundFillEnabled())
+        return { };
+
+#if PLATFORM(IOS_FAMILY)
+    auto obscuredInsets = m_page->obscuredInsets();
+#else
+    auto obscuredInsets = m_page->obscuredContentInsets();
+#endif
+
+    BoxSideSet sides;
+
+    if (obscuredInsets.top() > 0)
+        sides.add(BoxSideFlag::Top);
+
+    if (obscuredInsets.left() > 0)
+        sides.add(BoxSideFlag::Left);
+
+    if (obscuredInsets.right() > 0)
+        sides.add(BoxSideFlag::Right);
+
+    if (obscuredInsets.bottom() > 0)
+        sides.add(BoxSideFlag::Bottom);
+
+    return sides;
+}
+
 } // namespace WebKit
 
 #endif // PLATFORM(COCOA)

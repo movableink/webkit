@@ -1869,8 +1869,11 @@ LayoutPoint LocalFrameView::scrollPositionForFixedPosition(const LayoutRect& vis
     return LayoutPoint(position.x() * dragFactorX / frameScaleFactor, position.y() * dragFactorY / frameScaleFactor);
 }
 
-FixedContainerEdges LocalFrameView::fixedContainerEdges() const
+FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
 {
+    if (sides.isEmpty())
+        return { };
+
     RefPtr page = m_frame->page();
     if (!page)
         return { };
@@ -1882,16 +1885,40 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges() const
     if (!document)
         return { };
 
-    auto fixedRect = rectForFixedPositionLayout();
+    static constexpr auto sampleRectThickness = 2;
+    static constexpr auto sampleRectMargin = 2;
+    static constexpr auto thinBorderWidth = 5;
 
     struct FixedContainerResult {
         RefPtr<Element> container;
         bool shouldSample { false };
     };
 
-    auto findFixedContainer = [&](LayoutUnit x, LayoutUnit y) -> FixedContainerResult {
+    auto fixedRect = rectForFixedPositionLayout();
+    fixedRect.contract({ sampleRectMargin });
+
+    auto hitTestLocationForSide = [&](BoxSideFlag side) -> LayoutPoint {
+        switch (side) {
+        case BoxSideFlag::Top:
+            return { (fixedRect.x() + fixedRect.maxX()) / 2, fixedRect.y() };
+        case BoxSideFlag::Left:
+            return { fixedRect.x(), (fixedRect.y() + fixedRect.maxY()) / 2 };
+        case BoxSideFlag::Right:
+            return { fixedRect.maxX(), (fixedRect.y() + fixedRect.maxY()) / 2 };
+        case BoxSideFlag::Bottom:
+            return { (fixedRect.x() + fixedRect.maxX()) / 2, fixedRect.maxY() };
+        default:
+            ASSERT_NOT_REACHED();
+            return { };
+        }
+    };
+
+    auto findFixedContainer = [&](BoxSideFlag side) -> FixedContainerResult {
+        if (!sides.contains(side))
+            return { };
+
         using enum HitTestRequest::Type;
-        HitTestResult result { { x, y } };
+        HitTestResult result { hitTestLocationForSide(side) };
         if (!document->hitTest({ HitTestSource::User, { ReadOnly, DisallowUserAgentShadowContent, IgnoreClipping } }, result))
             return { };
 
@@ -1923,11 +1950,6 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges() const
     RectEdges<bool> fixedEdges;
     RectEdges<Color> sampledColors;
 
-    static constexpr auto sampleRectThickness = 2;
-    static constexpr auto sampleRectMargin = 2;
-    static constexpr auto thinBorderWidth = 5;
-    fixedRect.contract({ sampleRectMargin });
-
     auto sampleRectOffsetToAccountForBorderWidth = [](const BorderValue& border) -> LayoutUnit {
         if (!border.isVisible())
             return 0;
@@ -1939,7 +1961,7 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges() const
         return LayoutUnit::fromFloatRound(borderWidth);
     };
 
-    if (auto [container, shouldSample] = findFixedContainer((fixedRect.x() + fixedRect.maxX()) / 2, fixedRect.y()); container) {
+    if (auto [container, shouldSample] = findFixedContainer(BoxSideFlag::Top); container) {
         fixedEdges.setTop(true);
         if (shouldSample) {
             LayoutRect samplingRect { fixedRect.minXMinYCorner(), LayoutPoint { fixedRect.maxX(), fixedRect.y() + sampleRectThickness } };
@@ -1951,7 +1973,7 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges() const
         }
     }
 
-    if (auto [container, shouldSample] = findFixedContainer(fixedRect.x(), (fixedRect.y() + fixedRect.maxY()) / 2); container) {
+    if (auto [container, shouldSample] = findFixedContainer(BoxSideFlag::Left); container) {
         fixedEdges.setLeft(true);
         if (shouldSample) {
             LayoutRect samplingRect { fixedRect.minXMinYCorner(), LayoutPoint { fixedRect.x() + sampleRectThickness, fixedRect.maxY() } };
@@ -1963,7 +1985,7 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges() const
         }
     }
 
-    if (auto [container, shouldSample] = findFixedContainer(fixedRect.maxX(), (fixedRect.y() + fixedRect.maxY()) / 2); container) {
+    if (auto [container, shouldSample] = findFixedContainer(BoxSideFlag::Right); container) {
         fixedEdges.setRight(true);
         if (shouldSample) {
             LayoutRect samplingRect { LayoutPoint { fixedRect.maxX() - sampleRectThickness, fixedRect.y() }, fixedRect.maxXMaxYCorner() };
@@ -1975,7 +1997,7 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges() const
         }
     }
 
-    if (auto [container, shouldSample] = findFixedContainer((fixedRect.x() + fixedRect.maxX()) / 2, fixedRect.maxY()); container) {
+    if (auto [container, shouldSample] = findFixedContainer(BoxSideFlag::Bottom); container) {
         fixedEdges.setBottom(true);
         if (shouldSample) {
             LayoutRect samplingRect { LayoutPoint { fixedRect.x(), fixedRect.maxY() - sampleRectThickness }, fixedRect.maxXMaxYCorner() };

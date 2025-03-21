@@ -96,17 +96,17 @@ bool defaultUseSCContentSharingPicker()
 }
 #endif
 
+#if !ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+bool defaultContentInsetBackgroundFillEnabled()
+{
+    return false;
+}
+#endif
+
 } // namespace WebKit
 
 #if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WebPreferencesDefaultValuesCocoaAdditions.mm>)
 #import <WebKitAdditions/WebPreferencesDefaultValuesCocoaAdditions.mm>
-#else
-namespace WebKit {
-bool defaultFixedContainerEdgeSamplingEnabled()
-{
-    return false;
-}
-}
 #endif
 
 #endif // PLATFORM(COCOA)

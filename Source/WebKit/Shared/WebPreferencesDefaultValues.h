@@ -102,10 +102,6 @@ bool defaultWheelEventGesturesBecomeNonBlocking();
 bool defaultAppleMailPaginationQuirkEnabled();
 #endif
 
-#if PLATFORM(COCOA)
-bool defaultFixedContainerEdgeSamplingEnabled();
-#endif
-
 #if ENABLE(MEDIA_STREAM)
 bool defaultCaptureAudioInGPUProcessEnabled();
 bool defaultCaptureAudioInUIProcessEnabled();
@@ -178,7 +174,7 @@ bool defaultRequiresPageVisibilityForVideoToBeNowPlaying();
 
 bool defaultCookieStoreAPIEnabled();
 
-#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+#if PLATFORM(COCOA)
 bool defaultContentInsetBackgroundFillEnabled();
 #endif
 

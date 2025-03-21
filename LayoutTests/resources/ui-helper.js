@@ -1853,14 +1853,15 @@ window.UIHelper = class UIHelper {
         });
     }
 
-    static setObscuredInsets(top, right, bottom, left)
+    static async setObscuredInsets(top, right, bottom, left)
     {
-        if (!this.isWebKit2() || !this.isIOSFamily())
-            return Promise.resolve();
-
-        return new Promise(resolve => {
-            testRunner.runUIScript(`uiController.setObscuredInsets(${top}, ${right}, ${bottom}, ${left})`, resolve);
-        });
+        if (this.isWebKit2() && this.isIOSFamily()) {
+            const scriptToRun = `uiController.setObscuredInsets(${top}, ${right}, ${bottom}, ${left})`;
+            await new Promise(resolve => testRunner.runUIScript(scriptToRun, resolve));
+            await this.ensureVisibleContentRectUpdate();
+        } else
+            testRunner.setObscuredContentInsets(top, right, bottom, left);
+        await this.ensurePresentationUpdate();
     }
 
     static rotateDevice(orientationName, animatedResize = false)

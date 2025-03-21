@@ -1,4 +1,4 @@
-<!DOCTYPE html> <!-- webkit-test-runner [ FixedContainerEdgeSamplingEnabled=true useFlexibleViewport=true ] -->
+<!DOCTYPE html> <!-- webkit-test-runner [ ContentInsetBackgroundFillEnabled=true useFlexibleViewport=true ] -->
 <html>
 <head>
     <meta charset="utf-8">
@@ -34,6 +34,8 @@
     jsTestIsAsync = true;
 
     addEventListener("load", async () => {
+        await UIHelper.setObscuredInsets(100, 0, 0, 0);
+
         let frame = document.querySelector("iframe");
         await UIHelper.callFunctionAndWaitForEvent(() => {
             frame.srcdoc = `

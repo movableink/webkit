@@ -361,7 +361,7 @@ public:
     // and adjusting for page scale.
     LayoutPoint scrollPositionForFixedPosition() const;
 
-    WEBCORE_EXPORT FixedContainerEdges fixedContainerEdges() const;
+    WEBCORE_EXPORT FixedContainerEdges fixedContainerEdges(BoxSideSet) const;
     
     // Static function can be called from another thread.
     WEBCORE_EXPORT static LayoutPoint scrollPositionForFixedPosition(const LayoutRect& visibleContentRect, const LayoutSize& totalContentsSize, const LayoutPoint& scrollPosition, const LayoutPoint& scrollOrigin, float frameScaleFactor, bool fixedElementsLayoutRelativeToFrame, ScrollBehaviorForFixedElements, int headerHeight, int footerHeight);

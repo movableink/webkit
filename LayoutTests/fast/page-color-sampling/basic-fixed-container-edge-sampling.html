@@ -1,4 +1,4 @@
-<!DOCTYPE html> <!-- webkit-test-runner [ FixedContainerEdgeSamplingEnabled=true useFlexibleViewport=true ] -->
+<!DOCTYPE html> <!-- webkit-test-runner [ ContentInsetBackgroundFillEnabled=true useFlexibleViewport=true ] -->
 <html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <head>
@@ -68,6 +68,7 @@ async function showContainer(edge, expectedColors) {
 }
 
 addEventListener("load", async () => {
+    await UIHelper.setObscuredInsets(50, 50, 50, 50);
     await showContainer("top", { top: "rgb(0, 122, 255)", left: null, right: null, bottom: null });
 
     await showContainer("left", { top:

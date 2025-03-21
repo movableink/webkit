@@ -5021,8 +5021,8 @@ void WebPage::willCommitLayerTree(RemoteLayerTreeTransaction& layerTransaction, 
     layerTransaction.setThemeColor(page->themeColor());
     layerTransaction.setPageExtendedBackgroundColor(page->pageExtendedBackgroundColor());
     layerTransaction.setSampledPageTopColor(page->sampledPageTopColor());
-    if (page->settings().fixedContainerEdgeSamplingEnabled())
-        layerTransaction.setFixedContainerEdges(frameView->fixedContainerEdges());
+    if (auto sides = sidesRequiringFixedContainerEdges())
+        layerTransaction.setFixedContainerEdges(frameView->fixedContainerEdges(sides));
 
     layerTransaction.setBaseLayoutViewportSize(frameView->baseLayoutViewportSize());
     layerTransaction.setMinStableLayoutViewportOrigin(frameView->minStableLayoutViewportOrigin());

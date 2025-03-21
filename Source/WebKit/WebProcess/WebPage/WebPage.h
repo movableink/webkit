@@ -2522,6 +2522,10 @@ private:
     void setDefaultSpatialTrackingLabel(const String&);
 #endif
 
+#if PLATFORM(COCOA)
+    WebCore::BoxSideSet sidesRequiringFixedContainerEdges() const;
+#endif
+
     void frameNameWasChangedInAnotherProcess(WebCore::FrameIdentifier, const String& frameName);
 
     struct Internals;
