@@ -44,6 +44,7 @@
 #include <WebCore/ScreenOrientationType.h>
 #include <wtf/CallbackAggregator.h>
 #include <wtf/CoroutineUtilities.h>
+#include <wtf/FileHandle.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
