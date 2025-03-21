@@ -1012,6 +1012,26 @@ TEST(WKWebExtensionAPIScripting, UpdateContentScripts)
     [manager run];
 }
 
+TEST(WKWebExtensionAPIScripting, UpdateContentScriptsWithMinimalParametersShouldNotCrash)
+{
+    auto *backgroundScript = Util::constructScript(@[
+        @"await browser.scripting.registerContentScripts([{ id: '1', matches: ['*://localhost/*'], js: ['script.js'] }])",
+        @"await browser.scripting.updateContentScripts([{ id: '1', allFrames: true }])",
+
+        @"const results = await browser.scripting.getRegisteredContentScripts()",
+        @"browser.test.assertDeepEq(results, [{ id: '1', matches: ['*://localhost/*'], js: ['script.js'], allFrames: true, persistAcrossSessions: true }])",
+
+        @"browser.test.notifyPass()",
+    ]);
+
+    auto *resources = @{
+        @"background.js": backgroundScript,
+        @"script.js": @"document.body.style.backgroundColor = 'red'",
+    };
+
+    Util::loadAndRunExtension(scriptingManifest, resources);
+}
+
 TEST(WKWebExtensionAPIScripting, GetContentScripts)
 {
     TestWebKitAPI::HTTPServer server({
