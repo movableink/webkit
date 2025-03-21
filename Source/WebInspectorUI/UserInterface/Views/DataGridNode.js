@@ -339,7 +339,7 @@ WI.DataGridNode = class DataGridNode extends WI.Object
             this._scheduledRefreshIdentifier = undefined;
         }
 
-        this._cachedFilterableData = null;
+        this.clearCachedFilterableData();
         this._needsRefresh = false;
 
         this._element.removeChildren();
@@ -746,6 +746,13 @@ WI.DataGridNode = class DataGridNode extends WI.Object
     {
         let value = this.data[columnIdentifier];
         return typeof value === "string" ? value : null;
+    }
+
+    clearCachedFilterableData()
+    {
+        this._cachedFilterableData = null;
+
+        this.dataGrid?._applyFiltersToNodeAndDispatchEvent(this);
     }
 
     didResizeColumn(columnIdentifier)
