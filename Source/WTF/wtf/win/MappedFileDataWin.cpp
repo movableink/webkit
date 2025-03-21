@@ -38,8 +38,10 @@ MappedFileData::MappedFileData(std::span<uint8_t> fileData, Win32Handle&& fileMa
 
 MappedFileData::~MappedFileData()
 {
-    if (m_fileData.data())
-        UnmapViewOfFile(m_fileData.data());
+    if (m_fileMapping) {
+        if (m_fileData.data())
+            UnmapViewOfFile(m_fileData.data());
+    }
 }
 
 } // namespace WTF::FileSystemImpl
