@@ -38,11 +38,6 @@
 #import <BrowserEngineKit/BELayerHierarchy.h>
 #import <BrowserEngineKit/BELayerHierarchyHandle.h>
 #import <BrowserEngineKit/BELayerHierarchyHostingTransactionCoordinator.h>
-
-SOFT_LINK_FRAMEWORK_OPTIONAL(BrowserEngineKit);
-SOFT_LINK_CLASS_OPTIONAL(BrowserEngineKit, BELayerHierarchy);
-SOFT_LINK_CLASS_OPTIONAL(BrowserEngineKit, BELayerHierarchyHandle);
-SOFT_LINK_CLASS_OPTIONAL(BrowserEngineKit, BELayerHierarchyHostingTransactionCoordinator);
 #endif
 
 namespace WebKit {
@@ -84,7 +79,7 @@ std::unique_ptr<LayerHostingContext> LayerHostingContext::createForExternalHosti
     };
 #if USE(EXTENSIONKIT)
     if (options.useHostable) {
-        layerHostingContext->m_hostable = [getBELayerHierarchyClass() layerHierarchyWithOptions:contextOptions error:nil];
+        layerHostingContext->m_hostable = [BELayerHierarchy layerHierarchyWithOptions:contextOptions error:nil];
         return layerHostingContext;
     }
 #endif
@@ -231,7 +226,7 @@ RetainPtr<BELayerHierarchyHostingTransactionCoordinator> LayerHostingContext::cr
     auto xpcRepresentation = adoptOSObject(xpc_dictionary_create(nullptr, nullptr, 0));
     xpc_dictionary_set_mach_send(xpcRepresentation.get(), machPortKey, sendRight);
     NSError* error = nil;
-    auto coordinator = [getBELayerHierarchyHostingTransactionCoordinatorClass() coordinatorWithXPCRepresentation:xpcRepresentation.get() error:&error];
+    auto coordinator = [BELayerHierarchyHostingTransactionCoordinator coordinatorWithXPCRepresentation:xpcRepresentation.get() error:&error];
     if (error)
         NSLog(@"Could not create update coordinator, error = %@", error);
     return coordinator;
@@ -243,7 +238,7 @@ RetainPtr<BELayerHierarchyHandle> LayerHostingContext::createHostingHandle(uint6
     xpc_dictionary_set_uint64(xpcRepresentation.get(), processIDKey, pid);
     xpc_dictionary_set_uint64(xpcRepresentation.get(), contextIDKey, contextID);
     NSError* error = nil;
-    auto handle = [getBELayerHierarchyHandleClass() handleWithXPCRepresentation:xpcRepresentation.get() error:&error];
+    auto handle = [BELayerHierarchyHandle handleWithXPCRepresentation:xpcRepresentation.get() error:&error];
     if (error)
         NSLog(@"Could not create layer hierarchy handle, error = %@", error);
     return handle;
