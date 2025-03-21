@@ -626,6 +626,9 @@ public:
 
     void dump(PrintStream& out) const
     {
+        out.println("Block to Point:");
+        for (BasicBlock* block : m_code)
+            out.println("BB", pointerDump(block), ": ", positionOfHead(block));
         out.println("RegRanges:");
         dumpRegRanges<GP>(out);
         dumpRegRanges<FP>(out);
@@ -642,6 +645,8 @@ public:
         m_code.forEachTmp([&](Tmp tmp) {
             out.println("    ", tmp, ": ", m_map[tmp]);
         });
+        out.println("Stats (GP):", m_stats[GP]);
+        out.println("Stats (FP):", m_stats[FP]);
     }
 
 private:
@@ -694,7 +699,7 @@ private:
         return block;
     }
 
-    Point positionOfHead(BasicBlock* block)
+    Point positionOfHead(BasicBlock* block) const
     {
         return m_blockToHeadPoint[block];
     }
@@ -1444,6 +1449,16 @@ private:
         ASSERT(&m_map[tmp] == &tmpData);
         ASSERT(tmp.bank() == bank);
 
+        auto failOutOfRegisters = [this](Tmp tmp) {
+            insertFixupCode(); // So that the log shows the fixup code too
+            StringPrintStream out;
+            out.println("FATAL: no register for ", tmp);
+            out.println("Code:", m_code);
+            out.println("Register Allocator State:\n", pointerDump(this));
+            dataLogLn(out.toCString());
+            RELEASE_ASSERT_NOT_REACHED();
+        };
+
         Reg bestEvictReg;
         float minSpillCost = unspillableCost;
         BitVector visited(m_code.numTmps(bank));
@@ -1480,7 +1495,8 @@ private:
         }
         if (minSpillCost >= tmpData.spillCost()) {
             // If 'tmp' was unspillable, we better have found at least one suitable register.
-            RELEASE_ASSERT(tmpData.spillCost() != unspillableCost);
+            if (UNLIKELY(tmpData.spillCost() == unspillableCost))
+                failOutOfRegisters(tmp);
             return false;
         }
         // It's cheaper to spill all the already-assigned conflicting tmps, so evict them in favor of assigning 'tmp'.
