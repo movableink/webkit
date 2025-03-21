@@ -53,12 +53,9 @@ namespace JSC { namespace B3 { namespace Air {
 namespace Greedy {
 
 // Experiments
-static constexpr bool eagerGroups = true;
-static constexpr bool eagerGroupsSplitFully = false;
 static constexpr bool eagerGroupsExhaustiveSearch = false;
 static constexpr bool spillCostDivideBySize = true;
 static constexpr bool spillCostSizeBias = 1000; // Only relevant when spillCostDivideBySize
-static constexpr bool evictHeuristicAggregatorIsMax = false;
 
 // Quickly filters out short ranges from live range splitting consideration.
 static constexpr size_t splitMinRangeSize = 8;
@@ -1115,17 +1112,12 @@ private:
                         return aSize < bSize;
                     return a.tmp.tmpIndex(bank) < b.tmp.tmpIndex(bank);
             });
-
-            if (!eagerGroups)
-                return;
-
             for (auto& with : m_map[tmp].coalescables) {
                 if (tmp.tmpIndex(bank) < with.tmp.tmpIndex(bank))
                     moves.append({ tmp, with.tmp, with.moveCost });
             }
         });
 
-        ASSERT_IMPLIES(!eagerGroups, moves.isEmpty());
         std::sort(moves.begin(), moves.end(),
             [](Move& a, Move& b) -> bool {
                 if (a.cost != b.cost)
@@ -1296,7 +1288,6 @@ private:
         ASSERT(m_map[tmp].liveRange.size()); // 0-size ranges don't need a register and spillCost() depends on size() != 0
         ASSERT(stage == Stage::Unspillable || stage == Stage::TryAllocate || stage == Stage::TrySplit || stage == Stage::Spill);
         ASSERT(!tmpData.parentGroup); // Group member should not be enquened
-        ASSERT_IMPLIES(!eagerGroups, !tmpData.isGroup());
         tmpData.validate();
 
         tmpData.stage = stage;
@@ -1327,10 +1318,8 @@ private:
         m_code.forEachTmp<bank>([&](Tmp tmp) {
             ASSERT(!tmp.isReg());
             TmpData& tmpData = m_map[tmp];
-            if (tmpData.parentGroup) {
-                ASSERT(eagerGroups);
+            if (tmpData.parentGroup)
                 return;
-            }
             if (tmpData.liveRange.intervals().isEmpty())
                 return;
             setStageAndEnqueue(tmp, tmpData, Stage::TryAllocate);
@@ -1507,9 +1496,7 @@ private:
                         conflictsSpillCost = unspillableCost;
                         return IterationStatus::Done;
                     }
-                    if (evictHeuristicAggregatorIsMax)
-                        conflictsSpillCost = std::max(conflictsSpillCost, cost);
-                    else if (UNLIKELY(cost == std::numeric_limits<float>::max()
+                    if (UNLIKELY(cost == std::numeric_limits<float>::max()
                         || conflictsSpillCost == std::numeric_limits<float>::max()))
                         conflictsSpillCost = std::numeric_limits<float>::max();
                     else
@@ -1574,20 +1561,12 @@ private:
     {
         if (!tmpData.isGroup())
             return false;
-        ASSERT(eagerGroups);
         auto enqueueSubgroup = [&](Tmp subGrp) {
             m_map[subGrp].parentGroup = Tmp();
             setStageAndEnqueue(subGrp, m_map[subGrp], Stage::TryAllocate);
         };
-        if (eagerGroupsSplitFully) {
-            forEachTmpInGroup(tmp, [&](Tmp member) {
-                enqueueSubgroup(member);
-                return IterationStatus::Continue;
-            });
-        } else {
-            enqueueSubgroup(tmpData.subGroup0);
-            enqueueSubgroup(tmpData.subGroup1);
-        }
+        enqueueSubgroup(tmpData.subGroup0);
+        enqueueSubgroup(tmpData.subGroup1);
         tmpData.stage = Stage::Replaced;
         dataLogLnIf(verbose(), "Split (group) ", tmp);
         tmpData.validate();
