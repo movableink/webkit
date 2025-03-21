@@ -36,6 +36,7 @@ namespace JSC { namespace B3 { namespace Air {
 
 #define FOR_EACH_REGISTER_ALLOCATOR_STAT(macro) \
     macro(numTmpsIn)                            \
+    macro(numFastTmps)                          \
     macro(numUnspillableTmps)                   \
     macro(numSpillTmps)                         \
     macro(numSplitTmps)                         \
