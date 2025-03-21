@@ -523,7 +523,7 @@ ImageBitmapRenderingContext* HTMLCanvasElement::getContextBitmapRenderer(const S
     ASSERT_UNUSED(type, HTMLCanvasElement::isBitmapRendererType(type));
     if (!m_context)
         return createContextBitmapRenderer(type, WTFMove(settings));
-    return downcast<ImageBitmapRenderingContext>(m_context.get());
+    return dynamicDowncast<ImageBitmapRenderingContext>(m_context.get());
 }
 
 bool HTMLCanvasElement::isWebGPUType(const String& type)
