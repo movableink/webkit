@@ -920,7 +920,10 @@ public:
 
         void checkOffsets(unsigned low, unsigned high)
         {
-            RELEASE_ASSERT_WITH_MESSAGE(!(low <= m_offset && m_offset <= high), "Unsafe branch over register allocation at instruction offset %u in jump offset range %u..%u", m_offset, low, high);
+            // The low side can be == since if we encounter this allocation, then we know that
+            // the register allocation must have been emitted before the branch. If the allocation
+            // was after the branch, we wouldn't see it now.
+            RELEASE_ASSERT_WITH_MESSAGE(!(low < m_offset && m_offset <= high), "Unsafe branch over register allocation at instruction offset %u in jump offset range %u..%u", m_offset, low, high);
         }
 
     private:
