@@ -207,7 +207,7 @@ LayoutRect LegacyInlineTextBox::localSelectionRect(unsigned startPos, unsigned e
     selectionRect.move(logicalLeft(), 0);
     // FIXME: The computation of the snapped selection rect differs from the computation of this rect
     // in paintMarkedTextBackground(). See <https://bugs.webkit.org/show_bug.cgi?id=138913>.
-    return snappedSelectionRect(selectionRect, logicalRight(), renderer().writingMode());
+    return snappedSelectionRect(selectionRect, logicalRight(), writingMode);
 }
 
 void LegacyInlineTextBox::deleteLine()

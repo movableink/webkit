@@ -26,6 +26,7 @@
 #include "RenderBlockFlow.h"
 #include "RenderChildIterator.h"
 #include "RenderInline.h"
+#include "RenderListMarker.h"
 #include "RenderText.h"
 #include "UnicodeBidi.h"
 #include <wtf/StdLibExtras.h>
@@ -360,8 +361,8 @@ ALWAYS_INLINE UCharDirection LegacyInlineIterator::direction() const
         return surrogateTextDirection(codeUnit);
     }
 
-    if (m_renderer->isRenderListMarker())
-        return m_renderer->writingMode().isBidiLTR() ? U_LEFT_TO_RIGHT : U_RIGHT_TO_LEFT;
+    if (CheckedPtr listMarkerRenderer = dynamicDowncast<RenderListMarker>(*m_renderer))
+        return listMarkerRenderer->writingMode().isBidiLTR() ? U_LEFT_TO_RIGHT : U_RIGHT_TO_LEFT;
 
     return U_OTHER_NEUTRAL;
 }

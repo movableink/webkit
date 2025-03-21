@@ -332,6 +332,8 @@ public:
     static bool isAfterContent(const RenderElement*);
     static bool isBeforeOrAfterContent(const RenderElement*);
 
+    WritingMode writingMode() const { return style().writingMode(); }
+
 protected:
     RenderElement(Type, Element&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);
     RenderElement(Type, Document&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);

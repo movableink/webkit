@@ -357,7 +357,8 @@ bool canUseForPreferredWidthComputation(const RenderBlockFlow& blockContainer)
         if (isFullySupportedInFlowRenderer)
             continue;
 
-        if (!renderer.writingMode().isHorizontal() || !renderer.style().logicalWidth().isFixed())
+        auto& unsupportedRenderElement = downcast<RenderElement>(renderer);
+        if (!unsupportedRenderElement.writingMode().isHorizontal() || !unsupportedRenderElement.style().logicalWidth().isFixed())
             return false;
 
         auto isNonSupportedFixedWidthContent = [&] {
@@ -367,7 +368,7 @@ bool canUseForPreferredWidthComputation(const RenderBlockFlow& blockContainer)
                 return true;
             // FIXME: See RenderReplaced::computePreferredLogicalWidths where m_minPreferredLogicalWidth is set to 0.
             auto isReplacedWithSpecialIntrinsicWidth = [&] {
-                if (CheckedPtr renderReplaced = dynamicDowncast<RenderReplaced>(renderer))
+                if (CheckedPtr renderReplaced = dynamicDowncast<RenderReplaced>(unsupportedRenderElement))
                     return renderReplaced->style().logicalMaxWidth().isPercentOrCalculated();
                 return false;
             };
