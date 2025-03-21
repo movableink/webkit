@@ -25,11 +25,16 @@
 
 import AVFoundation
 import Combine
-import LinearMediaKit
 import RealityFoundation
 import UIKit
 import WebKitSwift
 import os
+
+#if canImport(AVKit, _version: 1270)
+@_spi(LinearMediaKit) import AVKit
+#else
+import LinearMediaKit
+#endif
 
 private extension Logger {
     static let linearMediaPlayer = Logger(subsystem: "com.apple.WebKit", category: "LinearMediaPlayer")
@@ -326,7 +331,7 @@ extension WKSLinearMediaPlayer {
 
 #if canImport(LinearMediaKit, _version: 205)
 
-extension WKSLinearMediaPlayer: @retroactive Playable {
+@_spi(Internal) extension WKSLinearMediaPlayer: @retroactive Playable {
     public var selectedPlaybackRatePublisher: AnyPublisher<Double, Never> {
         publisher(for: \.selectedPlaybackRate).eraseToAnyPublisher()
     }

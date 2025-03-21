@@ -25,7 +25,11 @@
 
 import UIKit
 
+#if canImport(AVKit, _version: 1270)
+@_spi(LinearMediaKit) @_spi(LinearMediaKit_WebKitOnly) import AVKit
+#else
 @_spi(WebKitOnly) import LinearMediaKit
+#endif
 
 @objc extension PlayableViewController {
     var wks_automaticallyDockOnFullScreenPresentation: Bool {
