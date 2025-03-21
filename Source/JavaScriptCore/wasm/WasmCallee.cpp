@@ -35,6 +35,7 @@
 #include "LLIntExceptions.h"
 #include "LLIntThunks.h"
 #include "NativeCalleeRegistry.h"
+#include "PCToCodeOriginMap.h"
 #include "VMInspector.h"
 #include "WasmCallingConvention.h"
 #include "WasmModuleInformation.h"
@@ -489,8 +490,7 @@ Box<PCToCodeOriginMap> OptimizingJITCallee::materializePCToOriginMap(B3::PCToOri
     PCToCodeOriginMapBuilder builder(shouldBuildMapping);
     for (const B3::PCToOriginMap::OriginRange& originRange : originMap.ranges()) {
         B3::Origin b3Origin = originRange.origin;
-        auto* origin = std::bit_cast<const OMGOrigin*>(b3Origin.data());
-        if (origin) {
+        if (auto* origin = b3Origin.maybeOMGOrigin()) {
             // We stash the location into a BytecodeIndex.
             builder.appendItem(originRange.label, CodeOrigin(BytecodeIndex(origin->m_callSiteIndex.bits())));
         } else
@@ -504,8 +504,7 @@ Box<PCToCodeOriginMap> OptimizingJITCallee::materializePCToOriginMap(B3::PCToOri
         PCToCodeOriginMapBuilder samplingProfilerBuilder(shouldBuildMapping);
         for (const B3::PCToOriginMap::OriginRange& originRange : originMap.ranges()) {
             B3::Origin b3Origin = originRange.origin;
-            auto* origin = std::bit_cast<const OMGOrigin*>(b3Origin.data());
-            if (origin) {
+            if (auto* origin = b3Origin.maybeOMGOrigin()) {
                 // We stash the location into a BytecodeIndex.
                 samplingProfilerBuilder.appendItem(originRange.label, CodeOrigin(BytecodeIndex(origin->m_opcodeOrigin.location())));
             } else

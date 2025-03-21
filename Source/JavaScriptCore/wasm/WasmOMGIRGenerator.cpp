@@ -1311,7 +1311,7 @@ void OMGIRGenerator::reloadMemoryRegistersFromInstance(const MemoryInformation& 
 void OMGIRGenerator::emitExceptionCheck(CCallHelpers& jit, Origin origin, ExceptionType type)
 {
     jit.move(CCallHelpers::TrustedImm32(static_cast<uint32_t>(type)), GPRInfo::argumentGPR1);
-    if (auto* omgOrigin = std::bit_cast<const OMGOrigin*>(origin.data())) {
+    if (auto* omgOrigin = origin.omgOrigin()) {
         jit.move(CCallHelpers::TrustedImm32(omgOrigin->m_callSiteIndex.bits()), GPRInfo::argumentGPR2);
         jit.store32(GPRInfo::argumentGPR2, CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
     }
@@ -4568,7 +4568,7 @@ auto OMGIRGenerator::addThrow(unsigned exceptionIndex, ArgumentList& args, Stack
     patch->setGenerator([this, exceptionIndex, handle, origin = this->origin()] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
         AllowMacroScratchRegisterUsage allowScratch(jit);
         handle.generate(jit, params, this);
-        if (auto* omgOrigin = std::bit_cast<const OMGOrigin*>(origin.data())) {
+        if (auto* omgOrigin = origin.omgOrigin()) {
             jit.move(CCallHelpers::TrustedImm32(omgOrigin->m_callSiteIndex.bits()), GPRInfo::nonPreservedNonArgumentGPR0);
             jit.store32(GPRInfo::nonPreservedNonArgumentGPR0, CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
         }
@@ -4599,7 +4599,7 @@ auto WARN_UNUSED_RETURN OMGIRGenerator::addThrowRef(ExpressionType exn, Stack&) 
     patch->setGenerator([this, handle, origin = this->origin()] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
         AllowMacroScratchRegisterUsage allowScratch(jit);
         handle.generate(jit, params, this);
-        if (auto* omgOrigin = std::bit_cast<const OMGOrigin*>(origin.data())) {
+        if (auto* omgOrigin = origin.omgOrigin()) {
             jit.move(CCallHelpers::TrustedImm32(omgOrigin->m_callSiteIndex.bits()), GPRInfo::nonPreservedNonArgumentGPR0);
             jit.store32(GPRInfo::nonPreservedNonArgumentGPR0, CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
         }
@@ -4622,7 +4622,7 @@ auto OMGIRGenerator::addRethrow(unsigned, ControlType& data) -> PartialResult
     patch->setGenerator([this, handle, origin = this->origin()] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
         AllowMacroScratchRegisterUsage allowScratch(jit);
         handle.generate(jit, params, this);
-        if (auto* omgOrigin = std::bit_cast<const OMGOrigin*>(origin.data())) {
+        if (auto* omgOrigin = origin.omgOrigin()) {
             jit.move(CCallHelpers::TrustedImm32(omgOrigin->m_callSiteIndex.bits()), GPRInfo::nonPreservedNonArgumentGPR0);
             jit.store32(GPRInfo::nonPreservedNonArgumentGPR0, CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
         }
@@ -5898,12 +5898,10 @@ Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileOMG(Compilati
 
     procedure.setNeedsPCToOriginMap();
     procedure.setOriginPrinter([](PrintStream& out, Origin origin) {
-        if (origin.data()) {
-            auto* impl = std::bit_cast<const OMGOrigin*>(origin.data());
+        if (auto* impl = origin.maybeOMGOrigin())
             out.print("Wasm: ", impl->m_opcodeOrigin, " CallSiteIndex: ", impl->m_callSiteIndex.bits());
-        }
     });
-    
+
     // This means we cannot use either StackmapGenerationParams::usedRegisters() or
     // StackmapGenerationParams::unavailableRegisters(). In exchange for this concession, we
     // don't strictly need to run Air::reportUsedRegisters(), which saves a bit of CPU time at

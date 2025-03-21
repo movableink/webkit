@@ -27,6 +27,7 @@
 
 #if ENABLE(WEBASSEMBLY_BBQJIT)
 
+#include "PCToCodeOriginMap.h"
 #include "WasmCallingConvention.h"
 #include "WasmCompilationContext.h"
 #include "WasmFunctionParser.h"

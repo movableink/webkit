@@ -363,6 +363,7 @@ set(WTF_PUBLIC_HEADERS
     UniqueRef.h
     UniqueRefVector.h
     VMTags.h
+    ValidatedReinterpretCast.h
     ValueCheck.h
     VariantExtras.h
     VariantList.h

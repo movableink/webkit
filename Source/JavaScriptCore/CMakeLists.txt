@@ -1301,6 +1301,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     wasm/WasmName.h
     wasm/WasmNameSection.h
     wasm/WasmOSREntryData.h
+    wasm/WasmOpcodeOrigin.h
     wasm/WasmSIMDOpcodes.h
     wasm/WasmSections.h
     wasm/WasmTypeDefinition.h

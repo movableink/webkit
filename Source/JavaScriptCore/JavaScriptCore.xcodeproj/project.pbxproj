@@ -1205,7 +1205,7 @@
 		53B601EC2034B8C5006BE667 /* JSCast.h in Headers */ = {isa = PBXBuildFile; fileRef = 53B601EB2034B8C5006BE667 /* JSCast.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		53C2CE9C22FCC3D6008B2853 /* AirHelpers.h in Headers */ = {isa = PBXBuildFile; fileRef = 53C2CE9B22FCC3D6008B2853 /* AirHelpers.h */; };
 		53C4F66B21B1A409002FD009 /* JSAPIGlobalObject.h in Headers */ = {isa = PBXBuildFile; fileRef = 53C4F66A21B1A409002FD009 /* JSAPIGlobalObject.h */; };
-		53C6FEEF1E8ADFA900B18425 /* WasmOpcodeOrigin.h in Headers */ = {isa = PBXBuildFile; fileRef = 53C6FEEE1E8ADFA900B18425 /* WasmOpcodeOrigin.h */; };
+		53C6FEEF1E8ADFA900B18425 /* WasmOpcodeOrigin.h in Headers */ = {isa = PBXBuildFile; fileRef = 53C6FEEE1E8ADFA900B18425 /* WasmOpcodeOrigin.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		53CA730A1EA533D80076049D /* WasmBBQPlan.h in Headers */ = {isa = PBXBuildFile; fileRef = 53CA73081EA533D80076049D /* WasmBBQPlan.h */; };
 		53CBE6532ACF18C0009C083D /* WasmIPIntTierUpCounter.h in Headers */ = {isa = PBXBuildFile; fileRef = 53CBE6522ACF18C0009C083D /* WasmIPIntTierUpCounter.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		53D35499240D88BD008950DD /* BytecodeOperandsForCheckpoint.h in Headers */ = {isa = PBXBuildFile; fileRef = 53D35497240D88AD008950DD /* BytecodeOperandsForCheckpoint.h */; };

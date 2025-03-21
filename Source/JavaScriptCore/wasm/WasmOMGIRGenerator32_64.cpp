@@ -6286,7 +6286,7 @@ auto OMGIRGenerator::origin() -> Origin
         break;
     }
     ASSERT(isValidOpType(static_cast<uint8_t>(origin.opcode())));
-    return std::bit_cast<Origin>(origin);
+    return origin.asB3Origin();
 }
 
 static bool shouldDumpIRFor(uint32_t functionIndex)
@@ -6317,8 +6317,9 @@ Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileOMG(Compilati
 
     procedure.setNeedsPCToOriginMap();
     procedure.setOriginPrinter([] (PrintStream& out, Origin origin) {
-        if (origin.data())
-            out.print("Wasm: ", OpcodeOrigin(origin));
+        if (!origin)
+            return;
+        out.print("Wasm: ", origin);
     });
 
     // This means we cannot use either StackmapGenerationParams::usedRegisters() or

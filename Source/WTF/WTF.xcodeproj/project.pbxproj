@@ -540,6 +540,7 @@
 		DD3DC97F27A4BF8E007E5B61 /* StackBounds.h in Headers */ = {isa = PBXBuildFile; fileRef = A8A4730F151A825B004123FF /* StackBounds.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC98027A4BF8E007E5B61 /* Stopwatch.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F8A93619C65EB400B2B15D /* Stopwatch.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC98127A4BF8E007E5B61 /* StdLibExtras.h in Headers */ = {isa = PBXBuildFile; fileRef = A8A47311151A825B004123FF /* StdLibExtras.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		DD3DC98127A4BF8E007E5B62 /* ValidatedReinterpretCast.h in Headers */ = {isa = PBXBuildFile; fileRef = A8A47311151A825B004123FG /* ValidatedReinterpretCast.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC98227A4BF8E007E5B61 /* StringHashDumpContext.h in Headers */ = {isa = PBXBuildFile; fileRef = A748745117A0BDAE00FA04CB /* StringHashDumpContext.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC98327A4BF8E007E5B61 /* OSRandomSource.h in Headers */ = {isa = PBXBuildFile; fileRef = A8A472DB151A825B004123FF /* OSRandomSource.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD3DC98527A4BF8E007E5B61 /* BlockPtr.h in Headers */ = {isa = PBXBuildFile; fileRef = 1A944F461C3D8814005BD28C /* BlockPtr.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -1559,6 +1560,7 @@
 		A8A4730E151A825B004123FF /* StackBounds.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StackBounds.cpp; sourceTree = "<group>"; };
 		A8A4730F151A825B004123FF /* StackBounds.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StackBounds.h; sourceTree = "<group>"; };
 		A8A47311151A825B004123FF /* StdLibExtras.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StdLibExtras.h; sourceTree = "<group>"; };
+		A8A47311151A825B004123FG /* ValidatedReinterpretCast.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ValidatedReinterpretCast.h; sourceTree = "<group>"; };
 		A8A47313151A825B004123FF /* StringExtras.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StringExtras.h; sourceTree = "<group>"; };
 		A8A47314151A825B004123FF /* Hasher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Hasher.h; sourceTree = "<group>"; };
 		A8A4731A151A825B004123FF /* SetForScope.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SetForScope.h; sourceTree = "<group>"; };
@@ -2660,6 +2662,7 @@
 				5CC0EE7221629F1900A1A842 /* URLParser.h */,
 				7AFEC6B01EB22B5900DADE36 /* UUID.cpp */,
 				7AFEC6AE1EB22AC600DADE36 /* UUID.h */,
+				A8A47311151A825B004123FG /* ValidatedReinterpretCast.h */,
 				A8A4736F151A825B004123FF /* ValueCheck.h */,
 				BCE0DFAA2D18670B003F0349 /* VariantExtras.h */,
 				BCEA08032CCFDB33000AC148 /* VariantList.h */,
@@ -3795,6 +3798,7 @@
 				FFE39CB12B1D7472004972B0 /* util.h in Headers */,
 				DDF306F527C086CC006A526F /* utils.h in Headers */,
 				DD3DC8C227A4BF8E007E5B61 /* UUID.h in Headers */,
+				DD3DC98127A4BF8E007E5B62 /* ValidatedReinterpretCast.h in Headers */,
 				DD3DC86D27A4BF8E007E5B61 /* ValueCheck.h in Headers */,
 				BCE0DFAB2D18670B003F0349 /* VariantExtras.h in Headers */,
 				BCEA08042CCFDB33000AC148 /* VariantList.h in Headers */,
