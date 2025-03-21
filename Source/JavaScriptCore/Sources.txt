@@ -1126,6 +1126,7 @@ tools/FunctionOverrides.cpp
 tools/HeapVerifier.cpp
 tools/Integrity.cpp
 tools/JSDollarVM.cpp
+tools/SourceProfiler.cpp
 tools/VMInspector.cpp
 
 wasm/WasmOMGIRGenerator.cpp

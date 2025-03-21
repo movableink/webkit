@@ -69,6 +69,7 @@
 #include "Register.h"
 #include "RegisterAtOffsetList.h"
 #include "ScopedArguments.h"
+#include "SourceProfiler.h"
 #include "StackFrame.h"
 #include "StackVisitor.h"
 #include "StrictEvalActivation.h"
@@ -184,6 +185,12 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
 
     DirectEvalExecutable* eval = callerBaselineCodeBlock->directEvalCodeCache().tryGet(programSource, bytecodeIndex);
     if (!eval) {
+        if (UNLIKELY(SourceProfiler::g_profilerHook)) {
+            SourceTaintedOrigin sourceTaintedOrigin = computeNewSourceTaintedOriginFromStack(vm, callFrame);
+            auto source = makeSource(programSource, callerBaselineCodeBlock->source().provider()->sourceOrigin(), sourceTaintedOrigin);
+            SourceProfiler::profile(SourceProfiler::Type::Eval, source);
+        }
+
         if (!(lexicallyScopedFeatures & StrictModeLexicallyScopedFeature)) {
             JSValue parsedValue;
             if (programSource.is8Bit()) {
@@ -986,6 +993,9 @@ JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, J
     auto clobberizeValidator = makeScopeExit([&] {
         vm.didEnterVM = true;
     });
+
+    if (UNLIKELY(SourceProfiler::g_profilerHook))
+        SourceProfiler::profile(SourceProfiler::Type::Program, source);
 
     ProgramExecutable* program = ProgramExecutable::create(globalObject, source);
     EXCEPTION_ASSERT(throwScope.exception() || program);

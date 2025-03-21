@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "JSModuleEnvironment.h"
 #include "JSModuleLoader.h"
 #include "JSModuleNamespaceObject.h"
+#include "SourceProfiler.h"
 #include "UnlinkedModuleProgramCodeBlock.h"
 #include <wtf/text/MakeString.h>
 
@@ -87,6 +88,9 @@ Synchronousness JSModuleRecord::link(JSGlobalObject* globalObject, JSValue scrip
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (UNLIKELY(SourceProfiler::g_profilerHook))
+        SourceProfiler::profile(SourceProfiler::Type::Module, sourceCode());
 
     ModuleProgramExecutable* executable = ModuleProgramExecutable::create(globalObject, sourceCode());
     EXCEPTION_ASSERT(!!scope.exception() == !executable);

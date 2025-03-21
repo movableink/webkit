@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2002 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2024 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *  Copyright (C) 2007 Maks Orlovich
  *
@@ -41,6 +41,7 @@
 #include "LiteralParser.h"
 #include "ObjectConstructorInlines.h"
 #include "ParseInt.h"
+#include "SourceProfiler.h"
 #include <stdio.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/Assertions.h>
@@ -493,6 +494,13 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
         globalObject->globalObjectMethodTable()->reportViolationForUnsafeEval(globalObject, programSource);
         throwException(globalObject, scope, createEvalError(globalObject, globalObject->evalDisabledErrorMessage()));
         return JSValue::encode(jsUndefined());
+    }
+
+    if (UNLIKELY(SourceProfiler::g_profilerHook)) {
+        SourceOrigin sourceOrigin = callFrame->callerSourceOrigin(vm);
+        SourceTaintedOrigin sourceTaintedOrigin = computeNewSourceTaintedOriginFromStack(vm, callFrame);
+        auto source = makeSource(programSource, sourceOrigin, sourceTaintedOrigin);
+        SourceProfiler::profile(SourceProfiler::Type::Eval, source);
     }
 
     JSValue parsedValue;

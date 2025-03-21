@@ -2216,6 +2216,7 @@
 		FEF5B430262A338B0016E776 /* ExceptionExpectation.h in Headers */ = {isa = PBXBuildFile; fileRef = FEF5B42F262A338B0016E776 /* ExceptionExpectation.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		FEF90A8D28AC135F00C14B84 /* APIIntegrityPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = FEF90A8C28AC135C00C14B84 /* APIIntegrityPrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		FEF934472B4DC61500DFA7F5 /* ExpressionInfoInlines.h in Headers */ = {isa = PBXBuildFile; fileRef = FEF934462B4DC61500DFA7F5 /* ExpressionInfoInlines.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		FEF9AD642D8B985E005821C5 /* SourceProfiler.h in Headers */ = {isa = PBXBuildFile; fileRef = FEF9AD612D8B9848005821C5 /* SourceProfiler.h */; };
 		FEFD6FC61D5E7992008F2F0B /* JSStringInlines.h in Headers */ = {isa = PBXBuildFile; fileRef = FEFD6FC51D5E7970008F2F0B /* JSStringInlines.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		FF1D8E872CE7C9BF00E211DD /* VerifierSlotVisitorScope.h in Headers */ = {isa = PBXBuildFile; fileRef = FF1D8E862CE7C9BF00E211DD /* VerifierSlotVisitorScope.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		FF3394AA2CB4944E004AFF6A /* RegExpSubstringGlobalAtomCache.h in Headers */ = {isa = PBXBuildFile; fileRef = FF3394A92CB4941B004AFF6A /* RegExpSubstringGlobalAtomCache.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -6180,6 +6181,8 @@
 		FEF90A8C28AC135C00C14B84 /* APIIntegrityPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = APIIntegrityPrivate.h; sourceTree = "<group>"; };
 		FEF90A8E28AC187A00C14B84 /* APIIntegrity.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = APIIntegrity.cpp; sourceTree = "<group>"; };
 		FEF934462B4DC61500DFA7F5 /* ExpressionInfoInlines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ExpressionInfoInlines.h; sourceTree = "<group>"; };
+		FEF9AD612D8B9848005821C5 /* SourceProfiler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SourceProfiler.h; sourceTree = "<group>"; };
+		FEF9AD622D8B9848005821C5 /* SourceProfiler.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SourceProfiler.cpp; sourceTree = "<group>"; };
 		FEFD6FC51D5E7970008F2F0B /* JSStringInlines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSStringInlines.h; sourceTree = "<group>"; };
 		FF1D8E862CE7C9BF00E211DD /* VerifierSlotVisitorScope.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VerifierSlotVisitorScope.h; sourceTree = "<group>"; };
 		FF27D0E42BE2AEDB00397A8C /* OrderedHashTable.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OrderedHashTable.cpp; sourceTree = "<group>"; };
@@ -9081,6 +9084,8 @@
 				FE384EE11ADDB7AD0055DE2C /* JSDollarVM.cpp */,
 				FE384EE21ADDB7AD0055DE2C /* JSDollarVM.h */,
 				86B5822C14D22F5F00A9C306 /* ProfileTreeNode.h */,
+				FEF9AD622D8B9848005821C5 /* SourceProfiler.cpp */,
+				FEF9AD612D8B9848005821C5 /* SourceProfiler.h */,
 				86B5826A14D35D5100A9C306 /* TieredMMapArray.h */,
 				FE3022D41E42856700BAC493 /* VMInspector.cpp */,
 				FE3022D51E42856700BAC493 /* VMInspector.h */,
@@ -11873,6 +11878,7 @@
 				70B791911C024A13002481E2 /* SourceCodeKey.h in Headers */,
 				5350356527147E5A00EC1A7E /* SourceID.h in Headers */,
 				2D342F36F7244096804ADB24 /* SourceOrigin.h in Headers */,
+				FEF9AD642D8B985E005821C5 /* SourceProfiler.h in Headers */,
 				BC18C4630E16F5CD00B34460 /* SourceProvider.h in Headers */,
 				E49DC16C12EF294E00184A1F /* SourceProviderCache.h in Headers */,
 				E49DC16D12EF295300184A1F /* SourceProviderCacheItem.h in Headers */,
