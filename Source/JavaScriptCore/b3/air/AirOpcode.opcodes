@@ -309,7 +309,7 @@ arm64: MultiplySignExtend32 U:G:32, U:G:32, D:G:64
 arm64: MultiplyZeroExtend32 U:G:32, U:G:32, D:G:64
     Tmp, Tmp, Tmp
 
-arm64: MulHigh32 U:G:32, U:G:32, ZD:G:32
+arm64: MulHigh32 U:G:32, U:G:32, D:G:32
     Tmp, Tmp, Tmp
 
 arm64: UMulHigh32 U:G:32, U:G:32, ZD:G:32
