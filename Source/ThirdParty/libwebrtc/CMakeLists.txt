@@ -695,7 +695,6 @@ set(webrtc_SOURCES
     Source/webrtc/api/video_codecs/builtin_video_encoder_factory.cc
     Source/webrtc/api/video_codecs/h264_profile_level_id.cc
     Source/webrtc/api/video_codecs/h265_profile_tier_level.cc
-    Source/webrtc/api/video_codecs/libaom_av1_encoder_factory.cc
     Source/webrtc/api/video_codecs/scalability_mode.cc
     Source/webrtc/api/video_codecs/scalability_mode_helper.cc
     Source/webrtc/api/video_codecs/sdp_video_format.cc
