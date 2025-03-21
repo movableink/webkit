@@ -30,7 +30,6 @@ UIProcess/WebProcessPool.h
 UIProcess/mac/WebViewImpl.h
 WebProcess/Extensions/Bindings/JSWebExtensionWrapper.h
 WebProcess/InjectedBundle/InjectedBundle.h
-WebProcess/InjectedBundle/InjectedBundlePageEditorClient.cpp
 WebProcess/Inspector/WebInspectorClient.cpp
 WebProcess/Plugins/PDF/UnifiedPDF/PDFDataDetectorOverlayController.mm
 WebProcess/Plugins/PDF/UnifiedPDF/PDFPresentationController.mm

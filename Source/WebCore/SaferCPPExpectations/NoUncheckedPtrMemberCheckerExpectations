@@ -1,6 +1,4 @@
 Modules/websockets/WorkerThreadableWebSocketChannel.h
-css/CSSFontFaceDescriptors.h
-css/CSSStyleProperties.h
 html/parser/HTMLTreeBuilder.h
 loader/WorkerThreadableLoader.h
 page/scrolling/ScrollAnchoringController.h

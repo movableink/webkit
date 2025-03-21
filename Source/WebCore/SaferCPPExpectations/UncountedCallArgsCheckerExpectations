@@ -33,7 +33,6 @@ Modules/applepay-ams-ui/ApplePayAMSUIPaymentHandler.cpp
 Modules/applepay/ApplePaySession.cpp
 Modules/applepay/ApplePaySetup.cpp
 Modules/applepay/PaymentCoordinator.cpp
-Modules/applepay/PaymentSession.cpp
 Modules/applepay/paymentrequest/ApplePayPaymentHandler.cpp
 Modules/applicationmanifest/ApplicationManifestParser.cpp
 Modules/async-clipboard/Clipboard.cpp
