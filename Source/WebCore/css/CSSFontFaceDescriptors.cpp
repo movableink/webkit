@@ -261,7 +261,7 @@ CSSStyleSheet* CSSFontFaceDescriptors::parentStyleSheet() const
 
 CSSRule* CSSFontFaceDescriptors::parentRule() const
 {
-    return m_parentRule;
+    return m_parentRule.get();
 }
 
 CSSParserContext CSSFontFaceDescriptors::cssParserContext() const

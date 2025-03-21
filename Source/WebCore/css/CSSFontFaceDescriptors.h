@@ -103,7 +103,7 @@ private:
 
     CSSParserContext cssParserContext() const;
 
-    CSSFontFaceRule* m_parentRule;
+    WeakPtr<CSSFontFaceRule> m_parentRule;
     UncheckedKeyHashMap<CSSValue*, WeakPtr<DeprecatedCSSOMValue>> m_cssomValueWrappers;
 
     // FIXME: Replaced this with a FontFace specific property map that doesn't have all the complexity of the Style one.
