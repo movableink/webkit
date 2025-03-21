@@ -41,6 +41,7 @@ const gcDebuggingNodeFieldCount = 7;
 // node flags
 const internalFlagsMask = (1 << 0);
 const objectTypeMask = (1 << 1);
+const elementTypeMask = (1 << 2);
 
 // edges
 // [<0:fromId>, <1:toId>, <2:typeTableIndex>, <3:edgeDataIndexOrEdgeNameIndex>]
@@ -64,6 +65,7 @@ const rootNodeIdentifier = 0;
 // Version Differences:
 //   - In Version 1, node[3] now named <flags> was the value 0 or 1 indicating not-internal or internal.
 //   - In Version 2, this became a bitmask so multiple flags could be included without modifying the size.
+//   - In Version 3, the "element" flag was added to indicate if the value was a DOM node.
 //
 // Terminology:
 //   - `nodeIndex` is an index into the `nodes` list.
@@ -102,7 +104,7 @@ HeapSnapshot = class HeapSnapshot
         snapshotDataString = null;
 
         let {version, type, nodes, nodeClassNames, edges, edgeTypes, edgeNames, roots, labels} = json;
-        console.assert(version === 1 || version === 2, "Expect JavaScriptCore Heap Snapshot version 1 or 2");
+        console.assert(version === 1 || version === 2 || version === 3, version);
         console.assert(!type || (type === "Inspector" || type === "GCDebugging"), "Expect an Inspector / GCDebugging Heap Snapshot");
 
         this._nodeFieldCount = type === "GCDebugging" ? gcDebuggingNodeFieldCount : nodeFieldCount;
@@ -190,7 +192,7 @@ HeapSnapshot = class HeapSnapshot
 
             let category = categories[className];
             if (!category)
-                category = categories[className] = {className, size: 0, retainedSize: 0, count: 0, internalCount: 0, deadCount: 0, objectCount: 0};
+                category = categories[className] = {className, size: 0, retainedSize: 0, count: 0, internalCount: 0, deadCount: 0, objectCount: 0, elementCount: 0};
 
             category.size += size;
             category.retainedSize += retainedSize;
@@ -199,6 +201,8 @@ HeapSnapshot = class HeapSnapshot
                 category.internalCount += 1;
             if (flags & objectTypeMask)
                 category.objectCount += 1;
+            if (flags & elementTypeMask)
+                category.elementCount += 1;
             if (dead)
                 category.deadCount += 1;
             else
@@ -462,6 +466,7 @@ HeapSnapshot = class HeapSnapshot
             retainedSize: this._nodeOrdinalToRetainedSizes[nodeOrdinal],
             internal: nodeFlags & internalFlagsMask ? true : false,
             isObjectType: nodeFlags & objectTypeMask ? true : false,
+            isElementType: nodeFlags & elementTypeMask ? true : false,
             gcRoot: this._nodeOrdinalIsGCRoot[nodeOrdinal] ? true : false,
             dead: this._nodeOrdinalIsDead[nodeOrdinal] ? true : false,
             dominatorNodeIdentifier,

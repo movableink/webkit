@@ -25,7 +25,7 @@
 
 WI.HeapSnapshotNodeProxy = class HeapSnapshotNodeProxy
 {
-    constructor(target, snapshotObjectId, {id, className, size, retainedSize, internal, isObjectType, gcRoot, dead, dominatorNodeIdentifier, hasChildren})
+    constructor(target, snapshotObjectId, {id, className, size, retainedSize, internal, isObjectType, isElementType, gcRoot, dead, dominatorNodeIdentifier, hasChildren})
     {
         console.assert(target instanceof WI.Target, target);
 
@@ -38,6 +38,7 @@ WI.HeapSnapshotNodeProxy = class HeapSnapshotNodeProxy
         this.retainedSize = retainedSize;
         this.internal = internal;
         this.isObjectType = isObjectType;
+        this.isElementType = isElementType;
         this.gcRoot = gcRoot;
         this.dead = dead;
         this.dominatorNodeIdentifier = dominatorNodeIdentifier;

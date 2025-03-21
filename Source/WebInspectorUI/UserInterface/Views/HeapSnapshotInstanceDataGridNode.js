@@ -150,12 +150,12 @@ WI.HeapSnapshotInstanceDataGridNode = class HeapSnapshotInstanceDataGridNode ext
             return Number.bytesToString(this._node.size);
 
         if (columnIdentifier === "className") {
-            let {className, id, internal, isObjectType} = this._node;
+            let {className, id, internal, isObjectType, isElementType} = this._node;
             let containerElement = document.createElement("span");
             containerElement.addEventListener("contextmenu", this._contextMenuHandler.bind(this));
 
             let iconElement = containerElement.appendChild(document.createElement("img"));
-            iconElement.classList.add("icon", WI.HeapSnapshotClusterContentView.iconStyleClassNameForClassName(className, internal, isObjectType));
+            iconElement.classList.add("icon", WI.HeapSnapshotClusterContentView.iconStyleClassNameForClassName(className, internal, isObjectType, isElementType));
 
             if (this._edge) {
                 let nameElement = containerElement.appendChild(document.createElement("span"));
@@ -218,6 +218,19 @@ WI.HeapSnapshotInstanceDataGridNode = class HeapSnapshotInstanceDataGridNode ext
         return false;
     }
 
+    _getRemoteObject(callback)
+    {
+        const objectGroup = undefined;
+        WI.heapManager.getRemoteObject(this._node, objectGroup, (error, remoteObjectPayload) => {
+            if (error) {
+                callback(null);
+                return;
+            }
+
+            callback(WI.RemoteObject.fromPayload(remoteObjectPayload, this._node.target));
+        });
+    }
+
     _populate()
     {
         this.removeEventListener(WI.DataGridNode.Event.Populate, this._populate, this);
@@ -267,9 +280,8 @@ WI.HeapSnapshotInstanceDataGridNode = class HeapSnapshotInstanceDataGridNode ext
 
     _populateWindowPreview(containerElement)
     {
-        const objectGroup = undefined;
-        WI.heapManager.getRemoteObject(this._node, objectGroup, (error, remoteObjectPayload) => {
-            if (error) {
+        this._getRemoteObject((remoteObject) => {
+            if (!remoteObject) {
                 this._populateError(containerElement);
                 return;
             }
@@ -278,8 +290,8 @@ WI.HeapSnapshotInstanceDataGridNode = class HeapSnapshotInstanceDataGridNode ext
                 return this.location.href;
             }
 
-            let remoteObject = WI.RemoteObject.fromPayload(remoteObjectPayload, this._node.target);
-            remoteObject.callFunctionJSON(inspectedPage_window_getLocationHref, undefined, (href) => {
+            const args = undefined;
+            remoteObject.callFunctionJSON(inspectedPage_window_getLocationHref, args, (href) => {
                 remoteObject.release();
 
                 if (!href)
@@ -337,7 +349,14 @@ WI.HeapSnapshotInstanceDataGridNode = class HeapSnapshotInstanceDataGridNode ext
 
             if (objectPreviewPayload) {
                 let objectPreview = WI.ObjectPreview.fromPayload(objectPreviewPayload);
-                let previewElement = WI.FormattedValue.createObjectPreviewOrFormattedValueForObjectPreview(objectPreview);
+                let previewElement = WI.FormattedValue.createObjectPreviewOrFormattedValueForObjectPreview(objectPreview, {
+                    remoteObjectAccessor: (callback) => {
+                        this._getRemoteObject((remoteObject) => {
+                            if (remoteObject)
+                                callback(remoteObject);
+                        });
+                    },
+                });
                 containerElement.appendChild(previewElement);
                 return;
             }
@@ -424,7 +443,7 @@ WI.HeapSnapshotInstanceDataGridNode = class HeapSnapshotInstanceDataGridNode ext
             containerElement.classList.add("node");
 
             let iconElement = containerElement.appendChild(document.createElement("img"));
-            iconElement.classList.add("icon", WI.HeapSnapshotClusterContentView.iconStyleClassNameForClassName(node.className, node.internal, node.isObjectType));
+            iconElement.classList.add("icon", WI.HeapSnapshotClusterContentView.iconStyleClassNameForClassName(node.className, node.internal, node.isObjectType, node.isElementType));
 
             let classNameElement = containerElement.appendChild(document.createElement("span"));
             classNameElement.textContent = sanitizeClassName(node.className) + " ";
