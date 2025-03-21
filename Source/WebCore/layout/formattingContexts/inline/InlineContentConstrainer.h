@@ -38,7 +38,7 @@ namespace Layout {
 
 class InlineContentConstrainer {
 public:
-    InlineContentConstrainer(InlineFormattingContext&, const InlineItemList&, const HorizontalConstraints&);
+    InlineContentConstrainer(InlineFormattingContext&, const InlineItemList&, HorizontalConstraints);
     std::optional<Vector<LayoutUnit>> computeParagraphLevelConstraints(TextWrapStyle);
 
 private:
@@ -76,7 +76,7 @@ private:
 
     InlineFormattingContext& m_inlineFormattingContext;
     const InlineItemList& m_inlineItemList;
-    const HorizontalConstraints& m_horizontalConstraints;
+    const HorizontalConstraints m_horizontalConstraints;
 
     Vector<InlineItemRange> m_originalLineInlineItemRanges;
     Vector<LayoutUnit> m_originalLineConstraints;

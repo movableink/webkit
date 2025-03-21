@@ -153,7 +153,7 @@ static PreviousLine buildPreviousLine(size_t lineIndex, LineLayoutResult lineLay
     return PreviousLine { lineIndex, lineLayoutResult.contentGeometry.trailingOverflowingContentWidth, !lineLayoutResult.inlineContent.isEmpty() && lineLayoutResult.inlineContent.last().isLineBreak(), !lineLayoutResult.inlineContent.isEmpty(), lineLayoutResult.directionality.inlineBaseDirection, WTFMove(lineLayoutResult.floatContent.suspendedFloats) };
 }
 
-InlineContentConstrainer::InlineContentConstrainer(InlineFormattingContext& inlineFormattingContext, const InlineItemList& inlineItemList, const HorizontalConstraints& horizontalConstraints)
+InlineContentConstrainer::InlineContentConstrainer(InlineFormattingContext& inlineFormattingContext, const InlineItemList& inlineItemList, HorizontalConstraints horizontalConstraints)
     : m_inlineFormattingContext(inlineFormattingContext)
     , m_inlineItemList(inlineItemList)
     , m_horizontalConstraints(horizontalConstraints)
