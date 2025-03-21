@@ -4815,19 +4815,24 @@ void LocalFrameView::didPaintContents(GraphicsContext& context, const IntRect& d
 void LocalFrameView::paintContents(GraphicsContext& context, const IntRect& dirtyRect, SecurityOriginPaintPolicy securityOriginPaintPolicy, RegionContext* regionContext)
 {
 #ifndef NDEBUG
-    bool fillWithWarningColor;
-    if (m_frame->document()->printing())
-        fillWithWarningColor = false; // Printing, don't fill with red (can't remember why).
-    else if (m_frame->ownerElement())
-        fillWithWarningColor = false; // Subframe, don't fill with red.
-    else if (isTransparent())
-        fillWithWarningColor = false; // Transparent, don't fill with red.
-    else if (m_paintBehavior & PaintBehavior::SelectionOnly)
-        fillWithWarningColor = false; // Selections are transparent, don't fill with red.
-    else if (m_nodeToDraw)
-        fillWithWarningColor = false; // Element images are transparent, don't fill with red.
-    else
-        fillWithWarningColor = true;
+    bool fillWithWarningColor = [&] {
+        if (m_frame->document()->printing())
+            return false; // Printing, don't fill with warning color (can't remember why).
+
+        if (m_frame->ownerElement())
+            return false; // Subframe, don't fill with warning color.
+
+        if (isTransparent())
+            return false; // Transparent, don't fill with warning color.
+
+        if (m_paintBehavior.containsAny({ PaintBehavior::SelectionOnly, PaintBehavior::FixedAndStickyLayersOnly }))
+            return false; // Don't fill with warning color for selection and fixed-position snapshots.
+
+        if (m_nodeToDraw)
+            return false; // Element images are transparent, don't fill with warning color.
+
+        return true;
+    }();
 
     if (fillWithWarningColor) {
         IntRect debugRect = frameRect();
