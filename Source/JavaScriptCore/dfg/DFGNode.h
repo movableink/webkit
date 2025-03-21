@@ -2922,6 +2922,12 @@ public:
         return isBinaryUseKind(left, right) || isBinaryUseKind(right, left);
     }
 
+    // Can handle both Int32Use and KnownInt32Use
+    bool isBinaryInt32UseKind()
+    {
+        return isInt32(child1().useKind()) && isInt32(child2().useKind());
+    }
+
     Edge childFor(UseKind useKind)
     {
         if (child1().useKind() == useKind)

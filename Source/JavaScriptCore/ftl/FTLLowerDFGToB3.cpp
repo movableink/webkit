@@ -2900,8 +2900,8 @@ private:
         }
 
         case Int52RepUse: {
-            if (!abstractValue(m_node->child1()).couldBeType(SpecNonInt32AsInt52)
-                && !abstractValue(m_node->child2()).couldBeType(SpecNonInt32AsInt52)) {
+            if (!shouldCheckOverflow(m_node->arithMode()) ||
+                (!abstractValue(m_node->child1()).couldBeType(SpecNonInt32AsInt52) && !abstractValue(m_node->child2()).couldBeType(SpecNonInt32AsInt52))) {
                 Int52Kind kind;
                 LValue left = lowWhicheverInt52(m_node->child1(), kind);
                 LValue right = lowInt52(m_node->child2(), kind);

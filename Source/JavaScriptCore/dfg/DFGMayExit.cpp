@@ -186,18 +186,18 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
         return Exits;
 
     case ArithBitNot:
-        if (node->child1().useKind() == Int32Use)
+        if (isInt32(node->child1().useKind()))
             break;
         return Exits;
 
     case ArithAbs:
-        if (node->arithMode() == Arith::Mode::Unchecked && node->child1().useKind() == Int32Use)
+        if (node->arithMode() == Arith::Mode::Unchecked && isInt32(node->child1().useKind()))
             break;
         return Exits;
 
     case ArithMin:
     case ArithMax:
-        if (graph.child(node, 0).useKind() == Int32Use)
+        if (isInt32(graph.child(node, 0).useKind()))
             break;
         if (graph.child(node, 0).useKind() == DoubleRepUse)
             break;
@@ -209,26 +209,36 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case ArithBitAnd:
     case ArithBitOr:
     case ArithBitXor:
-        if (node->isBinaryUseKind(Int32Use))
+        if (node->isBinaryInt32UseKind())
             break;
         return Exits;
 
     case ArithClz32:
-        if (node->child1().useKind() == Int32Use || node->child1().useKind() == KnownInt32Use)
+        if (isInt32(node->child1().useKind()))
             break;
         return Exits;
 
     case ArithAdd:
     case ArithSub:
+        if (node->arithMode() == Arith::Mode::Unchecked) {
+            if (node->isBinaryInt32UseKind())
+                break;
+            if (node->isBinaryUseKind(Int52RepUse))
+                break;
+        }
+        if (node->isBinaryUseKind(DoubleRepUse))
+            break;
+        return Exits;
+
     case ArithMul:
-        if (node->arithMode() == Arith::Mode::Unchecked && node->isBinaryUseKind(Int32Use))
+        if (node->arithMode() == Arith::Mode::Unchecked && node->isBinaryInt32UseKind())
             break;
         if (node->isBinaryUseKind(DoubleRepUse))
             break;
         return Exits;
 
     case ArithNegate:
-        if (node->arithMode() == Arith::Mode::Unchecked && node->child1().useKind() == Int32Use)
+        if (node->arithMode() == Arith::Mode::Unchecked && isInt32(node->child1().useKind()))
             break;
         if (node->child1().useKind() == DoubleRepUse)
             break;
@@ -237,6 +247,18 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case ArithDiv:
     case ArithMod:
         if (node->isBinaryUseKind(DoubleRepUse))
+            break;
+        return Exits;
+
+    case BooleanToNumber:
+        if (node->child1().useKind() == BooleanUse)
+            break;
+        return Exits;
+
+    case ValueToInt32:
+        if (node->child1().useKind() == Int52RepUse)
+            break;
+        if (node->child1().useKind() == DoubleRepUse)
             break;
         return Exits;
 
@@ -253,7 +275,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case CompareLessEq:
     case CompareGreater:
     case CompareGreaterEq:
-        if (node->isBinaryUseKind(Int32Use))
+        if (node->isBinaryInt32UseKind())
             break;
         if (node->isBinaryUseKind(DoubleRepUse))
             break;
@@ -264,7 +286,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
         return Exits;
 
     case ArithPow:
-        if (node->isBinaryUseKind(Int32Use))
+        if (node->isBinaryInt32UseKind())
             break;
         if (node->isBinaryUseKind(DoubleRepUse))
             break;

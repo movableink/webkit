@@ -5012,13 +5012,12 @@ void SpeculativeJIT::compileArithAdd(Node* node)
         
 #if USE(JSVALUE64)
     case Int52RepUse: {
-        ASSERT(shouldCheckOverflow(node->arithMode()));
         ASSERT(!shouldCheckNegativeZero(node->arithMode()));
 
         // Will we need an overflow check? If we can prove that neither input can be
         // Int52 then the overflow check will not be necessary.
-        if (!m_state.forNode(node->child1()).couldBeType(SpecNonInt32AsInt52)
-            && !m_state.forNode(node->child2()).couldBeType(SpecNonInt32AsInt52)) {
+        if (!shouldCheckOverflow(node->arithMode()) ||
+            (!m_state.forNode(node->child1()).couldBeType(SpecNonInt32AsInt52) && !m_state.forNode(node->child2()).couldBeType(SpecNonInt32AsInt52))) {
             SpeculateWhicheverInt52Operand op1(this, node->child1());
             SpeculateWhicheverInt52Operand op2(this, node->child2(), op1);
             GPRTemporary result(this, Reuse, op1);
@@ -5026,7 +5025,7 @@ void SpeculativeJIT::compileArithAdd(Node* node)
             int52Result(result.gpr(), node, op1.format());
             return;
         }
-        
+
         SpeculateInt52Operand op1(this, node->child1());
         SpeculateInt52Operand op2(this, node->child2());
         GPRTemporary result(this);
@@ -5195,13 +5194,12 @@ void SpeculativeJIT::compileArithSub(Node* node)
         
 #if USE(JSVALUE64)
     case Int52RepUse: {
-        ASSERT(shouldCheckOverflow(node->arithMode()));
         ASSERT(!shouldCheckNegativeZero(node->arithMode()));
 
         // Will we need an overflow check? If we can prove that neither input can be
         // Int52 then the overflow check will not be necessary.
-        if (!m_state.forNode(node->child1()).couldBeType(SpecNonInt32AsInt52)
-            && !m_state.forNode(node->child2()).couldBeType(SpecNonInt32AsInt52)) {
+        if (!shouldCheckOverflow(node->arithMode()) ||
+            (!m_state.forNode(node->child1()).couldBeType(SpecNonInt32AsInt52) && !m_state.forNode(node->child2()).couldBeType(SpecNonInt32AsInt52))) {
             SpeculateWhicheverInt52Operand op1(this, node->child1());
             SpeculateWhicheverInt52Operand op2(this, node->child2(), op1);
             GPRTemporary result(this, Reuse, op1);

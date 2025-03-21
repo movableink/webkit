@@ -1539,6 +1539,27 @@ private:
                 break;
             }
 
+            case ArithSub: {
+                switch (node->binaryUseKind()) {
+                case Int52RepUse: {
+                    if (shouldCheckOverflow(node->arithMode())) {
+                        auto& leftValue = m_state.forNode(node->child1());
+                        auto& rightValue = m_state.forNode(node->child2());
+                        if (!leftValue.couldBeType(SpecNonInt32AsInt52) && !rightValue.couldBeType(SpecNonInt32AsInt52)) {
+                            node->setArithMode(Arith::Unchecked);
+                            changed = true;
+                            break;
+                        }
+                    }
+                    break;
+                }
+
+                default:
+                    break;
+                }
+                break;
+            }
+
             case ArithAdd: {
                 JSValue left = m_state.forNode(node->child1()).value();
                 JSValue right = m_state.forNode(node->child2()).value();
@@ -1566,6 +1587,20 @@ private:
                     }
                     break;
                 }
+
+                case Int52RepUse: {
+                    if (shouldCheckOverflow(node->arithMode())) {
+                        auto& leftValue = m_state.forNode(node->child1());
+                        auto& rightValue = m_state.forNode(node->child2());
+                        if (!leftValue.couldBeType(SpecNonInt32AsInt52) && !rightValue.couldBeType(SpecNonInt32AsInt52)) {
+                            node->setArithMode(Arith::Unchecked);
+                            changed = true;
+                            break;
+                        }
+                    }
+                    break;
+                }
+
                 default:
                     break;
                 }
