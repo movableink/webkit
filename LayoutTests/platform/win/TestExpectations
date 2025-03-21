@@ -4500,3 +4500,8 @@ fast/box-shadow/shadow-repaint.html [ Skip ] # Failure
 fast/css/highlight-text-repaint.html [ Skip ] # Failure
 fast/css/text-underline-offset-repaint.html [ Skip ] # Failure
 fast/flexbox/missing-repaint-when-flext-item-never-had-layout.html [ Skip ] # Failure
+
+webkit.org/b/290120 fast/css/create-columns-onload-crash.html [ Pass Failure ]
+webkit.org/b/290120 fast/events/nested-event-remove-node-crash.html [ Pass Failure ]
+webkit.org/b/290120 fast/workers/worker-script-error.html [ Pass Failure ]
+webkit.org/b/290120 performance-api/performance-observer-exception.html [ Pass Failure ]
