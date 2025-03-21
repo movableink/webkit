@@ -17,59 +17,49 @@ function test()
 
     suite.addTestCase({
         name: "RemoteObject.getProperty.SuccessWithCallback.String",
-        async test() {
-            let finished = new WI.WrappedPromise;
+        test(resolve, reject) {
             object.getProperty("name", (error, result, wasThrown) => {
                 InspectorTest.assert(!error, "Should not have a protocol error.");
 
                 InspectorTest.expectFalse(wasThrown, "Should not have a thrown exception.");
                 InspectorTest.expectThat(result.hasValue(), "Fetched property should have a primitive value.");
                 InspectorTest.expectEqual(result.value, "Favorites", "Fetched property value should be as expected.");
-                error ? finished.reject(error) : finished.resolve();
+                error ? reject(error) : resolve();
             });
-
-            await finished.promise;
         }
     });
 
     suite.addTestCase({
         name: "RemoteObject.getProperty.SuccessWithCallback.Number",
-        async test() {
-            let finished = new WI.WrappedPromise;
+        test(resolve, reject) {
             object.getProperty(1, (error, result, wasThrown) => {
                 InspectorTest.assert(!error, "Should not have a protocol error.");
 
                 InspectorTest.expectFalse(wasThrown, "Should not have a thrown exception.");
                 InspectorTest.expectThat(result.hasValue(), "Fetched property should have a primitive value.");
                 InspectorTest.expectEqual(result.value, true, "Fetched property value should be as expected.");
-                error ? finished.reject(error) : finished.resolve();
+                error ? reject(error) : resolve();
             });
-
-            await finished.promise;
         }
     });
 
     suite.addTestCase({
         name: "RemoteObject.getProperty.NotFoundWithCallback",
-        async test() {
-            let finished = new WI.WrappedPromise;
+        test(resolve, reject) {
             object.getProperty("doesNotExist", (error, result, wasThrown) => {
                 InspectorTest.assert(!error, "Should not have a protocol error.");
 
                 InspectorTest.expectFalse(wasThrown, "Should not have a thrown exception.");
                 InspectorTest.expectThat(result.hasValue(), "Fetched property should have a primitive value.");
                 InspectorTest.expectEqual(result.value, undefined, "Fetched property value should be as expected.");
-                error ? finished.reject(error) : finished.resolve();
+                error ? reject(error) : resolve();
             });
-
-            await finished.promise;
         }
     });
 
     suite.addTestCase({
         name: "RemoteObject.getProperty.FailureWithCallback",
-        async test() {
-            let finished = new WI.WrappedPromise;
+        test(resolve, reject) {
             object.getProperty({}, (error, result, wasThrown) => {
                 InspectorTest.assert(!error, "Should not have a protocol error.");
 
@@ -77,11 +67,8 @@ function test()
                 InspectorTest.expectFalse(result.hasValue(), "Fetched property should not have a primitive value.");
                 InspectorTest.expectEqual(result.type, "object", "Fetched property value should have type `object`.");
                 InspectorTest.expectEqual(result.subtype, "error", "Fetched property value should have subtype `error`.");
-
-                error ? finished.reject(error) : finished.resolve();
+                error ? reject(error) : resolve();
             });
-
-            await finished.promise;
         }
     });
 

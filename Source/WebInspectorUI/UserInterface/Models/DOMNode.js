@@ -1084,10 +1084,10 @@ WI.DOMNode = class DOMNode extends WI.Object
         if (event.target === this || !event.target.isAncestor(this))
             return;
 
-        let domEvent = Object.shallowCopy(event.data.domEvent);
-        domEvent.originator = event.target;
-
-        this._addDOMEvent(domEvent);
+        this._addDOMEvent({
+            ...event.data.domEvent,
+            originator: event.target,
+        });
     }
 
     _addDOMEvent(domEvent)

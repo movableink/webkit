@@ -19,31 +19,30 @@ function action(a, b)
 
 function test()
 {
-    let breakpointPromise = new WI.WrappedPromise;
-    WI.debuggerManager.addEventListener(WI.DebuggerManager.Event.ScriptAdded, function(event) {
-        var scriptObject = event.data.script;
+    let breakpointPromise = new Promise((resolve, reject) => {
+        WI.debuggerManager.addEventListener(WI.DebuggerManager.Event.ScriptAdded, function(event) {
+            var scriptObject = event.data.script;
 
-        if (!/script\-for\-breakpoint\-actions\.js$/.test(scriptObject.url))
-            return;
+            if (!/script\-for\-breakpoint\-actions\.js$/.test(scriptObject.url))
+                return;
 
-        var location = scriptObject.createSourceCodeLocation(4, 0);
-        // Create the breakpoint and its actions before sending anything to the backend.
-        var breakpoint = new WI.JavaScriptBreakpoint(location);
-        breakpoint.autoContinue = true;
-        breakpoint.addAction(new WI.BreakpointAction(WI.BreakpointAction.Type.Evaluate, {data: "action(a, b)"}));
+            var location = scriptObject.createSourceCodeLocation(4, 0);
+            // Create the breakpoint and its actions before sending anything to the backend.
+            var breakpoint = new WI.JavaScriptBreakpoint(location);
+            breakpoint.autoContinue = true;
+            breakpoint.addAction(new WI.BreakpointAction(WI.BreakpointAction.Type.Evaluate, {data: "action(a, b)"}));
 
-        WI.debuggerManager.addBreakpoint(breakpoint);
+            WI.debuggerManager.addBreakpoint(breakpoint);
 
-        breakpointPromise.resolve()
+            resolve();
+        });
     });
 
     let reloadPromise = InspectorTest.awaitEvent(FrontendTestHarness.Event.TestPageDidLoad);
+
     InspectorTest.reloadPage();
-    Promise.all([
-        reloadPromise,
-        breakpointPromise.promise
-    ])
-    .then(() => {
+
+    Promise.all([reloadPromise, breakpointPromise]).then(() => {
         InspectorTest.evaluateInPage("runBreakpointActions()");
     });
 

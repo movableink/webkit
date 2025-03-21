@@ -323,19 +323,17 @@ WI.DOMManager = class DOMManager extends WI.Object
 
     _requestDocumentWithPromise()
     {
-        if (this._documentPromise)
-            return this._documentPromise.promise;
+        this._documentPromise ||= new Promise((resolve, reject) => {
+            if (this._document) {
+                resolve(this._document);
+                return;
+            }
 
-        this._documentPromise = new WI.WrappedPromise;
-        if (this._document)
-            this._documentPromise.resolve(this._document);
-        else {
             this._requestDocumentWithCallback((doc) => {
-                this._documentPromise.resolve(doc);
+                resolve(doc);
             });
-        }
-
-        return this._documentPromise.promise;
+        });
+        return this._documentPromise;
     }
 
     _requestDocumentWithCallback(callback)

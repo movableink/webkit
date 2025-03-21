@@ -763,9 +763,11 @@ WI.DataGrid = class DataGrid extends WI.View
         insertionIndex = Number.constrain(insertionIndex, 0, this.orderedColumns.length);
 
         // Copy configuration properties instead of keeping a reference to the passed-in object.
-        var column = Object.shallowCopy(columnData);
-        column["ordinal"] = insertionIndex;
-        column["columnIdentifier"] = columnIdentifier;
+        let column = {
+            ...columnData,
+            ordinal: insertionIndex,
+            columnIdentifier: columnIdentifier,
+        };
 
         this.orderedColumns.splice(insertionIndex, 0, columnIdentifier);
 
@@ -983,9 +985,10 @@ WI.DataGrid = class DataGrid extends WI.View
 
         if (this._columnVisibilitySetting) {
             if (this._columnVisibilitySetting.value[columnIdentifier] !== visible) {
-                let copy = Object.shallowCopy(this._columnVisibilitySetting.value);
-                copy[columnIdentifier] = visible;
-                this._columnVisibilitySetting.value = copy;
+                this._columnVisibilitySetting.value = {
+                    ...this._columnVisibilitySetting.value,
+                    [columnIdentifier]: visible,
+                };
             }
         }
 

@@ -173,10 +173,10 @@ WI.loaded = function()
 
     // Targets.
     WI.backendTarget = null;
-    WI._backendTargetAvailablePromise = new WI.WrappedPromise;
+    WI._backendTargetAvailablePromise = Promise.withResolvers();
 
     WI.pageTarget = null;
-    WI._pageTargetAvailablePromise = new WI.WrappedPromise;
+    WI._pageTargetAvailablePromise = Promise.withResolvers();
 
     // COMPATIBILITY (iOS 13.0): Target.exists was "replaced" by differentiating "web" debuggables
     // into "page" (direct) and "web-page" debuggables (multiplexing).

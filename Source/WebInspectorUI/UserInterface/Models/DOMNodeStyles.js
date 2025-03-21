@@ -163,10 +163,10 @@ WI.DOMNodeStyles = class DOMNodeStyles extends WI.Object
 
         this._needsRefresh = false;
 
-        let fetchedMatchedStylesPromise = new WI.WrappedPromise;
-        let fetchedInlineStylesPromise = new WI.WrappedPromise;
-        let fetchedComputedStylesPromise = new WI.WrappedPromise;
-        let fetchedFontDataPromise = new WI.WrappedPromise;
+        let fetchedMatchedStylesPromise = Promise.withResolvers();
+        let fetchedInlineStylesPromise = Promise.withResolvers();
+        let fetchedComputedStylesPromise = Promise.withResolvers();
+        let fetchedFontDataPromise = Promise.withResolvers();
 
         // Ensure we resolve these promises even in the case of an error.
         function wrap(func, promise) {

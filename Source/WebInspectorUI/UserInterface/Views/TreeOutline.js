@@ -981,7 +981,7 @@ WI.TreeOutline = class TreeOutline extends WI.Object
             // Redraw if there are a different number of items to show.
             if (visibleTreeElements.size === this._virtualizedVisibleTreeElements.size) {
                 // Redraw if all of the previously centered `WI.TreeElement` are no longer centered.
-                if (visibleTreeElements.intersects(this._virtualizedVisibleTreeElements)) {
+                if (!visibleTreeElements.isDisjointFrom(this._virtualizedVisibleTreeElements)) {
                     // Redraw if there is a `WI.TreeElement` that should be shown that isn't attached.
                     if (visibleTreeElements.isSubsetOf(this._virtualizedAttachedTreeElements))
                         return;
