@@ -52,8 +52,8 @@ PASS Placement: --bottom, --top
 PASS Placement: --bottom, --right, --top
 PASS Placement: --bottom, --right, --left, --top
 PASS Placement: --bottom, --left, --top, --right
-FAIL Placement: --right flip-inline assert_equals: offsetLeft expected 40 but got 350
-FAIL Placement: --bottom flip-block assert_equals: offsetLeft expected 95 but got 350
+FAIL Placement: --right flip-inline assert_equals: offsetLeft expected 40 but got 140
+FAIL Placement: --bottom flip-block assert_equals: offsetLeft expected 95 but got 140
 FAIL Placement: --left flip-start assert_equals: offsetLeft expected 95 but got 40
 FAIL Placement: --left flip-inline, --top assert_equals: offsetLeft expected 95 but got 40
 FAIL Placement: --top flip-block, --left assert_equals: offsetLeft expected 40 but got 95

@@ -71,6 +71,7 @@ PositionedLayoutConstraints::PositionedLayoutConstraints(const RenderBox& render
     else
         m_containingRange.set(m_container->borderBefore(), renderer.containingBlockLogicalHeightForPositioned(*m_container, false));
     m_marginPercentageBasis = containingWidth;
+    m_originalContainingRange = m_containingRange;
 
     computeAnchorGeometry(renderer);
 
@@ -180,25 +181,32 @@ void PositionedLayoutConstraints::computeAnchorGeometry(const RenderBox& rendere
 LayoutRange PositionedLayoutConstraints::adjustForPositionArea(const LayoutRange rangeToAdjust, const LayoutRange anchorArea, const BoxAxis containerAxis)
 {
     ASSERT(m_style.positionArea() && m_defaultAnchorBox && needsAnchor());
+    ASSERT(anchorArea.size() >= 0);
 
     auto adjustedRange = rangeToAdjust;
     switch (m_style.positionArea()->coordMatchedTrackForAxis(containerAxis, m_containingWritingMode, m_writingMode)) {
     case PositionAreaTrack::Start:
         adjustedRange.shiftMaxEdgeTo(anchorArea.min());
+        adjustedRange.floorSizeFromMaxEdge();
         return adjustedRange;
     case PositionAreaTrack::SpanStart:
         adjustedRange.shiftMaxEdgeTo(anchorArea.max());
+        adjustedRange.capMinEdgeTo(anchorArea.min());
         return adjustedRange;
     case PositionAreaTrack::End:
         adjustedRange.shiftMinEdgeTo(anchorArea.max());
+        adjustedRange.floorSizeFromMinEdge();
         return adjustedRange;
     case PositionAreaTrack::SpanEnd:
         adjustedRange.shiftMinEdgeTo(anchorArea.min());
+        adjustedRange.floorMaxEdgeTo(anchorArea.max());
         return adjustedRange;
     case PositionAreaTrack::Center:
         adjustedRange = anchorArea;
         return adjustedRange;
     case PositionAreaTrack::SpanAll:
+        adjustedRange.capMinEdgeTo(anchorArea.min());
+        adjustedRange.floorMaxEdgeTo(anchorArea.max());
         return adjustedRange;
     default:
         ASSERT_NOT_REACHED();
@@ -222,7 +230,6 @@ void PositionedLayoutConstraints::resolvePosition(RenderBox::LogicalExtentComput
 
     // See CSS2 § 10.3.7-8 and 10.6.4-5.
     if (!m_insetBefore.isAuto() && !m_insetAfter.isAuto()) {
-        bool startIsBefore = m_containingAxis == LogicalBoxAxis::Block || m_containingWritingMode.isLogicalLeftInlineStart();
         // Calculate auto margins.
         if (m_marginBefore.isAuto() && m_marginAfter.isAuto()) {
             // Distribute usable space to both margins equally.
@@ -232,7 +239,7 @@ void PositionedLayoutConstraints::resolvePosition(RenderBox::LogicalExtentComput
 
             // Distribute unused space to the end side.
             auto unusedSpace = remainingSpace - (usedMarginBefore + usedMarginAfter);
-            if (startIsBefore)
+            if (startIsBefore())
                 usedMarginAfter += unusedSpace;
             else
                 usedMarginBefore += unusedSpace;
@@ -240,10 +247,10 @@ void PositionedLayoutConstraints::resolvePosition(RenderBox::LogicalExtentComput
             usedMarginBefore = remainingSpace;
         else if (m_marginAfter.isAuto())
             usedMarginAfter = remainingSpace;
-        else {
+        else if (remainingSpace) {
             // Align into remaining space.
-            auto alignmentSpace = resolveAlignmentAdjustment(remainingSpace);
-            position += startIsBefore ? alignmentSpace : remainingSpace - alignmentSpace;
+            position += resolveAlignmentShift(remainingSpace,
+                computedValues.m_extent + usedMarginBefore + usedMarginAfter);
         }
     } else if (m_insetBefore.isAuto())
         position += remainingSpace;
@@ -268,21 +275,57 @@ void PositionedLayoutConstraints::resolvePosition(RenderBox::LogicalExtentComput
     }
 }
 
-LayoutUnit PositionedLayoutConstraints::resolveAlignmentAdjustment(LayoutUnit unusedSpace) const
+LayoutUnit PositionedLayoutConstraints::resolveAlignmentShift(LayoutUnit unusedSpace, LayoutUnit itemSize) const
 {
-    // FIXME: Smart safety.
-    if (unusedSpace < 0_lu && m_alignment.overflow() == OverflowAlignment::Safe)
-        return { };
+    bool startIsBefore = this->startIsBefore();
+    if (unusedSpace < 0_lu && OverflowAlignment::Safe == m_alignment.overflow())
+        return startIsBefore ? 0_lu : unusedSpace;
 
-    ItemPosition resolvedAlignment = resolveAlignmentPosition();
-    if (ItemPosition::Auto == resolvedAlignment
-        || ItemPosition::AnchorCenter == resolvedAlignment) // Handled in computeAnchorCenteredPosition().
+    ItemPosition resolvedAlignment = resolveAlignmentValue();
+    if (ItemPosition::Auto == resolvedAlignment)
         resolvedAlignment = ItemPosition::Normal;
 
-    return StyleSelfAlignmentData::adjustmentFromStartEdge(unusedSpace, resolvedAlignment, m_containingAxis, m_containingWritingMode, m_writingMode);
+    LayoutUnit shift;
+    if (ItemPosition::AnchorCenter == resolvedAlignment) {
+        auto anchorCenterPosition = m_anchorArea.min() + (m_anchorArea.size() - itemSize) / 2;
+        shift = anchorCenterPosition - m_insetModifiedContainingRange.min();
+    } else {
+        auto alignmentSpace = StyleSelfAlignmentData::adjustmentFromStartEdge(unusedSpace, resolvedAlignment, m_containingAxis, m_containingWritingMode, m_writingMode);
+        shift = startIsBefore ? alignmentSpace : unusedSpace - alignmentSpace;
+    }
+
+    if (unusedSpace < 0 && ItemPosition::Normal != resolvedAlignment
+        && OverflowAlignment::Default == m_alignment.overflow()) {
+        // Allow overflow, but try to stay within the containing block.
+        // See https://www.w3.org/TR/css-align-3/#auto-safety-position
+        auto spaceAfter = std::max(0_lu, m_originalContainingRange.max() - m_insetModifiedContainingRange.max());
+        auto spaceBefore = std::max(0_lu, m_insetModifiedContainingRange.min() - m_originalContainingRange.min());
+
+        if (startIsBefore) {
+            // Avoid overflow on the end side
+            spaceAfter += (unusedSpace - shift);
+            if (spaceAfter < 0)
+                shift += spaceAfter;
+            // Disallow overflow on the start side.
+            spaceBefore += shift;
+            if (spaceBefore < 0)
+                shift -= spaceBefore;
+        } else {
+            // Avoid overflow on the end side
+            spaceBefore += shift;
+            if (spaceBefore < 0)
+                shift -= spaceBefore;
+            // Disallow overflow on the start side.
+            spaceAfter += (unusedSpace - shift);
+            if (spaceAfter < 0)
+                shift += spaceAfter;
+        }
+
+    }
+    return shift;
 }
 
-ItemPosition PositionedLayoutConstraints::resolveAlignmentPosition() const
+ItemPosition PositionedLayoutConstraints::resolveAlignmentValue() const
 {
     auto alignmentPosition = m_alignment.position();
     if (ItemPosition::Auto == alignmentPosition)

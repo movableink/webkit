@@ -4026,10 +4026,6 @@ void RenderBox::computePositionedLogicalWidth(LogicalExtentComputedValues& compu
     inlineConstraints.resolvePosition(computedValues);
     inlineConstraints.fixupLogicalLeftPosition(computedValues);
 
-    // Perform alignment.
-    if (inlineConstraints.defaultAnchorBox() && inlineConstraints.resolveAlignmentPosition() == ItemPosition::AnchorCenter)
-        computeAnchorCenteredPosition(inlineConstraints, computedValues);
-
     // Adjust logicalLeft if we need to for the flipped version of our writing mode in fragments.
     // FIXME: Add support for other types of objects as containerBlock, not only RenderBlock.
     if (enclosingFragmentedFlow() && isWritingModeRoot() && inlineConstraints.isOrthogonal()) {
@@ -4126,10 +4122,6 @@ void RenderBox::computePositionedLogicalHeight(LogicalExtentComputedValues& comp
     // Calculate the position.
     blockConstraints.resolvePosition(computedValues);
     blockConstraints.fixupLogicalTopPosition(computedValues, *this);
-
-    // Perform alignment.
-    if (blockConstraints.defaultAnchorBox() && blockConstraints.resolveAlignmentPosition() == ItemPosition::AnchorCenter)
-        computeAnchorCenteredPosition(blockConstraints, computedValues);
 
     // Adjust logicalTop if we need to for perpendicular writing modes in fragments.
     // FIXME: Add support for other types of objects as containerBlock, not only RenderBlock.
@@ -5126,86 +5118,6 @@ void RenderBox::removeShapeOutsideInfo()
 
     setRenderBoxHasShapeOutsideInfo(false);
     shapeOutsideInfoMap().remove(*this);
-}
-
-// FIXME: Consider extracting to RenderElement as the same is used in LocalFrameViewLayoutContext.cpp.
-static bool isObjectAncestorContainerOf(const RenderElement& ancestor, const RenderElement& descendant)
-{
-    for (auto* renderer = &descendant; renderer; renderer = renderer->container()) {
-        if (renderer == &ancestor)
-            return true;
-    }
-    return false;
-}
-
-static CheckedPtr<const RenderBlock> findClosestCommonContainer(const RenderElement& elementA, const RenderElement& elementB)
-{
-    CheckedPtr closestCommonContainer = dynamicDowncast<RenderBlock>(&elementA);
-    while (closestCommonContainer && !isObjectAncestorContainerOf(*closestCommonContainer, elementB))
-        closestCommonContainer = dynamicDowncast<RenderBlock>(closestCommonContainer->container());
-    return closestCommonContainer;
-}
-
-// https://drafts.csswg.org/css-anchor-position-1/#anchor-center
-void RenderBox::computeAnchorCenteredPosition(const PositionedLayoutConstraints& constraints, LogicalExtentComputedValues& computedValues) const
-{
-    // Calculate desired anchor-centered position.
-    CheckedPtr closestCommonContainer = findClosestCommonContainer(*this, *constraints.defaultAnchorBox());
-    LayoutRect relativeAnchorRect = Style::AnchorPositionEvaluator::computeAnchorRectRelativeToContainingBlock(*constraints.defaultAnchorBox(), *closestCommonContainer);
-    LayoutUnit desiredPosition = constraints.physicalAxis() == BoxAxis::Horizontal
-        ? relativeAnchorRect.x() + (relativeAnchorRect.width() - computedValues.m_extent) / 2
-        : relativeAnchorRect.y() + (relativeAnchorRect.height() - computedValues.m_extent) / 2;
-    LayoutUnit desiredEnd = desiredPosition + computedValues.m_extent;
-
-    // FIXME: Match PositionedLayoutConstraints coordinates.
-    bool flip = constraints.isOrthogonal() && constraints.containingWritingMode().isBlockFlipped() && LogicalBoxAxis::Block == constraints.containingAxis();
-    LayoutUnit actualLeft = flip ? constraints.insetAfterValue() : constraints.insetBeforeValue();
-    LayoutUnit actualRight = flip ? constraints.insetBeforeValue() : constraints.insetAfterValue();
-    auto* parentContainer = downcast<RenderBox>(container());
-
-    // Switch from rl to lr as all the calculations are done in lr.
-    if (!container()->isHorizontalWritingMode() && isHorizontalWritingMode()) {
-        auto borderAndPaddingLeft = constraints.physicalAxis() == BoxAxis::Horizontal
-            ? (parentContainer->borderLeft() + parentContainer->paddingLeft())
-            : (parentContainer->borderTop() + parentContainer->paddingTop());
-        computedValues.m_position = borderAndPaddingLeft + actualLeft;
-    }
-
-    // https://drafts.csswg.org/css-align-3/#auto-safety-position
-
-    LayoutUnit insetModifiedContainingBlockPosition = computedValues.m_position;
-    LayoutUnit insetModifiedContainingBlockEnd = computedValues.m_position - actualLeft + constraints.containingSize() - actualRight;
-    LayoutUnit containingBlockPosition = insetModifiedContainingBlockPosition - actualLeft;
-    LayoutUnit containingBlockEnd = containingBlockPosition + constraints.containingSize();
-
-    // 4.4.1.2.1.
-    LayoutUnit defaultOverflowRectPosition = std::min(containingBlockPosition, insetModifiedContainingBlockPosition);
-    LayoutUnit defaultOverflowRectEnd = std::max(containingBlockEnd, insetModifiedContainingBlockEnd);
-    LayoutUnit defaultOverflowRectSize = defaultOverflowRectEnd - defaultOverflowRectPosition;
-
-    const bool overflowsInsetModifiedContainingBlock = desiredPosition < insetModifiedContainingBlockPosition || desiredEnd > insetModifiedContainingBlockEnd;
-    const bool overflowsDefaultOverflowRect = desiredPosition < defaultOverflowRectPosition || desiredEnd > defaultOverflowRectEnd;
-
-    // 4.4.1.2.2.
-    if (overflowsInsetModifiedContainingBlock && !overflowsDefaultOverflowRect)
-        computedValues.m_position = desiredPosition;
-    // 4.4.1.2.3.
-    else if (defaultOverflowRectSize >= computedValues.m_extent && overflowsDefaultOverflowRect) {
-        if (desiredPosition < defaultOverflowRectPosition)
-            computedValues.m_position = desiredPosition + (defaultOverflowRectPosition - desiredPosition);
-        else
-            computedValues.m_position = desiredPosition - (desiredEnd - defaultOverflowRectEnd);
-    } else if (defaultOverflowRectSize < computedValues.m_extent) // 4.4.1.2.4.
-        computedValues.m_position = insetModifiedContainingBlockPosition;
-    else
-        computedValues.m_position = desiredPosition;
-
-    // Switch back from lr to rl if necessary.
-    if (!container()->isHorizontalWritingMode() && isHorizontalWritingMode()) {
-        auto parentContainerLogicalWidth = constraints.physicalAxis() == BoxAxis::Horizontal
-            ? parentContainer->width() : parentContainer->height();
-        computedValues.m_position = parentContainerLogicalWidth - (computedValues.m_position + computedValues.m_extent);
-    }
 }
 
 bool RenderBox::hasAutoHeightOrContainingBlockWithAutoHeight(UpdatePercentageHeightDescendants updatePercentageDescendants) const

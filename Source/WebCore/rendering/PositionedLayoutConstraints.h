@@ -54,6 +54,7 @@ public:
     }
     void moveBy(LayoutUnit shift) { m_location += shift; }
     void moveTo(LayoutUnit location) { m_location = location; }
+
     void shiftMinEdgeBy(LayoutUnit shift)
     {
         m_location += shift;
@@ -62,6 +63,39 @@ public:
     void shiftMaxEdgeBy(LayoutUnit shift) { m_size += shift; }
     void shiftMinEdgeTo(LayoutUnit target) { shiftMinEdgeBy(target - min()); }
     void shiftMaxEdgeTo(LayoutUnit target) { shiftMaxEdgeBy(target - max()); }
+    void floorMinEdgeTo(LayoutUnit target)
+    {
+        if (target > max())
+            shiftMaxEdgeTo(target);
+    }
+    void floorMaxEdgeTo(LayoutUnit target)
+    {
+        if (target > max())
+            shiftMaxEdgeTo(target);
+    }
+    void capMinEdgeTo(LayoutUnit target)
+    {
+        if (target < min())
+            shiftMinEdgeTo(target);
+    }
+    void capMaxEdgeTo(LayoutUnit target)
+    {
+        if (target < max())
+            shiftMaxEdgeTo(target);
+    }
+
+    void sizeFromMinEdge(LayoutUnit size = 0_lu) { m_size = size; }
+    void sizeFromMaxEdge(LayoutUnit size = 0_lu)
+    {
+        m_location -= size - m_size;
+        m_size = size;
+    }
+    void floorSizeFromMinEdge(LayoutUnit size = 0_lu) { m_size = std::max(m_size, size); }
+    void floorSizeFromMaxEdge(LayoutUnit size = 0_lu)
+    {
+        if (size > m_size)
+            sizeFromMaxEdge(size);
+    }
 
 private:
     LayoutUnit m_location;
@@ -92,7 +126,7 @@ public:
     bool isOrthogonal() const { return m_containingWritingMode.isOrthogonal(m_writingMode); }
     bool isBlockOpposing() const { return m_containingWritingMode.isBlockOpposing(m_writingMode); }
     bool isBlockFlipped() const { return m_containingWritingMode.isBlockFlipped(); }
-    bool isLogicalLeftInlineStart() const { return m_containingWritingMode.isLogicalLeftInlineStart(); }
+    bool startIsBefore() const { return m_containingAxis == LogicalBoxAxis::Block || m_containingWritingMode.isLogicalLeftInlineStart(); }
     bool containingCoordsAreFlipped() const;
 
     LayoutUnit containingSize() const { return m_containingRange.size(); }
@@ -104,8 +138,8 @@ public:
     LayoutUnit availableContentSpace() const { return insetModifiedContainingSize() - marginBeforeValue() - bordersPlusPadding() - marginAfterValue(); } // This may be negative.
 
     void resolvePosition(RenderBox::LogicalExtentComputedValues&) const;
-    LayoutUnit resolveAlignmentAdjustment(const LayoutUnit unusedSpace) const;
-    ItemPosition resolveAlignmentPosition() const;
+    LayoutUnit resolveAlignmentShift(const LayoutUnit unusedSpace, const LayoutUnit itemSize) const;
+    ItemPosition resolveAlignmentValue() const;
     bool alignmentAppliesStretch(ItemPosition normalAlignment) const;
 
     void fixupLogicalLeftPosition(RenderBox::LogicalExtentComputedValues&) const;
@@ -128,6 +162,7 @@ private:
 
     // These values are calculated by the constructor.
     LayoutRange m_containingRange;
+    LayoutRange m_originalContainingRange;
     LayoutRange m_insetModifiedContainingRange;
     LayoutUnit m_marginPercentageBasis;
     CheckedPtr<const RenderBoxModelObject> m_container;
