@@ -31,6 +31,7 @@
 #include "Platform.h"
 #include <bit>
 #include <cstdint>
+#include <wtf/text/ASCIILiteral.h>
 
 namespace WTF {
 
