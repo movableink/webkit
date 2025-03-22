@@ -43,7 +43,10 @@ extension WKWebViewConfiguration {
         self.allowsInlinePredictions = wrapped.allowsInlinePredictions
         self.supportsAdaptiveImageGlyph = wrapped.supportsAdaptiveImageGlyph
         self._loadsSubresources = wrapped.loadsSubresources
+
+#if !os(visionOS)
         self.showsSystemScreenTimeBlockingView = wrapped.showsSystemScreenTimeBlockingView
+#endif
 
 #if os(iOS)
         self.dataDetectorTypes = wrapped.dataDetectorTypes
