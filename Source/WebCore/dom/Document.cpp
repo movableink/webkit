@@ -9126,6 +9126,11 @@ DocumentLoader* Document::loader() const
     return loader;
 }
 
+RefPtr<DocumentLoader> Document::protectedLoader() const
+{
+    return loader();
+}
+
 bool Document::allowsContentJavaScript() const
 {
     // FIXME: Get all SPI clients off of this potentially dangerous Setting.

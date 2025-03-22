@@ -55,7 +55,7 @@ ExceptionOr<void> PaymentSession::canCreateSession(Document& document)
     if (!document.frame())
         return Exception { ExceptionCode::InvalidAccessError, "Trying to start an Apple Pay session from an inactive document."_s };
 
-    if (!isSecure(*document.loader()))
+    if (!isSecure(*document.protectedLoader()))
         return Exception { ExceptionCode::InvalidAccessError, "Trying to start an Apple Pay session from an insecure document."_s };
 
     RefPtr mainFrameDocument = document.protectedMainFrameDocument();
@@ -66,7 +66,7 @@ ExceptionOr<void> PaymentSession::canCreateSession(Document& document)
 
     if (!document.isTopDocument()) {
         for (RefPtr ancestorDocument = document.parentDocument(); ancestorDocument != mainFrameDocument.get(); ancestorDocument = ancestorDocument->parentDocument()) {
-            if (!isSecure(*ancestorDocument->loader()))
+            if (!isSecure(*ancestorDocument->protectedLoader()))
                 return Exception { ExceptionCode::InvalidAccessError, "Trying to start an Apple Pay session from a document with an insecure parent frame."_s };
         }
     }

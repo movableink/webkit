@@ -791,6 +791,7 @@ public:
     bool visuallyOrdered() const { return m_visuallyOrdered; }
     
     WEBCORE_EXPORT DocumentLoader* loader() const;
+    RefPtr<DocumentLoader> protectedLoader() const;
 
     WEBCORE_EXPORT ExceptionOr<RefPtr<WindowProxy>> openForBindings(LocalDOMWindow& activeWindow, LocalDOMWindow& firstDOMWindow, const String& url, const AtomString& name, const String& features);
     WEBCORE_EXPORT ExceptionOr<Document&> openForBindings(Document* entryDocument, const String&, const String&);
