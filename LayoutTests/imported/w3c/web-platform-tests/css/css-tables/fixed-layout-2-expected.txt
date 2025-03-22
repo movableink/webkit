@@ -22,8 +22,8 @@ This should be a 50x50 cyan square:
 Table-layout:fixed does apply to width:min-content tables
 
 min-content
-This should be a 100x50 cyan rectangle:
-Table-layout:fixed does NOT apply to width:max-content tables
+This should be a 50x50 cyan square:
+Table-layout:fixed does apply to width:max-content tables
 
 max-content
 This should be a 50x50 cyan square:
@@ -34,12 +34,12 @@ This should be a 50x50 cyan square:
 Table-layout:fixed does apply to width:-webkit-fill-available tables
 
 -webkit-fill-available
-This should be a 100x50 cyan rectangle:
-Table-layout:fixed does NOT apply to width:intrinsic tables
+This should be a 50x50 cyan square:
+Table-layout:fixed does apply to width:intrinsic tables
 
 intrinsic
-This should be a 100x50 cyan rectangle:
-Table-layout:fixed does NOT apply to width:min-intrinsic tables
+This should be a 50x50 cyan square:
+Table-layout:fixed does apply to width:min-intrinsic tables
 
 min-intrinsic
 
@@ -48,9 +48,9 @@ PASS 100%
 PASS calc(10px + 100%)
 PASS auto
 PASS min-content
-PASS max-content
+FAIL max-content assert_equals: Table is in fixed mode expected 50 but got 100
 PASS fit-content
 PASS -webkit-fill-available
-PASS intrinsic
-PASS min-intrinsic
+FAIL intrinsic assert_equals: Table is in fixed mode expected 50 but got 100
+FAIL min-intrinsic assert_equals: Table is in fixed mode expected 50 but got 100
 
