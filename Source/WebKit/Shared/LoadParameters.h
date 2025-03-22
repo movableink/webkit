@@ -90,6 +90,7 @@ struct LoadParameters {
     bool isHandledByAboutSchemeHandler { false };
 
     std::optional<OptionSet<WebCore::AdvancedPrivacyProtections>> advancedPrivacyProtections;
+    uint64_t requiredCookiesVersion { 0 };
 };
 
 } // namespace WebKit

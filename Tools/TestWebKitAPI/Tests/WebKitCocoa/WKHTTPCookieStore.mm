@@ -1069,3 +1069,36 @@ TEST(WKHTTPCookieStore, WebSocketSetCookiesThroughRedirectToThirdParty)
     [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:[NSString stringWithFormat:@"http://127.0.0.1:%d/ninja", serverPort]]]];
     Util::run(&receivedWebSocket);
 }
+
+TEST(WKHTTPCookieStore, CookiesSetBeforeLoad)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } }
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    RetainPtr<NSHTTPCookie> sessionCookie = [NSHTTPCookie cookieWithProperties:@{
+        NSHTTPCookiePath: @"/",
+        NSHTTPCookieName: @"SessionCookieName",
+        NSHTTPCookieValue: @"CookieValue",
+        NSHTTPCookieDomain: @"127.0.0.1",
+    }];
+
+    RetainPtr<NSHTTPCookie> persistentCookie = [NSHTTPCookie cookieWithProperties:@{
+        NSHTTPCookiePath: @"/",
+        NSHTTPCookieName: @"PersistentCookieName",
+        NSHTTPCookieValue: @"CookieValue",
+        NSHTTPCookieDomain: @"127.0.0.1",
+        NSHTTPCookieExpires: [NSDate distantFuture],
+    }];
+
+    RetainPtr configuration = adoptNS([WKWebViewConfiguration new]);
+    configuration.get().websiteDataStore = [WKWebsiteDataStore nonPersistentDataStore];
+    RetainPtr webView = adoptNS([[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration.get()]);
+
+    [configuration.get().websiteDataStore.httpCookieStore setCookie:sessionCookie.get() completionHandler:^{ }];
+    [configuration.get().websiteDataStore.httpCookieStore setCookie:persistentCookie.get() completionHandler:^{ }];
+    [webView loadRequest:server.request()];
+    [webView _test_waitForDidFinishNavigation];
+
+    EXPECT_WK_STREQ(server.lastRequestCookies(), "PersistentCookieName=CookieValue; SessionCookieName=CookieValue");
+}

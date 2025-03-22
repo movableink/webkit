@@ -1503,7 +1503,7 @@ void NetworkProcess::setOptInCookiePartitioningEnabled(PAL::SessionID sessionID,
 }
 #endif
 
-void NetworkProcess::preconnectTo(PAL::SessionID sessionID, WebPageProxyIdentifier webPageProxyID, WebCore::PageIdentifier webPageID, WebCore::ResourceRequest&& request, WebCore::StoredCredentialsPolicy storedCredentialsPolicy, std::optional<NavigatingToAppBoundDomain> isNavigatingToAppBoundDomain)
+void NetworkProcess::preconnectTo(PAL::SessionID sessionID, WebPageProxyIdentifier webPageProxyID, WebCore::PageIdentifier webPageID, WebCore::ResourceRequest&& request, WebCore::StoredCredentialsPolicy storedCredentialsPolicy, std::optional<NavigatingToAppBoundDomain> isNavigatingToAppBoundDomain, uint64_t requiredCookiesVersion)
 {
     auto url = request.url();
     auto userAgent = request.httpUserAgent();
@@ -1527,6 +1527,7 @@ void NetworkProcess::preconnectTo(PAL::SessionID sessionID, WebPageProxyIdentifi
     parameters.isNavigatingToAppBoundDomain = isNavigatingToAppBoundDomain;
     parameters.storedCredentialsPolicy = storedCredentialsPolicy;
     parameters.shouldPreconnectOnly = PreconnectOnly::Yes;
+    parameters.requiredCookiesVersion = requiredCookiesVersion;
 
     NetworkLoadParameters parametersForAdditionalPreconnect = parameters;
 

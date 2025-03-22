@@ -633,4 +633,19 @@ void NetworkStorageSession::cookieEnabledStateMayHaveChanged()
         observer->cookieEnabledStateMayHaveChanged();
 }
 
+void NetworkStorageSession::setCookiesVersion(uint64_t version)
+{
+    m_cookiesVersion = version;
+    for (auto&& callback : m_cookiesVersionChangeCallbacks.take(version))
+        callback();
+}
+
+void NetworkStorageSession::addCookiesVersionChangeCallback(uint64_t version, CompletionHandler<void()>&& completionHandler)
+{
+    auto iterator = m_cookiesVersionChangeCallbacks.ensure(version, [] {
+        return Vector<CompletionHandler<void()>> { };
+    }).iterator;
+    iterator->value.append(WTFMove(completionHandler));
+}
+
 }

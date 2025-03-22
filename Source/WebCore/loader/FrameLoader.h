@@ -358,6 +358,9 @@ public:
 
     void updateURLAndHistory(const URL&, RefPtr<SerializedScriptValue>&& stateObject, NavigationHistoryBehavior = NavigationHistoryBehavior::Replace);
 
+    void setRequiredCookiesVersion(uint64_t version) { m_requiredCookiesVersion = version; }
+    uint64_t requiredCookiesVersion() const { return m_requiredCookiesVersion; }
+
 private:
     enum FormSubmissionCacheLoadPolicy {
         MayAttemptCacheOnlyLoadForFormSubmissionItem,
@@ -543,6 +546,7 @@ private:
 
     bool m_errorOccurredInLoading { false };
     bool m_doNotAbortNavigationAPI { false };
+    uint64_t m_requiredCookiesVersion { 0 };
 };
 
 // This function is called by createWindow() in JSDOMWindowBase.cpp, for example, for

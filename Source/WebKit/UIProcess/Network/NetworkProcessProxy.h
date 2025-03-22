@@ -141,6 +141,7 @@ public:
     void dataTaskWithRequest(WebPageProxy&, PAL::SessionID, WebCore::ResourceRequest&&, const std::optional<WebCore::SecurityOriginData>& topOrigin, bool shouldRunAtForegroundPriority, CompletionHandler<void(API::DataTask&)>&&);
 
     void addAllowedFirstPartyForCookies(WebProcessProxy&, const WebCore::RegistrableDomain& firstPartyForCookies, LoadedWebArchive, CompletionHandler<void()>&&);
+    void setCookies(PAL::SessionID, Vector<WebCore::Cookie>&&, CompletionHandler<void()>&&);
 
     void fetchWebsiteData(PAL::SessionID, OptionSet<WebsiteDataType>, OptionSet<WebsiteDataFetchOption>, CompletionHandler<void(WebsiteData)>&&);
     void deleteWebsiteData(PAL::SessionID, OptionSet<WebsiteDataType>, WallTime modifiedSince, const HashSet<WebCore::ProcessIdentifier>&, CompletionHandler<void()>&&);
@@ -348,6 +349,8 @@ public:
     void resetResourceMonitorThrottlerForTesting(PAL::SessionID, CompletionHandler<void()>&&);
 #endif
 
+    uint64_t cookiesVersion() const { return m_cookiesVersion; }
+
 private:
     explicit NetworkProcessProxy();
 
@@ -487,6 +490,8 @@ private:
     RetainPtr<id> m_backgroundObserver;
     RetainPtr<id> m_foregroundObserver;
 #endif
+
+    uint64_t m_cookiesVersion { 0 };
 };
 
 } // namespace WebKit

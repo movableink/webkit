@@ -191,6 +191,7 @@ NetworkDataTaskCocoa::NetworkDataTaskCocoa(NetworkSession& session, NetworkDataT
     , m_webPageProxyID(parameters.webPageProxyID)
     , m_isForMainResourceNavigationForAnyFrame(!!parameters.mainResourceNavigationDataForAnyFrame)
     , m_sourceOrigin(parameters.sourceOrigin)
+    , m_requiredCookiesVersion(parameters.requiredCookiesVersion)
 {
     auto request = parameters.request;
     auto url = request.url();
@@ -592,6 +593,20 @@ void NetworkDataTaskCocoa::resume()
 
     if (m_failureScheduled)
         return;
+
+    if (CheckedPtr session = m_session.get()) {
+        CheckedPtr storageSession = session->networkStorageSession();
+        if (storageSession && storageSession->cookiesVersion() < m_requiredCookiesVersion) {
+            RELEASE_LOG(Loading, "%p - NetworkDataTaskCocoa::resume: task is delayed because cookies version (%" PRIu64 ") is lower than required (%" PRIu64 ")", this, storageSession->cookiesVersion(), m_requiredCookiesVersion);
+            storageSession->addCookiesVersionChangeCallback(m_requiredCookiesVersion, [weakThis = ThreadSafeWeakPtr { *this }] {
+                if (auto protectedThis = weakThis.get()) {
+                    RELEASE_LOG(Loading, "%p - NetworkDataTaskCocoa::resume: task delayed by cookies version is started", protectedThis.get());
+                    protectedThis->resume();
+                }
+            });
+            return;
+        }
+    }
 
     auto& cocoaSession = static_cast<NetworkSessionCocoa&>(*m_session);
     if (cocoaSession.deviceManagementRestrictionsEnabled() && m_isForMainResourceNavigationForAnyFrame) {

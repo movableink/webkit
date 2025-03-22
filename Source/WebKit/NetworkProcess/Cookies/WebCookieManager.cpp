@@ -131,11 +131,12 @@ void WebCookieManager::getCookies(PAL::SessionID sessionID, const URL& url, Comp
     completionHandler(WTFMove(cookies));
 }
 
-void WebCookieManager::setCookie(PAL::SessionID sessionID, const Vector<Cookie>& cookies, CompletionHandler<void()>&& completionHandler)
+void WebCookieManager::setCookie(PAL::SessionID sessionID, const Vector<Cookie>& cookies, uint64_t cookiesVersion, CompletionHandler<void()>&& completionHandler)
 {
     if (auto* storageSession = protectedProcess()->storageSession(sessionID)) {
         for (auto& cookie : cookies)
             storageSession->setCookie(cookie);
+        storageSession->setCookiesVersion(cookiesVersion);
     }
     completionHandler();
 }

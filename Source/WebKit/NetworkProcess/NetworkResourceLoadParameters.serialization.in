@@ -53,6 +53,7 @@ class WebKit::NetworkLoadParameters {
     bool hadMainFrameMainResourcePrivateRelayed;
     bool allowPrivacyProxy;
     OptionSet<WebCore::AdvancedPrivacyProtections> advancedPrivacyProtections;
+    uint64_t requiredCookiesVersion;
 }
 
 class WebKit::NetworkResourceLoadParameters : WebKit::NetworkLoadParameters {

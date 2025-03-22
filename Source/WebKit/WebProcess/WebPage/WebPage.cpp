@@ -2157,7 +2157,7 @@ void WebPage::loadRequest(LoadParameters&& loadParameters)
         localFrame->setOwnerPermissionsPolicy(WTFMove(*onwerPermissionsPolicy));
 
     localFrame->loader().setHTTPFallbackInProgress(loadParameters.isPerformingHTTPFallback);
-
+    localFrame->loader().setRequiredCookiesVersion(loadParameters.requiredCookiesVersion);
     localFrame->loader().load(WTFMove(frameLoadRequest));
 
     ASSERT(!m_pendingNavigationID);

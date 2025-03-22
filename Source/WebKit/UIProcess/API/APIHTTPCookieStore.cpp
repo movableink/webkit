@@ -102,7 +102,7 @@ void HTTPCookieStore::setCookies(Vector<WebCore::Cookie>&& cookies, CompletionHa
 {
     filterAppBoundCookies(WTFMove(cookies), [this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)] (auto&& appBoundCookies) mutable {
         if (RefPtr networkProcess = networkProcessLaunchingIfNecessary())
-            networkProcess->sendWithAsyncReply(Messages::WebCookieManager::SetCookie(m_sessionID, appBoundCookies), WTFMove(completionHandler));
+            networkProcess->setCookies(m_sessionID, WTFMove(appBoundCookies), WTFMove(completionHandler));
         else
             completionHandler();
     });

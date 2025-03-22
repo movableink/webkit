@@ -205,4 +205,23 @@ static WKCookiePolicy toWKCookiePolicy(WebCore::HTTPCookieAcceptPolicy policy)
     });
 }
 
+#if !TARGET_OS_IPHONE
+
+static std::optional<WebCore::Cookie> makeVectorElement(const WebCore::Cookie*, id arrayElement)
+{
+    if (NSHTTPCookie *nsCookie = dynamic_objc_cast<NSHTTPCookie>(arrayElement))
+        return WebCore::Cookie { nsCookie };
+
+    return std::nullopt;
+}
+
+- (void)_setCookies:(NSArray<NSHTTPCookie *> *)cookies completionHandler:(void (^)(void))completionHandler
+{
+    _cookieStore->setCookies(makeVector<WebCore::Cookie>(cookies), [completionHandler = makeBlockPtr(completionHandler)]() {
+        completionHandler();
+    });
+}
+
+#endif
+
 @end

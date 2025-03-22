@@ -549,6 +549,9 @@ void WebLoaderStrategy::scheduleLoadFromNetworkProcess(ResourceLoader& resourceL
         loadParameters.frameAncestorOrigins = WTFMove(frameAncestorOrigins);
     }
 
+    if (RefPtr frameLoader = resourceLoader.frameLoader())
+        loadParameters.requiredCookiesVersion = frameLoader->requiredCookiesVersion();
+
     ASSERT((loadParameters.webPageID && loadParameters.webFrameID) || loadParameters.clientCredentialPolicy == ClientCredentialPolicy::CannotAskClientForCredentials);
 
     std::optional<NetworkResourceLoadIdentifier> existingNetworkResourceLoadIdentifierToResume;

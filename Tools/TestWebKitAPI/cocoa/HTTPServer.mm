@@ -56,6 +56,7 @@ struct HTTPServer::RequestData : public ThreadSafeRefCounted<RequestData, WTF::D
     HashMap<String, HTTPResponse> requestMap;
     Vector<Connection> connections;
     Vector<CoroutineHandle<ConnectionTask::promise_type>> coroutineHandles;
+    String lastRequestCookies;
 };
 
 static RetainPtr<nw_protocol_definition_t> proxyDefinition(HTTPServer::Protocol protocol)
@@ -307,6 +308,11 @@ size_t HTTPServer::totalRequests() const
     return m_requestData->requestCount;
 }
 
+String HTTPServer::lastRequestCookies() const
+{
+    return m_requestData->lastRequestCookies;
+}
+
 static ASCIILiteral statusText(unsigned statusCode)
 {
     switch (statusCode) {
@@ -375,6 +381,25 @@ String HTTPServer::parsePath(const Vector<char>& request)
     return request.subspan(pathPrefixLength, pathLength);
 }
 
+String HTTPServer::parseCookies(const Vector<char>& characters)
+{
+    if (!characters.size())
+        return { };
+
+    String request { characters.span() };
+    ASCIILiteral cookiePrefix = "Cookie: "_s;
+    size_t cookieStringStart = request.find(cookiePrefix);
+    if (cookieStringStart == notFound)
+        return { };
+    cookieStringStart += cookiePrefix.length();
+
+    size_t cookieStringEnd = request.find("\r\n"_s, cookieStringStart);
+    if (cookieStringEnd == notFound)
+        return { };
+
+    return request.substring(cookieStringStart, cookieStringEnd - cookieStringStart);
+}
+
 String HTTPServer::parseBody(const Vector<char>& request)
 {
     const char* headerEndBytes = "\r\n\r\n";
@@ -406,7 +431,9 @@ void HTTPServer::respondToRequests(Connection connection, Ref<RequestData> reque
     connection.receiveHTTPRequest([connection, requestData] (Vector<char>&& request) mutable {
         if (!request.size())
             return;
+
         requestData->requestCount++;
+        requestData->lastRequestCookies = parseCookies(request);
 
         auto path = parsePath(request);
         ASSERT_WITH_MESSAGE(requestData->requestMap.contains(path), "This HTTPServer does not know how to respond to a request for %s", path.utf8().data());

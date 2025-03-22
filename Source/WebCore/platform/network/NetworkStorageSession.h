@@ -301,6 +301,10 @@ public:
     WEBCORE_EXPORT void resetManagedDomains();
 #endif
 
+    uint64_t cookiesVersion() const { return m_cookiesVersion; }
+    WEBCORE_EXPORT void setCookiesVersion(uint64_t);
+    WEBCORE_EXPORT void addCookiesVersionChangeCallback(uint64_t version, CompletionHandler<void()>&&);
+
 private:
 #if PLATFORM(COCOA)
     enum IncludeHTTPOnlyOrNot { DoNotIncludeHTTPOnly, IncludeHTTPOnly };
@@ -388,6 +392,9 @@ public:
 private:
     mutable std::unique_ptr<CookieStorageObserver> m_cookieStorageObserver;
 #endif
+    uint64_t m_cookiesVersion { 0 };
+    HashMap<uint64_t, Vector<CompletionHandler<void()>>> m_cookiesVersionChangeCallbacks;
+
     static bool m_processMayUseCookieAPI;
 };
 

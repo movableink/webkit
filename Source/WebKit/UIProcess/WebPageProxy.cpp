@@ -2102,6 +2102,8 @@ void WebPageProxy::loadRequestWithNavigationShared(Ref<WebProcessProxy>&& proces
     loadParameters.isRequestFromClientOrUserInput = navigation.isRequestFromClientOrUserInput();
     loadParameters.isPerformingHTTPFallback = isPerformingHTTPFallback == IsPerformingHTTPFallback::Yes;
     loadParameters.isHandledByAboutSchemeHandler = protectedAboutSchemeHandler()->canHandleURL(url);
+    if (RefPtr networkProcess = protectedWebsiteDataStore()->networkProcessIfExists())
+        loadParameters.requiredCookiesVersion = networkProcess->cookiesVersion();
 
 #if ENABLE(CONTENT_EXTENSIONS)
     if (protectedPreferences()->iFrameResourceMonitoringEnabled())

@@ -59,6 +59,7 @@ public:
     WKWebViewConfiguration *httpsProxyConfiguration() const;
     size_t totalConnections() const;
     size_t totalRequests() const;
+    String lastRequestCookies() const;
     void cancel();
     void terminateAllConnections(CompletionHandler<void()>&&);
 
@@ -67,6 +68,7 @@ public:
 
     static void respondWithOK(Connection);
     static void respondWithChallengeThenOK(Connection);
+    static String parseCookies(const Vector<char>& request);
     static String parsePath(const Vector<char>& request);
     static String parseBody(const Vector<char>&);
     static Vector<uint8_t> testPrivateKey();

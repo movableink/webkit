@@ -60,6 +60,7 @@
 #include "StorageAccessStatus.h"
 #include "ViewSnapshotStore.h"
 #include "WebCompiledContentRuleList.h"
+#include "WebCookieManagerMessages.h"
 #include "WebFrameProxy.h"
 #include "WebNotificationManagerProxy.h"
 #include "WebPageMessages.h"
@@ -1670,7 +1671,7 @@ void NetworkProcessProxy::preconnectTo(PAL::SessionID sessionID, WebPageProxyIde
 {
     if (!request.url().isValid() || !request.url().protocolIsInHTTPFamily())
         return;
-    send(Messages::NetworkProcess::PreconnectTo(sessionID, webPageProxyID, webPageID, WTFMove(request), storedCredentialsPolicy, isNavigatingToAppBoundDomain), 0);
+    send(Messages::NetworkProcess::PreconnectTo(sessionID, webPageProxyID, webPageID, WTFMove(request), storedCredentialsPolicy, isNavigatingToAppBoundDomain, m_cookiesVersion), 0);
 }
 
 static bool anyProcessPoolHasForegroundWebProcesses()
@@ -1976,6 +1977,11 @@ void NetworkProcessProxy::addAllowedFirstPartyForCookies(WebProcessProxy& webPro
         sendWithAsyncReply(Messages::NetworkProcess::AddAllowedFirstPartyForCookies(webProcessProxy.coreProcessIdentifier(), firstPartyForCookies, loadedWebArchive), WTFMove(completionHandler));
     else
         completionHandler();
+}
+
+void NetworkProcessProxy::setCookies(PAL::SessionID sessionID, Vector<WebCore::Cookie>&& cookies, CompletionHandler<void()>&& completionHandler)
+{
+    sendWithAsyncReply(Messages::WebCookieManager::SetCookie(sessionID, WTFMove(cookies), ++m_cookiesVersion), WTFMove(completionHandler));
 }
 
 #if USE(RUNNINGBOARD)
