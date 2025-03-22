@@ -53,6 +53,7 @@
 #include "WebKitDOMXPathNSResolverPrivate.h"
 #include "WebKitDOMXPathResultPrivate.h"
 #include <WebCore/CSSImportRule.h>
+#include <WebCore/CSSStyleProperties.h>
 #include <WebCore/DOMException.h>
 #include <WebCore/DocumentFullscreen.h>
 #include <WebCore/DocumentInlines.h>
@@ -1285,7 +1286,8 @@ WebKitDOMCSSStyleDeclaration* webkit_dom_document_create_css_style_declaration(W
     WebCore::JSMainThreadNullState state;
     g_return_val_if_fail(WEBKIT_DOM_IS_DOCUMENT(self), 0);
     WebCore::Document* item = WebKit::core(self);
-    RefPtr<WebCore::CSSStyleDeclaration> gobjectResult = WTF::getPtr(item->createCSSStyleDeclaration());
+    auto declaration = item->createCSSStyleDeclaration();
+    RefPtr<WebCore::CSSStyleDeclaration> gobjectResult = WTF::getPtr(reinterpret_cast<WebCore::CSSStyleDeclaration*>(&declaration.get()));
     return WebKit::kit(gobjectResult.get());
 }
 
