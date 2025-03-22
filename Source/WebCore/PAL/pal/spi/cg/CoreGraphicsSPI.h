@@ -433,7 +433,7 @@ void CGPathAddContinuousRoundedRect(CGMutablePathRef, const CGAffineTransform*, 
 bool CGDisplayUsesForceToGray(void);
 
 CGSConnectionID CGSMainConnectionID(void);
-CFArrayRef CGSHWCaptureWindowList(CGSConnectionID, CGSWindowIDList windowList, CGSWindowCount, CGSWindowCaptureOptions);
+CFArrayRef CGSHWCaptureWindowList(CGSConnectionID, CGSWindowIDList windowList, CGSWindowCount, CGSWindowCaptureOptions) CF_RETURNS_RETAINED;
 CGError CGSSetConnectionProperty(CGSConnectionID, CGSConnectionID ownerCid, CFStringRef key, CFTypeRef value);
 CGError CGSCopyConnectionProperty(CGSConnectionID, CGSConnectionID ownerCid, CFStringRef key, CFTypeRef *value);
 CGError CGSGetScreenRectForWindow(CGSConnectionID, CGSWindowID, CGRect *);
