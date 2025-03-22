@@ -318,7 +318,7 @@ WebView *getWebView(WebFrame *webFrame)
 
     auto coreFrame = WebCore::LocalFrame::createSubframe(page, [frame] (auto&, auto& frameLoader) {
         return makeUniqueRefWithoutRefCountedCheck<WebFrameLoaderClient>(frameLoader, frame.get());
-    }, WebCore::FrameIdentifier::generate(), effectiveSandboxFlags, ownerElement, WebCore::FrameTreeSyncData::create());
+    }, WebCore::FrameIdentifier::generate(), effectiveSandboxFlags, ownerElement);
     frame->_private->coreFrame = coreFrame.ptr();
 
     coreFrame.get().tree().setSpecifiedName(name);

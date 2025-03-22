@@ -3456,7 +3456,6 @@ DocumentSyncData.cpp
 EventFactory.cpp
 EventNames.cpp
 EventTargetFactory.cpp
-FrameTreeSyncData.cpp
 HTMLElementFactory.cpp
 HTMLEntityTable.cpp
 JSHTMLElementWrapperFactory.cpp

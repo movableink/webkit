@@ -2699,8 +2699,6 @@ PROCESS_SYNC_DATA_INPUT_FILES = \
 GENERATED_PROCESS_SYNC_CLIENT_OUTPUT_FILES = \
 	DocumentSyncData.cpp \
 	DocumentSyncData.h \
-	FrameTreeSyncData.cpp \
-	FrameTreeSyncData.h \
 	ProcessSyncClient.cpp \
 	ProcessSyncClient.h \
 	ProcessSyncData.h \

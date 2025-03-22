@@ -32,9 +32,7 @@
 
 namespace WebCore {
 
-class CertificateInfo;
 class Document;
-class DocumentLoader;
 class Payment;
 class PaymentContact;
 class PaymentMethod;
@@ -44,7 +42,6 @@ struct ApplePayShippingMethod;
 
 class PaymentSession : public virtual PaymentSessionBase {
 public:
-    WEBCORE_EXPORT static bool isSecureForSession(const URL&, const std::optional<const CertificateInfo>&);
     static ExceptionOr<void> canCreateSession(Document&);
 
     virtual unsigned version() const = 0;

@@ -183,18 +183,9 @@ public:
     ProvisionalFrameProxy* provisionalFrame() { return m_provisionalFrame.get(); }
     std::unique_ptr<ProvisionalFrameProxy> takeProvisionalFrame();
     WebProcessProxy& provisionalLoadProcess();
+    void remoteProcessDidTerminate(WebProcessProxy&);
     std::optional<WebCore::PageIdentifier> webPageIDInCurrentProcess();
     void notifyParentOfLoadCompletion(WebProcessProxy&);
-
-    enum class ClearFrameTreeSyncData : bool {
-        No,
-        Yes
-    };
-    void remoteProcessDidTerminate(WebProcessProxy&, ClearFrameTreeSyncData);
-
-    Ref<WebCore::FrameTreeSyncData> calculateFrameTreeSyncData() const;
-    void broadcastFrameTreeSyncData(Ref<WebCore::FrameTreeSyncData>&&);
-
     void removeRemotePagesForSuspension();
     void bindAccessibilityFrameWithData(std::span<const uint8_t>);
 
@@ -223,7 +214,6 @@ public:
     void updateOpener(WebCore::FrameIdentifier);
     WebFrameProxy* opener() { return m_opener.get(); }
     void disownOpener() { m_opener = nullptr; }
-
 private:
     WebFrameProxy(WebPageProxy&, FrameProcess&, WebCore::FrameIdentifier, WebCore::SandboxFlags, WebCore::ScrollbarMode, WebFrameProxy*, IsMainFrame);
 

@@ -42,8 +42,6 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/EventNames.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/EventTargetFactory.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/EventTargetHeaders.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/EventTargetInterfaces.h
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/FrameTreeSyncData.cpp
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/FrameTreeSyncData.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/HTMLElementFactory.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/HTMLElementFactory.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/HTMLElementTypeHelpers.h

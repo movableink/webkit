@@ -81,7 +81,6 @@
 #include "NodeList.h"
 #include "NodeTraversal.h"
 #include "Page.h"
-#include "PaymentSession.h"
 #include "ProcessSyncClient.h"
 #include "ProcessWarming.h"
 #include "RemoteFrame.h"
@@ -168,8 +167,8 @@ static const LocalFrame& rootFrame(const LocalFrame& frame)
     return frame;
 }
 
-LocalFrame::LocalFrame(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, SandboxFlags sandboxFlags, std::optional<ScrollbarMode> scrollingMode, HTMLFrameOwnerElement* ownerElement, Frame* parent, Frame* opener, Ref<FrameTreeSyncData>&& frameTreeSyncData)
-    : Frame(page, identifier, FrameType::Local, ownerElement, parent, opener, WTFMove(frameTreeSyncData))
+LocalFrame::LocalFrame(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, SandboxFlags sandboxFlags, std::optional<ScrollbarMode> scrollingMode, HTMLFrameOwnerElement* ownerElement, Frame* parent, Frame* opener)
+    : Frame(page, identifier, FrameType::Local, ownerElement, parent, opener)
     , m_loader(makeUniqueRefWithoutRefCountedCheck<FrameLoader>(*this, WTFMove(clientCreator)))
     , m_script(makeUniqueRef<ScriptController>(*this))
     , m_pageZoomFactor(parentPageZoomFactor(this))
@@ -206,19 +205,19 @@ void LocalFrame::init()
     protectedLoader()->init();
 }
 
-Ref<LocalFrame> LocalFrame::createMainFrame(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, SandboxFlags effectiveSandboxFlags, Frame* opener, Ref<FrameTreeSyncData>&& frameTreeSyncData)
+Ref<LocalFrame> LocalFrame::createMainFrame(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, SandboxFlags effectiveSandboxFlags, Frame* opener)
 {
-    return adoptRef(*new LocalFrame(page, WTFMove(clientCreator), identifier, effectiveSandboxFlags, ScrollbarMode::Auto, nullptr, nullptr, opener, WTFMove(frameTreeSyncData)));
+    return adoptRef(*new LocalFrame(page, WTFMove(clientCreator), identifier, effectiveSandboxFlags, ScrollbarMode::Auto, nullptr, nullptr, opener));
 }
 
-Ref<LocalFrame> LocalFrame::createSubframe(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, SandboxFlags effectiveSandboxFlags, HTMLFrameOwnerElement& ownerElement, Ref<FrameTreeSyncData>&& frameTreeSyncData)
+Ref<LocalFrame> LocalFrame::createSubframe(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, SandboxFlags effectiveSandboxFlags, HTMLFrameOwnerElement& ownerElement)
 {
-    return adoptRef(*new LocalFrame(page, WTFMove(clientCreator), identifier, effectiveSandboxFlags, std::nullopt, &ownerElement, ownerElement.document().frame(), nullptr, WTFMove(frameTreeSyncData)));
+    return adoptRef(*new LocalFrame(page, WTFMove(clientCreator), identifier, effectiveSandboxFlags, std::nullopt, &ownerElement, ownerElement.document().frame(), nullptr));
 }
 
-Ref<LocalFrame> LocalFrame::createProvisionalSubframe(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, SandboxFlags effectiveSandboxFlags, ScrollbarMode scrollingMode, Frame& parent, Ref<FrameTreeSyncData>&& frameTreeSyncData)
+Ref<LocalFrame> LocalFrame::createProvisionalSubframe(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, SandboxFlags effectiveSandboxFlags, ScrollbarMode scrollingMode, Frame& parent)
 {
-    return adoptRef(*new LocalFrame(page, WTFMove(clientCreator), identifier, effectiveSandboxFlags, scrollingMode, nullptr, &parent, nullptr, WTFMove(frameTreeSyncData)));
+    return adoptRef(*new LocalFrame(page, WTFMove(clientCreator), identifier, effectiveSandboxFlags, scrollingMode, nullptr, &parent, nullptr));
 }
 
 LocalFrame::~LocalFrame()
@@ -1506,18 +1505,6 @@ void LocalFrame::reportResourceMonitoringWarning()
 }
 
 #endif
-
-bool LocalFrame::frameCanCreatePaymentSession() const
-{
-#if ENABLE(APPLE_PAY)
-    if (auto* documentLoader = loader().activeDocumentLoader())
-        return PaymentSession::isSecureForSession(documentLoader->response().url(), documentLoader->response().certificateInfo());
-    return false;
-#else
-    return false;
-#endif
-
-}
 
 } // namespace WebCore
 

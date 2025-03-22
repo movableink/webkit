@@ -27,7 +27,6 @@
 
 #include "FrameIdentifier.h"
 #include "FrameTree.h"
-#include "FrameTreeSyncData.h"
 #include "OwnerPermissionsPolicyData.h"
 #include "PageIdentifier.h"
 #include <wtf/CheckedRef.h>
@@ -131,13 +130,8 @@ public:
 
     void stopForBackForwardCache();
 
-    WEBCORE_EXPORT void updateFrameTreeSyncData(Ref<FrameTreeSyncData>&&);
-
-    virtual bool frameCanCreatePaymentSession() const;
-    FrameTreeSyncData& frameTreeSyncData() { return m_frameTreeSyncData.get(); }
-
 protected:
-    Frame(Page&, FrameIdentifier, FrameType, HTMLFrameOwnerElement*, Frame* parent, Frame* opener, Ref<FrameTreeSyncData>&&);
+    Frame(Page&, FrameIdentifier, FrameType, HTMLFrameOwnerElement*, Frame* parent, Frame* opener);
     void resetWindowProxy();
 
     virtual void frameWasDisconnectedFromOwner() const { }
@@ -158,8 +152,6 @@ private:
     WeakPtr<Frame> m_opener;
     WeakHashSet<Frame> m_openedFrames;
     std::optional<OwnerPermissionsPolicyData> m_ownerPermisssionsPolicyOverride;
-
-    Ref<FrameTreeSyncData> m_frameTreeSyncData;
 };
 
 } // namespace WebCore

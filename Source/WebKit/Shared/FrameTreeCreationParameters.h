@@ -26,7 +26,6 @@
 #pragma once
 
 #include <WebCore/FrameIdentifier.h>
-#include <WebCore/FrameTreeSyncData.h>
 #include <WebCore/ProcessIdentifier.h>
 #include <wtf/Vector.h>
 
@@ -36,7 +35,6 @@ struct FrameTreeCreationParameters {
     WebCore::FrameIdentifier frameID;
     std::optional<WebCore::FrameIdentifier> openerFrameID;
     String frameName;
-    Ref<WebCore::FrameTreeSyncData> frameTreeSyncData;
     Vector<FrameTreeCreationParameters> children;
 };
 

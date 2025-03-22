@@ -723,7 +723,6 @@ void Document::populateDocumentSyncDataForNewlyConstructedDocument(ProcessSyncDa
     case ProcessSyncDataType::HasInjectedUserScript:
     case ProcessSyncDataType::IsAutofocusProcessed:
     case ProcessSyncDataType::UserDidInteractWithPage:
-    case ProcessSyncDataType::FrameCanCreatePaymentSession:
         break;
     }
 }

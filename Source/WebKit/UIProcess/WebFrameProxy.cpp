@@ -51,7 +51,6 @@
 #include "WebProcessPool.h"
 #include "WebsiteDataStore.h"
 #include "WebsitePoliciesData.h"
-#include <WebCore/FrameTreeSyncData.h>
 #include <WebCore/Image.h>
 #include <WebCore/MIMETypeRegistry.h>
 #include <WebCore/NavigationScheduler.h>
@@ -61,10 +60,6 @@
 #include <wtf/RunLoop.h>
 #include <wtf/WeakRef.h>
 #include <wtf/text/WTFString.h>
-
-#if ENABLE(APPLE_PAY)
-#include <WebCore/PaymentSession.h>
-#endif
 
 #define MESSAGE_CHECK(assertion) MESSAGE_CHECK_BASE(assertion, process().connection())
 
@@ -292,10 +287,6 @@ void WebFrameProxy::didCommitLoad(const String& contentType, const WebCore::Cert
     m_MIMEType = contentType;
     m_certificateInfo = certificateInfo;
     m_containsPluginDocument = containsPluginDocument;
-
-    auto webPage = protectedPage();
-    if (webPage && webPage->protectedPreferences()->siteIsolationEnabled())
-        broadcastFrameTreeSyncData(calculateFrameTreeSyncData());
 }
 
 void WebFrameProxy::didFinishLoad()
@@ -523,7 +514,6 @@ FrameTreeCreationParameters WebFrameProxy::frameTreeCreationParameters() const
         m_frameID,
         m_opener ? std::optional(m_opener->frameID()) : std::nullopt,
         m_frameName,
-        calculateFrameTreeSyncData(),
         WTF::map(m_childFrames, [] (auto& frame) {
             return frame->frameTreeCreationParameters();
         })
@@ -547,46 +537,15 @@ bool WebFrameProxy::isFocused() const
     return webPage && webPage->focusedFrame() == this;
 }
 
-void WebFrameProxy::remoteProcessDidTerminate(WebProcessProxy& process, ClearFrameTreeSyncData clearFrameTreeSyncData)
+void WebFrameProxy::remoteProcessDidTerminate(WebProcessProxy& process)
 {
-    // Only clear the FrameTreeSyncData on all child processes once, when handling the main frame.
-    // No point in clearing it multiple times in a tight loop.
-    if (clearFrameTreeSyncData == ClearFrameTreeSyncData::Yes)
-        broadcastFrameTreeSyncData(FrameTreeSyncData::create());
-
     for (Ref child : m_childFrames)
-        child->remoteProcessDidTerminate(process, ClearFrameTreeSyncData::No);
+        child->remoteProcessDidTerminate(process);
     if (process.coreProcessIdentifier() != this->process().coreProcessIdentifier())
         return;
     if (m_frameLoadState.state() == FrameLoadState::State::Finished)
         return;
-
     notifyParentOfLoadCompletion(protectedProcess());
-}
-
-Ref<FrameTreeSyncData> WebFrameProxy::calculateFrameTreeSyncData() const
-{
-#if ENABLE(APPLE_PAY)
-    std::optional<const CertificateInfo> certificateInfo = m_certificateInfo.isEmpty() ? std::nullopt : std::optional<const CertificateInfo>(m_certificateInfo);
-    bool isSecureForPaymentSession = PaymentSession::isSecureForSession(url(), WTFMove(certificateInfo));
-#else
-    bool isSecureForPaymentSession = false;
-#endif
-
-    return FrameTreeSyncData::create(isSecureForPaymentSession);
-}
-
-void WebFrameProxy::broadcastFrameTreeSyncData(Ref<FrameTreeSyncData>&& data)
-{
-    RefPtr webPage = m_page.get();
-    if (!webPage)
-        return;
-
-    RELEASE_ASSERT(webPage->protectedPreferences()->siteIsolationEnabled());
-
-    webPage->forEachWebContentProcess([&](auto& webProcess, auto pageID) {
-        webProcess.send(Messages::WebPage::UpdateFrameTreeSyncData(m_frameID, data), pageID);
-    });
 }
 
 void WebFrameProxy::notifyParentOfLoadCompletion(WebProcessProxy& childFrameProcess)
@@ -600,7 +559,6 @@ void WebFrameProxy::notifyParentOfLoadCompletion(WebProcessProxy& childFrameProc
     Ref parentFrameProcess = parentFrame->process();
     if (parentFrameProcess->coreProcessIdentifier() == childFrameProcess.coreProcessIdentifier())
         return;
-
     parentFrameProcess->send(Messages::WebPage::DidFinishLoadInAnotherProcess(frameID()), *webPageID);
 }
 
