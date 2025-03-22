@@ -5650,7 +5650,10 @@ void Element::cloneAttributesFromElement(const Element& other)
         && (!uniqueElementData->inlineStyle() || !uniqueElementData->inlineStyle()->hasCSSOMWrapper()))
         const_cast<Element&>(other).m_elementData = uniqueElementData->makeShareableCopy();
 
-    if (!other.m_elementData->isUnique())
+    bool canShareElementData = !other.m_elementData->isUnique()
+        && (document().inQuirksMode() == other.document().inQuirksMode()); // Case folding in quirks mode documents can mutate element data.
+
+    if (canShareElementData)
         m_elementData = other.m_elementData;
     else
         m_elementData = other.m_elementData->makeUniqueCopy();
