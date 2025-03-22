@@ -109,7 +109,12 @@ extension WebPage {
         /// The default value is `true`. If `true`, the system Screen Time blocking view is shown when blocked by Screen Time.
         /// If `false`, a blurred view of the web content is shown instead.
         @available(visionOS, unavailable)
-        public var showsSystemScreenTimeBlockingView: Bool = true
+        public var showsSystemScreenTimeBlockingView: Bool {
+            get { _showsSystemScreenTimeBlockingView }
+            set { _showsSystemScreenTimeBlockingView = newValue }
+        }
+
+        private var _showsSystemScreenTimeBlockingView = true
 
 #if os(iOS)
         /// The types of data detectors to apply to the webpage's content.
