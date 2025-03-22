@@ -35,6 +35,7 @@
 #include "WebProcess.h"
 #include <WebCore/LayerHostingContextIdentifier.h>
 #include <WebCore/Page.h>
+#include <WebCore/ResourceError.h>
 #include <WebCore/TransformationMatrix.h>
 
 namespace WebKit {
@@ -94,6 +95,14 @@ void ModelProcessModelPlayer::didFinishLoading(const WebCore::FloatPoint3D& boun
 
     m_client->didFinishLoading(*this);
     m_client->didUpdateBoundingBox(*this, boundingBoxCenter, boundingBoxExtents);
+}
+
+void ModelProcessModelPlayer::didFailLoading()
+{
+    RELEASE_LOG(ModelElement, "%p - ModelProcessModelPlayer didFailLoading id=%" PRIu64, this, m_id.toUInt64());
+    RELEASE_ASSERT(modelProcessEnabled());
+
+    m_client->didFailLoading(*this, WebCore::ResourceError { WebCore::errorDomainWebKitInternal, 0, { }, "Failed to load model data"_s });
 }
 
 /// This comes from Model Process side, so that Web Process has the most up-to-date knowledge about the transform actually applied to the entity.

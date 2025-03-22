@@ -177,11 +177,27 @@ private:
     WeakPtr<REModelLoaderClient> m_client;
 };
 
+static ResourceError toResourceError(String payload, Model& model)
+{
+    return ResourceError { [NSError errorWithDomain:@"RKModelLoaderUSD" code:-1 userInfo:@{
+        NSLocalizedDescriptionKey: (NSString *)payload,
+        NSURLErrorFailingURLErrorKey: (NSURL *)model.url()
+    }] };
+}
+
 void RKModelLoaderUSD::load()
 {
     [getWKSRKEntityClass() loadFromData:m_model->data()->createNSData().get() completionHandler:makeBlockPtr([weakThis = WeakPtr { *this }] (WKSRKEntity *entity) mutable {
-        if (RefPtr protectedThis = weakThis.get())
-            protectedThis->didFinish(entity);
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
+
+        if (!entity) {
+            protectedThis->didFail(toResourceError("Failed to load the entity"_s, protectedThis->m_model));
+            return;
+        }
+
+        protectedThis->didFinish(entity);
     }).get()];
 }
 
@@ -494,7 +510,7 @@ void ModelProcessModelPlayerProxy::didFailLoading(WebCore::REModelLoader& loader
 
     RELEASE_LOG_ERROR(ModelElement, "%p - ModelProcessModelPlayerProxy failed to load model id=%" PRIu64 " error=\"%@\"", this, m_id.toUInt64(), error.nsError().localizedDescription);
 
-    // FIXME: Do something sensible in the failure case.
+    send(Messages::ModelProcessModelPlayer::DidFailLoading());
 }
 
 // MARK: - WebCore::ModelPlayer

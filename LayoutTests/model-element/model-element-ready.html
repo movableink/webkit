@@ -14,7 +14,15 @@ promise_test(async t => {
         value => assert_unreached("Unexpected ready promise resolution."),
         reason => assert_true(reason.toString().includes("NetworkError"), "The ready promise is rejected with a NetworkError.")
     );
-}, `<model> rejects the ready promise when provided with an unknown resoure.`);
+}, `<model> rejects the ready promise when provided with an unknown resource.`);
+
+promise_test(async t => {
+    const [model, source] = createModelAndSource(t, "resources/error-case.usdz");
+    return model.ready.then(
+        value => assert_unreached("Unexpected ready promise resolution."),
+        reason => assert_true(reason.toString().includes("AbortError"), "The ready promise is rejected with an AbortError.")
+    );
+}, `<model> rejects the ready promise when provided with a resource that can't be loaded.`);
 
 promise_test(async t => {
     const [model, source] = createModelAndSource(t, "resources/heart.usdz");
@@ -25,7 +33,7 @@ promise_test(async t => {
 
     return modelReady.then(
         value => assert_unreached("Unexpected ready promise resolution."),
-        reason => assert_true(reason.toString().includes("AbortError"), "The ready promise is rejected with a NetworkError.")
+        reason => assert_true(reason.toString().includes("AbortError"), "The ready promise is rejected with an AbortError.")
     );
 }, `<model> rejects the ready promise when its resource load is aborted.`);
 
