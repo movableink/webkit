@@ -131,14 +131,11 @@ AXTextMarkerRange::AXTextMarkerRange(AXTextMarkerRangeRef textMarkerRangeRef)
         return;
     }
 
-    auto start = AXTextMarkerRangeCopyStartMarker(textMarkerRangeRef);
-    auto end = AXTextMarkerRangeCopyEndMarker(textMarkerRangeRef);
+    RetainPtr start = adoptCF(AXTextMarkerRangeCopyStartMarker(textMarkerRangeRef));
+    RetainPtr end = adoptCF(AXTextMarkerRangeCopyEndMarker(textMarkerRangeRef));
 
-    m_start = start;
-    m_end = end;
-
-    CFRelease(start);
-    CFRelease(end);
+    m_start = start.get();
+    m_end = end.get();
 }
 
 RetainPtr<AXTextMarkerRangeRef> AXTextMarkerRange::platformData() const
