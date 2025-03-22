@@ -1272,8 +1272,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, MainFrameResourceRuleConversion)
         },
         @"trigger": @{
             @"url-filter": @"crouton\\.net",
-            @"resource-type": @[ @"document" ],
-            @"load-context": @[ @"top-frame" ],
+            @"resource-type": @[ @"top-document" ],
         },
     };
 
@@ -1302,8 +1301,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, SubFrameResourceRuleConversion)
         },
         @"trigger": @{
             @"url-filter": @"crouton\\.net",
-            @"resource-type": @[ @"document" ],
-            @"load-context": @[ @"child-frame" ],
+            @"resource-type": @[ @"child-document" ],
 
         },
     };
@@ -1333,9 +1331,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RepeatedMainFrameResourceRuleConver
         },
         @"trigger": @{
             @"url-filter": @"crouton\\.net",
-            @"resource-type": @[ @"document" ],
-            @"load-context": @[ @"top-frame" ],
-
+            @"resource-type": @[ @"top-document" ],
         },
     };
 
@@ -1411,19 +1407,24 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, ConvertingMultipleResourceTypes)
     };
 
     _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
-    NSDictionary *convertedRule = validatedRule.ruleInWebKitFormat.firstObject;
+    NSMutableDictionary *convertedRule = [validatedRule.ruleInWebKitFormat.firstObject mutableCopy];
     EXPECT_NOT_NULL(convertedRule);
 
-    NSDictionary *correctRuleConversion = @{
+    NSDictionary *correctRuleConversion = [@{
         @"action": @{
             @"type": @"block",
         },
-        @"trigger": @{
+        @"trigger": [@{
             @"url-filter": @"crouton\\.net",
             @"resource-type": @[ @"script", @"style-sheet", @"ping" ],
-        },
-    };
+        } mutableCopy],
+    } mutableCopy];
+    NSSet *actualResourceTypes = [NSSet setWithArray:convertedRule[@"trigger"][@"resource-type"]];
+    NSSet *expectedResourceTypes = [NSSet setWithArray:correctRuleConversion[@"trigger"][@"resource-type"]];
+    EXPECT_NS_EQUAL(actualResourceTypes, expectedResourceTypes);
 
+    convertedRule[@"trigger"][@"resource-type"] = nil;
+    correctRuleConversion[@"trigger"][@"resource-type"] = nil;
     EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
 }
 
@@ -1440,19 +1441,24 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, ConvertingXHRWebSocketAndOtherTypes
     };
 
     _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
-    NSDictionary *convertedRule = validatedRule.ruleInWebKitFormat.firstObject;
+    NSMutableDictionary *convertedRule = [validatedRule.ruleInWebKitFormat.firstObject mutableCopy];
     EXPECT_NOT_NULL(convertedRule);
 
-    NSDictionary *correctRuleConversion = @{
+    NSDictionary *correctRuleConversion = [@{
         @"action": @{
             @"type": @"block",
         },
-        @"trigger": @{
+        @"trigger": [@{
             @"url-filter": @"crouton\\.net",
             @"resource-type": @[ @"fetch", @"websocket", @"other" ],
-        },
-    };
+        } mutableCopy],
+    } mutableCopy];
+    NSSet *actualResourceTypes = [NSSet setWithArray:convertedRule[@"trigger"][@"resource-type"]];
+    NSSet *expectedResourceTypes = [NSSet setWithArray:correctRuleConversion[@"trigger"][@"resource-type"]];
+    EXPECT_NS_EQUAL(actualResourceTypes, expectedResourceTypes);
 
+    convertedRule[@"trigger"][@"resource-type"] = nil;
+    correctRuleConversion[@"trigger"][@"resource-type"] = nil;
     EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
 }
 
@@ -1504,59 +1510,35 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, UpgradeSchemeForMainFrameRuleConver
         @"action": @{ @"type": @"upgradeScheme" },
         @"condition": @{
             @"urlFilter": @"crouton.net",
-            @"resourceTypes": @[ @"main_frame", @"image" ],
+            @"resourceTypes": @[ @"main_frame" ],
         },
     };
 
     _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
     NSArray<NSDictionary *> *convertedRules = validatedRule.ruleInWebKitFormat;
-    EXPECT_EQ(convertedRules.count, 4ul);
+    EXPECT_EQ(convertedRules.count, 2ul);
 
-    NSDictionary *sortingRuleForMainFrame = @{
+    NSDictionary *sortingRule = @{
         @"action": @{
             @"type": @"ignore-previous-rules",
         },
         @"trigger": @{
             @"url-filter": @"crouton\\.net",
-            @"resource-type": @[ @"document" ],
-            @"load-context": @[ @"top-frame" ],
+            @"resource-type": @[ @"top-document" ],
         },
     };
-    EXPECT_NS_EQUAL(convertedRules[0], sortingRuleForMainFrame);
+    EXPECT_NS_EQUAL(convertedRules[0], sortingRule);
 
-    NSDictionary *sortingRuleForImage = @{
-        @"action": @{
-            @"type": @"ignore-previous-rules",
-        },
-        @"trigger": @{
-            @"url-filter": @"crouton\\.net",
-            @"resource-type": @[ @"image" ],
-        },
-    };
-    EXPECT_NS_EQUAL(convertedRules[1], sortingRuleForImage);
-
-    NSDictionary *makeHTTPSRuleForMainFrame = @{
+    NSDictionary *makeHTTPSRule = @{
         @"action": @{
             @"type": @"make-https",
         },
         @"trigger": @{
             @"url-filter": @"crouton\\.net",
-            @"resource-type": @[ @"document" ],
-            @"load-context": @[ @"top-frame" ],
+            @"resource-type": @[ @"top-document" ],
         },
     };
-    EXPECT_NS_EQUAL(convertedRules[2], makeHTTPSRuleForMainFrame);
-
-    NSDictionary *makeHTTPSRuleForImage = @{
-        @"action": @{
-            @"type": @"make-https",
-        },
-        @"trigger": @{
-            @"url-filter": @"crouton\\.net",
-            @"resource-type": @[ @"image" ],
-        },
-    };
-    EXPECT_NS_EQUAL(convertedRules[3], makeHTTPSRuleForImage);
+    EXPECT_NS_EQUAL(convertedRules[1], makeHTTPSRule);
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleWithoutAPriority)
@@ -1598,7 +1580,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithDomainType)
         @"action": @{ @"type": @"block" },
         @"condition": @{
             @"urlFilter": @"boatnerd.com",
-            @"resourceTypes": @[ @"script", @"image", @"stylesheet" ],
+            @"resourceTypes": @[ @"script" ],
             @"domainType": @"firstParty",
         },
     };
@@ -1613,7 +1595,7 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithDomainType)
         },
         @"trigger": @{
             @"url-filter": @"boatnerd\\.com",
-            @"resource-type": @[ @"script", @"image", @"style-sheet" ],
+            @"resource-type": @[ @"script" ],
             @"load-type": @[ @"first-party" ],
         },
     };
@@ -1632,34 +1614,25 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithNoSpecifiedResour
     };
 
     _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
-    NSArray<NSDictionary *> *convertedRules = validatedRule.ruleInWebKitFormat;
-    EXPECT_EQ(convertedRules.count, 2ul);
+    NSMutableDictionary *convertedRule = [validatedRule.ruleInWebKitFormat.firstObject mutableCopy];
+    EXPECT_NOT_NULL(convertedRule);
 
-    NSDictionary *documentRule = @{
+    NSMutableDictionary *correctRuleConversion = [@{
         @"action": @{
             @"type": @"ignore-previous-rules",
         },
-        @"trigger": @{
+        @"trigger": [@{
             @"url-filter": @".*",
-            @"resource-type": @[ @"document" ],
-            @"load-context": @[ @"child-frame" ],
-        },
-    };
-    EXPECT_NS_EQUAL(convertedRules[0], documentRule);
-
-    NSDictionary *otherResourceTypeRules = @{
-        @"action": @{
-            @"type": @"ignore-previous-rules",
-        },
-        @"trigger": @{
-            @"url-filter": @".*",
-            @"resource-type": @[ @"fetch", @"font", @"image", @"media", @"other", @"ping", @"script", @"style-sheet", @"websocket" ],
-        },
-    };
-
-    NSSet *actualResourceTypes = [NSSet setWithArray:convertedRules[1][@"trigger"][@"resource-type"]];
-    NSSet *expectedResourceTypes = [NSSet setWithArray:otherResourceTypeRules[@"trigger"][@"resource-type"]];
+            @"resource-type": @[ @"fetch", @"font", @"image", @"media", @"other", @"ping", @"script", @"style-sheet", @"websocket", @"child-document" ],
+        } mutableCopy],
+    } mutableCopy];
+    NSSet *actualResourceTypes = [NSSet setWithArray:convertedRule[@"trigger"][@"resource-type"]];
+    NSSet *expectedResourceTypes = [NSSet setWithArray:correctRuleConversion[@"trigger"][@"resource-type"]];
     EXPECT_NS_EQUAL(actualResourceTypes, expectedResourceTypes);
+
+    convertedRule[@"trigger"][@"resource-type"] = nil;
+    correctRuleConversion[@"trigger"][@"resource-type"] = nil;
+    EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithUnsupportedResourceTypes)
@@ -1745,34 +1718,25 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithUnsupportedExclud
     };
 
     _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
-    NSArray<NSDictionary *> *convertedRules = validatedRule.ruleInWebKitFormat;
-    EXPECT_EQ(convertedRules.count, 2ul);
+    NSDictionary *convertedRule = validatedRule.ruleInWebKitFormat.firstObject;
+    EXPECT_NOT_NULL(convertedRule);
 
-    NSDictionary *documentRule = @{
+    NSMutableDictionary *correctRuleConversion = [@{
         @"action": @{
             @"type": @"block",
         },
-        @"trigger": @{
+        @"trigger": [@{
             @"url-filter": @".*",
-            @"resource-type": @[ @"document" ],
-            @"load-context": @[ @"top-frame", @"child-frame" ],
-        },
-    };
-    EXPECT_NS_EQUAL(convertedRules[0], documentRule);
-
-    NSDictionary *otherResourceTypeRules = @{
-        @"action": @{
-            @"type": @"block",
-        },
-        @"trigger": @{
-            @"url-filter": @".*",
-            @"resource-type": @[ @"fetch", @"font", @"media", @"other", @"ping", @"script", @"style-sheet", @"websocket" ],
-        },
-    };
-
-    NSSet *actualResourceTypes = [NSSet setWithArray:convertedRules[1][@"trigger"][@"resource-type"]];
-    NSSet *expectedResourceTypes = [NSSet setWithArray:otherResourceTypeRules[@"trigger"][@"resource-type"]];
+            @"resource-type": @[ @"fetch", @"font", @"media", @"other", @"ping", @"script", @"style-sheet", @"websocket", @"top-document", @"child-document" ],
+        } mutableCopy],
+    } mutableCopy];
+    NSSet *actualResourceTypes = [NSSet setWithArray:convertedRule[@"trigger"][@"resource-type"]];
+    NSSet *expectedResourceTypes = [NSSet setWithArray:correctRuleConversion[@"trigger"][@"resource-type"]];
     EXPECT_NS_EQUAL(actualResourceTypes, expectedResourceTypes);
+
+    convertedRule[@"trigger"][@"resource-type"] = nil;
+    correctRuleConversion[@"trigger"][@"resource-type"] = nil;
+    EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithEmptyExcludedResourceTypes)
@@ -1787,34 +1751,26 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithEmptyExcludedReso
     };
 
     _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
-    NSArray<NSDictionary *> *convertedRules = validatedRule.ruleInWebKitFormat;
-    EXPECT_EQ(convertedRules.count, 2ul);
+    NSMutableDictionary *convertedRule = [validatedRule.ruleInWebKitFormat.firstObject mutableCopy];
+    EXPECT_NOT_NULL(convertedRule);
 
-    NSDictionary *documentRule = @{
+    NSDictionary *correctRuleConversion = [@{
         @"action": @{
             @"type": @"block",
         },
-        @"trigger": @{
+        @"trigger": [@{
             @"url-filter": @".*",
-            @"resource-type": @[ @"document" ],
-            @"load-context": @[ @"top-frame", @"child-frame" ],
-        },
-    };
-    EXPECT_NS_EQUAL(convertedRules[0], documentRule);
+            @"resource-type": @[ @"fetch", @"font", @"image", @"media", @"other", @"ping", @"script", @"style-sheet", @"websocket", @"top-document", @"child-document" ],
+        } mutableCopy],
+    } mutableCopy];
 
-    NSDictionary *otherResourceTypeRules = @{
-        @"action": @{
-            @"type": @"block",
-        },
-        @"trigger": @{
-            @"url-filter": @".*",
-            @"resource-type": @[ @"fetch", @"font", @"image", @"media", @"other", @"ping", @"script", @"style-sheet", @"websocket" ],
-        },
-    };
-
-    NSSet *actualResourceTypes = [NSSet setWithArray:convertedRules[1][@"trigger"][@"resource-type"]];
-    NSSet *expectedResourceTypes = [NSSet setWithArray:otherResourceTypeRules[@"trigger"][@"resource-type"]];
+    NSSet *actualResourceTypes = [NSSet setWithArray:convertedRule[@"trigger"][@"resource-type"]];
+    NSSet *expectedResourceTypes = [NSSet setWithArray:correctRuleConversion[@"trigger"][@"resource-type"]];
     EXPECT_NS_EQUAL(actualResourceTypes, expectedResourceTypes);
+
+    convertedRule[@"trigger"][@"resource-type"] = nil;
+    correctRuleConversion[@"trigger"][@"resource-type"] = nil;
+    EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, EmptyDomains)
@@ -1878,6 +1834,60 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithDomains)
     EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
 }
 
+TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithURLFilterAndRequestDomains)
+{
+    __auto_type testPattern = ^(NSString *requestDomain, NSString *urlFilter, NSString *expectedRegexPattern) {
+        NSMutableDictionary *rule = [@{
+            @"id": @1,
+            @"action": @{ @"type": @"block" },
+            @"condition": [@{
+                @"resourceTypes": @[ @"script" ],
+                @"requestDomains": @[ requestDomain ],
+            } mutableCopy],
+        } mutableCopy];
+
+        if (urlFilter)
+            rule[@"condition"][@"urlFilter"] = urlFilter;
+
+        _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
+        NSDictionary *convertedRule = validatedRule.ruleInWebKitFormat.firstObject;
+        EXPECT_NOT_NULL(convertedRule);
+
+        NSDictionary *correctRuleConversion = @{
+            @"action": @{
+                @"type": @"block",
+            },
+            @"trigger": @{
+                @"url-filter": expectedRegexPattern,
+                @"resource-type": @[ @"script" ],
+            },
+        };
+
+        EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
+    };
+
+    // No URL filter
+    testPattern(@"apple.com", nil, @"^[^:]+://+([^:/]+\\.)?apple\\.com");
+
+    // URL filter contains the request domain
+    testPattern(@"com", @".com/foo/bar", @"^[^:]+://+([^:/]+\\.)?\\.com/foo/bar");
+
+    // Part of the request domain is in the URL filter
+    testPattern(@"foo.com", @"bar-*.com", @"^[^:]+://+([^:/]+\\.)?bar-.*foo\\.com");
+    testPattern(@"foo.com", @"foo.*/bar/baz", @"^[^:]+://+([^:/]+\\.)?foo\\.com.*/bar/baz");
+
+    // || or :// prefix in the URL filter
+    testPattern(@"com", @"||foo", @"^[^:]+://+([^:/]+\\.)?foo.*com");
+    testPattern(@"com", @"://www.", @"://www\\..*com");
+    testPattern(@"com", @"://www.*", @"://www\\..*com");
+    testPattern(@"com", @"://www./foo/bar", @"://www\\..*com/foo/bar");
+    testPattern(@"com", @"://www.*/foo/bar", @"://www\\..*com/foo/bar");
+
+    // Concatenating the request domain and URL filter
+    testPattern(@"com", @"/foo/bar", @"^[^:]+://+([^:/]+\\.)?com.*/foo/bar");
+    testPattern(@"com", @"&foo=bar|", @"^[^:]+://+([^:/]+\\.)?com.*&foo=bar$");
+}
+
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithRequestDomains)
 {
     NSDictionary *rule = @{
@@ -1891,21 +1901,41 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithRequestDomains)
     };
 
     _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
-    NSDictionary *convertedRule = validatedRule.ruleInWebKitFormat.firstObject;
-    EXPECT_NOT_NULL(convertedRule);
+    NSArray<NSDictionary *> *convertedRules = validatedRule.ruleInWebKitFormat;
+    EXPECT_EQ(convertedRules.count, 3ul);
 
-    NSDictionary *correctRuleConversion = @{
+    NSDictionary *appleURLFilterRuleConversion = @{
         @"action": @{
             @"type": @"block",
         },
         @"trigger": @{
-            @"if-domain": @[ @"*apple.com", @"*facebook.com", @"*google.com" ],
             @"resource-type": @[ @"font" ],
-            @"url-filter": @".*",
+            @"url-filter": @"^[^:]+://+([^:/]+\\.)?apple\\.com",
         },
     };
+    EXPECT_NS_EQUAL(convertedRules[0], appleURLFilterRuleConversion);
 
-    EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
+    NSDictionary *facebookURLFilterRuleConversion = @{
+        @"action": @{
+            @"type": @"block",
+        },
+        @"trigger": @{
+            @"resource-type": @[ @"font" ],
+            @"url-filter": @"^[^:]+://+([^:/]+\\.)?facebook\\.com",
+        },
+    };
+    EXPECT_NS_EQUAL(convertedRules[1], facebookURLFilterRuleConversion);
+
+    NSDictionary *googleURLFilterRuleConversion = @{
+        @"action": @{
+            @"type": @"block",
+        },
+        @"trigger": @{
+            @"resource-type": @[ @"font" ],
+            @"url-filter": @"^[^:]+://+([^:/]+\\.)?.*google\\.com",
+        },
+    };
+    EXPECT_NS_EQUAL(convertedRules[2], googleURLFilterRuleConversion);
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithInitiatorDomains)
@@ -2094,21 +2124,30 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithExcludedRequestDo
     };
 
     _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
-    NSDictionary *convertedRule = validatedRule.ruleInWebKitFormat.firstObject;
-    EXPECT_NOT_NULL(convertedRule);
+    NSArray<NSDictionary *> *convertedRules = validatedRule.ruleInWebKitFormat;
+    EXPECT_EQ(convertedRules.count, 2ul);
 
-    NSDictionary *correctRuleConversion = @{
+    NSDictionary *blockRuleConversion = @{
         @"action": @{
             @"type": @"block",
         },
         @"trigger": @{
-            @"unless-domain": @[ @"*apple.com" ],
             @"resource-type": @[ @"media" ],
             @"url-filter": @".*",
         },
     };
+    EXPECT_NS_EQUAL(convertedRules[0], blockRuleConversion);
 
-    EXPECT_NS_EQUAL(convertedRule, correctRuleConversion);
+    NSDictionary *passRuleConversion = @{
+        @"action": @{
+            @"type": @"ignore-previous-rules",
+        },
+        @"trigger": @{
+            @"resource-type": @[ @"media" ],
+            @"url-filter": @"apple\\.com",
+        },
+    };
+    EXPECT_NS_EQUAL(convertedRules[1], passRuleConversion);
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, NonASCIIURLFilter)
