@@ -5472,6 +5472,11 @@ NotificationPermissionRequestManager* WebPage::notificationPermissionRequestMana
     return m_notificationPermissionRequestManager.get();
 }
 
+RefPtr<NotificationPermissionRequestManager> WebPage::protectedNotificationPermissionRequestManager()
+{
+    return notificationPermissionRequestManager();
+}
+
 #if ENABLE(DRAG_SUPPORT)
 
 #if PLATFORM(GTK)

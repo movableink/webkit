@@ -126,16 +126,16 @@ void InjectedBundle::setServiceWorkerProxyCreationCallback(void (*callback)(uint
 void InjectedBundle::postMessage(const String& messageName, API::Object* messageBody)
 {
     auto& webProcess = WebProcess::singleton();
-    webProcess.parentProcessConnection()->send(Messages::WebProcessPool::HandleMessage(messageName, UserData(webProcess.transformObjectsToHandles(messageBody))), 0);
+    webProcess.protectedParentProcessConnection()->send(Messages::WebProcessPool::HandleMessage(messageName, UserData(webProcess.transformObjectsToHandles(messageBody))), 0);
 }
 
 void InjectedBundle::postSynchronousMessage(const String& messageName, API::Object* messageBody, RefPtr<API::Object>& returnData)
 {
     auto& webProcess = WebProcess::singleton();
-    auto sendResult = webProcess.parentProcessConnection()->sendSync(Messages::WebProcessPool::HandleSynchronousMessage(messageName, UserData(webProcess.transformObjectsToHandles(messageBody))), 0);
+    auto sendResult = webProcess.protectedParentProcessConnection()->sendSync(Messages::WebProcessPool::HandleSynchronousMessage(messageName, UserData(webProcess.transformObjectsToHandles(messageBody))), 0);
     if (sendResult.succeeded()) {
         auto [returnUserData] = sendResult.takeReply();
-        returnData = webProcess.transformHandlesToObjects(returnUserData.object());
+        returnData = webProcess.transformHandlesToObjects(returnUserData.protectedObject().get());
     } else
         returnData = nullptr;
 }
@@ -143,19 +143,19 @@ void InjectedBundle::postSynchronousMessage(const String& messageName, API::Obje
 void InjectedBundle::addOriginAccessAllowListEntry(const String& sourceOrigin, const String& destinationProtocol, const String& destinationHost, bool allowDestinationSubdomains)
 {
     SecurityPolicy::addOriginAccessAllowlistEntry(SecurityOrigin::createFromString(sourceOrigin).get(), destinationProtocol, destinationHost, allowDestinationSubdomains);
-    WebProcess::singleton().ensureNetworkProcessConnection().connection().send(Messages::NetworkConnectionToWebProcess::AddOriginAccessAllowListEntry { sourceOrigin, destinationProtocol, destinationHost, allowDestinationSubdomains }, 0);
+    WebProcess::singleton().ensureNetworkProcessConnection().protectedConnection()->send(Messages::NetworkConnectionToWebProcess::AddOriginAccessAllowListEntry { sourceOrigin, destinationProtocol, destinationHost, allowDestinationSubdomains }, 0);
 }
 
 void InjectedBundle::removeOriginAccessAllowListEntry(const String& sourceOrigin, const String& destinationProtocol, const String& destinationHost, bool allowDestinationSubdomains)
 {
     SecurityPolicy::removeOriginAccessAllowlistEntry(SecurityOrigin::createFromString(sourceOrigin).get(), destinationProtocol, destinationHost, allowDestinationSubdomains);
-    WebProcess::singleton().ensureNetworkProcessConnection().connection().send(Messages::NetworkConnectionToWebProcess::RemoveOriginAccessAllowListEntry { sourceOrigin, destinationProtocol, destinationHost, allowDestinationSubdomains }, 0);
+    WebProcess::singleton().ensureNetworkProcessConnection().protectedConnection()->send(Messages::NetworkConnectionToWebProcess::RemoveOriginAccessAllowListEntry { sourceOrigin, destinationProtocol, destinationHost, allowDestinationSubdomains }, 0);
 }
 
 void InjectedBundle::resetOriginAccessAllowLists()
 {
     SecurityPolicy::resetOriginAccessAllowlists();
-    WebProcess::singleton().ensureNetworkProcessConnection().connection().send(Messages::NetworkConnectionToWebProcess::ResetOriginAccessAllowLists { }, 0);
+    WebProcess::singleton().ensureNetworkProcessConnection().protectedConnection()->send(Messages::NetworkConnectionToWebProcess::ResetOriginAccessAllowLists { }, 0);
 }
 
 void InjectedBundle::setAsynchronousSpellCheckingEnabled(bool enabled)
@@ -167,13 +167,13 @@ void InjectedBundle::setAsynchronousSpellCheckingEnabled(bool enabled)
 
 int InjectedBundle::numberOfPages(WebFrame* frame, double pageWidthInPixels, double pageHeightInPixels)
 {
-    auto* coreFrame = frame ? frame->coreLocalFrame() : nullptr;
+    RefPtr coreFrame = frame ? frame->coreLocalFrame() : nullptr;
     if (!coreFrame)
         return -1;
     if (!pageWidthInPixels)
-        pageWidthInPixels = coreFrame->view()->width();
+        pageWidthInPixels = coreFrame->protectedView()->width();
     if (!pageHeightInPixels)
-        pageHeightInPixels = coreFrame->view()->height();
+        pageHeightInPixels = coreFrame->protectedView()->height();
 
     return PrintContext::numberOfPages(*coreFrame, FloatSize(pageWidthInPixels, pageHeightInPixels));
 }
@@ -184,34 +184,34 @@ int InjectedBundle::pageNumberForElementById(WebFrame* frame, const String& id, 
     if (!coreFrame)
         return -1;
 
-    RefPtr element = coreFrame->document()->getElementById(id);
+    RefPtr element = coreFrame->protectedDocument()->getElementById(id);
     if (!element)
         return -1;
 
     if (!pageWidthInPixels)
-        pageWidthInPixels = coreFrame->view()->width();
+        pageWidthInPixels = coreFrame->protectedView()->width();
     if (!pageHeightInPixels)
-        pageHeightInPixels = coreFrame->view()->height();
+        pageHeightInPixels = coreFrame->protectedView()->height();
 
     return PrintContext::pageNumberForElement(element.get(), FloatSize(pageWidthInPixels, pageHeightInPixels));
 }
 
 String InjectedBundle::pageSizeAndMarginsInPixels(WebFrame* frame, int pageIndex, int width, int height, int marginTop, int marginRight, int marginBottom, int marginLeft)
 {
-    auto* coreFrame = frame ? frame->coreLocalFrame() : nullptr;
+    RefPtr coreFrame = frame ? frame->coreLocalFrame() : nullptr;
     if (!coreFrame)
         return String();
 
-    return PrintContext::pageSizeAndMarginsInPixels(coreFrame, pageIndex, width, height, marginTop, marginRight, marginBottom, marginLeft);
+    return PrintContext::pageSizeAndMarginsInPixels(coreFrame.get(), pageIndex, width, height, marginTop, marginRight, marginBottom, marginLeft);
 }
 
 bool InjectedBundle::isPageBoxVisible(WebFrame* frame, int pageIndex)
 {
-    auto* coreFrame = frame ? frame->coreLocalFrame() : nullptr;
+    RefPtr coreFrame = frame ? frame->coreLocalFrame() : nullptr;
     if (!coreFrame)
         return false;
 
-    return PrintContext::isPageBoxVisible(coreFrame, pageIndex);
+    return PrintContext::isPageBoxVisible(coreFrame.get(), pageIndex);
 }
 
 bool InjectedBundle::isProcessingUserGesture()
@@ -276,7 +276,7 @@ void InjectedBundle::setUserStyleSheetLocation(const String& location)
 void InjectedBundle::removeAllWebNotificationPermissions(WebPage* page)
 {
 #if ENABLE(NOTIFICATIONS)
-    page->notificationPermissionRequestManager()->removeAllPermissionsForTesting();
+    page->protectedNotificationPermissionRequestManager()->removeAllPermissionsForTesting();
 #else
     UNUSED_PARAM(page);
 #endif
@@ -285,7 +285,7 @@ void InjectedBundle::removeAllWebNotificationPermissions(WebPage* page)
 std::optional<WTF::UUID> InjectedBundle::webNotificationID(JSContextRef jsContext, JSValueRef jsNotification)
 {
 #if ENABLE(NOTIFICATIONS)
-    WebCore::Notification* notification = JSNotification::toWrapped(toJS(jsContext)->vm(), toJS(toJS(jsContext), jsNotification));
+    RefPtr notification = JSNotification::toWrapped(toJS(jsContext)->vm(), toJS(toJS(jsContext), jsNotification));
     if (!notification)
         return std::nullopt;
     return notification->identifier();
@@ -314,11 +314,11 @@ InjectedBundle::DocumentIDToURLMap InjectedBundle::liveDocumentURLs(bool exclude
 
     if (excludeDocumentsInPageGroupPages) {
         Page::forEachPage([&](Page& page) {
-            for (auto* frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
-                auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+            for (RefPtr frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
+                RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
                 if (!localFrame)
                     continue;
-                auto* document = localFrame->document();
+                RefPtr document = localFrame->document();
                 if (!document)
                     continue;
                 result.remove(document->identifier().object());
