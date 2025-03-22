@@ -1,6 +1,6 @@
 
 PASS Can anchor to a name both defined and scoped by the same element
-FAIL Sibling can not anchor into anchor-scope, even when anchor-name present assert_equals: expected "30px" but got "40px"
+PASS Sibling can not anchor into anchor-scope, even when anchor-name present
 PASS anchor-scope:all on common ancestor
 PASS anchor-scope:--a on common ancestor
 PASS anchor-scope:all on sibling

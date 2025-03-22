@@ -747,17 +747,19 @@ static bool firstChildPrecedesSecondChild(const RenderObject* firstChild, const 
     return false;
 }
 
-// Given an anchor element and its anchor names, locate the closest ancestor element
+// Given an anchor element and its anchor names, locate the closest ancestor (*) element
 // that establishes an anchor scope affecting this anchor element, and return the pointer
 // to such element. If no ancestor establishes an anchor scope affecting this anchor,
 // returns nullptr.
-static CheckedPtr<Element> anchorScopeForAnchorElement(const Element& anchorElement, const Vector<ScopedName>& anchorNames)
+// (*): an anchor element can also establish an anchor scope containing itself. In this
+// case, the return value is itself.
+static CheckedPtr<const Element> anchorScopeForAnchorElement(const Element& anchorElement, const Vector<ScopedName>& anchorNames)
 {
     // Precondition: anchorElement is an anchor, which has at least one anchor name.
     ASSERT(!anchorNames.isEmpty());
 
-    // Traverse up the composed tree through each ancestor.
-    for (CheckedPtr currentAncestor = anchorElement.parentElementInComposedTree(); currentAncestor; currentAncestor = currentAncestor->parentElementInComposedTree()) {
+    // Traverse up the composed tree through itself and each ancestor.
+    for (CheckedPtr<const Element> currentAncestor = &anchorElement; currentAncestor; currentAncestor = currentAncestor->parentElementInComposedTree()) {
         CheckedPtr currentAncestorStyle = currentAncestor->renderStyle();
         if (!currentAncestorStyle)
             continue;
