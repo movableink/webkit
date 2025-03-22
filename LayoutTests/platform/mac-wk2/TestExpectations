@@ -2077,3 +2077,5 @@ imported/w3c/web-platform-tests/css/css-position/sticky/position-sticky-scrolled
 
 # webkit.org/b/290012 REGRESSION(291808@main): [macOS Debug]: ASSERTION FAILED: !index in CSSFontSelector::fallbackFontAt
 [ Debug ] fonts/font-fallback-prefers-pictographs.html [ Skip ]
+
+webkit.org/b/290235 [ Sonoma+ Debug ] http/tests/site-isolation/unload-grandchild-fetch.html [ Skip ]
