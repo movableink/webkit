@@ -629,7 +629,7 @@ bool Path::hasSubpaths() const
 FloatRect Path::fastBoundingRect() const
 {
     if (auto* segment = asSingle())
-        return PathStream::computeFastBoundingRect(singleElementSpan(*segment));
+        return segment->fastBoundingRect();
 
     if (auto* impl = asImpl())
         return impl->fastBoundingRect();

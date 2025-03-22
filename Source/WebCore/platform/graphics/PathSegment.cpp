@@ -51,6 +51,22 @@ std::optional<FloatPoint> PathSegment::tryGetEndPointWithoutContext() const
     });
 }
 
+FloatRect PathSegment::fastBoundingRect() const
+{
+    FloatPoint currentPoint;
+    FloatPoint lastMoveToPoint;
+
+    auto boundingRect = FloatRect::smallestRect();
+    extendFastBoundingRect(currentPoint, lastMoveToPoint, boundingRect);
+
+    if (boundingRect.isSmallest()) {
+        currentPoint = calculateEndPoint(currentPoint, lastMoveToPoint);
+        boundingRect.extend(currentPoint);
+    }
+
+    return boundingRect;
+}
+
 void PathSegment::extendFastBoundingRect(const FloatPoint& currentPoint, const FloatPoint& lastMoveToPoint, FloatRect& boundingRect) const
 {
     WTF::switchOn(m_data, [&](auto& data) {
