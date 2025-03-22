@@ -144,11 +144,17 @@ final class WebViewCoordinator {
         // FIXME: Use the binding to update the `isPositionedByUser` property when applicable.
 
         let scrollPosition = environment.webViewScrollPositionContext
+
+        let scrollPositionDidNotChange = view.scrollPosition?.position?.wrappedValue == scrollPosition.position?.wrappedValue
+        guard !scrollPositionDidNotChange else {
+            return
+        }
+
         view.scrollPosition = scrollPosition
 
-        if let point = environment.webViewScrollPositionContext.position?.wrappedValue.point {
+        if let point = scrollPosition.position?.wrappedValue.point {
             webView.setContentOffset(point, animated: context.transaction.isAnimated)
-        } else if let edge = environment.webViewScrollPositionContext.position?.wrappedValue.edge {
+        } else if let edge = scrollPosition.position?.wrappedValue.edge {
             webView.scrollTo(edge: NSDirectionalRectEdge(edge), animated: context.transaction.isAnimated)
         }
     }
