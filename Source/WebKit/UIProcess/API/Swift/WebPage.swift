@@ -240,6 +240,12 @@ final public class WebPage {
         backingProperty(\.isWritingToolsActive, backedBy: \.isWritingToolsActive)
     }
 
+    /// Indicates whether Screen Time blocking has occurred.
+    @available(visionOS, unavailable)
+    public var isBlockedByScreenTime: Bool {
+        backingProperty(\.isBlockedByScreenTime, backedBy: \.isBlockedByScreenTime)
+    }
+
     /// The fullscreen state the page is currently in.
     public var fullscreenState: WebPage.FullscreenState {
         backingProperty(\.fullscreenState, backedBy: \.fullscreenState) { backingValue in

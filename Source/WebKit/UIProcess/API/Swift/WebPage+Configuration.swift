@@ -104,6 +104,13 @@ extension WebPage {
         /// If `true`, they are inserted with the full adaptive sizing behavior.
         public var supportsAdaptiveImageGlyph: Bool = false
 
+        /// Indicates whether the webpage should use the system Screen Time blocking view.
+        ///
+        /// The default value is `true`. If `true`, the system Screen Time blocking view is shown when blocked by Screen Time.
+        /// If `false`, a blurred view of the web content is shown instead.
+        @available(visionOS, unavailable)
+        public var showsSystemScreenTimeBlockingView: Bool = true
+
 #if os(iOS)
         /// The types of data detectors to apply to the webpage's content.
         ///
