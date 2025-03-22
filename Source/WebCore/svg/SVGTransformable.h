@@ -26,13 +26,14 @@
 namespace WebCore {
     
 class AffineTransform;
+class SVGTransform;
 
 class SVGTransformable : public SVGLocatable {
 public:
     virtual ~SVGTransformable();
 
-    static std::optional<SVGTransformValue> parseTransformValue(SVGTransformValue::SVGTransformType, StringParsingBuffer<LChar>&);
-    static std::optional<SVGTransformValue> parseTransformValue(SVGTransformValue::SVGTransformType, StringParsingBuffer<UChar>&);
+    static RefPtr<SVGTransform> parseTransform(SVGTransformValue::SVGTransformType, StringParsingBuffer<LChar>&, RefPtr<SVGTransform> reusableValue);
+    static RefPtr<SVGTransform> parseTransform(SVGTransformValue::SVGTransformType, StringParsingBuffer<UChar>&, RefPtr<SVGTransform> reusableValue);
 
     static std::optional<SVGTransformValue::SVGTransformType> parseTransformType(StringView);
     static std::optional<SVGTransformValue::SVGTransformType> parseTransformType(StringParsingBuffer<LChar>&);

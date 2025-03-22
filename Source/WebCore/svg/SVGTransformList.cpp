@@ -62,23 +62,36 @@ AffineTransform SVGTransformList::concatenate() const
     return result;
 }
 
-template<typename CharacterType> bool SVGTransformList::parseGeneric(StringParsingBuffer<CharacterType>& buffer)
+template<typename CharacterType> bool SVGTransformList::parseGeneric(StringParsingBuffer<CharacterType>& buffer, ListReplacement listReplacement)
 {
     bool delimParsed = false;
     skipOptionalSVGSpaces(buffer);
 
+    size_t itemIndex = 0;
+    auto currentListReplacement = listReplacement;
+
     while (buffer.hasCharactersRemaining()) {
         delimParsed = false;
-        
+
         auto parsedTransformType = SVGTransformable::parseTransformType(buffer);
         if (!parsedTransformType)
             return false;
 
-        auto parsedTransformValue = SVGTransformable::parseTransformValue(*parsedTransformType, buffer);
-        if (!parsedTransformValue)
+        RefPtr<SVGTransform> existingTransform;
+        if (currentListReplacement == ListReplacement::Replace && itemIndex < m_items.size() && parsedTransformType == m_items[itemIndex]->type())
+            existingTransform = m_items[itemIndex].ptr();
+
+        RefPtr parsedTransform = SVGTransformable::parseTransform(*parsedTransformType, buffer, existingTransform);
+        if (!parsedTransform)
             return false;
 
-        append(SVGTransform::create(WTFMove(*parsedTransformValue)));
+        if (currentListReplacement == ListReplacement::Replace && parsedTransform.get() != existingTransform.get()) {
+            currentListReplacement = ListReplacement::Append;
+            resize(itemIndex);
+        }
+
+        if (currentListReplacement == ListReplacement::Append)
+            append(parsedTransform.releaseNonNull());
 
         skipOptionalSVGSpaces(buffer);
 
@@ -86,30 +99,36 @@ template<typename CharacterType> bool SVGTransformList::parseGeneric(StringParsi
             delimParsed = true;
 
         skipOptionalSVGSpaces(buffer);
+
+        ++itemIndex;
     }
+
+    if (itemIndex < m_items.size()) {
+        ASSERT(currentListReplacement == ListReplacement::Replace);
+        resize(itemIndex);
+    }
+
     return !delimParsed;
 }
 
 void SVGTransformList::parse(StringView value)
 {
-    clearItems();
-
     bool parsingSucceeded = readCharactersForParsing(value, [&](auto buffer) {
-        return parseGeneric(buffer);
+        return parseGeneric(buffer, ListReplacement::Replace);
     });
-    
+
     if (!parsingSucceeded)
         clearItems();
 }
 
 bool SVGTransformList::parse(StringParsingBuffer<LChar>& buffer)
 {
-    return parseGeneric(buffer);
+    return parseGeneric(buffer, ListReplacement::Append);
 }
 
 bool SVGTransformList::parse(StringParsingBuffer<UChar>& buffer)
 {
-    return parseGeneric(buffer);
+    return parseGeneric(buffer, ListReplacement::Append);
 }
 
 String SVGTransformList::valueAsString() const
