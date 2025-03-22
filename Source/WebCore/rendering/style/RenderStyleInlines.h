@@ -570,7 +570,7 @@ constexpr bool RenderStyle::isDisplayListItemType(DisplayType display) { return 
 constexpr bool RenderStyle::isDisplayTableOrTablePart() const { return isDisplayTableOrTablePart(display()); }
 constexpr bool RenderStyle::isInternalTableBox() const { return isInternalTableBox(display()); }
 constexpr bool RenderStyle::isRubyContainerOrInternalRubyBox() const { return isRubyContainerOrInternalRubyBox(display()); }
-inline bool RenderStyle::isFixedTableLayout() const { return tableLayout() == TableLayoutType::Fixed && (logicalWidth().isSpecified() || logicalWidth().isFitContent() || logicalWidth().isFillAvailable() || logicalWidth().isMinContent()); }
+inline bool RenderStyle::isFixedTableLayout() const { return tableLayout() == TableLayoutType::Fixed && !logicalWidth().isAuto(); }
 inline bool RenderStyle::isFloating() const { return floating() != Float::None; }
 inline bool RenderStyle::isGridAutoFlowAlgorithmDense() const { return m_nonInheritedData->rareData->grid->gridAutoFlow & InternalAutoFlowAlgorithmDense; }
 inline bool RenderStyle::isGridAutoFlowAlgorithmSparse() const { return m_nonInheritedData->rareData->grid->gridAutoFlow & InternalAutoFlowAlgorithmSparse; }
