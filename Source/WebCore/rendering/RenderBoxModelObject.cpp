@@ -968,7 +968,7 @@ void RenderBoxModelObject::collectAbsoluteQuadsForContinuation(Vector<FloatQuad>
 {
     ASSERT(continuation());
     for (auto* nextInContinuation = this->continuation(); nextInContinuation; nextInContinuation = nextInContinuation->continuation()) {
-        if (auto blockBox = dynamicDowncast<RenderBlock>(*nextInContinuation)) {
+        if (auto blockBox = dynamicDowncast<RenderBlock>(*nextInContinuation); blockBox && blockBox->height() && blockBox->width()) {
             // For blocks inside inlines, we include margins so that we run right up to the inline boxes
             // above and below us (thus getting merged with them to form a single irregular shape).
             auto logicalRect = FloatRect { 0, -blockBox->collapsedMarginBefore(), blockBox->width(),
