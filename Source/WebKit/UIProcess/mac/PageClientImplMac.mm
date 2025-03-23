@@ -161,7 +161,7 @@ NSView *PageClientImpl::activeView() const
 NSWindow *PageClientImpl::activeWindow() const
 {
     if (m_impl && m_impl->thumbnailView())
-        return m_impl->thumbnailView().window;
+        return [m_impl->thumbnailView() window];
     if (m_impl && m_impl->targetWindowForMovePreparation())
         return m_impl->targetWindowForMovePreparation();
     return m_view.window;

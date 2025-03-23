@@ -36,6 +36,7 @@
 #include "WKTextAnimationType.h"
 #include <WebCore/DOMPasteAccess.h>
 #include <WebCore/FocusDirection.h>
+#include <WebCore/KeypressCommand.h>
 #include <WebCore/PlatformPlaybackSessionInterface.h>
 #include <WebCore/ScrollTypes.h>
 #include <WebCore/ShareableBitmap.h>
@@ -184,7 +185,6 @@ enum class ReplacementBehavior : uint8_t;
 
 namespace WebCore {
 struct DragItem;
-struct KeypressCommand;
 #if ENABLE(DIGITAL_CREDENTIALS_UI)
 struct DigitalCredentialsRequestData;
 #endif
@@ -527,7 +527,7 @@ public:
     CALayer *acceleratedCompositingRootLayer() const { return m_rootLayer.get(); }
 
     void setThumbnailView(_WKThumbnailView *);
-    _WKThumbnailView *thumbnailView() const { return m_thumbnailView; }
+    RetainPtr<_WKThumbnailView> thumbnailView() const { return m_thumbnailView.get(); }
 
     void setHeaderBannerLayer(CALayer *);
     CALayer *headerBannerLayer() const { return m_headerBannerLayer.get(); }
@@ -985,7 +985,7 @@ private:
     RetainPtr<CALayer> m_headerBannerLayer;
     RetainPtr<CALayer> m_footerBannerLayer;
 
-    _WKThumbnailView *m_thumbnailView { nullptr };
+    WeakObjCPtr<_WKThumbnailView> m_thumbnailView;
 
     RetainPtr<_WKRemoteObjectRegistry> m_remoteObjectRegistry;
 
@@ -1012,7 +1012,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     // the application to distinguish the case of a new event from one
     // that has been already sent to WebCore.
     RetainPtr<NSEvent> m_keyDownEventBeingResent;
-    Vector<WebCore::KeypressCommand>* m_collectedKeypressCommands { nullptr };
+
+    struct CheckedCommands : public CanMakeCheckedPtr<CheckedCommands> {
+        WTF_MAKE_FAST_ALLOCATED;
+        WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(CheckedCommands);
+    public:
+        Vector<WebCore::KeypressCommand> commands;
+    };
+    CheckedPtr<CheckedCommands> m_collectedKeypressCommands;
 
     String m_lastStringForCandidateRequest;
     NSInteger m_lastCandidateRequestSequenceNumber;

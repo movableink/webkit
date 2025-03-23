@@ -27,7 +27,6 @@ UIProcess/Cocoa/WebPageProxyCocoa.mm
 UIProcess/RemoteLayerTree/RemoteLayerTreeHost.mm
 UIProcess/RemoteLayerTree/mac/RemoteLayerTreeEventDispatcher.cpp
 UIProcess/WebProcessPool.h
-UIProcess/mac/WebViewImpl.h
 WebProcess/Extensions/Bindings/JSWebExtensionWrapper.h
 WebProcess/InjectedBundle/InjectedBundle.h
 WebProcess/Inspector/WebInspectorClient.cpp

@@ -105,7 +105,6 @@
 #import <WebCore/FixedContainerEdges.h>
 #import <WebCore/FontAttributeChanges.h>
 #import <WebCore/FontAttributes.h>
-#import <WebCore/KeypressCommand.h>
 #import <WebCore/LegacyNSPasteboardTypes.h>
 #import <WebCore/LoaderNSURLExtras.h>
 #import <WebCore/LocalizedStrings.h>
@@ -4063,15 +4062,15 @@ void WebViewImpl::setThumbnailView(_WKThumbnailView *thumbnailView)
 
 void WebViewImpl::reparentLayerTreeInThumbnailView()
 {
-    m_thumbnailView._thumbnailLayer = m_rootLayer.get();
+    [m_thumbnailView.get() _setThumbnailLayer: m_rootLayer.get()];
 }
 
 void WebViewImpl::updateThumbnailViewLayer()
 {
-    _WKThumbnailView *thumbnailView = m_thumbnailView;
+    RetainPtr thumbnailView = m_thumbnailView.get();
     ASSERT(thumbnailView);
 
-    if (thumbnailView._waitingForSnapshot && [m_view window])
+    if ([thumbnailView _waitingForSnapshot] && [m_view window])
         reparentLayerTreeInThumbnailView();
 }
 
@@ -5064,10 +5063,10 @@ static bool eventKeyCodeIsZeroOrNumLockOrFn(NSEvent *event)
 
 Vector<WebCore::KeypressCommand> WebViewImpl::collectKeyboardLayoutCommandsForEvent(NSEvent *event)
 {
-    Vector<WebCore::KeypressCommand> commands;
-
     if ([event type] != NSEventTypeKeyDown)
-        return commands;
+        return { };
+
+    CheckedCommands commands;
 
     ASSERT(!m_collectedKeypressCommands);
     m_collectedKeypressCommands = &commands;
@@ -5081,12 +5080,12 @@ Vector<WebCore::KeypressCommand> WebViewImpl::collectKeyboardLayoutCommandsForEv
 
     if (auto menu = NSApp.mainMenu; event.modifierFlags & NSEventModifierFlagFunction
         && [menu respondsToSelector:@selector(_containsItemMatchingEvent:includingDisabledItems:)] && [menu _containsItemMatchingEvent:event includingDisabledItems:YES]) {
-        commands.removeAllMatching([](auto& command) {
+        commands.commands.removeAllMatching([](auto& command) {
             return command.commandName == "insertText:"_s;
         });
     }
 
-    return commands;
+    return WTFMove(commands.commands);
 }
 
 void WebViewImpl::interpretKeyEvent(NSEvent *event, void(^completionHandler)(BOOL handled, const Vector<WebCore::KeypressCommand>& commands))
@@ -5119,9 +5118,9 @@ void WebViewImpl::doCommandBySelector(SEL selector)
 {
     LOG(TextInput, "doCommandBySelector:\"%s\"", sel_getName(selector));
 
-    if (auto* keypressCommands = m_collectedKeypressCommands) {
+    if (m_collectedKeypressCommands) {
         WebCore::KeypressCommand command(NSStringFromSelector(selector));
-        keypressCommands->append(command);
+        m_collectedKeypressCommands->commands.append(command);
         LOG(TextInput, "...stored");
         m_page->registerKeypressCommandName(command.commandName);
     } else {
@@ -5173,11 +5172,10 @@ void WebViewImpl::insertText(id string, NSRange replacementRange)
     // - If it's from an input method, then we should insert the text now.
     // - If it's sent outside of keyboard event processing (e.g. from Character Viewer, or when confirming an inline input area with a mouse),
     // then we also execute it immediately, as there will be no other chance.
-    Vector<WebCore::KeypressCommand>* keypressCommands = m_collectedKeypressCommands;
-    if (keypressCommands && !m_isTextInsertionReplacingSoftSpace) {
+    if (m_collectedKeypressCommands && !m_isTextInsertionReplacingSoftSpace) {
         ASSERT(replacementRange.location == NSNotFound);
         WebCore::KeypressCommand command("insertText:"_s, text);
-        keypressCommands->append(command);
+        m_collectedKeypressCommands->commands.append(command);
         LOG(TextInput, "...stored");
         m_page->registerKeypressCommandName(command.commandName);
         return;

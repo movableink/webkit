@@ -1705,7 +1705,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 {
     if (!_impl)
         return nil;
-    return _impl->thumbnailView();
+    return _impl->thumbnailView().autorelease();
 }
 
 - (void)_setIgnoresAllEvents:(BOOL)ignoresAllEvents
