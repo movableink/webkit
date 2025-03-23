@@ -54,7 +54,7 @@ private:
 
     bool isWebKitDiagnosticLoggingClient() const final { return true; }
 
-    WKWebView *m_webView;
+    WeakObjCPtr<WKWebView> m_webView;
     WeakObjCPtr<id <_WKDiagnosticLoggingDelegate>> m_delegate;
 
     struct {

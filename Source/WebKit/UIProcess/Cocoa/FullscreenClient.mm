@@ -67,61 +67,65 @@ void FullscreenClient::setDelegate(id <_WKFullscreenDelegate> delegate)
 
 void FullscreenClient::willEnterFullscreen(WebPageProxy*)
 {
-    [m_webView willChangeValueForKey:@"fullscreenState"];
-    [m_webView didChangeValueForKey:@"fullscreenState"];
+    RetainPtr webView = m_webView.get();
+    [webView willChangeValueForKey:@"fullscreenState"];
+    [webView didChangeValueForKey:@"fullscreenState"];
 #if PLATFORM(MAC)
     if (m_delegateMethods.webViewWillEnterFullscreen)
-        [m_delegate.get() _webViewWillEnterFullscreen:m_webView];
+        [m_delegate.get() _webViewWillEnterFullscreen:webView.get()];
 #else
     if (m_delegateMethods.webViewWillEnterElementFullscreen)
-        [m_delegate.get() _webViewWillEnterElementFullscreen:m_webView];
+        [m_delegate.get() _webViewWillEnterElementFullscreen:webView.get()];
 #endif
 }
 
 void FullscreenClient::didEnterFullscreen(WebPageProxy*)
 {
-    [m_webView willChangeValueForKey:@"fullscreenState"];
-    [m_webView didChangeValueForKey:@"fullscreenState"];
+    RetainPtr webView = m_webView.get();
+    [webView willChangeValueForKey:@"fullscreenState"];
+    [webView didChangeValueForKey:@"fullscreenState"];
 #if PLATFORM(MAC)
     if (m_delegateMethods.webViewDidEnterFullscreen)
-        [m_delegate.get() _webViewDidEnterFullscreen:m_webView];
+        [m_delegate.get() _webViewDidEnterFullscreen:webView.get()];
 #else
     if (m_delegateMethods.webViewDidEnterElementFullscreen)
-        [m_delegate.get() _webViewDidEnterElementFullscreen:m_webView];
+        [m_delegate.get() _webViewDidEnterElementFullscreen:webView.get()];
 #endif
 
 #if ENABLE(QUICKLOOK_FULLSCREEN)
-    if (auto fullScreenController = [m_webView fullScreenWindowController]) {
+    if (auto fullScreenController = [webView fullScreenWindowController]) {
         CGSize imageDimensions = fullScreenController.imageDimensions;
         if (fullScreenController.isUsingQuickLook && m_delegateMethods.webViewDidFullscreenImageWithQuickLook)
-            [m_delegate.get() _webView:m_webView didFullscreenImageWithQuickLook:imageDimensions];
+            [m_delegate.get() _webView:webView.get() didFullscreenImageWithQuickLook:imageDimensions];
     }
 #endif // ENABLE(QUICKLOOK_FULLSCREEN)
 }
 
 void FullscreenClient::willExitFullscreen(WebPageProxy*)
 {
-    [m_webView willChangeValueForKey:@"fullscreenState"];
-    [m_webView didChangeValueForKey:@"fullscreenState"];
+    RetainPtr webView = m_webView.get();
+    [webView willChangeValueForKey:@"fullscreenState"];
+    [webView didChangeValueForKey:@"fullscreenState"];
 #if PLATFORM(MAC)
     if (m_delegateMethods.webViewWillExitFullscreen)
-        [m_delegate.get() _webViewWillExitFullscreen:m_webView];
+        [m_delegate.get() _webViewWillExitFullscreen:webView.get()];
 #else
     if (m_delegateMethods.webViewWillExitElementFullscreen)
-        [m_delegate.get() _webViewWillExitElementFullscreen:m_webView];
+        [m_delegate.get() _webViewWillExitElementFullscreen:webView.get()];
 #endif
 }
 
 void FullscreenClient::didExitFullscreen(WebPageProxy*)
 {
-    [m_webView willChangeValueForKey:@"fullscreenState"];
-    [m_webView didChangeValueForKey:@"fullscreenState"];
+    RetainPtr webView = m_webView.get();
+    [webView willChangeValueForKey:@"fullscreenState"];
+    [webView didChangeValueForKey:@"fullscreenState"];
 #if PLATFORM(MAC)
     if (m_delegateMethods.webViewDidExitFullscreen)
-        [m_delegate.get() _webViewDidExitFullscreen:m_webView];
+        [m_delegate.get() _webViewDidExitFullscreen:webView.get()];
 #else
     if (m_delegateMethods.webViewDidExitElementFullscreen)
-        [m_delegate.get() _webViewDidExitElementFullscreen:m_webView];
+        [m_delegate.get() _webViewDidExitElementFullscreen:webView.get()];
 #endif
 }
 
@@ -131,7 +135,7 @@ void FullscreenClient::requestPresentingViewController(CompletionHandler<void(UI
     if (!m_delegateMethods.webViewRequestPresentingViewController)
         return completionHandler(nil, nil);
 
-    [m_delegate _webView:m_webView requestPresentingViewControllerWithCompletionHandler:makeBlockPtr(WTFMove(completionHandler)).get()];
+    [m_delegate _webView:m_webView.get().get() requestPresentingViewControllerWithCompletionHandler:makeBlockPtr(WTFMove(completionHandler)).get()];
 }
 #endif
 

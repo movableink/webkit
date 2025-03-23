@@ -73,7 +73,7 @@ void AutomationClient::didRequestAutomationSession(WebKit::WebProcessPool*, cons
 bool AutomationClient::remoteAutomationAllowed() const
 {
     if (m_delegateMethods.allowsRemoteAutomation)
-        return [m_delegate.get() _processPoolAllowsRemoteAutomation:m_processPool];
+        return [m_delegate.get() _processPoolAllowsRemoteAutomation:m_processPool.get().get()];
 
     return false;
 }
@@ -94,7 +94,7 @@ void AutomationClient::requestAutomationSession(const String& sessionIdentifier,
     NSString *requestedSessionIdentifier = sessionIdentifier;
     RunLoop::protectedMain()->dispatch([this, requestedSessionIdentifier = retainPtr(requestedSessionIdentifier), configuration = WTFMove(configuration)] {
         if (m_delegateMethods.requestAutomationSession)
-            [m_delegate.get() _processPool:m_processPool didRequestAutomationSessionWithIdentifier:requestedSessionIdentifier.get() configuration:configuration.get()];
+            [m_delegate.get() _processPool:m_processPool.get().get() didRequestAutomationSessionWithIdentifier:requestedSessionIdentifier.get() configuration:configuration.get()];
     });
 }
 
@@ -104,14 +104,14 @@ void AutomationClient::requestedDebuggablesToWakeUp()
 {
     RunLoop::protectedMain()->dispatch([this] {
         if (m_delegateMethods.requestedDebuggablesToWakeUp)
-            [m_delegate.get() _processPoolDidRequestInspectorDebuggablesToWakeUp:m_processPool];
+            [m_delegate.get() _processPoolDidRequestInspectorDebuggablesToWakeUp:m_processPool.get().get()];
     });
 }
 
 String AutomationClient::browserName() const
 {
     if (m_delegateMethods.browserNameForAutomation)
-        return [m_delegate _processPoolBrowserNameForAutomation:m_processPool];
+        return [m_delegate _processPoolBrowserNameForAutomation:m_processPool.get().get()];
 
     // Fall back to using the unlocalized app name (i.e., 'Safari').
     NSBundle *appBundle = [NSBundle mainBundle];
@@ -123,7 +123,7 @@ String AutomationClient::browserName() const
 String AutomationClient::browserVersion() const
 {
     if (m_delegateMethods.browserVersionForAutomation)
-        return [m_delegate _processPoolBrowserVersionForAutomation:m_processPool];
+        return [m_delegate _processPoolBrowserVersionForAutomation:m_processPool.get().get()];
 
     // Fall back to using the app short version (i.e., '11.1.1').
     NSBundle *appBundle = [NSBundle mainBundle];

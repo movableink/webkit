@@ -58,7 +58,7 @@ public:
 #endif
 
 private:
-    WKWebView *m_webView;
+    WeakObjCPtr<WKWebView> m_webView;
     WeakObjCPtr<id <_WKFullscreenDelegate> > m_delegate;
 
     struct {

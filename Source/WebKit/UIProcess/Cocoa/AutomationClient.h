@@ -56,7 +56,7 @@ private:
     String browserName() const final;
     String browserVersion() const final;
 
-    WKProcessPool *m_processPool;
+    WeakObjCPtr<WKProcessPool> m_processPool;
     WeakObjCPtr<id <_WKAutomationDelegate>> m_delegate;
 
     struct {

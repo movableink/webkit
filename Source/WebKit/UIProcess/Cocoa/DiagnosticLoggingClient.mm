@@ -61,7 +61,7 @@ void DiagnosticLoggingClient::setDelegate(id <_WKDiagnosticLoggingDelegate> dele
 void DiagnosticLoggingClient::logDiagnosticMessage(WebKit::WebPageProxy*, const WTF::String& message, const WTF::String& description)
 {
     if (m_delegateMethods.webviewLogDiagnosticMessage)
-        [m_delegate.get() _webView:m_webView logDiagnosticMessage:message description:description];
+        [m_delegate.get() _webView:m_webView.get().get() logDiagnosticMessage:message description:description];
 }
 
 static _WKDiagnosticLoggingResultType toWKDiagnosticLoggingResultType(WebCore::DiagnosticLoggingResultType result)
@@ -87,31 +87,31 @@ static _WKDiagnosticLoggingDomain toWKDiagnosticLoggingDomain(WebCore::Diagnosti
 void DiagnosticLoggingClient::logDiagnosticMessageWithResult(WebKit::WebPageProxy*, const WTF::String& message, const WTF::String& description, WebCore::DiagnosticLoggingResultType result)
 {
     if (m_delegateMethods.webviewLogDiagnosticMessageWithResult)
-        [m_delegate.get() _webView:m_webView logDiagnosticMessageWithResult:message description:description result:toWKDiagnosticLoggingResultType(result)];
+        [m_delegate.get() _webView:m_webView.get().get() logDiagnosticMessageWithResult:message description:description result:toWKDiagnosticLoggingResultType(result)];
 }
 
 void DiagnosticLoggingClient::logDiagnosticMessageWithValue(WebKit::WebPageProxy*, const WTF::String& message, const WTF::String& description, const WTF::String& value)
 {
     if (m_delegateMethods.webviewLogDiagnosticMessageWithValue)
-        [m_delegate.get() _webView:m_webView logDiagnosticMessageWithValue:message description:description value:value];
+        [m_delegate.get() _webView:m_webView.get().get() logDiagnosticMessageWithValue:message description:description value:value];
 }
 
 void DiagnosticLoggingClient::logDiagnosticMessageWithEnhancedPrivacy(WebKit::WebPageProxy*, const WTF::String& message, const WTF::String& description)
 {
     if (m_delegateMethods.webviewLogDiagnosticMessageWithEnhancedPrivacy)
-        [m_delegate.get() _webView:m_webView logDiagnosticMessageWithEnhancedPrivacy:message description:description];
+        [m_delegate.get() _webView:m_webView.get().get() logDiagnosticMessageWithEnhancedPrivacy:message description:description];
 }
 
 void DiagnosticLoggingClient::logDiagnosticMessageWithValueDictionary(WebPageProxy*, const String& message, const String& description, Ref<API::Dictionary>&& valueDictionary)
 {
     if (m_delegateMethods.webviewLogDiagnosticMessageWithValueDictionary)
-        [m_delegate.get() _webView:m_webView logDiagnosticMessage:message description:description valueDictionary:static_cast<NSDictionary*>(valueDictionary->wrapper())];
+        [m_delegate.get() _webView:m_webView.get().get() logDiagnosticMessage:message description:description valueDictionary:static_cast<NSDictionary*>(valueDictionary->wrapper())];
 }
 
 void DiagnosticLoggingClient::logDiagnosticMessageWithDomain(WebPageProxy*, const String& message, WebCore::DiagnosticLoggingDomain domain)
 {
     if (m_delegateMethods.webviewLogDiagnosticMessageWithDomain)
-        [m_delegate.get() _webView:m_webView logDiagnosticMessageWithDomain:message domain:toWKDiagnosticLoggingDomain(domain)];
+        [m_delegate.get() _webView:m_webView.get().get() logDiagnosticMessageWithDomain:message domain:toWKDiagnosticLoggingDomain(domain)];
 }
 
 } // namespace WebKit
