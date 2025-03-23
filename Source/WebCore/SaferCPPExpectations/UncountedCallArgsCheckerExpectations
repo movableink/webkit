@@ -966,7 +966,6 @@ page/scrolling/ScrollingThread.cpp
 page/scrolling/ScrollingTree.cpp
 page/scrolling/ScrollingTree.h
 page/scrolling/ScrollingTreeGestureState.cpp
-page/scrolling/ScrollingTreeScrollingNodeDelegate.h
 page/scrolling/ThreadedScrollingCoordinator.cpp
 page/scrolling/mac/ScrollerMac.mm
 page/scrolling/mac/ScrollingCoordinatorMac.mm
