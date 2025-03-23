@@ -1,5 +1,4 @@
 UIProcess/API/Cocoa/_WKRemoteWebInspectorViewController.mm
-UIProcess/DisplayLink.h
 UIProcess/mac/PageClientImplMac.h
 WebProcess/InjectedBundle/API/mac/WKWebProcessPlugInBrowserContextController.mm
 WebProcess/InjectedBundle/InjectedBundle.h
