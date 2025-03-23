@@ -1971,6 +1971,7 @@ svg/repaint/text-repainting-after-modifying-transform.html [ ImageOnlyFailure ]
 
 webkit.org/b/246356 imported/w3c/web-platform-tests/html/semantics/embedded-content/media-elements/autoplay-allowed-by-feature-policy.https.sub.html [ Pass Failure ]
 webkit.org/b/246356 imported/w3c/web-platform-tests/html/semantics/embedded-content/media-elements/autoplay-default-feature-policy.https.sub.html [ Pass Failure ]
+imported/w3c/web-platform-tests/html/semantics/embedded-content/media-elements/autoplay-allowed-by-feature-policy-attribute.https.sub.html [ Pass Failure ]
 
 # These tests are flaky due to "Blocked access to external URL" messages because we don't support WPT domains.
 imported/w3c/web-platform-tests/feature-policy/feature-policy-frame-policy-allowed-for-all.https.sub.html [ DumpJSConsoleLogInStdErr Failure Pass ]

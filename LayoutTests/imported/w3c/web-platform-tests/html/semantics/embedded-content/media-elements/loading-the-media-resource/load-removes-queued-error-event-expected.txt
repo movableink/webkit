@@ -1,4 +1,5 @@
 
-PASS video error event
+PASS video error event with load()
+PASS video error event with src resource
 PASS source error event
 
