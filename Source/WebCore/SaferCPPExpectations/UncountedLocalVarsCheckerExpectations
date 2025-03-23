@@ -380,7 +380,6 @@ html/PermissionsPolicy.cpp
 html/PluginDocument.cpp
 html/RangeInputType.cpp
 html/TextFieldInputType.cpp
-html/UserActivation.cpp
 html/ValidatedFormListedElement.cpp
 html/ValidationMessage.cpp
 html/canvas/ANGLEInstancedArrays.cpp
