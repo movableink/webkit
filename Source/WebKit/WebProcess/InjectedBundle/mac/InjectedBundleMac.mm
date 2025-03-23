@@ -118,7 +118,7 @@ bool InjectedBundle::initialize(const WebProcessCreationParameters& parameters, 
         }
     }
 
-    m_platformBundle = [[NSBundle alloc] initWithPath:m_path];
+    m_platformBundle = adoptNS([[NSBundle alloc] initWithPath:m_path]);
     if (!m_platformBundle) {
         WTFLogAlways("InjectedBundle::load failed - Could not create the bundle.\n");
         return false;
@@ -126,7 +126,7 @@ bool InjectedBundle::initialize(const WebProcessCreationParameters& parameters, 
 
     WKBundleAdditionalClassesForParameterCoderFunctionPtr additionalClassesForParameterCoderFunction = nullptr;
     WKBundleInitializeFunctionPtr initializeFunction = nullptr;
-    if (NSString *executablePath = m_platformBundle.executablePath) {
+    if (NSString *executablePath = [m_platformBundle executablePath]) {
         if (dlopen_preflight(executablePath.fileSystemRepresentation)) {
             // We don't hold onto this handle anywhere more permanent since we never dlclose.
             if (void* handle = dlopen(executablePath.fileSystemRepresentation, RTLD_LAZY | RTLD_GLOBAL | RTLD_FIRST)) {

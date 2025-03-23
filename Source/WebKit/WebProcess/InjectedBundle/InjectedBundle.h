@@ -60,7 +60,7 @@ class Connection;
 namespace WebKit {
 
 #if USE(FOUNDATION)
-typedef NSBundle *PlatformBundle;
+typedef RetainPtr<NSBundle> PlatformBundle;
 #elif USE(GLIB)
 typedef ::GModule* PlatformBundle;
 #else

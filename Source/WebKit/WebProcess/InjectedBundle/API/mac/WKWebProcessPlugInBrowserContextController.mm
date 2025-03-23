@@ -604,7 +604,7 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
     public:
         explicit Client(WKWebProcessPlugInBrowserContextController *controller)
             : m_controller { controller }
-            , m_delegateMethods { m_controller->_editingDelegate.get() }
+            , m_delegateMethods { controller->_editingDelegate.get() }
         {
         }
 
@@ -614,7 +614,8 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
             if (!m_delegateMethods.shouldInsertText)
                 return true;
 
-            return [m_controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:m_controller shouldInsertText:text replacingRange:wrapper(*WebKit::createHandle(rangeToReplace)) givenAction:toWK(action)];
+            RetainPtr controller = m_controller.get();
+            return [controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:controller.get() shouldInsertText:text replacingRange:wrapper(*WebKit::createHandle(rangeToReplace)) givenAction:toWK(action)];
         }
 
         bool shouldChangeSelectedRange(WebKit::WebPage&, const std::optional<WebCore::SimpleRange>& fromRange, const std::optional<WebCore::SimpleRange>& toRange, WebCore::Affinity affinity, bool stillSelecting) final
@@ -636,7 +637,8 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
             NSSelectionAffinity apiAffinity = affinity == WebCore::Affinity::Upstream ? NSSelectionAffinityUpstream : NSSelectionAffinityDownstream;
 #endif
 
-            return [m_controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:m_controller shouldChangeSelectedRange:apiFromRange.get() toRange:apiToRange.get() affinity:apiAffinity stillSelecting:stillSelecting];
+            RetainPtr controller = m_controller.get();
+            return [controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:controller.get() shouldChangeSelectedRange:apiFromRange.get() toRange:apiToRange.get() affinity:apiAffinity stillSelecting:stillSelecting];
         }
 
         void didChange(WebKit::WebPage&, const String&) final
@@ -644,7 +646,8 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
             if (!m_delegateMethods.didChange)
                 return;
 
-            [m_controller->_editingDelegate.get() _webProcessPlugInBrowserContextControllerDidChangeByEditing:m_controller];
+            RetainPtr controller = m_controller.get();
+            [controller->_editingDelegate.get() _webProcessPlugInBrowserContextControllerDidChangeByEditing:controller.get()];
         }
 
         void willWriteToPasteboard(WebKit::WebPage&, const std::optional<WebCore::SimpleRange>& range) final
@@ -652,7 +655,8 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
             if (!m_delegateMethods.willWriteToPasteboard)
                 return;
 
-            [m_controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:m_controller willWriteRangeToPasteboard:wrapper(WebKit::createHandle(range).get())];
+            RetainPtr controller = m_controller.get();
+            [controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:controller.get() willWriteRangeToPasteboard:wrapper(WebKit::createHandle(range).get())];
         }
 
         void getPasteboardDataForRange(WebKit::WebPage&, const std::optional<WebCore::SimpleRange>& range, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer>>& pasteboardData) final
@@ -660,7 +664,8 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
             if (!m_delegateMethods.getPasteboardDataForRange)
                 return;
 
-            auto dataByType = [m_controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:m_controller pasteboardDataForRange:wrapper(WebKit::createHandle(range).get())];
+            RetainPtr controller = m_controller.get();
+            auto dataByType = [controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:controller.get() pasteboardDataForRange:wrapper(WebKit::createHandle(range).get())];
             for (NSString *type in dataByType) {
                 pasteboardTypes.append(type);
                 pasteboardData.append(WebCore::SharedBuffer::create(dataByType[type]));
@@ -672,7 +677,8 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
             if (!m_delegateMethods.didWriteToPasteboard)
                 return;
 
-            [m_controller->_editingDelegate.get() _webProcessPlugInBrowserContextControllerDidWriteToPasteboard:m_controller];
+            RetainPtr controller = m_controller.get();
+            [controller->_editingDelegate.get() _webProcessPlugInBrowserContextControllerDidWriteToPasteboard:controller.get()];
         }
 
         bool performTwoStepDrop(WebKit::WebPage&, WebCore::DocumentFragment& fragment, const WebCore::SimpleRange& range, bool isMove) final
@@ -682,10 +688,11 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
 
             auto rangeHandle = WebKit::createHandle(range);
             auto nodeHandle = WebKit::InjectedBundleNodeHandle::getOrCreate(&fragment);
-            return [m_controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:m_controller performTwoStepDrop:wrapper(*nodeHandle) atDestination:wrapper(*rangeHandle) isMove:isMove];
+            RetainPtr controller = m_controller.get();
+            return [controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:controller.get() performTwoStepDrop:wrapper(*nodeHandle) atDestination:wrapper(*rangeHandle) isMove:isMove];
         }
 
-        WKWebProcessPlugInBrowserContextController *m_controller;
+        WeakObjCPtr<WKWebProcessPlugInBrowserContextController> m_controller;
         const struct DelegateMethods {
             DelegateMethods(RetainPtr<id <WKWebProcessPlugInEditingDelegate>> delegate)
                 : shouldInsertText([delegate respondsToSelector:@selector(_webProcessPlugInBrowserContextController:shouldInsertText:replacingRange:givenAction:)])

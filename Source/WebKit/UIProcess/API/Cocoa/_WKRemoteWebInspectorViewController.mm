@@ -36,6 +36,7 @@
 #import "_WKInspectorConfigurationInternal.h"
 #import "_WKInspectorDebuggableInfoInternal.h"
 #import <wtf/TZoneMallocInlines.h>
+#import <wtf/WeakObjCPtr.h>
 
 #if ENABLE(INSPECTOR_EXTENSIONS)
 #import "APIInspectorExtension.h"
@@ -78,11 +79,11 @@ public:
     
     Ref<API::InspectorConfiguration> configurationForRemoteInspector(RemoteWebInspectorUIProxy& inspector) override
     {
-        return downcast<API::InspectorConfiguration>([m_controller.configuration _apiObject]);
+        return downcast<API::InspectorConfiguration>([[m_controller configuration] _apiObject]);
     }
 
 private:
-    _WKRemoteWebInspectorViewController *m_controller;
+    WeakObjCPtr<_WKRemoteWebInspectorViewController> m_controller;
 };
 
 } // namespace WebKit

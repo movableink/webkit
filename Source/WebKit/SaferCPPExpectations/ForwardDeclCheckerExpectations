@@ -28,7 +28,6 @@ UIProcess/RemoteLayerTree/RemoteLayerTreeHost.mm
 UIProcess/RemoteLayerTree/mac/RemoteLayerTreeEventDispatcher.cpp
 UIProcess/WebProcessPool.h
 WebProcess/Extensions/Bindings/JSWebExtensionWrapper.h
-WebProcess/InjectedBundle/InjectedBundle.h
 WebProcess/Inspector/WebInspectorClient.cpp
 WebProcess/Plugins/PDF/UnifiedPDF/PDFDataDetectorOverlayController.mm
 WebProcess/Plugins/PDF/UnifiedPDF/PDFPresentationController.mm

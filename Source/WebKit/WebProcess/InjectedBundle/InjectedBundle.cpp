@@ -101,7 +101,7 @@ RefPtr<InjectedBundle> InjectedBundle::create(WebProcessCreationParameters& para
 
 InjectedBundle::InjectedBundle(const WebProcessCreationParameters& parameters)
     : m_path(parameters.injectedBundlePath)
-    , m_platformBundle(0)
+    , m_platformBundle(nullptr)
     , m_client(makeUnique<API::InjectedBundle::Client>())
 {
 }
