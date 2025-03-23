@@ -88,7 +88,7 @@ void WebDataListSuggestionsDropdownMac::show(WebCore::DataListSuggestionInformat
         return;
     }
 
-    m_dropdownUI = adoptNS([[WKDataListSuggestionsController alloc] initWithInformation:WTFMove(information) inView:m_view]);
+    m_dropdownUI = adoptNS([[WKDataListSuggestionsController alloc] initWithInformation:WTFMove(information) inView:m_view.get().get()]);
     [m_dropdownUI showSuggestionsDropdown:*this];
 }
 

@@ -33,6 +33,7 @@
 #include <WebCore/DOMPasteAccess.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
+#include <wtf/WeakObjCPtr.h>
 
 @class WKEditorUndoTarget;
 @class WKView;
@@ -327,7 +328,7 @@ private:
     void didCleanupFullscreen() final { }
 #endif
 
-    NSView *m_view;
+    WeakObjCPtr<NSView> m_view;
     WeakPtr<WebViewImpl> m_impl;
 #if USE(AUTOCORRECTION_PANEL)
     CorrectionPanel m_correctionPanel;
