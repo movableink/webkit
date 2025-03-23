@@ -20,11 +20,9 @@ Object.defineProperty(re, "dotAll", {
   }
 });
 
-const runs = 1e6;
-
-for (let i = 0; i < runs; i++) {
+for (let i = 0; i < testLoopCount; i++) {
   re[Symbol.split]("abc");
 }
 
-sameValue(dotAllCount, runs);
-sameValue(hasIndicesCount, runs);
+sameValue(dotAllCount, testLoopCount);
+sameValue(hasIndicesCount, testLoopCount);
