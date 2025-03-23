@@ -1227,7 +1227,7 @@ bool PDFPluginBase::supportsForms() const
 
 bool PDFPluginBase::showContextMenuAtPoint(const IntPoint& point)
 {
-    auto* frameView = m_frame ? m_frame->coreLocalFrame()->view() : nullptr;
+    RefPtr frameView = m_frame ? m_frame->coreLocalFrame()->view() : nullptr;
     if (!frameView)
         return false;
     IntPoint contentsPoint = frameView->contentsToRootView(point);
