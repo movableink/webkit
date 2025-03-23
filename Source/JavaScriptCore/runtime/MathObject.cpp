@@ -199,6 +199,33 @@ JSC_DEFINE_HOST_FUNCTION(mathProtoFuncHypot, (JSGlobalObject* globalObject, Call
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     unsigned argsCount = callFrame->argumentCount();
+
+    if (argsCount == 1) {
+        double arg0 = callFrame->uncheckedArgument(0).toNumber(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+        return JSValue::encode(jsDoubleNumber(std::fabs(arg0)));
+    }
+    if (argsCount == 2) {
+        double arg0 = callFrame->uncheckedArgument(0).toNumber(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+        double arg1 = callFrame->uncheckedArgument(1).toNumber(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (std::isinf(arg0) || std::isinf(arg1))
+            return JSValue::encode(jsDoubleNumber(+std::numeric_limits<double>::infinity()));
+        return JSValue::encode(jsDoubleNumber(std::hypot(arg0, arg1)));
+    }
+    if (argsCount == 3) {
+        double arg0 = callFrame->uncheckedArgument(0).toNumber(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+        double arg1 = callFrame->uncheckedArgument(1).toNumber(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+        double arg2 = callFrame->uncheckedArgument(2).toNumber(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (std::isinf(arg0) || std::isinf(arg1) || std::isinf(arg2))
+            return JSValue::encode(jsDoubleNumber(+std::numeric_limits<double>::infinity()));
+        return JSValue::encode(jsDoubleNumber(std::hypotl(std::hypotl(arg0, arg1), arg2)));
+    }
+
     Vector<double, 8> args(argsCount, [&](size_t i) -> std::optional<double> {
         double argument = callFrame->uncheckedArgument(i).toNumber(globalObject);
         RETURN_IF_EXCEPTION(scope, std::nullopt);
