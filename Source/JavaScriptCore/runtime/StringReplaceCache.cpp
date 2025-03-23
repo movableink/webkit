@@ -26,6 +26,10 @@
 #include "config.h"
 #include "StringReplaceCache.h"
 
+#include "AbstractSlotVisitor.h"
+#include "JSImmutableButterfly.h"
+#include "RegExp.h"
+
 namespace JSC {
 
 DEFINE_VISIT_AGGREGATE(StringReplaceCache);
