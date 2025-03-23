@@ -30,7 +30,6 @@ UIProcess/WebProcessPool.h
 WebProcess/Extensions/Bindings/JSWebExtensionWrapper.h
 WebProcess/Inspector/WebInspectorClient.cpp
 WebProcess/Plugins/PDF/UnifiedPDF/PDFDataDetectorOverlayController.mm
-WebProcess/Plugins/PDF/UnifiedPDF/PDFPresentationController.mm
 WebProcess/Plugins/PDF/UnifiedPDF/UnifiedPDFPlugin.mm
 WebProcess/WebAuthentication/WebAuthenticatorCoordinator.cpp
 WebProcess/WebCoreSupport/WebChromeClient.cpp

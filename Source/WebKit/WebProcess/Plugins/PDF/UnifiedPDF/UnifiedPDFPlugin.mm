@@ -80,6 +80,7 @@
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/GraphicsLayer.h>
 #include <WebCore/GraphicsLayerClient.h>
+#include <WebCore/GraphicsLayerFactory.h>
 #include <WebCore/GraphicsTypes.h>
 #include <WebCore/HTMLNames.h>
 #include <WebCore/HTMLPlugInElement.h>
