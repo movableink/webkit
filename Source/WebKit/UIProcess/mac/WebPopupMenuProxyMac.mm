@@ -121,7 +121,7 @@ void WebPopupMenuProxyMac::showPopupMenu(const IntRect& rect, TextDirection text
 
     populate(items, font, textDirection);
 
-    [m_popup attachPopUpWithFrame:rect inView:m_webView];
+    [m_popup attachPopUpWithFrame:rect inView:m_webView.get().get()];
     [m_popup selectItemAtIndex:selectedIndex];
     [m_popup setUserInterfaceLayoutDirection:textDirection == TextDirection::LTR ? NSUserInterfaceLayoutDirectionLeftToRight : NSUserInterfaceLayoutDirectionRightToLeft];
 
@@ -154,7 +154,7 @@ void WebPopupMenuProxyMac::showPopupMenu(const IntRect& rect, TextDirection text
     RetainPtr<NSView> dummyView = adoptNS([[NSView alloc] initWithFrame:rect]);
     [dummyView.get() setUserInterfaceLayoutDirection:textDirection == TextDirection::LTR ? NSUserInterfaceLayoutDirectionLeftToRight : NSUserInterfaceLayoutDirectionRightToLeft];
     [m_webView addSubview:dummyView.get()];
-    location = [dummyView convertPoint:location fromView:m_webView];
+    location = [dummyView convertPoint:location fromView:m_webView.get().get()];
 
     NSControlSize controlSize;
     switch (data.menuSize) {
