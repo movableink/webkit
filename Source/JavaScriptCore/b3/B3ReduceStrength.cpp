@@ -999,10 +999,14 @@ private:
 
                     Value* magicQuotient = nullptr;
                     if constexpr (isARM64() || isX86()) {
-                        magicQuotient = m_insertionSet.insert<Value>(m_index, MulHigh, m_value->origin(),
-                            dividend,
-                            m_insertionSet.insert<Const32Value>(m_index, m_value->origin(), magic.magicMultiplier));
-                    } else {
+                        if (!(divisor > 0 && magic.magicMultiplier < 0) && !(divisor < 0 && magic.magicMultiplier > 0)) {
+                            magicQuotient = m_insertionSet.insert<Value>(m_index, MulHigh, m_value->origin(),
+                                dividend,
+                                m_insertionSet.insert<Const32Value>(m_index, m_value->origin(), magic.magicMultiplier));
+                        }
+                    }
+
+                    if (!magicQuotient) {
                         magicQuotient = m_insertionSet.insert<Value>(
                             m_index, Trunc, m_value->origin(),
                             m_insertionSet.insert<Value>(
@@ -1020,17 +1024,18 @@ private:
                     if (divisor > 0 && magic.magicMultiplier < 0) {
                         magicQuotient = m_insertionSet.insert<Value>(
                             m_index, Add, m_value->origin(), magicQuotient, dividend);
-                    }
-                    if (divisor < 0 && magic.magicMultiplier > 0) {
+                    } else if (divisor < 0 && magic.magicMultiplier > 0) {
                         magicQuotient = m_insertionSet.insert<Value>(
                             m_index, Sub, m_value->origin(), magicQuotient, dividend);
                     }
+
                     if (magic.shift > 0) {
                         magicQuotient = m_insertionSet.insert<Value>(
                             m_index, SShr, m_value->origin(), magicQuotient,
                             m_insertionSet.insert<Const32Value>(
                                 m_index, m_value->origin(), magic.shift));
                     }
+
                     replaceWithIdentity(
                         m_insertionSet.insert<Value>(
                             m_index, Add, m_value->origin(), magicQuotient,
