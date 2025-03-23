@@ -1059,6 +1059,7 @@ runtime/StringIteratorPrototype.cpp
 runtime/StringObject.cpp
 runtime/StringPrototype.cpp
 runtime/StringRecursionChecker.cpp
+runtime/StringReplaceCache.cpp
 runtime/Structure.cpp
 runtime/StructureCache.cpp
 runtime/StructureChain.cpp
