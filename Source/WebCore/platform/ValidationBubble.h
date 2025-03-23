@@ -96,7 +96,11 @@ private:
     WEBCORE_EXPORT ValidationBubble(PlatformView*, const String& message, const Settings&);
 #endif
 
+#if PLATFORM(COCOA)
+    WeakObjCPtr<PlatformView> m_view;
+#else
     PlatformView* m_view;
+#endif
     String m_message;
     double m_fontSize { 0 };
 #if PLATFORM(MAC)

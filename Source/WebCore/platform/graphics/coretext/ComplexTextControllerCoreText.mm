@@ -137,7 +137,7 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(CTRunRef ctRun, const Font
 
 struct ProviderInfo {
     std::span<const UChar> cp;
-    CFDictionaryRef attributes;
+    RetainPtr<CFDictionaryRef> attributes;
 };
 
 static const UniChar* provideStringAndAttributes(CFIndex stringIndex, CFIndex* charCount, CFDictionaryRef* attributes, void* refCon)
@@ -147,7 +147,7 @@ static const UniChar* provideStringAndAttributes(CFIndex stringIndex, CFIndex* c
         return 0;
 
     *charCount = info->cp.size() - stringIndex;
-    *attributes = info->attributes;
+    *attributes = info->attributes.get();
     return reinterpret_cast<const UniChar*>(info->cp.subspan(stringIndex).data());
 }
 

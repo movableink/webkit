@@ -218,8 +218,9 @@ static UIViewController *fallbackViewController(UIView *view)
 
 void ValidationBubble::setAnchorRect(const IntRect& anchorRect, UIViewController *presentingViewController)
 {
+    RetainPtr view = m_view.get();
     if (!presentingViewController)
-        presentingViewController = fallbackViewController(m_view);
+        presentingViewController = fallbackViewController(view.get());
 
     if (!presentingViewController)
         return;
@@ -227,8 +228,8 @@ void ValidationBubble::setAnchorRect(const IntRect& anchorRect, UIViewController
     UIPopoverPresentationController *presentationController = [m_popoverController popoverPresentationController];
     m_popoverDelegate = adoptNS([[WebValidationBubbleDelegate alloc] init]);
     presentationController.delegate = m_popoverDelegate.get();
-    presentationController.passthroughViews = @[ presentingViewController.view, m_view ];
-    presentationController.sourceView = m_view;
+    presentationController.passthroughViews = @[ presentingViewController.view, view.get() ];
+    presentationController.sourceView = view.get();
     presentationController.sourceRect = CGRectMake(anchorRect.x(), anchorRect.y(), anchorRect.width(), anchorRect.height());
     m_presentingViewController = presentingViewController;
 }

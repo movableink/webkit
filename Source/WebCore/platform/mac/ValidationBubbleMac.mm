@@ -87,11 +87,12 @@ ValidationBubble::~ValidationBubble()
 void ValidationBubble::showRelativeTo(const IntRect& anchorRect)
 {
     // Passing an unparented view to [m_popover showRelativeToRect:ofView:preferredEdge:] crashes.
-    if (![m_view window])
+    RetainPtr view = m_view.get();
+    if (![view window])
         return;
 
     NSRect rect = NSMakeRect(anchorRect.x(), anchorRect.y(), anchorRect.width(), anchorRect.height());
-    [m_popover showRelativeToRect:rect ofView:m_view preferredEdge:NSMinYEdge];
+    [m_popover showRelativeToRect:rect ofView:view.get() preferredEdge:NSMinYEdge];
 }
 
 } // namespace WebCore

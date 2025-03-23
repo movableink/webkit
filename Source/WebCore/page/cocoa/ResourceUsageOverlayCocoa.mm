@@ -373,7 +373,7 @@ static void drawMemHistory(CGContextRef context, float x1, float y1, float y2, H
     CGContextSetLineWidth(context, 1);
 
     struct ColorAndSize {
-        CGColorRef color;
+        RetainPtr<CGColorRef> color;
         size_t size;
     };
 
@@ -396,7 +396,7 @@ static void drawMemHistory(CGContextRef context, float x1, float y1, float y2, H
             CGContextBeginPath(context);
             CGContextMoveToPoint(context, x1 + i, currentY2);
             CGContextAddLineToPoint(context, x1 + i, nextY2);
-            CGContextSetStrokeColorWithColor(context, colorAndSize.color);
+            CGContextSetStrokeColorWithColor(context, colorAndSize.color.get());
             CGContextStrokePath(context);
             currentY2 = nextY2;
         }
