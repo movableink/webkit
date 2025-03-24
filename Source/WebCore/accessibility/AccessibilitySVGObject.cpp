@@ -76,7 +76,7 @@ AccessibilityObject* AccessibilitySVGObject::targetForUseElement() const
 template <typename ChildrenType>
 Element* AccessibilitySVGObject::childElementWithMatchingLanguage(ChildrenType& children) const
 {
-    String languageCode = language();
+    String languageCode = languageIncludingAncestors();
     if (languageCode.isEmpty())
         languageCode = defaultLanguage();
 

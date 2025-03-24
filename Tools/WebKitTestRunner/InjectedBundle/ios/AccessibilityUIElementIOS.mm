@@ -50,6 +50,7 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (NSString *)accessibilityBrailleRoleDescription;
 - (id)accessibilityFocusedUIElement;
 - (id)accessibilityHitTest:(CGPoint)point;
+- (NSString *)accessibilityLanguage;
 - (id)accessibilityLinkedElement;
 - (id)accessibilityTitleElement;
 - (NSRange)accessibilityColumnRange;
@@ -571,7 +572,7 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::stringValue()
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::language()
 {
-    return createJSString();
+    return concatenateAttributeAndValue(@"AXLanguage", [m_element accessibilityLanguage]);
 }
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::helpText() const

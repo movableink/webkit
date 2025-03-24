@@ -1232,6 +1232,7 @@ public:
     AXCoreObject* axScrollView() const;
 
     virtual String language() const = 0;
+    String languageIncludingAncestors() const;
     // 1-based, to match the aria-level spec.
     virtual unsigned hierarchicalLevel() const = 0;
     virtual bool isInlineText() const = 0;

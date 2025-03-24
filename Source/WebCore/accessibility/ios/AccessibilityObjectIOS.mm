@@ -231,7 +231,7 @@ static void attributeStringSetLanguage(NSMutableAttributedString *attrString, Re
         return;
 
     RefPtr object = renderer->document().axObjectCache()->getOrCreate(*renderer);
-    NSString *language = object->language();
+    NSString *language = object->languageIncludingAncestors();
     if (language.length)
         [attrString addAttribute:AccessibilityTokenLanguage value:language range:range];
     else

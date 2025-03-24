@@ -821,7 +821,7 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
         if (invalidStatus != "false"_s)
             addAttributeIfNeeded("invalid"_s, invalidStatus);
 
-        String language = m_coreObject->language();
+        String language = m_coreObject->languageIncludingAncestors();
         if (!language.isEmpty())
             addAttributeIfNeeded("language"_s, language);
 

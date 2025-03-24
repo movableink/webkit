@@ -1446,21 +1446,18 @@ RenderView* AccessibilityObject::topRenderer() const
 
 String AccessibilityObject::language() const
 {
-    const AtomString& lang = getAttribute(langAttr);
+    const auto& lang = getAttribute(langAttr);
     if (!lang.isEmpty())
         return lang;
 
-    AccessibilityObject* parent = parentObject();
-    
-    // as a last resort, fall back to the content language specified in the meta tag
-    if (!parent) {
-        Document* doc = document();
-        if (doc)
-            return doc->contentLanguage();
-        return nullAtom();
+    if (isScrollView() && !parentObject()) {
+        // If this is the root, use the content language specified in the meta tag.
+        if (auto* document = this->document())
+            return document->contentLanguage();
     }
-    
-    return parent->language();
+
+    // This object has no language of its own.
+    return nullAtom();
 }
 
 VisiblePosition AccessibilityObject::visiblePositionForPoint(const IntPoint& point) const

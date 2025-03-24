@@ -581,7 +581,7 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
     if (![self _prepareAccessibilityCall])
         return nil;
     
-    return self.axBackingObject->language();
+    return self.axBackingObject->languageIncludingAncestors();
 }
 
 - (BOOL)accessibilityIsDialog

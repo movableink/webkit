@@ -1012,6 +1012,16 @@ AXCoreObject::AccessibilityChildrenVector AXCoreObject::selectedCells()
     return selectedCells;
 }
 
+String AXCoreObject::languageIncludingAncestors() const
+{
+    auto language = this->language();
+    if (!language.isEmpty())
+        return language;
+
+    auto* parent = parentObject();
+    return parent ? parent->languageIncludingAncestors() : nullAtom();
+}
+
 #if PLATFORM(COCOA)
 static bool isVisibleText(AccessibilityTextSource textSource)
 {

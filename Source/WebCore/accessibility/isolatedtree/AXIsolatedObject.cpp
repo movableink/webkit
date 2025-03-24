@@ -123,6 +123,10 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
             setProperty(AXProperty::ListMarkerLineID, object.listMarkerLineID());
         }
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
+
+        String language = object.language();
+        if (!language.isEmpty())
+            setProperty(AXProperty::Language, WTFMove(language).isolatedCopy());
     };
 
     // Allocate a capacity based on the minimum properties an object has (based on measurements from a real webpage).
@@ -202,7 +206,6 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXProperty::ColorValue, object.colorValue());
     setProperty(AXProperty::Orientation, static_cast<int>(object.orientation()));
     setProperty(AXProperty::HierarchicalLevel, object.hierarchicalLevel());
-    setProperty(AXProperty::Language, object.language().isolatedCopy());
     setProperty(AXProperty::LiveRegionStatus, object.liveRegionStatus().isolatedCopy());
     setProperty(AXProperty::LiveRegionRelevant, object.liveRegionRelevant().isolatedCopy());
     setProperty(AXProperty::LiveRegionAtomic, object.liveRegionAtomic());

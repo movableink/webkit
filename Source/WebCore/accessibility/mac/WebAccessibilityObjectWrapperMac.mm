@@ -1686,7 +1686,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     }
 
     if ([attributeName isEqualToString:NSAccessibilityLanguageAttribute])
-        return backingObject->language();
+        return backingObject->languageIncludingAncestors();
 
     if ([attributeName isEqualToString:NSAccessibilityExpandedAttribute])
         return [NSNumber numberWithBool:backingObject->isExpanded()];

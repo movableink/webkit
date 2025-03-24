@@ -698,7 +698,7 @@ CString AccessibilityObjectAtspi::description() const
 
 String AccessibilityObjectAtspi::locale() const
 {
-    return m_coreObject ? m_coreObject->language() : String();
+    return m_coreObject ? m_coreObject->languageIncludingAncestors() : String();
 }
 
 static bool shouldIncludeOrientationState(const AXCoreObject& coreObject)
