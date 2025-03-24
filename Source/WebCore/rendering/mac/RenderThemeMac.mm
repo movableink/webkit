@@ -599,6 +599,8 @@ Color RenderThemeMac::systemColor(CSSValueID cssValueID, OptionSet<StyleColorOpt
                 return @selector(tertiaryLabelColor);
             case CSSValueAppleSystemQuaternaryLabel:
                 return @selector(quaternaryLabelColor);
+            case CSSValueAppleSystemQuinaryLabel:
+                return @selector(quinaryLabelColor);
 #if HAVE(NSCOLOR_FILL_COLOR_HIERARCHY)
             case CSSValueAppleSystemOpaqueFill:
                 return @selector(systemFillColor);
