@@ -130,7 +130,7 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     };
 
     // Allocate a capacity based on the minimum properties an object has (based on measurements from a real webpage).
-    constexpr unsigned unignoredSizeToReserve = 11;
+    constexpr unsigned unignoredSizeToReserve = 10;
 #if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
     if (object.includeIgnoredInCoreTree()) {
         bool isIgnored = object.isIgnored();
@@ -204,7 +204,7 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXProperty::AccessKey, object.accessKey().isolatedCopy());
     setProperty(AXProperty::AutoCompleteValue, object.autoCompleteValue().isolatedCopy());
     setProperty(AXProperty::ColorValue, object.colorValue());
-    setProperty(AXProperty::Orientation, static_cast<int>(object.orientation()));
+    setProperty(AXProperty::ExplicitOrientation, object.explicitOrientation());
     setProperty(AXProperty::HierarchicalLevel, object.hierarchicalLevel());
     setProperty(AXProperty::LiveRegionStatus, object.liveRegionStatus().isolatedCopy());
     setProperty(AXProperty::LiveRegionRelevant, object.liveRegionRelevant().isolatedCopy());
@@ -640,6 +640,7 @@ void AXIsolatedObject::setProperty(AXProperty propertyName, AXPropertyValueVaria
         [] (WallTime& time) { return !time; },
         [] (TagName& tag) { return tag == TagName::Unknown; },
         [] (DateComponentsType& typedValue) { return typedValue == DateComponentsType::Invalid; },
+        [] (std::optional<AccessibilityOrientation>& typedValue) { return !typedValue; },
         [](auto&) {
             ASSERT_NOT_REACHED();
             return false;

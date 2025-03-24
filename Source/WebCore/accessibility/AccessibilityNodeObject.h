@@ -90,7 +90,8 @@ public:
     float minValueForRange() const override;
     float stepValueForRange() const override;
 
-    AccessibilityOrientation orientation() const override;
+    std::optional<AccessibilityOrientation> orientationFromARIA() const;
+    std::optional<AccessibilityOrientation> explicitOrientation() const override { return orientationFromARIA(); }
 
     AccessibilityButtonState checkboxOrRadioValue() const final;
 

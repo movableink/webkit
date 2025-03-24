@@ -520,7 +520,7 @@ public:
     void performDismissActionIgnoringResult() final { performDismissAction(); }
     bool press() override;
 
-    AccessibilityOrientation orientation() const override;
+    std::optional<AccessibilityOrientation> explicitOrientation() const override { return std::nullopt; }
     void increment() override { }
     void decrement() override { }
     virtual bool toggleDetailsAncestor() { return false; }

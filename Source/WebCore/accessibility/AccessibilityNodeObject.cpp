@@ -1066,7 +1066,7 @@ float AccessibilityNodeObject::stepValueForRange() const
     return getAttribute(stepAttr).toFloat();
 }
 
-AccessibilityOrientation AccessibilityNodeObject::orientation() const
+std::optional<AccessibilityOrientation> AccessibilityNodeObject::orientationFromARIA() const
 {
     const AtomString& ariaOrientation = getAttribute(aria_orientationAttr);
     if (equalLettersIgnoringASCIICase(ariaOrientation, "horizontal"_s))
@@ -1076,19 +1076,7 @@ AccessibilityOrientation AccessibilityNodeObject::orientation() const
     if (equalLettersIgnoringASCIICase(ariaOrientation, "undefined"_s))
         return AccessibilityOrientation::Undefined;
 
-    // In ARIA 1.1, the implicit value of aria-orientation changed from horizontal
-    // to undefined on all roles that don't have their own role-specific values. In
-    // addition, the implicit value of combobox became undefined.
-    if (isComboBox() || isRadioGroup() || isTreeGrid())
-        return AccessibilityOrientation::Undefined;
-
-    if (isScrollbar() || isListBox() || isMenu() || isTree())
-        return AccessibilityOrientation::Vertical;
-
-    if (isMenuBar() || isSplitter() || isTabList() || isToolbar() || isSlider())
-        return AccessibilityOrientation::Horizontal;
-
-    return AccessibilityObject::orientation();
+    return std::nullopt;
 }
 
 bool AccessibilityNodeObject::isBusy() const

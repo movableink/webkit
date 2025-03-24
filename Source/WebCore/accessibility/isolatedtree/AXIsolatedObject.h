@@ -349,7 +349,10 @@ private:
 #endif
     AXIsolatedObject* focusableAncestor() final { return Accessibility::focusableAncestor(*this); }
     AXIsolatedObject* highestEditableAncestor() final { return Accessibility::highestEditableAncestor(*this); }
-    AccessibilityOrientation orientation() const final { return static_cast<AccessibilityOrientation>(intAttributeValue(AXProperty::Orientation)); }
+    virtual std::optional<AccessibilityOrientation> explicitOrientation() const
+    {
+        return propertyValue<std::optional<AccessibilityOrientation>>(AXProperty::ExplicitOrientation);
+    }
     unsigned hierarchicalLevel() const final { return unsignedAttributeValue(AXProperty::HierarchicalLevel); }
     String language() const final { return stringAttributeValue(AXProperty::Language); }
     void setSelectedChildren(const AccessibilityChildrenVector&) final;

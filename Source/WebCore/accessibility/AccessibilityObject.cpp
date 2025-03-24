@@ -2580,18 +2580,6 @@ bool AccessibilityObject::insertText(const String& text)
     return editor.insertText(text, nullptr);
 }
 
-// Lacking concrete evidence of orientation, horizontal means width > height. vertical is height > width;
-AccessibilityOrientation AccessibilityObject::orientation() const
-{
-    LayoutRect bounds = elementRect();
-    if (bounds.size().width() > bounds.size().height())
-        return AccessibilityOrientation::Horizontal;
-    if (bounds.size().height() > bounds.size().width())
-        return AccessibilityOrientation::Vertical;
-
-    return AccessibilityOrientation::Undefined;
-}    
-
 using ARIARoleMap = UncheckedKeyHashMap<String, AccessibilityRole, ASCIICaseInsensitiveHash>;
 using ARIAReverseRoleMap = UncheckedKeyHashMap<AccessibilityRole, String, DefaultHash<int>, WTF::UnsignedWithZeroKeyHashTraits<int>>;
 

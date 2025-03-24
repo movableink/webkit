@@ -1592,9 +1592,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     if ([attributeName isEqualToString:NSAccessibilityDisclosingAttribute])
         return [NSNumber numberWithBool:backingObject->isExpanded()];
 
-    if (backingObject->isList() && [attributeName isEqualToString:NSAccessibilityOrientationAttribute])
-        return NSAccessibilityVerticalOrientationValue;
-
     if ([attributeName isEqualToString:NSAccessibilitySelectedTextMarkerRangeAttribute])
         return (id)[self selectedTextMarkerRange];
 

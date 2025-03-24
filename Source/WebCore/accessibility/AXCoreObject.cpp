@@ -761,6 +761,33 @@ bool AXCoreObject::selfOrAncestorLinkHasPopup() const
     return false;
 }
 
+AccessibilityOrientation AXCoreObject::orientation() const
+{
+    if (std::optional orientation = explicitOrientation())
+        return *orientation;
+
+    // In ARIA 1.1, the implicit value of aria-orientation changed from horizontal
+    // to undefined on all roles that don't have their own role-specific values. In
+    // addition, the implicit value of combobox became undefined.
+    if (isComboBox() || isRadioGroup() || isTreeGrid())
+        return AccessibilityOrientation::Undefined;
+
+    if (isScrollbar() || isList() || isListBox() || isMenu() || isTree())
+        return AccessibilityOrientation::Vertical;
+
+    if (isMenuBar() || isSplitter() || isTabList() || isToolbar() || isSlider())
+        return AccessibilityOrientation::Horizontal;
+
+    // Lacking concrete evidence of orientation, horizontal means width > height. vertical is height > width;
+    auto size = this->size();
+    if (size.width() > size.height())
+        return AccessibilityOrientation::Horizontal;
+    if (size.height() > size.width())
+        return AccessibilityOrientation::Vertical;
+
+    return AccessibilityOrientation::Undefined;
+}
+
 AccessibilitySortDirection AXCoreObject::sortDirectionIncludingAncestors() const
 {
     for (RefPtr ancestor = this; ancestor; ancestor = ancestor->parentObject()) {

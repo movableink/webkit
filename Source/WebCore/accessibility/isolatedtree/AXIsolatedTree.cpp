@@ -669,6 +669,9 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
         case AXProperty::DocumentLinks:
             propertyMap.set(AXProperty::DocumentLinks, axIDs(axObject.documentLinks()));
             break;
+        case AXProperty::ExplicitOrientation:
+            propertyMap.set(AXProperty::ExplicitOrientation, axObject.explicitOrientation());
+            break;
         case AXProperty::ExtendedDescription:
             propertyMap.set(AXProperty::ExtendedDescription, axObject.extendedDescription().isolatedCopy());
             break;
@@ -720,9 +723,6 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
             break;
         case AXProperty::MinValueForRange:
             propertyMap.set(AXProperty::MinValueForRange, axObject.minValueForRange());
-            break;
-        case AXProperty::Orientation:
-            propertyMap.set(AXProperty::Orientation, static_cast<int>(axObject.orientation()));
             break;
         case AXProperty::NameAttribute:
             propertyMap.set(AXProperty::NameAttribute, axObject.nameAttribute().isolatedCopy());

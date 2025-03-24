@@ -648,10 +648,10 @@ struct AccessibilityTextOperation {
     AccessibilityTextOperationSmartReplace smartReplace { AccessibilityTextOperationSmartReplace::Yes };
 };
 
-enum class AccessibilityOrientation {
-    Vertical,
-    Horizontal,
+enum class AccessibilityOrientation : uint8_t {
     Undefined,
+    Horizontal,
+    Vertical
 };
 
 enum class TrimWhitespace : bool { No, Yes };
@@ -1255,7 +1255,14 @@ public:
     virtual bool performDismissAction() { return false; }
     virtual void performDismissActionIgnoringResult() = 0;
 
-    virtual AccessibilityOrientation orientation() const = 0;
+    // An object has an "explicit orientation" when its backing entity explicitly provides one,
+    // vs. an "implicit" orientation which is determined inherently by its size or role.
+    //
+    // An example of an explicit orientation is one provided by aria-orientation. Another is scrollbars,
+    // which inherently are horizontal or vertical.
+    virtual std::optional<AccessibilityOrientation> explicitOrientation() const = 0;
+    AccessibilityOrientation orientation() const;
+
     virtual void increment() = 0;
     virtual void decrement() = 0;
 

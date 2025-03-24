@@ -47,7 +47,7 @@ private:
     LayoutRect elementRect() const final;
 
     AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::ScrollBar; }
-    AccessibilityOrientation orientation() const final;
+    std::optional<AccessibilityOrientation> explicitOrientation() const final;
     Document* document() const final;
     bool isEnabled() const final;
 

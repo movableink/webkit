@@ -4772,7 +4772,7 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
             tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::NameAttribute });
             break;
         case AXNotification::OrientationChanged:
-            tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::Orientation });
+            tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::ExplicitOrientation });
             break;
         case AXNotification::PositionInSetChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { { AXProperty::PosInSet, AXProperty::SupportsPosInSet } });

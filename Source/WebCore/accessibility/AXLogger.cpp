@@ -751,6 +751,9 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::ExpandedTextValue:
         stream << "ExpandedTextValue";
         break;
+    case AXProperty::ExplicitOrientation:
+        stream << "ExplicitOrientation";
+        break;
     case AXProperty::ExtendedDescription:
         stream << "ExtendedDescription";
         break;
@@ -1054,9 +1057,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
         break;
     case AXProperty::NameAttribute:
         stream << "NameAttribute";
-        break;
-    case AXProperty::Orientation:
-        stream << "Orientation";
         break;
     case AXProperty::OuterHTML:
         stream << "OuterHTML";
