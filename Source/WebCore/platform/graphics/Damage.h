@@ -70,7 +70,7 @@ public:
             return;
 
         m_size = size;
-        m_gridSize = { std::max(1, m_size.width() / m_tileSize.width()), std::max(1, m_size.height() / m_tileSize.height()) };
+        m_gridSize = ceiledIntSize({ static_cast<float>(m_size.width()) / m_tileSize.width(), static_cast<float>(m_size.height()) / m_tileSize.height() }).expandedTo({ 1, 1 });
         m_rects.clear();
         m_minimumBoundingRectangle = { };
         m_shouldUnite = m_gridSize.width() == 1 && m_gridSize.height() == 1;
