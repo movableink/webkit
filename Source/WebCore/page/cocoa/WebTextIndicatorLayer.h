@@ -42,9 +42,6 @@ WEBCORE_EXPORT @interface WebTextIndicatorLayer : CALayer {
 
 - (instancetype)initWithFrame:(CGRect)frame textIndicator:(WebCore::TextIndicator&)textIndicator margin:(CGSize)margin offset:(CGPoint)offset;
 
-- (bool)indicatorWantsManualAnimation:(const WebCore::TextIndicator&)indicator;
-- (bool)indicatorWantsBounce:(const WebCore::TextIndicator&)indicator;
-
 - (void)present;
 - (void)hideWithCompletionHandler:(void(^)(void))completionHandler;
 

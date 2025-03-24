@@ -131,6 +131,38 @@ RefPtr<TextIndicator> TextIndicator::createWithSelectionInFrame(LocalFrame& fram
     return TextIndicator::create(data);
 }
 
+bool TextIndicator::wantsBounce() const
+{
+    switch (m_data.presentationTransition) {
+    case WebCore::TextIndicatorPresentationTransition::BounceAndCrossfade:
+    case WebCore::TextIndicatorPresentationTransition::Bounce:
+        return true;
+
+    case WebCore::TextIndicatorPresentationTransition::FadeIn:
+    case WebCore::TextIndicatorPresentationTransition::None:
+        return false;
+    }
+
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
+bool TextIndicator::wantsManualAnimation() const
+{
+    switch (m_data.presentationTransition) {
+    case WebCore::TextIndicatorPresentationTransition::FadeIn:
+        return true;
+
+    case WebCore::TextIndicatorPresentationTransition::Bounce:
+    case WebCore::TextIndicatorPresentationTransition::BounceAndCrossfade:
+    case WebCore::TextIndicatorPresentationTransition::None:
+        return false;
+    }
+
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
 static bool hasNonInlineOrReplacedElements(const SimpleRange& range)
 {
     for (auto& node : intersectingNodes(range)) {

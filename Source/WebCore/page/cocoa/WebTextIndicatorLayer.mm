@@ -91,38 +91,6 @@ static bool indicatorWantsFadeIn(const WebCore::TextIndicator& indicator)
     return false;
 }
 
-- (bool)indicatorWantsBounce:(const WebCore::TextIndicator&)indicator
-{
-    switch (indicator.presentationTransition()) {
-    case WebCore::TextIndicatorPresentationTransition::BounceAndCrossfade:
-    case WebCore::TextIndicatorPresentationTransition::Bounce:
-        return true;
-
-    case WebCore::TextIndicatorPresentationTransition::FadeIn:
-    case WebCore::TextIndicatorPresentationTransition::None:
-        return false;
-    }
-
-    ASSERT_NOT_REACHED();
-    return false;
-}
-
-- (bool)indicatorWantsManualAnimation:(const WebCore::TextIndicator&)indicator
-{
-    switch (indicator.presentationTransition()) {
-    case WebCore::TextIndicatorPresentationTransition::FadeIn:
-        return true;
-
-    case WebCore::TextIndicatorPresentationTransition::Bounce:
-    case WebCore::TextIndicatorPresentationTransition::BounceAndCrossfade:
-    case WebCore::TextIndicatorPresentationTransition::None:
-        return false;
-    }
-
-    ASSERT_NOT_REACHED();
-    return false;
-}
-
 - (instancetype)initWithFrame:(CGRect)frame textIndicator:(WebCore::TextIndicator&)textIndicator margin:(CGSize)margin offset:(CGPoint)offset
 {
     if (!(self = [super init]))
@@ -287,7 +255,7 @@ static RetainPtr<CABasicAnimation> createFadeInAnimation(CFTimeInterval duration
 
 - (CFTimeInterval)_animationDuration
 {
-    if ([self indicatorWantsBounce:*_textIndicator]) {
+    if (_textIndicator->wantsBounce()) {
         if (indicatorWantsContentCrossfade(*_textIndicator))
             return bounceWithCrossfadeAnimationDuration;
         return WebCore::bounceAnimationDuration.value();
@@ -304,7 +272,7 @@ static RetainPtr<CABasicAnimation> createFadeInAnimation(CFTimeInterval duration
 - (void)present
 {
     RefPtr textIndicator = _textIndicator;
-    bool wantsBounce = [self indicatorWantsBounce:*textIndicator];
+    bool wantsBounce = textIndicator->wantsBounce();
     bool wantsCrossfade = indicatorWantsContentCrossfade(*textIndicator);
     bool wantsFadeIn = indicatorWantsFadeIn(*textIndicator);
     CFTimeInterval animationDuration = [self _animationDuration];
@@ -326,7 +294,7 @@ static RetainPtr<CABasicAnimation> createFadeInAnimation(CFTimeInterval duration
 
     [CATransaction begin];
     for (CALayer *bounceLayer in _bounceLayers.get()) {
-        if ([self indicatorWantsManualAnimation:*textIndicator])
+        if (textIndicator->wantsManualAnimation())
             bounceLayer.speed = 0;
 
         if (!wantsFadeIn)

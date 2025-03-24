@@ -85,7 +85,7 @@ void TextIndicatorWindow::clearTextIndicator(WebCore::TextIndicatorDismissalAnim
     if ([m_textIndicatorLayer isFadingOut])
         return;
 
-    if (textIndicator && [m_textIndicatorLayer indicatorWantsManualAnimation:*textIndicator] && [m_textIndicatorLayer hasCompletedAnimation] && animation == WebCore::TextIndicatorDismissalAnimation::FadeOut) {
+    if (textIndicator && textIndicator->wantsManualAnimation() && [m_textIndicatorLayer hasCompletedAnimation] && animation == WebCore::TextIndicatorDismissalAnimation::FadeOut) {
         startFadeOut();
         return;
     }
@@ -104,8 +104,9 @@ void TextIndicatorWindow::setTextIndicator(Ref<TextIndicator> textIndicator, CGR
 
     CGFloat horizontalMargin = dropShadowBlurRadius * 2 + TextIndicator::defaultHorizontalMargin;
     CGFloat verticalMargin = dropShadowBlurRadius * 2 + TextIndicator::defaultVerticalMargin;
-    
-    if ([m_textIndicatorLayer indicatorWantsBounce:*m_textIndicator]) {
+
+    RefPtr<TextIndicator> local_textIndicator = m_textIndicator;
+    if (local_textIndicator->wantsBounce()) {
         horizontalMargin = std::max(horizontalMargin, textBoundingRectInScreenCoordinates.size.width * (WebCore::midBounceScale - 1) + horizontalMargin);
         verticalMargin = std::max(verticalMargin, textBoundingRectInScreenCoordinates.size.height * (WebCore::midBounceScale - 1) + verticalMargin);
     }
@@ -124,7 +125,7 @@ void TextIndicatorWindow::setTextIndicator(Ref<TextIndicator> textIndicator, CGR
 
     NSRect frame = NSMakeRect(0, 0, [m_textIndicatorWindow frame].size.width, [m_textIndicatorWindow frame].size.height);
     m_textIndicatorLayer = adoptNS([[WebTextIndicatorLayer alloc] initWithFrame:frame
-        textIndicator:*m_textIndicator margin:NSMakeSize(horizontalMargin, verticalMargin) offset:fractionalTextOffset]);
+        textIndicator:*local_textIndicator margin:NSMakeSize(horizontalMargin, verticalMargin) offset:fractionalTextOffset]);
     m_textIndicatorView = adoptNS([[WebTextIndicatorView alloc] initWithFrame:frame]);
     [m_textIndicatorView setLayer:m_textIndicatorLayer.get()];
     [m_textIndicatorView setWantsLayer:YES];
@@ -133,7 +134,7 @@ void TextIndicatorWindow::setTextIndicator(Ref<TextIndicator> textIndicator, CGR
     [[m_targetView window] addChildWindow:m_textIndicatorWindow.get() ordered:NSWindowAbove];
     [m_textIndicatorWindow setReleasedWhenClosed:NO];
 
-    if (m_textIndicator->presentationTransition() != TextIndicatorPresentationTransition::None)
+    if (local_textIndicator->presentationTransition() != TextIndicatorPresentationTransition::None)
         [m_textIndicatorLayer present];
 
     if (lifetime == TextIndicatorLifetime::Temporary)
