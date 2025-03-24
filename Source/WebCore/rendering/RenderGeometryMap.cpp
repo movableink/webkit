@@ -152,7 +152,8 @@ static bool canMapBetweenRenderersViaLayers(const RenderLayerModelObject& render
         if (current->isFixedPositioned() || style.writingMode().isBlockFlipped())
             return false;
 
-        if (current->hasTransformOrPerspective())
+        auto hasTransformOrPerspective = current->hasTransformRelatedProperty() && (current->isTransformed() || current->style().hasPerspective());
+        if (hasTransformOrPerspective)
             return false;
         
         if (current->isRenderFragmentedFlow())

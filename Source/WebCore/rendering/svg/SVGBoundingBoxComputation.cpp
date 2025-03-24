@@ -23,7 +23,7 @@
 #include "NestingLevelIncrementer.h"
 #include "ReferencedSVGResources.h"
 #include "RenderChildIterator.h"
-#include "RenderObjectInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderSVGContainer.h"
 #include "RenderSVGForeignObject.h"
 #include "RenderSVGHiddenContainer.h"

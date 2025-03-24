@@ -155,7 +155,7 @@ RenderElement& RenderTreeBuilder::Table::findOrCreateParentForChild(RenderTable&
         }
     }
 
-    auto* parentCandidate = beforeChild;
+    auto* parentCandidate = dynamicDowncast<RenderElement>(beforeChild);
     while (parentCandidate && parentCandidate->parent()->isAnonymous()
         && !is<RenderTableSection>(*parentCandidate)
         && parentCandidate->style().display() != DisplayType::TableCaption

@@ -1540,60 +1540,6 @@ void RenderObject::mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode> mode, T
     }
 }
 
-bool RenderObject::shouldUseTransformFromContainer(const RenderElement* containerObject) const
-{
-    if (isTransformed())
-        return true;
-    if (hasLayer() && downcast<RenderLayerModelObject>(*this).layer()->snapshottedScrollOffsetForAnchorPositioning())
-        return true;
-    if (containerObject && containerObject->style().hasPerspective())
-        return containerObject == parent();
-    return false;
-}
-
-// FIXME: Now that it's no longer passed a container maybe this should be renamed?
-void RenderObject::getTransformFromContainer(const LayoutSize& offsetInContainer, TransformationMatrix& transform) const
-{
-    transform.makeIdentity();
-    transform.translate(offsetInContainer.width(), offsetInContainer.height());
-    CheckedPtr<RenderLayer> layer;
-    if (hasLayer() && (layer = downcast<RenderLayerModelObject>(*this).layer()) && layer->transform())
-        transform.multiply(layer->currentTransform());
-
-    CheckedPtr perspectiveObject = parent();
-
-    if (perspectiveObject && perspectiveObject->hasLayer() && perspectiveObject->style().hasPerspective()) {
-        // Perpsective on the container affects us, so we have to factor it in here.
-        ASSERT(perspectiveObject->hasLayer());
-        FloatPoint perspectiveOrigin = downcast<RenderLayerModelObject>(*perspectiveObject).layer()->perspectiveOrigin();
-
-        TransformationMatrix perspectiveMatrix;
-        perspectiveMatrix.applyPerspective(perspectiveObject->style().usedPerspective());
-        
-        transform.translateRight3d(-perspectiveOrigin.x(), -perspectiveOrigin.y(), 0);
-        transform = perspectiveMatrix * transform;
-        transform.translateRight3d(perspectiveOrigin.x(), perspectiveOrigin.y(), 0);
-    }
-}
-
-void RenderObject::pushOntoTransformState(TransformState& transformState, OptionSet<MapCoordinatesMode> mode, const RenderLayerModelObject* repaintContainer, const RenderElement* container, const LayoutSize& offsetInContainer, bool containerSkipped) const
-{
-    bool preserve3D = mode.contains(UseTransforms) && participatesInPreserve3D();
-    if (mode.contains(UseTransforms) && shouldUseTransformFromContainer(container)) {
-        TransformationMatrix matrix;
-        getTransformFromContainer(offsetInContainer, matrix);
-        transformState.applyTransform(matrix, preserve3D ? TransformState::AccumulateTransform : TransformState::FlattenTransform);
-    } else
-        transformState.move(offsetInContainer.width(), offsetInContainer.height(), preserve3D ? TransformState::AccumulateTransform : TransformState::FlattenTransform);
-
-    if (containerSkipped) {
-        // There can't be a transform between repaintContainer and container, because transforms create containers, so it should be safe
-        // to just subtract the delta between the repaintContainer and container.
-        LayoutSize containerOffset = repaintContainer->offsetFromAncestorContainer(*container);
-        transformState.move(-containerOffset.width(), -containerOffset.height(), preserve3D ? TransformState::AccumulateTransform : TransformState::FlattenTransform);
-    }
-}
-
 FloatQuad RenderObject::localToContainerQuad(const FloatQuad& localQuad, const RenderLayerModelObject* container, OptionSet<MapCoordinatesMode> mode, bool* wasFixed) const
 {
     // Track the point at the center of the quad's bounding box. As mapLocalToContainer() calls offsetFromContainer(),
@@ -1624,26 +1570,6 @@ LayoutSize RenderObject::offsetFromContainer(RenderElement& container, const Lay
 
     if (offsetDependsOnPoint)
         *offsetDependsOnPoint = is<RenderFragmentedFlow>(container);
-
-    return offset;
-}
-
-LayoutSize RenderObject::offsetFromAncestorContainer(const RenderElement& container) const
-{
-    LayoutSize offset;
-    LayoutPoint referencePoint;
-    CheckedPtr currentContainer = this;
-    do {
-        CheckedPtr nextContainer = currentContainer->container();
-        ASSERT(nextContainer);  // This means we reached the top without finding container.
-        if (!nextContainer)
-            break;
-        ASSERT(!currentContainer->isTransformed());
-        LayoutSize currentOffset = currentContainer->offsetFromContainer(*nextContainer, referencePoint);
-        offset += currentOffset;
-        referencePoint.move(currentOffset);
-        currentContainer = WTFMove(nextContainer);
-    } while (currentContainer != &container);
 
     return offset;
 }

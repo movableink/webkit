@@ -52,15 +52,15 @@ inline bool requiresLineBoxForContent(const RenderInline& flow, const LineInfo& 
     return false;
 }
 
-inline bool shouldCollapseWhiteSpace(const RenderStyle* style, const LineInfo& lineInfo, WhitespacePosition whitespacePosition)
+inline bool shouldCollapseWhiteSpace(const RenderStyle& style, const LineInfo& lineInfo, WhitespacePosition whitespacePosition)
 {
     // CSS2 16.6.1
     // If a space (U+0020) at the beginning of a line has 'white-space' set to 'normal', 'nowrap', or 'pre-line', it is removed.
     // If a space (U+0020) at the end of a line has 'white-space' set to 'normal', 'nowrap', or 'pre-line', it is also removed.
     // If spaces (U+0020) or tabs (U+0009) at the end of a line have 'white-space' set to 'pre-wrap', UAs may visually collapse them.
-    return style->collapseWhiteSpace()
-        || (whitespacePosition == TrailingWhitespace && style->whiteSpaceCollapse() == WhiteSpaceCollapse::Preserve
-            && style->textWrapMode() == TextWrapMode::Wrap && !lineInfo.isEmpty());
+    return style.collapseWhiteSpace()
+        || (whitespacePosition == TrailingWhitespace && style.whiteSpaceCollapse() == WhiteSpaceCollapse::Preserve
+            && style.textWrapMode() == TextWrapMode::Wrap && !lineInfo.isEmpty());
 }
 
 inline bool skipNonBreakingSpace(const LegacyInlineIterator& it, const LineInfo& lineInfo)
@@ -88,11 +88,11 @@ inline bool requiresLineBox(const LegacyInlineIterator& it, const LineInfo& line
         rendererIsEmptyInline = isEmptyInline(*inlineRenderer);
     }
 
-    if (!shouldCollapseWhiteSpace(&it.renderer()->style(), lineInfo, whitespacePosition))
+    if (!shouldCollapseWhiteSpace(it.renderer()->style(), lineInfo, whitespacePosition))
         return true;
 
     UChar current = it.current();
-    bool notJustWhitespace = current != ' ' && current != '\t' && current != softHyphen && (current != '\n' || it.renderer()->preservesNewline()) && !skipNonBreakingSpace(it, lineInfo);
+    bool notJustWhitespace = current != ' ' && current != '\t' && current != softHyphen && current != '\n' && !skipNonBreakingSpace(it, lineInfo);
     return notJustWhitespace || rendererIsEmptyInline;
 }
 
