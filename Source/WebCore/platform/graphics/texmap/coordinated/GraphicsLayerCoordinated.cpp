@@ -898,9 +898,12 @@ void GraphicsLayerCoordinated::updateDamage()
         return;
 
     Damage damage;
-    if (m_dirtyRegion.fullRepaint)
+    if (m_dirtyRegion.fullRepaint) {
+        // FIXME: this will be simply changing the mode when we create damage with the layer size.
+        damage.resize(m_size);
+        damage.setMode(Damage::Mode::Full);
         damage.add(FloatRect({ }, m_size));
-    else {
+    } else {
         for (const auto& rect : m_dirtyRegion.rects)
             damage.add(rect);
     }

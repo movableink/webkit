@@ -264,15 +264,12 @@ void ThreadedCompositor::paintToCurrentGLContext(const TransformationMatrix& mat
     currentRootLayer.prepareForPainting(*m_textureMapper);
     if (m_damagePropagation != Damage::Propagation::None) {
         Damage frameDamage;
+        if (m_damagePropagation == Damage::Propagation::Unified)
+            frameDamage.setMode(Damage::Mode::BoundingBox);
+
         WTFBeginSignpost(this, CollectDamage);
         currentRootLayer.collectDamage(*m_textureMapper, frameDamage);
         WTFEndSignpost(this, CollectDamage);
-
-        if (m_damagePropagation == Damage::Propagation::Unified) {
-            Damage boundsDamage;
-            boundsDamage.add(frameDamage.bounds());
-            frameDamage = WTFMove(boundsDamage);
-        }
 
         if (m_frameDamageHistory)
             m_frameDamageHistory->addDamage(frameDamage);

@@ -552,7 +552,10 @@ void TextureMapperLayer::collectDamageSelfChildrenFilterAndMask(TextureMapperPai
 
 void TextureMapperLayer::damageWholeLayer()
 {
-    ensureDamageInLayerCoordinateSpace().add(layerRect());
+    // FIXME: this will be simply changing the mode when we create damage with the layer size.
+    auto& damage = ensureDamageInLayerCoordinateSpace();
+    damage.resize(layerRect().size());
+    damage.setMode(Damage::Mode::Full);
 }
 
 void TextureMapperLayer::damageWholeLayerIncludingItsRectFromPreviousFrame()

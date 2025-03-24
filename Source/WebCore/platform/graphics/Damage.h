@@ -50,7 +50,7 @@ public:
         : m_tileSize(s_tileSize, s_tileSize)
     {
         // FIXME: Add a constructor to pass the size.
-        resize({ 2048, 1024 });
+        resize(IntSize { 2048, 1024 });
     }
 
     Damage(Damage&&) = default;
@@ -72,12 +72,47 @@ public:
         m_size = size;
         m_gridSize = { std::max(1, m_size.width() / m_tileSize.width()), std::max(1, m_size.height() / m_tileSize.height()) };
         m_rects.clear();
+        m_minimumBoundingRectangle = { };
         m_shouldUnite = m_gridSize.width() == 1 && m_gridSize.height() == 1;
+    }
+
+    void resize(const FloatSize& size)
+    {
+        resize(ceiledIntSize(LayoutSize(size)));
+    }
+
+    enum class Mode : uint8_t {
+        Rectangles, // Tracks dirty regions as rectangles, only unifying when maximum is reached.
+        BoundingBox, // Dirty region is always the minimum bounding box of all added rectangles.
+        Full, // All area is always dirty.
+    };
+
+    void setMode(Mode mode)
+    {
+        if (m_mode == mode)
+            return;
+
+        switch (mode) {
+        case Mode::Rectangles:
+            break;
+        case Mode::BoundingBox:
+            m_rects.clear();
+            if (!m_minimumBoundingRectangle.isEmpty())
+                m_rects.append(m_minimumBoundingRectangle);
+            break;
+        case Mode::Full:
+            m_minimumBoundingRectangle = { { }, m_size };
+            m_rects.clear();
+            m_rects.append(m_minimumBoundingRectangle);
+            break;
+        }
+
+        m_mode = mode;
     }
 
     ALWAYS_INLINE void add(const Region& region)
     {
-        if (region.isEmpty())
+        if (region.isEmpty() || !shouldAdd())
             return;
 
         for (const auto& rect : region.rects())
@@ -86,7 +121,7 @@ public:
 
     void add(const IntRect& rect)
     {
-        if (rect.isEmpty())
+        if (rect.isEmpty() || !shouldAdd())
             return;
 
         const auto rectsCount = m_rects.size();
@@ -101,6 +136,11 @@ public:
             return;
 
         m_minimumBoundingRectangle.unite(rect);
+        if (m_mode == Mode::BoundingBox) {
+            ASSERT(rectsCount == 1);
+            m_rects[0] = m_minimumBoundingRectangle;
+            return;
+        }
 
         if (m_shouldUnite) {
             unite(rect);
@@ -119,7 +159,7 @@ public:
 
     ALWAYS_INLINE void add(const FloatRect& rect)
     {
-        if (rect.isEmpty())
+        if (rect.isEmpty() || !shouldAdd())
             return;
 
         add(enclosingIntRect(rect));
@@ -127,11 +167,19 @@ public:
 
     ALWAYS_INLINE void add(const Damage& other)
     {
+        if (other.isEmpty() || !shouldAdd())
+            return;
+
         for (const auto& rect : other.rects())
             add(rect);
     }
 
 private:
+    ALWAYS_INLINE bool shouldAdd() const
+    {
+        return !m_size.isEmpty() && m_mode != Mode::Full;
+    }
+
     void uniteExistingRects()
     {
         Rects rectsCopy(m_rects.size());
@@ -161,6 +209,7 @@ private:
         m_rects[index].unite(rect);
     }
 
+    Mode m_mode { Mode::Rectangles };
     IntSize m_size;
     bool m_shouldUnite { false };
     IntSize m_tileSize;
