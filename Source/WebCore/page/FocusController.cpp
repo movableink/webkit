@@ -1086,7 +1086,6 @@ void FocusController::setIsVisibleAndActiveInternal(bool contentIsVisible)
 
 static void updateFocusCandidateIfNeeded(FocusDirection direction, const FocusCandidate& current, FocusCandidate& candidate, FocusCandidate& closest)
 {
-    ASSERT(candidate.visibleNode->isElementNode());
     ASSERT(candidate.visibleNode->renderer());
 
     // Ignore iframes that don't have a src attribute
@@ -1136,9 +1135,9 @@ static void updateFocusCandidateIfNeeded(FocusDirection direction, const FocusCa
         closest = candidate;
 }
 
-void FocusController::findFocusCandidateInContainer(Node& container, const LayoutRect& startingRect, FocusDirection direction, KeyboardEvent* event, FocusCandidate& closest)
+void FocusController::findFocusCandidateInContainer(const ContainerNode& container, const LayoutRect& startingRect, FocusDirection direction, KeyboardEvent* event, FocusCandidate& closest)
 {
-    Node* focusedNode = (focusedLocalFrame() && focusedLocalFrame()->document()) ? focusedLocalFrame()->document()->focusedElement() : nullptr;
+    auto* focusedNode = (focusedLocalFrame() && focusedLocalFrame()->document()) ? focusedLocalFrame()->document()->focusedElement() : nullptr;
 
     Element* element = ElementTraversal::firstWithin(container);
     FocusCandidate current;
@@ -1147,13 +1146,11 @@ void FocusController::findFocusCandidateInContainer(Node& container, const Layou
     current.visibleNode = focusedNode;
 
     unsigned candidateCount = 0;
-    for (; element; element = (is<HTMLFrameOwnerElement>(*element) || canScrollInDirection(element, direction))
-        ? ElementTraversal::nextSkippingChildren(*element, &container)
-        : ElementTraversal::next(*element, &container)) {
+    for (; element; element = (is<HTMLFrameOwnerElement>(*element) || canScrollInDirection(*element, direction)) ? ElementTraversal::nextSkippingChildren(*element, &container) : ElementTraversal::next(*element, &container)) {
         if (element == focusedNode)
             continue;
 
-        if (!element->isKeyboardFocusable(event) && !is<HTMLFrameOwnerElement>(*element) && !canScrollInDirection(element, direction))
+        if (!element->isKeyboardFocusable(event) && !is<HTMLFrameOwnerElement>(*element) && !canScrollInDirection(*element, direction))
             continue;
 
         FocusCandidate candidate = FocusCandidate(element, direction);
@@ -1177,11 +1174,8 @@ void FocusController::findFocusCandidateInContainer(Node& container, const Layou
     }
 }
 
-bool FocusController::advanceFocusDirectionallyInContainer(Node* container, const LayoutRect& startingRect, FocusDirection direction, KeyboardEvent* event)
+bool FocusController::advanceFocusDirectionallyInContainer(const ContainerNode& container, const LayoutRect& startingRect, FocusDirection direction, KeyboardEvent* event)
 {
-    if (!container)
-        return false;
-
     LayoutRect newStartingRect = startingRect;
 
     if (startingRect.isEmpty())
@@ -1189,7 +1183,7 @@ bool FocusController::advanceFocusDirectionallyInContainer(Node* container, cons
 
     // Find the closest node within current container in the direction of the navigation.
     FocusCandidate focusCandidate;
-    findFocusCandidateInContainer(*container, newStartingRect, direction, event, focusCandidate);
+    findFocusCandidateInContainer(container, newStartingRect, direction, event, focusCandidate);
 
     if (focusCandidate.isNull()) {
         // Nothing to focus, scroll if possible.
@@ -1205,46 +1199,45 @@ bool FocusController::advanceFocusDirectionallyInContainer(Node* container, cons
         ASSERT(is<LocalFrame>(frameElement->contentFrame()));
 
         if (focusCandidate.isOffscreenAfterScrolling) {
-            scrollInDirection(focusCandidate.visibleNode->protectedDocument().ptr(), direction);
+            scrollInDirection(focusCandidate.visibleNode->protectedDocument(), direction);
             return true;
         }
         // Navigate into a new frame.
         LayoutRect rect;
         RefPtr focusedOrMainFrame = this->focusedOrMainFrame();
         RefPtr focusedElement = focusedOrMainFrame ? focusedOrMainFrame->document()->focusedElement() : nullptr;
-        if (focusedElement && !hasOffscreenRect(focusedElement.get()))
-            rect = nodeRectInAbsoluteCoordinates(focusedElement.get(), true /* ignore border */);
+        if (focusedElement && !hasOffscreenRect(*focusedElement))
+            rect = nodeRectInAbsoluteCoordinates(*focusedElement, true /* ignore border */);
         dynamicDowncast<LocalFrame>(frameElement->contentFrame())->protectedDocument()->updateLayoutIgnorePendingStylesheets();
-        if (!advanceFocusDirectionallyInContainer(dynamicDowncast<LocalFrame>(frameElement->contentFrame())->document(), rect, direction, event)) {
+        if (!advanceFocusDirectionallyInContainer(*dynamicDowncast<LocalFrame>(frameElement->contentFrame())->document(), rect, direction, event)) {
             // The new frame had nothing interesting, need to find another candidate.
-            return advanceFocusDirectionallyInContainer(container, nodeRectInAbsoluteCoordinates(RefPtr { focusCandidate.visibleNode.get() }.get(), true), direction, event);
+            RefPtr visibleNode = focusCandidate.visibleNode.get();
+            return advanceFocusDirectionallyInContainer(container, nodeRectInAbsoluteCoordinates(*visibleNode, true), direction, event);
         }
         return true;
     }
 
-    if (RefPtr visibleNode = focusCandidate.visibleNode.get(); canScrollInDirection(visibleNode.get(), direction)) {
+    if (RefPtr visibleNode = focusCandidate.visibleNode.get(); visibleNode && canScrollInDirection(*visibleNode, direction)) {
         if (focusCandidate.isOffscreenAfterScrolling) {
-            scrollInDirection(visibleNode.get(), direction);
+            scrollInDirection(*visibleNode, direction);
             return true;
         }
         // Navigate into a new scrollable container.
         LayoutRect startingRect;
         RefPtr focusedOrMainFrame = this->focusedOrMainFrame();
         RefPtr focusedElement = focusedOrMainFrame ? focusedOrMainFrame->document()->focusedElement() : nullptr;
-        if (focusedElement && !hasOffscreenRect(focusedElement.get()))
-            startingRect = nodeRectInAbsoluteCoordinates(focusedElement.get(), true);
-        return advanceFocusDirectionallyInContainer(RefPtr { focusCandidate.visibleNode.get() }.get(), startingRect, direction, event);
+        if (focusedElement && !hasOffscreenRect(*focusedElement))
+            startingRect = nodeRectInAbsoluteCoordinates(*focusedElement, true);
+        return advanceFocusDirectionallyInContainer(*visibleNode, startingRect, direction, event);
     }
     if (focusCandidate.isOffscreenAfterScrolling) {
         RefPtr container = focusCandidate.enclosingScrollableBox.get();
-        scrollInDirection(container.get(), direction);
+        scrollInDirection(*container, direction);
         return true;
     }
 
     // We found a new focus node, navigate to it.
-    RefPtr element = downcast<Element>(focusCandidate.focusableNode.get());
-    ASSERT(element);
-
+    RefPtr element = focusCandidate.focusableNode.get();
     element->focus({ SelectionRestorationMode::SelectAll, direction });
     return true;
 }
@@ -1262,28 +1255,29 @@ bool FocusController::advanceFocusDirectionally(FocusDirection direction, Keyboa
     focusedDocument->updateLayoutIgnorePendingStylesheets();
 
     // Figure out the starting rect.
-    RefPtr<Node> container = focusedDocument.get();
+    RefPtr<ContainerNode> container = focusedDocument.get();
     LayoutRect startingRect;
     if (auto* focusedElement = focusedDocument->focusedElement()) {
-        if (!hasOffscreenRect(focusedElement)) {
-            container = scrollableEnclosingBoxOrParentFrameForNodeInDirection(direction, focusedElement);
-            startingRect = nodeRectInAbsoluteCoordinates(focusedElement, true /* ignore border */);
-        } else if (auto* area = dynamicDowncast<HTMLAreaElement>(*focusedElement)) {
-            container = scrollableEnclosingBoxOrParentFrameForNodeInDirection(direction, area->imageElement().get());
+        if (!hasOffscreenRect(*focusedElement)) {
+            container = scrollableEnclosingBoxOrParentFrameForNodeInDirection(direction, *focusedElement);
+            startingRect = nodeRectInAbsoluteCoordinates(*focusedElement, true /* ignore border */);
+        } else if (auto* area = dynamicDowncast<HTMLAreaElement>(*focusedElement); area && area->imageElement()) {
+            container = scrollableEnclosingBoxOrParentFrameForNodeInDirection(direction, *area->imageElement());
             startingRect = virtualRectForAreaElementAndDirection(area, direction);
         }
     }
 
+    ASSERT(container);
     auto* focusedFrame = focusedLocalFrame();
     if (focusedFrame && focusedFrame->document())
         focusedDocument->page()->setLastSpatialNavigationCandidateCount(0);
 
     bool consumed = false;
     do {
-        consumed = advanceFocusDirectionallyInContainer(container.get(), startingRect, direction, event);
+        consumed = advanceFocusDirectionallyInContainer(*container, startingRect, direction, event);
         focusedDocument->updateLayoutIgnorePendingStylesheets();
-        startingRect = nodeRectInAbsoluteCoordinates(container.get(), true /* ignore border */);
-        container = scrollableEnclosingBoxOrParentFrameForNodeInDirection(direction, container.get());
+        startingRect = nodeRectInAbsoluteCoordinates(*container, true /* ignore border */);
+        container = scrollableEnclosingBoxOrParentFrameForNodeInDirection(direction, *container);
     } while (!consumed && container);
 
     return consumed;

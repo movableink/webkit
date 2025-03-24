@@ -176,9 +176,12 @@ static inline bool elementAndAncestorsAreOnlyRenderedChildren(const Element& ele
         return false;
 
     for (auto& ancestor : ancestorsOfType<RenderElement>(*renderer)) {
+        if (ancestor.style().usedVisibility() == Visibility::Hidden)
+            continue;
+
         unsigned numberOfVisibleChildren = 0;
         for (auto& child : childrenOfType<RenderObject>(ancestor)) {
-            if (child.style().usedVisibility() == Visibility::Hidden)
+            if (CheckedPtr renderElement = dynamicDowncast<RenderElement>(child); renderElement && renderElement->style().usedVisibility() == Visibility::Hidden)
                 continue;
 
             if (++numberOfVisibleChildren >= 2)

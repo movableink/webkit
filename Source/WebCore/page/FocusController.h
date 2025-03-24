@@ -119,8 +119,8 @@ private:
     Element* nextFocusableElementOrScopeOwner(const FocusNavigationScope&, Node* start, KeyboardEvent*);
     Element* previousFocusableElementOrScopeOwner(const FocusNavigationScope&, Node* start, KeyboardEvent*);
 
-    bool advanceFocusDirectionallyInContainer(Node* container, const LayoutRect& startingRect, FocusDirection, KeyboardEvent*);
-    void findFocusCandidateInContainer(Node& container, const LayoutRect& startingRect, FocusDirection, KeyboardEvent*, FocusCandidate& closest);
+    bool advanceFocusDirectionallyInContainer(const ContainerNode&, const LayoutRect& startingRect, FocusDirection, KeyboardEvent*);
+    void findFocusCandidateInContainer(const ContainerNode&, const LayoutRect& startingRect, FocusDirection, KeyboardEvent*, FocusCandidate& closest);
 
     void focusRepaintTimerFired();
     Ref<Page> protectedPage() const;
