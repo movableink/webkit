@@ -855,7 +855,9 @@ SpeculatedType typeOfDoubleNegation(SpeculatedType value)
 {
     // Changing bits can make pure NaN impure and vice versa:
     // 0xefff000000000000 (pure) - 0xffff000000000000 (impure)
-    if (value & SpecDoubleNaN)
+    // But we don't allow such pure NaN patterns. Thus we don't
+    // need any special handling for those pure NaNs
+    if (value & SpecDoubleImpureNaN)
         value |= SpecDoubleNaN;
     // We could get negative zero, which mixes SpecAnyIntAsDouble and SpecNotIntAsDouble.
     // We could also overflow a large negative int into something that is no longer
@@ -872,9 +874,8 @@ SpeculatedType typeOfDoubleAbs(SpeculatedType value)
 
 SpeculatedType typeOfDoubleRounding(SpeculatedType value)
 {
-    // Double Pure NaN can becomes impure when converted back from Float.
-    // and vice versa.
-    if (value & SpecDoubleNaN)
+    // Impure NaN can become pure when rounding but none of the pure NaNs we produce will convert to an impure NaN.
+    if (value & SpecDoubleImpureNaN)
         value |= SpecDoubleNaN;
     // We might lose bits, which leads to a value becoming integer-representable.
     if (value & SpecNonIntAsDouble)
