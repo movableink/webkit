@@ -916,6 +916,8 @@ WebPageProxy::WebPageProxy(PageClient& pageClient, WebProcessProxy& process, Ref
     if (RefPtr gpuProcess = GPUProcessProxy::singletonIfCreated())
         gpuProcess->setPresentingApplicationAuditToken(process.coreProcessIdentifier(), m_webPageID, m_presentingApplicationAuditToken);
 #endif
+
+    setURLSchemeHandlerForScheme(m_aboutSchemeHandler, AboutSchemeHandler::scheme);
 }
 
 WebPageProxy::~WebPageProxy()
@@ -1605,9 +1607,6 @@ void WebPageProxy::didAttachToRunningProcess()
 #if PLATFORM(IOS_FAMILY) && ENABLE(MODEL_PROCESS)
     internals().modelPresentationManagerProxy = ModelPresentationManagerProxy::create(*this);
 #endif
-
-    if (!urlSchemeHandlerForScheme(AboutSchemeHandler::scheme))
-        setURLSchemeHandlerForScheme(m_aboutSchemeHandler, AboutSchemeHandler::scheme);
 }
 
 RefPtr<API::Navigation> WebPageProxy::launchProcessForReload()
@@ -14181,7 +14180,8 @@ void WebPageProxy::setURLSchemeHandlerForScheme(Ref<WebURLSchemeHandler>&& handl
     ASSERT_UNUSED(handlerIdentifierResult, handlerIdentifierResult.isNewEntry);
 
     WebCore::LegacySchemeRegistry::registerURLSchemeAsHandledBySchemeHandler(scheme);
-    send(Messages::WebPage::RegisterURLSchemeHandler(handlerIdentifier, canonicalizedScheme.value()));
+    if (hasRunningProcess())
+        send(Messages::WebPage::RegisterURLSchemeHandler(handlerIdentifier, canonicalizedScheme.value()));
 }
 
 WebURLSchemeHandler* WebPageProxy::urlSchemeHandlerForScheme(const String& scheme)
