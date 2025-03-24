@@ -562,7 +562,11 @@ void CoordinatedPlatformLayer::setDirtyRegion(Vector<IntRect, 1>&& dirtyRegion)
 void CoordinatedPlatformLayer::setDamage(Damage&& damage)
 {
     ASSERT(m_lock.isHeld());
-    m_damage = WTFMove(damage);
+
+    if (!m_damage)
+        m_damage = WTFMove(damage);
+    else
+        m_damage->add(damage);
     m_pendingChanges.add(Change::Damage);
 }
 #endif
@@ -908,8 +912,11 @@ void CoordinatedPlatformLayer::flushCompositingState(TextureMapper& textureMappe
         layer.setSolidColor(m_contentsColor);
 
 #if ENABLE(DAMAGE_TRACKING)
-    if (m_pendingChanges.contains(Change::Damage))
-        layer.setDamage(WTFMove(m_damage));
+    if (m_pendingChanges.contains(Change::Damage)) {
+        ASSERT(m_damage.has_value());
+        layer.setDamage(WTFMove(*m_damage));
+        m_damage = std::nullopt;
+    }
 #endif
 
     if (m_pendingChanges.contains(Change::Filters))

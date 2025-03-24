@@ -296,7 +296,7 @@ private:
     float m_debugBorderWidth WTF_GUARDED_BY_LOCK(m_lock) { 0 };
     int m_repaintCount WTF_GUARDED_BY_LOCK(m_lock) { -1 };
 #if ENABLE(DAMAGE_TRACKING)
-    Damage m_damage WTF_GUARDED_BY_LOCK(m_lock);
+    std::optional<Damage> m_damage WTF_GUARDED_BY_LOCK(m_lock);
 #endif
 #if ENABLE(SCROLLING_THREAD)
     Markable<ScrollingNodeID> m_scrollingNodeID WTF_GUARDED_BY_LOCK(m_lock);
