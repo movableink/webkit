@@ -1026,7 +1026,7 @@ class RunWorldLeaksTests(RunWebKitTests):
         return super().run()
 
 
-class RunAPITests(TestWithFailureCount, CustomFlagsMixin):
+class RunAPITests(TestWithFailureCount, CustomFlagsMixin, ShellMixin):
     name = "run-api-tests"
     VALID_ADDITIONAL_ARGUMENTS_LIST = ["--remote-layer-tree", "--use-gpu-process"]
     description = ["api tests running"]
@@ -1053,6 +1053,7 @@ class RunAPITests(TestWithFailureCount, CustomFlagsMixin):
 
     def __init__(self, *args, **kwargs):
         kwargs['logEnviron'] = False
+        kwargs['timeout'] = 3 * 60 * 60
         super().__init__(*args, **kwargs)
 
     def run(self):
@@ -1065,7 +1066,23 @@ class RunAPITests(TestWithFailureCount, CustomFlagsMixin):
         for additionalArgument in additionalArguments or []:
             if additionalArgument in self.VALID_ADDITIONAL_ARGUMENTS_LIST:
                 self.command += [additionalArgument]
-        return super().run()
+        self.command = self.shell_command(' '.join(self.command) + ' > logs.txt 2>&1 ; grep "Ran " logs.txt')
+
+        rc = super().run()
+
+        self.build.addStepsAfterCurrentStep([
+            GenerateS3URL(
+                f"{self.getProperty('fullPlatform')}-{self.getProperty('architecture')}-{self.getProperty('configuration')}-{self.name}",
+                extension='txt',
+                additions=f'{self.build.number}',
+                content_type='text/plain',
+            ), UploadFileToS3(
+                'logs.txt',
+                links={self.name: 'Full logs'},
+                content_type='text/plain',
+            )
+        ])
+        return rc
 
     def countFailures(self):
         return self.failedTestCount

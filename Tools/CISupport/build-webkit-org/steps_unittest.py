@@ -1180,6 +1180,50 @@ class TestRunJavaScriptCoreTests(BuildStepMixinAdditions, unittest.TestCase):
         return self.runStep()
 
 
+class TestRunAPITests(BuildStepMixinAdditions, unittest.TestCase):
+    def setUp(self):
+        self.longMessage = True
+        os.environ['RESULTS_SERVER_API_KEY'] = 'test-api-key'
+        self.jsonFileName = 'api_test_results.json'
+        return self.setUpBuildStep()
+
+    def tearDown(self):
+        del os.environ['RESULTS_SERVER_API_KEY']
+        return self.tearDownBuildStep()
+
+    def configureStep(self, platform=None, fullPlatform=None, configuration=None):
+        self.setupStep(RunAPITests())
+        if platform:
+            self.setProperty('platform', platform)
+        if fullPlatform:
+            self.setProperty('fullPlatform', fullPlatform)
+        if configuration:
+            self.setProperty('configuration', configuration)
+        self.setProperty('buildername', 'API-Tests')
+        self.setProperty('buildnumber', '101')
+        self.setProperty('workername', 'bot100')
+
+    def test_success(self):
+        self.configureStep(platform='mac', fullPlatform='mac-highsierra', configuration='release')
+        next_steps = []
+        self.patch(self.build, 'addStepsAfterCurrentStep', lambda s: next_steps.extend(s))
+        command = f'python3 Tools/Scripts/run-api-tests --no-build --json-output={self.jsonFileName} --release --verbose --buildbot-master {CURRENT_HOSTNAME} --builder-name API-Tests --build-number 101 --buildbot-worker bot100 --report https://results.webkit.org'
+        self.expectRemoteCommands(
+            ExpectShell(workdir='wkdir',
+                        logEnviron=False,
+                        command=['/bin/sh', '-c', command + ' > logs.txt 2>&1 ; grep "Ran " logs.txt'],
+                        logfiles={'json': self.jsonFileName},
+                        env={'RESULTS_SERVER_API_KEY': 'test-api-key'},
+                        timeout=10800,
+                        )
+            + 0,
+        )
+        self.expectOutcome(result=SUCCESS, state_string='run-api-tests')
+        rc = self.runStep()
+        self.assertEqual([GenerateS3URL('mac-highsierra-None-release-run-api-tests', extension='txt', additions='13', content_type='text/plain'), UploadFileToS3('logs.txt', links={'run-api-tests': 'Full logs'}, content_type='text/plain')], next_steps)
+        return rc
+
+
 class TestSetPermissions(BuildStepMixinAdditions, unittest.TestCase):
     def setUp(self):
         self.longMessage = True
