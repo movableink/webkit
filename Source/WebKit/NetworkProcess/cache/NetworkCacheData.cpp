@@ -39,6 +39,18 @@
 namespace WebKit {
 namespace NetworkCache {
 
+#if !USE(GLIB) && USE(CURL)
+Data::Data(Vector<uint8_t>&& data)
+    : Data(std::variant<Vector<uint8_t>, FileSystem::MappedFileData> { WTFMove(data) })
+{
+}
+#elif !PLATFORM(COCOA)
+Data::Data(Vector<uint8_t>&& data)
+    : Data(data.span())
+{
+}
+#endif
+
 Data Data::mapToFile(const String& path) const
 {
     FileSystem::FileHandle handle;

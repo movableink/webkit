@@ -32,6 +32,7 @@
 #import <sys/stat.h>
 #import <wtf/FileHandle.h>
 #import <wtf/cocoa/SpanCocoa.h>
+#import <wtf/cocoa/VectorCocoa.h>
 
 namespace WebKit {
 namespace NetworkCache {
@@ -44,6 +45,11 @@ Data::Data(std::span<const uint8_t> data)
 Data::Data(OSObjectPtr<dispatch_data_t>&& dispatchData, Backing backing)
     : m_dispatchData(WTFMove(dispatchData))
     , m_isMap(backing == Backing::Map && dispatch_data_get_size(m_dispatchData.get()))
+{
+}
+
+Data::Data(Vector<uint8_t>&& data)
+    : Data(makeDispatchData(WTFMove(data)).get(), Backing::Buffer)
 {
 }
 
