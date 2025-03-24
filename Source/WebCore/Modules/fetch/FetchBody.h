@@ -89,6 +89,8 @@ public:
     bool hasReadableStream() const { return !!m_readableStream; }
     const ReadableStream* readableStream() const { return m_readableStream.get(); }
     ReadableStream* readableStream() { return m_readableStream.get(); }
+    RefPtr<const ReadableStream> protectedReadableStream() const { return readableStream(); }
+    RefPtr<ReadableStream> protectedReadableStream() { return readableStream(); }
     void setReadableStream(Ref<ReadableStream>&& stream)
     {
         ASSERT(!m_readableStream);

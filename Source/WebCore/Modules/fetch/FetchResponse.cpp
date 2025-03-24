@@ -57,11 +57,17 @@ FetchResponse::~FetchResponse() = default;
 
 Ref<FetchResponse> FetchResponse::create(ScriptExecutionContext* context, std::optional<FetchBody>&& body, FetchHeaders::Guard guard, ResourceResponse&& response)
 {
+    bool isOpaque = response.tainting() == ResourceResponse::Tainting::Opaque;
+    Ref headers = isOpaque ? FetchHeaders::create(guard) : FetchHeaders::create(guard, HTTPHeaderMap { response.httpHeaderFields() });
+    return FetchResponse::create(context, WTFMove(body), WTFMove(headers), WTFMove(response));
+}
+
+Ref<FetchResponse> FetchResponse::create(ScriptExecutionContext* context, std::optional<FetchBody>&& body, Ref<FetchHeaders>&& headers, ResourceResponse&& response)
+{
     bool isSynthetic = response.type() == ResourceResponse::Type::Default || response.type() == ResourceResponse::Type::Error;
     bool isOpaque = response.tainting() == ResourceResponse::Tainting::Opaque;
-    auto headers = isOpaque ? FetchHeaders::create(guard) : FetchHeaders::create(guard, HTTPHeaderMap { response.httpHeaderFields() });
 
-    auto fetchResponse = adoptRef(*new FetchResponse(context, WTFMove(body), WTFMove(headers), WTFMove(response)));
+    Ref fetchResponse = adoptRef(*new FetchResponse(context, WTFMove(body), WTFMove(headers), WTFMove(response)));
     fetchResponse->suspendIfNeeded();
     if (!isSynthetic)
         fetchResponse->m_filteredResponse = ResourceResponseBase::filter(fetchResponse->m_internalResponse, ResourceResponse::PerformExposeAllHeadersCheck::Yes);
@@ -211,9 +217,9 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::clone()
     if (m_internalResponse.type() == ResourceResponse::Type::Default)
         m_internalResponse.setHTTPHeaderFields(HTTPHeaderMap { headers().internalHeaders() });
 
-    auto clone = FetchResponse::create(scriptExecutionContext(), std::nullopt, headers().guard(), ResourceResponse { m_internalResponse });
+    Ref headers = FetchHeaders::create(this->headers());
+    auto clone = FetchResponse::create(scriptExecutionContext(), std::nullopt, WTFMove(headers), ResourceResponse { m_internalResponse });
     clone->cloneBody(*this);
-    clone->m_headers = FetchHeaders::create(headers());
     clone->m_opaqueLoadIdentifier = m_opaqueLoadIdentifier;
     clone->m_bodySizeWithPadding = m_bodySizeWithPadding;
     return clone;
