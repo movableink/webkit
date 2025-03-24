@@ -142,15 +142,15 @@ typedef enum {
     nw_resolver_status_in_progress = 1,
     nw_resolver_status_complete = 2,
 } nw_resolver_status_t;
-nw_resolver_t nw_resolver_create_with_endpoint(nw_endpoint_t, nw_parameters_t);
+OS_OBJECT_RETURNS_RETAINED nw_resolver_t nw_resolver_create_with_endpoint(nw_endpoint_t, nw_parameters_t);
 typedef void (^nw_resolver_update_block_t) (nw_resolver_status_t, nw_array_t);
 bool nw_resolver_set_update_handler(nw_resolver_t, dispatch_queue_t, nw_resolver_update_block_t);
 bool nw_resolver_cancel(nw_resolver_t);
 void nw_context_set_privacy_level(nw_context_t, nw_context_privacy_level_t);
 void nw_parameters_set_context(nw_parameters_t, nw_context_t);
-nw_endpoint_t nw_establishment_report_copy_proxy_endpoint(nw_establishment_report_t);
+OS_OBJECT_RETURNS_RETAINED nw_endpoint_t nw_establishment_report_copy_proxy_endpoint(nw_establishment_report_t);
 
-nw_context_t nw_context_create(const char *);
+OS_OBJECT_RETURNS_RETAINED nw_context_t nw_context_create(const char *);
 size_t nw_array_get_count(nw_array_t);
 nw_object_t nw_array_get_object_at_index(nw_array_t, size_t);
 #ifdef __cplusplus
