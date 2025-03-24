@@ -151,8 +151,6 @@ public:
     bool establishesIndependentFormattingContext() const;
     bool createsNewFormattingContext() const;
 
-    static inline bool shouldSkipCreatingRunsForObject(RenderObject&);
-
     static TextRun constructTextRun(StringView, const RenderStyle&,
         ExpansionBehavior = ExpansionBehavior::defaultBehavior(), TextRunFlags = DefaultTextRunFlags);
     static TextRun constructTextRun(const String&, const RenderStyle&,

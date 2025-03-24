@@ -661,7 +661,14 @@ void RenderObject::setPreferredLogicalWidthsDirty(bool shouldBeDirty, MarkingBeh
 {
     bool alreadyDirty = preferredLogicalWidthsDirty();
     m_stateBitfields.setFlag(StateFlag::PreferredLogicalWidthsDirty, shouldBeDirty);
-    if (shouldBeDirty && !alreadyDirty && markParents == MarkContainingBlockChain && (isRenderText() || !style().hasOutOfFlowPosition()))
+    auto shouldMarkContainer = [&] {
+        if (markParents == MarkOnlyThis)
+            return false;
+        if (!shouldBeDirty || alreadyDirty)
+            return false;
+        return is<RenderText>(*this) || !downcast<RenderElement>(*this).style().hasOutOfFlowPosition();
+    };
+    if (shouldMarkContainer())
         invalidateContainerPreferredLogicalWidths();
 }
 

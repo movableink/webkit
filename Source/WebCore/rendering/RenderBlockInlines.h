@@ -37,11 +37,6 @@ inline LayoutUnit RenderBlock::endOffsetForLine(LayoutUnit position, LayoutUnit 
     return !writingMode().isLogicalLeftInlineStart() ? logicalLeftOffsetForLine(position, logicalHeight) : logicalWidth() - logicalRightOffsetForLine(position, logicalHeight);
 }
 
-inline bool RenderBlock::shouldSkipCreatingRunsForObject(RenderObject& object)
-{
-    return object.isFloating() || (object.isOutOfFlowPositioned() && !object.style().isOriginalDisplayInlineType() && !object.container()->isRenderInline());
-}
-
 inline LayoutUnit RenderBlock::startOffsetForLine(LayoutUnit position, LayoutUnit logicalHeight) const
 {
     return writingMode().isLogicalLeftInlineStart() ? logicalLeftOffsetForLine(position, logicalHeight)

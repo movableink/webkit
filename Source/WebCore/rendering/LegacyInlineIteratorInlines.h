@@ -42,7 +42,7 @@ inline void IsolateTracker::addFakeRunIfNecessary(RenderObject& object, unsigned
     // We only need to add a fake run for a given isolated span once during each call to createBidiRunsForLine.
     // We'll be called for every span inside the isolated span so we just ignore subsequent calls.
     // We also avoid creating a fake run until we hit a child that warrants one, e.g. we skip floats.
-    if (RenderBlock::shouldSkipCreatingRunsForObject(object))
+    if (LegacyLineLayout::shouldSkipCreatingRunsForObject(object))
         return;
     if (!m_haveAddedFakeRunForRootIsolate) {
         // object and position together denote a single position in the inline, from which the parsing of the isolate will start.

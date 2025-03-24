@@ -189,11 +189,11 @@ inline void BreakingContext::initializeForCurrentObject()
     if (m_nextObject && m_nextObject->parent() && !m_nextObject->parent()->isDescendantOf(renderer.parent()))
         m_includeEndWidth = true;
 
-    m_currentTextWrap = renderer.isReplacedOrAtomicInline() ? renderer.parent()->style().textWrapMode() : renderer.style().textWrapMode();
-    m_currentWhitespaceCollapse = renderer.isReplacedOrAtomicInline() ? renderer.parent()->style().whiteSpaceCollapse() : renderer.style().whiteSpaceCollapse();
+    m_currentTextWrap = renderer.isReplacedOrAtomicInline() || is<RenderText>(renderer) ? renderer.parent()->style().textWrapMode() : renderer.style().textWrapMode();
+    m_currentWhitespaceCollapse = renderer.isReplacedOrAtomicInline() || is<RenderText>(renderer) ? renderer.parent()->style().whiteSpaceCollapse() : renderer.style().whiteSpaceCollapse();
 
-    m_lastObjectTextWrap = m_lastObject->isReplacedOrAtomicInline() ? m_lastObject->parent()->style().textWrapMode() : m_lastObject->style().textWrapMode();
-    m_lastObjectWhitespaceCollapse = m_lastObject->isReplacedOrAtomicInline() ? m_lastObject->parent()->style().whiteSpaceCollapse() : m_lastObject->style().whiteSpaceCollapse();
+    m_lastObjectTextWrap = m_lastObject->isReplacedOrAtomicInline() || is<RenderText>(renderer) ? m_lastObject->parent()->style().textWrapMode() : m_lastObject->style().textWrapMode();
+    m_lastObjectWhitespaceCollapse = m_lastObject->isReplacedOrAtomicInline() || is<RenderText>(renderer) ? m_lastObject->parent()->style().whiteSpaceCollapse() : m_lastObject->style().whiteSpaceCollapse();
 
     bool isSVGText = renderer.isRenderSVGInlineText();
     m_autoWrap = !isSVGText && m_currentTextWrap != TextWrapMode::NoWrap;
@@ -710,7 +710,7 @@ inline TrailingObjects::CollapseFirstSpace checkWhitespaceCollapsingTransitions(
         if (currpoint == lBreak) {
             // We hit the line break before the start point. Shave off the start point.
             lineWhitespaceCollapsingState.decrementNumTransitions();
-            if (endpoint.renderer()->style().collapseWhiteSpace() && endpoint.renderer()->isRenderText()) {
+            if (CheckedPtr renderText = dynamicDowncast<RenderText>(*endpoint.renderer()); renderText && renderText->style().collapseWhiteSpace()) {
                 lineWhitespaceCollapsingState.decrementTransitionAt(lineWhitespaceCollapsingState.numTransitions() - 1);
                 return TrailingObjects::CollapseFirstSpace::No;
             }

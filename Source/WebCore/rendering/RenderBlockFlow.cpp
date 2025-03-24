@@ -4529,7 +4529,12 @@ static inline std::optional<std::pair<const RenderText&, const RenderText&>> tra
         return { };
 
     auto shouldSkip = [&](auto& renderer) {
-        return !renderer.isInFlow() || is<RenderInline>(renderer) || renderer.style().display() == DisplayType::RubyAnnotation;
+        if (is<RenderText>(renderer))
+            return false;
+        if (is<RenderInline>(renderer))
+            return true;
+        auto& renderBox = downcast<RenderBoxModelObject>(renderer);
+        return !renderBox.isInFlow() || renderBox.style().display() == DisplayType::RubyAnnotation;
     };
 
     auto walker = InlineWalker(blockContainer, rubyBase.firstInFlowChild());
@@ -4631,7 +4636,7 @@ void RenderBlockFlow::computeInlinePreferredLogicalWidths(LayoutUnit& minLogical
     bool addedStartPunctuationHang = false;
     
     while (RenderObject* child = childIterator.next()) {
-        bool autoWrap = child->isReplacedOrAtomicInline() ? child->parent()->style().autoWrap() : child->style().autoWrap();
+        bool autoWrap = child->isReplacedOrAtomicInline() || is<RenderText>(*child) ? child->parent()->style().autoWrap() : child->style().autoWrap();
 
         // Interlinear annotations don't participate in inline layout, but they put a minimum width requirement on the associated ruby base.
         auto isInterlinearTypeAnnotation = [&] {

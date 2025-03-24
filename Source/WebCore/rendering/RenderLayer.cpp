@@ -1952,27 +1952,25 @@ bool RenderLayer::computeHasVisibleContent() const
         return true;
 
     // Layer's renderer has visibility:hidden, but some non-layer child may have visibility:visible.
-    RenderObject* r = renderer().firstChild();
-    while (r) {
-        if (r->style().usedVisibility() == Visibility::Visible && !r->hasLayer())
-            return true;
-
-        RenderObject* child = nullptr;
-        if (!r->hasLayer() && (child = r->firstChildSlow()))
-            r = child;
-        else if (r->nextSibling())
-            r = r->nextSibling();
-        else {
-            do {
-                r = r->parent();
-                if (r == &renderer())
-                    r = nullptr;
-            } while (r && !r->nextSibling());
-            if (r)
-                r = r->nextSibling();
+    auto nextRenderer = [&] (auto& renderer) -> const RenderObject* {
+        for (auto* ancestor = &renderer; ancestor && ancestor != &this->renderer(); ancestor = ancestor->parent()) {
+            if (auto* sibling = ancestor->nextSibling())
+                return sibling;
         }
+        return { };
+    };
+    const auto* renderer = this->renderer().firstChild();
+    while (renderer) {
+        if (CheckedPtr renderElement = dynamicDowncast<RenderElement>(renderer); renderElement && !renderElement->hasLayer()) {
+            if (renderElement->style().usedVisibility() == Visibility::Visible)
+                return true;
+            if (auto* firstChild = renderElement->firstChild()) {
+                renderer = firstChild;
+                continue;
+            }
+        }
+        renderer = nextRenderer(*renderer);
     }
-
     return false;
 }
 

@@ -91,9 +91,21 @@ inline std::unique_ptr<BidiRun> createRun(int start, int end, RenderObject& obj,
     return makeUnique<BidiRun>(start, end, obj, resolver.context(), resolver.dir());
 }
 
+bool LegacyLineLayout::shouldSkipCreatingRunsForObject(RenderObject& object)
+{
+    if (is<RenderText>(object))
+        return false;
+    auto& renderElement = downcast<RenderElement>(object);
+    if (renderElement.isFloating())
+        return true;
+    if (renderElement.isOutOfFlowPositioned() && !renderElement.style().isOriginalDisplayInlineType() && !renderElement.container()->isRenderInline())
+        return true;
+    return false;
+}
+
 void LegacyLineLayout::appendRunsForObject(BidiRunList<BidiRun>* runs, int start, int end, RenderObject& obj, InlineBidiResolver& resolver)
 {
-    if (start > end || RenderBlock::shouldSkipCreatingRunsForObject(obj))
+    if (start > end || shouldSkipCreatingRunsForObject(obj))
         return;
 
     LineWhitespaceCollapsingState& lineWhitespaceCollapsingState = resolver.whitespaceCollapsingState();
