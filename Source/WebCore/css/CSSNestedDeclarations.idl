@@ -17,7 +17,8 @@
  * Boston, MA 02110-1301, USA.
  */
 
-// https://drafts.csswg.org/css-nesting/#the-cssnestrule
+// https://drafts.csswg.org/css-nesting/#cssnesteddeclarations
+
 [
     Exposed=Window
 ] interface CSSNestedDeclarations: CSSRule {

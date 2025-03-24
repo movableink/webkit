@@ -22,10 +22,10 @@
 #include "config.h"
 #include "CSSPageRule.h"
 
+#include "CSSPageDescriptors.h"
 #include "CSSParser.h"
 #include "CSSSelector.h"
 #include "CSSSerializationContext.h"
-#include "CSSStyleProperties.h"
 #include "CSSStyleSheet.h"
 #include "CommonAtomStrings.h"
 #include "Document.h"
@@ -47,10 +47,10 @@ CSSPageRule::~CSSPageRule()
         m_propertiesCSSOMWrapper->clearParentRule();
 }
 
-CSSStyleProperties& CSSPageRule::style()
+CSSPageDescriptors& CSSPageRule::style()
 {
     if (!m_propertiesCSSOMWrapper)
-        m_propertiesCSSOMWrapper = StyleRuleCSSStyleProperties::create(m_pageRule->mutableProperties(), *this);
+        m_propertiesCSSOMWrapper = CSSPageDescriptors::create(m_pageRule->mutableProperties(), *this);
     return *m_propertiesCSSOMWrapper;
 }
 

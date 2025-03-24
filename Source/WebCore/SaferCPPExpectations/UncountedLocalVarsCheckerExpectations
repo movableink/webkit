@@ -207,7 +207,6 @@ crypto/algorithms/CryptoAlgorithmX25519.cpp
 css/CSSComputedStyleDeclaration.cpp
 css/CSSCounterStyleDescriptors.cpp
 css/CSSFontFace.cpp
-css/CSSFontFaceDescriptors.cpp
 css/CSSFontFaceSet.cpp
 css/CSSFontFaceSource.cpp
 css/CSSFontSelector.cpp

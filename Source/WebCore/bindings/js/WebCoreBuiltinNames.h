@@ -154,6 +154,7 @@ namespace WebCore {
     macro(CSSOKLab) \
     macro(CSSPaintSize) \
     macro(CSSPerspective) \
+    macro(CSSPositionTryDescriptors) \
     macro(CSSPositionTryRule) \
     macro(CSSRGB) \
     macro(CSSRotate) \

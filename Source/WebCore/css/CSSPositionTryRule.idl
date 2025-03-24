@@ -30,10 +30,7 @@ typedef USVString CSSOMString;
 [
     EnabledBySetting=CSSAnchorPositioningEnabled,
     Exposed=Window
-]
-interface CSSPositionTryRule : CSSRule {
+] interface CSSPositionTryRule : CSSRule {
     readonly attribute [AtomString] CSSOMString name;
-
-    // FIXME (webkit.org/b/283722): this should be a CSSPositionTryDescriptors.
-    [SameObject, PutForwards=cssText] readonly attribute CSSStyleProperties style;
+    [SameObject, PutForwards=cssText] readonly attribute CSSPositionTryDescriptors style;
 };

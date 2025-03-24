@@ -40,6 +40,8 @@ class StyledElement;
 enum class StyleDeclarationType : uint8_t {
     Style,
     FontFace,
+    Page,
+    PositionTry
 };
 
 class CSSStyleDeclaration : public ScriptWrappable, public AbstractRefCountedAndCanMakeSingleThreadWeakPtr<CSSStyleDeclaration> {

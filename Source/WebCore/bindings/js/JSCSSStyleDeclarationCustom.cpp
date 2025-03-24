@@ -27,9 +27,13 @@
 #include "JSCSSStyleDeclaration.h"
 
 #include "CSSFontFaceDescriptors.h"
+#include "CSSPageDescriptors.h"
+#include "CSSPositionTryDescriptors.h"
 #include "CSSStyleProperties.h"
 #include "DOMWrapperWorld.h"
 #include "JSCSSFontFaceDescriptors.h"
+#include "JSCSSPageDescriptors.h"
+#include "JSCSSPositionTryDescriptors.h"
 #include "JSCSSRuleCustom.h"
 #include "JSCSSStyleProperties.h"
 #include "JSDOMConvertInterface.h"
@@ -39,7 +43,6 @@
 #include "JSStyleSheetCustom.h"
 #include "StyledElement.h"
 #include "WebCoreOpaqueRootInlines.h"
-
 
 namespace WebCore {
 using namespace JSC;
@@ -71,6 +74,10 @@ JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<C
         return createWrapper<CSSStyleProperties>(globalObject, WTFMove(declaration));
     case StyleDeclarationType::FontFace:
         return createWrapper<CSSFontFaceDescriptors>(globalObject, WTFMove(declaration));
+    case StyleDeclarationType::Page:
+        return createWrapper<CSSPageDescriptors>(globalObject, WTFMove(declaration));
+    case StyleDeclarationType::PositionTry:
+        return createWrapper<CSSPositionTryDescriptors>(globalObject, WTFMove(declaration));
     }
     RELEASE_ASSERT_NOT_REACHED();
 }

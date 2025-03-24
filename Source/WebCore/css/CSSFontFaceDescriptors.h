@@ -24,21 +24,15 @@
 
 #pragma once
 
-#include "CSSProperty.h"
-#include "CSSPropertyNames.h"
-#include "CSSStyleDeclaration.h"
+#include "PropertySetCSSDescriptors.h"
 
 namespace WebCore {
 
 class CSSFontFaceRule;
-struct CSSParserContext;
 
-class CSSFontFaceDescriptors final : public CSSStyleDeclaration, public RefCounted<CSSFontFaceDescriptors> {
+class CSSFontFaceDescriptors final : public PropertySetCSSDescriptors {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSFontFaceDescriptors);
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     static Ref<CSSFontFaceDescriptors> create(MutableStyleProperties& propertySet, CSSFontFaceRule& parentRule)
     {
         return adoptRef(*new CSSFontFaceDescriptors(propertySet, parentRule));
@@ -46,9 +40,6 @@ public:
     virtual ~CSSFontFaceDescriptors();
 
     StyleDeclarationType styleDeclarationType() const final { return StyleDeclarationType::FontFace; }
-
-    void clearParentRule() { m_parentRule = nullptr; }
-    void reattach(MutableStyleProperties&);
 
     String src() const;
     ExceptionOr<void> setSrc(const String&);
@@ -74,40 +65,7 @@ public:
 private:
     CSSFontFaceDescriptors(MutableStyleProperties&, CSSFontFaceRule&);
 
-    CSSStyleSheet* parentStyleSheet() const final;
-    CSSRule* parentRule() const final;
-    // FIXME: To implement.
-    CSSRule* cssRules() const override { return nullptr; }
-    unsigned length() const final;
-    String item(unsigned index) const final;
-    RefPtr<DeprecatedCSSOMValue> getPropertyCSSValue(const String& propertyName) final;
-    String getPropertyValue(const String& propertyName) final;
-    String getPropertyPriority(const String& propertyName) final;
-    String getPropertyShorthand(const String& propertyName) final;
-    bool isPropertyImplicit(const String& propertyName) final;
-    ExceptionOr<void> setProperty(const String& propertyName, const String& value, const String& priority) final;
-    ExceptionOr<String> removeProperty(const String& propertyName) final;
-    String cssText() const final;
-    ExceptionOr<void> setCssText(const String&) final;
-
-    bool isExposed(CSSPropertyID) const;
-    RefPtr<DeprecatedCSSOMValue> wrapForDeprecatedCSSOM(CSSValue*);
-
-    enum class MutationType : uint8_t { NoChanges, StyleAttributeChanged, PropertyChanged };
-    bool willMutate() WARN_UNUSED_RETURN;
-    void didMutate(MutationType);
-
-    // CSSPropertyID versions of the CSSOM functions to support bindings.
-    String getPropertyValueInternal(CSSPropertyID) const;
-    ExceptionOr<void> setPropertyInternal(CSSPropertyID, const String& value, IsImportant);
-
-    CSSParserContext cssParserContext() const;
-
-    WeakPtr<CSSFontFaceRule> m_parentRule;
-    UncheckedKeyHashMap<CSSValue*, WeakPtr<DeprecatedCSSOMValue>> m_cssomValueWrappers;
-
-    // FIXME: Replaced this with a FontFace specific property map that doesn't have all the complexity of the Style one.
-    Ref<MutableStyleProperties> m_propertySet;
+    StyleRuleType ruleType() const final;
 };
 
 } // namespace WebCore

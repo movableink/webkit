@@ -26,8 +26,8 @@
 #include "config.h"
 #include "CSSPositionTryRule.h"
 
+#include "CSSPositionTryDescriptors.h"
 #include "CSSSerializationContext.h"
-#include "CSSStyleProperties.h"
 
 namespace WebCore {
 
@@ -94,12 +94,12 @@ AtomString CSSPositionTryRule::name() const
     return m_positionTryRule->name();
 }
 
-CSSStyleProperties& CSSPositionTryRule::style()
+CSSPositionTryDescriptors& CSSPositionTryRule::style()
 {
     Ref mutablePropertiesRef = protectedPositionTryRule()->protectedMutableProperties();
 
     if (!m_propertiesCSSOMWrapper)
-        m_propertiesCSSOMWrapper = StyleRuleCSSStyleProperties::create(mutablePropertiesRef.get(), *this);
+        m_propertiesCSSOMWrapper = CSSPositionTryDescriptors::create(mutablePropertiesRef.get(), *this);
 
     return *m_propertiesCSSOMWrapper;
 }

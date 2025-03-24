@@ -464,6 +464,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSOMColorValue.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSOMColorValue.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSOMVariableReferenceValue.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSOMVariableReferenceValue.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSPageDescriptors.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSPageDescriptors.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSPageRule.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSPageRule.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSPaintCallback.cpp
@@ -472,6 +474,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSPaintSize.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSPaintSize.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSPerspective.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSPerspective.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSPositionTryDescriptors.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSPositionTryDescriptors.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSPositionTryRule.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSPositionTryRule.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSPropertyRule.cpp
@@ -506,6 +510,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleProperties+PropertyNames.
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleProperties+PropertyNames.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleRule.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleRule.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleRule+Typedom.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleRule+Typedom.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleSheet.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleSheet.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSCSSStyleValue.cpp
@@ -994,8 +1000,6 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSEffectTiming.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSEffectTiming.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElement+CSSOMView.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElement+CSSOMView.h
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElement+ComputedStyleMap.cpp
-$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElement+ComputedStyleMap.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElement+DOMParsing.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElement+DOMParsing.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElement+Fullscreen.cpp
@@ -1004,10 +1008,14 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElement+PointerEvents.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElement+PointerEvents.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElement+PointerLock.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElement+PointerLock.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElement+Typedom.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElement+Typedom.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElement.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElement.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElementCSSInlineStyle.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElementCSSInlineStyle.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElementCSSInlineStyle+Typedom.cpp
+$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElementCSSInlineStyle+Typedom.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElementContentEditable.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElementContentEditable.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore/JSElementCreationOptions.cpp

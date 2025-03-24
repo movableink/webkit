@@ -919,10 +919,12 @@ css/CSSNamedImageValue.cpp
 css/CSSNamespaceRule.cpp
 css/CSSNestedDeclarations.cpp
 css/CSSOffsetRotateValue.cpp
+css/CSSPageDescriptors.cpp
 css/CSSPageRule.cpp
 css/CSSPaintImageValue.cpp
 css/CSSPathValue.cpp
 css/CSSPendingSubstitutionValue.cpp
+css/CSSPositionTryDescriptors.cpp
 css/CSSPositionTryRule.cpp
 css/CSSPrimitiveValue.cpp
 css/CSSProperty.cpp
@@ -986,6 +988,7 @@ css/MediaQueryListEvent.cpp
 css/MediaQueryMatcher.cpp
 css/MediaQueryParserContext.cpp
 css/MutableStyleProperties.cpp
+css/PropertySetCSSDescriptors.cpp
 css/SVGCSSComputedStyleDeclaration.cpp
 css/SelectorChecker.cpp
 css/SelectorFilter.cpp
@@ -3580,9 +3583,11 @@ JSCSSLayerStatementRule.cpp
 JSCSSMediaRule.cpp
 JSCSSNamespaceRule.cpp
 JSCSSNestedDeclarations.cpp
+JSCSSPageDescriptors.cpp
 JSCSSPageRule.cpp
 JSCSSPaintCallback.cpp
 JSCSSPaintSize.cpp
+JSCSSPositionTryDescriptors.cpp
 JSCSSPositionTryRule.cpp
 JSCSSPropertyRule.cpp
 JSCSSRule.cpp

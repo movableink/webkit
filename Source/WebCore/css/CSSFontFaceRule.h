@@ -28,7 +28,7 @@ namespace WebCore {
 class CSSFontFaceDescriptors;
 class StyleRuleFontFace;
 
-class CSSFontFaceRule final : public CSSRule, public CanMakeWeakPtr<CSSFontFaceRule> {
+class CSSFontFaceRule final : public CSSRule {
 public:
     static Ref<CSSFontFaceRule> create(StyleRuleFontFace& rule, CSSStyleSheet* sheet) { return adoptRef(*new CSSFontFaceRule(rule, sheet)); }
 

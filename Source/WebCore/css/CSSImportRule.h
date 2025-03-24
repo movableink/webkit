@@ -33,7 +33,7 @@ struct MediaQuery;
 using MediaQueryList = Vector<MediaQuery>;
 }
 
-class CSSImportRule final : public CSSRule, public CanMakeWeakPtr<CSSImportRule> {
+class CSSImportRule final : public CSSRule {
 public:
     static Ref<CSSImportRule> create(StyleRuleImport& rule, CSSStyleSheet* sheet) { return adoptRef(*new CSSImportRule(rule, sheet)); }
 

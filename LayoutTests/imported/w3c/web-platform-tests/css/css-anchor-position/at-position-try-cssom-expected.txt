@@ -1,5 +1,5 @@
 
-FAIL CSSPositionTryRule attribute values Can't find variable: CSSPositionTryDescriptors
+PASS CSSPositionTryRule attribute values
 PASS CSSPositionTryRule.style.setProperty setting allowed and disallowed properties
 PASS CSSPositionTryDescriptors.item
 PASS CSSPositionTryDescriptors.cssText
@@ -223,44 +223,44 @@ PASS CSSPositionTryDescriptors[positionArea] (get)
 PASS CSSPositionTryDescriptors[positionArea] (set)
 PASS CSSPositionTryDescriptors.getPropertyValue(color)
 PASS CSSPositionTryDescriptors.setProperty(color)
-FAIL CSSPositionTryDescriptors[color] (set) assert_equals: expected (undefined) undefined but got (string) ""
+PASS CSSPositionTryDescriptors[color] (set)
 PASS CSSPositionTryDescriptors[color] (get)
 PASS CSSPositionTryDescriptors.getPropertyValue(align-items)
 PASS CSSPositionTryDescriptors.setProperty(align-items)
-FAIL CSSPositionTryDescriptors[align-items] (set) assert_equals: expected (undefined) undefined but got (string) ""
+PASS CSSPositionTryDescriptors[align-items] (set)
 PASS CSSPositionTryDescriptors[align-items] (get)
-FAIL CSSPositionTryDescriptors[alignItems] (get) assert_equals: expected (undefined) undefined but got (string) ""
+PASS CSSPositionTryDescriptors[alignItems] (get)
 PASS CSSPositionTryDescriptors[alignItems] (set)
 PASS CSSPositionTryDescriptors.getPropertyValue(align-content)
 PASS CSSPositionTryDescriptors.setProperty(align-content)
-FAIL CSSPositionTryDescriptors[align-content] (set) assert_equals: expected (undefined) undefined but got (string) ""
+PASS CSSPositionTryDescriptors[align-content] (set)
 PASS CSSPositionTryDescriptors[align-content] (get)
-FAIL CSSPositionTryDescriptors[alignContent] (get) assert_equals: expected (undefined) undefined but got (string) ""
+PASS CSSPositionTryDescriptors[alignContent] (get)
 PASS CSSPositionTryDescriptors[alignContent] (set)
 PASS CSSPositionTryDescriptors.getPropertyValue(background)
 PASS CSSPositionTryDescriptors.setProperty(background)
-FAIL CSSPositionTryDescriptors[background] (set) assert_equals: expected (undefined) undefined but got (string) ""
+PASS CSSPositionTryDescriptors[background] (set)
 PASS CSSPositionTryDescriptors[background] (get)
 PASS CSSPositionTryDescriptors.getPropertyValue(display)
 FAIL CSSPositionTryDescriptors.setProperty(display) assert_equals: expected "" but got "unset"
-FAIL CSSPositionTryDescriptors[display] (set) assert_equals: expected (undefined) undefined but got (string) ""
+PASS CSSPositionTryDescriptors[display] (set)
 FAIL CSSPositionTryDescriptors[display] (get) assert_equals: expected "" but got "unset"
 PASS CSSPositionTryDescriptors.getPropertyValue(position)
 PASS CSSPositionTryDescriptors.setProperty(position)
-FAIL CSSPositionTryDescriptors[position] (set) assert_equals: expected (undefined) undefined but got (string) ""
+PASS CSSPositionTryDescriptors[position] (set)
 PASS CSSPositionTryDescriptors[position] (get)
 PASS CSSPositionTryDescriptors.getPropertyValue(writing-mode)
 PASS CSSPositionTryDescriptors.setProperty(writing-mode)
-FAIL CSSPositionTryDescriptors[writing-mode] (set) assert_equals: expected (undefined) undefined but got (string) ""
+PASS CSSPositionTryDescriptors[writing-mode] (set)
 PASS CSSPositionTryDescriptors[writing-mode] (get)
-FAIL CSSPositionTryDescriptors[writingMode] (get) assert_equals: expected (undefined) undefined but got (string) ""
+PASS CSSPositionTryDescriptors[writingMode] (get)
 PASS CSSPositionTryDescriptors[writingMode] (set)
 PASS CSSPositionTryDescriptors.getPropertyValue(direction)
 PASS CSSPositionTryDescriptors.setProperty(direction)
-FAIL CSSPositionTryDescriptors[direction] (set) assert_equals: expected (undefined) undefined but got (string) ""
+PASS CSSPositionTryDescriptors[direction] (set)
 PASS CSSPositionTryDescriptors[direction] (get)
 PASS CSSPositionTryDescriptors.getPropertyValue(syntax)
 PASS CSSPositionTryDescriptors.setProperty(syntax)
-FAIL CSSPositionTryDescriptors[syntax] (set) assert_equals: expected (undefined) undefined but got (string) ""
+PASS CSSPositionTryDescriptors[syntax] (set)
 PASS CSSPositionTryDescriptors[syntax] (get)
 

@@ -248,26 +248,55 @@ PASS CSSGroupingRule interface: existence and properties of interface prototype 
 PASS CSSGroupingRule interface: attribute cssRules
 PASS CSSGroupingRule interface: operation insertRule(CSSOMString, optional unsigned long)
 PASS CSSGroupingRule interface: operation deleteRule(unsigned long)
-FAIL CSSPageDescriptors interface: existence and properties of interface object assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface object length assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface object name assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface: existence and properties of interface prototype object assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface: existence and properties of interface prototype object's "constructor" property assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface: existence and properties of interface prototype object's @@unscopables property assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface: attribute margin assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface: attribute marginTop assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface: attribute marginRight assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface: attribute marginBottom assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface: attribute marginLeft assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface: attribute margin-top assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface: attribute margin-right assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface: attribute margin-bottom assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface: attribute margin-left assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface: attribute size assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface: attribute pageOrientation assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface: attribute page-orientation assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface: attribute marks assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
-FAIL CSSPageDescriptors interface: attribute bleed assert_own_property: self does not have own property "CSSPageDescriptors" expected property "CSSPageDescriptors" missing
+PASS CSSPageDescriptors interface: existence and properties of interface object
+PASS CSSPageDescriptors interface object length
+PASS CSSPageDescriptors interface object name
+PASS CSSPageDescriptors interface: existence and properties of interface prototype object
+PASS CSSPageDescriptors interface: existence and properties of interface prototype object's "constructor" property
+PASS CSSPageDescriptors interface: existence and properties of interface prototype object's @@unscopables property
+PASS CSSPageDescriptors interface: attribute margin
+PASS CSSPageDescriptors interface: attribute marginTop
+PASS CSSPageDescriptors interface: attribute marginRight
+PASS CSSPageDescriptors interface: attribute marginBottom
+PASS CSSPageDescriptors interface: attribute marginLeft
+PASS CSSPageDescriptors interface: attribute margin-top
+PASS CSSPageDescriptors interface: attribute margin-right
+PASS CSSPageDescriptors interface: attribute margin-bottom
+PASS CSSPageDescriptors interface: attribute margin-left
+PASS CSSPageDescriptors interface: attribute size
+FAIL CSSPageDescriptors interface: attribute pageOrientation assert_true: The prototype object must have a property "pageOrientation" expected true got false
+FAIL CSSPageDescriptors interface: attribute page-orientation assert_true: The prototype object must have a property "page-orientation" expected true got false
+FAIL CSSPageDescriptors interface: attribute marks assert_true: The prototype object must have a property "marks" expected true got false
+FAIL CSSPageDescriptors interface: attribute bleed assert_true: The prototype object must have a property "bleed" expected true got false
+PASS CSSPageDescriptors must be primary interface of sheet.cssRules[2].style
+PASS Stringification of sheet.cssRules[2].style
+PASS CSSPageDescriptors interface: sheet.cssRules[2].style must inherit property "margin" with the proper type
+PASS CSSPageDescriptors interface: sheet.cssRules[2].style must inherit property "marginTop" with the proper type
+PASS CSSPageDescriptors interface: sheet.cssRules[2].style must inherit property "marginRight" with the proper type
+PASS CSSPageDescriptors interface: sheet.cssRules[2].style must inherit property "marginBottom" with the proper type
+PASS CSSPageDescriptors interface: sheet.cssRules[2].style must inherit property "marginLeft" with the proper type
+PASS CSSPageDescriptors interface: sheet.cssRules[2].style must inherit property "margin-top" with the proper type
+PASS CSSPageDescriptors interface: sheet.cssRules[2].style must inherit property "margin-right" with the proper type
+PASS CSSPageDescriptors interface: sheet.cssRules[2].style must inherit property "margin-bottom" with the proper type
+PASS CSSPageDescriptors interface: sheet.cssRules[2].style must inherit property "margin-left" with the proper type
+PASS CSSPageDescriptors interface: sheet.cssRules[2].style must inherit property "size" with the proper type
+FAIL CSSPageDescriptors interface: sheet.cssRules[2].style must inherit property "pageOrientation" with the proper type assert_inherits: property "pageOrientation" not found in prototype chain
+FAIL CSSPageDescriptors interface: sheet.cssRules[2].style must inherit property "page-orientation" with the proper type assert_inherits: property "page-orientation" not found in prototype chain
+FAIL CSSPageDescriptors interface: sheet.cssRules[2].style must inherit property "marks" with the proper type assert_inherits: property "marks" not found in prototype chain
+FAIL CSSPageDescriptors interface: sheet.cssRules[2].style must inherit property "bleed" with the proper type assert_inherits: property "bleed" not found in prototype chain
+PASS CSSStyleDeclaration interface: sheet.cssRules[2].style must inherit property "cssText" with the proper type
+PASS CSSStyleDeclaration interface: sheet.cssRules[2].style must inherit property "length" with the proper type
+PASS CSSStyleDeclaration interface: sheet.cssRules[2].style must inherit property "item(unsigned long)" with the proper type
+PASS CSSStyleDeclaration interface: calling item(unsigned long) on sheet.cssRules[2].style with too few arguments must throw TypeError
+PASS CSSStyleDeclaration interface: sheet.cssRules[2].style must inherit property "getPropertyValue(CSSOMString)" with the proper type
+PASS CSSStyleDeclaration interface: calling getPropertyValue(CSSOMString) on sheet.cssRules[2].style with too few arguments must throw TypeError
+PASS CSSStyleDeclaration interface: sheet.cssRules[2].style must inherit property "getPropertyPriority(CSSOMString)" with the proper type
+PASS CSSStyleDeclaration interface: calling getPropertyPriority(CSSOMString) on sheet.cssRules[2].style with too few arguments must throw TypeError
+PASS CSSStyleDeclaration interface: sheet.cssRules[2].style must inherit property "setProperty(CSSOMString, CSSOMString, optional CSSOMString)" with the proper type
+PASS CSSStyleDeclaration interface: calling setProperty(CSSOMString, CSSOMString, optional CSSOMString) on sheet.cssRules[2].style with too few arguments must throw TypeError
+PASS CSSStyleDeclaration interface: sheet.cssRules[2].style must inherit property "removeProperty(CSSOMString)" with the proper type
+PASS CSSStyleDeclaration interface: calling removeProperty(CSSOMString) on sheet.cssRules[2].style with too few arguments must throw TypeError
+PASS CSSStyleDeclaration interface: sheet.cssRules[2].style must inherit property "parentRule" with the proper type
 FAIL CSSPageRule interface: existence and properties of interface object assert_equals: prototype of CSSPageRule is not CSSGroupingRule expected function "function CSSGroupingRule() {
     [native code]
 }" but got function "function CSSRule() {
@@ -386,22 +415,6 @@ PASS CSSStyleDeclaration interface: calling setProperty(CSSOMString, CSSOMString
 PASS CSSStyleDeclaration interface: sheet.cssRules[4].style must inherit property "removeProperty(CSSOMString)" with the proper type
 PASS CSSStyleDeclaration interface: calling removeProperty(CSSOMString) on sheet.cssRules[4].style with too few arguments must throw TypeError
 PASS CSSStyleDeclaration interface: sheet.cssRules[4].style must inherit property "parentRule" with the proper type
-PASS CSSStyleProperties must be primary interface of sheet.cssRules[2].style
-PASS Stringification of sheet.cssRules[2].style
-PASS CSSStyleProperties interface: sheet.cssRules[2].style must inherit property "cssFloat" with the proper type
-PASS CSSStyleDeclaration interface: sheet.cssRules[2].style must inherit property "cssText" with the proper type
-PASS CSSStyleDeclaration interface: sheet.cssRules[2].style must inherit property "length" with the proper type
-PASS CSSStyleDeclaration interface: sheet.cssRules[2].style must inherit property "item(unsigned long)" with the proper type
-PASS CSSStyleDeclaration interface: calling item(unsigned long) on sheet.cssRules[2].style with too few arguments must throw TypeError
-PASS CSSStyleDeclaration interface: sheet.cssRules[2].style must inherit property "getPropertyValue(CSSOMString)" with the proper type
-PASS CSSStyleDeclaration interface: calling getPropertyValue(CSSOMString) on sheet.cssRules[2].style with too few arguments must throw TypeError
-PASS CSSStyleDeclaration interface: sheet.cssRules[2].style must inherit property "getPropertyPriority(CSSOMString)" with the proper type
-PASS CSSStyleDeclaration interface: calling getPropertyPriority(CSSOMString) on sheet.cssRules[2].style with too few arguments must throw TypeError
-PASS CSSStyleDeclaration interface: sheet.cssRules[2].style must inherit property "setProperty(CSSOMString, CSSOMString, optional CSSOMString)" with the proper type
-PASS CSSStyleDeclaration interface: calling setProperty(CSSOMString, CSSOMString, optional CSSOMString) on sheet.cssRules[2].style with too few arguments must throw TypeError
-PASS CSSStyleDeclaration interface: sheet.cssRules[2].style must inherit property "removeProperty(CSSOMString)" with the proper type
-PASS CSSStyleDeclaration interface: calling removeProperty(CSSOMString) on sheet.cssRules[2].style with too few arguments must throw TypeError
-PASS CSSStyleDeclaration interface: sheet.cssRules[2].style must inherit property "parentRule" with the proper type
 FAIL CSSStyleProperties must be primary interface of sheet.cssRules[2].cssRules[0].style assert_equals: Unexpected exception when evaluating object expected null but got object "TypeError: undefined is not an object (evaluating 'sheet.cssRules[2].cssRules[0]')"
 FAIL Stringification of sheet.cssRules[2].cssRules[0].style assert_equals: Unexpected exception when evaluating object expected null but got object "TypeError: undefined is not an object (evaluating 'sheet.cssRules[2].cssRules[0]')"
 FAIL CSSStyleProperties interface: sheet.cssRules[2].cssRules[0].style must inherit property "cssFloat" with the proper type assert_equals: Unexpected exception when evaluating object expected null but got object "TypeError: undefined is not an object (evaluating 'sheet.cssRules[2].cssRules[0]')"

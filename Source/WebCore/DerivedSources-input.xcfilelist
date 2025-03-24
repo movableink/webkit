@@ -1271,9 +1271,11 @@ $(PROJECT_DIR)/css/CSSLayerStatementRule.idl
 $(PROJECT_DIR)/css/CSSMediaRule.idl
 $(PROJECT_DIR)/css/CSSNamespaceRule.idl
 $(PROJECT_DIR)/css/CSSNestedDeclarations.idl
+$(PROJECT_DIR)/css/CSSPageDescriptors.idl
 $(PROJECT_DIR)/css/CSSPageRule.idl
 $(PROJECT_DIR)/css/CSSPaintCallback.idl
 $(PROJECT_DIR)/css/CSSPaintSize.idl
+$(PROJECT_DIR)/css/CSSPositionTryDescriptors.idl
 $(PROJECT_DIR)/css/CSSPositionTryRule.idl
 $(PROJECT_DIR)/css/CSSProperties.json
 $(PROJECT_DIR)/css/CSSPropertyRule.idl
@@ -1285,6 +1287,7 @@ $(PROJECT_DIR)/css/CSSStartingStyleRule.idl
 $(PROJECT_DIR)/css/CSSStyleDeclaration.idl
 $(PROJECT_DIR)/css/CSSStyleProperties.idl
 $(PROJECT_DIR)/css/CSSStyleRule.idl
+$(PROJECT_DIR)/css/CSSStyleRule+Typedom.idl
 $(PROJECT_DIR)/css/CSSStyleSheet.idl
 $(PROJECT_DIR)/css/CSSSupportsRule.idl
 $(PROJECT_DIR)/css/CSSValueKeywords.in
@@ -1304,8 +1307,8 @@ $(PROJECT_DIR)/css/DeprecatedCSSOMRGBColor.idl
 $(PROJECT_DIR)/css/DeprecatedCSSOMRect.idl
 $(PROJECT_DIR)/css/DeprecatedCSSOMValue.idl
 $(PROJECT_DIR)/css/DeprecatedCSSOMValueList.idl
-$(PROJECT_DIR)/css/DocumentOrShadowRoot+CSSOM.idl
 $(PROJECT_DIR)/css/ElementCSSInlineStyle.idl
+$(PROJECT_DIR)/css/ElementCSSInlineStyle+Typedom.idl
 $(PROJECT_DIR)/css/FontFace.idl
 $(PROJECT_DIR)/css/FontFaceSet.idl
 $(PROJECT_DIR)/css/FontFaceSource.idl
@@ -1436,6 +1439,7 @@ $(PROJECT_DIR)/dom/Document+ViewTransition.idl
 $(PROJECT_DIR)/dom/Document.idl
 $(PROJECT_DIR)/dom/DocumentAndElementEventHandlers.idl
 $(PROJECT_DIR)/dom/DocumentFragment.idl
+$(PROJECT_DIR)/dom/DocumentOrShadowRoot+CSSOM.idl
 $(PROJECT_DIR)/dom/DocumentOrShadowRoot+Fullscreen.idl
 $(PROJECT_DIR)/dom/DocumentOrShadowRoot+PointerLock.idl
 $(PROJECT_DIR)/dom/DocumentOrShadowRoot.idl

@@ -25,6 +25,7 @@
 #include "CSSParserEnum.h"
 #include "ExceptionOr.h"
 #include "StyleRuleType.h"
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TypeCasts.h>
 
 namespace WebCore {
@@ -40,7 +41,7 @@ namespace CSS {
 struct SerializationContext;
 }
 
-class CSSRule : public RefCounted<CSSRule> {
+class CSSRule : public RefCountedAndCanMakeWeakPtr<CSSRule> {
 public:
     virtual ~CSSRule() = default;
 

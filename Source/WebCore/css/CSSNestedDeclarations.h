@@ -30,7 +30,7 @@ class StylePropertyMap;
 class StyleRuleCSSStyleProperties;
 class StyleRuleNestedDeclarations;
 
-class CSSNestedDeclarations final : public CSSRule, public CanMakeWeakPtr<CSSNestedDeclarations> {
+class CSSNestedDeclarations final : public CSSRule {
 public:
     static Ref<CSSNestedDeclarations> create(StyleRuleNestedDeclarations& rule, CSSStyleSheet* sheet) { return adoptRef(* new CSSNestedDeclarations(rule, sheet)); };
 
