@@ -480,7 +480,7 @@ void RenderTreeBuilder::attachToRenderElementInternal(RenderElement& parent, Ren
     }
 
     newChild->setNeedsLayoutAndPrefWidthsRecalc();
-    auto isOutOfFlowBox = newChild->isOutOfFlowPositioned();
+    auto isOutOfFlowBox = newChild->style().hasOutOfFlowPosition();
     if (!isOutOfFlowBox)
         parent.setPreferredLogicalWidthsDirty(true);
 
@@ -847,7 +847,7 @@ void RenderTreeBuilder::removeAnonymousWrappersForInlineChildrenIfNeeded(RenderE
     // if we find a continuation.
     std::optional<bool> shouldAllChildrenBeInline;
     for (auto* current = blockParent->firstChild(); current; current = current->nextSibling()) {
-        if (current->isFloatingOrOutOfFlowPositioned())
+        if (current->style().isFloating() || current->style().hasOutOfFlowPosition())
             continue;
 
         if (!is<RenderBlock>(*current))
@@ -1102,7 +1102,7 @@ void RenderTreeBuilder::reportVisuallyNonEmptyContent(const RenderElement& paren
         };
         // SVG content tends to have a fixed size construct. However this is known to be inaccurate in certain cases (box-sizing: border-box) or especially when the parent box is oversized.
         auto candidateSize = IntSize { };
-        if (auto size = fixedSize(downcast<RenderElement>(child)))
+        if (auto size = fixedSize(child))
             candidateSize = *size;
         else if (auto size = fixedSize(parent))
             candidateSize = *size;

@@ -135,7 +135,7 @@ void RenderTreeBuilder::Block::insertChildToContinuation(RenderBlock& parent, Re
         return;
     }
 
-    bool childIsNormal = child->isInline() || downcast<RenderElement>(*child).style().columnSpan() == ColumnSpan::None;
+    bool childIsNormal = child->isInline() || child->style().columnSpan() == ColumnSpan::None;
     bool bcpIsNormal = beforeChildParent->isInline() || beforeChildParent->style().columnSpan() == ColumnSpan::None;
     bool flowIsNormal = flow->isInline() || flow->style().columnSpan() == ColumnSpan::None;
 

@@ -171,7 +171,7 @@ RenderObject* RenderTreeBuilder::MultiColumn::resolveMovedChild(RenderFragmented
         return beforeChild;
 
     // We only need to resolve for column spanners.
-    if (beforeChildRenderBox->style().columnSpan() != ColumnSpan::All)
+    if (beforeChild->style().columnSpan() != ColumnSpan::All)
         return beforeChild;
 
     // The renderer for the actual DOM node that establishes a spanner is moved from its original
@@ -245,9 +245,6 @@ void RenderTreeBuilder::MultiColumn::multiColumnDescendantInserted(RenderMultiCo
 void RenderTreeBuilder::MultiColumn::multiColumnRelativeWillBeRemoved(RenderMultiColumnFlow& flow, RenderObject& relative, RenderTreeBuilder::CanCollapseAnonymousBlock canCollapseAnonymousBlock)
 {
     flow.invalidateFragments();
-    if (is<RenderText>(relative))
-        return;
-
     if (auto* placeholder = dynamicDowncast<RenderMultiColumnSpannerPlaceholder>(relative)) {
         // Remove the map entry for this spanner, but leave the actual spanner renderer alone. Also
         // keep the reference to the spanner, since the placeholder may be about to be re-inserted
@@ -256,11 +253,11 @@ void RenderTreeBuilder::MultiColumn::multiColumnRelativeWillBeRemoved(RenderMult
         flow.spannerMap().remove(placeholder->spanner());
         return;
     }
-    if (auto* renderBox = dynamicDowncast<RenderBox>(relative); renderBox && renderBox->style().columnSpan() == ColumnSpan::All) {
-        if (renderBox->parent() != flow.parent())
+    if (relative.style().columnSpan() == ColumnSpan::All) {
+        if (relative.parent() != flow.parent())
             return; // not a valid spanner.
 
-        handleSpannerRemoval(flow, *renderBox, canCollapseAnonymousBlock);
+        handleSpannerRemoval(flow, relative, canCollapseAnonymousBlock);
     }
     // Note that we might end up with empty column sets if all column content is removed. That's no
     // big deal though (and locating them would be expensive), and they will be found and re-used if
@@ -445,10 +442,10 @@ RenderObject* RenderTreeBuilder::MultiColumn::processPossibleSpannerDescendant(R
     return nextDescendant;
 }
 
-void RenderTreeBuilder::MultiColumn::handleSpannerRemoval(RenderMultiColumnFlow& flow, RenderBox& spanner, RenderTreeBuilder::CanCollapseAnonymousBlock canCollapseAnonymousBlock)
+void RenderTreeBuilder::MultiColumn::handleSpannerRemoval(RenderMultiColumnFlow& flow, RenderObject& spanner, RenderTreeBuilder::CanCollapseAnonymousBlock canCollapseAnonymousBlock)
 {
     // The placeholder may already have been removed, but if it hasn't, do so now.
-    if (auto placeholder = flow.spannerMap().take(&spanner))
+    if (auto placeholder = flow.spannerMap().take(&downcast<RenderBox>(spanner)))
         m_builder.destroy(*placeholder, canCollapseAnonymousBlock);
 
     if (auto* next = spanner.nextSibling()) {

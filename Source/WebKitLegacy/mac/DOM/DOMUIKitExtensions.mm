@@ -55,8 +55,7 @@
 #import <WebCore/RenderBlock.h>
 #import <WebCore/RenderBlockFlow.h>
 #import <WebCore/RenderBox.h>
-#import <WebCore/RenderElement.h>
-#import <WebCore/RenderElementInlines.h>
+#import <WebCore/RenderObjectInlines.h>
 #import <WebCore/RenderStyleConstants.h>
 #import <WebCore/RenderText.h>
 #import <WebCore/RoundedRect.h>
@@ -259,13 +258,14 @@ static WebCore::Node* firstNodeAfter(const WebCore::BoundaryPoint& point)
 - (int)structuralComplexityContribution
 {
     int result = 0;
-    if (auto* renderer = core(self)->renderer()) {
+    RenderObject * renderer = core(self)->renderer();
+    if (renderer) {
         if (renderer->isFloatingOrOutOfFlowPositioned() ||
             renderer->isRenderWidget()) {
             result = INT_MAX;
-        } else if (!renderer->firstChild())
+        } else if (!renderer->firstChildSlow()) {
             result = 0;
-        else if (is<WebCore::RenderBlockFlow>(*renderer) || (is<RenderBlock>(*renderer) && downcast<RenderBlock>(*renderer).inlineContinuation())) {
+        } else if (is<WebCore::RenderBlockFlow>(*renderer) || (is<RenderBlock>(*renderer) && downcast<RenderBlock>(*renderer).inlineContinuation())) {
             BOOL noCost = NO;
             if (auto renderBox = dynamicDowncast<RenderBox>(*renderer)) {
                 auto* parentRenderBox = dynamicDowncast<RenderBox>(renderBox->parent());
@@ -273,8 +273,9 @@ static WebCore::Node* firstNodeAfter(const WebCore::BoundaryPoint& point)
                     noCost = YES;
             }
             result = (noCost ? 0 : 1);
-        } else if (renderer->isTransformed())
+        } else if (renderer->isTransformed()) {
             result = INT_MAX;
+        }
     }
     return result;
 }

@@ -430,6 +430,8 @@ public:
     bool isRenderInline() const { return m_typeFlags.contains(TypeFlag::IsRenderInline); }
     bool isRenderLayerModelObject() const { return m_typeFlags.contains(TypeFlag::IsLayerModelObject); }
 
+    inline bool isAtomicInlineLevelBox() const;
+
     bool isRenderCounter() const { return type() == Type::Counter; }
     bool isRenderQuote() const { return type() == Type::Quote; }
 
@@ -700,6 +702,8 @@ public:
     bool hasNonVisibleOverflow() const { return m_stateBitfields.hasFlag(StateFlag::HasNonVisibleOverflow); }
 
     bool hasTransformRelatedProperty() const { return m_stateBitfields.hasFlag(StateFlag::HasTransformRelatedProperty); } // Transform, perspective or transform-style: preserve-3d.
+    inline bool isTransformed() const;
+    inline bool hasTransformOrPerspective() const;
 
     bool capturedInViewTransition() const { return m_stateBitfields.hasFlag(StateFlag::CapturedInViewTransition); }
     bool setCapturedInViewTransition(bool);
@@ -825,6 +829,8 @@ public:
     // Return the offset from the container() renderer (excluding transforms). In multi-column layout,
     // different offsets apply at different points, so return the offset that applies to the given point.
     virtual LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const;
+    // Return the offset from an object up the container() chain. Asserts that none of the intermediate objects have transforms.
+    LayoutSize offsetFromAncestorContainer(const RenderElement&) const;
 
 #if PLATFORM(IOS_FAMILY)
     virtual void collectSelectionGeometries(Vector<SelectionGeometry>&, unsigned startOffset = 0, unsigned endOffset = std::numeric_limits<unsigned>::max());
@@ -1087,6 +1093,11 @@ public:
     // localToAbsolute/absoluteToLocal methods instead.
     virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed = nullptr) const;
     virtual void mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode>, TransformState&) const;
+
+    bool shouldUseTransformFromContainer(const RenderElement* container) const;
+    void getTransformFromContainer(const LayoutSize& offsetInContainer, TransformationMatrix&) const;
+    
+    void pushOntoTransformState(TransformState&, OptionSet<MapCoordinatesMode>, const RenderLayerModelObject* repaintContainer, const RenderElement* container, const LayoutSize& offsetInContainer, bool containerSkipped) const;
 
     bool participatesInPreserve3D() const;
 

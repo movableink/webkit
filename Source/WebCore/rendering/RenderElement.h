@@ -268,7 +268,6 @@ public:
     // https://www.w3.org/TR/css-transforms-1/#transform-box
     inline FloatRect transformReferenceBoxRect(const RenderStyle&) const;
     inline FloatRect transformReferenceBoxRect() const;
-    inline bool isTransformed() const;
 
     // https://www.w3.org/TR/css-transforms-1/#reference-box
     virtual FloatRect referenceBoxRect(CSSBoxType) const;
@@ -312,7 +311,6 @@ public:
     inline bool isBlockBox() const;
     inline bool isBlockLevelBox() const;
     inline bool isBlockContainer() const;
-    inline bool isAtomicInlineLevelBox() const;
 
     RenderBoxModelObject* offsetParent() const;
     // Pushes state onto RenderGeometryMap about how to map coordinates from this renderer to its container, or ancestorToStopAt (whichever is encountered first).
@@ -335,13 +333,6 @@ public:
     static bool isBeforeOrAfterContent(const RenderElement*);
 
     WritingMode writingMode() const { return style().writingMode(); }
-
-    bool shouldUseTransformFromContainer(const RenderElement* container) const;
-    void getTransformFromContainer(const LayoutSize& offsetInContainer, TransformationMatrix&) const;
-    void pushOntoTransformState(TransformState&, OptionSet<MapCoordinatesMode>, const RenderLayerModelObject* repaintContainer, const RenderElement* container, const LayoutSize& offsetInContainer, bool containerSkipped) const;
-
-    // Return the offset from an object up the container() chain. Asserts that none of the intermediate objects have transforms.
-    LayoutSize offsetFromAncestorContainer(const RenderElement&) const;
 
 protected:
     RenderElement(Type, Element&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);

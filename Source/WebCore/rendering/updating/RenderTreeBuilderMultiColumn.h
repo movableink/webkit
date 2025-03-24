@@ -52,7 +52,7 @@ private:
     void createFragmentedFlow(RenderBlockFlow&);
     void destroyFragmentedFlow(RenderBlockFlow&);
     RenderObject* processPossibleSpannerDescendant(RenderMultiColumnFlow&, RenderObject*& subtreeRoot, RenderObject& descendant);
-    void handleSpannerRemoval(RenderMultiColumnFlow&, RenderBox& spanner, RenderTreeBuilder::CanCollapseAnonymousBlock);
+    void handleSpannerRemoval(RenderMultiColumnFlow&, RenderObject& spanner, RenderTreeBuilder::CanCollapseAnonymousBlock);
 
     RenderTreeBuilder& m_builder;
 };

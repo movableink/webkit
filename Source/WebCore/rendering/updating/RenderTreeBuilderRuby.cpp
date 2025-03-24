@@ -70,15 +70,10 @@ RenderElement& RenderTreeBuilder::Ruby::findOrCreateParentForStyleBasedRubyChild
     else if (auto* rubyBlock = dynamicDowncast<RenderBlock>(parent); rubyBlock && rubyBlock->continuation())
         beforeChildAncestor = RenderTreeBuilder::Block::continuationBefore(*rubyBlock, beforeChild);
 
-    auto childElementDisplayType = [&] -> std::optional<DisplayType> {
-        if (is<RenderText>(child))
-            return { };
-        return downcast<RenderElement>(child).style().display();
-    }();
+    if (!child.isRenderText() && child.style().display() == DisplayType::Ruby && beforeChildAncestor->style().display() == DisplayType::RubyBlock)
+        return *beforeChildAncestor;
 
     if (beforeChildAncestor->style().display() == DisplayType::RubyBlock) {
-        if (childElementDisplayType && *childElementDisplayType == DisplayType::Ruby)
-            return *beforeChildAncestor;
         // See if we have an anonymous ruby box already.
         // FIXME: It should be the immediate child but continuations can break this assumption.
         for (CheckedPtr first = beforeChildAncestor->firstChild(); first; first = first->firstChildSlow()) {
@@ -100,7 +95,7 @@ RenderElement& RenderTreeBuilder::Ruby::findOrCreateParentForStyleBasedRubyChild
         return *newParent;
     }
 
-    if (childElementDisplayType && (*childElementDisplayType == DisplayType::RubyBase || *childElementDisplayType == DisplayType::RubyAnnotation))
+    if (!child.isRenderText() && (child.style().display() == DisplayType::RubyBase || child.style().display() == DisplayType::RubyAnnotation))
         return *beforeChildAncestor;
 
     if (beforeChild && beforeChild->parent()->style().display() == DisplayType::RubyBase)
