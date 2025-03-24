@@ -386,39 +386,6 @@ final public class WebPage {
         backingWebView.loadHTMLString(html, baseURL: baseURL).map(NavigationID.init(_:))
     }
 
-    /// Loads the web content from the specified file and navigates to it.
-    ///
-    /// - Parameters:
-    ///   - fileURL: The URL of a file that contains web content. This URL must be a file-based URL.
-    ///   - readAccessURL: The URL of a file or directory containing web content that you grant the system permission
-    ///   to read. This URL must be a file-based URL and must not be empty. To prevent WebKit from reading any other
-    ///   content, specify the same value as the URL parameter. To read additional files related to the content file,
-    ///   specify a directory.
-    /// - Returns: A navigation identifier you use to track the loading progress of the request.
-    @discardableResult
-    public func load(fileURL url: URL, allowingReadAccessTo readAccessURL: URL) -> NavigationID? {
-        backingWebView.loadFileURL(url, allowingReadAccessTo: readAccessURL).map(NavigationID.init(_:))
-    }
-
-    /// Loads the web content from the file the URL request object specifies and navigates to that content.
-    ///
-    /// Provide the source of this load request for app activity data by setting the `attribution` parameter on your request.
-    ///
-    /// - Parameters:
-    ///   - request: A URL request that specifies the file to display. The URL in this request must be a file-based URL.
-    ///   - readAccessURL: The URL of a file or directory containing web content that you grant the system permission
-    ///   to read. This URL must be a file-based URL and must not be empty. To prevent WebKit from reading any other
-    ///   content, specify the same value as the URL parameter. To read additional files related to the content file,
-    ///   specify a directory.
-    /// - Returns: A navigation identifier you use to track the loading progress of the request.
-    @discardableResult
-    public func load(fileRequest request: URLRequest, allowingReadAccessTo readAccessURL: URL) -> NavigationID? {
-        // `WKWebView` annotates this method as returning non-nil, but it may return nil.
-
-        let navigation = backingWebView.loadFileRequest(request, allowingReadAccessTo: readAccessURL) as WKNavigation?
-        return navigation.map(NavigationID.init(_:))
-    }
-
     /// Loads the web content from the data you provide as if the data were the response to the request.
     ///
     /// - Parameters:

@@ -131,7 +131,8 @@ final class BrowserViewModel {
     func openURL(_ url: URL) {
         assert(url.isFileURL)
 
-        page.load(fileURL: url, allowingReadAccessTo: url.deletingLastPathComponent())
+        let data = try! Data(contentsOf: url)
+        page.load(data, mimeType: "text/html", characterEncoding: .utf8, baseURL: URL(string: "about:blank")!)
     }
 
     func didReceiveNavigationEvent(_ event: WebPage.NavigationEvent) {
