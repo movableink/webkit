@@ -2079,3 +2079,5 @@ imported/w3c/web-platform-tests/css/css-position/sticky/position-sticky-scrolled
 [ Debug ] fonts/font-fallback-prefers-pictographs.html [ Skip ]
 
 webkit.org/b/290235 [ Sonoma+ Debug ] http/tests/site-isolation/unload-grandchild-fetch.html [ Skip ]
+
+webkit.org/b/290346 [ arm64 ] gamepad/gamepad-event-handlers.html [ Pass Timeout ]
