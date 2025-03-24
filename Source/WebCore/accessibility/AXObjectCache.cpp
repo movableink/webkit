@@ -1083,7 +1083,7 @@ void AXObjectCache::buildAccessibilityTreeIfNeeded()
         return;
 
     if (isIsolatedTreeEnabled())
-        isolatedTreeRootObject();
+        getOrCreateIsolatedTree();
 }
 #endif
 

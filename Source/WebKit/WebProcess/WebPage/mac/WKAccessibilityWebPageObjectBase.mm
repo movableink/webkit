@@ -103,9 +103,9 @@ namespace ax = WebCore::Accessibility;
         if (RefPtr root = m_isolatedTreeRoot.get())
             return root->wrapper();
     }
-#endif
+#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 
-    return ax::retrieveAutoreleasedValueFromMainThread<id>([protectedSelf = retainPtr(self), frame = RefPtr { frame }] () -> RetainPtr<id> {
+    return ax::retrieveAutoreleasedValueFromMainThread<id>([protectedSelf = retainPtr(self), protectedFrame = RefPtr { frame }] () -> RetainPtr<id> {
         if (!WebCore::AXObjectCache::accessibilityEnabled())
             [protectedSelf enableAccessibilityForAllProcesses];
 
@@ -117,11 +117,17 @@ namespace ax = WebCore::Accessibility;
             // If they aren't, we never have a backing object to serve any requests from.
             if (auto cache = protectedSelf.get().axObjectCache)
                 cache->buildAccessibilityTreeIfNeeded();
-#endif
+#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
             return protectedSelf.get().accessibilityPluginObject;
         }
 
+
         if (auto cache = protectedSelf.get().axObjectCache) {
+            // It's possible we were given a null frame (this is explicitly expected when off the main-thread, since
+            // we can't access the webpage off the main-thread to get a frame). Now that we are actually on the main-thread,
+            // try again if necessary.
+            RefPtr frame = protectedFrame ? WTFMove(protectedFrame) : [protectedSelf focusedLocalFrame];
+
             if (auto* root = frame ? cache->rootObjectForFrame(*frame) : nullptr)
                 return root->wrapper();
         }
