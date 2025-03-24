@@ -130,7 +130,16 @@ void GridTrack::ensureGrowthLimitIsBiggerThanBaseSize()
         m_growthLimit = std::max(m_baseSize, 0_lu);
 }
 
-// Static helper methods.
+
+GridAxis gridAxisForDirection(GridTrackSizingDirection direction)
+{
+    return direction == GridTrackSizingDirection::ForColumns ? GridAxis::GridRowAxis : GridAxis::GridColumnAxis;
+}
+
+GridTrackSizingDirection gridDirectionForAxis(GridAxis axis)
+{
+    return axis == GridAxis::GridRowAxis ? GridTrackSizingDirection::ForColumns : GridTrackSizingDirection::ForRows;
+}
 
 static bool hasRelativeMarginOrPaddingForGridItem(const RenderBox& gridItem, GridTrackSizingDirection direction)
 {
@@ -1216,7 +1225,7 @@ void GridTrackSizingAlgorithm::updateBaselineAlignmentContext(const RenderBox& g
     ASSERT(wasSetup());
     ASSERT(canParticipateInBaselineAlignment(gridItem, baselineAxis));
 
-    ItemPosition align = m_renderGrid->selfAlignmentForGridItem(baselineAxis, gridItem).position();
+    auto align = m_renderGrid->selfAlignmentForGridItem(gridDirectionForAxis(baselineAxis), gridItem).position();
     const auto& span = m_renderGrid->gridSpanForGridItem(gridItem, GridLayoutFunctions::gridDirectionForAxis(baselineAxis));
     auto alignmentContext = GridLayoutFunctions::alignmentContextForBaselineAlignment(span, align);
     m_baselineAlignment.updateBaselineAlignmentContext(align, alignmentContext, gridItem, baselineAxis);
@@ -1233,7 +1242,7 @@ LayoutUnit GridTrackSizingAlgorithm::baselineOffsetForGridItem(const RenderBox& 
         return LayoutUnit();
 
     ASSERT_IMPLIES(baselineAxis == GridAxis::GridColumnAxis, !m_renderGrid->isSubgridRows());
-    ItemPosition align = m_renderGrid->selfAlignmentForGridItem(baselineAxis, gridItem).position();
+    auto align = m_renderGrid->selfAlignmentForGridItem(gridDirectionForAxis(baselineAxis), gridItem).position();
     const auto& span = m_renderGrid->gridSpanForGridItem(gridItem, GridLayoutFunctions::gridDirectionForAxis(baselineAxis));
     auto alignmentContext = GridLayoutFunctions::alignmentContextForBaselineAlignment(span, align);
     return m_baselineAlignment.baselineOffsetForGridItem(align, alignmentContext, gridItem, baselineAxis);
@@ -1247,7 +1256,7 @@ void GridTrackSizingAlgorithm::clearBaselineItemsCache()
 
 void GridTrackSizingAlgorithm::cacheBaselineAlignedItem(const RenderBox& item, GridAxis axis, bool cachingRowSubgridsForRootGrid)
 {
-    ASSERT(downcast<RenderGrid>(item.parent())->isBaselineAlignmentForGridItem(item, axis));
+    ASSERT(downcast<RenderGrid>(item.parent())->isBaselineAlignmentForGridItem(item, gridDirectionForAxis(axis)));
 
     if (GridLayoutFunctions::isOrthogonalParent(*m_renderGrid, *item.parent()))
         axis = axis == GridAxis::GridColumnAxis ? GridAxis::GridRowAxis : GridAxis::GridColumnAxis;
