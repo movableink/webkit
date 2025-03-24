@@ -722,7 +722,8 @@ Ref<SharedBuffer> GstMappedOwnedBuffer::createSharedBuffer()
 
 GstMappedFrame::GstMappedFrame(GstBuffer* buffer, const GstVideoInfo* info, GstMapFlags flags)
 {
-    gst_video_frame_map(&m_frame, info, buffer, flags);
+    // This cast can be removed once the GStreamer minimum version is raised to 1.20
+    gst_video_frame_map(&m_frame, const_cast<GstVideoInfo*>(info), buffer, flags);
 }
 
 GstMappedFrame::GstMappedFrame(const GRefPtr<GstSample>& sample, GstMapFlags flags)
