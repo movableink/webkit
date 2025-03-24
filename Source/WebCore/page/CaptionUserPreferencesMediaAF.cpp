@@ -735,7 +735,7 @@ static String trackDisplayName(const TrackBase& track)
 
     String result;
 
-    String label = track.label();
+    String label = track.label().string().trim(isASCIIWhitespace);
     String trackLanguageIdentifier = track.validBCP47Language();
 
     auto preferredLanguages = userPreferredLanguages(ShouldMinimizeLanguages::No);
@@ -761,8 +761,12 @@ static String trackDisplayName(const TrackBase& track)
 
         result = addTrackKindDisplayNameIfNeeded(track, result);
 
-        if (!label.isEmpty() && !result.contains(label))
-            result = addTrackLabelAsSuffix(result, label);
+        if (!label.isEmpty()) {
+            if (result.isEmpty())
+                result = label;
+            else if (!result.contains(label))
+                result = addTrackLabelAsSuffix(result, label);
+        }
     }
 
     if (result.isEmpty())

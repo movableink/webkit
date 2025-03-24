@@ -15,6 +15,7 @@ Subtitles: [
   "Spanish Captions",
   "Spanish",
   "Spanish Descriptions",
+  "no-srclang",
   "Chinese (China mainland)",
   "French Captions (label-fr)",
   "French (label-fr)",
