@@ -14,5 +14,4 @@ Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
 List of files:
-/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/reference/green-100x100.html
-/LayoutTests/imported/w3c/web-platform-tests/svg/struct/reftests/reference/green-100x100.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/use-getComputedStyle.html

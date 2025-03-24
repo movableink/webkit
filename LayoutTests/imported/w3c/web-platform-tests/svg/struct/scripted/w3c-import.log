@@ -15,4 +15,13 @@ None
 ------------------------------------------------------------------------
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/svg/struct/scripted/autofocus-attribute.svg
-/LayoutTests/imported/w3c/web-platform-tests/svg/struct/scripted/blank.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/scripted/svg-checkIntersection-001.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/scripted/svg-checkIntersection-002.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/scripted/svg-getIntersectionList-001.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/scripted/svg-getIntersectionList-002.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/scripted/svg-getIntersectionList-003.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/scripted/svg-getIntersectionList-004.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/scripted/svg-getIntersectionList-005.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/scripted/svg-getIntersectionList-006.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/scripted/use-external-reload-in-iframe.html
+/LayoutTests/imported/w3c/web-platform-tests/svg/struct/scripted/use-load-error-events.tentative.html
