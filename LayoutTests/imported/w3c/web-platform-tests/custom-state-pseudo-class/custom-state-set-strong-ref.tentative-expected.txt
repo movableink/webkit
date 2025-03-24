@@ -1,3 +1,0 @@
-
-PASS customstateset doesn't crash after GC on detached node
-
