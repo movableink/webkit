@@ -153,7 +153,7 @@ TEST(Damage, Resize)
     Damage damage;
 
     // Grid size should be ceiled.
-    damage.resize({ 512, 333 });
+    damage.resize(IntSize { 512, 333 });
     damage.add(IntRect { 0, 0, 1, 1 });
     damage.add(IntRect { 1, 1, 1, 1 });
     damage.add(IntRect { 2, 2, 1, 1 });
