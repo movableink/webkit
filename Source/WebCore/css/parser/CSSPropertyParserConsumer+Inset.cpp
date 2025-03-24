@@ -29,8 +29,9 @@
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+LengthPercentage.h"
+#include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
 #include "CSSValueKeywords.h"
 
 namespace WebCore {
@@ -45,7 +46,14 @@ RefPtr<CSSValue> consumeInsetPhysical(CSSParserTokenRange& range, const CSSParse
         return consumeIdent(range);
 
     auto unitless = currentShorthand != CSSPropertyInset ? UnitlessQuirk::Allow : UnitlessQuirk::Forbid;
-    return consumeLengthPercentage(range, context, ValueRange::All, unitless, UnitlessZeroQuirk::Allow, AnchorPolicy::Allow, AnchorSizePolicy::Allow);
+
+    return CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, context, {
+        .parserMode = context.mode,
+        .anchorPolicy = AnchorPolicy::Allow,
+        .anchorSizePolicy = AnchorSizePolicy::Allow,
+        .unitless = unitless,
+        .unitlessZero = UnitlessZeroQuirk::Allow,
+    });
 }
 
 } // namespace CSSPropertyParserHelpers

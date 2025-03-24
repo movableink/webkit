@@ -30,8 +30,9 @@
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+LengthPercentage.h"
+#include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
 
@@ -48,7 +49,13 @@ RefPtr<CSSValue> consumeMarginPhysical(CSSParserTokenRange& range, const CSSPars
 
     auto unitless = currentShorthand != CSSPropertyInset ? UnitlessQuirk::Allow : UnitlessQuirk::Forbid;
     auto anchorSizePolicy = context.propertySettings.cssAnchorPositioningEnabled ? AnchorSizePolicy::Allow : AnchorSizePolicy::Forbid;
-    return consumeLengthPercentage(range, context, ValueRange::All, unitless, UnitlessZeroQuirk::Allow, AnchorPolicy::Forbid, anchorSizePolicy);
+
+    return CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, context, {
+        .parserMode = context.mode,
+        .anchorSizePolicy = anchorSizePolicy,
+        .unitless = unitless,
+        .unitlessZero = UnitlessZeroQuirk::Allow,
+    });
 }
 
 RefPtr<CSSValue> consumeMarginTrim(CSSParserTokenRange& range, const CSSParserContext&)

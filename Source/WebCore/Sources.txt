@@ -1026,8 +1026,6 @@ css/parser/CSSParserTokenRange.cpp
 css/parser/CSSPropertyParser.cpp
 css/parser/CSSPropertyParserConsumer+Align.cpp
 css/parser/CSSPropertyParserConsumer+Anchor.cpp
-css/parser/CSSPropertyParserConsumer+Angle.cpp
-css/parser/CSSPropertyParserConsumer+AnglePercentage.cpp
 css/parser/CSSPropertyParserConsumer+Animations.cpp
 css/parser/CSSPropertyParserConsumer+AppleVisualEffect.cpp
 css/parser/CSSPropertyParserConsumer+Attr.cpp
@@ -1047,19 +1045,14 @@ css/parser/CSSPropertyParserConsumer+Ident.cpp
 css/parser/CSSPropertyParserConsumer+Image.cpp
 css/parser/CSSPropertyParserConsumer+Inline.cpp
 css/parser/CSSPropertyParserConsumer+Inset.cpp
-css/parser/CSSPropertyParserConsumer+Integer.cpp
-css/parser/CSSPropertyParserConsumer+Length.cpp
-css/parser/CSSPropertyParserConsumer+LengthPercentage.cpp
 css/parser/CSSPropertyParserConsumer+Lists.cpp
 css/parser/CSSPropertyParserConsumer+Masking.cpp
 css/parser/CSSPropertyParserConsumer+Motion.cpp
-css/parser/CSSPropertyParserConsumer+Number.cpp
 css/parser/CSSPropertyParserConsumer+Percentage.cpp
 css/parser/CSSPropertyParserConsumer+Position.cpp
 css/parser/CSSPropertyParserConsumer+PositionTry.cpp
 css/parser/CSSPropertyParserConsumer+Primitives.cpp
 css/parser/CSSPropertyParserConsumer+Ratio.cpp
-css/parser/CSSPropertyParserConsumer+Resolution.cpp
 css/parser/CSSPropertyParserConsumer+SVG.cpp
 css/parser/CSSPropertyParserConsumer+ScrollSnap.cpp
 css/parser/CSSPropertyParserConsumer+Scrollbars.cpp
@@ -1068,7 +1061,6 @@ css/parser/CSSPropertyParserConsumer+String.cpp
 css/parser/CSSPropertyParserConsumer+Symbol.cpp
 css/parser/CSSPropertyParserConsumer+Syntax.cpp
 css/parser/CSSPropertyParserConsumer+TextDecoration.cpp
-css/parser/CSSPropertyParserConsumer+Time.cpp
 css/parser/CSSPropertyParserConsumer+Timeline.cpp
 css/parser/CSSPropertyParserConsumer+Transform.cpp
 css/parser/CSSPropertyParserConsumer+Transitions.cpp

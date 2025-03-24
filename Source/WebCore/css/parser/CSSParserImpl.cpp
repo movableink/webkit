@@ -45,11 +45,11 @@
 #include "CSSPositionTryRule.h"
 #include "CSSPropertyParser.h"
 #include "CSSPropertyParserConsumer+Animations.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+CounterStyles.h"
 #include "CSSPropertyParserConsumer+Font.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+Integer.h"
-#include "CSSPropertyParserConsumer+Length.h"
+#include "CSSPropertyParserConsumer+IntegerDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParserConsumer+Timeline.h"
 #include "CSSSelector.h"
@@ -810,7 +810,7 @@ RefPtr<StyleRuleFontFeatureValuesBlock> CSSParserImpl::consumeFontFeatureValuesR
 
         Vector<unsigned> values;
         while (!range.atEnd()) {
-            auto value = CSSPropertyParserHelpers::consumeNonNegativeInteger(range, m_context);
+            auto value = CSSPropertyParserHelpers::CSSPrimitiveValueResolver<CSS::Integer<CSS::Nonnegative>>::consumeAndResolve(range, m_context, { .parserMode = m_context.mode });
             if (!value)
                 return { };
             ASSERT(value->isInteger());

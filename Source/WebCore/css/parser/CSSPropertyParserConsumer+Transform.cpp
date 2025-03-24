@@ -30,12 +30,14 @@
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
-#include "CSSPropertyParserConsumer+Angle.h"
+#include "CSSPropertyParserConsumer+AngleDefinitions.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+Length.h"
-#include "CSSPropertyParserConsumer+LengthPercentage.h"
-#include "CSSPropertyParserConsumer+Number.h"
+#include "CSSPropertyParserConsumer+LengthDefinitions.h"
+#include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
+#include "CSSPropertyParserConsumer+NumberDefinitions.h"
 #include "CSSPropertyParserConsumer+Percentage.h"
+#include "CSSPropertyParserConsumer+PercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParsing.h"
 #include "CSSToLengthConversionData.h"
@@ -53,28 +55,28 @@ RefPtr<CSSValue> consumeRotate3dFunction(CSSParserTokenRange& range, const CSSPa
     // rotate3d() = rotate3d( <number> , <number> , <number> , [ <angle> | <zero> ] )
 
     auto consumeParameters = [](auto& args, auto& context) -> std::optional<CSSValueListBuilder> {
-        auto firstValue = consumeNumber(args, context);
+        auto firstValue = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(args, context, { .parserMode = context.mode });
         if (!firstValue)
             return { };
 
         if (!consumeCommaIncludingWhitespace(args))
             return { };
 
-        auto secondValue = consumeNumber(args, context);
+        auto secondValue = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(args, context, { .parserMode = context.mode });
         if (!secondValue)
             return { };
 
         if (!consumeCommaIncludingWhitespace(args))
             return { };
 
-        auto thirdValue = consumeNumber(args, context);
+        auto thirdValue = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(args, context, { .parserMode = context.mode });
         if (!thirdValue)
             return { };
 
         if (!consumeCommaIncludingWhitespace(args))
             return { };
 
-        auto angle = consumeAngle(args, context, UnitlessQuirk::Forbid, UnitlessZeroQuirk::Allow);
+        auto angle = CSSPrimitiveValueResolver<CSS::Angle<>>::consumeAndResolve(args, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
         if (!angle)
             return { };
 
@@ -111,13 +113,13 @@ RefPtr<CSSValue> consumeTranslateFunction(CSSParserTokenRange& range, const CSSP
     auto consumeParameters = [](auto& args, auto& context) -> std::optional<CSSValueListBuilder> {
         CSSValueListBuilder arguments;
 
-        auto firstValue = consumeLengthPercentage(args, context);
+        auto firstValue = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(args, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
         if (!firstValue)
             return { };
         arguments.append(firstValue.releaseNonNull());
 
         if (consumeCommaIncludingWhitespace(args)) {
-            auto secondValue = consumeLengthPercentage(args, context);
+            auto secondValue = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(args, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
             if (!secondValue)
                 return { };
             // A second value of `0` is the same as no second argument, so there is no need to store one if we know it is `0`.
@@ -151,21 +153,21 @@ RefPtr<CSSValue> consumeTranslate3dFunction(CSSParserTokenRange& range, const CS
     // translate3d() = translate3d( <length-percentage> , <length-percentage> , <length> )
 
     auto consumeParameters = [](auto& args, auto& context) -> std::optional<CSSValueListBuilder> {
-        auto firstValue = consumeLengthPercentage(args, context);
+        auto firstValue = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(args, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
         if (!firstValue)
             return { };
 
         if (!consumeCommaIncludingWhitespace(args))
             return { };
 
-        auto secondValue = consumeLengthPercentage(args, context);
+        auto secondValue = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(args, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
         if (!secondValue)
             return { };
 
         if (!consumeCommaIncludingWhitespace(args))
             return { };
 
-        auto thirdValue = consumeLength(args, context);
+        auto thirdValue = CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(args, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
         if (!thirdValue)
             return { };
 
@@ -208,7 +210,7 @@ RefPtr<CSSValue> consumeTranslate(CSSParserTokenRange& range, const CSSParserCon
     // value is missing, it defaults to 0px. If three values are given, this specifies a 3d translation, equivalent to the
     // translate3d() function.
 
-    auto x = consumeLengthPercentage(range, context);
+    auto x = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
     if (!x)
         return nullptr;
 
@@ -217,7 +219,7 @@ RefPtr<CSSValue> consumeTranslate(CSSParserTokenRange& range, const CSSParserCon
     if (range.atEnd())
         return CSSValueList::createSpaceSeparated(x.releaseNonNull());
 
-    auto y = consumeLengthPercentage(range, context);
+    auto y = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
     if (!y)
         return nullptr;
 
@@ -234,7 +236,7 @@ RefPtr<CSSValue> consumeTranslate(CSSParserTokenRange& range, const CSSParserCon
         return CSSValueList::createSpaceSeparated(x.releaseNonNull(), y.releaseNonNull());
     }
 
-    auto z = consumeLength(range, context);
+    auto z = CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
     if (!z)
         return nullptr;
 
@@ -273,7 +275,7 @@ RefPtr<CSSValue> consumeRotate(CSSParserTokenRange& range, const CSSParserContex
 
     while (!range.atEnd()) {
         // First, attempt to parse a number, which might be in a series of 3 specifying the rotation axis.
-        auto parsedValue = consumeNumber(range, context);
+        auto parsedValue = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
         if (parsedValue) {
             // If we've encountered an axis identifier, then this value is invalid.
             if (axisIdentifier)
@@ -285,7 +287,7 @@ RefPtr<CSSValue> consumeRotate(CSSParserTokenRange& range, const CSSParserContex
 
         // Then, attempt to parse an angle. We try this as a fallback rather than the first option because
         // a unitless 0 angle would be consumed as an angle.
-        parsedValue = consumeAngle(range, context, UnitlessQuirk::Forbid, UnitlessZeroQuirk::Allow);
+        parsedValue = CSSPrimitiveValueResolver<CSS::Angle<>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
         if (parsedValue) {
             // If we had already parsed an angle or numbers but not 3 in a row, this value is invalid.
             if (angle || (!list.isEmpty() && list.size() != 3))

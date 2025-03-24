@@ -35,16 +35,16 @@
 #include "CSSCalcTree+Parser.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Color.h"
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSPropertyParserConsumer+Image.h"
-#include "CSSPropertyParserConsumer+Length.h"
-#include "CSSPropertyParserConsumer+LengthPercentage.h"
+#include "CSSPropertyParserConsumer+LengthDefinitions.h"
 #include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+List.h"
 #include "CSSPropertyParserConsumer+MetaConsumer.h"
-#include "CSSPropertyParserConsumer+Number.h"
-#include "CSSPropertyParserConsumer+Percentage.h"
+#include "CSSPropertyParserConsumer+NumberDefinitions.h"
+#include "CSSPropertyParserConsumer+PercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParsing.h"
 #include "CSSQuadValue.h"
@@ -162,9 +162,9 @@ RefPtr<CSSValue> consumeBorderImageSlice(CSSParserTokenRange& range, const CSSPa
     std::array<RefPtr<CSSPrimitiveValue>, 4> slices;
 
     for (auto& value : slices) {
-        value = consumePercentage(range, context, ValueRange::NonNegative);
+        value = CSSPrimitiveValueResolver<CSS::Percentage<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = context.mode });
         if (!value)
-            value = consumeNumber(range, context, ValueRange::NonNegative);
+            value = CSSPrimitiveValueResolver<CSS::Number<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = context.mode });
         if (!value)
             break;
     }
@@ -193,10 +193,12 @@ RefPtr<CSSValue> consumeBorderImageWidth(CSSParserTokenRange& range, const CSSPa
 
     bool hasLength = false;
     for (auto& value : widths) {
-        value = consumeNumber(range, context, ValueRange::NonNegative);
+        value = CSSPrimitiveValueResolver<CSS::Number<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = context.mode });
         if (value)
             continue;
-        if (auto numericValue = consumeLengthPercentage(range, context, HTMLStandardMode, ValueRange::NonNegative)) {
+
+        // FIXME: Figure out and document why parserMode is explicitly set to HTMLStandardMode here or remove the special case.
+        if (auto numericValue = CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = HTMLStandardMode, .unitlessZero = UnitlessZeroQuirk::Allow })) {
             if (numericValue->isLength())
                 hasLength = true;
             value = numericValue;
@@ -276,7 +278,7 @@ RefPtr<CSSValue> consumeBorderWidth(CSSParserTokenRange& range, const CSSParserC
 
     bool allowQuirkyLengths = (context.mode == HTMLQuirksMode) && (currentShorthand == CSSPropertyInvalid || currentShorthand == CSSPropertyBorderWidth);
     UnitlessQuirk unitless = allowQuirkyLengths ? UnitlessQuirk::Allow : UnitlessQuirk::Forbid;
-    return consumeLength(range, context, ValueRange::NonNegative, unitless);
+    return CSSPrimitiveValueResolver<CSS::Length<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitless = unitless, .unitlessZero = UnitlessZeroQuirk::Allow });
 }
 
 RefPtr<CSSValue> consumeBorderColor(CSSParserTokenRange& range, const CSSParserContext& context, CSSPropertyID currentShorthand)
@@ -301,7 +303,7 @@ template<CSSPropertyID property> static RefPtr<CSSValue> consumeBackgroundSize(C
     bool shouldCoalesce = true;
     RefPtr<CSSPrimitiveValue> horizontal = consumeIdent<CSSValueAuto>(range);
     if (!horizontal) {
-        horizontal = consumeLengthPercentage(range, context, ValueRange::NonNegative, UnitlessQuirk::Forbid);
+        horizontal = CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
         if (!horizontal)
             return nullptr;
         shouldCoalesce = false;
@@ -311,7 +313,7 @@ template<CSSPropertyID property> static RefPtr<CSSValue> consumeBackgroundSize(C
     if (!range.atEnd()) {
         vertical = consumeIdent<CSSValueAuto>(range);
         if (!vertical)
-            vertical = consumeLengthPercentage(range, context, ValueRange::NonNegative, UnitlessQuirk::Forbid);
+            vertical = CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
     }
     if (!vertical) {
         if constexpr (property == CSSPropertyWebkitBackgroundSize) {
@@ -526,7 +528,7 @@ RefPtr<CSSValue> consumeReflect(CSSParserTokenRange& range, const CSSParserConte
     if (range.atEnd())
         offset = CSSPrimitiveValue::create(0, CSSUnitType::CSS_PX);
     else {
-        offset = consumeLengthPercentage(range, context);
+        offset = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
         if (!offset)
             return nullptr;
     }

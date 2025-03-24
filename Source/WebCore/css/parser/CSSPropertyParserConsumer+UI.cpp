@@ -30,9 +30,10 @@
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSPropertyParserConsumer+Image.h"
-#include "CSSPropertyParserConsumer+Number.h"
+#include "CSSPropertyParserConsumer+NumberDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
@@ -49,8 +50,8 @@ RefPtr<CSSValue> consumeCursor(CSSParserTokenRange& range, const CSSParserContex
     CSSValueListBuilder list;
     while (auto image = consumeImage(range, context, { AllowedImageType::URLFunction, AllowedImageType::ImageSet })) {
         RefPtr<CSSValuePair> hotSpot;
-        if (auto x = consumeNumber(range, context)) {
-            auto y = consumeNumber(range, context);
+        if (auto x = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode })) {
+            auto y = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
             if (!y)
                 return nullptr;
             hotSpot = CSSValuePair::createNoncoalescing(x.releaseNonNull(), y.releaseNonNull());

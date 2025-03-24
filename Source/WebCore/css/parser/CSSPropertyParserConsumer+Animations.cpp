@@ -32,8 +32,9 @@
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyParser.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+Percentage.h"
+#include "CSSPropertyParserConsumer+PercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+Timeline.h"
 #include "Length.h"
 
@@ -51,7 +52,7 @@ Vector<std::pair<CSSValueID, double>> consumeKeyframeKeyList(CSSParserTokenRange
         // We will eventually want to return a CSS value that can be kept as-is on a
         // BlendingKeyframe so that resolution happens when we have the necessary context
         // when the keyframes are associated with a target element.
-        if (auto percentageValue = consumePercentage(range, context, ValueRange::All)) {
+        if (auto percentageValue = CSSPrimitiveValueResolver<CSS::Percentage<>>::consumeAndResolve(range, context, { .parserMode = context.mode })) {
             auto resolvedPercentage = percentageValue->resolveAsPercentageDeprecated();
             if (restricted == RestrictedToZeroToHundredRange::No)
                 return resolvedPercentage / 100;

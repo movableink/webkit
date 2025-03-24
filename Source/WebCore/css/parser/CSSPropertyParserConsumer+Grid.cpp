@@ -35,9 +35,10 @@
 #include "CSSParserIdioms.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+Integer.h"
-#include "CSSPropertyParserConsumer+LengthPercentage.h"
+#include "CSSPropertyParserConsumer+IntegerDefinitions.h"
+#include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSSubgridValue.h"
 #include "CSSValueList.h"
@@ -164,21 +165,21 @@ RefPtr<CSSValue> consumeGridLine(CSSParserTokenRange& range, const CSSParserCont
 
     RefPtr<CSSPrimitiveValue> spanValue;
     RefPtr<CSSPrimitiveValue> gridLineName;
-    RefPtr<CSSPrimitiveValue> numericValue = consumeInteger(range, context);
+    RefPtr<CSSPrimitiveValue> numericValue = CSSPrimitiveValueResolver<CSS::Integer<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
     if (numericValue) {
         gridLineName = consumeCustomIdentForGridLine(range);
         spanValue = consumeIdent<CSSValueSpan>(range);
     } else {
         spanValue = consumeIdent<CSSValueSpan>(range);
         if (spanValue) {
-            numericValue = consumeInteger(range, context);
+            numericValue = CSSPrimitiveValueResolver<CSS::Integer<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
             gridLineName = consumeCustomIdentForGridLine(range);
             if (!numericValue)
-                numericValue = consumeInteger(range, context);
+                numericValue = CSSPrimitiveValueResolver<CSS::Integer<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
         } else {
             gridLineName = consumeCustomIdentForGridLine(range);
             if (gridLineName) {
-                numericValue = consumeInteger(range, context);
+                numericValue = CSSPrimitiveValueResolver<CSS::Integer<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
                 spanValue = consumeIdent<CSSValueSpan>(range);
                 if (!spanValue && !numericValue)
                     return gridLineName;
@@ -235,14 +236,14 @@ static RefPtr<CSSPrimitiveValue> consumeGridBreadth(CSSParserTokenRange& range, 
             return nullptr;
         return CSSPrimitiveValue::create(range.consumeIncludingWhitespace().numericValue(), CSSUnitType::CSS_FR);
     }
-    return consumeLengthPercentage(range, context.mode, ValueRange::NonNegative);
+    return CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
 }
 
 static RefPtr<CSSValue> consumeFitContent(CSSParserTokenRange& range, const CSSParserContext& context)
 {
     CSSParserTokenRange rangeCopy = range;
     CSSParserTokenRange args = consumeFunction(rangeCopy);
-    auto length = consumeLengthPercentage(args, context.mode, ValueRange::NonNegative, UnitlessQuirk::Allow);
+    auto length = CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::Nonnegative>>::consumeAndResolve(args, context, { .parserMode = context.mode, .unitless = UnitlessQuirk::Allow, .unitlessZero = UnitlessZeroQuirk::Allow });
     if (!length || !args.atEnd())
         return nullptr;
     range = rangeCopy;
@@ -307,7 +308,7 @@ static bool consumeGridTrackRepeatFunction(CSSParserTokenRange& range, const CSS
     auto autoRepeatType = consumeIdentRaw<CSSValueAutoFill, CSSValueAutoFit>(args);
     isAutoRepeat = autoRepeatType.has_value();
     if (!isAutoRepeat) {
-        repetitions = consumePositiveInteger(args, context);
+        repetitions = CSSPrimitiveValueResolver<CSS::Integer<CSS::Range{1, CSS::Range::infinity}, unsigned>>::consumeAndResolve(args, context, { .parserMode = context.mode });
         if (!repetitions)
             return false;
     }
@@ -349,7 +350,7 @@ static bool consumeSubgridNameRepeatFunction(CSSParserTokenRange& range, const C
     RefPtr<CSSPrimitiveValue> repetitions;
     isAutoRepeat = consumeIdentRaw<CSSValueAutoFill>(args).has_value();
     if (!isAutoRepeat) {
-        repetitions = consumePositiveInteger(args, context);
+        repetitions = CSSPrimitiveValueResolver<CSS::Integer<CSS::Range{1, CSS::Range::infinity}, unsigned>>::consumeAndResolve(args, context, { .parserMode = context.mode });
         if (!repetitions)
             return false;
         if (auto repetitionsInteger = repetitions->resolveAsIntegerIfNotCalculated(); repetitionsInteger && repetitionsInteger > GridPosition::max())

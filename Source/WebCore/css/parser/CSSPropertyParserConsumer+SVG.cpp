@@ -29,10 +29,11 @@
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Color.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+LengthPercentage.h"
-#include "CSSPropertyParserConsumer+Number.h"
+#include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
+#include "CSSPropertyParserConsumer+NumberDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParserConsumer+URL.h"
 #include "CSSValueKeywords.h"
@@ -105,9 +106,10 @@ RefPtr<CSSValue> consumeStrokeDasharray(CSSParserTokenRange& range, const CSSPar
         return consumeIdent(range);
     CSSValueListBuilder dashes;
     do {
-        RefPtr<CSSPrimitiveValue> dash = consumeLengthPercentage(range, context, HTMLStandardMode, ValueRange::NonNegative, UnitlessQuirk::Forbid, UnitlessZeroQuirk::Forbid);
+        // FIXME: Figure out and document why parserMode is explicitly set to HTMLStandardMode here or remove the special case.
+        auto dash = CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = HTMLStandardMode });
         if (!dash)
-            dash = consumeNumber(range, context, ValueRange::NonNegative);
+            dash = CSSPrimitiveValueResolver<CSS::Number<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = context.mode });
         if (!dash || (consumeCommaIncludingWhitespace(range) && range.atEnd()))
             return nullptr;
         dashes.append(dash.releaseNonNull());

@@ -28,8 +28,9 @@
 
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+LengthPercentage.h"
+#include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+List.h"
 #include "CSSPropertyParsing.h"
 #include "CSSScrollValue.h"
@@ -131,14 +132,14 @@ RefPtr<CSSValue> consumeSingleAnimationRange(CSSParserTokenRange& range, const C
             return name;
         if (!isAnimationRangeKeyword(name->valueID()))
             return nullptr;
-        if (auto offset = consumeLengthPercentage(range, context, ValueRange::All, UnitlessQuirk::Forbid)) {
+        if (auto offset = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow })) {
             if (SingleTimelineRange::isDefault(*offset, type))
                 return name;
             return CSSValuePair::createNoncoalescing(name.releaseNonNull(), offset.releaseNonNull());
         }
         return name;
     }
-    return consumeLengthPercentage(range, context, ValueRange::All, UnitlessQuirk::Forbid);
+    return CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
 }
 
 RefPtr<CSSValue> consumeSingleAnimationRangeStart(CSSParserTokenRange& range, const CSSParserContext& context)

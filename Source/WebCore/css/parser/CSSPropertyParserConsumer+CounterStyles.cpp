@@ -30,9 +30,10 @@
 #include "CSSParserIdioms.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSPropertyParserConsumer+Image.h"
-#include "CSSPropertyParserConsumer+Integer.h"
+#include "CSSPropertyParserConsumer+IntegerDefinitions.h"
 #include "CSSPropertyParserConsumer+List.h"
 #include "CSSPropertyParserConsumer+String.h"
 #include "CSSPropertyParsing.h"
@@ -127,7 +128,7 @@ RefPtr<CSSValue> consumeCounterStyleSystem(CSSParserTokenRange& range, const CSS
             return ident;
         // If we have the `fixed` keyword but the range is not at the end, the next token must be a integer.
         // If it's not, this value is invalid.
-        auto firstSymbolValue = consumeInteger(range, context);
+        auto firstSymbolValue = CSSPrimitiveValueResolver<CSS::Integer<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
         if (!firstSymbolValue)
             return nullptr;
         return CSSValuePair::create(ident.releaseNonNull(), firstSymbolValue.releaseNonNull());
@@ -151,7 +152,7 @@ RefPtr<CSSValue> consumeCounterStyleRange(CSSParserTokenRange& range, const CSSP
     auto consumeCounterStyleRangeBound = [&](CSSParserTokenRange& range) -> RefPtr<CSSPrimitiveValue> {
         if (auto infinite = consumeIdent<CSSValueInfinite>(range))
             return infinite;
-        if (auto integer = consumeInteger(range, context))
+        if (auto integer = CSSPrimitiveValueResolver<CSS::Integer<>>::consumeAndResolve(range, context, { .parserMode = context.mode }))
             return integer;
         return nullptr;
     };
@@ -187,12 +188,12 @@ RefPtr<CSSValue> consumeCounterStyleAdditiveSymbols(CSSParserTokenRange& range, 
 
     std::optional<int> lastWeight;
     auto values = consumeListSeparatedBy<',', OneOrMore>(range, [&lastWeight](auto& range, auto& context) -> RefPtr<CSSValue> {
-        auto integer = consumeNonNegativeInteger(range, context);
+        auto integer = CSSPrimitiveValueResolver<CSS::Integer<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = context.mode });
         auto symbol = CSSPropertyParsing::consumeSymbol(range, context);
         if (!integer) {
             if (!symbol)
                 return nullptr;
-            integer = consumeNonNegativeInteger(range, context);
+            integer = CSSPrimitiveValueResolver<CSS::Integer<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = context.mode });
             if (!integer)
                 return nullptr;
         }

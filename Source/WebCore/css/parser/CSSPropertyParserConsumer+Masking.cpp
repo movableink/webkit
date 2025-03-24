@@ -26,10 +26,12 @@
 #include "config.h"
 #include "CSSPropertyParserConsumer+Masking.h"
 
+#include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+Length.h"
+#include "CSSPropertyParserConsumer+LengthDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParserConsumer+Shapes.h"
 #include "CSSPropertyParserConsumer+URL.h"
@@ -55,7 +57,7 @@ RefPtr<CSSValue> consumeClipRectFunction(CSSParserTokenRange& range, const CSSPa
     auto consumeClipComponent = [&] -> RefPtr<CSSPrimitiveValue> {
         if (args.peek().id() == CSSValueAuto)
             return consumeIdent(args);
-        return consumeLength(args, context, ValueRange::All, UnitlessQuirk::Allow);
+        return CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(args, context, { .parserMode = context.mode, .unitless = UnitlessQuirk::Allow, .unitlessZero = UnitlessZeroQuirk::Allow });
     };
 
     // Support both rect(t, r, b, l) and rect(t r b l).

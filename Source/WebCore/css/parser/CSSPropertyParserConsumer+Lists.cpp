@@ -29,9 +29,10 @@
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+CounterStyles.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+Integer.h"
+#include "CSSPropertyParserConsumer+IntegerDefinitions.h"
 #include "CSSPropertyParserConsumer+String.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
@@ -50,7 +51,7 @@ static RefPtr<CSSValue> consumeCounter(CSSParserTokenRange& range, const CSSPars
         auto counterName = consumeCustomIdent(range);
         if (!counterName)
             return nullptr;
-        if (auto counterValue = consumeInteger(range, context))
+        if (auto counterValue = CSSPrimitiveValueResolver<CSS::Integer<>>::consumeAndResolve(range, context, { .parserMode = context.mode }))
             list.append(CSSValuePair::create(counterName.releaseNonNull(), counterValue.releaseNonNull()));
         else
             list.append(CSSValuePair::create(counterName.releaseNonNull(), CSSPrimitiveValue::createInteger(defaultValue)));

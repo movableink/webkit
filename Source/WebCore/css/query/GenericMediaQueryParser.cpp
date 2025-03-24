@@ -28,13 +28,14 @@
 #include "CSSCustomPropertyValue.h"
 #include "CSSParserImpl.h"
 #include "CSSPropertyParser.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+Integer.h"
-#include "CSSPropertyParserConsumer+Length.h"
-#include "CSSPropertyParserConsumer+Number.h"
+#include "CSSPropertyParserConsumer+IntegerDefinitions.h"
+#include "CSSPropertyParserConsumer+LengthDefinitions.h"
+#include "CSSPropertyParserConsumer+NumberDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParserConsumer+Ratio.h"
-#include "CSSPropertyParserConsumer+Resolution.h"
+#include "CSSPropertyParserConsumer+ResolutionDefinitions.h"
 #include "CSSRatioValue.h"
 #include "CSSValue.h"
 #include "CSSVariableParser.h"
@@ -221,20 +222,22 @@ std::optional<Feature> FeatureParser::consumeRangeFeature(CSSParserTokenRange& r
 
 RefPtr<CSSValue> FeatureParser::consumeValue(CSSParserTokenRange& range, const MediaQueryParserContext& context)
 {
+    using namespace CSSPropertyParserHelpers;
+
     if (range.atEnd())
         return nullptr;
 
-    if (RefPtr value = CSSPropertyParserHelpers::consumeIdent(range))
+    if (RefPtr value = consumeIdent(range))
         return value;
-    if (RefPtr value = CSSPropertyParserHelpers::consumeRatioWithBothNumeratorAndDenominator(range, context.context))
+    if (RefPtr value = consumeRatioWithBothNumeratorAndDenominator(range, context.context))
         return value;
-    if (RefPtr value = CSSPropertyParserHelpers::consumeInteger(range, context.context))
+    if (RefPtr value = CSSPrimitiveValueResolver<CSS::Integer<>>::consumeAndResolve(range, context.context, { .parserMode = context.context.mode }))
         return value;
-    if (RefPtr value = CSSPropertyParserHelpers::consumeNumber(range, context.context))
+    if (RefPtr value = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context.context, { .parserMode = context.context.mode }))
         return value;
-    if (RefPtr value = CSSPropertyParserHelpers::consumeLength(range, context.context, HTMLStandardMode))
+    if (RefPtr value = CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(range, context.context, { .parserMode = HTMLStandardMode }))
         return value;
-    if (RefPtr value = CSSPropertyParserHelpers::consumeResolution(range, context.context))
+    if (RefPtr value = CSSPrimitiveValueResolver<CSS::Resolution<>>::consumeAndResolve(range, context.context, { .parserMode = context.context.mode }))
         return value;
 
     return nullptr;

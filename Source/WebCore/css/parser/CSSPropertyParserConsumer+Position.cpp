@@ -28,8 +28,8 @@
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+LengthPercentage.h"
 #include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+MetaConsumer.h"
 #include "CSSValueKeywords.h"
@@ -71,7 +71,7 @@ static RefPtr<CSSPrimitiveValue> consumePositionComponent(CSSParserTokenRange& r
 {
     if (range.peek().type() == IdentToken)
         return consumeIdent<CSSValueLeft, CSSValueTop, CSSValueBottom, CSSValueRight, CSSValueCenter>(range);
-    return consumeLengthPercentage(range, context.mode, ValueRange::All, unitless, UnitlessZeroQuirk::Allow);
+    return CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitless = unitless, .unitlessZero = UnitlessZeroQuirk::Allow });
 }
 
 static bool isHorizontalPositionKeywordOnly(const CSSPrimitiveValue& value)
@@ -263,7 +263,7 @@ static RefPtr<CSSValue> consumeSingleAxisPosition(CSSParserTokenRange& range, co
             return value1;
     }
 
-    auto value2 = consumeLengthPercentage(range, context.mode);
+    auto value2 = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
     if (value1 && value2)
         return CSSValuePair::create(value1.releaseNonNull(), value2.releaseNonNull());
 

@@ -41,20 +41,15 @@
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPrimitiveValueMappings.h"
-#include "CSSPropertyParserConsumer+Angle.h"
 #include "CSSPropertyParserConsumer+AngleDefinitions.h"
 #include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Color.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+Integer.h"
 #include "CSSPropertyParserConsumer+IntegerDefinitions.h"
-#include "CSSPropertyParserConsumer+LengthPercentage.h"
 #include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+List.h"
 #include "CSSPropertyParserConsumer+MetaConsumer.h"
-#include "CSSPropertyParserConsumer+Number.h"
 #include "CSSPropertyParserConsumer+NumberDefinitions.h"
-#include "CSSPropertyParserConsumer+Percentage.h"
 #include "CSSPropertyParserConsumer+PercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+URL.h"
 #include "CSSPropertyParserOptions.h"
@@ -485,7 +480,7 @@ RefPtr<CSSValue> consumeFontSizeAdjust(CSSParserTokenRange& range, const CSSPars
         return consumeIdent(range);
 
     auto metric = consumeIdent<CSSValueExHeight, CSSValueCapHeight, CSSValueChWidth, CSSValueIcWidth, CSSValueIcHeight>(range);
-    auto value = consumeNumber(range, context, ValueRange::NonNegative);
+    auto value = CSSPrimitiveValueResolver<CSS::Number<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = context.mode });
     if (!value)
         value = consumeIdent<CSSValueFromFont>(range);
 
@@ -870,7 +865,7 @@ RefPtr<CSSValue> consumeFeatureTagValue(CSSParserTokenRange& range, const CSSPar
     RefPtr<CSSPrimitiveValue> tagValue;
     if (!range.atEnd() && range.peek().type() != CommaToken) {
         // Feature tag values could follow: <integer [0,∞]> | on | off
-        if (auto integer = consumeNonNegativeInteger(range, context))
+        if (auto integer = CSSPrimitiveValueResolver<CSS::Integer<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = context.mode }))
             tagValue = WTFMove(integer);
         else if (range.peek().id() == CSSValueOn || range.peek().id() == CSSValueOff)
             tagValue = CSSPrimitiveValue::createInteger(range.consumeIncludingWhitespace().id() == CSSValueOn ? 1 : 0);
@@ -916,7 +911,7 @@ RefPtr<CSSValue> consumeVariationTagValue(CSSParserTokenRange& range, const CSSP
     if (!tag)
         return nullptr;
 
-    auto tagValue = consumeNumber(range, context);
+    auto tagValue = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
     if (!tagValue)
         return nullptr;
 

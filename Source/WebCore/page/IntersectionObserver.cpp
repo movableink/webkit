@@ -28,7 +28,8 @@
 #include "IntersectionObserver.h"
 
 #include "CSSParserTokenRange.h"
-#include "CSSPropertyParserConsumer+LengthPercentage.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
+#include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
 #include "CSSTokenizer.h"
 #include "Element.h"
 #include "FrameDestructionObserverInlines.h"
@@ -54,6 +55,8 @@ namespace WebCore {
 
 static ExceptionOr<LengthBox> parseRootMargin(String& rootMargin)
 {
+    using namespace CSSPropertyParserHelpers;
+
     CSSTokenizer tokenizer(rootMargin);
     auto tokenRange = tokenizer.tokenRange();
     tokenRange.consumeWhitespace();
@@ -61,7 +64,7 @@ static ExceptionOr<LengthBox> parseRootMargin(String& rootMargin)
     while (!tokenRange.atEnd()) {
         if (margins.size() == 4)
             return Exception { ExceptionCode::SyntaxError, "Failed to construct 'IntersectionObserver': Extra text found at the end of rootMargin."_s };
-        RefPtr<CSSPrimitiveValue> parsedValue = CSSPropertyParserHelpers::consumeLengthPercentage(tokenRange, HTMLStandardMode);
+        auto parsedValue = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(tokenRange, CSSParserContext { HTMLStandardMode }, { });
         if (!parsedValue || parsedValue->isCalculated())
             return Exception { ExceptionCode::SyntaxError, "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent."_s };
         if (parsedValue->isPercentage())

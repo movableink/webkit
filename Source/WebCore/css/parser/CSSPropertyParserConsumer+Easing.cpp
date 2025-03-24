@@ -29,6 +29,7 @@
 #include "CSSEasingFunctionValue.h"
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSPropertyParserConsumer+IntegerDefinitions.h"
 #include "CSSPropertyParserConsumer+MetaConsumer.h"

@@ -47,9 +47,10 @@
 #include "CSSPendingSubstitutionValue.h"
 #include "CSSPrimitiveNumericTypes+CSSValueCreation.h"
 #include "CSSPropertyParserConsumer+Align.h"
-#include "CSSPropertyParserConsumer+Angle.h"
+#include "CSSPropertyParserConsumer+AngleDefinitions.h"
 #include "CSSPropertyParserConsumer+AppleVisualEffect.h"
 #include "CSSPropertyParserConsumer+Background.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Color.h"
 #include "CSSPropertyParserConsumer+Easing.h"
 #include "CSSPropertyParserConsumer+Font.h"
@@ -57,17 +58,17 @@
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSPropertyParserConsumer+Image.h"
 #include "CSSPropertyParserConsumer+Inline.h"
-#include "CSSPropertyParserConsumer+Integer.h"
-#include "CSSPropertyParserConsumer+Length.h"
-#include "CSSPropertyParserConsumer+LengthPercentage.h"
+#include "CSSPropertyParserConsumer+IntegerDefinitions.h"
+#include "CSSPropertyParserConsumer+LengthDefinitions.h"
+#include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+List.h"
-#include "CSSPropertyParserConsumer+Number.h"
-#include "CSSPropertyParserConsumer+Percentage.h"
+#include "CSSPropertyParserConsumer+NumberDefinitions.h"
+#include "CSSPropertyParserConsumer+PercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+Position.h"
-#include "CSSPropertyParserConsumer+Resolution.h"
+#include "CSSPropertyParserConsumer+ResolutionDefinitions.h"
 #include "CSSPropertyParserConsumer+String.h"
 #include "CSSPropertyParserConsumer+TextDecoration.h"
-#include "CSSPropertyParserConsumer+Time.h"
+#include "CSSPropertyParserConsumer+TimeDefinitions.h"
 #include "CSSPropertyParserConsumer+Timeline.h"
 #include "CSSPropertyParserConsumer+Transform.h"
 #include "CSSPropertyParserConsumer+Transitions.h"
@@ -386,9 +387,9 @@ std::pair<RefPtr<CSSValue>, CSSCustomPropertySyntax::Type> CSSPropertyParser::co
     auto consumeSingleValue = [&](auto& range, auto& component) -> RefPtr<CSSValue> {
         switch (component.type) {
         case CSSCustomPropertySyntax::Type::Length:
-            return consumeLength(range, m_context);
+            return CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(range, m_context, { .parserMode = m_context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
         case CSSCustomPropertySyntax::Type::LengthPercentage:
-            return consumeLengthPercentage(range, m_context);
+            return CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, m_context, { .parserMode = m_context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
         case CSSCustomPropertySyntax::Type::CustomIdent:
             if (RefPtr value = consumeCustomIdent(range)) {
                 if (component.ident.isNull() || value->stringValue() == component.ident)
@@ -396,17 +397,17 @@ std::pair<RefPtr<CSSValue>, CSSCustomPropertySyntax::Type> CSSPropertyParser::co
             }
             return nullptr;
         case CSSCustomPropertySyntax::Type::Percentage:
-            return consumePercentage(range, m_context);
+            return CSSPrimitiveValueResolver<CSS::Percentage<>>::consumeAndResolve(range, m_context, { .parserMode = m_context.mode });
         case CSSCustomPropertySyntax::Type::Integer:
-            return consumeInteger(range, m_context);
+            return CSSPrimitiveValueResolver<CSS::Integer<>>::consumeAndResolve(range, m_context, { .parserMode = m_context.mode });
         case CSSCustomPropertySyntax::Type::Number:
-            return consumeNumber(range, m_context);
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, m_context, { .parserMode = m_context.mode });
         case CSSCustomPropertySyntax::Type::Angle:
-            return consumeAngle(range, m_context);
+            return CSSPrimitiveValueResolver<CSS::Angle<>>::consumeAndResolve(range, m_context, { .parserMode = m_context.mode });
         case CSSCustomPropertySyntax::Type::Time:
-            return consumeTime(range, m_context);
+            return CSSPrimitiveValueResolver<CSS::Time<>>::consumeAndResolve(range, m_context, { .parserMode = m_context.mode });
         case CSSCustomPropertySyntax::Type::Resolution:
-            return consumeResolution(range, m_context);
+            return CSSPrimitiveValueResolver<CSS::Resolution<>>::consumeAndResolve(range, m_context, { .parserMode = m_context.mode });
         case CSSCustomPropertySyntax::Type::Color:
             return consumeColor(range, m_context);
         case CSSCustomPropertySyntax::Type::Image:
@@ -898,12 +899,12 @@ bool CSSPropertyParser::consumeFontSynthesis(bool important)
 
 bool CSSPropertyParser::consumeBorderSpacing(bool important)
 {
-    RefPtr horizontalSpacing = consumeLength(m_range, m_context, ValueRange::NonNegative, UnitlessQuirk::Allow);
+    RefPtr horizontalSpacing = CSSPrimitiveValueResolver<CSS::Length<CSS::Nonnegative>>::consumeAndResolve(m_range, m_context, { .parserMode = m_context.mode, .unitless = UnitlessQuirk::Allow, .unitlessZero = UnitlessZeroQuirk::Allow });
     if (!horizontalSpacing)
         return false;
     RefPtr verticalSpacing = horizontalSpacing;
     if (!m_range.atEnd())
-        verticalSpacing = consumeLength(m_range, m_context, ValueRange::NonNegative, UnitlessQuirk::Allow);
+        verticalSpacing = CSSPrimitiveValueResolver<CSS::Length<CSS::Nonnegative>>::consumeAndResolve(m_range, m_context, { .parserMode = m_context.mode, .unitless = UnitlessQuirk::Allow, .unitlessZero = UnitlessZeroQuirk::Allow });
     if (!verticalSpacing || !m_range.atEnd())
         return false;
     addProperty(CSSPropertyWebkitBorderHorizontalSpacing, CSSPropertyBorderSpacing, horizontalSpacing.releaseNonNull(), important);
@@ -1570,7 +1571,7 @@ bool CSSPropertyParser::consumeFlex(bool important)
     } else {
         unsigned index = 0;
         while (!m_range.atEnd() && index++ < 3) {
-            if (auto number = consumeNumber(m_range, m_context, ValueRange::NonNegative)) {
+            if (auto number = CSSPrimitiveValueResolver<CSS::Number<CSS::Nonnegative>>::consumeAndResolve(m_range, m_context, { .parserMode = m_context.mode })) {
                 if (!flexGrow)
                     flexGrow = WTFMove(number);
                 else if (!flexShrink)
@@ -1583,7 +1584,7 @@ bool CSSPropertyParser::consumeFlex(bool important)
                 if (isFlexBasisIdent(m_range.peek().id()))
                     flexBasis = consumeIdent(m_range);
                 if (!flexBasis)
-                    flexBasis = consumeLengthPercentage(m_range, m_context, ValueRange::NonNegative);
+                    flexBasis = CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::Nonnegative>>::consumeAndResolve(m_range, m_context, { .parserMode = m_context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
                 if (index == 2 && !m_range.atEnd())
                     return false;
             }
@@ -1846,13 +1847,13 @@ static RefPtr<CSSValue> consumeAnimationValueForShorthand(CSSPropertyID property
     switch (property) {
     case CSSPropertyAnimationDelay:
     case CSSPropertyTransitionDelay:
-        return consumeTime(range, context);
+        return CSSPrimitiveValueResolver<CSS::Time<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
     case CSSPropertyAnimationDirection:
         return CSSPropertyParsing::consumeSingleAnimationDirection(range);
     case CSSPropertyAnimationDuration:
         return CSSPropertyParsing::consumeSingleAnimationDuration(range, context);
     case CSSPropertyTransitionDuration:
-        return consumeTime(range, context, ValueRange::NonNegative);
+        return CSSPrimitiveValueResolver<CSS::Time<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = context.mode });
     case CSSPropertyAnimationFillMode:
         return CSSPropertyParsing::consumeSingleAnimationFillMode(range);
     case CSSPropertyAnimationIterationCount:
@@ -2584,7 +2585,7 @@ bool CSSPropertyParser::consumeTransformOrigin(bool important)
     if (auto resultXY = consumeOneOrTwoValuedPositionCoordinates(m_range, m_context, UnitlessQuirk::Forbid)) {
         m_range.consumeWhitespace();
         bool atEnd = m_range.atEnd();
-        auto resultZ = consumeLength(m_range, m_context);
+        auto resultZ = CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(m_range, m_context, { .parserMode = m_context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
         if ((!resultZ && !atEnd) || !m_range.atEnd())
             return false;
         addProperty(CSSPropertyTransformOriginX, CSSPropertyTransformOrigin, WTFMove(resultXY->x), important);
@@ -2613,7 +2614,7 @@ bool CSSPropertyParser::consumePrefixedPerspective(bool important)
         return m_range.atEnd();
     }
 
-    if (auto perspective = consumeNumber(m_range, m_context, ValueRange::NonNegative)) {
+    if (auto perspective = CSSPrimitiveValueResolver<CSS::Number<CSS::Nonnegative>>::consumeAndResolve(m_range, m_context, { .parserMode = m_context.mode })) {
         addProperty(CSSPropertyPerspective, CSSPropertyWebkitPerspective, WTFMove(perspective), important);
         return m_range.atEnd();
     }
