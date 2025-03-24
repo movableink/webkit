@@ -483,7 +483,7 @@ RefPtr<API::Data> encodeLegacySessionState(const SessionState& sessionState)
     auto sessionHistoryDictionary = encodeSessionHistory(sessionState.backForwardListState);
     auto provisionalURLString = sessionState.provisionalURL.isNull() ? nullptr : sessionState.provisionalURL.string().createCFString();
     RetainPtr<CFNumberRef> renderTreeSizeNumber(adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt64Type, &sessionState.renderTreeSize)));
-    RetainPtr<CFBooleanRef> isAppInitiated = adoptCF(sessionState.isAppInitiated ? kCFBooleanTrue : kCFBooleanFalse);
+    RetainPtr<CFBooleanRef> isAppInitiated = sessionState.isAppInitiated ? kCFBooleanTrue : kCFBooleanFalse;
 
     RetainPtr<CFDictionaryRef> stateDictionary;
     if (provisionalURLString) {
@@ -1002,35 +1002,35 @@ static WARN_UNUSED_RETURN bool decodeSessionHistoryEntryData(CFDataRef historyEn
 
 static WARN_UNUSED_RETURN bool decodeSessionHistoryEntry(CFDictionaryRef entryDictionary, FrameState& backForwardListItemState)
 {
-    auto title = dynamic_cf_cast<CFStringRef>(CFDictionaryGetValue(entryDictionary, sessionHistoryEntryTitleKey));
+    RetainPtr title = dynamic_cf_cast<CFStringRef>(CFDictionaryGetValue(entryDictionary, sessionHistoryEntryTitleKey));
     if (!title)
         return false;
 
-    auto urlString = dynamic_cf_cast<CFStringRef>(CFDictionaryGetValue(entryDictionary, sessionHistoryEntryURLKey));
+    RetainPtr urlString = dynamic_cf_cast<CFStringRef>(CFDictionaryGetValue(entryDictionary, sessionHistoryEntryURLKey));
     if (!urlString)
         return false;
 
-    auto originalURLString = dynamic_cf_cast<CFStringRef>(CFDictionaryGetValue(entryDictionary, sessionHistoryEntryOriginalURLKey));
+    RetainPtr originalURLString = dynamic_cf_cast<CFStringRef>(CFDictionaryGetValue(entryDictionary, sessionHistoryEntryOriginalURLKey));
     if (!originalURLString)
         return false;
 
-    auto rawShouldOpenExternalURLsPolicy = dynamic_cf_cast<CFNumberRef>(CFDictionaryGetValue(entryDictionary, sessionHistoryEntryShouldOpenExternalURLsPolicyKey));
+    RetainPtr rawShouldOpenExternalURLsPolicy = dynamic_cf_cast<CFNumberRef>(CFDictionaryGetValue(entryDictionary, sessionHistoryEntryShouldOpenExternalURLsPolicyKey));
     WebCore::ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy;
     if (rawShouldOpenExternalURLsPolicy) {
         uint64_t value;
-        CFNumberGetValue(rawShouldOpenExternalURLsPolicy, kCFNumberSInt64Type, &value);
+        CFNumberGetValue(rawShouldOpenExternalURLsPolicy.get(), kCFNumberSInt64Type, &value);
         shouldOpenExternalURLsPolicy = static_cast<WebCore::ShouldOpenExternalURLsPolicy>(value);
     } else
         shouldOpenExternalURLsPolicy = WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemesButNotAppLinks;
 
-    auto historyEntryData = dynamic_cf_cast<CFDataRef>(CFDictionaryGetValue(entryDictionary, sessionHistoryEntryDataKey));
-    if (historyEntryData && !decodeSessionHistoryEntryData(historyEntryData, backForwardListItemState))
+    RetainPtr historyEntryData = dynamic_cf_cast<CFDataRef>(CFDictionaryGetValue(entryDictionary, sessionHistoryEntryDataKey));
+    if (historyEntryData && !decodeSessionHistoryEntryData(historyEntryData.get(), backForwardListItemState))
         return false;
 
-    backForwardListItemState.title = title;
+    backForwardListItemState.title = title.get();
     backForwardListItemState.shouldOpenExternalURLsPolicy = shouldOpenExternalURLsPolicy;
-    backForwardListItemState.urlString = urlString;
-    backForwardListItemState.originalURLString = originalURLString;
+    backForwardListItemState.urlString = urlString.get();
+    backForwardListItemState.originalURLString = originalURLString.get();
 
     return true;
 }
@@ -1038,12 +1038,12 @@ static WARN_UNUSED_RETURN bool decodeSessionHistoryEntry(CFDictionaryRef entryDi
 static WARN_UNUSED_RETURN bool decodeSessionHistoryEntries(CFArrayRef entriesArray, Vector<Ref<FrameState>>& entries)
 {
     for (CFIndex i = 0, size = CFArrayGetCount(entriesArray); i < size; ++i) {
-        auto entryDictionary = dynamic_cf_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(entriesArray, i));
+        RetainPtr entryDictionary = dynamic_cf_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(entriesArray, i));
         if (!entryDictionary)
             return false;
 
         Ref entry = FrameState::create();
-        if (!decodeSessionHistoryEntry(entryDictionary, entry))
+        if (!decodeSessionHistoryEntry(entryDictionary.get(), entry))
             return false;
 
         entries.append(WTFMove(entry));
@@ -1054,28 +1054,28 @@ static WARN_UNUSED_RETURN bool decodeSessionHistoryEntries(CFArrayRef entriesArr
 
 static WARN_UNUSED_RETURN bool decodeV0SessionHistory(CFDictionaryRef sessionHistoryDictionary, BackForwardListState& backForwardListState)
 {
-    auto currentIndexNumber = dynamic_cf_cast<CFNumberRef>(CFDictionaryGetValue(sessionHistoryDictionary, sessionHistoryCurrentIndexKey));
+    RetainPtr currentIndexNumber = dynamic_cf_cast<CFNumberRef>(CFDictionaryGetValue(sessionHistoryDictionary, sessionHistoryCurrentIndexKey));
     if (!currentIndexNumber)
         return false;
 
     CFIndex currentIndex;
-    if (!CFNumberGetValue(currentIndexNumber, kCFNumberCFIndexType, &currentIndex))
+    if (!CFNumberGetValue(currentIndexNumber.get(), kCFNumberCFIndexType, &currentIndex))
         return false;
 
     if (currentIndex < -1)
         return false;
 
-    auto historyEntries = dynamic_cf_cast<CFArrayRef>(CFDictionaryGetValue(sessionHistoryDictionary, sessionHistoryEntriesKey));
+    RetainPtr historyEntries = dynamic_cf_cast<CFArrayRef>(CFDictionaryGetValue(sessionHistoryDictionary, sessionHistoryEntriesKey));
     if (!historyEntries)
         return false;
 
     // Version 0 session history relied on currentIndex == -1 to represent the same thing as not having a current index.
     bool hasCurrentIndex = currentIndex != -1;
 
-    if (!decodeSessionHistoryEntries(historyEntries, backForwardListState.items))
+    if (!decodeSessionHistoryEntries(historyEntries.get(), backForwardListState.items))
         return false;
 
-    if (!hasCurrentIndex && CFArrayGetCount(historyEntries))
+    if (!hasCurrentIndex && CFArrayGetCount(historyEntries.get()))
         return false;
 
     if (hasCurrentIndex) {
@@ -1090,7 +1090,7 @@ static WARN_UNUSED_RETURN bool decodeV0SessionHistory(CFDictionaryRef sessionHis
 
 static WARN_UNUSED_RETURN bool decodeV1SessionHistory(CFDictionaryRef sessionHistoryDictionary, BackForwardListState& backForwardListState)
 {
-    auto currentIndexNumber = dynamic_cf_cast<CFNumberRef>(CFDictionaryGetValue(sessionHistoryDictionary, sessionHistoryCurrentIndexKey));
+    RetainPtr currentIndexNumber = dynamic_cf_cast<CFNumberRef>(CFDictionaryGetValue(sessionHistoryDictionary, sessionHistoryCurrentIndexKey));
     if (!currentIndexNumber) {
         // No current index means the dictionary represents an empty session.
         backForwardListState.currentIndex = std::nullopt;
@@ -1099,17 +1099,17 @@ static WARN_UNUSED_RETURN bool decodeV1SessionHistory(CFDictionaryRef sessionHis
     }
 
     CFIndex currentIndex;
-    if (!CFNumberGetValue(currentIndexNumber, kCFNumberCFIndexType, &currentIndex))
+    if (!CFNumberGetValue(currentIndexNumber.get(), kCFNumberCFIndexType, &currentIndex))
         return false;
 
     if (currentIndex < 0)
         return false;
 
-    auto historyEntries = dynamic_cf_cast<CFArrayRef>(CFDictionaryGetValue(sessionHistoryDictionary, sessionHistoryEntriesKey));
+    RetainPtr historyEntries = dynamic_cf_cast<CFArrayRef>(CFDictionaryGetValue(sessionHistoryDictionary, sessionHistoryEntriesKey));
     if (!historyEntries)
         return false;
 
-    if (!decodeSessionHistoryEntries(historyEntries, backForwardListState.items))
+    if (!decodeSessionHistoryEntries(historyEntries.get(), backForwardListState.items))
         return false;
 
     backForwardListState.currentIndex = static_cast<uint32_t>(currentIndex);
@@ -1121,14 +1121,14 @@ static WARN_UNUSED_RETURN bool decodeV1SessionHistory(CFDictionaryRef sessionHis
 
 static WARN_UNUSED_RETURN bool decodeSessionHistory(CFDictionaryRef backForwardListDictionary, BackForwardListState& backForwardListState)
 {
-    auto sessionHistoryVersionNumber = dynamic_cf_cast<CFNumberRef>(CFDictionaryGetValue(backForwardListDictionary, sessionHistoryVersionKey));
+    RetainPtr sessionHistoryVersionNumber = dynamic_cf_cast<CFNumberRef>(CFDictionaryGetValue(backForwardListDictionary, sessionHistoryVersionKey));
     if (!sessionHistoryVersionNumber) {
         // Version 0 session history dictionaries did not contain a version number.
         return decodeV0SessionHistory(backForwardListDictionary, backForwardListState);
     }
 
     CFIndex sessionHistoryVersion;
-    if (!CFNumberGetValue(sessionHistoryVersionNumber, kCFNumberCFIndexType, &sessionHistoryVersion))
+    if (!CFNumberGetValue(sessionHistoryVersionNumber.get(), kCFNumberCFIndexType, &sessionHistoryVersion))
         return false;
 
     if (sessionHistoryVersion == 1)
@@ -1149,28 +1149,28 @@ bool decodeLegacySessionState(std::span<const uint8_t> data, SessionState& sessi
         return false;
 
     auto cfPropertyList = adoptCF(CFPropertyListCreateWithData(kCFAllocatorDefault, adoptCF(CFDataCreate(kCFAllocatorDefault, data.subspan(sizeof(uint32_t)).data(), size - sizeof(uint32_t))).get(), kCFPropertyListImmutable, nullptr, nullptr));
-    auto sessionStateDictionary = dynamic_cf_cast<CFDictionaryRef>(cfPropertyList.get());
+    RetainPtr sessionStateDictionary = dynamic_cf_cast<CFDictionaryRef>(cfPropertyList.get());
     if (!sessionStateDictionary)
         return false;
 
-    if (auto backForwardListDictionary = dynamic_cf_cast<CFDictionaryRef>(CFDictionaryGetValue(sessionStateDictionary, sessionHistoryKey))) {
-        if (!decodeSessionHistory(backForwardListDictionary, sessionState.backForwardListState))
+    if (RetainPtr backForwardListDictionary = dynamic_cf_cast<CFDictionaryRef>(CFDictionaryGetValue(sessionStateDictionary.get(), sessionHistoryKey))) {
+        if (!decodeSessionHistory(backForwardListDictionary.get(), sessionState.backForwardListState))
             return false;
     }
 
-    if (auto provisionalURLString = dynamic_cf_cast<CFStringRef>(CFDictionaryGetValue(sessionStateDictionary, provisionalURLKey))) {
-        sessionState.provisionalURL = URL { provisionalURLString };
+    if (RetainPtr provisionalURLString = dynamic_cf_cast<CFStringRef>(CFDictionaryGetValue(sessionStateDictionary.get(), provisionalURLKey))) {
+        sessionState.provisionalURL = URL { provisionalURLString.get() };
         if (!sessionState.provisionalURL.isValid())
             return false;
     }
 
-    if (auto renderTreeSize = dynamic_cf_cast<CFNumberRef>(CFDictionaryGetValue(sessionStateDictionary, renderTreeSizeKey)))
-        CFNumberGetValue(renderTreeSize, kCFNumberSInt64Type, &sessionState.renderTreeSize);
+    if (RetainPtr renderTreeSize = dynamic_cf_cast<CFNumberRef>(CFDictionaryGetValue(sessionStateDictionary.get(), renderTreeSizeKey)))
+        CFNumberGetValue(renderTreeSize.get(), kCFNumberSInt64Type, &sessionState.renderTreeSize);
     else
         sessionState.renderTreeSize = 0;
 
-    if (auto isAppInitiated = dynamic_cf_cast<CFBooleanRef>(CFDictionaryGetValue(sessionStateDictionary, isAppInitiatedKey)))
-        sessionState.isAppInitiated = isAppInitiated == kCFBooleanTrue;
+    if (RetainPtr isAppInitiated = dynamic_cf_cast<CFBooleanRef>(CFDictionaryGetValue(sessionStateDictionary.get(), isAppInitiatedKey)))
+        sessionState.isAppInitiated = isAppInitiated.get() == kCFBooleanTrue;
     else
         sessionState.isAppInitiated = true;
 

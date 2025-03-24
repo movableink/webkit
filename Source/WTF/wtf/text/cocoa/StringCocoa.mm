@@ -26,6 +26,13 @@
 
 namespace WTF {
 
+RetainPtr<NSString> String::protectedNSString() const
+{
+    if (!m_impl)
+        return @"";
+    SUPPRESS_UNCOUNTED_ARG return static_cast<NSString *>(*m_impl);
+}
+
 RetainPtr<id> makeNSArrayElement(const String& vectorElement)
 {
     return bridge_cast(vectorElement.createCFString());

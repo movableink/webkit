@@ -520,7 +520,7 @@ static NSString *pathToPDFOnDisk(const String& suggestedFilename)
 
     // The NSFileManager expects a path string, while NSWorkspace uses file URLs, and will decode any percent encoding
     // in its passed URLs before loading from disk. Create the files using decoded file paths so they match up.
-    NSString *path = [[pdfDirectoryPath stringByAppendingPathComponent:suggestedFilename] stringByRemovingPercentEncoding];
+    NSString *path = [[pdfDirectoryPath stringByAppendingPathComponent:suggestedFilename.protectedNSString().get()] stringByRemovingPercentEncoding];
 
     NSFileManager *fileManager = [NSFileManager defaultManager];
     if ([fileManager fileExistsAtPath:path]) {
@@ -712,7 +712,8 @@ NSMenu *WebPageProxy::activeContextMenu() const
 
 RetainPtr<NSEvent> WebPageProxy::createSyntheticEventForContextMenu(FloatPoint location) const
 {
-    return [NSEvent mouseEventWithType:NSEventTypeRightMouseUp location:location modifierFlags:0 timestamp:0 windowNumber:protectedPageClient()->platformWindow().windowNumber context:nil eventNumber:0 clickCount:0 pressure:0];
+    RetainPtr window = protectedPageClient()->platformWindow();
+    return [NSEvent mouseEventWithType:NSEventTypeRightMouseUp location:location modifierFlags:0 timestamp:0 windowNumber:[window windowNumber] context:nil eventNumber:0 clickCount:0 pressure:0];
 }
 
 void WebPageProxy::platformDidSelectItemFromActiveContextMenu(const WebContextMenuItemData& item, CompletionHandler<void()>&& completionHandler)
@@ -738,7 +739,10 @@ std::optional<IPC::AsyncReplyID> WebPageProxy::willPerformPasteCommand(DOMPasteA
 RetainPtr<NSView> WebPageProxy::Internals::platformView() const
 {
     RefPtr pageClient = protectedPage()->pageClient();
-    return pageClient ? [pageClient->platformWindow() contentView] : nullptr;
+    if (!pageClient)
+        return nullptr;
+    RetainPtr window = pageClient->platformWindow();
+    return [window contentView];
 }
 
 #if ENABLE(PDF_PLUGIN)
