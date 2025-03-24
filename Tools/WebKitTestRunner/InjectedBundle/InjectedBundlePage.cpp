@@ -149,11 +149,6 @@ static WTF::String styleDecToStr(WKBundleCSSStyleDeclarationRef)
     return "<DOMCSSStyleDeclaration ADDRESS>"_s;
 }
 
-static WTF::String string(WKSecurityOriginRef origin)
-{
-    return makeString('{', adoptWK(WKSecurityOriginCopyProtocol(origin)).get(), ", "_s, adoptWK(WKSecurityOriginCopyHost(origin)).get(), ", "_s, WKSecurityOriginGetPort(origin), '}');
-}
-
 static WTF::String string(WKBundleFrameRef frame)
 {
     auto name = adoptWK(WKBundleFrameCopyName(frame));
@@ -276,31 +271,6 @@ InjectedBundlePage::InjectedBundlePage(WKBundlePageRef page)
         0 // shouldUseCredentialStorage
     };
     WKBundlePageSetResourceLoadClient(m_page, &resourceLoadClient.base);
-
-    WKBundlePageUIClientV2 uiClient = {
-        { 2, this },
-        0, /*willAddMessageToConsole*/
-        willSetStatusbarText,
-        0, /*willRunJavaScriptAlert*/
-        0, /*willRunJavaScriptConfirm*/
-        0, /*willRunJavaScriptPrompt*/
-        0, /*mouseDidMoveOverElement*/
-        0, /*pageDidScroll*/
-        0, /*paintCustomOverhangArea*/
-        0, /*shouldGenerateFileForUpload*/
-        0, /*generateFileForUpload*/
-        0, /*shouldRubberBandInDirection*/
-        0, /*statusBarIsVisible*/
-        0, /*menuBarIsVisible*/
-        0, /*toolbarsAreVisible*/
-        0, /*didReachApplicationCacheOriginQuota*/
-        didExceedDatabaseQuota,
-        0, /*plugInStartLabelTitle*/
-        0, /*plugInStartLabelSubtitle*/
-        0, /*plugInExtraStyleSheet*/
-        0, /*plugInExtraScript*/
-    };
-    WKBundlePageSetUIClient(m_page, &uiClient.base);
 
     WKBundlePageEditorClientV1 editorClient = {
         { 1, this },
@@ -1099,60 +1069,6 @@ bool InjectedBundlePage::shouldCacheResponse(WKBundlePageRef, WKBundleFrameRef, 
 
     // The default behavior is the cache the response.
     return true;
-}
-
-// UI Client Callbacks
-
-void InjectedBundlePage::willSetStatusbarText(WKBundlePageRef page, WKStringRef statusbarText, const void *clientInfo)
-{
-    static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->willSetStatusbarText(statusbarText);
-}
-
-uint64_t InjectedBundlePage::didExceedDatabaseQuota(WKBundlePageRef page, WKSecurityOriginRef origin, WKStringRef databaseName, WKStringRef databaseDisplayName, uint64_t currentQuotaBytes, uint64_t currentOriginUsageBytes, uint64_t currentDatabaseUsageBytes, uint64_t expectedUsageBytes, const void* clientInfo)
-{
-    return static_cast<InjectedBundlePage*>(const_cast<void*>(clientInfo))->didExceedDatabaseQuota(origin, databaseName, databaseDisplayName, currentQuotaBytes, currentOriginUsageBytes, currentDatabaseUsageBytes, expectedUsageBytes);
-}
-
-void InjectedBundlePage::willSetStatusbarText(WKStringRef statusbarText)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    RefPtr testRunner = injectedBundle.testRunner();
-    if (!testRunner)
-        return;
-
-    if (!testRunner->shouldDumpStatusCallbacks())
-        return;
-
-    injectedBundle.outputText(makeString("UI DELEGATE STATUS CALLBACK: setStatusText:"_s, statusbarText, '\n'));
-}
-
-uint64_t InjectedBundlePage::didExceedDatabaseQuota(WKSecurityOriginRef origin, WKStringRef databaseName, WKStringRef databaseDisplayName, uint64_t currentQuotaBytes, uint64_t currentOriginUsageBytes, uint64_t currentDatabaseUsageBytes, uint64_t expectedUsageBytes)
-{
-    auto& injectedBundle = InjectedBundle::singleton();
-    RefPtr testRunner = injectedBundle.testRunner();
-    if (!testRunner) {
-        ASSERT_NOT_REACHED();
-        return 0;
-    }
-
-    if (testRunner->shouldDumpDatabaseCallbacks())
-        injectedBundle.outputText(makeString("UI DELEGATE DATABASE CALLBACK: exceededDatabaseQuotaForSecurityOrigin:"_s, string(origin), " database:"_s, databaseName, '\n'));
-
-    uint64_t defaultQuota = 5 * 1024 * 1024;
-    double testDefaultQuota = testRunner->databaseDefaultQuota();
-    if (testDefaultQuota >= 0)
-        defaultQuota = testDefaultQuota;
-
-    unsigned long long newQuota = defaultQuota;
-
-    double maxQuota = testRunner->databaseMaxQuota();
-    if (maxQuota >= 0) {
-        if (defaultQuota < expectedUsageBytes && expectedUsageBytes <= maxQuota) {
-            newQuota = expectedUsageBytes;
-            injectedBundle.outputText(makeString("UI DELEGATE DATABASE CALLBACK: increased quota to "_s, newQuota, '\n'));
-        }
-    }
-    return newQuota;
 }
 
 // Editor Client Callbacks

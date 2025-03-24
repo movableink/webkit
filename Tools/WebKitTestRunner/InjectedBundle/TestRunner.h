@@ -124,7 +124,6 @@ public:
     void dumpChildFrameScrollPositions();
     void dumpEditingCallbacks() { m_dumpEditingCallbacks = true; }
     void dumpSelectionRect() { m_dumpSelectionRect = true; }
-    void dumpStatusCallbacks() { m_dumpStatusCallbacks = true; }
     void dumpTitleChanges() { m_dumpTitleChanges = true; }
     void dumpFullScreenCallbacks();
     void dumpFrameLoadCallbacks() { setShouldDumpFrameLoadCallbacks(true); }
@@ -133,7 +132,6 @@ public:
     void dumpResourceResponseMIMETypes() { m_dumpResourceResponseMIMETypes = true; }
     void dumpWillCacheResponse() { m_dumpWillCacheResponse = true; }
     void dumpApplicationCacheDelegateCallbacks() { m_dumpApplicationCacheDelegateCallbacks = true; }
-    void dumpDatabaseCallbacks() { m_dumpDatabaseCallbacks = true; }
     void dumpDOMAsWebArchive() { setWhatToDump(WhatToDump::DOMAsWebArchive); }
     void dumpPolicyDelegateCallbacks();
     void dumpResourceLoadStatistics();
@@ -234,7 +232,6 @@ public:
     bool shouldDumpBackForwardListsForAllWindows() const;
     bool shouldDumpEditingCallbacks() const { return m_dumpEditingCallbacks; }
     bool shouldDumpMainFrameScrollPosition() const { return whatToDump() == WhatToDump::RenderTree; }
-    bool shouldDumpStatusCallbacks() const { return m_dumpStatusCallbacks; }
     bool shouldDumpTitleChanges() const { return m_dumpTitleChanges; }
     bool shouldDumpPixels() const;
     bool shouldDumpFrameLoadCallbacks();
@@ -243,7 +240,6 @@ public:
     bool shouldDumpResourceResponseMIMETypes() const { return m_dumpResourceResponseMIMETypes; }
     bool shouldDumpWillCacheResponse() const { return m_dumpWillCacheResponse; }
     bool shouldDumpApplicationCacheDelegateCallbacks() const { return m_dumpApplicationCacheDelegateCallbacks; }
-    bool shouldDumpDatabaseCallbacks() const { return m_dumpDatabaseCallbacks; }
     bool shouldDumpSelectionRect() const { return m_dumpSelectionRect; }
 
     bool didReceiveServerRedirectForProvisionalNavigation() const;
@@ -617,7 +613,6 @@ private:
     bool m_shouldAllowEditing { true };
 
     bool m_dumpEditingCallbacks { false };
-    bool m_dumpStatusCallbacks { false };
     bool m_dumpTitleChanges { false };
     bool m_dumpPixels { false };
     bool m_dumpSelectionRect { false };
@@ -626,7 +621,6 @@ private:
     bool m_dumpResourceResponseMIMETypes { false };
     bool m_dumpWillCacheResponse { false };
     bool m_dumpApplicationCacheDelegateCallbacks { false };
-    bool m_dumpDatabaseCallbacks { false };
 
     bool m_testRepaint { false };
     bool m_testRepaintSweepHorizontally { false };
