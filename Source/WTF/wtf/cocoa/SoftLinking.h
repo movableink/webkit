@@ -28,6 +28,14 @@
 #import <objc/runtime.h>
 #import <wtf/Assertions.h>
 
+#ifndef NS_RETURNS_RETAINED
+#if __has_feature(attribute_ns_returns_retained)
+#define NS_RETURNS_RETAINED __attribute__((ns_returns_retained))
+#else
+#define NS_RETURNS_RETAINED
+#endif
+#endif
+
 #define _STORE_IN_DLSYM_SECTION __attribute__((section("__TEXT,__dlsym_cstr")))
 #define _STORE_IN_GETCLASS_SECTION __attribute__((section("__TEXT,__getClass_cstr")))
 
@@ -224,7 +232,7 @@ static void* lib##Library() \
     } \
     _Pragma("clang diagnostic push") \
     _Pragma("clang diagnostic ignored \"-Wunused-function\"") \
-    static className *alloc##className##Instance() \
+    static className *alloc##className##Instance() NS_RETURNS_RETAINED \
     { \
         return [get##className##Class() alloc]; \
     } \
@@ -251,7 +259,7 @@ static void* lib##Library() \
     } \
     _Pragma("clang diagnostic push") \
     _Pragma("clang diagnostic ignored \"-Wunused-function\"") \
-    static className *alloc##className##Instance() \
+    static className *alloc##className##Instance() NS_RETURNS_RETAINED \
     { \
         return [get##className##Class() alloc]; \
     } \
@@ -432,8 +440,8 @@ static void* lib##Library() \
     @class className; \
     namespace functionNamespace { \
     extern Class (*get##className##Class)(); \
-    className *alloc##className##Instance(); \
-    inline className *alloc##className##Instance() \
+    className *alloc##className##Instance() NS_RETURNS_RETAINED; \
+    inline className *alloc##className##Instance() NS_RETURNS_RETAINED \
     { \
         return [get##className##Class() alloc]; \
     } \
@@ -493,8 +501,8 @@ static void* lib##Library() \
     SOFT_LINK_CLASS_FOR_SOURCE_WITH_EXPORT_AND_IS_OPTIONAL(functionNamespace, framework, className, , SOFT_LINK_IS_OPTIONAL)
 
 #define SOFT_LINK_CLASS_ALLOC_FUNCTION(className, availability) \
-    className *alloc##className##Instance() availability; \
-    className *alloc##className##Instance() availability \
+    NS_RETURNS_RETAINED className *alloc##className##Instance() availability; \
+    NS_RETURNS_RETAINED className *alloc##className##Instance() availability \
     { \
         return [get##className##Class() alloc]; \
     } \
