@@ -5,7 +5,6 @@ page/scrolling/ScrollAnchoringController.h
 platform/ScrollAnimator.h
 platform/Scrollbar.h
 platform/ScrollbarsController.h
-platform/ios/PlaybackSessionInterfaceIOS.h
 rendering/RenderAncestorIterator.h
 svg/properties/SVGPropertyOwnerRegistry.h
 workers/DedicatedWorkerThread.h

@@ -102,7 +102,7 @@ protected:
 #endif
 
     PlaybackSessionInterfaceIOS(PlaybackSessionModel&);
-    PlaybackSessionModel* m_playbackSessionModel { nullptr };
+    WeakPtr<PlaybackSessionModel> m_playbackSessionModel;
 
     // CheckedPtr interface
     uint32_t checkedPtrCount() const final;
