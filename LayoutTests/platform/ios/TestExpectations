@@ -7482,9 +7482,6 @@ imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-position-t
 imported/w3c/web-platform-tests/css/css-anchor-position/anchor-scroll-position-try-010.html [ Failure ]
 imported/w3c/web-platform-tests/css/css-contain/content-visibility/content-visibility-anchor-positioning-001.html [ Failure ]
 
-# webkit.org/b/277898 [ iOS 17 ] imported/w3c/web-platform-tests/css/css-tables/tentative/td-box-sizing-003.html is a flaky text failure
-imported/w3c/web-platform-tests/css/css-tables/tentative/td-box-sizing-003.html [ Pass Failure ]
-
 # webkit.org/b/277901 Regression: (246931@main?) [ iOS ] imported/w3c/web-platform-tests/workers/SharedWorker_dataUrl.html is a flaky failure
 imported/w3c/web-platform-tests/workers/SharedWorker_dataUrl.html [ Pass Failure ]
 
