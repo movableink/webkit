@@ -862,6 +862,7 @@ private:
 
         promoteLocalHeap();
         removeICStatusFilters();
+        fixUpsilonEdge();
 
         if (UNLIKELY(Options::validateGraphAtEachPhase()))
             DFG::validate(m_graph, DumpGraph, graphBeforeSinking);
@@ -2816,6 +2817,41 @@ escapeChildren:
                     break;
                 }
             }
+        }
+    }
+
+    // The added phis have NodeResultJS because their corresponding Upsilon edges, when coming from nodes in
+    // NamedPropertyPLoc, always have use kinds associated with NodeResultJS. However, this assumption breaks
+    // with the introduction of array allocation sinking, since nodes in ArrayIndexedPropertyPLoc may have
+    // use kinds that produce double results.
+    void fixUpsilonEdge()
+    {
+        for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
+            for (unsigned indexInBlock = 0; indexInBlock < block->size(); ++indexInBlock) {
+                Node* node = block->at(indexInBlock);
+                switch (node->op()) {
+                case Upsilon: {
+                    Edge& edge = node->child1();
+                    if (node->phi()->hasJSResult()) {
+                        Node* result = nullptr;
+                        if (edge->hasDoubleResult())
+                            result = m_insertionSet.insertNode(indexInBlock, SpecBytecodeDouble, ValueRep, node->origin, Edge(edge.node(), DoubleRepUse));
+                        else if (edge->hasInt52Result())
+                            result = m_insertionSet.insertNode(indexInBlock, SpecInt32Only | SpecAnyIntAsDouble, ValueRep, node->origin, Edge(edge.node(), Int52RepUse));
+
+                        if (result) {
+                            edge.setNode(result);
+                            edge.setUseKind(UntypedUse);
+                        }
+                    }
+                    break;
+                }
+                default:
+                    break;
+                }
+            }
+
+            m_insertionSet.execute(block);
         }
     }
 
