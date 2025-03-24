@@ -35,6 +35,7 @@
 #include <WebCore/Timer.h>
 #include <ifaddrs.h>
 #include <net/if.h>
+#include <wtf/BlockPtr.h>
 #include <wtf/Function.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RetainPtr.h>
@@ -89,19 +90,21 @@ public:
     const RTCNetwork::IPAddress& ipv4() const { return m_ipv4; }
     const RTCNetwork::IPAddress& ipv6()  const { return m_ipv6; }
 
+    rtc::AdapterType adapterTypeFromInterfaceName(const char*) const;
+
 private:
     void start();
     void stop();
 
     void updateNetworks();
     void updateNetworksOnQueue();
+    void updateNetworksFromPath(nw_path_t);
 
     void onGatheredNetworks(RTCNetwork::IPAddress&&, RTCNetwork::IPAddress&&, HashMap<String, RTCNetwork>&&);
 
     WeakHashSet<NetworkRTCMonitor> m_observers;
 
     Ref<ConcurrentWorkQueue> m_queue;
-    WebCore::Timer m_updateNetworksTimer;
 
     bool m_didReceiveResults { false };
     Vector<RTCNetwork> m_networkList;
@@ -109,6 +112,12 @@ private:
     RTCNetwork::IPAddress m_ipv6;
     int m_networkLastIndex { 0 };
     HashMap<String, RTCNetwork> m_networkMap;
+#if PLATFORM(COCOA)
+    RetainPtr<nw_path_monitor> m_nwMonitor;
+    HashMap<String, rtc::AdapterType> m_adapterTypes;
+#else
+    WebCore::Timer m_updateNetworksTimer;
+#endif
 };
 
 static NetworkManager& networkManager()
@@ -119,8 +128,18 @@ static NetworkManager& networkManager()
 
 NetworkManager::NetworkManager()
     : m_queue(ConcurrentWorkQueue::create("RTC Network Manager"_s))
+#if PLATFORM(COCOA)
+    , m_nwMonitor(adoptCF(nw_path_monitor_create()))
+#else
     , m_updateNetworksTimer([] { networkManager().updateNetworks(); })
+#endif
 {
+#if PLATFORM(COCOA)
+    nw_path_monitor_set_queue(m_nwMonitor.get(), dispatch_get_main_queue());
+    nw_path_monitor_set_update_handler(m_nwMonitor.get(), makeBlockPtr([](nw_path_t path) {
+        networkManager().updateNetworksFromPath(path);
+    }).get());
+#endif
 }
 
 void NetworkManager::addListener(NetworkRTCMonitor& monitor)
@@ -134,10 +153,13 @@ void NetworkManager::addListener(NetworkRTCMonitor& monitor)
         return;
 
     RELEASE_LOG(WebRTC, "NetworkManagerWrapper startUpdating");
-    updateNetworks();
 
-    // FIXME: Use nw_path_monitor for getting interface updates.
+#if PLATFORM(COCOA)
+    nw_path_monitor_start(m_nwMonitor.get());
+#else
+    updateNetworks();
     m_updateNetworksTimer.startRepeating(2_s);
+#endif
 }
 
 void NetworkManager::removeListener(NetworkRTCMonitor& monitor)
@@ -147,7 +169,11 @@ void NetworkManager::removeListener(NetworkRTCMonitor& monitor)
         return;
 
     RELEASE_LOG(WebRTC, "NetworkManagerWrapper stopUpdating");
+#if PLATFORM(COCOA)
+    nw_path_monitor_cancel(m_nwMonitor.get());
+#else
     m_updateNetworksTimer.stop();
+#endif
 }
 
 static std::optional<std::pair<RTCNetwork::InterfaceAddress, RTCNetwork::IPAddress>> addressFromInterface(const struct ifaddrs& interface)
@@ -157,14 +183,10 @@ static std::optional<std::pair<RTCNetwork::InterfaceAddress, RTCNetwork::IPAddre
     return std::make_pair(RTCNetwork::InterfaceAddress { address, rtc::IPV6_ADDRESS_FLAG_NONE }, mask);
 }
 
-static rtc::AdapterType interfaceAdapterType(const char* interfaceName)
-{
 #if PLATFORM(COCOA)
-    auto interface = adoptCF(nw_interface_create_with_name(interfaceName));
-    if (!interface)
-        return rtc::ADAPTER_TYPE_UNKNOWN;
-
-    switch (nw_interface_get_type(interface.get())) {
+static rtc::AdapterType interfaceAdapterType(nw_interface_t interface)
+{
+    switch (nw_interface_get_type(interface)) {
     case nw_interface_type_other:
         return rtc::ADAPTER_TYPE_VPN;
     case nw_interface_type_wifi:
@@ -176,10 +198,9 @@ static rtc::AdapterType interfaceAdapterType(const char* interfaceName)
     case nw_interface_type_loopback:
         return rtc::ADAPTER_TYPE_LOOPBACK;
     }
-#else
-    return rtc::GetAdapterTypeFromName(interfaceName);
-#endif
+    return rtc::ADAPTER_TYPE_UNKNOWN;
 }
+#endif
 
 static HashMap<String, RTCNetwork> gatherNetworkMap()
 {
@@ -216,7 +237,8 @@ static HashMap<String, RTCNetwork> gatherNetworkMap()
         auto networkKey = makeString(name, "-"_s, prefixLength, "-"_s, std::span { prefixString });
 
         networkMap.ensure(networkKey, [&] {
-            return RTCNetwork { name, networkKey.utf8().span(), address->second, prefixLength, interfaceAdapterType(iterator->ifa_name), 0, 0, true, false, scopeID, { } };
+            auto interfaceType = networkManager().adapterTypeFromInterfaceName(iterator->ifa_name);
+            return RTCNetwork { name, networkKey.utf8().span(), address->second, prefixLength, interfaceType, 0, 0, true, false, scopeID, { } };
         }).iterator->value.ips.append(address->first);
     }
 
@@ -303,6 +325,16 @@ static std::optional<RTCNetwork::IPAddress> getDefaultIPAddress(bool useIPv4)
     return getSocketLocalAddress(socket, useIPv4);
 }
 
+rtc::AdapterType NetworkManager::adapterTypeFromInterfaceName(const char* interfaceName) const
+{
+#if PLATFORM(COCOA)
+    auto iterator = m_adapterTypes.find(String::fromUTF8(interfaceName));
+    return iterator != m_adapterTypes.end() ? iterator->value : rtc::ADAPTER_TYPE_UNKNOWN;
+#else
+    return rtc::GetAdapterTypeFromName(interfaceName);
+#endif
+}
+
 void NetworkManager::updateNetworks()
 {
     auto aggregator = CallbackAggregator::create([] (auto&& ipv4, auto&& ipv6, auto&& networkList) mutable {
@@ -322,6 +354,19 @@ void NetworkManager::updateNetworks()
     protectedQueue->dispatch([aggregator] {
         aggregator->setNetworkMap(gatherNetworkMap());
     });
+}
+
+void NetworkManager::updateNetworksFromPath(nw_path_t path)
+{
+    auto status = nw_path_get_status(path);
+    if (status != nw_path_status_satisfied && status != nw_path_status_satisfiable)
+        return;
+
+    nw_path_enumerate_interfaces(path, makeBlockPtr([](nw_interface_t interface) -> bool {
+        networkManager().m_adapterTypes.set(String::fromUTF8(nw_interface_get_name(interface)), interfaceAdapterType(interface));
+        return true;
+    }).get());
+    updateNetworks();
 }
 
 static bool isEqual(const RTCNetwork::InterfaceAddress& a, const RTCNetwork::InterfaceAddress& b)
