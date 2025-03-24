@@ -1323,6 +1323,12 @@ void TypeChecker::visit(AST::CallExpression& call)
 
             if (std::holds_alternative<Types::Primitive>(*targetBinding->type))
                 targetName = targetBinding->type->toString();
+
+            if (std::holds_alternative<Types::Array>(*targetBinding->type)) {
+                isNamedType = false;
+                isParameterizedType = false;
+                isArrayType = true;
+            }
         } else if (targetBinding->kind == Binding::Function) {
             auto& functionType = std::get<Types::Function>(*targetBinding->type);
             auto numberOfArguments = call.arguments().size();
@@ -1452,17 +1458,19 @@ void TypeChecker::visit(AST::CallExpression& call)
     }
 
     RELEASE_ASSERT(isArrayType);
-    auto& array = uncheckedDowncast<AST::ArrayTypeExpression>(target);
+    auto* array = dynamicDowncast<AST::ArrayTypeExpression>(target);
+    const Types::Array* arrayType = targetBinding ? std::get_if<Types::Array>(targetBinding->type) : nullptr;
     const Type* elementType = nullptr;
     unsigned elementCount;
 
-    if (array.maybeElementType()) {
-        if (!array.maybeElementCount()) {
+    if ((array && array->maybeElementType()) || arrayType) {
+        if ((array && !array->maybeElementCount()) || (arrayType && arrayType->isRuntimeSized())) {
             typeError(call.span(), "cannot construct a runtime-sized array"_s);
             return;
         }
-        elementType = resolve(*array.maybeElementType());
-        auto* elementCountType = infer(*array.maybeElementCount(), m_evaluation);
+
+        elementType = arrayType ? arrayType->element : resolve(*array->maybeElementType());
+        const Type* elementCountType = arrayType ? m_types.u32Type() : infer(*array->maybeElementCount(), m_evaluation);
 
         if (isBottom(elementType) || isBottom(elementCountType)) {
             inferred(m_types.bottomType());
@@ -1470,16 +1478,23 @@ void TypeChecker::visit(AST::CallExpression& call)
         }
 
         if (!unify(m_types.i32Type(), elementCountType) && !unify(m_types.u32Type(), elementCountType)) {
-            typeError(array.span(), "array count must be an i32 or u32 value, found '"_s, *elementCountType, '\'');
+            typeError(array->span(), "array count must be an i32 or u32 value, found '"_s, *elementCountType, '\'');
             return;
         }
 
         if (!elementType->isConstructible()) {
-            typeError(array.span(), '\'', *elementType, "' cannot be used as an element type of an array"_s);
+            typeError(array->span(), '\'', *elementType, "' cannot be used as an element type of an array"_s);
             return;
         }
 
-        auto constantValue = array.maybeElementCount()->constantValue();
+        std::optional<ConstantValue> constantValue;
+        if (!arrayType)
+            constantValue = array->maybeElementCount()->constantValue();
+        else {
+            auto* maybeConstant = std::get_if<unsigned>(&arrayType->size);
+            constantValue = maybeConstant ? std::optional(ConstantValue(*maybeConstant)) : std::nullopt;
+        }
+
         if (!constantValue) {
             typeError(call.span(), "array must have constant size in order to be constructed"_s);
             return;
@@ -1512,7 +1527,7 @@ void TypeChecker::visit(AST::CallExpression& call)
             argument.m_inferredType = elementType;
         }
     } else {
-        ASSERT(!array.maybeElementCount());
+        ASSERT(!array->maybeElementCount());
         elementCount = call.arguments().size();
         if (!elementCount) {
             typeError(call.span(), "cannot infer array element type from constructor"_s);
@@ -1527,7 +1542,7 @@ void TypeChecker::visit(AST::CallExpression& call)
                 elementType = argumentType;
 
                 if (!elementType->isConstructible()) {
-                    typeError(array.span(), '\'', *elementType, "' cannot be used as an element type of an array"_s);
+                    typeError(array->span(), '\'', *elementType, "' cannot be used as an element type of an array"_s);
                     return;
                 }
 
