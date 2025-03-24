@@ -35,6 +35,7 @@
 #import <WebCore/CSSPropertyNames.h>
 #import <WebCore/ColorCocoa.h>
 #import <WebCore/ColorSerialization.h>
+#import <WebCore/Document.h>
 #import <WebCore/Event.h>
 #import <WebCore/EventNames.h>
 #import <WebCore/HTMLElement.h>
@@ -43,6 +44,7 @@
 #import <WebCore/HTMLTextAreaElement.h>
 #import <WebCore/KeyboardEvent.h>
 #import <WebCore/Page.h>
+#import <wtf/Ref.h>
 
 namespace WebKit {
 using namespace WebCore;
@@ -79,11 +81,11 @@ PDFPluginTextAnnotation::~PDFPluginTextAnnotation()
 
 Ref<Element> PDFPluginTextAnnotation::createAnnotationElement()
 {
-    Document& document = parent()->document();
+    Ref document = parent()->document();
     RetainPtr textAnnotation = annotation();
     bool isMultiline = [textAnnotation isMultiline];
 
-    Ref element = downcast<HTMLTextFormControlElement>(document.createElement(isMultiline ? textareaTag : inputTag, false));
+    Ref element = downcast<HTMLTextFormControlElement>(document->createElement(isMultiline ? textareaTag : inputTag, false));
     element->addEventListener(eventNames().keydownEvent, *eventListener(), false);
 
     if (!textAnnotation)

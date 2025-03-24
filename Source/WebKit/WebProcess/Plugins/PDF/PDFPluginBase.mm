@@ -141,7 +141,7 @@ PDFPluginBase::PDFPluginBase(HTMLPlugInElement& element)
 PDFPluginBase::~PDFPluginBase()
 {
 #if ENABLE(PDF_HUD)
-    if (auto* page = m_frame ? m_frame->page() : nullptr)
+    if (RefPtr page = m_frame ? m_frame->page() : nullptr)
         page->removePDFHUD(*this);
 #endif
 
