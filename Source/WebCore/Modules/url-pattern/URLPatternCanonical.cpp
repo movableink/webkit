@@ -196,9 +196,7 @@ ExceptionOr<String> canonicalizePathname(StringView pathnameValue)
     // FIXME: Set state override to State::PathStart after URLParser supports state override.
     URL dummyURL(dummyURLCharacters);
     dummyURL.setPath(maybeAddSlashPrefix);
-
-    if (!dummyURL.isValid())
-        return Exception { ExceptionCode::TypeError, "Invalid input to canonicalize a URL path string."_s };
+    ASSERT(dummyURL.isValid());
 
     auto result = dummyURL.path();
     if (!hasLeadingSlash)
@@ -235,9 +233,7 @@ ExceptionOr<String> canonicalizeSearch(StringView value, BaseURLStringType value
 
     URL dummyURL(dummyURLCharacters);
     dummyURL.setQuery(strippedValue);
-
-    if (!dummyURL.isValid())
-        return Exception { ExceptionCode::TypeError, "Invalid input to canonicalize a URL search string."_s };
+    ASSERT(dummyURL.isValid());
 
     return dummyURL.query().toString();
 }
@@ -255,9 +251,7 @@ ExceptionOr<String> canonicalizeHash(StringView value, BaseURLStringType valueTy
 
     URL dummyURL(dummyURLCharacters);
     dummyURL.setFragmentIdentifier(strippedValue);
-
-    if (!dummyURL.isValid())
-        return Exception { ExceptionCode::TypeError, "Invalid input to canonicalize a URL hash string."_s };
+    ASSERT(dummyURL.isValid());
 
     return dummyURL.fragmentIdentifier().toString();
 }
