@@ -1698,7 +1698,6 @@ std::optional<Cursor> EventHandler::selectCursor(const HitTestResult& result, bo
     switch (style ? style->cursor() : CursorType::Auto) {
     case CursorType::Auto: {
         if (ImageOverlay::isOverlayText(node.get())) {
-            auto* renderer = node->renderer();
             if (renderer && renderer->style().usedUserSelect() != UserSelect::None)
                 return iBeam;
         }

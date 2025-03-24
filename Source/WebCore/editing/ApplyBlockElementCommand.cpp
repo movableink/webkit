@@ -191,18 +191,15 @@ static bool isNewLineAtPosition(const Position& position)
 
 const RenderStyle* ApplyBlockElementCommand::renderStyleOfEnclosingTextNode(const Position& position)
 {
-    if (position.anchorType() != Position::PositionIsOffsetInAnchor
-        || !position.containerNode()
-        || !position.containerNode()->isTextNode())
+    RefPtr node = position.containerNode();
+    if (position.anchorType() != Position::PositionIsOffsetInAnchor || !node || !node->isTextNode())
         return nullptr;
 
     protectedDocument()->updateStyleIfNeeded();
 
-    CheckedPtr renderer = position.containerNode()->renderer();
-    if (!renderer)
-        return nullptr;
-
-    return &renderer->style();
+    if (CheckedPtr renderText = dynamicDowncast<RenderText>(node->renderer()))
+        return &renderText->style();
+    return { };
 }
 
 void ApplyBlockElementCommand::rangeForParagraphSplittingTextNodesIfNeeded(const VisiblePosition& endOfCurrentParagraph, Position& start, Position& end)

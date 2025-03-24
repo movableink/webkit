@@ -227,7 +227,7 @@ void LegacyRenderSVGImage::paintForeground(PaintInfo& paintInfo)
 
     ImagePaintingOptions options = {
         imageOrientation(),
-        ImageQualityController::chooseInterpolationQualityForSVG(paintInfo.context(), this, *image)
+        ImageQualityController::chooseInterpolationQualityForSVG(paintInfo.context(), *this, *image)
     };
 
     paintInfo.context().drawImage(*image, destRect, srcRect, options);

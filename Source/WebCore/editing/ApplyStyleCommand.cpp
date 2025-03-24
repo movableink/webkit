@@ -44,6 +44,7 @@
 #include "NodeInlines.h"
 #include "NodeList.h"
 #include "NodeTraversal.h"
+#include "RenderLineBreak.h"
 #include "RenderObject.h"
 #include "RenderText.h"
 #include "ScriptDisallowedScope.h"
@@ -1030,10 +1031,9 @@ void ApplyStyleCommand::applyInlineStyleToPushDown(Node& node, EditingStyle* sty
     {
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
 
-        auto* textRenderer = dynamicDowncast<RenderText>(*node.renderer());
-        if (textRenderer && textRenderer->containsOnlyCollapsibleWhitespace())
+        if (CheckedPtr textRenderer = dynamicDowncast<RenderText>(*node.renderer()); textRenderer && textRenderer->containsOnlyCollapsibleWhitespace())
             return;
-        if (node.renderer()->isBR() && !node.renderer()->style().preserveNewline())
+        if (CheckedPtr linebreak = dynamicDowncast<RenderLineBreak>(*node.renderer()); linebreak && !linebreak->style().preserveNewline())
             return;
     }
 

@@ -752,7 +752,13 @@ bool TextIterator::handleReplacedElement()
     if (m_fullyClippedStack.top())
         return false;
 
-    CheckedRef renderer = *m_currentNode->renderer();
+    // Note that RenderInlines can get passed in as replaced elements.
+    CheckedPtr renderer = dynamicDowncast<RenderElement>(m_currentNode->renderer());
+    if (!renderer) {
+        ASSERT_NOT_REACHED();
+        return false;
+    }
+
     if (renderer->style().visibility() != Visibility::Visible && !m_behaviors.contains(TextIteratorBehavior::IgnoresStyleVisibility))
         return false;
 

@@ -317,7 +317,7 @@ LineLayout* LineLayout::containing(RenderObject& renderer)
                     containingBlock = containingBlock->containingBlock();
             } else if (renderer.isFloating()) {
                 // Note that containigBlock() on boxes in top layer (i.e. dialog) may return incorrect result during style change even with not-yet-updated style.
-                containingBlock = RenderObject::containingBlockForPositionType(renderer.style().position(), renderer);
+                containingBlock = RenderObject::containingBlockForPositionType(downcast<RenderBox>(renderer).style().position(), renderer);
             }
             return dynamicDowncast<RenderBlockFlow>(containingBlock);
         };

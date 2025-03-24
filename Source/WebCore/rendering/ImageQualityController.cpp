@@ -117,13 +117,13 @@ std::optional<InterpolationQuality> ImageQualityController::interpolationQuality
     return std::nullopt;
 }
 
-InterpolationQuality ImageQualityController::chooseInterpolationQualityForSVG(GraphicsContext& context, RenderObject* object, Image& image)
+InterpolationQuality ImageQualityController::chooseInterpolationQualityForSVG(GraphicsContext& context, const RenderElement& renderElement, Image& image)
 {
     // If the image is not a bitmap image, then none of this is relevant and we just paint at high quality.
     if (!(image.isBitmapImage() || image.isPDFDocumentImage()) || context.paintingDisabled())
         return InterpolationQuality::Default;
 
-    if (auto styleInterpolation = interpolationQualityFromStyle(object->style()))
+    if (auto styleInterpolation = interpolationQualityFromStyle(renderElement.style()))
         return *styleInterpolation;
 
     return InterpolationQuality::Default;

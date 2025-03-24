@@ -211,9 +211,8 @@ static UncheckedKeyHashSet<Color> estimatedTextColorsForRange(const SimpleRange&
         auto node = iterator.node();
         if (!node)
             continue;
-        auto renderer = node->renderer();
-        if (CheckedPtr renderText = dynamicDowncast<RenderText>(renderer))
-            colors.add(renderer->style().color());
+        if (CheckedPtr renderText = dynamicDowncast<RenderText>(node->renderer()))
+            colors.add(renderText->style().color());
     }
     return colors;
 }

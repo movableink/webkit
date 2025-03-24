@@ -98,7 +98,6 @@ bool isEmptyTableCell(const Node*);
 bool isTableStructureNode(const Node&);
 bool isListHTMLElement(Node*);
 bool isListItem(const Node&);
-bool isNodeRendered(const Node&);
 bool isRenderedAsNonInlineTableImageOrHR(const Node*);
 bool isNonTableCellHTMLBlockElement(const Node*);
 

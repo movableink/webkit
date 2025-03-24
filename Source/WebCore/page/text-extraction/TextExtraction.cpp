@@ -356,7 +356,7 @@ static inline std::variant<SkipExtraction, ItemData, URL, Editable> extractItemD
     if (element->hasTagName(HTMLNames::navTag))
         return { ItemData { ContainerType::Nav } };
 
-    if (renderer->style().hasViewportConstrainedPosition())
+    if (CheckedPtr renderElement = dynamicDowncast<RenderBox>(*renderer); renderElement && renderElement->style().hasViewportConstrainedPosition())
         return { ItemData { ContainerType::ViewportConstrained } };
 
     return { SkipExtraction::Self };
@@ -558,16 +558,18 @@ static void extractRenderedTokens(Vector<TokenAndBlockOffset>& tokensAndOffsets,
         if (RefPtr node = descendant.node(); node && ImageOverlay::isInsideOverlay(*node))
             continue;
 
-        if (CheckedPtr textRenderer = dynamicDowncast<RenderText>(descendant); textRenderer && textRenderer->hasRenderedText()) {
-            Vector<Token> tokens;
-            for (auto token : textRenderer->text().simplifyWhiteSpace(isASCIIWhitespace).split(' ')) {
-                auto candidate = token.removeCharacters([](UChar character) {
-                    return !u_isalpha(character) && !u_isdigit(character);
-                });
-                if (!candidate.isEmpty())
-                    tokens.append({ WTFMove(candidate) });
+        if (CheckedPtr textRenderer = dynamicDowncast<RenderText>(descendant)) {
+            if (textRenderer->hasRenderedText()) {
+                Vector<Token> tokens;
+                for (auto token : textRenderer->text().simplifyWhiteSpace(isASCIIWhitespace).split(' ')) {
+                    auto candidate = token.removeCharacters([](UChar character) {
+                        return !u_isalpha(character) && !u_isdigit(character);
+                    });
+                    if (!candidate.isEmpty())
+                        tokens.append({ WTFMove(candidate) });
+                }
+                appendTokens(WTFMove(tokens), frameView->contentsToRootView(descendant.absoluteBoundingBoxRect()));
             }
-            appendTokens(WTFMove(tokens), frameView->contentsToRootView(descendant.absoluteBoundingBoxRect()));
             continue;
         }
 
@@ -577,7 +579,7 @@ static void extractRenderedTokens(Vector<TokenAndBlockOffset>& tokensAndOffsets,
             continue;
         }
 
-        appendReplacedContentOrBackgroundImage(descendant);
+        appendReplacedContentOrBackgroundImage(downcast<RenderElement>(descendant));
     }
 }
 

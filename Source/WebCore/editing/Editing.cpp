@@ -824,12 +824,6 @@ Ref<Element> createTabSpanElement(Document& document)
     return createTabSpanElement(document, document.createEditingTextNode("\t"_s));
 }
 
-bool isNodeRendered(const Node& node)
-{
-    auto* renderer = node.renderer();
-    return renderer && renderer->style().visibility() == Visibility::Visible;
-}
-
 unsigned numEnclosingMailBlockquotes(const Position& position)
 {
     unsigned count = 0;

@@ -2239,11 +2239,9 @@ static bool needsSpaceFromDisplay(AccessibilityObject& axObject)
         return false;
     }
 
-    const auto* style = renderer ? &renderer->style() : nullptr;
-    if (!style)
-        style = axObject.style();
-
-    return style ? displayTypeNeedsSpace(style->display()) : false;
+    if (auto* style = renderer ? &downcast<RenderElement>(*renderer).style() : axObject.style())
+        return displayTypeNeedsSpace(style->display());
+    return false;
 }
 
 static bool shouldPrependSpace(AccessibilityObject& object, AccessibilityObject* previousObject)

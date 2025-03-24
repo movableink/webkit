@@ -36,7 +36,7 @@ class GraphicsContext;
 class Image;
 class LayoutSize;
 class RenderBoxModelObject;
-class RenderObject;
+class RenderElement;
 class RenderView;
 class RenderStyle;
 
@@ -47,7 +47,7 @@ public:
     explicit ImageQualityController(const RenderView&);
 
     static std::optional<InterpolationQuality> interpolationQualityFromStyle(const RenderStyle&);
-    static InterpolationQuality chooseInterpolationQualityForSVG(GraphicsContext&, RenderObject*, Image&);
+    static InterpolationQuality chooseInterpolationQualityForSVG(GraphicsContext&, const RenderElement&, Image&);
     InterpolationQuality chooseInterpolationQuality(GraphicsContext&, RenderBoxModelObject*, Image&, const void* layer, const LayoutSize&);
 
     void rendererWillBeDestroyed(RenderBoxModelObject& renderer) { removeObject(&renderer); }

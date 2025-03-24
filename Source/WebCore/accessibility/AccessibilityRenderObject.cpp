@@ -1328,7 +1328,7 @@ bool AccessibilityRenderObject::computeIsIgnored() const
     if (isStyleFormatGroup())
         return false;
 
-    switch (m_renderer->style().display()) {
+    switch (downcast<RenderElement>(*m_renderer).style().display()) {
     case DisplayType::Ruby:
     case DisplayType::RubyBlock:
     case DisplayType::RubyAnnotation:
@@ -2158,7 +2158,7 @@ AccessibilityRole AccessibilityRenderObject::determineAccessibilityRole()
     if (m_renderer->isRenderOrLegacyRenderSVGRoot())
         return AccessibilityRole::SVGRoot;
     
-    switch (m_renderer->style().display()) {
+    switch (downcast<RenderElement>(*m_renderer).style().display()) {
     case DisplayType::Ruby:
         return AccessibilityRole::RubyInline;
     case DisplayType::RubyAnnotation:
@@ -2696,9 +2696,9 @@ bool AccessibilityRenderObject::isApplePayButton() const
 
 ApplePayButtonType AccessibilityRenderObject::applePayButtonType() const
 {
-    if (!m_renderer)
-        return ApplePayButtonType::Plain;
-    return m_renderer->style().applePayButtonType();
+    if (CheckedPtr renderElement = dynamicDowncast<RenderElement>(renderer()))
+        return renderElement->style().applePayButtonType();
+    return ApplePayButtonType::Plain;
 }
 #endif
 
