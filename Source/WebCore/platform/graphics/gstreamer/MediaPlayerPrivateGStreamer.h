@@ -526,6 +526,7 @@ private:
     void configureAudioDecoder(GstElement*);
     void configureVideoDecoder(GstElement*);
     void configureElement(GstElement*);
+    void configureParsebin(GstElement*);
 
     void configureElementPlatformQuirks(GstElement*);
 

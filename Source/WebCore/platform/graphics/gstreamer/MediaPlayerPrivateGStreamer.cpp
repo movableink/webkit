@@ -2483,6 +2483,43 @@ void MediaPlayerPrivateGStreamer::processTableOfContentsEntry(GstTocEntry* entry
         processTableOfContentsEntry(static_cast<GstTocEntry*>(i->data));
 }
 
+void MediaPlayerPrivateGStreamer::configureParsebin(GstElement* parsebin)
+{
+    // We can save some overhead by not parsing again streams that are already parsed and that
+    // the caps match the decoder's. In that case, we can skip creating a parser element in parsebin.
+    g_signal_connect(parsebin, "autoplug-select",
+        G_CALLBACK(+[](GstElement*, GstPad*, GstCaps* caps, GstElementFactory* factory, MediaPlayerPrivateGStreamer* player) -> unsigned {
+            static auto tryAutoPlug = *gstGetAutoplugSelectResult("try"_s);
+            static auto exposeAutoPlug = *gstGetAutoplugSelectResult("expose"_s);
+
+            auto* structure = gst_caps_get_structure(caps, 0);
+            if (!structure)
+                return tryAutoPlug;
+
+            // TODO: this already works perfectly well for MediaStream, but in MSE we still plug in a parser despite having
+            // already parsed the stream in the append pipeline, because the caps we receive here aren't parsed yet,
+            // although it becomes parsed later. We can probably find a way to avoid this extra parsing in MSE too.
+            auto isParsed = gstStructureGet<bool>(structure, "parsed"_s);
+            if (!isParsed || !*isParsed)
+                return tryAutoPlug;
+
+            auto& scanner = GStreamerRegistryScanner::singleton();
+            GUniquePtr<char> gstCodecName(gst_codec_utils_caps_get_mime_codec(caps));
+            auto codecName = String::fromUTF8(gstCodecName.get());
+            auto result = scanner.isCodecSupported(GStreamerRegistryScanner::Configuration::Decoding, codecName);
+            if (!result.isSupported)
+                return tryAutoPlug;
+
+            auto decoderFactoryAcceptsCaps = gst_element_factory_can_sink_any_caps(result.factory.get(), caps);
+            GST_DEBUG_OBJECT(player->pipeline(), "Does %" GST_PTR_FORMAT " decoder accept caps %" GST_PTR_FORMAT "? %s", factory, caps, boolForPrinting(decoderFactoryAcceptsCaps));
+
+            if (decoderFactoryAcceptsCaps)
+                return exposeAutoPlug;
+
+            return tryAutoPlug;
+        }), this);
+}
+
 void MediaPlayerPrivateGStreamer::configureElement(GstElement* element)
 {
     configureElementPlatformQuirks(element);
@@ -2498,6 +2535,9 @@ void MediaPlayerPrivateGStreamer::configureElement(GstElement* element)
     auto nameView = StringView::fromLatin1(elementName.get());
     if (webkitGstCheckVersion(1, 22, 0) && nameView.startsWith("urisourcebin"_s) && (isMediaSource() || isMediaStreamPlayer()))
         g_object_set(element, "use-buffering", FALSE, "parse-streams", !isMediaStreamPlayer(), nullptr);
+
+    if (nameView.startsWith("parsebin"_s))
+        configureParsebin(element);
 
     // In case of playbin3 with <video ... preload="auto">, instantiate
     // downloadbuffer element, otherwise the playbin3 would instantiate
