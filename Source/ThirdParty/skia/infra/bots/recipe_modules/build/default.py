@@ -97,47 +97,24 @@ def compile_fn(api, checkout_root, out_dir):
             infra_step=True)
 
   if os == 'Mac' or os == 'Mac10.15.7':
-    # XCode build is listed in parentheses after the version at
-    # https://developer.apple.com/news/releases/, or on Wikipedia here:
-    # https://en.wikipedia.org/wiki/Xcode#Version_comparison_table
-    # Use lowercase letters.
-    # https://chrome-infra-packages.appspot.com/p/infra_internal/ios/xcode
-    XCODE_BUILD_VERSION = '16a242d' # Xcode 16.0
-    extra_cflags.append(
-        '-DREBUILD_IF_CHANGED_xcode_build_version=%s' % XCODE_BUILD_VERSION)
-    mac_toolchain_cmd = api.vars.workdir.joinpath(
-        'mac_toolchain', 'mac_toolchain')
-    xcode_app_path = api.vars.cache_dir.joinpath('Xcode.app')
-    # Copied from
-    # https://chromium.googlesource.com/chromium/tools/build/+/e19b7d9390e2bb438b566515b141ed2b9ed2c7c2/scripts/slave/recipe_modules/ios/api.py#322
-    with api.step.nest('ensure xcode') as step_result:
-      step_result.step_summary_text = (
-          'Ensuring Xcode version %s in %s' % (
-              XCODE_BUILD_VERSION, xcode_app_path))
-      install_xcode_cmd = [
-          mac_toolchain_cmd, 'install',
-          # "ios" is needed for simulator builds
-          # (Build-Mac-Clang-x64-Release-iOS).
-          '-kind', 'ios',
-          '-xcode-version', XCODE_BUILD_VERSION,
-          '-output-dir', xcode_app_path,
-      ]
-      api.step('install xcode', install_xcode_cmd)
-      api.step('select xcode', [
-          'sudo', 'xcode-select', '-switch', xcode_app_path])
-      if 'iOS' in extra_tokens:
-        if 'iOS12' in extra_tokens:
-          # Ganesh has a lower minimum iOS version than Graphite but there are dedicated jobs that
-          # test with the lower SDK.
-          env['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
-          args['ios_min_target'] = '"12.0"'
-        else:
-          env['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
-          args['ios_min_target'] = '"13.0"'
+    api.xcode.install()
 
-      else:
-        # We have some machines on 10.15.
-        env['MACOSX_DEPLOYMENT_TARGET'] = '10.15'
+    extra_cflags.append(
+        '-DREBUILD_IF_CHANGED_xcode_build_version=%s' % api.xcode.version)
+    if 'iOS12' in extra_tokens:
+      # Ganesh has a lower minimum iOS version than Graphite but there are dedicated jobs that
+      # test with the lower SDK.
+      env['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
+      args['ios_min_target'] = '"12.0"'
+    elif 'iOS18' in extra_tokens:
+      env['IPHONEOS_DEPLOYMENT_TARGET'] = '18.2'
+      args['ios_min_target'] = '"18.0"'
+    elif 'iOS' in extra_tokens:
+      env['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+      args['ios_min_target'] = '"13.0"'
+    else:
+      # We have some machines on 10.15.
+      env['MACOSX_DEPLOYMENT_TARGET'] = '10.15'
 
   # ccache + clang-tidy.sh chokes on the argument list.
   if (api.vars.is_linux or os == 'Mac' or os == 'Mac10.15.5' or os == 'Mac10.15.7') and 'Tidy' not in extra_tokens:
@@ -318,13 +295,13 @@ def compile_fn(api, checkout_root, out_dir):
   if 'Metal' in extra_tokens and not 'Dawn' in extra_tokens:
     args['skia_use_metal'] = 'true'
     args['skia_use_gl'] = 'false'
-  if 'iOS' in extra_tokens:
+  if 'iOS' in extra_tokens or 'iOS18' in extra_tokens:
     # Bots use Chromium signing cert.
     args['skia_ios_identity'] = '".*83FNP.*"'
     # Get mobileprovision via the CIPD package.
     args['skia_ios_profile'] = '"%s"' % api.vars.workdir.joinpath(
         'provisioning_profile_ios',
-        'Upstream_Testing_Provisioning_Profile.mobileprovision')
+        'Upstream_Com_Testing_Provisioning_Profile.mobileprovision')
   if compiler == 'Clang' and 'Win' in os:
     args['clang_win'] = '"%s"' % api.vars.workdir.joinpath('clang_win')
     extra_cflags.append('-DPLACEHOLDER_clang_win_version=%s' %
@@ -352,7 +329,7 @@ def compile_fn(api, checkout_root, out_dir):
     'cxx': cxx,
     'sanitize': sanitize,
     'target_cpu': target_arch,
-    'target_os': 'ios' if 'iOS' in extra_tokens else '',
+    'target_os': 'ios' if ('iOS' in extra_tokens or 'iOS18' in extra_tokens) else '',
     'win_sdk': win_toolchain + '/win_sdk' if 'Win' in os else '',
     'win_vc': win_toolchain + '/VC' if 'Win' in os else '',
     'skia_dwritecore_sdk': dwritecore if 'DWriteCore' in extra_tokens else '',

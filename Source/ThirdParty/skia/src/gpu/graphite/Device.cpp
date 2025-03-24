@@ -40,7 +40,7 @@
 #include "src/gpu/graphite/geom/Geometry.h"
 #include "src/gpu/graphite/geom/IntersectionTree.h"
 #include "src/gpu/graphite/geom/Shape.h"
-#include "src/gpu/graphite/geom/Transform_graphite.h"
+#include "src/gpu/graphite/geom/Transform.h"
 #include "src/gpu/graphite/text/TextAtlasManager.h"
 
 #include "include/core/SkColorSpace.h"
@@ -898,7 +898,7 @@ void Device::drawArc(const SkArc& arc, const SkPaint& paint) {
          (paint.getStyle() == SkPaint::kStroke_Style &&
           // square caps can stick out from the shape so we can't do this with an rrect draw
           paint.getStrokeCap() != SkPaint::kSquare_Cap &&
-          // non-wedge cases with strokes will draw lines to the center
+          // wedge cases with strokes will draw lines to the center
           !arc.isWedge()))) {
         this->drawRRect(SkRRect::MakeOval(arc.oval()), paint);
     } else {
@@ -1810,7 +1810,7 @@ void Device::internalFlush() {
     fCurrentDepth = DrawOrder::kClearDepth;
 
      // Any cleanup in the AtlasProvider
-    fRecorder->priv().atlasProvider()->compact(/*forceCompact=*/false);
+    fRecorder->priv().atlasProvider()->compact();
 }
 
 bool Device::needsFlushBeforeDraw(int numNewRenderSteps, DstReadStrategy dstReadStrategy) const {

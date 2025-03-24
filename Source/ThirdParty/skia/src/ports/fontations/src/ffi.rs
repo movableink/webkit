@@ -14,8 +14,8 @@ use skrifa::{
     instance::{Location, Size},
     metrics::{GlyphMetrics, Metrics},
     outline::{
-        pen::NullPen, DrawSettings, Engine, HintingInstance, HintingOptions, OutlinePen,
-        SmoothMode, Target,
+        pen::NullPen, DrawSettings, Engine, HintingInstance, HintingOptions, OutlineGlyphFormat,
+        OutlinePen, SmoothMode, Target,
     },
     setting::VariationSetting,
     string::{LocalizedStrings, StringId},
@@ -26,8 +26,8 @@ use std::pin::Pin;
 use crate::bitmap::{bitmap_glyph, bitmap_metrics, has_bitmap_glyph, png_data, BridgeBitmapGlyph};
 
 use crate::ffi::{
-    AxisWrapper, BridgeFontStyle, BridgeLocalizedName, BridgeScalerMetrics, ClipBox,
-    ColorPainterWrapper, ColorStop, FfiPoint, PaletteOverride, SkiaDesignCoordinate,
+    AutoHintingControl, AxisWrapper, BridgeFontStyle, BridgeLocalizedName, BridgeScalerMetrics,
+    ClipBox, ColorPainterWrapper, ColorStop, FfiPoint, PaletteOverride, SkiaDesignCoordinate,
 };
 
 const PATH_EXTRACTION_RESERVE: usize = 150;
@@ -57,7 +57,7 @@ unsafe fn make_hinting_instance<'a>(
     do_light_hinting: bool,
     do_lcd_antialiasing: bool,
     lcd_orientation_vertical: bool,
-    force_autohinting: bool,
+    autohinting_control: AutoHintingControl,
 ) -> Box<BridgeHintingInstance> {
     let hinting_instance = match &outlines.0 {
         Some(outlines) => {
@@ -80,10 +80,21 @@ unsafe fn make_hinting_instance<'a>(
                 preserve_linear_metrics: false,
             };
 
-            let engine_type = if force_autohinting {
-                Engine::Auto(None)
-            } else {
-                Engine::AutoFallback
+            // Do not force-autohint for CFF to match FreeType, compare
+            // https://gitlab.freedesktop.org/freetype/freetype/-/blob/57617782464411201ce7bbc93b086c1b4d7d84a5/src/base/ftobjs.c#L1001
+            // Engine::AutoFallback (see Skrifa docs) means:
+            // "Specifically, PostScript (CFF/CFF2) fonts will always use the hinting engine in the
+            // PostScript interpreter and TrueType fonts will use the interpreter for TrueType
+            // instructions if one of the fpgm or prep tables is non-empty, falling back to the
+            // automatic hinter otherwise."
+            // So Engine::AutoFallback does not engage autohinting for CFF.
+            let engine_type = match (autohinting_control, outlines.format()) {
+                (AutoHintingControl::ForceForGlyfAndCff, _) => Engine::Auto(None),
+                (
+                    AutoHintingControl::PreferAutoOverHintsForGlyf,
+                    Some(OutlineGlyphFormat::Glyf),
+                ) => Engine::Auto(None),
+                _ => Engine::AutoFallback,
             };
 
             HintingInstance::new(
@@ -119,15 +130,23 @@ unsafe fn make_mono_hinting_instance<'a>(
     Box::new(BridgeHintingInstance(hinting_instance))
 }
 
-fn lookup_glyph_or_zero(font_ref: &BridgeFontRef, map: &BridgeMappingIndex, codepoint: u32) -> u16 {
-    font_ref
-        .with_font(|f| {
-            let glyph_id = map.0.charmap(f).map(codepoint)?.to_u32();
-            // Remove conversion and change return type to u32 when
-            // implementing large glyph id support in Skia.
-            glyph_id.try_into().ok()
-        })
-        .unwrap_or_default()
+fn lookup_glyph_or_zero(
+    font_ref: &BridgeFontRef,
+    map: &BridgeMappingIndex,
+    codepoints: &[u32],
+    glyphs: &mut [u16],
+) {
+    glyphs.fill(0);
+    font_ref.with_font(|f| {
+        let mappings = map.0.charmap(f);
+        for it in codepoints.iter().zip(glyphs.iter_mut()) {
+            let (codepoint, glyph) = it;
+            // Remove u16 conversion when implementing large glyph id support in Skia.
+            *glyph = u16::try_from(mappings.map(*codepoint).unwrap_or_default().to_u32())
+                .unwrap_or_default();
+        }
+        Some(())
+    });
 }
 
 fn num_glyphs(font_ref: &BridgeFontRef) -> u16 {
@@ -1208,7 +1227,7 @@ fn is_fixed_pitch(font_ref: &BridgeFontRef) -> bool {
             // Compare DWriteFontTypeface::onGetAdvancedMetrics().
             Some(
                 f.post().ok()?.is_fixed_pitch() != 0
-                    || f.hhea().ok()?.number_of_long_metrics() == 1,
+                    || f.hhea().ok()?.number_of_h_metrics() == 1,
             )
         })
         .unwrap_or_default()
@@ -1633,6 +1652,12 @@ mod ffi {
         advance: f32,
     }
 
+    enum AutoHintingControl {
+        PreferAutoOverHintsForGlyf,
+        ForceForGlyfAndCff,
+        AutoAsFallback,
+    }
+
     extern "Rust" {
         type BridgeFontRef<'a>;
         unsafe fn make_font_ref<'a>(font_data: &'a [u8], index: u32) -> Box<BridgeFontRef<'a>>;
@@ -1673,7 +1698,7 @@ mod ffi {
             do_light_hinting: bool,
             do_lcd_antialiasing: bool,
             lcd_orientation_vertical: bool,
-            force_autohinting: bool,
+            autohinting_control: AutoHintingControl,
         ) -> Box<BridgeHintingInstance>;
         unsafe fn make_mono_hinting_instance<'a>(
             outlines: &BridgeOutlineCollection,
@@ -1685,8 +1710,9 @@ mod ffi {
         fn lookup_glyph_or_zero(
             font_ref: &BridgeFontRef,
             map: &BridgeMappingIndex,
-            codepoint: u32,
-        ) -> u16;
+            codepoint: &[u32],
+            glyphs: &mut [u16],
+        );
 
         fn get_path_verbs_points(
             outlines: &BridgeOutlineCollection,

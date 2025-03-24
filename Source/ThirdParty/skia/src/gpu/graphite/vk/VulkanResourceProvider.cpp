@@ -18,13 +18,14 @@
 #include "src/gpu/graphite/RenderPassDesc.h"
 #include "src/gpu/graphite/Sampler.h"
 #include "src/gpu/graphite/Texture.h"
+#include "src/gpu/graphite/TextureInfoPriv.h"
 #include "src/gpu/graphite/vk/VulkanBuffer.h"
 #include "src/gpu/graphite/vk/VulkanCommandBuffer.h"
 #include "src/gpu/graphite/vk/VulkanDescriptorPool.h"
 #include "src/gpu/graphite/vk/VulkanDescriptorSet.h"
 #include "src/gpu/graphite/vk/VulkanFramebuffer.h"
 #include "src/gpu/graphite/vk/VulkanGraphicsPipeline.h"
-#include "src/gpu/graphite/vk/VulkanGraphiteTypesPriv.h"
+#include "src/gpu/graphite/vk/VulkanGraphiteUtils.h"
 #include "src/gpu/graphite/vk/VulkanRenderPass.h"
 #include "src/gpu/graphite/vk/VulkanSampler.h"
 #include "src/gpu/graphite/vk/VulkanSharedContext.h"
@@ -119,9 +120,9 @@ const VulkanSharedContext* VulkanResourceProvider::vulkanSharedContext() const {
 
 sk_sp<Texture> VulkanResourceProvider::onCreateWrappedTexture(const BackendTexture& texture) {
     sk_sp<VulkanYcbcrConversion> ycbcrConversion;
-    if (TextureInfos::GetVulkanYcbcrConversionInfo(texture.info()).isValid()) {
-        ycbcrConversion = this->findOrCreateCompatibleYcbcrConversion(
-                TextureInfos::GetVulkanYcbcrConversionInfo(texture.info()));
+    const auto& vkInfo = TextureInfoPriv::Get<VulkanTextureInfo>(texture.info());
+    if (vkInfo.fYcbcrConversionInfo.isValid()) {
+        ycbcrConversion = this->findOrCreateCompatibleYcbcrConversion(vkInfo.fYcbcrConversionInfo);
         if (!ycbcrConversion) {
             return nullptr;
         }
@@ -159,9 +160,9 @@ sk_sp<ComputePipeline> VulkanResourceProvider::createComputePipeline(const Compu
 sk_sp<Texture> VulkanResourceProvider::createTexture(SkISize size,
                                                      const TextureInfo& info) {
     sk_sp<VulkanYcbcrConversion> ycbcrConversion;
-    if (TextureInfos::GetVulkanYcbcrConversionInfo(info).isValid()) {
-        ycbcrConversion = this->findOrCreateCompatibleYcbcrConversion(
-                TextureInfos::GetVulkanYcbcrConversionInfo(info));
+    const auto& vkInfo = TextureInfoPriv::Get<VulkanTextureInfo>(info);
+    if (vkInfo.fYcbcrConversionInfo.isValid()) {
+        ycbcrConversion = this->findOrCreateCompatibleYcbcrConversion(vkInfo.fYcbcrConversionInfo);
         if (!ycbcrConversion) {
             return nullptr;
         }
@@ -200,10 +201,7 @@ sk_sp<Sampler> VulkanResourceProvider::createSampler(const SamplerDesc& samplerD
 
 BackendTexture VulkanResourceProvider::onCreateBackendTexture(SkISize dimensions,
                                                               const TextureInfo& info) {
-    VulkanTextureInfo vkTexInfo;
-    if (!TextureInfos::GetVulkanTextureInfo(info, &vkTexInfo)) {
-        return {};
-    }
+    const auto& vkTexInfo = TextureInfoPriv::Get<VulkanTextureInfo>(info);
     VulkanTexture::CreatedImageInfo createdTextureInfo;
     if (!VulkanTexture::MakeVkImage(this->vulkanSharedContext(), dimensions, info,
                                     &createdTextureInfo)) {
@@ -490,12 +488,64 @@ VkPipelineCache VulkanResourceProvider::pipelineCache() {
     return fPipelineCache;
 }
 
+namespace {
+
+void gather_attachment_views(skia_private::TArray<VkImageView>& attachmentViews,
+                             VulkanTexture* colorTexture,
+                             VulkanTexture* resolveTexture,
+                             VulkanTexture* depthStencilTexture) {
+    if (colorTexture) {
+        VkImageView& colorAttachmentView = attachmentViews.push_back();
+        colorAttachmentView =
+                colorTexture->getImageView(VulkanImageView::Usage::kAttachment)->imageView();
+
+        if (resolveTexture) {
+            VkImageView& resolveView = attachmentViews.push_back();
+            resolveView =
+                    resolveTexture->getImageView(VulkanImageView::Usage::kAttachment)->imageView();
+        }
+    }
+
+    if (depthStencilTexture) {
+        VkImageView& stencilView = attachmentViews.push_back();
+        stencilView =
+                depthStencilTexture->getImageView(VulkanImageView::Usage::kAttachment)->imageView();
+    }
+}
+
+} // anonymous namespace
+
 sk_sp<VulkanFramebuffer> VulkanResourceProvider::createFramebuffer(
         const VulkanSharedContext* context,
-        const skia_private::TArray<VkImageView>& attachmentViews,
+        VulkanTexture* colorTexture,
+        VulkanTexture* resolveTexture,
+        VulkanTexture* depthStencilTexture,
+        const RenderPassDesc& renderPassDesc,
         const VulkanRenderPass& renderPass,
         const int width,
         const int height) {
+
+    VulkanTexture* mainTexture = nullptr;
+    if (colorTexture) {
+        mainTexture = resolveTexture ? resolveTexture: colorTexture;
+    } else {
+        SkASSERT(depthStencilTexture);
+        mainTexture = depthStencilTexture;
+    }
+    SkASSERT(mainTexture);
+    VulkanTexture* msaaTexture = resolveTexture ? colorTexture: nullptr;
+
+    sk_sp<VulkanFramebuffer> fb = mainTexture->getCachedFramebuffer(renderPassDesc,
+                                                                    msaaTexture,
+                                                                    depthStencilTexture);
+    if (fb) {
+        return fb;
+    }
+
+    // Gather attachment views neeeded for frame buffer creation.
+    skia_private::TArray<VkImageView> attachmentViews;
+    gather_attachment_views(attachmentViews, colorTexture, resolveTexture, depthStencilTexture);
+
     // TODO: Consider caching these in the future. If we pursue that, it may make more sense to
     // use a compatible renderpass rather than a full one to make each frame buffer more versatile.
     VkFramebufferCreateInfo framebufferInfo;
@@ -509,7 +559,13 @@ sk_sp<VulkanFramebuffer> VulkanResourceProvider::createFramebuffer(
     framebufferInfo.width = width;
     framebufferInfo.height = height;
     framebufferInfo.layers = 1;
-    return VulkanFramebuffer::Make(context, framebufferInfo);
+    fb = VulkanFramebuffer::Make(context,
+                                 framebufferInfo,
+                                 renderPassDesc,
+                                 sk_ref_sp(msaaTexture),
+                                 sk_ref_sp(depthStencilTexture));
+    mainTexture->addCachedFramebuffer(fb);
+    return fb;
 }
 
 void VulkanResourceProvider::onDeleteBackendTexture(const BackendTexture& texture) {

@@ -206,7 +206,9 @@ var (
 			Path: "mac_toolchain",
 			// When this is updated, also update
 			// https://skia.googlesource.com/skcms.git/+/f1e2b45d18facbae2dece3aca673fe1603077846/infra/bots/gen_tasks.go#56
-			Version: "git_revision:e6f45bde6c5ee56924b1f905159b6a1a48ef25dd",
+			// and
+			// https://skia.googlesource.com/skia.git/+/main/infra/bots/recipe_modules/xcode/api.py#38
+			Version: "git_revision:0cb1e51344de158f72524c384f324465aebbcef2",
 		},
 	}
 
@@ -740,7 +742,7 @@ func (b *jobBuilder) deriveCompileTaskName() string {
 				"SkottieTracing", "SkottieWASM", "GpuTess", "DMSAAStats", "Docker", "PDF",
 				"Puppeteer", "SkottieFrames", "RenderSKP", "CanvasPerf", "AllPathsVolatile",
 				"WebGL2", "i5", "OldestSupportedSkpVersion", "FakeWGPU", "TintIR", "Protected",
-				"AndroidNDKFonts", "Upload"}
+				"AndroidNDKFonts", "Upload", "TestPrecompile"}
 			keep := make([]string, 0, len(ec))
 			for _, part := range ec {
 				if !In(part, ignore) {
@@ -757,7 +759,7 @@ func (b *jobBuilder) deriveCompileTaskName() string {
 		} else if b.os("ChromeOS") {
 			ec = append([]string{"Chromebook", "GLES"}, ec...)
 			task_os = COMPILE_TASK_NAME_OS_LINUX
-		} else if b.os("iOS") {
+		} else if b.matchOs("iOS") {
 			ec = append([]string{task_os}, ec...)
 			if b.parts["compiler"] == "Xcode11.4.1" {
 				task_os = "Mac10.15.7"
@@ -871,10 +873,10 @@ func (b *taskBuilder) defaultSwarmDimensions() {
 			"Mac":         DEFAULT_OS_MAC,
 			"Mac10.15.1":  "Mac-10.15.1",
 			"Mac10.15.7":  "Mac-10.15.7",
-			"Mac11":       "Mac-11.4",
 			"Mac12":       "Mac-12",
 			"Mac13":       "Mac-13",
 			"Mac14":       "Mac-14.7", // Builds run on 14.5, tests on 14.7.
+			"Mac15":       "Mac-15.3",
 			"Mokey":       "Android",
 			"MokeyGo32":   "Android",
 			"Ubuntu18":    "Ubuntu-18.04",
@@ -886,6 +888,7 @@ func (b *taskBuilder) defaultSwarmDimensions() {
 			"Win11":       "Windows-11-26100.1742",
 			"Win2019":     DEFAULT_OS_WIN_GCE,
 			"iOS":         "iOS-13.3.1",
+			"iOS18":       "iOS-18.2.1",
 		}[os]
 		if !ok {
 			log.Fatalf("Entry %q not found in OS mapping.", os)
@@ -896,6 +899,9 @@ func (b *taskBuilder) defaultSwarmDimensions() {
 		if os == "Win10" && b.parts["model"] == "Golo" {
 			// ChOps-owned machines have Windows 10 22H2.
 			d["os"] = "Windows-10-19045"
+		}
+		if strings.Contains(os, "iOS") {
+			d["pool"] = "SkiaIOS"
 		}
 		if b.parts["model"] == "iPadPro" {
 			d["os"] = "iOS-13.6"
@@ -936,17 +942,18 @@ func (b *taskBuilder) defaultSwarmDimensions() {
 			if b.extraConfig("HWASAN") {
 				d["android_hwasan_build"] = "1"
 			}
-		} else if b.os("iOS") {
+		} else if b.matchOs("iOS") {
 			device, ok := map[string]string{
-				"iPadMini4": "iPad5,1",
-				"iPhone7":   "iPhone9,1",
-				"iPhone8":   "iPhone10,1",
-				"iPadPro":   "iPad6,3",
+				"iPadMini4":   "iPad5,1",
+				"iPhone15Pro": "iPhone16,1",
+				"iPhone7":     "iPhone9,1",
+				"iPhone8":     "iPhone10,1",
+				"iPadPro":     "iPad6,3",
 			}[b.parts["model"]]
 			if !ok {
 				log.Fatalf("Entry %q not found in iOS mapping.", b.parts["model"])
 			}
-			d["device_type"] = device
+			d["device"] = device
 		} else if b.cpu() || b.extraConfig("CanvasKit", "Docker", "SwiftShader") {
 			modelMapping, ok := map[string]map[string]string{
 				"AppleM1": {
@@ -956,6 +963,7 @@ func (b *taskBuilder) defaultSwarmDimensions() {
 					"MacBookPro15.3": "arm64-64-Apple_M3",
 				},
 				"AppleIntel": {
+					"MacBookPro15.1": "x86-64",
 					"MacBookPro16.2": "x86-64",
 				},
 				"AVX": {
@@ -963,6 +971,7 @@ func (b *taskBuilder) defaultSwarmDimensions() {
 				},
 				"AVX2": {
 					"GCE":            "x86-64-Haswell_GCE",
+					"Golo":           "x86-64-E3-1230_v5",
 					"MacBookAir7.2":  "x86-64-i5-5350U",
 					"MacBookPro11.5": "x86-64-i7-4870HQ",
 					"MacMini7.1":     "x86-64-i5-4278U",
@@ -1011,10 +1020,15 @@ func (b *taskBuilder) defaultSwarmDimensions() {
 					"QuadroP400":    "10de:1cb3-31.0.15.5222",
 					"RadeonVega6":   "1002:1636-31.0.14057.5006",
 					"RadeonVega8":   "1002:1638-31.0.21916.2",
-					"RTX3060":       "10de:2489-32.0.15.6094",
+					"RTX3060":       "10de:2489-32.0.15.7270",
 				}[b.parts["cpu_or_gpu_value"]]
 				if !ok {
 					log.Fatalf("Entry %q not found in Win GPU mapping.", b.parts["cpu_or_gpu_value"])
+				}
+				// TODO(borenet): Remove this block once these machines are all
+				// migrated.
+				if b.os("Win10") && b.parts["cpu_or_gpu_value"] == "RTX3060" {
+					gpu = "10de:2489-32.0.15.6094"
 				}
 				d["gpu"] = gpu
 			} else if b.isLinux() {
@@ -1092,19 +1106,41 @@ func (b *taskBuilder) defaultSwarmDimensions() {
 				log.Fatalf("Unknown GPU mapping for OS %q.", b.parts["os"])
 			}
 		}
-	} else {
-		if d["os"] == DEBIAN_11_OS {
-			// The Debian11 compile machines in the skolo have
-			// GPUs, but we still use them for compiles also.
-
-			// Dodge Raspberry Pis.
-			d["cpu"] = "x86-64"
-			// Target the AMDRyzen 5 4500U machines, as they are beefy and we have
-			// 19 of them, and they are setup to compile.
-			d["gpu"] = "1002:1636"
-		} else {
-			d["gpu"] = "none"
+		if b.matchOs("Mac") {
+			// TODO(borenet): Remove empty and nested entries after all Macs
+			// are migrated to the new lab.
+			if macModel, ok := map[string]interface{}{
+				"MacBookAir7.2":  "",
+				"MacBookPro11.5": "MacBookPro11,5",
+				"MacBookPro15.1": "MacBookPro15,1",
+				"MacBookPro15.3": "Mac15,3",
+				"MacBookPro16.2": "",
+				"MacMini7.1":     "",
+				"MacMini8.1":     "Macmini8,1",
+				"MacMini9.1": map[string]string{
+					"Mac12": "",
+					"Mac13": "",
+					"Mac14": "Macmini9,1",
+				},
+				// TODO(borenet): This is currently resolving to multiple
+				// different actual device types.
+				"VMware7.1": "",
+			}[b.parts["model"]]; ok {
+				if macModel != "" {
+					macModelDim, ok := macModel.(string)
+					if !ok {
+						macModelDim = macModel.(map[string]string)[b.parts["os"]]
+					}
+					if macModelDim != "" {
+						d["mac_model"] = macModelDim
+					}
+				}
+			} else {
+				log.Fatalf("No mac_model found for %q", b.parts["model"])
+			}
 		}
+	} else {
+		d["gpu"] = "none"
 		if d["os"] == DEFAULT_OS_LINUX_GCE {
 			if b.extraConfig("CanvasKit", "CMake", "Docker", "PathKit") || b.role("BuildStats", "CodeSize") {
 				b.linuxGceDimensions(MACHINE_TYPE_MEDIUM)
@@ -1256,10 +1292,14 @@ func (b *taskBuilder) maybeAddIosDevImage() {
 				asset = "ios-dev-image-13.5"
 			case "13.6":
 				asset = "ios-dev-image-13.6"
+			case "18.2.1":
+				// Newer iOS versions don't use a pre-packaged dev image.
 			default:
 				log.Fatalf("Unable to determine correct ios-dev-image asset for %s. If %s is a new iOS release, you must add a CIPD package containing the corresponding iOS dev image; see ios-dev-image-11.4 for an example.", b.Name, m[1])
 			}
-			b.asset(asset)
+			if asset != "" {
+				b.asset(asset)
+			}
 			break
 		} else if strings.Contains(dim, "iOS") {
 			log.Fatalf("Must specify iOS version for %s to obtain correct dev image; os dimension is missing version: %s", b.Name, dim)
@@ -1352,7 +1392,7 @@ func (b *jobBuilder) compile() string {
 				})
 				b.asset("ccache_mac")
 				b.usesCCache()
-				if b.extraConfig("iOS") {
+				if b.matchExtraConfig("iOS.*") {
 					b.asset("provisioning_profile_ios")
 				}
 				if b.shellsOutToBazel() {
@@ -1743,6 +1783,12 @@ func (b *jobBuilder) dm() {
 				b.directUpload(b.cfg.GsBucketGm, b.cfg.ServiceAccountUploadGM)
 				directUpload = true
 			}
+			if b.matchOs("iOS") {
+				b.Spec.Caches = append(b.Spec.Caches, &specs.Cache{
+					Name: "xcode",
+					Path: "cache/Xcode.app",
+				})
+			}
 		}
 		b.recipeProp("gold_hashes_url", b.cfg.GoldHashesURL)
 		b.recipeProps(EXTRA_PROPS)
@@ -1795,7 +1841,7 @@ func (b *jobBuilder) dm() {
 		} else if b.arch("x86") && b.debug() {
 			// skia:6737
 			b.timeout(6 * time.Hour)
-		} else if b.matchOs("Mac11") {
+		} else if b.matchOs("Mac14") {
 			b.timeout(30 * time.Minute)
 		}
 		b.maybeAddIosDevImage()
@@ -1970,6 +2016,14 @@ func (b *jobBuilder) perf() {
 		} else if b.extraConfig("LottieWeb") {
 			recipe = "perf_skottiewasm_lottieweb"
 			cas = CAS_LOTTIE_WEB
+		} else if b.matchOs("iOS") {
+			// We need a service account in order to download the xcode CIPD
+			// packages.
+			b.serviceAccount(b.cfg.ServiceAccountUploadNano)
+			b.Spec.Caches = append(b.Spec.Caches, &specs.Cache{
+				Name: "xcode",
+				Path: "cache/Xcode.app",
+			})
 		}
 		b.recipeProps(EXTRA_PROPS)
 		if recipe == "perf" {
@@ -2000,7 +2054,7 @@ func (b *jobBuilder) perf() {
 		} else if b.parts["arch"] == "x86" && b.parts["configuration"] == "Debug" {
 			// skia:6737
 			b.timeout(6 * time.Hour)
-		} else if b.matchOs("Mac11") {
+		} else if b.matchOs("Mac14") {
 			b.timeout(30 * time.Minute)
 		}
 

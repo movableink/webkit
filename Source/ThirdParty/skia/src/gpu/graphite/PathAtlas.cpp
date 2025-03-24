@@ -13,7 +13,7 @@
 #include "src/gpu/graphite/RecorderPriv.h"
 #include "src/gpu/graphite/RendererProvider.h"
 #include "src/gpu/graphite/TextureProxy.h"
-#include "src/gpu/graphite/geom/Transform_graphite.h"
+#include "src/gpu/graphite/geom/Transform.h"
 
 namespace skgpu::graphite {
 namespace {
@@ -59,12 +59,14 @@ std::pair<const Renderer*, std::optional<PathAtlas::MaskAndOrigin>> PathAtlas::a
     // between clips of the same size.
     Rect shapeDevBounds = localToDevice.mapRect(shape.bounds());
     skvx::float2 clippedMaskOrigin = maskBounds.topLeft() - shapeDevBounds.topLeft();
+    SkIVector transformedMaskOffset = SkIVector::Make(maskBounds.topLeft().x(),
+                                                      maskBounds.topLeft().y());
     const TextureProxy* atlasProxy = this->onAddShape(shape,
                                                       localToDevice,
                                                       style,
                                                       skvx::cast<uint16_t>(clippedMaskOrigin),
                                                       maskInfo.fMaskSize,
-                                                      maskBounds.topLeft(),
+                                                      transformedMaskOffset,
                                                       &maskInfo.fTextureOrigin);
     if (!atlasProxy) {
         return std::make_pair(nullptr, std::nullopt);
@@ -109,7 +111,7 @@ const TextureProxy* PathAtlas::DrawAtlasMgr::findOrCreateEntry(Recorder* recorde
                                                                const SkStrokeRec& strokeRec,
                                                                skvx::half2 maskOrigin,
                                                                skvx::half2 maskSize,
-                                                               skvx::float2 transformedMaskOffset,
+                                                               SkIVector transformedMaskOffset,
                                                                skvx::half2* outPos) {
     // Shapes must have a key to use this method
     skgpu::UniqueKey maskKey = GeneratePathMaskKey(shape, localToDevice, strokeRec,
@@ -146,7 +148,7 @@ const TextureProxy* PathAtlas::DrawAtlasMgr::addToAtlas(Recorder* recorder,
                                                         const Transform& localToDevice,
                                                         const SkStrokeRec& strokeRec,
                                                         skvx::half2 maskSize,
-                                                        skvx::float2 transformedMaskOffset,
+                                                        SkIVector transformedMaskOffset,
                                                         skvx::half2* outPos,
                                                         AtlasLocator* locator) {
     // Render mask.
@@ -208,8 +210,12 @@ void PathAtlas::DrawAtlasMgr::evictAll() {
     SkASSERT(fShapeCache.empty());
 }
 
-void PathAtlas::DrawAtlasMgr::compact(Recorder* recorder, bool forceCompact) {
-    fDrawAtlas->compact(recorder->priv().tokenTracker()->nextFlushToken(), forceCompact);
+void PathAtlas::DrawAtlasMgr::compact(Recorder* recorder) {
+    fDrawAtlas->compact(recorder->priv().tokenTracker()->nextFlushToken());
+}
+
+void PathAtlas::DrawAtlasMgr::freeGpuResources(Recorder* recorder) {
+    fDrawAtlas->freeGpuResources(recorder->priv().tokenTracker()->nextFlushToken());
 }
 
 }  // namespace skgpu::graphite

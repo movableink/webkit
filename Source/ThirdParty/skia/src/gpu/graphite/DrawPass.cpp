@@ -454,9 +454,9 @@ std::unique_ptr<DrawPass> DrawPass::Make(Recorder* recorder,
     GraphicsPipelineCache pipelineCache;
 
     // Geometry uniforms are currently always UBO-backed.
-    const bool useStorageBuffers = recorder->priv().caps()->storageBufferSupport();
-    const ResourceBindingRequirements& bindingReqs =
-            recorder->priv().caps()->resourceBindingRequirements();
+    const Caps* caps = recorder->priv().caps();
+    const bool useStorageBuffers = caps->storageBufferSupport();
+    const ResourceBindingRequirements& bindingReqs = caps->resourceBindingRequirements();
     Layout uniformLayout =
             useStorageBuffers ? bindingReqs.fStorageBufferLayout : bindingReqs.fUniformBufferLayout;
 
@@ -510,7 +510,7 @@ std::unique_ptr<DrawPass> DrawPass::Make(Recorder* recorder,
 
             GraphicsPipelineCache::Index pipelineIndex = pipelineCache.insert(
                     { step->renderStepID(),
-                      performsShading ? shaderID : UniquePaintParamsID::InvalidID() });
+                      performsShading ? shaderID : UniquePaintParamsID::Invalid() });
 
             gatherer.resetWithNewLayout(uniformLayout);
             step->writeUniformsAndTextures(draw.fDrawParams, &gatherer);
@@ -566,14 +566,22 @@ std::unique_ptr<DrawPass> DrawPass::Make(Recorder* recorder,
     UniformTracker geometryUniformTracker(useStorageBuffers);
     UniformTracker shadingUniformTracker(useStorageBuffers);
 
+    // Some decisions depend upon the dst read strategy used by backends to read dst texture info.
+    DstReadStrategy dstReadStrategy = caps->getDstReadStrategy(target->textureInfo());
+    const bool drawsReadDstAsInput = dstReadStrategy == DstReadStrategy::kReadFromInput;
     // TODO(b/372953722): Remove this forced binding command behavior once dst copies are always
     // bound separately from the rest of the textures.
-    const bool rebindTexturesOnPipelineChange =
-            recorder->priv().caps()->getDstReadStrategy() == DstReadStrategy::kTextureCopy;
+    const bool rebindTexturesOnPipelineChange = dstReadStrategy == DstReadStrategy::kTextureCopy;
 
     for (const SortKey& key : keys) {
         const DrawList::Draw& draw = key.draw();
         const RenderStep& renderStep = key.renderStep();
+
+        // If reading from the dst texture as an input attachment, append a DrawCommand to signal to
+        // backend command buffers to add the appropriate barrier type.
+        if (drawsReadDstAsInput && draw.readsFromDst()) {
+            drawPass->fCommandList.addBarrier(BarrierType::kReadDstFromInput);
+        }
 
         const bool pipelineChange = key.pipelineIndex() != lastPipeline;
 
@@ -595,6 +603,11 @@ std::unique_ptr<DrawPass> DrawPass::Make(Recorder* recorder,
                  key.textureBindingIndex() != TextureBindingCache::kInvalidIndex);
         const SkIRect* newScissor        = draw.fDrawParams.clip().scissor() != lastScissor ?
                 &draw.fDrawParams.clip().scissor() : nullptr;
+
+        // TODO(b/393382700): Check whether a draw uses an advanced noncoherent blend mode. If so,
+        // that draw must not be grouped with draws that read from the dst texture since those
+        // requirements are mutually exclusive. We would also need to issue append an addBarrier
+        // command to the command list with BarrierType::kAdvancedNoncoherentBlend.
 
         const bool stateChange = geomBindingChange ||
                                  shadingBindingChange ||

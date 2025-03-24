@@ -16,8 +16,7 @@
 #include "include/gpu/graphite/Recording.h"
 #include "include/gpu/graphite/Surface.h"
 #include "include/gpu/graphite/dawn/DawnBackendContext.h"
-#include "include/gpu/graphite/dawn/DawnTypes.h"
-#include "include/gpu/graphite/dawn/DawnUtils.h"
+#include "include/gpu/graphite/dawn/DawnGraphiteTypes.h"
 #include "src/gpu/graphite/ContextOptionsPriv.h"
 #include "tools/ToolUtils.h"
 #include "tools/graphite/GraphiteToolUtils.h"
@@ -31,9 +30,9 @@ namespace skwindow::internal {
 GraphiteDawnWindowContext::GraphiteDawnWindowContext(std::unique_ptr<const DisplayParams> params,
                                                      wgpu::TextureFormat surfaceFormat)
         : WindowContext(std::move(params)), fSurfaceFormat(surfaceFormat) {
-    WGPUInstanceDescriptor desc{};
+    wgpu::InstanceDescriptor desc{};
     // need for WaitAny with timeout > 0
-    desc.features.timedWaitAnyEnable = true;
+    desc.capabilities.timedWaitAnyEnable = true;
     fInstance = std::make_unique<dawn::native::Instance>(&desc);
 }
 

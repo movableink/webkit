@@ -21,7 +21,8 @@ class ShaderCodeDictionary;
 
 // These are the top-level entry points to serialize Pipeline data for the Android-style
 // Precompilation API
-[[nodiscard]] sk_sp<SkData> PipelineDescToData(ShaderCodeDictionary*,
+[[nodiscard]] sk_sp<SkData> PipelineDescToData(const Caps*,
+                                               ShaderCodeDictionary*,
                                                const GraphicsPipelineDesc&,
                                                const RenderPassDesc&);
 
@@ -30,6 +31,16 @@ class ShaderCodeDictionary;
                                       const SkData*,
                                       GraphicsPipelineDesc* pipelineDesc,
                                       RenderPassDesc* renderPassDesc);
+
+#if defined(GPU_TEST_UTILS)
+void DumpPipelineDesc(const char* label,
+                      ShaderCodeDictionary*,
+                      const GraphicsPipelineDesc&,
+                      const RenderPassDesc&);
+
+[[nodiscard]] bool ComparePipelineDescs(const GraphicsPipelineDesc& a1, const RenderPassDesc& b1,
+                                        const GraphicsPipelineDesc& a2, const RenderPassDesc& b2);
+#endif
 
 } // skgpu::graphite
 

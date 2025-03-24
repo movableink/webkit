@@ -373,6 +373,9 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 			skip(ALL, "test", ALL, "ProcessorOptimizationValidationTest")
 			skip(ALL, "test", ALL, "TextBlobAbnormal")
 			skip(ALL, "test", ALL, "TextBlobStressAbnormal")
+
+			// b/399342221
+			skip(ALL, "test", ALL, "UserDefinedStableKeyTest")
 		}
 
 		// The Tegra3 doesn't support MSAA
@@ -486,7 +489,12 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 				}
 			} else if b.extraConfig("Native") {
 				if b.extraConfig("Metal") {
-					configs = []string{"grmtl"}
+					if b.extraConfig("TestPrecompile") {
+						configs = []string{"grmtltestprecompile"}
+					} else {
+						configs = []string{"grmtl"}
+					}
+
 					if b.gpu("IntelIrisPlus") {
 						// We get some 27/255 RGB diffs on the 45 degree
 						// rotation case on this device (skbug.com/14408)
@@ -494,7 +502,12 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 					}
 				}
 				if b.extraConfig("Vulkan") {
-					configs = []string{"grvk"}
+					if b.extraConfig("TestPrecompile") {
+						configs = []string{"grvktestprecompile"}
+					} else {
+						configs = []string{"grvk"}
+					}
+
 					// Couldn't readback
 					skip(ALL, "gm", ALL, "aaxfermodes")
 					// Could not instantiate texture proxy for UploadTask!
@@ -1069,6 +1082,12 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 		skip(ALL, "image", "gen_platf", "rle4-height-negative.bmp")
 	}
 
+	if b.matchOs("Mac14") {
+		// These images are very large
+		skip(ALL, "image", "gen_platf", "rgb24largepal.bmp")
+		skip(ALL, "image", "gen_platf", "pal8oversizepal.bmp")
+	}
+
 	// These PNGs have CRC errors. The platform generators seem to draw
 	// uninitialized memory without reporting an error, so skip them to
 	// avoid lots of images on Gold.
@@ -1207,15 +1226,11 @@ func (b *taskBuilder) dmFlags(internalHardwareLabel string) {
 		"async_rescale_and_read_dog_down",
 		"async_rescale_and_read_rose",
 		"async_rescale_and_read_no_bleed",
-		"async_rescale_and_read_alpha_type"} {
+		"async_rescale_and_read_alpha_type",
+		"blurrect_compare", // GM requires canvas->makeSurface() to return a valid surface.
+		"rrect_blurs"} {
 		skip("pic-8888", "gm", ALL, test)
 		skip("serialize-8888", "gm", ALL, test)
-
-		// GM requires canvas->makeSurface() to return a valid surface.
-		// TODO(borenet): These should be just outside of this block but are
-		// left here to match the recipe which has an indentation bug.
-		skip("pic-8888", "gm", ALL, "blurrect_compare")
-		skip("serialize-8888", "gm", ALL, "blurrect_compare")
 	}
 
 	// Extensions for RAW images

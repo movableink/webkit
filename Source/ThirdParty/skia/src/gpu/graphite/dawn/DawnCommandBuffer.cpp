@@ -18,8 +18,7 @@
 #include "src/gpu/graphite/dawn/DawnCaps.h"
 #include "src/gpu/graphite/dawn/DawnComputePipeline.h"
 #include "src/gpu/graphite/dawn/DawnGraphicsPipeline.h"
-#include "src/gpu/graphite/dawn/DawnGraphiteTypesPriv.h"
-#include "src/gpu/graphite/dawn/DawnGraphiteUtilsPriv.h"
+#include "src/gpu/graphite/dawn/DawnGraphiteUtils.h"
 #include "src/gpu/graphite/dawn/DawnQueueManager.h"
 #include "src/gpu/graphite/dawn/DawnSampler.h"
 #include "src/gpu/graphite/dawn/DawnSharedContext.h"
@@ -27,6 +26,11 @@
 
 #if defined(__EMSCRIPTEN__)
 #include <emscripten/version.h>
+
+namespace wgpu {
+using TexelCopyBufferInfo = ImageCopyBuffer;
+using TexelCopyTextureInfo = ImageCopyTexture;
+}  // namespace wgpu
 #endif
 
 namespace skgpu::graphite {
@@ -218,15 +222,7 @@ bool DawnCommandBuffer::onAddRenderPass(const RenderPassDesc& renderPassDesc,
                                         SkIRect viewport,
                                         const DrawPassList& drawPasses) {
     // `viewport` has already been translated by the replay translation by the base CommandBuffer.
-    // All GPU backends support viewports that are defined to extend beyond the render target
-    // (allowing for a stable linear transformation from NDC to viewport coordinates as the replay
-    // translation pushes the viewport off the final deferred target's edges).
-    // However, WebGPU validation layers currently require that the viewport is contained within
-    // the attachment so we intersect the viewport before setting the intrinsic constants or
-    // viewport state.
-    // TODO(https://github.com/gpuweb/gpuweb/issues/373): Hopefully the validation layers can be
-    // relaxed and then this extra intersection can be removed.
-    if (!viewport.intersect(SkIRect::MakeSize(fColorAttachmentSize))) SK_UNLIKELY {
+    if (!SkIRect::Intersects(viewport, fRenderPassBounds)) SK_UNLIKELY {
         // The entire pass is offscreen
         return true;
     }
@@ -409,7 +405,7 @@ bool DawnCommandBuffer::beginRenderPass(const RenderPassDesc& renderPassDesc,
     auto& depthStencilInfo = renderPassDesc.fDepthStencilAttachment;
     if (depthStencilTexture) {
         const auto* dawnDepthStencilTexture = static_cast<const DawnTexture*>(depthStencilTexture);
-        auto format = TextureInfos::GetDawnViewFormat(dawnDepthStencilTexture->textureInfo());
+        auto format = dawnDepthStencilTexture->dawnTextureInfo().getViewFormat();
         SkASSERT(DawnFormatIsDepthOrStencil(format));
 
         // TODO: check Texture matches RenderPassDesc
@@ -649,6 +645,10 @@ bool DawnCommandBuffer::addDrawPass(const DrawPass* drawPass) {
                 this->drawIndexedIndirect(draw->fType);
                 break;
             }
+            case DrawPassCommands::Type::kAddBarrier: {
+                SKGPU_LOG_E("DawnCommandBuffer does not support the addition of barriers.");
+                break;
+            }
         }
     }
 
@@ -760,7 +760,7 @@ void DawnCommandBuffer::bindTextureAndSamplers(
 #if !defined(__EMSCRIPTEN__)
     if (command.fNumTexSamplers == 1) {
         const wgpu::YCbCrVkDescriptor& ycbcrDesc =
-                TextureInfos::GetDawnTextureSpec(
+                TextureInfoPriv::Get<DawnTextureInfo>(
                         drawPass.getTexture(command.fTextureIndices[0])->textureInfo())
                         .fYcbcrVkDescriptor;
         usingSingleStaticSampler = DawnDescriptorIsValid(ycbcrDesc);
@@ -795,10 +795,8 @@ void DawnCommandBuffer::bindTextureAndSamplers(
             // 2 * i as base binding index of the sampler and texture.
             // TODO: https://b.corp.google.com/issues/259457090:
             // Better configurable way of assigning samplers and textures' bindings.
-
-            DawnTextureInfo dawnTextureInfo;
-            TextureInfos::GetDawnTextureInfo(texture->textureInfo(), &dawnTextureInfo);
-            const wgpu::YCbCrVkDescriptor& ycbcrDesc = dawnTextureInfo.fYcbcrVkDescriptor;
+            const wgpu::YCbCrVkDescriptor& ycbcrDesc =
+                    texture->dawnTextureInfo().fYcbcrVkDescriptor;
 
             // Only add a sampler as a bind group entry if it's a regular dynamic sampler. A valid
             // YCbCrVkDescriptor indicates the usage of a static sampler, which should not be
@@ -885,7 +883,7 @@ void DawnCommandBuffer::syncUniformBuffers() {
 
 void DawnCommandBuffer::setScissor(const Scissor& scissor) {
     SkASSERT(fActiveRenderPassEncoder);
-    SkIRect rect = scissor.getRect(fReplayTranslation, fReplayClip);
+    SkIRect rect = scissor.getRect(fReplayTranslation, fRenderPassBounds);
     fActiveRenderPassEncoder.SetScissorRect(rect.x(), rect.y(), rect.width(), rect.height());
 }
 
@@ -1115,13 +1113,13 @@ bool DawnCommandBuffer::onCopyTextureToBuffer(const Texture* texture,
     const auto* wgpuTexture = static_cast<const DawnTexture*>(texture);
     auto& wgpuBuffer = static_cast<const DawnBuffer*>(buffer)->dawnBuffer();
 
-    wgpu::ImageCopyTexture src;
+    wgpu::TexelCopyTextureInfo src;
     src.texture = wgpuTexture->dawnTexture();
     src.origin.x = srcRect.x();
     src.origin.y = srcRect.y();
-    src.aspect = TextureInfos::GetDawnAspect(wgpuTexture->textureInfo());
+    src.aspect = wgpuTexture->dawnTextureInfo().fAspect;
 
-    wgpu::ImageCopyBuffer dst;
+    wgpu::TexelCopyBufferInfo dst;
     dst.buffer = wgpuBuffer;
     dst.layout.offset = bufferOffset;
     dst.layout.bytesPerRow = bufferRowBytes;
@@ -1143,10 +1141,10 @@ bool DawnCommandBuffer::onCopyBufferToTexture(const Buffer* buffer,
     auto& wgpuTexture = static_cast<const DawnTexture*>(texture)->dawnTexture();
     auto& wgpuBuffer = static_cast<const DawnBuffer*>(buffer)->dawnBuffer();
 
-    wgpu::ImageCopyBuffer src;
+    wgpu::TexelCopyBufferInfo src;
     src.buffer = wgpuBuffer;
 
-    wgpu::ImageCopyTexture dst;
+    wgpu::TexelCopyTextureInfo dst;
     dst.texture = wgpuTexture;
 
     for (int i = 0; i < count; ++i) {
@@ -1177,12 +1175,12 @@ bool DawnCommandBuffer::onCopyTextureToTexture(const Texture* src,
     auto& wgpuTextureSrc = static_cast<const DawnTexture*>(src)->dawnTexture();
     auto& wgpuTextureDst = static_cast<const DawnTexture*>(dst)->dawnTexture();
 
-    wgpu::ImageCopyTexture srcArgs;
+    wgpu::TexelCopyTextureInfo srcArgs;
     srcArgs.texture = wgpuTextureSrc;
     srcArgs.origin.x = srcRect.fLeft;
     srcArgs.origin.y = srcRect.fTop;
 
-    wgpu::ImageCopyTexture dstArgs;
+    wgpu::TexelCopyTextureInfo dstArgs;
     dstArgs.texture = wgpuTextureDst;
     dstArgs.origin.x = dstPoint.fX;
     dstArgs.origin.y = dstPoint.fY;
