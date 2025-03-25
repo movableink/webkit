@@ -56,8 +56,6 @@ setup(
         'webkitcorepy.tests.mocks',
     ],
     install_requires=[
-        'inspect2',
-        'mock',
         'requests',
         'six',
         'tblib',

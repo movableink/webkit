@@ -23,12 +23,17 @@
 import logging
 import os
 import time
+from unittest.mock import patch
 
-from mock import patch
-from webkitbugspy import bugzilla, mocks as bmocks, radar, Tracker
-from webkitcorepy import OutputCapture, testing, mocks as wkmocks
-from webkitcorepy.mocks import Time as MockTime, Terminal as MockTerminal, Environment
-from webkitscmpy import local, program, mocks, log, Commit
+from webkitbugspy import Tracker, bugzilla, radar
+from webkitbugspy import mocks as bmocks
+from webkitcorepy import OutputCapture, testing
+from webkitcorepy import mocks as wkmocks
+from webkitcorepy.mocks import Environment
+from webkitcorepy.mocks import Terminal as MockTerminal
+from webkitcorepy.mocks import Time as MockTime
+
+from webkitscmpy import Commit, local, log, mocks, program
 
 
 class TestBranch(testing.PathTestCase):

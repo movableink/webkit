@@ -21,6 +21,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
+from unittest.mock import patch
 
 from webkitcorepy.mocks import ContextStack
 
@@ -32,7 +33,6 @@ class Environment(ContextStack):
         super(Environment, self).__init__(cls=Environment)
         self.environ = kwargs
 
-        from mock import patch
         from webkitcorepy.credentials import _cache
 
         self.patches.append(patch.dict(os.environ, kwargs))

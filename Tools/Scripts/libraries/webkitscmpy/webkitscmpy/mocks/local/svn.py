@@ -23,12 +23,12 @@
 import json
 import os
 import re
-
 from datetime import datetime
+from unittest.mock import patch
 
 from webkitcorepy import mocks
-from webkitscmpy import local
-from webkitscmpy import Commit, Contributor
+
+from webkitscmpy import Commit, Contributor, local
 
 
 class Svn(mocks.Subprocess):
@@ -169,11 +169,14 @@ class Svn(mocks.Subprocess):
         )
 
     def __enter__(self):
-        from mock import patch
-        from shutil import which
-
-        self.patches.append(patch('shutil.which', lambda cmd: dict(svn=self.executable).get(cmd, which(cmd))))
+        local.Svn.executable.clear()  # Clear the memoized cache prior to patching
+        p = patch('shutil.which', lambda cmd: self.executable if cmd == 'svn' else p.temp_original(cmd))
+        self.patches.append(p)
         return super(Svn, self).__enter__()
+
+    def __exit__(self, typ, exc, tb):
+        super().__exit__(typ, exc, tb)
+        local.Svn.executable.clear()  # Clear the memoized cache after patching
 
     @property
     def branch(self):

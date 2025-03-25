@@ -21,6 +21,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import json
+from unittest import mock
 
 from webkitcorepy import string_utils
 from webkitcorepy.mocks import ContextStack
@@ -110,9 +111,8 @@ class Requests(ContextStack):
         return Response.create404(url)
 
     def __enter__(self):
-        # Allow requests and mock to be managed via autoinstall
+        # Allow requests to be managed via autoinstall
         import requests
-        from mock import patch
 
         this = self
 
@@ -127,14 +127,14 @@ class Requests(ContextStack):
                 return super(Session, self).request(method, url, **kwargs)
 
         self._temp_patches = [
-            patch('requests.Session', new=Session),
-            patch('requests.request', new=lambda *args, **kwargs: Session().request(*args, **kwargs)),
-            patch('requests.get', new=lambda *args, **kwargs: Session().request('GET', *args, **kwargs)),
-            patch('requests.head', new=lambda *args, **kwargs: Session().request('HEAD', *args, **kwargs)),
-            patch('requests.post', new=lambda *args, **kwargs: Session().request('POST', *args, **kwargs)),
-            patch('requests.put', new=lambda *args, **kwargs: Session().request('PUT', *args, **kwargs)),
-            patch('requests.patch', new=lambda *args, **kwargs: Session().request('PATCH', *args, **kwargs)),
-            patch('requests.delete', new=lambda *args, **kwargs: Session().request('DELETE', *args, **kwargs)),
+            mock.patch('requests.Session', new=Session),
+            mock.patch('requests.request', new=lambda *args, **kwargs: Session().request(*args, **kwargs)),
+            mock.patch('requests.get', new=lambda *args, **kwargs: Session().request('GET', *args, **kwargs)),
+            mock.patch('requests.head', new=lambda *args, **kwargs: Session().request('HEAD', *args, **kwargs)),
+            mock.patch('requests.post', new=lambda *args, **kwargs: Session().request('POST', *args, **kwargs)),
+            mock.patch('requests.put', new=lambda *args, **kwargs: Session().request('PUT', *args, **kwargs)),
+            mock.patch('requests.patch', new=lambda *args, **kwargs: Session().request('PATCH', *args, **kwargs)),
+            mock.patch('requests.delete', new=lambda *args, **kwargs: Session().request('DELETE', *args, **kwargs)),
         ]
         for patch in self._temp_patches:
             patch.__enter__()

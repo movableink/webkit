@@ -21,8 +21,9 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import re
-
 from functools import cmp_to_key
+from unittest.mock import patch
+
 from webkitcorepy import string_utils, unicode
 from webkitcorepy.mocks import ContextStack
 
@@ -186,7 +187,5 @@ class Subprocess(ContextStack):
 
         super(Subprocess, self).__init__(cls=Subprocess)
 
-        # Allow mock to be managed via autoinstall
-        from mock import patch
         from webkitcorepy.mocks.popen import Popen
         self.patches.append(patch('subprocess.Popen', new=Popen))

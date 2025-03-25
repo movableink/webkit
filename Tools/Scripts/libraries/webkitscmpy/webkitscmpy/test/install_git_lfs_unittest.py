@@ -21,10 +21,12 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
+from unittest.mock import patch
 
-from mock import patch
-from webkitcorepy import OutputCapture, testing, mocks as wkmocks
-from webkitscmpy import local, program, mocks
+from webkitcorepy import OutputCapture, testing
+from webkitcorepy import mocks as wkmocks
+
+from webkitscmpy import local, mocks, program
 
 
 class TestInstallGitLFS(testing.PathTestCase):

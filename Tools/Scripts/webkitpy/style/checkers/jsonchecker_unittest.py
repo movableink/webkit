@@ -23,8 +23,7 @@
 """Unit test for jsonchecker.py."""
 
 import unittest
-
-from mock import Mock
+from unittest.mock import Mock
 
 from pyfakefs import fake_filesystem_unittest
 

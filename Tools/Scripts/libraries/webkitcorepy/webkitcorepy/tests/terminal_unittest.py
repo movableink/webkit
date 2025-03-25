@@ -25,8 +25,7 @@ import logging
 import sys
 import typing
 import unittest
-
-from mock import patch
+from unittest.mock import patch
 
 from webkitcorepy import OutputCapture, Terminal, mocks
 

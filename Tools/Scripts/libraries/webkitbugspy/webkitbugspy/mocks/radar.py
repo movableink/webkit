@@ -24,12 +24,14 @@ import calendar
 import os
 import re
 import time
+from unittest.mock import patch
 
-from .base import Base
-
-from webkitbugspy import User, Issue, radar
 from webkitcorepy import string_utils
 from webkitcorepy.mocks import ContextStack
+
+from webkitbugspy import Issue, User, radar
+
+from .base import Base
 
 
 class AppleDirectoryUserEntry(object):
@@ -583,7 +585,6 @@ class Radar(Base, ContextStack):
         self.AppleDirectoryQuery = AppleDirectoryQuery(self)
         self.RadarClient = lambda authentication_strategy, client_system_identifier, retry_policy=None: RadarClient(self, authentication_strategy)
 
-        from mock import patch
         self.patches.append(patch('webkitbugspy.radar.Tracker.radarclient', new=lambda s=None: self))
 
         self.request_count = 0
@@ -595,5 +596,4 @@ class NoRadar(ContextStack):
     def __init__(self):
         super(NoRadar, self).__init__(NoRadar)
 
-        from mock import patch
         self.patches.append(patch('webkitbugspy.radar.Tracker.radarclient', new=lambda s=None: None))

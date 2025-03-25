@@ -25,12 +25,13 @@ import json
 import os
 import re
 import time
-
-from datetime import datetime
 from collections import OrderedDict
+from datetime import datetime
+from unittest.mock import patch
 
-from webkitcorepy import decorators, mocks, string_utils, OutputCapture, StringIO
-from webkitscmpy import local, Commit, Contributor
+from webkitcorepy import OutputCapture, StringIO, decorators, mocks, string_utils
+
+from webkitscmpy import Commit, Contributor, local
 from webkitscmpy.program.canonicalize.committer import main as committer_main
 from webkitscmpy.program.canonicalize.message import main as message_main
 
@@ -774,11 +775,14 @@ nothing to commit, working tree clean
         )
 
     def __enter__(self):
-        from mock import patch
-        from shutil import which
-
-        self.patches.append(patch('shutil.which', lambda cmd: dict(git=self.executable).get(cmd, which(cmd))))
+        local.Git.executable.clear()  # Clear the memoized cache prior to patching
+        p = patch('shutil.which', lambda cmd: self.executable if cmd == 'git' else p.temp_original(cmd))
+        self.patches.append(p)
         return super(Git, self).__enter__()
+
+    def __exit__(self, typ, exc, tb):
+        super().__exit__(typ, exc, tb)
+        local.Git.executable.clear()  # Clear the memoized cache after patching
 
     @property
     def branch(self):

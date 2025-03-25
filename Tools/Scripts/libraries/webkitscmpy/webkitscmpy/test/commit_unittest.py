@@ -24,13 +24,15 @@ import json
 import logging
 import os
 import unittest
-
-from mock import patch
 from datetime import datetime
-from webkitbugspy import bugzilla, mocks as bmocks, Tracker, radar
+from unittest.mock import patch
+
+from webkitbugspy import Tracker, bugzilla, radar
+from webkitbugspy import mocks as bmocks
 from webkitcorepy import OutputCapture, testing
 from webkitcorepy.mocks import Environment
-from webkitscmpy import Contributor, Commit, program, mocks
+
+from webkitscmpy import Commit, Contributor, mocks, program
 
 
 class TestCommit(unittest.TestCase):

@@ -21,9 +21,12 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
-
+import shutil
 from datetime import datetime, timedelta
-from webkitcorepy import OutputCapture, LoggerCapture, testing
+from unittest.mock import patch
+
+from webkitcorepy import LoggerCapture, OutputCapture, testing
+
 from webkitscmpy import Commit, local, mocks, remote
 
 
@@ -263,6 +266,31 @@ class TestLocalSvn(testing.PathTestCase):
             self.assertEqual(svn.cache.to_identifier(revision=100), None)
             self.assertEqual(svn.cache.to_revision(hash='badc0dd1f'), None)
             self.assertEqual(svn.cache.to_revision(identifier='6@trunk'), None)
+
+
+class TestMockSvn(testing.PathTestCase):
+    basepath = 'mock/repository'
+
+    def setUp(self):
+        super().setUp()
+        os.mkdir(os.path.join(self.path, '.svn'))
+
+    def test_executable(self):
+        with mocks.local.Svn(self.path) as mock_svn:
+            self.assertEqual(mock_svn.executable, local.Svn.executable())
+
+    def test_executable_stack(self):
+        with patch('shutil.which', lambda _: 'everything-command'):
+            with mocks.local.Svn(self.path) as mock_svn:
+                self.assertEqual(mock_svn.executable, local.Svn.executable())
+                self.assertEqual('everything-command', shutil.which('echo'))
+
+    def test_executable_stack_2(self):
+        with mocks.local.Svn(self.path) as mock_svn:
+            with patch('shutil.which', lambda _: 'everything-command'):
+                self.assertEqual(os.path.realpath('everything-command'), local.Svn.executable())
+                self.assertEqual('everything-command', shutil.which('echo'))
+
 
 class TestRemoteSvn(testing.TestCase):
     remote = 'https://svn.example.org/repository/webkit'

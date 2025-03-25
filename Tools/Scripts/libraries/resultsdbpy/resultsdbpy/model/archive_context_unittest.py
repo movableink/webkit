@@ -22,12 +22,13 @@
 
 import base64
 import io
-import mock
 import os
 import zipfile
+from unittest import mock
 
 from fakeredis import FakeStrictRedis
 from redis import StrictRedis
+
 from resultsdbpy.controller.configuration import Configuration
 from resultsdbpy.model.cassandra_context import CassandraContext
 from resultsdbpy.model.mock_cassandra_context import MockCassandraContext

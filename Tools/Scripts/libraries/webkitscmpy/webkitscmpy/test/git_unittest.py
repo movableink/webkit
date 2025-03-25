@@ -21,11 +21,14 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
+import shutil
 import time
-
 from datetime import datetime
-from webkitcorepy import run, testing, LoggerCapture, OutputCapture
+from unittest.mock import patch
+
+from webkitcorepy import LoggerCapture, OutputCapture, run, testing
 from webkitcorepy.mocks import Time as MockTime
+
 from webkitscmpy import Commit, local, mocks, remote
 
 
@@ -613,6 +616,30 @@ CommitDate: {time_c}
             self.assertEqual(repo.is_suitable_branch_for_pull_request('safari-610-branch', source_remote=source_remote), False)
             self.assertEqual(repo.is_suitable_branch_for_pull_request('branch-a', source_remote=source_remote), False)
             self.assertEqual(repo.is_suitable_branch_for_pull_request(None, source_remote=source_remote), False)
+
+
+class TestMockGit(testing.PathTestCase):
+    basepath = 'mock/repository'
+
+    def setUp(self):
+        super().setUp()
+        os.mkdir(os.path.join(self.path, '.git'))
+
+    def test_executable(self):
+        with mocks.local.Git(self.path) as mock_git:
+            self.assertEqual(mock_git.executable, local.Git.executable())
+
+    def test_executable_stack(self):
+        with patch('shutil.which', lambda _: 'everything-command'):
+            with mocks.local.Git(self.path) as mock_git:
+                self.assertEqual(mock_git.executable, local.Git.executable())
+                self.assertEqual('everything-command', shutil.which('echo'))
+
+    def test_executable_stack_2(self):
+        with mocks.local.Git(self.path) as mock_git:
+            with patch('shutil.which', lambda _: 'everything-command'):
+                self.assertEqual(os.path.realpath('everything-command'), local.Git.executable())
+                self.assertEqual('everything-command', shutil.which('echo'))
 
 
 class TestGitHub(testing.TestCase):

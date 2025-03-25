@@ -22,13 +22,13 @@
 
 import os
 import time
+from unittest.mock import Mock, patch
 
-from mock import patch
-from mock.mock import Mock
+from webkitbugspy import mocks as bmocks
 from webkitcorepy import OutputCapture, testing
 from webkitcorepy.mocks import Time as MockTime
-from webkitscmpy import program, mocks, local, Contributor, Commit
-from webkitbugspy import mocks as bmocks
+
+from webkitscmpy import Commit, Contributor, local, mocks, program
 
 
 class TestConflict(testing.PathTestCase):

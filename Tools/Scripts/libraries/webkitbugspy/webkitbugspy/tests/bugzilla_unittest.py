@@ -21,13 +21,15 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import json
-import re
 import logging
+import re
 import unittest
+from unittest.mock import patch
 
-from mock import patch
+from webkitcorepy import OutputCapture
+from webkitcorepy import mocks as wkmocks
+
 from webkitbugspy import Tracker, User, bugzilla, mocks, radar
-from webkitcorepy import OutputCapture, mocks as wkmocks
 
 
 class TestBugzilla(unittest.TestCase):

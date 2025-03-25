@@ -20,13 +20,19 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import mock
 import re
 import time
-
-from cassandra.metadata import ColumnMetadata, KeyspaceMetadata, Metadata, TableMetadataV3
-from cassandra.util import OrderedDict
 from collections import defaultdict
+from unittest import mock
+
+from cassandra.metadata import (
+    ColumnMetadata,
+    KeyspaceMetadata,
+    Metadata,
+    TableMetadataV3,
+)
+from cassandra.util import OrderedDict
+
 from resultsdbpy.model.cassandra_context import CassandraContext
 
 

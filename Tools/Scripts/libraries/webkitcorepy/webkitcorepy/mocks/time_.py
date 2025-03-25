@@ -23,6 +23,7 @@
 import datetime
 import functools
 import time
+from unittest import mock
 
 
 # Without the meta-class, mock.Time must either be a decorator or a contextmanager.
@@ -36,8 +37,6 @@ class _MetaTime(type):
         self.stack = []
 
     def __enter__(self):
-        # Allow mock to be managed via autoinstall
-        from mock import patch
         self.stack.append(time.time())
 
         def sleep_func(t):
@@ -51,10 +50,10 @@ class _MetaTime(type):
                 return cls.fromtimestamp(self.stack[-1], tz=tz)
 
         self.patches.append([
-            patch('time.time', new=lambda: self.stack[-1]),
-            patch('time.sleep', new=sleep_func),
-            patch('datetime.datetime', new=FakeDateTime),
-            patch('webkitcorepy.timeout.ORIGINAL_SLEEP', new=sleep_func),
+            mock.patch('time.time', new=lambda: self.stack[-1]),
+            mock.patch('time.sleep', new=sleep_func),
+            mock.patch('datetime.datetime', new=FakeDateTime),
+            mock.patch('webkitcorepy.timeout.ORIGINAL_SLEEP', new=sleep_func),
         ])
 
         for patch in self.patches[-1]:
@@ -70,7 +69,7 @@ class _MetaTime(type):
 class Time(metaclass=_MetaTime):
     """
     Mock out time.sleep, time.time and datetime.datetime for testing.
-    Like mock.patch, this class can be used as both a decorator and a context manager.
+    Like unittest.mock.patch, this class can be used as both a decorator and a context manager.
 
     Example usage:
         @mocks.Time

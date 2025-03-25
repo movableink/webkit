@@ -4,7 +4,7 @@ Provides a number of utilities intended to support intermediate to advanced Pyth
 
 ## Requirements
 
-The mock, requests and six libraries.
+The requests, six, and tblib libraries.
  
 ## Usage
 
@@ -14,7 +14,7 @@ from webkitcorepy import Version
 version = Version(1, 2, 3)
 ```
 
-Unicode stream management across Python 2 and 3
+Unicode stream management, designed to ease transition to Python 3
 ```
 from webkitcorepy import BytesIO, StringIO, UnicodeIO, unicode
 ```

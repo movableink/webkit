@@ -56,8 +56,6 @@ version = Version(1, 0, 1)
 
 from webkitcorepy.autoinstall import Package, AutoInstall
 
-AutoInstall.register(Package('mock', Version(5, 1, 0), wheel=True))
-
 if sys.version_info >= (3, 12):
     AutoInstall.register(Package('setuptools', Version(68, 1, 2)))
 else:

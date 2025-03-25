@@ -20,8 +20,8 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import mock
 import unittest
+from unittest.mock import patch
 
 from webkitcorepy import mocks
 
@@ -35,7 +35,7 @@ class ExampleStack(mocks.ContextStack):
 
     def __init__(self):
         super(ExampleStack, self).__init__(cls=ExampleStack)
-        self.patches.append(mock.patch(
+        self.patches.append(patch(
             'webkitcorepy.tests.mocks.context_stack_unittest.to_be_replaced',
             new=lambda: str(self),
         ))
