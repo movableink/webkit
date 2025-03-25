@@ -469,7 +469,7 @@ private:
     bool dispatchNavigateEvent(const URL& newURL, FrameLoadType, const AtomString&, NavigationHistoryBehavior, bool isSameDocument, FormState* = nullptr, SerializedScriptValue* classicHistoryAPIState = nullptr);
 
     WeakRef<LocalFrame> m_frame;
-    UniqueRef<LocalFrameLoaderClient> m_client;
+    const UniqueRef<LocalFrameLoaderClient> m_client;
 
     const std::unique_ptr<PolicyChecker> m_policyChecker;
     const UniqueRef<HistoryController> m_history;

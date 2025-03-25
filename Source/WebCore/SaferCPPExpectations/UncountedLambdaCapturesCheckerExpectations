@@ -86,7 +86,6 @@ html/track/LoadableTextTrack.cpp
 html/track/TrackBase.cpp
 inspector/InspectorOverlay.cpp
 inspector/agents/page/PageDOMDebuggerAgent.cpp
-loader/FrameLoader.cpp
 loader/NetscapePlugInStreamLoader.cpp
 page/EventSource.cpp
 page/ImageAnalysisQueue.cpp

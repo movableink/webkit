@@ -237,7 +237,6 @@ WebProcess/WebPage/WebContextMenu.cpp
 WebProcess/WebPage/WebDisplayRefreshMonitor.cpp
 WebProcess/WebPage/WebFrame.cpp
 WebProcess/WebPage/WebOpenPanelResultListener.cpp
-WebProcess/WebPage/WebPage.cpp
 WebProcess/WebPage/WebPageOverlay.cpp
 WebProcess/WebPage/mac/PageBannerMac.mm
 WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm

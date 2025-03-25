@@ -107,7 +107,6 @@ layout/integration/inline/LayoutIntegrationLineLayout.h
 layout/layouttree/LayoutElementBox.h
 loader/DocumentLoader.cpp
 loader/DocumentThreadableLoader.h
-loader/FrameLoader.cpp
 loader/cache/CachedImageClient.h
 loader/cache/CachedResourceHandle.h
 page/DOMWindow.cpp
