@@ -41,6 +41,7 @@ cocoa/TestNavigationDelegate.mm
 cocoa/TestProtocol.mm
 cocoa/TestResourceLoadDelegate.mm
 cocoa/TestUIDelegate.mm
+cocoa/TestScriptMessageHandler.mm
 cocoa/TestWebExtensionsDelegate.mm
 cocoa/TestWKWebView.mm
 cocoa/TestWKWebViewConfiguration.mm

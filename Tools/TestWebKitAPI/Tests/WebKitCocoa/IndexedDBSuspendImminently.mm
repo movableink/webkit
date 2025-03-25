@@ -28,6 +28,7 @@
 #import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
+#import "TestScriptMessageHandler.h"
 #import "TestURLSchemeHandler.h"
 #import <WebKit/WKProcessPoolPrivate.h>
 #import <WebKit/WKUserContentControllerPrivate.h>
@@ -39,40 +40,7 @@
 
 #if PLATFORM(IOS_FAMILY)
 
-static bool idbActivitiesStarted;
-
-@interface IndexedDBSuspendImminentlyMessageHandler : NSObject <WKScriptMessageHandler>
-@end
-
-@implementation IndexedDBSuspendImminentlyMessageHandler
-
-- (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message
-{
-    idbActivitiesStarted = true;
-    receivedScriptMessage = true;
-    lastScriptMessage = message;
-}
-
-@end
-
-static void runUntilMessageReceived(NSString* expectedMessage)
-{
-    TestWebKitAPI::Util::run(&receivedScriptMessage);
-    RetainPtr<NSString> string = (NSString *)[lastScriptMessage body];
-    EXPECT_WK_STREQ(expectedMessage, string.get());
-    receivedScriptMessage = false;
-}
-
-static void keepNetworkProcessActive()
-{
-    [[WKWebsiteDataStore defaultDataStore] fetchDataRecordsOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] completionHandler:^(NSArray<WKWebsiteDataRecord *> *dataRecords) {
-        if (!idbActivitiesStarted)
-            keepNetworkProcessActive();
-    }];
-}
-
-// FIXME: Re-enable this test once webkit.org/b/290203 is resolved.
-TEST(IndexedDB, DISABLED_IndexedDBSuspendImminently)
+TEST(IndexedDB, IndexedDBSuspendImminently)
 {
     readyToContinue = false;
     [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] modifiedSince:[NSDate distantPast] completionHandler:^() {
@@ -80,19 +48,19 @@ TEST(IndexedDB, DISABLED_IndexedDBSuspendImminently)
     }];
     TestWebKitAPI::Util::run(&readyToContinue);
 
-    auto handler = adoptNS([[IndexedDBSuspendImminentlyMessageHandler alloc] init]);
+    auto handler = adoptNS([TestScriptMessageHandler new]);
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
     [[configuration userContentController] addScriptMessageHandler:handler.get() name:@"testHandler"];
     auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
     NSURLRequest *request = [NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"IndexedDBSuspendImminently" withExtension:@"html"]];
     [webView loadRequest:request];
-    runUntilMessageReceived(@"Continue");
+    EXPECT_WK_STREQ([handler waitForMessage].body, @"Continue");
 
     [configuration.get().websiteDataStore _sendNetworkProcessWillSuspendImminently];
-    runUntilMessageReceived(@"Expected Abort For Suspension");
+    EXPECT_WK_STREQ([handler waitForMessage].body, @"Expected Abort For Suspension");
 
     [configuration.get().websiteDataStore _sendNetworkProcessDidResume];
-    runUntilMessageReceived(@"Expected Success After Resume");
+    EXPECT_WK_STREQ([handler waitForMessage].body, @"Expected Success After Resume");
 }
 
 TEST(IndexedDB, SuspendImminentlyForThirdPartyDatabases)
@@ -143,7 +111,7 @@ TEST(IndexedDB, SuspendImminentlyForThirdPartyDatabases)
     )TESTRESOURCE";
 
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
-    auto handler = adoptNS([[IndexedDBSuspendImminentlyMessageHandler alloc] init]);
+    auto handler = adoptNS([TestScriptMessageHandler new]);
     [[configuration userContentController] addScriptMessageHandler:handler.get() name:@"testHandler"];
     auto schemeHandler = adoptNS([[TestURLSchemeHandler alloc] init]);
     [schemeHandler setStartURLSchemeTaskHandler:^(WKWebView *, id<WKURLSchemeTask> task) {
@@ -156,12 +124,12 @@ TEST(IndexedDB, SuspendImminentlyForThirdPartyDatabases)
 
     auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
     [webView loadHTMLString:mainFrameString baseURL:[NSURL URLWithString:@"http://webkit.org"]];
-    runUntilMessageReceived(@"database is created");
+    EXPECT_WK_STREQ([handler waitForMessage].body, @"database is created");
 
     [configuration.get().websiteDataStore _sendNetworkProcessWillSuspendImminently];
     [configuration.get().websiteDataStore _sendNetworkProcessDidResume];
 
-    runUntilMessageReceived(@"transaction is completed");
+    EXPECT_WK_STREQ([handler waitForMessage].body, @"transaction is completed");
 }
 
 #endif // PLATFORM(IOS_FAMILY)
