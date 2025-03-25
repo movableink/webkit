@@ -29,6 +29,7 @@
 #include "CachedResourceRequest.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "CookieJar.h"
 #include "CrossOriginAccessControl.h"
 #include "Document.h"
 #include "DocumentLoader.h"
@@ -124,7 +125,7 @@ static inline bool pageIsBeingDismissed(Document& document)
 // https://html.spec.whatwg.org/multipage/images.html#updating-the-image-data:list-of-available-images
 static bool canReuseFromListOfAvailableImages(const CachedResourceRequest& request, Document& document)
 {
-    CachedResourceHandle resource = MemoryCache::singleton().resourceForRequest(request.resourceRequest(), document.page()->sessionID());
+    CachedResourceHandle resource = MemoryCache::singleton().resourceForRequest(request.resourceRequest(), document.protectedPage()->sessionID());
     if (!resource || resource->stillNeedsLoad() || resource->isPreloaded())
         return false;
 
@@ -202,11 +203,12 @@ void ImageLoader::updateFromElement(RelevantMutation relevantMutation)
 {
     // If we're not making renderers for the page, then don't load images. We don't want to slow
     // down the raw HTML parsing case by loading images we don't intend to display.
-    Ref document = element().document();
+    Ref element = this->element();
+    Ref document = element->document();
     if (!document->hasLivingRenderTree())
         return;
 
-    AtomString attr = protectedElement()->imageSourceURL();
+    AtomString attr = element->imageSourceURL();
 
     LOG_WITH_STREAM(LazyLoading, stream << "ImageLoader " << this << " updateFromElement, current URL is " << attr);
 
@@ -219,11 +221,11 @@ void ImageLoader::updateFromElement(RelevantMutation relevantMutation)
     CachedResourceHandle<CachedImage> newImage;
     if (!attr.isNull() && !StringView(attr).containsOnly<isASCIIWhitespace<UChar>>()) {
         ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
-        options.contentSecurityPolicyImposition = protectedElement()->isInUserAgentShadowTree() ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
-        options.loadedFromPluginElement = is<HTMLPlugInElement>(element()) ? LoadedFromPluginElement::Yes : LoadedFromPluginElement::No;
+        options.contentSecurityPolicyImposition = element->isInUserAgentShadowTree() ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
+        options.loadedFromPluginElement = is<HTMLPlugInElement>(element) ? LoadedFromPluginElement::Yes : LoadedFromPluginElement::No;
         options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
-        options.serviceWorkersMode = is<HTMLPlugInElement>(element()) ? ServiceWorkersMode::None : ServiceWorkersMode::All;
-        RefPtr imageElement = dynamicDowncast<HTMLImageElement>(element());
+        options.serviceWorkersMode = is<HTMLPlugInElement>(element) ? ServiceWorkersMode::None : ServiceWorkersMode::All;
+        RefPtr imageElement = dynamicDowncast<HTMLImageElement>(element);
         if (imageElement) {
             options.referrerPolicy = imageElement->referrerPolicy();
             options.fetchPriority = imageElement->fetchPriority();
@@ -231,7 +233,7 @@ void ImageLoader::updateFromElement(RelevantMutation relevantMutation)
                 options.initiator = Initiator::Imageset;
         }
 
-        auto crossOriginAttribute = protectedElement()->attributeWithoutSynchronization(HTMLNames::crossoriginAttr);
+        auto crossOriginAttribute = element->attributeWithoutSynchronization(HTMLNames::crossoriginAttr);
 
         // Use URL from original request for same URL loads in order to preserve the original base URL.
         URL imageURL;
@@ -253,10 +255,10 @@ void ImageLoader::updateFromElement(RelevantMutation relevantMutation)
             m_pendingURL = attr;
         }
         ResourceRequest resourceRequest(imageURL);
-        resourceRequest.setInspectorInitiatorNodeIdentifier(InspectorInstrumentation::identifierForNode(m_element));
+        resourceRequest.setInspectorInitiatorNodeIdentifier(InspectorInstrumentation::identifierForNode(element));
 
         auto request = createPotentialAccessControlRequest(WTFMove(resourceRequest), WTFMove(options), document, crossOriginAttribute);
-        request.setInitiator(element());
+        request.setInitiator(element);
 
         if (m_loadManually) {
             Ref cachedResourceLoader = document->cachedResourceLoader();
@@ -281,7 +283,7 @@ void ImageLoader::updateFromElement(RelevantMutation relevantMutation)
             }
             auto imageLoading = (m_lazyImageLoadState == LazyImageLoadState::Deferred) ? ImageLoading::DeferredUntilVisible : ImageLoading::Immediate;
             newImage = document->protectedCachedResourceLoader()->requestImage(WTFMove(request), imageLoading).value_or(nullptr);
-            LOG_WITH_STREAM(LazyLoading, stream << "ImageLoader " << this << " updateFromElement " << element() << " - state changed from " << oldState << " to " << m_lazyImageLoadState << ", loading is " << imageLoading << " new image " << newImage.get());
+            LOG_WITH_STREAM(LazyLoading, stream << "ImageLoader " << this << " updateFromElement " << element.get() << " - state changed from " << oldState << " to " << m_lazyImageLoadState << ", loading is " << imageLoading << " new image " << newImage.get());
         }
 
 #if ENABLE(MULTI_REPRESENTATION_HEIC)
@@ -358,7 +360,7 @@ void ImageLoader::didUpdateCachedImage(RelevantMutation relevantMutation, Cached
                 updateRenderer();
 
             if (m_lazyImageLoadState == LazyImageLoadState::Deferred)
-                LazyLoadImageObserver::observe(element());
+                LazyLoadImageObserver::observe(protectedElement());
 
             // If newImage is cached, addClient() will result in the load event
             // being queued to fire.

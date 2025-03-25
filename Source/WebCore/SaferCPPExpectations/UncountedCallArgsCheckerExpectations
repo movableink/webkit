@@ -684,7 +684,6 @@ html/HTMLFormElement.cpp
 html/HTMLFrameElementBase.cpp
 html/HTMLIFrameElement.cpp
 html/HTMLImageElement.cpp
-html/HTMLImageLoader.cpp
 html/HTMLInputElement.cpp
 html/HTMLLinkElement.cpp
 html/HTMLMapElement.cpp
@@ -845,7 +844,6 @@ loader/DocumentWriter.cpp
 loader/FormSubmission.cpp
 loader/FrameLoadRequest.cpp
 loader/FrameLoader.cpp
-loader/ImageLoader.cpp
 loader/LinkLoader.cpp
 loader/MediaResourceLoader.cpp
 loader/MixedContentChecker.cpp
