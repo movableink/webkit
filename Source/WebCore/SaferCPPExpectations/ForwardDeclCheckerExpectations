@@ -149,7 +149,6 @@ platform/graphics/coretext/FontCustomPlatformDataCoreText.cpp
 platform/graphics/cv/GraphicsContextGLCVCocoa.h
 platform/graphics/mac/LegacyDisplayRefreshMonitorMac.h
 platform/graphics/mac/controls/ControlMac.mm
-platform/mac/DataDetectorHighlight.mm
 platform/mediarecorder/MediaRecorderPrivateEncoder.h
 platform/mediastream/libwebrtc/LibWebRTCDav1dDecoder.cpp
 platform/mediastream/mac/CoreAudioSharedUnit.h
