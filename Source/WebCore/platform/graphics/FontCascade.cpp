@@ -1625,6 +1625,16 @@ float FontCascade::widthForComplexText(const TextRun& run, SingleThreadWeakHashS
     return controller.totalAdvance().width();
 }
 
+float FontCascade::widthForCharacterInRun(const TextRun& run, unsigned characterPosition) const
+{
+    auto shortenedRun = run.subRun(characterPosition, 1);
+    auto codePathToUse = codePath(run);
+    if (codePathToUse == CodePath::Complex)
+        return widthForComplexText(shortenedRun);
+
+    return widthForSimpleText(shortenedRun);
+}
+
 void FontCascade::adjustSelectionRectForSimpleText(const TextRun& run, LayoutRect& selectionRect, unsigned from, unsigned to) const
 {
     GlyphBuffer glyphBuffer;

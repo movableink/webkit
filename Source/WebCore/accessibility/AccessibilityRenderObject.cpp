@@ -68,9 +68,11 @@
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
 #include "Image.h"
+#include "InlineIteratorBoxInlines.h"
 #include "InlineIteratorTextBoxInlines.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LegacyRenderSVGShape.h"
+#include "LineSelection.h"
 #include "LocalFrame.h"
 #include "LocalizedStrings.h"
 #include "NodeList.h"
@@ -1405,12 +1407,15 @@ AXTextRuns AccessibilityRenderObject::textRuns()
     CheckedPtr renderer = this->renderer();
     if (auto* renderLineBreak = dynamicDowncast<RenderLineBreak>(renderer.get())) {
         auto box = InlineIterator::boxFor(*renderLineBreak);
-        return { renderLineBreak->containingBlock(), { AXTextRun(box ? box->lineIndex() : 0, makeString('\n').isolatedCopy(), { lengthOneDomOffsets }) } };
+        return { renderLineBreak->containingBlock(), { AXTextRun(box ? box->lineIndex() : 0, makeString('\n').isolatedCopy(), { lengthOneDomOffsets }, { 0 }, 0) } };
     }
 
     if (is<HTMLImageElement>(node()) || is<HTMLMediaElement>(node())) {
         auto* containingBlock = renderer ? renderer->containingBlock() : nullptr;
-        return containingBlock ? AXTextRuns(containingBlock, { AXTextRun(0, String(span(objectReplacementCharacter)), { lengthOneDomOffsets }) }) : AXTextRuns();
+        FloatRect rect = frameRect();
+        uint16_t width = static_cast<uint16_t>(rect.width());
+        uint16_t height = static_cast<uint16_t>(rect.height());
+        return containingBlock ? AXTextRuns(containingBlock, { AXTextRun(0, String(span(objectReplacementCharacter)), { lengthOneDomOffsets }, { width }, height) }) : AXTextRuns();
     }
 
     WeakPtr renderText = dynamicDowncast<RenderText>(renderer.get());
@@ -1423,6 +1428,10 @@ AXTextRuns AccessibilityRenderObject::textRuns()
 
     Vector<AXTextRun> runs;
     StringBuilder lineString;
+    Vector<uint16_t> characterWidths;
+    // Used to round an accumulated floating point value into an uint16, which is how we store character widths.
+    float accumulatedDistanceFromStart = 0.0;
+    float lineHeight = 0.0;
     // Appends text to the current lineString, collapsing whitespace as necessary (similar to how TextIterator::handleTextRun() does).
     auto appendToLineString = [&] (const InlineIterator::TextBoxIterator& textBox) {
         auto text = textBox->originalText();
@@ -1431,8 +1440,20 @@ AXTextRuns AccessibilityRenderObject::textRuns()
 
         bool collapseTabs = textBox->style().collapseWhiteSpace();
         bool collapseNewlines = !textBox->style().preserveNewline();
+
+        auto textRun = textBox->textRun(InlineIterator::TextRunMode::Editing);
+        lineHeight = LineSelection::logicalRect(*textBox->lineBox()).height();
+
+        auto appendCharacterWidth = [&] (unsigned characterIndex) {
+            float characterWidth = textBox->fontCascade().widthForCharacterInRun(textRun, characterIndex);
+            characterWidths.append(static_cast<uint16_t>(characterWidth + fmod(accumulatedDistanceFromStart, 1)));
+            accumulatedDistanceFromStart += characterWidth;
+        };
+
         if (!collapseTabs && !collapseNewlines) {
             lineString.append(text);
+            for (unsigned i = 0; i < text.length(); i++)
+                appendCharacterWidth(i);
             return;
         }
 
@@ -1445,6 +1466,8 @@ AXTextRuns AccessibilityRenderObject::textRuns()
                 lineString.append(' ');
             else
                 lineString.append(character);
+
+            appendCharacterWidth(i);
         }
     };
 
@@ -1463,8 +1486,10 @@ AXTextRuns AccessibilityRenderObject::textRuns()
         size_t newLineIndex = textBox->lineIndex();
         if (newLineIndex != currentLineIndex) {
             // FIXME: Currently, this is only ever called to ship text runs off to the accessibility thread. But maybe we should we make the isolatedCopy()s in this function optional based on a parameter?
-            runs.append({ currentLineIndex, lineString.toString().isolatedCopy(), { std::exchange(textRunDomOffsets, { }) } });
+            runs.append({ currentLineIndex, lineString.toString().isolatedCopy(), { std::exchange(textRunDomOffsets, { }) }, std::exchange(characterWidths, { }), lineHeight });
             lineString.clear();
+            accumulatedDistanceFromStart = 0.0;
+            lineHeight = 0.0;
         }
         currentLineIndex = newLineIndex;
 
@@ -1472,7 +1497,7 @@ AXTextRuns AccessibilityRenderObject::textRuns()
     }
 
     if (!lineString.isEmpty())
-        runs.append({ currentLineIndex, lineString.toString().isolatedCopy(), WTFMove(textRunDomOffsets) });
+        runs.append({ currentLineIndex, lineString.toString().isolatedCopy(), WTFMove(textRunDomOffsets), std::exchange(characterWidths, { }), lineHeight });
     return { renderText->containingBlock(), WTFMove(runs) };
 }
 

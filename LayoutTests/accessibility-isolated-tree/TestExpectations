@@ -53,7 +53,6 @@ accessibility/mac/attributed-string-with-listitem-multiple-lines.html [ Failure 
 accessibility/mac/attributed-string/attributed-string-does-not-includes-misspelled-for-non-editable.html [ Failure ]
 accessibility/mac/attributed-string/attributed-string-for-range-with-options.html [ Failure ]
 accessibility/mac/attributed-string/attributed-string-for-range.html [ Failure ]
-accessibility/mac/bounds-for-range.html [ Failure ]
 accessibility/mac/character-offset-from-upstream-position.html [ Failure ]
 accessibility/mac/content-editable-attributed-string.html [ Failure ]
 accessibility/mac/insertion-point-line-number.html [ Failure ]

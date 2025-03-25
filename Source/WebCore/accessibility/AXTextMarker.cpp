@@ -934,17 +934,11 @@ static FloatRect viewportRelativeFrameFromRuns(Ref<AXIsolatedObject> object, uns
         return relativeFrame;
     }
 
-    float estimatedLineHeight = relativeFrame.height() / runs->size();
-    if (auto fontRef = object->font()) {
-        auto runsLocalRect = runs->localRect(start, end, estimatedLineHeight, relativeFrame, fontRef.get(), object->fontOrientation());
-        // The rect we got above is a "local" rect, relative to nothing else. Move it to be
-        // anchored at this object's relative frame.
-        runsLocalRect.move(relativeFrame.x(), relativeFrame.y());
-        return runsLocalRect;
-    }
-
-    // This means we had no font information, so fallback to the object's relative frame.
-    return relativeFrame;
+    auto runsLocalRect = runs->localRect(start, end, object->fontOrientation());
+    // The rect we got above is a "local" rect, relative to nothing else. Move it to be
+    // anchored at this object's relative frame.
+    runsLocalRect.move(relativeFrame.x(), relativeFrame.y());
+    return runsLocalRect;
 }
 
 static FloatRect viewportRelativeFrameFromRuns(Ref<AXIsolatedObject> object, unsigned offset)

@@ -76,10 +76,18 @@ struct AXTextRun {
     // This Vector would then have values: [[2, 10], [11, 16]]
     Vector<std::array<uint16_t, 2>> textRunDomOffsets;
 
-    AXTextRun(size_t lineIndex, String&& text, Vector<std::array<uint16_t, 2>>&& domOffsets)
+    // An array the size of the run, where each value is the width/advance of each character in the run (in the direction
+    // of the writing mode: horizontal or vertical).
+    Vector<uint16_t> characterAdvances;
+
+    float lineHeight;
+
+    AXTextRun(size_t lineIndex, String&& text, Vector<std::array<uint16_t, 2>>&& domOffsets, Vector<uint16_t> characterAdvances, float lineHeight)
         : lineIndex(lineIndex)
         , text(WTFMove(text))
         , textRunDomOffsets(WTFMove(domOffsets))
+        , characterAdvances(WTFMove(characterAdvances))
+        , lineHeight(lineHeight)
     { }
 
     String debugDescription(void* containingBlock) const
@@ -88,6 +96,7 @@ struct AXTextRun {
         return makeString(lineID.debugDescription(), ": |"_s, makeStringByReplacingAll(text, '\n', "{newline}"_s), "|(len "_s, text.length(), ")"_s);
     }
     const Vector<std::array<uint16_t, 2>>& domOffsets() const { return textRunDomOffsets; }
+    const Vector<uint16_t>& advances() const { return characterAdvances; }
 
     // Convenience methods for TextUnit movement.
     bool startsWithLineBreak() const { return text.startsWith('\n'); }
@@ -166,7 +175,7 @@ struct AXTextRuns {
     //   b|bb|b
     // The local rect would be:
     //   {x: width_of_single_b, y: |lineHeight| * 1, width: width_of_two_b, height: |lineHeight * 1|}
-    FloatRect localRect(unsigned start, unsigned end, float lineHeight, FloatRect, CTFontRef, FontOrientation) const;
+    FloatRect localRect(unsigned start, unsigned end, FontOrientation) const;
 };
 
 } // namespace WebCore
