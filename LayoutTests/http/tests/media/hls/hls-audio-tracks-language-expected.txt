@@ -1,0 +1,8 @@
+
+EVENT(canplaythrough)
+EXPECTED (video.audioTracks.length == '3') OK
+EXPECTED (video.audioTracks[0].language == 'en-US') OK
+EXPECTED (video.audioTracks[1].language == 'fr-FR') OK
+EXPECTED (video.audioTracks[2].language == 'es-US') OK
+END OF TEST
+

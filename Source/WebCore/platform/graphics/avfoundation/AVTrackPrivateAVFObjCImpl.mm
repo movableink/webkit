@@ -295,12 +295,18 @@ AtomString AVTrackPrivateAVFObjCImpl::label() const
 
 AtomString AVTrackPrivateAVFObjCImpl::language() const
 {
-    if (m_assetTrack)
-        return AtomString { languageForAVAssetTrack(m_assetTrack.get()) };
-    if (m_mediaSelectionOption)
-        return AtomString { languageForAVMediaSelectionOption(m_mediaSelectionOption->avMediaSelectionOption()) };
+    if (m_assetTrack) {
+        auto language = languageForAVAssetTrack(m_assetTrack.get());
+        if (!language.isEmpty())
+            return AtomString { language };
+    }
 
-    ASSERT_NOT_REACHED();
+    if (m_mediaSelectionOption) {
+        auto language = languageForAVMediaSelectionOption(m_mediaSelectionOption->avMediaSelectionOption());
+        if (!language.isEmpty())
+            return AtomString { language };
+    }
+
     return emptyAtom();
 }
 
