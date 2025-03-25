@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/DataLog.h>
 #include <wtf/Dominators.h>
 
 namespace WTF {
@@ -128,8 +129,8 @@ public:
     
         static constexpr bool verbose = false;
     
-        if (verbose) {
-            dataLog("Dominators:\n");
+        if constexpr (verbose) {
+            dataLogLn("Dominators:");
             dominators.dump(WTF::dataFile());
         }
     
@@ -161,9 +162,8 @@ public:
                 m_loops.append(loop);
             }
         }
-    
-        if (verbose)
-            dataLog("After bootstrap: ", *this, "\n");
+
+        dataLogLnIf(verbose, "After bootstrap: ", *this);
     
         FastBitVector seenBlocks;
         Vector<typename Graph::Node, 4> blockWorklist;
@@ -175,8 +175,7 @@ public:
             seenBlocks.clearAll();
             ASSERT(blockWorklist.isEmpty());
         
-            if (verbose)
-                dataLog("Dealing with loop ", loop, "\n");
+            dataLogLnIf(verbose, "Dealing with loop ", loop);
         
             for (unsigned j = loop.size(); j--;) {
                 seenBlocks[graph.index(loop[j])] = true;
@@ -186,8 +185,7 @@ public:
             while (!blockWorklist.isEmpty()) {
                 typename Graph::Node block = blockWorklist.takeLast();
             
-                if (verbose)
-                    dataLog("    Dealing with ", graph.dump(block), "\n");
+                dataLogLnIf(verbose, "    Dealing with ", graph.dump(block));
             
                 if (block == loop.header())
                     continue;
@@ -263,8 +261,7 @@ public:
             }
         }
     
-        if (verbose)
-            dataLog("Results: ", *this, "\n");
+        dataLogLnIf(verbose, "Results: ", *this);
     }
     
     Graph& graph() { return m_graph; }
@@ -287,10 +284,10 @@ public:
             return nullptr;
         if (loop->header() == block)
             return loop;
-        if (ASSERT_ENABLED) {
-            for (; loop; loop = innerMostOuterLoop(*loop))
-                ASSERT(loop->header() != block);
-        }
+#if ASSERT_ENABLED
+        for (; loop; loop = innerMostOuterLoop(*loop))
+            ASSERT(loop->header() != block);
+#endif
         return nullptr;
     }
     
