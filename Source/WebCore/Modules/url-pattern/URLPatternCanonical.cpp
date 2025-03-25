@@ -34,7 +34,7 @@
 
 namespace WebCore {
 
-static constexpr auto dummyURLCharacters { "https://www.webkit.org"_s };
+static constexpr auto dummyURLCharacters { "https://w/"_s };
 
 static bool isValidIPv6HostCodePoint(auto codepoint)
 {
@@ -77,7 +77,7 @@ ExceptionOr<String> canonicalizeProtocol(StringView value, BaseURLStringType val
     if (valueType == BaseURLStringType::Pattern)
         return strippedValue.toString();
 
-    URL dummyURL(makeString(strippedValue, "://webkit.test"_s));
+    URL dummyURL(makeString(strippedValue, "://w/"_s));
 
     if (!dummyURL.isValid())
         return Exception { ExceptionCode::TypeError, "Invalid input to canonicalize a URL protocol string."_s };
