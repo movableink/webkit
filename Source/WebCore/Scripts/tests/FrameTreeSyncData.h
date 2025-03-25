@@ -27,37 +27,29 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
-#include "DOMAudioSession.h"
+#include "StringifyThis"
 
 namespace WebCore {
 
 struct ProcessSyncData;
 
-class DocumentSyncData : public RefCounted<DocumentSyncData> {
-WTF_MAKE_TZONE_ALLOCATED_INLINE(DocumentSyncData);
+class FrameTreeSyncData : public RefCounted<FrameTreeSyncData> {
+WTF_MAKE_TZONE_ALLOCATED_INLINE(FrameTreeSyncData);
 public:
     template<typename... Args>
-    static Ref<DocumentSyncData> create(Args&&... args)
+    static Ref<FrameTreeSyncData> create(Args&&... args)
     {
-        return adoptRef(*new DocumentSyncData(std::forward<Args>(args)...));
+        return adoptRef(*new FrameTreeSyncData(std::forward<Args>(args)...));
     }
-    static Ref<DocumentSyncData> create() { return adoptRef(*new DocumentSyncData); }
+    static Ref<FrameTreeSyncData> create() { return adoptRef(*new FrameTreeSyncData); }
     void update(const ProcessSyncData&);
 
-    bool isAutofocusProcessed = { };
-#if ENABLE(DOM_AUDIO_SESSION)
-    WebCore::DOMAudioSessionType audioSessionType = { };
-#endif
-    bool userDidInteractWithPage = { };
+    StringifyThis anotherOne = { };
 
 private:
-    DocumentSyncData() = default;
-    WEBCORE_EXPORT DocumentSyncData(
-        bool
-#if ENABLE(DOM_AUDIO_SESSION)
-      , WebCore::DOMAudioSessionType
-#endif
-      , bool
+    FrameTreeSyncData() = default;
+    WEBCORE_EXPORT FrameTreeSyncData(
+        StringifyThis
     );
 };
 
