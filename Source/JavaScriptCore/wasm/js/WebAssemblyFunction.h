@@ -88,7 +88,7 @@ private:
     CodePtr<JSEntryPtrTag> jsCallEntrypointSlow();
 
     // This is the callee needed by LLInt/IPInt
-    uintptr_t m_boxedWasmCallee;
+    EncodedJSValue m_boxedWasmCallee;
     // This let's the JS->Wasm interpreter find its metadata
     Ref<Wasm::JSEntrypointCallee> m_jsToWasmCallee;
 #if ENABLE(JIT)

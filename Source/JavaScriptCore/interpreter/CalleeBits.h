@@ -57,9 +57,9 @@ public:
     }
 
 #if USE(JSVALUE32_64)
-    static EncodedJSValue encodeNullCallee()
+    static constexpr EncodedJSValue encodeNullCallee()
     {
-        return JSValue::encode(jsNull());
+        return static_cast<uint64_t>(JSValue::NullTag) << 32;
     }
 
     static EncodedJSValue encodeJSCallee(const JSCell* cell)
@@ -80,9 +80,9 @@ public:
     }
 
 #elif USE(JSVALUE64)
-    static EncodedJSValue encodeNullCallee()
+    static constexpr EncodedJSValue encodeNullCallee()
     {
-        return reinterpret_cast<EncodedJSValue>(nullptr);
+        return 0;
     }
 
     static EncodedJSValue encodeJSCallee(const JSCell* cell)

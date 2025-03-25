@@ -206,7 +206,7 @@ public:
     WasmToJSCallee(FunctionSpaceIndex, std::pair<const Name*, RefPtr<NameSection>>&&);
     static WasmToJSCallee& singleton();
 
-    uintptr_t* boxedWasmCalleeLoadLocation() { return &m_boxedThis; }
+    EncodedJSValue* boxedWasmCalleeLoadLocation() { return &m_boxedThis; }
 
 private:
     WasmToJSCallee();
@@ -214,7 +214,7 @@ private:
     CodePtr<WasmEntryPtrTag> entrypointImpl() const { return { }; }
     RegisterAtOffsetList* calleeSaveRegistersImpl() { return nullptr; }
 
-    uintptr_t m_boxedThis;
+    EncodedJSValue m_boxedThis;
 };
 
 #if ENABLE(JIT)

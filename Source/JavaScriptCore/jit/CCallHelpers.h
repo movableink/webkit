@@ -912,7 +912,7 @@ public:
 #endif
     }
 
-    void storeWasmCalleeCallee(const uintptr_t* boxedWasmCalleeLoadLocation)
+    void storeWasmCalleeCallee(const EncodedJSValue* boxedWasmCalleeLoadLocation)
     {
         ASSERT(boxedWasmCalleeLoadLocation);
         JIT_COMMENT(*this, "> ", RawHex(*boxedWasmCalleeLoadLocation));

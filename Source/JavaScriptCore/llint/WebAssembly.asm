@@ -1046,6 +1046,10 @@ else
     end)
 end
 
+if ASSERT_ENABLED
+    storep cfr, (constexpr (JSWebAssemblyInstance::offsetOfTemporaryCallFrame()))[wasmInstance]
+end
+
     move wasmInstance, a0
     move ws0, a1
     cCall2(_operationGetWasmCalleeStackSize)
@@ -1102,6 +1106,9 @@ end
 .postcall:
     subp RegisterSpaceScratchSize, sp
     storep r0, [sp]
+if not JSVALUE64
+    storep r1, TagOffset[sp]
+end
 
     loadp WasmCallableFunctionScratch[cfr], a0
     call _operationWasmToJSExitNeedToUnpack

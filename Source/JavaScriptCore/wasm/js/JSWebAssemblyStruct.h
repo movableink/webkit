@@ -37,7 +37,7 @@ namespace JSC {
 
 class JSWebAssemblyInstance;
 
-class JSWebAssemblyStruct final : public WebAssemblyGCObjectBase, private TrailingArray<JSWebAssemblyStruct, uint8_t> {
+class alignas(sizeof(uint64_t)) JSWebAssemblyStruct final : public WebAssemblyGCObjectBase, private TrailingArray<JSWebAssemblyStruct, uint8_t> {
 public:
     using Base = WebAssemblyGCObjectBase;
     using TrailingArrayType = TrailingArray<JSWebAssemblyStruct, uint8_t>;

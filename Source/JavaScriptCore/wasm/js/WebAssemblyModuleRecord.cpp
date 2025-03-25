@@ -205,7 +205,7 @@ void WebAssemblyModuleRecord::initializeImports(JSGlobalObject* globalObject, JS
 
             JSWebAssemblyInstance* calleeInstance = nullptr;
             WasmToWasmImportableFunction::LoadLocation entrypointLoadLocation = nullptr;
-            const uintptr_t* boxedWasmCalleeLoadLocation = &Wasm::NullWasmCallee;
+            const EncodedJSValue* boxedWasmCalleeLoadLocation = &Wasm::NullWasmCallee;
             JSObject* function = jsCast<JSObject*>(value);
 
             // ii. If v is an Exported Function Exotic Object:

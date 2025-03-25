@@ -1,4 +1,4 @@
-
+//@skip if $memoryLimited
 function test(v) {
     return v.byteLength;
 }
