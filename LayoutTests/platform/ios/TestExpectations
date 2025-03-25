@@ -7754,3 +7754,5 @@ webkit.org/b/290407 imported/w3c/web-platform-tests/css/css-contain/content-visi
 # webkit.org/b/290410 ([iOS Debug] 2 MediaRecorder tests are constantly crashing due to assertion failure.)
 [ Debug ] http/wpt/mediarecorder/MediaRecorder-audio-samplingrate-change.html [ Crash ]
 [ Debug ] http/wpt/mediarecorder/MediaRecorder-first-frame.html [ Crash ]
+
+webkit.org/b/290412 imported/w3c/web-platform-tests/scroll-animations/scroll-timelines/current-time-root-scroller.html [ Pass Failure ]
