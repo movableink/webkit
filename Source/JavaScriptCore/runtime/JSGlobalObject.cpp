@@ -554,9 +554,7 @@ JSC_DEFINE_HOST_FUNCTION(signpostStart, (JSGlobalObject* globalObject, CallFrame
     auto message = asSignpostString(globalObject, callFrame->argument(0));
     RETURN_IF_EXCEPTION(scope, EncodedJSValue());
 
-    ++activeJSGlobalObjectSignpostIntervalCount;
-    WTFBeginSignpostAlways(globalObject, JSCJSGlobalObject, "%" PUBLIC_LOG_STRING, message.ascii().data());
-
+    globalObject->startSignpost(WTFMove(message));
     return JSValue::encode(jsUndefined());
 }
 
@@ -568,10 +566,26 @@ JSC_DEFINE_HOST_FUNCTION(signpostStop, (JSGlobalObject* globalObject, CallFrame*
     auto message = asSignpostString(globalObject, callFrame->argument(0));
     RETURN_IF_EXCEPTION(scope, EncodedJSValue());
 
-    WTFEndSignpostAlways(globalObject, JSCJSGlobalObject, "%" PUBLIC_LOG_STRING, message.ascii().data());
-    --activeJSGlobalObjectSignpostIntervalCount;
-
+    globalObject->stopSignpost(WTFMove(message));
     return JSValue::encode(jsUndefined());
+}
+
+void JSGlobalObject::startSignpost(String&& message)
+{
+    ++activeJSGlobalObjectSignpostIntervalCount;
+    auto* identifier = std::bit_cast<void*>(static_cast<uintptr_t>(m_signposts.ensure(message, [] {
+        return JSCJSGlobalObjectSignpostIdentifier::generate();
+    }).iterator->value.toUInt64()));
+    WTFBeginSignpostAlways(identifier, JSCJSGlobalObject, "%" PUBLIC_LOG_STRING, message.ascii().data());
+}
+
+void JSGlobalObject::stopSignpost(String&& message)
+{
+    void* identifier = std::bit_cast<void*>(this);
+    if (auto stored = m_signposts.takeOptional(message))
+        identifier = std::bit_cast<void*>(static_cast<uintptr_t>(stored->toUInt64()));
+    WTFEndSignpostAlways(identifier, JSCJSGlobalObject, "%" PUBLIC_LOG_STRING, message.ascii().data());
+    --activeJSGlobalObjectSignpostIntervalCount;
 }
 
 #else
