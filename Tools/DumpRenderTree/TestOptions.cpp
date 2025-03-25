@@ -174,6 +174,7 @@ const TestFeatures& TestOptions::defaults()
 #if ENABLE(GPU_PROCESS) && ENABLE(WEBGL)
             { "UseGPUProcessForWebGLEnabled", false },
 #endif
+            { "SupportHDRDisplayEnabled", true },
         };
 #if PLATFORM(WIN)
         features.uint32WebPreferenceFeatures = {

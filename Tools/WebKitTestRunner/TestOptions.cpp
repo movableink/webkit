@@ -141,6 +141,7 @@ const TestFeatures& TestOptions::defaults()
             { "ScrollToTextFragmentIndicatorEnabled", false },
             { "ShowModalDialogEnabled", false },
             { "SpeakerSelectionRequiresUserGesture", false },
+            { "SupportHDRDisplayEnabled", true },
             { "VerifyWindowOpenUserGestureFromUIProcess", false },
             { "TabsToLinks", false },
             { "TextAutosizingEnabled", false },

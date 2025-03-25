@@ -46,6 +46,12 @@
 #define Webgpuhdr_feature_status Preview
 #endif
 
+#if defined(ENABLE_SUPPORT_HDR_DISPLAY_BY_DEFAULT) && ENABLE_SUPPORT_HDR_DISPLAY_BY_DEFAULT && defined(HAVE_SUPPORT_HDR_DISPLAY) && HAVE_SUPPORT_HDR_DISPLAY
+#define Supporthdrdisplay_feature_status Stable
+#else
+#define Supporthdrdisplay_feature_status Testable
+#endif
+
 #if defined(ENABLE_WEBXR_WEBGPU_BY_DEFAULT) && ENABLE_WEBXR_WEBGPU_BY_DEFAULT && PLATFORM(VISION)
 #define Webxr_layers_feature_status Stable
 #else

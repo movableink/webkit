@@ -7426,7 +7426,7 @@ StorageBlockingPolicy:
 
 SupportHDRDisplayEnabled:
   type: bool
-  status: stable
+  status: Supporthdrdisplay_feature_status
   category: media
   webcoreOnChange: setNeedsRelayoutAllFrames
   humanReadableName: "Support HDR Display"
@@ -7435,10 +7435,10 @@ SupportHDRDisplayEnabled:
     WebKitLegacy:
       default: false
     WebKit:
-      "PLATFORM(COCOA)": true
+      "ENABLE(SUPPORT_HDR_DISPLAY_BY_DEFAULT)": true
       default: false
     WebCore:
-      "PLATFORM(COCOA)": true
+      "ENABLE(SUPPORT_HDR_DISPLAY_BY_DEFAULT)": true
       default: false
 
 SuppressesIncrementalRendering:
