@@ -1718,7 +1718,6 @@ webkit.org/b/265599 [ Sonoma+ Debug x86_64 ] imported/w3c/web-platform-tests/htm
 http/wpt/opener/child-access-parent-via-windowproxy.html [ Pass ]
 http/wpt/opener/cross-site-child-access-parent-iframe-via-windowproxy.html [ Pass ]
 http/wpt/opener/iframe-access-top-via-windowproxy.html [ Pass ]
-http/wpt/opener/parent-access-child-via-windowproxy.html [ Pass ]
 http/wpt/opener/same-site-child-access-parent-iframe-via-windowproxy.html [ Pass ]
 
 webkit.org/b/265957 [ Release ] fullscreen/full-screen-layer-dump.html [ Pass Failure ]
@@ -2079,3 +2078,5 @@ imported/w3c/web-platform-tests/css/css-position/sticky/position-sticky-scrolled
 [ Debug ] fonts/font-fallback-prefers-pictographs.html [ Skip ]
 
 webkit.org/b/290346 [ arm64 ] gamepad/gamepad-event-handlers.html [ Pass Timeout ]
+
+webkit.org/b/290398 http/wpt/opener/parent-access-child-via-windowproxy.html [ Pass Failure ]
