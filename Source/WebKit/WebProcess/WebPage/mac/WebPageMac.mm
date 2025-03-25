@@ -528,7 +528,10 @@ void WebPage::setAXIsolatedTreeRoot(WebCore::AXCoreObject* root)
 
 bool WebPage::platformCanHandleRequest(const WebCore::ResourceRequest& request)
 {
-    if ([NSURLConnection canHandleRequest:request.nsURLRequest(HTTPBodyUpdatePolicy::DoNotUpdateHTTPBody)])
+    NSURLRequest *nsRequest = request.nsURLRequest(HTTPBodyUpdatePolicy::DoNotUpdateHTTPBody);
+    if (!nsRequest.URL)
+        return false;
+    if ([NSURLConnection canHandleRequest:nsRequest])
         return true;
 
     // FIXME: Return true if this scheme is any one WebKit2 knows how to handle.

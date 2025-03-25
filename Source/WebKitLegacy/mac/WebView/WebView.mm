@@ -3241,7 +3241,7 @@ IGNORE_WARNINGS_END
 + (BOOL)_canHandleRequest:(NSURLRequest *)request forMainFrame:(BOOL)forMainFrame
 {
     // FIXME: If <rdar://problem/5217309> gets fixed, this check can be removed.
-    if (!request)
+    if (!request || !request.URL)
         return NO;
 
     if ([NSURLConnection canHandleRequest:request])

@@ -602,7 +602,7 @@ void NavigationState::NavigationClient::decidePolicyForNavigationAction(WebPageP
             }
 
             auto nsURLRequest = wrapper(API::URLRequest::create(navigationAction->request()));
-            if ([NSURLConnection canHandleRequest:nsURLRequest.get()]
+            if ((nsURLRequest.get().URL && [NSURLConnection canHandleRequest:nsURLRequest.get()])
                 || webPage->urlSchemeHandlerForScheme(nsURLRequest.get().URL.scheme)
                 || [nsURLRequest.get().URL.scheme isEqualToString:@"blob"]) {
                 if (navigationAction->shouldPerformDownload())

@@ -753,7 +753,11 @@ WKAccessibilityWebPageObject* WebPage::accessibilityRemoteObject()
 
 bool WebPage::platformCanHandleRequest(const WebCore::ResourceRequest& request)
 {
-    return [NSURLConnection canHandleRequest:request.nsURLRequest(HTTPBodyUpdatePolicy::DoNotUpdateHTTPBody)];
+    NSURLRequest *nsRequest = request.nsURLRequest(HTTPBodyUpdatePolicy::DoNotUpdateHTTPBody);
+    if (!nsRequest.URL)
+        return false;
+
+    return [NSURLConnection canHandleRequest:nsRequest];
 }
 
 void WebPage::shouldDelayWindowOrderingEvent(const WebKit::WebMouseEvent&, CompletionHandler<void(bool)>&& completionHandler)
