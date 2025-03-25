@@ -20,19 +20,22 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #pragma once
 
 #include "DisplayList.h"
 #include "DisplayListItems.h"
-#include "DrawGlyphsRecorder.h"
 #include "GraphicsContext.h"
 #include "Image.h" // For Image::TileRule.
 #include "TextFlags.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/TZoneMalloc.h>
+
+#if USE(CORE_TEXT)
+#include "DrawGlyphsRecorder.h"
+#endif
 
 namespace WebCore {
 
@@ -55,8 +58,12 @@ class Recorder : public GraphicsContext {
 public:
     enum class DrawGlyphsMode {
         Normal,
-        DeconstructUsingDrawGlyphsCommands,
-        DeconstructUsingDrawDecomposedGlyphsCommands,
+        // Deconstruct different text layers into separate DrawGlyphs commands. Allows for doing the deconstruct work once during recording instead of
+        // multiple times during multiple playbacks.
+        Deconstruct,
+        // Deconstruct different text layers into separate DrawDeconstructed commands. Allows for caching based on DeconstructedGlyphs
+        // identities during multiple playbacks.
+        DeconstructAndRetain,
     };
 
     Recorder(const GraphicsContextState& state, const FloatRect& initialClip, const AffineTransform& transform, const DestinationColorSpace& colorSpace, DrawGlyphsMode drawGlyphsMode = DrawGlyphsMode::Normal)
@@ -77,8 +84,6 @@ protected:
     virtual void recordClearDropShadow() = 0;
     virtual void recordClipToImageBuffer(ImageBuffer&, const FloatRect& destinationRect) = 0;
     virtual void recordDrawFilteredImageBuffer(ImageBuffer*, const FloatRect& sourceImageRect, Filter&) = 0;
-    virtual void recordDrawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& localAnchor, FontSmoothingMode) = 0;
-    virtual void recordDrawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) = 0;
     virtual void recordDrawImageBuffer(ImageBuffer&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions) = 0;
     virtual void recordDrawNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions) = 0;
     virtual void recordDrawSystemImage(SystemImage&, const FloatRect&) = 0;
@@ -106,8 +111,6 @@ protected:
     virtual bool recordResourceUse(NativeImage&) = 0;
     virtual bool recordResourceUse(ImageBuffer&) = 0;
     virtual bool recordResourceUse(const SourceImage&) = 0;
-    virtual bool recordResourceUse(Font&) = 0;
-    virtual bool recordResourceUse(DecomposedGlyphs&) = 0;
     virtual bool recordResourceUse(Gradient&) = 0;
     virtual bool recordResourceUse(Filter&) = 0;
 
@@ -180,8 +183,6 @@ private:
     WEBCORE_EXPORT void strokePath(const Path&) final;
     WEBCORE_EXPORT void drawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter&, FilterResults&) final;
     WEBCORE_EXPORT void drawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& anchorPoint, FontSmoothingMode) final;
-    WEBCORE_EXPORT void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) override;
-    WEBCORE_EXPORT void drawGlyphsAndCacheResources(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& localAnchor, FontSmoothingMode) final;
     WEBCORE_EXPORT void drawImageBuffer(ImageBuffer&, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions) final;
     WEBCORE_EXPORT void drawConsumingImageBuffer(RefPtr<ImageBuffer>, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions) final;
     WEBCORE_EXPORT void drawNativeImageInternal(NativeImage&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions) final;
@@ -198,14 +199,14 @@ private:
 
     const AffineTransform& ctm() const;
 
-    bool shouldDeconstructDrawGlyphs() const;
-
     Vector<ContextState, 4> m_stateStack;
+    DestinationColorSpace m_colorSpace;
+    const FloatRect m_initialClip;
+#if USE(CORE_TEXT)
     std::unique_ptr<DrawGlyphsRecorder> m_drawGlyphsRecorder;
     float m_initialScale { 1 };
-    DestinationColorSpace m_colorSpace;
     const DrawGlyphsMode m_drawGlyphsMode { DrawGlyphsMode::Normal };
-    const FloatRect m_initialClip;
+#endif
 };
 
 } // namespace DisplayList

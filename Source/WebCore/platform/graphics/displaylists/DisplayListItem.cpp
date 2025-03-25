@@ -121,32 +121,6 @@ inline static std::optional<RenderingResourceIdentifier> applySetStateItem(Graph
     return std::nullopt;
 }
 
-inline static std::optional<RenderingResourceIdentifier> applyDrawGlyphs(GraphicsContext& context, const ResourceHeap& resourceHeap, const DrawGlyphs& item)
-{
-    auto resourceIdentifier = item.fontIdentifier();
-    if (auto* font = resourceHeap.getFont(resourceIdentifier)) {
-        item.apply(context, *font);
-        return std::nullopt;
-    }
-    return resourceIdentifier;
-}
-
-inline static std::optional<RenderingResourceIdentifier> applyDrawDecomposedGlyphs(GraphicsContext& context, const ResourceHeap& resourceHeap, const DrawDecomposedGlyphs& item)
-{
-    auto fontIdentifier = item.fontIdentifier();
-    auto* font = resourceHeap.getFont(fontIdentifier);
-    if (!font)
-        return fontIdentifier;
-
-    auto drawGlyphsIdentifier = item.decomposedGlyphsIdentifier();
-    RefPtr decomposedGlyphs = resourceHeap.getDecomposedGlyphs(drawGlyphsIdentifier);
-    if (!decomposedGlyphs)
-        return drawGlyphsIdentifier;
-
-    item.apply(context, *font, *decomposedGlyphs);
-    return std::nullopt;
-}
-
 ApplyItemResult applyItem(GraphicsContext& context, const ResourceHeap& resourceHeap, ControlFactory& controlFactory, const Item& item, OptionSet<ReplayOption> options)
 {
     if (!isValid(item))
@@ -161,12 +135,10 @@ ApplyItemResult applyItem(GraphicsContext& context, const ResourceHeap& resource
             item.apply(context, controlFactory);
             return { };
         }, [&](const DrawGlyphs& item) -> ApplyItemResult {
-            if (auto missingCachedResourceIdentifier = applyDrawGlyphs(context, resourceHeap, item))
-                return { StopReplayReason::MissingCachedResource, WTFMove(missingCachedResourceIdentifier) };
+            item.apply(context);
             return { };
         }, [&](const DrawDecomposedGlyphs& item) -> ApplyItemResult {
-            if (auto missingCachedResourceIdentifier = applyDrawDecomposedGlyphs(context, resourceHeap, item))
-                return { StopReplayReason::MissingCachedResource, WTFMove(missingCachedResourceIdentifier) };
+            item.apply(context);
             return { };
         }, [&](const DrawFilteredImageBuffer& item) -> ApplyItemResult {
             if (auto missingCachedResourceIdentifier = applyFilteredImageBufferItem(context, resourceHeap, item, options))

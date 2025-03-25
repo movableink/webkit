@@ -202,7 +202,6 @@ endif ()
 if (USE_CAIRO)
     list(APPEND WebCore_SOURCES
         platform/graphics/win/ComplexTextControllerUniscribe.cpp
-        platform/graphics/win/DrawGlyphsRecorderWin.cpp
         platform/graphics/win/FontCacheWin.cpp
         platform/graphics/win/FontCustomPlatformDataWin.cpp
         platform/graphics/win/FontDescriptionWin.cpp

@@ -1,3 +1,4 @@
+
 /*
  * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
@@ -31,15 +32,12 @@
 #include "GraphicsContext.h"
 #include "Pattern.h"
 #include "TextFlags.h"
-#include <wtf/TZoneMallocInlines.h>
-#include <wtf/UniqueRef.h>
-
-#if USE(CORE_TEXT)
 #include <CoreGraphics/CoreGraphics.h>
 #include <CoreText/CoreText.h>
 #include <pal/spi/cf/CoreTextSPI.h>
 #include <pal/spi/cg/CoreGraphicsSPI.h>
-#endif
+#include <wtf/TZoneMalloc.h>
+#include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
@@ -53,11 +51,11 @@ class DrawGlyphsRecorder {
     WTF_MAKE_NONCOPYABLE(DrawGlyphsRecorder);
 public:
     enum class DeriveFontFromContext : bool { No, Yes };
-    explicit DrawGlyphsRecorder(GraphicsContext&, float scaleFactor = 1, DeriveFontFromContext = DeriveFontFromContext::No);
+    enum class DrawDecomposedGlyphs : bool { No, Yes };
+    explicit DrawGlyphsRecorder(GraphicsContext&, float scaleFactor, DeriveFontFromContext, DrawDecomposedGlyphs);
 
-    void drawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& anchorPoint, FontSmoothingMode);
+    void drawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& localAnchor, FontSmoothingMode);
 
-#if USE(CORE_TEXT)
     void drawNativeText(CTFontRef, CGFloat fontSize, CTLineRef, CGRect lineRect);
 
     void recordBeginLayer(CGRenderingStateRef, CGGStateRef, CGRect);
@@ -65,12 +63,9 @@ public:
     void recordDrawGlyphs(CGRenderingStateRef, CGGStateRef, const CGAffineTransform*, std::span<const CGGlyph>, std::span<const CGPoint> positions);
     void recordDrawImage(CGRenderingStateRef, CGGStateRef, CGRect, CGImageRef);
     void recordDrawPath(CGRenderingStateRef, CGGStateRef, CGPathDrawingMode, CGPathRef);
-#endif
 
 private:
-#if USE(CORE_TEXT)
     UniqueRef<GraphicsContext> createInternalContext();
-#endif
 
     void drawBySplittingIntoOTSVGAndNonOTSVGRuns(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& anchorPoint, FontSmoothingMode);
     void drawOTSVGRun(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& anchorPoint, FontSmoothingMode);
@@ -91,26 +86,13 @@ private:
         No
     };
     void updateShadow(const std::optional<GraphicsDropShadow>&, ShadowsIgnoreTransforms);
-
-#if USE(CORE_TEXT)
     void updateFillColor(CGColorRef);
     void updateStrokeColor(CGColorRef);
     void updateShadow(CGStyleRef);
-#endif
 
     GraphicsContext& m_owner;
-
-#if USE(CORE_TEXT)
-    UniqueRef<GraphicsContext> m_internalContext;
-#endif
-
     const Font* m_originalFont { nullptr };
-
-    const DeriveFontFromContext m_deriveFontFromContext;
-    FontSmoothingMode m_smoothingMode { FontSmoothingMode::AutoSmoothing };
-
     AffineTransform m_originalTextMatrix;
-
     struct State {
         SourceBrush fillBrush;
         SourceBrush strokeBrush;
@@ -119,11 +101,12 @@ private:
         bool ignoreTransforms { false };
     };
     State m_originalState;
-
-#if USE(CORE_TEXT)
+    UniqueRef<GraphicsContext> m_internalContext;
     RetainPtr<CGColorRef> m_initialFillColor;
     RetainPtr<CGColorRef> m_initialStrokeColor;
-#endif
+    const DrawDecomposedGlyphs m_drawDecomposedGlyphs;
+    const DeriveFontFromContext m_deriveFontFromContext;
+    FontSmoothingMode m_smoothingMode { FontSmoothingMode::AutoSmoothing };
 };
 
 } // namespace WebCore

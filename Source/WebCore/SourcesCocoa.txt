@@ -484,7 +484,7 @@ platform/graphics/cocoa/WebLayer.mm
 platform/graphics/cocoa/controls/ApplePayButtonCocoa.mm
 platform/graphics/cocoa/controls/ControlFactoryCocoa.mm
 platform/graphics/coretext/ComplexTextControllerCoreText.mm
-platform/graphics/coretext/DrawGlyphsRecorderCoreText.cpp
+platform/graphics/coretext/DrawGlyphsRecorder.cpp
 platform/graphics/coretext/FontCascadeCoreText.cpp
 platform/graphics/coretext/FontCoreText.cpp
 platform/graphics/coretext/FontCustomPlatformDataCoreText.cpp

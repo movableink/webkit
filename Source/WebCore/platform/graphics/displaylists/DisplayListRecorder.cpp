@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -51,11 +51,16 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(Recorder);
 
 Recorder::Recorder(IsDeferred isDeferred, const GraphicsContextState& state, const FloatRect& initialClip, const AffineTransform& initialCTM, const DestinationColorSpace& colorSpace, DrawGlyphsMode drawGlyphsMode)
     : GraphicsContext(isDeferred, state)
-    , m_initialScale(initialCTM.xScale())
     , m_colorSpace(colorSpace)
-    , m_drawGlyphsMode(drawGlyphsMode)
     , m_initialClip(initialClip)
+#if USE(CORE_TEXT)
+    , m_initialScale(initialCTM.xScale())
+    , m_drawGlyphsMode(drawGlyphsMode)
+#endif
 {
+#if !USE(CORE_TEXT)
+    UNUSED_PARAM(drawGlyphsMode);
+#endif
     ASSERT(!state.changes());
     m_stateStack.append({ state, initialCTM, initialCTM.mapRect(initialClip) });
 }
@@ -74,7 +79,7 @@ void Recorder::commitRecording()
 void Recorder::appendStateChangeItem(const GraphicsContextState& state)
 {
     ASSERT(state.changes());
-    
+
     if (state.containsOnlyInlineChanges()) {
         if (state.changes().contains(GraphicsContextState::Change::FillBrush))
             recordSetInlineFillColor(*fillColor().tryGetAsPackedInline());
@@ -178,52 +183,19 @@ void Recorder::drawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect
     recordDrawFilteredImageBuffer(sourceImage, sourceImageRect, filter);
 }
 
-bool Recorder::shouldDeconstructDrawGlyphs() const
+void Recorder::drawGlyphs(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& localAnchor, FontSmoothingMode smoothingMode)
 {
-    switch (m_drawGlyphsMode) {
-    case DrawGlyphsMode::Normal:
-        return false;
-    case DrawGlyphsMode::DeconstructUsingDrawGlyphsCommands:
-    case DrawGlyphsMode::DeconstructUsingDrawDecomposedGlyphsCommands:
-        return true;
-    }
-    ASSERT_NOT_REACHED();
-    return false;
-}
-
-void Recorder::drawGlyphs(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& startPoint, FontSmoothingMode smoothingMode)
-{
-    if (shouldDeconstructDrawGlyphs()) {
-        if (!m_drawGlyphsRecorder)
-            m_drawGlyphsRecorder = makeUnique<DrawGlyphsRecorder>(*this, m_initialScale);
-        m_drawGlyphsRecorder->drawGlyphs(font, glyphs, advances, startPoint, smoothingMode);
+#if USE(CORE_TEXT)
+    if (m_drawGlyphsMode == DrawGlyphsMode::Deconstruct || m_drawGlyphsMode == DrawGlyphsMode::DeconstructAndRetain) {
+        if (!m_drawGlyphsRecorder) {
+            auto shouldDrawDecomposedGlyphs = m_drawGlyphsMode == DrawGlyphsMode::DeconstructAndRetain ? DrawGlyphsRecorder::DrawDecomposedGlyphs::Yes : DrawGlyphsRecorder::DrawDecomposedGlyphs::No;
+            m_drawGlyphsRecorder = makeUnique<DrawGlyphsRecorder>(*this, m_initialScale, DrawGlyphsRecorder::DeriveFontFromContext::No, shouldDrawDecomposedGlyphs);
+        }
+        m_drawGlyphsRecorder->drawGlyphs(font, glyphs, advances, localAnchor, smoothingMode);
         return;
     }
-
-    drawGlyphsAndCacheResources(font, glyphs, advances, startPoint, smoothingMode);
-}
-
-void Recorder::drawDecomposedGlyphs(const Font& font, const DecomposedGlyphs& decomposedGlyphs)
-{
-    appendStateChangeItemIfNecessary();
-    recordResourceUse(const_cast<Font&>(font));
-    recordResourceUse(const_cast<DecomposedGlyphs&>(decomposedGlyphs));
-    recordDrawDecomposedGlyphs(font, decomposedGlyphs);
-}
-
-void Recorder::drawGlyphsAndCacheResources(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& localAnchor, FontSmoothingMode smoothingMode)
-{
-    appendStateChangeItemIfNecessary();
-    recordResourceUse(const_cast<Font&>(font));
-
-    if (m_drawGlyphsMode == DrawGlyphsMode::DeconstructUsingDrawDecomposedGlyphsCommands) {
-        auto decomposedGlyphs = DecomposedGlyphs::create(glyphs, advances, localAnchor, smoothingMode);
-        recordResourceUse(decomposedGlyphs.get());
-        recordDrawDecomposedGlyphs(font, decomposedGlyphs.get());
-        return;
-    }
-
-    recordDrawGlyphs(font, glyphs, advances, localAnchor, smoothingMode);
+#endif
+    drawGlyphsImmediate(font, glyphs, advances, localAnchor, smoothingMode);
 }
 
 void Recorder::drawImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
@@ -534,7 +506,7 @@ void Recorder::ContextState::rotate(float angleInRadians)
 {
     double angleInDegrees = rad2deg(static_cast<double>(angleInRadians));
     ctm.rotate(angleInDegrees);
-    
+
     AffineTransform rotation;
     rotation.rotate(angleInDegrees);
 }

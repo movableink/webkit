@@ -556,8 +556,7 @@ void OperationRecorder::drawGlyphs(const Font& font, std::span<const GlyphBuffer
 
 void OperationRecorder::drawDecomposedGlyphs(const Font& font, const DecomposedGlyphs& decomposedGlyphs)
 {
-    auto positionedGlyphs = decomposedGlyphs.positionedGlyphs();
-    return drawGlyphs(font, positionedGlyphs.glyphs.span(), positionedGlyphs.advances.span(), positionedGlyphs.localAnchor, positionedGlyphs.smoothingMode);
+    return drawGlyphs(font, decomposedGlyphs.glyphs(), decomposedGlyphs.advances(), decomposedGlyphs.localAnchor(), decomposedGlyphs.fontSmoothingMode());
 }
 
 void OperationRecorder::drawImageBuffer(ImageBuffer& buffer, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)

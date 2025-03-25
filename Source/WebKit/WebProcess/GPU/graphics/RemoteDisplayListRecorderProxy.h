@@ -28,7 +28,6 @@
 #if ENABLE(GPU_PROCESS)
 
 #include <WebCore/DisplayListRecorder.h>
-#include <WebCore/DrawGlyphsRecorder.h>
 #include <WebCore/GraphicsContext.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
@@ -61,7 +60,6 @@ private:
     template<typename T> void send(T&& message);
     RefPtr<IPC::StreamClientConnection> connection() const;
     void didBecomeUnresponsive() const;
-    friend class WebCore::DrawGlyphsRecorder;
 
     WebCore::RenderingMode renderingMode() const final;
 
@@ -109,6 +107,9 @@ private:
     void strokeEllipse(const WebCore::FloatRect&) final;
     void clearRect(const WebCore::FloatRect&) final;
     void drawControlPart(WebCore::ControlPart&, const WebCore::FloatRoundedRect& borderRect, float deviceScaleFactor, const WebCore::ControlStyle&) final;
+    void drawGlyphsImmediate(const WebCore::Font&, std::span<const WebCore::GlyphBufferGlyph>, std::span<const WebCore::GlyphBufferAdvance>, const WebCore::FloatPoint& localAnchor, WebCore::FontSmoothingMode) final;
+    void drawDecomposedGlyphs(const WebCore::Font&, const WebCore::DecomposedGlyphs&) final;
+
 #if USE(CG)
     void applyStrokePattern() final;
     void applyFillPattern() final;
@@ -126,8 +127,6 @@ private:
     void recordClearDropShadow() final;
     void recordClipToImageBuffer(WebCore::ImageBuffer&, const WebCore::FloatRect& destinationRect) final;
     void recordDrawFilteredImageBuffer(WebCore::ImageBuffer*, const WebCore::FloatRect& sourceImageRect, WebCore::Filter&) final;
-    void recordDrawGlyphs(const WebCore::Font&, std::span<const WebCore::GlyphBufferGlyph>, std::span<const WebCore::GlyphBufferAdvance>, const WebCore::FloatPoint& localAnchor, WebCore::FontSmoothingMode) final;
-    void recordDrawDecomposedGlyphs(const WebCore::Font&, const WebCore::DecomposedGlyphs&) final;
     void recordDrawImageBuffer(WebCore::ImageBuffer&, const WebCore::FloatRect& destRect, const WebCore::FloatRect& srcRect, WebCore::ImagePaintingOptions) final;
     void recordDrawNativeImage(WebCore::RenderingResourceIdentifier imageIdentifier, const WebCore::FloatRect& destRect, const WebCore::FloatRect& srcRect, WebCore::ImagePaintingOptions) final;
     void recordDrawSystemImage(WebCore::SystemImage&, const WebCore::FloatRect&);
@@ -155,8 +154,8 @@ private:
     bool recordResourceUse(WebCore::NativeImage&) final;
     bool recordResourceUse(WebCore::ImageBuffer&) final;
     bool recordResourceUse(const WebCore::SourceImage&) final;
-    bool recordResourceUse(WebCore::Font&) final;
-    bool recordResourceUse(WebCore::DecomposedGlyphs&) final;
+    bool recordResourceUse(WebCore::Font&);
+    bool recordResourceUse(WebCore::DecomposedGlyphs&);
     bool recordResourceUse(WebCore::Gradient&) final;
     bool recordResourceUse(WebCore::Filter&) final;
 

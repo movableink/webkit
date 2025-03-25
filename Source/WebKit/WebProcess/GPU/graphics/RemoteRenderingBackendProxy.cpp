@@ -406,9 +406,9 @@ void RemoteRenderingBackendProxy::releaseFontCustomPlatformData(RenderingResourc
     send(Messages::RemoteRenderingBackend::ReleaseFontCustomPlatformData(identifier));
 }
 
-void RemoteRenderingBackendProxy::cacheDecomposedGlyphs(Ref<DecomposedGlyphs>&& decomposedGlyphs)
+void RemoteRenderingBackendProxy::cacheDecomposedGlyphs(const DecomposedGlyphs& glyphs)
 {
-    send(Messages::RemoteRenderingBackend::CacheDecomposedGlyphs(WTFMove(decomposedGlyphs)));
+    send(Messages::RemoteRenderingBackend::CacheDecomposedGlyphs({ glyphs.glyphs().data(), glyphs.advances().data(), glyphs.glyphs().size() }, glyphs.localAnchor(), glyphs.fontSmoothingMode(), glyphs.renderingResourceIdentifier()));
 }
 
 void RemoteRenderingBackendProxy::releaseDecomposedGlyphs(RenderingResourceIdentifier identifier)

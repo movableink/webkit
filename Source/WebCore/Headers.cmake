@@ -2080,7 +2080,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/DisplayRefreshMonitorFactory.h
     platform/graphics/DisplayRefreshMonitorManager.h
     platform/graphics/DisplayUpdate.h
-    platform/graphics/DrawGlyphsRecorder.h
     platform/graphics/Float16ArrayPixelBuffer.h
     platform/graphics/FloatLine.h
     platform/graphics/FloatPoint.h
@@ -2228,7 +2227,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/PlatformVideoMatrixCoefficients.h
     platform/graphics/PlatformVideoTrackConfiguration.h
     platform/graphics/PlatformVideoTransferCharacteristics.h
-    platform/graphics/PositionedGlyphs.h
     platform/graphics/Region.h
     platform/graphics/RenderingResource.h
     platform/graphics/RenderingResourceIdentifier.h

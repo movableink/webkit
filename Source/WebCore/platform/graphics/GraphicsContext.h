@@ -304,11 +304,6 @@ public:
     WEBCORE_EXPORT virtual void drawEmphasisMarks(const FontCascade&, const TextRun&, const AtomString& mark, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt);
     WEBCORE_EXPORT virtual void drawBidiText(const FontCascade&, const TextRun&, const FloatPoint&, FontCascade::CustomFontNotReadyAction = FontCascade::CustomFontNotReadyAction::DoNotPaintIfFontNotReady);
 
-    virtual void drawGlyphsAndCacheResources(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
-    {
-        drawGlyphs(font, glyphs, advances, point, fontSmoothingMode);
-    }
-
     WEBCORE_EXPORT virtual void drawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint&, FontSmoothingMode);
     WEBCORE_EXPORT virtual void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&);
 
@@ -383,6 +378,8 @@ protected:
     WEBCORE_EXPORT RefPtr<NativeImage> nativeImageForDrawing(ImageBuffer&);
     WEBCORE_EXPORT void fillEllipseAsPath(const FloatRect&);
     WEBCORE_EXPORT void strokeEllipseAsPath(const FloatRect&);
+    // Currently needed in the base class because CoreText DrawGlyphsRecorder must use GraphicsContext instead of a DisplayList::Recorder.
+    WEBCORE_EXPORT virtual void drawGlyphsImmediate(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint&, FontSmoothingMode);
 
     FloatRect computeLineBoundsAndAntialiasingModeForText(const FloatRect&, bool printing, Color&);
 
@@ -408,6 +405,7 @@ private:
     unsigned m_transparencyLayerCount { 0 };
     const IsDeferred m_isDeferred : 1; // NOLINT
     bool m_contentfulPaintDetected : 1 { false };
+    friend class DrawGlyphsRecorder; // To access drawGlyphsImmediate.
 };
 
 } // namespace WebCore

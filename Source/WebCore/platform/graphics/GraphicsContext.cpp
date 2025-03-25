@@ -173,10 +173,15 @@ void GraphicsContext::drawGlyphs(const Font& font, std::span<const GlyphBufferGl
     FontCascade::drawGlyphs(*this, font, glyphs, advances, point, fontSmoothingMode);
 }
 
+void GraphicsContext::drawGlyphsImmediate(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
+{
+    // Called by implementations that transform drawGlyphs into drawGlyphsImmediate or drawDecomposedGlyphs.
+    drawGlyphs(font, glyphs, advances, point, fontSmoothingMode);
+}
+
 void GraphicsContext::drawDecomposedGlyphs(const Font& font, const DecomposedGlyphs& decomposedGlyphs)
 {
-    auto positionedGlyphs = decomposedGlyphs.positionedGlyphs();
-    FontCascade::drawGlyphs(*this, font, positionedGlyphs.glyphs.span(), positionedGlyphs.advances.span(), positionedGlyphs.localAnchor, positionedGlyphs.smoothingMode);
+    FontCascade::drawGlyphs(*this, font, decomposedGlyphs.glyphs(), decomposedGlyphs.advances(), decomposedGlyphs.localAnchor(), decomposedGlyphs.fontSmoothingMode());
 }
 
 void GraphicsContext::drawEmphasisMarks(const FontCascade& font, const TextRun& run, const AtomString& mark, const FloatPoint& point, unsigned from, std::optional<unsigned> to)

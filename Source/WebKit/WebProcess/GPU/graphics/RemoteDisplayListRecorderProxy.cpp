@@ -54,7 +54,7 @@ using namespace WebCore;
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteDisplayListRecorderProxy);
 
 RemoteDisplayListRecorderProxy::RemoteDisplayListRecorderProxy(RemoteImageBufferProxy& imageBuffer, RemoteRenderingBackendProxy& renderingBackend, const FloatRect& initialClip, const AffineTransform& initialCTM)
-    : DisplayList::Recorder(IsDeferred::No, { }, initialClip, initialCTM, imageBuffer.colorSpace(), DrawGlyphsMode::DeconstructUsingDrawGlyphsCommands)
+    : DisplayList::Recorder(IsDeferred::No, { }, initialClip, initialCTM, imageBuffer.colorSpace(), DrawGlyphsMode::Deconstruct)
     , m_destinationBufferIdentifier(imageBuffer.renderingResourceIdentifier())
     , m_imageBuffer(imageBuffer)
     , m_renderingBackend(renderingBackend)
@@ -63,7 +63,7 @@ RemoteDisplayListRecorderProxy::RemoteDisplayListRecorderProxy(RemoteImageBuffer
 }
 
 RemoteDisplayListRecorderProxy::RemoteDisplayListRecorderProxy(RemoteRenderingBackendProxy& renderingBackend, RenderingResourceIdentifier renderingResourceIdentifier, const DestinationColorSpace& colorSpace, RenderingMode renderingMode, const FloatRect& initialClip, const AffineTransform& initialCTM)
-    : DisplayList::Recorder(IsDeferred::No, { }, initialClip, initialCTM, colorSpace, DrawGlyphsMode::DeconstructUsingDrawGlyphsCommands)
+    : DisplayList::Recorder(IsDeferred::No, { }, initialClip, initialCTM, colorSpace, DrawGlyphsMode::Deconstruct)
     , m_destinationBufferIdentifier(renderingResourceIdentifier)
     , m_renderingBackend(renderingBackend)
     , m_renderingMode(renderingMode)
@@ -259,14 +259,19 @@ void RemoteDisplayListRecorderProxy::recordDrawFilteredImageBuffer(ImageBuffer* 
     send(Messages::RemoteDisplayListRecorder::DrawFilteredImageBuffer(WTFMove(identifier), sourceImageRect, filter));
 }
 
-void RemoteDisplayListRecorderProxy::recordDrawGlyphs(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& localAnchor, FontSmoothingMode mode)
+void RemoteDisplayListRecorderProxy::drawGlyphsImmediate(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& localAnchor, FontSmoothingMode smoothingMode)
 {
     ASSERT(glyphs.size() == advances.size());
-    send(Messages::RemoteDisplayListRecorder::DrawGlyphs(font.renderingResourceIdentifier(), { glyphs.data(), advances.data(), glyphs.size() }, localAnchor, mode));
+    appendStateChangeItemIfNecessary();
+    recordResourceUse(const_cast<Font&>(font));
+    send(Messages::RemoteDisplayListRecorder::DrawGlyphs(font.renderingResourceIdentifier(), { glyphs.data(), advances.data(), glyphs.size() }, localAnchor, smoothingMode));
 }
 
-void RemoteDisplayListRecorderProxy::recordDrawDecomposedGlyphs(const Font& font, const DecomposedGlyphs& decomposedGlyphs)
+void RemoteDisplayListRecorderProxy::drawDecomposedGlyphs(const Font& font, const DecomposedGlyphs& decomposedGlyphs)
 {
+    appendStateChangeItemIfNecessary();
+    recordResourceUse(const_cast<Font&>(font));
+    recordResourceUse(const_cast<DecomposedGlyphs&>(decomposedGlyphs));
     send(Messages::RemoteDisplayListRecorder::DrawDecomposedGlyphs(font.renderingResourceIdentifier(), decomposedGlyphs.renderingResourceIdentifier()));
 }
 

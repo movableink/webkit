@@ -152,7 +152,7 @@ private:
     void destroyGetPixelBufferSharedMemory();
     void cacheNativeImage(WebCore::ShareableBitmap::Handle&&, WebCore::RenderingResourceIdentifier);
     void releaseNativeImage(WebCore::RenderingResourceIdentifier);
-    void cacheDecomposedGlyphs(Ref<WebCore::DecomposedGlyphs>&&);
+    void cacheDecomposedGlyphs(IPC::ArrayReferenceTuple<WebCore::GlyphBufferGlyph, WebCore::GlyphBufferAdvance>, WebCore::FloatPoint localAnchor, WebCore::FontSmoothingMode, WebCore::RenderingResourceIdentifier);
     void releaseDecomposedGlyphs(WebCore::RenderingResourceIdentifier);
     void cacheGradient(Ref<WebCore::Gradient>&&);
     void releaseGradient(WebCore::RenderingResourceIdentifier);

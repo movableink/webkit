@@ -72,16 +72,6 @@ void DisplayList::cacheNativeImage(NativeImage& image)
     m_resourceHeap.add(Ref { image });
 }
 
-void DisplayList::cacheFont(Font& font)
-{
-    m_resourceHeap.add(Ref { font });
-}
-
-void DisplayList::cacheDecomposedGlyphs(DecomposedGlyphs& decomposedGlyphs)
-{
-    m_resourceHeap.add(Ref { decomposedGlyphs });
-}
-
 void DisplayList::cacheGradient(Gradient& gradient)
 {
     m_resourceHeap.add(Ref { gradient });

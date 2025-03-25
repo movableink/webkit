@@ -288,42 +288,42 @@ void DrawFilteredImageBuffer::dump(TextStream& ts, OptionSet<AsTextFlag> flags) 
     ts.dumpProperty("source-image-rect"_s, sourceImageRect());
 }
 
-DrawGlyphs::DrawGlyphs(RenderingResourceIdentifier fontIdentifier, PositionedGlyphs&& positionedGlyphs)
-    : m_fontIdentifier(fontIdentifier)
-    , m_positionedGlyphs(WTFMove(positionedGlyphs))
+void DrawGlyphs::apply(GraphicsContext& context) const
 {
-}
-
-DrawGlyphs::DrawGlyphs(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& localAnchor, FontSmoothingMode smoothingMode)
-    : m_fontIdentifier(font.renderingResourceIdentifier())
-    , m_positionedGlyphs { Vector(glyphs), Vector(advances), localAnchor, smoothingMode }
-{
-}
-
-void DrawGlyphs::apply(GraphicsContext& context, const Font& font) const
-{
-    return context.drawGlyphs(font, m_positionedGlyphs.glyphs.span(), m_positionedGlyphs.advances.span(), anchorPoint(), m_positionedGlyphs.smoothingMode);
+    return context.drawGlyphs(m_font, m_glyphs.span(), m_advances.span(), m_localAnchor, m_fontSmoothingMode);
 }
 
 void DrawGlyphs::dump(TextStream& ts, OptionSet<AsTextFlag>) const
 {
     // FIXME: dump more stuff.
     ts.dumpProperty("local-anchor"_s, localAnchor());
-    ts.dumpProperty("anchor-point"_s, anchorPoint());
     ts.dumpProperty("font-smoothing-mode"_s, fontSmoothingMode());
     ts.dumpProperty("length"_s, glyphs().size());
 }
 
-void DrawDecomposedGlyphs::apply(GraphicsContext& context, const Font& font, const DecomposedGlyphs& decomposedGlyphs) const
+void DrawDecomposedGlyphs::apply(GraphicsContext& context) const
 {
-    return context.drawDecomposedGlyphs(font, decomposedGlyphs);
+    return context.drawDecomposedGlyphs(m_font, m_decomposedGlyphs);
 }
 
 void DrawDecomposedGlyphs::dump(TextStream& ts, OptionSet<AsTextFlag> flags) const
 {
-    if (flags.contains(AsTextFlag::IncludeResourceIdentifiers)) {
-        ts.dumpProperty("font-identifier"_s, fontIdentifier());
-        ts.dumpProperty("draw-glyphs-data-identifier"_s, decomposedGlyphsIdentifier());
+    {
+        // Currently not much platform-agnostic to print for font.
+        TextStream::GroupScope decomposedGlyphsScope { ts };
+        ts << "font"_s << ' ';
+        if (flags.contains(AsTextFlag::IncludeResourceIdentifiers))
+            ts.dumpProperty("identifier"_s, font()->renderingResourceIdentifier());
+    }
+    {
+        TextStream::GroupScope decomposedGlyphsScope { ts };
+        ts << "decomposedGlyphs"_s << ' ';
+        Ref decomposedGlyphs = this->decomposedGlyphs();
+        ts.dumpProperty("glyph-count"_s, decomposedGlyphs->glyphs().size());
+        ts.dumpProperty("local-anchor"_s, decomposedGlyphs->localAnchor());
+        ts.dumpProperty("font-smoothing-mode"_s, decomposedGlyphs->fontSmoothingMode());
+        if (flags.contains(AsTextFlag::IncludeResourceIdentifiers))
+            ts.dumpProperty("identifier"_s, decomposedGlyphs->renderingResourceIdentifier());
     }
 }
 

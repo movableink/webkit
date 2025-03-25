@@ -119,7 +119,7 @@ public:
     void releaseFont(WebCore::RenderingResourceIdentifier);
     void cacheFontCustomPlatformData(Ref<const WebCore::FontCustomPlatformData>&&);
     void releaseFontCustomPlatformData(WebCore::RenderingResourceIdentifier);
-    void cacheDecomposedGlyphs(Ref<WebCore::DecomposedGlyphs>&&);
+    void cacheDecomposedGlyphs(const WebCore::DecomposedGlyphs&);
     void releaseDecomposedGlyphs(WebCore::RenderingResourceIdentifier);
     void cacheGradient(Ref<WebCore::Gradient>&&);
     void releaseGradient(WebCore::RenderingResourceIdentifier);

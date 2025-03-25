@@ -28,6 +28,7 @@
 #include "AlphaPremultiplication.h"
 #include "ControlPart.h"
 #include "DashArray.h"
+#include "DecomposedGlyphs.h"
 #include "DisplayListItem.h"
 #include "Filter.h"
 #include "FloatRoundedRect.h"
@@ -36,10 +37,10 @@
 #include "Gradient.h"
 #include "GraphicsContext.h"
 #include "Image.h"
-#include "PositionedGlyphs.h"
 #include "RenderingResourceIdentifier.h"
 #include "SharedBuffer.h"
 #include "SystemImage.h"
+#include "TextFlags.h"
 #include <wtf/TypeCasts.h>
 
 namespace WTF {
@@ -499,43 +500,52 @@ class DrawGlyphs {
 public:
     static constexpr char name[] = "draw-glyphs";
 
-    RenderingResourceIdentifier fontIdentifier() const { return m_fontIdentifier; }
-    PositionedGlyphs positionedGlyphs() const { return m_positionedGlyphs; }
-    const FloatPoint& localAnchor() const { return m_positionedGlyphs.localAnchor; }
-    FloatPoint anchorPoint() const { return m_positionedGlyphs.localAnchor; }
-    FontSmoothingMode fontSmoothingMode() const { return m_positionedGlyphs.smoothingMode; }
-    const Vector<GlyphBufferGlyph>& glyphs() const { return m_positionedGlyphs.glyphs; }
+    DrawGlyphs(Ref<const Font>&& font, Vector<GlyphBufferGlyph>&& glyphs, Vector<GlyphBufferAdvance>&& advances, const FloatPoint& localAnchor,  FontSmoothingMode smoothingMode)
+        : m_font(WTFMove(font))
+        , m_glyphs(WTFMove(glyphs))
+        , m_advances(WTFMove(advances))
+        , m_localAnchor(localAnchor)
+        , m_fontSmoothingMode(smoothingMode)
+    {
+    }
 
-    WEBCORE_EXPORT DrawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& localAnchor, FontSmoothingMode);
-    WEBCORE_EXPORT DrawGlyphs(RenderingResourceIdentifier, PositionedGlyphs&&);
+    Ref<const Font> font() const { return m_font; }
+    const Vector<GlyphBufferGlyph>& glyphs() const { return m_glyphs; }
+    const Vector<GlyphBufferAdvance>& advances() const { return m_advances; }
 
-    WEBCORE_EXPORT void apply(GraphicsContext&, const Font&) const;
+    FloatPoint localAnchor() const { return m_localAnchor; }
+    FontSmoothingMode fontSmoothingMode() const { return m_fontSmoothingMode; }
+
+    WEBCORE_EXPORT void apply(GraphicsContext&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    RenderingResourceIdentifier m_fontIdentifier;
-    PositionedGlyphs m_positionedGlyphs;
+    Ref<const Font> m_font;
+    Vector<GlyphBufferGlyph> m_glyphs;
+    Vector<GlyphBufferAdvance> m_advances;
+    FloatPoint m_localAnchor;
+    FontSmoothingMode m_fontSmoothingMode;
 };
 
 class DrawDecomposedGlyphs {
 public:
     static constexpr char name[] = "draw-decomposed-glyphs";
 
-    DrawDecomposedGlyphs(RenderingResourceIdentifier fontIdentifier, RenderingResourceIdentifier decomposedGlyphsIdentifier)
-        : m_fontIdentifier(fontIdentifier)
-        , m_decomposedGlyphsIdentifier(decomposedGlyphsIdentifier)
+    DrawDecomposedGlyphs(Ref<const Font>&& font, Ref<const DecomposedGlyphs>&& decomposedGlyphs)
+        : m_font(WTFMove(font))
+        , m_decomposedGlyphs(WTFMove(decomposedGlyphs))
     {
     }
 
-    RenderingResourceIdentifier fontIdentifier() const { return m_fontIdentifier; }
-    RenderingResourceIdentifier decomposedGlyphsIdentifier() const { return m_decomposedGlyphsIdentifier; }
+    Ref<const Font> font() const { return m_font; }
+    Ref<const DecomposedGlyphs> decomposedGlyphs() const { return m_decomposedGlyphs; }
 
-    WEBCORE_EXPORT void apply(GraphicsContext&, const Font&, const DecomposedGlyphs&) const;
+    WEBCORE_EXPORT void apply(GraphicsContext&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    RenderingResourceIdentifier m_fontIdentifier;
-    RenderingResourceIdentifier m_decomposedGlyphsIdentifier;
+    Ref<const Font> m_font;
+    Ref<const DecomposedGlyphs> m_decomposedGlyphs;
 };
 
 class DrawImageBuffer {

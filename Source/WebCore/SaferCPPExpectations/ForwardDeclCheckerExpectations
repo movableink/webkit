@@ -143,7 +143,7 @@ platform/graphics/ca/cocoa/PlatformCALayerCocoa.mm
 platform/graphics/cg/GraphicsContextCG.cpp
 platform/graphics/cocoa/FontCacheCoreText.cpp
 platform/graphics/cocoa/GraphicsContextCocoa.mm
-platform/graphics/coretext/DrawGlyphsRecorderCoreText.cpp
+platform/graphics/coretext/DrawGlyphsRecorder.cpp
 platform/graphics/coretext/FontCoreText.cpp
 platform/graphics/coretext/FontCustomPlatformDataCoreText.cpp
 platform/graphics/cv/GraphicsContextGLCVCocoa.h

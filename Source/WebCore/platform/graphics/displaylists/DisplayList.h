@@ -60,8 +60,6 @@ public:
 
     void cacheImageBuffer(ImageBuffer&);
     void cacheNativeImage(NativeImage&);
-    void cacheFont(Font&);
-    void cacheDecomposedGlyphs(DecomposedGlyphs&);
     void cacheGradient(Gradient&);
     void cacheFilter(Filter&);
 

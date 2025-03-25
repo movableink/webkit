@@ -2707,11 +2707,6 @@ class WebCore::DatabaseDetails {
     std::optional<WallTime> modificationTime();
 };
 
-[RefCounted, AdditionalEncoder=StreamConnectionEncoder] class WebCore::DecomposedGlyphs {
-    WebCore::PositionedGlyphs positionedGlyphs();
-    WebCore::RenderingResourceIdentifier renderingResourceIdentifier();
-}
-
 header: <WebCore/TextIndicator.h>
 [CustomHeader] struct WebCore::TextIndicatorData {
     WebCore::FloatRect selectionRectInRootViewCoordinates;
@@ -6172,13 +6167,6 @@ struct WebCore::VideoFrameTimeMetadata {
     std::optional<Seconds> captureTime;
     std::optional<Seconds> receiveTime;
     std::optional<unsigned> rtpTimestamp;
-};
-
-[AdditionalEncoder=StreamConnectionEncoder] struct WebCore::PositionedGlyphs {
-    Vector<WebCore::GlyphBufferGlyph> glyphs;
-    [Validator='glyphs->size() == advances->size()'] Vector<WebCore::GlyphBufferAdvance> advances;
-    WebCore::FloatPoint localAnchor;
-    WebCore::FontSmoothingMode smoothingMode;
 };
 
 class WebCore::EventRegion {
