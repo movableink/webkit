@@ -232,6 +232,8 @@ enum class TapHandlingResult : uint8_t;
 - (void)_willInvalidateDraggedModelWithContainerView:(UIView *)containerView;
 #endif
 
+- (BOOL)_isInStableState:(UIScrollView *)scrollView;
+
 - (UIEdgeInsets)currentlyVisibleContentInsetsWithScale:(CGFloat)scaleFactor obscuredInsets:(UIEdgeInsets)obscuredInsets;
 
 @end

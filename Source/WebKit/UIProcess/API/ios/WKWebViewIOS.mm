@@ -2738,6 +2738,11 @@ static WebCore::FloatPoint constrainContentOffset(WebCore::FloatPoint contentOff
     [self _scheduleVisibleContentRectUpdate];
 }
 
+- (BOOL)_isInStableState:(UIScrollView *)scrollView
+{
+    return [self _viewStabilityState:scrollView].isEmpty();
+}
+
 - (OptionSet<WebKit::ViewStabilityFlag>)_viewStabilityState:(UIScrollView *)scrollView
 {
     OptionSet<WebKit::ViewStabilityFlag> stabilityFlags;

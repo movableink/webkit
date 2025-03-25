@@ -587,6 +587,9 @@ struct ImageAnalysisContextMenuActionData {
     std::optional<BOOL> _cachedRequiresLegacyTextInputTraits;
     NSInteger _dropAnimationCount;
 
+    BOOL _waitingForEditorStateAfterScrollingSelectionContainer;
+    std::optional<WebCore::IntPoint> _lastSelectionChildScrollViewContentOffset;
+
     BOOL _hasSetUpInteractions;
     std::optional<BOOL> _cachedHasCustomTintColor;
     NSUInteger _ignoreSelectionCommandFadeCount;
