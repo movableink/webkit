@@ -7760,3 +7760,5 @@ webkit.org/b/290412 imported/w3c/web-platform-tests/scroll-animations/scroll-tim
 webkit.org/b/290413 [ Debug ] imported/w3c/web-platform-tests/html/browsers/browsing-the-web/navigating-across-documents/javascript-url-return-value-handling-dynamic.html [ Failure ]
 
 webkit.org/b/290416 [ Debug ] imported/w3c/web-platform-tests/html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-multiple-times.html [ Pass Failure ]
+
+webkit.org/b/290420 [ Debug ] ipc/invalid-message-to-web-process.html [ Timeout ]
