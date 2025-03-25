@@ -74,12 +74,16 @@ PlatformWebView::PlatformWebView(WKPageConfigurationRef configuration, const Tes
     m_view = [[TestRunnerWKWebView alloc] initWithFrame:rect configuration:(__bridge WKWebViewConfiguration *)configuration];
     [m_view _setWindowOcclusionDetectionEnabled:NO];
 
-    NSScreen *firstScreen = [[NSScreen screens] objectAtIndex:0];
-    NSRect windowRect = m_options.shouldShowWindow() ? NSOffsetRect(rect, 100, 100) : NSOffsetRect(rect, -10000, [firstScreen frame].size.height - rect.size.height + 10000);
+    // FIXME: Remove handling of the no-screens case once <rdar://147785771> is fixed.
+    NSScreen *firstScreen = ([[NSScreen screens] count] > 0) ? [[NSScreen screens] objectAtIndex:0] : nil;
+    CGFloat xOffset = m_options.shouldShowWindow() ? 100 : -10000;
+    CGFloat yOffset = m_options.shouldShowWindow() ? 100 : (firstScreen ? ([firstScreen frame].size.height - rect.size.height + 10000) : -10000);
+    NSRect windowRect = NSOffsetRect(rect, xOffset, yOffset);
+
     m_window = [[WebKitTestRunnerWindow alloc] initWithContentRect:windowRect styleMask:NSWindowStyleMaskBorderless backing:(NSBackingStoreType)_NSBackingStoreUnbuffered defer:YES];
     m_window.platformWebView = this;
     [m_window setHasShadow:NO];
-    [m_window setColorSpace:[firstScreen colorSpace]];
+    [m_window setColorSpace:firstScreen ? [firstScreen colorSpace] : [NSColorSpace genericRGBColorSpace]];
     [m_window setAppearance:[NSAppearance appearanceNamed:NSAppearanceNameAqua]];
     [m_window setCollectionBehavior:NSWindowCollectionBehaviorStationary];
     [[m_window contentView] addSubview:m_view];
