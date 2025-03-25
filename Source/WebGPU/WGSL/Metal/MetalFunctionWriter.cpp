@@ -468,13 +468,13 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
                 m_indent, "U exchanged;\n"_s);
         }
         m_body.append(m_indent, "};\n\n"_s,
-            m_indent, "#define __wgslAtomicCompareExchangeWeak(atomic, compare, value) \\\n"_s);
+            m_indent, "template<typename T, typename S, typename V> __atomic_compare_exchange_result<S> __wgslAtomicCompareExchangeWeak(T atomic1, S compare, V value) {\n"_s);
         {
             IndentationScope scope(m_indent);
-            m_body.append(m_indent, "({ auto innerCompare = compare; \\\n"_s,
-                m_indent, "bool exchanged = atomic_compare_exchange_weak_explicit((atomic), &innerCompare, value, memory_order_relaxed, memory_order_relaxed); \\\n"_s,
-                m_indent, "__atomic_compare_exchange_result<decltype(compare)> { innerCompare, exchanged }; \\\n"_s,
-                m_indent, "})\n"_s);
+            m_body.append(m_indent, "auto innerCompare = compare; \n"_s,
+                m_indent, "bool exchanged = atomic_compare_exchange_weak_explicit(atomic1, &innerCompare, value, memory_order_relaxed, memory_order_relaxed); \n"_s,
+                m_indent, "return __atomic_compare_exchange_result<decltype(compare)> { innerCompare, exchanged }; \\\n"_s,
+                m_indent, "}\n"_s);
         }
     }
 
