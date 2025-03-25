@@ -283,7 +283,7 @@
         return;
     }
 
-    [self.layer setValue:(__bridge id)cachedCGColor(*backgroundColor).get() forKeyPath:@"separatedOptions.material.clearColor"];
+    [self.layer setValue:(__bridge id)cachedCGColor(backgroundColor->opaqueColor()).get() forKeyPath:@"separatedOptions.material.clearColor"];
 }
 
 #if HAVE(RE_STEREO_CONTENT_SUPPORT)
