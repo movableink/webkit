@@ -100,7 +100,7 @@ std::optional<NotificationData> NotificationData::fromDictionary(NSDictionary *d
 
 NSDictionary *NotificationData::dictionaryRepresentation() const
 {
-    NSMutableDictionary *result = @{
+    RetainPtr result = adoptNS(@{
         WebNotificationDefaultActionURLKey : (NSString *)navigateURL.string(),
         WebNotificationTitleKey : (NSString *)title,
         WebNotificationBodyKey : (NSString *)body,
@@ -113,15 +113,15 @@ NSDictionary *NotificationData::dictionaryRepresentation() const
         WebNotificationUUIDStringKey : (NSString *)notificationID.toString(),
         WebNotificationSessionIDKey : @(sourceSession.toUInt64()),
         WebNotificationDataKey: toNSData(data).autorelease(),
-    }.mutableCopy;
+    }.mutableCopy);
 
     if (contextIdentifier)
-        result[WebNotificationContextUUIDStringKey] = (NSString *)contextIdentifier->toString();
+        result.get()[WebNotificationContextUUIDStringKey] = (NSString *)contextIdentifier->toString();
 
     if (silent != std::nullopt)
-        result[WebNotificationSilentKey] = @(*silent);
+        result.get()[WebNotificationSilentKey] = @(*silent);
 
-    return result;
+    return result.autorelease();
 }
 
 } // namespace WebKit
