@@ -261,7 +261,6 @@ public:
     bool isShowingValidationMessage() const;
     String validationMessage() const;
 
-    unsigned blockquoteLevel() const final;
     unsigned headingLevel() const override { return 0; }
     AccessibilityButtonState checkboxOrRadioValue() const override;
     String valueDescription() const override { return String(); }

@@ -161,13 +161,18 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXProperty::IsBusy, object.isBusy());
     setProperty(AXProperty::IsEnabled, object.isEnabled());
     setProperty(AXProperty::IsExpanded, object.isExpanded());
+
+    // FIXME: These three properties, plus AXProperty::IsRadioInput below, are basically
+    // all just variations of HTMLInputElement::m_inputType. It would be better to cache
+    // just that rather than have four separate properties.
     setProperty(AXProperty::IsFileUploadButton, object.isFileUploadButton());
+    setProperty(AXProperty::IsInputImage, object.isInputImage());
+    setProperty(AXProperty::IsSecureField, object.isSecureField());
+
     setProperty(AXProperty::IsIndeterminate, object.isIndeterminate());
     setProperty(AXProperty::IsInlineText, object.isInlineText());
-    setProperty(AXProperty::IsInputImage, object.isInputImage());
     setProperty(AXProperty::IsMultiSelectable, object.isMultiSelectable());
     setProperty(AXProperty::IsRequired, object.isRequired());
-    setProperty(AXProperty::IsSecureField, object.isSecureField());
     setProperty(AXProperty::IsSelected, object.isSelected());
     setProperty(AXProperty::InsideLink, object.insideLink());
     setProperty(AXProperty::IsValueAutofillAvailable, object.isValueAutofillAvailable());
@@ -177,7 +182,6 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXProperty::CanSetFocusAttribute, object.canSetFocusAttribute());
     setProperty(AXProperty::CanSetValueAttribute, object.canSetValueAttribute());
     setProperty(AXProperty::CanSetSelectedAttribute, object.canSetSelectedAttribute());
-    setProperty(AXProperty::BlockquoteLevel, object.blockquoteLevel());
     setProperty(AXProperty::HeadingLevel, object.headingLevel());
     setProperty(AXProperty::ValueDescription, object.valueDescription().isolatedCopy());
     setProperty(AXProperty::ValueForRange, object.valueForRange());

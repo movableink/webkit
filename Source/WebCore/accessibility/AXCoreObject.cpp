@@ -947,6 +947,16 @@ String AXCoreObject::ariaLandmarkRoleDescription() const
     }
 }
 
+unsigned AXCoreObject::blockquoteLevel() const
+{
+    unsigned level = 0;
+    for (RefPtr ancestor = parentObject(); ancestor; ancestor = ancestor->parentObject()) {
+        if (ancestor->roleValue() == AccessibilityRole::Blockquote)
+            ++level;
+    }
+    return level;
+}
+
 bool AXCoreObject::supportsPressAction() const
 {
     if (roleValue() == AccessibilityRole::Presentational)

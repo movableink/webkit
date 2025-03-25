@@ -252,7 +252,6 @@ private:
     String datetimeAttributeValue() const final { return stringAttributeValue(AXProperty::DatetimeAttributeValue); }
     bool canSetValueAttribute() const final { return boolAttributeValue(AXProperty::CanSetValueAttribute); }
     bool canSetSelectedAttribute() const final { return boolAttributeValue(AXProperty::CanSetSelectedAttribute); }
-    unsigned blockquoteLevel() const final { return unsignedAttributeValue(AXProperty::BlockquoteLevel); }
     unsigned headingLevel() const final { return unsignedAttributeValue(AXProperty::HeadingLevel); }
     AccessibilityButtonState checkboxOrRadioValue() const final { return propertyValue<AccessibilityButtonState>(AXProperty::ButtonState); }
     String valueDescription() const final { return stringAttributeValue(AXProperty::ValueDescription); }

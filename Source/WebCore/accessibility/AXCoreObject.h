@@ -1008,7 +1008,7 @@ public:
 
     virtual bool isIgnored() const = 0;
 
-    virtual unsigned blockquoteLevel() const = 0;
+    unsigned blockquoteLevel() const;
     virtual unsigned headingLevel() const = 0;
     virtual AccessibilityButtonState checkboxOrRadioValue() const = 0;
     virtual String valueDescription() const = 0;
@@ -1532,7 +1532,6 @@ inline Vector<AXID> axIDs(const AXCoreObject::AccessibilityChildrenVector& objec
 
 #if PLATFORM(MAC)
 void attributedStringSetExpandedText(NSMutableAttributedString *, const AXCoreObject&, const NSRange&);
-void attributedStringSetBlockquoteLevel(NSMutableAttributedString *, const AXCoreObject&, const NSRange&);
 void attributedStringSetNeedsSpellCheck(NSMutableAttributedString *, const AXCoreObject&);
 void attributedStringSetElement(NSMutableAttributedString *, NSString *attribute, const AXCoreObject&, const NSRange&);
 #endif // PLATFORM(MAC)

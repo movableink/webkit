@@ -97,7 +97,6 @@ enum class AXProperty : uint16_t {
     AncestorFlags,
     AutoCompleteValue,
     BackgroundColor,
-    BlockquoteLevel,
     BrailleLabel,
     BrailleRoleDescription,
     ButtonState,

@@ -130,15 +130,6 @@ void attributedStringSetExpandedText(NSMutableAttributedString *string, const AX
         [string addAttribute:NSAccessibilityExpandedTextValueAttribute value:object.expandedTextValue() range:range];
 }
 
-void attributedStringSetBlockquoteLevel(NSMutableAttributedString *string, const AXCoreObject& object, const NSRange& range)
-{
-    if (!attributedStringContainsRange(string, range))
-        return;
-
-    if (unsigned level = object.blockquoteLevel())
-        [string addAttribute:NSAccessibilityBlockQuoteLevelAttribute value:@(level) range:range];
-}
-
 void attributedStringSetNeedsSpellCheck(NSMutableAttributedString *string, const AXCoreObject& object)
 {
     // If this object is not inside editable content, it's not eligible for spell-checking.
@@ -203,6 +194,7 @@ RetainPtr<NSMutableAttributedString> AXCoreObject::createAttributedString(String
     NSRange range = NSMakeRange(0, [string length]);
     attributedStringSetStyle(string.get(), stylesForAttributedString(), range);
 
+    unsigned blockquoteLevel = 0;
     // Set attributes determined by `this`, or an ancestor of `this`.
     bool didSetHeadingLevel = false;
     for (RefPtr ancestor = this; ancestor; ancestor = ancestor->parentObject()) {
@@ -235,12 +227,13 @@ RetainPtr<NSMutableAttributedString> AXCoreObject::createAttributedString(String
                 [string.get() addAttribute:NSAccessibilityHeadingLevelAttribute value:@(level) range:range];
             }
         }
-    }
 
-    // FIXME: Computing block-quote level is an ancestry walk, so ideally we would just combine that with the
-    // ancestry walk we do above, but we currently cache this as its own property (AXProperty::BlockquoteLevel)
-    // so just use that for now.
-    attributedStringSetBlockquoteLevel(string.get(), *this, range);
+        if (ancestor->roleValue() == AccessibilityRole::Blockquote)
+            ++blockquoteLevel;
+    }
+    if (blockquoteLevel)
+        [string.get() addAttribute:NSAccessibilityBlockQuoteLevelAttribute value:@(blockquoteLevel) range:range];
+
     attributedStringSetExpandedText(string.get(), *this, range);
 
     // FIXME: We need to implement this, but there are several issues with it:

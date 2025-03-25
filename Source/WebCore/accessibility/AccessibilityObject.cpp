@@ -507,17 +507,6 @@ AXTextMarkerRange AccessibilityObject::textInputMarkedTextMarkerRange() const
     return { editor.compositionRange() };
 }
 
-unsigned AccessibilityObject::blockquoteLevel() const
-{
-    unsigned level = 0;
-    for (Node* elementNode = node(); elementNode; elementNode = elementNode->parentNode()) {
-        if (elementNode->hasTagName(blockquoteTag))
-            ++level;
-    }
-    
-    return level;
-}
-
 AccessibilityObject* AccessibilityObject::displayContentsParent() const
 {
     auto* parentNode = node() ? node()->parentNode() : nullptr;

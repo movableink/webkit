@@ -659,9 +659,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::BackgroundColor:
         stream << "BackgroundColor";
         break;
-    case AXProperty::BlockquoteLevel:
-        stream << "BlockquoteLevel";
-        break;
     case AXProperty::BrailleLabel:
         stream << "BrailleLabel";
         break;
