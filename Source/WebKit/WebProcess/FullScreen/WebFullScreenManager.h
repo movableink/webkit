@@ -28,6 +28,8 @@
 #if ENABLE(FULLSCREEN_API)
 
 #include <WebCore/EventListener.h>
+#include <WebCore/ExceptionOr.h>
+#include <WebCore/FrameIdentifier.h>
 #include <WebCore/HTMLMediaElement.h>
 #include <WebCore/HTMLMediaElementEnums.h>
 #include <WebCore/IntRect.h>
