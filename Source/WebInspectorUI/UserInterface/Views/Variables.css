@@ -434,7 +434,8 @@ body {
         }
     }
 
-    &:not(.docked) {
+    /* Only needed by the Mac port, keep in sync with `WI.undockedTitleAreaHeight` */
+    &.mac-platform:not(.docked) {
         --undocked-title-area-height: calc(27px / var(--zoom-factor));
     }
 }
