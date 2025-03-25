@@ -169,13 +169,6 @@ void AcceleratedSurfaceDMABuf::RenderTarget::willRenderFrame()
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
 }
 
-void AcceleratedSurfaceDMABuf::RenderTarget::didRenderFrame()
-{
-#if ENABLE(DAMAGE_TRACKING)
-    m_damage = WebCore::Damage { };
-#endif
-}
-
 void AcceleratedSurfaceDMABuf::RenderTarget::setReleaseFenceFD(UnixFileDescriptor&& releaseFence)
 {
     m_releaseFenceFD = WTFMove(releaseFence);
@@ -686,6 +679,7 @@ void AcceleratedSurfaceDMABuf::didRenderFrame()
 
     Vector<WebCore::IntRect, 1> damageRects;
 #if ENABLE(DAMAGE_TRACKING)
+    m_target->setDamage(WebCore::Damage(m_size));
     if (m_frameDamage) {
         damageRects = m_frameDamage->rects();
         m_frameDamage = std::nullopt;

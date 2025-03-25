@@ -34,7 +34,7 @@ using namespace WebCore;
 
 TEST(Damage, Basics)
 {
-    Damage damage;
+    Damage damage(IntSize { 2048, 1024 });
     EXPECT_TRUE(damage.isEmpty());
     EXPECT_EQ(damage.rects().size(), 0);
 }
@@ -42,8 +42,7 @@ TEST(Damage, Basics)
 TEST(Damage, Mode)
 {
     // Rectangles is the default mode.
-    Damage rectsDamage;
-    rectsDamage.resize(IntSize { 1024, 768 });
+    Damage rectsDamage(IntSize { 1024, 768 });
     rectsDamage.add(IntRect { 100, 100, 200, 200 });
     rectsDamage.add(IntRect { 300, 300, 200, 200 });
     EXPECT_FALSE(rectsDamage.isEmpty());
@@ -54,9 +53,7 @@ TEST(Damage, Mode)
     EXPECT_EQ(rectsDamage.bounds().height(), 400);
 
     // BoundingBox always unite damage in bounds.
-    Damage bboxDamage;
-    bboxDamage.resize(IntSize { 1024, 768 });
-    bboxDamage.setMode(Damage::Mode::BoundingBox);
+    Damage bboxDamage(IntSize { 1024, 768 }, Damage::Mode::BoundingBox);
     bboxDamage.add(IntRect { 100, 100, 200, 200 });
     bboxDamage.add(IntRect { 300, 300, 200, 200 });
     EXPECT_FALSE(bboxDamage.isEmpty());
@@ -68,9 +65,7 @@ TEST(Damage, Mode)
     EXPECT_EQ(bboxDamage.bounds().height(), 400);
 
     // Full ignores any adds and always reports the whole area.
-    Damage fullDamage;
-    fullDamage.resize(IntSize { 1024, 768 });
-    fullDamage.setMode(Damage::Mode::Full);
+    Damage fullDamage(IntSize { 1024, 768 }, Damage::Mode::Full);
     fullDamage.add(IntRect { 100, 100, 200, 200 });
     fullDamage.add(IntRect { 300, 300, 200, 200 });
     EXPECT_FALSE(fullDamage.isEmpty());
@@ -81,19 +76,9 @@ TEST(Damage, Mode)
     EXPECT_EQ(fullDamage.bounds().width(), 1024);
     EXPECT_EQ(fullDamage.bounds().height(), 768);
 
-    // We can change the existing mode.
-    Damage bboxDamage2 = rectsDamage;
-    bboxDamage2.setMode(Damage::Mode::BoundingBox);
-    EXPECT_FALSE(bboxDamage2.isEmpty());
-    EXPECT_EQ(bboxDamage2.rects().size(), 1);
-    EXPECT_EQ(bboxDamage2.rects()[0], bboxDamage.bounds());
-    EXPECT_EQ(bboxDamage2.bounds().x(), 100);
-    EXPECT_EQ(bboxDamage2.bounds().y(), 100);
-    EXPECT_EQ(bboxDamage2.bounds().width(), 400);
-    EXPECT_EQ(bboxDamage2.bounds().height(), 400);
-
+    // We can make a Damage full.
     Damage fullDamage2 = rectsDamage;
-    fullDamage2.setMode(Damage::Mode::Full);
+    fullDamage2.makeFull();
     EXPECT_FALSE(fullDamage2.isEmpty());
     EXPECT_EQ(fullDamage2.rects().size(), 1);
     EXPECT_EQ(fullDamage2.rects()[0], fullDamage.bounds());
@@ -102,28 +87,20 @@ TEST(Damage, Mode)
     EXPECT_EQ(fullDamage2.bounds().width(), 1024);
     EXPECT_EQ(fullDamage2.bounds().height(), 768);
 
-    Damage rectsDamage2 = bboxDamage;
-    rectsDamage2.setMode(Damage::Mode::Rectangles);
-    EXPECT_FALSE(rectsDamage2.isEmpty());
-    EXPECT_EQ(rectsDamage2.rects().size(), 1);
-    EXPECT_EQ(rectsDamage2.bounds().x(), 100);
-    EXPECT_EQ(rectsDamage2.bounds().y(), 100);
-    EXPECT_EQ(rectsDamage2.bounds().width(), 400);
-    EXPECT_EQ(rectsDamage2.bounds().height(), 400);
-
-    Damage rectsDamage3 = fullDamage;
-    rectsDamage3.setMode(Damage::Mode::Rectangles);
-    EXPECT_FALSE(rectsDamage3.isEmpty());
-    EXPECT_EQ(rectsDamage3.rects().size(), 1);
-    EXPECT_EQ(rectsDamage3.bounds().x(), 0);
-    EXPECT_EQ(rectsDamage3.bounds().y(), 0);
-    EXPECT_EQ(rectsDamage3.bounds().width(), 1024);
-    EXPECT_EQ(rectsDamage3.bounds().height(), 768);
+    // We can make a Damage full with different size.
+    Damage fullDamage3 = rectsDamage;
+    fullDamage3.makeFull(IntSize { 800, 600 });
+    EXPECT_FALSE(fullDamage3.isEmpty());
+    EXPECT_EQ(fullDamage3.rects().size(), 1);
+    EXPECT_EQ(fullDamage3.bounds().x(), 0);
+    EXPECT_EQ(fullDamage3.bounds().y(), 0);
+    EXPECT_EQ(fullDamage3.bounds().width(), 800);
+    EXPECT_EQ(fullDamage3.bounds().height(), 600);
 }
 
 TEST(Damage, Move)
 {
-    Damage damage;
+    Damage damage(IntSize { 2048, 1024 });
     damage.add(IntRect { 100, 100, 200, 200 });
     damage.add(IntRect { 300, 300, 200, 200 });
     EXPECT_FALSE(damage.isEmpty());
@@ -150,20 +127,12 @@ TEST(Damage, Move)
 
 TEST(Damage, Resize)
 {
-    Damage damage;
 
-    // Grid size should be ceiled.
-    damage.resize(IntSize { 512, 333 });
-    damage.add(IntRect { 0, 0, 1, 1 });
-    damage.add(IntRect { 1, 1, 1, 1 });
-    damage.add(IntRect { 2, 2, 1, 1 });
-    damage.add(IntRect { 3, 3, 1, 1 });
-    EXPECT_EQ(damage.rects().size(), 4);
 }
 
 TEST(Damage, AddRect)
 {
-    Damage damage;
+    Damage damage(IntSize { 2048, 1024 });
     damage.add(IntRect { 100, 100, 200, 200 });
     EXPECT_EQ(damage.rects().size(), 1);
 
@@ -215,12 +184,12 @@ TEST(Damage, AddRect)
 
 TEST(Damage, AddDamage)
 {
-    Damage damage;
+    Damage damage(IntSize { 2048, 1024 });
     damage.add(IntRect { 100, 100, 200, 200 });
     EXPECT_EQ(damage.rects().size(), 1);
 
     // Adding empty Damage does nothing.
-    Damage other;
+    Damage other(IntSize { 2048, 1024 });
     damage.add(other);
     EXPECT_EQ(damage.rects().size(), 1);
 
@@ -237,10 +206,8 @@ TEST(Damage, AddDamage)
 
 TEST(Damage, Unite)
 {
-    Damage damage;
-    damage.resize(IntSize { 512, 512 });
-
     // Add several rects to the first tile.
+    Damage damage(IntSize { 512, 512 });
     damage.add(IntRect { 0, 0, 4, 4 });
     EXPECT_EQ(damage.rects().size(), 1);
     damage.add(IntRect { 200, 0, 4, 4 });
@@ -257,10 +224,8 @@ TEST(Damage, Unite)
     EXPECT_TRUE(damage.rects()[3].isEmpty());
     EXPECT_EQ(damage.rects()[0], damage.bounds());
 
-    damage = { };
-    damage.resize(IntSize { 512, 512 });
-
     // Add several rects to the second tile.
+    damage = Damage(IntSize { 512, 512 });
     damage.add(IntRect { 300, 0, 4, 4 });
     EXPECT_EQ(damage.rects().size(), 1);
     damage.add(IntRect { 500, 0, 4, 4 });
@@ -277,11 +242,8 @@ TEST(Damage, Unite)
     EXPECT_TRUE(damage.rects()[3].isEmpty());
     EXPECT_EQ(damage.rects()[1], damage.bounds());
 
-
-    damage = { };
-    damage.resize(IntSize { 512, 512 });
-
     // Add several rects to the third tile.
+    damage = Damage(IntSize { 512, 512 });
     damage.add(IntRect { 0, 300, 4, 4 });
     EXPECT_EQ(damage.rects().size(), 1);
     damage.add(IntRect { 200, 300, 4, 4 });
@@ -298,10 +260,8 @@ TEST(Damage, Unite)
     EXPECT_TRUE(damage.rects()[3].isEmpty());
     EXPECT_EQ(damage.rects()[2], damage.bounds());
 
-    damage = { };
-    damage.resize(IntSize { 512, 512 });
-
     // Add several rects to the fourth tile.
+    damage = Damage(IntSize { 512, 512 });
     damage.add(IntRect { 300, 300, 4, 4 });
     EXPECT_EQ(damage.rects().size(), 1);
     damage.add(IntRect { 500, 300, 4, 4 });
@@ -318,11 +278,8 @@ TEST(Damage, Unite)
     EXPECT_FALSE(damage.rects()[3].isEmpty());
     EXPECT_EQ(damage.rects()[3], damage.bounds());
 
-
-    damage = { };
-    damage.resize(IntSize { 512, 512 });
-
     // Add one rect per tile.
+    damage = Damage(IntSize { 512, 512 });
     damage.add(IntRect { 0, 0, 4, 4 });
     EXPECT_EQ(damage.rects().size(), 1);
     damage.add(IntRect { 300, 0, 4, 4 });
@@ -352,10 +309,8 @@ TEST(Damage, Unite)
     EXPECT_EQ(damage.rects()[3].width(), 4);
     EXPECT_EQ(damage.rects()[3].height(), 4);
 
-    damage = { };
-    damage.resize(IntSize { 512, 512 });
-
     // Add rects with points off the grid area.
+    damage = Damage(IntSize { 512, 512 });
     damage.add(IntRect { -2, 0, 4, 4 });
     EXPECT_EQ(damage.rects().size(), 1);
     damage.add(IntRect { 50, -2, 4, 4 });
@@ -393,10 +348,8 @@ TEST(Damage, Unite)
     EXPECT_EQ(damage.rects()[3].width(), 254);
     EXPECT_EQ(damage.rects()[3].height(), 254);
 
-    damage = { };
-    damage.resize(IntSize { 128, 128 });
-
     // Add several rects and check that unite works for single tile grid.
+    damage = Damage(IntSize { 128, 128 });
     damage.add(IntRect { 10, 10, 4, 4 });
     EXPECT_EQ(damage.rects().size(), 1);
     damage.add(IntRect { 60, 60, 4, 4 });
@@ -413,6 +366,14 @@ TEST(Damage, Unite)
     EXPECT_EQ(damage.rects().size(), 1);
     damage.add(IntRect { 120, 120, 4, 4 });
     EXPECT_EQ(damage.rects().size(), 1);
+
+    // Grid size should be ceiled.
+    damage = Damage(IntSize { 512, 333 });
+    damage.add(IntRect { 0, 0, 1, 1 });
+    damage.add(IntRect { 1, 1, 1, 1 });
+    damage.add(IntRect { 2, 2, 1, 1 });
+    damage.add(IntRect { 3, 3, 1, 1 });
+    EXPECT_EQ(damage.rects().size(), 4);
 }
 
 } // namespace TestWebKitAPI

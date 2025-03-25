@@ -892,29 +892,30 @@ void GraphicsLayerCoordinated::updateVisibleRect(const FloatRect& rect)
 }
 
 #if ENABLE(DAMAGE_TRACKING)
-void GraphicsLayerCoordinated::updateDamage()
+void GraphicsLayerCoordinated::updateDamage(const FloatSize& visibleSize)
 {
     if (!m_platformLayer->damagePropagation())
         return;
 
-    Damage damage;
     if (m_dirtyRegion.fullRepaint) {
-        // FIXME: this will be simply changing the mode when we create damage with the layer size.
-        damage.resize(m_size);
-        damage.setMode(Damage::Mode::Full);
-        damage.add(FloatRect({ }, m_size));
-    } else {
-        for (const auto& rect : m_dirtyRegion.rects)
-            damage.add(rect);
+        m_platformLayer->setDamage(Damage(m_size, Damage::Mode::Full));
+        return;
     }
+
+    static constexpr FloatSize minDamageSize = { 512, 512 };
+    Damage damage(m_size.constrainedBetween(minDamageSize, visibleSize));
+    for (const auto& rect : m_dirtyRegion.rects)
+        damage.add(rect);
     m_platformLayer->setDamage(WTFMove(damage));
 }
 #endif
 
-void GraphicsLayerCoordinated::updateDirtyRegion()
+void GraphicsLayerCoordinated::updateDirtyRegion(const FloatSize& visibleSize)
 {
 #if ENABLE(DAMAGE_TRACKING)
-    updateDamage();
+    updateDamage(visibleSize);
+#else
+    UNUSED_PARAM(visibleSize);
 #endif
 
     IntRect contentsRect(IntPoint::zero(), IntSize(m_size));
@@ -1092,7 +1093,7 @@ void GraphicsLayerCoordinated::commitLayerChanges(CommitState& commitState, floa
         m_platformLayer->setContentsColor(m_contentsColor);
 
     if (m_pendingChanges.contains(Change::DirtyRegion))
-        updateDirtyRegion();
+        updateDirtyRegion(commitState.visibleRect.size());
 
     if (m_pendingChanges.contains(Change::Filters))
         m_platformLayer->setFilters(m_filters);

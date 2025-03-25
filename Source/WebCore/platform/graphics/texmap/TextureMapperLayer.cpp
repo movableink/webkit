@@ -375,14 +375,19 @@ void TextureMapperLayer::paint(TextureMapper& textureMapper)
 Damage& TextureMapperLayer::ensureDamageInLayerCoordinateSpace()
 {
     if (!m_damageInLayerCoordinateSpace)
-        m_damageInLayerCoordinateSpace = Damage();
+        m_damageInLayerCoordinateSpace = Damage(m_state.size);
     return *m_damageInLayerCoordinateSpace;
 }
 
 Damage& TextureMapperLayer::ensureDamageInGlobalCoordinateSpace()
 {
-    if (!m_damageInGlobalCoordinateSpace)
-        m_damageInGlobalCoordinateSpace = Damage();
+    if (!m_damageInGlobalCoordinateSpace) {
+        // For the damage in global coordinates, use the root layer size.
+        auto* rootLayer = this;
+        while (rootLayer->m_parent)
+            rootLayer = rootLayer->m_parent;
+        m_damageInGlobalCoordinateSpace = Damage(rootLayer->m_state.size);
+    }
     return *m_damageInGlobalCoordinateSpace;
 }
 
@@ -552,10 +557,10 @@ void TextureMapperLayer::collectDamageSelfChildrenFilterAndMask(TextureMapperPai
 
 void TextureMapperLayer::damageWholeLayer()
 {
-    // FIXME: this will be simply changing the mode when we create damage with the layer size.
-    auto& damage = ensureDamageInLayerCoordinateSpace();
-    damage.resize(layerRect().size());
-    damage.setMode(Damage::Mode::Full);
+    if (m_state.size.isEmpty())
+        return;
+
+    ensureDamageInLayerCoordinateSpace().makeFull(m_state.size);
 }
 
 void TextureMapperLayer::damageWholeLayerIncludingItsRectFromPreviousFrame()

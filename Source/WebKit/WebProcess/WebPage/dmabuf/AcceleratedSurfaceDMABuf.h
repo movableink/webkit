@@ -120,12 +120,13 @@ private:
 
         uint64_t id() const { return m_id; }
 #if ENABLE(DAMAGE_TRACKING)
+        void setDamage(WebCore::Damage&& damage) { m_damage = WTFMove(damage); }
         const std::optional<WebCore::Damage>& damage() { return m_damage; }
         void addDamage(const std::optional<WebCore::Damage>&);
 #endif
 
         virtual void willRenderFrame();
-        virtual void didRenderFrame();
+        virtual void didRenderFrame() { };
 
         std::unique_ptr<WebCore::GLFence> createRenderingFence(bool) const;
         void setReleaseFenceFD(UnixFileDescriptor&&);

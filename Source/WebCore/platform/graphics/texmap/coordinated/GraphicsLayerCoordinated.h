@@ -172,9 +172,9 @@ private:
     IntRect transformedRectIncludingFuture(const FloatRect&) const;
     void updateGeometry(float pageScaleFactor, const FloatPoint&);
 #if ENABLE(DAMAGE_TRACKING)
-    void updateDamage();
+    void updateDamage(const FloatSize&);
 #endif
-    void updateDirtyRegion();
+    void updateDirtyRegion(const FloatSize&);
     void updateBackdropFilters();
     void updateBackdropFiltersRect();
     void updateAnimations();

@@ -46,11 +46,23 @@ public:
 
     static constexpr int s_tileSize { 256 };
 
-    Damage()
-        : m_tileSize(s_tileSize, s_tileSize)
+    enum class Mode : uint8_t {
+        Rectangles, // Tracks dirty regions as rectangles, only unifying when maximum is reached.
+        BoundingBox, // Dirty region is always the minimum bounding box of all added rectangles.
+        Full, // All area is always dirty.
+    };
+
+    explicit Damage(const IntSize& size, Mode mode = Mode::Rectangles)
+        : m_mode(mode)
+        , m_size(size)
+        , m_tileSize(s_tileSize, s_tileSize)
     {
-        // FIXME: Add a constructor to pass the size.
-        resize(IntSize { 2048, 1024 });
+        initialize();
+    }
+
+    explicit Damage(const FloatSize& size, Mode mode = Mode::Rectangles)
+        : Damage(ceiledIntSize(LayoutSize(size)), mode)
+    {
     }
 
     Damage(Damage&&) = default;
@@ -64,50 +76,25 @@ public:
     ALWAYS_INLINE const Rects& rects() const { return m_rects; }
     ALWAYS_INLINE bool isEmpty() const  { return m_rects.isEmpty(); }
 
-    void resize(const IntSize& size)
+    void makeFull(const IntSize& size)
     {
-        if (m_size == size)
+        if (m_mode == Mode::Full && m_size == size)
             return;
 
         m_size = size;
-        m_gridSize = ceiledIntSize({ static_cast<float>(m_size.width()) / m_tileSize.width(), static_cast<float>(m_size.height()) / m_tileSize.height() }).expandedTo({ 1, 1 });
+        m_mode = Mode::Full;
         m_rects.clear();
-        m_minimumBoundingRectangle = { };
-        m_shouldUnite = m_gridSize.width() == 1 && m_gridSize.height() == 1;
+        initialize();
     }
 
-    void resize(const FloatSize& size)
+    void makeFull(const FloatSize& size)
     {
-        resize(ceiledIntSize(LayoutSize(size)));
+        makeFull(ceiledIntSize(LayoutSize(size)));
     }
 
-    enum class Mode : uint8_t {
-        Rectangles, // Tracks dirty regions as rectangles, only unifying when maximum is reached.
-        BoundingBox, // Dirty region is always the minimum bounding box of all added rectangles.
-        Full, // All area is always dirty.
-    };
-
-    void setMode(Mode mode)
+    void makeFull()
     {
-        if (m_mode == mode)
-            return;
-
-        switch (mode) {
-        case Mode::Rectangles:
-            break;
-        case Mode::BoundingBox:
-            m_rects.clear();
-            if (!m_minimumBoundingRectangle.isEmpty())
-                m_rects.append(m_minimumBoundingRectangle);
-            break;
-        case Mode::Full:
-            m_minimumBoundingRectangle = { { }, m_size };
-            m_rects.clear();
-            m_rects.append(m_minimumBoundingRectangle);
-            break;
-        }
-
-        m_mode = mode;
+        makeFull(m_size);
     }
 
     ALWAYS_INLINE void add(const Region& region)
@@ -175,6 +162,22 @@ public:
     }
 
 private:
+    void initialize()
+    {
+        switch (m_mode) {
+        case Mode::Rectangles:
+            m_gridSize = ceiledIntSize({ static_cast<float>(m_size.width()) / m_tileSize.width(), static_cast<float>(m_size.height()) / m_tileSize.height() }).expandedTo({ 1, 1 });
+            m_shouldUnite = m_gridSize.width() == 1 && m_gridSize.height() == 1;
+            break;
+        case Mode::BoundingBox:
+            break;
+        case Mode::Full:
+            m_minimumBoundingRectangle = { { }, m_size };
+            m_rects.append(m_minimumBoundingRectangle);
+            break;
+        }
+    }
+
     ALWAYS_INLINE bool shouldAdd() const
     {
         return !m_size.isEmpty() && m_mode != Mode::Full;
