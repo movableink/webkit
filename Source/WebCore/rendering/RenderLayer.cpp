@@ -394,6 +394,7 @@ RenderLayer::~RenderLayer()
 
     clearLayerScrollableArea();
     clearLayerFilters();
+    clearLayerClipPath();
 
     // Child layers will be deleted by their corresponding render objects, so
     // we don't need to delete them ourselves.
@@ -3447,55 +3448,59 @@ void RenderLayer::setupClipPath(GraphicsContext& context, GraphicsContextStateSa
         return;
     }
 
-    if (RefPtr referenceClipPathOperation = dynamicDowncast<ReferencePathOperation>(style.clipPath())) {
-        if (auto* svgClipper = renderer().svgClipperResourceFromStyle()) {
-            RefPtr graphicsElement = svgClipper->shouldApplyPathClipping();
-            if (!graphicsElement) {
-                paintFlags.add(PaintLayerFlag::PaintingSVGClippingMask);
-                return;
-            }
-
-            stateSaver.save();
-            FloatRect svgReferenceBox;
-            FloatSize coordinateSystemOriginTranslation;
-            if (renderer().isSVGLayerAwareRenderer()) {
-                ASSERT(paintingInfo.subpixelOffset.isZero());
-                auto boundingBoxTopLeftCorner = renderer().nominalSVGLayoutLocation();
-                svgReferenceBox = renderer().objectBoundingBox();
-                coordinateSystemOriginTranslation = toLayoutPoint(offsetFromRoot) - boundingBoxTopLeftCorner;
-            } else {
-                auto clipPathObjectBoundingBox = referenceBoxRectForClipPath(CSSBoxType::BorderBox, offsetFromRoot, clippedContentBounds);
-                svgReferenceBox = snapRectToDevicePixels(LayoutRect(clipPathObjectBoundingBox), renderer().document().deviceScaleFactor());
-            }
-
-            if (!coordinateSystemOriginTranslation.isZero())
-                context.translate(coordinateSystemOriginTranslation);
-
-            svgClipper->applyPathClipping(context, renderer(), svgReferenceBox, *graphicsElement);
-
-            if (!coordinateSystemOriginTranslation.isZero())
-                context.translate(-coordinateSystemOriginTranslation);
+    if (auto* svgClipper = renderer().svgClipperResourceFromStyle()) {
+        RefPtr graphicsElement = svgClipper->shouldApplyPathClipping();
+        if (!graphicsElement) {
+            paintFlags.add(PaintLayerFlag::PaintingSVGClippingMask);
             return;
         }
 
-        if (auto* clipperRenderer = ReferencedSVGResources::referencedClipperRenderer(renderer().treeScopeForSVGReferences(), *referenceClipPathOperation)) {
-            // Use the border box as the reference box, even though this is not clearly specified: https://github.com/w3c/csswg-drafts/issues/5786.
-            // clippedContentBounds is used as the reference box for inlines, which is also poorly specified: https://github.com/w3c/csswg-drafts/issues/6383.
-            auto referenceBox = referenceBoxRectForClipPath(CSSBoxType::BorderBox, offsetFromRoot, clippedContentBounds);
-            auto snappedReferenceBox = snapRectToDevicePixelsIfNeeded(referenceBox, renderer());
-            auto offset = snappedReferenceBox.location();
-
-            auto snappedClippingBounds = snapRectToDevicePixelsIfNeeded(clippedContentBounds, renderer());
-            snappedClippingBounds.moveBy(-offset);
-
-            stateSaver.save();
-            context.translate(offset);
-            clipperRenderer->applyClippingToContext(context, renderer(), { { }, referenceBox.size() }, snappedClippingBounds, renderer().style().usedZoom());
-            context.translate(-offset);
-            
-            // FIXME: Support event regions.
+        stateSaver.save();
+        FloatRect svgReferenceBox;
+        FloatSize coordinateSystemOriginTranslation;
+        if (renderer().isSVGLayerAwareRenderer()) {
+            ASSERT(paintingInfo.subpixelOffset.isZero());
+            auto boundingBoxTopLeftCorner = renderer().nominalSVGLayoutLocation();
+            svgReferenceBox = renderer().objectBoundingBox();
+            coordinateSystemOriginTranslation = toLayoutPoint(offsetFromRoot) - boundingBoxTopLeftCorner;
+        } else {
+            auto clipPathObjectBoundingBox = referenceBoxRectForClipPath(CSSBoxType::BorderBox, offsetFromRoot, clippedContentBounds);
+            svgReferenceBox = snapRectToDevicePixels(LayoutRect(clipPathObjectBoundingBox), renderer().document().deviceScaleFactor());
         }
+
+        if (!coordinateSystemOriginTranslation.isZero())
+            context.translate(coordinateSystemOriginTranslation);
+
+        svgClipper->applyPathClipping(context, renderer(), svgReferenceBox, *graphicsElement);
+
+        if (!coordinateSystemOriginTranslation.isZero())
+            context.translate(-coordinateSystemOriginTranslation);
+        return;
     }
+
+    if (auto* svgClipper = renderer().legacySVGClipperResourceFromStyle()) {
+        // Use the border box as the reference box, even though this is not clearly specified: https://github.com/w3c/csswg-drafts/issues/5786.
+        // clippedContentBounds is used as the reference box for inlines, which is also poorly specified: https://github.com/w3c/csswg-drafts/issues/6383.
+        auto referenceBox = referenceBoxRectForClipPath(CSSBoxType::BorderBox, offsetFromRoot, clippedContentBounds);
+        auto snappedReferenceBox = snapRectToDevicePixelsIfNeeded(referenceBox, renderer());
+        auto offset = snappedReferenceBox.location();
+
+        auto snappedClippingBounds = snapRectToDevicePixelsIfNeeded(clippedContentBounds, renderer());
+        snappedClippingBounds.moveBy(-offset);
+
+        stateSaver.save();
+        context.translate(offset);
+        svgClipper->applyClippingToContext(context, renderer(), { { }, referenceBox.size() }, snappedClippingBounds, renderer().style().usedZoom());
+        context.translate(-offset);
+
+        // FIXME: Support event regions.
+    }
+}
+
+void RenderLayer::clearLayerClipPath()
+{
+    if (auto* svgClipper = renderer().legacySVGClipperResourceFromStyle())
+        svgClipper->removeClientFromCache(renderer());
 }
 
 RenderLayerFilters* RenderLayer::filtersForPainting(GraphicsContext& context, OptionSet<PaintLayerFlag> paintFlags) const
