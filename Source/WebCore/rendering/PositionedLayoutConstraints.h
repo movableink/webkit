@@ -26,83 +26,11 @@
 #pragma once
 
 #include "BoxSides.h"
+#include "LayoutRange.h"
 #include "RenderBox.h"
 
 namespace WebCore {
 
-// This is basically a 1-dimentional LayoutRect.
-class LayoutRange {
-public:
-    LayoutRange() = default;
-    LayoutRange(LayoutUnit location, LayoutUnit size)
-        : m_location(location)
-        , m_size(size)
-    { }
-    LayoutUnit min() const { return m_location; }
-    LayoutUnit max() const { return m_location + m_size; }
-    LayoutUnit size() const { return m_size; }
-
-    void set(LayoutUnit location, LayoutUnit size)
-    {
-        m_location = location;
-        m_size = size;
-    }
-    void reset(LayoutUnit size = 0_lu)
-    {
-        m_location = 0_lu;
-        m_size = size;
-    }
-    void moveBy(LayoutUnit shift) { m_location += shift; }
-    void moveTo(LayoutUnit location) { m_location = location; }
-
-    void shiftMinEdgeBy(LayoutUnit shift)
-    {
-        m_location += shift;
-        m_size -= shift;
-    }
-    void shiftMaxEdgeBy(LayoutUnit shift) { m_size += shift; }
-    void shiftMinEdgeTo(LayoutUnit target) { shiftMinEdgeBy(target - min()); }
-    void shiftMaxEdgeTo(LayoutUnit target) { shiftMaxEdgeBy(target - max()); }
-    void floorMinEdgeTo(LayoutUnit target)
-    {
-        if (target > max())
-            shiftMaxEdgeTo(target);
-    }
-    void floorMaxEdgeTo(LayoutUnit target)
-    {
-        if (target > max())
-            shiftMaxEdgeTo(target);
-    }
-    void capMinEdgeTo(LayoutUnit target)
-    {
-        if (target < min())
-            shiftMinEdgeTo(target);
-    }
-    void capMaxEdgeTo(LayoutUnit target)
-    {
-        if (target < max())
-            shiftMaxEdgeTo(target);
-    }
-
-    void sizeFromMinEdge(LayoutUnit size = 0_lu) { m_size = size; }
-    void sizeFromMaxEdge(LayoutUnit size = 0_lu)
-    {
-        m_location -= size - m_size;
-        m_size = size;
-    }
-    void floorSizeFromMinEdge(LayoutUnit size = 0_lu) { m_size = std::max(m_size, size); }
-    void floorSizeFromMaxEdge(LayoutUnit size = 0_lu)
-    {
-        if (size > m_size)
-            sizeFromMaxEdge(size);
-    }
-
-private:
-    LayoutUnit m_location;
-    LayoutUnit m_size;
-};
-
-// Convenience struct to package constraints and inputs.
 struct PositionedLayoutConstraints {
 public:
     PositionedLayoutConstraints(const RenderBox&, const RenderStyle&, LogicalBoxAxis);

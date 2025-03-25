@@ -2174,6 +2174,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/LayerHostingContextIdentifier.h
     platform/graphics/LayerTreeAsTextOptions.h
     platform/graphics/LayoutPoint.h
+    platform/graphics/LayoutRange.h
     platform/graphics/LayoutRect.h
     platform/graphics/LayoutSize.h
     platform/graphics/LegacyCDMSession.h
