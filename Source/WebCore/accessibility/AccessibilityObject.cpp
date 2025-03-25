@@ -1819,37 +1819,11 @@ String AccessibilityObject::textContentPrefixFromListMarker() const
     // in order to extract the list marker that was added as a prefix to the text content.
     std::optional<SimpleRange> firstCharacterRange = rangeForCharacterRange({ 0, 1 });
     if (firstCharacterRange) {
-        String firstCharacterText = stringForRange(*firstCharacterRange);
+        String firstCharacterText = AXTextMarkerRange { firstCharacterRange }.toString();
         if (firstCharacterText.length() > 1)
             return firstCharacterText.left(firstCharacterText.length() - 1);
     }
     return { };
-}
-
-String AccessibilityObject::stringForRange(const SimpleRange& range) const
-{
-    TextIterator it = textIteratorIgnoringFullSizeKana(range);
-    if (it.atEnd())
-        return String();
-
-    StringBuilder builder;
-    for (; !it.atEnd(); it.advance()) {
-        // non-zero length means textual node, zero length means replaced node (AKA "attachments" in AX)
-        if (it.text().length()) {
-            // If this is in a list item, we need to add the text for the list marker
-            // because a RenderListMarker does not have a Node equivalent and thus does not appear
-            // when iterating text.
-            // Don't add list marker text for new line character.
-            if (it.text().length() != 1 || !isASCIIWhitespace(it.text()[0]))
-                builder.append(listMarkerTextForNodeAndPosition(it.node(), makeDeprecatedLegacyPosition(it.range().start)));
-            it.appendTextToStringBuilder(builder);
-        } else {
-            if (replacedNodeNeedsCharacter(*it.node()))
-                builder.append(objectReplacementCharacter);
-        }
-    }
-
-    return builder.toString();
 }
 
 String AccessibilityObject::stringForVisiblePositionRange(const VisiblePositionRange& visiblePositionRange)
@@ -3059,7 +3033,7 @@ std::optional<String> AccessibilityObject::textContent() const
     else
         range = simpleRange();
     if (range)
-        return stringForRange(*range);
+        return AXTextMarkerRange { range }.toString();
     return std::nullopt;
 }
 

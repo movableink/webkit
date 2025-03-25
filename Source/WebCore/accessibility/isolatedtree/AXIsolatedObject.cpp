@@ -1282,13 +1282,6 @@ AXTextMarkerRange AXIsolatedObject::selectedTextMarkerRange() const
 }
 #endif // PLATFORM(MAC)
 
-String AXIsolatedObject::stringForRange(const SimpleRange& range) const
-{
-    ASSERT(isMainThread());
-    auto* axObject = associatedAXObject();
-    return axObject ? axObject->stringForRange(range).isolatedCopy() : String();
-}
-
 IntRect AXIsolatedObject::boundsForRange(const SimpleRange& range) const
 {
     ASSERT(isMainThread());

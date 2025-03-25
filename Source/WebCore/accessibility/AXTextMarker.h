@@ -419,10 +419,9 @@ public:
     bool isCollapsed() const { return m_start.isEqual(m_end); }
     bool isConfinedTo(std::optional<AXID>) const;
     bool isConfined() const;
+    String toString() const;
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
-    // Traverses from m_start to m_end, collecting all text along the way.
-    String toString() const;
     // Returns the bounds (frame) of the text in this range relative to the viewport.
     // Analagous to AXCoreObject::relativeFrame().
     FloatRect viewportRelativeFrame() const;

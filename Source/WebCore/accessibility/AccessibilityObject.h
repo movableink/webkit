@@ -602,7 +602,6 @@ public:
     AXTextMarkerRange selectedTextMarkerRange() const final;
 #endif
     static String stringForVisiblePositionRange(const VisiblePositionRange&);
-    String stringForRange(const SimpleRange&) const final;
     virtual IntRect boundsForVisiblePositionRange(const VisiblePositionRange&) const { return IntRect(); }
     IntRect boundsForRange(const SimpleRange&) const final;
     void setSelectedVisiblePositionRange(const VisiblePositionRange&) const override { }

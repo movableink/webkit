@@ -415,7 +415,6 @@ private:
 #if PLATFORM(MAC)
     AXTextMarkerRange selectedTextMarkerRange() const final;
 #endif
-    String stringForRange(const SimpleRange&) const final;
     IntRect boundsForRange(const SimpleRange&) const final;
     VisiblePosition visiblePositionForPoint(const IntPoint&) const final;
     VisiblePosition nextLineEndPosition(const VisiblePosition&) const final;

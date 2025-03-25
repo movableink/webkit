@@ -2246,9 +2246,7 @@ static RenderObject* rendererForView(WAKView* view)
     AXTextMarkerRange axRange { markers };
     if (!axRange)
         return nil;
-
-    auto range = axRange.simpleRange();
-    return range ? self.axBackingObject->stringForRange(*range) : String();
+    return axRange.toString();
 }
 
 // This method is intended to return an array of strings and accessibility elements that
@@ -2387,7 +2385,7 @@ static RenderObject* rendererForView(WAKView* view)
     auto webRange = makeDOMRange(self.axBackingObject->document(), range);
     if (!webRange)
         return nil;
-    return self.axBackingObject->stringForRange(*webRange);
+    return AXTextMarkerRange { webRange }.toString();
 }
 
 - (NSAttributedString *)attributedStringForRange:(NSRange)range

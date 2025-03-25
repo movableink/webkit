@@ -1338,7 +1338,6 @@ public:
     virtual AXTextMarkerRange selectedTextMarkerRange() const = 0;
 #endif
 
-    virtual String stringForRange(const SimpleRange&) const = 0;
     virtual IntRect boundsForRange(const SimpleRange&) const = 0;
     virtual void setSelectedVisiblePositionRange(const VisiblePositionRange&) const = 0;
 
