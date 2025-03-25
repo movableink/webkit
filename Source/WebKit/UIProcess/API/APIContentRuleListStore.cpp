@@ -361,6 +361,7 @@ static Expected<MappedData, std::error_code> compiledToFile(WTF::String&& json, 
         }
 
         bool hadErrorWhileWritingToFile() { return m_fileError; }
+        void closeFile() { m_fileHandle = { }; }
 
     private:
         void writeToFile(bool value)
@@ -413,6 +414,10 @@ static Expected<MappedData, std::error_code> compiledToFile(WTF::String&& json, 
         WTFLogAlways("Content Rule List compiling failed: Writing to file failed.");
         return makeUnexpected(ContentRuleListStore::Error::CompileFailed);
     }
+
+    // Make sure we close temporaryFileHandle before using the file on disk, otherwise, the
+    // data may not have been flushed yet.
+    compilationClient.closeFile();
 
     // Try and delete any files at the destination instead of overwriting them
     // in case there is already a file there and it is mmapped.
