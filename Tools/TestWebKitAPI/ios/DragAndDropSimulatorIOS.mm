@@ -41,6 +41,7 @@
 #import <WebKit/_WKFormInputSession.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/SoftLinking.h>
+#import <wtf/WeakObjCPtr.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
 
 #if USE(BROWSERENGINEKIT)
@@ -50,33 +51,7 @@
 using namespace TestWebKitAPI;
 
 @interface DragAndDropSimulator () <UIDragAnimating>
-
 - (void)_setNeedsDropPreviewUpdate:(UIDragItem *)item;
-
-@end
-
-@interface UIDragItem (DragAndDropSimulator)
-@property (nonatomic, strong, setter=_setDragAndDropSimulator:) DragAndDropSimulator *_dragAndDropSimulator;
-@end
-
-static char dragDropSimulatorKey;
-
-@implementation UIDragItem (DragAndDropSimulator)
-
-- (DragAndDropSimulator *)_dragAndDropSimulator
-{
-    return objc_getAssociatedObject(self, &dragDropSimulatorKey);
-}
-
-- (void)_setDragAndDropSimulator:(DragAndDropSimulator *)simulator
-{
-    objc_setAssociatedObject(self, &dragDropSimulatorKey, simulator, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-}
-
-- (void)_setNeedsDropPreviewUpdate
-{
-    [self._dragAndDropSimulator _setNeedsDropPreviewUpdate:self];
-}
 
 @end
 
@@ -379,6 +354,8 @@ IGNORE_WARNINGS_END
     BlockPtr<void(BOOL, NSArray *)> _dropCompletionBlock;
     BlockPtr<void()> _sessionWillBeginBlock;
     Vector<BlockPtr<void(UIViewAnimatingPosition)>> _dropAnimationCompletionBlocks;
+
+    std::unique_ptr<InstanceMethodSwizzler> _setNeedsDropPreviewUpdateSwizzler;
 }
 
 - (instancetype)initWithWebViewFrame:(CGRect)frame
@@ -405,6 +382,12 @@ IGNORE_WARNINGS_END
         [_webView setUIDelegate:self];
         [_webView _setInputDelegate:self];
         self.dragDestinationAction = WKDragDestinationActionAny & ~WKDragDestinationActionLoad;
+
+        _setNeedsDropPreviewUpdateSwizzler = WTF::makeUnique<InstanceMethodSwizzler>(UIDragItem.class, @selector(setNeedsDropPreviewUpdate), imp_implementationWithBlock([weakSelf = WeakObjCPtr<DragAndDropSimulator>(self)](UIDragItem *instance) {
+            auto strongSelf = weakSelf.get();
+            if (strongSelf)
+                [strongSelf _setNeedsDropPreviewUpdate:instance];
+        }));
     }
     return self;
 }
@@ -575,7 +558,6 @@ IGNORE_WARNINGS_END
     if (operation != UIDropOperationCancel && operation != UIDropOperationForbidden) {
         NSInteger dropPreviewIndex = 0;
         for (UIDragItem *item in [_dropSession items]) {
-            item._dragAndDropSimulator = self;
             auto defaultPreview = [self defaultDropPreviewForItemAtIndex:dropPreviewIndex];
 
             UIDropInteraction *interaction = [_webView dropInteraction];

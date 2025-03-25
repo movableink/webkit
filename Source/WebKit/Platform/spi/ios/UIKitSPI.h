@@ -1207,10 +1207,6 @@ typedef NS_ENUM(NSUInteger, _UIScrollDeviceCategory) {
 @property (nonatomic, readonly) CGRect _selectionClipRect;
 @end
 
-@interface UIDragItem (Staging_117702233)
-- (void)_setNeedsDropPreviewUpdate;
-@end
-
 @interface UIDevice ()
 @property (nonatomic, setter=_setBacklightLevel:) float _backlightLevel;
 @end

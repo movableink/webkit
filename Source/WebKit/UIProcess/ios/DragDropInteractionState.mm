@@ -207,12 +207,6 @@ UITargetedDragPreview *DragDropInteractionState::finalDropPreview(UIDragItem *it
     return m_finalDropPreviews.get(item).get();
 }
 
-inline static bool dragItemSupportsAsynchronousUpdates()
-{
-    static bool hasSupport = [UIDragItem instancesRespondToSelector:@selector(_setNeedsDropPreviewUpdate)];
-    return hasSupport;
-}
-
 void DragDropInteractionState::deliverDelayedDropPreview(UIView *contentView, UIView *previewContainer, const WebCore::TextIndicatorData& indicator)
 {
     auto textIndicatorImage = uiImageForImage(indicator.contentImage.get());
@@ -222,8 +216,7 @@ void DragDropInteractionState::deliverDelayedDropPreview(UIView *contentView, UI
 
     for (auto item : m_defaultDropPreviews.keys()) {
         m_finalDropPreviews.add(item, preview.get());
-        if (dragItemSupportsAsynchronousUpdates())
-            [item _setNeedsDropPreviewUpdate];
+        [item setNeedsDropPreviewUpdate];
     }
 }
 
@@ -248,8 +241,7 @@ void DragDropInteractionState::deliverDelayedDropPreview(UIView *contentView, CG
             // simply retarget the default preview.
             auto target = adoptNS([[UIDragPreviewTarget alloc] initWithContainer:contentView center:placeholderRect.center()]);
             m_finalDropPreviews.add(item, [defaultPreview retargetedPreviewWithTarget:target.get()]);
-            if (dragItemSupportsAsynchronousUpdates())
-                [item _setNeedsDropPreviewUpdate];
+            [item setNeedsDropPreviewUpdate];
             continue;
         }
 
@@ -271,8 +263,7 @@ void DragDropInteractionState::deliverDelayedDropPreview(UIView *contentView, CG
         auto target = adoptNS([[UIDragPreviewTarget alloc] initWithContainer:contentView center:previewIntersectionRect.center() transform:transform]);
         [defaultPreview parameters].visiblePath = [UIBezierPath bezierPathWithRect:insetPreviewBounds];
         m_finalDropPreviews.add(item, adoptNS([[UITargetedDragPreview alloc] initWithView:[defaultPreview view] parameters:[defaultPreview parameters] target:target.get()]));
-        if (dragItemSupportsAsynchronousUpdates())
-            [item _setNeedsDropPreviewUpdate];
+        [item setNeedsDropPreviewUpdate];
     }
 }
 
