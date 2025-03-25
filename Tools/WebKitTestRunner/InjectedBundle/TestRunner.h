@@ -632,7 +632,6 @@ private:
     bool m_shouldStopProvisionalFrameLoads { false };
 
     bool m_globalFlag { false };
-    bool m_customFullScreenBehavior { false };
 
     bool m_shouldDecideNavigationPolicyAfterDelay { false };
     bool m_shouldDecideResponsePolicyAfterDelay { false };

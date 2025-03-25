@@ -304,8 +304,7 @@ static NSString *addLeadingSpaceStripTrailingSpaces(NSString *string)
 
 - (void)webView:(WebView *)webView enterFullScreenForElement:(DOMElement*)element listener:(NSObject<WebKitFullScreenListener>*)listener
 {
-    if (!gTestRunner->hasCustomFullScreenBehavior())
-        [self performSelector:@selector(enterFullScreenWithListener:) withObject:listener afterDelay:0];
+    [self performSelector:@selector(enterFullScreenWithListener:) withObject:listener afterDelay:0];
 }
 
 - (void)exitFullScreenWithListener:(NSObject<WebKitFullScreenListener>*)listener
@@ -316,8 +315,7 @@ static NSString *addLeadingSpaceStripTrailingSpaces(NSString *string)
 
 - (void)webView:(WebView *)webView exitFullScreenForElement:(DOMElement*)element listener:(NSObject<WebKitFullScreenListener>*)listener
 {
-    if (!gTestRunner->hasCustomFullScreenBehavior())
-        [self performSelector:@selector(exitFullScreenWithListener:) withObject:listener afterDelay:0];
+    [self performSelector:@selector(exitFullScreenWithListener:) withObject:listener afterDelay:0];
 }
 
 - (void)webView:(WebView *)sender closeFullScreenWithListener:(NSObject<WebKitFullScreenListener>*)listener
