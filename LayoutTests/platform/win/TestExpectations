@@ -950,6 +950,8 @@ http/tests/websocket/tests/hybi/websocket-blocked-sending-cookie-as-third-party.
 
 http/tests/webxr [ Skip ]
 
+http/tests/workers/service/basic-install-event-waitUntil-reject.html [ Skip ] # Timeout Pass
+
 webkit.org/b/206834 http/tests/workers/service/basic-timeout.https.html [ Pass Failure ]
 
 # Needs curl download support
@@ -1129,6 +1131,9 @@ compositing/overlap-blending/reflection-opacity-huge.html [ ImageOnlyFailure Pas
 
 # Requires layer tiling
 compositing/repaint/scroller-repaints-once.html [ Failure ]
+
+# Makes a subsequent test crash
+webkit.org/b/290371 [ Debug ] compositing/repaint/inline-repaint-container.html [ Skip ]
 
 # Needs layer animation support
 animations/no-style-recalc-during-accelerated-animation.html [ Pass Failure ]
