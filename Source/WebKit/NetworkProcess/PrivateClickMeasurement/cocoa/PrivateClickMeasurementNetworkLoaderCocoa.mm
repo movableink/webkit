@@ -91,13 +91,13 @@ static NSURLSession *statelessSessionWithoutRedirects()
 {
     static NeverDestroyed<RetainPtr<WKNetworkSessionDelegateAllowingOnlyNonRedirectedJSON>> delegate = adoptNS([WKNetworkSessionDelegateAllowingOnlyNonRedirectedJSON new]);
     static NeverDestroyed<RetainPtr<NSURLSession>> session = [&] {
-        NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration ephemeralSessionConfiguration];
-        configuration.HTTPCookieAcceptPolicy = NSHTTPCookieAcceptPolicyNever;
-        configuration.URLCredentialStorage = nil;
-        configuration.URLCache = nil;
-        configuration.HTTPCookieStorage = nil;
-        configuration._shouldSkipPreferredClientCertificateLookup = YES;
-        return [NSURLSession sessionWithConfiguration:configuration delegate:delegate.get().get() delegateQueue:[NSOperationQueue mainQueue]];
+        RetainPtr configuration = [NSURLSessionConfiguration ephemeralSessionConfiguration];
+        configuration.get().HTTPCookieAcceptPolicy = NSHTTPCookieAcceptPolicyNever;
+        configuration.get().URLCredentialStorage = nil;
+        configuration.get().URLCache = nil;
+        configuration.get().HTTPCookieStorage = nil;
+        configuration.get()._shouldSkipPreferredClientCertificateLookup = YES;
+        return [NSURLSession sessionWithConfiguration:configuration.get() delegate:delegate.get().get() delegateQueue:[NSOperationQueue mainQueue]];
     }();
     return session.get().get();
 }
@@ -127,7 +127,7 @@ void NetworkLoader::start(URL&& url, RefPtr<JSON::Object>&& jsonPayload, WebCore
     setPCMDataCarriedOnRequest(pcmDataCarried, request.get());
 
     auto identifier = LoadTaskIdentifier::generate();
-    NSURLSessionDataTask *task = [statelessSessionWithoutRedirects() dataTaskWithRequest:request.get() completionHandler:makeBlockPtr([callback = WTFMove(callback), identifier](NSData *data, NSURLResponse *response, NSError *error) mutable {
+    RetainPtr task = [statelessSessionWithoutRedirects() dataTaskWithRequest:request.get() completionHandler:makeBlockPtr([callback = WTFMove(callback), identifier](NSData *data, NSURLResponse *response, NSError *error) mutable {
         taskMap().remove(identifier);
         if (error)
             return callback(error.localizedDescription, { });
@@ -136,7 +136,7 @@ void NetworkLoader::start(URL&& url, RefPtr<JSON::Object>&& jsonPayload, WebCore
         callback({ }, nullptr);
     }).get()];
     [task resume];
-    taskMap().add(identifier, task);
+    taskMap().add(identifier, task.get());
 }
 
 } // namespace WebKit::PCM

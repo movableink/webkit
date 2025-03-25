@@ -554,7 +554,7 @@ void ServiceWorkerFetchTask::loadBodyFromPreloader()
             protectedThis->didFinish(protectedThis->m_preloader->networkLoadMetrics());
             return;
         }
-        protectedThis->didReceiveDataFromPreloader(const_cast<WebCore::FragmentedSharedBuffer&>(*chunk), length);
+        protectedThis->didReceiveDataFromPreloader(*chunk, length);
     });
 }
 

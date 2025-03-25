@@ -408,8 +408,8 @@ bool NetworkConnectionToWebProcess::dispatchSyncMessage(IPC::Connection& connect
     MESSAGE_CHECK_WITH_RETURN_VALUE(decoder.messageReceiverName() != Messages::NetworkProcess::messageReceiverName(), false);
 
     if (decoder.messageReceiverName() == Messages::WebSWServerConnection::messageReceiverName()) {
-        if (m_swConnection)
-            return m_swConnection->didReceiveSyncMessage(connection, decoder, reply);
+        if (RefPtr swConnection = m_swConnection.get())
+            return swConnection->didReceiveSyncMessage(connection, decoder, reply);
         return false;
     }
 

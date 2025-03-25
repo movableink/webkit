@@ -1006,8 +1006,8 @@ $(PROJECT_DIR)/Modules/webauthn/AuthenticatorAttestationResponse.idl
 $(PROJECT_DIR)/Modules/webauthn/AuthenticatorResponse.idl
 $(PROJECT_DIR)/Modules/webauthn/AuthenticatorSelectionCriteria.idl
 $(PROJECT_DIR)/Modules/webauthn/AuthenticatorTransport.idl
-$(PROJECT_DIR)/Modules/webauthn/CurrentUserDetailsOptions.idl
 $(PROJECT_DIR)/Modules/webauthn/CredentialPropertiesOutput.idl
+$(PROJECT_DIR)/Modules/webauthn/CurrentUserDetailsOptions.idl
 $(PROJECT_DIR)/Modules/webauthn/PublicKeyCredential.idl
 $(PROJECT_DIR)/Modules/webauthn/PublicKeyCredentialCreationOptions.idl
 $(PROJECT_DIR)/Modules/webauthn/PublicKeyCredentialCreationOptionsJSON.idl
@@ -1023,8 +1023,8 @@ $(PROJECT_DIR)/Modules/webauthn/PublicKeyCredentialUserEntity.idl
 $(PROJECT_DIR)/Modules/webauthn/PublicKeyCredentialUserEntityJSON.idl
 $(PROJECT_DIR)/Modules/webauthn/RegistrationResponseJSON.idl
 $(PROJECT_DIR)/Modules/webauthn/ResidentKeyRequirement.idl
-$(PROJECT_DIR)/Modules/webauthn/UserVerificationRequirement.idl
 $(PROJECT_DIR)/Modules/webauthn/UnknownCredentialOptions.idl
+$(PROJECT_DIR)/Modules/webauthn/UserVerificationRequirement.idl
 $(PROJECT_DIR)/Modules/webcodecs/AacEncoderConfig.idl
 $(PROJECT_DIR)/Modules/webcodecs/AudioSampleFormat.idl
 $(PROJECT_DIR)/Modules/webcodecs/AvcEncoderConfig.idl
@@ -1286,8 +1286,8 @@ $(PROJECT_DIR)/css/CSSScopeRule.idl
 $(PROJECT_DIR)/css/CSSStartingStyleRule.idl
 $(PROJECT_DIR)/css/CSSStyleDeclaration.idl
 $(PROJECT_DIR)/css/CSSStyleProperties.idl
-$(PROJECT_DIR)/css/CSSStyleRule.idl
 $(PROJECT_DIR)/css/CSSStyleRule+Typedom.idl
+$(PROJECT_DIR)/css/CSSStyleRule.idl
 $(PROJECT_DIR)/css/CSSStyleSheet.idl
 $(PROJECT_DIR)/css/CSSSupportsRule.idl
 $(PROJECT_DIR)/css/CSSValueKeywords.in
@@ -1307,8 +1307,8 @@ $(PROJECT_DIR)/css/DeprecatedCSSOMRGBColor.idl
 $(PROJECT_DIR)/css/DeprecatedCSSOMRect.idl
 $(PROJECT_DIR)/css/DeprecatedCSSOMValue.idl
 $(PROJECT_DIR)/css/DeprecatedCSSOMValueList.idl
-$(PROJECT_DIR)/css/ElementCSSInlineStyle.idl
 $(PROJECT_DIR)/css/ElementCSSInlineStyle+Typedom.idl
+$(PROJECT_DIR)/css/ElementCSSInlineStyle.idl
 $(PROJECT_DIR)/css/FontFace.idl
 $(PROJECT_DIR)/css/FontFaceSet.idl
 $(PROJECT_DIR)/css/FontFaceSource.idl
@@ -1451,6 +1451,7 @@ $(PROJECT_DIR)/dom/Element+DOMParsing.idl
 $(PROJECT_DIR)/dom/Element+Fullscreen.idl
 $(PROJECT_DIR)/dom/Element+PointerEvents.idl
 $(PROJECT_DIR)/dom/Element+PointerLock.idl
+$(PROJECT_DIR)/dom/Element+Typedom.idl
 $(PROJECT_DIR)/dom/Element.idl
 $(PROJECT_DIR)/dom/ElementContentEditable.idl
 $(PROJECT_DIR)/dom/ElementCreationOptions.idl

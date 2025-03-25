@@ -10,8 +10,6 @@ GPUProcess/media/RemoteTextTrackProxy.h
 GPUProcess/media/RemoteVideoTrackProxy.cpp
 GPUProcess/media/RemoteVideoTrackProxy.h
 GeneratedSerializers.mm
-NetworkProcess/NetworkConnectionToWebProcess.cpp
-NetworkProcess/NetworkLoad.cpp
 NetworkProcess/ServiceWorker/ServiceWorkerFetchTask.cpp
 Platform/IPC/ArgumentCoders.h
 Platform/IPC/Connection.cpp

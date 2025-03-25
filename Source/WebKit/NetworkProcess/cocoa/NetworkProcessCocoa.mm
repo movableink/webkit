@@ -161,9 +161,9 @@ void NetworkProcess::deleteHSTSCacheForHostNames(PAL::SessionID sessionID, const
 void NetworkProcess::clearHSTSCache(PAL::SessionID sessionID, WallTime modifiedSince)
 {
     NSTimeInterval timeInterval = modifiedSince.secondsSinceEpoch().seconds();
-    NSDate *date = [NSDate dateWithTimeIntervalSince1970:timeInterval];
+    RetainPtr date = [NSDate dateWithTimeIntervalSince1970:timeInterval];
     if (auto* networkSession = downcast<NetworkSessionCocoa>(this->networkSession(sessionID)))
-        [networkSession->hstsStorage() resetHSTSHostsSinceDate:date];
+        [networkSession->hstsStorage() resetHSTSHostsSinceDate:date.get()];
 }
 
 void NetworkProcess::clearDiskCache(WallTime modifiedSince, CompletionHandler<void()>&& completionHandler)
@@ -171,8 +171,8 @@ void NetworkProcess::clearDiskCache(WallTime modifiedSince, CompletionHandler<vo
     if (!m_clearCacheDispatchGroup)
         m_clearCacheDispatchGroup = adoptOSObject(dispatch_group_create());
 
-    auto group = m_clearCacheDispatchGroup.get();
-    dispatch_group_async(group, dispatch_get_main_queue(), makeBlockPtr([this, protectedThis = Ref { *this }, modifiedSince, completionHandler = WTFMove(completionHandler)] () mutable {
+    RetainPtr group = m_clearCacheDispatchGroup.get();
+    dispatch_group_async(group.get(), dispatch_get_main_queue(), makeBlockPtr([this, protectedThis = Ref { *this }, modifiedSince, completionHandler = WTFMove(completionHandler)] () mutable {
         auto aggregator = CallbackAggregator::create(WTFMove(completionHandler));
         forEachNetworkSession([modifiedSince, &aggregator](NetworkSession& session) {
             if (RefPtr cache = session.cache())

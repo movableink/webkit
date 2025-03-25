@@ -130,8 +130,8 @@ void NetworkLoad::updateRequestAfterRedirection(WebCore::ResourceRequest& newReq
 void NetworkLoad::reprioritizeRequest(ResourceLoadPriority priority)
 {
     m_currentRequest.setPriority(priority);
-    if (m_task)
-        m_task->setPriority(priority);
+    if (RefPtr task = m_task)
+        task->setPriority(priority);
 }
 
 bool NetworkLoad::shouldCaptureExtraNetworkLoadMetrics() const
@@ -358,8 +358,8 @@ void NetworkLoad::setH2PingCallback(const URL& url, CompletionHandler<void(Expec
 
 void NetworkLoad::setTimingAllowFailedFlag()
 {
-    if (m_task)
-        m_task->setTimingAllowFailedFlag();
+    if (RefPtr task = m_task)
+        task->setTimingAllowFailedFlag();
 }
 
 String NetworkLoad::attributedBundleIdentifier(WebPageProxyIdentifier pageID)

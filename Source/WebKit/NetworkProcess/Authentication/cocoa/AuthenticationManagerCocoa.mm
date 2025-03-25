@@ -72,11 +72,11 @@ void AuthenticationManager::initializeConnection(IPC::Connection* connection)
             if (!challengeID)
                 return;
 
-            auto xpcEndPoint = xpc_dictionary_get_value(event.get(), ClientCertificateAuthentication::XPCSecKeyProxyEndpointKey);
-            if (!xpcEndPoint || xpc_get_type(xpcEndPoint) != XPC_TYPE_ENDPOINT)
+            RetainPtr xpcEndPoint = xpc_dictionary_get_value(event.get(), ClientCertificateAuthentication::XPCSecKeyProxyEndpointKey);
+            if (!xpcEndPoint || xpc_get_type(xpcEndPoint.get()) != XPC_TYPE_ENDPOINT)
                 return;
             auto endPoint = adoptNS([[NSXPCListenerEndpoint alloc] init]);
-            [endPoint _setEndpoint:xpcEndPoint];
+            [endPoint _setEndpoint:xpcEndPoint.get()];
             NSError *error = nil;
             auto identity = adoptCF([SecKeyProxy createIdentityFromEndpoint:endPoint.get() error:&error]);
             if (!identity || error) {
@@ -84,16 +84,16 @@ void AuthenticationManager::initializeConnection(IPC::Connection* connection)
                 return;
             }
 
-            auto certificateDataArray = xpc_dictionary_get_array(event.get(), ClientCertificateAuthentication::XPCCertificatesKey);
+            RetainPtr certificateDataArray = xpc_dictionary_get_array(event.get(), ClientCertificateAuthentication::XPCCertificatesKey);
             if (!certificateDataArray)
                 return;
-            NSMutableArray *certificates = nil;
-            if (auto total = xpc_array_get_count(certificateDataArray)) {
+            RetainPtr<NSMutableArray> certificates;
+            if (auto total = xpc_array_get_count(certificateDataArray.get())) {
                 certificates = [NSMutableArray arrayWithCapacity:total];
                 for (size_t i = 0; i < total; i++) {
-                    auto certificateData = xpc_array_get_value(certificateDataArray, i);
-                    auto cfData = adoptCF(CFDataCreate(nullptr, static_cast<const UInt8*>(xpc_data_get_bytes_ptr(certificateData)), xpc_data_get_length(certificateData)));
-                    auto certificate = adoptCF(SecCertificateCreateWithData(nullptr, cfData.get()));
+                    RetainPtr certificateData = xpc_array_get_value(certificateDataArray.get(), i);
+                    RetainPtr cfData = adoptCF(CFDataCreate(nullptr, static_cast<const UInt8*>(xpc_data_get_bytes_ptr(certificateData.get())), xpc_data_get_length(certificateData.get())));
+                    RetainPtr certificate = adoptCF(SecCertificateCreateWithData(nullptr, cfData.get()));
                     if (!certificate)
                         return;
                     [certificates addObject:(__bridge id)certificate.get()];
@@ -104,7 +104,7 @@ void AuthenticationManager::initializeConnection(IPC::Connection* connection)
             if (persistence > static_cast<uint64_t>(NSURLCredentialPersistenceSynchronizable))
                 return;
 
-            weakThis->completeAuthenticationChallenge(ObjectIdentifier<AuthenticationChallengeIdentifierType>(challengeID), AuthenticationChallengeDisposition::UseCredential, WebCore::Credential(adoptNS([[NSURLCredential alloc] initWithIdentity:identity.get() certificates:certificates persistence:(NSURLCredentialPersistence)persistence]).get()));
+            weakThis->completeAuthenticationChallenge(ObjectIdentifier<AuthenticationChallengeIdentifierType>(challengeID), AuthenticationChallengeDisposition::UseCredential, WebCore::Credential(adoptNS([[NSURLCredential alloc] initWithIdentity:identity.get() certificates:certificates.get() persistence:(NSURLCredentialPersistence)persistence]).get()));
         });
     });
 }

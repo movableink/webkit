@@ -66,15 +66,15 @@ namespace WebKit {
 
 inline static bool shouldBlockTrackersForThirdPartyCloaking(NSURLRequest *request)
 {
-    auto requestURL = request.URL;
-    auto mainDocumentURL = request.mainDocumentURL;
+    RetainPtr<NSURL> requestURL = request.URL;
+    RetainPtr<NSURL> mainDocumentURL = request.mainDocumentURL;
     if (!requestURL || !mainDocumentURL)
         return false;
 
-    if (!WebCore::areRegistrableDomainsEqual(requestURL, mainDocumentURL))
+    if (!WebCore::areRegistrableDomainsEqual(requestURL.get(), mainDocumentURL.get()))
         return false;
 
-    if ([requestURL.host isEqualToString:mainDocumentURL.host])
+    if ([[requestURL host] isEqualToString:[mainDocumentURL host]])
         return false;
 
     return true;
@@ -171,15 +171,15 @@ void NetworkDataTaskCocoa::updateFirstPartyInfoForSession(const URL& requestURL)
 
     auto* session = networkSession();
     auto cnameDomain = [this]() {
-        if (auto* lastResolvedCNAMEInChain = [[m_task _resolvedCNAMEChain] lastObject])
-            return lastCNAMEDomain(lastResolvedCNAMEInChain);
+        if (RetainPtr lastResolvedCNAMEInChain = [[m_task _resolvedCNAMEChain] lastObject])
+            return lastCNAMEDomain(lastResolvedCNAMEInChain.get());
         return WebCore::RegistrableDomain { };
     }();
     if (!cnameDomain.isEmpty())
         session->setFirstPartyHostCNAMEDomain(requestURL.host().toString(), WTFMove(cnameDomain));
 
-    if (NSString *ipAddress = lastRemoteIPAddress(m_task.get()); ipAddress.length)
-        session->setFirstPartyHostIPAddress(requestURL.host().toString(), ipAddress);
+    if (RetainPtr ipAddress = lastRemoteIPAddress(m_task.get()); [ipAddress length])
+        session->setFirstPartyHostIPAddress(requestURL.host().toString(), ipAddress.get());
 }
 
 NetworkDataTaskCocoa::NetworkDataTaskCocoa(NetworkSession& session, NetworkDataTaskClient& client, const NetworkLoadParameters& parameters)

@@ -35,6 +35,7 @@
 #include <dispatch/dispatch.h>
 #include <pal/spi/cocoa/NetworkSPI.h>
 #include <wtf/BlockPtr.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakObjCPtr.h>
 #include <wtf/cocoa/VectorCocoa.h>
@@ -49,12 +50,12 @@ using namespace WebCore;
 
 static dispatch_queue_t tcpSocketQueue()
 {
-    static dispatch_queue_t queue;
+    static LazyNeverDestroyed<RetainPtr<dispatch_queue_t>> queue;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        queue = dispatch_queue_create("WebRTC TCP socket queue", DISPATCH_QUEUE_CONCURRENT);
+        queue.construct(adoptNS(dispatch_queue_create("WebRTC TCP socket queue", DISPATCH_QUEUE_CONCURRENT)));
     });
-    return queue;
+    return queue.get().get();
 }
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(NetworkRTCTCPSocketCocoa);

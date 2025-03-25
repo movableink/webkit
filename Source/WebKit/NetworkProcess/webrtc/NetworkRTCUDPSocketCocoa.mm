@@ -99,12 +99,12 @@ private:
 
 static dispatch_queue_t udpSocketQueue()
 {
-    static dispatch_queue_t queue;
+    static LazyNeverDestroyed<RetainPtr<dispatch_queue_t>> queue;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        queue = dispatch_queue_create("WebRTC UDP socket queue", DISPATCH_QUEUE_CONCURRENT);
+        queue.construct(adoptNS(dispatch_queue_create("WebRTC UDP socket queue", DISPATCH_QUEUE_CONCURRENT)));
     });
-    return queue;
+    return queue.get().get();
 }
 
 NetworkRTCUDPSocketCocoa::NetworkRTCUDPSocketCocoa(WebCore::LibWebRTCSocketIdentifier identifier, NetworkRTCProvider& rtcProvider, const rtc::SocketAddress& address, Ref<IPC::Connection>&& connection, String&& attributedBundleIdentifier, bool isFirstParty, bool isRelayDisabled, const WebCore::RegistrableDomain& domain)
@@ -409,7 +409,7 @@ void NetworkRTCUDPSocketCocoaConnections::sendTo(std::span<const uint8_t> data, 
     if (isInCorrectValue)
         return;
 
-    nw_connection_t nwConnection;
+    RetainPtr<nw_connection_t> nwConnection;
     {
         Locker locker { m_nwConnectionsLock };
         nwConnection = m_nwConnections.ensure(remoteAddress, [this, &remoteAddress] {
@@ -418,7 +418,7 @@ void NetworkRTCUDPSocketCocoaConnections::sendTo(std::span<const uint8_t> data, 
     }
 
     RetainPtr value = adoptNS(dispatch_data_create(data.data(), data.size(), nullptr, DISPATCH_DATA_DESTRUCTOR_DEFAULT));
-    nw_connection_send(nwConnection, value.get(), NW_CONNECTION_DEFAULT_MESSAGE_CONTEXT, true, makeBlockPtr([identifier = m_identifier, connection = m_connection.copyRef(), options](_Nullable nw_error_t error) {
+    nw_connection_send(nwConnection.get(), value.get(), NW_CONNECTION_DEFAULT_MESSAGE_CONTEXT, true, makeBlockPtr([identifier = m_identifier, connection = m_connection.copyRef(), options](_Nullable nw_error_t error) {
         RELEASE_LOG_ERROR_IF(error, WebRTC, "NetworkRTCUDPSocketCocoaConnections::sendTo failed with error %d", error ? nw_error_get_error_code(error) : 0);
         connection->send(Messages::LibWebRTCNetwork::SignalSentPacket { identifier, options.packet_id, rtc::TimeMillis() }, 0);
     }).get());

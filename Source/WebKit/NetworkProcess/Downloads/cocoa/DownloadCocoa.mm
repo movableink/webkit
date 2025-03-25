@@ -53,13 +53,13 @@ void Download::resume(std::span<const uint8_t> resumeData, const String& path, S
     auto& cocoaSession = downcast<NetworkSessionCocoa>(*networkSession);
     RetainPtr nsData = toNSData(resumeData);
 
-    NSMutableDictionary *dictionary = [NSPropertyListSerialization propertyListWithData:nsData.get() options:NSPropertyListMutableContainersAndLeaves format:0 error:nullptr];
+    RetainPtr dictionary = [NSPropertyListSerialization propertyListWithData:nsData.get() options:NSPropertyListMutableContainersAndLeaves format:0 error:nullptr];
     [dictionary setObject:static_cast<NSString*>(path) forKey:@"NSURLSessionResumeInfoLocalPath"];
-    NSData *updatedData = [NSPropertyListSerialization dataWithPropertyList:dictionary format:NSPropertyListXMLFormat_v1_0 options:0 error:nullptr];
+    RetainPtr updatedData = [NSPropertyListSerialization dataWithPropertyList:dictionary.get() format:NSPropertyListXMLFormat_v1_0 options:0 error:nullptr];
 
     // FIXME: Use nsData instead of updatedData once we've migrated from _WKDownload to WKDownload
     // because there's no reason to set the local path we got from the data back into the data.
-    m_downloadTask = [cocoaSession.sessionWrapperForDownloadResume().session downloadTaskWithResumeData:updatedData];
+    m_downloadTask = [cocoaSession.sessionWrapperForDownloadResume().session downloadTaskWithResumeData:updatedData.get()];
     if (!m_downloadTask) {
         RELEASE_LOG_ERROR(Network, "Could not create download task from resume data");
         return;
