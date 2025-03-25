@@ -765,6 +765,8 @@
     (allow IOKIT_OPEN_USER_CLIENT
         (iokit-user-client-class "RootDomainUserClient")
         (apply-message-filter
+            (allow iokit-external-method
+                (iokit-method-number 3))
             (allow (with report) (with telemetry)
                 iokit-async-external-method
                 iokit-external-method
