@@ -292,7 +292,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     return ax::retrieveValueFromMainThread<RetainPtr<id>>([&attribute, &point, PROTECTED_SELF] () -> RetainPtr<id> {
         if (!protectedSelf->m_page)
             return nil;
-        id value = nil;
+        RetainPtr<id> value;
         if ([attribute isEqualToString:@"AXDataDetectorExistsAtPoint"] || [attribute isEqualToString:@"AXDidShowDataDetectorMenuAtPoint"]) {
             bool boolValue;
             if (protectedSelf->m_page->corePage()->pageOverlayController().copyAccessibilityAttributeBoolValueForPoint(attribute, point, boolValue))

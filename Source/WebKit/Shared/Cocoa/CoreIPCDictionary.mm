@@ -40,16 +40,16 @@ CoreIPCDictionary::CoreIPCDictionary(NSDictionary *dictionary)
     m_keyValuePairs.reserveInitialCapacity(dictionary.count);
 
     for (id key in dictionary) {
-        id value = dictionary[key];
+        RetainPtr<id> value = dictionary[key];
         ASSERT(value);
 
         // Ignore values we don't support.
         ASSERT(IPC::isSerializableValue(key));
-        ASSERT(IPC::isSerializableValue(value));
-        if (!IPC::isSerializableValue(key) || !IPC::isSerializableValue(value))
+        ASSERT(IPC::isSerializableValue(value.get()));
+        if (!IPC::isSerializableValue(key) || !IPC::isSerializableValue(value.get()))
             continue;
 
-        m_keyValuePairs.append({ CoreIPCNSCFObject(key), CoreIPCNSCFObject(value) });
+        m_keyValuePairs.append({ CoreIPCNSCFObject(key), CoreIPCNSCFObject(value.get()) });
     }
 }
 

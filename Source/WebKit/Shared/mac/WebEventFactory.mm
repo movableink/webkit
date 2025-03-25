@@ -403,11 +403,11 @@ WebWheelEvent WebEventFactory::createWebWheelEvent(NSEvent *event, NSView *windo
     auto momentumEndType = WebWheelEvent::MomentumEndType::Unknown;
     
     ([&] {
-        auto cgEvent = event.CGEvent;
+        RetainPtr<CGEventRef> cgEvent = event.CGEvent;
         if (!cgEvent)
             return;
 
-        auto ioHIDEvent = adoptCF(CGEventCopyIOHIDEvent(cgEvent));
+        auto ioHIDEvent = adoptCF(CGEventCopyIOHIDEvent(cgEvent.get()));
         if (!ioHIDEvent)
             return;
 

@@ -108,9 +108,9 @@ CoreIPCError::CoreIPCError(NSError *nsError)
     : m_domain([nsError domain])
     , m_code([nsError code])
 {
-    NSDictionary *userInfo = [nsError userInfo];
+    RetainPtr<NSDictionary> userInfo = [nsError userInfo];
 
-    RetainPtr<CFMutableDictionaryRef> filteredUserInfo = adoptCF(CFDictionaryCreateMutable(kCFAllocatorDefault, userInfo.count, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+    RetainPtr<CFMutableDictionaryRef> filteredUserInfo = adoptCF(CFDictionaryCreateMutable(kCFAllocatorDefault, [userInfo count], &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
 
     [userInfo enumerateKeysAndObjectsUsingBlock:^(id key, id value, BOOL*) {
         if ([key isEqualToString:@"NSErrorClientCertificateChainKey"]) {
