@@ -516,7 +516,16 @@ RenderBox* RenderObject::enclosingScrollableContainer() const
     return document().documentElement() ? document().documentElement()->renderBox() : nullptr;
 }
 
-static inline bool isLayoutBoundary(const RenderElement& renderer)
+static CheckedPtr<RenderElement> nearestBaselineContextAncestor(const RenderElement& renderer)
+{
+    for (CheckedPtr container = renderer.containingBlock(); container; container = container->containingBlock()) {
+        if (container->childrenInline() || container->isFlexibleBoxIncludingDeprecated() || container->isRenderGrid())
+            return container;
+    }
+    return nullptr;
+}
+
+static inline bool isLayoutBoundary(const RenderElement& renderer, std::optional<CheckedPtr<RenderElement>>& cachedBaselineContextAncestor)
 {
     // FIXME: In future it may be possible to broaden these conditions in order to improve performance.
     if (renderer.isRenderView())
@@ -553,6 +562,11 @@ static inline bool isLayoutBoundary(const RenderElement& renderer)
         return false;
 
     if (CheckedPtr renderBlock = dynamicDowncast<RenderBlock>(renderer); !renderBlock->createsNewFormattingContext())
+        return false;
+
+    if (!cachedBaselineContextAncestor.has_value())
+        cachedBaselineContextAncestor = nearestBaselineContextAncestor(renderer);
+    if (cachedBaselineContextAncestor.value())
         return false;
 
     return true;
@@ -593,6 +607,7 @@ RenderElement* RenderObject::markContainingBlocksForLayout(RenderElement* layout
         return downcast<RenderElement>(this);
 
     CheckedPtr ancestor = container();
+    std::optional<CheckedPtr<RenderElement>> nearestBaselineContextAncestor;
 
     bool simplifiedNormalFlowLayout = needsSimplifiedNormalFlowLayout() && !selfNeedsLayout() && !normalChildNeedsLayout();
     bool hasOutOfFlowPosition = isOutOfFlowPositioned();
@@ -608,6 +623,9 @@ RenderElement* RenderObject::markContainingBlocksForLayout(RenderElement* layout
             // Internal render tree shuffle.
             return { };
         }
+
+        if (nearestBaselineContextAncestor == ancestor)
+            nearestBaselineContextAncestor = std::nullopt;
 
         if (simplifiedNormalFlowLayout && ancestor->overflowChangesMayAffectLayout())
             simplifiedNormalFlowLayout = false;
@@ -638,7 +656,7 @@ RenderElement* RenderObject::markContainingBlocksForLayout(RenderElement* layout
             // Having a valid layout root also mean we should not stop at layout boundaries.
             if (ancestor == layoutRoot)
                 return layoutRoot;
-        } else if (isLayoutBoundary(*ancestor))
+        } else if (isLayoutBoundary(*ancestor, nearestBaselineContextAncestor))
             return ancestor.get();
 
         hasOutOfFlowPosition = ancestor->isOutOfFlowPositioned();
