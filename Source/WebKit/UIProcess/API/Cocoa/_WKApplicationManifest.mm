@@ -115,7 +115,7 @@ static std::optional<WebCore::ApplicationManifest::Shortcut> makeVectorElement(c
 
 - (instancetype)initWithCoreIcon:(const WebCore::ApplicationManifest::Icon *)icon
 {
-    if (!(self = [[_WKApplicationManifestIcon alloc] init]))
+    if (!(self = [super init]))
         return nil;
 
     if (icon) {
@@ -208,7 +208,7 @@ static std::optional<WebCore::ApplicationManifest::Shortcut> makeVectorElement(c
 
 - (instancetype)initWithCoreShortcut:(const WebCore::ApplicationManifest::Shortcut *)shortcut
 {
-    if (!(self = [[_WKApplicationManifestShortcut alloc] init]))
+    if (!(self = [super init]))
         return nil;
 
     if (shortcut) {
