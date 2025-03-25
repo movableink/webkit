@@ -86,7 +86,7 @@ void ImageBufferSkiaUnacceleratedBackend::getPixelBuffer(const IntRect& srcRect,
         ImageBufferBackend::getPixelBuffer(srcRect, span(pixmap), destination);
 }
 
-void ImageBufferSkiaUnacceleratedBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
+void ImageBufferSkiaUnacceleratedBackend::putPixelBuffer(const PixelBufferSourceView& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
     SkPixmap pixmap;
     if (m_surface->peekPixels(&pixmap))

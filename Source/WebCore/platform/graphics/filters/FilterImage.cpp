@@ -131,9 +131,9 @@ ImageBuffer* FilterImage::imageBufferFromPixelBuffer()
     auto imageBufferRect = IntRect { { }, m_absoluteImageRect.size() };
 
     if (pixelBufferSlot(AlphaPremultiplication::Premultiplied))
-        imageBuffer->putPixelBuffer(Ref { *pixelBufferSlot(AlphaPremultiplication::Premultiplied) }, imageBufferRect);
+        imageBuffer->putPixelBuffer(*pixelBufferSlot(AlphaPremultiplication::Premultiplied), imageBufferRect);
     else if (pixelBufferSlot(AlphaPremultiplication::Unpremultiplied))
-        imageBuffer->putPixelBuffer(Ref { *pixelBufferSlot(AlphaPremultiplication::Unpremultiplied) }, imageBufferRect);
+        imageBuffer->putPixelBuffer(*pixelBufferSlot(AlphaPremultiplication::Unpremultiplied), imageBufferRect);
 
     return m_imageBuffer.get();
 }

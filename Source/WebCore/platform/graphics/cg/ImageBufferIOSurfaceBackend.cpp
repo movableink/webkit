@@ -194,7 +194,7 @@ void ImageBufferIOSurfaceBackend::getPixelBuffer(const IntRect& srcRect, PixelBu
         ImageBufferBackend::getPixelBuffer(srcRect, lock->surfaceSpan(), destination);
 }
 
-void ImageBufferIOSurfaceBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
+void ImageBufferIOSurfaceBackend::putPixelBuffer(const PixelBufferSourceView& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
     prepareForExternalWrite();
     if (auto lock = m_surface->lock<IOSurface::AccessMode::ReadWrite>())

@@ -50,7 +50,7 @@ private:
     RefPtr<NativeImage> copyNativeImage() final;
     RefPtr<NativeImage> createNativeImageReference() final { return copyNativeImage(); }
     void getPixelBuffer(const IntRect&, PixelBuffer&) final { ASSERT_NOT_REACHED(); }
-    void putPixelBuffer(const PixelBuffer&, const IntRect&, const IntPoint&, AlphaPremultiplication) final { ASSERT_NOT_REACHED(); }
+    void putPixelBuffer(const PixelBufferSourceView&, const IntRect&, const IntPoint&, AlphaPremultiplication) final { ASSERT_NOT_REACHED(); }
 
     RefPtr<SharedBuffer> sinkIntoPDFDocument() final;
 

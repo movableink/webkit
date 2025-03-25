@@ -54,7 +54,7 @@ private:
     RefPtr<NativeImage> createNativeImageReference() final;
 
     void getPixelBuffer(const IntRect&, PixelBuffer&) final;
-    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) final;
+    void putPixelBuffer(const PixelBufferSourceView&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) final;
 
     std::span<uint8_t> m_data;
     RetainPtr<CGDataProviderRef> m_dataProvider;

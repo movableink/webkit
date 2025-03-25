@@ -234,7 +234,7 @@ static std::span<uint8_t> mutableSpan(SkData* data)
     return unsafeMakeSpan(static_cast<uint8_t*>(data->writable_data()), data->size());
 }
 
-void ImageBufferSkiaAcceleratedBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
+void ImageBufferSkiaAcceleratedBackend::putPixelBuffer(const PixelBufferSourceView& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
     UNUSED_PARAM(destFormat);
 

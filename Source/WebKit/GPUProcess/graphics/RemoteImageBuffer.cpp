@@ -111,7 +111,7 @@ void RemoteImageBuffer::getPixelBufferWithNewMemory(WebCore::SharedMemory::Handl
     getPixelBuffer(WTFMove(destinationFormat), WTFMove(srcPoint), WTFMove(srcSize), WTFMove(completionHandler));
 }
 
-void RemoteImageBuffer::putPixelBuffer(Ref<WebCore::PixelBuffer> pixelBuffer, WebCore::IntPoint srcPoint, WebCore::IntSize srcSize, WebCore::IntPoint destPoint, WebCore::AlphaPremultiplication destFormat)
+void RemoteImageBuffer::putPixelBuffer(const WebCore::PixelBufferSourceView& pixelBuffer, WebCore::IntPoint srcPoint, WebCore::IntSize srcSize, WebCore::IntPoint destPoint, WebCore::AlphaPremultiplication destFormat)
 {
     assertIsCurrent(workQueue());
     WebCore::IntRect srcRect(srcPoint, srcSize);

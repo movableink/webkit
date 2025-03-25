@@ -7855,7 +7855,14 @@ enum class WebCore::RepaintRectCalculation : bool;
     WebCore::PixelBufferFormat format();
     WebCore::IntSize size();
     std::span<const uint8_t> span();
-}
+};
+
+header: <WebCore/PixelBuffer.h>
+[AdditionalEncoder=StreamConnectionEncoder, CreateUsing=create, CustomHeader] class WebCore::PixelBufferSourceView {
+    WebCore::PixelBufferFormat format();
+    WebCore::IntSize size();
+    std::span<const uint8_t> bytes();
+};
 
 #if ENABLE(WEB_AUTHN)
 header: <WebCore/MediationRequirement.h>

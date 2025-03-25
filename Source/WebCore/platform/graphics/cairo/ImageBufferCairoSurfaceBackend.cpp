@@ -103,7 +103,7 @@ void ImageBufferCairoSurfaceBackend::getPixelBuffer(const IntRect& srcRect, Pixe
     ImageBufferBackend::getPixelBuffer(srcRect, span(m_surface.get()), destination);
 }
 
-void ImageBufferCairoSurfaceBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
+void ImageBufferCairoSurfaceBackend::putPixelBuffer(const PixelBufferSourceView& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
     ImageBufferBackend::putPixelBuffer(pixelBuffer, srcRect, destPoint, destFormat, mutableSpan(m_surface.get()));
 

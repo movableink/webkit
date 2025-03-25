@@ -46,7 +46,7 @@ public:
     bool canMapBackingStore() const final;
     RefPtr<cairo_surface_t> createCairoSurface() override;
     void getPixelBuffer(const IntRect&, PixelBuffer&) override;
-    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
+    void putPixelBuffer(const PixelBufferSourceView&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
 
 protected:
     ImageBufferCairoSurfaceBackend(const Parameters&, RefPtr<cairo_surface_t>&&);

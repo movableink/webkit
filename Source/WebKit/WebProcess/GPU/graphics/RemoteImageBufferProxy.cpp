@@ -317,7 +317,7 @@ GraphicsContext& RemoteImageBufferProxy::context() const
     return const_cast<RemoteImageBufferProxy*>(this)->m_remoteDisplayList;
 }
 
-void RemoteImageBufferProxy::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
+void RemoteImageBufferProxy::putPixelBuffer(const PixelBufferSourceView& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
     auto* backend = ensureBackend();
     if (!backend)
@@ -337,7 +337,7 @@ void RemoteImageBufferProxy::putPixelBuffer(const PixelBuffer& pixelBuffer, cons
     // This means that putPixelBuffer() is only called when resolutionScale() == 1.
     ASSERT(resolutionScale() == 1);
     backingStoreWillChange();
-    remoteRenderingBackendProxy->putPixelBufferForImageBuffer(m_renderingResourceIdentifier, pixelBuffer, srcRect, destPoint, destFormat);
+    send(Messages::RemoteImageBuffer::PutPixelBuffer(pixelBuffer, srcRect.location(), srcRect.size(), destPoint, destFormat));
 }
 
 void RemoteImageBufferProxy::convertToLuminanceMask()

@@ -190,7 +190,7 @@ void ImageBufferShareableMappedIOSurfaceBitmapBackend::getPixelBuffer(const IntR
     ASSERT_NOT_REACHED(); // Not applicable for LayerBacking.
 }
 
-void ImageBufferShareableMappedIOSurfaceBitmapBackend::putPixelBuffer(const PixelBuffer&, const IntRect&, const IntPoint&, AlphaPremultiplication)
+void ImageBufferShareableMappedIOSurfaceBitmapBackend::putPixelBuffer(const PixelBufferSourceView&, const IntRect&, const IntPoint&, AlphaPremultiplication)
 {
     ASSERT_NOT_REACHED(); // Not applicable for LayerBacking.
 }
