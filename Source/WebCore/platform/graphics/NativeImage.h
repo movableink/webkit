@@ -119,11 +119,10 @@ public:
     WEBCORE_EXPORT Headroom headroom() const final;
 
 #if USE(SKIA)
+    // FIXME: Remove the obsolete Skia specific methods and members below.
     bool finishAcceleratedRenderingAndCreateFence() final;
     void waitForAcceleratedRenderingFenceCompletion() final;
-
     const GrDirectContext* skiaGrContext() const final;
-
     RefPtr<NativeImage> copyAcceleratedNativeImageBorrowingBackendTexture() const final;
 #endif
 private:

@@ -41,12 +41,12 @@ class ImageBufferSkiaAcceleratedBackend final : public ImageBufferSkiaSurfaceBac
     WTF_MAKE_NONCOPYABLE(ImageBufferSkiaAcceleratedBackend);
 public:
     static std::unique_ptr<ImageBufferSkiaAcceleratedBackend> create(const Parameters&, const ImageBufferCreationContext&);
+    static std::unique_ptr<ImageBufferSkiaAcceleratedBackend> create(const Parameters&, const ImageBufferCreationContext&, sk_sp<SkSurface>&&);
     ~ImageBufferSkiaAcceleratedBackend();
 
     static constexpr RenderingMode renderingMode = RenderingMode::Accelerated;
 
 private:
-    static std::unique_ptr<ImageBufferSkiaAcceleratedBackend> create(const Parameters&, const ImageBufferCreationContext&, sk_sp<SkSurface>&&);
     ImageBufferSkiaAcceleratedBackend(const Parameters&, sk_sp<SkSurface>&&);
 
     void prepareForDisplay() final;
@@ -57,9 +57,9 @@ private:
     void getPixelBuffer(const IntRect&, PixelBuffer&) final;
     void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) final;
 
+    // FIXME: Remove the obsolete Skia specific methods and members below.
     bool finishAcceleratedRenderingAndCreateFence() final;
     void waitForAcceleratedRenderingFenceCompletion() final;
-
     const GrDirectContext* skiaGrContext() const final { return m_skiaGrContext; }
     RefPtr<ImageBuffer> copyAcceleratedImageBufferBorrowingBackendRenderTarget(const ImageBuffer&) const final;
 

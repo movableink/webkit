@@ -431,6 +431,13 @@ IOSurface* ImageBuffer::surface()
 }
 #endif
 
+#if USE(SKIA)
+SkSurface* ImageBuffer::surface() const
+{
+    return m_backend ? m_backend->surface() : nullptr;
+}
+#endif
+
 #if USE(CAIRO)
 RefPtr<cairo_surface_t> ImageBuffer::createCairoSurface()
 {

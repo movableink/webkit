@@ -29,14 +29,21 @@
 #if USE(COORDINATED_GRAPHICS) && USE(SKIA)
 #include "BitmapTexturePool.h"
 #include "CoordinatedTileBuffer.h"
-#include "DisplayListRecorderImpl.h"
-#include "DisplayListReplayer.h"
 #include "GLContext.h"
+#include "GLFence.h"
 #include "GraphicsContextSkia.h"
 #include "GraphicsLayer.h"
 #include "PlatformDisplay.h"
 #include "ProcessCapabilities.h"
 #include "RenderingMode.h"
+#include "SkiaReplayCanvas.h"
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
+#include <skia/core/SkPicture.h>
+#include <skia/core/SkPictureRecorder.h>
+#include <skia/gpu/ganesh/GrBackendSurface.h>
+#include <skia/gpu/ganesh/SkImageGanesh.h>
+#include <skia/utils/SkNWayCanvas.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #include <wtf/NumberOfCores.h>
 #include <wtf/SystemTracing.h>
 #include <wtf/text/StringToIntegerConversion.h>
@@ -80,30 +87,6 @@ static bool canPerformAcceleratedRendering()
     return ProcessCapabilities::canUseAcceleratedBuffers() && PlatformDisplay::sharedDisplay().skiaGLContext();
 }
 
-std::unique_ptr<DisplayList::DisplayList> SkiaPaintingEngine::recordDisplayList(RenderingMode& renderingMode, const GraphicsLayer& layer, const IntRect& dirtyRect, bool contentsOpaque, float contentsScale) const
-{
-    OptionSet<DisplayList::ReplayOption> options;
-    if (isHybridMode() || renderingMode == RenderingMode::Accelerated)
-        options.add(DisplayList::ReplayOption::FlushAcceleratedImagesAndWaitForCompletion);
-
-    auto displayList = makeUnique<DisplayList::DisplayList>(options);
-    DisplayList::RecorderImpl recordingContext(*displayList, GraphicsContextState(), FloatRect({ }, dirtyRect.size()), AffineTransform());
-    paintIntoGraphicsContext(layer, recordingContext, dirtyRect, contentsOpaque, contentsScale);
-
-    // If we used accelerated ImageBuffers during recording, it's mandatory to replay in a GPU worker thread, with a GL context available.
-    if (recordingContext.usedAcceleratedRendering()) {
-        // Verify that we only used accelerated rendering if we're in either hybrid mode or GPU rendering mode (renderingMode == RenderingMode::Accelerated).
-        // If isHybridMode() == true, we eventually decided to use the CPU before (indicated by renderingMode == RenderingMode::Unaccelerated), but are
-        // forced to switch to use the GPU for replaying, because fences were created due the use of accelerated ImageBuffers, and thus we have to wait for
-        // the fences to be signalled -- that requires a GL context, and thus it's mandatory to replay in a GPU worker thread.
-        ASSERT(isHybridMode() || renderingMode == RenderingMode::Accelerated);
-        ASSERT(canPerformAcceleratedRendering());
-        renderingMode = RenderingMode::Accelerated;
-    }
-
-    return displayList;
-}
-
 void SkiaPaintingEngine::paintIntoGraphicsContext(const GraphicsLayer& layer, GraphicsContext& context, const IntRect& dirtyRect, bool contentsOpaque, float contentsScale) const
 {
     IntRect initialClip(IntPoint::zero(), dirtyRect.size());
@@ -121,26 +104,6 @@ void SkiaPaintingEngine::paintIntoGraphicsContext(const GraphicsLayer& layer, Gr
     context.translate(-dirtyRect.x(), -dirtyRect.y());
     context.scale(contentsScale);
     layer.paintGraphicsLayerContents(context, clipRect);
-}
-
-bool SkiaPaintingEngine::paintDisplayListIntoBuffer(Ref<CoordinatedTileBuffer>& buffer, DisplayList::DisplayList& displayList)
-{
-    auto* canvas = buffer->canvas();
-    if (!canvas)
-        return false;
-
-    static thread_local RefPtr<ControlFactory> s_controlFactory;
-    if (!s_controlFactory)
-        s_controlFactory = ControlFactory::create();
-
-    canvas->save();
-    canvas->clear(SkColors::kTransparent);
-
-    GraphicsContextSkia context(*canvas, buffer->isBackedByOpenGL() ? RenderingMode::Accelerated : RenderingMode::Unaccelerated, RenderingPurpose::LayerBacking);
-    DisplayList::Replayer(context, displayList.items(), displayList.resourceHeap(), *s_controlFactory, displayList.replayOptions()).replay();
-
-    canvas->restore();
-    return true;
 }
 
 bool SkiaPaintingEngine::paintGraphicsLayerIntoBuffer(Ref<CoordinatedTileBuffer>& buffer, const GraphicsLayer& layer, const IntRect& dirtyRect, bool contentsOpaque, float contentsScale) const
@@ -294,27 +257,45 @@ Ref<CoordinatedTileBuffer> SkiaPaintingEngine::paintLayer(const GraphicsLayer& l
 
 Ref<CoordinatedTileBuffer> SkiaPaintingEngine::postPaintingTask(const GraphicsLayer& layer, RenderingMode renderingMode, const IntRect& dirtyRect, bool contentsOpaque, float contentsScale)
 {
-    WTFBeginSignpost(this, RecordTile);
-    auto displayList = recordDisplayList(renderingMode, layer, dirtyRect, contentsOpaque, contentsScale);
-    WTFEndSignpost(this, RecordTile);
-
     auto buffer = createBuffer(renderingMode, dirtyRect.size(), contentsOpaque);
     buffer->beginPainting();
 
+    WTFBeginSignpost(this, RecordTile);
+    SkPictureRecorder pictureRecorder;
+    auto* recordingCanvas = pictureRecorder.beginRecording(dirtyRect.width(), dirtyRect.height());
+    GraphicsContextSkia recordingContext(*recordingCanvas, renderingMode, RenderingPurpose::LayerBacking);
+    recordingContext.beginRecording();
+    paintIntoGraphicsContext(layer, recordingContext, dirtyRect, contentsOpaque, contentsScale);
+    auto imageToFenceMap = recordingContext.endRecording();
+    auto picture = pictureRecorder.finishRecordingAsPicture();
+    WTFEndSignpost(this, RecordTile);
+
     auto& workerPool = renderingMode == RenderingMode::Accelerated ? *m_gpuWorkerPool.get() : *m_cpuWorkerPool.get();
-    workerPool.postTask([buffer = Ref { buffer }, displayList = WTFMove(displayList), dirtyRect]() mutable {
-        if (auto* canvas = buffer->canvas()) {
-            WTFBeginSignpost(canvas, PaintTile, "Skia/%s threaded, dirty region %ix%i+%i+%i", buffer->isBackedByOpenGL() ? "GPU" : "CPU", dirtyRect.x(), dirtyRect.y(), dirtyRect.width(), dirtyRect.height());
-            paintDisplayListIntoBuffer(buffer, *displayList.get());
-            WTFEndSignpost(canvas, PaintTile);
+    workerPool.postTask([buffer = Ref { buffer }, picture = sk_sp<SkPicture> { picture }, dirtyRect, imageToFenceMap = WTFMove(imageToFenceMap)]() mutable {
+        auto* canvas = buffer->canvas();
+        if (!canvas) {
+            buffer->completePainting();
+            return;
         }
 
-        buffer->completePainting();
+        auto replayPicture = [&picture](SkCanvas* canvas) {
+            canvas->save();
+            canvas->clear(SkColors::kTransparent);
+            picture->playback(canvas);
+            canvas->restore();
+        };
 
-        // Destruct display list on main thread.
-        ensureOnMainThread([displayList = WTFMove(displayList)]() mutable {
-            displayList = nullptr;
-        });
+        WTFBeginSignpost(canvas, PaintTile, "Skia/%s threaded, dirty region %ix%i+%i+%i", buffer->isBackedByOpenGL() ? "GPU" : "CPU", dirtyRect.x(), dirtyRect.y(), dirtyRect.width(), dirtyRect.height());
+        if (!imageToFenceMap.isEmpty()) {
+            auto replayCanvas = SkiaReplayCanvas::create(dirtyRect.size(), WTFMove(imageToFenceMap));
+            replayCanvas->addCanvas(canvas);
+            replayPicture(&replayCanvas.get());
+            replayCanvas->removeCanvas(canvas);
+        } else
+            replayPicture(canvas);
+        WTFEndSignpost(canvas, PaintTile);
+
+        buffer->completePainting();
     });
 
     return buffer;

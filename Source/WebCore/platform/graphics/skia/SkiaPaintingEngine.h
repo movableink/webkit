@@ -28,10 +28,12 @@
 #if USE(COORDINATED_GRAPHICS) && USE(SKIA)
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
-#include <wtf/Vector.h>
 #include <wtf/WorkerPool.h>
 
+class SkImage;
+
 namespace WebCore {
+
 class BitmapTexturePool;
 class CoordinatedTileBuffer;
 class GraphicsContext;
@@ -39,10 +41,6 @@ class GraphicsLayer;
 class IntRect;
 class IntSize;
 enum class RenderingMode : uint8_t;
-
-namespace DisplayList {
-class DisplayList;
-}
 
 class SkiaPaintingEngine {
     WTF_MAKE_TZONE_ALLOCATED(SkiaPaintingEngine);
@@ -72,10 +70,7 @@ public:
 
 private:
     Ref<CoordinatedTileBuffer> createBuffer(RenderingMode, const IntSize&, bool contentsOpaque) const;
-    std::unique_ptr<DisplayList::DisplayList> recordDisplayList(RenderingMode&, const GraphicsLayer&, const IntRect& dirtyRect, bool contentsOpaque, float contentsScale) const;
     void paintIntoGraphicsContext(const GraphicsLayer&, GraphicsContext&, const IntRect&, bool contentsOpaque, float contentsScale) const;
-
-    static bool paintDisplayListIntoBuffer(Ref<CoordinatedTileBuffer>&, DisplayList::DisplayList&);
     bool paintGraphicsLayerIntoBuffer(Ref<CoordinatedTileBuffer>&, const GraphicsLayer&, const IntRect& dirtyRect, bool contentsOpaque, float contentsScale) const;
 
     // Threaded rendering
