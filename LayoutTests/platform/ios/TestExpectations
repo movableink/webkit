@@ -7758,3 +7758,5 @@ webkit.org/b/290407 imported/w3c/web-platform-tests/css/css-contain/content-visi
 webkit.org/b/290412 imported/w3c/web-platform-tests/scroll-animations/scroll-timelines/current-time-root-scroller.html [ Pass Failure ]
 
 webkit.org/b/290413 [ Debug ] imported/w3c/web-platform-tests/html/browsers/browsing-the-web/navigating-across-documents/javascript-url-return-value-handling-dynamic.html [ Failure ]
+
+imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-002.html [ Failure ]

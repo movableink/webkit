@@ -7831,3 +7831,9 @@ webkit.org/b/290285 imported/w3c/web-platform-tests/svg/struct/reftests/use-data
 webkit.org/b/290285 imported/w3c/web-platform-tests/svg/struct/reftests/use-data-url-setAttribute.tentative.html [ Skip ]
 webkit.org/b/290285 imported/w3c/web-platform-tests/svg/struct/reftests/use-data-url.tentative.svg [ Skip ]
 webkit.org/b/290285 imported/w3c/web-platform-tests/svg/struct/scripted/use-load-error-events.tentative.html [ Skip ]
+
+# hidden=until-found
+imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-001.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-004.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-005.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-007.html [ ImageOnlyFailure ]
