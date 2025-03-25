@@ -349,12 +349,12 @@ RenderLayerBacking::~RenderLayerBacking()
     destroyGraphicsLayers();
 }
 
-void RenderLayerBacking::willBeDestroyed()
+void RenderLayerBacking::willBeDestroyed(OptionSet<UpdateBackingSharingFlags> flags)
 {
     ASSERT(m_owningLayer.backing() == this);
     compositor().removeFromScrollCoordinatedLayers(m_owningLayer);
 
-    clearBackingSharingLayers();
+    clearBackingSharingLayers(flags);
 }
 
 void RenderLayerBacking::willDestroyLayer(const GraphicsLayer* layer)
@@ -363,59 +363,44 @@ void RenderLayerBacking::willDestroyLayer(const GraphicsLayer* layer)
         compositor().layerTiledBackingUsageChanged(layer, false);
 }
 
-static void clearBackingSharingLayerProviders(SingleThreadWeakListHashSet<RenderLayer>& sharingLayers, const RenderLayer& providerLayer)
+static void clearBackingSharingLayerProviders(SingleThreadWeakListHashSet<RenderLayer>& sharingLayers, const RenderLayer& providerLayer, OptionSet<UpdateBackingSharingFlags> flags)
 {
     for (auto& layer : sharingLayers) {
         if (layer.backingProviderLayer() == &providerLayer)
-            layer.setBackingProviderLayer(nullptr);
+            layer.setBackingProviderLayer(nullptr, flags);
     }
 }
 
 void RenderLayerBacking::setBackingSharingLayers(SingleThreadWeakListHashSet<RenderLayer>&& sharingLayers)
 {
     bool sharingLayersChanged = m_backingSharingLayers.computeSize() != sharingLayers.computeSize();
+    clearBackingSharingLayerProviders(m_backingSharingLayers, m_owningLayer, { UpdateBackingSharingFlags::DuringCompositingUpdate });
 
-    clearBackingSharingLayerProviders(m_backingSharingLayers, m_owningLayer);
-
-    // For layers that used to share and no longer do, and are not composited, recompute repaint rects.
     for (auto& oldSharingLayer : m_backingSharingLayers) {
-        // Layers that go from shared to composited have their repaint rects recomputed in RenderLayerCompositor::updateBacking().
-        if (!sharingLayers.contains(oldSharingLayer)) {
+        if (!sharingLayers.contains(oldSharingLayer))
             sharingLayersChanged = true;
-            if (!oldSharingLayer.isComposited())
-                oldSharingLayer.compositingStatusChanged(LayoutUpToDate::Yes);
-        }
     }
 
     if (sharingLayersChanged) {
         if (!sharingLayers.isEmptyIgnoringNullReferences())
             setRequiresOwnBackingStore(true);
-        setContentsNeedDisplay(); // This could be optimized to only repaint rects for changed layers.
     }
 
     auto oldSharingLayers = std::exchange(m_backingSharingLayers, WTFMove(sharingLayers));
 
     for (auto& layer : m_backingSharingLayers)
-        layer.setBackingProviderLayer(&m_owningLayer);
-
-    if (sharingLayersChanged) {
-        // For layers that are newly sharing, recompute repaint rects.
-        for (auto& currentSharingLayer : m_backingSharingLayers) {
-            if (!oldSharingLayers.contains(currentSharingLayer))
-                currentSharingLayer.compositingStatusChanged(LayoutUpToDate::Yes);
-        }
-    }
+        layer.setBackingProviderLayer(&m_owningLayer, { UpdateBackingSharingFlags::DuringCompositingUpdate });
 }
 
-void RenderLayerBacking::removeBackingSharingLayer(RenderLayer& layer)
+void RenderLayerBacking::removeBackingSharingLayer(RenderLayer& layer, OptionSet<UpdateBackingSharingFlags> flags)
 {
-    layer.setBackingProviderLayer(nullptr);
+    layer.setBackingProviderLayer(nullptr, flags);
     m_backingSharingLayers.remove(layer);
 }
 
-void RenderLayerBacking::clearBackingSharingLayers()
+void RenderLayerBacking::clearBackingSharingLayers(OptionSet<UpdateBackingSharingFlags> flags)
 {
-    clearBackingSharingLayerProviders(m_backingSharingLayers, m_owningLayer);
+    clearBackingSharingLayerProviders(m_backingSharingLayers, m_owningLayer, flags);
     m_backingSharingLayers.clear();
 }
 

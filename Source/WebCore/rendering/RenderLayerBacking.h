@@ -65,7 +65,7 @@ public:
     ~RenderLayerBacking();
 
     // Do cleanup while layer->backing() is still valid.
-    void willBeDestroyed();
+    void willBeDestroyed(OptionSet<UpdateBackingSharingFlags>);
 
     RenderLayer& owningLayer() const { return m_owningLayer; }
 
@@ -75,8 +75,8 @@ public:
 
     bool hasBackingSharingLayers() const { return !m_backingSharingLayers.isEmptyIgnoringNullReferences(); }
 
-    void removeBackingSharingLayer(RenderLayer&);
-    void clearBackingSharingLayers();
+    void removeBackingSharingLayer(RenderLayer&, OptionSet<UpdateBackingSharingFlags>);
+    void clearBackingSharingLayers(OptionSet<UpdateBackingSharingFlags>);
 
     void updateConfigurationAfterStyleChange();
 

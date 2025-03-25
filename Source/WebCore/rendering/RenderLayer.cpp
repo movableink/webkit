@@ -398,7 +398,7 @@ RenderLayer::~RenderLayer()
     // Child layers will be deleted by their corresponding render objects, so
     // we don't need to delete them ourselves.
 
-    clearBacking(true);
+    clearBacking({ }, true);
 
     // Layer and all its children should be removed from the tree before destruction.
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(renderer().renderTreeBeingDestroyed() || !parent());
@@ -850,7 +850,7 @@ void RenderLayer::removeSelfFromCompositor()
 {
     if (parent())
         compositor().layerWillBeRemoved(*parent(), *this);
-    clearBacking();
+    clearBacking({ });
 }
 
 void RenderLayer::removeDescendantsFromCompositor()
@@ -1354,6 +1354,7 @@ void RenderLayer::recursiveUpdateLayerPositions(OptionSet<UpdateLayerPositionsFl
         backing()->updateAfterLayout(flags.contains(ContainingClippingLayerChangedSize), flags.contains(NeedsFullRepaintInBacking));
 
     LAYER_POSITIONS_ASSERT_IMPLIES(mode == Verify, m_layerPositionDirtyBits.isEmpty());
+    ASSERT(m_backingProviderLayer == m_backingProviderLayerAtEndOfCompositingUpdate);
     clearLayerPositionDirtyBits();
 }
 
@@ -1370,6 +1371,14 @@ LayoutRect RenderLayer::repaintRectIncludingNonCompositingDescendants() const
         repaintRect.uniteIfNonZero(child->repaintRectIncludingNonCompositingDescendants());
     }
     return repaintRect;
+}
+
+void RenderLayer::setRepaintStatus(RepaintStatus status)
+{
+    if (status != m_repaintStatus) {
+        m_repaintStatus = status;
+        setNeedsPositionUpdate();
+    }
 }
 
 void RenderLayer::setAncestorChainHasSelfPaintingLayerDescendant()
@@ -1416,9 +1425,7 @@ void RenderLayer::computeRepaintRects(const RenderLayerModelObject* repaintConta
     else
         setRepaintRects(renderer().rectsForRepaintingAfterLayout(repaintContainer, RepaintOutlineBounds::Yes));
 
-#if LAYER_POSITIONS_ASSERT_ENABLED
     m_repaintContainer = repaintContainer;
-#endif
 }
 
 void RenderLayer::computeRepaintRectsIncludingDescendants()
@@ -2326,25 +2333,29 @@ bool RenderLayer::shouldRepaintAfterLayout() const
     return !isComposited() || backing()->paintsIntoCompositedAncestor();
 }
 
-void RenderLayer::setBackingProviderLayer(RenderLayer* backingProvider)
+void RenderLayer::setBackingProviderLayer(RenderLayer* backingProvider, OptionSet<UpdateBackingSharingFlags> flags)
 {
-    if (backingProvider == m_backingProviderLayer)
+    if (backingProvider == m_backingProviderLayer) {
+        ASSERT_IMPLIES(!flags.contains(UpdateBackingSharingFlags::DuringCompositingUpdate), backingProvider == m_backingProviderLayerAtEndOfCompositingUpdate);
         return;
+    }
 
     if (!renderer().renderTreeBeingDestroyed())
         clearClipRectsIncludingDescendants();
 
     m_backingProviderLayer = backingProvider;
+    if (!flags.contains(UpdateBackingSharingFlags::DuringCompositingUpdate))
+        m_backingProviderLayerAtEndOfCompositingUpdate = backingProvider;
 }
 
-void RenderLayer::disconnectFromBackingProviderLayer()
+void RenderLayer::disconnectFromBackingProviderLayer(OptionSet<UpdateBackingSharingFlags> flags)
 {
     if (!m_backingProviderLayer)
         return;
     
     ASSERT(m_backingProviderLayer->isComposited());
     if (m_backingProviderLayer->isComposited())
-        m_backingProviderLayer->backing()->removeBackingSharingLayer(*this);
+        m_backingProviderLayer->backing()->removeBackingSharingLayer(*this, flags);
 }
 
 bool compositedWithOwnBackingStore(const RenderLayer& layer)
@@ -5589,7 +5600,7 @@ RenderLayerBacking* RenderLayer::ensureBacking()
     return m_backing.get();
 }
 
-void RenderLayer::clearBacking(bool layerBeingDestroyed)
+void RenderLayer::clearBacking(OptionSet<UpdateBackingSharingFlags> flags, bool layerBeingDestroyed)
 {
     if (!m_backing)
         return;
@@ -5597,7 +5608,7 @@ void RenderLayer::clearBacking(bool layerBeingDestroyed)
     if (!renderer().renderTreeBeingDestroyed())
         compositor().layerBecameNonComposited(*this);
     
-    m_backing->willBeDestroyed();
+    m_backing->willBeDestroyed(flags);
     m_backing = nullptr;
 
     if (!layerBeingDestroyed)
@@ -6749,7 +6760,7 @@ static void outputLayerPositionTreeLegend(TextStream& stream)
     stream.nextLine();
     stream << "Dirty flags: NeedsPosition(U)pdate, (D)escendantNeedsPositionUpdate, All(C)hildrenNeedPositionUpdate, (A)llDescendantsNeedPositionUpdate\n";
     stream << "Repaint status: (-)NeedsNormalRepaint, Needs(F)ullRepaint, NeedsFullRepaintFor(P)ositionedMovementLayout\n";
-    stream << "Layer state: has(P)aginatedAncestor, has(F)ixedAncestor,  hasFixedContaining(B)lockAncestor, has(T)ransformedAncestor, has(3)DTransformedAncestor, hasComposited(S)crollingAncestor, !is(V)isibilityHiddenOrOpacityZero(), isSelfPainting(L)ayer\n";
+    stream << "Layer state: has(P)aginatedAncestor, has(F)ixedAncestor,  hasFixedContaining(B)lockAncestor, has(T)ransformedAncestor, has(3)DTransformedAncestor, hasComposited(S)crollingAncestor, !is(V)isibilityHiddenOrOpacityZero(), isSelfPainting(L)ayer, (C)omposited, CompositedWithOwn(B)ackingStore\n";
     stream.nextLine();
 }
 
@@ -6779,6 +6790,8 @@ void outputLayerPositionTreeRecursive(TextStream& stream, const WebCore::RenderL
     stream << (layer.hasCompositedScrollingAncestor() ? "S"_s : "-"_s);
     stream << (!layer.isVisibilityHiddenOrOpacityZero() ? "V"_s : "-"_s);
     stream << (layer.isSelfPaintingLayer() ? "L"_s : "-"_s);
+    stream << (layer.isComposited() ? "C"_s : "-"_s);
+    stream << (compositedWithOwnBackingStore(layer) ? "B"_s : "-"_s);
 
     // FIXME: cached clip rects?
 
@@ -6791,12 +6804,19 @@ void outputLayerPositionTreeRecursive(TextStream& stream, const WebCore::RenderL
     stream << &layer << " "_s << layerRect;
 
     stream << " "_s << layer.name();
-#if ASSERT_ENABLED || ENABLE(CONJECTURE_ASSERT)
+
+    if (layer.paintOrderParent() != layer.parent())
+        stream << " (paint order parent " << layer.paintOrderParent() << ")";
+
     if (layer.m_repaintContainer)
         stream << " (repaint container: " << layer.m_repaintContainer.get() << ")";
-#endif
+
     if (layer.repaintRects())
         stream << " (repaint rects " << *layer.repaintRects() << ")";
+
+    if (layer.paintsIntoProvidedBacking())
+        stream << " (backing provider " << layer.backingProviderLayer() << ")";
+
     stream.nextLine();
 
     for (WebCore::RenderLayer* child = layer.firstChild(); child; child = child->nextSibling())

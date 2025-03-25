@@ -244,8 +244,8 @@ public:
     void rootBackgroundColorOrTransparencyChanged();
     
     // Repaint the appropriate layers when the given RenderLayer starts or stops being composited.
-    void repaintOnCompositingChange(RenderLayer&);
-    
+    void repaintOnCompositingChange(RenderLayer&, RenderLayerModelObject* repaintContainer);
+
     void repaintInCompositedAncestor(RenderLayer&, const LayoutRect&);
     
     // Notify us that a layer has been removed
@@ -445,8 +445,9 @@ private:
 
     // Make or destroy the backing for this layer; returns true if backing changed.
     enum class BackingRequired { No, Yes, Unknown };
-    bool updateBacking(RenderLayer&, RequiresCompositingData&, BackingSharingState* = nullptr, BackingRequired = BackingRequired::Unknown);
-    bool updateLayerCompositingState(RenderLayer&, const RenderLayer* compositingAncestor, RequiresCompositingData&, BackingSharingState&);
+    bool updateBacking(RenderLayer&, RequiresCompositingData&, BackingSharingState*, BackingRequired);
+    bool updateExplicitBacking(RenderLayer&, RequiresCompositingData&, BackingRequired = BackingRequired::Unknown);
+    bool updateReflectionCompositingState(RenderLayer&, const RenderLayer* compositingAncestor, RequiresCompositingData&);
 
     template<typename ApplyFunctionType> void applyToCompositedLayerIncludingDescendants(RenderLayer&, const ApplyFunctionType&);
 

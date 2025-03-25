@@ -549,9 +549,9 @@ void RenderLayerCompositor::BackingSharingState::issuePendingRepaints()
     for (auto& layer : m_layersPendingRepaint) {
         LOG_WITH_STREAM(Compositing, stream << "Issuing postponed repaint of layer " << &layer);
         layer.compositingStatusChanged(LayoutUpToDate::Yes);
-        layer.compositor().repaintOnCompositingChange(layer);
+        layer.compositor().repaintOnCompositingChange(layer, layer.repaintContainer());
     }
-    
+
     m_layersPendingRepaint.clear();
 }
 
@@ -1038,6 +1038,7 @@ bool RenderLayerCompositor::updateCompositingLayers(CompositingUpdateType update
 #if ENABLE(TREE_DEBUGGING)
     if (compositingLogEnabled())
         showPaintOrderTree(m_renderView.layer());
+    rootRenderLayer().updateLayerPositionsAfterLayout(false, false);
 #endif
 
     if (updateType == CompositingUpdateType::AfterStyleChange || updateType == CompositingUpdateType::AfterLayout)
@@ -1130,6 +1131,7 @@ bool RenderLayerCompositor::updateCompositingLayers(CompositingUpdateType update
 #if ENABLE(TREE_DEBUGGING)
     if (compositingLogEnabled())
         showPaintOrderTree(m_renderView.layer());
+    updateRoot->updateLayerPositionsAfterLayout(false, false);
 #endif
 
     if (updateRoot->hasDescendantNeedingUpdateBackingOrHierarchyTraversal() || updateRoot->needsUpdateBackingOrHierarchyTraversal()) {
@@ -1198,6 +1200,10 @@ bool RenderLayerCompositor::updateCompositingLayers(CompositingUpdateType update
     if (m_scrolledContentsLayer)
         updateOverflowControlsLayers();
 
+
+#if ENABLE(TREE_DEBUGGING)
+    updateRoot->updateLayerPositionsAfterLayout(false, false);
+#endif
     return true;
 }
 
@@ -1259,7 +1265,8 @@ void RenderLayerCompositor::computeCompositingRequirements(RenderLayer* ancestor
 
     // We updated compositing for direct reasons in layerStyleChanged(). Here, check for compositing that can only be evaluated after layout.
     RequiresCompositingData queryData;
-    bool willBeComposited = layer.isComposited();
+    bool wasComposited = layer.isComposited();
+    bool willBeComposited = wasComposited;
     bool becameCompositedAfterDescendantTraversal = false;
     IndirectCompositingReason compositingReason = compositingState.subtreeIsCompositing ? IndirectCompositingReason::Stacking : IndirectCompositingReason::None;
 
@@ -1280,18 +1287,18 @@ void RenderLayerCompositor::computeCompositingRequirements(RenderLayer* ancestor
     bool respectTransforms = !layerExtent.hasTransformAnimation;
     overlapMap.geometryMap().pushMappingsToAncestor(&layer, ancestorLayer, respectTransforms);
 
-    bool layerPaintsIntoProvidedBacking = false;
+    SingleThreadWeakPtr<RenderLayer> providedBackingLayer;
     if (!willBeComposited && compositingState.subtreeIsCompositing && canBeComposited(layer)) {
         if (auto* provider = backingSharingState.backingProviderCandidateForLayer(layer, *this, overlapMap, layerExtent)) {
             provider->sharingLayers.add(layer);
             LOG_WITH_STREAM(Compositing, stream << TextStream::Repeat(treeDepth * 2, ' ') << " " << &layer << " can share with " << backingSharingState.backingProviderCandidates());
             compositingReason = IndirectCompositingReason::None;
-            layerPaintsIntoProvidedBacking = true;
+            providedBackingLayer = provider->providerLayer;
         }
     }
 
     // If we know for sure the layer is going to be composited, don't bother looking it up in the overlap map
-    if (!willBeComposited && !layerPaintsIntoProvidedBacking && !overlapMap.isEmpty() && compositingState.testingOverlap) {
+    if (!willBeComposited && !providedBackingLayer && !overlapMap.isEmpty() && compositingState.testingOverlap) {
         // If we're testing for overlap, we only need to composite if we overlap something that is already composited.
         if (layerOverlaps(overlapMap, layer, layerExtent))
             compositingReason = IndirectCompositingReason::Overlap;
@@ -1313,9 +1320,9 @@ void RenderLayerCompositor::computeCompositingRequirements(RenderLayer* ancestor
 
     // Check if the computed indirect reason will force the layer to become composited.
     if (!willBeComposited && layer.mustCompositeForIndirectReasons() && canBeComposited(layer)) {
-        LOG_WITH_STREAM(Compositing, stream << TextStream::Repeat(treeDepth * 2, ' ') << "layer " << &layer << " compositing for indirect reason " << layer.indirectCompositingReason() << " (was sharing: " << layerPaintsIntoProvidedBacking << ")");
+        LOG_WITH_STREAM(Compositing, stream << TextStream::Repeat(treeDepth * 2, ' ') << "layer " << &layer << " compositing for indirect reason " << layer.indirectCompositingReason() << " (was sharing: " << !!providedBackingLayer << ")");
         willBeComposited = true;
-        layerPaintsIntoProvidedBacking = false;
+        providedBackingLayer = nullptr;
     }
 
     // The children of this layer don't need to composite, unless there is
@@ -1333,9 +1340,9 @@ void RenderLayerCompositor::computeCompositingRequirements(RenderLayer* ancestor
         // Compositing turns off backing sharing.
         currentState.backingSharingAncestor = nullptr;
 
-        if (layerPaintsIntoProvidedBacking) {
-            layerPaintsIntoProvidedBacking = false;
-            // layerPaintsIntoProvidedBacking was only true for layers that would otherwise composite because of overlap. If we can
+        if (providedBackingLayer) {
+            providedBackingLayer = nullptr;
+            // providedBackingLayer was only valid for layers that would otherwise composite because of overlap. If we can
             // no longer share, put this this indirect reason back on the layer so that requiresOwnBackingStore() sees it.
             layer.setIndirectCompositingReason(IndirectCompositingReason::Overlap);
             LOG_WITH_STREAM(Compositing, stream << TextStream::Repeat(treeDepth * 2, ' ') << "layer " << &layer << " was sharing, now will composite");
@@ -1376,7 +1383,7 @@ void RenderLayerCompositor::computeCompositingRequirements(RenderLayer* ancestor
 
         // Too hard to compute animated bounds if both us and some ancestor is animating transform.
         layerExtent.animationCausesExtentUncertainty |= layerExtent.hasTransformAnimation && compositingState.ancestorHasTransformAnimation;
-    } else if (layerPaintsIntoProvidedBacking) {
+    } else if (providedBackingLayer) {
         currentState.backingSharingAncestor = &layer;
         overlapMap.pushCompositingContainer(layer);
         didPushOverlapContainer = true;
@@ -1457,7 +1464,7 @@ void RenderLayerCompositor::computeCompositingRequirements(RenderLayer* ancestor
     // Now check for reasons to become composited that depend on the state of descendant layers.
     if (!willBeComposited && canBeComposited(layer)) {
         layer.update3DTransformedDescendantStatus();
-        auto indirectReason = computeIndirectCompositingReason(layer, currentState.subtreeIsCompositing, layer.has3DTransformedDescendant(), layerPaintsIntoProvidedBacking);
+        auto indirectReason = computeIndirectCompositingReason(layer, currentState.subtreeIsCompositing, layer.has3DTransformedDescendant(), !!providedBackingLayer);
         if (indirectReason != IndirectCompositingReason::None) {
             layer.setIndirectCompositingReason(indirectReason);
             layerWillCompositePostDescendants();
@@ -1487,23 +1494,16 @@ void RenderLayerCompositor::computeCompositingRequirements(RenderLayer* ancestor
     // during post-order traversal (e.g. for clipping).
     bool needsCompositingStatusUpdate = false;
     if (updateBacking(layer, queryData, &backingSharingState, willBeComposited ? BackingRequired::Yes : BackingRequired::No)) {
-        layer.setNeedsCompositingLayerConnection();
-        // Child layers need to get a geometry update to recompute their position.
-        layer.setChildrenNeedCompositingGeometryUpdate();
-        // The composited bounds of enclosing layers depends on which descendants are composited, so they need a geometry update.
-        layer.setNeedsCompositingGeometryUpdateOnAncestors();
-
         // This layer and all of its descendants have cached repaints rects that are relative to
         // the repaint container, so change when compositing changes; we need to update them here,
         // as long as shared backing isn't going to change our repaint container.
-        if (willBeComposited || !layerRepaintTargetsBackingSharingLayer(layer, backingSharingState))
-            needsCompositingStatusUpdate = true;
+        needsCompositingStatusUpdate = true;
     }
 
     // Update layer state bits.
-    if (layer.reflectionLayer() && updateLayerCompositingState(*layer.reflectionLayer(), &layer, queryData, backingSharingState))
+    if (layer.reflectionLayer() && updateReflectionCompositingState(*layer.reflectionLayer(), &layer, queryData))
         layer.setNeedsCompositingLayerConnection();
-    
+
     // FIXME: clarify needsCompositingPaintOrderChildrenUpdate. If a composited layer gets a new ancestor, it needs geometry computations.
     if (layer.needsCompositingPaintOrderChildrenUpdate()) {
         layer.setChildrenNeedCompositingGeometryUpdate();
@@ -1516,17 +1516,32 @@ void RenderLayerCompositor::computeCompositingRequirements(RenderLayer* ancestor
     compositingState.updateWithDescendantStateAndLayer(currentState, layer, ancestorLayer, layerExtent);
     updateBackingSharingAfterDescendantTraversal(backingSharingState, treeDepth, overlapMap, layer, layerExtent, compositingState.stackingContextAncestor, backingSharingSnapshot);
 
+    needsCompositingStatusUpdate |= layer.backingProviderLayerAtEndOfCompositingUpdate() != providedBackingLayer;
+
     // Update the cached repaint rects now that we've finished updating backing
     // sharing state on descendants
     if (needsCompositingStatusUpdate) {
-        layer.compositingStatusChanged(queryData.layoutUpToDate);
+        // Repaint in the old container before we recompute the repaint container.
+        if (!wasComposited && layer.repaintContainer() && layer.repaintContainer()->isComposited())
+            repaintOnCompositingChange(layer, layer.repaintContainer());
+
+        // Compute the new repaint container, and repaint our bounds in it (unless
+        // this layer is newly compositing, in which case the layer will fully repaint already).
         if (!layer.isComposited()) {
+            // If this layer is going to participate in backing sharing, defer until that's
+            // complete, since repaint container computation depends on all the state being
+            // in-place.
             if (layerRepaintTargetsBackingSharingLayer(layer, backingSharingState))
                 backingSharingState.addLayerNeedingRepaint(layer);
-            else
-                repaintOnCompositingChange(layer);
-        }
+            else {
+                layer.compositingStatusChanged(LayoutUpToDate::Yes);
+                repaintOnCompositingChange(layer, layer.repaintContainer());
+            }
+        } else
+            layer.compositingStatusChanged(LayoutUpToDate::Yes);
     }
+
+    layer.setBackingProviderLayerAtEndOfCompositingUpdate(providedBackingLayer.get());
 
     bool layerContributesToOverlap = (currentState.compositingAncestor && !currentState.compositingAncestor->isRenderViewLayer()) || currentState.backingSharingAncestor;
     updateOverlapMap(overlapMap, layer, layerExtent, didPushOverlapContainer, layerContributesToOverlap, becameCompositedAfterDescendantTraversal && !descendantsAddedToOverlap);
@@ -1836,7 +1851,7 @@ std::optional<RenderLayerCompositor::BackingSharingSnapshot> RenderLayerComposit
 {
     UNUSED_PARAM(depth);
 
-    layer.setBackingProviderLayer(nullptr);
+    layer.setBackingProviderLayer(nullptr, { UpdateBackingSharingFlags::DuringCompositingUpdate });
 
     LOG_WITH_STREAM(Compositing, stream << TextStream::Repeat(depth * 2, ' ') << &layer << " updateBackingSharingBeforeDescendantTraversal - will be composited " << willBeComposited);
 
@@ -1868,7 +1883,7 @@ void RenderLayerCompositor::updateBackingSharingAfterDescendantTraversal(Backing
 
     if (layer.isComposited()) {
         // If this layer is being composited, clean up sharing-related state.
-        layer.disconnectFromBackingProviderLayer();
+        layer.disconnectFromBackingProviderLayer({ UpdateBackingSharingFlags::DuringCompositingUpdate });
         for (auto& candidate : sharingState.backingProviderCandidates())
             candidate.sharingLayers.remove(layer);
     }
@@ -1880,7 +1895,7 @@ void RenderLayerCompositor::updateBackingSharingAfterDescendantTraversal(Backing
         sharingState.endBackingSharingSequence(layer);
 
         if (layer.isComposited())
-            layer.backing()->clearBackingSharingLayers();
+            layer.backing()->clearBackingSharingLayers({ UpdateBackingSharingFlags::DuringCompositingUpdate });
 
         return;
     }
@@ -1908,7 +1923,7 @@ void RenderLayerCompositor::updateBackingSharingAfterDescendantTraversal(Backing
         }
     }
 
-    layer.backing()->clearBackingSharingLayers();
+    layer.backing()->clearBackingSharingLayers({ UpdateBackingSharingFlags::DuringCompositingUpdate });
     LOG_WITH_STREAM(Compositing, stream << TextStream::Repeat(depth * 2, ' ') << " - is composited; maybe ending existing backing sequence with candidates " << sharingState.backingProviderCandidates() << " stacking context " << sharingState.backingSharingStackingContext());
 
     // A layer that composites resets backing-sharing, since subsequent layers need to composite to overlap it. If a descendant didn't already end the sharing sequence that was current when processing of this layer started, end it now.
@@ -2134,18 +2149,7 @@ void RenderLayerCompositor::layerGainedCompositedScrollableOverflow(RenderLayer&
     RequiresCompositingData queryData;
     queryData.layoutUpToDate = LayoutUpToDate::No;
 
-    bool layerChanged = updateBacking(layer, queryData, nullptr, BackingRequired::Yes);
-    if (layerChanged) {
-        layer.compositingStatusChanged(queryData.layoutUpToDate);
-        if (!layer.isComposited())
-            repaintOnCompositingChange(layer);
-        layer.setChildrenNeedCompositingGeometryUpdate();
-        layer.setNeedsCompositingLayerConnection();
-        layer.setSubsequentLayersNeedCompositingRequirementsTraversal();
-        // Ancestor layers that composited for indirect reasons (things listed in styleChangeMayAffectIndirectCompositingReasons()) need to get updated.
-        // This could be optimized by only setting this flag on layers with the relevant styles.
-        layer.setNeedsPostLayoutCompositingUpdateOnAncestors();
-    }
+    updateExplicitBacking(layer, queryData, BackingRequired::Yes);
 
     auto* backing = layer.backing();
     if (!backing)
@@ -2164,19 +2168,8 @@ void RenderLayerCompositor::layerStyleChanged(StyleDifference diff, RenderLayer&
     // Also, it allows us to avoid a tree walk in updateCompositingLayers() when no layer changed its compositing state.
     RequiresCompositingData queryData;
     queryData.layoutUpToDate = LayoutUpToDate::No;
-    
-    bool layerChanged = updateBacking(layer, queryData);
-    if (layerChanged) {
-        layer.compositingStatusChanged(queryData.layoutUpToDate);
-        if (!layer.isComposited())
-            repaintOnCompositingChange(layer);
-        layer.setChildrenNeedCompositingGeometryUpdate();
-        layer.setNeedsCompositingLayerConnection();
-        layer.setSubsequentLayersNeedCompositingRequirementsTraversal();
-        // Ancestor layers that composited for indirect reasons (things listed in styleChangeMayAffectIndirectCompositingReasons()) need to get updated.
-        // This could be optimized by only setting this flag on layers with the relevant styles.
-        layer.setNeedsPostLayoutCompositingUpdateOnAncestors();
-    }
+
+    updateExplicitBacking(layer, queryData);
     layer.setIntrinsicallyComposited(queryData.intrinsic);
 
     if (queryData.reevaluateAfterLayout)
@@ -2309,7 +2302,7 @@ static void clearBackingSharingWithinStackingContext(RenderLayer& stackingContex
 
     for (auto* child = curLayer.firstChild(); child; child = child->nextSibling()) {
         if (child->isComposited())
-            child->backing()->clearBackingSharingLayers();
+            child->backing()->clearBackingSharingLayers({ });
 
         if (!curLayer.isReflectionLayer(*child))
             clearBackingSharingWithinStackingContext(stackingContextRoot, *child);
@@ -2340,10 +2333,8 @@ void RenderLayerCompositor::updateRootContentLayerClipping()
     RefPtr { m_rootContentsLayer }->setMasksToBounds(!m_renderView.settings().backgroundShouldExtendBeyondPage());
 }
 
-
-bool RenderLayerCompositor::updateBacking(RenderLayer& layer, RequiresCompositingData& queryData, BackingSharingState* backingSharingState, BackingRequired backingRequired)
+bool RenderLayerCompositor::updateExplicitBacking(RenderLayer& layer, RequiresCompositingData& queryData, BackingRequired backingRequired)
 {
-    bool layerChanged = false;
     if (backingRequired == BackingRequired::Unknown)
         backingRequired = needsToBeComposited(layer, queryData) ? BackingRequired::Yes : BackingRequired::No;
     else {
@@ -2351,24 +2342,46 @@ bool RenderLayerCompositor::updateBacking(RenderLayer& layer, RequiresCompositin
         requiresCompositingForPosition(rendererForCompositingTests(layer), layer, queryData);
     }
 
-    auto repaintTargetsSharedBacking = [&](RenderLayer& layer) {
-        return backingSharingState && layerRepaintTargetsBackingSharingLayer(layer, *backingSharingState);
-    };
-    
-    auto repaintLayer = [&](RenderLayer& layer) {
-        if (repaintTargetsSharedBacking(layer)) {
-            LOG_WITH_STREAM(Compositing, stream << "Layer " << &layer << " needs to repaint into potential backing-sharing layer, postponing repaint");
-            backingSharingState->addLayerNeedingRepaint(layer);
-        } else
-            repaintOnCompositingChange(layer);
-    };
+    bool hadBacking = layer.isComposited();
+    if (backingRequired == BackingRequired::Yes) {
+        // If we need to repaint, do so before making backing and disconnecting from the backing provider layer.
+        if (!layer.backing())
+            repaintOnCompositingChange(layer, layer.repaintContainer());
+    }
+
+    updateBacking(layer, queryData, nullptr, backingRequired);
+
+    if (hadBacking != layer.isComposited())
+        layer.compositingStatusChanged(queryData.layoutUpToDate);
+
+    if (backingRequired == BackingRequired::No && hadBacking)
+        repaintOnCompositingChange(layer, layer.repaintContainer());
+
+    return hadBacking != layer.isComposited();
+}
+
+
+bool RenderLayerCompositor::updateBacking(RenderLayer& layer, RequiresCompositingData& queryData, BackingSharingState* backingSharingState, BackingRequired backingRequired)
+{
+    bool layerChanged = false;
+    bool repaintRequired = false;
+    if (backingRequired == BackingRequired::Unknown)
+        backingRequired = needsToBeComposited(layer, queryData) ? BackingRequired::Yes : BackingRequired::No;
+    else {
+        // Need to fetch viewportConstrainedNotCompositedReason, but without doing all the work that needsToBeComposited does.
+        requiresCompositingForPosition(rendererForCompositingTests(layer), layer, queryData);
+    }
+
+    OptionSet<UpdateBackingSharingFlags> updateBackingSharingFlags;
+    if (backingSharingState)
+        updateBackingSharingFlags.add(UpdateBackingSharingFlags::DuringCompositingUpdate);
 
     if (backingRequired == BackingRequired::Yes) {
         // If we need to repaint, do so before making backing and disconnecting from the backing provider layer.
         if (!layer.backing())
-            repaintLayer(layer);
+            repaintRequired = true;
 
-        layer.disconnectFromBackingProviderLayer();
+        layer.disconnectFromBackingProviderLayer(updateBackingSharingFlags);
 
         enableCompositingMode();
         
@@ -2408,11 +2421,11 @@ bool RenderLayerCompositor::updateBacking(RenderLayer& layer, RequiresCompositin
                 }
             }
 
-            layer.clearBacking();
+            layer.clearBacking(updateBackingSharingFlags);
             layerChanged = true;
 
             // If we need to repaint, do so now that we've removed the backing.
-            repaintLayer(layer);
+            repaintRequired = true;
         }
     }
 
@@ -2453,17 +2466,21 @@ bool RenderLayerCompositor::updateBacking(RenderLayer& layer, RequiresCompositin
     if (layer.backing())
         layer.backing()->updateDebugIndicators(m_showDebugBorders, m_showRepaintCounter);
 
-    return layerChanged;
+    if (layerChanged) {
+        layer.setChildrenNeedCompositingGeometryUpdate();
+        layer.setNeedsCompositingLayerConnection();
+        layer.setSubsequentLayersNeedCompositingRequirementsTraversal();
+        // Ancestor layers that composited for indirect reasons (things listed in styleChangeMayAffectIndirectCompositingReasons()) need to get updated.
+        // This could be optimized by only setting this flag on layers with the relevant styles.
+        layer.setNeedsPostLayoutCompositingUpdateOnAncestors();
+    }
+
+    return repaintRequired;
 }
 
-bool RenderLayerCompositor::updateLayerCompositingState(RenderLayer& layer, const RenderLayer* compositingAncestor, RequiresCompositingData& queryData, BackingSharingState& backingSharingState)
+bool RenderLayerCompositor::updateReflectionCompositingState(RenderLayer& layer, const RenderLayer* compositingAncestor, RequiresCompositingData& queryData)
 {
-    bool layerChanged = updateBacking(layer, queryData, &backingSharingState);
-    if (layerChanged) {
-        layer.compositingStatusChanged(queryData.layoutUpToDate);
-        if (!layer.isComposited())
-            repaintOnCompositingChange(layer);
-    }
+    bool layerChanged = updateExplicitBacking(layer, queryData);
 
     // See if we need content or clipping layers. Methods called here should assume
     // that the compositing state of descendant layers has not been updated yet.
@@ -2473,17 +2490,13 @@ bool RenderLayerCompositor::updateLayerCompositingState(RenderLayer& layer, cons
     return layerChanged;
 }
 
-void RenderLayerCompositor::repaintOnCompositingChange(RenderLayer& layer)
+void RenderLayerCompositor::repaintOnCompositingChange(RenderLayer& layer, RenderLayerModelObject* repaintContainer)
 {
     // If the renderer is not attached yet, no need to repaint.
     if (&layer.renderer() != &m_renderView && !layer.renderer().parent())
         return;
 
-    CheckedPtr repaintContainer = layer.renderer().containerForRepaint().renderer;
-    if (!repaintContainer)
-        repaintContainer = &m_renderView;
-
-    layer.repaintIncludingNonCompositingDescendants(repaintContainer.get());
+    layer.repaintIncludingNonCompositingDescendants(repaintContainer);
     if (repaintContainer == &m_renderView) {
         // The contents of this layer may be moving between the window
         // and a GraphicsLayer, so we need to make sure the window system
@@ -2521,7 +2534,7 @@ void RenderLayerCompositor::layerWillBeRemoved(RenderLayer& parent, RenderLayer&
         auto* backingProviderLayer = child.backingProviderLayer();
         // FIXME: Optimize this repaint.
         backingProviderLayer->setBackingNeedsRepaint();
-        backingProviderLayer->backing()->removeBackingSharingLayer(child);
+        backingProviderLayer->backing()->removeBackingSharingLayer(child, { });
     } else
         return;
 
@@ -3162,7 +3175,7 @@ void RenderLayerCompositor::invalidateEventRegionForAllLayers()
 
 void RenderLayerCompositor::clearBackingForAllLayers()
 {
-    applyToCompositedLayerIncludingDescendants(*m_renderView.layer(), [](auto& layer) { layer.clearBacking(); });
+    applyToCompositedLayerIncludingDescendants(*m_renderView.layer(), [](auto& layer) { layer.clearBacking({ }); });
 }
 
 void RenderLayerCompositor::updateRootLayerPosition()

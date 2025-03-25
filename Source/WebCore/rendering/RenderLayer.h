@@ -151,6 +151,10 @@ struct ScrollRectToVisibleOptions {
     std::optional<LayoutRect> visibilityCheckRect { std::nullopt };
 };
 
+enum class UpdateBackingSharingFlags {
+    DuringCompositingUpdate = 1 << 0,
+};
+
 using ScrollingScope = uint64_t;
 
 class RenderLayer final : public CanMakeSingleThreadWeakPtr<RenderLayer>, public CanMakeCheckedPtr<RenderLayer> {
@@ -770,7 +774,7 @@ public:
     
     LayoutRect repaintRectIncludingNonCompositingDescendants() const;
 
-    void setRepaintStatus(RepaintStatus status) { m_repaintStatus = status; }
+    void setRepaintStatus(RepaintStatus);
     RepaintStatus repaintStatus() const { return m_repaintStatus; }
     bool needsFullRepaint() const { return m_repaintStatus == RepaintStatus::NeedsFullRepaint || m_repaintStatus == RepaintStatus::NeedsFullRepaintForPositionedMovementLayout; }
 
@@ -855,14 +859,18 @@ public:
 
     // If non-null, a non-ancestor composited layer that this layer paints into (it is sharing its backing store with this layer).
     RenderLayer* backingProviderLayer() const { return m_backingProviderLayer.get(); }
-    void setBackingProviderLayer(RenderLayer*);
-    void disconnectFromBackingProviderLayer();
+    void setBackingProviderLayer(RenderLayer*, OptionSet<UpdateBackingSharingFlags>);
+    void disconnectFromBackingProviderLayer(OptionSet<UpdateBackingSharingFlags>);
 
     bool paintsIntoProvidedBacking() const { return !!m_backingProviderLayer; }
 
+    RenderLayer* backingProviderLayerAtEndOfCompositingUpdate() const { return m_backingProviderLayerAtEndOfCompositingUpdate.get(); }
+    void setBackingProviderLayerAtEndOfCompositingUpdate(RenderLayer* provider) { m_backingProviderLayerAtEndOfCompositingUpdate = provider; }
+    RenderLayerModelObject* repaintContainer() const { return m_repaintContainer.get(); }
+
     RenderLayerBacking* backing() const { return m_backing.get(); }
     RenderLayerBacking* ensureBacking();
-    void clearBacking(bool layerBeingDestroyed = false);
+    void clearBacking(OptionSet<UpdateBackingSharingFlags>, bool layerBeingDestroyed = false);
 
     bool hasCompositedScrollingAncestor() const { return m_hasCompositedScrollingAncestor; }
     void setHasCompositedScrollingAncestor(bool hasCompositedScrollingAncestor) { m_hasCompositedScrollingAncestor = hasCompositedScrollingAncestor; }
@@ -1380,10 +1388,8 @@ private:
     RenderLayer* m_last { nullptr };
 
     SingleThreadWeakPtr<RenderLayer> m_backingProviderLayer;
-
-#if ASSERT_ENABLED || ENABLE(CONJECTURE_ASSERT)
-    SingleThreadWeakPtr<RenderObject> m_repaintContainer;
-#endif
+    SingleThreadWeakPtr<RenderLayer> m_backingProviderLayerAtEndOfCompositingUpdate;
+    SingleThreadWeakPtr<RenderLayerModelObject> m_repaintContainer;
 
     // For layers that establish stacking contexts, m_posZOrderList holds a sorted list of all the
     // descendant layers within the stacking context that have z-indices of 0 or greater
