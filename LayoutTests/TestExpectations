@@ -7843,3 +7843,6 @@ imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-f
 imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-004.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-005.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-007.html [ ImageOnlyFailure ]
+
+# This test hits an assert in debug
+webkit.org/b/290133 [ Debug ] svg/dom/SVGGeometry-isPointInFill-with-null-path.html [ Skip ]

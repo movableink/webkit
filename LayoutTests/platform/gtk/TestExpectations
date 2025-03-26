@@ -1956,3 +1956,4 @@ imported/w3c/web-platform-tests/css/css-view-transitions/element-is-grouping-dur
 webkit.org/b/213782 webanimations/accelerated-animation-with-easing.html [ Failure Pass ]
 
 imported/w3c/web-platform-tests/css/css-position/sticky/position-sticky-escape-scroller-004.html [ ImageOnlyFailure ]
+webkit.org/b/290133 svg/dom/SVGGeometry-isPointInFill-with-null-path.html [ Skip ]
