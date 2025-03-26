@@ -305,18 +305,18 @@ void RealtimeMediaSourceCenter::enumerateDevices(bool shouldEnumerateCamera, boo
         audioCaptureFactory().computeSpeakerDevices([callbackAggregator] { });
 }
 
-void RealtimeMediaSourceCenter::validateRequestConstraints(ValidConstraintsHandler&& validHandler, InvalidConstraintsHandler&& invalidHandler, const MediaStreamRequest& request, MediaDeviceHashSalts&& deviceIdentifierHashSalts)
+void RealtimeMediaSourceCenter::validateRequestConstraints(ValidateHandler&& validateHandler, const MediaStreamRequest& request, MediaDeviceHashSalts&& deviceIdentifierHashSalts)
 {
     bool shouldEnumerateCamera = request.videoConstraints.isValid;
     bool shouldEnumerateDisplay = displayCaptureFactory().displayCaptureDeviceManager().requiresCaptureDevicesEnumeration();
     bool shouldEnumerateMicrophone = request.audioConstraints.isValid;
     bool shouldEnumerateSpeakers = false;
-    enumerateDevices(shouldEnumerateCamera, shouldEnumerateDisplay, shouldEnumerateMicrophone, shouldEnumerateSpeakers, [this, validHandler = WTFMove(validHandler), invalidHandler = WTFMove(invalidHandler), request, deviceIdentifierHashSalts = WTFMove(deviceIdentifierHashSalts)]() mutable {
-        validateRequestConstraintsAfterEnumeration(WTFMove(validHandler), WTFMove(invalidHandler), request, WTFMove(deviceIdentifierHashSalts));
+    enumerateDevices(shouldEnumerateCamera, shouldEnumerateDisplay, shouldEnumerateMicrophone, shouldEnumerateSpeakers, [this, validateHandler = WTFMove(validateHandler), request, deviceIdentifierHashSalts = WTFMove(deviceIdentifierHashSalts)]() mutable {
+        validateRequestConstraintsAfterEnumeration(WTFMove(validateHandler), request, WTFMove(deviceIdentifierHashSalts));
     });
 }
 
-void RealtimeMediaSourceCenter::validateRequestConstraintsAfterEnumeration(ValidConstraintsHandler&& validHandler, InvalidConstraintsHandler&& invalidHandler, const MediaStreamRequest& request, MediaDeviceHashSalts&& deviceIdentifierHashSalts)
+void RealtimeMediaSourceCenter::validateRequestConstraintsAfterEnumeration(ValidateHandler&& validateHandler, const MediaStreamRequest& request, MediaDeviceHashSalts&& deviceIdentifierHashSalts)
 {
     ASSERT(request.type != MediaStreamRequest::Type::DisplayMedia || request.type != MediaStreamRequest::Type::DisplayMediaWithAudio);
     struct {
@@ -340,7 +340,7 @@ void RealtimeMediaSourceCenter::validateRequestConstraintsAfterEnumeration(Valid
         WTFLogAlways("Audio capture was requested but no device was found amongst %zu devices", audioCaptureFactory().audioCaptureDeviceManager().captureDevices().size());
         request.audioConstraints.mandatoryConstraints.forEach([](auto constraintType, auto& constraint) { constraint.log(constraintType); });
 
-        invalidHandler(firstInvalidConstraint);
+        validateHandler(makeUnexpected(firstInvalidConstraint));
         return;
     }
 
@@ -348,7 +348,7 @@ void RealtimeMediaSourceCenter::validateRequestConstraintsAfterEnumeration(Valid
         WTFLogAlways("Video capture was requested but no device was found amongst %zu devices", videoCaptureFactory().videoCaptureDeviceManager().captureDevices().size());
         request.videoConstraints.mandatoryConstraints.forEach([](auto constraintType, auto& constraint) { constraint.log(constraintType); });
 
-        invalidHandler(firstInvalidConstraint);
+        validateHandler(makeUnexpected(firstInvalidConstraint));
         return;
     }
 
@@ -368,7 +368,7 @@ void RealtimeMediaSourceCenter::validateRequestConstraintsAfterEnumeration(Valid
         });
     }
 
-    validHandler(WTFMove(audioDevices), WTFMove(videoDevices));
+    validateHandler(ValidDevices { WTFMove(audioDevices), WTFMove(videoDevices) });
 }
 
 void RealtimeMediaSourceCenter::setAudioCaptureFactory(AudioCaptureFactory& factory)

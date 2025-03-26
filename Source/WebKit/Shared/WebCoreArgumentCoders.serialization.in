@@ -5876,6 +5876,12 @@ header: <WebCore/MockMediaDevice.h>
     Invalid
 };
 
+header: <WebCore/RealtimeMediaSourceCenter.h>
+[Nested] struct WebCore::RealtimeMediaSourceCenter::ValidDevices {
+    Vector<WebCore::CaptureDevice> audioDevices;
+    Vector<WebCore::CaptureDevice> videoDevices;
+};
+
 #endif // ENABLE(MEDIA_STREAM)
 
 enum class WebCore::PlatformVideoColorPrimaries : uint8_t {

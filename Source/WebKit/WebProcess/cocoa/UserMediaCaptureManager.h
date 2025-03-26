@@ -31,12 +31,23 @@
 #include "WebProcessSupplement.h"
 #include <WebCore/DisplayCaptureManager.h>
 #include <WebCore/RealtimeMediaSource.h>
+#include <WebCore/RealtimeMediaSourceCenter.h>
 #include <WebCore/RealtimeMediaSourceFactory.h>
 #include <WebCore/RealtimeMediaSourceIdentifier.h>
 #include <WebCore/SharedMemory.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
+
+namespace IPC {
+class Decoder;
+class Encoder;
+
+template<> struct ArgumentCoder<WebCore::RealtimeMediaSourceCenter::ValidDevices> {
+    static void encode(Encoder&, const WebCore::RealtimeMediaSourceCenter::ValidDevices&);
+    static std::optional<WebCore::RealtimeMediaSourceCenter::ValidDevices> decode(Decoder&);
+};
+}
 
 namespace WebCore {
 class CAAudioStreamDescription;

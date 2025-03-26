@@ -189,7 +189,7 @@ private:
 
     static void requestSystemValidation(const WebPageProxy&, UserMediaPermissionRequestProxy&, CompletionHandler<void(bool)>&&);
 
-    void platformValidateUserMediaRequestConstraints(WebCore::RealtimeMediaSourceCenter::ValidConstraintsHandler&& validHandler, WebCore::RealtimeMediaSourceCenter::InvalidConstraintsHandler&& invalidHandler, WebCore::MediaDeviceHashSalts&&);
+    void validateUserMediaRequestConstraints(WebCore::RealtimeMediaSourceCenter::ValidateHandler&&, WebCore::MediaDeviceHashSalts&&);
 #endif
 
     bool mockCaptureDevicesEnabled() const;

@@ -663,20 +663,9 @@ void UserMediaPermissionRequestManagerProxy::processUserMediaPermissionRequest()
         if (!request->isPending())
             return;
 
-        RealtimeMediaSourceCenter::InvalidConstraintsHandler invalidHandler = [protectedThis, request](auto invalidConstraint) {
-            if (!request->isPending())
-                return;
-
-            RefPtr page = protectedThis->m_page.get();
-            if (!page || !page->hasRunningProcess())
-                return;
-
-            protectedThis->processUserMediaPermissionInvalidRequest(invalidConstraint);
-        };
-
         WebCore::MediaDeviceHashSalts deviceHashSaltsForFrame = { deviceIDHashSalt, protectedThis->ephemeralDeviceHashSaltForFrame(request->frameID()) };
 
-        auto validHandler = [protectedThis, request, deviceHashSaltsForFrame = deviceHashSaltsForFrame](Vector<CaptureDevice>&& audioDevices, Vector<CaptureDevice>&& videoDevices) mutable {
+        WebCore::RealtimeMediaSourceCenter::ValidateHandler validateHandler = [protectedThis, request, deviceHashSaltsForFrame = deviceHashSaltsForFrame](auto&& result) mutable {
             if (!request->isPending())
                 return;
 
@@ -684,23 +673,29 @@ void UserMediaPermissionRequestManagerProxy::processUserMediaPermissionRequest()
             if (!page || !page->hasRunningProcess() || !page->mainFrame())
                 return;
 
-            protectedThis->processUserMediaPermissionValidRequest(WTFMove(audioDevices), WTFMove(videoDevices), WTFMove(deviceHashSaltsForFrame));
+            if (!result) {
+                protectedThis->processUserMediaPermissionInvalidRequest(result.error());
+                return;
+            }
+
+            auto validDevices = WTFMove(result).value();
+            protectedThis->processUserMediaPermissionValidRequest(WTFMove(validDevices.audioDevices), WTFMove(validDevices.videoDevices), WTFMove(deviceHashSaltsForFrame));
         };
 
         protectedThis->syncWithWebCorePrefs();
 
         auto& realtimeMediaSourceCenter = RealtimeMediaSourceCenter::singleton();
         if (realtimeMediaSourceCenter.displayCaptureFactory().displayCaptureDeviceManager().requiresCaptureDevicesEnumeration() || !request->requiresDisplayCapture())
-            protectedThis->platformValidateUserMediaRequestConstraints(WTFMove(validHandler), WTFMove(invalidHandler), WTFMove(deviceHashSaltsForFrame));
+            protectedThis->validateUserMediaRequestConstraints(WTFMove(validateHandler), WTFMove(deviceHashSaltsForFrame));
         else
-            validHandler({ }, { });
+            validateHandler(WebCore::RealtimeMediaSourceCenter::ValidDevices { { }, { } });
     });
 }
 
 #if !USE(GLIB)
-void UserMediaPermissionRequestManagerProxy::platformValidateUserMediaRequestConstraints(WebCore::RealtimeMediaSourceCenter::ValidConstraintsHandler&& validHandler, RealtimeMediaSourceCenter::InvalidConstraintsHandler&& invalidHandler, MediaDeviceHashSalts&& deviceIDHashSalts)
+void UserMediaPermissionRequestManagerProxy::validateUserMediaRequestConstraints(WebCore::RealtimeMediaSourceCenter::ValidateHandler&& validateHandler, MediaDeviceHashSalts&& deviceIDHashSalts)
 {
-    RealtimeMediaSourceCenter::singleton().validateRequestConstraints(WTFMove(validHandler), WTFMove(invalidHandler), m_currentUserMediaRequest->userRequest(), WTFMove(deviceIDHashSalts));
+    RealtimeMediaSourceCenter::singleton().validateRequestConstraints(WTFMove(validateHandler), m_currentUserMediaRequest->userRequest(), WTFMove(deviceIDHashSalts));
 }
 #endif
 
