@@ -888,18 +888,21 @@ static NSDictionary<NSString *, id> *extractResolutionReport(NSError *error)
     if (!interfaces.get())
         return nil;
     nw_path_enumerate_interfaces(static_cast<nw_path_t>(pathValue.get()), ^bool(nw_interface_t interface) {
+        String name = String::fromUTF8(nw_interface_get_name(interface));
         [interfaces addObject:@{
             @"type" : description(nw_interface_get_type(interface)),
-            @"name" : @(nw_interface_get_name(interface) ?: "")
+            @"name" : static_cast<NSString *>(name) ?: @"",
         }];
         return true;
     });
 
     auto report = static_cast<nw_resolution_report_t>(reportValue.get());
+    String provider = String::fromUTF8(nw_resolution_report_get_provider_name(report));
+    String extraText = String::fromUTF8(nw_resolution_report_get_extended_dns_error_extra_text(report));
     return @{
-        @"provider" : @(nw_resolution_report_get_provider_name(report) ?: ""),
+        @"provider" : static_cast<NSString *>(provider) ?: @"",
         @"dnsFailureReason" : description(nw_resolution_report_get_dns_failure_reason(report)),
-        @"extendedDNSErrorExtraText" : @(nw_resolution_report_get_extended_dns_error_extra_text(report) ?: ""),
+        @"extendedDNSErrorExtraText" : static_cast<NSString *>(extraText) ?: @"",
         @"interfaces" : interfaces.get(),
     };
 }
