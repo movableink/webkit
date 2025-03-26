@@ -23,19 +23,12 @@
 
 #if ENABLE_SWIFTUI && compiler(>=6.0)
 
-import Foundation
+public import Foundation
 internal import WebKit_Internal
 
-extension WebPage {
-    @MainActor
-    @_spi(Private)
-    public struct ElementInfo: Sendable {
-        init(linkURL: URL?) {
-            self.linkURL = linkURL
-        }
-
-        public let linkURL: URL?
-    }
+@_spi(CrossImportOverlay)
+public struct WKContextMenuElementInfoAdapter {
+    public let linkURL: URL?
 }
 
 #endif

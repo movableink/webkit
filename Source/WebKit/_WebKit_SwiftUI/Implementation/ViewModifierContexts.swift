@@ -26,7 +26,7 @@ internal import SwiftUI
 
 struct ContextMenuContext {
 #if os(macOS)
-    let menu: (WebPage.ElementInfo) -> NSMenu
+    let menu: @MainActor (WebView.ActivatedElementInfo) -> NSMenu
 #endif
 }
 

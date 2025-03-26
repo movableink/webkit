@@ -138,4 +138,18 @@ extension WebView {
 
         let value: Value
     }
+
+    /// Contains information about an element the user activated in a webpage, which may be used to configure a context menu for that element.
+    /// For links, the information contains the URL that is linked to.
+    @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
+    @available(watchOS, unavailable)
+    @available(tvOS, unavailable)
+    public struct ActivatedElementInfo: Hashable, Sendable {
+        init(linkURL: URL?) {
+            self.linkURL = linkURL
+        }
+
+        /// The URL of the link that the user clicked.
+        public let linkURL: URL?
+    }
  }

@@ -305,7 +305,7 @@ final public class WebPage {
 
 #if os(macOS)
     @_spi(CrossImportOverlay)
-    public func setMenuBuilder(_ menuBuilder: ((WebPage.ElementInfo) -> NSMenu)?) {
+    public func setMenuBuilder(_ menuBuilder: ((WKContextMenuElementInfoAdapter) -> NSMenu)?) {
         backingUIDelegate.menuBuilder = menuBuilder
     }
 #endif

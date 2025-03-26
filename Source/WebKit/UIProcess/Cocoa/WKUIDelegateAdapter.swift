@@ -44,7 +44,7 @@ final class WKUIDelegateAdapter: NSObject, WKUIDelegatePrivate {
     weak var owner: WebPage? = nil
 
 #if os(macOS) && !targetEnvironment(macCatalyst)
-    var menuBuilder: ((WebPage.ElementInfo) -> NSMenu)? = nil
+    var menuBuilder: ((WKContextMenuElementInfoAdapter) -> NSMenu)? = nil
 #endif
 
     private let dialogPresenter: any WebPage.DialogPresenting
@@ -109,7 +109,7 @@ final class WKUIDelegateAdapter: NSObject, WKUIDelegatePrivate {
             return menu
         }
 
-        let info = WebPage.ElementInfo(linkURL: element.hitTestResult.absoluteLinkURL)
+        let info = WKContextMenuElementInfoAdapter(linkURL: element.hitTestResult.absoluteLinkURL)
         return menuBuilder(info)
     }
 #endif

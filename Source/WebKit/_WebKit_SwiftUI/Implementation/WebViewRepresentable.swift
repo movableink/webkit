@@ -93,7 +93,13 @@ struct WebViewRepresentable {
         context.coordinator.update(platformView, configuration: self, context: context)
 
 #if os(macOS) && !targetEnvironment(macCatalyst)
-        owner.page.setMenuBuilder(environment.webViewContextMenuContext?.menu)
+        if let menu = environment.webViewContextMenuContext?.menu {
+            owner.page.setMenuBuilder {
+                menu(.init(linkURL: $0.linkURL))
+            }
+        } else {
+            owner.page.setMenuBuilder(nil)
+        }
 #endif
     }
 

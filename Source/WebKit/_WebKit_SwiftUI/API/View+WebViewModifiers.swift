@@ -78,15 +78,24 @@ extension View {
         transformEnvironment(\.webViewFindContext) { $0.canReplace = !isDisabled }
     }
 
-    @_spi(Private)
-    public nonisolated func webViewContextMenu<M>(@ViewBuilder menuItems: @escaping (WebPage.ElementInfo) -> M) -> some View where M: View {
+    /// Adds an item-based context menu to a WebView, replacing the default set of context menu items.
+    ///
+    /// - Parameters:
+    ///   - menu: A closure that produces the menu. The single parameter to the closure describes the type of webpage element that was acted upon.
+    /// - Returns: A view that can display an item-based context menu.
+    @available(WK_MAC_TBA, *)
+    @available(iOS, unavailable)
+    @available(visionOS, unavailable)
+    @available(watchOS, unavailable)
+    @available(tvOS, unavailable)
+    public nonisolated func webViewContextMenu(@ViewBuilder menu: @MainActor @escaping (WebView.ActivatedElementInfo) -> some View) -> some View {
 #if os(macOS)
-        let converted = { (info: WebPage.ElementInfo) in
-            let menuView = menuItems(info)
+        let context = ContextMenuContext { info in
+            let menuView = menu(info)
             return NSHostingMenu(rootView: menuView)
         }
 
-        return environment(\.webViewContextMenuContext, .init(menu: converted))
+        return environment(\.webViewContextMenuContext, context)
 #else
         return self
 #endif
