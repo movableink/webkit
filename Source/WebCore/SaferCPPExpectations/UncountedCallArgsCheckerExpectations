@@ -654,7 +654,6 @@ html/BaseClickableWithKeyInputType.cpp
 html/BaseTextInputType.cpp
 html/CachedHTMLCollection.h
 html/CachedHTMLCollectionInlines.h
-html/CanvasBase.cpp
 html/CheckboxInputType.cpp
 html/CollectionTraversalInlines.h
 html/CustomPaintCanvas.cpp
