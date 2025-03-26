@@ -2420,6 +2420,8 @@ accessibility/attachment-element.html [ Pass ]
 
 # Enable Text marker tests for iOS
 webkit.org/b/153292 accessibility/text-marker [ Pass ]
+# TextMarkerDebugDescription not implemented on iOS:
+accessibility/text-marker/text-marker-debug-description.html [ Skip ]
 
 # More flaky tests (Sept 18, 2015)
 

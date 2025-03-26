@@ -8,3 +8,5 @@ http/tests/paymentrequest/paymentrequest-merchantCategoryCode.https.html [ Skip 
 # linkedOnOrAfter(Sequoa) for Cross Origin Redirect Downloads.
 http/tests/download/anchor-download-redirect-cross-origin.html
 http/tests/download/anchor-download-redirect-cross-origin-top-level.html
+
+accessibility/text-marker/text-marker-debug-description.html [ Skip ]

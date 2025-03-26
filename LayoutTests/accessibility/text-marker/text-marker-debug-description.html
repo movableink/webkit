@@ -1,0 +1,36 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+<head>
+<script src="../../resources/js-test.js"></script>
+<script src="../../resources/accessibility-helper.js"></script>
+</head>
+<body>
+
+<div id="content">
+<div id="text">some text</div>
+<a href="#" id="link">Click on the hypertext.</a>
+</div>
+
+<script>
+if (window.accessibilityController) {
+    let output = "This tests the AXTextMarker and AXTextMarkerRange DebugDescription APIs.\n\n";
+
+    let ids = ["text", "link"];
+    ids.forEach((id) => {
+        output += `${id}:\n`;
+        let axElement = accessibilityController.accessibleElementById(id);
+        let range = axElement.textMarkerRangeForElement(axElement);
+        output += `${axElement.textMarkerRangeDebugDescription(range)}\n\n`;
+
+        let start = axElement.startTextMarkerForTextMarkerRange(range);
+        let end = axElement.endTextMarkerForTextMarkerRange(range);
+        output += `${axElement.textMarkerDebugDescription(start)}\n\n`;
+        output += `${axElement.textMarkerDebugDescription(end)}\n\n`;
+    });
+
+    document.getElementById("content").style.visibility = "hidden";
+    debug(output);
+}
+</script>
+</body>
+</html>

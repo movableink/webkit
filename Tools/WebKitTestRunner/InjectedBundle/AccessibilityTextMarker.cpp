@@ -31,7 +31,7 @@
 #include "JSAccessibilityTextMarker.h"
 
 namespace WTR {
-    
+
 Ref<AccessibilityTextMarker> AccessibilityTextMarker::create(PlatformTextMarker marker)
 {
     return adoptRef(*new AccessibilityTextMarker(marker));

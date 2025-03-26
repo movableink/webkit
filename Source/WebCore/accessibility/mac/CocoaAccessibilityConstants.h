@@ -247,10 +247,12 @@
 #define NSAccessibilityStartTextMarkerForBoundsAttribute @"AXStartTextMarkerForBounds"
 #define NSAccessibilityStringForTextMarkerRangeAttribute @"AXStringForTextMarkerRange"
 #define NSAccessibilityStyleTextMarkerRangeForTextMarkerAttribute @"AXStyleTextMarkerRangeForTextMarker"
+#define NSAccessibilityTextMarkerDebugDescriptionAttribute @"AXTextMarkerDebugDescription"
 #define NSAccessibilityTextMarkerForIndexAttribute @"AXTextMarkerForIndex"
 #define NSAccessibilityTextMarkerForPositionAttribute @"AXTextMarkerForPosition" // FIXME: should be AXTextMarkerForPoint.
 #define NSAccessibilityTextMarkerIsNullParameterizedAttribute @"AXTextMarkerIsNull"
 #define NSAccessibilityTextMarkerIsValidAttribute @"AXTextMarkerIsValid"
+#define NSAccessibilityTextMarkerRangeDebugDescriptionAttribute @"AXTextMarkerRangeDebugDescription"
 #define NSAccessibilityTextMarkerRangeForLineAttribute @"AXTextMarkerRangeForLine"
 #define NSAccessibilityTextMarkerRangeForTextMarkersAttribute @"AXTextMarkerRangeForTextMarkers"
 #define NSAccessibilityTextMarkerRangeForUIElementAttribute @"AXTextMarkerRangeForUIElement"

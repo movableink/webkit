@@ -225,16 +225,28 @@ String AXTextMarker::debugDescription() const
 {
     auto separator = ", "_s;
     RefPtr object = this->object();
-    return makeString(
-        "treeID "_s, treeID() ? treeID()->loggingString() : ""_s
-        , separator, "objectID "_s, objectID() ? objectID()->loggingString() : ""_s
-        , separator, "role "_s, object ? accessibilityRoleToString(object->roleValue()) : "no object"_str
+
+    String ids;
+#if PLATFORM(MAC)
+    // Since treeID and objectID change from run to run and this is used in a Mac LayoutTest, don't include them in the debugDescription when running tests.
+    if (!AXObjectCache::clientIsInTestMode()) {
+#endif
+        ids = makeString(
+            "treeID "_s, treeID() ? treeID()->loggingString() : "null"_s
+            , separator, "objectID "_s, objectID() ? objectID()->loggingString() : "null"_s
+            , separator);
+#if PLATFORM(MAC)
+    }
+#endif
+
+    return makeString(ids
+        , "role "_s, object ? accessibilityRoleToString(object->roleValue()) : "no object"_s
         , isIgnored() ? makeString(separator, "ignored"_s) : ""_s
         , separator, "anchor "_s, m_data.anchorType
         , separator, "affinity "_s, m_data.affinity
         , separator, "offset "_s, m_data.offset
-        , separator, "characterStart "_s, m_data.characterStart
-        , separator, "characterOffset "_s, m_data.characterOffset
+        , separator, "charStart "_s, m_data.characterStart
+        , separator, "charOffset "_s, m_data.characterOffset
         , separator, "origin "_s, originToString(m_data.origin)
     );
 }
@@ -448,7 +460,9 @@ std::optional<AXTextMarkerRange> AXTextMarkerRange::intersectionWith(const AXTex
 
 String AXTextMarkerRange::debugDescription() const
 {
-    return makeString("start: {"_s, m_start.debugDescription(), "}\nend:   {"_s, m_end.debugDescription(), '}');
+    return makeString("text: '"_s, toString(), "'"_s,
+        ", start: {"_s, m_start.debugDescription(), '}',
+        ", end: {"_s, m_end.debugDescription(), '}');
 }
 
 std::partial_ordering partialOrder(const AXTextMarker& marker1, const AXTextMarker& marker2)

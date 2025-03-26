@@ -1,0 +1,21 @@
+This tests the AXTextMarker and AXTextMarkerRange DebugDescription APIs.
+
+text:
+text: 'some text', start: {role StaticText, anchor 0, affinity 1, offset 0, charStart 0, charOffset 0, origin Unknown}, end: {role StaticText, anchor 0, affinity 1, offset 9, charStart 0, charOffset 9, origin Unknown}
+
+role StaticText, anchor 0, affinity 1, offset 0, charStart 0, charOffset 0, origin Unknown
+
+role StaticText, anchor 0, affinity 1, offset 9, charStart 0, charOffset 9, origin Unknown
+
+link:
+text: 'Click on the hypertext.', start: {role StaticText, anchor 0, affinity 1, offset 0, charStart 0, charOffset 0, origin Unknown}, end: {role StaticText, anchor 0, affinity 1, offset 23, charStart 0, charOffset 23, origin Unknown}
+
+role StaticText, anchor 0, affinity 1, offset 0, charStart 0, charOffset 0, origin Unknown
+
+role StaticText, anchor 0, affinity 1, offset 23, charStart 0, charOffset 23, origin Unknown
+
+
+PASS successfullyParsed is true
+
+TEST COMPLETE
+
