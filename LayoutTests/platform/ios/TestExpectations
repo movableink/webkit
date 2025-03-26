@@ -7764,3 +7764,5 @@ webkit.org/b/290413 [ Debug ] imported/w3c/web-platform-tests/html/browsers/brow
 webkit.org/b/290416 [ Debug ] imported/w3c/web-platform-tests/html/semantics/embedded-content/the-iframe-element/iframe-loading-lazy-multiple-times.html [ Pass Failure ]
 
 webkit.org/b/290420 [ Debug ] ipc/invalid-message-to-web-process.html [ Timeout ]
+
+webkit.org/b/290457 [ Debug ] ipc/ui-send-empty-uuid.html [ Failure ]
