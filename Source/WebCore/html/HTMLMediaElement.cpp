@@ -7972,6 +7972,8 @@ void HTMLMediaElement::createMediaPlayer() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     RefPtr page = document().page();
     player->setPageIsVisible(!m_elementIsHidden);
     player->setVisibleInViewport(isVisibleInViewport());
+    player->setInFullscreenOrPictureInPicture(isFullscreen());
+
 #if USE(AVFOUNDATION) && ENABLE(MEDIA_SOURCE)
     player->setDecompressionSessionPreferences(document().settings().mediaSourcePrefersDecompressionSession(), document().settings().mediaSourceCanFallbackToDecompressionSession());
 #endif

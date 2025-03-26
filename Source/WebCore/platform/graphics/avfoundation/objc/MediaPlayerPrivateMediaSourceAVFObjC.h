@@ -164,6 +164,7 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     void setVideoTarget(const PlatformVideoTarget&) final;
+    void maybeUpdateDisplayLayer();
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -432,8 +433,10 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     String m_defaultSpatialTrackingLabel;
     String m_spatialTrackingLabel;
 #endif
+    AcceleratedVideoMode m_acceleratedVideoMode { AcceleratedVideoMode::Layer };
 #if ENABLE(LINEAR_MEDIA_PLAYER)
-    bool m_usingLinearMediaPlayer { false };
+    bool m_needNewFrameToProgressStaging { false };
+    bool m_updateDisplayLayerPending { false };
     RetainPtr<FigVideoTargetRef> m_videoTarget;
 #endif
 };
