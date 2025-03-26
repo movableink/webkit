@@ -82,17 +82,21 @@ void CoordinatedBackingStore::paintToTextureMapper(TextureMapper& textureMapper,
                 && !tile.texture().filterOperation();
         }();
         if (canUseDamageToDrawTextureFragment) {
-            // We define damagedTileRect as a minimum bounding rectangle of all damage rects that intersect tile.rect()
-            // - this way we can keep a single texture draw call yet with potentially smaller sourceRect.
-            FloatRect damagedTileRect;
+            // We use Damage here as it's a convenient way to track per-tile damage.
+            // If the tile size is big enough, the Damage will have a better resolution
+            // and will allow more than one "draw" operation thus reducing the re-painted
+            // area significantly in many cases.
+            const IntRect tileIntRect = enclosingIntRect(tile.rect());
+            Damage tileDamage(tileIntRect);
             for (const auto& damageRect : frameDamage->rects()) {
-                if (!damageRect.isEmpty())
-                    damagedTileRect.unite(intersection(tile.rect(), damageRect));
+                if (damageRect.isEmpty())
+                    continue;
+                tileDamage.add(intersection(tileIntRect, damageRect));
             }
-            if (damagedTileRect.isEmpty())
-                continue;
-            const auto sourceRect = FloatRect { FloatPoint { damagedTileRect.location() - tile.rect().location() }, damagedTileRect.size() };
-            textureMapper.drawTextureFragment(tile.texture(), sourceRect, damagedTileRect);
+            for (const auto& tileDamageRect : tileDamage.rectsForPainting()) {
+                const auto sourceRect = FloatRect { FloatPoint { tileDamageRect.location() - tile.rect().location() }, tileDamageRect.size() };
+                textureMapper.drawTextureFragment(tile.texture(), sourceRect, tileDamageRect);
+            }
         } else
 #endif
         textureMapper.drawTexture(tile.texture(), tile.rect(), adjustedTransform, opacity, allEdgesExposed);
