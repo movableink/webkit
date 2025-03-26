@@ -57,7 +57,7 @@ public:
     RefPtr<RemoteImageBufferProxy> cachedImageBuffer(WebCore::RenderingResourceIdentifier) const;
     void forgetImageBuffer(WebCore::RenderingResourceIdentifier);
 
-    void recordNativeImageUse(WebCore::NativeImage&);
+    void recordNativeImageUse(WebCore::NativeImage&, const WebCore::DestinationColorSpace&);
     void recordFontUse(WebCore::Font&);
     void recordImageBufferUse(WebCore::ImageBuffer&);
     void recordDecomposedGlyphsUse(WebCore::DecomposedGlyphs&);

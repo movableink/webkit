@@ -277,7 +277,7 @@ void RemoteImageBufferSetProxy::willPrepareForDisplay()
     if (m_remoteNeedsConfigurationUpdate) {
         send(Messages::RemoteImageBufferSet::UpdateConfiguration(m_configuration));
 
-        m_displayListRecorder = Ref { *m_remoteRenderingBackendProxy }->createDisplayListRecorder(m_displayListIdentifier, m_configuration.logicalSize, m_configuration.renderingMode, m_configuration.renderingPurpose, m_configuration.resolutionScale, m_configuration.colorSpace, m_configuration.pixelFormat);
+        m_displayListRecorder = Ref { *m_remoteRenderingBackendProxy }->createDisplayListRecorder(m_displayListIdentifier, m_configuration.logicalSize, m_configuration.renderingMode, m_configuration.renderingPurpose, m_configuration.resolutionScale, m_configuration.colorSpace, m_configuration.contentsFormat, m_configuration.pixelFormat);
     }
     m_remoteNeedsConfigurationUpdate = false;
 

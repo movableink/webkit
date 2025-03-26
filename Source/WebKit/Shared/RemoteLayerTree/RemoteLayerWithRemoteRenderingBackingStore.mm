@@ -116,6 +116,7 @@ void RemoteLayerWithRemoteRenderingBackingStore::ensureBackingStore(const Parame
             .logicalSize = size(),
             .resolutionScale = scale(),
             .colorSpace = colorSpace(),
+            .contentsFormat = contentsFormat(),
             .pixelFormat = pixelFormat(),
             .renderingMode = type() == RemoteLayerBackingStore::Type::IOSurface ? RenderingMode::Accelerated : RenderingMode::Unaccelerated,
             .renderingPurpose = WebCore::RenderingPurpose::LayerBacking,
