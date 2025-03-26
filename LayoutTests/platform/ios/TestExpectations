@@ -101,7 +101,6 @@ compositing/shared-backing/overflow-scroll [ Pass ]
 compositing/scrolling/async-overflow-scrolling [ Pass ]
 compositing/scrolling/async-overflow-scrolling/mac [ Skip ]
 compositing/layer-creation/clipping-scope [ Pass ]
-contact-picker/contacts-select-after-dismissing-picker.html [ Pass ]
 contact-picker/contacts-select-while-presenting-picker.html [ Pass ]
 contact-picker/contacts-select.html [ Pass ]
 css3/scroll-snap/ios [ Pass ]
@@ -7766,3 +7765,5 @@ webkit.org/b/290416 [ Debug ] imported/w3c/web-platform-tests/html/semantics/emb
 webkit.org/b/290420 [ Debug ] ipc/invalid-message-to-web-process.html [ Timeout ]
 
 webkit.org/b/290457 [ Debug ] ipc/ui-send-empty-uuid.html [ Failure ]
+
+webkit.org/b/290462 contact-picker/contacts-select-after-dismissing-picker.html [ Pass Timeout ]
