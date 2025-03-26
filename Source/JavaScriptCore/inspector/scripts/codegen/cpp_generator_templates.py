@@ -129,7 +129,7 @@ private:
 
 ${dispatchCases}
 
-    m_backendDispatcher->reportProtocolError(BackendDispatcher::MethodNotFound, makeString("'${domainName}."_s, protocol_method, "' was not found"_s));
+    m_backendDispatcher->reportProtocolError(BackendDispatcher::MethodNotFound, makeString("'${domainExposedAs}."_s, protocol_method, "' was not found"_s));
 }""")
 
     BackendDispatcherImplementationLargeSwitch = (
@@ -147,7 +147,7 @@ ${dispatchCases}
 
     auto findResult = dispatchMap->find(protocol_method);
     if (findResult == dispatchMap->end()) {
-        m_backendDispatcher->reportProtocolError(BackendDispatcher::MethodNotFound, makeString("'${domainName}."_s, protocol_method, "' was not found"_s));
+        m_backendDispatcher->reportProtocolError(BackendDispatcher::MethodNotFound, makeString("'${domainExposedAs}."_s, protocol_method, "' was not found"_s));
         return;
     }
 
@@ -164,13 +164,13 @@ ${domainName}BackendDispatcher::${domainName}BackendDispatcher(BackendDispatcher
     : SupplementalBackendDispatcher(backendDispatcher)
     , m_agent(agent)
 {
-    m_backendDispatcher->registerDispatcherForDomain("${domainName}"_s, this);
+    m_backendDispatcher->registerDispatcherForDomain("${domainExposedAs}"_s, this);
 }""")
 
     BackendDispatcherImplementationPrepareCommandArguments = (
 """${parameterDeclarations}
     if (m_backendDispatcher->hasProtocolErrors()) {
-        m_backendDispatcher->reportProtocolError(BackendDispatcher::InvalidParams, "Some arguments of method \'${domainName}.${commandName}\' can't be processed"_s);
+        m_backendDispatcher->reportProtocolError(BackendDispatcher::InvalidParams, "Some arguments of method \'${domainExposedAs}.${commandName}\' can't be processed"_s);
         return;
     }
 """)

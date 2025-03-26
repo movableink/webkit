@@ -98,6 +98,7 @@ class CppBackendDispatcherImplementationGenerator(CppGenerator):
 
         constructor_args = {
             'domainName': domain.domain_name,
+            'domainExposedAs': domain.domain_exposed_as
         }
         implementations.append(Template(CppTemplates.BackendDispatcherImplementationDomainConstructor).substitute(None, **constructor_args))
 
@@ -141,6 +142,7 @@ class CppBackendDispatcherImplementationGenerator(CppGenerator):
 
         switch_args = {
             'domainName': domain.domain_name,
+            'domainExposedAs': domain.domain_exposed_as,
             'dispatchCases': "\n".join(cases)
         }
 
@@ -159,6 +161,7 @@ class CppBackendDispatcherImplementationGenerator(CppGenerator):
 
         switch_args = {
             'domainName': domain.domain_name,
+            'domainExposedAs': domain.domain_exposed_as,
             'dispatchCases': "\n".join(cases)
         }
 
@@ -366,6 +369,7 @@ class CppBackendDispatcherImplementationGenerator(CppGenerator):
 
         command_args = {
             'domainName': domain.domain_name,
+            'domainExposedAs': domain.domain_exposed_as,
             'commandName': command.command_name,
             'parameterDeclarations': '\n'.join(parameter_declarations),
             'invocationParameters': ', '.join(method_parameters),

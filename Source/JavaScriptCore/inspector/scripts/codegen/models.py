@@ -429,7 +429,8 @@ class Protocol:
                 raise ParseException("Malformed domain specification: events is not an array")
             events.extend([self.parse_event(event, debuggable_types) for event in json['events']])
 
-        self.domains.append(Domain(json['domain'], json.get('description', ''), json.get('condition'), debuggable_types, target_types, isSupplemental, version, types, commands, events))
+        domain_name_exposed_as = json.get('exposedAs', json['domain'])
+        self.domains.append(Domain(json['domain'], domain_name_exposed_as, json.get('description', ''), json.get('condition'), debuggable_types, target_types, isSupplemental, version, types, commands, events))
 
     def parse_type_declaration(self, json):
         check_for_required_properties(['id', 'type'], json, "type")
@@ -630,8 +631,9 @@ class Protocol:
 
 
 class Domain:
-    def __init__(self, domain_name, description, condition, debuggable_types, target_types, isSupplemental, version, type_declarations, commands, events):
+    def __init__(self, domain_name, domain_exposed_as, description, condition, debuggable_types, target_types, isSupplemental, version, type_declarations, commands, events):
         self.domain_name = domain_name
+        self.domain_exposed_as = domain_exposed_as
         self.description = description
         self.condition = condition
         self.debuggable_types = debuggable_types
@@ -669,7 +671,7 @@ class Domain:
 
 
 class Domains:
-    GLOBAL = Domain("", "The global domain, in which primitive types are implicitly declared.", None, None, None, False, None, [], [], [])
+    GLOBAL = Domain("", "", "The global domain, in which primitive types are implicitly declared.", None, None, None, False, None, [], [], [])
 
 
 class TypeDeclaration:

@@ -1,5 +1,6 @@
 {
     "domain": "BidiLog",
+    "exposedAs": "log",
     "description": "The log module contains commands and events relating to logging.",
     "condition": "ENABLE(WEBDRIVER_BIDI)",
     "events": [

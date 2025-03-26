@@ -1,5 +1,6 @@
 {
     "domain": "BidiBrowsingContext",
+    "exposedAs": "browsingContext",
     "description": "The browsingContext module contains commands and events relating to navigables.",
     "condition": "ENABLE(WEBDRIVER_BIDI)",
     "types": [
