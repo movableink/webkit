@@ -137,6 +137,15 @@
         "subtests": {
             "/webkit/WebKitPrintOperation/custom-widget": {
                 "expected": {"gtk": {"status": ["FAIL", "TIMEOUT", "PASS"], "bug": "webkit.org/b/168196"}}
+            },
+            "/webkit/WebKitPrintOperation/print-errors": {
+                "expected": {"gtk": {"status": ["FAIL"], "bug": "webkit.org/b/290458"}}
+            },
+            "/webkit/WebKitPrintOperation/print": {
+                "expected": {"gtk": {"status": ["FAIL"], "bug": "webkit.org/b/290458"}}
+            },
+            "/webkit/WebKitPrintOperation/close-after-print": {
+                "expected": {"gtk": {"status": ["FAIL"], "bug": "webkit.org/b/290458"}}
             }
         }
     },
