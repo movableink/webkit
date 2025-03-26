@@ -158,6 +158,7 @@ private:
     RefPtr<WebDateTimePicker> createDateTimePicker(WebPageProxy&) final { return nullptr; }
 
     void setTextIndicator(Ref<WebCore::TextIndicator>, WebCore::TextIndicatorLifetime) override;
+    void updateTextIndicator(Ref<WebCore::TextIndicator>) override;
     void clearTextIndicator(WebCore::TextIndicatorDismissalAnimation) override;
     void setTextIndicatorAnimationProgress(float) override;
 

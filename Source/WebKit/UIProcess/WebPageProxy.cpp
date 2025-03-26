@@ -9896,6 +9896,33 @@ void WebPageProxy::setTextIndicator(const TextIndicatorData& indicatorData, uint
 #endif
 }
 
+void WebPageProxy::updateTextIndicatorFromFrame(FrameIdentifier frameID, WebCore::TextIndicatorData&& indicatorData)
+{
+    RefPtr frame = WebFrameProxy::webFrame(frameID);
+    if (!frame)
+        return;
+
+    auto rect = indicatorData.textBoundingRectInRootViewCoordinates;
+    convertRectToMainFrameCoordinates(rect, frame->rootFrame().frameID(), [weakThis = WeakPtr { *this }, indicatorData = WTFMove(indicatorData)] (std::optional<FloatRect> convertedRect) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis || !convertedRect)
+            return;
+        indicatorData.textBoundingRectInRootViewCoordinates = *convertedRect;
+        protectedThis->updateTextIndicator(WTFMove(indicatorData));
+    });
+}
+
+void WebPageProxy::updateTextIndicator(const TextIndicatorData& indicatorData)
+{
+    // FIXME: Make TextIndicatorWindow a platform-independent presentational thing ("TextIndicatorPresentation"?).
+#if PLATFORM(COCOA)
+    if (RefPtr pageClient = this->pageClient())
+        pageClient->updateTextIndicator(TextIndicator::create(indicatorData));
+#else
+    notImplemented();
+#endif
+}
+
 void WebPageProxy::clearTextIndicator()
 {
 #if PLATFORM(COCOA)

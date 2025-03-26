@@ -1551,6 +1551,7 @@ public:
     void countStringMatches(const String&, OptionSet<FindOptions>, unsigned maxMatchCount);
     void replaceMatches(Vector<uint32_t>&& matchIndices, const String& replacementText, bool selectionOnly, CompletionHandler<void(uint64_t)>&&);
     void setTextIndicator(const WebCore::TextIndicatorData&, uint64_t /* WebCore::TextIndicatorLifetime */ lifetime = 0 /* Permanent */);
+    void updateTextIndicator(const WebCore::TextIndicatorData&);
     void setTextIndicatorAnimationProgress(float);
     void clearTextIndicator();
 
@@ -3332,6 +3333,7 @@ private:
     void documentURLForConsoleLog(WebCore::FrameIdentifier, CompletionHandler<void(const URL&)>&&);
 
     void setTextIndicatorFromFrame(WebCore::FrameIdentifier, WebCore::TextIndicatorData&&, uint64_t);
+    void updateTextIndicatorFromFrame(WebCore::FrameIdentifier, WebCore::TextIndicatorData&&);
 
     void frameNameChanged(IPC::Connection&, WebCore::FrameIdentifier, const String& frameName);
 

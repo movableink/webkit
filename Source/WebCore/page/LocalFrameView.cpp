@@ -263,6 +263,7 @@ void LocalFrameView::reset()
     m_delayedTextFragmentIndicatorTimer.stop();
     m_pendingTextFragmentIndicatorRange.reset();
     m_pendingTextFragmentIndicatorText = String();
+    m_haveCreatedTextIndicator = false;
     m_lastViewportSize = IntSize();
     m_lastZoomFactor = 1.0f;
     m_isTrackingRepaints = false;
@@ -2393,9 +2394,9 @@ bool LocalFrameView::scrollToFragment(const URL& url)
                     document->setCSSTarget(downcast<Element>(commonAncestor.get()));
                 // FIXME: <http://webkit.org/b/245262> (Scroll To Text Fragment should use DelegateMainFrameScroll)
                 TemporarySelectionChange selectionChange(document, { range }, { TemporarySelectionOption::RevealSelection, TemporarySelectionOption::RevealSelectionBounds, TemporarySelectionOption::UserTriggered, TemporarySelectionOption::ForceCenterScroll });
-                maintainScrollPositionAtScrollToTextFragmentRange(range);
                 if (m_frame->settings().scrollToTextFragmentIndicatorEnabled() && !m_frame->page()->isControlledByAutomation())
                     m_delayedTextFragmentIndicatorTimer.startOneShot(100_ms);
+                maintainScrollPositionAtScrollToTextFragmentRange(range);
                 return true;
             }
         }
@@ -2661,8 +2662,8 @@ void LocalFrameView::scrollToFocusedElementInternal()
 void LocalFrameView::textFragmentIndicatorTimerFired()
 {
     ASSERT(m_frame->document());
-    auto& document = *m_frame->document();
-    
+    Ref document = *m_frame->document();
+
     m_delayedTextFragmentIndicatorTimer.stop();
     
     if (!m_pendingTextFragmentIndicatorRange)
@@ -2677,42 +2678,6 @@ void LocalFrameView::textFragmentIndicatorTimerFired()
     TemporarySelectionChange selectionChange(document, { range }, { TemporarySelectionOption::RevealSelection, TemporarySelectionOption::RevealSelectionBounds, TemporarySelectionOption::UserTriggered, TemporarySelectionOption::ForceCenterScroll });
     
     maintainScrollPositionAtScrollToTextFragmentRange(range);
-    
-    auto textIndicator = TextIndicator::createWithRange(range, { TextIndicatorOption::DoNotClipToVisibleRect }, WebCore::TextIndicatorPresentationTransition::Bounce);
-    
-    auto* page = m_frame->page();
-    
-    if (!page)
-        return;
-    
-    if (textIndicator) {
-        RefPtr localMainFrame = page->localMainFrame();
-        if (!localMainFrame)
-            return;
-
-        auto textRects = RenderObject::absoluteTextRects(range);
-
-        constexpr auto hitType = OptionSet { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AllowVisibleChildFrameContentOnly };
-        auto result = localMainFrame->eventHandler().hitTestResultAtPoint(LayoutPoint(textRects.first().center()), hitType);
-        if (!intersects(range, *result.protectedTargetNode()))
-            return;
-        
-        if (textRects.size() >= 2) {
-            result = localMainFrame->eventHandler().hitTestResultAtPoint(LayoutPoint(textRects[1].center()), hitType);
-            if (!intersects(range, *result.protectedTargetNode()))
-                return;
-        }
-        
-        if (textRects.size() >= 4) {
-            result = localMainFrame->eventHandler().hitTestResultAtPoint(LayoutPoint(textRects.last().center()), hitType);
-            if (!intersects(range, *result.protectedTargetNode()))
-                return;
-            result = localMainFrame->eventHandler().hitTestResultAtPoint(LayoutPoint(textRects[textRects.size() - 2].center()), hitType);
-            if (!intersects(range, *result.protectedTargetNode()))
-                return;
-        }
-        document.protectedPage()->chrome().client().setTextIndicator(textIndicator->data());
-    }
 }
 
 void LocalFrameView::cancelScheduledTextFragmentIndicatorTimer()
@@ -2721,6 +2686,7 @@ void LocalFrameView::cancelScheduledTextFragmentIndicatorTimer()
         return;
     m_pendingTextFragmentIndicatorRange.reset();
     m_pendingTextFragmentIndicatorText = String();
+    m_haveCreatedTextIndicator = false;
     m_delayedTextFragmentIndicatorTimer.stop();
 }
 
@@ -3730,8 +3696,9 @@ bool LocalFrameView::safeToPropagateScrollToParent() const
 void LocalFrameView::scheduleScrollToAnchorAndTextFragment()
 {
     RefPtr<ContainerNode> anchorNode = m_maintainScrollPositionAnchor;
-    if (!anchorNode)
+    if (!anchorNode && !(m_pendingTextFragmentIndicatorRange && !m_delayedTextFragmentIndicatorTimer.isActive()))
         return;
+
     m_scheduledMaintainScrollPositionAnchor = anchorNode;
 
     if (m_scheduledToScrollToAnchor)
@@ -3827,6 +3794,53 @@ void LocalFrameView::scrollToTextFragmentRange()
 
     // FIXME: <http://webkit.org/b/245262> (Scroll To Text Fragment should use DelegateMainFrameScroll)
     TemporarySelectionChange selectionChange(document, { range }, { TemporarySelectionOption::RevealSelection, TemporarySelectionOption::RevealSelectionBounds, TemporarySelectionOption::UserTriggered, TemporarySelectionOption::ForceCenterScroll });
+
+    if (m_delayedTextFragmentIndicatorTimer.isActive())
+        return;
+
+    if (!m_frame->settings().scrollToTextFragmentIndicatorEnabled() || m_frame->page()->isControlledByAutomation())
+        return;
+
+    RefPtr textIndicator = TextIndicator::createWithRange(range, { TextIndicatorOption::DoNotClipToVisibleRect }, WebCore::TextIndicatorPresentationTransition::Bounce);
+
+    RefPtr page = m_frame->page();
+
+    if (!page)
+        return;
+
+    if (textIndicator) {
+        RefPtr localMainFrame = page->localMainFrame();
+        if (!localMainFrame)
+            return;
+
+        auto textRects = RenderObject::absoluteTextRects(range);
+
+        static constexpr OptionSet hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AllowVisibleChildFrameContentOnly };
+        auto result = localMainFrame->eventHandler().hitTestResultAtPoint(LayoutPoint(textRects.first().center()), hitType);
+        if (!intersects(range, *result.protectedTargetNode()))
+            return;
+
+        if (textRects.size() >= 2) {
+            result = localMainFrame->eventHandler().hitTestResultAtPoint(LayoutPoint(textRects[1].center()), hitType);
+            if (!intersects(range, *result.protectedTargetNode()))
+                return;
+        }
+
+        if (textRects.size() >= 4) {
+            result = localMainFrame->eventHandler().hitTestResultAtPoint(LayoutPoint(textRects.last().center()), hitType);
+            if (!intersects(range, *result.protectedTargetNode()))
+                return;
+            result = localMainFrame->eventHandler().hitTestResultAtPoint(LayoutPoint(textRects[textRects.size() - 2].center()), hitType);
+            if (!intersects(range, *result.protectedTargetNode()))
+                return;
+        }
+        if (m_haveCreatedTextIndicator)
+            document->protectedPage()->chrome().client().updateTextIndicator(textIndicator->data());
+        else {
+            document->protectedPage()->chrome().client().setTextIndicator(textIndicator->data());
+            m_haveCreatedTextIndicator = true;
+        }
+    }
 }
 
 void LocalFrameView::updateEmbeddedObject(const SingleThreadWeakPtr<RenderEmbeddedObject>& embeddedObject)

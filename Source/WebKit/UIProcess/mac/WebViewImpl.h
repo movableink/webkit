@@ -476,6 +476,7 @@ public:
     void preferencesDidChange();
 
     void setTextIndicator(WebCore::TextIndicator&, WebCore::TextIndicatorLifetime = WebCore::TextIndicatorLifetime::Permanent);
+    void updateTextIndicator(WebCore::TextIndicator&);
     void clearTextIndicatorWithAnimation(WebCore::TextIndicatorDismissalAnimation);
     void setTextIndicatorAnimationProgress(float);
     void dismissContentRelativeChildWindowsFromViewOnly();

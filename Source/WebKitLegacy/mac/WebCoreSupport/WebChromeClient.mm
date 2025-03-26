@@ -724,6 +724,10 @@ void WebChromeClient::setTextIndicator(const WebCore::TextIndicatorData& indicat
 {
 }
 
+void WebChromeClient::updateTextIndicator(const WebCore::TextIndicatorData& indicatorData) const
+{
+}
+
 #if ENABLE(POINTER_LOCK)
 bool WebChromeClient::requestPointerLock()
 {
