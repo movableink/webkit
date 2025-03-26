@@ -7767,3 +7767,5 @@ webkit.org/b/290420 [ Debug ] ipc/invalid-message-to-web-process.html [ Timeout 
 webkit.org/b/290457 [ Debug ] ipc/ui-send-empty-uuid.html [ Failure ]
 
 webkit.org/b/290462 contact-picker/contacts-select-after-dismissing-picker.html [ Pass Timeout ]
+
+webkit.org/b/290483 [ Debug ] imported/w3c/web-platform-tests/navigation-api/scroll-behavior/manual-scroll-fragment-does-not-exist.html [ Pass Failure ]
