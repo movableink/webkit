@@ -312,11 +312,11 @@ void RealtimeMediaSourceCenter::validateRequestConstraints(ValidateHandler&& val
     bool shouldEnumerateMicrophone = request.audioConstraints.isValid;
     bool shouldEnumerateSpeakers = false;
     enumerateDevices(shouldEnumerateCamera, shouldEnumerateDisplay, shouldEnumerateMicrophone, shouldEnumerateSpeakers, [this, validateHandler = WTFMove(validateHandler), request, deviceIdentifierHashSalts = WTFMove(deviceIdentifierHashSalts)]() mutable {
-        validateRequestConstraintsAfterEnumeration(WTFMove(validateHandler), request, WTFMove(deviceIdentifierHashSalts));
+        validateHandler(validateRequestConstraintsAfterEnumeration(request, deviceIdentifierHashSalts));
     });
 }
 
-void RealtimeMediaSourceCenter::validateRequestConstraintsAfterEnumeration(ValidateHandler&& validateHandler, const MediaStreamRequest& request, MediaDeviceHashSalts&& deviceIdentifierHashSalts)
+Expected<RealtimeMediaSourceCenter::ValidDevices, MediaConstraintType> RealtimeMediaSourceCenter::validateRequestConstraintsAfterEnumeration(const MediaStreamRequest& request, const MediaDeviceHashSalts& deviceIdentifierHashSalts)
 {
     ASSERT(request.type != MediaStreamRequest::Type::DisplayMedia || request.type != MediaStreamRequest::Type::DisplayMediaWithAudio);
     struct {
@@ -340,16 +340,14 @@ void RealtimeMediaSourceCenter::validateRequestConstraintsAfterEnumeration(Valid
         WTFLogAlways("Audio capture was requested but no device was found amongst %zu devices", audioCaptureFactory().audioCaptureDeviceManager().captureDevices().size());
         request.audioConstraints.mandatoryConstraints.forEach([](auto constraintType, auto& constraint) { constraint.log(constraintType); });
 
-        validateHandler(makeUnexpected(firstInvalidConstraint));
-        return;
+        return makeUnexpected(firstInvalidConstraint);
     }
 
     if (request.videoConstraints.isValid && videoDeviceInfo.isEmpty()) {
         WTFLogAlways("Video capture was requested but no device was found amongst %zu devices", videoCaptureFactory().videoCaptureDeviceManager().captureDevices().size());
         request.videoConstraints.mandatoryConstraints.forEach([](auto constraintType, auto& constraint) { constraint.log(constraintType); });
 
-        validateHandler(makeUnexpected(firstInvalidConstraint));
-        return;
+        return makeUnexpected(firstInvalidConstraint);
     }
 
     Vector<CaptureDevice> audioDevices;
@@ -368,7 +366,7 @@ void RealtimeMediaSourceCenter::validateRequestConstraintsAfterEnumeration(Valid
         });
     }
 
-    validateHandler(ValidDevices { WTFMove(audioDevices), WTFMove(videoDevices) });
+    return ValidDevices { WTFMove(audioDevices), WTFMove(videoDevices) };
 }
 
 void RealtimeMediaSourceCenter::setAudioCaptureFactory(AudioCaptureFactory& factory)

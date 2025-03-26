@@ -117,6 +117,8 @@ public:
     void setCurrentMediaEnvironment(String&&);
 #endif
 
+    Expected<ValidDevices, MediaConstraintType> validateRequestConstraintsAfterEnumeration(const MediaStreamRequest&, const MediaDeviceHashSalts&);
+
 private:
     RealtimeMediaSourceCenter();
     friend class NeverDestroyed<RealtimeMediaSourceCenter>;
@@ -132,7 +134,6 @@ private:
 
     void getDisplayMediaDevices(const MediaStreamRequest&, MediaDeviceHashSalts&&, Vector<DeviceInfo>&, MediaConstraintType&);
     void getUserMediaDevices(const MediaStreamRequest&, MediaDeviceHashSalts&&, Vector<DeviceInfo>& audioDevices, Vector<DeviceInfo>& videoDevices, MediaConstraintType&);
-    void validateRequestConstraintsAfterEnumeration(ValidateHandler&&, const MediaStreamRequest&, MediaDeviceHashSalts&&);
     void enumerateDevices(bool shouldEnumerateCamera, bool shouldEnumerateDisplay, bool shouldEnumerateMicrophone, bool shouldEnumerateSpeakers, CompletionHandler<void()>&&);
 
     RunLoop::Timer m_debounceTimer;

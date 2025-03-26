@@ -4383,7 +4383,8 @@ void TestController::removeAllCookies(CompletionHandler<void(WKTypeRef)>&& compl
 
 void TestController::addMockMediaDevice(WKStringRef persistentID, WKStringRef label, WKStringRef type, WKDictionaryRef properties)
 {
-    WKAddMockMediaDevice(platformContext(), persistentID, label, type, properties);
+    bool isDefault = false;
+    WKAddMockMediaDevice(platformContext(), persistentID, label, type, properties, isDefault);
 }
 
 void TestController::clearMockMediaDevices()

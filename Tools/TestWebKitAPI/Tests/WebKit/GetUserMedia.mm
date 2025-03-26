@@ -2003,6 +2003,59 @@ TEST(GetUserMedia, ClearRemoteVideoFrameObjectHeapPixelConformerUnderMemoryPress
     TestWebKitAPI::Util::run(&done);
 }
 
+constexpr auto getUserMediaWithDeviceChangeWebPage = R"DOCDOCDOC(
+<!DOCTYPE html>
+<html>
+<body onload="window.webkit.messageHandlers.gum.postMessage('PASS')">
+<script>
+function callGetUserMedia(audio, video, expectedDeviceLabel)
+{
+    navigator.mediaDevices.getUserMedia({audio, video}).then((stream) => {
+        const deviceLabel = stream.getTracks()[0].label;
+        const result = deviceLabel == expectedDeviceLabel;
+        window.webkit.messageHandlers.gum.postMessage(result ? "PASS" : "Expected " + expectedDeviceLabel + " but got " + deviceLabel);
+    }, (e) => {
+        window.webkit.messageHandlers.gum.postMessage('Failed with:' + e);
+    });
+}
+</script>
+</body>
+</html>
+)DOCDOCDOC"_s;
+
+TEST(WebKit2, getUserMediaWithDeviceChangeWebPage)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { getUserMediaWithDeviceChangeWebPage } }
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    auto processPoolConfig = adoptNS([[_WKProcessPoolConfiguration alloc] init]);
+    initializeMediaCaptureConfiguration(configuration.get());
+
+    auto messageHandler = adoptNS([[GUMMessageHandler alloc] init]);
+    [[configuration.get() userContentController] addScriptMessageHandler:messageHandler.get() name:@"gum"];
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500) configuration:configuration.get() processPoolConfiguration:processPoolConfig.get()]);
+    auto delegate = adoptNS([[UserMediaCaptureUIDelegateWithDeviceChange alloc] init]);
+    [webView setUIDelegate:delegate.get()];
+
+    done = false;
+    [webView loadRequest:server.request()];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    [delegate addDefaultCamera:configuration.get()];
+    [webView stringByEvaluatingJavaScript:@"callGetUserMedia(false, true, 'Mock video device 1')"];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+
+    [delegate addDefaultMicrophone:configuration.get()];
+    [webView stringByEvaluatingJavaScript:@"callGetUserMedia(true, false, 'Mock audio device 1')"];
+    TestWebKitAPI::Util::run(&done);
+    done = false;
+}
+
 } // namespace TestWebKitAPI
 
 #endif // ENABLE(MEDIA_STREAM)

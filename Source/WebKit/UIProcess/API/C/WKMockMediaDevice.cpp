@@ -36,7 +36,7 @@
 
 using namespace WebKit;
 
-void WKAddMockMediaDevice(WKContextRef context, WKStringRef persistentId, WKStringRef label, WKStringRef type, WKDictionaryRef properties)
+void WKAddMockMediaDevice(WKContextRef context, WKStringRef persistentId, WKStringRef label, WKStringRef type, WKDictionaryRef properties, bool isDefault)
 {
 #if ENABLE(MEDIA_STREAM)
     String typeString = WebKit::toImpl(type)->string();
@@ -72,7 +72,6 @@ void WKAddMockMediaDevice(WKContextRef context, WKStringRef persistentId, WKStri
         }
     }
 
-    bool isDefault = false;
     toImpl(context)->addMockMediaDevice({ WebKit::toImpl(persistentId)->string(), WebKit::toImpl(label)->string(), flags, isDefault, WTFMove(deviceProperties) });
 #endif
 }

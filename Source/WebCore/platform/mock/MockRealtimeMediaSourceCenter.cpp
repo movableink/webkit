@@ -499,7 +499,8 @@ static bool shouldBeDefaultDevice(const MockMediaDevice& device)
 
 void MockRealtimeMediaSourceCenter::addDevice(const MockMediaDevice& device)
 {
-    bool isDefault = shouldBeDefaultDevice(device);
+    bool isDefault = device.isDefault || shouldBeDefaultDevice(device);
+
     if (isDefault)
         devices().insert(0, device);
     else

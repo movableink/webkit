@@ -29,6 +29,8 @@
 #if ENABLE(MEDIA_STREAM)
 #import "PlatformUtilities.h"
 #import "Utilities.h"
+#import <WebKit/WKMockMediaDevice.h>
+#import <WebKit/WKString.h>
 #import <WebKit/WKWebpagePreferencesPrivate.h>
 
 @implementation UserMediaCaptureUIDelegate {
@@ -152,4 +154,31 @@
 
 @end
 
+@implementation UserMediaCaptureUIDelegateWithDeviceChange {
+}
+-(id)init {
+    self = [super init];
+    return self;
+}
+
+- (void)webView:(WKWebView *)webView requestMediaCapturePermissionForOrigin:(WKSecurityOrigin *)origin initiatedByFrame:(WKFrameInfo *)frame type:(WKMediaCaptureType)type decisionHandler:(void (^)(WKPermissionDecision decision))decisionHandler {
+    WKResetMockMediaDevices((__bridge WKContextRef)webView.configuration.processPool);
+    decisionHandler(WKPermissionDecisionGrant);
+}
+
+-(void)addDefaultCamera:(WKWebViewConfiguration*)configuration {
+    auto persistentId = adoptWK(WKStringCreateWithUTF8CString("PERSISTENTCAMERAID1"));
+    auto label = adoptWK(WKStringCreateWithUTF8CString("NEWDEFAULTCAMERA"));
+    auto type = adoptWK(WKStringCreateWithUTF8CString("camera"));
+    WKAddMockMediaDevice((__bridge WKContextRef)configuration.processPool, persistentId.get(), label.get(), type.get(), nullptr, true);
+}
+
+-(void)addDefaultMicrophone:(WKWebViewConfiguration*)configuration {
+    auto persistentId = adoptWK(WKStringCreateWithUTF8CString("PERSISTENTMICROPHONEID1"));
+    auto label = adoptWK(WKStringCreateWithUTF8CString("NEWDEFAULTMICROPHONE"));
+    auto type = adoptWK(WKStringCreateWithUTF8CString("microphone"));
+    WKAddMockMediaDevice((__bridge WKContextRef)configuration.processPool, persistentId.get(), label.get(), type.get(), nullptr, true);
+}
+
+@end
 #endif // ENABLE(MEDIA_STREAM)
