@@ -42,7 +42,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(FECompositeNeonArithmeticApplier);
 FECompositeNeonArithmeticApplier::FECompositeNeonArithmeticApplier(const FEComposite& effect)
     : Base(effect)
 {
-    ASSERT(m_effect.operation() == CompositeOperationType::FECOMPOSITE_OPERATOR_ARITHMETIC);
+    ASSERT(m_effect->operation() == CompositeOperationType::FECOMPOSITE_OPERATOR_ARITHMETIC);
 }
 
 template <int b1, int b4>
