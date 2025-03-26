@@ -784,6 +784,7 @@ void PageClientImpl::setEditableElementIsFocused(bool editableElementIsFocused)
 
 void PageClientImpl::layerTreeCommitComplete()
 {
+    m_impl->layerTreeCommitComplete();
 }
 
 void PageClientImpl::scrollingNodeScrollViewDidScroll(WebCore::ScrollingNodeID)

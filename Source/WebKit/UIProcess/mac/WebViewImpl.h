@@ -274,6 +274,8 @@ public:
     void updateLayer();
     static bool wantsUpdateLayer() { return true; }
 
+    void layerTreeCommitComplete();
+
     void drawRect(CGRect);
     bool canChangeFrameLayout(WebFrameProxy&);
     NSPrintOperation *printOperationWithPrintInfo(NSPrintInfo *, WebFrameProxy&);
@@ -816,6 +818,10 @@ private:
 
     void suppressContentRelativeChildViews();
     void restoreContentRelativeChildViews();
+
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    void updateContentInsetFillBackdropLayerParentIfNeeded();
+#endif
 
     bool m_clientWantsMediaPlaybackControlsView { false };
     bool m_canCreateTouchBars { false };
