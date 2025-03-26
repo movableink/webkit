@@ -46,6 +46,7 @@ class CanvasBase;
 class CSSStyleImageValue;
 class DestinationColorSpace;
 class FloatSize;
+class GLFence;
 class HTMLCanvasElement;
 class HTMLImageElement;
 class HTMLVideoElement;
@@ -178,6 +179,9 @@ private:
     const bool m_originClean : 1 { false };
     const bool m_premultiplyAlpha : 1 { false };
     const bool m_forciblyPremultiplyAlpha : 1 { false };
+#if USE(SKIA)
+    std::unique_ptr<GLFence> m_fence;
+#endif
 };
 
 }

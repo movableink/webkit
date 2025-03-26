@@ -115,6 +115,7 @@ public:
 
     void drawSkiaText(const sk_sp<SkTextBlob>&, SkScalar, SkScalar, bool, bool);
 
+    static std::unique_ptr<GLFence> createAcceleratedRenderingFenceIfNeeded(SkSurface*);
     static std::unique_ptr<GLFence> createAcceleratedRenderingFenceIfNeeded(const sk_sp<SkImage>&);
 
 private:
