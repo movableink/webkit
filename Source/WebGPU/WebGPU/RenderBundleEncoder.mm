@@ -691,6 +691,10 @@ void RenderBundleEncoder::storeVertexBufferCountsForValidation(uint32_t indexCou
         return;
 
     bool needsValidationLayerWorkaround;
+    auto indexSizeInBytes = (m_indexType == MTLIndexTypeUInt16 ? sizeof(uint16_t) : sizeof(uint32_t));
+    auto elementCount = indexBuffer.length / indexSizeInBytes;
+    RELEASE_ASSERT(elementCount);
+
     auto [minVertexCount, minInstanceCount] = computeMininumVertexInstanceCount(needsValidationLayerWorkaround);
     m_minVertexCountForDrawCommand.add(m_currentCommandIndex, IndexBufferAndIndexData {
         .indexBuffer = m_indexBuffer,
@@ -701,6 +705,7 @@ void RenderBundleEncoder::storeVertexBufferCountsForValidation(uint32_t indexCou
             .minVertexCount = minVertexCount,
             .minInstanceCount = minInstanceCount,
             .bufferGpuAddress = indexBuffer.gpuAddress,
+            .indexBufferElementCountMinusOne = static_cast<uint32_t>(elementCount - 1),
             .indexCount = indexCount,
             .instanceCount = instanceCount,
             .firstIndex = firstIndex,
