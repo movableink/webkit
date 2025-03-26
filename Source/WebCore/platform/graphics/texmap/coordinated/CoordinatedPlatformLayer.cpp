@@ -914,8 +914,7 @@ void CoordinatedPlatformLayer::flushCompositingState(TextureMapper& textureMappe
 #if ENABLE(DAMAGE_TRACKING)
     if (m_pendingChanges.contains(Change::Damage)) {
         ASSERT(m_damage.has_value());
-        layer.setDamage(WTFMove(*m_damage));
-        m_damage = std::nullopt;
+        layer.setDamage(*std::exchange(m_damage, std::nullopt));
     }
 #endif
 

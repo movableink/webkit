@@ -8275,8 +8275,7 @@ Ref<DocumentLoader> WebPage::createDocumentLoader(LocalFrame& frame, const Resou
 
         if (m_internals->pendingWebsitePolicies && frame.isMainFrame()) {
             m_allowsContentJavaScriptFromMostRecentNavigation = m_internals->pendingWebsitePolicies->allowsContentJavaScript;
-            WebsitePoliciesData::applyToDocumentLoader(WTFMove(*m_internals->pendingWebsitePolicies), documentLoader);
-            m_internals->pendingWebsitePolicies = std::nullopt;
+            WebsitePoliciesData::applyToDocumentLoader(*std::exchange(m_internals->pendingWebsitePolicies, std::nullopt), documentLoader);
         }
     }
 
