@@ -485,10 +485,6 @@
 #include "CoreIPCAuditToken.h"
 #endif
 
-#if PLATFORM(COCOA)
-#include <pal/cf/CoreTextSoftLink.h>
-#endif
-
 namespace WebKit {
 using namespace JSC;
 using namespace WebCore;
@@ -4760,10 +4756,12 @@ void WebPage::adjustSettingsForLockdownMode(Settings& settings, const WebPrefere
     settings.disableFeaturesForLockdownMode();
 #if PLATFORM(COCOA)
     if (settings.downloadableBinaryFontTrustedTypes() != DownloadableBinaryFontTrustedTypes::None) {
-        settings.setDownloadableBinaryFontTrustedTypes(
-            (settings.lockdownFontParserEnabled() && PAL::canLoad_CoreText_CTFontManagerCreateMemorySafeFontDescriptorFromData())
-                ? DownloadableBinaryFontTrustedTypes::SafeFontParser
-                : DownloadableBinaryFontTrustedTypes::Restricted);
+        auto downloadableBinaryFontTrustedTypes = DownloadableBinaryFontTrustedTypes::Restricted;
+#if HAVE(CTFONTMANAGER_CREATEMEMORYSAFEFONTDESCRIPTORFROMDATA)
+        if (settings.lockdownFontParserEnabled())
+            downloadableBinaryFontTrustedTypes = DownloadableBinaryFontTrustedTypes::SafeFontParser;
+#endif
+        settings.setDownloadableBinaryFontTrustedTypes(downloadableBinaryFontTrustedTypes);
     }
 #endif
 

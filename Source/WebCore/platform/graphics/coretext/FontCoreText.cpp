@@ -197,21 +197,14 @@ void Font::platformInit()
     }
 
     if (CTFontGetSymbolicTraits(getCTFont()) & kCTFontTraitColorGlyphs) {
-#if HAVE(CTFONTCOPYCOLORGLYPHCOVERAGE)
-        // The reason this is guarded with both a preprocessor define and soft linking is that
-        // we want to get rid of the soft linking soon,
-        // once people have a chance to update to an SDK that includes it.
-        // At that point, only the preprocessor define will remain.
-        if (PAL::canLoad_CoreText_CTFontCopyColorGlyphCoverage()) {
-            if (auto cfBitVector = adoptCF(PAL::softLink_CoreText_CTFontCopyColorGlyphCoverage(getCTFont())))
-                m_emojiType = SomeEmojiGlyphs { BitVector(cfBitVector.get()) };
-            else
-                m_emojiType = NoEmojiGlyphs { };
-        } else
+#if HAVE(CTFONT_COPYCOLORGLYPHCOVERAGE)
+        if (RetainPtr cfBitVector = adoptCF(CTFontCopyColorGlyphCoverage(getCTFont())))
+            m_emojiType = SomeEmojiGlyphs { BitVector(cfBitVector.get()) };
+        else
+            m_emojiType = NoEmojiGlyphs { };
+#else
+        m_emojiType = AllEmojiGlyphs { };
 #endif
-        {
-            m_emojiType = AllEmojiGlyphs { };
-        }
     } else
         m_emojiType = NoEmojiGlyphs { };
 

@@ -88,10 +88,6 @@
 #import "DynamicContentScalingImageBufferBackend.h"
 #endif
 
-#if PLATFORM(COCOA)
-#include <pal/cf/CoreTextSoftLink.h>
-#endif
-
 #define MESSAGE_CHECK(assertion, message) MESSAGE_CHECK_WITH_MESSAGE_BASE(assertion, &m_gpuConnectionToWebProcess->connection(), message);
 
 namespace WebKit {
@@ -692,7 +688,11 @@ void RemoteRenderingBackend::terminateWebProcess(ASCIILiteral message)
 #if PLATFORM(COCOA)
 bool RemoteRenderingBackend::shouldUseLockdownFontParser() const
 {
-    return m_gpuConnectionToWebProcess->isLockdownSafeFontParserEnabled() && m_gpuConnectionToWebProcess->isLockdownModeEnabled() && PAL::canLoad_CoreText_CTFontManagerCreateMemorySafeFontDescriptorFromData();
+#if HAVE(CTFONTMANAGER_CREATEMEMORYSAFEFONTDESCRIPTORFROMDATA)
+    return m_gpuConnectionToWebProcess->isLockdownSafeFontParserEnabled() && m_gpuConnectionToWebProcess->isLockdownModeEnabled();
+#else
+    return false;
+#endif
 }
 #elif USE(CAIRO) || USE(SKIA)
 bool RemoteRenderingBackend::shouldUseLockdownFontParser() const

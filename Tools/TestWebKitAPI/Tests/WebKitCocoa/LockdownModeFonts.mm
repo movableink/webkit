@@ -28,7 +28,6 @@
 #import "PlatformUtilities.h"
 #import "TestNavigationDelegate.h"
 #import "TestWKWebView.h"
-#include <pal/cf/CoreTextSoftLink.h>
 
 namespace TestWebKitAPI {
 
@@ -86,10 +85,11 @@ TEST(LockdownMode, NotAllowedFontLoadingAPI)
         auto referenceResult = static_cast<NSNumber *>([webView objectByEvaluatingJavaScript:@"reference.offsetWidth"]).intValue;
 
         EXPECT_NE(beforeTargetResult, targetResult);
-        if (!PAL::canLoad_CoreText_CTFontManagerCreateMemorySafeFontDescriptorFromData())
-            EXPECT_EQ(targetResult, referenceResult);
-        else
-            EXPECT_NE(targetResult, referenceResult);
+#if HAVE(CTFONTMANAGER_CREATEMEMORYSAFEFONTDESCRIPTORFROMDATA)
+        EXPECT_NE(targetResult, referenceResult);
+#else
+        EXPECT_EQ(targetResult, referenceResult);
+#endif
     }
 }
 
@@ -203,13 +203,10 @@ TEST(LockdownMode, NotAllowedFont)
         auto targetResult = static_cast<NSNumber *>([webView objectByEvaluatingJavaScript:@"target.offsetWidth"]).intValue;
         auto referenceResult = static_cast<NSNumber *>([webView objectByEvaluatingJavaScript:@"reference.offsetWidth"]).intValue;
 
-#if PLATFORM(WATCHOS)
+#if HAVE(CTFONTMANAGER_CREATEMEMORYSAFEFONTDESCRIPTORFROMDATA)
         EXPECT_NE(targetResult, referenceResult);
 #else
-    if (!PAL::canLoad_CoreText_CTFontManagerCreateMemorySafeFontDescriptorFromData())
         EXPECT_EQ(targetResult, referenceResult);
-    else
-        EXPECT_NE(targetResult, referenceResult);
 #endif
     }
 }
