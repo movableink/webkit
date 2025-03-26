@@ -25,6 +25,8 @@
 
 #pragma once
 
+DECLARE_SYSTEM_HEADER
+
 #if PLATFORM(COCOA)
 
 // FIXME: Undo when isSystemVoice is available in all SDKs.

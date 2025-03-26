@@ -26,6 +26,9 @@
 #pragma once
 
 #import <TargetConditionals.h>
+#import <wtf/Compiler.h>
+
+DECLARE_SYSTEM_HEADER
 
 #if TARGET_OS_VISION
 

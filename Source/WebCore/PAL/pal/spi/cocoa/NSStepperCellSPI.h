@@ -23,6 +23,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
+DECLARE_SYSTEM_HEADER
+
 #import <AppKit/NSStepperCell.h>
 
 #if HAVE(NSSTEPPERCELL_INCREMENTING)

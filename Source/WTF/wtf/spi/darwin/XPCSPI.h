@@ -25,6 +25,8 @@
 
 #pragma once
 
+DECLARE_SYSTEM_HEADER
+
 #include <dispatch/dispatch.h>
 #include <os/object.h>
 

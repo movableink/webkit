@@ -23,9 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma clang system_header
-
 #pragma once
+
+DECLARE_SYSTEM_HEADER
 
 #include <CFNetwork/CFNetwork.h>
 #include <dispatch/dispatch.h>

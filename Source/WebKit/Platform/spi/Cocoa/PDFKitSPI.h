@@ -25,6 +25,8 @@
 
 #pragma once
 
+DECLARE_SYSTEM_HEADER
+
 #import <PDFKit/PDFKit.h>
 #import <pal/spi/cg/CoreGraphicsSPI.h>
 

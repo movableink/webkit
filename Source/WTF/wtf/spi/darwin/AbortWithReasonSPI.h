@@ -25,6 +25,8 @@
 
 #pragma once
 
+DECLARE_SYSTEM_HEADER
+
 #ifdef __cplusplus
 extern "C" {
 #endif

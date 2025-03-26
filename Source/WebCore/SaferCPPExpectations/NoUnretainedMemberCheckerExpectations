@@ -1,4 +1,3 @@
-PAL/pal/spi/cocoa/DataDetectorsCoreSPI.h
 PAL/pal/spi/mac/NSGraphicsSPI.h
 accessibility/mac/AccessibilityObjectMac.mm
 accessibility/mac/WebAccessibilityObjectWrapperBase.mm

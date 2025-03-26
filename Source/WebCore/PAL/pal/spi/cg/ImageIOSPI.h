@@ -25,6 +25,8 @@
 
 #pragma once
 
+DECLARE_SYSTEM_HEADER
+
 #include <ImageIO/ImageIOBase.h> 
 
 #if USE(APPLE_INTERNAL_SDK)
