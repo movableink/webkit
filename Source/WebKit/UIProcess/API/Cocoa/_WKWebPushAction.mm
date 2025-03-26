@@ -87,12 +87,12 @@ static RetainPtr<NSUUID> uuidFromPushPartition(NSString *pushPartition)
     if (!type || ![type isKindOfClass:[NSString class]])
         return nil;
 
-    _WKWebPushAction *result = [[_WKWebPushAction alloc] init];
-    result.version = version;
-    result.webClipIdentifier = uuid.get();
-    result.type = type;
+    RetainPtr result = adoptNS([[_WKWebPushAction alloc] init]);
+    result.get().version = version;
+    result.get().webClipIdentifier = uuid.get();
+    result.get().type = type;
 
-    return [result autorelease];
+    return result.autorelease();
 }
 
 + (_WKWebPushAction *)_webPushActionWithNotificationResponse:(UNNotificationResponse *)response
