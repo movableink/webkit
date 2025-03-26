@@ -63,40 +63,22 @@ public:
         m_filters.add(identifier, WTFMove(filter));
     }
 
-    RefPtr<ImageBuffer> getImageBuffer(RenderingResourceIdentifier identifier, OptionSet<ReplayOption> options = { }) const
+    RefPtr<ImageBuffer> getImageBuffer(RenderingResourceIdentifier identifier) const
     {
-        RefPtr imageBuffer = m_imageBuffers.get(identifier);
-
-#if USE(SKIA)
-        if (imageBuffer && options.contains(ReplayOption::FlushAcceleratedImagesAndWaitForCompletion))
-            imageBuffer->waitForAcceleratedRenderingFenceCompletion();
-#else
-        UNUSED_PARAM(options);
-#endif
-
-        return imageBuffer;
+        return m_imageBuffers.get(identifier);
     }
 
-    RefPtr<NativeImage> getNativeImage(RenderingResourceIdentifier identifier, OptionSet<ReplayOption> options = { }) const
+    RefPtr<NativeImage> getNativeImage(RenderingResourceIdentifier identifier) const
     {
-        RefPtr nativeImage = m_nativeImages.get(identifier);
-
-#if USE(SKIA)
-        if (nativeImage && options.contains(ReplayOption::FlushAcceleratedImagesAndWaitForCompletion))
-            nativeImage->backend().waitForAcceleratedRenderingFenceCompletion();
-#else
-        UNUSED_PARAM(options);
-#endif
-
-        return nativeImage;
+        return m_nativeImages.get(identifier);
     }
 
-    std::optional<SourceImage> getSourceImage(RenderingResourceIdentifier identifier, OptionSet<ReplayOption> options = { }) const
+    std::optional<SourceImage> getSourceImage(RenderingResourceIdentifier identifier) const
     {
-        if (RefPtr nativeImage = getNativeImage(identifier, options))
+        if (RefPtr nativeImage = getNativeImage(identifier))
             return { { *nativeImage } };
 
-        if (RefPtr imageBuffer = getImageBuffer(identifier, options))
+        if (RefPtr imageBuffer = getImageBuffer(identifier))
             return { { *imageBuffer } };
 
         return std::nullopt;

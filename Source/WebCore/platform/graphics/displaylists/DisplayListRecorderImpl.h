@@ -40,9 +40,6 @@ public:
     WEBCORE_EXPORT virtual ~RecorderImpl();
 
     bool isEmpty() const { return m_displayList.isEmpty(); }
-#if USE(SKIA)
-    bool usedAcceleratedRendering() const { return m_usedAcceleratedRendering; }
-#endif
 
     void save(GraphicsContextState::Purpose) final;
     void restore(GraphicsContextState::Purpose) final;
@@ -144,9 +141,6 @@ private:
     }
 
     DisplayList& m_displayList;
-#if USE(SKIA)
-    bool m_usedAcceleratedRendering : 1 { false };
-#endif
 };
 
 }
