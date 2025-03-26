@@ -5024,6 +5024,14 @@ void WebPage::updateVisibleContentRects(const VisibleContentRectUpdateInfo& visi
 #endif
         }();
 
+        auto setCorePageScaleFactor = [this, protectedThis = Ref { *this }](float scale, const auto& origin, bool inStableState) {
+            m_page->setPageScaleFactor(scale, origin, inStableState);
+#if ENABLE(PDF_PLUGIN)
+            if (RefPtr pluginView = mainFramePlugIn())
+                pluginView->mainFramePageScaleFactorDidChange();
+#endif
+        };
+
         bool hasSetPageScale = false;
         if (scaleFromUIProcess) {
             m_scaleWasSetByUIProcess = true;
@@ -5032,14 +5040,14 @@ void WebPage::updateVisibleContentRects(const VisibleContentRectUpdateInfo& visi
             m_dynamicSizeUpdateHistory.clear();
 
             if (shouldSetCorePageScale)
-                m_page->setPageScaleFactor(scaleFromUIProcess.value(), scrollPosition, m_isInStableState);
+                setCorePageScaleFactor(scaleFromUIProcess.value(), scrollPosition, m_isInStableState);
 
             hasSetPageScale = true;
             send(Messages::WebPageProxy::PageScaleFactorDidChange(scaleFromUIProcess.value()));
         }
 
         if (!hasSetPageScale && m_isInStableState && shouldSetCorePageScale)
-            m_page->setPageScaleFactor(scaleToUse, scrollPosition, true);
+            setCorePageScaleFactor(scaleToUse, scrollPosition, true);
     }
 
     if (scrollPosition != frameView.scrollPosition())

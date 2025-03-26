@@ -1202,8 +1202,10 @@ void UnifiedPDFPlugin::setScaleFactor(double scale, std::optional<WebCore::IntPo
 void UnifiedPDFPlugin::setPageScaleFactor(double scale, std::optional<WebCore::IntPoint> origin)
 {
     deviceOrPageScaleFactorChanged(CheckForMagnificationGesture::Yes);
-    if (!handlesPageScaleFactor())
+    if (!handlesPageScaleFactor()) {
+        mainFramePageScaleFactorDidChange();
         return;
+    }
 
     if (origin) {
         // Compensate for the subtraction of content insets that happens in ViewGestureController::handleMagnificationGestureEvent();
@@ -1223,6 +1225,12 @@ void UnifiedPDFPlugin::setPageScaleFactor(double scale, std::optional<WebCore::I
     auto internalScale = fromNormalizedScaleFactor(scale);
     LOG_WITH_STREAM(PDF, stream << "UnifiedPDFPlugin::setPageScaleFactor " << scale << " mapped to " << internalScale);
     setScaleFactor(internalScale, origin);
+}
+
+void UnifiedPDFPlugin::mainFramePageScaleFactorDidChange()
+{
+    ASSERT(!handlesPageScaleFactor());
+    updateScrollingExtents();
 }
 
 bool UnifiedPDFPlugin::geometryDidChange(const IntSize& pluginSize, const AffineTransform& pluginToRootViewTransform)

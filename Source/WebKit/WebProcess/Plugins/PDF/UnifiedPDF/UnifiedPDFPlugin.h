@@ -288,6 +288,7 @@ private:
     void didBeginMagnificationGesture() override;
     void didEndMagnificationGesture() override;
     void setPageScaleFactor(double scale, std::optional<WebCore::IntPoint> origin) final;
+    void mainFramePageScaleFactorDidChange() final;
     void setScaleFactor(double scale, std::optional<WebCore::IntPoint> origin = std::nullopt);
 
     enum class CheckForMagnificationGesture : bool { No, Yes };

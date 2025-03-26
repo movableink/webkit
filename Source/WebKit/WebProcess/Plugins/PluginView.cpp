@@ -353,6 +353,14 @@ void PluginView::setPageScaleFactor(double scaleFactor, std::optional<IntPoint> 
     protectedPlugin()->setPageScaleFactor(scaleFactor, origin);
 }
 
+void PluginView::mainFramePageScaleFactorDidChange()
+{
+    if (!m_isInitialized)
+        return;
+
+    protectedPlugin()->mainFramePageScaleFactorDidChange();
+}
+
 double PluginView::pageScaleFactor() const
 {
     return protectedPlugin()->scaleFactor();

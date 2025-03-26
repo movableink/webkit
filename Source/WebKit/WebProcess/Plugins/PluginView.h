@@ -96,6 +96,7 @@ public:
     void didBeginMagnificationGesture();
     void didEndMagnificationGesture();
     void setPageScaleFactor(double, std::optional<WebCore::IntPoint> origin);
+    void mainFramePageScaleFactorDidChange();
     double pageScaleFactor() const;
     void pluginScaleFactorDidChange();
 #if PLATFORM(IOS_FAMILY)
