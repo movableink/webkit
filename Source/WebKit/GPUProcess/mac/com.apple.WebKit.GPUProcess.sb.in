@@ -91,6 +91,8 @@
     (allow iokit-open-user-client
         (iokit-user-client-class "AppleVideoToolboxParavirtualizationUserClient")
         (apply-message-filter
+            (allow iokit-external-method
+                (iokit-method-number 0 1 2 3 4))
             (allow (with report) (with telemetry)
                 iokit-async-external-method
                 iokit-external-method
