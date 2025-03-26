@@ -219,12 +219,12 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXProperty::HasPlainText, object.hasPlainText());
 #if !ENABLE(AX_THREAD_TEXT_APIS)
     setProperty(AXProperty::HasUnderline, object.hasUnderline());
+    setProperty(AXProperty::TextContentPrefixFromListMarker, object.textContentPrefixFromListMarker());
 #endif
     setProperty(AXProperty::IsKeyboardFocusable, object.isKeyboardFocusable());
     setProperty(AXProperty::BrailleRoleDescription, object.brailleRoleDescription().isolatedCopy());
     setProperty(AXProperty::BrailleLabel, object.brailleLabel().isolatedCopy());
     setProperty(AXProperty::IsNonLayerSVGObject, object.isNonLayerSVGObject());
-    setProperty(AXProperty::TextContentPrefixFromListMarker, object.textContentPrefixFromListMarker());
 
     bool isWebArea = axObject->isWebArea();
     bool isScrollArea = axObject->isScrollView();

@@ -1473,7 +1473,7 @@ AXTextRuns AccessibilityRenderObject::textRuns()
 
     auto domOffset = [] (unsigned value) -> uint16_t {
         // It shouldn't be possible for any textbox to have more than 65535 characters.
-        RELEASE_ASSERT(value <= std::numeric_limits<uint16_t>::max());
+        ASSERT(value <= std::numeric_limits<uint16_t>::max());
         return static_cast<uint16_t>(value);
     };
 

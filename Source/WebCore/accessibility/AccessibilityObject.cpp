@@ -1766,7 +1766,7 @@ Vector<RetainPtr<id>> AccessibilityObject::modelElementChildren()
 static RenderListItem* renderListItemContainer(Node* node)
 {
     for (; node; node = node->parentNode()) {
-        if (auto* listItem = dynamicDowncast<RenderListItem>(node->renderBoxModelObject()))
+        if (auto* listItem = dynamicDowncast<RenderListItem>(node->renderer()))
             return listItem;
     }
     return nullptr;
@@ -1804,6 +1804,11 @@ StringView AccessibilityObject::listMarkerTextForNodeAndPosition(Node* node, Pos
 
 String AccessibilityObject::textContentPrefixFromListMarker() const
 {
+    // The code below creates a VisiblePosition, which is very expensive. Only do this if there's
+    // any chance we're actually associated with a list marker.
+    if (!renderListItemContainer(node()))
+        return { };
+
     // Get the attributed string for range (0, 1) and then delete the last character,
     // in order to extract the list marker that was added as a prefix to the text content.
     std::optional<SimpleRange> firstCharacterRange = rangeForCharacterRange({ 0, 1 });
