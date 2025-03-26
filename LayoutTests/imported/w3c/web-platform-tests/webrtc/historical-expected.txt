@@ -16,4 +16,6 @@ PASS mozRTCIceCandidate interface should not exist
 PASS mozRTCPeerConnection interface should not exist
 PASS mozRTCSessionDescription interface should not exist
 PASS webkitRTCPeerConnection interface should not exist
+PASS new RTCPeerConnection(config) - with url field should throw TypeError
+PASS setConfiguration(config) - with url field should throw TypeError
 

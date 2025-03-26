@@ -2543,7 +2543,13 @@ imported/w3c/web-platform-tests/webrtc/protocol/h264-profile-levels.https.html [
 imported/w3c/web-platform-tests/webrtc/RTCRtpParameters-encodings.html [ Pass Failure ]
 imported/w3c/web-platform-tests/mst-content-hint/RTCRtpSendParameters-degradationEffect.html [ Failure ]
 
+imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-getStats-timestamp.https.html [ Pass Failure ]
+imported/w3c/web-platform-tests/webrtc-stats/getStats-remote-candidate-ufrag.html [ Failure ]
+imported/w3c/web-platform-tests/webrtc-stats/supported-stats.https.html [ Failure ]
+imported/w3c/web-platform-tests/webrtc/RTCConfiguration-bundlePolicy.html [ Failure ]
+
 # Skip timing out test
+imported/w3c/web-platform-tests/webrtc/RTCDataChannel-send-close.html [ Skip ]
 imported/w3c/web-platform-tests/webrtc/RTCTrackEvent-fire.html [ Skip ]
 fast/mediastream/RTCPeerConnection-closed-state.html [ Skip ]
 fast/mediastream/RTCPeerConnection-iceconnectionstatechange-event.html [ Skip ]

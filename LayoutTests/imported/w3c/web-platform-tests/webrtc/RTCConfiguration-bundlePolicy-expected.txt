@@ -14,4 +14,7 @@ PASS new RTCPeerConnection({ bundlePolicy: null }) should throw TypeError
 PASS new RTCPeerConnection({ bundlePolicy: 'invalid' }) should throw TypeError
 PASS setConfiguration({ bundlePolicy: 'max-compat' }) with initial bundlePolicy max-bundle should throw InvalidModificationError
 PASS setConfiguration({}) with initial bundlePolicy max-bundle should throw InvalidModificationError
+FAIL "balanced" bundle policy should gather ICE candidates for each media type in use assert_equals: Second audio m-line should have no candidates expected 0 but got 2
+PASS "max-compat" bundle policy should gather ICE candidates for each track
+PASS "max-bundle" bundle policy should gather ICE candidates for one track
 

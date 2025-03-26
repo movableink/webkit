@@ -6488,13 +6488,16 @@
     "imported/w3c/web-platform-tests/webrtc/RTCConfiguration-iceTransportPolicy.html": [
         "slow"
     ],
-    "imported/w3c/web-platform-tests/webrtc/RTCDTMFSender-ontonechange-long.html": [
+    "imported/w3c/web-platform-tests/webrtc/RTCConfiguration-validation.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/webrtc/RTCDTMFSender-ontonechange-long.https.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/webrtc/RTCDTMFSender-ontonechange.https.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/webrtc/RTCDataChannel-GC.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/webrtc/RTCDataChannel-bufferedAmount.html": [
@@ -6506,10 +6509,16 @@
     "imported/w3c/web-platform-tests/webrtc/RTCDataChannel-iceRestart.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/webrtc/RTCDataChannel-send-close.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/webrtc/RTCDataChannel-send.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/webrtc/RTCIceConnectionState-candidate-pair.https.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/webrtc/RTCIceTransport.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-GC.https.html": [
@@ -6521,10 +6530,19 @@
     "imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-addIceCandidate-connectionSetup.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-addTcpIceCandidate.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-capture-video.https.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-createDataChannel.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-generateCertificate.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-getStats-timestamp.https.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-getStats.https.html": [
@@ -6534,6 +6552,9 @@
         "slow"
     ],
     "imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-iceConnectionState.https.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-iceGatheringState.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-mandatory-getStats.https.html": [
@@ -6557,13 +6578,13 @@
     "imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-relay-canvas.https.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-remote-track-currentTime.https.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-remote-track-mute.https.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-setRemoteDescription-tracks.https.html": [
-        "slow"
-    ],
-    "imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-track-stats.https.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-transceivers.https.html": [
@@ -6572,10 +6593,22 @@
     "imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-videoDetectorTest.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/webrtc/RTCRtpParameters-codec.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/webrtc/RTCRtpParameters-codecs.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/webrtc/RTCRtpReceiver-audio-jitterBufferTarget-stats.https.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/webrtc/RTCRtpReceiver-getStats.https.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/webrtc/RTCRtpReceiver-getSynchronizationSources.https.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/webrtc/RTCRtpReceiver-video-jitterBufferTarget-stats.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/webrtc/RTCRtpSender-encode-same-track-twice.https.html": [
@@ -6587,6 +6620,9 @@
     "imported/w3c/web-platform-tests/webrtc/RTCRtpSender-replaceTrack.https.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/webrtc/RTCRtpSender-setParameters-keyFrame.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/webrtc/RTCRtpSender-transport.https.html": [
         "slow"
     ],
@@ -6596,10 +6632,19 @@
     "imported/w3c/web-platform-tests/webrtc/legacy/munge-dont.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/webrtc/protocol/additional-codecs.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/webrtc/protocol/bundle.https.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/webrtc/protocol/candidate-exchange.https.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/webrtc/protocol/codecs-filtered-by-direction.https.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/webrtc/protocol/codecs-subsequent-offer.https.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/webrtc/protocol/dtls-certificates.html": [
@@ -6626,6 +6671,9 @@
     "imported/w3c/web-platform-tests/webrtc/protocol/vp8-fmtp.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/webrtc/simulcast/av1.https.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/webrtc/simulcast/basic.https.html": [
         "slow"
     ],
@@ -6641,10 +6689,16 @@
     "imported/w3c/web-platform-tests/webrtc/simulcast/rid-manipulation.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/webrtc/simulcast/screenshare.https.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/webrtc/simulcast/setParameters-active.https.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/webrtc/simulcast/setParameters-encodings.https.html": [
+        "slow"
+    ],
+    "imported/w3c/web-platform-tests/webrtc/simulcast/setParameters-maxFramerate.https.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/webrtc/simulcast/vp8.https.html": [

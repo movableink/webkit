@@ -15,8 +15,8 @@ None
 ------------------------------------------------------------------------
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/legacy/README.txt
-/LayoutTests/imported/w3c/web-platform-tests/webrtc/legacy/RTCPeerConnection-createOffer-offerToReceive.html
-/LayoutTests/imported/w3c/web-platform-tests/webrtc/legacy/RTCRtpTransceiver-with-OfferToReceive-options.https.html
+/LayoutTests/imported/w3c/web-platform-tests/webrtc/legacy/RTCPeerConnection-createOffer-offerToReceive.optional.html
+/LayoutTests/imported/w3c/web-platform-tests/webrtc/legacy/RTCRtpTransceiver-with-OfferToReceive-options.optional.https.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/legacy/munge-dont.html
 /LayoutTests/imported/w3c/web-platform-tests/webrtc/legacy/onaddstream.https.html
-/LayoutTests/imported/w3c/web-platform-tests/webrtc/legacy/simplecall_callbacks.https.html
+/LayoutTests/imported/w3c/web-platform-tests/webrtc/legacy/simplecall_callbacks.optional.https.html

@@ -2381,7 +2381,6 @@ webrtc/video-vp8-videorange.html [ Skip ]
 imported/w3c/web-platform-tests/webrtc/ [ Skip ]
 imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-canTrickleIceCandidates.html [ Pass ]
 imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-addIceCandidate-timing.https.html [ Pass ]
-imported/w3c/web-platform-tests/webrtc/RTCRtpParameters-codecs.html [ Pass ]
 imported/w3c/web-platform-tests/webrtc/RTCRtpParameters-encodings.html [ Pass ]
 imported/w3c/web-platform-tests/webrtc/RTCRtpParameters-headerExtensions.html [ Pass ]
 imported/w3c/web-platform-tests/webrtc/RTCRtpParameters-rtcp.html [ Pass ]
@@ -2408,6 +2407,15 @@ imported/w3c/web-platform-tests/webrtc/protocol/rtp-payloadtypes.html [ Failure 
 imported/w3c/web-platform-tests/webrtc/protocol/vp8-fmtp.html [ Failure ]
 imported/w3c/web-platform-tests/webrtc/protocol/h264-profile-levels.https.html [ Failure ]
 imported/w3c/web-platform-tests/webrtc/protocol/handover-datachannel.html [ Failure ]
+
+imported/w3c/web-platform-tests/webrtc/protocol/additional-codecs.html [ Failure ]
+imported/w3c/web-platform-tests/webrtc/protocol/codecs-subsequent-offer.https.html [ Failure ]
+imported/w3c/web-platform-tests/webrtc/protocol/pt-no-bundle.html [ Failure ]
+imported/w3c/web-platform-tests/webrtc/protocol/sdes-dont-dont-dont.html [ Failure ]
+imported/w3c/web-platform-tests/webrtc/protocol/transceiver-mline-recycling.html [ Failure ]
+
+# Crashing
+imported/w3c/web-platform-tests/webrtc/RTCRtpParameters-codecs.html [ Skip ]
 
 webkit.org/b/286481 imported/w3c/web-platform-tests/webrtc/protocol/rtp-demuxing.html [ Crash ]
 

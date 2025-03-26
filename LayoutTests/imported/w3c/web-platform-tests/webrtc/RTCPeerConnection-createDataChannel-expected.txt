@@ -1,8 +1,8 @@
 
 PASS createDataChannel with no argument should throw TypeError
 PASS createDataChannel with closed connection should throw InvalidStateError
-FAIL createDataChannel attribute default values assert_equals: expected "blob" but got "arraybuffer"
-FAIL createDataChannel with provided parameters should initialize attributes to provided values assert_equals: expected "blob" but got "arraybuffer"
+PASS createDataChannel attribute default values
+PASS createDataChannel with provided parameters should initialize attributes to provided values
 PASS createDataChannel with label "foo" should succeed
 PASS createDataChannel with label null should succeed
 PASS createDataChannel with label undefined should succeed
@@ -46,7 +46,9 @@ PASS Reusing a data channel id that is in use (after setRemoteDescription, negot
 PASS New datachannel should be in the connecting state after creation (after connection establishment)
 PASS addTrack, then creating datachannel, should negotiate properly
 PASS addTrack, then creating datachannel, should negotiate properly when max-bundle is used
+PASS Renegotiation with audio/video and datachannel should work properly
 PASS New negotiated datachannel should be in the connecting state after creation (after connection establishment)
 PASS addTrack, then creating negotiated datachannel, should negotiate properly
 PASS addTrack, then creating negotiated datachannel, should negotiate properly when max-bundle is used
+PASS Renegotiation with audio/video and negotiated datachannel should work properly
 
