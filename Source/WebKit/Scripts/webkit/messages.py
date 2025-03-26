@@ -160,6 +160,7 @@ def types_that_must_be_moved():
         'WebKit::GPUProcessCreationParameters',
         'WebKit::ModelProcessCreationParameters',
         'WebKit::NetworkProcessCreationParameters',
+        'WebKit::NetworkResourceLoadParameters',
         'WebKit::WebsiteDataStoreParameters',
         'WebKit::GPUProcessSessionParameters',
         'WebKit::GoToBackForwardItemParameters',
