@@ -60,13 +60,13 @@ enum class PrivateRelayed : bool;
 class WebResourceLoader : public RefCounted<WebResourceLoader>, public IPC::MessageSender {
 public:
     struct TrackingParameters {
-        Markable<WebPageProxyIdentifier> webPageProxyID { };
-        Markable<WebCore::PageIdentifier> pageID;
-        Markable<WebCore::FrameIdentifier> frameID;
-        Markable<WebCore::ResourceLoaderIdentifier> resourceID;
+        WebPageProxyIdentifier webPageProxyID;
+        WebCore::PageIdentifier pageID;
+        WebCore::FrameIdentifier frameID;
+        WebCore::ResourceLoaderIdentifier resourceID;
     };
 
-    static Ref<WebResourceLoader> create(Ref<WebCore::ResourceLoader>&&, const TrackingParameters&);
+    static Ref<WebResourceLoader> create(Ref<WebCore::ResourceLoader>&&, const std::optional<TrackingParameters>&);
 
     ~WebResourceLoader();
 
@@ -79,7 +79,7 @@ public:
     void detachFromCoreLoader();
 
 private:
-    WebResourceLoader(Ref<WebCore::ResourceLoader>&&, const TrackingParameters&);
+    WebResourceLoader(Ref<WebCore::ResourceLoader>&&, const std::optional<TrackingParameters>&);
 
     // IPC::MessageSender
     IPC::Connection* messageSenderConnection() const override;
@@ -111,7 +111,7 @@ private:
     void updateBytesTransferredOverNetwork(uint64_t bytesTransferredOverNetwork);
 
     RefPtr<WebCore::ResourceLoader> m_coreLoader;
-    const TrackingParameters m_trackingParameters;
+    const std::optional<TrackingParameters> m_trackingParameters;
     WebResourceInterceptController m_interceptController;
     size_t m_numBytesReceived { 0 };
     size_t m_bytesTransferredOverNetwork { 0 };

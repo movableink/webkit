@@ -108,7 +108,6 @@ class NetworkOriginAccessPatterns;
 class NetworkSchemeRegistry;
 class NetworkProcess;
 class NetworkResourceLoader;
-class NetworkResourceLoadParameters;
 class NetworkSession;
 class NetworkSocketChannel;
 class NetworkTransportSession;
@@ -120,6 +119,7 @@ class WebSharedWorkerServerToContextConnection;
 
 struct CoreIPCAuditToken;
 struct NetworkProcessConnectionParameters;
+struct NetworkResourceLoadParameters;
 struct WebTransportSessionIdentifierType;
 
 using WebTransportSessionIdentifier = ObjectIdentifier<WebTransportSessionIdentifierType>;

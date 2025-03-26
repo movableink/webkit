@@ -106,9 +106,9 @@ private:
     void scheduleInternallyFailedLoad(WebCore::ResourceLoader&);
     void internallyFailedLoadTimerFired();
     void startLocalLoad(WebCore::ResourceLoader&);
-    bool tryLoadingUsingURLSchemeHandler(WebCore::ResourceLoader&, const WebResourceLoader::TrackingParameters&);
+    bool tryLoadingUsingURLSchemeHandler(WebCore::ResourceLoader&, const std::optional<WebResourceLoader::TrackingParameters>&);
 #if ENABLE(PDFJS)
-    bool tryLoadingUsingPDFJSHandler(WebCore::ResourceLoader&, const WebResourceLoader::TrackingParameters&);
+    bool tryLoadingUsingPDFJSHandler(WebCore::ResourceLoader&, const std::optional<WebResourceLoader::TrackingParameters>&);
 #endif
 
     WebCore::ResourceError cancelledError(const WebCore::ResourceRequest&) const final;
