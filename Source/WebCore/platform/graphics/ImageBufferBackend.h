@@ -51,7 +51,6 @@
 #endif
 
 #if USE(SKIA)
-class GrDirectContext;
 class SkSurface;
 #endif
 
@@ -145,12 +144,6 @@ public:
 
 #if USE(SKIA)
     virtual SkSurface* surface() const { return nullptr; }
-
-    // FIXME: Remove the obsolete Skia specific methods below.
-    virtual bool finishAcceleratedRenderingAndCreateFence() { return false; }
-    virtual void waitForAcceleratedRenderingFenceCompletion() { }
-    virtual const GrDirectContext* skiaGrContext() const { return nullptr; }
-    WEBCORE_EXPORT virtual RefPtr<ImageBuffer> copyAcceleratedImageBufferBorrowingBackendRenderTarget(const ImageBuffer&) const;
 #endif
 
     virtual bool isInUse() const { return false; }

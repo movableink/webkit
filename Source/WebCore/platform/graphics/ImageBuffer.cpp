@@ -484,39 +484,6 @@ RefPtr<cairo_surface_t> ImageBuffer::createCairoSurface()
 }
 #endif
 
-#if USE(SKIA)
-bool ImageBuffer::finishAcceleratedRenderingAndCreateFence()
-{
-    if (auto* backend = ensureBackend())
-        return backend->finishAcceleratedRenderingAndCreateFence();
-    return false;
-}
-
-void ImageBuffer::waitForAcceleratedRenderingFenceCompletion()
-{
-    if (auto* backend = ensureBackend())
-        backend->waitForAcceleratedRenderingFenceCompletion();
-}
-
-const GrDirectContext* ImageBuffer::skiaGrContext() const
-{
-    auto* backend = ensureBackend();
-    if (!backend)
-        return nullptr;
-    return backend->skiaGrContext();
-}
-
-RefPtr<ImageBuffer> ImageBuffer::copyAcceleratedImageBufferBorrowingBackendRenderTarget() const
-{
-    ASSERT(renderingMode() == RenderingMode::Accelerated);
-
-    auto* backend = ensureBackend();
-    if (!backend)
-        return nullptr;
-    return backend->copyAcceleratedImageBufferBorrowingBackendRenderTarget(*this);
-}
-#endif
-
 RefPtr<GraphicsLayerContentsDisplayDelegate> ImageBuffer::layerContentsDisplayDelegate()
 {
     if (auto* backend = ensureBackend())
