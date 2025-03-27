@@ -1462,9 +1462,6 @@ webkit.org/b/260455 http/tests/media/media-source/mediasource-rvfc.html [ Crash 
 # MSE text tracks not supported
 webkit.org/b/281343 media/media-source/media-managedmse-webvtt-track.html [ Skip ]
 
-# Asserts when handling video flush events
-webkit.org/b/288936 [ Debug ] imported/w3c/web-platform-tests/webvtt/rendering/cues-with-video/processing-model/ [ Skip ]
-
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of GStreamer-related bugs
 #////////////////////////////////////////////////////////////////////////////////////////
