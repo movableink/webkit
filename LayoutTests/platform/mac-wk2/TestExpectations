@@ -2074,9 +2074,6 @@ imported/w3c/web-platform-tests/css/css-position/block-axis-constraint-changes-f
 imported/w3c/web-platform-tests/css/css-position/sticky/position-sticky-escape-scroller-001.html [ Pass ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-position/sticky/position-sticky-scrolled-remove-sibling-002.html [ Pass ImageOnlyFailure ]
 
-# webkit.org/b/290012 REGRESSION(291808@main): [macOS Debug]: ASSERTION FAILED: !index in CSSFontSelector::fallbackFontAt
-[ Debug ] fonts/font-fallback-prefers-pictographs.html [ Skip ]
-
 webkit.org/b/290346 [ arm64 ] gamepad/gamepad-event-handlers.html [ Pass Timeout ]
 
 webkit.org/b/290398 http/wpt/opener/parent-access-child-via-windowproxy.html [ Pass Failure ]
