@@ -222,7 +222,6 @@ WebProcess/WebCoreSupport/mac/WebContextMenuClientMac.mm
 WebProcess/WebCoreSupport/mac/WebDragClientMac.mm
 WebProcess/WebCoreSupport/mac/WebEditorClientMac.mm
 WebProcess/WebPage/Cocoa/WebPageCocoa.mm
-WebProcess/WebPage/DrawingArea.cpp
 WebProcess/WebPage/FindController.cpp
 WebProcess/WebPage/RemoteLayerTree/GraphicsLayerCARemote.mm
 WebProcess/WebPage/RemoteLayerTree/PlatformCALayerRemote.mm
