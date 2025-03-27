@@ -1150,7 +1150,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         resourceResponse.setProxyName(WTFMove(proxyName));
         networkDataTask->didReceiveResponse(WTFMove(resourceResponse), negotiatedLegacyTLS, privateRelayed, [completionHandler = makeBlockPtr(completionHandler), taskIdentifier](WebCore::PolicyAction policyAction) {
 #if !LOG_DISABLED
-            LOG(NetworkSession, "%llu didReceiveResponse completionHandler (%d)", taskIdentifier, policyAction);
+            LOG(NetworkSession, "%llu didReceiveResponse completionHandler (%s)", taskIdentifier, toString(policyAction).characters());
 #else
             UNUSED_PARAM(taskIdentifier);
 #endif

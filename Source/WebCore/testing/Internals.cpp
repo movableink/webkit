@@ -879,7 +879,7 @@ String Internals::styleChangeType(Node& node)
 
 String Internals::description(JSC::JSValue value)
 {
-    return toString(value);
+    return ::toString(value);
 }
 
 void Internals::log(const String& value)
