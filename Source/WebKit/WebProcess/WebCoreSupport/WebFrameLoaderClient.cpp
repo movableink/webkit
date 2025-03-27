@@ -211,7 +211,7 @@ void WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const Navigat
         if (!frame)
             return;
 
-        RELEASE_LOG_ERROR_FORWARDABLE(Network, WEBFRAMELOADERCLIENT_DISPATCHDECIDEPOLICYFORNAVIGATIONACTION_GOT_POLICYACTION_FROM_ASYNC_IPC, frame->frameID().object().toUInt64(), webPageID, toString(policyDecision.policyAction).characters());
+        RELEASE_LOG_FORWARDABLE(Network, WEBFRAMELOADERCLIENT_DISPATCHDECIDEPOLICYFORNAVIGATIONACTION_GOT_POLICYACTION_FROM_ASYNC_IPC, frame->frameID().object().toUInt64(), webPageID, toString(policyDecision.policyAction).characters());
 
         frame->didReceivePolicyDecision(listenerID, WTFMove(policyDecision));
     });
