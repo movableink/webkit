@@ -7982,6 +7982,10 @@ void HTMLMediaElement::createMediaPlayer() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     updateShouldContinueAfterNeedKey();
 #endif
 
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    player->setPrefersSpatialAudioExperience(document().settings().preferSpatialAudioExperience());
+#endif
+
 #if HAVE(SPATIAL_TRACKING_LABEL)
     updateSpatialTrackingLabel();
 #endif
