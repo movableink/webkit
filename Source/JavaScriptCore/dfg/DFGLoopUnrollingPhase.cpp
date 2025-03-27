@@ -419,9 +419,6 @@ public:
 
     bool shouldUnrollLoop(LoopData& data)
     {
-        if (Options::disallowLoopUnrollingForNonInnermost() && !data.loop->isInnerMostLoop())
-            return false;
-
         uint32_t totalNodeCount = 0;
         uint32_t maxLoopUnrollingBodyNodeSize = data.isOperandConstant() ? Options::maxLoopUnrollingBodyNodeSize() : Options::maxPartialLoopUnrollingBodyNodeSize();
         for (uint32_t i = 0; i < data.loopSize(); ++i) {

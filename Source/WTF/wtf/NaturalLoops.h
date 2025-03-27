@@ -41,15 +41,13 @@ public:
         : m_graph(nullptr)
         , m_header(nullptr)
         , m_outerLoopIndex(UINT_MAX)
-        , m_innerLoopIndex(UINT_MAX)
     {
     }
-
+    
     NaturalLoop(Graph& graph, typename Graph::Node header, unsigned index)
         : m_graph(&graph)
         , m_header(header)
         , m_outerLoopIndex(UINT_MAX)
-        , m_innerLoopIndex(UINT_MAX)
         , m_index(index)
     {
     }
@@ -80,7 +78,6 @@ public:
     unsigned index() const { return m_index; }
     
     bool isOuterMostLoop() const { return m_outerLoopIndex == UINT_MAX; }
-    bool isInnerMostLoop() const { return m_innerLoopIndex == UINT_MAX; }
     
     void dump(PrintStream& out) const
     {
@@ -109,7 +106,6 @@ private:
     typename Graph::Node m_header;
     Vector<typename Graph::Node, 4> m_body;
     unsigned m_outerLoopIndex;
-    unsigned m_innerLoopIndex;
     unsigned m_index;
 };
 
@@ -239,8 +235,6 @@ public:
             RELEASE_ASSERT(m_innerMostLoopIndices[loop.header()][0] == i);
         
             loop.m_outerLoopIndex = m_innerMostLoopIndices[loop.header()][1];
-            if (loop.m_outerLoopIndex != UINT_MAX)
-                m_loops[loop.m_outerLoopIndex].m_innerLoopIndex = loop.index();
         }
     
         if (selfCheck) {
