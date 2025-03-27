@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,21 +25,15 @@
 
 #pragma once
 
-#if ENABLE(GPU_PROCESS)
+#if ENABLE(GPU_PROCESS) && ENABLE(WEBGL)
 
-#include "ObjectIdentifierReferenceTracker.h"
-#include <WebCore/RenderingResourceIdentifier.h>
 #include <wtf/ObjectIdentifier.h>
 
 namespace WebKit {
 
-enum class RemoteSerializedImageBufferIdentifierType { };
-using RemoteSerializedImageBufferIdentifier = AtomicObjectIdentifier<RemoteSerializedImageBufferIdentifierType>;
-using RemoteSerializedImageBufferReadReference = IPC::ObjectIdentifierReadReference<RemoteSerializedImageBufferIdentifier>;
-using RemoteSerializedImageBufferWriteReference = IPC::ObjectIdentifierWriteReference<RemoteSerializedImageBufferIdentifier>;
-using RemoteSerializedImageBufferReference = IPC::ObjectIdentifierReference<RemoteSerializedImageBufferIdentifier>;
-using RemoteSerializedImageBufferReferenceTracker = IPC::ObjectIdentifierReferenceTracker<RemoteSerializedImageBufferIdentifier>;
+enum class RemoteDisplayListRecorderIdentifierType { };
+using RemoteDisplayListRecorderIdentifier = AtomicObjectIdentifier<RemoteDisplayListRecorderIdentifierType>;
 
 } // namespace WebKit
 
-#endif // ENABLE(GPU_PROCESS)
+#endif

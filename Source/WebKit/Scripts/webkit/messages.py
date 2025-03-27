@@ -413,6 +413,7 @@ def serialized_identifiers():
         'WebKit::RemoteCDMIdentifier',
         'WebKit::RemoteCDMInstanceIdentifier',
         'WebKit::RemoteCDMInstanceSessionIdentifier',
+        'WebKit::RemoteDisplayListRecorderIdentifier',
         'WebKit::RemoteLegacyCDMIdentifier',
         'WebKit::RemoteLegacyCDMSessionIdentifier',
         'WebKit::RemoteMediaRecorderPrivateWriterIdentifier',

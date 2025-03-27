@@ -5202,8 +5202,8 @@ void WebPage::didCompleteRenderingFrame()
 void WebPage::releaseMemory(Critical)
 {
 #if ENABLE(GPU_PROCESS)
-    if (m_remoteRenderingBackendProxy)
-        m_remoteRenderingBackendProxy->remoteResourceCacheProxy().releaseMemory();
+    if (RefPtr renderingBackend = m_remoteRenderingBackendProxy)
+        renderingBackend->releaseMemory();
 #endif
 
     m_foundTextRangeController->clearCachedRanges();
@@ -5212,8 +5212,8 @@ void WebPage::releaseMemory(Critical)
 void WebPage::willDestroyDecodedDataForAllImages()
 {
 #if ENABLE(GPU_PROCESS)
-    if (m_remoteRenderingBackendProxy)
-        m_remoteRenderingBackendProxy->remoteResourceCacheProxy().releaseAllImageResources();
+    if (RefPtr renderingBackend = m_remoteRenderingBackendProxy)
+        renderingBackend->releaseNativeImages();
 #endif
 
     if (RefPtr drawingArea = m_drawingArea)
@@ -5223,12 +5223,10 @@ void WebPage::willDestroyDecodedDataForAllImages()
 unsigned WebPage::remoteImagesCountForTesting() const
 {
 #if ENABLE(GPU_PROCESS)
-    if (!m_remoteRenderingBackendProxy)
-        return 0;
-    return m_remoteRenderingBackendProxy->remoteResourceCacheProxy().imagesCountForTesting();
-#else
-    return 0;
+    if (RefPtr renderingBackend = m_remoteRenderingBackendProxy)
+        return renderingBackend->nativeImageCountForTesting();
 #endif
+return 0;
 }
 
 WebInspector* WebPage::inspector(LazyCreationPolicy behavior)

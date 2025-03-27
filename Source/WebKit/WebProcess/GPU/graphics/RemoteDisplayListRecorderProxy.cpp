@@ -53,21 +53,20 @@ using namespace WebCore;
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteDisplayListRecorderProxy);
 
-RemoteDisplayListRecorderProxy::RemoteDisplayListRecorderProxy(RemoteImageBufferProxy& imageBuffer, RemoteRenderingBackendProxy& renderingBackend, const FloatRect& initialClip, const AffineTransform& initialCTM)
-    : DisplayList::Recorder(IsDeferred::No, { }, initialClip, initialCTM, imageBuffer.colorSpace(), DrawGlyphsMode::Deconstruct)
-    , m_destinationBufferIdentifier(imageBuffer.renderingResourceIdentifier())
-    , m_imageBuffer(imageBuffer)
+RemoteDisplayListRecorderProxy::RemoteDisplayListRecorderProxy(const DestinationColorSpace& colorSpace, RenderingMode renderingMode, const FloatRect& initialClip, const AffineTransform& initialCTM, RemoteRenderingBackendProxy& renderingBackend)
+    : DisplayList::Recorder(IsDeferred::No, { }, initialClip, initialCTM, colorSpace, DrawGlyphsMode::Deconstruct)
+    , m_renderingMode(renderingMode)
+    , m_identifier(RemoteDisplayListRecorderIdentifier::generate())
     , m_renderingBackend(renderingBackend)
-    , m_renderingMode(imageBuffer.renderingMode())
 {
 }
 
-RemoteDisplayListRecorderProxy::RemoteDisplayListRecorderProxy(RemoteRenderingBackendProxy& renderingBackend, RenderingResourceIdentifier renderingResourceIdentifier, const DestinationColorSpace& colorSpace, ContentsFormat contentsFormat, RenderingMode renderingMode, const FloatRect& initialClip, const AffineTransform& initialCTM)
+RemoteDisplayListRecorderProxy::RemoteDisplayListRecorderProxy(const DestinationColorSpace& colorSpace, WebCore::ContentsFormat contentsFormat, RenderingMode renderingMode, const FloatRect& initialClip, const AffineTransform& initialCTM, RemoteDisplayListRecorderIdentifier identifier, RemoteRenderingBackendProxy& renderingBackend)
     : DisplayList::Recorder(IsDeferred::No, { }, initialClip, initialCTM, colorSpace, DrawGlyphsMode::Deconstruct)
-    , m_destinationBufferIdentifier(renderingResourceIdentifier)
+    , m_renderingMode(renderingMode)
+    , m_identifier(identifier)
     , m_renderingBackend(renderingBackend)
     , m_contentsFormat(contentsFormat)
-    , m_renderingMode(renderingMode)
 {
 }
 
@@ -80,10 +79,9 @@ ALWAYS_INLINE void RemoteDisplayListRecorderProxy::send(T&& message)
     if (UNLIKELY(!connection))
         return;
 
-    RefPtr imageBuffer = m_imageBuffer.get();
-    if (LIKELY(imageBuffer))
-        imageBuffer->backingStoreWillChange();
-    auto result = connection->send(std::forward<T>(message), m_destinationBufferIdentifier);
+    if (RefPtr client = m_client.get())
+        client->backingStoreWillChange();
+    auto result = connection->send(std::forward<T>(message), m_identifier);
     if (UNLIKELY(result != IPC::Error::NoError)) {
         RELEASE_LOG(RemoteLayerBuffers, "RemoteDisplayListRecorderProxy::send - failed, name:%" PUBLIC_LOG_STRING ", error:%" PUBLIC_LOG_STRING,
             IPC::description(T::name()).characters(), IPC::errorAsString(result).characters());
@@ -615,14 +613,7 @@ bool RemoteDisplayListRecorderProxy::recordResourceUse(ImageBuffer& imageBuffer)
         ASSERT_NOT_REACHED();
         return false;
     }
-
-    if (!renderingBackend->isCached(imageBuffer)) {
-        LOG_WITH_STREAM(DisplayLists, stream << "RemoteDisplayListRecorderProxy::recordResourceUse - failed to record use of image buffer " << imageBuffer.renderingResourceIdentifier());
-        return false;
-    }
-
-    renderingBackend->remoteResourceCacheProxy().recordImageBufferUse(imageBuffer);
-    return true;
+    return renderingBackend->isCached(imageBuffer);
 }
 
 bool RemoteDisplayListRecorderProxy::recordResourceUse(const SourceImage& image)
