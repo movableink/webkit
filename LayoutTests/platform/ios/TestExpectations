@@ -7773,3 +7773,5 @@ webkit.org/b/290483 [ Debug ] imported/w3c/web-platform-tests/navigation-api/scr
 webkit.org/b/290489 [ Debug ] media/video-webm-seek-singlekeyframe.html [ Crash ]
 
 webkit.org/b/290494 editing/caret/caret-position-sideways-lr.html [ Pass Failure ]
+
+webkit.org/b/290564 imported/w3c/web-platform-tests/css/css-viewport/computedStyle-zoom.html [ Pass Timeout ]
