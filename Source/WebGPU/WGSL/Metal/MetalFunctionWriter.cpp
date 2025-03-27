@@ -163,7 +163,7 @@ public:
     void visit(AST::Parameter&) override;
     void visitArgumentBufferParameter(AST::Parameter&);
 
-    void visit(const Type*);
+    void visit(const Type*, bool shouldPack = false);
 
     StringBuilder& stringBuilder() { return m_body; }
     Indentation<4>& indent() { return m_indent; }
@@ -172,7 +172,7 @@ private:
     void emitNecessaryHelpers();
     void serializeVariable(AST::Variable&);
     void generatePackingHelpers(AST::Structure&);
-    bool emitPackedVector(const Types::Vector&);
+    bool emitPackedVector(const Types::Vector&, bool shouldPack);
     void serializeConstant(const Type*, ConstantValue);
     void serializeBinaryExpression(AST::Expression&, AST::BinaryOperation, AST::Expression&);
     void visitStatements(AST::Statement::List&);
@@ -801,9 +801,9 @@ bool FunctionDefinitionWriter::shouldPackType() const
     return false;
 }
 
-bool FunctionDefinitionWriter::emitPackedVector(const Types::Vector& vector)
+bool FunctionDefinitionWriter::emitPackedVector(const Types::Vector& vector, bool shouldPack)
 {
-    if (!shouldPackType())
+    if (!shouldPack)
         return false;
 
     // The only vectors that need to be packed are the vectors with 3 elements,
@@ -1069,9 +1069,12 @@ void FunctionDefinitionWriter::visit(AST::InterpolateAttribute& attribute)
 }
 
 // Types
-void FunctionDefinitionWriter::visit(const Type* type)
+void FunctionDefinitionWriter::visit(const Type* type, bool shouldPack)
 {
     using namespace WGSL::Types;
+
+    shouldPack |= shouldPackType();
+
     WTF::switchOn(*type,
         [&](const Primitive& primitive) {
             switch (primitive.kind) {
@@ -1107,26 +1110,26 @@ void FunctionDefinitionWriter::visit(const Type* type)
             }
         },
         [&](const Vector& vector) {
-            if (emitPackedVector(vector))
+            if (emitPackedVector(vector, shouldPack))
                 return;
             m_body.append("vec<"_s);
-            visit(vector.element);
+            visit(vector.element, shouldPack);
             m_body.append(", "_s, vector.size, '>');
         },
         [&](const Matrix& matrix) {
             m_body.append("matrix<"_s);
-            visit(matrix.element);
+            visit(matrix.element, shouldPack);
             m_body.append(", "_s, matrix.columns, ", "_s, matrix.rows, '>');
         },
         [&](const Array& array) {
             m_body.append("array<"_s);
             auto* vector = std::get_if<Types::Vector>(array.element);
-            if (vector && vector->size == 3 && shouldPackType()) {
+            if (vector && vector->size == 3 && shouldPack) {
                 m_body.append("PackedVec3<"_s);
-                visit(vector->element);
+                visit(vector->element, shouldPack);
                 m_body.append(">"_s);
             } else
-                visit(array.element);
+                visit(array.element, shouldPack);
             m_body.append(", "_s);
             WTF::switchOn(array.size,
                 [&](unsigned size) { m_body.append(size); },
@@ -1138,7 +1141,7 @@ void FunctionDefinitionWriter::visit(const Type* type)
         },
         [&](const Struct& structure) {
             m_body.append(structure.structure.name());
-            if (shouldPackType() && structure.structure.role() == AST::StructureRole::UserDefinedResource)
+            if (shouldPack && structure.structure.role() == AST::StructureRole::UserDefinedResource)
                 m_body.append("::PackedType"_s);
         },
         [&](const PrimitiveStruct& structure) {
@@ -1148,7 +1151,7 @@ void FunctionDefinitionWriter::visit(const Type* type)
                 if (!first)
                     m_body.append(", "_s);
                 first = false;
-                visit(value);
+                visit(value, shouldPack);
             }
             m_body.append('>');
         },
@@ -1180,7 +1183,7 @@ void FunctionDefinitionWriter::visit(const Type* type)
                 break;
             }
             m_body.append(type, '<');
-            visit(texture.element);
+            visit(texture.element, shouldPack);
             m_body.append(", access::"_s, access, '>');
         },
         [&](const TextureStorage& texture) {
@@ -1254,7 +1257,8 @@ void FunctionDefinitionWriter::visit(const Type* type)
                 m_body.append("const "_s);
             if (addressSpace)
                 m_body.append(addressSpace, ' ');
-            visit(pointer.element);
+            bool shouldPack = pointer.addressSpace == AddressSpace::Storage || pointer.addressSpace == AddressSpace::Uniform;
+            visit(pointer.element, shouldPack);
             m_body.append('*');
         },
         [&](const Atomic& atomic) {
