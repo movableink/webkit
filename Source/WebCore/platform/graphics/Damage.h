@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if PLATFORM(GTK) || PLATFORM(WPE)
+#if USE(COORDINATED_GRAPHICS)
 #include "FloatRect.h"
 #include "Region.h"
 #include <wtf/ForbidHeapAllocation.h>
@@ -77,6 +77,7 @@ public:
     // May return both empty and overlapping rects.
     ALWAYS_INLINE const Rects& rects() const { return m_rects; }
     ALWAYS_INLINE bool isEmpty() const  { return m_rects.isEmpty(); }
+    ALWAYS_INLINE Mode mode() const { return m_mode; }
 
     // Removes empty and overlapping rects. May clip to grid.
     Rects rectsForPainting() const
@@ -126,68 +127,62 @@ public:
         makeFull(m_rect);
     }
 
-    ALWAYS_INLINE void add(const Region& region)
-    {
-        if (region.isEmpty() || !shouldAdd())
-            return;
-
-        for (const auto& rect : region.rects())
-            add(rect);
-    }
-
-    void add(const IntRect& rect)
+    bool add(const IntRect& rect)
     {
         if (rect.isEmpty() || !shouldAdd())
-            return;
+            return false;
 
         const auto rectsCount = m_rects.size();
         if (!rectsCount || rect.contains(m_minimumBoundingRectangle)) {
             m_rects.clear();
             m_rects.append(rect);
             m_minimumBoundingRectangle = rect;
-            return;
+            return true;
         }
 
         if (rectsCount == 1 && m_minimumBoundingRectangle.contains(rect))
-            return;
+            return false;
 
         m_minimumBoundingRectangle.unite(rect);
         if (m_mode == Mode::BoundingBox) {
             ASSERT(rectsCount == 1);
             m_rects[0] = m_minimumBoundingRectangle;
-            return;
+            return true;
         }
 
         if (m_shouldUnite) {
             unite(rect);
-            return;
+            return true;
         }
 
         if (rectsCount == m_gridCells.unclampedArea()) {
             m_shouldUnite = true;
             uniteExistingRects();
             unite(rect);
-            return;
+            return true;
         }
 
         m_rects.append(rect);
+        return true;
     }
 
-    ALWAYS_INLINE void add(const FloatRect& rect)
+    ALWAYS_INLINE bool add(const FloatRect& rect)
     {
         if (rect.isEmpty() || !shouldAdd())
-            return;
+            return false;
 
-        add(enclosingIntRect(rect));
+        return add(enclosingIntRect(rect));
     }
 
-    ALWAYS_INLINE void add(const Damage& other)
+    ALWAYS_INLINE bool add(const Damage& other)
     {
         if (other.isEmpty() || !shouldAdd())
-            return;
+            return false;
 
+        bool returnValue = false;
         for (const auto& rect : other.rects())
-            add(rect);
+            returnValue |= add(rect);
+        return returnValue;
     }
 
 private:
@@ -278,4 +273,4 @@ static inline WTF::TextStream& operator<<(WTF::TextStream& ts, const Damage& dam
 
 } // namespace WebCore
 
-#endif // PLATFORM(GTK) || PLATFORM(WPE)
+#endif // USE(COORDINATED_GRAPHICS)

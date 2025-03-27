@@ -4503,6 +4503,17 @@ float RenderLayerCompositor::zoomedOutPageScaleFactor() const
     return page().zoomedOutPageScaleFactor();
 }
 
+FloatSize RenderLayerCompositor::enclosingFrameViewVisibleSize() const
+{
+    const Ref frameView = m_renderView.frameView();
+#if PLATFORM(IOS_FAMILY)
+    return frameView->exposedContentRect().size();
+#endif
+    if (m_scrolledContentsLayer)
+        return frameView->sizeForVisibleContent(scrollbarInclusionForVisibleRect());
+    return frameView->visibleContentRect().size();
+}
+
 float RenderLayerCompositor::contentsScaleMultiplierForNewTiles(const GraphicsLayer*) const
 {
 #if PLATFORM(IOS_FAMILY)

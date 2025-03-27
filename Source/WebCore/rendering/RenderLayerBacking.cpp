@@ -4089,6 +4089,11 @@ float RenderLayerBacking::zoomedOutPageScaleFactor() const
     return compositor().zoomedOutPageScaleFactor();
 }
 
+FloatSize RenderLayerBacking::enclosingFrameViewVisibleSize() const
+{
+    return compositor().enclosingFrameViewVisibleSize();
+}
+
 float RenderLayerBacking::deviceScaleFactor() const
 {
     return compositor().deviceScaleFactor();
