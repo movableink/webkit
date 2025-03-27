@@ -101,6 +101,11 @@ public final class WKSRKEntity: NSObject {
         guard let boundingBox = self.boundingBox else { return SIMD3<Float>(0, 0, 0) }
         return boundingBox.center
     }
+    
+    @objc(boundingRadius) public var boundingRadius: Float {
+        guard let boundingBox = self.boundingBox else { return 0.0 }
+        return boundingBox.boundingRadius
+    }
 
     private var boundingBox: BoundingBox? {
         entity.visualBounds(relativeTo: entity)
@@ -363,6 +368,18 @@ public final class WKSRKEntity: NSObject {
     
     @objc(interactionContainerDidRecenterFromTransform:) public func interactionContainerDidRecenter(_ transform: simd_float4x4) {
         entity.setTransformMatrix(transform, relativeTo: nil)
+    }
+    
+    @objc(recenterEntityAtTransform:) public func recenterEntity(at newTransform: WKEntityTransform) {
+        // Apply the scale and translation of the entity separately from the rotation
+        transform = WKEntityTransform(scale: newTransform.scale, rotation: .init(ix: 0, iy: 0, iz: 0, r: 1), translation: newTransform.translation)
+        
+        // The pivot for the orientation may be different from the center of the model's bounding box
+        // As a result, we offset the translation after the rotation has been applied to recenter it
+        let pivotPoint = interactionPivotPoint
+        transform = newTransform
+        let offset = pivotPoint - interactionPivotPoint
+        transform = WKEntityTransform(scale: newTransform.scale, rotation: newTransform.rotation, translation: newTransform.translation + offset)
     }
 }
 
