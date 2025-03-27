@@ -6895,6 +6895,7 @@ imported/w3c/web-platform-tests/html/canvas/element/manual/filters/canvas-filter
 imported/w3c/web-platform-tests/html/canvas/element/manual/filters/canvas-opacity-blend-modes.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/canvas/element/text/direction-inherit-rtl.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/canvas/element/text/direction-rtl.html [ ImageOnlyFailure ]
+webkit.org/b/290519 imported/w3c/web-platform-tests/html/canvas/element/manual/text/canvas.2d.direction.inherit.disconnected.canvas.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/html/canvas/offscreen/filters/2d.filter.canvasFilterObject.dropShadow.tentative.html [ ImageOnlyFailure ]
 webkit.org/b/260220 imported/w3c/web-platform-tests/html/canvas/element/text/parent-style-relative-units.html [ Skip ]
 imported/w3c/web-platform-tests/html/canvas/offscreen/filters/2d.filter.canvasFilterObject.dropShadow.tentative.w.html [ Timeout ]
