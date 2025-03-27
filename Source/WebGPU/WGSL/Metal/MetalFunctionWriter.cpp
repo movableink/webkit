@@ -560,7 +560,7 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
             IndentationScope scope(m_indent);
             m_body.append(m_indent, "auto o = min(offset, 32u);\n"_s,
                 m_indent, "auto c = min(count, 32u - o);\n"_s,
-                m_indent, "return extract_bits(e, min(o, 31u), c);\n"_s);
+                m_indent, "return select((T)0, extract_bits(e, min(o, 31u), c), c);\n"_s);
         }
         m_body.append(m_indent, "}\n"_s);
     }
