@@ -253,8 +253,28 @@ private:
     InjectedScriptManager& m_injectedScriptManager;
     UncheckedKeyHashMap<JSC::SourceID, JSC::Debugger::Script> m_scripts;
 
-    using BlackboxParameters = std::tuple<String /* url */, bool /* caseSensitive */, bool /* isRegex */>;
-    UncheckedKeyHashMap<BlackboxParameters, UncheckedKeyHashSet<JSC::Debugger::BlackboxRange>> m_blackboxedURLs;
+    struct BlackboxedScript {
+        String url;
+        bool caseSensitive { false }; // FIXME: should this be `true`?
+        bool isRegex { false };
+
+        // This is only used to restrict where within the script to ignore pausing.
+        // Put another way, it doesn't change whether the script is blackboxed.
+        UncheckedKeyHashSet<JSC::Debugger::BlackboxRange> ranges;
+
+        inline bool operator==(const BlackboxedScript& other) const
+        {
+            return url == other.url
+                && caseSensitive == other.caseSensitive
+                && isRegex == other.isRegex;
+        }
+
+        bool matches(const String& url);
+
+    private:
+        std::optional<ContentSearchUtilities::Searcher> m_urlSearcher;
+    };
+    Vector<BlackboxedScript> m_blackboxedScripts;
 
     UncheckedKeyHashSet<Listener*> m_listeners;
 

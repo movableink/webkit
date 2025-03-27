@@ -1301,14 +1301,17 @@ Protocol::ErrorStringOr<void> InspectorDebuggerAgent::setShouldBlackboxURL(const
     if (url.isEmpty())
         return makeUnexpected("URL must not be empty"_s);
 
-    bool caseSensitive = optionalCaseSensitive.value_or(false);
-    bool isRegex = optionalIsRegex.value_or(false);
+    BlackboxedScript blackboxedScript;
+    blackboxedScript.url = url;
+    blackboxedScript.caseSensitive = optionalCaseSensitive.value_or(false);
+    blackboxedScript.isRegex = optionalIsRegex.value_or(false);
 
-    if (!caseSensitive && !isRegex && isWebKitInjectedScript(url))
+    if (!blackboxedScript.caseSensitive && !blackboxedScript.isRegex && isWebKitInjectedScript(blackboxedScript.url))
         return makeUnexpected("Blackboxing of internal scripts is controlled by 'Debugger.setPauseForInternalScripts'"_s);
 
+    m_blackboxedScripts.removeAll(blackboxedScript);
+
     if (shouldBlackbox) {
-        UncheckedKeyHashSet<JSC::Debugger::BlackboxRange> blackboxRanges;
         if (protocolSourceRanges) {
             if (protocolSourceRanges->length() % 4)
                 return makeUnexpected("Unexpected format for given sourceRanges"_s);
@@ -1343,7 +1346,7 @@ Protocol::ErrorStringOr<void> InspectorDebuggerAgent::setShouldBlackboxURL(const
                 if (startLine == endLine && startColumn >= endColumn)
                     return makeUnexpected("Unexpected endColumn before startColumn in given sourceRanges"_s);
 
-                blackboxRanges.add({
+                blackboxedScript.ranges.add({
                     { OrdinalNumber::fromZeroBasedInt(startLine), OrdinalNumber::fromZeroBasedInt(startColumn) },
                     { OrdinalNumber::fromZeroBasedInt(endLine), OrdinalNumber::fromZeroBasedInt(endColumn) },
                 });
@@ -1356,9 +1359,9 @@ Protocol::ErrorStringOr<void> InspectorDebuggerAgent::setShouldBlackboxURL(const
             ASSERT(startColumn == -1);
             ASSERT(endLine == -1);
         }
-        m_blackboxedURLs.set({ url, caseSensitive, isRegex }, WTFMove(blackboxRanges));
-    } else
-        m_blackboxedURLs.remove({ url, caseSensitive, isRegex });
+
+        m_blackboxedScripts.append(WTFMove(blackboxedScript));
+    }
 
     for (auto& [sourceID, script] : m_scripts) {
         if (isWebKitInjectedScript(script.sourceURL))
@@ -1381,16 +1384,11 @@ void InspectorDebuggerAgent::setBlackboxConfiguration(JSC::SourceID sourceID, co
         blackboxFlags.add(JSC::Debugger::BlackboxFlag::Ignore);
     }
 
-    for (const auto& [blackboxParameters, blackboxRanges] : m_blackboxedURLs) {
-        const auto& [url, caseSensitive, isRegex] = blackboxParameters;
-
-        auto searchType = isRegex ? ContentSearchUtilities::SearchType::Regex : ContentSearchUtilities::SearchType::ExactString;
-        auto searchCaseSensitive = caseSensitive ? ContentSearchUtilities::SearchCaseSensitive::Yes : ContentSearchUtilities::SearchCaseSensitive::No;
-        auto searcher = ContentSearchUtilities::createSearcherForString(url, searchType, searchCaseSensitive);
-        if ((script.sourceURL.isEmpty() || !ContentSearchUtilities::searcherMatchesText(searcher, script.sourceURL)) && (script.url.isEmpty() || !ContentSearchUtilities::searcherMatchesText(searcher, script.url)))
+    for (auto& blackboxedScript : m_blackboxedScripts) {
+        if (!blackboxedScript.matches(script.sourceURL) && !blackboxedScript.matches(script.url))
             continue;
 
-        if (blackboxRanges.isEmpty()) {
+        if (blackboxedScript.ranges.isEmpty()) {
             auto& blackboxFlags = blackboxConfiguration.ensure(blackboxRange(script), [] {
                 return JSC::Debugger::BlackboxFlags();
             }).iterator->value;
@@ -1398,8 +1396,8 @@ void InspectorDebuggerAgent::setBlackboxConfiguration(JSC::SourceID sourceID, co
             continue;
         }
 
-        for (const auto& blackboxRange : blackboxRanges) {
-            auto& blackboxFlags = blackboxConfiguration.ensure(blackboxRange, [] {
+        for (const auto& range : blackboxedScript.ranges) {
+            auto& blackboxFlags = blackboxConfiguration.ensure(range, [] {
                 return JSC::Debugger::BlackboxFlags();
             }).iterator->value;
             blackboxFlags.add(JSC::Debugger::BlackboxFlag::Defer);
@@ -1959,6 +1957,19 @@ void InspectorDebuggerAgent::clearAsyncStackTraceData()
     m_currentAsyncCallIdentifierStack.clear();
 
     didClearAsyncStackTraceData();
+}
+
+bool InspectorDebuggerAgent::BlackboxedScript::matches(const String& url)
+{
+    if (url.isEmpty())
+        return false;
+
+    if (!m_urlSearcher) {
+        auto searchType = isRegex ? ContentSearchUtilities::SearchType::Regex : ContentSearchUtilities::SearchType::ExactString;
+        auto searchCaseSensitive = caseSensitive ? ContentSearchUtilities::SearchCaseSensitive::Yes : ContentSearchUtilities::SearchCaseSensitive::No;
+        m_urlSearcher = ContentSearchUtilities::createSearcherForString(this->url, searchType, searchCaseSensitive);
+    }
+    return ContentSearchUtilities::searcherMatchesText(*m_urlSearcher, url);
 }
 
 bool InspectorDebuggerAgent::SymbolicBreakpoint::matches(const String& symbol)
