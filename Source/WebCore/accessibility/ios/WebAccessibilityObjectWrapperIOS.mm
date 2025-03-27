@@ -2118,7 +2118,7 @@ static RenderObject* rendererForView(WAKView* view)
     // Use this to check if an object is the child of a summary object.
     // And return the summary's parent, which is the expandable details object.
     return Accessibility::findAncestor<AccessibilityObject>(object, true, [&] (const AccessibilityObject& object) {
-        auto tag = object.tagName();
+        const auto& tag = object.tagName();
         if (tag == summaryTag)
             foundSummary = true;
 

@@ -748,6 +748,9 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::ExpandedTextValue:
         stream << "ExpandedTextValue";
         break;
+    case AXProperty::ExplicitLiveRegionStatus:
+        stream << "ExplicitLiveRegionStatus";
+        break;
     case AXProperty::ExplicitOrientation:
         stream << "ExplicitOrientation";
         break;
@@ -773,9 +776,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
         break;
     case AXProperty::HasClickHandler:
         stream << "HasClickHandler";
-        break;
-    case AXProperty::HasHighlighting:
-        stream << "HasHighlighting";
         break;
     case AXProperty::HasItalicFont:
         stream << "HasItalicFont";
@@ -998,9 +998,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::LiveRegionRelevant:
         stream << "LiveRegionRelevant";
         break;
-    case AXProperty::LiveRegionStatus:
-        stream << "LiveRegionStatus";
-        break;
     case AXProperty::LocalizedActionVerb:
         stream << "LocalizedActionVerb";
         break;
@@ -1162,9 +1159,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
         break;
     case AXProperty::SupportsPosInSet:
         stream << "SupportsPosInSet";
-        break;
-    case AXProperty::SupportsRangeValue:
-        stream << "SupportsRangeValue";
         break;
     case AXProperty::SupportsSetSize:
         stream << "SupportsSetSize";

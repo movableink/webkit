@@ -183,7 +183,7 @@ protected:
 
     bool elementAttributeValue(const QualifiedName&) const;
 
-    const String liveRegionStatus() const final;
+    const String explicitLiveRegionStatus() const final { return getAttribute(HTMLNames::aria_liveAttr); }
     const String liveRegionRelevant() const final;
     bool liveRegionAtomic() const final;
 

@@ -1512,7 +1512,7 @@ void AXObjectCache::handleLiveRegionCreated(Element& element)
     if (liveRegionStatus.isEmpty()) {
         const AtomString& ariaRole = element.attributeWithoutSynchronization(roleAttr);
         if (!ariaRole.isEmpty())
-            liveRegionStatus = AtomString { AccessibilityObject::defaultLiveRegionStatusForRole(AccessibilityObject::ariaRoleToWebCoreRole(ariaRole)) };
+            liveRegionStatus = AtomString { AXCoreObject::defaultLiveRegionStatusForRole(AccessibilityObject::ariaRoleToWebCoreRole(ariaRole)) };
     }
 
     if (AXCoreObject::liveRegionStatusIsEnabled(liveRegionStatus)) {
@@ -2670,7 +2670,7 @@ void AXObjectCache::handleRoleChanged(AccessibilityObject& axObject, Accessibili
 #if PLATFORM(MAC)
     if (axObject.supportsLiveRegion())
         addSortedObject(axObject, PreSortedObjectType::LiveRegion);
-    else if (AXCoreObject::liveRegionStatusIsEnabled(AtomString { AccessibilityObject::defaultLiveRegionStatusForRole(oldRole) }))
+    else if (AXCoreObject::liveRegionStatusIsEnabled(AtomString { AXCoreObject::defaultLiveRegionStatusForRole(oldRole) }))
         removeLiveRegion(axObject);
 #else
     UNUSED_PARAM(oldRole);

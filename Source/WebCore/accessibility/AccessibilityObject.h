@@ -230,7 +230,6 @@ public:
     bool hasSameFontColor(AXCoreObject&) override { return false; }
     bool hasSameStyle(AXCoreObject&) override { return false; }
     bool hasUnderline() const override { return false; }
-    bool hasHighlighting() const final;
     AXTextMarkerRange textInputMarkedTextMarkerRange() const final;
 
     WallTime dateTimeValue() const override { return { }; }
@@ -288,7 +287,6 @@ public:
     bool supportsRowCountChange() const;
     AccessibilitySortDirection sortDirection() const final;
     virtual bool canvasHasFallbackContent() const { return false; }
-    bool supportsRangeValue() const final;
     String identifierAttribute() const final;
     String linkRelValue() const final;
     Vector<String> classList() const final;
@@ -573,7 +571,7 @@ public:
     bool hasAttachmentTag() const final { return hasTagName(HTMLNames::attachmentTag); }
     bool hasBodyTag() const final { return hasTagName(HTMLNames::bodyTag); }
     bool hasMarkTag() const final { return hasTagName(HTMLNames::markTag); }
-    AtomString tagName() const;
+    const AtomString& tagName() const;
     bool hasDisplayContents() const;
 
     std::optional<SimpleRange> simpleRange() const final;
@@ -637,11 +635,10 @@ public:
 
     // ARIA live-region features.
     AccessibilityObject* liveRegionAncestor(bool excludeIfOff = true) const final { return Accessibility::liveRegionAncestor(*this, excludeIfOff); }
-    const String liveRegionStatus() const override { return String(); }
+    const String explicitLiveRegionStatus() const override { return String(); }
     const String liveRegionRelevant() const override { return nullAtom(); }
     bool liveRegionAtomic() const override { return false; }
     bool isBusy() const override { return false; }
-    static const String defaultLiveRegionStatusForRole(AccessibilityRole);
     static bool contentEditableAttributeIsEnabled(Element&);
     bool hasContentEditableAttributeSet() const;
 

@@ -127,6 +127,7 @@ enum class AXProperty : uint16_t {
     DocumentURI,
     EmbeddedImageDescription,
     ExpandedTextValue,
+    ExplicitLiveRegionStatus,
     ExplicitOrientation,
     ExtendedDescription,
 #if PLATFORM(COCOA)
@@ -137,7 +138,6 @@ enum class AXProperty : uint16_t {
     HasApplePDFAnnotationAttribute,
     HasBoldFont,
     HasClickHandler,
-    HasHighlighting,
     HasItalicFont,
     HasLinethrough,
     HasPlainText,
@@ -213,7 +213,6 @@ enum class AXProperty : uint16_t {
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
     LiveRegionAtomic,
     LiveRegionRelevant,
-    LiveRegionStatus,
     LocalizedActionVerb,
     MathFencedOpenString,
     MathFencedCloseString,
@@ -268,7 +267,6 @@ enum class AXProperty : uint16_t {
     SupportsKeyShortcuts,
     SupportsPath,
     SupportsPosInSet,
-    SupportsRangeValue,
     SupportsSetSize,
     TagName,
     TextContentPrefixFromListMarker,

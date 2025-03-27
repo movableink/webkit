@@ -986,7 +986,7 @@ public:
     virtual bool hasSameStyle(AXCoreObject&) = 0;
     bool isStaticText() const { return roleValue() == AccessibilityRole::StaticText; }
     virtual bool hasUnderline() const = 0;
-    virtual bool hasHighlighting() const = 0;
+    bool hasHighlighting() const;
     virtual AXTextMarkerRange textInputMarkedTextMarkerRange() const = 0;
 
     virtual WallTime dateTimeValue() const = 0;
@@ -1063,7 +1063,7 @@ public:
     virtual bool supportsChecked() const = 0;
     virtual AccessibilitySortDirection sortDirection() const = 0;
     AccessibilitySortDirection sortDirectionIncludingAncestors() const;
-    virtual bool supportsRangeValue() const = 0;
+    bool supportsRangeValue() const;
     virtual String identifierAttribute() const = 0;
     virtual String linkRelValue() const = 0;
     virtual Vector<String> classList() const = 0;
@@ -1375,6 +1375,7 @@ public:
 
     // ARIA live-region features.
     static bool liveRegionStatusIsEnabled(const AtomString&);
+    static const String defaultLiveRegionStatusForRole(AccessibilityRole);
     bool supportsLiveRegion(bool excludeIfOff = true) const;
 #if PLATFORM(MAC)
     virtual AccessibilityChildrenVector allSortedLiveRegions() const = 0;
@@ -1382,7 +1383,8 @@ public:
     AccessibilityChildrenVector sortedDescendants(size_t limit, PreSortedObjectType) const;
 #endif // PLATFORM(MAC)
     virtual AXCoreObject* liveRegionAncestor(bool excludeIfOff = true) const = 0;
-    virtual const String liveRegionStatus() const = 0;
+    virtual const String explicitLiveRegionStatus() const = 0;
+    const String liveRegionStatus() const;
     virtual const String liveRegionRelevant() const = 0;
     virtual bool liveRegionAtomic() const = 0;
     virtual bool isBusy() const = 0;
@@ -1550,9 +1552,32 @@ inline bool AXCoreObject::shouldComputeTitleAttributeValue() const
 }
 #endif // PLATFORM(COCOA)
 
+inline const String AXCoreObject::defaultLiveRegionStatusForRole(AccessibilityRole role)
+{
+    switch (role) {
+    case AccessibilityRole::ApplicationAlertDialog:
+    case AccessibilityRole::ApplicationAlert:
+        return "assertive"_s;
+    case AccessibilityRole::ApplicationLog:
+    case AccessibilityRole::ApplicationStatus:
+        return "polite"_s;
+    case AccessibilityRole::ApplicationTimer:
+    case AccessibilityRole::ApplicationMarquee:
+        return "off"_s;
+    default:
+        return nullAtom();
+    }
+}
+
 inline bool AXCoreObject::liveRegionStatusIsEnabled(const AtomString& liveRegionStatus)
 {
     return equalLettersIgnoringASCIICase(liveRegionStatus, "polite"_s) || equalLettersIgnoringASCIICase(liveRegionStatus, "assertive"_s);
+}
+
+inline const String AXCoreObject::liveRegionStatus() const
+{
+    auto explicitStatus = explicitLiveRegionStatus();
+    return explicitStatus.isEmpty() ? defaultLiveRegionStatusForRole(roleValue()) : explicitStatus;
 }
 
 inline bool AXCoreObject::supportsLiveRegion(bool excludeIfOff) const

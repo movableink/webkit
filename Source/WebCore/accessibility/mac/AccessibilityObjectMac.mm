@@ -417,7 +417,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return "AXCodeStyleGroup"_s;
 
     using namespace HTMLNames;
-    auto tag = tagName();
+    const auto& tag = tagName();
     if (tag == kbdTag)
         return "AXKeyboardInputStyleGroup"_s;
     if (tag == preTag)

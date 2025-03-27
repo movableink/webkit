@@ -2241,23 +2241,6 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityObject::disclosedRows()
     return result;
 }
 
-const String AccessibilityObject::defaultLiveRegionStatusForRole(AccessibilityRole role)
-{
-    switch (role) {
-    case AccessibilityRole::ApplicationAlertDialog:
-    case AccessibilityRole::ApplicationAlert:
-        return "assertive"_s;
-    case AccessibilityRole::ApplicationLog:
-    case AccessibilityRole::ApplicationStatus:
-        return "polite"_s;
-    case AccessibilityRole::ApplicationTimer:
-    case AccessibilityRole::ApplicationMarquee:
-        return "off"_s;
-    default:
-        return nullAtom();
-    }
-}
-
 String AccessibilityObject::localizedActionVerb() const
 {
 #if !PLATFORM(IOS_FAMILY)
@@ -2802,16 +2785,6 @@ void AccessibilityObject::updateRole()
     }
 }
 
-bool AccessibilityObject::hasHighlighting() const
-{
-    for (Node* node = this->node(); node; node = node->parentNode()) {
-        if (node->hasTagName(markTag))
-            return true;
-    }
-    
-    return false;
-}
-
 SRGBA<uint8_t> AccessibilityObject::colorValue() const
 {
     return Color::black;
@@ -3205,16 +3178,6 @@ AccessibilitySortDirection AccessibilityObject::sortDirection() const
         return AccessibilitySortDirection::Other;
 
     return AccessibilitySortDirection::None;
-}
-
-bool AccessibilityObject::supportsRangeValue() const
-{
-    return isProgressIndicator()
-        || isSlider()
-        || isScrollbar()
-        || isSpinButton()
-        || (isSplitter() && canSetFocusAttribute())
-        || hasAttachmentTag();
 }
 
 bool AccessibilityObject::supportsHasPopup() const
@@ -4097,7 +4060,7 @@ AccessibilityObject* AccessibilityObject::radioGroupAncestor() const
     });
 }
 
-AtomString AccessibilityObject::tagName() const
+const AtomString& AccessibilityObject::tagName() const
 {
     auto* element = this->element();
     return element ? element->localName() : nullAtom();

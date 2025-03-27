@@ -164,6 +164,15 @@ bool AXCoreObject::isGroup() const
     }
 }
 
+bool AXCoreObject::hasHighlighting() const
+{
+    for (RefPtr ancestor = this; ancestor; ancestor = ancestor->parentObject()) {
+        if (ancestor->hasMarkTag())
+            return true;
+    }
+    return false;
+}
+
 bool AXCoreObject::hasGridRole() const
 {
     auto role = roleValue();
@@ -702,6 +711,16 @@ bool AXCoreObject::isActiveDescendantOfFocusedContainer() const
     }
 
     return false;
+}
+
+bool AXCoreObject::supportsRangeValue() const
+{
+    return isProgressIndicator()
+        || isSlider()
+        || isScrollbar()
+        || isSpinButton()
+        || (isSplitter() && canSetFocusAttribute())
+        || hasAttachmentTag();
 }
 
 bool AXCoreObject::supportsRequiredAttribute() const

@@ -107,7 +107,7 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
 
         // These properties are cached for all objects, ignored and unignored.
         setProperty(AXProperty::HasClickHandler, object.hasClickHandler());
-        auto tag = object.tagName();
+        const auto& tag = object.tagName();
         if (tag == bodyTag)
             setProperty(AXProperty::TagName, TagName::body);
 #if ENABLE(AX_THREAD_TEXT_APIS)
@@ -192,7 +192,6 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXProperty::InvalidStatus, object.invalidStatus().isolatedCopy());
     setProperty(AXProperty::SupportsExpanded, object.supportsExpanded());
     setProperty(AXProperty::SortDirection, static_cast<int>(object.sortDirection()));
-    setProperty(AXProperty::SupportsRangeValue, object.supportsRangeValue());
 #if !LOG_DISABLED
     // Eagerly cache ID when logging is enabled so that we can log isolated objects without constant deadlocks.
     // Don't cache ID when logging is disabled because we don't expect non-test AX clients to actually request it.
@@ -210,10 +209,9 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXProperty::ColorValue, object.colorValue());
     setProperty(AXProperty::ExplicitOrientation, object.explicitOrientation());
     setProperty(AXProperty::HierarchicalLevel, object.hierarchicalLevel());
-    setProperty(AXProperty::LiveRegionStatus, object.liveRegionStatus().isolatedCopy());
+    setProperty(AXProperty::ExplicitLiveRegionStatus, object.explicitLiveRegionStatus().isolatedCopy());
     setProperty(AXProperty::LiveRegionRelevant, object.liveRegionRelevant().isolatedCopy());
     setProperty(AXProperty::LiveRegionAtomic, object.liveRegionAtomic());
-    setProperty(AXProperty::HasHighlighting, object.hasHighlighting());
     setProperty(AXProperty::HasBoldFont, object.hasBoldFont());
     setProperty(AXProperty::HasItalicFont, object.hasItalicFont());
     setProperty(AXProperty::HasPlainText, object.hasPlainText());

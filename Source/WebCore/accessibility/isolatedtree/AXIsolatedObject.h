@@ -266,7 +266,6 @@ private:
     String invalidStatus() const final { return stringAttributeValue(AXProperty::InvalidStatus); }
     bool supportsExpanded() const final { return boolAttributeValue(AXProperty::SupportsExpanded); }
     AccessibilitySortDirection sortDirection() const final { return static_cast<AccessibilitySortDirection>(intAttributeValue(AXProperty::SortDirection)); }
-    bool supportsRangeValue() const final { return boolAttributeValue(AXProperty::SupportsRangeValue); }
     String identifierAttribute() const final;
     String linkRelValue() const final;
     Vector<String> classList() const final;
@@ -359,7 +358,7 @@ private:
     void setChildrenIDs(Vector<AXID>&&);
     bool isDetachedFromParent() final;
     AXIsolatedObject* liveRegionAncestor(bool excludeIfOff = true) const final { return Accessibility::liveRegionAncestor(*this, excludeIfOff); }
-    const String liveRegionStatus() const final { return stringAttributeValue(AXProperty::LiveRegionStatus); }
+    const String explicitLiveRegionStatus() const final { return stringAttributeValue(AXProperty::ExplicitLiveRegionStatus); }
     const String liveRegionRelevant() const final { return stringAttributeValue(AXProperty::LiveRegionRelevant); }
     bool liveRegionAtomic() const final { return boolAttributeValue(AXProperty::LiveRegionAtomic); }
     bool isBusy() const final { return boolAttributeValue(AXProperty::IsBusy); }
@@ -485,7 +484,6 @@ private:
     bool hasSameFontColor(AXCoreObject&) final;
     bool hasSameStyle(AXCoreObject&) final;
     bool hasUnderline() const final { return boolAttributeValue(AXProperty::HasUnderline); }
-    bool hasHighlighting() const final { return boolAttributeValue(AXProperty::HasHighlighting); }
     AXTextMarkerRange textInputMarkedTextMarkerRange() const final;
     Element* element() const final;
     Node* node() const final;
