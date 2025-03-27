@@ -962,7 +962,7 @@ GraphicsLayer* LocalFrameView::graphicsLayerForPlatformWidget(PlatformWidget pla
 
 GraphicsLayer* LocalFrameView::graphicsLayerForPageScale()
 {
-    auto* page = m_frame->page();
+    RefPtr page = m_frame->page();
     if (!page)
         return nullptr;
 
@@ -995,7 +995,7 @@ GraphicsLayer* LocalFrameView::graphicsLayerForScrolledContents()
 #if HAVE(RUBBER_BANDING)
 GraphicsLayer* LocalFrameView::graphicsLayerForTransientZoomShadow()
 {
-    auto* page = m_frame->page();
+    RefPtr page = m_frame->page();
     if (!page)
         return nullptr;
 
@@ -2778,7 +2778,7 @@ void LocalFrameView::scrollRectToVisibleInTopLevelView(const LayoutRect& absolut
     if (options.revealMode == SelectionRevealMode::RevealUpToMainFrame && m_frame->isMainFrame())
         return;
 
-    auto* page = m_frame->page();
+    RefPtr page = m_frame->page();
     if (!page)
         return;
 
@@ -2969,7 +2969,7 @@ void LocalFrameView::updateScriptedAnimationsAndTimersThrottlingState(const IntR
     bool shouldThrottle = visibleRect.isEmpty() && !m_lastUsedSizeForLayout.isEmpty() && m_frame->ownerRenderer();
     document->setTimerThrottlingEnabled(shouldThrottle);
 
-    auto* page = m_frame->page();
+    RefPtr page = m_frame->page();
     if (!page || !page->canUpdateThrottlingReason(ThrottlingReason::OutsideViewport))
         return;
     
@@ -3263,7 +3263,7 @@ void LocalFrameView::addedOrRemovedScrollbar()
 
 OptionSet<TiledBacking::Scrollability> LocalFrameView::computeScrollability() const
 {
-    auto* page = m_frame->page();
+    RefPtr page = m_frame->page();
 
     // Use smaller square tiles if the Window is not active to facilitate app napping.
     if (!page || !page->isWindowActive())
@@ -4011,7 +4011,7 @@ void LocalFrameView::scheduleResizeEventIfNeeded()
     if (!renderView || renderView->printing())
         return;
 
-    auto* page = m_frame->page();
+    RefPtr page = m_frame->page();
     if (page && page->chrome().client().isSVGImageChromeClient())
         return;
 
@@ -4103,7 +4103,7 @@ void LocalFrameView::autoSizeIfEnabled()
         break;
     }
 
-    if (auto* page = m_frame->page(); page && m_frame->isMainFrame())
+    if (RefPtr page = m_frame->page(); page && m_frame->isMainFrame())
         page->chrome().client().intrinsicContentsSizeChanged(m_autoSizeContentSize);
 
     m_didRunAutosize = true;
@@ -5128,7 +5128,7 @@ void LocalFrameView::updateHasReachedSignificantRenderedTextThreshold()
     if (m_hasReachedSignificantRenderedTextThreshold)
         return;
 
-    auto* page = m_frame->page();
+    RefPtr page = m_frame->page();
     if (!page || !page->requestedLayoutMilestones().contains(LayoutMilestone::DidRenderSignificantAmountOfText))
         return;
 
@@ -5765,7 +5765,7 @@ void LocalFrameView::setScrollVelocity(const VelocityData& velocityData)
 void LocalFrameView::setScrollingPerformanceTestingEnabled(bool scrollingPerformanceTestingEnabled)
 {
     if (scrollingPerformanceTestingEnabled) {
-        auto* page = m_frame->page();
+        RefPtr page = m_frame->page();
         if (page && page->performanceLoggingClient())
             page->performanceLoggingClient()->logScrollingEvent(PerformanceLoggingClient::ScrollingEvent::LoggingEnabled, MonotonicTime::now(), 0);
     }
@@ -5776,7 +5776,7 @@ void LocalFrameView::setScrollingPerformanceTestingEnabled(bool scrollingPerform
 
 void LocalFrameView::createScrollbarsController()
 {
-    auto* page = m_frame->page();
+    RefPtr page = m_frame->page();
     if (!page) {
         ScrollView::createScrollbarsController();
         return;
@@ -5787,7 +5787,7 @@ void LocalFrameView::createScrollbarsController()
 
 void LocalFrameView::didAddScrollbar(Scrollbar* scrollbar, ScrollbarOrientation orientation)
 {
-    auto* page = m_frame->page();
+    RefPtr page = m_frame->page();
 
     ScrollableArea::didAddScrollbar(scrollbar, orientation);
 
