@@ -7776,4 +7776,3 @@ webkit.org/b/290494 editing/caret/caret-position-sideways-lr.html [ Pass Failure
 
 webkit.org/b/290564 imported/w3c/web-platform-tests/css/css-viewport/computedStyle-zoom.html [ Pass Timeout ]
 
-webkit.org/b/290568 [ Debug ] fast/dynamic/link-href-change.html [ Pass Crash ]
