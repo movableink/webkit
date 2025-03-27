@@ -1974,12 +1974,38 @@ void WebPageProxy::maybeInitializeSandboxExtensionHandle(WebProcessProxy& proces
         }
     }
 
-    if (createdExtension)
+    if (createdExtension) {
         process.assumeReadAccessToBaseURL(*this, baseURL.string(), [sandboxExtensionHandle = WTFMove(sandboxExtensionHandle), completionHandler = WTFMove(completionHandler)] mutable {
             completionHandler(WTFMove(sandboxExtensionHandle));
         });
-    else
-        completionHandler(std::nullopt);
+        return;
+    }
+
+    // We failed to issue read access to the base path, fall back to issuing one for the full URL instead.
+    auto fullPath = url.fileSystemPath();
+    if (fullPath.isNull())
+        return completionHandler(std::nullopt);
+#if HAVE(AUDIT_TOKEN)
+    if (auto token = process.protectedConnection()->getAuditToken()) {
+        if (auto handle = SandboxExtension::createHandleForReadByAuditToken(fullPath, *token)) {
+            sandboxExtensionHandle = WTFMove(*handle);
+            createdExtension = true;
+        }
+    } else
+#endif
+    {
+        if (auto handle = SandboxExtension::createHandle(fullPath, SandboxExtension::Type::ReadOnly)) {
+            sandboxExtensionHandle = WTFMove(*handle);
+            createdExtension = true;
+        }
+    }
+
+    if (createdExtension) {
+        completionHandler(WTFMove(sandboxExtensionHandle));
+        return;
+    }
+
+    completionHandler(std::nullopt);
 }
 
 void WebPageProxy::prepareToLoadWebPage(WebProcessProxy& process, LoadParameters& parameters)

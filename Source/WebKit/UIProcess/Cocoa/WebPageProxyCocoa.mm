@@ -285,14 +285,17 @@ void WebPageProxy::addPlatformLoadParameters(WebProcessProxy& process, LoadParam
 
 void WebPageProxy::createSandboxExtensionsIfNeeded(const Vector<String>& files, SandboxExtension::Handle& fileReadHandle, Vector<SandboxExtension::Handle>& fileUploadHandles)
 {
+    WEBPAGEPROXY_RELEASE_LOG(Loading, "WebPageProxy::createSandboxExtensionsIfNeeded: %zu files", files.size());
+
     if (!files.size())
         return;
+
+    auto token = protectedLegacyMainFrameProcess()->protectedConnection()->getAuditToken();
+    ASSERT(token);
 
     if (files.size() == 1) {
         BOOL isDirectory;
         if ([[NSFileManager defaultManager] fileExistsAtPath:files[0] isDirectory:&isDirectory] && !isDirectory) {
-            auto token = protectedLegacyMainFrameProcess()->protectedConnection()->getAuditToken();
-            ASSERT(token);
             if (token) {
                 if (auto handle = SandboxExtension::createHandleForReadByAuditToken("/"_s, *token))
                     fileReadHandle = WTFMove(*handle);
@@ -305,7 +308,10 @@ void WebPageProxy::createSandboxExtensionsIfNeeded(const Vector<String>& files, 
     for (auto& file : files) {
         if (![[NSFileManager defaultManager] fileExistsAtPath:file])
             continue;
-        if (auto handle = SandboxExtension::createHandle(file, SandboxExtension::Type::ReadOnly))
+        if (token) {
+            if (auto handle = SandboxExtension::createHandleForReadByAuditToken(file, *token))
+                fileUploadHandles.append(WTFMove(*handle));
+        } else if (auto handle = SandboxExtension::createHandle(file, SandboxExtension::Type::ReadOnly))
             fileUploadHandles.append(WTFMove(*handle));
     }
 }
