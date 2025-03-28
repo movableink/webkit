@@ -7032,8 +7032,6 @@ imported/w3c/web-platform-tests/scroll-animations/css/view-timeline-subject-boun
 imported/w3c/web-platform-tests/css/css-cascade/scope-visited.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-cascade/scope-shadow-sharing.html [ ImageOnlyFailure ]
 
-imported/w3c/web-platform-tests/css/css-cascade/scope-invalidation.html [ Skip ]
-
 webkit.org/b/263923 animations/transition-and-animation-2.html [ Failure Pass ]
 
 # CloseWatcher related timeouts
