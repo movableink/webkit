@@ -26,19 +26,11 @@
 #pragma once
 
 #if USE(ATK)
-#include "atk/ATKCompat.h"
 #include <atk/atk.h>
-#include <glib-object.h>
-#include <wpe/WPEView.h>
-#include <wpe/WPEViewAccessible.h>
+#if !ATK_CHECK_VERSION(2, 38, 0)
 
-G_BEGIN_DECLS
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(AtkSocket, g_object_unref)
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(AtkObject, g_object_unref)
 
-#define WPE_TYPE_VIEW_ACCESSIBLE_ATK (wpe_view_accessible_atk_get_type())
-G_DECLARE_FINAL_TYPE (WPEViewAccessibleAtk, wpe_view_accessible_atk, WPE, VIEW_ACCESSIBLE_ATK, AtkSocket)
-
-WPEViewAccessible* wpeViewAccessibleAtkNew(WPEView*);
-
-G_END_DECLS
-
-#endif // USE(ATK)
+#endif
+#endif

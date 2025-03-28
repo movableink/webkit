@@ -27,6 +27,7 @@
 
 #if USE(ATK)
 #include "WPEToplevel.h"
+#include "atk/ATKCompat.h"
 #include <atk/atk.h>
 #include <glib-object.h>
 

@@ -26,6 +26,7 @@
 #pragma once
 
 #if USE(ATK)
+#include "atk/ATKCompat.h"
 #include <atk/atk.h>
 #include <glib-object.h>
 #include <wpe/WPEToplevel.h>
