@@ -98,7 +98,7 @@ public:
     bool inPaintableState() const { return layoutPhase() != LayoutPhase::InRenderTreeLayout && layoutPhase() != LayoutPhase::InViewSizeAdjust && (layoutPhase() != LayoutPhase::InPostLayout || inAsynchronousTasks()); }
 
     bool isSkippedContentForLayout(const RenderElement&) const;
-    bool isSkippedContentRootForLayout(const RenderElement&) const;
+    bool isSkippedContentRootForLayout(const RenderBox&) const;
 
     bool isPercentHeightResolveDisabledFor(const RenderBox& flexItem);
 

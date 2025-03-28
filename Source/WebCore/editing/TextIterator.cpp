@@ -489,7 +489,7 @@ void TextIterator::advance()
             if (!isRendererVisible(renderer.get(), m_behaviors)) {
                 m_handledNode = true;
                 m_handledChildren = !hasDisplayContents(*protectedCurrentNode()) && !renderer;
-            } else if (auto* renderElement = dynamicDowncast<RenderElement>(renderer.get()); renderElement && isSkippedContentRoot(*renderElement))
+            } else if (auto* renderBox = dynamicDowncast<RenderBox>(renderer.get()); renderBox && isSkippedContentRoot(*renderBox))
                 m_handledChildren = true;
             else {
                 // handle current node according to its type

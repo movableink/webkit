@@ -675,11 +675,11 @@ bool LocalFrameViewLayoutContext::isSkippedContentForLayout(const RenderElement&
     return renderer.isSkippedContent();
 }
 
-bool LocalFrameViewLayoutContext::isSkippedContentRootForLayout(const RenderElement& renderer) const
+bool LocalFrameViewLayoutContext::isSkippedContentRootForLayout(const RenderBox& renderBox) const
 {
     if (skippedContentNeedsLayout())
         return false;
-    return isSkippedContentRoot(renderer);
+    return isSkippedContentRoot(renderBox);
 }
 
 #if ASSERT_ENABLED

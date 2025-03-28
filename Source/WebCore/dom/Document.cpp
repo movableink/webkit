@@ -2255,7 +2255,7 @@ std::optional<BoundaryPoint> Document::caretPositionFromPoint(const LayoutPoint&
     if (!renderer)
         return std::nullopt;
 
-    if (auto* renderElement = dynamicDowncast<RenderElement>(*renderer); renderElement && isSkippedContentRoot(*renderElement))
+    if (auto* renderBox = dynamicDowncast<RenderBox>(*renderer); renderBox && isSkippedContentRoot(*renderBox))
         return { { *node, 0 } };
 
     auto rangeCompliantPosition = renderer->positionForPoint(localPoint, source).parentAnchoredEquivalent();
@@ -2286,7 +2286,7 @@ RefPtr<CaretPosition> Document::caretPositionFromPoint(double x, double y, Caret
     if (!renderer)
         return nullptr;
 
-    if (auto* renderElement = dynamicDowncast<RenderElement>(*renderer); renderElement && isSkippedContentRoot(*renderElement))
+    if (auto* renderBox = dynamicDowncast<RenderBox>(*renderer); renderBox && isSkippedContentRoot(*renderBox))
         return CaretPosition::create(WTFMove(node), 0);
 
     auto position = renderer->positionForPoint(localPoint, HitTestSource::Script);
