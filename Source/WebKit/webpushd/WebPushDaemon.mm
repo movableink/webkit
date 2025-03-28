@@ -541,16 +541,14 @@ void WebPushDaemon::handleIncomingPush(const PushSubscriptionSetIdentifier& iden
 #if HAVE(FULL_FEATURED_USER_NOTIFICATIONS)
 static bool supportsBuiltinNotifications(const PushSubscriptionSetIdentifier& identifier)
 {
+    bool hasPushPartition = !identifier.pushPartition.isEmpty();
+
 #if PLATFORM(IOS)
-    if (identifier.pushPartition.isEmpty())
-        return false;
+    return hasPushPartition;
 #endif
 #if PLATFORM(MAC)
-    if (identifier.bundleIdentifier != "com.apple.WebKit.TestWebKitAPI"_s)
-        return false;
+    return identifier.bundleIdentifier == "com.apple.WebKit.TestWebKitAPI"_s && hasPushPartition;
 #endif // PLATFORM(MAC)
-
-    return true;
 }
 #endif // HAVE(FULL_FEATURED_USER_NOTIFICATIONS)
 
