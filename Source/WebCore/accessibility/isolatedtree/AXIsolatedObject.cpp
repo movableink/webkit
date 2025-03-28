@@ -130,7 +130,7 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     };
 
     // Allocate a capacity based on the minimum properties an object has (based on measurements from a real webpage).
-    constexpr unsigned unignoredSizeToReserve = 10;
+    constexpr unsigned unignoredSizeToReserve = 2;
 #if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
     if (object.includeIgnoredInCoreTree()) {
         bool isIgnored = object.isIgnored();
@@ -188,8 +188,8 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXProperty::MaxValueForRange, object.maxValueForRange());
     setProperty(AXProperty::MinValueForRange, object.minValueForRange());
     setProperty(AXProperty::SupportsARIAOwns, object.supportsARIAOwns());
-    setProperty(AXProperty::PopupValue, object.popupValue().isolatedCopy());
-    setProperty(AXProperty::InvalidStatus, object.invalidStatus().isolatedCopy());
+    setProperty(AXProperty::ExplicitPopupValue, object.explicitPopupValue().isolatedCopy());
+    setProperty(AXProperty::ExplicitInvalidStatus, object.explicitInvalidStatus().isolatedCopy());
     setProperty(AXProperty::SupportsExpanded, object.supportsExpanded());
     setProperty(AXProperty::SortDirection, static_cast<int>(object.sortDirection()));
 #if !LOG_DISABLED
@@ -205,12 +205,12 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXProperty::ValueAutofillButtonType, static_cast<int>(object.valueAutofillButtonType()));
     setProperty(AXProperty::URL, std::make_shared<URL>(object.url().isolatedCopy()));
     setProperty(AXProperty::AccessKey, object.accessKey().isolatedCopy());
-    setProperty(AXProperty::AutoCompleteValue, object.autoCompleteValue().isolatedCopy());
+    setProperty(AXProperty::ExplicitAutoCompleteValue, object.explicitAutoCompleteValue().isolatedCopy());
     setProperty(AXProperty::ColorValue, object.colorValue());
     setProperty(AXProperty::ExplicitOrientation, object.explicitOrientation());
     setProperty(AXProperty::HierarchicalLevel, object.hierarchicalLevel());
     setProperty(AXProperty::ExplicitLiveRegionStatus, object.explicitLiveRegionStatus().isolatedCopy());
-    setProperty(AXProperty::LiveRegionRelevant, object.liveRegionRelevant().isolatedCopy());
+    setProperty(AXProperty::ExplicitLiveRegionRelevant, object.explicitLiveRegionRelevant().isolatedCopy());
     setProperty(AXProperty::LiveRegionAtomic, object.liveRegionAtomic());
     setProperty(AXProperty::HasBoldFont, object.hasBoldFont());
     setProperty(AXProperty::HasItalicFont, object.hasItalicFont());
@@ -593,9 +593,11 @@ void AXIsolatedObject::setProperty(AXProperty propertyName, AXPropertyValueVaria
         [](std::nullptr_t&) { return true; },
         [](Markable<AXID> typedValue) { return !typedValue; },
         [&](String& typedValue) {
+#if !ENABLE(AX_THREAD_TEXT_APIS)
             // We use a null stringValue to indicate when the string value is different than the text content.
             if (propertyName == AXProperty::StringValue)
                 return typedValue == emptyString(); // Only compares empty, not null
+#endif // !ENABLE(AX_THREAD_TEXT_APIS)
             return typedValue.isEmpty(); // null or empty
         },
         [](bool typedValue) { return !typedValue; },
@@ -605,7 +607,11 @@ void AXIsolatedObject::setProperty(AXProperty propertyName, AXPropertyValueVaria
         [](float typedValue) { return typedValue == 0.0; },
         [](uint64_t typedValue) { return !typedValue; },
         [](AccessibilityButtonState& typedValue) { return typedValue == AccessibilityButtonState::Off; },
-        [](Color& typedValue) { return typedValue == Color(); },
+        [&](Color& typedValue) {
+            if (propertyName == AXProperty::ColorValue)
+                return typedValue == Color::black;
+            return typedValue.toColorTypeLossy<SRGBA<uint8_t>>() == Color().toColorTypeLossy<SRGBA<uint8_t>>();
+        },
         [](std::shared_ptr<URL>& typedValue) { return !typedValue || *typedValue == URL(); },
         [](LayoutRect& typedValue) { return typedValue == LayoutRect(); },
         [](IntPoint& typedValue) { return typedValue == IntPoint(); },
@@ -643,6 +649,7 @@ void AXIsolatedObject::setProperty(AXProperty propertyName, AXPropertyValueVaria
         [] (TagName& tag) { return tag == TagName::Unknown; },
         [] (DateComponentsType& typedValue) { return typedValue == DateComponentsType::Invalid; },
         [] (std::optional<AccessibilityOrientation>& typedValue) { return !typedValue; },
+        [] (OptionSet<SpeakAs>& typedValue) { return typedValue.isEmpty(); },
         [](auto&) {
             ASSERT_NOT_REACHED();
             return false;
@@ -957,7 +964,20 @@ void AXIsolatedObject::setSelectedTextRange(CharacterRange&& range)
 
 SRGBA<uint8_t> AXIsolatedObject::colorValue() const
 {
-    return colorAttributeValue(AXProperty::ColorValue).toColorTypeLossy<SRGBA<uint8_t>>();
+    auto it = m_propertyMap.find(AXProperty::ColorValue);
+    if (it == m_propertyMap.end()) {
+        // Don't fallback to returning the default Color() value, as that is transparent black,
+        // but we want to return opaque black as a default for this property.
+        return Color::black;
+    }
+
+    return WTF::switchOn(it->value,
+        [] (const Color& typedValue) -> SRGBA<uint8_t> { return typedValue.toColorTypeLossy<SRGBA<uint8_t>>(); },
+        [] (const auto&) -> SRGBA<uint8_t> {
+            ASSERT_NOT_REACHED();
+            return Color().toColorTypeLossy<SRGBA<uint8_t>>();
+        }
+    );
 }
 
 AXIsolatedObject* AXIsolatedObject::accessibilityHitTest(const IntPoint& point) const
@@ -1020,7 +1040,7 @@ OptionSet<T> AXIsolatedObject::optionSetAttributeValue(AXProperty propertyName) 
 {
     auto value = m_propertyMap.get(propertyName);
     return WTF::switchOn(value,
-        [] (T& typedValue) -> OptionSet<T> { return typedValue; },
+        [] (OptionSet<T>& typedValue) -> OptionSet<T> { return typedValue; },
         [] (auto&) { return OptionSet<T>(); }
     );
 }
@@ -1998,11 +2018,15 @@ String AXIsolatedObject::titleAttributeValue() const
 
 String AXIsolatedObject::stringValue() const
 {
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    return stringAttributeValue(AXProperty::StringValue);
+#else
     if (m_propertyMap.contains(AXProperty::StringValue))
         return stringAttributeValue(AXProperty::StringValue);
     if (auto value = platformStringValue())
         return *value;
     return { };
+#endif // ENABLE(AX_THREAD_TEXT_APIS)
 }
 
 String AXIsolatedObject::text() const
@@ -2097,15 +2121,6 @@ AXCoreObject::AccessibilityChildrenVector AXIsolatedObject::relatedObjects(AXRel
     if (auto relatedObjectIDs = tree()->relatedObjectIDsFor(*this, relationType))
         return tree()->objectsForIDs(*relatedObjectIDs);
     return { };
-}
-
-OptionSet<AXAncestorFlag> AXIsolatedObject::ancestorFlags() const
-{
-    auto value = m_propertyMap.get(AXProperty::AncestorFlags);
-    return WTF::switchOn(value,
-        [] (OptionSet<AXAncestorFlag>& typedValue) -> OptionSet<AXAncestorFlag> { return typedValue; },
-        [] (auto&) { return OptionSet<AXAncestorFlag>(); }
-    );
 }
 
 String AXIsolatedObject::innerHTML() const

@@ -37,7 +37,7 @@ namespace WebCore {
 void AXIsolatedObject::initializePlatformProperties(const Ref<const AccessibilityObject>& object)
 {
     setProperty(AXProperty::HasApplePDFAnnotationAttribute, object->hasApplePDFAnnotationAttribute());
-    setProperty(AXProperty::SpeechHint, object->speechHintAttributeValue().isolatedCopy());
+    setProperty(AXProperty::SpeakAs, object->speakAs());
 #if ENABLE(AX_THREAD_TEXT_APIS)
     if (object->isStaticText()) {
         auto style = object->stylesForAttributedString();

@@ -653,9 +653,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::AncestorFlags:
         stream << "AncestorFlags";
         break;
-    case AXProperty::AutoCompleteValue:
-        stream << "AutoCompleteValue";
-        break;
     case AXProperty::BackgroundColor:
         stream << "BackgroundColor";
         break;
@@ -748,11 +745,23 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::ExpandedTextValue:
         stream << "ExpandedTextValue";
         break;
+    case AXProperty::ExplicitAutoCompleteValue:
+        stream << "ExplicitAutoCompleteValue";
+        break;
+    case AXProperty::ExplicitInvalidStatus:
+        stream << "ExplicitInvalidStatus";
+        break;
+    case AXProperty::ExplicitLiveRegionRelevant:
+        stream << "ExplicitLiveRegionRelevant";
+        break;
     case AXProperty::ExplicitLiveRegionStatus:
         stream << "ExplicitLiveRegionStatus";
         break;
     case AXProperty::ExplicitOrientation:
         stream << "ExplicitOrientation";
+        break;
+    case AXProperty::ExplicitPopupValue:
+        stream << "ExplicitPopupValue";
         break;
     case AXProperty::ExtendedDescription:
         stream << "ExtendedDescription";
@@ -827,9 +836,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
         break;
     case AXProperty::InsideLink:
         stream << "InsideLink";
-        break;
-    case AXProperty::InvalidStatus:
-        stream << "InvalidStatus";
         break;
     case AXProperty::IsGrabbed:
         stream << "IsGrabbed";
@@ -995,9 +1001,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::LiveRegionAtomic:
         stream << "LiveRegionAtomic";
         break;
-    case AXProperty::LiveRegionRelevant:
-        stream << "LiveRegionRelevant";
-        break;
     case AXProperty::LocalizedActionVerb:
         stream << "LocalizedActionVerb";
         break;
@@ -1061,9 +1064,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::PlaceholderValue:
         stream << "PlaceholderValue";
         break;
-    case AXProperty::PopupValue:
-        stream << "PopupValue";
-        break;
     case AXProperty::PosInSet:
         stream << "PosInSet";
         break;
@@ -1118,8 +1118,8 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::SortDirection:
         stream << "SortDirection";
         break;
-    case AXProperty::SpeechHint:
-        stream << "SpeechHint";
+    case AXProperty::SpeakAs:
+        stream << "SpeakAs";
         break;
     case AXProperty::StringValue:
         stream << "StringValue";

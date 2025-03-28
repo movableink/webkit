@@ -589,11 +589,14 @@ enum class AccessibilityButtonState {
 enum class AXDirection : bool { Next, Previous };
 
 enum class AccessibilitySortDirection {
+    // It's important that Invalid is the first entry, as that means it is the "default value"
+    // according to AXIsolatedObject::setProperty, and thus won't be cached unless it's something
+    // other than Invalid.
+    Invalid,
     None,
     Ascending,
     Descending,
     Other,
-    Invalid,
 };
 
 enum class AccessibilitySearchTextStartFrom {
@@ -1055,10 +1058,12 @@ public:
 
     bool hasPopup() const;
     bool selfOrAncestorLinkHasPopup() const;
-    virtual String popupValue() const = 0;
+    virtual String explicitPopupValue() const = 0;
+    String popupValue() const;
     virtual bool supportsHasPopup() const = 0;
     virtual bool pressedIsPresent() const = 0;
-    virtual String invalidStatus() const = 0;
+    virtual String explicitInvalidStatus() const = 0;
+    String invalidStatus() const;
     virtual bool supportsExpanded() const = 0;
     virtual bool supportsChecked() const = 0;
     virtual AccessibilitySortDirection sortDirection() const = 0;
@@ -1385,10 +1390,12 @@ public:
     virtual AXCoreObject* liveRegionAncestor(bool excludeIfOff = true) const = 0;
     virtual const String explicitLiveRegionStatus() const = 0;
     const String liveRegionStatus() const;
-    virtual const String liveRegionRelevant() const = 0;
+    virtual const String explicitLiveRegionRelevant() const = 0;
+    const String liveRegionRelevant() const;
     virtual bool liveRegionAtomic() const = 0;
     virtual bool isBusy() const = 0;
-    virtual String autoCompleteValue() const = 0;
+    virtual String explicitAutoCompleteValue() const = 0;
+    String autoCompleteValue() const;
 
     // Make this object visible by scrolling as many nested scrollable views as needed.
     virtual void scrollToMakeVisible() const = 0;
@@ -1458,7 +1465,8 @@ public:
 #if PLATFORM(COCOA)
     virtual bool preventKeyboardDOMEventDispatch() const = 0;
     virtual void setPreventKeyboardDOMEventDispatch(bool) = 0;
-    virtual String speechHintAttributeValue() const = 0;
+    virtual OptionSet<SpeakAs> speakAs() const = 0;
+    String speechHint() const;
     virtual bool fileUploadButtonReturnsValueInTitle() const = 0;
     String descriptionAttributeValue() const;
     bool shouldComputeDescriptionAttributeValue() const;
@@ -1572,6 +1580,13 @@ inline const String AXCoreObject::defaultLiveRegionStatusForRole(AccessibilityRo
 inline bool AXCoreObject::liveRegionStatusIsEnabled(const AtomString& liveRegionStatus)
 {
     return equalLettersIgnoringASCIICase(liveRegionStatus, "polite"_s) || equalLettersIgnoringASCIICase(liveRegionStatus, "assertive"_s);
+}
+
+inline const String AXCoreObject::liveRegionRelevant() const
+{
+    auto explicitValue = explicitLiveRegionRelevant();
+    // Default aria-relevant = "additions text".
+    return explicitValue.isEmpty() ? "additions text"_s : explicitValue;
 }
 
 inline const String AXCoreObject::liveRegionStatus() const

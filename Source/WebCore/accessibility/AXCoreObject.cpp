@@ -392,6 +392,19 @@ AXCoreObject* AXCoreObject::nextSiblingIncludingIgnoredOrParent() const
     return parent.get();
 }
 
+String AXCoreObject::autoCompleteValue() const
+{
+    String explicitValue = explicitAutoCompleteValue();
+    return explicitValue.isEmpty() ? "none"_s : explicitValue;
+}
+
+String AXCoreObject::invalidStatus() const
+{
+    auto explicitValue = explicitInvalidStatus();
+    // "false" is the default if no invalid status is explicitly provided (e.g. via aria-invalid).
+    return explicitValue.isEmpty() ? "false"_s : explicitValue;
+}
+
 AXCoreObject::AccessibilityChildrenVector AXCoreObject::contents()
 {
     if (isTabList())
@@ -759,6 +772,22 @@ bool AXCoreObject::isRootWebArea() const
     RefPtr parent = parentObject();
     // If the parent is a scroll area, and the scroll area has no parent, we are at the root web area.
     return parent && parent->roleValue() == AccessibilityRole::ScrollArea && !parent->parentObject();
+}
+
+String AXCoreObject::popupValue() const
+{
+    String explicitValue = explicitPopupValue();
+    if (!explicitValue.isEmpty())
+        return explicitValue;
+
+    // In ARIA 1.1, the implicit value for combobox became "listbox."
+    if (isComboBox())
+        return "listbox"_s;
+
+    // The spec states that "User agents must treat any value of aria-haspopup that is not
+    // included in the list of allowed values, including an empty string, as if the value
+    // false had been provided."
+    return "false"_s;
 }
 
 bool AXCoreObject::hasPopup() const

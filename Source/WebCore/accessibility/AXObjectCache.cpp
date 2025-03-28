@@ -4816,7 +4816,7 @@ void AXObjectCache::updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityO
             tree->queueNodeUpdate(notification.first->objectID(), { { AXProperty::SetSize, AXProperty::SupportsSetSize } });
             break;
         case AXNotification::SpeakAsChanged:
-            tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::SpeechHint });
+            tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::SpeakAs });
             break;
         case AXNotification::TextCompositionChanged:
             tree->queueNodeUpdate(notification.first->objectID(), { AXProperty::TextInputMarkedTextMarkerRange });

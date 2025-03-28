@@ -275,12 +275,12 @@ public:
     bool supportsARIARoleDescription() const;
     bool supportsARIAOwns() const override { return false; }
 
-    String popupValue() const final;
+    String explicitPopupValue() const final;
     bool hasDatalist() const;
     bool supportsHasPopup() const final;
     bool pressedIsPresent() const final;
     bool ariaIsMultiline() const;
-    String invalidStatus() const final;
+    String explicitInvalidStatus() const final;
     bool supportsPressed() const;
     bool supportsExpanded() const final;
     bool supportsChecked() const final;
@@ -636,7 +636,7 @@ public:
     // ARIA live-region features.
     AccessibilityObject* liveRegionAncestor(bool excludeIfOff = true) const final { return Accessibility::liveRegionAncestor(*this, excludeIfOff); }
     const String explicitLiveRegionStatus() const override { return String(); }
-    const String liveRegionRelevant() const override { return nullAtom(); }
+    const String explicitLiveRegionRelevant() const override { return nullAtom(); }
     bool liveRegionAtomic() const override { return false; }
     bool isBusy() const override { return false; }
     static bool contentEditableAttributeIsEnabled(Element&);
@@ -646,13 +646,10 @@ public:
     virtual String readOnlyValue() const;
 
     bool supportsAutoComplete() const;
-    String autoCompleteValue() const final;
+    String explicitAutoCompleteValue() const final;
 
     bool hasARIAValueNow() const { return hasAttribute(HTMLNames::aria_valuenowAttr); }
     bool supportsARIAAttributes() const;
-
-    // CSS3 Speech properties.
-    OptionSet<SpeakAs> speakAsProperty() const;
 
     // Make this object visible by scrolling as many nested scrollable views as needed.
     void scrollToMakeVisible() const final;
@@ -748,7 +745,7 @@ public:
     bool preventKeyboardDOMEventDispatch() const final;
     void setPreventKeyboardDOMEventDispatch(bool) final;
     bool fileUploadButtonReturnsValueInTitle() const final;
-    String speechHintAttributeValue() const final;
+    OptionSet<SpeakAs> speakAs() const final;
     bool hasApplePDFAnnotationAttribute() const final { return hasAttribute(HTMLNames::x_apple_pdf_annotationAttr); }
 #endif
 

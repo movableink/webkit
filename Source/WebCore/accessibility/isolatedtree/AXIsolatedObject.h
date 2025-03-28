@@ -261,9 +261,9 @@ private:
     int layoutCount() const final;
     double loadingProgress() const final { return tree()->loadingProgress(); }
     bool supportsARIAOwns() const final { return boolAttributeValue(AXProperty::SupportsARIAOwns); }
-    String popupValue() const final { return stringAttributeValue(AXProperty::PopupValue); }
+    String explicitPopupValue() const final { return stringAttributeValue(AXProperty::ExplicitPopupValue); }
     bool pressedIsPresent() const final;
-    String invalidStatus() const final { return stringAttributeValue(AXProperty::InvalidStatus); }
+    String explicitInvalidStatus() const final { return stringAttributeValue(AXProperty::ExplicitInvalidStatus); }
     bool supportsExpanded() const final { return boolAttributeValue(AXProperty::SupportsExpanded); }
     AccessibilitySortDirection sortDirection() const final { return static_cast<AccessibilitySortDirection>(intAttributeValue(AXProperty::SortDirection)); }
     String identifierAttribute() const final;
@@ -308,7 +308,7 @@ private:
     String accessKey() const final { return stringAttributeValueNullIfMissing(AXProperty::AccessKey); }
     String localizedActionVerb() const final { return stringAttributeValue(AXProperty::LocalizedActionVerb); }
     String actionVerb() const final { return stringAttributeValue(AXProperty::ActionVerb); }
-    String autoCompleteValue() const final { return stringAttributeValue(AXProperty::AutoCompleteValue); }
+    String explicitAutoCompleteValue() const final { return stringAttributeValue(AXProperty::ExplicitAutoCompleteValue); }
     bool isMathElement() const final { return boolAttributeValue(AXProperty::IsMathElement); }
     bool isMathFraction() const final { return boolAttributeValue(AXProperty::IsMathFraction); }
     bool isMathFenced() const final { return boolAttributeValue(AXProperty::IsMathFenced); }
@@ -337,7 +337,7 @@ private:
     void mathPrescripts(AccessibilityMathMultiscriptPairs&) final;
     void mathPostscripts(AccessibilityMathMultiscriptPairs&) final;
 #if PLATFORM(COCOA)
-    String speechHintAttributeValue() const final { return stringAttributeValue(AXProperty::SpeechHint); }
+    OptionSet<SpeakAs> speakAs() const final { return optionSetAttributeValue<SpeakAs>(AXProperty::SpeakAs); }
 #endif
     bool fileUploadButtonReturnsValueInTitle() const final;
 #if PLATFORM(MAC)
@@ -359,7 +359,7 @@ private:
     bool isDetachedFromParent() final;
     AXIsolatedObject* liveRegionAncestor(bool excludeIfOff = true) const final { return Accessibility::liveRegionAncestor(*this, excludeIfOff); }
     const String explicitLiveRegionStatus() const final { return stringAttributeValue(AXProperty::ExplicitLiveRegionStatus); }
-    const String liveRegionRelevant() const final { return stringAttributeValue(AXProperty::LiveRegionRelevant); }
+    const String explicitLiveRegionRelevant() const final { return stringAttributeValue(AXProperty::ExplicitLiveRegionRelevant); }
     bool liveRegionAtomic() const final { return boolAttributeValue(AXProperty::LiveRegionAtomic); }
     bool isBusy() const final { return boolAttributeValue(AXProperty::IsBusy); }
     bool isInlineText() const final { return boolAttributeValue(AXProperty::IsInlineText); }
@@ -535,7 +535,7 @@ private:
     ScrollView* scrollView() const final;
     void detachFromParent() final;
 
-    OptionSet<AXAncestorFlag> ancestorFlags() const;
+    OptionSet<AXAncestorFlag> ancestorFlags() const { return optionSetAttributeValue<AXAncestorFlag>(AXProperty::AncestorFlags); }
 
     bool hasDocumentRoleAncestor() const final { return ancestorFlags().contains(AXAncestorFlag::HasDocumentRoleAncestor); }
     bool hasWebApplicationAncestor() const final { return ancestorFlags().contains(AXAncestorFlag::HasWebApplicationAncestor); }

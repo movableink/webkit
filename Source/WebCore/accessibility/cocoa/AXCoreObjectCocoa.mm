@@ -58,6 +58,22 @@ SOFT_LINK_CONSTANT(AXRuntime, UIAccessibilityTokenAttachment, NSString *);
 
 namespace WebCore {
 
+String AXCoreObject::speechHint() const
+{
+    auto speakAs = this->speakAs();
+
+    StringBuilder builder;
+    builder.append((speakAs & SpeakAs::SpellOut) ? "spell-out"_s : "normal"_s);
+    if (speakAs & SpeakAs::Digits)
+        builder.append(" digits"_s);
+    if (speakAs & SpeakAs::LiteralPunctuation)
+        builder.append(" literal-punctuation"_s);
+    if (speakAs & SpeakAs::NoPunctuation)
+        builder.append(" no-punctuation"_s);
+
+    return builder.toString();
+}
+
 // When modifying attributed strings, the range can come from a source which may provide faulty information (e.g. the spell checker).
 // To protect against such cases, the range should be validated before adding or removing attributes.
 bool attributedStringContainsRange(NSAttributedString *attributedString, const NSRange& range)

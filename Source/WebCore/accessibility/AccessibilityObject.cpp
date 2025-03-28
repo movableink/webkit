@@ -1891,13 +1891,6 @@ std::optional<VisiblePosition> AccessibilityObject::previousLineStartPositionInt
     return startPosition;
 }
 
-OptionSet<SpeakAs> AccessibilityObject::speakAsProperty() const
-{
-    if (auto* style = this->style())
-        return style->speakAs();
-    return { };
-}
-
 InsideLink AccessibilityObject::insideLink() const
 {
     auto* style = this->style();
@@ -1996,7 +1989,7 @@ bool AccessibilityObject::supportsAutoComplete() const
     return (isComboBox() || isARIATextControl()) && hasAttribute(aria_autocompleteAttr);
 }
 
-String AccessibilityObject::autoCompleteValue() const
+String AccessibilityObject::explicitAutoCompleteValue() const
 {
     const AtomString& autoComplete = getAttribute(aria_autocompleteAttr);
     if (equalLettersIgnoringASCIICase(autoComplete, "inline"_s)
@@ -2004,7 +1997,7 @@ String AccessibilityObject::autoCompleteValue() const
         || equalLettersIgnoringASCIICase(autoComplete, "both"_s))
         return autoComplete;
 
-    return "none"_s;
+    return { };
 }
 
 bool AccessibilityObject::contentEditableAttributeIsEnabled(Element& element)
@@ -2319,13 +2312,13 @@ bool AccessibilityObject::ariaIsMultiline() const
     return equalLettersIgnoringASCIICase(getAttribute(aria_multilineAttr), "true"_s);
 }
 
-String AccessibilityObject::invalidStatus() const
+String AccessibilityObject::explicitInvalidStatus() const
 {
-    String grammarValue = "grammar"_s;
-    String falseValue = "false"_s;
-    String spellingValue = "spelling"_s;
-    String trueValue = "true"_s;
-    String undefinedValue = "undefined"_s;
+    static NeverDestroyed<String> grammarValue = "grammar"_s;
+    static NeverDestroyed<String> falseValue = "false"_s;
+    static NeverDestroyed<String> spellingValue = "spelling"_s;
+    static NeverDestroyed<String> trueValue = "true"_s;
+    static NeverDestroyed<String> undefinedValue = "undefined"_s;
 
     // aria-invalid can return false (default), grammar, spelling, or true.
     auto ariaInvalid = getAttributeTrimmed(aria_invalidAttr);
@@ -2337,7 +2330,7 @@ String AccessibilityObject::invalidStatus() const
             if (validatedFormListedElement->willValidate() && !validatedFormListedElement->isValidFormControlElement())
                 return trueValue;
         }
-        return falseValue;
+        return { };
     }
     
     // If "false", "undefined" [sic, string value], empty, or missing, return "false".
@@ -3185,14 +3178,14 @@ bool AccessibilityObject::supportsHasPopup() const
     return hasAttribute(aria_haspopupAttr) || isComboBox();
 }
 
-String AccessibilityObject::popupValue() const
+String AccessibilityObject::explicitPopupValue() const
 {
     auto& hasPopup = getAttribute(aria_haspopupAttr);
     if (hasPopup.isEmpty()) {
-        // In ARIA 1.1, the implicit value for combobox became "listbox."
-        if (isComboBox() || hasDatalist())
+        // In ARIA 1.1, the implicit value for datalists became "listbox."
+        if (hasDatalist())
             return "listbox"_s;
-        return "false"_s;
+        return { };
     }
 
     for (auto& value : { "menu"_s, "listbox"_s, "tree"_s, "grid"_s, "dialog"_s }) {
@@ -3204,11 +3197,7 @@ String AccessibilityObject::popupValue() const
     // aria-haspopup specification states that true must be treated as menu.
     if (equalLettersIgnoringASCIICase(hasPopup, "true"_s))
         return "menu"_s;
-
-    // The spec states that "User agents must treat any value of aria-haspopup that is not
-    // included in the list of allowed values, including an empty string, as if the value
-    // false had been provided."
-    return "false"_s;
+    return { };
 }
 
 bool AccessibilityObject::hasDatalist() const

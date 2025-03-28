@@ -95,7 +95,6 @@ enum class AXProperty : uint16_t {
     AccessibilityText,
     ActionVerb,
     AncestorFlags,
-    AutoCompleteValue,
     BackgroundColor,
     BrailleLabel,
     BrailleRoleDescription,
@@ -127,8 +126,12 @@ enum class AXProperty : uint16_t {
     DocumentURI,
     EmbeddedImageDescription,
     ExpandedTextValue,
+    ExplicitAutoCompleteValue,
+    ExplicitInvalidStatus,
+    ExplicitLiveRegionRelevant,
     ExplicitLiveRegionStatus,
     ExplicitOrientation,
+    ExplicitPopupValue,
     ExtendedDescription,
 #if PLATFORM(COCOA)
     Font,
@@ -155,7 +158,6 @@ enum class AXProperty : uint16_t {
     InnerHTML,
     InternalLinkElement,
     InsideLink,
-    InvalidStatus,
     IsGrabbed,
     IsARIATreeGridRow,
     IsAttachment,
@@ -212,7 +214,6 @@ enum class AXProperty : uint16_t {
     ListMarkerText,
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
     LiveRegionAtomic,
-    LiveRegionRelevant,
     LocalizedActionVerb,
     MathFencedOpenString,
     MathFencedCloseString,
@@ -234,7 +235,6 @@ enum class AXProperty : uint16_t {
     OuterHTML,
     Path,
     PlaceholderValue,
-    PopupValue,
     PosInSet,
     PreventKeyboardDOMEventDispatch,
     RadioButtonGroup,
@@ -253,7 +253,7 @@ enum class AXProperty : uint16_t {
     SelectedTextRange,
     SetSize,
     SortDirection,
-    SpeechHint,
+    SpeakAs,
     StringValue,
     SubrolePlatformString,
     SupportsDragging,
@@ -300,6 +300,7 @@ using AXPropertyValueVariant = std::variant<std::nullptr_t, Markable<AXID>, Stri
 #if PLATFORM(COCOA)
     , RetainPtr<NSAttributedString>
     , RetainPtr<id>
+    , OptionSet<SpeakAs>
 #endif // PLATFORM(COCOA)
 #if ENABLE(AX_THREAD_TEXT_APIS)
     , RetainPtr<CTFontRef>
