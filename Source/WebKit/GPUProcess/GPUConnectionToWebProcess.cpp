@@ -1327,7 +1327,7 @@ void GPUConnectionToWebProcess::enableMediaPlaybackIfNecessary()
 #if ENABLE(ROUTING_ARBITRATION) && HAVE(AVAUDIO_ROUTING_ARBITER)
     ASSERT(!m_routingArbitrator);
     m_routingArbitrator = LocalAudioSessionRoutingArbitrator::create(*this);
-    protectedGPUProcess()->protectedAudioSessionManager()->session().setRoutingArbitrationClient(m_routingArbitrator.get());
+    protectedGPUProcess()->protectedAudioSessionManager()->protectedSession()->setRoutingArbitrationClient(m_routingArbitrator.get());
 #endif
 }
 

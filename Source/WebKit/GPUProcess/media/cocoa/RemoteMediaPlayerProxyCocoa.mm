@@ -73,7 +73,7 @@ void RemoteMediaPlayerProxy::mediaPlayerRenderingModeChanged()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
 
-    auto* layer = protectedPlayer()->platformLayer();
+    RetainPtr layer = protectedPlayer()->platformLayer();
     if (layer && !m_inlineLayerHostingContext) {
         LayerHostingContextOptions contextOptions;
 #if USE(EXTENSIONKIT)
@@ -84,7 +84,7 @@ void RemoteMediaPlayerProxy::mediaPlayerRenderingModeChanged()
 #endif
         m_inlineLayerHostingContext = LayerHostingContext::createForExternalHostingProcess(contextOptions);
         if (m_configuration.videoLayerSize.isEmpty())
-            m_configuration.videoLayerSize = enclosingIntRect(WebCore::FloatRect(layer.frame)).size();
+            m_configuration.videoLayerSize = enclosingIntRect(WebCore::FloatRect(layer.get().frame)).size();
         auto& size = m_configuration.videoLayerSize;
         [layer setFrame:CGRectMake(0, 0, size.width(), size.height())];
         protectedConnection()->send(Messages::MediaPlayerPrivateRemote::LayerHostingContextIdChanged(m_inlineLayerHostingContext->contextID(), size), m_id);
@@ -96,7 +96,7 @@ void RemoteMediaPlayerProxy::mediaPlayerRenderingModeChanged()
     }
 
     if (m_inlineLayerHostingContext)
-        m_inlineLayerHostingContext->setRootLayer(layer);
+        m_inlineLayerHostingContext->setRootLayer(layer.get());
 
     protectedConnection()->send(Messages::MediaPlayerPrivateRemote::RenderingModeChanged(), m_id);
 }

@@ -1,14 +1,6 @@
 AutomationBackendDispatchers.cpp
 AutomationFrontendDispatchers.cpp
 AutomationProtocolObjects.h
-GPUProcess/GPUConnectionToWebProcess.cpp
-GPUProcess/media/RemoteAudioTrackProxy.cpp
-GPUProcess/media/RemoteAudioTrackProxy.h
-GPUProcess/media/RemoteSourceBufferProxy.cpp
-GPUProcess/media/RemoteTextTrackProxy.cpp
-GPUProcess/media/RemoteTextTrackProxy.h
-GPUProcess/media/RemoteVideoTrackProxy.cpp
-GPUProcess/media/RemoteVideoTrackProxy.h
 GeneratedSerializers.mm
 NetworkProcess/ServiceWorker/ServiceWorkerFetchTask.cpp
 Platform/IPC/ArgumentCoders.h
