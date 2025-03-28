@@ -459,7 +459,7 @@ static void* lib##Library() \
     namespace functionNamespace { \
     static Class init##className(); \
     export Class (*get##className##Class)() = init##className; \
-    static Class class##className; \
+    SUPPRESS_UNRETAINED_LOCAL static Class class##className; \
     \
     static Class className##Function() \
     { \
@@ -520,7 +520,7 @@ static void* lib##Library() \
     export variableType get_##framework##_##variableName(); \
     variableType get_##framework##_##variableName() \
     { \
-        static variableType constant##framework##variableName; \
+        SUPPRESS_UNRETAINED_LOCAL static variableType constant##framework##variableName; \
         static dispatch_once_t once; \
         dispatch_once(&once, ^{ \
             _STORE_IN_DLSYM_SECTION static char const auditedName[] = #variableName; \
