@@ -1549,12 +1549,6 @@ void AXObjectCache::deferAddUnconnectedNode(AccessibilityObject& axObject)
 }
 #endif
 
-void AXObjectCache::childrenChanged(Node* node, Element* changedChild)
-{
-    childrenChanged(get(node));
-    deferElementAddedOrRemoved(changedChild);
-}
-
 AccessibilityObject* AXObjectCache::getIncludingAncestors(RenderObject* renderer) const
 {
     for (auto* current = renderer; current; current = current->parent()) {
@@ -2786,7 +2780,8 @@ void AXObjectCache::handleAttributeChange(Element* element, const QualifiedName&
         postNotification(element, AXNotification::RequiredStatusChanged);
     else if (attrName == tabindexAttr) {
         if (oldValue.isEmpty() || newValue.isEmpty()) {
-            childrenChanged(element->parentNode(), element);
+            if (RefPtr parent = element->parentNode())
+                childrenChanged(parent->renderer());
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
             postNotification(element, AXNotification::FocusableStateChanged);
 #endif
@@ -2953,7 +2948,6 @@ void AXObjectCache::handleAttributeChange(Element* element, const QualifiedName&
         if (RefPtr parent = get(element->parentNode()))
             childrenChanged(parent.get());
 #endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
-
 
         if (m_currentModalElement && m_currentModalElement->isDescendantOf(element))
             deferModalChange(*m_currentModalElement);

@@ -2228,7 +2228,7 @@ String AccessibilityNodeObject::textUnderElement(TextUnderElementMode mode) cons
 {
     RefPtr node = this->node();
     if (auto* text = dynamicDowncast<Text>(node.get()))
-        return !mode.isHidden() ? text->wholeText() : emptyString();
+        return !mode.isHidden() ? text->data() : emptyString();
 
     const auto* style = this->style();
     mode.inHiddenSubtree = WebCore::isRenderHidden(style);
