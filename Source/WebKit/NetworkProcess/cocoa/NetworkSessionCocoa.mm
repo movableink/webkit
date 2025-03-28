@@ -1111,14 +1111,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         NegotiatedLegacyTLS negotiatedLegacyTLS = NegotiatedLegacyTLS::No;
         RetainPtr<NSURLSessionTaskMetrics> taskMetrics = dataTask._incompleteTaskMetrics;
 
-        NSURLSessionTaskTransactionMetrics *metrics = taskMetrics.get().transactionMetrics.lastObject;
+        RetainPtr<NSURLSessionTaskTransactionMetrics> metrics = taskMetrics.get().transactionMetrics.lastObject;
 #if HAVE(NETWORK_CONNECTION_PRIVACY_STANCE)
-        auto privateRelayed = metrics._privacyStance == nw_connection_privacy_stance_direct
-            || metrics._privacyStance == nw_connection_privacy_stance_not_eligible
+        auto privateRelayed = metrics.get()._privacyStance == nw_connection_privacy_stance_direct
+            || metrics.get()._privacyStance == nw_connection_privacy_stance_not_eligible
             ? PrivateRelayed::No : PrivateRelayed::Yes;
         String proxyName;
-        if (metrics._establishmentReport) {
-            if (RetainPtr endpoint = adoptNS(nw_establishment_report_copy_proxy_endpoint(metrics._establishmentReport))) {
+        if (metrics.get()._establishmentReport) {
+            if (RetainPtr endpoint = adoptNS(nw_establishment_report_copy_proxy_endpoint(metrics.get()._establishmentReport))) {
                 if (const char *hostname = nw_endpoint_get_hostname(endpoint.get()))
                     proxyName = String::fromUTF8(unsafeSpan(hostname));
             }
@@ -1127,7 +1127,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #else
         auto privateRelayed = PrivateRelayed::No;
 #endif
-        negotiatedLegacyTLS = checkForLegacyTLS(metrics);
+        negotiatedLegacyTLS = checkForLegacyTLS(metrics.get());
 
         // Avoid MIME type sniffing if the response comes back as 304 Not Modified.
         RetainPtr httpResponse = dynamic_objc_cast<NSHTTPURLResponse>(response);

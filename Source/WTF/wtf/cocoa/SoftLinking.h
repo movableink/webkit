@@ -242,7 +242,7 @@ static void* lib##Library() \
     @class className; \
     static Class init##className(); \
     static Class (*get##className##Class)() = init##className; \
-    static Class class##className; \
+    SUPPRESS_UNRETAINED_LOCAL static Class class##className; \
     \
     static Class className##Function() \
     { \
