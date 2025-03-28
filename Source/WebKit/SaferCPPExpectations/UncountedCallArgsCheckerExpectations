@@ -95,7 +95,6 @@ UIProcess/API/Cocoa/_WKWebAuthenticationAssertionResponse.mm
 UIProcess/API/Cocoa/_WKWebAuthenticationPanel.mm
 UIProcess/API/Cocoa/_WKWebsiteDataStoreConfiguration.mm
 UIProcess/Downloads/DownloadProxy.cpp
-UIProcess/RemoteLayerTree/RemoteScrollingTree.h
 UIProcess/RemotePageDrawingAreaProxy.cpp
 UIProcess/WebsiteData/WebsiteDataStore.cpp
 UIProcess/mac/WebContextMenuProxyMac.mm
