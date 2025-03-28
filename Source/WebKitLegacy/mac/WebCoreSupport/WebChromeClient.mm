@@ -129,6 +129,7 @@ NSString *WebConsoleMessageStorageMessageSource = @"StorageMessageSource";
 NSString *WebConsoleMessageAppCacheMessageSource = @"AppCacheMessageSource";
 NSString *WebConsoleMessageRenderingMessageSource = @"RenderingMessageSource";
 NSString *WebConsoleMessageCSSMessageSource = @"CSSMessageSource";
+NSString *WebConsoleMessageAccessibilityMessageSource = @"AccessibilityMessageSource";
 NSString *WebConsoleMessageSecurityMessageSource = @"SecurityMessageSource";
 NSString *WebConsoleMessageContentBlockerMessageSource = @"ContentBlockerMessageSource";
 NSString *WebConsoleMessageMediaMessageSource = @"MediaMessageSource";
@@ -404,6 +405,8 @@ inline static NSString *stringForMessageSource(MessageSource source)
         return WebConsoleMessageRenderingMessageSource;
     case MessageSource::CSS:
         return WebConsoleMessageCSSMessageSource;
+    case MessageSource::Accessibility:
+        return WebConsoleMessageAccessibilityMessageSource;
     case MessageSource::Security:
         return WebConsoleMessageSecurityMessageSource;
     case MessageSource::ContentBlocker:
