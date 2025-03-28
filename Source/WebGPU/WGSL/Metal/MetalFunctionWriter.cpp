@@ -1911,7 +1911,9 @@ static void emitLength(FunctionDefinitionWriter* writer, AST::CallExpression& ca
 
 static void emitDegrees(FunctionDefinitionWriter* writer, AST::CallExpression& call)
 {
-    writer->stringBuilder().append('(');
+    writer->stringBuilder().append("static_cast<"_s);
+    writer->visit(call.inferredType());
+    writer->stringBuilder().append(">("_s);
     writer->visit(call.arguments()[0]);
     writer->stringBuilder().append(" * "_s, String::number(180 / std::numbers::pi), ')');
 }
@@ -2002,7 +2004,9 @@ static void emitQuantizeToF16(FunctionDefinitionWriter* writer, AST::CallExpress
 
 static void emitRadians(FunctionDefinitionWriter* writer, AST::CallExpression& call)
 {
-    writer->stringBuilder().append('(');
+    writer->stringBuilder().append("static_cast<"_s);
+    writer->visit(call.inferredType());
+    writer->stringBuilder().append(">("_s);
     writer->visit(call.arguments()[0]);
     writer->stringBuilder().append(" * "_s, String::number(std::numbers::pi / 180), ')');
 }
