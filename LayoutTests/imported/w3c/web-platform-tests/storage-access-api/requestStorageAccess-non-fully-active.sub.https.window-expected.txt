@@ -1,0 +1,4 @@
+
+FAIL [non-fully-active] document.requestStorageAccess() should not resolve when run in a detached frame promise_test: Unhandled rejection with value: object "TypeError: undefined is not an object (evaluating 'e.name')"
+FAIL [non-fully-active] document.requestStorageAccess() should not resolve when run in a detached DOMParser document promise_rejects_dom: document.requestStorageAccess() in a detached DOMParser result function "function() { throw e }" threw undefined with type "undefined", not an object
+
