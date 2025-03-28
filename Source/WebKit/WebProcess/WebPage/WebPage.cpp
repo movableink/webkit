@@ -7814,6 +7814,12 @@ static void setCanIgnoreViewportArgumentsToAvoidExcessiveZoomIfNeeded(ViewportCo
     if (auto* document = frame ? frame->document() : nullptr; document && document->quirks().shouldIgnoreViewportArgumentsToAvoidExcessiveZoom())
         configuration.setCanIgnoreViewportArgumentsToAvoidExcessiveZoom(shouldIgnoreMetaViewport);
 }
+
+static void setCanIgnoreViewportArgumentsToAvoidEnlargedViewIfNeeded(ViewportConfiguration& configuration, LocalFrame* frame)
+{
+    if (auto* document = frame ? frame->document() : nullptr; document && document->quirks().shouldIgnoreViewportArgumentsToAvoidEnlargedView())
+        configuration.setCanIgnoreViewportArgumentsToAvoidEnlargedView(true);
+}
 #endif
 
 void WebPage::didCommitLoad(WebFrame* frame)
@@ -7912,6 +7918,8 @@ void WebPage::didCommitLoad(WebFrame* frame)
     bool viewportChanged = false;
 
     setCanIgnoreViewportArgumentsToAvoidExcessiveZoomIfNeeded(m_viewportConfiguration, coreFrame.get(), shouldIgnoreMetaViewport());
+    setCanIgnoreViewportArgumentsToAvoidEnlargedViewIfNeeded(m_viewportConfiguration, coreFrame.get());
+
     m_viewportConfiguration.setPrefersHorizontalScrollingBelowDesktopViewportWidths(shouldEnableViewportBehaviorsForResizableWindows());
 
     LOG_WITH_STREAM(VisibleRects, stream << "WebPage " << m_identifier.toUInt64() << " didCommitLoad setting content size to " << coreFrame->view()->contentsSize());
@@ -8214,6 +8222,7 @@ void WebPage::updateWebsitePolicies(WebsitePoliciesData&& websitePolicies)
 
 #if ENABLE(META_VIEWPORT)
     setCanIgnoreViewportArgumentsToAvoidExcessiveZoomIfNeeded(m_viewportConfiguration, localMainFrame.get(), shouldIgnoreMetaViewport());
+    setCanIgnoreViewportArgumentsToAvoidEnlargedViewIfNeeded(m_viewportConfiguration, localMainFrame.get());
 #endif
 }
 
