@@ -748,11 +748,16 @@ void ModelProcessModelPlayerProxy::applyEnvironmentMapDataAndRelease()
 {
     if (m_transientEnvironmentMapData) {
         if (m_transientEnvironmentMapData->size() > 0) {
-            [m_modelRKEntity applyIBLData:m_transientEnvironmentMapData->createNSData().get() withCompletion:^(BOOL succeeded) {
+            [m_modelRKEntity applyIBLData:m_transientEnvironmentMapData->createNSData().get() withCompletion:makeBlockPtr([weakThis = WeakPtr { *this }] (BOOL succeeded) {
+                RefPtr protectedThis = weakThis.get();
+                if (!protectedThis)
+                    return;
+
                 if (!succeeded)
-                    [m_modelRKEntity applyDefaultIBL];
-                send(Messages::ModelProcessModelPlayer::DidFinishEnvironmentMapLoading(succeeded));
-            }];
+                    [protectedThis->m_modelRKEntity applyDefaultIBL];
+
+                protectedThis->send(Messages::ModelProcessModelPlayer::DidFinishEnvironmentMapLoading(succeeded));
+            }).get()];
         } else {
             [m_modelRKEntity applyDefaultIBL];
             send(Messages::ModelProcessModelPlayer::DidFinishEnvironmentMapLoading(true));

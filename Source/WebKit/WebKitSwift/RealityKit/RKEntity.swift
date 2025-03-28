@@ -327,12 +327,14 @@ public final class WKSRKEntity: NSObject {
                 await MainActor.run {
                     entity.components[ImageBasedLightComponent.self] = .init(source: .single(environment))
                     entity.components[ImageBasedLightReceiverComponent.self] = .init(imageBasedLight: entity)
+                    Logger.realityKitEntity.info("Successfully applied IBL to entity")
+                    completion(true)
                 }
-                Logger.realityKitEntity.info("Successfully applied IBL to entity")
-                completion(true)
             } catch {
-                Logger.realityKitEntity.error("Cannot load environment resource from CGImage.")
-                completion(false)
+                await MainActor.run {
+                    Logger.realityKitEntity.error("Cannot load environment resource from CGImage.")
+                    completion(false)
+                }
             }
         }
     }
