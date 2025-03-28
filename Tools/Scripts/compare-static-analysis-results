@@ -99,11 +99,13 @@ def parser():
 
 def find_diff(args, file1, file2):
     # Create empty file if the corresponding one doesn't exist - this happens if a checker is added or removed
-    if not args.check_expectations and not os.path.exists(file1):
+    if not os.path.exists(file1):
+        os.makedirs(os.path.dirname(file1), exist_ok=True)
         f = open(file1, 'a')
         f.close()
 
     if not os.path.exists(file2):
+        os.makedirs(os.path.dirname(file2), exist_ok=True)
         f = open(file2, 'a')
         f.close()
 
