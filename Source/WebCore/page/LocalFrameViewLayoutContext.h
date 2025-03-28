@@ -163,7 +163,7 @@ private:
     friend class LayoutStateDisabler;
     friend class SubtreeLayoutStateMaintainer;
     friend class FlexPercentResolveDisabler;
-    friend class ContentVisibilityForceLayoutScope;
+    friend class ContentVisibilityOverrideScope;
 
     bool needsLayoutInternal() const;
 
@@ -199,8 +199,11 @@ private:
     void disablePaintOffsetCache() { m_paintOffsetCacheDisableCount++; }
     void enablePaintOffsetCache() { ASSERT(m_paintOffsetCacheDisableCount > 0); m_paintOffsetCacheDisableCount--; }
 
-    bool skippedContentNeedsLayout() const { return m_skippedContentNeedsLayout; }
-    void setSkippedContentNeedsLayout(bool skippedContentNeedsLayout) { m_skippedContentNeedsLayout = skippedContentNeedsLayout; }
+    bool isVisiblityHiddenIgnored() const { return m_visiblityHiddenIsIgnored; }
+    void setIsVisiblityHiddenIgnored(bool ignored) { m_visiblityHiddenIsIgnored = ignored; }
+
+    bool isVisiblityAutoIgnored() const { return m_visiblityAutoIsIgnored; }
+    void setIsVisiblityAutoIgnored(bool ignored) { m_visiblityAutoIsIgnored = ignored; }
 
     void disablePercentHeightResolveFor(const RenderBox& flexItem);
     void enablePercentHeightResolveFor(const RenderBox& flexItem);
@@ -223,7 +226,8 @@ private:
     bool m_needsFullRepaint { true };
     bool m_inAsynchronousTasks { false };
     bool m_setNeedsLayoutWasDeferred { false };
-    bool m_skippedContentNeedsLayout { false };
+    bool m_visiblityHiddenIsIgnored { false };
+    bool m_visiblityAutoIsIgnored { false };
     bool m_updateCompositingLayersIsPending { false };
     LayoutPhase m_layoutPhase { LayoutPhase::OutsideLayout };
     enum class LayoutNestedState : uint8_t  { NotInLayout, NotNested, Nested };

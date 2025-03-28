@@ -670,16 +670,26 @@ void LocalFrameViewLayoutContext::addLayoutDelta(const LayoutSize& delta)
 
 bool LocalFrameViewLayoutContext::isSkippedContentForLayout(const RenderElement& renderer) const
 {
-    if (skippedContentNeedsLayout())
+    if (isVisiblityHiddenIgnored() || isVisiblityAutoIgnored()) {
+        // In theory we should only descend into a hidden/auto subree when hidden/auto root is ignored (see isSkippedContentRootForLayout below).
         return false;
+    }
     return renderer.isSkippedContent();
 }
 
 bool LocalFrameViewLayoutContext::isSkippedContentRootForLayout(const RenderBox& renderBox) const
 {
-    if (skippedContentNeedsLayout())
+    if (!isSkippedContentRoot(renderBox))
         return false;
-    return isSkippedContentRoot(renderBox);
+
+    auto contentVisibility = renderBox.style().contentVisibility();
+    if (contentVisibility == ContentVisibility::Hidden && isVisiblityHiddenIgnored())
+        return false;
+
+    if (contentVisibility == ContentVisibility::Auto && isVisiblityAutoIgnored())
+        return false;
+
+    return true;
 }
 
 #if ASSERT_ENABLED

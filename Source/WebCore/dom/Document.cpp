@@ -2975,7 +2975,7 @@ auto Document::updateLayout(OptionSet<LayoutOptions> layoutOptions, const Elemen
 
             auto& layoutContext = frameView->layoutContext();
             auto runForcedLayoutOnSkippedContentIfNeeded = [&] {
-                if (!layoutOptions.contains(LayoutOptions::ContentVisibilityForceLayout))
+                if (!layoutOptions.containsAll({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }))
                     return false;
 
                 ASSERT(context);
@@ -2992,7 +2992,16 @@ auto Document::updateLayout(OptionSet<LayoutOptions> layoutOptions, const Elemen
 
                 skippedSubtreeeRootRenderer.setNeedsLayout();
 
-                auto contentVisibilityScope = ContentVisibilityForceLayoutScope { layoutContext };
+                auto overrideTypes = [&] {
+                    auto types = OptionSet<ContentVisibilityOverrideScope::OverrideType> { };
+
+                    if (layoutOptions.contains(LayoutOptions::TreatContentVisibilityHiddenAsVisible))
+                        types.add(ContentVisibilityOverrideScope::OverrideType::Hidden);
+                    if (layoutOptions.contains(LayoutOptions::TreatContentVisibilityAutoAsVisible))
+                        types.add(ContentVisibilityOverrideScope::OverrideType::Auto);
+                    return types;
+                };
+                auto contentVisibilityOverrideScope = ContentVisibilityOverrideScope { layoutContext, overrideTypes() };
                 layoutContext.layout(layoutOptions.contains(LayoutOptions::CanDeferUpdateLayerPositions));
                 return true;
             };
@@ -3087,7 +3096,7 @@ bool Document::updateLayoutIfDimensionsOutOfDate(Element& element, OptionSet<Dim
 
     updateStyleIfNeeded();
 
-    if (layoutOptions.contains(LayoutOptions::ContentVisibilityForceLayout)) {
+    if (layoutOptions.containsAll({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible })) {
         if (CheckedPtr renderer = element.renderer(); renderer &&  renderer->style().hasSkippedContent()) {
             if (auto wasSkippedDuringLastLayout = renderer->wasSkippedDuringLastLayoutDueToContentVisibility()) {
                 if (*wasSkippedDuringLastLayout)
