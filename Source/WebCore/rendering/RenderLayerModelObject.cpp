@@ -241,18 +241,18 @@ bool RenderLayerModelObject::startAnimation(double timeOffset, const Animation& 
     return layer()->backing()->startAnimation(timeOffset, animation, keyframes);
 }
 
-void RenderLayerModelObject::animationPaused(double timeOffset, const String& name)
+void RenderLayerModelObject::animationPaused(double timeOffset, const BlendingKeyframes& keyframes)
 {
     if (!layer() || !layer()->backing())
         return;
-    layer()->backing()->animationPaused(timeOffset, name);
+    layer()->backing()->animationPaused(timeOffset, keyframes.acceleratedAnimationName());
 }
 
-void RenderLayerModelObject::animationFinished(const String& name)
+void RenderLayerModelObject::animationFinished(const BlendingKeyframes& keyframes)
 {
     if (!layer() || !layer()->backing())
         return;
-    layer()->backing()->animationFinished(name);
+    layer()->backing()->animationFinished(keyframes.acceleratedAnimationName());
 }
 
 void RenderLayerModelObject::transformRelatedPropertyDidChange()
