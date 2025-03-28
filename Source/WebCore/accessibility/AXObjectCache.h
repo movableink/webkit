@@ -387,6 +387,7 @@ public:
     void checkedStateChanged(Element&);
     void autofillTypeChanged(HTMLInputElement&);
     void handleRoleChanged(AccessibilityObject&, AccessibilityRole previousRole);
+    void handleReferenceTargetChanged();
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     void columnIndexChanged(AccessibilityObject&);
