@@ -3398,7 +3398,6 @@ DEFINE_DYNAMIC_SPACE_AND_SET_MEMBER_SLOW(moduleProgramExecutableSpace, destructi
 
 #undef DEFINE_DYNAMIC_SPACE_AND_SET_MEMBER_SLOW
 
-// FIXME: We should figure out how to adapt IsoAlignedMemoryAllocators for these so they're at least somewhat isolated.
 #define DEFINE_DYNAMIC_NON_ISO_SUBSPACE_MEMBER_SLOW(name, heapCellType, type, SubspaceType) \
     SubspaceType* Heap::name##Slow() \
     { \

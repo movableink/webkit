@@ -67,7 +67,7 @@ private:
     void didBeginSweepingToFreeList(MarkedBlock::Handle*) final;
 
     BlockDirectory m_directory;
-    std::unique_ptr<AlignedMemoryAllocator> m_isoAlignedMemoryAllocator;
+    std::unique_ptr<AlignedMemoryAllocator> m_allocator;
     SentinelLinkedList<PreciseAllocation, BasicRawSentinelNode<PreciseAllocation>> m_lowerTierPreciseFreeList;
     SentinelLinkedList<IsoCellSet, BasicRawSentinelNode<IsoCellSet>> m_cellSets;
 };

@@ -541,7 +541,6 @@
 		0FDCE1221FAE858C006F3901 /* HeapCellType.h in Headers */ = {isa = PBXBuildFile; fileRef = 0FDCE11F1FAE8587006F3901 /* HeapCellType.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		0FDCE12A1FAFA85F006F3901 /* CompleteSubspace.h in Headers */ = {isa = PBXBuildFile; fileRef = 0FDCE1281FAFA859006F3901 /* CompleteSubspace.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		0FDCE12D1FAFB4E5006F3901 /* IsoSubspace.h in Headers */ = {isa = PBXBuildFile; fileRef = 0FDCE12B1FAFB4DE006F3901 /* IsoSubspace.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		0FDCE1321FB11DA4006F3901 /* IsoAlignedMemoryAllocator.h in Headers */ = {isa = PBXBuildFile; fileRef = 0FDCE1301FB11D9D006F3901 /* IsoAlignedMemoryAllocator.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		0FDDBFB61666EEDA00C55FEF /* DFGVariableAccessDataDump.h in Headers */ = {isa = PBXBuildFile; fileRef = 0FDDBFB31666EED500C55FEF /* DFGVariableAccessDataDump.h */; };
 		0FDE87FC1DFE6E510064C390 /* SpaceTimeMutatorScheduler.h in Headers */ = {isa = PBXBuildFile; fileRef = 0FDE87FB1DFE6E500064C390 /* SpaceTimeMutatorScheduler.h */; };
 		0FDF67D21D9C6D27001B9825 /* B3Kind.h in Headers */ = {isa = PBXBuildFile; fileRef = 0FDF67D11D9C6086001B9825 /* B3Kind.h */; };
@@ -3375,8 +3374,6 @@
 		0FDCE1281FAFA859006F3901 /* CompleteSubspace.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CompleteSubspace.h; sourceTree = "<group>"; };
 		0FDCE12B1FAFB4DE006F3901 /* IsoSubspace.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IsoSubspace.h; sourceTree = "<group>"; };
 		0FDCE12C1FAFB4DE006F3901 /* IsoSubspace.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = IsoSubspace.cpp; sourceTree = "<group>"; };
-		0FDCE12F1FB11D9D006F3901 /* IsoAlignedMemoryAllocator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = IsoAlignedMemoryAllocator.cpp; sourceTree = "<group>"; };
-		0FDCE1301FB11D9D006F3901 /* IsoAlignedMemoryAllocator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IsoAlignedMemoryAllocator.h; sourceTree = "<group>"; };
 		0FDDBFB21666EED500C55FEF /* DFGVariableAccessDataDump.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DFGVariableAccessDataDump.cpp; path = dfg/DFGVariableAccessDataDump.cpp; sourceTree = "<group>"; };
 		0FDDBFB31666EED500C55FEF /* DFGVariableAccessDataDump.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DFGVariableAccessDataDump.h; path = dfg/DFGVariableAccessDataDump.h; sourceTree = "<group>"; };
 		0FDE87F81DFD0C6D0064C390 /* CellContainer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CellContainer.cpp; sourceTree = "<group>"; };
@@ -7218,8 +7215,6 @@
 				0FADE6721D4D23BC00768457 /* HeapUtil.h */,
 				C25F8BCB157544A900245B71 /* IncrementalSweeper.cpp */,
 				C25F8BCC157544A900245B71 /* IncrementalSweeper.h */,
-				0FDCE12F1FB11D9D006F3901 /* IsoAlignedMemoryAllocator.cpp */,
-				0FDCE1301FB11D9D006F3901 /* IsoAlignedMemoryAllocator.h */,
 				0FB4677C1FDDA6D9003FCB09 /* IsoCellSet.cpp */,
 				0FB4677D1FDDA6D9003FCB09 /* IsoCellSet.h */,
 				0FB4677B1FDDA6D8003FCB09 /* IsoCellSetInlines.h */,
@@ -11288,7 +11283,6 @@
 				860BD801148EA6F200112B2F /* Intrinsic.h in Headers */,
 				534E03541E53BD2900213F64 /* IntrinsicGetterAccessCase.h in Headers */,
 				A38CA59E26DD84DE00C8D84C /* ISO8601.h in Headers */,
-				0FDCE1321FB11DA4006F3901 /* IsoAlignedMemoryAllocator.h in Headers */,
 				0FB467801FDDA6F1003FCB09 /* IsoCellSet.h in Headers */,
 				0FB467811FDDA6F7003FCB09 /* IsoCellSetInlines.h in Headers */,
 				E3BF1BAE238AAEDB003A1C2B /* IsoHeapCellType.h in Headers */,

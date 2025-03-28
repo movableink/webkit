@@ -558,7 +558,6 @@ heap/HeapProfiler.cpp
 heap/HeapSnapshot.cpp
 heap/HeapSnapshotBuilder.cpp
 heap/IncrementalSweeper.cpp
-heap/IsoAlignedMemoryAllocator.cpp
 heap/IsoCellSet.cpp
 heap/IsoHeapCellType.cpp
 heap/IsoMemoryAllocatorBase.cpp
