@@ -1879,7 +1879,7 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
     if (!page)
         return { };
 
-    if (!m_viewportConstrainedObjects)
+    if (!hasViewportConstrainedObjects())
         return { };
 
     RefPtr document = m_frame->document();
