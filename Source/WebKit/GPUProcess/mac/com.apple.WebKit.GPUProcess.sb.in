@@ -1208,7 +1208,7 @@
             (iokit-user-client-class "IOSurfaceAcceleratorClient")
             (apply-message-filter
                 (allow iokit-external-method
-                    (iokit-method-number 10))
+                    (iokit-method-number 1 4 10))
                 (allow (with report) (with telemetry)
                     iokit-async-external-method
                     iokit-external-method
