@@ -32,7 +32,7 @@ namespace WTF {
 
 static const UINT PerformWorkMessage = WM_USER + 1;
 static const UINT SetTimerMessage = WM_USER + 2;
-static const UINT FireTimerMessage = WM_USER + 3;
+static const UINT KillTimerMessage = WM_USER + 3;
 static const LPCWSTR kRunLoopMessageWindowClassName = L"RunLoopMessageWindow";
 
 LRESULT CALLBACK RunLoop::RunLoopWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -58,10 +58,18 @@ LRESULT RunLoop::wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         performWork();
         return 0;
     case SetTimerMessage:
+        ::SetTimer(hWnd, wParam, lParam, nullptr);
         return 0;
-    case FireTimerMessage:
+    case KillTimerMessage:
+        ::KillTimer(hWnd, wParam);
+        return 0;
+    case WM_TIMER:
         RunLoop::TimerBase* timer = nullptr;
-        timer = std::bit_cast<RunLoop::TimerBase*>(wParam);
+        {
+            Locker locker { m_loopLock };
+            if (m_liveTimers.contains(wParam))
+                timer = std::bit_cast<RunLoop::TimerBase*>(wParam);
+        }
         if (timer != nullptr)
             timer->timerFired();
         return 0;
@@ -72,55 +80,12 @@ LRESULT RunLoop::wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 void RunLoop::run()
 {
-    while (true) {
-        RunLoop::currentSingleton().fireTimers();
-        MSG message;
-        while (BOOL result = ::PeekMessage(&message, nullptr, 0, 0, PM_REMOVE)) {
-            if (result == -1)
-                break;
-            if (message.message == WM_QUIT)
-                return;
-            ::TranslateMessage(&message);
-            ::DispatchMessage(&message);
-        }
-
-        DWORD timeout = RunLoop::currentSingleton().msTillNextTimer();
-        if (timeout > 0)
-            ::MsgWaitForMultipleObjectsEx(0, nullptr, timeout, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
-    }
-}
-
-DWORD RunLoop::msTillNextTimer()
-{
-    Locker locker { m_loopLock };
-    Seconds timeout = Seconds(3600);
-
-    if (!m_timers.isEmpty()) {
-        auto now = MonotonicTime::now();
-        auto firstTimer = m_timers.last();
-
-        timeout = std::max<Seconds>(firstTimer->m_nextFireDate - now, 0_s);
-    }
-    return timeout.milliseconds();
-}
-
-void RunLoop::fireTimers()
-{
-    Locker locker { m_loopLock };
-
-    // Can bail here if there's no timers before we check the time
-    if (m_timers.isEmpty())
-        return;
-
-    // Fire any timers ready from the front of the queue
-    auto now = MonotonicTime::now();
-
-    while (!m_timers.isEmpty()) {
-        auto timer = m_timers.last();
-        if (timer->m_nextFireDate > now)
-            return;
-        ::PostMessage(m_runLoopMessageWindow, FireTimerMessage, std::bit_cast<uintptr_t>(timer), 0LL);
-        m_timers.removeLast();
+    MSG message;
+    while (BOOL result = ::GetMessage(&message, nullptr, 0, 0)) {
+        if (result == -1)
+            break;
+        ::TranslateMessage(&message);
+        ::DispatchMessage(&message);
     }
 }
 
@@ -172,7 +137,6 @@ void RunLoop::wakeUp()
 
 RunLoop::CycleResult RunLoop::cycle(RunLoopMode)
 {
-    RunLoop::currentSingleton().fireTimers();
     MSG message;
     while (::PeekMessage(&message, nullptr, 0, 0, PM_REMOVE)) {
         if (message.message == WM_QUIT)
@@ -196,13 +160,9 @@ void RunLoop::TimerBase::timerFired()
 
         if (!m_isRepeating) {
             m_isActive = false;
-            m_nextFireDate = MonotonicTime::infinity();
-        } else {
+            ::KillTimer(m_runLoop->m_runLoopMessageWindow, std::bit_cast<uintptr_t>(this));
+        } else
             m_nextFireDate = MonotonicTime::timePointFromNow(m_interval);
-            m_runLoop->m_timers.appendAndBubble(this, [&] (TimerBase* otherTimer) -> bool {
-                return m_nextFireDate > otherTimer->m_nextFireDate;
-            });
-        }
     }
 
     fired();
@@ -221,23 +181,12 @@ RunLoop::TimerBase::~TimerBase()
 void RunLoop::TimerBase::start(Seconds interval, bool repeat)
 {
     Locker locker { m_runLoop->m_loopLock };
-    if (isActiveWithLock()) {
-        // Rescheduling timer that's already started
-        m_runLoop->m_timers.removeFirstMatching([&] (TimerBase* t) -> bool {
-            return this == t;
-        });
-    }
-
     m_isRepeating = repeat;
     m_isActive = true;
     m_interval = interval;
     m_nextFireDate = MonotonicTime::timePointFromNow(m_interval);
-    m_runLoop->m_timers.appendAndBubble(this, [&] (TimerBase* otherTimer) -> bool {
-        return m_nextFireDate > otherTimer->m_nextFireDate;
-    });
-    // If this is the first timer now, we need to cycle the run loop so we don't sleep through it
-    if (m_runLoop->m_timers.last() == this)
-        ::PostMessage(m_runLoop->m_runLoopMessageWindow, SetTimerMessage, std::bit_cast<uintptr_t>(this), interval.millisecondsAs<UINT>());
+    m_runLoop->m_liveTimers.add(std::bit_cast<uintptr_t>(this));
+    ::PostMessage(m_runLoop->m_runLoopMessageWindow, SetTimerMessage, std::bit_cast<uintptr_t>(this), interval.millisecondsAs<UINT>());
 }
 
 void RunLoop::TimerBase::stop()
@@ -247,11 +196,8 @@ void RunLoop::TimerBase::stop()
         return;
 
     m_isActive = false;
-    m_nextFireDate = MonotonicTime::infinity();
-
-    m_runLoop->m_timers.removeFirstMatching([&] (TimerBase* t) -> bool {
-        return this == t;
-    });
+    m_runLoop->m_liveTimers.remove(std::bit_cast<uintptr_t>(this));
+    ::PostMessage(m_runLoop->m_runLoopMessageWindow, KillTimerMessage, std::bit_cast<uintptr_t>(this), 0LL);
 }
 
 bool RunLoop::TimerBase::isActiveWithLock() const

@@ -263,10 +263,8 @@ private:
 #if USE(WINDOWS_EVENT_LOOP)
     static LRESULT CALLBACK RunLoopWndProc(HWND, UINT, WPARAM, LPARAM);
     LRESULT wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-    DWORD msTillNextTimer();
-    void fireTimers();
     HWND m_runLoopMessageWindow;
-    Deque<TimerBase*> m_timers;
+    UncheckedKeyHashSet<UINT_PTR> m_liveTimers;
 
     Lock m_loopLock;
 #elif USE(COCOA_EVENT_LOOP)
