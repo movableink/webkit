@@ -199,8 +199,8 @@ private:
     void disablePaintOffsetCache() { m_paintOffsetCacheDisableCount++; }
     void enablePaintOffsetCache() { ASSERT(m_paintOffsetCacheDisableCount > 0); m_paintOffsetCacheDisableCount--; }
 
-    bool needsSkippedContentLayout() const { return m_needsSkippedContentLayout; }
-    void setNeedsSkippedContentLayout(bool needsSkippedContentLayout) { m_needsSkippedContentLayout = needsSkippedContentLayout; }
+    bool skippedContentNeedsLayout() const { return m_skippedContentNeedsLayout; }
+    void setSkippedContentNeedsLayout(bool skippedContentNeedsLayout) { m_skippedContentNeedsLayout = skippedContentNeedsLayout; }
 
     void disablePercentHeightResolveFor(const RenderBox& flexItem);
     void enablePercentHeightResolveFor(const RenderBox& flexItem);
@@ -223,7 +223,7 @@ private:
     bool m_needsFullRepaint { true };
     bool m_inAsynchronousTasks { false };
     bool m_setNeedsLayoutWasDeferred { false };
-    bool m_needsSkippedContentLayout { false };
+    bool m_skippedContentNeedsLayout { false };
     bool m_updateCompositingLayersIsPending { false };
     LayoutPhase m_layoutPhase { LayoutPhase::OutsideLayout };
     enum class LayoutNestedState : uint8_t  { NotInLayout, NotNested, Nested };

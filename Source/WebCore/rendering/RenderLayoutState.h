@@ -207,12 +207,11 @@ private:
 
 class ContentVisibilityForceLayoutScope {
 public:
-    ContentVisibilityForceLayoutScope(LocalFrameViewLayoutContext&, const Element*);
+    ContentVisibilityForceLayoutScope(LocalFrameViewLayoutContext&);
     ~ContentVisibilityForceLayoutScope();
 
 private:
     CheckedRef<LocalFrameViewLayoutContext> m_layoutContext;
-    CheckedPtr<const Element> m_element;
 };
 
 } // namespace WebCore

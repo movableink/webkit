@@ -2972,24 +2972,40 @@ auto Document::updateLayout(OptionSet<LayoutOptions> layoutOptions, const Elemen
         StackStats::LayoutCheckPoint layoutCheckPoint;
 
         if (frameView && renderView()) {
-            if (context && layoutOptions.contains(LayoutOptions::ContentVisibilityForceLayout)) {
-                if (context->renderer() && context->renderer()->style().hasSkippedContent()) {
-                    if (auto wasSkippedDuringLastLayout = context->renderer()->wasSkippedDuringLastLayoutDueToContentVisibility()) {
-                        if (*wasSkippedDuringLastLayout)
-                            context->renderer()->setNeedsLayout();
-                        else
-                            context = nullptr;
-                    }
-                } else
-                    context = nullptr;
-            }
-            if (frameView->layoutContext().needsLayout(layoutOptions)) {
-                auto contentVisibilityScope = ContentVisibilityForceLayoutScope { frameView->layoutContext(), context };
-                frameView->layoutContext().layout(layoutOptions.contains(LayoutOptions::CanDeferUpdateLayerPositions));
-                result = UpdateLayoutResult::ChangesDone;
+
+            auto& layoutContext = frameView->layoutContext();
+            auto runForcedLayoutOnSkippedContentIfNeeded = [&] {
+                if (!layoutOptions.contains(LayoutOptions::ContentVisibilityForceLayout))
+                    return false;
+
+                ASSERT(context);
+                if (!context || !context->renderer())
+                    return false;
+
+                auto& skippedSubtreeeRootRenderer = *context->renderer();
+                if (!skippedSubtreeeRootRenderer.style().hasSkippedContent())
+                    return false;
+
+                auto everhadLayoutAndWasSkippedDuringLast = skippedSubtreeeRootRenderer.wasSkippedDuringLastLayoutDueToContentVisibility();
+                if (everhadLayoutAndWasSkippedDuringLast && !*everhadLayoutAndWasSkippedDuringLast)
+                    return false;
+
+                skippedSubtreeeRootRenderer.setNeedsLayout();
+
+                auto contentVisibilityScope = ContentVisibilityForceLayoutScope { layoutContext };
+                layoutContext.layout(layoutOptions.contains(LayoutOptions::CanDeferUpdateLayerPositions));
+                return true;
+            };
+
+            auto didRunLayout = runForcedLayoutOnSkippedContentIfNeeded();
+            if (!didRunLayout && layoutContext.needsLayout(layoutOptions)) {
+                layoutContext.layout(layoutOptions.contains(LayoutOptions::CanDeferUpdateLayerPositions));
+                didRunLayout = true;
             }
 
-            if (layoutOptions.contains(LayoutOptions::UpdateCompositingLayers) && frameView->layoutContext().updateCompositingLayersAfterLayoutIfNeeded())
+            result = didRunLayout ? UpdateLayoutResult::ChangesDone : result;
+
+            if (layoutOptions.contains(LayoutOptions::UpdateCompositingLayers) && layoutContext.updateCompositingLayersAfterLayoutIfNeeded())
                 result = UpdateLayoutResult::ChangesDone;
         }
     }
@@ -3045,7 +3061,7 @@ bool Document::updateLayoutIfDimensionsOutOfDate(Element& element, OptionSet<Dim
 
     // If the stylesheets haven't loaded, just give up and do a full layout ignoring pending stylesheets.
     if (!haveStylesheetsLoaded()) {
-        updateLayoutIgnorePendingStylesheets(layoutOptions);
+        updateLayoutIgnorePendingStylesheets(layoutOptions, &element);
         return true;
     }
 

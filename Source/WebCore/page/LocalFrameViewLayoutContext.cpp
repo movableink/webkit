@@ -670,14 +670,14 @@ void LocalFrameViewLayoutContext::addLayoutDelta(const LayoutSize& delta)
 
 bool LocalFrameViewLayoutContext::isSkippedContentForLayout(const RenderElement& renderer) const
 {
-    if (needsSkippedContentLayout())
+    if (skippedContentNeedsLayout())
         return false;
     return renderer.isSkippedContent();
 }
 
 bool LocalFrameViewLayoutContext::isSkippedContentRootForLayout(const RenderElement& renderer) const
 {
-    if (needsSkippedContentLayout())
+    if (skippedContentNeedsLayout())
         return false;
     return isSkippedContentRoot(renderer);
 }
