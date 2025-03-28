@@ -29,9 +29,9 @@
 #if ENABLE(DFG_JIT)
 
 #include "CodeOrigin.h"
-#include "DFGBasicBlockInlines.h"
 #include "DFGBlockInsertionSet.h"
 #include "DFGCFAPhase.h"
+#include "DFGCloneHelper.h"
 #include "DFGGraph.h"
 #include "DFGNaturalLoops.h"
 #include "DFGNodeOrigin.h"
@@ -450,7 +450,7 @@ public:
         for (uint32_t i = 0; i < data.loopSize(); ++i) {
             BasicBlock* body = data.loopBody(i);
             for (Node* node : *body) {
-                if (!isNodeCloneable(cloneableCache, node)) {
+                if (!CloneHelper::isNodeCloneable(m_graph, cloneableCache, node)) {
                     dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *data.header(), " since D@", node->index(), " with op ", node->op(), " is not cloneable");
                     return false;
                 }
@@ -528,6 +528,7 @@ public:
         m_graph.initializeNodeOwners(); // This is only used for the debug assertion in cloneNodeImpl.
 #endif
 
+        CloneHelper helper(m_graph, nodeClones);
         BasicBlock* taken = next;
         uint32_t cloneCount = 0;
         if (data.isOperandConstant()) {
@@ -560,7 +561,7 @@ public:
 
                 // 3. Clone nodes.
                 for (Node* node : *body)
-                    cloneNode(nodeClones, clone, node);
+                    helper.cloneNode(clone, node);
 
                 // 4. Clone variables and tail and head.
                 clone->variablesAtTail = body->variablesAtTail;
@@ -598,10 +599,6 @@ public:
         m_graph.killUnreachableBlocks();
         ASSERT(m_graph.m_form == LoadStore);
     }
-
-    bool isNodeCloneable(HashSet<Node*>& cloneableCache, Node*);
-    Node* cloneNode(UncheckedKeyHashMap<Node*, Node*>& nodeClones, BasicBlock* into, Node*);
-    Node* cloneNodeImpl(UncheckedKeyHashMap<Node*, Node*>& nodeClones, BasicBlock* into, Node*);
 
 private:
     BlockInsertionSet m_blockInsertionSet;
@@ -668,196 +665,6 @@ void LoopUnrollingPhase::LoopData::dump(PrintStream& out) const
     out.print("iterationCount=", iterationCount, ", ");
 
     out.print("inverseCondition=", inverseCondition);
-}
-
-bool LoopUnrollingPhase::isNodeCloneable(HashSet<Node*>& cloneableCache, Node* node)
-{
-    if (cloneableCache.contains(node))
-        return true;
-
-    bool result = true;
-    // FIXME: We should support all DFG nodes.
-    switch (node->op()) {
-    case Phi:
-        break;
-    case ValueRep:
-    case DoubleRep:
-    case PurifyNaN:
-    case JSConstant:
-    case LoopHint:
-    case PhantomLocal:
-    case SetArgumentDefinitely:
-    case Jump:
-    case Branch:
-    case MovHint:
-    case ExitOK:
-    case ZombieHint:
-    case InvalidationPoint:
-    case Check:
-    case CheckVarargs:
-    case Flush:
-    case GetLocal:
-    case SetLocal:
-    case GetButterfly:
-    case CheckArray:
-    case AssertNotEmpty:
-    case CheckStructure:
-    case FilterCallLinkStatus:
-    case ArrayifyToStructure:
-    case NewArrayWithConstantSize:
-    case NewArrayWithSize:
-    case ValueToInt32:
-    case ArithAdd:
-    case ArithSub:
-    case ArithMul:
-    case ArithDiv:
-    case ArithMod:
-    case ArithBitAnd:
-    case ArithBitOr:
-    case ArithBitNot:
-    case ArithBitRShift:
-    case ArithBitLShift:
-    case ArithBitXor:
-    case BitURShift:
-    case CompareLess:
-    case CompareLessEq:
-    case CompareGreater:
-    case CompareGreaterEq:
-    case CompareEq:
-    case CompareStrictEq:
-    case PutByVal:
-    case PutByValAlias:
-    case GetByVal: {
-        m_graph.doToChildrenWithCheck(node, [&](Edge& edge) {
-            if (isNodeCloneable(cloneableCache, edge.node()))
-                return IterationStatus::Continue;
-            result = false;
-            return IterationStatus::Done;
-        });
-        break;
-    }
-    default:
-        result = false;
-    }
-
-    if (result)
-        cloneableCache.add(node);
-    return result;
-}
-
-Node* LoopUnrollingPhase::cloneNode(UncheckedKeyHashMap<Node*, Node*>& nodeClones, BasicBlock* into, Node* node)
-{
-    ASSERT(node);
-    auto itr = nodeClones.find(node);
-    if (itr != nodeClones.end())
-        return itr->value;
-    Node* result = cloneNodeImpl(nodeClones, into, node);
-    ASSERT(result);
-    nodeClones.add(node, result);
-    return result;
-}
-
-Node* LoopUnrollingPhase::cloneNodeImpl(UncheckedKeyHashMap<Node*, Node*>& nodeClones, BasicBlock* into, Node* node)
-{
-#if ASSERT_ENABLED
-    m_graph.doToChildren(node, [&](Edge& e) {
-        ASSERT(e.node()->owner == node->owner);
-    });
-#endif
-
-    auto cloneEdge = [&](Edge& edge) ALWAYS_INLINE_LAMBDA {
-        return edge ? Edge(cloneNode(nodeClones, into, edge.node()), edge.useKind()) : Edge();
-    };
-
-    switch (node->op()) {
-    case Phi: {
-        // Phi nodes should already be cloned in the step 2 of unrollLoop.
-        RELEASE_ASSERT_NOT_REACHED();
-        return nullptr;
-    }
-    case Branch: {
-        Node* clone = into->cloneAndAppend(m_graph, node);
-        clone->setOpInfo(OpInfo(m_graph.m_branchData.add(WTFMove(*node->branchData()))));
-        clone->child1() = cloneEdge(node->child1());
-        return clone;
-    }
-    case PutByVal:
-    case GetByVal:
-    case PutByValAlias:
-    case CheckVarargs: {
-        if (node->hasVarArgs()) {
-            size_t firstChild = m_graph.m_varArgChildren.size();
-
-            uint32_t validChildrenCount = 0;
-            m_graph.doToChildren(node, [&](Edge& edge) {
-                m_graph.m_varArgChildren.append(cloneEdge(edge));
-                ++validChildrenCount;
-            });
-
-            uint32_t expectedCount = m_graph.numChildren(node);
-            for (uint32_t i = validChildrenCount; i < expectedCount; ++i)
-                m_graph.m_varArgChildren.append(Edge());
-
-            Node* clone = into->cloneAndAppend(m_graph, node);
-            clone->children.setFirstChild(firstChild);
-            return clone;
-        }
-        FALLTHROUGH;
-    }
-    case ValueRep:
-    case DoubleRep:
-    case PurifyNaN:
-    case ExitOK:
-    case LoopHint:
-    case GetButterfly:
-    case JSConstant:
-    case Jump:
-    case CompareLess:
-    case CompareLessEq:
-    case CompareGreater:
-    case CompareGreaterEq:
-    case CompareEq:
-    case CompareStrictEq:
-    case CheckStructure:
-    case ArithBitNot:
-    case ArrayifyToStructure:
-    case ArithBitAnd:
-    case ArithBitOr:
-    case ArithBitRShift:
-    case ArithBitLShift:
-    case ArithBitXor:
-    case BitURShift:
-    case ArithAdd:
-    case ArithSub:
-    case ArithMul:
-    case ArithDiv:
-    case ArithMod:
-    case CheckArray:
-    case FilterCallLinkStatus:
-    case GetLocal:
-    case MovHint:
-    case Flush:
-    case ZombieHint:
-    case SetLocal:
-    case PhantomLocal:
-    case Check:
-    case AssertNotEmpty:
-    case SetArgumentDefinitely:
-    case NewArrayWithSize:
-    case NewArrayWithConstantSize:
-    case ValueToInt32:
-    case InvalidationPoint: {
-        Node* clone = into->cloneAndAppend(m_graph, node);
-        clone->child1() = cloneEdge(node->child1());
-        clone->child2() = cloneEdge(node->child2());
-        clone->child3() = cloneEdge(node->child3());
-        return clone;
-    }
-    default:
-        dataLogLnIf(Options::verboseLoopUnrolling(), "Could not clone node: ", node, " into ", into);
-        RELEASE_ASSERT_NOT_REACHED();
-        return nullptr;
-    }
 }
 
 // FIXME: Add more condition and update operations if they are profitable.
