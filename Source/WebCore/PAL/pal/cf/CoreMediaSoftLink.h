@@ -360,7 +360,7 @@ SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMBlockBufferAssureBlockMemory, OS
 SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMBlockBufferGetDataPointer, OSStatus, (CMBlockBufferRef theBuffer, size_t offset, size_t* lengthAtOffsetOut, size_t* totalLengthOut, char** dataPointerOut), (theBuffer, offset, lengthAtOffsetOut, totalLengthOut, dataPointerOut))
 #define CMBlockBufferGetDataPointer softLink_CoreMedia_CMBlockBufferGetDataPointer
 
-SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMSampleBufferCopySampleBufferForRange, OSStatus, (CFAllocatorRef allocator, CMSampleBufferRef sbuf, CFRange sampleRange, CMSampleBufferRef* sBufOut), (allocator, sbuf, sampleRange, sBufOut))
+SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMSampleBufferCopySampleBufferForRange, OSStatus, (CFAllocatorRef allocator, CMSampleBufferRef sbuf, CFRange sampleRange, CF_RETURNS_RETAINED CMSampleBufferRef* sBufOut), (allocator, sbuf, sampleRange, sBufOut))
 #define CMSampleBufferCopySampleBufferForRange softLink_CoreMedia_CMSampleBufferCopySampleBufferForRange
 SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMSampleBufferGetSampleSizeArray, OSStatus, (CMSampleBufferRef sbuf, CMItemCount sizeArrayEntries, size_t* sizeArrayOut, CMItemCount* sizeArrayEntriesNeededOut), (sbuf, sizeArrayEntries, sizeArrayOut, sizeArrayEntriesNeededOut))
 #define CMSampleBufferGetSampleSizeArray softLink_CoreMedia_CMSampleBufferGetSampleSizeArray
