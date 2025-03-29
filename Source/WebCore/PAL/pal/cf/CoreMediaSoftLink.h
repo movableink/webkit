@@ -273,7 +273,7 @@ SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMBufferQueueReset, OSStatus, (CMB
 #define CMBufferQueueReset softLink_CoreMedia_CMBufferQueueReset
 SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMBufferQueueGetHead, CMBufferRef, (CMBufferQueueRef queue), (queue))
 #define CMBufferQueueGetHead softLink_CoreMedia_CMBufferQueueGetHead
-SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMBufferQueueDequeueAndRetain, CMBufferRef, (CMBufferQueueRef queue), (queue))
+SOFT_LINK_FUNCTION_FOR_HEADER_WITH_CF_RETURNS_RETAINED(PAL, CoreMedia, CMBufferQueueDequeueAndRetain, CMBufferRef, (CMBufferQueueRef queue), (queue))
 #define CMBufferQueueDequeueAndRetain softLink_CoreMedia_CMBufferQueueDequeueAndRetain
 SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMBufferQueueEnqueue, OSStatus, (CMBufferQueueRef queue, CMBufferRef buffer), (queue, buffer))
 #define CMBufferQueueEnqueue softLink_CoreMedia_CMBufferQueueEnqueue
