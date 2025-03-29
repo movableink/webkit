@@ -7795,3 +7795,5 @@ webkit.org/b/290666 imported/w3c/web-platform-tests/screen-orientation/fullscree
 webkit.org/b/290670 imported/w3c/web-platform-tests/css/css-viewport/zoom/relative-units.html [ Failure ]
 
 webkit.org/b/290546 [ Debug ] imported/w3c/web-platform-tests/workers/abrupt-completion.html [ Pass Crash ]
+
+webkit.org/b/290673 editing/selection/ios/selection-moves-between-composited-layers.html [ Failure ]
