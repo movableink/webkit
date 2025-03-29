@@ -7789,3 +7789,5 @@ webkit.org/b/290648 contact-picker/contacts-select-while-presenting-picker.html 
 # webkit.org/b/290654 REGRESSION(iOS 17.2 - 17.5?): [ iOS Debug ] 2x imported/w3c/web-platform-tests/navigation-api/scroll-behavior/manual-*.html is a flaky failure (290654)
 [ Debug ] imported/w3c/web-platform-tests/navigation-api/scroll-behavior/manual-immediate-scroll.html [ Pass Failure ]
 [ Debug ] imported/w3c/web-platform-tests/navigation-api/scroll-behavior/manual-basic.html [ Pass Failure ]
+
+webkit.org/b/290666 imported/w3c/web-platform-tests/screen-orientation/fullscreen-interactions.html [ Pass Failure ]
