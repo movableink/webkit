@@ -5377,7 +5377,7 @@
 		41FBE824206DA79C000F0741 /* NetworkContentRuleListManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NetworkContentRuleListManager.cpp; sourceTree = "<group>"; };
 		41FCD6B323CDC60400C62567 /* SampleBufferDisplayLayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SampleBufferDisplayLayer.h; sourceTree = "<group>"; };
 		41FCD6B423CDCAC200C62567 /* RemoteSampleBufferDisplayLayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RemoteSampleBufferDisplayLayer.h; sourceTree = "<group>"; };
-		41FCD6B523CDE1C600C62567 /* RemoteSampleBufferDisplayLayer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RemoteSampleBufferDisplayLayer.cpp; sourceTree = "<group>"; };
+		41FCD6B523CDE1C600C62567 /* RemoteSampleBufferDisplayLayer.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RemoteSampleBufferDisplayLayer.mm; sourceTree = "<group>"; };
 		41FCD6B623CDE1C600C62567 /* RemoteSampleBufferDisplayLayer.messages.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = RemoteSampleBufferDisplayLayer.messages.in; sourceTree = "<group>"; };
 		41FCD6B723CDE53D00C62567 /* SampleBufferDisplayLayer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SampleBufferDisplayLayer.cpp; sourceTree = "<group>"; };
 		41FCD6B823CDE53E00C62567 /* SampleBufferDisplayLayer.messages.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = SampleBufferDisplayLayer.messages.in; sourceTree = "<group>"; };
@@ -12497,9 +12497,9 @@
 				41C3B89126493B7B004ED4DE /* RemoteAudioMediaStreamTrackRendererInternalUnitManager.cpp */,
 				41C3B89026493B7B004ED4DE /* RemoteAudioMediaStreamTrackRendererInternalUnitManager.h */,
 				41C3B89426493B7C004ED4DE /* RemoteAudioMediaStreamTrackRendererInternalUnitManager.messages.in */,
-				41FCD6B523CDE1C600C62567 /* RemoteSampleBufferDisplayLayer.cpp */,
 				41FCD6B423CDCAC200C62567 /* RemoteSampleBufferDisplayLayer.h */,
 				41FCD6B623CDE1C600C62567 /* RemoteSampleBufferDisplayLayer.messages.in */,
+				41FCD6B523CDE1C600C62567 /* RemoteSampleBufferDisplayLayer.mm */,
 				41FCD6BE23CE044000C62567 /* RemoteSampleBufferDisplayLayerManager.cpp */,
 				41FCD6BF23CE044000C62567 /* RemoteSampleBufferDisplayLayerManager.h */,
 				41FCD6BD23CE043F00C62567 /* RemoteSampleBufferDisplayLayerManager.messages.in */,
