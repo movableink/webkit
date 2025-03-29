@@ -916,8 +916,6 @@ WebPageProxy::WebPageProxy(PageClient& pageClient, WebProcessProxy& process, Ref
     if (RefPtr gpuProcess = GPUProcessProxy::singletonIfCreated())
         gpuProcess->setPresentingApplicationAuditToken(process.coreProcessIdentifier(), m_webPageID, m_presentingApplicationAuditToken);
 #endif
-
-    setURLSchemeHandlerForScheme(m_aboutSchemeHandler, AboutSchemeHandler::scheme);
 }
 
 WebPageProxy::~WebPageProxy()
@@ -2074,7 +2072,7 @@ void WebPageProxy::loadRequestWithNavigationShared(Ref<WebProcessProxy>&& proces
     loadParameters.advancedPrivacyProtections = navigation.originatorAdvancedPrivacyProtections();
     loadParameters.isRequestFromClientOrUserInput = navigation.isRequestFromClientOrUserInput();
     loadParameters.isPerformingHTTPFallback = isPerformingHTTPFallback == IsPerformingHTTPFallback::Yes;
-    loadParameters.isHandledByAboutSchemeHandler = protectedAboutSchemeHandler()->canHandleURL(url);
+    loadParameters.isHandledByAboutSchemeHandler = m_aboutSchemeHandler->canHandleURL(url);
     if (RefPtr networkProcess = protectedWebsiteDataStore()->networkProcessIfExists())
         loadParameters.requiredCookiesVersion = networkProcess->cookiesVersion();
 
@@ -2300,7 +2298,7 @@ RefPtr<API::Navigation> WebPageProxy::loadSimulatedRequest(WebCore::ResourceRequ
     loadParameters.lockBackForwardList = navigation->lockBackForwardList();
     loadParameters.clientRedirectSourceForHistory = navigation->clientRedirectSourceForHistory();
     loadParameters.isNavigatingToAppBoundDomain = isNavigatingToAppBoundDomain();
-    loadParameters.isHandledByAboutSchemeHandler = protectedAboutSchemeHandler()->canHandleURL(loadParameters.request.url());
+    loadParameters.isHandledByAboutSchemeHandler = m_aboutSchemeHandler->canHandleURL(loadParameters.request.url());
 
     simulatedResponse.setExpectedContentLength(loadParameters.data->size());
     simulatedResponse.includeCertificateInfo();
@@ -4958,7 +4956,7 @@ void WebPageProxy::receivedNavigationActionPolicyDecision(WebProcessProxy& proce
             loadParameters.navigationID = navigation->navigationID();
             loadParameters.ownerPermissionsPolicy = navigation->ownerPermissionsPolicy();
             loadParameters.isPerformingHTTPFallback = navigationAction->data().isPerformingHTTPFallback;
-            loadParameters.isHandledByAboutSchemeHandler = protectedAboutSchemeHandler()->canHandleURL(loadParameters.request.url());
+            loadParameters.isHandledByAboutSchemeHandler = m_aboutSchemeHandler->canHandleURL(loadParameters.request.url());
             processNavigatingTo->send(Messages::WebPage::LoadRequest(WTFMove(loadParameters)), webPageIDInProcess(processNavigatingTo));
         }
 
@@ -5147,7 +5145,7 @@ void WebPageProxy::continueNavigationInNewProcess(API::Navigation& navigation, W
         loadParameters.lockBackForwardList = !!navigation.backForwardFrameLoadType() ? LockBackForwardList::Yes : LockBackForwardList::No;
         loadParameters.ownerPermissionsPolicy = navigation.ownerPermissionsPolicy();
         loadParameters.isPerformingHTTPFallback = isPerformingHTTPFallback == IsPerformingHTTPFallback::Yes;
-        loadParameters.isHandledByAboutSchemeHandler = protectedAboutSchemeHandler()->canHandleURL(loadParameters.request.url());
+        loadParameters.isHandledByAboutSchemeHandler = m_aboutSchemeHandler->canHandleURL(loadParameters.request.url());
 
         if (navigation.isInitialFrameSrcLoad())
             frame.setIsPendingInitialHistoryItem(true);

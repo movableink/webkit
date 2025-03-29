@@ -3901,7 +3901,7 @@ private:
     std::optional<audit_token_t> m_presentingApplicationAuditToken;
 #endif
 
-    Ref<AboutSchemeHandler> m_aboutSchemeHandler;
+    const Ref<AboutSchemeHandler> m_aboutSchemeHandler;
     RefPtr<WebPageProxyTesting> m_pageForTesting;
 };
 
