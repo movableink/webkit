@@ -244,9 +244,9 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
         {
             IndentationScope scope(m_indent);
             m_body.append(
-                m_indent, "T x;\n"_s,
-                m_indent, "T y;\n"_s,
-                m_indent, "T z;\n"_s,
+                m_indent, "union { T x; T r; };\n"_s,
+                m_indent, "union { T y; T g; };\n"_s,
+                m_indent, "union { T z; T b; };\n"_s,
                 m_indent, "uint8_t __padding[sizeof(T)];\n"_s,
                 m_indent, "\n"_s,
                 m_indent, "PackedVec3() { }\n"_s,
