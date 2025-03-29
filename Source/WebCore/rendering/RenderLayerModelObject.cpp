@@ -26,6 +26,7 @@
 #include "config.h"
 #include "RenderLayerModelObject.h"
 
+#include "BlendingKeyframes.h"
 #include "InspectorInstrumentation.h"
 #include "MotionPath.h"
 #include "ReferencedSVGResources.h"
