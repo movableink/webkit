@@ -70,7 +70,7 @@ SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMSampleBufferGetSampleTimingInfo,
 #define CMSampleBufferGetSampleTimingInfo softLink_CoreMedia_CMSampleBufferGetSampleTimingInfo
 SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMSampleBufferDataIsReady, Boolean, (CMSampleBufferRef sbuf), (sbuf))
 #define CMSampleBufferDataIsReady softLink_CoreMedia_CMSampleBufferDataIsReady
-SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMSampleBufferCreateReady, OSStatus, (CFAllocatorRef allocator, CMBlockBufferRef dataBuffer, CMFormatDescriptionRef formatDescription, CMItemCount numSamples, CMItemCount numSampleTimingEntries, const CMSampleTimingInfo* sampleTimingArray, CMItemCount numSampleSizeEntries, const size_t* sampleSizeArray, CMSampleBufferRef* sampleBufferOut), (allocator, dataBuffer, formatDescription, numSamples, numSampleTimingEntries, sampleTimingArray, numSampleSizeEntries, sampleSizeArray, sampleBufferOut))
+SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMSampleBufferCreateReady, OSStatus, (CFAllocatorRef allocator, CMBlockBufferRef dataBuffer, CMFormatDescriptionRef formatDescription, CMItemCount numSamples, CMItemCount numSampleTimingEntries, const CMSampleTimingInfo* sampleTimingArray, CMItemCount numSampleSizeEntries, const size_t* sampleSizeArray, CF_RETURNS_RETAINED CMSampleBufferRef* sampleBufferOut), (allocator, dataBuffer, formatDescription, numSamples, numSampleTimingEntries, sampleTimingArray, numSampleSizeEntries, sampleSizeArray, sampleBufferOut))
 #define CMSampleBufferCreateReady softLink_CoreMedia_CMSampleBufferCreateReady
 
 SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMTimeAdd, CMTime, (CMTime time1, CMTime time2), (time1, time2))
@@ -419,7 +419,7 @@ SOFT_LINK_CONSTANT_MAY_FAIL_FOR_HEADER(PAL, CoreMedia, kCMFormatDescriptionProje
 SOFT_LINK_CONSTANT_MAY_FAIL_FOR_HEADER(PAL, CoreMedia, kCMFormatDescriptionProjectionKind_ParametricImmersive, CFStringRef)
 #define kCMFormatDescriptionProjectionKind_ParametricImmersive get_CoreMedia_kCMFormatDescriptionProjectionKind_ParametricImmersive()
 
-SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMVideoFormatDescriptionCreateFromH264ParameterSets, OSStatus, (CFAllocatorRef allocator, size_t parameterSetCount, const uint8_t* const* parameterSetPointers, const size_t* parameterSetSizes, int NALUnitHeaderLength, CMFormatDescriptionRef* formatDescriptionOut), (allocator, parameterSetCount, parameterSetPointers, parameterSetSizes, NALUnitHeaderLength, formatDescriptionOut))
+SOFT_LINK_FUNCTION_FOR_HEADER(PAL, CoreMedia, CMVideoFormatDescriptionCreateFromH264ParameterSets, OSStatus, (CFAllocatorRef allocator, size_t parameterSetCount, const uint8_t* const* parameterSetPointers, const size_t* parameterSetSizes, int NALUnitHeaderLength, CF_RETURNS_RETAINED CMFormatDescriptionRef* formatDescriptionOut), (allocator, parameterSetCount, parameterSetPointers, parameterSetSizes, NALUnitHeaderLength, formatDescriptionOut))
 #define CMVideoFormatDescriptionCreateFromH264ParameterSets softLink_CoreMedia_CMVideoFormatDescriptionCreateFromH264ParameterSets
 
 namespace PAL {
