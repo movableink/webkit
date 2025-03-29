@@ -158,8 +158,8 @@ public:
     std::pair<unsigned, unsigned> rowIndexRange() const override { return { 0, 1 }; }
     // Returns the start location and column span of the cell.
     std::pair<unsigned, unsigned> columnIndexRange() const override { return { 0, 1 }; }
-    int axColumnIndex() const override { return -1; }
-    int axRowIndex() const override { return -1; }
+    std::optional<unsigned> axColumnIndex() const override { return std::nullopt; }
+    std::optional<unsigned> axRowIndex() const override { return std::nullopt; }
 
     // Table column support.
     unsigned columnIndex() const override { return 0; }
@@ -571,6 +571,8 @@ public:
     bool hasAttachmentTag() const final { return hasTagName(HTMLNames::attachmentTag); }
     bool hasBodyTag() const final { return hasTagName(HTMLNames::bodyTag); }
     bool hasMarkTag() const final { return hasTagName(HTMLNames::markTag); }
+    bool hasRowGroupTag() const final;
+
     const AtomString& tagName() const;
     bool hasDisplayContents() const;
 

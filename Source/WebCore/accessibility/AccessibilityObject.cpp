@@ -1891,6 +1891,12 @@ std::optional<VisiblePosition> AccessibilityObject::previousLineStartPositionInt
     return startPosition;
 }
 
+bool AccessibilityObject::hasRowGroupTag() const
+{
+    const auto& tag = tagName();
+    return tag == theadTag || tag == tbodyTag || tag == tfootTag;
+}
+
 InsideLink AccessibilityObject::insideLink() const
 {
     auto* style = this->style();

@@ -115,6 +115,12 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
             setProperty(AXProperty::TagName, TagName::mark);
         else if (tag == attachmentTag)
             setProperty(AXProperty::TagName, TagName::attachment);
+        else if (tag == theadTag)
+            setProperty(AXProperty::TagName, TagName::thead);
+        else if (tag == tbodyTag)
+            setProperty(AXProperty::TagName, TagName::tbody);
+        else if (tag == tfootTag)
+            setProperty(AXProperty::TagName, TagName::tfoot);
 
         setProperty(AXProperty::TextRuns, object.textRuns());
         setProperty(AXProperty::TextEmissionBehavior, object.textEmissionBehavior());
@@ -314,7 +320,6 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
         setProperty(AXProperty::IsColumnHeader, object.isColumnHeader());
         setProperty(AXProperty::IsRowHeader, object.isRowHeader());
         setProperty(AXProperty::CellScope, object.cellScope().isolatedCopy());
-        setProperty(AXProperty::RowGroupAncestorID, object.rowGroupAncestorID());
     }
 
     if (object.isTableColumn())
@@ -649,6 +654,7 @@ void AXIsolatedObject::setProperty(AXProperty propertyName, AXPropertyValueVaria
         [] (TagName& tag) { return tag == TagName::Unknown; },
         [] (DateComponentsType& typedValue) { return typedValue == DateComponentsType::Invalid; },
         [] (std::optional<AccessibilityOrientation>& typedValue) { return !typedValue; },
+        [] (std::optional<unsigned>& typedValue) { return !typedValue; },
         [] (OptionSet<SpeakAs>& typedValue) { return typedValue.isEmpty(); },
         [](auto&) {
             ASSERT_NOT_REACHED();
@@ -1841,6 +1847,12 @@ Vector<AXTextMarkerRange> AXIsolatedObject::misspellingRanges() const
             return axObject->misspellingRanges();
         return { };
     });
+}
+
+bool AXIsolatedObject::hasRowGroupTag() const
+{
+    auto tag = propertyValue<TagName>(AXProperty::TagName);
+    return tag == TagName::thead || tag == TagName::tbody || tag == TagName::tfoot;
 }
 
 bool AXIsolatedObject::hasSameFont(AXCoreObject& otherObject)

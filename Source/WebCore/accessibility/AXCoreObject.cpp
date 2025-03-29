@@ -913,6 +913,20 @@ AXCoreObject::AccessibilityChildrenVector AXCoreObject::columnHeaders()
     return headers;
 }
 
+std::optional<AXID> AXCoreObject::rowGroupAncestorID() const
+{
+    if (!hasCellRole())
+        return { };
+
+    auto* rowGroup = Accessibility::findAncestor<AXCoreObject>(*this, /* includeSelf */ false, [] (const auto& ancestor) {
+        return ancestor.hasRowGroupTag();
+    });
+
+    if (!rowGroup)
+        return std::nullopt;
+    return rowGroup->objectID();
+}
+
 bool AXCoreObject::isTableCellInSameRowGroup(AXCoreObject& otherTableCell)
 {
     auto ancestorID = rowGroupAncestorID();

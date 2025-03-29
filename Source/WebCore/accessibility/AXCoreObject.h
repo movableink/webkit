@@ -875,14 +875,14 @@ public:
     virtual bool isRowHeader() const { return false; }
     bool isTableCellInSameRowGroup(AXCoreObject&);
     bool isTableCellInSameColGroup(AXCoreObject*);
-    virtual std::optional<AXID> rowGroupAncestorID() const { return std::nullopt; }
+    std::optional<AXID> rowGroupAncestorID() const;
     virtual String cellScope() const { return { }; }
     // Returns the start location and row span of the cell.
     virtual std::pair<unsigned, unsigned> rowIndexRange() const = 0;
     // Returns the start location and column span of the cell.
     virtual std::pair<unsigned, unsigned> columnIndexRange() const = 0;
-    virtual int axColumnIndex() const = 0;
-    virtual int axRowIndex() const = 0;
+    virtual std::optional<unsigned> axColumnIndex() const = 0;
+    virtual std::optional<unsigned> axRowIndex() const = 0;
 
     // Table column support.
     bool isTableColumn() const { return roleValue() == AccessibilityRole::Column; }
@@ -1496,6 +1496,8 @@ public:
     virtual bool hasAttachmentTag() const = 0;
     virtual bool hasBodyTag() const = 0;
     virtual bool hasMarkTag() const = 0;
+    virtual bool hasRowGroupTag() const = 0;
+
     virtual String innerHTML() const = 0;
     virtual String outerHTML() const = 0;
 

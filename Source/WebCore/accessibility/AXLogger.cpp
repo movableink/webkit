@@ -1091,9 +1091,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::Rows:
         stream << "Rows";
         break;
-    case AXProperty::RowGroupAncestorID:
-        stream << "RowGroupAncestorID";
-        break;
     case AXProperty::RowHeader:
         stream << "RowHeader";
         break;

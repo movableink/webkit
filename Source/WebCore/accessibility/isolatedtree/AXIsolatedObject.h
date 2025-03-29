@@ -68,6 +68,7 @@ public:
     bool hasAttachmentTag() const final { return propertyValue<TagName>(AXProperty::TagName) == TagName::attachment; }
     bool hasBodyTag() const final { return propertyValue<TagName>(AXProperty::TagName) == TagName::body; }
     bool hasMarkTag() const final { return propertyValue<TagName>(AXProperty::TagName) == TagName::mark; }
+    bool hasRowGroupTag() const final;
 
     const AccessibilityChildrenVector& children(bool updateChildrenIfNeeded = true) final;
 #if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
@@ -208,12 +209,11 @@ private:
     std::pair<unsigned, unsigned> rowIndexRange() const final { return indexRangePairAttributeValue(AXProperty::RowIndexRange); }
     // Returns the start location and column span of the cell.
     std::pair<unsigned, unsigned> columnIndexRange() const final { return indexRangePairAttributeValue(AXProperty::ColumnIndexRange); }
-    int axColumnIndex() const final { return intAttributeValue(AXProperty::AXColumnIndex); }
-    int axRowIndex() const final { return intAttributeValue(AXProperty::AXRowIndex); }
+    std::optional<unsigned> axColumnIndex() const final { return propertyValue<std::optional<unsigned>>(AXProperty::AXColumnIndex); }
+    std::optional<unsigned> axRowIndex() const final { return propertyValue<std::optional<unsigned>>(AXProperty::AXRowIndex); }
     bool isColumnHeader() const final { return boolAttributeValue(AXProperty::IsColumnHeader); }
     bool isRowHeader() const final { return boolAttributeValue(AXProperty::IsRowHeader); }
     String cellScope() const final { return stringAttributeValue(AXProperty::CellScope); }
-    std::optional<AXID> rowGroupAncestorID() const final { return propertyValue<Markable<AXID>>(AXProperty::RowGroupAncestorID); }
 
     // Table column support.
     unsigned columnIndex() const final { return unsignedAttributeValue(AXProperty::ColumnIndex); }

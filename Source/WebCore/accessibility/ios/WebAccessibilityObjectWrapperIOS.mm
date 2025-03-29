@@ -1375,8 +1375,8 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     if (!tableCell)
         return NSNotFound;
     
-    NSInteger rowIndex = tableCell->axRowIndex();
-    return rowIndex > 0 ? rowIndex : NSNotFound;
+    std::optional rowIndex = tableCell->axRowIndex();
+    return rowIndex ? *rowIndex : NSNotFound;
 }
 
 - (NSUInteger)accessibilityARIAColumnIndex
@@ -1387,8 +1387,8 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     if (!tableCell)
         return NSNotFound;
     
-    NSInteger columnIndex = tableCell->axColumnIndex();
-    return columnIndex > 0 ? columnIndex : NSNotFound;
+    std::optional columnIndex = tableCell->axColumnIndex();
+    return columnIndex ? *columnIndex : NSNotFound;
 }
 
 - (NSRange)accessibilityRowRange
