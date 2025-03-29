@@ -7793,3 +7793,5 @@ webkit.org/b/290648 contact-picker/contacts-select-while-presenting-picker.html 
 webkit.org/b/290666 imported/w3c/web-platform-tests/screen-orientation/fullscreen-interactions.html [ Pass Failure ]
 
 webkit.org/b/290670 imported/w3c/web-platform-tests/css/css-viewport/zoom/relative-units.html [ Failure ]
+
+webkit.org/b/290546 [ Debug ] imported/w3c/web-platform-tests/workers/abrupt-completion.html [ Pass Crash ]
