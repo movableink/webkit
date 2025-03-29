@@ -173,7 +173,7 @@
                     iokit-external-trap)
                 (when (not (equal? (param "CPU") "arm64"))
                     (allow iokit-external-method
-                        (iokit-method-number 1 4 9 11 12 20 257))
+                        (iokit-method-number 1 4 9 11 12 20 24 257 267))
                     (allow iokit-async-external-method
                         (iokit-method-number 0)))
                 (allow iokit-external-method
