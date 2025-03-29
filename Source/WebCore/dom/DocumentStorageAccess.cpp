@@ -114,6 +114,10 @@ std::optional<bool> DocumentStorageAccess::hasStorageAccessQuickCheck()
 void DocumentStorageAccess::hasStorageAccess(Ref<DeferredPromise>&& promise)
 {
     Ref document = m_document.get();
+    if (!document->isFullyActive()) {
+        promise->reject(ExceptionCode::InvalidStateError);
+        return;
+    }
 
     auto quickCheckResult = hasStorageAccessQuickCheck();
     if (quickCheckResult) {
@@ -186,6 +190,10 @@ std::optional<StorageAccessQuickResult> DocumentStorageAccess::requestStorageAcc
 void DocumentStorageAccess::requestStorageAccess(Ref<DeferredPromise>&& promise)
 {
     Ref document = m_document.get();
+    if (!document->isFullyActive()) {
+        promise->reject(ExceptionCode::InvalidStateError);
+        return;
+    }
 
     auto quickCheckResult = requestStorageAccessQuickCheck();
     if (quickCheckResult) {
