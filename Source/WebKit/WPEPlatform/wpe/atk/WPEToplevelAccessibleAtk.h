@@ -26,20 +26,17 @@
 #pragma once
 
 #if USE(ATK)
-#include "WPEToplevel.h"
-#include "atk/ATKCompat.h"
+#include "ATKCompat.h"
 #include <atk/atk.h>
 #include <glib-object.h>
+#include <wpe/WPEToplevel.h>
 
 G_BEGIN_DECLS
 
-#define WPE_TYPE_APPLICATION_ACCESSIBLE_ATK (wpe_application_accessible_atk_get_type())
-G_DECLARE_FINAL_TYPE (WPEApplicationAccessibleAtk, wpe_application_accessible_atk, WPE, APPLICATION_ACCESSIBLE_ATK, AtkObject)
+#define WPE_TYPE_TOPLEVEL_ACCESSIBLE_ATK (wpe_toplevel_accessible_atk_get_type())
+G_DECLARE_FINAL_TYPE (WPEToplevelAccessibleAtk, wpe_toplevel_accessible_atk, WPE, TOPLEVEL_ACCESSIBLE_ATK, AtkObject)
 
-AtkObject* wpeApplicationAccessibleAtkNew();
-void wpeApplicationAccessibleAtkToplevelCreated(WPEApplicationAccessibleAtk*, WPEToplevel*);
-void wpeApplicationAccessibleAtkToplevelDestroyed(WPEApplicationAccessibleAtk*, WPEToplevel*);
-int wpeApplicationAccessibleAtkGetToplevelIndex(WPEApplicationAccessibleAtk*, WPEToplevel*);
+AtkObject* wpeToplevelAccessibleAtkNew(WPEToplevel*);
 
 G_END_DECLS
 
