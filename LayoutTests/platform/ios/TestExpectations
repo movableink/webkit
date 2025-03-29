@@ -7791,3 +7791,5 @@ webkit.org/b/290648 contact-picker/contacts-select-while-presenting-picker.html 
 [ Debug ] imported/w3c/web-platform-tests/navigation-api/scroll-behavior/manual-basic.html [ Pass Failure ]
 
 webkit.org/b/290666 imported/w3c/web-platform-tests/screen-orientation/fullscreen-interactions.html [ Pass Failure ]
+
+webkit.org/b/290670 imported/w3c/web-platform-tests/css/css-viewport/zoom/relative-units.html [ Failure ]
