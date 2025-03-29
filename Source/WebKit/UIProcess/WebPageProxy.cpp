@@ -1881,7 +1881,17 @@ void WebPageProxy::maybeInitializeSandboxExtensionHandle(WebProcessProxy& proces
     if (process.isLaunching() || process.wasTerminated())
         return completionHandler(std::nullopt);
 #endif
-    SandboxExtension::Handle sandboxExtensionHandle;
+
+    auto createSandboxExtension = [protectedProcess = Ref { process }] (const String& path) {
+#if HAVE(AUDIT_TOKEN)
+        auto token = protectedProcess->protectedConnection()->getAuditToken();
+        ASSERT(token);
+        if (token)
+            return SandboxExtension::createHandleForReadByAuditToken(path, *token);
+#endif
+        return SandboxExtension::createHandle(path, SandboxExtension::Type::ReadOnly);
+    };
+
     if (!resourceDirectoryURL.isEmpty()) {
         if (checkAssumedReadAccessToResourceURL && process.hasAssumedReadAccessToURL(resourceDirectoryURL)) {
 #if PLATFORM(COCOA)
@@ -1891,26 +1901,8 @@ void WebPageProxy::maybeInitializeSandboxExtensionHandle(WebProcessProxy& proces
             return completionHandler(std::nullopt);
         }
 
-        bool createdExtension = false;
-#if HAVE(AUDIT_TOKEN)
-        auto token = process.protectedConnection()->getAuditToken();
-        ASSERT(token);
-        if (token) {
-            if (auto handle = SandboxExtension::createHandleForReadByAuditToken(resourceDirectoryURL.fileSystemPath(), *token)) {
-                sandboxExtensionHandle = WTFMove(*handle);
-                createdExtension = true;
-            }
-        } else
-#endif
-        {
-            if (auto handle = SandboxExtension::createHandle(resourceDirectoryURL.fileSystemPath(), SandboxExtension::Type::ReadOnly)) {
-                sandboxExtensionHandle = WTFMove(*handle);
-                createdExtension = true;
-            }
-        }
-
-        if (createdExtension) {
-            process.assumeReadAccessToBaseURL(*this, resourceDirectoryURL.string(), [sandboxExtensionHandle = WTFMove(sandboxExtensionHandle), completionHandler = WTFMove(completionHandler)] () mutable {
+        if (auto sandboxExtensionHandle = createSandboxExtension(resourceDirectoryURL.fileSystemPath())) {
+            process.assumeReadAccessToBaseURL(*this, resourceDirectoryURL.string(), [sandboxExtensionHandle = WTFMove(*sandboxExtensionHandle), completionHandler = WTFMove(completionHandler)] () mutable {
                 completionHandler(WTFMove(sandboxExtensionHandle));
             });
             return;
@@ -1923,27 +1915,11 @@ void WebPageProxy::maybeInitializeSandboxExtensionHandle(WebProcessProxy& proces
     // Inspector resources are in a directory with assumed access.
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!WebKit::isInspectorPage(*this));
 
-    bool createdExtension = false;
-#if HAVE(AUDIT_TOKEN)
-    if (auto token = process.protectedConnection()->getAuditToken()) {
-        if (auto handle = SandboxExtension::createHandleForReadByAuditToken("/"_s, *token)) {
-            createdExtension = true;
-            sandboxExtensionHandle = WTFMove(*handle);
-        }
-    } else
-#endif
-    {
-        if (auto handle = SandboxExtension::createHandle("/"_s, SandboxExtension::Type::ReadOnly)) {
-            createdExtension = true;
-            sandboxExtensionHandle = WTFMove(*handle);
-        }
-    }
-
-    if (createdExtension) {
+    if (auto sandboxExtensionHandle = createSandboxExtension("/"_s)) {
         willAcquireUniversalFileReadSandboxExtension(process);
         auto baseURL = url.truncatedForUseAsBase();
         auto basePath = baseURL.fileSystemPath();
-        process.assumeReadAccessToBaseURL(*this, basePath, [sandboxExtensionHandle = WTFMove(sandboxExtensionHandle), completionHandler = WTFMove(completionHandler)] () mutable {
+        process.assumeReadAccessToBaseURL(*this, basePath, [sandboxExtensionHandle = WTFMove(*sandboxExtensionHandle), completionHandler = WTFMove(completionHandler)] () mutable {
             completionHandler(WTFMove(sandboxExtensionHandle));
         });
         return;
@@ -1959,23 +1935,9 @@ void WebPageProxy::maybeInitializeSandboxExtensionHandle(WebProcessProxy& proces
     auto basePath = baseURL.fileSystemPath();
     if (basePath.isNull())
         return completionHandler(std::nullopt);
-#if HAVE(AUDIT_TOKEN)
-    if (auto token = process.protectedConnection()->getAuditToken()) {
-        if (auto handle = SandboxExtension::createHandleForReadByAuditToken(basePath, *token)) {
-            sandboxExtensionHandle = WTFMove(*handle);
-            createdExtension = true;
-        }
-    } else
-#endif
-    {
-        if (auto handle = SandboxExtension::createHandle(basePath, SandboxExtension::Type::ReadOnly)) {
-            sandboxExtensionHandle = WTFMove(*handle);
-            createdExtension = true;
-        }
-    }
 
-    if (createdExtension) {
-        process.assumeReadAccessToBaseURL(*this, baseURL.string(), [sandboxExtensionHandle = WTFMove(sandboxExtensionHandle), completionHandler = WTFMove(completionHandler)] mutable {
+    if (auto sandboxExtensionHandle = createSandboxExtension(basePath)) {
+        process.assumeReadAccessToBaseURL(*this, baseURL.string(), [sandboxExtensionHandle = WTFMove(*sandboxExtensionHandle), completionHandler = WTFMove(completionHandler)] mutable {
             completionHandler(WTFMove(sandboxExtensionHandle));
         });
         return;
@@ -1985,23 +1947,9 @@ void WebPageProxy::maybeInitializeSandboxExtensionHandle(WebProcessProxy& proces
     auto fullPath = url.fileSystemPath();
     if (fullPath.isNull())
         return completionHandler(std::nullopt);
-#if HAVE(AUDIT_TOKEN)
-    if (auto token = process.protectedConnection()->getAuditToken()) {
-        if (auto handle = SandboxExtension::createHandleForReadByAuditToken(fullPath, *token)) {
-            sandboxExtensionHandle = WTFMove(*handle);
-            createdExtension = true;
-        }
-    } else
-#endif
-    {
-        if (auto handle = SandboxExtension::createHandle(fullPath, SandboxExtension::Type::ReadOnly)) {
-            sandboxExtensionHandle = WTFMove(*handle);
-            createdExtension = true;
-        }
-    }
 
-    if (createdExtension) {
-        completionHandler(WTFMove(sandboxExtensionHandle));
+    if (auto sandboxExtensionHandle = createSandboxExtension(fullPath)) {
+        completionHandler(WTFMove(*sandboxExtensionHandle));
         return;
     }
 

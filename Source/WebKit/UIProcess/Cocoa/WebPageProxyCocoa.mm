@@ -290,17 +290,22 @@ void WebPageProxy::createSandboxExtensionsIfNeeded(const Vector<String>& files, 
     if (!files.size())
         return;
 
-    auto token = protectedLegacyMainFrameProcess()->protectedConnection()->getAuditToken();
-    ASSERT(token);
+    auto createSandboxExtension = [protectedThis = Ref { *this }] (const String& path) {
+        auto token = protectedThis->protectedLegacyMainFrameProcess()->protectedConnection()->getAuditToken();
+        ASSERT(token);
+
+        if (token) {
+            if (auto handle = SandboxExtension::createHandleForReadByAuditToken(path, *token))
+                return WTFMove(*handle);
+        } else if (auto handle = SandboxExtension::createHandle(path, SandboxExtension::Type::ReadOnly))
+            return WTFMove(*handle);
+        return SandboxExtension::Handle();
+    };
 
     if (files.size() == 1) {
         BOOL isDirectory;
         if ([[NSFileManager defaultManager] fileExistsAtPath:files[0] isDirectory:&isDirectory] && !isDirectory) {
-            if (token) {
-                if (auto handle = SandboxExtension::createHandleForReadByAuditToken("/"_s, *token))
-                    fileReadHandle = WTFMove(*handle);
-            } else if (auto handle = SandboxExtension::createHandle("/"_s, SandboxExtension::Type::ReadOnly))
-                fileReadHandle = WTFMove(*handle);
+            fileReadHandle = createSandboxExtension("/"_s);
             willAcquireUniversalFileReadSandboxExtension(m_legacyMainFrameProcess);
         }
     }
@@ -308,11 +313,7 @@ void WebPageProxy::createSandboxExtensionsIfNeeded(const Vector<String>& files, 
     for (auto& file : files) {
         if (![[NSFileManager defaultManager] fileExistsAtPath:file])
             continue;
-        if (token) {
-            if (auto handle = SandboxExtension::createHandleForReadByAuditToken(file, *token))
-                fileUploadHandles.append(WTFMove(*handle));
-        } else if (auto handle = SandboxExtension::createHandle(file, SandboxExtension::Type::ReadOnly))
-            fileUploadHandles.append(WTFMove(*handle));
+        fileUploadHandles.append(createSandboxExtension(file));
     }
 }
 
