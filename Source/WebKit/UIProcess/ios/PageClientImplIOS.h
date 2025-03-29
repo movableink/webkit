@@ -171,7 +171,6 @@ private:
     void updateAcceleratedCompositingMode(const LayerTreeContext&) override;
     void setRemoteLayerTreeRootNode(RemoteLayerTreeNode*) override;
     CALayer* acceleratedCompositingRootLayer() const override;
-    LayerHostingMode viewLayerHostingMode() override { return LayerHostingMode::OutOfProcess; }
 
     void makeViewBlank(bool) final;
 

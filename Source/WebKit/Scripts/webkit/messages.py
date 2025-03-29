@@ -1214,7 +1214,6 @@ def headers_for_type(type):
         'WebKit::SnapshotOption': ['"ImageOptions.h"'],
         'WebKit::LastNavigationWasAppInitiated': ['"AppPrivacyReport.h"'],
         'WebKit::LayerHostingContextID': ['"LayerHostingContext.h"'],
-        'WebKit::LayerHostingMode': ['"LayerTreeContext.h"'],
         'WebKit::MediaTimeUpdateData': ['"MediaPlayerPrivateRemote.h"'],
         'WebKit::PageGroupIdentifier': ['"IdentifierTypes.h"'],
         'WebKit::PaymentSetupConfiguration': ['"PaymentSetupConfigurationWebKit.h"'],

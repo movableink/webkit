@@ -282,9 +282,6 @@ public:
     // Return whether the view is visually idle.
     virtual bool isVisuallyIdle() { return !isViewVisible(); }
 
-    // Return the layer hosting mode for the view.
-    virtual LayerHostingMode viewLayerHostingMode() { return LayerHostingMode::InProcess; }
-
     virtual WindowKind windowKind() { return isViewInWindow() ? WindowKind::Normal : WindowKind::Unparented; }
 
     virtual void processDidExit() = 0;

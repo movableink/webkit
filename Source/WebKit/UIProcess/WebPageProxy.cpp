@@ -842,10 +842,6 @@ WebPageProxy::WebPageProxy(PageClient& pageClient, WebProcessProxy& process, Ref
     updateActivityState();
     updateThrottleState();
     updateHiddenPageThrottlingAutoIncreases();
-    
-#if HAVE(OUT_OF_PROCESS_LAYER_HOSTING)
-    internals().layerHostingMode = isInWindow() ? WebPageProxy::protectedPageClient()->viewLayerHostingMode() : LayerHostingMode::OutOfProcess;
-#endif
 
     platformInitialize();
 
@@ -3022,12 +3018,6 @@ void WebPageProxy::viewDidLeaveWindow()
 
 void WebPageProxy::viewDidEnterWindow()
 {
-    LayerHostingMode layerHostingMode = protectedPageClient()->viewLayerHostingMode();
-    if (internals().layerHostingMode != layerHostingMode) {
-        internals().layerHostingMode = layerHostingMode;
-        send(Messages::WebPage::SetLayerHostingMode(layerHostingMode));
-    }
-
 #if HAVE(SPATIAL_TRACKING_LABEL)
     updateDefaultSpatialTrackingLabel();
 #endif
@@ -3249,20 +3239,6 @@ void WebPageProxy::updateHiddenPageThrottlingAutoIncreases()
         internals().hiddenPageDOMTimerThrottlingAutoIncreasesCount = nullptr;
     else if (!internals().hiddenPageDOMTimerThrottlingAutoIncreasesCount)
         internals().hiddenPageDOMTimerThrottlingAutoIncreasesCount = m_legacyMainFrameProcess->protectedProcessPool()->hiddenPageThrottlingAutoIncreasesCount();
-}
-
-void WebPageProxy::layerHostingModeDidChange()
-{
-    RefPtr pageClient = this->pageClient();
-    if (!pageClient)
-        return;
-
-    LayerHostingMode layerHostingMode = pageClient->viewLayerHostingMode();
-    if (internals().layerHostingMode == layerHostingMode)
-        return;
-    internals().layerHostingMode = layerHostingMode;
-    if (hasRunningProcess())
-        send(Messages::WebPage::SetLayerHostingMode(layerHostingMode));
 }
 
 void WebPageProxy::waitForDidUpdateActivityState(ActivityStateChangeID activityStateChangeID)
@@ -11607,7 +11583,6 @@ WebPageCreationParameters WebPageProxy::creationParameters(WebProcessProxy& proc
     else
         parameters.scrollbarOverlayStyle = std::nullopt;
     parameters.backgroundExtendsBeyondPage = m_backgroundExtendsBeyondPage;
-    parameters.layerHostingMode = internals().layerHostingMode;
     parameters.controlledByAutomation = m_controlledByAutomation;
     parameters.isProcessSwap = isProcessSwap;
     parameters.useDarkAppearance = useDarkAppearance();
@@ -11664,9 +11639,6 @@ WebPageCreationParameters WebPageProxy::creationParameters(WebProcessProxy& proc
         auto handle = SandboxExtension::createHandleForMachLookup("com.apple.CARenderServer"_s, std::nullopt);
         if (handle)
             parameters.renderServerMachExtensionHandle = WTFMove(*handle);
-#if HAVE(HOSTED_CORE_ANIMATION)
-        parameters.acceleratedCompositingPort = createMachSendRightForRemoteLayerServer();
-#endif // HAVE(HOSTED_CORE_ANIMATION)
     }
 #endif // PLATFORM(MAC)
 

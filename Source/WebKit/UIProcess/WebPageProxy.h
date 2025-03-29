@@ -1003,8 +1003,6 @@ public:
     void waitForDidUpdateActivityState(ActivityStateChangeID);
     void didUpdateActivityState() { m_waitingForDidUpdateActivityState = false; }
 
-    void layerHostingModeDidChange();
-
     WebCore::IntSize viewSize() const;
     bool isViewVisible() const;
     bool isViewFocused() const;
@@ -3350,10 +3348,6 @@ private:
     struct Internals;
     Internals& internals() { return m_internals; }
     const Internals& internals() const { return m_internals; }
-
-#if HAVE(HOSTED_CORE_ANIMATION)
-    static WTF::MachSendRight createMachSendRightForRemoteLayerServer();
-#endif
 
     void takeVisibleActivity();
     void takeAudibleActivity();

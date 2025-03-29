@@ -323,7 +323,6 @@ public:
     void windowWillBeginSheet();
     void windowDidChangeBackingProperties(CGFloat oldBackingScaleFactor);
     void windowDidChangeScreen();
-    void windowDidChangeLayerHosting();
     void windowDidChangeOcclusionState();
     void windowWillClose();
     void screenDidChangeColorSpace();

@@ -82,7 +82,7 @@ void RemoteMediaPlayerProxy::mediaPlayerRenderingModeChanged()
 #if PLATFORM(IOS_FAMILY)
         contextOptions.canShowWhileLocked = m_configuration.canShowWhileLocked;
 #endif
-        m_inlineLayerHostingContext = LayerHostingContext::createForExternalHostingProcess(contextOptions);
+        m_inlineLayerHostingContext = LayerHostingContext::create(contextOptions);
         if (m_configuration.videoLayerSize.isEmpty())
             m_configuration.videoLayerSize = enclosingIntRect(WebCore::FloatRect(layer.get().frame)).size();
         auto& size = m_configuration.videoLayerSize;

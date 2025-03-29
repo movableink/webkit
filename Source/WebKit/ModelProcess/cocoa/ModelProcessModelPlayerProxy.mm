@@ -303,7 +303,7 @@ void ModelProcessModelPlayerProxy::createLayer()
     [m_layer setPlayer:WeakPtr { this }];
 
     LayerHostingContextOptions contextOptions;
-    m_layerHostingContext = LayerHostingContext::createForExternalHostingProcess(contextOptions);
+    m_layerHostingContext = LayerHostingContext::create(contextOptions);
     m_layerHostingContext->setRootLayer(m_layer.get());
 
     RELEASE_LOG(ModelElement, "%p - ModelProcessModelPlayerProxy creating remote CA layer ctxID = %" PRIu64 " id=%" PRIu64, this, layerHostingContextIdentifier().value().toUInt64(), m_id.toUInt64());
