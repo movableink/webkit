@@ -188,9 +188,6 @@ public:
             return false;
         dataLogLnIf(Options::verboseLoopUnrolling(), "\tFound InductionVariable with LoopData=", data);
 
-        if (!canCloneLoop(data))
-            return false;
-
         BasicBlock* header = data.header();
         unrollLoop(data);
 
@@ -392,7 +389,6 @@ public:
             auto compare = comparisonFunction(condition, data.inverseCondition.value());
             auto update = updateFunction(data.update);
             for (CheckedInt32 i = data.initialValue; compare(i, std::get<CheckedInt32>(data.operand));) {
-                // FIXME: We should compute code generated codes instead here. See LowerDFGToB3::compileBlock for details.
                 if (iterationCount > Options::maxLoopUnrollingIterationCount()) {
                     dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *data.header(), " since maxLoopUnrollingIterationCount =", Options::maxLoopUnrollingIterationCount());
                     return false;
@@ -422,7 +418,7 @@ public:
         if (Options::disallowLoopUnrollingForNonInnermost() && !data.loop->isInnerMostLoop())
             return false;
 
-        uint32_t totalNodeCount = 0;
+        uint32_t materialNodeCount = 0;
         uint32_t maxLoopUnrollingBodyNodeSize = data.isOperandConstant() ? Options::maxLoopUnrollingBodyNodeSize() : Options::maxPartialLoopUnrollingBodyNodeSize();
         for (uint32_t i = 0; i < data.loopSize(); ++i) {
             BasicBlock* body = data.loopBody(i);
@@ -435,21 +431,17 @@ public:
             // If the block is unreachable or invalid in the CFG, we can directly
             // ignore the loop, avoiding unnecessary cloneability checks for nodes in invalid blocks.
 
-            totalNodeCount += body->size();
-            if (totalNodeCount > maxLoopUnrollingBodyNodeSize) {
-                dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *data.header(), " and loop node count=", totalNodeCount, " since maxLoopUnrollingBodyNodeSize =", Options::maxLoopUnrollingBodyNodeSize());
-                return false;
-            }
-        }
-        return true;
-    }
-
-    bool canCloneLoop(LoopData& data)
-    {
-        HashSet<Node*> cloneableCache;
-        for (uint32_t i = 0; i < data.loopSize(); ++i) {
-            BasicBlock* body = data.loopBody(i);
+            HashSet<Node*> cloneableCache;
             for (Node* node : *body) {
+                // Count only nodes that would generate real code. Helps avoid overestimating loop body size due to Phantom or ExitOK, etc.
+                if (isMaterialNode(node))
+                    ++materialNodeCount;
+
+                if (materialNodeCount > maxLoopUnrollingBodyNodeSize) {
+                    dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *data.header(), " and loop node count=", materialNodeCount, " since maxLoopUnrollingBodyNodeSize =", Options::maxLoopUnrollingBodyNodeSize());
+                    return false;
+                }
+
                 if (!CloneHelper::isNodeCloneable(m_graph, cloneableCache, node)) {
                     dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *data.header(), " since D@", node->index(), " with op ", node->op(), " is not cloneable");
                     return false;
@@ -600,6 +592,10 @@ public:
         ASSERT(m_graph.m_form == LoadStore);
     }
 
+    // Returns true if the node would emit code when lowered to B3.
+    // Used to estimate unrolling cost more precisely, skipping Phantom-like ops.
+    bool isMaterialNode(Node*);
+
 private:
     BlockInsertionSet m_blockInsertionSet;
     UncheckedKeyHashSet<BasicBlock*> m_unrolledLoopHeaders;
@@ -738,6 +734,55 @@ LoopUnrollingPhase::UpdateFunction LoopUnrollingPhase::updateFunction(Node* upda
         RELEASE_ASSERT_NOT_REACHED();
         return [](auto, auto) { return CheckedInt32(); };
     }
+}
+
+bool LoopUnrollingPhase::isMaterialNode(Node* node)
+{
+    switch (node->op()) {
+    // This aligns with DFGDCEPhase.
+    case Check:
+    case Phantom:
+        if (node->children.isEmpty())
+            return false;
+        break;
+    case CheckVarargs: {
+        bool isEmpty = true;
+        m_graph.doToChildren(node, [&] (Edge edge) {
+            isEmpty &= !edge;
+        });
+        if (isEmpty)
+            return false;
+        break;
+    }
+    // This aligns with LowerDFGToB3::compileNode.
+    case PhantomLocal:
+    case MovHint:
+    case ZombieHint:
+    case ExitOK:
+    case PhantomNewObject:
+    case PhantomNewArrayWithConstantSize:
+    case PhantomNewFunction:
+    case PhantomNewGeneratorFunction:
+    case PhantomNewAsyncGeneratorFunction:
+    case PhantomNewAsyncFunction:
+    case PhantomNewInternalFieldObject:
+    case PhantomCreateActivation:
+    case PhantomDirectArguments:
+    case PhantomCreateRest:
+    case PhantomSpread:
+    case PhantomNewArrayWithSpread:
+    case PhantomNewArrayBuffer:
+    case PhantomClonedArguments:
+    case PhantomNewRegExp:
+    case PutHint:
+    case BottomValue:
+    case KillStack:
+    case InitializeEntrypointArguments:
+        return false;
+    default:
+        break;
+    }
+    return true;
 }
 
 }
