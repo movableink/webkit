@@ -72,10 +72,6 @@ public:
     
 #if HAVE(OUT_OF_PROCESS_LAYER_HOSTING)
     static std::unique_ptr<LayerHostingContext> createForExternalHostingProcess(const LayerHostingContextOptions& = { });
-
-#if PLATFORM(MAC)
-    static std::unique_ptr<LayerHostingContext> createForExternalPluginHostingProcess();
-#endif
     
     static std::unique_ptr<LayerHostingContext> createTransportLayerForRemoteHosting(LayerHostingContextID);
 
