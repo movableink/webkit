@@ -243,7 +243,7 @@ void RemoteInspector::sendMessageToRemote(TargetID targetIdentifier, const Strin
     if (!targetConnection)
         return;
 
-    NSData *messageData = [static_cast<NSString *>(message) dataUsingEncoding:NSUTF8StringEncoding];
+    NSData *messageData = [message.createNSString() dataUsingEncoding:NSUTF8StringEncoding];
     NSUInteger messageLength = messageData.length;
     const NSUInteger maxChunkSize = 2 * 1024 * 1024; // 2 Mebibytes
 

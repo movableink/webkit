@@ -10020,7 +10020,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         context.get()[PAL::get_DataDetectorsUI_kDataDetectorsTrailingText()] = positionInformation.textAfter;
 
     auto canShowPreview = ^{
-        if (!static_cast<NSURL *>(positionInformation.url).iTunesStoreURL)
+        if (!positionInformation.url.createNSURL().get().iTunesStoreURL)
             return YES;
         if (!_page->websiteDataStore().isPersistent())
             return NO;

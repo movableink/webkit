@@ -1083,7 +1083,6 @@ platform/mock/RTCNotifiersMock.cpp
 platform/mock/TimerEventBasedMock.h
 platform/mock/mediasource/MockMediaSourcePrivate.cpp
 platform/network/SynchronousLoaderClient.cpp
-platform/network/cocoa/RangeResponseGenerator.mm
 platform/network/mac/ResourceHandleMac.mm
 platform/network/mac/WebCoreResourceHandleAsOperationQueueDelegate.mm
 platform/text/BidiContext.cpp

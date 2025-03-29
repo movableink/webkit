@@ -99,7 +99,7 @@ static RetainPtr<NSArray<NSHTTPCookie *>> cookiesByCappingExpiry(NSArray<NSHTTPC
 {
     RetainPtr cappedCookies = [NSMutableArray arrayWithCapacity:cookies.count];
     for (NSHTTPCookie *cookie in cookies)
-        [cappedCookies addObject:WebCore::NetworkStorageSession::capExpiryOfPersistentCookie(cookie, ageCap)];
+        [cappedCookies addObject:WebCore::NetworkStorageSession::capExpiryOfPersistentCookie(cookie, ageCap).get()];
     return cappedCookies;
 }
 
@@ -342,8 +342,7 @@ void NetworkTaskCocoa::updateTaskWithFirstPartyForSameSiteCookies(NSURLSessionTa
     if (request.isSameSiteUnspecified())
         return;
 #if HAVE(FOUNDATION_WITH_SAME_SITE_COOKIE_SUPPORT)
-    static NeverDestroyed<RetainPtr<NSURL>> emptyURL = adoptNS([[NSURL alloc] initWithString:@""]);
-    task._siteForCookies = request.isSameSite() ? task.currentRequest.URL : emptyURL.get().get();
+    task._siteForCookies = request.isSameSite() ? task.currentRequest.URL : URL::emptyNSURL();
     task._isTopLevelNavigation = request.isTopSite();
 #else
     UNUSED_PARAM(task);

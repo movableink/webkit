@@ -891,7 +891,7 @@ static NSDictionary<NSString *, id> *extractResolutionReport(NSError *error)
         String name = String::fromUTF8(nw_interface_get_name(interface));
         [interfaces addObject:@{
             @"type" : description(nw_interface_get_type(interface)),
-            @"name" : static_cast<NSString *>(name) ?: @"",
+            @"name" : name.createNSString().get() ?: @"",
         }];
         return true;
     });
@@ -900,9 +900,9 @@ static NSDictionary<NSString *, id> *extractResolutionReport(NSError *error)
     String provider = String::fromUTF8(nw_resolution_report_get_provider_name(report));
     String extraText = String::fromUTF8(nw_resolution_report_get_extended_dns_error_extra_text(report));
     return @{
-        @"provider" : static_cast<NSString *>(provider) ?: @"",
+        @"provider" : provider.createNSString().get() ?: @"",
         @"dnsFailureReason" : description(nw_resolution_report_get_dns_failure_reason(report)),
-        @"extendedDNSErrorExtraText" : static_cast<NSString *>(extraText) ?: @"",
+        @"extendedDNSErrorExtraText" : extraText.createNSString().get() ?: @"",
         @"interfaces" : interfaces.get(),
     };
 }
