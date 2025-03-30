@@ -703,13 +703,10 @@ bool AccessibilityNodeObject::computeIsIgnored() const
     return role == AccessibilityRole::Ignored || role == AccessibilityRole::Unknown;
 }
 
-bool AccessibilityNodeObject::canvasHasFallbackContent() const
+bool AccessibilityNodeObject::hasElementDescendant() const
 {
-    RefPtr canvasElement = dynamicDowncast<HTMLCanvasElement>(node());
-    // If it has any children that are elements, we'll assume it might be fallback
-    // content. If it has no children or its only children are not elements
-    // (e.g. just text nodes), it doesn't have fallback content.
-    return canvasElement && childrenOfType<Element>(*canvasElement).first();
+    RefPtr element = dynamicDowncast<Element>(node());
+    return element && childrenOfType<Element>(*element).first();
 }
 
 bool AccessibilityNodeObject::isNativeTextControl() const

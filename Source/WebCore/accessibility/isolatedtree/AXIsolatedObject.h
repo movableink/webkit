@@ -290,8 +290,7 @@ private:
     String expandedTextValue() const final { return stringAttributeValue(AXProperty::ExpandedTextValue); }
     bool supportsExpandedTextValue() const final { return boolAttributeValue(AXProperty::SupportsExpandedTextValue); }
     SRGBA<uint8_t> colorValue() const final;
-    String rolePlatformString() const final { return stringAttributeValue(AXProperty::RolePlatformString); }
-    String roleDescription() const final { return stringAttributeValue(AXProperty::RoleDescription); }
+    String roleDescription() final { return stringAttributeValue(AXProperty::RoleDescription); }
     String subrolePlatformString() const final { return stringAttributeValue(AXProperty::SubrolePlatformString); }
     LayoutRect elementRect() const final;
     IntPoint clickPoint() final;
@@ -322,6 +321,7 @@ private:
     bool isMathTableCell() const final { return boolAttributeValue(AXProperty::IsMathTableCell); }
     bool isMathMultiscript() const final { return boolAttributeValue(AXProperty::IsMathMultiscript); }
     bool isMathToken() const final { return boolAttributeValue(AXProperty::IsMathToken); }
+    bool isAnonymousMathOperator() const final { return boolAttributeValue(AXProperty::IsAnonymousMathOperator); }
     std::optional<AccessibilityChildrenVector> mathRadicand() final;
     AXIsolatedObject* mathRootIndexObject() final { return objectAttributeValue(AXProperty::MathRootIndexObject); }
     AXIsolatedObject* mathUnderObject() final { return objectAttributeValue(AXProperty::MathUnderObject); }

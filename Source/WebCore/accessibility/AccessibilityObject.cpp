@@ -2790,12 +2790,7 @@ SRGBA<uint8_t> AccessibilityObject::colorValue() const
 }
 
 #if !PLATFORM(MAC)
-String AccessibilityObject::rolePlatformString() const
-{
-    return Accessibility::roleToPlatformString(roleValue());
-}
-
-String AccessibilityObject::rolePlatformDescription() const
+String AccessibilityObject::rolePlatformDescription()
 {
     // FIXME: implement in other platforms.
     return String();
@@ -2828,7 +2823,7 @@ bool AccessibilityObject::supportsARIARoleDescription() const
     }
 }
 
-String AccessibilityObject::roleDescription() const
+String AccessibilityObject::roleDescription()
 {
     // aria-roledescription takes precedence over any other rule.
     if (supportsARIARoleDescription()) {
@@ -4220,20 +4215,5 @@ AccessibilityObject* AccessibilityObject::containingWebArea() const
     RefPtr root = cache ? dynamicDowncast<AccessibilityScrollView>(cache->getOrCreate(frameView.get())) : nullptr;
     return root ? root->webAreaObject() : nullptr;
 }
-
-namespace Accessibility {
-
-#if !PLATFORM(MAC) && !USE(ATSPI)
-// FIXME: implement in other platforms.
-PlatformRoleMap createPlatformRoleMap() { return PlatformRoleMap(); }
-#endif
-
-String roleToPlatformString(AccessibilityRole role)
-{
-    static NeverDestroyed<PlatformRoleMap> roleMap = createPlatformRoleMap();
-    return roleMap->get(enumToUnderlyingType(role));
-}
-
-} // namespace Accessibility
 
 } // namespace WebCore

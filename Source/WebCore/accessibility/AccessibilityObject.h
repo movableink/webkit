@@ -286,7 +286,7 @@ public:
     bool supportsChecked() const final;
     bool supportsRowCountChange() const;
     AccessibilitySortDirection sortDirection() const final;
-    virtual bool canvasHasFallbackContent() const { return false; }
+    virtual bool hasElementDescendant() const { return false; }
     String identifierAttribute() const final;
     String linkRelValue() const final;
     Vector<String> classList() const final;
@@ -432,8 +432,7 @@ public:
     SRGBA<uint8_t> colorValue() const override;
 
     virtual AccessibilityRole determineAccessibilityRole() = 0;
-    String rolePlatformString() const final;
-    String roleDescription() const override;
+    String roleDescription() override;
     String subrolePlatformString() const final;
 
     AXObjectCache* axObjectCache() const override;
@@ -711,7 +710,7 @@ public:
     String mathFencedOpenString() const override { return String(); }
     String mathFencedCloseString() const override { return String(); }
     int mathLineThickness() const override { return 0; }
-    virtual bool isAnonymousMathOperator() const { return false; }
+    bool isAnonymousMathOperator() const override { return false; }
 
     // Multiscripts components.
     void mathPrescripts(AccessibilityMathMultiscriptPairs&) override { }
@@ -900,7 +899,7 @@ protected:
 
     virtual bool shouldIgnoreAttributeRole() const { return false; }
     virtual AccessibilityRole buttonRoleType() const;
-    String rolePlatformDescription() const;
+    String rolePlatformDescription();
     bool dispatchTouchEvent();
 
     static bool isARIAInput(AccessibilityRole);
@@ -995,11 +994,6 @@ inline bool AccessibilityObject::hasAttributedText() const
 AccessibilityObject* firstAccessibleObjectFromNode(const Node*, NOESCAPE const Function<bool(const AccessibilityObject&)>& isAccessible);
 
 namespace Accessibility {
-
-using PlatformRoleMap = UncheckedKeyHashMap<AccessibilityRole, String, DefaultHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>>;
-
-PlatformRoleMap createPlatformRoleMap();
-String roleToPlatformString(AccessibilityRole);
 
 #if PLATFORM(IOS_FAMILY)
 WEBCORE_EXPORT RetainPtr<NSData> newAccessibilityRemoteToken(NSString *);

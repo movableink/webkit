@@ -160,6 +160,7 @@ enum class AXProperty : uint16_t {
     InsideLink,
     IsGrabbed,
     IsARIATreeGridRow,
+    IsAnonymousMathOperator,
     IsAttachment,
     IsBusy,
     IsChecked,

@@ -183,7 +183,6 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXProperty::InsideLink, object.insideLink());
     setProperty(AXProperty::IsValueAutofillAvailable, object.isValueAutofillAvailable());
     setProperty(AXProperty::RoleDescription, object.roleDescription().isolatedCopy());
-    setProperty(AXProperty::RolePlatformString, object.rolePlatformString().isolatedCopy());
     setProperty(AXProperty::SubrolePlatformString, object.subrolePlatformString().isolatedCopy());
     setProperty(AXProperty::CanSetFocusAttribute, object.canSetFocusAttribute());
     setProperty(AXProperty::CanSetValueAttribute, object.canSetValueAttribute());
@@ -383,6 +382,7 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
         setProperty(AXProperty::MathFencedOpenString, object.mathFencedOpenString().isolatedCopy());
         setProperty(AXProperty::MathFencedCloseString, object.mathFencedCloseString().isolatedCopy());
         setProperty(AXProperty::MathLineThickness, object.mathLineThickness());
+        setProperty(AXProperty::IsAnonymousMathOperator, object.isAnonymousMathOperator());
 
         bool isMathRoot = object.isMathRoot();
         setProperty(AXProperty::IsMathRoot, isMathRoot);

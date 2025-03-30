@@ -1056,6 +1056,8 @@ public:
     void appendRadioButtonDescendants(AXCoreObject&, AccessibilityChildrenVector&) const;
     virtual AccessibilityChildrenVector radioButtonGroup() const = 0;
 
+    virtual bool containsOnlyStaticText() const;
+
     bool hasPopup() const;
     bool selfOrAncestorLinkHasPopup() const;
     virtual String explicitPopupValue() const = 0;
@@ -1171,10 +1173,14 @@ public:
     virtual SRGBA<uint8_t> colorValue() const = 0;
 
     AccessibilityRole roleValue() const { return m_role; }
+#if PLATFORM(MAC)
     // Non-localized string associated with the object role.
-    virtual String rolePlatformString() const = 0;
+    String rolePlatformString();
+#else
+    String rolePlatformString() { return { }; }
+#endif // PLATFORM(MAC)
     // Localized string that describes the object's role.
-    virtual String roleDescription() const = 0;
+    virtual String roleDescription() = 0;
     // Localized string that describes ARIA landmark roles.
     String ariaLandmarkRoleDescription() const;
     // Non-localized string associated with the object's subrole.
@@ -1420,6 +1426,7 @@ public:
     virtual bool isMathTableCell() const = 0;
     virtual bool isMathMultiscript() const = 0;
     virtual bool isMathToken() const = 0;
+    virtual bool isAnonymousMathOperator() const = 0;
 
     // Root components.
     virtual std::optional<AccessibilityChildrenVector> mathRadicand() = 0;
@@ -1505,7 +1512,7 @@ public:
     virtual Vector<RetainPtr<id>> modelElementChildren() = 0;
 #endif
 
-    String infoStringForTesting() const;
+    String infoStringForTesting();
 
 protected:
     AXCoreObject() = delete;
@@ -1863,6 +1870,12 @@ template<typename T, typename U> inline T retrieveAutoreleasedValueFromMainThrea
 #endif
 
 bool inRenderTreeOrStyleUpdate(const Document&);
+
+using PlatformRoleMap = UncheckedKeyHashMap<AccessibilityRole, String, DefaultHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>>;
+
+void initializeRoleMap();
+PlatformRoleMap createPlatformRoleMap();
+String roleToPlatformString(AccessibilityRole);
 
 } // namespace Accessibility
 

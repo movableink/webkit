@@ -46,7 +46,7 @@ public:
 
     void init() override;
 
-    bool canvasHasFallbackContent() const final;
+    bool hasElementDescendant() const final;
 
     bool isBusy() const final;
     bool isDetached() const override { return !m_node; }

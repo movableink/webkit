@@ -958,6 +958,24 @@ bool AXCoreObject::isReplacedElement() const
     }
 }
 
+bool AXCoreObject::containsOnlyStaticText() const
+{
+    bool hasText = false;
+    auto* nonTextDescendant = Accessibility::findUnignoredDescendant(const_cast<AXCoreObject&>(*this), /* includeSelf */ false, [&] (auto& descendant) {
+        if (descendant.isGroup()) {
+            // Skip through groups to keep looking for text.
+            return false;
+        }
+
+        if (descendant.isStaticText()) {
+            hasText = hasText || !descendant.isIgnored();
+            return false;
+        }
+        return true;
+    });
+    return hasText && !nonTextDescendant;
+}
+
 String AXCoreObject::ariaLandmarkRoleDescription() const
 {
     switch (roleValue()) {
@@ -1371,12 +1389,32 @@ String LineDecorationStyle::debugDescription() const
     );
 }
 
-String AXCoreObject::infoStringForTesting() const
+String AXCoreObject::infoStringForTesting()
 {
     return makeString("Role: "_s, rolePlatformString(), ", Value: "_s, stringValue());
 }
 
 namespace Accessibility {
+
+#if !PLATFORM(MAC) && !USE(ATSPI)
+// FIXME: implement in other platforms.
+PlatformRoleMap createPlatformRoleMap() { return PlatformRoleMap(); }
+#endif
+
+void initializeRoleMap()
+{
+    roleToPlatformString(AccessibilityRole::Button);
+}
+
+String roleToPlatformString(AccessibilityRole role)
+{
+    // This map can be read from multiple threads at once. This is fine,
+    // as we don't mutate it after creation, and never allow it to be destroyed.
+    // The only thing we need to make thread-safe is its initialization, accomplished
+    // by expliciting initializing the map before the accessibility thread is started.
+    static NeverDestroyed<PlatformRoleMap> roleMap = createPlatformRoleMap();
+    return roleMap->get(enumToUnderlyingType(role));
+}
 
 bool inRenderTreeOrStyleUpdate(const Document& document)
 {

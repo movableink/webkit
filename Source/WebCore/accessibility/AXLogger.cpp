@@ -843,6 +843,9 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::IsARIATreeGridRow:
         stream << "IsARIATreeGridRow";
         break;
+    case AXProperty::IsAnonymousMathOperator:
+        stream << "IsAnonymousMathOperator";
+        break;
     case AXProperty::IsAttachment:
         stream << "IsAttachment";
         break;

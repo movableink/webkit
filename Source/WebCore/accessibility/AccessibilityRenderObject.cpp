@@ -1279,8 +1279,13 @@ bool AccessibilityRenderObject::computeIsIgnored() const
         return !blockFlow->hasLines() && !clickableSelfOrAncestor();
 
     if (isCanvas()) {
-        if (canvasHasFallbackContent())
+        if (hasElementDescendant()) {
+            // Don't ignore canvases with potential fallback content, indicated by
+            // having at least one element descendant. If it has no children or its
+            // only children are not elements (e.g. just text nodes), it doesn't have
+            // fallback content.
             return false;
+        }
 
         if (WeakPtr canvasBox = dynamicDowncast<RenderBox>(*m_renderer)) {
             if (canvasBox->height() <= 1 || canvasBox->width() <= 1)

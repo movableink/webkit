@@ -792,7 +792,7 @@ Ref<AccessibilityRenderObject> AXObjectCache::createObjectFromRenderer(RenderObj
 
     bool isAnonymous = false;
 #if USE(ATSPI)
-    // This branch is only necessary because ATSPI walks the render tree rather than the DOM to build the accessiblity tree.
+    // This branch is only necessary because ATSPI walks the render tree rather than the DOM to build the accessibility tree.
     // FIXME: Consider removing this with https://bugs.webkit.org/show_bug.cgi?id=282117.
     isAnonymous = renderer.isAnonymous();
 #endif
