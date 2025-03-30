@@ -313,7 +313,7 @@ void UnifiedPDFPlugin::installPDFDocument()
 
     auto handlePDFTestCallback = makeScopeExit([testCallback = WTFMove(m_pdfTestCallback)] {
         if (testCallback)
-            testCallback->handleEvent();
+            testCallback->invoke();
     });
 
     m_documentLayout.setPDFDocument(m_pdfDocument.get());
