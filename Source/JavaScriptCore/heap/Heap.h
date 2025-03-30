@@ -303,7 +303,7 @@ class Heap;
 typedef HashCountedSet<JSCell*> ProtectCountSet;
 typedef HashCountedSet<ASCIILiteral> TypeCountSet;
 
-enum class HeapType : uint8_t { Small, Large };
+enum class HeapType : uint8_t { Small, Medium, Large };
 
 class HeapUtil;
 

@@ -202,6 +202,7 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, optimizeParallelSlotVisitorsForStoppedMutator, false, Normal, nullptr) \
     v(Bool, verboseHeapSnapshotLogging, true, Normal, nullptr) \
     v(Unsigned, largeHeapSize, 32 * 1024 * 1024, Normal, nullptr) \
+    v(Unsigned, mediumHeapSize, 4 * 1024 * 1024, Normal, nullptr) \
     v(Unsigned, smallHeapSize, 1 * 1024 * 1024, Normal, nullptr) \
     v(Double, smallHeapRAMFraction, 0.25, Normal, nullptr) \
     v(Double, smallHeapGrowthFactor, 2, Normal, nullptr) \

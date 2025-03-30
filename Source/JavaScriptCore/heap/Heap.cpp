@@ -123,13 +123,19 @@ double maxPauseMS(double thisPauseMS)
 
 size_t minHeapSize(HeapType heapType, size_t ramSize)
 {
-    if (heapType == HeapType::Large) {
-        double result = std::min(
+    switch (heapType) {
+    case HeapType::Large:
+        return static_cast<size_t>(std::min(
             static_cast<double>(Options::largeHeapSize()),
-            ramSize * Options::smallHeapRAMFraction());
-        return static_cast<size_t>(result);
+            ramSize * Options::smallHeapRAMFraction()));
+    case HeapType::Medium:
+        return Options::mediumHeapSize();
+    case HeapType::Small:
+        return Options::smallHeapSize();
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
     }
-    return Options::smallHeapSize();
 }
 
 size_t proportionalHeapSize(size_t heapSize, size_t ramSize)
