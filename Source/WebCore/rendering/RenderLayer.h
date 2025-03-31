@@ -436,8 +436,12 @@ public:
     void updateDescendantDependentFlags();
     bool descendantDependentFlagsAreDirty() const
     {
-        return m_visibleDescendantStatusDirty || m_visibleContentStatusDirty || m_hasSelfPaintingLayerDescendantDirty
-            || m_hasNotIsolatedBlendingDescendantsStatusDirty || m_hasAlwaysIncludedInZOrderListsDescendantsStatusDirty;
+        return m_visibleDescendantStatusDirty
+            || m_visibleContentStatusDirty
+            || m_hasSelfPaintingLayerDescendantDirty
+            || m_hasViewportConstrainedDescendantStatusDirty
+            || m_hasNotIsolatedBlendingDescendantsStatusDirty
+            || m_hasAlwaysIncludedInZOrderListsDescendantsStatusDirty;
     }
 
     bool isPaintingSVGResourceLayer() const { return m_isPaintingSVGResourceLayer; }
@@ -1236,6 +1240,9 @@ private:
     bool has3DTransformedDescendant() const { ASSERT(!m_3DTransformedDescendantStatusDirty); return m_has3DTransformedDescendant; }
     bool has3DTransformedAncestor() const { return m_has3DTransformedAncestor; }
 
+    void setAncestorChainHasViewportConstrainedDescendant();
+    void dirtyAncestorChainHasViewportConstrainedDescendantStatus();
+
     bool hasFixedAncestor() const { return m_hasFixedAncestor; }
     bool hasPaginatedAncestor() const { return m_hasPaginatedAncestor; }
 
@@ -1327,6 +1334,9 @@ private:
     // significant savings, especially if the tree has lots of non-self-painting layers grouped together (e.g. table cells).
     bool m_hasSelfPaintingLayerDescendant : 1;
     bool m_hasSelfPaintingLayerDescendantDirty : 1;
+
+    bool m_hasViewportConstrainedDescendant : 1;
+    bool m_hasViewportConstrainedDescendantStatusDirty : 1;
 
     bool m_usedTransparency : 1; // Tracks whether we need to close a transparent layer, i.e., whether
                                  // we ended up painting this layer or any descendants (and therefore need to

@@ -1923,8 +1923,15 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
             return { };
 
         using enum HitTestRequest::Type;
+        static constexpr OptionSet hitTestOptions {
+            ReadOnly,
+            DisallowUserAgentShadowContent,
+            IgnoreClipping,
+            ViewportConstrainedLayersOnly,
+        };
+
         HitTestResult result { hitTestLocationForSide(side) };
-        if (!document->hitTest({ HitTestSource::User, { ReadOnly, DisallowUserAgentShadowContent, IgnoreClipping } }, result))
+        if (!document->hitTest({ HitTestSource::User, hitTestOptions }, result))
             return { };
 
         RefPtr hitNode = result.innerNonSharedNode();
