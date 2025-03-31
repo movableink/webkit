@@ -58,10 +58,10 @@ ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
 ALLOW_NEW_API_WITHOUT_GUARDS_END
 
     if ([configuration respondsToSelector:@selector(setSignedFields:)]) {
-        NSMutableArray *signedFields = [NSMutableArray arrayWithCapacity:coreConfiguration.signedFields.size()];
+        RetainPtr signedFields = adoptNS([[NSMutableArray alloc] initWithCapacity:coreConfiguration.signedFields.size()]);
         for (auto& signedField : coreConfiguration.signedFields)
             [signedFields addObject:signedField];
-        [configuration setSignedFields:signedFields];
+        [configuration setSignedFields:signedFields.get()];
     }
 
     return configuration;
