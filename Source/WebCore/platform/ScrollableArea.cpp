@@ -397,12 +397,12 @@ void ScrollableArea::didAddScrollbar(Scrollbar* scrollbar, ScrollbarOrientation 
     setScrollbarOverlayStyle(scrollbarOverlayStyle());
 }
 
-void ScrollableArea::willRemoveScrollbar(Scrollbar* scrollbar, ScrollbarOrientation orientation)
+void ScrollableArea::willRemoveScrollbar(Scrollbar& scrollbar, ScrollbarOrientation orientation)
 {
     if (orientation == ScrollbarOrientation::Vertical)
-        scrollbarsController().willRemoveVerticalScrollbar(scrollbar);
+        scrollbarsController().willRemoveVerticalScrollbar(&scrollbar);
     else
-        scrollbarsController().willRemoveHorizontalScrollbar(scrollbar);
+        scrollbarsController().willRemoveHorizontalScrollbar(&scrollbar);
 }
 
 void ScrollableArea::contentsResized()

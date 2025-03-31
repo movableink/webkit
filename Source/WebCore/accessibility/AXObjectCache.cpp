@@ -1134,7 +1134,7 @@ void AXObjectCache::remove(std::optional<AXID> axID)
     if (!axID)
         return;
 
-    auto object = m_objects.take(*axID);
+    RefPtr object = m_objects.take(*axID);
     if (!object)
         return;
 
@@ -1160,12 +1160,10 @@ void AXObjectCache::remove(std::optional<AXID> axID)
 #endif
 }
 
-void AXObjectCache::remove(RenderObject* renderer)
+void AXObjectCache::remove(RenderObject& renderer)
 {
     AXTRACE(makeString("AXObjectCache::remove RenderObject* 0x"_s, hex(reinterpret_cast<uintptr_t>(this))));
-
-    if (renderer)
-        remove(m_renderObjectMapping.takeOptional(*renderer));
+    remove(m_renderObjectMapping.takeOptional(renderer));
 }
 
 void AXObjectCache::remove(Node& node)
@@ -1173,7 +1171,8 @@ void AXObjectCache::remove(Node& node)
     AXTRACE(makeString("AXObjectCache::remove Node& 0x"_s, hex(reinterpret_cast<uintptr_t>(this))));
 
     remove(m_nodeObjectMapping.take(node));
-    remove(node.renderer());
+    if (auto* renderer = node.renderer())
+        remove(*renderer);
 
     // If we're in the middle of a cache update, don't modify any of these vectors because we are currently
     // iterating over them. They will be cleared at the end of the cache update, so not removing them here is fine.
@@ -1201,12 +1200,10 @@ void AXObjectCache::remove(Node& node)
     m_deferredTextChangedList.remove(node);
 }
 
-void AXObjectCache::remove(Widget* view)
+void AXObjectCache::remove(Widget& view)
 {
-    if (!view)
-        return;
-    remove(m_widgetObjectMapping.takeOptional(*view));
-    if (auto* scrollView = dynamicDowncast<ScrollView>(*view))
+    remove(m_widgetObjectMapping.takeOptional(view));
+    if (auto* scrollView = dynamicDowncast<ScrollView>(view))
         m_deferredScrollbarUpdateChangeList.remove(*scrollView);
 }
 
@@ -1549,21 +1546,18 @@ void AXObjectCache::deferAddUnconnectedNode(AccessibilityObject& axObject)
 }
 #endif
 
-AccessibilityObject* AXObjectCache::getIncludingAncestors(RenderObject* renderer) const
+AccessibilityObject* AXObjectCache::getIncludingAncestors(RenderObject& renderer) const
 {
-    for (auto* current = renderer; current; current = current->parent()) {
+    for (auto* current = &renderer; current; current = current->parent()) {
         if (auto* object = get(*current))
             return object;
     }
     return nullptr;
 }
 
-void AXObjectCache::childrenChanged(RenderObject* renderer, RenderObject* changedChild)
+void AXObjectCache::childrenChanged(RenderObject& renderer, RenderObject* changedChild)
 {
-    if (!renderer)
-        return;
-
-    if (renderer->isAnonymous()) {
+    if (renderer.isAnonymous()) {
         // Don't drop a children-changed event if we can't |get| the given renderer if the renderer is anonymous.
         // Sometimes the only children-changed we get from the render tree for some subtrees is for an anonymous renderer,
         // so if we just drop it, we can have a stale accessibility tree. This problem is specific to anonymous renderers
@@ -1580,7 +1574,7 @@ void AXObjectCache::childrenChanged(RenderObject* renderer, RenderObject* change
         // following many of the same codepaths, but unfortunately will still pass even without this branch.
         childrenChanged(getIncludingAncestors(renderer));
     } else
-        childrenChanged(get(*renderer));
+        childrenChanged(get(renderer));
 
     if (changedChild)
         deferElementAddedOrRemoved(dynamicDowncast<Element>(changedChild->node()));
@@ -1903,7 +1897,8 @@ void AXObjectCache::onInertOrVisibilityChange(RenderElement& renderer)
 #endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 
 #else // !ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
-    childrenChanged(renderer.checkedParent().get(), &renderer);
+    if (CheckedPtr parent = renderer.checkedParent())
+        childrenChanged(*parent, &renderer);
 #endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
 }
 
@@ -2780,8 +2775,9 @@ void AXObjectCache::handleAttributeChange(Element* element, const QualifiedName&
         postNotification(element, AXNotification::RequiredStatusChanged);
     else if (attrName == tabindexAttr) {
         if (oldValue.isEmpty() || newValue.isEmpty()) {
-            if (RefPtr parent = element->parentNode())
-                childrenChanged(parent->renderer());
+            RefPtr parent = element->parentNode();
+            if (auto* renderer = parent ? parent->renderer() : nullptr)
+                childrenChanged(*renderer);
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
             postNotification(element, AXNotification::FocusableStateChanged);
 #endif

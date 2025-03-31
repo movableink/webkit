@@ -1810,7 +1810,7 @@ void RenderObject::willBeDestroyed()
     ASSERT(renderTreeBeingDestroyed() || !is<RenderElement>(*this) || !view().frameView().hasSlowRepaintObject(downcast<RenderElement>(*this)));
 
     if (CheckedPtr cache = document().existingAXObjectCache())
-        cache->remove(this);
+        cache->remove(*this);
 
     if (RefPtr node = this->node()) {
         // FIXME: Continuations should be anonymous.

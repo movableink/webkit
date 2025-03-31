@@ -194,7 +194,7 @@ HTMLSelectElement& RenderMenuList::selectElement() const
 void RenderMenuList::didAttachChild(RenderObject& child, RenderObject*)
 {
     if (CheckedPtr cache = document().existingAXObjectCache())
-        cache->childrenChanged(this, &child);
+        cache->childrenChanged(*this, &child);
 }
 
 void RenderMenuList::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)

@@ -513,7 +513,7 @@ void RenderTreeBuilder::attachToRenderElementInternal(RenderElement& parent, Ren
     }
 
     if (AXObjectCache* cache = parent.document().axObjectCache())
-        cache->childrenChanged(&parent, newChild);
+        cache->childrenChanged(parent, newChild);
 
     if (parent.hasOutlineAutoAncestor() || parent.outlineStyleForRepaint().outlineStyleIsAuto() == OutlineIsAuto::On)
         if (!is<RenderMultiColumnSet>(newChild->previousSibling())) 
@@ -1055,7 +1055,7 @@ RenderPtr<RenderObject> RenderTreeBuilder::detachFromRenderElement(RenderElement
     auto childToTake = parent.detachRendererInternal(child);
 
     if (AXObjectCache* cache = parent.document().existingAXObjectCache())
-        cache->childrenChanged(&parent);
+        cache->childrenChanged(parent);
 
     return childToTake;
 }

@@ -97,7 +97,7 @@ bool ScrollView::setHasScrollbarInternal(RefPtr<Scrollbar>& scrollbar, Scrollbar
     
     if (!hasBar && scrollbar) {
         bool wasOverlayScrollbar = scrollbar->isOverlayScrollbar();
-        willRemoveScrollbar(scrollbar.get(), orientation);
+        willRemoveScrollbar(*scrollbar, orientation);
         removeChild(*scrollbar);
         scrollbar = nullptr;
         if (contentSizeAffected)

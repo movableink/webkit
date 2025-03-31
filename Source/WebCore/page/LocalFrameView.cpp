@@ -293,9 +293,10 @@ void LocalFrameView::resetLayoutMilestones()
 void LocalFrameView::removeFromAXObjectCache()
 {
     if (AXObjectCache* cache = axObjectCache()) {
-        if (HTMLFrameOwnerElement* owner = m_frame->ownerElement())
-            cache->childrenChanged(owner->renderer());
-        cache->remove(this);
+        auto* owner = m_frame->ownerElement();
+        if (auto* renderer = owner ? owner->renderer() : nullptr)
+            cache->childrenChanged(*renderer);
+        cache->remove(*this);
     }
 }
 
@@ -5800,7 +5801,7 @@ void LocalFrameView::didAddScrollbar(Scrollbar* scrollbar, ScrollbarOrientation 
         cache->onScrollbarUpdate(*this);
 }
 
-void LocalFrameView::willRemoveScrollbar(Scrollbar* scrollbar, ScrollbarOrientation orientation)
+void LocalFrameView::willRemoveScrollbar(Scrollbar& scrollbar, ScrollbarOrientation orientation)
 {
     ScrollableArea::willRemoveScrollbar(scrollbar, orientation);
     if (AXObjectCache* cache = axObjectCache()) {

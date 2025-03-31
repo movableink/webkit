@@ -184,7 +184,7 @@ public:
     WEBCORE_EXPORT bool scrollbarsCanBeActive() const;
 
     WEBCORE_EXPORT virtual void didAddScrollbar(Scrollbar*, ScrollbarOrientation);
-    WEBCORE_EXPORT virtual void willRemoveScrollbar(Scrollbar*, ScrollbarOrientation);
+    WEBCORE_EXPORT virtual void willRemoveScrollbar(Scrollbar&, ScrollbarOrientation);
 
     WEBCORE_EXPORT virtual void contentsResized();
 

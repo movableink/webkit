@@ -1012,7 +1012,7 @@ void PDFPluginBase::destroyScrollbar(ScrollbarOrientation orientation)
     if (!scrollbar)
         return;
 
-    willRemoveScrollbar(scrollbar.get(), orientation);
+    willRemoveScrollbar(*scrollbar, orientation);
     scrollbar->removeFromParent();
     scrollbar = nullptr;
 }

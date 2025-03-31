@@ -895,7 +895,7 @@ void RenderLayerScrollableArea::destroyScrollbar(ScrollbarOrientation orientatio
         return;
 
     if (!scrollbar->isCustomScrollbar())
-        willRemoveScrollbar(scrollbar.get(), orientation);
+        willRemoveScrollbar(*scrollbar, orientation);
 
     scrollbar->removeFromParent();
     scrollbar = nullptr;
