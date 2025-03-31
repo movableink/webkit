@@ -3637,7 +3637,6 @@
 				DD3DC8D927A4BF8E007E5B61 /* RefCounter.h in Headers */,
 				9785729929FAC2BB00350CBA /* ReferenceWrapperVector.h in Headers */,
 				DD3DC91D27A4BF8E007E5B61 /* RefPtr.h in Headers */,
-				DD3DC91D27A4BF8E007E5B61 /* RefPtr.h in Headers */,
 				4BF93AD32C8B53C100F0E06C /* RefTrackerMixin.h in Headers */,
 				3A5BCFA3298768E300E0ABB2 /* RefVector.h in Headers */,
 				DD3DC8C727A4BF8E007E5B61 /* ResourceUsage.h in Headers */,
