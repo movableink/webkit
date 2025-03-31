@@ -1864,13 +1864,27 @@ void MediaPlayerPrivateGStreamer::configureMediaStreamAudioTracks()
 #endif
 }
 
-void MediaPlayerPrivateGStreamer::setVolume(float volume)
+void MediaPlayerPrivateGStreamer::setVolumeLocked(bool volumeLocked)
 {
+    if (m_volumeLocked == volumeLocked)
+        return;
+
+    m_volumeLocked = volumeLocked;
+    GST_DEBUG_OBJECT(pipeline(), "Volume is now %s", m_volumeLocked ? "locked" : "unlocked");
+}
+
+void MediaPlayerPrivateGStreamer::setVolumeDouble(double volume)
+{
+    if (m_volumeLocked) {
+        GST_DEBUG_OBJECT(pipeline(), "Volume is locked, aborting");
+        return;
+    }
+
     if (!m_volumeElement)
         return;
 
     GST_DEBUG_OBJECT(pipeline(), "Setting volume: %f", volume);
-    gst_stream_volume_set_volume(m_volumeElement.get(), GST_STREAM_VOLUME_FORMAT_LINEAR, static_cast<double>(volume));
+    gst_stream_volume_set_volume(m_volumeElement.get(), GST_STREAM_VOLUME_FORMAT_LINEAR, volume);
     configureMediaStreamAudioTracks();
 }
 

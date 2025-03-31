@@ -149,7 +149,8 @@ public:
     void setPreservesPitch(bool) final;
     void setPreload(MediaPlayer::Preload) final;
     FloatSize naturalSize() const final;
-    void setVolume(float) final;
+    void setVolumeLocked(bool) final;
+    void setVolumeDouble(double) final;
     float volume() const final;
     void setMuted(bool) final;
     MediaPlayer::NetworkState networkState() const final;
@@ -668,6 +669,8 @@ private:
     MediaTime m_estimatedVideoFrameDuration { MediaTime::zeroTime() };
 
     std::optional<VideoFrameGStreamer::Info> m_videoInfo;
+
+    bool m_volumeLocked { false };
 };
 
 } // namespace WebCore
