@@ -85,51 +85,51 @@ customElements.define(
 <script>
 description("This tests the basic interaction between referenceTarget and aria-activedescendant.");
 
+var realInput;
 if (window.accessibilityController) {
     window.jsTestIsAsync = true;
 
     let output = "aria-activedescendant targeting a custom element with shadowrootreferencetarget.\n"
     var combobox1 = accessibilityController.accessibleElementById("combobox1");
     output += expect("combobox1.selectedChildrenCount", "1");
-    output += expect("combobox1.selectedChildAtIndex(0).title", "'AXTitle: Option 2'");
-    output += "\n";
+    output += `${expect("combobox1.selectedChildAtIndex(0).title", "'AXTitle: Option 2'")}\n`;
 
     output += "ShadowRoot.referenceTarget property works on an imperatively defined custom element.\n";
     var combobox2 = accessibilityController.accessibleElementById("combobox2");
     output += expect("combobox2.selectedChildrenCount", "1");
-    output += expect("combobox2.selectedChildAtIndex(0).title", "'AXTitle: Option C'");
-    output += "\n";
+    output += `${expect("combobox2.selectedChildAtIndex(0).title", "'AXTitle: Option C'")}\n`;
 
     output += "Modifying a ShadowRoot's referenceTarget also updates the accessibility object.\n";
     const listboxElement = document.getElementById("x-listbox2");
     listboxElement.setReferenceTarget("option-a");
-    output += expect("combobox2.selectedChildrenCount", "1");
-    output += expect("combobox2.selectedChildAtIndex(0).title", "'AXTitle: Option A'");
-    output += "\n";
+    setTimeout(async function() {
+        output += await expectAsync("combobox2.selectedChildrenCount", "1");
+        output += `${expect("combobox2.selectedChildAtIndex(0).title", "'AXTitle: Option A'")}\n`;
 
-    output += "Modifying a ShadowRoot's referenceTarget's ID also updates the accessibility object.\n";
-    let referenceTargetElement = listboxElement.referenceTargetElement();
-    referenceTargetElement.id = "option-d";
-    output += expect("combobox2.selectedChildrenCount", "0");
-    referenceTargetElement.nextElementSibling.id = "option-a";
-    output += expect("combobox2.selectedChildrenCount", "1");
-    output += expect("combobox2.selectedChildAtIndex(0).title", "'AXTitle: Option B'");
-    output += "\n";
+        output += "Modifying a ShadowRoot's referenceTarget's ID also updates the accessibility object.\n";
+        let referenceTargetElement = listboxElement.referenceTargetElement();
+        referenceTargetElement.id = "option-d";
+        output += await expectAsync("combobox2.selectedChildrenCount", "0");
+        referenceTargetElement.nextElementSibling.id = "option-a";
+        output += await expectAsync("combobox2.selectedChildrenCount", "1");
+        output += await expectAsync("combobox2.selectedChildAtIndex(0).title", "'AXTitle: Option B'");
+        output += "\n";
 
-    output += "aria-activedescendant works when the linkage is created across two sibling shadow trees.\n";
-    var realInput = accessibilityController.accessibleElementById("real-input");
-    output += expect("realInput.selectedChildrenCount", "1");
-    output += expect("realInput.selectedChildAtIndex(0).title", "'AXTitle: Option C'");
-    output += "\n";
+        output += "aria-activedescendant works when the linkage is created across two sibling shadow trees.\n";
+        realInput = accessibilityController.accessibleElementById("real-input");
+        output += expect("realInput.selectedChildrenCount", "1");
+        output += expect("realInput.selectedChildAtIndex(0).title", "'AXTitle: Option C'");
+        output += "\n";
 
-    output += "Modifying a ShadowRoot's referenceTarget also updates the accessibility object when the linkage is created across two sibling shadow trees.\n";
-    const fancyListboxElement = document.getElementById("fancy-listbox");
-    fancyListboxElement.setReferenceTarget("option-b");
-    output += expect("realInput.selectedChildrenCount", "1");
-    output += expect("realInput.selectedChildAtIndex(0).title", "'AXTitle: Option B'");
+        output += "Modifying a ShadowRoot's referenceTarget also updates the accessibility object when the linkage is created across two sibling shadow trees.\n";
+        const fancyListboxElement = document.getElementById("fancy-listbox");
+        fancyListboxElement.setReferenceTarget("option-b");
+        output += await expectAsync("realInput.selectedChildrenCount", "1");
+        output += await expectAsync("realInput.selectedChildAtIndex(0).title", "'AXTitle: Option B'");
 
-    debug(output);
-    finishJSTest();
+        debug(output);
+        finishJSTest();
+    }, 0);
 }
 </script>
 </body>
