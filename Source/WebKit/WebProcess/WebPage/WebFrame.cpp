@@ -216,7 +216,7 @@ WebFrame::~WebFrame()
 {
     ASSERT(!m_coreFrame);
 
-    ASSERT_WITH_MESSAGE(!WebProcess::singleton().webFrame(m_frameID), "invalidate should have removed this WebFrame before destruction");
+    ASSERT_WITH_MESSAGE(WebProcess::singleton().webFrame(m_frameID) != this, "invalidate should have removed this WebFrame before destruction");
 
 #ifndef NDEBUG
     webFrameCounter.decrement();
