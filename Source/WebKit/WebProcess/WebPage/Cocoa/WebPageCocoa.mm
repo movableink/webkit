@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -1199,12 +1199,12 @@ void WebPage::createTextIndicatorForElementWithID(const String& elementID, Compl
 
 void WebPage::createIconDataFromImageData(Ref<WebCore::SharedBuffer>&& buffer, const Vector<unsigned>& lengths, CompletionHandler<void(RefPtr<WebCore::SharedBuffer>&&)>&& completionHandler)
 {
-    return completionHandler(WebCore::createIconDataFromImageData(buffer->span(), lengths.span()));
+    WebCore::createIconDataFromImageData(buffer->span(), lengths.span(), WTFMove(completionHandler));
 }
 
 void WebPage::decodeImageData(Ref<WebCore::SharedBuffer>&& buffer, std::optional<WebCore::FloatSize> preferredSize, CompletionHandler<void(RefPtr<WebCore::ShareableBitmap>&&)>&& completionHandler)
 {
-    completionHandler(decodeImageWithSize(buffer->span(), preferredSize));
+    decodeImageWithSize(buffer->span(), preferredSize, WTFMove(completionHandler));
 }
 
 #if HAVE(PDFKIT)

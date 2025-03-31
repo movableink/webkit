@@ -65,7 +65,7 @@ CocoaColor *toSRGBColor(CocoaColor *color)
 #endif
 }
 
-bool compareColors(CocoaColor *color1, CocoaColor *color2)
+bool compareColors(CocoaColor *color1, CocoaColor *color2, float tolerance)
 {
     if (color1 == color2 || [color1 isEqual:color2])
         return true;
@@ -82,7 +82,7 @@ bool compareColors(CocoaColor *color1, CocoaColor *color2)
     CGFloat red2, green2, blue2, alpha2;
     [color2 getRed:&red2 green:&green2 blue:&blue2 alpha:&alpha2];
 
-    return fabs(red1 - red2) < 0.01 && fabs(green1 - green2) < 0.01 && fabs(blue1 - blue2) < 0.01 && fabs(alpha1 - alpha2) < 0.01;
+    return fabs(red1 - red2) < tolerance && fabs(green1 - green2) < tolerance && fabs(blue1 - blue2) < tolerance && fabs(alpha1 - alpha2) < tolerance;
 }
 
 } // namespace TestWebKitAPI::Util

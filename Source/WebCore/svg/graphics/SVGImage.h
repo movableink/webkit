@@ -44,7 +44,7 @@ class Settings;
 class SVGImage final : public Image {
 public:
     static Ref<SVGImage> create(ImageObserver* observer) { return adoptRef(*new SVGImage(observer)); }
-    WEBCORE_EXPORT static RefPtr<SVGImage> tryCreateFromData(std::span<const uint8_t>);
+    WEBCORE_EXPORT static void tryCreateFromData(std::span<const uint8_t>, CompletionHandler<void(RefPtr<SVGImage>&&)>&&);
     WEBCORE_EXPORT static bool isDataDecodable(const Settings&, std::span<const uint8_t>);
 
     RenderBox* embeddedContentBox() const;
@@ -99,6 +99,8 @@ private:
     RefPtr<NativeImage> nativeImage(const DestinationColorSpace& = DestinationColorSpace::SRGB()) final;
 
     void startAnimationTimerFired();
+
+    void subresourcesAreFinished(CompletionHandler<void()>&&);
 
     WEBCORE_EXPORT explicit SVGImage(ImageObserver*);
     ImageDrawResult draw(GraphicsContext&, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions = { }) final;

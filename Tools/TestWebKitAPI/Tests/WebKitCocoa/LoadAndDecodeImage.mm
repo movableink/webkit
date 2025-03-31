@@ -25,10 +25,10 @@
 
 #import "config.h"
 
-#import "CocoaImage.h"
 #import "HTTPServer.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
+#import "TestCocoaImageAndCocoaColor.h"
 #import "TestNavigationDelegate.h"
 #import "TestWKWebView.h"
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
@@ -239,6 +239,7 @@ TEST(WebKit, CreateIconDataFromImageData)
     done = false;
     [webView _createIconDataFromImageData:imageData.get() withLengths:lengths completionHandler:^(NSData *result, NSError *error) {
         EXPECT_NULL(error);
+        EXPECT_NOT_NULL(result);
         iconData = result;
         done = true;
     }];
@@ -276,6 +277,7 @@ TEST(WebKit, CreateIconDataFromImageDataSVG)
     done = false;
     [webView _createIconDataFromImageData:imageData.get() withLengths:lengths completionHandler:^(NSData *result, NSError *error) {
         EXPECT_NULL(error);
+        EXPECT_NOT_NULL(result);
         iconData = result;
         done = true;
     }];
@@ -307,6 +309,37 @@ TEST(WebKit, CreateIconDataFromImageDataSVG)
         EXPECT_NOT_NULL(result);
         EXPECT_EQ(result.size.width, 256);
         EXPECT_EQ(result.size.height, 256);
+        done = true;
+    }];
+    Util::run(&done);
+}
+
+TEST(WebKit, CreateIconDataFromImageDataSVGWithSubresource)
+{
+    RetainPtr webView = adoptNS([WKWebView new]);
+    RetainPtr imageData = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"icon-with-subresource" ofType:@"svg"]];
+
+    done = false;
+    [webView _decodeImageData:imageData.get() preferredSize:nil completionHandler:^(CocoaImage *result, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_NOT_NULL(result);
+        EXPECT_EQ(result.size.width, 10);
+        EXPECT_EQ(result.size.height, 10);
+
+        // FIXME: Util::pixelColor gives us NSCalibratedRGBColorSpace instead of sRGB IEC61966-2.1.
+        // This is tracked by <https://bugs.webkit.org/show_bug.cgi?id=290768>.
+        auto lime = [CocoaColor greenColor];
+        EXPECT_TRUE(Util::compareColors(Util::pixelColor(result, { 3, 3 }), lime, 0.025));
+        EXPECT_TRUE(Util::compareColors(Util::pixelColor(result, { 8, 8 }), lime, 0.025));
+
+        done = true;
+    }];
+    Util::run(&done);
+
+    done = false;
+    [webView _createIconDataFromImageData:imageData.get() withLengths:nil completionHandler:^(NSData *result, NSError *error) {
+        EXPECT_NULL(error);
+        EXPECT_NOT_NULL(result);
         done = true;
     }];
     Util::run(&done);

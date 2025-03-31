@@ -39,6 +39,6 @@ namespace TestWebKitAPI::Util {
 
 CocoaColor *pixelColor(CocoaImage *, CGPoint = CGPointZero);
 CocoaColor *toSRGBColor(CocoaColor *);
-bool compareColors(CocoaColor *, CocoaColor *);
+bool compareColors(CocoaColor *, CocoaColor *, float tolerance = 0.01);
 
 } // namespace TestWebKitAPI::Util
