@@ -82,9 +82,11 @@ public:
     void setHostProcessAuditToken(const std::optional<audit_token_t>& token) { m_hostProcessAuditToken = token; }
 #endif
 
+    struct FilterParameters {
 #if HAVE(WEBCONTENTRESTRICTIONS)
-    virtual void setUsesWebContentRestrictions(bool) { };
+        bool usesWebContentRestrictions { false };
 #endif
+    };
 
 protected:
     PlatformContentFilter() = default;

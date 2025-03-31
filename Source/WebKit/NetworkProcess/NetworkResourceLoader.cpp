@@ -290,9 +290,6 @@ bool NetworkResourceLoader::startContentFiltering(ResourceRequest& request)
 #if HAVE(AUDIT_TOKEN)
     m_contentFilter->setHostProcessAuditToken(protectedConnectionToWebProcess()->protectedNetworkProcess()->sourceApplicationAuditToken());
 #endif
-#if HAVE(WEBCONTENTRESTRICTIONS)
-    m_contentFilter->setUsesWebContentRestrictions(protectedConnectionToWebProcess()->usesWebContentRestrictionsForFilter());
-#endif
     m_contentFilter->startFilteringMainResource(request.url());
     if (!m_contentFilter->continueAfterWillSendRequest(request, ResourceResponse())) {
         m_contentFilter->stopFilteringMainResource();
@@ -300,6 +297,7 @@ bool NetworkResourceLoader::startContentFiltering(ResourceRequest& request)
     }
     return true;
 }
+
 #endif
 
 void NetworkResourceLoader::retrieveCacheEntry(const ResourceRequest& request)
@@ -2186,6 +2184,13 @@ void NetworkResourceLoader::handleProvisionalLoadFailureFromContentFilter(const 
     protectedConnectionToWebProcess()->protectedNetworkProcess()->addAllowedFirstPartyForCookies(m_connection->webProcessIdentifier(), RegistrableDomain { WebCore::ContentFilter::blockedPageURL() }, LoadedWebArchive::No, [] { });
     send(Messages::WebResourceLoader::ContentFilterDidBlockLoad(m_unblockHandler, m_unblockRequestDeniedScript, m_contentFilter->blockedError(), blockedPageURL, substituteData));
 }
+
+#if HAVE(WEBCONTENTRESTRICTIONS)
+bool NetworkResourceLoader::usesWebContentRestrictions()
+{
+    return protectedConnectionToWebProcess()->usesWebContentRestrictionsForFilter();
+}
+#endif
 #endif // ENABLE(CONTENT_FILTERING)
 
 void NetworkResourceLoader::useRedirectionForCurrentNavigation(WebCore::ResourceResponse&& response)

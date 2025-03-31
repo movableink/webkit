@@ -36,8 +36,12 @@
 #import <pal/spi/cocoa/WebFilterEvaluatorSPI.h>
 #import <wtf/SoftLinking.h>
 #import <wtf/TZoneMallocInlines.h>
+#import <wtf/cocoa/SpanCocoa.h>
 
 #if HAVE(WEBCONTENTRESTRICTIONS)
+#import <WebCore/ParentalControlsURLFilter.h>
+#import <wtf/CompletionHandler.h>
+
 #import <pal/cocoa/WebContentRestrictionsSoftLink.h>
 #endif
 
@@ -48,15 +52,11 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ParentalControlsContentFilter);
 
-#if HAVE(WEBCONTENTRESTRICTIONS)
-bool ParentalControlsContentFilter::enabled(bool usesWebContentRestrictions)
-#else
-bool ParentalControlsContentFilter::enabled()
-#endif
+bool ParentalControlsContentFilter::enabled() const
 {
 #if HAVE(WEBCONTENTRESTRICTIONS)
-    if (usesWebContentRestrictions)
-        return [PAL::getWCRBrowserEngineClientClass() shouldEvaluateURLs];
+    if (m_usesWebContentRestrictions)
+        return ParentalControlsURLFilter::singleton().isEnabled();
 #endif
 
     bool enabled = [getWebFilterEvaluatorClass() isManagedSession];
@@ -64,9 +64,17 @@ bool ParentalControlsContentFilter::enabled()
     return enabled;
 }
 
-UniqueRef<ParentalControlsContentFilter> ParentalControlsContentFilter::create()
+UniqueRef<ParentalControlsContentFilter> ParentalControlsContentFilter::create(const PlatformContentFilter::FilterParameters& params)
 {
-    return makeUniqueRef<ParentalControlsContentFilter>();
+    return makeUniqueRef<ParentalControlsContentFilter>(params);
+}
+
+ParentalControlsContentFilter::ParentalControlsContentFilter(const PlatformContentFilter::FilterParameters& params)
+#if HAVE(WEBCONTENTRESTRICTIONS)
+    : m_usesWebContentRestrictions(params.usesWebContentRestrictions)
+#endif
+{
+    UNUSED_PARAM(params);
 }
 
 static inline bool canHandleResponse(const ResourceResponse& response)
@@ -80,26 +88,19 @@ static inline bool canHandleResponse(const ResourceResponse& response)
 
 void ParentalControlsContentFilter::responseReceived(const ResourceResponse& response)
 {
-#if HAVE(WEBCONTENTRESTRICTIONS)
-    bool filterEnabled = enabled(m_usesWebContentRestrictions);
-#else
-    bool filterEnabled = enabled();
-#endif
-    if (!canHandleResponse(response) || !filterEnabled) {
+    if (!canHandleResponse(response) || !enabled()) {
         m_state = State::Allowed;
         return;
     }
 
 #if HAVE(WEBCONTENTRESTRICTIONS)
     if (m_usesWebContentRestrictions) {
-        ASSERT(!m_wcrBrowserEngineClient);
-        m_wcrBrowserEngineClient = adoptNS([PAL::allocWCRBrowserEngineClientInstance() init]);
         m_evaluatedURL = response.url();
         m_state = State::Filtering;
-        [m_wcrBrowserEngineClient evaluateURL:*m_evaluatedURL withCompletion:[weakThis = WeakPtr { *this }](BOOL shouldBlock, NSData *replacementData) {
+        ParentalControlsURLFilter::singleton().isURLAllowed(*m_evaluatedURL, [weakThis = WeakPtr { *this }](bool isAllowed, auto replacementData) {
             if (CheckedPtr checkedThis = weakThis.get())
-                checkedThis->updateFilterState(shouldBlock, replacementData);
-        }];
+                checkedThis->updateFilterState(isAllowed ? State::Allowed : State::Blocked, replacementData);
+        });
         return;
     }
 #endif
@@ -117,7 +118,7 @@ void ParentalControlsContentFilter::responseReceived(const ResourceResponse& res
 void ParentalControlsContentFilter::addData(const SharedBuffer& data)
 {
 #if HAVE(WEBCONTENTRESTRICTIONS)
-    if (m_wcrBrowserEngineClient)
+    if (m_usesWebContentRestrictions)
         return;
 #endif
 
@@ -130,7 +131,7 @@ void ParentalControlsContentFilter::addData(const SharedBuffer& data)
 void ParentalControlsContentFilter::finishedAddingData()
 {
 #if HAVE(WEBCONTENTRESTRICTIONS)
-    if (m_wcrBrowserEngineClient)
+    if (m_usesWebContentRestrictions)
         return;
 #endif
 
@@ -149,7 +150,7 @@ Ref<FragmentedSharedBuffer> ParentalControlsContentFilter::replacementData() con
 ContentFilterUnblockHandler ParentalControlsContentFilter::unblockHandler() const
 {
 #if HAVE(WEBCONTENTRESTRICTIONS)
-    if (m_wcrBrowserEngineClient)
+    if (m_usesWebContentRestrictions)
         return ContentFilterUnblockHandler { *m_evaluatedURL };
 #endif
 
@@ -184,15 +185,10 @@ void ParentalControlsContentFilter::updateFilterState()
 
 #if HAVE(WEBCONTENTRESTRICTIONS)
 
-void ParentalControlsContentFilter::updateFilterState(bool shouldBlock, NSData *replacementData)
+void ParentalControlsContentFilter::updateFilterState(State state, NSData *replacementData)
 {
-    m_state = shouldBlock ? State::Blocked : State::Allowed;
+    m_state = state;
     m_replacementData = replacementData;
-}
-
-void ParentalControlsContentFilter::setUsesWebContentRestrictions(bool usesWebContentRestrictions)
-{
-    m_usesWebContentRestrictions = usesWebContentRestrictions;
 }
 
 #endif

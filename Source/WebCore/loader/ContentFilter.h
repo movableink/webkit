@@ -83,7 +83,6 @@ public:
 #endif
 
 #if HAVE(WEBCONTENTRESTRICTIONS)
-    WEBCORE_EXPORT void setUsesWebContentRestrictions(bool);
     static bool isWebContentRestrictionsUnblockURL(const URL&);
 #endif
 
@@ -91,7 +90,7 @@ private:
     using State = PlatformContentFilter::State;
 
     struct Type {
-        Function<UniqueRef<PlatformContentFilter>()> create;
+        Function<UniqueRef<PlatformContentFilter>(const PlatformContentFilter::FilterParameters&)> create;
     };
     template <typename T> static Type type();
     WEBCORE_EXPORT static Vector<Type>& types();

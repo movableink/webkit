@@ -38,6 +38,7 @@ class SliderThumbMac final : public ControlMac {
     WTF_MAKE_TZONE_ALLOCATED(SliderThumbMac);
 public:
     SliderThumbMac(SliderThumbPart&, ControlFactoryMac&, NSSliderCell *);
+    ~SliderThumbMac();
 
 private:
     void updateCellStates(const FloatRect&, const ControlStyle&) override;

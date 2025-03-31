@@ -43,6 +43,7 @@ class ControlMac : public PlatformControl {
     WTF_MAKE_TZONE_ALLOCATED(ControlMac);
 public:
     ControlMac(ControlPart&, ControlFactoryMac&);
+    ~ControlMac();
 
 protected:
     static bool userPrefersContrast();

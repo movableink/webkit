@@ -44,6 +44,8 @@ ProgressBarMac::ProgressBarMac(ProgressBarPart& owningPart, ControlFactoryMac& c
 {
 }
 
+ProgressBarMac::~ProgressBarMac() = default;
+
 IntSize ProgressBarMac::cellSize(NSControlSize controlSize, const ControlStyle&) const
 {
     static const std::array<IntSize, 4> sizes =

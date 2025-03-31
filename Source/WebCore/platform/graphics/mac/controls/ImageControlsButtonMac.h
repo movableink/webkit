@@ -40,6 +40,7 @@ class ImageControlsButtonMac final : public ControlMac {
     WTF_MAKE_TZONE_ALLOCATED(ImageControlsButtonMac);
 public:
     ImageControlsButtonMac(ImageControlsButtonPart&, ControlFactoryMac&, NSServicesRolloverButtonCell *);
+    ~ImageControlsButtonMac();
 
     static IntSize servicesRolloverButtonCellSize();
 

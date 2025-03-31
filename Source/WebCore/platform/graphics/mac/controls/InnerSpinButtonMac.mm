@@ -48,6 +48,8 @@ InnerSpinButtonMac::InnerSpinButtonMac(InnerSpinButtonPart& owningPart, ControlF
 {
 }
 
+InnerSpinButtonMac::~InnerSpinButtonMac() = default;
+
 #if HAVE(NSSTEPPERCELL_INCREMENTING)
 IntOutsets InnerSpinButtonMac::cellOutsets(NSControlSize controlSize, const ControlStyle&) const
 {

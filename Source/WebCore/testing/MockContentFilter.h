@@ -38,7 +38,7 @@ class MockContentFilter final : public PlatformContentFilter {
 
 public:
     static void ensureInstalled();
-    static UniqueRef<MockContentFilter> create();
+    static UniqueRef<MockContentFilter> create(const PlatformContentFilter::FilterParameters&);
 
     void willSendRequest(ResourceRequest&, const ResourceResponse&) override;
     void responseReceived(const ResourceResponse&) override;

@@ -43,7 +43,8 @@
 #endif
 
 #if HAVE(WEBCONTENTRESTRICTIONS)
-#import <pal/cocoa/WebContentRestrictionsSoftLink.h>
+#import <WebCore/ParentalControlsURLFilter.h>
+#import <wtf/CompletionHandler.h>
 #endif
 
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
@@ -178,14 +179,12 @@ void ContentFilterUnblockHandler::requestUnblockAsync(DecisionHandlerFunction de
 {
 #if HAVE(WEBCONTENTRESTRICTIONS)
     if (m_evaluatedURL) {
-        if (!m_wcrBrowserEngineClient)
-            m_wcrBrowserEngineClient = adoptNS([PAL::allocWCRBrowserEngineClientInstance() init]);
-        [m_wcrBrowserEngineClient allowURL:*m_evaluatedURL withCompletion:[decisionHandler](BOOL didAllow, NSError *) {
-            callOnMainThread([decisionHandler, didAllow] {
-                RELEASE_LOG(ContentFiltering, "WebFilterEvaluator %s the unblock request.\n", didAllow ? "allowed" : "did not allow");
+        WebCore::ParentalControlsURLFilter::singleton().allowURL(*m_evaluatedURL, [decisionHandler = WTFMove(decisionHandler)](bool didAllow) {
+            callOnMainThread([decisionHandler = WTFMove(decisionHandler), didAllow]() {
+                RELEASE_LOG(ContentFiltering, "ParentalControlsURLFilter %" PUBLIC_LOG_STRING " the unblock request.\n", didAllow ? "allowed" : "did not allow");
                 decisionHandler(didAllow);
             });
-        }];
+        });
         return;
     }
 #endif

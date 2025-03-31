@@ -2183,10 +2183,6 @@ void DocumentLoader::startLoadingMainResource()
     contentFilterInDocumentLoader() = frame && frame->view() && frame->protectedView()->platformWidget();
     if (contentFilterInDocumentLoader())
         m_contentFilter = !m_substituteData.isValid() ? ContentFilter::create(*this) : nullptr;
-#if HAVE(WEBCONTENTRESTRICTIONS)
-    if (m_contentFilter)
-        m_contentFilter->setUsesWebContentRestrictions(DeprecatedGlobalSettings::usesWebContentRestrictionsForFilter());
-#endif
 #endif
 
     auto url = m_request.url();
@@ -2643,6 +2639,13 @@ void DocumentLoader::handleProvisionalLoadFailureFromContentFilter(const URL& bl
 {
     protectedFrameLoader()->load(FrameLoadRequest(*frame(), blockedPageURL, substituteData));
 }
+
+#if HAVE(WEBCONTENTRESTRICTIONS)
+bool DocumentLoader::usesWebContentRestrictions()
+{
+    return DeprecatedGlobalSettings::usesWebContentRestrictionsForFilter();
+}
+#endif
 #endif // ENABLE(CONTENT_FILTERING)
 
 #if ENABLE(CONTENT_FILTERING)

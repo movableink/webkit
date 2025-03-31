@@ -43,6 +43,8 @@ MenuListButtonMac::MenuListButtonMac(MenuListButtonPart& owningPart, ControlFact
 {
 }
 
+MenuListButtonMac::~MenuListButtonMac() = default;
+
 static void interpolateGradient(const CGFloat* rawInData, CGFloat* rawOutData, std::span<const float, 4> dark, std::span<const float, 4> light)
 {
     auto inData = unsafeMakeSpan(rawInData, 1);

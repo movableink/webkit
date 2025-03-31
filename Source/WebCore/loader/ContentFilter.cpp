@@ -46,6 +46,10 @@
 #include <wtf/SetForScope.h>
 #include <wtf/Vector.h>
 
+#if HAVE(WEBCONTENTRESTRICTIONS)
+#include "ParentalControlsURLFilter.h"
+#endif
+
 #if !LOG_DISABLED
 #include <wtf/text/CString.h>
 #endif
@@ -67,8 +71,13 @@ Vector<ContentFilter::Type>& ContentFilter::types()
 
 std::unique_ptr<ContentFilter> ContentFilter::create(ContentFilterClient& client)
 {
-    auto filters = types().map([](auto& type) {
-        return type.create();
+    PlatformContentFilter::FilterParameters params {
+#if HAVE(WEBCONTENTRESTRICTIONS)
+        client.usesWebContentRestrictions()
+#endif
+    };
+    auto filters = types().map([params](auto& type) {
+        return type.create(params);
     });
 
     if (filters.isEmpty())
@@ -382,12 +391,6 @@ bool ContentFilter::isWebContentRestrictionsUnblockURL(const URL& url)
 #endif
 
     return url.protocolIs(ContentFilter::urlScheme()) && equalIgnoringASCIICase(url.host(), "unblock"_s);
-}
-
-void ContentFilter::setUsesWebContentRestrictions(bool usesWebContentRestrictions)
-{
-    for (auto& contentFilter : m_contentFilters)
-        contentFilter->setUsesWebContentRestrictions(usesWebContentRestrictions);
 }
 
 #endif

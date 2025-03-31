@@ -61,7 +61,7 @@ bool MockContentFilter::enabled()
     return enabled;
 }
 
-UniqueRef<MockContentFilter> MockContentFilter::create()
+UniqueRef<MockContentFilter> MockContentFilter::create(const PlatformContentFilter::FilterParameters&)
 {
     return makeUniqueRef<MockContentFilter>();
 }

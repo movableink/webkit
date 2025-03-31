@@ -56,6 +56,8 @@ ControlMac::ControlMac(ControlPart& owningPart, ControlFactoryMac& controlFactor
 {
 }
 
+ControlMac::~ControlMac() = default;
+
 bool ControlMac::userPrefersContrast()
 {
     return [[NSWorkspace sharedWorkspace] accessibilityDisplayShouldIncreaseContrast];

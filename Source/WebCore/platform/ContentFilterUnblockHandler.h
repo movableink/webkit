@@ -102,7 +102,6 @@ private:
     UnblockRequesterFunction m_unblockRequester;
 #if HAVE(WEBCONTENTRESTRICTIONS)
     std::optional<URL> m_evaluatedURL;
-    mutable RetainPtr<WCRBrowserEngineClient> m_wcrBrowserEngineClient;
 #endif
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
     RetainPtr<WebFilterEvaluator> m_webFilterEvaluator;

@@ -42,6 +42,8 @@ ButtonControlMac::ButtonControlMac(ControlPart& part, ControlFactoryMac& control
     ASSERT(m_buttonCell);
 }
 
+ButtonControlMac::~ButtonControlMac() = default;
+
 void ButtonControlMac::updateCellStates(const FloatRect& rect, const ControlStyle& style)
 {
     ControlMac::updateCellStates(rect, style);

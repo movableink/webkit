@@ -47,7 +47,7 @@ class NetworkExtensionContentFilter final : public PlatformContentFilter {
     friend UniqueRef<NetworkExtensionContentFilter> WTF::makeUniqueRefWithoutFastMallocCheck<NetworkExtensionContentFilter>();
 
 public:
-    static UniqueRef<NetworkExtensionContentFilter> create();
+    static UniqueRef<NetworkExtensionContentFilter> create(const PlatformContentFilter::FilterParameters&);
 
     void willSendRequest(ResourceRequest&, const ResourceResponse&) override;
     void responseReceived(const ResourceResponse&) override;

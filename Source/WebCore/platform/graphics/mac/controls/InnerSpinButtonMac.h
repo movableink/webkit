@@ -38,6 +38,7 @@ class InnerSpinButtonMac final : public ControlMac {
     WTF_MAKE_TZONE_ALLOCATED(InnerSpinButtonMac);
 public:
     InnerSpinButtonMac(InnerSpinButtonPart&, ControlFactoryMac&, NSStepperCell *);
+    ~InnerSpinButtonMac();
 
 private:
     IntSize cellSize(NSControlSize, const ControlStyle&) const override;

@@ -34,18 +34,16 @@
 OBJC_CLASS NSData;
 OBJC_CLASS WebFilterEvaluator;
 
-#if HAVE(WEBCONTENTRESTRICTIONS)
-OBJC_CLASS WCRBrowserEngineClient;
-#endif
-
 namespace WebCore {
+
+class ParentalControlsURLFilter;
 
 class ParentalControlsContentFilter final : public PlatformContentFilter {
     WTF_MAKE_TZONE_ALLOCATED(ParentalControlsContentFilter);
-    friend UniqueRef<ParentalControlsContentFilter> WTF::makeUniqueRefWithoutFastMallocCheck<ParentalControlsContentFilter>();
+    friend UniqueRef<ParentalControlsContentFilter> WTF::makeUniqueRefWithoutFastMallocCheck<ParentalControlsContentFilter>(const PlatformContentFilter::FilterParameters&);
 
 public:
-    static UniqueRef<ParentalControlsContentFilter> create();
+    static UniqueRef<ParentalControlsContentFilter> create(const PlatformContentFilter::FilterParameters&);
 
     void willSendRequest(ResourceRequest&, const ResourceResponse&) override { }
     void responseReceived(const ResourceResponse&) override;
@@ -57,17 +55,13 @@ public:
 #endif
     
 private:
-#if HAVE(WEBCONTENTRESTRICTIONS)
-    static bool enabled(bool usesWebContentRestrictions);
-#else
-    static bool enabled();
-#endif
+    explicit ParentalControlsContentFilter(const PlatformContentFilter::FilterParameters&);
+    bool enabled() const;
 
-    ParentalControlsContentFilter() = default;
     void updateFilterState();
 #if HAVE(WEBCONTENTRESTRICTIONS)
-    void updateFilterState(bool shouldBlock, NSData *replacmentData);
-    void setUsesWebContentRestrictions(bool) final;
+    void updateFilterState(PlatformContentFilter::State, NSData *);
+    void enableURLFilter();
 #endif
 
     RetainPtr<WebFilterEvaluator> m_webFilterEvaluator;
@@ -75,7 +69,6 @@ private:
 
 #if HAVE(WEBCONTENTRESTRICTIONS)
     bool m_usesWebContentRestrictions { false };
-    RetainPtr<WCRBrowserEngineClient> m_wcrBrowserEngineClient;
     std::optional<URL> m_evaluatedURL;
 #endif
 };
