@@ -46,8 +46,8 @@ GStreamerAudioCapturer::GStreamerAudioCapturer(GStreamerCaptureDevice&& device)
     initializeAudioCapturerDebugCategory();
 }
 
-GStreamerAudioCapturer::GStreamerAudioCapturer()
-    : GStreamerCapturer("appsrc", adoptGRef(gst_caps_new_empty_simple("audio/x-raw")), CaptureDevice::DeviceType::Microphone)
+GStreamerAudioCapturer::GStreamerAudioCapturer(const PipeWireCaptureDevice& device)
+    : GStreamerCapturer(device)
 {
     initializeAudioCapturerDebugCategory();
 }

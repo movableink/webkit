@@ -1,8 +1,5 @@
 /*
- * Copyright (C) 2018 Metrological Group B.V.
- * Copyright (C) 2020 Igalia S.L.
- * Author: Thibault Saunier <tsaunier@igalia.com>
- * Author: Alejandro G. Castro <alex@igalia.com>
+ * Copyright (C) 2025 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,26 +21,28 @@
 
 #if ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
 
-#include "GStreamerCapturer.h"
+#include "GStreamerCommon.h"
 
 namespace WebCore {
 
-class GStreamerAudioCapturer final : public GStreamerCapturer {
-public:
-    GStreamerAudioCapturer(GStreamerCaptureDevice&&);
-    GStreamerAudioCapturer(const PipeWireCaptureDevice&);
-    ~GStreamerAudioCapturer() = default;
+struct PipeWireNodeData {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
-    GstElement* createConverter() final;
-    const char* name() final { return "Audio"; }
+    PipeWireNodeData(uint32_t objectId)
+        : objectId(objectId)
+        , persistentId(emptyString())
+        , fd(-1)
+        , path(emptyString())
+        , label(emptyString())
+    {
+    }
 
-    bool setSampleRate(int);
-
-    using SinkAudioDataCallback = Function<void(GRefPtr<GstSample>&&, MediaTime&&)>;
-    void setSinkAudioCallback(SinkAudioDataCallback&&);
-
-private:
-    std::pair<unsigned long, SinkAudioDataCallback> m_sinkAudioDataCallback;
+    uint32_t objectId;
+    String persistentId;
+    int fd;
+    GRefPtr<GstCaps> caps;
+    String path;
+    String label;
 };
 
 } // namespace WebCore

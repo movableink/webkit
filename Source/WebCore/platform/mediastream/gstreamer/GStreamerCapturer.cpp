@@ -28,7 +28,6 @@
 #include "VideoFrameMetadataGStreamer.h"
 
 #include <gst/app/gstappsink.h>
-#include <gst/app/gstappsrc.h>
 #include <mutex>
 #include <wtf/HexNumber.h>
 #include <wtf/MonotonicTime.h>
@@ -52,19 +51,18 @@ static void initializeCapturerDebugCategory()
 
 GStreamerCapturer::GStreamerCapturer(GStreamerCaptureDevice&& device, GRefPtr<GstCaps>&& caps)
     : m_caps(WTFMove(caps))
-    , m_sourceFactory(nullptr)
     , m_deviceType(device.type())
 {
     initializeCapturerDebugCategory();
     m_device.emplace(WTFMove(device));
 }
 
-GStreamerCapturer::GStreamerCapturer(ASCIILiteral sourceFactory, GRefPtr<GstCaps>&& caps, CaptureDevice::DeviceType deviceType)
-    : m_caps(WTFMove(caps))
-    , m_sourceFactory(sourceFactory)
-    , m_deviceType(deviceType)
+GStreamerCapturer::GStreamerCapturer(const PipeWireCaptureDevice& device)
+    : m_deviceType(device.type())
 {
     initializeCapturerDebugCategory();
+    m_pipewireDevice.emplace(device);
+    m_caps = device.caps();
 }
 
 GStreamerCapturer::~GStreamerCapturer()
@@ -144,12 +142,9 @@ void GStreamerCapturer::forEachObserver(NOESCAPE const Function<void(GStreamerCa
 
 GstElement* GStreamerCapturer::createSource()
 {
-    if (m_sourceFactory) {
-        m_src = makeElement(m_sourceFactory);
+    if (m_pipewireDevice) {
+        m_src = makeElement("pipewiresrc");
         ASSERT(m_src);
-
-        if (GST_IS_APP_SRC(m_src.get()))
-            g_object_set(m_src.get(), "is-live", TRUE, "format", GST_FORMAT_TIME, "do-timestamp", TRUE, nullptr);
 
         if (m_deviceType == CaptureDevice::DeviceType::Screen) {
             auto srcPad = adoptGRef(gst_element_get_static_pad(m_src.get(), "src"));
@@ -173,6 +168,10 @@ GstElement* GStreamerCapturer::createSource()
                 return GST_PAD_PROBE_OK;
             }, this, nullptr);
         }
+
+        auto path = AtomString::number(m_pipewireDevice->objectId());
+        // FIXME: The path property is deprecated in favor of target-object but the portal doesn't expose this object.
+        g_object_set(m_src.get(), "path", path.string().ascii().data(), "fd", m_pipewireDevice->fd(), nullptr);
     } else {
         ASSERT(m_device);
         auto sourceName = makeString(unsafeSpan(name()), hex(reinterpret_cast<uintptr_t>(this)));
@@ -181,7 +180,30 @@ GstElement* GStreamerCapturer::createSource()
         g_object_set(m_src.get(), "do-timestamp", TRUE, nullptr);
     }
 
+    GST_DEBUG_OBJECT(m_pipeline.get(), "Source element created: %" GST_PTR_FORMAT, m_src.get());
+
+    if (gstElementFactoryEquals(m_src.get(), "pipewiresrc"_s)) {
+        auto srcPad = adoptGRef(gst_element_get_static_pad(m_src.get(), "src"));
+        gst_pad_add_probe(srcPad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, [](GstPad*, GstPadProbeInfo* info, void* userData) -> GstPadProbeReturn {
+            auto* event = gst_pad_probe_info_get_event(info);
+            if (GST_EVENT_TYPE(event) != GST_EVENT_CAPS)
+                return GST_PAD_PROBE_OK;
+
+            callOnMainThread([event, capturer = reinterpret_cast<GStreamerCapturer*>(userData)] {
+                GstCaps* caps;
+                gst_event_parse_caps(event, &caps);
+                capturer->forEachObserver([caps](auto& observer) {
+                    observer.sourceCapsChanged(caps);
+                });
+            });
+            return GST_PAD_PROBE_OK;
+        }, this, nullptr);
+    }
+
     if (m_deviceType == CaptureDevice::DeviceType::Camera) {
+        if (gstElementMatchesFactoryAndHasProperty(m_src.get(), "pipewiresrc"_s, "use-bufferpool"_s))
+            g_object_set(m_src.get(), "use-bufferpool", FALSE, nullptr);
+
         auto srcPad = adoptGRef(gst_element_get_static_pad(m_src.get(), "src"));
         gst_pad_add_probe(srcPad.get(), static_cast<GstPadProbeType>(GST_PAD_PROBE_TYPE_PUSH | GST_PAD_PROBE_TYPE_BUFFER), [](GstPad*, GstPadProbeInfo* info, gpointer) -> GstPadProbeReturn {
             VideoFrameTimeMetadata metadata;
@@ -197,12 +219,8 @@ GstElement* GStreamerCapturer::createSource()
 
 GRefPtr<GstCaps> GStreamerCapturer::caps()
 {
-    if (m_sourceFactory) {
-        GRefPtr<GstElement> element = makeElement(m_sourceFactory);
-        auto pad = adoptGRef(gst_element_get_static_pad(element.get(), "src"));
-
-        return adoptGRef(gst_pad_query_caps(pad.get(), nullptr));
-    }
+    if (m_pipewireDevice)
+        return m_pipewireDevice->caps();
 
     ASSERT(m_device);
     return adoptGRef(gst_device_get_caps(m_device->device()));

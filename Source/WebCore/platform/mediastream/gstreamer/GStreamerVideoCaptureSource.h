@@ -25,17 +25,17 @@
 #if ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
 #include "CaptureDevice.h"
 #include "GStreamerVideoCapturer.h"
+#include "PipeWireCaptureDevice.h"
+#include "RealtimeMediaSourceCapabilities.h"
 #include "RealtimeVideoCaptureSource.h"
 #include "VideoFrameGStreamer.h"
 
 namespace WebCore {
 
-using NodeAndFD = GStreamerVideoCapturer::NodeAndFD;
-
 class GStreamerVideoCaptureSource final : public RealtimeVideoCaptureSource, GStreamerCapturerObserver {
 public:
     static CaptureSourceOrError create(String&& deviceID, MediaDeviceHashSalts&&, const MediaConstraints*);
-    static CaptureSourceOrError createPipewireSource(String&& deviceID, const NodeAndFD&, MediaDeviceHashSalts&&, const MediaConstraints*, CaptureDevice::DeviceType);
+    static CaptureSourceOrError createPipewireSource(const PipeWireCaptureDevice&, MediaDeviceHashSalts&&, const MediaConstraints*);
 
     WEBCORE_EXPORT static VideoCaptureFactory& factory();
 
@@ -56,8 +56,8 @@ public:
     std::pair<GstClockTime, GstClockTime> queryCaptureLatency() const final;
 
 protected:
-    GStreamerVideoCaptureSource(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&&, ASCIILiteral sourceFactory, CaptureDevice::DeviceType, const NodeAndFD&);
     GStreamerVideoCaptureSource(GStreamerCaptureDevice&&, MediaDeviceHashSalts&&);
+    GStreamerVideoCaptureSource(const PipeWireCaptureDevice&, MediaDeviceHashSalts&&);
     virtual ~GStreamerVideoCaptureSource();
     void startProducingData() final;
     void stopProducingData() final;

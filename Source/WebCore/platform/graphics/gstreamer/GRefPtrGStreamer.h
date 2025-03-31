@@ -169,6 +169,10 @@ template<> GRefPtr<GstDeviceMonitor> adoptGRef(GstDeviceMonitor*);
 template<> GstDeviceMonitor* refGPtr<GstDeviceMonitor>(GstDeviceMonitor*);
 template<> void derefGPtr<GstDeviceMonitor>(GstDeviceMonitor*);
 
+template<> GRefPtr<GstDeviceProvider> adoptGRef(GstDeviceProvider*);
+template<> GstDeviceProvider* refGPtr<GstDeviceProvider>(GstDeviceProvider*);
+template<> void derefGPtr<GstDeviceProvider>(GstDeviceProvider*);
+
 template<> GRefPtr<GstDevice> adoptGRef(GstDevice*);
 template<> GstDevice* refGPtr<GstDevice>(GstDevice*);
 template<> void derefGPtr<GstDevice>(GstDevice*);

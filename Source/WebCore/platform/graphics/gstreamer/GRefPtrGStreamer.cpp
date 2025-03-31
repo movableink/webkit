@@ -528,6 +528,28 @@ void derefGPtr<GstDeviceMonitor>(GstDeviceMonitor* ptr)
 }
 
 template<>
+GRefPtr<GstDeviceProvider> adoptGRef(GstDeviceProvider* ptr)
+{
+    return GRefPtr<GstDeviceProvider>(ptr, GRefPtrAdopt);
+}
+
+template<>
+GstDeviceProvider* refGPtr<GstDeviceProvider>(GstDeviceProvider* ptr)
+{
+    if (ptr)
+        gst_object_ref(GST_OBJECT_CAST(ptr));
+
+    return ptr;
+}
+
+template<>
+void derefGPtr<GstDeviceProvider>(GstDeviceProvider* ptr)
+{
+    if (ptr)
+        gst_object_unref(ptr);
+}
+
+template<>
 GRefPtr<GstDevice> adoptGRef(GstDevice* ptr)
 {
     return GRefPtr<GstDevice>(ptr, GRefPtrAdopt);
