@@ -1065,6 +1065,9 @@ void LocalFrameView::obscuredContentInsetsDidChange(const FloatBoxExtent& newObs
         tiledBacking->setObscuredContentInsets(newObscuredContentInsets);
 
     setCurrentScrollType(oldScrollType);
+
+    if (RefPtr page = m_frame->page())
+        page->chrome().client().setNeedsFixedContainerEdgesUpdate();
 }
 
 void LocalFrameView::topContentDirectionDidChange()

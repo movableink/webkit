@@ -5198,6 +5198,15 @@ void Page::setSceneIdentifier(String&& sceneIdentifier)
         document.sceneIdentifierDidChange();
     });
 }
+
+void Page::setObscuredInsets(const FloatBoxExtent& insets)
+{
+    if (m_obscuredInsets == insets)
+        return;
+
+    m_obscuredInsets = insets;
+    m_chrome->client().setNeedsFixedContainerEdgesUpdate();
+}
 #endif
 
 void Page::setPortsForUpgradingInsecureSchemeForTesting(uint16_t upgradeFromInsecurePort, uint16_t upgradeToSecurePort)

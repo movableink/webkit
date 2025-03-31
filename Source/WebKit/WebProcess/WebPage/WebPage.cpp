@@ -5003,8 +5003,8 @@ void WebPage::willCommitLayerTree(RemoteLayerTreeTransaction& layerTransaction, 
     layerTransaction.setThemeColor(page->themeColor());
     layerTransaction.setPageExtendedBackgroundColor(page->pageExtendedBackgroundColor());
     layerTransaction.setSampledPageTopColor(page->sampledPageTopColor());
-    if (auto sides = sidesRequiringFixedContainerEdges())
-        layerTransaction.setFixedContainerEdges(frameView->fixedContainerEdges(sides));
+    if (std::exchange(m_needsFixedContainerEdgesUpdate, false))
+        layerTransaction.setFixedContainerEdges(frameView->fixedContainerEdges(sidesRequiringFixedContainerEdges()));
 
     layerTransaction.setBaseLayoutViewportSize(frameView->baseLayoutViewportSize());
     layerTransaction.setMinStableLayoutViewportOrigin(frameView->minStableLayoutViewportOrigin());
@@ -7961,6 +7961,8 @@ void WebPage::didCommitLoad(WebFrame* frame)
     m_hasActiveContextMenuInteraction = false;
 #endif
 
+    m_needsFixedContainerEdgesUpdate = true;
+
     flushDeferredDidReceiveMouseEvent();
 }
 
@@ -10129,6 +10131,8 @@ void WebPage::updateLastNodeBeforeWritingSuggestions(const KeyboardEvent& event)
 
 void WebPage::didAddOrRemoveViewportConstrainedObjects()
 {
+    m_needsFixedContainerEdgesUpdate = true;
+
 #if PLATFORM(IOS_FAMILY)
     scheduleLayoutViewportHeightExpansionUpdate();
 #endif

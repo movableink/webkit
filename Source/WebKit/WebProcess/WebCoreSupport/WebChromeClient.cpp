@@ -2049,4 +2049,9 @@ WebCore::FrameDamageHistory* WebChromeClient::damageHistoryForTesting() const
 }
 #endif
 
+void WebChromeClient::setNeedsFixedContainerEdgesUpdate()
+{
+    m_page->setNeedsFixedContainerEdgesUpdate();
+}
+
 } // namespace WebKit

@@ -635,7 +635,7 @@ public:
     void setEnclosedInScrollableAncestorView(bool f) { m_enclosedInScrollableAncestorView = f; }
 
     const FloatBoxExtent& obscuredInsets() const { return m_obscuredInsets; }
-    void setObscuredInsets(const FloatBoxExtent& insets) { m_obscuredInsets = insets; }
+    WEBCORE_EXPORT void setObscuredInsets(const FloatBoxExtent&);
 #endif
 
     const FloatBoxExtent& obscuredContentInsets() const { return m_obscuredContentInsets; }

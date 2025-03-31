@@ -1978,6 +1978,8 @@ public:
 
     bool shouldSendConsoleLogsToUIProcessForTesting() const { return m_shouldSendConsoleLogsToUIProcessForTesting; }
 
+    void setNeedsFixedContainerEdgesUpdate() { m_needsFixedContainerEdgesUpdate = true; }
+
 private:
     WebPage(WebCore::PageIdentifier, WebPageCreationParameters&&);
 
@@ -2946,6 +2948,7 @@ private:
     bool m_isSuspended { false };
     bool m_needsFontAttributes { false };
     bool m_firstFlushAfterCommit { false };
+    bool m_needsFixedContainerEdgesUpdate { true };
 #if PLATFORM(COCOA)
     WeakPtr<WebRemoteObjectRegistry> m_remoteObjectRegistry;
 #endif

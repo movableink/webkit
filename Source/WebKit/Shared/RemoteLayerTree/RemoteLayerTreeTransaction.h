@@ -258,8 +258,8 @@ public:
     void setAcceleratedTimelineTimeOrigin(Seconds timeOrigin) { m_acceleratedTimelineTimeOrigin = timeOrigin; }
 #endif
 
-    const WebCore::FixedContainerEdges& fixedContainerEdges() const { return m_fixedContainerEdges; }
-    void setFixedContainerEdges(WebCore::FixedContainerEdges&& edges) { m_fixedContainerEdges = WTFMove(edges); }
+    const std::optional<WebCore::FixedContainerEdges>& fixedContainerEdges() const { return m_fixedContainerEdges; }
+    void setFixedContainerEdges(WebCore::FixedContainerEdges&& edges) { m_fixedContainerEdges = { WTFMove(edges) }; }
 
 private:
     friend struct IPC::ArgumentCoder<RemoteLayerTreeTransaction, void>;
@@ -288,7 +288,7 @@ private:
     WebCore::Color m_themeColor;
     WebCore::Color m_pageExtendedBackgroundColor;
     WebCore::Color m_sampledPageTopColor;
-    WebCore::FixedContainerEdges m_fixedContainerEdges;
+    std::optional<WebCore::FixedContainerEdges> m_fixedContainerEdges;
 
 #if PLATFORM(MAC)
     Markable<WebCore::PlatformLayerIdentifier> m_pageScalingLayerID; // Only used for non-delegated scaling.

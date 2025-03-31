@@ -435,7 +435,8 @@ void PageClientImplCocoa::setFullScreenClientForTesting(std::unique_ptr<WebFullS
 
 void PageClientImplCocoa::didCommitLayerTree(const RemoteLayerTreeTransaction& transaction)
 {
-    [webView() _updateFixedContainerEdges:transaction.fixedContainerEdges()];
+    if (auto& edges = transaction.fixedContainerEdges())
+        [webView() _updateFixedContainerEdges:*edges];
     [webView() _updateScrollGeometryWithContentOffset:transaction.scrollPosition() contentSize:transaction.contentsSize()];
 }
 

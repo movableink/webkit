@@ -568,6 +568,8 @@ private:
     WebCore::FrameDamageHistory* damageHistoryForTesting() const final;
 #endif
 
+    void setNeedsFixedContainerEdgesUpdate() final;
+
     mutable bool m_cachedMainFrameHasHorizontalScrollbar { false };
     mutable bool m_cachedMainFrameHasVerticalScrollbar { false };
 

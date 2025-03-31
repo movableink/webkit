@@ -1555,6 +1555,8 @@ void RenderLayerBacking::updateGeometry(const RenderLayer* compositedAncestor)
         primaryLayerPosition = { };
     }
 
+    setNeedsFixedContainerEdgesUpdateIfNeeded();
+
     if (m_contentsContainmentLayer) {
         m_contentsContainmentLayer->setPreserves3D(preserves3D);
         m_contentsContainmentLayer->setPosition(primaryLayerPosition);
@@ -3621,6 +3623,8 @@ void RenderLayerBacking::setContentsNeedDisplay(GraphicsLayer::ShouldClipToLayer
 
     if (m_scrolledContentsLayer && m_scrolledContentsLayer->drawsContent())
         m_scrolledContentsLayer->setNeedsDisplay();
+
+    setNeedsFixedContainerEdgesUpdateIfNeeded();
 }
 
 // r is in the coordinate space of the layer's render object
@@ -3672,6 +3676,8 @@ void RenderLayerBacking::setContentsNeedDisplayInRect(const LayoutRect& r, Graph
         layerDirtyRect.move(-m_scrolledContentsLayer->offsetFromRenderer() + toLayoutSize(scrollOffset) - m_subpixelOffsetFromRenderer);
         m_scrolledContentsLayer->setNeedsDisplayInRect(layerDirtyRect, shouldClip);
     }
+
+    setNeedsFixedContainerEdgesUpdateIfNeeded();
 }
 
 void RenderLayerBacking::paintIntoLayer(const GraphicsLayer* graphicsLayer, GraphicsContext& context,
@@ -4627,6 +4633,14 @@ void RenderLayerBacking::dumpProperties(const GraphicsLayer* layer, TextStream& 
         ts << remoteFrame->client().layerTreeAsText(ts.indent() + 1, options);
         ts << indent << ")\n"_s;
     }
+}
+
+void RenderLayerBacking::setNeedsFixedContainerEdgesUpdateIfNeeded()
+{
+    if (!m_owningLayer.isViewportConstrained())
+        return;
+
+    renderer().page().chrome().client().setNeedsFixedContainerEdgesUpdate();
 }
 
 } // namespace WebCore

@@ -427,6 +427,8 @@ private:
 
     bool shouldSetContentsDisplayDelegate() const;
 
+    void setNeedsFixedContainerEdgesUpdateIfNeeded();
+
     RenderLayer& m_owningLayer;
     
     // A list other layers that paint into this backing store, later than m_owningLayer in paint order.
