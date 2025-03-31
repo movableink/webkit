@@ -228,12 +228,15 @@ void WebSWContextManagerConnection::installServiceWorker(ServiceWorkerContextDat
 #if PLATFORM(COCOA) && ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT)
 
 #if ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION)
+        ASSERT(RunLoop::isMain());
         handleThreadDebuggerTasksStarted = [serviceWorkerIdentifier, scopeURL, inspectable] {
-            CompletionHandler<void(bool)> handleDebuggableCreated = [serviceWorkerIdentifier](bool shouldWait) {
+            // This may or may not be called on the main thread.
+            CompletionHandler<void(bool)> handleDebuggableCreated { [serviceWorkerIdentifier](bool shouldWait) {
+                ASSERT(RunLoop::isMain());
                 if (!shouldWait)
                     SWContextManager::singleton().stopRunningDebuggerTasksOnServiceWorker(serviceWorkerIdentifier);
                 // Otherwise, let the worker remain paused until the auto-launched inspector's frontendInitialized.
-            };
+            }, CompletionHandlerCallThread::MainThread };
             WebProcess::singleton().sendWithAsyncReply(Messages::WebProcessProxy::CreateServiceWorkerDebuggable(serviceWorkerIdentifier, scopeURL, inspectable), WTFMove(handleDebuggableCreated));
         };
 #else
