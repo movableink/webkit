@@ -440,6 +440,8 @@ static ALWAYS_INLINE JITReservation initializeJITPageReservation()
             auto uuid = WTF::UUID::createVersion5(jscJITNamespace, std::span { std::bit_cast<const uint8_t*>(&pid), sizeof(pid) });
             kdebug_trace(KDBG_CODE(DBG_DYLD, DBG_DYLD_UUID, DBG_DYLD_UUID_MAP_A), WTF::byteSwap64(uuid.high()), WTF::byteSwap64(uuid.low()), std::bit_cast<uintptr_t>(reservation.base), 0);
         }
+#elif USE(SYSPROF_CAPTURE)
+        WTFEmitSignpost(reservation, InitJITPageReservation);
 #endif
     }
 
