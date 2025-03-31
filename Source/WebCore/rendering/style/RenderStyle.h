@@ -796,8 +796,7 @@ public:
     // content-visibility: auto at all times), ContentVisibility::Auto in a content-visibility: auto subtree (when the
     // content is not user relevant and thus skipped), and ContentVisibility::Visible otherwise.
     inline ContentVisibility usedContentVisibility() const;
-    // Returns true for skipped content roots and skipped content itself.
-    inline bool hasSkippedContent() const;
+    inline bool isSkippedRootOrSkippedContent() const;
 
     inline ContainIntrinsicSizeType containIntrinsicWidthType() const;
     inline ContainIntrinsicSizeType containIntrinsicHeightType() const;

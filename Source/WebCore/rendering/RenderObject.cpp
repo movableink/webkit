@@ -2971,7 +2971,7 @@ String RenderObject::debugDescription() const
 
 bool RenderObject::isSkippedContent() const
 {
-    return parent() && parent()->style().hasSkippedContent();
+    return parent() && parent()->style().isSkippedRootOrSkippedContent();
 }
 
 TextStream& operator<<(TextStream& ts, const RenderObject& renderer)

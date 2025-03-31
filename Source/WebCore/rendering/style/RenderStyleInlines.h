@@ -734,7 +734,7 @@ inline const Length& RenderStyle::shapeMargin() const { return m_nonInheritedDat
 inline ShapeValue* RenderStyle::shapeOutside() const { return m_nonInheritedData->rareData->shapeOutside.get(); }
 inline RefPtr<ShapeValue> RenderStyle::protectedShapeOutside() const { return shapeOutside(); }
 inline ContentVisibility RenderStyle::usedContentVisibility() const { return static_cast<ContentVisibility>(m_rareInheritedData->usedContentVisibility); }
-inline bool RenderStyle::hasSkippedContent() const { return usedContentVisibility() != ContentVisibility::Visible; }
+inline bool RenderStyle::isSkippedRootOrSkippedContent() const { return usedContentVisibility() != ContentVisibility::Visible; }
 inline OptionSet<SpeakAs> RenderStyle::speakAs() const { return OptionSet<SpeakAs>::fromRaw(m_rareInheritedData->speakAs); }
 inline const AtomString& RenderStyle::specifiedLocale() const { return fontDescription().specifiedLocale(); }
 inline int RenderStyle::specifiedZIndex() const { return m_nonInheritedData->boxData->specifiedZIndex(); }

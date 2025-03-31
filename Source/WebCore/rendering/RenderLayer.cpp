@@ -373,7 +373,7 @@ RenderLayer::RenderLayer(RenderLayerModelObject& renderer)
             return false;
 
         //  We need the parent to know if we have skipped content or content-visibility root.
-        if (renderer.style().hasSkippedContent() && !renderer.parent())
+        if (renderer.style().isSkippedRootOrSkippedContent() && !renderer.parent())
             return false;
         return true;
     }();
@@ -1927,7 +1927,7 @@ void RenderLayer::updateDescendantDependentFlags()
 
     if (m_visibleContentStatusDirty) {
         //  We need the parent to know if we have skipped content or content-visibility root.
-        if (renderer().style().hasSkippedContent() && !renderer().parent())
+        if (renderer().style().isSkippedRootOrSkippedContent() && !renderer().parent())
             return;
         bool hasVisibleContent = computeHasVisibleContent();
         if (hasVisibleContent != m_hasVisibleContent) {

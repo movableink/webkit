@@ -2983,10 +2983,10 @@ auto Document::updateLayout(OptionSet<LayoutOptions> layoutOptions, const Elemen
                     return false;
 
                 if (context) {
-                    auto& skippedRootRenderer = *context->renderer();
-                    if (!skippedRootRenderer.style().hasSkippedContent())
+                    if (!context->renderer()->style().isSkippedRootOrSkippedContent())
                         return false;
 
+                    auto& skippedRootRenderer = *context->renderer();
                     auto everhadLayoutAndWasSkippedDuringLast = skippedRootRenderer.wasSkippedDuringLastLayoutDueToContentVisibility();
                     if (everhadLayoutAndWasSkippedDuringLast && !*everhadLayoutAndWasSkippedDuringLast)
                         return false;
@@ -3112,7 +3112,7 @@ bool Document::updateLayoutIfDimensionsOutOfDate(Element& element, OptionSet<Dim
     updateStyleIfNeeded();
 
     if (layoutOptions.containsAll({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible })) {
-        if (CheckedPtr renderer = element.renderer(); renderer &&  renderer->style().hasSkippedContent()) {
+        if (CheckedPtr renderer = element.renderer(); renderer &&  renderer->style().isSkippedRootOrSkippedContent()) {
             if (auto wasSkippedDuringLastLayout = renderer->wasSkippedDuringLastLayoutDueToContentVisibility()) {
                 if (*wasSkippedDuringLastLayout)
                     renderer->setNeedsLayout();
