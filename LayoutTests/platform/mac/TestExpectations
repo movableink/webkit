@@ -2427,6 +2427,4 @@ imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-complex-001.s
 svg/W3C-I18N/tspan-dirRTL-ubEmbed-in-ltr-context.svg [ Failure ]
 svg/W3C-I18N/tspan-dirRTL-ubEmbed-in-default-context.svg [ Failure ]
 
-webkit.org/b/290546 [ Debug ] imported/w3c/web-platform-tests/workers/abrupt-completion.html [ Pass Crash ]
-
 [ x86_64 ] imported/w3c/web-platform-tests/css/css-values/attr-all-types.html [ Failure ]
