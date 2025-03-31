@@ -195,7 +195,6 @@
 		45D3F7F52D374A020004DD56 /* CSSParserFastPaths.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 45D3F7F42D374A020004DD56 /* CSSParserFastPaths.cpp */; };
 		45F3A5E52D81F955002B4550 /* DateMath.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7AA021BA1AB09EA70052953F /* DateMath.cpp */; };
 		45F3A5F72D822261002B4550 /* CrossThreadTask.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51714EB91D087416004723C4 /* CrossThreadTask.cpp */; };
-		45F3A5FF2D82228B002B4550 /* Function.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83DB79671EF63B3C00BFA5E5 /* Function.cpp */; };
 		45F3A6002D8222CD002B4550 /* WorkerPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E388887020C9098100E632BC /* WorkerPool.cpp */; };
 		4628C8E92367ABD100B073F0 /* WKSecurityOrigin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4628C8E82367ABBC00B073F0 /* WKSecurityOrigin.cpp */; };
 		46397B951DC2C850009A78AE /* DOMNode.mm in Sources */ = {isa = PBXBuildFile; fileRef = 46397B941DC2C850009A78AE /* DOMNode.mm */; };
@@ -3193,7 +3192,6 @@
 		83B6DE6E1EE7520F001E792F /* RestoreSessionState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RestoreSessionState.cpp; sourceTree = "<group>"; };
 		83B88A331C80056D00BB2418 /* HTMLParserIdioms.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HTMLParserIdioms.cpp; sourceTree = "<group>"; };
 		83BC5ABF20E6C0D300F5879F /* StartLoadInDidFailProvisionalLoad.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = StartLoadInDidFailProvisionalLoad.mm; sourceTree = "<group>"; };
-		83DB79671EF63B3C00BFA5E5 /* Function.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Function.cpp; sourceTree = "<group>"; };
 		83F22C6320B355EB0034277E /* NoPolicyDelegateResponse.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = NoPolicyDelegateResponse.mm; sourceTree = "<group>"; };
 		86BD19971A2DB05B006DCF0A /* RefCounter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RefCounter.cpp; sourceTree = "<group>"; };
 		8A2C750D16CED9550024F352 /* ResizeWindowAfterCrash.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ResizeWindowAfterCrash.cpp; sourceTree = "<group>"; };
@@ -5827,7 +5825,6 @@
 				FF910E9D297A0D1100D1A24D /* FixedBitVector.cpp */,
 				E3210518261979F300157C67 /* FixedVector.cpp */,
 				9310CD361EF708FB0050FFE0 /* Function.cpp */,
-				83DB79671EF63B3C00BFA5E5 /* Function.cpp */,
 				7A38D7E51C752D5F004F157D /* HashCountedSet.cpp */,
 				933D631B1FCB76180032ECD6 /* Hasher.cpp */,
 				0BCD833414857CE400EA2003 /* HashMap.cpp */,
@@ -6919,7 +6916,6 @@
 				FF910EA5297A0D1100D1A24D /* FixedBitVector.cpp in Sources */,
 				E3210519261979F300157C67 /* FixedVector.cpp in Sources */,
 				9310CD381EF708FB0050FFE0 /* Function.cpp in Sources */,
-				45F3A5FF2D82228B002B4550 /* Function.cpp in Sources */,
 				6BFD294C1D5E6C1D008EC968 /* HashCountedSet.cpp in Sources */,
 				933D631D1FCB76200032ECD6 /* Hasher.cpp in Sources */,
 				7C83DED21D0A590C00FEBCF3 /* HashMap.cpp in Sources */,
