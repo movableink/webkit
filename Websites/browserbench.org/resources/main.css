@@ -162,7 +162,6 @@ article {
 main .navigation a,
 .announcements a,
 article a {
-    display: inline-block;
     color: rgb(200, 0, 0);
 }
 main .navigation a:hover,
