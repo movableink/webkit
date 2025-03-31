@@ -29,6 +29,7 @@
 
 #import "HTTPServer.h"
 #import "TestCocoa.h"
+#import "TestCocoaImageAndCocoaColor.h"
 #import "WebExtensionUtilities.h"
 #import <WebKit/WKFoundation.h>
 #import <WebKit/WKWebExtensionMatchPatternPrivate.h>

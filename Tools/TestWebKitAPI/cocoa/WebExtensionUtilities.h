@@ -32,16 +32,6 @@
 #include "Utilities.h"
 #include "WTFTestUtilities.h"
 
-#if USE(APPKIT)
-OBJC_CLASS NSImage;
-using CocoaImage = NSImage;
-using CocoaColor = NSColor;
-#else
-OBJC_CLASS UIImage;
-using CocoaImage = UIImage;
-using CocoaColor = UIColor;
-#endif
-
 #ifdef __OBJC__
 
 @class TestWebExtensionTab;
@@ -168,10 +158,6 @@ NSData *makePNGData(CGSize, SEL colorSelector);
 enum class Appearance { Light, Dark };
 
 void performWithAppearance(Appearance, void (^block)(void));
-
-CocoaColor *pixelColor(CocoaImage *, CGPoint = CGPointZero);
-CocoaColor *toSRGBColor(CocoaColor *);
-bool compareColors(CocoaColor *, CocoaColor *);
 
 #endif
 

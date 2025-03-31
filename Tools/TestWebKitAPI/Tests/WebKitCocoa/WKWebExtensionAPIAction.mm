@@ -28,6 +28,7 @@
 #if ENABLE(WK_WEB_EXTENSIONS)
 
 #import "HTTPServer.h"
+#import "TestCocoaImageAndCocoaColor.h"
 #import "TestWebExtensionsDelegate.h"
 #import "WebExtensionUtilities.h"
 
