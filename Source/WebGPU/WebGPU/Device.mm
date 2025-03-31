@@ -357,12 +357,7 @@ Device::Device(id<MTLDevice> device, id<MTLCommandQueue> defaultQueue, HardwareC
     m_sampleCounterBuffers = [NSMapTable weakToStrongObjectsMapTable];
     m_resolvedSampleCounterBuffers = [NSMapTable weakToStrongObjectsMapTable];
 
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        // Workaround for rdar://141660277
-        if ((m_shaderValidationEnabled = [NSStringFromClass([m_device class]) containsString:@"Debug"]))
-            WTFLogAlways("WebGPU: Using DEBUG Metal device: retaining references"); // NOLINT
-    });
+    m_shaderValidationEnabled = WebGPU::isShaderValidationEnabled(m_device);
 }
 
 Device::Device(Adapter& adapter)

@@ -1026,6 +1026,8 @@ bool RenderPassEncoder::splitRenderPass()
         m_metalDescriptor.depthAttachment.loadAction = MTLLoadActionLoad;
         m_metalDescriptor.stencilAttachment.loadAction = MTLLoadActionLoad;
     }
+    m_priorVertexDynamicOffsets.clear();
+    m_priorFragmentDynamicOffsets.clear();
 
     m_renderCommandEncoder = [parentEncoder->commandBuffer() renderCommandEncoderWithDescriptor:m_metalDescriptor];
     [m_renderCommandEncoder waitForFence:fence beforeStages:MTLRenderStageVertex];
@@ -1037,6 +1039,8 @@ bool RenderPassEncoder::splitRenderPass()
         [m_renderCommandEncoder setStencilReferenceValue:*m_stencilReferenceValue];
     if (m_scissorRect)
         [m_renderCommandEncoder setScissorRect:*m_scissorRect];
+    if (RefPtr pipeline = m_pipeline)
+        setPipeline(*pipeline);
 
     return true;
 }

@@ -53,5 +53,6 @@ bool isValid(const WGPULimits&);
 WGPULimits defaultLimits();
 bool anyLimitIsBetterThan(const WGPULimits& target, const WGPULimits& reference);
 bool includesUnsupportedFeatures(const Vector<WGPUFeatureName>& target, const Vector<WGPUFeatureName>& reference);
+bool isShaderValidationEnabled(id<MTLDevice>);
 
 } // namespace WebGPU

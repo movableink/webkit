@@ -149,13 +149,25 @@ static Vector<WGPUFeatureName> baseFeatures(id<MTLDevice> device, const Hardware
     return features;
 }
 
+bool isShaderValidationEnabled(id<MTLDevice> device)
+{
+    static bool result = false;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        // Workaround for rdar://141660277
+        if ((result = [NSStringFromClass([device class]) containsString:@"Debug"]))
+            WTFLogAlways("WebGPU: Using DEBUG Metal device: retaining references"); // NOLINT
+    });
+    return result;
+}
+
 static HardwareCapabilities apple4(id<MTLDevice> device)
 {
     auto baseCapabilities = WebGPU::baseCapabilities(device);
 
     baseCapabilities.supportsNonPrivateDepthStencilTextures = true;
     baseCapabilities.canPresentRGB10A2PixelFormats = false;
-    baseCapabilities.memoryBarrierLimit = std::numeric_limits<decltype(baseCapabilities.memoryBarrierLimit)>::max();
+    baseCapabilities.memoryBarrierLimit = isShaderValidationEnabled(device) ? 0u : std::numeric_limits<decltype(baseCapabilities.memoryBarrierLimit)>::max();
 
     auto features = WebGPU::baseFeatures(device, baseCapabilities);
 
