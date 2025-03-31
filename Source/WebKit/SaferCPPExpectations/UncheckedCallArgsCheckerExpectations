@@ -1,4 +1,3 @@
-UIProcess/Launcher/cocoa/ProcessLauncherCocoa.mm
 WebProcess/FullScreen/WebFullScreenManager.cpp
 WebProcess/Inspector/WebInspectorInternal.cpp
 WebProcess/Plugins/PDF/PDFPluginAnnotation.mm

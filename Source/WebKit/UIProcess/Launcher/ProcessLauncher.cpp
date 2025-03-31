@@ -53,6 +53,11 @@ ProcessLauncher::~ProcessLauncher()
         tracePoint(ProcessLaunchEnd, m_launchOptions.processIdentifier.toUInt64(), static_cast<uint64_t>(m_launchOptions.processType));
 }
 
+auto ProcessLauncher::checkedClient() const -> CheckedPtr<Client>
+{
+    return m_client;
+}
+
 #if !PLATFORM(COCOA)
 void ProcessLauncher::platformDestroy()
 {

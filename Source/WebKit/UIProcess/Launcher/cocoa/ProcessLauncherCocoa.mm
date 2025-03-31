@@ -382,14 +382,15 @@ void ProcessLauncher::finishLaunchingProcess(ASCIILiteral name)
     xpc_dictionary_set_value(bootstrapMessage.get(), "ContainerEnvironmentVariables", containerEnvironmentVariables.get());
 #endif
 
-    if (m_client) {
-        if (m_client->shouldConfigureJSCForTesting())
+    CheckedPtr client = m_client;
+    if (client) {
+        if (client->shouldConfigureJSCForTesting())
             xpc_dictionary_set_bool(bootstrapMessage.get(), "configure-jsc-for-testing", true);
-        if (!m_client->isJITEnabled())
+        if (!client->isJITEnabled())
             xpc_dictionary_set_bool(bootstrapMessage.get(), "disable-jit", true);
-        if (m_client->shouldEnableSharedArrayBuffer())
+        if (client->shouldEnableSharedArrayBuffer())
             xpc_dictionary_set_bool(bootstrapMessage.get(), "enable-shared-array-buffer", true);
-        if (m_client->shouldDisableJITCage())
+        if (client->shouldDisableJITCage())
             xpc_dictionary_set_bool(bootstrapMessage.get(), "disable-jit-cage", true);
     }
 
@@ -400,9 +401,9 @@ void ProcessLauncher::finishLaunchingProcess(ASCIILiteral name)
     xpc_dictionary_set_string(bootstrapMessage.get(), "client-identifier", !clientIdentifier.isEmpty() ? clientIdentifier.utf8().data() : *_NSGetProgname());
     xpc_dictionary_set_string(bootstrapMessage.get(), "client-bundle-identifier", applicationBundleIdentifier().utf8().data());
     xpc_dictionary_set_string(bootstrapMessage.get(), "process-identifier", String::number(m_launchOptions.processIdentifier.toUInt64()).utf8().data());
-    RetainPtr processName = [&] {
+    RetainPtr processName = [&]() -> RetainPtr<NSString> {
 #if PLATFORM(MAC)
-        if (auto name = NSRunningApplication.currentApplication.localizedName; name.length)
+        if (RetainPtr<NSString> name = NSRunningApplication.currentApplication.localizedName; name.get().length)
             return name;
 #endif
         return NSProcessInfo.processInfo.processName;
@@ -414,7 +415,7 @@ void ProcessLauncher::finishLaunchingProcess(ASCIILiteral name)
 #if ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT)
         bool disableLogging = true;
 #else
-        bool disableLogging = m_client->shouldEnableLockdownMode();
+        bool disableLogging = !client || client->shouldEnableLockdownMode();
 #endif
         xpc_dictionary_set_bool(bootstrapMessage.get(), "disable-logging", disableLogging);
     }
@@ -473,7 +474,7 @@ void ProcessLauncher::finishLaunchingProcess(ASCIILiteral name)
         processLauncher->didFinishLaunchingProcess(0, IPC::Connection::Identifier());
     };
 
-    Function<void(xpc_object_t)> eventHandler = [errorHandlerImpl = WTFMove(errorHandlerImpl), xpcEventHandler = m_client->xpcEventHandler()] (xpc_object_t event) mutable {
+    Function<void(xpc_object_t)> eventHandler = [errorHandlerImpl = WTFMove(errorHandlerImpl), xpcEventHandler = client->xpcEventHandler()] (xpc_object_t event) mutable {
 
         if (!event || xpc_get_type(event) == XPC_TYPE_ERROR) {
             RunLoop::protectedMain()->dispatch([errorHandlerImpl = std::exchange(errorHandlerImpl, nullptr), event = OSObjectPtr(event)] {

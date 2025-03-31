@@ -91,7 +91,6 @@ UIProcess/Inspector/mac/RemoteWebInspectorUIProxyMac.mm
 UIProcess/Inspector/mac/WKInspectorResourceURLSchemeHandler.mm
 UIProcess/Inspector/mac/WKInspectorViewController.mm
 UIProcess/Inspector/mac/WebInspectorUIProxyMac.mm
-UIProcess/Launcher/cocoa/ProcessLauncherCocoa.mm
 UIProcess/Network/NetworkProcessProxyCocoa.mm
 UIProcess/PDF/WKPDFHUDView.mm
 UIProcess/WebAuthentication/Cocoa/CcidService.mm
