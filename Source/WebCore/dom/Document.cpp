@@ -226,6 +226,7 @@
 #include "RealtimeMediaSourceCenter.h"
 #include "RenderBoxInlines.h"
 #include "RenderChildIterator.h"
+#include "RenderDescendantIterator.h"
 #include "RenderElementInlines.h"
 #include "RenderInline.h"
 #include "RenderLayerCompositor.h"
@@ -2975,22 +2976,36 @@ auto Document::updateLayout(OptionSet<LayoutOptions> layoutOptions, const Elemen
 
             auto& layoutContext = frameView->layoutContext();
             auto runForcedLayoutOnSkippedContentIfNeeded = [&] {
-                if (!layoutOptions.containsAll({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }))
+                if (!layoutOptions.containsAny({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }))
                     return false;
 
-                ASSERT(context);
-                if (!context || !context->renderer())
+                if (context && !context->renderer())
                     return false;
 
-                auto& skippedSubtreeeRootRenderer = *context->renderer();
-                if (!skippedSubtreeeRootRenderer.style().hasSkippedContent())
-                    return false;
+                if (context) {
+                    auto& skippedRootRenderer = *context->renderer();
+                    if (!skippedRootRenderer.style().hasSkippedContent())
+                        return false;
 
-                auto everhadLayoutAndWasSkippedDuringLast = skippedSubtreeeRootRenderer.wasSkippedDuringLastLayoutDueToContentVisibility();
-                if (everhadLayoutAndWasSkippedDuringLast && !*everhadLayoutAndWasSkippedDuringLast)
-                    return false;
+                    auto everhadLayoutAndWasSkippedDuringLast = skippedRootRenderer.wasSkippedDuringLastLayoutDueToContentVisibility();
+                    if (everhadLayoutAndWasSkippedDuringLast && !*everhadLayoutAndWasSkippedDuringLast)
+                        return false;
 
-                skippedSubtreeeRootRenderer.setNeedsLayout();
+                    skippedRootRenderer.setNeedsLayout();
+                } else {
+                    ASSERT(!layoutOptions.contains(LayoutOptions::TreatContentVisibilityHiddenAsVisible));
+
+                    auto isSkippedContentStale = false;
+                    for (auto& descendant : descendantsOfType<RenderBlock>(*renderView())) {
+                        auto everhadLayoutAndWasSkippedDuringLast = descendant.wasSkippedDuringLastLayoutDueToContentVisibility();
+                        if (everhadLayoutAndWasSkippedDuringLast && *everhadLayoutAndWasSkippedDuringLast) {
+                            descendant.setNeedsLayout();
+                            isSkippedContentStale = true;
+                        }
+                    }
+                    if (!isSkippedContentStale)
+                        return false;
+                }
 
                 auto overrideTypes = [&] {
                     auto types = OptionSet<ContentVisibilityOverrideScope::OverrideType> { };
