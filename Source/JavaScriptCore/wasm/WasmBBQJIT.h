@@ -423,27 +423,15 @@ public:
             Scratch = 3, // Denotes a register bound for use as a scratch, not as a local or temp's location.
         };
 
-        RegisterBinding()
-            : m_uintValue(0)
-        { }
-
-        RegisterBinding(uint32_t uintValue)
-            : m_uintValue(uintValue)
-        { }
-
+        static RegisterBinding none() { return RegisterBinding(); }
         static RegisterBinding fromValue(Value value);
-
-        static RegisterBinding none();
-
         static RegisterBinding scratch();
 
         Value toValue() const;
 
-        bool isNone() const;
-
-        bool isValid() const;
-
-        bool isScratch() const;
+        bool isNone() const { return m_kind == None; }
+        bool isValid() const { return m_kind != None; }
+        bool isScratch() const { return m_kind == Scratch; }
 
         bool operator==(RegisterBinding other) const;
 
@@ -451,20 +439,14 @@ public:
 
         unsigned hash() const;
 
-        uint32_t encode() const;
-
-        union {
-            uint32_t m_uintValue;
-            struct {
-                TypeKind m_type;
-                unsigned m_kind : 3;
-                unsigned m_index : LocalIndexBits;
-            };
-        };
+        TypeKind m_type { 0 };
+        unsigned m_kind : 3 { None };
+        unsigned m_index : LocalIndexBits { 0 };
     };
 
     // Tables mapping from each register to the current value bound to it.
     struct RegisterBindings {
+        RegisterBindings() = default;
         void dump(PrintStream& out) const;
         // FIXME: We should really compress this since it's copied by slow paths to know how to restore the correct state.
         std::array<RegisterBinding, 32> m_gprBindings { RegisterBinding::none() }; // Tables mapping from each register to the current value bound to it.
