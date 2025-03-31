@@ -3539,7 +3539,7 @@ imported/w3c/web-platform-tests/css/css-pseudo/target-text-009.html [ ImageOnlyF
 imported/w3c/web-platform-tests/css/css-pseudo/target-text-dynamic-004.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-pseudo/selection-background-painting-order.html [ ImageOnlyFailure ]
 
-webkit.org/b/177799 accessibility/table-detection.html [ Pass Failure ]
+webkit.org/b/177799,webkit.org/b/290781 accessibility/table-detection.html [ Pass Failure Timeout ]
 
 webkit.org/b/179069 imported/w3c/web-platform-tests/html/semantics/embedded-content/the-iframe-element/sandbox_032.htm [ Pass Failure ]
 
