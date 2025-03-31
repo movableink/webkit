@@ -175,6 +175,10 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.fontVariantCaps6.html
 /LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.fontVariantCaps6.w-expected.html
 /LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.fontVariantCaps6.w.html
+/LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.lang.default.html
+/LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.lang.default.worker.js
+/LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.lang.valid.html
+/LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.lang.valid.worker.js
 /LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.measure.actualBoundingBox.html
 /LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.measure.actualBoundingBox.worker.js
 /LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.measure.advances.html
@@ -195,6 +199,9 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.measure.fontBoundingBox.ahem.worker.js
 /LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.measure.fontBoundingBox.html
 /LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.measure.fontBoundingBox.worker.js
+/LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.measure.lang.html
+/LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.measure.lang.inherit.html
+/LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.measure.lang.worker.js
 /LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.measure.width.basic.html
 /LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.measure.width.basic.worker.js
 /LayoutTests/imported/w3c/web-platform-tests/html/canvas/offscreen/text/2d.text.measure.width.empty.html
