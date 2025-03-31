@@ -1961,7 +1961,7 @@
     "imported/w3c/web-platform-tests/css/css-values/calc-size/animation/calc-size-width-interpolation.html": [
         "slow"
     ],
-    "imported/w3c/web-platform-tests/css/css-values/vh_not_refreshing_on_chrome.html": [
+    "imported/w3c/web-platform-tests/css/css-values/vh-update-and-transition-in-subframe.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/css/css-view-transitions/content-with-transform-old-image.html": [

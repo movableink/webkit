@@ -25,6 +25,8 @@ FAIL resolved height for height in auto height container: calc-size(calc-size(an
 FAIL resolved height for height in definite height container: calc-size(calc-size(any, 30px), 15em) assert_equals: expected "300px" but got "10px"
 FAIL resolved height for height in auto height container: calc-size(calc-size(2in, 30px), 15em) assert_equals: expected "300px" but got "10px"
 FAIL resolved height for height in definite height container: calc-size(calc-size(2in, 30px), 15em) assert_equals: expected "300px" but got "10px"
+FAIL resolved height for height in auto height container: calc-size(calc-size(any, 300px), size * 2) assert_equals: expected "600px" but got "10px"
+FAIL resolved height for height in definite height container: calc-size(calc-size(any, 300px), size * 2) assert_equals: expected "600px" but got "10px"
 FAIL resolved height for height in auto height container: calc-size(calc-size(min-content, 30px), 15em) assert_equals: expected "300px" but got "10px"
 FAIL resolved height for height in definite height container: calc-size(calc-size(min-content, 30px), 15em) assert_equals: expected "300px" but got "10px"
 PASS resolved height for height in auto height container: calc-size(calc-size(min-content, size), size)
