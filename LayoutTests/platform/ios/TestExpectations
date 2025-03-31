@@ -7795,3 +7795,5 @@ webkit.org/b/290670 imported/w3c/web-platform-tests/css/css-viewport/zoom/relati
 webkit.org/b/290546 [ Debug ] imported/w3c/web-platform-tests/workers/abrupt-completion.html [ Pass Crash ]
 
 webkit.org/b/290767 [ x86_64 ] imported/w3c/web-platform-tests/webaudio/the-audio-api/the-audioworklet-interface/audioworklet-denormals.https.window.html [ Failure ]
+
+webkit.org/b/290790 editing/selection/ios/show-selection-in-transformed-container.html [ Failure ]
