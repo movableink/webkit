@@ -22,6 +22,7 @@
 
 #if ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
 
+#include "GStreamerCaptureDeviceManager.h"
 #include "GStreamerVideoCaptureSource.h"
 #include "MockRealtimeMediaSourceCenter.h"
 #include <wtf/Scope.h>
