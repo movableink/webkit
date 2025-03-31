@@ -1,3 +1,7 @@
+PASS function() {
+        model.entityTransform = scaledTransform;
+        assert_3d_matrix_not_equals(model.entityTransform, scaledTransform);
+    } threw exception InvalidStateError: Transform is read-only unless StageMode is set to 'none'.
 
 PASS <model> with empty source has entityTransform = identity
 PASS <model> gets the updated entityTransform after change

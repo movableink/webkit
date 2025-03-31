@@ -5,6 +5,7 @@
 <script src="../resources/testharnessreport.js"></script>
 <script src="resources/model-element-test-utils.js"></script>
 <script src="resources/model-utils.js"></script>
+<script src="../resources/js-test-pre.js"></script>
 <body>
 <script>
 'use strict';
@@ -68,6 +69,11 @@ promise_test(async t => {
     assert_3d_matrix_not_equals(model.entityTransform, scaledTransform);
     assert_3d_matrix_not_equals(model.entityTransform, originalTransform);
     let orbitFitTransform = model.entityTransform;
+
+    shouldThrowErrorName(function() {
+        model.entityTransform = scaledTransform;
+        assert_3d_matrix_not_equals(model.entityTransform, scaledTransform);
+    }, "InvalidStateError");
 
     model.stageMode = "none";
     await new Promise((resolve) => t.step_timeout(resolve, 100));

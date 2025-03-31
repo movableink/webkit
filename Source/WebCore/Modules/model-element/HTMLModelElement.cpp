@@ -454,7 +454,7 @@ const DOMMatrixReadOnly& HTMLModelElement::entityTransform() const
 ExceptionOr<void> HTMLModelElement::setEntityTransform(const DOMMatrixReadOnly& transform)
 {
     if (supportsStageModeInteraction())
-        return { };
+        return Exception { ExceptionCode::InvalidStateError,  "Transform is read-only unless StageMode is set to 'none'"_s };
 
     auto player = m_modelPlayer;
     if (!player) {
