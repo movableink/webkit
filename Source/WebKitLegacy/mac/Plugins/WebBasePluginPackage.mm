@@ -172,7 +172,6 @@ static constexpr auto QuickTimeCocoaPluginIdentifier = "com.apple.quicktime.webp
     pluginInfo.desc = description;
 
     pluginInfo.isApplicationPlugin = false;
-    pluginInfo.clientLoadPolicy = WebCore::PluginLoadClientPolicy::Undefined;
 #if PLATFORM(MAC)
     pluginInfo.bundleIdentifier = self.bundleIdentifier;
     pluginInfo.versionString = self.bundleVersion;

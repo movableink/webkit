@@ -135,7 +135,6 @@ PluginInfo PluginData::dummyPDFPluginInfo()
     info.desc = pdfDocumentTypeDescription();
     info.file = "internal-pdf-viewer"_s;
     info.isApplicationPlugin = true;
-    info.clientLoadPolicy = PluginLoadClientPolicy::Undefined;
 
     MimeClassInfo pdfMimeClassInfo;
     pdfMimeClassInfo.type = "application/pdf"_s;

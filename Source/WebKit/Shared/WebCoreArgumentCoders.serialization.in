@@ -6154,14 +6154,6 @@ header: <WebCore/PluginData.h>
     String pluginIdentifier;
 };
 
-enum class WebCore::PluginLoadClientPolicy : uint8_t {
-    Undefined,
-    Block,
-    Ask,
-    Allow,
-    AllowAlways,
-};
-
 struct WebCore::CSSValueKey {
     unsigned cssValueID;
     bool useDarkAppearance;

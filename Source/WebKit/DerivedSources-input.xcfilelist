@@ -173,10 +173,6 @@ $(PROJECT_DIR)/Platform/IPC/StreamServerConnection.serialization.in
 $(PROJECT_DIR)/Platform/LogMessages.in
 $(PROJECT_DIR)/Platform/SharedMemory.serialization.in
 $(PROJECT_DIR)/Platform/cocoa/MediaPlaybackTargetContextSerialized.serialization.in
-$(PROJECT_DIR)/PluginProcess/PluginControllerProxy.messages.in
-$(PROJECT_DIR)/PluginProcess/PluginProcess.messages.in
-$(PROJECT_DIR)/PluginProcess/WebProcessConnection.messages.in
-$(PROJECT_DIR)/PluginProcess/mac/com.apple.WebKit.plugin-common.sb.in
 $(PROJECT_DIR)/Resources/SandboxProfiles/ios/com.apple.WebKit.GPU.sb.in
 $(PROJECT_DIR)/Resources/SandboxProfiles/ios/com.apple.WebKit.Model.sb.in
 $(PROJECT_DIR)/Resources/SandboxProfiles/ios/com.apple.WebKit.Networking.sb.in
@@ -527,7 +523,6 @@ $(PROJECT_DIR)/UIProcess/Media/RemoteMediaSessionCoordinatorProxy.messages.in
 $(PROJECT_DIR)/UIProcess/Model/ModelProcessProxy.messages.in
 $(PROJECT_DIR)/UIProcess/Network/CustomProtocols/LegacyCustomProtocolManagerProxy.messages.in
 $(PROJECT_DIR)/UIProcess/Network/NetworkProcessProxy.messages.in
-$(PROJECT_DIR)/UIProcess/Plugins/PluginProcessProxy.messages.in
 $(PROJECT_DIR)/UIProcess/RemoteLayerTree/RemoteLayerTreeDrawingAreaProxy.messages.in
 $(PROJECT_DIR)/UIProcess/SpeechRecognitionRemoteRealtimeMediaSourceManager.messages.in
 $(PROJECT_DIR)/UIProcess/SpeechRecognitionServer.messages.in
@@ -659,9 +654,6 @@ $(PROJECT_DIR)/WebProcess/Network/webrtc/WebMDNSRegister.messages.in
 $(PROJECT_DIR)/WebProcess/Network/webrtc/WebRTCMonitor.messages.in
 $(PROJECT_DIR)/WebProcess/Network/webrtc/WebRTCResolver.messages.in
 $(PROJECT_DIR)/WebProcess/Notifications/WebNotificationManager.messages.in
-$(PROJECT_DIR)/WebProcess/Plugins/PluginProcessConnection.messages.in
-$(PROJECT_DIR)/WebProcess/Plugins/PluginProcessConnectionManager.messages.in
-$(PROJECT_DIR)/WebProcess/Plugins/PluginProxy.messages.in
 $(PROJECT_DIR)/WebProcess/Speech/SpeechRecognitionRealtimeMediaSourceManager.messages.in
 $(PROJECT_DIR)/WebProcess/Storage/WebSWClientConnection.messages.in
 $(PROJECT_DIR)/WebProcess/Storage/WebSWContextManagerConnection.messages.in

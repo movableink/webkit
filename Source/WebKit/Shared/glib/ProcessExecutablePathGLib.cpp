@@ -72,15 +72,6 @@ String executablePathOfWebProcess()
 #endif
 }
 
-String executablePathOfPluginProcess()
-{
-#if PLATFORM(WPE)
-    return findWebKitProcess("WPEPluginProcess");
-#else
-    return findWebKitProcess("WebKitPluginProcess");
-#endif
-}
-
 String executablePathOfNetworkProcess()
 {
 #if PLATFORM(WPE)
