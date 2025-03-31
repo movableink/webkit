@@ -2778,7 +2778,7 @@ private:
     void didFailLoadForFrame(IPC::Connection&, WebCore::FrameIdentifier, FrameInfoData&&, WebCore::ResourceRequest&&, std::optional<WebCore::NavigationIdentifier>, const WebCore::ResourceError&, const UserData&);
     void didSameDocumentNavigationForFrame(IPC::Connection&, WebCore::FrameIdentifier, std::optional<WebCore::NavigationIdentifier>, SameDocumentNavigationType, URL&&, const UserData&);
     void didSameDocumentNavigationForFrameViaJS(IPC::Connection&, SameDocumentNavigationType, URL, NavigationActionData&&, const UserData&);
-    void didChangeMainDocument(WebCore::FrameIdentifier, std::optional<WebCore::NavigationIdentifier>);
+    void didChangeMainDocument(IPC::Connection&, WebCore::FrameIdentifier, std::optional<WebCore::NavigationIdentifier>);
     void didExplicitOpenForFrame(IPC::Connection&, WebCore::FrameIdentifier, URL&&, String&& mimeType);
 
     void didReceiveTitleForFrame(IPC::Connection&, WebCore::FrameIdentifier, const String&, const UserData&);
@@ -2809,7 +2809,7 @@ private:
     void didDestroyNavigation(WebCore::NavigationIdentifier);
 
     void decidePolicyForNavigationAction(Ref<WebProcessProxy>&&, WebFrameProxy&, NavigationActionData&&, CompletionHandler<void(PolicyDecision&&)>&&);
-    void decidePolicyForNavigationActionAsync(NavigationActionData&&, CompletionHandler<void(PolicyDecision&&)>&&);
+    void decidePolicyForNavigationActionAsync(IPC::Connection&, NavigationActionData&&, CompletionHandler<void(PolicyDecision&&)>&&);
     void decidePolicyForNavigationActionSync(IPC::Connection&, NavigationActionData&&, CompletionHandler<void(PolicyDecision&&)>&&);
     void decidePolicyForNewWindowAction(IPC::Connection&, NavigationActionData&&, const String& frameName, CompletionHandler<void(PolicyDecision&&)>&&);
     void decidePolicyForResponse(IPC::Connection&, FrameInfoData&&, std::optional<WebCore::NavigationIdentifier>, const WebCore::ResourceResponse&, const WebCore::ResourceRequest&, bool canShowMIMEType, const String& downloadAttribute, bool isShowingInitialAboutBlank, WebCore::CrossOriginOpenerPolicyValue activeDocumentCOOPValue, CompletionHandler<void(PolicyDecision&&)>&&);
@@ -2824,9 +2824,9 @@ private:
 #endif
 
     // History client
-    void didNavigateWithNavigationData(const WebNavigationDataStore&, WebCore::FrameIdentifier);
-    void didPerformClientRedirect(const String& sourceURLString, const String& destinationURLString, WebCore::FrameIdentifier);
-    void didPerformServerRedirect(const String& sourceURLString, const String& destinationURLString, WebCore::FrameIdentifier);
+    void didNavigateWithNavigationData(IPC::Connection&, const WebNavigationDataStore&, WebCore::FrameIdentifier);
+    void didPerformClientRedirect(IPC::Connection&, const String& sourceURLString, const String& destinationURLString, WebCore::FrameIdentifier);
+    void didPerformServerRedirect(IPC::Connection&, const String& sourceURLString, const String& destinationURLString, WebCore::FrameIdentifier);
     void didUpdateHistoryTitle(IPC::Connection&, const String& title, const String& url, WebCore::FrameIdentifier);
 
     // UI client

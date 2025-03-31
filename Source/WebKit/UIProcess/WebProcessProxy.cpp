@@ -207,9 +207,11 @@ RefPtr<WebProcessProxy> WebProcessProxy::processForIdentifier(ProcessIdentifier 
     return allProcessMap().get(identifier);
 }
 
-RefPtr<WebProcessProxy> WebProcessProxy::processForConnection(const IPC::Connection& connection)
+Ref<WebProcessProxy> WebProcessProxy::fromConnection(const IPC::Connection& connection)
 {
-    return dynamicDowncast<WebProcessProxy>(AuxiliaryProcessProxy::fromConnection(connection));
+    auto* process = dynamicDowncast<WebProcessProxy>(AuxiliaryProcessProxy::fromConnection(connection));
+    RELEASE_ASSERT(process);
+    return *process;
 }
 
 auto WebProcessProxy::globalPageMap() -> WebPageProxyMap&

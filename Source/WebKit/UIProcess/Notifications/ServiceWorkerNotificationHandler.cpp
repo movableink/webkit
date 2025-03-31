@@ -101,11 +101,7 @@ void ServiceWorkerNotificationHandler::getPermissionStateSync(WebCore::SecurityO
 
 std::optional<SharedPreferencesForWebProcess> ServiceWorkerNotificationHandler::sharedPreferencesForWebProcess(const IPC::Connection& connection) const
 {
-    if (auto webProcessProxy = WebProcessProxy::processForConnection(connection))
-        return webProcessProxy->sharedPreferencesForWebProcess();
-
-    ASSERT_NOT_REACHED();
-    return std::nullopt;
+    return WebProcessProxy::fromConnection(connection)->sharedPreferencesForWebProcess();
 }
 
 } // namespace WebKit
