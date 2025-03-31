@@ -51,6 +51,7 @@ class TextureMapperLayer;
 
 #if USE(SKIA)
 class SkiaPaintingEngine;
+class SkiaRecordingResult;
 #endif
 #if USE(CAIRO)
 namespace Cairo {
@@ -182,6 +183,10 @@ public:
     RunLoop* compositingRunLoop() const;
 
     Ref<CoordinatedTileBuffer> paint(const IntRect&);
+#if USE(SKIA)
+    Ref<SkiaRecordingResult> record(const IntRect&);
+    Ref<CoordinatedTileBuffer> replay(const RefPtr<SkiaRecordingResult>&, const IntRect&);
+#endif
     void waitUntilPaintingComplete();
 
 private:

@@ -28,6 +28,11 @@
 #include <wtf/SystemTracing.h>
 #include <wtf/TZoneMallocInlines.h>
 
+#if USE(SKIA)
+#include "SkiaPaintingEngine.h"
+#include "SkiaRecordingResult.h"
+#endif
+
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(CoordinatedBackingStoreProxy);
@@ -148,13 +153,24 @@ OptionSet<CoordinatedBackingStoreProxy::UpdateResult> CoordinatedBackingStorePro
         result.add(UpdateResult::TilesPending);
 
     // Update the dirty tiles.
+    IntRect tileDirtyRectUnion;
     unsigned dirtyTilesCount = 0;
     for (const auto& tile : m_tiles.values()) {
-        if (tile.isDirty())
-            dirtyTilesCount++;
+        if (!tile.isDirty())
+            continue;
+
+        tileDirtyRectUnion.unite(tile.dirtyRect);
+        ++dirtyTilesCount;
     }
 
     WTFBeginSignpost(this, UpdateTiles, "dirty tiles: %u", dirtyTilesCount);
+
+#if USE(SKIA)
+    // Record only once the whole layer.
+    RefPtr<SkiaRecordingResult> recording;
+    if (LIKELY(dirtyTilesCount > 0 && layer.client().paintingEngine().useThreadedRendering()))
+        recording = layer.record(tileDirtyRectUnion);
+#endif
 
     Vector<Update::TileUpdate> tilesToUpdate;
     unsigned dirtyTileIndex = 0;
@@ -165,7 +181,12 @@ OptionSet<CoordinatedBackingStoreProxy::UpdateResult> CoordinatedBackingStorePro
         WTFBeginSignpost(this, UpdateTile, "%u/%u, id: %d, rect: %ix%i+%i+%i, dirty: %ix%i+%i+%i", ++dirtyTileIndex, dirtyTilesCount, tile.id,
             tile.rect.x(), tile.rect.y(), tile.rect.width(), tile.rect.height(), tile.dirtyRect.x(), tile.dirtyRect.y(), tile.dirtyRect.width(), tile.dirtyRect.height());
 
+#if USE(SKIA)
+        auto buffer = recording ? layer.replay(recording, tile.dirtyRect) : layer.paint(tile.dirtyRect);
+#else
         auto buffer = layer.paint(tile.dirtyRect);
+#endif
+
         IntRect updateRect(tile.dirtyRect);
         updateRect.move(-tile.rect.x(), -tile.rect.y());
         tilesToUpdate.append({ tile.id, tile.rect, WTFMove(updateRect), WTFMove(buffer) });

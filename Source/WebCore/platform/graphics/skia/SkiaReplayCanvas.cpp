@@ -38,19 +38,17 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(SkiaReplayCanvas);
-
-SkiaReplayCanvas::SkiaReplayCanvas(const IntSize& size, SkiaImageToFenceMap&& imageToFenceMap)
+SkiaReplayCanvas::SkiaReplayCanvas(const IntSize& size, const RefPtr<SkiaRecordingResult>& recording)
     : SkNWayCanvas(size.width(), size.height())
-    , m_imageToFenceMap(WTFMove(imageToFenceMap))
+    , m_recording(recording)
 {
 }
 
 SkiaReplayCanvas::~SkiaReplayCanvas() = default;
 
-Ref<SkiaReplayCanvas> SkiaReplayCanvas::create(const IntSize& size, SkiaImageToFenceMap&& imageToFenceMap)
+Ref<SkiaReplayCanvas> SkiaReplayCanvas::create(const IntSize& size, const RefPtr<SkiaRecordingResult>& recodingResult)
 {
-    return adoptRef(*new SkiaReplayCanvas(size, WTFMove(imageToFenceMap)));
+    return adoptRef(*new SkiaReplayCanvas(size, recodingResult));
 }
 
 sk_sp<SkImage> SkiaReplayCanvas::waitForRenderingCompletionAndRewrapImageIfNeeded(const SkImage* image)
@@ -62,8 +60,7 @@ sk_sp<SkImage> SkiaReplayCanvas::waitForRenderingCompletionAndRewrapImageIfNeede
     if (!glContext || !glContext->makeContextCurrent())
         return nullptr;
 
-    if (auto fence = m_imageToFenceMap.take(image))
-        fence->serverWait();
+    m_recording->waitForFenceIfNeeded(*image);
 
     auto* grContext = PlatformDisplay::sharedDisplay().skiaGrContext();
     if (image->isValid(grContext))

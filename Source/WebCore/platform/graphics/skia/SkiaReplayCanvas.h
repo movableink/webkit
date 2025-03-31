@@ -26,30 +26,25 @@
 #pragma once
 
 #if USE(COORDINATED_GRAPHICS) && USE(SKIA)
-#include "GraphicsContextSkia.h"
 #include "IntSize.h"
+#include "SkiaRecordingResult.h"
 #include <skia/utils/SkNWayCanvas.h>
 #include <wtf/Assertions.h>
 #include <wtf/Function.h>
-#include <wtf/HashMap.h>
-#include <wtf/RefCounted.h>
-#include <wtf/TZoneMalloc.h>
 
 class SkImage;
 
 namespace WebCore {
 
-class GLFence;
-
 class SkiaReplayCanvas final : public SkNWayCanvas, public RefCounted<SkiaReplayCanvas> {
-    WTF_MAKE_TZONE_ALLOCATED(SkiaReplayCanvas);
-    WTF_MAKE_NONCOPYABLE(SkiaReplayCanvas);
 public:
     ~SkiaReplayCanvas() override;
-    static Ref<SkiaReplayCanvas> create(const IntSize&, SkiaImageToFenceMap&&);
+    static Ref<SkiaReplayCanvas> create(const IntSize&, const RefPtr<SkiaRecordingResult>&);
+
+    const sk_sp<SkPicture>& picture() const { return m_recording->picture(); }
 
 private:
-    SkiaReplayCanvas(const IntSize&, SkiaImageToFenceMap&&);
+    SkiaReplayCanvas(const IntSize&, const RefPtr<SkiaRecordingResult>&);
 
     sk_sp<SkImage> waitForRenderingCompletionAndRewrapImageIfNeeded(const SkImage*);
 
@@ -80,7 +75,7 @@ private:
     void onDrawTextBlob(const SkTextBlob*, SkScalar x, SkScalar y, const SkPaint&) override;
     void onDrawVerticesObject(const SkVertices*, SkBlendMode, const SkPaint&) override;
 
-    SkiaImageToFenceMap m_imageToFenceMap;
+    RefPtr<SkiaRecordingResult> m_recording;
 };
 
 } // namespace WebCore
