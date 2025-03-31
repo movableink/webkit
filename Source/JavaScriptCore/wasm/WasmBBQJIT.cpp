@@ -1454,23 +1454,6 @@ StorageType BBQJIT::getArrayElementType(uint32_t typeIndex)
     return arrayType->elementType().type;
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayNewDefault(uint32_t typeIndex, ExpressionType size, ExpressionType& result)
-{
-    Vector<Value, 8> arguments = {
-        instanceValue(),
-        Value::fromI32(typeIndex),
-        size,
-    };
-    result = topValue(TypeKind::Arrayref);
-    emitCCall(&operationWasmArrayNewEmpty, arguments, result);
-
-    Location resultLocation = loadIfNecessary(result);
-    emitThrowOnNullReference(ExceptionType::BadArrayNew, resultLocation);
-
-    LOG_INSTRUCTION("ArrayNewDefault", typeIndex, size, RESULT(result));
-    return { };
-}
-
 void BBQJIT::pushArrayNewFromSegment(ArraySegmentOperation operation, uint32_t typeIndex, uint32_t segmentIndex, ExpressionType arraySize, ExpressionType offset, ExceptionType exceptionType, ExpressionType& result)
 {
     Vector<Value, 8> arguments = {
@@ -4043,7 +4026,7 @@ void BBQJIT::RegisterBindings::dump(PrintStream& out) const
         out.print("]");
 
     // FIXME: These should be store load pairs.
-    comma = CommaPrinter(", ", ", [");
+    comma = CommaPrinter(", ", comma.didPrint() ? ", ["_s : "["_s);
     for (unsigned i = 0; i < m_gprBindings.size(); ++i) {
         if (!m_gprBindings[i].isNone())
             out.print(comma, "<", static_cast<GPRReg>(i), ": ", m_gprBindings[i], ">");
@@ -4054,7 +4037,6 @@ void BBQJIT::RegisterBindings::dump(PrintStream& out) const
 
 void BBQJIT::slowPathSpillBindings(const RegisterBindings& bindings)
 {
-    dataLogLn(bindings);
     for (unsigned i = 0; i < bindings.m_fprBindings.size(); ++i) {
         Value value = bindings.m_fprBindings[i].toValue();
         if (!value.isNone())

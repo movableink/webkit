@@ -1542,6 +1542,23 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayNewFixed(uint32_t typeIndex, Ar
     return { };
 }
 
+PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayNewDefault(uint32_t typeIndex, ExpressionType size, ExpressionType& result)
+{
+    Vector<Value, 8> arguments = {
+        instanceValue(),
+        Value::fromI32(typeIndex),
+        size,
+    };
+    result = topValue(TypeKind::Arrayref);
+    emitCCall(&operationWasmArrayNewEmpty, arguments, result);
+
+    Location resultLocation = loadIfNecessary(result);
+    emitThrowOnNullReference(ExceptionType::BadArrayNew, resultLocation);
+
+    LOG_INSTRUCTION("ArrayNewDefault", typeIndex, size, RESULT(result));
+    return { };
+}
+
 PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayGet(ExtGCOpType arrayGetKind, uint32_t typeIndex, ExpressionType arrayref, ExpressionType index, ExpressionType& result)
 {
     StorageType elementType = getArrayElementType(typeIndex);

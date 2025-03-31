@@ -1638,6 +1638,8 @@ void BBQJIT::emitAllocateGCArrayUninitialized(GPRReg resultGPR, uint32_t typeInd
         m_jit.store32(sizeLocation.asGPR(), MacroAssembler::Address(resultGPR, JSWebAssemblyArray::offsetOfSize()));
     }
 
+    // FIXME: Ideally we'd have a way for our caller to set the label they want us to return to since e.g. addArrayNewDefault doesn't need to initialize
+    // if we hit the slow path. But the way Labels work we need to know the exact offset we're returning to when moving to the slow path.
     JIT_COMMENT(m_jit, "Slow path return");
     MacroAssembler::Label done(m_jit);
     m_slowPaths.append({ WTFMove(slowPath), WTFMove(done), m_bindings, [typeIndex, size, sizeLocation, resultGPR](BBQJIT& bbq, CCallHelpers& jit) {
@@ -1672,7 +1674,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayNew(uint32_t typeIndex, Express
         m_jit.sub32(TrustedImm32(1), sizeLocation.asGPR());
         constexpr bool preserveIndex = true;
         emitArrayStoreElementUnchecked(elementType, scratchGPR, sizeLocation, initValue, preserveIndex);
-        m_jit.jump().linkTo(loop, m_jit);
+        m_jit.jump(loop);
         done.link(m_jit);
 
         if (Wasm::isRefType(elementType.unpacked()))
@@ -1730,6 +1732,62 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayNewFixed(uint32_t typeIndex, Ar
     bind(result, Location::fromGPR(resultGPR));
 
     LOG_INSTRUCTION("ArrayNewFixed", typeIndex, args.size(), RESULT(result));
+    return { };
+}
+
+
+PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayNewDefault(uint32_t typeIndex, ExpressionType size, ExpressionType& result)
+{
+    StorageType elementType = getArrayElementType(typeIndex);
+    // FIXME: We don't have a good way to fill V128s yet so just make a call.
+    if (elementType.unpacked().isV128()) {
+        Vector<Value, 8> arguments = {
+            instanceValue(),
+            Value::fromI32(typeIndex),
+            size,
+        };
+        result = topValue(TypeKind::Arrayref);
+        emitCCall(operationWasmArrayNewEmpty, arguments, result);
+
+        Location resultLocation = loadIfNecessary(result);
+        emitThrowOnNullReference(ExceptionType::BadArrayNew, resultLocation);
+
+        LOG_INSTRUCTION("ArrayNewDefault", typeIndex, size, RESULT(result));
+        return { };
+    }
+
+    GPRReg resultGPR;
+    {
+        ScratchScope<2, 0> scratches(*this);
+        resultGPR = scratches.gpr(0);
+        GPRReg scratchGPR = scratches.gpr(1);
+
+        emitAllocateGCArrayUninitialized(resultGPR, typeIndex, size, wasmScratchGPR, scratchGPR);
+
+        JIT_COMMENT(m_jit, "Array allocation done do initialization");
+        Location sizeLocation = materializeToRegister(size);
+        Value initValue = Value::fromI64(Wasm::isRefType(elementType.unpacked()) ? JSValue::encode(jsNull()) : 0);
+
+        emitArrayGetPayload(elementType, resultGPR, scratchGPR);
+
+        MacroAssembler::Label loop(m_jit);
+        JIT_COMMENT(m_jit, "Array initialization loop header");
+        Jump done = m_jit.branchTestPtr(MacroAssembler::Zero, sizeLocation.asGPR());
+        m_jit.sub32(TrustedImm32(1), sizeLocation.asGPR());
+        constexpr bool preserveIndex = true;
+        emitArrayStoreElementUnchecked(elementType, scratchGPR, sizeLocation, initValue, preserveIndex);
+        m_jit.jump(loop);
+        done.link(m_jit);
+
+        if (Wasm::isRefType(elementType.unpacked()))
+            emitMutatorFence();
+    }
+
+    consume(size);
+    result = topValue(TypeKind::Ref);
+    bind(result, Location::fromGPR(resultGPR));
+
+    LOG_INSTRUCTION("ArrayNewDefault", typeIndex, size, RESULT(result));
     return { };
 }
 
@@ -2163,17 +2221,17 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addStructNew(uint32_t typeIndex, Argume
     result = topValue(TypeKind::Ref);
     bind(result, Location::fromGPR(resultGPR));
 
-// #if ASSERT_ENABLED
-//     auto debugStructType = &structType;
-//     m_jit.probeDebug([=] (Probe::Context& context) {
-//         auto* structPtr = context.gpr<JSWebAssemblyStruct*>(resultGPR);
-//         for (unsigned i = 0; i < debugStructType->fieldCount(); ++i) {
-//             auto type = debugStructType->field(i).type.unpacked();
-//             if (type.kind != TypeKind::V128)
-//                 validateWasmValue(structPtr->get(i), type);
-//         }
-//     });
-// #endif
+#if ASSERT_ENABLED
+    auto debugStructType = &structType;
+    m_jit.probeDebug([=] (Probe::Context& context) {
+        auto* structPtr = context.gpr<JSWebAssemblyStruct*>(resultGPR);
+        for (unsigned i = 0; i < debugStructType->fieldCount(); ++i) {
+            auto type = debugStructType->field(i).type.unpacked();
+            if (type.kind != TypeKind::V128)
+                validateWasmValue(structPtr->get(i), type);
+        }
+    });
+#endif
 
     LOG_INSTRUCTION("StructNew", typeIndex, args, RESULT(result));
 

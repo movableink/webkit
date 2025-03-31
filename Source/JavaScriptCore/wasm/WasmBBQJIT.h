@@ -1201,7 +1201,6 @@ public:
 
     void emitAllocateGCArrayUninitialized(GPRReg result, uint32_t typeIndex, ExpressionType size, GPRReg scratchGPR, GPRReg scratchGPR2);
     PartialResult WARN_UNUSED_RETURN addArrayNew(uint32_t typeIndex, ExpressionType size, ExpressionType initValue, ExpressionType& result);
-
     PartialResult WARN_UNUSED_RETURN addArrayNewDefault(uint32_t typeIndex, ExpressionType size, ExpressionType& result);
 
     using ArraySegmentOperation = EncodedJSValue SYSV_ABI (&)(JSC::JSWebAssemblyInstance*, uint32_t, uint32_t, uint32_t, uint32_t);

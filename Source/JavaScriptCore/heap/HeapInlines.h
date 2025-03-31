@@ -126,7 +126,14 @@ inline void Heap::writeBarrier(const JSCell* from)
 
 inline void Heap::mutatorFence()
 {
-    if (isX86() || UNLIKELY(mutatorShouldBeFenced()))
+    // We could push this condition in the lower `if` as on X86 a storeStoreFence is a compilerFence
+    // but this condition makes the logic a bit more explicit.
+    if constexpr (isX86()) {
+        WTF::compilerFence();
+        return;
+    }
+
+    if (UNLIKELY(mutatorShouldBeFenced()))
         WTF::storeStoreFence();
 }
 
