@@ -32,10 +32,10 @@ import rapidfuzz
 AutoInstall.install('markupsafe')
 AutoInstall.install('jinja2')
 
-AutoInstall.install(Package('attr', Version(21, 3, 0), pypi_name='attrs'))
+AutoInstall.install(Package('attrs', Version(21, 3), aliases=['attr']))
 AutoInstall.install(Package('constantly', Version(15, 1, 0)))
-AutoInstall.install(Package('dateutil', Version(2, 8, 1), pypi_name='python-dateutil'))
-AutoInstall.install(Package('future', Version(0, 18, 2)))
+AutoInstall.install(Package('dateutil', Version(2, 8, 1), pypi_name='python-dateutil', wheel=True))
+AutoInstall.install(Package('future', Version(0, 18, 2), aliases=['libfuturize', 'libpasteurize', 'past']))
 AutoInstall.install(Package('pbr', Version(5, 9, 0)))
 AutoInstall.install(Package('lz4', Version(4, 3, 2)))
 AutoInstall.install(Package('jwt', Version(1, 7, 1), pypi_name='PyJWT'))
@@ -46,7 +46,7 @@ AutoInstall.install(Package('automat', Version(20, 2, 0), pypi_name='Automat'))
 AutoInstall.install(Package('decorator', Version(5, 1, 1)))
 AutoInstall.install(Package('hamcrest', Version(2, 0, 3), pypi_name='PyHamcrest'))
 AutoInstall.install(Package('sqlalchemy', Version(1, 3, 20), pypi_name='SQLAlchemy'))
-AutoInstall.install(Package('sqlalchemy-migrate', Version(0, 13, 0)))
+AutoInstall.install(Package('sqlalchemy_migrate', Version(0, 13, 0), pypi_name='sqlalchemy-migrate'))
 AutoInstall.install(Package('sqlparse', Version(0, 4, 2)))
 AutoInstall.install(Package('txaio', Version(20, 4, 1)))
 AutoInstall.install(Package('tempita', Version(0, 5, 2), pypi_name='Tempita'))
@@ -54,7 +54,7 @@ AutoInstall.install(Package('tempita', Version(0, 5, 2), pypi_name='Tempita'))
 # buildbot has wheel=False because we rely on items in buildbot.test that only
 # became public API and started being included in wheels from 3.5.0.
 AutoInstall.install(Package('buildbot', Version(2, 10, 5), wheel=False))
-AutoInstall.install(Package('buildbot-worker', Version(2, 10, 5)))
+AutoInstall.install(Package('buildbot_worker', Version(2, 10, 5), pypi_name='buildbot-worker'))
 
 
 sys.modules[__name__] = __import__('buildbot')
