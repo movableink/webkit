@@ -97,17 +97,14 @@ CompilationResult JITWorklist::enqueue(Ref<JITPlan> plan)
         dump(locker, WTF::dataFile());
         dataLog(": Enqueueing plan to optimize ", plan->key(), "\n");
     }
+    unsigned tier = static_cast<unsigned>(plan->tier());
     ASSERT(m_plans.find(plan->key()) == m_plans.end());
     m_plans.add(plan->key(), plan.copyRef());
-    m_queues[static_cast<unsigned>(plan->tier())].append(WTFMove(plan));
+    m_queues[tier].append(WTFMove(plan));
 
-    // Notify when some of thread is waiting.
-    for (auto& thread : m_threads) {
-        if (thread->state() == JITWorklistThread::State::NotCompiling) {
-            m_planEnqueued->notifyOne(locker);
-            break;
-        }
-    }
+    if (m_numberOfActiveThreads < Options::numberOfWorklistThreads()
+        && m_ongoingCompilationsPerTier[tier] < m_maximumNumberOfConcurrentCompilationsPerTier[tier])
+        m_planEnqueued->notifyOne(locker);
 
     return CompilationDeferred;
 }
