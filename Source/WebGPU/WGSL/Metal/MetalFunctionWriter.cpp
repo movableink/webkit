@@ -300,7 +300,7 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
     if (m_shaderModule.usesPackArray()) {
         m_shaderModule.clearUsesPackArray();
         m_body.append(m_indent, "template<typename T, size_t N>\n"_s,
-            m_indent, "static array<typename T::PackedType, N> __pack(array<T, N> unpacked)\n"_s,
+            m_indent, "static __attribute((always_inline)) array<typename T::PackedType, N> __pack(array<T, N> unpacked)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
@@ -316,7 +316,7 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
 
         if (m_shaderModule.usesPackedVec3()) {
             m_body.append(m_indent, "template<typename T, size_t N>\n"_s,
-                m_indent, "static array<PackedVec3<T>, N> __pack(array<vec<T, 3>, N> unpacked)\n"_s,
+                m_indent, "static __attribute((always_inline)) array<PackedVec3<T>, N> __pack(array<vec<T, 3>, N> unpacked)\n"_s,
                 m_indent, "{\n"_s);
             {
                 IndentationScope scope(m_indent);
@@ -335,7 +335,7 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
     if (m_shaderModule.usesUnpackArray()) {
         m_shaderModule.clearUsesUnpackArray();
         m_body.append(m_indent, "template<typename T, size_t N>\n"_s,
-            m_indent, "static array<typename T::UnpackedType, N> __unpack(array<T, N> packed)\n"_s,
+            m_indent, "static __attribute((always_inline)) array<typename T::UnpackedType, N> __unpack(array<T, N> packed)\n"_s,
             m_indent, "{\n"_s);
         {
             IndentationScope scope(m_indent);
@@ -351,7 +351,7 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
 
         if (m_shaderModule.usesPackedVec3()) {
             m_body.append(m_indent, "template<typename T, size_t N>\n"_s,
-                m_indent, "static array<vec<T, 3>, N> __unpack(array<PackedVec3<T>, N> packed)\n"_s,
+                m_indent, "static __attribute((always_inline)) array<vec<T, 3>, N> __unpack(array<PackedVec3<T>, N> packed)\n"_s,
                 m_indent, "{\n"_s);
             {
                 IndentationScope scope(m_indent);
@@ -370,13 +370,13 @@ void FunctionDefinitionWriter::emitNecessaryHelpers()
     if (m_shaderModule.usesPackVector()) {
         m_shaderModule.clearUsesPackVector();
         m_body.append(m_indent, "template<typename T>\n"_s,
-            m_indent, "static packed_vec<T, 3> __pack(vec<T, 3> unpacked) { return unpacked; }\n\n"_s);
+            m_indent, "static __attribute((always_inline)) packed_vec<T, 3> __pack(vec<T, 3> unpacked) { return unpacked; }\n\n"_s);
     }
 
     if (m_shaderModule.usesUnpackVector()) {
         m_shaderModule.clearUsesUnpackVector();
         m_body.append(m_indent, "template<typename T>\n"_s,
-            m_indent, "static vec<T, 3> __unpack(packed_vec<T, 3> packed) { return packed; }\n\n"_s);
+            m_indent, "static __attribute((always_inline)) vec<T, 3> __unpack(packed_vec<T, 3> packed) { return packed; }\n\n"_s);
 
         if (m_shaderModule.usesPackedVec3()) {
             m_body.append(m_indent, "template<typename T>\n"_s,
@@ -774,7 +774,7 @@ void FunctionDefinitionWriter::generatePackingHelpers(AST::Structure& structure)
     const String& packedName = structure.name();
     auto unpackedName = structure.original()->name();
 
-    m_body.append(m_indent, "static "_s, packedName, " __pack("_s, unpackedName, " unpacked)\n"_s,
+    m_body.append(m_indent, "static __attribute((always_inline)) "_s, packedName, " __pack("_s, unpackedName, " unpacked)\n"_s,
         m_indent, "{\n"_s);
     {
         IndentationScope scope(m_indent);
