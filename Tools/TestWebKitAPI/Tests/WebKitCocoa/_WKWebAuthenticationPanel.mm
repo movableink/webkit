@@ -428,7 +428,12 @@ TEST(WebAuthenticationPanel, NoPanelNfcSucceed)
 }
 #endif
 
+// FIXME rdar://145102423
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+TEST(WebAuthenticationPanel, DISABLED_NoPanelHidSuccess)
+#else
 TEST(WebAuthenticationPanel, NoPanelHidSuccess)
+#endif
 {
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid" withExtension:@"html"];
 
@@ -441,7 +446,12 @@ TEST(WebAuthenticationPanel, NoPanelHidSuccess)
     [webView waitForMessage:@"Succeeded!"];
 }
 
+// FIXME rdar://145102423
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+TEST(WebAuthenticationPanel, DISABLED_PanelHidSuccess1)
+#else
 TEST(WebAuthenticationPanel, PanelHidSuccess1)
+#endif
 {
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid" withExtension:@"html"];
@@ -462,7 +472,12 @@ TEST(WebAuthenticationPanel, PanelHidSuccess1)
     checkPanel([delegate panel], @"", @[adoptNS([[NSNumber alloc] initWithInt:_WKWebAuthenticationTransportUSB]).get()], _WKWebAuthenticationTypeGet);
 }
 
+// FIXME rdar://145102423
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+TEST(WebAuthenticationPanel, DISABLED_PanelHidSuccess2)
+#else
 TEST(WebAuthenticationPanel, PanelHidSuccess2)
+#endif
 {
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-hid" withExtension:@"html"];
@@ -534,7 +549,12 @@ TEST(WebAuthenticationPanel, PanelRacy2)
 }
 #endif // HAVE(NEAR_FIELD)
 
+// FIXME rdar://145102423
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+TEST(WebAuthenticationPanel, DISABLED_PanelTwice)
+#else
 TEST(WebAuthenticationPanel, PanelTwice)
+#endif
 {
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid" withExtension:@"html"];
@@ -738,7 +758,12 @@ TEST(WebAuthenticationPanel, PanelHidCancel)
     EXPECT_TRUE(webAuthenticationPanelFailed);
 }
 
+// FIXME rdar://145102423
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+TEST(WebAuthenticationPanel, DISABLED_PanelHidCtapNoCredentialsFound)
+#else
 TEST(WebAuthenticationPanel, PanelHidCtapNoCredentialsFound)
+#endif
 {
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-no-credentials" withExtension:@"html"];
@@ -772,7 +797,12 @@ TEST(WebAuthenticationPanel, PanelU2fCtapNoCredentialsFound)
     Util::run(&webAuthenticationPanelUpdateNoCredentialsFound);
 }
 
+// FIXME rdar://145102423
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+TEST(WebAuthenticationPanel, DISABLED_FakePanelHidSuccess)
+#else
 TEST(WebAuthenticationPanel, FakePanelHidSuccess)
+#endif
 {
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid" withExtension:@"html"];
@@ -808,7 +838,12 @@ TEST(WebAuthenticationPanel, FakePanelHidCtapNoCredentialsFound)
     [webView waitForMessage:@"Operation timed out."];
 }
 
+// FIXME rdar://145102423
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+TEST(WebAuthenticationPanel, DISABLED_NullPanelHidSuccess)
+#else
 TEST(WebAuthenticationPanel, NullPanelHidSuccess)
+#endif
 {
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid" withExtension:@"html"];
@@ -882,7 +917,12 @@ TEST(WebAuthenticationPanel, PanelHidCancelReloadNoCrash)
     [webView waitForMessage:@"Operation timed out."];
 }
 
+// FIXME rdar://145102423
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+TEST(WebAuthenticationPanel, DISABLED_PanelHidSuccessCancelNoCrash)
+#else
 TEST(WebAuthenticationPanel, PanelHidSuccessCancelNoCrash)
+#endif
 {
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid" withExtension:@"html"];
@@ -899,7 +939,12 @@ TEST(WebAuthenticationPanel, PanelHidSuccessCancelNoCrash)
     [webView waitForMessage:@"Succeeded!"];
 }
 
+// FIXME rdar://145102423
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+TEST(WebAuthenticationPanel, DISABLED_PanelHidCtapNoCredentialsFoundCancelNoCrash)
+#else
 TEST(WebAuthenticationPanel, PanelHidCtapNoCredentialsFoundCancelNoCrash)
+#endif
 {
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-no-credentials" withExtension:@"html"];
@@ -1135,7 +1180,12 @@ TEST(WebAuthenticationPanel, MakeCredentialPinInvalidErrorAndRetry)
     EXPECT_TRUE(webAuthenticationPanelUpdatePINInvalid);
 }
 
+// FIXME rdar://145102423
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+TEST(WebAuthenticationPanel, DISABLED_GetAssertionPin)
+#else
 TEST(WebAuthenticationPanel, GetAssertionPin)
+#endif
 {
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-pin" withExtension:@"html"];
@@ -1152,7 +1202,12 @@ TEST(WebAuthenticationPanel, GetAssertionPin)
     [webView waitForMessage:@"Succeeded!"];
 }
 
+// FIXME rdar://145102423
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+TEST(WebAuthenticationPanel, DISABLED_GetAssertionInternalUV)
+#else
 TEST(WebAuthenticationPanel, GetAssertionInternalUV)
+#endif
 {
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-internal-uv" withExtension:@"html"];
@@ -1168,7 +1223,12 @@ TEST(WebAuthenticationPanel, GetAssertionInternalUV)
     [webView waitForMessage:@"Succeeded!"];
 }
 
+// FIXME rdar://145102423
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+TEST(WebAuthenticationPanel, DISABLED_GetAssertionInternalUVPinFallback)
+#else
 TEST(WebAuthenticationPanel, GetAssertionInternalUVPinFallback)
+#endif
 {
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-internal-uv-pin-fallback" withExtension:@"html"];
@@ -1185,7 +1245,12 @@ TEST(WebAuthenticationPanel, GetAssertionInternalUVPinFallback)
     [webView waitForMessage:@"Succeeded!"];
 }
 
+// FIXME rdar://145102423
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+TEST(WebAuthenticationPanel, DISABLED_GetAssertionPinAuthBlockedError)
+#else
 TEST(WebAuthenticationPanel, GetAssertionPinAuthBlockedError)
+#endif
 {
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-pin-auth-blocked-error" withExtension:@"html"];
@@ -1204,7 +1269,12 @@ TEST(WebAuthenticationPanel, GetAssertionPinAuthBlockedError)
     EXPECT_TRUE(webAuthenticationPanelUpdatePINAuthBlocked);
 }
 
+// FIXME rdar://145102423
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+TEST(WebAuthenticationPanel, DISABLED_GetAssertionPinInvalidErrorAndRetry)
+#else
 TEST(WebAuthenticationPanel, GetAssertionPinInvalidErrorAndRetry)
+#endif
 {
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-pin-invalid-error-retry" withExtension:@"html"];
@@ -1258,7 +1328,12 @@ TEST(WebAuthenticationPanel, MultipleAccountsNullDelegate)
     [webView waitForMessage:@"Operation timed out."];
 }
 
+// FIXME rdar://145102423
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+TEST(WebAuthenticationPanel, DISABLED_MultipleAccounts)
+#else
 TEST(WebAuthenticationPanel, MultipleAccounts)
+#endif
 {
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-multiple-accounts" withExtension:@"html"];
@@ -1353,7 +1428,12 @@ TEST(WebAuthenticationPanel, LANoCredential)
     Util::run(&webAuthenticationPanelUpdateLANoCredential);
 }
 
+// FIXME rdar://145102423
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+TEST(WebAuthenticationPanel, DISABLED_LAMakeCredentialAllowLocalAuthenticator)
+#else
 TEST(WebAuthenticationPanel, LAMakeCredentialAllowLocalAuthenticator)
+#endif
 {
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-la" withExtension:@"html"];
@@ -1420,7 +1500,12 @@ TEST(WebAuthenticationPanel, LAGetAssertionMultipleCredentialStore)
     cleanUpKeychain();
 }
 
+// FIXME rdar://145102423
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+TEST(WebAuthenticationPanel, DISABLED_LAGetAssertionNoMockNoUserGesture)
+#else
 TEST(WebAuthenticationPanel, LAGetAssertionNoMockNoUserGesture)
+#endif
 {
     reset();
     webAuthenticationPanelRequestNoGesture = false;
@@ -1693,7 +1778,12 @@ TEST(WebAuthenticationPanel, PublicKeyCredentialCreationOptionsMaximum2)
     EXPECT_EQ(result.attestation, AttestationConveyancePreference::Indirect);
 }
 
+// FIXME rdar://145102423
+#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+TEST(WebAuthenticationPanel, DISABLED_MakeCredentialSPITimeout)
+#else
 TEST(WebAuthenticationPanel, MakeCredentialSPITimeout)
+#endif
 {
     reset();
 
