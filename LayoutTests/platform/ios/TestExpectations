@@ -7817,3 +7817,5 @@ webkit.org/b/290856 imported/w3c/web-platform-tests/css/css-viewport/zoom/backgr
 webkit.org/b/290871 imported/w3c/web-platform-tests/navigation-api/scroll-behavior/after-transition-reject.html [ Pass Failure ]
 
 webkit.org/b/290876 imported/w3c/web-platform-tests/trusted-types/DedicatedWorker-constructor-from-SharedWorker.html [ Pass Failure ]
+
+webkit.org/b/290888 fast/loader/redirect-to-invalid-url-using-meta-refresh-calls-policy-delegate.html [ Pass Failure ]
