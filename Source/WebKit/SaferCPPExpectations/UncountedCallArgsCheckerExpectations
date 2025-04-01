@@ -8,6 +8,7 @@ Platform/IPC/Connection.h
 Platform/IPC/StreamClientConnection.cpp
 Shared/Cocoa/WKObject.mm
 Shared/JavaScriptEvaluationResult.mm
+Shared/RemoteLayerTree/RemoteLayerBackingStore.mm
 UIProcess/API/APIDataTask.cpp
 UIProcess/API/C/WKAuthenticationChallenge.cpp
 UIProcess/API/C/WKAuthenticationDecisionListener.cpp

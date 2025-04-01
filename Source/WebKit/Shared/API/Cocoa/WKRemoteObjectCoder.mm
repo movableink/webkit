@@ -150,8 +150,8 @@ static void encodeToObjectStream(WKRemoteObjectEncoder *encoder, id value)
 
 static void encodeInvocationArguments(WKRemoteObjectEncoder *encoder, NSInvocation *invocation, NSUInteger firstArgument)
 {
-    RetainPtr<NSMethodSignature> methodSignature = invocation.methodSignature;
-    NSUInteger argumentCount = methodSignature.get().numberOfArguments;
+    NSMethodSignature *methodSignature = invocation.methodSignature;
+    NSUInteger argumentCount = methodSignature.numberOfArguments;
 
     ASSERT(firstArgument <= argumentCount);
 
@@ -317,8 +317,8 @@ static void encodeInvocationArguments(WKRemoteObjectEncoder *encoder, NSInvocati
 
 static void encodeInvocation(WKRemoteObjectEncoder *encoder, NSInvocation *invocation)
 {
-    RetainPtr<NSMethodSignature> methodSignature = invocation.methodSignature;
-    [encoder encodeObject:methodSignature.get()._typeString forKey:typeStringKey];
+    NSMethodSignature *methodSignature = invocation.methodSignature;
+    [encoder encodeObject:methodSignature._typeString forKey:typeStringKey];
 
     if ([invocation isKindOfClass:[NSBlockInvocation class]]) {
         [encoder encodeBool:YES forKey:isReplyBlockKey];
@@ -389,15 +389,15 @@ static void encodeError(WKRemoteObjectEncoder *encoder, NSError *error)
             copy = adoptNS([error.userInfo mutableCopy]);
         [copy removeObjectForKey:clientCertificateKey];
     }
-    if (RetainPtr<NSArray> certificateChain = error.userInfo[peerCertificateKey]) {
+    if (NSArray *certificateChain = error.userInfo[peerCertificateKey]) {
         if (!copy)
             copy = adoptNS([error.userInfo mutableCopy]);
-        copy.get()[peerCertificateKey] = transformCertificatesToData(certificateChain.get()).get();
+        copy.get()[peerCertificateKey] = transformCertificatesToData(certificateChain).get();
     }
-    if (RetainPtr<id> trust = error.userInfo[peerTrustKey]) {
+    if (id trust = error.userInfo[peerTrustKey]) {
         if (!copy)
             copy = adoptNS([error.userInfo mutableCopy]);
-        copy.get()[peerTrustKey] = bridge_cast(transformTrustToData((SecTrustRef)trust.get()).get());
+        copy.get()[peerTrustKey] = bridge_cast(transformTrustToData((SecTrustRef)trust).get());
     }
     if (!copy)
         [error encodeWithCoder:encoder];
@@ -434,14 +434,14 @@ static RetainPtr<NSError> decodeError(WKRemoteObjectDecoder *decoder)
 {
     RetainPtr<NSError> error = decodeObjCObject(decoder, [NSError class]);
     RetainPtr<NSMutableDictionary> copy;
-    if (RetainPtr<NSArray> certificateChain = error.get().userInfo[peerCertificateKey]) {
+    if (NSArray *certificateChain = error.get().userInfo[peerCertificateKey]) {
         copy = adoptNS([error.get().userInfo mutableCopy]);
-        copy.get()[peerCertificateKey] = transformDataToCertificates(certificateChain.get()).get();
+        copy.get()[peerCertificateKey] = transformDataToCertificates(certificateChain).get();
     }
-    if (RetainPtr<NSData> trust = error.get().userInfo[peerTrustKey]) {
+    if (NSData *trust = error.get().userInfo[peerTrustKey]) {
         if (!copy)
             copy = adoptNS([error.get().userInfo mutableCopy]);
-        copy.get()[peerTrustKey] = bridge_id_cast(transformDataToTrust(trust.get()).get());
+        copy.get()[peerTrustKey] = bridge_id_cast(transformDataToTrust(trust).get());
     }
     if (!copy)
         return error;
@@ -458,7 +458,7 @@ static void encodeObject(WKRemoteObjectEncoder *encoder, id object)
     if (class_isMetaClass(object_getClass(object)))
         [NSException raise:NSInvalidArgumentException format:@"Class objects may not be encoded"];
 
-    RetainPtr<Class> objectClass = [object classForCoder];
+    Class objectClass = [object classForCoder];
     if (!objectClass)
         [NSException raise:NSInvalidArgumentException format:@"-classForCoder returned nil for %@", object];
 
@@ -473,7 +473,7 @@ static void encodeObject(WKRemoteObjectEncoder *encoder, id object)
         encoder->_objectsBeingEncoded.remove(object);
     });
 
-    Ref { *encoder->_currentDictionary }->set(classNameKey, API::String::create(String::fromLatin1(class_getName(objectClass.get()))));
+    Ref { *encoder->_currentDictionary }->set(classNameKey, API::String::create(String::fromLatin1(class_getName(objectClass))));
 
     if ([object isKindOfClass:[NSInvocation class]]) {
         // We have to special case NSInvocation since we don't want to encode the target.
@@ -481,12 +481,12 @@ static void encodeObject(WKRemoteObjectEncoder *encoder, id object)
         return;
     }
 
-    if (objectClass.get() == [NSString class] || objectClass.get() == [NSMutableString class]) {
+    if (objectClass == [NSString class] || objectClass == [NSMutableString class]) {
         encodeString(encoder, object);
         return;
     }
 
-    if (objectClass.get() == [NSError class])
+    if (objectClass == [NSError class])
         return encodeError(encoder, object);
     
     [object encodeWithCoder:encoder];
@@ -768,9 +768,9 @@ static NSString *escapeKey(NSString *key)
     return [self decodeObjectOfClasses:nil forKey:key];
 }
 
-static RetainPtr<id> decodeObject(WKRemoteObjectDecoder *, const API::Dictionary*, const HashSet<CFTypeRef>& allowedClasses);
+static id decodeObject(WKRemoteObjectDecoder *, const API::Dictionary*, const HashSet<CFTypeRef>& allowedClasses);
 
-static RetainPtr<id> decodeObjectFromObjectStream(WKRemoteObjectDecoder *decoder, const HashSet<CFTypeRef>& allowedClasses)
+static id decodeObjectFromObjectStream(WKRemoteObjectDecoder *decoder, const HashSet<CFTypeRef>& allowedClasses)
 {
     if (!decoder->_objectStream)
         return nil;
@@ -861,8 +861,8 @@ static void validateClass(WKRemoteObjectDecoder *decoder, Class objectClass)
 
 static void decodeInvocationArguments(WKRemoteObjectDecoder *decoder, NSInvocation *invocation, const Vector<HashSet<CFTypeRef>>& allowedArgumentClasses, NSUInteger firstArgument)
 {
-    RetainPtr<NSMethodSignature> methodSignature = invocation.methodSignature;
-    NSUInteger argumentCount = methodSignature.get().numberOfArguments;
+    NSMethodSignature *methodSignature = invocation.methodSignature;
+    NSUInteger argumentCount = methodSignature.numberOfArguments;
 
     ASSERT(firstArgument <= argumentCount);
 
@@ -965,9 +965,8 @@ static void decodeInvocationArguments(WKRemoteObjectDecoder *decoder, NSInvocati
         case '@': {
             auto& allowedClasses = allowedArgumentClasses[i - firstArgument];
 
-            RetainPtr value = decodeObjectFromObjectStream(decoder, allowedClasses);
-            SUPPRESS_UNRETAINED_LOCAL id valueId = value.get();
-            [invocation setArgument:&valueId atIndex:i];
+            id value = decodeObjectFromObjectStream(decoder, allowedClasses);
+            [invocation setArgument:&value atIndex:i];
 
             // FIXME: Make sure the invocation doesn't outlive the value.
             break;
@@ -995,10 +994,10 @@ static void decodeInvocationArguments(WKRemoteObjectDecoder *decoder, NSInvocati
     }
 }
 
-static RetainPtr<NSInvocation> decodeInvocation(WKRemoteObjectDecoder *decoder)
+static NSInvocation *decodeInvocation(WKRemoteObjectDecoder *decoder)
 {
     SEL selector = nullptr;
-    RetainPtr<NSInvocation> invocation;
+    NSInvocation* invocation = nil;
     BOOL isReplyBlock = [decoder decodeBoolForKey:isReplyBlockKey];
     if (isReplyBlock) {
         if (!decoder->_replyToSelector)
@@ -1008,32 +1007,32 @@ static RetainPtr<NSInvocation> decodeInvocation(WKRemoteObjectDecoder *decoder)
         if (!invocation)
             [NSException raise:NSInvalidUnarchiveOperationException format:@"Reply block for selector \"%s\" is not defined in the local interface", sel_getName(decoder->_replyToSelector)];
     } else {
-        RetainPtr<NSString> selectorString = [decoder decodeObjectOfClass:[NSString class] forKey:selectorKey];
+        NSString *selectorString = [decoder decodeObjectOfClass:[NSString class] forKey:selectorKey];
         if (!selectorString)
             [NSException raise:NSInvalidUnarchiveOperationException format:@"Invocation had no selector"];
 
-        selector = NSSelectorFromString(selectorString.get());
+        selector = NSSelectorFromString(selectorString);
         ASSERT(selector);
 
         invocation = [decoder->_interface _invocationForSelector:selector];
         if (!invocation)
-            [NSException raise:NSInvalidUnarchiveOperationException format:@"Selector \"%@\" is not defined in the local interface", selectorString.get()];
+            [NSException raise:NSInvalidUnarchiveOperationException format:@"Selector \"%@\" is not defined in the local interface", selectorString];
     }
 
-    RetainPtr<NSString> typeSignature = [decoder decodeObjectOfClass:[NSString class] forKey:typeStringKey];
+    NSString *typeSignature = [decoder decodeObjectOfClass:[NSString class] forKey:typeStringKey];
     if (!typeSignature)
         [NSException raise:NSInvalidUnarchiveOperationException format:@"Invocation had no type signature"];
 
-    RetainPtr<NSString> localMethodSignature = [invocation methodSignature]._typeString;
-    if (!WebKit::methodSignaturesAreCompatible(typeSignature.get(), localMethodSignature.get()))
+    NSString *localMethodSignature = [invocation methodSignature]._typeString;
+    if (!WebKit::methodSignaturesAreCompatible(typeSignature, localMethodSignature))
         [NSException raise:NSInvalidUnarchiveOperationException format:@"Local and remote method signatures are not compatible for method \"%s\"", selector ? sel_getName(selector) : "(no selector)"];
 
     if (isReplyBlock) {
         const auto& allowedClasses = [decoder->_interface _allowedArgumentClassesForReplyBlockOfSelector:decoder->_replyToSelector];
-        decodeInvocationArguments(decoder, invocation.get(), allowedClasses, 1);
+        decodeInvocationArguments(decoder, invocation, allowedClasses, 1);
     } else {
         const auto& allowedClasses = [decoder->_interface _allowedArgumentClassesForSelector:selector];
-        decodeInvocationArguments(decoder, invocation.get(), allowedClasses, 2);
+        decodeInvocationArguments(decoder, invocation, allowedClasses, 2);
 
         [invocation setArgument:&selector atIndex:1];
     }
@@ -1050,7 +1049,7 @@ static RetainPtr<NSString> decodeString(WKRemoteObjectDecoder *decoder)
     return string->stringView().createNSString();
 }
 
-static RetainPtr<id> decodeObject(WKRemoteObjectDecoder *decoder)
+static id decodeObject(WKRemoteObjectDecoder *decoder)
 {
     RefPtr classNameString = Ref { *decoder->_currentDictionary }->get<API::String>(classNameKey);
     if (!classNameString)
@@ -1058,28 +1057,28 @@ static RetainPtr<id> decodeObject(WKRemoteObjectDecoder *decoder)
 
     CString className = classNameString->string().utf8();
 
-    RetainPtr<Class> objectClass = objc_lookUpClass(className.data());
+    Class objectClass = objc_lookUpClass(className.data());
     if (!objectClass)
         crashWithClassName(className.span());
 
-    validateClass(decoder, objectClass.get());
+    validateClass(decoder, objectClass);
 
-    if (objectClass.get() == [NSInvocation class] || objectClass.get() == [NSBlockInvocation class])
+    if (objectClass == [NSInvocation class] || objectClass == [NSBlockInvocation class])
         return decodeInvocation(decoder);
 
-    if (objectClass.get() == [NSString class])
-        return decodeString(decoder);
+    if (objectClass == [NSString class])
+        return decodeString(decoder).autorelease();
     
-    if (objectClass.get() == [NSError class])
-        return decodeError(decoder);
+    if (objectClass == [NSError class])
+        return decodeError(decoder).autorelease();
 
-    if (objectClass.get() == [NSMutableString class])
-        return adoptNS([[NSMutableString alloc] initWithString:decodeString(decoder).get()]);
+    if (objectClass == [NSMutableString class])
+        return [NSMutableString stringWithString:decodeString(decoder).get()];
 
-    return decodeObjCObject(decoder, objectClass.get());
+    return decodeObjCObject(decoder, objectClass).autorelease();
 }
 
-static RetainPtr<id> decodeObject(WKRemoteObjectDecoder *decoder, const API::Dictionary* dictionary, const HashSet<CFTypeRef>& allowedClasses)
+static id decodeObject(WKRemoteObjectDecoder *decoder, const API::Dictionary* dictionary, const HashSet<CFTypeRef>& allowedClasses)
 {
     if (!dictionary)
         return nil;
@@ -1171,7 +1170,7 @@ static RetainPtr<id> decodeObject(WKRemoteObjectDecoder *decoder, const API::Dic
         allowedClasses.add((__bridge CFTypeRef)allowedClass);
 
     RefPtr dictionary = Ref { *_currentDictionary }->get<API::Dictionary>(escapeKey(key));
-    return decodeObject(self, dictionary.get(), allowedClasses).autorelease();
+    return decodeObject(self, dictionary.get(), allowedClasses);
 }
 
 - (NSSet *)allowedClasses
