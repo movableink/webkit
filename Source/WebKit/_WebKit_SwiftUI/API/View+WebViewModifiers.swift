@@ -23,7 +23,6 @@
 
 import Foundation
 public import SwiftUI
-@_spi(Private) @_spi(CrossImportOverlay) import WebKit
 
 extension View {
     /// Determines whether horizontal swipe gestures trigger backward and forward page navigation.
@@ -101,7 +100,15 @@ extension View {
 #endif
     }
 
-    @_spi(Private)
+    /// Specifies the visibility of the webpage's natural background color within this view.
+    ///
+    /// By default, WebViews are opaque, and use the page's natural background color as their background color. Use this modifier if you would like to
+    /// not use this behavior and instead provide a custom background using SwiftUI.
+    ///
+    /// - Parameter visibility: The visibility to use for the background.
+    @available(WK_IOS_TBA, WK_MAC_TBA, WK_XROS_TBA, *)
+    @available(watchOS, unavailable)
+    @available(tvOS, unavailable)
     public nonisolated func webViewContentBackground(_ visibility: Visibility) -> some View {
         environment(\.webViewContentBackground, visibility)
     }
