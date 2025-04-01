@@ -1602,6 +1602,8 @@ localizedStrings["Skip Network @ Local Override Popover Options"] = "Skip Networ
 localizedStrings["Slashed Zeros @ Font Details Sidebar Property Value"] = "Slashed Zeros";
 /* Title for a badge applied to HTMLSlotElement that have assigned nodes or nodes that are assigned to HTMLSlotElement. */
 localizedStrings["Slot"] = "Slot";
+/* Title for a badge applied to a node that is assigned to a HTMLSlotElement. */
+localizedStrings["Slotted"] = "Slotted";
 /* Property value for `font-variant-capitals: small-caps`. */
 localizedStrings["Small Capitals @ Font Details Sidebar Property Value"] = "Small Capitals";
 localizedStrings["Snapshot Comparison (%d and %d)"] = "Snapshot Comparison (%d and %d)";

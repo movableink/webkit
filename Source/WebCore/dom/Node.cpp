@@ -1400,6 +1400,8 @@ void Node::setManuallyAssignedSlot(HTMLSlotElement* slotElement)
         RenderTreeUpdater::tearDownRenderer(*text);
 
     ensureRareData().setManuallyAssignedSlot(slotElement);
+
+    InspectorInstrumentation::didChangeAssignedSlot(*this);
 }
 
 bool Node::hasEverPaintedImages() const

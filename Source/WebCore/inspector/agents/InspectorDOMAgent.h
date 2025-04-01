@@ -115,6 +115,7 @@ public:
     Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::DOM::NodeId>>> querySelectorAll(Inspector::Protocol::DOM::NodeId, const String& selector);
     Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::DOM::Node>> getDocument();
     Inspector::Protocol::ErrorStringOr<void> requestChildNodes(Inspector::Protocol::DOM::NodeId, std::optional<int>&& depth);
+    Inspector::CommandResult<std::optional<Inspector::Protocol::DOM::NodeId>> requestAssignedSlot(Inspector::Protocol::DOM::NodeId);
     Inspector::CommandResult<Ref<JSON::ArrayOf<Inspector::Protocol::DOM::NodeId>>> requestAssignedNodes(Inspector::Protocol::DOM::NodeId);
     Inspector::Protocol::ErrorStringOr<void> setAttributeValue(Inspector::Protocol::DOM::NodeId, const String& name, const String& value);
     Inspector::Protocol::ErrorStringOr<void> setAttributesAsText(Inspector::Protocol::DOM::NodeId, const String& text, const String& name);

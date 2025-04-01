@@ -2099,6 +2099,11 @@ WI.DOMTreeElement = class DOMTreeElement extends WI.TreeElement
             handleClick = this._handleEventBadgeClicked.bind(this);
             break;
 
+        case WI.DOMTreeElement.BadgeType.SlotAssigned:
+            text = WI.UIString("Slotted", "Title for a badge applied to a node that is assigned to a HTMLSlotElement.");
+            handleClick = this._handleSlotAssignedBadgeClicked.bind(this);
+            break;
+
         case WI.DOMTreeElement.BadgeType.SlotFilled:
             text = WI.UIString("Assigned", "Title for a badge applied to HTMLSlotElement that have assigned nodes.");
             handleClick = this._handleSlotFilledBadgeClicked.bind(this);
@@ -2142,6 +2147,10 @@ WI.DOMTreeElement = class DOMTreeElement extends WI.TreeElement
 
             case WI.DOMNode.LayoutFlag.Event:
                 this._createBadge(WI.DOMTreeElement.BadgeType.Event);
+                break;
+
+            case WI.DOMNode.LayoutFlag.SlotAssigned:
+                this._createBadge(WI.DOMTreeElement.BadgeType.SlotAssigned);
                 break;
 
             case WI.DOMNode.LayoutFlag.SlotFilled:
@@ -2214,6 +2223,18 @@ WI.DOMTreeElement = class DOMTreeElement extends WI.TreeElement
         contentElement.appendChild(detailsSection.element);
 
         this._eventBadgePopover.presentNewContentWithFrame(contentElement, calculateTargetFrame(), preferredEdges);
+    }
+
+    async _handleSlotAssignedBadgeClicked(event)
+    {
+        let slotNode = await this.representedObject.requestAssignedSlot();
+        console.assert(slotNode, this.representedObject);
+        if (!slotNode)
+            return;
+
+        WI.domManager.inspectElement(slotNode.id, {
+            initiatorHint: WI.TabBrowser.TabNavigationInitiator.LinkClick,
+        });
     }
 
     async _handleSlotFilledBadgeClicked(event)
@@ -2361,6 +2382,7 @@ WI.DOMTreeElement.BadgeType = {
     Flex: "flex",
     Grid: "grid",
     Event: "event",
+    SlotAssigned: "slot-assigned",
     SlotFilled: "slot-filled",
 };
 WI.settings.enabledDOMTreeBadgeTypes = new WI.Setting("enabled-dom-tree-badge-types", Object.values(WI.DOMTreeElement.BadgeType));

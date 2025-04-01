@@ -811,6 +811,13 @@ WI.DOMNode = class DOMNode extends WI.Object
         target.DOMAgent.requestChildNodes(this.id, depth, mycallback.bind(this));
     }
 
+    async requestAssignedSlot()
+    {
+        let target = WI.assumingMainTarget();
+        let {slotElementId} = await target.DOMAgent.requestAssignedSlot(this.id);
+        return WI.domManager.nodeForId(slotElementId);
+    }
+
     async requestAssignedNodes()
     {
         let target = WI.assumingMainTarget();
@@ -1389,6 +1396,7 @@ WI.DOMNode.LayoutFlag = {
     Rendered: "rendered",
     Event: "event",
     Scrollable: "scrollable",
+    SlotAssigned: "slot-assigned",
     SlotFilled: "slot-filled",
 
     // These are mutually exclusive.

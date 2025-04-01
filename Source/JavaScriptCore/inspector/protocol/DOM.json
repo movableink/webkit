@@ -287,6 +287,16 @@
             ]
         },
         {
+            "name": "requestAssignedSlot",
+            "description": "Requests the <code>HTMLSlotElement</code> that the node with the given id is assigned to.",
+            "parameters": [
+                { "name": "nodeId", "$ref": "NodeId" }
+            ],
+            "returns": [
+                { "name": "slotElementId", "$ref": "NodeId", "optional": true, "description": "Not provided if the given node is not assigned to a <code>HTMLSlotElement</code>." }
+            ]
+        },
+        {
             "name": "requestAssignedNodes",
             "description": "Requests the list of assigned nodes for the <code>HTMLSlotElement</code> with the given id.",
             "parameters": [

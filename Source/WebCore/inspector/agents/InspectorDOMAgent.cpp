@@ -649,6 +649,25 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDOMAgent::requestChildNodes(In
     return { };
 }
 
+Inspector::CommandResult<std::optional<Inspector::Protocol::DOM::NodeId>> InspectorDOMAgent::requestAssignedSlot(Inspector::Protocol::DOM::NodeId nodeId)
+{
+    Inspector::Protocol::ErrorString errorString;
+
+    RefPtr node = assertNode(errorString, nodeId);
+    if (!node)
+        return makeUnexpected(errorString);
+
+    RefPtr slotElement = node->assignedSlot();
+    if (!slotElement)
+        return { };
+
+    auto slotElementId = pushNodePathToFrontend(errorString, slotElement.get());
+    if (!slotElementId)
+        return makeUnexpected(errorString);
+
+    return { slotElementId };
+}
+
 Inspector::CommandResult<Ref<JSON::ArrayOf<Inspector::Protocol::DOM::NodeId>>> InspectorDOMAgent::requestAssignedNodes(Inspector::Protocol::DOM::NodeId nodeId)
 {
     Inspector::Protocol::ErrorString errorString;

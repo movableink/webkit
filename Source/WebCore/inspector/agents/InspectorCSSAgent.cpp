@@ -1090,6 +1090,9 @@ OptionSet<InspectorCSSAgent::LayoutFlag> InspectorCSSAgent::layoutFlagsForNode(N
     if (hasJSEventListener(node))
         layoutFlags.add(InspectorCSSAgent::LayoutFlag::Event);
 
+    if (node.assignedSlot())
+        layoutFlags.add(InspectorCSSAgent::LayoutFlag::SlotAssigned);
+
     if (isSlotElementWithAssignedNodes(node))
         layoutFlags.add(InspectorCSSAgent::LayoutFlag::SlotFilled);
 
@@ -1112,6 +1115,8 @@ static RefPtr<JSON::ArrayOf<String /* Inspector::Protocol::CSS::LayoutFlag */>> 
         protocolLayoutFlags->addItem(Inspector::Protocol::Helpers::getEnumConstantValue(Inspector::Protocol::CSS::LayoutFlag::Grid));
     if (layoutFlags.contains(InspectorCSSAgent::LayoutFlag::Event))
         protocolLayoutFlags->addItem(Inspector::Protocol::Helpers::getEnumConstantValue(Inspector::Protocol::CSS::LayoutFlag::Event));
+    if (layoutFlags.contains(InspectorCSSAgent::LayoutFlag::SlotAssigned))
+        protocolLayoutFlags->addItem(Inspector::Protocol::Helpers::getEnumConstantValue(Inspector::Protocol::CSS::LayoutFlag::SlotAssigned));
     if (layoutFlags.contains(InspectorCSSAgent::LayoutFlag::SlotFilled))
         protocolLayoutFlags->addItem(Inspector::Protocol::Helpers::getEnumConstantValue(Inspector::Protocol::CSS::LayoutFlag::SlotFilled));
     return protocolLayoutFlags;
@@ -1167,6 +1172,11 @@ void InspectorCSSAgent::willRemoveEventListener(EventTarget& target)
 {
     if (auto* node = dynamicDowncast<Node>(target))
         nodeHasLayoutFlagsChange(*node);
+}
+
+void InspectorCSSAgent::didChangeAssignedSlot(Node& slotable)
+{
+    nodeHasLayoutFlagsChange(slotable);
 }
 
 void InspectorCSSAgent::didChangeAssignedNodes(Element& slotElement)
