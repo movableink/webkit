@@ -581,7 +581,10 @@ std::optional<double> AnchorPositionEvaluator::evaluate(BuilderState& builderSta
 
     // Proceed with computing the inset value for the specified inset property.
     CheckedRef anchorBox = downcast<RenderBoxModelObject>(*anchorRenderer);
-    return computeInsetValue(propertyID, anchorBox, *anchorPositionedRenderer, side, builderState.positionTryFallback());
+    double insetValue = computeInsetValue(propertyID, anchorBox, *anchorPositionedRenderer, side, builderState.positionTryFallback());
+
+    // Adjust for CSS `zoom` property and page zoom.
+    return insetValue / style.usedZoom();
 }
 
 // Returns the default anchor size dimension to use when it is not specified in
@@ -710,11 +713,13 @@ std::optional<double> AnchorPositionEvaluator::evaluateSize(BuilderState& builde
     CheckedRef anchorBox = downcast<RenderBoxModelObject>(*anchorRenderer);
     auto anchorBorderBoundingBox = anchorBox->borderBoundingBox();
 
+    // Adjust for CSS `zoom` property and page zoom.
+
     switch (physicalDimension) {
     case BoxAxis::Horizontal:
-        return anchorBorderBoundingBox.width();
+        return anchorBorderBoundingBox.width() / style.usedZoom();
     case BoxAxis::Vertical:
-        return anchorBorderBoundingBox.height();
+        return anchorBorderBoundingBox.height() / style.usedZoom();
     }
 
     ASSERT_NOT_REACHED();
