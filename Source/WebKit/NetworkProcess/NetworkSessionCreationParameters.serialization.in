@@ -80,6 +80,7 @@ enum class WebKit::AllowsCellularAccess : bool;
     bool isBlobRegistryTopOriginPartitioningEnabled;
     bool isOptInCookiePartitioningEnabled;
     bool shouldSendPrivateTokenIPCForTesting;
+    uint64_t cookiesVersion;
 
     WebKit::UnifiedOriginStorageLevel unifiedOriginStorageLevel;
     uint64_t perOriginStorageQuota;

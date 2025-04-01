@@ -77,6 +77,7 @@ NetworkStorageSession::NetworkStorageSession(PAL::SessionID sessionID, IsInMemor
 
 NetworkStorageSession::~NetworkStorageSession()
 {
+    clearCookiesVersionChangeCallbacks();
     g_signal_handlers_disconnect_matched(m_cookieStorage.get(), G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
 }
 

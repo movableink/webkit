@@ -36,6 +36,7 @@
 #include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/CompletionHandler.h>
+#include <wtf/Deque.h>
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
 #include <wtf/RobinHoodHashMap.h>
@@ -172,6 +173,7 @@ public:
     // May be null, in which case a Foundation default should be used.
     CFURLStorageSessionRef platformSession() { return m_platformSession.get(); }
     WEBCORE_EXPORT RetainPtr<CFHTTPCookieStorageRef> cookieStorage() const;
+    CookieStorageObserver& cookieStorageObserver() const;
 #elif USE(SOUP)
     WEBCORE_EXPORT explicit NetworkStorageSession(PAL::SessionID, IsInMemoryCookieStore = IsInMemoryCookieStore::No);
     ~NetworkStorageSession();
@@ -322,6 +324,7 @@ private:
     void registerCookieChangeListenersIfNecessary();
     void unregisterCookieChangeListenersIfNecessary();
 #endif
+    void clearCookiesVersionChangeCallbacks();
 
     PAL::SessionID m_sessionID;
 
@@ -386,14 +389,14 @@ private:
     HashSet<RegistrableDomain> m_managedDomains;
 
 #if PLATFORM(COCOA)
-public:
-    CookieStorageObserver& cookieStorageObserver() const;
-
-private:
     mutable std::unique_ptr<CookieStorageObserver> m_cookieStorageObserver;
 #endif
     uint64_t m_cookiesVersion { 0 };
-    HashMap<uint64_t, Vector<CompletionHandler<void()>>> m_cookiesVersionChangeCallbacks;
+    struct CookieVersionChangeCallback {
+        uint64_t version;
+        CompletionHandler<void()> callback;
+    };
+    Deque<CookieVersionChangeCallback> m_cookiesVersionChangeCallbacks;
 
     static bool m_processMayUseCookieAPI;
 };

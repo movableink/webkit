@@ -1102,3 +1102,39 @@ TEST(WKHTTPCookieStore, CookiesSetBeforeLoad)
 
     EXPECT_WK_STREQ(server.lastRequestCookies(), "PersistentCookieName=CookieValue; SessionCookieName=CookieValue");
 }
+
+TEST(WKHTTPCookieStore, CookiesSetInAnotherStoreBeforeLoad)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } }
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    RetainPtr<NSHTTPCookie> sessionCookie = [NSHTTPCookie cookieWithProperties:@{
+        NSHTTPCookiePath: @"/",
+        NSHTTPCookieName: @"SessionCookieName",
+        NSHTTPCookieValue: @"CookieValue",
+        NSHTTPCookieDomain: @"127.0.0.1",
+    }];
+
+    RetainPtr<NSHTTPCookie> persistentCookie = [NSHTTPCookie cookieWithProperties:@{
+        NSHTTPCookiePath: @"/",
+        NSHTTPCookieName: @"PersistentCookieName",
+        NSHTTPCookieValue: @"CookieValue",
+        NSHTTPCookieDomain: @"127.0.0.1",
+        NSHTTPCookieExpires: [NSDate distantFuture],
+    }];
+
+    RetainPtr firstDataStore = [WKWebsiteDataStore nonPersistentDataStore];
+    RetainPtr secondDataStore = [WKWebsiteDataStore nonPersistentDataStore];
+    RetainPtr configuration = adoptNS([WKWebViewConfiguration new]);
+    configuration.get().websiteDataStore = firstDataStore.get();
+    RetainPtr webView = adoptNS([[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration.get()]);
+
+    [firstDataStore.get().httpCookieStore setCookie:sessionCookie.get() completionHandler:^{ }];
+    // Setting cookies in second store should not affect the load with first store.
+    [secondDataStore.get().httpCookieStore setCookie:persistentCookie.get() completionHandler:^{ }];
+    [webView loadRequest:server.request()];
+    [webView _test_waitForDidFinishNavigation];
+
+    EXPECT_WK_STREQ(server.lastRequestCookies(), "SessionCookieName=CookieValue");
+}

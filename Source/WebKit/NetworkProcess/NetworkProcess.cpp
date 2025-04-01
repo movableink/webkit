@@ -524,6 +524,8 @@ void NetworkProcess::addStorageSession(PAL::SessionID sessionID, const WebsiteDa
 #elif USE(SOUP)
     addResult.iterator->value = makeUnique<NetworkStorageSession>(sessionID);
 #endif
+
+    addResult.iterator->value->setCookiesVersion(parameters.networkSessionParameters.cookiesVersion);
 }
 
 void NetworkProcess::addWebsiteDataStore(WebsiteDataStoreParameters&& parameters)

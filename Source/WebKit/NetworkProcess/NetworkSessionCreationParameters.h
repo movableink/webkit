@@ -106,6 +106,7 @@ struct NetworkSessionCreationParameters {
     bool isBlobRegistryTopOriginPartitioningEnabled { false };
     bool isOptInCookiePartitioningEnabled { false };
     bool shouldSendPrivateTokenIPCForTesting { false };
+    uint64_t cookiesVersion { 0 };
 
     UnifiedOriginStorageLevel unifiedOriginStorageLevel { UnifiedOriginStorageLevel::Standard };
     uint64_t perOriginStorageQuota;

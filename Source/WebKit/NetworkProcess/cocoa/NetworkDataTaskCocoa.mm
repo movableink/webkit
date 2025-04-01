@@ -597,7 +597,7 @@ void NetworkDataTaskCocoa::resume()
     if (CheckedPtr session = m_session.get()) {
         CheckedPtr storageSession = session->networkStorageSession();
         if (storageSession && storageSession->cookiesVersion() < m_requiredCookiesVersion) {
-            RELEASE_LOG(Loading, "%p - NetworkDataTaskCocoa::resume: task is delayed because cookies version (%" PRIu64 ") is lower than required (%" PRIu64 ")", this, storageSession->cookiesVersion(), m_requiredCookiesVersion);
+            RELEASE_LOG(Loading, "%p - NetworkDataTaskCocoa::resume: task is delayed because cookies version (%" PRIu64 ") of session (%" PRIu64 ") is lower than required (%" PRIu64 ")", this, storageSession->cookiesVersion(), storageSession->sessionID().toUInt64(), m_requiredCookiesVersion);
             storageSession->addCookiesVersionChangeCallback(m_requiredCookiesVersion, [weakThis = ThreadSafeWeakPtr { *this }] {
                 if (auto protectedThis = weakThis.get()) {
                     RELEASE_LOG(Loading, "%p - NetworkDataTaskCocoa::resume: task delayed by cookies version is started", protectedThis.get());

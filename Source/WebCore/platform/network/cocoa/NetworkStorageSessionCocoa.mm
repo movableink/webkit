@@ -57,6 +57,7 @@ NetworkStorageSession::~NetworkStorageSession()
 #if HAVE(COOKIE_CHANGE_LISTENER_API)
     unregisterCookieChangeListenersIfNecessary();
 #endif
+    clearCookiesVersionChangeCallbacks();
 }
 
 void NetworkStorageSession::setCookie(const Cookie& cookie)

@@ -30,6 +30,7 @@
 #include "Cookie.h"
 #include "CookieJar.h"
 #include "HTTPCookieAcceptPolicy.h"
+#include "Logging.h"
 #include "NotImplemented.h"
 #include "PublicSuffixStore.h"
 #include "ResourceRequest.h"
@@ -635,17 +636,35 @@ void NetworkStorageSession::cookieEnabledStateMayHaveChanged()
 
 void NetworkStorageSession::setCookiesVersion(uint64_t version)
 {
+    // Ensure version always increases.
+    if (version <= m_cookiesVersion)
+        return;
+
+    RELEASE_LOG(Loading, "%p - NetworkStorageSession::setCookiesVersion session=%" PRIu64 ", version=%" PRIu64, this, m_sessionID.toUInt64(), version);
     m_cookiesVersion = version;
-    for (auto&& callback : m_cookiesVersionChangeCallbacks.take(version))
-        callback();
+    auto cookiesVersionChangeCallbacks = std::exchange(m_cookiesVersionChangeCallbacks, { });
+    while (!cookiesVersionChangeCallbacks.isEmpty()) {
+        auto callback = cookiesVersionChangeCallbacks.takeFirst();
+        if (callback.version <= m_cookiesVersion) {
+            callback.callback();
+            continue;
+        }
+        m_cookiesVersionChangeCallbacks.append(WTFMove(callback));
+    }
 }
 
 void NetworkStorageSession::addCookiesVersionChangeCallback(uint64_t version, CompletionHandler<void()>&& completionHandler)
 {
-    auto iterator = m_cookiesVersionChangeCallbacks.ensure(version, [] {
-        return Vector<CompletionHandler<void()>> { };
-    }).iterator;
-    iterator->value.append(WTFMove(completionHandler));
+    ASSERT(version < m_cookiesVersion);
+    m_cookiesVersionChangeCallbacks.append({ version, WTFMove(completionHandler) });
+}
+
+void NetworkStorageSession::clearCookiesVersionChangeCallbacks()
+{
+    while (!m_cookiesVersionChangeCallbacks.isEmpty()) {
+        auto callback = m_cookiesVersionChangeCallbacks.takeFirst();
+        callback.callback();
+    }
 }
 
 }

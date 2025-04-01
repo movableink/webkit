@@ -137,7 +137,8 @@ void WebCookieManager::setCookie(PAL::SessionID sessionID, const Vector<Cookie>&
         for (auto& cookie : cookies)
             storageSession->setCookie(cookie);
         storageSession->setCookiesVersion(cookiesVersion);
-    }
+    } else
+        RELEASE_LOG_ERROR(Storage, "%p - WebCookieManager::setCookie failed to set cookies and version (%" PRIu64 ") for session %" PRIu64, this, cookiesVersion, sessionID.toUInt64());
     completionHandler();
 }
 
