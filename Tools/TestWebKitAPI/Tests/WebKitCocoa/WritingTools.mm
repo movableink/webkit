@@ -3805,7 +3805,12 @@ TEST(WritingTools, CompositionWithOmittedTrailingWhitespaceContent)
     TestWebKitAPI::Util::run(&finished);
 }
 
+// FIXME rdar://148280675
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WritingTools, DISABLED_IntelligenceTextEffectCoordinatorDelegate_RectsForProofreadingSuggestionsInRange)
+#else
 TEST(WritingTools, IntelligenceTextEffectCoordinatorDelegate_RectsForProofreadingSuggestionsInRange)
+#endif
 {
     RetainPtr session = adoptNS([[WTSession alloc] initWithType:WTSessionTypeProofreading textViewDelegate:nil]);
 
