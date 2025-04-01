@@ -788,7 +788,7 @@
         (iokit-user-client-class "RootDomainUserClient")))
 
 (if (equal? (param "ENABLE_SANDBOX_MESSAGE_FILTER") "YES")
-    (allow IOKIT_OPEN_USER_CLIENT (with report) (with telemetry)
+    (allow IOKIT_OPEN_USER_CLIENT
         (iokit-user-client-class "IOAudioControlUserClient")
         (apply-message-filter
             (allow (with report) (with telemetry)
