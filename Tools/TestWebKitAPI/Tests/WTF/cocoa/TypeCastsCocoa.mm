@@ -246,7 +246,7 @@ TEST(TypeCastsCocoa, dynamic_objc_cast_RetainPtr)
     }
 
     @autoreleasepool {
-        auto object = adoptNS<id>([[NSString alloc] initWithFormat:@"%s", helloWorldCString]);
+        RetainPtr<id> object = adoptNS<id>([[NSString alloc] initWithFormat:@"%s", helloWorldCString]);
         uintptr_t objectPtr;
         AUTORELEASEPOOL_FOR_ARC_DEBUG {
             objectPtr = reinterpret_cast<uintptr_t>(object.get());
@@ -288,7 +288,7 @@ TEST(TypeCastsCocoa, dynamic_objc_cast_RetainPtr)
         RetainPtr<NSArray> objectCastBad;
         uintptr_t objectPtr2;
         AUTORELEASEPOOL_FOR_ARC_DEBUG {
-            objectCastBad = dynamic_objc_cast<NSArray>(object);
+            objectCastBad = dynamic_objc_cast<NSArray>(WTFMove(object));
             objectPtr2 = reinterpret_cast<uintptr_t>(object.get());
         }
         EXPECT_EQ(objectPtr, objectPtr2);
