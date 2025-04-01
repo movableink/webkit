@@ -458,7 +458,7 @@ void RenderText::styleDidChange(StyleDifference diff, const RenderStyle* oldStyl
         RenderText::setText(originalText(), true);
 
     // FIXME: First line change on the block comes in as equal on text.
-    auto needsLayoutBoxStyleUpdate = layoutBox() && (diff >= StyleDifference::Repaint || (&style() != &firstLineStyle()));
+    auto needsLayoutBoxStyleUpdate = layoutBox() && (diff >= StyleDifference::RecompositeLayer || (&style() != &firstLineStyle()));
     if (needsLayoutBoxStyleUpdate)
         LayoutIntegration::LineLayout::updateStyle(*this);
 
