@@ -7813,3 +7813,5 @@ webkit.org/b/290855 imported/w3c/web-platform-tests/css/css-anchor-position/posi
 
 webkit.org/b/290856 imported/w3c/web-platform-tests/css/css-view-transitions/navigation/navigation-auto-excludes-reload.html [ Pass Timeout ]
 webkit.org/b/290856 imported/w3c/web-platform-tests/css/css-viewport/zoom/background-image.html [ Pass Timeout ]
+
+webkit.org/b/290871 imported/w3c/web-platform-tests/navigation-api/scroll-behavior/after-transition-reject.html [ Pass Failure ]
