@@ -6912,6 +6912,16 @@ imported/w3c/web-platform-tests/html/canvas/offscreen/fill-and-stroke-styles/2d.
 imported/w3c/web-platform-tests/html/canvas/offscreen/fill-and-stroke-styles/2d.pattern.transform.infinity.html [ Skip ]
 imported/w3c/web-platform-tests/html/canvas/offscreen/fill-and-stroke-styles/2d.pattern.transform.invalid.html [ Skip ]
 
+webkit.org/b/290526 imported/w3c/web-platform-tests/html/canvas/element/text/2d.text.fontVariantCaps1.html [ Pass ImageOnlyFailure ]
+webkit.org/b/290526 imported/w3c/web-platform-tests/html/canvas/element/text/2d.text.fontVariantCaps3.html [ Pass ImageOnlyFailure ]
+webkit.org/b/290526 imported/w3c/web-platform-tests/html/canvas/element/text/2d.text.writingmode.html [ Pass ImageOnlyFailure ]
+webkit.org/b/290526 imported/w3c/web-platform-tests/html/canvas/element/text/2d.text.measure.fillTextCluster-align.tentative.html [ ImageOnlyFailure ]
+webkit.org/b/290526 imported/w3c/web-platform-tests/html/canvas/element/text/2d.text.measure.fillTextCluster-baseline.tentative.html [ ImageOnlyFailure ]
+webkit.org/b/290526 imported/w3c/web-platform-tests/html/canvas/element/text/2d.text.measure.fillTextCluster-drawing-styles-change.tentative.html [ ImageOnlyFailure ]
+webkit.org/b/290526 imported/w3c/web-platform-tests/html/canvas/element/text/2d.text.measure.strokeTextCluster-align.tentative.html [ ImageOnlyFailure ]
+webkit.org/b/290526 imported/w3c/web-platform-tests/html/canvas/element/text/2d.text.measure.strokeTextCluster-baseline.tentative.html [ ImageOnlyFailure ]
+webkit.org/b/290526 imported/w3c/web-platform-tests/html/canvas/element/text/2d.text.measure.strokeTextCluster-drawing-styles-change.tentative.html [ ImageOnlyFailure ]
+
 # We only support import-attributes and do not support import-assertions.
 imported/w3c/web-platform-tests/html/semantics/scripting-1/the-script-element/import-assertions
 
