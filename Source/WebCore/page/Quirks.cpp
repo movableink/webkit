@@ -888,6 +888,11 @@ bool Quirks::shouldEnableSpeakerSelectionPermissionsPolicyQuirk() const
 {
     return needsQuirks() && m_quirksData.shouldEnableSpeakerSelectionPermissionsPolicyQuirk;
 }
+
+bool Quirks::shouldEnableEnumerateDeviceQuirk() const
+{
+    return needsQuirks() && m_quirksData.shouldEnableEnumerateDeviceQuirk;
+}
 #endif
 
 // hulu.com rdar://55041979
@@ -2313,6 +2318,9 @@ static void handleGoogleQuirks(QuirksData& quirksData, const URL& quirksURL, con
 #if PLATFORM(MAC)
     // docs.google.com https://bugs.webkit.org/show_bug.cgi?id=161984
     quirksData.isTouchBarUpdateSuppressedForHiddenContentEditableQuirk = quirksData.isGoogleDocs;
+#endif
+#if ENABLE(MEDIA_STREAM)
+    quirksData.shouldEnableEnumerateDeviceQuirk = topDocumentHost == "meet.google.com"_s;
 #endif
 }
 

@@ -2923,6 +2923,19 @@ ExperimentalSandboxEnabled:
     WebKit:
       default: false
 
+ExposeCaptureDevicesAfterCaptureEnabled:
+  type: bool
+  status: internal
+  category: media
+  humanReadableName: "Expose all capture devices when one is used"
+  humanReadableDescription: "Expose all capture devices when one is used"
+  condition: ENABLE(MEDIA_STREAM)
+  defaultValue:
+    WebKit:
+      default: true
+    WebCore:
+      default: false
+
 ExposeSpeakersEnabled:
   type: bool
   status: internal

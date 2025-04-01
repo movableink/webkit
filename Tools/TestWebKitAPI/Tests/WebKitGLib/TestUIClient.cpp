@@ -1106,6 +1106,10 @@ static void testWebViewUserMediaEnumerateDevicesPermissionCheck(UIClientTest* te
         "  </script>"
         "  <body onload='runTest();'></body>"
         "</html>";
+    static const char* refreshTitleHTML =
+        "<html>"
+        "  <body onload='document.title =\"Ready\";'></body>"
+        "</html>";
 
     test->m_verifyMediaTypes = TRUE;
 
@@ -1114,10 +1118,14 @@ static void testWebViewUserMediaEnumerateDevicesPermissionCheck(UIClientTest* te
     test->loadHtml(userMediaRequestHTML, "https://foo.com/bar");
     test->waitUntilTitleChangedTo("Permission denied");
 
+    test->loadHtml(refreshTitleHTML, "https://foo.com/bar");
+    test->waitUntilTitleChangedTo("Ready");
+
     // Test allowing a permission request.
     test->m_expectedQueryPermissionReply = "granted";
     test->loadHtml(userMediaRequestHTML, "https://foo.com/bar");
-    test->waitUntilTitleChangedTo("OK");
+    // Permission is granted by enumerateDevices is based on whether the page is capturing or not, as per spec.
+    test->waitUntilTitleChangedTo("Permission denied");
 
     webkit_settings_set_enable_media_stream(settings, enabled);
     webkit_settings_set_enable_mock_capture_devices(settings, FALSE);

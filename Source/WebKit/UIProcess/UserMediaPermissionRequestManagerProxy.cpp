@@ -972,7 +972,9 @@ void UserMediaPermissionRequestManagerProxy::computeFilteredDeviceList(FrameIden
     static const unsigned defaultMaximumMicrophoneCount = 1;
 
     bool revealIdsAndLabels = cameraState == PermissionState::Granted || microphoneState == PermissionState::Granted;
-    platformGetMediaStreamDevices(revealIdsAndLabels || wasGrantedVideoAccess(frameID) || wasGrantedAudioAccess(frameID), [frameID, logIdentifier = LOGIDENTIFIER, weakThis = WeakPtr { *this }, cameraState, microphoneState, revealIdsAndLabels, completion = WTFMove(completion)](auto&& devicesWithCapabilities) mutable {
+    RefPtr page = m_page.get();
+    bool shoulExposeCaptureDevicesBasedOnPermission = page && !page->protectedPreferences()->exposeCaptureDevicesAfterCaptureEnabled();
+    platformGetMediaStreamDevices(revealIdsAndLabels || wasGrantedVideoAccess(frameID) || wasGrantedAudioAccess(frameID), [frameID, logIdentifier = LOGIDENTIFIER, weakThis = WeakPtr { *this }, cameraState, microphoneState, revealIdsAndLabels, shoulExposeCaptureDevicesBasedOnPermission, completion = WTFMove(completion)](auto&& devicesWithCapabilities) mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis) {
             completion({ });
@@ -983,9 +985,12 @@ void UserMediaPermissionRequestManagerProxy::computeFilteredDeviceList(FrameIden
         unsigned microphoneCount = 0;
         unsigned speakerCount = 0;
 
-        // FIXME: We should restrict device exposure if device permission is not granted or device type was not used by the page.
-        bool shouldRestrictCamera = cameraState == PermissionState::Denied || (!revealIdsAndLabels && !protectedThis->wasGrantedVideoAccess(frameID));
-        bool shouldRestrictMicrophone = microphoneState == PermissionState::Denied || (!revealIdsAndLabels && !protectedThis->wasGrantedAudioAccess(frameID));
+        bool shouldRestrictCamera = !protectedThis->wasGrantedVideoAccess(frameID);
+        bool shouldRestrictMicrophone = !protectedThis->wasGrantedAudioAccess(frameID);
+        if (shoulExposeCaptureDevicesBasedOnPermission) {
+            shouldRestrictCamera = cameraState == PermissionState::Denied || (!revealIdsAndLabels && !protectedThis->wasGrantedVideoAccess(frameID));
+            shouldRestrictMicrophone = microphoneState == PermissionState::Denied || (!revealIdsAndLabels && !protectedThis->wasGrantedAudioAccess(frameID));
+        }
 
         bool shouldRestrictSpeaker = !protectedThis->wasGrantedAudioAccess(frameID);
         Vector<CaptureDeviceWithCapabilities> filteredDevices;
@@ -1040,20 +1045,24 @@ void UserMediaPermissionRequestManagerProxy::enumerateMediaDevicesForFrame(Frame
 #if ENABLE(MEDIA_STREAM)
     ALWAYS_LOG(LOGIDENTIFIER);
 
-    auto callback = [this, protectedThis = Ref { *this }, frameID, userMediaDocumentOrigin, topLevelDocumentOrigin, completionHandler = WTFMove(completionHandler)](auto cameraState, auto microphoneState) mutable {
+    auto callback = [weakThis = WeakPtr { *this }, frameID, userMediaDocumentOrigin, topLevelDocumentOrigin, completionHandler = WTFMove(completionHandler)](auto cameraState, auto microphoneState) mutable {
         auto callCompletionHandler = makeScopeExit([&completionHandler] {
             completionHandler({ }, { });
         });
 
-        RefPtr page = m_page.get();
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
+            return;
+
+        RefPtr page = protectedThis->m_page.get();
         if (!page || !page->hasRunningProcess())
             return;
 
         auto requestID = MediaDevicePermissionRequestIdentifier::generate();
-        m_pendingDeviceRequests.add(requestID);
+        protectedThis->m_pendingDeviceRequests.add(requestID);
 
         callCompletionHandler.release();
-        page->protectedWebsiteDataStore()->ensureProtectedDeviceIdHashSaltStorage()->deviceIdHashSaltForOrigin(userMediaDocumentOrigin, topLevelDocumentOrigin, [weakThis = WeakPtr { *this }, requestID, frameID, userMediaDocumentOrigin, topLevelDocumentOrigin, cameraState, microphoneState, completionHandler = WTFMove(completionHandler)](String&& deviceIDHashSalt) mutable {
+        page->protectedWebsiteDataStore()->ensureProtectedDeviceIdHashSaltStorage()->deviceIdHashSaltForOrigin(userMediaDocumentOrigin, topLevelDocumentOrigin, [weakThis = WTFMove(weakThis), requestID, frameID, userMediaDocumentOrigin, topLevelDocumentOrigin, cameraState, microphoneState, completionHandler = WTFMove(completionHandler)](String&& deviceIDHashSalt) mutable {
             auto callCompletionHandler = makeScopeExit([&completionHandler] {
                 completionHandler({ }, { });
             });

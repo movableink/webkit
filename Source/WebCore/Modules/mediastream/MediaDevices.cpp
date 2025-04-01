@@ -96,7 +96,21 @@ Document* MediaDevices::document() const
     return downcast<Document>(scriptExecutionContext());
 }
 
-static MediaConstraints createMediaConstraints(const std::variant<bool, MediaTrackConstraints>& constraints)
+static bool shouldEnableEnumerateDeviceQuirk(const Document& document)
+{
+    return document.settings().exposeCaptureDevicesAfterCaptureEnabled() && document.quirks().shouldEnableEnumerateDeviceQuirk();
+}
+
+static bool isDefaultDeviceIdConstraint(const std::optional<StringConstraint>& deviceId)
+{
+    if (!deviceId || !deviceId->isMandatory())
+        return false;
+
+    Vector<String> exact;
+    return deviceId->getExact(exact) && exact.size() == 1 && exact[0] == "default"_s;
+}
+
+static MediaConstraints createMediaConstraints(const std::variant<bool, MediaTrackConstraints>& constraints, const Document* document = nullptr)
 {
     return WTF::switchOn(constraints,
         [&] (bool isValid) {
@@ -105,7 +119,10 @@ static MediaConstraints createMediaConstraints(const std::variant<bool, MediaTra
             return constraints;
         },
         [&] (const MediaTrackConstraints& trackConstraints) {
-            return createMediaConstraints(trackConstraints);
+            auto result = createMediaConstraints(trackConstraints);
+            if (result.isValid && document && shouldEnableEnumerateDeviceQuirk(*document) && isDefaultDeviceIdConstraint(result.mandatoryConstraints.deviceId()))
+                result.mandatoryConstraints.clearDeviceId();
+            return result;
         }
     );
 }
@@ -125,15 +142,15 @@ bool MediaDevices::computeUserGesturePriviledge(GestureAllowedRequest requestTyp
 
 void MediaDevices::getUserMedia(StreamConstraints&& constraints, Promise&& promise)
 {
-    auto audioConstraints = createMediaConstraints(constraints.audio);
-    auto videoConstraints = createMediaConstraints(constraints.video);
+    RefPtr document = this->document();
+    auto audioConstraints = createMediaConstraints(constraints.audio, document.get());
+    auto videoConstraints = createMediaConstraints(constraints.video, document.get());
 
     if (!audioConstraints.isValid && !videoConstraints.isValid) {
         promise.reject(ExceptionCode::TypeError, "No constraints provided"_s);
         return;
     }
 
-    RefPtr document = this->document();
     if (!document || !document->isFullyActive()) {
         promise.reject(Exception { ExceptionCode::InvalidStateError, "Document is not fully active"_s });
         return;
@@ -369,6 +386,12 @@ void MediaDevices::exposeDevices(Vector<CaptureDeviceWithCapabilities>&& newDevi
                 m_hasRestrictedCameraDevices = false;
             if (newDevice.type() == CaptureDevice::DeviceType::Microphone && !newDevice.label().isEmpty())
                 m_hasRestrictedMicrophoneDevices = false;
+            if (shouldEnableEnumerateDeviceQuirk(document)) {
+                if (deviceId.isEmpty())
+                    deviceId = "default"_s;
+                if (newDeviceWithCapabilities.device.label().isEmpty())
+                    newDeviceWithCapabilities.device.setLabel("default"_s);
+            }
             devices.append(RefPtr<InputDeviceInfo> { InputDeviceInfo::create(WTFMove(newDeviceWithCapabilities), WTFMove(deviceId), WTFMove(groupId)) });
         }
     }

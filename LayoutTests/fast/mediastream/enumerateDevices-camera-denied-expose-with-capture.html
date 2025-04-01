@@ -1,4 +1,4 @@
-<!doctype html><!-- webkit-test-runner [ ExposeCaptureDevicesAfterCaptureEnabled=false ] -->
+<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
@@ -31,11 +31,9 @@ promise_test(async (test) => {
 
     await navigator.mediaDevices.getUserMedia({ audio : true });
     const devices = await navigator.mediaDevices.enumerateDevices();
-    for (const device of devices) {
-        if (device.kind === "videoinput")
-            assert_not_equals(device.label, "");
-    }
-}, "enumerateDevices() does not filter out cameras if camera permission is granted");
+    for (const device of devices)
+        assert_true(device.label === "" || device.kind !== "videoinput");
+}, "enumerateDevices() filters out devices even if camera permission is granted and microphone is in use");
 
     </script>
 </head>
