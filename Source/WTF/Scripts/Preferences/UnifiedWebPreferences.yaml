@@ -5926,9 +5926,9 @@ PictureInPicturePlaybackStateEnabled:
   condition: HAVE(PIP_SKIP_PREROLL)
   defaultValue:
     WebKitLegacy:
-      default: false
+      default: true
     WebKit:
-      default: false
+      default: true
     WebCore:
       default: false
   disableInLockdownMode: true
