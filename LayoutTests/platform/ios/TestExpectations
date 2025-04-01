@@ -7807,3 +7807,5 @@ webkit.org/b/290804 [ Debug ] editing/caret/caret-position-vertical-rl.html [ Fa
 webkit.org/b/290804 [ Release ] editing/caret/caret-position-vertical-rl.html [ Pass Failure ]
 
 webkit.org/b/290811 [ Debug ] imported/w3c/web-platform-tests/fetch/api/crashtests/huge-fetch.any.worker.html [ Pass Crash ]
+
+webkit.org/b/290824 fast/events/autoscroll-with-software-keyboard.html [ Pass Failure ]
