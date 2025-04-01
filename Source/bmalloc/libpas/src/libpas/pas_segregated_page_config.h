@@ -221,9 +221,6 @@ PAS_API extern bool pas_medium_segregated_page_config_variant_is_enabled_overrid
 #define PAS_SEGREGATED_PAGE_CONFIG_SPECIALIZATION_DECLARATIONS(lower_case_page_config_name) \
     PAS_SEGREGATED_PAGE_CONFIG_TLC_SPECIALIZATION_DECLARATIONS(lower_case_page_config_name)
 
-#define PAS_SEGREGATED_PAGE_CONFIG_GOOD_MAX_OBJECT_SIZE(object_payload_size, min_num_objects) \
-    ((object_payload_size) / (min_num_objects))
-
 static inline bool pas_segregated_page_config_is_enabled(pas_segregated_page_config config,
                                                          pas_heap_runtime_config* runtime_config)
 {

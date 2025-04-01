@@ -28,8 +28,6 @@
 
 #include "pas_config.h"
 
-#define PAS_SUBPAGE_SIZE                 4096
-
 #define PAS_USE_SMALL_SEGREGATED_OVERRIDE     true
 #define PAS_USE_MEDIUM_SEGREGATED_OVERRIDE    true
 #define PAS_USE_SMALL_BITFIT_OVERRIDE         true
@@ -73,14 +71,6 @@
    paths for sharing_shift == PAS_BITVECTOR_WORD_SHIFT. */
 #define PAS_SMALL_SHARING_SHIFT          5
 
-#define PAS_APPROXIMATE_LARGE_SIZE_SHIFT 10
-#define PAS_APPROXIMATE_LARGE_SIZE       ((size_t)1 << PAS_APPROXIMATE_LARGE_SIZE_SHIFT)
-
-/* This is the minimum object size in small allocators and we rely on this to lay out alloc
-   bits. */
-#define PAS_MIN_OBJECT_SIZE_SHIFT        4
-#define PAS_MIN_OBJECT_SIZE              ((size_t)1 << PAS_MIN_OBJECT_SIZE_SHIFT)
-
 #define PAS_MIN_MEDIUM_ALIGN_SHIFT       9
 #define PAS_MIN_MEDIUM_ALIGN             ((size_t)1 << PAS_MIN_MEDIUM_ALIGN_SHIFT)
 
@@ -90,9 +80,6 @@
 #define PAS_MEDIUM_SHARING_SHIFT         3
 
 #define PAS_MIN_OBJECTS_PER_PAGE         6
-
-/* Expresses the probability using integers in the range 0..UINT_MAX (inclusive) */
-#define PAS_PROBABILITY_OF_SHARED_PAGE_INELIGIBILITY 0x1fffffff
 
 #ifdef PAS_LIBMALLOC
 #define PAS_DEALLOCATION_LOG_SIZE        10
