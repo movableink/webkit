@@ -2411,9 +2411,7 @@ imported/w3c/web-platform-tests/webrtc/protocol/codecs-subsequent-offer.https.ht
 imported/w3c/web-platform-tests/webrtc/protocol/pt-no-bundle.html [ Failure ]
 imported/w3c/web-platform-tests/webrtc/protocol/sdes-dont-dont-dont.html [ Failure ]
 imported/w3c/web-platform-tests/webrtc/protocol/transceiver-mline-recycling.html [ Failure ]
-
-# Crashing
-imported/w3c/web-platform-tests/webrtc/RTCRtpParameters-codecs.html [ Skip ]
+imported/w3c/web-platform-tests/webrtc/RTCRtpParameters-codecs.html [ Failure ]
 
 webkit.org/b/286481 imported/w3c/web-platform-tests/webrtc/protocol/rtp-demuxing.html [ Crash ]
 
