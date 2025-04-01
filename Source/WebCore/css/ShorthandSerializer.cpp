@@ -133,6 +133,7 @@ private:
     String serializeGridTemplate() const;
     String serializeOffset() const;
     String serializePageBreak() const;
+    String serializePositionTry() const;
     String serializeLineClamp() const;
     String serializeTextBox() const;
     String serializeTextWrap() const;
@@ -356,7 +357,6 @@ String ShorthandSerializer::serialize()
     case CSSPropertyTextEmphasis:
     case CSSPropertyWebkitTextDecoration:
     case CSSPropertyWebkitTextStroke:
-    case CSSPropertyPositionTry:
         return serializeLonghandsOmittingInitialValues();
     case CSSPropertyBorderColor:
     case CSSPropertyBorderStyle:
@@ -408,6 +408,8 @@ String ShorthandSerializer::serialize()
     case CSSPropertyPageBreakInside:
     case CSSPropertyWebkitColumnBreakInside:
         return serializeBreakInside();
+    case CSSPropertyPositionTry:
+        return serializePositionTry();
     case CSSPropertyTextDecorationSkip:
     case CSSPropertyTextDecoration:
     case CSSPropertyWebkitBackgroundSize:
@@ -1293,6 +1295,18 @@ String ShorthandSerializer::serializePageBreak() const
     default:
         return String();
     }
+}
+
+String ShorthandSerializer::serializePositionTry() const
+{
+    auto positionTryOrderIndex = longhandIndex(0, CSSPropertyPositionTryOrder);
+    auto positionTryFallbacksIndex = longhandIndex(1, CSSPropertyPositionTryFallbacks);
+
+    auto positionTryFallbacksSerialization = serializeLonghandValue(positionTryFallbacksIndex);
+    if (isLonghandInitialValue(positionTryOrderIndex))
+        return positionTryFallbacksSerialization;
+
+    return makeString(serializeLonghandValue(positionTryOrderIndex), " "_s, positionTryFallbacksSerialization);
 }
 
 String ShorthandSerializer::serializeLineClamp() const

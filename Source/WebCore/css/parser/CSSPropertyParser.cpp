@@ -3009,7 +3009,7 @@ bool CSSPropertyParser::consumePositionTryShorthand(bool important)
 
     addProperty(CSSPropertyPositionTryOrder, CSSPropertyPositionTry, WTFMove(order), important);
     addProperty(CSSPropertyPositionTryFallbacks, CSSPropertyPositionTry, WTFMove(fallbacks), important);
-    return true;
+    return m_range.atEnd();
 }
 
 bool CSSPropertyParser::parseShorthand(CSSPropertyID property, bool important)

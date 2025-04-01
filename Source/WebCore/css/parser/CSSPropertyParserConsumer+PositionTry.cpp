@@ -41,9 +41,10 @@ RefPtr<CSSValue> consumePositionTryFallbacks(CSSParserTokenRange& range, const C
     if (auto result = consumeIdent<CSSValueNone>(range))
         return result;
 
-    auto consume = [&](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
-        // <'position-area'>
+    auto consumeFallback = [&](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+        // Try to parse <'position-area'>
         auto rangeCopy = range;
+        // consumePositionArea accepts 'none', so detect and reject it beforehand.
         if (range.peek().id() == CSSValueNone)
             return nullptr;
         if (auto positionArea = consumePositionArea(range, context))
@@ -51,29 +52,34 @@ RefPtr<CSSValue> consumePositionTryFallbacks(CSSParserTokenRange& range, const C
 
         range = rangeCopy;
 
-        // [<dashed-ident> || <try-tactic>]
+        // Try to parse [<dashed-ident> || <try-tactic>]
+        // <try-tactic> = flip-block || flip-inline || flip-start
         auto tryRuleIdent = consumeDashedIdentRaw(range);
 
-        Vector<CSSValueID, 3> idents;
-        while (auto ident = consumeIdentRaw<CSSValueFlipBlock, CSSValueFlipInline, CSSValueFlipStart>(range)) {
-            if (idents.contains(*ident))
+        Vector<CSSValueID, 3> tryTactics;
+        while (auto tactic = consumeIdentRaw<CSSValueFlipBlock, CSSValueFlipInline, CSSValueFlipStart>(range)) {
+            if (tryTactics.contains(*tactic))
                 return nullptr;
-            idents.append(*ident);
+            tryTactics.append(*tactic);
         }
-
-        CSSValueListBuilder list;
-        for (auto ident : idents)
-            list.append(CSSPrimitiveValue::create(ident));
 
         if (tryRuleIdent.isNull())
             tryRuleIdent = consumeDashedIdentRaw(range);
 
+        CSSValueListBuilder list;
         if (!tryRuleIdent.isNull())
-            list.insert(0, CSSPrimitiveValue::createCustomIdent(tryRuleIdent));
+            list.append(CSSPrimitiveValue::createCustomIdent(tryRuleIdent));
+        for (auto tactic : tryTactics)
+            list.append(CSSPrimitiveValue::create(tactic));
+
+        // At least one @position-try rule ident or tactic must be present.
+        if (list.isEmpty())
+            return nullptr;
 
         return CSSValueList::createSpaceSeparated(WTFMove(list));
     };
-    return consumeListSeparatedBy<',', OneOrMore, ListOptimization::SingleValue>(range, consume);
+
+    return consumeListSeparatedBy<',', OneOrMore, ListOptimization::SingleValue>(range, consumeFallback);
 }
 
 } // namespace CSSPropertyParserHelpers
