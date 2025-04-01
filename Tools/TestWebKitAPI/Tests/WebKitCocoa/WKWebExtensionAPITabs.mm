@@ -1512,7 +1512,12 @@ TEST(WKWebExtensionAPITabs, HighlightedAlsoActivatesTab)
     Util::loadAndRunExtension(tabsManifest, @{ @"background.js": backgroundScript });
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPITabs, DISABLED_SendMessage)
+#else
 TEST(WKWebExtensionAPITabs, SendMessage)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -1562,7 +1567,12 @@ TEST(WKWebExtensionAPITabs, SendMessage)
     [manager run];
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPITabs, DISABLED_SendMessageWithAsyncReply)
+#else
 TEST(WKWebExtensionAPITabs, SendMessageWithAsyncReply)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -1614,7 +1624,12 @@ TEST(WKWebExtensionAPITabs, SendMessageWithAsyncReply)
     [manager run];
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPITabs, DISABLED_SendMessageWithPromiseReply)
+#else
 TEST(WKWebExtensionAPITabs, SendMessageWithPromiseReply)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -1664,7 +1679,12 @@ TEST(WKWebExtensionAPITabs, SendMessageWithPromiseReply)
     [manager run];
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPITabs, DISABLED_SendMessageWithAsyncPromiseReply)
+#else
 TEST(WKWebExtensionAPITabs, SendMessageWithAsyncPromiseReply)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -1716,7 +1736,12 @@ TEST(WKWebExtensionAPITabs, SendMessageWithAsyncPromiseReply)
     [manager run];
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPITabs, DISABLED_SendMessageWithoutReply)
+#else
 TEST(WKWebExtensionAPITabs, SendMessageWithoutReply)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -2001,7 +2026,12 @@ TEST(WKWebExtensionAPITabs, SendMessageFromBackgroundToSpecificDocument)
     [manager run];
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPITabs, DISABLED_Connect)
+#else
 TEST(WKWebExtensionAPITabs, Connect)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -2268,7 +2298,12 @@ TEST(WKWebExtensionAPITabs, ConnectToSubframe)
     [manager run];
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPITabs, DISABLED_PortDisconnect)
+#else
 TEST(WKWebExtensionAPITabs, PortDisconnect)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -2322,7 +2357,12 @@ TEST(WKWebExtensionAPITabs, PortDisconnect)
     [manager run];
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPITabs, DISABLED_ConnectWithMultipleListeners)
+#else
 TEST(WKWebExtensionAPITabs, ConnectWithMultipleListeners)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },
@@ -2390,7 +2430,12 @@ TEST(WKWebExtensionAPITabs, ConnectWithMultipleListeners)
     [manager run];
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPITabs, DISABLED_PortDisconnectWithMultipleListeners)
+#else
 TEST(WKWebExtensionAPITabs, PortDisconnectWithMultipleListeners)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } },

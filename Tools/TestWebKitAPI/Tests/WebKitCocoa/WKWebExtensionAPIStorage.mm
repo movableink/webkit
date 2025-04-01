@@ -108,7 +108,12 @@ TEST(WKWebExtensionAPIStorage, UndefinedProperties)
     Util::loadAndRunExtension(storageManifest, @{ @"background.js": backgroundScript });
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPIStorage, DISABLED_SetAccessLevelTrustedContexts)
+#else
 TEST(WKWebExtensionAPIStorage, SetAccessLevelTrustedContexts)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } }
@@ -149,7 +154,12 @@ TEST(WKWebExtensionAPIStorage, SetAccessLevelTrustedContexts)
     [manager run];
 }
 
+// FIXME rdar://147858640
+#if PLATFORM(IOS) && !defined(NDEBUG)
+TEST(WKWebExtensionAPIStorage, DISABLED_SetAccessLevelTrustedAndUntrustedContexts)
+#else
 TEST(WKWebExtensionAPIStorage, SetAccessLevelTrustedAndUntrustedContexts)
+#endif
 {
     TestWebKitAPI::HTTPServer server({
         { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } }
