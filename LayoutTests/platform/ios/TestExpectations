@@ -7812,3 +7812,4 @@ webkit.org/b/290824 fast/events/autoscroll-with-software-keyboard.html [ Pass Fa
 webkit.org/b/290855 imported/w3c/web-platform-tests/css/css-anchor-position/position-try-switch-from-fixed-anchor.html [ Pass Failure ]
 
 webkit.org/b/290856 imported/w3c/web-platform-tests/css/css-view-transitions/navigation/navigation-auto-excludes-reload.html [ Pass Timeout ]
+webkit.org/b/290856 imported/w3c/web-platform-tests/css/css-viewport/zoom/background-image.html [ Pass Timeout ]

@@ -2118,3 +2118,4 @@ webkit.org/b/290346 [ arm64 ] gamepad/gamepad-event-handlers.html [ Pass Timeout
 webkit.org/b/290564 [ Sequoia Debug ] imported/w3c/web-platform-tests/css/css-viewport/computedStyle-zoom.html [ Pass Timeout ]
 
 webkit.org/b/290856 [ Sequoia Debug ] imported/w3c/web-platform-tests/css/css-view-transitions/navigation/navigation-auto-excludes-reload.html [ Pass Timeout ]
+webkit.org/b/290856 [ Sequoia Debug ] imported/w3c/web-platform-tests/css/css-viewport/zoom/background-image.html [ Pass Timeout ]
