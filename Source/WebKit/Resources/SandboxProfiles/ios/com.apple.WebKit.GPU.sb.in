@@ -287,7 +287,9 @@
             (allow (with telemetry) (with report) (with message "IOSurfaceAcceleratorClient")
                 iokit-async-external-method
                 iokit-external-trap
-                iokit-external-method)))
+                iokit-external-method)
+            (allow iokit-external-method
+                (iokit-method-number 1 10))))
         
     (allow iokit-open-user-client
         (iokit-user-client-class "IOSurfaceRootUserClient")
