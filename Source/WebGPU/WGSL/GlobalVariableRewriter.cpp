@@ -989,7 +989,7 @@ std::optional<Error> RewriteGlobalVariables::visitEntryPoint(const CallGraph::En
     m_reads.clear();
     m_structTypes.clear();
     m_globalsUsingDynamicOffset.clear();
-
+    m_generateLayoutGroupMapping.clear();
 
     auto result = m_entryPointInformations.add(entryPoint.originalName, Reflection::EntryPointInformation { });
     RELEASE_ASSERT(result.isNewEntry);

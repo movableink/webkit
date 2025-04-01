@@ -34,7 +34,7 @@
 
 static NO_RETURN void printUsageStatement(bool help = false)
 {
-    fprintf(stderr, "Usage: wgsl [options] <file> <entrypoint>\n");
+    fprintf(stderr, "Usage: wgsl [options] <file> [entrypoint]\n");
     fprintf(stderr, "  -h|--help  Prints this help message\n");
     fprintf(stderr, "  --dump-ast-after-checking  Dumps the AST after parsing and checking\n");
     fprintf(stderr, "  --dump-ast-at-end  Dumps the AST after generating code\n");
@@ -100,8 +100,11 @@ void CommandLine::parseArguments(int argc, char** argv)
             printUsageStatement(false);
     }
 
-    if (!m_file || !m_entrypoint)
+    if (!m_file)
         printUsageStatement(false);
+
+    if (!m_entrypoint)
+        m_entrypoint = "_";
 }
 
 static int runWGSL(const CommandLine& options)
@@ -134,7 +137,14 @@ static int runWGSL(const CommandLine& options)
         WGSL::AST::dumpAST(shaderModule);
 
     String entrypointName = String::fromLatin1(options.entrypoint());
-    auto prepareResult = WGSL::prepare(shaderModule, entrypointName, nullptr);
+    HashMap<String, WGSL::PipelineLayout*> pipelineLayouts;
+    if (entrypointName != "_"_s)
+        pipelineLayouts.add(entrypointName, nullptr);
+    else {
+        for (auto& entryPoint : shaderModule->callGraph().entrypoints())
+            pipelineLayouts.add(entryPoint.originalName, nullptr);
+    }
+    auto prepareResult = WGSL::prepare(shaderModule, pipelineLayouts);
 
     if (auto* error = std::get_if<WGSL::Error>(&prepareResult)) {
         dataLogLn(*error);
