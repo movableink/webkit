@@ -726,13 +726,8 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
 
         includedProperties = { };
 
-        if (!inheritedStyleEqual) {
+        if (!inheritedStyleEqual)
             includedProperties.add(PropertyCascade::PropertyType::Inherited);
-            // FIXME: See toStyleColorWithResolvedCurrentColor().
-            bool mayContainResolvedCurrentcolor = style.disallowsFastPathInheritance() && hasExplicitlyInherited;
-            if (mayContainResolvedCurrentcolor && parentStyle.color() != cacheEntry->parentRenderStyle->color())
-                includedProperties.add(PropertyCascade::PropertyType::NonInherited);
-        }
         if (hasExplicitlyInherited)
             includedProperties.add(PropertyCascade::PropertyType::ExplicitlyInherited);
         if (!matchResult.nonCacheablePropertyIds.isEmpty())

@@ -27,6 +27,7 @@
 
 #include "CSSFilterProperty.h"
 #include "Document.h"
+#include "DropShadowFilterOperationWithStyleColor.h"
 #include "FilterOperations.h"
 #include "StyleBlurFunction.h"
 #include "StyleBrightnessFunction.h"
@@ -82,8 +83,8 @@ CSS::FilterProperty toCSSFilterProperty(const FilterOperations& filterOperations
         case FilterOperation::Type::Blur:
             list.value.append(CSS::BlurFunction { toCSSBlur(downcast<BlurFilterOperation>(op), style) });
             break;
-        case FilterOperation::Type::DropShadow:
-            list.value.append(CSS::DropShadowFunction { toCSSDropShadow(downcast<DropShadowFilterOperation>(op), style) });
+        case FilterOperation::Type::DropShadowWithStyleColor:
+            list.value.append(CSS::DropShadowFunction { toCSSDropShadow(downcast<DropShadowFilterOperationWithStyleColor>(op), style) });
             break;
         default:
             ASSERT_NOT_REACHED();

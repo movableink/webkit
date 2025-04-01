@@ -57,6 +57,7 @@ public:
         Contrast,
         Blur,
         DropShadow,
+        DropShadowWithStyleColor,
         Passthrough,
         Default,
         None
@@ -110,6 +111,10 @@ public:
     virtual bool movesPixels() const { return false; }
     // True if the filter should not be allowed to work on content that is not available from this security origin.
     virtual bool shouldBeRestrictedBySecurityOrigin() const { return false; }
+
+    bool isDropShadowBase() const { return type() == WebCore::FilterOperation::Type::DropShadow || type() == WebCore::FilterOperation::Type::DropShadowWithStyleColor; }
+
+    virtual bool requiresRepaintForCurrentColorChange() const { return false; }
 
 protected:
     FilterOperation(Type type)
@@ -343,37 +348,25 @@ private:
     Length m_stdDeviation;
 };
 
-class WEBCORE_EXPORT DropShadowFilterOperation : public FilterOperation {
+class WEBCORE_EXPORT DropShadowFilterOperationBase : public FilterOperation {
 public:
-    static Ref<DropShadowFilterOperation> create(const IntPoint& location, int stdDeviation, const Color& color)
-    {
-        return adoptRef(*new DropShadowFilterOperation(location, stdDeviation, color));
-    }
-
-    Ref<FilterOperation> clone() const override
-    {
-        return adoptRef(*new DropShadowFilterOperation(location(), stdDeviation(), color()));
-    }
-
     int x() const { return m_location.x(); }
     int y() const { return m_location.y(); }
     IntPoint location() const { return m_location; }
     int stdDeviation() const { return m_stdDeviation; }
-    const Color& color() const { return m_color; }
 
     bool affectsOpacity() const override { return true; }
     bool movesPixels() const override { return true; }
 
-    RefPtr<FilterOperation> blend(const FilterOperation* from, const BlendingContext&, bool blendToPassthrough = false) override;
+    virtual void dump(TextStream&) const = 0;
 
-private:
-    bool operator==(const FilterOperation&) const override;
+protected:
+    bool nonColorEqual(const DropShadowFilterOperationBase&) const;
 
-    DropShadowFilterOperation(const IntPoint& location, int stdDeviation, const Color& color)
-        : FilterOperation(Type::DropShadow)
+    DropShadowFilterOperationBase(Type type, const IntPoint& location, int stdDeviation)
+        : FilterOperation(type)
         , m_location(location)
         , m_stdDeviation(stdDeviation)
-        , m_color(color)
     {
     }
 
@@ -382,6 +375,35 @@ private:
 
     IntPoint m_location; // FIXME: should location be in Lengths?
     int m_stdDeviation;
+};
+
+class WEBCORE_EXPORT DropShadowFilterOperation : public DropShadowFilterOperationBase {
+public:
+    static Ref<DropShadowFilterOperation> create(const IntPoint& location, int stdDeviation, const Color& color)
+    {
+        return adoptRef(*new DropShadowFilterOperation(location, stdDeviation, color));
+    }
+
+    Ref<FilterOperation> clone() const override
+    {
+        return adoptRef(*new DropShadowFilterOperation(location(), stdDeviation(), m_color));
+    }
+
+    const Color& color() const { return m_color; }
+
+    RefPtr<FilterOperation> blend(const FilterOperation* from, const BlendingContext&, bool blendToPassthrough = false) override;
+
+private:
+    bool operator==(const FilterOperation&) const override;
+
+    void dump(TextStream&) const override;
+
+    DropShadowFilterOperation(const IntPoint& location, int stdDeviation, const Color& color)
+        : DropShadowFilterOperationBase(Type::DropShadow, location, stdDeviation)
+        , m_color(color)
+    {
+    }
+
     Color m_color;
 };
 
@@ -402,3 +424,4 @@ SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(BasicComponentTransferFilterOperation, is
 SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(InvertLightnessFilterOperation, type() == WebCore::FilterOperation::Type::AppleInvertLightness)
 SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(BlurFilterOperation, type() == WebCore::FilterOperation::Type::Blur)
 SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(DropShadowFilterOperation, type() == WebCore::FilterOperation::Type::DropShadow)
+SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(DropShadowFilterOperationBase, isDropShadowBase())

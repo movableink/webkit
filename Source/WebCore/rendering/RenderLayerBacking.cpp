@@ -37,6 +37,7 @@
 #include "Chrome.h"
 #include "DebugOverlayRegions.h"
 #include "DebugPageOverlays.h"
+#include "DropShadowFilterOperationWithStyleColor.h"
 #include "EventRegion.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
@@ -816,14 +817,29 @@ void RenderLayerBacking::updateChildrenTransformAndAnchorPoint(const LayoutRect&
     removeChildrenTransformFromLayers(layerForPerspective);
 }
 
+static FilterOperations resolveFilters(const FilterOperations& filterOperations, const RenderStyle& style)
+{
+    Vector<Ref<FilterOperation>> resolvedOperations;
+    resolvedOperations.reserveInitialCapacity(filterOperations.size());
+
+    for (auto& filter : filterOperations) {
+        if (auto dropShadow = dynamicDowncast<Style::DropShadowFilterOperationWithStyleColor>(filter))
+            resolvedOperations.append(dropShadow->createEquivalentWithResolvedColor(style));
+        else
+            resolvedOperations.append(filter);
+    }
+
+    return FilterOperations { WTFMove(resolvedOperations) };
+}
+
 void RenderLayerBacking::updateFilters(const RenderStyle& style)
 {
-    m_canCompositeFilters = m_graphicsLayer->setFilters(style.filter());
+    m_canCompositeFilters = m_graphicsLayer->setFilters(resolveFilters(style.filter(), style));
 }
 
 void RenderLayerBacking::updateBackdropFilters(const RenderStyle& style)
 {
-    m_canCompositeBackdropFilters = m_graphicsLayer->setBackdropFilters(style.backdropFilter());
+    m_canCompositeBackdropFilters = m_graphicsLayer->setBackdropFilters(resolveFilters(style.backdropFilter(), style));
 }
 
 void RenderLayerBacking::updateBackdropFiltersGeometry()

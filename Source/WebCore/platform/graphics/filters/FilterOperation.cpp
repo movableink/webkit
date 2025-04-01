@@ -433,44 +433,40 @@ IntOutsets BlurFilterOperation::outsets() const
     return FEGaussianBlur::calculateOutsets({ stdDeviation, stdDeviation });
 }
 
+bool DropShadowFilterOperationBase::nonColorEqual(const DropShadowFilterOperationBase& other) const
+{
+    return m_location == other.m_location && m_stdDeviation == other.m_stdDeviation;
+}
+
+bool DropShadowFilterOperationBase::isIdentity() const
+{
+    return m_stdDeviation < 0 || (!m_stdDeviation && m_location.isZero());
+}
+
+IntOutsets DropShadowFilterOperationBase::outsets() const
+{
+    return FEDropShadow::calculateOutsets(FloatSize(x(), y()), FloatSize(m_stdDeviation, m_stdDeviation));
+}
+
 bool DropShadowFilterOperation::operator==(const FilterOperation& operation) const
 {
     if (!isSameType(operation))
         return false;
     const DropShadowFilterOperation& other = downcast<DropShadowFilterOperation>(operation);
-    return m_location == other.m_location && m_stdDeviation == other.m_stdDeviation && m_color == other.m_color;
-}
-    
-RefPtr<FilterOperation> DropShadowFilterOperation::blend(const FilterOperation* from, const BlendingContext& context, bool blendToPassthrough)
-{
-    if (from && !from->isSameType(*this))
-        return this;
-
-    if (blendToPassthrough)
-        return DropShadowFilterOperation::create(
-            WebCore::blend(m_location, IntPoint(), context),
-            WebCore::blend(m_stdDeviation, 0, context),
-            WebCore::blend(m_color, Color::transparentBlack, context));
-
-    const DropShadowFilterOperation* fromOperation = downcast<DropShadowFilterOperation>(from);
-    IntPoint fromLocation = fromOperation ? fromOperation->location() : IntPoint();
-    int fromStdDeviation = fromOperation ? fromOperation->stdDeviation() : 0;
-    Color fromColor = fromOperation ? fromOperation->color() : Color::transparentBlack;
-    
-    return DropShadowFilterOperation::create(
-        WebCore::blend(fromLocation, m_location, context),
-        std::max(WebCore::blend(fromStdDeviation, m_stdDeviation, context), 0),
-        WebCore::blend(fromColor, m_color, context));
+    return nonColorEqual(other) && m_color == other.m_color;
 }
 
-bool DropShadowFilterOperation::isIdentity() const
+RefPtr<FilterOperation> DropShadowFilterOperation::blend(const FilterOperation*, const BlendingContext&, bool)
 {
-    return m_stdDeviation < 0 || (!m_stdDeviation && m_location.isZero());
+    // Only DropShadowFilterOperationWithStyleColor gets blended.
+    ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
-IntOutsets DropShadowFilterOperation::outsets() const
+void DropShadowFilterOperation::dump(TextStream& ts) const
 {
-    return FEDropShadow::calculateOutsets(FloatSize(x(), y()), FloatSize(m_stdDeviation, m_stdDeviation));
+    ts << "drop-shadow("_s << x() << ' ' << y() << ' ' << location() << ' ';
+    ts << color() << ')';
 }
 
 TextStream& operator<<(TextStream& ts, const FilterOperation& filter)
@@ -528,10 +524,10 @@ TextStream& operator<<(TextStream& ts, const FilterOperation& filter)
         ts << "blur("_s << blurFilter.stdDeviation().value() << ')'; // FIXME: should call floatValueForLength() but that's outisde of platform/.
         break;
     }
-    case FilterOperation::Type::DropShadow: {
-        const auto& dropShadowFilter = downcast<DropShadowFilterOperation>(filter);
-        ts << "drop-shadow("_s << dropShadowFilter.x() << ' ' << dropShadowFilter.y() << ' ' << dropShadowFilter.location() << ' ';
-        ts << dropShadowFilter.color() << ')';
+    case FilterOperation::Type::DropShadow:
+    case FilterOperation::Type::DropShadowWithStyleColor: {
+        const auto& dropShadowFilter = downcast<DropShadowFilterOperationBase>(filter);
+        dropShadowFilter.dump(ts);
         break;
     }
     case FilterOperation::Type::Passthrough:

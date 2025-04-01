@@ -1236,6 +1236,12 @@ bool RenderStyle::changeRequiresLayerRepaint(const RenderStyle& other, OptionSet
     }
 #endif
 
+    bool currentColorDiffers = m_inheritedData->color != other.m_inheritedData->color;
+    if (currentColorDiffers) {
+        if (filter().requiresRepaintForCurrentColorChange() || backdropFilter().requiresRepaintForCurrentColorChange())
+            return true;
+    }
+
     return false;
 }
 

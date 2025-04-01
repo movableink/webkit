@@ -939,6 +939,9 @@ bool PlatformCALayerCocoa::filtersCanBeComposited(const FilterOperations& filter
             if (i < (filters.size() - 1))
                 return false;
             break;
+        case FilterOperation::Type::DropShadowWithStyleColor:
+            ASSERT_NOT_REACHED();
+            break;
         default:
             break;
         }

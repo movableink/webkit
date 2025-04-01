@@ -176,7 +176,6 @@ WTF::TextStream& operator<<(WTF::TextStream&, const Color&);
 
 Color toStyleColor(const CSS::Color&, ColorResolutionState&);
 Color toStyleColor(const CSS::Color&, Ref<const Document>, const RenderStyle&, const CSSToLengthConversionData&, ForVisitedLink);
-Color toStyleColorWithResolvedCurrentColor(const CSS::Color&, Ref<const Document>, RenderStyle&, const CSSToLengthConversionData&, ForVisitedLink);
 
 template<> struct ToCSS<Color> {
     auto operator()(const Color&, const RenderStyle&) -> CSS::Color;

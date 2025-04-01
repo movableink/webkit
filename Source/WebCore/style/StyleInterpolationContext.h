@@ -41,8 +41,8 @@ struct Context : BlendingContext {
     const Client& client;
     AnimatableCSSProperty property;
 
-    Context(const AnimatableCSSProperty& property, double progress, bool isDiscrete, CompositeOperation compositeOperation, IterationCompositeOperation iterationCompositeOperation, double currentIteration, const Client& client)
-        : BlendingContext(progress, isDiscrete, compositeOperation, iterationCompositeOperation, currentIteration)
+    Context(const AnimatableCSSProperty& property, double progress, bool isDiscrete, CompositeOperation compositeOperation, IterationCompositeOperation iterationCompositeOperation, double currentIteration, WebCore::Color fromColor,  WebCore::Color toColor, const Client& client)
+        : BlendingContext(progress, isDiscrete, compositeOperation, iterationCompositeOperation, currentIteration, fromColor, toColor)
         , client(client)
         , property(property)
     {

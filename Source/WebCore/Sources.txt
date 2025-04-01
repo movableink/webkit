@@ -2931,6 +2931,7 @@ rendering/shapes/ShapeOutsideInfo.cpp
 rendering/style/BorderData.cpp
 rendering/style/BorderValue.cpp
 rendering/style/ContentData.cpp
+rendering/style/DropShadowFilterOperationWithStyleColor.cpp
 rendering/style/FillLayer.cpp
 rendering/style/GapLength.cpp
 rendering/style/GridPosition.cpp

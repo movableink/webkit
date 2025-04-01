@@ -6271,7 +6271,21 @@ void RenderLayer::updateFiltersAfterStyleChange(StyleDifference diff, const Rend
     else if (m_filters)
         m_filters->removeReferenceFilterClients();
 
-    if (diff >= StyleDifference::RepaintLayer && oldStyle && oldStyle->filter() != renderer().style().filter())
+    auto filterChanged = [&] {
+        if (!m_filters)
+            return false;
+        if (diff < StyleDifference::RepaintLayer)
+            return false;
+        if (!oldStyle)
+            return false;
+        if (oldStyle->filter() != renderer().style().filter())
+            return true;
+        auto currentColorChanged = oldStyle->color() != renderer().style().color();
+        if (currentColorChanged && oldStyle->filter().requiresRepaintForCurrentColorChange())
+            return true;
+        return false;
+    };
+    if (filterChanged())
         clearLayerFilters();
 }
 

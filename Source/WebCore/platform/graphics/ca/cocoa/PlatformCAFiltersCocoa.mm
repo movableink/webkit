@@ -62,6 +62,9 @@ static unsigned keyValueCountForFilter(const FilterOperation& filterOperation)
     case FilterOperation::Type::AppleInvertLightness:
         ASSERT_NOT_REACHED(); // AppleInvertLightness is only used in -apple-color-filter.
         break;
+    case FilterOperation::Type::DropShadowWithStyleColor:
+        ASSERT_NOT_REACHED(); // Replaced by DropShadow.
+        break;
     case FilterOperation::Type::Passthrough:
         return 0;
     }
@@ -140,6 +143,7 @@ void PlatformCAFilters::presentationModifiers(const FilterOperations& initialFil
         case FilterOperation::Type::Default:
         case FilterOperation::Type::Reference:
         case FilterOperation::Type::None:
+        case FilterOperation::Type::DropShadowWithStyleColor:
             ASSERT_NOT_REACHED();
             break;
         case FilterOperation::Type::DropShadow: {
@@ -189,6 +193,7 @@ void PlatformCAFilters::updatePresentationModifiers(const FilterOperations& filt
         case FilterOperation::Type::Default:
         case FilterOperation::Type::Reference:
         case FilterOperation::Type::None:
+        case FilterOperation::Type::DropShadowWithStyleColor:
             ASSERT_NOT_REACHED();
             return;
         case FilterOperation::Type::DropShadow: {
@@ -252,6 +257,7 @@ void PlatformCAFilters::setFiltersOnLayer(PlatformLayer* layer, const FilterOper
         case FilterOperation::Type::Default:
         case FilterOperation::Type::Reference:
         case FilterOperation::Type::None:
+        case FilterOperation::Type::DropShadowWithStyleColor:
             ASSERT_NOT_REACHED();
             return nil;
         case FilterOperation::Type::DropShadow: {

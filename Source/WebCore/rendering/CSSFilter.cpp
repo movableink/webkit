@@ -28,6 +28,7 @@
 #include "CSSFilter.h"
 
 #include "ColorMatrix.h"
+#include "DropShadowFilterOperationWithStyleColor.h"
 #include "FEColorMatrix.h"
 #include "FEComponentTransfer.h"
 #include "FEDropShadow.h"
@@ -130,6 +131,12 @@ static RefPtr<FilterEffect> createDropShadowEffect(const DropShadowFilterOperati
 {
     float std = dropShadowOperation.stdDeviation();
     return FEDropShadow::create(std, std, dropShadowOperation.x(), dropShadowOperation.y(), dropShadowOperation.color(), 1);
+}
+
+static RefPtr<FilterEffect> createDropShadowEffect(const Style::DropShadowFilterOperationWithStyleColor& dropShadowOperation, const RenderStyle& style)
+{
+    float std = dropShadowOperation.stdDeviation();
+    return FEDropShadow::create(std, std, dropShadowOperation.x(), dropShadowOperation.y(), style.colorResolvingCurrentColor(dropShadowOperation.styleColor()), 1);
 }
 
 static RefPtr<FilterEffect> createGrayScaleEffect(const BasicColorMatrixFilterOperation& colorMatrixOperation)
@@ -262,6 +269,10 @@ bool CSSFilter::buildFilterFunctions(RenderElement& renderer, const FilterOperat
 
         case FilterOperation::Type::DropShadow:
             function = createDropShadowEffect(uncheckedDowncast<DropShadowFilterOperation>(operation));
+            break;
+
+        case FilterOperation::Type::DropShadowWithStyleColor:
+            function = createDropShadowEffect(uncheckedDowncast<Style::DropShadowFilterOperationWithStyleColor>(operation), renderer.style());
             break;
 
         case FilterOperation::Type::Grayscale:

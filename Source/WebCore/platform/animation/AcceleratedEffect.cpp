@@ -477,7 +477,7 @@ void AcceleratedEffect::validateFilters(const AcceleratedEffectValues& baseValue
         // from the other filter operations and it will be applied to the layer as the last filer.
         ASSERT(longestFilterList);
         for (auto& operation : *longestFilterList) {
-            if (operation->type() == FilterOperation::Type::DropShadow && operation != longestFilterList->last())
+            if ((operation->type() == FilterOperation::Type::DropShadow || operation->type() == FilterOperation::Type::DropShadowWithStyleColor) && operation != longestFilterList->last())
                 return false;
         }
 

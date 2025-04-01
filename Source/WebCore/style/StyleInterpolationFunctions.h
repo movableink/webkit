@@ -387,7 +387,7 @@ inline Visibility blendFunc(Visibility from, Visibility to, const Context& conte
     if (fromVal == toVal)
         return to;
     // The composite operation here is irrelevant.
-    double result = blendFunc(fromVal, toVal, { context.property, context.progress, false, CompositeOperation::Replace, IterationCompositeOperation::Replace, 0, context.client });
+    double result = blendFunc(fromVal, toVal, { context.property, context.progress, false, CompositeOperation::Replace, IterationCompositeOperation::Replace, 0, { }, { }, context.client });
     return result > 0. ? Visibility::Visible : (to != Visibility::Visible ? to : from);
 }
 

@@ -340,18 +340,6 @@ Color toStyleColor(const CSS::Color& value, Ref<const Document> document, const 
     return toStyleColor(value, resolutionState);
 }
 
-Color toStyleColorWithResolvedCurrentColor(const CSS::Color& value, Ref<const Document> document, RenderStyle& style, const CSSToLengthConversionData& conversionData, ForVisitedLink forVisitedLink)
-{
-    // FIXME: 'currentcolor' should be resolved at use time to make it inherit correctly. https://bugs.webkit.org/show_bug.cgi?id=210005
-    if (CSS::containsCurrentColor(value)) {
-        // Color is an inherited property so depending on it effectively makes the property inherited.
-        style.setHasExplicitlyInheritedProperties();
-        style.setDisallowsFastPathInheritance();
-    }
-
-    return toStyleColor(value, document, style, conversionData, forVisitedLink);
-}
-
 auto ToCSS<Color>::operator()(const Color& value, const RenderStyle& style) -> CSS::Color
 {
     return CSS::Color { CSS::ResolvedColor { style.colorResolvingCurrentColor(value) } };
