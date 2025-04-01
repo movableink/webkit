@@ -13905,11 +13905,6 @@ IGNORE_CLANG_WARNINGS_END
     void compileGlobalIsNaN()
     {
         switch (m_node->child1().useKind()) {
-        case DoubleRepUse: {
-            LValue argument = lowDouble(m_node->child1());
-            setBoolean(m_out.doubleNotEqualOrUnordered(argument, argument));
-            break;
-        }
         case UntypedUse: {
             JSGlobalObject* globalObject = m_graph.globalObjectFor(m_origin.semantic);
             LValue argument = lowJSValue(m_node->child1());

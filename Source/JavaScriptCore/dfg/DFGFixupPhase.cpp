@@ -3175,6 +3175,7 @@ private:
             }
             if (node->child1()->shouldSpeculateNumber()) {
                 fixEdge<DoubleRepUse>(node->child1());
+                node->setOp(NumberIsNaN);
                 node->clearFlags(NodeMustGenerate);
                 break;
             }

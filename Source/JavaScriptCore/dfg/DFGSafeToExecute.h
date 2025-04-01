@@ -344,7 +344,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
         return true;
 
     case GlobalIsNaN:
-        return node->child1().useKind() == DoubleRepUse;
+        return false;
 
     case GetButterfly:
         return state.forNode(node->child1()).isType(SpecObject);

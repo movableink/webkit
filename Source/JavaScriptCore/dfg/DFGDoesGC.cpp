@@ -483,10 +483,8 @@ bool doesGC(Graph& graph, Node* node)
 
     case ToIntegerOrInfinity:
     case ToLength:
-        return node->child1().useKind() == UntypedUse;
-
     case GlobalIsNaN:
-        return node->child1().useKind() != DoubleRepUse;
+        return node->child1().useKind() == UntypedUse;
 
     case CallNumberConstructor:
         switch (node->child1().useKind()) {

@@ -270,13 +270,10 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         def(PureValue(node));
         return;
 
-    case GlobalIsNaN: {
-        if (node->child1().useKind() == DoubleRepUse)
-            def(PureValue(node));
-        else
-            clobberTop();
+    case GlobalIsNaN:
+        ASSERT(node->child1().useKind() == UntypedUse);
+        clobberTop();
         return;
-    }
 
     case StringLocaleCompare:
         read(World);
