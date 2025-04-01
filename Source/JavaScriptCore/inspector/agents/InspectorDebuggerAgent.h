@@ -255,7 +255,7 @@ private:
 
     struct BlackboxedScript {
         String url;
-        bool caseSensitive { false }; // FIXME: should this be `true`?
+        bool caseSensitive { true };
         bool isRegex { false };
 
         // This is only used to restrict where within the script to ignore pausing.

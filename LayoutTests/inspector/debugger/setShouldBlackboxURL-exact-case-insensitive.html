@@ -26,7 +26,7 @@ function test()
                 ProtocolTest.Blackbox.evaluate(`createScripts("ExactCaseInsensitive_StepOver")`),
             ]);
 
-            await ProtocolTest.Blackbox.setBlackbox(middleSourceURL);
+            await ProtocolTest.Blackbox.setBlackbox(middleSourceURL, {caseSensitive: false});
             await ProtocolTest.Blackbox.setBreakpoint(innerSourceURL, 3); // last line of function, so it only pauses once
             await ProtocolTest.Blackbox.evaluate(`ExactCaseInsensitive_StepOver_Outer(10)`);
 
@@ -54,7 +54,7 @@ function test()
                 ProtocolTest.Blackbox.evaluate(`createScripts("ExactCaseInsensitive_PauseInCaller")`),
             ]);
 
-            await ProtocolTest.Blackbox.setBlackbox(innerSourceURL);
+            await ProtocolTest.Blackbox.setBlackbox(innerSourceURL, {caseSensitive: false});
             await ProtocolTest.Blackbox.setBreakpoint(innerSourceURL, 2);
             await ProtocolTest.Blackbox.evaluate(`ExactCaseInsensitive_PauseInCaller_Outer(10)`);
 
@@ -82,7 +82,7 @@ function test()
                 ProtocolTest.Blackbox.evaluate(`createScripts("ExactCaseInsensitive_PauseInCallee")`),
             ]);
 
-            await ProtocolTest.Blackbox.setBlackbox(outerSourceURL);
+            await ProtocolTest.Blackbox.setBlackbox(outerSourceURL, {caseSensitive: false});
             await ProtocolTest.Blackbox.setBreakpoint(outerSourceURL, 2);
             await ProtocolTest.Blackbox.evaluate(`ExactCaseInsensitive_PauseInCallee_Outer(10)`);
 
@@ -109,6 +109,7 @@ function test()
             ]);
 
             await ProtocolTest.Blackbox.setBlackbox(multipleSourceURL, {
+                caseSensitive: false,
                 sourceRanges: [
                     3, 0, 4,  0, // whole line
                     4, 5, 4, 18, // after pause position

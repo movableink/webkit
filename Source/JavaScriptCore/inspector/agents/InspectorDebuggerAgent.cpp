@@ -1303,10 +1303,12 @@ Protocol::ErrorStringOr<void> InspectorDebuggerAgent::setShouldBlackboxURL(const
 
     BlackboxedScript blackboxedScript;
     blackboxedScript.url = url;
-    blackboxedScript.caseSensitive = optionalCaseSensitive.value_or(false);
-    blackboxedScript.isRegex = optionalIsRegex.value_or(false);
+    if (optionalCaseSensitive)
+        blackboxedScript.caseSensitive = *optionalCaseSensitive;
+    if (optionalIsRegex)
+        blackboxedScript.isRegex = *optionalIsRegex;
 
-    if (!blackboxedScript.caseSensitive && !blackboxedScript.isRegex && isWebKitInjectedScript(blackboxedScript.url))
+    if (blackboxedScript.caseSensitive && !blackboxedScript.isRegex && isWebKitInjectedScript(blackboxedScript.url))
         return makeUnexpected("Blackboxing of internal scripts is controlled by 'Debugger.setPauseForInternalScripts'"_s);
 
     m_blackboxedScripts.removeAll(blackboxedScript);

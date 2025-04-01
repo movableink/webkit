@@ -64,14 +64,11 @@ function test()
         ProtocolTest.pass("Resumed.");
     };
 
-    async function setBlackbox(url, options = {}) {
-        if (!options.caseSensitive)
-            url = url.toLowerCase();
-
-        ProtocolTest.log(`Blackboxing ${options.caseSensitive ? "(case sensitive) " : ""}${options.isRegex ? "(regex) " : ""}'${url}'...`);
+    async function setBlackbox(url) {
+        ProtocolTest.log(`Blackboxing '${url}'...`);
         await InspectorProtocol.awaitCommand({
             method: "Debugger.setShouldBlackboxURL",
-            params: {url, shouldBlackbox: true, ...options},
+            params: {url, shouldBlackbox: true},
         });
     }
 
@@ -84,7 +81,7 @@ function test()
     }
 
     async function setBlackboxBreakpointEvaluations(blackboxBreakpointEvaluations) {
-        ProtocolTest.log(`${blackboxBreakpointEvaluations ? "Blackboxing" : "Unblackboxing"} preakpoing evaluations...`);
+        ProtocolTest.log(`${blackboxBreakpointEvaluations ? "Blackboxing" : "Unblackboxing"} breakpoint evaluations...`);
         return InspectorProtocol.awaitCommand({
             method: "Debugger.setBlackboxBreakpointEvaluations",
             params: {blackboxBreakpointEvaluations},

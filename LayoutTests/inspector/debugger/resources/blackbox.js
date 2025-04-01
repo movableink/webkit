@@ -88,10 +88,10 @@ TestPage.registerInitializer(() => {
     };
 
     ProtocolTest.Blackbox.setBlackbox = async function(url, options = {}) {
-        if (!options.caseSensitive)
+        if (options.caseSensitive === false)
             url = url.toLowerCase();
 
-        let logPrefix = `Blackboxing ${options.caseSensitive ? "(case sensitive) " : ""}${options.isRegex ? "(regex) " : ""}'${url}'`;
+        let logPrefix = `Blackboxing ${options.caseSensitive === false ? "" : "(case sensitive) "}${options.isRegex === true ? "(regex) " : ""}'${url}'`;
         if (options.sourceRanges) {
             for (let i = 0; i < options.sourceRanges.length; i += 4) {
                  let startLine = options.sourceRanges[i];
