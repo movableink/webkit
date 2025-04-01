@@ -206,15 +206,57 @@ public:
         return add(enclosingIntRect(rect));
     }
 
+    ALWAYS_INLINE bool add(const Rects& rects)
+    {
+        if (rects.isEmpty() || !shouldAdd())
+            return false;
+
+        // When adding rects to an empty Damage and we know we will need to unite,
+        // we can unite the rects directly.
+        if (m_mode == Mode::Rectangles && m_rects.isEmpty()) {
+            auto rectsCount = rects.size();
+            auto gridArea = m_gridCells.unclampedArea();
+
+            if (rectsCount > gridArea) {
+                m_rects.grow(gridArea);
+                for (const auto& rect : rects) {
+                    if (rect.isEmpty())
+                        continue;
+
+                    m_minimumBoundingRectangle.unite(rect);
+                    unite(rect);
+                }
+
+                if (m_minimumBoundingRectangle.isEmpty()) {
+                    // All rectangles were empty.
+                    m_rects.clear();
+                    return false;
+                }
+                m_shouldUnite = true;
+
+                return true;
+            }
+        }
+
+        bool returnValue = false;
+        for (const auto& rect : rects)
+            returnValue |= add(rect);
+        return returnValue;
+    }
+
     ALWAYS_INLINE bool add(const Damage& other)
     {
         if (other.isEmpty() || !shouldAdd())
             return false;
 
-        bool returnValue = false;
-        for (const auto& rect : other.rects())
-            returnValue |= add(rect);
-        return returnValue;
+        // When both Damage are already united and have the same rect, we can just iterate the rects and unite them.
+        if (m_mode == Mode::Rectangles && m_shouldUnite && m_rect == other.m_rect && m_shouldUnite == other.m_shouldUnite) {
+            for (unsigned i = 0; i < m_rects.size(); ++i)
+                m_rects[i].unite(other.m_rects[i]);
+            return true;
+        }
+
+        return add(other.rects());
     }
 
 private:
@@ -250,8 +292,7 @@ private:
 
     ALWAYS_INLINE size_t cellIndexForRect(const IntRect& rect) const
     {
-        if (m_rects.size() == 1)
-            return 0;
+        ASSERT(m_rects.size() > 1);
 
         const auto rectCenter = IntPoint(rect.center() - m_rect.location());
         const auto rectCell = flooredIntPoint(FloatPoint { static_cast<float>(rectCenter.x()) / s_cellSize, static_cast<float>(rectCenter.y()) / s_cellSize });
@@ -263,6 +304,11 @@ private:
         // When merging cannot be avoided, we use m_rects to store minimal bounding rectangles
         // and perform merging while trying to keep minimal bounding rectangles small and
         // separated from each other.
+        if (m_rects.size() == 1) {
+            m_rects[0] = m_minimumBoundingRectangle;
+            return;
+        }
+
         const auto index = cellIndexForRect(rect);
         ASSERT(index < m_rects.size());
         m_rects[index].unite(rect);

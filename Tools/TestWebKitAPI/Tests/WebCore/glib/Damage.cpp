@@ -177,6 +177,78 @@ TEST(Damage, AddRect)
     EXPECT_EQ(damage.rects().size(), 2);
 }
 
+TEST(Damage, AddRects)
+{
+    Damage damage(IntSize { 2048, 1024 });
+    EXPECT_TRUE(damage.add(Vector<IntRect, 1> { { 100, 100, 200, 200 } }));
+    EXPECT_EQ(damage.rects().size(), 1);
+    EXPECT_EQ(damage.bounds(), IntRect(100, 100, 200, 200));
+
+    // Adding an empty Vector does nothing.
+    EXPECT_FALSE(damage.add(Vector<IntRect, 1> { }));
+    EXPECT_EQ(damage.rects().size(), 1);
+
+    // Adding a Vector with empty rets does nothing.
+    EXPECT_FALSE(damage.add(Vector<IntRect, 1> { { }, { } }));
+    EXPECT_EQ(damage.rects().size(), 1);
+
+    // Adding more than 4 rectangles will unite.
+    damage = Damage(IntSize { 512, 512 });
+    EXPECT_TRUE(damage.add(Vector<IntRect, 1> {
+        { 0, 0, 4, 4 },
+        { 200, 0, 4, 4 },
+        { 0, 200, 4, 4 },
+        { 200, 200, 4, 4 },
+        { 128, 128, 4, 4 }
+    }));
+    EXPECT_EQ(damage.rects().size(), 4);
+    EXPECT_EQ(damage.rects()[0], damage.bounds());
+
+    // Adding more than 4 rectangles to a non empty damage should unite too.
+    damage = Damage(IntSize { 512, 512 });
+    EXPECT_TRUE(damage.add(IntRect { 300, 0, 4, 4 }));
+    EXPECT_TRUE(damage.add(Vector<IntRect, 1> {
+        { 500, 0, 4, 4 },
+        { 300, 200, 4, 4 },
+        { 500, 200, 4, 4 },
+        { 384, 128, 4, 4 }
+    }));
+    EXPECT_EQ(damage.rects().size(), 4);
+    EXPECT_EQ(damage.rects()[1], damage.bounds());
+
+    // Adding more than 4 empty rectangles does nothing.
+    damage = Damage(IntSize { 512, 512 });
+    EXPECT_FALSE(damage.add(Vector<IntRect, 1> { { }, { }, { }, { }, { } }));
+    EXPECT_EQ(damage.rects().size(), 0);
+
+    // Adding more than 4 empty rectangles to a non empty damage does nothing too.
+    damage = Damage(IntSize { 512, 512 });
+    EXPECT_TRUE(damage.add(IntRect { 300, 0, 4, 4 }));
+    EXPECT_EQ(damage.rects().size(), 1);
+    EXPECT_FALSE(damage.add(Vector<IntRect, 1> { { }, { }, { }, { }, { } }));
+    EXPECT_EQ(damage.rects().size(), 1);
+
+    // Adding a Vector to damage in BoundingBox mode always unite damage in bounds.
+    damage = Damage(IntSize { 1024, 768 }, Damage::Mode::BoundingBox);
+    EXPECT_TRUE(damage.add(Vector<IntRect, 1> {
+        { 100, 100, 200, 200 },
+        { 300, 300, 200, 200 }
+    }));
+    EXPECT_EQ(damage.rects().size(), 1);
+    EXPECT_EQ(damage.rects()[0], damage.bounds());
+    EXPECT_EQ(damage.bounds(), IntRect(100, 100, 400, 400));
+
+    // Adding a Vector to damage in Full mode does nothing.
+    damage = Damage(IntSize { 1024, 768 }, Damage::Mode::Full);
+    EXPECT_FALSE(damage.add(Vector<IntRect, 1> {
+        { 100, 100, 200, 200 },
+        { 300, 300, 200, 200 }
+    }));
+    EXPECT_EQ(damage.rects().size(), 1);
+    EXPECT_EQ(damage.rects()[0], damage.bounds());
+    EXPECT_EQ(damage.bounds(), IntRect(0, 0, 1024, 768));
+}
+
 TEST(Damage, AddDamage)
 {
     Damage damage(IntSize { 2048, 1024 });
@@ -197,6 +269,52 @@ TEST(Damage, AddDamage)
     EXPECT_EQ(damage.bounds().y(), 100);
     EXPECT_EQ(damage.bounds().width(), 400);
     EXPECT_EQ(damage.bounds().height(), 400);
+
+    // It's possible to add one Damage to another with different rectangle.
+    damage = Damage(IntSize { 1024, 768 });
+    EXPECT_TRUE(damage.add(IntRect { 100, 100, 200, 200 }));
+    EXPECT_EQ(damage.rects().size(), 1);
+    other = Damage(IntSize { 800, 600 });
+    EXPECT_TRUE(other.add(IntRect { 300, 300, 200, 200 }));
+    EXPECT_EQ(other.rects().size(), 1);
+    EXPECT_TRUE(damage.add(other));
+    EXPECT_EQ(damage.rects().size(), 2);
+    EXPECT_EQ(damage.rects()[0], IntRect(100, 100, 200, 200));
+    EXPECT_EQ(damage.rects()[1], IntRect(300, 300, 200, 200));
+
+    // Adding a Damage already united with the same rectangle, just unites every rectangle in the grid.
+    damage = Damage(IntSize { 512, 512 });
+    EXPECT_TRUE(damage.add(Vector<IntRect, 1> {
+        { 0, 0, 4, 4 },
+        { 300, 0, 4, 4 },
+        { 0, 300, 4, 4 },
+        { 300, 300, 4, 4 },
+        { 128, 128, 4, 4 }
+    }));
+    EXPECT_EQ(damage.rects().size(), 4);
+    EXPECT_EQ(damage.rects()[0], IntRect(0, 0, 132, 132));
+    EXPECT_EQ(damage.rects()[1], IntRect(300, 0, 4, 4));
+    EXPECT_EQ(damage.rects()[2], IntRect(0, 300, 4, 4));
+    EXPECT_EQ(damage.rects()[3], IntRect(300, 300, 4, 4));
+    other = Damage(IntSize { 512, 512 });
+    EXPECT_TRUE(other.add(Vector<IntRect, 1> {
+        { 10, 10, 4, 4 },
+        { 310, 10, 4, 4 },
+        { 10, 310, 4, 4 },
+        { 310, 310, 4, 4 },
+        { 384, 384, 4, 4 }
+    }));
+    EXPECT_EQ(other.rects().size(), 4);
+    EXPECT_EQ(other.rects()[0], IntRect(10, 10, 4, 4));
+    EXPECT_EQ(other.rects()[1], IntRect(310, 10, 4, 4));
+    EXPECT_EQ(other.rects()[2], IntRect(10, 310, 4, 4));
+    EXPECT_EQ(other.rects()[3], IntRect(310, 310, 78, 78));
+    EXPECT_TRUE(damage.add(other));
+    EXPECT_EQ(damage.rects().size(), 4);
+    EXPECT_EQ(damage.rects()[0], IntRect(0, 0, 132, 132));
+    EXPECT_EQ(damage.rects()[1], IntRect(300, 0, 14, 14));
+    EXPECT_EQ(damage.rects()[2], IntRect(0, 300, 14, 14));
+    EXPECT_EQ(damage.rects()[3], IntRect(300, 300, 88, 88));
 }
 
 TEST(Damage, Unite)
