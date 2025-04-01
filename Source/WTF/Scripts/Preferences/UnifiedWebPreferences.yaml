@@ -5176,8 +5176,10 @@ MediaSourcePrefersDecompressionSession:
     WebKitLegacy:
       default: false
     WebKit:
+      "PLATFORM(IOS)": false
       default: true
     WebCore:
+      "PLATFORM(IOS)": false
       default: true
   sharedPreferenceForWebProcess: true
 
