@@ -1007,7 +1007,6 @@
 		5333BBDB2110F7D2007618EC /* DFGSpeculativeJIT32_64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 86880F1B14328BB900B08D42 /* DFGSpeculativeJIT32_64.cpp */; };
 		5333BBDC2110F7D9007618EC /* DFGSpeculativeJIT.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 86EC9DC21328DF82002B2AD7 /* DFGSpeculativeJIT.cpp */; };
 		5333BBDD2110F7E1007618EC /* DFGSpeculativeJIT64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 86880F4C14353B2100B08D42 /* DFGSpeculativeJIT64.cpp */; };
-		533699B327A3079200C9561D /* IsoMemoryAllocatorBase.h in Headers */ = {isa = PBXBuildFile; fileRef = 533699B127A3078600C9561D /* IsoMemoryAllocatorBase.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		5338E2A72396EFFB00C61BAD /* CheckpointOSRExitSideState.h in Headers */ = {isa = PBXBuildFile; fileRef = 5338E2A62396EFEC00C61BAD /* CheckpointOSRExitSideState.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		5338EBA323AB04B800382662 /* FTLSelectPredictability.h in Headers */ = {isa = PBXBuildFile; fileRef = 5338EBA223AB04A300382662 /* FTLSelectPredictability.h */; };
 		533D074422C2D797004D2FE2 /* FinalizationRegistryConstructor.h in Headers */ = {isa = PBXBuildFile; fileRef = 533D074322C2D797004D2FE2 /* FinalizationRegistryConstructor.h */; };
@@ -4140,8 +4139,6 @@
 		531EE7B922DE6BBB0030DA81 /* FinalizationRegistryPrototype.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FinalizationRegistryPrototype.h; sourceTree = "<group>"; };
 		531EE7BC22DE6EC60030DA81 /* FinalizationRegistryPrototype.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FinalizationRegistryPrototype.cpp; sourceTree = "<group>"; };
 		532631B3218777A5007B8191 /* JavaScriptCore.modulemap */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = "sourcecode.module-map"; path = JavaScriptCore.modulemap; sourceTree = "<group>"; };
-		533699B127A3078600C9561D /* IsoMemoryAllocatorBase.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IsoMemoryAllocatorBase.h; sourceTree = "<group>"; };
-		533699B227A3078700C9561D /* IsoMemoryAllocatorBase.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = IsoMemoryAllocatorBase.cpp; sourceTree = "<group>"; };
 		5338E2A62396EFEC00C61BAD /* CheckpointOSRExitSideState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CheckpointOSRExitSideState.h; sourceTree = "<group>"; };
 		5338EBA223AB04A300382662 /* FTLSelectPredictability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FTLSelectPredictability.h; path = ftl/FTLSelectPredictability.h; sourceTree = "<group>"; };
 		533B15DE1DC7F463004D500A /* WasmOps.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WasmOps.h; sourceTree = "<group>"; };
@@ -7225,8 +7222,6 @@
 				E3BF1BAD238AAED1003A1C2B /* IsoHeapCellType.h */,
 				E3C8ED4223A1DBC500131958 /* IsoInlinedHeapCellType.h */,
 				FE65B1502748601F00DB5B16 /* IsoInlinedHeapCellTypeInlines.h */,
-				533699B227A3078700C9561D /* IsoMemoryAllocatorBase.cpp */,
-				533699B127A3078600C9561D /* IsoMemoryAllocatorBase.h */,
 				0FDCE12C1FAFB4DE006F3901 /* IsoSubspace.cpp */,
 				0FDCE12B1FAFB4DE006F3901 /* IsoSubspace.h */,
 				0FD2FD9220B52BDC00F09441 /* IsoSubspaceInlines.h */,
@@ -11294,7 +11289,6 @@
 				E3BF1BAE238AAEDB003A1C2B /* IsoHeapCellType.h in Headers */,
 				E3C8ED4323A1DBCB00131958 /* IsoInlinedHeapCellType.h in Headers */,
 				FE65B1512748601F00DB5B16 /* IsoInlinedHeapCellTypeInlines.h in Headers */,
-				533699B327A3079200C9561D /* IsoMemoryAllocatorBase.h in Headers */,
 				0FDCE12D1FAFB4E5006F3901 /* IsoSubspace.h in Headers */,
 				0FD2FD9520B52BE200F09441 /* IsoSubspaceInlines.h in Headers */,
 				8B9F6D561D5912FA001C739F /* IterationKind.h in Headers */,

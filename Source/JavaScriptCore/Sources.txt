@@ -561,7 +561,6 @@ heap/HeapSnapshotBuilder.cpp
 heap/IncrementalSweeper.cpp
 heap/IsoCellSet.cpp
 heap/IsoHeapCellType.cpp
-heap/IsoMemoryAllocatorBase.cpp
 heap/IsoSubspace.cpp
 heap/JITStubRoutineSet.cpp
 heap/PreciseAllocation.cpp

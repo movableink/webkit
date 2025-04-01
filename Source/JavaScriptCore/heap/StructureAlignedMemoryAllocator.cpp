@@ -32,6 +32,19 @@
 
 #if CPU(ADDRESS64) && !ENABLE(STRUCTURE_ID_WITH_SHIFT)
 #include <wtf/NeverDestroyed.h>
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+#if !USE(SYSTEM_MALLOC)
+#include <bmalloc/bmalloc_heap.h>
+#include <bmalloc/bmalloc_heap_config.h>
+#include <bmalloc/bmalloc_heap_inlines.h>
+#include <bmalloc/bmalloc_heap_ref.h>
+#include <bmalloc/pas_page_sharing_pool.h>
+#include <bmalloc/pas_primitive_heap_ref.h>
+#include <bmalloc/pas_probabilistic_guard_malloc_allocator.h>
+#include <bmalloc/pas_scavenger.h>
+#include <bmalloc/pas_thread_local_cache.h>
+#endif
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 #endif
 
 #include <wtf/OSAllocator.h>
@@ -42,15 +55,8 @@
 
 namespace JSC {
 
-StructureAlignedMemoryAllocator::StructureAlignedMemoryAllocator(CString name)
-    : Base(name)
-{
-}
-
-StructureAlignedMemoryAllocator::~StructureAlignedMemoryAllocator()
-{
-    releaseMemoryFromSubclassDestructor();
-}
+StructureAlignedMemoryAllocator::StructureAlignedMemoryAllocator() = default;
+StructureAlignedMemoryAllocator::~StructureAlignedMemoryAllocator() = default;
 
 void StructureAlignedMemoryAllocator::dump(PrintStream& out) const
 {
@@ -75,6 +81,24 @@ void* StructureAlignedMemoryAllocator::tryReallocateMemory(void*, size_t)
 }
 
 #if CPU(ADDRESS64) && !ENABLE(STRUCTURE_ID_WITH_SHIFT)
+#if !USE(SYSTEM_MALLOC)
+
+static const bmalloc_type structureHeapType { BMALLOC_TYPE_INITIALIZER(MarkedBlock::blockSize, MarkedBlock::blockSize, "Structure Heap") };
+static pas_primitive_heap_ref structureHeap { BMALLOC_AUXILIARY_HEAP_REF_INITIALIZER(&structureHeapType) };
+
+void* StructureAlignedMemoryAllocator::tryAllocateAlignedMemory(size_t alignment, size_t size)
+{
+    ASSERT_UNUSED(alignment, alignment == MarkedBlock::blockSize);
+    ASSERT_UNUSED(size, size == MarkedBlock::blockSize);
+    return bmalloc_try_allocate_auxiliary_with_alignment_inline(&structureHeap, MarkedBlock::blockSize, MarkedBlock::blockSize, pas_maybe_compact_allocation_mode);
+}
+
+void StructureAlignedMemoryAllocator::freeAlignedMemory(void* ptr)
+{
+    bmalloc_deallocate_inline(ptr);
+}
+
+#else
 
 class StructureMemoryManager {
 public:
@@ -82,16 +106,6 @@ public:
     {
         // Don't use the first page because zero is used as the empty StructureID and the first allocation will conflict.
         m_usedBlocks.set(0);
-
-        uintptr_t mappedHeapSize = structureHeapAddressSize;
-        for (unsigned i = 0; i < 8; ++i) {
-            g_jscConfig.startOfStructureHeap = reinterpret_cast<uintptr_t>(OSAllocator::tryReserveUncommittedAligned(mappedHeapSize, structureHeapAddressSize, OSAllocator::FastMallocPages));
-            if (g_jscConfig.startOfStructureHeap)
-                break;
-            mappedHeapSize /= 2;
-        }
-        g_jscConfig.sizeOfStructureHeap = mappedHeapSize;
-        RELEASE_ASSERT(g_jscConfig.startOfStructureHeap && ((g_jscConfig.startOfStructureHeap & ~StructureID::structureIDMask) == g_jscConfig.startOfStructureHeap));
     }
 
     void* tryMallocStructureBlock()
@@ -157,35 +171,42 @@ private:
 
 static LazyNeverDestroyed<StructureMemoryManager> s_structureMemoryManager;
 
-void StructureAlignedMemoryAllocator::initializeStructureAddressSpace()
+void* StructureAlignedMemoryAllocator::tryAllocateAlignedMemory(size_t alignment, size_t size)
 {
-    static_assert(hasOneBitSet(structureHeapAddressSize));
-    s_structureMemoryManager.construct();
-}
-
-void* StructureAlignedMemoryAllocator::tryMallocBlock()
-{
+    ASSERT_UNUSED(alignment, alignment == MarkedBlock::blockSize);
+    ASSERT_UNUSED(size, size == MarkedBlock::blockSize);
     return s_structureMemoryManager->tryMallocStructureBlock();
 }
 
-void StructureAlignedMemoryAllocator::freeBlock(void* block)
+void StructureAlignedMemoryAllocator::freeAlignedMemory(void* block)
 {
     s_structureMemoryManager->freeStructureBlock(block);
 }
 
-void StructureAlignedMemoryAllocator::commitBlock(void* block)
-{
-    StructureMemoryManager::commitBlock(block);
-}
+#endif
 
-void StructureAlignedMemoryAllocator::decommitBlock(void* block)
+void StructureAlignedMemoryAllocator::initializeStructureAddressSpace()
 {
-    StructureMemoryManager::decommitBlock(block);
+    static_assert(hasOneBitSet(structureHeapAddressSize));
+    uintptr_t mappedHeapSize = structureHeapAddressSize;
+    for (unsigned i = 0; i < 8; ++i) {
+        g_jscConfig.startOfStructureHeap = reinterpret_cast<uintptr_t>(OSAllocator::tryReserveUncommittedAligned(mappedHeapSize, structureHeapAddressSize, OSAllocator::FastMallocPages));
+        if (g_jscConfig.startOfStructureHeap)
+            break;
+        mappedHeapSize /= 2;
+    }
+    g_jscConfig.sizeOfStructureHeap = mappedHeapSize;
+    RELEASE_ASSERT(g_jscConfig.startOfStructureHeap && ((g_jscConfig.startOfStructureHeap & ~StructureID::structureIDMask) == g_jscConfig.startOfStructureHeap));
+
+#if !USE(SYSTEM_MALLOC)
+    // Don't use the first page because zero is used as the empty StructureID and the first allocation will conflict.
+    bmalloc_force_auxiliary_heap_into_reserved_memory(&structureHeap, reinterpret_cast<uintptr_t>(g_jscConfig.startOfStructureHeap) + MarkedBlock::blockSize, reinterpret_cast<uintptr_t>(g_jscConfig.startOfStructureHeap) + g_jscConfig.sizeOfStructureHeap);
+#else
+    s_structureMemoryManager.construct();
+#endif
 }
 
 #else // not CPU(ADDRESS64)
-
-// FIXME: This is the same as IsoAlignedMemoryAllocator maybe we should just use that for 32-bit.
 
 void StructureAlignedMemoryAllocator::initializeStructureAddressSpace()
 {
@@ -193,24 +214,16 @@ void StructureAlignedMemoryAllocator::initializeStructureAddressSpace()
     g_jscConfig.sizeOfStructureHeap = UINTPTR_MAX;
 }
 
-void* StructureAlignedMemoryAllocator::tryMallocBlock()
+void* StructureAlignedMemoryAllocator::tryAllocateAlignedMemory(size_t alignment, size_t size)
 {
-    return tryFastAlignedMalloc(MarkedBlock::blockSize, MarkedBlock::blockSize);
+    ASSERT_UNUSED(alignment, alignment == MarkedBlock::blockSize);
+    ASSERT_UNUSED(size, size == MarkedBlock::blockSize);
+    return tryFastCompactAlignedMalloc(MarkedBlock::blockSize, MarkedBlock::blockSize);
 }
 
-void StructureAlignedMemoryAllocator::freeBlock(void* block)
+void StructureAlignedMemoryAllocator::freeAlignedMemory(void* block)
 {
     fastAlignedFree(block);
-}
-
-void StructureAlignedMemoryAllocator::commitBlock(void* block)
-{
-    WTF::fastCommitAlignedMemory(block, MarkedBlock::blockSize);
-}
-
-void StructureAlignedMemoryAllocator::decommitBlock(void* block)
-{
-    WTF::fastDecommitAlignedMemory(block, MarkedBlock::blockSize);
 }
 
 #endif // CPU(ADDRESS64)
