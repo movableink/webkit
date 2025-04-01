@@ -675,10 +675,6 @@ js/slow-stress [ Skip ]
 workers/wasm-hashset-many-2.html [ Skip ] # Timeout
 workers/wasm-hashset-many.html [ Skip ] # Timeout
 
-webkit.org/b/280498 workers/wasm-hashset.html [ Skip ] # Crash
-
-webkit.org/b/290650 workers/wasm-references.html [ Skip ] # Makes a subsequent test random crash
-
 #//////////////////////////////////////////////////////////////////////////////////////////
 # http
 #//////////////////////////////////////////////////////////////////////////////////////////
@@ -1321,8 +1317,7 @@ webkit.org/b/151759 fast/dom/Window/property-access-on-cached-window-after-frame
 
 fast/dom/HTMLInputElement/change-type-in-input-event-listener.html [ Skip ]
 
-webkit.org/b/227753 [ Debug ] fast/dom/Window/post-message-large-array-buffer-should-not-crash.html [ Pass Failure ]
-webkit.org/b/224735 [ Release ] fast/dom/Window/post-message-large-array-buffer-should-not-crash.html [ Skip ] # Crash
+webkit.org/b/227753 fast/dom/Window/post-message-large-array-buffer-should-not-crash.html [ Pass Failure ]
 
 fast/editing/recursive-reapply-edit-command-crash.html [ Pass Failure ]
 
@@ -1703,9 +1698,6 @@ storage/indexeddb/IDBKey-create-array-buffer-view-oom.html [ Skip ] # Slow
 storage/indexeddb/cursor-request-cycle-private.html [ Skip ] # Slow
 storage/indexeddb/cursor-request-cycle.html [ Skip ] # Slow
 
-storage/indexeddb/key-type-array-private.html [ Skip ] # Crash by stack overflow
-storage/indexeddb/key-type-array.html [ Skip ] # Crash by stack overflow
-
 storage/indexeddb/shared-memory-structured-clone.html [ Skip ] # Timeout
 storage/indexeddb/structured-clone-image-data-display-p3.html [ Failure ]
 
@@ -1857,7 +1849,7 @@ webkit.org/b/199186 fonts/use-typo-metrics-1.html [ Skip ]
 # content-visibility:auto is flaky
 webkit.org/b/277235 fast/dynamic/content-visibility-crash-with-continuation-and-table.html [ Skip ] # Pass Failure
 
-webkit.org/b/238491 fast/editing/apply-relative-font-style-change-crash-004.html [ Skip ] # Crash by stack overflow
+fast/editing/apply-relative-font-style-change-crash-004.html [ Failure ]
 
 webkit.org/b/238644 fast/events/mouse-click-events.html [ Skip ]
 
