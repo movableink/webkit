@@ -23,27 +23,28 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "RemoteLayerTreeEventDispatcher.h"
+#import "config.h"
+#import "RemoteLayerTreeEventDispatcher.h"
 
 #if PLATFORM(MAC) && ENABLE(SCROLLING_THREAD)
 
-#include "DisplayLink.h"
-#include "Logging.h"
-#include "NativeWebWheelEvent.h"
-#include "RemoteLayerTreeDrawingAreaProxyMac.h"
-#include "RemoteLayerTreeNode.h"
-#include "RemoteScrollingCoordinatorProxyMac.h"
-#include "RemoteScrollingTree.h"
-#include "WebEventConversion.h"
-#include "WebPageProxy.h"
-#include <WebCore/PlatformWheelEvent.h>
-#include <WebCore/ScrollingCoordinatorTypes.h>
-#include <WebCore/ScrollingNodeID.h>
-#include <WebCore/ScrollingThread.h>
-#include <WebCore/WheelEventDeltaFilter.h>
-#include <wtf/SystemTracing.h>
-#include <wtf/TZoneMallocInlines.h>
+#import "DisplayLink.h"
+#import "Logging.h"
+#import "NativeWebWheelEvent.h"
+#import "RemoteLayerTreeDrawingAreaProxyMac.h"
+#import "RemoteLayerTreeNode.h"
+#import "RemoteScrollingCoordinatorProxyMac.h"
+#import "RemoteScrollingTree.h"
+#import "WebEventConversion.h"
+#import "WebPageProxy.h"
+#import <QuartzCore/CALayer.h>
+#import <WebCore/PlatformWheelEvent.h>
+#import <WebCore/ScrollingCoordinatorTypes.h>
+#import <WebCore/ScrollingNodeID.h>
+#import <WebCore/ScrollingThread.h>
+#import <WebCore/WheelEventDeltaFilter.h>
+#import <wtf/SystemTracing.h>
+#import <wtf/TZoneMallocInlines.h>
 
 namespace WebKit {
 using namespace WebCore;
