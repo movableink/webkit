@@ -7809,3 +7809,5 @@ webkit.org/b/290804 [ Release ] editing/caret/caret-position-vertical-rl.html [ 
 webkit.org/b/290811 [ Debug ] imported/w3c/web-platform-tests/fetch/api/crashtests/huge-fetch.any.worker.html [ Pass Crash ]
 
 webkit.org/b/290824 fast/events/autoscroll-with-software-keyboard.html [ Pass Failure ]
+
+webkit.org/b/290855 imported/w3c/web-platform-tests/css/css-anchor-position/position-try-switch-from-fixed-anchor.html [ Pass Failure ]
