@@ -139,7 +139,7 @@ public:
     void searchInRequest(Inspector::Protocol::ErrorString&, const Inspector::Protocol::Network::RequestId&, const String& query, bool caseSensitive, bool isRegex, RefPtr<JSON::ArrayOf<Inspector::Protocol::GenericTypes::SearchMatch>>&);
 
 protected:
-    InspectorNetworkAgent(WebAgentContext&);
+    InspectorNetworkAgent(WebAgentContext&, uint32_t);
 
     virtual Inspector::Protocol::Network::LoaderId loaderIdentifier(DocumentLoader*) = 0;
     virtual Inspector::Protocol::Network::FrameId frameIdentifier(DocumentLoader*) = 0;

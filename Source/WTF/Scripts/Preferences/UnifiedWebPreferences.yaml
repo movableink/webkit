@@ -3911,6 +3911,19 @@ InspectorAttachmentSide:
     WebKit:
       default: 0
 
+InspectorMaximumResourcesContentSize:
+  type: uint32_t
+  status: embedder
+  defaultValue:
+    WebKitLegacy:
+      default: 200
+    WebKit:
+      "PLATFORM(WPE)": 50
+      default: 200
+    WebCore:
+      "PLATFORM(WPE)": 50
+      default: 200
+
 InspectorStartsAttached:
   type: bool
   status: embedder
