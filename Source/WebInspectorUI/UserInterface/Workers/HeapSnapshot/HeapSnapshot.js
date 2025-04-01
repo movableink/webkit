@@ -433,6 +433,8 @@ HeapSnapshot = class HeapSnapshot
 
     // Public
 
+    get imported() { return !this._targetId; }
+
     serialize()
     {
         return {

@@ -27,11 +27,11 @@ WI.HeapSnapshotProxy = class HeapSnapshotProxy extends WI.Object
 {
     constructor(target, snapshotObjectId, identifier, title, totalSize, totalObjectCount, liveSize, categories)
     {
-        console.assert(target instanceof WI.Target, target);
+        console.assert(!target || target instanceof WI.Target || target instanceof WI.ImportedTarget, target);
 
         super();
 
-        this._target = target;
+        this._target = target || null;
         this._proxyObjectId = snapshotObjectId;
 
         this._identifier = identifier;
@@ -78,7 +78,6 @@ WI.HeapSnapshotProxy = class HeapSnapshotProxy extends WI.Object
     get totalObjectCount() { return this._totalObjectCount; }
     get liveSize() { return this._liveSize; }
     get categories() { return this._categories; }
-    get imported() { return !this._target; }
     get invalid() { return this._proxyObjectId === 0; }
 
     get snapshotStringData()
@@ -89,6 +88,11 @@ WI.HeapSnapshotProxy = class HeapSnapshotProxy extends WI.Object
     set snapshotStringData(data)
     {
         this._snapshotStringData = data;
+    }
+
+    get imported()
+    {
+        return !this._target || this._target instanceof WI.ImportedTarget;
     }
 
     updateForCollectionEvent(event)

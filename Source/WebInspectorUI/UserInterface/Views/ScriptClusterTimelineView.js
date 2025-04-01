@@ -51,7 +51,7 @@ WI.ScriptClusterTimelineView = class ScriptClusterTimelineView extends WI.Cluste
         let targets = this.representedObject.targets;
 
         this._selectedTarget = null;
-        this._displayedTarget = targets.includes(WI.mainTarget) ? WI.mainTarget : (targets.firstValue || WI.assumingMainTarget());
+        this._displayedTarget = (!this.representedObject.imported && targets.includes(WI.mainTarget)) ? WI.mainTarget : (targets.firstValue || WI.assumingMainTarget());
 
         this._pathComponentForTarget = new Map(targets.map((target) => [target, this._createTargetPathComponent(target)]));
         this._sortTargetPathComponents();
@@ -147,7 +147,9 @@ WI.ScriptClusterTimelineView = class ScriptClusterTimelineView extends WI.Cluste
 
     restoreFromCookie(cookie)
     {
-        this._displayedTarget = WI.targetManager.targetForIdentifier(cookie[WI.ScriptClusterTimelineView.TargetIdentifierCookieKey]);
+        let targetId = cookie[WI.ScriptClusterTimelineView.TargetIdentifierCookieKey];
+        this._displayedTarget = this.representedObject.imported ? WI.ImportedTarget.forIdentifier(targetId) : WI.targetManager.targetForIdentifier(targetId);
+
         this._currentContentViewSetting.value = cookie[WI.ScriptClusterTimelineView.ViewIdentifierCookieKey];
         this._updateCurrentContentView();
     }
@@ -229,7 +231,7 @@ WI.ScriptClusterTimelineView = class ScriptClusterTimelineView extends WI.Cluste
 
         if (!this._selectedTarget) {
             console.assert(this._pathComponentForTarget.size >= 1, this._pathComponentForTarget);
-            let displayedTarget = this._pathComponentForTarget.has(WI.mainTarget) ? WI.mainTarget : this._pathComponentForTarget.firstKey;
+            let displayedTarget = (!this.representedObject.imported && this._pathComponentForTarget.has(WI.mainTarget)) ? WI.mainTarget : this._pathComponentForTarget.firstKey;
             if (displayedTarget !== this._displayedTarget) {
                 this._displayedTarget = displayedTarget;
                 this._updateCurrentContentView();

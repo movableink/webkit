@@ -52,6 +52,8 @@ WI.HeapSnapshotInstanceDataGridNode = class HeapSnapshotInstanceDataGridNode ext
 
     static logHeapSnapshotNode(node)
     {
+        console.assert(!node.imported, node);
+
         node.shortestGCRootPath((gcRootPath) => {
             let text = WI.UIString("Heap Snapshot Object (%s)").format("@" + node.id);
             let addSpecialUserLogClass = !gcRootPath.length;
@@ -154,7 +156,6 @@ WI.HeapSnapshotInstanceDataGridNode = class HeapSnapshotInstanceDataGridNode ext
         if (columnIdentifier === "className") {
             let {className, id, internal, isObjectType, isElementType} = this._node;
             let containerElement = document.createElement("span");
-            containerElement.addEventListener("contextmenu", this._contextMenuHandler.bind(this));
 
             let iconElement = containerElement.appendChild(document.createElement("img"));
             iconElement.classList.add("icon", WI.HeapSnapshotClusterContentView.iconStyleClassNameForClassName(className, internal, isObjectType, isElementType));
@@ -171,18 +172,25 @@ WI.HeapSnapshotInstanceDataGridNode = class HeapSnapshotInstanceDataGridNode ext
             let idElement = containerElement.appendChild(document.createElement("span"));
             idElement.classList.add("object-id");
             idElement.textContent = "@" + id;
-            idElement.addEventListener("click", WI.HeapSnapshotInstanceDataGridNode.logHeapSnapshotNode.bind(null, this._node));
-            idElement.addEventListener("mouseover", this._mouseoverHandler.bind(this));
 
             let spacerElement = containerElement.appendChild(document.createElement("span"));
             spacerElement.textContent = " ";
 
-            let rootClassName = this._node.target.type === WI.TargetType.Worker ? "DedicatedWorkerGlobalScope" : "Window";
-            if (className === rootClassName && this._node.dominatorNodeIdentifier === 0) {
-                containerElement.append(rootClassName, " ");
-                this._populateWindowPreview(containerElement);
-            } else
-                this._populatePreview(containerElement);
+            if (this._node.imported)
+                this._populateError(containerElement);
+            else {
+                let rootClassName = this._node.target.type === WI.TargetType.Worker ? "DedicatedWorkerGlobalScope" : "Window";
+                if (className === rootClassName && this._node.dominatorNodeIdentifier === 0) {
+                    containerElement.append(rootClassName, " ");
+                    this._populateWindowPreview(containerElement);
+                } else
+                    this._populatePreview(containerElement);
+
+                containerElement.addEventListener("contextmenu", this._contextMenuHandler.bind(this));
+
+                idElement.addEventListener("click", WI.HeapSnapshotInstanceDataGridNode.logHeapSnapshotNode.bind(null, this._node));
+                idElement.addEventListener("mouseover", this._mouseoverHandler.bind(this));
+            }
 
             return containerElement;
         }
@@ -238,6 +246,8 @@ WI.HeapSnapshotInstanceDataGridNode = class HeapSnapshotInstanceDataGridNode ext
 
     _getRemoteObject(callback)
     {
+        console.assert(!this._node.imported, this._node);
+
         const objectGroup = undefined;
         WI.heapManager.getRemoteObject(this._node, objectGroup, (error, remoteObjectPayload) => {
             if (error) {
@@ -317,13 +327,15 @@ WI.HeapSnapshotInstanceDataGridNode = class HeapSnapshotInstanceDataGridNode ext
                     return;
                 }
 
-                this._populateRemoteObject(WI.RemoteObject.fromPrimitiveValue(href));
+                this._populateRemoteObject(containerElement, WI.RemoteObject.fromPrimitiveValue(href));
             });
         });
     }
 
     _populatePreview(containerElement)
     {
+        console.assert(!this._node.imported, this._node);
+
         WI.heapManager.getPreview(this._node, (error, string, functionDetails, objectPreviewPayload) => {
             if (error) {
                 this._populateError(containerElement);
@@ -332,9 +344,9 @@ WI.HeapSnapshotInstanceDataGridNode = class HeapSnapshotInstanceDataGridNode ext
 
             if (string) {
                 if (this._node.className === "BigInt")
-                    this._populateRemoteObject(WI.RemoteObject.createBigIntFromDescriptionString(string + "n"));
+                    this._populateRemoteObject(containerElement, WI.RemoteObject.createBigIntFromDescriptionString(string + "n"));
                 else
-                    this._populateRemoteObject(WI.RemoteObject.fromPrimitiveValue(string));
+                    this._populateRemoteObject(containerElement, WI.RemoteObject.fromPrimitiveValue(string));
                 return;
             }
 
@@ -393,7 +405,7 @@ WI.HeapSnapshotInstanceDataGridNode = class HeapSnapshotInstanceDataGridNode ext
 
     _populateRemoteObject(containerElement, remoteObject)
     {
-        let remoteObjectElement = WI.FormattedValue.createElementForRemoteObject(primitiveRemoteObject);
+        let remoteObjectElement = WI.FormattedValue.createElementForRemoteObject(remoteObject);
 
         this._classNameElementTextContent = remoteObjectElement.textContent;
         this.clearCachedFilterableData();
@@ -403,6 +415,8 @@ WI.HeapSnapshotInstanceDataGridNode = class HeapSnapshotInstanceDataGridNode ext
 
     _mouseoverHandler(event)
     {
+        console.assert(!this._node.imported, this._node);
+
         let targetFrame = WI.Rect.rectFromClientRect(event.target.getBoundingClientRect());
         if (!targetFrame.size.width && !targetFrame.size.height)
             return;

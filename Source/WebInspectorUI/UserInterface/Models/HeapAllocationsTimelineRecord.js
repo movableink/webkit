@@ -44,14 +44,12 @@ WI.HeapAllocationsTimelineRecord = class HeapAllocationsTimelineRecord extends W
         // it is not perfect but does what we want. It asynchronously creates
         // a heap snapshot at the right time, and insert it into the active
         // recording, which on an import should be the newly imported recording.
-        let {timestamp, title, snapshotStringData} = json;
+        let {target, timestamp, title, snapshotStringData} = json;
 
-        return await new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => {
             let workerProxy = WI.HeapSnapshotWorkerProxy.singleton();
             workerProxy.createImportedSnapshot(snapshotStringData, title, ({objectId, snapshot: serializedSnapshot}) => {
-                // FIXME: <https://webkit.org/b/287738> support exporting and importing data from worker targets
-                const target = null;
-                let snapshot = WI.HeapSnapshotProxy.deserialize(target, objectId, serializedSnapshot);
+                let snapshot = WI.HeapSnapshotProxy.deserialize(target ? WI.ImportedTarget.import(target) : null, objectId, serializedSnapshot);
                 snapshot.snapshotStringData = snapshotStringData;
                 resolve(new WI.HeapAllocationsTimelineRecord(timestamp, snapshot));
             });
@@ -60,9 +58,8 @@ WI.HeapAllocationsTimelineRecord = class HeapAllocationsTimelineRecord extends W
 
     toJSON()
     {
-        // FIXME: <https://webkit.org/b/287738> support exporting and importing data from worker targets
-
         return {
+            target: this._heapSnapshot.target.exportData(),
             type: this.type,
             timestamp: this._timestamp,
             title: WI.TimelineTabContentView.displayNameForRecord(this),

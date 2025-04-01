@@ -47,8 +47,7 @@ WI.TimelineRecording = class TimelineRecording extends WI.Object
         this._exportDataMarkers = null;
         this._exportDataRecords = null;
         this._exportDataMemoryPressureEvents = null;
-        this._exportDataSampleStackTraces = null;
-        this._exportDataSampleDurations = null;
+        this._exportDataSamplesForTarget = new Map;
 
         for (let type of WI.TimelineManager.availableTimelineTypes()) {
             let timeline = WI.Timeline.create(type);
@@ -71,10 +70,7 @@ WI.TimelineRecording = class TimelineRecording extends WI.Object
 
     static async import(identifier, json, displayName)
     {
-        // FIXME: <https://webkit.org/b/287738> support exporting and importing data from worker targets
-        let target = WI.assumingMainTarget();
-
-        let {startTime, endTime, discontinuities, instrumentTypes, records, markers, memoryPressureEvents, sampleStackTraces, sampleDurations} = json;
+        let {startTime, endTime, discontinuities, instrumentTypes, records, markers, memoryPressureEvents, samples} = json;
         let importedDisplayName = WI.UIString("Imported - %s").format(displayName);
         let instruments = instrumentTypes.map((type) => WI.Instrument.createForTimelineType(type));
         let recording = new WI.TimelineRecording(identifier, importedDisplayName, instruments);
@@ -85,9 +81,13 @@ WI.TimelineRecording = class TimelineRecording extends WI.Object
         recording._endTime = endTime;
         recording._discontinuities = discontinuities;
 
-        recording.updateCallingContextTrees(target, sampleStackTraces, sampleDurations);
-
-        let topDownCallingContextTree = undefined;
+        if (samples) {
+            for (let {target, stackTraces, durations} of samples)
+                recording.updateCallingContextTrees(WI.ImportedTarget.import(target), stackTraces, durations);
+        } else if (json.sampleStackTraces && json.sampleDurations) {
+            // COMPATIBILITY: `samples` replaced `sampleStackTraces` and `sampleDurations`.
+            recording.updateCallingContextTrees(WI.assumingMainTarget(), json.sampleStackTraces, json.sampleDurations);
+        }
 
         for (let recordJSON of records) {
             let record = await WI.TimelineRecord.fromJSON(recordJSON);
@@ -95,11 +95,9 @@ WI.TimelineRecording = class TimelineRecording extends WI.Object
                 recording.addRecord(record);
 
                 if (record instanceof WI.ScriptTimelineRecord) {
-                    if (topDownCallingContextTree === undefined) {
-                        let scriptTimeline = recording.timelineForRecordType(WI.TimelineRecord.Type.Script);
-                        console.assert(scriptTimeline);
-                        topDownCallingContextTree = scriptTimeline?.callingContextTree(target, WI.CallingContextTree.Type.TopDown) || null;
-                    }
+                    let scriptTimeline = recording.timelineForRecordType(WI.TimelineRecord.Type.Script);
+                    let topDownCallingContextTree = scriptTimeline?.callingContextTree(record.target || WI.assumingMainTarget(), WI.CallingContextTree.Type.TopDown);
+                    console.assert(topDownCallingContextTree, scriptTimeline);
                     if (topDownCallingContextTree)
                         record.profilePayload = topDownCallingContextTree.toCPUProfilePayload(record.startTime, record.endTime);
                 }
@@ -144,8 +142,7 @@ WI.TimelineRecording = class TimelineRecording extends WI.Object
             records: this._exportDataRecords,
             markers: this._exportDataMarkers,
             memoryPressureEvents: this._exportDataMemoryPressureEvents,
-            sampleStackTraces: this._exportDataSampleStackTraces,
-            sampleDurations: this._exportDataSampleDurations,
+            samples: Array.from(this._exportDataSamplesForTarget.values()),
         };
     }
 
@@ -248,8 +245,7 @@ WI.TimelineRecording = class TimelineRecording extends WI.Object
         this._exportDataMarkers = [];
         this._exportDataRecords = [];
         this._exportDataMemoryPressureEvents = [];
-        this._exportDataSampleStackTraces = [];
-        this._exportDataSampleDurations = [];
+        this._exportDataSamplesForTarget.clear();
 
         for (var timeline of this._timelines.values())
             timeline.reset(suppressEvents);
@@ -426,10 +422,16 @@ WI.TimelineRecording = class TimelineRecording extends WI.Object
 
     updateCallingContextTrees(target, stackTraces, sampleDurations)
     {
-        // FIXME: <https://webkit.org/b/287738> support exporting and importing data from worker targets
-        if (target === WI.mainTarget) {
-            this._exportDataSampleStackTraces.pushAll(stackTraces);
-            this._exportDataSampleDurations.pushAll(sampleDurations);
+        if (target === WI.mainTarget || WI.settings.experimentalEnableWorkerTimelineRecording.value) {
+            let exportDataSamples = this._exportDataSamplesForTarget.getOrInitialize(target, () => {
+                return {
+                    target: target.exportData(),
+                    stackTraces: [],
+                    durations: [],
+                };
+            });
+            exportDataSamples.stackTraces.pushAll(stackTraces);
+            exportDataSamples.durations.pushAll(sampleDurations);
         }
 
         let scriptTimeline = this._timelines.get(WI.TimelineRecord.Type.Script);

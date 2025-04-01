@@ -66,7 +66,6 @@ WI.HeapSnapshotWorkerProxy = class HeapSnapshotWorkerProxy extends WI.Object
 
     createImportedSnapshot(snapshotStringData, title, callback)
     {
-        // FIXME: <https://webkit.org/b/287738> support exporting and importing data from worker targets
         const targetId = null;
         this.performAction("createSnapshot", targetId, snapshotStringData, title, callback);
     }

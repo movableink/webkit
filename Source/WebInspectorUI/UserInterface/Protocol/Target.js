@@ -171,6 +171,18 @@ WI.Target = class Target extends WI.Object
         });
     }
 
+    // Import / Export
+
+    exportData()
+    {
+        // Only expected to be used by timeline recordings for `WI.ImportedTarget`.
+        return {
+            identifier: this._identifier,
+            type: this._type,
+            name: this.displayName,
+        };
+    }
+
     // Public
 
     get parentTarget() { return this._parentTarget; }

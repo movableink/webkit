@@ -276,17 +276,18 @@ WI.HeapSnapshotObjectGraphDataGridTree = class HeapSnapshotObjectGraphDataGridTr
                 this.appendChild(new WI.HeapSnapshotInstanceDataGridNode(instance, this));
         });
 
-        let rootClassName = this.heapSnapshot.target.type === WI.TargetType.Worker ? "DedicatedWorkerGlobalScope" : "Window";
-        this.heapSnapshot.instancesWithClassName(rootClassName, (instances) => {
-            for (let instance of instances) {
-                // FIXME: Why is the window.Window Function classified as a Window?
-                // In any case, ignore objects not dominated by the root, as they
-                // are probably not what we want.
-                if (instance.dominatorNodeIdentifier === 0)
-                    this.appendChild(new WI.HeapSnapshotInstanceDataGridNode(instance, this));
-            }
+        for (let rootClassName of ["Window", "DedicatedWorkerGlobalScope"]) {
+            this.heapSnapshot.instancesWithClassName(rootClassName, (instances) => {
+                for (let instance of instances) {
+                    // FIXME: Why is the window.Window Function classified as a Window?
+                    // In any case, ignore objects not dominated by the root, as they
+                    // are probably not what we want.
+                    if (instance.dominatorNodeIdentifier === 0)
+                        this.appendChild(new WI.HeapSnapshotInstanceDataGridNode(instance, this));
+                }
 
-            this.didPopulate();
-        });
+                this.didPopulate();
+            });
+        }
     }
 };

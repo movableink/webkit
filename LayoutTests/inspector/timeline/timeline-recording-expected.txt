@@ -49,10 +49,7 @@ Export Data:
     "<filtered>"
   ],
   "memoryPressureEvents": [],
-  "sampleStackTraces": [
-    "<filtered>"
-  ],
-  "sampleDurations": [
+  "samples": [
     "<filtered>"
   ]
 }

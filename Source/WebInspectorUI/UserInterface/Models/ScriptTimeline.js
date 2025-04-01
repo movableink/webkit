@@ -32,6 +32,15 @@ WI.ScriptTimeline = class ScriptTimeline extends WI.Timeline
         return Array.from(this._callingContextTreesForTarget.keys());
     }
 
+    get imported()
+    {
+        for (let target of this._callingContextTreesForTarget.keys()) {
+            if (target instanceof WI.ImportedTarget)
+                return true;
+        }
+        return false;
+    }
+
     reset(suppressEvents)
     {
         this._callingContextTreesForTarget = new Map;
