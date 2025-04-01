@@ -83,38 +83,18 @@ final public class WebPage {
         _configuration: Configuration,
         _navigationDecider navigationDecider: (any NavigationDeciding)?,
         _dialogPresenter dialogPresenter: (any DialogPresenting)?,
-        _downloadCoordinator downloadCoordinator: (any DownloadCoordinator)?
     ) {
         self.configuration = _configuration
 
-        let (downloadStream, downloadContinuation) = AsyncStream.makeStream(of: DownloadEvent.self)
-        downloads = Downloads(source: downloadStream)
-
-        backingDownloadDelegate = WKDownloadDelegateAdapter(
-            downloadProgressContinuation: downloadContinuation,
-            downloadCoordinator: downloadCoordinator
-        )
         backingUIDelegate = WKUIDelegateAdapter(
             dialogPresenter: dialogPresenter
         )
         backingNavigationDelegate = WKNavigationDelegateAdapter(
-            downloadProgressContinuation: downloadContinuation,
             navigationDecider: navigationDecider
         )
 
         backingUIDelegate.owner = self
         backingNavigationDelegate.owner = self
-        backingDownloadDelegate.owner = self
-    }
-
-    @_spi(Private)
-    public convenience init(
-        configuration: Configuration = Configuration(),
-        navigationDecider: some NavigationDeciding,
-        dialogPresenter: some DialogPresenting,
-        downloadCoordinator: some DownloadCoordinator
-    ) {
-        self.init(_configuration: configuration, _navigationDecider: navigationDecider, _dialogPresenter: dialogPresenter, _downloadCoordinator: downloadCoordinator)
     }
 
     public convenience init(
@@ -122,53 +102,27 @@ final public class WebPage {
         navigationDecider: some NavigationDeciding,
         dialogPresenter: some DialogPresenting
     ) {
-        self.init(_configuration: configuration, _navigationDecider: navigationDecider, _dialogPresenter: dialogPresenter, _downloadCoordinator: nil)
-    }
-
-    @_spi(Private)
-    public convenience init(
-        configuration: Configuration = Configuration(),
-        navigationDecider: some NavigationDeciding,
-        downloadCoordinator: some DownloadCoordinator
-    ) {
-        self.init(_configuration: configuration, _navigationDecider: navigationDecider, _dialogPresenter: nil, _downloadCoordinator: downloadCoordinator)
-    }
-
-    @_spi(Private)
-    public convenience init(
-        configuration: Configuration = Configuration(),
-        dialogPresenter: some DialogPresenting,
-        downloadCoordinator: some DownloadCoordinator
-    ) {
-        self.init(_configuration: configuration, _navigationDecider: nil, _dialogPresenter: dialogPresenter, _downloadCoordinator: downloadCoordinator)
+        self.init(_configuration: configuration, _navigationDecider: navigationDecider, _dialogPresenter: dialogPresenter)
     }
 
     public convenience init(
         configuration: Configuration = Configuration(),
         dialogPresenter: some DialogPresenting
     ) {
-        self.init(_configuration: configuration, _navigationDecider: nil, _dialogPresenter: dialogPresenter, _downloadCoordinator: nil)
+        self.init(_configuration: configuration, _navigationDecider: nil, _dialogPresenter: dialogPresenter)
     }
 
     public convenience init(
         configuration: Configuration = Configuration(),
         navigationDecider: some NavigationDeciding
     ) {
-        self.init(_configuration: configuration, _navigationDecider: navigationDecider, _dialogPresenter: nil, _downloadCoordinator: nil)
-    }
-
-    @_spi(Private)
-    public convenience init(
-        configuration: Configuration = Configuration(),
-        downloadCoordinator: some DownloadCoordinator
-    ) {
-        self.init(_configuration: configuration, _navigationDecider: nil, _dialogPresenter: nil, _downloadCoordinator: downloadCoordinator)
+        self.init(_configuration: configuration, _navigationDecider: navigationDecider, _dialogPresenter: nil)
     }
 
     public convenience init(
         configuration: Configuration = Configuration(),
     ) {
-        self.init(_configuration: configuration, _navigationDecider: nil, _dialogPresenter: nil, _downloadCoordinator: nil)
+        self.init(_configuration: configuration, _navigationDecider: nil, _dialogPresenter: nil)
     }
 
     // MARK: Properties
@@ -180,9 +134,6 @@ final public class WebPage {
     /// A new navigation begins when a `NavigationEvent` has a type of `startedProvisionalNavigation`, and is finished once a
     /// navigation event with a type of `.finished`, `.failedProvisionalNavigation`, or `.failed`.
     public internal(set) var currentNavigationEvent: WebPage.NavigationEvent? = nil
-
-    @_spi(Private)
-    public let downloads: Downloads
 
     let configuration: Configuration
 
@@ -301,7 +252,6 @@ final public class WebPage {
 
     let backingUIDelegate: WKUIDelegateAdapter
     private let backingNavigationDelegate: WKNavigationDelegateAdapter
-    let backingDownloadDelegate: WKDownloadDelegateAdapter
 
 #if os(macOS)
     @_spi(CrossImportOverlay)
@@ -548,23 +498,6 @@ final public class WebPage {
     /// - Parameter state: The new capture state the page should use.
     public func setMicrophoneCaptureState(_ state: WKMediaCaptureState) async {
         await backingWebView.setMicrophoneCaptureState(state)
-    }
-
-    // MARK: Downloads
-
-    // For these to work, a custom implementation of `DownloadCoordinator.destination(forDownload:response:suggestedFilename:) async -> URL?`
-    // must be provided so that the downloads are not immediately cancelled.
-
-    @_spi(Private)
-    public func startDownload(using request: URLRequest) async -> WebPage.DownloadID {
-        let cocoaDownload = await backingWebView.startDownload(using: request)
-        return WebPage.DownloadID(cocoaDownload)
-    }
-
-    @_spi(Private)
-    public func resumeDownload(fromResumeData resumeData: Data) async -> WebPage.DownloadID {
-        let cocoaDownload = await backingWebView.resumeDownload(fromResumeData: resumeData)
-        return WebPage.DownloadID(cocoaDownload)
     }
 
     // MARK: Private helper functions

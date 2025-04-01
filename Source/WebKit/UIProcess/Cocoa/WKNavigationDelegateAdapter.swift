@@ -31,17 +31,12 @@ fileprivate struct DefaultNavigationDecider: WebPage.NavigationDeciding {
 
 @MainActor
 final class WKNavigationDelegateAdapter: NSObject, WKNavigationDelegate {
-    init(
-        downloadProgressContinuation: AsyncStream<WebPage.DownloadEvent>.Continuation,
-        navigationDecider: (any WebPage.NavigationDeciding)?
-    ) {
-        self.downloadProgressContinuation = downloadProgressContinuation
+    init(navigationDecider: (any WebPage.NavigationDeciding)?) {
         self.navigationDecider = navigationDecider ?? DefaultNavigationDecider()
     }
 
     weak var owner: WebPage? = nil
 
-    private let downloadProgressContinuation: AsyncStream<WebPage.DownloadEvent>.Continuation
     private var navigationDecider: any WebPage.NavigationDeciding
 
     // MARK: Navigation progress reporting
@@ -52,11 +47,6 @@ final class WKNavigationDelegateAdapter: NSObject, WKNavigationDelegate {
         owner?.backingWebView._do(afterNextPresentationUpdate: { [weak owner] in
             owner?.currentNavigationEvent = navigation
         })
-    }
-
-    private func yieldDownloadProgress(kind: WebPage.DownloadEvent.Kind, download: WKDownload) {
-        let downloadEvent = WebPage.DownloadEvent(kind: kind, download: .init(download))
-        downloadProgressContinuation.yield(downloadEvent)
     }
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -81,24 +71,6 @@ final class WKNavigationDelegateAdapter: NSObject, WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: any Error) {
         yieldNavigationProgress(kind: .failed(underlyingError: error), cocoaNavigation: navigation)
-    }
-
-    // MARK: Downloads
-
-    func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
-        download.delegate = owner?.backingDownloadDelegate
-        yieldDownloadProgress(kind: .started, download: download)
-    }
-
-    func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
-        download.delegate = owner?.backingDownloadDelegate
-        yieldDownloadProgress(kind: .started, download: download)
-    }
-
-    @objc(_webView:contextMenuDidCreateDownload:)
-    func _webView(_ webView: WKWebView!, contextMenuDidCreateDownload download: WKDownload!) {
-        download.delegate = owner?.backingDownloadDelegate
-        yieldDownloadProgress(kind: .started, download: download)
     }
 
     // MARK: Back-forward list support

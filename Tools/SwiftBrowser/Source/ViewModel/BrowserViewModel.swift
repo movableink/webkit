@@ -64,14 +64,13 @@ final class BrowserViewModel {
         var configuration = WebPage.Configuration()
         configuration.deviceSensorAuthorization = WebPage.DeviceSensorAuthorization(decisionHandler: Self.decideSensorAuthorization(permission:frame:origin:))
 
-        self.page = WebPage(configuration: configuration, navigationDecider: self.navigationDecider, dialogPresenter: self.dialogPresenter, downloadCoordinator: self.downloadCoordinator)
+        self.page = WebPage(configuration: configuration, navigationDecider: self.navigationDecider, dialogPresenter: self.dialogPresenter)
 
         self.navigationDecider.owner = self
         self.dialogPresenter.owner = self
     }
 
     let page: WebPage
-    let downloadCoordinator = DownloadCoordinator()
 
     private let dialogPresenter = DialogPresenter()
     private let navigationDecider = NavigationDecider()

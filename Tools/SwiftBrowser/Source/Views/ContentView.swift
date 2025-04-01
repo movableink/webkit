@@ -211,7 +211,6 @@ struct ContentView: View {
     let initialRequest: URLRequest
 
     @State private var findNavigatorIsPresented = false
-    @State private var downloadsSheetPresented = false
 
     @Environment(\.openWindow) private var openWindow
     @Environment(BrowserViewModel.self) private var viewModel
@@ -237,11 +236,6 @@ struct ContentView: View {
                 .webViewFindNavigator(isPresented: $findNavigatorIsPresented)
                 .task {
                     // FIXME: Observe navigation changes.
-                }
-                .task {
-                    for await event in viewModel.page.downloads {
-                        viewModel.downloadCoordinator.didReceiveDownloadEvent(event)
-                    }
                 }
                 .onAppear {
                     viewModel.displayedURL = initialRequest.url!.absoluteString
@@ -271,10 +265,6 @@ struct ContentView: View {
                 } message: { dialog in
                     DialogMessageView(dialog: dialog)
                 }
-                .sheet(isPresented: $downloadsSheetPresented) {
-                    DownloadsList(downloads: viewModel.downloadCoordinator.downloads)
-                        .presentationDetents([.medium, .large])
-                }
                 .scrollBounceBehavior(scrollBounceBehaviorBasedOnSize == true ? .basedOnSize : .automatic)
                 .webViewContentBackground(backgroundHidden == true ? .hidden : .automatic)
 #if os(macOS)
@@ -283,13 +273,6 @@ struct ContentView: View {
                         Button("Open Link in New Window") {
                             let request = URLRequest(url: url)
                             openWindow(value: CodableURLRequest(request))
-                        }
-
-                        Button("Download Linked File") {
-                            let request = URLRequest(url: url)
-                            Task {
-                                await viewModel.page.startDownload(using: request)
-                            }
                         }
                     } else {
                         if let previousItem = viewModel.page.backForwardList.backList.last {
@@ -329,19 +312,6 @@ struct ContentView: View {
                         ) {
                             viewModel.page.load($0)
                         }
-
-                        #if os(iOS)
-
-                        Spacer()
-
-                        Button {
-                            downloadsSheetPresented.toggle()
-                        } label: {
-                            Label("Downloads", systemImage: "square.and.arrow.down")
-                                .labelStyle(.iconOnly)
-                        }
-
-                        #endif
 
                         Spacer()
 
