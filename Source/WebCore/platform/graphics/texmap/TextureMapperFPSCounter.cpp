@@ -24,6 +24,7 @@
 #include "TextureMapperFPSCounter.h"
 
 #include "TextureMapper.h"
+#include <wtf/SystemTracing.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/WTFString.h>
 
@@ -48,8 +49,14 @@ TextureMapperFPSCounter::TextureMapperFPSCounter()
 
 void TextureMapperFPSCounter::updateFPSAndDisplay(TextureMapper& textureMapper, const FloatPoint& location, const TransformationMatrix& matrix)
 {
-    if (!m_isShowingFPS)
+    if (!m_isShowingFPS) {
+#if USE(SYSPROF_CAPTURE)
+        if (!SysprofAnnotator::singletonIfCreated())
+            return;
+#else
         return;
+#endif
+    }
 
     m_frameCount++;
     Seconds delta = MonotonicTime::now() - m_fpsTimestamp;
@@ -59,7 +66,10 @@ void TextureMapperFPSCounter::updateFPSAndDisplay(TextureMapper& textureMapper, 
         m_fpsTimestamp += delta;
     }
 
-    textureMapper.drawNumber(m_lastFPS, Color::black, location, matrix);
+    WTFSetCounter(FPS, m_lastFPS);
+
+    if (m_isShowingFPS)
+        textureMapper.drawNumber(m_lastFPS, Color::black, location, matrix);
 }
 
 } // namespace WebCore

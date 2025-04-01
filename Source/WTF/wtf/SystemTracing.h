@@ -370,6 +370,8 @@ enum WTFOSSignpostType {
 #define WTFEmitSignpostIndirectlyWithType(type, pointer, name, timeDelta, format, ...) \
     SUPPRESS_UNCOUNTED_LOCAL os_log(WTFSignpostLogHandle(), "type=%d name=%d p=%" PRIuPTR " ts=%llu " format, type, WTFOSSignpostName ## name, reinterpret_cast<uintptr_t>(pointer), WTFCurrentContinuousTime(timeDelta), ##__VA_ARGS__)
 
+#define WTFSetCounter(name, value) do { } while (0)
+
 #elif USE(SYSPROF_CAPTURE)
 
 #define WTFEmitSignpost(pointer, name, ...) \
@@ -415,6 +417,12 @@ enum WTFOSSignpostType {
 #define WTFBeginSignpostAlwaysWithTimeDelta(pointer, name, timeDelta, ...) WTFBeginSignpostWithTimeDelta((pointer), name, (timeDelta), ##__VA_ARGS__)
 #define WTFEndSignpostAlwaysWithTimeDelta(pointer, name, timeDelta, ...) WTFEndSignpostWithTimeDelta((pointer), name, (timeDelta), ##__VA_ARGS__)
 
+#define WTFSetCounter(name, value) \
+    do { \
+        if (auto* annotator = SysprofAnnotator::singletonIfCreated()) \
+            annotator->setCounter(std::span(_STRINGIFY(name)), value); \
+    } while (0)
+
 #else
 
 #define WTFEmitSignpost(pointer, name, ...) do { } while (0)
@@ -432,5 +440,7 @@ enum WTFOSSignpostType {
 #define WTFEmitSignpostAlwaysWithTimeDelta(pointer, name, ...) do { } while (0)
 #define WTFBeginSignpostAlwaysWithTimeDelta(pointer, name, ...) do { } while (0)
 #define WTFEndSignpostAlwaysWithTimeDelta(pointer, name, ...) do { } while (0)
+
+#define WTFSetCounter(name, value) do { } while (0)
 
 #endif
