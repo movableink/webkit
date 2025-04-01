@@ -578,7 +578,7 @@ void AXIsolatedTree::objectChangedIgnoredState(const AccessibilityObject& object
 #endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
 }
 
-void AXIsolatedTree::updatePropertiesForSelfAndDescendants(AccessibilityObject& axObject, const AXPropertySet& properties)
+void AXIsolatedTree::updatePropertiesForSelfAndDescendants(AccessibilityObject& axObject, const AXPropertySet& propertySet)
 {
     AXTRACE("AXIsolatedTree::updatePropertiesForSelfAndDescendants"_s);
     ASSERT(isMainThread());
@@ -586,16 +586,12 @@ void AXIsolatedTree::updatePropertiesForSelfAndDescendants(AccessibilityObject& 
     if (isUpdatingSubtree())
         return;
 
-    AXPropertySet propertySet;
-    for (const auto& property : properties)
-        propertySet.add(property);
-
     Accessibility::enumerateDescendantsIncludingIgnored<AXCoreObject>(axObject, true, [&propertySet, this] (auto& descendant) {
         queueNodeUpdate(descendant.objectID(), { propertySet });
     });
 }
 
-void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const AXPropertySet& properties)
+void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const AXPropertySet& propertySet)
 {
     AXTRACE("AXIsolatedTree::updateNodeProperties"_s);
     AXLOG(makeString("Updating properties for objectID "_s, axObject.objectID().loggingString(), ": "_s));
@@ -604,12 +600,13 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
     if (isUpdatingSubtree())
         return;
 
-    AXPropertyMap propertyMap;
-    for (const auto& property : properties) {
+    AXPropertyVector properties;
+    properties.reserveInitialCapacity(propertySet.size());
+    for (const auto& property : propertySet) {
         AXLOG(makeString("Property: "_s, property));
         switch (property) {
         case AXProperty::AccessKey:
-            propertyMap.set(AXProperty::AccessKey, axObject.accessKey().isolatedCopy());
+            properties.append({ AXProperty::AccessKey, axObject.accessKey().isolatedCopy() });
             break;
         case AXProperty::AccessibilityText: {
             Vector<AccessibilityText> texts;
@@ -617,250 +614,250 @@ void AXIsolatedTree::updateNodeProperties(AccessibilityObject& axObject, const A
             auto axTextValue = texts.map([] (const auto& text) -> AccessibilityText {
                 return { text.text.isolatedCopy(), text.textSource };
             });
-            propertyMap.set(AXProperty::AccessibilityText, axTextValue);
+            properties.append({ AXProperty::AccessibilityText, WTFMove(axTextValue) });
             break;
         }
         case AXProperty::ValueAutofillButtonType:
-            propertyMap.set(AXProperty::ValueAutofillButtonType, static_cast<int>(axObject.valueAutofillButtonType()));
-            propertyMap.set(AXProperty::IsValueAutofillAvailable, axObject.isValueAutofillAvailable());
+            properties.append({ AXProperty::ValueAutofillButtonType, static_cast<int>(axObject.valueAutofillButtonType()) });
+            properties.append({ AXProperty::IsValueAutofillAvailable, axObject.isValueAutofillAvailable() });
             break;
         case AXProperty::AXColumnCount:
-            propertyMap.set(AXProperty::AXColumnCount, axObject.axColumnCount());
+            properties.append({ AXProperty::AXColumnCount, axObject.axColumnCount() });
             break;
         case AXProperty::BrailleLabel:
-            propertyMap.set(AXProperty::BrailleLabel, axObject.brailleLabel().isolatedCopy());
+            properties.append({ AXProperty::BrailleLabel, axObject.brailleLabel().isolatedCopy() });
             break;
         case AXProperty::BrailleRoleDescription:
-            propertyMap.set(AXProperty::BrailleRoleDescription, axObject.brailleRoleDescription().isolatedCopy());
+            properties.append({ AXProperty::BrailleRoleDescription, axObject.brailleRoleDescription().isolatedCopy() });
             break;
         case AXProperty::AXColumnIndex:
-            propertyMap.set(AXProperty::AXColumnIndex, axObject.axColumnIndex());
+            properties.append({ AXProperty::AXColumnIndex, axObject.axColumnIndex() });
             break;
         case AXProperty::CanSetFocusAttribute:
-            propertyMap.set(AXProperty::CanSetFocusAttribute, axObject.canSetFocusAttribute());
+            properties.append({ AXProperty::CanSetFocusAttribute, axObject.canSetFocusAttribute() });
             break;
         case AXProperty::CanSetSelectedAttribute:
-            propertyMap.set(AXProperty::CanSetSelectedAttribute, axObject.canSetSelectedAttribute());
+            properties.append({ AXProperty::CanSetSelectedAttribute, axObject.canSetSelectedAttribute() });
             break;
         case AXProperty::CanSetValueAttribute:
-            propertyMap.set(AXProperty::CanSetValueAttribute, axObject.canSetValueAttribute());
+            properties.append({ AXProperty::CanSetValueAttribute, axObject.canSetValueAttribute() });
             break;
         case AXProperty::Cells:
-            propertyMap.set(AXProperty::Cells, axIDs(axObject.cells()));
+            properties.append({ AXProperty::Cells, axIDs(axObject.cells()) });
             break;
         case AXProperty::CellSlots:
-            propertyMap.set(AXProperty::CellSlots, axObject.cellSlots());
+            properties.append({ AXProperty::CellSlots, axObject.cellSlots() });
             break;
         case AXProperty::ColumnIndex:
-            propertyMap.set(AXProperty::ColumnIndex, axObject.columnIndex());
+            properties.append({ AXProperty::ColumnIndex, axObject.columnIndex() });
             break;
         case AXProperty::ColumnIndexRange:
-            propertyMap.set(AXProperty::ColumnIndexRange, axObject.columnIndexRange());
+            properties.append({ AXProperty::ColumnIndexRange, axObject.columnIndexRange() });
             break;
         case AXProperty::CurrentState:
-            propertyMap.set(AXProperty::CurrentState, static_cast<int>(axObject.currentState()));
+            properties.append({ AXProperty::CurrentState, static_cast<int>(axObject.currentState()) });
             break;
         case AXProperty::DatetimeAttributeValue:
-            propertyMap.set(AXProperty::DatetimeAttributeValue, axObject.datetimeAttributeValue().isolatedCopy());
+            properties.append({ AXProperty::DatetimeAttributeValue, axObject.datetimeAttributeValue().isolatedCopy() });
             break;
         case AXProperty::DisclosedRows:
-            propertyMap.set(AXProperty::DisclosedRows, axIDs(axObject.disclosedRows()));
+            properties.append({ AXProperty::DisclosedRows, axIDs(axObject.disclosedRows()) });
             break;
         case AXProperty::DocumentLinks:
-            propertyMap.set(AXProperty::DocumentLinks, axIDs(axObject.documentLinks()));
+            properties.append({ AXProperty::DocumentLinks, axIDs(axObject.documentLinks()) });
             break;
         case AXProperty::ExplicitOrientation:
-            propertyMap.set(AXProperty::ExplicitOrientation, axObject.explicitOrientation());
+            properties.append({ AXProperty::ExplicitOrientation, axObject.explicitOrientation() });
             break;
         case AXProperty::ExtendedDescription:
-            propertyMap.set(AXProperty::ExtendedDescription, axObject.extendedDescription().isolatedCopy());
+            properties.append({ AXProperty::ExtendedDescription, axObject.extendedDescription().isolatedCopy() });
             break;
         case AXProperty::HasClickHandler:
-            propertyMap.set(AXProperty::HasClickHandler, axObject.hasClickHandler());
+            properties.append({ AXProperty::HasClickHandler, axObject.hasClickHandler() });
             break;
         case AXProperty::IdentifierAttribute:
-            propertyMap.set(AXProperty::IdentifierAttribute, axObject.identifierAttribute().isolatedCopy());
+            properties.append({ AXProperty::IdentifierAttribute, axObject.identifierAttribute().isolatedCopy() });
             break;
         case AXProperty::InsideLink:
-            propertyMap.set(AXProperty::InsideLink, axObject.insideLink());
+            properties.append({ AXProperty::InsideLink, axObject.insideLink() });
             break;
         case AXProperty::InternalLinkElement: {
             auto* linkElement = axObject.internalLinkElement();
-            propertyMap.set(AXProperty::InternalLinkElement, linkElement ? std::optional { linkElement->objectID() } : std::nullopt);
+            properties.append({ AXProperty::InternalLinkElement, linkElement ? std::optional { linkElement->objectID() } : std::nullopt });
             break;
         }
         case AXProperty::IsChecked:
             ASSERT(axObject.supportsCheckedState());
-            propertyMap.set(AXProperty::IsChecked, axObject.isChecked());
-            propertyMap.set(AXProperty::ButtonState, axObject.checkboxOrRadioValue());
+            properties.append({ AXProperty::IsChecked, axObject.isChecked() });
+            properties.append({ AXProperty::ButtonState, axObject.checkboxOrRadioValue() });
             break;
         case AXProperty::IsColumnHeader:
-            propertyMap.set(AXProperty::IsColumnHeader, axObject.isColumnHeader());
+            properties.append({ AXProperty::IsColumnHeader, axObject.isColumnHeader() });
             break;
         case AXProperty::IsEnabled:
-            propertyMap.set(AXProperty::IsEnabled, axObject.isEnabled());
+            properties.append({ AXProperty::IsEnabled, axObject.isEnabled() });
             break;
         case AXProperty::IsExpanded:
-            propertyMap.set(AXProperty::IsExpanded, axObject.isExpanded());
+            properties.append({ AXProperty::IsExpanded, axObject.isExpanded() });
             break;
         case AXProperty::IsIgnored:
-            propertyMap.set(AXProperty::IsIgnored, axObject.isIgnored());
+            properties.append({ AXProperty::IsIgnored, axObject.isIgnored() });
             break;
         case AXProperty::IsRequired:
-            propertyMap.set(AXProperty::IsRequired, axObject.isRequired());
+            properties.append({ AXProperty::IsRequired, axObject.isRequired() });
             break;
         case AXProperty::IsSelected:
-            propertyMap.set(AXProperty::IsSelected, axObject.isSelected());
+            properties.append({ AXProperty::IsSelected, axObject.isSelected() });
             break;
         case AXProperty::IsRowHeader:
-            propertyMap.set(AXProperty::IsRowHeader, axObject.isRowHeader());
+            properties.append({ AXProperty::IsRowHeader, axObject.isRowHeader() });
             break;
         case AXProperty::IsVisible:
-            propertyMap.set(AXProperty::IsVisible, axObject.isVisible());
+            properties.append({ AXProperty::IsVisible, axObject.isVisible() });
             break;
         case AXProperty::MaxValueForRange:
-            propertyMap.set(AXProperty::MaxValueForRange, axObject.maxValueForRange());
+            properties.append({ AXProperty::MaxValueForRange, axObject.maxValueForRange() });
             break;
         case AXProperty::MinValueForRange:
-            propertyMap.set(AXProperty::MinValueForRange, axObject.minValueForRange());
+            properties.append({ AXProperty::MinValueForRange, axObject.minValueForRange() });
             break;
         case AXProperty::NameAttribute:
-            propertyMap.set(AXProperty::NameAttribute, axObject.nameAttribute().isolatedCopy());
+            properties.append({ AXProperty::NameAttribute, axObject.nameAttribute().isolatedCopy() });
             break;
         case AXProperty::PosInSet:
-            propertyMap.set(AXProperty::PosInSet, axObject.posInSet());
+            properties.append({ AXProperty::PosInSet, axObject.posInSet() });
             break;
         case AXProperty::RemoteFramePlatformElement:
-            propertyMap.set(AXProperty::RemoteFramePlatformElement, axObject.remoteFramePlatformElement());
+            properties.append({ AXProperty::RemoteFramePlatformElement, axObject.remoteFramePlatformElement() });
             break;
         case AXProperty::StringValue:
-            propertyMap.set(AXProperty::StringValue, axObject.stringValue().isolatedCopy());
+            properties.append({ AXProperty::StringValue, axObject.stringValue().isolatedCopy() });
             break;
         case AXProperty::HasRemoteFrameChild:
-            propertyMap.set(AXProperty::HasRemoteFrameChild, axObject.hasRemoteFrameChild());
+            properties.append({ AXProperty::HasRemoteFrameChild, axObject.hasRemoteFrameChild() });
             break;
         case AXProperty::RoleDescription:
-            propertyMap.set(AXProperty::RoleDescription, axObject.roleDescription().isolatedCopy());
+            properties.append({ AXProperty::RoleDescription, axObject.roleDescription().isolatedCopy() });
             break;
         case AXProperty::RowIndex:
-            propertyMap.set(AXProperty::RowIndex, axObject.rowIndex());
+            properties.append({ AXProperty::RowIndex, axObject.rowIndex() });
             break;
         case AXProperty::RowIndexRange:
-            propertyMap.set(AXProperty::RowIndexRange, axObject.rowIndexRange());
+            properties.append({ AXProperty::RowIndexRange, axObject.rowIndexRange() });
             break;
         case AXProperty::AXRowIndex:
-            propertyMap.set(AXProperty::AXRowIndex, axObject.axRowIndex());
+            properties.append({ AXProperty::AXRowIndex, axObject.axRowIndex() });
             break;
         case AXProperty::CellScope:
-            propertyMap.set(AXProperty::CellScope, axObject.cellScope().isolatedCopy());
+            properties.append({ AXProperty::CellScope, axObject.cellScope().isolatedCopy() });
             break;
         case AXProperty::ScreenRelativePosition:
-            propertyMap.set(AXProperty::ScreenRelativePosition, axObject.screenRelativePosition());
+            properties.append({ AXProperty::ScreenRelativePosition, axObject.screenRelativePosition() });
             break;
         case AXProperty::SelectedTextRange:
-            propertyMap.set(AXProperty::SelectedTextRange, axObject.selectedTextRange());
+            properties.append({ AXProperty::SelectedTextRange, axObject.selectedTextRange() });
             break;
         case AXProperty::SetSize:
-            propertyMap.set(AXProperty::SetSize, axObject.setSize());
+            properties.append({ AXProperty::SetSize, axObject.setSize() });
             break;
         case AXProperty::SortDirection:
-            propertyMap.set(AXProperty::SortDirection, static_cast<int>(axObject.sortDirection()));
+            properties.append({ AXProperty::SortDirection, static_cast<int>(axObject.sortDirection()) });
             break;
         case AXProperty::SpeakAs:
-            propertyMap.set(AXProperty::SpeakAs, axObject.speakAs());
+            properties.append({ AXProperty::SpeakAs, axObject.speakAs() });
             break;
         case AXProperty::KeyShortcuts:
-            propertyMap.set(AXProperty::SupportsKeyShortcuts, axObject.supportsKeyShortcuts());
-            propertyMap.set(AXProperty::KeyShortcuts, axObject.keyShortcuts().isolatedCopy());
+            properties.append({ AXProperty::SupportsKeyShortcuts, axObject.supportsKeyShortcuts() });
+            properties.append({ AXProperty::KeyShortcuts, axObject.keyShortcuts().isolatedCopy() });
             break;
         case AXProperty::SupportsARIAOwns:
-            propertyMap.set(AXProperty::SupportsARIAOwns, axObject.supportsARIAOwns());
+            properties.append({ AXProperty::SupportsARIAOwns, axObject.supportsARIAOwns() });
             break;
         case AXProperty::SupportsExpanded:
-            propertyMap.set(AXProperty::SupportsExpanded, axObject.supportsExpanded());
+            properties.append({ AXProperty::SupportsExpanded, axObject.supportsExpanded() });
             break;
         case AXProperty::SupportsDragging:
-            propertyMap.set(AXProperty::SupportsDragging, axObject.supportsDragging());
+            properties.append({ AXProperty::SupportsDragging, axObject.supportsDragging() });
             break;
         case AXProperty::SupportsPosInSet:
-            propertyMap.set(AXProperty::SupportsPosInSet, axObject.supportsPosInSet());
+            properties.append({ AXProperty::SupportsPosInSet, axObject.supportsPosInSet() });
             break;
         case AXProperty::SupportsSetSize:
-            propertyMap.set(AXProperty::SupportsSetSize, axObject.supportsSetSize());
+            properties.append({ AXProperty::SupportsSetSize, axObject.supportsSetSize() });
             break;
         case AXProperty::TextInputMarkedTextMarkerRange: {
             std::pair<Markable<AXID>, CharacterRange> value;
             auto range = axObject.textInputMarkedTextMarkerRange();
             if (auto characterRange = range.characterRange(); range && characterRange)
                 value = { range.start().objectID(), *characterRange };
-            propertyMap.set(AXProperty::TextInputMarkedTextMarkerRange, value);
+            properties.append({ AXProperty::TextInputMarkedTextMarkerRange, WTFMove(value) });
             break;
         }
 #if ENABLE(AX_THREAD_TEXT_APIS)
         case AXProperty::BackgroundColor:
-            propertyMap.set(AXProperty::BackgroundColor, axObject.backgroundColor());
+            properties.append({ AXProperty::BackgroundColor, axObject.backgroundColor() });
             break;
         case AXProperty::Font:
-            propertyMap.set(AXProperty::Font, axObject.font());
+            properties.append({ AXProperty::Font, axObject.font() });
             break;
         case AXProperty::HasLinethrough:
-            propertyMap.set(AXProperty::HasLinethrough, axObject.lineDecorationStyle().hasLinethrough);
+            properties.append({ AXProperty::HasLinethrough, axObject.lineDecorationStyle().hasLinethrough });
             break;
         case AXProperty::HasTextShadow:
-            propertyMap.set(AXProperty::HasTextShadow, axObject.hasTextShadow());
+            properties.append({ AXProperty::HasTextShadow, axObject.hasTextShadow() });
             break;
         case AXProperty::HasUnderline:
-            propertyMap.set(AXProperty::HasUnderline, axObject.lineDecorationStyle().hasUnderline);
+            properties.append({ AXProperty::HasUnderline, axObject.lineDecorationStyle().hasUnderline });
             break;
         case AXProperty::IsSubscript:
-            propertyMap.set(AXProperty::IsSubscript, axObject.isSubscript());
+            properties.append({ AXProperty::IsSubscript, axObject.isSubscript() });
             break;
         case AXProperty::IsSuperscript:
-            propertyMap.set(AXProperty::IsSuperscript, axObject.isSuperscript());
+            properties.append({ AXProperty::IsSuperscript, axObject.isSuperscript() });
             break;
         case AXProperty::LinethroughColor:
-            propertyMap.set(AXProperty::LinethroughColor, axObject.lineDecorationStyle().linethroughColor);
+            properties.append({ AXProperty::LinethroughColor, axObject.lineDecorationStyle().linethroughColor });
             break;
         case AXProperty::TextColor:
-            propertyMap.set(AXProperty::TextColor, axObject.textColor());
+            properties.append({ AXProperty::TextColor, axObject.textColor() });
             break;
         case AXProperty::TextRuns:
-            propertyMap.set(AXProperty::TextRuns, axObject.textRuns());
+            properties.append({ AXProperty::TextRuns, axObject.textRuns() });
             break;
         case AXProperty::UnderlineColor:
-            propertyMap.set(AXProperty::UnderlineColor, axObject.lineDecorationStyle().underlineColor);
+            properties.append({ AXProperty::UnderlineColor, axObject.lineDecorationStyle().underlineColor });
             break;
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
         case AXProperty::Title:
-            propertyMap.set(AXProperty::Title, axObject.title().isolatedCopy());
+            properties.append({ AXProperty::Title, axObject.title().isolatedCopy() });
             break;
         case AXProperty::URL:
-            propertyMap.set(AXProperty::URL, std::make_shared<URL>(axObject.url().isolatedCopy()));
+            properties.append({ AXProperty::URL, std::make_shared<URL>(axObject.url().isolatedCopy()) });
             break;
         case AXProperty::ValueForRange:
-            propertyMap.set(AXProperty::ValueForRange, axObject.valueForRange());
+            properties.append({ AXProperty::ValueForRange, axObject.valueForRange() });
             break;
         default:
             break;
         }
     }
 
-    if (propertyMap.isEmpty())
+    if (properties.isEmpty())
         return;
 
     Locker locker { m_changeLogLock };
-    m_pendingPropertyChanges.append({ axObject.objectID(), propertyMap });
+    m_pendingPropertyChanges.append({ axObject.objectID(), WTFMove(properties) });
 }
 
-void AXIsolatedTree::overrideNodeProperties(AXID axID, AXPropertyMap&& propertyMap)
+void AXIsolatedTree::overrideNodeProperties(AXID axID, AXPropertyVector&& properties)
 {
     ASSERT(isMainThread());
 
-    if (propertyMap.isEmpty())
+    if (properties.isEmpty())
         return;
 
     Locker locker { m_changeLogLock };
-    m_pendingPropertyChanges.append({ axID, WTFMove(propertyMap) });
+    m_pendingPropertyChanges.append({ axID, WTFMove(properties) });
 }
 
 void AXIsolatedTree::updateDependentProperties(AccessibilityObject& axObject)
@@ -1192,12 +1189,12 @@ void AXIsolatedTree::updateFrame(AXID axID, IntRect&& newFrame)
     if (isUpdatingSubtree())
         return;
 
-    AXPropertyMap propertyMap;
-    propertyMap.set(AXProperty::RelativeFrame, WTFMove(newFrame));
+    AXPropertyVector properties;
+    properties.append({ AXProperty::RelativeFrame, WTFMove(newFrame) });
     // We can clear the initially-cached rough frame, since the object's frame has been cached
-    propertyMap.set(AXProperty::InitialFrameRect, FloatRect());
+    properties.append({ AXProperty::InitialFrameRect, FloatRect() });
     Locker locker { m_changeLogLock };
-    m_pendingPropertyChanges.append({ axID, WTFMove(propertyMap) });
+    m_pendingPropertyChanges.append({ axID, WTFMove(properties) });
 }
 
 void AXIsolatedTree::updateRootScreenRelativePosition()
@@ -1373,7 +1370,8 @@ void AXIsolatedTree::applyPendingChanges()
     for (auto& change : m_pendingPropertyChanges) {
         if (RefPtr object = objectForID(change.axID)) {
             for (auto& property : change.properties)
-                object->setProperty(property.key, WTFMove(property.value));
+                object->setProperty(property.first, WTFMove(property.second));
+            object->shrinkPropertiesAfterUpdates();
         }
     }
     m_pendingPropertyChanges.clear();

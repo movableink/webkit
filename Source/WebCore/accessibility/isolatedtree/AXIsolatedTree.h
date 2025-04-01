@@ -310,12 +310,12 @@ using AXPropertyValueVariant = std::variant<std::nullptr_t, Markable<AXID>, Stri
     , AXTextRunLineID
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
 >;
-using AXPropertyMap = UncheckedKeyHashMap<AXProperty, AXPropertyValueVariant, IntHash<AXProperty>, WTF::StrongEnumHashTraits<AXProperty>>;
-WTF::TextStream& operator<<(WTF::TextStream&, const AXPropertyMap&);
+using AXPropertyVector = Vector<std::pair<AXProperty, AXPropertyValueVariant>>;
+WTF::TextStream& operator<<(WTF::TextStream&, const AXPropertyVector&);
 
 struct AXPropertyChange {
     AXID axID; // ID of the object whose properties changed.
-    AXPropertyMap properties; // Changed properties.
+    AXPropertyVector properties; // Changed properties.
 };
 
 struct NodeUpdateOptions {
@@ -398,7 +398,7 @@ public:
     void updatePropertiesForSelfAndDescendants(AccessibilityObject&, const AXPropertySet&);
     void updateFrame(AXID, IntRect&&);
     void updateRootScreenRelativePosition();
-    void overrideNodeProperties(AXID, AXPropertyMap&&);
+    void overrideNodeProperties(AXID, AXPropertyVector&&);
 
     double loadingProgress();
     void updateLoadingProgress(double);

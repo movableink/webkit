@@ -103,7 +103,7 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
 
     auto reserveCapacityAndCacheBaseProperties = [&] (unsigned sizeToReserve) {
         if (sizeToReserve)
-            m_propertyMap.reserveInitialCapacity(sizeToReserve);
+            m_properties.reserveInitialCapacity(sizeToReserve);
 
         // These properties are cached for all objects, ignored and unignored.
         setProperty(AXProperty::HasClickHandler, object.hasClickHandler());
@@ -469,11 +469,12 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     setProperty(AXProperty::IsPressed, object.isPressed());
     setProperty(AXProperty::IsSelectedOptionActive, object.isSelectedOptionActive());
     setProperty(AXProperty::LocalizedActionVerb, object.localizedActionVerb().isolatedCopy());
-#endif
-
+#endif // USE(ATSPI)
     setObjectProperty(AXProperty::InternalLinkElement, object.internalLinkElement());
 
     initializePlatformProperties(axObject);
+
+    shrinkPropertiesAfterUpdates();
 }
 
 bool AXIsolatedObject::canBeMultilineTextField(AccessibilityObject& object)
@@ -497,12 +498,12 @@ AccessibilityObject* AXIsolatedObject::associatedAXObject() const
     return axObjectCache ? axObjectCache->objectForID(objectID()) : nullptr;
 }
 
-void AXIsolatedObject::setMathscripts(AXProperty propertyName, AccessibilityObject& object)
+void AXIsolatedObject::setMathscripts(AXProperty property, AccessibilityObject& object)
 {
     AccessibilityMathMultiscriptPairs pairs;
-    if (propertyName == AXProperty::MathPrescripts)
+    if (property == AXProperty::MathPrescripts)
         object.mathPrescripts(pairs);
-    else if (propertyName == AXProperty::MathPostscripts)
+    else if (property == AXProperty::MathPostscripts)
         object.mathPostscripts(pairs);
     
     size_t mathSize = pairs.size();
@@ -512,23 +513,23 @@ void AXIsolatedObject::setMathscripts(AXProperty propertyName, AccessibilityObje
     auto idPairs = pairs.map([](auto& mathPair) {
         return std::pair { mathPair.first ? Markable { mathPair.first->objectID() } : std::nullopt, mathPair.second ? Markable { mathPair.second->objectID() } : std::nullopt };
     });
-    setProperty(propertyName, WTFMove(idPairs));
+    setProperty(property, WTFMove(idPairs));
 }
 
-void AXIsolatedObject::setObjectProperty(AXProperty propertyName, AXCoreObject* object)
+void AXIsolatedObject::setObjectProperty(AXProperty property, AXCoreObject* object)
 {
-    setProperty(propertyName, object ? Markable { object->objectID() } : std::nullopt);
+    setProperty(property, object ? Markable { object->objectID() } : std::nullopt);
 }
 
-void AXIsolatedObject::setObjectVectorProperty(AXProperty propertyName, const AccessibilityChildrenVector& objects)
+void AXIsolatedObject::setObjectVectorProperty(AXProperty property, const AccessibilityChildrenVector& objects)
 {
-    setProperty(propertyName, axIDs(objects));
+    setProperty(property, axIDs(objects));
 }
 
-void AXIsolatedObject::setProperty(AXProperty propertyName, AXPropertyValueVariant&& value)
+void AXIsolatedObject::setProperty(AXProperty property, AXPropertyValueVariant&& value)
 {
     if (std::holds_alternative<bool>(value)) {
-        switch (propertyName) {
+        switch (property) {
         case AXProperty::CanSetFocusAttribute:
             setPropertyFlag(AXPropertyFlag::CanSetFocusAttribute, std::get<bool>(value));
             return;
@@ -600,7 +601,7 @@ void AXIsolatedObject::setProperty(AXProperty propertyName, AXPropertyValueVaria
         [&](String& typedValue) {
 #if !ENABLE(AX_THREAD_TEXT_APIS)
             // We use a null stringValue to indicate when the string value is different than the text content.
-            if (propertyName == AXProperty::StringValue)
+            if (property == AXProperty::StringValue)
                 return typedValue == emptyString(); // Only compares empty, not null
 #endif // !ENABLE(AX_THREAD_TEXT_APIS)
             return typedValue.isEmpty(); // null or empty
@@ -613,7 +614,7 @@ void AXIsolatedObject::setProperty(AXProperty propertyName, AXPropertyValueVaria
         [](uint64_t typedValue) { return !typedValue; },
         [](AccessibilityButtonState& typedValue) { return typedValue == AccessibilityButtonState::Off; },
         [&](Color& typedValue) {
-            if (propertyName == AXProperty::ColorValue)
+            if (property == AXProperty::ColorValue)
                 return typedValue == Color::black;
             return typedValue.toColorTypeLossy<SRGBA<uint8_t>>() == Color().toColorTypeLossy<SRGBA<uint8_t>>();
         },
@@ -662,9 +663,9 @@ void AXIsolatedObject::setProperty(AXProperty propertyName, AXPropertyValueVaria
         }
     );
     if (isDefaultValue)
-        m_propertyMap.remove(propertyName);
+        removePropertyInVector(property);
     else
-        m_propertyMap.set(propertyName, value);
+        setPropertyInVector(property, WTFMove(value));
 }
 
 void AXIsolatedObject::detachRemoteParts(AccessibilityDetachmentType)
@@ -752,12 +753,11 @@ bool AXIsolatedObject::isDetachedFromParent()
 
 AXIsolatedObject* AXIsolatedObject::cellForColumnAndRow(unsigned columnIndex, unsigned rowIndex)
 {
-    // AXProperty::CellSlots can be big, so make sure not to copy it.
-    auto cellSlotsIterator = m_propertyMap.find(AXProperty::CellSlots);
-    if (cellSlotsIterator == m_propertyMap.end())
+    size_t index = indexOfProperty(AXProperty::CellSlots);
+    if (index == notFound)
         return nullptr;
 
-    auto cellID = WTF::switchOn(cellSlotsIterator->value,
+    auto cellID = WTF::switchOn(m_properties[index].second,
         [&] (Vector<Vector<Markable<AXID>>>& cellSlots) -> std::optional<AXID> {
             if (rowIndex >= cellSlots.size() || columnIndex >= cellSlots[rowIndex].size())
                 return std::nullopt;
@@ -799,7 +799,7 @@ void AXIsolatedObject::mathPostscripts(AccessibilityMathMultiscriptPairs& pairs)
 
 std::optional<AXCoreObject::AccessibilityChildrenVector> AXIsolatedObject::mathRadicand()
 {
-    if (m_propertyMap.contains(AXProperty::MathRadicand)) {
+    if (indexOfProperty(AXProperty::MathRadicand) != notFound) {
         Vector<Ref<AXCoreObject>> radicand;
         fillChildrenVectorForProperty(AXProperty::MathRadicand, radicand);
         return { radicand };
@@ -970,14 +970,14 @@ void AXIsolatedObject::setSelectedTextRange(CharacterRange&& range)
 
 SRGBA<uint8_t> AXIsolatedObject::colorValue() const
 {
-    auto it = m_propertyMap.find(AXProperty::ColorValue);
-    if (it == m_propertyMap.end()) {
+    size_t index = indexOfProperty(AXProperty::ColorValue);
+    if (index == notFound) {
         // Don't fallback to returning the default Color() value, as that is transparent black,
         // but we want to return opaque black as a default for this property.
         return Color::black;
     }
 
-    return WTF::switchOn(it->value,
+    return WTF::switchOn(m_properties[index].second,
         [] (const Color& typedValue) -> SRGBA<uint8_t> { return typedValue.toColorTypeLossy<SRGBA<uint8_t>>(); },
         [] (const auto&) -> SRGBA<uint8_t> {
             ASSERT_NOT_REACHED();
@@ -1001,73 +1001,89 @@ AXIsolatedObject* AXIsolatedObject::accessibilityHitTest(const IntPoint& point) 
     return tree()->objectForID(axID);
 }
 
-IntPoint AXIsolatedObject::intPointAttributeValue(AXProperty propertyName) const
+IntPoint AXIsolatedObject::intPointAttributeValue(AXProperty property) const
 {
-    auto value = m_propertyMap.get(propertyName);
-    return WTF::switchOn(value,
-        [] (IntPoint& typedValue) -> IntPoint { return typedValue; },
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
+        return IntPoint();
+
+    return WTF::switchOn(m_properties[index].second,
+        [] (const IntPoint& typedValue) -> IntPoint { return typedValue; },
         [] (auto&) { return IntPoint(); }
     );
 }
 
-AXIsolatedObject* AXIsolatedObject::objectAttributeValue(AXProperty propertyName) const
+AXIsolatedObject* AXIsolatedObject::objectAttributeValue(AXProperty property) const
 {
-    auto value = m_propertyMap.get(propertyName);
-    auto axID = WTF::switchOn(value,
-        [] (Markable<AXID>& typedValue) -> std::optional<AXID> { return typedValue; },
-        [] (auto&) { return std::optional<AXID> { }; }
-    );
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
+        return nullptr;
 
-    return tree()->objectForID(axID);
+    return tree()->objectForID(WTF::switchOn(m_properties[index].second,
+        [] (const Markable<AXID>& typedValue) -> std::optional<AXID> { return typedValue; },
+        [] (auto&) { return std::optional<AXID> { }; }
+    ));
 }
 
 template<typename T>
-T AXIsolatedObject::rectAttributeValue(AXProperty propertyName) const
+T AXIsolatedObject::rectAttributeValue(AXProperty property) const
 {
-    auto value = m_propertyMap.get(propertyName);
-    return WTF::switchOn(value,
-        [] (T& typedValue) -> T { return typedValue; },
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
+        return T { };
+
+    return WTF::switchOn(m_properties[index].second,
+        [] (const T& typedValue) -> T { return typedValue; },
         [] (auto&) { return T { }; }
     );
 }
 
 template<typename T>
-Vector<T> AXIsolatedObject::vectorAttributeValue(AXProperty propertyName) const
+Vector<T> AXIsolatedObject::vectorAttributeValue(AXProperty property) const
 {
-    auto value = m_propertyMap.get(propertyName);
-    return WTF::switchOn(value,
-        [] (Vector<T>& typedValue) -> Vector<T> { return typedValue; },
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
+        return { };
+
+    return WTF::switchOn(m_properties[index].second,
+        [] (const Vector<T>& typedValue) -> Vector<T> { return typedValue; },
         [] (auto&) { return Vector<T>(); }
     );
 }
 
 template<typename T>
-OptionSet<T> AXIsolatedObject::optionSetAttributeValue(AXProperty propertyName) const
+OptionSet<T> AXIsolatedObject::optionSetAttributeValue(AXProperty property) const
 {
-    auto value = m_propertyMap.get(propertyName);
-    return WTF::switchOn(value,
-        [] (OptionSet<T>& typedValue) -> OptionSet<T> { return typedValue; },
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
+        return OptionSet<T>();
+
+    return WTF::switchOn(m_properties[index].second,
+        [] (const OptionSet<T>& typedValue) -> OptionSet<T> { return typedValue; },
         [] (auto&) { return OptionSet<T>(); }
     );
 }
 
-std::pair<unsigned, unsigned> AXIsolatedObject::indexRangePairAttributeValue(AXProperty propertyName) const
+std::pair<unsigned, unsigned> AXIsolatedObject::indexRangePairAttributeValue(AXProperty property) const
 {
-    auto value = m_propertyMap.get(propertyName);
-    return WTF::switchOn(value,
-        [] (std::pair<unsigned, unsigned>& typedValue) -> std::pair<unsigned, unsigned> { return typedValue; },
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
+        return std::pair<unsigned, unsigned>(0, 1);
+
+    return WTF::switchOn(m_properties[index].second,
+        [] (const std::pair<unsigned, unsigned>& typedValue) -> std::pair<unsigned, unsigned> { return typedValue; },
         [] (auto&) { return std::pair<unsigned, unsigned>(0, 1); }
     );
 }
 
 template<typename T>
-std::optional<T> AXIsolatedObject::optionalAttributeValue(AXProperty propertyName) const
+std::optional<T> AXIsolatedObject::optionalAttributeValue(AXProperty property) const
 {
-    auto it = m_propertyMap.find(propertyName);
-    if (it == m_propertyMap.end())
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
         return std::nullopt;
 
-    return WTF::switchOn(it->value,
+    return WTF::switchOn(m_properties[index].second,
         [] (const T& typedValue) -> std::optional<T> { return typedValue; },
         [] (const auto&) -> std::optional<T> {
             ASSERT_NOT_REACHED();
@@ -1076,20 +1092,26 @@ std::optional<T> AXIsolatedObject::optionalAttributeValue(AXProperty propertyNam
     );
 }
 
-uint64_t AXIsolatedObject::uint64AttributeValue(AXProperty propertyName) const
+uint64_t AXIsolatedObject::uint64AttributeValue(AXProperty property) const
 {
-    auto value = m_propertyMap.get(propertyName);
-    return WTF::switchOn(value,
-        [] (uint64_t& typedValue) -> uint64_t { return typedValue; },
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
+        return 0;
+
+    return WTF::switchOn(m_properties[index].second,
+        [] (const uint64_t& typedValue) -> uint64_t { return typedValue; },
         [] (auto&) -> uint64_t { return 0; }
     );
 }
 
-URL AXIsolatedObject::urlAttributeValue(AXProperty propertyName) const
+URL AXIsolatedObject::urlAttributeValue(AXProperty property) const
 {
-    auto value = m_propertyMap.get(propertyName);
-    return WTF::switchOn(value,
-        [] (std::shared_ptr<URL>& typedValue) -> URL {
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
+        return URL();
+
+    return WTF::switchOn(m_properties[index].second,
+        [] (const std::shared_ptr<URL>& typedValue) -> URL {
             ASSERT(typedValue.get());
             return *typedValue.get();
         },
@@ -1097,11 +1119,14 @@ URL AXIsolatedObject::urlAttributeValue(AXProperty propertyName) const
     );
 }
 
-Path AXIsolatedObject::pathAttributeValue(AXProperty propertyName) const
+Path AXIsolatedObject::pathAttributeValue(AXProperty property) const
 {
-    auto value = m_propertyMap.get(propertyName);
-    return WTF::switchOn(value,
-        [] (std::shared_ptr<Path>& typedValue) -> Path {
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
+        return Path();
+
+    return WTF::switchOn(m_properties[index].second,
+        [] (const std::shared_ptr<Path>& typedValue) -> Path {
             ASSERT(typedValue.get());
             return *typedValue.get();
         },
@@ -1109,45 +1134,57 @@ Path AXIsolatedObject::pathAttributeValue(AXProperty propertyName) const
     );
 }
 
-Color AXIsolatedObject::colorAttributeValue(AXProperty propertyName) const
+Color AXIsolatedObject::colorAttributeValue(AXProperty property) const
 {
-    auto value = m_propertyMap.get(propertyName);
-    return WTF::switchOn(value,
-        [] (Color& typedValue) -> Color { return typedValue; },
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
+        return Color();
+
+    return WTF::switchOn(m_properties[index].second,
+        [] (const Color& typedValue) -> Color { return typedValue; },
         [] (auto&) { return Color(); }
     );
 }
 
-float AXIsolatedObject::floatAttributeValue(AXProperty propertyName) const
+float AXIsolatedObject::floatAttributeValue(AXProperty property) const
 {
-    auto value = m_propertyMap.get(propertyName);
-    return WTF::switchOn(value,
-        [] (float& typedValue) -> float { return typedValue; },
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
+        return 0.0f;
+
+    return WTF::switchOn(m_properties[index].second,
+        [] (const float& typedValue) -> float { return typedValue; },
         [] (auto&) { return 0.0f; }
     );
 }
 
-double AXIsolatedObject::doubleAttributeValue(AXProperty propertyName) const
+double AXIsolatedObject::doubleAttributeValue(AXProperty property) const
 {
-    auto value = m_propertyMap.get(propertyName);
-    return WTF::switchOn(value,
-        [] (double& typedValue) -> double { return typedValue; },
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
+        return 0.0;
+
+    return WTF::switchOn(m_properties[index].second,
+        [] (const double& typedValue) -> double { return typedValue; },
         [] (auto&) { return 0.0; }
     );
 }
 
-unsigned AXIsolatedObject::unsignedAttributeValue(AXProperty propertyName) const
+unsigned AXIsolatedObject::unsignedAttributeValue(AXProperty property) const
 {
-    auto value = m_propertyMap.get(propertyName);
-    return WTF::switchOn(value,
-        [] (unsigned& typedValue) -> unsigned { return typedValue; },
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
+        return 0u;
+
+    return WTF::switchOn(m_properties[index].second,
+        [] (const unsigned& typedValue) -> unsigned { return typedValue; },
         [] (auto&) { return 0u; }
     );
 }
 
-bool AXIsolatedObject::boolAttributeValue(AXProperty propertyName) const
+bool AXIsolatedObject::boolAttributeValue(AXProperty property) const
 {
-    switch (propertyName) {
+    switch (property) {
     case AXProperty::CanSetFocusAttribute:
         return hasPropertyFlag(AXPropertyFlag::CanSetFocusAttribute);
     case AXProperty::CanSetSelectedAttribute:
@@ -1192,36 +1229,48 @@ bool AXIsolatedObject::boolAttributeValue(AXProperty propertyName) const
         break;
     }
 
-    auto value = m_propertyMap.get(propertyName);
-    return WTF::switchOn(value,
-        [] (bool& typedValue) { return typedValue; },
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
+        return false;
+
+    return WTF::switchOn(m_properties[index].second,
+        [] (const bool& typedValue) { return typedValue; },
         [] (auto&) { return false; }
     );
 }
 
-String AXIsolatedObject::stringAttributeValue(AXProperty propertyName) const
+String AXIsolatedObject::stringAttributeValue(AXProperty property) const
 {
-    auto value = m_propertyMap.get(propertyName);
-    return WTF::switchOn(value,
-        [] (String& typedValue) { return typedValue; },
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
+        return emptyString();
+
+    return WTF::switchOn(m_properties[index].second,
+        [] (const String& typedValue) { return typedValue; },
         [] (auto&) { return emptyString(); }
     );
 }
 
-String AXIsolatedObject::stringAttributeValueNullIfMissing(AXProperty propertyName) const
+String AXIsolatedObject::stringAttributeValueNullIfMissing(AXProperty property) const
 {
-    auto value = m_propertyMap.get(propertyName);
-    return WTF::switchOn(value,
-        [] (String& typedValue) { return typedValue; },
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
+        return nullString();
+
+    return WTF::switchOn(m_properties[index].second,
+        [] (const String& typedValue) { return typedValue; },
         [] (auto&) { return nullString(); }
     );
 }
 
-int AXIsolatedObject::intAttributeValue(AXProperty propertyName) const
+int AXIsolatedObject::intAttributeValue(AXProperty property) const
 {
-    auto value = m_propertyMap.get(propertyName);
-    return WTF::switchOn(value,
-        [] (int& typedValue) { return typedValue; },
+    size_t index = indexOfProperty(property);
+    if (index == notFound)
+        return 0;
+
+    return WTF::switchOn(m_properties[index].second,
+        [] (const int& typedValue) { return typedValue; },
         [] (auto&) { return 0; }
     );
 }
@@ -1229,10 +1278,10 @@ int AXIsolatedObject::intAttributeValue(AXProperty propertyName) const
 #if ENABLE(AX_THREAD_TEXT_APIS)
 const AXTextRuns* AXIsolatedObject::textRuns() const
 {
-    auto entry = m_propertyMap.find(AXProperty::TextRuns);
-    if (entry == m_propertyMap.end())
+    size_t index = indexOfProperty(AXProperty::TextRuns);
+    if (index == notFound)
         return nullptr;
-    return WTF::switchOn(entry->value,
+    return WTF::switchOn(m_properties[index].second,
         [] (const AXTextRuns& typedValue) -> const AXTextRuns* { return &typedValue; },
         [] (auto&) -> const AXTextRuns* { return nullptr; }
     );
@@ -1240,18 +1289,18 @@ const AXTextRuns* AXIsolatedObject::textRuns() const
 #endif
 
 template<typename T>
-T AXIsolatedObject::getOrRetrievePropertyValue(AXProperty propertyName)
+T AXIsolatedObject::getOrRetrievePropertyValue(AXProperty property)
 {
-    if (m_propertyMap.contains(propertyName))
-        return propertyValue<T>(propertyName);
+    if (std::optional value = optionalAttributeValue<T>(property))
+        return *value;
 
-    Accessibility::performFunctionOnMainThreadAndWait([&propertyName, this] () {
+    Accessibility::performFunctionOnMainThreadAndWait([&property, this] () {
         auto* axObject = associatedAXObject();
         if (!axObject)
             return;
 
         AXPropertyValueVariant value;
-        switch (propertyName) {
+        switch (property) {
         case AXProperty::InnerHTML:
             value = axObject->innerHTML().isolatedCopy();
             break;
@@ -1263,15 +1312,15 @@ T AXIsolatedObject::getOrRetrievePropertyValue(AXProperty propertyName)
         }
 
         // Cache value so that there is no need to access the main thread in subsequent calls.
-        m_propertyMap.set(propertyName, WTFMove(value));
+        setPropertyInVector(property, WTFMove(value));
     });
 
-    return propertyValue<T>(propertyName);
+    return propertyValue<T>(property);
 }
 
-void AXIsolatedObject::fillChildrenVectorForProperty(AXProperty propertyName, AccessibilityChildrenVector& children) const
+void AXIsolatedObject::fillChildrenVectorForProperty(AXProperty property, AccessibilityChildrenVector& children) const
 {
-    Vector<AXID> childIDs = vectorAttributeValue<AXID>(propertyName);
+    Vector<AXID> childIDs = vectorAttributeValue<AXID>(property);
     children.reserveCapacity(childIDs.size());
     for (const auto& childID : childIDs) {
         if (RefPtr object = tree()->objectForID(childID))
@@ -2021,11 +2070,7 @@ String AXIsolatedObject::textContentPrefixFromListMarker() const
 
 String AXIsolatedObject::titleAttributeValue() const
 {
-    AXTRACE("AXIsolatedObject::titleAttributeValue"_s);
-
-    if (m_propertyMap.contains(AXProperty::TitleAttributeValue))
-        return propertyValue<String>(AXProperty::TitleAttributeValue);
-    return AXCoreObject::titleAttributeValue();
+    return optionalAttributeValue<String>(AXProperty::TitleAttributeValue).value_or(AXCoreObject::titleAttributeValue());
 }
 
 String AXIsolatedObject::stringValue() const
@@ -2033,8 +2078,8 @@ String AXIsolatedObject::stringValue() const
 #if ENABLE(AX_THREAD_TEXT_APIS)
     return stringAttributeValue(AXProperty::StringValue);
 #else
-    if (m_propertyMap.contains(AXProperty::StringValue))
-        return stringAttributeValue(AXProperty::StringValue);
+    if (std::optional stringValue = optionalAttributeValue<String>(AXProperty::StringValue))
+        return *stringValue;
     if (auto value = platformStringValue())
         return *value;
     return { };

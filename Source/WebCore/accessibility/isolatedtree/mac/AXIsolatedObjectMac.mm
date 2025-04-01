@@ -198,8 +198,8 @@ std::optional<String> AXIsolatedObject::textContent() const
     if (AXObjectCache::useAXThreadTextApis())
         return textMarkerRange().toString();
 #else
-    if (m_propertyMap.contains(AXProperty::TextContent))
-        return stringAttributeValue(AXProperty::TextContent);
+    if (std::optional textContent = optionalAttributeValue<String>(AXProperty::TextContent))
+        return *textContent;
     if (auto attributedText = propertyValue<RetainPtr<NSAttributedString>>(AXProperty::AttributedText))
         return String { [attributedText string] };
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
