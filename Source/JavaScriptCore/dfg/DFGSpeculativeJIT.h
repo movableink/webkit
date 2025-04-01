@@ -1795,6 +1795,7 @@ public:
     void compileDateSet(Node*);
     void compileGlobalIsNaN(Node*);
     void compileNumberIsNaN(Node*);
+    void compileNumberIsFinite(Node*);
     void compileToIntegerOrInfinity(Node*);
     void compileToLength(Node*);
 

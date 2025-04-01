@@ -340,6 +340,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case DataViewGetFloat:
     case ResolveRope:
     case NumberIsNaN:
+    case NumberIsFinite:
     case StringIndexOf:
         return true;
 

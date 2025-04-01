@@ -3099,6 +3099,16 @@ auto ByteCodeParser::handleIntrinsicCall(Node* callee, Operand resultOperand, Ca
             return CallOptimizationResult::Inlined;
         }
 
+        case NumberIsFiniteIntrinsic: {
+            if (argumentCountIncludingThis < 2)
+                return CallOptimizationResult::DidNothing;
+
+            insertChecks();
+            setResult(addToGraph(NumberIsFinite, get(virtualRegisterForArgumentIncludingThis(1, registerOffset))));
+
+            return CallOptimizationResult::Inlined;
+        }
+
         case RegExpExecIntrinsic: {
             if (argumentCountIncludingThis < 2)
                 return CallOptimizationResult::DidNothing;

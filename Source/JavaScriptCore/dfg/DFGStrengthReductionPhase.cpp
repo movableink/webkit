@@ -116,6 +116,7 @@ private:
         case ValueToInt32:
         case GlobalIsNaN:
         case NumberIsNaN:
+        case NumberIsFinite:
         case ParseInt:
         case ToIntegerOrInfinity:
         case ToLength:

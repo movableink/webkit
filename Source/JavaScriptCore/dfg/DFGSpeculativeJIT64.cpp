@@ -5283,6 +5283,11 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
+    case NumberIsFinite: {
+        compileNumberIsFinite(node);
+        break;
+    }
+
     case MapHash: {
         switch (node->child1().useKind()) {
 #if USE(BIGINT32)

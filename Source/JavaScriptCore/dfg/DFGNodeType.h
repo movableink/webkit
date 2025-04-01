@@ -456,6 +456,7 @@ namespace JSC { namespace DFG {
     macro(IsBigInt, NodeResultBoolean) \
     macro(GlobalIsNaN, NodeMustGenerate | NodeResultBoolean) \
     macro(NumberIsNaN, NodeResultBoolean) \
+    macro(NumberIsFinite, NodeResultBoolean) \
     macro(NumberIsInteger, NodeResultBoolean) \
     macro(IsObject, NodeResultBoolean) \
     macro(IsCallable, NodeResultBoolean) \

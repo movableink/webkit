@@ -16742,6 +16742,50 @@ void SpeculativeJIT::compileNumberIsNaN(Node* node)
     }
 }
 
+void SpeculativeJIT::compileNumberIsFinite(Node* node)
+{
+    switch (node->child1().useKind()) {
+    case DoubleRepUse: {
+        SpeculateDoubleOperand argument(this, node->child1());
+        GPRTemporary scratch(this);
+        FPRTemporary diff(this);
+
+        FPRReg argumentFPR = argument.fpr();
+        GPRReg scratchGPR = scratch.gpr();
+        FPRReg diffFPR = diff.fpr();
+
+        subDouble(argumentFPR, argumentFPR, diffFPR);
+        compareDouble(DoubleEqualAndOrdered, diffFPR, diffFPR, scratchGPR);
+        unblessedBooleanResult(scratchGPR, node);
+        break;
+    }
+    case UntypedUse: {
+        JSValueOperand argument(this, node->child1());
+        GPRTemporary scratch1(this);
+
+        bool mayBeInt32 = m_interpreter.forNode(node->child1()).m_type & SpecInt32Only;
+
+        JSValueRegs argumentRegs = argument.jsValueRegs();
+        GPRReg scratch1GPR = scratch1.gpr();
+
+        flushRegisters();
+        Jump isInt32;
+        if (mayBeInt32) {
+            move(TrustedImm32(1), scratch1GPR);
+            isInt32 = branchIfInt32(argumentRegs);
+        }
+        callOperation(operationNumberIsFinite, scratch1GPR, argumentRegs);
+        if (mayBeInt32)
+            isInt32.link(this);
+        unblessedBooleanResult(scratch1GPR, node);
+        break;
+    }
+    default:
+        DFG_CRASH(m_graph, node, "Bad use kind");
+        break;
+    }
+}
+
 void SpeculativeJIT::compileToIntegerOrInfinity(Node* node)
 {
     switch (node->child1().useKind()) {

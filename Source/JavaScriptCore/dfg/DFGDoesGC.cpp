@@ -275,6 +275,7 @@ bool doesGC(Graph& graph, Node* node)
     case PutByOffset:
     case WeakMapGet:
     case NumberIsNaN:
+    case NumberIsFinite:
         return false;
 
 #if ASSERT_ENABLED

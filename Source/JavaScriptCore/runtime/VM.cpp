@@ -652,6 +652,8 @@ static ThunkGenerator thunkGeneratorForIntrinsic(Intrinsic intrinsic)
         return globalIsNaNThunkGenerator;
     case NumberIsNaNIntrinsic:
         return numberIsNaNThunkGenerator;
+    case NumberIsFiniteIntrinsic:
+        return numberIsFiniteThunkGenerator;
     case SqrtIntrinsic:
         return sqrtThunkGenerator;
     case AbsIntrinsic:

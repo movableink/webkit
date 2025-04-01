@@ -266,6 +266,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         def(PureValue(node));
         return;
 
+    case NumberIsFinite:
     case NumberIsNaN:
         def(PureValue(node));
         return;

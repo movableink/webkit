@@ -3806,6 +3806,15 @@ JSC_DEFINE_JIT_OPERATION(operationNumberIsInteger, size_t, (JSGlobalObject* glob
     OPERATION_RETURN(scope, NumberConstructor::isIntegerImpl(JSValue::decode(value)));
 }
 
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationNumberIsFinite, UCPUStrictInt32, (EncodedJSValue value))
+{
+    JSValue argument = JSValue::decode(value);
+    if (!argument.isNumber())
+        return toUCPUStrictInt32(0);
+    return toUCPUStrictInt32(!!std::isfinite(argument.asNumber()));
+}
+
+
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationNumberIsNaN, UCPUStrictInt32, (EncodedJSValue value))
 {
     JSValue argument = JSValue::decode(value);

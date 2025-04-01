@@ -5025,7 +5025,6 @@
 		A514B2C0185A684400F3C7CB /* InjectedScriptBase.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InjectedScriptBase.cpp; sourceTree = "<group>"; };
 		A514B2C1185A684400F3C7CB /* InjectedScriptBase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InjectedScriptBase.h; sourceTree = "<group>"; };
 		A52704851D027C8800354C37 /* GlobalOperations.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = GlobalOperations.js; sourceTree = "<group>"; };
-		A52704861D027C8800354C37 /* NumberConstructor.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = NumberConstructor.js; sourceTree = "<group>"; };
 		A5311C341C77CEAC00E6B1B6 /* HeapSnapshotBuilder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HeapSnapshotBuilder.cpp; sourceTree = "<group>"; };
 		A5311C351C77CEAC00E6B1B6 /* HeapSnapshotBuilder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HeapSnapshotBuilder.h; sourceTree = "<group>"; };
 		A532438118568317002ED692 /* InspectorBackendDispatchers.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = InspectorBackendDispatchers.cpp; sourceTree = "<group>"; };
@@ -10030,7 +10029,6 @@
 				534D9BFA2363C55D0054524D /* MapIteratorPrototype.js */,
 				7035587C1C418419004BD7BF /* MapPrototype.js */,
 				E30677971B8BC6F5003F87F0 /* ModuleLoader.js */,
-				A52704861D027C8800354C37 /* NumberConstructor.js */,
 				7CF9BC5C1B65D9B1009DB1EF /* ObjectConstructor.js */,
 				7CF9BC5E1B65D9B1009DB1EF /* PromiseConstructor.js */,
 				7CF9BC5D1B65D9B1009DB1EF /* PromiseOperations.js */,
