@@ -9845,6 +9845,11 @@ void SpeculativeJIT::compileArrayIndexOfOrArrayIncludes(Node* node)
                 callOperation(operationArrayIndexOfValueDouble, lengthGPR, storageGPR, searchElementRegs, indexGPR);
             break;
         case Array::Int32:
+            if (isArrayIncludes)
+                callOperation(operationArrayIncludesValueInt32, lengthGPR, LinkableConstant::globalObject(*this, node), storageGPR, searchElementRegs, indexGPR);
+            else
+                callOperation(operationArrayIndexOfValueInt32, lengthGPR, LinkableConstant::globalObject(*this, node), storageGPR, searchElementRegs, indexGPR);
+            break;
         case Array::Contiguous:
             if (isArrayIncludes)
                 callOperation(operationArrayIncludesValueInt32OrContiguous, lengthGPR, LinkableConstant::globalObject(*this, node), storageGPR, searchElementRegs, indexGPR);
