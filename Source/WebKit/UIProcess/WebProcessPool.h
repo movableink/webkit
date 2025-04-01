@@ -615,7 +615,7 @@ public:
 #endif
 
 #if ENABLE(CONTENT_EXTENSIONS)
-    WebCompiledContentRuleList* cachedResourceMonitorRuleList();
+    WebCompiledContentRuleList* cachedResourceMonitorRuleList(bool forTesting);
     void setResourceMonitorURLsForTesting(const String& rulesText, CompletionHandler<void()>&&);
 #endif
 
@@ -749,6 +749,7 @@ private:
 
     void platformLoadResourceMonitorRuleList(CompletionHandler<void(RefPtr<WebCompiledContentRuleList>)>&&);
     void platformCompileResourceMonitorRuleList(const String& rulesText, CompletionHandler<void(RefPtr<WebCompiledContentRuleList>)>&&);
+    String platformResourceMonitorRuleListSourceForTesting();
 #endif
 
     Ref<API::ProcessPoolConfiguration> m_configuration;

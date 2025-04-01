@@ -2104,9 +2104,10 @@ WebsiteDataStoreParameters WebsiteDataStore::parameters()
     createHandleFromResolvedPathIfPossible(hstsStorageDirectory, hstsStorageDirectoryExtensionHandle);
 
 #if ENABLE(CONTENT_EXTENSIONS)
-    auto resourceMonitorThrottlerDirectory = directories.resourceMonitorThrottlerDirectory;
+    auto resourceMonitorThrottlerDirectory = isPersistent() ? directories.resourceMonitorThrottlerDirectory : WebCore::SQLiteDatabase::inMemoryPath();
     SandboxExtension::Handle resourceMonitorThrottlerDirectoryExtensionHandle;
-    createHandleFromResolvedPathIfPossible(resourceMonitorThrottlerDirectory, resourceMonitorThrottlerDirectoryExtensionHandle);
+    if (isPersistent())
+        createHandleFromResolvedPathIfPossible(resourceMonitorThrottlerDirectory, resourceMonitorThrottlerDirectoryExtensionHandle);
 #endif
 
     bool shouldIncludeLocalhostInResourceLoadStatistics = false;

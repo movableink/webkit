@@ -149,6 +149,9 @@
 #import <pal/cocoa/MediaToolboxSoftLink.h>
 #import <pal/spi/cocoa/AccessibilitySupportSoftLink.h>
 
+#if __has_include(<WebKitAdditions/WebProcessPoolAdditions.h>)
+#import <WebKitAdditions/WebProcessPoolAdditions.h>
+#endif
 
 NSString *WebServiceWorkerRegistrationDirectoryDefaultsKey = @"WebServiceWorkerRegistrationDirectory";
 NSString *WebKitLocalCacheDefaultsKey = @"WebKitLocalCache";
@@ -1416,6 +1419,15 @@ void WebProcessPool::platformCompileResourceMonitorRuleList(const String& rulesT
 
         completionHandler(createCompiledContentRuleList(list));
     }).get()];
+}
+
+String WebProcessPool::platformResourceMonitorRuleListSourceForTesting()
+{
+#if HAVE(RESOURCE_MONITOR_RULE_LIST_SOURCE_FOR_TESTING)
+    return resourceMonitorRuleListSourceForTestingCocoa();
+#else
+    return emptyString();
+#endif
 }
 #endif
 

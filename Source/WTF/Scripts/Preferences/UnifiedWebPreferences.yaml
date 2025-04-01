@@ -3555,6 +3555,22 @@ IFrameResourceMonitoringEnabled:
     WebCore:
       default: false
 
+IFrameResourceMonitoringTestingSettingsEnabled:
+  type: bool
+  status: internal
+  category: networking
+  condition: ENABLE(CONTENT_EXTENSIONS)
+  defaultsOverridable: true
+  humanReadableName: "Frame Resource Monitoring Settings For Testing"
+  humanReadableDescription: "Use Resource Monitoring Settings for testing"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 IPAddressAndLocalhostMixedContentUpgradeTestingEnabled:
   type: bool
   status: testable

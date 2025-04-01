@@ -549,7 +549,7 @@ public:
 #endif
 
 #if ENABLE(CONTENT_EXTENSIONS)
-    void requestResourceMonitorRuleLists();
+    void requestResourceMonitorRuleLists(bool forTesting);
     void setResourceMonitorRuleListsIfRequired(RefPtr<WebCompiledContentRuleList>);
     void setResourceMonitorRuleLists(RefPtr<WebCompiledContentRuleList>, CompletionHandler<void()>&&);
 #endif

@@ -2708,12 +2708,18 @@ void WebProcessPool::updateWebProcessSuspensionDelayWithPacing(WeakHashSet<WebPr
 
 constexpr static Seconds resourceMonitorRuleListCheckInterval = 24_h;
 
-WebCompiledContentRuleList* WebProcessPool::cachedResourceMonitorRuleList()
+WebCompiledContentRuleList* WebProcessPool::cachedResourceMonitorRuleList(bool forTesting)
 {
-    if (!m_resourceMonitorRuleListCache)
-        loadOrUpdateResourceMonitorRuleList();
+    if (m_resourceMonitorRuleListCache)
+        return m_resourceMonitorRuleListCache.get();
 
-    return m_resourceMonitorRuleListCache.get();
+    if (forTesting) {
+        setResourceMonitorURLsForTesting(platformResourceMonitorRuleListSourceForTesting(), [] { });
+        return nullptr;
+    }
+
+    loadOrUpdateResourceMonitorRuleList();
+    return nullptr;
 }
 
 void WebProcessPool::loadOrUpdateResourceMonitorRuleList()
@@ -2789,6 +2795,13 @@ void WebProcessPool::platformCompileResourceMonitorRuleList(const String& rulesT
     notImplemented();
     completionHandler(nullptr);
 }
+
+String WebProcessPool::platformResourceMonitorRuleListSourceForTesting()
+{
+    notImplemented();
+    return "[]"_s;
+}
+
 #endif
 
 #endif

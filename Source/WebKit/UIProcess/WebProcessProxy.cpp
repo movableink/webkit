@@ -3107,12 +3107,12 @@ const WebCore::ProcessIdentity& WebProcessProxy::processIdentity()
 #endif
 
 #if ENABLE(CONTENT_EXTENSIONS)
-void WebProcessProxy::requestResourceMonitorRuleLists()
+void WebProcessProxy::requestResourceMonitorRuleLists(bool forTesting)
 {
     if (RefPtr processPool = m_processPool.get()) {
         m_resourceMonitorRuleListRequestedBySomePage = true;
 
-        if (RefPtr ruleList = processPool->cachedResourceMonitorRuleList())
+        if (RefPtr ruleList = processPool->cachedResourceMonitorRuleList(forTesting))
             setResourceMonitorRuleListsIfRequired(WTFMove(ruleList));
     }
 }
