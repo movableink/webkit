@@ -510,7 +510,12 @@ static void attemptConnectionInProcessWithoutEntitlement()
 #endif
 }
 
+// FIXME rdar://97553050
+#if PLATFORM(IOS)
+TEST(PrivateClickMeasurement, DISABLED_DaemonBasicFunctionality)
+#else
 TEST(PrivateClickMeasurement, DaemonBasicFunctionality)
+#endif
 {
     auto [tempDir, configuration] = setUpDaemon(configurationWithoutUsingDaemon().autorelease());
     attemptConnectionInProcessWithoutEntitlement();
