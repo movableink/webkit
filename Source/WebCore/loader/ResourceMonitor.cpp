@@ -26,6 +26,8 @@
 #include "config.h"
 #include "ResourceMonitor.h"
 
+#include "DiagnosticLoggingClient.h"
+#include "DiagnosticLoggingKeys.h"
 #include "Document.h"
 #include "FrameLoader.h"
 #include "HTMLIFrameElement.h"
@@ -187,6 +189,15 @@ void ResourceMonitor::updateNetworkUsageThreshold(size_t threshold)
         checkNetworkUsageExcessIfNecessary();
 }
 
+static DiagnosticLoggingClient::ValueDictionary diagnosticValues()
+{
+    DiagnosticLoggingClient::ValueDictionary dictionary;
+    dictionary.set(DiagnosticLoggingKeys::unloadCountKey(), 0);
+    dictionary.set(DiagnosticLoggingKeys::unloadPreventedByThrottlerCountKey(), 0);
+    dictionary.set(DiagnosticLoggingKeys::unloadPreventedByStickyActivationCountKey(), 1);
+    return dictionary;
+}
+
 void ResourceMonitor::checkNetworkUsageExcessIfNecessary()
 {
     ASSERT(!parentResourceMonitorIfExists() || !parentResourceMonitorIfExists()->isEligible());
@@ -205,6 +216,9 @@ void ResourceMonitor::checkNetworkUsageExcessIfNecessary()
 
         // If the frame has sticky user activation, don't do offloading.
         if (RefPtr protectedWindow = frame->window(); protectedWindow && protectedWindow->hasStickyActivation()) {
+            if (RefPtr page = frame->protectedPage())
+                page->diagnosticLoggingClient().logDiagnosticMessageWithValueDictionary(DiagnosticLoggingKeys::iframeResourceMonitoringKey(), "IFrame ResourceMonitoring Throttled"_s, diagnosticValues(), ShouldSample::No);
+
             RESOURCEMONITOR_RELEASE_LOG("But the frame has sticky user activation so ignoring.");
             return;
         }

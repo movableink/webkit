@@ -816,5 +816,27 @@ String DiagnosticLoggingKeys::textTrackModeKey()
     return "textTrackMode"_s;
 }
 
+#if ENABLE(CONTENT_EXTENSIONS)
+String DiagnosticLoggingKeys::iframeResourceMonitoringKey()
+{
+    return "IFrameResourceMonitoring"_s;
+}
+
+String DiagnosticLoggingKeys::unloadCountKey()
+{
+    return "unloadCount"_s;
+}
+
+String DiagnosticLoggingKeys::unloadPreventedByThrottlerCountKey()
+{
+    return "unloadPreventedByThrottlerCount"_s;
+}
+
+String DiagnosticLoggingKeys::unloadPreventedByStickyActivationCountKey()
+{
+    return "unloadPreventedByStickyActivationCount"_s;
+}
+#endif
+
 } // namespace WebCore
 

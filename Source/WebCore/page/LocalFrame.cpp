@@ -41,6 +41,8 @@
 #include "CachedResourceLoader.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "DiagnosticLoggingClient.h"
+#include "DiagnosticLoggingKeys.h"
 #include "DocumentLoader.h"
 #include "DocumentType.h"
 #include "Editing.h"
@@ -1455,6 +1457,15 @@ static String generateResourceMonitorErrorHTML(OptionSet<ColorScheme> colorSchem
 #endif
 }
 
+static DiagnosticLoggingClient::ValueDictionary valueDictionaryForResult(bool unloaded)
+{
+    DiagnosticLoggingClient::ValueDictionary dictionary;
+    dictionary.set(DiagnosticLoggingKeys::unloadCountKey(), (unloaded ? 1 : 0));
+    dictionary.set(DiagnosticLoggingKeys::unloadPreventedByThrottlerCountKey(), unloaded ? 0 : 1);
+    dictionary.set(DiagnosticLoggingKeys::unloadPreventedByStickyActivationCountKey(), 0);
+    return dictionary;
+}
+
 void LocalFrame::showResourceMonitoringError()
 {
     RefPtr iframeElement = dynamicDowncast<HTMLIFrameElement>(ownerElement());
@@ -1466,8 +1477,10 @@ void LocalFrame::showResourceMonitoringError()
     URL mainFrameURL;
     if (document)
         url = document->url();
-    if (RefPtr page = protectedPage())
+    if (RefPtr page = protectedPage()) {
         mainFrameURL = page->mainFrameURL();
+        page->diagnosticLoggingClient().logDiagnosticMessageWithValueDictionary(DiagnosticLoggingKeys::iframeResourceMonitoringKey(), "IFrame ResourceMonitoring Unloaded"_s, valueDictionaryForResult(true), ShouldSample::No);
+    }
 
     FRAME_RELEASE_LOG(ResourceMonitoring, "Detected excessive network usage in frame at %" SENSITIVE_LOG_STRING " and main frame at %" SENSITIVE_LOG_STRING ": unloading", url.isValid() ? url.string().utf8().data() : "invalid", mainFrameURL.isValid() ? mainFrameURL.string().utf8().data() : "invalid");
 
@@ -1496,8 +1509,10 @@ void LocalFrame::reportResourceMonitoringWarning()
     URL mainFrameURL;
     if (RefPtr document = protectedDocument())
         url = document->url();
-    if (RefPtr page = protectedPage())
+    if (RefPtr page = protectedPage()) {
         mainFrameURL = page->mainFrameURL();
+        page->diagnosticLoggingClient().logDiagnosticMessageWithValueDictionary(DiagnosticLoggingKeys::iframeResourceMonitoringKey(), "IFrame ResourceMonitoring Throttled"_s, valueDictionaryForResult(false), ShouldSample::No);
+    }
 
     FRAME_RELEASE_LOG(ResourceMonitoring, "Detected excessive network usage in frame at %" SENSITIVE_LOG_STRING " and main frame at %" SENSITIVE_LOG_STRING ": not unloading due to global limits", url.isValid() ? url.string().utf8().data() : "invalid", mainFrameURL.isValid() ? mainFrameURL.string().utf8().data() : "invalid");
 
