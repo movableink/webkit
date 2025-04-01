@@ -61,13 +61,9 @@
     dispatch_once(&onceToken, ^{
         NSString * const debugFlag = @"ModelDebugEnableStereoContent";
         id value = [[NSUserDefaults standardUserDefaults] objectForKey:debugFlag];
-        if (![value isKindOfClass:NSNumber.class] && ![value isKindOfClass:NSString.class]) {
-#if PLATFORM(IOS_FAMILY_SIMULATOR)
-            stereoContentEnabled = NO;
-#else
+        if (![value isKindOfClass:NSNumber.class] && ![value isKindOfClass:NSString.class])
             stereoContentEnabled = YES;
-#endif
-        } else
+        else
             stereoContentEnabled = [[NSUserDefaults standardUserDefaults] boolForKey:debugFlag];
 
         RELEASE_LOG_INFO(ModelElement, "Stereo content enabled: %d", stereoContentEnabled);
