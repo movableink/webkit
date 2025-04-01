@@ -73,3 +73,9 @@
     (state-flag "local:WebContentProcessLaunched"))
 
 (define (notify-blocking) (require-entitlement "com.apple.developer.web-browser-engine.restrict.notifyd"))
+
+#if ENABLE(GPU_PROCESS_IOKIT_RESTRICTIONS)
+#define GPU_PROCESS_IOKIT_DEFAULT_FILTER_OPERATION deny
+#else
+#define GPU_PROCESS_IOKIT_DEFAULT_FILTER_OPERATION allow
+#endif
