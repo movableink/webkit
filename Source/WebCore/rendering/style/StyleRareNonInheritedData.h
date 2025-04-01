@@ -278,7 +278,7 @@ public:
     unsigned nativeAppearanceDisabled : 1;
 
 #if HAVE(CORE_MATERIAL)
-    unsigned appleVisualEffect : 4; // AppleVisualEffect
+    unsigned appleVisualEffect : 5; // AppleVisualEffect
 #endif
 
     unsigned scrollbarWidth : 2; // ScrollbarWidth
