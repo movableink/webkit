@@ -911,6 +911,10 @@ class RunWebKitTests(shell.TestNewStyle, CustomFlagsMixin, ShellMixin):
 
         if additionalArguments:
             self.command += additionalArguments
+            # Double the timeout for site isolation queues.
+            # FIXME: We should remove the need for these timeouts altogether. (webkit.org/b/290867)
+            if '--site-isolation' in additionalArguments:
+                self.timeout = 6 * 60 * 60
 
         filter_command = ' '.join(self.command) + ' 2>&1 | python3 Tools/Scripts/filter-test-logs layout'
         self.command = self.shell_command(filter_command)

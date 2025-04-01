@@ -958,6 +958,24 @@ class TestRunWebKitTests(BuildStepMixinAdditions, unittest.TestCase):
         self.expectOutcome(result=SUCCESS, state_string='layout-tests')
         return self.runStep()
 
+    def test_site_isolation_timeout(self):
+        self.configureStep()
+        self.setProperty('fullPlatform', 'mac-highsierra')
+        self.setProperty('configuration', 'debug')
+        self.setProperty('additionalArguments', ['--site-isolation'])
+        self.expectRemoteCommands(
+            ExpectShell(
+                workdir='wkdir',
+                timeout=21600,
+                logEnviron=False,
+                command=['/bin/sh', '-c',
+                         f'python3 Tools/Scripts/run-webkit-tests --no-build --no-show-results --no-new-test-results --clobber-old-results --builder-name iOS-14-Simulator-WK2-Tests-EWS --build-number 101 --buildbot-worker ews100 --buildbot-master {CURRENT_HOSTNAME} --report {RESULTS_WEBKIT_URL} --exit-after-n-crashes-or-timeouts 50 --exit-after-n-failures 500 --debug --results-directory layout-test-results --debug-rwt-logging --site-isolation 2>&1 | python3 Tools/Scripts/filter-test-logs layout'],
+                env={'RESULTS_SERVER_API_KEY': 'test-api-key'}
+            ) + 0
+        )
+        self.expectOutcome(result=SUCCESS, state_string='layout-tests')
+        return self.runStep()
+
 
 class TestRunDashboardTests(BuildStepMixinAdditions, unittest.TestCase):
     def setUp(self):
