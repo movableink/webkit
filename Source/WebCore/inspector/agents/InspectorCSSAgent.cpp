@@ -28,9 +28,10 @@
 
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSImportRule.h"
-#include "CSSParserFastPaths.h"
 #include "CSSParserMode.h"
 #include "CSSPropertyNames.h"
+#include "CSSPropertyParserState.h"
+#include "CSSPropertyParsing.h"
 #include "CSSPropertySourceData.h"
 #include "CSSRule.h"
 #include "CSSRuleList.h"
@@ -911,10 +912,13 @@ Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::CSS::C
                 property->setLonghands(WTFMove(longhands));
         }
 
-        if (CSSParserFastPaths::isKeywordFastPathEligibleStyleProperty(propertyID)) {
+        if (CSSPropertyParsing::isKeywordFastPathEligibleStyleProperty(propertyID)) {
+            auto propertyParserState = CSS::PropertyParserState {
+                .context = strictCSSParserContext(),
+            };
             auto values = JSON::ArrayOf<String>::create();
             for (auto valueID : allCSSValueKeywords()) {
-                if (CSSParserFastPaths::isKeywordValidForStyleProperty(propertyID, valueID, strictCSSParserContext()))
+                if (CSSPropertyParsing::isKeywordValidForStyleProperty(propertyID, valueID, propertyParserState))
                     values->addItem(nameString(valueID));
             }
             if (values->length())

@@ -296,8 +296,11 @@ RefPtr<CSSValue> valueForPositionArea(CSSValueID dim1, CSSValueID dim2)
     return CSSValuePair::create(CSSPrimitiveValue::create(dim1), CSSPrimitiveValue::create(dim2));
 }
 
-RefPtr<CSSValue> consumePositionArea(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumePositionArea(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
+    // <'position-area'> = none | <position-area>
+    // https://drafts.csswg.org/css-anchor-position-1/#propdef-position-area
+
     auto maybeDim1 = consumeIdentRaw(range);
     if (!maybeDim1)
         return nullptr;

@@ -25,6 +25,7 @@
 
 #include "config.h"
 
+#include <WebCore/CSSParserContext.h>
 #include <WebCore/CSSParserFastPaths.h>
 
 namespace TestWebKitAPI {
@@ -49,7 +50,7 @@ TEST(CSSParserFastPaths, ParseRgbAndRgba)
     };
 
     for (auto input : expectedValidInputs)
-        EXPECT_TRUE(CSSParserFastPaths::parseSimpleColor(input));
+        EXPECT_TRUE(CSSParserFastPaths::parseSimpleColor(input, strictCSSParserContext()));
 
     StringView expectedInvalidInputs[] = {
         "rgb(255,0,0"_s,
@@ -71,7 +72,7 @@ TEST(CSSParserFastPaths, ParseRgbAndRgba)
     };
 
     for (auto input : expectedInvalidInputs)
-        EXPECT_FALSE(CSSParserFastPaths::parseSimpleColor(input));
+        EXPECT_FALSE(CSSParserFastPaths::parseSimpleColor(input, strictCSSParserContext()));
 }
 
 } // namespace TestWebKitAPI

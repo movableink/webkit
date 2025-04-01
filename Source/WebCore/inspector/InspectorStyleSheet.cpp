@@ -189,10 +189,8 @@ static bool isValidRuleHeaderText(const String& headerText, StyleRuleType styleR
     };
 
     switch (styleRuleType) {
-    case StyleRuleType::Style: {
-        CSSParser parser(parserContextForDocument(document));
-        return !!parser.parseSelectorList(headerText, nullptr, nestedContext);
-    }
+    case StyleRuleType::Style:
+        return !!CSSParser::parseSelectorList(headerText, parserContextForDocument(document), nullptr, nestedContext);
     case StyleRuleType::Media:
     case StyleRuleType::Supports:
     case StyleRuleType::LayerBlock:
@@ -535,7 +533,7 @@ void StyleSheetHandler::observeComment(unsigned startOffset, unsigned endOffset)
     RuleSourceDataList sourceData;
     
     StyleSheetHandler handler(commentText, m_document, &sourceData);
-    CSSParser::parseDeclarationForInspector(parserContextForDocument(m_document), commentText, handler);
+    CSSParser::parseDeclarationForInspector(commentText, parserContextForDocument(m_document), handler);
     Vector<CSSPropertySourceData>& commentPropertyData = sourceData.first()->styleSourceData->propertyData;
     if (commentPropertyData.size() != 1)
         return;
@@ -1703,7 +1701,7 @@ bool InspectorStyleSheet::ensureSourceData()
         context.setUASheetMode();
 
     StyleSheetHandler handler(m_parsedStyleSheet->text(), m_pageStyleSheet->ownerDocument(), ruleSourceDataResult.get());
-    CSSParser::parseSheetForInspector(context, newStyleSheet, m_parsedStyleSheet->text(), handler);
+    CSSParser::parseSheetForInspector(m_parsedStyleSheet->text(), context, newStyleSheet, handler);
     m_parsedStyleSheet->setSourceData(WTFMove(ruleSourceDataResult));
     return m_parsedStyleSheet->hasSourceData();
 }
@@ -1928,7 +1926,7 @@ Ref<CSSRuleSourceData> InspectorStyleSheetForInlineStyle::ruleSourceData() const
     CSSParserContext context(parserContextForDocument(&m_element->document()));
     RuleSourceDataList ruleSourceDataResult;
     StyleSheetHandler handler(m_styleText, &m_element->document(), &ruleSourceDataResult);
-    CSSParser::parseDeclarationForInspector(context, m_styleText, handler);
+    CSSParser::parseDeclarationForInspector(m_styleText, context, handler);
     return WTFMove(ruleSourceDataResult.first());
 }
 

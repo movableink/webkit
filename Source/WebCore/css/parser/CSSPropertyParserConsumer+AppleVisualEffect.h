@@ -33,11 +33,14 @@ namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumeAppleVisualEffect(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeAppleVisualEffect(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

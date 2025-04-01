@@ -31,6 +31,7 @@
 #include "Document.h"
 #include "StyleProperties.h"
 #include "StyleRule.h"
+#include "StyleSheetContents.h"
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
@@ -65,9 +66,9 @@ String CSSPageRule::selectorText() const
 
 void CSSPageRule::setSelectorText(const String& selectorText)
 {
-    CSSParser parser(parserContext());
-    auto* sheet = parentStyleSheet();
-    auto selectorList = parser.parseSelectorList(selectorText, sheet ? &sheet->contents() : nullptr);
+    RefPtr sheet = parentStyleSheet();
+    RefPtr sheetContents = sheet ? &sheet->contents() : nullptr;
+    auto selectorList = CSSParser::parseSelectorList(selectorText, parserContext(), sheetContents.get());
     if (!selectorList)
         return;
 

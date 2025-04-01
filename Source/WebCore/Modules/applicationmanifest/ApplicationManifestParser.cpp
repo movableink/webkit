@@ -28,7 +28,7 @@
 
 #if ENABLE(APPLICATION_MANIFEST)
 
-#include "CSSParser.h"
+#include "CSSPropertyParserConsumer+Color.h"
 #include "Color.h"
 #include "Document.h"
 #include "SecurityOrigin.h"
@@ -523,7 +523,7 @@ std::optional<URL> ApplicationManifestParser::parseScope(const JSON::Object& man
 
 Color ApplicationManifestParser::parseColor(const JSON::Object& manifest, const String& propertyName)
 {
-    return CSSParser::parseColorWithoutContext(parseGenericString(manifest, propertyName));
+    return CSSPropertyParserHelpers::deprecatedParseColorRawWithoutContext(parseGenericString(manifest, propertyName));
 }
 
 String ApplicationManifestParser::parseGenericString(const JSON::Object& manifest, const String& propertyName)

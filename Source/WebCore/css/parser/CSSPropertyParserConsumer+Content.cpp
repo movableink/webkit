@@ -36,6 +36,7 @@
 #include "CSSPropertyParserConsumer+Lists.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParserConsumer+String.h"
+#include "CSSPropertyParserState.h"
 #include "CSSPropertyParsing.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
@@ -44,7 +45,7 @@
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumeQuotes(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumeQuotes(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <'quotes'> = auto | none | match-parent | [ <string> <string> ]+
     // https://drafts.csswg.org/css-content-3/#propdef-quotes
@@ -67,7 +68,7 @@ RefPtr<CSSValue> consumeQuotes(CSSParserTokenRange& range, const CSSParserContex
     return nullptr;
 }
 
-static RefPtr<CSSValue> consumeCounterContent(CSSParserTokenRange args, const CSSParserContext& context, bool counters)
+static RefPtr<CSSValue> consumeCounterContent(CSSParserTokenRange args, CSS::PropertyParserState& state, bool counters)
 {
     AtomString identifier { consumeCustomIdentRaw(args) };
     if (identifier.isNull())
@@ -84,7 +85,7 @@ static RefPtr<CSSValue> consumeCounterContent(CSSParserTokenRange args, const CS
     if (consumeCommaIncludingWhitespace(args)) {
         if (args.peek().id() == CSSValueNone || args.peek().type() == StringToken)
             return nullptr;
-        listStyleType = CSSPropertyParsing::consumeListStyleType(args, context);
+        listStyleType = CSSPropertyParsing::consumeListStyleType(args, state);
         if (!listStyleType)
             return nullptr;
     }
@@ -95,7 +96,7 @@ static RefPtr<CSSValue> consumeCounterContent(CSSParserTokenRange args, const CS
     return CSSCounterValue::create(WTFMove(identifier), WTFMove(separator), WTFMove(listStyleType));
 }
 
-RefPtr<CSSValue> consumeContent(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeContent(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // Standard says this should be:
     //
@@ -112,19 +113,19 @@ RefPtr<CSSValue> consumeContent(CSSParserTokenRange& range, const CSSParserConte
             RefPtr<CSSValue> parsedValue = consumeString(range);
             if (type == ContentListType::VisibleContent) {
                 if (!parsedValue)
-                    parsedValue = consumeImage(range, context);
+                    parsedValue = consumeImage(range, state);
                 if (!parsedValue)
                     parsedValue = consumeIdent<CSSValueOpenQuote, CSSValueCloseQuote, CSSValueNoOpenQuote, CSSValueNoCloseQuote>(range);
             }
             if (!parsedValue) {
                 if (range.peek().functionId() == CSSValueAttr)
-                    parsedValue = consumeAttr(consumeFunction(range), context);
+                    parsedValue = consumeAttr(consumeFunction(range), state);
                 // FIXME: Alt-text should support counters.
                 else if (type == ContentListType::VisibleContent) {
                     if (range.peek().functionId() == CSSValueCounter)
-                        parsedValue = consumeCounterContent(consumeFunction(range), context, false);
+                        parsedValue = consumeCounterContent(consumeFunction(range), state, false);
                     else if (range.peek().functionId() == CSSValueCounters)
-                        parsedValue = consumeCounterContent(consumeFunction(range), context, true);
+                        parsedValue = consumeCounterContent(consumeFunction(range), state, true);
                 }
                 if (!parsedValue)
                     return false;

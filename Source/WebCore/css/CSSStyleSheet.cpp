@@ -350,7 +350,7 @@ ExceptionOr<unsigned> CSSStyleSheet::insertRule(const String& ruleString, unsign
 
     if (index > length())
         return Exception { ExceptionCode::IndexSizeError };
-    RefPtr<StyleRuleBase> rule = CSSParser::parseRule(m_contents.get().parserContext(), m_contents.ptr(), ruleString);
+    RefPtr rule = CSSParser::parseRule(ruleString, m_contents.get().parserContext(), m_contents.ptr());
 
     if (!rule)
         return Exception { ExceptionCode::SyntaxError };

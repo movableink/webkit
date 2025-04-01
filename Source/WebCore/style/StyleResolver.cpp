@@ -53,6 +53,7 @@
 #include "LocalFrameView.h"
 #include "Logging.h"
 #include "MediaList.h"
+#include "MutableCSSSelector.h"
 #include "NodeRenderStyle.h"
 #include "PageRuleCollector.h"
 #include "RenderScrollbar.h"

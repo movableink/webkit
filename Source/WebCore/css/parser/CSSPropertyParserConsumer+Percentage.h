@@ -34,14 +34,16 @@ namespace WebCore {
 class CSSPrimitiveValue;
 class CSSParserTokenRange;
 
-struct CSSParserContext;
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
 // MARK: - Consumer functions
 
 // FIXME: Users of this function are likely getting incorrect results when used with calc() producing a percent, as it is not getting divided by 100.
-RefPtr<CSSPrimitiveValue> consumePercentageDividedBy100OrNumber(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSPrimitiveValue> consumePercentageDividedBy100OrNumber(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

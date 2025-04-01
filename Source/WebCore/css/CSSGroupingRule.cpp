@@ -76,8 +76,8 @@ ExceptionOr<unsigned> CSSGroupingRule::insertRule(const String& ruleString, unsi
         return Exception { ExceptionCode::IndexSizeError };
     }
 
-    CSSStyleSheet* styleSheet = parentStyleSheet();
-    RefPtr newRule = CSSParser::parseRule(parserContext(), styleSheet ? &styleSheet->contents() : nullptr, ruleString, nestedContext());
+    RefPtr styleSheet = parentStyleSheet();
+    RefPtr newRule = CSSParser::parseRule(ruleString, parserContext(), styleSheet ? &styleSheet->contents() : nullptr, nestedContext());
     if (!newRule) {
         if (!hasStyleRuleAncestor())
             return Exception { ExceptionCode::SyntaxError };

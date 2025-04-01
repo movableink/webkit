@@ -39,6 +39,7 @@
 #include "CSSPropertyParserConsumer+Percentage.h"
 #include "CSSPropertyParserConsumer+PercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
+#include "CSSPropertyParserState.h"
 #include "CSSPropertyParsing.h"
 #include "CSSToLengthConversionData.h"
 #include "CSSValueList.h"
@@ -49,34 +50,34 @@
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumeRotate3dFunction(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeRotate3dFunction(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // https://drafts.csswg.org/css-transforms-2/#funcdef-rotate3d
     // rotate3d() = rotate3d( <number> , <number> , <number> , [ <angle> | <zero> ] )
 
-    auto consumeParameters = [](auto& args, auto& context) -> std::optional<CSSValueListBuilder> {
-        auto firstValue = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(args, context, { .parserMode = context.mode });
+    auto consumeParameters = [](auto& args, auto& state) -> std::optional<CSSValueListBuilder> {
+        auto firstValue = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(args, state);
         if (!firstValue)
             return { };
 
         if (!consumeCommaIncludingWhitespace(args))
             return { };
 
-        auto secondValue = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(args, context, { .parserMode = context.mode });
+        auto secondValue = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(args, state);
         if (!secondValue)
             return { };
 
         if (!consumeCommaIncludingWhitespace(args))
             return { };
 
-        auto thirdValue = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(args, context, { .parserMode = context.mode });
+        auto thirdValue = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(args, state);
         if (!thirdValue)
             return { };
 
         if (!consumeCommaIncludingWhitespace(args))
             return { };
 
-        auto angle = CSSPrimitiveValueResolver<CSS::Angle<>>::consumeAndResolve(args, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
+        auto angle = CSSPrimitiveValueResolver<CSS::Angle<>>::consumeAndResolve(args, state, { .unitlessZeroAngle = UnitlessZeroQuirk::Allow });
         if (!angle)
             return { };
 
@@ -97,7 +98,7 @@ RefPtr<CSSValue> consumeRotate3dFunction(CSSParserTokenRange& range, const CSSPa
     if (args.atEnd())
         return { };
 
-    auto parameters = consumeParameters(args, context);
+    auto parameters = consumeParameters(args, state);
     if (!parameters || !args.atEnd())
         return { };
 
@@ -105,21 +106,21 @@ RefPtr<CSSValue> consumeRotate3dFunction(CSSParserTokenRange& range, const CSSPa
     return CSSFunctionValue::create(functionId, WTFMove(*parameters));
 }
 
-RefPtr<CSSValue> consumeTranslateFunction(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeTranslateFunction(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // https://drafts.csswg.org/css-transforms-1/#funcdef-transform-translate
     // translate() = translate( <length-percentage> , <length-percentage>? )
 
-    auto consumeParameters = [](auto& args, auto& context) -> std::optional<CSSValueListBuilder> {
+    auto consumeParameters = [](auto& args, auto& state) -> std::optional<CSSValueListBuilder> {
         CSSValueListBuilder arguments;
 
-        auto firstValue = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(args, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
+        auto firstValue = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(args, state);
         if (!firstValue)
             return { };
         arguments.append(firstValue.releaseNonNull());
 
         if (consumeCommaIncludingWhitespace(args)) {
-            auto secondValue = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(args, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
+            auto secondValue = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(args, state);
             if (!secondValue)
                 return { };
             // A second value of `0` is the same as no second argument, so there is no need to store one if we know it is `0`.
@@ -139,7 +140,7 @@ RefPtr<CSSValue> consumeTranslateFunction(CSSParserTokenRange& range, const CSSP
     if (args.atEnd())
         return { };
 
-    auto parameters = consumeParameters(args, context);
+    auto parameters = consumeParameters(args, state);
     if (!parameters || !args.atEnd())
         return { };
 
@@ -147,27 +148,27 @@ RefPtr<CSSValue> consumeTranslateFunction(CSSParserTokenRange& range, const CSSP
     return CSSFunctionValue::create(functionId, WTFMove(*parameters));
 }
 
-RefPtr<CSSValue> consumeTranslate3dFunction(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeTranslate3dFunction(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // https://drafts.csswg.org/css-transforms-2/#funcdef-translate3d
     // translate3d() = translate3d( <length-percentage> , <length-percentage> , <length> )
 
-    auto consumeParameters = [](auto& args, auto& context) -> std::optional<CSSValueListBuilder> {
-        auto firstValue = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(args, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
+    auto consumeParameters = [](auto& args, auto& state) -> std::optional<CSSValueListBuilder> {
+        auto firstValue = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(args, state);
         if (!firstValue)
             return { };
 
         if (!consumeCommaIncludingWhitespace(args))
             return { };
 
-        auto secondValue = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(args, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
+        auto secondValue = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(args, state);
         if (!secondValue)
             return { };
 
         if (!consumeCommaIncludingWhitespace(args))
             return { };
 
-        auto thirdValue = CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(args, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
+        auto thirdValue = CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(args, state);
         if (!thirdValue)
             return { };
 
@@ -187,7 +188,7 @@ RefPtr<CSSValue> consumeTranslate3dFunction(CSSParserTokenRange& range, const CS
     if (args.atEnd())
         return { };
 
-    auto parameters = consumeParameters(args, context);
+    auto parameters = consumeParameters(args, state);
     if (!parameters || !args.atEnd())
         return { };
 
@@ -195,7 +196,7 @@ RefPtr<CSSValue> consumeTranslate3dFunction(CSSParserTokenRange& range, const CS
     return CSSFunctionValue::create(functionId, WTFMove(*parameters));
 }
 
-RefPtr<CSSValue> consumeTranslate(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeTranslate(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // https://drafts.csswg.org/css-transforms-2/#propdef-translate
     // none | <length-percentage> [ <length-percentage> <length>? ]?
@@ -210,7 +211,7 @@ RefPtr<CSSValue> consumeTranslate(CSSParserTokenRange& range, const CSSParserCon
     // value is missing, it defaults to 0px. If three values are given, this specifies a 3d translation, equivalent to the
     // translate3d() function.
 
-    auto x = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
+    auto x = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, state);
     if (!x)
         return nullptr;
 
@@ -219,7 +220,7 @@ RefPtr<CSSValue> consumeTranslate(CSSParserTokenRange& range, const CSSParserCon
     if (range.atEnd())
         return CSSValueList::createSpaceSeparated(x.releaseNonNull());
 
-    auto y = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
+    auto y = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, state);
     if (!y)
         return nullptr;
 
@@ -236,7 +237,7 @@ RefPtr<CSSValue> consumeTranslate(CSSParserTokenRange& range, const CSSParserCon
         return CSSValueList::createSpaceSeparated(x.releaseNonNull(), y.releaseNonNull());
     }
 
-    auto z = CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
+    auto z = CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(range, state);
     if (!z)
         return nullptr;
 
@@ -250,7 +251,7 @@ RefPtr<CSSValue> consumeTranslate(CSSParserTokenRange& range, const CSSParserCon
     return CSSValueList::createSpaceSeparated(x.releaseNonNull(), y.releaseNonNull(), z.releaseNonNull());
 }
 
-RefPtr<CSSValue> consumeRotate(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeRotate(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // https://drafts.csswg.org/css-transforms-2/#propdef-rotate
     // none | <angle> | [ x | y | z | <number>{3} ] && <angle>
@@ -275,7 +276,7 @@ RefPtr<CSSValue> consumeRotate(CSSParserTokenRange& range, const CSSParserContex
 
     while (!range.atEnd()) {
         // First, attempt to parse a number, which might be in a series of 3 specifying the rotation axis.
-        auto parsedValue = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        auto parsedValue = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, state);
         if (parsedValue) {
             // If we've encountered an axis identifier, then this value is invalid.
             if (axisIdentifier)
@@ -287,7 +288,7 @@ RefPtr<CSSValue> consumeRotate(CSSParserTokenRange& range, const CSSParserContex
 
         // Then, attempt to parse an angle. We try this as a fallback rather than the first option because
         // a unitless 0 angle would be consumed as an angle.
-        parsedValue = CSSPrimitiveValueResolver<CSS::Angle<>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
+        parsedValue = CSSPrimitiveValueResolver<CSS::Angle<>>::consumeAndResolve(range, state);
         if (parsedValue) {
             // If we had already parsed an angle or numbers but not 3 in a row, this value is invalid.
             if (angle || (!list.isEmpty() && list.size() != 3))
@@ -352,7 +353,7 @@ RefPtr<CSSValue> consumeRotate(CSSParserTokenRange& range, const CSSParserContex
     return nullptr;
 }
 
-RefPtr<CSSValue> consumeScale(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeScale(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // https://drafts.csswg.org/css-transforms-2/#propdef-scale
     // none | [ <number> | <percentage> ]{1,3}
@@ -369,7 +370,7 @@ RefPtr<CSSValue> consumeScale(CSSParserTokenRange& range, const CSSParserContext
     // If one or two values are given, this specifies a 2d scaling, equivalent to the scale() function.
     // If three values are given, this specifies a 3d scaling, equivalent to the scale3d() function.
 
-    auto x = consumePercentageDividedBy100OrNumber(range, context);
+    auto x = consumePercentageDividedBy100OrNumber(range, state);
     if (!x)
         return nullptr;
 
@@ -378,7 +379,7 @@ RefPtr<CSSValue> consumeScale(CSSParserTokenRange& range, const CSSParserContext
     if (range.atEnd())
         return CSSValueList::createSpaceSeparated(x.releaseNonNull());
 
-    auto y = consumePercentageDividedBy100OrNumber(range, context);
+    auto y = consumePercentageDividedBy100OrNumber(range, state);
     if (!y)
         return nullptr;
 
@@ -394,7 +395,7 @@ RefPtr<CSSValue> consumeScale(CSSParserTokenRange& range, const CSSParserContext
         return CSSValueList::createSpaceSeparated(x.releaseNonNull());
     }
 
-    auto z = consumePercentageDividedBy100OrNumber(range, context);
+    auto z = consumePercentageDividedBy100OrNumber(range, state);
     if (!z)
         return nullptr;
 
@@ -411,13 +412,14 @@ RefPtr<CSSValue> consumeScale(CSSParserTokenRange& range, const CSSParserContext
 
 std::optional<TransformOperations> parseTransformRaw(const String& string, const CSSParserContext& context, const CSSToLengthConversionData& conversionData)
 {
-    CSSTokenizer tokenizer(string);
-    CSSParserTokenRange range(tokenizer.tokenRange());
+    auto tokenizer = CSSTokenizer(string);
+    auto range = tokenizer.tokenRange();
 
     // Handle leading whitespace.
     range.consumeWhitespace();
 
-    auto parsedValue = CSSPropertyParsing::consumeTransform(range, context);
+    auto state = CSS::PropertyParserState { .context = context };
+    auto parsedValue = CSSPropertyParsing::consumeTransform(range, state);
     if (!parsedValue)
         return { };
 

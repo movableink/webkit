@@ -35,7 +35,9 @@ class CSSValue;
 
 enum CSSValueID : uint16_t;
 
-struct CSSParserContext;
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
@@ -48,7 +50,9 @@ namespace CSSPropertyParserHelpers {
 // CSSPrimitiveValue or CSSValuePair depending on if the keywords can be collapsed.
 RefPtr<CSSValue> valueForPositionArea(CSSValueID, CSSValueID);
 
-RefPtr<CSSValue> consumePositionArea(CSSParserTokenRange&, const CSSParserContext&);
+// MARK: <'position-area'>
+// https://drafts.csswg.org/css-anchor-position-1/#propdef-position-area
+RefPtr<CSSValue> consumePositionArea(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

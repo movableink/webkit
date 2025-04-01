@@ -36,6 +36,7 @@
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParserConsumer+Ratio.h"
 #include "CSSPropertyParserConsumer+ResolutionDefinitions.h"
+#include "CSSPropertyParserState.h"
 #include "CSSRatioValue.h"
 #include "CSSValue.h"
 #include "CSSVariableParser.h"
@@ -229,15 +230,21 @@ RefPtr<CSSValue> FeatureParser::consumeValue(CSSParserTokenRange& range, const M
 
     if (RefPtr value = consumeIdent(range))
         return value;
-    if (RefPtr value = consumeRatioWithBothNumeratorAndDenominator(range, context.context))
+
+    auto parserState = CSS::PropertyParserState {
+        .context = context.context,
+    };
+
+    if (RefPtr value = consumeRatioWithBothNumeratorAndDenominator(range, parserState))
         return value;
-    if (RefPtr value = CSSPrimitiveValueResolver<CSS::Integer<>>::consumeAndResolve(range, context.context, { .parserMode = context.context.mode }))
+    if (RefPtr value = CSSPrimitiveValueResolver<CSS::Integer<>>::consumeAndResolve(range, parserState))
         return value;
-    if (RefPtr value = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context.context, { .parserMode = context.context.mode }))
+    if (RefPtr value = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, parserState))
         return value;
-    if (RefPtr value = CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(range, context.context, { .parserMode = HTMLStandardMode }))
+    // FIXME: Figure out and document why overrideParserMode is explicitly set to HTMLStandardMode here.
+    if (RefPtr value = CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(range, parserState, { .overrideParserMode = HTMLStandardMode }))
         return value;
-    if (RefPtr value = CSSPrimitiveValueResolver<CSS::Resolution<>>::consumeAndResolve(range, context.context, { .parserMode = context.context.mode }))
+    if (RefPtr value = CSSPrimitiveValueResolver<CSS::Resolution<>>::consumeAndResolve(range, parserState))
         return value;
 
     return nullptr;

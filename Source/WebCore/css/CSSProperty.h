@@ -33,14 +33,15 @@ class CSSValueList;
 class Settings;
 
 enum class IsImportant : bool { No, Yes };
+enum class IsImplicit : bool { No, Yes };
 
 struct StylePropertyMetadata {
-    StylePropertyMetadata(CSSPropertyID propertyID, bool isSetFromShorthand, int indexInShorthandsVector, IsImportant important, bool implicit)
+    StylePropertyMetadata(CSSPropertyID propertyID, bool isSetFromShorthand, int indexInShorthandsVector, IsImportant important, IsImplicit implicit)
         : m_propertyID(propertyID)
         , m_isSetFromShorthand(isSetFromShorthand)
         , m_indexInShorthandsVector(indexInShorthandsVector)
         , m_important(important == IsImportant::Yes)
-        , m_implicit(implicit)
+        , m_implicit(implicit == IsImplicit::Yes)
     {
         ASSERT(propertyID != CSSPropertyInvalid);
         ASSERT_WITH_MESSAGE(propertyID < firstShorthandProperty, "unexpected property: %d", propertyID);
@@ -60,7 +61,7 @@ struct StylePropertyMetadata {
 
 class CSSProperty {
 public:
-    CSSProperty(CSSPropertyID propertyID, Ref<CSSValue>&& value, IsImportant important = IsImportant::No, bool isSetFromShorthand = false, int indexInShorthandsVector = 0, bool implicit = false)
+    CSSProperty(CSSPropertyID propertyID, Ref<CSSValue>&& value, IsImportant important = IsImportant::No, bool isSetFromShorthand = false, int indexInShorthandsVector = 0, IsImplicit implicit = IsImplicit::No)
         : m_metadata(propertyID, isSetFromShorthand, indexInShorthandsVector, important, implicit)
         , m_value(WTFMove(value))
     {
@@ -91,6 +92,20 @@ public:
 
     static bool animationIsAccelerated(CSSPropertyID, const Settings&);
     static std::span<const CSSPropertyID> allAcceleratedAnimationProperties(const Settings&);
+
+    // Properties where <color> productions should accept <quirky-color> (e.g. hashless hex color quirk).
+    // https://drafts.csswg.org/css-color-4/#quirky-color
+    // https://quirks.spec.whatwg.org/#the-hashless-hex-color-quirk
+    static bool acceptsQuirkyColor(CSSPropertyID);
+
+    // Properties where <length> productions should accept <quirky-length> (e.g. unitless length quirk).
+    // https://drafts.csswg.org/css-values-4/#deprecated-quirky-length
+    // https://quirks.spec.whatwg.org/#the-unitless-length-quirk
+    static bool acceptsQuirkyLength(CSSPropertyID);
+
+    // Properties where <angle> productions should accept <quirky-angle> (e.g. unitless angle quirk).
+    // FIXME: This is not specified anywhere and other engines don't implement the properties where this is used. We should remove this quirk.
+    static bool acceptsQuirkyAngle(CSSPropertyID);
 
     // Logical Property Groups.
     // NOTE: These return true if the CSSPropertyID is member of the named logical

@@ -40,7 +40,7 @@ namespace CSSPropertyParserHelpers {
 
 /// Non-template base type for code sharing.
 struct CSSPrimitiveValueResolverBase {
-    static RefPtr<CSSPrimitiveValue> resolve(CSS::NumericRaw auto value, CSSPropertyParserOptions)
+    static RefPtr<CSSPrimitiveValue> resolve(CSS::NumericRaw auto value, CSSPropertyParserOptions = { })
     {
         return CSSPrimitiveValue::create(value.value, CSS::toCSSUnitType(value.unit));
     }
@@ -50,17 +50,17 @@ struct CSSPrimitiveValueResolverBase {
         return CSSPrimitiveValue::createInteger(value.value);
     }
 
-    static RefPtr<CSSPrimitiveValue> resolve(CSS::Calc auto value, CSSPropertyParserOptions)
+    static RefPtr<CSSPrimitiveValue> resolve(CSS::Calc auto value, CSSPropertyParserOptions = { })
     {
         return CSSPrimitiveValue::create(value.protectedCalc());
     }
 
-    static RefPtr<CSSPrimitiveValue> resolve(CSS::Numeric auto value, CSSPropertyParserOptions options)
+    static RefPtr<CSSPrimitiveValue> resolve(CSS::Numeric auto value, CSSPropertyParserOptions options = { })
     {
         return WTF::switchOn(WTFMove(value), [&](auto&& value) { return resolve(WTFMove(value), options); });
     }
 
-    template<CSS::Range nR, CSS::Range pR, typename T> static RefPtr<CSSPrimitiveValue> resolve(const CSS::NumberOrPercentageResolvedToNumber<nR, pR, T>& value, CSSPropertyParserOptions options)
+    template<CSS::Range nR, CSS::Range pR, typename T> static RefPtr<CSSPrimitiveValue> resolve(const CSS::NumberOrPercentageResolvedToNumber<nR, pR, T>& value, CSSPropertyParserOptions options = { })
     {
         return WTF::switchOn(value,
             [&](const CSS::Number<nR, T>& value) -> RefPtr<CSSPrimitiveValue> {

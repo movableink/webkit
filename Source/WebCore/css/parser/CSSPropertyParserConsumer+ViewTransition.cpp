@@ -36,7 +36,7 @@
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumeViewTransitionTypes(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumeViewTransitionTypes(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <'types'> = none | <custom-ident>+
     // https://www.w3.org/TR/css-view-transitions-2/#descdef-view-transition-types

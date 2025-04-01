@@ -25,7 +25,7 @@
 #include "HTMLMetaElement.h"
 
 #include "Attribute.h"
-#include "CSSParser.h"
+#include "CSSPropertyParserConsumer+Color.h"
 #include "Color.h"
 #include "Document.h"
 #include "DocumentInlines.h"
@@ -100,7 +100,7 @@ bool HTMLMetaElement::mediaAttributeMatches()
 const Color& HTMLMetaElement::contentColor()
 {
     if (!m_contentColor)
-        m_contentColor = CSSParser::parseColorWithoutContext(content());
+        m_contentColor = CSSPropertyParserHelpers::deprecatedParseColorRawWithoutContext(content());
     return *m_contentColor;
 }
 

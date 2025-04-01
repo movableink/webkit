@@ -35,6 +35,7 @@
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParserConsumer+Shapes.h"
 #include "CSSPropertyParserConsumer+URL.h"
+#include "CSSPropertyParserState.h"
 #include "CSSPropertyParsing.h"
 #include "CSSRectValue.h"
 #include "CSSValueKeywords.h"
@@ -43,7 +44,7 @@
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumeClipRectFunction(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeClipRectFunction(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // rect() = rect( <top>, <right>, <bottom>, <left> )
     // "<top>, <right>, <bottom>, and <left> may either have a <length> value or auto."
@@ -57,7 +58,7 @@ RefPtr<CSSValue> consumeClipRectFunction(CSSParserTokenRange& range, const CSSPa
     auto consumeClipComponent = [&] -> RefPtr<CSSPrimitiveValue> {
         if (args.peek().id() == CSSValueAuto)
             return consumeIdent(args);
-        return CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(args, context, { .parserMode = context.mode, .unitless = UnitlessQuirk::Allow, .unitlessZero = UnitlessZeroQuirk::Allow });
+        return CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(args, state);
     };
 
     // Support both rect(t, r, b, l) and rect(t r b l).
@@ -93,7 +94,7 @@ RefPtr<CSSValue> consumeClipRectFunction(CSSParserTokenRange& range, const CSSPa
     );
 }
 
-RefPtr<CSSValue> consumeClipPath(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeClipPath(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'clip-path'> = none | <clip-source> | [ <basic-shape> || <geometry-box> ]
     // <clip-source> = <url>
@@ -111,7 +112,7 @@ RefPtr<CSSValue> consumeClipPath(CSSParserTokenRange& range, const CSSParserCont
     auto consumeShape = [&]() -> bool {
         if (shape)
             return false;
-        shape = consumeBasicShape(range, context, { });
+        shape = consumeBasicShape(range, state, { });
         return !!shape;
     };
     auto consumeBox = [&]() -> bool {

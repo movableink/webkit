@@ -29,6 +29,7 @@
 namespace WebCore {
 
 class CSSPrimitiveValue;
+class CSSToLengthConversionData;
 class Element;
 class SVGLengthContext;
 

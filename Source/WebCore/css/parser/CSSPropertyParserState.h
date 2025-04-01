@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,22 +24,23 @@
 
 #pragma once
 
-#include <wtf/Forward.h>
+#include "CSSProperty.h"
+#include "CSSPropertyNames.h"
+#include "StyleRuleType.h"
 
 namespace WebCore {
 
-class CSSParserTokenRange;
-class CSSValue;
+struct CSSParserContext;
 
 namespace CSS {
-struct PropertyParserState;
-}
 
-namespace CSSPropertyParserHelpers {
+struct PropertyParserState {
+    const CSSParserContext& context;
 
-// MARK: <'text-shadow'> consuming
-// https://drafts.csswg.org/css-text-decor-3/#propdef-text-shadow
-RefPtr<CSSValue> consumeTextShadow(CSSParserTokenRange&, CSS::PropertyParserState&);
+    StyleRuleType currentRule { StyleRuleType::Style };
+    CSSPropertyID currentProperty { CSSPropertyInvalid };
+    IsImportant important { IsImportant::No };
+};
 
-} // namespace CSSPropertyParserHelpers
+} // namespace CSS
 } // namespace WebCore

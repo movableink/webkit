@@ -25,10 +25,10 @@
 
 #include "CSSColorValue.h"
 #include "CSSCustomPropertyValue.h"
-#include "CSSParser.h"
 #include "CSSPendingSubstitutionValue.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyNames.h"
+#include "CSSPropertyParserConsumer+Color.h"
 #include "CSSPropertyParserConsumer+Font.h"
 #include "CSSSerializationContext.h"
 #include "CSSStyleProperties.h"
@@ -111,9 +111,12 @@ std::optional<Color> StyleProperties::propertyAsColor(CSSPropertyID property) co
     auto value = getPropertyCSSValue(property);
     if (!value)
         return std::nullopt;
-    return value->isColor()
-        ? CSSColorValue::absoluteColor(*value)
-        : CSSParser::parseColorWithoutContext(WebCore::serializeLonghandValue(CSS::defaultSerializationContext(), property, *value));
+
+    if (value->isColor())
+        return CSSColorValue::absoluteColor(*value);
+
+    auto serializationString = WebCore::serializeLonghandValue(CSS::defaultSerializationContext(), property, *value);
+    return CSSPropertyParserHelpers::deprecatedParseColorRawWithoutContext(serializationString);
 }
 
 std::optional<CSSValueID> StyleProperties::propertyAsValueID(CSSPropertyID property) const

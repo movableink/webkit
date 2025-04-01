@@ -28,6 +28,7 @@
 
 #include "CSSKeyframeRule.h"
 #include "CSSParser.h"
+#include "CSSPropertyParserConsumer+Animations.h"
 #include "CSSRuleList.h"
 #include "CSSStyleSheet.h"
 #include "Document.h"
@@ -79,7 +80,7 @@ void StyleRuleKeyframes::wrapperRemoveKeyframe(unsigned index)
 
 std::optional<size_t> StyleRuleKeyframes::findKeyframeIndex(const String& key) const
 {
-    auto keys = CSSParser::parseKeyframeKeyList(key, strictCSSParserContext());
+    auto keys = CSSPropertyParserHelpers::parseKeyframeKeyList(key, strictCSSParserContext());
     if (keys.isEmpty())
         return std::nullopt;
 
@@ -127,8 +128,7 @@ void CSSKeyframesRule::appendRule(const String& ruleText)
 {
     ASSERT(m_childRuleCSSOMWrappers.size() == m_keyframesRule->keyframes().size());
 
-    CSSParser parser(parserContext());
-    RefPtr<StyleRuleKeyframe> keyframe = parser.parseKeyframeRule(ruleText);
+    auto keyframe = CSSParser::parseKeyframeRule(ruleText, parserContext());
     if (!keyframe)
         return;
 

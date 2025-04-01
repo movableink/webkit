@@ -61,7 +61,7 @@
 #include "WebProcess.h"
 #include <WebCore/AXCoreObject.h>
 #include <WebCore/AXObjectCache.h>
-#include <WebCore/CSSParser.h>
+#include <WebCore/CSSPropertyParserConsumer+Color.h>
 #include <WebCore/CaptionUserPreferences.h>
 #include <WebCore/CompositionHighlight.h>
 #include <WebCore/FocusController.h>
@@ -497,10 +497,10 @@ void WKBundlePageSetComposition(WKBundlePageRef pageRef, WKStringRef text, int f
             std::optional<WebCore::Color> foregroundHighlightColor;
 
             if (auto backgroundColor = dictionary->get("color"_s))
-                backgroundHighlightColor = WebCore::CSSParser::parseColorWithoutContext(downcast<API::String>(backgroundColor)->string());
+                backgroundHighlightColor = WebCore::CSSPropertyParserHelpers::deprecatedParseColorRawWithoutContext(downcast<API::String>(backgroundColor)->string());
 
             if (auto foregroundColor = dictionary->get("foregroundColor"_s))
-                foregroundHighlightColor = WebCore::CSSParser::parseColorWithoutContext(downcast<API::String>(foregroundColor)->string());
+                foregroundHighlightColor = WebCore::CSSPropertyParserHelpers::deprecatedParseColorRawWithoutContext(downcast<API::String>(foregroundColor)->string());
 
             highlights.append({
                 static_cast<unsigned>(startOffset),

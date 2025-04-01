@@ -99,10 +99,7 @@ ExceptionOr<ViewTimeline::SpecifiedViewTimelineInsets> ViewTimeline::validateSpe
     if (auto* insetString = std::get_if<String>(&inset)) {
         if (insetString->isEmpty())
             return Exception { ExceptionCode::TypeError };
-        CSSTokenizer tokenizer(*insetString);
-        auto tokenRange = tokenizer.tokenRange();
-        tokenRange.consumeWhitespace();
-        auto consumedInset = CSSPropertyParserHelpers::consumeSingleViewTimelineInsetItem(tokenRange, Ref { document }->cssParserContext());
+        auto consumedInset = CSSPropertyParserHelpers::parseSingleViewTimelineInsetItem(*insetString, Ref { document }->cssParserContext());
         if (!consumedInset)
             return Exception { ExceptionCode::TypeError };
 

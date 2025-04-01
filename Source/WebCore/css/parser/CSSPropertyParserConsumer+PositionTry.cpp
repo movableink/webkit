@@ -35,9 +35,11 @@
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumePositionTryFallbacks(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumePositionTryFallbacks(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
-    // none | [ [<dashed-ident> || <try-tactic>] | <'position-area'> ]#
+    // <'position-try-fallbacks'> = none | [ [<dashed-ident> || <try-tactic>] | <'position-area'> ]#
+    // https://drafts.csswg.org/css-anchor-position-1/#propdef-position-try-fallbacks
+
     if (auto result = consumeIdent<CSSValueNone>(range))
         return result;
 
@@ -47,7 +49,7 @@ RefPtr<CSSValue> consumePositionTryFallbacks(CSSParserTokenRange& range, const C
         // consumePositionArea accepts 'none', so detect and reject it beforehand.
         if (range.peek().id() == CSSValueNone)
             return nullptr;
-        if (auto positionArea = consumePositionArea(range, context))
+        if (auto positionArea = consumePositionArea(range, state))
             return positionArea;
 
         range = rangeCopy;

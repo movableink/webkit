@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,37 +22,32 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "CSSPropertyParserConsumer+Inset.h"
+#pragma once
 
-#include "CSSParserContext.h"
-#include "CSSParserTokenRange.h"
-#include "CSSPrimitiveValue.h"
-#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
-#include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
-#include "CSSValueKeywords.h"
+#include "CSSParserFastPaths.h"
+#include "CSSPlatformColorResolutionState.h"
+#include "CSSPropertyParserConsumer+Color.h"
 
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumeInsetPhysical(CSSParserTokenRange& range, const CSSParserContext& context, CSSPropertyID currentShorthand)
+// MARK: <color> parsing (raw)
+
+template<typename F> WebCore::Color parseColorRaw(const String& string, const CSSParserContext& context, F&& lazySlowPathOptionsFunctor)
 {
-    // <inset-physical> = auto | <length-percentage anchor-allowed anchor-size-allowed>
-    // https://drafts.csswg.org/css-position-3/#insets
+    if (auto color = CSSParserFastPaths::parseSimpleColor(string, context))
+        return *color;
 
-    if (range.peek().id() == CSSValueAuto)
-        return consumeIdent(range);
+    // To avoid doing anything unnecessary before the fast path can run, callers bundle up
+    // a functor to generate the slow path parameters.
+    auto [options, eagerResolutionState, eagerResolutionDelegate] = lazySlowPathOptionsFunctor();
 
-    auto unitless = currentShorthand != CSSPropertyInset ? UnitlessQuirk::Allow : UnitlessQuirk::Forbid;
+    // If a delegate is provided, hook it up to the context here. By having it live on the stack,
+    // we avoid allocating it.
+    if (eagerResolutionDelegate)
+        eagerResolutionState.delegate = &eagerResolutionDelegate.value();
 
-    return CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, context, {
-        .parserMode = context.mode,
-        .anchorPolicy = AnchorPolicy::Allow,
-        .anchorSizePolicy = AnchorSizePolicy::Allow,
-        .unitless = unitless,
-        .unitlessZero = UnitlessZeroQuirk::Allow,
-    });
+    return parseColorRawSlow(string, context, options, eagerResolutionState);
 }
 
 } // namespace CSSPropertyParserHelpers

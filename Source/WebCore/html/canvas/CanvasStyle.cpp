@@ -31,7 +31,7 @@
 
 #include "CSSParser.h"
 #include "CSSPropertyNames.h"
-#include "CSSPropertyParserConsumer+Color.h"
+#include "CSSPropertyParserConsumer+ColorInlines.h"
 #include "CanvasGradient.h"
 #include "CanvasPattern.h"
 #include "ColorConversion.h"

@@ -57,6 +57,11 @@ static ExceptionOr<LengthBox> parseRootMargin(String& rootMargin)
 {
     using namespace CSSPropertyParserHelpers;
 
+    auto parserContext = CSSParserContext { HTMLStandardMode };
+    auto parserState = CSS::PropertyParserState {
+        .context = parserContext,
+    };
+
     CSSTokenizer tokenizer(rootMargin);
     auto tokenRange = tokenizer.tokenRange();
     tokenRange.consumeWhitespace();
@@ -64,7 +69,7 @@ static ExceptionOr<LengthBox> parseRootMargin(String& rootMargin)
     while (!tokenRange.atEnd()) {
         if (margins.size() == 4)
             return Exception { ExceptionCode::SyntaxError, "Failed to construct 'IntersectionObserver': Extra text found at the end of rootMargin."_s };
-        auto parsedValue = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(tokenRange, CSSParserContext { HTMLStandardMode }, { });
+        auto parsedValue = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(tokenRange, parserState);
         if (!parsedValue || parsedValue->isCalculated())
             return Exception { ExceptionCode::SyntaxError, "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent."_s };
         if (parsedValue->isPercentage())

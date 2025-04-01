@@ -176,14 +176,9 @@ void CSSCounterStyleRule::reattach(StyleRuleBase& rule)
     m_counterStyleRule = downcast<StyleRuleCounterStyle>(rule);
 }
 
-RefPtr<CSSValue> CSSCounterStyleRule::cssValueFromText(CSSPropertyID propertyID, const String& valueText)
+RefPtr<CSSValue> CSSCounterStyleRule::cssValueFromText(CSSPropertyID propertyID, const String& string)
 {
-    auto tokenizer = CSSTokenizer(valueText);
-    auto tokenRange = tokenizer.tokenRange();
-    auto result = CSSPropertyParser::parseCounterStyleDescriptor(propertyID, tokenRange, parserContext());
-    if (!result || !tokenRange.atEnd())
-        return nullptr;
-    return result;
+    return CSSPropertyParser::parseCounterStyleDescriptor(propertyID, string, parserContext());
 }
 
 // https://drafts.csswg.org/css-counter-styles-3/#dom-csscounterstylerule-name

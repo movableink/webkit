@@ -101,8 +101,6 @@ public:
     static void parseStyleSheet(const String&, const CSSParserContext&, StyleSheetContents&);
     static CSSSelectorList parsePageSelector(CSSParserTokenRange, StyleSheetContents*);
 
-    static Vector<std::pair<CSSValueID, double>> parseKeyframeKeyList(const String&, const CSSParserContext&);
-
     bool supportsDeclaration(CSSParserTokenRange&);
     const CSSParserContext& context() const { return m_context; }
 

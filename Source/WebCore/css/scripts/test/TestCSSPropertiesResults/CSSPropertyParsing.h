@@ -7,33 +7,38 @@
 
 namespace WebCore {
 
-struct CSSParserContext;
 class CSSParserTokenRange;
 class CSSValue;
 
+namespace CSS {
+
+struct PropertyParserState;
+
+} // namespace CSS
+
 struct CSSPropertyParsing {
     // Parse and return a single longhand style property.
-    static RefPtr<CSSValue> parseStyleProperty(CSSParserTokenRange&, CSSPropertyID id, CSSPropertyID currentShorthand, const CSSParserContext&);
+    static RefPtr<CSSValue> parseStyleProperty(CSSParserTokenRange&, CSSPropertyID id, CSS::PropertyParserState&);
     // Fast path bare-keyword support.
-    static bool isKeywordValidForStyleProperty(CSSPropertyID, CSSValueID, const CSSParserContext&);
+    static bool isKeywordValidForStyleProperty(CSSPropertyID, CSSValueID, CSS::PropertyParserState&);
     static bool isKeywordFastPathEligibleStyleProperty(CSSPropertyID);
 
     // Parse and return a single longhand @first-at-rule descriptor.
-    static RefPtr<CSSValue> parseFirstAtRuleDescriptor(CSSParserTokenRange&, CSSPropertyID id, const CSSParserContext&);
+    static RefPtr<CSSValue> parseFirstAtRuleDescriptor(CSSParserTokenRange&, CSSPropertyID id, CSS::PropertyParserState&);
     // Fast path bare-keyword support.
-    static bool isKeywordValidForFirstAtRuleDescriptor(CSSPropertyID, CSSValueID, const CSSParserContext&);
+    static bool isKeywordValidForFirstAtRuleDescriptor(CSSPropertyID, CSSValueID, CSS::PropertyParserState&);
     static bool isKeywordFastPathEligibleFirstAtRuleDescriptor(CSSPropertyID);
 
     // Parse and return a single longhand @second-at-rule descriptor.
-    static RefPtr<CSSValue> parseSecondAtRuleDescriptor(CSSParserTokenRange&, CSSPropertyID id, const CSSParserContext&);
+    static RefPtr<CSSValue> parseSecondAtRuleDescriptor(CSSParserTokenRange&, CSSPropertyID id, CSS::PropertyParserState&);
     // Fast path bare-keyword support.
-    static bool isKeywordValidForSecondAtRuleDescriptor(CSSPropertyID, CSSValueID, const CSSParserContext&);
+    static bool isKeywordValidForSecondAtRuleDescriptor(CSSPropertyID, CSSValueID, CSS::PropertyParserState&);
     static bool isKeywordFastPathEligibleSecondAtRuleDescriptor(CSSPropertyID);
 
     // Direct consumers.
 
     // Exported shared consumers.
-    static RefPtr<CSSValue> consumeSharedRuleExported(CSSParserTokenRange&, const CSSParserContext&);
+    static RefPtr<CSSValue> consumeSharedRuleExported(CSSParserTokenRange&, CSS::PropertyParserState&);
 };
 
 } // namespace WebCore

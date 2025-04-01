@@ -1021,7 +1021,6 @@ css/parser/CSSCustomPropertySyntax.cpp
 css/parser/CSSParser.cpp
 css/parser/CSSParserContext.cpp
 css/parser/CSSParserFastPaths.cpp
-css/parser/CSSParserIdioms.cpp
 css/parser/CSSParserImpl.cpp
 css/parser/CSSParserObserverWrapper.cpp
 css/parser/CSSParserToken.cpp
@@ -1047,7 +1046,6 @@ css/parser/CSSPropertyParserConsumer+Grid.cpp
 css/parser/CSSPropertyParserConsumer+Ident.cpp
 css/parser/CSSPropertyParserConsumer+Image.cpp
 css/parser/CSSPropertyParserConsumer+Inline.cpp
-css/parser/CSSPropertyParserConsumer+Inset.cpp
 css/parser/CSSPropertyParserConsumer+Lists.cpp
 css/parser/CSSPropertyParserConsumer+Masking.cpp
 css/parser/CSSPropertyParserConsumer+Motion.cpp

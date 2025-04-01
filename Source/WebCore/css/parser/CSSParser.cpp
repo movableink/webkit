@@ -8,6 +8,7 @@
  * Copyright (C) 2012, 2013 Adobe Systems Incorporated. All rights reserved.
  * Copyright (C) 2012 Intel Corporation. All rights reserved.
  * Copyright (C) 2014 Google Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -28,13 +29,13 @@
 #include "config.h"
 #include "CSSParser.h"
 
-#include "CSSColorValue.h"
 #include "CSSKeyframeRule.h"
-#include "CSSParserFastPaths.h"
 #include "CSSParserImpl.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPendingSubstitutionValue.h"
+#include "CSSProperty.h"
 #include "CSSPropertyParser.h"
+#include "CSSPropertyParserState.h"
 #include "CSSSelectorParser.h"
 #include "CSSSupportsParser.h"
 #include "CSSTokenizer.h"
@@ -46,7 +47,6 @@
 #include "Page.h"
 #include "RenderTheme.h"
 #include "Settings.h"
-#include "StyleColor.h"
 #include "StyleRule.h"
 #include "StyleSheetContents.h"
 #include <wtf/NeverDestroyed.h>
@@ -54,84 +54,39 @@
 
 namespace WebCore {
 
-CSSParser::CSSParser(const CSSParserContext& context)
-    : m_context(context)
+void CSSParser::parseSheet(const String& string, const CSSParserContext& context, StyleSheetContents& sheet)
 {
+    return CSSParserImpl::parseStyleSheet(string, context, sheet);
 }
 
-CSSParser::~CSSParser() = default;
-
-void CSSParser::parseSheet(StyleSheetContents& sheet, const String& string)
-{
-    return CSSParserImpl::parseStyleSheet(string, m_context, sheet);
-}
-
-void CSSParser::parseSheetForInspector(const CSSParserContext& context, StyleSheetContents& sheet, const String& string, CSSParserObserver& observer)
+void CSSParser::parseSheetForInspector(const String& string, const CSSParserContext& context, StyleSheetContents& sheet, CSSParserObserver& observer)
 {
     return CSSParserImpl::parseStyleSheetForInspector(string, context, sheet, observer);
 }
 
-RefPtr<StyleRuleBase> CSSParser::parseRule(const CSSParserContext& context, StyleSheetContents* sheet, const String& string, CSSParserEnum::NestedContext nestedContext)
+RefPtr<StyleRuleBase> CSSParser::parseRule(const String& string, const CSSParserContext& context, StyleSheetContents* sheet, CSSParserEnum::NestedContext nestedContext)
 {
     return CSSParserImpl::parseRule(string, context, sheet, CSSParserImpl::AllowedRules::ImportRules, nestedContext);
 }
 
-RefPtr<StyleRuleKeyframe> CSSParser::parseKeyframeRule(const String& string)
+RefPtr<StyleRuleKeyframe> CSSParser::parseKeyframeRule(const String& string, const CSSParserContext& context)
 {
-    RefPtr keyframe = CSSParserImpl::parseRule(string, m_context, nullptr, CSSParserImpl::AllowedRules::KeyframeRules);
+    RefPtr keyframe = CSSParserImpl::parseRule(string, context, nullptr, CSSParserImpl::AllowedRules::KeyframeRules);
     return downcast<StyleRuleKeyframe>(keyframe.get());
 }
 
-bool CSSParser::parseSupportsCondition(const String& condition)
+bool CSSParser::parseSupportsCondition(const String& condition, const CSSParserContext& context)
 {
-    CSSParserImpl parser(m_context, condition);
+    CSSParserImpl parser(context, condition);
     if (!parser.tokenizer())
         return false;
     return CSSSupportsParser::supportsCondition(parser.tokenizer()->tokenRange(), parser, CSSSupportsParser::ParsingMode::AllowBareDeclarationAndGeneralEnclosed) == CSSSupportsParser::Supported;
 }
 
-static Color color(RefPtr<CSSValue>&& value)
-{
-    if (!value)
-        return { };
-    return CSSColorValue::absoluteColor(*value);
-}
-
-Color CSSParser::parseColorWithoutContext(const String& string, bool strict)
-{
-    if (auto color = CSSParserFastPaths::parseSimpleColor(string, strict))
-        return *color;
-    // FIXME: Unclear why we want to ignore the boolean argument "strict" and always pass strictCSSParserContext here.
-    return color(parseSingleValue(CSSPropertyColor, string, strictCSSParserContext()));
-}
-
-std::optional<SRGBA<uint8_t>> CSSParser::parseNamedColor(StringView string)
-{
-    return CSSParserFastPaths::parseNamedColor(string);
-}
-
-std::optional<SRGBA<uint8_t>> CSSParser::parseHexColor(StringView string)
-{
-    return CSSParserFastPaths::parseHexColor(string);
-}
-
-RefPtr<CSSValue> CSSParser::parseSingleValue(CSSPropertyID propertyID, const String& string, const CSSParserContext& context)
-{
-    if (string.isEmpty())
-        return nullptr;
-    if (RefPtr value = CSSParserFastPaths::maybeParseValue(propertyID, string, context))
-        return value;
-    CSSTokenizer tokenizer(string);
-    return CSSPropertyParser::parseSingleValue(propertyID, tokenizer.tokenRange(), context);
-}
-
 CSSParser::ParseResult CSSParser::parseValue(MutableStyleProperties& declaration, CSSPropertyID propertyID, const String& string, IsImportant important, const CSSParserContext& context)
 {
     ASSERT(!string.isEmpty());
-    if (RefPtr value = CSSParserFastPaths::maybeParseValue(propertyID, string, context))
-        return declaration.addParsedProperty(CSSProperty(propertyID, value.releaseNonNull(), important)) ? CSSParser::ParseResult::Changed : CSSParser::ParseResult::Unchanged;
-    CSSParser parser(context);
-    return parser.parseValue(declaration, propertyID, string, important);
+    return CSSParserImpl::parseValue(declaration, propertyID, string, important, context);
 }
 
 CSSParser::ParseResult CSSParser::parseCustomPropertyValue(MutableStyleProperties& declaration, const AtomString& propertyName, const String& string, IsImportant important, const CSSParserContext& context)
@@ -139,14 +94,9 @@ CSSParser::ParseResult CSSParser::parseCustomPropertyValue(MutableStylePropertie
     return CSSParserImpl::parseCustomPropertyValue(declaration, propertyName, string, important, context);
 }
 
-CSSParser::ParseResult CSSParser::parseValue(MutableStyleProperties& declaration, CSSPropertyID propertyID, const String& string, IsImportant important)
+std::optional<CSSSelectorList> CSSParser::parseSelectorList(const String& string, const CSSParserContext& context, StyleSheetContents* styleSheet, CSSParserEnum::NestedContext nestedContext)
 {
-    return CSSParserImpl::parseValue(declaration, propertyID, string, important, m_context);
-}
-
-std::optional<CSSSelectorList> CSSParser::parseSelectorList(const String& string, StyleSheetContents* styleSheet, CSSParserEnum::NestedContext nestedContext)
-{
-    return parseCSSSelectorList(CSSTokenizer(string).tokenRange(), m_context, styleSheet, nestedContext);
+    return parseCSSSelectorList(CSSTokenizer(string).tokenRange(), context, styleSheet, nestedContext);
 }
 
 Ref<ImmutableStyleProperties> CSSParser::parseInlineStyleDeclaration(const String& string, const Element& element)
@@ -154,19 +104,14 @@ Ref<ImmutableStyleProperties> CSSParser::parseInlineStyleDeclaration(const Strin
     return CSSParserImpl::parseInlineStyleDeclaration(string, element);
 }
 
-bool CSSParser::parseDeclaration(MutableStyleProperties& declaration, const String& string)
+bool CSSParser::parseDeclaration(MutableStyleProperties& declaration, const String& string, const CSSParserContext& context)
 {
-    return CSSParserImpl::parseDeclarationList(&declaration, string, m_context);
+    return CSSParserImpl::parseDeclarationList(&declaration, string, context);
 }
 
-void CSSParser::parseDeclarationForInspector(const CSSParserContext& context, const String& string, CSSParserObserver& observer)
+void CSSParser::parseDeclarationForInspector(const String& string, const CSSParserContext& context, CSSParserObserver& observer)
 {
     CSSParserImpl::parseDeclarationListForInspector(string, context, observer);
 }
 
-Vector<std::pair<CSSValueID, double>> CSSParser::parseKeyframeKeyList(const String& selector, const CSSParserContext& context)
-{
-    return CSSParserImpl::parseKeyframeKeyList(selector, context);
-}
-
-}
+} // namespace WebCore

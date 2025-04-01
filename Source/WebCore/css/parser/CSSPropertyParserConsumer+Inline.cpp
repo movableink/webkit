@@ -63,7 +63,7 @@ static RefPtr<CSSValue> consumeTextEdge(CSSParserTokenRange& range)
     return CSSValuePair::create(firstValue.releaseNonNull(), secondValue.releaseNonNull());
 }
 
-RefPtr<CSSValue> consumeLineFitEdge(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumeLineFitEdge(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <'line-fit-edge'> = leading | <text-edge>
     // https://drafts.csswg.org/css-inline-3/#propdef-line-fit-edge
@@ -73,7 +73,7 @@ RefPtr<CSSValue> consumeLineFitEdge(CSSParserTokenRange& range, const CSSParserC
     return consumeTextEdge(range);
 }
 
-RefPtr<CSSValue> consumeTextBoxEdge(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumeTextBoxEdge(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <'text-box-edge'> = auto | <text-edge>
     // https://drafts.csswg.org/css-inline-3/#propdef-text-box-edge

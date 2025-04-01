@@ -39,26 +39,7 @@
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumeMarginPhysical(CSSParserTokenRange& range, const CSSParserContext& context, CSSPropertyID currentShorthand)
-{
-    // <margin-physical> = <length-percentage> | auto
-    // https://drafts.csswg.org/css-box/#margin-physical
-
-    if (range.peek().id() == CSSValueAuto)
-        return consumeIdent(range);
-
-    auto unitless = currentShorthand != CSSPropertyInset ? UnitlessQuirk::Allow : UnitlessQuirk::Forbid;
-    auto anchorSizePolicy = context.propertySettings.cssAnchorPositioningEnabled ? AnchorSizePolicy::Allow : AnchorSizePolicy::Forbid;
-
-    return CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, context, {
-        .parserMode = context.mode,
-        .anchorSizePolicy = anchorSizePolicy,
-        .unitless = unitless,
-        .unitlessZero = UnitlessZeroQuirk::Allow,
-    });
-}
-
-RefPtr<CSSValue> consumeMarginTrim(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumeMarginTrim(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <'margin-trim'> = none | [ block || inline ] | [ block-start || inline-start || block-end || inline-end ]
     // https://drafts.csswg.org/css-box/#margin-trim

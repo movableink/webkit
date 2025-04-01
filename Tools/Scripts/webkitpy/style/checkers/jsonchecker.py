@@ -374,6 +374,9 @@ class JSONCSSPropertiesChecker(JSONChecker):
             return
 
         keys_and_validators = {
+            'accepts-quirky-angle': self.validate_boolean,
+            'accepts-quirky-color': self.validate_boolean,
+            'accepts-quirky-length': self.validate_boolean,
             'aliases': self.validate_array,
             'animation-getter': self.validate_string,
             'animation-initial': self.validate_string,
@@ -415,13 +418,6 @@ class JSONCSSPropertiesChecker(JSONChecker):
             'parser-exported': self.validate_boolean,
             'parser-function': self.validate_string,
             'parser-function-allows-number-or-integer-input': self.validate_boolean,
-            'parser-function-requires-additional-parameters': self.validate_array,
-            'parser-function-requires-context': self.validate_boolean,
-            'parser-function-requires-context-mode': self.validate_boolean,
-            'parser-function-requires-current-property': self.validate_boolean,
-            'parser-function-requires-current-shorthand': self.validate_boolean,
-            'parser-function-requires-quirks-mode': self.validate_boolean,
-            'parser-function-requires-value-pool': self.validate_boolean,
             'parser-grammar': self.validate_string,
             'parser-grammar-comment': self.validate_comment,
             'parser-grammar-unused': self.validate_string,

@@ -115,9 +115,8 @@ void CSSStyleRule::setSelectorText(const String& selectorText)
     if (!parentStyleSheet())
         return;
 
-    CSSParser p(parserContext());
     RefPtr sheet = parentStyleSheet();
-    auto selectorList = p.parseSelectorList(selectorText, sheet ? &sheet->contents() : nullptr, nestedContext());
+    auto selectorList = CSSParser::parseSelectorList(selectorText, parserContext(), sheet ? &sheet->contents() : nullptr, nestedContext());
     if (!selectorList)
         return;
 
@@ -237,7 +236,7 @@ ExceptionOr<unsigned> CSSStyleRule::insertRule(const String& ruleString, unsigne
         return Exception { ExceptionCode::IndexSizeError };
 
     RefPtr styleSheet = parentStyleSheet();
-    RefPtr newRule = CSSParser::parseRule(parserContext(), styleSheet ? &styleSheet->contents() : nullptr, ruleString, CSSParserEnum::NestedContextType::Style);
+    RefPtr newRule = CSSParser::parseRule(ruleString, parserContext(), styleSheet ? &styleSheet->contents() : nullptr, CSSParserEnum::NestedContextType::Style);
     if (!newRule) {
         newRule = CSSParserImpl::parseNestedDeclarations(parserContext(), ruleString);
         if (!newRule)

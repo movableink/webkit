@@ -43,7 +43,7 @@
 #include "CSSMediaRule.h"
 #include "CSSParser.h"
 #include "CSSPropertyParser.h"
-#include "CSSPropertyParserConsumer+Color.h"
+#include "CSSPropertyParserConsumer+ColorInlines.h"
 #include "CSSStyleRule.h"
 #include "CSSSupportsRule.h"
 #include "CacheStorageConnection.h"
@@ -7621,8 +7621,7 @@ void Internals::acceptTypedArrays(Int32Array&)
 
 Internals::SelectorFilterHashCounts Internals::selectorFilterHashCounts(const String& selector)
 {
-    auto parser = CSSParser { { *contextDocument() } };
-    auto selectorList = parser.parseSelectorList(selector);
+    auto selectorList = CSSParser::parseSelectorList(selector, CSSParserContext(*contextDocument()));
     if (!selectorList)
         return { };
     

@@ -147,16 +147,10 @@ RefPtr<CSSValue> SingleTimelineRange::parse(TimelineRangeValue&& value, RefPtr<E
     const auto& parserContext = document->cssParserContext();
     return WTF::switchOn(value,
     [&](String& rangeString) -> RefPtr<CSSValue> {
-        CSSTokenizer tokenizer(rangeString);
-        auto tokenRange = tokenizer.tokenRange();
-        tokenRange.consumeWhitespace();
-        return CSSPropertyParserHelpers::consumeSingleAnimationRange(tokenRange, parserContext, type);
+        return CSSPropertyParserHelpers::parseSingleAnimationRange(rangeString, parserContext, type);
     },
     [&](TimelineRangeOffset& rangeOffset) -> RefPtr<CSSValue> {
-        CSSTokenizer tokenizer(rangeOffset.rangeName);
-        auto tokenRange = tokenizer.tokenRange();
-        tokenRange.consumeWhitespace();
-        if (auto consumedRangeName = CSSPropertyParserHelpers::consumeSingleAnimationRange(tokenRange, parserContext, type)) {
+        if (auto consumedRangeName = CSSPropertyParserHelpers::parseSingleAnimationRange(rangeOffset.rangeName, parserContext, type)) {
             if (rangeOffset.offset)
                 return CSSValuePair::createNoncoalescing(*consumedRangeName, *rangeOffset.offset->toCSSValue());
             return consumedRangeName;

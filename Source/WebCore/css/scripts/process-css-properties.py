@@ -451,6 +451,9 @@ class Longhand:
 
 class StylePropertyCodeGenProperties:
     schema = Schema(
+        Schema.Entry("accepts-quirky-angle", allowed_types=[bool], default_value=False),
+        Schema.Entry("accepts-quirky-color", allowed_types=[bool], default_value=False),
+        Schema.Entry("accepts-quirky-length", allowed_types=[bool], default_value=False),
         Schema.Entry("aliases", allowed_types=[list], default_value=[]),
         Schema.Entry("animation-getter", allowed_types=[str]),
         Schema.Entry("animation-initial", allowed_types=[str]),
@@ -489,10 +492,6 @@ class StylePropertyCodeGenProperties:
         Schema.Entry("parser-exported", allowed_types=[bool]),
         Schema.Entry("parser-function", allowed_types=[str]),
         Schema.Entry("parser-function-allows-number-or-integer-input", allowed_types=[bool], default_value=False),
-        Schema.Entry("parser-function-requires-additional-parameters", allowed_types=[list], default_value=[]),
-        Schema.Entry("parser-function-requires-current-property", allowed_types=[bool], default_value=False),
-        Schema.Entry("parser-function-requires-current-shorthand", allowed_types=[bool], default_value=False),
-        Schema.Entry("parser-function-requires-value-pool", allowed_types=[bool], default_value=False),
         Schema.Entry("parser-grammar", allowed_types=[str]),
         Schema.Entry("parser-grammar-unused", allowed_types=[str]),
         Schema.Entry("parser-grammar-unused-reason", allowed_types=[str]),
@@ -620,7 +619,7 @@ class StylePropertyCodeGenProperties:
                 raise Exception(f"{key_path} can't be both a cascade alias and a shorthand.")
 
         if json_value.get("parser-grammar"):
-            for entry_name in ["parser-function", "parser-function-requires-additional-parameters", "parser-function-requires-current-shorthand", "parser-function-requires-current-property", "parser-function-requires-value-pool", "skip-parser", "longhands"]:
+            for entry_name in ["parser-function", "skip-parser", "longhands"]:
                 if entry_name in json_value:
                     raise Exception(f"{key_path} can't have both 'parser-grammar' and '{entry_name}'.")
             grammar = Grammar.from_string(parsing_context, f"{key_path}", name, json_value["parser-grammar"])
@@ -910,10 +909,6 @@ class StyleProperties:
     def noun(self):
         return 'property'
 
-    @property
-    def supports_current_shorthand(self):
-        return True
-
     @staticmethod
     def from_json(parsing_context, key_path, json_value):
         return StyleProperties(list(compact_map(lambda item: StyleProperty.from_json(parsing_context, key_path, item[0], item[1]), json_value.items())))
@@ -1031,6 +1026,9 @@ class StyleProperties:
 
 class DescriptorCodeGenProperties:
     schema = Schema(
+        Schema.Entry("accepts-quirky-angle", allowed_types=[bool], default_value=False),
+        Schema.Entry("accepts-quirky-color", allowed_types=[bool], default_value=False),
+        Schema.Entry("accepts-quirky-length", allowed_types=[bool], default_value=False),
         Schema.Entry("aliases", allowed_types=[list], default_value=[]),
         Schema.Entry("enable-if", allowed_types=[str]),
         Schema.Entry("internal-only", allowed_types=[bool], default_value=False),
@@ -1038,10 +1036,6 @@ class DescriptorCodeGenProperties:
         Schema.Entry("parser-exported", allowed_types=[bool]),
         Schema.Entry("parser-function", allowed_types=[str]),
         Schema.Entry("parser-function-allows-number-or-integer-input", allowed_types=[bool], default_value=False),
-        Schema.Entry("parser-function-requires-additional-parameters", allowed_types=[list], default_value=[]),
-        Schema.Entry("parser-function-requires-current-shorthand", allowed_types=[bool], default_value=False),
-        Schema.Entry("parser-function-requires-current-property", allowed_types=[bool], default_value=False),
-        Schema.Entry("parser-function-requires-value-pool", allowed_types=[bool], default_value=False),
         Schema.Entry("parser-grammar", allowed_types=[str]),
         Schema.Entry("parser-grammar-unused", allowed_types=[str]),
         Schema.Entry("parser-grammar-unused-reason", allowed_types=[str]),
@@ -1082,7 +1076,7 @@ class DescriptorCodeGenProperties:
                 del json_value["longhands"]
 
         if json_value.get("parser-grammar"):
-            for entry_name in ["parser-function", "parser-function-requires-additional-parameters", "parser-function-requires-current-shorthand", "parser-function-requires-current-property", "parser-function-requires-value-pool", "skip-parser", "longhands"]:
+            for entry_name in ["parser-function", "skip-parser", "longhands"]:
                 if entry_name in json_value:
                     raise Exception(f"{key_path} can't have both 'parser-grammar' and '{entry_name}.")
             grammar = Grammar.from_string(parsing_context, f"{key_path}", name, json_value["parser-grammar"])
@@ -1234,10 +1228,6 @@ class DescriptorSet:
     @property
     def noun(self):
         return 'descriptor'
-
-    @property
-    def supports_current_shorthand(self):
-        return False
 
     @property
     def all(self):
@@ -1583,11 +1573,9 @@ class BuiltinSchema:
 #
 
 # BuiltinSchema.StringParameter Mappings
-UNITLESS_MAPPINGS = {'allowed': 'UnitlessQuirk::Allow', 'forbidden': 'UnitlessQuirk::Forbid'}
 UNITLESS_ZERO_MAPPINGS = {'allowed': 'UnitlessZeroQuirk::Allow', 'forbidden': 'UnitlessZeroQuirk::Forbid'}
 ANCHOR_MAPPINGS = {'allowed': 'AnchorPolicy::Allow', 'forbidden': 'AnchorPolicy::Forbid'}
 ANCHOR_SIZE_MAPPINGS = {'allowed': 'AnchorSizePolicy::Allow', 'forbidden': 'AnchorSizePolicy::Forbid'}
-QUIRKY_COLORS_MAPPINGS = {'allowed': 'true', 'forbidden': 'false'}
 ALLOWED_COLOR_TYPES_MAPPINGS = {'absolute': 'CSS::ColorType::Absolute', 'current': 'CSS::ColorType::Current', 'system': 'CSS::ColorType::System'}
 ALLOWED_IMAGE_TYPES_MAPPINGS = {'url': 'AllowedImageType::URLFunction', 'image-set': 'AllowedImageType::ImageSet', 'generated': 'AllowedImageType::GeneratedImage'}
 
@@ -1595,15 +1583,12 @@ class ReferenceTerm:
     builtins = BuiltinSchema(
         BuiltinSchema.Entry('angle',
             BuiltinSchema.RangeParameter('value-range'),
-            BuiltinSchema.StringParameter('unitless', mappings=UNITLESS_MAPPINGS, default='forbidden'),
             BuiltinSchema.StringParameter('unitless-zero', mappings=UNITLESS_ZERO_MAPPINGS, default='forbidden')),
         BuiltinSchema.Entry('length',
             BuiltinSchema.RangeParameter('value-range'),
-            BuiltinSchema.StringParameter('unitless', mappings=UNITLESS_MAPPINGS, default='forbidden'),
             BuiltinSchema.StringParameter('unitless-zero', mappings=UNITLESS_ZERO_MAPPINGS, default='allowed')),
         BuiltinSchema.Entry('length-percentage',
             BuiltinSchema.RangeParameter('value-range'),
-            BuiltinSchema.StringParameter('unitless', mappings=UNITLESS_MAPPINGS, default='forbidden'),
             BuiltinSchema.StringParameter('unitless-zero', mappings=UNITLESS_ZERO_MAPPINGS, default='allowed'),
             BuiltinSchema.StringParameter('anchor', mappings=ANCHOR_MAPPINGS, default='forbidden'),
             BuiltinSchema.StringParameter('anchor-size', mappings=ANCHOR_SIZE_MAPPINGS, default='forbidden')),
@@ -1619,10 +1604,8 @@ class ReferenceTerm:
             BuiltinSchema.RangeParameter('value-range')),
         BuiltinSchema.Entry('number-or-percentage-resolved-to-number',
             BuiltinSchema.RangeParameter('value-range')),
-        BuiltinSchema.Entry('position',
-            BuiltinSchema.StringParameter('unitless', mappings=UNITLESS_MAPPINGS, default='forbidden')),
+        BuiltinSchema.Entry('position'),
         BuiltinSchema.Entry('color',
-            BuiltinSchema.StringParameter('quirky-colors-in-quirks-mode', mappings=QUIRKY_COLORS_MAPPINGS, default='forbidden'),
             BuiltinSchema.StringParameter('allowed-types', mappings=ALLOWED_COLOR_TYPES_MAPPINGS, default=['absolute', 'current', 'system'])),
         BuiltinSchema.Entry('image',
             BuiltinSchema.StringParameter('allowed-types', mappings=ALLOWED_IMAGE_TYPES_MAPPINGS, default=['url', 'image-set', 'generated'])),
@@ -1842,7 +1825,7 @@ class KeywordTerm:
         return False
 
     @property
-    def requires_context(self):
+    def requires_state(self):
         return self.settings_flag or self.status == "internal"
 
     @property
@@ -3453,6 +3436,24 @@ class GenerateCSSPropertyNames:
                 iterable=self.properties_and_descriptors.all_descriptor_only
             )
 
+            self.generation_context.generate_property_id_switch_function_bool(
+                to=writer,
+                signature="bool CSSProperty::acceptsQuirkyColor(CSSPropertyID id)",
+                iterable=(p for p in self.properties_and_descriptors.style_properties.all if p.codegen_properties.accepts_quirky_color)
+            )
+
+            self.generation_context.generate_property_id_switch_function_bool(
+                to=writer,
+                signature="bool CSSProperty::acceptsQuirkyLength(CSSPropertyID id)",
+                iterable=(p for p in self.properties_and_descriptors.style_properties.all if p.codegen_properties.accepts_quirky_length)
+            )
+
+            self.generation_context.generate_property_id_switch_function_bool(
+                to=writer,
+                signature="bool CSSProperty::acceptsQuirkyAngle(CSSPropertyID id)",
+                iterable=(p for p in self.properties_and_descriptors.style_properties.all if p.codegen_properties.accepts_quirky_angle)
+            )
+
             self._generate_animation_property_functions(
                 to=writer
             )
@@ -4441,11 +4442,11 @@ class GenerateCSSPropertyParsing:
 
     @property
     def all_property_parsing_collections(self):
-        ParsingCollection = collections.namedtuple('ParsingCollection', ['id', 'name', 'noun', 'supports_current_shorthand', 'consumers'])
+        ParsingCollection = collections.namedtuple('ParsingCollection', ['id', 'name', 'noun', 'consumers'])
 
         result = []
         for set in self.properties_and_descriptors.all_sets:
-            result += [ParsingCollection(set.id, set.name, set.noun, set.supports_current_shorthand, list(self.property_consumers[property] for property in set.all))]
+            result += [ParsingCollection(set.id, set.name, set.noun, list(self.property_consumers[property] for property in set.all))]
         return result
 
     @property
@@ -4479,12 +4480,17 @@ class GenerateCSSPropertyParsing:
                     to=writer,
                     classes=[
                         "CSSParserTokenRange",
-                        "CSSValue"
-                    ],
-                    structs=[
-                        "CSSParserContext"
+                        "CSSValue",
                     ]
                 )
+
+                with self.generation_context.namespace("CSS", to=writer):
+                    self.generation_context.generate_forward_declarations(
+                        to=writer,
+                        structs=[
+                            "PropertyParserState",
+                        ]
+                    )
 
                 self._generate_css_property_parsing_h_property_parsing_declaration(
                     to=writer
@@ -4532,7 +4538,6 @@ class GenerateCSSPropertyParsing:
                     "CSSPropertyParserConsumer+Ident.h",
                     "CSSPropertyParserConsumer+Image.h",
                     "CSSPropertyParserConsumer+Inline.h",
-                    "CSSPropertyParserConsumer+Inset.h",
                     "CSSPropertyParserConsumer+IntegerDefinitions.h",
                     "CSSPropertyParserConsumer+LengthDefinitions.h",
                     "CSSPropertyParserConsumer+LengthPercentageDefinitions.h",
@@ -4564,6 +4569,7 @@ class GenerateCSSPropertyParsing:
                     "CSSPropertyParserConsumer+UnicodeRange.h",
                     "CSSPropertyParserConsumer+ViewTransition.h",
                     "CSSPropertyParserConsumer+WillChange.h",
+                    "CSSPropertyParserState.h",
                     "CSSQuadValue.h",
                     "CSSTransformListValue.h",
                     "CSSValuePair.h",
@@ -4610,12 +4616,9 @@ class GenerateCSSPropertyParsing:
         with to.indent():
             for parsing_collection in self.all_property_parsing_collections:
                 to.write(f"// Parse and return a single longhand {parsing_collection.name} {parsing_collection.noun}.")
-                if parsing_collection.supports_current_shorthand:
-                    to.write(f"static RefPtr<CSSValue> parse{parsing_collection.id}(CSSParserTokenRange&, CSSPropertyID id, CSSPropertyID currentShorthand, const CSSParserContext&);")
-                else:
-                    to.write(f"static RefPtr<CSSValue> parse{parsing_collection.id}(CSSParserTokenRange&, CSSPropertyID id, const CSSParserContext&);")
+                to.write(f"static RefPtr<CSSValue> parse{parsing_collection.id}(CSSParserTokenRange&, CSSPropertyID id, CSS::PropertyParserState&);")
                 to.write(f"// Fast path bare-keyword support.")
-                to.write(f"static bool isKeywordValidFor{parsing_collection.id}(CSSPropertyID, CSSValueID, const CSSParserContext&);")
+                to.write(f"static bool isKeywordValidFor{parsing_collection.id}(CSSPropertyID, CSSValueID, CSS::PropertyParserState&);")
                 to.write(f"static bool isKeywordFastPathEligible{parsing_collection.id}(CSSPropertyID);")
                 to.newline()
 
@@ -4635,7 +4638,7 @@ class GenerateCSSPropertyParsing:
 
     def _generate_css_property_parsing_cpp_is_keyword_valid_for_property(self, *, to, parsing_collection, keyword_fast_path_eligible_property_consumers):
         if not keyword_fast_path_eligible_property_consumers:
-            to.write(f"bool CSSPropertyParsing::isKeywordValidFor{parsing_collection.id}(CSSPropertyID, CSSValueID, const CSSParserContext&)")
+            to.write(f"bool CSSPropertyParsing::isKeywordValidFor{parsing_collection.id}(CSSPropertyID, CSSValueID, CSS::PropertyParserState&)")
             to.write(f"{{")
             with to.indent():
                 to.write(f"return false;")
@@ -4643,13 +4646,13 @@ class GenerateCSSPropertyParsing:
             to.newline()
             return
 
-        requires_context = any(property_consumer.keyword_fast_path_generator.requires_context for property_consumer in keyword_fast_path_eligible_property_consumers)
+        requires_state = any(property_consumer.keyword_fast_path_generator.requires_state for property_consumer in keyword_fast_path_eligible_property_consumers)
 
         self.generation_context.generate_property_id_switch_function(
             to=to,
-            signature=f"bool CSSPropertyParsing::isKeywordValidFor{parsing_collection.id}(CSSPropertyID id, CSSValueID keyword, const CSSParserContext&{' context' if requires_context else ''})",
+            signature=f"bool CSSPropertyParsing::isKeywordValidFor{parsing_collection.id}(CSSPropertyID id, CSSValueID keyword, CSS::PropertyParserState&{' state' if requires_state else ''})",
             iterable=keyword_fast_path_eligible_property_consumers,
-            mapping=lambda property_consumer: f"return {property_consumer.keyword_fast_path_generator.generate_call_string(keyword_string='keyword', context_string='context')};",
+            mapping=lambda property_consumer: f"return {property_consumer.keyword_fast_path_generator.generate_call_string(keyword_string='keyword', state_string='state')};",
             default="return false;",
             mapping_to_property=lambda property_consumer: property_consumer.property
         )
@@ -4694,16 +4697,11 @@ class GenerateCSSPropertyParsing:
             shared_grammar_rule_consumer.generate_definition(to=to)
 
     def _generate_css_property_parsing_cpp_parse_property(self, *, to, parsing_collection):
-        if parsing_collection.supports_current_shorthand:
-            to.write(f"RefPtr<CSSValue> CSSPropertyParsing::parse{parsing_collection.id}(CSSParserTokenRange& range, CSSPropertyID id, CSSPropertyID currentShorthand, const CSSParserContext& context)")
-            current_shorthand_string = "currentShorthand"
-        else:
-            to.write(f"RefPtr<CSSValue> CSSPropertyParsing::parse{parsing_collection.id}(CSSParserTokenRange& range, CSSPropertyID id, const CSSParserContext& context)")
-            current_shorthand_string = None
+        to.write(f"RefPtr<CSSValue> CSSPropertyParsing::parse{parsing_collection.id}(CSSParserTokenRange& range, CSSPropertyID id, CSS::PropertyParserState& state)")
 
         to.write(f"{{")
         with to.indent():
-            to.write(f"if (!isExposed(id, context.propertySettings) && !isInternal(id)) {{")
+            to.write(f"if (!isExposed(id, state.context.propertySettings) && !isInternal(id)) {{")
             with to.indent():
                 to.write(f"// Allow internal properties as we use them to parse several internal-only-shorthands (e.g. background-repeat),")
                 to.write(f"// and to handle certain DOM-exposed values (e.g. -webkit-font-size-delta from execCommand('FontSizeDelta')).")
@@ -4719,9 +4717,7 @@ class GenerateCSSPropertyParsing:
             for consumer in parsing_collection.consumers:
                 return_expression = consumer.generate_call_string(
                     range_string="range",
-                    id_string="id",
-                    current_shorthand_string=current_shorthand_string,
-                    context_string="context")
+                    state_string="state")
 
                 if return_expression is None:
                     continue
@@ -5105,7 +5101,7 @@ class TermGeneratorOptionalTerm(TermGenerator):
     def __init__(self, optional_term):
         self.term = optional_term
         self.subterm_generator = TermGenerator.make(optional_term.subterm, None)
-        self.requires_context = self.subterm_generator.requires_context
+        self.requires_state = self.subterm_generator.requires_state
 
     def __str__(self):
         return str(self.term)
@@ -5117,11 +5113,11 @@ class TermGeneratorOptionalTerm(TermGenerator):
     def produces_group(self):
         return self.subterm_generator.produces_group
 
-    def generate_conditional(self, *, to, range_string, context_string):
-        self.subterm_generator.generate_conditional(to=to, range_string=range_string, context_string=context_string)
+    def generate_conditional(self, *, to, range_string, state_string):
+        self.subterm_generator.generate_conditional(to=to, range_string=range_string, state_string=state_string)
 
-    def generate_unconditional(self, *, to, range_string, context_string):
-        self.subterm_generator.generate_unconditional(to=to, range_string=range_string, context_string=context_string)
+    def generate_unconditional(self, *, to, range_string, state_string):
+        self.subterm_generator.generate_unconditional(to=to, range_string=range_string, state_string=state_string)
 
 
 # Generation support for a single `FunctionTerm`.
@@ -5129,7 +5125,7 @@ class TermGeneratorFunctionTerm(TermGenerator):
     def __init__(self, term):
         self.term = term
         self.parameter_group_generator = TermGenerator.make(term.parameter_group_term)
-        self.requires_context = self.parameter_group_generator.requires_context
+        self.requires_state = self.parameter_group_generator.requires_state
 
     def __str__(self):
         return str(self.term)
@@ -5141,44 +5137,44 @@ class TermGeneratorFunctionTerm(TermGenerator):
     def produces_group(self):
         return False
 
-    def generate_conditional(self, *, to, range_string, context_string):
+    def generate_conditional(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         self._generate_lambda(to=to)
-        to.write(f"if (auto result = {self._generate_call_string(range_string=range_string, context_string=context_string)})")
+        to.write(f"if (auto result = {self._generate_call_string(range_string=range_string, state_string=state_string)})")
         with to.indent():
             to.write(f"return result;")
 
-    def generate_unconditional(self, *, to, range_string, context_string):
+    def generate_unconditional(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         self._generate_lambda(to=to)
-        to.write(f"return {self._generate_call_string(range_string=range_string, context_string=context_string)};")
+        to.write(f"return {self._generate_call_string(range_string=range_string, state_string=state_string)};")
 
     def _generate_lambda(self, *, to):
         lambda_declaration_paramaters = ["CSSParserTokenRange& range"]
-        if self.parameter_group_generator.requires_context:
-            lambda_declaration_paramaters += ["const CSSParserContext& context"]
+        if self.parameter_group_generator.requires_state:
+            lambda_declaration_paramaters += ["CSS::PropertyParserState& state"]
 
         to.write(f"auto consume{self.term.name.id_without_prefix}Function = []({', '.join(lambda_declaration_paramaters)}) -> RefPtr<CSSValue> {{")
         with to.indent():
             if self.term.settings_flag:
-                to.write(f"if (!context.{self.term.settings_flag})")
+                to.write(f"if (!state.context.{self.term.settings_flag})")
                 with to.indent():
                     to.write(f"return {{ }};")
 
             inner_lambda_declaration_paramaters = ["CSSParserTokenRange& args"]
             inner_lambda_declaration_calling_parameters = ["args"]
-            if self.parameter_group_generator.requires_context:
-                inner_lambda_declaration_paramaters += ["const CSSParserContext& context"]
-                inner_lambda_declaration_calling_parameters += ["context"]
+            if self.parameter_group_generator.requires_state:
+                inner_lambda_declaration_paramaters += ["CSS::PropertyParserState& state"]
+                inner_lambda_declaration_calling_parameters += ["state"]
 
             to.write(f"auto consumeParameters = []({', '.join(inner_lambda_declaration_paramaters)}) -> std::optional<CSSValueListBuilder> {{")
             with to.indent():
                 if self.parameter_group_generator.produces_group:
-                    self.parameter_group_generator.generate_unconditional_into_builder(to=to, range_string="args", context_string="context")
+                    self.parameter_group_generator.generate_unconditional_into_builder(to=to, range_string="args", state_string="state")
                 else:
                     to.write(f"auto consumeParameter = []({', '.join(inner_lambda_declaration_paramaters)}) -> RefPtr<CSSValue> {{")
                     with to.indent():
-                        self.parameter_group_generator.generate_unconditional(to=to, range_string="args", context_string="context")
+                        self.parameter_group_generator.generate_unconditional(to=to, range_string="args", state_string="state")
                     to.write(f"}};")
                     to.write(f"auto parameter = consumeParameter({', '.join(inner_lambda_declaration_calling_parameters)});")
                     to.write(f"if (!parameter)")
@@ -5210,10 +5206,10 @@ class TermGeneratorFunctionTerm(TermGenerator):
             to.write(f"return CSSFunctionValue::create({self.term.name.id}, WTFMove(*result));")
         to.write(f"}};")
 
-    def _generate_call_string(self, *, range_string, context_string):
+    def _generate_call_string(self, *, range_string, state_string):
         parameters = [range_string]
-        if self.parameter_group_generator.requires_context:
-            parameters += [context_string]
+        if self.parameter_group_generator.requires_state:
+            parameters += [state_string]
         return f"consume{self.term.name.id_without_prefix}Function({', '.join(parameters)})"
 
 
@@ -5221,7 +5217,7 @@ class TermGeneratorFunctionTerm(TermGenerator):
 class TermGeneratorLiteralTerm(TermGenerator):
     def __init__(self, term):
         self.term = term
-        self.requires_context = self.term.requires_context
+        self.requires_state = self.term.requires_state
 
     def __str__(self):
         return str(self.term)
@@ -5233,11 +5229,11 @@ class TermGeneratorLiteralTerm(TermGenerator):
     def produces_group(self):
         return False
 
-    def generate_conditional(self, *, to, range_string, context_string):
+    def generate_conditional(self, *, to, range_string, state_string):
         # FIXME: Implement generation.
         pass
 
-    def generate_unconditional(self, *, to, range_string, context_string):
+    def generate_unconditional(self, *, to, range_string, state_string):
         # FIXME: Implement generation.
         pass
 
@@ -5247,7 +5243,7 @@ class TermGeneratorUnboundedRepetitionTerm(TermGenerator):
     def __init__(self, term):
         self.term = term
         self.repeated_term_generator = TermGenerator.make(term.repeated_term, None)
-        self.requires_context = self.repeated_term_generator.requires_context
+        self.requires_state = self.repeated_term_generator.requires_state
 
     def __str__(self):
         return str(self.term)
@@ -5259,50 +5255,50 @@ class TermGeneratorUnboundedRepetitionTerm(TermGenerator):
     def produces_group(self):
         return True
 
-    def generate_conditional(self, *, to, range_string, context_string):
+    def generate_conditional(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         self._generate_lambda(to=to)
-        to.write(f"if (auto result = {self._generate_call_string(range_string=range_string, context_string=context_string)})")
+        to.write(f"if (auto result = {self._generate_call_string(range_string=range_string, state_string=state_string)})")
         with to.indent():
             to.write(f"return result;")
 
-    def generate_unconditional(self, *, to, range_string, context_string):
+    def generate_unconditional(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         self._generate_lambda(to=to)
-        to.write(f"return {self._generate_call_string(range_string=range_string, context_string=context_string)};")
+        to.write(f"return {self._generate_call_string(range_string=range_string, state_string=state_string)};")
 
-    def generate_unconditional_into_builder(self, *, to, range_string, context_string):
+    def generate_unconditional_into_builder(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         self._generate_lambda_into_builder(to=to)
-        to.write(f"return {self._generate_call_string(range_string=range_string, context_string=context_string)};")
+        to.write(f"return {self._generate_call_string(range_string=range_string, state_string=state_string)};")
 
     def _generate_consume_repeated_term_lambda(self, *, to):
         lambda_declaration_parameters = ["CSSParserTokenRange& range"]
-        if self.repeated_term_generator.requires_context:
-            lambda_declaration_parameters += ["const CSSParserContext& context"]
+        if self.repeated_term_generator.requires_state:
+            lambda_declaration_parameters += ["CSS::PropertyParserState& state"]
 
         to.write(f"auto consumeRepeatedTerm = []({', '.join(lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
         with to.indent():
-            self.repeated_term_generator.generate_unconditional(to=to, range_string="range", context_string="context")
+            self.repeated_term_generator.generate_unconditional(to=to, range_string="range", state_string="state")
         to.write(f"}};")
 
     def _generate_lambda(self, *, to):
         lambda_declaration_parameters = ["CSSParserTokenRange& range"]
-        if self.repeated_term_generator.requires_context:
-            lambda_declaration_parameters += ["const CSSParserContext& context"]
+        if self.repeated_term_generator.requires_state:
+            lambda_declaration_parameters += ["CSS::PropertyParserState& state"]
 
         to.write(f"auto consumeUnboundedRepetition = []({', '.join(lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
         with to.indent():
             if self.term.settings_flag:
-                to.write(f"if (!context.{self.term.settings_flag})")
+                to.write(f"if (!state.context.{self.term.settings_flag})")
                 with to.indent():
                     to.write(f"return {{ }};")
 
             self._generate_consume_repeated_term_lambda(to=to)
 
             parameters = ["range", "consumeRepeatedTerm"]
-            if self.repeated_term_generator.requires_context:
-                parameters += ["context"]
+            if self.repeated_term_generator.requires_state:
+                parameters += ["state"]
 
             if self.term.min <= 1 and self.term.single_value_optimization:
                 optimization = 'SingleValue'
@@ -5314,24 +5310,24 @@ class TermGeneratorUnboundedRepetitionTerm(TermGenerator):
 
     def _generate_lambda_into_builder(self, *, to):
         lambda_declaration_parameters = ["CSSParserTokenRange& range"]
-        if self.repeated_term_generator.requires_context:
-            lambda_declaration_parameters += ["const CSSParserContext& context"]
+        if self.repeated_term_generator.requires_state:
+            lambda_declaration_parameters += ["CSS::PropertyParserState& state"]
 
         to.write(f"auto consumeUnboundedRepetition = []({', '.join(lambda_declaration_parameters)}) -> std::optional<CSSValueListBuilder> {{")
         with to.indent():
             self._generate_consume_repeated_term_lambda(to=to)
 
             parameters = ["range", "consumeRepeatedTerm"]
-            if self.repeated_term_generator.requires_context:
-                parameters += ["context"]
+            if self.repeated_term_generator.requires_state:
+                parameters += ["state"]
 
             to.write(f"return consumeListSeparatedByIntoBuilder<'{self.term.separator}', ListBounds::minimumOf({self.term.min})>({', '.join(parameters)});")
         to.write(f"}};")
 
-    def _generate_call_string(self, *, range_string, context_string):
+    def _generate_call_string(self, *, range_string, state_string):
         parameters = [range_string]
-        if self.repeated_term_generator.requires_context:
-            parameters += [context_string]
+        if self.repeated_term_generator.requires_state:
+            parameters += [state_string]
         return f"consumeUnboundedRepetition({', '.join(parameters)})"
 
 
@@ -5340,7 +5336,7 @@ class TermGeneratorBoundedRepetitionTerm(TermGenerator):
     def __init__(self, term):
         self.term = term
         self.repeated_term_generator = TermGenerator.make(term.repeated_term, None)
-        self.requires_context = self.repeated_term_generator.requires_context
+        self.requires_state = self.repeated_term_generator.requires_state
 
     def __str__(self):
         return str(self.term)
@@ -5352,42 +5348,42 @@ class TermGeneratorBoundedRepetitionTerm(TermGenerator):
     def produces_group(self):
         return True
 
-    def generate_conditional(self, *, to, range_string, context_string):
+    def generate_conditional(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         self._generate_lambda(to=to)
-        to.write(f"if (auto result = {self._generate_call_string(range_string=range_string, context_string=context_string)})")
+        to.write(f"if (auto result = {self._generate_call_string(range_string=range_string, state_string=state_string)})")
         with to.indent():
             to.write(f"return result;")
 
-    def generate_unconditional(self, *, to, range_string, context_string):
+    def generate_unconditional(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         self._generate_lambda(to=to)
-        to.write(f"return {self._generate_call_string(range_string=range_string, context_string=context_string)};")
+        to.write(f"return {self._generate_call_string(range_string=range_string, state_string=state_string)};")
 
-    def generate_unconditional_into_builder(self, *, to, range_string, context_string):
+    def generate_unconditional_into_builder(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         self._generate_lambda_into_builder(to=to)
-        to.write(f"return {self._generate_call_string(range_string=range_string, context_string=context_string)};")
+        to.write(f"return {self._generate_call_string(range_string=range_string, state_string=state_string)};")
 
     def _generate_consume_repeated_term_lambda(self, *, to):
         lambda_declaration_parameters = ["CSSParserTokenRange& range"]
-        if self.repeated_term_generator.requires_context:
-            lambda_declaration_parameters += ["const CSSParserContext& context"]
+        if self.repeated_term_generator.requires_state:
+            lambda_declaration_parameters += ["CSS::PropertyParserState& state"]
 
         to.write(f"auto consumeRepeatedTerm = []({', '.join(lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
         with to.indent():
-            self.repeated_term_generator.generate_unconditional(to=to, range_string="range", context_string="context")
+            self.repeated_term_generator.generate_unconditional(to=to, range_string="range", state_string="state")
         to.write(f"}};")
 
     def _generate_lambda(self, *, to):
         lambda_declaration_parameters = ["CSSParserTokenRange& range"]
-        if self.repeated_term_generator.requires_context:
-            lambda_declaration_parameters += ["const CSSParserContext& context"]
+        if self.repeated_term_generator.requires_state:
+            lambda_declaration_parameters += ["CSS::PropertyParserState& state"]
 
         to.write(f"auto consumeBoundedRepetition = []({', '.join(lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
         with to.indent():
             if self.term.settings_flag:
-                to.write(f"if (!context.{self.term.settings_flag})")
+                to.write(f"if (!state.context.{self.term.settings_flag})")
                 with to.indent():
                     to.write(f"return {{ }};")
 
@@ -5395,8 +5391,8 @@ class TermGeneratorBoundedRepetitionTerm(TermGenerator):
 
             if self.term.type != 'CSSValueList':
                 inner_lambda_declaration_calling_parameters = ["rangeCopy"]
-                if self.repeated_term_generator.requires_context:
-                    inner_lambda_declaration_calling_parameters += ["context"]
+                if self.repeated_term_generator.requires_state:
+                    inner_lambda_declaration_calling_parameters += ["state"]
 
                 to.write(f"CSSParserTokenRange rangeCopy = range;")
 
@@ -5434,8 +5430,8 @@ class TermGeneratorBoundedRepetitionTerm(TermGenerator):
                 to.write(f"return {self.term.type}::create({', '.join(terms_to_return)});")
             else:
                 consumeListParameters = ["range", "consumeRepeatedTerm"]
-                if self.repeated_term_generator.requires_context:
-                    consumeListParameters += ["context"]
+                if self.repeated_term_generator.requires_state:
+                    consumeListParameters += ["state"]
 
                 if self.term.min <= 1 and self.term.single_value_optimization:
                     optimization = 'SingleValue'
@@ -5447,25 +5443,24 @@ class TermGeneratorBoundedRepetitionTerm(TermGenerator):
 
     def _generate_lambda_into_builder(self, *, to):
         lambda_declaration_parameters = ["CSSParserTokenRange& range"]
-        if self.repeated_term_generator.requires_context:
-            lambda_declaration_parameters += ["const CSSParserContext& context"]
+        if self.repeated_term_generator.requires_state:
+            lambda_declaration_parameters += ["CSS::PropertyParserState& state"]
 
         to.write(f"auto consumeBoundedRepetition = []({', '.join(lambda_declaration_parameters)}) -> std::optional<CSSValueListBuilder> {{")
         with to.indent():
             self._generate_consume_repeated_term_lambda(to=to)
 
             consumeListParameters = ["range", "consumeRepeatedTerm"]
-            if self.repeated_term_generator.requires_context:
-                consumeListParameters += ["context"]
+            if self.repeated_term_generator.requires_state:
+                consumeListParameters += ["state"]
 
             to.write(f"return consumeListSeparatedByIntoBuilder<'{self.term.separator}', ListBounds {{ {self.term.min}, {self.term.max} }}>({', '.join(consumeListParameters)});")
         to.write(f"}};")
 
-
-    def _generate_call_string(self, *, range_string, context_string):
+    def _generate_call_string(self, *, range_string, state_string):
         parameters = [range_string]
-        if self.repeated_term_generator.requires_context:
-            parameters += [context_string]
+        if self.repeated_term_generator.requires_state:
+            parameters += [state_string]
         return f"consumeBoundedRepetition({', '.join(parameters)})"
 
 
@@ -5475,7 +5470,7 @@ class TermGeneratorMatchOneTerm(TermGenerator):
         self.term = term
         self.keyword_fast_path_generator = keyword_fast_path_generator
         self.term_generators = TermGeneratorMatchOneTerm._build_term_generators(term, keyword_fast_path_generator)
-        self.requires_context = term.settings_flag is not None or any(term_generator.requires_context for term_generator in self.term_generators)
+        self.requires_state = term.settings_flag is not None or any(term_generator.requires_state for term_generator in self.term_generators)
 
     def __str__(self):
         return str(self.term)
@@ -5549,30 +5544,30 @@ class TermGeneratorMatchOneTerm(TermGenerator):
 
         return term_generators
 
-    def generate_conditional(self, *, to, range_string, context_string):
+    def generate_conditional(self, *, to, range_string, state_string):
         if self.term.settings_flag:
-            to.write(f"if (!{context_string}.{self.term.settings_flag})")
+            to.write(f"if (!{state_string}.context.{self.term.settings_flag})")
             with to.indent():
                 to.write(f"return {{ }};")
 
         for term_generator in self.term_generators:
-            term_generator.generate_conditional(to=to, range_string=range_string, context_string=context_string)
+            term_generator.generate_conditional(to=to, range_string=range_string, state_string=state_string)
 
-    def generate_unconditional(self, *, to, range_string, context_string):
+    def generate_unconditional(self, *, to, range_string, state_string):
         # Pop the last generator off, as that one will be the special, non-if case.
         *remaining_term_generators, last_term_generator = self.term_generators
 
         if self.term.settings_flag:
-            to.write(f"if (!{context_string}.{self.term.settings_flag})")
+            to.write(f"if (!{state_string}.context.{self.term.settings_flag})")
             with to.indent():
                 to.write(f"return {{ }};")
 
         # For any remaining generators, call the consume function and return the result if non-null.
         for term_generator in remaining_term_generators:
-            term_generator.generate_conditional(to=to, range_string=range_string, context_string=context_string)
+            term_generator.generate_conditional(to=to, range_string=range_string, state_string=state_string)
 
         # And finally call that last generator we popped of back.
-        last_term_generator.generate_unconditional(to=to, range_string=range_string, context_string=context_string)
+        last_term_generator.generate_unconditional(to=to, range_string=range_string, state_string=state_string)
 
 
 # Generation support for a single `MatchAllOrderedTerm`.
@@ -5580,7 +5575,7 @@ class TermGeneratorMatchAllOrderedTerm(TermGenerator):
     def __init__(self, term):
         self.term = term
         self.subterm_generators = [TermGenerator.make(subterm) for subterm in term.subterms]
-        self.requires_context = any(subterm_generator.requires_context for subterm_generator in self.subterm_generators)
+        self.requires_state = any(subterm_generator.requires_state for subterm_generator in self.subterm_generators)
         self.number_of_terms = count_iterable(self.subterm_generators)
         self.number_of_optional_terms = count_iterable(filter(lambda x: isinstance(x, TermGeneratorOptionalTerm), self.subterm_generators))
 
@@ -5594,43 +5589,43 @@ class TermGeneratorMatchAllOrderedTerm(TermGenerator):
     def produces_group(self):
         return True
 
-    def generate_conditional(self, *, to, range_string, context_string):
+    def generate_conditional(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         self._generate_lambda(to=to)
-        to.write(f"if (auto result = {self._generate_call_string(range_string=range_string, context_string=context_string)})")
+        to.write(f"if (auto result = {self._generate_call_string(range_string=range_string, state_string=state_string)})")
         with to.indent():
             to.write(f"return result;")
 
-    def generate_unconditional(self, *, to, range_string, context_string):
+    def generate_unconditional(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         self._generate_lambda(to=to)
-        to.write(f"return {self._generate_call_string(range_string=range_string, context_string=context_string)};")
+        to.write(f"return {self._generate_call_string(range_string=range_string, state_string=state_string)};")
 
-    def generate_unconditional_into_builder(self, *, to, range_string, context_string):
+    def generate_unconditional_into_builder(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         self._generate_lambda_into_builder(to=to)
-        to.write(f"return {self._generate_call_string(range_string=range_string, context_string=context_string)};")
+        to.write(f"return {self._generate_call_string(range_string=range_string, state_string=state_string)};")
 
     def _generate_consume_subterm_lambdas(self, *, to):
         for (i, subterm_generator) in enumerate(self.subterm_generators):
             inner_lambda_declaration_parameters = ["CSSParserTokenRange& range"]
-            if subterm_generator.requires_context:
-                inner_lambda_declaration_parameters += ["const CSSParserContext& context"]
+            if subterm_generator.requires_state:
+                inner_lambda_declaration_parameters += ["CSS::PropertyParserState& state"]
 
             to.write(f"auto consumeTerm{i} = []({', '.join(inner_lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
             with to.indent():
-                subterm_generator.generate_unconditional(to=to, range_string="range", context_string="context")
+                subterm_generator.generate_unconditional(to=to, range_string="range", state_string="state")
             to.write(f"}};")
 
     def _generate_lambda(self, *, to):
         lambda_declaration_parameters = ["CSSParserTokenRange& range"]
-        if self.requires_context:
-            lambda_declaration_parameters += ["const CSSParserContext& context"]
+        if self.requires_state:
+            lambda_declaration_parameters += ["CSS::PropertyParserState& state"]
 
         to.write(f"auto consumeMatchAllOrdered = []({', '.join(lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
         with to.indent():
             if self.term.settings_flag:
-                to.write(f"if (!context.{self.term.settings_flag})")
+                to.write(f"if (!state.context.{self.term.settings_flag})")
                 with to.indent():
                     to.write(f"return {{ }};")
 
@@ -5646,8 +5641,8 @@ class TermGeneratorMatchAllOrderedTerm(TermGenerator):
 
                 for (i, subterm_generator) in enumerate(self.subterm_generators):
                     inner_lambda_call_parameters = ["range"]
-                    if subterm_generator.requires_context:
-                        inner_lambda_call_parameters += ["context"]
+                    if subterm_generator.requires_state:
+                        inner_lambda_call_parameters += ["state"]
 
                     to.write(f"// {str(subterm_generator)}")
                     to.write(f"auto value{i} = consumeTerm{i}({', '.join(inner_lambda_call_parameters)});")
@@ -5693,8 +5688,8 @@ class TermGeneratorMatchAllOrderedTerm(TermGenerator):
 
                 for (i, subterm_generator) in enumerate(self.subterm_generators):
                     inner_lambda_call_parameters = ["range"]
-                    if subterm_generator.requires_context:
-                        inner_lambda_call_parameters += ["context"]
+                    if subterm_generator.requires_state:
+                        inner_lambda_call_parameters += ["state"]
 
                     to.write(f"// {str(subterm_generator)}")
                     to.write(f"auto value{i} = consumeTerm{i}({', '.join(inner_lambda_call_parameters)});")
@@ -5708,8 +5703,8 @@ class TermGeneratorMatchAllOrderedTerm(TermGenerator):
 
     def _generate_lambda_into_builder(self, *, to):
         lambda_declaration_parameters = ["CSSParserTokenRange& range"]
-        if self.requires_context:
-            lambda_declaration_parameters += ["const CSSParserContext& context"]
+        if self.requires_state:
+            lambda_declaration_parameters += ["CSS::PropertyParserState& state"]
 
         to.write(f"auto consumeMatchAllOrdered = []({', '.join(lambda_declaration_parameters)}) -> std::optional<CSSValueListBuilder> {{")
         with to.indent():
@@ -5719,8 +5714,8 @@ class TermGeneratorMatchAllOrderedTerm(TermGenerator):
 
             for (i, subterm_generator) in enumerate(self.subterm_generators):
                 inner_lambda_call_parameters = ["range"]
-                if subterm_generator.requires_context:
-                    inner_lambda_call_parameters += ["context"]
+                if subterm_generator.requires_state:
+                    inner_lambda_call_parameters += ["state"]
 
                 to.write(f"// {str(subterm_generator)}")
                 to.write(f"auto value{i} = consumeTerm{i}({', '.join(inner_lambda_call_parameters)});")
@@ -5737,10 +5732,10 @@ class TermGeneratorMatchAllOrderedTerm(TermGenerator):
 
         to.write(f"}};")
 
-    def _generate_call_string(self, *, range_string, context_string):
+    def _generate_call_string(self, *, range_string, state_string):
         parameters = [range_string]
-        if self.requires_context:
-            parameters += [context_string]
+        if self.requires_state:
+            parameters += [state_string]
         return f"consumeMatchAllOrdered({', '.join(parameters)})"
 
 
@@ -5749,7 +5744,7 @@ class TermGeneratorMatchAllAnyOrderTerm(TermGenerator):
     def __init__(self, term):
         self.term = term
         self.subterm_generators = [TermGenerator.make(subterm) for subterm in term.subterms]
-        self.requires_context = any(subterm_generator.requires_context for subterm_generator in self.subterm_generators)
+        self.requires_state = any(subterm_generator.requires_state for subterm_generator in self.subterm_generators)
         self.number_of_terms = count_iterable(self.subterm_generators)
         self.number_of_optional_terms = count_iterable(filter(lambda x: isinstance(x, TermGeneratorOptionalTerm), self.subterm_generators))
 
@@ -5763,22 +5758,22 @@ class TermGeneratorMatchAllAnyOrderTerm(TermGenerator):
     def produces_group(self):
         return True
 
-    def generate_conditional(self, *, to, range_string, context_string):
+    def generate_conditional(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         self._generate_lambda(to=to)
-        to.write(f"if (auto result = {self._generate_call_string(range_string=range_string, context_string=context_string)})")
+        to.write(f"if (auto result = {self._generate_call_string(range_string=range_string, state_string=state_string)})")
         with to.indent():
             to.write(f"return result;")
 
-    def generate_unconditional(self, *, to, range_string, context_string):
+    def generate_unconditional(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         self._generate_lambda(to=to)
-        to.write(f"return {self._generate_call_string(range_string=range_string, context_string=context_string)};")
+        to.write(f"return {self._generate_call_string(range_string=range_string, state_string=state_string)};")
 
-    def generate_unconditional_into_builder(self, *, to, range_string, context_string):
+    def generate_unconditional_into_builder(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         self._generate_lambda_into_builder(to=to)
-        to.write(f"return {self._generate_call_string(range_string=range_string, context_string=context_string)};")
+        to.write(f"return {self._generate_call_string(range_string=range_string, state_string=state_string)};")
 
     def _generate_consume_subterm_lambdas(self, *, to):
         try_consume_strings = []
@@ -5788,8 +5783,8 @@ class TermGeneratorMatchAllAnyOrderTerm(TermGenerator):
 
         for (i, subterm_generator) in enumerate(self.subterm_generators):
             inner_lambda_declaration_parameters = ["CSSParserTokenRange& range"]
-            if subterm_generator.requires_context:
-                inner_lambda_declaration_parameters += ["const CSSParserContext& context"]
+            if subterm_generator.requires_state:
+                inner_lambda_declaration_parameters += ["CSS::PropertyParserState& state"]
 
             if self.term.preserve_order:
                 to.write(f"bool consumedValue{i} = false; // {str(subterm_generator)}")
@@ -5802,12 +5797,12 @@ class TermGeneratorMatchAllAnyOrderTerm(TermGenerator):
             with to.indent():
                 to.write(f"auto consumeTerm{i} = []({', '.join(inner_lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
                 with to.indent():
-                    subterm_generator.generate_unconditional(to=to, range_string="range", context_string="context")
+                    subterm_generator.generate_unconditional(to=to, range_string="range", state_string="state")
                 to.write(f"}};")
 
                 inner_lambda_call_parameters = ["range"]
-                if subterm_generator.requires_context:
-                    inner_lambda_call_parameters += ["context"]
+                if subterm_generator.requires_state:
+                    inner_lambda_call_parameters += ["state"]
 
                 try_consume_strings.append(f"tryConsumeTerm{i}({', '.join(inner_lambda_call_parameters)})")
 
@@ -5842,13 +5837,13 @@ class TermGeneratorMatchAllAnyOrderTerm(TermGenerator):
 
     def _generate_lambda(self, *, to):
         lambda_declaration_parameters = ["CSSParserTokenRange& range"]
-        if self.requires_context:
-            lambda_declaration_parameters += ["const CSSParserContext& context"]
+        if self.requires_state:
+            lambda_declaration_parameters += ["CSS::PropertyParserState& state"]
 
         to.write(f"auto consumeMatchAllAnyOrder = []({', '.join(lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
         with to.indent():
             if self.term.settings_flag:
-                to.write(f"if (!context.{self.term.settings_flag})")
+                to.write(f"if (!state.context.{self.term.settings_flag})")
                 with to.indent():
                     to.write(f"return {{ }};")
 
@@ -5922,8 +5917,8 @@ class TermGeneratorMatchAllAnyOrderTerm(TermGenerator):
 
     def _generate_lambda_into_builder(self, *, to):
         lambda_declaration_parameters = ["CSSParserTokenRange& range"]
-        if self.requires_context:
-            lambda_declaration_parameters += ["const CSSParserContext& context"]
+        if self.requires_state:
+            lambda_declaration_parameters += ["CSS::PropertyParserState& state"]
 
         to.write(f"auto consumeMatchAllAnyOrder = []({', '.join(lambda_declaration_parameters)}) -> std::optional<CSSValueListBuilder> {{")
         with to.indent():
@@ -5950,10 +5945,10 @@ class TermGeneratorMatchAllAnyOrderTerm(TermGenerator):
             to.write(f"return {{ WTFMove(list) }};")
         to.write(f"}};")
 
-    def _generate_call_string(self, *, range_string, context_string):
+    def _generate_call_string(self, *, range_string, state_string):
         parameters = [range_string]
-        if self.requires_context:
-            parameters += [context_string]
+        if self.requires_state:
+            parameters += [state_string]
         return f"consumeMatchAllAnyOrder({', '.join(parameters)})"
 
 
@@ -5962,7 +5957,7 @@ class TermGeneratorMatchOneOrMoreAnyOrderTerm(TermGenerator):
     def __init__(self, term):
         self.term = term
         self.subterm_generators = [TermGenerator.make(subterm) for subterm in term.subterms]
-        self.requires_context = any(subterm_generator.requires_context for subterm_generator in self.subterm_generators)
+        self.requires_state = any(subterm_generator.requires_state for subterm_generator in self.subterm_generators)
 
     def __str__(self):
         return str(self.term)
@@ -5974,22 +5969,22 @@ class TermGeneratorMatchOneOrMoreAnyOrderTerm(TermGenerator):
     def produces_group(self):
         return True
 
-    def generate_conditional(self, *, to, range_string, context_string):
+    def generate_conditional(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         self._generate_lambda(to=to)
-        to.write(f"if (auto result = {self._generate_call_string(range_string=range_string, context_string=context_string)})")
+        to.write(f"if (auto result = {self._generate_call_string(range_string=range_string, state_string=state_string)})")
         with to.indent():
             to.write(f"return result;")
 
-    def generate_unconditional(self, *, to, range_string, context_string):
+    def generate_unconditional(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         self._generate_lambda(to=to)
-        to.write(f"return {self._generate_call_string(range_string=range_string, context_string=context_string)};")
+        to.write(f"return {self._generate_call_string(range_string=range_string, state_string=state_string)};")
 
-    def generate_unconditional_into_builder(self, *, to, range_string, context_string):
+    def generate_unconditional_into_builder(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         self._generate_lambda_into_builder(to=to)
-        to.write(f"return {self._generate_call_string(range_string=range_string, context_string=context_string)};")
+        to.write(f"return {self._generate_call_string(range_string=range_string, state_string=state_string)};")
 
     def _generate_consume_subterm_lambdas(self, *, to):
         try_consume_strings = []
@@ -5999,8 +5994,8 @@ class TermGeneratorMatchOneOrMoreAnyOrderTerm(TermGenerator):
 
         for (i, subterm_generator) in enumerate(self.subterm_generators):
             inner_lambda_declaration_parameters = ["CSSParserTokenRange& range"]
-            if subterm_generator.requires_context:
-                inner_lambda_declaration_parameters += ["const CSSParserContext& context"]
+            if subterm_generator.requires_state:
+                inner_lambda_declaration_parameters += ["CSS::PropertyParserState& state"]
 
             if self.term.preserve_order:
                 to.write(f"bool consumedValue{i} = false; // {str(subterm_generator)}")
@@ -6013,12 +6008,12 @@ class TermGeneratorMatchOneOrMoreAnyOrderTerm(TermGenerator):
             with to.indent():
                 to.write(f"auto consumeTerm{i} = []({', '.join(inner_lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
                 with to.indent():
-                    subterm_generator.generate_unconditional(to=to, range_string="range", context_string="context")
+                    subterm_generator.generate_unconditional(to=to, range_string="range", state_string="state")
                 to.write(f"}};")
 
                 inner_lambda_call_parameters = ["range"]
-                if subterm_generator.requires_context:
-                    inner_lambda_call_parameters += ["context"]
+                if subterm_generator.requires_state:
+                    inner_lambda_call_parameters += ["state"]
 
                 try_consume_strings.append(f"tryConsumeTerm{i}({', '.join(inner_lambda_call_parameters)})")
 
@@ -6053,13 +6048,13 @@ class TermGeneratorMatchOneOrMoreAnyOrderTerm(TermGenerator):
 
     def _generate_lambda(self, *, to):
         lambda_declaration_parameters = ["CSSParserTokenRange& range"]
-        if self.requires_context:
-            lambda_declaration_parameters += ["const CSSParserContext& context"]
+        if self.requires_state:
+            lambda_declaration_parameters += ["CSS::PropertyParserState& state"]
 
         to.write(f"auto consumeMatchOneOrMoreAnyOrder = []({', '.join(lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
         with to.indent():
             if self.term.settings_flag:
-                to.write(f"if (!context.{self.term.settings_flag})")
+                to.write(f"if (!state.context.{self.term.settings_flag})")
                 with to.indent():
                     to.write(f"return {{ }};")
 
@@ -6108,8 +6103,8 @@ class TermGeneratorMatchOneOrMoreAnyOrderTerm(TermGenerator):
 
     def _generate_lambda_into_builder(self, *, to):
         lambda_declaration_parameters = ["CSSParserTokenRange& range"]
-        if self.requires_context:
-            lambda_declaration_parameters += ["const CSSParserContext& context"]
+        if self.requires_state:
+            lambda_declaration_parameters += ["CSS::PropertyParserState& state"]
 
         to.write(f"auto consumeMatchOneOrMoreAnyOrder = []({', '.join(lambda_declaration_parameters)}) -> std::optional<CSSValueListBuilder> {{")
         with to.indent():
@@ -6128,10 +6123,10 @@ class TermGeneratorMatchOneOrMoreAnyOrderTerm(TermGenerator):
             to.write(f"return {{ WTFMove(list) }};")
         to.write(f"}};")
 
-    def _generate_call_string(self, *, range_string, context_string):
+    def _generate_call_string(self, *, range_string, state_string):
         parameters = [range_string]
-        if self.requires_context:
-            parameters += [context_string]
+        if self.requires_state:
+            parameters += [state_string]
         return f"consumeMatchOneOrMoreAnyOrder({', '.join(parameters)})"
 
 
@@ -6150,77 +6145,77 @@ class TermGeneratorReferenceTerm(TermGenerator):
     def produces_group(self):
         return False
 
-    def generate_conditional(self, *, to, range_string, context_string):
+    def generate_conditional(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         if self.term.settings_flag is not None:
             self._generate_lambda(to=to)
-        to.write(f"if (auto result = {self.generate_call_string(range_string=range_string, context_string=context_string)})")
+        to.write(f"if (auto result = {self.generate_call_string(range_string=range_string, state_string=state_string)})")
         with to.indent():
             to.write(f"return result;")
 
-    def generate_unconditional(self, *, to, range_string, context_string):
+    def generate_unconditional(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
         if self.term.settings_flag is not None:
             self._generate_lambda(to=to)
-        to.write(f"return {self.generate_call_string(range_string=range_string, context_string=context_string)};")
+        to.write(f"return {self.generate_call_string(range_string=range_string, state_string=state_string)};")
 
-    def generate_call_string(self, *, range_string, context_string):
+    def generate_call_string(self, *, range_string, state_string):
         if self.term.settings_flag is not None:
-            return f"consume{self.term.name.id_without_prefix}Reference({range_string}, {context_string})"
-        return self._generate_call_reference_string(range_string=range_string, context_string=context_string)
+            return f"consume{self.term.name.id_without_prefix}Reference({range_string}, {state_string})"
+        return self._generate_call_reference_string(range_string=range_string, state_string=state_string)
 
-    def _generate_call_reference_string(self, *, range_string, context_string):
+    def _generate_call_reference_string(self, *, range_string, state_string):
         if self.term.override_function:
-            return f"{self.term.override_function}({range_string}, {context_string})"
+            return f"{self.term.override_function}({range_string}, {state_string})"
         elif self.term.is_builtin:
             builtin = self.term.builtin
             if isinstance(builtin, BuiltinAngleConsumer):
-                return f"CSSPrimitiveValueResolver<CSS::Angle<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {context_string}.mode, .unitless = {builtin.unitless}, .unitlessZero = {builtin.unitless_zero} }})"
+                return f"CSSPrimitiveValueResolver<CSS::Angle<{builtin.value_range}>>::consumeAndResolve({range_string}, {state_string}, {{ .unitlessZeroAngle = {builtin.unitless_zero} }})"
             elif isinstance(builtin, BuiltinTimeConsumer):
-                return f"CSSPrimitiveValueResolver<CSS::Time<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {context_string}.mode }})"
+                return f"CSSPrimitiveValueResolver<CSS::Time<{builtin.value_range}>>::consumeAndResolve({range_string}, {state_string})"
             elif isinstance(builtin, BuiltinLengthConsumer):
-                return f"CSSPrimitiveValueResolver<CSS::Length<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {context_string}.mode, .unitless = {builtin.unitless}, .unitlessZero = {builtin.unitless_zero} }})"
+                return f"CSSPrimitiveValueResolver<CSS::Length<{builtin.value_range}>>::consumeAndResolve({range_string}, {state_string}, {{ .unitlessZeroLength = {builtin.unitless_zero} }})"
             elif isinstance(builtin, BuiltinLengthPercentageConsumer):
-                return f"CSSPrimitiveValueResolver<CSS::LengthPercentage<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {context_string}.mode, .anchorPolicy = {builtin.anchor}, .anchorSizePolicy = {builtin.anchor_size}, .unitless = {builtin.unitless}, .unitlessZero = {builtin.unitless_zero} }})"
+                return f"CSSPrimitiveValueResolver<CSS::LengthPercentage<{builtin.value_range}>>::consumeAndResolve({range_string}, {state_string}, {{ .anchorPolicy = {builtin.anchor}, .anchorSizePolicy = {builtin.anchor_size}, .unitlessZeroLength = {builtin.unitless_zero} }})"
             elif isinstance(builtin, BuiltinIntegerConsumer):
-                return f"CSSPrimitiveValueResolver<CSS::Integer<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {context_string}.mode }})"
+                return f"CSSPrimitiveValueResolver<CSS::Integer<{builtin.value_range}>>::consumeAndResolve({range_string}, {state_string})"
             elif isinstance(builtin, BuiltinNumberConsumer):
-                return f"CSSPrimitiveValueResolver<CSS::Number<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {context_string}.mode }})"
+                return f"CSSPrimitiveValueResolver<CSS::Number<{builtin.value_range}>>::consumeAndResolve({range_string}, {state_string})"
             elif isinstance(builtin, BuiltinPercentageConsumer):
-                return f"CSSPrimitiveValueResolver<CSS::Percentage<{builtin.value_range}>>::consumeAndResolve({range_string}, {context_string}, {{ .parserMode = {context_string}.mode }})"
+                return f"CSSPrimitiveValueResolver<CSS::Percentage<{builtin.value_range}>>::consumeAndResolve({range_string}, {state_string})"
             elif isinstance(builtin, BuiltinNumberOrPercentageResolvedToNumberConsumer):
-                return f"consumePercentageDividedBy100OrNumber({range_string}, {context_string})"
+                return f"consumePercentageDividedBy100OrNumber({range_string}, {state_string})"
             elif isinstance(builtin, BuiltinPositionConsumer):
-                return f"consumePosition({range_string}, {context_string}, {builtin.unitless}, PositionSyntax::Position)"
+                return f"consumePosition({range_string}, {state_string})"
             elif isinstance(builtin, BuiltinColorConsumer):
-                return f"consumeColor({range_string}, {context_string}, {{ .acceptQuirkyColorsInQuirksMode = {builtin.quirky_colors_in_quirks_mode}, .allowedColorTypes = {{ {builtin.allowed_types} }} }})"
+                return f"consumeColor({range_string}, {state_string}, {{ .allowedColorTypes = {{ {builtin.allowed_types} }} }})"
             elif isinstance(builtin, BuiltinImageConsumer):
-                return f"consumeImage({range_string}, {context_string}, {{ {builtin.allowed_types} }})"
+                return f"consumeImage({range_string}, {state_string}, {{ {builtin.allowed_types} }})"
             elif isinstance(builtin, BuiltinCustomIdentConsumer):
                 if builtin.excluding:
                     return f"consumeCustomIdentExcluding({range_string}, {{ { ', '.join(ValueKeywordName(id).id for id in builtin.excluding)} }})"
                 return f"consumeCustomIdent({range_string})"
-            elif self.requires_context:
-                return f"consume{self.term.name.id_without_prefix}({range_string}, {context_string})"
+            elif self.requires_state:
+                return f"consume{self.term.name.id_without_prefix}({range_string}, {state_string})"
             else:
                 return f"consume{self.term.name.id_without_prefix}({range_string})"
         else:
-            return f"consume{self.term.name.id_without_prefix}({range_string}, {context_string})"
+            return f"consume{self.term.name.id_without_prefix}({range_string}, {state_string})"
 
     def _generate_lambda(self, *, to):
-        lambda_declaration_parameters = ["CSSParserTokenRange& range, const CSSParserContext& context"]
+        lambda_declaration_parameters = ["CSSParserTokenRange& range, CSS::PropertyParserState& state"]
 
         to.write(f"auto consume{self.term.name.id_without_prefix}Reference = []({', '.join(lambda_declaration_parameters)}) -> RefPtr<CSSValue> {{")
         with to.indent():
             if self.term.settings_flag:
-                to.write(f"if (!context.{self.term.settings_flag})")
+                to.write(f"if (!state.context.{self.term.settings_flag})")
                 with to.indent():
                     to.write(f"return {{ }};")
-            to.write(f"return {self._generate_call_reference_string(range_string='range', context_string='context')};")
+            to.write(f"return {self._generate_call_reference_string(range_string='range', state_string='state')};")
         to.write(f"}};")
 
     @property
-    def requires_context(self):
+    def requires_state(self):
         if self.term.override_function:
             return True
         elif self.term.is_builtin:
@@ -6273,7 +6268,7 @@ class TermGeneratorReferenceTerm(TermGenerator):
 class TermGeneratorNonFastPathKeywordTerm(TermGenerator):
     def __init__(self, keyword_terms):
         self.keyword_terms = keyword_terms
-        self.requires_context = any(keyword_term.requires_context for keyword_term in self.keyword_terms)
+        self.requires_state = any(keyword_term.requires_state for keyword_term in self.keyword_terms)
 
     def __str__(self):
         return ' | '.join(stringify_iterable(self.keyword_terms))
@@ -6285,15 +6280,15 @@ class TermGeneratorNonFastPathKeywordTerm(TermGenerator):
     def produces_group(self):
         return False
 
-    def generate_conditional(self, *, to, range_string, context_string):
+    def generate_conditional(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
-        self._generate(to=to, range_string=range_string, context_string=context_string, default_string="break")
+        self._generate(to=to, range_string=range_string, state_string=state_string, default_string="break")
 
-    def generate_unconditional(self, *, to, range_string, context_string):
+    def generate_unconditional(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
-        self._generate(to=to, range_string=range_string, context_string=context_string, default_string="return nullptr")
+        self._generate(to=to, range_string=range_string, state_string=state_string, default_string="return nullptr")
 
-    def _generate(self, *, to, range_string, context_string, default_string):
+    def _generate(self, *, to, range_string, state_string, default_string):
         # Build up a list of pairs of (value, return-expression-to-use-for-value), taking
         # into account settings flags and mode checks for internal values. Leave the return
         # expression as an empty array for the default return expression "return true;".
@@ -6308,9 +6303,9 @@ class TermGeneratorNonFastPathKeywordTerm(TermGenerator):
                 if keyword_term.settings_flag.startswith("DeprecatedGlobalSettings::"):
                     conditions.append(f"!{keyword_term.settings_flag}")
                 else:
-                    conditions.append(f"!{context_string}.{keyword_term.settings_flag}")
+                    conditions.append(f"!{state_string}.context.{keyword_term.settings_flag}")
             if keyword_term.status == "internal":
-                conditions.append(f"!isUASheetBehavior({context_string}.mode)")
+                conditions.append(f"!isUASheetBehavior({state_string}.context.mode)")
 
             if keyword_term.aliased_to:
                 return_value = keyword_term.aliased_to.id
@@ -6347,7 +6342,7 @@ class TermGeneratorNonFastPathKeywordTerm(TermGenerator):
 class TermGeneratorFastPathKeywordTerms(TermGenerator):
     def __init__(self, keyword_fast_path_generator):
         self.keyword_fast_path_generator = keyword_fast_path_generator
-        self.requires_context = keyword_fast_path_generator.requires_context
+        self.requires_state = keyword_fast_path_generator.requires_state
 
     def __str__(self):
         return ' | '.join(stringify_iterable(self.keyword_fast_path_generator.keyword_terms))
@@ -6359,21 +6354,21 @@ class TermGeneratorFastPathKeywordTerms(TermGenerator):
     def produces_group(self):
         return False
 
-    def generate_conditional(self, *, to, range_string, context_string):
+    def generate_conditional(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
-        to.write(f"if (auto result = {self.generate_call_string(range_string=range_string, context_string=context_string)})")
+        to.write(f"if (auto result = {self.generate_call_string(range_string=range_string, state_string=state_string)})")
         with to.indent():
             to.write(f"return result;")
 
-    def generate_unconditional(self, *, to, range_string, context_string):
+    def generate_unconditional(self, *, to, range_string, state_string):
         to.write(f"// {str(self)}")
-        to.write(f"return {self.generate_call_string(range_string=range_string, context_string=context_string)};")
+        to.write(f"return {self.generate_call_string(range_string=range_string, state_string=state_string)};")
 
-    def generate_call_string(self, *, range_string, context_string):
+    def generate_call_string(self, *, range_string, state_string):
         # For root keyword terms we can utilize the `keyword-only fast path` function.
         parameters = [range_string, self.keyword_fast_path_generator.generate_reference_string()]
-        if self.requires_context:
-            parameters.append(context_string)
+        if self.requires_state:
+            parameters.append(state_string)
         return f"consumeIdent({', '.join(parameters)})"
 
 
@@ -6383,31 +6378,31 @@ class TermGeneratorFastPathKeywordTerms(TermGenerator):
 class KeywordFastPathGenerator:
     def __init__(self, name, keyword_terms):
         self.keyword_terms = keyword_terms
-        self.requires_context = any(keyword_term.requires_context for keyword_term in keyword_terms)
-        self.signature = KeywordFastPathGenerator._build_signature(name, self.requires_context)
+        self.requires_state = any(keyword_term.requires_state for keyword_term in keyword_terms)
+        self.signature = KeywordFastPathGenerator._build_signature(name, self.requires_state)
 
     @staticmethod
-    def _build_parameters(requires_context):
+    def _build_parameters(requires_state):
         parameters = [FunctionParameter("CSSValueID", "keyword")]
-        if requires_context:
-            parameters += [FunctionParameter("const CSSParserContext&", "context")]
+        if requires_state:
+            parameters += [FunctionParameter("CSS::PropertyParserState&", "state")]
         return parameters
 
     @staticmethod
-    def _build_signature(name, requires_context):
+    def _build_signature(name, requires_state):
         return FunctionSignature(
             result_type="bool",
             scope=None,
             name=name,
-            parameters=KeywordFastPathGenerator._build_parameters(requires_context))
+            parameters=KeywordFastPathGenerator._build_parameters(requires_state))
 
     def generate_reference_string(self):
         return self.signature.reference_string
 
-    def generate_call_string(self, *, keyword_string, context_string):
+    def generate_call_string(self, *, keyword_string, state_string):
         parameters = [keyword_string]
-        if self.requires_context:
-            parameters += [context_string]
+        if self.requires_state:
+            parameters += [state_string]
 
         return self.signature.generate_call_string(parameters)
 
@@ -6429,9 +6424,9 @@ class KeywordFastPathGenerator:
                     if keyword_term.settings_flag.startswith("DeprecatedGlobalSettings::"):
                         return_expression.append(keyword_term.settings_flag)
                     else:
-                        return_expression.append(f"context.{keyword_term.settings_flag}")
+                        return_expression.append(f"state.context.{keyword_term.settings_flag}")
                 if keyword_term.status == "internal":
-                    return_expression.append("isUASheetBehavior(context.mode)")
+                    return_expression.append("isUASheetBehavior(state.context.mode)")
 
                 keyword_term_and_return_expressions.append(KeywordTermReturnExpression(keyword_term, return_expression))
 
@@ -6509,8 +6504,8 @@ class SkipSharedGrammarRuleConsumer(SharedGrammarRuleConsumer):
 class GeneratedSharedGrammarRuleConsumer(SharedGrammarRuleConsumer):
     def __init__(self, shared_grammar_rule):
         self.term_generator = TermGenerator.make(shared_grammar_rule.grammar.root_term)
-        self.requires_context = self.term_generator.requires_context
-        self.signature = GeneratedSharedGrammarRuleConsumer._build_signature(shared_grammar_rule, self.requires_context)
+        self.requires_state = self.term_generator.requires_state
+        self.signature = GeneratedSharedGrammarRuleConsumer._build_signature(shared_grammar_rule, self.requires_state)
 
     def __str__(self):
         return "GeneratedSharedGrammarRuleConsumer"
@@ -6519,19 +6514,19 @@ class GeneratedSharedGrammarRuleConsumer(SharedGrammarRuleConsumer):
         return self.__str__()
 
     @staticmethod
-    def _build_parameters(requires_context):
+    def _build_parameters(requires_state):
         parameters = [FunctionParameter("CSSParserTokenRange&", "range")]
-        if requires_context:
-            parameters += [FunctionParameter("const CSSParserContext&", "context")]
+        if requires_state:
+            parameters += [FunctionParameter("CSS::PropertyParserState&", "state")]
         return parameters
 
     @staticmethod
-    def _build_signature(shared_grammar_rule, requires_context):
+    def _build_signature(shared_grammar_rule, requires_state):
         return FunctionSignature(
             result_type="RefPtr<CSSValue>",
             scope="CSSPropertyParsing",
             name=f"consume{shared_grammar_rule.name_for_methods.id_without_prefix}",
-            parameters=GeneratedSharedGrammarRuleConsumer._build_parameters(requires_context))
+            parameters=GeneratedSharedGrammarRuleConsumer._build_parameters(requires_state))
 
     @property
     def is_exported(self):
@@ -6544,7 +6539,7 @@ class GeneratedSharedGrammarRuleConsumer(SharedGrammarRuleConsumer):
         to.write(f"{self.signature.definition_string}")
         to.write(f"{{")
         with to.indent():
-            self.term_generator.generate_unconditional(to=to, range_string='range', context_string='context')
+            self.term_generator.generate_unconditional(to=to, range_string='range', state_string='state')
         to.write(f"}}")
         to.newline()
 
@@ -6588,7 +6583,7 @@ class GeneratedSharedGrammarRuleConsumer(SharedGrammarRuleConsumer):
 #
 # `PropertyConsumer` abstract interface:
 #
-#   def generate_call_string(self, *, range_string, id_string, current_shorthand_string, context_string):
+#   def generate_call_string(self, *, range_string, state_string):
 #   def generate_export_declaration(self, *, to):
 #   def generate_definition(self, *, to):
 #   var is_exported
@@ -6624,7 +6619,7 @@ class SkipPropertyConsumer(PropertyConsumer):
     def __repr__(self):
         return self.__str__()
 
-    def generate_call_string(self, *, range_string, id_string, current_shorthand_string, context_string):
+    def generate_call_string(self, *, range_string, state_string):
         return None
 
     def generate_export_declaration(self, *, to):
@@ -6653,20 +6648,8 @@ class CustomPropertyConsumer(PropertyConsumer):
     def __repr__(self):
         return self.__str__()
 
-    def generate_call_string(self, *, range_string, id_string, current_shorthand_string, context_string):
-        parameters = [range_string, context_string]
-        if self.property.codegen_properties.parser_function_requires_current_property:
-            parameters.append(id_string)
-        if self.property.codegen_properties.parser_function_requires_current_shorthand:
-            parameters.append(current_shorthand_string)
-        if self.property.codegen_properties.parser_function_requires_value_pool:
-            parameters.append("CSSValuePool::singleton()")
-        parameters += self.property.codegen_properties.parser_function_requires_additional_parameters
-
-        function = self.property.codegen_properties.parser_function
-
-        # Merge the scope, function and parameters to form the final invocation.
-        return f"{function}({', '.join(parameters)})"
+    def generate_call_string(self, *, range_string, state_string):
+        return f"{self.property.codegen_properties.parser_function}({range_string}, {state_string})"
 
     def generate_export_declaration(self, *, to):
         pass
@@ -6706,8 +6689,8 @@ class FastPathKeywordOnlyPropertyConsumer(PropertyConsumer):
     @staticmethod
     def _build_parameters(keyword_fast_path_generator):
         parameters = [FunctionParameter("CSSParserTokenRange&", "range")]
-        if keyword_fast_path_generator.requires_context:
-            parameters += [FunctionParameter("const CSSParserContext&", "context")]
+        if keyword_fast_path_generator.requires_state:
+            parameters += [FunctionParameter("CSS::PropertyParserState&", "state")]
         return parameters
 
     @staticmethod
@@ -6718,10 +6701,10 @@ class FastPathKeywordOnlyPropertyConsumer(PropertyConsumer):
             name=f"consume{property.name_for_parsing_methods}",
             parameters=FastPathKeywordOnlyPropertyConsumer._build_parameters(keyword_fast_path_generator))
 
-    def generate_call_string(self, *, range_string, id_string=None, current_shorthand_string=None, context_string):
+    def generate_call_string(self, *, range_string, state_string):
         # NOTE: Even in the case that we generate a `consume` function, we don't generate a call to it,
         # but rather always directly use `consumeIdent` with the keyword-only fast path predicate.
-        return self.term_generator.generate_call_string(range_string=range_string, context_string=context_string)
+        return self.term_generator.generate_call_string(range_string=range_string, state_string=state_string)
 
     # For "direct" and "fast-path keyword only" consumers, we only generate the property specific
     # definition if the property has been marked as exported.
@@ -6739,7 +6722,7 @@ class FastPathKeywordOnlyPropertyConsumer(PropertyConsumer):
             to.write(f"{self.signature.definition_string}")
             to.write(f"{{")
             with to.indent():
-                to.write(f"return {self.generate_call_string(range_string='range', context_string='context')};")
+                to.write(f"return {self.generate_call_string(range_string='range', state_string='state')};")
             to.write(f"}}")
             to.newline()
 
@@ -6767,8 +6750,8 @@ class DirectPropertyConsumer(PropertyConsumer):
     @staticmethod
     def _build_parameters(term_generator):
         parameters = [FunctionParameter("CSSParserTokenRange&", "range")]
-        if term_generator.requires_context:
-            parameters += [FunctionParameter("const CSSParserContext&", "context")]
+        if term_generator.requires_state:
+            parameters += [FunctionParameter("CSS::PropertyParserState&", "state")]
         return parameters
 
     @staticmethod
@@ -6779,11 +6762,11 @@ class DirectPropertyConsumer(PropertyConsumer):
             name=f"consume{property.name_for_parsing_methods}",
             parameters=DirectPropertyConsumer._build_parameters(term_generator))
 
-    def generate_call_string(self, *, range_string, id_string=None, current_shorthand_string=None, context_string):
+    def generate_call_string(self, *, range_string, state_string):
         # NOTE: Even in the case that we generate a `consume` function for the case, we don't
         # generate a call to it, but rather always generate the consume function for the reference,
         # which is just as good and works in all cases.
-        return self.term_generator.generate_call_string(range_string=range_string, context_string=context_string)
+        return self.term_generator.generate_call_string(range_string=range_string, state_string=state_string)
 
     # For "direct" and "fast-path keyword only" consumers, we only generate the property specific
     # definition if the property has been marked as exported.
@@ -6801,7 +6784,7 @@ class DirectPropertyConsumer(PropertyConsumer):
             to.write(f"{self.signature.definition_string}")
             to.write(f"{{")
             with to.indent():
-                self.term_generator.generate_unconditional(to=to, range_string='range', context_string='context')
+                self.term_generator.generate_unconditional(to=to, range_string='range', state_string='state')
             to.write(f"}}")
             to.newline()
 
@@ -6816,8 +6799,8 @@ class GeneratedPropertyConsumer(PropertyConsumer):
         self.property = property
         self.keyword_fast_path_generator = GeneratedPropertyConsumer._build_keyword_fast_path_generator(property)
         self.term_generator = TermGenerator.make(property.codegen_properties.parser_grammar.root_term, self.keyword_fast_path_generator)
-        self.requires_context = self.term_generator.requires_context
-        self.signature = GeneratedPropertyConsumer._build_signature(property, self.requires_context)
+        self.requires_state = self.term_generator.requires_state
+        self.signature = GeneratedPropertyConsumer._build_signature(property, self.requires_state)
 
     def __str__(self):
         return f"GeneratedPropertyConsumer for {self.property}"
@@ -6832,19 +6815,19 @@ class GeneratedPropertyConsumer(PropertyConsumer):
         return None
 
     @staticmethod
-    def _build_parameters(property, requires_context):
+    def _build_parameters(property, requires_state):
         parameters = [FunctionParameter("CSSParserTokenRange&", "range")]
-        if requires_context:
-            parameters += [FunctionParameter("const CSSParserContext&", "context")]
+        if requires_state:
+            parameters += [FunctionParameter("CSS::PropertyParserState&", "state")]
         return parameters
 
     @staticmethod
-    def _build_signature(property, requires_context):
+    def _build_signature(property, requires_state):
         return FunctionSignature(
             result_type="RefPtr<CSSValue>",
             scope=GeneratedPropertyConsumer._build_scope(property),
             name=f"consume{property.name_for_parsing_methods}",
-            parameters=GeneratedPropertyConsumer._build_parameters(property, requires_context))
+            parameters=GeneratedPropertyConsumer._build_parameters(property, requires_state))
 
     @staticmethod
     def _build_keyword_fast_path_generator(property):
@@ -6852,10 +6835,10 @@ class GeneratedPropertyConsumer(PropertyConsumer):
             return KeywordFastPathGenerator(f"isKeywordValidFor{property.name_for_parsing_methods}", property.codegen_properties.parser_grammar.fast_path_keyword_terms_sorted_by_name)
         return None
 
-    def generate_call_string(self, *, range_string, id_string, current_shorthand_string, context_string):
+    def generate_call_string(self, *, range_string, state_string):
         parameters = [range_string]
-        if self.requires_context:
-            parameters += [context_string]
+        if self.requires_state:
+            parameters += [state_string]
         return self.signature.generate_call_string(parameters)
 
     @property
@@ -6873,7 +6856,7 @@ class GeneratedPropertyConsumer(PropertyConsumer):
             to.write(f"static {self.signature.definition_string}")
         to.write(f"{{")
         with to.indent():
-            self.term_generator.generate_unconditional(to=to, range_string='range', context_string='context')
+            self.term_generator.generate_unconditional(to=to, range_string='range', state_string='state')
         to.write(f"}}")
         to.newline()
 

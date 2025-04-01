@@ -1503,8 +1503,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDOMAgent::highlightSelector(co
     if (!document)
         return makeUnexpected("Missing document of frame for given frameId"_s);
 
-    CSSParser parser(*document);
-    auto selectorList = parser.parseSelectorList(selectorString);
+    auto selectorList = CSSParser::parseSelectorList(selectorString, CSSParserContext(*document));
     if (!selectorList)
         return { };
 

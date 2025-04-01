@@ -34,7 +34,9 @@ class CSSToLengthConversionData;
 class CSSValue;
 class TimingFunction;
 
-struct CSSParserContext;
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
@@ -43,10 +45,10 @@ namespace CSSPropertyParserHelpers {
 // https://drafts.csswg.org/css-easing/#typedef-easing-function
 
 // MARK: <easing-function> consuming (unresolved)
-std::optional<CSS::EasingFunction> consumeUnresolvedEasingFunction(CSSParserTokenRange&, const CSSParserContext&);
+std::optional<CSS::EasingFunction> consumeUnresolvedEasingFunction(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 // MARK: <easing-function> consuming (CSSValue)
-RefPtr<CSSValue> consumeEasingFunction(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeEasingFunction(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 // MARK: <easing-function> parsing (raw)
 RefPtr<TimingFunction> parseEasingFunction(const String&, const CSSParserContext&, const CSSToLengthConversionData&);

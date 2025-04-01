@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,21 +24,33 @@
 
 #pragma once
 
-#include <wtf/Forward.h>
+#include "CSSParserTokenRange.h"
 
 namespace WebCore {
 
-class CSSParserTokenRange;
-class CSSValue;
-struct CSSParserContext;
+struct [[nodiscard]] CSSParserTokenRangeGuard {
+    CSSParserTokenRangeGuard(CSSParserTokenRange& range)
+        : m_range { range }
+        , m_savedRange { range }
+    {
+    }
 
-enum CSSPropertyID : uint16_t;
+    ~CSSParserTokenRangeGuard()
+    {
+        if (m_committed)
+            return;
+        m_range = m_savedRange;
+    }
 
-namespace CSSPropertyParserHelpers {
+    void commit()
+    {
+        m_committed = true;
+    }
 
-// MARK: <inset-physical> consuming
-// https://drafts.csswg.org/css-position-3/#insets
-RefPtr<CSSValue> consumeInsetPhysical(CSSParserTokenRange&, const CSSParserContext&, CSSPropertyID currentShorthand);
+private:
+    bool m_committed { false };
+    CSSParserTokenRange& m_range;
+    CSSParserTokenRange m_savedRange;
+};
 
-} // namespace CSSPropertyParserHelpers
 } // namespace WebCore

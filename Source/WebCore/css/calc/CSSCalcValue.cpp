@@ -56,7 +56,7 @@
 
 namespace WebCore {
 
-RefPtr<CSSCalcValue> CSSCalcValue::parse(CSSParserTokenRange& tokens, const CSSParserContext& context, Calculation::Category category, CSS::Range range, CSSCalcSymbolsAllowed symbolsAllowed, CSSPropertyParserOptions propertyOptions)
+RefPtr<CSSCalcValue> CSSCalcValue::parse(CSSParserTokenRange& tokens, CSS::PropertyParserState& state, Calculation::Category category, CSS::Range range, CSSCalcSymbolsAllowed symbolsAllowed, CSSPropertyParserOptions propertyOptions)
 {
     auto parserOptions = CSSCalc::ParserOptions {
         .category = category,
@@ -72,7 +72,7 @@ RefPtr<CSSCalcValue> CSSCalcValue::parse(CSSParserTokenRange& tokens, const CSSP
         .allowZeroValueLengthRemovalFromSum = false,
     };
 
-    auto tree = CSSCalc::parseAndSimplify(tokens, context, parserOptions, simplificationOptions);
+    auto tree = CSSCalc::parseAndSimplify(tokens, state, parserOptions, simplificationOptions);
     if (!tree)
         return nullptr;
 

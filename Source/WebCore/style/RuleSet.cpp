@@ -39,6 +39,7 @@
 #include "DocumentInlines.h"
 #include "HTMLNames.h"
 #include "MediaQueryEvaluator.h"
+#include "MutableCSSSelector.h"
 #include "RuleSetBuilder.h"
 #include "SVGElement.h"
 #include "ScriptExecutionContext.h"

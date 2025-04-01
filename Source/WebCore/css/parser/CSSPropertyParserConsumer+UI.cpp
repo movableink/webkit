@@ -35,6 +35,7 @@
 #include "CSSPropertyParserConsumer+Image.h"
 #include "CSSPropertyParserConsumer+NumberDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
+#include "CSSPropertyParserState.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
 #include "CSSValuePair.h"
@@ -42,21 +43,21 @@
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumeCursor(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeCursor(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <cursor> = [ [ <url> | <url-set> ] [<x> <y>]? ]#? [ auto | default | none | context-menu | help | pointer | progress | wait | cell | crosshair | text | vertical-text | alias | copy | move | no-drop | not-allowed | grab | grabbing | e-resize | n-resize | ne-resize | nw-resize | s-resize | se-resize | sw-resize | w-resize | ew-resize | ns-resize | nesw-resize | nwse-resize | col-resize | row-resize | all-scroll | zoom-in | zoom-out ]
     // https://drafts.csswg.org/css-ui/#propdef-cursor
 
     CSSValueListBuilder list;
-    while (auto image = consumeImage(range, context, { AllowedImageType::URLFunction, AllowedImageType::ImageSet })) {
+    while (auto image = consumeImage(range, state, { AllowedImageType::URLFunction, AllowedImageType::ImageSet })) {
         RefPtr<CSSValuePair> hotSpot;
-        if (auto x = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode })) {
-            auto y = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+        if (auto x = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, state)) {
+            auto y = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, state);
             if (!y)
                 return nullptr;
             hotSpot = CSSValuePair::createNoncoalescing(x.releaseNonNull(), y.releaseNonNull());
         }
-        list.append(CSSCursorImageValue::create(image.releaseNonNull(), WTFMove(hotSpot), context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No));
+        list.append(CSSCursorImageValue::create(image.releaseNonNull(), WTFMove(hotSpot), state.context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No));
         if (!consumeCommaIncludingWhitespace(range))
             return nullptr;
     }
@@ -64,7 +65,7 @@ RefPtr<CSSValue> consumeCursor(CSSParserTokenRange& range, const CSSParserContex
     CSSValueID id = range.peek().id();
     RefPtr<CSSValue> cursorType;
     if (id == CSSValueHand) {
-        if (context.mode != HTMLQuirksMode) // Non-standard behavior
+        if (state.context.mode != HTMLQuirksMode) // Non-standard behavior
             return nullptr;
         cursorType = CSSPrimitiveValue::create(CSSValuePointer);
         range.consumeIncludingWhitespace();

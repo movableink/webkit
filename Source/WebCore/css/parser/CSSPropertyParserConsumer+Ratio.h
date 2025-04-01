@@ -30,25 +30,25 @@
 
 namespace WebCore {
 
-namespace CSS {
-struct Ratio;
-}
-
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+struct Ratio;
+}
 
 namespace CSSPropertyParserHelpers {
 
 // https://drafts.csswg.org/css-values-4/#ratio-value
 
 // MARK: <ratio> consuming (unresolved)
-std::optional<CSS::Ratio> consumeUnresolvedRatio(CSSParserTokenRange&, const CSSParserContext&);
-std::optional<CSS::Ratio> consumeUnresolvedRatioWithBothNumeratorAndDenominator(CSSParserTokenRange&, const CSSParserContext&);
+std::optional<CSS::Ratio> consumeUnresolvedRatio(CSSParserTokenRange&, CSS::PropertyParserState&);
+std::optional<CSS::Ratio> consumeUnresolvedRatioWithBothNumeratorAndDenominator(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 // MARK: <ratio> consuming (value)
-RefPtr<CSSValue> consumeRatio(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeRatioWithBothNumeratorAndDenominator(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeRatio(CSSParserTokenRange&, CSS::PropertyParserState&);
+RefPtr<CSSValue> consumeRatioWithBothNumeratorAndDenominator(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

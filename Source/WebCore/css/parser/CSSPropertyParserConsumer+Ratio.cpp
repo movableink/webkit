@@ -31,19 +31,20 @@
 #include "CSSPropertyParserConsumer+MetaConsumer.h"
 #include "CSSPropertyParserConsumer+NumberDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
+#include "CSSPropertyParserState.h"
 #include "CSSRatioValue.h"
 
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-std::optional<CSS::Ratio> consumeUnresolvedRatio(CSSParserTokenRange& range, const CSSParserContext& context)
+std::optional<CSS::Ratio> consumeUnresolvedRatio(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <ratio> = <number [0,∞]> [ / <number [0,∞]> ]?
     // https://drafts.csswg.org/css-values-4/#ratio-value
 
     auto rangeCopy = range;
 
-    auto numerator = MetaConsumer<CSS::Number<CSS::Nonnegative>>::consume(rangeCopy, context, { }, { .parserMode = context.mode });
+    auto numerator = MetaConsumer<CSS::Number<CSS::Nonnegative>>::consume(rangeCopy, state);
     if (!numerator)
         return { };
 
@@ -52,7 +53,7 @@ std::optional<CSS::Ratio> consumeUnresolvedRatio(CSSParserTokenRange& range, con
         return CSS::Ratio { WTFMove(*numerator) };
     }
 
-    auto denominator = MetaConsumer<CSS::Number<CSS::Nonnegative>>::consume(rangeCopy, context, { }, { .parserMode = context.mode });
+    auto denominator = MetaConsumer<CSS::Number<CSS::Nonnegative>>::consume(rangeCopy, state);
     if (!denominator)
         return { };
 
@@ -60,21 +61,21 @@ std::optional<CSS::Ratio> consumeUnresolvedRatio(CSSParserTokenRange& range, con
     return CSS::Ratio { WTFMove(*numerator), WTFMove(*denominator) };
 }
 
-std::optional<CSS::Ratio> consumeUnresolvedRatioWithBothNumeratorAndDenominator(CSSParserTokenRange& range, const CSSParserContext& context)
+std::optional<CSS::Ratio> consumeUnresolvedRatioWithBothNumeratorAndDenominator(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <ratio> = <number [0,∞]> [ / <number [0,∞]> ]?
     // https://drafts.csswg.org/css-values-4/#ratio-value
 
     auto rangeCopy = range;
 
-    auto numerator = MetaConsumer<CSS::Number<CSS::Nonnegative>>::consume(rangeCopy, context, { }, { .parserMode = context.mode });
+    auto numerator = MetaConsumer<CSS::Number<CSS::Nonnegative>>::consume(rangeCopy, state);
     if (!numerator)
         return { };
 
     if (!CSSPropertyParserHelpers::consumeSlashIncludingWhitespace(rangeCopy))
         return { };
 
-    auto denominator = MetaConsumer<CSS::Number<CSS::Nonnegative>>::consume(rangeCopy, context, { }, { .parserMode = context.mode });
+    auto denominator = MetaConsumer<CSS::Number<CSS::Nonnegative>>::consume(rangeCopy, state);
     if (!denominator)
         return { };
 
@@ -82,16 +83,16 @@ std::optional<CSS::Ratio> consumeUnresolvedRatioWithBothNumeratorAndDenominator(
     return CSS::Ratio { WTFMove(*numerator), WTFMove(*denominator) };
 }
 
-RefPtr<CSSValue> consumeRatio(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeRatio(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
-    if (auto ratio = consumeUnresolvedRatio(range, context))
+    if (auto ratio = consumeUnresolvedRatio(range, state))
         return CSSRatioValue::create(WTFMove(*ratio));
     return nullptr;
 }
 
-RefPtr<CSSValue> consumeRatioWithBothNumeratorAndDenominator(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeRatioWithBothNumeratorAndDenominator(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
-    if (auto ratio = consumeUnresolvedRatioWithBothNumeratorAndDenominator(range, context))
+    if (auto ratio = consumeUnresolvedRatioWithBothNumeratorAndDenominator(range, state))
         return CSSRatioValue::create(WTFMove(*ratio));
     return nullptr;
 }

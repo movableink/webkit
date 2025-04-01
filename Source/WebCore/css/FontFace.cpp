@@ -33,8 +33,6 @@
 #include "CSSValueList.h"
 #include "CSSValuePool.h"
 #include "DOMPromiseProxy.h"
-#include "Document.h"
-#include "DocumentInlines.h"
 #include "JSFontFace.h"
 #include "TrustedFonts.h"
 #include <JavaScriptCore/ArrayBuffer.h>
@@ -78,8 +76,7 @@ Ref<FontFace> FontFace::create(ScriptExecutionContext& context, const String& fa
     auto fontTrustedTypes = context.settingsValues().downloadableBinaryFontTrustedTypes;
     auto sourceConversionResult = WTF::switchOn(source,
         [&] (String& string) -> ExceptionOr<void> {
-            auto* document = dynamicDowncast<Document>(context);
-            auto value = CSSPropertyParserHelpers::parseFontFaceSrc(string, document ? CSSParserContext(*document) : HTMLStandardMode);
+            auto value = CSSPropertyParserHelpers::parseFontFaceSrc(string, context);
             if (!value)
                 return Exception { ExceptionCode::SyntaxError };
             CSSFontFace::appendSources(result->backing(), *value, &context, false);

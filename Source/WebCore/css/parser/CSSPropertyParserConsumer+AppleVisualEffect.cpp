@@ -63,7 +63,7 @@ static bool isKeywordValidForAppleVisualEffect(CSSValueID keyword)
     }
 }
 
-RefPtr<CSSValue> consumeAppleVisualEffect(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumeAppleVisualEffect(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     return consumeIdent(range, isKeywordValidForAppleVisualEffect);
 }

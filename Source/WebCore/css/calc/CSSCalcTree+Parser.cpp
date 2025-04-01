@@ -35,6 +35,7 @@
 #include "CSSParserTokenRange.h"
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
+#include "CSSPropertyParserState.h"
 #include "CSSPropertyParsing.h"
 #include "CSSSerializationContext.h"
 #include "CSSUnits.h"
@@ -71,11 +72,13 @@ static std::optional<std::pair<Number, Type>> lookupConstantNumber(CSSValueID sy
 
 // MARK: - Parser State
 
+namespace {
+
 enum class ParseStatus { Ok, TooDeep };
 
 struct ParserState {
-    // CSSParserContext used to initiate the parse.
-    const CSSParserContext& parserContext;
+    // CSS::PropertyParserState used to initiate the parse.
+    CSS::PropertyParserState& propertyParserState;
 
     // ParserOptions used to initiate the parse.
     const ParserOptions& parserOptions;
@@ -89,6 +92,8 @@ struct ParserState {
     // Tracks whether the parse tree contains any nodes that disqualify the tree from style sharing.
     bool unique = false;
 };
+
+} // namespace (anonymous)
 
 static ParseStatus checkDepth(int depth)
 {
@@ -113,10 +118,10 @@ static std::optional<TypedChild> parseCalcNumber(const CSSParserToken&, ParserSt
 static std::optional<TypedChild> parseCalcPercentage(const CSSParserToken&, ParserState&);
 static std::optional<TypedChild> parseCalcDimension(const CSSParserToken&, ParserState&);
 
-std::optional<Tree> parseAndSimplify(CSSParserTokenRange& range, const CSSParserContext& parserContext, const ParserOptions& parserOptions, const SimplificationOptions& simplificationOptions)
+std::optional<Tree> parseAndSimplify(CSSParserTokenRange& range, CSS::PropertyParserState& propertyParserState, const ParserOptions& parserOptions, const SimplificationOptions& simplificationOptions)
 {
     auto function = range.peek().functionId();
-    if (!isCalcFunction(function, parserContext))
+    if (!isCalcFunction(function))
         return std::nullopt;
 
     auto tokens = CSSPropertyParserHelpers::consumeFunction(range);
@@ -126,7 +131,7 @@ std::optional<Tree> parseAndSimplify(CSSParserTokenRange& range, const CSSParser
     // -- Parsing --
 
     ParserState state {
-        .parserContext = parserContext,
+        .propertyParserState = propertyParserState,
         .parserOptions = parserOptions,
         .simplificationOptions = &simplificationOptions
     };
@@ -159,7 +164,7 @@ std::optional<Tree> parseAndSimplify(CSSParserTokenRange& range, const CSSParser
     return result;
 }
 
-bool isCalcFunction(CSSValueID functionId, const CSSParserContext&)
+bool isCalcFunction(CSSValueID functionId)
 {
     switch (functionId) {
     case CSSValueCalc:
@@ -663,7 +668,7 @@ static std::optional<TypedChild> consumeRandom(CSSParserTokenRange& tokens, int 
 {
     // <random()> = random( <random-caching-options>? , <calc-sum>, <calc-sum>, [by <calc-sum>]? )
 
-    if (!state.parserContext.cssRandomFunctionEnabled)
+    if (!state.propertyParserState.context.cssRandomFunctionEnabled)
         return { };
 
     using Op = Random;
@@ -801,7 +806,7 @@ static std::optional<TypedChild> consumeProgress(CSSParserTokenRange& tokens, in
 {
     // <progress()> = progress( <calc-sum>, <calc-sum>, <calc-sum> )
 
-    if (!state.parserContext.cssProgressFunctionEnabled)
+    if (!state.propertyParserState.context.cssProgressFunctionEnabled)
         return { };
 
     using Op = Progress;
@@ -896,7 +901,7 @@ static std::optional<TypedChild> consumeMediaProgress(CSSParserTokenRange& token
 {
     // <media-progress()> = media-progress( <mf-name>, <calc-sum>, <calc-sum> )
 
-    if (!state.parserContext.cssMediaProgressFunctionEnabled)
+    if (!state.propertyParserState.context.cssMediaProgressFunctionEnabled)
         return { };
 
     using Op = MediaProgress;
@@ -907,7 +912,7 @@ static std::optional<TypedChild> consumeMediaProgress(CSSParserTokenRange& token
         return std::nullopt;
     }
 
-    auto* schema = MQ::MediaQueryParser::mediaProgressProvidingSchemaForFeatureName(*featureName, state.parserContext);
+    auto* schema = MQ::MediaQueryParser::mediaProgressProvidingSchemaForFeatureName(*featureName, state.propertyParserState.context);
     if (!schema) {
         LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed parse of argument #1 - invalid media feature");
         return std::nullopt;
@@ -921,7 +926,7 @@ static std::optional<TypedChild> consumeMediaProgress(CSSParserTokenRange& token
     auto schemaCategory = schema->category();
 
     ParserState nestedState {
-        .parserContext = state.parserContext,
+        .propertyParserState = state.propertyParserState,
         .parserOptions = ParserOptions {
             .category = schemaCategory,
             .range = CSS::All,
@@ -990,7 +995,7 @@ static std::optional<TypedChild> consumeContainerProgress(CSSParserTokenRange& t
 {
     // <container-progress()> = container-progress( <mf-name> [ of <container-name> ]?, <calc-sum>, <calc-sum> )
 
-    if (!state.parserContext.cssContainerProgressFunctionEnabled)
+    if (!state.propertyParserState.context.cssContainerProgressFunctionEnabled)
         return { };
 
     using Op = ContainerProgress;
@@ -1010,7 +1015,7 @@ static std::optional<TypedChild> consumeContainerProgress(CSSParserTokenRange& t
         container = tokens.consumeIncludingWhitespace().value().toAtomString();
     }
 
-    auto* schema = CQ::ContainerQueryParser::containerProgressProvidingSchemaForFeatureName(*featureName, state.parserContext);
+    auto* schema = CQ::ContainerQueryParser::containerProgressProvidingSchemaForFeatureName(*featureName, state.propertyParserState.context);
     if (!schema) {
         LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - failed parse of argument #1 - invalid media feature");
         return std::nullopt;
@@ -1024,7 +1029,7 @@ static std::optional<TypedChild> consumeContainerProgress(CSSParserTokenRange& t
     auto schemaCategory = schema->category();
 
     ParserState nestedState {
-        .parserContext = state.parserContext,
+        .propertyParserState = state.propertyParserState,
         .parserOptions = ParserOptions {
             .category = schemaCategory,
             .range = CSS::All,
@@ -1124,7 +1129,7 @@ static std::optional<TypedChild> consumeAnchor(CSSParserTokenRange& tokens, int 
     if (state.parserOptions.propertyOptions.anchorPolicy != AnchorPolicy::Allow)
         return { };
 
-    if (!state.parserContext.propertySettings.cssAnchorPositioningEnabled)
+    if (!state.propertyParserState.context.propertySettings.cssAnchorPositioningEnabled)
         return { };
 
     auto anchorElement = CSSPropertyParserHelpers::consumeDashedIdentRaw(tokens);
@@ -1142,7 +1147,7 @@ static std::optional<TypedChild> consumeAnchor(CSSParserTokenRange& tokens, int 
             .propertyOptions = { },
         };
         auto percentageState = ParserState {
-            .parserContext = state.parserContext,
+            .propertyParserState = state.propertyParserState,
             .parserOptions = percentageOptions,
             .simplificationOptions = { },
         };
@@ -1222,7 +1227,7 @@ static std::optional<TypedChild> consumeAnchorSize(CSSParserTokenRange& tokens, 
     if (state.parserOptions.propertyOptions.anchorSizePolicy != AnchorSizePolicy::Allow)
         return { };
 
-    if (!state.parserContext.propertySettings.cssAnchorPositioningEnabled)
+    if (!state.propertyParserState.context.propertySettings.cssAnchorPositioningEnabled)
         return { };
 
     // parse <anchor-element>
@@ -1610,7 +1615,7 @@ std::optional<TypedChild> parseCalcValue(CSSParserTokenRange& tokens, int depth,
             return CSSValueCalc;
         }
 
-        if (auto functionId = tokens.peek().functionId(); isCalcFunction(functionId, state.parserContext))
+        if (auto functionId = tokens.peek().functionId(); isCalcFunction(functionId))
             return functionId;
         return std::nullopt;
     };

@@ -76,8 +76,7 @@ bool DOMCSSNamespace::supports(Document& document, const String& conditionText)
 {
     CSSParserContext context(document);
     context.mode = HTMLStandardMode;
-    CSSParser parser(context);
-    return parser.parseSupportsCondition(conditionText);
+    return CSSParser::parseSupportsCondition(conditionText, context);
 }
 
 String DOMCSSNamespace::escape(const String& ident)

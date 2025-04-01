@@ -215,8 +215,7 @@ bool isValidCSSSelector(const String& selector)
     // we want to use quirks mode in parsing, but automatic mode when actually applying the content blocker styles.
     // FIXME: rdar://105733691 (Parse/apply content blocker style sheets in both standards and quirks mode lazily).
     WebCore::CSSParserContext context(HTMLQuirksMode);
-    CSSParser parser(context);
-    return !!parser.parseSelectorList(selector);
+    return !!CSSParser::parseSelectorList(selector, context);
 }
 
 WebCore::CSSParserContext contentExtensionCSSParserContext()

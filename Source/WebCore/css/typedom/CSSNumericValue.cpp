@@ -47,6 +47,7 @@
 #include "CSSNumericType.h"
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
+#include "CSSPropertyParserState.h"
 #include "CSSTokenizer.h"
 #include "CSSUnitValue.h"
 #include "CalculationCategory.h"
@@ -463,6 +464,9 @@ ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::parse(Document& document, Str
             // See https://github.com/w3c/csswg-drafts/issues/10753
 
             auto parserContext = CSSParserContext { document };
+            auto parserState = CSS::PropertyParserState {
+                .context = parserContext,
+            };
             auto parserOptions = CSSCalc::ParserOptions {
                 .category = Calculation::Category::LengthPercentage,
                 .range = CSS::All,
@@ -476,7 +480,7 @@ ExceptionOr<Ref<CSSNumericValue>> CSSNumericValue::parse(Document& document, Str
                 .symbolTable = { },
                 .allowZeroValueLengthRemovalFromSum = false,
             };
-            auto tree = CSSCalc::parseAndSimplify(componentValueRange, parserContext, parserOptions, simplificationOptions);
+            auto tree = CSSCalc::parseAndSimplify(componentValueRange, parserState, parserOptions, simplificationOptions);
             if (!tree)
                 return Exception { ExceptionCode::SyntaxError, "Failed to parse CSS text"_s };
 

@@ -200,27 +200,24 @@
         "Indicates that the property requires a custom parser and that the parser function",
         "will be named whatever string is provided as the value.",
         "",
-        "* parser-function-requires-additional-parameters:",
-        "An array of strings to pass as arguments to a custom parser. 'parser-function' must",
-        "also be specified for this to be valid.",
-        "",
-        "* parser-function-requires-current-shorthand:",
-        "Indicates that the current shorthand being parsed is required by the custom",
-        "parser. 'parser-function' must also be specified for this to be valid.",
-        "",
-        "* parser-function-requires-current-property:",
-        "Indicates that the current property being parsed is required by the custom",
-        "parser. 'parser-function' must also be specified for this to be valid.",
-        "",
-        "* parser-function-requires-value-pool:",
-        "Indicates that a CSSValuePool is required by the custom parser. 'parser-function'",
-        "must also be specified for this to be valid.",
-        "",
         "* parser-grammar:",
         "An array of terms that define the grammar for the property.",
         "",
         "* parser-grammar-comment:",
         "A comment specific to the `parser-grammar` value.",
+        "",
+        "* accepts-quirky-color:",
+        "Indicates the property is listed as support quirky colors in quirks mode",
+        "in https://drafts.csswg.org/css-color-4/#quirky-color.",
+        "",
+        "* accepts-quirky-length:",
+        "Indicates the property is listed as support quirky lengths in quirks mode",
+        "in https://drafts.csswg.org/css-values-4/#deprecated-quirky-length.",
+        "",
+        "* accepts-quirky-angle:",
+        "Indicates the property requires support for unitless angles. Only used for",
+        "two properties, glyph-orientation-horizontal and glyph-orientation-vertical,",
+        "though nothing in any standard requires this.",
         "",
         "2. Lesser known capabilities of this file format",
         "",
@@ -404,13 +401,14 @@
             "inherited": true,
             "initial": "CanvasText",
             "codegen-properties": {
+                "accepts-quirky-color": true,
                 "animation-wrapper": "VisitedAffectedColorWrapper",
                 "visited-link-color-support": true,
                 "color-property": true,
                 "style-builder-custom": "All",
                 "high-priority": true,
                 "fast-path-inherited": true,
-                "parser-grammar": "<color quirky-colors-in-quirks-mode=allowed>"
+                "parser-grammar": "<color>"
             },
             "status": {
                 "comment": "All the values from CSS Color Level 3 are supported, as well as the 8- and 4-digit forms of hex color, and the color() function."
@@ -652,11 +650,12 @@
                 }
             ],
             "codegen-properties": {
+                "accepts-quirky-length": true,
                 "animation-wrapper": "Wrapper<float>",
                 "animation-wrapper-requires-computed-getter": true,
                 "style-builder-custom": "All",
                 "high-priority": true,
-                "parser-grammar": "<absolute-size> | <relative-size> | <length-percentage [0,inf] unitless=allowed> | <-webkit-absolute-size> | <-webkit-relative-size>",
+                "parser-grammar": "<absolute-size> | <relative-size> | <length-percentage [0,inf]> | <-webkit-absolute-size> | <-webkit-relative-size>",
                 "parser-exported": true
             },
             "specification": {
@@ -2087,11 +2086,12 @@
             "animation-type": "by computed value",
             "initial": "transparent",
             "codegen-properties": {
+                "accepts-quirky-color": true,
                 "animation-wrapper": "VisitedAffectedStyleColorWrapper",
                 "visited-link-color-support": true,
                 "color-property": true,
                 "disables-native-appearance": true,
-                "parser-grammar": "<color quirky-colors-in-quirks-mode=allowed>"
+                "parser-grammar": "<color>"
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -2145,7 +2145,8 @@
                 "longhands": [
                     "background-position-x",
                     "background-position-y"
-                ]
+                ],
+                "accepts-quirky-length": true
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -2606,19 +2607,17 @@
             "animation-type": "by computed value",
             "initial": "currentColor",
             "codegen-properties": {
+                "logical-property-group": {
+                    "name": "border-color",
+                    "resolver": "bottom"
+                },
+                "accepts-quirky-color": true,
                 "animation-wrapper": "VisitedAffectedStyleColorWrapper",
                 "render-style-initial": "currentColor",
                 "visited-link-color-support": true,
                 "color-property": true,
                 "disables-native-appearance": true,
-                "logical-property-group": {
-                    "name": "border-color",
-                    "resolver": "bottom"
-                },
-                "parser-function": "consumeBorderColor",
-                "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "<color quirky-colors-in-quirks-mode=allowed>",
-                "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
+                "parser-grammar": "<color>"
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -2705,19 +2704,17 @@
                 "thick"
             ],
             "codegen-properties": {
+                "logical-property-group": {
+                    "name": "border-width",
+                    "resolver": "bottom"
+                },
+                "accepts-quirky-length": true,
                 "animation-wrapper": "FloatWrapper",
                 "animation-wrapper-requires-additional-parameters": ["FloatWrapper::ValueRange::NonNegative"],
                 "render-style-initial": "initialBorderWidth",
                 "style-builder-converter": "LineWidth<float>",
                 "disables-native-appearance": true,
-                "logical-property-group": {
-                    "name": "border-width",
-                    "resolver": "bottom"
-                },
-                "parser-function": "consumeBorderWidth",
-                "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "<line-width>",
-                "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
+                "parser-grammar": "<line-width>"
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -2747,7 +2744,8 @@
                     "border-right-color",
                     "border-bottom-color",
                     "border-left-color"
-                ]
+                ],
+                "accepts-quirky-color": true
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -2853,7 +2851,6 @@
                 "disables-native-appearance": true,
                 "parser-function": "consumeBorderImageSlice",
                 "parser-function-allows-number-or-integer-input": true,
-                "parser-function-requires-current-property": true,
                 "parser-grammar-unused": "[ <number [0,inf]> | <percentage [0,inf]> ]{1,4} && fill?",
                 "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
             },
@@ -2893,7 +2890,6 @@
                 "disables-native-appearance": true,
                 "parser-function": "consumeBorderImageWidth",
                 "parser-function-allows-number-or-integer-input": true,
-                "parser-function-requires-current-property": true,
                 "parser-grammar-unused": "[ <length-percentage [0,inf]> | <number [0,inf]> | auto ]{1,4}",
                 "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
             },
@@ -3159,19 +3155,17 @@
             "animation-type": "by computed value",
             "initial": "currentColor",
             "codegen-properties": {
+                "logical-property-group": {
+                    "name": "border-color",
+                    "resolver": "left"
+                },
+                "accepts-quirky-color": true,
                 "animation-wrapper": "VisitedAffectedStyleColorWrapper",
                 "render-style-initial": "currentColor",
                 "visited-link-color-support": true,
                 "color-property": true,
                 "disables-native-appearance": true,
-                "logical-property-group": {
-                    "name": "border-color",
-                    "resolver": "left"
-                },
-                "parser-function": "consumeBorderColor",
-                "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "<color quirky-colors-in-quirks-mode=allowed>",
-                "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
+                "parser-grammar": "<color>"
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -3216,19 +3210,17 @@
                 "thick"
             ],
             "codegen-properties": {
+                "logical-property-group": {
+                    "name": "border-width",
+                    "resolver": "left"
+                },
+                "accepts-quirky-length": true,
                 "animation-wrapper": "FloatWrapper",
                 "animation-wrapper-requires-additional-parameters": ["FloatWrapper::ValueRange::NonNegative"],
                 "render-style-initial": "initialBorderWidth",
                 "style-builder-converter": "LineWidth<float>",
                 "disables-native-appearance": true,
-                "logical-property-group": {
-                    "name": "border-width",
-                    "resolver": "left"
-                },
-                "parser-function": "consumeBorderWidth",
-                "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "<line-width>",
-                "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
+                "parser-grammar": "<line-width>"
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -3266,19 +3258,17 @@
             "animation-type": "by computed value",
             "initial": "currentColor",
             "codegen-properties": {
+                "logical-property-group": {
+                    "name": "border-color",
+                    "resolver": "right"
+                },
+                "accepts-quirky-color": true,
                 "animation-wrapper": "VisitedAffectedStyleColorWrapper",
                 "render-style-initial": "currentColor",
                 "visited-link-color-support": true,
                 "color-property": true,
                 "disables-native-appearance": true,
-                "logical-property-group": {
-                    "name": "border-color",
-                    "resolver": "right"
-                },
-                "parser-function": "consumeBorderColor",
-                "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "<color quirky-colors-in-quirks-mode=allowed>",
-                "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
+                "parser-grammar": "<color>"
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -3323,19 +3313,17 @@
                 "thick"
             ],
             "codegen-properties": {
+                "logical-property-group": {
+                    "name": "border-width",
+                    "resolver": "right"
+                },
+                "accepts-quirky-length": true,
                 "animation-wrapper": "FloatWrapper",
                 "animation-wrapper-requires-additional-parameters": ["FloatWrapper::ValueRange::NonNegative"],
                 "render-style-initial": "initialBorderWidth",
                 "style-builder-converter": "LineWidth<float>",
                 "disables-native-appearance": true,
-                "logical-property-group": {
-                    "name": "border-width",
-                    "resolver": "right"
-                },
-                "parser-function": "consumeBorderWidth",
-                "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "<line-width>",
-                "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
+                "parser-grammar": "<line-width>"
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -3350,7 +3338,8 @@
                 "longhands": [
                     "-webkit-border-horizontal-spacing",
                     "-webkit-border-vertical-spacing"
-                ]
+                ],
+                "accepts-quirky-length": true
             },
             "specification": {
                 "category": "css-22",
@@ -3422,19 +3411,17 @@
             "animation-type": "by computed value",
             "initial": "currentColor",
             "codegen-properties": {
+                "logical-property-group": {
+                    "name": "border-color",
+                    "resolver": "top"
+                },
+                "accepts-quirky-color": true,
                 "animation-wrapper": "VisitedAffectedStyleColorWrapper",
                 "render-style-initial": "currentColor",
                 "visited-link-color-support": true,
                 "color-property": true,
                 "disables-native-appearance": true,
-                "logical-property-group": {
-                    "name": "border-color",
-                    "resolver": "top"
-                },
-                "parser-function": "consumeBorderColor",
-                "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "<color quirky-colors-in-quirks-mode=allowed>",
-                "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
+                "parser-grammar": "<color>"
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -3521,19 +3508,17 @@
                 "thick"
             ],
             "codegen-properties": {
+                "logical-property-group": {
+                    "name": "border-width",
+                    "resolver": "top"
+                },
+                "accepts-quirky-length": true,
                 "animation-wrapper": "FloatWrapper",
                 "animation-wrapper-requires-additional-parameters": ["FloatWrapper::ValueRange::NonNegative"],
                 "render-style-initial": "initialBorderWidth",
                 "style-builder-converter": "LineWidth<float>",
                 "disables-native-appearance": true,
-                "logical-property-group": {
-                    "name": "border-width",
-                    "resolver": "top"
-                },
-                "parser-function": "consumeBorderWidth",
-                "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "<line-width>",
-                "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
+                "parser-grammar": "<line-width>"
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -3547,7 +3532,8 @@
                     "border-right-width",
                     "border-bottom-width",
                     "border-left-width"
-                ]
+                ],
+                "accepts-quirky-length": true
             },
             "specification": {
                 "category": "css-backgrounds",
@@ -3561,18 +3547,16 @@
                 "auto"
             ],
             "codegen-properties": {
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
-                "render-style-initial": "initialOffset",
-                "style-builder-converter": "LengthOrAuto",
                 "logical-property-group": {
                     "name": "inset",
                     "resolver": "bottom"
                 },
-                "parser-function": "consumeInsetPhysical",
-                "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "auto | <length-percentage anchor=allowed anchor-size=allowed>",
-                "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
+                "accepts-quirky-length": true,
+                "animation-wrapper": "LengthWrapper",
+                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
+                "render-style-initial": "initialOffset",
+                "style-builder-converter": "LengthOrAuto",
+                "parser-grammar": "auto | <length-percentage anchor=allowed anchor-size=allowed>"
             },
             "specification": {
                 "category": "css-position-3",
@@ -3783,6 +3767,7 @@
                 "auto"
             ],
             "codegen-properties": {
+                "accepts-quirky-length": true,
                 "animation-wrapper": "ClipWrapper",
                 "animation-wrapper-requires-override-parameters": [],
                 "style-builder-custom": "All",
@@ -4444,9 +4429,10 @@
             "inherited": true,
             "initial": "0deg",
             "codegen-properties": {
+                "accepts-quirky-angle": true,
                 "style-builder-converter": "GlyphOrientation",
                 "svg": true,
-                "parser-grammar": "<angle unitless=allowed unitless-zero=allowed>"
+                "parser-grammar": "<angle unitless-zero=allowed>"
             },
             "specification": {
                 "category": "svg",
@@ -4461,9 +4447,10 @@
                 "auto"
             ],
             "codegen-properties": {
+                "accepts-quirky-angle": true,
                 "style-builder-converter": "GlyphOrientationOrAuto",
                 "svg": true,
-                "parser-grammar": "auto | <angle unitless=allowed unitless-zero=allowed>"
+                "parser-grammar": "auto | <angle unitless-zero=allowed>"
             },
             "specification": {
                 "category": "svg",
@@ -4532,15 +4519,16 @@
                 }
             ],
             "codegen-properties": {
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
-                "render-style-initial": "initialSize",
-                "style-builder-converter": "LengthSizing",
                 "logical-property-group": {
                     "name": "size",
                     "resolver": "vertical"
                 },
-                "parser-grammar": "<width-or-height-unitless-allowed>"
+                "accepts-quirky-length": true,
+                "animation-wrapper": "LengthWrapper",
+                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
+                "render-style-initial": "initialSize",
+                "style-builder-converter": "LengthSizing",
+                "parser-grammar": "<width-or-height>"
             },
             "specification": {
                 "category": "css-22",
@@ -4786,18 +4774,16 @@
                 "auto"
             ],
             "codegen-properties": {
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
-                "render-style-initial": "initialOffset",
-                "style-builder-converter": "LengthOrAuto",
                 "logical-property-group": {
                     "name": "inset",
                     "resolver": "left"
                 },
-                "parser-function": "consumeInsetPhysical",
-                "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "auto | <length-percentage anchor=allowed anchor-size=allowed>",
-                "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
+                "accepts-quirky-length": true,
+                "animation-wrapper": "LengthWrapper",
+                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
+                "render-style-initial": "initialOffset",
+                "style-builder-converter": "LengthOrAuto",
+                "parser-grammar": "auto | <length-percentage anchor=allowed anchor-size=allowed>"
             },
             "specification": {
                 "category": "css-position-3",
@@ -4812,6 +4798,7 @@
                 "normal"
             ],
             "codegen-properties": {
+                "accepts-quirky-length": true,
                 "animation-wrapper": "LengthWrapper",
                 "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
                 "animation-wrapper-requires-computed-getter": true,
@@ -4821,7 +4808,7 @@
                 "high-priority": true,
                 "sink-priority": true,
                 "style-builder-converter": "TextLengthOrNormal",
-                "parser-grammar": "normal | <length-percentage unitless=allowed>"
+                "parser-grammar": "normal | <length-percentage>"
             },
             "specification": {
                 "category": "css-text",
@@ -5065,7 +5052,8 @@
                     "margin-right",
                     "margin-bottom",
                     "margin-left"
-                ]
+                ],
+                "accepts-quirky-length": true
             },
             "specification": {
                 "category": "css-22",
@@ -5132,18 +5120,16 @@
                 "auto"
             ],
             "codegen-properties": {
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
-                "render-style-initial": "initialMargin",
-                "style-builder-converter": "LengthOrAuto",
                 "logical-property-group": {
                     "name": "margin",
                     "resolver": "bottom"
                 },
-                "parser-function": "consumeMarginPhysical",
-                "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "<length-percentage> | auto",
-                "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
+                "accepts-quirky-length": true,
+                "animation-wrapper": "LengthWrapper",
+                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
+                "render-style-initial": "initialMargin",
+                "style-builder-converter": "LengthOrAuto",
+                "parser-grammar": "<length-percentage anchor-size=allowed> | auto"
             },
             "specification": {
                 "category": "css-box-4",
@@ -5213,18 +5199,16 @@
                 "auto"
             ],
             "codegen-properties": {
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
-                "render-style-initial": "initialMargin",
-                "style-builder-converter": "LengthOrAuto",
                 "logical-property-group": {
                     "name": "margin",
                     "resolver": "left"
                 },
-                "parser-function": "consumeMarginPhysical",
-                "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "<length-percentage> | auto",
-                "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
+                "accepts-quirky-length": true,
+                "animation-wrapper": "LengthWrapper",
+                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
+                "render-style-initial": "initialMargin",
+                "style-builder-converter": "LengthOrAuto",
+                "parser-grammar": "<length-percentage anchor-size=allowed> | auto"
             },
             "specification": {
                 "category": "css-box-4",
@@ -5238,18 +5222,16 @@
                 "auto"
             ],
             "codegen-properties": {
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
-                "render-style-initial": "initialMargin",
-                "style-builder-converter": "LengthOrAuto",
                 "logical-property-group": {
                     "name": "margin",
                     "resolver": "right"
                 },
-                "parser-function": "consumeMarginPhysical",
-                "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "<length-percentage> | auto",
-                "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
+                "accepts-quirky-length": true,
+                "animation-wrapper": "LengthWrapper",
+                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
+                "render-style-initial": "initialMargin",
+                "style-builder-converter": "LengthOrAuto",
+                "parser-grammar": "<length-percentage anchor-size=allowed> | auto"
             },
             "specification": {
                 "category": "css-box-4",
@@ -5263,18 +5245,16 @@
                 "auto"
             ],
             "codegen-properties": {
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
-                "render-style-initial": "initialMargin",
-                "style-builder-converter": "LengthOrAuto",
                 "logical-property-group": {
                     "name": "margin",
                     "resolver": "top"
                 },
-                "parser-function": "consumeMarginPhysical",
-                "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "<length-percentage> | auto",
-                "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
+                "accepts-quirky-length": true,
+                "animation-wrapper": "LengthWrapper",
+                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
+                "render-style-initial": "initialMargin",
+                "style-builder-converter": "LengthOrAuto",
+                "parser-grammar": "<length-percentage anchor-size=allowed> | auto"
             },
             "specification": {
                 "category": "css-box-4",
@@ -5466,7 +5446,6 @@
                 "animation-wrapper-requires-additional-parameters": ["{ LengthBoxWrapper::Flags::UsesFillKeyword }"],
                 "style-builder-custom": "All",
                 "parser-function": "consumeBorderImageSlice",
-                "parser-function-requires-current-property": true,
                 "parser-grammar-unused": "[ <number [0,inf]> | <percentage [0,inf]> ]{1,4} && fill?",
                 "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
             },
@@ -5509,7 +5488,6 @@
                 "animation-wrapper-requires-additional-parameters": ["{ LengthBoxWrapper::Flags::IsLengthPercentage }"],
                 "style-builder-custom": "All",
                 "parser-function": "consumeBorderImageWidth",
-                "parser-function-requires-current-property": true,
                 "parser-grammar-unused": "[ <length-percentage [0,inf]> | <number [0,inf]> | auto ]{1,4}",
                 "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
             },
@@ -5897,15 +5875,16 @@
                 }
             ],
             "codegen-properties": {
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
-                "render-style-initial": "initialMaxSize",
-                "style-builder-converter": "LengthMaxSizing",
                 "logical-property-group": {
                     "name": "max-size",
                     "resolver": "vertical"
                 },
-                "parser-grammar": "<max-width-or-height-unitless-allowed>"
+                "accepts-quirky-length": true,
+                "animation-wrapper": "LengthWrapper",
+                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
+                "render-style-initial": "initialMaxSize",
+                "style-builder-converter": "LengthMaxSizing",
+                "parser-grammar": "<max-width-or-height>"
             },
             "specification": {
                 "category": "css-22",
@@ -6030,15 +6009,16 @@
                 }
             ],
             "codegen-properties": {
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
-                "render-style-initial": "initialMaxSize",
-                "style-builder-converter": "LengthMaxSizing",
                 "logical-property-group": {
                     "name": "max-size",
                     "resolver": "horizontal"
                 },
-                "parser-grammar": "<max-width-or-height-unitless-allowed>"
+                "accepts-quirky-length": true,
+                "animation-wrapper": "LengthWrapper",
+                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
+                "render-style-initial": "initialMaxSize",
+                "style-builder-converter": "LengthMaxSizing",
+                "parser-grammar": "<max-width-or-height>"
             },
             "specification": {
                 "category": "css-22",
@@ -6144,15 +6124,16 @@
                 }
             ],
             "codegen-properties": {
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
-                "render-style-initial": "initialMinSize",
-                "style-builder-converter": "LengthSizing",
                 "logical-property-group": {
                     "name": "min-size",
                     "resolver": "vertical"
                 },
-                "parser-grammar": "<width-or-height-unitless-allowed>"
+                "accepts-quirky-length": true,
+                "animation-wrapper": "LengthWrapper",
+                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
+                "render-style-initial": "initialMinSize",
+                "style-builder-converter": "LengthSizing",
+                "parser-grammar": "<width-or-height>"
             },
             "specification": {
                 "category": "css-22",
@@ -6258,15 +6239,16 @@
                 }
             ],
             "codegen-properties": {
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
-                "render-style-initial": "initialMinSize",
-                "style-builder-converter": "LengthSizing",
                 "logical-property-group": {
                     "name": "min-size",
                     "resolver": "horizontal"
                 },
-                "parser-grammar": "<width-or-height-unitless-allowed>"
+                "accepts-quirky-length": true,
+                "animation-wrapper": "LengthWrapper",
+                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
+                "render-style-initial": "initialMinSize",
+                "style-builder-converter": "LengthSizing",
+                "parser-grammar": "<width-or-height>"
             },
             "specification": {
                 "category": "css-22",
@@ -6796,7 +6778,8 @@
                     "padding-right",
                     "padding-bottom",
                     "padding-left"
-                ]
+                ],
+                "accepts-quirky-length": true
             },
             "specification": {
                 "category": "css-22",
@@ -6857,15 +6840,16 @@
             "animation-type": "by computed value",
             "initial": "0",
             "codegen-properties": {
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
-                "render-style-initial": "initialPadding",
-                "style-builder-converter": "Length",
                 "logical-property-group": {
                     "name": "padding",
                     "resolver": "bottom"
                 },
-                "parser-grammar": "<length-percentage [0,inf] unitless=allowed>"
+                "accepts-quirky-length": true,
+                "animation-wrapper": "LengthWrapper",
+                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
+                "render-style-initial": "initialPadding",
+                "style-builder-converter": "Length",
+                "parser-grammar": "<length-percentage [0,inf]>"
             },
             "specification": {
                 "category": "css-22",
@@ -6926,15 +6910,16 @@
             "animation-type": "by computed value",
             "initial": "0",
             "codegen-properties": {
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
-                "render-style-initial": "initialPadding",
-                "style-builder-converter": "Length",
                 "logical-property-group": {
                     "name": "padding",
                     "resolver": "left"
                 },
-                "parser-grammar": "<length-percentage [0,inf] unitless=allowed>"
+                "accepts-quirky-length": true,
+                "animation-wrapper": "LengthWrapper",
+                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
+                "render-style-initial": "initialPadding",
+                "style-builder-converter": "Length",
+                "parser-grammar": "<length-percentage [0,inf]>"
             },
             "specification": {
                 "category": "css-22",
@@ -6945,15 +6930,16 @@
             "animation-type": "by computed value",
             "initial": "0",
             "codegen-properties": {
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
-                "render-style-initial": "initialPadding",
-                "style-builder-converter": "Length",
                 "logical-property-group": {
                     "name": "padding",
                     "resolver": "right"
                 },
-                "parser-grammar": "<length-percentage [0,inf] unitless=allowed>"
+                "accepts-quirky-length": true,
+                "animation-wrapper": "LengthWrapper",
+                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
+                "render-style-initial": "initialPadding",
+                "style-builder-converter": "Length",
+                "parser-grammar": "<length-percentage [0,inf]>"
             },
             "specification": {
                 "category": "css-22",
@@ -6964,15 +6950,16 @@
             "animation-type": "by computed value",
             "initial": "0",
             "codegen-properties": {
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
-                "render-style-initial": "initialPadding",
-                "style-builder-converter": "Length",
                 "logical-property-group": {
                     "name": "padding",
                     "resolver": "top"
                 },
-                "parser-grammar": "<length-percentage [0,inf] unitless=allowed>"
+                "accepts-quirky-length": true,
+                "animation-wrapper": "LengthWrapper",
+                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
+                "render-style-initial": "initialPadding",
+                "style-builder-converter": "Length",
+                "parser-grammar": "<length-percentage [0,inf]>"
             },
             "specification": {
                 "category": "css-22",
@@ -7167,18 +7154,16 @@
                 "auto"
             ],
             "codegen-properties": {
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
-                "render-style-initial": "initialOffset",
-                "style-builder-converter": "LengthOrAuto",
                 "logical-property-group": {
                     "name": "inset",
                     "resolver": "right"
                 },
-                "parser-function": "consumeInsetPhysical",
-                "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "auto | <length-percentage anchor=allowed anchor-size=allowed>",
-                "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
+                "accepts-quirky-length": true,
+                "animation-wrapper": "LengthWrapper",
+                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
+                "render-style-initial": "initialOffset",
+                "style-builder-converter": "LengthOrAuto",
+                "parser-grammar": "auto | <length-percentage anchor=allowed anchor-size=allowed>"
             },
             "specification": {
                 "category": "css-position-3",
@@ -7685,10 +7670,11 @@
                 "each-line"
             ],
             "codegen-properties": {
+                "accepts-quirky-length": true,
                 "animation-wrapper": "TextIndentWrapper",
                 "animation-wrapper-requires-override-parameters": [],
                 "style-builder-custom": "All",
-                "parser-grammar": "<length-percentage unitless=allowed> && hanging? && each-line?"
+                "parser-grammar": "<length-percentage> && hanging? && each-line?"
             },
             "specification": {
                 "category": "css-text",
@@ -7846,18 +7832,16 @@
                 "auto"
             ],
             "codegen-properties": {
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
-                "render-style-initial": "initialOffset",
-                "style-builder-converter": "LengthOrAuto",
                 "logical-property-group": {
                     "name": "inset",
                     "resolver": "top"
                 },
-                "parser-function": "consumeInsetPhysical",
-                "parser-function-requires-current-shorthand": true,
-                "parser-grammar-unused": "auto | <length-percentage anchor=allowed anchor-size=allowed>",
-                "parser-grammar-unused-reason": "Needs support for different parsing based on the current shorthand."
+                "accepts-quirky-length": true,
+                "animation-wrapper": "LengthWrapper",
+                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
+                "render-style-initial": "initialOffset",
+                "style-builder-converter": "LengthOrAuto",
+                "parser-grammar": "auto | <length-percentage anchor=allowed anchor-size=allowed>"
             },
             "specification": {
                 "category": "css-position-3",
@@ -8055,10 +8039,11 @@
                 }
             ],
             "codegen-properties": {
+                "accepts-quirky-length": true,
                 "animation-wrapper": "VerticalAlignWrapper",
                 "animation-wrapper-requires-override-parameters": [],
                 "style-builder-custom": "Inherit|Value",
-                "parser-grammar": "<<values>> | <length-percentage unitless=allowed>",
+                "parser-grammar": "<<values>> | <length-percentage>",
                 "parser-grammar-comment": "Current spec has 'vertical-align' specified as a shorthand with grammar '[ first | last] || <<'alignment-baseline'>> || <<'baseline-shift'>>'"
             },
             "specification": {
@@ -8182,15 +8167,16 @@
                 }
             ],
             "codegen-properties": {
-                "animation-wrapper": "LengthWrapper",
-                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
-                "render-style-initial": "initialSize",
-                "style-builder-converter": "LengthSizing",
                 "logical-property-group": {
                     "name": "size",
                     "resolver": "horizontal"
                 },
-                "parser-grammar": "<width-or-height-unitless-allowed>"
+                "accepts-quirky-length": true,
+                "animation-wrapper": "LengthWrapper",
+                "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage, LengthWrapper::Flags::NegativeLengthsAreInvalid }"],
+                "render-style-initial": "initialSize",
+                "style-builder-converter": "LengthSizing",
+                "parser-grammar": "<width-or-height>"
             },
             "specification": {
                 "category": "css-22",
@@ -8253,13 +8239,14 @@
                 "normal"
             ],
             "codegen-properties": {
+                "accepts-quirky-length": true,
                 "animation-wrapper": "LengthWrapper",
                 "animation-wrapper-requires-additional-parameters": ["{ LengthWrapper::Flags::IsLengthPercentage }"],
                 "animation-wrapper-requires-computed-getter": true,
                 "style-builder-custom": "Inherit",
                 "sink-priority": true,
                 "style-builder-converter": "TextLengthOrNormal",
-                "parser-grammar": "normal | <length-percentage unitless=allowed>"
+                "parser-grammar": "normal | <length-percentage>"
             },
             "specification": {
                 "category": "css-text",
@@ -8792,7 +8779,7 @@
             "initial": "none",
             "codegen-properties": {
                 "style-builder-converter": "Reflection",
-                "parser-function": "consumeReflect",
+                "parser-function": "consumeWebkitBoxReflect",
                 "parser-grammar-unused": "none | [ [ above | below | left | right ] <length-percentage>? <border-image>? ]",
                 "parser-grammar-unused-reason": "Needs support for default values on optionals and property references."
 
@@ -9564,9 +9551,10 @@
         "-webkit-font-size-delta": {
             "animation-type": "not animatable (internal)",
             "codegen-properties": {
+                "accepts-quirky-length": true,
                 "skip-style-builder": true,
                 "internal-only": true,
-                "parser-grammar": "<length unitless=allowed>"
+                "parser-grammar": "<length>"
             },
             "status": "non-standard"
         },
@@ -9676,7 +9664,6 @@
                 "style-builder-converter": "GridTrackSizeList",
                 "separator": " ",
                 "parser-function": "consumeGridTrackList",
-                "parser-function-requires-additional-parameters": ["GridAuto"],
                 "parser-grammar-unused": "<track-size>+",
                 "parser-grammar-unused-reason": "Needs investigation."
             },
@@ -9693,7 +9680,6 @@
                 "style-builder-converter": "GridTrackSizeList",
                 "separator": " ",
                 "parser-function": "consumeGridTrackList",
-                "parser-function-requires-additional-parameters": ["GridAuto"],
                 "parser-grammar-unused": "<track-size>+",
                 "parser-grammar-unused-reason": "Needs investigation."
             },
@@ -10128,9 +10114,10 @@
             "animation-type": "not animatable (internal)",
             "initial": "6px",
             "codegen-properties": {
+                "accepts-quirky-length": true,
                 "style-builder-conditional-converter": "MarqueeIncrement",
                 "internal-only": true,
-                "parser-grammar": "<length-percentage unitless=allowed>"
+                "parser-grammar": "<length-percentage>"
             },
             "status": "non-standard"
         },
@@ -12925,24 +12912,8 @@
                 "url": "https://drafts.csswg.org/css-sizing-4/#preferred-size-properties"
             }
         },
-        "<width-or-height-unitless-allowed>": {
-            "grammar":  "auto | <width-or-height-keyword> | <length-percentage [0,inf] unitless=allowed anchor-size=allowed>",
-            "comment": "Doesn't match current specification",
-            "specification": {
-                "category": "css-sizing",
-                "url": "https://drafts.csswg.org/css-sizing-4/#preferred-size-properties"
-            }
-        },
         "<max-width-or-height>": {
             "grammar": "none | <width-or-height-keyword> | <length-percentage [0,inf] anchor-size=allowed>",
-            "comment": "Doesn't match current specification",
-            "specification": {
-                "category": "css-sizing",
-                "url": "https://drafts.csswg.org/css-sizing-4/#max-size-properties"
-            }
-        },
-        "<max-width-or-height-unitless-allowed>": {
-            "grammar":  "none | <width-or-height-keyword> | <length-percentage [0,inf] unitless=allowed anchor-size=allowed>",
             "comment": "Doesn't match current specification",
             "specification": {
                 "category": "css-sizing",

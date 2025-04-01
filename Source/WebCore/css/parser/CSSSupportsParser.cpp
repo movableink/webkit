@@ -32,6 +32,7 @@
 
 #include "CSSParserImpl.h"
 #include "CSSPropertyParserConsumer+Font.h"
+#include "CSSPropertyParserState.h"
 #include "CSSSelectorParser.h"
 #include "CSSTokenizer.h"
 #include "FontCustomPlatformData.h"
@@ -171,7 +172,9 @@ CSSSupportsParser::SupportsResult CSSSupportsParser::consumeSupportsSelectorFunc
 CSSSupportsParser::SupportsResult CSSSupportsParser::consumeSupportsFontFormatFunction(CSSParserTokenRange& range)
 {
     ASSERT(range.peek().type() == FunctionToken && range.peek().functionId() == CSSValueFontFormat);
-    auto format = CSSPropertyParserHelpers::consumeFontFormat(range, m_parser.context(), true);
+
+    auto state = CSS::PropertyParserState { .context = m_parser.context() };
+    auto format = CSSPropertyParserHelpers::consumeFontFormat(range, state, true);
     if (format.isNull())
         return Unsupported;
     return FontCustomPlatformData::supportsFormat(format) ? Supported : Unsupported;
@@ -181,7 +184,9 @@ CSSSupportsParser::SupportsResult CSSSupportsParser::consumeSupportsFontFormatFu
 CSSSupportsParser::SupportsResult CSSSupportsParser::consumeSupportsFontTechFunction(CSSParserTokenRange& range)
 {
     ASSERT(range.peek().type() == FunctionToken && range.peek().functionId() == CSSValueFontTech);
-    auto technologies = CSSPropertyParserHelpers::consumeFontTech(range, m_parser.context(), true);
+
+    auto state = CSS::PropertyParserState { .context = m_parser.context() };
+    auto technologies = CSSPropertyParserHelpers::consumeFontTech(range, state, true);
     if (technologies.isEmpty())
         return Unsupported;
     ASSERT(technologies.size() == 1);

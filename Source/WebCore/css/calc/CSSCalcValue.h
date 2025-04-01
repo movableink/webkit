@@ -43,6 +43,7 @@ enum class Category : uint8_t;
 }
 
 namespace CSS {
+struct PropertyParserState;
 struct Range;
 }
 
@@ -64,7 +65,7 @@ enum class CSSUnitType : uint8_t;
 
 class CSSCalcValue final : public CSSValue {
 public:
-    static RefPtr<CSSCalcValue> parse(CSSParserTokenRange&, const CSSParserContext&, Calculation::Category, CSS::Range, CSSCalcSymbolsAllowed, CSSPropertyParserOptions);
+    static RefPtr<CSSCalcValue> parse(CSSParserTokenRange&, CSS::PropertyParserState&, Calculation::Category, CSS::Range, CSSCalcSymbolsAllowed, CSSPropertyParserOptions);
 
     static Ref<CSSCalcValue> create(const CalculationValue&, const RenderStyle&);
     static Ref<CSSCalcValue> create(Calculation::Category, CSS::Range, CSSCalc::Tree&&);

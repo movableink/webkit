@@ -36,7 +36,7 @@ namespace CSSPropertyParserHelpers {
 
 // MARK: - Consumer functions
 
-RefPtr<CSSPrimitiveValue> consumePercentageDividedBy100OrNumber(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSPrimitiveValue> consumePercentageDividedBy100OrNumber(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     using NumberConsumer = ConsumerDefinition<CSS::Number<>>;
     using PercentageConsumer = ConsumerDefinition<CSS::Percentage<>>;
@@ -45,19 +45,19 @@ RefPtr<CSSPrimitiveValue> consumePercentageDividedBy100OrNumber(CSSParserTokenRa
 
     switch (token.type()) {
     case FunctionToken:
-        if (auto value = NumberConsumer::FunctionToken::consume(range, context, { }, { }))
-            return CSSPrimitiveValueResolver<CSS::Number<>>::resolve(*value, { });
-        if (auto value = PercentageConsumer::FunctionToken::consume(range, context, { }, { }))
-            return CSSPrimitiveValueResolver<CSS::Percentage<>>::resolve(*value, { });
+        if (auto value = NumberConsumer::FunctionToken::consume(range, state, { }, { }))
+            return CSSPrimitiveValueResolver<CSS::Number<>>::resolve(*value);
+        if (auto value = PercentageConsumer::FunctionToken::consume(range, state, { }, { }))
+            return CSSPrimitiveValueResolver<CSS::Percentage<>>::resolve(*value);
         break;
 
     case NumberToken:
-        if (auto value = NumberConsumer::NumberToken::consume(range, context, { }, { }))
-            return CSSPrimitiveValueResolver<CSS::Number<>>::resolve(*value, { });
+        if (auto value = NumberConsumer::NumberToken::consume(range, state, { }, { }))
+            return CSSPrimitiveValueResolver<CSS::Number<>>::resolve(*value);
         break;
 
     case PercentageToken:
-        if (auto value = PercentageConsumer::PercentageToken::consume(range, context, { }, { }))
+        if (auto value = PercentageConsumer::PercentageToken::consume(range, state, { }, { }))
             return CSSPrimitiveValue::create(value->value / 100.0);
         break;
 

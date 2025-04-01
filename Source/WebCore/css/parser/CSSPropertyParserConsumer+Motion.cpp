@@ -38,6 +38,7 @@
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParserConsumer+Shapes.h"
 #include "CSSPropertyParserConsumer+URL.h"
+#include "CSSPropertyParserState.h"
 #include "CSSPropertyParsing.h"
 #include "CSSRayValue.h"
 #include "CSSValueKeywords.h"
@@ -47,7 +48,7 @@
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-static RefPtr<CSSValue> consumeRayFunction(CSSParserTokenRange& range, const CSSParserContext& context)
+static RefPtr<CSSValue> consumeRayFunction(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // ray( <angle> && <ray-size>? && contain? && [at <position>]? )
     // <ray-size> = closest-side | closest-corner | farthest-side | farthest-corner | sides
@@ -75,7 +76,7 @@ static RefPtr<CSSValue> consumeRayFunction(CSSParserTokenRange& range, const CSS
     auto consumeAngle = [&] -> bool {
         if (angle)
             return false;
-        angle = MetaConsumer<CSS::Angle<>>::consume(args, context, { }, { .parserMode = context.mode });
+        angle = MetaConsumer<CSS::Angle<>>::consume(args, state);
         return angle.has_value();
     };
     auto consumeSize = [&] -> bool {
@@ -93,7 +94,7 @@ static RefPtr<CSSValue> consumeRayFunction(CSSParserTokenRange& range, const CSS
     auto consumeAtPosition = [&] -> bool {
         if (position || !consumeIdentRaw<CSSValueAt>(args).has_value())
             return false;
-        position = consumePositionUnresolved(args, context);
+        position = consumePositionUnresolved(args, state);
         return position.has_value();
     };
 
@@ -119,7 +120,7 @@ static RefPtr<CSSValue> consumeRayFunction(CSSParserTokenRange& range, const CSS
     );
 }
 
-RefPtr<CSSValue> consumeOffsetPath(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeOffsetPath(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'offset-path'> = none | <offset-path> || <coord-box>
     //
@@ -151,13 +152,13 @@ RefPtr<CSSValue> consumeOffsetPath(CSSParserTokenRange& range, const CSSParserCo
     auto consumeRay = [&]() -> bool {
         if (shapeOrRay)
             return false;
-        shapeOrRay = consumeRayFunction(range, context);
+        shapeOrRay = consumeRayFunction(range, state);
         return !!shapeOrRay;
     };
     auto consumeShape = [&]() -> bool {
         if (shapeOrRay)
             return false;
-        shapeOrRay = consumeBasicShape(range, context, PathParsingOption::RejectPathFillRule);
+        shapeOrRay = consumeBasicShape(range, state, PathParsingOption::RejectPathFillRule);
         return !!shapeOrRay;
     };
     auto consumeBox = [&]() -> bool {

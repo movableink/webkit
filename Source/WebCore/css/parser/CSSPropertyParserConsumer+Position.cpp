@@ -27,11 +27,13 @@
 
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
+#include "CSSParserTokenRangeGuard.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+MetaConsumer.h"
+#include "CSSPropertyParserState.h"
 #include "CSSValueKeywords.h"
 #include "CSSValuePair.h"
 #include "CSSValuePool.h"
@@ -67,11 +69,11 @@ namespace CSSPropertyParserHelpers {
 //   [ center | [ left | right ] <length-percentage>? ] &&
 //   [ center | [ top | bottom ] <length-percentage>? ]
 
-static RefPtr<CSSPrimitiveValue> consumePositionComponent(CSSParserTokenRange& range, const CSSParserContext& context, UnitlessQuirk unitless)
+static RefPtr<CSSPrimitiveValue> consumePositionComponent(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     if (range.peek().type() == IdentToken)
         return consumeIdent<CSSValueLeft, CSSValueTop, CSSValueBottom, CSSValueRight, CSSValueCenter>(range);
-    return CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitless = unitless, .unitlessZero = UnitlessZeroQuirk::Allow });
+    return CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, state);
 }
 
 static bool isHorizontalPositionKeywordOnly(const CSSPrimitiveValue& value)
@@ -190,23 +192,30 @@ static std::optional<PositionCoordinates> positionFromFourValues(std::array<RefP
     return PositionCoordinates { resultX.releaseNonNull(), resultY.releaseNonNull() };
 }
 
-// FIXME: This may consume from the range upon failure. The background
-// shorthand works around it, but we should just fix it here.
-std::optional<PositionCoordinates> consumePositionCoordinates(CSSParserTokenRange& range, const CSSParserContext& context, UnitlessQuirk unitless, PositionSyntax positionSyntax)
+std::optional<PositionCoordinates> consumeBackgroundPositionCoordinates(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
-    auto value1 = consumePositionComponent(range, context, unitless);
+    CSSParserTokenRangeGuard guard { range };
+
+    auto value1 = consumePositionComponent(range, state);
     if (!value1)
         return std::nullopt;
 
-    auto value2 = consumePositionComponent(range, context, unitless);
-    if (!value2)
+    auto value2 = consumePositionComponent(range, state);
+    if (!value2) {
+        // NOTE: `positionFromOneValue` always succeeds, so we can commit the range right unconditionally.
+        guard.commit();
         return positionFromOneValue(*value1);
+    }
 
-    auto value3 = consumePositionComponent(range, context, unitless);
-    if (!value3)
-        return positionFromTwoValues(*value1, *value2);
+    auto value3 = consumePositionComponent(range, state);
+    if (!value3) {
+        auto result = positionFromTwoValues(*value1, *value2);
+        if (result)
+            guard.commit();
+        return result;
+    }
 
-    auto value4 = consumePositionComponent(range, context, unitless);
+    auto value4 = consumePositionComponent(range, state);
 
     std::array<RefPtr<CSSPrimitiveValue>, 5> values {
         WTFMove(value1),
@@ -216,34 +225,81 @@ std::optional<PositionCoordinates> consumePositionCoordinates(CSSParserTokenRang
         nullptr
     };
 
-    if (value4)
-        return positionFromFourValues(WTFMove(values));
+    if (value4) {
+        auto result = positionFromFourValues(WTFMove(values));
+        if (result)
+            guard.commit();
+        return result;
+    }
 
-    if (positionSyntax != PositionSyntax::BackgroundPosition)
-        return std::nullopt;
-
-    return backgroundPositionFromThreeValues(WTFMove(values));
+    auto result = backgroundPositionFromThreeValues(WTFMove(values));
+    if (result)
+        guard.commit();
+    return result;
 }
 
-RefPtr<CSSValue> consumePosition(CSSParserTokenRange& range, const CSSParserContext& context, UnitlessQuirk unitless, PositionSyntax positionSyntax)
+std::optional<PositionCoordinates> consumePositionCoordinates(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
-    if (auto coordinates = consumePositionCoordinates(range, context, unitless, positionSyntax))
+    CSSParserTokenRangeGuard guard { range };
+
+    auto value1 = consumePositionComponent(range, state);
+    if (!value1)
+        return std::nullopt;
+
+    auto value2 = consumePositionComponent(range, state);
+    if (!value2) {
+        // NOTE: `positionFromOneValue` always succeeds, so we can commit the range right unconditionally.
+        guard.commit();
+        return positionFromOneValue(*value1);
+    }
+
+    auto value3 = consumePositionComponent(range, state);
+    if (!value3) {
+        auto result = positionFromTwoValues(*value1, *value2);
+        if (result)
+            guard.commit();
+        return result;
+    }
+
+    auto value4 = consumePositionComponent(range, state);
+
+    std::array<RefPtr<CSSPrimitiveValue>, 5> values {
+        WTFMove(value1),
+        WTFMove(value2),
+        WTFMove(value3),
+        value4.copyRef(),
+        nullptr
+    };
+
+    if (value4) {
+        auto result = positionFromFourValues(WTFMove(values));
+        if (result)
+            guard.commit();
+        return result;
+    }
+
+    return std::nullopt;
+}
+
+RefPtr<CSSValue> consumePosition(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+{
+    if (auto coordinates = consumePositionCoordinates(range, state))
         return CSSValuePair::createNoncoalescing(WTFMove(coordinates->x), WTFMove(coordinates->y));
     return nullptr;
 }
 
-std::optional<PositionCoordinates> consumeOneOrTwoValuedPositionCoordinates(CSSParserTokenRange& range, const CSSParserContext& context, UnitlessQuirk unitless)
+std::optional<PositionCoordinates> consumeOneOrTwoValuedPositionCoordinates(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
-    auto value1 = consumePositionComponent(range, context, unitless);
+    auto value1 = consumePositionComponent(range, state);
     if (!value1)
         return std::nullopt;
-    auto value2 = consumePositionComponent(range, context, unitless);
+    auto value2 = consumePositionComponent(range, state);
     if (!value2)
         return positionFromOneValue(*value1);
     return positionFromTwoValues(*value1, *value2);
 }
 
-static RefPtr<CSSValue> consumeSingleAxisPosition(CSSParserTokenRange& range, const CSSParserContext& context, BoxOrient orientation)
+static RefPtr<CSSValue> consumeSingleAxisPosition(CSSParserTokenRange& range, CSS::PropertyParserState& state, BoxOrient orientation)
 {
     RefPtr<CSSPrimitiveValue> value1;
 
@@ -263,28 +319,28 @@ static RefPtr<CSSValue> consumeSingleAxisPosition(CSSParserTokenRange& range, co
             return value1;
     }
 
-    auto value2 = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, context, { .parserMode = context.mode, .unitlessZero = UnitlessZeroQuirk::Allow });
+    auto value2 = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, state);
     if (value1 && value2)
         return CSSValuePair::create(value1.releaseNonNull(), value2.releaseNonNull());
 
     return value1 ? value1 : value2;
 }
 
-RefPtr<CSSValue> consumePositionX(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumePositionX(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
-    return consumeSingleAxisPosition(range, context, BoxOrient::Horizontal);
+    return consumeSingleAxisPosition(range, state, BoxOrient::Horizontal);
 }
 
-RefPtr<CSSValue> consumePositionY(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumePositionY(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
-    return consumeSingleAxisPosition(range, context, BoxOrient::Vertical);
+    return consumeSingleAxisPosition(range, state, BoxOrient::Vertical);
 }
 
 // MARK: Unresolved Position
 
 using PositionUnresolvedComponent = std::variant<CSS::Keyword::Left, CSS::Keyword::Right, CSS::Keyword::Top, CSS::Keyword::Bottom, CSS::Keyword::Center, CSS::LengthPercentage<>>;
 
-static std::optional<PositionUnresolvedComponent> consumePositionUnresolvedComponent(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<PositionUnresolvedComponent> consumePositionUnresolvedComponent(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     if (range.peek().type() == IdentToken) {
         switch (range.peek().id()) {
@@ -308,16 +364,12 @@ static std::optional<PositionUnresolvedComponent> consumePositionUnresolvedCompo
         }
     }
 
-    const auto options = CSSPropertyParserOptions {
-        .parserMode = context.mode,
-        .unitlessZero = UnitlessZeroQuirk::Allow
-    };
-    if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, context, { }, options))
+    if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state))
         return PositionUnresolvedComponent { WTFMove(*lengthPercentage) };
     return std::nullopt;
 }
 
-std::optional<CSS::TwoComponentPositionHorizontal> consumeTwoComponentPositionHorizontalUnresolved(CSSParserTokenRange& range, const CSSParserContext& context)
+std::optional<CSS::TwoComponentPositionHorizontal> consumeTwoComponentPositionHorizontalUnresolved(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     if (range.peek().type() == IdentToken) {
         switch (range.peek().id()) {
@@ -335,16 +387,12 @@ std::optional<CSS::TwoComponentPositionHorizontal> consumeTwoComponentPositionHo
         }
     }
 
-    const auto options = CSSPropertyParserOptions {
-        .parserMode = context.mode,
-        .unitlessZero = UnitlessZeroQuirk::Allow
-    };
-    if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, context, { }, options))
+    if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state))
         return CSS::TwoComponentPositionHorizontal { WTFMove(*lengthPercentage) };
     return std::nullopt;
 }
 
-std::optional<CSS::TwoComponentPositionVertical> consumeTwoComponentPositionVerticalUnresolved(CSSParserTokenRange& range, const CSSParserContext& context)
+std::optional<CSS::TwoComponentPositionVertical> consumeTwoComponentPositionVerticalUnresolved(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     if (range.peek().type() == IdentToken) {
         switch (range.peek().id()) {
@@ -362,11 +410,7 @@ std::optional<CSS::TwoComponentPositionVertical> consumeTwoComponentPositionVert
         }
     }
 
-    const auto options = CSSPropertyParserOptions {
-        .parserMode = context.mode,
-        .unitlessZero = UnitlessZeroQuirk::Allow
-    };
-    if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, context, { }, options))
+    if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state))
         return CSS::TwoComponentPositionVertical { WTFMove(*lengthPercentage) };
     return std::nullopt;
 }
@@ -514,21 +558,21 @@ static std::optional<CSS::Position> positionUnresolvedFromFourComponents(Positio
     return CSS::FourComponentPosition { WTFMove(*horizontal), WTFMove(*vertical) };
 }
 
-std::optional<CSS::Position> consumePositionUnresolved(CSSParserTokenRange& range, const CSSParserContext& context)
+std::optional<CSS::Position> consumePositionUnresolved(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     auto rangeCopy = range;
 
-    auto component1 = consumePositionUnresolvedComponent(rangeCopy, context);
+    auto component1 = consumePositionUnresolvedComponent(rangeCopy, state);
     if (!component1)
         return std::nullopt;
 
-    auto component2 = consumePositionUnresolvedComponent(rangeCopy, context);
+    auto component2 = consumePositionUnresolvedComponent(rangeCopy, state);
     if (!component2) {
         range = rangeCopy;
         return positionUnresolvedFromOneComponent(WTFMove(*component1));
     }
 
-    auto component3 = consumePositionUnresolvedComponent(rangeCopy, context);
+    auto component3 = consumePositionUnresolvedComponent(rangeCopy, state);
     if (!component3) {
         auto position = positionUnresolvedFromTwoComponents(WTFMove(*component1), WTFMove(*component2));
         if (!position)
@@ -537,7 +581,7 @@ std::optional<CSS::Position> consumePositionUnresolved(CSSParserTokenRange& rang
         return position;
     }
 
-    auto component4 = consumePositionUnresolvedComponent(rangeCopy, context);
+    auto component4 = consumePositionUnresolvedComponent(rangeCopy, state);
     if (!component4)
         return std::nullopt;
 
@@ -548,15 +592,15 @@ std::optional<CSS::Position> consumePositionUnresolved(CSSParserTokenRange& rang
     return position;
 }
 
-std::optional<CSS::Position> consumeOneOrTwoComponentPositionUnresolved(CSSParserTokenRange& range, const CSSParserContext& context)
+std::optional<CSS::Position> consumeOneOrTwoComponentPositionUnresolved(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     auto rangeCopy = range;
 
-    auto component1 = consumePositionUnresolvedComponent(rangeCopy, context);
+    auto component1 = consumePositionUnresolvedComponent(rangeCopy, state);
     if (!component1)
         return std::nullopt;
 
-    auto component2 = consumePositionUnresolvedComponent(rangeCopy, context);
+    auto component2 = consumePositionUnresolvedComponent(rangeCopy, state);
     if (!component2) {
         range = rangeCopy;
         return positionUnresolvedFromOneComponent(WTFMove(*component1));

@@ -3,6 +3,7 @@
  * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2009 - 2010  Torch Mobile (Beijing) Co. Ltd. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,27 +23,28 @@
 
 #pragma once
 
-#include "CSSParserContext.h"
 #include "CSSParserEnum.h"
-#include "CSSProperty.h"
-#include "CSSSelectorParser.h"
-#include "CSSValue.h"
-#include "ColorTypes.h"
-#include "WritingMode.h"
-#include <wtf/text/WTFString.h>
+#include <optional>
+#include <utility>
+#include <wtf/Forward.h>
 
 namespace WebCore {
 
 class CSSParserObserver;
 class CSSSelectorList;
-class Color;
 class Element;
 class ImmutableStyleProperties;
 class MutableStyleProperties;
 class StyleRuleBase;
-class StyleRuleNestedDeclarations;
 class StyleRuleKeyframe;
 class StyleSheetContents;
+
+struct CSSParserContext;
+
+enum CSSPropertyID : uint16_t;
+enum CSSValueID : uint16_t;
+
+enum class IsImportant : bool;
 
 class CSSParser {
 public:
@@ -52,42 +54,22 @@ public:
         Error
     };
 
-    WEBCORE_EXPORT explicit CSSParser(const CSSParserContext&);
-    WEBCORE_EXPORT ~CSSParser();
+    static void parseSheet(const String&, const CSSParserContext&, StyleSheetContents&);
+    static void parseSheetForInspector(const String&, const CSSParserContext&, StyleSheetContents&, CSSParserObserver&);
 
-    void parseSheet(StyleSheetContents&, const String&);
-    
-    static RefPtr<StyleRuleBase> parseRule(const CSSParserContext&, StyleSheetContents*, const String&, CSSParserEnum::NestedContext = { });
-    
-    RefPtr<StyleRuleKeyframe> parseKeyframeRule(const String&);
-    static Vector<std::pair<CSSValueID, double>> parseKeyframeKeyList(const String&, const CSSParserContext&);
+    static RefPtr<StyleRuleBase> parseRule(const String&, const CSSParserContext&, StyleSheetContents*, CSSParserEnum::NestedContext = { });
+    static RefPtr<StyleRuleKeyframe> parseKeyframeRule(const String&, const CSSParserContext&);
 
-    bool parseSupportsCondition(const String&);
-
-    static void parseSheetForInspector(const CSSParserContext&, StyleSheetContents&, const String&, CSSParserObserver&);
-    static void parseDeclarationForInspector(const CSSParserContext&, const String&, CSSParserObserver&);
+    static bool parseSupportsCondition(const String&, const CSSParserContext&);
 
     static ParseResult parseValue(MutableStyleProperties&, CSSPropertyID, const String&, IsImportant, const CSSParserContext&);
     static ParseResult parseCustomPropertyValue(MutableStyleProperties&, const AtomString& propertyName, const String&, IsImportant, const CSSParserContext&);
-    
-    static RefPtr<CSSValue> parseSingleValue(CSSPropertyID, const String&, const CSSParserContext& = strictCSSParserContext());
 
-    WEBCORE_EXPORT bool parseDeclaration(MutableStyleProperties&, const String&);
+    WEBCORE_EXPORT static bool parseDeclaration(MutableStyleProperties&, const String&, const CSSParserContext&);
     static Ref<ImmutableStyleProperties> parseInlineStyleDeclaration(const String&, const Element&);
+    static void parseDeclarationForInspector(const String&, const CSSParserContext&, CSSParserObserver&);
 
-    WEBCORE_EXPORT std::optional<CSSSelectorList> parseSelectorList(const String&, StyleSheetContents* = nullptr, CSSParserEnum::NestedContext = { });
-
-    // FIXME: All callers are not getting the right Settings, keyword resolution and calc resolution when using this
-    // function and should switch to the parseColorRaw() function in CSSPropertyParserConsumer+Color.h.
-    WEBCORE_EXPORT static Color parseColorWithoutContext(const String&, bool strict = false);
-
-    static std::optional<SRGBA<uint8_t>> parseNamedColor(StringView);
-    static std::optional<SRGBA<uint8_t>> parseHexColor(StringView);
-
-private:
-    ParseResult parseValue(MutableStyleProperties&, CSSPropertyID, const String&, IsImportant);
-
-    CSSParserContext m_context;
+    WEBCORE_EXPORT static std::optional<CSSSelectorList> parseSelectorList(const String&, const CSSParserContext&, StyleSheetContents* = nullptr, CSSParserEnum::NestedContext = { });
 };
 
 } // namespace WebCore

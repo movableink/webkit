@@ -28,6 +28,7 @@
 
 #include "CSSKeyframesRule.h"
 #include "CSSParser.h"
+#include "CSSPropertyParserConsumer+Animations.h"
 #include "CSSSerializationContext.h"
 #include "CSSStyleProperties.h"
 #include "MutableStyleProperties.h"
@@ -107,7 +108,7 @@ String StyleRuleKeyframe::keyText() const
 bool StyleRuleKeyframe::setKeyText(const String& keyText)
 {
     ASSERT(!keyText.isNull());
-    auto keys = CSSParser::parseKeyframeKeyList(keyText, strictCSSParserContext());
+    auto keys = CSSPropertyParserHelpers::parseKeyframeKeyList(keyText, strictCSSParserContext());
     if (keys.isEmpty())
         return false;
     m_keys = keys.map([](auto& pair) -> Key {

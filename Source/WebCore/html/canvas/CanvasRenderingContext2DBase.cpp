@@ -41,6 +41,7 @@
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParserConsumer+LengthDefinitions.h"
 #include "CSSPropertyParserConsumer+MetaConsumer.h"
+#include "CSSPropertyParserState.h"
 #include "CSSSerializationContext.h"
 #include "CSSStyleImageValue.h"
 #include "CSSTokenizer.h"
@@ -3142,7 +3143,12 @@ void CanvasRenderingContext2DBase::setLetterSpacing(const String& letterSpacing)
     auto tokenRange = tokenizer.tokenRange();
     tokenRange.consumeWhitespace();
 
-    auto parsedValue = CSSPropertyParserHelpers::MetaConsumer<CSS::Length<>>::consume(tokenRange, HTMLStandardMode, { }, { .unitlessZero = UnitlessZeroQuirk::Allow });
+    auto parserContext = CSSParserContext { HTMLStandardMode };
+    auto parserState = CSS::PropertyParserState {
+        .context = parserContext,
+    };
+
+    auto parsedValue = CSSPropertyParserHelpers::MetaConsumer<CSS::Length<>>::consume(tokenRange, parserState);
     if (!parsedValue)
         return;
     auto rawLength = parsedValue->raw();
@@ -3167,7 +3173,12 @@ void CanvasRenderingContext2DBase::setWordSpacing(const String& wordSpacing)
     auto tokenRange = tokenizer.tokenRange();
     tokenRange.consumeWhitespace();
 
-    auto parsedValue = CSSPropertyParserHelpers::MetaConsumer<CSS::Length<>>::consume(tokenRange, HTMLStandardMode, { }, { .unitlessZero = UnitlessZeroQuirk::Allow });
+    auto parserContext = CSSParserContext { HTMLStandardMode };
+    auto parserState = CSS::PropertyParserState {
+        .context = parserContext,
+    };
+
+    auto parsedValue = CSSPropertyParserHelpers::MetaConsumer<CSS::Length<>>::consume(tokenRange, parserState);
     if (!parsedValue)
         return;
     auto rawLength = parsedValue->raw();

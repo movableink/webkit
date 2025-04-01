@@ -53,6 +53,7 @@
 #include "CSSPropertyParserConsumer+PercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+URL.h"
 #include "CSSPropertyParserOptions.h"
+#include "CSSPropertyParserState.h"
 #include "CSSPropertyParsing.h"
 #include "CSSUnicodeRangeValue.h"
 #include "CSSValuePair.h"
@@ -88,7 +89,7 @@ static CSSParserMode parserMode(ScriptExecutionContext& context)
 
 // MARK: - 'font-width'
 
-static std::optional<UnresolvedFontWidth> consumeFontWidthUnresolved(CSSParserTokenRange& range, const CSSParserContext&)
+static std::optional<UnresolvedFontWidth> consumeFontWidthUnresolved(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <'font-width'> = normal | <percentage [0,∞]> | ultra-condensed | extra-condensed | condensed | semi-condensed | semi-expanded | expanded | extra-expanded | ultra-expanded
     // https://drafts.csswg.org/css-fonts-4/#propdef-font-width
@@ -117,12 +118,10 @@ static std::optional<UnresolvedFontWeightNumber::Raw> validateFontWeightNumber(U
 }
 #endif
 
-static std::optional<UnresolvedFontWeightNumber> consumeFontWeightNumberUnresolved(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<UnresolvedFontWeightNumber> consumeFontWeightNumberUnresolved(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     auto rangeCopy = range;
-
-    auto options = CSSPropertyParserOptions { };
-    auto number = MetaConsumer<UnresolvedFontWeightNumber>::consume(rangeCopy, context, { }, options);
+    auto number = MetaConsumer<UnresolvedFontWeightNumber>::consume(rangeCopy, state);
     if (!number)
         return std::nullopt;
 
@@ -148,14 +147,14 @@ static std::optional<UnresolvedFontWeightNumber> consumeFontWeightNumberUnresolv
     return result;
 }
 
-static std::optional<UnresolvedFontWeight> consumeFontWeightUnresolved(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<UnresolvedFontWeight> consumeFontWeightUnresolved(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'font-weight'> = normal | bold | bolder | lighter | <number [1,1000]>
     // https://drafts.csswg.org/css-fonts-4/#font-weight-prop
 
     if (auto keyword = consumeIdentRaw<CSSValueNormal, CSSValueBold, CSSValueBolder, CSSValueLighter>(range))
         return { *keyword };
-    if (auto fontWeightNumber = consumeFontWeightNumberUnresolved(range, context))
+    if (auto fontWeightNumber = consumeFontWeightNumberUnresolved(range, state))
         return { WTFMove(*fontWeightNumber) };
     return std::nullopt;
 }
@@ -164,12 +163,11 @@ static std::optional<UnresolvedFontWeight> consumeFontWeightUnresolved(CSSParser
 
 #if ENABLE(VARIATION_FONTS)
 
-static std::optional<UnresolvedFontStyleObliqueAngle> consumeFontStyleAngleUnresolved(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<UnresolvedFontStyleObliqueAngle> consumeFontStyleAngleUnresolved(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     auto rangeCopy = range;
 
-    auto options = CSSPropertyParserOptions { .parserMode = context.mode };
-    auto angle = MetaConsumer<UnresolvedFontStyleObliqueAngle>::consume(rangeCopy, context, { }, options);
+    auto angle = MetaConsumer<UnresolvedFontStyleObliqueAngle>::consume(rangeCopy, state);
     if (!angle)
         return std::nullopt;
 
@@ -179,16 +177,15 @@ static std::optional<UnresolvedFontStyleObliqueAngle> consumeFontStyleAngleUnres
 
 #endif
 
-static std::optional<UnresolvedFontStyle> consumeFontStyleUnresolved(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<UnresolvedFontStyle> consumeFontStyleUnresolved(CSSParserTokenRange& range, [[maybe_unused]] CSS::PropertyParserState& state)
 {
-    UNUSED_PARAM(context);
     auto keyword = consumeIdentRaw<CSSValueNormal, CSSValueItalic, CSSValueOblique>(range);
     if (!keyword)
         return std::nullopt;
 
 #if ENABLE(VARIATION_FONTS)
     if (*keyword == CSSValueOblique && !range.atEnd()) {
-        if (auto angle = consumeFontStyleAngleUnresolved(range, context))
+        if (auto angle = consumeFontStyleAngleUnresolved(range, state))
             return { { WTFMove(*angle) } };
     }
 #endif
@@ -196,16 +193,15 @@ static std::optional<UnresolvedFontStyle> consumeFontStyleUnresolved(CSSParserTo
     return { { *keyword } };
 }
 
-RefPtr<CSSValue> consumeFontStyle(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeFontStyle(CSSParserTokenRange& range, [[maybe_unused]] CSS::PropertyParserState& state)
 {
-    UNUSED_PARAM(context);
     auto keyword = consumeIdentRaw<CSSValueNormal, CSSValueItalic, CSSValueOblique>(range);
     if (!keyword)
         return nullptr;
 
 #if ENABLE(VARIATION_FONTS)
     if (*keyword == CSSValueOblique && !range.atEnd()) {
-        if (auto angle = consumeFontStyleAngleUnresolved(range, context))
+        if (auto angle = consumeFontStyleAngleUnresolved(range, state))
             return CSSFontStyleWithAngleValue::create(WTFMove(*angle));
     }
 #endif
@@ -322,7 +318,7 @@ static std::optional<UnresolvedFontFamily> consumeFontFamilyUnresolved(CSSParser
     return list;
 }
 
-RefPtr<CSSValue> consumeFamilyName(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumeFamilyName(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // https://drafts.csswg.org/css-fonts-4/#family-name-syntax
 
@@ -332,7 +328,7 @@ RefPtr<CSSValue> consumeFamilyName(CSSParserTokenRange& range, const CSSParserCo
     return CSSValuePool::singleton().createFontFamilyValue(familyName);
 }
 
-RefPtr<CSSValue> consumeFontFamily(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeFontFamily(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'font-family'> = [ <family-name> | <generic-family> ]#
     // https://drafts.csswg.org/css-fonts-4/#font-family-prop
@@ -340,13 +336,13 @@ RefPtr<CSSValue> consumeFontFamily(CSSParserTokenRange& range, const CSSParserCo
     return consumeListSeparatedBy<',', OneOrMore>(range, [&](auto& range) -> RefPtr<CSSValue> {
         if (auto parsedValue = consumeGenericFamily(range))
             return parsedValue;
-        return consumeFamilyName(range, context);
+        return consumeFamilyName(range, state);
     });
 }
 
 // MARK: - 'font-size'
 
-static std::optional<UnresolvedFontSize> consumeFontSizeUnresolved(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<UnresolvedFontSize> consumeFontSizeUnresolved(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'font-size> = <absolute-size> | <relative-size> | <length-percentage [0,∞]> | math
     // https://drafts.csswg.org/css-fonts-4/#propdef-font-size
@@ -371,8 +367,7 @@ static std::optional<UnresolvedFontSize> consumeFontSizeUnresolved(CSSParserToke
 
     auto rangeCopy = range;
 
-    auto options = CSSPropertyParserOptions { .parserMode = context.mode };
-    auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<CSS::Nonnegative>>::consume(rangeCopy, context, { }, options);
+    auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<CSS::Nonnegative>>::consume(rangeCopy, state);
     if (!lengthPercentage)
         return std::nullopt;
 
@@ -382,7 +377,7 @@ static std::optional<UnresolvedFontSize> consumeFontSizeUnresolved(CSSParserToke
 
 // MARK: - 'line-height'
 
-static std::optional<UnresolvedFontLineHeight> consumeLineHeightUnresolved(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<UnresolvedFontLineHeight> consumeLineHeightUnresolved(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'line-height'> = normal | <number [0,∞]> | <length-percentage [0,∞]>
     // https://www.w3.org/TR/css-inline-3/#line-height-property
@@ -393,7 +388,7 @@ static std::optional<UnresolvedFontLineHeight> consumeLineHeightUnresolved(CSSPa
         CSS::LengthPercentage<CSS::Nonnegative>
     >;
 
-    return Consumer::consume(range, context, { }, { .parserMode = context.mode },
+    return Consumer::consume(range, state,
         [&](CSS::Keyword::Normal) { return UnresolvedFontLineHeight { CSSValueNormal }; },
         [&](auto&& value) { return UnresolvedFontLineHeight { WTFMove(value) }; }
     );
@@ -401,7 +396,7 @@ static std::optional<UnresolvedFontLineHeight> consumeLineHeightUnresolved(CSSPa
 
 // MARK: 'font' (shorthand)
 
-static std::optional<UnresolvedFont> consumeUnresolvedFont(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<UnresolvedFont> consumeUnresolvedFont(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     std::optional<UnresolvedFontStyle> fontStyle;
     std::optional<UnresolvedFontVariantCaps> fontVariantCaps;
@@ -415,13 +410,13 @@ static std::optional<UnresolvedFont> consumeUnresolvedFont(CSSParserTokenRange& 
     for (unsigned i = 0; i < 4 && !range.atEnd(); ++i) {
         if (consumeIdentRaw<CSSValueNormal>(range))
             continue;
-        if (!fontStyle && (fontStyle = consumeFontStyleUnresolved(range, context)))
+        if (!fontStyle && (fontStyle = consumeFontStyleUnresolved(range, state)))
             continue;
         if (!fontVariantCaps && (fontVariantCaps = consumeIdentRaw<CSSValueSmallCaps>(range)))
             continue;
-        if (!fontWeight && (fontWeight = consumeFontWeightUnresolved(range, context)))
+        if (!fontWeight && (fontWeight = consumeFontWeightUnresolved(range, state)))
             continue;
-        if (!fontWidth && (fontWidth = consumeFontWidthUnresolved(range, context)))
+        if (!fontWidth && (fontWidth = consumeFontWidthUnresolved(range, state)))
             continue;
         break;
     }
@@ -430,7 +425,7 @@ static std::optional<UnresolvedFont> consumeUnresolvedFont(CSSParserTokenRange& 
         return std::nullopt;
 
     // Required 'font-size'.
-    fontSize = consumeFontSizeUnresolved(range, context);
+    fontSize = consumeFontSizeUnresolved(range, state);
     if (!fontSize)
         return std::nullopt;
 
@@ -439,7 +434,7 @@ static std::optional<UnresolvedFont> consumeUnresolvedFont(CSSParserTokenRange& 
 
     if (consumeSlashIncludingWhitespace(range)) {
         // If a slash is consumed, a 'line-height' is required.
-        fontLineHeight = consumeLineHeightUnresolved(range, context);
+        fontLineHeight = consumeLineHeightUnresolved(range, state);
         if (!fontLineHeight)
             return std::nullopt;
     }
@@ -463,24 +458,26 @@ static std::optional<UnresolvedFont> consumeUnresolvedFont(CSSParserTokenRange& 
     };
 }
 
-std::optional<UnresolvedFont> parseUnresolvedFont(const String& string, const CSSParserContext& context)
+std::optional<UnresolvedFont> parseUnresolvedFont(const String& string, const CSSParserContext& parserContext)
 {
-    CSSTokenizer tokenizer(string);
-    CSSParserTokenRange range(tokenizer.tokenRange());
+    auto tokenizer = CSSTokenizer(string);
+    auto range = tokenizer.tokenRange();
+
     range.consumeWhitespace();
 
-    return consumeUnresolvedFont(range, context);
+    auto state = CSS::PropertyParserState { .context = parserContext };
+    return consumeUnresolvedFont(range, state);
 }
 
 // MARK: 'font-size-adjust'
 
-RefPtr<CSSValue> consumeFontSizeAdjust(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeFontSizeAdjust(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     if (range.peek().id() == CSSValueNone || range.peek().id() == CSSValueFromFont)
         return consumeIdent(range);
 
     auto metric = consumeIdent<CSSValueExHeight, CSSValueCapHeight, CSSValueChWidth, CSSValueIcWidth, CSSValueIcHeight>(range);
-    auto value = CSSPrimitiveValueResolver<CSS::Number<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+    auto value = CSSPrimitiveValueResolver<CSS::Number<CSS::Nonnegative>>::consumeAndResolve(range, state);
     if (!value)
         value = consumeIdent<CSSValueFromFont>(range);
 
@@ -495,12 +492,12 @@ RefPtr<CSSValue> consumeFontSizeAdjust(CSSParserTokenRange& range, const CSSPars
 // MARK: - @font-face
 
 // MARK: @font-face 'font-family'
-RefPtr<CSSValue> consumeFontFaceFontFamily(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeFontFaceFontFamily(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'font-family'> = <family-name>
     // https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-family
 
-    auto name = consumeFamilyName(range, context);
+    auto name = consumeFamilyName(range, state);
     if (!name || !range.atEnd())
         return nullptr;
 
@@ -514,7 +511,7 @@ RefPtr<CSSValue> consumeFontFaceFontFamily(CSSParserTokenRange& range, const CSS
 
 // MARK: @font-face 'src'
 
-Vector<FontTechnology> consumeFontTech(CSSParserTokenRange& range, const CSSParserContext&, bool singleValue)
+Vector<FontTechnology> consumeFontTech(CSSParserTokenRange& range, CSS::PropertyParserState&, bool singleValue)
 {
     Vector<FontTechnology> technologies;
     auto args = consumeFunction(range);
@@ -548,7 +545,7 @@ static bool isFontFormatKeywordValid(CSSValueID id)
     }
 }
 
-String consumeFontFormat(CSSParserTokenRange& range, const CSSParserContext&, bool rejectStringValues)
+String consumeFontFormat(CSSParserTokenRange& range, CSS::PropertyParserState&, bool rejectStringValues)
 {
     // https://drafts.csswg.org/css-fonts/#descdef-font-face-src
     // FIXME: We allow any identifier here and convert to strings; specification calls for certain keywords and legacy compatibility strings.
@@ -563,7 +560,7 @@ String consumeFontFormat(CSSParserTokenRange& range, const CSSParserContext&, bo
     return nullString();
 }
 
-static RefPtr<CSSFontFaceSrcResourceValue> consumeFontFaceSrcURI(CSSParserTokenRange& range, const CSSParserContext& context)
+static RefPtr<CSSFontFaceSrcResourceValue> consumeFontFaceSrcURI(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <font-src-uri>       = <url> [ format( <font-format> ) ]? [ tech( <font-tech># ) ]?
 
@@ -576,29 +573,29 @@ static RefPtr<CSSFontFaceSrcResourceValue> consumeFontFaceSrcURI(CSSParserTokenR
 
     StringView parsedURL = consumeURLRaw(range);
     String urlString = !parsedURL.is8Bit() && parsedURL.containsOnlyASCII() ? String::make8Bit(parsedURL.span16()) : parsedURL.toString();
-    auto location = context.completeURL(urlString);
+    auto location = state.context.completeURL(urlString);
     if (location.resolvedURL.isNull())
         return nullptr;
 
     String format;
     Vector<FontTechnology> technologies;
     if (range.peek().functionId() == CSSValueFormat) {
-        format = consumeFontFormat(range, context);
+        format = consumeFontFormat(range, state);
         if (format.isNull())
             return nullptr;
     }
     if (range.peek().functionId() == CSSValueTech) {
-        technologies = consumeFontTech(range, context);
+        technologies = consumeFontTech(range, state);
         if (technologies.isEmpty())
             return nullptr;
     }
     if (!range.atEnd())
         return nullptr;
 
-    return CSSFontFaceSrcResourceValue::create(WTFMove(location), WTFMove(format), WTFMove(technologies), context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No);
+    return CSSFontFaceSrcResourceValue::create(WTFMove(location), WTFMove(format), WTFMove(technologies), state.context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No);
 }
 
-static RefPtr<CSSValue> consumeFontFaceSrcLocal(CSSParserTokenRange& range, const CSSParserContext&)
+static RefPtr<CSSValue> consumeFontFaceSrcLocal(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <font-src-local>     = local( <family-name> )
     // https://drafts.csswg.org/css-fonts-4/#typedef-font-src
@@ -619,7 +616,7 @@ static RefPtr<CSSValue> consumeFontFaceSrcLocal(CSSParserTokenRange& range, cons
     return nullptr;
 }
 
-RefPtr<CSSValueList> consumeFontFaceSrc(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValueList> consumeFontFaceSrc(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <font-src-list>      = <font-src>#
 
@@ -638,9 +635,9 @@ RefPtr<CSSValueList> consumeFontFaceSrc(CSSParserTokenRange& range, const CSSPar
     auto consumeSrcListComponent = [&](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
         const CSSParserToken& token = range.peek();
         if (token.type() == CSSParserTokenType::UrlToken || token.functionId() == CSSValueUrl)
-            return consumeFontFaceSrcURI(range, context);
+            return consumeFontFaceSrcURI(range, state);
         if (token.functionId() == CSSValueLocal)
-            return consumeFontFaceSrcLocal(range, context);
+            return consumeFontFaceSrcLocal(range, state);
         return nullptr;
     };
     while (!range.atEnd()) {
@@ -658,14 +655,20 @@ RefPtr<CSSValueList> consumeFontFaceSrc(CSSParserTokenRange& range, const CSSPar
     return CSSValueList::createCommaSeparated(WTFMove(values));
 }
 
-RefPtr<CSSValueList> parseFontFaceSrc(const String& string, const CSSParserContext& context)
+RefPtr<CSSValueList> parseFontFaceSrc(const String& string, ScriptExecutionContext& context)
 {
-    CSSParserImpl parser(context, string);
+    RefPtr document = dynamicDowncast<Document>(context);
+    CSSParserContext parserContext = document ? CSSParserContext(*document) : CSSParserContext(HTMLStandardMode);
+    CSSParserImpl parser(parserContext, string);
     CSSParserTokenRange range = parser.tokenizer()->tokenRange();
+
     range.consumeWhitespace();
+
     if (range.atEnd())
         return nullptr;
-    RefPtr parsedValue = consumeFontFaceSrc(range, parser.context());
+
+    auto state = CSS::PropertyParserState { .context = parserContext };
+    auto parsedValue = consumeFontFaceSrc(range, state);
     if (!parsedValue || !range.atEnd())
         return nullptr;
 
@@ -688,7 +691,8 @@ RefPtr<CSSValue> parseFontFaceSizeAdjust(const String& string, ScriptExecutionCo
     if (range.atEnd())
         return nullptr;
 
-    RefPtr parsedValue = CSSPropertyParsing::consumeFontFaceSizeAdjust(range, parserContext);
+    auto state = CSS::PropertyParserState { .context = parserContext };
+    auto parsedValue = CSSPropertyParsing::consumeFontFaceSizeAdjust(range, state);
     if (!parsedValue || !range.atEnd())
         return nullptr;
 
@@ -759,7 +763,8 @@ RefPtr<CSSValue> parseFontFaceFontStyle(const String& string, ScriptExecutionCon
     if (range.atEnd())
         return nullptr;
 
-    RefPtr parsedValue = consumeFontFaceFontStyle(range, parserContext);
+    auto state = CSS::PropertyParserState { .context = parserContext };
+    auto parsedValue = consumeFontFaceFontStyle(range, state);
     if (!parsedValue || !range.atEnd())
         return nullptr;
 
@@ -768,7 +773,7 @@ RefPtr<CSSValue> parseFontFaceFontStyle(const String& string, ScriptExecutionCon
 
 #if ENABLE(VARIATION_FONTS)
 
-RefPtr<CSSValue> consumeFontFaceFontStyle(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeFontFaceFontStyle(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'font-style'> auto | normal | italic | oblique [ <angle [-90deg,90deg]>{1,2} ]?
     // https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-style
@@ -784,7 +789,7 @@ RefPtr<CSSValue> consumeFontFaceFontStyle(CSSParserTokenRange& range, const CSSP
 
     auto rangeAfterAngles = range;
 
-    auto firstAngle = consumeFontStyleAngleUnresolved(rangeAfterAngles, context);
+    auto firstAngle = consumeFontStyleAngleUnresolved(rangeAfterAngles, state);
     if (!firstAngle)
         return nullptr;
 
@@ -798,7 +803,7 @@ RefPtr<CSSValue> consumeFontFaceFontStyle(CSSParserTokenRange& range, const CSSP
         );
     }
 
-    auto secondAngle = consumeFontStyleAngleUnresolved(rangeAfterAngles, context);
+    auto secondAngle = consumeFontStyleAngleUnresolved(rangeAfterAngles, state);
     if (!secondAngle)
         return nullptr;
 
@@ -814,12 +819,12 @@ RefPtr<CSSValue> consumeFontFaceFontStyle(CSSParserTokenRange& range, const CSSP
 
 #else
 
-RefPtr<CSSValue> consumeFontFaceFontStyle(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeFontFaceFontStyle(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'font-style'> = <font-style>
     // NOTE: This is the pre-variation fonts definition.
 
-    return consumeFontStyle(range, context);
+    return consumeFontStyle(range, state);
 }
 
 #endif
@@ -853,7 +858,7 @@ static std::optional<FontTag> consumeFontOpenTypeTag(CSSParserTokenRange& range)
     return { tag };
 }
 
-RefPtr<CSSValue> consumeFeatureTagValue(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeFeatureTagValue(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <feature-tag-value> = <opentype-tag> [ <integer [0,∞]> | on | off ]?
     // https://drafts.csswg.org/css-fonts/#feature-tag-value
@@ -865,7 +870,7 @@ RefPtr<CSSValue> consumeFeatureTagValue(CSSParserTokenRange& range, const CSSPar
     RefPtr<CSSPrimitiveValue> tagValue;
     if (!range.atEnd() && range.peek().type() != CommaToken) {
         // Feature tag values could follow: <integer [0,∞]> | on | off
-        if (auto integer = CSSPrimitiveValueResolver<CSS::Integer<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = context.mode }))
+        if (auto integer = CSSPrimitiveValueResolver<CSS::Integer<CSS::Nonnegative>>::consumeAndResolve(range, state))
             tagValue = WTFMove(integer);
         else if (range.peek().id() == CSSValueOn || range.peek().id() == CSSValueOff)
             tagValue = CSSPrimitiveValue::createInteger(range.consumeIncludingWhitespace().id() == CSSValueOn ? 1 : 0);
@@ -891,7 +896,8 @@ RefPtr<CSSValue> parseFontFaceFeatureSettings(const String& string, ScriptExecut
     if (range.atEnd())
         return nullptr;
 
-    RefPtr parsedValue = CSSPropertyParsing::consumeFontFeatureSettings(range, parserContext);
+    auto state = CSS::PropertyParserState { .context = parserContext };
+    auto parsedValue = CSSPropertyParsing::consumeFontFeatureSettings(range, state);
     if (!parsedValue || !range.atEnd())
         return nullptr;
 
@@ -902,7 +908,7 @@ RefPtr<CSSValue> parseFontFaceFeatureSettings(const String& string, ScriptExecut
 
 #if ENABLE(VARIATION_FONTS)
 
-RefPtr<CSSValue> consumeVariationTagValue(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeVariationTagValue(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <variation-tag-value> = <opentype-tag> <number>
     // https://drafts.csswg.org/css-fonts/#font-variation-settings-def
@@ -911,7 +917,7 @@ RefPtr<CSSValue> consumeVariationTagValue(CSSParserTokenRange& range, const CSSP
     if (!tag)
         return nullptr;
 
-    auto tagValue = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+    auto tagValue = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, state);
     if (!tagValue)
         return nullptr;
 
@@ -936,7 +942,8 @@ RefPtr<CSSValue> parseFontFaceFontWidth(const String& string, ScriptExecutionCon
     if (range.atEnd())
         return nullptr;
 
-    RefPtr parsedValue = CSSPropertyParsing::consumeFontFaceFontWidth(range, parserContext);
+    auto state = CSS::PropertyParserState { .context = parserContext };
+    auto parsedValue = CSSPropertyParsing::consumeFontFaceFontWidth(range, state);
     if (!parsedValue || !range.atEnd())
         return nullptr;
 
@@ -959,7 +966,8 @@ RefPtr<CSSValue> parseFontFaceFontWeight(const String& string, ScriptExecutionCo
     if (range.atEnd())
         return nullptr;
 
-    RefPtr parsedValue = CSSPropertyParsing::consumeFontFaceFontWeight(range, parserContext);
+    auto state = CSS::PropertyParserState { .context = parserContext };
+    auto parsedValue = CSSPropertyParsing::consumeFontFaceFontWeight(range, state);
     if (!parsedValue || !range.atEnd())
         return nullptr;
 

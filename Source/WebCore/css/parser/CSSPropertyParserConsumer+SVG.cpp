@@ -36,13 +36,14 @@
 #include "CSSPropertyParserConsumer+NumberDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParserConsumer+URL.h"
+#include "CSSPropertyParserState.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
 
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumePaintOrder(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumePaintOrder(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <'paint-order'> = normal | [ fill || stroke || markers ]
     // https://svgwg.org/svg2-draft/painting.html#PaintOrderProperty
@@ -96,7 +97,7 @@ RefPtr<CSSValue> consumePaintOrder(CSSParserTokenRange& range, const CSSParserCo
     return CSSValueList::createSpaceSeparated(WTFMove(paintOrderList));
 }
 
-RefPtr<CSSValue> consumeStrokeDasharray(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeStrokeDasharray(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'stroke-dasharray'> = none | [ [ <length-percentage> | <number> ]+ ]#
     // https://svgwg.org/svg2-draft/painting.html#StrokeDashing
@@ -106,10 +107,10 @@ RefPtr<CSSValue> consumeStrokeDasharray(CSSParserTokenRange& range, const CSSPar
         return consumeIdent(range);
     CSSValueListBuilder dashes;
     do {
-        // FIXME: Figure out and document why parserMode is explicitly set to HTMLStandardMode here or remove the special case.
-        auto dash = CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = HTMLStandardMode });
+        // FIXME: Figure out and document why overrideParserMode is explicitly set to HTMLStandardMode here or remove the special case.
+        auto dash = CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::Nonnegative>>::consumeAndResolve(range, state, { .overrideParserMode = HTMLStandardMode, .unitlessZeroLength = UnitlessZeroQuirk::Forbid });
         if (!dash)
-            dash = CSSPrimitiveValueResolver<CSS::Number<CSS::Nonnegative>>::consumeAndResolve(range, context, { .parserMode = context.mode });
+            dash = CSSPrimitiveValueResolver<CSS::Number<CSS::Nonnegative>>::consumeAndResolve(range, state);
         if (!dash || (consumeCommaIncludingWhitespace(range) && range.atEnd()))
             return nullptr;
         dashes.append(dash.releaseNonNull());

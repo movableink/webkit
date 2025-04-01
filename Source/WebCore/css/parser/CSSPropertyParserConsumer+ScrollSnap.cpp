@@ -35,7 +35,7 @@
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumeScrollSnapType(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumeScrollSnapType(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <'scroll-snap-type'> = none | [ x | y | block | inline | both ] [ mandatory | proximity ]?
     // https://drafts.csswg.org/css-scroll-snap-1/#scroll-snap-type

@@ -3,6 +3,7 @@
  * Copyright (C) 2004 - 2021 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2009 - 2010  Torch Mobile (Beijing) Co. Ltd. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,6 +26,7 @@
 #include "CSSCustomPropertySyntax.h"
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
+#include "CSSProperty.h"
 #include "StyleRuleType.h"
 #include <wtf/text/StringView.h>
 
@@ -33,6 +35,10 @@ namespace WebCore {
 class CSSCustomPropertyValue;
 class CSSProperty;
 class StylePropertyShorthand;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace Style {
 class BuilderState;
@@ -44,31 +50,34 @@ class BuilderState;
 class CSSPropertyParser {
     WTF_MAKE_NONCOPYABLE(CSSPropertyParser);
 public:
-    static bool parseValue(CSSPropertyID, bool important, const CSSParserTokenRange&, const CSSParserContext&, Vector<CSSProperty, 256>&, StyleRuleType);
+    static bool parseValue(CSSPropertyID, IsImportant, const CSSParserTokenRange&, const CSSParserContext&, Vector<CSSProperty, 256>&, StyleRuleType);
 
-    // Parses a non-shorthand CSS property
-    static RefPtr<CSSValue> parseSingleValue(CSSPropertyID, const CSSParserTokenRange&, const CSSParserContext&);
+    // Parses a longhand CSS property.
+    static RefPtr<CSSValue> parseStylePropertyLonghand(CSSPropertyID, const String&, const CSSParserContext&);
+    static RefPtr<CSSValue> parseStylePropertyLonghand(CSSPropertyID, const CSSParserTokenRange&, const CSSParserContext&);
 
     static RefPtr<CSSCustomPropertyValue> parseTypedCustomPropertyInitialValue(const AtomString&, const CSSCustomPropertySyntax&, CSSParserTokenRange, Style::BuilderState&, const CSSParserContext&);
     static RefPtr<CSSCustomPropertyValue> parseTypedCustomPropertyValue(const AtomString& name, const CSSCustomPropertySyntax&, const CSSParserTokenRange&, Style::BuilderState&, const CSSParserContext&);
     static ComputedStyleDependencies collectParsedCustomPropertyValueDependencies(const CSSCustomPropertySyntax&, const CSSParserTokenRange&, const CSSParserContext&);
     static bool isValidCustomPropertyValueForSyntax(const CSSCustomPropertySyntax&, CSSParserTokenRange, const CSSParserContext&);
 
-    static RefPtr<CSSValue> parseCounterStyleDescriptor(CSSPropertyID, CSSParserTokenRange&, const CSSParserContext&);
+    static RefPtr<CSSValue> parseCounterStyleDescriptor(CSSPropertyID, const String&, const CSSParserContext&);
 
 private:
     CSSPropertyParser(const CSSParserTokenRange&, const CSSParserContext&, Vector<CSSProperty, 256>*, bool consumeWhitespace = true);
 
-    // FIXME: Rename once the CSSParserValue-based parseValue is removed
-    bool parseValueStart(CSSPropertyID, bool important);
-    bool consumeCSSWideKeyword(CSSPropertyID, bool important);
-    RefPtr<CSSValue> parseSingleValue(CSSPropertyID, CSSPropertyID = CSSPropertyInvalid);
-    
-    std::pair<RefPtr<CSSValue>, CSSCustomPropertySyntax::Type> consumeCustomPropertyValueWithSyntax(const CSSCustomPropertySyntax&);
-    RefPtr<CSSCustomPropertyValue> parseTypedCustomPropertyValue(const AtomString& name, const CSSCustomPropertySyntax&, Style::BuilderState&);
-    ComputedStyleDependencies collectParsedCustomPropertyValueDependencies(const CSSCustomPropertySyntax&);
+    // MARK: - Custom property parsing
 
-    bool inQuirksMode() const { return m_context.mode == HTMLQuirksMode; }
+    std::pair<RefPtr<CSSValue>, CSSCustomPropertySyntax::Type> consumeCustomPropertyValueWithSyntax(CSS::PropertyParserState&, const CSSCustomPropertySyntax&);
+    RefPtr<CSSCustomPropertyValue> parseTypedCustomPropertyValue(CSS::PropertyParserState&, const AtomString& name, const CSSCustomPropertySyntax&, Style::BuilderState&);
+    ComputedStyleDependencies collectParsedCustomPropertyValueDependencies(CSS::PropertyParserState&, const CSSCustomPropertySyntax&);
+
+    // MARK: - Root parsing functions.
+
+    // Style properties.
+    bool parseStyleProperty(CSSPropertyID, IsImportant, StyleRuleType);
+    RefPtr<CSSValue> parseStylePropertyLonghand(CSSPropertyID, CSS::PropertyParserState&);
+    bool parseStylePropertyShorthand(CSSPropertyID, CSS::PropertyParserState&);
 
     // @font-face descriptors.
     bool parseFontFaceDescriptor(CSSPropertyID);
@@ -80,10 +89,10 @@ private:
     bool parseCounterStyleDescriptor(CSSPropertyID);
     
     // @keyframe descriptors.
-    bool parseKeyframeDescriptor(CSSPropertyID, bool important);
+    bool parseKeyframeDescriptor(CSSPropertyID, IsImportant);
 
     // @page descriptors.
-    bool parsePageDescriptor(CSSPropertyID, bool important);
+    bool parsePageDescriptor(CSSPropertyID, IsImportant);
 
     // @property descriptors.
     bool parsePropertyDescriptor(CSSPropertyID);
@@ -92,76 +101,107 @@ private:
     bool parseViewTransitionDescriptor(CSSPropertyID);
 
     // @position-try descriptors.
-    bool parsePositionTryDescriptor(CSSPropertyID, bool important);
+    bool parsePositionTryDescriptor(CSSPropertyID, IsImportant);
 
-    void addProperty(CSSPropertyID longhand, CSSPropertyID shorthand, RefPtr<CSSValue>&&, bool important, bool implicit = false);
-    void addExpandedProperty(CSSPropertyID shorthand, RefPtr<CSSValue>&&, bool important, bool implicit = false);
+    // MARK: - Property Adding
 
-    // Shorthand Parsing.
+    // Bottleneck where the CSSValue is added to the CSSProperty vector.
+    void addProperty(CSSPropertyID longhand, CSSPropertyID shorthand, RefPtr<CSSValue>&&, IsImportant, IsImplicit = IsImplicit::No);
 
-    bool parseShorthand(CSSPropertyID, bool important);
-    bool consumeShorthandGreedily(const StylePropertyShorthand&, bool important);
-    bool consume2ValueShorthand(const StylePropertyShorthand&, bool important);
-    bool consume4ValueShorthand(const StylePropertyShorthand&, bool important);
+    // Utility functions to make adding properties more ergonomic.
+    void addPropertyForCurrentShorthand(CSS::PropertyParserState&, CSSPropertyID longhand, RefPtr<CSSValue>&&, IsImplicit = IsImplicit::No);
+    void addPropertyForAllLonghandsOfShorthand(CSSPropertyID shorthand, RefPtr<CSSValue>&&, IsImportant, IsImplicit = IsImplicit::No);
+    void addPropertyForAllLonghandsOfCurrentShorthand(CSS::PropertyParserState&, RefPtr<CSSValue>&&, IsImplicit = IsImplicit::No);
 
-    bool consumeBorderShorthand(CSSPropertyID widthProperty, CSSPropertyID styleProperty, CSSPropertyID colorProperty, bool important);
+    // MARK: - Shorthand Parsing
 
-    // Legacy parsing allows <string>s for animation-name
-    bool consumeAnimationShorthand(const StylePropertyShorthand&, bool important);
-    bool consumeBackgroundShorthand(const StylePropertyShorthand&, bool important);
-    bool consumeOverflowShorthand(bool important);
+    bool consumeShorthandGreedily(const StylePropertyShorthand&, CSS::PropertyParserState&);
+    bool consume2ValueShorthand(const StylePropertyShorthand&, CSS::PropertyParserState&);
+    bool consume4ValueShorthand(const StylePropertyShorthand&, CSS::PropertyParserState&);
 
-    bool consumeColumns(bool important);
+    bool consumeBorderShorthand(CSS::PropertyParserState&);
+    bool consumeBorderInlineShorthand(CSS::PropertyParserState&);
+    bool consumeBorderBlockShorthand(CSS::PropertyParserState&);
 
-    bool consumeGridItemPositionShorthand(CSSPropertyID, bool important);
-    bool consumeGridTemplateRowsAndAreasAndColumns(CSSPropertyID, bool important);
-    bool consumeGridTemplateShorthand(CSSPropertyID, bool important);
-    bool consumeGridShorthand(bool important);
-    bool consumeGridAreaShorthand(bool important);
+    bool consumeAnimationShorthand(const StylePropertyShorthand&, CSS::PropertyParserState&);
 
-    bool consumeAlignShorthand(const StylePropertyShorthand&, bool important);
+    bool consumeBackgroundShorthand(const StylePropertyShorthand&, CSS::PropertyParserState&);
+    bool consumeBackgroundPositionShorthand(const StylePropertyShorthand&, CSS::PropertyParserState&);
+    bool consumeWebkitBackgroundSizeShorthand(CSS::PropertyParserState&);
 
-    bool consumeBlockStepShorthand(bool important);
+    bool consumeMaskShorthand(CSS::PropertyParserState&);
+    bool consumeMaskPositionShorthand(CSS::PropertyParserState&);
 
-    bool consumeFont(bool important);
-    bool consumeTextDecorationSkip(bool important);
-    bool consumeFontVariantShorthand(bool important);
-    bool consumeFontSynthesis(bool important);
+    bool consumeOverflowShorthand(CSS::PropertyParserState&);
 
-    bool consumeBorderSpacing(bool important);
+    bool consumeColumnsShorthand(CSS::PropertyParserState&);
 
-    // CSS3 Parsing Routines (for properties specific to CSS3)
-    bool consumeBorderImage(CSSPropertyID, bool important);
-    bool consumeBorderRadius(CSSPropertyID, bool important);
+    bool consumeGridItemPositionShorthand(const StylePropertyShorthand&, CSS::PropertyParserState&);
+    bool consumeGridTemplateRowsAndAreasAndColumns(CSS::PropertyParserState&);
+    bool consumeGridTemplateShorthand(CSS::PropertyParserState&);
+    bool consumeGridShorthand(CSS::PropertyParserState&);
+    bool consumeGridAreaShorthand(CSS::PropertyParserState&);
 
-    bool consumeFlex(bool important);
+    bool consumeAlignShorthand(const StylePropertyShorthand&, CSS::PropertyParserState&);
 
-    bool consumeLegacyBreakProperty(CSSPropertyID, bool important);
-    bool consumeLegacyTextOrientation(bool important);
+    bool consumeBlockStepShorthand(CSS::PropertyParserState&);
 
-    bool consumeTransformOrigin(bool important);
-    bool consumePerspectiveOrigin(bool important);
-    bool consumePrefixedPerspective(bool important);
-    bool consumeOffset(bool important);
-    bool consumeListStyleShorthand(bool important);
+    bool consumeFontShorthand(CSS::PropertyParserState&);
+    bool consumeFontVariantShorthand(CSS::PropertyParserState&);
+    bool consumeFontSynthesisShorthand(CSS::PropertyParserState&);
 
-    bool consumeOverscrollBehaviorShorthand(bool important);
+    bool consumeTextDecorationShorthand(CSS::PropertyParserState&);
+    bool consumeTextDecorationSkipShorthand(CSS::PropertyParserState&);
 
-    bool consumeContainerShorthand(bool important);
-    bool consumeContainIntrinsicSizeShorthand(bool important);
+    bool consumeBorderSpacingShorthand(CSS::PropertyParserState&);
 
-    bool consumeAnimationRangeShorthand(bool important);
-    bool consumeScrollTimelineShorthand(bool important);
-    bool consumeViewTimelineShorthand(bool important);
+    bool consumeBorderRadiusShorthand(CSS::PropertyParserState&);
+    bool consumeWebkitBorderRadiusShorthand(CSS::PropertyParserState&);
 
-    bool consumeLineClampShorthand(bool important);
+    bool consumeBorderImageShorthand(CSS::PropertyParserState&);
+    bool consumeWebkitBorderImageShorthand(CSS::PropertyParserState&);
 
-    bool consumeTextBoxShorthand(bool important);
+    bool consumeMaskBorderShorthand(CSS::PropertyParserState&);
+    bool consumeWebkitMaskBoxImageShorthand(CSS::PropertyParserState&);
 
-    bool consumeTextWrapShorthand(bool important);
-    bool consumeWhiteSpaceShorthand(bool important);
+    bool consumeFlexShorthand(CSS::PropertyParserState&);
 
-    bool consumePositionTryShorthand(bool important);
+    bool consumePageBreakAfterShorthand(CSS::PropertyParserState&);
+    bool consumePageBreakBeforeShorthand(CSS::PropertyParserState&);
+    bool consumePageBreakInsideShorthand(CSS::PropertyParserState&);
+
+    bool consumeWebkitColumnBreakAfterShorthand(CSS::PropertyParserState&);
+    bool consumeWebkitColumnBreakBeforeShorthand(CSS::PropertyParserState&);
+    bool consumeWebkitColumnBreakInsideShorthand(CSS::PropertyParserState&);
+
+    bool consumeWebkitTextOrientationShorthand(CSS::PropertyParserState&);
+
+    bool consumeTransformOriginShorthand(CSS::PropertyParserState&);
+    bool consumePerspectiveOriginShorthand(CSS::PropertyParserState&);
+    bool consumePrefixedPerspectiveShorthand(CSS::PropertyParserState&);
+    bool consumeOffsetShorthand(CSS::PropertyParserState&);
+    bool consumeListStyleShorthand(CSS::PropertyParserState&);
+
+    bool consumeOverscrollBehaviorShorthand(CSS::PropertyParserState&);
+
+    bool consumeContainerShorthand(CSS::PropertyParserState&);
+    bool consumeContainIntrinsicSizeShorthand(CSS::PropertyParserState&);
+
+    bool consumeAnimationRangeShorthand(CSS::PropertyParserState&);
+    bool consumeScrollTimelineShorthand(CSS::PropertyParserState&);
+    bool consumeViewTimelineShorthand(CSS::PropertyParserState&);
+
+    bool consumeLineClampShorthand(CSS::PropertyParserState&);
+
+    bool consumeTextBoxShorthand(CSS::PropertyParserState&);
+
+    bool consumeTextWrapShorthand(CSS::PropertyParserState&);
+    bool consumeWhiteSpaceShorthand(CSS::PropertyParserState&);
+
+    bool consumePositionTryShorthand(CSS::PropertyParserState&);
+
+    bool consumeMarkerShorthand(CSS::PropertyParserState&);
+
 private:
     // Inputs:
     CSSParserTokenRange m_range;

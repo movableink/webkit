@@ -33,7 +33,7 @@
 #include "ColorInputType.h"
 
 #include "AXObjectCache.h"
-#include "CSSPropertyParserConsumer+Color.h"
+#include "CSSPropertyParserConsumer+ColorInlines.h"
 #include "Chrome.h"
 #include "Color.h"
 #include "ColorSerialization.h"
