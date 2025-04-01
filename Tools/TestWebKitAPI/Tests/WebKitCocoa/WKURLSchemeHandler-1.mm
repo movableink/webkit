@@ -470,7 +470,12 @@ static void checkCallSequence(Vector<Command>&& commands, ShouldRaiseException s
     TestWebKitAPI::Util::run(&done);
 }
 
+// FIXME rdar://148379405
+#if (PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 150000)) && !defined(NDEBUG)
+TEST(URLSchemeHandler, DISABLED_Exceptions)
+#else
 TEST(URLSchemeHandler, Exceptions)
+#endif
 {
     checkCallSequence({Command::Response, Command::Data, Command::Finish}, ShouldRaiseException::No);
     checkCallSequence({Command::Response, Command::Redirect}, ShouldRaiseException::Yes);
