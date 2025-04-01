@@ -301,9 +301,9 @@
             (allow iokit-async-external-method
                 (iokit-method-number 40))
             (allow iokit-external-trap
-                (iokit-trap-number 0 1 2 3 4 5))
+                (iokit-trap-number 0 1 2 3 4 5 8 9))
             (allow iokit-external-method
-                (iokit-method-number 0 9 10 13 20 32 34 35 36 38 41 44 54))))
+                (iokit-method-number 0 4 5 9 10 11 12 13 20 27 32 34 35 36 38 39 41 44 54 58 59))))
 
     ;; Silence sandbox violations from apps trying to create the empty plist if it doesn't exist.
     ;; <rdar://problem/13796537>
