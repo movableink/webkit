@@ -503,6 +503,21 @@ TEST(Damage, Unite)
     EXPECT_EQ(damage.rects()[1], IntRect(600, 300, 1, 1));
     EXPECT_EQ(damage.rects()[2], IntRect(300, 600, 1, 1));
     EXPECT_EQ(damage.rects()[3], IntRect(600, 600, 1, 1));
+
+    // Adding a rect covering the current bounding box makes the Damage no longer unified.
+    damage = Damage(IntSize { 512, 512 });
+    EXPECT_TRUE(damage.add(IntRect { 300, 0, 4, 4 }));
+    EXPECT_EQ(damage.rects().size(), 1);
+    EXPECT_TRUE(damage.add(IntRect { 500, 0, 4, 4 }));
+    EXPECT_EQ(damage.rects().size(), 2);
+    EXPECT_TRUE(damage.add(IntRect { 300, 200, 4, 4 }));
+    EXPECT_EQ(damage.rects().size(), 3);
+    EXPECT_TRUE(damage.add(IntRect { 500, 200, 4, 4 }));
+    EXPECT_EQ(damage.rects().size(), 4);
+    EXPECT_TRUE(damage.add(IntRect { 384, 128, 4, 4 }));
+    EXPECT_EQ(damage.rects().size(), 4);
+    EXPECT_TRUE(damage.add(IntRect { 250, 0, 254, 254 }));
+    EXPECT_EQ(damage.rects().size(), 1);
 }
 
 TEST(Damage, RectsForPainting)

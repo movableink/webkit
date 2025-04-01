@@ -141,6 +141,7 @@ public:
         m_rect = rect;
         m_mode = Mode::Full;
         m_rects.clear();
+        m_shouldUnite = false;
         initialize();
     }
 
@@ -167,6 +168,8 @@ public:
         const auto rectsCount = m_rects.size();
         if (!rectsCount || rect.contains(m_minimumBoundingRectangle)) {
             m_rects.clear();
+            if (m_mode == Mode::Rectangles)
+                m_shouldUnite = m_gridCells.width() == 1 && m_gridCells.height() == 1;
             m_rects.append(rect);
             m_minimumBoundingRectangle = rect;
             return true;
@@ -250,7 +253,7 @@ public:
             return false;
 
         // When both Damage are already united and have the same rect, we can just iterate the rects and unite them.
-        if (m_mode == Mode::Rectangles && m_shouldUnite && m_rect == other.m_rect && m_shouldUnite == other.m_shouldUnite) {
+        if (m_mode == Mode::Rectangles && m_shouldUnite && m_mode == other.m_mode && m_rect == other.m_rect && other.m_shouldUnite && m_rects.size() == other.m_rects.size()) {
             for (unsigned i = 0; i < m_rects.size(); ++i)
                 m_rects[i].unite(other.m_rects[i]);
             return true;
