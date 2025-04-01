@@ -1245,8 +1245,6 @@ public:
     RefPtr<Document> protectedMainFrameDocument() const { return mainFrameDocument(); }
     bool isTopDocument() const { return mainFrameDocument() == this; }
 
-    WEBCORE_EXPORT RefPtr<Document> localTopDocument() const;
-
     ScriptRunner* scriptRunnerIfExists() { return m_scriptRunner.get(); }
     inline ScriptRunner& scriptRunner();
     Ref<ScriptRunner> protectedScriptRunner();
