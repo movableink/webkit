@@ -270,27 +270,27 @@ void DisplayCaptureSourceCocoa::emitFrame()
 
     auto frame = m_capturer->generateFrame();
     auto imageSize = WTF::switchOn(frame,
-        [](RetainPtr<IOSurfaceRef>& surface) -> IntSize {
+        [](RetainPtr<IOSurfaceRef> surface) -> IntSize {
             if (!surface)
                 return { };
 
             return IntSize(IOSurfaceGetWidth(surface.get()), IOSurfaceGetHeight(surface.get()));
         },
-        [](RefPtr<NativeImage>& image) -> IntSize {
+        [](RefPtr<NativeImage> image) -> IntSize {
             if (!image)
                 return { };
 
             return image->size();
         },
-        [](RetainPtr<CMSampleBufferRef>& sample) -> IntSize {
+        [](RetainPtr<CMSampleBufferRef> sample) -> IntSize {
             if (!sample)
                 return { };
 
-            CMFormatDescriptionRef formatDescription = PAL::CMSampleBufferGetFormatDescription(sample.get());
-            if (PAL::CMFormatDescriptionGetMediaType(formatDescription) != kCMMediaType_Video)
+            RetainPtr formatDescription = PAL::CMSampleBufferGetFormatDescription(sample.get());
+            if (PAL::CMFormatDescriptionGetMediaType(formatDescription.get()) != kCMMediaType_Video)
                 return IntSize();
 
-            return IntSize(PAL::CMVideoFormatDescriptionGetPresentationDimensions(formatDescription, true, true));
+            return IntSize(PAL::CMVideoFormatDescriptionGetPresentationDimensions(formatDescription.get(), true, true));
         }
     );
 

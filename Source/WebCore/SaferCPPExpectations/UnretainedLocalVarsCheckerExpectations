@@ -201,13 +201,10 @@ platform/mac/WebCoreView.m
 platform/mac/WebPlaybackControlsManager.mm
 platform/mac/WidgetMac.mm
 platform/mediarecorder/cocoa/MediaRecorderPrivateWriterAVFObjC.mm
-platform/mediastream/cocoa/DisplayCaptureSourceCocoa.cpp
 platform/mediastream/mac/AVCaptureDeviceManager.mm
 platform/mediastream/mac/AVVideoCaptureSource.mm
 platform/mediastream/mac/CoreAudioSharedUnit.mm
 platform/mediastream/mac/RealtimeIncomingVideoSourceCocoa.mm
-platform/mediastream/mac/ScreenCaptureKitCaptureSource.mm
-platform/mediastream/mac/ScreenCaptureKitSharingSessionManager.mm
 platform/network/cf/CertificateInfoCFNet.cpp
 platform/network/mac/CredentialStorageMac.mm
 platform/network/mac/NetworkStateNotifierMac.cpp

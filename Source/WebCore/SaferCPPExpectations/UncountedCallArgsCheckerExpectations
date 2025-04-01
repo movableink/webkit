@@ -1062,16 +1062,12 @@ platform/mediastream/RealtimeOutgoingAudioSource.cpp
 platform/mediastream/RealtimeOutgoingVideoSource.cpp
 platform/mediastream/cocoa/AudioMediaStreamTrackRendererCocoa.cpp
 platform/mediastream/cocoa/AudioMediaStreamTrackRendererUnit.cpp
-platform/mediastream/cocoa/DisplayCaptureSourceCocoa.cpp
-platform/mediastream/cocoa/DisplayCaptureSourceCocoa.h
 platform/mediastream/cocoa/IncomingAudioMediaStreamTrackRendererUnit.cpp
 platform/mediastream/libwebrtc/LibWebRTCAudioModule.cpp
 platform/mediastream/mac/AVCaptureDeviceManager.mm
 platform/mediastream/mac/MediaStreamTrackAudioSourceProviderCocoa.cpp
 platform/mediastream/mac/MockAudioSharedUnit.mm
 platform/mediastream/mac/RealtimeOutgoingAudioSourceCocoa.cpp
-platform/mediastream/mac/ScreenCaptureKitCaptureSource.mm
-platform/mediastream/mac/ScreenCaptureKitSharingSessionManager.mm
 platform/mediastream/mac/WebAudioSourceProviderCocoa.mm
 platform/mock/GeolocationClientMock.cpp
 platform/mock/MockAudioDestinationCocoa.cpp

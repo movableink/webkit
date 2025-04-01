@@ -108,18 +108,18 @@ public:
 
         void isRunningChanged(bool running)
         {
-            if (m_observer)
-                m_observer->capturerIsRunningChanged(running);
+            if (RefPtr observer = m_observer.get())
+                observer->capturerIsRunningChanged(running);
         }
         void captureFailed()
         {
-            if (m_observer)
-                m_observer->capturerFailed();
+            if (RefPtr observer = m_observer.get())
+                observer->capturerFailed();
         }
         void configurationChanged()
         {
-            if (m_observer)
-                m_observer->capturerConfigurationChanged();
+            if (RefPtr observer = m_observer.get())
+                observer->capturerConfigurationChanged();
         }
 
     private:
@@ -165,7 +165,7 @@ private:
     void commitConfiguration() { m_capturer->commitConfiguration(settings()); }
     void emitFrame();
 
-    UniqueRef<Capturer> m_capturer;
+    const UniqueRef<Capturer> m_capturer;
     std::optional<RealtimeMediaSourceCapabilities> m_capabilities;
     std::optional<RealtimeMediaSourceSettings> m_currentSettings;
     RealtimeMediaSourceSupportedConstraints m_supportedConstraints;
