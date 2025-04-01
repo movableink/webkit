@@ -133,6 +133,11 @@
     return _impl->inSecureInputState();
 }
 
+- (NSRect)_windowRelativeBoundsForCustomSwipeViewsForTesting
+{
+    return _impl->windowRelativeBoundsForCustomSwipeViews();
+}
+
 - (void)_setSelectedColorForColorPicker:(NSColor *)color
 {
     _page->colorPickerClient().didChooseColor(WebCore::colorFromCocoaColor(color));

@@ -311,7 +311,11 @@ FloatRect ViewGestureController::windowRelativeBoundsForCustomSwipeViews() const
     FloatRect swipeArea;
     for (const auto& view : m_customSwipeViews)
         swipeArea.unite([view convertRect:[view bounds] toView:nil]);
-    swipeArea.setHeight(swipeArea.height() - m_customSwipeViewsTopContentInset);
+    swipeArea.move(m_customSwipeViewsObscuredContentInsets.left(), m_customSwipeViewsObscuredContentInsets.bottom());
+    swipeArea.contract({
+        m_customSwipeViewsObscuredContentInsets.left() + m_customSwipeViewsObscuredContentInsets.right(),
+        m_customSwipeViewsObscuredContentInsets.bottom() + m_customSwipeViewsObscuredContentInsets.top(),
+    });
     return swipeArea;
 }
 
@@ -410,9 +414,13 @@ void ViewGestureController::beginSwipeGesture(WebBackForwardListItem* targetItem
     FloatRect swipeArea;
     FloatBoxExtent obscuredContentInsets;
     if (!m_customSwipeViews.isEmpty()) {
-        obscuredContentInsets.setTop(m_customSwipeViewsTopContentInset);
+        obscuredContentInsets = m_customSwipeViewsObscuredContentInsets;
         swipeArea = m_currentSwipeCustomViewBounds;
-        swipeArea.expand(0, m_customSwipeViewsTopContentInset);
+        swipeArea.expand({
+            obscuredContentInsets.left() + obscuredContentInsets.right(),
+            obscuredContentInsets.bottom() + obscuredContentInsets.top(),
+        });
+        swipeArea.move(-obscuredContentInsets.left(), -obscuredContentInsets.bottom());
 
         for (const auto& view : m_customSwipeViews) {
             CALayer *layer = [view layer];

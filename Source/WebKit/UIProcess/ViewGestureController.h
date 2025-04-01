@@ -28,6 +28,7 @@
 #include "MessageReceiver.h"
 #include "SameDocumentNavigationType.h"
 #include "WebPageProxyIdentifier.h"
+#include <WebCore/BoxExtents.h>
 #include <WebCore/Color.h>
 #include <WebCore/FloatRect.h>
 #include <WebCore/FloatSize.h>
@@ -157,7 +158,8 @@ public:
     void gestureEventWasNotHandledByWebCore(PlatformScrollEvent, WebCore::FloatPoint origin);
 
     void setCustomSwipeViews(Vector<RetainPtr<NSView>> views) { m_customSwipeViews = WTFMove(views); }
-    void setCustomSwipeViewsTopContentInset(float topContentInset) { m_customSwipeViewsTopContentInset = topContentInset; }
+    const WebCore::FloatBoxExtent& customSwipeViewsObscuredContentInsets() const { return m_customSwipeViewsObscuredContentInsets; }
+    void setCustomSwipeViewsObscuredContentInsets(WebCore::FloatBoxExtent&& insets) { m_customSwipeViewsObscuredContentInsets = WTFMove(insets); }
     WebCore::FloatRect windowRelativeBoundsForCustomSwipeViews() const;
     void setDidMoveSwipeSnapshotCallback(BlockPtr<void (CGRect)>&& callback) { m_didMoveSwipeSnapshotCallback = WTFMove(callback); }
 #elif PLATFORM(IOS_FAMILY)
@@ -413,7 +415,7 @@ private:
     Vector<RetainPtr<CALayer>> m_currentSwipeLiveLayers;
 
     Vector<RetainPtr<NSView>> m_customSwipeViews;
-    float m_customSwipeViewsTopContentInset { 0 };
+    WebCore::FloatBoxExtent m_customSwipeViewsObscuredContentInsets;
     WebCore::FloatRect m_currentSwipeCustomViewBounds;
 
     BlockPtr<void (CGRect)> m_didMoveSwipeSnapshotCallback;

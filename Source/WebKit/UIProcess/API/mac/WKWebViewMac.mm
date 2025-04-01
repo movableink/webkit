@@ -81,6 +81,16 @@ std::optional<WebCore::ScrollbarOverlayStyle> toCoreScrollbarStyle(_WKOverlayScr
     return std::nullopt;
 }
 
+static WebCore::FloatBoxExtent coreBoxExtentsFromEdgeInsets(NSEdgeInsets insets)
+{
+    return {
+        static_cast<float>(insets.top),
+        static_cast<float>(insets.right),
+        static_cast<float>(insets.bottom),
+        static_cast<float>(insets.left)
+    };
+}
+
 @interface WKWebView (WKImplementationMac) <NSTextInputClient
     , NSTextInputClient_Async
 #if HAVE(TOUCH_BAR)
@@ -1533,12 +1543,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return;
     }
 
-    _impl->setObscuredContentInsets({
-        static_cast<float>(insets.top),
-        static_cast<float>(insets.right),
-        static_cast<float>(insets.bottom),
-        static_cast<float>(insets.left)
-    });
+    _impl->setObscuredContentInsets(coreBoxExtentsFromEdgeInsets(insets));
 
     if (immediate)
         _impl->flushPendingObscuredContentInsetChanges();
@@ -1801,7 +1806,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (void)_setCustomSwipeViewsTopContentInset:(float)topContentInset
 {
-    _impl->setCustomSwipeViewsTopContentInset(topContentInset);
+    auto insets = _impl->customSwipeViewsObscuredContentInsets();
+    insets.setTop(topContentInset);
+    _impl->setCustomSwipeViewsObscuredContentInsets(WTFMove(insets));
+}
+
+- (void)_setCustomSwipeViewsObscuredContentInsets:(NSEdgeInsets)insets
+{
+    _impl->setCustomSwipeViewsObscuredContentInsets(coreBoxExtentsFromEdgeInsets(insets));
 }
 
 - (void)_setDidMoveSwipeSnapshotCallback:(void(^)(CGRect))callback

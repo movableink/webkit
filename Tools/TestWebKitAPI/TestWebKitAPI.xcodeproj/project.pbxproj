@@ -3973,6 +3973,7 @@
 		F4D5E4E71F0C5D27008C1A49 /* dragstart-clear-selection.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "dragstart-clear-selection.html"; sourceTree = "<group>"; };
 		F4D65DA71F5E46C0009D8C27 /* selected-text-image-link-and-editable.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = "selected-text-image-link-and-editable.html"; sourceTree = "<group>"; };
 		F4D9818E2196B911008230FC /* editable-nested-lists.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "editable-nested-lists.html"; sourceTree = "<group>"; };
+		F4DA1FF02D9A165D0069AF6D /* CustomSwipeViewTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CustomSwipeViewTests.mm; sourceTree = "<group>"; };
 		F4DADCF62BABA65B008B398F /* ElementTargetingTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ElementTargetingTests.mm; sourceTree = "<group>"; };
 		F4DADCFF2BABA80C008B398F /* element-targeting-1.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "element-targeting-1.html"; sourceTree = "<group>"; };
 		F4DD79E12AD4BDCB000C6821 /* InitializeWebViewWhenChangingUserDefaults.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = InitializeWebViewWhenChangingUserDefaults.mm; sourceTree = "<group>"; };
@@ -6132,6 +6133,7 @@
 				37FB72951DB2E82F00E41BE4 /* ContextMenuDefaultItemsHaveTags.mm */,
 				F4613F1C27DC2EDD007CCDE6 /* ContextMenuTests.mm */,
 				7AEAD47C1E20113800416EFE /* CrossPartitionFileSchemeAccess.mm */,
+				F4DA1FF02D9A165D0069AF6D /* CustomSwipeViewTests.mm */,
 				E5AA8D1C25151CC60051CC45 /* DateInputTests.mm */,
 				939BA91614103412001A01BD /* DeviceScaleFactorOnBack.mm */,
 				F4D5D69425AF8BE400205280 /* DisableAutomaticSpellingCorrection.mm */,

@@ -853,6 +853,7 @@ typedef NS_OPTIONS(NSUInteger, _WKWebViewDataType) {
 - (void)_setCustomSwipeViews:(NSArray *)customSwipeViews WK_API_AVAILABLE(macos(10.13.4));
 - (void)_setDidMoveSwipeSnapshotCallback:(void(^)(CGRect))callback WK_API_AVAILABLE(macos(10.13.4));
 - (void)_setCustomSwipeViewsTopContentInset:(float)topContentInset WK_API_AVAILABLE(macos(10.13.4));
+- (void)_setCustomSwipeViewsObscuredContentInsets:(NSEdgeInsets)contentInsets WK_API_AVAILABLE(macos(WK_MAC_TBA));
 
 - (NSView *)_fullScreenPlaceholderView WK_API_AVAILABLE(macos(10.13.4));
 - (NSWindow *)_fullScreenWindow WK_API_AVAILABLE(macos(10.13.4));

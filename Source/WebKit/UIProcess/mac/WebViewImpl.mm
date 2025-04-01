@@ -4879,9 +4879,30 @@ void WebViewImpl::setCustomSwipeViews(NSArray *customSwipeViews)
     ensureProtectedGestureController()->setCustomSwipeViews(views);
 }
 
-void WebViewImpl::setCustomSwipeViewsTopContentInset(float topContentInset)
+FloatRect WebViewImpl::windowRelativeBoundsForCustomSwipeViews() const
 {
-    ensureProtectedGestureController()->setCustomSwipeViewsTopContentInset(topContentInset);
+    if (!m_gestureController)
+        return { };
+
+    return protectedGestureController()->windowRelativeBoundsForCustomSwipeViews();
+}
+
+FloatBoxExtent WebViewImpl::customSwipeViewsObscuredContentInsets() const
+{
+    if (!m_gestureController)
+        return { };
+
+    return m_gestureController->customSwipeViewsObscuredContentInsets();
+}
+
+RefPtr<ViewGestureController> WebViewImpl::protectedGestureController() const
+{
+    return m_gestureController;
+}
+
+void WebViewImpl::setCustomSwipeViewsObscuredContentInsets(FloatBoxExtent&& insets)
+{
+    ensureProtectedGestureController()->setCustomSwipeViewsObscuredContentInsets(WTFMove(insets));
 }
 
 bool WebViewImpl::tryToSwipeWithEvent(NSEvent *event, bool ignoringPinnedState)

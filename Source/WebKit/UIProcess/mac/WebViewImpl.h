@@ -588,6 +588,7 @@ public:
     _WKWarningView *warningView() { return m_warningView.get(); }
 
     ViewGestureController* gestureController() { return m_gestureController.get(); }
+    RefPtr<ViewGestureController> protectedGestureController() const;
     ViewGestureController& ensureGestureController();
     Ref<ViewGestureController> ensureProtectedGestureController();
     void setAllowsBackForwardNavigationGestures(bool);
@@ -599,7 +600,9 @@ public:
     void setMagnification(double);
     double magnification() const;
     void setCustomSwipeViews(NSArray *);
-    void setCustomSwipeViewsTopContentInset(float);
+    WebCore::FloatRect windowRelativeBoundsForCustomSwipeViews() const;
+    WebCore::FloatBoxExtent customSwipeViewsObscuredContentInsets() const;
+    void setCustomSwipeViewsObscuredContentInsets(WebCore::FloatBoxExtent&&);
     bool tryToSwipeWithEvent(NSEvent *, bool ignoringPinnedState);
     void setDidMoveSwipeSnapshotCallback(BlockPtr<void (CGRect)>&&);
 
