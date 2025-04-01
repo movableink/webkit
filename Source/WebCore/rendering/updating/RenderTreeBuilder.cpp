@@ -1063,16 +1063,14 @@ RenderPtr<RenderObject> RenderTreeBuilder::detachFromRenderElement(RenderElement
 void RenderTreeBuilder::attachToRenderGrid(RenderGrid& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
 {
     auto& newChild = *child;
-    blockBuilder().attach(parent, WTFMove(child), beforeChild);
-
-    // Positioned grid items do not take up space or otherwise participate in the layout of the grid,
-    // for that reason we don't need to mark the grid as dirty when they are added.
-    if (newChild.isOutOfFlowPositioned())
-        return;
-
     // The grid needs to be recomputed as it might contain auto-placed items that
-    // will change their position.
-    parent.setNeedsItemPlacement();
+    // will change their position. Positioned grid items do not take up space or
+    // otherwise participate in the layout of the grid, for that reason we don't
+    // need to mark the grid as dirty when they are added.
+    if (!newChild.isOutOfFlowPositioned())
+        parent.setNeedsItemPlacement();
+
+    blockBuilder().attach(parent, WTFMove(child), beforeChild);
 }
 
 void RenderTreeBuilder::reportVisuallyNonEmptyContent(const RenderElement& parent, const RenderObject& child)

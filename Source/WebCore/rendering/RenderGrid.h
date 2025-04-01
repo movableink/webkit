@@ -145,6 +145,11 @@ public:
 
     bool shouldCheckExplicitIntrinsicInnerLogicalSize(GridTrackSizingDirection) const;
 
+    // Checks both the grid container and the grid since the grid container is sized
+    // according to the rules of the formatting context it lives in while the size of the
+    // grid is determined by the lines/grid areas which come from track sizing.
+    bool isExtrinsicallySized() const;
+
 private:
     friend class GridTrackSizingAlgorithm;
     friend class GridTrackSizingAlgorithmStrategy;
@@ -182,6 +187,7 @@ private:
     void placeItemsOnGrid(std::optional<LayoutUnit> availableLogicalWidth);
     void populateExplicitGridAndOrderIterator();
     GridArea createEmptyGridAreaAtSpecifiedPositionsOutsideGrid(const RenderBox&, GridTrackSizingDirection, const GridSpan&) const;
+    bool isPlacedWithinExtrinsicallySizedExplicitTracks(const RenderBox&) const;
     void placeSpecifiedMajorAxisItemsOnGrid(const Vector<RenderBox*>&);
     void placeAutoMajorAxisItemsOnGrid(const Vector<RenderBox*>&);
     void placeItemUsingMasonryPositioning(Grid&, RenderBox*) const;

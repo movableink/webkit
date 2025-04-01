@@ -65,6 +65,50 @@ RenderGrid::RenderGrid(Element& element, RenderStyle&& style)
 
 RenderGrid::~RenderGrid() = default;
 
+bool RenderGrid::isExtrinsicallySized() const
+{
+    auto& gridStyle = style();
+    auto allTracksAreExtrinsicallySized = [&] {
+        for (auto& column : gridStyle.gridTrackSizes(GridTrackSizingDirection::ForColumns)) {
+            if (column.isContentSized())
+                return false;
+        }
+
+        for (auto& row : gridStyle.gridTrackSizes(GridTrackSizingDirection::ForRows)) {
+            if (row.isContentSized())
+                return false;
+        }
+        return true;
+    };
+
+    // Since we currently only check if the grid's logical width is auto, it being
+    // extrinsically sized in this regard depends on the formatting context it
+    // participates in. For now we only check and allow if it participates in block
+    // layout since that is simple.
+    auto participatesInBlockLayout = [&] {
+        auto* containingBlock = this->containingBlock();
+        return containingBlock && containingBlock->isBlockContainer() && !containingBlock->childrenInline();
+    };
+
+    if (!gridStyle.logicalWidth().isAuto()
+        || !participatesInBlockLayout()
+        || !gridStyle.logicalHeight().isFixed()
+        || !allTracksAreExtrinsicallySized()
+        || gridStyle.hasAspectRatio()
+        || isSubgrid()
+        || isMasonry())
+        return false;
+
+    for (auto& gridItem : childrenOfType<RenderBox>(*this)) {
+        // FIXME: If we do not need to perform item placement we should be able
+        // to check any implicitly created tracks as well.
+        if (!isPlacedWithinExtrinsicallySizedExplicitTracks(gridItem))
+            return false;
+    }
+
+    return true;
+}
+
 StyleSelfAlignmentData RenderGrid::selfAlignmentForGridItem(GridTrackSizingDirection alignmentContextType, const RenderBox& gridItem, const RenderStyle* gridStyle) const
 {
     return alignmentContextType == GridTrackSizingDirection::ForColumns ? justifySelfForGridItem(gridItem, StretchingMode::Any, gridStyle) : alignSelfForGridItem(gridItem, StretchingMode::Any, gridStyle);
@@ -1195,6 +1239,34 @@ GridArea RenderGrid::createEmptyGridAreaAtSpecifiedPositionsOutsideGrid(const Re
     unsigned crossDirectionSpanSize = GridPositionsResolver::spanSizeForAutoPlacedItem(gridItem, crossDirection);
     GridSpan crossDirectionPositions = GridSpan::translatedDefiniteGridSpan(endOfCrossDirection, endOfCrossDirection + crossDirectionSpanSize);
     return { specifiedDirection == GridTrackSizingDirection::ForColumns ? crossDirectionPositions : specifiedPositions, specifiedDirection == GridTrackSizingDirection::ForColumns ? specifiedPositions : crossDirectionPositions };
+}
+
+bool RenderGrid::isPlacedWithinExtrinsicallySizedExplicitTracks(const RenderBox& gridItem) const
+{
+    auto& currentGrid = this->currentGrid();
+    if (currentGrid.needsItemsPlacement())
+        return false;
+
+    auto& gridStyle = style();
+    auto gridItemArea = currentGrid.gridItemArea(gridItem);
+    auto& gridColumnSizes = gridStyle.gridColumnTrackSizes();
+    if (gridItemArea.columns.endLine() > gridColumnSizes.size())
+        return false;
+
+    for (auto columnIndex : gridItemArea.columns) {
+        if (gridColumnSizes[columnIndex].isContentSized())
+            return false;
+    }
+
+    auto& gridRowSizes = gridStyle.gridRowTrackSizes();
+    if (gridItemArea.rows.endLine() > gridRowSizes.size())
+        return false;
+
+    for (auto rowIndex : gridItemArea.rows) {
+        if (gridRowSizes[rowIndex].isContentSized())
+            return false;
+    }
+    return true;
 }
 
 void RenderGrid::placeSpecifiedMajorAxisItemsOnGrid(const Vector<RenderBox*>& autoGridItems)

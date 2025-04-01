@@ -53,6 +53,7 @@
 #include "RenderCounter.h"
 #include "RenderElementInlines.h"
 #include "RenderFragmentedFlow.h"
+#include "RenderGrid.h"
 #include "RenderInline.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
@@ -676,6 +677,9 @@ RenderElement* RenderObject::markContainingBlocksForLayout(RenderElement* layout
             if (boundary == RelayoutBoundary::OverflowOnly)
                 simplifiedNormalFlowLayout = true;
         }
+
+        if (auto* renderGrid = dynamicDowncast<RenderGrid>(container.get()); renderGrid && renderGrid->isExtrinsicallySized())
+            simplifiedNormalFlowLayout = true;
 
         hasOutOfFlowPosition = ancestor->isOutOfFlowPositioned();
         ancestor = WTFMove(container);
