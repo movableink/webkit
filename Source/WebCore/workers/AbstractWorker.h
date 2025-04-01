@@ -53,6 +53,8 @@ protected:
     // Helper function that converts a URL to an absolute URL and checks the result for validity.
     ExceptionOr<URL> resolveURL(const String& url);
 
+    static std::optional<Exception> validateURL(ScriptExecutionContext&, const URL&);
+
     intptr_t asID() const { return reinterpret_cast<intptr_t>(this); }
 
 private:

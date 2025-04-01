@@ -9401,6 +9401,20 @@ WirelessPlaybackTargetAPIEnabled:
       "PLATFORM(VISION)" : false
       default: true
 
+WorkerAsynchronousURLErrorHandlingEnabled:
+  type: bool
+  status: preview
+  category: dom
+  humanReadableName: "Worker asynchronous URL error handling"
+  humanReadableDescription: "Worker asynchronous URL error handling"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 WriteRichTextDataWhenCopyingOrDragging:
   type: bool
   status: internal
