@@ -97,7 +97,7 @@ private:
 
     bool isCanvas() const final { return true; }
 
-    Ref<HTMLCanvasElement> m_canvas;
+    const Ref<HTMLCanvasElement> m_canvas;
 };
 
 }

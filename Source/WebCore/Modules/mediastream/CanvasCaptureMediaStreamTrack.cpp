@@ -86,10 +86,12 @@ CanvasCaptureMediaStreamTrack::Source::Source(HTMLCanvasElement& canvas, std::op
 
 void CanvasCaptureMediaStreamTrack::Source::startProducingData()
 {
-    if (!m_canvas)
+    RefPtr canvas = m_canvas.get();
+    if (!canvas)
         return;
-    m_canvas->addObserver(*this);
-    m_canvas->addDisplayBufferObserver(*this);
+
+    canvas->addObserver(*this);
+    canvas->addDisplayBufferObserver(*this);
 
     if (!m_frameRequestRate)
         return;
@@ -102,10 +104,12 @@ void CanvasCaptureMediaStreamTrack::Source::stopProducingData()
 {
     m_requestFrameTimer.stop();
 
-    if (!m_canvas)
+    RefPtr canvas = m_canvas.get();
+    if (!canvas)
         return;
-    m_canvas->removeObserver(*this);
-    m_canvas->removeDisplayBufferObserver(*this);
+
+    canvas->removeObserver(*this);
+    canvas->removeDisplayBufferObserver(*this);
 }
 
 void CanvasCaptureMediaStreamTrack::Source::requestFrameTimerFired()
@@ -118,7 +122,7 @@ void CanvasCaptureMediaStreamTrack::Source::canvasDestroyed(CanvasBase& canvas)
     ASSERT_UNUSED(canvas, m_canvas == &canvas);
 
     stop();
-    m_canvas = nullptr;
+    m_canvas = { };
 }
 
 const RealtimeMediaSourceSettings& CanvasCaptureMediaStreamTrack::Source::settings()
@@ -127,12 +131,17 @@ const RealtimeMediaSourceSettings& CanvasCaptureMediaStreamTrack::Source::settin
         return m_currentSettings.value();
 
     RealtimeMediaSourceSupportedConstraints constraints;
-    constraints.setSupportsWidth(true);
-    constraints.setSupportsHeight(true);
+    RefPtr canvas = m_canvas.get();
+    if (canvas) {
+        constraints.setSupportsWidth(true);
+        constraints.setSupportsHeight(true);
+    }
 
     RealtimeMediaSourceSettings settings;
-    settings.setWidth(m_canvas->width());
-    settings.setHeight(m_canvas->height());
+    if (canvas) {
+        settings.setWidth(canvas->width());
+        settings.setHeight(canvas->height());
+    }
     settings.setSupportedConstraints(constraints);
 
     m_currentSettings = WTFMove(settings);
@@ -147,15 +156,17 @@ void CanvasCaptureMediaStreamTrack::Source::settingsDidChange(OptionSet<Realtime
 
 void CanvasCaptureMediaStreamTrack::Source::canvasResized(CanvasBase& canvas)
 {
-    ASSERT_UNUSED(canvas, m_canvas == &canvas);
-    setSize(IntSize(m_canvas->width(), m_canvas->height()));
+    ASSERT(m_canvas == &canvas);
+    setSize(IntSize(canvas.width(), canvas.height()));
 }
 
 void CanvasCaptureMediaStreamTrack::Source::canvasChanged(CanvasBase&, const FloatRect&)
 {
     // If canvas needs preparation, the capture will be scheduled once document prepares the canvas.
-    if (m_canvas->needsPreparationForDisplay())
+    RefPtr canvas = m_canvas.get();
+    if (!canvas || canvas->needsPreparationForDisplay())
         return;
+
     scheduleCaptureCanvas();
 }
 
@@ -180,7 +191,8 @@ void CanvasCaptureMediaStreamTrack::Source::captureCanvas()
 {
     ASSERT(m_canvas);
 
-    if (!isProducingData())
+    RefPtr canvas = m_canvas.get();
+    if (!canvas || !isProducingData())
         return;
 
     if (m_frameRequestRate) {
@@ -189,14 +201,14 @@ void CanvasCaptureMediaStreamTrack::Source::captureCanvas()
         m_shouldEmitFrame = false;
     }
 
-    if (!m_canvas->originClean())
+    if (!canvas->originClean())
         return;
     RefPtr<VideoFrame> videoFrame = [&]() -> RefPtr<VideoFrame> {
 #if ENABLE(WEBGL)
-        if (auto* gl = dynamicDowncast<WebGLRenderingContextBase>(m_canvas->renderingContext()))
+        if (RefPtr gl = dynamicDowncast<WebGLRenderingContextBase>(canvas->renderingContext()))
             return gl->surfaceBufferToVideoFrame(CanvasRenderingContext::SurfaceBuffer::DisplayBuffer);
 #endif
-        return m_canvas->toVideoFrame();
+        return canvas->toVideoFrame();
     }();
     if (!videoFrame)
         return;
