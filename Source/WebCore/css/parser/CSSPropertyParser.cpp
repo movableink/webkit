@@ -2015,16 +2015,6 @@ static inline CSSValueID mapFromColumnRegionOrPageBreakInside(CSSValueID value)
     return CSSValueInvalid;
 }
 
-static inline CSSPropertyID mapFromLegacyBreakProperty(CSSPropertyID property)
-{
-    if (property == CSSPropertyPageBreakAfter || property == CSSPropertyWebkitColumnBreakAfter)
-        return CSSPropertyBreakAfter;
-    if (property == CSSPropertyPageBreakBefore || property == CSSPropertyWebkitColumnBreakBefore)
-        return CSSPropertyBreakBefore;
-    ASSERT(property == CSSPropertyPageBreakInside || property == CSSPropertyWebkitColumnBreakInside);
-    return CSSPropertyBreakInside;
-}
-
 bool CSSPropertyParser::consumePageBreakAfterShorthand(CSS::PropertyParserState& state)
 {
     auto keyword = consumeIdentRaw(m_range);

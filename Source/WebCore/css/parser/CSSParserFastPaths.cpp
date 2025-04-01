@@ -40,6 +40,7 @@
 #include "CSSProperty.h"
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParser.h"
+#include "CSSPropertyParserConsumer+Color.h"
 #include "CSSPropertyParserState.h"
 #include "CSSPropertyParsing.h"
 #include "CSSTransformListValue.h"

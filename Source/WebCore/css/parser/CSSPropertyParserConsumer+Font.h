@@ -48,6 +48,8 @@ enum CSSValueID : uint16_t;
 
 enum class FontTechnology : uint8_t;
 
+struct CSSParserContext;
+
 namespace CSS {
 struct PropertyParserState;
 }

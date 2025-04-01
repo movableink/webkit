@@ -29,6 +29,7 @@
 #include "JSCConfig.h"
 #include "MarkedBlock.h"
 #include "StructureID.h"
+#include <wtf/BitVector.h>
 
 #if CPU(ADDRESS64) && !ENABLE(STRUCTURE_ID_WITH_SHIFT)
 #include <wtf/NeverDestroyed.h>

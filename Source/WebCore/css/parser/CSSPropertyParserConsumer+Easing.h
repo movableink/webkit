@@ -33,6 +33,7 @@ class CSSParserTokenRange;
 class CSSToLengthConversionData;
 class CSSValue;
 class TimingFunction;
+struct CSSParserContext;
 
 namespace CSS {
 struct PropertyParserState;

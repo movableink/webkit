@@ -25,6 +25,7 @@
 namespace WebCore {
 
 class CSSValue;
+class CSSValueList;
 
 namespace CSS {
 

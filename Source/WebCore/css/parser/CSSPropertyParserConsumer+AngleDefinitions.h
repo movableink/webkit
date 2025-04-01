@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include "CSSParserContext.h"
 #include "CSSPrimitiveNumericTypes+Canonicalization.h"
 #include "CSSPropertyParserConsumer+MetaConsumerDefinitions.h"
 

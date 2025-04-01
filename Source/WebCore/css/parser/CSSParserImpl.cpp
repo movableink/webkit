@@ -38,6 +38,7 @@
 #include "CSSKeyframesRule.h"
 #include "CSSParser.h"
 #include "CSSParserEnum.h"
+#include "CSSParserFastPaths.h"
 #include "CSSParserIdioms.h"
 #include "CSSParserObserver.h"
 #include "CSSParserObserverWrapper.h"

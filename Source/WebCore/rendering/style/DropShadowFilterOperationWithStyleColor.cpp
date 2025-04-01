@@ -27,6 +27,7 @@
 #include "DropShadowFilterOperationWithStyleColor.h"
 
 #include "ColorBlending.h"
+#include "RenderStyle.h"
 
 namespace WebCore {
 namespace Style {

@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include "CSSParserContext.h"
 #include "CSSProperty.h"
 #include "CSSPropertyParserConsumer+MetaConsumerDefinitions.h"
 #include "CSSPropertyParserState.h"
