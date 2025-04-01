@@ -188,9 +188,9 @@ static RetainPtr<PKDateComponentsRange> toPKDateComponentsRange(const WebCore::A
 
 #endif // HAVE(PASSKIT_SHIPPING_METHOD_DATE_COMPONENTS_RANGE)
 
-RetainPtr<PKShippingMethod> toPKShippingMethod(const WebCore::ApplePayShippingMethod& shippingMethod)
+PKShippingMethod *toPKShippingMethod(const WebCore::ApplePayShippingMethod& shippingMethod)
 {
-    RetainPtr<PKShippingMethod> result = [PAL::getPKShippingMethodClass() summaryItemWithLabel:shippingMethod.label amount:WebCore::toDecimalNumber(shippingMethod.amount)];
+    PKShippingMethod *result = [PAL::getPKShippingMethodClass() summaryItemWithLabel:shippingMethod.label amount:WebCore::toDecimalNumber(shippingMethod.amount)];
     [result setIdentifier:shippingMethod.identifier];
     [result setDetail:shippingMethod.detail];
 #if HAVE(PASSKIT_SHIPPING_METHOD_DATE_COMPONENTS_RANGE)
@@ -202,16 +202,16 @@ RetainPtr<PKShippingMethod> toPKShippingMethod(const WebCore::ApplePayShippingMe
 
 #if HAVE(PASSKIT_DEFAULT_SHIPPING_METHOD)
 
-RetainPtr<PKShippingMethods> toPKShippingMethods(const Vector<WebCore::ApplePayShippingMethod>& webShippingMethods)
+PKShippingMethods *toPKShippingMethods(const Vector<WebCore::ApplePayShippingMethod>& webShippingMethods)
 {
     RetainPtr<PKShippingMethod> defaultMethod;
     auto methods = createNSArray(webShippingMethods, [&defaultMethod] (const auto& webShippingMethod) {
-        RetainPtr pkShippingMethod = toPKShippingMethod(webShippingMethod);
+        auto pkShippingMethod = toPKShippingMethod(webShippingMethod);
         if (webShippingMethod.selected)
             defaultMethod = pkShippingMethod;
         return pkShippingMethod;
     });
-    return adoptNS([PAL::allocPKShippingMethodsInstance() initWithMethods:methods.get() defaultMethod:defaultMethod.get()]);
+    return adoptNS([PAL::allocPKShippingMethodsInstance() initWithMethods:methods.get() defaultMethod:defaultMethod.get()]).autorelease();
 }
 
 #endif // HAVE(PASSKIT_DEFAULT_SHIPPING_METHOD)
@@ -319,7 +319,7 @@ RetainPtr<PKPaymentRequest> WebPaymentCoordinatorProxy::platformPaymentRequest(c
     [result setShippingType:toPKShippingType(paymentRequest.shippingType())];
 
 #if HAVE(PASSKIT_DEFAULT_SHIPPING_METHOD)
-    [result setAvailableShippingMethods:toPKShippingMethods(paymentRequest.shippingMethods()).get()];
+    [result setAvailableShippingMethods:toPKShippingMethods(paymentRequest.shippingMethods())];
 #else
     [result setShippingMethods:createNSArray(paymentRequest.shippingMethods(), [] (auto& method) {
         return toPKShippingMethod(method);

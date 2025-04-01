@@ -325,8 +325,8 @@ auto JavaScriptEvaluationResult::toVariant(JSGlobalContextRef context, JSValueRe
     size_t length = JSPropertyNameArrayGetCount(names);
     HashMap<JSObjectID, JSObjectID> map;
     for (size_t i = 0; i < length; i++) {
-        JSRetainPtr<JSStringRef> key = JSPropertyNameArrayGetNameAtIndex(names, i);
-        map.add(addObjectToMap(context, JSValueMakeString(context, key.get())), addObjectToMap(context, JSObjectGetPropertyForKey(context, object, JSValueMakeString(context, key.get()), nullptr)));
+        JSStringRef key = JSPropertyNameArrayGetNameAtIndex(names, i);
+        map.add(addObjectToMap(context, JSValueMakeString(context, key)), addObjectToMap(context, JSObjectGetPropertyForKey(context, object, JSValueMakeString(context, key), nullptr)));
     }
     JSPropertyNameArrayRelease(names);
     return WTFMove(map);
