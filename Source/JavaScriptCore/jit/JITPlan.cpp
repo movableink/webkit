@@ -51,6 +51,7 @@ JITPlan::JITPlan(JITCompilationMode mode, CodeBlock* codeBlock)
     : m_mode(mode)
     , m_vm(&codeBlock->vm())
     , m_codeBlock(codeBlock)
+    , m_signpostMessage(signpostMessage())
 {
     m_vm->changeNumberOfActiveJITPlans(1);
 }
@@ -66,6 +67,8 @@ void JITPlan::cancel()
     RELEASE_ASSERT(m_stage != JITPlanStage::Canceled);
     RELEASE_ASSERT(!safepointKeepsDependenciesLive());
     ASSERT(m_vm);
+
+    endSignpost(JITPlan::SignpostDetail::Canceled);
     m_vm->changeNumberOfActiveJITPlans(-1);
     m_stage = JITPlanStage::Canceled;
     m_vm = nullptr;
@@ -74,12 +77,18 @@ void JITPlan::cancel()
 
 void JITPlan::notifyCompiling()
 {
+    ASSERT(m_stage == JITPlanStage::Preparing);
+    endSignpost();
     m_stage = JITPlanStage::Compiling;
+    beginSignpost();
 }
 
 void JITPlan::notifyReady()
 {
+    ASSERT(m_stage == JITPlanStage::Compiling);
+    endSignpost();
     m_stage = JITPlanStage::Ready;
+    beginSignpost();
 }
 
 auto JITPlan::tier() const -> Tier
@@ -174,6 +183,69 @@ bool JITPlan::reportCompileTimes() const
         || (Options::reportFTLCompileTimes() && isFTL());
 }
 
+static inline void* signpostId(JITPlan& plan)
+{
+    uintptr_t id = std::bit_cast<uintptr_t>(&plan);
+    unsigned stage = static_cast<unsigned>(plan.stage());
+    ASSERT(!(id & 0xf));
+    ASSERT(!(stage & ~0xfu));
+    id |= stage;
+    return std::bit_cast<void*>(id);
+}
+
+CString JITPlan::signpostMessage()
+{
+    if (LIKELY(!Options::useCompilerSignpost()))
+        return CString();
+    StringPrintStream stream;
+    stream.print(m_mode, " ", *m_codeBlock);
+    return stream.toCString();
+}
+
+void JITPlan::beginSignpostImpl()
+{
+    ASSERT(Options::useCompilerSignpost() && !m_signpostMessage.isNull());
+    auto id = signpostId(*this);
+    UNUSED_VARIABLE(id); // WTFBeginSignpost not always defined
+    switch (m_stage) {
+    case JITPlanStage::Preparing:
+        WTFBeginSignpost(id, JSCJITPlanQueued, "%" PUBLIC_LOG_STRING, m_signpostMessage.data());
+        break;
+    case JITPlanStage::Compiling:
+        WTFBeginSignpost(id, JSCJITCompiler, "%" PUBLIC_LOG_STRING, m_signpostMessage.data());
+        break;
+    case JITPlanStage::Ready:
+        WTFBeginSignpost(id, JSCJITPlanReady, "%" PUBLIC_LOG_STRING, m_signpostMessage.data());
+        break;
+    case JITPlanStage::Canceled:
+        RELEASE_ASSERT_NOT_REACHED();
+    };
+}
+
+void JITPlan::endSignpostImpl(JITPlan::SignpostDetail detail)
+{
+    ASSERT(Options::useCompilerSignpost() && !m_signpostMessage.isNull());
+    auto id = signpostId(*this);
+    const char* detailStr = "";
+    if (detail == JITPlan::SignpostDetail::Canceled)
+        detailStr = "Canceled";
+    UNUSED_VARIABLE(id); // WTFEndSignpost not always defined
+    UNUSED_VARIABLE(detailStr);
+    switch (m_stage) {
+    case JITPlanStage::Preparing:
+        WTFEndSignpost(id, JSCJITPlanQueued, "%" PUBLIC_LOG_STRING " %" PUBLIC_LOG_STRING, m_signpostMessage.data(), detailStr);
+        break;
+    case JITPlanStage::Compiling:
+        WTFEndSignpost(id, JSCJITCompiler, "%" PUBLIC_LOG_STRING " %" PUBLIC_LOG_STRING, m_signpostMessage.data(), detailStr);
+        break;
+    case JITPlanStage::Ready:
+        WTFEndSignpost(id, JSCJITPlanReady, "%" PUBLIC_LOG_STRING " %" PUBLIC_LOG_STRING, m_signpostMessage.data(), detailStr);
+        break;
+    case JITPlanStage::Canceled:
+        RELEASE_ASSERT_NOT_REACHED();
+    };
+}
+
 void JITPlan::compileInThread(JITWorklistThread* thread)
 {
     SetForScope threadScope(m_thread, thread);
@@ -195,21 +267,8 @@ void JITPlan::compileInThread(JITWorklistThread* thread)
         dataLog("DFG(Plan) compiling ", *m_codeBlock, " with ", m_mode, ", instructions size = ", m_codeBlock->instructionsSize(), "\n");
 #endif // ENABLE(DFG_JIT)
 
-    CString signpostMessage;
-    UNUSED_VARIABLE(signpostMessage);
-    if (UNLIKELY(Options::useCompilerSignpost())) {
-        StringPrintStream stream;
-        stream.print(m_mode, " ", *m_codeBlock, " instructions size = ", m_codeBlock->instructionsSize());
-        signpostMessage = stream.toCString();
-        WTFBeginSignpost(this, JSCJITCompiler, "%" PUBLIC_LOG_STRING, signpostMessage.data() ? signpostMessage.data() : "(nullptr)");
-    }
-
     CompilationPath path = compileInThreadImpl();
-
     RELEASE_ASSERT((path == CancelPath) == (m_stage == JITPlanStage::Canceled));
-
-    if (UNLIKELY(Options::useCompilerSignpost()))
-        WTFEndSignpost(this, JSCJITCompiler, "%" PUBLIC_LOG_STRING, signpostMessage.data() ? signpostMessage.data() : "(nullptr)");
 
     if (LIKELY(!computeCompileTimes))
         return;

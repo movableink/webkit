@@ -265,6 +265,8 @@ WTF_EXTERN_C_END
     M(RegisterImportMap) \
     M(JSCGarbageCollector) \
     M(JSCJITCompiler) \
+    M(JSCJITPlanQueued) \
+    M(JSCJITPlanReady) \
     M(JSCJSGlobalObject) \
     M(IPCConnection) \
     M(StreamClientConnection) \

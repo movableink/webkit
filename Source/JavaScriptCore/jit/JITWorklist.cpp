@@ -88,9 +88,14 @@ CompilationResult JITWorklist::enqueue(Ref<JITPlan> plan)
         // Must be constructed before we allocate anything using SequesteredArenaMalloc
         ArenaLifetime saLifetime;
 #endif
+        plan->beginSignpost();
         plan->compileInThread(nullptr);
+        if (plan->stage() != JITPlanStage::Canceled)
+            plan->endSignpost();
         return plan->finalize();
     }
+    ASSERT(plan->stage() == JITPlanStage::Preparing);
+    plan->beginSignpost();
 
     Locker locker { *m_lock };
     if (Options::verboseCompilationQueue()) {
@@ -167,6 +172,7 @@ auto JITWorklist::completeAllReadyPlansForVM(VM& vm, JITCompilationKey requested
         dataLogLnIf(Options::verboseCompilationQueue(), *this, ": Completing ", plan->key());
         RELEASE_ASSERT(plan->stage() == JITPlanStage::Ready);
         plan->finalize();
+        plan->endSignpost();
     }
     return resultingState;
 }
@@ -238,6 +244,10 @@ void JITWorklist::cancelAllPlansForVM(VM& vm)
 
     Vector<RefPtr<JITPlan>, 8> myReadyPlans;
     removeAllReadyPlansForVM(vm, myReadyPlans, { });
+    for (auto& plan : myReadyPlans) {
+        ASSERT(plan->stage() == JITPlanStage::Ready);
+        plan->endSignpost(JITPlan::SignpostDetail::Canceled);
+    }
 }
 
 void JITWorklist::removeDeadPlans(VM& vm)
