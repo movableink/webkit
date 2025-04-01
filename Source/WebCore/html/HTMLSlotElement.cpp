@@ -31,6 +31,7 @@
 #include "Event.h"
 #include "EventNames.h"
 #include "HTMLNames.h"
+#include "InspectorInstrumentation.h"
 #include "MutationObserver.h"
 #include "ShadowRoot.h"
 #include "SlotAssignment.h"
@@ -218,10 +219,12 @@ void HTMLSlotElement::removeManuallyAssignedNode(Node& node)
 void HTMLSlotElement::enqueueSlotChangeEvent()
 {
     // https://dom.spec.whatwg.org/#signal-a-slot-change
-    if (m_inSignalSlotList)
-        return;
-    m_inSignalSlotList = true;
-    MutationObserver::enqueueSlotChangeEvent(*this);
+    if (!m_inSignalSlotList) {
+        m_inSignalSlotList = true;
+        MutationObserver::enqueueSlotChangeEvent(*this);
+    }
+
+    InspectorInstrumentation::didChangeAssignedNodes(*this);
 }
 
 void HTMLSlotElement::dispatchSlotChangeEvent()

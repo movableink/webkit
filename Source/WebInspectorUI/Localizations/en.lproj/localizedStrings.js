@@ -218,6 +218,8 @@ localizedStrings["Assertion Failed: %s"] = "Assertion Failed: %s";
 /* Break (pause) when console.assert() fails */
 localizedStrings["Assertion Failures @ JavaScript Breakpoint"] = "Assertion Failures";
 localizedStrings["Assertive"] = "Assertive";
+/* Title for a badge applied to HTMLSlotElement that have assigned nodes. */
+localizedStrings["Assigned"] = "Assigned";
 localizedStrings["Associated Data"] = "Associated Data";
 localizedStrings["Attribute"] = "Attribute";
 /* A submenu item of 'Break On' that breaks (pauses) before DOM attribute is modified */
@@ -1598,6 +1600,8 @@ localizedStrings["Sizes"] = "Sizes";
 localizedStrings["Skip Network @ Local Override Popover Options"] = "Skip Network";
 /* Property value for `font-variant-numeric: slashed-zero`. */
 localizedStrings["Slashed Zeros @ Font Details Sidebar Property Value"] = "Slashed Zeros";
+/* Title for a badge applied to HTMLSlotElement that have assigned nodes or nodes that are assigned to HTMLSlotElement. */
+localizedStrings["Slot"] = "Slot";
 /* Property value for `font-variant-capitals: small-caps`. */
 localizedStrings["Small Capitals @ Font Details Sidebar Property Value"] = "Small Capitals";
 localizedStrings["Snapshot Comparison (%d and %d)"] = "Snapshot Comparison (%d and %d)";

@@ -541,6 +541,14 @@ WI.DOMTreeContentView = class DOMTreeContentView extends WI.ContentView
                 WI.settings.enabledDOMTreeBadgeTypes.save();
             }, WI.settings.enabledDOMTreeBadgeTypes.value.includes(WI.DOMTreeElement.BadgeType.Scrollable));
         }
+
+        // COMPATIBILITY (iOS X.Y, macOS X.Y): `SlotFilled` value for `CSS.LayoutFlag` did not exist yet.
+        if (InspectorBackend.Enum.CSS?.LayoutFlag?.SlotFilled) {
+            contextMenu.appendCheckboxItem(WI.UIString("Slot", "Title for a badge applied to HTMLSlotElement that have assigned nodes or nodes that are assigned to HTMLSlotElement."), () => {
+                WI.settings.enabledDOMTreeBadgeTypes.value.toggleIncludes(WI.DOMTreeElement.BadgeType.SlotFilled);
+                WI.settings.enabledDOMTreeBadgeTypes.save();
+            }, WI.settings.enabledDOMTreeBadgeTypes.value.includes(WI.DOMTreeElement.BadgeType.SlotFilled));
+        }
     }
 
     _domTreeElementAdded(event)

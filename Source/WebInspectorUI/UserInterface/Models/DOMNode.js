@@ -811,6 +811,21 @@ WI.DOMNode = class DOMNode extends WI.Object
         target.DOMAgent.requestChildNodes(this.id, depth, mycallback.bind(this));
     }
 
+    async requestAssignedNodes()
+    {
+        let target = WI.assumingMainTarget();
+        let {assignedNodeIds} = await target.DOMAgent.requestAssignedNodes(this.id);
+
+        let assignedNodes = [];
+        for (let assignedNodeId of assignedNodeIds) {
+            let assignedNode = WI.domManager.nodeForId(assignedNodeId);
+            console.assert(assignedNode, this, assignedNodeId);
+            if (assignedNode)
+                assignedNodes.push(assignedNode);
+        }
+        return assignedNodes;
+    }
+
     getOuterHTML(callback)
     {
         console.assert(!this._destroyed, this);
@@ -1374,6 +1389,7 @@ WI.DOMNode.LayoutFlag = {
     Rendered: "rendered",
     Event: "event",
     Scrollable: "scrollable",
+    SlotFilled: "slot-filled",
 
     // These are mutually exclusive.
     Flex: "flex",

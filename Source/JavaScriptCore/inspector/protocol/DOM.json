@@ -287,6 +287,16 @@
             ]
         },
         {
+            "name": "requestAssignedNodes",
+            "description": "Requests the list of assigned nodes for the <code>HTMLSlotElement</code> with the given id.",
+            "parameters": [
+                { "name": "slotElementId", "$ref": "NodeId" }
+            ],
+            "returns": [
+                { "name": "assignedNodeIds", "type": "array", "items": { "$ref": "NodeId" } }
+            ]
+        },
+        {
             "name": "querySelector",
             "description": "Executes <code>querySelector</code> on a given node.",
             "targetTypes": ["page"],

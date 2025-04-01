@@ -51,6 +51,7 @@
 #include "FontPlatformData.h"
 #include "HTMLHeadElement.h"
 #include "HTMLHtmlElement.h"
+#include "HTMLSlotElement.h"
 #include "HTMLStyleElement.h"
 #include "InspectorDOMAgent.h"
 #include "InspectorHistory.h"
@@ -1044,6 +1045,19 @@ static bool hasJSEventListener(Node& node)
     return false;
 }
 
+static bool isSlotElementWithAssignedNodes(Node& node)
+{
+    if (RefPtr slotElement = dynamicDowncast<HTMLSlotElement>(node)) {
+        if (const auto* assignedNodes = slotElement->assignedNodes()) {
+            for (const auto& assignedNode : *assignedNodes) {
+                if (assignedNode)
+                    return true;
+            }
+        }
+    }
+    return false;
+}
+
 OptionSet<InspectorCSSAgent::LayoutFlag> InspectorCSSAgent::layoutFlagsForNode(Node& node)
 {
     auto* renderer = node.renderer();
@@ -1072,6 +1086,9 @@ OptionSet<InspectorCSSAgent::LayoutFlag> InspectorCSSAgent::layoutFlagsForNode(N
     if (hasJSEventListener(node))
         layoutFlags.add(InspectorCSSAgent::LayoutFlag::Event);
 
+    if (isSlotElementWithAssignedNodes(node))
+        layoutFlags.add(InspectorCSSAgent::LayoutFlag::SlotFilled);
+
     return layoutFlags;
 }
 
@@ -1091,6 +1108,8 @@ static RefPtr<JSON::ArrayOf<String /* Inspector::Protocol::CSS::LayoutFlag */>> 
         protocolLayoutFlags->addItem(Inspector::Protocol::Helpers::getEnumConstantValue(Inspector::Protocol::CSS::LayoutFlag::Grid));
     if (layoutFlags.contains(InspectorCSSAgent::LayoutFlag::Event))
         protocolLayoutFlags->addItem(Inspector::Protocol::Helpers::getEnumConstantValue(Inspector::Protocol::CSS::LayoutFlag::Event));
+    if (layoutFlags.contains(InspectorCSSAgent::LayoutFlag::SlotFilled))
+        protocolLayoutFlags->addItem(Inspector::Protocol::Helpers::getEnumConstantValue(Inspector::Protocol::CSS::LayoutFlag::SlotFilled));
     return protocolLayoutFlags;
 }
 
@@ -1144,6 +1163,12 @@ void InspectorCSSAgent::willRemoveEventListener(EventTarget& target)
 {
     if (auto* node = dynamicDowncast<Node>(target))
         nodeHasLayoutFlagsChange(*node);
+}
+
+void InspectorCSSAgent::didChangeAssignedNodes(Element& slotElement)
+{
+    ASSERT(is<HTMLSlotElement>(slotElement));
+    nodeHasLayoutFlagsChange(slotElement);
 }
 
 void InspectorCSSAgent::nodeHasLayoutFlagsChange(Node& node)

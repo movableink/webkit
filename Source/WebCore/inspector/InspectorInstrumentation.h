@@ -139,6 +139,7 @@ public:
     static void activeStyleSheetsUpdated(Document&);
     static void didPushShadowRoot(Element& host, ShadowRoot&);
     static void willPopShadowRoot(Element& host, ShadowRoot&);
+    static void didChangeAssignedNodes(Element& slotElement);
     static void didChangeCustomElementState(Element&);
     static void pseudoElementCreated(Page*, PseudoElement&);
     static void pseudoElementDestroyed(Page*, PseudoElement&);
@@ -365,6 +366,7 @@ private:
     static void activeStyleSheetsUpdatedImpl(InstrumentingAgents&, Document&);
     static void didPushShadowRootImpl(InstrumentingAgents&, Element& host, ShadowRoot&);
     static void willPopShadowRootImpl(InstrumentingAgents&, Element& host, ShadowRoot&);
+    static void didChangeAssignedNodesImpl(InstrumentingAgents&, Element& slotElement);
     static void didChangeCustomElementStateImpl(InstrumentingAgents&, Element&);
     static void pseudoElementCreatedImpl(InstrumentingAgents&, PseudoElement&);
     static void pseudoElementDestroyedImpl(InstrumentingAgents&, PseudoElement&);
@@ -699,6 +701,13 @@ inline void InspectorInstrumentation::willPopShadowRoot(Element& host, ShadowRoo
     FAST_RETURN_IF_NO_FRONTENDS(void());
     if (auto* agents = instrumentingAgents(host.document()))
         willPopShadowRootImpl(*agents, host, root);
+}
+
+inline void InspectorInstrumentation::didChangeAssignedNodes(Element& slotElement)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    if (auto* agents = instrumentingAgents(slotElement.document()))
+        didChangeAssignedNodesImpl(*agents, slotElement);
 }
 
 inline void InspectorInstrumentation::didChangeCustomElementState(Element& element)
