@@ -56,8 +56,25 @@ void WebExtensionContext::permissionsGetAll(CompletionHandler<void(Vector<String
     for (auto& permission : currentPermissions())
         permissions.append(permission);
 
-    for (auto& matchPattern : currentPermissionMatchPatterns())
+    bool hasGrantedAccessToAllURLsOrHosts = false;
+
+    for (auto& matchPattern : currentPermissionMatchPatterns()) {
+        if (matchPattern->matchesAllHosts()) {
+            hasGrantedAccessToAllURLsOrHosts = true;
+            continue;
+        }
+
         origins.append(matchPattern->string());
+    }
+
+    if (hasGrantedAccessToAllURLsOrHosts) {
+        auto combinedPermissionMatchPatterns = protectedExtension()->combinedPermissionMatchPatterns();
+
+        for (auto& matchPattern : combinedPermissionMatchPatterns) {
+            if (matchPattern->matchesAllHosts())
+                origins.append(matchPattern->string());
+        }
+    }
 
     completionHandler(WTFMove(permissions), WTFMove(origins));
 }
