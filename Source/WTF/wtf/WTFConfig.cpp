@@ -73,13 +73,19 @@ void setPermissionsOfConfigPage()
     std::call_once(onceFlag, [] {
         mach_vm_address_t addr = std::bit_cast<uintptr_t>(static_cast<void*>(WebConfig::g_config));
         auto flags = VM_FLAGS_FIXED | VM_FLAGS_OVERWRITE | VM_FLAGS_PERMANENT;
-        auto prot = VM_PROT_READ | VM_PROT_WRITE;
 
         auto attemptVMMapping = [&] {
-            // We use remap instead of map here to avoid zeroing the config,
-            // since WebKit components like bmalloc can potentially use the
-            // config prior to WTF initialization.
-            return mach_vm_remap(mach_task_self(), &addr, ConfigSizeToProtect, pageSize() - 1, flags, mach_task_self(), addr, false, &prot, &prot, VM_INHERIT_DEFAULT);
+            constexpr size_t preWTFConfigSize = Gigacage::startOffsetOfGigacageConfig + Gigacage::reservedBytesForGigacageConfig;
+
+            // We may have potentially initialized some of g_config, namely the
+            // gigacage config, prior to reaching this function. We need to
+            // preserve these config contents across the mach_vm_map.
+            uint8_t preWTFConfigContents[preWTFConfigSize];
+            memcpySpan(std::span<uint8_t> { preWTFConfigContents, preWTFConfigSize }, std::span<uint8_t> { std::bit_cast<uint8_t*>(&WebConfig::g_config), preWTFConfigSize });
+            auto result = mach_vm_map(mach_task_self(), &addr, ConfigSizeToProtect, pageSize() - 1, flags, MEMORY_OBJECT_NULL, 0, false, VM_PROT_READ | VM_PROT_WRITE, VM_PROT_READ | VM_PROT_WRITE, VM_INHERIT_DEFAULT);
+            if (result == KERN_SUCCESS)
+                memcpySpan(std::span<uint8_t> { std::bit_cast<uint8_t*>(&WebConfig::g_config), preWTFConfigSize }, std::span<uint8_t> { preWTFConfigContents, preWTFConfigSize });
+            return result;
         };
 
         auto result = attemptVMMapping();
