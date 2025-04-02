@@ -10,7 +10,7 @@ PASS: pdfAxObject.parentElement().domIdentifier === 'pdfEmbed'
 PASS: pdfPageObject.role === 'AXRole: AXPage'
 PASS: pdfTextNode.stringAttributeValue('AXRole') === 'AXStaticText'
 PASS: pdfTextNode.stringValue.split(' ')[1] === 'Welcome'
-PASS: hitTestResult.stringAttributeValue('AXRole') === 'AXGroup'
+PASS: Hit test role was an expected value
 PASS: pdfTextNode.stringAttributeValue('AXRole') === 'AXStaticText'
 PASS: pdfTextNode.stringValue.split(' ')[1] === 'Welcome'
 PASS: searchResultElement.stringAttributeValue('AXSubrole') === 'AXPDFPluginSubrole'
