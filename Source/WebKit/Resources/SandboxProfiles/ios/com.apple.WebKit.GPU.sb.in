@@ -284,7 +284,7 @@
     (allow iokit-open-user-client
         (iokit-user-client-class "IOSurfaceAcceleratorClient")
         (apply-message-filter
-            (allow (with telemetry) (with report) (with message "IOSurfaceAcceleratorClient")
+            (GPU_PROCESS_IOKIT_DEFAULT_FILTER_OPERATION (with telemetry) (with message "IOSurfaceAcceleratorClient")
                 iokit-async-external-method
                 iokit-external-trap
                 iokit-external-method)
