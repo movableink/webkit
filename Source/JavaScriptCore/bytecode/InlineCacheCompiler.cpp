@@ -2208,8 +2208,7 @@ void InlineCacheCompiler::generateWithGuard(unsigned index, AccessCase& accessCa
                     RELEASE_ASSERT(m_scratchFPR != InvalidFPRReg);
                     auto canBeInt = jit.branch32(CCallHelpers::GreaterThanOrEqual, valueRegs.payloadGPR(), CCallHelpers::TrustedImm32(0));
 
-                    jit.convertInt32ToDouble(valueRegs.payloadGPR(), m_scratchFPR);
-                    jit.addDouble(CCallHelpers::AbsoluteAddress(&CCallHelpers::twoToThe32), m_scratchFPR);
+                    jit.convertUInt32ToDouble(valueRegs.payloadGPR(), m_scratchFPR);
                     jit.boxDouble(m_scratchFPR, valueRegs);
                     done = jit.jump();
                     canBeInt.link(&jit);

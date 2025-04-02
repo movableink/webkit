@@ -4827,11 +4827,53 @@ private:
         }
 
         case IToD: {
+            auto tryAppendUToD = [&](Value* value) {
+                if (!isValidForm(ConvertUInt32ToDouble, Arg::Tmp, Arg::Tmp))
+                    return false;
+
+                if (value->child(0)->type() != Int64)
+                    return false;
+
+                if (value->child(0)->opcode() != ZExt32)
+                    return false;
+
+                if (!canBeInternal(m_value->child(0)))
+                    return false;
+
+                append(ConvertUInt32ToDouble, tmp(value->child(0)->child(0)), tmp(value));
+                commitInternal(m_value->child(0));
+                return true;
+            };
+
+            if (tryAppendUToD(m_value))
+                return;
+
             appendUnOp<ConvertInt32ToDouble, ConvertInt64ToDouble>(m_value->child(0));
             return;
         }
 
         case IToF: {
+            auto tryAppendUToF = [&](Value* value) {
+                if (!isValidForm(ConvertUInt32ToFloat, Arg::Tmp, Arg::Tmp))
+                    return false;
+
+                if (value->child(0)->type() != Int64)
+                    return false;
+
+                if (value->child(0)->opcode() != ZExt32)
+                    return false;
+
+                if (!canBeInternal(m_value->child(0)))
+                    return false;
+
+                append(ConvertUInt32ToFloat, tmp(value->child(0)->child(0)), tmp(value));
+                commitInternal(m_value->child(0));
+                return true;
+            };
+
+            if (tryAppendUToF(m_value))
+                return;
+
             appendUnOp<ConvertInt32ToFloat, ConvertInt64ToFloat>(m_value->child(0));
             return;
         }

@@ -2334,6 +2334,18 @@ public:
             m_assembler.cvtsi2ss_mr(src.offset, src.base, dest);
     }
 
+    void convertUInt32ToDouble(RegisterID src, FPRegisterID dest)
+    {
+        zeroExtend32ToWord(src, scratchRegister());
+        convertInt64ToDouble(scratchRegister(), dest);
+    }
+
+    void convertUInt32ToFloat(RegisterID src, FPRegisterID dest)
+    {
+        zeroExtend32ToWord(src, scratchRegister());
+        convertInt64ToFloat(scratchRegister(), dest);
+    }
+
     Jump branchDouble(DoubleCondition cond, FPRegisterID left, FPRegisterID right)
     {
         if (cond & DoubleConditionBitInvert) {

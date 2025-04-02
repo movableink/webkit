@@ -2881,7 +2881,17 @@ public:
     {
         m_assembler.scvtf<32, 32>(dest, src);
     }
-    
+
+    void convertUInt32ToDouble(RegisterID src, FPRegisterID dest)
+    {
+        m_assembler.ucvtf<64, 32>(dest, src);
+    }
+
+    void convertUInt32ToFloat(RegisterID src, FPRegisterID dest)
+    {
+        m_assembler.ucvtf<32, 32>(dest, src);
+    }
+
     void convertInt64ToDouble(RegisterID src, FPRegisterID dest)
     {
         m_assembler.scvtf<64, 64>(dest, src);

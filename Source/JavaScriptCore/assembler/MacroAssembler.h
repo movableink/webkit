@@ -207,8 +207,6 @@ public:
         return value == static_cast<int32_t>(value);
     }
 
-    static const double twoToThe32; // This is super useful for some double code.
-
     // Utilities used by the DFG JIT.
     using AbstractMacroAssemblerBase::invert;
     using MacroAssemblerBase::invert;

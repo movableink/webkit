@@ -352,6 +352,8 @@ void run(const TestConfig* config)
     RUN(testIToF64Arg());
     RUN(testIToD32Arg());
     RUN(testIToF32Arg());
+    RUN(testIToDU32Arg());
+    RUN(testIToFU32Arg());
     RUN(testIToD64Mem());
     RUN(testIToF64Mem());
     RUN(testIToD32Mem());

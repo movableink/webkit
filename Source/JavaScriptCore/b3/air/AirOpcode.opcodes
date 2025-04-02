@@ -688,6 +688,12 @@ ConvertInt32ToFloat U:G:32, D:F:32
     Tmp, Tmp
     x86_64: Addr, Tmp
 
+arm64: ConvertUInt32ToDouble U:G:32, D:F:64
+    Tmp, Tmp
+
+arm64: ConvertUInt32ToFloat U:G:32, D:F:32
+    Tmp, Tmp
+
 CountLeadingZeros32 U:G:32, ZD:G:32
     Tmp, Tmp
     x86: Addr, Tmp

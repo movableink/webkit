@@ -2741,14 +2741,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addF32ConvertUI32(Value operand, Value&
         "F32ConvertUI32", TypeKind::F32,
         BLOCK(Value::fromF32(static_cast<uint32_t>(operand.asI32()))),
         BLOCK(
-#if CPU(X86_64)
-            ScratchScope<1, 0> scratches(*this);
-            m_jit.zeroExtend32ToWord(operandLocation.asGPR(), wasmScratchGPR);
-            m_jit.convertUInt64ToFloat(wasmScratchGPR, resultLocation.asFPR(), scratches.gpr(0));
-#else
-            m_jit.zeroExtend32ToWord(operandLocation.asGPR(), wasmScratchGPR);
-            m_jit.convertUInt64ToFloat(wasmScratchGPR, resultLocation.asFPR());
-#endif
+            m_jit.convertUInt32ToFloat(operandLocation.asGPR(), resultLocation.asFPR());
         )
     )
 }
@@ -2785,14 +2778,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addF64ConvertUI32(Value operand, Value&
         "F64ConvertUI32", TypeKind::F64,
         BLOCK(Value::fromF64(static_cast<uint32_t>(operand.asI32()))),
         BLOCK(
-#if CPU(X86_64)
-            ScratchScope<1, 0> scratches(*this);
-            m_jit.zeroExtend32ToWord(operandLocation.asGPR(), wasmScratchGPR);
-            m_jit.convertUInt64ToDouble(wasmScratchGPR, resultLocation.asFPR(), scratches.gpr(0));
-#else
-            m_jit.zeroExtend32ToWord(operandLocation.asGPR(), wasmScratchGPR);
-            m_jit.convertUInt64ToDouble(wasmScratchGPR, resultLocation.asFPR());
-#endif
+            m_jit.convertUInt32ToDouble(operandLocation.asGPR(), resultLocation.asFPR());
         )
     )
 }

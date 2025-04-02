@@ -3403,6 +3403,34 @@ void testIToF32Arg()
         CHECK(isIdentical(invoke<float>(*code, testValue.value), static_cast<float>(testValue.value)));
 }
 
+void testIToDU32Arg()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* src = arguments[0];
+    Value* srcAsDouble = root->appendNew<Value>(proc, IToD, Origin(), root->appendNew<Value>(proc, ZExt32, Origin(), src));
+    root->appendNewControlValue(proc, Return, Origin(), srcAsDouble);
+
+    auto code = compileProc(proc);
+    for (auto testValue : int32Operands())
+        CHECK(isIdentical(invoke<double>(*code, static_cast<uint32_t>(testValue.value)), static_cast<double>(static_cast<uint32_t>(testValue.value))));
+}
+
+void testIToFU32Arg()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* src = arguments[0];
+    Value* srcAsFloat = root->appendNew<Value>(proc, IToF, Origin(), root->appendNew<Value>(proc, ZExt32, Origin(), src));
+    root->appendNewControlValue(proc, Return, Origin(), srcAsFloat);
+
+    auto code = compileProc(proc);
+    for (auto testValue : int32Operands())
+        CHECK(isIdentical(invoke<float>(*code, static_cast<uint32_t>(testValue.value)), static_cast<float>(static_cast<uint32_t>(testValue.value))));
+}
+
 void testIToD64Mem()
 {
     Procedure proc;

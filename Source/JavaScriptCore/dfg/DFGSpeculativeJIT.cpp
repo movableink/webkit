@@ -2873,16 +2873,9 @@ void SpeculativeJIT::compileUInt32ToNumber(Node* node)
         }
         SpeculateInt32Operand op1(this, node->child1());
         FPRTemporary result(this);
-            
         GPRReg inputGPR = op1.gpr();
         FPRReg outputFPR = result.fpr();
-            
-        convertInt32ToDouble(inputGPR, outputFPR);
-            
-        Jump positive = branch32(GreaterThanOrEqual, inputGPR, TrustedImm32(0));
-        addDouble(AbsoluteAddress(&twoToThe32), outputFPR);
-        positive.link(this);
-            
+        convertUInt32ToDouble(inputGPR, outputFPR);
         doubleResult(outputFPR, node);
         return;
     }
@@ -3290,10 +3283,7 @@ void SpeculativeJIT::setIntTypedArrayLoadResult(Node* node, JSValueRegs resultRe
 
     if (shouldBox) {
         if (isUInt32) {
-            convertInt32ToDouble(resultReg, resultFPR);
-            Jump positive = branch32(GreaterThanOrEqual, resultReg, TrustedImm32(0));
-            addDouble(AbsoluteAddress(&twoToThe32), resultFPR);
-            positive.link(this);
+            convertUInt32ToDouble(resultReg, resultFPR);
             boxDouble(resultFPR, resultRegs);
         } else
             boxInt32(resultRegs.payloadGPR(), resultRegs);
@@ -3323,11 +3313,8 @@ void SpeculativeJIT::setIntTypedArrayLoadResult(Node* node, JSValueRegs resultRe
         return;
     }
 #endif
-    
-    convertInt32ToDouble(resultReg, resultFPR);
-    Jump positive = branch32(GreaterThanOrEqual, resultReg, TrustedImm32(0));
-    addDouble(AbsoluteAddress(&twoToThe32), resultFPR);
-    positive.link(this);
+
+    convertUInt32ToDouble(resultReg, resultFPR);
     doubleResult(resultFPR, node);
 }
 

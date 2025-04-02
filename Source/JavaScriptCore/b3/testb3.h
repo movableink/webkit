@@ -872,6 +872,8 @@ void testIToD64Arg();
 void testIToF64Arg();
 void testIToD32Arg();
 void testIToF32Arg();
+void testIToDU32Arg();
+void testIToFU32Arg();
 void testIToD64Mem();
 void testIToF64Mem();
 void testIToD32Mem();
