@@ -406,7 +406,6 @@
                 "visited-link-color-support": true,
                 "color-property": true,
                 "style-builder-custom": "All",
-                "high-priority": true,
                 "fast-path-inherited": true,
                 "parser-grammar": "<color>"
             },
