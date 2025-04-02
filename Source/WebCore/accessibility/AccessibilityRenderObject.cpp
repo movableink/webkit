@@ -48,6 +48,7 @@
 #include "FrameLoader.h"
 #include "FrameSelection.h"
 #include "HTMLAreaElement.h"
+#include "HTMLAttachmentElement.h"
 #include "HTMLBRElement.h"
 #include "HTMLDetailsElement.h"
 #include "HTMLFormElement.h"
@@ -1415,7 +1416,8 @@ AXTextRuns AccessibilityRenderObject::textRuns()
         return { renderLineBreak->containingBlock(), { AXTextRun(box ? box->lineIndex() : 0, makeString('\n').isolatedCopy(), { lengthOneDomOffsets }, { 0 }, 0) } };
     }
 
-    if (is<HTMLImageElement>(node()) || is<HTMLMediaElement>(node())) {
+    RefPtr node = this->node();
+    if (is<HTMLImageElement>(node) || is<HTMLMediaElement>(node) || is<HTMLAttachmentElement>(node)) {
         auto* containingBlock = renderer ? renderer->containingBlock() : nullptr;
         FloatRect rect = frameRect();
         uint16_t width = static_cast<uint16_t>(rect.width());
