@@ -8964,6 +8964,14 @@ void Document::didAddTouchEventHandler(Node& handler)
         parent->didAddTouchEventHandler(*this);
         return;
     }
+
+#if ENABLE(TOUCH_EVENT_REGIONS)
+    if (RefPtr element = dynamicDowncast<Element>(handler)) {
+        // Style is affected via eventListenerRegionTypes().
+        element->invalidateStyle();
+    }
+#endif
+
 #else
     UNUSED_PARAM(handler);
 #endif
