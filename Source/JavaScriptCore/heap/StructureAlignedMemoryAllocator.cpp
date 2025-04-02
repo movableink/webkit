@@ -186,7 +186,9 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 private:
     Lock m_lock;
+#if !USE(SYSTEM_MALLOC)
     bool m_useDebugHeap { true };
+#endif
     BitVector m_usedBlocks;
 };
 
