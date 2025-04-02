@@ -265,4 +265,8 @@ FAIL Invalid 'use' field: importKey(jwk(private), {name: Ed448}, true, [sign]) a
 FAIL Invalid 'use' field: importKey(jwk (public) , {name: Ed448}, true, [verify]) assert_equals: Invalid 'use' field not supported. expected "DataError" but got "NotSupportedError"
 FAIL Invalid 'crv' field: importKey(jwk(private), {name: Ed448}, true, [sign]) assert_equals: Invalid 'crv' field not supported. expected "DataError" but got "NotSupportedError"
 FAIL Invalid 'crv' field: importKey(jwk (public) , {name: Ed448}, true, [verify]) assert_equals: Invalid 'crv' field not supported. expected "DataError" but got "NotSupportedError"
+FAIL Invalid 'alg' field 'ed448': importKey(jwk(private), {name: Ed448}, true, [sign]) assert_equals: Invalid 'alg' field 'ed448' not supported. expected "DataError" but got "NotSupportedError"
+FAIL Invalid 'alg' field 'ED448': importKey(jwk(private), {name: Ed448}, true, [sign]) assert_equals: Invalid 'alg' field 'ED448' not supported. expected "DataError" but got "NotSupportedError"
+FAIL Invalid 'alg' field 'ed448': importKey(jwk (public) , {name: Ed448}, true, [verify]) assert_equals: Invalid 'alg' field 'ed448' not supported. expected "DataError" but got "NotSupportedError"
+FAIL Invalid 'alg' field 'ED448': importKey(jwk (public) , {name: Ed448}, true, [verify]) assert_equals: Invalid 'alg' field 'ED448' not supported. expected "DataError" but got "NotSupportedError"
 
