@@ -16,7 +16,6 @@ Shared/Extensions/_WKWebExtensionSQLiteRow.mm
 Shared/Extensions/_WKWebExtensionSQLiteStatement.mm
 UIProcess/API/C/WKPage.cpp
 UIProcess/Automation/WebAutomationSession.h
-UIProcess/RemoteLayerTree/mac/RemoteLayerTreeEventDispatcher.cpp
 UIProcess/WebProcessPool.h
 WebProcess/Extensions/Bindings/JSWebExtensionWrapper.h
 WebProcess/Inspector/WebInspectorClient.cpp
