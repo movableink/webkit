@@ -28,6 +28,7 @@
 
 #if PLATFORM(IOS_FAMILY)
 
+#import "Logging.h"
 #import "RemoteLayerTreeViews.h"
 #import "UIKitSPI.h"
 #import "WKContentView.h"
