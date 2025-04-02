@@ -798,6 +798,11 @@ bool AXTextMarker::atLineBoundaryForDirection(AXDirection direction) const
 bool AXTextMarker::atLineBoundaryForDirection(AXDirection direction, const AXTextRuns* runs, size_t runIndex) const
 {
     auto* nextObjectWithRuns = findObjectWithRuns(*isolatedObject(), direction);
+    // If the next object is a line break, it will often have the same line index as the previous static text
+    // (even though it is a newline). In this case, advance one object to check the next line index.
+    if (nextObjectWithRuns && nextObjectWithRuns->isLineBreak())
+        nextObjectWithRuns = findObjectWithRuns(*nextObjectWithRuns, direction);
+
     auto* nextRuns = nextObjectWithRuns ? nextObjectWithRuns->textRuns() : nullptr;
     // If there are more runs in the same containing block with the same line, we are not at a start or end and can exit early.
     // No need to continue searching when the containing block changes.

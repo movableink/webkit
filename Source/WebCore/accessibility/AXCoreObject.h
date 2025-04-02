@@ -948,6 +948,7 @@ public:
 #if ENABLE(MODEL_ELEMENT)
     bool isModel() const { return roleValue() == AccessibilityRole::Model; }
 #endif
+    bool isLineBreak() const { return roleValue() == AccessibilityRole::LineBreak; }
 
     bool isLandmark() const;
     virtual bool isKeyboardFocusable() const = 0;
