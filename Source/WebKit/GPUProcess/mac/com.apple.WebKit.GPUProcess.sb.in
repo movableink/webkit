@@ -836,7 +836,7 @@
             (extension "com.apple.webkit.extension.iokit")
             (iokit-user-client-class "H11ANEInDirectPathClient"))
         (apply-message-filter
-            (allow (with report) (with telemetry)
+            (GPU_PROCESS_IOKIT_DEFAULT_FILTER_OPERATION (with telemetry)
                 iokit-async-external-method
                 iokit-external-method
                 iokit-external-trap)))
