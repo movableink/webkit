@@ -277,7 +277,7 @@ RefPtr<WebCore::Frame> WebFrame::protectedCoreFrame() const
     return coreFrame();
 }
 
-FrameInfoData WebFrame::info() const
+FrameInfoData WebFrame::info(WithCertificateInfo withCertificateInfo) const
 {
     RefPtr parent = parentFrame();
     RefPtr coreFrame = this->coreFrame();
@@ -305,7 +305,7 @@ FrameInfoData WebFrame::info() const
         frameID(),
         parent ? std::optional { parent->frameID() } : std::nullopt,
         document ? std::optional { document->identifier() } : std::nullopt,
-        certificateInfo(),
+        withCertificateInfo == WithCertificateInfo::Yes ? certificateInfo() : CertificateInfo(),
         getCurrentProcessID(),
         isFocused(),
         coreLocalFrame ? coreLocalFrame->loader().errorOccurredInLoading() : false,

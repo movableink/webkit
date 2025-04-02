@@ -78,10 +78,13 @@ class WebImage;
 class WebMouseEvent;
 class WebPage;
 class WebRemoteFrameClient;
+
 struct FrameInfoData;
 struct FrameTreeNodeData;
 struct ProvisionalFrameCreationParameters;
 struct WebsitePoliciesData;
+
+enum class WithCertificateInfo : bool { No, Yes };
 
 class WebFrame : public API::ObjectImpl<API::Object::Type::BundleFrame>, public CanMakeWeakPtr<WebFrame> {
 public:
@@ -113,7 +116,7 @@ public:
     void loadDidCommitInAnotherProcess(std::optional<WebCore::LayerHostingContextIdentifier>);
     WebCore::LocalFrame* provisionalFrame() { return m_provisionalFrame.get(); }
 
-    FrameInfoData info() const;
+    FrameInfoData info(WithCertificateInfo = WithCertificateInfo::No) const;
     FrameTreeNodeData frameTreeData() const;
 
     WebCore::FrameIdentifier frameID() const { return m_frameID; }

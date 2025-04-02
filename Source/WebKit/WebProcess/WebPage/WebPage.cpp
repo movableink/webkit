@@ -1197,7 +1197,7 @@ void WebPage::getFrameInfo(WebCore::FrameIdentifier frameID, CompletionHandler<v
     if (!frame)
         return completionHandler(std::nullopt);
 
-    completionHandler(frame->info());
+    completionHandler(frame->info(WithCertificateInfo::Yes));
 }
 
 Awaitable<std::optional<FrameTreeNodeData>> WebPage::getFrameTree()
