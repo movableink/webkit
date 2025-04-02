@@ -29,7 +29,7 @@ addEventListener("load", async () => {
     for (const stringToType of ["\n", "One\n", "Two\n", "Three\n", "Four\n", "Five\n"]) {
         await UIHelper.typeCharacters(stringToType);
         await UIHelper.ensurePresentationUpdate();
-        caretRects.push(await UIHelper.getUICaretViewRect());
+        caretRects.push(UIHelper.roundRectToDevicePixel(await UIHelper.getUICaretViewRect()));
     }
 
     shouldBe("caretRects[0].height", "caretRects[1].height");
