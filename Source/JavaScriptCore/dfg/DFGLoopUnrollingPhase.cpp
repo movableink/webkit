@@ -53,7 +53,8 @@ public:
         uint32_t loopSize() { return loop->size(); }
         BasicBlock* loopBody(uint32_t i) { return loop->at(i).node(); }
         BasicBlock* header() const { return loop->header().node(); }
-        bool isOperandConstant() const { return std::holds_alternative<CheckedInt32>(operand); }
+        // If operand is a constant, it indicates that we can do fully unrolling.
+        bool shouldFullyUnroll() const { return std::holds_alternative<CheckedInt32>(operand); }
 
         Node* condition() const
         {
@@ -78,7 +79,7 @@ public:
         CheckedInt32 updateValue { INT_MIN };
         CheckedUint32 iterationCount { 0 };
 
-        std::optional<bool> inverseCondition { };
+        bool inverseCondition { false };
     };
 
     LoopUnrollingPhase(Graph& graph)
@@ -295,8 +296,7 @@ public:
             if (data.loop->contains(terminal->branchData()->taken.block))
                 return false;
             data.inverseCondition = true;
-        } else
-            data.inverseCondition = false;
+        }
 
         return true;
     }
@@ -384,9 +384,9 @@ public:
         }
 
         // Compute the number of iterations in the loop, if it has a constant iteration count.
-        if (data.isOperandConstant()) {
+        if (data.shouldFullyUnroll()) {
             CheckedUint32 iterationCount = 0;
-            auto compare = comparisonFunction(condition, data.inverseCondition.value());
+            auto compare = comparisonFunction(condition, data.inverseCondition);
             auto update = updateFunction(data.update);
             for (CheckedInt32 i = data.initialValue; compare(i, std::get<CheckedInt32>(data.operand));) {
                 if (iterationCount > Options::maxLoopUnrollingIterationCount()) {
@@ -419,7 +419,7 @@ public:
             return false;
 
         uint32_t materialNodeCount = 0;
-        uint32_t maxLoopUnrollingBodyNodeSize = data.isOperandConstant() ? Options::maxLoopUnrollingBodyNodeSize() : Options::maxPartialLoopUnrollingBodyNodeSize();
+        uint32_t maxLoopUnrollingBodyNodeSize = data.shouldFullyUnroll() ? Options::maxLoopUnrollingBodyNodeSize() : Options::maxPartialLoopUnrollingBodyNodeSize();
         for (uint32_t i = 0; i < data.loopSize(); ++i) {
             BasicBlock* body = data.loopBody(i);
             if (!body->isReachable) {
@@ -461,7 +461,7 @@ public:
 
     void unrollLoop(LoopData& data)
     {
-        dataLogLnIf(Options::verboseLoopUnrolling(), " unroll ", data.isOperandConstant() ?  " with constant iterations" : " partially");
+        dataLogLnIf(Options::verboseLoopUnrolling(), " unroll ", data.shouldFullyUnroll() ?  " with constant iterations" : " partially");
 
         BasicBlock* const header = data.header();
         BasicBlock* const tail = data.tail;
@@ -497,7 +497,7 @@ public:
         auto convertTailBranchToNextJump = [&](BasicBlock* tail, BasicBlock* taken) {
             BasicBlock* notTaken = next;
             auto* terminal = tail->terminal();
-            if (data.isOperandConstant()) {
+            if (data.shouldFullyUnroll()) {
                 // Why don't we use Jump instead of Branch? The reason is tail's original terminal was Branch.
                 // If we change this from Branch to Jump, we need to preserve how variables are used (via GetLocal, MovHint, SetLocal)
                 // not to confuse these variables liveness, it involves what blocks are used for successors of this tail block.
@@ -510,7 +510,8 @@ public:
                 tail->insertBeforeTerminal(constant);
                 terminal->child1() = Edge(constant, KnownBooleanUse);
                 notTaken = header;
-            }
+            } else if (data.inverseCondition)
+                std::swap(taken, notTaken);
 
             terminal->branchData()->taken = BranchTarget(taken);
             terminal->branchData()->notTaken = BranchTarget(notTaken);
@@ -523,7 +524,7 @@ public:
         CloneHelper helper(m_graph, nodeClones);
         BasicBlock* taken = next;
         uint32_t cloneCount = 0;
-        if (data.isOperandConstant()) {
+        if (data.shouldFullyUnroll()) {
             ASSERT(!data.iterationCount.hasOverflowed() && data.iterationCount);
             cloneCount = data.iterationCount - 1;
         } else
@@ -564,7 +565,7 @@ public:
                 // 5. Clone successors. (predecessors will be fixed in resetReachability below)
                 if (body == tail) {
                     ASSERT(tail->terminal()->isBranch());
-                    bool isTakenNextInPartialMode = taken == next && !data.isOperandConstant();
+                    bool isTakenNextInPartialMode = taken == next && !data.shouldFullyUnroll();
                     convertTailBranchToNextJump(clone, isTakenNextInPartialMode ? header : taken);
                 } else {
                     for (uint32_t i = 0; i < body->numSuccessors(); ++i) {
@@ -644,7 +645,7 @@ void LoopUnrollingPhase::LoopData::dump(PrintStream& out) const
     out.print(", ");
 
     out.print("initValue=", initialValue, ", ");
-    if (isOperandConstant())
+    if (shouldFullyUnroll())
         out.print("operand=", std::get<CheckedInt32>(operand), ", ");
     else
         out.print("operand=", std::get<Node*>(operand), ", ");
