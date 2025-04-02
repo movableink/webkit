@@ -38,7 +38,7 @@
 #include "SystemSettings.h"
 #endif
 
-#if defined(__ANDROID__) || defined(ANDROID)
+#if OS(ANDROID)
 #include <skia/ports/SkFontMgr_android.h>
 #elif PLATFORM(WIN)
 #include <dwrite.h>
@@ -56,7 +56,7 @@ void FontCache::platformInit()
 SkFontMgr& FontCache::fontManager() const
 {
     if (!m_fontManager) {
-#if defined(__ANDROID__) || defined(ANDROID)
+#if OS(ANDROID)
         m_fontManager = SkFontMgr_New_Android(nullptr);
 #elif OS(WINDOWS)
         auto result = createDWriteFactory();
