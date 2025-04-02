@@ -262,9 +262,9 @@ public:
             counter.id = newId;
             counter.type = SYSPROF_CAPTURE_COUNTER_INT64;
             counter.value.v64 = value;
-            strlcpy(counter.category, m_processName.characters(), sizeof counter.category);
-            strlcpy(counter.name, name.data(), sizeof counter.name);
-            strlcpy(counter.description, "", sizeof counter.description);
+            g_strlcpy(counter.category, m_processName.characters(), sizeof counter.category);
+            g_strlcpy(counter.name, name.data(), sizeof counter.name);
+            g_strlcpy(counter.description, "", sizeof counter.description);
 
             sysprof_collector_define_counters(&counter, 1);
         }
