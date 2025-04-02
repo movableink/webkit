@@ -901,19 +901,14 @@ void RenderElement::styleWillChange(StyleDifference diff, const RenderStyle& new
         }
 
         // Keep layer hierarchy visibility bits up to date if visibility or skipped content state changes.
-        bool wasVisible = m_style.usedVisibility() == Visibility::Visible && !m_style.isSkippedRootOrSkippedContent();
-        bool willBeVisible = newStyle.usedVisibility() == Visibility::Visible && !newStyle.isSkippedRootOrSkippedContent();
-        if (wasVisible != willBeVisible) {
-            if (CheckedPtr layer = enclosingLayer()) {
-                if (willBeVisible) {
-                    auto* renderBox = dynamicDowncast<RenderBox>(*this);
-                    if (m_style.isSkippedRootOrSkippedContent() && renderBox && isSkippedContentRoot(*renderBox))
-                        layer->dirtyVisibleContentStatus();
-                    else
-                        layer->setHasVisibleContent();
-                } else if (layer->hasVisibleContent() && (this == &layer->renderer() || layer->renderer().style().usedVisibility() != Visibility::Visible))
-                    layer->dirtyVisibleContentStatus();
-            }
+        if (m_style.usedVisibility() != newStyle.usedVisibility()) {
+            if (CheckedPtr layer = enclosingLayer())
+                layer->dirtyVisibleContentStatus();
+        }
+
+        if (m_style.usedContentVisibility() != newStyle.usedContentVisibility()) {
+            if (CheckedPtr layer = enclosingLayer())
+                layer->dirtyVisibleContentStatus();
         }
 
         auto needsInvalidateEventRegion = [&] {

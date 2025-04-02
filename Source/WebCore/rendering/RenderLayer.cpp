@@ -1472,6 +1472,7 @@ void RenderLayer::computeRepaintRectsIncludingDescendants()
 
 void RenderLayer::compositingStatusChanged(LayoutUpToDate layoutUpToDate)
 {
+    updateDescendantDependentFlags();
     if (parent() || isRenderViewLayer())
         computeRepaintRectsIncludingDescendants();
     if (layoutUpToDate == LayoutUpToDate::No)
