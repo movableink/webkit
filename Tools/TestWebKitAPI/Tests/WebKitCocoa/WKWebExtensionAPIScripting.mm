@@ -1235,6 +1235,65 @@ TEST(WKWebExtensionAPIScripting, RegisteredScriptIsInjectedAfterContextReloads)
     [manager run];
 }
 
+TEST(WKWebExtensionAPIScripting, RegisteredScriptExcludeMatches)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, ""_s } }
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.webNavigation.onCompleted.addListener(async () => {",
+
+        @"  var expectedResults = [{",
+        @"    id: '1',",
+        @"    js: ['changeBackgroundColorScript.js'],",
+        @"    matches: ['*://*/*'],",
+        @"    persistAcrossSessions: true,",
+        @"    excludeMatches: ['*://*.example.com/*']",
+        @"  }]",
+
+        @"  await browser.scripting.registerContentScripts([{ id: '1', matches: ['*://*/*'], js: ['changeBackgroundColorScript.js'], excludeMatches: ['*://*.example.com/*']}])",
+
+        @"  var results = await browser.scripting.getRegisteredContentScripts()",
+        @"  browser.test.assertDeepEq(results, expectedResults)",
+
+        @"  results = await browser.scripting.getRegisteredContentScripts({ 'ids': ['1'] })",
+        @"  browser.test.assertDeepEq(results, expectedResults)",
+
+        @"  await browser.scripting.unregisterContentScripts()",
+
+        @"  browser.test.notifyPass()",
+        @"})",
+
+        @"browser.test.sendMessage('Load Tab')",
+    ]);
+
+    static auto *resources = @{
+        @"background.js": backgroundScript,
+        @"changeBackgroundColorScript.js": changeBackgroundColorScript,
+    };
+
+    auto manager = Util::loadExtension(scriptingManifest, resources);
+    auto *testContext = manager.get().context;
+
+    // Confirm that the script can't be injected on example.com.
+    auto *exampleURL = [NSURL URLWithString:@"https://example.com/"];
+    EXPECT_FALSE([testContext hasInjectedContentForURL:exampleURL]);
+
+    auto *urlRequest = server.requestWithLocalhost();
+    auto *url = urlRequest.URL;
+
+    auto *matchPattern = [WKWebExtensionMatchPattern matchPatternWithScheme:url.scheme host:url.host path:@"/*"];
+    [testContext setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forPermission:WKWebExtensionPermissionWebNavigation];
+    [testContext setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forMatchPattern:matchPattern];
+
+    [manager runUntilTestMessage:@"Load Tab"];
+
+    [manager.get().defaultTab.webView loadRequest:urlRequest];
+
+    [manager run];
+}
+
 TEST(WKWebExtensionAPIScripting, InjectedOnlyOnce)
 {
     TestWebKitAPI::HTTPServer server({
