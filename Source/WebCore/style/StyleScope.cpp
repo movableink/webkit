@@ -45,6 +45,7 @@
 #include "HTMLStyleElement.h"
 #include "InspectorInstrumentation.h"
 #include "Logging.h"
+#include "MatchResultCache.h"
 #include "ProcessingInstruction.h"
 #include "RenderBoxInlines.h"
 #include "RenderLayer.h"
@@ -216,7 +217,7 @@ void Scope::releaseMemory()
     clearResolver();
 
     m_sharedShadowTreeResolvers.clear();
-    m_cachedMatchResults.clear();
+    m_matchResultCache = { };
 }
 
 Scope& Scope::forNode(Node& node)
@@ -733,7 +734,7 @@ void Scope::scheduleUpdate(UpdateType update)
         if (!m_isUpdatingStyleResolver && !m_document->isResolvingTreeStyle())
             clearResolver();
 
-        m_cachedMatchResults.clear();
+        m_matchResultCache = { };
     }
 
     if (!m_pendingUpdate || *m_pendingUpdate < update) {
@@ -1063,45 +1064,13 @@ bool Scope::invalidateForPositionTryFallbacks(LayoutDependencyUpdateContext& con
     return invalidated;
 }
 
-const MatchResult* Scope::cachedMatchResult(const Element& element)
+MatchResultCache& Scope::matchResultCache()
 {
-    auto it = m_cachedMatchResults.find(element);
-    if (it == m_cachedMatchResults.end())
-        return { };
+    ASSERT(!m_shadowRoot);
 
-    auto& matchResult = *it->value;
-
-    auto inlineStyleMatches = [&] {
-        auto* styledElement = dynamicDowncast<StyledElement>(element);
-        if (!styledElement || !styledElement->inlineStyle())
-            return false;
-
-        auto& inlineStyle = *styledElement->inlineStyle();
-
-        for (auto& declaration : matchResult.authorDeclarations) {
-            if (&declaration.properties.get() == &inlineStyle)
-                return true;
-        }
-        return false;
-    }();
-
-    if (!inlineStyleMatches) {
-        m_cachedMatchResults.remove(it);
-        return { };
-    }
-
-    return &matchResult;
-}
-
-void Scope::updateCachedMatchResult(const Element& element, const MatchResult& matchResult)
-{
-    // For now we cache match results if there is mutable inline style. This way we can avoid
-    // selector matching when it gets mutated again.
-    auto* styledElement = dynamicDowncast<StyledElement>(element);
-    if (styledElement && styledElement->inlineStyle() && styledElement->inlineStyle()->isMutable())
-        m_cachedMatchResults.set(element, makeUniqueRef<MatchResult>(matchResult));
-    else
-        m_cachedMatchResults.remove(element);
+    if (!m_matchResultCache)
+        m_matchResultCache = makeUnique<MatchResultCache>();
+    return *m_matchResultCache;
 }
 
 HTMLSlotElement* assignedSlotForScopeOrdinal(const Element& element, ScopeOrdinal scopeOrdinal)

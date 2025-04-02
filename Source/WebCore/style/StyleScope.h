@@ -66,6 +66,7 @@ class WeakPtrImplWithEventTargetData;
 namespace Style {
 
 class CustomPropertyRegistry;
+class MatchResultCache;
 class Resolver;
 class RuleSet;
 struct MatchResult;
@@ -136,8 +137,7 @@ public:
 
     void clearViewTransitionStyles();
 
-    const MatchResult* cachedMatchResult(const Element&);
-    void updateCachedMatchResult(const Element&, const MatchResult&);
+    MatchResultCache& matchResultCache();
 
     const Document& document() const { return m_document; }
     Document& document() { return m_document; }
@@ -257,7 +257,7 @@ private:
 
     SingleThreadWeakHashMap<const RenderBoxModelObject, LayoutRect> m_anchorRectsOnLastUpdate;
 
-    mutable WeakHashMap<const Element, UniqueRef<MatchResult>, WeakPtrImplWithEventTargetData> m_cachedMatchResults;
+    std::unique_ptr<MatchResultCache> m_matchResultCache;
 
     UniqueRef<CustomPropertyRegistry> m_customPropertyRegistry;
     UniqueRef<CSSCounterStyleRegistry> m_counterStyleRegistry;

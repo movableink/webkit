@@ -3102,6 +3102,7 @@ style/IdChangeInvalidation.cpp
 style/InlineTextBoxStyle.cpp
 style/InspectorCSSOMWrappers.cpp
 style/MatchedDeclarationsCache.cpp
+style/MatchResultCache.cpp
 style/PageRuleCollector.cpp
 style/PropertyAllowlist.cpp
 style/PropertyCascade.cpp

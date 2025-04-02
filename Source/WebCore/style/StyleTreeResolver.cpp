@@ -44,6 +44,7 @@
 #include "HTMLSlotElement.h"
 #include "LoaderStrategy.h"
 #include "LocalFrame.h"
+#include "MatchResultCache.h"
 #include "NodeRenderStyle.h"
 #include "Page.h"
 #include "PlatformStrategies.h"
@@ -177,7 +178,7 @@ ResolvedStyle TreeResolver::styleForStyleable(const Styleable& styleable, Resolu
         return { WTFMove(style) };
 
     if (resolutionType == ResolutionType::FullWithMatchResultCache) {
-        if (auto cachedMatchResult = m_document->styleScope().cachedMatchResult(element))
+        if (auto cachedMatchResult = m_document->styleScope().matchResultCache().get(element))
             return scope().resolver->styleForElementWithCachedMatchResult(element, resolutionContext, *cachedMatchResult, *existingStyle);
     }
 
@@ -186,7 +187,7 @@ ResolvedStyle TreeResolver::styleForStyleable(const Styleable& styleable, Resolu
     if (elementStyle.relations)
         commitRelations(WTFMove(elementStyle.relations), *m_update);
 
-    m_document->styleScope().updateCachedMatchResult(element, *elementStyle.matchResult);
+    m_document->styleScope().matchResultCache().update(element, *elementStyle.matchResult);
 
     return elementStyle;
 }
