@@ -209,7 +209,7 @@ RefPtr<WebProcessProxy> WebProcessProxy::processForIdentifier(ProcessIdentifier 
 
 Ref<WebProcessProxy> WebProcessProxy::fromConnection(const IPC::Connection& connection)
 {
-    auto* process = dynamicDowncast<WebProcessProxy>(AuxiliaryProcessProxy::fromConnection(connection));
+    RefPtr process = dynamicDowncast<WebProcessProxy>(AuxiliaryProcessProxy::fromConnection(connection));
     RELEASE_ASSERT(process);
     return *process;
 }
