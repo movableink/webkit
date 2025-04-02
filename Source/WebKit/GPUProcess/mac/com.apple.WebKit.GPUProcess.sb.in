@@ -856,7 +856,7 @@
                 (iokit-method-number 2))
             (allow iokit-external-method
                 (iokit-method-number 0 1))
-            (allow (with report) (with telemetry)
+            (GPU_PROCESS_IOKIT_DEFAULT_FILTER_OPERATION (with telemetry)
                 iokit-async-external-method
                 iokit-external-method
                 iokit-external-trap)))
