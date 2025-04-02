@@ -1638,16 +1638,6 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::popupValue() const
     return [@"false" createJSStringRef];
 }
 
-bool AccessibilityUIElement::hasDocumentRoleAncestor() const
-{
-    return boolAttributeValue(@"AXHasDocumentRoleAncestor");
-}
-
-bool AccessibilityUIElement::hasWebApplicationAncestor() const
-{
-    return boolAttributeValue(@"AXHasWebApplicationAncestor");
-}
-
 bool AccessibilityUIElement::isInDescriptionListDetail() const
 {
     return boolAttributeValue(@"AXIsInDescriptionListDetail");

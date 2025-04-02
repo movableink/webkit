@@ -1,7 +1,5 @@
 Image map - test 2 - 2 Links (alt tags)
 ----------------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: (null)
 AXRoleDescription: group
@@ -34,8 +32,6 @@ AXVisibleCharacterRange: NSRange: {0, 63}
 AXElementBusy: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXLink
 AXSubrole: (null)
 AXRoleDescription: link
@@ -72,8 +68,6 @@ AXLinkRelationshipType:
 AXPath: <AXLink>
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXLink
 AXSubrole: (null)
 AXRoleDescription: link

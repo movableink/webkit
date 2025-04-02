@@ -1299,8 +1299,6 @@ imported/w3c/web-platform-tests/xhr/xhr-timeout-longtask.any.html [ Pass Failure
 
 webkit.org/b/229561 http/tests/navigation/page-cache-video.html [ Pass Failure ]
 
-webkit.org/b/239099 [ Debug ] accessibility/ancestor-computation.html [ Pass Timeout ]
-
 webkit.org/b/231088 [ Release ] http/tests/loading/preload-slow-loading.py [ Pass Failure ]
 
 webkit.org/b/228127 imported/w3c/web-platform-tests/html/cross-origin-opener-policy/resource-popup.https.html [ Pass Crash Failure ]

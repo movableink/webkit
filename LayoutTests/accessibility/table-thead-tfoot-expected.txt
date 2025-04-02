@@ -1,6 +1,4 @@
 THEAD, TFOOT table
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -41,8 +39,6 @@ AXRequired: 0
 AXSortDirection: AXUnknownSortDirection
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -83,8 +79,6 @@ AXRequired: 0
 AXSortDirection: AXUnknownSortDirection
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -126,8 +120,6 @@ AXSortDirection: AXUnknownSortDirection
 
 ------------
 
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -168,8 +160,6 @@ AXRequired: 0
 AXSortDirection: AXUnknownSortDirection
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -210,8 +200,6 @@ AXRequired: 0
 AXSortDirection: AXUnknownSortDirection
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -253,8 +241,6 @@ AXSortDirection: AXUnknownSortDirection
 
 ------------
 
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXColumn
 AXSubrole: (null)
 AXRoleDescription: column
@@ -291,8 +277,6 @@ AXRows: <array of size 4>
 AXVisibleRows: <array of size 4>
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXColumn
 AXSubrole: (null)
 AXRoleDescription: column
@@ -329,8 +313,6 @@ AXRows: <array of size 4>
 AXVisibleRows: <array of size 4>
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXColumn
 AXSubrole: (null)
 AXRoleDescription: column
@@ -368,8 +350,6 @@ AXVisibleRows: <array of size 4>
 
 ------------
 
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXRow
 AXSubrole: (null)
 AXRoleDescription: row
@@ -403,8 +383,6 @@ AXElementBusy: 0
 AXIndex: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXRow
 AXSubrole: (null)
 AXRoleDescription: row
@@ -438,8 +416,6 @@ AXElementBusy: 0
 AXIndex: 1
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXRow
 AXSubrole: (null)
 AXRoleDescription: row
@@ -473,8 +449,6 @@ AXElementBusy: 0
 AXIndex: 2
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXRow
 AXSubrole: (null)
 AXRoleDescription: row
@@ -509,8 +483,6 @@ AXIndex: 3
 
 ------------
 
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -551,8 +523,6 @@ AXRequired: 0
 AXSortDirection: AXUnknownSortDirection
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -593,8 +563,6 @@ AXRequired: 0
 AXSortDirection: AXUnknownSortDirection
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -635,8 +603,6 @@ AXRequired: 0
 AXSortDirection: AXUnknownSortDirection
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -677,8 +643,6 @@ AXRequired: 0
 AXSortDirection: AXUnknownSortDirection
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -718,8 +682,6 @@ AXARIARowIndex: -1
 AXRequired: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -759,8 +721,6 @@ AXARIARowIndex: -1
 AXRequired: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -801,8 +761,6 @@ AXRequired: 0
 AXSortDirection: AXUnknownSortDirection
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -842,8 +800,6 @@ AXARIARowIndex: -1
 AXRequired: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -883,8 +839,6 @@ AXARIARowIndex: -1
 AXRequired: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -924,8 +878,6 @@ AXARIARowIndex: -1
 AXRequired: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -965,8 +917,6 @@ AXARIARowIndex: -1
 AXRequired: 0
 
 ------------
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -1007,8 +957,6 @@ AXRequired: 0
 
 ------------
 
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: (null)
 AXRoleDescription: group

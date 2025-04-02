@@ -77,7 +77,7 @@ public:
 
     // Prefer using the dedicated functions over consuming these flag values directly, as the flags can sometimes be uninitialized.
     // Also, the dedicated functions traverse for you if the flags aren't yet initialized.
-    // For example, use `hasDocumentRoleAncestor()` instead of `ancestorFlags().contains(AXAncestorFlag::HasDocumentRoleAncestor)`.
+    // For example, use `isInRow()` instead of `ancestorFlags().contains(AXAncestorFlag::IsInRow)`.
     OptionSet<AXAncestorFlag> ancestorFlags() const { return m_ancestorFlags; }
 
     void addAncestorFlags(const OptionSet<AXAncestorFlag>& flags) { m_ancestorFlags.add(flags); }
@@ -92,11 +92,9 @@ public:
 
     bool hasDirtySubtree() const { return m_subtreeDirty; }
 
-    bool hasDocumentRoleAncestor() const final;
-    bool hasWebApplicationAncestor() const final;
-    bool isInDescriptionListDetail() const final;
+    bool isInDescriptionListDetail() const;
     bool isInDescriptionListTerm() const final;
-    bool isInCell() const final;
+    bool isInCell() const;
     bool isInRow() const;
 
     bool isDetached() const override;

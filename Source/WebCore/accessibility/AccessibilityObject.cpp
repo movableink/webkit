@@ -184,12 +184,6 @@ OptionSet<AXAncestorFlag> AccessibilityObject::computeAncestorFlags() const
 {
     OptionSet<AXAncestorFlag> computedFlags;
 
-    if (hasAncestorFlag(AXAncestorFlag::HasDocumentRoleAncestor) || matchesAncestorFlag(AXAncestorFlag::HasDocumentRoleAncestor))
-        computedFlags.set(AXAncestorFlag::HasDocumentRoleAncestor, 1);
-
-    if (hasAncestorFlag(AXAncestorFlag::HasWebApplicationAncestor) || matchesAncestorFlag(AXAncestorFlag::HasWebApplicationAncestor))
-        computedFlags.set(AXAncestorFlag::HasWebApplicationAncestor, 1);
-
     if (hasAncestorFlag(AXAncestorFlag::IsInDescriptionListDetail) || matchesAncestorFlag(AXAncestorFlag::IsInDescriptionListDetail))
         computedFlags.set(AXAncestorFlag::IsInDescriptionListDetail, 1);
 
@@ -228,10 +222,6 @@ bool AccessibilityObject::matchesAncestorFlag(AXAncestorFlag flag) const
 {
     auto role = roleValue();
     switch (flag) {
-    case AXAncestorFlag::HasDocumentRoleAncestor:
-        return role == AccessibilityRole::Document || role == AccessibilityRole::GraphicsDocument;
-    case AXAncestorFlag::HasWebApplicationAncestor:
-        return role == AccessibilityRole::WebApplication;
     case AXAncestorFlag::IsInDescriptionListDetail:
         return role == AccessibilityRole::DescriptionListDetail;
     case AXAncestorFlag::IsInDescriptionListTerm:
@@ -254,22 +244,6 @@ bool AccessibilityObject::hasAncestorMatchingFlag(AXAncestorFlag flag) const
 
         return object.matchesAncestorFlag(flag);
     }) != nullptr;
-}
-
-bool AccessibilityObject::hasDocumentRoleAncestor() const
-{
-    if (ancestorFlagsAreInitialized())
-        return m_ancestorFlags.contains(AXAncestorFlag::HasDocumentRoleAncestor);
-
-    return hasAncestorMatchingFlag(AXAncestorFlag::HasDocumentRoleAncestor);
-}
-
-bool AccessibilityObject::hasWebApplicationAncestor() const
-{
-    if (ancestorFlagsAreInitialized())
-        return m_ancestorFlags.contains(AXAncestorFlag::HasWebApplicationAncestor);
-
-    return hasAncestorMatchingFlag(AXAncestorFlag::HasWebApplicationAncestor);
 }
 
 bool AccessibilityObject::isInDescriptionListDetail() const

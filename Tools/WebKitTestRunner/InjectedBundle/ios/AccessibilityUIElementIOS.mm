@@ -118,8 +118,6 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (BOOL)accessibilityHasPopup;
 - (NSString *)accessibilityPopupValue;
 - (NSString *)accessibilityColorStringValue;
-- (BOOL)accessibilityHasDocumentRoleAncestor;
-- (BOOL)accessibilityHasWebApplicationAncestor;
 - (BOOL)accessibilityIsInDescriptionListDefinition;
 - (BOOL)accessibilityIsInDescriptionListTerm;
 - (BOOL)_accessibilityIsInTableCell;
@@ -1225,16 +1223,6 @@ bool AccessibilityUIElement::hasPopup() const
 JSRetainPtr<JSStringRef> AccessibilityUIElement::popupValue() const
 {
     return [[m_element accessibilityPopupValue] createJSStringRef];
-}
-
-bool AccessibilityUIElement::hasDocumentRoleAncestor() const
-{
-    return [m_element accessibilityHasDocumentRoleAncestor];
-}
-
-bool AccessibilityUIElement::hasWebApplicationAncestor() const
-{
-    return [m_element accessibilityHasWebApplicationAncestor];
 }
 
 bool AccessibilityUIElement::isInDescriptionListDetail() const

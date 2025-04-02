@@ -8,8 +8,6 @@ ROWSPAN="2"	3,2	3,3	3,4
 4,2	4,3	4,4
 ----------------------
 { 0, 0 }
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -52,8 +50,6 @@ AXRequired: 0
 
 ----------------------
 { 1, 1 }
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -96,8 +92,6 @@ AXRequired: 0
 
 ----------------------
 { 3, 0 }
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -140,8 +134,6 @@ AXRequired: 0
 
 ----------------------
 { 2, 0 }
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -184,8 +176,6 @@ AXRequired: 0
 
 ----------------------
 { 2, 3 }
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell

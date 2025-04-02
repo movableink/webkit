@@ -517,22 +517,6 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
     return self.axBackingObject->popupValue();
 }
 
-- (BOOL)accessibilityHasDocumentRoleAncestor
-{
-    if (![self _prepareAccessibilityCall])
-        return NO;
-
-    return self.axBackingObject->hasDocumentRoleAncestor();
-}
-
-- (BOOL)accessibilityHasWebApplicationAncestor
-{
-    if (![self _prepareAccessibilityCall])
-        return NO;
-
-    return self.axBackingObject->hasWebApplicationAncestor();
-}
-
 - (BOOL)accessibilityIsInDescriptionListDefinition
 {
     if (![self _prepareAccessibilityCall])

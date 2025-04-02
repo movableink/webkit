@@ -724,11 +724,6 @@ accessibility/mixed-contenteditable-double-br-visible-character-range-hang.html 
 accessibility/aria-braillelabel.html [ Skip ]
 accessibility/aria-brailleroledescription.html [ Skip ]
 
-# Need to implement AccessibilityUIElement::hasDocumentRoleAncestor(), AccessibilityUIElement::hasWebApplicationAncestor(),
-# AccessibilityUIElement::isInDescriptionListDetail(), AccessibilityUIElement::isInDescriptionListTerm(), and
-# AccessibilityUIElement::isInCell().
-accessibility/ancestor-computation.html [ Skip ]
-
 # Need to implement AccessibilityUIElement::domIdentifier() for this test to pass after webkit.org/b/234198.
 accessibility/focusable-div.html [ Skip ]
 

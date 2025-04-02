@@ -158,11 +158,6 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
     reserveCapacityAndCacheBaseProperties(unignoredSizeToReserve);
 #endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
 
-    if (object.ancestorFlagsAreInitialized())
-        setProperty(AXProperty::AncestorFlags, object.ancestorFlags());
-    else
-        setProperty(AXProperty::AncestorFlags, object.computeAncestorFlagsWithTraversal());
-
     setProperty(AXProperty::IsAttachment, object.isAttachment());
     setProperty(AXProperty::IsBusy, object.isBusy());
     setProperty(AXProperty::IsEnabled, object.isEnabled());
@@ -749,6 +744,13 @@ bool AXIsolatedObject::isDetachedFromParent()
     if (RefPtr root = tree()->rootNode())
         return root->objectID() != objectID();
     return false;
+}
+
+bool AXIsolatedObject::isInDescriptionListTerm() const
+{
+    return Accessibility::findAncestor<AXIsolatedObject>(*this, false, [&] (const auto& ancestor) {
+        return ancestor.roleValue() == AccessibilityRole::DescriptionListTerm;
+    });
 }
 
 AXIsolatedObject* AXIsolatedObject::cellForColumnAndRow(unsigned columnIndex, unsigned rowIndex)

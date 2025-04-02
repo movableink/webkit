@@ -94,7 +94,6 @@ enum class AXProperty : uint16_t {
     AccessKey,
     AccessibilityText,
     ActionVerb,
-    AncestorFlags,
     BackgroundColor,
     BrailleLabel,
     BrailleRoleDescription,

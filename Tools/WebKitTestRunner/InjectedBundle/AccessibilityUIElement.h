@@ -418,8 +418,6 @@ public:
     bool scrollPageLeft();
     bool scrollPageRight();
     
-    bool hasDocumentRoleAncestor() const;
-    bool hasWebApplicationAncestor() const;
     bool isInDescriptionListDetail() const;
     bool isInDescriptionListTerm() const;
 

@@ -2,8 +2,6 @@ This test ensures that the headers associated with cells are exposed properly vi
 
 
 Column had header with attributes:
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -46,8 +44,6 @@ AXRequired: 0
 
 
 Column had header with attributes:
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell

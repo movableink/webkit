@@ -585,8 +585,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         return [[self attachmentView] accessibilityAttributeNames];
 
     static NeverDestroyed<RetainPtr<NSArray>> attributes = @[
-        NSAccessibilityHasDocumentRoleAncestorAttribute,
-        NSAccessibilityHasWebApplicationAncestorAttribute,
         NSAccessibilityRoleAttribute,
         NSAccessibilitySubroleAttribute,
         NSAccessibilityRoleDescriptionAttribute,
@@ -1816,15 +1814,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     if ([attributeName isEqualToString:NSAccessibilityKeyShortcutsAttribute])
         return backingObject->keyShortcuts();
 
-    if ([attributeName isEqualToString:NSAccessibilityHasDocumentRoleAncestorAttribute])
-        return [NSNumber numberWithBool:backingObject->hasDocumentRoleAncestor()];
-
-    if ([attributeName isEqualToString:NSAccessibilityHasWebApplicationAncestorAttribute])
-        return [NSNumber numberWithBool:backingObject->hasWebApplicationAncestor()];
-
-    if ([attributeName isEqualToString:NSAccessibilityIsInDescriptionListDetailAttribute])
-        return [NSNumber numberWithBool:backingObject->isInDescriptionListDetail()];
-
     if ([attributeName isEqualToString:NSAccessibilityIsInDescriptionListTermAttribute])
         return [NSNumber numberWithBool:backingObject->isInDescriptionListTerm()];
 
@@ -1928,9 +1917,6 @@ id attributeValueForTesting(const RefPtr<AXCoreObject>& backingObject, NSString 
 
     if ([attributeName isEqualToString:NSAccessibilityOwnersAttribute])
         return makeNSArray(backingObject->owners());
-
-    if ([attributeName isEqualToString:NSAccessibilityIsInCellAttribute])
-        return [NSNumber numberWithBool:backingObject->isInCell()];
 
     if ([attributeName isEqualToString:NSAccessibilityARIAPressedIsPresentAttribute])
         return [NSNumber numberWithBool:backingObject->pressedIsPresent()];

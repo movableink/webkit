@@ -10,8 +10,6 @@ South	3333	1111	2222
 South	3333	1111	2222
 ------------------------
 [0,0]
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -53,8 +51,6 @@ AXSortDirection: AXUnknownSortDirection
 
 ------------------------
 [3,1]
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -95,8 +91,6 @@ AXRequired: 0
 
 ------------------------
 [1,1]
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -138,8 +132,6 @@ AXSortDirection: AXUnknownSortDirection
 
 ------------------------
 [2,2]
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
@@ -180,8 +172,6 @@ AXRequired: 0
 
 ------------------------
 [3,5]
-AXHasDocumentRoleAncestor: 0
-AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell

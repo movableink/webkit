@@ -555,13 +555,7 @@ private:
     ScrollView* scrollView() const final;
     void detachFromParent() final;
 
-    OptionSet<AXAncestorFlag> ancestorFlags() const { return optionSetAttributeValue<AXAncestorFlag>(AXProperty::AncestorFlags); }
-
-    bool hasDocumentRoleAncestor() const final { return ancestorFlags().contains(AXAncestorFlag::HasDocumentRoleAncestor); }
-    bool hasWebApplicationAncestor() const final { return ancestorFlags().contains(AXAncestorFlag::HasWebApplicationAncestor); }
-    bool isInDescriptionListDetail() const final { return ancestorFlags().contains(AXAncestorFlag::IsInDescriptionListDetail); }
-    bool isInDescriptionListTerm() const final { return ancestorFlags().contains(AXAncestorFlag::IsInDescriptionListTerm); }
-    bool isInCell() const final { return ancestorFlags().contains(AXAncestorFlag::IsInCell); }
+    bool isInDescriptionListTerm() const final;
 
     String nameAttribute() const final { return stringAttributeValue(AXProperty::NameAttribute); }
 #if PLATFORM(COCOA)

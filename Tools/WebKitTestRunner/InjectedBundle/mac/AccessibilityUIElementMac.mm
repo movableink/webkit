@@ -2045,16 +2045,6 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::popupValue() const
     return [@"false" createJSStringRef];
 }
 
-bool AccessibilityUIElement::hasDocumentRoleAncestor() const
-{
-    return boolAttributeValueNS(@"AXHasDocumentRoleAncestor");
-}
-
-bool AccessibilityUIElement::hasWebApplicationAncestor() const
-{
-    return boolAttributeValueNS(@"AXHasWebApplicationAncestor");
-}
-
 RefPtr<AccessibilityUIElement> AccessibilityUIElement::focusableAncestor()
 {
     BEGIN_AX_OBJC_EXCEPTIONS

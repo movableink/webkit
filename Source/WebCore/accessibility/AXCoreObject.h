@@ -118,14 +118,12 @@ enum class AXAncestorFlag : uint8_t {
     // When the flags aren't initialized, it means the object hasn't been inserted into the tree,
     // and thus we haven't set any of these ancestry flags.
     FlagsInitialized = 1 << 0,
-    HasDocumentRoleAncestor = 1 << 1,
-    HasWebApplicationAncestor = 1 << 2,
-    IsInDescriptionListDetail = 1 << 3,
-    IsInDescriptionListTerm = 1 << 4,
-    IsInCell = 1 << 5,
-    IsInRow = 1 << 6,
+    IsInDescriptionListDetail = 1 << 1,
+    IsInDescriptionListTerm = 1 << 2,
+    IsInCell = 1 << 3,
+    IsInRow = 1 << 4,
 
-    // Bit 7 is free.
+    // Bit 5 is free.
 };
 
 enum class AccessibilityRole : uint8_t {
@@ -1110,11 +1108,7 @@ public:
     virtual bool isDescendantOfRole(AccessibilityRole) const = 0;
     AXCoreObject* selfOrFirstTextDescendant();
 
-    virtual bool hasDocumentRoleAncestor() const = 0;
-    virtual bool hasWebApplicationAncestor() const = 0;
-    virtual bool isInDescriptionListDetail() const = 0;
     virtual bool isInDescriptionListTerm() const = 0;
-    virtual bool isInCell() const = 0;
 
     // Text selection
     virtual Vector<SimpleRange> findTextRanges(const AccessibilitySearchTextCriteria&) const = 0;

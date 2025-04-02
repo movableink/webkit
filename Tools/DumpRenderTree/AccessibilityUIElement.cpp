@@ -1498,16 +1498,6 @@ static JSValueRef getURLCallback(JSContextRef context, JSObjectRef thisObject, J
     return JSValueMakeString(context, url.get());
 }
 
-static JSValueRef hasDocumentRoleAncestorCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef, JSValueRef*)
-{
-    return JSValueMakeBoolean(context, toAXElement(thisObject)->hasDocumentRoleAncestor());
-}
-
-static JSValueRef hasWebApplicationAncestorCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef, JSValueRef*)
-{
-    return JSValueMakeBoolean(context, toAXElement(thisObject)->hasWebApplicationAncestor());
-}
-
 static JSValueRef isInDescriptionListDetailCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef, JSValueRef*)
 {
     return JSValueMakeBoolean(context, toAXElement(thisObject)->isInDescriptionListDetail());
@@ -2014,8 +2004,6 @@ JSClassRef AccessibilityUIElement::getJSClass()
         { "verticalScrollbar", verticalScrollbarCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "startTextMarker", startTextMarkerCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "endTextMarker", endTextMarkerCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "hasDocumentRoleAncestor", hasDocumentRoleAncestorCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "hasWebApplicationAncestor", hasWebApplicationAncestorCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isInDescriptionListDetail", isInDescriptionListDetailCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isInDescriptionListTerm", isInDescriptionListTermCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "isInCell", isInCellCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },

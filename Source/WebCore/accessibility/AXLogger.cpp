@@ -650,9 +650,6 @@ TextStream& operator<<(WTF::TextStream& stream, AXProperty property)
     case AXProperty::ActionVerb:
         stream << "ActionVerb";
         break;
-    case AXProperty::AncestorFlags:
-        stream << "AncestorFlags";
-        break;
     case AXProperty::BackgroundColor:
         stream << "BackgroundColor";
         break;
