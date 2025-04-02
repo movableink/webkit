@@ -64,6 +64,18 @@ fn main() -> @location(0) vec4<f32> {
 
 using namespace metal;
 
+template<typename T>
+struct __UnpackedTypeImpl;
+
+template<typename T>
+struct __PackedTypeImpl;
+
+template<typename T>
+using __UnpackedType = typename __UnpackedTypeImpl<T>::Type;
+
+template<typename T>
+using __PackedType = typename __PackedTypeImpl<T>::Type;
+
 [[fragment]] vec<float, 4> function0()
 {
     return vec<float, 4>(1., 0., 0., 1.);
@@ -87,6 +99,18 @@ fn main(@builtin(position) position : vec4<f32>,
 #include <metal_types>
 
 using namespace metal;
+
+template<typename T>
+struct __UnpackedTypeImpl;
+
+template<typename T>
+struct __PackedTypeImpl;
+
+template<typename T>
+using __UnpackedType = typename __UnpackedTypeImpl<T>::Type;
+
+template<typename T>
+using __PackedType = typename __PackedTypeImpl<T>::Type;
 
 [[fragment]] void function0(vec<float, 4> parameter0 [[position]], unsigned parameter1 [[sample_id]], unsigned parameter2 [[sample_mask]])
 {
