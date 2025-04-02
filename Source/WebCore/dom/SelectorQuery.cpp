@@ -437,8 +437,16 @@ ALWAYS_INLINE void SelectorDataList::executeSingleAttributeExactSelectorData(con
     const auto& prefix = selectorAttribute.prefix();
     const auto& namespaceURI = selectorAttribute.namespaceURI();
 
+    bool foundFirstMatch = false;
+    CheckedPtr<Element> cachedContainer;
+    if (rootNode.isDocumentNode())
+        cachedContainer = rootNode.document().cachedFirstElementWithAttribute(selectorAttribute);
+
     bool documentIsHTML = rootNode.document().isHTMLDocument();
-    for (Ref element : descendantsOfType<Element>(const_cast<ContainerNode&>(rootNode))) {
+
+    auto elementDescendants = descendantsOfType<Element>(const_cast<ContainerNode&>(rootNode));
+    for (auto it = cachedContainer ? elementDescendants.beginAt(*cachedContainer) : elementDescendants.begin(); it; ++it) {
+        Ref element = *it;
         if (!element->hasAttributesWithoutUpdate())
             continue;
 
@@ -447,6 +455,11 @@ ALWAYS_INLINE void SelectorDataList::executeSingleAttributeExactSelectorData(con
         for (auto& attribute : element->attributes()) {
             if (!attribute.matches(prefix, localNameToMatch, namespaceURI))
                 continue;
+
+            if (!foundFirstMatch && rootNode.isDocumentNode()) {
+                foundFirstMatch = true;
+                rootNode.document().setCachedFirstElementWithAttribute(selectorAttribute, element);
+            }
 
             if (selectorValue == attribute.value()) {
                 appendOutputForElement(output, element);

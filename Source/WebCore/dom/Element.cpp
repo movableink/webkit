@@ -2223,6 +2223,9 @@ void Element::notifyAttributeChanged(const QualifiedName& name, const AtomString
 
         if (CheckedPtr cache = document().existingAXObjectCache())
             cache->deferAttributeChangeIfNeeded(*this, name, oldValue, newValue);
+
+        if (isConnected() && oldValue == nullAtom())
+            document().attributeAddedToElement(name);
     }
 }
 
@@ -3005,6 +3008,11 @@ Node::InsertedIntoAncestorResult Element::insertedIntoAncestor(InsertionType ins
             else
                 LOG_ONCE(SiteIsolation, "Unable to properly perform Element::insertedIntoAncestor() without access to the main frame document ");
         }
+
+        if (hasAttributesWithoutUpdate()) {
+            for (auto& attribute : attributes())
+                document().attributeAddedToElement(attribute.name());
+        }
     }
 
     if (parentNode() == &parentOfInsertedTree) {
@@ -3096,6 +3104,8 @@ void Element::removedFromAncestor(RemovalType removalType, ContainerNode& oldPar
             oldDocument->observeForContainIntrinsicSize(*this);
             oldDocument->resetObservationSizeForContainIntrinsicSize(*this);
         }
+
+        oldDocument->elementDisconnectedFromDocument(*this);
 
         setSavedLayerScrollPosition({ });
 
