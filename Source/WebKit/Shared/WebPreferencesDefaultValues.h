@@ -180,9 +180,7 @@ bool defaultRequiresPageVisibilityForVideoToBeNowPlaying();
 
 bool defaultCookieStoreAPIEnabled();
 
-#if PLATFORM(COCOA)
 bool defaultContentInsetBackgroundFillEnabled();
-#endif
 
 #if ENABLE(SCREEN_TIME)
 bool defaultScreenTimeEnabled();

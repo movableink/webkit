@@ -103,7 +103,8 @@ IntersectionObserver* ContentVisibilityDocumentState::intersectionObserver(Docum
     if (!m_observer) {
         auto callback = ContentVisibilityIntersectionObserverCallback::create(document);
         IntersectionObserver::Init options { &document, { }, { } };
-        auto observer = IntersectionObserver::create(document, WTFMove(callback), WTFMove(options));
+        auto includeObscuredInsets = document.settings().contentInsetBackgroundFillEnabled() ? IncludeObscuredInsets::Yes : IncludeObscuredInsets::No;
+        auto observer = IntersectionObserver::create(document, WTFMove(callback), WTFMove(options), includeObscuredInsets);
         if (observer.hasException())
             return nullptr;
         m_observer = observer.releaseReturnValue();

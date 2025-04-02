@@ -104,7 +104,7 @@ static ExceptionOr<LengthBox> parseRootMargin(String& rootMargin)
     return LengthBox(WTFMove(margins[0]), WTFMove(margins[1]), WTFMove(margins[2]), WTFMove(margins[3]));
 }
 
-ExceptionOr<Ref<IntersectionObserver>> IntersectionObserver::create(Document& document, Ref<IntersectionObserverCallback>&& callback, IntersectionObserver::Init&& init)
+ExceptionOr<Ref<IntersectionObserver>> IntersectionObserver::create(Document& document, Ref<IntersectionObserverCallback>&& callback, IntersectionObserver::Init&& init, IncludeObscuredInsets includeObscuredInsets)
 {
     RefPtr<ContainerNode> root;
     if (init.root) {
@@ -134,16 +134,17 @@ ExceptionOr<Ref<IntersectionObserver>> IntersectionObserver::create(Document& do
             return Exception { ExceptionCode::RangeError, "Failed to construct 'IntersectionObserver': all thresholds must lie in the range [0.0, 1.0]."_s };
     }
 
-    return adoptRef(*new IntersectionObserver(document, WTFMove(callback), root.get(), rootMarginOrException.releaseReturnValue(), WTFMove(thresholds)));
+    return adoptRef(*new IntersectionObserver(document, WTFMove(callback), root.get(), rootMarginOrException.releaseReturnValue(), WTFMove(thresholds), includeObscuredInsets));
 }
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IntersectionObserver);
 
-IntersectionObserver::IntersectionObserver(Document& document, Ref<IntersectionObserverCallback>&& callback, ContainerNode* root, LengthBox&& parsedRootMargin, Vector<double>&& thresholds)
+IntersectionObserver::IntersectionObserver(Document& document, Ref<IntersectionObserverCallback>&& callback, ContainerNode* root, LengthBox&& parsedRootMargin, Vector<double>&& thresholds, IncludeObscuredInsets includeObscuredInsets)
     : m_root(root)
     , m_rootMargin(WTFMove(parsedRootMargin))
     , m_thresholds(WTFMove(thresholds))
     , m_callback(WTFMove(callback))
+    , m_includeObscuredInsets(includeObscuredInsets)
 {
     if (RefPtr rootDocument = dynamicDowncast<Document>(root)) {
         auto& observerData = rootDocument->ensureIntersectionObserverData();
@@ -336,6 +337,13 @@ auto IntersectionObserver::computeIntersectionState(const IntersectionObserverRe
     RenderElement* targetRenderer = nullptr;
     IntersectionObservationState intersectionState;
 
+    auto layoutViewportRectForIntersection = [&] {
+        if (m_includeObscuredInsets == IncludeObscuredInsets::Yes)
+            return frameView.layoutViewportRectIncludingObscuredInsets();
+
+        return frameView.layoutViewportRect();
+    };
+
     auto computeRootBounds = [&]() {
         targetRenderer = target.renderer();
         if (!targetRenderer)
@@ -354,7 +362,7 @@ auto IntersectionObserver::computeIntersectionState(const IntersectionObserverRe
 
             intersectionState.canComputeIntersection = true;
             if (root() == &target.document())
-                intersectionState.rootBounds = frameView.layoutViewportRect();
+                intersectionState.rootBounds = layoutViewportRectForIntersection();
             else if (rootRenderer->hasNonVisibleOverflow())
                 intersectionState.rootBounds = rootRenderer->contentBoxRect();
             else
@@ -370,7 +378,7 @@ auto IntersectionObserver::computeIntersectionState(const IntersectionObserverRe
 
         intersectionState.canComputeIntersection = true;
         rootRenderer = frameView.renderView();
-        intersectionState.rootBounds = frameView.layoutViewportRect();
+        intersectionState.rootBounds = layoutViewportRectForIntersection();
     };
 
     computeRootBounds();

@@ -418,4 +418,11 @@ bool defaultTrustedTypesEnabled()
 #endif
 }
 
+#if !ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+bool defaultContentInsetBackgroundFillEnabled()
+{
+    return false;
+}
+#endif
+
 } // namespace WebKit

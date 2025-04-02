@@ -2146,7 +2146,6 @@ ContentInsetBackgroundFillEnabled:
   status: internal
   humanReadableName: "Content Inset Background Fill"
   humanReadableDescription: "Fill content insets with background colors"
-  condition: PLATFORM(COCOA)
   defaultValue:
     WebKit:
       default: WebKit::defaultContentInsetBackgroundFillEnabled()

@@ -65,6 +65,8 @@ struct IntersectionObserverData {
     Vector<IntersectionObserverRegistration> registrations;
 };
 
+enum class IncludeObscuredInsets : bool { No, Yes };
+
 class IntersectionObserver : public RefCountedAndCanMakeWeakPtr<IntersectionObserver> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(IntersectionObserver);
 public:
@@ -74,7 +76,7 @@ public:
         std::variant<double, Vector<double>> threshold;
     };
 
-    static ExceptionOr<Ref<IntersectionObserver>> create(Document&, Ref<IntersectionObserverCallback>&&, Init&&);
+    static ExceptionOr<Ref<IntersectionObserver>> create(Document&, Ref<IntersectionObserverCallback>&&, Init&&, IncludeObscuredInsets = IncludeObscuredInsets::No);
 
     ~IntersectionObserver();
 
@@ -113,7 +115,7 @@ public:
     bool isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor&) const;
 
 private:
-    IntersectionObserver(Document&, Ref<IntersectionObserverCallback>&&, ContainerNode* root, LengthBox&& parsedRootMargin, Vector<double>&& thresholds);
+    IntersectionObserver(Document&, Ref<IntersectionObserverCallback>&&, ContainerNode* root, LengthBox&& parsedRootMargin, Vector<double>&& thresholds, IncludeObscuredInsets);
 
     bool removeTargetRegistration(Element&);
     void removeAllTargets();
@@ -141,6 +143,7 @@ private:
     Vector<GCReachableRef<Element>> m_pendingTargets;
     Vector<Ref<IntersectionObserverEntry>> m_queuedEntries;
     Vector<GCReachableRef<Element>> m_targetsWaitingForFirstObservation;
+    IncludeObscuredInsets m_includeObscuredInsets { IncludeObscuredInsets::No };
 };
 
 
