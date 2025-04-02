@@ -2431,5 +2431,3 @@ svg/W3C-I18N/tspan-dirRTL-ubEmbed-in-default-context.svg [ Failure ]
 
 # webkit.org/b/290848 : AX: accessibility/mac/line-boundary-at-br.html asserts on Debug
 [ Debug ] accessibility/mac/line-boundary-at-br.html [ Skip ]
-
-webkit.org/b/290874 fast/text/international/generic-font-family-language-traditional.html [ ImageOnlyFailure ]
