@@ -149,7 +149,7 @@ void MockLocalConnection::filterResponses(Vector<Ref<AuthenticatorAssertionRespo
 
     RefPtr<AuthenticatorAssertionResponse> matchingResponse;
     for (auto& response : responses) {
-        auto* rawId = response->rawId();
+        RefPtr rawId = response->rawId();
         ASSERT(rawId);
         auto rawIdBase64 = base64EncodeToString(rawId->span());
         if (rawIdBase64 == preferredCredentialIdBase64) {

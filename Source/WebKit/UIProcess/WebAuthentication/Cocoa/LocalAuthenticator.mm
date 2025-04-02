@@ -277,7 +277,7 @@ void LocalAuthenticator::makeCredential()
     auto excludeCredentialIds = produceHashSet(creationOptions.excludeCredentials);
     if (!excludeCredentialIds.isEmpty()) {
         if (notFound != m_existingCredentials.findIf([&excludeCredentialIds] (auto& credential) {
-            auto* rawId = credential->rawId();
+            RefPtr rawId = credential->rawId();
             ASSERT(rawId);
             return excludeCredentialIds.contains(base64EncodeToString(rawId->span()));
         })) {
@@ -614,7 +614,7 @@ void LocalAuthenticator::getAssertion()
     auto assertionResponses = WTF::compactMap(m_existingCredentials, [&](auto& credential) -> RefPtr<WebCore::AuthenticatorAssertionResponse> {
         if (allowCredentialIds.isEmpty())
             return credential.copyRef();
-        auto* rawId = credential->rawId();
+        RefPtr rawId = credential->rawId();
         if (allowCredentialIds.contains(base64EncodeToString(rawId->span())))
             return credential.copyRef();
         return nullptr;
@@ -807,7 +807,7 @@ void LocalAuthenticator::deleteDuplicateCredential() const
 
     auto& creationOptions = std::get<PublicKeyCredentialCreationOptions>(requestData().options);
     m_existingCredentials.findIf([creationOptions] (auto& credential) {
-        auto* userHandle = credential->userHandle();
+        RefPtr userHandle = credential->userHandle();
         ASSERT(userHandle);
         if (!equalSpans(userHandle->span(), BufferSource { creationOptions.user.id } .span()))
             return false;

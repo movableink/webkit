@@ -93,7 +93,6 @@ UIProcess/Inspector/mac/WKInspectorViewController.mm
 UIProcess/Inspector/mac/WebInspectorUIProxyMac.mm
 UIProcess/Network/NetworkProcessProxyCocoa.mm
 UIProcess/PDF/WKPDFHUDView.mm
-UIProcess/WebAuthentication/Cocoa/CcidService.mm
 UIProcess/WebAuthentication/Cocoa/LocalAuthenticator.mm
 UIProcess/WebAuthentication/Cocoa/LocalConnection.mm
 UIProcess/WebAuthentication/Cocoa/NfcConnection.mm
