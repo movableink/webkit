@@ -58,8 +58,10 @@
 #endif
 #elif USE(SKIA)
 #include <WebCore/GraphicsContextSkia.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/docs/SkPDFDocument.h>
 #include <skia/docs/SkPDFJpegHelpers.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #endif
 
 namespace WebKit {
