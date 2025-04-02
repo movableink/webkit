@@ -2403,7 +2403,9 @@ bool LocalFrameView::scrollToFragment(const URL& url)
 {
     ASSERT(m_frame->document());
     Ref document = *m_frame->document();
-    
+
+    document->fragmentHighlightRegistry().clear();
+
     auto fragmentIdentifier = url.fragmentIdentifier();
     auto fragmentDirective = document->fragmentDirective();
     
@@ -2430,6 +2432,7 @@ bool LocalFrameView::scrollToFragment(const URL& url)
                 TemporarySelectionChange selectionChange(document, { range }, { TemporarySelectionOption::RevealSelection, TemporarySelectionOption::RevealSelectionBounds, TemporarySelectionOption::UserTriggered, TemporarySelectionOption::ForceCenterScroll });
                 if (m_frame->settings().scrollToTextFragmentIndicatorEnabled() && !m_frame->page()->isControlledByAutomation())
                     m_delayedTextFragmentIndicatorTimer.startOneShot(100_ms);
+
                 maintainScrollPositionAtScrollToTextFragmentRange(range);
                 return true;
             }
