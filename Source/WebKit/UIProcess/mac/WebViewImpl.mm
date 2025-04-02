@@ -359,8 +359,8 @@ static void* keyValueObservingContext = &keyValueObservingContext;
     [defaultNotificationCenter addObserver:self selector:@selector(_windowWillClose:) name:NSWindowWillCloseNotification object:window];
 
     [defaultNotificationCenter addObserver:self selector:@selector(_screenDidChangeColorSpace:) name:NSScreenColorSpaceDidChangeNotification object:nil];
-    [defaultNotificationCenter addObserver:self selector:@selector(_applicationShouldSuppressHDR:) name:@"NSApplicationShouldBeginSuppressingHighDynamicRangeContentNotification" object:NSApp];
-    [defaultNotificationCenter addObserver:self selector:@selector(_applicationShouldAllowHDR:) name:@"NSApplicationShouldEndSuppressingHighDynamicRangeContentNotification" object:NSApp];
+    [defaultNotificationCenter addObserver:self selector:@selector(_applicationShouldBeginSuppressingHDR:) name:@"NSApplicationShouldBeginSuppressingHighDynamicRangeContentNotification" object:NSApp];
+    [defaultNotificationCenter addObserver:self selector:@selector(_applicationShouldEndSuppressingHDR:) name:@"NSApplicationShouldEndSuppressingHighDynamicRangeContentNotification" object:NSApp];
 
     if (_shouldObserveFontPanel) {
         ASSERT(!_isObservingFontPanel);
@@ -532,16 +532,16 @@ static void* keyValueObservingContext = &keyValueObservingContext;
         _impl->screenDidChangeColorSpace();
 }
 
-- (void)_applicationShouldSuppressHDR:(NSNotification *)notification
+- (void)_applicationShouldBeginSuppressingHDR:(NSNotification *)notification
 {
     if (_impl)
-        _impl->applicationShouldSuppressHDR();
+        _impl->applicationShouldSuppressHDR(true);
 }
 
-- (void)_applicationShouldAllowHDR:(NSNotification *)notification
+- (void)_applicationShouldEndSuppressingHDR:(NSNotification *)notification
 {
     if (_impl)
-        _impl->applicationShouldAllowHDR();
+        _impl->applicationShouldSuppressHDR(false);
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
@@ -2095,7 +2095,6 @@ void WebViewImpl::windowDidBecomeKey(NSWindow *keyWindow)
 #endif
         updateSecureInputState();
         m_page->activityStateDidChange(WebCore::ActivityState::WindowIsActive);
-        updateHDRState(HDRConstrainingReasonAction::Remove, HDRConstrainingReason::WindowIsNotActive);
     }
 }
 
@@ -2107,7 +2106,6 @@ void WebViewImpl::windowDidResignKey(NSWindow *formerKeyWindow)
 #endif
         updateSecureInputState();
         m_page->activityStateDidChange(WebCore::ActivityState::WindowIsActive);
-        updateHDRState(HDRConstrainingReasonAction::Add, HDRConstrainingReason::WindowIsNotActive);
     }
 }
 
@@ -2172,30 +2170,10 @@ void WebViewImpl::screenDidChangeColorSpace()
     m_page->configuration().protectedProcessPool()->screenPropertiesChanged();
 }
 
-void WebViewImpl::updateHDRState(HDRConstrainingReasonAction action, HDRConstrainingReason reason)
+void WebViewImpl::applicationShouldSuppressHDR(bool suppress)
 {
-    auto didHaveReasonToConstrain = !m_hdrConstrainingReason.isEmpty();
-
-    if (action == HDRConstrainingReasonAction::Add)
-        m_hdrConstrainingReason.add(reason);
-    else
-        m_hdrConstrainingReason.remove(reason);
-
-    auto haveReasonToConstrain = !m_hdrConstrainingReason.isEmpty();
-    if (haveReasonToConstrain != didHaveReasonToConstrain) {
-        m_page->setShouldSuppressHDR(haveReasonToConstrain);
-        setDynamicRangeLimit(m_rootLayer.get(), haveReasonToConstrain ? PlatformDynamicRangeLimit::defaultWhenSuppressingHDR() : PlatformDynamicRangeLimit::noLimit(), true);
-    }
-}
-
-void WebViewImpl::applicationShouldSuppressHDR()
-{
-    updateHDRState(HDRConstrainingReasonAction::Add, HDRConstrainingReason::ShouldSuppressHDR);
-}
-
-void WebViewImpl::applicationShouldAllowHDR()
-{
-    updateHDRState(HDRConstrainingReasonAction::Remove, HDRConstrainingReason::ShouldSuppressHDR);
+    m_page->setShouldSuppressHDR(suppress);
+    setDynamicRangeLimit(m_rootLayer.get(), suppress ? PlatformDynamicRangeLimit::defaultWhenSuppressingHDR() : PlatformDynamicRangeLimit::noLimit(), true);
 }
 
 bool WebViewImpl::mightBeginDragWhileInactive()

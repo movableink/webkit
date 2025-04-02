@@ -328,15 +328,7 @@ public:
     void screenDidChangeColorSpace();
     bool shouldDelayWindowOrderingForEvent(NSEvent *);
     bool windowResizeMouseLocationIsInVisibleScrollerThumb(CGPoint);
-    void applicationShouldSuppressHDR();
-    void applicationShouldAllowHDR();
-
-    enum class HDRConstrainingReasonAction : bool { Remove, Add };
-    enum class HDRConstrainingReason : uint8_t {
-        WindowIsNotActive = 1 << 0,
-        ShouldSuppressHDR = 1 << 1,
-    };
-    void updateHDRState(HDRConstrainingReasonAction, HDRConstrainingReason);
+    void applicationShouldSuppressHDR(bool);
 
     void accessibilitySettingsDidChange();
 
@@ -1092,7 +1084,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #if HAVE(INLINE_PREDICTIONS)
     bool m_inlinePredictionsEnabled { false };
 #endif
-    OptionSet<HDRConstrainingReason> m_hdrConstrainingReason { HDRConstrainingReason::WindowIsNotActive };
 };
 
 } // namespace WebKit
