@@ -791,7 +791,7 @@
     (allow IOKIT_OPEN_USER_CLIENT
         (iokit-user-client-class "IOAudioControlUserClient")
         (apply-message-filter
-            (allow (with report) (with telemetry)
+            (GPU_PROCESS_IOKIT_DEFAULT_FILTER_OPERATION (with telemetry)
                 iokit-async-external-method
                 iokit-external-method
                 iokit-external-trap)))
