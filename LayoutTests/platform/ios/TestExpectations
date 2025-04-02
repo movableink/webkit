@@ -7819,3 +7819,5 @@ webkit.org/b/290871 imported/w3c/web-platform-tests/navigation-api/scroll-behavi
 webkit.org/b/290876 imported/w3c/web-platform-tests/trusted-types/DedicatedWorker-constructor-from-SharedWorker.html [ Pass Failure ]
 
 webkit.org/b/290888 fast/loader/redirect-to-invalid-url-using-meta-refresh-calls-policy-delegate.html [ Pass Failure ]
+
+webkit.org/b/290942 [ Debug ] fast/viewport/ios/width-is-device-width-overflowing-body-overflow-hidden.html [ Pass Crash ]
