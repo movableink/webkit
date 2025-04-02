@@ -3969,10 +3969,16 @@ JSC_DEFINE_JIT_OPERATION(operationArrayIncludesValueInt32, UCPUStrictInt32, (JSG
     if (searchElement.isUndefined() && containsHole(data, length))
         OPERATION_RETURN(scope, toUCPUStrictInt32(1));
 
-    if (!searchElement.isInt32AsAnyInt())
-        OPERATION_RETURN(scope, toUCPUStrictInt32(0));
+    int32_t int32Value = 0;
+    if (searchElement.isInt32AsAnyInt())
+        int32Value = searchElement.asInt32AsAnyInt();
+    else {
+        if (!searchElement.isNumber() || searchElement.asNumber() != 0.0)
+            OPERATION_RETURN(scope, toUCPUStrictInt32(0));
+        int32Value = 0;
+    }
 
-    EncodedJSValue encodedSearchElement = JSValue::encode(jsNumber(searchElement.asInt32AsAnyInt()));
+    EncodedJSValue encodedSearchElement = JSValue::encode(jsNumber(int32Value));
     auto* result = std::bit_cast<const WriteBarrier<Unknown>*>(WTF::find64(std::bit_cast<const uint64_t*>(data + index), encodedSearchElement, length - index));
     if (result)
         OPERATION_RETURN(scope, toUCPUStrictInt32(1));
@@ -4148,10 +4154,16 @@ JSC_DEFINE_JIT_OPERATION(operationArrayIndexOfValueInt32, UCPUStrictInt32, (JSGl
 
     JSValue searchElement = JSValue::decode(encodedValue);
 
-    if (!searchElement.isInt32AsAnyInt())
-        OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
+    int32_t int32Value = 0;
+    if (searchElement.isInt32AsAnyInt())
+        int32Value = searchElement.asInt32AsAnyInt();
+    else {
+        if (!searchElement.isNumber() || searchElement.asNumber() != 0.0)
+            OPERATION_RETURN(scope, toUCPUStrictInt32(-1));
+        int32Value = 0;
+    }
 
-    EncodedJSValue encodedSearchElement = JSValue::encode(jsNumber(searchElement.asInt32AsAnyInt()));
+    EncodedJSValue encodedSearchElement = JSValue::encode(jsNumber(int32Value));
     auto* result = std::bit_cast<const WriteBarrier<Unknown>*>(WTF::find64(std::bit_cast<const uint64_t*>(data + index), encodedSearchElement, length - index));
     if (result)
         OPERATION_RETURN(scope, toUCPUStrictInt32(result - data));
