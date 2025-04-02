@@ -57,10 +57,10 @@ FontPlatformData::FontPlatformData(RetainPtr<CTFontRef>&& font, float size, bool
     : FontPlatformData(size, syntheticBold, syntheticOblique, orientation, widthVariant, textRenderingMode, customPlatformData)
 {
     ASSERT_ARG(font, font);
-    m_font = font;
-    m_isColorBitmapFont = CTFontGetSymbolicTraits(font.get()) & kCTFontColorGlyphsTrait;
-    m_isSystemFont = WebCore::isSystemFont(font.get());
-    auto variations = adoptCF(static_cast<CFDictionaryRef>(CTFontCopyAttribute(font.get(), kCTFontVariationAttribute)));
+    m_font = WTFMove(font);
+    m_isColorBitmapFont = CTFontGetSymbolicTraits(m_font.get()) & kCTFontColorGlyphsTrait;
+    m_isSystemFont = WebCore::isSystemFont(m_font.get());
+    auto variations = adoptCF(static_cast<CFDictionaryRef>(CTFontCopyAttribute(m_font.get(), kCTFontVariationAttribute)));
     m_hasVariations = variations && CFDictionaryGetCount(variations.get());
 
 #if PLATFORM(IOS_FAMILY)
@@ -78,7 +78,7 @@ FontPlatformData::FontPlatformData(RetainPtr<CTFontRef>&& font, float size, bool
         RetainPtr<CTFontRef> newFont = adoptCF(CTFontCreateWithFontDescriptor(newDescriptor.get(), m_size, 0));
 
         if (newFont)
-            m_font = newFont;
+            m_font = WTFMove(newFont);
     }
 }
 

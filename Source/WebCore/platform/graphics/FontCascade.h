@@ -235,7 +235,7 @@ public:
 
     bool primaryFontIsSystemFont() const;
 
-    static float syntheticObliqueAngle() { return 14; }
+    static constexpr float syntheticObliqueAngle() { return 14; }
 
     std::unique_ptr<DisplayList::DisplayList> displayListForTextRun(GraphicsContext&, const TextRun&, unsigned from = 0, std::optional<unsigned> to = { }, CustomFontNotReadyAction = CustomFontNotReadyAction::DoNotPaintIfFontNotReady) const;
 
@@ -257,8 +257,8 @@ private:
     std::optional<GlyphData> getEmphasisMarkGlyphData(const AtomString&) const;
     const Font* fontForEmphasisMark(const AtomString&) const;
 
-    static bool canReturnFallbackFontsForComplexText();
-    static bool canExpandAroundIdeographsInComplexText();
+    static constexpr bool canReturnFallbackFontsForComplexText();
+    static constexpr bool canExpandAroundIdeographsInComplexText();
 
     GlyphBuffer layoutComplexText(const TextRun&, unsigned from, unsigned to, ForTextEmphasisOrNot = ForTextEmphasisOrNot::NotForTextEmphasis) const;
     float widthForComplexText(const TextRun&, SingleThreadWeakHashSet<const Font>* fallbackFonts = nullptr, GlyphOverflow* = nullptr) const;

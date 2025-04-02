@@ -35,16 +35,6 @@
 
 namespace WebCore {
 
-bool FontCascade::canReturnFallbackFontsForComplexText()
-{
-    return false;
-}
-
-bool FontCascade::canExpandAroundIdeographsInComplexText()
-{
-    return false;
-}
-
 bool FontCascade::canUseGlyphDisplayList(const RenderStyle&)
 {
     return true;

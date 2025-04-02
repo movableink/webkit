@@ -29,6 +29,7 @@
 #include "DisplayListRecorderImpl.h"
 #include "FloatRect.h"
 #include "FontCache.h"
+#include "FontCascadeInlines.h"
 #include "GlyphBuffer.h"
 #include "GraphicsContext.h"
 #include "LayoutRect.h"
@@ -313,7 +314,7 @@ float FontCascade::width(const TextRun& run, SingleThreadWeakHashSet<const Font>
     CodePath codePathToUse = codePath(run);
     if (codePathToUse != CodePath::Complex) {
         // The complex path is more restrictive about returning fallback fonts than the simple path, so we need an explicit test to make their behaviors match.
-        if (!canReturnFallbackFontsForComplexText())
+        if constexpr (!canReturnFallbackFontsForComplexText())
             fallbackFonts = nullptr;
         // The simple path can optimize the case where glyph overflow is not observable.
         if (codePathToUse != CodePath::SimpleWithGlyphOverflow && (glyphOverflow && !glyphOverflow->computeBounds))

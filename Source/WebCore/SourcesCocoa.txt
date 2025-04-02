@@ -446,7 +446,6 @@ platform/graphics/cocoa/ColorCocoa.mm
 platform/graphics/cocoa/FloatRectCocoa.mm
 platform/graphics/cocoa/FontCacheCocoa.mm
 platform/graphics/cocoa/FontCacheCoreText.cpp
-platform/graphics/cocoa/FontCascadeCocoa.cpp
 platform/graphics/cocoa/FontCocoa.cpp
 platform/graphics/cocoa/FontDatabase.cpp
 platform/graphics/cocoa/FontDescriptionCocoa.cpp

@@ -77,7 +77,7 @@ AffineTransform computeOverallTextMatrix(const Font& font)
     std::optional<AffineTransform> syntheticOblique;
     auto& platformData = font.platformData();
     if (platformData.syntheticOblique()) {
-        float obliqueSkew = tanf(deg2rad(FontCascade::syntheticObliqueAngle()));
+        static const float obliqueSkew = std::tanf(deg2rad(FontCascade::syntheticObliqueAngle()));
         if (platformData.orientation() == FontOrientation::Vertical) {
             if (font.isTextOrientationFallback())
                 syntheticOblique = AffineTransform(1, obliqueSkew, 0, 1, 0, 0);

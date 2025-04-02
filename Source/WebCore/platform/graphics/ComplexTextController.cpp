@@ -27,6 +27,7 @@
 
 #include "FloatSize.h"
 #include "FontCascade.h"
+#include "FontCascadeInlines.h"
 #include "GlyphBuffer.h"
 #include "RenderBlock.h"
 #include "RenderText.h"
@@ -738,7 +739,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
 #if USE(CORE_TEXT)
                 boundsForGlyphs[glyphIndex] = font.boundsForGlyph(glyph);
 #endif
-            } else if (FontCascade::treatAsZeroWidthSpace(character) && !treatAsSpace) {
+            } else if (!treatAsSpace && FontCascade::treatAsZeroWidthSpace(character)) {
                 advance.setWidth(0);
                 glyph = font.spaceGlyph();
 #if USE(CORE_TEXT)

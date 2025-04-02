@@ -25,6 +25,7 @@
 #include "ComposedCharacterClusterTextIterator.h"
 #include "Font.h"
 #include "FontCascade.h"
+#include "FontCascadeInlines.h"
 #include "GlyphBuffer.h"
 #include "Latin1TextIterator.h"
 #include "SurrogatePairAwareTextIterator.h"
