@@ -1207,7 +1207,7 @@
             (apply-message-filter
                 (allow iokit-external-method
                     (iokit-method-number 82 88))
-                (allow (with report) (with telemetry)
+                (GPU_PROCESS_IOKIT_DEFAULT_FILTER_OPERATION (with telemetry)
                     iokit-async-external-method
                     iokit-external-method
                     iokit-external-trap)))
