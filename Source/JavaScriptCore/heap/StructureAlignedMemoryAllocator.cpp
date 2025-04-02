@@ -35,6 +35,7 @@
 #include <wtf/NeverDestroyed.h>
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #if !USE(SYSTEM_MALLOC)
+#include <bmalloc/bmalloc.h>
 #include <bmalloc/bmalloc_heap.h>
 #include <bmalloc/bmalloc_heap_config.h>
 #include <bmalloc/bmalloc_heap_inlines.h>
@@ -87,30 +88,41 @@ void* StructureAlignedMemoryAllocator::tryReallocateMemory(void*, size_t)
 static const bmalloc_type structureHeapType { BMALLOC_TYPE_INITIALIZER(MarkedBlock::blockSize, MarkedBlock::blockSize, "Structure Heap") };
 static pas_primitive_heap_ref structureHeap { BMALLOC_AUXILIARY_HEAP_REF_INITIALIZER(&structureHeapType) };
 
-void* StructureAlignedMemoryAllocator::tryAllocateAlignedMemory(size_t alignment, size_t size)
-{
-    ASSERT_UNUSED(alignment, alignment == MarkedBlock::blockSize);
-    ASSERT_UNUSED(size, size == MarkedBlock::blockSize);
-    return bmalloc_try_allocate_auxiliary_with_alignment_inline(&structureHeap, MarkedBlock::blockSize, MarkedBlock::blockSize, pas_maybe_compact_allocation_mode);
-}
-
-void StructureAlignedMemoryAllocator::freeAlignedMemory(void* ptr)
-{
-    bmalloc_deallocate_inline(ptr);
-}
-
-#else
+#endif
 
 class StructureMemoryManager {
 public:
     StructureMemoryManager()
     {
+        static_assert(hasOneBitSet(structureHeapAddressSize));
+        uintptr_t mappedHeapSize = structureHeapAddressSize;
+        for (unsigned i = 0; i < 8; ++i) {
+            g_jscConfig.startOfStructureHeap = reinterpret_cast<uintptr_t>(OSAllocator::tryReserveUncommittedAligned(mappedHeapSize, structureHeapAddressSize, OSAllocator::FastMallocPages));
+            if (g_jscConfig.startOfStructureHeap)
+                break;
+            mappedHeapSize /= 2;
+        }
+        g_jscConfig.sizeOfStructureHeap = mappedHeapSize;
+        RELEASE_ASSERT(g_jscConfig.startOfStructureHeap && ((g_jscConfig.startOfStructureHeap & ~StructureID::structureIDMask) == g_jscConfig.startOfStructureHeap));
+
         // Don't use the first page because zero is used as the empty StructureID and the first allocation will conflict.
+#if !USE(SYSTEM_MALLOC)
+        m_useDebugHeap = !bmalloc::api::isEnabled();
+        if (LIKELY(!m_useDebugHeap)) {
+            bmalloc_force_auxiliary_heap_into_reserved_memory(&structureHeap, reinterpret_cast<uintptr_t>(g_jscConfig.startOfStructureHeap) + MarkedBlock::blockSize, reinterpret_cast<uintptr_t>(g_jscConfig.startOfStructureHeap) + g_jscConfig.sizeOfStructureHeap);
+            return;
+        }
+#endif
         m_usedBlocks.set(0);
     }
 
     void* tryMallocStructureBlock()
     {
+#if !USE(SYSTEM_MALLOC)
+        if (LIKELY(!m_useDebugHeap))
+            return bmalloc_try_allocate_auxiliary_with_alignment_inline(&structureHeap, MarkedBlock::blockSize, MarkedBlock::blockSize, pas_maybe_compact_allocation_mode);
+#endif
+
         size_t freeIndex;
         {
             Locker locker(m_lock);
@@ -132,6 +144,13 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     void freeStructureBlock(void* blockPtr)
     {
+#if !USE(SYSTEM_MALLOC)
+        if (LIKELY(!m_useDebugHeap)) {
+            bmalloc_deallocate_inline(blockPtr);
+            return;
+        }
+#endif
+
         decommitBlock(blockPtr);
         uintptr_t block = reinterpret_cast<uintptr_t>(blockPtr);
         RELEASE_ASSERT(g_jscConfig.startOfStructureHeap <= block && block < g_jscConfig.startOfStructureHeap + g_jscConfig.sizeOfStructureHeap);
@@ -167,6 +186,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 private:
     Lock m_lock;
+    bool m_useDebugHeap { true };
     BitVector m_usedBlocks;
 };
 
@@ -184,27 +204,9 @@ void StructureAlignedMemoryAllocator::freeAlignedMemory(void* block)
     s_structureMemoryManager->freeStructureBlock(block);
 }
 
-#endif
-
 void StructureAlignedMemoryAllocator::initializeStructureAddressSpace()
 {
-    static_assert(hasOneBitSet(structureHeapAddressSize));
-    uintptr_t mappedHeapSize = structureHeapAddressSize;
-    for (unsigned i = 0; i < 8; ++i) {
-        g_jscConfig.startOfStructureHeap = reinterpret_cast<uintptr_t>(OSAllocator::tryReserveUncommittedAligned(mappedHeapSize, structureHeapAddressSize, OSAllocator::FastMallocPages));
-        if (g_jscConfig.startOfStructureHeap)
-            break;
-        mappedHeapSize /= 2;
-    }
-    g_jscConfig.sizeOfStructureHeap = mappedHeapSize;
-    RELEASE_ASSERT(g_jscConfig.startOfStructureHeap && ((g_jscConfig.startOfStructureHeap & ~StructureID::structureIDMask) == g_jscConfig.startOfStructureHeap));
-
-#if !USE(SYSTEM_MALLOC)
-    // Don't use the first page because zero is used as the empty StructureID and the first allocation will conflict.
-    bmalloc_force_auxiliary_heap_into_reserved_memory(&structureHeap, reinterpret_cast<uintptr_t>(g_jscConfig.startOfStructureHeap) + MarkedBlock::blockSize, reinterpret_cast<uintptr_t>(g_jscConfig.startOfStructureHeap) + g_jscConfig.sizeOfStructureHeap);
-#else
     s_structureMemoryManager.construct();
-#endif
 }
 
 #else // not CPU(ADDRESS64)
