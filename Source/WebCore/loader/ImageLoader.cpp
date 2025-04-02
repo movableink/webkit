@@ -547,12 +547,7 @@ void ImageLoader::updatedHasPendingEvent()
     // destroyed by DOM manipulation or garbage collection.
     // If such an Element wishes for the load to stop when removed from the DOM it needs to stop the ImageLoader explicitly.
     bool wasProtected = m_elementIsProtected;
-
-    // Because of lazy image loading, an image's load may be deferred indefinitely. To avoid leaking the element, we only
-    // protect it once the load has actually started.
-    bool imageWillBeLoadedLater = m_image && !m_image->isLoading() && m_image->stillNeedsLoad();
-
-    m_elementIsProtected = (m_hasPendingLoadEvent && !imageWillBeLoadedLater) || m_hasPendingErrorEvent;
+    m_elementIsProtected = hasPendingActivity();
     if (wasProtected == m_elementIsProtected)
         return;
 
