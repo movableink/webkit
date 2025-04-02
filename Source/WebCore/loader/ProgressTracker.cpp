@@ -111,7 +111,7 @@ Ref<Page> ProgressTracker::protectedPage() const
 
 void ProgressTracker::progressStarted(LocalFrame& frame)
 {
-    LOG(Progress, "Progress started (%p) - frame %p(frameID %" PRIu64 "), value %f, tracked frames %d, originating frame %p", this, &frame, frame.frameID().object().toUInt64(), m_progressValue, m_numProgressTrackedFrames, m_originatingProgressFrame.get());
+    LOG(Progress, "Progress started (%p) - frame %p(frameID %" PRIu64 "), value %f, tracked frames %d, originating frame %p", this, &frame, frame.frameID().toUInt64(), m_progressValue, m_numProgressTrackedFrames, m_originatingProgressFrame.get());
 
     m_client->willChangeEstimatedProgress();
 
@@ -136,7 +136,7 @@ void ProgressTracker::progressStarted(LocalFrame& frame)
     m_numProgressTrackedFrames++;
 
     RefPtr originatingProgressFrame = m_originatingProgressFrame.get();
-    PROGRESS_TRACKER_RELEASE_LOG(PROGRESSTRACKER_PROGRESSSTARTED, frame.frameID().object().toUInt64(), m_progressValue, m_numProgressTrackedFrames, originatingProgressFrame ? originatingProgressFrame->frameID().object().toUInt64() : 0, m_isMainLoad);
+    PROGRESS_TRACKER_RELEASE_LOG(PROGRESSTRACKER_PROGRESSSTARTED, frame.frameID().toUInt64(), m_progressValue, m_numProgressTrackedFrames, originatingProgressFrame ? originatingProgressFrame->frameID().toUInt64() : 0, m_isMainLoad);
 
     m_client->didChangeEstimatedProgress();
     InspectorInstrumentation::frameStartedLoading(frame);
@@ -151,8 +151,8 @@ void ProgressTracker::progressEstimateChanged(LocalFrame& frame)
 void ProgressTracker::progressCompleted(LocalFrame& frame)
 {
     RefPtr originatingProgressFrame = m_originatingProgressFrame.get();
-    LOG(Progress, "Progress completed (%p) - frame %p(frameID %" PRIu64 "), value %f, tracked frames %d, originating frame %p", this, &frame, frame.frameID().object().toUInt64(), m_progressValue, m_numProgressTrackedFrames, originatingProgressFrame.get());
-    PROGRESS_TRACKER_RELEASE_LOG(PROGRESSTRACKER_PROGRESSCOMPLETED, frame.frameID().object().toUInt64(), m_progressValue, m_numProgressTrackedFrames, originatingProgressFrame ? originatingProgressFrame->frameID().object().toUInt64() : 0, m_isMainLoad);
+    LOG(Progress, "Progress completed (%p) - frame %p(frameID %" PRIu64 "), value %f, tracked frames %d, originating frame %p", this, &frame, frame.frameID().toUInt64(), m_progressValue, m_numProgressTrackedFrames, originatingProgressFrame.get());
+    PROGRESS_TRACKER_RELEASE_LOG(PROGRESSTRACKER_PROGRESSCOMPLETED, frame.frameID().toUInt64(), m_progressValue, m_numProgressTrackedFrames, originatingProgressFrame ? originatingProgressFrame->frameID().toUInt64() : 0, m_isMainLoad);
 
     if (m_numProgressTrackedFrames <= 0)
         return;
@@ -170,7 +170,7 @@ void ProgressTracker::finalProgressComplete()
 {
     RefPtr frame = std::exchange(m_originatingProgressFrame, nullptr).get();
     LOG(Progress, "Final progress complete (%p)", this);
-    PROGRESS_TRACKER_RELEASE_LOG(PROGRESSTRACKER_FINALPROGRESSCOMPLETE, m_progressValue, m_numProgressTrackedFrames, frame ? frame->frameID().object().toUInt64() : 0, m_isMainLoad, isMainLoadProgressing());
+    PROGRESS_TRACKER_RELEASE_LOG(PROGRESSTRACKER_FINALPROGRESSCOMPLETE, m_progressValue, m_numProgressTrackedFrames, frame ? frame->frameID().toUInt64() : 0, m_isMainLoad, isMainLoadProgressing());
 
     // Before resetting progress value be sure to send client a least one notification
     // with final progress value.

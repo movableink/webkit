@@ -687,7 +687,7 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString, bo
                 auto subframeMainResourceURL = subframeMainResource ? subframeMainResource->url() : URL { };
                 if (!subframeMainResourceURL.isEmpty()) {
                     auto subframeMainResourceRelativePath = frame.isMainFrame() ? subframeMainResource->relativeFilePath() : FileSystem::lastComponentOfPathIgnoringTrailingSlash(subframeMainResource->relativeFilePath());
-                    uniqueSubresources.add(childFrame->frameID().toString(), subframeMainResourceRelativePath);
+                    uniqueSubresources.add(makeString(childFrame->frameID().toUInt64()), subframeMainResourceRelativePath);
                 }
                 subframeArchives.append(subframeArchive.releaseNonNull());
             } else
@@ -773,7 +773,7 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString, bo
         if (!extension.isEmpty())
             extension = makeString('.', extension);
         auto mainFrameFilePathWithExtension = mainFrameFilePath.endsWith(extension) ? mainFrameFilePath : makeString(mainFrameFilePath, extension);
-        auto filePathWithExtension = frame.isMainFrame() ? mainFrameFilePathWithExtension : makeString(subresourcesDirectoryName, "/frame_"_s, frame.frameID().toString(), extension);
+        auto filePathWithExtension = frame.isMainFrame() ? mainFrameFilePathWithExtension : makeString(subresourcesDirectoryName, "/frame_"_s, frame.frameID().toUInt64(), extension);
 
         ResolveURLs resolveURLs = ResolveURLs::No;
         // Base element is excluded, so all URLs should be replaced with absolute URL.

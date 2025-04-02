@@ -47,7 +47,7 @@
 
 #define WebFrameLoaderClient_PREFIX_PARAMETERS "%p - [webFrame=%p, webFrameID=%" PRIu64 ", webPage=%p, webPageID=%" PRIu64 "] WebFrameLoaderClient::"
 #define WebFrameLoaderClient_WEBFRAME (&webFrame())
-#define WebFrameLoaderClient_WEBFRAMEID (webFrame().frameID().object().toUInt64())
+#define WebFrameLoaderClient_WEBFRAMEID (webFrame().frameID().toUInt64())
 #define WebFrameLoaderClient_WEBPAGE (webFrame().page())
 #define WebFrameLoaderClient_WEBPAGEID (WebFrameLoaderClient_WEBPAGE ? WebFrameLoaderClient_WEBPAGE->identifier().toUInt64() : 0)
 
@@ -211,7 +211,7 @@ void WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const Navigat
         if (!frame)
             return;
 
-        RELEASE_LOG_FORWARDABLE(Network, WEBFRAMELOADERCLIENT_DISPATCHDECIDEPOLICYFORNAVIGATIONACTION_GOT_POLICYACTION_FROM_ASYNC_IPC, frame->frameID().object().toUInt64(), webPageID, toString(policyDecision.policyAction).characters());
+        RELEASE_LOG_FORWARDABLE(Network, WEBFRAMELOADERCLIENT_DISPATCHDECIDEPOLICYFORNAVIGATIONACTION_GOT_POLICYACTION_FROM_ASYNC_IPC, frame->frameID().toUInt64(), webPageID, toString(policyDecision.policyAction).characters());
 
         frame->didReceivePolicyDecision(listenerID, WTFMove(policyDecision));
     });

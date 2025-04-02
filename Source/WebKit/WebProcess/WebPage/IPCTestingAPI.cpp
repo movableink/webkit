@@ -2419,13 +2419,9 @@ static bool encodeArgument(IPC::Encoder& encoder, JSContextRef context, JSValueR
 
     if (type == "FrameID"_s) {
         uint64_t frameIdentifier = jsValue.get(globalObject, 0u).toBigUInt64(globalObject);
-        uint64_t processIdentifier = jsValue.get(globalObject, 1u).toBigUInt64(globalObject);
-        if (!ObjectIdentifier<WebCore::FrameIdentifierType>::isValidIdentifier(frameIdentifier) || !ObjectIdentifier<WebCore::ProcessIdentifierType>::isValidIdentifier(processIdentifier))
+        if (!ObjectIdentifier<WebCore::FrameIdentifierType>::isValidIdentifier(frameIdentifier))
             return false;
-        encoder << WebCore::FrameIdentifier {
-            ObjectIdentifier<WebCore::FrameIdentifierType>(frameIdentifier),
-            ObjectIdentifier<WebCore::ProcessIdentifierType>(processIdentifier)
-        };
+        encoder << WebCore::FrameIdentifier(frameIdentifier);
         return true;
     }
 
@@ -2878,8 +2874,7 @@ JSValueRef JSIPC::frameID(JSContextRef context, JSObjectRef thisObject, JSString
     }
 
     auto frameID = wrapped->m_webFrame->frameID();
-    array->putDirectIndex(globalObject, 0, JSC::JSBigInt::createFrom(globalObject, frameID.object().toUInt64()));
-    array->putDirectIndex(globalObject, 1, JSC::JSBigInt::createFrom(globalObject, frameID.processIdentifier().toUInt64()));
+    array->putDirectIndex(globalObject, 0, JSC::JSBigInt::createFrom(globalObject, frameID.toUInt64()));
     return toRef(vm, array);
 }
 

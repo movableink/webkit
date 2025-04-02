@@ -36,6 +36,7 @@ namespace Process {
 
 WEBCORE_EXPORT void setIdentifier(ProcessIdentifier);
 WEBCORE_EXPORT ProcessIdentifier identifier();
+WEBCORE_EXPORT ProcessIdentifier generateIdentifier();
 
 } // namespace Process
 } // namespace WebCore

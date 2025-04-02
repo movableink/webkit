@@ -1222,7 +1222,7 @@ PageConfiguration pageConfigurationWithEmptyClients(std::optional<PageIdentifier
             } },
             SandboxFlags::all(),
         },
-        FrameIdentifier::generate(),
+        generateFrameIdentifier(),
         nullptr,
         makeUniqueRef<DummySpeechRecognitionProvider>(),
         EmptyBroadcastChannelRegistry::create(),

@@ -55,12 +55,12 @@
 
 - (NSUInteger)hash
 {
-    return _frameHandle->frameID() ? _frameHandle->frameID()->object().toUInt64() : 0;
+    return _frameHandle->frameID() ? _frameHandle->frameID()->toUInt64() : 0;
 }
 
 - (uint64_t)frameID
 {
-    return _frameHandle->frameID() ? _frameHandle->frameID()->object().toUInt64() : 0;
+    return _frameHandle->frameID() ? _frameHandle->frameID()->toUInt64() : 0;
 }
 
 #pragma mark NSCopying protocol implementation
@@ -94,30 +94,14 @@
         return nil;
     }
 
-    NSNumber *processID = [decoder decodeObjectOfClass:[NSNumber class] forKey:@"processID"];
-    if (![processID isKindOfClass:[NSNumber class]]) {
-        [self release];
-        return nil;
-    }
-
-    auto rawProcessID = processID.unsignedLongLongValue;
-    if (!ObjectIdentifier<WebCore::ProcessIdentifierType>::isValidIdentifier(rawProcessID)) {
-        [self release];
-        return nil;
-    }
-
-    API::Object::constructInWrapper<API::FrameHandle>(self, WebCore::FrameIdentifier {
-        ObjectIdentifier<WebCore::FrameIdentifierType>(rawFrameID),
-        ObjectIdentifier<WebCore::ProcessIdentifierType>(rawProcessID)
-    }, false);
+    API::Object::constructInWrapper<API::FrameHandle>(self, WebCore::FrameIdentifier(rawFrameID), false);
 
     return self;
 }
 
 - (void)encodeWithCoder:(NSCoder *)coder
 {
-    [coder encodeObject:@(_frameHandle->frameID() ? _frameHandle->frameID()->object().toUInt64() : 0) forKey:@"frameID"];
-    [coder encodeObject:@(_frameHandle->frameID() ? _frameHandle->frameID()->processIdentifier().toUInt64() : 0) forKey:@"processID"];
+    [coder encodeObject:@(_frameHandle->frameID() ? _frameHandle->frameID()->toUInt64() : 0) forKey:@"frameID"];
 }
 
 #pragma mark WKObject protocol implementation

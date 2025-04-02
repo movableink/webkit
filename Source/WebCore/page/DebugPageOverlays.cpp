@@ -695,7 +695,7 @@ void SiteIsolationOverlay::drawRect(PageOverlay&, GraphicsContext& context, cons
         if (!frame->virtualView())
             continue;
         auto frameView = frame->virtualView();
-        auto debugStr = makeString(is<RemoteFrame>(frame) ? "remote("_s : "local("_s, frame->frameID().toString(), ')');
+        auto debugStr = makeString(is<RemoteFrame>(frame) ? "remote("_s : "local("_s, frame->frameID().toUInt64(), ')');
         TextRun textRun = TextRun(debugStr);
         context.setFillColor(Color::black);
 

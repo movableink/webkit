@@ -421,7 +421,7 @@ void WebFrameProxy::didCreateSubframe(WebCore::FrameIdentifier frameID, const St
     RefPtr page = m_page.get();
     MESSAGE_CHECK(page);
     MESSAGE_CHECK(WebFrameProxy::canCreateFrame(frameID));
-    MESSAGE_CHECK(frameID.processIdentifier() == process().coreProcessIdentifier());
+    MESSAGE_CHECK((frameID.toUInt64() >> 32) == process().coreProcessIdentifier().toUInt64());
 
     Ref child = WebFrameProxy::create(*page, m_frameProcess, frameID, effectiveSandboxFlags, scrollingMode, nullptr, IsMainFrame::No);
     child->m_parentFrame = *this;

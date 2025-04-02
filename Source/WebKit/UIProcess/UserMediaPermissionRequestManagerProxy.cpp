@@ -394,13 +394,13 @@ void UserMediaPermissionRequestManagerProxy::finishGrantingRequest(UserMediaPerm
 
 void UserMediaPermissionRequestManagerProxy::didCommitLoadForFrame(FrameIdentifier frameID)
 {
-    ALWAYS_LOG(LOGIDENTIFIER, frameID.object().toUInt64());
+    ALWAYS_LOG(LOGIDENTIFIER, frameID.toUInt64());
     m_frameEphemeralHashSalts.remove(frameID);
 }
 
 void UserMediaPermissionRequestManagerProxy::resetAccess(WebFrameProxy* frame)
 {
-    ALWAYS_LOG(LOGIDENTIFIER, frame ? frame->frameID().object().toUInt64() : 0);
+    ALWAYS_LOG(LOGIDENTIFIER, frame ? frame->frameID().toUInt64() : 0);
 
     if (RefPtr currentUserMediaRequest = m_currentUserMediaRequest; currentUserMediaRequest && (!frame || m_currentUserMediaRequest->frameID() == frame->frameID())) {
         // Avoid starting pending requests after denying current request.

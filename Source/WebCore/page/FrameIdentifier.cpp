@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,20 +24,18 @@
  */
 
 #include "config.h"
-#include "WKFrameHandleRef.h"
+#include "FrameIdentifier.h"
 
-#include "APIFrameHandle.h"
-#include "WKAPICast.h"
+#include "ProcessIdentifier.h"
+#include <wtf/MainThread.h>
 
-using namespace WebKit;
+namespace WebCore {
 
-WKTypeID WKFrameHandleGetTypeID()
+FrameIdentifier generateFrameIdentifier()
 {
-    return toAPI(API::FrameHandle::APIType);
+    ASSERT(isMainThread());
+    static uint64_t nextIdentifier { 1 };
+    return FrameIdentifier((Process::identifier().toUInt64() << 32) | nextIdentifier++);
 }
 
-uint64_t WKFrameHandleGetFrameID(WKFrameHandleRef frameHandleRef)
-{
-    auto frameID = toImpl(frameHandleRef)->frameID();
-    return frameID ? frameID->toUInt64() : 0;
 }

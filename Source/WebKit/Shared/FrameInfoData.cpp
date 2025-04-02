@@ -40,7 +40,7 @@ FrameInfoData legacyEmptyFrameInfo(WebCore::ResourceRequest&& request)
         WTFMove(request),
         WebCore::SecurityOriginData::createOpaque(),
         String { },
-        WebCore::FrameIdentifier::generate(),
+        WebCore::generateFrameIdentifier(),
         std::nullopt,
         std::nullopt,
         WebCore::CertificateInfo { },

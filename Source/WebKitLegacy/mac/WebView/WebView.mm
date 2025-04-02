@@ -1522,7 +1522,7 @@ static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
             } },
             WebCore::SandboxFlags { } // Set by updateSandboxFlags after instantiation.
         },
-        WebCore::FrameIdentifier::generate(),
+        WebCore::generateFrameIdentifier(),
         nullptr, // Opener may be set by setOpenerForWebKitLegacy after instantiation.
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
         WebBroadcastChannelRegistry::getOrCreate([[self preferences] privateBrowsingEnabled]),
@@ -1791,7 +1791,7 @@ static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
             } },
             WebCore::SandboxFlags { } // Set by updateSandboxFlags after instantiation.
         },
-        WebCore::FrameIdentifier::generate(),
+        WebCore::generateFrameIdentifier(),
         nullptr, // Opener may be set by setOpenerForWebKitLegacy after instantiation.
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
         WebBroadcastChannelRegistry::getOrCreate([[self preferences] privateBrowsingEnabled]),

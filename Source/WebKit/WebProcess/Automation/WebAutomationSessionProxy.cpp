@@ -225,10 +225,7 @@ static JSValueRef evaluateJavaScriptCallback(JSContextRef context, JSObjectRef f
     if (!ObjectIdentifier<WebCore::ProcessIdentifierType>::isValidIdentifier(rawProcessID))
         return JSValueMakeUndefined(context);
 
-    WebCore::FrameIdentifier frameID {
-        ObjectIdentifier<WebCore::FrameIdentifierType>(rawFrameID),
-        ObjectIdentifier<WebCore::ProcessIdentifierType>(rawProcessID)
-    };
+    WebCore::FrameIdentifier frameID(rawFrameID);
     uint64_t rawCallbackID = JSValueToNumber(context, arguments[2], exception);
     if (!WebAutomationSessionProxy::JSCallbackIdentifier::isValidIdentifier(rawCallbackID))
         return JSValueMakeUndefined(context);
@@ -448,8 +445,7 @@ void WebAutomationSessionProxy::evaluateJavaScriptFunction(WebCore::PageIdentifi
         toJSArray(context, arguments, toJSValue, &exception),
         JSValueMakeBoolean(context, expectsImplicitCallbackArgument),
         JSValueMakeBoolean(context, forceUserGesture),
-        JSValueMakeNumber(context, frameID.object().toUInt64()),
-        JSValueMakeNumber(context, frameID.processIdentifier().toUInt64()),
+        JSValueMakeNumber(context, frameID.toUInt64()),
         JSValueMakeNumber(context, callbackID.toUInt64()),
         JSObjectMakeFunctionWithCallback(context, nullptr, evaluateJavaScriptCallback),
         JSValueMakeNumber(context, callbackTimeout.value_or(-1))

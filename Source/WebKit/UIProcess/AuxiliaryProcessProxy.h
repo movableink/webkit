@@ -316,7 +316,7 @@ private:
     bool m_alwaysRunsAtBackgroundPriority { false };
     bool m_didBeginResponsivenessChecks { false };
     bool m_isSuspended { false };
-    const WebCore::ProcessIdentifier m_processIdentifier { WebCore::ProcessIdentifier::generate() };
+    const WebCore::ProcessIdentifier m_processIdentifier { WebCore::Process::generateIdentifier() };
     std::optional<UseLazyStop> m_delayedResponsivenessCheck;
     MonotonicTime m_processStart;
     ProcessThrottler m_throttler;

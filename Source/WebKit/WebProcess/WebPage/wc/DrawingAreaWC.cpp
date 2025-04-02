@@ -98,8 +98,7 @@ void DrawingAreaWC::setRootCompositingLayer(WebCore::Frame& frame, GraphicsLayer
 void DrawingAreaWC::addRootFrame(WebCore::FrameIdentifier frameID)
 {
     auto layer = GraphicsLayer::create(graphicsLayerFactory(), this->m_rootLayerClient);
-    // FIXME: This has an unnecessary string allocation. Adding a StringTypeAdapter for FrameIdentifier or ProcessQualified would remove that.
-    layer->setName(makeString("drawing area root "_s, frameID.toString()));
+    layer->setName(makeString("drawing area root "_s, frameID.toUInt64()));
     layer->setAnchorPoint({ });
     m_rootLayers.append(RootLayerInfo {
         WTFMove(layer),

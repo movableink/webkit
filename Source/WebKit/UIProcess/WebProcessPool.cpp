@@ -283,7 +283,7 @@ WebProcessPool::WebProcessPool(API::ProcessPoolConfiguration& configuration)
     if (needsGlobalStaticInitialization == NeedsGlobalStaticInitialization::Yes) {
         WTF::setProcessPrivileges(allPrivileges());
         WebCore::NetworkStorageSession::permitProcessToUseCookieAPI(true);
-        Process::setIdentifier(WebCore::ProcessIdentifier::generate());
+        Process::setIdentifier(WebCore::Process::generateIdentifier());
     }
 
     for (auto& scheme : m_configuration->alwaysRevalidatedURLSchemes())

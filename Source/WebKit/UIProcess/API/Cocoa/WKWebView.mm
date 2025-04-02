@@ -3497,7 +3497,7 @@ static RetainPtr<NSDictionary<NSString *, id>> createUserInfo(const std::optiona
                 [wkToken setUserInfo:createUserInfo(token.info).get()];
                 return wkToken;
             });
-            auto identifier = makeString(item.frameID ? item.frameID->processIdentifier().toUInt64() : 0, '-', item.frameID ? item.frameID->object().toUInt64() : 0, '-', item.identifier ? item.identifier->toUInt64() : 0);
+            auto identifier = makeString(item.frameID ? item.frameID->toUInt64() : 0, '-', item.identifier ? item.identifier->toUInt64() : 0);
             return adoptNS([[_WKTextManipulationItem alloc] initWithIdentifier:identifier tokens:tokens.get() isSubframe:item.isSubframe isCrossSiteSubframe:item.isCrossSiteSubframe]);
         };
 
@@ -3521,18 +3521,14 @@ static std::optional<ItemIdentifiers> coreTextManipulationItemIdentifierFromStri
 {
     String identifierString { identifier };
     unsigned index = 0;
-    std::optional<uint64_t> processID;
     std::optional<uint64_t> frameID;
     std::optional<uint64_t> itemID;
     for (auto token : StringView(identifierString).split('-')) {
         switch (index) {
         case 0:
-            processID = parseInteger<uint64_t>(token);
-            break;
-        case 1:
             frameID = parseInteger<uint64_t>(token);
             break;
-        case 2:
+        case 1:
             itemID = parseInteger<uint64_t>(token);
             break;
         default:
@@ -3540,17 +3536,16 @@ static std::optional<ItemIdentifiers> coreTextManipulationItemIdentifierFromStri
         }
         ++index;
     }
-    if (!processID || !*processID || !frameID || !*frameID || !itemID || !*itemID)
+    if (!frameID || !*frameID || !itemID || !*itemID)
         return std::nullopt;
 
-    if (!ObjectIdentifier<WebCore::ProcessIdentifierType>::isValidIdentifier(*processID))
+    if (!WebCore::FrameIdentifier::isValidIdentifier(*frameID))
         return std::nullopt;
 
     if (!ObjectIdentifier<WebCore::TextManipulationItemIdentifierType>::isValidIdentifier(*itemID))
         return std::nullopt;
 
-    return ItemIdentifiers { WebCore::ProcessQualified(ObjectIdentifier<WebCore::FrameIdentifierType>(*frameID),
-        ObjectIdentifier<WebCore::ProcessIdentifierType>(*processID)),
+    return ItemIdentifiers { WebCore::FrameIdentifier(*frameID),
         ObjectIdentifier<WebCore::TextManipulationItemIdentifierType>(*itemID) };
 }
 

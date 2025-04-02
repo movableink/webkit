@@ -365,7 +365,7 @@ std::pair<String, MarkupAccumulator::IsCreatedByURLReplacement> MarkupAccumulato
 
     if (m_serializationContext) {
         if (RefPtr frame = frameForAttributeReplacement(element)) {
-            auto replacementURLString = m_serializationContext->replacementURLStrings.get(frame->frameID().toString());
+            auto replacementURLString = m_serializationContext->replacementURLStrings.get(makeString(frame->frameID().toUInt64()));
             if (!replacementURLString.isEmpty())
                 return { replacementURLString, IsCreatedByURLReplacement::Yes };
         }
@@ -748,7 +748,7 @@ Attribute MarkupAccumulator::replaceAttributeIfNecessary(const Element& element,
         if (!frame || !frame->loader().documentLoader()->response().url().isAboutSrcDoc())
             return attribute;
 
-        auto replacementURLString = m_serializationContext->replacementURLStrings.get(frame->frameID().toString());
+        auto replacementURLString = m_serializationContext->replacementURLStrings.get(makeString(frame->frameID().toUInt64()));
         if (replacementURLString.isEmpty())
             return attribute;
 
@@ -767,7 +767,7 @@ bool MarkupAccumulator::appendURLAttributeForReplacementIfNecessary(StringBuilde
     if (!frame)
         return false;
 
-    auto replacementURLString = m_serializationContext->replacementURLStrings.get(frame->frameID().toString());
+    auto replacementURLString = m_serializationContext->replacementURLStrings.get(makeString(frame->frameID().toUInt64()));
     if (replacementURLString.isEmpty())
         return false;
 
