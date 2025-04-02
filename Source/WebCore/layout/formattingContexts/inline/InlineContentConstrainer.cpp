@@ -62,9 +62,9 @@ static size_t lastLineBreakingPointOffset()
 
 // Use auto layout if ideal line width is too short relative to the largest inline item.
 // In these situations, text-wrap-pretty does very little of note other than take up time.
-static bool validIdealLineWidth(InlineLayoutUnit maxItemWidth, InlineLayoutUnit idealLineWidth)
+static bool validIdealLineWidth(InlineLayoutUnit maxItemWidth, InlineLayoutUnit idealLineWidth, InlineLayoutUnit maxTextIndent)
 {
-    return idealLineWidth >= maxItemWidth * 3;
+    return idealLineWidth >= maxItemWidth * 3 + maxTextIndent;
 }
 
 static bool validLineWidthPretty(InlineLayoutUnit candidateLineWidth, InlineLayoutUnit idealLineWidth)
@@ -529,7 +529,7 @@ std::optional<Vector<LayoutUnit>> InlineContentConstrainer::prettifyRange(Inline
 {
     ASSERT(range.startIndex() < range.endIndex());
     // Fall back to auto layout if the ideal line width is too narrow relative to the width of the largest inline item.
-    if (!validIdealLineWidth(m_inlineItemWidthsMax, idealLineWidth))
+    if (!validIdealLineWidth(m_inlineItemWidthsMax, idealLineWidth, computeMaxTextIndent()))
         return { };
 
     // breakOpportunities holds the indices i such that a line break can occur before m_inlineItemList[i].
@@ -825,6 +825,19 @@ Vector<LayoutUnit> InlineContentConstrainer::computeLineWidthsFromBreaks(InlineI
         lineWidths[i] = computeLineWidthFromSlidingWidth(indentWidth, slidingWidth);
     }
     return lineWidths;
+}
+
+InlineLayoutUnit InlineContentConstrainer::computeMaxTextIndent() const
+{
+    // Indent for the first chunk
+    auto firstChunkTextIndent = computeTextIndent(std::nullopt);
+    // Indent for the first line after a break
+    auto firstLineAfterBreakIndent = computeTextIndent(true);
+    // Regular line indent
+    auto regularIndent = computeTextIndent(false);
+
+    // Return the maximum indent value
+    return std::max({ firstChunkTextIndent, firstLineAfterBreakIndent, regularIndent });
 }
 
 InlineLayoutUnit InlineContentConstrainer::computeTextIndent(std::optional<bool> previousLineEndsWithLineBreak) const

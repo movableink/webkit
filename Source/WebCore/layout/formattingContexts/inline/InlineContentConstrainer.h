@@ -72,6 +72,7 @@ private:
     bool shouldTrimTrailing(size_t inlineItemIndex, bool useFirstLineStyle) const;
     Vector<size_t> computeBreakOpportunities(InlineItemRange) const;
     Vector<LayoutUnit> computeLineWidthsFromBreaks(InlineItemRange, const Vector<size_t>& breaks, bool isFirstChunk) const;
+    InlineLayoutUnit computeMaxTextIndent() const;
     InlineLayoutUnit computeTextIndent(std::optional<bool> previousLineEndsWithLineBreak) const;
 
     InlineFormattingContext& m_inlineFormattingContext;
