@@ -793,7 +793,27 @@ void WebLocalFrameLoaderClient::completePageTransitionIfNeeded()
 
     webPage->didCompletePageTransition();
     m_didCompletePageTransition = true;
+
+    // We suppress layout related milestones during page transition but we need to make sure
+    // we eventually dispatch when the transition is complete.
+    fireLayoutRelatedMilestonesIfNeeded();
+
     WebLocalFrameLoaderClient_RELEASE_LOG_FORWARDABLE(Layout, WEBLOCALFRAMELOADERCLIENT_COMPLETE_PAGE_TRANSITION_IF_NEEDED);
+}
+
+bool WebLocalFrameLoaderClient::shouldSuppressLayoutMilestones() const
+{
+    return m_frame->isMainFrame() && !m_didCompletePageTransition;
+}
+
+void WebLocalFrameLoaderClient::fireLayoutRelatedMilestonesIfNeeded()
+{
+    ASSERT(!shouldSuppressLayoutMilestones());
+    RefPtr localFrame = m_frame->coreLocalFrame();
+    if (!localFrame || !localFrame->isMainFrame())
+        return;
+    if (RefPtr view = localFrame->view())
+        view->fireLayoutRelatedMilestonesIfNeeded();
 }
 
 void WebLocalFrameLoaderClient::setDocumentVisualUpdatesAllowed(bool allowed)

@@ -385,6 +385,8 @@ public:
     virtual void didExceedNetworkUsageThreshold();
 #endif
 
+    virtual bool shouldSuppressLayoutMilestones() const { return false; }
+
 protected:
     explicit LocalFrameLoaderClient(FrameLoader&);
 

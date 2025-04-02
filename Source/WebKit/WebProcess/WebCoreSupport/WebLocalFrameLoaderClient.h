@@ -82,6 +82,9 @@ private:
     
     void detachedFromParent2() final;
     void detachedFromParent3() final;
+
+    bool shouldSuppressLayoutMilestones() const final;
+    void fireLayoutRelatedMilestonesIfNeeded();
     
     void assignIdentifierToInitialRequest(WebCore::ResourceLoaderIdentifier, WebCore::IsMainResourceLoad, WebCore::DocumentLoader*, const WebCore::ResourceRequest&) final;
     

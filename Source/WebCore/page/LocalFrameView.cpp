@@ -5856,6 +5856,9 @@ void LocalFrameView::addPaintPendingMilestones(OptionSet<LayoutMilestone> milest
 
 void LocalFrameView::fireLayoutRelatedMilestonesIfNeeded()
 {
+    if (m_frame->loader().client().shouldSuppressLayoutMilestones())
+        return;
+
     OptionSet<LayoutMilestone> requestedMilestones;
     OptionSet<LayoutMilestone> milestonesAchieved;
     Page* page = m_frame->page();
