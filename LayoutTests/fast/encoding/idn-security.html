@@ -109,8 +109,6 @@ function testDoesNotEncodeIDNCharacter(charCode)
     shouldBe("testIDNEncodeTripFirstCharacter(0x" + charCode.toString(16) + ")", "'" + expected + "'");
 }
 
-var isOlderICU = testIDNEncode(0x3002) == ".";
-
 /* Allowed Characters - dot and slash */
 testIDNCharacter(".".charCodeAt(0), "allowed");
 testIDNCharacter("/".charCodeAt(0), "allowed");
@@ -234,55 +232,29 @@ testIDNCharacter(0x0702, "disallowed", "does not encode");
 /* ICU won't encode these characters if they're the first character in the host name.  
    If the character does get encoded as the first character, then ICU converts it to another allowed character */
 
-if (isOlderICU) {
-    testIDNCharacter(0x200B, "");
-    testIDNCharacter(0x3002, ".");
-    testIDNCharacter(0xFF0E, ".");
-    testIDNCharacter(0xFF61, ".");
-    testIDNCharacter(0xFEFF, "");
-    testIDNCharacter(0x2024, ".");
-    testIDNCharacter(0xFE52, ".");
-    testIDNCharacter(0x0337, "disallowed");
-    testIDNCharacter(0x0337, "disallowed");
-    testIDNCharacter(0x0338, "disallowed");
-    testIDNCharacter(0x0338, "disallowed");
-    testIDNCharacter(0x05B4, "disallowed");
-    testIDNCharacter(0x05BC, "disallowed");
-    testIDNCharacter(0x0660, "disallowed");
-    testIDNCharacter(0x06F0, "disallowed");
-    testIDNCharacter(0x115F, "disallowed");
-    testIDNCharacter(0x1160, "disallowed");
-    testIDNCharacter(0x3164, "disallowed");
-    testIDNCharacter(0x321D, "disallowed");
-    testIDNCharacter(0x321E, "disallowed");
-    testIDNCharacter(0xFE14, "disallowed");
-    testIDNCharacter(0xFE15, "disallowed");
-    testIDNCharacter(0xFFA0, "disallowed");
-} else {
-    testIDNCharacter(0x200B, "does not encode", "");
-    testIDNCharacter(0x3002, "does not encode", ".");
-    testIDNCharacter(0xFF0E, "does not encode", ".");
-    testIDNCharacter(0xFF61, "does not encode", ".");
-    testIDNCharacter(0xFEFF, "does not encode", "");
-    testIDNCharacter(0x2024, "%u2024");
-    testIDNCharacter(0xFE52, "%uFE52");
-    testIDNCharacter(0x0337, "%u0337", "punycode");
-    testIDNCharacter(0x0337, "%u0337", "punycode");
-    testIDNCharacter(0x0338, "%u0338", "punycode");
-    testIDNCharacter(0x0338, "%u0338", "punycode");
-    testIDNCharacter(0x05B4, "%u05B4", "punycode");
-    testIDNCharacter(0x05BC, "%u05BC", "punycode");
-    testIDNCharacter(0x0660, "%u0660");
-    testIDNCharacter(0x06F0, "disallowed");
-    testIDNCharacter(0x115F, "%u115F");
-    testIDNCharacter(0x1160, "%u1160");
-    testIDNCharacter(0x3164, "%u3164");
-    testIDNCharacter(0x321D, "%28%uC624%uC804%29");
-    testIDNCharacter(0x321E, "%28%uC624%uD6C4%29");
-    testIDNCharacter(0xFE14, "%3B");
-    testIDNCharacter(0xFE15, "%21");
-    testIDNCharacter(0xFFA0, "%uFFA0");
-}
+testIDNCharacter(0x200B, "does not encode", "");
+testIDNCharacter(0x3002, "does not encode", ".");
+testIDNCharacter(0xFF0E, "does not encode", ".");
+testIDNCharacter(0xFF61, "does not encode", ".");
+testIDNCharacter(0xFEFF, "does not encode", "");
+testIDNCharacter(0x2024, "%u2024");
+testIDNCharacter(0xFE52, "%uFE52");
+testIDNCharacter(0x0337, "%u0337", "punycode");
+testIDNCharacter(0x0337, "%u0337", "punycode");
+testIDNCharacter(0x0338, "%u0338", "punycode");
+testIDNCharacter(0x0338, "%u0338", "punycode");
+testIDNCharacter(0x05B4, "%u05B4", "punycode");
+testIDNCharacter(0x05BC, "%u05BC", "punycode");
+testIDNCharacter(0x0660, "%u0660");
+testIDNCharacter(0x06F0, "disallowed");
+testIDNCharacter(0x115F, "does not encode", "");
+testIDNCharacter(0x1160, "does not encode", "");
+testIDNCharacter(0x3164, "does not encode", "");
+testIDNCharacter(0x321D, "%28%uC624%uC804%29");
+testIDNCharacter(0x321E, "%28%uC624%uD6C4%29");
+testIDNCharacter(0xFE14, "%3B");
+testIDNCharacter(0xFE15, "%21");
+testIDNCharacter(0xFFA0, "does not encode", "");
 
 </script>
 </body>

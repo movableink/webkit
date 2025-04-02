@@ -3079,3 +3079,6 @@ webkit.org/b/289369 fast/workers/dedicated-worker-lifecycle.html [ Pass Timeout 
 webkit.org/b/289612 http/tests/navigation/https-in-page-cache.html [ Pass Timeout ]
 
 imported/w3c/web-platform-tests/css/css-position/sticky/position-sticky-escape-scroller-004.html [ ImageOnlyFailure ]
+
+[ Sonoma ] fast/encoding/idn-security.html [ Failure ]
+[ Sequoia ] fast/encoding/idn-security.html [ Pass Failure ]
