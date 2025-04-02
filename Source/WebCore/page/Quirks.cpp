@@ -1447,6 +1447,13 @@ bool Quirks::needsIPhoneUserAgent(const URL& url)
     return false;
 }
 
+bool Quirks::needsCustomUserAgentOverride(const URL& url)
+{
+    if (url.host() == "tiktok.com"_s)
+        return true;
+    return false;
+}
+
 bool Quirks::needsDesktopUserAgent(const URL& url)
 {
     return needsDesktopUserAgentInternal(url);

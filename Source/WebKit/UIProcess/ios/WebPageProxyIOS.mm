@@ -1555,7 +1555,13 @@ WebContentMode WebPageProxy::effectiveContentModeAfterAdjustingPolicies(API::Web
         auto applicationName = policies.applicationNameForDesktopUserAgent();
         if (applicationName.isEmpty())
             applicationName = applicationNameForDesktopUserAgent();
-        policies.setCustomUserAgent(standardUserAgentWithApplicationName(applicationName, emptyString(), UserAgentType::Desktop));
+        // FIXME: This is done here for adding a UA override to tiktok.
+        // needsCustomUserAgentOverride() is currently very generic on purpose.
+        // In the future we want to pass more parameters for targeting specific domains.
+        if (Quirks::needsCustomUserAgentOverride(request.url()))
+            policies.setCustomUserAgent(makeStringByReplacingAll(standardUserAgentWithApplicationName(m_applicationNameForUserAgent), "like Gecko"_s, "like Gecko, like Chrome/136."_s));
+        else
+            policies.setCustomUserAgent(standardUserAgentWithApplicationName(applicationName, emptyString(), UserAgentType::Desktop));
     }
 
     if (policies.customNavigatorPlatform().isEmpty()) {
