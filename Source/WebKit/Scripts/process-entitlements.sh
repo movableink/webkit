@@ -564,6 +564,8 @@ if [[ "${WK_PLATFORM_NAME}" == xros ]]; then
 fi
 
     plistbuddy Add :com.apple.developer.hardened-process bool YES
+
+    plistbuddy Add :com.apple.developer.kernel.extended-virtual-addressing bool YES
 }
 
 function ios_family_process_model_entitlements()
