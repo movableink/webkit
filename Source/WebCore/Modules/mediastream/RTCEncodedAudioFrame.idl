@@ -31,7 +31,15 @@
 ]
 dictionary RTCEncodedAudioFrameMetadata {
     unsigned long synchronizationSource;
+    octet payloadType;
     sequence<unsigned long> contributingSources;
+    short sequenceNumber;
+    unsigned long rtpTimestamp;
+    // FIXME: add additional time metadata
+    // DOMHighResTimeStamp receiveTime;
+    // DOMHighResTimeStamp captureTime;
+    // DOMHighResTimeStamp senderCaptureTimeOffset;
+    DOMString mimeType;
 };
 
 // https://w3c.github.io/webrtc-encoded-transform/#RTCEncodedAudioFrame-interface

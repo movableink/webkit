@@ -24,6 +24,7 @@
 
 #include "config.h"
 #include "LibWebRTCRtpTransformableFrame.h"
+#include "LibWebRTCUtils.h"
 #include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
@@ -38,9 +39,8 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCRtpTransformableFrame);
 
-LibWebRTCRtpTransformableFrame::LibWebRTCRtpTransformableFrame(std::unique_ptr<webrtc::TransformableFrameInterface>&& frame, bool isAudioSenderFrame)
+LibWebRTCRtpTransformableFrame::LibWebRTCRtpTransformableFrame(std::unique_ptr<webrtc::TransformableFrameInterface>&& frame)
     : m_rtcFrame(WTFMove(frame))
-    , m_isAudioSenderFrame(isAudioSenderFrame)
 {
 }
 
@@ -85,14 +85,16 @@ RTCEncodedAudioFrameMetadata LibWebRTCRtpTransformableFrame::audioMetadata() con
         return { };
 
     Vector<uint32_t> cssrcs;
-    if (!m_isAudioSenderFrame) {
+    std::optional<uint16_t> sequenceNumber;
+    if (m_rtcFrame->GetDirection() == webrtc::TransformableFrameInterface::Direction::kReceiver) {
         auto* audioFrame = static_cast<webrtc::TransformableAudioFrameInterface*>(m_rtcFrame.get());
         auto contributingSources = audioFrame->GetContributingSources();
         cssrcs = Vector<uint32_t>(contributingSources.size(), [&](size_t cptr) {
             return contributingSources[cptr];
         });
+        sequenceNumber = audioFrame->SequenceNumber();
     }
-    return { m_rtcFrame->GetSsrc(), WTFMove(cssrcs) };
+    return { m_rtcFrame->GetSsrc(), m_rtcFrame->GetPayloadType(), WTFMove(cssrcs), sequenceNumber, m_rtcFrame->GetTimestamp(), fromStdString(m_rtcFrame->GetMimeType()) };
 }
 
 RTCEncodedVideoFrameMetadata LibWebRTCRtpTransformableFrame::videoMetadata() const
@@ -110,7 +112,18 @@ RTCEncodedVideoFrameMetadata LibWebRTCRtpTransformableFrame::videoMetadata() con
     for (auto value : metadata.GetFrameDependencies())
         dependencies.append(value);
 
-    return { frameId, WTFMove(dependencies), metadata.GetWidth(), metadata.GetHeight(), metadata.GetSpatialIndex(), metadata.GetTemporalIndex(), m_rtcFrame->GetSsrc() };
+    Vector<uint32_t> cssrcs;
+    if (m_rtcFrame->GetDirection() == webrtc::TransformableFrameInterface::Direction::kReceiver) {
+        auto rtcCssrcs = metadata.GetCsrcs();
+        cssrcs = Vector<uint32_t>(rtcCssrcs.size(), [&](size_t cptr) {
+            return rtcCssrcs[cptr];
+        });
+    }
+
+    std::optional<int64_t> timestamp;
+    if (auto presentationTimestamp = m_rtcFrame->GetPresentationTimestamp())
+        timestamp = presentationTimestamp->us();
+    return { frameId, WTFMove(dependencies), metadata.GetWidth(), metadata.GetHeight(), metadata.GetSpatialIndex(), metadata.GetTemporalIndex(), m_rtcFrame->GetSsrc(), m_rtcFrame->GetPayloadType(), WTFMove(cssrcs), timestamp, m_rtcFrame->GetTimestamp(), fromStdString(m_rtcFrame->GetMimeType()) };
 }
 
 } // namespace WebCore

@@ -11,6 +11,8 @@ class AudioVideoRTCRtpTransformer {
                 this.tryGenerateKeyFramePromiseHandling = true;
             else if (event.data === "tryAccessingDataTwice")
                 this.tryAccessingDataTwice = true;
+            else if (event.data === "tryAccessingMetadata")
+                this.tryAccessingMetadata = true;
         };
         this.start();
     }
@@ -32,6 +34,11 @@ class AudioVideoRTCRtpTransformer {
                 const data1 = chunk.value.data;
                 const data2 = chunk.value.data;
                 this.context.options.port.postMessage(data1 === data2 ? "PASS" : "FAIL, data objects are different");
+            }
+
+            if (this.tryAccessingMetadata) {
+                this.tryAccessingMetadata = false;
+                this.context.options.port.postMessage(chunk.value.getMetadata());
             }
 
             this.writer.write(chunk.value);

@@ -34,8 +34,13 @@ namespace WebCore {
 
 struct RTCEncodedAudioFrameMetadata {
     uint32_t synchronizationSource;
+    uint8_t payloadType;
     Vector<uint32_t> contributingSources;
+    std::optional<uint16_t> sequenceNumber;
+    uint32_t rtpTimestamp;
+    String mimeType;
 };
+
 
 struct RTCEncodedVideoFrameMetadata {
     std::optional<int64_t> frameId;
@@ -45,6 +50,11 @@ struct RTCEncodedVideoFrameMetadata {
     std::optional<int32_t> spatialIndex;
     std::optional<int32_t> temporalIndex;
     uint32_t synchronizationSource;
+    uint8_t payloadType;
+    Vector<uint32_t> contributingSources;
+    std::optional<int64_t> timestamp;
+    uint32_t rtpTimestamp;
+    String mimeType;
 };
 
 class RTCRtpTransformableFrame : public RefCounted<RTCRtpTransformableFrame> {

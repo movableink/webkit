@@ -1,13 +1,13 @@
 
 
-FAIL audio metadata: timestamp assert_equals: timestamp matches (for sender before and after write) expected 0 but got 879366111
+FAIL audio metadata: timestamp assert_equals: timestamp matches (for sender before and after write) expected 0 but got 2587289961
 PASS audio metadata: synchronizationSource
-FAIL audio metadata: payloadType assert_equals: expected "number" but got "undefined"
+PASS audio metadata: payloadType
 PASS audio metadata: contributingSources
-FAIL audio metadata: sequenceNumber assert_equals: expected "number" but got "undefined"
-FAIL video metadata: timestamp assert_equals: timestamp matches (for sender before and after write) expected 0 but got 1674909870
+PASS audio metadata: sequenceNumber
+FAIL video metadata: timestamp assert_equals: timestamp matches (for sender before and after write) expected 0 but got 3109625852
 PASS video metadata: ssrc
-FAIL video metadata: csrcs assert_array_equals: csrcs are arrays, and match (for sender before and after write) value is undefined, expected array
+PASS video metadata: csrcs
 PASS video metadata: width and height
 PASS video metadata: spatial and temporal index
 PASS video metadata: dependencies
