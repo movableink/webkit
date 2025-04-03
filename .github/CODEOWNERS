@@ -124,9 +124,6 @@
 
 /Source/WebCore/animation @graouts
 
-
-/Source/WebCore/crypto/ @zdobersek
-
 /LayoutTests/http/tests/paymentrequest @aprotyas @marcoscaceres
 /LayoutTests/http/tests/ssl/applepay @aprotyas
 /LayoutTests/http/tests/ssl/applepay-ams-ui @aprotyas
@@ -180,9 +177,9 @@
 # ================================================================================
 # Linux graphics
 
-CoordinatedGraphics/ @magomez @zdobersek
-cairo/ @magomez @zdobersek
-coordinated/ @magomez @zdobersek
+CoordinatedGraphics/ @magomez
+cairo/ @magomez
+coordinated/ @magomez
 skia/ @alexgcastro @carlosgcampos @nikolaszimmermann
 
 # ================================================================================
@@ -208,12 +205,12 @@ glib/ @WebKit/glib-reviewers
 gtk4/ @WebKit/glib-reviewers
 gtk/ @WebKit/glib-reviewers
 harfbuzz/ @WebKit/glib-reviewers
-libwpe/ @WebKit/glib-reviewers @donny-dont @zdobersek
+libwpe/ @WebKit/glib-reviewers @donny-dont
 linux/ @WebKit/glib-reviewers
 soup/ @WebKit/glib-reviewers
 unix/ @WebKit/glib-reviewers
 xdg/ @WebKit/glib-reviewers
-wpe/ @WebKit/glib-reviewers @zdobersek
+wpe/ @WebKit/glib-reviewers
 **/wpe/qt/ @philn
 
 # Don't want to own these
