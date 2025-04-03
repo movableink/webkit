@@ -7687,16 +7687,12 @@ void WebPageProxy::beginSafeBrowsingCheck(const URL&, bool, WebFramePolicyListen
 
 void WebPageProxy::decidePolicyForNavigationActionAsync(IPC::Connection& connection, NavigationActionData&& data, CompletionHandler<void(PolicyDecision&&)>&& completionHandler)
 {
-    decidePolicyForNavigationActionAsyncShared(WebProcessProxy::fromConnection(connection), WTFMove(data), WTFMove(completionHandler));
-}
-
-void WebPageProxy::decidePolicyForNavigationActionAsyncShared(Ref<WebProcessProxy>&& process, NavigationActionData&& data, CompletionHandler<void(PolicyDecision&&)>&& completionHandler)
-{
     RefPtr frame = WebFrameProxy::webFrame(data.frameInfo.frameID);
     if (!frame)
         return completionHandler({ });
 
     auto url = data.request.url();
+    Ref process = WebProcessProxy::fromConnection(connection);
     decidePolicyForNavigationAction(process.copyRef(), *frame, WTFMove(data), [completionHandler = WTFMove(completionHandler), process, url = WTFMove(url)] (PolicyDecision&& policyDecision) mutable {
         if (policyDecision.policyAction == PolicyAction::Use && url.protocolIsFile())
             process->addPreviouslyApprovedFileURL(url);
@@ -8059,23 +8055,15 @@ void WebPageProxy::logFrameNavigation(const WebFrameProxy& frame, const URL& pag
 
 void WebPageProxy::decidePolicyForNavigationActionSync(IPC::Connection& connection, NavigationActionData&& data, CompletionHandler<void(PolicyDecision&&)>&& reply)
 {
-    auto& frameInfo = data.frameInfo;
-    RefPtr frame = WebFrameProxy::webFrame(frameInfo.frameID);
+    auto frameID = data.frameInfo.frameID;
+    Ref process = WebProcessProxy::fromConnection(connection);
+    RefPtr frame = WebFrameProxy::webFrame(frameID);
     if (!frame) {
         // This message should always be queued at this point, so we can pull it out with a 0 timeout.
-        connection.waitForAndDispatchImmediately<Messages::WebPageProxy::DidCreateSubframe>(webPageIDInMainFrameProcess(), 0_s);
-        frame = WebFrameProxy::webFrame(frameInfo.frameID);
+        connection.waitForAndDispatchImmediately<Messages::WebPageProxy::DidCreateSubframe>(webPageIDInProcess(process), 0_s);
+        frame = WebFrameProxy::webFrame(frameID);
         MESSAGE_CHECK_COMPLETION_BASE(frame, connection, reply({ }));
     }
-
-    decidePolicyForNavigationActionSyncShared(frame->protectedProcess(), WTFMove(data), WTFMove(reply));
-}
-
-void WebPageProxy::decidePolicyForNavigationActionSyncShared(Ref<WebProcessProxy>&& process, NavigationActionData&& data, CompletionHandler<void(PolicyDecision&&)>&& reply)
-{
-    RefPtr frame = WebFrameProxy::webFrame(data.frameInfo.frameID);
-    if (!frame)
-        return reply({ });
 
     class PolicyDecisionSender : public RefCounted<PolicyDecisionSender> {
     public:

@@ -170,7 +170,7 @@ private:
     bool sendMessage(UniqueRef<IPC::Encoder>&&, OptionSet<IPC::SendOption>) final;
     bool sendMessageWithAsyncReply(UniqueRef<IPC::Encoder>&&, AsyncReplyHandler, OptionSet<IPC::SendOption>) final;
 
-    void decidePolicyForNavigationActionAsync(NavigationActionData&&, CompletionHandler<void(PolicyDecision&&)>&&);
+    void decidePolicyForNavigationActionAsync(IPC::Connection&, NavigationActionData&&, CompletionHandler<void(PolicyDecision&&)>&&);
     void decidePolicyForResponse(FrameInfoData&&, std::optional<WebCore::NavigationIdentifier>, const WebCore::ResourceResponse&, const WebCore::ResourceRequest&, bool canShowMIMEType, const String& downloadAttribute, bool isShowingInitialAboutBlank, WebCore::CrossOriginOpenerPolicyValue activeDocumentCOOPValue, CompletionHandler<void(PolicyDecision&&)>&&);
     void didChangeProvisionalURLForFrame(WebCore::FrameIdentifier, std::optional<WebCore::NavigationIdentifier>, URL&&);
     void didPerformServerRedirect(const String& sourceURLString, const String& destinationURLString, WebCore::FrameIdentifier);
@@ -185,7 +185,7 @@ private:
     void logDiagnosticMessageWithValueDictionaryFromWebProcess(const String& message, const String& description, const WebCore::DiagnosticLoggingClient::ValueDictionary&, WebCore::ShouldSample);
     void startURLSchemeTask(IPC::Connection&, URLSchemeTaskParameters&&);
     void backForwardGoToItem(WebCore::BackForwardItemIdentifier, CompletionHandler<void(const WebBackForwardListCounts&)>&&);
-    void decidePolicyForNavigationActionSync(NavigationActionData&&, CompletionHandler<void(PolicyDecision&&)>&&);
+    void decidePolicyForNavigationActionSync(IPC::Connection&, NavigationActionData&&, CompletionHandler<void(PolicyDecision&&)>&&);
     void backForwardAddItem(IPC::Connection&, Ref<FrameState>&&);
     void didDestroyNavigation(WebCore::NavigationIdentifier);
 #if USE(QUICK_LOOK)

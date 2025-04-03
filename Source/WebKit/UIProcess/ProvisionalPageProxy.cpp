@@ -503,13 +503,13 @@ void ProvisionalPageProxy::didChangeProvisionalURLForFrame(FrameIdentifier frame
         page->didChangeProvisionalURLForFrameShared(protectedProcess(), frameID, navigationID, WTFMove(url));
 }
 
-void ProvisionalPageProxy::decidePolicyForNavigationActionAsync(NavigationActionData&& data, CompletionHandler<void(PolicyDecision&&)>&& completionHandler)
+void ProvisionalPageProxy::decidePolicyForNavigationActionAsync(IPC::Connection& connection, NavigationActionData&& data, CompletionHandler<void(PolicyDecision&&)>&& completionHandler)
 {
     if (!validateInput(data.frameInfo.frameID, data.navigationID))
         return completionHandler({ });
 
     if (RefPtr page = m_page.get())
-        page->decidePolicyForNavigationActionAsyncShared(protectedProcess(), WTFMove(data), WTFMove(completionHandler));
+        page->decidePolicyForNavigationActionAsync(connection, WTFMove(data), WTFMove(completionHandler));
     else
         completionHandler({ });
 }
@@ -557,7 +557,7 @@ void ProvisionalPageProxy::backForwardGoToItem(WebCore::BackForwardItemIdentifie
         completionHandler({ });
 }
 
-void ProvisionalPageProxy::decidePolicyForNavigationActionSync(NavigationActionData&& data, CompletionHandler<void(PolicyDecision&&)>&& reply)
+void ProvisionalPageProxy::decidePolicyForNavigationActionSync(IPC::Connection& connection, NavigationActionData&& data, CompletionHandler<void(PolicyDecision&&)>&& reply)
 {
     auto& frameInfo = data.frameInfo;
     auto navigationID = data.navigationID;
@@ -569,7 +569,7 @@ void ProvisionalPageProxy::decidePolicyForNavigationActionSync(NavigationActionD
     ASSERT(m_mainFrame);
 
     if (RefPtr page = m_page.get())
-        page->decidePolicyForNavigationActionSyncShared(protectedProcess(), WTFMove(data), WTFMove(reply));
+        page->decidePolicyForNavigationActionSync(connection, WTFMove(data), WTFMove(reply));
     else
         reply({ });
 }
