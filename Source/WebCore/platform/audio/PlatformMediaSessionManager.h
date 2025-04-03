@@ -67,8 +67,6 @@ public:
 
     WEBCORE_EXPORT static void setAlternateWebMPlayerEnabled(bool);
     WEBCORE_EXPORT static bool alternateWebMPlayerEnabled();
-    WEBCORE_EXPORT static void setUseSCContentSharingPicker(bool);
-    WEBCORE_EXPORT static bool useSCContentSharingPicker();
 
 #if ENABLE(VP9)
     WEBCORE_EXPORT static void setShouldEnableVP9Decoder(bool);

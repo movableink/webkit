@@ -291,11 +291,6 @@ void GPUProcess::updateGPUProcessPreferences(GPUProcessPreferences&& preferences
         PlatformMediaSessionManager::setAlternateWebMPlayerEnabled(*m_preferences.alternateWebMPlayerEnabled);
 #endif
 
-#if HAVE(SC_CONTENT_SHARING_PICKER)
-    if (updatePreference(m_preferences.useSCContentSharingPicker, preferences.useSCContentSharingPicker))
-        PlatformMediaSessionManager::setUseSCContentSharingPicker(*m_preferences.useSCContentSharingPicker);
-#endif
-
 #if ENABLE(EXTENSION_CAPABILITIES)
     if (updatePreference(m_preferences.mediaCapabilityGrantsEnabled, preferences.mediaCapabilityGrantsEnabled))
         PlatformMediaSessionManager::setMediaCapabilityGrantsEnabled(*m_preferences.mediaCapabilityGrantsEnabled);
@@ -383,15 +378,6 @@ void GPUProcess::didDrawRemoteToPDF(PageIdentifier pageID, RefPtr<SharedBuffer>&
 void GPUProcess::setMockCaptureDevicesEnabled(bool isEnabled)
 {
     WebCore::MockRealtimeMediaSourceCenter::setMockRealtimeMediaSourceCenterEnabled(isEnabled);
-}
-
-void GPUProcess::setUseSCContentSharingPicker(bool use)
-{
-#if HAVE(SC_CONTENT_SHARING_PICKER)
-    WebCore::PlatformMediaSessionManager::setUseSCContentSharingPicker(use);
-#else
-    UNUSED_PARAM(use);
-#endif
 }
 
 void GPUProcess::setOrientationForMediaCapture(WebCore::IntDegrees orientation)

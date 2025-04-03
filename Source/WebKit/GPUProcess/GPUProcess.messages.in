@@ -59,9 +59,6 @@ messages -> GPUProcess : AuxiliaryProcess {
     SetShouldListenToVoiceActivity(bool shouldListen)
     EnableMicrophoneMuteStatusAPI()
 #endif
-#if HAVE(SC_CONTENT_SHARING_PICKER)
-    SetUseSCContentSharingPicker(bool use)
-#endif
 #if PLATFORM(MAC)
     SetScreenProperties(struct WebCore::ScreenProperties screenProperties)
 #endif

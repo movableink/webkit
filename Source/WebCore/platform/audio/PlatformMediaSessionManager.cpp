@@ -47,10 +47,6 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(PlatformMediaSessionManager);
 bool PlatformMediaSessionManager::m_alternateWebMPlayerEnabled;
 #endif
 
-#if HAVE(SC_CONTENT_SHARING_PICKER)
-bool PlatformMediaSessionManager::s_useSCContentSharingPicker;
-#endif
-
 #if ENABLE(VP9)
 bool PlatformMediaSessionManager::m_vp9DecoderEnabled;
 bool PlatformMediaSessionManager::m_swVPDecodersAlwaysEnabled;
@@ -788,24 +784,6 @@ bool PlatformMediaSessionManager::alternateWebMPlayerEnabled()
 {
 #if ENABLE(ALTERNATE_WEBM_PLAYER)
     return m_alternateWebMPlayerEnabled;
-#else
-    return false;
-#endif
-}
-
-void PlatformMediaSessionManager::setUseSCContentSharingPicker(bool use)
-{
-#if HAVE(SC_CONTENT_SHARING_PICKER)
-    s_useSCContentSharingPicker = use;
-#else
-    UNUSED_PARAM(use);
-#endif
-}
-
-bool PlatformMediaSessionManager::useSCContentSharingPicker()
-{
-#if HAVE(SC_CONTENT_SHARING_PICKER)
-    return s_useSCContentSharingPicker;
 #else
     return false;
 #endif

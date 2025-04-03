@@ -1139,17 +1139,6 @@ void UserMediaPermissionRequestManagerProxy::syncWithWebCorePrefs() const
         page->legacyMainFrameProcess().protectedProcessPool()->ensureProtectedGPUProcess()->setUseMockCaptureDevices(mockDevicesEnabled);
 #endif
 
-#if HAVE(SC_CONTENT_SHARING_PICKER)
-    auto useSharingPicker = preferences->useSCContentSharingPicker();
-
-#if ENABLE(GPU_PROCESS)
-    if (useSharingPicker)
-        page->legacyMainFrameProcess().protectedProcessPool()->ensureProtectedGPUProcess()->setUseSCContentSharingPicker(useSharingPicker);
-#endif
-
-    PlatformMediaSessionManager::setUseSCContentSharingPicker(useSharingPicker);
-#endif
-
     if (MockRealtimeMediaSourceCenter::mockRealtimeMediaSourceCenterEnabled() == mockDevicesEnabled)
         return;
     MockRealtimeMediaSourceCenter::setMockRealtimeMediaSourceCenterEnabled(mockDevicesEnabled);

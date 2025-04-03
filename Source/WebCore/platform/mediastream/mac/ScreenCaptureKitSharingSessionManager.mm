@@ -203,7 +203,7 @@ bool ScreenCaptureKitSharingSessionManager::isAvailable()
 bool ScreenCaptureKitSharingSessionManager::useSCContentSharingPicker()
 {
 #if HAVE(SC_CONTENT_SHARING_PICKER)
-    return PlatformMediaSessionManager::useSCContentSharingPicker() && isAvailable();
+    return isAvailable();
 #else
     return false;
 #endif
