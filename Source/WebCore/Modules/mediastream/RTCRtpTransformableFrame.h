@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc.
+ * Copyright (C) 2020-2025 Apple Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,7 @@
 #if ENABLE(WEB_RTC)
 
 #include <span>
-#include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -58,7 +58,7 @@ struct RTCEncodedVideoFrameMetadata {
     String mimeType;
 };
 
-class RTCRtpTransformableFrame : public RefCounted<RTCRtpTransformableFrame> {
+class RTCRtpTransformableFrame : public ThreadSafeRefCounted<RTCRtpTransformableFrame> {
 public:
     virtual ~RTCRtpTransformableFrame() = default;
 
@@ -70,6 +70,8 @@ public:
     virtual RTCEncodedVideoFrameMetadata videoMetadata() const = 0;
 
     virtual bool isKeyFrame() const = 0;
+
+    virtual Ref<RTCRtpTransformableFrame> clone() = 0;
 };
 
 } // namespace WebCore

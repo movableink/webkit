@@ -59,6 +59,14 @@ Ref<RTCRtpTransformableFrame> RTCEncodedFrame::rtcFrame()
     return m_frame;
 }
 
+Ref<RTCRtpTransformableFrame> RTCEncodedFrame::serialize()
+{
+    auto clone = m_frame->clone();
+    if (m_data)
+        clone->setData(m_data->span());
+    return clone;
+}
+
 } // namespace WebCore
 
 #endif // ENABLE(WEB_RTC)

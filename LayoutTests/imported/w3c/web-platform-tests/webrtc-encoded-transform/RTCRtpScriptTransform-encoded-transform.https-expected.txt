@@ -1,0 +1,7 @@
+
+
+FAIL Receiver and sender read, modifiy and write video frames. assert_equals: expected "got expected" but got "unexpected value: lastByte (got 1, expected 1),  frame data length (got 532, expected 0), rtpTimestamp (got undefined, expected null)"
+FAIL Receiver and sender read, modifiy and write audio frames. assert_equals: expected "got expected" but got "unexpected value: lastByte (got 1, expected 1),  frame data length (got 98, expected 0), rtpTimestamp (got undefined, expected null)"
+PASS Sender reads frames but doesn't write them back. Receiver doesn't receive any frames.
+PASS Sender skips some frames and only writes one back. Receiver only receives that frame.
+

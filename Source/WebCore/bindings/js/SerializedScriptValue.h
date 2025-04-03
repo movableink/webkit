@@ -52,6 +52,10 @@
 #include "WebCodecsVideoFrame.h"
 #endif
 
+#if ENABLE(WEB_RTC)
+#include "RTCRtpTransformableFrame.h"
+#endif
+
 typedef const struct OpaqueJSContext* JSContextRef;
 typedef const struct OpaqueJSValue* JSValueRef;
 
@@ -147,6 +151,8 @@ private:
     WEBCORE_EXPORT SerializedScriptValue(Vector<unsigned char>&&, std::unique_ptr<ArrayBufferContentsArray>&& = nullptr
 #if ENABLE(WEB_RTC)
         , Vector<std::unique_ptr<DetachedRTCDataChannel>>&& = { }
+        , Vector<RefPtr<RTCRtpTransformableFrame>>&& = { }
+        , Vector<RefPtr<RTCRtpTransformableFrame>>&& = { }
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
         , Vector<RefPtr<DetachedMediaSourceHandle>>&& = { }
@@ -170,6 +176,8 @@ private:
         , Vector<Ref<MessagePort>>&& = { }
 #if ENABLE(WEB_RTC)
         , Vector<std::unique_ptr<DetachedRTCDataChannel>>&& = { }
+        , Vector<RefPtr<RTCRtpTransformableFrame>>&& = { }
+        , Vector<RefPtr<RTCRtpTransformableFrame>>&& = { }
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
         , Vector<RefPtr<DetachedMediaSourceHandle>>&& = { }
@@ -202,6 +210,10 @@ private:
         Vector<RefPtr<WebCodecsEncodedAudioChunkStorage>> serializedAudioChunks;
         Vector<WebCodecsVideoFrameData> serializedVideoFrames { };
         Vector<WebCodecsAudioInternalData> serializedAudioData { };
+#endif
+#if ENABLE(WEB_RTC)
+        Vector<RefPtr<RTCRtpTransformableFrame>> serializedRTCEncodedAudioFrames { };
+        Vector<RefPtr<RTCRtpTransformableFrame>> serializedRTCEncodedVideoFrames { };
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
         Vector<RefPtr<DetachedMediaSourceHandle>> detachedMediaSourceHandles { };

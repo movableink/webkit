@@ -39,13 +39,13 @@ namespace WebCore {
 class LibWebRTCRtpTransformableFrame final : public RTCRtpTransformableFrame {
     WTF_MAKE_TZONE_ALLOCATED(LibWebRTCRtpTransformableFrame);
 public:
-    static Ref<LibWebRTCRtpTransformableFrame> create(std::unique_ptr<webrtc::TransformableFrameInterface>&& frame) { return adoptRef(*new LibWebRTCRtpTransformableFrame(WTFMove(frame))); }
+    static Ref<LibWebRTCRtpTransformableFrame> create(std::unique_ptr<webrtc::TransformableFrameInterface>&& frame, bool isAudio) { return adoptRef(*new LibWebRTCRtpTransformableFrame(WTFMove(frame), isAudio)); }
     ~LibWebRTCRtpTransformableFrame();
 
     std::unique_ptr<webrtc::TransformableFrameInterface> takeRTCFrame();
 
 private:
-    explicit LibWebRTCRtpTransformableFrame(std::unique_ptr<webrtc::TransformableFrameInterface>&&);
+    LibWebRTCRtpTransformableFrame(std::unique_ptr<webrtc::TransformableFrameInterface>&&, bool isAudio);
 
     // RTCRtpTransformableFrame
     std::span<const uint8_t> data() const final;
@@ -54,8 +54,10 @@ private:
     uint64_t timestamp() const final;
     RTCEncodedAudioFrameMetadata audioMetadata() const final;
     RTCEncodedVideoFrameMetadata videoMetadata() const final;
+    Ref<RTCRtpTransformableFrame> clone() final;
 
     std::unique_ptr<webrtc::TransformableFrameInterface> m_rtcFrame;
+    bool m_isAudio;
 };
 
 } // namespace WebCore

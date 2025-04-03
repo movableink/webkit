@@ -1958,7 +1958,7 @@
 		416B09EF2A3C7F180017367B /* field_trials_registry.h in Headers */ = {isa = PBXBuildFile; fileRef = 416B09E92A3C7F160017367B /* field_trials_registry.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		416B09F02A3C7F180017367B /* field_trials.h in Headers */ = {isa = PBXBuildFile; fileRef = 416B09EA2A3C7F170017367B /* field_trials.h */; };
 		416B09F12A3C7F180017367B /* frame_transformer_factory.cc in Sources */ = {isa = PBXBuildFile; fileRef = 416B09EB2A3C7F170017367B /* frame_transformer_factory.cc */; };
-		416B09F22A3C7F180017367B /* frame_transformer_factory.h in Headers */ = {isa = PBXBuildFile; fileRef = 416B09EC2A3C7F170017367B /* frame_transformer_factory.h */; };
+		416B09F22A3C7F180017367B /* frame_transformer_factory.h in Headers */ = {isa = PBXBuildFile; fileRef = 416B09EC2A3C7F170017367B /* frame_transformer_factory.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		416B09F32A3C7F180017367B /* webrtc_key_value_config.h in Headers */ = {isa = PBXBuildFile; fileRef = 416B09ED2A3C7F180017367B /* webrtc_key_value_config.h */; };
 		416B09FB2A3C7F840017367B /* frame_buffer.cc in Sources */ = {isa = PBXBuildFile; fileRef = 416B09F52A3C7F820017367B /* frame_buffer.cc */; };
 		416B09FC2A3C7F840017367B /* event_wrapper.h in Headers */ = {isa = PBXBuildFile; fileRef = 416B09F62A3C7F820017367B /* event_wrapper.h */; };

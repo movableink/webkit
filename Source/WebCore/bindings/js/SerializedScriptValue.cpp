@@ -61,6 +61,8 @@
 #include "JSNavigator.h"
 #include "JSRTCCertificate.h"
 #include "JSRTCDataChannel.h"
+#include "JSRTCEncodedAudioFrame.h"
+#include "JSRTCEncodedVideoFrame.h"
 #include "JSWebCodecsAudioData.h"
 #include "JSWebCodecsEncodedAudioChunk.h"
 #include "JSWebCodecsEncodedVideoChunk.h"
@@ -251,6 +253,10 @@ enum SerializationTag {
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
     MediaSourceHandleTransferTag = 61,
 #endif
+#if ENABLE(WEB_RTC)
+    RTCEncodedAudioFrameTag = 62,
+    RTCEncodedVideoFrameTag = 63,
+#endif
     ErrorTag = 255
 };
 
@@ -353,6 +359,10 @@ static ASCIILiteral name(SerializationTag tag)
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
     case MediaSourceHandleTransferTag: return "MediaSourceHandleTransferTag"_s;
+#endif
+#if ENABLE(WEB_RTC)
+    case RTCEncodedAudioFrameTag: return "RTCEncodedAudioFrameTag"_s;
+    case RTCEncodedVideoFrameTag: return "RTCEncodedVideoFrameTag"_s;
 #endif
     case ErrorTag: return "ErrorTag"_s;
     }
@@ -496,6 +506,12 @@ static bool isTypeExposedToGlobalObject(JSC::JSGlobalObject& globalObject, Seria
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
     case MediaSourceHandleTransferTag:
+#endif
+#if ENABLE(WEB_RTC)
+    case RTCEncodedAudioFrameTag:
+#endif
+#if ENABLE(WEB_RTC)
+    case RTCEncodedVideoFrameTag:
 #endif
         break;
     }
@@ -802,6 +818,8 @@ static_assert(TerminatorTag > MAX_ARRAY_INDEX);
  *    | WebCodecsEncodedVideoChunkTag <identifier:uint32_t>
  *    | MediaStreamTrackTag <identifier:uint32_t>
  *    | MediaSourceHandleTransferTag <identifier:uint32_t>
+ *    | RTCEncodedAudioFrameTag <identifier:uint32_t>
+ *    | RTCEncodedVideoFrameTag <identifier:uint32_t>
  *
  * Inside certificate, data is serialized in this format as per spec:
  *
@@ -1048,6 +1066,10 @@ public:
         Vector<RefPtr<WebCodecsEncodedAudioChunkStorage>> dummyAudioChunks;
         Vector<RefPtr<WebCodecsAudioData>> dummyAudioData;
 #endif
+#if ENABLE(WEB_RTC)
+        Vector<RefPtr<RTCEncodedAudioFrame>> dummyRTCEncodedAudioFrames;
+        Vector<RefPtr<RTCEncodedVideoFrame>> dummyRTCEncodedVideoFrames;
+#endif
 #if ENABLE(MEDIA_STREAM)
         Vector<RefPtr<MediaStreamTrack>> dummyMediaStreamTracks;
 #endif
@@ -1067,7 +1089,7 @@ public:
 #endif
             dummyInMemoryMessagePorts,
 #if ENABLE(WEB_RTC)
-            { },
+            { }, dummyRTCEncodedAudioFrames, dummyRTCEncodedVideoFrames,
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
             { },
@@ -1098,6 +1120,8 @@ public:
             Vector<Ref<MessagePort>>& inMemoryMessagePorts,
 #if ENABLE(WEB_RTC)
             const Vector<Ref<RTCDataChannel>>& rtcDataChannels,
+            Vector<RefPtr<RTCEncodedAudioFrame>>& serializedRTCEncodedAudioFrames,
+            Vector<RefPtr<RTCEncodedVideoFrame>>& serializedRTCEncodedVideoFrames,
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
             const Vector<Ref<MediaSourceHandle>>& mediaSourceHandles,
@@ -1131,6 +1155,8 @@ public:
             inMemoryMessagePorts,
 #if ENABLE(WEB_RTC)
             rtcDataChannels,
+            serializedRTCEncodedAudioFrames,
+            serializedRTCEncodedVideoFrames,
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
             mediaSourceHandles,
@@ -1191,6 +1217,8 @@ private:
             Vector<Ref<MessagePort>>& inMemoryMessagePorts,
 #if ENABLE(WEB_RTC)
             const Vector<Ref<RTCDataChannel>>& rtcDataChannels,
+            Vector<RefPtr<RTCEncodedAudioFrame>>& serializedRTCEncodedAudioFrames,
+            Vector<RefPtr<RTCEncodedVideoFrame>>& serializedRTCEncodedVideoFrames,
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
             const Vector<Ref<MediaSourceHandle>>& mediaSourceHandles,
@@ -1212,6 +1240,10 @@ private:
         : CloneBase(lexicalGlobalObject)
         , m_buffer(out)
         , m_blobHandles(blobHandles)
+#if ENABLE(WEB_RTC)
+        , m_serializedRTCEncodedAudioFrames(serializedRTCEncodedAudioFrames)
+        , m_serializedRTCEncodedVideoFrames(serializedRTCEncodedVideoFrames)
+#endif
         , m_context(context)
         , m_sharedBuffers(sharedBuffers)
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
@@ -1723,6 +1755,32 @@ private:
 
         code = SerializationReturnCode::DataCloneError;
     }
+    void dumpRTCEncodedAudioFrame(JSObject* obj)
+    {
+        Ref frame = jsCast<JSRTCEncodedAudioFrame*>(obj)->wrapped();
+
+        auto index = m_serializedRTCEncodedAudioFrames.find(frame.ptr());
+        if (index == notFound) {
+            index = m_serializedRTCEncodedAudioFrames.size();
+            m_serializedRTCEncodedAudioFrames.append(WTFMove(frame));
+        }
+
+        write(RTCEncodedAudioFrameTag);
+        write(static_cast<uint32_t>(index));
+    }
+    void dumpRTCEncodedVideoFrame(JSObject* obj)
+    {
+        Ref frame = jsCast<JSRTCEncodedVideoFrame*>(obj)->wrapped();
+
+        auto index = m_serializedRTCEncodedVideoFrames.find(frame.ptr());
+        if (index == notFound) {
+            index = m_serializedRTCEncodedVideoFrames.size();
+            m_serializedRTCEncodedVideoFrames.append(WTFMove(frame));
+        }
+
+        write(RTCEncodedVideoFrameTag);
+        write(static_cast<uint32_t>(index));
+    }
 #endif
 #if ENABLE(WEB_CODECS)
     void dumpWebCodecsEncodedVideoChunk(JSObject* obj)
@@ -2112,6 +2170,14 @@ private:
 #if ENABLE(WEB_RTC)
             if (obj->inherits<JSRTCDataChannel>()) {
                 dumpRTCDataChannel(obj, code);
+                return true;
+            }
+            if (obj->inherits<JSRTCEncodedAudioFrame>()) {
+                dumpRTCEncodedAudioFrame(obj);
+                return true;
+            }
+            if (obj->inherits<JSRTCEncodedVideoFrame>()) {
+                dumpRTCEncodedVideoFrame(obj);
                 return true;
             }
 #endif
@@ -2653,6 +2719,8 @@ private:
 #endif
 #if ENABLE(WEB_RTC)
     ObjectPoolMap m_transferredRTCDataChannels;
+    Vector<RefPtr<RTCEncodedAudioFrame>>& m_serializedRTCEncodedAudioFrames;
+    Vector<RefPtr<RTCEncodedVideoFrame>>& m_serializedRTCEncodedVideoFrames;
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
     ObjectPoolMap m_transferredMediaSourceHandles;
@@ -2987,6 +3055,8 @@ public:
         , const Vector<Ref<MessagePort>>& inMemoryMessagePorts
 #if ENABLE(WEB_RTC)
         , Vector<std::unique_ptr<DetachedRTCDataChannel>>&& detachedRTCDataChannels
+        , Vector<RefPtr<RTCRtpTransformableFrame>>&& serializedRTCEncodedAudioFrames
+        , Vector<RefPtr<RTCRtpTransformableFrame>>&& serializedRTCEncodedVideoFrames
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
         , Vector<RefPtr<DetachedMediaSourceHandle>>&& detachedMediaSourceHandles
@@ -3017,6 +3087,8 @@ public:
             , inMemoryMessagePorts
 #if ENABLE(WEB_RTC)
             , WTFMove(detachedRTCDataChannels)
+            , WTFMove(serializedRTCEncodedAudioFrames)
+            , WTFMove(serializedRTCEncodedVideoFrames)
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
             , WTFMove(detachedMediaSourceHandles)
@@ -3049,6 +3121,8 @@ public:
             , inMemoryMessagePorts
 #if ENABLE(WEB_RTC)
             , deserializer.takeDetachedRTCDataChannels()
+            , deserializer.takeSerializedRTCEncodedAudioFrames()
+            , deserializer.takeSerializedRTCEncodedVideoFrames()
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
             , deserializer.takeDetachedMediaSourceHandles()
@@ -3121,6 +3195,8 @@ private:
         , const Vector<Ref<MessagePort>>& inMemoryMessagePorts = { }
 #if ENABLE(WEB_RTC)
         , Vector<std::unique_ptr<DetachedRTCDataChannel>>&& detachedRTCDataChannels = { }
+        , Vector<RefPtr<RTCRtpTransformableFrame>>&& serializedRTCEncodedAudioFrames = { }
+        , Vector<RefPtr<RTCRtpTransformableFrame>>&& serializedRTCEncodedVideoFrames = { }
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
         , Vector<RefPtr<DetachedMediaSourceHandle>>&& detachedMediaSourceHandles = { }
@@ -3160,6 +3236,10 @@ private:
 #if ENABLE(WEB_RTC)
         , m_detachedRTCDataChannels(WTFMove(detachedRTCDataChannels))
         , m_rtcDataChannels(m_detachedRTCDataChannels.size())
+        , m_serializedRTCEncodedAudioFrames(WTFMove(serializedRTCEncodedAudioFrames))
+        , m_rtcEncodedAudioFrames(m_serializedRTCEncodedAudioFrames.size())
+        , m_serializedRTCEncodedVideoFrames(WTFMove(serializedRTCEncodedVideoFrames))
+        , m_rtcEncodedVideoFrames(m_serializedRTCEncodedVideoFrames.size())
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
         , m_detachedMediaSourceHandles(WTFMove(detachedMediaSourceHandles))
@@ -3199,6 +3279,8 @@ private:
         , const Vector<Ref<MessagePort>>& inMemoryMessagePorts
 #if ENABLE(WEB_RTC)
         , Vector<std::unique_ptr<DetachedRTCDataChannel>>&& detachedRTCDataChannels
+        , Vector<RefPtr<RTCRtpTransformableFrame>>&& serializedRTCEncodedAudioFrames
+        , Vector<RefPtr<RTCRtpTransformableFrame>>&& serializedRTCEncodedVideoFrames
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
         , Vector<RefPtr<DetachedMediaSourceHandle>>&& detachedMediaSourceHandles
@@ -3241,6 +3323,10 @@ private:
 #if ENABLE(WEB_RTC)
         , m_detachedRTCDataChannels(WTFMove(detachedRTCDataChannels))
         , m_rtcDataChannels(m_detachedRTCDataChannels.size())
+        , m_serializedRTCEncodedAudioFrames(WTFMove(serializedRTCEncodedAudioFrames))
+        , m_rtcEncodedAudioFrames(m_serializedRTCEncodedAudioFrames.size())
+        , m_serializedRTCEncodedVideoFrames(WTFMove(serializedRTCEncodedVideoFrames))
+        , m_rtcEncodedVideoFrames(m_serializedRTCEncodedVideoFrames.size())
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
         , m_detachedMediaSourceHandles(WTFMove(detachedMediaSourceHandles))
@@ -3321,6 +3407,8 @@ private:
 #endif
 #if ENABLE(WEB_RTC)
     Vector<std::unique_ptr<DetachedRTCDataChannel>> takeDetachedRTCDataChannels() { return std::exchange(m_detachedRTCDataChannels, { }); }
+    Vector<RefPtr<RTCRtpTransformableFrame>> takeSerializedRTCEncodedAudioFrames() { return std::exchange(m_serializedRTCEncodedAudioFrames, { }); }
+    Vector<RefPtr<RTCRtpTransformableFrame>> takeSerializedRTCEncodedVideoFrames() { return std::exchange(m_serializedRTCEncodedVideoFrames, { }); }
 #endif
 #if ENABLE(WEB_CODECS)
     Vector<RefPtr<WebCodecsEncodedVideoChunkStorage>> takeSerializedVideoChunks() { return std::exchange(m_serializedVideoChunks, { }); }
@@ -4559,6 +4647,38 @@ private:
 
         return getJSValue(m_rtcDataChannels[index].get());
     }
+
+    JSValue readRTCEncodedAudioFrame()
+    {
+        uint32_t index;
+        bool indexSuccessfullyRead = read(index);
+        if (!indexSuccessfullyRead || index >= m_serializedRTCEncodedAudioFrames.size()) {
+            SERIALIZE_TRACE("FAIL deserialize");
+            fail();
+            return JSValue();
+        }
+
+        if (!m_rtcEncodedAudioFrames[index])
+            m_rtcEncodedAudioFrames[index] = RTCEncodedAudioFrame::create(m_serializedRTCEncodedAudioFrames.at(index).releaseNonNull());
+
+        return getJSValue(m_rtcEncodedAudioFrames[index].get());
+    }
+
+    JSValue readRTCEncodedVideoFrame()
+    {
+        uint32_t index;
+        bool indexSuccessfullyRead = read(index);
+        if (!indexSuccessfullyRead || index >= m_serializedRTCEncodedVideoFrames.size()) {
+            SERIALIZE_TRACE("FAIL deserialize");
+            fail();
+            return JSValue();
+        }
+
+        if (!m_rtcEncodedVideoFrames[index])
+            m_rtcEncodedVideoFrames[index] = RTCEncodedVideoFrame::create(m_serializedRTCEncodedVideoFrames.at(index).releaseNonNull());
+
+        return getJSValue(m_rtcEncodedVideoFrames[index].get());
+    }
 #endif
 
 #if ENABLE(WEB_CODECS)
@@ -5285,6 +5405,10 @@ private:
 #if ENABLE(WEB_RTC)
         case RTCDataChannelTransferTag:
             return readRTCDataChannel();
+        case RTCEncodedAudioFrameTag:
+            return readRTCEncodedAudioFrame();
+        case RTCEncodedVideoFrameTag:
+            return readRTCEncodedVideoFrame();
 #endif
 #if ENABLE(WEB_CODECS)
         case WebCodecsEncodedVideoChunkTag:
@@ -5349,6 +5473,10 @@ private:
 #if ENABLE(WEB_RTC)
     Vector<std::unique_ptr<DetachedRTCDataChannel>> m_detachedRTCDataChannels;
     Vector<RefPtr<RTCDataChannel>> m_rtcDataChannels;
+    Vector<RefPtr<RTCRtpTransformableFrame>> m_serializedRTCEncodedAudioFrames;
+    Vector<RefPtr<RTCEncodedAudioFrame>> m_rtcEncodedAudioFrames;
+    Vector<RefPtr<RTCRtpTransformableFrame>> m_serializedRTCEncodedVideoFrames;
+    Vector<RefPtr<RTCEncodedVideoFrame>> m_rtcEncodedVideoFrames;
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
     Vector<RefPtr<DetachedMediaSourceHandle>> m_detachedMediaSourceHandles;
@@ -5635,6 +5763,8 @@ void validateSerializedResult(CloneSerializer& serializer, SerializationReturnCo
 #endif
 #if ENABLE(WEB_RTC)
     Vector<std::unique_ptr<DetachedRTCDataChannel>> detachedRTCDataChannels;
+    Vector<RefPtr<RTCRtpTransformableFrame>> serializedRTCEncodedAudioFrames;
+    Vector<RefPtr<RTCRtpTransformableFrame>> serializedRTCEncodedVideoFrames;
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
     Vector<RefPtr<DetachedMediaSourceHandle>> detachedMediaSourceHandles;
@@ -5657,7 +5787,7 @@ void validateSerializedResult(CloneSerializer& serializer, SerializationReturnCo
 #endif
         , inMemoryMessagePorts
 #if ENABLE(WEB_RTC)
-        , WTFMove(detachedRTCDataChannels)
+        , WTFMove(detachedRTCDataChannels), WTFMove(serializedRTCEncodedAudioFrames), WTFMove(serializedRTCEncodedVideoFrames)
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
         , WTFMove(detachedMediaSourceHandles)
@@ -5732,6 +5862,8 @@ SerializedScriptValue::~SerializedScriptValue() = default;
 SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>&& buffer, std::unique_ptr<ArrayBufferContentsArray>&& arrayBufferContentsArray
 #if ENABLE(WEB_RTC)
     , Vector<std::unique_ptr<DetachedRTCDataChannel>>&& detachedRTCDataChannels
+    , Vector<RefPtr<RTCRtpTransformableFrame>>&& serializedRTCEncodedAudioFrames
+    , Vector<RefPtr<RTCRtpTransformableFrame>>&& serializedRTCEncodedVideoFrames
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
     , Vector<RefPtr<DetachedMediaSourceHandle>>&& detachedMediaSourceHandles
@@ -5758,6 +5890,10 @@ SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>&& buffer, std::uniq
         , .serializedVideoFrames = WTFMove(serializedVideoFrames)
         , .serializedAudioData = WTFMove(serializedAudioData)
 #endif
+#if ENABLE(WEB_RTC)
+        , .serializedRTCEncodedAudioFrames = WTFMove(serializedRTCEncodedAudioFrames)
+        , .serializedRTCEncodedVideoFrames = WTFMove(serializedRTCEncodedVideoFrames)
+#endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
         , .detachedMediaSourceHandles = WTFMove(detachedMediaSourceHandles)
 #endif
@@ -5777,6 +5913,8 @@ SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>&& buffer, Vector<UR
         , Vector<Ref<MessagePort>>&& inMemoryMessagePorts
 #if ENABLE(WEB_RTC)
         , Vector<std::unique_ptr<DetachedRTCDataChannel>>&& detachedRTCDataChannels
+        , Vector<RefPtr<RTCRtpTransformableFrame>>&& serializedRTCEncodedAudioFrames
+        , Vector<RefPtr<RTCRtpTransformableFrame>>&& serializedRTCEncodedVideoFrames
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
         , Vector<RefPtr<DetachedMediaSourceHandle>>&& detachedMediaSourceHandles
@@ -5806,6 +5944,10 @@ SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>&& buffer, Vector<UR
         , .serializedAudioChunks = WTFMove(serializedAudioChunks)
         , .serializedVideoFrames = WTFMove(serializedVideoFrames)
         , .serializedAudioData = WTFMove(serializedAudioData)
+#endif
+#if ENABLE(WEB_RTC)
+        , .serializedRTCEncodedAudioFrames = WTFMove(serializedRTCEncodedAudioFrames)
+        , .serializedRTCEncodedVideoFrames = WTFMove(serializedRTCEncodedVideoFrames)
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
         , .detachedMediaSourceHandles = WTFMove(detachedMediaSourceHandles)
@@ -6174,6 +6316,10 @@ ExceptionOr<Ref<SerializedScriptValue>> SerializedScriptValue::create(JSGlobalOb
     WasmMemoryHandleArray wasmMemoryHandles;
 #endif
     std::unique_ptr<ArrayBufferContentsArray> sharedBuffers = makeUnique<ArrayBufferContentsArray>();
+#if ENABLE(WEB_RTC)
+    Vector<RefPtr<RTCEncodedAudioFrame>> serializedRTCEncodedAudioFrames;
+    Vector<RefPtr<RTCEncodedVideoFrame>> serializedRTCEncodedVideoFrames;
+#endif
 #if ENABLE(WEB_CODECS)
     Vector<RefPtr<WebCodecsEncodedVideoChunkStorage>> serializedVideoChunks;
     Vector<RefPtr<WebCodecsVideoFrame>> serializedVideoFrames;
@@ -6191,6 +6337,8 @@ ExceptionOr<Ref<SerializedScriptValue>> SerializedScriptValue::create(JSGlobalOb
         inMemoryMessagePorts,
 #if ENABLE(WEB_RTC)
         dataChannels,
+        serializedRTCEncodedAudioFrames,
+        serializedRTCEncodedVideoFrames,
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
         mediaSourceHandles,
@@ -6233,8 +6381,13 @@ ExceptionOr<Ref<SerializedScriptValue>> SerializedScriptValue::create(JSGlobalOb
     Vector<std::unique_ptr<DetachedRTCDataChannel>> detachedRTCDataChannels;
     for (auto& channel : dataChannels)
         detachedRTCDataChannels.append(channel->detach());
+    auto serializedRTCEncodedAudioFrameStorages = map(serializedRTCEncodedAudioFrames, [](auto& frame) -> RefPtr<RTCRtpTransformableFrame> {
+        return frame->serialize();
+    });
+    auto serializedRTCEncodedVideoFrameStorages = map(serializedRTCEncodedVideoFrames, [](auto& frame) -> RefPtr<RTCRtpTransformableFrame> {
+        return frame->serialize();
+    });
 #endif
-
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
     Vector<RefPtr<DetachedMediaSourceHandle>> detachedMediaSourceHandles;
     for (auto& handle : mediaSourceHandles)
@@ -6265,6 +6418,8 @@ ExceptionOr<Ref<SerializedScriptValue>> SerializedScriptValue::create(JSGlobalOb
                 , WTFMove(inMemoryMessagePorts)
 #if ENABLE(WEB_RTC)
                 , WTFMove(detachedRTCDataChannels)
+                , WTFMove(serializedRTCEncodedAudioFrameStorages)
+                , WTFMove(serializedRTCEncodedVideoFrameStorages)
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
                 , WTFMove(detachedMediaSourceHandles)
@@ -6344,6 +6499,8 @@ JSValue SerializedScriptValue::deserialize(JSGlobalObject& lexicalGlobalObject, 
         , m_internals.inMemoryMessagePorts
 #if ENABLE(WEB_RTC)
         , WTFMove(m_internals.detachedRTCDataChannels)
+        , WTFMove(m_internals.serializedRTCEncodedAudioFrames)
+        , WTFMove(m_internals.serializedRTCEncodedVideoFrames)
 #endif
 #if ENABLE(MEDIA_SOURCE_IN_WORKERS)
         , WTFMove(m_internals.detachedMediaSourceHandles)

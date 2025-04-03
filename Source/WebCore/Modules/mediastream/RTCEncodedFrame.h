@@ -47,6 +47,8 @@ public:
 
     Ref<RTCRtpTransformableFrame> rtcFrame();
 
+    Ref<RTCRtpTransformableFrame> serialize();
+
 protected:
     explicit RTCEncodedFrame(Ref<RTCRtpTransformableFrame>&&);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc.
+ * Copyright (C) 2020-2025 Apple Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
+#include <webrtc/api/frame_transformer_factory.h>
 #include <webrtc/api/frame_transformer_interface.h>
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
@@ -39,8 +40,9 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCRtpTransformableFrame);
 
-LibWebRTCRtpTransformableFrame::LibWebRTCRtpTransformableFrame(std::unique_ptr<webrtc::TransformableFrameInterface>&& frame)
+LibWebRTCRtpTransformableFrame::LibWebRTCRtpTransformableFrame(std::unique_ptr<webrtc::TransformableFrameInterface>&& frame, bool isAudio)
     : m_rtcFrame(WTFMove(frame))
+    , m_isAudio(isAudio)
 {
 }
 
@@ -124,6 +126,16 @@ RTCEncodedVideoFrameMetadata LibWebRTCRtpTransformableFrame::videoMetadata() con
     if (auto presentationTimestamp = m_rtcFrame->GetPresentationTimestamp())
         timestamp = presentationTimestamp->us();
     return { frameId, WTFMove(dependencies), metadata.GetWidth(), metadata.GetHeight(), metadata.GetSpatialIndex(), metadata.GetTemporalIndex(), m_rtcFrame->GetSsrc(), m_rtcFrame->GetPayloadType(), WTFMove(cssrcs), timestamp, m_rtcFrame->GetTimestamp(), fromStdString(m_rtcFrame->GetMimeType()) };
+}
+
+Ref<RTCRtpTransformableFrame> LibWebRTCRtpTransformableFrame::clone()
+{
+    std::unique_ptr<webrtc::TransformableFrameInterface> rtcClone;
+    if (m_isAudio)
+        rtcClone = webrtc::CloneAudioFrame(static_cast<webrtc::TransformableAudioFrameInterface*>(m_rtcFrame.get()));
+    else
+        rtcClone = webrtc::CloneVideoFrame(static_cast<webrtc::TransformableVideoFrameInterface*>(m_rtcFrame.get()));
+    return adoptRef(*new LibWebRTCRtpTransformableFrame(WTFMove(rtcClone), m_isAudio));
 }
 
 } // namespace WebCore
