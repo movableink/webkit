@@ -62,7 +62,7 @@
         }
 
         for (colors of sampledColors) {
-            shouldBeNull("colors.top");
+            shouldBeEqualToString("colors.top", "multiple");
             shouldBeNull("colors.left");
             shouldBeNull("colors.right");
             shouldBeEqualToString("colors.bottom", "rgb(211, 211, 211)");

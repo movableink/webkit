@@ -31,6 +31,8 @@
 #import <WebKit/WKWebViewPrivateForTestingMac.h>
 #endif
 
+#import <WebKit/_WKRectEdge.h>
+
 NS_ASSUME_NONNULL_BEGIN
 
 typedef enum {
@@ -153,6 +155,17 @@ struct WKAppPrivacyReportTestingData {
 @property (nonatomic, readonly) BOOL _hasAccessibilityActivityForTesting;
 
 - (void)_setMediaVolumeForTesting:(float)volume;
+
+@property (nonatomic, readonly) _WKRectEdge _fixedContainerEdges;
+#if TARGET_OS_IPHONE
+@property (nonatomic, readonly) UIColor *_sampledLeftFixedPositionContentColor;
+@property (nonatomic, readonly) UIColor *_sampledBottomFixedPositionContentColor;
+@property (nonatomic, readonly) UIColor *_sampledRightFixedPositionContentColor;
+#else
+@property (nonatomic, readonly) NSColor *_sampledLeftFixedPositionContentColor;
+@property (nonatomic, readonly) NSColor *_sampledBottomFixedPositionContentColor;
+@property (nonatomic, readonly) NSColor *_sampledRightFixedPositionContentColor;
+#endif
 
 @end
 

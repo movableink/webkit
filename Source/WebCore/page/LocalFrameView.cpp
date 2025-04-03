@@ -1919,21 +1919,21 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
 
     struct FixedContainerResult {
         RefPtr<Element> container;
-        bool shouldSample { false };
+        bool foundBackdropFilter { false };
     };
 
     auto fixedRect = rectForFixedPositionLayout();
     fixedRect.contract({ sampleRectMargin });
 
-    auto hitTestLocationForSide = [&](BoxSideFlag side) -> LayoutPoint {
+    auto hitTestLocationForSide = [&](BoxSide side) -> LayoutPoint {
         switch (side) {
-        case BoxSideFlag::Top:
+        case BoxSide::Top:
             return { (fixedRect.x() + fixedRect.maxX()) / 2, fixedRect.y() };
-        case BoxSideFlag::Left:
+        case BoxSide::Left:
             return { fixedRect.x(), (fixedRect.y() + fixedRect.maxY()) / 2 };
-        case BoxSideFlag::Right:
+        case BoxSide::Right:
             return { fixedRect.maxX(), (fixedRect.y() + fixedRect.maxY()) / 2 };
-        case BoxSideFlag::Bottom:
+        case BoxSide::Bottom:
             return { (fixedRect.x() + fixedRect.maxX()) / 2, fixedRect.maxY() };
         default:
             ASSERT_NOT_REACHED();
@@ -1941,10 +1941,7 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
         }
     };
 
-    auto findFixedContainer = [&](BoxSideFlag side) -> FixedContainerResult {
-        if (!sides.contains(side))
-            return { };
-
+    auto findFixedContainer = [&](BoxSide side) -> FixedContainerResult {
         using enum HitTestRequest::Type;
         static constexpr OptionSet hitTestOptions {
             ReadOnly,
@@ -1974,7 +1971,7 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
             if (renderer->isFixedPositioned() || renderer->isStickilyPositioned()) {
                 return {
                     .container = { renderer->element() },
-                    .shouldSample = !foundBackdropFilter
+                    .foundBackdropFilter = foundBackdropFilter
                 };
             }
         }
@@ -1982,69 +1979,92 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
         return { };
     };
 
-    RectEdges<bool> fixedEdges;
-    RectEdges<Color> sampledColors;
+    auto computeSamplingRect = [&](const RenderStyle* style, BoxSide side) -> LayoutRect {
+        LayoutRect samplingRect;
+        switch (side) {
+        case BoxSide::Top:
+            samplingRect = { fixedRect.minXMinYCorner(), LayoutPoint { fixedRect.maxX(), fixedRect.y() + sampleRectThickness } };
+            break;
+        case BoxSide::Left:
+            samplingRect = { fixedRect.minXMinYCorner(), LayoutPoint { fixedRect.x() + sampleRectThickness, fixedRect.maxY() } };
+            break;
+        case BoxSide::Right:
+            samplingRect = { LayoutPoint { fixedRect.maxX() - sampleRectThickness, fixedRect.y() }, fixedRect.maxXMaxYCorner() };
+            break;
+        case BoxSide::Bottom:
+            samplingRect = { LayoutPoint { fixedRect.x(), fixedRect.maxY() - sampleRectThickness }, fixedRect.maxXMaxYCorner() };
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+            return { };
+        }
 
-    auto sampleRectOffsetToAccountForBorderWidth = [](const BorderValue& border) -> LayoutUnit {
-        if (!border.isVisible())
-            return 0;
+        if (!style)
+            return samplingRect;
 
-        auto borderWidth = border.width();
+        const BorderValue* border = nullptr;
+        switch (side) {
+        case BoxSide::Top:
+            border = &style->borderTop();
+            break;
+        case BoxSide::Left:
+            border = &style->borderLeft();
+            break;
+        case BoxSide::Right:
+            border = &style->borderRight();
+            break;
+        case BoxSide::Bottom:
+            border = &style->borderBottom();
+            break;
+        }
+
+        if (!border)
+            return samplingRect;
+
+        if (!border->isVisible())
+            return samplingRect;
+
+        auto borderWidth = border->width();
         if (borderWidth > thinBorderWidth)
-            return 0;
+            return samplingRect;
 
-        return LayoutUnit::fromFloatRound(borderWidth);
+        auto offset = LayoutUnit::fromFloatRound(borderWidth);
+
+        switch (side) {
+        case BoxSide::Top:
+            samplingRect.move(0, offset);
+            break;
+        case BoxSide::Left:
+            samplingRect.move(offset, 0);
+            break;
+        case BoxSide::Right:
+            samplingRect.move(-offset, 0);
+            break;
+        case BoxSide::Bottom:
+            samplingRect.move(0, -offset);
+            break;
+        }
+
+        return samplingRect;
     };
 
-    if (auto [container, shouldSample] = findFixedContainer(BoxSideFlag::Top); container) {
-        fixedEdges.setTop(true);
-        if (shouldSample) {
-            LayoutRect samplingRect { fixedRect.minXMinYCorner(), LayoutPoint { fixedRect.maxX(), fixedRect.y() + sampleRectThickness } };
-            if (CheckedPtr style = container->renderStyle()) {
-                if (auto offset = sampleRectOffsetToAccountForBorderWidth(style->borderTop()))
-                    samplingRect.move(0, offset);
-            }
-            sampledColors.setTop(PageColorSampler::predominantColor(*page, WTFMove(samplingRect)));
+    FixedContainerEdges edges;
+
+    for (auto sideFlag : sides) {
+        auto side = boxSideFromFlag(sideFlag);
+        auto [container, foundBackdropFilter] = findFixedContainer(side);
+        if (!container)
+            continue;
+
+        if (foundBackdropFilter) {
+            edges.colors.setAt(side, PredominantColorType::Multiple);
+            continue;
         }
+
+        edges.colors.setAt(side, PageColorSampler::predominantColor(*page, computeSamplingRect(container->renderStyle(), side)));
     }
 
-    if (auto [container, shouldSample] = findFixedContainer(BoxSideFlag::Left); container) {
-        fixedEdges.setLeft(true);
-        if (shouldSample) {
-            LayoutRect samplingRect { fixedRect.minXMinYCorner(), LayoutPoint { fixedRect.x() + sampleRectThickness, fixedRect.maxY() } };
-            if (CheckedPtr style = container->renderStyle()) {
-                if (auto offset = sampleRectOffsetToAccountForBorderWidth(style->borderLeft()))
-                    samplingRect.move(offset, 0);
-            }
-            sampledColors.setLeft(PageColorSampler::predominantColor(*page, WTFMove(samplingRect)));
-        }
-    }
-
-    if (auto [container, shouldSample] = findFixedContainer(BoxSideFlag::Right); container) {
-        fixedEdges.setRight(true);
-        if (shouldSample) {
-            LayoutRect samplingRect { LayoutPoint { fixedRect.maxX() - sampleRectThickness, fixedRect.y() }, fixedRect.maxXMaxYCorner() };
-            if (CheckedPtr style = container->renderStyle()) {
-                if (auto offset = sampleRectOffsetToAccountForBorderWidth(style->borderRight()))
-                    samplingRect.move(-offset, 0);
-            }
-            sampledColors.setRight(PageColorSampler::predominantColor(*page, WTFMove(samplingRect)));
-        }
-    }
-
-    if (auto [container, shouldSample] = findFixedContainer(BoxSideFlag::Bottom); container) {
-        fixedEdges.setBottom(true);
-        if (shouldSample) {
-            LayoutRect samplingRect { LayoutPoint { fixedRect.x(), fixedRect.maxY() - sampleRectThickness }, fixedRect.maxXMaxYCorner() };
-            if (CheckedPtr style = container->renderStyle()) {
-                if (auto offset = sampleRectOffsetToAccountForBorderWidth(style->borderBottom()))
-                    samplingRect.move(0, -offset);
-            }
-            sampledColors.setBottom(PageColorSampler::predominantColor(*page, WTFMove(samplingRect)));
-        }
-    }
-
-    return { WTFMove(sampledColors), WTFMove(fixedEdges) };
+    return edges;
 }
 
 FloatPoint LocalFrameView::positionForInsetClipLayer(const FloatPoint& scrollPosition, const FloatBoxExtent& obscuredContentInset)

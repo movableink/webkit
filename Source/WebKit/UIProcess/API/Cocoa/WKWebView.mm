@@ -2905,68 +2905,45 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
 
 - (_WKRectEdge)_fixedContainerEdges
 {
+    // FIXME: Remove once it's no longer required to maintain binary compatibility with internal clients.
     _WKRectEdge edges = _WKRectEdgeNone;
-    if (_fixedContainerEdges.fixedEdges.bottom())
+    if (_fixedContainerEdges.hasFixedEdge(WebCore::BoxSide::Bottom))
         edges |= _WKRectEdgeBottom;
-    if (_fixedContainerEdges.fixedEdges.left())
+    if (_fixedContainerEdges.hasFixedEdge(WebCore::BoxSide::Left))
         edges |= _WKRectEdgeLeft;
-    if (_fixedContainerEdges.fixedEdges.right())
+    if (_fixedContainerEdges.hasFixedEdge(WebCore::BoxSide::Right))
         edges |= _WKRectEdgeRight;
-    if (_fixedContainerEdges.fixedEdges.top())
+    if (_fixedContainerEdges.hasFixedEdge(WebCore::BoxSide::Top))
         edges |= _WKRectEdgeTop;
     return edges;
 }
 
-- (WebCore::CocoaColor *)_sampledBottomFixedPositionContentColor:(const WebCore::FixedContainerEdges&)edges
+static WebCore::CocoaColor *sampledFixedPositionContentColor(const WebCore::FixedContainerEdges& edges, WebCore::BoxSide side)
 {
-    if (!edges.fixedEdges.bottom())
+    if (!edges.hasFixedEdge(side))
         return nil;
 
-    return cocoaColorOrNil(edges.predominantColors.bottom()).autorelease();
-}
-
-- (WebCore::CocoaColor *)_sampledLeftFixedPositionContentColor:(const WebCore::FixedContainerEdges&)edges
-{
-    if (!edges.fixedEdges.left())
-        return nil;
-
-    return cocoaColorOrNil(edges.predominantColors.left()).autorelease();
-}
-
-- (WebCore::CocoaColor *)_sampledTopFixedPositionContentColor:(const WebCore::FixedContainerEdges&)edges
-{
-    if (!edges.fixedEdges.top())
-        return nil;
-
-    return cocoaColorOrNil(edges.predominantColors.top()).autorelease();
-}
-
-- (WebCore::CocoaColor *)_sampledRightFixedPositionContentColor:(const WebCore::FixedContainerEdges&)edges
-{
-    if (!edges.fixedEdges.right())
-        return nil;
-
-    return cocoaColorOrNil(edges.predominantColors.right()).autorelease();
+    return cocoaColorOrNil(edges.predominantColor(side)).autorelease();
 }
 
 - (WebCore::CocoaColor *)_sampledBottomFixedPositionContentColor
 {
-    return [self _sampledBottomFixedPositionContentColor:_fixedContainerEdges];
+    return sampledFixedPositionContentColor(_fixedContainerEdges, WebCore::BoxSide::Bottom);
 }
 
 - (WebCore::CocoaColor *)_sampledLeftFixedPositionContentColor
 {
-    return [self _sampledLeftFixedPositionContentColor:_fixedContainerEdges];
+    return sampledFixedPositionContentColor(_fixedContainerEdges, WebCore::BoxSide::Left);
 }
 
 - (WebCore::CocoaColor *)_sampledTopFixedPositionContentColor
 {
-    return [self _sampledTopFixedPositionContentColor:_fixedContainerEdges];
+    return sampledFixedPositionContentColor(_fixedContainerEdges, WebCore::BoxSide::Top);
 }
 
 - (WebCore::CocoaColor *)_sampledRightFixedPositionContentColor
 {
-    return [self _sampledRightFixedPositionContentColor:_fixedContainerEdges];
+    return sampledFixedPositionContentColor(_fixedContainerEdges, WebCore::BoxSide::Right);
 }
 
 - (void)_updateScrollGeometryWithContentOffset:(CGPoint)contentOffset contentSize:(CGSize)contentSize
@@ -2998,40 +2975,12 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
     if (_fixedContainerEdges == edges)
         return;
 
-    Vector<SEL, 5> changedSelectors;
+    RetainPtr oldTopColor = [self _sampledTopFixedPositionContentColor];
+    RetainPtr newTopColor = sampledFixedPositionContentColor(edges, WebCore::BoxSide::Top);
+    bool isTopColorChanging = oldTopColor != newTopColor || ![oldTopColor isEqual:newTopColor.get()];
 
-    using FixedEdgeColors = WebCore::RectEdges<RetainPtr<WebCore::CocoaColor>>;
-    FixedEdgeColors oldColors {
-        [self _sampledTopFixedPositionContentColor],
-        [self _sampledRightFixedPositionContentColor],
-        [self _sampledBottomFixedPositionContentColor],
-        [self _sampledLeftFixedPositionContentColor]
-    };
-
-    FixedEdgeColors newColors {
-        [self _sampledTopFixedPositionContentColor:edges],
-        [self _sampledRightFixedPositionContentColor:edges],
-        [self _sampledBottomFixedPositionContentColor:edges],
-        [self _sampledLeftFixedPositionContentColor:edges]
-    };
-
-    if (oldColors.bottom() != newColors.bottom() || ![oldColors.bottom() isEqual:newColors.bottom().get()])
-        changedSelectors.append(@selector(_sampledBottomFixedPositionContentColor));
-
-    if (oldColors.left() != newColors.left() || ![oldColors.left() isEqual:newColors.left().get()])
-        changedSelectors.append(@selector(_sampledLeftFixedPositionContentColor));
-
-    if (oldColors.right() != newColors.right() || ![oldColors.right() isEqual:newColors.right().get()])
-        changedSelectors.append(@selector(_sampledRightFixedPositionContentColor));
-
-    if (oldColors.top() != newColors.top() || ![oldColors.top() isEqual:newColors.top().get()])
-        changedSelectors.append(@selector(_sampledTopFixedPositionContentColor));
-
-    if (_fixedContainerEdges.fixedEdges != edges.fixedEdges)
-        changedSelectors.append(@selector(_fixedContainerEdges));
-
-    for (auto selector : changedSelectors)
-        [self willChangeValueForKey:NSStringFromSelector(selector)];
+    if (isTopColorChanging)
+        [self willChangeValueForKey:NSStringFromSelector(@selector(_sampledTopFixedPositionContentColor))];
 
     _fixedContainerEdges = edges;
 
@@ -3039,8 +2988,8 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
     [self _updateFixedColorExtensionViews];
 #endif
 
-    for (auto selector : changedSelectors)
-        [self didChangeValueForKey:NSStringFromSelector(selector)];
+    if (isTopColorChanging)
+        [self didChangeValueForKey:NSStringFromSelector(@selector(_sampledTopFixedPositionContentColor))];
 }
 
 #if ENABLE(PDF_PAGE_NUMBER_INDICATOR)
@@ -3121,7 +3070,7 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
     RetainPtr parentView = [self _containerForFixedColorExtension];
     auto insets = [self _obscuredInsetsForFixedColorExtension];
     auto updateExtensionView = [&](WebCore::BoxSide side) {
-        BOOL needsView = insets.at(side) > 0 && _fixedContainerEdges.fixedEdges.at(side);
+        BOOL needsView = insets.at(side) > 0 && _fixedContainerEdges.hasFixedEdge(side);
         RetainPtr extensionView = _fixedColorExtensionViews.at(side);
         if (!needsView) {
             [extensionView setHidden:YES];
@@ -3152,7 +3101,7 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
             _fixedColorExtensionViews.setAt(side, extensionView);
         }
 
-        RetainPtr predominantColor = cocoaColorOrNil(_fixedContainerEdges.predominantColors.at(side));
+        RetainPtr predominantColor = cocoaColorOrNil(_fixedContainerEdges.predominantColor(side));
         [extensionView setBackgroundColor:predominantColor.get() ?: [self underPageBackgroundColor]];
         [extensionView setHidden:NO];
     };

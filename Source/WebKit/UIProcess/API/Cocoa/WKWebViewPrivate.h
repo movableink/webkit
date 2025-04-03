@@ -402,17 +402,10 @@ for this property.
 
 @property (nonatomic, readonly) BOOL _isSuspended;
 
-@property (nonatomic, readonly) _WKRectEdge _fixedContainerEdges WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
 #if TARGET_OS_IPHONE
 @property (nonatomic, readonly) UIColor *_sampledTopFixedPositionContentColor WK_API_AVAILABLE(ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
-@property (nonatomic, readonly) UIColor *_sampledLeftFixedPositionContentColor WK_API_AVAILABLE(ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
-@property (nonatomic, readonly) UIColor *_sampledBottomFixedPositionContentColor WK_API_AVAILABLE(ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
-@property (nonatomic, readonly) UIColor *_sampledRightFixedPositionContentColor WK_API_AVAILABLE(ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
 #else
 @property (nonatomic, readonly) NSColor *_sampledTopFixedPositionContentColor WK_API_AVAILABLE(macos(WK_MAC_TBA));
-@property (nonatomic, readonly) NSColor *_sampledLeftFixedPositionContentColor WK_API_AVAILABLE(macos(WK_MAC_TBA));
-@property (nonatomic, readonly) NSColor *_sampledBottomFixedPositionContentColor WK_API_AVAILABLE(macos(WK_MAC_TBA));
-@property (nonatomic, readonly) NSColor *_sampledRightFixedPositionContentColor WK_API_AVAILABLE(macos(WK_MAC_TBA));
 #endif
 
 @property (nonatomic, readonly) BOOL _canTogglePictureInPicture;

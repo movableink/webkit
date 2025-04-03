@@ -33,10 +33,12 @@ namespace WebCore {
 class LayoutRect;
 class Page;
 
+enum class PredominantColorType : uint8_t;
+
 class PageColorSampler {
 public:
     static std::optional<Color> sampleTop(Page&);
-    static Color predominantColor(Page&, const LayoutRect&);
+    static std::variant<PredominantColorType, Color> predominantColor(Page&, const LayoutRect&);
 };
 
 } // namespace WebCore

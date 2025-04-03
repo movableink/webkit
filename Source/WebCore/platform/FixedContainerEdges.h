@@ -30,9 +30,33 @@
 
 namespace WebCore {
 
+enum class PredominantColorType : uint8_t {
+    None,
+    Multiple,
+};
+
+using FixedContainerEdge = std::variant<WebCore::PredominantColorType, WebCore::Color>;
+
 struct FixedContainerEdges {
-    RectEdges<Color> predominantColors;
-    RectEdges<bool> fixedEdges;
+    RectEdges<FixedContainerEdge> colors { PredominantColorType::None, PredominantColorType::None, PredominantColorType::None, PredominantColorType::None };
+
+    bool hasFixedEdge(BoxSide side) const
+    {
+        return std::visit(WTF::makeVisitor([&](PredominantColorType type) {
+            return type != PredominantColorType::None;
+        }, [&](const Color&) {
+            return true;
+        }), colors.at(side));
+    }
+
+    Color predominantColor(BoxSide side) const
+    {
+        return std::visit(WTF::makeVisitor([&](PredominantColorType) -> Color {
+            return { };
+        }, [&](const Color& color) {
+            return color;
+        }), colors.at(side));
+    }
 
     bool operator==(const FixedContainerEdges&) const = default;
 };

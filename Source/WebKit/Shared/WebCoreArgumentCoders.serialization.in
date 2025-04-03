@@ -9087,9 +9087,24 @@ header: <WebCore/StageModeOperations.h>
 enum class WebCore::StageModeOperation : bool;
 #endif
 
+header: <WebCore/FixedContainerEdges.h>
+enum class WebCore::PredominantColorType : uint8_t {
+    None,
+    Multiple
+};
+
+using WebCore::FixedContainerEdge = std::variant<WebCore::PredominantColorType, WebCore::Color>;
+
+header: <WebCore/FixedContainerEdges.h>
+[Nested] class WebCore::RectEdges<WebCore::FixedContainerEdge> {
+    WebCore::FixedContainerEdge top();
+    WebCore::FixedContainerEdge right();
+    WebCore::FixedContainerEdge bottom();
+    WebCore::FixedContainerEdge left();
+};
+
 struct WebCore::FixedContainerEdges {
-    WebCore::RectEdges<WebCore::Color> predominantColors;
-    WebCore::RectEdges<bool> fixedEdges;
+    WebCore::RectEdges<WebCore::FixedContainerEdge> colors;
 };
 
 header: <WebCore/LocalFrameLoaderClient.h>

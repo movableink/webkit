@@ -396,17 +396,19 @@ void UIScriptControllerCocoa::resetVisibilityAdjustments(JSValueRef callback)
 
 JSObjectRef UIScriptControllerCocoa::fixedContainerEdgeColors() const
 {
-    auto nsColorOrNSNull = [](WebCore::CocoaColor *color) -> id {
+    auto colorDescriptionOrNull = [fixedEdges = webView()._fixedContainerEdges](WebCore::CocoaColor *color, _WKRectEdge edge) -> id {
         if (color)
             return (NSString *)WebCoreTestSupport::serializationForCSS(color);
+        if (fixedEdges & edge)
+            return @"multiple";
         return NSNull.null;
     };
 
     RetainPtr jsValue = [JSValue valueWithObject:@{
-        @"top": nsColorOrNSNull(webView()._sampledTopFixedPositionContentColor),
-        @"left": nsColorOrNSNull(webView()._sampledLeftFixedPositionContentColor),
-        @"bottom": nsColorOrNSNull(webView()._sampledBottomFixedPositionContentColor),
-        @"right": nsColorOrNSNull(webView()._sampledRightFixedPositionContentColor)
+        @"top": colorDescriptionOrNull(webView()._sampledTopFixedPositionContentColor, _WKRectEdgeTop),
+        @"left": colorDescriptionOrNull(webView()._sampledLeftFixedPositionContentColor, _WKRectEdgeLeft),
+        @"bottom": colorDescriptionOrNull(webView()._sampledBottomFixedPositionContentColor, _WKRectEdgeBottom),
+        @"right": colorDescriptionOrNull(webView()._sampledRightFixedPositionContentColor, _WKRectEdgeRight)
     } inContext:[JSContext contextWithJSGlobalContextRef:m_context->jsContext()]];
     return JSValueToObject(m_context->jsContext(), [jsValue JSValueRef], nullptr);
 }

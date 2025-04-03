@@ -31,6 +31,7 @@
 #include "ContentfulPaintChecker.h"
 #include "Document.h"
 #include "Element.h"
+#include "FixedContainerEdges.h"
 #include "FrameSnapshotting.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLIFrameElement.h"
@@ -277,19 +278,19 @@ std::optional<Color> PageColorSampler::sampleTop(Page& page)
         return averageColor(std::span(samples));
 }
 
-Color PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteRect)
+std::variant<PredominantColorType, Color> PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteRect)
 {
     RefPtr frame = page.localMainFrame();
     if (!frame)
-        return { };
+        return PredominantColorType::None;
 
     RefPtr view = frame->view();
     if (!view)
-        return { };
+        return PredominantColorType::None;
 
     RefPtr document = frame->document();
     if (!document)
-        return { };
+        return PredominantColorType::None;
 
     static constexpr OptionSet snapshotFlags {
         SnapshotFlags::ExcludeSelectionHighlighting,
@@ -302,37 +303,47 @@ Color PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteR
     auto colorSpace = DestinationColorSpace::SRGB();
     auto snapshot = snapshotFrameRect(*frame, snappedIntRect(absoluteRect), { snapshotFlags, ImageBufferPixelFormat::BGRA8, colorSpace });
     if (!snapshot)
-        return { };
+        return PredominantColorType::None;
 
     auto pixelBuffer = snapshot->getPixelBuffer({ AlphaPremultiplication::Unpremultiplied, PixelFormat::BGRA8, colorSpace }, { { }, snapshot->truncatedLogicalSize() });
     if (!pixelBuffer)
-        return { };
+        return PredominantColorType::None;
 
-    auto isNearlyTransparent = [](const Color& color) {
-        static constexpr auto nearlyTransparentAlphaThreshold = 0.33;
-        return color.alphaAsFloat() < nearlyTransparentAlphaThreshold;
-    };
-
+    static constexpr auto nearlyTransparentAlphaThreshold = 0.1;
     static constexpr auto sampleCount = 29;
     static constexpr auto minimumSampleCountForPredominantColor = 0.5 * sampleCount;
     static constexpr auto bytesPerPixel = 4;
 
+    auto isNearlyTransparent = [](const Color& color) {
+        return color.alphaAsFloat() < nearlyTransparentAlphaThreshold;
+    };
+
     auto numberOfBytes = pixelBuffer->bytes().size();
     auto numberOfPixels = numberOfBytes / bytesPerPixel;
     if (numberOfPixels <= sampleCount)
-        return { };
+        return PredominantColorType::None;
 
     auto byteSamplingInterval = bytesPerPixel * (numberOfPixels / (sampleCount - 1));
     auto pixels = pixelBuffer->bytes();
     HashCountedSet<Color> colorDistribution;
     for (uint64_t i = 0; i < numberOfBytes; i += byteSamplingInterval) {
-        if (auto color = Color { SRGBA<uint8_t> { pixels[i + 2], pixels[i + 1], pixels[i], pixels[i + 3] } }; color.isVisible())
-            colorDistribution.add(WTFMove(color));
+        auto color = Color { SRGBA<uint8_t> { pixels[i + 2], pixels[i + 1], pixels[i], pixels[i + 3] } };
+        if (!color.isVisible())
+            continue;
+
+        colorDistribution.add(WTFMove(color));
     }
 
+    if (colorDistribution.isEmpty())
+        return PredominantColorType::None;
+
     for (auto& [color, count] : colorDistribution) {
-        if (count > minimumSampleCountForPredominantColor)
-            return isNearlyTransparent(color) ? Color { } : color;
+        if (count > minimumSampleCountForPredominantColor) {
+            if (isNearlyTransparent(color))
+                return PredominantColorType::None;
+
+            return { WTFMove(color) };
+        }
     }
 
     auto colorsAreSimilar = [](const Color& a, const Color& b) {
@@ -368,11 +379,15 @@ Color PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteR
 
         mostFrequentColorCount += count;
 
-        if (mostFrequentColorCount > minimumSampleCountForPredominantColor)
-            return isNearlyTransparent(*mostFrequentColor) ? Color { } : WTFMove(*mostFrequentColor);
+        if (mostFrequentColorCount > minimumSampleCountForPredominantColor) {
+            if (isNearlyTransparent(*mostFrequentColor))
+                return PredominantColorType::None;
+
+            return { WTFMove(*mostFrequentColor) };
+        }
     }
 
-    return { };
+    return PredominantColorType::Multiple;
 }
 
 } // namespace WebCore
