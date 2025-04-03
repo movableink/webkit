@@ -5948,9 +5948,7 @@ void Document::flushAutofocusCandidates()
 
     while (!m_autofocusCandidates.isEmpty()) {
         RefPtr element = m_autofocusCandidates.first().get();
-        Document* elementMainFrameDocument = element ? element->document().mainFrameDocument() : nullptr;
-        if (!elementMainFrameDocument)
-            LOG_ONCE(SiteIsolation, "Unable to fully perform Document::flushAutofocusCandidates() without access to the elements main frame document ");
+        RefPtr<Document> elementMainFrameDocument = element ? element->document().mainFrameDocument() : nullptr;
 
         if (!element || !element->document().isFullyActive() || (elementMainFrameDocument && elementMainFrameDocument != this)) {
             m_autofocusCandidates.removeFirst();

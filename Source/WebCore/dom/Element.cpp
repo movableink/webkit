@@ -231,6 +231,7 @@ static Attr* findAttrNodeInList(Vector<RefPtr<Attr>>& attrNodeList, const Qualif
     return nullptr;
 }
 
+// Insertion steps from https://html.spec.whatwg.org/multipage/interaction.html#the-autofocus-attribute
 static bool shouldAutofocus(const Element& element)
 {
     Ref document = element.document();
@@ -250,12 +251,33 @@ static bool shouldAutofocus(const Element& element)
         return false;
     }
 
-    if (!document->frame()->isMainFrame() && !document->topOrigin().isSameOriginDomain(document->securityOrigin())) {
-        document->addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Blocked autofocusing on a form control in a cross-origin subframe."_s);
-        return false;
-    }
+    // Make sure all navigable ancestors are of the same origin.
+    bool allAncestorsAreSameOrigin = [&] {
+        RefPtr<Frame> currentFrame = document->frame();
+        RefPtr<Document> currentDocument = document.ptr();
+        while (currentFrame) {
+            if (!currentDocument || !document->topOrigin().isSameOriginDomain(currentDocument->securityOrigin()))
+                return false;
 
-    return true;
+            RefPtr parentFrame = currentFrame->tree().parent();
+            if (!parentFrame)
+                return currentFrame->isMainFrame();
+
+            // If the parent frame is not local then it is definitely a different origin.
+            RefPtr localParent = dynamicDowncast<LocalFrame>(parentFrame.get());
+            if (!localParent)
+                return false;
+
+            currentFrame = WTFMove(parentFrame);
+            currentDocument = localParent->document();
+        }
+        return true;
+    }();
+
+    if (!allAncestorsAreSameOrigin)
+        document->addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Blocked autofocusing on a form control in a cross-origin subframe."_s);
+
+    return allAncestorsAreSameOrigin;
 }
 
 static UncheckedKeyHashMap<WeakRef<Element, WeakPtrImplWithEventTargetData>, ElementIdentifier>& elementIdentifiersMap()
@@ -3005,8 +3027,6 @@ Node::InsertedIntoAncestorResult Element::insertedIntoAncestor(InsertionType ins
         if (shouldAutofocus(*this)) {
             if (RefPtr mainFrameDocument = document().mainFrameDocument())
                 mainFrameDocument->appendAutofocusCandidate(*this);
-            else
-                LOG_ONCE(SiteIsolation, "Unable to properly perform Element::insertedIntoAncestor() without access to the main frame document ");
         }
 
         if (hasAttributesWithoutUpdate()) {
