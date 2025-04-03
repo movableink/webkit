@@ -260,12 +260,6 @@ static dispatch_queue_t globalLoaderDelegateQueue()
 
 class MediaPlayerPrivateAVFoundationObjC::Factory final : public MediaPlayerFactory {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(Factory);
-public:
-    Factory()
-    {
-        MediaSessionManagerCocoa::ensureCodecsRegistered();
-    }
-
 private:
     MediaPlayerEnums::MediaEngineIdentifier identifier() const final { return MediaPlayerEnums::MediaEngineIdentifier::AVFoundation; };
 

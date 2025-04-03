@@ -34,7 +34,6 @@
 #import "LocalSampleBufferDisplayLayer.h"
 #import "Logging.h"
 #import "MediaPlayer.h"
-#import "MediaSessionManagerCocoa.h"
 #import "MediaStreamPrivate.h"
 #import "PixelBufferConformerCV.h"
 #import "PlatformDynamicRangeLimitCocoa.h"
@@ -190,12 +189,6 @@ MediaPlayerPrivateMediaStreamAVFObjC::~MediaPlayerPrivateMediaStreamAVFObjC()
 
 class MediaPlayerFactoryMediaStreamAVFObjC final : public MediaPlayerFactory {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(MediaPlayerFactoryMediaStreamAVFObjC);
-public:
-    MediaPlayerFactoryMediaStreamAVFObjC()
-    {
-        MediaSessionManagerCocoa::ensureCodecsRegistered();
-    }
-
 private:
     MediaPlayerEnums::MediaEngineIdentifier identifier() const final { return MediaPlayerEnums::MediaEngineIdentifier::AVFoundationMediaStream; };
 

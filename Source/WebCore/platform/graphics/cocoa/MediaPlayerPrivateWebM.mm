@@ -37,7 +37,6 @@
 #import "MediaPlaybackTarget.h"
 #import "MediaPlayer.h"
 #import "MediaSampleAVFObjC.h"
-#import "MediaSessionManagerCocoa.h"
 #import "NativeImage.h"
 #import "NotImplemented.h"
 #import "PixelBufferConformerCV.h"

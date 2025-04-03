@@ -179,12 +179,6 @@ MediaPlayerPrivateMediaSourceAVFObjC::~MediaPlayerPrivateMediaSourceAVFObjC()
 
 class MediaPlayerFactoryMediaSourceAVFObjC final : public MediaPlayerFactory {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(MediaPlayerFactoryMediaSourceAVFObjC);
-public:
-    MediaPlayerFactoryMediaSourceAVFObjC()
-    {
-        MediaSessionManagerCocoa::ensureCodecsRegistered();
-    }
-
 private:
     MediaPlayerEnums::MediaEngineIdentifier identifier() const final { return MediaPlayerEnums::MediaEngineIdentifier::AVFoundationMSE; };
 
