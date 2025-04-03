@@ -3451,7 +3451,7 @@ RefPtr<WebCore::TextIndicator> UnifiedPDFPlugin::textIndicatorForTextMatch(const
     if (!selection)
         return { };
 
-    return textIndicatorForSelection(selection.get(), { WebCore::TextIndicatorOption::IncludeMarginIfRangeMatchesSelection }, transition);
+    return textIndicatorForSelection(selection.get(), WebCore::TextIndicatorOption::IncludeMarginIfRangeMatchesSelection, transition);
 }
 
 RefPtr<TextIndicator> UnifiedPDFPlugin::textIndicatorForCurrentSelection(OptionSet<WebCore::TextIndicatorOption> options, WebCore::TextIndicatorPresentationTransition transition)
@@ -3466,13 +3466,20 @@ RefPtr<TextIndicator> UnifiedPDFPlugin::textIndicatorForSelection(PDFSelection *
     if (selectionPageCoverage.isEmpty())
         return nullptr;
 
+    auto mainFrameScaleForTextIndicator = [this] {
+        if (handlesPageScaleFactor())
+            return 1.0;
+        if (!m_frame || !m_frame->page())
+            return 1.0;
+        return m_frame->protectedPage()->pageScaleFactor();
+    }();
     auto rectInContentsCoordinates = convertUp(CoordinateSpace::PDFPage, CoordinateSpace::Contents, selectionPageCoverage[0].pageBounds, selectionPageCoverage[0].pageIndex);
     auto rectInPluginCoordinates = convertUp(CoordinateSpace::Contents, CoordinateSpace::Plugin, rectInContentsCoordinates);
-    auto rectInRootViewCoordinates = convertFromPluginToRootView(enclosingIntRect(rectInPluginCoordinates));
+    auto rectInRootViewCoordinates = convertFromPluginToRootView(rectInPluginCoordinates);
+    auto bufferSize = rectInRootViewCoordinates.size().scaled(mainFrameScaleForTextIndicator);
 
     float deviceScaleFactor = this->deviceScaleFactor();
-
-    auto buffer = ImageBuffer::create(rectInRootViewCoordinates.size(), RenderingMode::Unaccelerated, RenderingPurpose::ShareableSnapshot, deviceScaleFactor, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    auto buffer = ImageBuffer::create(bufferSize, RenderingMode::Unaccelerated, RenderingPurpose::ShareableSnapshot, deviceScaleFactor, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     if (!buffer)
         return nullptr;
 
@@ -3481,7 +3488,7 @@ RefPtr<TextIndicator> UnifiedPDFPlugin::textIndicatorForSelection(PDFSelection *
     {
         GraphicsContextStateSaver saver(context);
 
-        context.scale(m_scaleFactor);
+        context.scale(nonNormalizedScaleFactor() * mainFrameScaleForTextIndicator);
         context.translate(-rectInContentsCoordinates.location());
 
         auto layoutRow = m_documentLayout.rowForPageIndex(selectionPageCoverage[0].pageIndex);
@@ -3494,7 +3501,7 @@ RefPtr<TextIndicator> UnifiedPDFPlugin::textIndicatorForSelection(PDFSelection *
 #else
     Color highlightColor = SRGBA<float>(.99, .89, 0.22, 1.0);
 #endif
-    context.fillRect({ { 0, 0 }, rectInRootViewCoordinates.size() }, highlightColor, CompositeOperator::SourceOver, BlendMode::Multiply);
+    context.fillRect({ { 0, 0 }, bufferSize }, highlightColor, CompositeOperator::SourceOver, BlendMode::Multiply);
 
     TextIndicatorData data;
     data.contentImage = BitmapImage::create(ImageBuffer::sinkIntoNativeImage(WTFMove(buffer)));
@@ -3503,9 +3510,11 @@ RefPtr<TextIndicator> UnifiedPDFPlugin::textIndicatorForSelection(PDFSelection *
     data.contentImageWithoutSelectionRectInRootViewCoordinates = rectInRootViewCoordinates;
     data.selectionRectInRootViewCoordinates = rectInRootViewCoordinates;
     data.textBoundingRectInRootViewCoordinates = rectInRootViewCoordinates;
-    data.textRectsInBoundingRectCoordinates = { FloatRect { 0, 0, static_cast<float>(rectInRootViewCoordinates.width()), static_cast<float>(rectInRootViewCoordinates.height()) } };
+    data.textRectsInBoundingRectCoordinates = { { { 0, 0, }, rectInRootViewCoordinates.size() } };
     data.presentationTransition = transition;
     data.options = options;
+
+    LOG_WITH_STREAM(PDF, stream << "UnifiedPDFPlugin: creating text indicator for selection with page coverage " << selectionPageCoverage << " and content image " << *data.contentImage);
 
     return TextIndicator::create(data);
 }

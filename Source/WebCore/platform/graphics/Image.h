@@ -196,7 +196,7 @@ private:
     static bool gSystemAllowsAnimationControls;
 };
 
-WTF::TextStream& operator<<(WTF::TextStream&, const Image&);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Image&);
 
 } // namespace WebCore
 
