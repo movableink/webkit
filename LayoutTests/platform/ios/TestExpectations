@@ -7823,3 +7823,5 @@ webkit.org/b/290888 fast/loader/redirect-to-invalid-url-using-meta-refresh-calls
 webkit.org/b/290942 [ Debug ] fast/viewport/ios/width-is-device-width-overflowing-body-overflow-hidden.html [ Pass Crash ]
 
 webkit.org/b/290958 [ Debug ] imported/w3c/web-platform-tests/navigation-api/scroll-behavior/manual-scroll-after-resolve.html [ Pass Failure ]
+
+webkit.org/b/290967 [ Debug ] imported/w3c/IndexedDB-private-browsing/idbcursor_iterating.html [ Pass Crash ]
