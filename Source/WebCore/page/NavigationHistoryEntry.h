@@ -61,6 +61,8 @@ public:
     SerializedScriptValue* state() const { return m_state.get(); }
 
     HistoryItem& associatedHistoryItem() const { return m_associatedHistoryItem; }
+    Ref<HistoryItem> protectedAssociatedHistoryItem() const { return m_associatedHistoryItem; }
+
     void dispatchDisposeEvent();
 
 private:

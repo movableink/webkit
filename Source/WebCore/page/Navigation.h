@@ -41,7 +41,6 @@ namespace WebCore {
 class FormState;
 class HistoryItem;
 class SerializedScriptValue;
-class NavigateEvent;
 class NavigationActivation;
 class NavigationDestination;
 
@@ -124,6 +123,7 @@ public:
 
     const Vector<Ref<NavigationHistoryEntry>>& entries() const;
     NavigationHistoryEntry* currentEntry() const;
+    RefPtr<NavigationHistoryEntry> protectedCurrentEntry() const { return currentEntry(); }
     NavigationTransition* transition() { return m_transition.get(); };
     NavigationActivation* activation() { return m_activation.get(); };
 
@@ -180,6 +180,8 @@ public:
         bool m_wasAborted { false };
     };
     Ref<AbortHandler> registerAbortHandler();
+
+    RefPtr<NavigateEvent> protectedOngoingNavigateEvent() { return m_ongoingNavigateEvent; }
 
 private:
     explicit Navigation(LocalDOMWindow&);

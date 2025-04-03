@@ -36,6 +36,7 @@ class LocalDOMWindowProperty {
 public:
     WEBCORE_EXPORT LocalFrame* frame() const;
     LocalDOMWindow* window() const;
+    RefPtr<LocalDOMWindow> protectedWindow() const { return window(); }
 
 protected:
     explicit LocalDOMWindowProperty(LocalDOMWindow*);

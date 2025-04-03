@@ -489,7 +489,6 @@ page/LocalDOMWindow.cpp
 page/LocalFrame.cpp
 page/LocalFrameView.cpp
 page/Location.cpp
-page/Navigation.cpp
 page/Navigator.cpp
 page/OpportunisticTaskScheduler.cpp
 page/PageColorSampler.cpp
