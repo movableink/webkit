@@ -11,5 +11,5 @@ fn main() {
   // CHECK: local\d+ = 0
   b = 0.0;
   // CHECK: function\d\(local\d+\)
-  _ = f(b);
+  f(b);
 }

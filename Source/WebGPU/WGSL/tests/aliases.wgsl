@@ -46,23 +46,23 @@ fn main() {
     let x = v(0);
     let y = s(0);
 
-    _ = f1(vec2f(vec2(0u)));
-    _ = f2(vec2i(vec2(0f)));
-    _ = f3(vec2u(vec2(0f)));
-    _ = f4(vec3f(vec3(0u)));
-    _ = f5(vec3i(vec3(0f)));
-    _ = f6(vec3u(vec3(0f)));
-    _ = f7(vec4f(vec4(0u)));
-    _ = f8(vec4i(vec4(0f)));
-    _ = f9(vec4u(vec4(0f)));
+    f1(vec2f(vec2(0u)));
+    f2(vec2i(vec2(0f)));
+    f3(vec2u(vec2(0f)));
+    f4(vec3f(vec3(0u)));
+    f5(vec3i(vec3(0f)));
+    f6(vec3u(vec3(0f)));
+    f7(vec4f(vec4(0u)));
+    f8(vec4i(vec4(0f)));
+    f9(vec4u(vec4(0f)));
 
-    _ = m1(mat2x2f(mat2x2(0, 0, 0, 0)));
-    _ = m2(mat2x3f(mat2x3(0, 0, 0, 0, 0, 0)));
-    _ = m3(mat2x4f(mat2x4(0, 0, 0, 0, 0, 0, 0, 0)));
-    _ = m4(mat3x2f(mat3x2(0, 0, 0, 0, 0, 0)));
-    _ = m5(mat3x3f(mat3x3(0, 0, 0, 0, 0, 0, 0, 0, 0)));
-    _ = m6(mat3x4f(mat3x4(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)));
-    _ = m7(mat4x2f(mat4x2(0, 0, 0, 0, 0, 0, 0, 0)));
-    _ = m8(mat4x3f(mat4x3(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)));
-    _ = m9(mat4x4f(mat4x4(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)));
+    m1(mat2x2f(mat2x2(0, 0, 0, 0)));
+    m2(mat2x3f(mat2x3(0, 0, 0, 0, 0, 0)));
+    m3(mat2x4f(mat2x4(0, 0, 0, 0, 0, 0, 0, 0)));
+    m4(mat3x2f(mat3x2(0, 0, 0, 0, 0, 0)));
+    m5(mat3x3f(mat3x3(0, 0, 0, 0, 0, 0, 0, 0, 0)));
+    m6(mat3x4f(mat3x4(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)));
+    m7(mat4x2f(mat4x2(0, 0, 0, 0, 0, 0, 0, 0)));
+    m8(mat4x3f(mat4x3(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)));
+    m9(mat4x4f(mat4x4(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)));
 }
