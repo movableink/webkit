@@ -41,6 +41,7 @@
 #include "ProvisionalPageProxy.h"
 #include "RemotePageProxy.h"
 #include "WebBackForwardListFrameItem.h"
+#include "WebFrameMessages.h"
 #include "WebFramePolicyListenerProxy.h"
 #include "WebNavigationState.h"
 #include "WebPageMessages.h"
@@ -120,6 +121,18 @@ WebFrameProxy::~WebFrameProxy()
 
     ASSERT(allFrames().get(m_frameID) == this);
     allFrames().remove(m_frameID);
+}
+
+template<typename M, typename C> void WebFrameProxy::sendWithAsyncReply(M&& message, C&& completionHandler)
+{
+    // Use AuxiliaryProcessProxy::sendMessage to handle process crashes and launches more gracefully.
+    protectedProcess()->sendWithAsyncReply(std::forward<M>(message), std::forward<C>(completionHandler), m_frameID);
+}
+
+template<typename M> void WebFrameProxy::send(M&& message)
+{
+    // Use AuxiliaryProcessProxy::sendMessage to handle process crashes and launches more gracefully.
+    protectedProcess()->send(std::forward<M>(message), m_frameID);
 }
 
 WebPageProxy* WebFrameProxy::page() const
@@ -455,13 +468,18 @@ void WebFrameProxy::commitProvisionalFrame(IPC::Connection& connection, FrameIde
         if (RefPtr process = std::exchange(m_provisionalFrame, nullptr)->takeFrameProcess()) {
             m_frameProcess = process.releaseNonNull();
             if (m_remoteFrameSize)
-                protectedProcess()->send(Messages::WebPage::UpdateFrameSize(frameID, *m_remoteFrameSize), *webPageIDInCurrentProcess());
+                send(Messages::WebFrame::UpdateFrameSize(*m_remoteFrameSize));
         }
     }
     protectedPage()->didCommitLoadForFrame(connection, frameID, WTFMove(frameInfo), WTFMove(request), navigationID, mimeType, frameHasCustomContentProvider, frameLoadType, certificateInfo, usedLegacyTLS, privateRelayed, proxyName, source, containsPluginDocument, hasInsecureContent, mouseEventPolicy, userData);
 }
 
-void WebFrameProxy::getFrameInfo(CompletionHandler<void(std::optional<FrameTreeNodeData>&&)>&& completionHandler)
+void WebFrameProxy::getFrameInfo(CompletionHandler<void(std::optional<FrameInfoData>&&)>&& completionHandler)
+{
+    sendWithAsyncReply(Messages::WebFrame::GetFrameInfo(), WTFMove(completionHandler));
+}
+
+void WebFrameProxy::getFrameTree(CompletionHandler<void(std::optional<FrameTreeNodeData>&&)>&& completionHandler)
 {
     class FrameInfoCallbackAggregator : public RefCounted<FrameInfoCallbackAggregator> {
     public:
@@ -492,16 +510,16 @@ void WebFrameProxy::getFrameInfo(CompletionHandler<void(std::optional<FrameTreeN
     };
 
     Ref aggregator = FrameInfoCallbackAggregator::create(WTFMove(completionHandler), m_childFrames.size());
-    protectedProcess()->sendWithAsyncReply(Messages::WebPage::GetFrameInfo(m_frameID), [aggregator] (std::optional<FrameInfoData>&& info) {
+    getFrameInfo([aggregator] (std::optional<FrameInfoData>&& info) {
         if (info)
             aggregator->setCurrentFrameData(WTFMove(*info));
-    }, *webPageIDInCurrentProcess());
+    });
 
     RefPtr page = this->page();
     bool isSiteIsolationEnabled = page && page->protectedPreferences()->siteIsolationEnabled();
     size_t index = 0;
     for (Ref childFrame : m_childFrames) {
-        childFrame->getFrameInfo([aggregator, index = index++, frameID = this->frameID(), isSiteIsolationEnabled] (std::optional<FrameTreeNodeData>&& data) {
+        childFrame->getFrameTree([aggregator, index = index++, frameID = this->frameID(), isSiteIsolationEnabled] (std::optional<FrameTreeNodeData>&& data) {
             if (!data)
                 return;
 
@@ -736,6 +754,17 @@ void WebFrameProxy::updateScrollingMode(WebCore::ScrollbarMode scrollingMode)
     m_scrollingMode = scrollingMode;
     if (RefPtr page = m_page.get())
         page->sendToProcessContainingFrame(m_frameID, Messages::WebPage::UpdateFrameScrollingMode(m_frameID, scrollingMode));
+}
+
+void WebFrameProxy::updateRemoteFrameSize(WebCore::IntSize size)
+{
+    m_remoteFrameSize = size;
+    send(Messages::WebFrame::UpdateFrameSize(size));
+}
+
+std::optional<SharedPreferencesForWebProcess> WebFrameProxy::sharedPreferencesForWebProcess() const
+{
+    return process().sharedPreferencesForWebProcess();
 }
 
 } // namespace WebKit

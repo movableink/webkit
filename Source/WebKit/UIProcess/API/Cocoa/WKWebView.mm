@@ -3384,9 +3384,14 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(FORWARD_ACTION_TO_WKCONTENTVIEW)
 {
     auto frameID = handle->_frameHandle->frameID();
     if (!frameID)
-        completionHandler(nil);
-    _page->getFrameInfo(*frameID, [completionHandler = makeBlockPtr(completionHandler)] (auto* frameInfo) {
-        completionHandler(wrapper(frameInfo));
+        return completionHandler(nil);
+    RefPtr frame = WebKit::WebFrameProxy::webFrame(*frameID);
+    if (!frame)
+        return completionHandler(nil);
+    frame->getFrameInfo([completionHandler = makeBlockPtr(completionHandler), page = RefPtr { _page.get() }] (auto&& data) mutable {
+        if (!data)
+            return completionHandler(nil);
+        completionHandler(wrapper(API::FrameInfo::create(WTFMove(*data), WTFMove(page))).get());
     });
 }
 

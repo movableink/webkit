@@ -142,6 +142,7 @@ enum class MessageName : uint16_t {
     TestWithValidator_AlwaysEnabled,
     TestWithValidator_EnabledIfPassValidation,
     TestWithValidator_EnabledIfSomeFeatureEnabledAndPassValidation,
+    TestWithValidator_MessageWithReply,
     TestWithWantsAsyncDispatch_TestMessage,
     TestWithWantsDispatchNoSyncMessages_TestMessage,
     TestWithWantsDispatch_TestMessage,
@@ -212,6 +213,7 @@ enum class MessageName : uint16_t {
     TestWithSuperclass_TestAsyncMessageWithMultipleArgumentsReply,
     TestWithSuperclass_TestAsyncMessageWithNoArgumentsReply,
 #endif
+    TestWithValidator_MessageWithReplyReply,
     TestWithoutAttributes_CreatePluginReply,
     TestWithoutAttributes_GetPluginsReply,
 #if PLATFORM(MAC)

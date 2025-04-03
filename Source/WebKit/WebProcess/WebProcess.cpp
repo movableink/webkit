@@ -59,6 +59,7 @@
 #include "WebCookieJar.h"
 #include "WebFileSystemStorageConnection.h"
 #include "WebFrame.h"
+#include "WebFrameMessages.h"
 #include "WebGamepadProvider.h"
 #include "WebGeolocationManager.h"
 #include "WebIDBConnectionToServer.h"
@@ -1010,6 +1011,13 @@ void WebProcess::terminate()
 
 bool WebProcess::dispatchMessage(IPC::Connection& connection, IPC::Decoder& decoder)
 {
+    if (decoder.messageReceiverName() == Messages::WebFrame::messageReceiverName()) {
+        if (RefPtr frame = FrameIdentifier::isValidIdentifier(decoder.destinationID()) ? webFrame(FrameIdentifier(decoder.destinationID())) : nullptr)
+            frame->didReceiveMessage(connection, decoder);
+        else
+            WebFrame::sendCancelReply(connection, decoder);
+        return true;
+    }
     if (decoder.messageReceiverName() == Messages::WebSWContextManagerConnection::messageReceiverName()) {
         ASSERT(SWContextManager::singleton().connection());
         if (RefPtr contextManagerConnection = SWContextManager::singleton().connection())

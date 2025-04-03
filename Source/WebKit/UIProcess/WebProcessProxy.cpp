@@ -63,6 +63,7 @@
 #include "WebBackForwardListItem.h"
 #include "WebCompiledContentRuleList.h"
 #include "WebFrameProxy.h"
+#include "WebFrameProxyMessages.h"
 #include "WebInspectorUtilities.h"
 #include "WebLockRegistryProxy.h"
 #include "WebNavigationDataStore.h"
@@ -1232,6 +1233,13 @@ bool WebProcessProxy::dispatchMessage(IPC::Connection& connection, IPC::Decoder&
         return true;
     if (protectedProcessPool()->dispatchMessage(connection, decoder))
         return true;
+    if (decoder.messageReceiverName() == Messages::WebFrameProxy::messageReceiverName()) {
+        if (RefPtr frame = FrameIdentifier::isValidIdentifier(decoder.destinationID()) ? WebFrameProxy::webFrame(FrameIdentifier(decoder.destinationID())) : nullptr)
+            frame->didReceiveMessage(connection, decoder);
+        else
+            WebFrameProxy::sendCancelReply(connection, decoder);
+        return true;
+    }
 
     // FIXME: Add unhandled message logging.
     // WebProcessProxy will receive messages to instances that were removed from

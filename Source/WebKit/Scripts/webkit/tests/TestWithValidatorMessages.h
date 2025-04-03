@@ -113,5 +113,34 @@ private:
     std::tuple<const String&> m_arguments;
 };
 
+class MessageWithReply {
+public:
+    using Arguments = std::tuple<String>;
+
+    static IPC::MessageName name() { return IPC::MessageName::TestWithValidator_MessageWithReply; }
+    static constexpr bool isSync = false;
+    static constexpr bool canDispatchOutOfOrder = false;
+    static constexpr bool replyCanDispatchOutOfOrder = false;
+    static constexpr bool deferSendingIfSuspended = false;
+
+    static IPC::MessageName asyncMessageReplyName() { return IPC::MessageName::TestWithValidator_MessageWithReplyReply; }
+    static constexpr auto callbackThread = WTF::CompletionHandlerCallThread::ConstructionThread;
+    using ReplyArguments = std::tuple<String, double>;
+    using Reply = CompletionHandler<void(String&&, double)>;
+    using Promise = WTF::NativePromise<std::tuple<String, double>, IPC::Error>;
+    explicit MessageWithReply(const String& url)
+        : m_arguments(url)
+    {
+    }
+
+    auto&& arguments()
+    {
+        return WTFMove(m_arguments);
+    }
+
+private:
+    std::tuple<const String&> m_arguments;
+};
+
 } // namespace TestWithValidator
 } // namespace Messages

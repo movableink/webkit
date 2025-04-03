@@ -47,6 +47,7 @@
 #include "WebContextMenu.h"
 #include "WebEventConversion.h"
 #include "WebEventFactory.h"
+#include "WebFrameProxyMessages.h"
 #include "WebImage.h"
 #include "WebPage.h"
 #include "WebPageProxyMessages.h"
@@ -100,6 +101,7 @@
 #include <WebCore/SubresourceLoader.h>
 #include <WebCore/TextIterator.h>
 #include <WebCore/TextResourceDecoder.h>
+#include <wtf/CoroutineUtilities.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -275,6 +277,11 @@ WebCore::Frame* WebFrame::coreFrame() const
 RefPtr<WebCore::Frame> WebFrame::protectedCoreFrame() const
 {
     return coreFrame();
+}
+
+Awaitable<std::optional<FrameInfoData>> WebFrame::getFrameInfo()
+{
+    co_return info(WithCertificateInfo::Yes);
 }
 
 FrameInfoData WebFrame::info(WithCertificateInfo withCertificateInfo) const
@@ -1172,8 +1179,35 @@ String WebFrame::mimeTypeForResourceWithURL(const URL& url) const
 
 void WebFrame::updateRemoteFrameSize(WebCore::IntSize size)
 {
-    if (m_page)
-        m_page->send(Messages::WebPageProxy::UpdateRemoteFrameSize(m_frameID, size));
+    send(Messages::WebFrameProxy::UpdateRemoteFrameSize(size));
+}
+
+void WebFrame::updateFrameSize(WebCore::IntSize newSize)
+{
+    ASSERT(m_page->corePage()->settings().siteIsolationEnabled());
+    RefPtr localFrame = coreLocalFrame();
+    if (!localFrame)
+        return;
+
+    RefPtr frameView = localFrame->view();
+    if (!frameView)
+        return;
+
+    if (frameView->size() == newSize)
+        return;
+
+    frameView->resize(newSize);
+#if PLATFORM(IOS_FAMILY)
+    // FIXME: This ensures cross-site iframe render correctly;
+    // it should be removed after rdar://122429810 is fixed.
+    frameView->setExposedContentRect(frameView->frameRect());
+    frameView->setUnobscuredContentSize(frameView->size());
+#endif
+
+    if (RefPtr drawingArea = m_page ? m_page->drawingArea() : nullptr) {
+        drawingArea->setNeedsDisplay();
+        drawingArea->triggerRenderingUpdate();
+    }
 }
 
 void WebFrame::setTextDirection(const String& direction)
@@ -1441,6 +1475,16 @@ String WebFrame::frameTextForTesting(bool includeSubframes)
 WebFrame* WebFrame::webFrame(std::optional<WebCore::FrameIdentifier> frameID)
 {
     return WebProcess::singleton().webFrame(frameID);
+}
+
+IPC::Connection* WebFrame::messageSenderConnection() const
+{
+    return WebProcess::singleton().parentProcessConnection();
+}
+
+uint64_t WebFrame::messageSenderDestinationID() const
+{
+    return m_frameID.toUInt64();
 }
 
 } // namespace WebKit

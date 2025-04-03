@@ -1191,15 +1191,6 @@ void WebPage::createRemoteSubframe(WebCore::FrameIdentifier parentID, WebCore::F
     WebFrame::createRemoteSubframe(*this, *parentFrame, newChildID, newChildFrameName, std::nullopt, WTFMove(frameTreeSyncData));
 }
 
-void WebPage::getFrameInfo(WebCore::FrameIdentifier frameID, CompletionHandler<void(std::optional<FrameInfoData>&&)>&& completionHandler)
-{
-    RefPtr frame = WebProcess::singleton().webFrame(frameID);
-    if (!frame)
-        return completionHandler(std::nullopt);
-
-    completionHandler(frame->info(WithCertificateInfo::Yes));
-}
-
 Awaitable<std::optional<FrameTreeNodeData>> WebPage::getFrameTree()
 {
     co_return m_mainFrame->frameTreeData();
@@ -3378,41 +3369,6 @@ void WebPage::updateFrameScrollingMode(FrameIdentifier frameID, ScrollbarMode sc
         return;
 
     frame->setScrollingMode(scrollingMode);
-}
-
-void WebPage::updateFrameSize(WebCore::FrameIdentifier frameID, WebCore::IntSize newSize)
-{
-    if (!m_page)
-        return;
-
-    ASSERT(m_page->settings().siteIsolationEnabled());
-    RefPtr webFrame = WebProcess::singleton().webFrame(frameID);
-    if (!webFrame)
-        return;
-
-    RefPtr frame = webFrame->coreLocalFrame();
-    if (!frame)
-        return;
-
-    RefPtr frameView = frame->view();
-    if (!frameView)
-        return;
-
-    if (frameView->size() == newSize)
-        return;
-
-    frameView->resize(newSize);
-#if PLATFORM(IOS_FAMILY)
-    // FIXME: This ensures cross-site iframe render correctly;
-    // it should be removed after rdar://122429810 is fixed.
-    frameView->setExposedContentRect(frameView->frameRect());
-    frameView->setUnobscuredContentSize(frameView->size());
-#endif
-
-    if (RefPtr drawingArea = m_drawingArea) {
-        drawingArea->setNeedsDisplay();
-        drawingArea->triggerRenderingUpdate();
-    }
 }
 
 void WebPage::tryMarkLayersVolatile(CompletionHandler<void(bool)>&& completionHandler)

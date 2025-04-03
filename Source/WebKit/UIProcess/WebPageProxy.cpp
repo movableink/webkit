@@ -6203,17 +6203,7 @@ void WebPageProxy::getAllFrames(CompletionHandler<void(std::optional<FrameTreeNo
     RefPtr mainFrame = m_mainFrame;
     if (!mainFrame)
         return completionHandler({ });
-    mainFrame->getFrameInfo(WTFMove(completionHandler));
-}
-
-void WebPageProxy::getFrameInfo(WebCore::FrameIdentifier frameID, CompletionHandler<void(API::FrameInfo*)>&& completionHandler)
-{
-    sendWithAsyncReplyToProcessContainingFrame(frameID, Messages::WebPage::GetFrameInfo(frameID), [weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)] (std::optional<FrameInfoData>&& data) mutable {
-        RefPtr protectedThis = weakThis.get();
-        if (!data || !protectedThis)
-            return completionHandler(nullptr);
-        completionHandler(API::FrameInfo::create(WTFMove(*data), WTFMove(protectedThis)).ptr());
-    });
+    mainFrame->getFrameTree(WTFMove(completionHandler));
 }
 
 void WebPageProxy::getAllFrameTrees(CompletionHandler<void(Vector<FrameTreeNodeData>&&)>&& completionHandler)
@@ -6533,14 +6523,6 @@ void WebPageProxy::updateScrollingMode(IPC::Connection& connection, WebCore::Fra
         MESSAGE_CHECK(process, parentFrame && &parentFrame->process() == process.ptr());
         frame->updateScrollingMode(scrollingMode);
     }
-}
-
-void WebPageProxy::updateRemoteFrameSize(WebCore::FrameIdentifier frameID, WebCore::IntSize size)
-{
-    if (RefPtr frame = WebFrameProxy::webFrame(frameID))
-        frame->setRemoteFrameSize(size);
-
-    sendToProcessContainingFrame(frameID, Messages::WebPage::UpdateFrameSize(frameID, size));
 }
 
 void WebPageProxy::resolveAccessibilityHitTestForTesting(WebCore::FrameIdentifier frameID, WebCore::IntPoint point, CompletionHandler<void(String)>&& callback)

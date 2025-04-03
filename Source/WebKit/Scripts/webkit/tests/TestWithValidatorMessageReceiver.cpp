@@ -68,9 +68,34 @@ void TestWithValidator::didReceiveMessage(IPC::Connection& connection, IPC::Deco
         }
         return IPC::handleMessage<Messages::TestWithValidator::EnabledIfSomeFeatureEnabledAndPassValidation>(connection, decoder, this, &TestWithValidator::enabledIfSomeFeatureEnabledAndPassValidation);
     }
+    if (decoder.messageName() == Messages::TestWithValidator::MessageWithReply::name())
+        return IPC::handleMessageAsync<Messages::TestWithValidator::MessageWithReply>(connection, decoder, this, &TestWithValidator::messageWithReply);
     UNUSED_PARAM(connection);
     RELEASE_LOG_ERROR(IPC, "Unhandled message %s to %" PRIu64, IPC::description(decoder.messageName()).characters(), decoder.destinationID());
     decoder.markInvalid();
+}
+
+void TestWithValidator::sendCancelReply(IPC::Connection& connection, IPC::Decoder& decoder)
+{
+    ASSERT(decoder.messageReceiverName() == IPC::ReceiverName::TestWithValidator);
+    switch (decoder.messageName()) {
+    case IPC::MessageName::TestWithValidator_MessageWithReply: {
+        auto arguments = decoder.decode<typename Messages::TestWithValidator::MessageWithReply::Arguments>();
+        if (UNLIKELY(!arguments))
+            return;
+        auto replyID = decoder.decode<IPC::AsyncReplyID>();
+        if (UNLIKELY(!replyID))
+            return;
+        connection.sendAsyncReply<Messages::TestWithValidator::MessageWithReply>(*replyID
+            , IPC::AsyncReplyError<String>::create()
+            , IPC::AsyncReplyError<double>::create()
+        );
+        return;
+    }
+    default:
+        // No reply to send.
+        return;
+    }
 }
 
 } // namespace WebKit
@@ -90,6 +115,14 @@ template<> std::optional<JSC::JSValue> jsValueForDecodedMessage<MessageName::Tes
 template<> std::optional<JSC::JSValue> jsValueForDecodedMessage<MessageName::TestWithValidator_EnabledIfSomeFeatureEnabledAndPassValidation>(JSC::JSGlobalObject* globalObject, Decoder& decoder)
 {
     return jsValueForDecodedArguments<Messages::TestWithValidator::EnabledIfSomeFeatureEnabledAndPassValidation::Arguments>(globalObject, decoder);
+}
+template<> std::optional<JSC::JSValue> jsValueForDecodedMessage<MessageName::TestWithValidator_MessageWithReply>(JSC::JSGlobalObject* globalObject, Decoder& decoder)
+{
+    return jsValueForDecodedArguments<Messages::TestWithValidator::MessageWithReply::Arguments>(globalObject, decoder);
+}
+template<> std::optional<JSC::JSValue> jsValueForDecodedMessageReply<MessageName::TestWithValidator_MessageWithReply>(JSC::JSGlobalObject* globalObject, Decoder& decoder)
+{
+    return jsValueForDecodedArguments<Messages::TestWithValidator::MessageWithReply::ReplyArguments>(globalObject, decoder);
 }
 
 }

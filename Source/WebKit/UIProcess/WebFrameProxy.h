@@ -27,6 +27,7 @@
 
 #include "APIObject.h"
 #include "FrameLoadState.h"
+#include "MessageReceiver.h"
 #include "WebFramePolicyListenerProxy.h"
 #include "WebProcessProxy.h"
 #include <WebCore/FrameLoaderTypes.h>
@@ -82,12 +83,15 @@ struct FrameTreeCreationParameters;
 struct FrameTreeNodeData;
 struct WebsitePoliciesData;
 
-class WebFrameProxy : public API::ObjectImpl<API::Object::Type::Frame>, public CanMakeWeakPtr<WebFrameProxy> {
+class WebFrameProxy : public API::ObjectImpl<API::Object::Type::Frame>, public IPC::MessageReceiver {
 public:
     static Ref<WebFrameProxy> create(WebPageProxy& page, FrameProcess& process, WebCore::FrameIdentifier frameID, WebCore::SandboxFlags sandboxFlags, WebCore::ScrollbarMode scrollingMode, WebFrameProxy* opener, IsMainFrame isMainFrame)
     {
         return adoptRef(*new WebFrameProxy(page, process, frameID, sandboxFlags, scrollingMode, opener, isMainFrame));
     }
+
+    void ref() const final { API::ObjectImpl<API::Object::Type::Frame>::ref(); }
+    void deref() const final { API::ObjectImpl<API::Object::Type::Frame>::deref(); }
 
     static WebFrameProxy* webFrame(std::optional<WebCore::FrameIdentifier>);
     static RefPtr<WebFrameProxy> protectedWebFrame(std::optional<WebCore::FrameIdentifier> identifier) { return webFrame(identifier); }
@@ -169,7 +173,8 @@ public:
 
     void commitProvisionalFrame(IPC::Connection&, WebCore::FrameIdentifier, FrameInfoData&&, WebCore::ResourceRequest&&, std::optional<WebCore::NavigationIdentifier>, const String& mimeType, bool frameHasCustomContentProvider, WebCore::FrameLoadType, const WebCore::CertificateInfo&, bool usedLegacyTLS, bool privateRelayed, const String& proxyName, WebCore::ResourceResponseSource, bool containsPluginDocument, WebCore::HasInsecureContent, WebCore::MouseEventPolicy, const UserData&);
 
-    void getFrameInfo(CompletionHandler<void(std::optional<FrameTreeNodeData>&&)>&&);
+    void getFrameTree(CompletionHandler<void(std::optional<FrameTreeNodeData>&&)>&&);
+    void getFrameInfo(CompletionHandler<void(std::optional<FrameInfoData>&&)>&&);
     FrameTreeCreationParameters frameTreeCreationParameters() const;
 
     WebFrameProxy* parentFrame() const { return m_parentFrame.get(); }
@@ -212,7 +217,7 @@ public:
     bool isPendingInitialHistoryItem() const { return m_isPendingInitialHistoryItem; }
 
     WebCore::LayerHostingContextIdentifier layerHostingContextIdentifier() const { return m_layerHostingContextIdentifier; }
-    void setRemoteFrameSize(WebCore::IntSize size) { m_remoteFrameSize = size; }
+    void updateRemoteFrameSize(WebCore::IntSize);
 
     WebCore::SandboxFlags effectiveSandboxFlags() const { return m_effectiveSandboxFlags; }
     void updateSandboxFlags(WebCore::SandboxFlags sandboxFlags) { m_effectiveSandboxFlags = sandboxFlags; }
@@ -224,8 +229,15 @@ public:
     WebFrameProxy* opener() { return m_opener.get(); }
     void disownOpener() { m_opener = nullptr; }
 
+    void didReceiveMessage(IPC::Connection&, IPC::Decoder&);
+    static void sendCancelReply(IPC::Connection&, IPC::Decoder&);
+    template<typename M, typename C> void sendWithAsyncReply(M&&, C&&);
+    template<typename M> void send(M&&);
+
 private:
     WebFrameProxy(WebPageProxy&, FrameProcess&, WebCore::FrameIdentifier, WebCore::SandboxFlags, WebCore::ScrollbarMode, WebFrameProxy*, IsMainFrame);
+
+    std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const;
 
     std::optional<WebCore::PageIdentifier> pageIdentifier() const;
 

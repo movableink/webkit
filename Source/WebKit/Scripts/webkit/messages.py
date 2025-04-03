@@ -1565,6 +1565,34 @@ def generate_message_handler(receiver):
             result.append('    return false;\n')
         result.append('}\n')
 
+    if receiver.wants_send_cancel_reply:
+        result.append('\n')
+        result.append('void %s::sendCancelReply(IPC::Connection& connection, IPC::Decoder& decoder)\n' % (receiver.name))
+        result.append('{\n')
+        result.append('    ASSERT(decoder.messageReceiverName() == IPC::ReceiverName::%s);\n' % (receiver.name))
+        result.append('    switch (decoder.messageName()) {\n')
+        for message in receiver.messages:
+            if message.reply_parameters is None:
+                continue
+            result.append('    case IPC::MessageName::%s_%s: {\n' % (receiver.name, message.name))
+            result.append('        auto arguments = decoder.decode<typename Messages::%s::%s::Arguments>();\n' % (receiver.name, message.name))
+            result.append('        if (UNLIKELY(!arguments))\n')
+            result.append('            return;\n')
+            result.append('        auto replyID = decoder.decode<IPC::AsyncReplyID>();\n')
+            result.append('        if (UNLIKELY(!replyID))\n')
+            result.append('            return;\n')
+            result.append('        connection.sendAsyncReply<Messages::%s::%s>(*replyID\n' % (receiver.name, message.name))
+            for parameter in message.reply_parameters:
+                result.append('            , IPC::AsyncReplyError<%s>::create()\n' % (parameter.type))
+            result.append('        );\n')
+            result.append('        return;\n')
+            result.append('    }\n')
+        result.append('    default:\n')
+        result.append('        // No reply to send.\n')
+        result.append('        return;\n')
+        result.append('    }\n')
+        result.append('}\n')
+
     result.append('\n')
     result.append('} // namespace WebKit\n')
 

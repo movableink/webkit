@@ -434,6 +434,8 @@ std::optional<JSC::JSValue> jsValueForArguments(JSC::JSGlobalObject* globalObjec
         return jsValueForDecodedMessage<MessageName::TestWithValidator_EnabledIfPassValidation>(globalObject, decoder);
     case MessageName::TestWithValidator_EnabledIfSomeFeatureEnabledAndPassValidation:
         return jsValueForDecodedMessage<MessageName::TestWithValidator_EnabledIfSomeFeatureEnabledAndPassValidation>(globalObject, decoder);
+    case MessageName::TestWithValidator_MessageWithReply:
+        return jsValueForDecodedMessage<MessageName::TestWithValidator_MessageWithReply>(globalObject, decoder);
     case MessageName::TestWithWantsAsyncDispatch_TestMessage:
         return jsValueForDecodedMessage<MessageName::TestWithWantsAsyncDispatch_TestMessage>(globalObject, decoder);
     case MessageName::TestWithWantsAsyncDispatch_TestSyncMessage:
@@ -531,6 +533,8 @@ std::optional<JSC::JSValue> jsValueForReplyArguments(JSC::JSGlobalObject* global
         return jsValueForDecodedMessageReply<MessageName::TestWithSuperclassAndWantsAsyncDispatch_TestSyncMessage>(globalObject, decoder);
     case MessageName::TestWithSuperclassAndWantsDispatch_TestSyncMessage:
         return jsValueForDecodedMessageReply<MessageName::TestWithSuperclassAndWantsDispatch_TestSyncMessage>(globalObject, decoder);
+    case MessageName::TestWithValidator_MessageWithReply:
+        return jsValueForDecodedMessageReply<MessageName::TestWithValidator_MessageWithReply>(globalObject, decoder);
     case MessageName::TestWithWantsAsyncDispatch_TestSyncMessage:
         return jsValueForDecodedMessageReply<MessageName::TestWithWantsAsyncDispatch_TestSyncMessage>(globalObject, decoder);
     case MessageName::TestWithWantsDispatch_TestSyncMessage:
@@ -1276,6 +1280,10 @@ std::optional<Vector<ArgumentDescription>> messageArgumentDescriptions(MessageNa
         return Vector<ArgumentDescription> {
             { "url"_s, "String"_s },
         };
+    case MessageName::TestWithValidator_MessageWithReply:
+        return Vector<ArgumentDescription> {
+            { "url"_s, "String"_s },
+        };
     case MessageName::TestWithWantsAsyncDispatch_TestMessage:
         return Vector<ArgumentDescription> {
             { "url"_s, "String"_s },
@@ -1431,6 +1439,11 @@ std::optional<Vector<ArgumentDescription>> messageReplyArgumentDescriptions(Mess
     case MessageName::TestWithSuperclassAndWantsDispatch_TestSyncMessage:
         return Vector<ArgumentDescription> {
             { "reply"_s, "uint8_t"_s },
+        };
+    case MessageName::TestWithValidator_MessageWithReply:
+        return Vector<ArgumentDescription> {
+            { "reply"_s, "String"_s },
+            { "value"_s, "double"_s },
         };
     case MessageName::TestWithWantsAsyncDispatch_TestSyncMessage:
         return Vector<ArgumentDescription> {

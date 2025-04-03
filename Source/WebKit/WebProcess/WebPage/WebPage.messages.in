@@ -196,7 +196,6 @@ messages -> WebPage WantsAsyncDispatchMessage {
     LoadAlternateHTML(struct WebKit::LoadParameters loadParameters)
     CreateRemoteSubframe(WebCore::FrameIdentifier parentID, WebCore::FrameIdentifier newChildID, String frameName, Ref<WebCore::FrameTreeSyncData> frameTreeSyncData)
 
-    GetFrameInfo(WebCore::FrameIdentifier frameID) -> (std::optional<WebKit::FrameInfoData> data)
     GetFrameTree() -> (std::optional<WebKit::FrameTreeNodeData> data)
     DidFinishLoadInAnotherProcess(WebCore::FrameIdentifier frameID)
     FrameWasRemovedInAnotherProcess(WebCore::FrameIdentifier frameID)
@@ -775,7 +774,6 @@ messages -> WebPage WantsAsyncDispatchMessage {
     UseRedirectionForCurrentNavigation(WebCore::ResourceResponse response);
 
     UpdateFrameScrollingMode(WebCore::FrameIdentifier frame, enum:uint8_t WebCore::ScrollbarMode scrollingMode)
-    UpdateFrameSize(WebCore::FrameIdentifier frame, WebCore::IntSize newSize)
 
     DispatchLoadEventToFrameOwnerElement(WebCore::FrameIdentifier frameID)
 

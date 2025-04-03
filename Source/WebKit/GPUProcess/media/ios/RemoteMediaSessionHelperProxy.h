@@ -36,6 +36,7 @@
 namespace WebKit {
 
 class GPUConnectionToWebProcess;
+struct SharedPreferencesForWebProcess;
 
 class RemoteMediaSessionHelperProxy
     : public WebCore::MediaSessionHelperClient
