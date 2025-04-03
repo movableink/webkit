@@ -4,7 +4,7 @@
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
  *           (C) 2004 Allan Sandfeld Jensen (kde@carewolf.com)
  * Copyright (C) 2004-2024 Apple Inc. All rights reserved.
- * Copyright (C) 2009-2017 Google Inc. All rights reserved.
+ * Copyright (C) 2009 Google Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
  * This library is free software; you can redistribute it and/or
@@ -552,7 +552,7 @@ static inline RelayoutBoundary isLayoutBoundary(const RenderElement& renderer, s
     if (renderer.isRenderOrLegacyRenderSVGRoot())
         return RelayoutBoundary::Yes;
 
-    if (style.width().isIntrinsicOrAuto() || style.height().isIntrinsicOrAuto() || style.height().isPercentOrCalculated() || style.width().isPercentOrCalculated())
+    if (style.width().isIntrinsicOrAuto() || style.height().isIntrinsicOrAuto() || style.height().isPercentOrCalculated())
         return RelayoutBoundary::No;
 
     if (renderer.document().settings().layerBasedSVGEngineEnabled() && renderer.isSVGLayerAwareRenderer())
