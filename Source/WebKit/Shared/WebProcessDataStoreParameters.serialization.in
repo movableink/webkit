@@ -39,7 +39,6 @@
     WebKit::SandboxExtensionHandle modelElementCacheDirectoryExtensionHandle;
 #endif
 #if PLATFORM(IOS_FAMILY)
-    std::optional<WebKit::SandboxExtensionHandle> cookieStorageDirectoryExtensionHandle;
     std::optional<WebKit::SandboxExtensionHandle> containerCachesDirectoryExtensionHandle;
     std::optional<WebKit::SandboxExtensionHandle> containerTemporaryDirectoryExtensionHandle;
 #endif

@@ -611,9 +611,6 @@ void WebProcess::platformSetWebsiteDataStoreParameters(WebProcessDataStoreParame
 #endif
 #endif
 #if PLATFORM(IOS_FAMILY)
-    // FIXME: Does the web process still need access to the cookie storage directory? Probably not.
-    if (auto& handle = parameters.cookieStorageDirectoryExtensionHandle)
-        SandboxExtension::consumePermanently(*handle);
     if (auto& handle = parameters.containerCachesDirectoryExtensionHandle)
         SandboxExtension::consumePermanently(*handle);
     if (auto& handle = parameters.containerTemporaryDirectoryExtensionHandle)

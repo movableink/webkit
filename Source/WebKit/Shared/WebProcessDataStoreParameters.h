@@ -55,7 +55,6 @@ struct WebProcessDataStoreParameters {
     SandboxExtension::Handle modelElementCacheDirectoryExtensionHandle;
 #endif
 #if PLATFORM(IOS_FAMILY)
-    std::optional<SandboxExtension::Handle> cookieStorageDirectoryExtensionHandle;
     std::optional<SandboxExtension::Handle> containerCachesDirectoryExtensionHandle;
     std::optional<SandboxExtension::Handle> containerTemporaryDirectoryExtensionHandle;
 #endif
