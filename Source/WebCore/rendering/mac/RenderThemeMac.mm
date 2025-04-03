@@ -1451,28 +1451,14 @@ static void paintAttachmentIcon(const RenderAttachment& attachment, GraphicsCont
 
 static std::pair<RefPtr<Image>, float> createAttachmentPlaceholderImage(float deviceScaleFactor, const AttachmentLayout& layout)
 {
-#if HAVE(ALTERNATE_ICONS)
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    auto image = [NSImage _imageWithSystemSymbolName:@"arrow.down.circle"];
-ALLOW_DEPRECATED_DECLARATIONS_END
+    RetainPtr configuration = [NSImageSymbolConfiguration configurationWithPointSize:32 weight:NSFontWeightRegular scale:NSImageSymbolScaleMedium];
+    RetainPtr image = [[NSImage imageWithSystemSymbolName:@"arrow.down.circle" accessibilityDescription:nil] imageWithSymbolConfiguration:configuration.get()];
     auto imageSize = FloatSize([image size]);
     auto imageSizeScales = deviceScaleFactor * layout.iconRect.size() / imageSize;
     imageSize.scale(std::min(imageSizeScales.width(), imageSizeScales.height()));
     auto imageRect = NSMakeRect(0, 0, imageSize.width(), imageSize.height());
-    auto cgImage = [image CGImageForProposedRect:&imageRect context:nil hints:@{
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        NSImageHintSymbolFont : [NSFont systemFontOfSize:32],
-        NSImageHintSymbolScale : @(NSImageSymbolScaleMedium)
-ALLOW_DEPRECATED_DECLARATIONS_END
-    }];
-    return { BitmapImage::create(cgImage), deviceScaleFactor };
-#else
-    UNUSED_PARAM(layout);
-    if (deviceScaleFactor >= 2)
-        return { ImageAdapter::loadPlatformResource("AttachmentPlaceholder@2x"), 2 };
-
-    return { ImageAdapter::loadPlatformResource("AttachmentPlaceholder"), 1 };
-#endif
+    RetainPtr cgImage = [image CGImageForProposedRect:&imageRect context:nil hints:nil];
+    return { BitmapImage::create(cgImage.get()), deviceScaleFactor };
 }
 
 static void paintAttachmentIconPlaceholder(const RenderAttachment& attachment, GraphicsContext& context, AttachmentLayout& layout)

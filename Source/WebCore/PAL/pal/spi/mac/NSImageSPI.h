@@ -60,15 +60,4 @@ NS_ASSUME_NONNULL_BEGIN
 
 NS_ASSUME_NONNULL_END
 
-#if HAVE(ALTERNATE_ICONS)
-
-NS_ASSUME_NONNULL_BEGIN
-
-extern const NSImageHintKey NSImageHintSymbolFont;
-extern const NSImageHintKey NSImageHintSymbolScale;
-
-NS_ASSUME_NONNULL_END
-
-#endif // HAVE(ALTERNATE_ICONS)
-
 #endif // USE(APPLE_INTERNAL_SDK)
