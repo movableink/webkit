@@ -38,8 +38,8 @@ accessibility/frame-disconnect-textmarker-cache-crash.html [ Pass Failure ]
 # Test times out without ITM, so we need to reconcile behavior here.
 accessibility/mac/style-range.html [ Pass ]
 
-# Flaky timeouts
-accessibility/datetime/input-date-field-labels-and-value-changes.html [ Pass Timeout ]
+# Flaky: https://bugs.webkit.org/show_bug.cgi?id=290946
+accessibility/datetime/input-date-field-labels-and-value-changes.html [ Pass Failure ]
 
 # Failures introduced by ENABLE(AX_THREAD_TEXT_APIS).
 accessibility/content-editable-as-textarea.html [ Failure ]
