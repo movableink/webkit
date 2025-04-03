@@ -15,9 +15,6 @@ Shared/API/Cocoa/_WKRemoteObjectRegistry.mm
 Shared/Cocoa/APIObject.mm
 Shared/Cocoa/AuxiliaryProcessCocoa.mm
 Shared/Cocoa/CompletionHandlerCallChecker.mm
-Shared/EntryPointUtilities/Cocoa/XPCService/XPCEndpointMessages.mm
-Shared/EntryPointUtilities/Cocoa/XPCService/XPCServiceEntryPoint.mm
-Shared/EntryPointUtilities/Cocoa/XPCService/XPCServiceMain.mm
 Shared/cf/CoreIPCSecKeychainItem.h
 UIProcess/API/Cocoa/APIAttachmentCocoa.mm
 UIProcess/API/Cocoa/APIContentRuleListStoreCocoa.mm

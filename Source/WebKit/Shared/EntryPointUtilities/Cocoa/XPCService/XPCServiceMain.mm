@@ -41,6 +41,7 @@
 #import <wtf/RetainPtr.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/WTFProcess.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/darwin/XPCExtras.h>
 #import <wtf/spi/cocoa/OSLogSPI.h>
 #import <wtf/spi/darwin/SandboxSPI.h>
@@ -165,10 +166,10 @@ void XPCServiceEventHandler(xpc_connection_t peer)
             bool disableLogging = xpc_dictionary_get_bool(event, "disable-logging");
             initializeLogd(disableLogging);
 
-            if (xpc_object_t languages = xpc_dictionary_get_value(event, "OverrideLanguages")) {
+            if (RetainPtr languages = xpc_dictionary_get_value(event, "OverrideLanguages")) {
                 Vector<String> newLanguages;
                 @autoreleasepool {
-                    xpc_array_apply(languages, makeBlockPtr([&newLanguages](size_t index, xpc_object_t value) {
+                    xpc_array_apply(languages.get(), makeBlockPtr([&newLanguages](size_t index, xpc_object_t value) {
                         newLanguages.append(xpcStringGetString(value));
                         return true;
                     }).get());
@@ -210,11 +211,11 @@ void XPCServiceEventHandler(xpc_connection_t peer)
                 return;
             }
 
-            CFBundleRef webKitBundle = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebKit"));
+            RetainPtr webKitBundle = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebKit"));
             typedef void (*InitializerFunction)(xpc_connection_t, xpc_object_t);
-            InitializerFunction initializerFunctionPtr = reinterpret_cast<InitializerFunction>(CFBundleGetFunctionPointerForName(webKitBundle, entryPointFunctionName));
+            InitializerFunction initializerFunctionPtr = reinterpret_cast<InitializerFunction>(CFBundleGetFunctionPointerForName(webKitBundle.get(), entryPointFunctionName));
             if (!initializerFunctionPtr) {
-                RELEASE_LOG_FAULT(IPC, "Exiting: Unable to find entry point in WebKit.framework with name: %s", [(__bridge NSString *)entryPointFunctionName UTF8String]);
+                RELEASE_LOG_FAULT(IPC, "Exiting: Unable to find entry point in WebKit.framework with name: %s", [bridge_cast(entryPointFunctionName) UTF8String]);
                 [[NSRunLoop mainRunLoop] performBlock:^{
                     exitProcess(EXIT_FAILURE);
                 }];
