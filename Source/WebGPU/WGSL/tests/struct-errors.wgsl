@@ -1,5 +1,18 @@
 // RUN: %not %wgslc | %check
 
+struct T {
+    x: u32,
+    // CHECK-L: a struct that contains a runtime array cannot be nested inside another struct
+    y: U,
+}
+
+struct U {
+    x: u32,
+    y: array<u32>,
+}
+
+// --
+
 struct S {
     x: f32,
     y: i32,

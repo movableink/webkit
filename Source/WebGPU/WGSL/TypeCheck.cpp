@@ -477,6 +477,12 @@ void TypeChecker::visit(AST::Structure& structure)
                 return;
             }
 
+            if (!std::holds_alternative<Types::Array>(*memberType)) {
+                typeError(InferBottom::No, member.span(), "a struct that contains a runtime array cannot be nested inside another struct"_s);
+                introduceType(structure.name(), m_types.bottomType());
+                return;
+            }
+
             if (i != structure.members().size() - 1) {
                 typeError(InferBottom::No, member.span(), "runtime arrays may only appear as the last member of a struct"_s);
                 introduceType(structure.name(), m_types.bottomType());
