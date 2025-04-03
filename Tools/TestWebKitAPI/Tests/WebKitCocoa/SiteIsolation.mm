@@ -3945,6 +3945,22 @@ TEST(SiteIsolation, ReuseConfiguration)
     [navigationDelegate2 waitForDidFinishNavigation];
 }
 
+TEST(SiteIsolation, ReuseConfigurationLoadHTMLString)
+{
+    auto configuration = adoptNS([WKWebViewConfiguration new]);
+    enableSiteIsolation(configuration.get());
+    [configuration setWebsiteDataStore:[WKWebsiteDataStore nonPersistentDataStore]];
+    auto webView1 = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    [webView1 loadHTMLString:@"hi!" baseURL:[NSURL URLWithString:@"https://webkit.org/"]];
+    [webView1 _test_waitForDidFinishNavigation];
+
+    auto webView2 = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    [webView2 loadHTMLString:@"hi!" baseURL:[NSURL URLWithString:@"https://webkit.org/"]];
+    [webView2 _test_waitForDidFinishNavigation];
+
+    EXPECT_EQ([webView1 _webProcessIdentifier], [webView2 _webProcessIdentifier]);
+}
+
 static void callMethodOnFirstVideoElementInFrame(WKWebView *webView, NSString *methodName, WKFrameInfo *frame)
 {
     __block RetainPtr<NSError> error;

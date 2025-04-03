@@ -2191,7 +2191,7 @@ RefPtr<API::Navigation> WebPageProxy::loadData(Ref<WebCore::SharedBuffer>&& data
     }
 
     if (!hasRunningProcess())
-        launchProcess(Site(aboutBlankURL()), ProcessLaunchReason::InitialProcess);
+        launchProcess(Site(URL(baseURL)), ProcessLaunchReason::InitialProcess);
 
     Ref navigation = protectedNavigationState()->createLoadDataNavigation(legacyMainFrameProcess().coreProcessIdentifier(), makeUnique<API::SubstituteData>(Vector(data->span()), type, encoding, baseURL, userData));
 
