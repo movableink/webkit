@@ -103,8 +103,7 @@ public:
 
         void operator++() { ++m_logicalIndex; }
         T& operator*() { return m_range.m_data[index()]; }
-        bool operator==(const Iterator& other) { return m_logicalIndex == other.m_logicalIndex; }
-        bool operator!=(const Iterator& other) { return m_logicalIndex != other.m_logicalIndex; }
+        bool operator==(const Iterator& other) const { return m_logicalIndex == other.m_logicalIndex; }
         unsigned index()
         {
             ASSERT(m_logicalIndex < m_range.m_length);

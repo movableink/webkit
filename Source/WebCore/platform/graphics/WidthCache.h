@@ -75,7 +75,6 @@ private:
         bool isHashTableEmptyValue() const { return !m_hashAndLength; }
 
         friend bool operator==(const SmallStringKey&, const SmallStringKey&) = default;
-        friend bool operator!=(const SmallStringKey&, const SmallStringKey&) = default;
 
     private:
         static constexpr unsigned s_capacity = 16;

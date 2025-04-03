@@ -53,7 +53,6 @@ public:
     WEBCORE_EXPORT unsigned hash() const;
 
     bool operator==(const Site&) const = default;
-    bool operator!=(const Site&) const = default;
 
     struct Hash {
         static unsigned hash(const Site& site) { return site.hash(); }
