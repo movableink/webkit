@@ -100,7 +100,7 @@ public:
             byteOffsetEnd = bufferByteLength;
         else
             byteOffsetEnd = byteOffsetStart + byteLengthRaw();
-        if (UNLIKELY(!(byteOffsetStart > bufferByteLength || byteOffsetEnd > bufferByteLength)))
+        if (UNLIKELY(byteOffsetStart > bufferByteLength || byteOffsetEnd > bufferByteLength))
             return 0;
         return byteOffsetRaw();
     }
@@ -122,7 +122,7 @@ public:
             byteOffsetEnd = bufferByteLength;
         else
             byteOffsetEnd = byteOffsetStart + byteLengthRaw();
-        if (UNLIKELY(!(byteOffsetStart > bufferByteLength || byteOffsetEnd > bufferByteLength)))
+        if (UNLIKELY(byteOffsetStart > bufferByteLength || byteOffsetEnd > bufferByteLength))
             return 0;
         if (!isAutoLength())
             return byteLengthRaw();
