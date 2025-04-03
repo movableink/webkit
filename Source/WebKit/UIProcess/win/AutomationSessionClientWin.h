@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Sony Interactive Entertainment Inc.
+ * Copyright (C) 2025 Sony Interactive Entertainment Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,35 +26,36 @@
 #pragma once
 
 #if ENABLE(REMOTE_INSPECTOR)
-#include "APIAutomationClient.h"
+#include "APIAutomationSessionClient.h"
 #include "WebProcessPool.h"
+#include "WebView.h"
 #include <JavaScriptCore/RemoteInspectorServer.h>
 
 namespace WebKit {
 
-class AutomationClient final : public API::AutomationClient, Inspector::RemoteInspector::Client {
+class AutomationSessionClient final : public API::AutomationSessionClient {
 public:
-    explicit AutomationClient(WebProcessPool&);
-    ~AutomationClient();
+    explicit AutomationSessionClient(const String&, const Inspector::RemoteInspector::Client::SessionCapabilities&);
+
+    String sessionIdentifier() const override { return m_sessionIdentifier; }
+
+    // From API::AutomationSessionClient
+    void requestNewPageWithOptions(WebKit::WebAutomationSession&, API::AutomationSessionBrowsingContextOptions, CompletionHandler<void(WebKit::WebPageProxy*)>&&) override;
+    void didDisconnectFromRemote(WebKit::WebAutomationSession&) override;
+
+    void retainWebView(Ref<WebView>&&);
+    void releaseWebView(WebPageProxy*);
 
 private:
-    // API::AutomationClient
-    bool allowsRemoteAutomation(WebKit::WebProcessPool*) final { return remoteAutomationAllowed(); }
-    void didRequestAutomationSession(WebKit::WebProcessPool*, const String& sessionIdentifier) final { }
+    String m_sessionIdentifier;
+    Inspector::RemoteInspector::Client::SessionCapabilities m_capabilities { };
 
-    // RemoteInspector::Client
-    bool remoteAutomationAllowed() const override { return true; }
+    static void close(WKPageRef, const void*);
 
-    // FIXME: should use valid value
-    String browserName() const override { return "MiniBrowser"_s; }
-    String browserVersion() const override { return "1.0"_s; }
+    static void didReceiveAuthenticationChallenge(WKPageRef, WKAuthenticationChallengeRef, const void*);
+    void didReceiveAuthenticationChallenge(WKPageRef, WKAuthenticationChallengeRef);
 
-    RefPtr<WebProcessPool> protectedProcessPool() const;
-
-    void requestAutomationSession(const String&, const Inspector::RemoteInspector::Client::SessionCapabilities&) override;
-    void closeAutomationSession() override;
-
-    WeakPtr<WebProcessPool> m_processPool;
+    HashSet<Ref<WebView>> m_webViews;
 };
 
 } // namespace WebKit
