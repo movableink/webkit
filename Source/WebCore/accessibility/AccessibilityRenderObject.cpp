@@ -1417,7 +1417,7 @@ AXTextRuns AccessibilityRenderObject::textRuns()
     }
 
     RefPtr node = this->node();
-    if (is<HTMLImageElement>(node) || is<HTMLMediaElement>(node) || is<HTMLAttachmentElement>(node)) {
+    if (is<HTMLMediaElement>(node) || is<HTMLAttachmentElement>(node) || isImage()) {
         auto* containingBlock = renderer ? renderer->containingBlock() : nullptr;
         FloatRect rect = frameRect();
         uint16_t width = static_cast<uint16_t>(rect.width());

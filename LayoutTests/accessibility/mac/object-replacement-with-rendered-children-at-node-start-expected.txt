@@ -1,9 +1,10 @@
-Object string for BODY range: [ATTACHMENT]inside
-b
 This tests object replacements are present in strings when the replaced element is at the beginning of the document and there are rendered children
 
-On success, you will see a series of "PASS" messages, followed by "TEST COMPLETE".
+Webarea text: [ATTACHMENT]inside
+b
+
 PASS successfullyParsed is true
 
 TEST COMPLETE
-
+inside
+b

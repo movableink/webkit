@@ -1596,11 +1596,11 @@ AXIsolatedObject* findObjectWithRuns(AXIsolatedObject& start, AXDirection direct
             const auto& children = object.childrenIncludingIgnored();
             if (!children.isEmpty()) {
                 auto role = object.roleValue();
-                if (role != AccessibilityRole::Column && role != AccessibilityRole::TableHeaderContainer && !object.isReplacedElement()) {
+                if (role != AccessibilityRole::Column && role != AccessibilityRole::TableHeaderContainer && (object.isImage() || !object.isReplacedElement())) {
                     // Table columns and header containers add cells despite not being their "true" parent (which are the rows).
                     // Don't allow a pre-order traversal of these object types to return cells to avoid an infinite loop.
                     //
-                    // We also don't want to descend into replaced elements (e.g. <audio>), which can have user-agent shadow tree markup.
+                    // We also don't want to descend into non-image replaced elements (e.g. <audio>), which can have user-agent shadow tree markup.
                     // This matches TextIterator behavior, and prevents us from emitting incorrect text.
                     return downcast<AXIsolatedObject>(children[0].ptr());
                 }
