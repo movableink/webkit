@@ -774,6 +774,14 @@ private:
                         Edge(child));
                 };
                 
+                // AI already concluded this was a constant so we're safe to do so as well.
+                if (AbstractValue constantResult = m_state.forNode(node); constantResult.value()) {
+                    addFilterStatus();
+                    m_graph.convertToConstant(node, constantResult.value());
+                    changed = true;
+                    break;
+                }
+
                 if (status.numVariants() == 1) {
                     unsigned identifierNumber = m_graph.identifiers().ensure(uid);
                     addFilterStatus();
