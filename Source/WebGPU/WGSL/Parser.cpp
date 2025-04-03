@@ -137,7 +137,17 @@ struct TemplateTypes<TT> {
     if (m_parseDepth > 128) \
         FAIL("maximum parser recursive depth reached"_s);
 
-static bool canBeginUnaryExpression(const Token& token)
+template<typename Lexer>
+void Parser<Lexer>::splitMinusMinus()
+{
+    ASSERT(m_currentTokenIndex + 1 < m_tokens.size());
+    ASSERT(m_tokens[m_currentTokenIndex + 1].type == TokenType::Placeholder);
+    current().type = TokenType::Minus;
+    m_tokens[m_currentTokenIndex + 1].type = TokenType::Minus;
+}
+
+template<typename Lexer>
+bool Parser<Lexer>::canBeginUnaryExpression(const Token& token)
 {
     switch (token.type) {
     case TokenType::And:
@@ -145,6 +155,9 @@ static bool canBeginUnaryExpression(const Token& token)
     case TokenType::Star:
     case TokenType::Minus:
     case TokenType::Bang:
+        return true;
+    case TokenType::MinusMinus:
+        splitMinusMinus();
         return true;
     default:
         return false;
@@ -163,11 +176,15 @@ static bool canContinueMultiplicativeExpression(const Token& token)
     }
 }
 
-static bool canContinueAdditiveExpression(const Token& token)
+template<typename Lexer>
+bool Parser<Lexer>::canContinueAdditiveExpression(const Token& token)
 {
     switch (token.type) {
     case TokenType::Minus:
     case TokenType::Plus:
+        return true;
+    case TokenType::MinusMinus:
+        splitMinusMinus();
         return true;
     default:
         return canContinueMultiplicativeExpression(token);

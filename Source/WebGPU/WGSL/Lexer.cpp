@@ -87,6 +87,7 @@ Vector<Token> Lexer<T>::lex()
             FALLTHROUGH;
         case TokenType::GtGt:
         case TokenType::GtEq:
+        case TokenType::MinusMinus:
             tokens.append(makeToken(TokenType::Placeholder));
             break;
         default:
