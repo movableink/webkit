@@ -142,7 +142,7 @@ Ref<WebFrame> WebFrame::createSubframe(WebPage& page, WebFrame& parent, const At
     auto frameID = WebCore::generateFrameIdentifier();
     auto frame = create(page, frameID);
     ASSERT(page.corePage());
-    auto coreFrame = LocalFrame::createSubframe(*page.corePage(), [frame] (auto& localFrame, auto& frameLoader) {
+    auto coreFrame = LocalFrame::createSubframe(*page.protectedCorePage(), [frame] (auto& localFrame, auto& frameLoader) {
         return makeUniqueRefWithoutRefCountedCheck<WebLocalFrameLoaderClient>(localFrame, frameLoader, frame.get(), frame->makeInvalidator());
     }, frameID, effectiveSandboxFlags, ownerElement, WebCore::FrameTreeSyncData::create());
     frame->m_coreFrame = coreFrame.get();
@@ -164,12 +164,15 @@ Ref<WebFrame> WebFrame::createRemoteSubframe(WebPage& page, WebFrame& parent, We
             opener = openerWebFrame->coreFrame();
     }
 
+    RefPtr corePage = page.corePage();
+    RefPtr parentCoreFrame = parent.coreFrame();
+
     auto frame = create(page, frameID);
-    RELEASE_ASSERT(page.corePage());
-    RELEASE_ASSERT(parent.coreFrame());
-    auto coreFrame = RemoteFrame::createSubframe(*page.corePage(), [frame] (auto&) {
+    RELEASE_ASSERT(corePage);
+    RELEASE_ASSERT(parentCoreFrame);
+    auto coreFrame = RemoteFrame::createSubframe(*corePage, [frame] (auto&) {
         return makeUniqueRef<WebRemoteFrameClient>(frame.copyRef(), frame->makeInvalidator());
-    }, frameID, *parent.coreFrame(), opener.get(), WTFMove(frameTreeSyncData));
+    }, frameID, *parentCoreFrame, opener.get(), WTFMove(frameTreeSyncData));
     frame->m_coreFrame = coreFrame.get();
     coreFrame->tree().setSpecifiedName(AtomString(frameName));
     return frame;
@@ -188,7 +191,7 @@ WebFrame::WebFrame(WebPage& page, WebCore::FrameIdentifier frameID)
 
 WebLocalFrameLoaderClient* WebFrame::localFrameLoaderClient() const
 {
-    if (auto* localFrame = dynamicDowncast<LocalFrame>(m_coreFrame.get()))
+    if (RefPtr localFrame = dynamicDowncast<LocalFrame>(m_coreFrame.get()))
         return dynamicDowncast<WebLocalFrameLoaderClient>(localFrame->loader().client());
     return nullptr;
 }
@@ -200,16 +203,16 @@ RefPtr<WebLocalFrameLoaderClient> WebFrame::protectedLocalFrameLoaderClient() co
 
 WebRemoteFrameClient* WebFrame::remoteFrameClient() const
 {
-    if (auto* remoteFrame = dynamicDowncast<RemoteFrame>(m_coreFrame.get()))
+    if (RefPtr remoteFrame = dynamicDowncast<RemoteFrame>(m_coreFrame.get()))
         return downcast<WebRemoteFrameClient>(&remoteFrame->client());
     return nullptr;
 }
 
 WebFrameLoaderClient* WebFrame::frameLoaderClient() const
 {
-    if (auto* localFrame = dynamicDowncast<LocalFrame>(m_coreFrame.get()))
+    if (RefPtr localFrame = dynamicDowncast<LocalFrame>(m_coreFrame.get()))
         return dynamicDowncast<WebLocalFrameLoaderClient>(localFrame->loader().client());
-    if (auto* remoteFrame = dynamicDowncast<RemoteFrame>(m_coreFrame.get()))
+    if (RefPtr remoteFrame = dynamicDowncast<RemoteFrame>(m_coreFrame.get()))
         return downcast<WebRemoteFrameClient>(&remoteFrame->client());
     return nullptr;
 }
@@ -230,7 +233,7 @@ WebPage* WebFrame::page() const
     if (!m_coreFrame)
         return nullptr;
 
-    auto* page = m_coreFrame->page();
+    RefPtr page = m_coreFrame->page();
     return page ? WebPage::fromCorePage(*page) : nullptr;
 }
 
@@ -334,7 +337,7 @@ FrameTreeNodeData WebFrame::frameTreeData() const
 
     data.children.reserveInitialCapacity(m_coreFrame->tree().childCount());
 
-    for (auto* child = m_coreFrame->tree().firstChild(); child; child = child->tree().nextSibling()) {
+    for (RefPtr child = m_coreFrame->tree().firstChild(); child; child = child->tree().nextSibling()) {
         RefPtr childWebFrame = WebFrame::fromCoreFrame(*child);
         if (!childWebFrame) {
             ASSERT_NOT_REACHED();
@@ -380,7 +383,7 @@ void WebFrame::loadDidCommitInAnotherProcess(std::optional<WebCore::LayerHosting
         return;
     }
 
-    auto* corePage = localFrame->page();
+    RefPtr corePage = localFrame->page();
     if (!corePage) {
         ASSERT_NOT_REACHED();
         return;
@@ -389,7 +392,7 @@ void WebFrame::loadDidCommitInAnotherProcess(std::optional<WebCore::LayerHosting
     RefPtr parent = localFrame->tree().parent();
     RefPtr ownerElement = localFrame->ownerElement();
 
-    auto* frameLoaderClient = this->localFrameLoaderClient();
+    RefPtr frameLoaderClient = this->localFrameLoaderClient();
     if (!frameLoaderClient) {
         ASSERT_NOT_REACHED();
         return;
@@ -483,7 +486,7 @@ void WebFrame::commitProvisionalFrame()
         return;
     }
 
-    auto* corePage = remoteFrame->page();
+    RefPtr corePage = remoteFrame->page();
     if (!corePage) {
         ASSERT_NOT_REACHED();
         return;
@@ -536,7 +539,7 @@ void WebFrame::removeFromTree()
         return;
     }
 
-    auto* corePage = webPage->corePage();
+    RefPtr corePage = webPage->corePage();
     if (!corePage) {
         ASSERT_NOT_REACHED();
         return;
@@ -549,8 +552,8 @@ void WebFrame::removeFromTree()
 
 void WebFrame::didFinishLoadInAnotherProcess()
 {
-    if (m_coreFrame)
-        m_coreFrame->didFinishLoadInAnotherProcess();
+    if (RefPtr coreFrame = m_coreFrame.get())
+        coreFrame->didFinishLoadInAnotherProcess();
 }
 
 void WebFrame::invalidatePolicyListeners()
@@ -566,12 +569,12 @@ void WebFrame::invalidatePolicyListeners()
 
 void WebFrame::didReceivePolicyDecision(uint64_t listenerID, PolicyDecision&& policyDecision)
 {
-    if (m_page) {
+    if (RefPtr page = m_page.get()) {
 #if ENABLE(APP_BOUND_DOMAINS)
-        m_page->setIsNavigatingToAppBoundDomain(policyDecision.isNavigatingToAppBoundDomain, Ref { *this });
+        page->setIsNavigatingToAppBoundDomain(policyDecision.isNavigatingToAppBoundDomain, Ref { *this });
 #endif
         if (auto& message = policyDecision.consoleMessage)
-            m_page->addConsoleMessage(m_frameID, message->messageSource, message->messageLevel, message->message);
+            page->addConsoleMessage(m_frameID, message->messageSource, message->messageLevel, message->message);
     }
 
     if (!m_coreFrame)
@@ -588,18 +591,18 @@ void WebFrame::didReceivePolicyDecision(uint64_t listenerID, PolicyDecision&& po
         ASSERT(page());
         if (page())
             page()->setAllowsContentJavaScriptFromMostRecentNavigation(policyDecision.websitePoliciesData->allowsContentJavaScript);
-        localFrameLoaderClient()->applyWebsitePolicies(WTFMove(*policyDecision.websitePoliciesData));
+        protectedLocalFrameLoaderClient()->applyWebsitePolicies(WTFMove(*policyDecision.websitePoliciesData));
     }
 
     m_policyDownloadID = policyDecision.downloadID;
     if (policyDecision.navigationID) {
-        auto* localFrame = dynamicDowncast<LocalFrame>(m_coreFrame.get());
+        RefPtr localFrame = dynamicDowncast<LocalFrame>(m_coreFrame.get());
         if (RefPtr documentLoader = localFrame ? localFrame->loader().policyDocumentLoader() : nullptr)
             documentLoader->setNavigationID(*policyDecision.navigationID);
     }
 
     if (policyDecision.policyAction == PolicyAction::Use && policyDecision.sandboxExtensionHandle) {
-        if (auto* page = this->page()) {
+        if (RefPtr page = this->page()) {
             Ref mainWebFrame = page->mainWebFrame();
             page->sandboxExtensionTracker().beginLoad(WTFMove(*(policyDecision.sandboxExtensionHandle)));
         }
@@ -614,14 +617,14 @@ void WebFrame::startDownload(const WebCore::ResourceRequest& request, const Stri
         ASSERT_NOT_REACHED();
         return;
     }
-    auto* localFrame = dynamicDowncast<LocalFrame>(m_coreFrame.get());
-    auto topOrigin = localFrame && localFrame->document() ? std::optional { localFrame->document()->topOrigin().data() } : std::nullopt;
+    RefPtr localFrame = dynamicDowncast<LocalFrame>(m_coreFrame.get());
+    auto topOrigin = localFrame && localFrame->document() ? std::optional { localFrame->protectedDocument()->topOrigin().data() } : std::nullopt;
     auto policyDownloadID = *std::exchange(m_policyDownloadID, std::nullopt);
 
     std::optional<NavigatingToAppBoundDomain> isAppBound = NavigatingToAppBoundDomain::No;
     isAppBound = m_isNavigatingToAppBoundDomain;
     if (localFrame)
-        WebProcess::singleton().ensureNetworkProcessConnection().connection().send(Messages::NetworkConnectionToWebProcess::StartDownload(policyDownloadID, request, topOrigin, isAppBound, suggestedName, fromDownloadAttribute, localFrame->frameID(), localFrame->pageID()), 0);
+        WebProcess::singleton().ensureProtectedNetworkProcessConnection()->protectedConnection()->send(Messages::NetworkConnectionToWebProcess::StartDownload(policyDownloadID, request, topOrigin, isAppBound, suggestedName, fromDownloadAttribute, localFrame->frameID(), localFrame->pageID()), 0);
 }
 
 void WebFrame::convertMainResourceLoadToDownload(DocumentLoader* documentLoader, const ResourceRequest& request, const ResourceResponse& response)
@@ -630,11 +633,11 @@ void WebFrame::convertMainResourceLoadToDownload(DocumentLoader* documentLoader,
         ASSERT_NOT_REACHED();
         return;
     }
-    auto* localFrame = dynamicDowncast<LocalFrame>(m_coreFrame.get());
-    auto topOrigin = localFrame && localFrame->document() ? std::optional { localFrame->document()->topOrigin().data() } : std::nullopt;
+    RefPtr localFrame = dynamicDowncast<LocalFrame>(m_coreFrame.get());
+    auto topOrigin = localFrame && localFrame->document() ? std::optional { localFrame->protectedDocument()->topOrigin().data() } : std::nullopt;
     auto policyDownloadID = *std::exchange(m_policyDownloadID, std::nullopt);
 
-    SubresourceLoader* mainResourceLoader = documentLoader->mainResourceLoader();
+    RefPtr mainResourceLoader = documentLoader->mainResourceLoader();
 
     auto& webProcess = WebProcess::singleton();
     // Use std::nullopt to indicate that the resource load can't be converted and a new download must be started.
@@ -646,12 +649,12 @@ void WebFrame::convertMainResourceLoadToDownload(DocumentLoader* documentLoader,
 
     std::optional<NavigatingToAppBoundDomain> isAppBound = NavigatingToAppBoundDomain::No;
     isAppBound = m_isNavigatingToAppBoundDomain;
-    webProcess.ensureNetworkProcessConnection().connection().send(Messages::NetworkConnectionToWebProcess::ConvertMainResourceLoadToDownload(mainResourceLoadIdentifier, policyDownloadID, request, topOrigin, response, isAppBound), 0);
+    webProcess.ensureNetworkProcessConnection().protectedConnection()->send(Messages::NetworkConnectionToWebProcess::ConvertMainResourceLoadToDownload(mainResourceLoadIdentifier, policyDownloadID, request, topOrigin, response, isAppBound), 0);
 }
 
 void WebFrame::addConsoleMessage(MessageSource messageSource, MessageLevel messageLevel, const String& message, uint64_t requestID)
 {
-    auto* localFrame = dynamicDowncast<LocalFrame>(m_coreFrame.get());
+    RefPtr localFrame = dynamicDowncast<LocalFrame>(m_coreFrame.get());
     if (!localFrame)
         return;
     if (RefPtr document = localFrame->document())
@@ -666,7 +669,7 @@ String WebFrame::source() const
     RefPtr document = localFrame->document();
     if (!document)
         return String();
-    TextResourceDecoder* decoder = document->decoder();
+    RefPtr decoder = document->decoder();
     if (!decoder)
         return String();
     RefPtr documentLoader = localFrame->loader().activeDocumentLoader();
@@ -718,15 +721,16 @@ String WebFrame::selectionAsString() const
     if (!localFrame)
         return String();
 
-    return localFrame->displayStringModifiedByEncoding(localFrame->editor().selectedText());
+    return localFrame->displayStringModifiedByEncoding(localFrame->protectedEditor()->selectedText());
 }
 
 IntSize WebFrame::size() const
 {
-    if (!m_coreFrame)
+    RefPtr localFrame = coreFrame();
+    if (!localFrame)
         return IntSize();
 
-    RefPtr frameView = m_coreFrame->virtualView();
+    RefPtr frameView = localFrame->virtualView();
     if (!frameView)
         return IntSize();
 
@@ -747,20 +751,23 @@ bool WebFrame::isFrameSet() const
 
 bool WebFrame::isMainFrame() const
 {
-    return m_coreFrame && m_coreFrame->isMainFrame();
+    RefPtr coreFrame = m_coreFrame.get();
+    return coreFrame && coreFrame->isMainFrame();
 }
 
 bool WebFrame::isRootFrame() const
 {
-    return m_coreFrame && m_coreFrame->isRootFrame();
+    RefPtr coreFrame = m_coreFrame.get();
+    return coreFrame && coreFrame->isRootFrame();
 }
 
 String WebFrame::name() const
 {
-    if (!m_coreFrame)
+    RefPtr coreFrame = m_coreFrame.get();
+    if (!coreFrame)
         return String();
 
-    return m_coreFrame->tree().uniqueName();
+    return coreFrame->tree().uniqueName();
 }
 
 URL WebFrame::url() const
@@ -798,7 +805,7 @@ String WebFrame::innerText() const
     if (!localFrame->document()->documentElement())
         return String();
 
-    return localFrame->document()->documentElement()->innerText();
+    return localFrame->protectedDocument()->protectedDocumentElement()->innerText();
 }
 
 RefPtr<WebFrame> WebFrame::parentFrame() const
@@ -852,7 +859,7 @@ unsigned WebFrame::pendingUnloadCount() const
     if (!localFrame)
         return 0;
 
-    return localFrame->document()->domWindow()->pendingUnloadEventListeners();
+    return localFrame->protectedDocument()->protectedWindow()->pendingUnloadEventListeners();
 }
 
 bool WebFrame::allowsFollowingLink(const URL& url) const
@@ -861,7 +868,7 @@ bool WebFrame::allowsFollowingLink(const URL& url) const
     if (!localFrame)
         return true;
 
-    return localFrame->document()->securityOrigin().canDisplay(url, WebCore::OriginAccessPatternsForWebProcess::singleton());
+    return localFrame->protectedDocument()->protectedSecurityOrigin()->canDisplay(url, WebCore::OriginAccessPatternsForWebProcess::singleton());
 }
 
 JSGlobalContextRef WebFrame::jsContext()
@@ -884,7 +891,7 @@ JSGlobalContextRef WebFrame::jsContextForWorld(DOMWrapperWorld& world)
 
 JSGlobalContextRef WebFrame::jsContextForWorld(InjectedBundleScriptWorld* world)
 {
-    return jsContextForWorld(world->coreWorld());
+    return jsContextForWorld(world->protectedCoreWorld());
 }
 
 JSGlobalContextRef WebFrame::jsContextForServiceWorkerWorld(DOMWrapperWorld& world)
@@ -892,12 +899,12 @@ JSGlobalContextRef WebFrame::jsContextForServiceWorkerWorld(DOMWrapperWorld& wor
     if (!m_coreFrame || !m_coreFrame->page())
         return nullptr;
 
-    return toGlobalRef(m_coreFrame->page()->serviceWorkerGlobalObject(world));
+    return toGlobalRef(m_coreFrame->protectedPage()->serviceWorkerGlobalObject(world));
 }
 
 JSGlobalContextRef WebFrame::jsContextForServiceWorkerWorld(InjectedBundleScriptWorld* world)
 {
-    return jsContextForServiceWorkerWorld(world->coreWorld());
+    return jsContextForServiceWorkerWorld(world->protectedCoreWorld());
 }
 
 void WebFrame::setAccessibleName(const AtomString& accessibleName)
@@ -922,10 +929,11 @@ void WebFrame::setAccessibleName(const AtomString& accessibleName)
 
 IntRect WebFrame::contentBounds() const
 {
-    if (!m_coreFrame)
+    RefPtr localCoreFrame = coreFrame();
+    if (!localCoreFrame)
         return IntRect();
     
-    RefPtr view = m_coreFrame->virtualView();
+    RefPtr view = localCoreFrame->virtualView();
     if (!view)
         return IntRect();
     
@@ -934,10 +942,11 @@ IntRect WebFrame::contentBounds() const
 
 IntRect WebFrame::visibleContentBounds() const
 {
-    if (!m_coreFrame)
+    RefPtr coreFrame = m_coreFrame.get();
+    if (!coreFrame)
         return IntRect();
-    
-    RefPtr view = m_coreFrame->virtualView();
+
+    RefPtr view = coreFrame->virtualView();
     if (!view)
         return IntRect();
     
@@ -961,10 +970,11 @@ IntRect WebFrame::visibleContentBoundsExcludingScrollbars() const
 
 IntSize WebFrame::scrollOffset() const
 {
-    if (!m_coreFrame)
+    RefPtr localCoreFrame = coreFrame();
+    if (!localCoreFrame)
         return IntSize();
     
-    RefPtr view = m_coreFrame->virtualView();
+    RefPtr view = localCoreFrame->virtualView();
     if (!view)
         return IntSize();
 
@@ -986,10 +996,11 @@ bool WebFrame::hasHorizontalScrollbar() const
 
 bool WebFrame::hasVerticalScrollbar() const
 {
-    if (!m_coreFrame)
+    RefPtr localCoreFrame = coreFrame();
+    if (!localCoreFrame)
         return false;
 
-    RefPtr view = m_coreFrame->virtualView();
+    RefPtr view = localCoreFrame->virtualView();
     if (!view)
         return false;
 
@@ -1047,7 +1058,7 @@ bool WebFrame::containsAnyFormControls() const
     if (!document)
         return false;
 
-    for (auto& child : childrenOfType<Element>(*document)) {
+    for (Ref child : childrenOfType<Element>(*document)) {
         if (is<HTMLTextFormControlElement>(child) || is<HTMLSelectElement>(child))
             return true;
     }
@@ -1081,7 +1092,7 @@ JSValueRef WebFrame::jsWrapperForWorld(InjectedBundleCSSStyleDeclarationHandle* 
     if (!localFrame)
         return nullptr;
 
-    auto* globalObject = localFrame->script().globalObject(world->coreWorld());
+    auto* globalObject = localFrame->script().globalObject(world->protectedCoreWorld());
 
     JSLockHolder lock(globalObject);
     return toRef(globalObject, toJS(globalObject, globalObject, RefPtr { cssStyleDeclarationHandle->coreCSSStyleDeclaration() }.get()));
@@ -1093,7 +1104,7 @@ JSValueRef WebFrame::jsWrapperForWorld(InjectedBundleNodeHandle* nodeHandle, Inj
     if (!localFrame)
         return nullptr;
 
-    auto* globalObject = localFrame->script().globalObject(world->coreWorld());
+    auto* globalObject = localFrame->script().globalObject(world->protectedCoreWorld());
 
     JSLockHolder lock(globalObject);
     return toRef(globalObject, toJS(globalObject, globalObject, RefPtr { nodeHandle->coreNode() }.get()));
@@ -1105,7 +1116,7 @@ JSValueRef WebFrame::jsWrapperForWorld(InjectedBundleRangeHandle* rangeHandle, I
     if (!localFrame)
         return nullptr;
 
-    auto* globalObject = localFrame->script().globalObject(world->coreWorld());
+    auto* globalObject = localFrame->script().globalObject(world->protectedCoreWorld());
 
     JSLockHolder lock(globalObject);
     return toRef(globalObject, toJS(globalObject, globalObject, Ref { rangeHandle->coreRange() }.get()));
@@ -1217,11 +1228,11 @@ void WebFrame::setTextDirection(const String& direction)
         return;
 
     if (direction == "auto"_s)
-        localFrame->editor().setBaseWritingDirection(WritingDirection::Natural);
+        localFrame->protectedEditor()->setBaseWritingDirection(WritingDirection::Natural);
     else if (direction == "ltr"_s)
-        localFrame->editor().setBaseWritingDirection(WritingDirection::LeftToRight);
+        localFrame->protectedEditor()->setBaseWritingDirection(WritingDirection::LeftToRight);
     else if (direction == "rtl"_s)
-        localFrame->editor().setBaseWritingDirection(WritingDirection::RightToLeft);
+        localFrame->protectedEditor()->setBaseWritingDirection(WritingDirection::RightToLeft);
 }
 
 #if PLATFORM(COCOA)
@@ -1247,7 +1258,7 @@ RetainPtr<CFDataRef> WebFrame::webArchiveData(FrameFilterFunction callback, void
 
 RefPtr<WebImage> WebFrame::createSelectionSnapshot() const
 {
-    auto snapshot = snapshotSelection(*coreLocalFrame(), { { WebCore::SnapshotFlags::ForceBlackText, WebCore::SnapshotFlags::Shareable }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() });
+    auto snapshot = snapshotSelection(*protectedCoreLocalFrame(), { { WebCore::SnapshotFlags::ForceBlackText, WebCore::SnapshotFlags::Shareable }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() });
     if (!snapshot)
         return nullptr;
 
@@ -1340,10 +1351,10 @@ static bool isContextClick(const PlatformMouseEvent& event)
 
 bool WebFrame::handleContextMenuEvent(const PlatformMouseEvent& platformMouseEvent)
 {
-    auto* coreLocalFrame = dynamicDowncast<LocalFrame>(coreFrame());
+    RefPtr coreLocalFrame = dynamicDowncast<LocalFrame>(coreFrame());
     if (!coreLocalFrame)
         return false;
-    IntPoint point = coreLocalFrame->view()->windowToContents(platformMouseEvent.position());
+    IntPoint point = coreLocalFrame->protectedView()->windowToContents(platformMouseEvent.position());
     constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::DisallowUserAgentShadowContent,  HitTestRequest::Type::AllowChildFrameContent };
     HitTestResult result = coreLocalFrame->eventHandler().hitTestResultAtPoint(point, hitType);
 
@@ -1354,7 +1365,7 @@ bool WebFrame::handleContextMenuEvent(const PlatformMouseEvent& platformMouseEve
     bool handled = frame->eventHandler().sendContextMenuEvent(platformMouseEvent);
 #if ENABLE(CONTEXT_MENUS)
     if (handled)
-        page()->contextMenu().show();
+        protectedPage()->protectedContextMenu()->show();
 #endif
     return handled;
 }
@@ -1362,7 +1373,7 @@ bool WebFrame::handleContextMenuEvent(const PlatformMouseEvent& platformMouseEve
 
 WebCore::HandleUserInputEventResult WebFrame::handleMouseEvent(const WebMouseEvent& mouseEvent)
 {
-    auto* coreLocalFrame = dynamicDowncast<LocalFrame>(coreFrame());
+    RefPtr coreLocalFrame = dynamicDowncast<LocalFrame>(coreFrame());
     if (!coreLocalFrame)
         return false;
 
@@ -1458,7 +1469,7 @@ String WebFrame::frameTextForTesting(bool includeSubframes)
     if (!includeSubframes)
         return builder.toString();
 
-    for (auto* child = m_coreFrame->tree().firstChild(); child; child = child->tree().nextSibling()) {
+    for (RefPtr child = m_coreFrame->tree().firstChild(); child; child = child->tree().nextSibling()) {
         RefPtr childWebFrame = fromCoreFrame(*child);
         if (!childWebFrame)
             continue;
