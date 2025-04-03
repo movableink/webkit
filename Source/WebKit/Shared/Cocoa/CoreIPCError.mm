@@ -27,6 +27,7 @@
 #import "CoreIPCError.h"
 
 #import <wtf/TZoneMallocInlines.h>
+#import <wtf/URL.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
 
 namespace WebKit {
@@ -61,6 +62,19 @@ bool CoreIPCError::hasValidUserInfo(const RetainPtr<CFDictionaryRef>& userInfo)
     if (RetainPtr<id> underlyingError = [info objectForKey:NSUnderlyingErrorKey]) {
         if (![underlyingError isKindOfClass:[NSError class]])
             return false;
+    }
+
+    if (id nsErrorFailingURL = [info objectForKey:@"NSErrorFailingURLKey"]) {
+        auto *failingURL = dynamic_objc_cast<NSURL>(nsErrorFailingURL);
+        if (!failingURL)
+            return false;
+        if (id nsErrorFailingURLString = [info objectForKey:@"NSErrorFailingURLStringKey"]) {
+            auto *failingURLString = dynamic_objc_cast<NSString>(nsErrorFailingURLString);
+            if (!failingURLString)
+                return false;
+            if (![failingURL isEqual:URL(failingURLString)])
+                return false;
+        }
     }
 
     return true;
