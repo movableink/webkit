@@ -93,10 +93,6 @@ UIProcess/API/Cocoa/_WKUserStyleSheet.mm
 UIProcess/API/Cocoa/_WKWebAuthenticationAssertionResponse.mm
 UIProcess/API/Cocoa/_WKWebAuthenticationPanel.mm
 UIProcess/API/Cocoa/_WKWebsiteDataStoreConfiguration.mm
-UIProcess/Downloads/DownloadProxy.cpp
-UIProcess/RemotePageDrawingAreaProxy.cpp
-UIProcess/WebsiteData/WebsiteDataStore.cpp
-UIProcess/mac/WebContextMenuProxyMac.mm
 WebDriverBidiBackendDispatchers.cpp
 WebDriverBidiFrontendDispatchers.cpp
 WebProcess/ApplePay/WebPaymentCoordinator.cpp

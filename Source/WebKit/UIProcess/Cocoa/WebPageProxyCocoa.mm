@@ -1030,7 +1030,7 @@ NSDictionary *WebPageProxy::contentsOfUserInterfaceItem(NSString *userInterfaceI
 #if ENABLE(CONTEXT_MENUS)
     RefPtr activeContextMenu = m_activeContextMenu;
     if (activeContextMenu && [userInterfaceItem isEqualToString:@"mediaControlsContextMenu"])
-        return @{ userInterfaceItem: activeContextMenu->platformData() };
+        return @{ userInterfaceItem: activeContextMenu->platformData().get() };
 #endif // ENABLE(CONTEXT_MENUS)
 
     return nil;

@@ -171,11 +171,11 @@ void WebPageProxy::stopSpeaking()
 
 void WebPageProxy::searchTheWeb(const String& string)
 {
-    NSPasteboard *pasteboard = [NSPasteboard pasteboardWithUniqueName];
+    RetainPtr pasteboard = [NSPasteboard pasteboardWithUniqueName];
     [pasteboard declareTypes:@[legacyStringPasteboardType()] owner:nil];
     [pasteboard setString:string forType:legacyStringPasteboardType()];
     
-    NSPerformService(@"Search With %WebSearchProvider@", pasteboard);
+    NSPerformService(@"Search With %WebSearchProvider@", pasteboard.get());
 }
 
 void WebPageProxy::windowAndViewFramesChanged(const FloatRect& viewFrameInWindowCoordinates, const FloatPoint& accessibilityViewCoordinates)
@@ -486,22 +486,22 @@ CALayer *WebPageProxy::footerBannerLayer() const
 
 int WebPageProxy::headerBannerHeight() const
 {
-    if (auto *headerBannerLayer = this->headerBannerLayer())
-        return headerBannerLayer.frame.size.height;
+    if (RetainPtr headerBannerLayer = this->headerBannerLayer())
+        return headerBannerLayer.get().frame.size.height;
     return 0;
 }
 
 int WebPageProxy::footerBannerHeight() const
 {
-    if (auto *footerBannerLayer = this->footerBannerLayer())
-        return footerBannerLayer.frame.size.height;
+    if (RetainPtr footerBannerLayer = this->footerBannerLayer())
+        return footerBannerLayer.get().frame.size.height;
     return 0;
 }
 
 static NSString *temporaryPDFDirectoryPath()
 {
     static NeverDestroyed path = [] {
-        auto temporaryDirectoryTemplate = [NSTemporaryDirectory() stringByAppendingPathComponent:@"WebKitPDFs-XXXXXX"];
+        RetainPtr temporaryDirectoryTemplate = [NSTemporaryDirectory() stringByAppendingPathComponent:@"WebKitPDFs-XXXXXX"];
         CString templateRepresentation = [temporaryDirectoryTemplate fileSystemRepresentation];
         if (mkdtemp(templateRepresentation.mutableSpanIncludingNullTerminator().data()))
             return adoptNS((NSString *)[[[NSFileManager defaultManager] stringWithFileSystemRepresentation:templateRepresentation.data() length:templateRepresentation.length()] copy]);
@@ -510,9 +510,9 @@ static NSString *temporaryPDFDirectoryPath()
     return path.get().get();
 }
 
-static NSString *pathToPDFOnDisk(const String& suggestedFilename)
+static RetainPtr<NSString> pathToPDFOnDisk(const String& suggestedFilename)
 {
-    NSString *pdfDirectoryPath = temporaryPDFDirectoryPath();
+    RetainPtr pdfDirectoryPath = temporaryPDFDirectoryPath();
     if (!pdfDirectoryPath) {
         WTFLogAlways("Cannot create temporary PDF download directory.");
         return nil;
@@ -520,11 +520,11 @@ static NSString *pathToPDFOnDisk(const String& suggestedFilename)
 
     // The NSFileManager expects a path string, while NSWorkspace uses file URLs, and will decode any percent encoding
     // in its passed URLs before loading from disk. Create the files using decoded file paths so they match up.
-    NSString *path = [[pdfDirectoryPath stringByAppendingPathComponent:suggestedFilename.createNSString().get()] stringByRemovingPercentEncoding];
+    RetainPtr path = [[pdfDirectoryPath stringByAppendingPathComponent:suggestedFilename.createNSString().get()] stringByRemovingPercentEncoding];
 
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    if ([fileManager fileExistsAtPath:path]) {
-        auto [fileHandle, pathTemplateRepresentation] = FileSystem::createTemporaryFileInDirectory(pdfDirectoryPath, makeString('-', suggestedFilename));
+    RetainPtr fileManager = [NSFileManager defaultManager];
+    if ([fileManager fileExistsAtPath:path.get()]) {
+        auto [fileHandle, pathTemplateRepresentation] = FileSystem::createTemporaryFileInDirectory(pdfDirectoryPath.get(), makeString('-', suggestedFilename));
         if (!fileHandle) {
             WTFLogAlways("Cannot create PDF file in the temporary directory (%s).", suggestedFilename.utf8().data());
             return nil;
@@ -549,7 +549,7 @@ void WebPageProxy::savePDFToTemporaryFolderAndOpenWithNativeApplication(const St
         WTFLogAlways("Cannot save file without .pdf extension to the temporary directory.");
         return;
     }
-    auto nsPath = retainPtr(pathToPDFOnDisk(sanitizedFilename));
+    RetainPtr nsPath = pathToPDFOnDisk(sanitizedFilename);
 
     if (!nsPath)
         return;
@@ -609,15 +609,15 @@ void WebPageProxy::showPDFContextMenu(const WebKit::PDFContextMenu& contextMenu,
         [nsItem setTag:item.tag];
         [nsMenu insertItem:nsItem.get() atIndex:i];
     }
-    NSWindow *window = pageClient->platformWindow();
+    RetainPtr window = pageClient->platformWindow();
     auto location = [window convertRectFromScreen: { contextMenu.point, NSZeroSize }].origin;
     auto event = createSyntheticEventForContextMenu(location);
 
-    auto view = window.contentView;
-    [NSMenu popUpContextMenu:nsMenu.get() withEvent:event.get() forView:view];
+    RetainPtr<NSView> view = window.get().contentView;
+    [NSMenu popUpContextMenu:nsMenu.get() withEvent:event.get() forView:view.get()];
 
-    if (auto selectedMenuItem = [menuTarget selectedMenuItem]) {
-        NSInteger tag = selectedMenuItem.tag;
+    if (RetainPtr selectedMenuItem = [menuTarget selectedMenuItem]) {
+        NSInteger tag = selectedMenuItem.get().tag;
         if (contextMenu.openInPreviewTag && *contextMenu.openInPreviewTag == tag)
             pdfOpenWithPreview(identifier);
         return completionHandler(tag);
@@ -886,10 +886,10 @@ void WebPageProxy::showImageInQuickLookPreviewPanel(ShareableBitmap& imageBitmap
     if (RefPtr pageClient = this->pageClient())
         pageClient->makeFirstResponder();
 
-    auto previewPanel = [PAL::getQLPreviewPanelClass() sharedPreviewPanel];
+    RetainPtr previewPanel = [PAL::getQLPreviewPanelClass() sharedPreviewPanel];
     [previewPanel makeKeyAndOrderFront:nil];
 
-    if (![m_quickLookPreviewController isControlling:previewPanel]) {
+    if (![m_quickLookPreviewController isControlling:previewPanel.get()]) {
         // The WebKit client may have overridden QLPreviewPanelController methods on the view without calling into the superclass.
         // In this case, hand over control to the client and clear out our state eagerly, since we don't expect any further delegate
         // calls once the preview panel is dismissed.
@@ -915,10 +915,10 @@ void WebPageProxy::handleContextMenuCopySubject(const String& preferredMIMEType)
     if (!data)
         return;
 
-    auto pasteboard = NSPasteboard.generalPasteboard;
-    auto pasteboardType = (__bridge NSString *)type.get();
-    [pasteboard declareTypes:@[pasteboardType] owner:nil];
-    [pasteboard setData:data.get() forType:pasteboardType];
+    RetainPtr<NSPasteboard> pasteboard = NSPasteboard.generalPasteboard;
+    RetainPtr pasteboardType = bridge_cast(type.get());
+    [pasteboard declareTypes:@[pasteboardType.get()] owner:nil];
+    [pasteboard setData:data.get() forType:pasteboardType.get()];
 }
 
 #endif // ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)

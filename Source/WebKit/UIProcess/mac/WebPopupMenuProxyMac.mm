@@ -71,7 +71,7 @@ void WebPopupMenuProxyMac::populate(const Vector<WebPopupItem>& items, NSFont *f
             [[m_popup menu] addItem:[NSMenuItem separatorItem]];
         else {
             [m_popup addItemWithTitle:@""];
-            NSMenuItem *menuItem = [m_popup lastItem];
+            RetainPtr menuItem = [m_popup lastItem];
 
             RetainPtr<NSMutableParagraphStyle> paragraphStyle = adoptNS([[NSParagraphStyle defaultParagraphStyle] mutableCopy]);
             NSWritingDirection writingDirection = items[i].m_textDirection == TextDirection::LTR ? NSWritingDirectionLeftToRight : NSWritingDirectionRightToLeft;
@@ -102,14 +102,14 @@ void WebPopupMenuProxyMac::populate(const Vector<WebPopupItem>& items, NSFont *f
 void WebPopupMenuProxyMac::showPopupMenu(const IntRect& rect, TextDirection textDirection, double pageScaleFactor, const Vector<WebPopupItem>& items, const PlatformPopupMenuData& data, int32_t selectedIndex)
 {
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanCommunicateWithWindowServer));
-    NSFont *font;
+    RetainPtr<NSFont> font;
 
     BEGIN_BLOCK_OBJC_EXCEPTIONS
 
-    if (NSDictionary *fontAttributes = static_cast<NSDictionary *>(data.fontInfo.fontAttributeDictionary.get())) {
-        auto scaledFontSize = [fontAttributes[NSFontSizeAttribute] floatValue] * pageScaleFactor;
+    if (RetainPtr fontAttributes = bridge_cast(data.fontInfo.fontAttributeDictionary.get())) {
+        auto scaledFontSize = [fontAttributes.get()[NSFontSizeAttribute] floatValue] * pageScaleFactor;
 
-        font = fontWithAttributes(fontAttributes, ((pageScaleFactor != 1) ? scaledFontSize : 0));
+        font = fontWithAttributes(fontAttributes.get(), ((pageScaleFactor != 1) ? scaledFontSize : 0));
         // font will be nil when using a custom font. However, we should still
         // honor the font size, matching other browsers.
         if (!font)
@@ -119,13 +119,13 @@ void WebPopupMenuProxyMac::showPopupMenu(const IntRect& rect, TextDirection text
     
     END_BLOCK_OBJC_EXCEPTIONS
 
-    populate(items, font, textDirection);
+    populate(items, font.get(), textDirection);
 
     [m_popup attachPopUpWithFrame:rect inView:m_webView.get().get()];
     [m_popup selectItemAtIndex:selectedIndex];
     [m_popup setUserInterfaceLayoutDirection:textDirection == TextDirection::LTR ? NSUserInterfaceLayoutDirectionLeftToRight : NSUserInterfaceLayoutDirectionRightToLeft];
 
-    NSMenu *menu = [m_popup menu];
+    RetainPtr menu = [m_popup menu];
     [menu setUserInterfaceLayoutDirection:textDirection == TextDirection::LTR ? NSUserInterfaceLayoutDirectionLeftToRight : NSUserInterfaceLayoutDirectionRightToLeft];
 
     // These values were borrowed from AppKit to match their placement of the menu.
@@ -173,7 +173,7 @@ void WebPopupMenuProxyMac::showPopupMenu(const IntRect& rect, TextDirection text
     }
 
     Ref<WebPopupMenuProxyMac> protect(*this);
-    PAL::popUpMenu(menu, location, roundf(NSWidth(rect)), dummyView.get(), selectedIndex, font, controlSize, data.hideArrows);
+    PAL::popUpMenu(menu.get(), location, roundf(NSWidth(rect)), dummyView.get(), selectedIndex, font.get(), controlSize, data.hideArrows);
 
     [m_popup dismissPopUp];
     [dummyView removeFromSuperview];
@@ -188,11 +188,11 @@ void WebPopupMenuProxyMac::showPopupMenu(const IntRect& rect, TextDirection text
     if (!client->currentlyProcessedMouseDownEvent())
         return;
     
-    NSEvent* initiatingNSEvent = client->currentlyProcessedMouseDownEvent()->nativeEvent();
+    RetainPtr initiatingNSEvent = client->currentlyProcessedMouseDownEvent()->nativeEvent();
     if ([initiatingNSEvent type] != NSEventTypeLeftMouseDown)
         return;
 
-    NSEvent *fakeEvent = [NSEvent mouseEventWithType:NSEventTypeLeftMouseUp
+    RetainPtr fakeEvent = [NSEvent mouseEventWithType:NSEventTypeLeftMouseUp
                                             location:[initiatingNSEvent locationInWindow]
                                        modifierFlags:[initiatingNSEvent modifierFlags]
                                            timestamp:[initiatingNSEvent timestamp]
@@ -202,7 +202,7 @@ void WebPopupMenuProxyMac::showPopupMenu(const IntRect& rect, TextDirection text
                                           clickCount:[initiatingNSEvent clickCount]
                                             pressure:[initiatingNSEvent pressure]];
 
-    [NSApp postEvent:fakeEvent atStart:YES];
+    [NSApp postEvent:fakeEvent.get() atStart:YES];
     fakeEvent = [NSEvent mouseEventWithType:NSEventTypeMouseMoved
                                    location:[[m_webView window]
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
@@ -215,7 +215,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
                                 eventNumber:0
                                  clickCount:0
                                    pressure:0];
-    [NSApp postEvent:fakeEvent atStart:YES];
+    [NSApp postEvent:fakeEvent.get() atStart:YES];
 }
 
 void WebPopupMenuProxyMac::hidePopupMenu()

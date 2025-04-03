@@ -55,7 +55,7 @@ public:
 
 #if PLATFORM(COCOA)
     virtual NSMenu *platformMenu() const = 0;
-    virtual NSArray *platformData() const = 0;
+    virtual RetainPtr<NSArray> platformData() const = 0;
 #endif // PLATFORM(COCOA)
 
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)

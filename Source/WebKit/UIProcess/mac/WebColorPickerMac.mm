@@ -41,6 +41,7 @@
 #import <pal/spi/mac/NSPopoverSPI.h>
 #import <wtf/WeakObjCPtr.h>
 #import <wtf/WeakPtr.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 static const size_t maxColorSuggestions = 12;
 static const CGFloat colorPickerMatrixNumColumns = 12.0;
@@ -158,18 +159,17 @@ void WebColorPickerMac::showColorPicker(const WebCore::Color& color)
 
 - (void)_showPopover
 {
-    NSPopover *popover = [[self class] _colorPopoverCreateIfNecessary:YES];
-    popover.delegate = self;
+    RetainPtr popover = [[self class] _colorPopoverCreateIfNecessary:YES];
+    popover.get().delegate = self;
 
     [self deactivate];
 
     // Deactivate previous NSPopoverColorWell
-    NSColorWell *owner = [NSColorWell _exclusiveColorPanelOwner];
-    if ([owner isKindOfClass:[NSPopoverColorWell class]])
+    if (RetainPtr owner = dynamic_objc_cast<NSPopoverColorWell>([NSColorWell _exclusiveColorPanelOwner]))
         [owner deactivate];
 
-    NSColorPopoverController *controller = (NSColorPopoverController *)[popover contentViewController];
-    controller.delegate = self;
+    RetainPtr controller = checked_objc_cast<NSColorPopoverController>([popover.get() contentViewController]);
+    controller.get().delegate = self;
 
     if (_suggestedColors) {
         NSUInteger numColors = [[_suggestedColors allKeys] count];
@@ -177,10 +177,10 @@ void WebColorPickerMac::showColorPicker(const WebCore::Color& color)
         CGFloat swatchHeight = colorPickerMatrixSwatchWidth;
 
         // topBarMatrixView cannot be accessed until view has been loaded
-        if (!controller.isViewLoaded)
+        if (!controller.get().isViewLoaded)
             [controller loadView];
 
-        NSColorPickerMatrixView *topMatrix = controller.topBarMatrixView;
+        RetainPtr<NSColorPickerMatrixView> topMatrix = controller.get().topBarMatrixView;
         [topMatrix setNumberOfColumns:numColors];
         [topMatrix setSwatchSize:NSMakeSize(swatchWidth, swatchHeight)];
         [topMatrix setColorList:_suggestedColors.get()];
@@ -259,9 +259,9 @@ void WebColorPickerMac::showColorPicker(const WebCore::Color& color)
     _popoverWell = nil;
     _picker = nil;
 
-    NSColorPanel *panel = [NSColorPanel sharedColorPanel];
-    if (panel.delegate == self) {
-        panel.delegate = nil;
+    RetainPtr panel = [NSColorPanel sharedColorPanel];
+    if (panel.get().delegate == self) {
+        panel.get().delegate = nil;
         [panel close];
     }
 }

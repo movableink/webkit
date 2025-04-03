@@ -134,8 +134,8 @@
 
 + (WKMenuTarget*)sharedMenuTarget
 {
-    static WKMenuTarget* target = [[WKMenuTarget alloc] init];
-    return target;
+    static NeverDestroyed<RetainPtr<WKMenuTarget>> target = adoptNS([[WKMenuTarget alloc] init]);
+    return target.get().get();
 }
 
 - (WebKit::WebContextMenuProxyMac*)menuProxy
@@ -154,7 +154,7 @@
     if (!menuProxy)
         return;
 
-    id representedObject = [sender representedObject];
+    RetainPtr<id> representedObject = [sender representedObject];
 
     // NSMenuItems with a represented selection handler belong solely to the UI process
     // and don't need any further processing after the selection handler is called.
@@ -165,10 +165,8 @@
 
     ASSERT(!sender || [sender isKindOfClass:NSMenuItem.class]);
     WebKit::WebContextMenuItemData item(WebCore::ContextMenuItemType::Action, static_cast<WebCore::ContextMenuAction>([sender tag]), [sender title], [sender isEnabled], [(NSMenuItem *)sender state] == NSControlStateValueOn);
-    if (representedObject) {
-        ASSERT([representedObject isKindOfClass:[WKUserDataWrapper class]]);
-        item.setUserData(RefPtr { [static_cast<WKUserDataWrapper *>(representedObject) userData] }.get());
-    }
+    if (representedObject)
+        item.setUserData(RefPtr { [checked_objc_cast<WKUserDataWrapper>(representedObject.get()) userData] }.get());
 
     menuProxy->contextMenuItemSelected(item);
 }
@@ -329,9 +327,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     Vector<RetainPtr<NSMenuItem>> telephoneNumberMenuItems;
 
     for (auto& telephoneNumber : m_context.selectedTelephoneNumbers()) {
-        if (NSMenuItem *item = menuItemForTelephoneNumber(telephoneNumber)) {
+        if (RetainPtr item = menuItemForTelephoneNumber(telephoneNumber)) {
             [item setIndentationLevel:1];
-            telephoneNumberMenuItems.append(item);
+            telephoneNumberMenuItems.append(WTFMove(item));
         }
     }
 
@@ -495,11 +493,11 @@ RetainPtr<NSMenuItem> WebContextMenuProxyMac::createShareMenuItem(ShareMenuItemT
         if (usePlaceholder)
             [items addObject:adoptNS([[NSImage alloc] init]).get()];
         else if (auto image = adoptNS([[NSImage alloc] initWithData:Ref { *hitTestData.imageSharedMemory }->toNSData().get()])) {
-            NSString *title = hitTestData.imageText;
-            if (!title.length)
+            RetainPtr title = hitTestData.imageText.createNSString();
+            if (![title length])
                 title = WEB_UI_NSSTRING(@"Image", "Fallback title for images in the share sheet");
 
-            auto activityItem = adoptNS([[NSPreviewRepresentingActivityItem alloc] initWithItem:image.get() title:title image:image.get() icon:nil]);
+            auto activityItem = adoptNS([[NSPreviewRepresentingActivityItem alloc] initWithItem:image.get() title:title.get() image:image.get() icon:nil]);
             [items addObject:activityItem.get()];
         }
     }
@@ -748,7 +746,7 @@ static RetainPtr<NSMenuItem> createMenuActionItem(const WebContextMenuItemData& 
     [menuItem setIdentifier:menuItemIdentifier(item.action())];
 
     if (item.userData())
-        [menuItem setRepresentedObject:adoptNS([[WKUserDataWrapper alloc] initWithUserData:item.userData()]).get()];
+        [menuItem setRepresentedObject:adoptNS([[WKUserDataWrapper alloc] initWithUserData:item.protectedUserData().get()]).get()];
 
     return menuItem;
 }
@@ -1033,43 +1031,43 @@ NSMenu *WebContextMenuProxyMac::platformMenu() const
     return m_menu.get();
 }
 
-static NSDictionary *contentsOfContextMenuItem(NSMenuItem *item)
+static RetainPtr<NSDictionary> contentsOfContextMenuItem(NSMenuItem *item)
 {
-    NSMutableDictionary* result = NSMutableDictionary.dictionary;
+    RetainPtr result = adoptNS([[NSMutableDictionary alloc] init]);
 
     if (item.title.length)
-        result[@"title"] = item.title;
+        result.get()[@"title"] = item.title;
 
     if (item.isSeparatorItem)
-        result[@"separator"] = @YES;
+        result.get()[@"separator"] = @YES;
     else if (!item.enabled)
-        result[@"enabled"] = @NO;
+        result.get()[@"enabled"] = @NO;
 
     if (NSInteger indentationLevel = item.indentationLevel)
-        result[@"indentationLevel"] = [NSNumber numberWithInteger:indentationLevel];
+        result.get()[@"indentationLevel"] = [NSNumber numberWithInteger:indentationLevel];
 
     if (item.state == NSControlStateValueOn)
-        result[@"checked"] = @YES;
+        result.get()[@"checked"] = @YES;
 
-    if (NSArray<NSMenuItem *> *submenuItems = item.submenu.itemArray) {
-        NSMutableArray *children = [NSMutableArray arrayWithCapacity:submenuItems.count];
-        for (NSMenuItem *submenuItem : submenuItems)
-            [children addObject:contentsOfContextMenuItem(submenuItem)];
-        result[@"children"] = children;
+    if (RetainPtr<NSArray<NSMenuItem *>> submenuItems = item.submenu.itemArray) {
+        RetainPtr children = adoptNS([[NSMutableArray alloc] initWithCapacity:[submenuItems count]]);
+        for (NSMenuItem *submenuItem : submenuItems.get())
+            [children addObject:contentsOfContextMenuItem(submenuItem).get()];
+        result.get()[@"children"] = children.get();
     }
 
     return result;
 }
 
-NSArray *WebContextMenuProxyMac::platformData() const
+RetainPtr<NSArray> WebContextMenuProxyMac::platformData() const
 {
-    NSMutableArray *result = NSMutableArray.array;
+    RetainPtr result = adoptNS([[NSMutableArray alloc] init]);
 
-    if (NSArray<NSMenuItem *> *submenuItems = [m_menu itemArray]) {
-        NSMutableArray *children = [NSMutableArray arrayWithCapacity:submenuItems.count];
-        for (NSMenuItem *submenuItem : submenuItems)
-            [children addObject:contentsOfContextMenuItem(submenuItem)];
-        [result addObject:@{ @"children": children }];
+    if (RetainPtr<NSArray<NSMenuItem *>> submenuItems = [m_menu itemArray]) {
+        RetainPtr children = adoptNS([[NSMutableArray alloc] initWithCapacity:[submenuItems count]]);
+        for (NSMenuItem *submenuItem : submenuItems.get())
+            [children addObject:contentsOfContextMenuItem(submenuItem).get()];
+        [result addObject:@{ @"children": children.get() }];
     }
 
     return result;

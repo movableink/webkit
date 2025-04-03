@@ -112,12 +112,6 @@ UIProcess/mac/WKPrintingView.mm
 UIProcess/mac/WKQuickLookPreviewController.mm
 UIProcess/mac/WKRevealItemPresenter.mm
 UIProcess/mac/WKSharingServicePickerDelegate.mm
-UIProcess/mac/WebColorPickerMac.mm
-UIProcess/mac/WebContextMenuProxyMac.mm
-UIProcess/mac/WebDataListSuggestionsDropdownMac.mm
-UIProcess/mac/WebDateTimePickerMac.mm
-UIProcess/mac/WebPageProxyMac.mm
-UIProcess/mac/WebPopupMenuProxyMac.mm
 UIProcess/mac/WebViewImpl.mm
 WebProcess/Extensions/API/Cocoa/WebExtensionAPIActionCocoa.mm
 WebProcess/GPU/graphics/cocoa/ImageBufferShareableMappedIOSurfaceBitmapBackend.cpp

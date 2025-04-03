@@ -2252,17 +2252,15 @@ void WebsiteDataStore::addSecKeyProxyStore(Ref<SecKeyProxyStore>&& store)
 #if ENABLE(WEB_AUTHN)
 void WebsiteDataStore::setMockWebAuthenticationConfiguration(WebCore::MockWebAuthenticationConfiguration&& configuration)
 {
-    if (!m_authenticatorManager->isMock()) {
+    if (RefPtr manager = dynamicDowncast<MockAuthenticatorManager>(m_authenticatorManager))
+        manager->setTestConfiguration(WTFMove(configuration));
+    else
         m_authenticatorManager = MockAuthenticatorManager::create(WTFMove(configuration));
-        return;
-    }
-    Ref manager = downcast<MockAuthenticatorManager>(m_authenticatorManager);
-    manager->setTestConfiguration(WTFMove(configuration));
 }
 
 VirtualAuthenticatorManager& WebsiteDataStore::virtualAuthenticatorManager()
 {
-    if (!m_authenticatorManager->isVirtual())
+    if (!is<VirtualAuthenticatorManager>(m_authenticatorManager.get()))
         m_authenticatorManager = VirtualAuthenticatorManager::create();
     return downcast<VirtualAuthenticatorManager>(m_authenticatorManager.get());
 }

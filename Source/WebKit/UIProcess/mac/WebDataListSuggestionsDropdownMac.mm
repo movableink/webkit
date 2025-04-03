@@ -416,8 +416,8 @@ static BOOL shouldShowDividersBetweenCells(const Vector<WebCore::DataListSuggest
     [_table scrollRowToVisible:newSelection];
 
     // Notify accessibility clients of new selection.
-    NSString *currentSelectedString = [self currentSelectedString];
-    [self notifyAccessibilityClients:currentSelectedString];
+    RetainPtr currentSelectedString = [self currentSelectedString].createNSString();
+    [self notifyAccessibilityClients:currentSelectedString.get()];
 }
 
 - (void)invalidate
@@ -437,14 +437,14 @@ static BOOL shouldShowDividersBetweenCells(const Vector<WebCore::DataListSuggest
     _enclosingWindow = nil;
 
     // Notify accessibility clients that datalist went away.
-    NSString *info = WEB_UI_STRING("Suggestions list hidden.", "Accessibility announcement for the data list suggestions dropdown going away.");
-    [self notifyAccessibilityClients:info];
+    RetainPtr info = WEB_UI_STRING("Suggestions list hidden.", "Accessibility announcement for the data list suggestions dropdown going away.").createNSString();
+    [self notifyAccessibilityClients:info.get()];
 }
 
 - (NSRect)dropdownRectForElementRect:(const WebCore::IntRect&)rect
 {
-    NSWindow *presentingWindow = [_presentingView window];
-    NSRect screenRect = presentingWindow.screen.visibleFrame;
+    RetainPtr presentingWindow = [_presentingView window];
+    NSRect screenRect = presentingWindow.get().screen.visibleFrame;
     NSRect windowRect = [presentingWindow convertRectToScreen:[_presentingView convertRect:rect toView:nil]];
 
     windowRect = CGRectIntersection(windowRect, screenRect);
@@ -476,9 +476,9 @@ static BOOL shouldShowDividersBetweenCells(const Vector<WebCore::DataListSuggest
     [_scrollView flashScrollers];
 
     // Notify accessibility clients of datalist becoming visible.
-    NSString *currentSelectedString = [self currentSelectedString];
-    NSString *info = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Suggestions list visible, %@", "Accessibility announcement that the suggestions list became visible. The format argument is for the first option in the list."), currentSelectedString];
-    [self notifyAccessibilityClients:info];
+    RetainPtr currentSelectedString = [self currentSelectedString].createNSString();
+    RetainPtr info = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Suggestions list visible, %@", "Accessibility announcement that the suggestions list became visible. The format argument is for the first option in the list."), currentSelectedString.get()];
+    [self notifyAccessibilityClients:info.get()];
 }
 
 - (void)selectedRow:(NSTableView *)sender
