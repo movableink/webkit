@@ -1,4 +1,23 @@
 =================
+WPE WebKit 2.49.1
+=================
+
+What's new in WPE WebKit 2.49.1?
+
+  - Change threaded rendering implementation to use Skia API instead of WebCore display
+    list that is not thread safe. This also allowed to improve performance by recording
+    layers once and replaying every dirty region in different worker threads.
+  - Added hybrid rendering mode that tries to use the GPU worker threads, but if they
+    are all busy the CPU worker threads are used if possible.
+  - Add volume locking support to media player.
+  - Add support for tracing counters with Sysprof.
+  - Add a default accessibility implementation using ATK to WPEPlatform.
+  - Add new API in WPEPlatform that allows attaching user data to WPEEvent.
+  - Add new API in WPEPlatform to get/set the input purpose and hints for
+    the current input through WPEInputMethodContext.
+  - Fix several crashes and rendering issues.
+
+=================
 WPE WebKit 2.47.4
 =================
 
