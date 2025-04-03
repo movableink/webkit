@@ -483,54 +483,112 @@ TEST(WebKit, TryWindowOpenJavascriptURLInIframeSingleWindowApp)
     TestWebKitAPI::Util::run(&calledCreateWebViewWithConfiguration);
 }
 
-TEST(WEBKIT, NavigationActionHasOpener)
+static void runHasOpenerTest(NSString *js, bool expectsOpener)
 {
-    auto runHasOpenerTest = [](NSString *js, bool expectsOpener) {
-        auto webView = adoptNS([TestWKWebView new]);
-        auto uiDelegate = adoptNS([TestUIDelegate new]);
-        [webView setUIDelegate:uiDelegate.get()];
+    RetainPtr webView = adoptNS([TestWKWebView new]);
+    RetainPtr uiDelegate = adoptNS([TestUIDelegate new]);
+    [webView setUIDelegate:uiDelegate.get()];
 
-        __block RetainPtr<TestWKWebView> openedWebView;
-        __block bool decidedPolicyInPopup = false;
-        __block bool popupHasOpenerInCreateWebView = false;
-        __block bool popupHasOpenerInDecidePolicyForNavigationAction = false;
+    __block RetainPtr<TestWKWebView> openedWebView;
+    __block bool decidedPolicyInPopup = false;
+    __block bool popupHasOpenerInCreateWebView = false;
+    __block bool popupHasOpenerInDecidePolicyForNavigationAction = false;
 
-        __block auto popupNavigationDelegate = adoptNS([TestNavigationDelegate new]);
-        popupNavigationDelegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *action, void (^decisionHandler)(WKNavigationActionPolicy)) {
-            popupHasOpenerInDecidePolicyForNavigationAction = action._hasOpener;
-            decisionHandler(WKNavigationActionPolicyCancel);
-            decidedPolicyInPopup = true;
-        };
-        uiDelegate.get().createWebViewWithConfiguration = ^(WKWebViewConfiguration *configuration, WKNavigationAction *action, WKWindowFeatures *windowFeatures) {
-            popupHasOpenerInCreateWebView = action._hasOpener;
-            openedWebView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration]);
-            [openedWebView setNavigationDelegate:popupNavigationDelegate.get()];
-            return openedWebView.get();
-        };
-
-        openedWebView = nullptr;
-        popupHasOpenerInCreateWebView = false;
-        popupHasOpenerInDecidePolicyForNavigationAction = false;
-        decidedPolicyInPopup = false;
-        [webView synchronouslyLoadHTMLString:js];
-        [webView evaluateJavaScript:@"runTest()" completionHandler:^(id result, NSError *error) { }];
-        TestWebKitAPI::Util::run(&decidedPolicyInPopup);
-        EXPECT_EQ(popupHasOpenerInCreateWebView, expectsOpener);
-        EXPECT_EQ(popupHasOpenerInDecidePolicyForNavigationAction, expectsOpener);
+    __block auto popupNavigationDelegate = adoptNS([TestNavigationDelegate new]);
+    popupNavigationDelegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *action, void (^decisionHandler)(WKNavigationActionPolicy)) {
+        popupHasOpenerInDecidePolicyForNavigationAction = action._hasOpener;
+        decisionHandler(WKNavigationActionPolicyCancel);
+        decidedPolicyInPopup = true;
     };
+    uiDelegate.get().createWebViewWithConfiguration = ^(WKWebViewConfiguration *configuration, WKNavigationAction *action, WKWindowFeatures *windowFeatures) {
+        popupHasOpenerInCreateWebView = action._hasOpener;
+        openedWebView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration]);
+        [openedWebView setNavigationDelegate:popupNavigationDelegate.get()];
+        return openedWebView.get();
+    };
+
+    openedWebView = nullptr;
+    popupHasOpenerInCreateWebView = false;
+    popupHasOpenerInDecidePolicyForNavigationAction = false;
+    decidedPolicyInPopup = false;
+    [webView synchronouslyLoadHTMLString:js];
+    [webView evaluateJavaScript:@"runTest()" completionHandler:^(id result, NSError *error) { }];
+    TestWebKitAPI::Util::run(&decidedPolicyInPopup);
+    EXPECT_EQ(popupHasOpenerInCreateWebView, expectsOpener);
+    EXPECT_EQ(popupHasOpenerInDecidePolicyForNavigationAction, expectsOpener);
+}
+
+TEST(WEBKIT, NavigationActionHasOpener1)
+{
     runHasOpenerTest(@"<a id='testLink' href='https://www.apple.com' target='foo'>Link</a><script>function runTest() { document.getElementById('testLink').click(); }</script>", true);
+}
+
+TEST(WEBKIT, NavigationActionHasOpener2)
+{
     runHasOpenerTest(@"<a id='testLink' href='https://www.apple.com' target='foo' rel='noopener'>Link</a><script>function runTest() { document.getElementById('testLink').click(); }</script>", false);
+}
+
+TEST(WEBKIT, NavigationActionHasOpener3)
+{
     runHasOpenerTest(@"<a id='testLink' href='https://www.apple.com' target='foo' rel='noreferrer'>Link</a><script>function runTest() { document.getElementById('testLink').click(); }</script>", false);
+}
+
+TEST(WEBKIT, NavigationActionHasOpener4)
+{
     runHasOpenerTest(@"<a id='testLink' href='https://www.apple.com' target='_blank'>Link</a><script>function runTest() { document.getElementById('testLink').click(); }</script>", false);
+}
+
+TEST(WEBKIT, NavigationActionHasOpener5)
+{
     runHasOpenerTest(@"<a id='testLink' href='https://www.apple.com' target='_blank' rel='opener'>Link</a><script>function runTest() { document.getElementById('testLink').click(); }</script>", true);
+}
+
+TEST(WEBKIT, NavigationActionHasOpener6)
+{
     runHasOpenerTest(@"<script>function runTest() { open('https://www.apple.com'); }</script>", true);
+}
+
+TEST(WEBKIT, NavigationActionHasOpener7)
+{
     runHasOpenerTest(@"<script>function runTest() { open('https://www.apple.com', 'foo'); }</script>", true);
+}
+
+TEST(WEBKIT, NavigationActionHasOpener8)
+{
     runHasOpenerTest(@"<script>function runTest() { open('https://www.apple.com', 'foo', 'noopener'); }</script>", false);
+}
+
+TEST(WEBKIT, NavigationActionHasOpener9)
+{
     runHasOpenerTest(@"<script>function runTest() { open('https://www.apple.com', 'foo', 'noreferrer'); }</script>", false);
+}
+
+TEST(WEBKIT, NavigationActionHasOpener10)
+{
     runHasOpenerTest(@"<script>function runTest() { open('https://www.apple.com', '_blank'); }</script>", true);
+}
+
+TEST(WEBKIT, NavigationActionHasOpener11)
+{
     runHasOpenerTest(@"<form action='https://www.apple.com' target='foo'><input id='testButton' type='submit'></form><script>function runTest() { document.getElementById('testButton').click(); }</script>", true);
+}
+
+TEST(WEBKIT, NavigationActionHasOpener12)
+{
     runHasOpenerTest(@"<form action='https://www.apple.com' target='foo' rel='noopener'><input id='testButton' type='submit'></form><script>function runTest() { document.getElementById('testButton').click(); }</script>", false);
+}
+
+TEST(WEBKIT, NavigationActionHasOpener13)
+{
     runHasOpenerTest(@"<form action='https://www.apple.com' target='foo' rel='noreferrer'><input id='testButton' type='submit'></form><script>function runTest() { document.getElementById('testButton').click(); }</script>", false);
+}
+
+TEST(WEBKIT, NavigationActionHasOpener14)
+{
     runHasOpenerTest(@"<form action='https://www.apple.com' target='_blank'><input id='testButton' type='submit'></form><script>function runTest() { document.getElementById('testButton').click(); }</script>", false);
+}
+
+TEST(WEBKIT, NavigationActionHasOpener15)
+{
     runHasOpenerTest(@"<form action='https://www.apple.com' target='_blank' rel='opener'><input id='testButton' type='submit'></form><script>function runTest() { document.getElementById('testButton').click(); }</script>", true);
 }
