@@ -2181,12 +2181,12 @@ WritingDirection Editor::baseWritingDirectionForSelectionStart() const
     ScriptDisallowedScope::InMainThread scriptDisallowedScope;
 
     CheckedPtr renderer = node->renderer();
-    if (renderer && !is<RenderBlockFlow>(*renderer))
+    if (renderer && !is<RenderBlock>(*renderer))
         renderer = renderer->containingBlock();
     if (!renderer)
         return result;
 
-    switch (downcast<RenderBlockFlow>(*renderer).writingMode().bidiDirection()) {
+    switch (downcast<RenderBlock>(*renderer).writingMode().bidiDirection()) {
     case TextDirection::LTR:
         return WritingDirection::LeftToRight;
     case TextDirection::RTL:
