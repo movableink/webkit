@@ -7828,3 +7828,5 @@ webkit.org/b/290967 [ Debug ] imported/w3c/IndexedDB-private-browsing/idbcursor_
 
 # hidden=until-found
 imported/w3c/web-platform-tests/html/editing/the-hidden-attribute/hidden-until-found-002.html [ Failure ]
+
+webkit.org/b/291001 imported/w3c/web-platform-tests/scroll-animations/css/animation-fill-outside-range-test.html [ Pass Failure ]
