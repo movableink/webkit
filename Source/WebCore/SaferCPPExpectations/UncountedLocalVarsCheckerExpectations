@@ -30,7 +30,6 @@ Modules/mediacontrols/MediaControlsHost.cpp
 Modules/mediarecorder/MediaRecorder.cpp
 Modules/mediasession/MediaSession.cpp
 Modules/mediasource/SourceBuffer.cpp
-Modules/mediastream/MediaStream.cpp
 Modules/mediastream/PeerConnectionBackend.cpp
 Modules/mediastream/RTCController.cpp
 Modules/mediastream/RTCPeerConnection.cpp

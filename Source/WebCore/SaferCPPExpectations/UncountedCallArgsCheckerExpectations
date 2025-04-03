@@ -93,8 +93,6 @@ Modules/indexeddb/client/IDBConnectionProxy.cpp
 Modules/indexeddb/client/IDBConnectionToServer.cpp
 Modules/indexeddb/client/TransactionOperation.h
 Modules/mediacontrols/MediaControlsHost.cpp
-Modules/mediarecorder/MediaRecorder.cpp
-Modules/mediarecorder/MediaRecorder.h
 Modules/mediasession/MediaMetadata.cpp
 Modules/mediasession/MediaSession.cpp
 Modules/mediasession/MediaSessionCoordinator.cpp
@@ -106,8 +104,6 @@ Modules/mediasource/MediaSourceInterfaceMainThread.cpp
 Modules/mediasource/MediaSourceInterfaceWorker.cpp
 Modules/mediasource/SampleMap.cpp
 Modules/mediasource/SourceBuffer.cpp
-Modules/mediastream/MediaStream.cpp
-Modules/mediastream/MediaStream.h
 Modules/mediastream/MediaStreamTrack.cpp
 Modules/mediastream/MediaStreamTrackProcessor.cpp
 Modules/mediastream/PeerConnectionBackend.cpp
@@ -1053,7 +1049,6 @@ platform/mac/ScrollbarsControllerMac.mm
 platform/mediarecorder/MediaRecorderPrivate.h
 platform/mediarecorder/MediaRecorderPrivateAVFImpl.cpp
 platform/mediarecorder/MediaRecorderPrivateMock.cpp
-platform/mediastream/MediaStreamPrivate.cpp
 platform/mediastream/MediaStreamTrackDataHolder.cpp
 platform/mediastream/MediaStreamTrackPrivate.cpp
 platform/mediastream/RealtimeMediaSourceCenter.cpp

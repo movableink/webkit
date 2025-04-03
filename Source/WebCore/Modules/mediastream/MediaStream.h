@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2011, 2015 Ericsson AB. All rights reserved.
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  *
  * Redistribution and use in source and binary forms, with or without
@@ -151,7 +151,7 @@ private:
 
     Document* document() const;
 
-    Ref<MediaStreamPrivate> m_private;
+    const Ref<MediaStreamPrivate> m_private;
 
     MemoryCompactRobinHoodHashMap<String, Ref<MediaStreamTrack>> m_trackMap;
 
