@@ -3561,9 +3561,9 @@ auto OMGIRGenerator::addArrayGet(ExtGCOpType arrayGetKind, uint32_t typeIndex, E
 
 Value* OMGIRGenerator::emitGetArrayPayloadBase(Wasm::StorageType fieldType, Value* arrayref)
 {
-    auto payloadBase = m_currentBlock->appendNew<Value>(m_proc, Add, pointerType(), origin(), arrayref, constant(pointerType(), JSWebAssemblyArray::offsetOfData()));
+    auto payloadBase = m_currentBlock->appendNew<Value>(m_proc, Add, pointerType(), origin(), truncate(arrayref), constant(pointerType(), JSWebAssemblyArray::offsetOfData()));
     if (JSWebAssemblyArray::needsAlignmentCheck(fieldType)) {
-        auto isPreciseAllocation = m_currentBlock->appendNew<Value>(m_proc, BitAnd, origin(), arrayref, constant(pointerType(), PreciseAllocation::halfAlignment));
+        auto isPreciseAllocation = m_currentBlock->appendNew<Value>(m_proc, BitAnd, origin(), truncate(arrayref), constant(pointerType(), PreciseAllocation::halfAlignment));
         return m_currentBlock->appendNew<Value>(m_proc, B3::Select, origin(), isPreciseAllocation,
             payloadBase,
             m_currentBlock->appendNew<Value>(m_proc, Add, origin(), payloadBase, constant(pointerType(), JSWebAssemblyArray::v128AlignmentShift)));
@@ -3775,7 +3775,7 @@ auto OMGIRGenerator::addStructNew(uint32_t typeIndex, ArgumentList& args, Expres
         needsWriteBarrier |= emitStructSet(structValue, i, structType, get(args[i]));
 
     if (needsWriteBarrier)
-        emitWriteBarrier(structValue, instanceValue());
+        emitWriteBarrier(truncate(structValue), instanceValue());
 
     result = push(structValue);
 
@@ -3882,7 +3882,7 @@ auto OMGIRGenerator::addStructSet(ExpressionType structReference, const StructTy
     Value* structValue = get(structReference);
     bool needsWriteBarrier = emitStructSet(structValue, fieldIndex, structType, get(value));
     if (needsWriteBarrier)
-        emitWriteBarrier(structValue, instanceValue());
+        emitWriteBarrier(truncate(structValue), instanceValue());
     return { };
 }
 
