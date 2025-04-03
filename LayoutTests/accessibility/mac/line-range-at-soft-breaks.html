@@ -19,13 +19,13 @@ if (window.accessibilityController) {
     var currentMarker = paragraph.startTextMarkerForTextMarkerRange(textMarkerRange);
     
     var lineRange = paragraph.lineTextMarkerRangeForTextMarker(currentMarker);
-    output += expect("paragraph.stringForTextMarkerRange(lineRange)", "'WebKit is the web browser engine used by Safari, Mail, App Store, and many'");
+    output += expect("paragraph.stringForTextMarkerRange(lineRange).trim()", "'WebKit is the web browser engine used by Safari, Mail, App Store, and many'");
     
     currentMarker = paragraph.nextLineEndTextMarkerForTextMarker(currentMarker);
     currentMarker = paragraph.nextTextMarker(currentMarker);
 
     lineRange = paragraph.lineTextMarkerRangeForTextMarker(currentMarker);
-    output += expect("paragraph.stringForTextMarkerRange(lineRange)", "'other apps on macOS, iOS, and Linux. Get started contributing code, or'");
+    output += expect("paragraph.stringForTextMarkerRange(lineRange).trim()", "'other apps on macOS, iOS, and Linux. Get started contributing code, or'");
     
     currentMarker = paragraph.nextLineEndTextMarkerForTextMarker(currentMarker);
     currentMarker = paragraph.nextTextMarker(currentMarker);

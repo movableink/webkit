@@ -113,17 +113,12 @@ struct AXTextRuns {
     bool containsOnlyASCII { true };
 
     AXTextRuns() = default;
-    AXTextRuns(RenderBlock* containingBlock, Vector<AXTextRun>&& textRuns)
+    AXTextRuns(RenderBlock* containingBlock, Vector<AXTextRun>&& textRuns, bool containsOnlyASCII = true)
         : containingBlock(containingBlock)
         , runs(WTFMove(textRuns))
-    {
-        for (const auto& run : runs) {
-            if (!run.text.containsOnlyASCII()) {
-                containsOnlyASCII = false;
-                break;
-            }
-        }
-    }
+        , containsOnlyASCII(containsOnlyASCII)
+    { }
+
     String debugDescription() const;
 
     size_t size() const { return runs.size(); }
