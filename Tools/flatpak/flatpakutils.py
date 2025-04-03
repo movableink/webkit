@@ -670,6 +670,7 @@ class WebkitFlatpak:
         self.update = False
         self.args = []
         self.gdb_stack_trace = False
+        self.proc = None
 
         self.release = False
         self.debug = False
@@ -708,7 +709,11 @@ class WebkitFlatpak:
         result = 0
         with ctx_manager:
             try:
-                result = subprocess.check_call(args, stdout=stdout, stderr=stderr, env=env)
+                self.proc = subprocess.Popen(args, stdout=stdout, stderr=stderr, env=env)
+                self.proc.wait()
+                result = self.proc.returncode
+                if result != 0:
+                    raise subprocess.CalledProcessError(result, args)
             except subprocess.CalledProcessError as err:
                 if self.verbose:
                     cmd = ' '.join(string_utils.decode(arg) for arg in err.cmd)
@@ -820,6 +825,23 @@ class WebkitFlatpak:
                 if var_name.endswith('PATH'):
                     environment[var_name] = "%s:%s" % (environment[var_name], value)
         return environment
+
+    def _is_this_the_only_flatpaksdk_running(self):
+        try:
+            output = subprocess.check_output(['flatpak', 'ps'], text=True)
+            for line in output.splitlines():
+                if self.sdk.name in line and str(self.proc.pid) not in line:
+                    return False
+            return True
+        except subprocess.CalledProcessError:
+            return False
+
+    def clean_flatpak_tmpdir(self):
+        xdg_runtime_dir = os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}')
+        flatpak_tmpdir = os.path.join(xdg_runtime_dir, '.flatpak', self.sdk.name, 'tmp')
+        # Only clean the flatpak /tmp if there are no more flatpak SDK running at exit.
+        if os.path.isdir(flatpak_tmpdir) and self._is_this_the_only_flatpaksdk_running():
+            shutil.rmtree(flatpak_tmpdir, ignore_errors=True)
 
     def is_branch_build(self):
         try:
@@ -1148,6 +1170,8 @@ class WebkitFlatpak:
             return self.execute_command(command, stdout=stdout, env=flatpak_env, keep_signals=keep_signals)
         except KeyboardInterrupt:
             return 0
+        finally:
+            self.clean_flatpak_tmpdir()
 
     def main(self):
         if self.check_available:
