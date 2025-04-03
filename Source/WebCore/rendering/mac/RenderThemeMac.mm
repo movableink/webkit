@@ -1436,37 +1436,14 @@ static void paintAttachmentIconBackground(const RenderAttachment& attachment, Gr
     }
 }
 
-static bool shouldDrawIcon(const String& title)
-{
-#if HAVE(QUICKLOOK_THUMBNAILING)
-    // The thumbnail will be painted by the client.
-    NSString *cocoaTitle = title;
-    if (auto fileExtension = cocoaTitle.pathExtension; fileExtension.length) {
-        return ![fileExtension isEqualToString:@"key"]
-            && ![fileExtension isEqualToString:@"pages"]
-            && ![fileExtension isEqualToString:@"numbers"];
-    }
-#endif
-    UNUSED_PARAM(title);
-    return true;
-}
-
 static void paintAttachmentIcon(const RenderAttachment& attachment, GraphicsContext& context, AttachmentLayout& layout)
 {
-    if (auto thumbnailIcon = attachment.attachmentElement().thumbnail()) {
-        context.drawImage(*thumbnailIcon, layout.iconRect);
-        return;
-    }
-
     if (context.paintingDisabled())
         return;
 
     attachment.attachmentElement().requestIconIfNeededWithSize(layout.iconRect.size());
     auto icon = attachment.attachmentElement().icon();
     if (!icon)
-        return;
-    
-    if (!shouldDrawIcon(attachment.attachmentElement().attachmentTitleForDisplay()))
         return;
 
     context.drawImage(*icon, layout.iconRect);

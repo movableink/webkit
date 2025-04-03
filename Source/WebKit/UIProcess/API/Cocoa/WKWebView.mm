@@ -55,7 +55,6 @@
 #import "PlatformWritingToolsUtilities.h"
 #import "ProcessTerminationReason.h"
 #import "ProvisionalPageProxy.h"
-#import "QuickLookThumbnailLoader.h"
 #import "RemoteLayerTreeScrollingPerformanceData.h"
 #import "RemoteObjectRegistry.h"
 #import "RemoteObjectRegistryMessages.h"
@@ -4466,9 +4465,6 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
         if (capturedHandler)
             capturedHandler(true);
     });
-#if HAVE(QUICKLOOK_THUMBNAILING)
-    _page->requestThumbnail(attachment, identifier);
-#endif
     return wrapper(attachment);
 #else
     return nil;

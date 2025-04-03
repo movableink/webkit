@@ -39,7 +39,7 @@
 #import "WKWebViewConfigurationExtras.h"
 #import <Contacts/Contacts.h>
 #import <MapKit/MapKit.h>
-#import <QuickLookThumbnailing/QLThumbnailGenerator.h>
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <WebKit/WKPreferencesRefPrivate.h>
 #import <WebKit/WKUserContentControllerPrivate.h>
 #import <WebKit/WKWebViewPrivateForTesting.h>
@@ -59,9 +59,6 @@ SOFT_LINK_CLASS(Contacts, CNMutableContact)
 SOFT_LINK_FRAMEWORK(MapKit)
 SOFT_LINK_CLASS(MapKit, MKMapItem)
 SOFT_LINK_CLASS(MapKit, MKPlacemark)
-
-SOFT_LINK_FRAMEWORK(QuickLookThumbnailing)
-SOFT_LINK_CLASS(QuickLookThumbnailing, QLThumbnailGenerator)
 
 @interface NSArray (AttachmentTestingHelpers)
 - (_WKAttachment *)_attachmentWithName:(NSString *)name;
@@ -1696,16 +1693,6 @@ TEST(WKAttachmentTests, CopyAndPasteImageBetweenWebViews)
     EXPECT_TRUE([originalData isEqualToData:pastedAttachmentInfo.data]);
 }
 
-#if HAVE(QUICKLOOK_THUMBNAILING)
-
-static bool triedToLoadThumbnail;
-static void _generateBestRepresentationForRequest(id, SEL)
-{
-    triedToLoadThumbnail = true;
-}
-
-#endif
-
 TEST(WKAttachmentTests, CutAndPasteAttachmentBetweenWebViews)
 {
     auto webView = webViewForTestingAttachments();
@@ -1713,56 +1700,11 @@ TEST(WKAttachmentTests, CutAndPasteAttachmentBetweenWebViews)
     [webView selectAll:nil];
     [webView _synchronouslyExecuteEditCommand:@"Cut" argument:nil];
 
-#if HAVE(QUICKLOOK_THUMBNAILING)
-    InstanceMethodSwizzler quickLookSwizzler {
-        getQLThumbnailGeneratorClass(),
-        @selector(generateBestRepresentationForRequest:completionHandler:),
-        reinterpret_cast<IMP>(_generateBestRepresentationForRequest)
-    };
-    triedToLoadThumbnail = false;
-#endif
-
     auto destinationView = webViewForTestingAttachments();
     ObserveAttachmentUpdatesForScope observer(destinationView.get());
     [destinationView _synchronouslyExecuteEditCommand:@"Paste" argument:nil];
     EXPECT_EQ(1U, observer.observer().inserted.count);
-
-#if HAVE(QUICKLOOK_THUMBNAILING)
-    Util::run(&triedToLoadThumbnail);
-#endif
 }
-
-#if HAVE(QUICKLOOK_THUMBNAILING)
-
-TEST(WKAttachmentTests, iWorkAttachmentWithoutPasteboardActionLoadsThumbnail)
-{
-    triedToLoadThumbnail = false;
-    InstanceMethodSwizzler quickLookSwizzler {
-        getQLThumbnailGeneratorClass(),
-        @selector(generateBestRepresentationForRequest:completionHandler:),
-        reinterpret_cast<IMP>(_generateBestRepresentationForRequest)
-    };
-
-    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
-    configuration.get()._attachmentElementEnabled = YES;
-    WKPreferencesSetCustomPasteboardDataEnabled((__bridge WKPreferencesRef)[configuration preferences], YES);
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 500, 500) configuration:configuration.get()]);
-
-    auto uiDelegate = adoptNS([[AttachmentUIDelegate alloc] init]);
-    webView.get().UIDelegate = uiDelegate.get();
-
-    static NSString *htmlWithEmbeddedAttachment = @"<meta name='viewport' content='width=device-width, initial-scale=1'>"
-        "<script>focus = () => document.body.focus()</script>"
-        "<body onload=focus() contenteditable>"
-        "<attachment src='test.pages' title='test.pages'></attachment></body>";
-
-    [webView synchronouslyLoadHTMLString:htmlWithEmbeddedAttachment];
-
-    Util::run(&triedToLoadThumbnail);
-}
-
-#endif // HAVE(QUICKLOOK_THUMBNAILING)
 
 TEST(WKAttachmentTests, AttachmentIdentifierOfClonedAttachment)
 {

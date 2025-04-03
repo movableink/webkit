@@ -659,7 +659,6 @@ messages -> WebPage WantsAsyncDispatchMessage {
 #if ENABLE(ATTACHMENT_ELEMENT)
     InsertAttachment(String identifier, std::optional<uint64_t> fileSize, String fileName, String contentType) -> ()
     UpdateAttachmentAttributes(String identifier, std::optional<uint64_t> fileSize, String contentType, String fileName, IPC::SharedBufferReference associatedElementData) -> ()
-    UpdateAttachmentThumbnail(String identifier, std::optional<WebCore::ShareableBitmapHandle> qlThumbnailHandle)
     UpdateAttachmentIcon(String identifier, std::optional<WebCore::ShareableBitmapHandle> icon, WebCore::FloatSize size)
 #endif
 

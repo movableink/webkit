@@ -14306,25 +14306,7 @@ void WebPageProxy::insertAttachment(Ref<API::Attachment>&& attachment, Completio
 void WebPageProxy::updateAttachmentAttributes(const API::Attachment& attachment, CompletionHandler<void()>&& callback)
 {
     sendWithAsyncReply(Messages::WebPage::UpdateAttachmentAttributes(attachment.identifier(), attachment.fileSizeForDisplay(), attachment.contentType(), attachment.fileName(), IPC::SharedBufferReference(attachment.associatedElementData())), WTFMove(callback));
-
-#if HAVE(QUICKLOOK_THUMBNAILING)
-    requestThumbnail(attachment, attachment.identifier());
-#endif
 }
-
-#if HAVE(QUICKLOOK_THUMBNAILING)
-void WebPageProxy::updateAttachmentThumbnail(const String& identifier, const RefPtr<ShareableBitmap>& bitmap)
-{
-    if (!hasRunningProcess())
-        return;
-    
-    std::optional<ShareableBitmap::Handle> handle;
-    if (bitmap)
-        handle = bitmap->createHandle();
-
-    send(Messages::WebPage::UpdateAttachmentThumbnail(identifier, handle));
-}
-#endif
 
 void WebPageProxy::registerAttachmentIdentifierFromData(IPC::Connection& connection, const String& identifier, const String& contentType, const String& preferredFileName, const IPC::SharedBufferReference& data)
 {
@@ -14354,9 +14336,6 @@ void WebPageProxy::registerAttachmentIdentifierFromFilePath(IPC::Connection& con
     attachment->setFilePath(filePath);
     m_attachmentIdentifierToAttachmentMap.set(identifier, attachment.copyRef());
     platformRegisterAttachment(WTFMove(attachment), filePath);
-#if HAVE(QUICKLOOK_THUMBNAILING)
-    requestThumbnailWithPath(filePath, identifier);
-#endif
 }
 
 void WebPageProxy::registerAttachmentIdentifier(IPC::Connection& connection, const String& identifier)
@@ -14377,9 +14356,6 @@ void WebPageProxy::registerAttachmentsFromSerializedData(IPC::Connection& connec
         if (!attachmentForIdentifier(identifier)) {
             Ref attachment = ensureAttachment(identifier);
             attachment->updateFromSerializedRepresentation(WTFMove(serializedData.data), WTFMove(serializedData.mimeType));
-#if HAVE(QUICKLOOK_THUMBNAILING)
-            requestThumbnail(attachment, identifier);
-#endif
         }
     }
 }

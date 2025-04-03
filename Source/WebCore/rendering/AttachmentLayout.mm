@@ -286,11 +286,8 @@ AttachmentLayout::AttachmentLayout(const RenderAttachment& attachment, Attachmen
         attachment.attachmentElement().requestIconIfNeededWithSize(FloatSize());
         FloatSize iconSize = attachment.attachmentElement().iconSize();
         icon = attachment.attachmentElement().icon();
-        thumbnailIcon = attachment.attachmentElement().thumbnail();
-        if (thumbnailIcon)
-            iconSize = largestRectWithAspectRatioInsideRect(thumbnailIcon->size().aspectRatio(), FloatRect(0, 0, attachmentIconSize, attachmentIconSize)).size();
         
-        if (thumbnailIcon || icon) {
+        if (icon) {
             iconRect = FloatRect(FloatPoint((attachmentRect.width() / 2) - (iconSize.width() / 2), 0), iconSize);
             yOffset += iconRect.height() + attachmentItemMargin;
         }

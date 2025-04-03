@@ -2126,12 +2126,6 @@ public:
     ShouldUpdateAttachmentAttributes willUpdateAttachmentAttributes(const API::Attachment&);
 #endif
 
-#if ENABLE(ATTACHMENT_ELEMENT) && HAVE(QUICKLOOK_THUMBNAILING)
-    void updateAttachmentThumbnail(const String&, const RefPtr<WebCore::ShareableBitmap>&);
-    void requestThumbnailWithPath(const String&, const String&);
-    void requestThumbnail(const API::Attachment&, const String&);
-#endif
-
 #if ENABLE(APPLICATION_MANIFEST)
     void getApplicationManifest(CompletionHandler<void(const std::optional<WebCore::ApplicationManifest>&)>&&);
 #endif
@@ -3221,10 +3215,6 @@ private:
     void requestAttachmentIcon(IPC::Connection&, const String& identifier, const String& type, const String& path, const String& title, const WebCore::FloatSize&);
 
     RefPtr<WebCore::ShareableBitmap> iconForAttachment(const String& fileName, const String& contentType, const String& title, WebCore::FloatSize&);
-#endif
-
-#if ENABLE(ATTACHMENT_ELEMENT) && HAVE(QUICKLOOK_THUMBNAILING)
-    void requestThumbnail(WKQLThumbnailLoadOperation *);
 #endif
 
     void reportPageLoadResult(const WebCore::ResourceError&);

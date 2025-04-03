@@ -362,15 +362,6 @@ enum AV1ConfigurationRange {
 
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
-    Conditional=ATTACHMENT_ELEMENT,
-    JSGenerateToJSObject,
-] dictionary AttachmentThumbnailInfo {
-    unsigned long width;
-    unsigned long height;
-};
-
-[
-    ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
 ] dictionary TextIndicatorOptions {
     boolean useBoundingRectAndPaintAllContentForComplexRanges = false;
     boolean computeEstimatedBackgroundColor = false;
@@ -1384,7 +1375,6 @@ enum ContentsFormat {
 
     undefined setContentSizeCategory(ContentSizeCategory category);
 
-    [Conditional=ATTACHMENT_ELEMENT] AttachmentThumbnailInfo attachmentThumbnailInfo(HTMLAttachmentElement element);
     [Conditional=ATTACHMENT_ELEMENT, Conditional=SERVICE_CONTROLS] boolean hasImageControls(HTMLImageElement element);
 
     [Conditional=MEDIA_SESSION] double currentMediaSessionPosition(MediaSession session);

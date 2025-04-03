@@ -45,7 +45,6 @@
 #import "PageClient.h"
 #import "PlatformXRSystem.h"
 #import "PlaybackSessionManagerProxy.h"
-#import "QuickLookThumbnailLoader.h"
 #import "RemoteLayerTreeTransaction.h"
 #import "SafeBrowsingSPI.h"
 #import "SharedBufferReference.h"
@@ -736,35 +735,6 @@ void WebPageProxy::fullscreenVideoTextRecognitionTimerFired()
     });
 }
 #endif // ENABLE(VIDEO_PRESENTATION_MODE)
-
-#if HAVE(QUICKLOOK_THUMBNAILING)
-
-void WebPageProxy::requestThumbnail(WKQLThumbnailLoadOperation *operation)
-{
-    [operation setCompletionBlock:^{
-        RunLoop::protectedMain()->dispatch([this, operation = retainPtr(operation)] {
-            auto identifier = [operation identifier];
-            auto convertedImage = convertPlatformImageToBitmap([operation thumbnail], iconSize);
-            if (!convertedImage)
-                return;
-            this->updateAttachmentThumbnail(identifier, convertedImage);
-        });
-    }];
-
-    [[WKQLThumbnailQueueManager sharedInstance].queue addOperation:operation];
-}
-
-void WebPageProxy::requestThumbnail(const API::Attachment& attachment, const String& identifier)
-{
-    requestThumbnail(adoptNS([[WKQLThumbnailLoadOperation alloc] initWithAttachment:attachment identifier:identifier]).get());
-}
-
-void WebPageProxy::requestThumbnailWithPath(const String& filePath, const String& identifier)
-{
-    requestThumbnail(adoptNS([[WKQLThumbnailLoadOperation alloc] initWithURL:filePath identifier:identifier]).get());
-}
-
-#endif // HAVE(QUICKLOOK_THUMBNAILING)
 
 #if ENABLE(ATTACHMENT_ELEMENT) && PLATFORM(MAC)
 
