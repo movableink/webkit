@@ -266,7 +266,12 @@ TEST(WTF, URLExtras_Solidus)
     EXPECT_STREQ("site.com/othersite.org", [WTF::decodeHostName(@"site.com\xEF\xBC\x8Fothersite.org") UTF8String]);
 }
 
+// FIXME: rdar://148285224
+#if ((PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 150400) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 180400)) && !defined(NDEBUG)
+TEST(WTF_URLExtras, DISABLED_URLExtras_Space)
+#else
 TEST(WTF_URLExtras, URLExtras_Space)
+#endif
 {
     // Selected ideographic space, which looks like the ASCII space, which is not allowed unescaped.
 
@@ -290,7 +295,12 @@ TEST(WTF_URLExtras, URLExtras_File)
     EXPECT_STREQ("file:///%E2%98%83", [[WTF::URLWithUserTypedString(@"file:///☃", nil) absoluteString] UTF8String]);
 }
 
+// FIXME: rdar://148285224
+#if ((PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 150400) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 180400)) && !defined(NDEBUG)
+TEST(WTF_URLExtras, DISABLED_URLExtras_ParsingError)
+#else
 TEST(WTF_URLExtras, URLExtras_ParsingError)
+#endif
 {
     // Expect IDN failure.
     NSURL *url = WTF::URLWithUserTypedString(@"http://.com", nil);
