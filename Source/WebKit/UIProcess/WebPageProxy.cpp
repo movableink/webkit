@@ -1254,15 +1254,10 @@ void WebPageProxy::setResourceLoadClient(std::unique_ptr<API::ResourceLoadClient
 
 void WebPageProxy::handleMessage(IPC::Connection& connection, const String& messageName, const WebKit::UserData& messageBody)
 {
-    handleMessageShared(WebProcessProxy::fromConnection(connection), messageName, messageBody);
-}
-
-void WebPageProxy::handleMessageShared(const Ref<WebProcessProxy>& process, const String& messageName, const WebKit::UserData& messageBody)
-{
     if (!m_injectedBundleClient)
         return;
 
-    m_injectedBundleClient->didReceiveMessageFromInjectedBundle(this, messageName, process->transformHandlesToObjects(messageBody.protectedObject().get()).get());
+    m_injectedBundleClient->didReceiveMessageFromInjectedBundle(this, messageName, WebProcessProxy::fromConnection(connection)->transformHandlesToObjects(messageBody.protectedObject().get()).get());
 }
 
 void WebPageProxy::handleMessageWithAsyncReply(const String& messageName, const UserData& messageBody, CompletionHandler<void(UserData&&)>&& completionHandler)
@@ -8142,7 +8137,7 @@ void WebPageProxy::decidePolicyForResponse(IPC::Connection& connection, FrameInf
 {
     RefPtr frame = WebFrameProxy::webFrame(frameInfo.frameID);
     if (!frame)
-        return;
+        return completionHandler({ });
     decidePolicyForResponseShared(WebProcessProxy::fromConnection(connection), m_webPageID, WTFMove(frameInfo), navigationID, response, request, canShowMIMEType, downloadAttribute, isShowingInitialAboutBlank, activeDocumentCOOPValue, WTFMove(completionHandler));
 }
 

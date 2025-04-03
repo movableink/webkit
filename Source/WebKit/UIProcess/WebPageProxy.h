@@ -2180,7 +2180,6 @@ public:
 #if ENABLE(CONTENT_FILTERING)
     void contentFilterDidBlockLoadForFrameShared(Ref<WebProcessProxy>&&, const WebCore::ContentFilterUnblockHandler&, WebCore::FrameIdentifier);
 #endif
-    void handleMessageShared(const Ref<WebProcessProxy>&, const String& messageName, const WebKit::UserData&);
 
 #if ENABLE(SPEECH_SYNTHESIS)
     void speechSynthesisVoiceList(CompletionHandler<void(Vector<WebSpeechSynthesisVoice>&&)>&&);
