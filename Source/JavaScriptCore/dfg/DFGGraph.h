@@ -76,35 +76,45 @@ using CPSNaturalLoops = NaturalLoops<CPSCFG>;
 using SSANaturalLoops = NaturalLoops<SSACFG>;
 
 #define APPLY_THING_TO_DO(node, edge, thingToDo) thingToDo(node, edge);
-#define APPLY_THING_TO_DO_WITH_CHECK(node, edge, thingToDo) \
+#define APPLY_THING_TO_DO_BREAK_ON_DONE(node, edge, thingToDo) \
     if (thingToDo(node, edge) == IterationStatus::Done)     \
         return;
 
-#define DFG_NODE_DO_TO_CHILDREN_COMMON(graph, node, thingToDo, THING_TO_DO)                 \
-    do {                                                                                    \
-        Node* _node = (node);                                                               \
-        if (_node->flags() & NodeHasVarArgs) {                                              \
-            for (unsigned _childIdx = _node->firstChild();                                  \
-                 _childIdx < _node->firstChild() + _node->numChildren();                    \
-                 _childIdx++) {                                                             \
-                if (!!(graph).m_varArgChildren[_childIdx])                                  \
-                    THING_TO_DO(_node, (graph).m_varArgChildren[_childIdx], thingToDo)      \
-            }                                                                               \
-        } else {                                                                            \
-            for (unsigned _edgeIndex = 0; _edgeIndex < AdjacencyList::Size; _edgeIndex++) { \
-                Edge& _edge = _node->children.child(_edgeIndex);                            \
-                if (!_edge)                                                                 \
-                    break;                                                                  \
-                THING_TO_DO(_node, _edge, thingToDo)                                        \
-            }                                                                               \
-        }                                                                                   \
+#define ALWAYS_TRUE(edge) true
+#define NON_NULL_EDGE(edge) (!!(edge))
+
+#define DFG_NODE_DO_TO_CHILDREN_GENERIC(graph, node, thingToDo, THING_TO_DO, CHILD_CHECK)    \
+    do {                                                                                     \
+        Node* _node = (node);                                                                \
+        if (_node->flags() & NodeHasVarArgs) {                                               \
+            for (unsigned _childIdx = _node->firstChild();                                   \
+                _childIdx < _node->firstChild() + _node->numChildren();                      \
+                _childIdx++) {                                                               \
+                Edge& _edge = (graph).m_varArgChildren[_childIdx];                           \
+                if (CHILD_CHECK(_edge))                                                      \
+                    THING_TO_DO(_node, _edge, thingToDo);                                    \
+            }                                                                                \
+        } else {                                                                             \
+            for (unsigned _edgeIndex = 0; _edgeIndex < AdjacencyList::Size; _edgeIndex++) {  \
+                Edge& _edge = _node->children.child(_edgeIndex);                             \
+                if (!CHILD_CHECK(_edge))                                                     \
+                    break;                                                                   \
+                THING_TO_DO(_node, _edge, thingToDo);                                        \
+            }                                                                                \
+        }                                                                                    \
     } while (false)
+
+#define DFG_NODE_DO_TO_ALL_CHILDREN_COMMON(graph, node, thingToDo, THING_TO_DO) \
+    DFG_NODE_DO_TO_CHILDREN_GENERIC(graph, node, thingToDo, THING_TO_DO, ALWAYS_TRUE)
+
+#define DFG_NODE_DO_TO_CHILDREN_COMMON(graph, node, thingToDo, THING_TO_DO) \
+    DFG_NODE_DO_TO_CHILDREN_GENERIC(graph, node, thingToDo, THING_TO_DO, NON_NULL_EDGE)
 
 #define DFG_NODE_DO_TO_CHILDREN(graph, node, thingToDo) \
     DFG_NODE_DO_TO_CHILDREN_COMMON(graph, node, thingToDo, APPLY_THING_TO_DO)
 
-#define DFG_NODE_DO_TO_CHILDREN_WITH_CHECK(graph, node, thingToDo) \
-    DFG_NODE_DO_TO_CHILDREN_COMMON(graph, node, thingToDo, APPLY_THING_TO_DO_WITH_CHECK)
+#define DFG_NODE_DO_TO_CHILDREN_BREAK_ON_DONE(graph, node, thingToDo) \
+    DFG_NODE_DO_TO_CHILDREN_COMMON(graph, node, thingToDo, APPLY_THING_TO_DO_BREAK_ON_DONE)
 
 #define DFG_ASSERT(graph, node, assertion, ...) do {                    \
         if (!!(assertion))                                              \
@@ -778,59 +788,43 @@ public:
     {
         return NaturalBlockIterable(*this);
     }
-    
-    template<typename ChildFunctor>
-    ALWAYS_INLINE void doToChildrenWithNode(Node* node, const ChildFunctor& functor)
-    {
-        DFG_NODE_DO_TO_CHILDREN(*this, node, functor);
-    }
-    
+
+    template<typename Functor>
+    class ForwardingFunc {
+    public:
+        explicit ForwardingFunc(const Functor& functor)
+            : m_functor(functor)
+        {
+        }
+
+        template<typename NodeType>
+        ALWAYS_INLINE auto operator()(NodeType*, Edge& edge) const -> decltype(std::declval<Functor>()(edge))
+        {
+            return m_functor(edge);
+        }
+
+    private:
+        const Functor& m_functor;
+    };
+
     template<typename ChildFunctor>
     ALWAYS_INLINE void doToChildren(Node* node, const ChildFunctor& functor)
     {
-        class ForwardingFunc {
-        public:
-            ForwardingFunc(const ChildFunctor& functor)
-                : m_functor(functor)
-            {
-            }
-            
-            // This is a manually written func because we want ALWAYS_INLINE.
-            ALWAYS_INLINE void operator()(Node*, Edge& edge) const
-            {
-                m_functor(edge);
-            }
-        
-        private:
-            const ChildFunctor& m_functor;
-        };
+        DFG_NODE_DO_TO_CHILDREN(*this, node, (ForwardingFunc<ChildFunctor>(functor)));
+    }
     
-        doToChildrenWithNode(node, ForwardingFunc(functor));
+    template<typename ChildFunctor>
+    ALWAYS_INLINE void doToAllChildren(Node* node, const ChildFunctor& functor)
+    {
+        DFG_NODE_DO_TO_ALL_CHILDREN_COMMON(*this, node, (ForwardingFunc<ChildFunctor>(functor)), APPLY_THING_TO_DO);
     }
 
     template<typename ChildFunctor>
-    ALWAYS_INLINE void doToChildrenWithCheck(Node* node, const ChildFunctor& functor)
+    ALWAYS_INLINE void doToChildrenBreakOnDone(Node* node, const ChildFunctor& functor)
     {
-        class ForwardingFunc {
-        public:
-            ForwardingFunc(const ChildFunctor& functor)
-                : m_functor(functor)
-            {
-            }
-
-            // This is a manually written func because we want ALWAYS_INLINE.
-            ALWAYS_INLINE IterationStatus operator()(Node*, Edge& edge) const
-            {
-                return m_functor(edge);
-            }
-
-        private:
-            const ChildFunctor& m_functor;
-        };
-
-        DFG_NODE_DO_TO_CHILDREN_WITH_CHECK(*this, node, ForwardingFunc(functor));
+        DFG_NODE_DO_TO_CHILDREN_BREAK_ON_DONE(*this, node, (ForwardingFunc<ChildFunctor>(functor)));
     }
-    
+
     bool uses(Node* node, Node* child)
     {
         bool result = false;

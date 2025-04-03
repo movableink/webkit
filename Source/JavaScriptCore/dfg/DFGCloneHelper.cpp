@@ -65,7 +65,7 @@ bool CloneHelper::isNodeCloneable(Graph& graph, HashSet<Node*>& cloneableCache, 
     switch (nodeCloneStatusFor(node->op())) {
     case NodeCloneStatus::Common:
     case NodeCloneStatus::Special: {
-        graph.doToChildrenWithCheck(node, [&](Edge& edge) {
+        graph.doToChildrenBreakOnDone(node, [&](Edge& edge) {
             if (isNodeCloneable(graph, cloneableCache, edge.node()))
                 return IterationStatus::Continue;
             result = false;
@@ -112,16 +112,9 @@ Node* CloneHelper::cloneNodeImpl(BasicBlock* into, Node* node)
     case NodeCloneStatus::Common: {
         if (node->hasVarArgs()) {
             size_t firstChild = m_graph.m_varArgChildren.size();
-
-            uint32_t validChildrenCount = 0;
-            m_graph.doToChildren(node, [&](Edge& edge) {
+            m_graph.doToAllChildren(node, [&](Edge& edge) {
                 m_graph.m_varArgChildren.append(cloneEdge(edge));
-                ++validChildrenCount;
             });
-
-            uint32_t expectedCount = m_graph.numChildren(node);
-            for (uint32_t i = validChildrenCount; i < expectedCount; ++i)
-                m_graph.m_varArgChildren.append(Edge());
 
             Node* clone = into->cloneAndAppend(m_graph, node);
             clone->children.setFirstChild(firstChild);
