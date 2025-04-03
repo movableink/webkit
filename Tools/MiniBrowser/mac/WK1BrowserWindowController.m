@@ -340,6 +340,7 @@ static BOOL areEssentiallyEqual(double a, double b)
     preferences.siteSpecificQuirksModeEnabled = settings.siteSpecificQuirksModeEnabled;
     preferences.punchOutWhiteBackgroundsInDarkMode = settings.punchOutWhiteBackgroundsInDarkMode;
     preferences.mockCaptureDevicesEnabled = settings.useMockCaptureDevices;
+    preferences.allowUniversalAccessFromFileURLs = settings.allowUniversalAccessFromFileURLs;
 
     preferences.serviceControlsEnabled = settings.dataDetectorsEnabled;
     // There is no WebKitLegacy API on macOS for telephone number detection.

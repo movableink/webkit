@@ -280,6 +280,7 @@ static NSNumber *_currentBadge;
     configuration.websiteDataStore._resourceLoadStatisticsEnabled = _settingsController.resourceLoadStatisticsEnabled;
     configuration._attachmentElementEnabled = _settingsController.attachmentElementEnabled != AttachmentElementEnabledStateDisabled ? YES : NO;
     configuration._attachmentWideLayoutEnabled = _settingsController.attachmentElementEnabled == AttachmentElementEnabledStateWideLayoutEnabled ? YES : NO;
+    configuration._allowUniversalAccessFromFileURLs = _settingsController.allowUniversalAccessFromFileURLs;
 
     return configuration;
 }

@@ -71,6 +71,7 @@ static NSString * const UseMockCaptureDevicesPreferenceKey = @"UseMockCaptureDev
 static NSString * const AttachmentElementEnabledPreferenceKey = @"AttachmentElementEnabled";
 static NSString * const AdvancedPrivacyProtectionsPreferenceKey = @"AdvancedPrivacyProtectionsEnabled";
 static NSString * const AllowsContentJavascriptPreferenceKey = @"AllowsContentJavascript";
+static NSString * const AllowUniversalAccessFromFileURLsPreferenceKey = @"AllowUniversalAccessFromFileURLs";
 
 static NSString * const SiteIsolationOverlayPreferenceKey = @"SiteIsolationOverlayEnabled";
 
@@ -199,6 +200,7 @@ static NSMenu *addSubmenuToMenu(NSMenu *menu, NSString *title)
     addItem(@"Enable Data Detectors", @selector(toggleDataDetectorsEnabled:));
     addItem(@"Use Mock Capture Devices", @selector(toggleUseMockCaptureDevices:));
     addItem(@"Advanced Privacy Protections", @selector(toggleAdvancedPrivacyProtections:));
+    addItem(@"Disable local file restrictions", @selector(toggleAllowUniversalAccessFromFileURLs:));
 
     NSMenu *attachmentElementMenu = addSubmenu(@"Enable Attachment Element");
     addItemToMenu(attachmentElementMenu, @"Disabled", @selector(changeAttachmentElementEnabled:), NO, AttachmentElementDisabledTag);
@@ -410,6 +412,8 @@ static NSMenu *addSubmenuToMenu(NSMenu *menu, NSString *title)
         [menuItem setState:[self advancedPrivacyProtectionsEnabled] ? NSControlStateValueOn : NSControlStateValueOff];
     else if (action == @selector(toggleAllowsContentJavascript:))
         [menuItem setState:[self allowsContentJavascript] ? NSControlStateValueOn : NSControlStateValueOff];
+    else if (action == @selector(toggleAllowUniversalAccessFromFileURLs:))
+        [menuItem setState:[self allowUniversalAccessFromFileURLs] ? NSControlStateValueOn : NSControlStateValueOff];
     else if (action == @selector(toggleReserveSpaceForBanners:))
         [menuItem setState:[self isSpaceReservedForBanners] ? NSControlStateValueOn : NSControlStateValueOff];
     else if (action == @selector(toggleShowTiledScrollingIndicator:))
@@ -760,6 +764,16 @@ static NSMenu *addSubmenuToMenu(NSMenu *menu, NSString *title)
 - (BOOL)allowsContentJavascript
 {
     return [[NSUserDefaults standardUserDefaults] boolForKey:AllowsContentJavascriptPreferenceKey];
+}
+
+- (void)toggleAllowUniversalAccessFromFileURLs:(id)sender
+{
+    [self _toggleBooleanDefault:AllowUniversalAccessFromFileURLsPreferenceKey];
+}
+
+- (BOOL)allowUniversalAccessFromFileURLs
+{
+    return [[NSUserDefaults standardUserDefaults] boolForKey:AllowUniversalAccessFromFileURLsPreferenceKey];
 }
 
 - (BOOL)nonFastScrollableRegionOverlayVisible
