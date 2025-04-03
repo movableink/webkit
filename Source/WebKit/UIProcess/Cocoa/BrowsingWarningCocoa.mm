@@ -143,18 +143,18 @@ static NSString *browsingWarningText(BrowsingWarning::Data data)
 static NSMutableAttributedString *browsingDetailsText(const URL& url, SSBServiceLookupResult *result)
 {
     if (result.isPhishing) {
-        NSString *phishingDescription = WEB_UI_NSSTRING(@"Warnings are shown for websites that have been reported as deceptive. Deceptive websites try to trick you into believing they are legitimate websites you trust.", "Phishing warning description");
-        NSString *learnMore = WEB_UI_NSSTRING(@"Learn more…", "Action from safe browsing warning");
-        NSString *phishingActions = WEB_UI_NSSTRING(@"This website was reported as deceptive by %provider-display-name%. If you believe this website is safe, you can %report-an-error% to %provider%. Or, if you understand the risks involved, you can %bypass-link%.", "Phishing warning description");
-        NSString *reportAnError = WEB_UI_NSSTRING(@"report an error", "Action from safe browsing warning");
-        NSString *visitUnsafeWebsite = WEB_UI_NSSTRING(@"visit this unsafe website", "Action from safe browsing warning");
+        RetainPtr phishingDescription = WEB_UI_NSSTRING(@"Warnings are shown for websites that have been reported as deceptive. Deceptive websites try to trick you into believing they are legitimate websites you trust.", "Phishing warning description");
+        RetainPtr learnMore = WEB_UI_NSSTRING(@"Learn more…", "Action from safe browsing warning");
+        RetainPtr phishingActions = WEB_UI_NSSTRING(@"This website was reported as deceptive by %provider-display-name%. If you believe this website is safe, you can %report-an-error% to %provider%. Or, if you understand the risks involved, you can %bypass-link%.", "Phishing warning description");
+        RetainPtr reportAnError = WEB_UI_NSSTRING(@"report an error", "Action from safe browsing warning");
+        RetainPtr visitUnsafeWebsite = WEB_UI_NSSTRING(@"visit this unsafe website", "Action from safe browsing warning");
 
-        auto attributedString = adoptNS([[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@ %@\n\n%@", phishingDescription, learnMore, phishingActions]]);
-        addLinkAndReplace(attributedString.get(), learnMore, learnMore, learnMoreURL(result));
+        RetainPtr attributedString = adoptNS([[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@ %@\n\n%@", phishingDescription.get(), learnMore.get(), phishingActions.get()]]);
+        addLinkAndReplace(attributedString.get(), learnMore.get(), learnMore.get(), learnMoreURL(result));
         replace(attributedString.get(), @"%provider-display-name%", localizedProviderDisplayName(result));
         replace(attributedString.get(), @"%provider%", localizedProviderShortName(result));
-        addLinkAndReplace(attributedString.get(), @"%report-an-error%", reportAnError, reportAnErrorURL(url, result));
-        addLinkAndReplace(attributedString.get(), @"%bypass-link%", visitUnsafeWebsite, BrowsingWarning::visitUnsafeWebsiteSentinel());
+        addLinkAndReplace(attributedString.get(), @"%report-an-error%", reportAnError.get(), reportAnErrorURL(url, result));
+        addLinkAndReplace(attributedString.get(), @"%bypass-link%", visitUnsafeWebsite.get(), BrowsingWarning::visitUnsafeWebsiteSentinel());
         return attributedString.autorelease();
     }
 

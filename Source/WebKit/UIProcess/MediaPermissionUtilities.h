@@ -68,7 +68,7 @@ bool checkUsageDescriptionStringForType(MediaPermissionType);
 bool checkUsageDescriptionStringForSpeechRecognition();
 
 RetainPtr<NSString> applicationVisibleNameFromOrigin(const WebCore::SecurityOriginData&);
-NSString *applicationVisibleName();
+RetainPtr<NSString> applicationVisibleName();
 void alertForPermission(WebPageProxy&, MediaPermissionReason, const WebCore::SecurityOriginData&, CompletionHandler<void(bool)>&&);
 
 void requestAVCaptureAccessForType(MediaPermissionType, CompletionHandler<void(bool authorized)>&&);

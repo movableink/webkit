@@ -575,13 +575,13 @@ void VideoPresentationManagerProxy::invalidateInterface(WebCore::PlatformVideoPr
 {
     interface.setVideoPresentationModel(nullptr);
 
-    if (auto *layerHostView = interface.layerHostView()) {
+    if (RetainPtr layerHostView = interface.layerHostView()) {
         [layerHostView removeFromSuperview];
         interface.setLayerHostView(nullptr);
     }
 
-    if (auto *playerLayer = interface.playerLayer()) {
-        playerLayer.presentationModel = nil;
+    if (RetainPtr playerLayer = interface.playerLayer()) {
+        playerLayer.get().presentationModel = nil;
         interface.setPlayerLayer(nullptr);
     }
 
@@ -882,13 +882,13 @@ RetainPtr<WKLayerHostView> VideoPresentationManagerProxy::createLayerHostViewWit
         auto hostingView = adoptNS([[BELayerHierarchyHostingView alloc] init]);
         view->_hostingView = hostingView;
         [view addSubview:hostingView.get()];
-        auto layer = [hostingView layer];
+        RetainPtr layer = [hostingView layer];
 #else
-        auto layer = [view layer];
+        RetainPtr layer = [view layer];
 #endif
-        layer.masksToBounds = NO;
-        layer.name = @"WKLayerHostView layer";
-        layer.frame = CGRectMake(0, 0, initialSize.width(), initialSize.height());
+        layer.get().masksToBounds = NO;
+        layer.get().name = @"WKLayerHostView layer";
+        layer.get().frame = CGRectMake(0, 0, initialSize.width(), initialSize.height());
     }
 
 #if USE(EXTENSIONKIT)
@@ -1452,9 +1452,9 @@ void VideoPresentationManagerProxy::didCleanupFullscreen(PlaybackSessionContextI
 
     [interface->layerHostView() removeFromSuperview];
     interface->removeCaptionsLayer();
-    if (auto playerLayer = interface->playerLayer()) {
+    if (RetainPtr playerLayer = interface->playerLayer()) {
         // Return the video layer to the player layer
-        auto videoView = interface->layerHostView();
+        RetainPtr videoView = interface->layerHostView();
         [playerLayer addSublayer:[videoView layer]];
         [playerLayer layoutSublayers];
     } else {

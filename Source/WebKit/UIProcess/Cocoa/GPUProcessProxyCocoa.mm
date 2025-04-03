@@ -33,6 +33,7 @@
 #include "GPUProcessMessages.h"
 #include "MediaPermissionUtilities.h"
 #include "WebProcessProxy.h"
+#include <wtf/cf/TypeCastsCF.h>
 #include <wtf/cocoa/SpanCocoa.h>
 
 #if HAVE(POWERLOG_TASK_MODE_QUERY)
@@ -51,7 +52,7 @@ void GPUProcessProxy::platformInitializeGPUProcessParameters(GPUProcessCreationP
 {
     parameters.mobileGestaltExtensionHandle = createMobileGestaltSandboxExtensionIfNeeded();
     parameters.gpuToolsExtensionHandles = createGPUToolsSandboxExtensionHandlesIfNeeded();
-    parameters.applicationVisibleName = applicationVisibleName();
+    parameters.applicationVisibleName = applicationVisibleName().get();
 #if PLATFORM(MAC)
     if (auto launchServicesExtensionHandle = SandboxExtension::createHandleForMachLookup("com.apple.coreservices.launchservicesd"_s, std::nullopt))
         parameters.launchServicesExtensionHandle = WTFMove(*launchServicesExtensionHandle);
@@ -63,16 +64,16 @@ void GPUProcessProxy::platformInitializeGPUProcessParameters(GPUProcessCreationP
 #if HAVE(POWERLOG_TASK_MODE_QUERY)
 bool GPUProcessProxy::isPowerLoggingInTaskMode()
 {
-    CFDictionaryRef dictionary = nullptr;
+    RetainPtr<CFDictionaryRef> dictionary;
     if (PLQueryRegistered)
         dictionary = PLQueryRegistered(PLClientIDWebKit, CFSTR("TaskModeQuery"), nullptr);
     if (!dictionary)
         return false;
-    CFNumberRef taskModeRef = static_cast<CFNumberRef>(CFDictionaryGetValue(dictionary, CFSTR("Task Mode")));
+    RetainPtr taskModeRef = checked_cf_cast<CFNumberRef>(CFDictionaryGetValue(dictionary.get(), CFSTR("Task Mode")));
     if (!taskModeRef)
         return false;
     int taskMode = 0;
-    if (!CFNumberGetValue(taskModeRef, kCFNumberIntType, &taskMode))
+    if (!CFNumberGetValue(taskModeRef.get(), kCFNumberIntType, &taskMode))
         return false;
     return !!taskMode;
 }

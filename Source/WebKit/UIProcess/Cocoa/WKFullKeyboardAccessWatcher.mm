@@ -86,8 +86,8 @@ static inline BOOL platformIsFullKeyboardAccessEnabled()
 
     [self retrieveKeyboardUIModeFromPreferences:nil];
 
-    NSNotificationCenter *notificationCenter = nil;
-    NSString *notitificationName = nil;
+    RetainPtr<NSNotificationCenter> notificationCenter;
+    RetainPtr<NSString> notitificationName;
     
 #if PLATFORM(MAC)
     notificationCenter = [NSDistributedNotificationCenter defaultCenter];
@@ -98,15 +98,15 @@ static inline BOOL platformIsFullKeyboardAccessEnabled()
 #endif
     
     if (notitificationName)
-        [notificationCenter addObserver:self selector:@selector(retrieveKeyboardUIModeFromPreferences:) name:notitificationName object:nil];
+        [notificationCenter addObserver:self selector:@selector(retrieveKeyboardUIModeFromPreferences:) name:notitificationName.get() object:nil];
 
     return self;
 }
 
 + (BOOL)fullKeyboardAccessEnabled
 {
-    static WKFullKeyboardAccessWatcher *watcher = [[WKFullKeyboardAccessWatcher alloc] init];
-    return watcher->fullKeyboardAccessEnabled;
+    static NeverDestroyed<RetainPtr<WKFullKeyboardAccessWatcher>> watcher = adoptNS([[WKFullKeyboardAccessWatcher alloc] init]);
+    return watcher.get()->fullKeyboardAccessEnabled;
 }
 
 @end

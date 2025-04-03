@@ -147,9 +147,9 @@ void LegacyDownloadClient::decideDestinationWithSuggestedFilename(DownloadProxy&
     if (m_delegateMethods.downloadDecideDestinationWithSuggestedFilenameAllowOverwrite) {
         BOOL allowOverwrite = NO;
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        NSString *destination = [m_delegate _download:[_WKDownload downloadWithDownload:wrapper(downloadProxy)] decideDestinationWithSuggestedFilename:filename allowOverwrite:&allowOverwrite];
+        RetainPtr destination = [m_delegate _download:[_WKDownload downloadWithDownload:wrapper(downloadProxy)] decideDestinationWithSuggestedFilename:filename allowOverwrite:&allowOverwrite];
 ALLOW_DEPRECATED_DECLARATIONS_END
-        completionHandler(allowOverwrite ? AllowOverwrite::Yes : AllowOverwrite::No, destination);
+        completionHandler(allowOverwrite ? AllowOverwrite::Yes : AllowOverwrite::No, destination.get());
     } else {
         [m_delegate _download:[_WKDownload downloadWithDownload:wrapper(downloadProxy)] decideDestinationWithSuggestedFilename:filename completionHandler:makeBlockPtr([checker = CompletionHandlerCallChecker::create(m_delegate.get().get(), @selector(_download:decideDestinationWithSuggestedFilename:completionHandler:)), completionHandler = WTFMove(completionHandler)] (BOOL allowOverwrite, NSString *destination) mutable {
             if (checker->completionHandlerHasBeenCalled())

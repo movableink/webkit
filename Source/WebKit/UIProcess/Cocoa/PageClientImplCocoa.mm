@@ -139,17 +139,17 @@ void PageClientImplCocoa::didInvalidateDataForAttachment(API::Attachment& attach
 
 NSFileWrapper *PageClientImplCocoa::allocFileWrapperInstance() const
 {
-    Class cls = [m_webView configuration]._attachmentFileWrapperClass ?: [NSFileWrapper class];
-    return [cls alloc];
+    RetainPtr cls = [m_webView configuration]._attachmentFileWrapperClass ?: [NSFileWrapper class];
+    return [cls.get() alloc];
 }
 
 NSSet *PageClientImplCocoa::serializableFileWrapperClasses() const
 {
-    Class defaultFileWrapperClass = NSFileWrapper.class;
-    Class configuredFileWrapperClass = [m_webView configuration]._attachmentFileWrapperClass;
-    if (configuredFileWrapperClass && configuredFileWrapperClass != defaultFileWrapperClass)
-        return [NSSet setWithObjects:configuredFileWrapperClass, defaultFileWrapperClass, nil];
-    return [NSSet setWithObjects:defaultFileWrapperClass, nil];
+    RetainPtr<Class> defaultFileWrapperClass = NSFileWrapper.class;
+    RetainPtr<Class> configuredFileWrapperClass = [m_webView configuration]._attachmentFileWrapperClass;
+    if (configuredFileWrapperClass && configuredFileWrapperClass.get() != defaultFileWrapperClass.get())
+        return [NSSet setWithObjects:configuredFileWrapperClass.get(), defaultFileWrapperClass.get(), nil];
+    return [NSSet setWithObjects:defaultFileWrapperClass.get(), nil];
 }
 
 #endif
@@ -271,7 +271,7 @@ void PageClientImplCocoa::systemAudioCaptureChanged()
 
 WindowKind PageClientImplCocoa::windowKind()
 {
-    auto window = [m_webView window];
+    RetainPtr window = [m_webView window];
     if (!window)
         return WindowKind::Unparented;
     if ([window isKindOfClass:NSClassFromString(@"_SCNSnapshotWindow")])

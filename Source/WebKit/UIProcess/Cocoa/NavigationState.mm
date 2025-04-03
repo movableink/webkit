@@ -513,12 +513,12 @@ static void tryInterceptNavigation(Ref<API::NavigationAction>&& navigationAction
     if (navigationAction->shouldOpenAppLinks()) {
         auto url = navigationAction->request().url();
 
-        NSURL *referrerURL = nil;
+        RetainPtr<NSURL> referrerURL;
         auto request = navigationAction->request();
         request.setExistingHTTPReferrerToOriginString();
         auto referrerString = request.httpReferrer();
         if (!referrerString.isEmpty())
-            referrerURL = (NSURL *)URL { referrerString };
+            referrerURL = URL { referrerString }.createNSURL();
 
         auto* localCompletionHandler = new WTF::Function<void (bool)>([navigationAction = WTFMove(navigationAction), weakPage = WeakPtr { page }, completionHandler = WTFMove(completionHandler)] (bool success) mutable {
             ASSERT(RunLoop::isMain());
@@ -534,7 +534,7 @@ static void tryInterceptNavigation(Ref<API::NavigationAction>&& navigationAction
         });
 
         RetainPtr<_LSOpenConfiguration> configuration = adoptNS([[_LSOpenConfiguration alloc] init]);
-        configuration.get().referrerURL = referrerURL;
+        configuration.get().referrerURL = referrerURL.get();
 
         [LSAppLink openWithURL:url configuration:configuration.get() completionHandler:[localCompletionHandler](BOOL success, NSError *) {
             RunLoop::protectedMain()->dispatch([localCompletionHandler, success] {
@@ -556,13 +556,13 @@ static bool isUnsupportedWebExtensionNavigation(API::NavigationAction& navigatio
     if (subframeNavigation)
         return false;
 
-    auto *requiredBaseURL = page.cocoaView().get()._requiredWebExtensionBaseURL;
+    RetainPtr<NSURL> requiredBaseURL = page.cocoaView().get()._requiredWebExtensionBaseURL;
     if (!requiredBaseURL || navigationAction.shouldPerformDownload())
         return false;
 
     if (RefPtr extensionController = page.webExtensionController()) {
         auto extensionContext = extensionController->extensionContext(navigationAction.originalURL());
-        if (!extensionContext || !extensionContext->isURLForThisExtension(requiredBaseURL))
+        if (!extensionContext || !extensionContext->isURLForThisExtension(requiredBaseURL.get()))
             return true;
     }
 
@@ -774,10 +774,10 @@ void NavigationState::NavigationClient::decidePolicyForNavigationResponse(WebPag
 {
     RefPtr navigationState = m_navigationState.get();
     if (!navigationState || !navigationState->m_navigationDelegateMethods.webViewDecidePolicyForNavigationResponseDecisionHandler) {
-        NSURL *url = navigationResponse->response().nsURLResponse().URL;
+        RetainPtr<NSURL> url = navigationResponse->response().nsURLResponse().URL;
         if ([url isFileURL]) {
             BOOL isDirectory = NO;
-            BOOL exists = [[NSFileManager defaultManager] fileExistsAtPath:url.path isDirectory:&isDirectory];
+            BOOL exists = [[NSFileManager defaultManager] fileExistsAtPath:url.get().path isDirectory:&isDirectory];
 
             if (exists && !isDirectory && navigationResponse->canShowMIMEType())
                 listener->use();
@@ -927,8 +927,8 @@ static RetainPtr<NSError> createErrorWithRecoveryAttempter(WKWebView *webView, c
 
     auto userInfo = adoptNS([[NSMutableDictionary alloc] initWithObjectsAndKeys:recoveryAttempter.get(), _WKRecoveryAttempterErrorKey, nil]);
 
-    if (NSDictionary *originalUserInfo = originalError.userInfo)
-        [userInfo addEntriesFromDictionary:originalUserInfo];
+    if (RetainPtr<NSDictionary> originalUserInfo = originalError.userInfo)
+        [userInfo addEntriesFromDictionary:originalUserInfo.get()];
 
     return adoptNS([[NSError alloc] initWithDomain:originalError.domain code:originalError.code userInfo:userInfo.get()]);
 }
@@ -1341,8 +1341,8 @@ void NavigationState::NavigationClient::legacyWebCryptoMasterKey(WebPageProxy&, 
         return completionHandler(std::nullopt);
 
     if (navigationState->m_navigationDelegateMethods.webCryptoMasterKeyForWebView) {
-        if (NSData *data = [static_cast<id<WKNavigationDelegatePrivate>>(navigationDelegate) _webCryptoMasterKeyForWebView:navigationState->webView().get()])
-            return completionHandler(makeVector(data));
+        if (RetainPtr data = [static_cast<id<WKNavigationDelegatePrivate>>(navigationDelegate) _webCryptoMasterKeyForWebView:navigationState->webView().get()])
+            return completionHandler(makeVector(data.get()));
         return completionHandler(std::nullopt);
     }
     if (navigationState->m_navigationDelegateMethods.webCryptoMasterKeyForWebViewCompletionHandler) {
