@@ -1624,6 +1624,12 @@ public:
         ASSERT(m_alternative->m_terms.size());
 
         if (!max) {
+            // If we're removing a ForwardReference, we need to remove the corresponding references in
+            // m_forwardReferencesInLookbehind, or else we have a bad pointer.
+            // We know that the ForwardReference is the atom we just pushed, so it has to be at the end
+            // of m_forwardReferencesInLookbehind.
+            if (parenthesisMatchDirection() == Backward && m_alternative->m_terms.last().type == PatternTerm::Type::ForwardReference)
+                m_forwardReferencesInLookbehind.removeLast();
             m_alternative->removeLastTerm();
             return;
         }
