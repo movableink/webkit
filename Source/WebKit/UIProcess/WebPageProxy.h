@@ -3403,6 +3403,8 @@ private:
     String m_failingProvisionalLoadURL;
     bool m_isLoadingAlternateHTMLStringForFailingProvisionalLoad { false };
 
+    bool m_isCallingCreateNewPage { false };
+
     std::unique_ptr<WebPageLoadTiming> m_pageLoadTiming;
     HashSet<WebCore::FrameIdentifier> m_framesWithSubresourceLoadingForPageLoadTiming;
     RunLoop::Timer m_generatePageLoadTimingTimer;

@@ -26,16 +26,21 @@
 #import "config.h"
 
 #import "DeprecatedGlobalValues.h"
+#import "HTTPServer.h"
 #import "PlatformUtilities.h"
+#import "Test.h"
 #import "TestNavigationDelegate.h"
 #import "TestUIDelegate.h"
 #import "TestWKWebView.h"
+#import <WebKit/WKFrameInfo.h>
+#import <WebKit/WKFrameInfoPrivate.h>
 #import <WebKit/WKNavigationActionPrivate.h>
 #import <WebKit/WKPreferences.h>
 #import <WebKit/WKUIDelegatePrivate.h>
 #import <WebKit/WKWebViewConfiguration.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/WKWindowFeaturesPrivate.h>
+#import <WebKit/_WKFrameTreeNode.h>
 #import <wtf/RetainPtr.h>
 
 @class OpenAndCloseWindowUIDelegate;
@@ -449,6 +454,33 @@ TEST(WebKit, TryClose)
     EXPECT_TRUE([webView _tryClose]);
     [webView synchronouslyLoadHTMLString:@"<body onunload='runScriptThatDoesNotNeedToExist()'/>"];
     EXPECT_FALSE([webView _tryClose]);
+}
+
+TEST(WebKit, TryWindowOpenJavascriptURLInIframeSingleWindowApp)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/mainframe"_s, { "<iframe src='https://domain2.com/subframe'></iframe>"_s } },
+        { "/subframe"_s, { ""_s } }
+    }, TestWebKitAPI::HTTPServer::Protocol::HttpsProxy);
+
+    auto navigationDelegate = adoptNS([TestNavigationDelegate new]);
+    [navigationDelegate allowAnyTLSCertificate];
+    auto webView = adoptNS([TestWKWebView new]);
+    webView.get().configuration.preferences.javaScriptCanOpenWindowsAutomatically = YES;
+    auto uiDelegate = adoptNS([TestUIDelegate new]);
+    [webView setUIDelegate:uiDelegate.get()];
+    webView.get().navigationDelegate = navigationDelegate.get();
+
+    __block bool calledCreateWebViewWithConfiguration { false };
+    uiDelegate.get().createWebViewWithConfiguration = ^WKWebView *(WKWebViewConfiguration *, WKNavigationAction *navigationAction, WKWindowFeatures *) {
+        EXPECT_NULL([webView loadRequest:[navigationAction request]]);
+        calledCreateWebViewWithConfiguration = true;
+        return nil;
+    };
+
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://domain1.com/mainframe"]]];
+    [webView objectByEvaluatingJavaScript:@"window.open(\"javascript:alert('test');\")" inFrame:[webView firstChildFrame]];
+    TestWebKitAPI::Util::run(&calledCreateWebViewWithConfiguration);
 }
 
 TEST(WEBKIT, NavigationActionHasOpener)

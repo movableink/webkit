@@ -1978,6 +1978,11 @@ RefPtr<API::Navigation> WebPageProxy::loadRequest(WebCore::ResourceRequest&& req
 
     WEBPAGEPROXY_RELEASE_LOG(Loading, "loadRequest:");
 
+    if (m_isCallingCreateNewPage && request.url().protocolIsJavaScript()) {
+        WEBPAGEPROXY_RELEASE_LOG(Loading, "loadRequest: Not loading javascript URL during createNewPage.");
+        return nullptr;
+    }
+
     if (!hasRunningProcess())
         launchProcess(Site { request.url() }, ProcessLaunchReason::InitialProcess);
 
@@ -8407,6 +8412,7 @@ void WebPageProxy::createNewPage(IPC::Connection& connection, WindowFeatures&& w
         openedBlobURL,
         wantsNoOpener = windowFeatures.wantsNoOpener()
     ] (RefPtr<WebPageProxy> newPage) mutable {
+        m_isCallingCreateNewPage = false;
         if (!newPage) {
             reply(std::nullopt, std::nullopt);
             return;
@@ -8481,6 +8487,7 @@ void WebPageProxy::createNewPage(IPC::Connection& connection, WindowFeatures&& w
     }
 
     trySOAuthorization(configuration.copyRef(), WTFMove(navigationAction), *this, WTFMove(completionHandler), [this, protectedThis = Ref { *this }, configuration] (Ref<API::NavigationAction>&& navigationAction, CompletionHandler<void(RefPtr<WebPageProxy>&&)>&& completionHandler) mutable {
+        m_isCallingCreateNewPage = true;
         m_uiClient->createNewPage(*this, WTFMove(configuration), WTFMove(navigationAction), WTFMove(completionHandler));
     });
 }
