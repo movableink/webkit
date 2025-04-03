@@ -30,6 +30,7 @@
 namespace WebCore {
 
 class Element;
+class WeakPtrImplWithEventTargetData;
 
 namespace Style {
 
