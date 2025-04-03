@@ -2387,8 +2387,10 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValSetPrivateFieldGeneric, void, (JSGloba
 JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalSloppy, EncodedJSValue, (void* frame, JSScope* callerScopeChain, EncodedJSValue encodedThisValue))
 {
     CallFrame* calleeFrame = reinterpret_cast<CallFrame*>(frame);
+    CallFrame* callFrame = calleeFrame->callerFrame();
     // We can't trust our callee since it could be garbage but our caller's should be ok.
-    VM& vm = calleeFrame->callerFrame()->deprecatedVM();
+    VM& vm = callFrame->deprecatedVM();
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     calleeFrame->setCodeBlock(nullptr);
 
@@ -2398,8 +2400,10 @@ JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalSloppy, EncodedJSValue, (void* f
 JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalStrict, EncodedJSValue, (void* frame, JSScope* callerScopeChain, EncodedJSValue encodedThisValue))
 {
     CallFrame* calleeFrame = reinterpret_cast<CallFrame*>(frame);
+    CallFrame* callFrame = calleeFrame->callerFrame();
     // We can't trust our callee since it could be garbage but our caller's should be ok.
-    VM& vm = calleeFrame->callerFrame()->deprecatedVM();
+    VM& vm = callFrame->deprecatedVM();
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     calleeFrame->setCodeBlock(nullptr);
 
@@ -2409,8 +2413,10 @@ JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalStrict, EncodedJSValue, (void* f
 JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalSloppyTaintedByWithScope, EncodedJSValue, (void* frame, JSScope* callerScopeChain, EncodedJSValue encodedThisValue))
 {
     CallFrame* calleeFrame = reinterpret_cast<CallFrame*>(frame);
+    CallFrame* callFrame = calleeFrame->callerFrame();
     // We can't trust our callee since it could be garbage but our caller's should be ok.
-    VM& vm = calleeFrame->callerFrame()->deprecatedVM();
+    VM& vm = callFrame->deprecatedVM();
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     calleeFrame->setCodeBlock(nullptr);
 
@@ -2420,8 +2426,10 @@ JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalSloppyTaintedByWithScope, Encode
 JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalStrictTaintedByWithScope, EncodedJSValue, (void* frame, JSScope* callerScopeChain, EncodedJSValue encodedThisValue))
 {
     CallFrame* calleeFrame = reinterpret_cast<CallFrame*>(frame);
+    CallFrame* callFrame = calleeFrame->callerFrame();
     // We can't trust our callee since it could be garbage but our caller's should be ok.
-    VM& vm = calleeFrame->callerFrame()->deprecatedVM();
+    VM& vm = callFrame->deprecatedVM();
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     calleeFrame->setCodeBlock(nullptr);
 
