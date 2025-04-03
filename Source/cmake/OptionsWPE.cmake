@@ -5,6 +5,7 @@ SET_PROJECT_VERSION(2 49 1)
 
 set(USER_AGENT_BRANDING "" CACHE STRING "Branding to add to user agent string")
 
+# Update Source/WTF/wtf/Platform.h to match required GLib versions.
 find_package(GLIB 2.70.0 REQUIRED COMPONENTS gio gio-unix gobject gthread gmodule)
 find_package(HarfBuzz 2.7.4 REQUIRED COMPONENTS ICU)
 find_package(ICU 70.1 REQUIRED COMPONENTS data i18n uc)
