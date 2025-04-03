@@ -1501,7 +1501,7 @@ TEST(WebAuthenticationPanel, LAGetAssertionMultipleCredentialStore)
 }
 
 // FIXME rdar://145102423
-#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+#if ((PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000)) || PLATFORM(MAC)) && !defined(NDEBUG)
 TEST(WebAuthenticationPanel, DISABLED_LAGetAssertionNoMockNoUserGesture)
 #else
 TEST(WebAuthenticationPanel, LAGetAssertionNoMockNoUserGesture)
@@ -1779,7 +1779,7 @@ TEST(WebAuthenticationPanel, PublicKeyCredentialCreationOptionsMaximum2)
 }
 
 // FIXME rdar://145102423
-#if PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000) && !defined(NDEBUG)
+#if ((PLATFORM(IOS) && (__IPHONE_OS_VERSION_MIN_REQUIRED > 180000)) || PLATFORM(MAC)) && !defined(NDEBUG)
 TEST(WebAuthenticationPanel, DISABLED_MakeCredentialSPITimeout)
 #else
 TEST(WebAuthenticationPanel, MakeCredentialSPITimeout)
