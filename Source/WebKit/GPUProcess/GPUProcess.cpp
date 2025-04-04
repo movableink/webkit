@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -298,7 +298,7 @@ void GPUProcess::updateGPUProcessPreferences(GPUProcessPreferences&& preferences
 
 #if ENABLE(VP9)
     if (updatePreference(m_preferences.vp9DecoderEnabled, preferences.vp9DecoderEnabled)) {
-        PlatformMediaSessionManager::setShouldEnableVP9Decoder(*m_preferences.vp9DecoderEnabled);
+        VP9TestingOverrides::singleton().setShouldEnableVP9Decoder(*m_preferences.vp9DecoderEnabled);
 #if PLATFORM(COCOA)
         if (!m_haveEnabledVP9Decoder && *m_preferences.vp9DecoderEnabled) {
             m_haveEnabledVP9Decoder = true;
@@ -306,9 +306,10 @@ void GPUProcess::updateGPUProcessPreferences(GPUProcessPreferences&& preferences
         }
 #endif
     }
-    if (preferences.swVPDecodersAlwaysEnabled != std::exchange(m_preferences.swVPDecodersAlwaysEnabled, preferences.swVPDecodersAlwaysEnabled))
-        PlatformMediaSessionManager::setSWVPDecodersAlwaysEnabled(m_preferences.swVPDecodersAlwaysEnabled);
 #if PLATFORM(COCOA)
+    if (preferences.swVPDecodersAlwaysEnabled != std::exchange(m_preferences.swVPDecodersAlwaysEnabled, preferences.swVPDecodersAlwaysEnabled))
+        VP9TestingOverrides::singleton().setSWVPDecodersAlwaysEnabled(m_preferences.swVPDecodersAlwaysEnabled);
+
     if (!m_haveEnabledSWVP9Decoder && WebCore::shouldEnableSWVP9Decoder()) {
         WebCore::registerWebKitVP9Decoder();
         m_haveEnabledSWVP9Decoder = true;
