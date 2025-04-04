@@ -69,13 +69,10 @@ bool GPUProcessProxy::isPowerLoggingInTaskMode()
         dictionary = PLQueryRegistered(PLClientIDWebKit, CFSTR("TaskModeQuery"), nullptr);
     if (!dictionary)
         return false;
-    RetainPtr taskModeRef = checked_cf_cast<CFNumberRef>(CFDictionaryGetValue(dictionary.get(), CFSTR("Task Mode")));
+    RetainPtr taskModeRef = checked_cf_cast<CFBooleanRef>(CFDictionaryGetValue(dictionary.get(), CFSTR("Task Mode")));
     if (!taskModeRef)
         return false;
-    int taskMode = 0;
-    if (!CFNumberGetValue(taskModeRef.get(), kCFNumberIntType, &taskMode))
-        return false;
-    return !!taskMode;
+    return !!CFBooleanGetValue(taskModeRef.get());
 }
 
 void GPUProcessProxy::enablePowerLogging()
