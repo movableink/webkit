@@ -99,7 +99,7 @@ protected:
 
     static ScrollableArea* scrollableAreaForSourceRenderer(const RenderElement*, Document&);
 
-    std::optional<ResolvedScrollDirection> resolvedScrollDirection() const;
+    ResolvedScrollDirection resolvedScrollDirection() const;
 
 private:
     explicit ScrollTimeline();

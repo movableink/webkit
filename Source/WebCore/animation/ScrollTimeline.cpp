@@ -186,17 +186,16 @@ AnimationTimelinesController* ScrollTimeline::controller() const
     return nullptr;
 }
 
-std::optional<ScrollTimeline::ResolvedScrollDirection> ScrollTimeline::resolvedScrollDirection() const
+ScrollTimeline::ResolvedScrollDirection ScrollTimeline::resolvedScrollDirection() const
 {
-    RefPtr source = this->source();
-    if (!source)
-        return { };
+    auto writingMode = [&] -> WritingMode {
+        if (RefPtr source = this->source()) {
+            if (CheckedPtr renderer = source->renderer())
+                return renderer->style().writingMode();
+        }
 
-    CheckedPtr renderer = source->renderer();
-    if (!renderer)
-        return { };
-
-    auto writingMode = renderer->style().writingMode();
+        return { RenderStyle::initialWritingMode(), RenderStyle::initialDirection(), RenderStyle::initialTextOrientation() };
+    }();
 
     auto isVertical = [&] {
         switch (m_axis) {
@@ -229,7 +228,7 @@ std::optional<ScrollTimeline::ResolvedScrollDirection> ScrollTimeline::resolvedS
 
     auto isReversed = (isVertical && !writingMode.isAnyTopToBottom()) || (!isVertical && !writingMode.isAnyLeftToRight());
 
-    return { { isVertical, isReversed } };
+    return { isVertical, isReversed };
 }
 
 void ScrollTimeline::cacheCurrentTime()
@@ -244,11 +243,8 @@ void ScrollTimeline::cacheCurrentTime()
         if (!sourceScrollableArea)
             return { };
         auto scrollDirection = resolvedScrollDirection();
-        if (!scrollDirection)
-            return { };
-
-        float scrollOffset = scrollDirection->isVertical ? sourceScrollableArea->scrollOffset().y() : sourceScrollableArea->scrollOffset().x();
-        float maxScrollOffset = scrollDirection->isVertical ? sourceScrollableArea->maximumScrollOffset().y() : sourceScrollableArea->maximumScrollOffset().x();
+        float scrollOffset = scrollDirection.isVertical ? sourceScrollableArea->scrollOffset().y() : sourceScrollableArea->scrollOffset().x();
+        float maxScrollOffset = scrollDirection.isVertical ? sourceScrollableArea->maximumScrollOffset().y() : sourceScrollableArea->maximumScrollOffset().x();
         // Chrome appears to clip the current time of a scroll timeline in the [0-100] range.
         // We match this behavior for compatibility reasons, see https://github.com/w3c/csswg-drafts/issues/11033.
         if (maxScrollOffset > 0)
@@ -342,10 +338,7 @@ std::optional<WebAnimationTime> ScrollTimeline::currentTime()
         return { };
 
     auto scrollDirection = resolvedScrollDirection();
-    if (!scrollDirection)
-        return { };
-
-    auto distance = scrollDirection->isReversed ? data.rangeEnd - data.scrollOffset : data.scrollOffset - data.rangeStart;
+    auto distance = scrollDirection.isReversed ? data.rangeEnd - data.scrollOffset : data.scrollOffset - data.rangeStart;
     auto progress = distance / range;
     return WebAnimationTime::fromPercentage(progress * 100);
 }

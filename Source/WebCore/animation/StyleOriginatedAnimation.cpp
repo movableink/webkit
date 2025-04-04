@@ -67,7 +67,7 @@ void StyleOriginatedAnimation::tick()
     bool wasRelevant = isRelevant();
     
     WebAnimation::tick();
-    invalidateDOMEvents(shouldFireDOMEvents());
+    invalidateDOMEvents();
 
     // If a style-originated animation transitions from a non-idle state to an idle state, it means it was
     // canceled using the Web Animations API and it should be disassociated from its owner element.
@@ -256,29 +256,11 @@ WebAnimationTime StyleOriginatedAnimation::effectTimeAtEnd() const
     return 0_s;
 }
 
-auto StyleOriginatedAnimation::shouldFireDOMEvents() const -> ShouldFireEvents
-{
-    if (!m_owningElement)
-        return ShouldFireEvents::No;
-
-    auto& document = m_owningElement->document();
-    if (is<CSSAnimation>(*this)) {
-        if (document.hasListenerType(Document::ListenerType::CSSAnimation))
-            return ShouldFireEvents::YesForCSSAnimation;
-        return ShouldFireEvents::No;
-    }
-    ASSERT(is<CSSTransition>(*this));
-    if (document.hasListenerType(Document::ListenerType::CSSTransition))
-        return ShouldFireEvents::YesForCSSTransition;
-    return ShouldFireEvents::No;
-}
-
 template<typename F> void StyleOriginatedAnimation::invalidateDOMEvents(F&& callback)
 {
     WebAnimationTime cancelationTime = 0_s;
 
-    auto shouldFireEvents = shouldFireDOMEvents();
-    if (shouldFireEvents != ShouldFireEvents::No) {
+    if (m_owningElement) {
         if (auto* animationEffect = effect()) {
             if (auto activeTime = animationEffect->getBasicTiming().activeTime)
                 cancelationTime = *activeTime;
@@ -287,14 +269,14 @@ template<typename F> void StyleOriginatedAnimation::invalidateDOMEvents(F&& call
 
     callback();
 
-    invalidateDOMEvents(shouldFireEvents, cancelationTime);
+    invalidateDOMEvents(cancelationTime);
 }
 
-void StyleOriginatedAnimation::invalidateDOMEvents(ShouldFireEvents shouldFireEvents, WebAnimationTime cancelationTime)
+void StyleOriginatedAnimation::invalidateDOMEvents(WebAnimationTime cancelationTime)
 {
     if (!m_owningElement)
         return;
-    
+
     auto isPending = pending();
     if (isPending && m_wasPending)
         return;
@@ -338,8 +320,7 @@ void StyleOriginatedAnimation::invalidateDOMEvents(ShouldFireEvents shouldFireEv
     bool isBefore = currentPhase == AnimationEffectPhase::Before;
     bool isIdle = currentPhase == AnimationEffectPhase::Idle;
 
-    switch (shouldFireEvents) {
-    case ShouldFireEvents::YesForCSSAnimation:
+    if (isCSSAnimation()) {
         // https://drafts.csswg.org/css-animations-2/#events
         if ((wasIdle || wasBefore) && isActive)
             enqueueDOMEvent(eventNames().animationstartEvent, intervalStart, effectTimeAtStart());
@@ -363,8 +344,7 @@ void StyleOriginatedAnimation::invalidateDOMEvents(ShouldFireEvents shouldFireEv
             enqueueDOMEvent(eventNames().animationendEvent, intervalStart, effectTimeAtEnd());
         } else if ((!wasIdle && !wasAfter) && isIdle)
             enqueueDOMEvent(eventNames().animationcancelEvent, cancelationTime, cancelationTime);
-        break;
-    case ShouldFireEvents::YesForCSSTransition:
+    } else if (isCSSTransition()) {
         // https://drafts.csswg.org/css-transitions-2/#transition-events
         if (wasIdle && (isPending || isBefore))
             enqueueDOMEvent(eventNames().transitionrunEvent, intervalStart, effectTimeAtStart());
@@ -392,9 +372,6 @@ void StyleOriginatedAnimation::invalidateDOMEvents(ShouldFireEvents shouldFireEv
             enqueueDOMEvent(eventNames().transitionendEvent, intervalStart, effectTimeAtEnd());
         } else if ((!wasIdle && !wasAfter) && isIdle)
             enqueueDOMEvent(eventNames().transitioncancelEvent, cancelationTime, cancelationTime);
-        break;
-    case ShouldFireEvents::No:
-        break;
     }
 
     m_wasPending = isPending;

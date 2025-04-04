@@ -297,23 +297,21 @@ void DocumentTimeline::removeReplacedAnimations()
         //    event queue along with its target, animation. For the scheduled event time, use the result of applying the procedure
         //    to convert timeline time to origin-relative time to the current time of the timeline with which animation is associated.
         //    Otherwise, queue a task to dispatch removeEvent at animation. The task source for this task is the DOM manipulation task source.
-        if (animation->hasEventListeners(eventNames.removeEvent)) {
-            auto scheduledTime = [&]() -> std::optional<Seconds> {
-                if (auto* documentTimeline = dynamicDowncast<DocumentTimeline>(animation->timeline())) {
-                    if (auto currentTime = documentTimeline->currentTime()) {
-                        ASSERT(currentTime->time());
-                        return documentTimeline->convertTimelineTimeToOriginRelativeTime(*currentTime->time());
-                    }
+        auto scheduledTime = [&]() -> std::optional<Seconds> {
+            if (auto* documentTimeline = dynamicDowncast<DocumentTimeline>(animation->timeline())) {
+                if (auto currentTime = documentTimeline->currentTime()) {
+                    ASSERT(currentTime->time());
+                    return documentTimeline->convertTimelineTimeToOriginRelativeTime(*currentTime->time());
                 }
-                return std::nullopt;
-            }();
-            auto animationCurrentTime = [&]() -> std::optional<Seconds> {
-                if (auto animationTime = animation->currentTime())
-                    return animationTime->time();
-                return std::nullopt;
-            }();
-            animation->enqueueAnimationPlaybackEvent(eventNames.removeEvent, animationCurrentTime, scheduledTime);
-        }
+            }
+            return std::nullopt;
+        }();
+        auto animationCurrentTime = [&]() -> std::optional<Seconds> {
+            if (auto animationTime = animation->currentTime())
+                return animationTime->time();
+            return std::nullopt;
+        }();
+        animation->enqueueAnimationPlaybackEvent(eventNames.removeEvent, animationCurrentTime, scheduledTime);
 
         animationsToRemove.append(animation.get());
     }
