@@ -207,11 +207,10 @@ static JSValueRef evaluateJavaScriptCallback(JSContextRef context, JSObjectRef f
     // This is using the JSC C API so we cannot take a std::span in argument directly.
     auto arguments = unsafeMakeSpan(rawArguments, rawArgumentCount);
 
-    ASSERT(arguments.size() == 4);
+    ASSERT(arguments.size() == 3);
     ASSERT(JSValueIsNumber(context, arguments[0]));
     ASSERT(JSValueIsNumber(context, arguments[1]));
-    ASSERT(JSValueIsNumber(context, arguments[2]));
-    ASSERT(JSValueIsObject(context, arguments[3]) || JSValueIsString(context, arguments[3]));
+    ASSERT(JSValueIsObject(context, arguments[2]) || JSValueIsString(context, arguments[2]));
 
     auto automationSessionProxy = WebProcess::singleton().automationSessionProxy();
     if (!automationSessionProxy)
@@ -221,21 +220,17 @@ static JSValueRef evaluateJavaScriptCallback(JSContextRef context, JSObjectRef f
     if (!ObjectIdentifier<WebCore::FrameIdentifierType>::isValidIdentifier(rawFrameID))
         return JSValueMakeUndefined(context);
 
-    auto rawProcessID = JSValueToNumber(context, arguments[1], exception);
-    if (!ObjectIdentifier<WebCore::ProcessIdentifierType>::isValidIdentifier(rawProcessID))
-        return JSValueMakeUndefined(context);
-
     WebCore::FrameIdentifier frameID(rawFrameID);
-    uint64_t rawCallbackID = JSValueToNumber(context, arguments[2], exception);
+    uint64_t rawCallbackID = JSValueToNumber(context, arguments[1], exception);
     if (!WebAutomationSessionProxy::JSCallbackIdentifier::isValidIdentifier(rawCallbackID))
         return JSValueMakeUndefined(context);
     WebAutomationSessionProxy::JSCallbackIdentifier callbackID(rawCallbackID);
 
-    if (JSValueIsString(context, arguments[3])) {
-        auto result = adoptRef(JSValueToStringCopy(context, arguments[3], exception));
+    if (JSValueIsString(context, arguments[2])) {
+        auto result = adoptRef(JSValueToStringCopy(context, arguments[2], exception));
         automationSessionProxy->didEvaluateJavaScriptFunction(frameID, callbackID, result->string(), { });
-    } else if (JSValueIsObject(context, arguments[3])) {
-        JSObjectRef error = JSValueToObject(context, arguments[3], exception);
+    } else if (JSValueIsObject(context, arguments[2])) {
+        JSObjectRef error = JSValueToObject(context, arguments[2], exception);
         JSValueRef nameValue = JSObjectGetProperty(context, error, OpaqueJSString::tryCreate("name"_s).get(), exception);
         String exceptionName = adoptRef(JSValueToStringCopy(context, nameValue, nullptr))->string();
         String errorType = Inspector::Protocol::AutomationHelpers::getEnumConstantValue(Inspector::Protocol::Automation::ErrorMessage::JavaScriptError);
