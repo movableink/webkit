@@ -1244,6 +1244,8 @@ public:
     RefPtr<Document> protectedMainFrameDocument() const { return mainFrameDocument(); }
     bool isTopDocument() const { return mainFrameDocument() == this; }
 
+    RefPtr<Document> sameOriginTopLevelTraversable() const;
+
     ScriptRunner* scriptRunnerIfExists() { return m_scriptRunner.get(); }
     inline ScriptRunner& scriptRunner();
     Ref<ScriptRunner> protectedScriptRunner();

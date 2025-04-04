@@ -258,13 +258,11 @@ void HTMLDialogElement::runFocusingSteps()
     else if (m_isModal)
         protectedDocument()->setFocusedElement(nullptr); // Focus fixup rule
 
-    if (!controlDocument->isSameOriginAsTopDocument())
+    RefPtr topDocument = controlDocument->sameOriginTopLevelTraversable();
+    if (!topDocument)
         return;
 
-    if (RefPtr mainFrameDocument = controlDocument->mainFrameDocument())
-        mainFrameDocument->clearAutofocusCandidates();
-    else
-        LOG_ONCE(SiteIsolation, "Unable to fully perform HTMLDialogElement::runFocusingSteps() without access to the main frame document ");
+    topDocument->clearAutofocusCandidates();
     page->setAutofocusProcessed();
 }
 

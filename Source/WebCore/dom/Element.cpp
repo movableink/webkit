@@ -3025,8 +3025,8 @@ Node::InsertedIntoAncestorResult Element::insertedIntoAncestor(InsertionType ins
         if (UNLIKELY(isDefinedCustomElement()))
             CustomElementReactionQueue::enqueueConnectedCallbackIfNeeded(*this);
         if (shouldAutofocus(*this)) {
-            if (RefPtr mainFrameDocument = document().mainFrameDocument())
-                mainFrameDocument->appendAutofocusCandidate(*this);
+            if (RefPtr topDocument = document().sameOriginTopLevelTraversable())
+                topDocument->appendAutofocusCandidate(*this);
         }
 
         if (hasAttributesWithoutUpdate()) {

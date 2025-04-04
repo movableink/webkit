@@ -1113,13 +1113,11 @@ static void runPopoverFocusingSteps(HTMLElement& popover)
 
     control->runFocusingStepsForAutofocus();
 
-    if (!controlDocument->isSameOriginAsTopDocument())
+    RefPtr topDocument = controlDocument->sameOriginTopLevelTraversable();
+    if (!topDocument)
         return;
 
-    if (RefPtr mainFrameDocument = controlDocument->mainFrameDocument())
-        mainFrameDocument->clearAutofocusCandidates();
-    else
-        LOG_ONCE(SiteIsolation, "Unable to fully perform runPopoverFocusingSteps() without access to the main frame document ");
+    topDocument->clearAutofocusCandidates();
     page->setAutofocusProcessed();
 }
 

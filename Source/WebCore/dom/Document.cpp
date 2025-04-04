@@ -7701,6 +7701,26 @@ Document* Document::mainFrameDocument() const
     return document;
 }
 
+RefPtr<Document> Document::sameOriginTopLevelTraversable() const
+{
+    if (!m_frame)
+        return nullptr;
+
+    RefPtr<Frame> topLevelAncestorFrame = m_frame.get();
+    for (Frame* parent = topLevelAncestorFrame->tree().parent(); parent; parent = parent->tree().parent())
+        topLevelAncestorFrame = parent;
+
+    RefPtr localTopAncestor = dynamicDowncast<LocalFrame>(topLevelAncestorFrame);
+    if (!localTopAncestor)
+        return nullptr;
+
+    RefPtr document = localTopAncestor->document();
+    if (!document)
+        return nullptr;
+
+    return document->protectedSecurityOrigin()->isSameOriginDomain(protectedSecurityOrigin()) ? document : nullptr;
+}
+
 RefPtr<LocalFrame> Document::localMainFrame() const
 {
     if (RefPtr page = protectedPage())
