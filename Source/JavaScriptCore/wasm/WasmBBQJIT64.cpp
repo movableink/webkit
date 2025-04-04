@@ -3551,6 +3551,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addFusedIfCompare(OpType op, Expression
     scratches.unbindPreserved();
     Location leftLocation, rightLocation;
     RegisterSet liveScratchGPRs, liveScratchFPRs;
+    liveScratchFPRs.add(scratches.fpr(0), Width64);
     if (foldResult == BranchNotFolded) {
         ASSERT(!left.isConst() || !right.isConst()); // If they're both constants, we should have folded.
 
