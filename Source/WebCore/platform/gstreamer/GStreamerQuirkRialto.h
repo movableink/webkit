@@ -42,6 +42,7 @@ public:
     std::optional<bool> isHardwareAccelerated(GstElementFactory*) final;
     bool shouldParseIncomingLibWebRTCBitStream() const final { return false; }
     unsigned getAdditionalPlaybinFlags() const { return getGstPlayFlag("text") | getGstPlayFlag("native-audio") | getGstPlayFlag("native-video"); }
+    bool needsCustomInstantRateChange() const final { return true; }
 
 private:
     GRefPtr<GstCaps> m_sinkCaps;

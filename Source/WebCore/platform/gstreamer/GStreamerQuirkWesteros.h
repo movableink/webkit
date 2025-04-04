@@ -34,6 +34,7 @@ public:
     void configureElement(GstElement*, const OptionSet<ElementRuntimeCharacteristics>&) final;
     std::optional<bool> isHardwareAccelerated(GstElementFactory*) final;
     unsigned getAdditionalPlaybinFlags() const final { return getGstPlayFlag("text") | getGstPlayFlag("native-video"); }
+    bool needsCustomInstantRateChange() const final { return true; }
 
 private:
     GRefPtr<GstCaps> m_sinkCaps;

@@ -698,9 +698,11 @@ static void webKitMediaSrcStreamFlush(Stream* stream, bool isSeekingFlush)
             // We need to increase the base by the running time accumulated during the previous segment.
             GstClockTime pipelineRunningTime = gst_segment_to_running_time(&streamingMembers->segment, GST_FORMAT_TIME, pipelineStreamTime);
             if ((GST_CLOCK_TIME_IS_VALID(pipelineRunningTime))) {
-                GST_DEBUG_OBJECT(stream->source, "Resetting segment to current pipeline running time (%" GST_TIME_FORMAT " and stream time (%" GST_TIME_FORMAT " = %s)",
-                    GST_TIME_ARGS(pipelineRunningTime), GST_TIME_ARGS(pipelineStreamTime), streamTime.toString().ascii().data());
+                GST_DEBUG_OBJECT(stream->source, "Resetting segment to current pipeline running time (%" GST_TIME_FORMAT
+                    " and stream time (%" GST_TIME_FORMAT " = %s), updating rate to %f", GST_TIME_ARGS(pipelineRunningTime),
+                    GST_TIME_ARGS(pipelineStreamTime), streamTime.toString().ascii().data(), stream->source->priv->rate);
                 streamingMembers->segment.base = pipelineRunningTime;
+                streamingMembers->segment.rate = stream->source->priv->rate;
                 streamingMembers->segment.start = streamingMembers->segment.time = static_cast<GstClockTime>(pipelineStreamTime);
             }
         }
@@ -834,6 +836,25 @@ static gboolean webKitMediaSrcSendEvent(GstElement* element, GstEvent* eventTran
         GST_DEBUG_OBJECT(element, "Handling seek event: %" GST_PTR_FORMAT, event.get());
         webKitMediaSrcSeek(WEBKIT_MEDIA_SRC(element), start, rate);
         return true;
+    }
+    case GST_EVENT_CUSTOM_DOWNSTREAM_OOB: {
+        WebKitMediaSrc* source = WEBKIT_MEDIA_SRC(element);
+        bool forwardToAllPads = GStreamerQuirksManager::singleton().analyzeWebKitMediaSrcCustomEvent(event);
+        bool wasEventHandledByAnyStream = false;
+        bool wasEventHandledByAllStreams = false;
+        if (forwardToAllPads) {
+            wasEventHandledByAllStreams = !source->priv->streams.isEmpty();
+            for (const RefPtr<Stream>& stream : source->priv->streams.values()) {
+                bool wasHandled = gst_pad_push_event(stream->pad.get(), gst_event_ref(event.get()));
+                wasEventHandledByAllStreams &= wasHandled;
+                wasEventHandledByAnyStream |= wasHandled;
+            }
+        } else
+            wasEventHandledByAnyStream = GST_ELEMENT_CLASS(webkit_media_src_parent_class)->send_event(element, event.leakRef());
+        auto rate = GStreamerQuirksManager::singleton().processWebKitMediaSrcCustomEvent(event, wasEventHandledByAnyStream, wasEventHandledByAllStreams);
+        if (rate.has_value())
+            source->priv->rate = rate.value();
+        return forwardToAllPads ? wasEventHandledByAllStreams : wasEventHandledByAnyStream;
     }
     default:
         return GST_ELEMENT_CLASS(webkit_media_src_parent_class)->send_event(element, event.leakRef());

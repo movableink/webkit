@@ -20,6 +20,7 @@
 
 #include "config.h"
 #include "GStreamerQuirks.h"
+#include <optional>
 
 #if USE(GSTREAMER)
 
@@ -348,6 +349,94 @@ void GStreamerQuirksManager::processWebAudioSilentBuffer(GstBuffer* buffer) cons
         if (quirk->processWebAudioSilentBuffer(buffer))
             break;
     }
+}
+
+bool GStreamerQuirksManager::needsCustomInstantRateChange() const
+{
+    for (auto& quirk : m_quirks) {
+        if (quirk->needsCustomInstantRateChange())
+            return true;
+    }
+    return false;
+}
+
+// Returning processed and didInstantRateChange.
+std::pair<bool, bool> GStreamerQuirksManager::applyCustomInstantRateChange(
+    bool isPipelinePlaying, bool isPipelineWaitingPreroll, float playbackRate, bool mute, GstElement* pipeline) const
+{
+    for (auto& quirk : m_quirks) {
+        if (quirk->needsCustomInstantRateChange()) {
+            return quirk->applyCustomInstantRateChange(isPipelinePlaying, isPipelineWaitingPreroll, playbackRate,
+                mute, pipeline);
+        }
+    }
+    return { false, false };
+}
+
+// Returning forwardToAllPads.
+bool GStreamerQuirksManager::analyzeWebKitMediaSrcCustomEvent(GRefPtr<GstEvent> event) const
+{
+    for (auto& quirk : m_quirks) {
+        if (quirk->needsCustomInstantRateChange())
+            return quirk->analyzeWebKitMediaSrcCustomEvent(event);
+    }
+    return false;
+}
+
+// Returning rate.
+std::optional<double> GStreamerQuirksManager::processWebKitMediaSrcCustomEvent(GRefPtr<GstEvent> event, bool handledByAnyStream,
+    bool handledByAllStreams) const
+{
+    for (auto& quirk : m_quirks) {
+        if (quirk->needsCustomInstantRateChange())
+            return quirk->processWebKitMediaSrcCustomEvent(event, handledByAnyStream, handledByAllStreams);
+    }
+    return std::nullopt;
+}
+
+// Returning processed and didInstantRateChange.
+std::pair<bool, bool> GStreamerQuirk::applyCustomInstantRateChange(
+    bool isPipelinePlaying, bool isPipelineWaitingPreroll, float playbackRate, bool mute, GstElement* pipeline) const
+{
+    // This check allows to implement a common behaviour for this instant rate change family of methods
+    // in the superclass, but ensure that the code will only run on subclasses actually supporting
+    // instant rate change. This is better than copypasting the code to all the subclasses, and better
+    // than creating a common base class. Common base classes for features instead of for platforms
+    // is a strategy that would quickly become unmaintainable.
+    if (!needsCustomInstantRateChange())
+        return std::pair<bool, bool>(false, false);
+
+    bool didInstantRateChange = false;
+    if (isPipelinePlaying && !isPipelineWaitingPreroll) {
+        GstStructure* s = gst_structure_new("custom-instant-rate-change",
+            "rate", G_TYPE_DOUBLE, playbackRate, nullptr);
+        didInstantRateChange = gst_element_send_event(
+            pipeline, gst_event_new_custom(GST_EVENT_CUSTOM_DOWNSTREAM_OOB, s));
+        if (didInstantRateChange)
+            g_object_set(pipeline, "mute", mute, nullptr);
+    }
+
+    return { true, didInstantRateChange };
+}
+
+// Returning forwardToAllPads.
+bool GStreamerQuirk::analyzeWebKitMediaSrcCustomEvent(GRefPtr<GstEvent> event) const
+{
+    return needsCustomInstantRateChange() && gst_event_has_name(event.get(), "custom-instant-rate-change");
+}
+
+// Returning rate.
+std::optional<double> GStreamerQuirk::processWebKitMediaSrcCustomEvent(GRefPtr<GstEvent> event, bool,
+    bool handledByAllStreams) const
+{
+    if (!needsCustomInstantRateChange())
+        return std::nullopt;
+    if (gst_event_has_name(event.get(), "custom-instant-rate-change") && handledByAllStreams) {
+        auto eventRate = gstStructureGet<double>(gst_event_get_structure(event.get()), "rate"_s);
+        if (eventRate.has_value())
+            return eventRate.value();
+    }
+    return std::nullopt;
 }
 
 #undef GST_CAT_DEFAULT

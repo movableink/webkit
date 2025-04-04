@@ -685,7 +685,13 @@ void MediaPlayerPrivateGStreamer::updatePlaybackRate()
     GST_INFO_OBJECT(pipeline(), mute ? "Need to mute audio" : "Do not need to mute audio");
 
     if (m_lastPlaybackRate != m_playbackRate) {
-        if (doSeek(SeekTarget { playbackPosition() }, m_playbackRate)) {
+        auto& quirksManager = GStreamerQuirksManager::singleton();
+        const auto [processed, didInstantRateChange] = quirksManager.applyCustomInstantRateChange(
+            m_isPipelinePlaying, isPipelineWaitingPreroll(), m_playbackRate, mute, pipeline());
+        if (processed) {
+            if (didInstantRateChange)
+                m_lastPlaybackRate = m_playbackRate;
+        } else if (doSeek(SeekTarget { playbackPosition() }, m_playbackRate)) {
             g_object_set(m_pipeline.get(), "mute", mute, nullptr);
             m_lastPlaybackRate = m_playbackRate;
         } else {
@@ -3345,7 +3351,7 @@ void MediaPlayerPrivateGStreamer::createGSTPlayBin(const URL& url)
 
     g_object_set(m_pipeline.get(), "audio-sink", m_audioSink.get(), "video-sink", createVideoSink(), nullptr);
 
-    if (m_shouldPreservePitch && !isMediaStream) {
+    if (m_shouldPreservePitch && !isMediaStream && !GStreamerQuirksManager::singleton().needsCustomInstantRateChange()) {
         if (auto* scale = makeGStreamerElement("scaletempo"_s))
             g_object_set(m_pipeline.get(), "audio-filter", scale, nullptr);
     }
