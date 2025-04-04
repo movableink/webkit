@@ -11,6 +11,6 @@ PASS video metadata: csrcs
 PASS video metadata: width and height
 PASS video metadata: spatial and temporal index
 PASS video metadata: dependencies
-FAIL video metadata: frameId assert_equals: frameId matches (for sender and receiver) expected (undefined) undefined but got (number) 1
+PASS video metadata: frameId
 PASS video metadata: type
 
