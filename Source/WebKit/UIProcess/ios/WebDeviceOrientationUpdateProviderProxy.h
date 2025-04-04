@@ -54,7 +54,7 @@ public:
     void startUpdatingDeviceMotion(const WebCore::SecurityOriginData&);
     void stopUpdatingDeviceMotion();
 
-    std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess() const;
+    std::optional<SharedPreferencesForWebProcess> sharedPreferencesForWebProcess(IPC::Connection&) const;
 
 private:
     explicit WebDeviceOrientationUpdateProviderProxy(WebPageProxy&);

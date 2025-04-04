@@ -23,6 +23,7 @@
 #if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
 [
     EnabledBy=VideoPresentationManagerEnabled || VideoPresentationModeAPIEnabled,
+    SharedPreferencesNeedsConnection,
     DispatchedFrom=WebContent,
     DispatchedTo=UI
 ]

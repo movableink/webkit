@@ -28,6 +28,7 @@
 [
     DispatchedFrom=WebContent,
     DispatchedTo=UI,
+    SharedPreferencesNeedsConnection,
     EnabledBy=WebXREnabled
 ]
 messages -> PlatformXRSystem {
