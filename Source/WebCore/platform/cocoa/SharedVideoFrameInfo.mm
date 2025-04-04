@@ -91,8 +91,11 @@ size_t SharedVideoFrameInfo::storageSize() const
     if (!WTF::safeAdd(sizePlaneA, sizePlaneB, size) || !WTF::safeAdd(size, sizeof(SharedVideoFrameInfo), size))
         return 0;
 
-    if (m_bufferType == kCVPixelFormatType_420YpCbCr8VideoRange_8A_TriPlanar && !WTF::safeAdd(sizePlaneA, size, size))
-        return 0;
+    if (m_bufferType == kCVPixelFormatType_420YpCbCr8VideoRange_8A_TriPlanar) {
+        size_t sizePlaneAlpha;
+        if (!WTF::safeMultiply(m_bytesPerRowPlaneAlpha, m_height, sizePlaneAlpha) || !WTF::safeAdd(sizePlaneAlpha, size, size))
+            return 0;
+    }
 
     const_cast<SharedVideoFrameInfo*>(this)->m_storageSize = size;
     return m_storageSize;
@@ -153,12 +156,12 @@ std::optional<SharedVideoFrameInfo> SharedVideoFrameInfo::decode(std::span<const
     if (!bytesPerRowPlaneB)
         return std::nullopt;
 
-    std::optional<uint32_t> bytesPerRowPlaneA;
-    decoder >> bytesPerRowPlaneA;
-    if (!bytesPerRowPlaneB)
+    std::optional<uint32_t> bytesPerRowPlaneAlpha;
+    decoder >> bytesPerRowPlaneAlpha;
+    if (!bytesPerRowPlaneAlpha)
         return std::nullopt;
 
-    SharedVideoFrameInfo info { *bufferType, *width, *height, *bytesPerRow , *widthPlaneB, *heightPlaneB, *bytesPerRowPlaneB, *bytesPerRowPlaneA };
+    SharedVideoFrameInfo info { *bufferType, *width, *height, *bytesPerRow , *widthPlaneB, *heightPlaneB, *bytesPerRowPlaneB, *bytesPerRowPlaneAlpha };
     if (!info.storageSize())
         return std::nullopt;
 
