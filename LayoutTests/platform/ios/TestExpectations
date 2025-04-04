@@ -7835,3 +7835,5 @@ fast/forms/date/date-input-rendering-basic.html [ Failure ]
 fast/forms/date/date-pseudo-elements.html [ Failure ]
 
 webkit.org/b/291099 imported/w3c/web-platform-tests/css/css-view-transitions/update-callback-called-once.html [ Pass Failure ]
+
+webkit.org/b/291108 imported/w3c/web-platform-tests/html/webappapis/dynamic-markup-insertion/document-write/049.html [ Pass Timeout ]
