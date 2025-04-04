@@ -34,6 +34,14 @@ DECLARE_SYSTEM_HEADER
 #import <AppSSO/AppSSO.h>
 #import <AppSSOCore/AppSSOCore.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
+@interface SOAuthorization (Staging_rdar_148133727)
++ (void)canPerformAuthorizationWithURL:(NSURL *)url responseCode:(NSInteger)responseCode callerBundleIdentifier:(NSString * _Nullable)callerBundleIdentifier useInternalExtensions:(BOOL)useInternalExtensions completion:(void (^)(BOOL))completion;
+@end
+
+NS_ASSUME_NONNULL_END
+
 #else
 
 #if __has_include(<UIKit/UIKit.h>)
@@ -101,6 +109,7 @@ typedef NS_ENUM(NSInteger, SOAuthorizationInitiatingAction) {
 - (void)getAuthorizationHintsWithURL:(NSURL *)url responseCode:(NSInteger)responseCode completion:(void (^)(SOAuthorizationHints * _Nullable authorizationHints, NSError * _Nullable error))completion;
 + (BOOL)canPerformAuthorizationWithURL:(NSURL *)url responseCode:(NSInteger)responseCode;
 + (BOOL)canPerformAuthorizationWithURL:(NSURL *)url responseCode:(NSInteger)responseCode useInternalExtensions:(BOOL)useInternalExtensions;
++ (void)canPerformAuthorizationWithURL:(NSURL *)url responseCode:(NSInteger)responseCode callerBundleIdentifier:(NSString * _Nullable)callerBundleIdentifier useInternalExtensions:(BOOL)useInternalExtensions completion:(void (^)(BOOL))completion;
 - (void)beginAuthorizationWithURL:(NSURL *)url httpHeaders:(NSDictionary <NSString *, NSString *> *)httpHeaders httpBody:(NSData *)httpBody;
 - (void)beginAuthorizationWithOperation:(nullable SOAuthorizationOperation)operation url:(NSURL *)url httpHeaders:(NSDictionary <NSString *, NSString *> *)httpHeaders httpBody:(NSData *)httpBody;
 - (void)beginAuthorizationWithParameters:(SOAuthorizationParameters *)parameters;

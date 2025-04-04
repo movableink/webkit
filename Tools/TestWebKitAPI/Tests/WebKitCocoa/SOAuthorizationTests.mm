@@ -344,6 +344,16 @@ private:
 
 @end
 
+using CanPerformAuthorizationWithURLCallback = void (^)(BOOL);
+static void overrideCanPerformAuthorizationWithURLCompletion(id, SEL, NSURL *url, NSInteger, NSString *, BOOL, CanPerformAuthorizationWithURLCallback completion)
+{
+    if (![url.lastPathComponent isEqual:@"simple.html"] && ![url.host isEqual:@"www.example.com"] && ![url.lastPathComponent isEqual:@"GetSessionCookie.html"]) {
+        completion(NO);
+        return;
+    }
+    completion(YES);
+}
+
 static bool overrideCanPerformAuthorizationWithURL(id, SEL, NSURL *url, NSInteger)
 {
     if (![url.lastPathComponent isEqual:@"simple.html"] && ![url.host isEqual:@"www.example.com"] && ![url.lastPathComponent isEqual:@"GetSessionCookie.html"])
@@ -446,6 +456,7 @@ static void checkAuthorizationOptions(bool userActionInitiated, String initiator
 }
 
 #define SWIZZLE_SOAUTH(SOAuthClass) \
+    ClassMethodSwizzler swizzler0(SOAuthClass, @selector(canPerformAuthorizationWithURL:responseCode:callerBundleIdentifier:useInternalExtensions:completion:), reinterpret_cast<IMP>(overrideCanPerformAuthorizationWithURLCompletion)); \
     ClassMethodSwizzler swizzler1(SOAuthClass, @selector(canPerformAuthorizationWithURL:responseCode:), reinterpret_cast<IMP>(overrideCanPerformAuthorizationWithURL)); \
     InstanceMethodSwizzler swizzler2(SOAuthClass, @selector(setDelegate:), reinterpret_cast<IMP>(overrideSetDelegate)); \
     InstanceMethodSwizzler swizzler3(SOAuthClass, @selector(beginAuthorizationWithURL:httpHeaders:httpBody:), reinterpret_cast<IMP>(overrideBeginAuthorizationWithURL)); \
@@ -501,6 +512,7 @@ TEST(SOAuthorizationRedirect, InterceptionError)
 {
     resetState();
     // This test relies on us not swizzling most of the SOAuthorizationClass methods.
+    ClassMethodSwizzler swizzler0(PAL::getSOAuthorizationClass(), @selector(canPerformAuthorizationWithURL:responseCode:callerBundleIdentifier:useInternalExtensions:completion:), reinterpret_cast<IMP>(overrideCanPerformAuthorizationWithURLCompletion));
     ClassMethodSwizzler swizzler1(PAL::getSOAuthorizationClass(), @selector(canPerformAuthorizationWithURL:responseCode:), reinterpret_cast<IMP>(overrideCanPerformAuthorizationWithURL));
     InstanceMethodSwizzler swizzler2(PAL::getSOAuthorizationClass(), @selector(getAuthorizationHintsWithURL:responseCode:completion:), reinterpret_cast<IMP>(overrideGetAuthorizationHintsWithURL));
 
