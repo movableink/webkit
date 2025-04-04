@@ -111,29 +111,29 @@ WebFixedPositionContentData::~WebFixedPositionContentData()
 
         switch (constraints.constraintType()) {
         case ViewportConstraints::FixedPositionConstraint: {
-                const FixedPositionViewportConstraints& fixedConstraints = static_cast<const FixedPositionViewportConstraints&>(constraints);
+            auto& fixedConstraints = downcast<FixedPositionViewportConstraints>(constraints);
 
-                FloatPoint layerPosition = fixedConstraints.layerPositionForViewportRect(positionedObjectsRect);
+            FloatPoint layerPosition = fixedConstraints.layerPositionForViewportRect(positionedObjectsRect);
             
-                CGRect layerBounds = [layer bounds];
-                CGPoint anchorPoint = [layer anchorPoint];
-                CGPoint newPosition = CGPointMake(layerPosition.x() - constraints.alignmentOffset().width() + anchorPoint.x * layerBounds.size.width,
-                                                  layerPosition.y() - constraints.alignmentOffset().height() + anchorPoint.y * layerBounds.size.height);
-                [layer setPosition:newPosition];
-                break;
-            }
+            CGRect layerBounds = [layer bounds];
+            CGPoint anchorPoint = [layer anchorPoint];
+            CGPoint newPosition = CGPointMake(layerPosition.x() - constraints.alignmentOffset().width() + anchorPoint.x * layerBounds.size.width,
+                layerPosition.y() - constraints.alignmentOffset().height() + anchorPoint.y * layerBounds.size.height);
+            [layer setPosition:newPosition];
+            break;
+        }
         case ViewportConstraints::StickyPositionConstraint: {
-                const StickyPositionViewportConstraints& stickyConstraints = static_cast<const StickyPositionViewportConstraints&>(constraints);
+            auto& stickyConstraints = downcast<StickyPositionViewportConstraints>(constraints);
 
-                FloatPoint layerPosition = stickyConstraints.layerPositionForConstrainingRect(positionedObjectsRect);
+            FloatPoint layerPosition = stickyConstraints.layerPositionForConstrainingRect(positionedObjectsRect);
 
-                CGRect layerBounds = [layer bounds];
-                CGPoint anchorPoint = [layer anchorPoint];
-                CGPoint newPosition = CGPointMake(layerPosition.x() - constraints.alignmentOffset().width() + anchorPoint.x * layerBounds.size.width,
-                                                  layerPosition.y() - constraints.alignmentOffset().height() + anchorPoint.y * layerBounds.size.height);
-                [layer setPosition:newPosition];
-                break;
-            }
+            CGRect layerBounds = [layer bounds];
+            CGPoint anchorPoint = [layer anchorPoint];
+            CGPoint newPosition = CGPointMake(layerPosition.x() - constraints.alignmentOffset().width() + anchorPoint.x * layerBounds.size.width,
+                layerPosition.y() - constraints.alignmentOffset().height() + anchorPoint.y * layerBounds.size.height);
+            [layer setPosition:newPosition];
+            break;
+        }
         }
     }
 }

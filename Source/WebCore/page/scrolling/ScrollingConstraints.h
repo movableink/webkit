@@ -203,3 +203,11 @@ WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const FixedPosition
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const StickyPositionViewportConstraints&);
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::FixedPositionViewportConstraints)
+    static bool isType(const WebCore::ViewportConstraints& constraints) { return constraints.constraintType() == WebCore::ViewportConstraints::ConstraintType::FixedPositionConstraint; }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StickyPositionViewportConstraints)
+    static bool isType(const WebCore::ViewportConstraints& constraints) { return constraints.constraintType() == WebCore::ViewportConstraints::ConstraintType::StickyPositionConstraint; }
+SPECIALIZE_TYPE_TRAITS_END()

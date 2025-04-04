@@ -103,7 +103,6 @@ loader/cache/CachedResourceHandle.h
 mathml/MathMLRowElement.cpp
 page/NavigatorLoginStatus.cpp
 page/mac/EventHandlerMac.mm
-page/scrolling/AsyncScrollingCoordinator.cpp
 platform/ThreadGlobalData.cpp
 platform/ThreadGlobalData.h
 platform/graphics/GraphicsLayer.cpp

@@ -1085,12 +1085,12 @@ void AsyncScrollingCoordinator::setViewportConstraintedNodeConstraints(Scrolling
     switch (constraints.constraintType()) {
     case ViewportConstraints::FixedPositionConstraint: {
         if (RefPtr fixedNode = dynamicDowncast<ScrollingStateFixedNode>(node))
-            fixedNode->updateConstraints((const FixedPositionViewportConstraints&)constraints);
+            fixedNode->updateConstraints(downcast<FixedPositionViewportConstraints>(constraints));
         break;
     }
     case ViewportConstraints::StickyPositionConstraint: {
         if (RefPtr stickyNode = dynamicDowncast<ScrollingStateStickyNode>(node))
-            stickyNode->updateConstraints((const StickyPositionViewportConstraints&)constraints);
+            stickyNode->updateConstraints(downcast<StickyPositionViewportConstraints>(constraints));
         break;
     }
     }
