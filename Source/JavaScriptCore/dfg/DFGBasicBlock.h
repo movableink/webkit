@@ -261,7 +261,12 @@ public:
         ~SSAData();
     };
     std::unique_ptr<SSAData> ssa;
-    
+
+#if ASSERT_ENABLED
+    // Points to the original block this one was cloned from during loop unrolling.
+    BasicBlock* cloneSource { nullptr };
+#endif
+
 private:
     friend class InsertionSet;
     BlockNodeList m_nodes;

@@ -461,7 +461,7 @@ public:
 
     void unrollLoop(LoopData& data)
     {
-        dataLogLnIf(Options::verboseLoopUnrolling(), " unroll ", data.shouldFullyUnroll() ?  " with constant iterations" : " partially");
+        dataLogLnIf(Options::verboseLoopUnrolling(), data.shouldFullyUnroll() ?  "Fully" : "Partially", " unrolling...");
 
         BasicBlock* const header = data.header();
         BasicBlock* const tail = data.tail;
@@ -575,6 +575,10 @@ public:
                             successor = blockClones.get(successor);
                     }
                 }
+
+#if ASSERT_ENABLED
+                clone->cloneSource = body;
+#endif
             }
 
             taken = blockClones.get(header);
