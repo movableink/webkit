@@ -25,7 +25,9 @@
 
 #pragma once
 
+#include "NativeImage.h"
 #include "NowPlayingManager.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -36,6 +38,7 @@ class CDMFactory;
 class MediaRecorderPrivateWriter;
 class MediaRecorderPrivateWriterListener;
 class NowPlayingManager;
+class VideoFrame;
 
 struct AudioDestinationCreationOptions;
 
@@ -56,6 +59,10 @@ public:
     virtual std::unique_ptr<MediaRecorderPrivateWriter> createMediaRecorderPrivateWriter(const String&, MediaRecorderPrivateWriterListener&) const;
 #endif
 
+#if ENABLE(VIDEO)
+    virtual void nativeImageFromVideoFrame(const VideoFrame&, CompletionHandler<void(std::optional<RefPtr<NativeImage>>&&)>&&);
+#endif
+
     virtual bool isWebMediaStrategy() const { return false; }
 
 protected:
@@ -63,5 +70,10 @@ protected:
     virtual ~MediaStrategy();
     bool m_mockMediaSourceEnabled { false };
 };
+
+inline void MediaStrategy::nativeImageFromVideoFrame(const VideoFrame&, CompletionHandler<void(std::optional<RefPtr<NativeImage>>&&)>&& completionHandler)
+{
+    completionHandler(std::nullopt);
+}
 
 } // namespace WebCore

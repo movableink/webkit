@@ -30,6 +30,7 @@
 #include "GPUProcessConnection.h"
 #include "RemoteAudioDestinationProxy.h"
 #include "RemoteCDMFactory.h"
+#include "RemoteVideoFrameObjectHeapProxy.h"
 #include "WebProcess.h"
 #include <WebCore/AudioDestination.h>
 #include <WebCore/AudioIOCallback.h>
@@ -135,4 +136,13 @@ std::unique_ptr<MediaRecorderPrivateWriter> WebMediaStrategy::createMediaRecorde
     return nullptr;
 }
 #endif
+
+#if PLATFORM(COCOA) && ENABLE(VIDEO)
+void WebMediaStrategy::nativeImageFromVideoFrame(const WebCore::VideoFrame& frame, CompletionHandler<void(std::optional<RefPtr<WebCore::NativeImage>>&&)>&& completionHandler)
+{
+    // FIMXE: Move out of sync IPC.
+    completionHandler(WebProcess::singleton().ensureProtectedGPUProcessConnection()->protectedVideoFrameObjectHeapProxy()->getNativeImage(frame));
+}
+#endif
+
 } // namespace WebKit

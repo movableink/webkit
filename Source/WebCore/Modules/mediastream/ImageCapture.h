@@ -41,7 +41,10 @@ class Logger;
 
 namespace WebCore {
 
-class ImageCapture : public RefCounted<ImageCapture>, public ActiveDOMObject {
+class ImageBitmap;
+class ImageCaptureVideoFrameObserver;
+
+class ImageCapture : public RefCounted<ImageCapture>, public ActiveDOMObject, public MediaStreamTrackPrivateObserver {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ImageCapture);
 public:
     void ref() const final { RefCounted::ref(); }
@@ -52,6 +55,7 @@ public:
     ~ImageCapture();
 
     void takePhoto(PhotoSettings&&, DOMPromiseDeferred<IDLInterface<Blob>>&&);
+    void grabFrame(DOMPromiseDeferred<IDLInterface<ImageBitmap>>&&);
     void getPhotoCapabilities(DOMPromiseDeferred<IDLDictionary<PhotoCapabilities>>&&);
     void getPhotoSettings(DOMPromiseDeferred<IDLDictionary<PhotoSettings>>&&);
 
@@ -59,6 +63,17 @@ public:
 
 private:
     ImageCapture(Document&, Ref<MediaStreamTrack>);
+
+    void stopGrabFrameObserver();
+
+    // ActiveDOMObject
+    void stop() final;
+
+    // MediaStreamTrackPrivateObserver
+    void trackEnded(MediaStreamTrackPrivate&) final { stopGrabFrameObserver(); }
+    void trackMutedChanged(MediaStreamTrackPrivate&) final { }
+    void trackSettingsChanged(MediaStreamTrackPrivate&) final { }
+    void trackEnabledChanged(MediaStreamTrackPrivate&) final { }
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const { return m_logger.get(); }
@@ -68,6 +83,8 @@ private:
 #endif
 
     const Ref<MediaStreamTrack> m_track;
+    RefPtr<ImageCaptureVideoFrameObserver> m_grabFrameObserver;
+    bool m_isStopped { false };
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;

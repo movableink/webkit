@@ -734,6 +734,7 @@ void MockRealtimeVideoSource::orientationChanged(IntDegrees orientation)
         m_deviceOrientation = VideoFrame::Rotation::Right;
         break;
     case -90:
+    case 270:
         m_deviceOrientation = VideoFrame::Rotation::Left;
         break;
     case 180:

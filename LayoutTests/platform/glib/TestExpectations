@@ -2235,6 +2235,7 @@ webrtc/video-rotation-no-cvo.html [ Failure Timeout ]
 webrtc/video-rotation-black.html [ Crash Failure Pass Timeout ]
 
 fast/mediastream/video-rotation-clone.html [ Skip ]
+fast/mediastream/image-capture-grabFrame.html [ Failure ]
 
 # No AudioSession category handling in WPE/GTK ports.
 fast/mediastream/microphone-interruption-and-audio-session.html [ Skip ]
