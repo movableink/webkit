@@ -177,7 +177,7 @@ void ViewTransition::skipViewTransition(ExceptionOr<JSC::JSValue>&& reason)
     if (m_phase < ViewTransitionPhase::UpdateCallbackCalled) {
         protectedDocument()->checkedEventLoop()->queueTask(TaskSource::DOMManipulation, [this, weakThis = WeakPtr { *this }] {
             RefPtr protectedThis = weakThis.get();
-            if (protectedThis)
+            if (protectedThis && protectedThis->protectedDocument()->globalObject())
                 callUpdateCallback();
         });
 
