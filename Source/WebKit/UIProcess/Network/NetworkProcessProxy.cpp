@@ -157,7 +157,8 @@ Ref<NetworkProcessProxy> NetworkProcessProxy::ensureDefaultNetworkProcess()
 void NetworkProcessProxy::terminate()
 {
     AuxiliaryProcessProxy::terminate();
-    protectedConnection()->invalidate();
+    if (hasConnection())
+        protectedConnection()->invalidate();
 }
 
 void NetworkProcessProxy::requestTermination()
