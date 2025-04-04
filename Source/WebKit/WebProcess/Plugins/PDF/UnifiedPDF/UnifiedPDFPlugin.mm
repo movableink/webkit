@@ -145,7 +145,7 @@
     RefPtr plugin = _plugin.get();
     plugin->didMutatePDFDocument();
 
-    NSString *fieldName = (NSString *)[[notification userInfo] objectForKey:@"PDFFormFieldName"];
+    NSString *fieldName = checked_objc_cast<NSString>([[notification userInfo] objectForKey:@"PDFFormFieldName"]);
     plugin->repaintAnnotationsForFormField(fieldName);
 }
 @end

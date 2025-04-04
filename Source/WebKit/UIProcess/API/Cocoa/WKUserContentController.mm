@@ -207,7 +207,7 @@ private:
 - (void)_addScriptMessageHandler:(WebKit::WebScriptMessageHandler&)scriptMessageHandler
 {
     if (!_userContentControllerProxy->addUserScriptMessageHandler(scriptMessageHandler))
-        [NSException raise:NSInvalidArgumentException format:@"Attempt to add script message handler with name '%@' when one already exists.", (NSString *)scriptMessageHandler.name()];
+        [NSException raise:NSInvalidArgumentException format:@"Attempt to add script message handler with name '%@' when one already exists.", scriptMessageHandler.name().createNSString().get()];
 }
 
 - (void)addScriptMessageHandler:(id <WKScriptMessageHandler>)scriptMessageHandler name:(NSString *)name

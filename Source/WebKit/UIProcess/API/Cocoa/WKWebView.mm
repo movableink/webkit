@@ -2153,7 +2153,7 @@ static NSDictionary *dictionaryRepresentationForEditorState(const WebKit::Editor
         @"italic": postLayoutData.typingAttributes.contains(WebKit::TypingAttribute::Italics) ? @YES : @NO,
         @"underline": postLayoutData.typingAttributes.contains(WebKit::TypingAttribute::Underline) ? @YES : @NO,
         @"text-alignment": @(nsTextAlignment(static_cast<WebKit::TextAlignment>(postLayoutData.textAlignment))),
-        @"text-color": (NSString *)serializationForCSS(postLayoutData.textColor)
+        @"text-color": serializationForCSS(postLayoutData.textColor).createNSString().get()
     };
 }
 
@@ -3394,9 +3394,9 @@ static RetainPtr<NSDictionary<NSString *, id>> createUserInfo(const std::optiona
     if (!info->documentURL.isNull())
         [result setObject:(NSURL *)info->documentURL forKey:_WKTextManipulationTokenUserInfoDocumentURLKey];
     if (!info->tagName.isNull())
-        [result setObject:(NSString *)info->tagName forKey:_WKTextManipulationTokenUserInfoTagNameKey];
+        [result setObject:info->tagName.createNSString().get() forKey:_WKTextManipulationTokenUserInfoTagNameKey];
     if (!info->roleAttribute.isNull())
-        [result setObject:(NSString *)info->roleAttribute forKey:_WKTextManipulationTokenUserInfoRoleAttributeKey];
+        [result setObject:info->roleAttribute.createNSString().get() forKey:_WKTextManipulationTokenUserInfoRoleAttributeKey];
     [result setObject:@(info->isVisible) forKey:_WKTextManipulationTokenUserInfoVisibilityKey];
 
     return result;

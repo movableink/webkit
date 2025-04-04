@@ -82,7 +82,7 @@ void WebExtensionAPIDevToolsInspectedWindow::eval(WebPageProxyIdentifier webPage
 
         if (!result.value()) {
             // If an error occurred, element 0 will be undefined, and element 1 will contain an object giving details about the error.
-            callback->call(@[ undefinedValue, @{ isExceptionKey: @YES, valueKey: result.value().error() ? (NSString *)result.value().error()->message : @"" } ]);
+            callback->call(@[ undefinedValue, @{ isExceptionKey: @YES, valueKey: result.value().error() ? result.value().error()->message.createNSString().get() : @"" } ]);
             return;
         }
 

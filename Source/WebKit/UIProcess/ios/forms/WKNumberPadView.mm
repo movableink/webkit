@@ -36,6 +36,7 @@
 #import <wtf/NeverDestroyed.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/WeakObjCPtr.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/text/WTFString.h>
 
 static BOOL isRegularDeviceVariant()
@@ -434,7 +435,7 @@ static WKNumberPadKey alternateKeyAtPosition(WKNumberPadButtonPosition position)
     [button setDefaultKey:defaultKeyAtPosition(position, [_controller inputMode])];
     [button setAlternateKey:alternateKeyAtPosition(position)];
     [button setButtonPosition:position];
-    [button titleLabel].font = [UIFont systemFontOfSize:numberPadLabelFontSize() weight:UIFontWeightSemibold design:(NSString *)kCTFontUIFontDesignRounded];
+    [button titleLabel].font = [UIFont systemFontOfSize:numberPadLabelFontSize() weight:UIFontWeightSemibold design:bridge_cast(kCTFontUIFontDesignRounded)];
     [button setUserInteractionEnabled:NO];
     return button.autorelease();
 }

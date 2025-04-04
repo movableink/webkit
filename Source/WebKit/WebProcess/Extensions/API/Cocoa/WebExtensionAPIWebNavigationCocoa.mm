@@ -59,7 +59,7 @@ static NSDictionary *toWebAPI(WebExtensionFrameParameters frameInfo)
 
     result[errorOccurredKey] = @(frameInfo.errorOccurred);
     result[parentFrameIdKey] = @(toWebAPI(frameInfo.parentFrameIdentifier));
-    result[urlKey] = frameInfo.url && !frameInfo.url.value().isNull() ? (NSString *)frameInfo.url.value().string() : emptyURLValue;
+    result[urlKey] = frameInfo.url && !frameInfo.url.value().isNull() ? frameInfo.url.value().string().createNSString().get() : emptyURLValue;
 
     if (frameInfo.frameIdentifier)
         result[frameIdKey] = @(toWebAPI(frameInfo.frameIdentifier.value()));

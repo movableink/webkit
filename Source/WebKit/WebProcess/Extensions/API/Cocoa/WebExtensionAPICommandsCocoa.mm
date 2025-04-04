@@ -56,9 +56,9 @@ static NSString * const oldShortcutKey = @"oldShortcut";
 static inline NSDictionary *toAPI(const WebExtensionCommandParameters& command)
 {
     return @{
-        nameKey: (NSString *)command.identifier,
-        descriptionKey: (NSString *)command.description,
-        shortcutKey: (NSString *)command.shortcut
+        nameKey: command.identifier.createNSString().get(),
+        descriptionKey: command.description.createNSString().get(),
+        shortcutKey: command.shortcut.createNSString().get()
     };
 }
 

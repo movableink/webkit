@@ -654,19 +654,19 @@ void WebProcess::updateProcessName(IsInProcessInitialization isInProcessInitiali
     RetainPtr<NSString> applicationName;
     switch (m_processType) {
     case ProcessType::Inspector:
-        applicationName = [NSString stringWithFormat:WEB_UI_NSSTRING(@"%@ Web Inspector", "Visible name of Web Inspector's web process. The argument is the application name."), (NSString *)m_uiProcessName];
+        applicationName = [NSString stringWithFormat:WEB_UI_NSSTRING(@"%@ Web Inspector", "Visible name of Web Inspector's web process. The argument is the application name."), m_uiProcessName.createNSString().get()];
         break;
     case ProcessType::ServiceWorker:
-        applicationName = [NSString stringWithFormat:WEB_UI_NSSTRING(@"%@ Service Worker (%@)", "Visible name of Service Worker process. The argument is the application name."), (NSString *)m_uiProcessName, (NSString *)m_registrableDomain.string()];
+        applicationName = [NSString stringWithFormat:WEB_UI_NSSTRING(@"%@ Service Worker (%@)", "Visible name of Service Worker process. The argument is the application name."), m_uiProcessName.createNSString().get(), m_registrableDomain.string().createNSString().get()];
         break;
     case ProcessType::PrewarmedWebContent:
-        applicationName = [NSString stringWithFormat:WEB_UI_NSSTRING(@"%@ Web Content (Prewarmed)", "Visible name of the web process. The argument is the application name."), (NSString *)m_uiProcessName];
+        applicationName = [NSString stringWithFormat:WEB_UI_NSSTRING(@"%@ Web Content (Prewarmed)", "Visible name of the web process. The argument is the application name."), m_uiProcessName.createNSString().get()];
         break;
     case ProcessType::CachedWebContent:
-        applicationName = [NSString stringWithFormat:WEB_UI_NSSTRING(@"%@ Web Content (Cached)", "Visible name of the web process. The argument is the application name."), (NSString *)m_uiProcessName];
+        applicationName = [NSString stringWithFormat:WEB_UI_NSSTRING(@"%@ Web Content (Cached)", "Visible name of the web process. The argument is the application name."), m_uiProcessName.createNSString().get()];
         break;
     case ProcessType::WebContent:
-        applicationName = [NSString stringWithFormat:WEB_UI_NSSTRING(@"%@ Web Content", "Visible name of the web process. The argument is the application name."), (NSString *)m_uiProcessName];
+        applicationName = [NSString stringWithFormat:WEB_UI_NSSTRING(@"%@ Web Content", "Visible name of the web process. The argument is the application name."), m_uiProcessName.createNSString().get()];
         break;
     }
 

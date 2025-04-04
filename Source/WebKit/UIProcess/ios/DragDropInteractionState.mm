@@ -349,8 +349,8 @@ void DragDropInteractionState::stageDragItem(const DragItem& item, DragSourceSta
         dragPreviewContent,
         item.image.indicatorData(),
         item.image.visiblePath(),
-        item.title.isEmpty() ? nil : (NSString *)item.title,
-        item.url.isEmpty() ? nil : (NSURL *)item.url,
+        item.title.isEmpty() ? nil : item.title.createNSString().get(),
+        item.url.isEmpty() ? nil : item.url.createNSURL().get(),
         true, // We assume here that drag previews need to be updated until proven otherwise in updatePreviewsForActiveDragSources().
         item.containsSelection,
         ++currentDragSourceItemIdentifier
@@ -395,7 +395,7 @@ void DragDropInteractionState::updatePreviewsForActiveDragSources()
             continue;
 
         if (source.action.contains(DragSourceAction::Link)) {
-            dragItem.previewProvider = [title = retainPtr((NSString *)source.linkTitle), url = retainPtr((NSURL *)source.linkURL)] () -> UIDragPreview * {
+            dragItem.previewProvider = [title = source.linkTitle.createNSString(), url = retainPtr((NSURL *)source.linkURL)] () -> UIDragPreview * {
                 RetainPtr preview = [UIDragPreview previewForURL:url.get() title:title.get()];
 #if PLATFORM(VISION)
                 // FIXME: This is a slightly unfortunate since we end up copying the preview parameters,

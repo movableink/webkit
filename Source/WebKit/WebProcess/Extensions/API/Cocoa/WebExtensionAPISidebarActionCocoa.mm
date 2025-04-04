@@ -75,7 +75,7 @@ static ParseResult parseSidebarActionDetails(NSDictionary *details)
 
 static std::variant<std::monostate, String, SidebarError> parseDetailsStringFromKey(NSDictionary *dict, NSString *key, bool required = false)
 {
-    id maybeValue = [dict objectForKey:key];
+    RetainPtr<id> maybeValue = [dict objectForKey:key];
     if (!maybeValue && required)
         return SidebarError { toErrorString(nullString(), @"details", [NSString stringWithFormat:@"'%@' is required", key]) };
 
@@ -85,13 +85,14 @@ static std::variant<std::monostate, String, SidebarError> parseDetailsStringFrom
         return std::monostate();
     }
 
-    if (![maybeValue isKindOfClass:NSString.class]) {
+    RetainPtr nsStringValue = dynamic_objc_cast<NSString>(maybeValue.get());
+    if (!nsStringValue]) {
         if (required)
             return SidebarError { toErrorString(nullString(), @"details", [NSString stringWithFormat:@"'%@' must be of type 'string'", key]) };
         return SidebarError { toErrorString(nullString(), @"details", [NSString stringWithFormat:@"'%@' must be of type 'string' or 'null'", key]) };
     }
 
-    return String((NSString *)maybeValue);
+    return String(nsStringValue.get());
 }
 
 template<typename VariantType>

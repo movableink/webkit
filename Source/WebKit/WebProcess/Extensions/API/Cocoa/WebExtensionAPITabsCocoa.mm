@@ -141,10 +141,10 @@ NSDictionary *toWebAPI(const WebExtensionTabParameters& parameters)
         result[idKey] = @(toWebAPI(parameters.identifier.value()));
 
     if (parameters.url)
-        result[urlKey] = !parameters.url.value().isNull() ? (NSString *)parameters.url.value().string() : emptyURLValue;
+        result[urlKey] = !parameters.url.value().isNull() ? parameters.url.value().string().createNSString().get() : emptyURLValue;
 
     if (parameters.title)
-        result[titleKey] = !parameters.title.value().isNull() ? (NSString *)parameters.title.value() : emptyTitleValue;
+        result[titleKey] = !parameters.title.value().isNull() ? parameters.title.value().createNSString().get() : emptyTitleValue;
 
     if (parameters.windowIdentifier)
         result[windowIdKey] = @(toWebAPI(parameters.windowIdentifier.value()));
@@ -364,7 +364,7 @@ bool WebExtensionAPITabs::parseTabQueryOptions(NSDictionary *options, WebExtensi
         for (auto& patternString : parameters.urlPatterns.value()) {
             auto pattern = WebExtensionMatchPattern::getOrCreate(patternString);
             if (!pattern || !pattern->isSupported()) {
-                *outExceptionString = toErrorString(nullString(), urlKey, @"'%@' is not a valid pattern", (NSString *)patternString);
+                *outExceptionString = toErrorString(nullString(), urlKey, @"'%@' is not a valid pattern", patternString.createNSString().get());
                 return false;
             }
         }

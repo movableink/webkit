@@ -218,7 +218,7 @@ static NSString *replyBlockSignature(Protocol *protocol, SEL selector, NSUIntege
 
     auto interfaceAndObject = _exportedObjects.get(interfaceIdentifier);
     if (!interfaceAndObject.second) {
-        NSLog(@"Did not find a registered object for the interface \"%@\"", (NSString *)interfaceIdentifier);
+        NSLog(@"Did not find a registered object for the interface \"%@\"", interfaceIdentifier.createNSString().get());
         return;
     }
 

@@ -123,7 +123,7 @@ NSMenuItem *menuItemForTelephoneNumber(const String& telephoneNumber)
 
     [actionContext setAllowedActionUTIs:@[ @"com.apple.dial" ]];
 
-    NSArray *proposedMenuItems = [[PAL::getDDActionsManagerClass() sharedManager] menuItemsForValue:(NSString *)telephoneNumber type:PAL::get_DataDetectorsCore_DDBinderPhoneNumberKey() service:nil context:actionContext.get()];
+    NSArray *proposedMenuItems = [[PAL::getDDActionsManagerClass() sharedManager] menuItemsForValue:telephoneNumber.createNSString().get() type:PAL::get_DataDetectorsCore_DDBinderPhoneNumberKey() service:nil context:actionContext.get()];
     for (NSMenuItem *item in proposedMenuItems) {
         auto action = actionForMenuItem(item);
         if ([action.actionUTI hasPrefix:@"com.apple.dial"]) {

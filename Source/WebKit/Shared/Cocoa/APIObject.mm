@@ -550,7 +550,7 @@ RetainPtr<NSObject<NSSecureCoding>> Object::toNSObject()
         auto result = adoptNS([[NSMutableDictionary alloc] initWithCapacity:dictionary.size()]);
         for (auto& pair : dictionary.map()) {
             if (auto nsObject = pair.value ? Ref { *pair.value }->toNSObject() : RetainPtr<NSObject<NSSecureCoding>>())
-                [result setObject:nsObject.get() forKey:(NSString *)pair.key];
+                [result setObject:nsObject.get() forKey:pair.key.createNSString().get()];
         }
         return result;
     }

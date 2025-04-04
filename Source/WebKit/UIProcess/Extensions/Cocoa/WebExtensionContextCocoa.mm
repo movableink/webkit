@@ -352,7 +352,7 @@ bool WebExtensionContext::load(WebExtensionController& controller, String storag
     readStateFromStorage();
 
     auto lastSeenBaseURL = URL { objectForKey<NSString>(m_state, lastSeenBaseURLStateKey) };
-    [m_state setObject:(NSString *)m_baseURL.string() forKey:lastSeenBaseURLStateKey];
+    [m_state setObject:m_baseURL.string().createNSString().get() forKey:lastSeenBaseURLStateKey];
 
     if (NSString *displayName = protectedExtension()->displayName())
         [m_state setObject:displayName forKey:lastSeenDisplayNameStateKey];
@@ -4868,7 +4868,7 @@ void WebExtensionContext::loadDeclarativeNetRequestRules(CompletionHandler<void(
             NSError *serializationError;
             NSData *dynamicRulesAsData = encodeJSONData(rules, JSONOptions::FragmentsAllowed, &serializationError);
             if (serializationError)
-                RELEASE_LOG_ERROR(Extensions, "Unable to serialize dynamic declarativeNetRequest rules for extension with identifier %{private}@ with error: %{public}@", (NSString *)uniqueIdentifier(), privacyPreservingDescription(serializationError));
+                RELEASE_LOG_ERROR(Extensions, "Unable to serialize dynamic declarativeNetRequest rules for extension with identifier %{private}@ with error: %{public}@", uniqueIdentifier().createNSString().get(), privacyPreservingDescription(serializationError));
             else
                 [allJSONData addObject:dynamicRulesAsData];
 
@@ -4892,7 +4892,7 @@ void WebExtensionContext::loadDeclarativeNetRequestRules(CompletionHandler<void(
         NSError *serializationError;
         NSData *sessionRulesAsData = encodeJSONData(rules, JSONOptions::FragmentsAllowed, &serializationError);
         if (serializationError)
-            RELEASE_LOG_ERROR(Extensions, "Unable to serialize session declarativeNetRequest rules for extension with identifier %{private}@ with error: %{public}@", (NSString *)uniqueIdentifier(), privacyPreservingDescription(serializationError));
+            RELEASE_LOG_ERROR(Extensions, "Unable to serialize session declarativeNetRequest rules for extension with identifier %{private}@ with error: %{public}@", uniqueIdentifier().createNSString().get(), privacyPreservingDescription(serializationError));
         else
             [allJSONData addObject:sessionRulesAsData];
 

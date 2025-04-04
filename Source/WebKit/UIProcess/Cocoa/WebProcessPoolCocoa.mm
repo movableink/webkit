@@ -1481,7 +1481,7 @@ static URL fontURLFromName(ASCIILiteral fontName)
 static RetainPtr<CTFontDescriptorRef> fontDescription(ASCIILiteral fontName)
 {
     RetainPtr nsFontName = fontName.createNSString();
-    RetainPtr attributes = @{ (NSString *)kCTFontFamilyNameAttribute: nsFontName.get(), (NSString *)kCTFontRegistrationScopeAttribute: @(kCTFontPriorityComputer) };
+    RetainPtr attributes = @{ bridge_cast(kCTFontFamilyNameAttribute): nsFontName.get(), bridge_cast(kCTFontRegistrationScopeAttribute): @(kCTFontPriorityComputer) };
     return adoptCF(CTFontDescriptorCreateWithAttributes((__bridge CFDictionaryRef)attributes.get()));
 }
 

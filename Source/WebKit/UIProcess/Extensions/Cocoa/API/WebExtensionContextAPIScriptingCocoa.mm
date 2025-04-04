@@ -198,7 +198,7 @@ void WebExtensionContext::scriptingUpdateRegisteredScripts(const Vector<WebExten
         auto scriptID = parameters.identifier;
         RefPtr registeredScript = m_registeredScriptsMap.get(scriptID);
         if (!registeredScript) {
-            completionHandler(toWebExtensionError(apiName, nullString(), @"no existing script with ID '%@'", (NSString *)scriptID));
+            completionHandler(toWebExtensionError(apiName, nullString(), @"no existing script with ID '%@'", scriptID.createNSString().get()));
             return;
         }
 
@@ -273,7 +273,7 @@ void WebExtensionContext::scriptingUnregisterContentScripts(const Vector<String>
 
     for (auto& scriptID : ids) {
         if (!m_registeredScriptsMap.contains(scriptID)) {
-            completionHandler(toWebExtensionError(apiName, nullString(), @"no script with ID '%@'", (NSString *)scriptID));
+            completionHandler(toWebExtensionError(apiName, nullString(), @"no script with ID '%@'", scriptID.createNSString().get()));
             return;
         }
     }
@@ -303,20 +303,20 @@ void WebExtensionContext::loadRegisteredContentScripts()
 
     [registeredContentScriptsStore() getScriptsWithCompletionHandler:makeBlockPtr([this, protectedThis = Ref { *this }](NSArray *scripts, NSString *errorMessage) mutable {
         if (errorMessage) {
-            RELEASE_LOG_ERROR(Extensions, "Unable to get registered scripts for extension %{private}@. Error: %{public}@", (NSString *)m_uniqueIdentifier, errorMessage);
+            RELEASE_LOG_ERROR(Extensions, "Unable to get registered scripts for extension %{private}@. Error: %{public}@", m_uniqueIdentifier.createNSString().get(), errorMessage);
             return;
         }
 
         Vector<WebExtensionRegisteredScriptParameters> parametersVector;
         if (!WebExtensionAPIScripting::parseRegisteredContentScripts(scripts, FirstTimeRegistration::Yes, parametersVector, &errorMessage)) {
-            RELEASE_LOG_ERROR(Extensions, "Failed to parse injected content data for extension %{private}@. Error: %{public}@", (NSString *)m_uniqueIdentifier, errorMessage);
+            RELEASE_LOG_ERROR(Extensions, "Failed to parse injected content data for extension %{private}@. Error: %{public}@", m_uniqueIdentifier.createNSString().get(), errorMessage);
             return;
         }
 
         DynamicInjectedContentsMap injectedContentsMap;
         createInjectedContentForScripts(parametersVector, FirstTimeRegistration::Yes, injectedContentsMap, nil, &errorMessage);
         if (errorMessage) {
-            RELEASE_LOG_ERROR(Extensions, "Failed to create injected content data for extension %{private}@. Error: %{public}@", (NSString *)m_uniqueIdentifier, errorMessage);
+            RELEASE_LOG_ERROR(Extensions, "Failed to create injected content data for extension %{private}@. Error: %{public}@", m_uniqueIdentifier.createNSString().get(), errorMessage);
             return;
         }
 
@@ -349,7 +349,7 @@ bool WebExtensionContext::createInjectedContentForScripts(const Vector<WebExtens
         auto scriptID = parameters.identifier;
 
         if (firstTimeRegistration == FirstTimeRegistration::Yes && (m_registeredScriptsMap.contains(scriptID) || idsToAdd.contains(scriptID))) {
-            *errorMessage = toErrorString(callingAPIName, nullString(), @"duplicate ID '%@'", (NSString *)scriptID);
+            *errorMessage = toErrorString(callingAPIName, nullString(), @"duplicate ID '%@'", scriptID.createNSString().get());
             return false;
         }
 
@@ -393,13 +393,13 @@ bool WebExtensionContext::createInjectedContentForScripts(const Vector<WebExtens
         auto *matchesArray = parameters.matchPatterns ? createNSArray(parameters.matchPatterns.value()).get() : @[ ];
         for (NSString *matchPatternString in matchesArray) {
             if (!matchPatternString.length) {
-                *errorMessage = toErrorString(callingAPIName, nullString(), @"script with ID '%@' contains an empty match pattern", (NSString *)scriptID);
+                *errorMessage = toErrorString(callingAPIName, nullString(), @"script with ID '%@' contains an empty match pattern", scriptID.createNSString().get());
                 return false;
             }
 
             RefPtr matchPattern = WebExtensionMatchPattern::getOrCreate(matchPatternString);
             if (!matchPattern || !matchPattern->isSupported()) {
-                *errorMessage = toErrorString(callingAPIName, nullString(), @"script with ID '%@' has an invalid match pattern '%@'", (NSString *)scriptID, matchPatternString);
+                *errorMessage = toErrorString(callingAPIName, nullString(), @"script with ID '%@' has an invalid match pattern '%@'", scriptID.createNSString().get(), matchPatternString);
                 return false;
             }
 
@@ -410,13 +410,13 @@ bool WebExtensionContext::createInjectedContentForScripts(const Vector<WebExtens
         auto *excludeMatchesArray = parameters.excludeMatchPatterns ? createNSArray(parameters.excludeMatchPatterns.value()).get() : @[ ];
         for (NSString *matchPatternString in excludeMatchesArray) {
             if (!matchPatternString.length) {
-                *errorMessage = toErrorString(callingAPIName, nullString(), @"script with ID '%@' contains an empty exclude match pattern", (NSString *)scriptID);
+                *errorMessage = toErrorString(callingAPIName, nullString(), @"script with ID '%@' contains an empty exclude match pattern", scriptID.createNSString().get());
                 return false;
             }
 
             RefPtr matchPattern = WebExtensionMatchPattern::getOrCreate(matchPatternString);
             if (!matchPattern || !matchPattern->isSupported()) {
-                *errorMessage = toErrorString(callingAPIName, nullString(), @"script with ID '%@' has an invalid exclude match pattern '%@'", (NSString *)scriptID, matchPatternString);
+                *errorMessage = toErrorString(callingAPIName, nullString(), @"script with ID '%@' has an invalid exclude match pattern '%@'", scriptID.createNSString().get(), matchPatternString);
                 return false;
             }
 

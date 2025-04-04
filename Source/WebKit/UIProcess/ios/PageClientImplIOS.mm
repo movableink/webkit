@@ -382,7 +382,7 @@ void PageClientImpl::registerEditCommand(Ref<WebEditCommandProxy>&& command, Und
     NSUndoManager *undoManager = [contentView() undoManagerForWebView];
     [undoManager registerUndoWithTarget:m_undoTarget.get() selector:((undoOrRedo == UndoOrRedo::Undo) ? @selector(undoEditing:) : @selector(redoEditing:)) object:commandObjC.get()];
     if (!actionName.isEmpty())
-        [undoManager setActionName:(NSString *)actionName];
+        [undoManager setActionName:actionName.createNSString().get()];
 }
 
 void PageClientImpl::clearAllEditCommands()

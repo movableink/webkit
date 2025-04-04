@@ -1352,14 +1352,14 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 
     auto dictionary = adoptNS([[NSMutableDictionary alloc] init]);
     if (httpProxy.isValid()) {
-        [dictionary setObject:httpProxy.host().createNSString().get() forKey:(NSString *)kCFStreamPropertyHTTPProxyHost];
+        [dictionary setObject:httpProxy.host().createNSString().get() forKey:bridge_cast(kCFStreamPropertyHTTPProxyHost)];
         if (auto port = httpProxy.port())
-            [dictionary setObject:@(*port) forKey:(NSString *)kCFStreamPropertyHTTPProxyPort];
+            [dictionary setObject:@(*port) forKey:bridge_cast(kCFStreamPropertyHTTPProxyPort)];
     }
     if (httpsProxy.isValid()) {
-        [dictionary setObject:httpsProxy.host().createNSString().get() forKey:(NSString *)kCFStreamPropertyHTTPSProxyHost];
+        [dictionary setObject:httpsProxy.host().createNSString().get() forKey:bridge_cast(kCFStreamPropertyHTTPSProxyHost)];
         if (auto port = httpsProxy.port())
-            [dictionary setObject:@(*port) forKey:(NSString *)kCFStreamPropertyHTTPSProxyPort];
+            [dictionary setObject:@(*port) forKey:bridge_cast(kCFStreamPropertyHTTPSProxyPort)];
     }
     return dictionary;
 
@@ -1940,7 +1940,7 @@ std::unique_ptr<WebSocketTask> NetworkSessionCocoa::createWebSocketTask(WebPageP
         [ensureMutableRequest() addValue:StringView(protocol).createNSString().get() forHTTPHeaderField:@"Sec-WebSocket-Protocol"];
 
     // rdar://problem/68057031: explicitly disable sniffing for WebSocket handshakes.
-    [nsRequest _setProperty:@NO forKey:(NSString *)_kCFURLConnectionPropertyShouldSniff];
+    [nsRequest _setProperty:@NO forKey:bridge_cast(_kCFURLConnectionPropertyShouldSniff)];
 
 #if ENABLE(APP_PRIVACY_REPORT)
     if (!request.isAppInitiated())

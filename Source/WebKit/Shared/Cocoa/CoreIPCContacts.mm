@@ -29,8 +29,10 @@
 #if HAVE(CONTACTS)
 
 #import <pal/spi/cocoa/ContactsSPI.h>
-#import <pal/cocoa/ContactsSoftLink.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
+
+#import <pal/cocoa/ContactsSoftLink.h>
 
 namespace WebKit {
 
@@ -42,7 +44,7 @@ CoreIPCCNPhoneNumber::CoreIPCCNPhoneNumber(CNPhoneNumber *cnPhoneNumber)
 
 RetainPtr<id> CoreIPCCNPhoneNumber::toID() const
 {
-    return [PAL::getCNPhoneNumberClass() phoneNumberWithDigits:(NSString *)m_digits countryCode:(NSString *)m_countryCode];
+    return [PAL::getCNPhoneNumberClass() phoneNumberWithDigits:m_digits.createNSString().get() countryCode:m_countryCode.createNSString().get()];
 }
 
 CoreIPCCNPostalAddress::CoreIPCCNPostalAddress(CNPostalAddress *cnPostalAddress)

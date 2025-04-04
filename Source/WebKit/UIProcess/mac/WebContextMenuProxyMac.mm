@@ -503,7 +503,7 @@ RetainPtr<NSMenuItem> WebContextMenuProxyMac::createShareMenuItem(ShareMenuItemT
     }
 
     if (!m_context.selectedText().isEmpty())
-        [items addObject:(NSString *)m_context.selectedText()];
+        [items addObject:m_context.selectedText().createNSString().get()];
 
     if (![items count])
         return nil;

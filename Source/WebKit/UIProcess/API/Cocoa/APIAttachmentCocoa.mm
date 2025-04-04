@@ -41,8 +41,8 @@ namespace API {
 
 static WTF::String mimeTypeInferredFromFileExtension(const API::Attachment& attachment)
 {
-    if (NSString *fileExtension = [(NSString *)attachment.fileName() pathExtension])
-        return WebCore::MIMETypeRegistry::mimeTypeForExtension(WTF::String(fileExtension));
+    if (RetainPtr<NSString> fileExtension = [attachment.fileName().createNSString() pathExtension])
+        return WebCore::MIMETypeRegistry::mimeTypeForExtension(WTF::String(fileExtension.get()));
 
     return { };
 }

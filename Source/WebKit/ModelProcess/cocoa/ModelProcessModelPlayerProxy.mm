@@ -180,8 +180,8 @@ private:
 static ResourceError toResourceError(String payload, Model& model)
 {
     return ResourceError { [NSError errorWithDomain:@"RKModelLoaderUSD" code:-1 userInfo:@{
-        NSLocalizedDescriptionKey: (NSString *)payload,
-        NSURLErrorFailingURLErrorKey: (NSURL *)model.url()
+        NSLocalizedDescriptionKey: payload.createNSString().get(),
+        NSURLErrorFailingURLErrorKey: model.url().createNSURL().get()
     }] };
 }
 

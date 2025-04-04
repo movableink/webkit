@@ -212,7 +212,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
         auto* validationBubble = _page->validationBubble();
         String message = validationBubble ? validationBubble->message() : emptyString();
         double fontSize = validationBubble ? validationBubble->fontSize() : 0;
-        return @{ userInterfaceItem: @{ @"message": (NSString *)message, @"fontSize": @(fontSize) } };
+        return @{ userInterfaceItem: @{ @"message": message.createNSString().get(), @"fontSize": @(fontSize) } };
     }
 
     if (NSDictionary *contents = _page->contentsOfUserInterfaceItem(userInterfaceItem))

@@ -222,7 +222,7 @@ bool WebExtensionAPIPermissions::validatePermissionsDetails(HashSet<String>& per
 {
     for (auto& permission : permissions) {
         if (!WebExtension::supportedPermissions().contains(permission)) {
-            *outExceptionString = toErrorString(nullString(), permissionsKey, @"'%@' is not a valid permission", (NSString *)permission);
+            *outExceptionString = toErrorString(nullString(), permissionsKey, @"'%@' is not a valid permission", permission.createNSString().get());
             return false;
         }
     }
@@ -230,7 +230,7 @@ bool WebExtensionAPIPermissions::validatePermissionsDetails(HashSet<String>& per
     for (auto& origin : origins) {
         auto pattern = WebExtensionMatchPattern::getOrCreate(origin);
         if (!pattern || !pattern->isSupported()) {
-            *outExceptionString = toErrorString(nullString(), originsKey, @"'%@' is not a valid pattern", (NSString *)origin);
+            *outExceptionString = toErrorString(nullString(), originsKey, @"'%@' is not a valid pattern", origin.createNSString().get());
             return false;
         }
 

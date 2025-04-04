@@ -155,10 +155,10 @@ void executeScript(const SourcePairs& scriptPairs, WKWebView *webView, API::Cont
             }
 
             if (parameters.function) {
-                NSString *javaScript = [NSString stringWithFormat:@"return (%@)(...arguments)", (NSString *)parameters.function.value()];
+                RetainPtr javaScript = adoptNS([[NSString alloc] initWithFormat:@"return (%@)(...arguments)", parameters.function.value().createNSString().get()]);
                 NSArray *arguments = parameters.arguments ? parseJSON(parameters.arguments.value(), JSONOptions::FragmentsAllowed) : @[ ];
 
-                [webView _callAsyncJavaScript:javaScript arguments:@{ @"arguments": arguments } inFrame:frameInfo inContentWorld:executionWorld->wrapper() completionHandler:makeBlockPtr([injectionResults, aggregator, frameInfo](id resultOfExecution, NSError *error) mutable {
+                [webView _callAsyncJavaScript:javaScript.get() arguments:@{ @"arguments": arguments } inFrame:frameInfo inContentWorld:executionWorld->wrapper() completionHandler:makeBlockPtr([injectionResults, aggregator, frameInfo](id resultOfExecution, NSError *error) mutable {
                     injectionResults->results.append(toInjectionResultParameters(resultOfExecution, frameInfo, error.localizedDescription));
                 }).get()];
 

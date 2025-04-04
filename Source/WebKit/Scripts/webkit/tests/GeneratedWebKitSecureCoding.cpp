@@ -26,6 +26,8 @@
 #include "GeneratedWebKitSecureCoding.h"
 
 #include "ArgumentCodersCocoa.h"
+#include <wtf/cocoa/TypeCastsCocoa.h>
+
 #if USE(AVFOUNDATION)
 #include <pal/cocoa/AVFoundationSoftLink.h>
 #endif
@@ -130,11 +132,11 @@ CoreIPCAVOutputContext::CoreIPCAVOutputContext(
 CoreIPCAVOutputContext::CoreIPCAVOutputContext(AVOutputContext *object)
 {
     auto dictionary = dictionaryForWebKitSecureCodingType(object);
-    m_AVOutputContextSerializationKeyContextID = (NSString *)[dictionary objectForKey:@"AVOutputContextSerializationKeyContextID"];
+    m_AVOutputContextSerializationKeyContextID = checked_objc_cast<NSString>([dictionary objectForKey:@"AVOutputContextSerializationKeyContextID"]);
     if (![m_AVOutputContextSerializationKeyContextID isKindOfClass:IPC::getClass<NSString>()])
         m_AVOutputContextSerializationKeyContextID = nullptr;
 
-    m_AVOutputContextSerializationKeyContextType = (NSString *)[dictionary objectForKey:@"AVOutputContextSerializationKeyContextType"];
+    m_AVOutputContextSerializationKeyContextType = checked_objc_cast<NSString>([dictionary objectForKey:@"AVOutputContextSerializationKeyContextType"]);
     if (![m_AVOutputContextSerializationKeyContextType isKindOfClass:IPC::getClass<NSString>()])
         m_AVOutputContextSerializationKeyContextType = nullptr;
 
@@ -177,7 +179,7 @@ CoreIPCNSSomeFoundationType::CoreIPCNSSomeFoundationType(
 CoreIPCNSSomeFoundationType::CoreIPCNSSomeFoundationType(NSSomeFoundationType *object)
 {
     auto dictionary = dictionaryForWebKitSecureCodingType(object);
-    m_StringKey = (NSString *)[dictionary objectForKey:@"StringKey"];
+    m_StringKey = checked_objc_cast<NSString>([dictionary objectForKey:@"StringKey"]);
     if (![m_StringKey isKindOfClass:IPC::getClass<NSString>()])
         m_StringKey = nullptr;
 
@@ -285,7 +287,7 @@ CoreIPCDDScannerResult::CoreIPCDDScannerResult(
 CoreIPCDDScannerResult::CoreIPCDDScannerResult(DDScannerResult *object)
 {
     auto dictionary = dictionaryForWebKitSecureCodingType(object);
-    m_StringKey = (NSString *)[dictionary objectForKey:@"StringKey"];
+    m_StringKey = checked_object_cast<NSString>([dictionary objectForKey:@"StringKey"]);
     if (![m_StringKey isKindOfClass:IPC::getClass<NSString>()])
         m_StringKey = nullptr;
 

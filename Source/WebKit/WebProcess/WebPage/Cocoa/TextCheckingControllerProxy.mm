@@ -151,7 +151,7 @@ void TextCheckingControllerProxy::replaceRelativeToSelection(const WebCore::Attr
             if (![value isKindOfClass:[NSString class]])
                 return;
             markers.addMarker(attributeCoreRange, WebCore::DocumentMarkerType::PlatformTextChecking,
-                WebCore::DocumentMarker::PlatformTextCheckingData { key, (NSString *)value });
+                WebCore::DocumentMarker::PlatformTextCheckingData { key, checked_objc_cast<NSString>(value) });
 
             // FIXME: Switch to constants after rdar://problem/48914153 is resolved.
             if ([key isEqualToString:@"NSSpellingState"]) {

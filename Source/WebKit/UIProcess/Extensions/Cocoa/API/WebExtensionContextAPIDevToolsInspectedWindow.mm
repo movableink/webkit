@@ -68,7 +68,7 @@ void WebExtensionContext::devToolsInspectedWindowEval(WebPageProxyIdentifier web
 
         extension->evaluateScript(scriptSource, frameURL, std::nullopt, std::nullopt, [completionHandler = WTFMove(completionHandler)](Inspector::ExtensionEvaluationResult&& result) mutable {
             if (!result) {
-                RELEASE_LOG_ERROR(Extensions, "Inspector could not evaluate script (%{public}@)", (NSString *)extensionErrorToString(result.error()));
+                RELEASE_LOG_ERROR(Extensions, "Inspector could not evaluate script (%{public}@)", extensionErrorToString(result.error()).createNSString().get());
                 completionHandler(toWebExtensionError(apiName, nullString(), @"Web Inspector could not evaluate script"));
                 return;
             }
@@ -90,7 +90,7 @@ void WebExtensionContext::devToolsInspectedWindowReload(WebPageProxyIdentifier w
 
     extension->reloadIgnoringCache(ignoreCache, std::nullopt, std::nullopt, [](Inspector::ExtensionVoidResult&& result) {
         if (!result)
-            RELEASE_LOG_ERROR(Extensions, "Inspector could not reload page (%{public}@)", (NSString *)extensionErrorToString(result.error()));
+            RELEASE_LOG_ERROR(Extensions, "Inspector could not reload page (%{public}@)", extensionErrorToString(result.error()).createNSString().get());
     });
 }
 

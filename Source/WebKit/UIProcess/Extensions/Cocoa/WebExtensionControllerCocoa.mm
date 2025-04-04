@@ -147,7 +147,7 @@ void WebExtensionController::getDataRecords(OptionSet<WebExtensionDataType> data
     for (auto& uniqueIdentifier : uniqueIdentifiers) {
         String displayName;
         if (!WebExtensionContext::readDisplayNameFromState(stateFilePath(uniqueIdentifier), displayName)) {
-            RELEASE_LOG_ERROR(Extensions, "Failed to read extension display name from State.plist for extension: %{private}@", (NSString *)uniqueIdentifier);
+            RELEASE_LOG_ERROR(Extensions, "Failed to read extension display name from State.plist for extension: %{private}@", uniqueIdentifier.createNSString().get());
             continue;
         }
 
@@ -158,7 +158,7 @@ void WebExtensionController::getDataRecords(OptionSet<WebExtensionDataType> data
 
             RefPtr storage = sqliteStore(storageDirectory(uniqueIdentifier), dataType, this->extensionContext(uniqueIdentifier));
             if (!storage) {
-                RELEASE_LOG_ERROR(Extensions, "Failed to create sqlite store for extension: %{private}@", (NSString *)uniqueIdentifier);
+                RELEASE_LOG_ERROR(Extensions, "Failed to create sqlite store for extension: %{private}@", uniqueIdentifier.createNSString().get());
                 record->addError(@"Unable to calculate extension storage", dataType);
                 continue;
             }
@@ -208,7 +208,7 @@ void WebExtensionController::getDataRecord(OptionSet<WebExtensionDataType> dataT
 
         RefPtr storage = sqliteStore(storageDirectory(matchingUniqueIdentifier), dataType, this->extensionContext(matchingUniqueIdentifier));
         if (!storage) {
-            RELEASE_LOG_ERROR(Extensions, "Failed to create sqlite store for extension: %{private}@", (NSString *)matchingUniqueIdentifier);
+            RELEASE_LOG_ERROR(Extensions, "Failed to create sqlite store for extension: %{private}@", matchingUniqueIdentifier.createNSString().get());
             record->addError(@"Unable to calculcate extension storage", dataType);
             continue;
         }
@@ -239,7 +239,7 @@ void WebExtensionController::removeData(OptionSet<WebExtensionDataType> dataType
             RefPtr extensionContext = this->extensionContext(uniqueIdentifier);
             RefPtr storage = sqliteStore(storageDirectory(uniqueIdentifier), dataType, extensionContext);
             if (!storage) {
-                RELEASE_LOG_ERROR(Extensions, "Failed to create sqlite store for extension: %{private}@", (NSString *)uniqueIdentifier);
+                RELEASE_LOG_ERROR(Extensions, "Failed to create sqlite store for extension: %{private}@", uniqueIdentifier.createNSString().get());
                 record->addError(@"Unable to delete extension storage", dataType);
                 continue;
             }
@@ -314,7 +314,7 @@ bool WebExtensionController::load(WebExtensionContext& extensionContext, NSError
 
     auto extensionDirectory = storageDirectory(extensionContext);
     if (!!extensionDirectory && !FileSystem::makeAllDirectories(extensionDirectory))
-        RELEASE_LOG_ERROR(Extensions, "Failed to create directory: %{private}@", (NSString *)extensionDirectory);
+        RELEASE_LOG_ERROR(Extensions, "Failed to create directory: %{private}@", extensionDirectory.createNSString().get());
 
     if (!extensionContext.load(*this, extensionDirectory, outError)) {
         m_extensionContexts.remove(extensionContext);

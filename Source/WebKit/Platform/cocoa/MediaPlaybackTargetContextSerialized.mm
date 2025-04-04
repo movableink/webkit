@@ -55,8 +55,8 @@ MediaPlaybackTargetContextSerialized::MediaPlaybackTargetContextSerialized(const
         auto archiver = adoptNS([WKKeyedCoder new]);
         [downcast<MediaPlaybackTargetContextCocoa>(context).outputContext() encodeWithCoder:archiver.get()];
         auto dictionary = [archiver accumulatedDictionary];
-        m_contextID = (NSString *)[dictionary objectForKey:@"AVOutputContextSerializationKeyContextID"];
-        m_contextType = (NSString *)[dictionary objectForKey:@"AVOutputContextSerializationKeyContextType"];
+        m_contextID = checked_objc_cast<NSString>([dictionary objectForKey:@"AVOutputContextSerializationKeyContextID"]);
+        m_contextType = checked_objc_cast<NSString>([dictionary objectForKey:@"AVOutputContextSerializationKeyContextType"]);
 #endif
     } else if (is<MediaPlaybackTargetContextMock>(context))
         m_state = downcast<MediaPlaybackTargetContextMock>(context).state();

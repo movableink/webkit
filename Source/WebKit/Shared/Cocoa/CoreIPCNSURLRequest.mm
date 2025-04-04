@@ -263,7 +263,7 @@ RetainPtr<id> CoreIPCNSURLRequest::toID() const
                     auto array = adoptNS([[NSMutableArray alloc] initWithCapacity:1]);
                     if (!s.isNull() && !headerPair.first.isNull()) {
                         [array addObject: s];
-                        [headerFields setObject:array.get() forKey:(NSString *)headerPair.first];
+                        [headerFields setObject:array.get() forKey:headerPair.first.createNSString().get()];
                     }
                 },
                 [&] (const Vector<String>& vector) {
@@ -271,7 +271,7 @@ RetainPtr<id> CoreIPCNSURLRequest::toID() const
                     for (auto& item : vector)
                         [array addObject: item];
                     if (!headerPair.first.isNull())
-                        [headerFields setObject:array.get() forKey:(NSString *)headerPair.first];
+                        [headerFields setObject:array.get() forKey:headerPair.first.createNSString().get()];
                 }
             );
         }

@@ -144,7 +144,7 @@ void AutomationSessionClient::loadWebExtensionWithOptions(WebKit::WebAutomationS
         return;
     }
 
-    [m_delegate.get() _automationSession:wrapper(session) loadWebExtensionWithOptions:toAPI(options) resource:(NSString *)resource completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)](NSString *extensionId) mutable {
+    [m_delegate.get() _automationSession:wrapper(session) loadWebExtensionWithOptions:toAPI(options) resource:resource.createNSString().get() completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)](NSString *extensionId) mutable {
         completionHandler(extensionId);
     }).get()];
 }

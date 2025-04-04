@@ -29,6 +29,7 @@
 #if ENABLE(FULL_KEYBOARD_ACCESS)
 
 #import "WebProcessPool.h"
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 #if PLATFORM(IOS_FAMILY)
 #import "AccessibilitySupportSPI.h"
@@ -94,7 +95,7 @@ static inline BOOL platformIsFullKeyboardAccessEnabled()
     notitificationName = KeyboardUIModeDidChangeNotification;
 #elif PLATFORM(IOS_FAMILY)
     notificationCenter = [NSNotificationCenter defaultCenter];
-    notitificationName = (NSString *)kAXSFullKeyboardAccessEnabledNotification;
+    notitificationName = bridge_cast(kAXSFullKeyboardAccessEnabledNotification);
 #endif
     
     if (notitificationName)

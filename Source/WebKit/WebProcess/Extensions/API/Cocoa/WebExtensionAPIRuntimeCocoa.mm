@@ -567,7 +567,7 @@ NSDictionary *toWebAPI(const WebExtensionMessageSenderParameters& parameters, co
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
 
     if (parameters.extensionUniqueIdentifier)
-        result[idKey] = (NSString *)parameters.extensionUniqueIdentifier.value();
+        result[idKey] = parameters.extensionUniqueIdentifier.value().createNSString().get();
 
     if (parameters.tabParameters)
         result[tabKey] = toWebAPI(parameters.tabParameters.value());
@@ -581,15 +581,15 @@ NSDictionary *toWebAPI(const WebExtensionMessageSenderParameters& parameters, co
         auto baseURLOrigin = makeString(baseURL.protocol(), "://"_s, baseURL.host());
 
         if (equalIgnoringASCIICase(securityOrigin, baseURLOrigin))
-            result[originKey] = (NSString *)baseURLOrigin;
+            result[originKey] = baseURLOrigin.createNSString().get();
         else
-            result[originKey] = (NSString *)securityOrigin;
+            result[originKey] = securityOrigin.createNSString().get();
 
-        result[urlKey] = (NSString *)parameters.url.string();
+        result[urlKey] = parameters.url.string().createNSString().get();
     }
 
     if (parameters.documentIdentifier.isValid())
-        result[documentIdKey] = (NSString *)parameters.documentIdentifier.toString();
+        result[documentIdKey] = parameters.documentIdentifier.toString().createNSString().get();
 
     return [result copy];
 }
@@ -806,7 +806,7 @@ void WebExtensionContextProxy::dispatchRuntimeInstalledEvent(WebExtensionContext
     NSDictionary *details;
 
     if (installReason == WebExtensionContext::InstallReason::ExtensionUpdate)
-        details = @{ reasonKey: toWebAPI(installReason), previousVersionKey: (NSString *)previousVersion };
+        details = @{ reasonKey: toWebAPI(installReason), previousVersionKey: previousVersion.createNSString().get() };
     else
         details = @{ reasonKey: toWebAPI(installReason) };
 
