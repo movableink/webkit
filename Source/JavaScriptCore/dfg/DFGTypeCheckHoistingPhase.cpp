@@ -275,6 +275,7 @@ private:
                 case GetButterfly:
                 case EnumeratorGetByVal:
                 case GetByVal:
+                case MultiGetByVal:
                 case PutByValDirect:
                 case PutByVal:
                 case PutByValAlias:
@@ -361,6 +362,7 @@ private:
                 case GetButterfly:
                 case EnumeratorGetByVal:
                 case GetByVal:
+                case MultiGetByVal:
                 case PutByValDirect:
                 case PutByVal:
                 case PutByValAlias:

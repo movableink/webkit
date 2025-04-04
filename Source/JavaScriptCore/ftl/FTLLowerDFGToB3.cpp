@@ -1084,6 +1084,9 @@ private:
         case GetByVal:
             compileGetByVal();
             break;
+        case MultiGetByVal:
+            compileMultiGetByVal();
+            break;
         case GetByValMegamorphic:
             compileGetByValMegamorphic();
             break;
@@ -6516,6 +6519,288 @@ IGNORE_CLANG_WARNINGS_END
             setDouble(result);
         else
             setJSValue(result);
+    }
+
+    void compileMultiGetByVal()
+    {
+        constexpr ArrayModes arrayModesForJSArray = ALL_ARRAY_ARRAY_MODES;
+        constexpr ArrayModes arrayModesForTypedArrays = ALL_TYPED_ARRAY_MODES;
+
+        JSGlobalObject* globalObject = m_graph.globalObjectFor(m_origin.semantic);
+        ArrayModes arrayModes = m_node->arrayModes();
+        ArrayMode arrayMode = m_node->arrayMode();
+        Vector<ValueFromBlock> results;
+
+        Edge& baseEdge = m_graph.child(m_node, 0);
+        Edge& indexEdge = m_graph.child(m_node, 1);
+        LValue base = lowCell(baseEdge);
+        LValue index = lowInt32(indexEdge);
+
+        LBasicBlock continuation = m_out.newBlock();
+        LBasicBlock bailout = m_out.newBlock();
+        LBasicBlock lastNext = m_out.insertNewBlocksBefore(continuation);
+
+        if (arrayModes & arrayModesForJSArray) {
+            auto arrayModeToIndexingType = [&](ArrayModes oneArrayMode) {
+                switch (oneArrayMode) {
+                case asArrayModesIgnoringTypedArrays(ArrayWithInt32):
+                    return ArrayWithInt32;
+                case asArrayModesIgnoringTypedArrays(ArrayWithDouble):
+                    return ArrayWithDouble;
+                case asArrayModesIgnoringTypedArrays(ArrayWithContiguous):
+                    return ArrayWithContiguous;
+                default:
+                    RELEASE_ASSERT_NOT_REACHED();
+                    return ArrayWithContiguous;
+                }
+            };
+
+            constexpr IndexingType indexingModeMask = IsArray | IndexingShapeMask;
+            LValue indexingMode = m_out.load8ZeroExt32(base, m_heaps.JSCell_indexingTypeAndMisc);
+            LValue maskedIndexingType = m_out.bitAnd(indexingMode, m_out.constInt32(indexingModeMask));
+
+            auto tryLoadJSArray = [&](IndexingType expectedType, LBasicBlock continuation) {
+                LValue butterfly = m_out.loadPtr(base, m_heaps.JSObject_butterfly);
+                LValue length = m_out.load32(butterfly, m_heaps.Butterfly_publicLength);
+                auto& heap = ([&] -> IndexedAbstractHeap& {
+                    switch (expectedType) {
+                    case ArrayWithInt32:
+                        return m_heaps.indexedInt32Properties;
+                    case ArrayWithContiguous:
+                        return m_heaps.indexedContiguousProperties;
+                    case ArrayWithDouble:
+                        return m_heaps.indexedDoubleProperties;
+                    default:
+                        return m_heaps.indexedContiguousProperties;
+                    }
+                })();
+
+                LValue isOutOfBounds = m_out.aboveOrEqual(index, length);
+
+                if (arrayMode.isInBounds()) {
+                    speculate(OutOfBounds, noValue(), nullptr, isOutOfBounds);
+                    LValue isHole = nullptr;
+                    LValue result = nullptr;
+                    if (expectedType == ArrayWithDouble) {
+                        LValue doubleResult = m_out.loadDouble(baseIndexWithProvenValue(heap, butterfly, index, indexEdge));
+                        isHole = m_out.doubleNotEqualOrUnordered(doubleResult, doubleResult);
+                        if (m_node->hasDoubleResult())
+                            result = doubleResult;
+                        else
+                            result = boxDouble(doubleResult);
+                    } else {
+                        result = m_out.load64(baseIndexWithProvenValue(heap, butterfly, index, indexEdge));
+                        isHole = m_out.isZero64(result);
+                    }
+                    if (arrayMode.isInBoundsSaneChain()) {
+                        if (m_node->hasDoubleResult())
+                            result = m_out.select(isHole, m_out.constDouble(std::bit_cast<int64_t>(PNaN)), result);
+                        else
+                            result = m_out.select(isHole, m_out.constInt64(JSValue::encode(jsUndefined())), result);
+                    } else
+                        speculate(LoadFromHole, noValue(), nullptr, isHole);
+                    results.append(m_out.anchor(result));
+                    m_out.jump(continuation);
+                    return;
+                }
+
+                ASSERT(!m_node->hasDoubleResult());
+                LBasicBlock fastCase = m_out.newBlock();
+                LBasicBlock slowCase = m_out.newBlock();
+
+                m_out.branch(isOutOfBounds, rarely(slowCase), usually(fastCase));
+
+                m_out.appendTo(fastCase);
+                if (expectedType == ArrayWithDouble) {
+                    LValue doubleValue = m_out.loadDouble(baseIndexWithProvenValue(heap, butterfly, index, indexEdge));
+                    LValue result = boxDouble(doubleValue);
+                    results.append(m_out.anchor(result));
+                    m_out.branch(m_out.doubleNotEqualOrUnordered(doubleValue, doubleValue), rarely(slowCase), usually(continuation));
+                } else {
+                    LValue result = m_out.load64(baseIndexWithProvenValue(heap, butterfly, index, indexEdge));
+                    results.append(m_out.anchor(result));
+                    m_out.branch(m_out.isZero64(result), rarely(slowCase), usually(continuation));
+                }
+
+                m_out.appendTo(slowCase);
+                if (arrayMode.isOutOfBoundsSaneChain()) {
+                    speculate(NegativeIndex, noValue(), nullptr, m_out.lessThan(index, m_out.int32Zero));
+                    results.append(m_out.anchor(m_out.constInt64(JSValue::ValueUndefined)));
+                } else
+                    results.append(m_out.anchor(vmCall(Int64, operationGetByValObjectInt, weakPointer(globalObject), base, index)));
+                m_out.jump(continuation);
+            };
+
+            for (unsigned i = 0; i < sizeof(ArrayModes) * 8; ++i) {
+                ArrayModes oneArrayMode = 1ULL << i;
+                if ((arrayModes & arrayModesForJSArray) & oneArrayMode) {
+                    IndexingType indexingType = arrayModeToIndexingType(oneArrayMode);
+                    LBasicBlock next = m_out.newBlock();
+                    LBasicBlock handled = m_out.newBlock();
+                    m_out.branch(m_out.equal(maskedIndexingType, m_out.constInt32(indexingType)), unsure(handled), unsure(next));
+                    m_out.appendTo(handled);
+                    tryLoadJSArray(indexingType, continuation);
+                    m_out.appendTo(next);
+                }
+            }
+        }
+
+        if (arrayModes & arrayModesForTypedArrays) {
+            auto arrayModeToTypedArrayType = [&](ArrayModes oneArrayMode) {
+                switch (oneArrayMode) {
+                case Int8ArrayMode:
+                    return TypeInt8;
+                case Int16ArrayMode:
+                    return TypeInt16;
+                case Int32ArrayMode:
+                    return TypeInt32;
+                case Uint8ArrayMode:
+                    return TypeUint8;
+                case Uint8ClampedArrayMode:
+                    return TypeUint8Clamped;
+                case Uint16ArrayMode:
+                    return TypeUint16;
+                case Uint32ArrayMode:
+                    return TypeUint32;
+                case Float16ArrayMode:
+                    return TypeFloat16;
+                case Float32ArrayMode:
+                    return TypeFloat32;
+                case Float64ArrayMode:
+                    return TypeFloat64;
+                case BigInt64ArrayMode:
+                    return TypeBigInt64;
+                case BigUint64ArrayMode:
+                    return TypeBigUint64;
+                default:
+                    RELEASE_ASSERT_NOT_REACHED();
+                    return TypeBigUint64;
+                }
+            };
+
+            auto tryLoadTypedArray = [&](TypedArrayType type, LValue storage, LBasicBlock continuation) {
+                TypedPointer pointer = pointerIntoTypedArray(storage, index, type);
+
+                auto loadValue = [&]() -> LValue {
+                    if (isInt(type))
+                        return loadFromIntTypedArray(pointer, type);
+
+                    ASSERT(isFloat(type));
+
+                    switch (type) {
+                    case TypeFloat16:
+                        return m_out.loadFloat16AsDouble(pointer);
+                    case TypeFloat32:
+                        return m_out.floatToDouble(m_out.loadFloat(pointer));
+                    case TypeFloat64:
+                        return m_out.loadDouble(pointer);
+                    default:
+                        DFG_CRASH(m_graph, m_node, "Bad typed array type");
+                    }
+                    return nullptr;
+                };
+
+                LValue unboxedResult = loadValue();
+                if (isInt(type)) {
+                    ASSERT(!m_node->hasDoubleResult()); // Right now, it is yes. We extend later.
+                    auto speculateOrAdjust = [&](LValue result) {
+                        if (elementSize(type) < 4 || isSigned(type))
+                            return boxInt32(result);
+
+                        if (m_node->shouldSpeculateInt32()) {
+                            speculate(Overflow, noValue(), nullptr, m_out.lessThan(result, m_out.int32Zero));
+                            return boxInt32(result);
+                        }
+
+                        return boxDouble(m_out.unsignedToDouble(result));
+                    };
+                    results.append(m_out.anchor(speculateOrAdjust(unboxedResult)));
+                } else {
+                    if (m_node->hasDoubleResult())
+                        results.append(m_out.anchor(unboxedResult));
+                    else
+                        results.append(m_out.anchor(boxDouble(m_out.purifyNaN(unboxedResult))));
+                }
+                m_out.jump(continuation);
+            };
+
+            // If it is only one TypedArray type, we do not need to make a slow operation.
+            if (std::popcount(arrayModes & arrayModesForTypedArrays) == 1) {
+                ArrayModes oneArrayMode = arrayModes & arrayModesForTypedArrays;
+                auto typedArrayType = arrayModeToTypedArrayType(oneArrayMode);
+                LBasicBlock next = m_out.newBlock();
+                LBasicBlock handled = m_out.newBlock();
+                ASSERT(isTypedView(typedArrayType));
+                m_out.branch(m_out.equal(m_out.load8ZeroExt32(base, m_heaps.JSCell_typeInfoType), m_out.constInt32(typeForTypedArrayType(typedArrayType))), unsure(handled), unsure(next));
+
+                m_out.appendTo(handled);
+                LValue length = typedArrayLength(base, arrayMode.mayBeResizableOrGrowableSharedTypedArray(), arrayModeToTypedArrayType(arrayModes & arrayModesForTypedArrays), baseEdge);
+
+#if USE(LARGE_TYPED_ARRAYS)
+                auto isOutOfBounds = m_out.aboveOrEqual(m_out.signExt32To64(index), length);
+#else
+                auto isOutOfBounds = m_out.aboveOrEqual(index, length);
+#endif
+                if (arrayMode.isOutOfBounds()) {
+                    auto fastCase = m_out.newBlock();
+                    results.append(m_out.anchor(m_out.constInt64(JSValue::encode(jsUndefined()))));
+                    m_out.branch(isOutOfBounds, rarely(continuation), usually(fastCase));
+                    m_out.appendTo(fastCase);
+                }
+
+                LValue vector = m_out.loadPtr(base, m_heaps.JSArrayBufferView_vector);
+                LValue storage = caged(Gigacage::Primitive, vector, base);
+                tryLoadTypedArray(typedArrayType, storage, continuation);
+                m_out.appendTo(next);
+            } else {
+                LBasicBlock checkLength = m_out.newBlock();
+                m_out.branch(isTypedArrayView(base), unsure(checkLength), rarely(bailout));
+
+                m_out.appendTo(checkLength);
+                LValue length = typedArrayLength(base, arrayMode.mayBeResizableOrGrowableSharedTypedArray(), std::nullopt, baseEdge);
+
+#if USE(LARGE_TYPED_ARRAYS)
+                auto isOutOfBounds = m_out.aboveOrEqual(m_out.signExt32To64(index), length);
+#else
+                auto isOutOfBounds = m_out.aboveOrEqual(index, length);
+#endif
+                if (arrayMode.isOutOfBounds()) {
+                    auto fastCase = m_out.newBlock();
+                    results.append(m_out.anchor(m_out.constInt64(JSValue::encode(jsUndefined()))));
+                    m_out.branch(isOutOfBounds, rarely(continuation), usually(fastCase));
+                    m_out.appendTo(fastCase);
+                }
+
+                LValue vector = m_out.loadPtr(base, m_heaps.JSArrayBufferView_vector);
+                LValue storage = caged(Gigacage::Primitive, vector, base);
+
+                for (unsigned i = 0; i < sizeof(ArrayModes) * 8; ++i) {
+                    ArrayModes oneArrayMode = 1ULL << i;
+                    if ((arrayModes & arrayModesForTypedArrays) & oneArrayMode) {
+                        auto typedArrayType = arrayModeToTypedArrayType(oneArrayMode);
+                        LBasicBlock next = m_out.newBlock();
+                        LBasicBlock handled = m_out.newBlock();
+                        ASSERT(isTypedView(typedArrayType));
+                        m_out.branch(m_out.equal(m_out.load8ZeroExt32(base, m_heaps.JSCell_typeInfoType), m_out.constInt32(typeForTypedArrayType(typedArrayType))), unsure(handled), unsure(next));
+
+                        m_out.appendTo(handled);
+                        tryLoadTypedArray(typedArrayType, storage, continuation);
+                        m_out.appendTo(next);
+                    }
+                }
+            }
+        }
+        m_out.jump(bailout);
+
+        m_out.appendTo(bailout, continuation);
+        speculate(BadIndexingType, jsValueValue(base), nullptr, m_out.booleanTrue);
+        m_out.unreachable();
+
+        m_out.appendTo(continuation, lastNext);
+        if (m_node->hasDoubleResult())
+            setDouble(m_out.phi(Double, results));
+        else
+            setJSValue(m_out.phi(Int64, results));
     }
 
     void compileGetMyArgumentByVal()

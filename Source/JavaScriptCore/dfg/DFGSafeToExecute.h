@@ -412,6 +412,9 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case StringCodePointAt:
         return node->arrayMode().alreadyChecked(graph, node, state.forNode(graph.child(node, 0)));
 
+    case MultiGetByVal:
+        return false;
+
     case ArrayPush:
         return node->arrayMode().alreadyChecked(graph, node, state.forNode(graph.varArgChild(node, 1)));
 

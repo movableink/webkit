@@ -2930,7 +2930,49 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         }
         break;
     }
-            
+
+    case MultiGetByVal: {
+        ArrayMode mode = node->arrayMode();
+        for (unsigned i = 0; i < sizeof(ArrayModes) * 8; ++i) {
+            ArrayModes oneArrayMode = 1ULL << i;
+            if (node->arrayModes() & oneArrayMode) {
+                switch (oneArrayMode) {
+                case asArrayModesIgnoringTypedArrays(ArrayWithInt32):
+                case asArrayModesIgnoringTypedArrays(ArrayWithDouble):
+                case asArrayModesIgnoringTypedArrays(ArrayWithContiguous): {
+                    if (mode.isInBounds() || mode.isOutOfBoundsSaneChain())
+                        break;
+                    clobberWorld();
+                    break;
+                }
+                case Int8ArrayMode:
+                case Int16ArrayMode:
+                case Int32ArrayMode:
+                case Uint8ArrayMode:
+                case Uint8ClampedArrayMode:
+                case Float16ArrayMode:
+                case Uint16ArrayMode:
+                case Uint32ArrayMode:
+                case Float32ArrayMode:
+                case Float64ArrayMode:
+                case BigInt64ArrayMode:
+                case BigUint64ArrayMode:
+                    break;
+                default:
+                    DFG_CRASH(m_graph, node, "impossible array mode for MultiGetByVal");
+                    break;
+                }
+            }
+        }
+
+        if (node->hasDoubleResult()) {
+            // We say SpecFullDouble since it will involve Float16 / Float32 / Float64 TypedArrays.
+            setNonCellTypeForNode(node, SpecFullDouble);
+        } else
+            makeHeapTopForNode(node);
+        break;
+    }
+
     case PutByValDirect:
     case PutByVal:
     case PutByValAlias:

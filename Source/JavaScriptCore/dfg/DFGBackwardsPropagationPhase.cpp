@@ -506,6 +506,7 @@ private:
             break;
         }
 
+        case MultiGetByVal:
         case EnumeratorGetByVal:
         case GetByVal:
         case GetByValMegamorphic: {

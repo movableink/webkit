@@ -233,6 +233,8 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
         out.print(comma, "numberOfBoundArguments = "_s, node->numberOfBoundArguments());
     if (node->hasArrayMode())
         out.print(comma, node->arrayMode());
+    if (node->hasArrayModes())
+        out.print(comma, ArrayModesDump(node->arrayModes()));
     if (node->hasArithUnaryType())
         out.print(comma, "Type:"_s, node->arithUnaryType());
     if (node->hasArithMode())

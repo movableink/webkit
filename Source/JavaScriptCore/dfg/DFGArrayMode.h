@@ -190,6 +190,11 @@ public:
     Array::Action action() const { return static_cast<Array::Action>(u.asBytes.action); }
     bool mayBeLargeTypedArray() const { return u.asBytes.mayBeLargeTypedArray; }
     bool mayBeResizableOrGrowableSharedTypedArray() const { return u.asBytes.mayBeResizableOrGrowableSharedTypedArray; }
+
+    void setSpeculation(Array::Speculation speculation)
+    {
+        u.asBytes.speculation = speculation;
+    }
     
     unsigned asWord() const { return u.asWord; }
     

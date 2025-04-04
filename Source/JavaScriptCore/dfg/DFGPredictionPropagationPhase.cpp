@@ -639,6 +639,11 @@ private:
             break;
         }
 
+        case MultiGetByVal: {
+            changed |= mergePrediction(node->getHeapPrediction());
+            break;
+        }
+
         case StringAt: {
             if (node->arrayMode().isOutOfBounds())
                 changed |= mergePrediction(SpecString | SpecOther);
@@ -1530,6 +1535,7 @@ private:
         case ArithMod:
         case ArithAbs:
         case GetByVal:
+        case MultiGetByVal:
         case ToThis:
         case ToPrimitive: 
         case ToPropertyKey:

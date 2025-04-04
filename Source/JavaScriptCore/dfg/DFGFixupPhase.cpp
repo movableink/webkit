@@ -1211,19 +1211,55 @@ private:
                 break;
             case Array::Generic:
                 if (node->op() == GetByValMegamorphic) {
-                    fixEdge<ObjectUse>(m_graph.varArgChild(node, 0));
-                    fixEdge<StringUse>(m_graph.varArgChild(node, 1));
-                } else {
-                    if (m_graph.varArgChild(node, 0)->shouldSpeculateObject()) {
-                        if (m_graph.varArgChild(node, 1)->shouldSpeculateString()) {
-                            fixEdge<ObjectUse>(m_graph.varArgChild(node, 0));
-                            fixEdge<StringUse>(m_graph.varArgChild(node, 1));
-                            break;
-                        }
+                    fixEdge<ObjectUse>(m_graph.child(node, 0));
+                    fixEdge<StringUse>(m_graph.child(node, 1));
+                    break;
+                }
 
-                        if (m_graph.varArgChild(node, 1)->shouldSpeculateSymbol()) {
-                            fixEdge<ObjectUse>(m_graph.varArgChild(node, 0));
-                            fixEdge<SymbolUse>(m_graph.varArgChild(node, 1));
+                if (m_graph.child(node, 0)->shouldSpeculateObject()) {
+                    if (m_graph.child(node, 1)->shouldSpeculateString()) {
+                        fixEdge<ObjectUse>(m_graph.child(node, 0));
+                        fixEdge<StringUse>(m_graph.child(node, 1));
+                        break;
+                    }
+
+                    if (m_graph.child(node, 1)->shouldSpeculateSymbol()) {
+                        fixEdge<ObjectUse>(m_graph.child(node, 0));
+                        fixEdge<SymbolUse>(m_graph.child(node, 1));
+                        break;
+                    }
+
+                    if (m_graph.m_plan.isFTL()) {
+                        if (node->op() == GetByVal && m_graph.child(node, 1)->shouldSpeculateInt32()) {
+                            if (m_graph.hasExitSite(node->origin.semantic, OutOfBounds)) {
+                                auto old = node->arrayMode();
+                                old.setSpeculation(Array::OutOfBounds);
+                                node->setArrayMode(old);
+                            }
+
+                            ArrayModes arrayModes = 0;
+                            {
+                                CodeBlock* profiledBlock = m_graph.baselineCodeBlockFor(node->origin.semantic);
+                                ConcurrentJSLocker locker(profiledBlock->m_lock);
+                                if (ArrayProfile* arrayProfile = profiledBlock->getArrayProfile(locker, node->origin.semantic.bytecodeIndex()))
+                                    arrayModes = arrayProfile->observedArrayModes(locker);
+                            }
+                            auto info = refineArrayModesForMultiByVal(node, arrayModes);
+                            if (!info)
+                                break;
+
+                            NodeFlags flags = 0;
+                            std::tie(arrayModes, flags) = info.value();
+
+                            fixEdge<CellUse>(m_graph.child(node, 0));
+                            fixEdge<Int32Use>(m_graph.child(node, 1));
+                            auto* data = m_graph.m_multiGetByValData.add(MultiGetByValData {
+                                arrayModes,
+                                arrayMode,
+                            });
+                            node->convertToMultiGetByVal(data);
+                            if (flags == NodeResultDouble)
+                                node->setResult(NodeResultDouble);
                             break;
                         }
                     }
@@ -3408,6 +3444,7 @@ private:
         case MakeAtomString:
         case CallCustomAccessorGetter:
         case CallCustomAccessorSetter:
+        case MultiGetByVal:
             break;
 #else // not ASSERT_ENABLED
         default:
@@ -4383,7 +4420,74 @@ private:
             return;
         } }
     }
-    
+
+    static std::optional<std::tuple<ArrayModes, NodeFlags>> refineArrayModesForMultiByVal(Node* node, ArrayModes arrayModes)
+    {
+        constexpr ArrayModes supportedArrays = 0
+            | asArrayModesIgnoringTypedArrays(ArrayWithInt32)
+            | asArrayModesIgnoringTypedArrays(ArrayWithDouble)
+            | asArrayModesIgnoringTypedArrays(ArrayWithContiguous)
+            | CopyOnWriteArrayWithInt32ArrayMode
+            | CopyOnWriteArrayWithDoubleArrayMode
+            | CopyOnWriteArrayWithContiguousArrayMode
+            | Int8ArrayMode
+            | Int16ArrayMode
+            | Int32ArrayMode
+            | Uint8ArrayMode
+            | Uint8ClampedArrayMode
+            // | Float16ArrayMode // Not supporting right now.
+            | Uint16ArrayMode
+            | Uint32ArrayMode
+            | Float32ArrayMode
+            | Float64ArrayMode
+            // | BigInt64ArrayMode // Not supporting right now.
+            // | BigUint64ArrayMode // Not supporting right now.
+            | 0;
+
+        constexpr ArrayModes preferDoubleResult = 0
+            | asArrayModesIgnoringTypedArrays(ArrayWithDouble)
+            | CopyOnWriteArrayWithDoubleArrayMode
+            | Float16ArrayMode
+            | Float32ArrayMode
+            | Float64ArrayMode;
+
+        if (!arrayModes)
+            return { };
+
+        // NonArray IndexingMode includes various subtle array-like objects, including DirectArguments, String, etc.
+        // We do not support them in Multi-ByVal ops.
+        if (~supportedArrays & arrayModes)
+            return { };
+
+        // Unify CoW ArrayModes into non-CoW ones.
+        if (arrayModes & CopyOnWriteArrayWithInt32ArrayMode) {
+            arrayModes &= ~CopyOnWriteArrayWithInt32ArrayMode;
+            arrayModes |= asArrayModesIgnoringTypedArrays(ArrayWithInt32);
+        }
+
+        if (arrayModes & CopyOnWriteArrayWithDoubleArrayMode) {
+            arrayModes &= ~CopyOnWriteArrayWithDoubleArrayMode;
+            arrayModes |= asArrayModesIgnoringTypedArrays(ArrayWithDouble);
+        }
+
+        if (arrayModes & CopyOnWriteArrayWithContiguousArrayMode) {
+            arrayModes &= ~CopyOnWriteArrayWithContiguousArrayMode;
+            arrayModes |= asArrayModesIgnoringTypedArrays(ArrayWithContiguous);
+        }
+
+        unsigned count = std::popcount(arrayModes);
+        if (count > Options::maxAccessVariantListSize())
+            return { };
+
+        NodeFlags flags = NodeResultJS;
+        if (!node->arrayMode().isOutOfBounds()) {
+            if ((arrayModes & preferDoubleResult) == arrayModes)
+                flags = NodeResultDouble;
+        }
+
+        return std::tuple { arrayModes, flags };
+    }
+
     bool alwaysUnboxSimplePrimitives()
     {
 #if USE(JSVALUE64)
