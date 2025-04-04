@@ -41,7 +41,7 @@ RTCEncodedFrame::RTCEncodedFrame(Ref<RTCRtpTransformableFrame>&& frame)
 RefPtr<JSC::ArrayBuffer> RTCEncodedFrame::data() const
 {
     if (!m_data)
-        m_data = JSC::ArrayBuffer::create(m_frame->data());
+        m_data = m_isNeutered ? JSC::ArrayBuffer::create(static_cast<size_t>(0U), 1) : JSC::ArrayBuffer::create(m_frame->data());
     return m_data;
 }
 
@@ -50,11 +50,18 @@ void RTCEncodedFrame::setData(JSC::ArrayBuffer& buffer)
     m_data = &buffer;
 }
 
-Ref<RTCRtpTransformableFrame> RTCEncodedFrame::rtcFrame()
+Ref<RTCRtpTransformableFrame> RTCEncodedFrame::rtcFrame(JSC::VM& vm, ShouldNeuter shouldNeuter)
 {
-    if (m_data) {
-        m_frame->setData(m_data->span());
-        m_data = nullptr;
+    ASSERT(!m_isNeutered);
+    if (shouldNeuter == ShouldNeuter::Yes) {
+        m_isNeutered = true;
+        if (m_data) {
+            m_frame->setData(m_data->span());
+
+            JSC::ArrayBufferContents emptyBuffer;
+            bool result = m_data->transferTo(vm, emptyBuffer);
+            ASSERT_UNUSED(result, result);
+        }
     }
     return m_frame;
 }

@@ -103,6 +103,34 @@ promise_test((test) => {
 }, "generate key frame promise handling on video sender");
 
 promise_test(async (test) => {
+    audioReceiverTransform.port.postMessage("checkDataAfterWrite");
+    await waitForMessage(audioReceiverTransform.port, "PASS");
+
+    audioSenderTransform.port.postMessage("checkDataAfterWrite");
+    await waitForMessage(audioSenderTransform.port, "PASS");
+
+    videoReceiverTransform.port.postMessage("checkDataAfterWrite");
+    await waitForMessage(videoReceiverTransform.port, "PASS");
+
+    videoSenderTransform.port.postMessage("checkDataAfterWrite");
+    await waitForMessage(videoSenderTransform.port, "PASS");
+}, "Check data after write");
+
+promise_test(async (test) => {
+    audioReceiverTransform.port.postMessage("checkModifiedDataAfterWrite");
+    await waitForMessage(audioReceiverTransform.port, "PASS");
+
+    audioSenderTransform.port.postMessage("checkModifiedDataAfterWrite");
+    await waitForMessage(audioSenderTransform.port, "PASS");
+
+    videoReceiverTransform.port.postMessage("checkModifiedDataAfterWrite");
+    await waitForMessage(videoReceiverTransform.port, "PASS");
+
+    videoSenderTransform.port.postMessage("checkModifiedDataAfterWrite");
+    await waitForMessage(videoSenderTransform.port, "PASS");
+}, "Check modified data after write");
+
+promise_test(async (test) => {
     audioReceiverTransform.port.postMessage("tryAccessingDataTwice");
     await waitForExpectedMessage(audioReceiverTransform.port, "PASS");
 

@@ -99,7 +99,8 @@ ExceptionOr<Ref<WritableStream>> RTCRtpScriptTransformer::writable()
                 return Exception { ExceptionCode::InvalidStateError };
 
             auto& globalObject = *context.globalObject();
-            auto scope = DECLARE_THROW_SCOPE(globalObject.vm());
+            Ref vm = globalObject.vm();
+            auto scope = DECLARE_THROW_SCOPE(vm);
 
             auto frameConversionResult = convert<IDLUnion<IDLInterface<RTCEncodedAudioFrame>, IDLInterface<RTCEncodedVideoFrame>>>(globalObject, value);
             if (UNLIKELY(frameConversionResult.hasException(scope)))
@@ -107,9 +108,9 @@ ExceptionOr<Ref<WritableStream>> RTCRtpScriptTransformer::writable()
 
             auto frame = frameConversionResult.releaseReturnValue();
             auto rtcFrame = WTF::switchOn(frame, [&](RefPtr<RTCEncodedAudioFrame>& value) {
-                return value->rtcFrame();
+                return value->rtcFrame(vm);
             }, [&](RefPtr<RTCEncodedVideoFrame>& value) {
-                return value->rtcFrame();
+                return value->rtcFrame(vm);
             });
 
             // If no data, skip the frame since there is nothing to packetize or decode.

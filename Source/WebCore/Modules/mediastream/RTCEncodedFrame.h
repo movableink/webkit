@@ -34,6 +34,7 @@
 
 namespace JSC {
 class ArrayBuffer;
+class VM;
 }
 
 namespace WebCore {
@@ -45,7 +46,8 @@ public:
     RefPtr<JSC::ArrayBuffer> data() const;
     void setData(JSC::ArrayBuffer&);
 
-    Ref<RTCRtpTransformableFrame> rtcFrame();
+    enum class ShouldNeuter : bool { No, Yes };
+    Ref<RTCRtpTransformableFrame> rtcFrame(JSC::VM&, ShouldNeuter = ShouldNeuter::Yes);
 
     Ref<RTCRtpTransformableFrame> serialize();
 
@@ -54,6 +56,7 @@ protected:
 
     Ref<RTCRtpTransformableFrame> m_frame;
     mutable RefPtr<JSC::ArrayBuffer> m_data;
+    bool m_isNeutered { false };
 };
 
 } // namespace WebCore
