@@ -7794,8 +7794,6 @@ webkit.org/b/290794 fast/viewport/ios/content-visibility-layout-viewport-during-
 
 webkit.org/b/290796 fast/events/ios/keyboard-scrolling-distance.html [ Failure ]
 
-webkit.org/b/290799 media/ios/video-volume-ios-quirk.html [ Failure ]
-
 webkit.org/b/290804 [ Debug ] editing/caret/caret-position-vertical-rl.html [ Failure ]
 
 webkit.org/b/290804 [ Release ] editing/caret/caret-position-vertical-rl.html [ Pass Failure ]

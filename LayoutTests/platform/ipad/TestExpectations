@@ -19,6 +19,7 @@ fast/forms/ios/zoom-after-input-tap-wide-input.html [ Skip ]
 fast/forms/ios/zoom-after-input-tap.html [ Skip ]
 
 media/video-background-playback.html [ Pass Crash ]
+media/video-volume.html [ Pass ]
 fast/forms/ios/scroll-to-reveal-focused-select.html [ Crash Failure ]
 fast/forms/ios/time-picker-value-change.html [ Failure ]
 [ Debug ] fast/forms/ios/form-control-refresh/select/focus-select-in-touchend.html [ Timeout ]
