@@ -7833,3 +7833,5 @@ webkit.org/b/291035 webaudio/decode-audio-data-too-short.html [ Pass Failure ]
 # webkit.org/b/287204 REGRESSION(292441@main): [ iOS ] 2x fast/forms/date/date-*.html are constant failures.
 fast/forms/date/date-input-rendering-basic.html [ Failure ]
 fast/forms/date/date-pseudo-elements.html [ Failure ]
+
+webkit.org/b/291099 imported/w3c/web-platform-tests/css/css-view-transitions/update-callback-called-once.html [ Pass Failure ]
