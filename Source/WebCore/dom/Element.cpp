@@ -1459,7 +1459,7 @@ int Element::offsetTop()
 
 int Element::offsetWidth()
 {
-    protectedDocument()->updateLayoutIfDimensionsOutOfDate(*this, DimensionsCheck::Width);
+    protectedDocument()->updateLayoutIfDimensionsOutOfDate(*this, DimensionsCheck::Width, { LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible });
     if (CheckedPtr renderer = renderBoxModelObject()) {
         auto offsetWidth = LayoutUnit { roundToInt(renderer->offsetWidth()) };
         return convertToNonSubpixelValue(adjustLayoutUnitForAbsoluteZoom(offsetWidth, *renderer).toDouble());
@@ -1469,7 +1469,7 @@ int Element::offsetWidth()
 
 int Element::offsetHeight()
 {
-    protectedDocument()->updateLayoutIfDimensionsOutOfDate(*this, DimensionsCheck::Height);
+    protectedDocument()->updateLayoutIfDimensionsOutOfDate(*this, DimensionsCheck::Height, { LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible });
     if (CheckedPtr renderer = renderBoxModelObject()) {
         auto offsetHeight = LayoutUnit { roundToInt(renderer->offsetHeight()) };
         return convertToNonSubpixelValue(adjustLayoutUnitForAbsoluteZoom(offsetHeight, *renderer).toDouble());
@@ -1522,7 +1522,7 @@ int Element::clientTop()
 int Element::clientWidth()
 {
     Ref document = this->document();
-    document->updateLayoutIfDimensionsOutOfDate(*this, DimensionsCheck::Width);
+    document->updateLayoutIfDimensionsOutOfDate(*this, DimensionsCheck::Width, { LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible });
 
     if (!document->hasLivingRenderTree())
         return 0;
@@ -1557,7 +1557,7 @@ int Element::clientWidth()
 int Element::clientHeight()
 {
     Ref document = this->document();
-    document->updateLayoutIfDimensionsOutOfDate(*this, DimensionsCheck::Height);
+    document->updateLayoutIfDimensionsOutOfDate(*this, DimensionsCheck::Height, { LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible });
     if (!document->hasLivingRenderTree())
         return 0;
 
@@ -1681,7 +1681,7 @@ void Element::setScrollTop(int newTop)
 int Element::scrollWidth()
 {
     Ref document = this->document();
-    document->updateLayoutIfDimensionsOutOfDate(*this, DimensionsCheck::Width);
+    document->updateLayoutIfDimensionsOutOfDate(*this, DimensionsCheck::Width, { LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible });
 
     if (document->scrollingElement() == this) {
         // FIXME (webkit.org/b/182289): updateLayoutIfDimensionsOutOfDate seems to ignore zoom level change.
@@ -1699,7 +1699,7 @@ int Element::scrollWidth()
 int Element::scrollHeight()
 {
     Ref document = this->document();
-    document->updateLayoutIfDimensionsOutOfDate(*this, DimensionsCheck::Height);
+    document->updateLayoutIfDimensionsOutOfDate(*this, DimensionsCheck::Height, { LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible });
 
     if (document->scrollingElement() == this) {
         // FIXME (webkit.org/b/182289): updateLayoutIfDimensionsOutOfDate seems to ignore zoom level change.

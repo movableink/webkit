@@ -2985,23 +2985,33 @@ auto Document::updateLayout(OptionSet<LayoutOptions> layoutOptions, const Elemen
                 if (context && !context->renderer())
                     return false;
 
+                auto shouldForceLayoutOnRenderer = [&](auto& renderer) {
+                    auto everhadLayoutAndWasSkippedDuringLast = renderer.wasSkippedDuringLastLayoutDueToContentVisibility();
+                    if (!everhadLayoutAndWasSkippedDuringLast) {
+                        // Never had layout.
+                        return true;
+                    }
+                    if (*everhadLayoutAndWasSkippedDuringLast) {
+                        // Was skipped at the last layout.
+                        return true;
+                    }
+                    return renderer.needsLayout();
+                };
+
                 if (context) {
                     if (!context->renderer()->style().isSkippedRootOrSkippedContent())
                         return false;
 
                     auto& skippedRootRenderer = *context->renderer();
-                    auto everhadLayoutAndWasSkippedDuringLast = skippedRootRenderer.wasSkippedDuringLastLayoutDueToContentVisibility();
-                    if (everhadLayoutAndWasSkippedDuringLast && !*everhadLayoutAndWasSkippedDuringLast)
+                    if (!shouldForceLayoutOnRenderer(skippedRootRenderer))
                         return false;
-
                     skippedRootRenderer.setNeedsLayout();
                 } else {
                     ASSERT(!layoutOptions.contains(LayoutOptions::TreatContentVisibilityHiddenAsVisible));
 
                     auto isSkippedContentStale = false;
                     for (auto& descendant : descendantsOfType<RenderBlock>(*renderView())) {
-                        auto everhadLayoutAndWasSkippedDuringLast = descendant.wasSkippedDuringLastLayoutDueToContentVisibility();
-                        if (everhadLayoutAndWasSkippedDuringLast && *everhadLayoutAndWasSkippedDuringLast) {
+                        if (shouldForceLayoutOnRenderer(descendant)) {
                             descendant.setNeedsLayout();
                             isSkippedContentStale = true;
                         }
