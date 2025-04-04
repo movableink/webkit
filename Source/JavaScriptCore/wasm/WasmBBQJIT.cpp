@@ -4890,7 +4890,7 @@ void BBQJIT::setLRUKey(Location location, LocalOrTempIndex key)
 
 void BBQJIT::increaseKey(Location location)
 {
-    setLRUKey(location, m_lastUseTimestamp ++);
+    setLRUKey(location, ++m_lastUseTimestamp);
 }
 
 Location BBQJIT::bind(Value value)
