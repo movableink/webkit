@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2004-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,6 +38,7 @@
 #include "ShareableBitmap.h"
 #include "SharedBuffer.h"
 #include <math.h>
+#include <wtf/CompletionHandler.h>
 #include <wtf/MainThread.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/URL.h>
@@ -132,6 +133,11 @@ std::optional<Ref<Image>> Image::create(RefPtr<ShareableBitmap>&& bitmap)
 bool Image::supportsType(const String& type)
 {
     return MIMETypeRegistry::isSupportedImageMIMEType(type);
+}
+
+void Image::subresourcesAreFinished(Document*, CompletionHandler<void()>&& completionHandler)
+{
+    completionHandler();
 }
 
 RefPtr<FragmentedSharedBuffer> Image::protectedData() const

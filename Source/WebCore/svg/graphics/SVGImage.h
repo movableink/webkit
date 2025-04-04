@@ -52,6 +52,9 @@ public:
     RefPtr<LocalFrameView> protectedFrameView() const;
 
     bool isSVGImage() const final { return true; }
+
+    void subresourcesAreFinished(Document*, CompletionHandler<void()>&&) final;
+
     FloatSize size(ImageOrientation = ImageOrientation::Orientation::FromImage) const final { return m_intrinsicSize; }
 
     bool renderingTaintsOrigin() const final;
@@ -99,8 +102,6 @@ private:
     RefPtr<NativeImage> nativeImage(const DestinationColorSpace& = DestinationColorSpace::SRGB()) final;
 
     void startAnimationTimerFired();
-
-    void subresourcesAreFinished(CompletionHandler<void()>&&);
 
     WEBCORE_EXPORT explicit SVGImage(ImageObserver*);
     ImageDrawResult draw(GraphicsContext&, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions = { }) final;

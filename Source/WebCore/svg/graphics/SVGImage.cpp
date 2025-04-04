@@ -545,10 +545,16 @@ bool isInSVGImage(const Element* element)
     return page->chrome().client().isSVGImageChromeClient();
 }
 
-void SVGImage::subresourcesAreFinished(CompletionHandler<void()>&& completionHandler)
+void SVGImage::subresourcesAreFinished(Document* embedderDocument, CompletionHandler<void()>&& completionHandler)
 {
     ASSERT(rootElement());
-    internalPage()->localTopDocument()->whenWindowLoadEventOrDestroyed(WTFMove(completionHandler));
+    if (embedderDocument)
+        embedderDocument->incrementLoadEventDelayCount();
+    internalPage()->localTopDocument()->whenWindowLoadEventOrDestroyed([embedderDocument = WeakPtr { embedderDocument }, completionHandler = WTFMove(completionHandler)]() mutable {
+        if (RefPtr document = embedderDocument.get())
+            document->decrementLoadEventDelayCount();
+        completionHandler();
+    });
 }
 
 void SVGImage::tryCreateFromData(std::span<const uint8_t> data, CompletionHandler<void(RefPtr<SVGImage>&&)>&& completionHandler)
@@ -560,7 +566,7 @@ void SVGImage::tryCreateFromData(std::span<const uint8_t> data, CompletionHandle
         completionHandler(nullptr);
         return;
     }
-    svgImage->subresourcesAreFinished([svgImage, completionHandler = WTFMove(completionHandler)]() mutable {
+    svgImage->subresourcesAreFinished(nullptr, [svgImage, completionHandler = WTFMove(completionHandler)]() mutable {
         completionHandler(WTFMove(svgImage));
     });
 }

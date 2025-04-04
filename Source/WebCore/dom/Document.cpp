@@ -6630,7 +6630,14 @@ void Document::whenWindowLoadEventOrDestroyed(CompletionHandler<void()>&& comple
         completionHandler();
         return;
     }
-    m_whenWindowLoadEventOrDestroyed = WTFMove(completionHandler);
+    if (!m_whenWindowLoadEventOrDestroyed) {
+        m_whenWindowLoadEventOrDestroyed = WTFMove(completionHandler);
+        return;
+    }
+    m_whenWindowLoadEventOrDestroyed = [oldCompletionHandler = std::exchange(m_whenWindowLoadEventOrDestroyed, { }), newCompletionHandler = WTFMove(completionHandler)]() mutable {
+        oldCompletionHandler();
+        newCompletionHandler();
+    };
 }
 
 void Document::queueTaskToDispatchEvent(TaskSource source, Ref<Event>&& event)

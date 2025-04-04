@@ -28,17 +28,10 @@
 
     // We need to wait till the image is loaded.
     image.onload = function() {
-      // But we need to wait a little more till its sub-resources are loaded
-      setTimeout(function () {
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        var img = document.getElementById("container");
-        img.src = canvas.toDataURL();
-        var forceLayout = document.body.offsetWidth;
-        // Then we need to wait a litlle more till the page layout is complete
-        setTimeout(function () {
-          testRunner.notifyDone();
-        }, 200);
-      }, 200);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      var img = document.getElementById("container");
+      img.src = canvas.toDataURL();
+      img.onload = () => testRunner.notifyDone();
     }    
   </script>
 </body>
