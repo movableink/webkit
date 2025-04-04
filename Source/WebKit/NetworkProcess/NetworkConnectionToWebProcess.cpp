@@ -1001,17 +1001,22 @@ void NetworkConnectionToWebProcess::subscribeToCookieChangeNotifications(const U
     if (allowCookieAccess != NetworkProcess::AllowCookieAccess::Allow)
         return completionHandler({ });
 
+    auto host = url.host().toString();
+    MESSAGE_CHECK_COMPLETION(m_hostsWithCookieListeners.isValidValue(host), completionHandler(false));
+
     bool startedListening = false;
     if (CheckedPtr networkStorageSession = storageSession())
         startedListening = networkStorageSession->startListeningForCookieChangeNotifications(*this, url, firstParty, frameID, pageID, protectedNetworkProcess()->shouldRelaxThirdPartyCookieBlockingForPage(webPageProxyID));
 
     if (startedListening)
-        m_hostsWithCookieListeners.add(url.host().toString());
+        m_hostsWithCookieListeners.add(host);
     completionHandler(startedListening);
 }
 
 void NetworkConnectionToWebProcess::unsubscribeFromCookieChangeNotifications(const String& host)
 {
+    MESSAGE_CHECK(m_hostsWithCookieListeners.isValidValue(host));
+
     bool removed = m_hostsWithCookieListeners.remove(host);
     ASSERT_UNUSED(removed, removed);
 
