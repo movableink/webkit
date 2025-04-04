@@ -6556,6 +6556,11 @@ class WebKitStyleTest(CppStyleTestBase):
         # vm_throw is allowed as well.
         self.assert_lint('int vm_throw;', '')
 
+        # Ignore compiler attributes.
+        self.assert_lint('static StringView substringIgnoringQueryAndFragments(const URL& url LIFETIME_BOUND)', '')
+        self.assert_lint('VectorType& m_vector WTF_GUARDED_BY_LOCK(m_lock);', '')
+        self.assert_lint('void* m_currentRingBuffer WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { nullptr }', '')
+
         # Bitfields.
         self.assert_lint('unsigned _fillRule : 1;',
                          '_fillRule' + name_underscore_error_message)
