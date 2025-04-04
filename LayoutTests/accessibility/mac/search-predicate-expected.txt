@@ -61,8 +61,8 @@ PASS: resultElement.childAtIndex(0).childAtIndex(0).childAtIndex(0).stringValue 
 PASS: resultElement.role === 'AXRole: AXTable'
 PASS: resultElement.childAtIndex(0).childAtIndex(0).childAtIndex(0).stringValue === 'AXValue: first table heading level 1'
 PASS: resultElement.role === 'AXRole: AXTextField'
-PASS: resultElement.role === 'AXRole: AXGroup'
-PASS: resultElement.childAtIndex(0).stringValue === 'AXValue: sans-serif black bold text with underline'
+PASS: resultElement.role === 'AXRole: AXStaticText'
+PASS: resultElement.stringValue === 'AXValue: sans-serif black bold text with underline'
 PASS: resultElement.boolAttributeValue('AXVisited') === false
 PASS: resultElement.childAtIndex(0).stringValue === 'AXValue: link'
 PASS: resultElement.role === 'AXRole: AXStaticText'

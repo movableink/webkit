@@ -239,8 +239,13 @@
 
         // Underline.
         resultElement = containerElement.uiElementForSearchPredicate(startElement, true, "AXUnderlineSearchKey", "", false);
-        output += expect("resultElement.role", "'AXRole: AXGroup'");
-        output += expect("resultElement.childAtIndex(0).stringValue", "'AXValue: sans-serif black bold text with underline'");
+        if (resultElement.role.includes("AXGroup")) {
+            // With ITM on, we only consider text to have underline (which seems more logical).
+            // This branch allows the test to pass with ITM on or off.
+            resultElement = resultElement.childAtIndex(0);
+        }
+        output += expect("resultElement.role", "'AXRole: AXStaticText'");
+        output += expect("resultElement.stringValue", "'AXValue: sans-serif black bold text with underline'");
 
         // Unvisited link.
         resultElement = containerElement.uiElementForSearchPredicate(startElement, true, "AXUnvisitedLinkSearchKey", "", false);
