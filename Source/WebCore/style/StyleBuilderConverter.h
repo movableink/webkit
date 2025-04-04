@@ -2613,32 +2613,49 @@ static std::pair<CSSValueID, CSSValueID> positionAreaExpandKeyword(CSSValueID di
     return { dim, dim };
 }
 
-// Get the opposite axis of a given axis. Used to resolve the axis of an axis ambiguous
-// keyword, as its axis is the opposite of the other keyword in the pair.
-static PositionAreaAxis positionAreaOppositeAxis(PositionAreaAxis axis)
+
+// Flip a PositionArea across a logical axis (block or inline), given the current writing mode.
+inline PositionArea flipPositionAreaByLogicalAxis(LogicalBoxAxis flipAxis, PositionArea area, WritingMode writingMode)
 {
-    switch (axis) {
-    case PositionAreaAxis::Horizontal:
-        return PositionAreaAxis::Vertical;
-    case PositionAreaAxis::Vertical:
-        return PositionAreaAxis::Horizontal;
+    auto blockOrXSpan = area.blockOrXAxis();
+    auto inlineOrYSpan = area.inlineOrYAxis();
 
-    case PositionAreaAxis::X:
-        return PositionAreaAxis::Y;
-    case PositionAreaAxis::Y:
-        return PositionAreaAxis::X;
-
-    case PositionAreaAxis::Block:
-        return PositionAreaAxis::Inline;
-    case PositionAreaAxis::Inline:
-        return PositionAreaAxis::Block;
+    // blockOrXSpan is on the flip axis, so flip its track and keep inlineOrYSpan intact.
+    if (mapPositionAreaAxisToLogicalAxis(blockOrXSpan.axis(), writingMode) == flipAxis) {
+        return {
+            { blockOrXSpan.axis(), flipPositionAreaTrack(blockOrXSpan.track()), blockOrXSpan.self() },
+            inlineOrYSpan
+        };
     }
 
-    ASSERT_NOT_REACHED();
-    return PositionAreaAxis::Horizontal;
+    // The two spans are orthogonal in axis, so if blockOrXSpan isn't on the flip axis,
+    // inlineOrYSpan must be. In this case, flip the track of inlineOrYSpan, and
+    // keep blockOrXSpan intact.
+    return {
+        blockOrXSpan,
+        { inlineOrYSpan.axis(), flipPositionAreaTrack(inlineOrYSpan.track()), inlineOrYSpan.self() }
+    };
 }
 
-inline std::optional<PositionArea> BuilderConverter::convertPositionArea(BuilderState&, const CSSValue& value)
+// Flip a PositionArea as specified by flip-start tactic.
+// Intuitively, this mirrors the PositionArea across a diagonal line drawn from the
+// block-start/inline-start corner to the block-end/inline-end corner. This is done
+// by flipping the axes of the spans in the PositionArea, while keeping their track
+// and self properties intact. Because this turns a block/X span into an inline/Y
+// span and vice versa, this function also swaps the order of the spans, so
+// that the block/X span goes before the inline/Y span.
+inline PositionArea mirrorPositionAreaAcrossDiagonal(PositionArea area)
+{
+    auto blockOrXSpan = area.blockOrXAxis();
+    auto inlineOrYSpan = area.inlineOrYAxis();
+
+    return {
+        { oppositePositionAreaAxis(inlineOrYSpan.axis()), inlineOrYSpan.track(), inlineOrYSpan.self() },
+        { oppositePositionAreaAxis(blockOrXSpan.axis()), blockOrXSpan.track(), blockOrXSpan.self() }
+    };
+}
+
+inline std::optional<PositionArea> BuilderConverter::convertPositionArea(BuilderState& builderState, const CSSValue& value)
 {
     std::pair<CSSValueID, CSSValueID> dimPair;
 
@@ -2672,14 +2689,33 @@ inline std::optional<PositionArea> BuilderConverter::convertPositionArea(Builder
         dim1Axis = PositionAreaAxis::Block;
         dim2Axis = PositionAreaAxis::Inline;
     } else if (!dim1Axis)
-        dim1Axis = positionAreaOppositeAxis(*dim2Axis);
+        dim1Axis = oppositePositionAreaAxis(*dim2Axis);
     else if (!dim2Axis)
-        dim2Axis = positionAreaOppositeAxis(*dim1Axis);
+        dim2Axis = oppositePositionAreaAxis(*dim1Axis);
 
-    return PositionArea {
+    PositionArea area {
         { *dim1Axis, positionAreaKeywordToTrack(dimPair.first), positionAreaKeywordToSelf(dimPair.first) },
         { *dim2Axis, positionAreaKeywordToTrack(dimPair.second), positionAreaKeywordToSelf(dimPair.second) }
     };
+
+    // Flip according to position-try-fallbacks, if specified.
+    if (const auto& positionTryFallback = builderState.positionTryFallback()) {
+        for (auto tactic : positionTryFallback->tactics) {
+            switch (tactic) {
+            case PositionTryFallback::Tactic::FlipBlock:
+                area = flipPositionAreaByLogicalAxis(LogicalBoxAxis::Block, area, builderState.style().writingMode());
+                break;
+            case PositionTryFallback::Tactic::FlipInline:
+                area = flipPositionAreaByLogicalAxis(LogicalBoxAxis::Inline, area, builderState.style().writingMode());
+                break;
+            case PositionTryFallback::Tactic::FlipStart:
+                area = mirrorPositionAreaAcrossDiagonal(area);
+                break;
+            }
+        }
+    }
+
+    return area;
 }
 
 inline OptionSet<PositionVisibility> BuilderConverter::convertPositionVisibility(BuilderState& builderState, const CSSValue& value)
@@ -2785,8 +2821,15 @@ inline Vector<PositionTryFallback> BuilderConverter::convertPositionTryFallbacks
         for (auto& item : *valueList) {
             if (item.isCustomIdent())
                 fallback.positionTryRuleName = Style::ScopedName { AtomString { item.customIdent() }, builderState.styleScopeOrdinal() };
-            else
-                fallback.tactics.append(fromCSSValueID<PositionTryFallback::Tactic>(item.valueID()));
+            else {
+                auto tacticValue = fromCSSValueID<PositionTryFallback::Tactic>(item.valueID());
+                if (fallback.tactics.contains(tacticValue)) {
+                    ASSERT_NOT_REACHED();
+                    return { };
+                }
+
+                fallback.tactics.append(tacticValue);
+            }
         }
         return fallback;
     };

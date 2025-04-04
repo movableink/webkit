@@ -164,10 +164,9 @@ ItemPosition PositionArea::defaultAlignmentForAxis(BoxAxis physicalAxis, Writing
     return containerWritingMode.isBlockFlipped() ? flip(alignment) : alignment;
 }
 
-WTF::TextStream& operator<<(WTF::TextStream& ts, const PositionAreaSpan& span)
+WTF::TextStream& operator<<(WTF::TextStream& ts, PositionAreaAxis axis)
 {
-    ts << "{ axis: "_s;
-    switch (span.axis()) {
+    switch (axis) {
     case PositionAreaAxis::Horizontal: ts << "horizontal"_s; break;
     case PositionAreaAxis::Vertical:   ts << "vertical"_s; break;
     case PositionAreaAxis::X:          ts << 'x'; break;
@@ -176,8 +175,12 @@ WTF::TextStream& operator<<(WTF::TextStream& ts, const PositionAreaSpan& span)
     case PositionAreaAxis::Inline:     ts << "inline"_s; break;
     }
 
-    ts << ", track: "_s;
-    switch (span.track()) {
+    return ts;
+}
+
+WTF::TextStream& operator<<(WTF::TextStream& ts, PositionAreaTrack track)
+{
+    switch (track) {
     case PositionAreaTrack::Start:     ts << "start"_s; break;
     case PositionAreaTrack::SpanStart: ts << "span-start"_s; break;
     case PositionAreaTrack::End:       ts << "end"_s; break;
@@ -186,18 +189,26 @@ WTF::TextStream& operator<<(WTF::TextStream& ts, const PositionAreaSpan& span)
     case PositionAreaTrack::SpanAll:   ts << "span-all"_s; break;
     }
 
-    ts << ", self: "_s;
-    switch (span.self()) {
+    return ts;
+}
+
+WTF::TextStream& operator<<(WTF::TextStream& ts, PositionAreaSelf self)
+{
+    switch (self) {
     case PositionAreaSelf::No:  ts << "no"_s; break;
     case PositionAreaSelf::Yes: ts << "yes"_s; break;
     }
 
-    ts << " }"_s;
-
     return ts;
 }
 
-WTF::TextStream& operator<<(WTF::TextStream& ts, const PositionArea& positionArea)
+WTF::TextStream& operator<<(WTF::TextStream& ts, PositionAreaSpan span)
+{
+    ts << "{ axis: "_s << span.axis() << ", track: "_s << span.track() << ", self: "_s << span.self() << " }"_s;
+    return ts;
+}
+
+WTF::TextStream& operator<<(WTF::TextStream& ts, PositionArea positionArea)
 {
     ts << "{ span1: "_s << positionArea.blockOrXAxis() << ", span2: "_s << positionArea.inlineOrYAxis() << " }"_s;
     return ts;
