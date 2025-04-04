@@ -2136,7 +2136,6 @@ private:
 
     LValue boxDoubleAsDouble(LValue value)
     {
-        ASSERT(isARM64());
         PatchpointValue* result = m_out.patchpoint(Double);
         result->append(value, ValueRep::SomeRegister);
         result->append(m_out.doubleEncodeOffsetAsDouble, ValueRep::SomeRegister);
@@ -2150,7 +2149,6 @@ private:
 
     LValue unboxDoubleAsDouble(LValue value)
     {
-        ASSERT(isARM64());
         PatchpointValue* result = m_out.patchpoint(Double);
         result->append(value, ValueRep::SomeRegister);
         result->append(m_out.doubleEncodeOffsetAsDouble, ValueRep::SomeRegister);

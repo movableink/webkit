@@ -7648,16 +7648,27 @@ public:
 
     void add64(FPRegisterID left, FPRegisterID right, FPRegisterID dest)
     {
-        UNUSED_PARAM(left);
-        UNUSED_PARAM(right);
-        UNUSED_PARAM(dest);
+        if (supportsAVX()) {
+            m_assembler.vpaddq_rrr(right, left, dest);
+            return;
+        }
+
+        if (left == dest && right == dest)
+            m_assembler.paddq_rr(dest, dest);
+        else if (left == dest)
+            m_assembler.paddq_rr(right, dest);
+        else if (right == dest)
+            m_assembler.paddq_rr(left, dest);
+        else {
+            m_assembler.movaps_rr(left, dest);
+            m_assembler.paddq_rr(right, dest);
+        }
     }
 
     void sub64(FPRegisterID left, FPRegisterID right, FPRegisterID dest)
     {
-        UNUSED_PARAM(left);
-        UNUSED_PARAM(right);
-        UNUSED_PARAM(dest);
+        ASSERT(supportsAVX());
+        m_assembler.vpsubq_rrr(right, left, dest);
     }
 
     void vectorAdd(SIMDInfo simdInfo, FPRegisterID left, FPRegisterID right, FPRegisterID dest)

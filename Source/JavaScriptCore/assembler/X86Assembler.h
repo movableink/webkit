@@ -2753,12 +2753,68 @@ public:
         m_formatter.twoByteOp(OP2_ADDPS_VpsWps, (RegisterID)vd, (RegisterID)vn);
     }
 
+    void paddb_rr(XMMRegisterID vn, XMMRegisterID vd)
+    {
+        // https://www.felixcloutier.com/x86/paddb:paddw:paddd:paddq
+        // 66 0F FC /r PADDB xmm1, xmm2/m128
+        m_formatter.prefix(PRE_SSE_66);
+        m_formatter.twoByteOp(OP2_PADDB_VdqWdq, (RegisterID)vd, (RegisterID)vn);
+    }
+
+    void paddw_rr(XMMRegisterID vn, XMMRegisterID vd)
+    {
+        // https://www.felixcloutier.com/x86/paddb:paddw:paddd:paddq
+        // 66 0F FD /r PADDW xmm1, xmm2/m128
+        m_formatter.prefix(PRE_SSE_66);
+        m_formatter.twoByteOp(OP2_PADDW_VdqWdq, (RegisterID)vd, (RegisterID)vn);
+    }
+
+    void paddd_rr(XMMRegisterID vn, XMMRegisterID vd)
+    {
+        // https://www.felixcloutier.com/x86/paddb:paddw:paddd:paddq
+        // 66 0F FE /r PADDD xmm1, xmm2/m128
+        m_formatter.prefix(PRE_SSE_66);
+        m_formatter.twoByteOp(OP2_PADDD_VdqWdq, (RegisterID)vd, (RegisterID)vn);
+    }
+
+    void paddq_rr(XMMRegisterID vn, XMMRegisterID vd)
+    {
+        // https://www.felixcloutier.com/x86/paddb:paddw:paddd:paddq
+        // 66 0F D4 /r PADDQ xmm1, xmm2/m128
+        m_formatter.prefix(PRE_SSE_66);
+        m_formatter.twoByteOp(OP2_PADDQ_VdqWdq, (RegisterID)vd, (RegisterID)vn);
+    }
+
+    void psubb_rr(XMMRegisterID vn, XMMRegisterID vd)
+    {
+        // https://www.felixcloutier.com/x86/psubb:psubw:psubd
+        // 66 0F F8 /r PSUBB xmm1, xmm2/m128
+        m_formatter.prefix(PRE_SSE_66);
+        m_formatter.twoByteOp(OP2_PSUBB_VdqWdq, (RegisterID)vd, (RegisterID)vn);
+    }
+
+    void psubw_rr(XMMRegisterID vn, XMMRegisterID vd)
+    {
+        // https://www.felixcloutier.com/x86/psubb:psubw:psubd
+        // 66 0F F9 /r PSUBW xmm1, xmm2/m128
+        m_formatter.prefix(PRE_SSE_66);
+        m_formatter.twoByteOp(OP2_PSUBW_VdqWdq, (RegisterID)vd, (RegisterID)vn);
+    }
+
     void psubd_rr(XMMRegisterID vn, XMMRegisterID vd)
     {
         // https://www.felixcloutier.com/x86/psubb:psubw:psubd
         // 66 0F FA /r PSUBD xmm1, xmm2/m128
         m_formatter.prefix(PRE_SSE_66);
         m_formatter.twoByteOp(OP2_PSUBD_VdqWdq, (RegisterID)vd, (RegisterID)vn);
+    }
+
+    void psubq_rr(XMMRegisterID vn, XMMRegisterID vd)
+    {
+        // https://www.felixcloutier.com/x86/psubq
+        // 66 0F FB /r PSUBQ xmm1, xmm2/m128
+        m_formatter.prefix(PRE_SSE_66);
+        m_formatter.twoByteOp(OP2_PSUBQ_VdqWdq, (RegisterID)vd, (RegisterID)vn);
     }
 
     enum class RoundingType : uint8_t {

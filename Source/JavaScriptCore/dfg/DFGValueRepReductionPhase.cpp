@@ -65,8 +65,10 @@ private:
                     break;
                 }
 
-#if CPU(ARM64)
                 case DoubleRep: {
+                    if (!isARM64() && !isX86_64_AVX())
+                        break;
+
                     switch (node->child1()->op()) {
                     case GetClosureVar:
                     case GetGlobalVar:
@@ -85,7 +87,6 @@ private:
                     }
                     break;
                 }
-#endif
 
                 default:
                     break;
@@ -111,17 +112,17 @@ private:
                     break;
                 }
 
-#if CPU(ARM64)
                 case GetClosureVar:
                 case GetGlobalVar:
                 case GetGlobalLexicalVariable:
                 case MultiGetByOffset:
                 case GetByOffset: {
+                    if (!isARM64() && !isX86_64_AVX())
+                        break;
                     if (candidates.contains(node))
                         usersOf.add(node, Vector<Node*>());
                     break;
                 }
-#endif
 
                 case ValueRep: {
                     if (candidates.contains(node))
@@ -219,19 +220,23 @@ private:
                             break;
                         }
 
-#if CPU(ARM64)
                         case GetClosureVar:
                         case GetGlobalVar:
                         case GetGlobalLexicalVariable:
                         case MultiGetByOffset:
                         case GetByOffset: {
+                            if (!isARM64() && !isX86_64_AVX()) {
+                                ok = false;
+                                dumpEscape("Unsupported incoming value to Phi: ", node);
+                                break;
+                            }
+
                             if (isEscaped(node)) {
                                 ok = false;
                                 dumpEscape("Phi Incoming Get is escaped: ", node);
                             }
                             break;
                         }
-#endif
 
                         case ValueRep: {
                             if (node->child1().useKind() != DoubleRepUse) {
@@ -283,14 +288,17 @@ private:
                     case MovHint:
                         break;
 
-#if CPU(ARM64)
                     // We can handle these nodes only when we have FPRReg addition in integer form.
                     case PutByOffset:
                     case MultiPutByOffset:
                     case PutClosureVar:
                     case PutGlobalVariable:
+                        if (!isARM64() && !isX86_64_AVX()) {
+                            dumpEscape("Normal escape: ", user);
+                            ok = false;
+                            break;
+                        }
                         break;
-#endif
 
                     case Upsilon: {
                         Node* phi = user->phi();
@@ -356,16 +364,18 @@ private:
                         newChild = incomingValue;
                         break;
                     }
-#if CPU(ARM64)
+
                     case GetClosureVar:
                     case GetGlobalVar:
                     case GetGlobalLexicalVariable:
                     case MultiGetByOffset:
                     case GetByOffset: {
+                        if (!isARM64() && !isX86_64_AVX())
+                            RELEASE_ASSERT_NOT_REACHED();
                         newChild = incomingValue;
                         break;
                     }
-#endif
+
                     default:
                         RELEASE_ASSERT_NOT_REACHED();
                         break;
@@ -383,17 +393,17 @@ private:
                 break;
             }
 
-#if CPU(ARM64)
             case GetClosureVar:
             case GetGlobalVar:
             case GetGlobalLexicalVariable:
             case MultiGetByOffset:
             case GetByOffset: {
+                if (!isARM64() && !isX86_64_AVX())
+                    RELEASE_ASSERT_NOT_REACHED();
                 candidate->setResult(NodeResultDouble);
                 resultNode = candidate;
                 break;
             }
-#endif
 
             default:
                 RELEASE_ASSERT_NOT_REACHED();
@@ -419,23 +429,29 @@ private:
                     user->child1() = Edge(resultNode, DoubleRepUse);
                     break;
 
-#if CPU(ARM64)
                 case PutByOffset:
+                    if (!isARM64() && !isX86_64_AVX())
+                        RELEASE_ASSERT_NOT_REACHED();
                     user->child3() = Edge(resultNode, DoubleRepUse);
                     break;
 
                 case MultiPutByOffset:
+                    if (!isARM64() && !isX86_64_AVX())
+                        RELEASE_ASSERT_NOT_REACHED();
                     user->child2() = Edge(resultNode, DoubleRepUse);
                     break;
 
                 case PutClosureVar:
+                    if (!isARM64() && !isX86_64_AVX())
+                        RELEASE_ASSERT_NOT_REACHED();
                     user->child2() = Edge(resultNode, DoubleRepUse);
                     break;
 
                 case PutGlobalVariable:
+                    if (!isARM64() && !isX86_64_AVX())
+                        RELEASE_ASSERT_NOT_REACHED();
                     user->child2() = Edge(resultNode, DoubleRepUse);
                     break;
-#endif
 
                 case Upsilon: {
                     Node* phi = user->phi();
