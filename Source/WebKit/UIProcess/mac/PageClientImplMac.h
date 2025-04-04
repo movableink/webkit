@@ -210,7 +210,7 @@ private:
 
     void registerInsertionUndoGrouping() override;
 
-    void createPDFHUD(PDFPluginIdentifier, const WebCore::IntRect&) override;
+    void createPDFHUD(PDFPluginIdentifier, WebCore::FrameIdentifier, const WebCore::IntRect&) override;
     void updatePDFHUDLocation(PDFPluginIdentifier, const WebCore::IntRect&) override;
     void removePDFHUD(PDFPluginIdentifier) override;
     void removeAllPDFHUDs() override;

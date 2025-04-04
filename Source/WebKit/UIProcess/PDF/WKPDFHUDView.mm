@@ -91,6 +91,7 @@ static NSArray<NSString *> *controlArray()
     WeakPtr<WebKit::WebPageProxy> _page;
     RetainPtr<NSString> _activeControl;
     Markable<WebKit::PDFPluginIdentifier> _pluginIdentifier;
+    Markable<WebCore::FrameIdentifier> _frameID;
     CGFloat _deviceScaleFactor;
     RetainPtr<CALayer> _layer;
     RetainPtr<CALayer> _activeLayer;
@@ -100,7 +101,7 @@ static NSArray<NSString *> *controlArray()
     BOOL _initialHideTimerFired;
 }
 
-- (instancetype)initWithFrame:(NSRect)frame pluginIdentifier:(WebKit::PDFPluginIdentifier)pluginIdentifier page:(WebKit::WebPageProxy&)page
+- (instancetype)initWithFrame:(NSRect)frame pluginIdentifier:(WebKit::PDFPluginIdentifier)pluginIdentifier frameIdentifier:(WebCore::FrameIdentifier)frameID page:(WebKit::WebPageProxy&)page
 {
     if (!(self = [super initWithFrame:frame]))
         return nil;
@@ -108,6 +109,7 @@ static NSArray<NSString *> *controlArray()
     self.wantsLayer = YES;
     _cachedIcons = adoptNS([[NSMutableDictionary alloc] init]);
     _pluginIdentifier = pluginIdentifier;
+    _frameID = frameID;
     _page = page;
     _deviceScaleFactor = page.deviceScaleFactor();
     _visible = YES;
@@ -259,13 +261,13 @@ static NSArray<NSString *> *controlArray()
     if (!page)
         return;
     if ([control isEqualToString:PDFHUDZoomInControl])
-        page->pdfZoomIn(*_pluginIdentifier);
+        page->pdfZoomIn(*_pluginIdentifier, *_frameID);
     else if ([control isEqualToString:PDFHUDZoomOutControl])
-        page->pdfZoomOut(*_pluginIdentifier);
+        page->pdfZoomOut(*_pluginIdentifier, *_frameID);
     else if ([control isEqualToString:PDFHUDSavePDFControl])
-        page->pdfSaveToPDF(*_pluginIdentifier);
+        page->pdfSaveToPDF(*_pluginIdentifier, *_frameID);
     else if ([control isEqualToString:PDFHUDLaunchPreviewControl])
-        page->pdfOpenWithPreview(*_pluginIdentifier);
+        page->pdfOpenWithPreview(*_pluginIdentifier, *_frameID);
 }
 
 - (void)_loadIconImages

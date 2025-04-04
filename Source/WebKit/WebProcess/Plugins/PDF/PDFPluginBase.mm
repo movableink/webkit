@@ -672,13 +672,17 @@ bool PDFPluginBase::shouldShowHUD() const
 
 void PDFPluginBase::updateHUDVisibility()
 {
-    if (!m_frame)
+    RefPtr frame = m_frame.get();
+    if (!frame)
+        return;
+    RefPtr page = frame->page();
+    if (!page)
         return;
 
     if (shouldShowHUD())
-        m_frame->page()->createPDFHUD(*this, frameForHUDInRootViewCoordinates());
+        page->createPDFHUD(*this, frame->frameID(), frameForHUDInRootViewCoordinates());
     else
-        m_frame->page()->removePDFHUD(*this);
+        page->removePDFHUD(*this);
 }
 #endif
 
