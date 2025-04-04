@@ -39,6 +39,7 @@
 #include "FormState.h"
 #include "FrameLoadRequest.h"
 #include "FrameLoader.h"
+#include "HTMLFormElement.h"
 #include "HistoryController.h"
 #include "HistoryItem.h"
 #include "JSDOMGlobalObject.h"
