@@ -4645,7 +4645,7 @@ RenderLayer::HitLayer RenderLayer::hitTestLayer(RenderLayer* rootLayer, RenderLa
             return { };
     }
 
-    if (request.viewportConstrainedLayersOnly() && !m_hasViewportConstrainedDescendant && !isViewportConstrained())
+    if (request.viewportConstrainedLayersOnly() && !m_hasViewportConstrainedDescendant && !isViewportConstrained() && !hasFixedAncestor())
         return { };
 
     // The natural thing would be to keep HitTestingTransformState on the stack, but it's big, so we heap-allocate.
@@ -6136,6 +6136,9 @@ void RenderLayer::styleChanged(StyleDifference diff, const RenderStyle* oldStyle
 
     updateTransform();
     updateFilterPaintingStrategy();
+
+    if (oldStyle && oldStyle->hasViewportConstrainedPosition() != isViewportConstrained())
+        dirtyAncestorChainHasViewportConstrainedDescendantStatus();
 
 #if PLATFORM(IOS_FAMILY) && ENABLE(TOUCH_EVENTS)
     if (diff == StyleDifference::RecompositeLayer || diff >= StyleDifference::LayoutPositionedMovementOnly)
