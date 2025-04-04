@@ -68,7 +68,7 @@ public:
     virtual void animationSuspensionStateDidChange(bool) { };
     virtual void animationTimelineDidChange(const AnimationTimeline*);
     virtual void animationDidFinish() { };
-    void animationPlaybackRateDidChange();
+    virtual void animationPlaybackRateDidChange();
     virtual void animationProgressBasedTimelineSourceDidChangeMetrics(const TimelineRange&);
     void animationRangeDidChange();
 

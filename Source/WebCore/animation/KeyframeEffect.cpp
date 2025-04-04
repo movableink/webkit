@@ -2147,6 +2147,13 @@ void KeyframeEffect::animationDidFinish()
 #endif
 }
 
+void KeyframeEffect::animationPlaybackRateDidChange()
+{
+    AnimationEffect::animationPlaybackRateDidChange();
+
+    updateAcceleratedAnimationIfNecessary();
+}
+
 void KeyframeEffect::transformRelatedPropertyDidChange()
 {
     ASSERT(isRunningAcceleratedTransformRelatedAnimation());
