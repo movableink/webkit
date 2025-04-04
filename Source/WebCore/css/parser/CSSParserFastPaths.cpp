@@ -835,12 +835,12 @@ static bool parseTransformNumberArguments(CharType*& pos, CharType* end, unsigne
     return true;
 }
 
-static constexpr int kShortestValidTransformStringLength = 9; // "rotate(0)"
-
 template <typename CharType>
 static RefPtr<CSSFunctionValue> parseSimpleTransformValue(CharType*& pos, CharType* end)
 {
-    if (end - pos < kShortestValidTransformStringLength)
+    // Also guarantees indexes up to pos[8] are safe to access below.
+    constexpr auto shortestValidTransformStringLength = 9; // "rotate(0)"
+    if (end - pos < shortestValidTransformStringLength)
         return nullptr;
 
     bool isTranslate = toASCIILower(pos[0]) == 't'
@@ -854,6 +854,11 @@ static RefPtr<CSSFunctionValue> parseSimpleTransformValue(CharType*& pos, CharTy
         && toASCIILower(pos[8]) == 'e';
 
     if (isTranslate) {
+        // Also guarantees indexes up to pos[11] are safe to access below.
+        constexpr auto shortestValidTranslateStringLength = 12; // "translate(0)"
+        if (end - pos < shortestValidTranslateStringLength)
+            return nullptr;
+
         CSSValueID transformType;
         unsigned expectedArgumentCount = 1;
         unsigned argumentStart = 11;
