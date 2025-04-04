@@ -34,7 +34,7 @@
     WebCore::ThirdPartyCookieBlockingMode thirdPartyCookieBlockingMode;
     HashSet<WebCore::RegistrableDomain> domainsWithUserInteraction;
     HashMap<WebCore::RegistrableDomain, Vector<WebCore::RegistrableDomain>> domainsWithStorageAccessQuirk;
-#if ENABLE(ARKIT_INLINE_PREVIEW)
+#if ENABLE(ARKIT_INLINE_PREVIEW) && !PLATFORM(IOS_FAMILY)
     String modelElementCacheDirectory;
     WebKit::SandboxExtensionHandle modelElementCacheDirectoryExtensionHandle;
 #endif
