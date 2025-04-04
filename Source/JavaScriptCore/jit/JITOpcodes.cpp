@@ -891,8 +891,7 @@ void JIT::compileOpStrictEq(const JSInstruction* currentInstruction)
     emitPutVirtualRegister(dst, regT5);
 #else // if !USE(BIGINT32)
     // Jump slow if both are cells (to cover strings).
-    move(regT0, regT2);
-    or64(regT1, regT2);
+    or64(regT1, regT0, regT2);
     addSlowCase(branchIfCell(regT2));
 
     // Jump slow if either is a double. First test if it's an integer, which is fine, and then test
@@ -1060,8 +1059,7 @@ void JIT::compileOpStrictEqJump(const JSInstruction* currentInstruction)
     }
 #else // if !USE(BIGINT32)
     // Jump slow if both are cells (to cover strings).
-    move(regT0, regT2);
-    or64(regT1, regT2);
+    or64(regT1, regT0, regT2);
     addSlowCase(branchIfCell(regT2));
 
     // Jump slow if either is a double. First test if it's an integer, which is fine, and then test
