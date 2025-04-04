@@ -106,6 +106,8 @@ public:
     WEBCORE_EXPORT void setPresentationMode(VideoPresentationMode);
     WEBCORE_EXPORT void didEnterFullscreenOrPictureInPicture(const FloatSize&);
     WEBCORE_EXPORT void didExitFullscreenOrPictureInPicture();
+    WEBCORE_EXPORT void didEnterExternalPlayback();
+    WEBCORE_EXPORT void didExitExternalPlayback();
     WEBCORE_EXPORT bool isChangingPresentationMode() const;
     WEBCORE_EXPORT void setPresentationModeIgnoringPermissionsPolicy(VideoPresentationMode);
 

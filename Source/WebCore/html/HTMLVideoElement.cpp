@@ -635,6 +635,18 @@ void HTMLVideoElement::didExitFullscreenOrPictureInPicture()
     HTMLMediaElement::didStopBeingFullscreenElement();
 }
 
+void HTMLVideoElement::didEnterExternalPlayback()
+{
+    if (RefPtr player = this->player())
+        player->setInFullscreenOrPictureInPicture(true);
+}
+
+void HTMLVideoElement::didExitExternalPlayback()
+{
+    if (RefPtr player = this->player())
+        player->setInFullscreenOrPictureInPicture(false);
+}
+
 bool HTMLVideoElement::isChangingPresentationMode() const
 {
     return isChangingVideoFullscreenMode();

@@ -735,6 +735,32 @@ void VideoPresentationManager::didEnterFullscreen(PlaybackSessionContextIdentifi
     });
 }
 
+#if PLATFORM(VISION)
+void VideoPresentationManager::didEnterExternalPlayback(PlaybackSessionContextIdentifier contextId)
+{
+    auto [model, interface] = ensureModelAndInterface(contextId);
+    INFO_LOG(LOGIDENTIFIER, model->logIdentifier());
+
+    RefPtr<HTMLVideoElement> videoElement = model->videoElement();
+    if (!videoElement)
+        return;
+
+    videoElement->didEnterExternalPlayback();
+}
+
+void VideoPresentationManager::didExitExternalPlayback(PlaybackSessionContextIdentifier contextId)
+{
+    auto [model, interface] = ensureModelAndInterface(contextId);
+    INFO_LOG(LOGIDENTIFIER, model->logIdentifier());
+
+    RefPtr<HTMLVideoElement> videoElement = model->videoElement();
+    if (!videoElement)
+        return;
+
+    videoElement->didExitExternalPlayback();
+}
+#endif
+
 void VideoPresentationManager::failedToEnterFullscreen(PlaybackSessionContextIdentifier contextId)
 {
 #if PLATFORM(IOS_FAMILY)

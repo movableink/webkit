@@ -38,6 +38,10 @@ messages -> VideoPresentationManager {
     DidEnterFullscreen(WebKit::PlaybackSessionContextIdentifier contextId, std::optional<WebCore::FloatSize> size)
     FailedToEnterFullscreen(WebKit::PlaybackSessionContextIdentifier contextId)
     DidCleanupFullscreen(WebKit::PlaybackSessionContextIdentifier contextId)
+#if PLATFORM(VISION)
+    DidEnterExternalPlayback(WebKit::PlaybackSessionContextIdentifier contextId)
+    DidExitExternalPlayback(WebKit::PlaybackSessionContextIdentifier contextId)
+#endif
     SetVideoLayerFrameFenced(WebKit::PlaybackSessionContextIdentifier contextId, WebCore::FloatRect bounds, MachSendRight machSendRight)
     SetVideoLayerGravityEnum(WebKit::PlaybackSessionContextIdentifier contextId, unsigned gravity)
     SetVideoFullscreenFrame(WebKit::PlaybackSessionContextIdentifier contextId, WebCore::FloatRect frame)

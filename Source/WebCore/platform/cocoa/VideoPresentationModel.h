@@ -94,6 +94,10 @@ public:
     virtual void didExitFullscreen() { };
     virtual void didCleanupFullscreen() { };
     virtual void fullscreenMayReturnToInline() { };
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    virtual void didEnterExternalPlayback() { };
+    virtual void didExitExternalPlayback() { };
+#endif
     virtual void setRequiresTextTrackRepresentation(bool) { }
     virtual void setTextTrackRepresentationBounds(const IntRect&) { }
 

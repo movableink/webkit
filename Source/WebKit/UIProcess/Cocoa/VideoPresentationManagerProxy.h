@@ -114,6 +114,10 @@ private:
     void didExitFullscreen() final;
     void didCleanupFullscreen() final;
     void fullscreenMayReturnToInline() final;
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    void didEnterExternalPlayback() final;
+    void didExitExternalPlayback() final;
+#endif
     void setRequiresTextTrackRepresentation(bool) final;
     void setTextTrackRepresentationBounds(const WebCore::IntRect&) final;
 
@@ -258,6 +262,10 @@ private:
     void setVideoFullscreenFrame(PlaybackSessionContextIdentifier, WebCore::FloatRect);
     void fullscreenModeChanged(PlaybackSessionContextIdentifier, WebCore::HTMLMediaElementEnums::VideoFullscreenMode);
     void fullscreenMayReturnToInline(PlaybackSessionContextIdentifier);
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    void didEnterExternalPlayback(PlaybackSessionContextIdentifier);
+    void didExitExternalPlayback(PlaybackSessionContextIdentifier);
+#endif
 
     void requestCloseAllMediaPresentations(PlaybackSessionContextIdentifier, bool finishedWithMedia, CompletionHandler<void()>&&);
     void callCloseCompletionHandlers();

@@ -1889,6 +1889,8 @@ void MediaPlayerPrivateMediaSourceAVFObjC::setVideoTarget(const PlatformVideoTar
 
     // Transition to docking goes: Layer -> StagedVideoRenderer -> Renderer
     // Transition from docking goes: Renderer -> StagedLayer -> Layer
+    // Transition to external playback goes: Layer -> StagedVideoRenderer -> Renderer
+    // Transition from external playback goes: Renderer -> StagedLayer -> Layer
     auto oldAcceleratedVideoMode = m_acceleratedVideoMode;
     switch (oldAcceleratedVideoMode) {
     case AcceleratedVideoMode::Layer:

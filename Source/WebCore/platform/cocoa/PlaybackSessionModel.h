@@ -189,6 +189,7 @@ public:
     virtual void supportsLinearMediaPlayerChanged(bool) { }
     virtual void spatialVideoMetadataChanged(const std::optional<SpatialVideoMetadata>&) { };
     virtual void isImmersiveVideoChanged(bool) { };
+    virtual void didSetVideoReceiverEndpoint() { };
 #endif
     virtual void ensureControlsManager() { }
     virtual void modelDestroyed() { }

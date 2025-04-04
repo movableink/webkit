@@ -207,6 +207,10 @@ protected:
     void didEnterFullscreen(PlaybackSessionContextIdentifier, std::optional<WebCore::FloatSize>);
     void failedToEnterFullscreen(PlaybackSessionContextIdentifier);
     void didCleanupFullscreen(PlaybackSessionContextIdentifier);
+#if PLATFORM(VISION)
+    void didEnterExternalPlayback(PlaybackSessionContextIdentifier);
+    void didExitExternalPlayback(PlaybackSessionContextIdentifier);
+#endif
     void setVideoLayerFrameFenced(PlaybackSessionContextIdentifier, WebCore::FloatRect bounds, WTF::MachSendRight&&);
     void setVideoLayerGravityEnum(PlaybackSessionContextIdentifier, unsigned gravity);
     void setVideoFullscreenFrame(PlaybackSessionContextIdentifier, WebCore::FloatRect);
