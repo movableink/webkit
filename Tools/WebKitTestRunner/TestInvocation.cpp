@@ -86,6 +86,7 @@ TestInvocation::TestInvocation(WKURLRef url, const TestOptions& options)
     , m_url(url)
     , m_waitToDumpWatchdogTimer(RunLoop::main(), this, &TestInvocation::waitToDumpWatchdogTimerFired)
     , m_waitForPostDumpWatchdogTimer(RunLoop::main(), this, &TestInvocation::waitForPostDumpWatchdogTimerFired)
+    , m_textOutput(OverflowPolicy::RecordOverflow)
 {
     m_urlString = toWTFString(adoptWK(WKURLCopyString(m_url.get())).get());
 
@@ -287,7 +288,9 @@ void TestInvocation::dumpResults()
     if (m_shouldDumpPrivateClickMeasurement)
         m_textOutput.append(TestController::singleton().dumpPrivateClickMeasurement());
 
-    if (m_textOutput.length() || !m_audioResult)
+    if (m_textOutput.hasOverflowed())
+        dump("text output overflowed");
+    else if (m_textOutput.length() || !m_audioResult)
         dump(m_textOutput.toString().utf8().data());
     else
         dumpAudio(m_audioResult.get());
