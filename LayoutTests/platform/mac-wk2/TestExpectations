@@ -2123,3 +2123,5 @@ webkit.org/b/290869 [ Debug ] ipc/send-gpu-GetShareableBitmap-RemoteRenderingBac
 webkit.org/b/290281 [ Sequoia Debug arm64 ] imported/w3c/web-platform-tests/svg/struct/scripted/svg-checkIntersection-001.svg [ Pass Timeout ]
 
 webkit.org/b/291035 webaudio/decode-audio-data-too-short.html [ Pass Failure ]
+
+webkit.org/b/291108 [ Sequoia Debug ] imported/w3c/web-platform-tests/html/webappapis/dynamic-markup-insertion/document-write/049.html [ Pass Timeout ]
