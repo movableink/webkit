@@ -101,6 +101,7 @@ public:
     void pluginScaleFactorDidChange();
 #if PLATFORM(IOS_FAMILY)
     std::pair<URL, WebCore::FloatRect> linkURLAndBoundsAtPoint(WebCore::FloatPoint pointInRootView) const;
+    std::tuple<URL, WebCore::FloatRect, RefPtr<WebCore::TextIndicator>> linkDataAtPoint(WebCore::FloatPoint pointInRootView);
     std::optional<WebCore::FloatRect> highlightRectForTapAtPoint(WebCore::FloatPoint pointInRootView) const;
     void handleSyntheticClick(WebCore::PlatformMouseEvent&&);
     void setSelectionRange(WebCore::FloatPoint pointInRootView, WebCore::TextGranularity);

@@ -1186,6 +1186,11 @@ std::pair<URL, FloatRect> PluginView::linkURLAndBoundsAtPoint(FloatPoint pointIn
     return protectedPlugin()->linkURLAndBoundsAtPoint(pointInRootView);
 }
 
+std::tuple<URL, FloatRect, RefPtr<TextIndicator>> PluginView::linkDataAtPoint(FloatPoint pointInRootView)
+{
+    return protectedPlugin()->linkDataAtPoint(pointInRootView);
+}
+
 std::optional<FloatRect> PluginView::highlightRectForTapAtPoint(FloatPoint pointInRootView) const
 {
     return protectedPlugin()->highlightRectForTapAtPoint(pointInRootView);

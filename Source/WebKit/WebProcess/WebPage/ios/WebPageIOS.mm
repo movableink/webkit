@@ -3906,10 +3906,11 @@ InteractionInformationAtPosition WebPage::positionInformation(const InteractionI
 
 #if ENABLE(PDF_PLUGIN)
     if (pluginView) {
-        if (auto [url, bounds] = pluginView->linkURLAndBoundsAtPoint(request.point); !url.isEmpty()) {
+        if (auto [url, bounds, textIndicator] = pluginView->linkDataAtPoint(request.point); !url.isEmpty()) {
             info.isLink = true;
             info.url = WTFMove(url);
             info.bounds = enclosingIntRect(bounds);
+            info.linkIndicator = textIndicator->data();
         }
         info.isInPlugin = true;
     }
