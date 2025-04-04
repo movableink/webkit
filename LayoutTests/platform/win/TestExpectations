@@ -879,6 +879,10 @@ http/tests/security/contentSecurityPolicy/audioworklet-script-src-blocked.html [
 
 http/tests/security/contentSecurityPolicy/block-all-mixed-content/insecure-iframe-in-main-frame.html [ Failure Pass ]
 
+webkit.org/b/291024 http/tests/security/contentSecurityPolicy/block-all-mixed-content/insecure-image-in-iframe.html [ Skip ] # Failure Pass
+webkit.org/b/291024 http/tests/security/contentSecurityPolicy/upgrade-insecure-requests/proper-open-window-upgrades-UpgradeMixedContent.html [ Skip ] # Failure Pass
+webkit.org/b/291024 http/tests/security/contentSecurityPolicy/upgrade-insecure-requests/proper-open-window-upgrades.html [ Skip ] # Failure Pass
+
 http/tests/security/cookie-module-import-propagate.html [ Skip ] # Failure
 http/tests/security/cookie-module-import.html [ Skip ] # Failure
 http/tests/security/cookie-module-propagate.html [ Skip ] # Failure
@@ -1245,6 +1249,8 @@ fast/css/caret-color-with-initial-color-property.html [ Skip ] # ImageOnlyFailur
 
 # GPU process hangs. Makes the subsequent test Timeout
 fast/css/repeating-conic-gradient-small-range.html [ Skip ]
+
+http/tests/css/css-image-loading.html [ Failure Pass ]
 
 imported/w3c/web-platform-tests/css/CSS2/floats/overflow-scroll-float-paint-order.html [ Pass ]
 
