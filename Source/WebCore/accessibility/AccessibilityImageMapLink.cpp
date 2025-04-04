@@ -30,59 +30,40 @@
 #include "AccessibilityImageMapLink.h"
 
 #include "AXObjectCache.h"
-#include "AccessibilityRenderObject.h"
-#include "Document.h"
-#include "HTMLNames.h"
-#include "RenderBoxModelObject.h"
+#include "ElementAncestorIteratorInlines.h"
+#include "HTMLImageElement.h"
 
 namespace WebCore {
     
-using namespace HTMLNames;
-
-AccessibilityImageMapLink::AccessibilityImageMapLink(AXID axID)
-    : AccessibilityMockObject(axID)
-    , m_areaElement(nullptr)
-    , m_mapElement(nullptr)
+AccessibilityImageMapLink::AccessibilityImageMapLink(AXID axID, HTMLAreaElement& element)
+    : AccessibilityNodeObject(axID, &element)
 {
 }
 
 AccessibilityImageMapLink::~AccessibilityImageMapLink() = default;
 
-Ref<AccessibilityImageMapLink> AccessibilityImageMapLink::create(AXID axID)
+Ref<AccessibilityImageMapLink> AccessibilityImageMapLink::create(AXID axID, HTMLAreaElement& element)
 {
-    return adoptRef(*new AccessibilityImageMapLink(axID));
-}
-
-void AccessibilityImageMapLink::setHTMLAreaElement(HTMLAreaElement* element)
-{
-    if (element == m_areaElement)
-        return;
-    m_areaElement = element;
-    // AccessibilityImageMapLink::determineAccessibilityRole() depends on m_areaElement, so re-compute it now.
-    updateRole();
+    return adoptRef(*new AccessibilityImageMapLink(axID, element));
 }
 
 AccessibilityObject* AccessibilityImageMapLink::parentObject() const
 {
-    if (m_parent)
-        return m_parent.get();
-    
-    if (!m_mapElement.get() || !m_mapElement->renderer())
+    RefPtr node = this->node();
+    if (!node)
         return nullptr;
-    
-    return m_mapElement->document().axObjectCache()->getOrCreate(m_mapElement->renderer());
+
+    RefPtr map = ancestorsOfType<HTMLMapElement>(*node).first();
+    WeakPtr cache = axObjectCache();
+    return map && cache ? cache->getOrCreate(map->imageElement().get()) : nullptr;
 }
-    
+
 AccessibilityRole AccessibilityImageMapLink::determineAccessibilityRole()
 {
-    if (!m_areaElement)
-        return AccessibilityRole::WebCoreLink;
-    
-    const AtomString& ariaRole = getAttribute(roleAttr);
-    if (!ariaRole.isEmpty())
-        return AccessibilityObject::ariaRoleToWebCoreRole(ariaRole);
+    if ((m_ariaRole = determineAriaRoleAttribute()) != AccessibilityRole::Unknown)
+        return m_ariaRole;
 
-    return AccessibilityRole::WebCoreLink;
+    return !url().isEmpty() ? AccessibilityRole::WebCoreLink : AccessibilityRole::Generic;
 }
     
 Element* AccessibilityImageMapLink::actionElement() const
@@ -92,15 +73,14 @@ Element* AccessibilityImageMapLink::actionElement() const
     
 Element* AccessibilityImageMapLink::anchorElement() const
 {
-    return m_areaElement.get();
+    ASSERT(!node() || is<HTMLAreaElement>(node()));
+    return dynamicDowncast<Element>(node());
 }
 
 URL AccessibilityImageMapLink::url() const
 {
-    if (!m_areaElement.get())
-        return URL();
-    
-    return m_areaElement->href();
+    RefPtr areaElement = downcast<HTMLAreaElement>(node());
+    return areaElement ? areaElement->href() : URL();
 }
 
 void AccessibilityImageMapLink::accessibilityText(Vector<AccessibilityText>& textOrder) const
@@ -145,37 +125,25 @@ String AccessibilityImageMapLink::title() const
 
 RenderElement* AccessibilityImageMapLink::imageMapLinkRenderer() const
 {
-    if (!m_mapElement || !m_areaElement)
+    RefPtr node = this->node();
+    if (!node)
         return nullptr;
-
-    if (auto* parent = dynamicDowncast<AccessibilityRenderObject>(m_parent.get()))
-        return downcast<RenderElement>(parent->renderer());
-    return m_mapElement->renderer();
-}
-
-void AccessibilityImageMapLink::detachFromParent()
-{
-    AccessibilityMockObject::detachFromParent();
-    m_areaElement = nullptr;
-    m_mapElement = nullptr;
+    RefPtr map = ancestorsOfType<HTMLMapElement>(*node).first();
+    return map ? map->renderer() : nullptr;
 }
 
 Path AccessibilityImageMapLink::elementPath() const
 {
-    auto renderer = imageMapLinkRenderer();
-    if (!renderer)
-        return Path();
-    
-    return m_areaElement->computePath(*renderer);
+    CheckedPtr renderer = imageMapLinkRenderer();
+    RefPtr areaElement = dynamicDowncast<HTMLAreaElement>(node());
+    return renderer && areaElement ? areaElement->computePath(*renderer) : Path();
 }
     
 LayoutRect AccessibilityImageMapLink::elementRect() const
 {
-    auto renderer = imageMapLinkRenderer();
-    if (!renderer)
-        return LayoutRect();
-    
-    return m_areaElement->computeRect(renderer);
+    CheckedPtr renderer = imageMapLinkRenderer();
+    RefPtr areaElement = dynamicDowncast<HTMLAreaElement>(node());
+    return renderer && areaElement ? areaElement->computeRect(renderer.get()) : LayoutRect();
 }
     
 } // namespace WebCore

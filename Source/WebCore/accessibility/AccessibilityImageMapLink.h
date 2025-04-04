@@ -34,19 +34,11 @@
 
 namespace WebCore {
     
-class AccessibilityImageMapLink final : public AccessibilityMockObject {
+class AccessibilityImageMapLink final : public AccessibilityNodeObject {
 public:
-    static Ref<AccessibilityImageMapLink> create(AXID);
+    static Ref<AccessibilityImageMapLink> create(AXID, HTMLAreaElement&);
     virtual ~AccessibilityImageMapLink();
     
-    void setHTMLAreaElement(HTMLAreaElement*);
-    HTMLAreaElement* areaElement() const { return m_areaElement.get(); }
-    
-    void setHTMLMapElement(HTMLMapElement* element) { m_mapElement = element; }    
-    HTMLMapElement* mapElement() const { return m_mapElement.get(); }
-    
-    Node* node() const final { return m_areaElement.get(); }
-
     AccessibilityRole determineAccessibilityRole() final;
     bool isEnabled() const final { return true; }
 
@@ -60,17 +52,13 @@ public:
     LayoutRect elementRect() const final;
 
 private:
-    explicit AccessibilityImageMapLink(AXID);
+    explicit AccessibilityImageMapLink(AXID, HTMLAreaElement&);
 
-    void detachFromParent() final;
     Path elementPath() const final;
     RenderElement* imageMapLinkRenderer() const;
     void accessibilityText(Vector<AccessibilityText>&) const final;
     bool isImageMapLink() const final { return true; }
     bool supportsPath() const final { return true; }
-
-    WeakPtr<HTMLAreaElement, WeakPtrImplWithEventTargetData> m_areaElement;
-    WeakPtr<HTMLMapElement, WeakPtrImplWithEventTargetData> m_mapElement;
 };
     
 } // namespace WebCore

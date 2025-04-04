@@ -94,7 +94,6 @@ accessibility/AXRemoteFrame.cpp
 accessibility/AXSearchManager.cpp
 accessibility/AXTextMarker.cpp
 accessibility/AccessibilityARIAGridRow.cpp
-accessibility/AccessibilityImageMapLink.cpp
 accessibility/AccessibilityList.cpp
 accessibility/AccessibilityListBox.cpp
 accessibility/AccessibilityListBoxOption.cpp

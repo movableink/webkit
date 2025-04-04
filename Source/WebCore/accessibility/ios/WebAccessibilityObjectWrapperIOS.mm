@@ -310,7 +310,6 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
     case AccessibilityRole::ColorWell:
     case AccessibilityRole::ComboBox:
     case AccessibilityRole::Heading:
-    case AccessibilityRole::ImageMapLink:
     case AccessibilityRole::Image:
     case AccessibilityRole::Link:
     case AccessibilityRole::ListBox:
@@ -900,7 +899,6 @@ static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descenda
     case AccessibilityRole::RadioButton:
     case AccessibilityRole::Slider:
     case AccessibilityRole::Image:
-    case AccessibilityRole::ImageMapLink:
     case AccessibilityRole::ProgressIndicator:
     case AccessibilityRole::Meter:
     case AccessibilityRole::MenuItem:

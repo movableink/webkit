@@ -1091,7 +1091,7 @@ static NSArray *children(AXCoreObject& backingObject)
     if (backingObject.isTreeItem())
         return makeNSArray(backingObject.ariaTreeItemContent());
 
-    return makeNSArray(backingObject.unignoredChildren());
+    return makeNSArray(unignoredChildren);
 }
 
 static NSString *roleString(AXCoreObject& backingObject)

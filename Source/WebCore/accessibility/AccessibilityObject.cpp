@@ -609,6 +609,18 @@ void AccessibilityObject::insertChild(AccessibilityObject& child, unsigned index
         }
     }
 
+    if (UNLIKELY(is<HTMLAreaElement>(child.node()))) {
+        // Despite the DOM parent for <area> elements being <map>, we expose <area> elements as children
+        // of the <img> using the <map>. This provides a better experience for AT users, e.g. a screenreader
+        // would hear "image map" or "group" plus the image description, then the links, which provides the
+        // added context for what the links represent.
+        //
+        // Due to the difference in DOM vs. expected AX hierarchy, make sure area elements are only inserted
+        // by their associated image as children.
+        if (child.parentObject() != this)
+            return;
+    }
+
     // If the parent is asking for this child's children, then either it's the first time (and clearing is a no-op),
     // or its visibility has changed. In the latter case, this child may have a stale child cached.
     // This can prevent aria-hidden changes from working correctly. Hence, whenever a parent is getting children, ensure data is not stale.

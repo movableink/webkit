@@ -504,7 +504,7 @@ AccessibilityObject* AXObjectCache::focusedImageMapUIElement(HTMLAreaElement& ar
     
     for (const auto& child : axRenderImage->unignoredChildren()) {
         auto* imageMapLink = dynamicDowncast<AccessibilityImageMapLink>(child.get());
-        if (imageMapLink && imageMapLink->areaElement() == &areaElement)
+        if (imageMapLink && imageMapLink->node() == &areaElement)
             return imageMapLink;
     }
     return nullptr;
@@ -844,6 +844,8 @@ Ref<AccessibilityNodeObject> AXObjectCache::createFromNode(Node& node)
             return AccessibilityARIAGridRow::create(AXID::generate(), *element);
         if (isAccessibilityARIAGridCell(*element))
             return AccessibilityARIAGridCell::create(AXID::generate(), *element);
+        if (auto* areaElement = dynamicDowncast<HTMLAreaElement>(*element))
+            return AccessibilityImageMapLink::create(AXID::generate(), *areaElement);
     }
     return AccessibilityNodeObject::create(AXID::generate(), node);
 }
@@ -945,7 +947,8 @@ AccessibilityObject* AXObjectCache::getOrCreate(Node& node, IsPartOfRelation isP
         auto* element = dynamicDowncast<Element>(node);
         bool hasDisplayContents = element && element->hasDisplayContents();
         bool isPopover = element && element->hasAttributeWithoutSynchronization(popoverAttr);
-        if (!inCanvasSubtree && !insideMeterElement && !hasDisplayContents && !isPopover && !isNodeFocused(node))
+        bool isAreaElement = is<HTMLAreaElement>(element);
+        if (!inCanvasSubtree && !insideMeterElement && !hasDisplayContents && !isPopover && !isNodeFocused(node) && !isAreaElement)
             return nullptr;
     }
 
@@ -1091,9 +1094,6 @@ AccessibilityObject* AXObjectCache::create(AccessibilityRole role)
 {
     RefPtr<AccessibilityObject> object;
     switch (role) {
-    case AccessibilityRole::ImageMapLink:
-        object = AccessibilityImageMapLink::create(AXID::generate());
-        break;
     case AccessibilityRole::Column:
         object = AccessibilityTableColumn::create(AXID::generate());
         break;

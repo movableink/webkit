@@ -658,7 +658,6 @@ static constexpr std::pair<AccessibilityRole, RoleNameEntry> roleNames[] = {
     { AccessibilityRole::Inline, { "text", N_("text") } },
     { AccessibilityRole::Image, { "image", N_("image") } },
     { AccessibilityRole::ImageMap, { "image map", N_("image map") } },
-    { AccessibilityRole::ImageMapLink, { "link", N_("link") } },
     { AccessibilityRole::Insertion, { "content insertion", N_("content insertion") } },
     { AccessibilityRole::Label, { "label", N_("label") } },
     { AccessibilityRole::LandmarkBanner, { "landmark", N_("landmark") } },

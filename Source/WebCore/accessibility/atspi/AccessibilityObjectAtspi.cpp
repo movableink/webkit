@@ -251,7 +251,6 @@ static Atspi::Role atspiRole(AccessibilityRole role)
         return Atspi::Role::TableCell;
     case AccessibilityRole::Link:
     case AccessibilityRole::WebCoreLink:
-    case AccessibilityRole::ImageMapLink:
         return Atspi::Role::Link;
     case AccessibilityRole::ImageMap:
         return Atspi::Role::ImageMap;

@@ -1711,14 +1711,6 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityRenderObject::documentLin
                         if (is<AccessibilityImageMapLink>(child) && !result.contains(child))
                             result.append(child);
                     }
-                } else {
-                    // We couldn't retrieve the already existing image-map links from the parent image, so create a new one.
-                    ASSERT_NOT_REACHED("Unexpectedly missing image-map link parent AX object.");
-                    auto& areaObject = downcast<AccessibilityImageMapLink>(*cache->create(AccessibilityRole::ImageMapLink));
-                    areaObject.setHTMLAreaElement(uncheckedDowncast<HTMLAreaElement>(current));
-                    areaObject.setHTMLMapElement(parentMap);
-                    areaObject.setParent(associatedAXImage(*parentMap));
-                    result.append(areaObject);
                 }
             }
         }
@@ -2316,18 +2308,14 @@ void AccessibilityRenderObject::addImageMapChildren()
     if (!map)
         return;
 
+    WeakPtr cache = axObjectCache();
+    if (!cache)
+        return;
     for (auto& area : descendantsOfType<HTMLAreaElement>(*map)) {
         // add an <area> element for this child if it has a link
         if (!area.isLink())
             continue;
-        auto& areaObject = uncheckedDowncast<AccessibilityImageMapLink>(*axObjectCache()->create(AccessibilityRole::ImageMapLink));
-        areaObject.setHTMLAreaElement(&area);
-        areaObject.setHTMLMapElement(map.get());
-        areaObject.setParent(this);
-        if (!areaObject.isIgnored())
-            addChild(areaObject);
-        else
-            axObjectCache()->remove(areaObject.objectID());
+        addChild(cache->getOrCreate(area));
     }
 }
 
