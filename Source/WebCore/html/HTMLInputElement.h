@@ -445,6 +445,8 @@ private:
     bool computeWillValidate() const final;
     void requiredStateChanged() final;
 
+    void logUserInteraction();
+
     void updateType(const AtomString& typeAttributeValue);
     void runPostTypeUpdateTasks();
 
