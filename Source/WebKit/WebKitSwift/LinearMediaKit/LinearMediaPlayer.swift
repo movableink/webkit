@@ -206,6 +206,7 @@ enum LinearMediaPlayerErrors: Error {
         case .inline:
             swiftOnlyData.presentationState = .external
             swiftOnlyData.fullscreenBehaviorsSubject.send([ .hostContentInline ])
+            contentOverlay = .init(frame: .zero)
             completionHandler(true, nil)
         @unknown default:
             fatalError()
@@ -222,6 +223,7 @@ enum LinearMediaPlayerErrors: Error {
             delegate?.linearMediaPlayerClearVideoReceiverEndpoint?(self)
             swiftOnlyData.presentationState = .inline
             swiftOnlyData.fullscreenBehaviorsSubject.send(FullscreenBehaviors.default)
+            contentOverlay = nil
             completionHandler(true, nil)
         @unknown default:
             fatalError()
