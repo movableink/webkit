@@ -4596,14 +4596,15 @@
    },
    {
       "emails" : [
-         "jhoffman23@apple.com"
+         "jhoffman23@apple.com",
+         "josh_hoffman@apple.com"
       ],
       "github" : "hoffmanjoshua",
       "name" : "Joshua Hoffman",
       "nicks" : [
          "hoffmanjoshua"
       ],
-      "status" : "committer"
+      "status" : "reviewer"
    },
    {
       "emails" : [
