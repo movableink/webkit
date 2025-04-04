@@ -7670,8 +7670,6 @@ imported/w3c/web-platform-tests/navigation-api/navigation-activation/activation-
 imported/w3c/web-platform-tests/navigation-api/navigation-methods/disambigaute-forward.html [ Failure ]
 imported/w3c/web-platform-tests/navigation-api/navigation-methods/disambigaute-traverseTo-forward-multiple.html [ Failure ]
 
-webkit.org/b/286500 [ Release ] fast/forms/date/date-pseudo-elements.html [ Pass Failure ]
-
 webkit.org/b/286507 compositing/geometry/fixed-position-composited-page-scale-smaller-than-viewport.html [ Pass Failure ]
 
 webkit.org/b/286515 fast/forms/datalist/datalist-show-hide.html [ Timeout ]
@@ -7681,8 +7679,6 @@ webkit.org/b/286594 http/wpt/cache-storage/quota-third-party.https.html [ Pass F
 webkit.org/b/286318 http/tests/iframe-monitor [ Pass ]
 
 # webkit.org/b/286934 [ Debug ] ipc/create-media-source-with-invalid-constraints-crash.html [ Skip ]
-
-webkit.org/b/287204 [ Release ] fast/forms/date/date-input-rendering-basic.html [ Pass Failure ]
 
 webkit.org/b/287291 http/tests/site-isolation/selection-focus.html [ ImageOnlyFailure ]
 
@@ -7835,3 +7831,7 @@ webkit.org/b/290281 imported/w3c/web-platform-tests/svg/struct/scripted/svg-chec
 webkit.org/b/291021 imported/w3c/web-platform-tests/webrtc/RTCIceTransport.html [ Failure ]
 
 webkit.org/b/291035 webaudio/decode-audio-data-too-short.html [ Pass Failure ]
+
+# webkit.org/b/287204 REGRESSION(292441@main): [ iOS ] 2x fast/forms/date/date-*.html are constant failures.
+fast/forms/date/date-input-rendering-basic.html [ Failure ]
+fast/forms/date/date-pseudo-elements.html [ Failure ]
