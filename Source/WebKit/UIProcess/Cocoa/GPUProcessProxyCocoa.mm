@@ -69,10 +69,24 @@ bool GPUProcessProxy::isPowerLoggingInTaskMode()
         dictionary = PLQueryRegistered(PLClientIDWebKit, CFSTR("TaskModeQuery"), nullptr);
     if (!dictionary)
         return false;
-    RetainPtr taskModeRef = checked_cf_cast<CFBooleanRef>(CFDictionaryGetValue(dictionary.get(), CFSTR("Task Mode")));
+
+    RetainPtr taskModeRef = CFDictionaryGetValue(dictionary.get(), CFSTR("Task Mode"));
     if (!taskModeRef)
         return false;
-    return !!CFBooleanGetValue(taskModeRef.get());
+
+    if (RetainPtr booleanRef = dynamic_cf_cast<CFBooleanRef>(taskModeRef.get()))
+        return !!CFBooleanGetValue(booleanRef.get());
+
+    RetainPtr numberRef = dynamic_cf_cast<CFNumberRef>(taskModeRef.get());
+    if (!numberRef) {
+        RELEASE_LOG_ERROR(Sandbox, "GPUProcessProxy::isPowerLoggingInTaskMode: Could not process task mode as a boolean or number");
+        return false;
+    }
+
+    int taskMode = 0;
+    if (!CFNumberGetValue(numberRef.get(), kCFNumberIntType, &taskMode))
+        return false;
+    return !!taskMode;
 }
 
 void GPUProcessProxy::enablePowerLogging()
