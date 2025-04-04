@@ -633,6 +633,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     Modules/webauthn/AuthenticationExtensionsClientInputsJSON.h
     Modules/webauthn/AuthenticationExtensionsClientOutputs.h
     Modules/webauthn/AuthenticationExtensionsClientOutputsJSON.h
+    Modules/webauthn/AuthenticatorAssertionResponse.h
     Modules/webauthn/AuthenticatorCoordinator.h
     Modules/webauthn/AuthenticatorCoordinatorClient.h
     Modules/webauthn/AuthenticatorResponseData.h

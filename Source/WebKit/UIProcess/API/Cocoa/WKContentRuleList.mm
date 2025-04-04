@@ -37,7 +37,7 @@
     if (WebCoreObjCScheduleDeallocateOnMainRunLoop(WKContentRuleList.class, self))
         return;
 
-    _contentRuleList->~ContentRuleList();
+    Ref { *_contentRuleList }->~ContentRuleList();
 
     [super dealloc];
 }
@@ -52,7 +52,7 @@
 - (NSString *)identifier
 {
 #if ENABLE(CONTENT_EXTENSIONS)
-    return _contentRuleList->name();
+    return Ref { *_contentRuleList }->name();
 #else
     return nil;
 #endif

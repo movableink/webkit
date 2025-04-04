@@ -94,6 +94,7 @@
 #include "WebProcessPool.h"
 #include "WebProcessProxy.h"
 #include "WebProtectionSpace.h"
+#include <WebCore/AuthenticatorAssertionResponse.h>
 #include <WebCore/AutoplayEvent.h>
 #include <WebCore/ContentRuleListResults.h>
 #include <WebCore/FrameLoaderClient.h>
@@ -2298,7 +2299,8 @@ void WKPageSetPageUIClient(WKPageRef pageRef, const WKPageUIClientBase* wkClient
                 void selectAssertionResponse(Vector<Ref<WebCore::AuthenticatorAssertionResponse>>&& responses, WebKit::WebAuthenticationSource, CompletionHandler<void(WebCore::AuthenticatorAssertionResponse*)>&& completionHandler) const final
                 {
                     ASSERT(!responses.isEmpty());
-                    completionHandler(responses[0].ptr());
+                    Ref firstResponse = responses[0];
+                    completionHandler(firstResponse.ptr());
                 }
 
                 void decidePolicyForLocalAuthenticator(CompletionHandler<void(WebKit::LocalAuthenticatorPolicy)>&& completionHandler) const final

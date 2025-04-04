@@ -14,7 +14,6 @@ Shared/Extensions/_WKWebExtensionSQLiteDatabase.mm
 Shared/Extensions/_WKWebExtensionSQLiteHelpers.h
 Shared/Extensions/_WKWebExtensionSQLiteRow.mm
 Shared/Extensions/_WKWebExtensionSQLiteStatement.mm
-UIProcess/API/C/WKPage.cpp
 UIProcess/Automation/WebAutomationSession.h
 UIProcess/WebProcessPool.h
 WebProcess/Extensions/Bindings/JSWebExtensionWrapper.h

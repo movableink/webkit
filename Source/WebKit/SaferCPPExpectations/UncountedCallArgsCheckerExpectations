@@ -8,9 +8,7 @@ Platform/IPC/Connection.h
 Platform/IPC/StreamClientConnection.cpp
 Shared/Cocoa/WKObject.mm
 Shared/JavaScriptEvaluationResult.mm
-UIProcess/API/APIDataTask.cpp
 UIProcess/API/C/WKAuthenticationChallenge.cpp
-UIProcess/API/C/WKAuthenticationDecisionListener.cpp
 UIProcess/API/C/WKBackForwardListRef.cpp
 UIProcess/API/C/WKContext.cpp
 UIProcess/API/C/WKContextConfigurationRef.cpp
@@ -47,8 +45,6 @@ UIProcess/API/C/WKWebsiteDataStoreConfigurationRef.cpp
 UIProcess/API/C/WKWebsiteDataStoreRef.cpp
 UIProcess/API/C/WKWebsitePolicies.cpp
 UIProcess/API/C/mac/WKPagePrivateMac.mm
-UIProcess/API/Cocoa/WKContentRuleList.mm
-UIProcess/API/Cocoa/WKContentRuleListStore.mm
 UIProcess/API/Cocoa/WKContentWorld.mm
 UIProcess/API/Cocoa/WKDownload.mm
 UIProcess/API/Cocoa/WKFrameInfo.mm
