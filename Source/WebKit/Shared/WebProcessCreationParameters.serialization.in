@@ -214,6 +214,10 @@
     CString inspectorServerAddress;
 #endif
 
+#if PLATFORM(WPE)
+    OptionSet<WebKit::AvailableInputDevices> availableInputDevices;
+#endif
+
 #if USE(ATSPI)
     String accessibilityBusAddress;
     String accessibilityBusName;

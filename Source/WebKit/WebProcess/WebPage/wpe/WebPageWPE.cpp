@@ -48,38 +48,33 @@ bool WebPage::platformCanHandleRequest(const ResourceRequest&)
 
 bool WebPage::hoverSupportedByPrimaryPointingDevice() const
 {
-#if ENABLE(TOUCH_EVENTS)
-    return !screenIsTouchPrimaryInputDevice();
-#else
-    return true;
-#endif
+    return WebProcess::singleton().primaryPointingDevice() == AvailableInputDevices::Mouse;
 }
 
 bool WebPage::hoverSupportedByAnyAvailablePointingDevice() const
 {
-#if ENABLE(TOUCH_EVENTS)
-    return !screenHasTouchDevice();
-#else
-    return true;
-#endif
+    return WebProcess::singleton().availableInputDevices().contains(AvailableInputDevices::Mouse);
 }
 
 std::optional<PointerCharacteristics> WebPage::pointerCharacteristicsOfPrimaryPointingDevice() const
 {
-#if ENABLE(TOUCH_EVENTS)
-    if (screenIsTouchPrimaryInputDevice())
+    const auto& primaryPointingDevice = WebProcess::singleton().primaryPointingDevice();
+    if (primaryPointingDevice == AvailableInputDevices::Mouse)
+        return PointerCharacteristics::Fine;
+    if (primaryPointingDevice == AvailableInputDevices::Touchscreen)
         return PointerCharacteristics::Coarse;
-#endif
-    return PointerCharacteristics::Fine;
+    return std::nullopt;
 }
 
 OptionSet<PointerCharacteristics> WebPage::pointerCharacteristicsOfAllAvailablePointingDevices() const
 {
-#if ENABLE(TOUCH_EVENTS)
-    if (screenHasTouchDevice())
-        return PointerCharacteristics::Coarse;
-#endif
-    return PointerCharacteristics::Fine;
+    OptionSet<PointerCharacteristics> pointerCharacteristics;
+    const auto& availableInputs = WebProcess::singleton().availableInputDevices();
+    if (availableInputs.contains(AvailableInputDevices::Mouse))
+        pointerCharacteristics.add(PointerCharacteristics::Fine);
+    if (availableInputs.contains(AvailableInputDevices::Touchscreen))
+        pointerCharacteristics.add(PointerCharacteristics::Coarse);
+    return pointerCharacteristics;
 }
 
 #if USE(GBM) && ENABLE(WPE_PLATFORM)

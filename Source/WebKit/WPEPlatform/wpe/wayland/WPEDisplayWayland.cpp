@@ -375,6 +375,12 @@ static gboolean wpeDisplayWaylandSetup(WPEDisplayWayland* display, GError** erro
         xdg_wm_base_add_listener(priv->xdgWMBase, &xdgWMBaseListener, nullptr);
     if (priv->wlSeat) {
         priv->wlCursor = makeUnique<WPE::WaylandCursor>(display);
+        priv->wlSeat->setAvailableInputDevicesChangedCallback([weakDisplay = GWeakPtr { display }](WPEAvailableInputDevices devices) {
+            if (!weakDisplay)
+                return;
+
+            wpe_display_set_available_input_devices(WPE_DISPLAY(weakDisplay.get()), devices);
+        });
         priv->wlSeat->startListening();
     }
 

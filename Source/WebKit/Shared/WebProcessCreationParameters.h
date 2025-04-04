@@ -64,6 +64,10 @@
 #include <wtf/MemoryPressureHandler.h>
 #endif
 
+#if PLATFORM(WPE)
+#include "AvailableInputDevices.h"
+#endif
+
 namespace API {
 class Data;
 }
@@ -263,6 +267,10 @@ struct WebProcessCreationParameters {
 #if ENABLE(REMOTE_INSPECTOR)
     CString inspectorServerAddress;
 #endif
+#endif
+
+#if PLATFORM(WPE)
+    OptionSet<AvailableInputDevices> availableInputDevices;
 #endif
 
 #if USE(ATSPI)

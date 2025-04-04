@@ -77,6 +77,39 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 namespace WebKit {
 
+#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM)
+static OptionSet<AvailableInputDevices> toAvailableInputDevices(WPEAvailableInputDevices inputDevices)
+{
+    OptionSet<AvailableInputDevices> availableInputDevices;
+    if (inputDevices & WPE_AVAILABLE_INPUT_DEVICE_MOUSE)
+        availableInputDevices.add(AvailableInputDevices::Mouse);
+    if (inputDevices & WPE_AVAILABLE_INPUT_DEVICE_KEYBOARD)
+        availableInputDevices.add(AvailableInputDevices::Keyboard);
+    if (inputDevices & WPE_AVAILABLE_INPUT_DEVICE_TOUCHSCREEN)
+        availableInputDevices.add(AvailableInputDevices::Touchscreen);
+
+    return availableInputDevices;
+}
+#endif
+
+#if PLATFORM(WPE)
+static OptionSet<AvailableInputDevices> availableInputDevices()
+{
+#if ENABLE(WPE_PLATFORM)
+    bool usingWPEPlatformAPI = !!g_type_class_peek(WPE_TYPE_DISPLAY);
+    if (usingWPEPlatformAPI) {
+        const auto inputDevices = wpe_display_get_available_input_devices(wpe_display_get_primary());
+        return toAvailableInputDevices(inputDevices);
+    }
+#endif
+#if ENABLE(TOUCH_EVENTS)
+    return AvailableInputDevices::Touchscreen;
+#else
+    return AvailableInputDevices::Mouse;
+#endif
+}
+#endif
+
 void WebProcessPool::platformInitialize(NeedsGlobalStaticInitialization)
 {
     m_alwaysUsesComplexTextCodePath = true;
@@ -101,6 +134,17 @@ void WebProcessPool::platformInitialize(NeedsGlobalStaticInitialization)
 #if OS(LINUX)
     if (!MemoryPressureMonitor::disabled())
         installMemoryPressureHandler();
+#endif
+
+#if ENABLE(WPE_PLATFORM)
+    bool usingWPEPlatformAPI = !!g_type_class_peek(WPE_TYPE_DISPLAY);
+    if (usingWPEPlatformAPI) {
+        auto* display = wpe_display_get_primary();
+        g_signal_connect(display, "notify::available-input-devices", G_CALLBACK(+[](WPEDisplay* display, GParamSpec*, WebProcessPool* pool) {
+            auto availableInputDevices = toAvailableInputDevices(wpe_display_get_available_input_devices(display));
+            pool->sendToAllProcesses(Messages::WebProcess::SetAvailableInputDevices(availableInputDevices));
+        }), this);
+    }
 #endif
 }
 
@@ -133,6 +177,8 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
         parameters.hostClientFileDescriptor = UnixFileDescriptor { wpe_renderer_host_create_client(), UnixFileDescriptor::Adopt };
         parameters.implementationLibraryName = FileSystem::fileSystemRepresentation(String::fromLatin1(wpe_loader_get_loaded_implementation_library_name()));
     }
+
+    parameters.availableInputDevices = availableInputDevices();
 #endif
 
     parameters.memoryCacheDisabled = m_memoryCacheDisabled || LegacyGlobalSettings::singleton().cacheModel() == CacheModel::DocumentViewer;
@@ -185,6 +231,13 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
 
 void WebProcessPool::platformInvalidateContext()
 {
+#if ENABLE(WPE_PLATFORM)
+    bool usingWPEPlatformAPI = !!g_type_class_peek(WPE_TYPE_DISPLAY);
+    if (usingWPEPlatformAPI) {
+        auto* display = wpe_display_get_primary();
+        g_signal_handlers_disconnect_by_data(display, this);
+    }
+#endif
 }
 
 void WebProcessPool::platformResolvePathsForSandboxExtensions()

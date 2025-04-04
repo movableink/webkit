@@ -60,9 +60,20 @@ struct _WPEDisplayPrivate {
     GRefPtr<WPEBufferDMABufFormats> preferredDMABufFormats;
     GRefPtr<WPEKeymap> keymap;
     GRefPtr<WPESettings> settings;
+    WPEAvailableInputDevices availableInputDevices;
 };
 
 WEBKIT_DEFINE_ABSTRACT_TYPE(WPEDisplay, wpe_display, G_TYPE_OBJECT)
+
+enum {
+    PROP_0,
+
+    PROP_AVAILABLE_INPUT_DEVICES,
+
+    N_PROPERTIES
+};
+
+static std::array<GParamSpec*, N_PROPERTIES> sObjProperties;
 
 enum {
     SCREEN_ADDED,
@@ -104,11 +115,56 @@ static void wpeDisplayDispose(GObject* object)
     G_OBJECT_CLASS(wpe_display_parent_class)->dispose(object);
 }
 
+static void wpeDisplaySetProperty(GObject* object, guint propId, const GValue* value, GParamSpec* paramSpec)
+{
+    auto* display = WPE_DISPLAY(object);
+
+    switch (propId) {
+    case PROP_AVAILABLE_INPUT_DEVICES:
+        wpe_display_set_available_input_devices(display, static_cast<WPEAvailableInputDevices>(g_value_get_flags(value)));
+        break;
+    default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, paramSpec);
+    }
+}
+
+static void wpeDisplayGetProperty(GObject* object, guint propId, GValue* value, GParamSpec* paramSpec)
+{
+    auto* display = WPE_DISPLAY(object);
+
+    switch (propId) {
+    case PROP_AVAILABLE_INPUT_DEVICES:
+        g_value_set_flags(value, wpe_display_get_available_input_devices(display));
+        break;
+    default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, paramSpec);
+    }
+}
+
 static void wpe_display_class_init(WPEDisplayClass* displayClass)
 {
     GObjectClass* objectClass = G_OBJECT_CLASS(displayClass);
     objectClass->constructed = wpeDisplayConstructed;
     objectClass->dispose = wpeDisplayDispose;
+    objectClass->set_property = wpeDisplaySetProperty;
+    objectClass->get_property = wpeDisplayGetProperty;
+
+    /**
+     * WPEDisplay:available-input-devices:
+     *
+     * The input devices (e.g. mouse, keyboard or touchscreen) available to use for this display.
+     *
+     * This property can be used by creators to adjust their UI based on the available interactions.
+     */
+    sObjProperties[PROP_AVAILABLE_INPUT_DEVICES] =
+        g_param_spec_flags(
+            "available-input-devices",
+            nullptr, nullptr,
+            WPE_TYPE_AVAILABLE_INPUT_DEVICES,
+            WPE_AVAILABLE_INPUT_DEVICE_NONE,
+            static_cast<GParamFlags>(G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | G_PARAM_EXPLICIT_NOTIFY));
+
+    g_object_class_install_properties(objectClass, N_PROPERTIES, sObjProperties.data());
 
     /**
      * WPEDisplay::screen-added:
@@ -584,4 +640,39 @@ gboolean wpe_display_use_explicit_sync(WPEDisplay* display)
 
     auto* wpeDisplayClass = WPE_DISPLAY_GET_CLASS(display);
     return wpeDisplayClass->use_explicit_sync ? wpeDisplayClass->use_explicit_sync(display) : FALSE;
+}
+
+/**
+ * wpe_display_get_available_input_devices:
+ * @display: a #WPEDisplay
+ *
+ * Get the available input devices of @display that can be used by creators to adjust their UI based on the available interactions.
+ *
+ * Returns: a #WPEAvailableInputDevices
+ */
+WPEAvailableInputDevices wpe_display_get_available_input_devices(WPEDisplay* display)
+{
+    g_return_val_if_fail(WPE_IS_DISPLAY(display), WPE_AVAILABLE_INPUT_DEVICE_NONE);
+
+    return display->priv->availableInputDevices;
+}
+
+/**
+ * wpe_display_set_available_input_devices:
+ * @display: a #WPEDisplay
+ * @devices: a #WPEAvailableInputDevices
+ *
+ * Sets the available input devices for a @display.
+ *
+ * This function should only be called by platform implementations.
+ */
+void wpe_display_set_available_input_devices(WPEDisplay *display, WPEAvailableInputDevices devices)
+{
+    g_return_if_fail(WPE_IS_DISPLAY(display));
+
+    if (display->priv->availableInputDevices == devices)
+        return;
+
+    display->priv->availableInputDevices = devices;
+    g_object_notify_by_pspec(G_OBJECT(display), sObjProperties[PROP_AVAILABLE_INPUT_DEVICES]);
 }

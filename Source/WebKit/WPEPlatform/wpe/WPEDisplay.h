@@ -46,6 +46,13 @@ G_BEGIN_DECLS
 #define WPE_TYPE_DISPLAY (wpe_display_get_type())
 WPE_DECLARE_DERIVABLE_TYPE (WPEDisplay, wpe_display, WPE, DISPLAY, GObject)
 
+typedef enum {
+    WPE_AVAILABLE_INPUT_DEVICE_NONE        = 0,
+    WPE_AVAILABLE_INPUT_DEVICE_MOUSE       = (1 << 0),
+    WPE_AVAILABLE_INPUT_DEVICE_KEYBOARD    = (1 << 1),
+    WPE_AVAILABLE_INPUT_DEVICE_TOUCHSCREEN = (1 << 2)
+} WPEAvailableInputDevices;
+
 struct _WPEDisplayClass
 {
     GObjectClass parent_class;
@@ -85,29 +92,32 @@ typedef enum {
     WPE_DISPLAY_ERROR_CONNECTION_FAILED
 } WPEDisplayError;
 
-WPE_API GQuark                  wpe_display_error_quark                   (void);
-WPE_API WPEDisplay             *wpe_display_get_default                   (void);
-WPE_API WPEDisplay             *wpe_display_get_primary                   (void);
-WPE_API void                    wpe_display_set_primary                   (WPEDisplay *display);
-WPE_API gboolean                wpe_display_connect                       (WPEDisplay *display,
-                                                                           GError    **error);
-WPE_API gpointer                wpe_display_get_egl_display               (WPEDisplay *display,
-                                                                           GError    **error);
-WPE_API WPEKeymap              *wpe_display_get_keymap                    (WPEDisplay *display,
-                                                                           GError    **error);
-WPE_API WPEBufferDMABufFormats *wpe_display_get_preferred_dma_buf_formats (WPEDisplay *display);
-WPE_API guint                   wpe_display_get_n_screens                 (WPEDisplay *display);
-WPE_API WPEScreen              *wpe_display_get_screen                    (WPEDisplay *display,
-                                                                           guint       index);
-WPE_API void                    wpe_display_screen_added                  (WPEDisplay *display,
-                                                                           WPEScreen *screen);
-WPE_API void                    wpe_display_screen_removed                (WPEDisplay *display,
-                                                                           WPEScreen *screen);
-WPE_API const char             *wpe_display_get_drm_device                (WPEDisplay *display);
-WPE_API const char             *wpe_display_get_drm_render_node           (WPEDisplay *display);
-WPE_API gboolean                wpe_display_use_explicit_sync             (WPEDisplay *display);
+WPE_API GQuark                   wpe_display_error_quark                   (void);
+WPE_API WPEDisplay              *wpe_display_get_default                   (void);
+WPE_API WPEDisplay              *wpe_display_get_primary                   (void);
+WPE_API void                     wpe_display_set_primary                   (WPEDisplay *display);
+WPE_API gboolean                 wpe_display_connect                       (WPEDisplay *display,
+                                                                            GError    **error);
+WPE_API gpointer                 wpe_display_get_egl_display               (WPEDisplay *display,
+                                                                            GError    **error);
+WPE_API WPEKeymap               *wpe_display_get_keymap                    (WPEDisplay *display,
+                                                                            GError    **error);
+WPE_API WPEBufferDMABufFormats  *wpe_display_get_preferred_dma_buf_formats (WPEDisplay *display);
+WPE_API guint                    wpe_display_get_n_screens                 (WPEDisplay *display);
+WPE_API WPEScreen               *wpe_display_get_screen                    (WPEDisplay *display,
+                                                                            guint       index);
+WPE_API void                     wpe_display_screen_added                  (WPEDisplay *display,
+                                                                            WPEScreen *screen);
+WPE_API void                     wpe_display_screen_removed                (WPEDisplay *display,
+                                                                            WPEScreen *screen);
+WPE_API const char              *wpe_display_get_drm_device                (WPEDisplay *display);
+WPE_API const char              *wpe_display_get_drm_render_node           (WPEDisplay *display);
+WPE_API gboolean                 wpe_display_use_explicit_sync             (WPEDisplay *display);
 
-WPE_API WPESettings            *wpe_display_get_settings                  (WPEDisplay *display);
+WPE_API WPESettings             *wpe_display_get_settings                  (WPEDisplay *display);
+WPE_API WPEAvailableInputDevices wpe_display_get_available_input_devices   (WPEDisplay *display);
+WPE_API void                     wpe_display_set_available_input_devices   (WPEDisplay *display,
+                                                                            WPEAvailableInputDevices devices);
 
 G_END_DECLS
 
