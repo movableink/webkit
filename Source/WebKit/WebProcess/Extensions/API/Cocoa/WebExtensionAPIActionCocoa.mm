@@ -321,7 +321,7 @@ static NSString *dataURLFromImageData(JSValue *imageData, size_t *outWidth, NSSt
     constexpr size_t bitsPerComponent = 8;
     constexpr size_t bitsPerPixel = 32;
     const size_t bytesPerRow = 4 * width;
-    auto colorSpace = CGColorSpaceCreateWithName([colorSpaceString isEqualToString:@"display-p3"] ? kCGColorSpaceDisplayP3 : kCGColorSpaceSRGB);
+    RetainPtr colorSpace = adoptCF(CGColorSpaceCreateWithName([colorSpaceString isEqualToString:@"display-p3"] ? kCGColorSpaceDisplayP3 : kCGColorSpaceSRGB));
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
@@ -332,10 +332,8 @@ static NSString *dataURLFromImageData(JSValue *imageData, size_t *outWidth, NSSt
     constexpr CGFloat *decode = nullptr;
     constexpr bool shouldInterpolate = YES;
 
-    auto dataProvider = CGDataProviderCreateWithCFData((__bridge CFDataRef)pixelData);
-    auto cgImage = CGImageCreate(width, height, bitsPerComponent, bitsPerPixel, bytesPerRow, colorSpace, bitmapInfo, dataProvider, decode, shouldInterpolate, renderingIntent);
-    CGDataProviderRelease(dataProvider);
-    CGColorSpaceRelease(colorSpace);
+    RetainPtr dataProvider = adoptCF(CGDataProviderCreateWithCFData((__bridge CFDataRef)pixelData));
+    RetainPtr cgImage = adoptCF(CGImageCreate(width, height, bitsPerComponent, bitsPerPixel, bytesPerRow, colorSpace.get(), bitmapInfo, dataProvider.get(), decode, shouldInterpolate, renderingIntent));
 
     if (!cgImage) {
         *outExceptionString = toErrorString(nullString(), sourceKey, notImageDataError);
@@ -343,14 +341,10 @@ static NSString *dataURLFromImageData(JSValue *imageData, size_t *outWidth, NSSt
     }
 
 #if USE(APPKIT)
-    auto *imageRep = [[NSBitmapImageRep alloc] initWithCGImage:cgImage];
-    CGImageRelease(cgImage);
-
+    auto *imageRep = [[NSBitmapImageRep alloc] initWithCGImage:cgImage.get()];
     auto *pngData = [imageRep representationUsingType:NSBitmapImageFileTypePNG properties:@{ }];
 #else
-    UIImage *image = [UIImage imageWithCGImage:cgImage];
-    CGImageRelease(cgImage);
-
+    auto *image = [UIImage imageWithCGImage:cgImage.get()];
     auto *pngData = UIImagePNGRepresentation(image);
 #endif
 
