@@ -1,11 +1,11 @@
 
 
-FAIL audio metadata: timestamp assert_equals: timestamp matches (for sender before and after write) expected 0 but got 2587289961
+PASS audio metadata: timestamp
 PASS audio metadata: synchronizationSource
 PASS audio metadata: payloadType
 PASS audio metadata: contributingSources
 PASS audio metadata: sequenceNumber
-FAIL video metadata: timestamp assert_equals: timestamp matches (for sender before and after write) expected 0 but got 3109625852
+PASS video metadata: timestamp
 PASS video metadata: ssrc
 PASS video metadata: csrcs
 PASS video metadata: width and height

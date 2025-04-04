@@ -39,11 +39,6 @@ RTCEncodedAudioFrame::RTCEncodedAudioFrame(Ref<RTCRtpTransformableFrame>&& frame
 
 RTCEncodedAudioFrame::~RTCEncodedAudioFrame() = default;
 
-uint64_t RTCEncodedAudioFrame::timestamp() const
-{
-    return m_frame->timestamp();
-}
-
 const RTCEncodedAudioFrame::Metadata& RTCEncodedAudioFrame::getMetadata()
 {
     if (!m_metadata)

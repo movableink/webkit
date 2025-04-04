@@ -39,8 +39,6 @@ public:
     using Metadata = RTCEncodedAudioFrameMetadata;
     const Metadata& getMetadata();
 
-    uint64_t timestamp() const;
-
 private:
     explicit RTCEncodedAudioFrame(Ref<RTCRtpTransformableFrame>&&);
 

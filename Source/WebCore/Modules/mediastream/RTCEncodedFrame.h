@@ -49,6 +49,8 @@ public:
     enum class ShouldNeuter : bool { No, Yes };
     Ref<RTCRtpTransformableFrame> rtcFrame(JSC::VM&, ShouldNeuter = ShouldNeuter::Yes);
 
+    uint64_t timestamp() const;
+
     Ref<RTCRtpTransformableFrame> serialize();
 
 protected:
@@ -57,6 +59,7 @@ protected:
     Ref<RTCRtpTransformableFrame> m_frame;
     mutable RefPtr<JSC::ArrayBuffer> m_data;
     bool m_isNeutered { false };
+    mutable std::optional<uint64_t> m_timestamp;
 };
 
 } // namespace WebCore

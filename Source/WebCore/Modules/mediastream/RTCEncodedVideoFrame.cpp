@@ -40,11 +40,6 @@ RTCEncodedVideoFrame::RTCEncodedVideoFrame(Ref<RTCRtpTransformableFrame>&& frame
 
 RTCEncodedVideoFrame::~RTCEncodedVideoFrame() = default;
 
-uint64_t RTCEncodedVideoFrame::timestamp() const
-{
-    return m_frame->timestamp();
-}
-
 const RTCEncodedVideoFrame::Metadata& RTCEncodedVideoFrame::getMetadata()
 {
     if (!m_metadata)

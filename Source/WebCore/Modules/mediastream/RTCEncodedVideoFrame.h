@@ -42,8 +42,6 @@ public:
     using Metadata = RTCEncodedVideoFrameMetadata;
     const Metadata& getMetadata();
 
-    uint64_t timestamp() const;
-
 private:
     explicit RTCEncodedVideoFrame(Ref<RTCRtpTransformableFrame>&&);
 

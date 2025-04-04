@@ -50,6 +50,13 @@ void RTCEncodedFrame::setData(JSC::ArrayBuffer& buffer)
     m_data = &buffer;
 }
 
+uint64_t RTCEncodedFrame::timestamp() const
+{
+    if (!m_timestamp)
+        m_timestamp = m_frame->timestamp();
+    return *m_timestamp;
+}
+
 Ref<RTCRtpTransformableFrame> RTCEncodedFrame::rtcFrame(JSC::VM& vm, ShouldNeuter shouldNeuter)
 {
     ASSERT(!m_isNeutered);
