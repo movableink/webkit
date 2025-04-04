@@ -704,10 +704,12 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
         // element context. This is fast and saves memory by reusing the style data structures.
         style.copyNonInheritedFrom(*cacheEntry->renderStyle);
 
-        bool hasExplicitlyInherited = cacheEntry->renderStyle->hasExplicitlyInheritedProperties();
-        bool inheritedStyleEqual = parentStyle.inheritedEqual(*cacheEntry->parentRenderStyle);
+        bool inheritedEqual = parentStyle.inheritedEqual(*cacheEntry->parentRenderStyle);
 
-        if (inheritedStyleEqual) {
+        bool hasExplicitlyInherited = cacheEntry->renderStyle->hasExplicitlyInheritedProperties();
+        bool explicitlyInheritedEqual = !hasExplicitlyInherited || parentStyle.nonInheritedEqual(*cacheEntry->parentRenderStyle);
+
+        if (inheritedEqual) {
             InsideLink linkStatus = state.style()->insideLink();
             // If the cache item parent style has identical inherited properties to the current parent style then the
             // resulting style will be identical too. We copy the inherited properties over from the cache and are done.
@@ -716,7 +718,7 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
             // Link status is treated like an inherited property. We need to explicitly restore it.
             style.setInsideLink(linkStatus);
 
-            if (!hasExplicitlyInherited && matchResult.nonCacheablePropertyIds.isEmpty()) {
+            if (explicitlyInheritedEqual && matchResult.nonCacheablePropertyIds.isEmpty()) {
                 if (cacheEntry->userAgentAppearanceStyle && elementTypeHasAppearanceFromUAStyle(element))
                     state.setUserAgentAppearanceStyle(RenderStyle::clonePtr(*cacheEntry->userAgentAppearanceStyle));
 
@@ -726,9 +728,9 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
 
         includedProperties = { };
 
-        if (!inheritedStyleEqual)
+        if (!inheritedEqual)
             includedProperties.add(PropertyCascade::PropertyType::Inherited);
-        if (hasExplicitlyInherited)
+        if (!explicitlyInheritedEqual)
             includedProperties.add(PropertyCascade::PropertyType::ExplicitlyInherited);
         if (!matchResult.nonCacheablePropertyIds.isEmpty())
             includedProperties.add(PropertyCascade::PropertyType::NonCacheable);
