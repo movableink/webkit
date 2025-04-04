@@ -77,8 +77,7 @@
 
 #define MESSAGE_CHECK(assertion, connection) MESSAGE_CHECK_BASE(assertion, connection)
 #define MESSAGE_CHECK_COMPLETION(assertion, connection, completion) MESSAGE_CHECK_COMPLETION_BASE(assertion, connection, completion)
-#define MESSAGE_CHECK_URL(url) MESSAGE_CHECK_BASE(checkURLReceivedFromCurrentOrPreviousWebProcess(m_legacyMainFrameProcess, url), m_legacyMainFrameProcess->connection())
-#define MESSAGE_CHECK_WITH_RETURN_VALUE(assertion, returnValue) MESSAGE_CHECK_WITH_RETURN_VALUE_BASE(assertion, process().connection(), returnValue)
+#define MESSAGE_CHECK_URL(url) MESSAGE_CHECK_BASE(checkURLReceivedFromCurrentOrPreviousWebProcess(process, url), connection)
 
 @interface NSApplication ()
 - (BOOL)isSpeaking;
@@ -261,6 +260,7 @@ bool WebPageProxy::readSelectionFromPasteboard(const String& pasteboardName)
 void WebPageProxy::setPromisedDataForImage(IPC::Connection& connection, const String& pasteboardName, SharedMemory::Handle&& imageHandle, const String& filename, const String& extension,
     const String& title, const String& url, const String& visibleURL, SharedMemory::Handle&& archiveHandle, const String& originIdentifier)
 {
+    Ref process = WebProcessProxy::fromConnection(connection);
     MESSAGE_CHECK_URL(url);
     MESSAGE_CHECK_URL(visibleURL);
     MESSAGE_CHECK(extension == FileSystem::lastComponentOfPathIgnoringTrailingSlash(extension), connection);
@@ -978,7 +978,6 @@ WebCore::FloatRect WebPageProxy::selectionBoundingRectInRootViewCoordinates() co
 
 #endif // PLATFORM(MAC)
 
-#undef MESSAGE_CHECK_WITH_RETURN_VALUE
 #undef MESSAGE_CHECK_URL
 #undef MESSAGE_CHECK_COMPLETION
 #undef MESSAGE_CHECK
