@@ -499,7 +499,7 @@ void ImageLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetr
         loadEventSender().dispatchEventSoon(*this, eventNames().loadEvent);
 
 #if ENABLE(QUICKLOOK_FULLSCREEN)
-        if (RefPtr page = element().document()->protectedPage())
+        if (RefPtr page = element().document().protectedPage())
             page->chrome().client().updateImageSource(protectedElement().get());
 #endif
 
