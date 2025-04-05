@@ -537,8 +537,6 @@ JSC_DEFINE_HOST_FUNCTION(tracePointStop, (JSGlobalObject* globalObject, CallFram
 
 std::atomic<unsigned> activeJSGlobalObjectSignpostIntervalCount { 0 };
 
-#if HAVE(OS_SIGNPOST)
-
 static String asSignpostString(JSGlobalObject* globalObject, JSValue v)
 {
     if (v.isUndefined())
@@ -576,6 +574,8 @@ void JSGlobalObject::startSignpost(String&& message)
     auto* identifier = std::bit_cast<void*>(static_cast<uintptr_t>(m_signposts.ensure(message, [] {
         return JSCJSGlobalObjectSignpostIdentifier::generate();
     }).iterator->value.toUInt64()));
+    UNUSED_VARIABLE(identifier);
+    UNUSED_PARAM(message);
     WTFBeginSignpostAlways(identifier, JSCJSGlobalObject, "%" PUBLIC_LOG_STRING, message.ascii().data());
 }
 
@@ -584,23 +584,11 @@ void JSGlobalObject::stopSignpost(String&& message)
     void* identifier = std::bit_cast<void*>(this);
     if (auto stored = m_signposts.takeOptional(message))
         identifier = std::bit_cast<void*>(static_cast<uintptr_t>(stored->toUInt64()));
+    UNUSED_VARIABLE(identifier);
+    UNUSED_PARAM(message);
     WTFEndSignpostAlways(identifier, JSCJSGlobalObject, "%" PUBLIC_LOG_STRING, message.ascii().data());
     --activeJSGlobalObjectSignpostIntervalCount;
 }
-
-#else
-
-JSC_DEFINE_HOST_FUNCTION(signpostStart, (JSGlobalObject*, CallFrame*))
-{
-    return JSValue::encode(jsUndefined());
-}
-
-JSC_DEFINE_HOST_FUNCTION(signpostStop, (JSGlobalObject*, CallFrame*))
-{
-    return JSValue::encode(jsUndefined());
-}
-
-#endif // HAVE(OS_SIGNPOST)
 
 JSC_DEFINE_HOST_FUNCTION(enableSuperSampler, (JSGlobalObject*, CallFrame*))
 {
