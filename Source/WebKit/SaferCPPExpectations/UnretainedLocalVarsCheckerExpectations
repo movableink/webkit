@@ -11,7 +11,6 @@ Platform/mac/StringUtilities.mm
 UIProcess/API/Cocoa/APIAttachmentCocoa.mm
 UIProcess/API/Cocoa/APIContentRuleListStoreCocoa.mm
 UIProcess/API/Cocoa/NSAttributedString.mm
-UIProcess/API/Cocoa/WKBrowsingContextController.mm
 UIProcess/API/Cocoa/WKContentRuleList.mm
 UIProcess/API/Cocoa/WKContentRuleListStore.mm
 UIProcess/API/Cocoa/WKContentWorldConfiguration.mm
@@ -19,7 +18,6 @@ UIProcess/API/Cocoa/WKDownload.mm
 UIProcess/API/Cocoa/WKFindConfiguration.mm
 UIProcess/API/Cocoa/WKFindResult.mm
 UIProcess/API/Cocoa/WKPDFConfiguration.mm
-UIProcess/API/Cocoa/WKProcessGroup.mm
 UIProcess/API/Cocoa/WKProcessPool.mm
 UIProcess/API/Cocoa/WKSnapshotConfiguration.mm
 UIProcess/API/Cocoa/WKWebView.mm

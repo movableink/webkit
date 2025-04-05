@@ -33,7 +33,6 @@
 #import "TestBrowsingContextLoadDelegate.h"
 #import "TestProtocol.h"
 #import <WebKit/WKContextPrivate.h>
-#import <WebKit/WKProcessGroupPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/WKWebsiteDataStoreRef.h>
 #import <wtf/RetainPtr.h>
@@ -69,12 +68,6 @@ static bool testFinished;
 
 @end
 
-static WKProcessGroup *processGroup()
-{
-    static WKProcessGroup *processGroup = [[WKProcessGroup alloc] init];
-    return processGroup;
-}
-
 static RetainPtr<WKWebView> wkView;
 
 @interface CloseWhileStartingProtocol : TestProtocol
@@ -85,15 +78,6 @@ static RetainPtr<WKWebView> wkView;
 - (void)startLoading
 {
     dispatch_async(dispatch_get_main_queue(), ^ {
-        WKContextClientV0 client;
-        zeroBytes(client);
-        client.base.clientInfo = self;
-        client.networkProcessDidCrash = [](WKContextRef context, const void* clientInfo) {
-            auto protocol = (CloseWhileStartingProtocol *)clientInfo;
-            [protocol.client URLProtocol:protocol didFailWithError:[NSError errorWithDomain:NSCocoaErrorDomain code:0 userInfo:nil]];
-        };
-        WKContextSetClient([processGroup() _contextRef], &client.base);
-
         kill(WKWebsiteDataStoreGetNetworkProcessIdentifier(WKPageGetWebsiteDataStore([wkView _pageRefForTransitionToWKWebView])), SIGKILL);
         [self.client URLProtocol:self didFailWithError:[NSError errorWithDomain:NSCocoaErrorDomain code:0 userInfo:nil]];
     });

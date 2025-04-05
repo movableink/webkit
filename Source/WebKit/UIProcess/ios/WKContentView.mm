@@ -42,11 +42,9 @@
 #import "SmartMagnificationController.h"
 #import "UIKitSPI.h"
 #import "VisibleContentRectUpdateInfo.h"
-#import "WKBrowsingContextControllerInternal.h"
 #import "WKBrowsingContextGroupPrivate.h"
 #import "WKInspectorHighlightView.h"
 #import "WKPreferencesInternal.h"
-#import "WKProcessGroupPrivate.h"
 #import "WKUIDelegatePrivate.h"
 #import "WKVisibilityPropagationView.h"
 #import "WKWebViewConfiguration.h"
@@ -55,6 +53,7 @@
 #import "WebKit2Initialize.h"
 #import "WebPageGroup.h"
 #import "WebPageMessages.h"
+#import "WebPageProxy.h"
 #import "WebPageProxyMessages.h"
 #import "WebProcessPool.h"
 #import "_WKFrameHandleInternal.h"
@@ -205,9 +204,6 @@ typedef NS_ENUM(NSInteger, _WKPrintRenderingCallbackType) {
 
 @implementation WKContentView {
     std::unique_ptr<WebKit::PageClientImpl> _pageClient;
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    RetainPtr<WKBrowsingContextController> _browsingContextController;
-ALLOW_DEPRECATED_DECLARATIONS_END
 
     RetainPtr<UIView> _rootContentView;
     RetainPtr<UIView> _fixedClippingView;
@@ -597,16 +593,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     else
         [self cleanUpInteractionPreviewContainers];
 }
-
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-- (WKBrowsingContextController *)browsingContextController
-{
-    if (!_browsingContextController)
-        _browsingContextController = adoptNS([[WKBrowsingContextController alloc] _initWithPageRef:toAPI(_page.get())]);
-
-    return _browsingContextController.get();
-}
-ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (WKPageRef)_pageRef
 {
