@@ -528,7 +528,7 @@ private:
 
     std::optional<NodeChange> nodeChangeForObject(Ref<AccessibilityObject>, AttachWrapper = AttachWrapper::OnMainThread);
     void collectNodeChangesForSubtree(AccessibilityObject&);
-    bool isCollectingNodeChanges() const { return m_collectingNodeChangesAtTreeLevel > 0; }
+    bool isCollectingNodeChanges() const { return m_isCollectingNodeChanges; }
     void queueChange(const NodeChange&) WTF_REQUIRES_LOCK(m_changeLogLock);
     void queueRemovals(Vector<AXID>&&);
     void queueRemovalsLocked(Vector<AXID>&&) WTF_REQUIRES_LOCK(m_changeLogLock);
@@ -539,7 +539,6 @@ private:
     void objectChangedIgnoredState(const AccessibilityObject&);
 
     const ProcessID m_processID { legacyPresentingApplicationPID() };
-    unsigned m_maxTreeDepth { 0 };
     WeakPtr<AXObjectCache> m_axObjectCache;
     OptionSet<ActivityState> m_pageActivityState;
     RefPtr<AXGeometryManager> m_geometryManager;
@@ -581,8 +580,8 @@ private:
     // Only accessed on the main thread.
     // Objects whose parent has changed, and said change needs to be synced to the secondary thread.
     HashSet<AXID> m_needsParentUpdate;
-    // 1-based tree level, 0 = not collecting. Only accessed on the main thread.
-    unsigned m_collectingNodeChangesAtTreeLevel { 0 };
+    // Only accessed on the main thread.
+    bool m_isCollectingNodeChanges { false };
 
     // Only accessed on AX thread.
     UncheckedKeyHashMap<AXID, Ref<AXIsolatedObject>> m_readerThreadNodeMap;

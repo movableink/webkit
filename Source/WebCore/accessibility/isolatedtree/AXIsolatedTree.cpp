@@ -156,9 +156,6 @@ RefPtr<AXIsolatedTree> AXIsolatedTree::create(AXObjectCache& axObjectCache)
     if (!Accessibility::inRenderTreeOrStyleUpdate(*document))
         document->updateLayoutIgnorePendingStylesheets();
 
-    tree->m_maxTreeDepth = document->settings().maximumHTMLParserDOMTreeDepth();
-    ASSERT(tree->m_maxTreeDepth);
-
     // Generate the nodes of the tree and set its root and focused objects.
     // For this, we need the root and focused objects of the AXObject tree.
     auto* axRoot = axObjectCache.getOrCreate(document->view());
@@ -458,9 +455,7 @@ void AXIsolatedTree::collectNodeChangesForSubtree(AccessibilityObject& axObject)
         return;
     }
 
-    SetForScope collectingAtTreeLevel(m_collectingNodeChangesAtTreeLevel, m_collectingNodeChangesAtTreeLevel + 1);
-    if (m_collectingNodeChangesAtTreeLevel >= m_maxTreeDepth)
-        return;
+    SetForScope isCollectingNodeChanges(m_isCollectingNodeChanges, true);
 
     auto* axParent = axObject.parentInCoreTree();
     auto parentID = axParent ? std::optional { axParent->objectID() } : std::nullopt;
