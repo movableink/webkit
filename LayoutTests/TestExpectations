@@ -1696,7 +1696,6 @@ imported/w3c/web-platform-tests/css/css-flexbox/flexbox-min-width-auto-006.html 
 imported/w3c/web-platform-tests/css/css-flexbox/intrinsic-size/col-wrap-020.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-flexbox/min-size-auto-overflow-clip.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-flexbox/aspect-ratio-intrinsic-size-009.html [ ImageOnlyFailure ]
-imported/w3c/web-platform-tests/css/css-flexbox/baseline-outside-flex-item.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-flexbox/flexbox-flex-wrap-flexing-002.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-flexbox/flexbox-flex-wrap-flexing-003.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/css/css-flexbox/multiline-shrink-to-fit.html [ ImageOnlyFailure ]

@@ -2253,7 +2253,7 @@ void RenderFlexibleBox::layoutAndPlaceFlexItems(LayoutUnit& crossAxisOffset, Fle
     LayoutUnit maxFlexItemCrossAxisExtent;
 
     LayoutUnit maxAscent;
-    LayoutUnit maxDescent;
+    LayoutUnit maxDescent = LayoutUnit::min();
     LayoutUnit lastBaselineMaxAscent;
     std::optional<BaselineAlignmentState> baselineAlignmentState;
 
