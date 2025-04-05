@@ -27,14 +27,11 @@
 #pragma once
 
 #include "GeneratedImage.h"
+#include "StyleURL.h"
 #include <wtf/URL.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-
-namespace Style {
-struct URL;
-}
 
 class LegacyRenderSVGResourceContainer;
 class RenderElement;

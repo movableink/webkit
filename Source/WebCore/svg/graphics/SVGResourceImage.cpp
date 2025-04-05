@@ -30,7 +30,6 @@
 #include "LegacyRenderSVGResourceMasker.h"
 #include "ReferencedSVGResources.h"
 #include "RenderSVGResourceMasker.h"
-#include "StyleURL.h"
 
 namespace WebCore {
 

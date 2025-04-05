@@ -34,6 +34,8 @@
 #include "HTMLImageElement.h"
 
 namespace WebCore {
+
+using namespace HTMLNames;
     
 AccessibilityImageMapLink::AccessibilityImageMapLink(AXID axID, HTMLAreaElement& element)
     : AccessibilityNodeObject(axID, &element)

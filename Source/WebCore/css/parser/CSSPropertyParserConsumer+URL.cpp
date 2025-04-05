@@ -30,6 +30,7 @@
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyParserConsumer+KeywordDefinitions.h"
 #include "CSSPropertyParserConsumer+MetaConsumer.h"
+#include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParserConsumer+String.h"
 #include "CSSPropertyParserState.h"
 #include "CSSURLValue.h"

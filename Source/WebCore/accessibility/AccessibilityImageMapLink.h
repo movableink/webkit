@@ -29,6 +29,7 @@
 #pragma once
 
 #include "AccessibilityMockObject.h"
+#include "AccessibilityNodeObject.h"
 #include "HTMLAreaElement.h"
 #include "HTMLMapElement.h"
 
