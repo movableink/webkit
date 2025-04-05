@@ -152,6 +152,9 @@ auto JavaScriptEvaluationResult::toVariant(id object) -> Variant
     if (!object)
         return NullType::NullPointer;
 
+    if (auto* jsValue = dynamic_objc_cast<JSValue>(object))
+        return jsValueToVariant(jsValue);
+
     if ([object isKindOfClass:NSNull.class])
         return NullType::NSNull;
 
@@ -199,6 +202,11 @@ JSObjectID JavaScriptEvaluationResult::addObjectToMap(id object)
             m_map.add(*m_nullObjectID, Variant { NullType::NullPointer });
         }
         return *m_nullObjectID;
+    }
+
+    if (auto* jsValue = dynamic_objc_cast<JSValue>(object)) {
+        if (jsValue.isArray)
+            return addObjectToMap([jsValue toArray]);
     }
 
     auto it = m_objectsInMap.find(object);
@@ -280,80 +288,43 @@ JavaScriptEvaluationResult::JavaScriptEvaluationResult(id object)
 }
 
 // Similar to JSValue's valueToObjectWithoutCopy.
-auto JavaScriptEvaluationResult::toVariant(JSGlobalContextRef context, JSValueRef value) -> Variant
+auto JavaScriptEvaluationResult::jsValueToVariant(JSValue *value) -> Variant
 {
-    if (!JSValueIsObject(context, value)) {
-        if (JSValueIsBoolean(context, value))
-            return JSValueToBoolean(context, value);
-        if (JSValueIsNumber(context, value)) {
-            value = JSValueMakeNumber(context, JSValueToNumber(context, value, 0));
-            return CoreIPCNumber(JSValueToNumber(context, value, 0));
-        }
-        if (JSValueIsString(context, value)) {
-            auto* globalObject = ::toJS(context);
-            JSC::JSValue jsValue = ::toJS(globalObject, value);
-            return jsValue.toWTFString(globalObject);
-        }
-        if (JSValueIsNull(context, value))
+    if (!value.isObject) {
+        if (value.isBoolean)
+            return static_cast<bool>([value toBool]);
+        if (value.isNumber)
+            return CoreIPCNumber([value toNumber]);
+        if (value.isString)
+            return String([value toString]);
+        if (value.isNull)
             return NullType::NSNull;
         return NullType::NullPointer;
     }
 
-    JSObjectRef object = JSValueToObject(context, value, 0);
+    if (value.isDate)
+        return Seconds([[value toDate] timeIntervalSince1970]);
 
-    if (JSValueIsDate(context, object))
-        return Seconds(JSValueToNumber(context, object, 0) / 1000.0);
-
-    if (JSValueIsArray(context, object)) {
-        JSValueRef lengthPropertyName = JSValueMakeString(context, adopt(JSStringCreateWithUTF8CString("length")).get());
-        JSValueRef lengthValue = JSObjectGetPropertyForKey(context, object, lengthPropertyName, nullptr);
-        double lengthDouble = JSValueToNumber(context, lengthValue, nullptr);
-        if (lengthDouble < 0 || lengthDouble > static_cast<double>(std::numeric_limits<size_t>::max()))
+    if (value.isArray) {
+        RetainPtr nsArray = [value toArray];
+        if (!nsArray)
             return NullType::NullPointer;
 
-        size_t length = lengthDouble;
-        Vector<JSObjectID> vector;
-        if (!vector.tryReserveInitialCapacity(length))
-            return NullType::NullPointer;
-
-        for (size_t i = 0; i < length; ++i)
-            vector.append(addObjectToMap(context, JSObjectGetPropertyAtIndex(context, object, i, nullptr)));
+        Vector<JSObjectID> vector([nsArray count], [&](size_t i) {
+            return addObjectToMap([nsArray objectAtIndex:i]);
+        });
         return WTFMove(vector);
     }
 
-    JSPropertyNameArrayRef names = JSObjectCopyPropertyNames(context, object);
-    size_t length = JSPropertyNameArrayGetCount(names);
+    RetainPtr object = checked_objc_cast<NSDictionary>([value toObject]);
     HashMap<JSObjectID, JSObjectID> map;
-    for (size_t i = 0; i < length; i++) {
-        JSRetainPtr<JSStringRef> key = JSPropertyNameArrayGetNameAtIndex(names, i);
-        map.add(addObjectToMap(context, JSValueMakeString(context, key.get())), addObjectToMap(context, JSObjectGetPropertyForKey(context, object, JSValueMakeString(context, key.get()), nullptr)));
-    }
-    JSPropertyNameArrayRelease(names);
+    for (id key in object.get())
+        map.add(addObjectToMap(key), addObjectToMap([object objectForKey:key]));
     return WTFMove(map);
 }
 
-JSObjectID JavaScriptEvaluationResult::addObjectToMap(JSGlobalContextRef context, JSValueRef object)
-{
-    if (!object) {
-        if (!m_nullObjectID) {
-            m_nullObjectID = JSObjectID::generate();
-            m_map.add(*m_nullObjectID, Variant { NullType::NullPointer });
-        }
-        return *m_nullObjectID;
-    }
-
-    auto it = m_jsObjectsInMap.find(object);
-    if (it != m_jsObjectsInMap.end())
-        return it->value;
-
-    auto identifier = JSObjectID::generate();
-    m_jsObjectsInMap.set(object, identifier);
-    m_map.add(identifier, toVariant(context, object));
-    return identifier;
-}
-
 JavaScriptEvaluationResult::JavaScriptEvaluationResult(JSGlobalContextRef context, JSValueRef value)
-    : m_root(addObjectToMap(context, value))
+    : m_root(addObjectToMap([JSValue valueWithJSValueRef:value inContext:[JSContext contextWithJSGlobalContextRef:context]]))
 {
     m_jsObjectsInMap.clear();
     m_nullObjectID = std::nullopt;
