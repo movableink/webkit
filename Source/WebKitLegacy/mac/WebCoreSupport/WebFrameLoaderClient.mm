@@ -881,18 +881,19 @@ void WebFrameLoaderClient::dispatchDecidePolicyForNewWindowAction(const WebCore:
     WebView *webView = getWebView(m_webFrame.get());
     BOOL tryAppLink = shouldTryAppLink(webView, action, nullptr);
 
-    NSURL *appLinkURL = nil, *referrerURL = nil;
+    RetainPtr<NSURL> appLinkURL;
+    RetainPtr<NSURL> referrerURL;
     if (tryAppLink) {
-        appLinkURL = (NSURL *)request.url();
+        appLinkURL = request.url().createNSURL();
         if (!request.httpReferrer().isEmpty())
-            referrerURL = (NSURL *)URL(request.httpReferrer());
+            referrerURL = URL(request.httpReferrer()).createNSURL();
     }
 
     [[webView _policyDelegateForwarder] webView:webView
         decidePolicyForNewWindowAction:actionDictionary(action, formState)
         request:request.nsURLRequest(WebCore::HTTPBodyUpdatePolicy::UpdateHTTPBody)
         newFrameName:frameName
-        decisionListener:setUpPolicyListener(WTFMove(function), WebCore::PolicyAction::Ignore, appLinkURL, referrerURL).get()];
+        decisionListener:setUpPolicyListener(WTFMove(function), WebCore::PolicyAction::Ignore, appLinkURL.get(), referrerURL.get()).get()];
 }
 
 void WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const WebCore::NavigationAction& action, const WebCore::ResourceRequest& request, const WebCore::ResourceResponse&, WebCore::FormState* formState, const String&, std::optional<WebCore::NavigationIdentifier>, std::optional<WebCore::HitTestResult>&&, bool, WebCore::IsPerformingHTTPFallback, WebCore::SandboxFlags, WebCore::PolicyDecisionMode, WebCore::FramePolicyFunction&& function)
@@ -900,18 +901,19 @@ void WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const WebCore
     WebView *webView = getWebView(m_webFrame.get());
     BOOL tryAppLink = shouldTryAppLink(webView, action, core(m_webFrame.get()));
 
-    NSURL *appLinkURL = nil, *referrerURL = nil;
+    RetainPtr<NSURL> appLinkURL;
+    RetainPtr<NSURL> referrerURL;
     if (tryAppLink) {
-        appLinkURL = (NSURL *)request.url();
+        appLinkURL = request.url().createNSURL();
         if (!request.httpReferrer().isEmpty())
-            referrerURL = (NSURL *)URL(request.httpReferrer());
+            referrerURL = URL(request.httpReferrer()).createNSURL();
     }
 
     [[webView _policyDelegateForwarder] webView:webView
         decidePolicyForNavigationAction:actionDictionary(action, formState)
         request:request.nsURLRequest(WebCore::HTTPBodyUpdatePolicy::UpdateHTTPBody)
         frame:m_webFrame.get()
-        decisionListener:setUpPolicyListener(WTFMove(function), WebCore::PolicyAction::Ignore, appLinkURL, referrerURL).get()];
+        decisionListener:setUpPolicyListener(WTFMove(function), WebCore::PolicyAction::Ignore, appLinkURL.get(), referrerURL.get()).get()];
 }
 
 void WebFrameLoaderClient::cancelPolicyCheck()
@@ -2090,7 +2092,7 @@ void WebFrameLoaderClient::finishedLoadingIcon(WebCore::FragmentedSharedBuffer* 
         return nil;
 
     _appLinkURL = appLinkURL;
-    _referrerURL = (NSURL *)WebCore::SecurityOrigin::create(URL { referrerURL })->toURL();
+    _referrerURL = WebCore::SecurityOrigin::create(URL { referrerURL })->toURL().createNSURL();
 
     return self;
 }

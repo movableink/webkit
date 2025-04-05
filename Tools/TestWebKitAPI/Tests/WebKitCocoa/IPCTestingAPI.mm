@@ -38,6 +38,7 @@
 #import <WebKit/_WKRemoteObjectInterface.h>
 #import <WebKit/_WKRemoteObjectRegistry.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 static bool didCrash = false;
 static RetainPtr<NSString> alertMessage;
@@ -660,12 +661,12 @@ TEST(IPCTestingAPI, NSURLWithBaseURLInNSSecureCoding)
     EXPECT_EQ(result.count, static_cast<NSUInteger>(1));
     NSString *resultKey = result.allKeys[0];
     EXPECT_TRUE([key isEqual:resultKey]);
-    NSURL *resultValue = (NSURL *)(result.allValues[0]);
+    RetainPtr resultValue = checked_objc_cast<NSURL>(result.allValues[0]);
 
     // Our coder resolves the URL so we end up with an absolute URL instead of base URL + relative string.
-    EXPECT_WK_STREQ(resultValue.baseURL.absoluteString, @"");
-    EXPECT_WK_STREQ(resultValue.baseURL.relativeString, @"");
-    EXPECT_WK_STREQ(resultValue.absoluteString, @"amcomponent://com.xunmeng.pinduoduo/garden_home.html");
+    EXPECT_WK_STREQ(resultValue.get().baseURL.absoluteString, @"");
+    EXPECT_WK_STREQ(resultValue.get().baseURL.relativeString, @"");
+    EXPECT_WK_STREQ(resultValue.get().absoluteString, @"amcomponent://com.xunmeng.pinduoduo/garden_home.html");
     [unarchiver finishDecoding];
     unarchiver.get().delegate = nil;
 }

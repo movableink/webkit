@@ -155,7 +155,7 @@ static NSString * const _WKARQLWebsiteURLParameterKey = @"ARQLWebsiteURLParamete
             // If the download happened instantly, the call to finish might have come before this
             // loadHandler. In that case, call the completionHandler here.
             if (!strongSelf->_downloadedURL.isEmpty())
-                completionHandler((NSURL *)strongSelf->_downloadedURL, nil);
+                completionHandler(strongSelf->_downloadedURL.createNSURL().get(), nil);
             else
                 [strongSelf setCompletionHandler:completionHandler];
         }
@@ -174,7 +174,7 @@ static NSString * const _WKARQLWebsiteURLParameterKey = @"ARQLWebsiteURLParamete
     _downloadedURL = url;
 
     if (self.completionHandler)
-        self.completionHandler((NSURL *)url, nil);
+        self.completionHandler(url.createNSURL().get(), nil);
 }
 
 - (void)failWithError:(NSError *)error
@@ -629,8 +629,8 @@ void SystemPreviewController::triggerSystemPreviewActionWithTargetForTesting(uin
 
 NSArray *SystemPreviewController::localFileURLs() const
 {
-    NSURL *nsurl = (NSURL *)m_localFileURL;
-    return nsurl ? @[ nsurl ] : @[];
+    RetainPtr nsurl = m_localFileURL.createNSURL();
+    return nsurl ? @[ nsurl.get() ] : @[];
 }
 
 }

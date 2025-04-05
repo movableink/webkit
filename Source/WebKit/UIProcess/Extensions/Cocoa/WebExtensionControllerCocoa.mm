@@ -292,7 +292,7 @@ bool WebExtensionController::load(WebExtensionContext& extensionContext, NSError
     }
 
     if (!m_extensionContextBaseURLMap.add(extensionContext.baseURL().protocolHostAndPort(), extensionContext)) {
-        RELEASE_LOG_ERROR(Extensions, "Extension context already loaded with same base URL: %{private}@", (NSURL *)extensionContext.baseURL());
+        RELEASE_LOG_ERROR(Extensions, "Extension context already loaded with same base URL: %{private}@", extensionContext.baseURL().createNSURL().get());
         m_extensionContexts.remove(extensionContext);
         if (outError)
             *outError = extensionContext.createError(WebExtensionContext::Error::BaseURLAlreadyInUse);

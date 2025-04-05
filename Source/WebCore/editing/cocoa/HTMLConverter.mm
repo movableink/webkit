@@ -2614,7 +2614,7 @@ static void updateAttributes(const Node* node, const RenderStyle& style, OptionS
     if (linkURL.isEmpty())
         [attributes removeObjectForKey:NSLinkAttributeName];
     else
-        [attributes setObject:(NSURL *)linkURL forKey:NSLinkAttributeName];
+        [attributes setObject:linkURL.createNSURL().get() forKey:NSLinkAttributeName];
 
 }
 

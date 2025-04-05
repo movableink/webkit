@@ -192,9 +192,9 @@ private:
             callback(newWebView._page.get());
         });
 
-        auto nsURL = (NSURL *)URL { url };
+        RetainPtr nsURL = URL { url }.createNSURL();
         auto apiOrigin = API::SecurityOrigin::create(serviceWorkerOrigin);
-        [m_delegate.getAutoreleased() websiteDataStore:m_dataStore.getAutoreleased() openWindow:nsURL fromServiceWorkerOrigin:wrapper(apiOrigin.get()) completionHandler:completionHandler.get()];
+        [m_delegate.getAutoreleased() websiteDataStore:m_dataStore.getAutoreleased() openWindow:nsURL.get() fromServiceWorkerOrigin:wrapper(apiOrigin.get()) completionHandler:completionHandler.get()];
     }
 
     void reportServiceWorkerConsoleMessage(const URL&, const WebCore::SecurityOriginData&, MessageSource, MessageLevel, const String& message, unsigned long)
@@ -278,7 +278,7 @@ private:
         if (!m_hasNavigateToNotificationActionURLSelector || !m_delegate || !m_dataStore)
             return;
 
-        [m_delegate.getAutoreleased() websiteDataStore:m_dataStore.getAutoreleased() navigateToNotificationActionURL:(NSURL *)url];
+        [m_delegate.getAutoreleased() websiteDataStore:m_dataStore.getAutoreleased() navigateToNotificationActionURL:url.createNSURL().get()];
     }
 
 

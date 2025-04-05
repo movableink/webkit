@@ -80,7 +80,7 @@ NSDictionary *NotificationPayload::dictionaryRepresentation() const
     id nsOptions = options ? options->dictionaryRepresentation() : [NSNull null];
 
     return @{
-        WebNotificationDefaultActionKey : (NSURL *)defaultActionURL,
+        WebNotificationDefaultActionKey : defaultActionURL.createNSURL().get(),
         WebNotificationTitleKey : (NSString *)title,
         WebNotificationAppBadgeKey : nsAppBadge,
         WebNotificationOptionsKey : nsOptions,

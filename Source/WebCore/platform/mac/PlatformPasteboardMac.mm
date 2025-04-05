@@ -409,11 +409,11 @@ int64_t PlatformPasteboard::setBufferForType(SharedBuffer* buffer, const String&
 
 int64_t PlatformPasteboard::setURL(const PasteboardURL& pasteboardURL)
 {
-    auto urlString = [(NSURL *)pasteboardURL.url absoluteString];
+    RetainPtr urlString = [pasteboardURL.url.createNSURL() absoluteString];
     if (!urlString)
         return 0;
 
-    NSArray *urlWithTitle = @[ @[ urlString ], @[ pasteboardURL.title ] ];
+    NSArray *urlWithTitle = @[ @[ urlString.get() ], @[ pasteboardURL.title ] ];
     NSString *pasteboardType = [NSString stringWithUTF8String:WebURLsWithTitlesPboardType];
     BOOL didWriteData = [m_pasteboard setPropertyList:urlWithTitle forType:pasteboardType];
     if (!didWriteData)

@@ -588,7 +588,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     }
 
     ASSERT([link isKindOfClass:[NSURL class]]);
-    _completionHandler((NSURL *)link);
+    _completionHandler(link);
 }
 
 - (BOOL)forMainFrameNavigation

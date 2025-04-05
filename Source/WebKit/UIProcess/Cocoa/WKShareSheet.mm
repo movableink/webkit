@@ -301,29 +301,29 @@ static void appendFilesAsShareableURLs(RetainPtr<NSMutableArray>&& shareDataArra
         [shareDataArray addObject:(NSString *)data.shareData.text];
     
     if (data.url) {
-        NSURL *url = (NSURL *)data.url.value();
-        NSString *title = nil;
+        RetainPtr url = data.url.value().createNSURL();
+        RetainPtr<NSString> title;
         if (!data.shareData.title.isEmpty())
             title = data.shareData.title;
 
         if (data.originator == WebCore::ShareDataOriginator::Web) {
 #if PLATFORM(IOS_FAMILY)
-            auto item = adoptNS([[WKShareSheetURLItemProvider alloc] initWithURL:url title:title]);
+            auto item = adoptNS([[WKShareSheetURLItemProvider alloc] initWithURL:url.get() title:title.get()]);
 #else
-            auto item = adoptNS([[NSPreviewRepresentingActivityItem alloc] initWithItem:url linkMetadata:placeholderMetadataWithURLAndTitle(url, title).get()]);
+            auto item = adoptNS([[NSPreviewRepresentingActivityItem alloc] initWithItem:url.get() linkMetadata:placeholderMetadataWithURLAndTitle(url.get(), title.get()).get()]);
 #endif
             if (item)
                 [shareDataArray addObject:item.get()];
         } else {
 #if HAVE(NSURL_TITLE)
-            [url _web_setTitle:title];
+            [url _web_setTitle:title.get()];
 #endif
-            [shareDataArray addObject:url];
+            [shareDataArray addObject:url.get()];
         }
     }
     
     if (!data.shareData.title.isEmpty() && ![shareDataArray count])
-        [shareDataArray addObject:(NSString *)data.shareData.title];
+        [shareDataArray addObject:data.shareData.title.createNSString().get()];
 
     _completionHandler = WTFMove(completionHandler);
 

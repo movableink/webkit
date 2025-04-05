@@ -154,7 +154,7 @@ void Download::publishProgress(const URL& url, std::span<const uint8_t> bookmark
         RELEASE_LOG(Network, "Unable to create bookmark URL, error = %@", error);
 
     if (enableModernDownloadProgress()) {
-        RetainPtr<NSURL> publishURL = (NSURL *)url;
+        RetainPtr publishURL = url.createNSURL();
         if (!publishURL) {
             RELEASE_LOG_ERROR(Network, "Download::publishProgress: Invalid publish URL");
             return;
@@ -169,7 +169,7 @@ void Download::publishProgress(const URL& url, std::span<const uint8_t> bookmark
         if (!isUsingPlaceholder)
             startUpdatingProgress();
     } else {
-        m_progress = adoptNS([[WKDownloadProgress alloc] initWithDownloadTask:m_downloadTask.get() download:*this URL:(NSURL *)url sandboxExtension:nullptr]);
+        m_progress = adoptNS([[WKDownloadProgress alloc] initWithDownloadTask:m_downloadTask.get() download:*this URL:url.createNSURL().get() sandboxExtension:nullptr]);
 #if HAVE(NSPROGRESS_PUBLISHING_SPI)
         [m_progress _publish];
 #else
@@ -302,7 +302,7 @@ void Download::publishProgress(const URL& url, SandboxExtension::Handle&& sandbo
     if (!sandboxExtension)
         return;
 
-    m_progress = adoptNS([[WKDownloadProgress alloc] initWithDownloadTask:m_downloadTask.get() download:*this URL:(NSURL *)url sandboxExtension:sandboxExtension]);
+    m_progress = adoptNS([[WKDownloadProgress alloc] initWithDownloadTask:m_downloadTask.get() download:*this URL:url.createNSURL().get() sandboxExtension:sandboxExtension]);
 #if HAVE(NSPROGRESS_PUBLISHING_SPI)
     [m_progress _publish];
 #else

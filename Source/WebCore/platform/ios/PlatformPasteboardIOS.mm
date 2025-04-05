@@ -780,7 +780,7 @@ String PlatformPasteboard::readString(size_t index, const String& type) const
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     if (type == String(kUTTypeURL)) {
         String title;
-        return [(NSURL *)readURL(index, title) absoluteString];
+        return [readURL(index, title).createNSURL() absoluteString];
     }
 
     if ((NSInteger)index < 0 || (NSInteger)index >= [m_pasteboard numberOfItems])

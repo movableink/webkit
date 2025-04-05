@@ -41,7 +41,7 @@
     if (!(self = [super init]))
         return nil;
 
-    _url = (NSURL *)linkIcon.url;
+    _url = linkIcon.url.createNSURL();
     _mimeType = linkIcon.mimeType.createNSString();
 
     if (linkIcon.size)

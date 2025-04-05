@@ -348,7 +348,7 @@ static RetainPtr<id> toNSObject(const AttributedString::AttributeValue& value, I
     }, [] (const RetainPtr<NSPresentationIntent>& value) -> RetainPtr<id> {
         return value;
     }, [] (const URL& value) -> RetainPtr<id> {
-        return (NSURL *)value;
+        return value.createNSURL();
     }, [] (const Vector<String>& value) -> RetainPtr<id> {
         return createNSArray(value, [] (const String& string) {
             return (NSString *)string;

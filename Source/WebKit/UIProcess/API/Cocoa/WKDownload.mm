@@ -227,12 +227,13 @@ private:
         if (bookmarkResolvingError || bookmarkDataIsStale)
             RELEASE_LOG_ERROR(Network, "Failed to resolve URL from bookmark data");
 
-        NSURL *placeholderURL = urlFromBookmark ? urlFromBookmark.get() : (NSURL *)url;
+        if (!urlFromBookmark)
+            urlFromBookmark = url.createNSURL();
 
         if (m_respondsToDidReceivePlaceholderURL)
-            [m_delegate _download:wrapper(download) didReceivePlaceholderURL:placeholderURL completionHandler:makeBlockPtr(WTFMove(completionHandler)).get()];
+            [m_delegate _download:wrapper(download) didReceivePlaceholderURL:urlFromBookmark.get() completionHandler:makeBlockPtr(WTFMove(completionHandler)).get()];
         else
-            [m_delegate download:wrapper(download) didReceivePlaceholderURL:placeholderURL completionHandler:makeBlockPtr(WTFMove(completionHandler)).get()];
+            [m_delegate download:wrapper(download) didReceivePlaceholderURL:urlFromBookmark.get() completionHandler:makeBlockPtr(WTFMove(completionHandler)).get()];
     }
 
     void didReceiveFinalURL(WebKit::DownloadProxy& download, const WTF::URL& url, std::span<const uint8_t> bookmarkData) final
@@ -247,12 +248,13 @@ private:
         if (bookmarkResolvingError || bookmarkDataIsStale)
             RELEASE_LOG_ERROR(Network, "Failed to resolve URL from bookmark data");
 
-        NSURL *finalURL = urlFromBookmark.get() ?: (NSURL *)url;
+        if (!urlFromBookmark)
+            urlFromBookmark = url.createNSURL();
 
         if (m_respondsToDidReceiveFinalURL)
-            [m_delegate _download:wrapper(download) didReceiveFinalURL:finalURL];
+            [m_delegate _download:wrapper(download) didReceiveFinalURL:urlFromBookmark.get()];
         else
-            [m_delegate download:wrapper(download) didReceiveFinalURL:finalURL];
+            [m_delegate download:wrapper(download) didReceiveFinalURL:urlFromBookmark.get()];
     }
 #endif
 

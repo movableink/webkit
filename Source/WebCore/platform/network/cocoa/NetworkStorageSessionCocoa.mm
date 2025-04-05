@@ -83,7 +83,7 @@ void NetworkStorageSession::setCookies(const Vector<Cookie>& cookies, const URL&
     });
 
     BEGIN_BLOCK_OBJC_EXCEPTIONS
-    [nsCookieStorage() setCookies:nsCookies.get() forURL:(NSURL *)url mainDocumentURL:(NSURL *)mainDocumentURL];
+    [nsCookieStorage() setCookies:nsCookies.get() forURL:url.createNSURL().get() mainDocumentURL:mainDocumentURL.createNSURL().get()];
     END_BLOCK_OBJC_EXCEPTIONS
 }
 
@@ -125,7 +125,7 @@ Vector<Cookie> NetworkStorageSession::getAllCookies()
 Vector<Cookie> NetworkStorageSession::getCookies(const URL& url)
 {
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanAccessRawCookies));
-    return nsCookiesToCookieVector([nsCookieStorage() cookiesForURL:(NSURL *)url]);
+    return nsCookiesToCookieVector([nsCookieStorage() cookiesForURL:url.createNSURL().get()]);
 }
 
 void NetworkStorageSession::hasCookies(const RegistrableDomain& domain, CompletionHandler<void(bool)>&& completionHandler) const
@@ -545,7 +545,7 @@ bool NetworkStorageSession::setCookieFromDOM(const URL& firstParty, const SameSi
     if (!nshttpCookie)
         return false;
 
-    setHTTPCookiesForURL(cookieStorage().get(), @[ nshttpCookie.get() ], (NSURL *)url, firstParty, sameSiteInfo);
+    setHTTPCookiesForURL(cookieStorage().get(), @[ nshttpCookie.get() ], url.createNSURL().get(), firstParty, sameSiteInfo);
     return true;
 
     END_BLOCK_OBJC_EXCEPTIONS

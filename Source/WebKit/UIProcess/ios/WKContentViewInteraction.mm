@@ -9968,7 +9968,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (!_positionInformation.isLink || !_positionInformation.isInPlugin)
         return NO;
 
-    RetainPtr urlToCopy = (NSURL *)_positionInformation.url;
+    RetainPtr urlToCopy = _positionInformation.url.createNSURL();
     if (!urlToCopy)
         return NO;
 
@@ -14707,7 +14707,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
         // Previously, UIPreviewItemController would detect the case where there was no previewViewController
         // and create one. We need to replicate this code for the new API.
-        if (!previewViewController || [(NSURL *)url iTunesStoreURL]) {
+        if (!previewViewController || [url.createNSURL() iTunesStoreURL]) {
             auto ddContextMenuActionClass = PAL::getDDContextMenuActionClass();
             BEGIN_BLOCK_OBJC_EXCEPTIONS
             NSDictionary *context = [self dataDetectionContextForPositionInformation:_positionInformation];
@@ -14725,7 +14725,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         _contextMenuLegacyMenu = menuFromLegacyPreviewOrDefaultActions(previewViewController.get(), defaultActionsFromAssistant, elementInfo);
 
     } else if (_positionInformation.isImage && _positionInformation.image) {
-        NSURL *nsURL = (NSURL *)url;
+        RetainPtr nsURL = url.createNSURL();
         RetainPtr<NSDictionary> imageInfo;
         auto cgImage = _positionInformation.image->makeCGImageCopy();
         auto uiImage = adoptNS([[UIImage alloc] initWithCGImage:cgImage.get()]);
@@ -14743,7 +14743,7 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         RetainPtr<NSArray<_WKElementAction *>> defaultActionsFromAssistant = [_actionSheetAssistant defaultActionsForImageSheet:elementInfo.get()];
 
         if (imageInfo && [uiDelegate respondsToSelector:@selector(_webView:previewViewControllerForImage:alternateURL:defaultActions:elementInfo:)])
-            previewViewController = [uiDelegate _webView:self.webView previewViewControllerForImage:uiImage.get() alternateURL:nsURL defaultActions:defaultActionsFromAssistant.get() elementInfo:elementInfo.get()];
+            previewViewController = [uiDelegate _webView:self.webView previewViewControllerForImage:uiImage.get() alternateURL:nsURL.get() defaultActions:defaultActionsFromAssistant.get() elementInfo:elementInfo.get()];
         else
             previewViewController = adoptNS([[WKImagePreviewViewController alloc] initWithCGImage:cgImage defaultActions:defaultActionsFromAssistant.get() elementInfo:elementInfo.get()]);
 ALLOW_DEPRECATED_DECLARATIONS_END
@@ -14902,7 +14902,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     }
 
 #if ENABLE(DATA_DETECTION)
-    if ([(NSURL *)linkURL iTunesStoreURL]) {
+    if ([linkURL.createNSURL() iTunesStoreURL]) {
         [self continueContextMenuInteractionWithDataDetectors:continueWithContextMenuConfiguration];
         return;
     }
@@ -15141,7 +15141,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
                 if (imageURL.isEmpty() || !(imageURL.protocolIsInHTTPFamily() || imageURL.protocolIs("data"_s)))
                     return;
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-                [uiDelegate _webView:self.webView commitPreviewedImageWithURL:(NSURL *)imageURL];
+                [uiDelegate _webView:self.webView commitPreviewedImageWithURL:imageURL.createNSURL().get()];
 ALLOW_DEPRECATED_DECLARATIONS_END
             }
             return;
@@ -15282,7 +15282,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         id <WKUIDelegatePrivate> uiDelegate = static_cast<id <WKUIDelegatePrivate>>([_webView UIDelegate]);
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         if ([uiDelegate respondsToSelector:@selector(webView:shouldPreviewElement:)]) {
-            auto previewElementInfo = adoptNS([[WKPreviewElementInfo alloc] _initWithLinkURL:(NSURL *)linkURL]);
+            auto previewElementInfo = adoptNS([[WKPreviewElementInfo alloc] _initWithLinkURL:linkURL.createNSURL().get()]);
             return [uiDelegate webView:self.webView shouldPreviewElement:previewElementInfo.get()];
         }
 ALLOW_DEPRECATED_DECLARATIONS_END
@@ -15337,9 +15337,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (canShowLinkPreview) {
         *type = UIPreviewItemTypeLink;
         if (useImageURLForLink)
-            dataForPreview.get()[UIPreviewDataLink] = (NSURL *)_positionInformation.imageURL;
+            dataForPreview.get()[UIPreviewDataLink] = _positionInformation.imageURL.createNSURL().get();
         else
-            dataForPreview.get()[UIPreviewDataLink] = (NSURL *)linkURL;
+            dataForPreview.get()[UIPreviewDataLink] = linkURL.createNSURL().get();
 #if ENABLE(DATA_DETECTION)
         if (isDataDetectorLink) {
             NSDictionary *context = nil;
@@ -15368,10 +15368,10 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #endif // ENABLE(DATA_DETECTION)
     } else if (canShowImagePreview) {
         *type = UIPreviewItemTypeImage;
-        dataForPreview.get()[UIPreviewDataLink] = (NSURL *)_positionInformation.imageURL;
+        dataForPreview.get()[UIPreviewDataLink] = _positionInformation.imageURL.createNSURL().get();
     } else if (canShowAttachmentPreview) {
         *type = UIPreviewItemTypeAttachment;
-        auto element = adoptNS([[_WKActivatedElementInfo alloc] _initWithType:_WKActivatedElementTypeAttachment URL:(NSURL *)linkURL image:nil information:_positionInformation]);
+        auto element = adoptNS([[_WKActivatedElementInfo alloc] _initWithType:_WKActivatedElementTypeAttachment URL:linkURL.createNSURL().get() image:nil information:_positionInformation]);
         NSUInteger index = [uiDelegate _webView:self.webView indexIntoAttachmentListForElement:element.get()];
         if (index != NSNotFound) {
             BOOL sourceIsManaged = NO;
@@ -15495,7 +15495,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
             if (imageURL.isEmpty() || !(imageURL.protocolIsInHTTPFamily() || imageURL.protocolIs("data"_s)))
                 return;
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-            [uiDelegate _webView:self.webView commitPreviewedImageWithURL:(NSURL *)imageURL];
+            [uiDelegate _webView:self.webView commitPreviewedImageWithURL:imageURL.createNSURL().get()];
 ALLOW_DEPRECATED_DECLARATIONS_END
             return;
         }

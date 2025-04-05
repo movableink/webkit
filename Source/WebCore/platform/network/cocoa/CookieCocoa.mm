@@ -134,25 +134,25 @@ Cookie::operator NSHTTPCookie * _Nullable () const
     RetainPtr properties = adoptNS([[NSMutableDictionary alloc] initWithCapacity:14]);
 
     if (!comment.isNull())
-        [properties setObject:(NSString *)comment forKey:NSHTTPCookieComment];
+        [properties setObject:comment.createNSString().get() forKey:NSHTTPCookieComment];
 
     if (!commentURL.isNull())
-        [properties setObject:(NSURL *)commentURL forKey:NSHTTPCookieCommentURL];
+        [properties setObject:commentURL.createNSURL().get() forKey:NSHTTPCookieCommentURL];
 
     if (!domain.isNull())
-        [properties setObject:(NSString *)domain forKey:NSHTTPCookieDomain];
+        [properties setObject:domain.createNSString().get() forKey:NSHTTPCookieDomain];
 
     if (!name.isNull())
-        [properties setObject:(NSString *)name forKey:NSHTTPCookieName];
+        [properties setObject:name.createNSString().get() forKey:NSHTTPCookieName];
 
     if (!path.isNull())
-        [properties setObject:(NSString *)path forKey:NSHTTPCookiePath];
+        [properties setObject:path.createNSString().get() forKey:NSHTTPCookiePath];
 
     if (!partitionKey.isNull())
-        [properties setObject:(NSString *)partitionKey forKey:@"StoragePartition"];
+        [properties setObject:partitionKey.createNSString().get() forKey:@"StoragePartition"];
 
     if (!value.isNull())
-        [properties setObject:(NSString *)value forKey:NSHTTPCookieValue];
+        [properties setObject:value.createNSString().get() forKey:NSHTTPCookieValue];
 
     if (expires) {
         RetainPtr expirationDate = [NSDate dateWithTimeIntervalSince1970:*expires / 1000.0];

@@ -2746,7 +2746,7 @@ TEST(WebPushD, DeclarativeWebPushHandling)
 
     done = false;
 
-    [connection getNotifications:(NSURL *)message.registrationURL tag:@"" completionHandler:^(NSArray<_WKNotificationData *> *notifications, NSError *error) {
+    [connection getNotifications:message.registrationURL.createNSURL().get() tag:@"" completionHandler:^(NSArray<_WKNotificationData *> *notifications, NSError *error) {
         EXPECT_NULL(error);
         EXPECT_NOT_NULL(notifications);
         EXPECT_EQ(notifications.count, 1u);
