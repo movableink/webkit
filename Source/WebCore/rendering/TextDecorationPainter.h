@@ -24,6 +24,7 @@
 
 #include "Color.h"
 #include "FloatPoint.h"
+#include "GraphicsContext.h"
 #include "InlineTextBoxStyle.h"
 #include "RenderStyleConstants.h"
 #include <wtf/OptionSet.h>
@@ -32,7 +33,6 @@ namespace WebCore {
 
 class FilterOperations;
 class FontCascade;
-class GraphicsContext;
 class RenderObject;
 class RenderStyle;
 class ShadowData;

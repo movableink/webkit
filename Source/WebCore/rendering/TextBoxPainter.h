@@ -28,6 +28,7 @@
 #include "FloatRoundedRect.h"
 #include "InlineIteratorInlineBox.h"
 #include "InlineIteratorTextBox.h"
+#include "PaintInfo.h"
 #include "RenderObject.h"
 #include "TextBoxSelectableRange.h"
 #include "TextDecorationPainter.h"
@@ -43,7 +44,6 @@ class RenderText;
 class ShadowData;
 struct CompositionUnderline;
 struct MarkedText;
-struct PaintInfo;
 struct StyledMarkedText;
 
 class TextBoxPainter {
