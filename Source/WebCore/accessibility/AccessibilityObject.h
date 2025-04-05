@@ -550,7 +550,7 @@ public:
 #else
     void detachFromParent() override { }
 #endif
-    bool isDetachedFromParent() override { return false; }
+    virtual bool isDetachedFromParent() { return false; }
 
     void setSelectedChildren(const AccessibilityChildrenVector&) override { }
     AccessibilityChildrenVector visibleChildren() override { return { }; }

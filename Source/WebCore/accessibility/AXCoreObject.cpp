@@ -458,8 +458,10 @@ AXCoreObject::AXValue AXCoreObject::value()
     if (supportsRangeValue())
         return valueForRange();
 
-    if (roleValue() == AccessibilityRole::SliderThumb)
-        return parentObject()->valueForRange();
+    if (roleValue() == AccessibilityRole::SliderThumb) {
+        RefPtr parent = parentObject();
+        return parent ? parent->valueForRange() : 0.0f;
+    }
 
     if (isHeading())
         return headingLevel();

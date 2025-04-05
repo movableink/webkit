@@ -630,15 +630,6 @@ void AccessibilityObject::insertChild(AccessibilityObject& child, unsigned index
         // Pass m_subtreeDirty flag down to the child so that children cache gets reset properly.
         if (m_subtreeDirty)
             child.setNeedsToUpdateSubtree();
-    } else {
-        // For some reason the grand children might be detached so that we need to regenerate the
-        // children list of this child.
-        for (const auto& grandChild : child.unignoredChildren(/* updateChildrenIfNeeded */ false)) {
-            if (grandChild->isDetachedFromParent()) {
-                child.clearChildren();
-                break;
-            }
-        }
     }
 
 #if USE(ATSPI)

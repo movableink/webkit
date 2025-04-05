@@ -1172,12 +1172,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         return nil;
     }
 
-    if (backingObject->isDetachedFromParent()) {
-        AXLOG("backingObject is detached from parent!!!");
-        AXLOG(backingObject);
-        return nil;
-    }
-
     if ([attributeName isEqualToString:NSAccessibilityRoleAttribute])
         return roleString(*backingObject);
 

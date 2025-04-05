@@ -733,19 +733,6 @@ void AXIsolatedObject::setSelectedChildren(const AccessibilityChildrenVector& se
     });
 }
 
-bool AXIsolatedObject::isDetachedFromParent()
-{
-    ASSERT(!isMainThread());
-
-    if (parent())
-        return false;
-
-    // Check whether this is the root node, in which case we should return false.
-    if (RefPtr root = tree()->rootNode())
-        return root->objectID() != objectID();
-    return false;
-}
-
 bool AXIsolatedObject::isInDescriptionListTerm() const
 {
     return Accessibility::findAncestor<AXIsolatedObject>(*this, false, [&] (const auto& ancestor) {

@@ -1307,7 +1307,6 @@ public:
     AXCoreObject* deepestLastChildIncludingIgnored(bool updateChildrenIfNeeded);
 
     virtual void detachFromParent() = 0;
-    virtual bool isDetachedFromParent() = 0;
 
     AccessibilityChildrenVector listboxSelectedChildren();
     AccessibilityChildrenVector selectedRows();
