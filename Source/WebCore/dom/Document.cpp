@@ -3011,6 +3011,10 @@ auto Document::updateLayout(OptionSet<LayoutOptions> layoutOptions, const Elemen
 
                     auto isSkippedContentStale = false;
                     for (auto& descendant : descendantsOfType<RenderBlock>(*renderView())) {
+                        if (descendant.style().usedContentVisibility() != ContentVisibility::Auto) {
+                            // FIXME: While 'c-v: auto' is used 'hidden' inside 'c-v: hidden' we could entirly skip hidden subtrees.
+                            continue;
+                        }
                         if (shouldForceLayoutOnRenderer(descendant)) {
                             descendant.setNeedsLayout();
                             isSkippedContentStale = true;
