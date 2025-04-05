@@ -6251,7 +6251,7 @@ class TermGeneratorReferenceTerm(TermGenerator):
             elif isinstance(builtin, BuiltinDashedIdentConsumer):
                 return False
             elif isinstance(builtin, BuiltinURLConsumer):
-                return False
+                return True
             elif isinstance(builtin, BuiltinFeatureTagValueConsumer):
                 return True
             elif isinstance(builtin, BuiltinVariationTagValueConsumer):

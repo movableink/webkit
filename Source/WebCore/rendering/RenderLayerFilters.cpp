@@ -37,6 +37,7 @@
 #include "GraphicsContextSwitcher.h"
 #include "LegacyRenderSVGResourceFilter.h"
 #include "Logging.h"
+#include "ReferenceFilterOperation.h"
 #include "RenderSVGShape.h"
 #include "RenderStyleInlines.h"
 #include <wtf/NeverDestroyed.h>
@@ -85,7 +86,7 @@ void RenderLayerFilters::updateReferenceFilterClients(const FilterOperations& op
     removeReferenceFilterClients();
 
     for (auto& operation : operations) {
-        RefPtr referenceOperation = dynamicDowncast<ReferenceFilterOperation>(operation);
+        RefPtr referenceOperation = dynamicDowncast<Style::ReferenceFilterOperation>(operation);
         if (!referenceOperation)
             continue;
 

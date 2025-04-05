@@ -47,6 +47,7 @@
 #include "LegacyRenderSVGShapeInlines.h"
 #include "NodeRenderStyle.h"
 #include "NullGraphicsContext.h"
+#include "ReferenceFilterOperation.h"
 #include "RenderImage.h"
 #include "RenderIterator.h"
 #include "RenderObjectInlines.h"
@@ -256,7 +257,7 @@ void writeSVGPaintingFeatures(TextStream& ts, const RenderElement& renderer, Opt
         writeIfNotDefault(ts, "clip rule"_s, svgStyle->clipRule(), WindRule::NonZero);
     }
 
-    auto writeMarker = [&](ASCIILiteral name, const String& value) {
+    auto writeMarker = [&](ASCIILiteral name, const Style::URL& value) {
         auto* element = renderer.element();
         if (!element)
             return;
@@ -582,11 +583,11 @@ void writeResources(TextStream& ts, const RenderObject& renderer, OptionSet<Rend
     // For now leave the DRT output as is, but later on we should change this so cycles are properly ignored in the DRT output.
     if (style.hasPositionedMask()) {
         RefPtr maskImage = style.maskImage();
-        Ref document = renderer.document();
-        auto reresolvedURL = maskImage ? maskImage->reresolvedURL(document) : URL();
+        auto maskImageURL = maskImage ? maskImage->url() : Style::URL::none();
 
-        if (!reresolvedURL.isEmpty()) {
-            auto resourceID = SVGURIReference::fragmentIdentifierFromIRIString(reresolvedURL.string(), document);
+        if (!maskImageURL.isNone()) {
+            Ref document = renderer.document();
+            auto resourceID = SVGURIReference::fragmentIdentifierFromIRIString(maskImageURL, document);
             if (auto* masker = getRenderSVGResourceById<LegacyRenderSVGResourceMasker>(renderer.treeScopeForSVGReferences(), resourceID)) {
                 ts << indent << ' ';
                 writeNameAndQuotedValue(ts, "masker"_s, resourceID);
@@ -609,8 +610,8 @@ void writeResources(TextStream& ts, const RenderObject& renderer, OptionSet<Rend
     if (style.hasFilter()) {
         const FilterOperations& filterOperations = style.filter();
         if (filterOperations.size() == 1) {
-            if (RefPtr referenceFilterOperation = dynamicDowncast<ReferenceFilterOperation>(*filterOperations.at(0))) {
-                AtomString id = SVGURIReference::fragmentIdentifierFromIRIString(referenceFilterOperation->url(), renderer.protectedDocument());
+            if (RefPtr referenceFilterOperation = dynamicDowncast<Style::ReferenceFilterOperation>(*filterOperations.at(0))) {
+                auto id = referenceFilterOperation->fragment();
                 if (LegacyRenderSVGResourceFilter* filter = getRenderSVGResourceById<LegacyRenderSVGResourceFilter>(renderer.treeScopeForSVGReferences(), id)) {
                     ts << indent << ' ';
                     writeNameAndQuotedValue(ts, "filter"_s, id);

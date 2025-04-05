@@ -24,12 +24,14 @@
 
 #include "CSSPrimitiveValueMappings.h"
 #include "CSSPropertyNames.h"
+#include "CSSURLValue.h"
 #include "CSSValueList.h"
 #include "CSSValuePool.h"
 #include "Document.h"
 #include "Element.h"
 #include "RenderStyle.h"
 #include "SVGRenderStyle.h"
+#include "StyleURL.h"
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -69,31 +71,28 @@ static Ref<CSSValue> createCSSValue(const Vector<SVGLengthValue>& dashes)
     return CSSValueList::createCommaSeparated(WTFMove(list));
 }
 
-Ref<CSSValue> ComputedStyleExtractor::adjustSVGPaint(SVGPaintType paintType, const String& url, Ref<CSSValue> color) const
+Ref<CSSValue> ComputedStyleExtractor::adjustSVGPaint(const RenderStyle& style, SVGPaintType paintType, const Style::URL& url, const Style::Color& color) const
 {
     if (paintType >= SVGPaintType::URINone) {
         CSSValueListBuilder values;
-        values.append(CSSPrimitiveValue::createURI(url));
+        values.append(CSSURLValue::create(Style::toCSS(url, style)));
         if (paintType == SVGPaintType::URINone)
             values.append(CSSPrimitiveValue::create(CSSValueNone));
         else if (paintType == SVGPaintType::URICurrentColor || paintType == SVGPaintType::URIRGBColor)
-            values.append(color);
+            values.append(currentColorOrValidColor(style, color));
         return CSSValueList::createSpaceSeparated(WTFMove(values));
     }
     if (paintType == SVGPaintType::None)
         return CSSPrimitiveValue::create(CSSValueNone);
     
-    return color;
+    return currentColorOrValidColor(style, color);
 }
 
-static RefPtr<CSSValue> svgMarkerValue(const String& marker, const Element* element)
+static RefPtr<CSSValue> svgMarkerValue(const RenderStyle& style, const Style::URL& marker)
 {
-    if (marker.isEmpty())
+    if (marker.isNone())
         return CSSPrimitiveValue::create(CSSValueNone);
-    if (URL(marker).isValid() || !element)
-        return CSSPrimitiveValue::createURI(marker);
-    auto resolvedURL = URL(element->document().baseURL(), marker);
-    return CSSPrimitiveValue::createURI(resolvedURL.string());
+    return CSSURLValue::create(Style::toCSS(marker, style));
 }
 
 RefPtr<CSSValue> ComputedStyleExtractor::svgPropertyValue(CSSPropertyID propertyID) const
@@ -105,12 +104,7 @@ RefPtr<CSSValue> ComputedStyleExtractor::svgPropertyValue(CSSPropertyID property
     if (!style)
         return nullptr;
 
-    const SVGRenderStyle& svgStyle = style->svgStyle();
-
-    auto createColor = [&style](const Style::Color& color) {
-        auto resolvedColor = style->colorResolvingCurrentColor(color);
-        return CSSValuePool::singleton().createColorValue(resolvedColor);
-    };
+    auto& svgStyle = style->svgStyle();
 
     switch (propertyID) {
     case CSSPropertyClipRule:
@@ -138,21 +132,21 @@ RefPtr<CSSValue> ComputedStyleExtractor::svgPropertyValue(CSSPropertyID property
     case CSSPropertyTextAnchor:
         return CSSPrimitiveValue::create(toCSSValueID(svgStyle.textAnchor()));
     case CSSPropertyFloodColor:
-        return createColor(svgStyle.floodColor());
+        return currentColorOrValidColor(*style, svgStyle.floodColor());
     case CSSPropertyLightingColor:
-        return createColor(svgStyle.lightingColor());
+        return currentColorOrValidColor(*style, svgStyle.lightingColor());
     case CSSPropertyStopColor:
-        return createColor(svgStyle.stopColor());
+        return currentColorOrValidColor(*style, svgStyle.stopColor());
     case CSSPropertyFill:
-        return adjustSVGPaint(svgStyle.fillPaintType(), svgStyle.fillPaintUri(), createColor(svgStyle.fillPaintColor()));
+        return adjustSVGPaint(*style, svgStyle.fillPaintType(), svgStyle.fillPaintUri(), svgStyle.fillPaintColor());
     case CSSPropertyMarkerEnd:
-        return svgMarkerValue(svgStyle.markerEndResource(), m_element.get());
+        return svgMarkerValue(*style, svgStyle.markerEndResource());
     case CSSPropertyMarkerMid:
-        return svgMarkerValue(svgStyle.markerMidResource(), m_element.get());
+        return svgMarkerValue(*style, svgStyle.markerMidResource());
     case CSSPropertyMarkerStart:
-        return svgMarkerValue(svgStyle.markerStartResource(), m_element.get());
+        return svgMarkerValue(*style, svgStyle.markerStartResource());
     case CSSPropertyStroke:
-        return adjustSVGPaint(svgStyle.strokePaintType(), svgStyle.strokePaintUri(), createColor(svgStyle.strokePaintColor()));
+        return adjustSVGPaint(*style, svgStyle.strokePaintType(), svgStyle.strokePaintUri(), svgStyle.strokePaintColor());
     case CSSPropertyStrokeDasharray:
         return createCSSValue(svgStyle.strokeDashArray());
     case CSSPropertyBaselineShift: {

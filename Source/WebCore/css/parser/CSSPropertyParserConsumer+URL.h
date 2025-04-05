@@ -28,16 +28,21 @@
 
 namespace WebCore {
 
+namespace CSS {
+struct PropertyParserState;
+struct URL;
+}
+
 class CSSParserTokenRange;
-class CSSPrimitiveValue;
+class CSSValue;
 
 namespace CSSPropertyParserHelpers {
 
 // MARK: <url>
 // https://drafts.csswg.org/css-values/#urls
 
-StringView consumeURLRaw(CSSParserTokenRange&);
-RefPtr<CSSPrimitiveValue> consumeURL(CSSParserTokenRange&);
+std::optional<CSS::URL> consumeURLRaw(CSSParserTokenRange&, CSS::PropertyParserState&);
+RefPtr<CSSValue> consumeURL(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

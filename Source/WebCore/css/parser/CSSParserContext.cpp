@@ -38,12 +38,6 @@
 
 namespace WebCore {
 
-// https://drafts.csswg.org/css-values/#url-local-url-flag
-bool ResolvedURL::isLocalURL() const
-{
-    return specifiedURLString.startsWith('#');
-}
-
 const CSSParserContext& strictCSSParserContext()
 {
     static MainThreadNeverDestroyed<CSSParserContext> strictContext(HTMLStandardMode);
@@ -164,43 +158,10 @@ void add(Hasher& hasher, const CSSParserContext& context)
     add(hasher, context.baseURL, context.charset, context.propertySettings, bits);
 }
 
-ResolvedURL CSSParserContext::completeURL(const String& string) const
-{
-    auto result = [&] () -> ResolvedURL {
-        // See also Document::completeURL(const String&), but note that CSS always uses UTF-8 for URLs
-        if (string.isNull())
-            return { };
-
-        if (CSSValue::isCSSLocalURL(string))
-            return { string, URL { string } };
-
-        return { string, { baseURL, string } };
-    }();
-
-    if (mode == WebVTTMode && !result.resolvedURL.protocolIsData())
-        return { };
-
-    return result;
-}
-
 void CSSParserContext::setUASheetMode()
 {
     mode = UASheetMode;
     applyUASheetBehaviorsToContext(*this);
-}
-
-bool mayDependOnBaseURL(const ResolvedURL& resolved)
-{
-    if (resolved.specifiedURLString.isEmpty())
-        return false;
-
-    if (CSSValue::isCSSLocalURL(resolved.specifiedURLString))
-        return false;
-
-    if (protocolIs(resolved.specifiedURLString, "data"_s))
-        return false;
-
-    return true;
 }
 
 }

@@ -32,18 +32,22 @@
 
 namespace WebCore {
 
+namespace Style {
+struct URL;
+}
+
 class LegacyRenderSVGResourceContainer;
 class RenderElement;
 class RenderSVGResourceContainer;
 
 class SVGResourceImage final : public GeneratedImage {
 public:
-    static Ref<SVGResourceImage> create(RenderSVGResourceContainer&, const URL& reresolvedURL);
-    static Ref<SVGResourceImage> create(LegacyRenderSVGResourceContainer&, const URL& reresolvedURL);
+    static Ref<SVGResourceImage> create(RenderSVGResourceContainer&, const Style::URL&);
+    static Ref<SVGResourceImage> create(LegacyRenderSVGResourceContainer&, const Style::URL&);
 
 private:
-    SVGResourceImage(RenderSVGResourceContainer&, const URL& reresolvedURL);
-    SVGResourceImage(LegacyRenderSVGResourceContainer&, const URL& reresolvedURL);
+    SVGResourceImage(RenderSVGResourceContainer&, const Style::URL&);
+    SVGResourceImage(LegacyRenderSVGResourceContainer&, const Style::URL&);
 
     ImageDrawResult draw(GraphicsContext&, const FloatRect& destinationRect, const FloatRect& sourceRect, ImagePaintingOptions = { }) final;
     void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { }) final;
@@ -54,7 +58,7 @@ private:
 
     SingleThreadWeakPtr<RenderSVGResourceContainer> m_renderResource;
     SingleThreadWeakPtr<LegacyRenderSVGResourceContainer> m_legacyRenderResource;
-    URL m_reresolvedURL;
+    Style::URL m_resourceURL;
 };
 
 } // namespace WebCore

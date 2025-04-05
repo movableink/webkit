@@ -132,7 +132,6 @@ static inline bool isValidCSSUnitTypeForDoubleConversion(CSSUnitType unitType)
     case CSSUnitType::CSS_PROPERTY_ID:
     case CSSUnitType::CSS_STRING:
     case CSSUnitType::CSS_UNKNOWN:
-    case CSSUnitType::CSS_URI:
     case CSSUnitType::CSS_VALUE_ID:
         return false;
     case CSSUnitType::CSS_IDENT:
@@ -150,7 +149,6 @@ static inline bool isStringType(CSSUnitType type)
     switch (type) {
     case CSSUnitType::CSS_STRING:
     case CSSUnitType::CustomIdent:
-    case CSSUnitType::CSS_URI:
     case CSSUnitType::CSS_ATTR:
     case CSSUnitType::CSS_FONT_FAMILY:
         return true;
@@ -326,7 +324,6 @@ CSSPrimitiveValue::~CSSPrimitiveValue()
     switch (type) {
     case CSSUnitType::CSS_STRING:
     case CSSUnitType::CustomIdent:
-    case CSSUnitType::CSS_URI:
     case CSSUnitType::CSS_FONT_FAMILY:
         if (m_value.string)
             m_value.string->deref();
@@ -552,11 +549,6 @@ Ref<CSSPrimitiveValue> CSSPrimitiveValue::createFontFamily(String value)
 Ref<CSSPrimitiveValue> CSSPrimitiveValue::createInteger(double value)
 {
     return adoptRef(*new CSSPrimitiveValue(value, CSSUnitType::CSS_INTEGER));
-}
-
-Ref<CSSPrimitiveValue> CSSPrimitiveValue::createURI(String value)
-{
-    return adoptRef(*new CSSPrimitiveValue(WTFMove(value), CSSUnitType::CSS_URI));
 }
 
 bool CSSPrimitiveValue::conversionToCanonicalUnitRequiresConversionData() const
@@ -895,7 +887,6 @@ String CSSPrimitiveValue::stringValue() const
     case CSSUnitType::CSS_STRING:
     case CSSUnitType::CustomIdent:
     case CSSUnitType::CSS_FONT_FAMILY:
-    case CSSUnitType::CSS_URI:
         return m_value.string;
     case CSSUnitType::CSS_VALUE_ID:
         return nameString(m_value.valueID);
@@ -1000,7 +991,6 @@ ASCIILiteral CSSPrimitiveValue::unitTypeString(CSSUnitType unitType)
     case CSSUnitType::CSS_QUIRKY_EM:
     case CSSUnitType::CSS_STRING:
     case CSSUnitType::CSS_UNKNOWN:
-    case CSSUnitType::CSS_URI:
     case CSSUnitType::CSS_VALUE_ID:
     case CSSUnitType::CustomIdent:
         return ""_s;
@@ -1093,8 +1083,6 @@ ALWAYS_INLINE String CSSPrimitiveValue::serializeInternal(const CSS::Serializati
         return formatNumberValue("em"_s);
     case CSSUnitType::CSS_STRING:
         return serializeString(m_value.string);
-    case CSSUnitType::CSS_URI:
-        return serializeURL(m_value.string);
     case CSSUnitType::CustomIdent: {
         StringBuilder builder;
         serializeIdentifier(m_value.string, builder);
@@ -1216,7 +1204,6 @@ bool CSSPrimitiveValue::equals(const CSSPrimitiveValue& other) const
         return m_value.valueID == other.m_value.valueID;
     case CSSUnitType::CSS_STRING:
     case CSSUnitType::CustomIdent:
-    case CSSUnitType::CSS_URI:
     case CSSUnitType::CSS_FONT_FAMILY:
         return equal(m_value.string, other.m_value.string);
     case CSSUnitType::CSS_ATTR:
@@ -1317,7 +1304,6 @@ bool CSSPrimitiveValue::addDerivedHash(Hasher& hasher) const
         break;
     case CSSUnitType::CSS_STRING:
     case CSSUnitType::CustomIdent:
-    case CSSUnitType::CSS_URI:
     case CSSUnitType::CSS_FONT_FAMILY:
         add(hasher, String { m_value.string });
         break;

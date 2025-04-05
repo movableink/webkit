@@ -26,7 +26,13 @@
 #include "CSSPropertyParserConsumer+URL.h"
 
 #include "CSSParserTokenRange.h"
+#include "CSSParserTokenRangeGuard.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyParserConsumer+KeywordDefinitions.h"
+#include "CSSPropertyParserConsumer+MetaConsumer.h"
+#include "CSSPropertyParserConsumer+String.h"
+#include "CSSPropertyParserState.h"
+#include "CSSURLValue.h"
 #include "CSSValueKeywords.h"
 #include <wtf/text/StringView.h>
 
@@ -36,35 +42,47 @@ namespace CSSPropertyParserHelpers {
 // MARK: <url>
 // https://drafts.csswg.org/css-values/#urls
 
-StringView consumeURLRaw(CSSParserTokenRange& range)
+std::optional<CSS::URL> consumeURLRaw(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     auto& token = range.peek();
     if (token.type() == UrlToken) {
+        auto result = CSS::completeURL(token.value().toString(), state.context);
+        if (!result)
+            return { };
         range.consumeIncludingWhitespace();
-        return token.value();
+        return result;
     }
 
-    if (token.functionId() == CSSValueUrl) {
-        auto rangeCopy = range;
-        auto args = rangeCopy.consumeBlock();
-        auto& next = args.consumeIncludingWhitespace();
-        if (next.type() == BadStringToken || !args.atEnd())
-            return StringView();
-        ASSERT(next.type() == StringToken);
-        range = rangeCopy;
-        range.consumeWhitespace();
-        return next.value();
+    switch (token.functionId()) {
+    case CSSValueUrl: {
+        CSSParserTokenRangeGuard guard { range };
+
+        auto args = consumeFunction(range);
+
+        auto string = consumeStringRaw(args);
+        if (string.isNull())
+            return { };
+        auto result = CSS::completeURL(string.toString(), state.context);
+        if (!result || !args.atEnd())
+            return { };
+
+        guard.commit();
+
+        return result;
+    }
+
+    default:
+        break;
     }
 
     return { };
 }
 
-RefPtr<CSSPrimitiveValue> consumeURL(CSSParserTokenRange& range)
+RefPtr<CSSValue> consumeURL(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
-    auto url = consumeURLRaw(range);
-    if (url.isNull())
-        return nullptr;
-    return CSSPrimitiveValue::createURI(url.toString());
+    if (auto rawURL = consumeURLRaw(range, state))
+        return CSSURLValue::create(WTFMove(*rawURL));
+    return nullptr;
 }
 
 } // namespace CSSPropertyParserHelpers

@@ -48,14 +48,17 @@
 #include "CSSTokenizer.h"
 #include "CSSTransformListValue.h"
 #include "CSSTransformValue.h"
+#include "CSSURLValue.h"
 #include "CSSUnitValue.h"
 #include "CSSUnparsedValue.h"
 #include "CSSValueList.h"
 #include "CSSValuePool.h"
 #include "CSSVariableData.h"
 #include "CSSVariableReferenceValue.h"
+#include "RenderStyle.h"
 #include "StylePropertiesInlines.h"
 #include "StylePropertyShorthand.h"
+#include "StyleURL.h"
 #include <wtf/FixedVector.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -395,8 +398,8 @@ RefPtr<CSSStyleValue> CSSStyleValueFactory::constructStyleValueForCustomProperty
         if (colorValue.isCurrentColor())
             return CSSKeywordValue::rectifyKeywordish(nameLiteral(CSSValueCurrentcolor));
         return CSSStyleValue::create(CSSValuePool::singleton().createColorValue(colorValue.resolvedColor()));
-    }, [&](const URL& urlValue) -> RefPtr<CSSStyleValue> {
-        return CSSStyleValue::create(CSSPrimitiveValue::createURI(urlValue.string()));
+    }, [&](const Style::URL& urlValue) -> RefPtr<CSSStyleValue> {
+        return CSSStyleValue::create(CSSURLValue::create(Style::toCSS(urlValue, RenderStyle::defaultStyle())));
     }, [&](const String& identValue) -> RefPtr<CSSStyleValue> {
         return CSSKeywordValue::rectifyKeywordish(identValue);
     }, [&](const RefPtr<StyleImage>&) -> RefPtr<CSSStyleValue>  {

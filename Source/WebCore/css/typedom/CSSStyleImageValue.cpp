@@ -55,7 +55,6 @@ Document* CSSStyleImageValue::document() const
     return m_document.get();
 }
 
-
 RefPtr<CSSValue> CSSStyleImageValue::toCSSValue() const
 {
     return m_cssValue.copyRef();

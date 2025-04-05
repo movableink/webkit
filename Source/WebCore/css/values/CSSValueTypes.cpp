@@ -25,12 +25,19 @@
 #include "config.h"
 #include "CSSValueTypes.h"
 
+#include "CSSMarkup.h"
+
 namespace WebCore {
 namespace CSS {
 
 void Serialize<CustomIdentifier>::operator()(StringBuilder& builder, const SerializationContext&, const CustomIdentifier& value)
 {
     builder.append(value.value);
+}
+
+void Serialize<WTF::String>::operator()(StringBuilder& builder, const SerializationContext&, const WTF::String& value)
+{
+    serializeString(value, builder);
 }
 
 } // namespace CSS

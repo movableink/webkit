@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "CSSURL.h"
 #include "CSSValue.h"
 #include "CSSValuePair.h"
 #include "IntPoint.h"
@@ -38,10 +39,11 @@ class BuilderState;
 class CSSCursorImageValue final : public CSSValue {
 public:
     static Ref<CSSCursorImageValue> create(Ref<CSSValue>&& imageValue, RefPtr<CSSValue>&& hotSpot, LoadedFromOpaqueSource);
-    static Ref<CSSCursorImageValue> create(Ref<CSSValue>&& imageValue, RefPtr<CSSValue>&& hotSpot, URL, LoadedFromOpaqueSource);
+    static Ref<CSSCursorImageValue> create(Ref<CSSValue>&& imageValue, RefPtr<CSSValue>&& hotSpot, CSS::URL&&, LoadedFromOpaqueSource);
     ~CSSCursorImageValue();
 
-    const URL& imageURL() const { return m_originalURL; }
+    const CSS::URL& originalURL() const { return m_originalURL; }
+
     String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSCursorImageValue&) const;
 
@@ -53,9 +55,9 @@ public:
     RefPtr<StyleCursorImage> createStyleImage(const Style::BuilderState&) const;
 
 private:
-    CSSCursorImageValue(Ref<CSSValue>&& imageValue, RefPtr<CSSValue>&& hotSpot, URL, LoadedFromOpaqueSource);
+    CSSCursorImageValue(Ref<CSSValue>&& imageValue, RefPtr<CSSValue>&& hotSpot, CSS::URL&&, LoadedFromOpaqueSource);
 
-    URL m_originalURL;
+    CSS::URL m_originalURL;
     Ref<CSSValue> m_imageValue;
     RefPtr<CSSValue> m_hotSpot;
     LoadedFromOpaqueSource m_loadedFromOpaqueSource { LoadedFromOpaqueSource::No };

@@ -37,26 +37,6 @@ namespace WebCore {
 
 class Document;
 
-struct ResolvedURL {
-    String specifiedURLString;
-    URL resolvedURL;
-
-    bool isLocalURL() const;
-};
-
-inline ResolvedURL makeResolvedURL(URL&& resolvedURL)
-{
-    auto string = resolvedURL.string();
-    return { WTFMove(string), WTFMove(resolvedURL) };
-}
-
-inline bool operator==(const ResolvedURL& a, const ResolvedURL& b)
-{
-    return a.specifiedURLString == b.specifiedURLString && a.resolvedURL == b.resolvedURL;
-}
-
-bool mayDependOnBaseURL(const ResolvedURL&);
-
 struct CSSParserContext {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
@@ -113,8 +93,6 @@ struct CSSParserContext {
     CSSParserContext(CSSParserMode, const URL& baseURL = URL());
     WEBCORE_EXPORT CSSParserContext(const Document&);
     CSSParserContext(const Document&, const URL& baseURL, ASCIILiteral charset = ""_s);
-
-    ResolvedURL completeURL(const String&) const;
 
     void setUASheetMode();
 

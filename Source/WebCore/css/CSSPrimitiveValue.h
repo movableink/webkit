@@ -129,9 +129,6 @@ public:
     static Ref<CSSPrimitiveValue> createFontFamily(String);
     bool isFontFamily() const { return primitiveUnitType() == CSSUnitType::CSS_FONT_FAMILY; }
 
-    static Ref<CSSPrimitiveValue> createURI(String);
-    bool isURI() const { return primitiveUnitType() == CSSUnitType::CSS_URI; }
-
     static inline CSSPrimitiveValue& implicitInitialValue();
 
     ~CSSPrimitiveValue();

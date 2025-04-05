@@ -52,6 +52,7 @@ css/CSSScrollValue.h
 css/CSSSubgridValue.h
 css/CSSTextShadowPropertyValue.h
 css/CSSTransformListValue.h
+css/CSSURLValue.h
 css/CSSUnicodeRangeValue.h
 css/CSSValueList.h
 css/CSSValuePair.h

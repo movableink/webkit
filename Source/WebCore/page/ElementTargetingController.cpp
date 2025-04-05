@@ -64,6 +64,7 @@
 #include "ShadowRoot.h"
 #include "SimpleRange.h"
 #include "StyleImage.h"
+#include "StyleURL.h"
 #include "TextExtraction.h"
 #include "TextIterator.h"
 #include "TypedElementDescendantIteratorInlines.h"
@@ -663,7 +664,7 @@ static URL urlForElement(const Element& element)
     if (CheckedPtr renderer = element.renderer()) {
         if (auto& style = renderer->style(); style.hasBackgroundImage()) {
             if (RefPtr image = style.backgroundLayers().image())
-                return image->reresolvedURL(element.document());
+                return image->url().resolved;
         }
     }
 

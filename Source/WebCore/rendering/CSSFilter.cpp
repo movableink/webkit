@@ -35,6 +35,7 @@
 #include "FEGaussianBlur.h"
 #include "FilterOperations.h"
 #include "Logging.h"
+#include "ReferenceFilterOperation.h"
 #include "ReferencedSVGResources.h"
 #include "RenderElement.h"
 #include "SVGFilter.h"
@@ -201,12 +202,12 @@ static RefPtr<FilterEffect> createSepiaEffect(const BasicColorMatrixFilterOperat
     return FEColorMatrix::create(ColorMatrixType::FECOLORMATRIX_TYPE_MATRIX, WTFMove(inputParameters));
 }
 
-static RefPtr<SVGFilterElement> referenceFilterElement(const ReferenceFilterOperation& filterOperation, RenderElement& renderer)
+static RefPtr<SVGFilterElement> referenceFilterElement(const Style::ReferenceFilterOperation& filterOperation, RenderElement& renderer)
 {
     RefPtr filterElement = ReferencedSVGResources::referencedFilterElement(renderer.protectedTreeScopeForSVGReferences(), filterOperation);
 
     if (!filterElement) {
-        LOG_WITH_STREAM(Filters, stream << " buildReferenceFilter: failed to find filter renderer, adding pending resource " << filterOperation.fragment());
+        LOG_WITH_STREAM(Filters, stream << " buildReferenceFilter: failed to find filter renderer, adding pending resource " << filterOperation.url());
         // Although we did not find the referenced filter, it might exist later in the document.
         // FIXME: This skips anonymous RenderObjects. <https://webkit.org/b/131085>
         // FIXME: Unclear if this does anything.
@@ -216,7 +217,7 @@ static RefPtr<SVGFilterElement> referenceFilterElement(const ReferenceFilterOper
     return filterElement;
 }
 
-static bool isIdentityReferenceFilter(const ReferenceFilterOperation& filterOperation, RenderElement& renderer)
+static bool isIdentityReferenceFilter(const Style::ReferenceFilterOperation& filterOperation, RenderElement& renderer)
 {
     RefPtr filterElement = referenceFilterElement(filterOperation, renderer);
     if (!filterElement)
@@ -225,7 +226,7 @@ static bool isIdentityReferenceFilter(const ReferenceFilterOperation& filterOper
     return SVGFilter::isIdentity(*filterElement);
 }
 
-static IntOutsets calculateReferenceFilterOutsets(const ReferenceFilterOperation& filterOperation, RenderElement& renderer, const FloatRect& targetBoundingBox)
+static IntOutsets calculateReferenceFilterOutsets(const Style::ReferenceFilterOperation& filterOperation, RenderElement& renderer, const FloatRect& targetBoundingBox)
 {
     RefPtr filterElement = referenceFilterElement(filterOperation, renderer);
     if (!filterElement)
@@ -234,7 +235,7 @@ static IntOutsets calculateReferenceFilterOutsets(const ReferenceFilterOperation
     return SVGFilter::calculateOutsets(*filterElement, targetBoundingBox);
 }
 
-static RefPtr<SVGFilter> createReferenceFilter(CSSFilter& filter, const ReferenceFilterOperation& filterOperation, RenderElement& renderer, OptionSet<FilterRenderingMode> preferredFilterRenderingModes, const FloatRect& targetBoundingBox, const GraphicsContext& destinationContext)
+static RefPtr<SVGFilter> createReferenceFilter(CSSFilter& filter, const Style::ReferenceFilterOperation& filterOperation, RenderElement& renderer, OptionSet<FilterRenderingMode> preferredFilterRenderingModes, const FloatRect& targetBoundingBox, const GraphicsContext& destinationContext)
 {
     RefPtr filterElement = referenceFilterElement(filterOperation, renderer);
     if (!filterElement)
@@ -300,7 +301,7 @@ bool CSSFilter::buildFilterFunctions(RenderElement& renderer, const FilterOperat
             break;
 
         case FilterOperation::Type::Reference:
-            function = createReferenceFilter(*this, uncheckedDowncast<ReferenceFilterOperation>(operation), renderer, preferredFilterRenderingModes, targetBoundingBox, destinationContext);
+            function = createReferenceFilter(*this, uncheckedDowncast<Style::ReferenceFilterOperation>(operation), renderer, preferredFilterRenderingModes, targetBoundingBox, destinationContext);
             break;
 
         default:
@@ -402,7 +403,7 @@ bool CSSFilter::isIdentity(RenderElement& renderer, const FilterOperations& oper
         return false;
 
     for (auto& operation : operations) {
-        if (RefPtr referenceOperation = dynamicDowncast<ReferenceFilterOperation>(operation)) {
+        if (RefPtr referenceOperation = dynamicDowncast<Style::ReferenceFilterOperation>(operation)) {
             if (!isIdentityReferenceFilter(*referenceOperation, renderer))
                 return false;
             continue;
@@ -420,7 +421,7 @@ IntOutsets CSSFilter::calculateOutsets(RenderElement& renderer, const FilterOper
     IntOutsets outsets;
 
     for (auto& operation : operations) {
-        if (RefPtr referenceOperation = dynamicDowncast<ReferenceFilterOperation>(operation)) {
+        if (RefPtr referenceOperation = dynamicDowncast<Style::ReferenceFilterOperation>(operation)) {
             outsets += calculateReferenceFilterOutsets(*referenceOperation, renderer, targetBoundingBox);
             continue;
         }

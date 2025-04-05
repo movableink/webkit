@@ -157,6 +157,11 @@ template<> struct Serialize<CustomIdentifier> {
     void operator()(StringBuilder&, const SerializationContext&, const CustomIdentifier&);
 };
 
+// Specialization for `WTF::String`.
+template<> struct Serialize<WTF::String> {
+    void operator()(StringBuilder&, const SerializationContext&, const WTF::String&);
+};
+
 // Specialization for `FunctionNotation`.
 template<CSSValueID Name, typename CSSType> struct Serialize<FunctionNotation<Name, CSSType>> {
     void operator()(StringBuilder& builder, const SerializationContext& context, const FunctionNotation<Name, CSSType>& value)
@@ -292,6 +297,22 @@ template<> struct ComputedStyleDependenciesCollector<CustomIdentifier> {
     }
 };
 
+// Specialization for `WTF::String`.
+template<> struct ComputedStyleDependenciesCollector<WTF::String> {
+    constexpr void operator()(ComputedStyleDependencies&, const WTF::String&)
+    {
+        // Nothing to do.
+    }
+};
+
+// Specialization for `WTF::URL`.
+template<> struct ComputedStyleDependenciesCollector<WTF::URL> {
+    constexpr void operator()(ComputedStyleDependencies&, const WTF::URL&)
+    {
+        // Nothing to do.
+    }
+};
+
 // MARK: - CSSValue Visitation
 
 // All non-tuple-like leaf types must implement the following conversions:
@@ -394,6 +415,22 @@ template<CSSValueID C> struct CSSValueChildrenVisitor<Constant<C>> {
 // Specialization for `CustomIdentifier`.
 template<> struct CSSValueChildrenVisitor<CustomIdentifier> {
     constexpr IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const CustomIdentifier&)
+    {
+        return IterationStatus::Continue;
+    }
+};
+
+// Specialization for `WTF::String`.
+template<> struct CSSValueChildrenVisitor<WTF::String> {
+    constexpr IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const WTF::String&)
+    {
+        return IterationStatus::Continue;
+    }
+};
+
+// Specialization for `WTF::URL`.
+template<> struct CSSValueChildrenVisitor<WTF::URL> {
+    constexpr IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const WTF::URL&)
     {
         return IterationStatus::Continue;
     }

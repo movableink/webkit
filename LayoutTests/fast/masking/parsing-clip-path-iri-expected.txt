@@ -1,13 +1,6 @@
-Test clip-path IRIs
 
-On success, you will see a series of "PASS" messages, followed by "TEST COMPLETE".
-
-
-PASS innerStyle("-webkit-clip-path", "url(#clip1)") is "url(\"#clip1\")"
-PASS innerStyle("-webkit-clip-path", "url(clip.svg#clip1)") is "url(\"clip.svg#clip1\")"
-PASS computedStyle("-webkit-clip-path", "url(#clip1)") is "url(\"#clip1\")"
-PASS computedStyle("-webkit-clip-path", "url(clip.svg#clip1)") is "url(\"clip.svg#clip1\")"
-PASS successfullyParsed is true
-
-TEST COMPLETE
+PASS e.style['-webkit-clip-path'] = "url(#clip1)" should set the property value
+PASS e.style['-webkit-clip-path'] = "url(clip.svg#clip1)" should set the property value
+PASS Property -webkit-clip-path value 'url(#clip1)'
+PASS Property -webkit-clip-path value 'url(clip.svg#clip1)'
 

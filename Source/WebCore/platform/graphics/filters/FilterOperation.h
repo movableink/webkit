@@ -37,10 +37,6 @@ namespace WebCore {
 // CSS Filters
 
 struct BlendingContext;
-class CachedResourceLoader;
-class CachedSVGDocumentReference;
-class FilterEffect;
-struct ResourceLoaderOptions;
 
 class FilterOperation : public ThreadSafeRefCounted<FilterOperation> {
 public:
@@ -175,46 +171,6 @@ private:
         : FilterOperation(Type::Passthrough)
     {
     }
-};
-
-class ReferenceFilterOperation : public FilterOperation {
-public:
-    static Ref<ReferenceFilterOperation> create(const String& url, AtomString&& fragment)
-    {
-        return adoptRef(*new ReferenceFilterOperation(url, WTFMove(fragment)));
-    }
-    virtual ~ReferenceFilterOperation();
-
-    Ref<FilterOperation> clone() const final
-    {
-        // Reference filters cannot be cloned.
-        RELEASE_ASSERT_NOT_REACHED();
-    }
-
-    bool affectsOpacity() const override { return true; }
-    bool movesPixels() const override { return true; }
-    // FIXME: This only needs to return true for graphs that include ConvolveMatrix, DisplacementMap, Morphology and possibly Lighting.
-    // https://bugs.webkit.org/show_bug.cgi?id=171753
-    bool shouldBeRestrictedBySecurityOrigin() const override { return true; }
-
-    const String& url() const { return m_url; }
-    const AtomString& fragment() const { return m_fragment; }
-
-    void loadExternalDocumentIfNeeded(CachedResourceLoader&, const ResourceLoaderOptions&);
-
-    CachedSVGDocumentReference* cachedSVGDocumentReference() const { return m_cachedSVGDocumentReference.get(); }
-
-private:
-    ReferenceFilterOperation(const String& url, AtomString&& fragment);
-
-    bool operator==(const FilterOperation&) const override;
-
-    bool isIdentity() const override;
-    IntOutsets outsets() const override;
-
-    String m_url;
-    AtomString m_fragment;
-    std::unique_ptr<CachedSVGDocumentReference> m_cachedSVGDocumentReference;
 };
 
 // Grayscale, Sepia, Saturate and HueRotate are variations on a basic color matrix effect.
@@ -418,7 +374,6 @@ SPECIALIZE_TYPE_TRAITS_END()
 
 SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(DefaultFilterOperation, type() == WebCore::FilterOperation::Type::Default)
 SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(PassthroughFilterOperation, type() == WebCore::FilterOperation::Type::Passthrough)
-SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(ReferenceFilterOperation, type() == WebCore::FilterOperation::Type::Reference)
 SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(BasicColorMatrixFilterOperation, isBasicColorMatrixFilterOperation())
 SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(BasicComponentTransferFilterOperation, isBasicComponentTransferFilterOperation())
 SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(InvertLightnessFilterOperation, type() == WebCore::FilterOperation::Type::AppleInvertLightness)

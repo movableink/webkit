@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "CSSParserContext.h"
+#include "CSSURL.h"
 #include "CSSValue.h"
 #include "CachedResourceHandle.h"
 #include "ResourceLoaderOptions.h"
@@ -43,18 +43,18 @@ class BuilderState;
 class CSSImageValue final : public CSSValue {
 public:
     static Ref<CSSImageValue> create();
-    static Ref<CSSImageValue> create(ResolvedURL, LoadedFromOpaqueSource, AtomString = { });
-    static Ref<CSSImageValue> create(URL, LoadedFromOpaqueSource, AtomString = { });
+    static Ref<CSSImageValue> create(CSS::URL, LoadedFromOpaqueSource, AtomString = { });
+    static Ref<CSSImageValue> create(WTF::URL, LoadedFromOpaqueSource, AtomString = { });
     ~CSSImageValue();
+
+    Ref<CSSImageValue> copyForComputedStyle(const CSS::URL& resolvedURL) const;
 
     bool isPending() const;
     CachedImage* loadImage(CachedResourceLoader&, const ResourceLoaderOptions&);
     CachedImage* cachedImage() const { return m_cachedImage ? m_cachedImage.value().get() : nullptr; }
 
     // Take care when using this, and read https://drafts.csswg.org/css-values/#relative-urls
-    const URL& imageURL() const { return m_location.resolvedURL; }
-
-    URL reresolvedURL(const Document&) const;
+    const CSS::URL& url() const { return m_location; }
 
     String customCSSText(const CSS::SerializationContext&) const;
 
@@ -82,9 +82,9 @@ public:
 
 private:
     CSSImageValue();
-    CSSImageValue(ResolvedURL&&, LoadedFromOpaqueSource, AtomString&&);
+    CSSImageValue(CSS::URL&&, LoadedFromOpaqueSource, AtomString&&);
 
-    ResolvedURL m_location;
+    CSS::URL m_location;
     std::optional<CachedResourceHandle<CachedImage>> m_cachedImage;
     AtomString m_initiatorType;
     LoadedFromOpaqueSource m_loadedFromOpaqueSource { LoadedFromOpaqueSource::No };

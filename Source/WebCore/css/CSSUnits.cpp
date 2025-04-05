@@ -121,7 +121,6 @@ CSSUnitCategory unitCategory(CSSUnitType type)
     case CSSUnitType::CSS_QUIRKY_EM:
     case CSSUnitType::CSS_STRING:
     case CSSUnitType::CSS_UNKNOWN:
-    case CSSUnitType::CSS_URI:
     case CSSUnitType::CSS_VALUE_ID:
     case CSSUnitType::CustomIdent:
         return CSSUnitCategory::Other;
@@ -205,7 +204,6 @@ TextStream& operator<<(TextStream& ts, CSSUnitType unitType)
     case CSSUnitType::CSS_KHZ: ts << "khz"_s; break;
     case CSSUnitType::CSS_DIMENSION: ts << "dimension"_s; break;
     case CSSUnitType::CSS_STRING: ts << "string"_s; break;
-    case CSSUnitType::CSS_URI: ts << "uri"_s; break;
     case CSSUnitType::CSS_IDENT: ts << "ident"_s; break;
     case CSSUnitType::CustomIdent: ts << "custom-ident"_s; break;
     case CSSUnitType::CSS_ATTR: ts << "attr"_s; break;
@@ -382,7 +380,6 @@ bool conversionToCanonicalUnitRequiresConversionData(CSSUnitType unit)
     case CSSUnitType::CSS_QUIRKY_EM:
     case CSSUnitType::CSS_STRING:
     case CSSUnitType::CSS_UNKNOWN:
-    case CSSUnitType::CSS_URI:
     case CSSUnitType::CSS_VALUE_ID:
     case CSSUnitType::CustomIdent:
         break;

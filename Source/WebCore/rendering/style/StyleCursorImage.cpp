@@ -44,16 +44,30 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(StyleCursorImage);
 
-Ref<StyleCursorImage> StyleCursorImage::create(Ref<StyleImage>&& image, const std::optional<IntPoint>& hotSpot, const URL& originalURL, LoadedFromOpaqueSource loadedFromOpaqueSource)
-{ 
-    return adoptRef(*new StyleCursorImage(WTFMove(image), hotSpot, originalURL, loadedFromOpaqueSource));
+Ref<StyleCursorImage> StyleCursorImage::create(const Ref<StyleImage>& image, std::optional<IntPoint> hotSpot, const Style::URL& originalURL, LoadedFromOpaqueSource loadedFromOpaqueSource)
+{
+    return adoptRef(*new StyleCursorImage(image, hotSpot, originalURL, loadedFromOpaqueSource));
 }
 
-StyleCursorImage::StyleCursorImage(Ref<StyleImage>&& image, const std::optional<IntPoint>& hotSpot, const URL& originalURL, LoadedFromOpaqueSource loadedFromOpaqueSource)
+Ref<StyleCursorImage> StyleCursorImage::create(Ref<StyleImage>&& image, std::optional<IntPoint> hotSpot, Style::URL&& originalURL, LoadedFromOpaqueSource loadedFromOpaqueSource)
+{
+    return adoptRef(*new StyleCursorImage(WTFMove(image), hotSpot, WTFMove(originalURL), loadedFromOpaqueSource));
+}
+
+StyleCursorImage::StyleCursorImage(const Ref<StyleImage>& image, std::optional<IntPoint> hotSpot, const Style::URL& originalURL, LoadedFromOpaqueSource loadedFromOpaqueSource)
+    : StyleMultiImage { Type::CursorImage }
+    , m_image { image }
+    , m_hotSpot { hotSpot }
+    , m_originalURL { originalURL }
+    , m_loadedFromOpaqueSource { loadedFromOpaqueSource }
+{
+}
+
+StyleCursorImage::StyleCursorImage(Ref<StyleImage>&& image, std::optional<IntPoint> hotSpot, Style::URL&& originalURL, LoadedFromOpaqueSource loadedFromOpaqueSource)
     : StyleMultiImage { Type::CursorImage }
     , m_image { WTFMove(image) }
     , m_hotSpot { hotSpot }
-    , m_originalURL { originalURL }
+    , m_originalURL { WTFMove(originalURL) }
     , m_loadedFromOpaqueSource { loadedFromOpaqueSource }
 {
 }
@@ -86,7 +100,7 @@ Ref<CSSValue> StyleCursorImage::computedStyleValue(const RenderStyle& style) con
     if (m_hotSpot)
         hotSpot = CSSValuePair::createNoncoalescing(CSSPrimitiveValue::create(m_hotSpot->x()), CSSPrimitiveValue::create(m_hotSpot->y()));
 
-    return CSSCursorImageValue::create(m_image->computedStyleValue(style), WTFMove(hotSpot), m_originalURL, m_loadedFromOpaqueSource );
+    return CSSCursorImageValue::create(m_image->computedStyleValue(style), WTFMove(hotSpot), Style::toCSS(m_originalURL, style), m_loadedFromOpaqueSource );
 }
 
 ImageWithScale StyleCursorImage::selectBestFitImage(const Document& document)
@@ -96,11 +110,13 @@ ImageWithScale StyleCursorImage::selectBestFitImage(const Document& document)
 
     if (RefPtr cachedImage = dynamicDowncast<StyleCachedImage>(m_image.get())) {
         if (RefPtr cursorElement = updateCursorElement(document)) {
-            auto existingImageURL = cachedImage->imageURL();
+            auto existingImageURL = cachedImage->url().resolved;
             auto updatedImageURL = document.completeURL(cursorElement->href());
 
-            if (existingImageURL != updatedImageURL)
-                m_image = StyleCachedImage::create(CSSImageValue::create(WTFMove(updatedImageURL), m_loadedFromOpaqueSource));
+            if (existingImageURL != updatedImageURL) {
+                auto styleURL = Style::URL { .resolved = updatedImageURL };
+                m_image = StyleCachedImage::create(styleURL, CSSImageValue::create(WTFMove(updatedImageURL), m_loadedFromOpaqueSource));
+            }
         }
     }
 
@@ -109,7 +125,7 @@ ImageWithScale StyleCursorImage::selectBestFitImage(const Document& document)
 
 RefPtr<SVGCursorElement> StyleCursorImage::updateCursorElement(const Document& document)
 {
-    RefPtr cursorElement = dynamicDowncast<SVGCursorElement>(SVGURIReference::targetElementFromIRIString(m_originalURL.string(), document).element);
+    RefPtr cursorElement = dynamicDowncast<SVGCursorElement>(SVGURIReference::targetElementFromIRIString(m_originalURL.resolved.string(), document).element);
     if (!cursorElement)
         return nullptr;
 
@@ -145,12 +161,12 @@ void StyleCursorImage::setContainerContextForRenderer(const RenderElement& rende
 {
     if (!hasCachedImage())
         return;
-    cachedImage()->setContainerContextForClient(renderer, LayoutSize(containerSize), containerZoom, m_originalURL);
+    cachedImage()->setContainerContextForClient(renderer, LayoutSize(containerSize), containerZoom, m_originalURL.resolved);
 }
 
 bool StyleCursorImage::usesDataProtocol() const
 {
-    return m_originalURL.protocolIsData();
+    return m_originalURL.resolved.protocolIsData();
 }
 
 } // namespace WebCore

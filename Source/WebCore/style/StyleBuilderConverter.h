@@ -55,6 +55,7 @@
 #include "CSSRayValue.h"
 #include "CSSReflectValue.h"
 #include "CSSSubgridValue.h"
+#include "CSSURLValue.h"
 #include "CSSValuePair.h"
 #include "CalculationValue.h"
 #include "FontPalette.h"
@@ -91,6 +92,7 @@
 #include "StyleScrollPadding.h"
 #include "StyleScrollSnapPoints.h"
 #include "StyleTextEdge.h"
+#include "StyleURL.h"
 #include "TabSize.h"
 #include "TextSpacing.h"
 #include "TimelineRange.h"
@@ -201,7 +203,7 @@ public:
     static Vector<SVGLengthValue> convertStrokeDashArray(BuilderState&, const CSSValue&);
     static PaintOrder convertPaintOrder(BuilderState&, const CSSValue&);
     static float convertOpacity(BuilderState&, const CSSValue&);
-    static String convertSVGURIReference(BuilderState&, const CSSValue&);
+    static Style::URL convertSVGURIReference(BuilderState&, const CSSValue&);
     static StyleSelfAlignmentData convertSelfOrDefaultAlignmentData(BuilderState&, const CSSValue&);
     static StyleContentAlignmentData convertContentAlignmentData(BuilderState&, const CSSValue&);
     static GlyphOrientation convertGlyphOrientation(BuilderState&, const CSSValue&);
@@ -872,20 +874,25 @@ inline RefPtr<StylePathData> BuilderConverter::convertDPath(BuilderState& builde
 inline RefPtr<PathOperation> BuilderConverter::convertPathOperation(BuilderState& builderState, const CSSValue& value)
 {
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
-        if (primitiveValue->isURI()) {
-            auto cssURLValue = primitiveValue->stringValue();
-            auto fragment = SVGURIReference::fragmentIdentifierFromIRIString(cssURLValue, builderState.document());
-            // FIXME: It doesn't work with external SVG references (see https://bugs.webkit.org/show_bug.cgi?id=126133)
-            const TreeScope* treeScope = nullptr;
-            if (builderState.element())
-                treeScope = &builderState.element()->treeScopeForSVGReferences();
-            else
-                treeScope = &builderState.document();
-            auto target = SVGURIReference::targetElementFromIRIString(cssURLValue, *treeScope);
-            return ReferencePathOperation::create(cssURLValue, fragment, dynamicDowncast<SVGElement>(target.element.get()));
-        }
-        ASSERT(primitiveValue->valueID() == CSSValueNone);
+        ASSERT_UNUSED(primitiveValue, primitiveValue->valueID() == CSSValueNone);
         return nullptr;
+    }
+
+    if (RefPtr url = dynamicDowncast<CSSURLValue>(value)) {
+        auto styleURL = Style::toStyle(url->url(), builderState);
+
+        // FIXME: ReferencePathOperation are not hooked up to support remote URLs yet, so only works with document local references. To see an example of how this should work, see ReferenceFilterOperation which supports both document local and remote URLs.
+
+        auto fragment = SVGURIReference::fragmentIdentifierFromIRIString(styleURL, builderState.document());
+
+        const TreeScope* treeScope = nullptr;
+        if (builderState.element())
+            treeScope = &builderState.element()->treeScopeForSVGReferences();
+        else
+            treeScope = &builderState.document();
+        auto target = SVGURIReference::targetElementFromIRIString(styleURL, *treeScope);
+
+        return ReferencePathOperation::create(WTFMove(styleURL), fragment, dynamicDowncast<SVGElement>(target.element.get()));
     }
 
     if (RefPtr ray = dynamicDowncast<CSSRayValue>(value))
@@ -1891,15 +1898,17 @@ inline float BuilderConverter::convertOpacity(BuilderState& builderState, const 
     return std::max(0.0f, std::min(1.0f, opacity));
 }
 
-inline String BuilderConverter::convertSVGURIReference(BuilderState& builderState, const CSSValue& value)
+inline Style::URL BuilderConverter::convertSVGURIReference(BuilderState& builderState, const CSSValue& value)
 {
+    if (auto url = dynamicDowncast<CSSURLValue>(value))
+        return Style::toStyle(url->url(), builderState);
+
     auto* primitiveValue = requiredDowncast<CSSPrimitiveValue>(builderState, value);
     if (!primitiveValue)
-        return { };
+        return Style::URL::none();
 
-    if (primitiveValue->isURI())
-        return primitiveValue->stringValue();
-    return emptyString();
+    ASSERT(primitiveValue->valueID() == CSSValueNone);
+    return Style::URL::none();
 }
 
 inline StyleSelfAlignmentData BuilderConverter::convertSelfOrDefaultAlignmentData(BuilderState&, const CSSValue& value)

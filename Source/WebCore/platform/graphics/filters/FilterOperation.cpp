@@ -27,8 +27,6 @@
 #include "FilterOperation.h"
 
 #include "AnimationUtilities.h"
-#include "CachedResourceLoader.h"
-#include "CachedSVGDocumentReference.h"
 #include "ColorBlending.h"
 #include "ColorConversion.h"
 #include "ColorMatrix.h"
@@ -38,7 +36,6 @@
 #include "FilterEffect.h"
 #include "ImageBuffer.h"
 #include "LengthFunctions.h"
-#include "SVGURIReference.h"
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
@@ -54,47 +51,6 @@ bool DefaultFilterOperation::operator==(const FilterOperation& operation) const
 FilterOperation::Type DefaultFilterOperation::representedType() const
 {
     return m_representedType;
-}
-
-ReferenceFilterOperation::ReferenceFilterOperation(const String& url, AtomString&& fragment)
-    : FilterOperation(Type::Reference)
-    , m_url(url)
-    , m_fragment(WTFMove(fragment))
-{
-}
-
-ReferenceFilterOperation::~ReferenceFilterOperation() = default;
-    
-bool ReferenceFilterOperation::operator==(const FilterOperation& operation) const
-{
-    if (!isSameType(operation))
-        return false;
-    
-    return m_url == downcast<ReferenceFilterOperation>(operation).m_url;
-}
-
-bool ReferenceFilterOperation::isIdentity() const
-{
-    // Answering this question requires access to the renderer and the referenced filterElement.
-    ASSERT_NOT_REACHED();
-    return false;
-}
-
-IntOutsets ReferenceFilterOperation::outsets() const
-{
-    // Answering this question requires access to the renderer and the referenced filterElement.
-    ASSERT_NOT_REACHED();
-    return { };
-}
-
-void ReferenceFilterOperation::loadExternalDocumentIfNeeded(CachedResourceLoader& cachedResourceLoader, const ResourceLoaderOptions& options)
-{
-    if (m_cachedSVGDocumentReference)
-        return;
-    if (!SVGURIReference::isExternalURIReference(m_url, *cachedResourceLoader.protectedDocument()))
-        return;
-    m_cachedSVGDocumentReference = makeUnique<CachedSVGDocumentReference>(m_url);
-    m_cachedSVGDocumentReference->load(cachedResourceLoader, options);
 }
 
 double FilterOperation::blendAmounts(double from, double to, const BlendingContext& context) const

@@ -26,6 +26,7 @@
 #include "CSSValue.h"
 #include "FloatSize.h"
 #include "Image.h"
+#include "StyleURL.h"
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TypeCasts.h>
@@ -63,7 +64,7 @@ public:
     virtual bool errorOccurred() const { return false; }
     virtual bool usesDataProtocol() const { return false; }
     virtual bool hasImage() const { return false; }
-    virtual URL reresolvedURL(const Document&) const { return { }; }
+    virtual Style::URL url() const { return { }; }
 
     // Clients.
     virtual void addClient(RenderElement&) = 0;

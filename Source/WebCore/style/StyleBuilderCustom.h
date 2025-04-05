@@ -28,6 +28,7 @@
 
 #include "CSSBoxShadowPropertyValue.h"
 #include "CSSCalcSymbolTable.h"
+#include "CSSColorValue.h"
 #include "CSSCounterStyleRegistry.h"
 #include "CSSCounterStyleRule.h"
 #include "CSSCounterValue.h"
@@ -40,6 +41,7 @@
 #include "CSSRectValue.h"
 #include "CSSRegisteredCustomProperty.h"
 #include "CSSTextShadowPropertyValue.h"
+#include "CSSURLValue.h"
 #include "CounterContent.h"
 #include "CursorList.h"
 #include "ElementAncestorIteratorInlines.h"
@@ -1196,25 +1198,23 @@ inline void BuilderCustom::applyValueCursor(BuilderState& builderState, CSSValue
     }
 }
 
-inline std::pair<Color, SVGPaintType> colorAndSVGPaintType(BuilderState& builderState, const CSSValue& localValue, String& url)
+inline std::pair<Color, SVGPaintType> colorAndSVGPaintType(BuilderState& builderState, const CSSValue& localValue, Style::URL& url)
 {
+    if (RefPtr localURLValue = dynamicDowncast<CSSURLValue>(localValue)) {
+        url = Style::toStyle(localURLValue->url(), builderState);
+        return { Color::currentColor(), SVGPaintType::URI };
+    }
     if (RefPtr localPrimitiveValue = dynamicDowncast<CSSPrimitiveValue>(localValue)) {
-        if (localPrimitiveValue->isURI()) {
-            url = localPrimitiveValue->stringValue();
-            return { Color::currentColor(), SVGPaintType::URI };
-        }
-
         auto valueID = localPrimitiveValue->valueID();
-
         if (valueID == CSSValueNone)
-            return { Color::currentColor(), url.isEmpty() ? SVGPaintType::None : SVGPaintType::URINone };
+            return { Color::currentColor(), url.isNone() ? SVGPaintType::None : SVGPaintType::URINone };
         if (valueID == CSSValueCurrentcolor) {
             builderState.style().setDisallowsFastPathInheritance();
-            return { Color::currentColor(), url.isEmpty() ? SVGPaintType::CurrentColor : SVGPaintType::URICurrentColor };
+            return { Color::currentColor(), url.isNone() ? SVGPaintType::CurrentColor : SVGPaintType::URICurrentColor };
         }
     }
 
-    return { builderState.createStyleColor(localValue), url.isEmpty() ? SVGPaintType::RGBColor : SVGPaintType::URIRGBColor };
+    return { builderState.createStyleColor(localValue), url.isNone() ? SVGPaintType::RGBColor : SVGPaintType::URIRGBColor };
 }
 
 inline void BuilderCustom::applyInitialFill(BuilderState& builderState)
@@ -1234,12 +1234,13 @@ inline void BuilderCustom::applyValueFill(BuilderState& builderState, CSSValue& 
 {
     auto& svgStyle = builderState.style().accessSVGStyle();
     RefPtr<const CSSValue> localValue;
-    String url;
+    auto url = Style::URL::none();
+
     if (RefPtr list = dynamicDowncast<CSSValueList>(value)) {
-        auto primitiveValue = BuilderConverter::requiredDowncast<CSSPrimitiveValue>(builderState, *list->item(0));
-        if (!primitiveValue)
+        auto urlValue = BuilderConverter::requiredDowncast<CSSURLValue>(builderState, *list->item(0));
+        if (!urlValue)
             return;
-        url = primitiveValue->stringValue();
+        url = Style::toStyle(urlValue->url(), builderState);
         localValue = list->protectedItem(1);
         if (!localValue)
             return;
@@ -1265,12 +1266,13 @@ inline void BuilderCustom::applyValueStroke(BuilderState& builderState, CSSValue
 {
     auto& svgStyle = builderState.style().accessSVGStyle();
     RefPtr<const CSSValue> localValue;
-    String url;
+    auto url = Style::URL::none();
+
     if (RefPtr list = dynamicDowncast<CSSValueList>(value)) {
-        auto primitiveValue = BuilderConverter::requiredDowncast<CSSPrimitiveValue>(builderState, *list->item(0));
-        if (!primitiveValue)
+        auto urlValue = BuilderConverter::requiredDowncast<CSSURLValue>(builderState, *list->item(0));
+        if (!urlValue)
             return;
-        url = primitiveValue->stringValue();
+        url = Style::toStyle(urlValue->url(), builderState);
         localValue = list->protectedItem(1);
         if (!localValue)
             return;

@@ -33,6 +33,7 @@
 #include "ShadowData.h"
 #include "StyleColor.h"
 #include "StylePathData.h"
+#include "StyleURL.h"
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
@@ -158,8 +159,8 @@ public:
     float opacity;
     Style::Color paintColor;
     Style::Color visitedLinkPaintColor;
-    String paintUri;
-    String visitedLinkPaintUri;
+    Style::URL paintUri;
+    Style::URL visitedLinkPaintUri;
     SVGPaintType paintType;
     SVGPaintType visitedLinkPaintType;
 
@@ -186,8 +187,8 @@ public:
     Style::Color paintColor;
     Style::Color visitedLinkPaintColor;
 
-    String paintUri;
-    String visitedLinkPaintUri;
+    Style::URL paintUri;
+    Style::URL visitedLinkPaintUri;
 
     Length dashOffset;
     Vector<SVGLengthValue> dashArray;
@@ -280,9 +281,9 @@ public:
     void dumpDifferences(TextStream&, const StyleInheritedResourceData&) const;
 #endif
 
-    String markerStart;
-    String markerMid;
-    String markerEnd;
+    Style::URL markerStart;
+    Style::URL markerMid;
+    Style::URL markerEnd;
 
 private:
     StyleInheritedResourceData();

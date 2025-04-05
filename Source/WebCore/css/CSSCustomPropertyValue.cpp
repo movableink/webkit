@@ -34,6 +34,7 @@
 #include "CSSTokenizer.h"
 #include "ComputedStyleExtractor.h"
 #include "RenderStyle.h"
+#include "StyleURL.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
@@ -86,8 +87,8 @@ String CSSCustomPropertyValue::customCSSText(const CSS::SerializationContext& co
         }, [&](const RefPtr<StyleImage>& value) {
             // FIXME: This is not right for gradients that use `currentcolor`. There should be a way preserve it.
             return value->computedStyleValue(RenderStyle::defaultStyle())->cssText(context);
-        }, [&](const URL& value) {
-            return serializeURL(value.string());
+        }, [&](const Style::URL& value) {
+            return serializationForCSS(context, Style::toCSS(value, RenderStyle::defaultStyle()));
         }, [&](const String& value) {
             return value;
         }, [&](const TransformSyntaxValue& value) {
@@ -204,7 +205,7 @@ static bool mayDependOnBaseURL(const CSSCustomPropertyValue::SyntaxValue& syntax
         [](const RefPtr<StyleImage>&) {
             return true;
         },
-        [](const URL&) {
+        [](const Style::URL&) {
             return true;
         },
         [](const String&) {

@@ -1181,8 +1181,11 @@ static RefPtr<CSSValue> consumeImageSet(CSSParserTokenRange& args, CSS::Property
 RefPtr<CSSValue> consumeImage(CSSParserTokenRange& range, CSS::PropertyParserState& state, OptionSet<AllowedImageType> allowedImageTypes)
 {
     if (range.peek().type() == StringToken && allowedImageTypes.contains(AllowedImageType::RawStringAsURL)) {
-        return CSSImageValue::create(state.context.completeURL(range.consumeIncludingWhitespace().value().toAtomString().string()),
-            state.context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No);
+        auto imageURL = CSS::completeURL(range.peek().value().toAtomString().string(), state.context);
+        if (!imageURL)
+            return nullptr;
+        range.consumeIncludingWhitespace();
+        return CSSImageValue::create(WTFMove(*imageURL), state.context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No);
     }
 
     if (range.peek().type() == FunctionToken) {
@@ -1256,10 +1259,8 @@ RefPtr<CSSValue> consumeImage(CSSParserTokenRange& range, CSS::PropertyParserSta
     }
 
     if (allowedImageTypes.contains(AllowedImageType::URLFunction)) {
-        if (auto string = consumeURLRaw(range); !string.isNull()) {
-            return CSSImageValue::create(state.context.completeURL(string.toAtomString().string()),
-                state.context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No);
-        }
+        if (auto imageURL = consumeURLRaw(range, state))
+            return CSSImageValue::create(WTFMove(*imageURL), state.context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No);
     }
 
     return nullptr;

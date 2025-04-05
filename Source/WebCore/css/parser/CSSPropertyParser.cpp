@@ -79,6 +79,7 @@
 #include "CSSQuadValue.h"
 #include "CSSTokenizer.h"
 #include "CSSTransformListValue.h"
+#include "CSSURLValue.h"
 #include "CSSValuePair.h"
 #include "CSSVariableParser.h"
 #include "CSSVariableReferenceValue.h"
@@ -89,6 +90,7 @@
 #include "StyleBuilderConverter.h"
 #include "StylePropertyShorthand.h"
 #include "StylePropertyShorthandFunctions.h"
+#include "StyleURL.h"
 #include "TimingFunction.h"
 #include "TransformOperationsBuilder.h"
 #include <memory>
@@ -495,7 +497,7 @@ std::pair<RefPtr<CSSValue>, CSSCustomPropertySyntax::Type> CSSPropertyParser::co
         case CSSCustomPropertySyntax::Type::Image:
             return consumeImage(range, state, { AllowedImageType::URLFunction, AllowedImageType::GeneratedImage });
         case CSSCustomPropertySyntax::Type::URL:
-            return consumeURL(range);
+            return consumeURL(range, state);
         case CSSCustomPropertySyntax::Type::String:
             return consumeString(range);
         case CSSCustomPropertySyntax::Type::TransformFunction:
@@ -602,10 +604,8 @@ RefPtr<CSSCustomPropertyValue> CSSPropertyParser::parseTypedCustomPropertyValue(
                 return { };
             return { WTFMove(styleImage) };
         }
-        case CSSCustomPropertySyntax::Type::URL: {
-            auto url = m_context.completeURL(downcast<CSSPrimitiveValue>(value).stringValue());
-            return { url.resolvedURL };
-        }
+        case CSSCustomPropertySyntax::Type::URL:
+            return { Style::toStyle(downcast<CSSURLValue>(value).url(), builderState) };
         case CSSCustomPropertySyntax::Type::CustomIdent:
             return { downcast<CSSPrimitiveValue>(value).stringValue() };
         case CSSCustomPropertySyntax::Type::String:

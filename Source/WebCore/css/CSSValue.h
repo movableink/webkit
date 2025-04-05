@@ -120,6 +120,7 @@ public:
     bool isSubgridValue() const { return m_classType == ClassType::Subgrid; }
     bool isTextShadowPropertyValue() const { return m_classType == ClassType::TextShadowProperty; }
     bool isTransformListValue() const { return m_classType == ClassType::TransformList; }
+    bool isURL() const { return m_classType == ClassType::URL; }
     bool isUnicodeRangeValue() const { return m_classType == ClassType::UnicodeRange; }
     bool isValueList() const { return m_classType == ClassType::ValueList; }
     bool isVariableReferenceValue() const { return m_classType == ClassType::VariableReference; }
@@ -244,6 +245,7 @@ protected:
         Reflect,
         Scroll,
         TextShadowProperty,
+        URL,
         UnicodeRange,
         ValuePair,
         VariableReference,

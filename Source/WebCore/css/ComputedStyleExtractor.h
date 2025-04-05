@@ -28,6 +28,7 @@ namespace WebCore {
 
 namespace Style {
 struct Color;
+struct URL;
 }
 
 class Animation;
@@ -97,7 +98,7 @@ private:
     RenderElement* styledRenderer() const;
 
     RefPtr<CSSValue> svgPropertyValue(CSSPropertyID) const;
-    Ref<CSSValue> adjustSVGPaint(SVGPaintType, const String& url, Ref<CSSValue> color) const;
+    Ref<CSSValue> adjustSVGPaint(const RenderStyle&, SVGPaintType, const Style::URL&, const Style::Color&) const;
 
     Ref<CSSValueList> getCSSPropertyValuesForShorthandProperties(const StylePropertyShorthand&) const;
     RefPtr<CSSValueList> getCSSPropertyValuesFor2SidesShorthand(const StylePropertyShorthand&) const;

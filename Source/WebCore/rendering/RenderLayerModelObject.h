@@ -38,6 +38,10 @@ class RenderSVGResourceMasker;
 class RenderSVGResourcePaintServer;
 class SVGGraphicsElement;
 
+namespace Style {
+struct URL;
+}
+
 class RenderLayerModelObject : public RenderElement {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderLayerModelObject);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderLayerModelObject);
@@ -133,7 +137,7 @@ protected:
     virtual void updateFromStyle() { }
 
 private:
-    RenderSVGResourceMarker* svgMarkerResourceFromStyle(const String& markerResource) const;
+    RenderSVGResourceMarker* svgMarkerResourceFromStyle(const Style::URL& markerResource) const;
 
     std::unique_ptr<RenderLayer> m_layer;
 

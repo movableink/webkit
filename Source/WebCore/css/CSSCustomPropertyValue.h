@@ -31,9 +31,9 @@
 #include "Length.h"
 #include "StyleColor.h"
 #include "StyleImage.h"
+#include "StyleURL.h"
 #include "TransformOperation.h"
 #include <wtf/PointerComparison.h>
-#include <wtf/URL.h>
 
 namespace WebCore {
 
@@ -53,7 +53,7 @@ public:
         bool operator==(const TransformSyntaxValue& other) const { return transform.get() == other.transform.get(); }
     };
 
-    using SyntaxValue = std::variant<Length, NumericSyntaxValue, Style::Color, RefPtr<StyleImage>, URL, String, TransformSyntaxValue>;
+    using SyntaxValue = std::variant<Length, NumericSyntaxValue, Style::Color, RefPtr<StyleImage>, Style::URL, String, TransformSyntaxValue>;
 
     struct SyntaxValueList {
         Vector<SyntaxValue> values;
