@@ -33,6 +33,7 @@
 #pragma once
 
 #include <wtf/HashMap.h>
+#include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
@@ -52,7 +53,7 @@ class Object;
 class ObjectBase;
 
 // FIXME: unify this JSON parser with JSONParse in JavaScriptCore.
-class WTF_EXPORT_PRIVATE Value : public RefCounted<Value> {
+class WTF_EXPORT_PRIVATE Value : public RefCounted<Value>, public NoVirtualDestructorBase {
 public:
     static constexpr int maxDepth = 1000;
 
@@ -171,7 +172,7 @@ private:
     } m_value;
 };
 
-class SUPPRESS_REFCOUNTED_WITHOUT_VIRTUAL_DESTRUCTOR ObjectBase : public Value {
+class ObjectBase : public Value {
 private:
     friend class Value;
     using DataStorage = UncheckedKeyHashMap<String, Ref<Value>>;
@@ -266,7 +267,7 @@ public:
 };
 
 
-class SUPPRESS_REFCOUNTED_WITHOUT_VIRTUAL_DESTRUCTOR WTF_EXPORT_PRIVATE ArrayBase : public Value {
+class WTF_EXPORT_PRIVATE ArrayBase : public Value {
 private:
     friend class Value;
     using DataStorage = Vector<Ref<Value>>;

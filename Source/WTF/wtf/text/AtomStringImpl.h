@@ -27,7 +27,7 @@ namespace WTF {
 
 class AtomStringTable;
 
-class SUPPRESS_REFCOUNTED_WITHOUT_VIRTUAL_DESTRUCTOR AtomStringImpl final : public UniquedStringImpl {
+class AtomStringImpl final : public UniquedStringImpl {
 public:
     WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> lookUp(std::span<const LChar>);
     WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> lookUp(std::span<const UChar>);

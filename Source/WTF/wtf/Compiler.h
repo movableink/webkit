@@ -568,8 +568,7 @@
 #define SUPPRESS_UNRETAINED_LOCAL
 #endif
 
-#define SUPPRESS_REFCOUNTED_WITHOUT_VIRTUAL_DESTRUCTOR \
-    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE_ON_CLASS("webkit.RefCntblBaseVirtualDtor")
+// To suppress webkit.RefCntblBaseVirtualDtor, use NoVirtualDestructorBase instead.
 
 #define SUPPRESS_MEMORY_UNSAFE_CAST \
     IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("alpha.webkit.MemoryUnsafeCastChecker")

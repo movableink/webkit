@@ -30,6 +30,7 @@
 #include "TagCollection.h"
 #include <new>
 #include <wtf/HashSet.h>
+#include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashSet.h>
@@ -224,7 +225,7 @@ public:
 };
 
 DECLARE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER(NodeRareData);
-class NodeRareData {
+class NodeRareData : public NoVirtualDestructorBase {
     WTF_MAKE_NONCOPYABLE(NodeRareData);
     WTF_MAKE_STRUCT_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(NodeRareData);
 public:

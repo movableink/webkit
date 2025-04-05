@@ -31,7 +31,7 @@ namespace WTF {
 
 // It represents that the string impl is uniqued in some ways.
 // When the given 2 string impls are both uniqued string impls, we can compare it just using pointer comparison.
-class SUPPRESS_REFCOUNTED_WITHOUT_VIRTUAL_DESTRUCTOR UniquedStringImpl : public StringImpl {
+class UniquedStringImpl : public StringImpl {
 private:
     UniquedStringImpl() = delete;
 protected:

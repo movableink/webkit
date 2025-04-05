@@ -191,6 +191,7 @@ set(WTF_PUBLIC_HEADERS
     NeverDestroyed.h
     NoLock.h
     NoTailCalls.h
+    NoVirtualDestructorBase.h
     Noncopyable.h
     Nonmovable.h
     NotFound.h
