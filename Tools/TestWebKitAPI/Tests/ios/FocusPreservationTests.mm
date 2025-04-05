@@ -76,6 +76,10 @@ TEST(FocusPreservationTests, PreserveAndRestoreFocus)
 
 TEST(FocusPreservationTests, UserCanDismissInputViewRegardlessOfFocusPreservationCount)
 {
+    // The Done button above the keyboard is only present when using the phone idiom.
+    if ([[UIDevice currentDevice] userInterfaceIdiom] != UIUserInterfaceIdiomPhone)
+        return;
+
     bool inputFocused = false;
     auto [webView, delegate] = webViewForTestingFocusPreservation([&inputFocused] (id<_WKFocusedElementInfo>) {
         inputFocused = true;
@@ -89,13 +93,7 @@ TEST(FocusPreservationTests, UserCanDismissInputViewRegardlessOfFocusPreservatio
     [webView dismissFormAccessoryView];
     [webView waitForNextPresentationUpdate];
 
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=281518 Test is broken on iPad
-    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone)
-        EXPECT_FALSE([[webView objectByEvaluatingJavaScript:@"document.activeElement == document.querySelector('input')"] boolValue]);
-    else
-        EXPECT_TRUE([[webView objectByEvaluatingJavaScript:@"document.activeElement == document.querySelector('input')"] boolValue]);
-ALLOW_DEPRECATED_DECLARATIONS_END
+    EXPECT_FALSE([[webView objectByEvaluatingJavaScript:@"document.activeElement == document.querySelector('input')"] boolValue]);
 }
 
 // FIXME: Re-enable this test once rdar://60644908 is resolved
