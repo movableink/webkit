@@ -210,8 +210,8 @@ static NSArray<NSString *> *controlArray()
     if (!_activeControl)
         return false;
     
-    NSString* mouseUpControl = [self _controlForEvent:event];
-    if ([_activeControl isEqualToString:mouseUpControl])
+    RetainPtr mouseUpControl = [self _controlForEvent:event];
+    if ([_activeControl isEqualToString:mouseUpControl.get()])
         [self _performActionForControl:_activeControl.get()];
     
     [CATransaction begin];
@@ -231,8 +231,8 @@ static NSArray<NSString *> *controlArray()
     initialPoint.x -= [_layer frame].origin.x;
     initialPoint.y -= [_layer frame].origin.y;
     for (NSUInteger index = 0; index < [_layer sublayers].count; index++) {
-        CALayer *subLayer = [_layer sublayers][index];
-        NSRect windowSpaceRect = [self convertRect:subLayer.frame toView:nil];
+        RetainPtr<CALayer> subLayer = [_layer sublayers][index];
+        NSRect windowSpaceRect = [self convertRect:[subLayer frame] toView:nil];
         if (CGRectContainsPoint(windowSpaceRect, initialPoint))
             return index;
     }
@@ -273,7 +273,7 @@ static NSArray<NSString *> *controlArray()
 - (void)_loadIconImages
 {
     for (NSString *controlName in controlArray())
-        [self _getImageForControlName:controlName];
+        [self _imageForControlName:controlName];
 }
 
 - (void)_setupLayer:(CALayer *)parentLayer
@@ -304,8 +304,8 @@ static NSArray<NSString *> *controlArray()
             
             [controlLayer setBackgroundColor:[[NSColor lightGrayColor] CGColor]];
         } else {
-            NSImage *controlImage = [self _getImageForControlName:controlName];
-            [controlLayer setContents:controlImage];
+            RetainPtr controlImage = [self _imageForControlName:controlName];
+            [controlLayer setContents:controlImage.get()];
             [controlLayer setOpacity:controlLayerNormalAlpha];
 
             dy = layerImageVerticalMargin;
@@ -330,16 +330,16 @@ static NSArray<NSString *> *controlArray()
 - (void)_redrawLayer
 {
     [_cachedIcons removeAllObjects];
-    CALayer *parentLayer = [_layer superlayer];
+    RetainPtr parentLayer = [_layer superlayer];
     [_layer removeFromSuperlayer];
-    [self _setupLayer:parentLayer];
+    [self _setupLayer:parentLayer.get()];
 }
 
-- (NSImage *)_getImageForControlName:(NSString *)control
+- (NSImage *)_imageForControlName:(NSString *)control
 {
-    NSImage *iconImage = _cachedIcons.get()[control];
+    RetainPtr<NSImage> iconImage = _cachedIcons.get()[control];
     if (iconImage)
-        return iconImage;
+        return iconImage.autorelease();
 
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     iconImage = [NSImage _imageWithSystemSymbolName:control];
@@ -350,11 +350,11 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     iconImage = [iconImage imageWithSymbolConfiguration:[NSImageSymbolConfiguration configurationWithTextStyle:NSFontTextStyleTitle2 scale:NSImageSymbolScaleLarge]];
         
     NSRect iconImageRect = NSMakeRect(0, 0, [iconImage size].width * layerImageScale * _deviceScaleFactor, [iconImage size].height * layerImageScale * _deviceScaleFactor);
-    NSImageRep *iconImageRep = [iconImage bestRepresentationForRect:iconImageRect context:nil hints:nil];
-    iconImage = [NSImage imageWithImageRep:iconImageRep];
+    RetainPtr iconImageRep = [iconImage bestRepresentationForRect:iconImageRect context:nil hints:nil];
+    iconImage = [NSImage imageWithImageRep:iconImageRep.get()];
     
-    _cachedIcons.get()[control] = iconImage;
-    return iconImage;
+    _cachedIcons.get()[control] = iconImage.get();
+    return iconImage.autorelease();
 }
 
 - (void)_setLayerOpacity:(CGFloat)alpha
