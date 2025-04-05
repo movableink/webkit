@@ -112,16 +112,16 @@ bool experimentalFeatureEnabled(const String& key, bool defaultValue)
     return *optionalExperimentalFeatureEnabled(key, defaultValue);
 }
 
-static NSString* applicationOrProcessIdentifier()
+static RetainPtr<NSString> applicationOrProcessIdentifier()
 {
-    NSString *identifier = [NSBundle mainBundle].bundleIdentifier;
-    NSString *processName = [NSProcessInfo processInfo].processName;
+    RetainPtr<NSString> identifier = [NSBundle mainBundle].bundleIdentifier;
+    RetainPtr<NSString> processName = [NSProcessInfo processInfo].processName;
     // SafariForWebKitDevelopment has the same bundle identifier as Safari, but it does not have the privilege to
     // access Safari's paths.
     if ([identifier isEqualToString:@"com.apple.Safari"] && [processName isEqualToString:@"SafariForWebKitDevelopment"])
-        identifier = processName;
-    if (!identifier)
-        identifier = processName;
+        identifier = WTFMove(processName);
+    else if (!identifier)
+        identifier = WTFMove(processName);
     return identifier;
 }
 
@@ -140,7 +140,7 @@ void WebsiteDataStore::platformSetNetworkParameters(WebsiteDataStoreParameters& 
 {
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanAccessRawCookies));
 
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    RetainPtr defaults = [NSUserDefaults standardUserDefaults];
     bool shouldLogCookieInformation = false;
     auto sameSiteStrictEnforcementEnabled = WebCore::SameSiteStrictEnforcementEnabled::No;
     auto firstPartyWebsiteDataRemovalMode = WebCore::FirstPartyWebsiteDataRemovalMode::AllButCookies;
@@ -159,10 +159,10 @@ void WebsiteDataStore::platformSetNetworkParameters(WebsiteDataStoreParameters& 
             firstPartyWebsiteDataRemovalMode = WebCore::FirstPartyWebsiteDataRemovalMode::AllButCookies;
     }
 
-    if (auto manualPrevalentResource = [defaults stringForKey:@"ITPManualPrevalentResource"]) {
-        URL url { { }, manualPrevalentResource };
+    if (RetainPtr manualPrevalentResource = [defaults stringForKey:@"ITPManualPrevalentResource"]) {
+        URL url { { }, manualPrevalentResource.get() };
         if (!url.isValid())
-            url = { { }, makeString("http://"_s, manualPrevalentResource) };
+            url = { { }, makeString("http://"_s, manualPrevalentResource.get()) };
         if (url.isValid())
             resourceLoadStatisticsManualPrevalentResource = WebCore::RegistrableDomain { url };
     }
@@ -277,11 +277,11 @@ static String defaultWebsiteDataStoreRootDirectory()
     static dispatch_once_t onceToken;
     static NeverDestroyed<RetainPtr<NSURL>> websiteDataStoreDirectory;
     dispatch_once(&onceToken, ^{
-        NSURL *libraryDirectory = [[NSFileManager defaultManager] URLForDirectory:NSLibraryDirectory inDomain:NSUserDomainMask appropriateForURL:nullptr create:NO error:nullptr];
+        RetainPtr libraryDirectory = [[NSFileManager defaultManager] URLForDirectory:NSLibraryDirectory inDomain:NSUserDomainMask appropriateForURL:nullptr create:NO error:nullptr];
         RELEASE_ASSERT(libraryDirectory);
-        NSURL *webkitDirectory = [libraryDirectory URLByAppendingPathComponent:@"WebKit" isDirectory:YES];
+        RetainPtr webkitDirectory = [libraryDirectory URLByAppendingPathComponent:@"WebKit" isDirectory:YES];
         if (!WebKit::processHasContainer())
-            webkitDirectory = [webkitDirectory URLByAppendingPathComponent:applicationOrProcessIdentifier() isDirectory:YES];
+            webkitDirectory = [webkitDirectory URLByAppendingPathComponent:applicationOrProcessIdentifier().get() isDirectory:YES];
 
         websiteDataStoreDirectory.get() = [webkitDirectory URLByAppendingPathComponent:@"WebsiteDataStore" isDirectory:YES];
     });
@@ -307,9 +307,9 @@ void WebsiteDataStore::removeDataStoreWithIdentifierImpl(const WTF::UUID& identi
 {
     websiteDataStoreIOQueueSingleton().dispatch([completionHandler = WTFMove(completionHandler), identifier, directory = defaultWebsiteDataStoreDirectory(identifier).isolatedCopy()]() mutable {
         RetainPtr nsCredentialStorage = adoptNS([[NSURLCredentialStorage alloc] _initWithIdentifier:identifier.toString() private:NO]);
-        auto* credentials = [nsCredentialStorage allCredentials];
-        for (NSURLProtectionSpace *space in credentials) {
-            for (NSURLCredential *credential in [credentials[space] allValues])
+        RetainPtr credentials = [nsCredentialStorage allCredentials];
+        for (NSURLProtectionSpace *space in credentials.get()) {
+            for (NSURLCredential *credential in [credentials.get()[space] allValues])
                 [nsCredentialStorage removeCredential:credential forProtectionSpace:space];
         }
 
@@ -413,16 +413,16 @@ String WebsiteDataStore::defaultGeneralStorageDirectory(const String& baseDirect
     dispatch_once(&onceToken, ^{
         // This is the old storage directory, and there might be files left here.
         auto oldDirectory = cacheDirectoryFileSystemRepresentation("Storage"_s, { }, ShouldCreateDirectory::No);
-        NSFileManager *fileManager = [NSFileManager defaultManager];
-        NSArray *files = [fileManager contentsOfDirectoryAtPath:oldDirectory error:0];
+        RetainPtr fileManager = [NSFileManager defaultManager];
+        RetainPtr<NSArray> files = [fileManager contentsOfDirectoryAtPath:oldDirectory error:0];
         if (files) {
-            for (NSString *fileName in files) {
+            for (NSString *fileName in files.get()) {
                 if (![fileName length])
                     continue;
 
-                NSString *path = [directory stringByAppendingPathComponent:fileName];
-                NSString *oldPath = [oldDirectory stringByAppendingPathComponent:fileName];
-                [fileManager moveItemAtPath:oldPath toPath:path error:nil];
+                RetainPtr path = [directory stringByAppendingPathComponent:fileName];
+                RetainPtr oldPath = [oldDirectory stringByAppendingPathComponent:fileName];
+                [fileManager moveItemAtPath:oldPath.get() toPath:path.get() error:nil];
             }
         }
         [fileManager removeItemAtPath:oldDirectory error:nil];
@@ -563,23 +563,23 @@ String WebsiteDataStore::tempDirectoryFileSystemRepresentation(const String& dir
     static NeverDestroyed<RetainPtr<NSURL>> tempURL;
     
     dispatch_once(&onceToken, ^{
-        NSURL *url = [NSURL fileURLWithPath:NSTemporaryDirectory() isDirectory:YES];
+        RetainPtr url = [NSURL fileURLWithPath:NSTemporaryDirectory() isDirectory:YES];
         if (!url)
             RELEASE_ASSERT_NOT_REACHED();
         
         if (!WebKit::processHasContainer())
-            url = [url URLByAppendingPathComponent:applicationOrProcessIdentifier() isDirectory:YES];
+            url = [url URLByAppendingPathComponent:applicationOrProcessIdentifier().get() isDirectory:YES];
         
         tempURL.get() = [url URLByAppendingPathComponent:@"WebKit" isDirectory:YES];
     });
     
-    NSURL *url = [tempURL.get() URLByAppendingPathComponent:directoryName isDirectory:YES];
+    RetainPtr url = [tempURL.get() URLByAppendingPathComponent:directoryName isDirectory:YES];
 
     if (shouldCreateDirectory == ShouldCreateDirectory::Yes
-        && (![[NSFileManager defaultManager] createDirectoryAtURL:url withIntermediateDirectories:YES attributes:nil error:nullptr]))
-        LOG_ERROR("Failed to create directory %@", url);
+        && (![[NSFileManager defaultManager] createDirectoryAtURL:url.get() withIntermediateDirectories:YES attributes:nil error:nullptr]))
+        LOG_ERROR("Failed to create directory %@", url.get());
     
-    return url.absoluteURL.path;
+    return url.get().absoluteURL.path;
 }
 
 String WebsiteDataStore::cacheDirectoryFileSystemRepresentation(const String& directoryName, const String&, ShouldCreateDirectory shouldCreateDirectory)
@@ -588,22 +588,22 @@ String WebsiteDataStore::cacheDirectoryFileSystemRepresentation(const String& di
     static NeverDestroyed<RetainPtr<NSURL>> cacheURL;
 
     dispatch_once(&onceToken, ^{
-        NSURL *url = [[NSFileManager defaultManager] URLForDirectory:NSCachesDirectory inDomain:NSUserDomainMask appropriateForURL:nullptr create:NO error:nullptr];
+        RetainPtr url = [[NSFileManager defaultManager] URLForDirectory:NSCachesDirectory inDomain:NSUserDomainMask appropriateForURL:nullptr create:NO error:nullptr];
         if (!url)
             RELEASE_ASSERT_NOT_REACHED();
 
         if (!WebKit::processHasContainer())
-            url = [url URLByAppendingPathComponent:applicationOrProcessIdentifier() isDirectory:YES];
+            url = [url URLByAppendingPathComponent:applicationOrProcessIdentifier().get() isDirectory:YES];
 
         cacheURL.get() = [url URLByAppendingPathComponent:@"WebKit" isDirectory:YES];
     });
 
-    NSURL *url = [cacheURL.get() URLByAppendingPathComponent:directoryName isDirectory:YES];
+    RetainPtr url = [cacheURL.get() URLByAppendingPathComponent:directoryName isDirectory:YES];
     if (shouldCreateDirectory == ShouldCreateDirectory::Yes
-        && ![[NSFileManager defaultManager] createDirectoryAtURL:url withIntermediateDirectories:YES attributes:nil error:nullptr])
-        LOG_ERROR("Failed to create directory %@", url);
+        && ![[NSFileManager defaultManager] createDirectoryAtURL:url.get() withIntermediateDirectories:YES attributes:nil error:nullptr])
+        LOG_ERROR("Failed to create directory %@", url.get());
 
-    return url.absoluteURL.path;
+    return url.get().absoluteURL.path;
 }
 
 String WebsiteDataStore::websiteDataDirectoryFileSystemRepresentation(const String& directoryName, const String&, ShouldCreateDirectory shouldCreateDirectory)
@@ -612,25 +612,25 @@ String WebsiteDataStore::websiteDataDirectoryFileSystemRepresentation(const Stri
     static NeverDestroyed<RetainPtr<NSURL>> websiteDataURL;
 
     dispatch_once(&onceToken, ^{
-        NSURL *url = [[NSFileManager defaultManager] URLForDirectory:NSLibraryDirectory inDomain:NSUserDomainMask appropriateForURL:nullptr create:NO error:nullptr];
+        RetainPtr url = [[NSFileManager defaultManager] URLForDirectory:NSLibraryDirectory inDomain:NSUserDomainMask appropriateForURL:nullptr create:NO error:nullptr];
         if (!url)
             RELEASE_ASSERT_NOT_REACHED();
 
         url = [url URLByAppendingPathComponent:@"WebKit" isDirectory:YES];
         if (!WebKit::processHasContainer())
-            url = [url URLByAppendingPathComponent:applicationOrProcessIdentifier() isDirectory:YES];
+            url = [url URLByAppendingPathComponent:applicationOrProcessIdentifier().get() isDirectory:YES];
 
         websiteDataURL.get() = [url URLByAppendingPathComponent:@"WebsiteData" isDirectory:YES];
     });
 
-    NSURL *url = [websiteDataURL.get() URLByAppendingPathComponent:directoryName isDirectory:YES];
+    RetainPtr url = [websiteDataURL.get() URLByAppendingPathComponent:directoryName isDirectory:YES];
 
     if (shouldCreateDirectory == ShouldCreateDirectory::Yes) {
-        if (![[NSFileManager defaultManager] createDirectoryAtURL:url withIntermediateDirectories:YES attributes:nil error:nullptr])
-            LOG_ERROR("Failed to create directory %@", url);
+        if (![[NSFileManager defaultManager] createDirectoryAtURL:url.get() withIntermediateDirectories:YES attributes:nil error:nullptr])
+            LOG_ERROR("Failed to create directory %@", url.get());
     }
 
-    return url.absoluteURL.path;
+    return url.get().absoluteURL.path;
 }
 
 #if ENABLE(APP_BOUND_DOMAINS)
@@ -818,13 +818,13 @@ void WebsiteDataStore::initializeManagedDomains(ForceReinitialization forceReini
         if (hasInitializedManagedDomains && forceReinitialization != ForceReinitialization::Yes)
             return;
         static const auto maxManagedDomainCount = 10;
-        NSArray<NSString *> *crossSiteTrackingPreventionRelaxedDomains = nil;
-        NSArray<NSString *> *crossSiteTrackingPreventionRelaxedApps = nil;
+        RetainPtr<NSArray<NSString *>> crossSiteTrackingPreventionRelaxedDomains;
+        RetainPtr<NSArray<NSString *>> crossSiteTrackingPreventionRelaxedApps;
 
         bool isSafari = false;
 #if PLATFORM(MAC)
         isSafari = WTF::MacApplication::isSafari();
-        NSDictionary *managedSitesPrefs = [NSDictionary dictionaryWithContentsOfFile:[[NSString stringWithFormat:@"/Library/Managed Preferences/%@/%@.plist", NSUserName(), kManagedSitesIdentifier] stringByStandardizingPath]];
+        RetainPtr managedSitesPrefs = adoptNS([[NSDictionary alloc] initWithContentsOfFile:[[NSString stringWithFormat:@"/Library/Managed Preferences/%@/%@.plist", NSUserName(), kManagedSitesIdentifier] stringByStandardizingPath]]);
         crossSiteTrackingPreventionRelaxedDomains = [managedSitesPrefs objectForKey:kCrossSiteTrackingPreventionRelaxedDomainsKey];
         crossSiteTrackingPreventionRelaxedApps = [managedSitesPrefs objectForKey:kCrossSiteTrackingPreventionRelaxedAppsKey];
 #elif !PLATFORM(MACCATALYST)
@@ -847,7 +847,7 @@ void WebsiteDataStore::initializeManagedDomains(ForceReinitialization forceReini
         if (!shouldUseRelaxedDomainsIfAvailable)
             return;
 
-        RunLoop::protectedMain()->dispatch([forceReinitialization, crossSiteTrackingPreventionRelaxedDomains = retainPtr(crossSiteTrackingPreventionRelaxedDomains)] {
+        RunLoop::protectedMain()->dispatch([forceReinitialization, crossSiteTrackingPreventionRelaxedDomains] {
             if (hasInitializedManagedDomains && forceReinitialization != ForceReinitialization::Yes)
                 return;
 

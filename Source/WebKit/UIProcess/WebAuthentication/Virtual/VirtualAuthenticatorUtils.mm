@@ -100,14 +100,12 @@ std::pair<Vector<uint8_t>, Vector<uint8_t>> credentialIdAndCosePubKeyForPrivateK
 String base64PrivateKey(RetainPtr<SecKeyRef> privateKey)
 {
     CFErrorRef errorRef = nullptr;
-    auto privateKeyRep = adoptCF(SecKeyCopyExternalRepresentation((__bridge SecKeyRef)((id)privateKey.get()), &errorRef));
-    auto retainError = adoptCF(errorRef);
+    RetainPtr nsPrivateKeyRep = bridge_cast(adoptCF(SecKeyCopyExternalRepresentation((__bridge SecKeyRef)((id)privateKey.get()), &errorRef)));
+    RetainPtr retainError = adoptCF(errorRef);
     if (errorRef) {
         ASSERT_NOT_REACHED();
         return emptyString();
     }
-    NSData *nsPrivateKeyRep = (NSData *)privateKeyRep.get();
-
     return String([nsPrivateKeyRep base64EncodedStringWithOptions:0]);
 }
 
@@ -131,12 +129,12 @@ RetainPtr<SecKeyRef> privateKeyFromBase64(const String& base64PrivateKey)
 
 Vector<uint8_t> signatureForPrivateKey(RetainPtr<SecKeyRef> privateKey, const Vector<uint8_t>& authData, const Vector<uint8_t>& clientDataHash)
 {
-    NSMutableData *dataToSign = [NSMutableData dataWithBytes:authData.data() length:authData.size()];
+    RetainPtr dataToSign = adoptNS([[NSMutableData alloc] initWithBytes:authData.data() length:authData.size()]);
     [dataToSign appendBytes:clientDataHash.data() length:clientDataHash.size()];
     RetainPtr<CFDataRef> signature;
     {
         CFErrorRef errorRef = nullptr;
-        signature = adoptCF(SecKeyCreateSignature((__bridge SecKeyRef)((id)privateKey.get()), kSecKeyAlgorithmECDSASignatureMessageX962SHA256, (__bridge CFDataRef)dataToSign, &errorRef));
+        signature = adoptCF(SecKeyCreateSignature((__bridge SecKeyRef)((id)privateKey.get()), kSecKeyAlgorithmECDSASignatureMessageX962SHA256, bridge_cast(dataToSign.get()), &errorRef));
         auto retainError = adoptCF(errorRef);
         ASSERT(!errorRef);
     }

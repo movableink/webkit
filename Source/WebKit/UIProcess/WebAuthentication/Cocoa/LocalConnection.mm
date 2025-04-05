@@ -226,11 +226,10 @@ RetainPtr<NSArray> LocalConnection::getExistingCredentials(const String& rpId)
     OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, &attributesArrayRef);
     if (status && status != errSecItemNotFound)
         return nullptr;
-    auto retainAttributesArray = adoptCF(attributesArrayRef);
-    NSArray *sortedAttributesArray = [(NSArray *)attributesArrayRef sortedArrayUsingComparator:^(NSDictionary *a, NSDictionary *b) {
+    RetainPtr nsAttributesArray = bridge_cast(adoptCF(checked_cf_cast<CFArrayRef>(attributesArrayRef)));
+    return [nsAttributesArray sortedArrayUsingComparator:^(NSDictionary *a, NSDictionary *b) {
         return [b[(id)kSecAttrModificationDate] compare:a[(id)kSecAttrModificationDate]];
     }];
-    return retainPtr(sortedAttributesArray);
 }
 
 } // namespace WebKit

@@ -1025,7 +1025,7 @@ static inline void continueAfterRequest(RetainPtr<id <ASCCredentialProtocol>> cr
 {
     AuthenticatorResponseData response = { };
     ExceptionData exceptionData = { };
-    NSString *rawAttachment = nil;
+    RetainPtr<NSString> rawAttachment;
 
     if ([credential isKindOfClass:getASCPlatformPublicKeyCredentialRegistrationClass()]) {
         response.isAuthenticatorAttestationResponse = true;
@@ -1077,7 +1077,7 @@ static inline void continueAfterRequest(RetainPtr<id <ASCCredentialProtocol>> cr
             response.extensionOutputs = toExtensionOutputs(assertionCredential.extensionOutputsCBOR);
     } else {
         ExceptionCode exceptionCode;
-        NSString *errorMessage = nil;
+        RetainPtr<NSString> errorMessage;
         if ([error.get().domain isEqualToString:WKErrorDomain]) {
             exceptionCode = toExceptionCode(error.get().code);
             errorMessage = error.get().userInfo[NSLocalizedDescriptionKey];
@@ -1093,7 +1093,7 @@ static inline void continueAfterRequest(RetainPtr<id <ASCCredentialProtocol>> cr
             }
         }
 
-        exceptionData = { exceptionCode, errorMessage };
+        exceptionData = { exceptionCode, errorMessage.get() };
     }
     
     AuthenticatorAttachment attachment;

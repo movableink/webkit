@@ -213,7 +213,7 @@ std::optional<Vector<Ref<AuthenticatorAssertionResponse>>> LocalAuthenticator::g
         }
         auto& username = it->second.getString();
 
-        id credentialID;
+        RetainPtr<id> credentialID;
         if (shouldUseAlternateKeychainAttribute()) {
             credentialID = attributes[(id)kSecAttrAlias];
             if (!credentialID)
@@ -221,7 +221,7 @@ std::optional<Vector<Ref<AuthenticatorAssertionResponse>>> LocalAuthenticator::g
         } else
             credentialID = attributes[(id)kSecAttrApplicationLabel];
 
-        auto response = AuthenticatorAssertionResponse::create(LocalAuthenticatorInternal::toArrayBuffer(credentialID), WTFMove(userHandle), String(username), (__bridge SecAccessControlRef)attributes[(id)kSecAttrAccessControl], AuthenticatorAttachment::Platform);
+        auto response = AuthenticatorAssertionResponse::create(LocalAuthenticatorInternal::toArrayBuffer(credentialID.get()), WTFMove(userHandle), String(username), (__bridge SecAccessControlRef)attributes[(id)kSecAttrAccessControl], AuthenticatorAttachment::Platform);
 
         auto group = groupForAttributes(attributes);
         if (!group.isNull()) {
@@ -312,13 +312,12 @@ void LocalAuthenticator::continueMakeCredentialAfterReceivingLAContext(LAContext
         }
     }
 
-    SecAccessControlRef accessControlRef = accessControl.get();
-    auto callback = [accessControl = WTFMove(accessControl), context = retainPtr(context), weakThis = WeakPtr { *this }] (LocalConnection::UserVerification verification) {
+    auto callback = [accessControl, context = retainPtr(context), weakThis = WeakPtr { *this }] (LocalConnection::UserVerification verification) {
         ASSERT(RunLoop::isMain());
         if (RefPtr protectedThis = weakThis.get())
             protectedThis->continueMakeCredentialAfterUserVerification(accessControl.get(), verification, context.get());
     };
-    protectedConnection()->verifyUser(accessControlRef, context, WTFMove(callback));
+    protectedConnection()->verifyUser(accessControl.get(), context, WTFMove(callback));
 }
 
 std::optional<WebCore::ExceptionData> LocalAuthenticator::processLargeBlobExtension(const WebCore::PublicKeyCredentialCreationOptions& options, WebCore::AuthenticationExtensionsClientOutputs& extensionOutputs)
@@ -397,10 +396,9 @@ std::optional<WebCore::ExceptionData> LocalAuthenticator::processLargeBlobExtens
             return WebCore::ExceptionData { ExceptionCode::UnknownError, "Attempted to update unknown credential."_s };
         }
 
-        auto retainAttributesArray = adoptCF(attributesArrayRef);
-        NSDictionary *dict = (NSDictionary *)attributesArrayRef;
+        RetainPtr dict = bridge_cast(adoptCF(checked_cf_cast<CFDictionaryRef>(attributesArrayRef)));
 
-        auto decodedResponse = cbor::CBORReader::read(makeVector(dict[(id)kSecAttrApplicationTag]));
+        auto decodedResponse = cbor::CBORReader::read(makeVector(dict.get()[(id)kSecAttrApplicationTag]));
         if (!decodedResponse || !decodedResponse->isMap()) {
             ASSERT_NOT_REACHED();
             return WebCore::ExceptionData { ExceptionCode::UnknownError, "Could not read credential."_s };
@@ -415,7 +413,7 @@ std::optional<WebCore::ExceptionData> LocalAuthenticator::processLargeBlobExtens
         auto outputTag = cbor::CBORWriter::write(cbor::CBORValue(WTFMove(responseMap)));
         auto nsOutputTag = toNSData(*outputTag);
         NSDictionary *updateQuery = @{
-            (id)kSecValuePersistentRef: dict[(id)kSecValuePersistentRef],
+            (id)kSecValuePersistentRef: dict.get()[(id)kSecValuePersistentRef],
         };
 
         NSDictionary *updateParams = @{
@@ -513,14 +511,14 @@ void LocalAuthenticator::continueMakeCredentialAfterUserVerification(SecAccessCo
         }
         ASSERT(((NSData *)publicKeyDataRef.get()).length == (1 + 2 * ES256FieldElementLength)); // 04 | X | Y
     }
-    NSData *nsPublicKeyData = (NSData *)publicKeyDataRef.get();
+    RetainPtr nsPublicKeyData = bridge_cast(publicKeyDataRef.get());
 
     // Query credentialId in the keychain could be racy as it is the only unique identifier
     // of the key item. Instead we calculate that, and examine its equaity in DEBUG build.
     Vector<uint8_t> credentialId;
     {
         auto digest = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_1);
-        digest->addBytes(span(nsPublicKeyData));
+        digest->addBytes(span(nsPublicKeyData.get()));
         credentialId = digest->computeHash();
         m_provisionalCredentialId = toNSData(credentialId);
 
@@ -651,15 +649,15 @@ void LocalAuthenticator::continueGetAssertionAfterResponseSelected(Ref<WebCore::
     ASSERT(m_state == State::RequestReceived);
     m_state = State::ResponseSelected;
 
-    auto accessControlRef = response->accessControl();
-    LAContext *context = response->laContext();
+    RetainPtr accessControlRef = response->accessControl();
+    RetainPtr context = response->laContext();
     auto callback = [weakThis = WeakPtr { *this }, response = WTFMove(response)] (LocalConnection::UserVerification verification) mutable {
         ASSERT(RunLoop::isMain());
         if (RefPtr protectedThis = weakThis.get())
             protectedThis->continueGetAssertionAfterUserVerification(WTFMove(response), verification, response->laContext());
     };
 
-    protectedConnection()->verifyUser(accessControlRef, context, WTFMove(callback));
+    protectedConnection()->verifyUser(accessControlRef.get(), context.get(), WTFMove(callback));
 }
 
 void LocalAuthenticator::continueGetAssertionAfterUserVerification(Ref<WebCore::AuthenticatorAssertionResponse>&& response, LocalConnection::UserVerification verification, LAContext *context)
@@ -681,26 +679,24 @@ void LocalAuthenticator::continueGetAssertionAfterUserVerification(Ref<WebCore::
     auto nsCredentialId = toNSData(response->rawId());
     {
         BOOL useAlternateKeychainAttribute = shouldUseAlternateKeychainAttribute();
-        NSMutableDictionary *queryDictionary = [@{
+        RetainPtr<NSMutableDictionary> query = adoptNS([@{
             (id)kSecClass: (id)kSecClassKey,
             (id)kSecAttrSynchronizable: (id)kSecAttrSynchronizableAny,
             (id)kSecReturnRef: @YES,
             (id)kSecUseDataProtectionKeychain: @YES
-        } mutableCopy];
+        } mutableCopy]);
 
         CFStringRef credentialIdKey = useAlternateKeychainAttribute ? kSecAttrAlias : kSecAttrApplicationLabel;
-        queryDictionary[(id)credentialIdKey] = nsCredentialId.get();
+        query.get()[(id)credentialIdKey] = nsCredentialId.get();
 
         if (context)
-            queryDictionary[(id)kSecUseAuthenticationContext] = context;
-
-        auto query = adoptNS(queryDictionary);
+            query.get()[(id)kSecUseAuthenticationContext] = context;
 
         CFTypeRef privateKeyRef = nullptr;
         OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query.get(), &privateKeyRef);
         if (useAlternateKeychainAttribute && status == errSecItemNotFound) {
-            queryDictionary[(id)kSecAttrAlias] = nil;
-            queryDictionary[(id)kSecAttrApplicationLabel] = nsCredentialId.get();
+            query.get()[(id)kSecAttrAlias] = nil;
+            query.get()[(id)kSecAttrApplicationLabel] = nsCredentialId.get();
             status = SecItemCopyMatching((__bridge CFDictionaryRef)query.get(), &privateKeyRef);
         }
 
@@ -716,12 +712,12 @@ void LocalAuthenticator::continueGetAssertionAfterUserVerification(Ref<WebCore::
         }
         auto privateKey = adoptCF(privateKeyRef);
 
-        NSMutableData *dataToSign = [NSMutableData dataWithBytes:authData.data() length:authData.size()];
+        RetainPtr dataToSign = adoptNS([[NSMutableData alloc] initWithBytes:authData.data() length:authData.size()]);
         [dataToSign appendBytes:requestData().hash.data() length:requestData().hash.size()];
 
         CFErrorRef errorRef = nullptr;
         // FIXME: Converting CFTypeRef to SecKeyRef is quite subtle here.
-        signature = adoptCF(SecKeyCreateSignature((__bridge SecKeyRef)((id)privateKeyRef), kSecKeyAlgorithmECDSASignatureMessageX962SHA256, (__bridge CFDataRef)dataToSign, &errorRef));
+        signature = adoptCF(SecKeyCreateSignature((__bridge SecKeyRef)((id)privateKeyRef), kSecKeyAlgorithmECDSASignatureMessageX962SHA256, bridge_cast(dataToSign.get()), &errorRef));
         auto retainError = adoptCF(errorRef);
         if (errorRef) {
             RELEASE_LOG_ERROR(WebAuthn, "Couldn't generate signature: %@", ((NSError*)errorRef).localizedDescription);

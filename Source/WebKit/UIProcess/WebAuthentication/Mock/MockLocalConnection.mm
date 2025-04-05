@@ -34,6 +34,8 @@
 #import <WebCore/ExceptionData.h>
 #import <wtf/RunLoop.h>
 #import <wtf/TZoneMallocInlines.h>
+#import <wtf/cf/TypeCastsCF.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/spi/cocoa/SecuritySPI.h>
 #import <wtf/text/Base64.h>
 #import <wtf/text/WTFString.h>
@@ -178,11 +180,10 @@ RetainPtr<NSArray> MockLocalConnection::getExistingCredentials(const String& rpI
     OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, &attributesArrayRef);
     if (status && status != errSecItemNotFound)
         return nullptr;
-    auto retainAttributesArray = adoptCF(attributesArrayRef);
-    NSArray *sortedAttributesArray = [(NSArray *)attributesArrayRef sortedArrayUsingComparator:^(NSDictionary *a, NSDictionary *b) {
+    RetainPtr nsAttributesArray = bridge_cast(adoptCF(checked_cf_cast<CFArrayRef>(attributesArrayRef)));
+    return [nsAttributesArray sortedArrayUsingComparator:^(NSDictionary *a, NSDictionary *b) {
         return [b[(id)kSecAttrModificationDate] compare:a[(id)kSecAttrModificationDate]];
     }];
-    return retainPtr(sortedAttributesArray);
 }
 
 } // namespace WebKit

@@ -64,13 +64,6 @@ UIProcess/Inspector/mac/WKInspectorResourceURLSchemeHandler.mm
 UIProcess/Inspector/mac/WKInspectorViewController.mm
 UIProcess/Inspector/mac/WebInspectorUIProxyMac.mm
 UIProcess/Network/NetworkProcessProxyCocoa.mm
-UIProcess/WebAuthentication/Cocoa/LocalAuthenticator.mm
-UIProcess/WebAuthentication/Cocoa/LocalConnection.mm
-UIProcess/WebAuthentication/Cocoa/NfcConnection.mm
-UIProcess/WebAuthentication/Cocoa/WebAuthenticatorCoordinatorProxy.mm
-UIProcess/WebAuthentication/Mock/MockLocalConnection.mm
-UIProcess/WebAuthentication/Virtual/VirtualAuthenticatorUtils.mm
-UIProcess/WebsiteData/Cocoa/WebsiteDataStoreCocoa.mm
 UIProcess/mac/CorrectionPanel.mm
 UIProcess/mac/DisplayCaptureSessionManager.mm
 UIProcess/mac/PageClientImplMac.mm
