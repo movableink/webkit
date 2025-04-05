@@ -2127,3 +2127,5 @@ webkit.org/b/291035 webaudio/decode-audio-data-too-short.html [ Pass Failure ]
 webkit.org/b/291108 [ Sequoia Debug ] imported/w3c/web-platform-tests/html/webappapis/dynamic-markup-insertion/document-write/049.html [ Pass Timeout ]
 
 webkit.org/b/291115 [ Sequoia Debug ] imported/w3c/web-platform-tests/websockets/back-forward-cache-with-closed-websocket-connection-ccns.tentative.window.html [ Pass Failure ]
+
+webkit.org/b/291119 [ Debug ] imported/w3c/web-platform-tests/html/semantics/embedded-content/media-elements/loading-the-media-resource/resource-selection-invoke-pause-networkState.html [ Pass Failure ]
