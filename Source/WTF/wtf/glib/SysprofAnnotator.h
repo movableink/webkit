@@ -194,6 +194,8 @@ public:
         case WebXRLayerEndFrameEnd:
         case WebXRSessionFrameCallbacksEnd:
         case ProgrammaticScroll:
+        case FixedContainerEdgeSamplingStart:
+        case FixedContainerEdgeSamplingEnd:
         case WebHTMLViewPaintEnd:
         case BackingStoreFlushEnd:
         case WaitForCompositionCompletionEnd:
@@ -392,6 +394,9 @@ private:
             return "WebXRSessionFrameCallbacks"_s;
         case ProgrammaticScroll:
             return "ProgrammaticScroll"_s;
+        case FixedContainerEdgeSamplingStart:
+        case FixedContainerEdgeSamplingEnd:
+            return "FixedContainerEdgeSampling"_s;
 
         case WebHTMLViewPaintStart:
         case WebHTMLViewPaintEnd:

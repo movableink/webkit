@@ -116,6 +116,8 @@ enum TracePointCode {
     WebXRSessionFrameCallbacksStart,
     WebXRSessionFrameCallbacksEnd,
     ProgrammaticScroll,
+    FixedContainerEdgeSamplingStart,
+    FixedContainerEdgeSamplingEnd,
 
     WebKitRange = 10000,
     WebHTMLViewPaintStart,

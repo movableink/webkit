@@ -1913,6 +1913,8 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
     if (!document)
         return { };
 
+    TraceScope tracingScope { FixedContainerEdgeSamplingStart, FixedContainerEdgeSamplingEnd };
+
     static constexpr auto sampleRectThickness = 2;
     static constexpr auto sampleRectMargin = 2;
     static constexpr auto thinBorderWidth = 5;
