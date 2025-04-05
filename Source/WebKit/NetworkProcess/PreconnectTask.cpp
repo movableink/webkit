@@ -86,7 +86,7 @@ void PreconnectTask::didReceiveResponse(ResourceResponse&& response, PrivateRela
     completionHandler(PolicyAction::Ignore);
 }
 
-void PreconnectTask::didReceiveBuffer(const FragmentedSharedBuffer&, uint64_t reportedEncodedDataLength)
+void PreconnectTask::didReceiveBuffer(const FragmentedSharedBuffer&)
 {
     ASSERT_NOT_REACHED();
 }

@@ -140,7 +140,7 @@ public:
     void willSendRedirectedRequest(WebCore::ResourceRequest&&, WebCore::ResourceRequest&& redirectRequest, WebCore::ResourceResponse&&, CompletionHandler<void(WebCore::ResourceRequest&&)>&&) final;
     void didReceiveInformationalResponse(WebCore::ResourceResponse&&) final;
     void didReceiveResponse(WebCore::ResourceResponse&&, PrivateRelayed, ResponseCompletionHandler&&) final;
-    void didReceiveBuffer(const WebCore::FragmentedSharedBuffer&, uint64_t reportedEncodedDataLength) final;
+    void didReceiveBuffer(const WebCore::FragmentedSharedBuffer&) final;
     void didFinishLoading(const WebCore::NetworkLoadMetrics&) final;
     void didFailLoading(const WebCore::ResourceError&) final;
     void didBlockAuthenticationChallenge() final;
@@ -179,7 +179,7 @@ public:
     bool isAppInitiated();
 
 #if ENABLE(CONTENT_FILTERING)
-    bool continueAfterServiceWorkerReceivedData(const WebCore::SharedBuffer&, uint64_t encodedDataLength);
+    bool continueAfterServiceWorkerReceivedData(const WebCore::SharedBuffer&);
     bool continueAfterServiceWorkerReceivedResponse(const WebCore::ResourceResponse&);
     void serviceWorkerDidFinish();
 #endif
@@ -200,7 +200,7 @@ private:
 
 #if ENABLE(CONTENT_FILTERING)
     // ContentFilterClient
-    void dataReceivedThroughContentFilter(const WebCore::SharedBuffer&, size_t) final;
+    void dataReceivedThroughContentFilter(const WebCore::SharedBuffer&) final;
     WebCore::ResourceError contentFilterDidBlock(WebCore::ContentFilterUnblockHandler, String&& unblockRequestDeniedScript) final;
     void cancelMainResourceLoadForContentFilter(const WebCore::ResourceError&) final;
     void handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, WebCore::SubstituteData&) final;
@@ -245,7 +245,7 @@ private:
 
     void startBufferingTimerIfNeeded();
     void bufferingTimerFired();
-    void sendBuffer(const WebCore::FragmentedSharedBuffer&, size_t encodedDataLength);
+    void sendBuffer(const WebCore::FragmentedSharedBuffer&);
 
     void consumeSandboxExtensions();
     void invalidateSandboxExtensions();
@@ -289,7 +289,7 @@ private:
 
     bool shouldSendResourceLoadMessages() const;
 
-    void sendDidReceiveDataMessage(const WebCore::FragmentedSharedBuffer&, size_t encodedDataLength);
+    void sendDidReceiveDataMessage(const WebCore::FragmentedSharedBuffer&);
 
 #if ENABLE(CONTENT_EXTENSIONS)
     void updateBytesTransferredOverNetwork(size_t bytesTransferredOverNetwork);
@@ -306,7 +306,6 @@ private:
 
     WebCore::ResourceResponse m_response;
 
-    size_t m_bufferedDataEncodedDataLength { 0 };
     WebCore::SharedBufferBuilder m_bufferedData;
     unsigned m_redirectCount { 0 };
 

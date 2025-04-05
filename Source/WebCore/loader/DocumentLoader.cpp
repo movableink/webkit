@@ -1412,7 +1412,7 @@ void DocumentLoader::dataReceived(CachedResource& resource, const SharedBuffer& 
 void DocumentLoader::dataReceived(const SharedBuffer& buffer)
 {
 #if ENABLE(CONTENT_FILTERING)
-    if (m_contentFilter && !m_contentFilter->continueAfterDataReceived(buffer))
+    if (m_contentFilter && !m_contentFilter->continueAfterDataReceived(buffer, ContentFilter::FromDocumentLoader::Yes))
         return;
 #endif
 
@@ -2620,7 +2620,7 @@ void DocumentLoader::enqueueSecurityPolicyViolationEvent(SecurityPolicyViolation
 }
 
 #if ENABLE(CONTENT_FILTERING)
-void DocumentLoader::dataReceivedThroughContentFilter(const SharedBuffer& buffer, size_t)
+void DocumentLoader::dataReceivedThroughContentFilter(const SharedBuffer& buffer)
 {
     dataReceived(buffer);
 }

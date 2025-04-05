@@ -165,7 +165,7 @@ bool ContentFilter::continueAfterResponseReceived(const ResourceResponse& respon
     return m_state != State::Blocked;
 }
 
-bool ContentFilter::continueAfterDataReceived(const SharedBuffer& data, size_t encodedDataLength)
+bool ContentFilter::continueAfterDataReceived(const SharedBuffer& data, FromDocumentLoader fromDocumentLoader)
 {
     Ref protectedClient { m_client.get() };
 
@@ -175,31 +175,18 @@ bool ContentFilter::continueAfterDataReceived(const SharedBuffer& data, size_t e
         forEachContentFilterUntilBlocked([data = Ref { data }](auto& contentFilter) {
             contentFilter.addData(data);
         });
-        if (m_state == State::Allowed) {
-            deliverStoredResourceData();
-            deliverResourceData(data, encodedDataLength);
-        } else
-            m_buffers.append(ResourceDataItem { RefPtr { &data }, encodedDataLength });
-        return false;
-    }
-
-    return m_state != State::Blocked;
-}
-
-bool ContentFilter::continueAfterDataReceived(const SharedBuffer& data)
-{
-    Ref protectedClient { m_client.get() };
-
-    if (m_state == State::Filtering) {
-        LOG(ContentFiltering, "ContentFilter received %zu bytes of data from <%{sensitive}s>.\n", data.size(), url().string().ascii().data());
-
-        forEachContentFilterUntilBlocked([data = Ref { data }](auto& contentFilter) {
-            contentFilter.addData(data);
-        });
-        if (m_state == State::Allowed) {
-            ASSERT(m_mainResource->dataBufferingPolicy() == DataBufferingPolicy::BufferData);
-            if (RefPtr buffer = m_mainResource->resourceBuffer())
-                deliverResourceData(buffer->makeContiguous());
+        if (fromDocumentLoader == FromDocumentLoader::Yes) {
+            if (m_state == State::Allowed) {
+                ASSERT(m_mainResource->dataBufferingPolicy() == DataBufferingPolicy::BufferData);
+                if (RefPtr buffer = m_mainResource->resourceBuffer())
+                    deliverResourceData(buffer->makeContiguous());
+            }
+        } else {
+            if (m_state == State::Allowed) {
+                deliverStoredResourceData();
+                deliverResourceData(data);
+            } else
+                m_buffers.append(ResourceDataItem { RefPtr { &data } });
         }
         return false;
     }
@@ -305,10 +292,10 @@ Ref<ContentFilterClient> ContentFilter::protectedClient() const
     return m_client.get();
 }
 
-void ContentFilter::deliverResourceData(const SharedBuffer& buffer, size_t encodedDataLength)
+void ContentFilter::deliverResourceData(const SharedBuffer& buffer)
 {
     ASSERT(m_state == State::Allowed);
-    protectedClient()->dataReceivedThroughContentFilter(buffer, encodedDataLength);
+    protectedClient()->dataReceivedThroughContentFilter(buffer);
 }
 
 URL ContentFilter::url()
@@ -368,7 +355,7 @@ void ContentFilter::handleProvisionalLoadFailure(const ResourceError& error)
 void ContentFilter::deliverStoredResourceData()
 {
     for (auto& buffer : m_buffers)
-        deliverResourceData(Ref { *buffer.buffer }, buffer.encodedDataLength);
+        deliverResourceData(Ref { *buffer.buffer });
     m_buffers.clear();
 }
 

@@ -587,7 +587,7 @@ private:
 
 #if ENABLE(CONTENT_FILTERING)
     // ContentFilterClient
-    WEBCORE_EXPORT void dataReceivedThroughContentFilter(const SharedBuffer&, size_t) final;
+    WEBCORE_EXPORT void dataReceivedThroughContentFilter(const SharedBuffer&) final;
     WEBCORE_EXPORT ResourceError contentFilterDidBlock(ContentFilterUnblockHandler, String&& unblockRequestDeniedScript) final;
     WEBCORE_EXPORT void cancelMainResourceLoadForContentFilter(const ResourceError&) final;
     WEBCORE_EXPORT void handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, SubstituteData&) final;

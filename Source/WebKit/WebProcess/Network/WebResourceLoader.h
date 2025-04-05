@@ -88,7 +88,7 @@ private:
     void willSendRequest(WebCore::ResourceRequest&&, IPC::FormDataReference&& requestBody, WebCore::ResourceResponse&&, CompletionHandler<void(WebCore::ResourceRequest&&, bool)>&&);
     void didSendData(uint64_t bytesSent, uint64_t totalBytesToBeSent);
     void didReceiveResponse(WebCore::ResourceResponse&&, PrivateRelayed, bool needsContinueDidReceiveResponseMessage, std::optional<WebCore::NetworkLoadMetrics>&&);
-    void didReceiveData(IPC::SharedBufferReference&& data, uint64_t encodedDataLength, uint64_t bytesTransferredOverNetwork);
+    void didReceiveData(IPC::SharedBufferReference&& data, uint64_t bytesTransferredOverNetwork);
     void didFinishResourceLoad(WebCore::NetworkLoadMetrics&&);
     void didFailResourceLoad(const WebCore::ResourceError&);
     void didFailServiceWorkerLoad(const WebCore::ResourceError&);
@@ -108,7 +108,7 @@ private:
     void contentFilterDidBlockLoad(const WebCore::ContentFilterUnblockHandler&, String&& unblockRequestDeniedScript, const WebCore::ResourceError&, const URL& blockedPageURL, WebCore::SubstituteData&&);
 #endif
 
-    void updateBytesTransferredOverNetwork(uint64_t bytesTransferredOverNetwork);
+    size_t calculateBytesTransferredOverNetworkDelta(size_t bytesTransferredOverNetwork);
 
     RefPtr<WebCore::ResourceLoader> m_coreLoader;
     const std::optional<TrackingParameters> m_trackingParameters;

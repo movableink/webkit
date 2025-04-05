@@ -227,16 +227,16 @@ void WebResourceLoader::didReceiveResponse(ResourceResponse&& response, PrivateR
     coreLoader->didReceiveResponse(response, WTFMove(policyDecisionCompletionHandler));
 }
 
-void WebResourceLoader::didReceiveData(IPC::SharedBufferReference&& data, uint64_t encodedDataLength, uint64_t bytesTransferredOverNetwork)
+void WebResourceLoader::didReceiveData(IPC::SharedBufferReference&& data, uint64_t bytesTransferredOverNetwork)
 {
     RefPtr coreLoader = m_coreLoader;
     LOG(Network, "(WebProcess) WebResourceLoader::didReceiveData of size %zu for '%s'", data.size(), coreLoader->url().string().latin1().data());
     ASSERT_WITH_MESSAGE(!m_isProcessingNetworkResponse, "Network process should not send data until we've validated the response");
 
     if (UNLIKELY(m_interceptController.isIntercepting(*coreLoader->identifier()))) {
-        m_interceptController.defer(*coreLoader->identifier(), [this, protectedThis = Ref { *this }, buffer = WTFMove(data), encodedDataLength, bytesTransferredOverNetwork]() mutable {
+        m_interceptController.defer(*coreLoader->identifier(), [this, protectedThis = Ref { *this }, buffer = WTFMove(data), bytesTransferredOverNetwork]() mutable {
             if (m_coreLoader)
-                didReceiveData(WTFMove(buffer), encodedDataLength, bytesTransferredOverNetwork);
+                didReceiveData(WTFMove(buffer), bytesTransferredOverNetwork);
         });
         return;
     }
@@ -245,9 +245,16 @@ void WebResourceLoader::didReceiveData(IPC::SharedBufferReference&& data, uint64
         WEBRESOURCELOADER_RELEASE_LOG(WEBRESOURCELOADER_DIDRECEIVEDATA);
     m_numBytesReceived += data.size();
 
-    coreLoader->didReceiveData(data.isNull() ? SharedBuffer::create() : data.unsafeBuffer().releaseNonNull(), encodedDataLength, DataPayloadBytes);
+    auto delta = calculateBytesTransferredOverNetworkDelta(bytesTransferredOverNetwork);
 
-    updateBytesTransferredOverNetwork(bytesTransferredOverNetwork);
+    coreLoader->didReceiveData(data.isNull() ? SharedBuffer::create() : data.unsafeBuffer().releaseNonNull(), delta, DataPayloadBytes);
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    if (delta) {
+        if (RefPtr resourceMonitor = coreLoader->resourceMonitorIfExists())
+            resourceMonitor->addNetworkUsage(delta);
+    }
+#endif
 }
 
 void WebResourceLoader::didFinishResourceLoad(NetworkLoadMetrics&& networkLoadMetrics)
@@ -266,8 +273,15 @@ void WebResourceLoader::didFinishResourceLoad(NetworkLoadMetrics&& networkLoadMe
 
     networkLoadMetrics.workerStart = m_workerStart;
 
-    if (networkLoadMetrics.responseBodyBytesReceived != std::numeric_limits<uint64_t>::max())
-        updateBytesTransferredOverNetwork(networkLoadMetrics.responseBodyBytesReceived);
+#if ENABLE(CONTENT_EXTENSIONS)
+    if (networkLoadMetrics.responseBodyBytesReceived != std::numeric_limits<uint64_t>::max()) {
+        auto delta = calculateBytesTransferredOverNetworkDelta(networkLoadMetrics.responseBodyBytesReceived);
+        if (delta) {
+            if (RefPtr resourceMonitor = coreLoader->resourceMonitorIfExists())
+                resourceMonitor->addNetworkUsage(delta);
+        }
+    }
+#endif
 
     ASSERT_WITH_MESSAGE(!m_isProcessingNetworkResponse, "Load should not be able to finish before we've validated the response");
     coreLoader->didFinishLoading(networkLoadMetrics);
@@ -382,25 +396,13 @@ void WebResourceLoader::contentFilterDidBlockLoad(const WebCore::ContentFilterUn
 }
 #endif // ENABLE(CONTENT_FILTERING)
 
-void WebResourceLoader::updateBytesTransferredOverNetwork(uint64_t bytesTransferredOverNetwork)
+size_t WebResourceLoader::calculateBytesTransferredOverNetworkDelta(size_t bytesTransferredOverNetwork)
 {
-#if ENABLE(CONTENT_EXTENSIONS)
     CheckedSize delta = bytesTransferredOverNetwork - m_bytesTransferredOverNetwork;
     ASSERT(!delta.hasOverflowed());
 
-    if (delta) {
-        RefPtr coreLoader = m_coreLoader;
-        if (RefPtr resourceMonitor = coreLoader ? coreLoader->resourceMonitorIfExists() : nullptr) {
-            auto oldLevel = resourceMonitor->networkUsageLevel();
-            resourceMonitor->addNetworkUsage(delta);
-            auto newLevel = resourceMonitor->networkUsageLevel();
-            if (oldLevel != newLevel)
-                RELEASE_LOG(ResourceMonitoring, "(WebProcess) WebResourceLoader::updateBytesTransferredOverNetwork level=%d%% of %zu bytes", static_cast<int>(newLevel), resourceMonitor->networkUsageThreshold());
-        }
-    }
-#endif
-
     m_bytesTransferredOverNetwork = bytesTransferredOverNetwork;
+    return delta;
 }
 
 RefPtr<WebCore::ResourceLoader> WebResourceLoader::protectedCoreLoader() const

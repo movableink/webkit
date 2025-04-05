@@ -104,9 +104,9 @@ void WebServiceWorkerFetchTaskClient::didReceiveDataInternal(const SharedBuffer&
     }
 
     if (m_isDownload)
-        connection->send(Messages::ServiceWorkerDownloadTask::DidReceiveData { IPC::SharedBufferReference(buffer), buffer.size() }, m_fetchIdentifier);
+        connection->send(Messages::ServiceWorkerDownloadTask::DidReceiveData { IPC::SharedBufferReference(buffer) }, m_fetchIdentifier);
     else
-        connection->send(Messages::ServiceWorkerFetchTask::DidReceiveData { IPC::SharedBufferReference(buffer), buffer.size() }, m_fetchIdentifier);
+        connection->send(Messages::ServiceWorkerFetchTask::DidReceiveData { IPC::SharedBufferReference(buffer) }, m_fetchIdentifier);
 }
 
 void WebServiceWorkerFetchTaskClient::didReceiveFormDataAndFinish(Ref<FormData>&& formData)
@@ -171,9 +171,9 @@ void WebServiceWorkerFetchTaskClient::didReceiveBlobChunk(const SharedBuffer& bu
         return;
 
     if (m_isDownload)
-        connection->send(Messages::ServiceWorkerDownloadTask::DidReceiveData { IPC::SharedBufferReference(buffer), buffer.size() }, m_fetchIdentifier);
+        connection->send(Messages::ServiceWorkerDownloadTask::DidReceiveData { IPC::SharedBufferReference(buffer) }, m_fetchIdentifier);
     else
-        connection->send(Messages::ServiceWorkerFetchTask::DidReceiveData { IPC::SharedBufferReference(buffer), buffer.size() }, m_fetchIdentifier);
+        connection->send(Messages::ServiceWorkerFetchTask::DidReceiveData { IPC::SharedBufferReference(buffer) }, m_fetchIdentifier);
 }
 
 void WebServiceWorkerFetchTaskClient::didFinishBlobLoading()

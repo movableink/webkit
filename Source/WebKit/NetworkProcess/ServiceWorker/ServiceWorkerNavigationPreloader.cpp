@@ -118,10 +118,8 @@ void ServiceWorkerNavigationPreloader::loadWithCacheEntry(NetworkCache::Entry& e
         if (!weakThis || weakThis->m_isCancelled)
             return;
 
-        size_t size  = 0;
         if (body) {
-            size = body->size();
-            weakThis->didReceiveBuffer(body.releaseNonNull(), size);
+            weakThis->didReceiveBuffer(body.releaseNonNull());
             if (!weakThis)
                 return;
         }
@@ -129,7 +127,7 @@ void ServiceWorkerNavigationPreloader::loadWithCacheEntry(NetworkCache::Entry& e
         NetworkLoadMetrics networkLoadMetrics;
         networkLoadMetrics.markComplete();
         networkLoadMetrics.responseBodyBytesReceived = 0;
-        networkLoadMetrics.responseBodyDecodedSize = size;
+        networkLoadMetrics.responseBodyDecodedSize = 0;
         if (weakThis->shouldCaptureExtraNetworkLoadMetrics()) {
             auto additionalMetrics = WebCore::AdditionalNetworkLoadMetricsForWebInspector::create();
             additionalMetrics->requestHeaderBytesSent = 0;
@@ -188,10 +186,10 @@ void ServiceWorkerNavigationPreloader::didReceiveResponse(ResourceResponse&& res
         callback();
 }
 
-void ServiceWorkerNavigationPreloader::didReceiveBuffer(const FragmentedSharedBuffer& buffer, uint64_t reportedEncodedDataLength)
+void ServiceWorkerNavigationPreloader::didReceiveBuffer(const FragmentedSharedBuffer& buffer)
 {
     if (m_bodyCallback)
-        m_bodyCallback(RefPtr { &buffer }, reportedEncodedDataLength);
+        m_bodyCallback(RefPtr { &buffer });
 }
 
 void ServiceWorkerNavigationPreloader::didFinishLoading(const NetworkLoadMetrics& networkLoadMetrics)
@@ -223,7 +221,7 @@ void ServiceWorkerNavigationPreloader::didComplete()
         responseCallback();
 
     if (bodyCallback)
-        bodyCallback({ }, 0);
+        bodyCallback({ });
 }
 
 void ServiceWorkerNavigationPreloader::waitForResponse(ResponseCallback&& callback)
@@ -244,7 +242,7 @@ void ServiceWorkerNavigationPreloader::waitForResponse(ResponseCallback&& callba
 void ServiceWorkerNavigationPreloader::waitForBody(BodyCallback&& callback)
 {
     if (!m_error.isNull() || !m_responseCompletionHandler) {
-        callback({ }, 0);
+        callback({ });
         return;
     }
 

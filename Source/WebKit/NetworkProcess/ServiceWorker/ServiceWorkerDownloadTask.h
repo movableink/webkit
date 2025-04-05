@@ -72,7 +72,7 @@ private:
     Ref<NetworkProcess> protectedNetworkProcess() const;
 
     // IPC Message
-    void didReceiveData(const IPC::SharedBufferReference&, uint64_t encodedDataLength);
+    void didReceiveData(const IPC::SharedBufferReference&);
     void didReceiveFormData(const IPC::FormDataReference&);
     void didFinish();
     void didFail(WebCore::ResourceError&&);

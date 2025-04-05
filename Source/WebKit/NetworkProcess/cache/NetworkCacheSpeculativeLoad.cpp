@@ -126,7 +126,7 @@ void SpeculativeLoad::didReceiveResponse(ResourceResponse&& receivedResponse, Pr
     completionHandler(PolicyAction::Use);
 }
 
-void SpeculativeLoad::didReceiveBuffer(const WebCore::FragmentedSharedBuffer& buffer, uint64_t reportedEncodedDataLength)
+void SpeculativeLoad::didReceiveBuffer(const WebCore::FragmentedSharedBuffer& buffer)
 {
     ASSERT(!m_cacheEntry);
 
