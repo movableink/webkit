@@ -35,14 +35,17 @@
 #include "WebPage.h"
 #include "WebProcess.h"
 #include <JavaScriptCore/ConsoleTypes.h>
+#include <WebCore/AllAcceptedCredentialsOptions.h>
 #include <WebCore/AuthenticatorAttachment.h>
 #include <WebCore/AuthenticatorResponseData.h>
+#include <WebCore/CurrentUserDetailsOptions.h>
 #include <WebCore/LocalFrame.h>
 #include <WebCore/MediationRequirement.h>
 #include <WebCore/PublicKeyCredentialCreationOptions.h>
 #include <WebCore/PublicKeyCredentialRequestOptions.h>
 #include <WebCore/Quirks.h>
 #include <WebCore/SecurityOrigin.h>
+#include <WebCore/UnknownCredentialOptions.h>
 #include <WebCore/UserGestureIndicator.h>
 #include <WebCore/WebAuthenticationConstants.h>
 #include <wtf/TZoneMallocInlines.h>

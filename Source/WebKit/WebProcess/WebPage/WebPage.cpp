@@ -4898,13 +4898,9 @@ static void detectDataInFrame(const Ref<Frame>& frame, OptionSet<WebCore::DataDe
     }
 
     DataDetection::detectContentInFrame(localFrame.get(), dataDetectorTypes, dataDetectionReferenceDate, [localFrame, mainFrameResult = WTFMove(mainFrameResult), dataDetectionReferenceDate, completionHandler = WTFMove(completionHandler), dataDetectorTypes](NSArray *results) mutable {
-        auto retainedResults = retainPtr(results);
-
-        RefPtr protectedLocalFrame { localFrame };
-
-        protectedLocalFrame->dataDetectionResults().setDocumentLevelResults(retainedResults.get());
-        if (protectedLocalFrame->isMainFrame())
-            mainFrameResult->results = retainedResults;
+        localFrame->dataDetectionResults().setDocumentLevelResults(results);
+        if (localFrame->isMainFrame())
+            mainFrameResult->results = results;
 
         RefPtr next = localFrame->tree().traverseNext();
         if (!next) {

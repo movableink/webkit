@@ -31,6 +31,7 @@
 #include "WebPage.h"
 #include <WebCore/Animation.h>
 #include <WebCore/GraphicsLayer.h>
+#include <WebCore/GraphicsLayerFactory.h>
 #include <WebCore/InspectorController.h>
 #include <WebCore/LocalFrame.h>
 #include <WebCore/Page.h>
