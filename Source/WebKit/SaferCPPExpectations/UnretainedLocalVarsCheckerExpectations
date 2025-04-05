@@ -8,10 +8,6 @@ Platform/cocoa/WebPrivacyHelpers.mm
 Platform/cocoa/_WKWebViewTextInputNotifications.mm
 Platform/mac/MenuUtilities.mm
 Platform/mac/StringUtilities.mm
-Shared/API/Cocoa/WKRemoteObjectCoder.mm
-Shared/API/Cocoa/_WKFrameHandle.mm
-Shared/API/Cocoa/_WKRemoteObjectInterface.mm
-Shared/API/Cocoa/_WKRemoteObjectRegistry.mm
 Shared/Cocoa/APIObject.mm
 Shared/Cocoa/AuxiliaryProcessCocoa.mm
 Shared/Cocoa/CompletionHandlerCallChecker.mm

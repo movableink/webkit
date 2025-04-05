@@ -28,6 +28,7 @@
 
 #import <WebCore/FrameIdentifier.h>
 #import <WebCore/WebCoreObjCExtras.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 @implementation _WKFrameHandle
 
@@ -82,13 +83,13 @@
     if (!(self = [super init]))
         return nil;
 
-    NSNumber *frameID = [decoder decodeObjectOfClass:[NSNumber class] forKey:@"frameID"];
-    if (![frameID isKindOfClass:[NSNumber class]]) {
+    RetainPtr frameID = dynamic_objc_cast<NSNumber>([decoder decodeObjectOfClass:[NSNumber class] forKey:@"frameID"]);
+    if (!frameID) {
         [self release];
         return nil;
     }
 
-    auto rawFrameID = frameID.unsignedLongLongValue;
+    auto rawFrameID = frameID.get().unsignedLongLongValue;
     if (!ObjectIdentifier<WebCore::FrameIdentifierType>::isValidIdentifier(rawFrameID)) {
         [self release];
         return nil;

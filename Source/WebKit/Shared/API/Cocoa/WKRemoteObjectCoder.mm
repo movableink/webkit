@@ -336,7 +336,7 @@ static void encodeString(WKRemoteObjectEncoder *encoder, NSString *string)
 
 static RetainPtr<id> decodeObjCObject(WKRemoteObjectDecoder *decoder, Class objectClass)
 {
-    id allocation = [objectClass allocWithZone:decoder.zone];
+    SUPPRESS_UNRETAINED_LOCAL id allocation = [objectClass allocWithZone:decoder.zone];
     if (!allocation)
         [NSException raise:NSInvalidUnarchiveOperationException format:@"Class \"%@\" returned nil from +alloc while being decoded", NSStringFromClass(objectClass)];
 
