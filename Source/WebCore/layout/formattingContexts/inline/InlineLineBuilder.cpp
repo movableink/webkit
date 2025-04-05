@@ -266,8 +266,8 @@ LineBuilder::LineBuilder(InlineFormattingContext& inlineFormattingContext, Horiz
 
 LineLayoutResult LineBuilder::layoutInlineContent(const LineInput& lineInput, const std::optional<PreviousLine>& previousLine)
 {
-    auto previousLineEndsWithLineBreak = !previousLine || !previousLine->hasInlineContent ? std::nullopt : std::make_optional(previousLine->endsWithLineBreak);
-    initialize(lineInput.initialLogicalRect, lineInput.needsLayoutRange, previousLine, previousLineEndsWithLineBreak);
+    auto previousLineState = !previousLine || !previousLine->hasInlineContent ? PreviousLineState::NoPreviousLine : (previousLine->endsWithLineBreak ? PreviousLineState::EndsWithLineBreak : PreviousLineState::DoesNotEndWithLineBreak);
+    initialize(lineInput.initialLogicalRect, lineInput.needsLayoutRange, previousLine, previousLineState);
     auto lineContent = placeInlineAndFloatContent(lineInput.needsLayoutRange);
     auto result = m_line.close();
 
@@ -308,7 +308,7 @@ LineLayoutResult LineBuilder::layoutInlineContent(const LineInput& lineInput, co
     };
 }
 
-void LineBuilder::initialize(const InlineRect& initialLineLogicalRect, const InlineItemRange& needsLayoutRange, const std::optional<PreviousLine>& previousLine, std::optional<bool> previousLineEndsWithLineBreak)
+void LineBuilder::initialize(const InlineRect& initialLineLogicalRect, const InlineItemRange& needsLayoutRange, const std::optional<PreviousLine>& previousLine, PreviousLineState previousLineState)
 {
     ASSERT(!needsLayoutRange.isEmpty() || (previousLine && !previousLine->suspendedFloats.isEmpty()));
     reset();
@@ -372,7 +372,7 @@ void LineBuilder::initialize(const InlineRect& initialLineLogicalRect, const Inl
     m_line.initialize(m_lineSpanningInlineBoxes, isFirstFormattedLine());
 
     m_lineInitialLogicalRect = initialLineLogicalRect;
-    m_lineMarginStart = formattingContext().formattingUtils().computedTextIndent(isInIntrinsicWidthMode() ? InlineFormattingUtils::IsIntrinsicWidthMode::Yes : InlineFormattingUtils::IsIntrinsicWidthMode::No, previousLineEndsWithLineBreak, initialLineLogicalRect.width());
+    m_lineMarginStart = formattingContext().formattingUtils().computedTextIndent(isInIntrinsicWidthMode() ? InlineFormattingUtils::IsIntrinsicWidthMode::Yes : InlineFormattingUtils::IsIntrinsicWidthMode::No, previousLineState, initialLineLogicalRect.width());
 
     auto constraints = floatAvoidingRect(initialLineLogicalRect, { });
     m_lineLogicalRect = constraints.logicalRect;

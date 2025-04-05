@@ -30,6 +30,7 @@
 #include "InlineFormattingUtils.h"
 #include "InlineItem.h"
 #include "InlineLineBuilder.h"
+#include "InlineLineTypes.h"
 #include "InlineTextItem.h"
 #include <optional>
 
@@ -73,7 +74,7 @@ private:
     Vector<size_t> computeBreakOpportunities(InlineItemRange) const;
     Vector<LayoutUnit> computeLineWidthsFromBreaks(InlineItemRange, const Vector<size_t>& breaks, bool isFirstChunk) const;
     InlineLayoutUnit computeMaxTextIndent() const;
-    InlineLayoutUnit computeTextIndent(std::optional<bool> previousLineEndsWithLineBreak) const;
+    InlineLayoutUnit computeTextIndent(PreviousLineState) const;
 
     InlineFormattingContext& m_inlineFormattingContext;
     const InlineItemList& m_inlineItemList;

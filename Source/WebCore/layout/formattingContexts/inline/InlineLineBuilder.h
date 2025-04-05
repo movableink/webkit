@@ -69,7 +69,7 @@ private:
     size_t rebuildLineWithInlineContent(const InlineItemRange& needsLayoutRange, const InlineItem& lastInlineItemToAdd);
     size_t rebuildLineForTrailingSoftHyphen(const InlineItemRange& layoutRange);
     void commitPartialContent(const InlineContentBreaker::ContinuousContent::RunList&, const InlineContentBreaker::Result::PartialTrailingContent&);
-    void initialize(const InlineRect& initialLineLogicalRect, const InlineItemRange& needsLayoutRange, const std::optional<PreviousLine>&,  std::optional<bool> previousLineEndsWithLineBreak);
+    void initialize(const InlineRect& initialLineLogicalRect, const InlineItemRange& needsLayoutRange, const std::optional<PreviousLine>&,  PreviousLineState);
     UniqueRef<LineContent> placeInlineAndFloatContent(const InlineItemRange&);
     struct InitialLetterOffsets {
         LayoutUnit capHeightOffset;

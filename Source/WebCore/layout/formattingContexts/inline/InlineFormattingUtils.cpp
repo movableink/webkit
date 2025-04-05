@@ -32,6 +32,7 @@
 #include "InlineDisplayContent.h"
 #include "InlineLevelBoxInlines.h"
 #include "InlineLineBoxVerticalAligner.h"
+#include "InlineLineTypes.h"
 #include "InlineQuirks.h"
 #include "LayoutElementBox.h"
 #include "LengthFunctions.h"
@@ -143,7 +144,7 @@ InlineRect InlineFormattingUtils::flipVisualRectToLogicalForWritingMode(const In
     return visualRect;
 }
 
-InlineLayoutUnit InlineFormattingUtils::computedTextIndent(IsIntrinsicWidthMode isIntrinsicWidthMode, std::optional<bool> previousLineEndsWithLineBreak, InlineLayoutUnit availableWidth) const
+InlineLayoutUnit InlineFormattingUtils::computedTextIndent(IsIntrinsicWidthMode isIntrinsicWidthMode, PreviousLineState previousLineState, InlineLayoutUnit availableWidth) const
 {
     auto& root = formattingContext().root();
 
@@ -154,7 +155,8 @@ InlineLayoutUnit InlineFormattingUtils::computedTextIndent(IsIntrinsicWidthMode 
     // If 'each-line' is specified, indentation also applies to all lines where the previous line ends with a hard break.
     // [Integration] root()->parent() would normally produce a valid layout box.
     bool shouldIndent = false;
-    if (!previousLineEndsWithLineBreak) {
+    switch (previousLineState) {
+    case PreviousLineState::NoPreviousLine:
         shouldIndent = !root.isAnonymous();
         if (root.isAnonymous()) {
             if (!root.isInlineIntegrationRoot())
@@ -162,8 +164,14 @@ InlineLayoutUnit InlineFormattingUtils::computedTextIndent(IsIntrinsicWidthMode 
             else
                 shouldIndent = root.isFirstChildForIntegration();
         }
-    } else
-        shouldIndent = root.style().textIndentLine() == TextIndentLine::EachLine && *previousLineEndsWithLineBreak;
+        break;
+    case PreviousLineState::EndsWithLineBreak:
+        shouldIndent = root.style().textIndentLine() == TextIndentLine::EachLine;
+        break;
+    case PreviousLineState::DoesNotEndWithLineBreak:
+        shouldIndent = false;
+        break;
+    }
 
     // Specifying 'hanging' inverts whether the line should be indented or not.
     if (root.style().textIndentType() == TextIndentType::Hanging)
