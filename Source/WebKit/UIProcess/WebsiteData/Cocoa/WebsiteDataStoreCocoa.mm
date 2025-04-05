@@ -992,20 +992,6 @@ String WebsiteDataStore::resolvedContainerCachesNetworkingDirectory()
     return m_resolvedContainerCachesNetworkingDirectory;
 }
 
-String WebsiteDataStore::resolvedContainerCachesWebContentDirectory()
-{
-    if (m_resolvedContainerCachesWebContentDirectory.isNull()) {
-        if (!isPersistent())
-            m_resolvedContainerCachesWebContentDirectory = emptyString();
-        else {
-            auto directory = cacheDirectoryInContainerOrHomeDirectory("/Library/Caches/com.apple.WebKit.WebContent/"_s);
-            m_resolvedContainerCachesWebContentDirectory = resolveAndCreateReadWriteDirectoryForSandboxExtension(directory);
-        }
-    }
-
-    return m_resolvedContainerCachesWebContentDirectory;
-}
-
 String WebsiteDataStore::resolvedContainerTemporaryDirectory()
 {
     if (m_resolvedContainerTemporaryDirectory.isNull())

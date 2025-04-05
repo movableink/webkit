@@ -886,9 +886,6 @@ WebProcessDataStoreParameters WebProcessPool::webProcessDataStoreParameters(WebP
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-    std::optional<SandboxExtension::Handle> containerCachesDirectoryExtensionHandle;
-    if (auto directory = websiteDataStore.resolvedContainerCachesWebContentDirectory(); !directory.isEmpty())
-        containerCachesDirectoryExtensionHandle = SandboxExtension::createHandleWithoutResolvingPath(directory, SandboxExtension::Type::ReadWrite);
     std::optional<SandboxExtension::Handle> containerTemporaryDirectoryExtensionHandle;
     if (auto directory = websiteDataStore.resolvedContainerTemporaryDirectory(); !directory.isEmpty())
         containerTemporaryDirectoryExtensionHandle = SandboxExtension::createHandleWithoutResolvingPath(directory, SandboxExtension::Type::ReadWrite);
@@ -913,7 +910,6 @@ WebProcessDataStoreParameters WebProcessPool::webProcessDataStoreParameters(WebP
         WTFMove(modelElementCacheDirectoryExtensionHandle),
 #endif
 #if PLATFORM(IOS_FAMILY)
-        WTFMove(containerCachesDirectoryExtensionHandle),
         WTFMove(containerTemporaryDirectoryExtensionHandle),
 #endif
         websiteDataStore.trackingPreventionEnabled()

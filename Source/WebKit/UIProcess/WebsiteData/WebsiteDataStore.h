@@ -193,7 +193,6 @@ public:
 
 #if PLATFORM(IOS_FAMILY)
     String resolvedCookieStorageDirectory();
-    String resolvedContainerCachesWebContentDirectory();
     String resolvedContainerTemporaryDirectory();
     static String defaultResolvedContainerTemporaryDirectory();
     static String cacheDirectoryInContainerOrHomeDirectory(const String& subpath);

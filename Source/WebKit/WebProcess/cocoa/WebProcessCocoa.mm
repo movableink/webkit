@@ -611,8 +611,6 @@ void WebProcess::platformSetWebsiteDataStoreParameters(WebProcessDataStoreParame
 #endif
 #endif
 #if PLATFORM(IOS_FAMILY)
-    if (auto& handle = parameters.containerCachesDirectoryExtensionHandle)
-        SandboxExtension::consumePermanently(*handle);
     if (auto& handle = parameters.containerTemporaryDirectoryExtensionHandle)
         SandboxExtension::consumePermanently(*handle);
 #endif
