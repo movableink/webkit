@@ -8,10 +8,6 @@ Platform/cocoa/WebPrivacyHelpers.mm
 Platform/cocoa/_WKWebViewTextInputNotifications.mm
 Platform/mac/MenuUtilities.mm
 Platform/mac/StringUtilities.mm
-Shared/Cocoa/APIObject.mm
-Shared/Cocoa/AuxiliaryProcessCocoa.mm
-Shared/Cocoa/CompletionHandlerCallChecker.mm
-Shared/cf/CoreIPCSecKeychainItem.h
 UIProcess/API/Cocoa/APIAttachmentCocoa.mm
 UIProcess/API/Cocoa/APIContentRuleListStoreCocoa.mm
 UIProcess/API/Cocoa/NSAttributedString.mm

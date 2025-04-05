@@ -198,7 +198,7 @@ RetainPtr<id> AuxiliaryProcess::decodePreferenceValue(const std::optional<String
         NSData.class,
         NSMutableData.class,
     nil];
-    NSError *error { nil };
+    SUPPRESS_UNRETAINED_LOCAL NSError *error { nil };
     RetainPtr<id> result = [NSKeyedUnarchiver _strictlyUnarchivedObjectOfClasses:classes.get() fromData:encodedData.get() error:&error];
     ASSERT(!error);
     return result;

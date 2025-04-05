@@ -66,7 +66,7 @@ public:
             return nullptr;
 
         ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        SecKeychainItemRef keychainItem = NULL;
+        SUPPRESS_UNRETAINED_LOCAL SecKeychainItemRef keychainItem = NULL;
         SecKeychainItemCopyFromPersistentReference(m_persistentRef.get(), &keychainItem);
         ALLOW_DEPRECATED_DECLARATIONS_END
         return adoptCF(keychainItem);
@@ -88,7 +88,7 @@ private:
             return nullptr;
 
         ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        CFDataRef data = NULL;
+        SUPPRESS_UNRETAINED_LOCAL CFDataRef data = NULL;
         SecKeychainItemCreatePersistentReference(keychainItem, &data);
         ALLOW_DEPRECATED_DECLARATIONS_END
 
