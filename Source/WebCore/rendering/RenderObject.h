@@ -911,10 +911,11 @@ public:
         CalculateAccurateRepaintRect        = 1 << 4,
     };
     struct VisibleRectContext {
-        VisibleRectContext(bool hasPositionFixedDescendant = false, bool dirtyRectIsFlipped = false, OptionSet<VisibleRectContextOption> options = { })
+        VisibleRectContext(bool hasPositionFixedDescendant = false, bool dirtyRectIsFlipped = false, OptionSet<VisibleRectContextOption> options = { }, const std::optional<LengthBox>& scrollMargin = std::nullopt)
             : hasPositionFixedDescendant(hasPositionFixedDescendant)
             , dirtyRectIsFlipped(dirtyRectIsFlipped)
             , options(options)
+            , scrollMargin(scrollMargin)
             {
             }
 
@@ -927,6 +928,7 @@ public:
         bool dirtyRectIsFlipped { false };
         bool descendantNeedsEnclosingIntRect { false };
         OptionSet<VisibleRectContextOption> options;
+        std::optional<LengthBox> scrollMargin;
     };
 
     struct RepaintRects {

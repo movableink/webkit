@@ -53,7 +53,7 @@
 
 namespace WebCore {
 
-static ExceptionOr<LengthBox> parseRootMargin(String& rootMargin)
+static ExceptionOr<LengthBox> parseMargin(String& margin, const String& marginName)
 {
     using namespace CSSPropertyParserHelpers;
 
@@ -62,22 +62,22 @@ static ExceptionOr<LengthBox> parseRootMargin(String& rootMargin)
         .context = parserContext,
     };
 
-    CSSTokenizer tokenizer(rootMargin);
+    CSSTokenizer tokenizer(margin);
     auto tokenRange = tokenizer.tokenRange();
     tokenRange.consumeWhitespace();
     Vector<Length, 4> margins;
     while (!tokenRange.atEnd()) {
         if (margins.size() == 4)
-            return Exception { ExceptionCode::SyntaxError, "Failed to construct 'IntersectionObserver': Extra text found at the end of rootMargin."_s };
+            return Exception { ExceptionCode::SyntaxError, makeString("Failed to construct 'IntersectionObserver': Extra text found at the end of "_s, marginName, "."_s) };
         auto parsedValue = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(tokenRange, parserState);
         if (!parsedValue || parsedValue->isCalculated())
-            return Exception { ExceptionCode::SyntaxError, "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent."_s };
+            return Exception { ExceptionCode::SyntaxError, makeString("Failed to construct 'IntersectionObserver': "_s, marginName, " must be specified in pixels or percent."_s) };
         if (parsedValue->isPercentage())
             margins.append(Length(parsedValue->resolveAsPercentageNoConversionDataRequired(), LengthType::Percent));
         else if (parsedValue->isPx())
             margins.append(Length(parsedValue->resolveAsLengthNoConversionDataRequired<int>(), LengthType::Fixed));
         else
-            return Exception { ExceptionCode::SyntaxError, "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent."_s };
+            return Exception { ExceptionCode::SyntaxError, makeString("Failed to construct 'IntersectionObserver': "_s, marginName, " must be specified in pixels or percent."_s) };
     }
     switch (margins.size()) {
     case 0:
@@ -115,9 +115,13 @@ ExceptionOr<Ref<IntersectionObserver>> IntersectionObserver::create(Document& do
         });
     }
 
-    auto rootMarginOrException = parseRootMargin(init.rootMargin);
+    auto rootMarginOrException = parseMargin(init.rootMargin, "rootMargin"_s);
     if (rootMarginOrException.hasException())
         return rootMarginOrException.releaseException();
+
+    auto scrollMarginOrException = parseMargin(init.scrollMargin, "scrollMargin"_s);
+    if (scrollMarginOrException.hasException())
+        return scrollMarginOrException.releaseException();
 
     Vector<double> thresholds;
     WTF::switchOn(init.threshold, [&thresholds] (double initThreshold) {
@@ -134,14 +138,15 @@ ExceptionOr<Ref<IntersectionObserver>> IntersectionObserver::create(Document& do
             return Exception { ExceptionCode::RangeError, "Failed to construct 'IntersectionObserver': all thresholds must lie in the range [0.0, 1.0]."_s };
     }
 
-    return adoptRef(*new IntersectionObserver(document, WTFMove(callback), root.get(), rootMarginOrException.releaseReturnValue(), WTFMove(thresholds), includeObscuredInsets));
+    return adoptRef(*new IntersectionObserver(document, WTFMove(callback), root.get(), rootMarginOrException.releaseReturnValue(), scrollMarginOrException.releaseReturnValue(), WTFMove(thresholds), includeObscuredInsets));
 }
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IntersectionObserver);
 
-IntersectionObserver::IntersectionObserver(Document& document, Ref<IntersectionObserverCallback>&& callback, ContainerNode* root, LengthBox&& parsedRootMargin, Vector<double>&& thresholds, IncludeObscuredInsets includeObscuredInsets)
+IntersectionObserver::IntersectionObserver(Document& document, Ref<IntersectionObserverCallback>&& callback, ContainerNode* root, LengthBox&& parsedRootMargin, LengthBox&& parsedScrollMargin, Vector<double>&& thresholds, IncludeObscuredInsets includeObscuredInsets)
     : m_root(root)
     , m_rootMargin(WTFMove(parsedRootMargin))
+    , m_scrollMargin(WTFMove(parsedScrollMargin))
     , m_thresholds(WTFMove(thresholds))
     , m_callback(WTFMove(callback))
     , m_includeObscuredInsets(includeObscuredInsets)
@@ -159,7 +164,7 @@ IntersectionObserver::IntersectionObserver(Document& document, Ref<IntersectionO
 
     std::sort(m_thresholds.begin(), m_thresholds.end());
     
-    LOG_WITH_STREAM(IntersectionObserver, stream << "Created IntersectionObserver " << this << " root " << root << " root margin " << m_rootMargin << " thresholds " << m_thresholds);
+    LOG_WITH_STREAM(IntersectionObserver, stream << "Created IntersectionObserver " << this << " root " << root << " root margin " << m_rootMargin << " scroll margin " << m_scrollMargin << " thresholds " << m_thresholds);
 }
 
 IntersectionObserver::~IntersectionObserver()
@@ -177,6 +182,16 @@ String IntersectionObserver::rootMargin() const
     StringBuilder stringBuilder;
     for (auto side : allBoxSides) {
         auto& length = m_rootMargin.at(side);
+        stringBuilder.append(length.intValue(), length.isPercent() ? "%"_s : "px"_s, side != BoxSide::Left ? " "_s : ""_s);
+    }
+    return stringBuilder.toString();
+}
+
+String IntersectionObserver::scrollMargin() const
+{
+    StringBuilder stringBuilder;
+    for (auto side : allBoxSides) {
+        auto& length = m_scrollMargin.at(side);
         stringBuilder.append(length.intValue(), length.isPercent() ? "%"_s : "px"_s, side != BoxSide::Left ? " "_s : ""_s);
     }
     return stringBuilder.toString();
@@ -299,7 +314,7 @@ static void expandRootBoundsWithRootMargin(FloatRect& rootBounds, const LengthBo
     rootBounds.expand(rootMarginEdges);
 }
 
-static std::optional<LayoutRect> computeClippedRectInRootContentsSpace(const LayoutRect& rect, const RenderElement* renderer)
+static std::optional<LayoutRect> computeClippedRectInRootContentsSpace(const LayoutRect& rect, const RenderElement* renderer, const LengthBox& scrollMargin)
 {
     auto visibleRectOptions = OptionSet {
         RenderObject::VisibleRectContextOption::UseEdgeInclusiveIntersection,
@@ -307,7 +322,7 @@ static std::optional<LayoutRect> computeClippedRectInRootContentsSpace(const Lay
         RenderObject::VisibleRectContextOption::ApplyCompositedContainerScrolls
     };
 
-    auto absoluteRects = renderer->computeVisibleRectsInContainer({ rect }, &renderer->view(), { false /* hasPositionFixedDescendant */, false /* dirtyRectIsFlipped */, visibleRectOptions });
+    auto absoluteRects = renderer->computeVisibleRectsInContainer({ rect }, &renderer->view(), { false /* hasPositionFixedDescendant */, false /* dirtyRectIsFlipped */, visibleRectOptions, scrollMargin });
     if (!absoluteRects)
         return std::nullopt;
 
@@ -315,7 +330,16 @@ static std::optional<LayoutRect> computeClippedRectInRootContentsSpace(const Lay
     if (renderer->frame().isMainFrame())
         return absoluteClippedRect;
 
-    bool intersects = absoluteClippedRect.edgeInclusiveIntersect(renderer->view().frameView().layoutViewportRect());
+    auto frameRect = renderer->view().frameView().layoutViewportRect();
+    auto scrollMarginEdges = LayoutBoxExtent {
+        LayoutUnit(intValueForLength(scrollMargin.top(), frameRect.height())),
+        LayoutUnit(intValueForLength(scrollMargin.right(), frameRect.width())),
+        LayoutUnit(intValueForLength(scrollMargin.bottom(), frameRect.height())),
+        LayoutUnit(intValueForLength(scrollMargin.left(), frameRect.width()))
+    };
+    frameRect.expand(scrollMarginEdges);
+
+    bool intersects = absoluteClippedRect.edgeInclusiveIntersect(frameRect);
     if (!intersects)
         return std::nullopt;
 
@@ -326,7 +350,7 @@ static std::optional<LayoutRect> computeClippedRectInRootContentsSpace(const Lay
     LayoutRect rectInFrameViewSpace { renderer->view().frameView().contentsToView(absoluteClippedRect) };
 
     rectInFrameViewSpace.moveBy(ownerRenderer->contentBoxLocation());
-    return computeClippedRectInRootContentsSpace(rectInFrameViewSpace, ownerRenderer.get());
+    return computeClippedRectInRootContentsSpace(rectInFrameViewSpace, ownerRenderer.get(), scrollMargin);
 }
 
 auto IntersectionObserver::computeIntersectionState(const IntersectionObserverRegistration& registration, LocalFrameView& frameView, Element& target, bool applyRootMargin) const -> IntersectionObservationState
@@ -387,8 +411,10 @@ auto IntersectionObserver::computeIntersectionState(const IntersectionObserverRe
         return intersectionState;
     }
 
-    if (applyRootMargin)
+    if (applyRootMargin) {
+        expandRootBoundsWithRootMargin(intersectionState.rootBounds, scrollMarginBox(), rootRenderer->style().usedZoom());
         expandRootBoundsWithRootMargin(intersectionState.rootBounds, rootMarginBox(), rootRenderer->style().usedZoom());
+    }
 
     auto localTargetBounds = [&]() -> LayoutRect {
         if (CheckedPtr renderBox = dynamicDowncast<RenderBox>(*targetRenderer))
@@ -422,7 +448,7 @@ auto IntersectionObserver::computeIntersectionState(const IntersectionObserverRe
             return result->clippedOverflowRect;
         }
 
-        return computeClippedRectInRootContentsSpace(localTargetBounds, targetRenderer);
+        return computeClippedRectInRootContentsSpace(localTargetBounds, targetRenderer, scrollMarginBox());
     }();
 
     auto rootLocalIntersectionRect = intersectionState.rootBounds;

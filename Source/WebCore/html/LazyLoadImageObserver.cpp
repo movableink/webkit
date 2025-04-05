@@ -94,7 +94,7 @@ IntersectionObserver* LazyLoadImageObserver::intersectionObserver(Document& docu
     if (!m_observer) {
         auto callback = LazyImageLoadIntersectionObserverCallback::create(document);
         static NeverDestroyed<const String> lazyLoadingRootMarginFallback(MAKE_STATIC_STRING_IMPL("100%"));
-        IntersectionObserver::Init options { &document, lazyLoadingRootMarginFallback, { } };
+        IntersectionObserver::Init options { &document, lazyLoadingRootMarginFallback, emptyString(), { } };
         auto observer = IntersectionObserver::create(document, WTFMove(callback), WTFMove(options));
         if (observer.hasException())
             return nullptr;

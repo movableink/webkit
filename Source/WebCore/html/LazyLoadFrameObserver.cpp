@@ -109,7 +109,7 @@ IntersectionObserver* LazyLoadFrameObserver::intersectionObserver(Document& docu
 {
     if (!m_observer) {
         auto callback = LazyFrameLoadIntersectionObserverCallback::create(document);
-        IntersectionObserver::Init options { std::nullopt, emptyString(), { } };
+        IntersectionObserver::Init options { std::nullopt, emptyString(), emptyString(), { } };
         auto observer = IntersectionObserver::create(document, WTFMove(callback), WTFMove(options));
         if (observer.hasException())
             return nullptr;
