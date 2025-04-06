@@ -6746,7 +6746,8 @@ IGNORE_CLANG_WARNINGS_END
                     results.append(m_out.anchor(m_out.constInt64(JSValue::encode(jsUndefined()))));
                     m_out.branch(isOutOfBounds, rarely(continuation), usually(fastCase));
                     m_out.appendTo(fastCase);
-                }
+                } else
+                    speculate(OutOfBounds, noValue(), nullptr, isOutOfBounds);
 
                 LValue vector = m_out.loadPtr(base, m_heaps.JSArrayBufferView_vector);
                 LValue storage = caged(Gigacage::Primitive, vector, base);
@@ -6769,7 +6770,8 @@ IGNORE_CLANG_WARNINGS_END
                     results.append(m_out.anchor(m_out.constInt64(JSValue::encode(jsUndefined()))));
                     m_out.branch(isOutOfBounds, rarely(continuation), usually(fastCase));
                     m_out.appendTo(fastCase);
-                }
+                } else
+                    speculate(OutOfBounds, noValue(), nullptr, isOutOfBounds);
 
                 LValue vector = m_out.loadPtr(base, m_heaps.JSArrayBufferView_vector);
                 LValue storage = caged(Gigacage::Primitive, vector, base);

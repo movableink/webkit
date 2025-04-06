@@ -1132,6 +1132,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case MultiGetByVal: {
         ArrayMode mode = node->arrayMode();
         LocationKind indexedPropertyLoc = indexedPropertyLocForResultType(node->result());
+        bool canUseCSE = true;
         for (unsigned i = 0; i < sizeof(ArrayModes) * 8; ++i) {
             ArrayModes oneArrayMode = 1ULL << i;
             if (node->arrayModes() & oneArrayMode) {
@@ -1179,6 +1180,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
                     read(TypedArrayProperties);
                     read(MiscFields);
                     if (mode.mayBeResizableOrGrowableSharedTypedArray()) {
+                        canUseCSE = false;
                         write(MiscFields);
                         write(TypedArrayProperties);
                     }
@@ -1189,7 +1191,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
                 }
             }
         }
-        if (!mode.isOutOfBounds())
+        if (!mode.isOutOfBounds() && canUseCSE)
             def(HeapLocation(indexedPropertyLoc, IndexedProperties, graph.child(node, 0).node(), LazyNode(graph.child(node, 1).node()), nullptr, std::bit_cast<void*>(static_cast<uintptr_t>(node->arrayModes()))), LazyNode(node));
         return;
     }
