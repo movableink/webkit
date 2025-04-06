@@ -3455,7 +3455,7 @@ instructionLabel(_i32_trunc_sat_f32_s)
     nextIPIntInstruction()
 
 .ipint_i32_trunc_sat_f32_s_outOfBoundsTruncSatMinOrNaN:
-    bfeq ft0, ft0, .outOfBoundsTruncSatMin
+    bfeq ft0, ft0, .ipint_i32_trunc_sat_f32_s_outOfBoundsTruncSatMin
     move 0, t0
     pushInt32(t0)
 
@@ -3623,7 +3623,7 @@ instructionLabel(_i64_trunc_sat_f32_s)
     nextIPIntInstruction()
 
 .ipint_i64_trunc_sat_f32_s_outOfBoundsTruncSatMinOrNaN:
-    bfeq ft0, ft0, .outOfBoundsTruncSatMin
+    bfeq ft0, ft0, .ipint_i64_trunc_sat_f32_s_outOfBoundsTruncSatMax
     move 0, t0
     pushInt64(t0)
 
@@ -3682,11 +3682,11 @@ instructionLabel(_i64_trunc_sat_f64_s)
     popFloat64(ft0)
     move 0xc3e0000000000000, t0 # INT64_MIN
     fq2d t0, ft1
-    bdltun ft0, ft1, .outOfBoundsTruncSatMinOrNaN
+    bdltun ft0, ft1, .ipint_i64_trunc_sat_f64_s_outOfBoundsTruncSatMinOrNaN
 
     move 0x43e0000000000000, t0 # -INT64_MIN
     fq2d t0, ft1
-    bdgtequn ft0, ft1, .outOfBoundsTruncSatMax
+    bdgtequn ft0, ft1, .ipint_i64_trunc_sat_f64_s_outOfBoundsTruncSatMax
 
     truncated2qs ft0, t0
     pushInt64(t0)
@@ -3696,8 +3696,8 @@ instructionLabel(_i64_trunc_sat_f64_s)
     advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
 
-.outOfBoundsTruncSatMinOrNaN:
-    bdeq ft0, ft0, .outOfBoundsTruncSatMin
+.ipint_i64_trunc_sat_f64_s_outOfBoundsTruncSatMinOrNaN:
+    bdeq ft0, ft0, .ipint_i64_trunc_sat_f64_s_outOfBoundsTruncSatMin
     move 0, t0
     pushInt64(t0)
 
@@ -3706,7 +3706,7 @@ instructionLabel(_i64_trunc_sat_f64_s)
     advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
 
-.outOfBoundsTruncSatMax:
+.ipint_i64_trunc_sat_f64_s_outOfBoundsTruncSatMax:
     move (constexpr INT64_MAX), t0
     pushInt64(t0)
 
@@ -3715,7 +3715,7 @@ instructionLabel(_i64_trunc_sat_f64_s)
     advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
 
-.outOfBoundsTruncSatMin:
+.ipint_i64_trunc_sat_f64_s_outOfBoundsTruncSatMin:
     move (constexpr INT64_MIN), t0
     pushInt64(t0)
 
