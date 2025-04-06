@@ -1399,26 +1399,21 @@ ALWAYS_INLINE JSValue fastIndexOf(JSGlobalObject* globalObject, VM& vm, JSArray*
 
     switch (array->indexingType()) {
     case ALL_INT32_INDEXING_TYPES: {
-        if (!searchElement.isNumber())
-            return jsNumber(-1);
-        JSValue searchInt32;
-        if (searchElement.isInt32())
-            searchInt32 = searchElement;
-        else {
-            double searchNumber = searchElement.asNumber();
-            if (!canBeInt32(searchNumber))
-                return jsNumber(-1);
-            searchInt32 = jsNumber(static_cast<int32_t>(searchNumber));
-        }
         auto& butterfly = *array->butterfly();
         auto data = butterfly.contiguous().data();
+
+        int32_t int32Value = 0;
+        if (searchElement.isInt32AsAnyInt())
+            int32Value = searchElement.asInt32AsAnyInt();
+        else if (UNLIKELY(!searchElement.isNumber() || searchElement.asNumber() != 0.0))
+            return jsNumber(-1);
+        JSValue searchInt32 = jsNumber(int32Value);
+
         if constexpr (direction == IndexOfDirection::Forward) {
-            for (; index < length; ++index) {
-                // Array#indexOf uses `===` semantics (not UncheckedKeyHashMap isEqual semantics).
-                // And the hole never matches against Int32 value.
-                if (searchInt32 == data[index].get())
-                    return jsNumber(index);
-            }
+            EncodedJSValue encodedSearchElement = JSValue::encode(searchInt32);
+            auto* result = std::bit_cast<const WriteBarrier<Unknown>*>(WTF::find64(std::bit_cast<const uint64_t*>(data + index), encodedSearchElement, length - index));
+            if (result)
+                return jsNumber(result - data);
         } else {
             do {
                 ASSERT(index < length);

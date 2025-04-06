@@ -719,24 +719,17 @@ std::optional<bool> JSArray::fastIncludes(JSGlobalObject* globalObject, JSValue 
         auto& butterfly = *this->butterfly();
         auto data = butterfly.contiguous().data();
 
-        if (searchElement.isUndefined())
+        int32_t int32Value = 0;
+        if (searchElement.isInt32AsAnyInt())
+            int32Value = searchElement.asInt32AsAnyInt();
+        else if (UNLIKELY(searchElement.isUndefined()))
             return containsHole(data, length64);
-        if (!searchElement.isNumber())
+        else if (UNLIKELY(!searchElement.isNumber() || searchElement.asNumber() != 0.0))
             return false;
-        JSValue searchInt32;
-        if (searchElement.isInt32())
-            searchInt32 = searchElement;
-        else {
-            double searchNumber = searchElement.asNumber();
-            if (!canBeInt32(searchNumber))
-                return false;
-            searchInt32 = jsNumber(static_cast<int32_t>(searchNumber));
-        }
-        for (; index < length; ++index) {
-            if (searchInt32 == data[index].get())
-                return true;
-        }
-        return false;
+
+        EncodedJSValue encodedSearchElement = JSValue::encode(jsNumber(int32Value));
+        auto* result = WTF::find64(std::bit_cast<const uint64_t*>(data + index), encodedSearchElement, length - index);
+        return static_cast<bool>(result);
     }
     case ArrayWithContiguous: {
         auto& butterfly = *this->butterfly();

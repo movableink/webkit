@@ -9,3 +9,4 @@ for (var i = 0; i < array.length; i++)
 
 for (var i = 0; i < 1e6; ++i)
     test(array, i % 1024);
+
