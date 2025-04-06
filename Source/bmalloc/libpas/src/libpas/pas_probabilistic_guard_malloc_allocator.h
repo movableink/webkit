@@ -54,6 +54,7 @@
 
 #include "pas_utils.h"
 #include "pas_large_heap.h"
+#include "pas_large_map_entry.h"
 #include "pas_ptr_hash_map.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -124,6 +125,7 @@ size_t pas_probabilistic_guard_malloc_get_free_wasted_memory(void);
 pas_ptr_hash_map_entry* pas_probabilistic_guard_malloc_get_metadata_array(void);
 
 bool pas_probabilistic_guard_malloc_check_exists(uintptr_t mem);
+bool pas_probabilistic_guard_malloc_enabled_on_process(void);
 
 /*
  * Determine whether PGM can be called at runtime.

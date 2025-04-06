@@ -54,6 +54,12 @@ uint16_t pas_probabilistic_guard_malloc_counter = 0;
 bool pas_probabilistic_guard_malloc_can_use = false;
 bool pas_probabilistic_guard_malloc_is_initialized = false;
 
+/* 
+ * Flag to indicate if PGM has enabled at all for this process,
+ * even if it been subsequently disabled, or no guarded allocations have been made
+*/
+static bool pas_probabilistic_guard_malloc_has_been_used = false;
+
 /*
  * the hash map is used to keep track of all pgm allocations
  * key   : user's starting memory address
@@ -259,6 +265,7 @@ void pas_probabilistic_guard_malloc_deallocate(void* mem)
         pas_probabilistic_guard_malloc_debug_info((void*)key, value, "Deallocating Memory");
 
     pas_probabilistic_guard_malloc_can_use = true;
+    pas_probabilistic_guard_malloc_has_been_used = true;
 }
 
 bool pas_probabilistic_guard_malloc_check_exists(uintptr_t mem)
@@ -317,6 +324,15 @@ pas_ptr_hash_map_entry* pas_probabilistic_guard_malloc_get_metadata_array(void)
 }
 
 /*
+ * Function to be called to check if PGM has been enabled on this process at any point,
+ * regardless of if it has since been disabled, or if any guarded allocations were made.
+*/
+bool pas_probabilistic_guard_malloc_enabled_on_process(void)
+{
+    return pas_probabilistic_guard_malloc_has_been_used;
+}
+
+/*
  * During heap creation we want to check whether we should enable PGM.
  * PGM being enabled in the heap config does not mean it will be enabled at runtime.
  * This function will be run once for all heaps (ISO, bmalloc, JIT, etc...), but only those with
@@ -351,6 +367,7 @@ void pas_probabilistic_guard_malloc_initialize_pgm_as_enabled(uint16_t pgm_rando
 {
     pas_probabilistic_guard_malloc_is_initialized = true;
     pas_probabilistic_guard_malloc_can_use = true;
+    pas_probabilistic_guard_malloc_has_been_used = true;
     pas_probabilistic_guard_malloc_random = pgm_random_rate;
     pas_probabilistic_guard_malloc_counter = 0;
     memset(pgm_metadata_vector, 0, sizeof(pgm_metadata_vector));
