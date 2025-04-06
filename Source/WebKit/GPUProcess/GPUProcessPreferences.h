@@ -44,10 +44,6 @@ struct GPUProcessPreferences {
     std::optional<bool> alternateWebMPlayerEnabled;
 #endif
 
-#if ENABLE(EXTENSION_CAPABILITIES)
-    std::optional<bool> mediaCapabilityGrantsEnabled;
-#endif
-
 #if ENABLE(VP9)
     std::optional<bool> vp9DecoderEnabled;
     bool swVPDecodersAlwaysEnabled { false };

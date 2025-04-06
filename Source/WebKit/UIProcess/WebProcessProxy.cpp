@@ -1961,15 +1961,20 @@ String WebProcessProxy::environmentIdentifier() const
 
 void WebProcessProxy::updateAudibleMediaAssertions()
 {
-#if ENABLE(EXTENSION_CAPABILITIES)
-    if (PlatformMediaSessionManager::mediaCapabilityGrantsEnabled())
-        return;
-#endif
-
     bool hasAudibleMainPage = WTF::anyOf(pages(), [] (auto& page) {
+#if ENABLE(EXTENSION_CAPABILITIES)
+        if (page->preferences().mediaCapabilityGrantsEnabled())
+            return false;
+#endif
         return page->isPlayingAudio();
     });
     bool hasAudibleRemotePage = WTF::anyOf(remotePages(), [](auto& remotePage) {
+#if ENABLE(EXTENSION_CAPABILITIES)
+        if (RefPtr page = remotePage ? remotePage->protectedPage() : nullptr) {
+            if (page->preferences().mediaCapabilityGrantsEnabled())
+                return false;
+        }
+#endif
         return remotePage ? remotePage->mediaState().contains(MediaProducerMediaState::IsPlayingAudio) : false;
     });
     bool hasAudibleWebPage = hasAudibleMainPage || hasAudibleRemotePage;

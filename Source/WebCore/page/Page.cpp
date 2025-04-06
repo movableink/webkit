@@ -5641,6 +5641,11 @@ void Page::setPresentingApplicationAuditToken(std::optional<audit_token_t> prese
 {
     m_presentingApplicationAuditToken = WTFMove(presentingApplicationAuditToken);
 
+#if ENABLE(EXTENSION_CAPABILITIES)
+    if (settings().mediaCapabilityGrantsEnabled())
+        return;
+#endif
+
     if (RefPtr mediaSessionManager = PlatformMediaSessionManager::singletonIfExists())
         mediaSessionManager->updatePresentingApplicationPIDIfNecessary(presentingApplicationPID());
 }

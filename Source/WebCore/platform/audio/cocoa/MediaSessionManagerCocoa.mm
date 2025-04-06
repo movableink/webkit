@@ -238,6 +238,10 @@ void MediaSessionManagerCocoa::beginInterruption(PlatformMediaSession::Interrupt
 
 void MediaSessionManagerCocoa::prepareToSendUserMediaPermissionRequestForPage(Page& page)
 {
+#if ENABLE(EXTENSION_CAPABILITIES)
+    if (page.settings().mediaCapabilityGrantsEnabled())
+        return;
+#endif
     providePresentingApplicationPIDIfNecessary(page.presentingApplicationPID());
 }
 

@@ -68,11 +68,6 @@ public:
     WEBCORE_EXPORT static void setAlternateWebMPlayerEnabled(bool);
     WEBCORE_EXPORT static bool alternateWebMPlayerEnabled();
 
-#if ENABLE(EXTENSION_CAPABILITIES)
-    WEBCORE_EXPORT static bool mediaCapabilityGrantsEnabled();
-    WEBCORE_EXPORT static void setMediaCapabilityGrantsEnabled(bool);
-#endif
-
     virtual ~PlatformMediaSessionManager();
 
     virtual void scheduleSessionStatusUpdate() { }
@@ -267,10 +262,6 @@ private:
 #if ENABLE(VP9)
     static bool m_vp9DecoderEnabled;
     static bool m_swVPDecodersAlwaysEnabled;
-#endif
-
-#if ENABLE(EXTENSION_CAPABILITIES)
-    static bool s_mediaCapabilityGrantsEnabled;
 #endif
 
 #if !RELEASE_LOG_DISABLED
