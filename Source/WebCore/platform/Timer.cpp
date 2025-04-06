@@ -199,11 +199,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     }
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
-    friend bool operator==(TimerHeapIterator, TimerHeapIterator) = default;
-    friend bool operator<(TimerHeapIterator, TimerHeapIterator);
-    friend bool operator>(TimerHeapIterator, TimerHeapIterator);
-    friend bool operator<=(TimerHeapIterator, TimerHeapIterator);
-    friend bool operator>=(TimerHeapIterator, TimerHeapIterator);
+    friend auto operator<=>(TimerHeapIterator, TimerHeapIterator) = default;
     
     friend TimerHeapIterator operator+(TimerHeapIterator, size_t);
     friend TimerHeapIterator operator+(size_t, TimerHeapIterator);
@@ -213,11 +209,6 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     RefPtr<ThreadTimerHeapItem>* m_pointer;
 };
-
-inline bool operator<(TimerHeapIterator a, TimerHeapIterator b) { return a.m_pointer < b.m_pointer; }
-inline bool operator>(TimerHeapIterator a, TimerHeapIterator b) { return a.m_pointer > b.m_pointer; }
-inline bool operator<=(TimerHeapIterator a, TimerHeapIterator b) { return a.m_pointer <= b.m_pointer; }
-inline bool operator>=(TimerHeapIterator a, TimerHeapIterator b) { return a.m_pointer >= b.m_pointer; }
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 inline TimerHeapIterator operator+(TimerHeapIterator a, size_t b) { return TimerHeapIterator(a.m_pointer + b); }

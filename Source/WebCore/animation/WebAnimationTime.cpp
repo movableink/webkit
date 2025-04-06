@@ -226,11 +226,6 @@ bool WebAnimationTime::operator>=(const WebAnimationTime& other) const
     return m_value >= other.m_value;
 }
 
-bool WebAnimationTime::operator==(const WebAnimationTime& other) const
-{
-    return m_type == other.m_type && m_value == other.m_value;
-}
-
 WebAnimationTime WebAnimationTime::operator+(const Seconds& other) const
 {
     ASSERT(m_type == Type::Time);

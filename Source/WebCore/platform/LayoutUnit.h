@@ -87,7 +87,7 @@ public:
     LayoutUnit& operator=(const LayoutUnit&) = default;
     LayoutUnit& operator=(const float& other) { return *this = LayoutUnit(other); }
 
-    friend bool operator==(LayoutUnit, LayoutUnit) = default;
+    friend auto operator<=>(LayoutUnit, LayoutUnit) = default;
 
     static LayoutUnit fromFloatCeil(float value)
     {
@@ -246,11 +246,6 @@ private:
     int m_value;
 };
 
-inline bool operator<=(const LayoutUnit& a, const LayoutUnit& b)
-{
-    return a.rawValue() <= b.rawValue();
-}
-
 inline bool operator<=(const LayoutUnit& a, float b)
 {
     return a.toFloat() <= b;
@@ -271,11 +266,6 @@ inline bool operator<=(const int a, const LayoutUnit& b)
     return LayoutUnit(a) <= b;
 }
 
-inline bool operator>=(const LayoutUnit& a, const LayoutUnit& b)
-{
-    return a.rawValue() >= b.rawValue();
-}
-
 inline bool operator>=(const LayoutUnit& a, int b)
 {
     return a >= LayoutUnit(b);
@@ -294,11 +284,6 @@ inline bool operator>=(const LayoutUnit& a, float b)
 inline bool operator>=(const int a, const LayoutUnit& b)
 {
     return LayoutUnit(a) >= b;
-}
-
-inline bool operator<(const LayoutUnit& a, const LayoutUnit& b)
-{
-    return a.rawValue() < b.rawValue();
 }
 
 inline bool operator<(const LayoutUnit& a, int b)
@@ -324,11 +309,6 @@ inline bool operator<(const int a, const LayoutUnit& b)
 inline bool operator<(const float a, const LayoutUnit& b)
 {
     return a < b.toFloat();
-}
-
-inline bool operator>(const LayoutUnit& a, const LayoutUnit& b)
-{
-    return a.rawValue() > b.rawValue();
 }
 
 inline bool operator>(const LayoutUnit& a, double b)

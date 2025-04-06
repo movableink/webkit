@@ -66,7 +66,7 @@ public:
     bool operator<=(const WebAnimationTime&) const;
     bool operator>(const WebAnimationTime&) const;
     bool operator>=(const WebAnimationTime&) const;
-    bool operator==(const WebAnimationTime&) const;
+    friend bool operator==(const WebAnimationTime&, const WebAnimationTime&) = default;
 
     WebAnimationTime operator+(const Seconds&) const;
     WebAnimationTime operator-(const Seconds&) const;
