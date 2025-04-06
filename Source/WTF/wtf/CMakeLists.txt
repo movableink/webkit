@@ -321,6 +321,7 @@ set(WTF_PUBLIC_HEADERS
     StringExtras.h
     StringHashDumpContext.h
     StringPrintStream.h
+    StructDump.h
     SuspendableWorkQueue.h
     SynchronizedFixedQueue.h
     SystemFree.h
