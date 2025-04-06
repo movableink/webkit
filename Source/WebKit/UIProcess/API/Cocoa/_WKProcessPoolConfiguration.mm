@@ -335,7 +335,7 @@
 
 - (NSString *)description
 {
-    NSString *description = [NSString stringWithFormat:@"<%@: %p", NSStringFromClass(self.class), self];
+    RetainPtr description = adoptNS([[NSString alloc] initWithFormat:@"<%@: %p", NSStringFromClass(self.class), self]);
 
     if (!_processPoolConfiguration->injectedBundlePath().isEmpty())
         return [description stringByAppendingFormat:@"; injectedBundleURL: \"%@\">", [self injectedBundleURL]];

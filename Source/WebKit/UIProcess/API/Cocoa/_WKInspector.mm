@@ -195,7 +195,7 @@ private:
 - (void)printErrorToConsole:(NSString *)error
 {
     // FIXME: This should use a new message source rdar://problem/34658378
-    [self.webView evaluateJavaScript:[NSString stringWithFormat:@"console.error(\"%@\");", error] completionHandler:nil];
+    [self.webView evaluateJavaScript:adoptNS([[NSString alloc] initWithFormat:@"console.error(\"%@\");", error]).get() completionHandler:nil];
 }
 
 // MARK: _WKInspectorPrivate methods

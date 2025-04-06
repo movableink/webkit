@@ -64,21 +64,21 @@ void DisplayCaptureSessionManager::alertForGetDisplayMedia(WebPageProxy& page, c
     if (!visibleOrigin)
         visibleOrigin = applicationVisibleName();
 
-    NSString *alertTitle = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Allow “%@” to observe one of your windows or screens?", "Message for window and screen sharing prompt"), visibleOrigin.get()];
-    auto *allowWindowButtonString = WEB_UI_NSSTRING(@"Allow to Share Window", "Allow window button title in window and screen sharing prompt");
-    auto *allowScreenButtonString = WEB_UI_NSSTRING(@"Allow to Share Screen", "Allow screen button title in window and screen sharing prompt");
-    auto *doNotAllowButtonString = WEB_UI_NSSTRING_KEY(@"Don’t Allow", @"Don’t Allow (window and screen sharing)", "Disallow button title in window and screen sharing prompt");
+    RetainPtr alertTitle = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"Allow “%@” to observe one of your windows or screens?", "Message for window and screen sharing prompt"), visibleOrigin.get()]);
+    RetainPtr<NSString> allowWindowButtonString = WEB_UI_NSSTRING(@"Allow to Share Window", "Allow window button title in window and screen sharing prompt");
+    RetainPtr<NSString> allowScreenButtonString = WEB_UI_NSSTRING(@"Allow to Share Screen", "Allow screen button title in window and screen sharing prompt");
+    RetainPtr<NSString> doNotAllowButtonString = WEB_UI_NSSTRING_KEY(@"Don’t Allow", @"Don’t Allow (window and screen sharing)", "Disallow button title in window and screen sharing prompt");
 
-    auto alert = adoptNS([[NSAlert alloc] init]);
-    [alert setMessageText:alertTitle];
+    RetainPtr alert = adoptNS([[NSAlert alloc] init]);
+    [alert setMessageText:alertTitle.get()];
 
-    auto *button = [alert addButtonWithTitle:allowWindowButtonString];
+    auto *button = [alert addButtonWithTitle:allowWindowButtonString.get()];
     button.keyEquivalent = @"";
 
-    button = [alert addButtonWithTitle:allowScreenButtonString];
+    button = [alert addButtonWithTitle:allowScreenButtonString.get()];
     button.keyEquivalent = @"";
 
-    button = [alert addButtonWithTitle:doNotAllowButtonString];
+    button = [alert addButtonWithTitle:doNotAllowButtonString.get()];
     button.keyEquivalent = @"\E";
 
     [alert beginSheetModalForWindow:[webView window] completionHandler:[completionBlock = makeBlockPtr(WTFMove(completionHandler))](NSModalResponse returnCode) {

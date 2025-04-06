@@ -477,7 +477,7 @@ static BOOL shouldShowDividersBetweenCells(const Vector<WebCore::DataListSuggest
 
     // Notify accessibility clients of datalist becoming visible.
     RetainPtr currentSelectedString = [self currentSelectedString].createNSString();
-    RetainPtr info = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Suggestions list visible, %@", "Accessibility announcement that the suggestions list became visible. The format argument is for the first option in the list."), currentSelectedString.get()];
+    RetainPtr info = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"Suggestions list visible, %@", "Accessibility announcement that the suggestions list became visible. The format argument is for the first option in the list."), currentSelectedString.get()]);
     [self notifyAccessibilityClients:info.get()];
 }
 

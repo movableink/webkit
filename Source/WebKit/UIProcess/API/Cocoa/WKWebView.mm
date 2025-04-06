@@ -3081,7 +3081,7 @@ static WebCore::CocoaColor *sampledFixedPositionContentColor(const WebCore::Fixe
 #if PLATFORM(MAC)
             [extensionView setWantsLayer:YES];
 #endif
-            [extensionView layer].name = [NSString stringWithFormat:@"Fixed color extension fill (%s)", [side] {
+            [extensionView layer].name = adoptNS([[NSString alloc] initWithFormat:@"Fixed color extension fill (%s)", [side] {
                 switch (side) {
                 case WebCore::BoxSide::Top:
                     return "Top";
@@ -3095,7 +3095,7 @@ static WebCore::CocoaColor *sampledFixedPositionContentColor(const WebCore::Fixe
                     ASSERT_NOT_REACHED();
                     return "";
                 }
-            }()];
+            }()]).get();
             [parentView addSubview:extensionView.get()];
             _fixedColorExtensionViews.setAt(side, extensionView);
         }

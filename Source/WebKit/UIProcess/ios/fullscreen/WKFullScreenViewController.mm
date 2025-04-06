@@ -725,7 +725,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _location = location;
 
 #if ENABLE(FULLSCREEN_DISMISSAL_GESTURES)
-    [_bannerLabel setText:[NSString stringWithFormat:WEB_UI_NSSTRING(@"”%@” is in full screen.\nSwipe down to exit.", "Full Screen Warning Banner Content Text"), (NSString *)self.location]];
+    [_bannerLabel setText:adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"”%@” is in full screen.\nSwipe down to exit.", "Full Screen Warning Banner Content Text"), (NSString *)self.location]).get()];
     [_bannerLabel sizeToFit];
 #endif
 }
@@ -833,7 +833,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     [_bannerLabel setNumberOfLines:0];
     [_bannerLabel setLineBreakMode:NSLineBreakByWordWrapping];
     [_bannerLabel setTextAlignment:NSTextAlignmentCenter];
-    [_bannerLabel setText:[NSString stringWithFormat:WEB_UI_NSSTRING(@"”%@” is in full screen.\nSwipe down to exit.", "Full Screen Warning Banner Content Text"), (NSString *)self.location]];
+    [_bannerLabel setText:adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"”%@” is in full screen.\nSwipe down to exit.", "Full Screen Warning Banner Content Text"), (NSString *)self.location]).get()];
 
     auto banner = adoptNS([[WKFullscreenStackView alloc] init]);
     [banner addArrangedSubview:_bannerLabel.get() applyingMaterialStyle:AVBackgroundViewMaterialStyleSecondary tintEffectStyle:AVBackgroundViewTintEffectStyleSecondary];
@@ -1126,9 +1126,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return;
     }
 
-    NSString *alertTitle = WEB_UI_STRING("It looks like you are typing while in full screen", "Full Screen Deceptive Website Warning Sheet Title");
-    NSString *alertMessage = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Typing is not allowed in full screen websites. “%@” may be showing a fake keyboard to trick you into disclosing personal or financial information.", "Full Screen Deceptive Website Warning Sheet Content Text"), (NSString *)self.location];
-    auto alert = WebKit::createUIAlertController(alertTitle, alertMessage);
+    RetainPtr alertTitle = WEB_UI_STRING("It looks like you are typing while in full screen", "Full Screen Deceptive Website Warning Sheet Title").createNSString();
+    RetainPtr alertMessage = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"Typing is not allowed in full screen websites. “%@” may be showing a fake keyboard to trick you into disclosing personal or financial information.", "Full Screen Deceptive Website Warning Sheet Content Text"), (NSString *)self.location]);
+    RetainPtr alert = WebKit::createUIAlertController(alertTitle.get(), alertMessage.get());
 
     if (page) {
         page->suspendAllMediaPlayback([] { });

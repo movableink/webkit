@@ -34,7 +34,6 @@ UIProcess/API/Cocoa/_WKDownload.mm
 UIProcess/API/Cocoa/_WKInspector.mm
 UIProcess/API/Cocoa/_WKInspectorConfiguration.mm
 UIProcess/API/Cocoa/_WKInspectorDebuggableInfo.mm
-UIProcess/API/Cocoa/_WKProcessPoolConfiguration.mm
 UIProcess/API/Cocoa/_WKResourceLoadInfo.mm
 UIProcess/API/Cocoa/_WKTextManipulationItem.mm
 UIProcess/API/Cocoa/_WKTextManipulationToken.mm

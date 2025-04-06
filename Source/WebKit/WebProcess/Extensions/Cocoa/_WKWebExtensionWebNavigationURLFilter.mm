@@ -175,7 +175,7 @@ static NSString * const portsKey = @"ports";
         NSUInteger count = dynamic_objc_cast<NSArray>(rawValue).count;
         for (NSUInteger i = 0; i < count; ++i) {
             id portOrRange = rawValue[i];
-            if (!validateObject(portOrRange, [NSString stringWithFormat:@"%@[%lu]", portsKey, i], expectedPortOrRangeTypes, outErrorMessage))
+            if (!validateObject(portOrRange, adoptNS([[NSString alloc] initWithFormat:@"%@[%lu]", portsKey, i]).get(), expectedPortOrRangeTypes, outErrorMessage))
                 return nil;
 
             if (NSNumber *number = dynamic_objc_cast<NSNumber>(portOrRange)) {

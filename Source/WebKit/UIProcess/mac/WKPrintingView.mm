@@ -40,6 +40,7 @@
 #import <WebCore/ShareableBitmap.h>
 #import <wtf/RunLoop.h>
 #import <wtf/cocoa/SpanCocoa.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 #import "PDFKitSoftLink.h"
 
@@ -453,9 +454,9 @@ static void prepareDataForPrintingOnSecondaryThread(WKPrintingView *view)
     return 0; // Invalid page number.
 }
 
-static NSString *linkDestinationName(PDFDocument *document, PDFDestination *destination)
+static RetainPtr<NSString> linkDestinationName(PDFDocument *document, PDFDestination *destination)
 {
-    return [NSString stringWithFormat:@"%lu-%f-%f", (unsigned long)[document indexForPage:destination.page], destination.point.x, destination.point.y];
+    return adoptNS([[NSString alloc] initWithFormat:@"%lu-%f-%f", (unsigned long)[document indexForPage:destination.page], destination.point.x, destination.point.y]);
 }
 
 - (void)_drawPDFDocument:(PDFDocument *)pdfDocument page:(unsigned)page atPoint:(NSPoint)point
@@ -487,7 +488,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     for (const auto& destination : _linkDestinationsPerPage[page]) {
         CGPoint destinationPoint = CGPointApplyAffineTransform(NSPointToCGPoint([destination point]), transform);
-        CGPDFContextAddDestinationAtPoint(context, (__bridge CFStringRef)linkDestinationName(pdfDocument, destination.get()), destinationPoint);
+        CGPDFContextAddDestinationAtPoint(context, bridge_cast(linkDestinationName(pdfDocument, destination.get())).get(), destinationPoint);
     }
 
     for (PDFAnnotation *annotation in [pdfPage annotations]) {
@@ -501,7 +502,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
             PDFDestination *destination = annotation.destination;
             if (!destination)
                 continue;
-            CGPDFContextSetDestinationForRect(context, (__bridge CFStringRef)linkDestinationName(pdfDocument, destination), transformedRect);
+            CGPDFContextSetDestinationForRect(context, bridge_cast(linkDestinationName(pdfDocument, destination)).get(), transformedRect);
             continue;
         }
 

@@ -71,11 +71,11 @@
 
 - (NSView *)tableView:(NSTableView *)tableView viewForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row
 {
-    NSString *viewIdenfier = [NSString stringWithFormat:@"row%ldIdentifier", (long)row];
-    RetainPtr result = [tableView makeViewWithIdentifier:viewIdenfier owner:self];
+    RetainPtr viewIdenfier = adoptNS([[NSString alloc] initWithFormat:@"row%ldIdentifier", (long)row]);
+    RetainPtr result = [tableView makeViewWithIdentifier:viewIdenfier.get() owner:self];
     if (!result) {
         result = adoptNS([[NSTextView alloc] initWithFrame:NSMakeRect(0, 0, 100, 300)]);
-        result.get().identifier = viewIdenfier;
+        result.get().identifier = viewIdenfier.get();
     }
     [result setEditable:NO];
     [result setDrawsBackground:NO];
@@ -110,39 +110,38 @@ void presentStorageAccessAlert(WKWebView *webView, const WebCore::RegistrableDom
     auto currentDomain = current.string().createCFString();
 
 #if PLATFORM(MAC)
-    NSString *alertTitle = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Do you want to allow “%@” to use cookies and website data while browsing “%@”?", @"Message for requesting cross-site cookie and website data access."), requestingDomain.get(), currentDomain.get()];
+    RetainPtr alertTitle = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"Do you want to allow “%@” to use cookies and website data while browsing “%@”?", @"Message for requesting cross-site cookie and website data access."), requestingDomain.get(), currentDomain.get()]);
 #else
-    NSString *alertTitle = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Allow “%@” to use cookies and website data while browsing “%@”?", @"Message for requesting cross-site cookie and website data access."), requestingDomain.get(), currentDomain.get()];
+    RetainPtr alertTitle = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"Allow “%@” to use cookies and website data while browsing “%@”?", @"Message for requesting cross-site cookie and website data access."), requestingDomain.get(), currentDomain.get()]);
 #endif
 
-    NSString *informativeText = [NSString stringWithFormat:WEB_UI_NSSTRING(@"This will allow “%@” to track your activity.", @"Informative text for requesting cross-site cookie and website data access."), requestingDomain.get()];
+    RetainPtr informativeText = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"This will allow “%@” to track your activity.", @"Informative text for requesting cross-site cookie and website data access."), requestingDomain.get()]);
 
-    displayStorageAccessAlert(webView, alertTitle, informativeText, nil, nil, WTFMove(completionHandler));
+    displayStorageAccessAlert(webView, alertTitle.get(), informativeText.get(), nil, nil, WTFMove(completionHandler));
 }
 
 void presentStorageAccessAlertQuirk(WKWebView *webView, const WebCore::RegistrableDomain& firstRequesting, const WebCore::RegistrableDomain& secondRequesting, const WebCore::RegistrableDomain& current, CompletionHandler<void(bool)>&& completionHandler)
 {
-    auto firstRequestingDomain = firstRequesting.string().createCFString();
-    auto secondRequestingDomain = secondRequesting.string().createCFString();
-    auto currentDomain = current.string().createCFString();
+    RetainPtr firstRequestingDomain = firstRequesting.string().createCFString();
+    RetainPtr secondRequestingDomain = secondRequesting.string().createCFString();
+    RetainPtr currentDomain = current.string().createCFString();
 
 #if PLATFORM(MAC)
-    NSString *alertTitle = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Do you want to allow “%@” and “%@” to use cookies and website data while browsing “%@”?", @"Message for requesting cross-site cookie and website data access."), firstRequestingDomain.get(), secondRequestingDomain.get(), currentDomain.get()];
+    RetainPtr alertTitle = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"Do you want to allow “%@” and “%@” to use cookies and website data while browsing “%@”?", @"Message for requesting cross-site cookie and website data access."), firstRequestingDomain.get(), secondRequestingDomain.get(), currentDomain.get()]);
 #else
-    NSString *alertTitle = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Allow “%@” and “%@” to use cookies and website data while browsing “%@”?", @"Message for requesting cross-site cookie and website data access."), firstRequestingDomain.get(), secondRequestingDomain.get(), currentDomain.get()];
+    RetainPtr alertTitle = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"Allow “%@” and “%@” to use cookies and website data while browsing “%@”?", @"Message for requesting cross-site cookie and website data access."), firstRequestingDomain.get(), secondRequestingDomain.get(), currentDomain.get()]);
 #endif
 
-    NSString *informativeText = [NSString stringWithFormat:WEB_UI_NSSTRING(@"This will allow “%@” and “%@” to track your activity.", @"Informative text for requesting cross-site cookie and website data access."), firstRequestingDomain.get(), secondRequestingDomain.get()];
-
-    displayStorageAccessAlert(webView, alertTitle, informativeText, nil, nil, WTFMove(completionHandler));
+    RetainPtr informativeText = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"This will allow “%@” and “%@” to track your activity.", @"Informative text for requesting cross-site cookie and website data access."), firstRequestingDomain.get(), secondRequestingDomain.get()]);
+    displayStorageAccessAlert(webView, alertTitle.get(), informativeText.get(), nil, nil, WTFMove(completionHandler));
 }
 
 void presentStorageAccessAlertSSOQuirk(WKWebView *webView, const String& organizationName, const HashMap<WebCore::RegistrableDomain, Vector<WebCore::RegistrableDomain>>& domainPairings, CompletionHandler<void(bool)>&& completionHandler)
 {
-    NSString *alertTitle = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Allow related %@ websites to share cookies and website data?", @"Message for requesting cross-site cookie and website data access."), organizationName.createCFString().get()];
+    RetainPtr alertTitle = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"Allow related %@ websites to share cookies and website data?", @"Message for requesting cross-site cookie and website data access."), organizationName.createCFString().get()]);
 
-    NSString *informativeText;;
-    NSString *relatedWebsitesString;
+    RetainPtr<NSString> informativeText;;
+    RetainPtr<NSString> relatedWebsitesString;
     NSMutableArray<NSString *> *accessoryTextList;
 
     HashSet<String> allDomains;
@@ -167,19 +166,19 @@ void presentStorageAccessAlertSSOQuirk(WKWebView *webView, const String& organiz
         if (uniqueDomainList.size() == 2)
             initialListOfSites.append(","_s);
 
-        informativeText = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Using the same cookies and website data is required for %s and %s to work correctly, but could make it easier to track your browsing across these websites.", @"Informative text for requesting cross-site cookie and website data access for two sites"), initialListOfSites.toString().utf8().data(), lastSite.utf8().data()];
+        informativeText = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"Using the same cookies and website data is required for %s and %s to work correctly, but could make it easier to track your browsing across these websites.", @"Informative text for requesting cross-site cookie and website data access for two sites"), initialListOfSites.toString().utf8().data(), lastSite.utf8().data()]);
         relatedWebsitesString = nil;
         accessoryTextList = nil;
     } else {
-        informativeText = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Using the same cookies and website data is required for %s, %s, and %lu other websites to work correctly, but could make it easier to track your browsing across these websites.", @"Informative text for requesting cross-site cookie and website data access for four or more sites."), uniqueDomainList[0].utf8().data(), uniqueDomainList[1].utf8().data(), uniqueDomainList.size() - 2];
+        informativeText = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"Using the same cookies and website data is required for %s, %s, and %lu other websites to work correctly, but could make it easier to track your browsing across these websites.", @"Informative text for requesting cross-site cookie and website data access for four or more sites."), uniqueDomainList[0].utf8().data(), uniqueDomainList[1].utf8().data(), uniqueDomainList.size() - 2]);
 
-        relatedWebsitesString = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Related %@ websites", @"Label describing the list of related websites controlled by the same organization"), organizationName.createCFString().get()];
+        relatedWebsitesString = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"Related %@ websites", @"Label describing the list of related websites controlled by the same organization"), organizationName.createCFString().get()]);
         accessoryTextList = [NSMutableArray arrayWithCapacity:uniqueDomainList.size()];
         for (const auto& domains : uniqueDomainList)
             [accessoryTextList addObject:domains];
     }
 
-    displayStorageAccessAlert(webView, alertTitle, informativeText, relatedWebsitesString, accessoryTextList, WTFMove(completionHandler));
+    displayStorageAccessAlert(webView, alertTitle.get(), informativeText.get(), relatedWebsitesString.get(), accessoryTextList, WTFMove(completionHandler));
 }
 
 void displayStorageAccessAlert(WKWebView *webView, NSString *alertTitle, NSString *informativeText, NSString *accessoryLabel, NSArray<NSString *> *accessoryTextList, CompletionHandler<void(bool)>&& completionHandler)

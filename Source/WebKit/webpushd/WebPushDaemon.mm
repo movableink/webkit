@@ -139,7 +139,7 @@ static RetainPtr<NSString> platformDefaultActionBundleIdentifier(const WebCore::
 
 static RetainPtr<NSString> platformNotificationCenterBundleIdentifier(String pushPartition)
 {
-    return [NSString stringWithFormat:@"com.apple.WebKit.PushBundle.%@", pushPartition.createNSString().get()];
+    return adoptNS([[NSString alloc] initWithFormat:@"com.apple.WebKit.PushBundle.%@", pushPartition.createNSString().get()]);
 }
 
 #endif // HAVE(FULL_FEATURED_USER_NOTIFICATIONS)
@@ -1025,7 +1025,7 @@ void WebPushDaemon::showNotification(const WebCore::PushSubscriptionSetIdentifie
 #endif
 
 ALLOW_NONLITERAL_FORMAT_BEGIN
-    content.get().subtitle = [NSString stringWithFormat:WEB_UI_STRING("from %@", "Web Push Notification string to indicate the name of the Web App/Web Site a notification was sent from, such as 'from Wikipedia'").createNSString().get(), notificationSourceForDisplay];
+    content.get().subtitle = adoptNS([[NSString alloc] initWithFormat:WEB_UI_STRING("from %@", "Web Push Notification string to indicate the name of the Web App/Web Site a notification was sent from, such as 'from Wikipedia'").createNSString().get(), notificationSourceForDisplay]).get();
 ALLOW_NONLITERAL_FORMAT_END
 
     content.get().userInfo = notificationData.dictionaryRepresentation();

@@ -48,7 +48,7 @@ static NSString* WKPopoverTableViewCellReuseIdentifier  = @"WKPopoverTableViewCe
 - (CGRect)contentRectForBounds:(CGRect)bounds;
 @end
 
-static NSString *stringWithWritingDirection(NSString *string, NSWritingDirection writingDirection, bool override)
+static RetainPtr<NSString> stringWithWritingDirection(NSString *string, NSWritingDirection writingDirection, bool override)
 {
     if (![string length] || writingDirection == NSWritingDirectionNatural)
         return string;
@@ -72,7 +72,7 @@ static NSString *stringWithWritingDirection(NSString *string, NSWritingDirection
     else
         directionalFormattingCharacter = (override ? rightToLeftOverride : rightToLeftEmbedding);
     
-    return [NSString stringWithFormat:@"%C%@%C", directionalFormattingCharacter, string, popDirectionalFormatting];
+    return adoptNS([[NSString alloc] initWithFormat:@"%C%@%C", directionalFormattingCharacter, string, popDirectionalFormatting]);
 }
 
 @class WKSelectPopover;
@@ -134,7 +134,7 @@ static NSString *stringWithWritingDirection(NSString *string, NSWritingDirection
     // For that reason we have to override what the system thinks.
     if (writingDirection == NSWritingDirectionRightToLeft)
         self.view.semanticContentAttribute = UISemanticContentAttributeForceRightToLeft;
-    [self setTitle:stringWithWritingDirection(_contentView.focusedElementInformation.title, writingDirection, override)];
+    [self setTitle:stringWithWritingDirection(_contentView.focusedElementInformation.title, writingDirection, override).get()];
 
     return self;
 }

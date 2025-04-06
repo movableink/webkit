@@ -692,8 +692,8 @@ void WebAutomationSession::platformSimulateKeyboardInteraction(WebPageProxy& pag
     NSEventModifierFlags changedModifiers = 0;
     unsigned short keyCode = unknownKeyCode;
 
-    NSString *characters = nil;
-    NSString *unmodifiedCharacters = nil;
+    RetainPtr<NSString> characters;
+    RetainPtr<NSString> unmodifiedCharacters;
 
     // FIXME: consider using AppKit SPI to normalize 'characters', i.e., changing * to Shift-8,
     // and passing that in to charactersIgnoringModifiers. We could hardcode this for ASCII if needed.
@@ -703,9 +703,9 @@ void WebAutomationSession::platformSimulateKeyboardInteraction(WebPageProxy& pag
             changedModifiers = eventModifierFlagsForVirtualKey(virtualKey);
             keyCode = keyCodeForVirtualKey(virtualKey);
             if (auto charCode = charCodeForVirtualKey(virtualKey))
-                characters = [NSString stringWithCharacters:&charCode.value() length:1];
+                characters = adoptNS([[NSString alloc] initWithCharacters:&charCode.value() length:1]);
             if (auto charCodeIgnoringModifiers = charCodeIgnoringModifiersForVirtualKey(virtualKey))
-                unmodifiedCharacters = [NSString stringWithCharacters:&charCodeIgnoringModifiers.value() length:1];
+                unmodifiedCharacters = adoptNS([[NSString alloc] initWithCharacters:&charCodeIgnoringModifiers.value() length:1]);
         },
         [&] (CharKey charKey) {
             keyCode = keyCodeForCharKey(charKey);
@@ -735,7 +735,7 @@ void WebAutomationSession::platformSimulateKeyboardInteraction(WebPageProxy& pag
         // `characters` will not automatically include the result of modifier keys when creating an NSEvent; AppKit
         // expects them to be pre-transformed. Event type is unimportant here as we are more interested in the events
         // ability to apply modifiers to its characters.
-        characters = [[NSEvent keyEventWithType:NSEventTypeKeyDown location:eventPosition modifierFlags:0 timestamp:timestamp windowNumber:windowNumber context:nil characters:characters charactersIgnoringModifiers:unmodifiedCharacters isARepeat:NO keyCode:keyCode] charactersByApplyingModifiers:m_currentModifiers & characterTransformingModifiers];
+        characters = [[NSEvent keyEventWithType:NSEventTypeKeyDown location:eventPosition modifierFlags:0 timestamp:timestamp windowNumber:windowNumber context:nil characters:characters.get() charactersIgnoringModifiers:unmodifiedCharacters.get() isARepeat:NO keyCode:keyCode] charactersByApplyingModifiers:m_currentModifiers & characterTransformingModifiers];
     }
 
     auto eventsToBeSent = adoptNS([[NSMutableArray alloc] init]);
@@ -743,7 +743,7 @@ void WebAutomationSession::platformSimulateKeyboardInteraction(WebPageProxy& pag
     switch (interaction) {
     case KeyboardInteraction::KeyPress: {
         NSEventType eventType = isStickyModifier ? NSEventTypeFlagsChanged : NSEventTypeKeyDown;
-        [eventsToBeSent addObject:[NSEvent keyEventWithType:eventType location:eventPosition modifierFlags:m_currentModifiers timestamp:timestamp windowNumber:windowNumber context:nil characters:characters charactersIgnoringModifiers:unmodifiedCharacters isARepeat:NO keyCode:keyCode]];
+        [eventsToBeSent addObject:[NSEvent keyEventWithType:eventType location:eventPosition modifierFlags:m_currentModifiers timestamp:timestamp windowNumber:windowNumber context:nil characters:characters.get() charactersIgnoringModifiers:unmodifiedCharacters.get() isARepeat:NO keyCode:keyCode]];
         break;
     }
     case KeyboardInteraction::KeyRelease: {
@@ -754,7 +754,7 @@ void WebAutomationSession::platformSimulateKeyboardInteraction(WebPageProxy& pag
         if (characters && commandKeyHeldDown)
             break;
 
-        [eventsToBeSent addObject:[NSEvent keyEventWithType:eventType location:eventPosition modifierFlags:m_currentModifiers timestamp:timestamp windowNumber:windowNumber context:nil characters:characters charactersIgnoringModifiers:unmodifiedCharacters isARepeat:NO keyCode:keyCode]];
+        [eventsToBeSent addObject:[NSEvent keyEventWithType:eventType location:eventPosition modifierFlags:m_currentModifiers timestamp:timestamp windowNumber:windowNumber context:nil characters:characters.get() charactersIgnoringModifiers:unmodifiedCharacters.get() isARepeat:NO keyCode:keyCode]];
         break;
     }
     case KeyboardInteraction::InsertByKey: {
@@ -763,8 +763,8 @@ void WebAutomationSession::platformSimulateKeyboardInteraction(WebPageProxy& pag
         if (isStickyModifier)
             return;
 
-        [eventsToBeSent addObject:[NSEvent keyEventWithType:NSEventTypeKeyDown location:eventPosition modifierFlags:m_currentModifiers timestamp:timestamp windowNumber:windowNumber context:nil characters:characters charactersIgnoringModifiers:unmodifiedCharacters isARepeat:NO keyCode:keyCode]];
-        [eventsToBeSent addObject:[NSEvent keyEventWithType:NSEventTypeKeyUp location:eventPosition modifierFlags:m_currentModifiers timestamp:timestamp windowNumber:windowNumber context:nil characters:characters charactersIgnoringModifiers:unmodifiedCharacters isARepeat:NO keyCode:keyCode]];
+        [eventsToBeSent addObject:[NSEvent keyEventWithType:NSEventTypeKeyDown location:eventPosition modifierFlags:m_currentModifiers timestamp:timestamp windowNumber:windowNumber context:nil characters:characters.get() charactersIgnoringModifiers:unmodifiedCharacters.get() isARepeat:NO keyCode:keyCode]];
+        [eventsToBeSent addObject:[NSEvent keyEventWithType:NSEventTypeKeyUp location:eventPosition modifierFlags:m_currentModifiers timestamp:timestamp windowNumber:windowNumber context:nil characters:characters.get() charactersIgnoringModifiers:unmodifiedCharacters.get() isARepeat:NO keyCode:keyCode]];
         break;
     }
     }

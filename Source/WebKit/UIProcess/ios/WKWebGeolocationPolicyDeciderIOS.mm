@@ -170,20 +170,20 @@ struct PermissionRequest {
         }
 
         NSString *applicationName = appDisplayName();
-        NSString *message;
+        RetainPtr<NSString> message;
 
     IGNORE_WARNINGS_BEGIN("format-nonliteral")
-        NSString *title = [NSString stringWithFormat:WEB_UI_STRING("“%@” would like to use your current location.", "Prompt for a webpage to request location access. The parameter is the domain for the webpage."), _activeChallenge->token.get()];
+        RetainPtr title = adoptNS([[NSString alloc] initWithFormat:WEB_UI_STRING("“%@” would like to use your current location.", "Prompt for a webpage to request location access. The parameter is the domain for the webpage."), _activeChallenge->token.get()]);
         if (appHasPreciseLocationPermission())
-            message = [NSString stringWithFormat:WEB_UI_STRING("This website will use your precise location because “%@” currently has access to your precise location.", "Message informing the user that the website will have precise location data"), applicationName];
+            message = adoptNS([[NSString alloc] initWithFormat:WEB_UI_STRING("This website will use your precise location because “%@” currently has access to your precise location.", "Message informing the user that the website will have precise location data"), applicationName]);
         else
-            message = [NSString stringWithFormat:WEB_UI_STRING("This website will use your approximate location because “%@” currently has access to your approximate location.", "Message informing the user that the website will have approximate location data"), applicationName];
+            message = adoptNS([[NSString alloc] initWithFormat:WEB_UI_STRING("This website will use your approximate location because “%@” currently has access to your approximate location.", "Message informing the user that the website will have approximate location data"), applicationName]);
     IGNORE_WARNINGS_END
 
         NSString *allowActionTitle = WEB_UI_STRING("Allow", "Action authorizing a webpage to access the user’s location.");
         NSString *denyActionTitle = WEB_UI_STRING_KEY("Don’t Allow", "Don’t Allow (website location dialog)", "Action denying a webpage access to the user’s location.");
 
-        auto alert = WebKit::createUIAlertController(title, message);
+        RetainPtr alert = WebKit::createUIAlertController(title.get(), message.get());
         UIAlertAction *denyAction = [UIAlertAction actionWithTitle:denyActionTitle style:UIAlertActionStyleDefault handler:[weakSelf = WeakObjCPtr<WKWebGeolocationPolicyDecider>(self)](UIAlertAction *) mutable {
             if (auto strongSelf = weakSelf.get())
                 [strongSelf _finishActiveChallenge:NO];

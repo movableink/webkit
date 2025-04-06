@@ -268,7 +268,7 @@ static NSMutableDictionary *webRequestDetailsForResourceLoad(const ResourceLoadI
     NSMutableDictionary *result = [@{
         frameIdKey: resourceLoad.parentFrameID ? @(toWebAPI(toWebExtensionFrameIdentifier(resourceLoad.frameID))) : @(toWebAPI(WebExtensionFrameConstants::MainFrameIdentifier)),
         parentFrameIdKey: resourceLoad.parentFrameID ? @(toWebAPI(toWebExtensionFrameIdentifier(resourceLoad.parentFrameID))) : @(toWebAPI(WebExtensionFrameConstants::NoneIdentifier)),
-        requestIdKey: [NSString stringWithFormat:@"%llu", resourceLoad.resourceLoadID.toUInt64()],
+        requestIdKey: adoptNS([[NSString alloc] initWithFormat:@"%llu", resourceLoad.resourceLoadID.toUInt64()]).get(),
         timeStampKey: @(floor(resourceLoad.eventTimestamp.approximateWallTime().secondsSinceEpoch().milliseconds())),
         urlKey: resourceLoad.originalURL.string(),
         tabIdKey: @(toWebAPI(tabIdentifier)),

@@ -96,7 +96,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 #if ENABLE(CONTENT_EXTENSIONS)
     self._protectedContentListStore->compileContentRuleList(identifier, encodedContentRuleList, [completionHandler = makeBlockPtr(completionHandler)](RefPtr<API::ContentRuleList> contentRuleList, std::error_code error) {
         if (error) {
-            auto userInfo = @{ NSHelpAnchorErrorKey: [NSString stringWithFormat:@"Rule list compilation failed: %s", error.message().c_str()] };
+            auto userInfo = @{ NSHelpAnchorErrorKey: adoptNS([[NSString alloc] initWithFormat:@"Rule list compilation failed: %s", error.message().c_str()]).get() };
 
             // error.value() could have a specific compiler error that is not equal to WKErrorContentRuleListStoreCompileFailed.
             // We want to use error.message, but here we want to only pass on CompileFailed with userInfo from the std::error_code.
@@ -112,7 +112,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 #if ENABLE(CONTENT_EXTENSIONS)
     self._protectedContentListStore->lookupContentRuleList(identifier, [completionHandler = makeBlockPtr(completionHandler)](RefPtr<API::ContentRuleList> contentRuleList, std::error_code error) {
         if (error) {
-            auto userInfo = @{NSHelpAnchorErrorKey: [NSString stringWithFormat:@"Rule list lookup failed: %s", error.message().c_str()]};
+            auto userInfo = @{ NSHelpAnchorErrorKey: adoptNS([[NSString alloc] initWithFormat:@"Rule list lookup failed: %s", error.message().c_str()]).get() };
             auto wkError = toWKErrorCode(error);
             ASSERT(wkError == WKErrorContentRuleListStoreLookUpFailed || wkError == WKErrorContentRuleListStoreVersionMismatch);
             return completionHandler(nil, [NSError errorWithDomain:WKErrorDomain code:wkError userInfo:userInfo]);
@@ -137,7 +137,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 #if ENABLE(CONTENT_EXTENSIONS)
     self._protectedContentListStore->removeContentRuleList(identifier, [completionHandler = makeBlockPtr(completionHandler)](std::error_code error) {
         if (error) {
-            auto userInfo = @{NSHelpAnchorErrorKey: [NSString stringWithFormat:@"Rule list removal failed: %s", error.message().c_str()]};
+            auto userInfo = @{ NSHelpAnchorErrorKey: adoptNS([[NSString alloc] initWithFormat:@"Rule list removal failed: %s", error.message().c_str()]).get() };
             ASSERT(toWKErrorCode(error) == WKErrorContentRuleListStoreRemoveFailed);
             return completionHandler([NSError errorWithDomain:WKErrorDomain code:WKErrorContentRuleListStoreRemoveFailed userInfo:userInfo]);
         }

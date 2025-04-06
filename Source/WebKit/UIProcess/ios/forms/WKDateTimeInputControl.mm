@@ -388,8 +388,8 @@ static constexpr auto yearAndMonthDatePickerMode = static_cast<UIDatePickerMode>
 
 - (void)setHour:(NSInteger)hour minute:(NSInteger)minute
 {
-    NSString *timeString = [NSString stringWithFormat:@"%.2ld:%.2ld", (long)hour, (long)minute];
-    [_datePicker setDate:[[self dateFormatterForPicker] dateFromString:timeString]];
+    RetainPtr timeString = adoptNS([[NSString alloc] initWithFormat:@"%.2ld:%.2ld", (long)hour, (long)minute]);
+    [_datePicker setDate:[[self dateFormatterForPicker] dateFromString:timeString.get()]];
     [self _dateChanged];
 }
 

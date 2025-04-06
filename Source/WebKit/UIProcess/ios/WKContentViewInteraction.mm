@@ -9925,8 +9925,8 @@ static String fallbackLabelTextForUnlabeledInputFieldInZoomedFormControls(WebCor
 - (void)actionSheetAssistant:(WKActionSheetAssistant *)assistant shareElementWithImage:(UIImage *)image rect:(CGRect)boundingRect
 {
     WebCore::ShareDataWithParsedURL shareData;
-    NSString* fileName = [NSString stringWithFormat:@"%@.png", (NSString*)WEB_UI_STRING("Shared Image", "Default name for the file created for a shared image with no explicit name.")];
-    shareData.files = { { fileName, WebCore::SharedBuffer::create(UIImagePNGRepresentation(image)) } };
+    RetainPtr fileName = adoptNS([[NSString alloc] initWithFormat:@"%@.png", (NSString*)WEB_UI_STRING("Shared Image", "Default name for the file created for a shared image with no explicit name.")]);
+    shareData.files = { { fileName.get(), WebCore::SharedBuffer::create(UIImagePNGRepresentation(image)) } };
     shareData.originator = WebCore::ShareDataOriginator::User;
     [self _showShareSheet:shareData inRect: { [self convertRect:boundingRect toView:self.webView] } completionHandler:nil];
 }

@@ -354,11 +354,11 @@ void WebInspectorUIProxy::updateInspectorWindowTitle() const
 
     unsigned level = inspectionLevel();
     if (level > 1) {
-        NSString *debugTitle = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Web Inspector [%d] — %@", "Web Inspector window title when inspecting Web Inspector"), level, m_urlString.createNSString().get()];
-        [m_inspectorWindow setTitle:debugTitle];
+        RetainPtr debugTitle = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"Web Inspector [%d] — %@", "Web Inspector window title when inspecting Web Inspector"), level, m_urlString.createNSString().get()]);
+        [m_inspectorWindow setTitle:debugTitle.get()];
     } else {
-        NSString *title = [NSString stringWithFormat:WEB_UI_NSSTRING(@"Web Inspector — %@", "Web Inspector window title"), m_urlString.createNSString().get()];
-        [m_inspectorWindow setTitle:title];
+        RetainPtr title = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"Web Inspector — %@", "Web Inspector window title"), m_urlString.createNSString().get()]);
+        [m_inspectorWindow setTitle:title.get()];
     }
 }
 

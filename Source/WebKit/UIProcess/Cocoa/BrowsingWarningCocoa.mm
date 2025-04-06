@@ -149,7 +149,7 @@ static NSMutableAttributedString *browsingDetailsText(const URL& url, SSBService
         RetainPtr reportAnError = WEB_UI_NSSTRING(@"report an error", "Action from safe browsing warning");
         RetainPtr visitUnsafeWebsite = WEB_UI_NSSTRING(@"visit this unsafe website", "Action from safe browsing warning");
 
-        RetainPtr attributedString = adoptNS([[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@ %@\n\n%@", phishingDescription.get(), learnMore.get(), phishingActions.get()]]);
+        RetainPtr attributedString = adoptNS([[NSMutableAttributedString alloc] initWithString:adoptNS([[NSString alloc] initWithFormat:@"%@ %@\n\n%@", phishingDescription.get(), learnMore.get(), phishingActions.get()]).get()]);
         addLinkAndReplace(attributedString.get(), learnMore.get(), learnMore.get(), learnMoreURL(result));
         replace(attributedString.get(), @"%provider-display-name%", localizedProviderDisplayName(result));
         replace(attributedString.get(), @"%provider%", localizedProviderShortName(result));

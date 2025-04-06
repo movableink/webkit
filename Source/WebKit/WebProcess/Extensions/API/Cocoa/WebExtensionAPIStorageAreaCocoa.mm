@@ -182,12 +182,12 @@ void WebExtensionAPIStorageArea::set(WebPageProxyIdentifier webPageProxyIdentifi
     });
 
     if (keyWithError) {
-        *outExceptionString = toErrorString(nullString(), [NSString stringWithFormat:@"items[`%@`]", keyWithError], @"it is not JSON-serializable");
+        *outExceptionString = toErrorString(nullString(), adoptNS([[NSString alloc] initWithFormat:@"items[`%@`]", keyWithError]).get(), @"it is not JSON-serializable");
         return;
     }
 
     if (m_type == WebExtensionDataType::Sync && anyItemsExceedQuota(serializedData, webExtensionStorageAreaSyncQuotaBytesPerItem, &keyWithError)) {
-        *outExceptionString = toErrorString(nullString(), [NSString stringWithFormat:@"items[`%@`]", keyWithError], @"it exceeded maximum size for a single item");
+        *outExceptionString = toErrorString(nullString(), adoptNS([[NSString alloc] initWithFormat:@"items[`%@`]", keyWithError]).get(), @"it exceeded maximum size for a single item");
         return;
     }
 

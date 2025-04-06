@@ -413,7 +413,7 @@ NSMutableDictionary *WebExtensionAPIAction::parseIconPathsDictionary(NSDictionar
         }
 
         NSString *path = input[key];
-        if (!validateObject(path, [NSString stringWithFormat:@"%@[%@]", inputKey, key], NSString.class, outExceptionString))
+        if (!validateObject(path, adoptNS([[NSString alloc] initWithFormat:@"%@[%@]", inputKey, key]).get(), NSString.class, outExceptionString))
             return nil;
 
         result[key] = parseIconPath(path, baseURL);
@@ -439,7 +439,7 @@ NSMutableDictionary *WebExtensionAPIAction::parseIconImageDataDictionary(NSDicti
         }
 
         id value = input[key];
-        if (!validateObject(value, [NSString stringWithFormat:@"%@[%@]", inputKey, key], JSValue.class, outExceptionString))
+        if (!validateObject(value, adoptNS([[NSString alloc] initWithFormat:@"%@[%@]", inputKey, key]).get(), JSValue.class, outExceptionString))
             return nil;
 
         auto *dataURLString = dataURLFromImageData(value, nullptr, key, outExceptionString);

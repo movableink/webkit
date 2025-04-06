@@ -104,15 +104,15 @@
 
         RetainPtr<NSMutableDictionary> headerFields = adoptNS(@{
             @"Access-Control-Allow-Origin": @"*",
-            @"Content-Length": [NSString stringWithFormat:@"%zu", (size_t)fileData.length],
+            @"Content-Length": adoptNS([[NSString alloc] initWithFormat:@"%zu", (size_t)fileData.length]).get(),
             @"Content-Type": mimeType,
         }.mutableCopy);
 
         // Allow fetches for resources that use a registered custom URL scheme.
         if (_allowedURLSchemesForCSP && [self.mainResourceURLsForCSP containsObject:requestURL]) {
-            NSString *listOfCustomProtocols = [NSString stringWithFormat:@"%@:", [_allowedURLSchemesForCSP.get().allObjects componentsJoinedByString:@": "]];
-            NSString *stringForCSPPolicy = [NSString stringWithFormat:@"connect-src * %@; img-src * file: blob: resource: %@", listOfCustomProtocols, listOfCustomProtocols];
-            [headerFields setObject:stringForCSPPolicy forKey:@"Content-Security-Policy"];
+            RetainPtr listOfCustomProtocols = adoptNS([[NSString alloc] initWithFormat:@"%@:", [_allowedURLSchemesForCSP.get().allObjects componentsJoinedByString:@": "]]);
+            RetainPtr stringForCSPPolicy = adoptNS([[NSString alloc] initWithFormat:@"connect-src * %@; img-src * file: blob: resource: %@", listOfCustomProtocols.get(), listOfCustomProtocols.get()]);
+            [headerFields setObject:stringForCSPPolicy.get() forKey:@"Content-Security-Policy"];
         }
 
         RetainPtr<NSHTTPURLResponse> urlResponse = adoptNS([[NSHTTPURLResponse alloc] initWithURL:urlSchemeTask.request.URL statusCode:200 HTTPVersion:nil headerFields:headerFields.get()]);

@@ -74,8 +74,8 @@ void WebAutomationSession::platformSimulateKeyboardInteraction(WebPageProxy& pag
     // The modifiers changed by the virtual key when it is pressed or released.
     WebEventFlags changedModifiers = 0;
 
-    NSString *characters;
-    NSString *unmodifiedCharacters;
+    RetainPtr<NSString> characters;
+    RetainPtr<NSString> unmodifiedCharacters;
 
     // FIXME: consider using UIKit SPI to normalize 'characters', i.e., changing * to Shift-8,
     // and passing that in to charactersIgnoringModifiers. This is probably not worth the trouble
@@ -87,9 +87,9 @@ void WebAutomationSession::platformSimulateKeyboardInteraction(WebPageProxy& pag
             // unichars and WebCore maps these to "windows" key codes. Synthesize a single unichar such that the correct
             // key code is inferred.
             if (auto charCode = charCodeForVirtualKey(virtualKey))
-                characters = [NSString stringWithCharacters:&charCode.value() length:1];
+                characters = adoptNS([[NSString alloc] initWithCharacters:&charCode.value() length:1]);
             if (auto charCodeIgnoringModifiers = charCodeIgnoringModifiersForVirtualKey(virtualKey))
-                unmodifiedCharacters = [NSString stringWithCharacters:&charCodeIgnoringModifiers.value() length:1];
+                unmodifiedCharacters = adoptNS([[NSString alloc] initWithCharacters:&charCodeIgnoringModifiers.value() length:1]);
 
             switch (virtualKey) {
             case VirtualKey::Shift:
@@ -122,7 +122,7 @@ void WebAutomationSession::platformSimulateKeyboardInteraction(WebPageProxy& pag
         }
     );
 
-    BOOL isTabKey = characters.length == 1 && [characters characterAtIndex:0] == NSTabCharacter;
+    BOOL isTabKey = characters.get().length == 1 && [characters characterAtIndex:0] == NSTabCharacter;
 
     // This is used as WebEvent.keyboardFlags, which are only used if we need to
     // send this event back to UIKit to be interpreted by the keyboard / input manager.
@@ -138,19 +138,19 @@ void WebAutomationSession::platformSimulateKeyboardInteraction(WebPageProxy& pag
     case KeyboardInteraction::KeyPress: {
         m_currentModifiers |= changedModifiers;
 
-        [eventsToBeSent addObject:adoptNS([[::WebEvent alloc] initWithKeyEventType:WebEventKeyDown timeStamp:CFAbsoluteTimeGetCurrent() characters:characters charactersIgnoringModifiers:unmodifiedCharacters modifiers:m_currentModifiers isRepeating:NO withFlags:inputFlags withInputManagerHint:nil keyCode:keyCode isTabKey:isTabKey]).get()];
+        [eventsToBeSent addObject:adoptNS([[::WebEvent alloc] initWithKeyEventType:WebEventKeyDown timeStamp:CFAbsoluteTimeGetCurrent() characters:characters.get() charactersIgnoringModifiers:unmodifiedCharacters.get() modifiers:m_currentModifiers isRepeating:NO withFlags:inputFlags withInputManagerHint:nil keyCode:keyCode isTabKey:isTabKey]).get()];
         break;
     }
     case KeyboardInteraction::KeyRelease: {
         m_currentModifiers &= ~changedModifiers;
 
-        [eventsToBeSent addObject:adoptNS([[::WebEvent alloc] initWithKeyEventType:WebEventKeyUp timeStamp:CFAbsoluteTimeGetCurrent() characters:characters charactersIgnoringModifiers:unmodifiedCharacters modifiers:m_currentModifiers isRepeating:NO withFlags:inputFlags withInputManagerHint:nil keyCode:keyCode isTabKey:isTabKey]).get()];
+        [eventsToBeSent addObject:adoptNS([[::WebEvent alloc] initWithKeyEventType:WebEventKeyUp timeStamp:CFAbsoluteTimeGetCurrent() characters:characters.get() charactersIgnoringModifiers:unmodifiedCharacters.get() modifiers:m_currentModifiers isRepeating:NO withFlags:inputFlags withInputManagerHint:nil keyCode:keyCode isTabKey:isTabKey]).get()];
         break;
     }
     case KeyboardInteraction::InsertByKey: {
         // Modifiers only change with KeyPress or KeyRelease, this code path is for single characters.
-        [eventsToBeSent addObject:adoptNS([[::WebEvent alloc] initWithKeyEventType:WebEventKeyDown timeStamp:CFAbsoluteTimeGetCurrent() characters:characters charactersIgnoringModifiers:unmodifiedCharacters modifiers:m_currentModifiers isRepeating:NO withFlags:inputFlags withInputManagerHint:nil keyCode:keyCode isTabKey:isTabKey]).get()];
-        [eventsToBeSent addObject:adoptNS([[::WebEvent alloc] initWithKeyEventType:WebEventKeyUp timeStamp:CFAbsoluteTimeGetCurrent() characters:characters charactersIgnoringModifiers:unmodifiedCharacters modifiers:m_currentModifiers isRepeating:NO withFlags:inputFlags withInputManagerHint:nil keyCode:keyCode isTabKey:isTabKey]).get()];
+        [eventsToBeSent addObject:adoptNS([[::WebEvent alloc] initWithKeyEventType:WebEventKeyDown timeStamp:CFAbsoluteTimeGetCurrent() characters:characters.get() charactersIgnoringModifiers:unmodifiedCharacters.get() modifiers:m_currentModifiers isRepeating:NO withFlags:inputFlags withInputManagerHint:nil keyCode:keyCode isTabKey:isTabKey]).get()];
+        [eventsToBeSent addObject:adoptNS([[::WebEvent alloc] initWithKeyEventType:WebEventKeyUp timeStamp:CFAbsoluteTimeGetCurrent() characters:characters.get() charactersIgnoringModifiers:unmodifiedCharacters.get() modifiers:m_currentModifiers isRepeating:NO withFlags:inputFlags withInputManagerHint:nil keyCode:keyCode isTabKey:isTabKey]).get()];
         break;
     }
     }

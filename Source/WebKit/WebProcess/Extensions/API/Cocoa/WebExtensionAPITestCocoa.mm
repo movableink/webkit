@@ -302,7 +302,7 @@ JSValue *WebExtensionAPITest::assertResolves(JSContextRef context, JSValue *prom
         }
 
         JSValue *errorMessageValue = error.isObject && [error hasProperty:@"message"] ? error[@"message"] : error;
-        fail(context, combineMessages(message, [NSString stringWithFormat:@"Promise rejected with an error: %@", debugString(errorMessageValue)]));
+        fail(context, combineMessages(message, adoptNS([[NSString alloc] initWithFormat:@"Promise rejected with an error: %@", debugString(errorMessageValue)]).get()));
 
         [resolveCallback callWithArguments:nil];
     }];
@@ -353,7 +353,7 @@ JSValue *WebExtensionAPITest::assertSafe(JSContextRef context, JSValue *function
     function.context.exception = nil;
 
     JSValue *exceptionMessageValue = exceptionValue.isObject && [exceptionValue hasProperty:@"message"] ? exceptionValue[@"message"] : exceptionValue;
-    fail(context, combineMessages(message, [NSString stringWithFormat:@"Function threw an exception: %@", debugString(exceptionMessageValue)]));
+    fail(context, combineMessages(message, adoptNS([[NSString alloc] initWithFormat:@"Function threw an exception: %@", debugString(exceptionMessageValue)]).get()));
 
     return [JSValue valueWithUndefinedInContext:function.context];
 }
@@ -439,7 +439,7 @@ void WebExtensionAPITest::startNextTest()
     auto testComplete = [this, protectedThis = Ref { *this }, test](JSValue *result, JSValue *error) {
         if (error || m_hitAssertion) {
             JSValue *errorMessageValue = error.isObject && [error hasProperty:@"message"] ? error[@"message"] : error;
-            WebProcess::singleton().send(Messages::WebExtensionController::TestFinished(test.testName, false, [NSString stringWithFormat:@"Promise rejected with an error: %@", debugString(errorMessageValue)], test.location.first, test.location.second), test.webExtensionControllerIdentifier);
+            WebProcess::singleton().send(Messages::WebExtensionController::TestFinished(test.testName, false, adoptNS([[NSString alloc] initWithFormat:@"Promise rejected with an error: %@", debugString(errorMessageValue)]).get(), test.location.first, test.location.second), test.webExtensionControllerIdentifier);
             [test.rejectCallback callWithArguments:nil];
         } else {
             WebProcess::singleton().send(Messages::WebExtensionController::TestFinished(test.testName, true, @"Promise resolved without an error.", test.location.first, test.location.second), test.webExtensionControllerIdentifier);

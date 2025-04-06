@@ -260,7 +260,7 @@ RemoteLayerTreeNode* RemoteLayerTreeNode::forCALayer(CALayer *layer)
 NSString *RemoteLayerTreeNode::appendLayerDescription(NSString *description, CALayer *layer)
 {
     auto layerID = WebKit::RemoteLayerTreeNode::layerID(layer);
-    RetainPtr layerDescription = [NSString stringWithFormat:@" layerID = %llu \"%@\"", layerID ? layerID->object().toUInt64() : 0, layer.name ? layer.name : @""];
+    RetainPtr layerDescription = adoptNS([[NSString alloc] initWithFormat:@" layerID = %llu \"%@\"", layerID ? layerID->object().toUInt64() : 0, layer.name ? layer.name : @""]);
     return [description stringByAppendingString:layerDescription.get()];
 }
 

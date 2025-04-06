@@ -630,7 +630,7 @@ static void createNSErrorFromWKErrorIfNecessary(NSError **error, WKErrorCode err
 
     NSDictionary *options = @{
         // Key type values are string values of numbers, stored as kCFNumberSInt64Type in attributes, but must be passed as string here
-        (id)kSecAttrKeyType: (id)[NSString stringWithFormat:@"%i", (int)keyType],
+        (id)kSecAttrKeyType: (id)adoptNS([[NSString alloc] initWithFormat:@"%i", (int)keyType]).get(),
         (id)kSecAttrKeyClass: (id)kSecAttrKeyClassPrivate,
         (id)kSecAttrKeySizeInBits: @(keySize),
     };

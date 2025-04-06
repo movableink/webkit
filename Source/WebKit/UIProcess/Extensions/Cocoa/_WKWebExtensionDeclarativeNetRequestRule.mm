@@ -140,7 +140,7 @@ using namespace WebKit;
     NSString *exceptionString;
     if (!validateDictionary(ruleDictionary, nil, requiredKeysInRuleDictionary, keyToExpectedValueTypeInRuleDictionary, &exceptionString)) {
         if (outErrorString)
-            *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. %@", (long)_ruleID, exceptionString];
+            *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. %@", (long)_ruleID, exceptionString];
 
         return nil;
     }
@@ -150,14 +150,14 @@ using namespace WebKit;
 
     if (_ruleID < 1) {
         if (outErrorString)
-            *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. Rule id must be non-negative.", (long)_ruleID];
+            *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. Rule id must be non-negative.", (long)_ruleID];
 
         return nil;
     }
 
     if (_priority < 1) {
         if (outErrorString)
-            *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. Rule priority must be non-negative.", (long)_ruleID];
+            *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. Rule priority must be non-negative.", (long)_ruleID];
 
         return nil;
     }
@@ -177,7 +177,7 @@ using namespace WebKit;
 
     if (!validateDictionary(_action, nil, requiredKeysInActionDictionary, keyToExpectedValueTypeInActionDictionary, &exceptionString)) {
         if (outErrorString)
-            *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. %@", (long)_ruleID, exceptionString];
+            *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. %@", (long)_ruleID, exceptionString];
 
         return nil;
     }
@@ -193,7 +193,7 @@ using namespace WebKit;
 
     if (![supportedActionTypes containsObject:_action[declarativeNetRequestRuleActionTypeKey]]) {
         if (outErrorString)
-            *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `%@` is not a supported action type.", (long)_ruleID, _action[declarativeNetRequestRuleActionTypeKey]];
+            *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `%@` is not a supported action type.", (long)_ruleID, _action[declarativeNetRequestRuleActionTypeKey]];
 
         return nil;
     }
@@ -216,14 +216,14 @@ using namespace WebKit;
 
     if (!validateDictionary(_condition, nil, @[ ], keyToExpectedValueTypeInConditionDictionary, &exceptionString)) {
         if (outErrorString)
-            *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. %@", (long)_ruleID, exceptionString];
+            *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. %@", (long)_ruleID, exceptionString];
 
         return nil;
     }
 
     if (_condition[declarativeNetRequestRuleConditionRegexFilterKey] && _condition[declarativeNetRequestRuleConditionURLFilterKey]) {
         if (outErrorString)
-            *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. Define only one of the `regexFilter` or `urlFilter` keys.", (long)_ruleID];
+            *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. Define only one of the `regexFilter` or `urlFilter` keys.", (long)_ruleID];
 
         return nil;
     }
@@ -231,14 +231,14 @@ using namespace WebKit;
     if (NSString *regexFilter = _condition[declarativeNetRequestRuleConditionRegexFilterKey]) {
         if (![regexFilter canBeConvertedToEncoding:NSASCIIStringEncoding]) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `regexFilter` cannot contain non-ASCII characters.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `regexFilter` cannot contain non-ASCII characters.", (long)_ruleID];
 
             return nil;
         }
 
         if (![WKContentRuleList _supportsRegularExpression:regexFilter]) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `regexFilter` is not a supported regular expression.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `regexFilter` is not a supported regular expression.", (long)_ruleID];
 
             return nil;
         }
@@ -247,7 +247,7 @@ using namespace WebKit;
     if (NSString *urlFilter = _condition[declarativeNetRequestRuleConditionURLFilterKey]) {
         if (![urlFilter canBeConvertedToEncoding:NSASCIIStringEncoding]) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `urlFilter` cannot contain non-ASCII characters.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `urlFilter` cannot contain non-ASCII characters.", (long)_ruleID];
 
             return nil;
         }
@@ -255,7 +255,7 @@ using namespace WebKit;
 
     if (_condition[declarativeNetRequestRuleConditionResourceTypeKey] && _condition[declarativeNetRequestRuleConditionExcludedResourceTypesKey]) {
         if (outErrorString)
-            *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. Define only one of the `resourceTypes` or `excludedResourceTypes` keys.", (long)_ruleID];
+            *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. Define only one of the `resourceTypes` or `excludedResourceTypes` keys.", (long)_ruleID];
 
         return nil;
     }
@@ -264,7 +264,7 @@ using namespace WebKit;
     if (resourceTypes) {
         if (!resourceTypes.count) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `resourceTypes` cannot be an empty array.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `resourceTypes` cannot be an empty array.", (long)_ruleID];
 
             return nil;
         }
@@ -274,7 +274,7 @@ using namespace WebKit;
 
         if (!resourceTypes.count) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. The value in the `resourceTypes` array is invalid.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. The value in the `resourceTypes` array is invalid.", (long)_ruleID];
 
             return nil;
         }
@@ -286,7 +286,7 @@ using namespace WebKit;
     if ([_action[declarativeNetRequestRuleActionTypeKey] isEqualToString:declarativeNetRequestRuleActionTypeAllowAllRequests]) {
         if (!resourceTypes) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. A rule with the `allowAllRequests` action type must have the `resourceTypes` key.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. A rule with the `allowAllRequests` action type must have the `resourceTypes` key.", (long)_ruleID];
 
             return nil;
         }
@@ -294,7 +294,7 @@ using namespace WebKit;
         for (NSString *resourceType in resourceTypes) {
             if (![resourceType isEqualToString:@"main_frame"] && ![resourceType isEqualToString:@"sub_frame"]) {
                 if (outErrorString)
-                    *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `%@` is not a valid resource type for the `allowAllRequests` action type.", (long)_ruleID, resourceType];
+                    *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `%@` is not a valid resource type for the `allowAllRequests` action type.", (long)_ruleID, resourceType];
 
                 return nil;
             }
@@ -304,7 +304,7 @@ using namespace WebKit;
     if (NSString *domainType = _condition[declarativeNetRequestRuleConditionDomainTypeKey]) {
         if (![[self _chromeDomainTypeToWebKitDomainType] objectForKey:domainType]) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `%@` is not a valid domain type.", (long)_ruleID, domainType];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `%@` is not a valid domain type.", (long)_ruleID, domainType];
 
             return nil;
         }
@@ -313,7 +313,7 @@ using namespace WebKit;
     if (NSArray<NSString *> *domains = _condition[declarativeNetRequestRuleConditionDomainsKey]) {
         if (!isArrayOfDomainsValid(domains)) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `domains` must be non-empty and cannot contain non-ASCII characters.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `domains` must be non-empty and cannot contain non-ASCII characters.", (long)_ruleID];
 
             return nil;
         }
@@ -322,7 +322,7 @@ using namespace WebKit;
     if (NSArray<NSString *> *domains = _condition[ruleConditionRequestDomainsKey]) {
         if (!isArrayOfDomainsValid(domains)) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `requestDomains` must be non-empty and cannot contain non-ASCII characters.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `requestDomains` must be non-empty and cannot contain non-ASCII characters.", (long)_ruleID];
 
             return nil;
         }
@@ -331,7 +331,7 @@ using namespace WebKit;
     if (NSArray<NSString *> *excludedDomains = _condition[declarativeNetRequestRuleConditionExcludedDomainsKey]) {
         if (!isArrayOfExcludedDomainsValid(excludedDomains)) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `excludedDomains` cannot contain non-ASCII characters.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `excludedDomains` cannot contain non-ASCII characters.", (long)_ruleID];
 
             return nil;
         }
@@ -340,7 +340,7 @@ using namespace WebKit;
     if (NSArray<NSString *> *excludedDomains = _condition[ruleConditionExcludedRequestDomainsKey]) {
         if (!isArrayOfExcludedDomainsValid(excludedDomains)) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `excludedRequestDomains` cannot contain non-ASCII characters.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `excludedRequestDomains` cannot contain non-ASCII characters.", (long)_ruleID];
 
             return nil;
         }
@@ -349,7 +349,7 @@ using namespace WebKit;
     if (NSArray<NSString *> *initiatorDomains = _condition[ruleConditionInitiatorDomainsKey]) {
         if (!isArrayOfDomainsValid(initiatorDomains)) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `initiatorDomains` must be non-empty and cannot contain non-ASCII characters.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `initiatorDomains` must be non-empty and cannot contain non-ASCII characters.", (long)_ruleID];
 
             return nil;
         }
@@ -358,7 +358,7 @@ using namespace WebKit;
     if (NSArray<NSString *> *excludedInitiatorDomains = _condition[ruleConditionExcludedInitiatorDomainsKey]) {
         if (!isArrayOfExcludedDomainsValid(excludedInitiatorDomains)) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `excludedInitiatorDomains` cannot contain non-ASCII characters.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `excludedInitiatorDomains` cannot contain non-ASCII characters.", (long)_ruleID];
 
             return nil;
         }
@@ -374,7 +374,7 @@ using namespace WebKit;
 
         if (!urlString && !extensionPathString && !transformDictionary && !regexSubstitutionString) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `redirect` is missing either a `url`, `extensionPath`, `regexSubstitution`, or `transform` key.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `redirect` is missing either a `url`, `extensionPath`, `regexSubstitution`, or `transform` key.", (long)_ruleID];
 
             return nil;
         }
@@ -385,14 +385,14 @@ using namespace WebKit;
             NSURL *url = [NSURL URLWithString:urlString];
             if (!url) {
                 if (outErrorString)
-                    *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `redirect` specified an invalid or empty `url`.", (long)_ruleID];
+                    *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `redirect` specified an invalid or empty `url`.", (long)_ruleID];
 
                 return nil;
             }
 
             if (!URL(url).protocolIsInHTTPFamily()) {
                 if (outErrorString)
-                    *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `redirect` specified a non-HTTP `url`.", (long)_ruleID];
+                    *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `redirect` specified a non-HTTP `url`.", (long)_ruleID];
 
                 return nil;
             }
@@ -401,7 +401,7 @@ using namespace WebKit;
         if (regexSubstitutionString) {
             if (!_condition[declarativeNetRequestRuleConditionRegexFilterKey]) {
                 if (outErrorString)
-                    *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `redirect` specified a `regexSubstitution` without a `regexFilter` condition.", (long)_ruleID];
+                    *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `redirect` specified a `regexSubstitution` without a `regexFilter` condition.", (long)_ruleID];
 
                 return nil;
             }
@@ -409,14 +409,14 @@ using namespace WebKit;
 
         if (extensionPathString && ![extensionPathString hasPrefix:@"/"]) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `redirect` specified an `extensionPath` without a '/' prefix.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `redirect` specified an `extensionPath` without a '/' prefix.", (long)_ruleID];
 
             return nil;
         }
 
         if (transformDictionary && !transformDictionary.count) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `redirect` specified an invalid or empty `transform`.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `redirect` specified an invalid or empty `transform`.", (long)_ruleID];
 
             return nil;
         }
@@ -435,7 +435,7 @@ using namespace WebKit;
 
         if (transformDictionary && !validateDictionary(transformDictionary, nil, @[ ], keyToExpectedValueTypeInTransformDictionary, &exceptionString)) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `redirect` specified an invalid `transform`. %@", (long)_ruleID, exceptionString];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `redirect` specified an invalid `transform`. %@", (long)_ruleID, exceptionString];
 
             return nil;
         }
@@ -443,7 +443,7 @@ using namespace WebKit;
         NSDictionary<NSString *, id> *queryTransformDictionary = objectForKey<NSDictionary>(transformDictionary, declarativeNetRequestRuleURLTransformQueryTransform, false);
         if (queryTransformDictionary && !queryTransformDictionary.count) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `transform` specified an invalid or empty `queryTransform`.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `transform` specified an invalid or empty `queryTransform`.", (long)_ruleID];
 
             return nil;
         }
@@ -455,7 +455,7 @@ using namespace WebKit;
 
         if (queryTransformDictionary && !validateDictionary(queryTransformDictionary, nil, @[ ], keyToExpectedValueTypeInQueryTransformDictionary, &exceptionString)) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `transform` specified an invalid `queryTransform`. %@", (long)_ruleID, exceptionString];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `transform` specified an invalid `queryTransform`. %@", (long)_ruleID, exceptionString];
 
             return nil;
         }
@@ -463,7 +463,7 @@ using namespace WebKit;
         NSArray<NSString *> *removeParamsArray = queryTransformDictionary[declarativeNetRequestRuleQueryTransformRemoveParams];
         if (removeParamsArray && !removeParamsArray.count) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `queryTransform` specified an invalid or empty `removeParams`.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `queryTransform` specified an invalid or empty `removeParams`.", (long)_ruleID];
 
             return nil;
         }
@@ -482,7 +482,7 @@ using namespace WebKit;
         NSArray<NSDictionary<NSString *, id> *> *addOrReplaceParamsArray = queryTransformDictionary[declarativeNetRequestRuleQueryTransformAddOrReplaceParams];
         if (addOrReplaceParamsArray && !addOrReplaceParamsArray.count) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `queryTransform` specified an invalid or empty `addOrReplaceParams`.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `queryTransform` specified an invalid or empty `addOrReplaceParams`.", (long)_ruleID];
 
             return nil;
         }
@@ -490,7 +490,7 @@ using namespace WebKit;
         for (NSDictionary<NSString *, id> *addOrReplaceParamsDictionary in addOrReplaceParamsArray) {
             if (!validateDictionary(addOrReplaceParamsDictionary, nil, requiredKeysInAddOrReplaceDictionary, keyToExpectedValueTypeInAddOrReplaceDictionary, &exceptionString)) {
                 if (outErrorString)
-                    *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. `queryTransform` specified an invalid `addOrReplaceParams`. %@", (long)_ruleID, exceptionString];
+                    *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `queryTransform` specified an invalid `addOrReplaceParams`. %@", (long)_ruleID, exceptionString];
 
                 return nil;
             }
@@ -503,14 +503,14 @@ using namespace WebKit;
 
         if (!requestHeadersInfo && !responseHeadersInfo) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. A modifyHeaders rule must have `requestHeaders` or `responseHeaders` set.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. A modifyHeaders rule must have `requestHeaders` or `responseHeaders` set.", (long)_ruleID];
 
             return nil;
         }
 
         if ((requestHeadersInfo && !requestHeadersInfo.count) || (responseHeadersInfo && !responseHeadersInfo.count)) {
             if (outErrorString)
-                *outErrorString = [NSString stringWithFormat:@"Rule with id %ld is invalid. The arrays specified by `requestHeaders` or `responseHeaders` must be non-empty.", (long)_ruleID];
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. The arrays specified by `requestHeaders` or `responseHeaders` must be non-empty.", (long)_ruleID];
 
             return nil;
         }
@@ -554,7 +554,7 @@ using namespace WebKit;
 
     NSString *exceptionString;
     if (!validateDictionary(headerInfo, nil, requiredKeysInModifyHeadersDictionary, keyToExpectedValueTypeInHeadersDictionary, &exceptionString))
-        return [NSString stringWithFormat:@"Rule with id %ld is invalid. One of the headers dictionaries is not formatted correctly. %@", (long)_ruleID, exceptionString];
+        return [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. One of the headers dictionaries is not formatted correctly. %@", (long)_ruleID, exceptionString];
 
     NSString *operationType = headerInfo[declarativeNetRequestRuleHeaderOperationKey];
     BOOL isSetOperation = [operationType isEqual:declarativeNetRequestRuleHeaderOperationValueSet];
@@ -562,18 +562,18 @@ using namespace WebKit;
     BOOL isRemoveOperation = [operationType isEqual:declarativeNetRequestRuleHeaderOperationValueRemove];
 
     if (!isSetOperation && !isAppendOperation && !isRemoveOperation)
-        return [NSString stringWithFormat:@"Rule with id %ld is invalid. `%@` is not a recognized header operation.", (long)_ruleID, operationType];
+        return [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `%@` is not a recognized header operation.", (long)_ruleID, operationType];
 
     NSString *headerName = headerInfo[declarativeNetRequestRuleHeaderKey];
     if (!isHeaderNameValid(headerName))
-        return [NSString stringWithFormat:@"Rule with id %ld is invalid. The header `%@` is not recognized.", (long)_ruleID, headerName];
+        return [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. The header `%@` is not recognized.", (long)_ruleID, headerName];
 
     NSString *headerValue = headerInfo[declarativeNetRequestRuleHeaderValueKey];
     if (isRemoveOperation && headerValue)
-        return [NSString stringWithFormat:@"Rule with id %ld is invalid. Do not provide a value when removing a header.", (long)_ruleID];
+        return [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. Do not provide a value when removing a header.", (long)_ruleID];
 
     if ((isSetOperation || isAppendOperation) && !headerValue)
-        return [NSString stringWithFormat:@"Rule with id %ld is invalid. You must provide a value when modifying a header.", (long)_ruleID];
+        return [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. You must provide a value when modifying a header.", (long)_ruleID];
 
     return nil;
 }
@@ -1143,7 +1143,7 @@ static NSInteger priorityForRuleType(NSString *ruleType)
 
 - (NSString *)description
 {
-    return [NSString stringWithFormat:@"<%@:%p %@>", self.class, self, @{
+    return [[NSString alloc] initWithFormat:@"<%@:%p %@>", self.class, self, @{
         @"id" : @(_ruleID),
         @"priority" : @(_priority),
         @"action": _action,

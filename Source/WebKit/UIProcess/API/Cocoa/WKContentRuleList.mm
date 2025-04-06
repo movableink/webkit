@@ -78,7 +78,7 @@
     if (!error)
         return nil;
 
-    auto userInfo = @{ NSHelpAnchorErrorKey: [NSString stringWithFormat:@"Rule list parsing failed: %s", error.message().c_str()] };
+    auto userInfo = @{ NSHelpAnchorErrorKey: adoptNS([[NSString alloc] initWithFormat:@"Rule list parsing failed: %s", error.message().c_str()]).get() };
     return [NSError errorWithDomain:WKErrorDomain code:WKErrorContentRuleListStoreCompileFailed userInfo:userInfo];
 #else
     return nil;

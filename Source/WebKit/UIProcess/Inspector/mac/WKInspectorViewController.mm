@@ -201,7 +201,7 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
 
 + (NSURL *)URLForInspectorResource:(NSString *)resource
 {
-    return [NSURL URLWithString:[NSString stringWithFormat:@"%@:///%@", WKInspectorResourceScheme, resource]].URLByStandardizingPath;
+    return [NSURL URLWithString:adoptNS([[NSString alloc] initWithFormat:@"%@:///%@", WKInspectorResourceScheme, resource]).get()].URLByStandardizingPath;
 }
 
 // MARK: WKUIDelegate methods
