@@ -21,6 +21,8 @@
 #include "config.h"
 #include "Fuzzilli.h"
 
+#if ENABLE(FUZZILLI)
+
 #include <fcntl.h>
 #include <mutex>
 #include <sys/mman.h>
@@ -32,8 +34,6 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/ASCIILiteral.h>
-
-#if ENABLE(FUZZILLI)
 
 #define REPRL_CRFD 100
 #define REPRL_CWFD 101
