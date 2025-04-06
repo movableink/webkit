@@ -385,7 +385,7 @@ private:
     static void dumpCode(void* code, size_t);
 #endif
 
-    void logJITCodeForPerf(CodeRef<LinkBufferPtrTag>&, ASCIILiteral);
+    void logJITCodeForJITDump(CodeRef<LinkBufferPtrTag>&, ASCIILiteral);
 
     RefPtr<ExecutableMemoryHandle> m_executableMemory;
     size_t m_size { 0 };

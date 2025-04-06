@@ -168,6 +168,8 @@ static inline uint32_t getCurrentThreadID()
     uint64_t thread = 0;
     pthread_threadid_np(NULL, &thread);
     return static_cast<uint32_t>(thread);
+#elif OS(WINDOWS)
+    return static_cast<uint32_t>(GetCurrentThreadId());
 #else
     return 0;
 #endif
@@ -208,7 +210,7 @@ PerfLog::PerfLog()
 
 void PerfLog::write(const AbstractLocker&, const void* data, size_t size)
 {
-    size_t result = fwrite(data, 1, size, m_file);
+    size_t result = fwrite(data, size, 1, m_file);
     RELEASE_ASSERT(result == size);
 }
 

@@ -66,13 +66,13 @@ LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithoutDisassembly
     ASSERT(m_didAllocate);
     CodeRef<LinkBufferPtrTag> codeRef(m_executableMemory ? CodeRef<LinkBufferPtrTag>(*m_executableMemory) : CodeRef<LinkBufferPtrTag>::createSelfManagedCodeRef(m_code));
 
-    if (UNLIKELY(Options::logJITCodeForPerf()))
-        logJITCodeForPerf(codeRef, simpleName);
+    if (UNLIKELY(Options::useJITDump()))
+        logJITCodeForJITDump(codeRef, simpleName);
 
     return codeRef;
 }
 
-void LinkBuffer::logJITCodeForPerf(CodeRef<LinkBufferPtrTag>& codeRef, ASCIILiteral simpleName)
+void LinkBuffer::logJITCodeForJITDump(CodeRef<LinkBufferPtrTag>& codeRef, ASCIILiteral simpleName)
 {
     auto dumpSimpleName = [&](StringPrintStream& out, ASCIILiteral simpleName) {
         if (simpleName.isNull())
