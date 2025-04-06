@@ -248,7 +248,6 @@ void UIDelegate::setDelegate(id <WKUIDelegate> delegate)
     m_delegateMethods.webViewRequestCookieConsentWithMoreInfoHandlerDecisionHandler = [delegate respondsToSelector:@selector(_webView:requestCookieConsentWithMoreInfoHandler:decisionHandler:)];
 
     m_delegateMethods.webViewUpdatedAppBadge = [delegate respondsToSelector:@selector(_webView:updatedAppBadge:fromSecurityOrigin:)];
-    m_delegateMethods.webViewUpdatedClientBadge = [delegate respondsToSelector:@selector(_webView:updatedClientBadge:fromSecurityOrigin:)];
 
     m_delegateMethods.webViewDidAdjustVisibilityWithSelectors = [delegate respondsToSelector:@selector(_webView:didAdjustVisibilityWithSelectors:)];
 
@@ -1980,27 +1979,6 @@ void UIDelegate::UIClient::updateAppBadge(WebPageProxy&, const WebCore::Security
 
     auto apiOrigin = API::SecurityOrigin::create(origin);
     [delegate _webView:uiDelegate->m_webView.get().get() updatedAppBadge:nsBadge fromSecurityOrigin:wrapper(apiOrigin.get())];
-}
-
-void UIDelegate::UIClient::updateClientBadge(WebPageProxy&, const WebCore::SecurityOriginData& origin, std::optional<uint64_t> badge)
-{
-    RefPtr uiDelegate = m_uiDelegate.get();
-    if (!uiDelegate)
-        return;
-
-    if (!uiDelegate->m_delegateMethods.webViewUpdatedClientBadge)
-        return;
-
-    auto delegate = (id <WKUIDelegatePrivate>)uiDelegate->m_delegate.get();
-    if (!delegate)
-        return;
-
-    NSNumber *nsBadge = nil;
-    if (badge)
-        nsBadge = @(*badge);
-
-    auto apiOrigin = API::SecurityOrigin::create(origin);
-    [delegate _webView:uiDelegate->m_webView.get().get() updatedClientBadge:nsBadge fromSecurityOrigin:wrapper(apiOrigin.get())];
 }
 
 void UIDelegate::UIClient::didAdjustVisibilityWithSelectors(WebPageProxy&, Vector<String>&& selectors)

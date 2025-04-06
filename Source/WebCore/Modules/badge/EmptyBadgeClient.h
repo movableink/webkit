@@ -37,7 +37,6 @@ public:
     }
 private:
     void setAppBadge(Page*, const SecurityOriginData&, std::optional<uint64_t>) final { }
-    void setClientBadge(Page&, const SecurityOriginData&, std::optional<uint64_t>) final { }
 };
 
 } // namespace WebCore

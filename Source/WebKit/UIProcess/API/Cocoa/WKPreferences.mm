@@ -1607,16 +1607,6 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
     return _preferences->appBadgeEnabled();
 }
 
-- (void)_setClientBadgeEnabled:(BOOL)enabled
-{
-    _preferences->setClientBadgeEnabled(enabled);
-}
-
-- (BOOL)_clientBadgeEnabled
-{
-    return _preferences->clientBadgeEnabled();
-}
-
 - (void)_setVerifyWindowOpenUserGestureFromUIProcess:(BOOL)enabled
 {
     _preferences->setVerifyWindowOpenUserGestureFromUIProcess(enabled);
@@ -1925,6 +1915,15 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
 - (BOOL)_mediaStreamEnabled
 {
     return YES;
+}
+
+- (void)_setClientBadgeEnabled:(BOOL)enabled
+{
+}
+
+- (BOOL)_clientBadgeEnabled
+{
+    return NO;
 }
 
 #if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WKPreferencesAdditions.mm>)

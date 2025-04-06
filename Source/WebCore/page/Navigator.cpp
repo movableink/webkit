@@ -435,29 +435,6 @@ void Navigator::clearAppBadge(Ref<DeferredPromise>&& promise)
     setAppBadge(0, WTFMove(promise));
 }
 
-void Navigator::setClientBadge(std::optional<unsigned long long> badge, Ref<DeferredPromise>&& promise)
-{
-    RefPtr frame = this->frame();
-    if (!frame) {
-        promise->reject();
-        return;
-    }
-
-    RefPtr page = frame->page();
-    if (!page) {
-        promise->reject();
-        return;
-    }
-
-    page->badgeClient().setClientBadge(*page, SecurityOriginData::fromFrame(frame.get()), badge);
-    promise->resolve();
-}
-
-void Navigator::clearClientBadge(Ref<DeferredPromise>&& promise)
-{
-    setClientBadge(0, WTFMove(promise));
-}
-
 int Navigator::maxTouchPoints() const
 {
 #if ENABLE(IOS_TOUCH_EVENTS) && !PLATFORM(MACCATALYST)

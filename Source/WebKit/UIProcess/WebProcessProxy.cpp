@@ -2885,14 +2885,6 @@ void WebProcessProxy::setAppBadge(std::optional<WebPageProxyIdentifier> pageIden
         page->uiClient().updateAppBadge(*page, origin, badge);
 }
 
-void WebProcessProxy::setClientBadge(WebPageProxyIdentifier pageIdentifier, const SecurityOriginData& origin, std::optional<uint64_t> badge)
-{
-    // This page might have gone away since the WebContent process sent this message,
-    // and that's just fine.
-    if (RefPtr page = m_pageMap.get(pageIdentifier))
-        page->uiClient().updateClientBadge(*page, origin, badge);
-}
-
 const WeakHashSet<WebProcessProxy>* WebProcessProxy::serviceWorkerClientProcesses() const
 {
     if (m_serviceWorkerInformation)

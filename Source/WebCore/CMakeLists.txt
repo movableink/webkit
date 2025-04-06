@@ -297,7 +297,6 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/audiosession/DOMAudioSession.idl
     Modules/audiosession/Navigator+AudioSession.idl
 
-    Modules/badge/Navigator+Badge.idl
     Modules/badge/NavigatorBadge.idl
 
     Modules/beacon/Navigator+Beacon.idl
