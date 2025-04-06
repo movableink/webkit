@@ -75,37 +75,41 @@ ProfilerSupport& ProfilerSupport::singleton()
 }
 
 ProfilerSupport::ProfilerSupport()
+    : m_queue(WorkQueue::create("JSC PerfLog"_s))
 {
-    StringPrintStream filename;
-    if (auto* optionalDirectory = Options::textMarkersDirectory())
-        filename.print(optionalDirectory);
-    else
-        filename.print("/tmp");
-    filename.print("/marker-", getCurrentProcessID(), ".txt");
+    if (Options::useTextMarkers()) {
+        StringPrintStream filename;
+        if (auto* optionalDirectory = Options::textMarkersDirectory())
+            filename.print(optionalDirectory);
+        else
+            filename.print("/tmp");
+        filename.print("/marker-", getCurrentProcessID(), ".txt");
 
-    m_fd = open(filename.toCString().data(), O_CREAT | O_TRUNC | O_RDWR, 0666);
-    RELEASE_ASSERT(m_fd != -1);
+        m_fd = open(filename.toCString().data(), O_CREAT | O_TRUNC | O_RDWR, 0666);
+        RELEASE_ASSERT(m_fd != -1);
 
 #if OS(LINUX)
-    // Linux perf command records this mmap operation in perf.data as a metadata to the JIT perf annotations.
-    // We do not use this mmap-ed memory region actually.
-    m_marker = mmap(nullptr, pageSize(), PROT_READ | PROT_EXEC, MAP_PRIVATE, m_fd, 0);
-    RELEASE_ASSERT(m_marker != MAP_FAILED);
+        // Linux perf command records this mmap operation in perf.data as a metadata to the JIT perf annotations.
+        // We do not use this mmap-ed memory region actually.
+        auto* marker = mmap(nullptr, pageSize(), PROT_READ | PROT_EXEC, MAP_PRIVATE, m_fd, 0);
+        RELEASE_ASSERT(marker != MAP_FAILED);
 #endif
 
-    auto* file = fdopen(m_fd, "wb");
-    RELEASE_ASSERT(file);
+        auto* file = fdopen(m_fd, "wb");
+        RELEASE_ASSERT(file);
 
-    m_file = makeUnique<FilePrintStream>(file, FilePrintStream::Adopt);
-    RELEASE_ASSERT(m_file);
+        m_fileStream = makeUnique<FilePrintStream>(file, FilePrintStream::Adopt);
+        RELEASE_ASSERT(m_fileStream);
+    }
 }
 
-static void write(const AbstractLocker&, FilePrintStream& stream, uint64_t start, uint64_t end, const CString& message)
+void ProfilerSupport::write(const AbstractLocker&, uint64_t start, uint64_t end, const CString& message)
 {
-    stream.println(start, " ", end, " ", message);
+    m_fileStream->println(start, " ", end, " ", message);
+    m_fileStream->flush();
 }
 
-void ProfilerSupport::markStart(const void* identifier, Category category, const CString&)
+void ProfilerSupport::markStart(const void* identifier, Category category, CString&&)
 {
     if (!Options::useTextMarkers())
         return;
@@ -114,48 +118,54 @@ void ProfilerSupport::markStart(const void* identifier, Category category, const
 
     auto& profiler = singleton();
 
-    Locker locker { profiler.m_lock };
+    Locker locker { profiler.m_tableLock };
     auto& table = profiler.m_markers[static_cast<unsigned>(category)];
     table.add(identifier, generateTimestamp());
 }
 
-void ProfilerSupport::markEnd(const void* identifier, Category category, const CString& message)
+void ProfilerSupport::markEnd(const void* identifier, Category category, CString&& message)
 {
-    UNUSED_PARAM(identifier);
     if (!Options::useTextMarkers())
         return;
     if (!identifier)
         return;
 
+    auto timestamp = generateTimestamp();
+    uint64_t start = timestamp;
+    uint64_t end = timestamp;
+
     auto& profiler = singleton();
+    {
+        Locker locker { profiler.m_tableLock };
+        auto& table = profiler.m_markers[static_cast<unsigned>(category)];
 
-    Locker locker { profiler.m_lock };
-    auto& table = profiler.m_markers[static_cast<unsigned>(category)];
-
-    uint64_t start = generateTimestamp();
-    uint64_t end = start;
-
-    auto iterator = table.find(identifier);
-    if (iterator != table.end()) {
-        start = iterator->value;
-        table.remove(iterator);
+        auto iterator = table.find(identifier);
+        if (iterator != table.end()) {
+            start = iterator->value;
+            table.remove(iterator);
+        }
     }
 
-    write(locker, *profiler.m_file, start, end, message);
+    profiler.queue().dispatch([message = WTFMove(message), start, end] {
+        auto& profiler = singleton();
+        Locker locker { profiler.m_lock };
+        profiler.write(locker, start, end, message);
+    });
 }
 
-void ProfilerSupport::mark(const void* identifier, Category category, const CString& message)
+void ProfilerSupport::mark(const void* identifier, Category, CString&& message)
 {
-    UNUSED_PARAM(identifier);
-    UNUSED_PARAM(category);
     if (!Options::useTextMarkers())
         return;
+    if (!identifier)
+        return;
 
-    auto& profiler = singleton();
-
-    Locker locker { profiler.m_lock };
-    uint64_t timestamp = generateTimestamp();
-    write(locker, *profiler.m_file, timestamp, timestamp, message);
+    auto timestamp = generateTimestamp();
+    singleton().queue().dispatch([message = WTFMove(message), timestamp] {
+        auto& profiler = singleton();
+        Locker locker { profiler.m_lock };
+        profiler.write(locker, timestamp, timestamp, message);
+    });
 }
 
 } // namespace JSC

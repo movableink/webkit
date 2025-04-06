@@ -578,7 +578,7 @@ void JSGlobalObject::startSignpost(String&& message)
     UNUSED_VARIABLE(identifier);
     auto string = message.ascii();
     WTFBeginSignpostAlways(identifier, JSCJSGlobalObject, "%" PUBLIC_LOG_STRING, string.data());
-    ProfilerSupport::markStart(identifier, ProfilerSupport::Category::JSGlobalObjectSignpost, string);
+    ProfilerSupport::markStart(identifier, ProfilerSupport::Category::JSGlobalObjectSignpost, WTFMove(string));
 }
 
 void JSGlobalObject::stopSignpost(String&& message)
@@ -589,7 +589,7 @@ void JSGlobalObject::stopSignpost(String&& message)
     UNUSED_VARIABLE(identifier);
     auto string = message.ascii();
     WTFEndSignpostAlways(identifier, JSCJSGlobalObject, "%" PUBLIC_LOG_STRING, string.data());
-    ProfilerSupport::markEnd(identifier, ProfilerSupport::Category::JSGlobalObjectSignpost, string);
+    ProfilerSupport::markEnd(identifier, ProfilerSupport::Category::JSGlobalObjectSignpost, WTFMove(string));
     --activeJSGlobalObjectSignpostIntervalCount;
 }
 

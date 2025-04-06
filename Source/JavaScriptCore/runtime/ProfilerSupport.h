@@ -31,6 +31,7 @@
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WorkQueue.h>
 #include <wtf/text/CString.h>
 
 namespace JSC {
@@ -53,20 +54,26 @@ public:
     static constexpr unsigned numberOfCategories = 0 JSC_PROFILER_SUPPORT_CATEGORY(JSC_COUNT_CATEGORY);
 #undef JSC_COUNT_CATEGORY
 
-    static void markStart(const void*, Category, const CString&);
-    static void markEnd(const void*, Category, const CString&);
-    static void mark(const void*, Category, const CString&);
+    static void markStart(const void*, Category, CString&&);
+    static void markEnd(const void*, Category, CString&&);
+    static void mark(const void*, Category, CString&&);
+
+    WorkQueue& queue() { return m_queue.get(); }
 
     static uint64_t generateTimestamp();
 
-private:
-    ProfilerSupport();
     static ProfilerSupport& singleton();
 
-    void* m_marker { nullptr };
-    std::unique_ptr<FilePrintStream> m_file;
+private:
+    ProfilerSupport();
+
+    void write(const AbstractLocker&, uint64_t start, uint64_t end, const CString& message) WTF_REQUIRES_LOCK(m_lock);
+
+    const Ref<WorkQueue> m_queue;
+    std::unique_ptr<FilePrintStream> m_fileStream;
     std::array<HashMap<const void*, uint64_t>, numberOfCategories> m_markers;
     int m_fd { -1 };
+    Lock m_tableLock;
     Lock m_lock;
 };
 

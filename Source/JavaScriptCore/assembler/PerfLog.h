@@ -33,7 +33,6 @@
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMalloc.h>
-#include <wtf/WorkQueue.h>
 #include <wtf/text/CString.h>
 
 namespace JSC {
@@ -52,7 +51,6 @@ private:
     void write(const AbstractLocker&, const void*, size_t) WTF_REQUIRES_LOCK(m_lock);
     void flush(const AbstractLocker&) WTF_REQUIRES_LOCK(m_lock);
 
-    const Ref<WorkQueue> m_queue;
     FILE* m_file { nullptr };
     void* m_marker { nullptr };
     uint64_t m_codeIndex { 0 };

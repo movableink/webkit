@@ -172,7 +172,6 @@ static inline uint32_t getCurrentThreadID()
 }
 
 PerfLog::PerfLog()
-    : m_queue(WorkQueue::create("JSC PerfLog"_s))
 {
     {
         StringPrintStream filename;
@@ -219,7 +218,7 @@ void PerfLog::log(CString&& name, MacroAssemblerCodeRef<LinkBufferPtrTag> code)
 {
     auto timestamp = ProfilerSupport::generateTimestamp();
     auto tid = getCurrentThreadID();
-    singleton().m_queue->dispatch([name = WTFMove(name), code, tid, timestamp] {
+    ProfilerSupport::singleton().queue().dispatch([name = WTFMove(name), code, tid, timestamp] {
         PerfLog& logger = singleton();
         size_t size = code.size();
         auto* executableAddress = code.code().untaggedPtr<const uint8_t*>();
