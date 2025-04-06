@@ -67,21 +67,20 @@ RetainPtr<SecKeyRef> createPrivateKey()
 
 std::pair<Vector<uint8_t>, Vector<uint8_t>> credentialIdAndCosePubKeyForPrivateKey(RetainPtr<SecKeyRef> privateKey)
 {
-    RetainPtr<CFDataRef> publicKeyDataRef;
+    RetainPtr<NSData> nsPublicKeyData;
     {
-        auto publicKey = adoptCF(SecKeyCopyPublicKey(privateKey.get()));
+        RetainPtr publicKey = adoptCF(SecKeyCopyPublicKey(privateKey.get()));
         CFErrorRef errorRef = nullptr;
-        publicKeyDataRef = adoptCF(SecKeyCopyExternalRepresentation(publicKey.get(), &errorRef));
-        auto retainError = adoptCF(errorRef);
+        nsPublicKeyData = bridge_cast(adoptCF(SecKeyCopyExternalRepresentation(publicKey.get(), &errorRef)));
+        RetainPtr retainError = adoptCF(errorRef);
         ASSERT(!errorRef);
-        ASSERT(((NSData *)publicKeyDataRef.get()).length == (1 + 2 * ES256FieldElementLength)); // 04 | X | Y
+        ASSERT(nsPublicKeyData.get().length == (1 + 2 * ES256FieldElementLength)); // 04 | X | Y
     }
-    NSData *nsPublicKeyData = (NSData *)publicKeyDataRef.get();
 
     Vector<uint8_t> credentialId;
     {
         auto digest = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_1);
-        digest->addBytes(span(nsPublicKeyData));
+        digest->addBytes(span(nsPublicKeyData.get()));
         credentialId = digest->computeHash();
     }
 

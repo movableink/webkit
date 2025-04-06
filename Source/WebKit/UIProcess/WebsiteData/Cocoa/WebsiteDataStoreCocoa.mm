@@ -842,8 +842,8 @@ void WebsiteDataStore::initializeManagedDomains(ForceReinitialization forceReini
 #endif
         managedKeyExists = !!crossSiteTrackingPreventionRelaxedDomains;
     
-        NSString *bundleID = [[NSBundle mainBundle] bundleIdentifier];
-        bool shouldUseRelaxedDomainsIfAvailable = isSafari || isRunningTest(bundleID) || [crossSiteTrackingPreventionRelaxedApps containsObject:bundleID];
+        RetainPtr<NSString> bundleID = [[NSBundle mainBundle] bundleIdentifier];
+        bool shouldUseRelaxedDomainsIfAvailable = isSafari || isRunningTest(bundleID.get()) || [crossSiteTrackingPreventionRelaxedApps containsObject:bundleID.get()];
         if (!shouldUseRelaxedDomainsIfAvailable)
             return;
 
