@@ -125,7 +125,7 @@ void WebExtensionURLSchemeHandler::platformStartTask(WebPageProxy& page, WebURLS
         auto mimeType = extension->resourceMIMETypeForPath(requestURL.path().toString());
         resourceData = extensionContext->localizedResourceData(resourceData, mimeType);
 
-        auto *urlResponse = [[NSHTTPURLResponse alloc] initWithURL:requestURL statusCode:200 HTTPVersion:nil headerFields:@{
+        auto *urlResponse = [[NSHTTPURLResponse alloc] initWithURL:requestURL.createNSURL().get() statusCode:200 HTTPVersion:nil headerFields:@{
             @"Access-Control-Allow-Origin": @"*",
             @"Content-Security-Policy": extension->contentSecurityPolicy(),
             @"Content-Length": @(resourceData->size()).stringValue,

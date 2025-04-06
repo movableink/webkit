@@ -6719,7 +6719,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         return nil;
 
     // We arbitrarily choose the first icon in the list if there is more than one.
-    return (NSURL *)linkIcons[0].url;
+    return linkIcons[0].url.createNSURL().autorelease();
 }
 #endif
 

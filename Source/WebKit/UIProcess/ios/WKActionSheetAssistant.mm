@@ -305,13 +305,13 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (!WebCore::DataDetection::canBePresentedByDataDetectors(information.url))
         return;
 
-    NSURL *targetURL = information.url;
+    RetainPtr targetURL = information.url.createNSURL();
     if (!targetURL)
         return;
 
     auto *controller = [PAL::getDDDetectionControllerClass() sharedController];
     if ([controller respondsToSelector:@selector(interactionDidStartForURL:)])
-        [controller interactionDidStartForURL:targetURL];
+        [controller interactionDidStartForURL:targetURL.get()];
 #endif
 }
 
@@ -335,7 +335,7 @@ static bool isJavaScriptURL(NSURL *url)
     if (!_positionInformation)
         return;
 
-    NSURL *targetURL = _positionInformation->url;
+    RetainPtr targetURL = _positionInformation->url.createNSURL();
     // FIXME: We should check if Javascript is enabled in the preferences.
 
     _interactionSheet = adoptNS([[WKActionSheet alloc] init]);
@@ -344,10 +344,10 @@ static bool isJavaScriptURL(NSURL *url)
 
     NSString *titleString = nil;
     if (showLinkTitle && [[targetURL absoluteString] length]) {
-        if (isJavaScriptURL(targetURL))
+        if (isJavaScriptURL(targetURL.get()))
             titleString = WEB_UI_STRING_KEY("JavaScript", "JavaScript Action Sheet Title", "Title for action sheet for JavaScript link");
         else
-            titleString = WTF::userVisibleString(targetURL);
+            titleString = WTF::userVisibleString(targetURL.get());
     } else if (defaultTitle)
         titleString = defaultTitle;
     else
@@ -392,11 +392,11 @@ static bool isJavaScriptURL(NSURL *url)
         return;
 
     void (^showImageSheetWithAlternateURLBlock)(NSURL*, NSDictionary *userInfo) = ^(NSURL *alternateURL, NSDictionary *userInfo) {
-        NSURL *targetURL = _positionInformation->url;
-        NSURL *imageURL = _positionInformation->imageURL;
+        RetainPtr targetURL = _positionInformation->url.createNSURL();
+        RetainPtr imageURL = _positionInformation->imageURL.createNSURL();
         if (!targetURL)
             targetURL = alternateURL;
-        auto elementInfo = adoptNS([[_WKActivatedElementInfo alloc] _initWithType:_WKActivatedElementTypeImage URL:targetURL imageURL:imageURL userInfo:userInfo information:*_positionInformation]);
+        auto elementInfo = adoptNS([[_WKActivatedElementInfo alloc] _initWithType:_WKActivatedElementTypeImage URL:targetURL.get() imageURL:imageURL.get() userInfo:userInfo information:*_positionInformation]);
         if ([delegate respondsToSelector:@selector(actionSheetAssistant:showCustomSheetForElement:)] && [delegate actionSheetAssistant:self showCustomSheetForElement:elementInfo.get()])
             return;
         auto defaultActions = [self defaultActionsForImageSheet:elementInfo.get()];
@@ -648,13 +648,13 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (![self synchronouslyRetrievePositionInformation])
         return;
 
-    NSURL *targetURL = _positionInformation->url;
+    RetainPtr targetURL = _positionInformation->url.createNSURL();
     if (!targetURL) {
         _needsLinkIndicator = NO;
         return;
     }
 
-    auto elementInfo = adoptNS([[_WKActivatedElementInfo alloc] _initWithType:_WKActivatedElementTypeLink URL:targetURL information:*_positionInformation]);
+    auto elementInfo = adoptNS([[_WKActivatedElementInfo alloc] _initWithType:_WKActivatedElementTypeLink URL:targetURL.get() information:*_positionInformation]);
     if ([_delegate respondsToSelector:@selector(actionSheetAssistant:showCustomSheetForElement:)] && [_delegate actionSheetAssistant:self showCustomSheetForElement:elementInfo.get()]) {
         _needsLinkIndicator = NO;
         return;
@@ -776,7 +776,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (!WebCore::DataDetection::canBePresentedByDataDetectors(_positionInformation->url))
         return;
 
-    NSURL *targetURL = _positionInformation->url;
+    RetainPtr targetURL = _positionInformation->url.createNSURL();
     if (!targetURL)
         return;
 
@@ -789,14 +789,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if ([_delegate respondsToSelector:@selector(selectedTextForActionSheetAssistant:)])
         textAtSelection = [_delegate selectedTextForActionSheetAssistant:self];
 
-    if ([controller respondsToSelector:@selector(shouldImmediatelyLaunchDefaultActionForURL:)] && [controller shouldImmediatelyLaunchDefaultActionForURL:targetURL]) {
-        auto action = [controller defaultActionForURL:targetURL results:_positionInformation->dataDetectorResults.get() context:context];
+    if ([controller respondsToSelector:@selector(shouldImmediatelyLaunchDefaultActionForURL:)] && [controller shouldImmediatelyLaunchDefaultActionForURL:targetURL.get()]) {
+        auto action = [controller defaultActionForURL:targetURL.get() results:_positionInformation->dataDetectorResults.get() context:context];
         auto *elementAction = [self _elementActionForDDAction:action];
         [elementAction _runActionWithElementInfo:_elementInfo.get() forActionSheetAssistant:self];
         return;
     }
 
-    NSArray *dataDetectorsActions = [controller actionsForURL:targetURL identifier:_positionInformation->dataDetectorIdentifier selectedText:textAtSelection results:_positionInformation->dataDetectorResults.get() context:context];
+    NSArray *dataDetectorsActions = [controller actionsForURL:targetURL.get() identifier:_positionInformation->dataDetectorIdentifier selectedText:textAtSelection results:_positionInformation->dataDetectorResults.get() context:context];
     if ([dataDetectorsActions count] == 0)
         return;
     
@@ -811,7 +811,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         [elementActions addObject:elementAction];
     }
 
-    NSString *title = [controller titleForURL:targetURL results:_positionInformation->dataDetectorResults.get() context:context];
+    NSString *title = [controller titleForURL:targetURL.get() results:_positionInformation->dataDetectorResults.get() context:context];
     [self _createSheetWithElementActions:elementActions defaultTitle:title showLinkTitle:NO];
     if (!_interactionSheet)
         return;
@@ -923,7 +923,7 @@ static NSMutableArray<UIMenuElement *> *menuElementsFromDefaultActions(RetainPtr
             textAtSelection = [_delegate selectedTextForActionSheetAssistant:self];
 
         NSDictionary *newContext = nil;
-        DDResultRef ddResult = [controller resultForURL:_positionInformation->url identifier:_positionInformation->dataDetectorIdentifier selectedText:textAtSelection results:_positionInformation->dataDetectorResults.get() context:context extendedContext:&newContext];
+        DDResultRef ddResult = [controller resultForURL:_positionInformation->url.createNSURL().get() identifier:_positionInformation->dataDetectorIdentifier selectedText:textAtSelection results:_positionInformation->dataDetectorResults.get() context:context extendedContext:&newContext];
 
         CGRect sourceRect;
         if (_positionInformation->isLink)
@@ -936,7 +936,7 @@ static NSMutableArray<UIMenuElement *> *menuElementsFromDefaultActions(RetainPtr
 
         if (ddResult)
             return [ddContextMenuActionClass contextMenuConfigurationWithResult:ddResult inView:_view.getAutoreleased() context:finalContext menuIdentifier:nil];
-        return [ddContextMenuActionClass contextMenuConfigurationWithURL:_positionInformation->url inView:_view.getAutoreleased() context:finalContext menuIdentifier:nil];
+        return [ddContextMenuActionClass contextMenuConfigurationWithURL:_positionInformation->url.createNSURL().get() inView:_view.getAutoreleased() context:finalContext menuIdentifier:nil];
     }
 #endif // ENABLE(DATA_DETECTION)
 

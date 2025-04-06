@@ -36,10 +36,10 @@
     if (!(self = [super init]))
         return nil;
 
-    _sourceURL = [spatialBackdropSource.m_sourceURL copy];
-    _modelURL = [spatialBackdropSource.m_modelURL copy];
+    _sourceURL = [spatialBackdropSource.m_sourceURL.createNSURL() copy];
+    _modelURL = [spatialBackdropSource.m_modelURL.createNSURL() copy];
     if (spatialBackdropSource.m_environmentMapURL)
-        _environmentMapURL = [spatialBackdropSource.m_environmentMapURL.value() copy];
+        _environmentMapURL = [spatialBackdropSource.m_environmentMapURL.value().createNSURL() copy];
 
     return self;
 }

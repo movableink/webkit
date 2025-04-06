@@ -72,7 +72,7 @@ bool CoreIPCError::hasValidUserInfo(const RetainPtr<CFDictionaryRef>& userInfo)
             RetainPtr failingURLString = dynamic_objc_cast<NSString>(nsErrorFailingURLString.get());
             if (!failingURLString)
                 return false;
-            if (![failingURL isEqual:URL(failingURLString.get())])
+            if (![failingURL isEqual:URL(failingURLString.get()).createNSURL().get()])
                 return false;
         }
     }

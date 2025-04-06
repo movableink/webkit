@@ -193,7 +193,7 @@ static void checkURLArgument(NSURL *url)
 
 - (NSURL *)httpProxy
 {
-    return _configuration->httpProxy();
+    return _configuration->httpProxy().createNSURL().autorelease();
 }
 
 - (void)setHTTPProxy:(NSURL *)proxy
@@ -203,7 +203,7 @@ static void checkURLArgument(NSURL *url)
 
 - (NSURL *)httpsProxy
 {
-    return _configuration->httpsProxy();
+    return _configuration->httpsProxy().createNSURL().autorelease();
 }
 
 - (void)setHTTPSProxy:(NSURL *)proxy
@@ -761,7 +761,7 @@ static WebKit::UnifiedOriginStorageLevel toUnifiedOriginStorageLevel(_WKUnifiedO
 
 - (NSURL *)standaloneApplicationURL
 {
-    return _configuration->standaloneApplicationURL();
+    return _configuration->standaloneApplicationURL().createNSURL().autorelease();
 }
 
 - (void)setStandaloneApplicationURL:(NSURL *)url

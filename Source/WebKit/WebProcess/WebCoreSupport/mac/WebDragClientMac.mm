@@ -143,7 +143,7 @@ void WebDragClient::declareAndWriteDragImage(const String& pasteboardName, Eleme
     if (title.isEmpty()) {
         title = url.lastPathComponent().toString();
         if (title.isEmpty())
-            title = WTF::userVisibleString(url);
+            title = WTF::userVisibleString(url.createNSURL().get());
     }
 
     auto archive = LegacyWebArchive::create(element);
@@ -180,7 +180,7 @@ void WebDragClient::declareAndWriteDragImage(const String& pasteboardName, Eleme
             filename = downloadFilename;
     }
 
-    m_page->send(Messages::WebPageProxy::SetPromisedDataForImage(pasteboardName, WTFMove(*imageHandle), filename, extension, title, String([[response URL] absoluteString]), WTF::userVisibleString(url), WTFMove(*archiveHandle), element.document().originIdentifierForPasteboard()));
+    m_page->send(Messages::WebPageProxy::SetPromisedDataForImage(pasteboardName, WTFMove(*imageHandle), filename, extension, title, String([[response URL] absoluteString]), WTF::userVisibleString(url.createNSURL().get()), WTFMove(*archiveHandle), element.document().originIdentifierForPasteboard()));
 }
 
 #else

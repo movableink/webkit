@@ -775,13 +775,12 @@ void MediaPlayerPrivateAVFoundationObjC::synchronizeTextTrackState()
     }
 }
 
-static NSURL *canonicalURL(const URL& url)
+static RetainPtr<NSURL> canonicalURL(const URL& url)
 {
-    NSURL *cocoaURL = url;
     if (url.isEmpty())
-        return cocoaURL;
+        return URL::emptyNSURL();
 
-    return URLByCanonicalizingURL(cocoaURL);
+    return URLByCanonicalizingURL(url.createNSURL().get());
 }
 
 void MediaPlayerPrivateAVFoundationObjC::createAVAssetForURL(const URL& url)
@@ -984,19 +983,19 @@ void MediaPlayerPrivateAVFoundationObjC::createAVAssetForURL(const URL& url, Ret
         [options setObject:@YES forKey:AVURLAssetShouldEnableLegacyWebKitCompatibilityModeForContentKeyRequests];
 #endif
 
-    NSURL *cocoaURL = canonicalURL(url);
+    RetainPtr nsURL = canonicalURL(url);
 
     @try {
-        m_avAsset = adoptNS([PAL::allocAVURLAssetInstance() initWithURL:cocoaURL options:options.get()]);
+        m_avAsset = adoptNS([PAL::allocAVURLAssetInstance() initWithURL:nsURL.get() options:options.get()]);
     } @catch(NSException *exception) {
-        ERROR_LOG(LOGIDENTIFIER, "-[AVURLAssetInstance initWithURL:cocoaURL options:] threw an exception: ", exception.name, ", reason : ", exception.reason);
-        cocoaURL = canonicalURL(conformFragmentIdentifierForURL(url));
+        ERROR_LOG(LOGIDENTIFIER, "-[AVURLAssetInstance initWithURL:nsURL.get() options:] threw an exception: ", exception.name, ", reason : ", exception.reason);
+        nsURL = canonicalURL(conformFragmentIdentifierForURL(url));
 
         @try {
-            m_avAsset = adoptNS([PAL::allocAVURLAssetInstance() initWithURL:cocoaURL options:options.get()]);
+            m_avAsset = adoptNS([PAL::allocAVURLAssetInstance() initWithURL:nsURL.get() options:options.get()]);
         } @catch(NSException *exception) {
             ASSERT_NOT_REACHED();
-            ERROR_LOG(LOGIDENTIFIER, "-[AVURLAssetInstance initWithURL:cocoaURL options:] threw a second exception, bailing: ", exception.name, ", reason : ", exception.reason);
+            ERROR_LOG(LOGIDENTIFIER, "-[AVURLAssetInstance initWithURL:nsURL.get() options:] threw a second exception, bailing: ", exception.name, ", reason : ", exception.reason);
             setNetworkState(MediaPlayer::NetworkState::FormatError);
             return;
         }

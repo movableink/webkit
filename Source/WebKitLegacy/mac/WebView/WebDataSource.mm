@@ -355,7 +355,7 @@ void addTypesFromClass(NSMutableDictionary *allTypes, Class objCClass, NSArray *
     const URL& url = toPrivate(_private)->loader->url();
     if (url.isEmpty())
         return nil;
-    return url;
+    return url.createNSURL().autorelease();
 }
 
 - (WebView *)_webView
@@ -522,7 +522,7 @@ void addTypesFromClass(NSMutableDictionary *allTypes, Class objCClass, NSArray *
     const URL& unreachableURL = toPrivate(_private)->loader->unreachableURL();
     if (unreachableURL.isEmpty())
         return nil;
-    return unreachableURL;
+    return unreachableURL.createNSURL().autorelease();
 }
 
 - (WebArchive *)webArchive

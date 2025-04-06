@@ -1636,7 +1636,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     URL url = self.axBackingObject->url();
     if (url.isNull())
         return nil;
-    return (NSURL*)url;
+    return url.createNSURL().autorelease();
 }
 
 - (CGPoint)_accessibilityConvertPointToViewSpace:(CGPoint)point

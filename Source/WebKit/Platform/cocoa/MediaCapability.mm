@@ -38,9 +38,9 @@ namespace WebKit {
 
 static RetainPtr<BEMediaEnvironment> createMediaEnvironment(const URL& webPageURL)
 {
-    NSURL *protocolHostAndPortURL = URL { webPageURL.protocolHostAndPort() };
+    RetainPtr protocolHostAndPortURL = URL { webPageURL.protocolHostAndPort() }.createNSURL();
     RELEASE_ASSERT(protocolHostAndPortURL);
-    return adoptNS([[BEMediaEnvironment alloc] initWithWebPageURL:protocolHostAndPortURL]);
+    return adoptNS([[BEMediaEnvironment alloc] initWithWebPageURL:protocolHostAndPortURL.get()]);
 }
 
 Ref<MediaCapability> MediaCapability::create(URL&& url)

@@ -254,7 +254,7 @@ void Editor::writeImageToPasteboard(Pasteboard& pasteboard, Element& imageElemen
 
     pasteboardImage.url.url = url;
     pasteboardImage.url.title = title;
-    pasteboardImage.url.userVisibleForm = WTF::userVisibleString(pasteboardImage.url.url);
+    pasteboardImage.url.userVisibleForm = WTF::userVisibleString(pasteboardImage.url.url.createNSURL().get());
     if (auto* buffer = cachedImage->resourceBuffer())
         pasteboardImage.resourceData = buffer->makeContiguous();
     pasteboardImage.resourceMIMEType = cachedImage->response().mimeType();

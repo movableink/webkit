@@ -1009,7 +1009,7 @@ WKWebView *WebExtensionAction::popupWebView()
     extensionContext->addPopupPage(Ref { *m_popupWebView.get()._page.get() }, *this);
 
     auto url = URL { extensionContext->baseURL(), popupPath() };
-    [m_popupWebView loadRequest:[NSURLRequest requestWithURL:url]];
+    [m_popupWebView loadRequest:[NSURLRequest requestWithURL:url.createNSURL().get()]];
 
     return m_popupWebView.get();
 }

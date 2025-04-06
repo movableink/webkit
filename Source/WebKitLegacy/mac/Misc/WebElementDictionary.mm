@@ -221,12 +221,12 @@ static NSString* NSStringOrNil(String coreString)
 
 - (NSURL *)_absoluteImageURL
 {
-    return _result->absoluteImageURL();
+    return _result->absoluteImageURL().createNSURL().autorelease();
 }
 
 - (NSURL *)_absoluteMediaURL
 {
-    return _result->absoluteMediaURL();
+    return _result->absoluteMediaURL().createNSURL().autorelease();
 }
 
 - (NSNumber *)_isSelected
@@ -242,7 +242,7 @@ static NSString* NSStringOrNil(String coreString)
 
 - (NSURL *)_absoluteLinkURL
 {
-    return _result->absoluteLinkURL();
+    return _result->absoluteLinkURL().createNSURL().autorelease();
 }
 
 - (WebFrame *)_targetWebFrame

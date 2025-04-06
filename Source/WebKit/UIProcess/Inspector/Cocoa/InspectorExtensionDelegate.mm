@@ -103,7 +103,7 @@ void InspectorExtensionDelegate::InspectorExtensionClient::didNavigateExtensionT
     if (!delegate)
         return;
 
-    [delegate inspectorExtension:m_inspectorExtensionDelegate->m_inspectorExtension.get().get() didNavigateTabWithIdentifier:extensionTabID newURL:newURL];
+    [delegate inspectorExtension:m_inspectorExtensionDelegate->m_inspectorExtension.get().get() didNavigateTabWithIdentifier:extensionTabID newURL:newURL.createNSURL().get()];
 }
 
 void InspectorExtensionDelegate::InspectorExtensionClient::inspectedPageDidNavigate(const WTF::URL& newURL)
@@ -115,7 +115,7 @@ void InspectorExtensionDelegate::InspectorExtensionClient::inspectedPageDidNavig
     if (!delegate)
         return;
 
-    [delegate inspectorExtension:m_inspectorExtensionDelegate->m_inspectorExtension.get().get() inspectedPageDidNavigate:newURL];
+    [delegate inspectorExtension:m_inspectorExtensionDelegate->m_inspectorExtension.get().get() inspectedPageDidNavigate:newURL.createNSURL().get()];
 }
 
 } // namespace WebKit

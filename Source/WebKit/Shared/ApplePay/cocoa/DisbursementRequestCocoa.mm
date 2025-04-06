@@ -73,7 +73,7 @@ RetainPtr<PKDisbursementPaymentRequest> platformDisbursementRequest(const AppleP
         [disbursementRequest setRequiredRecipientContactFields:createNSArray(WTFMove(*requiredRecipientContactFields), platformContactField).get()];
 
     auto disbursementPaymentRequest = adoptNS([PAL::allocPKDisbursementPaymentRequestInstance() initWithDisbursementRequest:disbursementRequest.get()]);
-    [disbursementPaymentRequest setOriginatingURL:originatingURL];
+    [disbursementPaymentRequest setOriginatingURL:originatingURL.createNSURL().get()];
     [disbursementPaymentRequest setAPIType:PKPaymentRequestAPITypeWebPaymentRequest];
     return disbursementPaymentRequest;
 }

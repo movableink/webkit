@@ -119,7 +119,7 @@ static std::optional<WebCore::ApplicationManifest::Shortcut> makeVectorElement(c
         return nil;
 
     if (icon) {
-        _src = adoptNS([icon->src copy]);
+        _src = icon->src.createNSURL();
         _sizes = createNSArray(icon->sizes, [] (auto& size) -> NSString * {
             return size;
         });
@@ -213,7 +213,7 @@ static std::optional<WebCore::ApplicationManifest::Shortcut> makeVectorElement(c
 
     if (shortcut) {
         _name = adoptNS([shortcut->name copy]);
-        _url = adoptNS([shortcut->url copy]);
+        _url = shortcut->url.createNSURL();
         _icons = createNSArray(shortcut->icons, [] (auto& icon) {
             return adoptNS([[_WKApplicationManifestIcon alloc] initWithCoreIcon:&icon]);
         });
@@ -402,7 +402,7 @@ static NSString *nullableNSString(const WTF::String& string)
 
 - (NSURL *)scope
 {
-    return _applicationManifest->applicationManifest().scope;
+    return _applicationManifest->applicationManifest().scope.createNSURL().autorelease();
 }
 
 - (BOOL)isDefaultScope
@@ -412,12 +412,12 @@ static NSString *nullableNSString(const WTF::String& string)
 
 - (NSURL *)manifestURL
 {
-    return _applicationManifest->applicationManifest().manifestURL;
+    return _applicationManifest->applicationManifest().manifestURL.createNSURL().autorelease();
 }
 
 - (NSURL *)startURL
 {
-    return _applicationManifest->applicationManifest().startURL;
+    return _applicationManifest->applicationManifest().startURL.createNSURL().autorelease();
 }
 
 - (WebCore::CocoaColor *)backgroundColor
@@ -497,7 +497,7 @@ static NSString *nullableNSString(const WTF::String& string)
 
 - (NSURL *)manifestId
 {
-    return _applicationManifest->applicationManifest().id;
+    return _applicationManifest->applicationManifest().id.createNSURL().autorelease();
 }
 
 @end

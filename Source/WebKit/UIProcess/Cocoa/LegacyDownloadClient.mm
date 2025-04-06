@@ -181,7 +181,7 @@ void LegacyDownloadClient::legacyDidCancel(DownloadProxy& downloadProxy)
 void LegacyDownloadClient::willSendRequest(DownloadProxy& downloadProxy, WebCore::ResourceRequest&& request, const WebCore::ResourceResponse&, CompletionHandler<void(WebCore::ResourceRequest&&)>&& completionHandler)
 {
     if (m_delegateMethods.downloadDidReceiveServerRedirectToURL)
-        [m_delegate _download:[_WKDownload downloadWithDownload:wrapper(downloadProxy)] didReceiveServerRedirectToURL:request.url()];
+        [m_delegate _download:[_WKDownload downloadWithDownload:wrapper(downloadProxy)] didReceiveServerRedirectToURL:request.url().createNSURL().get()];
 
     completionHandler(WTFMove(request));
 }

@@ -480,7 +480,7 @@ WebHistoryItem *kit(HistoryItem* item)
     const URL& url = core(_private)->url();
     if (url.isEmpty())
         return nil;
-    return url;
+    return url.createNSURL().autorelease();
 }
 
 #if !PLATFORM(IOS_FAMILY)

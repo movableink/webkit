@@ -378,7 +378,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 - (NSURL *)_requiredWebExtensionBaseURL
 {
 #if ENABLE(WK_WEB_EXTENSIONS)
-    return self._protectedPageConfiguration->requiredWebExtensionBaseURL();
+    return self._protectedPageConfiguration->requiredWebExtensionBaseURL().createNSURL().autorelease();
 #else
     return nil;
 #endif

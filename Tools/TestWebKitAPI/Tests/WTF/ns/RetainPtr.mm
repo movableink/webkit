@@ -388,7 +388,7 @@ TEST(RETAIN_PTR_TEST_NAME, URLBridgeCast)
     uintptr_t nsURLPtr;
     @autoreleasepool {
         URL url("https://www.webkit.org"_str);
-        nsURL = static_cast<NSURL *>(url);
+        nsURL = url.createNSURL().get();
         nsURLPtr = reinterpret_cast<uintptr_t>(nsURL.get());
     }
 

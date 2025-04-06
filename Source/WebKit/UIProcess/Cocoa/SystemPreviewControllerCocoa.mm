@@ -133,15 +133,15 @@ static NSString * const _WKARQLWebsiteURLParameterKey = @"ARQLWebsiteURLParamete
     NSString *contentType = WebCore::UTIFromMIMEType("model/vnd.usdz+zip"_s);
 
 #if HAVE(ARKIT_QUICK_LOOK_PREVIEW_ITEM)
-    auto previewItem = adoptNS([WebKit::allocARQuickLookPreviewItemInstance() initWithFileAtURL:_downloadedURL]);
-    [previewItem setCanonicalWebPageURL:_originatingPageURL];
+    RetainPtr previewItem = adoptNS([WebKit::allocARQuickLookPreviewItemInstance() initWithFileAtURL:_downloadedURL.createNSURL().get()]);
+    [previewItem setCanonicalWebPageURL:_originatingPageURL.createNSURL().get()];
 
     _item = adoptNS([allocARQuickLookWebKitItemInstance() initWithPreviewItemProvider:_itemProvider.get() contentType:contentType previewTitle:@"Preview" fileSize:@(0) previewItem:previewItem.get()]);
     [_item setDelegate:self];
 
     if ([_item respondsToSelector:(@selector(setAdditionalParameters:))]) {
-        NSURL *urlParameter = _originatingPageURL;
-        [_item setAdditionalParameters:@{ _WKARQLWebsiteURLParameterKey: urlParameter }];
+        RetainPtr urlParameter = _originatingPageURL.createNSURL();
+        [_item setAdditionalParameters:@{ _WKARQLWebsiteURLParameterKey: urlParameter.get() }];
     }
 
 #else
@@ -492,7 +492,7 @@ void SystemPreviewController::loadStarted(const URL& localFileURL)
 
 #if PLATFORM(VISION)
     if ([getASVLaunchPreviewClass() respondsToSelector:@selector(beginPreviewApplicationWithURLs:is3DContent:websiteURL:completion:)])
-        [getASVLaunchPreviewClass() beginPreviewApplicationWithURLs:localFileURLs() is3DContent:YES websiteURL:m_downloadURL completion:^(NSError *error) { }];
+        [getASVLaunchPreviewClass() beginPreviewApplicationWithURLs:localFileURLs() is3DContent:YES websiteURL:m_downloadURL.createNSURL().get() completion:^(NSError *error) { }];
 #endif
 
     m_state = State::Loading;

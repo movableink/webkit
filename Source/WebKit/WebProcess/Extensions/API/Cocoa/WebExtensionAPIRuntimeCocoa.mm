@@ -171,7 +171,7 @@ NSURL *WebExtensionAPIRuntime::getURL(NSString *resourcePath, NSString **outExce
 {
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/runtime/getURL
 
-    return URL { extensionContext().baseURL(), resourcePath };
+    return URL { extensionContext().baseURL(), resourcePath }.createNSURL().autorelease();
 }
 
 NSDictionary *WebExtensionAPIRuntime::getManifest()

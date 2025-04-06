@@ -126,7 +126,7 @@
 
 - (NSURL *)URL
 {
-    return _frame->url();
+    return _frame->url().createNSURL().autorelease();
 }
 
 - (NSArray *)childFrames
@@ -164,8 +164,8 @@ static RetainPtr<NSArray> collectIcons(WebCore::LocalFrame* frame, OptionSet<Web
     RefPtr document = frame->document();
     if (!document)
         return @[];
-    return createNSArray(WebCore::LinkIconCollector(*document).iconsOfTypes(iconTypes), [] (auto&& icon) -> NSURL * {
-        return icon.url;
+    return createNSArray(WebCore::LinkIconCollector(*document).iconsOfTypes(iconTypes), [] (auto&& icon) {
+        return icon.url.createNSURL();
     });
 }
 

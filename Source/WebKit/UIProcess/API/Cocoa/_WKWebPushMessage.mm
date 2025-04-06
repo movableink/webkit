@@ -50,7 +50,7 @@
 
 - (NSURL *)scope
 {
-    return _message->scope();
+    return _message->scope().createNSURL().autorelease();
 }
 
 - (NSString *)partition

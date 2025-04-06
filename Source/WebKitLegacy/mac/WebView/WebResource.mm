@@ -166,20 +166,20 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
     auto* resource = _private->coreResource.get();
 
     RetainPtr<NSData> data;
-    NSURL *url = nil;
+    RetainPtr<NSURL> url;
     NSString *mimeType = nil, *textEncoding = nil, *frameName = nil;
     NSURLResponse *response = nil;
 
     if (resource) {
         data = resource->data().makeContiguous()->createNSData();
-        url = resource->url();
+        url = resource->url().createNSURL();
         mimeType = resource->mimeType();
         textEncoding = resource->textEncoding();
         frameName = resource->frameName();
         response = resource->response().nsURLResponse();
     }
     [encoder encodeObject:data.get() forKey:WebResourceDataKey];
-    [encoder encodeObject:url forKey:WebResourceURLKey];
+    [encoder encodeObject:url.get() forKey:WebResourceURLKey];
     [encoder encodeObject:mimeType forKey:WebResourceMIMETypeKey];
     [encoder encodeObject:textEncoding forKey:WebResourceTextEncodingNameKey];
     [encoder encodeObject:frameName forKey:WebResourceFrameNameKey];
@@ -212,7 +212,7 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
 
     if (!_private->coreResource)
         return nil;
-    return _private->coreResource->url();
+    return _private->coreResource->url().createNSURL().autorelease();
 }
 
 - (NSString *)MIMEType

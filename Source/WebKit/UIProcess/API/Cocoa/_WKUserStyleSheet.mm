@@ -78,7 +78,7 @@
 
 - (NSURL *)baseURL
 {
-    return _userStyleSheet->userStyleSheet().url();
+    return _userStyleSheet->userStyleSheet().url().createNSURL().autorelease();
 }
 
 - (BOOL)isForMainFrameOnly

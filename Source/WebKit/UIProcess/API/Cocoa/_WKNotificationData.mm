@@ -192,7 +192,7 @@ static NSString *dataKey = @"data";
 
 - (NSURL *)securityOrigin
 {
-    return (NSURL *)(URL { _coreData.originString });
+    return URL { _coreData.originString }.createNSURL().autorelease();
 }
 
 - (void)setServiceWorkerRegistrationURL:(NSURL *)serviceWorkerRegistrationURL
@@ -202,7 +202,7 @@ static NSString *dataKey = @"data";
 
 - (NSURL *)serviceWorkerRegistrationURL
 {
-    return (NSURL *)_coreData.serviceWorkerRegistrationURL;
+    return _coreData.serviceWorkerRegistrationURL.createNSURL().autorelease();
 }
 
 - (NSString *)identifier

@@ -179,7 +179,7 @@ static WKSyntheticClickType toWKSyntheticClickType(WebKit::WebMouseEventSyntheti
 
 - (NSURL *)_originalURL
 {
-    return Ref { *_navigationAction }->originalURL();
+    return Ref { *_navigationAction }->originalURL().createNSURL().autorelease();
 }
 
 - (BOOL)_isUserInitiated

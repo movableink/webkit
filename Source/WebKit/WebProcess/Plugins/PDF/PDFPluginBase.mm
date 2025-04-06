@@ -614,7 +614,7 @@ void PDFPluginBase::addArchiveResource()
 
     // Add just enough data for context menu handling and web archives to work.
     NSDictionary* headers = @{ @"Content-Disposition": m_suggestedFilename.createNSString().get(), @"Content-Type" : @"application/pdf" };
-    auto response = adoptNS([[NSHTTPURLResponse alloc] initWithURL:m_view->mainResourceURL() statusCode:200 HTTPVersion:(NSString*)kCFHTTPVersion1_1 headerFields:headers]);
+    RetainPtr response = adoptNS([[NSHTTPURLResponse alloc] initWithURL:m_view->mainResourceURL().createNSURL().get() statusCode:200 HTTPVersion:(NSString*)kCFHTTPVersion1_1 headerFields:headers]);
     ResourceResponse synthesizedResponse(response.get());
 
     RetainPtr data = originalData();
@@ -1136,7 +1136,7 @@ void PDFPluginBase::writeItemsToGeneralPasteboard(Vector<PasteboardItem>&& paste
                 .url = sanitizedURL,
                 .title = sanitizedURL.string(),
 #if PLATFORM(MAC)
-                .userVisibleForm = userVisibleString(sanitizedURL),
+                .userVisibleForm = WTF::userVisibleString(sanitizedURL.createNSURL().get()),
 #endif
             };
         }

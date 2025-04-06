@@ -101,7 +101,7 @@ void WebExtensionContext::runtimeOpenOptionsPage(CompletionHandler<void(Expected
     configuration.shouldAddToSelection = YES;
     configuration.window = frontmostWindow ? frontmostWindow->delegate() : nil;
     configuration.index = frontmostWindow ? frontmostWindow->tabs().size() : 0;
-    configuration.url = optionsPageURL();
+    configuration.url = optionsPageURL().createNSURL().get();
 
     [delegate webExtensionController:extensionController->wrapper() openNewTabUsingConfiguration:configuration forExtensionContext:wrapper() completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)](id<WKWebExtensionTab> newTab, NSError *error) mutable {
         if (error) {

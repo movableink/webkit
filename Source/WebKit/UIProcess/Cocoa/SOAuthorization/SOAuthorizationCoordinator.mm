@@ -72,14 +72,14 @@ void SOAuthorizationCoordinator::canAuthorize(const URL& url, CompletionHandler<
         return;
     }
     if ([PAL::getSOAuthorizationClass() respondsToSelector:@selector(canPerformAuthorizationWithURL:responseCode:callerBundleIdentifier:useInternalExtensions:completion:)]) {
-        [PAL::getSOAuthorizationClass() canPerformAuthorizationWithURL:url responseCode:0 callerBundleIdentifier:nil useInternalExtensions:YES completion:makeBlockPtr([completionHandler = WTFMove(completionHandler)] (BOOL result) mutable {
+        [PAL::getSOAuthorizationClass() canPerformAuthorizationWithURL:url.createNSURL().get() responseCode:0 callerBundleIdentifier:nil useInternalExtensions:YES completion:makeBlockPtr([completionHandler = WTFMove(completionHandler)] (BOOL result) mutable {
             ensureOnMainRunLoop([completionHandler = WTFMove(completionHandler), result] () mutable {
                 completionHandler(result);
             });
         }).get()];
         return;
     }
-    completionHandler([PAL::getSOAuthorizationClass() canPerformAuthorizationWithURL:url responseCode:0]);
+    completionHandler([PAL::getSOAuthorizationClass() canPerformAuthorizationWithURL:url.createNSURL().get() responseCode:0]);
 }
 
 void SOAuthorizationCoordinator::tryAuthorize(Ref<API::NavigationAction>&& navigationAction, WebPageProxy& page, Function<void(bool)>&& completionHandler)
@@ -95,7 +95,7 @@ void SOAuthorizationCoordinator::tryAuthorize(Ref<API::NavigationAction>&& navig
         // SubFrameSOAuthorizationSession should only be allowed for Apple first parties.
         RefPtr targetFrame = navigationAction->targetFrame();
         bool subframeNavigation = targetFrame && !targetFrame->isMainFrame();
-        if (subframeNavigation && (!page->mainFrame() || ![AKAuthorizationController isURLFromAppleOwnedDomain:page->mainFrame()->url()])) {
+        if (subframeNavigation && (!page->mainFrame() || ![AKAuthorizationController isURLFromAppleOwnedDomain:page->mainFrame()->url().createNSURL().get()])) {
             AUTHORIZATIONCOORDINATOR_RELEASE_LOG_ERROR_STATIC("tryAuthorize: Attempting to perform subframe navigation for non-Apple authorization URL.");
             completionHandler(false);
             return;

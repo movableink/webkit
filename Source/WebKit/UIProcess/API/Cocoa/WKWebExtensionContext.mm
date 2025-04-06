@@ -115,7 +115,7 @@ WK_OBJECT_DEALLOC_IMPL_ON_MAIN_THREAD(WKWebExtensionContext, WebExtensionContext
 
 - (NSURL *)baseURL
 {
-    return Ref { *_webExtensionContext }->baseURL();
+    return Ref { *_webExtensionContext }->baseURL().createNSURL().autorelease();
 }
 
 - (void)setBaseURL:(NSURL *)baseURL
@@ -180,12 +180,12 @@ WK_OBJECT_DEALLOC_IMPL_ON_MAIN_THREAD(WKWebExtensionContext, WebExtensionContext
 
 - (NSURL *)optionsPageURL
 {
-    return Ref { *_webExtensionContext }->optionsPageURL();
+    return Ref { *_webExtensionContext }->optionsPageURL().createNSURL().autorelease();
 }
 
 - (NSURL *)overrideNewTabPageURL
 {
-    return Ref { *_webExtensionContext }->overrideNewTabPageURL();
+    return Ref { *_webExtensionContext }->overrideNewTabPageURL().createNSURL().autorelease();
 }
 
 static inline WallTime toImpl(NSDate *date)
@@ -841,7 +841,7 @@ static inline OptionSet<WebKit::WebExtensionTab::ChangedProperties> toImpl(WKWeb
 
 - (NSURL *)_backgroundContentURL
 {
-    return self._protectedWebExtensionContext->backgroundContentURL();
+    return self._protectedWebExtensionContext->backgroundContentURL().createNSURL().autorelease();
 }
 
 - (void)_sendTestMessage:(NSString *)message withArgument:(id)argument

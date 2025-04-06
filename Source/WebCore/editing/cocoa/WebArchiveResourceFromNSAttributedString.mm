@@ -66,7 +66,7 @@ using namespace WebCore;
 
 - (NSURL *)URL
 {
-    return resource->url();
+    return resource->url().createNSURL().autorelease();
 }
 
 @end

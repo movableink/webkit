@@ -89,7 +89,7 @@ WebContextMenuClient::~WebContextMenuClient()
 
 void WebContextMenuClient::downloadURL(const URL& url)
 {
-    [m_webView _downloadURL:url];
+    [m_webView _downloadURL:url.createNSURL().get()];
 }
 
 void WebContextMenuClient::searchWithGoogle(const LocalFrame*)

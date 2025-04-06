@@ -234,7 +234,6 @@ public:
 
 #if USE(FOUNDATION)
     WTF_EXPORT_PRIVATE URL(NSURL *);
-    WTF_EXPORT_PRIVATE operator NSURL *() const;
     WTF_EXPORT_PRIVATE RetainPtr<NSURL> createNSURL() const;
     WTF_EXPORT_PRIVATE static NSURL *emptyNSURL();
 #endif

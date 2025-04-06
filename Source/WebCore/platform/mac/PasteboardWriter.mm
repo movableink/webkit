@@ -71,31 +71,31 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     }
 
     if (auto& urlData = data.urlData()) {
-        NSURL *cocoaURL = urlData->url;
+        RetainPtr nsURL = urlData->url.createNSURL();
         NSString *userVisibleString = urlData->userVisibleForm;
         NSString *title = (NSString *)urlData->title;
         if (!title.length) {
-            title = cocoaURL.path.lastPathComponent;
+            title = nsURL.get().path.lastPathComponent;
             if (!title.length)
                 title = userVisibleString;
         }
 
         // WebURLsWithTitlesPboardType.
         // FIXME: This could use StringView (the one that creates NSString) to save an allocation
-        auto paths = adoptNS([[NSArray alloc] initWithObjects:@[ @[ cocoaURL.absoluteString ] ], @[ urlData->title.trim(deprecatedIsSpaceOrNewline) ], nil]);
+        auto paths = adoptNS([[NSArray alloc] initWithObjects:@[ @[ nsURL.get().absoluteString ] ], @[ urlData->title.trim(deprecatedIsSpaceOrNewline) ], nil]);
         [pasteboardItem setPropertyList:paths.get() forType:toUTI(@"WebURLsWithTitlesPboardType").get()];
 
         // NSURLPboardType.
-        if (NSURL *baseCocoaURL = cocoaURL.baseURL)
-            [pasteboardItem setPropertyList:@[ cocoaURL.relativeString, baseCocoaURL.absoluteString ] forType:toUTI(WebCore::legacyURLPasteboardType()).get()];
-        else if (cocoaURL)
-            [pasteboardItem setPropertyList:@[ cocoaURL.absoluteString, @"" ] forType:toUTI(WebCore::legacyURLPasteboardType()).get()];
+        if (NSURL *baseCocoaURL = nsURL.get().baseURL)
+            [pasteboardItem setPropertyList:@[ nsURL.get().relativeString, baseCocoaURL.absoluteString ] forType:toUTI(WebCore::legacyURLPasteboardType()).get()];
+        else if (nsURL)
+            [pasteboardItem setPropertyList:@[ nsURL.get().absoluteString, @"" ] forType:toUTI(WebCore::legacyURLPasteboardType()).get()];
         else
             [pasteboardItem setPropertyList:@[ @"", @"" ] forType:toUTI(WebCore::legacyURLPasteboardType()).get()];
 
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        if (cocoaURL.fileURL)
-            [pasteboardItem setString:cocoaURL.absoluteString forType:(NSString *)kUTTypeFileURL];
+        if (nsURL.get().fileURL)
+            [pasteboardItem setString:nsURL.get().absoluteString forType:(NSString *)kUTTypeFileURL];
         [pasteboardItem setString:userVisibleString forType:(NSString *)kUTTypeURL];
 ALLOW_DEPRECATED_DECLARATIONS_END
 

@@ -274,9 +274,9 @@ void ResourceRequest::doUpdatePlatformRequest()
     auto nsRequest = adoptNS<NSMutableURLRequest *>([m_nsRequest mutableCopy]);
 
     if (nsRequest)
-        [nsRequest setURL:url()];
+        [nsRequest setURL:url().createNSURL().get()];
     else
-        nsRequest = adoptNS([[NSMutableURLRequest alloc] initWithURL:url()]);
+        nsRequest = adoptNS([[NSMutableURLRequest alloc] initWithURL:url().createNSURL().get()]);
 
     configureRequestWithData(nsRequest.get(), m_requestData);
 
@@ -299,7 +299,7 @@ void ResourceRequest::doUpdatePlatformRequest()
         [nsRequest setTimeoutInterval:timeoutInterval];
     // Otherwise, respect NSURLRequest default timeout.
 
-    [nsRequest setMainDocumentURL:firstPartyForCookies()];
+    [nsRequest setMainDocumentURL:firstPartyForCookies().createNSURL().get()];
     if (!httpMethod().isEmpty())
         [nsRequest setHTTPMethod:httpMethod()];
     [nsRequest setHTTPShouldHandleCookies:allowCookies()];
@@ -352,9 +352,9 @@ void ResourceRequest::doUpdatePlatformHTTPBody()
     auto nsRequest = adoptNS<NSMutableURLRequest *>([m_nsRequest mutableCopy]);
 
     if (nsRequest)
-        [nsRequest setURL:url()];
+        [nsRequest setURL:url().createNSURL().get()];
     else
-        nsRequest = adoptNS([[NSMutableURLRequest alloc] initWithURL:url()]);
+        nsRequest = adoptNS([[NSMutableURLRequest alloc] initWithURL:url().createNSURL().get()]);
 
     configureRequestWithData(nsRequest.get(), m_requestData);
 

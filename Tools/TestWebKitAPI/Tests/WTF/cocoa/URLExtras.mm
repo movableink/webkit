@@ -310,19 +310,19 @@ TEST(WTF_URLExtras, URLExtras_ParsingError)
     EXPECT_TRUE(encodedHostName == nil);
 
     WTF::URL url2 { utf16String(u"http://\u2267\u222E\uFE63\u0661\u06F1") };
-    EXPECT_NULL([url2 absoluteString]);
+    EXPECT_NULL([url2.createNSURL() absoluteString]);
 
     std::array<UChar, 2> utf16 { 0xC2, 0xB6 };
     WTF::URL url3 { String(utf16) };
     EXPECT_FALSE(url3.string().is8Bit());
     EXPECT_FALSE(url3.isValid());
-    EXPECT_NULL([url3 absoluteString]);
+    EXPECT_NULL([url3.createNSURL() absoluteString]);
     
     std::array<LChar, 2> latin1 { 0xC2, 0xB6 };
     WTF::URL url4 { String(latin1) };
     EXPECT_FALSE(url4.isValid());
     EXPECT_TRUE(url4.string().is8Bit());
-    EXPECT_NULL([url4 absoluteString]);
+    EXPECT_NULL([url4.createNSURL() absoluteString]);
 
     std::array<char, 100> buffer = { };
     WTF::URL url5 { "file:///A%C3%A7%C3%A3o.html"_str };

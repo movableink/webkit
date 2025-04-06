@@ -43,13 +43,6 @@ URL::URL(NSURL *cocoaURL)
 {
 }
 
-URL::operator NSURL *() const
-{
-    // Creating a toll-free bridged CFURL because creation with NSURL methods would not preserve the original string.
-    // We'll need fidelity when round-tripping via CFURLGetBytes().
-    return createCFURL().bridgingAutorelease();
-}
-
 RetainPtr<NSURL> URL::createNSURL() const
 {
     return bridge_cast(createCFURL());

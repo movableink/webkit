@@ -103,7 +103,7 @@
 - (NSURL *)_webkit_canonicalize_with_wtf
 {
     auto url = WTF::URL(self);
-    return url.isValid() ? (NSURL *)url : nil;
+    return url.isValid() ? url.createNSURL().autorelease() : nil;
 }
 
 - (NSURL *)_webkit_URLByRemovingFragment 

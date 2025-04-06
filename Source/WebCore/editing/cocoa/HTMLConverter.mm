@@ -1637,12 +1637,12 @@ void HTMLConverter::_addLinkForElement(Element& element, NSRange range)
     NSString *urlString = element.getAttribute(hrefAttr);
     NSString *strippedString = [urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
     if (urlString && [urlString length] > 0 && strippedString && [strippedString length] > 0 && ![strippedString hasPrefix:@"#"]) {
-        NSURL *url = element.document().completeURL(urlString);
+        RetainPtr url = element.document().completeURL(urlString).createNSURL();
         if (!url)
-            url = element.document().completeURL(strippedString);
+            url = element.document().completeURL(strippedString).createNSURL();
         if (!url)
             url = [NSURL _web_URLWithString:strippedString relativeToURL:nil];
-        [_attrStr addAttribute:NSLinkAttributeName value:url ? (id)url : (id)urlString range:range];
+        [_attrStr addAttribute:NSLinkAttributeName value:url ? (id)url.get() : (id)urlString range:range];
     }
 }
 
@@ -1799,7 +1799,7 @@ BOOL HTMLConverter::_processElement(Element& element, NSInteger depth)
 #endif
         NSString *urlString = element.imageSourceURL();
         if (retval && urlString && [urlString length] > 0) {
-            NSURL *url = element.document().completeURL(urlString);
+            RetainPtr url = element.document().completeURL(urlString).createNSURL();
             if (!url)
                 url = [NSURL _web_URLWithString:[urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:nil];
 #if PLATFORM(IOS_FAMILY)
@@ -1808,7 +1808,7 @@ BOOL HTMLConverter::_processElement(Element& element, NSInteger depth)
             BOOL usePlaceholderImage = YES;
 #endif
             if (url)
-                _addAttachmentForElement(element, url, isBlockLevel, usePlaceholderImage);
+                _addAttachmentForElement(element, url.get(), isBlockLevel, usePlaceholderImage);
         }
         retval = NO;
     } else if (element.hasTagName(objectTag)) {
@@ -1816,21 +1816,21 @@ BOOL HTMLConverter::_processElement(Element& element, NSInteger depth)
         NSString *urlString = element.getAttribute(dataAttr);
         NSString *declareString = element.getAttribute(declareAttr);
         if (urlString && [urlString length] > 0 && ![@"true" isEqualToString:declareString]) {
-            NSURL *baseURL = nil;
-            NSURL *url = nil;
+            RetainPtr<NSURL> baseURL;
+            RetainPtr<NSURL> url;
             if (baseString && [baseString length] > 0) {
-                baseURL = element.document().completeURL(baseString);
+                baseURL = element.document().completeURL(baseString).createNSURL();
                 if (!baseURL)
                     baseURL = [NSURL _web_URLWithString:[baseString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:nil];
             }
             if (baseURL)
-                url = [NSURL _web_URLWithString:[urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:baseURL];
+                url = [NSURL _web_URLWithString:[urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:baseURL.get()];
             if (!url)
-                url = element.document().completeURL(urlString);
+                url = element.document().completeURL(urlString).createNSURL();
             if (!url)
                 url = [NSURL _web_URLWithString:[urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:nil];
             if (url)
-                retval = !_addAttachmentForElement(element, url, isBlockLevel, NO);
+                retval = !_addAttachmentForElement(element, url.get(), isBlockLevel, NO);
         }
     } else if (auto* frameElement = dynamicDowncast<HTMLFrameElementBase>(element)) {
         if (RefPtr contentDocument = frameElement->contentDocument()) {
@@ -2315,7 +2315,7 @@ static RetainPtr<NSFileWrapper> fileWrapperForURL(DocumentLoader* dataSource, NS
             auto wrapper = adoptNS([[NSFileWrapper alloc] initRegularFileWithContents:resource->data().makeContiguous()->createNSData().get()]);
             NSString *filename = resource->response().suggestedFilename();
             if (!filename || ![filename length])
-                filename = suggestedFilenameWithMIMEType(resource->url(), resource->mimeType());
+                filename = suggestedFilenameWithMIMEType(resource->url().createNSURL().get(), resource->mimeType());
             [wrapper setPreferredFilename:filename];
             return wrapper;
         }

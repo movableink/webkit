@@ -2270,7 +2270,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 - (DOMDocumentFragment *)_documentFragmentForImageData:(NSData *)data withRelativeURLPart:(NSString *)relativeURLPart andMIMEType:(NSString *)mimeType
 {
     auto resource = adoptNS([[WebResource alloc] initWithData:data
-        URL:URL::fakeURLWithRelativePart(String { relativeURLPart })
+        URL:URL::fakeURLWithRelativePart(String { relativeURLPart }).createNSURL().get()
         MIMEType:mimeType textEncodingName:nil frameName:nil]);
     return [[self _dataSource] _documentFragmentWithImageResource:resource.get()];
 }
@@ -2468,27 +2468,28 @@ static NSURL *createUniqueWebDataURL()
         return [[self _webkit_invokeOnMainThread] _loadData:data MIMEType:MIMEType textEncodingName:encodingName baseURL:baseURL unreachableURL:unreachableURL];
 #endif
 
-    NSURL *responseURL = nil;
+    RetainPtr<NSURL> responseURL;
+    RetainPtr<NSURL> absoluteBaseURL;
     if (baseURL)
-        baseURL = [baseURL absoluteURL];
+        absoluteBaseURL = [baseURL absoluteURL];
     else {
-        baseURL = aboutBlankURL();
+        absoluteBaseURL = aboutBlankURL().createNSURL();
         responseURL = createUniqueWebDataURL();
     }
     
 #if USE(QUICK_LOOK)
     if (WebCore::shouldUseQuickLookForMIMEType(MIMEType)) {
-        NSURL *quickLookURL = responseURL ? responseURL : baseURL;
-        if (auto request = WebCore::registerQLPreviewConverterIfNeeded(quickLookURL, MIMEType, data)) {
+        RetainPtr quickLookURL = responseURL ? responseURL : absoluteBaseURL;
+        if (auto request = WebCore::registerQLPreviewConverterIfNeeded(quickLookURL.get(), MIMEType, data)) {
             _private->coreFrame->loader().load(WebCore::FrameLoadRequest(*_private->coreFrame, request.get()));
             return;
         }
     }
 #endif
 
-    WebCore::ResourceRequest request(baseURL);
+    WebCore::ResourceRequest request(absoluteBaseURL.get());
 
-    WebCore::ResourceResponse response(responseURL, MIMEType, [data length], encodingName);
+    WebCore::ResourceResponse response(responseURL.get(), MIMEType, [data length], encodingName);
     WebCore::SubstituteData substituteData(WebCore::SharedBuffer::create(data), [unreachableURL absoluteURL], response, WebCore::SubstituteData::SessionHistoryVisibility::Hidden);
 
     _private->coreFrame->loader().load(WebCore::FrameLoadRequest(*_private->coreFrame, request, substituteData));

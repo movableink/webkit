@@ -276,7 +276,7 @@
     if (_contentPreventsDefault)
         return adoptNS([[WebAnimationController alloc] init]).autorelease();
 
-    NSURL *url = _hitTestResult.absoluteLinkURL();
+    RetainPtr url = _hitTestResult.absoluteLinkURL().createNSURL();
     String absoluteURLString = [url absoluteString];
     if (url && _hitTestResult.URLElement()) {
         if (WTF::protocolIs(absoluteURLString, "mailto"_s)) {
@@ -362,7 +362,7 @@
     if (!_webView)
         return nil;
 
-    return _hitTestResult.absoluteLinkURL();
+    return _hitTestResult.absoluteLinkURL().createNSURL().autorelease();
 }
 
 - (NSRectEdge)menuItem:(NSMenuItem *)menuItem preferredEdgeForPoint:(NSPoint)point

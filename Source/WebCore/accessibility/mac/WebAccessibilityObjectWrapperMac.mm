@@ -1283,7 +1283,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         URL url = backingObject->url();
         if (url.isNull())
             return nil;
-        return (NSURL*)url;
+        return url.createNSURL().autorelease();
     }
 
     if ([attributeName isEqualToString:NSAccessibilityIncrementButtonAttribute]) {

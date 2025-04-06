@@ -70,8 +70,8 @@
     if (!(self = [super init]))
         return nil;
     
-    _URL = information.url;
-    _imageURL = information.imageURL;
+    _URL = information.url.createNSURL();
+    _imageURL = information.imageURL.createNSURL();
     _imageMIMEType = information.imageMIMEType;
     _interactionLocation = information.request.point;
     _title = information.title;
@@ -106,12 +106,12 @@
 
 - (instancetype)_initWithType:(_WKActivatedElementType)type URL:(NSURL *)url information:(const WebKit::InteractionInformationAtPosition&)information
 {
-    return [self _initWithType:type URL:url imageURL:information.imageURL information:information];
+    return [self _initWithType:type URL:url imageURL:information.imageURL.createNSURL().get() information:information];
 }
 
 - (instancetype)_initWithType:(_WKActivatedElementType)type image:(WebCore::ShareableBitmap*)image information:(const WebKit::InteractionInformationAtPosition&)information
 {
-    return [self _initWithType:type URL:information.url imageURL:information.imageURL image:image userInfo:nil information:information];
+    return [self _initWithType:type URL:information.url.createNSURL().get() imageURL:information.imageURL.createNSURL().get() image:image userInfo:nil information:information];
 }
 
 - (instancetype)_initWithType:(_WKActivatedElementType)type URL:(NSURL *)url imageURL:(NSURL *)imageURL information:(const WebKit::InteractionInformationAtPosition&)information
@@ -121,7 +121,7 @@
 
 - (instancetype)_initWithType:(_WKActivatedElementType)type URL:(NSURL *)url image:(WebCore::ShareableBitmap*)image information:(const WebKit::InteractionInformationAtPosition&)information
 {
-    return [self _initWithType:type URL:url imageURL:information.imageURL image:image userInfo:nil information:information];
+    return [self _initWithType:type URL:url imageURL:information.imageURL.createNSURL().get() image:image userInfo:nil information:information];
 }
 
 - (instancetype)_initWithType:(_WKActivatedElementType)type URL:(NSURL *)url imageURL:(NSURL *)imageURL userInfo:(NSDictionary *)userInfo information:(const WebKit::InteractionInformationAtPosition&)information

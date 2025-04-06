@@ -209,11 +209,11 @@ static long writeURLForTypes(const Vector<String>& types, const String& pasteboa
     
     ASSERT(!pasteboardURL.url.isEmpty());
     
-    NSURL *cocoaURL = pasteboardURL.url;
+    RetainPtr nsURL = pasteboardURL.url.createNSURL();
     NSString *userVisibleString = pasteboardURL.userVisibleForm;
     NSString *title = (NSString *)pasteboardURL.title;
     if (![title length]) {
-        title = [[cocoaURL path] lastPathComponent];
+        title = [[nsURL path] lastPathComponent];
         if (![title length])
             title = userVisibleString;
     }
@@ -223,7 +223,7 @@ static long writeURLForTypes(const Vector<String>& types, const String& pasteboa
         newChangeCount = platformStrategies()->pasteboardStrategy()->setURL(url, pasteboardName, context);
     }
     if (types.contains(String(legacyURLPasteboardType())))
-        newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType([cocoaURL absoluteString], legacyURLPasteboardType(), pasteboardName, context);
+        newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType([nsURL absoluteString], legacyURLPasteboardType(), pasteboardName, context);
     if (types.contains(WebURLPboardType))
         newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType(userVisibleString, WebURLPboardType, pasteboardName, context);
     if (types.contains(WebURLNamePboardType))
@@ -255,7 +255,7 @@ void Pasteboard::write(const Color& color)
 static NSFileWrapper* fileWrapper(const PasteboardImage& pasteboardImage)
 {
     auto wrapper = adoptNS([[NSFileWrapper alloc] initRegularFileWithContents:pasteboardImage.resourceData->makeContiguous()->createNSData().get()]);
-    [wrapper setPreferredFilename:suggestedFilenameWithMIMEType(pasteboardImage.url.url, pasteboardImage.resourceMIMEType)];
+    [wrapper setPreferredFilename:suggestedFilenameWithMIMEType(pasteboardImage.url.url.createNSURL().get(), pasteboardImage.resourceMIMEType)];
     return wrapper.autorelease();
 }
 

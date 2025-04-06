@@ -11,7 +11,6 @@ mac/DOM/DOMCounter.mm
 mac/DOM/DOMCustomXPathNSResolver.mm
 mac/DOM/DOMEvent.mm
 mac/DOM/DOMFileList.mm
-mac/DOM/DOMHTML.mm
 mac/DOM/DOMHTMLCollection.mm
 mac/DOM/DOMHTMLInputElement.mm
 mac/DOM/DOMHTMLOptionsCollection.mm

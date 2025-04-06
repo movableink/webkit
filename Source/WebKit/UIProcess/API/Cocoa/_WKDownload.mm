@@ -95,8 +95,8 @@ IGNORE_WARNINGS_END
 
 -(NSArray<NSURL *> *)redirectChain
 {
-    return createNSArray(_download->_download->redirectChain(), [] (auto& url) -> NSURL * {
-        return url;
+    return createNSArray(_download->_download->redirectChain(), [] (auto& url) {
+        return url.createNSURL();
     }).autorelease();
 }
 

@@ -534,11 +534,11 @@ void PlatformPasteboard::write(const PasteboardImage& pasteboardImage)
     // associated image URL. However, in the case of an image enclosed by an anchor, we might want to consider the
     // the URL (i.e. the anchor's href attribute) to be a higher fidelity representation.
     auto& pasteboardURL = pasteboardImage.url;
-    if (NSURL *nsURL = pasteboardURL.url) {
+    if (RetainPtr nsURL = pasteboardURL.url.createNSURL()) {
 #if HAVE(NSURL_TITLE)
-        [nsURL _web_setTitle:pasteboardURL.title.isEmpty() ? WTF::userVisibleString(pasteboardURL.url) : (NSString *)pasteboardURL.title];
+        [nsURL _web_setTitle:pasteboardURL.title.isEmpty() ? WTF::userVisibleString(pasteboardURL.url.createNSURL().get()) : (NSString *)pasteboardURL.title];
 #endif
-        [representationsToRegister addRepresentingObject:nsURL];
+        [representationsToRegister addRepresentingObject:nsURL.get()];
     }
 
     registerItemToPasteboard(representationsToRegister.get(), m_pasteboard.get());
@@ -568,12 +568,12 @@ void PlatformPasteboard::write(const PasteboardURL& url)
     auto representationsToRegister = adoptNS([[WebItemProviderRegistrationInfoList alloc] init]);
     [representationsToRegister setPreferredPresentationStyle:WebPreferredPresentationStyleInline];
 
-    if (NSURL *nsURL = url.url) {
+    if (RetainPtr nsURL = url.url.createNSURL()) {
 #if HAVE(NSURL_TITLE)
         if (!url.title.isEmpty())
             [nsURL _web_setTitle:url.title];
 #endif
-        [representationsToRegister addRepresentingObject:nsURL];
+        [representationsToRegister addRepresentingObject:nsURL.get()];
         [representationsToRegister addRepresentingObject:(NSString *)url.url.string()];
     }
 

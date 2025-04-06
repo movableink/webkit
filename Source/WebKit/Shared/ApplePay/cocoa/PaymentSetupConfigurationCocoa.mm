@@ -51,7 +51,7 @@ static RetainPtr<PKPaymentSetupConfiguration> toPlatformConfiguration(const WebC
 
     auto configuration = adoptNS([PAL::allocPKPaymentSetupConfigurationInstance() init]);
     [configuration setMerchantIdentifier:coreConfiguration.merchantIdentifier];
-    [configuration setOriginatingURL:url];
+    [configuration setOriginatingURL:url.createNSURL().get()];
     [configuration setReferrerIdentifier:coreConfiguration.referrerIdentifier];
 ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
     [configuration setSignature:coreConfiguration.signature];

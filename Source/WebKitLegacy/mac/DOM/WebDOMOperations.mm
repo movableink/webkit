@@ -164,7 +164,7 @@ using namespace JSC;
 
 - (NSURL *)URLWithAttributeString:(NSString *)string
 {
-    return core(self)->completeURL(string);
+    return core(self)->completeURL(string).createNSURL().autorelease();
 }
 
 @end

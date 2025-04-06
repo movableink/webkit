@@ -91,14 +91,14 @@ static void addLinkAndReplace(NSMutableAttributedString *string, NSString *toRep
     [string replaceCharactersInRange:[string.string rangeOfString:toReplace] withAttributedString:stringWithLink.get()];
 }
 
-static NSURL *reportAnErrorURL(const URL& url, SSBServiceLookupResult *result)
+static RetainPtr<NSURL> reportAnErrorURL(const URL& url, SSBServiceLookupResult *result)
 {
-    return URL({ }, makeString(reportAnErrorBase(result), "&url="_s, encodeWithURLEscapeSequences(url.string()), "&hl="_s, defaultLanguage()));
+    return URL({ }, makeString(reportAnErrorBase(result), "&url="_s, encodeWithURLEscapeSequences(url.string()), "&hl="_s, defaultLanguage())).createNSURL();
 }
 
-static NSURL *malwareDetailsURL(const URL& url, SSBServiceLookupResult *result)
+static RetainPtr<NSURL> malwareDetailsURL(const URL& url, SSBServiceLookupResult *result)
 {
-    return URL({ }, makeString(malwareDetailsBase(result), "&site="_s, url.host(), "&hl="_s, defaultLanguage()));
+    return URL({ }, makeString(malwareDetailsBase(result), "&site="_s, url.host(), "&hl="_s, defaultLanguage())).createNSURL();
 }
 
 static NSString *browsingWarningTitleText(SSBServiceLookupResult *result)
@@ -153,7 +153,7 @@ static NSMutableAttributedString *browsingDetailsText(const URL& url, SSBService
         addLinkAndReplace(attributedString.get(), learnMore.get(), learnMore.get(), learnMoreURL(result));
         replace(attributedString.get(), @"%provider-display-name%", localizedProviderDisplayName(result));
         replace(attributedString.get(), @"%provider%", localizedProviderShortName(result));
-        addLinkAndReplace(attributedString.get(), @"%report-an-error%", reportAnError.get(), reportAnErrorURL(url, result));
+        addLinkAndReplace(attributedString.get(), @"%report-an-error%", reportAnError.get(), reportAnErrorURL(url, result).get());
         addLinkAndReplace(attributedString.get(), @"%bypass-link%", visitUnsafeWebsite.get(), BrowsingWarning::visitUnsafeWebsiteSentinel());
         return attributedString.autorelease();
     }
@@ -163,7 +163,7 @@ static NSMutableAttributedString *browsingDetailsText(const URL& url, SSBService
         replace(malwareDescription.get(), @"%safeBrowsingProvider%", localizedProviderDisplayName(result));
         auto statusLink = adoptNS([[NSMutableAttributedString alloc] initWithString:WEB_UI_NSSTRING(@"the status of “%site%”", "Part of malware description")]);
         replace(statusLink.get(), @"%site%", url.host().toString());
-        addLinkAndReplace(malwareDescription.get(), statusStringToReplace, [statusLink string], malwareDetailsURL(url, result));
+        addLinkAndReplace(malwareDescription.get(), statusStringToReplace, [statusLink string], malwareDetailsURL(url, result).get());
 
         auto ifYouUnderstand = adoptNS([[NSMutableAttributedString alloc] initWithString:WEB_UI_NSSTRING(@"If you understand the risks involved, you can %visit-this-unsafe-site-link%.", "Action from safe browsing warning")]);
         addLinkAndReplace(ifYouUnderstand.get(), @"%visit-this-unsafe-site-link%", WEB_UI_NSSTRING(@"visit this unsafe website", "Action from safe browsing warning"), confirmMalware ? BrowsingWarning::confirmMalwareSentinel() : BrowsingWarning::visitUnsafeWebsiteSentinel());

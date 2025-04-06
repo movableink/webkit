@@ -300,7 +300,7 @@ RetainPtr<PKPaymentRequest> WebPaymentCoordinatorProxy::platformPaymentRequest(c
 {
     auto result = adoptNS([PAL::allocPKPaymentRequestInstance() init]);
 
-    [result setOriginatingURL:originatingURL];
+    [result setOriginatingURL:originatingURL.createNSURL().get()];
 
     [result setThumbnailURLs:createNSArray(linkIconURLs).get()];
 

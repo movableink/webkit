@@ -299,8 +299,8 @@ RetainPtr<NSError> nsErrorFromExceptionDetails(const std::optional<WebCore::Exce
     [userInfo setObject:@(details->columnNumber) forKey:_WKJavaScriptExceptionColumnNumberErrorKey];
 
     if (!details->sourceURL.isEmpty()) {
-        if (NSURL *url = URL(details->sourceURL))
-            [userInfo setObject:url forKey:_WKJavaScriptExceptionSourceURLErrorKey];
+        if (RetainPtr url = URL(details->sourceURL).createNSURL())
+            [userInfo setObject:url.get() forKey:_WKJavaScriptExceptionSourceURLErrorKey];
     }
 
     return adoptNS([[NSError alloc] initWithDomain:WKErrorDomain code:errorCode userInfo:userInfo.get()]);
@@ -1074,7 +1074,7 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
 
 - (NSURL *)_resourceDirectoryURL
 {
-    return _page->currentResourceDirectoryURL();
+    return _page->currentResourceDirectoryURL().createNSURL().autorelease();
 }
 
 - (BOOL)isLoading
@@ -4011,7 +4011,7 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
 - (NSURL *)_mainFrameURL
 {
     if (RefPtr frame = _page->mainFrame())
-        return frame->url();
+        return frame->url().createNSURL().autorelease();
     return nil;
 }
 
@@ -4554,7 +4554,7 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
                 return completionHandler(NO, nil);
             }
         }, [&] (URL url) {
-            completionHandler(NO, url);
+            completionHandler(NO, url.createNSURL().get());
         });
     };
 #if PLATFORM(MAC)

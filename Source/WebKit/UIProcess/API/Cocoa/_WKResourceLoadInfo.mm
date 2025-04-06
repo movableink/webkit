@@ -112,7 +112,7 @@ static _WKResourceLoadInfoResourceType toWKResourceLoadInfoResourceType(WebKit::
 
 - (NSURL *)originalURL
 {
-    return _info->originalURL();
+    return _info->originalURL().createNSURL().autorelease();
 }
 
 - (NSString *)originalHTTPMethod

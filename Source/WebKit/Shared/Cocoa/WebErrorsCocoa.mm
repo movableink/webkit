@@ -47,17 +47,17 @@ static RetainPtr<NSError> createNSError(NSString* domain, int code, NSURL *URL)
 
 ResourceError cancelledError(const ResourceRequest& request)
 {
-    return ResourceError(createNSError(NSURLErrorDomain, NSURLErrorCancelled, request.url()).get());
+    return ResourceError(createNSError(NSURLErrorDomain, NSURLErrorCancelled, request.url().createNSURL().get()).get());
 }
 
 ResourceError fileDoesNotExistError(const ResourceResponse& response)
 {
-    return ResourceError(createNSError(NSURLErrorDomain, NSURLErrorFileDoesNotExist, response.url()).get());
+    return ResourceError(createNSError(NSURLErrorDomain, NSURLErrorFileDoesNotExist, response.url().createNSURL().get()).get());
 }
 
 ResourceError decodeError(const URL& url)
 {
-    return ResourceError(createNSError(NSURLErrorDomain, NSURLErrorCannotDecodeContentData, url).get());
+    return ResourceError(createNSError(NSURLErrorDomain, NSURLErrorCannotDecodeContentData, url.createNSURL().get()).get());
 }
 
 } // namespace WebKit

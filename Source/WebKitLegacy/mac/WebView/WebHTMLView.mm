@@ -2285,7 +2285,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 {
     String filename = [imageMIMEType stringByReplacingOccurrencesOfString:@"/" withString:@"."];
     auto resource = adoptNS([[WebResource alloc] initWithData:[pasteboard dataForType:pasteboardType]
-        URL:URL::fakeURLWithRelativePart(filename) MIMEType:imageMIMEType textEncodingName:nil frameName:nil]);
+        URL:URL::fakeURLWithRelativePart(filename).createNSURL().get() MIMEType:imageMIMEType textEncodingName:nil frameName:nil]);
     return [[self _dataSource] _documentFragmentWithImageResource:resource.get()];
 }
 
@@ -3580,13 +3580,13 @@ static RetainPtr<NSMenuItem> createShareMenuItem(const WebCore::HitTestResult& h
     auto items = adoptNS([[NSMutableArray alloc] init]);
 
     if (!hitTestResult.absoluteLinkURL().isEmpty()) {
-        NSURL *absoluteLinkURL = hitTestResult.absoluteLinkURL();
-        [items addObject:absoluteLinkURL];
+        RetainPtr absoluteLinkURL = hitTestResult.absoluteLinkURL().createNSURL();
+        [items addObject:absoluteLinkURL.get()];
     }
 
     if (!hitTestResult.absoluteMediaURL().isEmpty() && hitTestResult.isDownloadableMedia()) {
-        NSURL *downloadableMediaURL = hitTestResult.absoluteMediaURL();
-        [items addObject:downloadableMediaURL];
+        RetainPtr downloadableMediaURL = hitTestResult.absoluteMediaURL().createNSURL();
+        [items addObject:downloadableMediaURL.get()];
     }
 
     if (auto* image = hitTestResult.image()) {
@@ -4357,7 +4357,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
 ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 {
     RetainPtr<NSFileWrapper> wrapper;
-    NSURL *draggingElementURL = nil;
+    RetainPtr<NSURL> draggingElementURL;
 
     if (auto tiffResource = _private->promisedDragTIFFDataSource) {
         if (auto* buffer = tiffResource->resourceBuffer()) {
@@ -4384,9 +4384,9 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
         const URL& imageURL = page->dragController().draggingImageURL();
         if (!imageURL.isEmpty())
-            draggingElementURL = imageURL;
+            draggingElementURL = imageURL.createNSURL();
 
-        wrapper = [[self _dataSource] _fileWrapperForURL:draggingElementURL];
+        wrapper = [[self _dataSource] _fileWrapperForURL:draggingElementURL.get()];
     }
     
     if (!wrapper) {
@@ -7189,7 +7189,7 @@ static CGImageRef selectionImage(WebCore::LocalFrame* frame, bool forceBlackText
 
 + (NSURL *)_web_uniqueWebDataURL
 {
-    return URL::fakeURLWithRelativePart(emptyString());
+    return URL::fakeURLWithRelativePart(emptyString()).createNSURL().autorelease();
 }
 
 @end

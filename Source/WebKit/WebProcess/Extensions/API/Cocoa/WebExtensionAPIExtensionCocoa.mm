@@ -103,7 +103,7 @@ NSURL *WebExtensionAPIExtension::getURL(NSString *resourcePath, NSString **outEx
 {
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/extension/getURL
 
-    return URL { extensionContext().baseURL(), resourcePath };
+    return URL { extensionContext().baseURL(), resourcePath }.createNSURL().autorelease();
 }
 
 JSValue *WebExtensionAPIExtension::getBackgroundPage(JSContextRef context)

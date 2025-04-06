@@ -205,7 +205,7 @@ void WebDragClient::beginDrag(DragItem dragItem, LocalFrame& frame, const IntPoi
 void WebDragClient::declareAndWriteDragImage(const String& pasteboardName, Element& element, const URL& url, const String& title, WebCore::LocalFrame* frame)
 {
     ASSERT(pasteboardName);
-    [[NSPasteboard pasteboardWithName:pasteboardName] _web_declareAndWriteDragImageForElement:kit(&element) URL:url title:title archive:[kit(&element) webArchive] source:getTopHTMLView(frame)];
+    [[NSPasteboard pasteboardWithName:pasteboardName] _web_declareAndWriteDragImageForElement:kit(&element) URL:url.createNSURL().get() title:title archive:[kit(&element) webArchive] source:getTopHTMLView(frame)];
 }
 
 #elif !PLATFORM(IOS_FAMILY) || !ENABLE(DRAG_SUPPORT)

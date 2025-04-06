@@ -259,7 +259,7 @@ void Editor::replaceSelectionWithAttributedString(NSAttributedString *attributed
 
 String Editor::userVisibleString(const URL& url)
 {
-    return WTF::userVisibleString(url);
+    return WTF::userVisibleString(url.createNSURL().get());
 }
 
 RefPtr<SharedBuffer> Editor::dataInRTFDFormat(NSAttributedString *string)

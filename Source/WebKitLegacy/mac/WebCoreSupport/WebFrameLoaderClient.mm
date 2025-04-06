@@ -444,8 +444,8 @@ bool WebFrameLoaderClient::shouldPaintBrokenImage(const URL& imageURL) const
     WebResourceDelegateImplementationCache* implementations = WebViewGetResourceLoadDelegateImplementations(webView);
 
     if (implementations->shouldPaintBrokenImageForURLFunc) {
-        NSURL* url = imageURL;
-        return CallResourceLoadDelegateReturningBoolean(YES, implementations->shouldPaintBrokenImageForURLFunc, webView, @selector(webView:shouldPaintBrokenImageForURL:), url);
+        RetainPtr url = imageURL.createNSURL();
+        return CallResourceLoadDelegateReturningBoolean(YES, implementations->shouldPaintBrokenImageForURLFunc, webView, @selector(webView:shouldPaintBrokenImageForURL:), url.get());
     }
     return true;
 }
@@ -584,8 +584,8 @@ void WebFrameLoaderClient::dispatchWillPerformClientRedirect(const URL& url, dou
     WebView *webView = getWebView(m_webFrame.get());
     WebFrameLoadDelegateImplementationCache* implementations = WebViewGetFrameLoadDelegateImplementations(webView);
     if (implementations->willPerformClientRedirectToURLDelayFireDateForFrameFunc) {
-        NSURL *cocoaURL = url;
-        CallFrameLoadDelegate(implementations->willPerformClientRedirectToURLDelayFireDateForFrameFunc, webView, @selector(webView:willPerformClientRedirectToURL:delay:fireDate:forFrame:), cocoaURL, delay, [NSDate dateWithTimeIntervalSince1970:fireDate.secondsSinceEpoch().seconds()], m_webFrame.get());
+        RetainPtr nsURL = url.createNSURL();
+        CallFrameLoadDelegate(implementations->willPerformClientRedirectToURLDelayFireDateForFrameFunc, webView, @selector(webView:willPerformClientRedirectToURL:delay:fireDate:forFrame:), nsURL.get(), delay, [NSDate dateWithTimeIntervalSince1970:fireDate.secondsSinceEpoch().seconds()], m_webFrame.get());
     }
 }
 
@@ -983,7 +983,7 @@ void WebFrameLoaderClient::setMainFrameDocumentReady(bool ready)
 void WebFrameLoaderClient::startDownload(const WebCore::ResourceRequest& request, const String& /* suggestedName */, WebCore::FromDownloadAttribute)
 {
     // FIXME: Should download full request.
-    [getWebView(m_webFrame.get()) _downloadURL:request.url()];
+    [getWebView(m_webFrame.get()) _downloadURL:request.url().createNSURL().get()];
 }
 
 void WebFrameLoaderClient::willChangeTitle(WebCore::DocumentLoader* loader)
@@ -1052,7 +1052,7 @@ void WebFrameLoaderClient::updateGlobalHistory()
         return;
     }
 
-    [[WebHistory optionalSharedHistory] _visitedURL:loader->urlForHistory() withTitle:loader->title().string method:loader->originalRequestCopy().httpMethod() wasFailure:loader->urlForHistoryReflectsFailure()];
+    [[WebHistory optionalSharedHistory] _visitedURL:loader->urlForHistory().createNSURL().get() withTitle:loader->title().string method:loader->originalRequestCopy().httpMethod() wasFailure:loader->urlForHistoryReflectsFailure()];
 }
 
 static void addRedirectURL(WebHistoryItem *item, const String& url)
@@ -1302,7 +1302,7 @@ void WebFrameLoaderClient::setTitle(const WebCore::StringWithDirection& title, c
         return;
     }
 
-    NSURL* nsURL = url;
+    RetainPtr nsURL = url.createNSURL();
     nsURL = [nsURL _webkit_canonicalize];
     if(!nsURL)
         return;
@@ -1310,7 +1310,7 @@ void WebFrameLoaderClient::setTitle(const WebCore::StringWithDirection& title, c
     if ([[nsURL absoluteString] isEqualToString:@"about:blank"])
         return;
 #endif
-    [[[WebHistory optionalSharedHistory] itemForURL:nsURL] setTitle:title.string];
+    [[[WebHistory optionalSharedHistory] itemForURL:nsURL.get()] setTitle:title.string];
 }
 
 void WebFrameLoaderClient::savePlatformDataToCachedFrame(WebCore::CachedFrame* cachedFrame)
@@ -1506,12 +1506,12 @@ NSDictionary *WebFrameLoaderClient::actionDictionary(const WebCore::NavigationAc
     modifierFlags = 0;
 #endif
 
-    NSURL *originalURL = action.url();
+    RetainPtr originalURL = action.url().createNSURL();
 
     NSMutableDictionary *result = [NSMutableDictionary dictionaryWithObjectsAndKeys:
         @(static_cast<int>(action.type())), WebActionNavigationTypeKey,
         @(modifierFlags), WebActionModifierFlagsKey,
-        originalURL, WebActionOriginalURLKey,
+        originalURL.get(), WebActionOriginalURLKey,
         nil];
 
     if (auto mouseEventData = action.mouseEventData()) {
@@ -1593,8 +1593,8 @@ WebCore::ObjectContentType WebFrameLoaderClient::objectContentType(const URL& ur
 
     if (type.isEmpty()) {
         // Try to guess the MIME type based off the extension.
-        NSURL *URL = url;
-        NSString *extension = [[URL path] pathExtension];
+        RetainPtr nsURL = url.createNSURL();
+        NSString *extension = [[nsURL path] pathExtension];
         if ([extension length] > 0) {
             type = [[NSURLFileTypeMappings sharedMappings] MIMETypeForExtension:extension];
             if (type.isEmpty()) {
@@ -1714,8 +1714,8 @@ RefPtr<WebCore::Widget> WebFrameLoaderClient::createPlugin(WebCore::HTMLPlugInEl
 
     WebView *webView = getWebView(m_webFrame.get());
     auto* document = core(m_webFrame.get())->document();
-    NSURL *baseURL = document->baseURL();
-    NSURL *pluginURL = url;
+    RetainPtr baseURL = document->baseURL().createNSURL();
+    RetainPtr pluginURL = url.createNSURL();
     auto attributeKeys = createNSArray(paramNames);
 
 #if PLATFORM(MAC)
@@ -1728,7 +1728,7 @@ RefPtr<WebCore::Widget> WebFrameLoaderClient::createPlugin(WebCore::HTMLPlugInEl
             [NSNumber numberWithBool:!loadManually], WebPlugInShouldLoadMainResourceKey,
             kit(&element), WebPlugInContainingElementKey,
             // FIXME: We should be passing base URL, see <https://bugs.webkit.org/show_bug.cgi?id=35215>.
-            pluginURL, WebPlugInBaseURLKey, // pluginURL might be nil, so add it last
+            pluginURL.get(), WebPlugInBaseURLKey, // pluginURL might be nil, so add it last
             nil]);
 
         NSView *view = CallUIDelegate(webView, selector, arguments.get());
@@ -1773,7 +1773,7 @@ RefPtr<WebCore::Widget> WebFrameLoaderClient::createPlugin(WebCore::HTMLPlugInEl
                 downcast<WebCore::RenderEmbeddedObject>(*element.renderer()).setPluginUnavailabilityReason(WebCore::PluginUnavailabilityReason::InsecurePluginVersion);
         } else {
             if ([pluginPackage isKindOfClass:[WebPluginPackage class]])
-                view = pluginView(m_webFrame.get(), (WebPluginPackage *)pluginPackage, attributeKeys.get(), createNSArray(paramValues).get(), baseURL, kit(&element), loadManually);
+                view = pluginView(m_webFrame.get(), (WebPluginPackage *)pluginPackage, attributeKeys.get(), createNSArray(paramValues).get(), baseURL.get(), kit(&element), loadManually);
         }
     } else
         errorCode = WebKitErrorCannotFindPlugIn;
@@ -1789,8 +1789,7 @@ RefPtr<WebCore::Widget> WebFrameLoaderClient::createPlugin(WebCore::HTMLPlugInEl
                 pluginPageURL = URL();
             NSString *pluginName = pluginPackage ? (NSString *)[pluginPackage pluginInfo].name : nil;
 
-            auto error = adoptNS([[NSError alloc] _initWithPluginErrorCode:errorCode
-                                                            contentURL:pluginURL pluginPageURL:pluginPageURL pluginName:pluginName MIMEType:MIMEType]);
+            RetainPtr error = adoptNS([[NSError alloc] _initWithPluginErrorCode:errorCode contentURL:pluginURL.get() pluginPageURL:pluginPageURL.createNSURL().get() pluginName:pluginName MIMEType:MIMEType]);
             CallResourceLoadDelegate(implementations->plugInFailedWithErrorFunc, [m_webFrame.get() webView],
                                      @selector(webView:plugInFailedWithError:dataSource:), error.get(), [m_webFrame.get() _dataSource]);
         }
@@ -1892,7 +1891,7 @@ bool WebFrameLoaderClient::shouldLoadMediaElementURL(const URL& url) const
     
     if (id policyDelegate = [webView policyDelegate]) {
         if ([policyDelegate respondsToSelector:@selector(webView:shouldLoadMediaURL:inFrame:)])
-            return [policyDelegate webView:webView shouldLoadMediaURL:url inFrame:m_webFrame.get()];
+            return [policyDelegate webView:webView shouldLoadMediaURL:url.createNSURL().get() inFrame:m_webFrame.get()];
     }
     return true;
 }

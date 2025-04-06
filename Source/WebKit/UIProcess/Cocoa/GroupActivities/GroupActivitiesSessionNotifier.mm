@@ -73,7 +73,7 @@ GroupActivitiesSessionNotifier::GroupActivitiesSessionNotifier()
         auto result = m_sessions.add(session->fallbackURL(), session.copyRef());
         ASSERT_UNUSED(result, result.isNewEntry);
 
-        [[NSWorkspace sharedWorkspace] openURL:session->fallbackURL()];
+        [[NSWorkspace sharedWorkspace] openURL:session->fallbackURL().createNSURL().get()];
     };
 }
 

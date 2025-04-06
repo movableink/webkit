@@ -122,16 +122,16 @@ static NSDictionary *attributesForAttributedStringConversion(bool useInterchange
         [excludedElements addObject:@"object"];
 #endif
 
-    NSURL *baseURL = URL::fakeURLWithRelativePart(emptyString());
+    RetainPtr baseURL = URL::fakeURLWithRelativePart(emptyString()).createNSURL();
 
     // The output base URL needs +1 refcount to work around the fact that NSHTMLReader over-releases it.
-    CFRetain((__bridge CFTypeRef)baseURL);
+    CFRetain((__bridge CFTypeRef)baseURL.get());
 
     return @{
         NSExcludedElementsDocumentAttribute: excludedElements.get(),
         @"InterchangeNewline": @(useInterchangeNewlines),
         @"CoalesceTabSpans": @YES,
-        @"OutputBaseURL": baseURL,
+        @"OutputBaseURL": baseURL.get(),
         @"WebResourceHandler": adoptNS([WebArchiveResourceWebResourceHandler new]).get(),
     };
 }

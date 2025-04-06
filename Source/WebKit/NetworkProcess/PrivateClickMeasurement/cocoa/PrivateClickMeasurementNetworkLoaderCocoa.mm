@@ -114,7 +114,7 @@ void NetworkLoader::start(URL&& url, RefPtr<JSON::Object>&& jsonPayload, WebCore
     if (allowedLocalTestServerTrust() && url.host() != "127.0.0.1"_s)
         return callback({ }, { });
 
-    auto request = adoptNS([[NSMutableURLRequest alloc] initWithURL:url]);
+    auto request = adoptNS([[NSMutableURLRequest alloc] initWithURL:url.createNSURL().get()]);
     [request setValue:WebCore::HTTPHeaderValues::maxAge0() forHTTPHeaderField:@"Cache-Control"];
     [request setValue:WebCore::standardUserAgentWithApplicationName({ }) forHTTPHeaderField:@"User-Agent"];
     if (jsonPayload) {

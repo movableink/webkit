@@ -201,7 +201,7 @@ bool DataDetection::canPresentDataDetectorsUIForElement(Element& element)
     if (!isDataDetectorLink(element))
         return false;
     
-    if (PAL::softLink_DataDetectorsCore_DDShouldImmediatelyShowActionSheetForURL(downcast<HTMLAnchorElement>(element).href()))
+    if (PAL::softLink_DataDetectorsCore_DDShouldImmediatelyShowActionSheetForURL(downcast<HTMLAnchorElement>(element).href().createNSURL().get()))
         return true;
     
     auto& resultAttribute = element.attributeWithoutSynchronization(x_apple_data_detectors_resultAttr);

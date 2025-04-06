@@ -100,7 +100,7 @@ namespace WebCore {
 
 String Internals::userVisibleString(const DOMURL& url)
 {
-    return WTF::userVisibleString(url.href());
+    return WTF::userVisibleString(url.href().createNSURL().get());
 }
 
 bool Internals::userPrefersContrast() const

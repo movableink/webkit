@@ -190,15 +190,15 @@ struct LinkImageLayout {
 LinkImageLayout::LinkImageLayout(URL& url, const String& titleString)
 {
     NSString *title = nsStringNilIfEmpty(titleString);
-    NSURL *cocoaURL = url;
-    NSString *absoluteURLString = [cocoaURL absoluteString];
+    RetainPtr nsURL = url.createNSURL();
+    NSString *absoluteURLString = [nsURL absoluteString];
 
     NSString *domain = absoluteURLString;
 #if HAVE(URL_FORMATTING)
-    domain = [cocoaURL _lp_simplifiedDisplayString];
+    domain = [nsURL _lp_simplifiedDisplayString];
 #else
     if (LinkPresentationLibrary())
-        domain = [cocoaURL _lp_simplifiedDisplayString];
+        domain = [nsURL _lp_simplifiedDisplayString];
 #endif
 
     if ([title isEqualToString:absoluteURLString])
