@@ -1911,9 +1911,51 @@ inline Style::URL BuilderConverter::convertSVGURIReference(BuilderState& builder
     return Style::URL::none();
 }
 
-inline StyleSelfAlignmentData BuilderConverter::convertSelfOrDefaultAlignmentData(BuilderState&, const CSSValue& value)
+// Get the "opposite" ItemPosition to the provided ItemPosition.
+// e.g: start -> end, end -> start, self-start -> self-end.
+// Position that doesn't have an opposite value is returned as-is.
+inline ItemPosition oppositeItemPosition(ItemPosition position)
+{
+    switch (position) {
+    case ItemPosition::Legacy:
+    case ItemPosition::Auto:
+    case ItemPosition::Normal:
+    case ItemPosition::Stretch:
+    case ItemPosition::Baseline:
+    case ItemPosition::LastBaseline:
+    case ItemPosition::Center:
+    case ItemPosition::AnchorCenter:
+        return position;
+
+    case ItemPosition::Start:
+        return ItemPosition::End;
+    case ItemPosition::End:
+        return ItemPosition::Start;
+
+    case ItemPosition::SelfStart:
+        return ItemPosition::SelfEnd;
+    case ItemPosition::SelfEnd:
+        return ItemPosition::SelfStart;
+
+    case ItemPosition::FlexStart:
+        return ItemPosition::FlexEnd;
+    case ItemPosition::FlexEnd:
+        return ItemPosition::FlexStart;
+
+    case ItemPosition::Left:
+        return ItemPosition::Right;
+    case ItemPosition::Right:
+        return ItemPosition::Left;
+    }
+
+    ASSERT_NOT_REACHED();
+    return position;
+}
+
+inline StyleSelfAlignmentData BuilderConverter::convertSelfOrDefaultAlignmentData(BuilderState& builderState, const CSSValue& value)
 {
     auto alignmentData = RenderStyle::initialSelfAlignment();
+
     if (value.isPair()) {
         if (value.first().valueID() == CSSValueLegacy) {
             alignmentData.setPositionType(ItemPositionType::Legacy);
@@ -1928,6 +1970,46 @@ inline StyleSelfAlignmentData BuilderConverter::convertSelfOrDefaultAlignmentDat
         }
     } else
         alignmentData.setPosition(fromCSSValue<ItemPosition>(value));
+
+    // Flip the position according to position-try fallback, if specified.
+    if (auto positionTryFallback = builderState.positionTryFallback()) {
+        for (auto tactic : positionTryFallback->tactics) {
+            switch (tactic) {
+            case PositionTryFallback::Tactic::FlipBlock:
+                if (builderState.cssPropertyID() == CSSPropertyAlignSelf)
+                    alignmentData.setPosition(oppositeItemPosition(alignmentData.position()));
+                break;
+
+            case PositionTryFallback::Tactic::FlipInline:
+                if (builderState.cssPropertyID() == CSSPropertyJustifySelf)
+                    alignmentData.setPosition(oppositeItemPosition(alignmentData.position()));
+                break;
+
+            case PositionTryFallback::Tactic::FlipStart:
+                // justify-self additionally takes left/right, align-self doesn't. When
+                // applying flip-start, justify-self gets swapped with align-self. So if
+                // we're resolving justify-self (which later gets swapped with align-self),
+                // and the position is 'left' or 'right', resolve it to self-start/self-end.
+                if (builderState.cssPropertyID() == CSSPropertyJustifySelf) {
+                    auto writingMode = builderState.style().writingMode();
+
+                    switch (alignmentData.position()) {
+                    case ItemPosition::Left:
+                        alignmentData.setPosition(writingMode.bidiDirection() == TextDirection::LTR ? ItemPosition::SelfStart : ItemPosition::SelfEnd);
+                        break;
+                    case ItemPosition::Right:
+                        alignmentData.setPosition(writingMode.bidiDirection() == TextDirection::LTR ? ItemPosition::SelfEnd : ItemPosition::SelfStart);
+                        break;
+                    default:
+                        break;
+                    }
+                }
+
+                break;
+            }
+        }
+    }
+
     return alignmentData;
 }
 

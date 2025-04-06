@@ -1066,6 +1066,10 @@ static CSSPropertyID flipStart(CSSPropertyID propertyID, WritingMode writingMode
             return CSSPropertyMarginBlockStart;
         case CSSPropertyMarginInlineEnd:
             return CSSPropertyMarginBlockEnd;
+        case CSSPropertyAlignSelf:
+            return CSSPropertyJustifySelf;
+        case CSSPropertyJustifySelf:
+            return CSSPropertyAlignSelf;
         default:
             return propertyID;
         }
