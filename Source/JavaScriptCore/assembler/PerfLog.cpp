@@ -30,6 +30,7 @@
 #if ENABLE(ASSEMBLER)
 
 #include "Options.h"
+#include "ProfilerSupport.h"
 #include <array>
 #include <fcntl.h>
 #include <mutex>
@@ -153,11 +154,6 @@ PerfLog& PerfLog::singleton()
     return logger.get();
 }
 
-static inline uint64_t generateTimestamp()
-{
-    return MonotonicTime::now().secondsSinceEpoch().nanosecondsAs<uint64_t>();
-}
-
 static inline uint32_t getCurrentThreadID()
 {
 #if OS(LINUX)
@@ -200,7 +196,7 @@ PerfLog::PerfLog()
     }
 
     JITDump::FileHeader header;
-    header.timestamp = generateTimestamp();
+    header.timestamp = ProfilerSupport::generateTimestamp();
     header.pid = getCurrentProcessID();
 
     Locker locker { m_lock };
@@ -221,7 +217,7 @@ void PerfLog::flush(const AbstractLocker&)
 
 void PerfLog::log(CString&& name, MacroAssemblerCodeRef<LinkBufferPtrTag> code)
 {
-    auto timestamp = generateTimestamp();
+    auto timestamp = ProfilerSupport::generateTimestamp();
     auto tid = getCurrentThreadID();
     singleton().m_queue->dispatch([name = WTFMove(name), code, tid, timestamp] {
         PerfLog& logger = singleton();
