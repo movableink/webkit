@@ -83,7 +83,6 @@ runtime/JSLock.h
 runtime/MicrotaskQueue.h
 runtime/NumericStrings.h
 runtime/PropertySlot.h
-runtime/ProxyObject.cpp
 runtime/SmallStrings.h
 runtime/StringPrototype.cpp
 runtime/StringReplaceCache.h
