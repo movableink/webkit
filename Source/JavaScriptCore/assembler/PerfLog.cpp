@@ -211,7 +211,7 @@ PerfLog::PerfLog()
 void PerfLog::write(const AbstractLocker&, const void* data, size_t size)
 {
     size_t result = fwrite(data, size, 1, m_file);
-    RELEASE_ASSERT(result == size);
+    RELEASE_ASSERT(result == 1);
 }
 
 void PerfLog::flush(const AbstractLocker&)
