@@ -30,6 +30,7 @@
 #include "HitTestSource.h"
 #include <memory>
 #include <wtf/Forward.h>
+#include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>
@@ -64,7 +65,7 @@ class TreeScopeOrderedMap;
 class WeakPtrImplWithEventTargetData;
 struct SVGResourcesMap;
 
-class TreeScope {
+class TreeScope : public NoVirtualDestructorBase {
     friend class Document;
 
 public:

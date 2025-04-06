@@ -34,6 +34,7 @@
 #include "ExceptionOr.h"
 #include "FloatPoint3D.h"
 #include "ScriptWrappable.h"
+#include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -43,7 +44,7 @@ struct DOMMatrixInit;
 class DOMPoint;
 class WebCoreOpaqueRoot;
 
-class DOMPointReadOnly : public ScriptWrappable, public RefCounted<DOMPointReadOnly> {
+class DOMPointReadOnly : public ScriptWrappable, public RefCounted<DOMPointReadOnly>, public NoVirtualDestructorBase {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(DOMPointReadOnly, WEBCORE_EXPORT);
 public:
     static Ref<DOMPointReadOnly> create(double x, double y, double z, double w) { return adoptRef(*new DOMPointReadOnly(x, y, z, w)); }

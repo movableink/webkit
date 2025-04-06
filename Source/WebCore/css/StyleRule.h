@@ -32,6 +32,7 @@
 #include "StyleRuleType.h"
 #include <map>
 #include <variant>
+#include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TypeCasts.h>
@@ -52,7 +53,7 @@ class StyleSheetContents;
 using CascadeLayerName = Vector<AtomString>;
     
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRuleBase);
-class StyleRuleBase : public RefCounted<StyleRuleBase> {
+class StyleRuleBase : public RefCounted<StyleRuleBase>, public NoVirtualDestructorBase {
     WTF_MAKE_STRUCT_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRuleBase);
 public:
     StyleRuleType type() const { return static_cast<StyleRuleType>(m_type); }
