@@ -26,6 +26,8 @@
 #pragma once
 
 #import "Pipeline.h"
+#import "PipelineLayout.h"
+
 #import <wtf/FastMalloc.h>
 #import <wtf/HashMap.h>
 #import <wtf/HashTraits.h>
@@ -70,7 +72,7 @@ public:
     Ref<BindGroupLayout> getBindGroupLayout(uint32_t groupIndex);
     void setLabel(String&&);
 
-    bool isValid() const { return m_renderPipelineState; }
+    bool isValid() const { return m_renderPipelineState && m_pipelineLayout->isValid(); }
 
     id<MTLRenderPipelineState> renderPipelineState() const { return m_renderPipelineState; }
     id<MTLDepthStencilState> depthStencilState() const;

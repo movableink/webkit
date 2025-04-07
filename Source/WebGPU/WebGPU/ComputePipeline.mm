@@ -181,8 +181,10 @@ Ref<BindGroupLayout> ComputePipeline::getBindGroupLayout(uint32_t groupIndex)
     }
 
     if (groupIndex >= pipelineLayout->numberOfBindGroupLayouts()) {
-        device->generateAValidationError("getBindGroupLayout: groupIndex is out of range"_s);
-        pipelineLayout->makeInvalid();
+        if (groupIndex >= device->limits().maxBindGroups) {
+            device->generateAValidationError("getBindGroupLayout: groupIndex is out of range"_s);
+            pipelineLayout->makeInvalid();
+        }
         return BindGroupLayout::createInvalid(device);
     }
 

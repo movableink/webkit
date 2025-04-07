@@ -27,6 +27,7 @@
 
 #import "BindGroupLayout.h"
 #import "Pipeline.h"
+#import "PipelineLayout.h"
 
 #import <wtf/FastMalloc.h>
 #import <wtf/HashMap.h>
@@ -63,7 +64,7 @@ public:
     Ref<BindGroupLayout> getBindGroupLayout(uint32_t groupIndex);
     void setLabel(String&&);
 
-    bool isValid() const { return m_computePipelineState; }
+    bool isValid() const { return m_computePipelineState && m_pipelineLayout->isValid(); }
 
     id<MTLComputePipelineState> computePipelineState() const { return m_computePipelineState; }
 
