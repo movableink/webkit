@@ -1106,8 +1106,7 @@ void RenderBlock::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 
 void RenderBlock::paintContents(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (isSkippedContentRoot(*this))
-        return;
+    ASSERT(!isSkippedContentRoot(*this));
 
     if (childrenInline())
         paintInlineChildren(paintInfo, paintOffset);
@@ -1132,6 +1131,8 @@ void RenderBlock::paintContents(PaintInfo& paintInfo, const LayoutPoint& paintOf
 
 void RenderBlock::paintChildren(PaintInfo& paintInfo, const LayoutPoint& paintOffset, PaintInfo& paintInfoForChild, bool usePrintRect)
 {
+    ASSERT(!isSkippedContentRoot(*this));
+
     for (auto& child : childrenOfType<RenderBox>(*this)) {
         if (!paintChild(child, paintInfo, paintOffset, paintInfoForChild, usePrintRect))
             return;
@@ -1140,6 +1141,8 @@ void RenderBlock::paintChildren(PaintInfo& paintInfo, const LayoutPoint& paintOf
 
 bool RenderBlock::paintChild(RenderBox& child, PaintInfo& paintInfo, const LayoutPoint& paintOffset, PaintInfo& paintInfoForChild, bool usePrintRect, PaintBlockType paintType)
 {
+    ASSERT(!isSkippedContentRoot(*this));
+
     if (child.isExcludedAndPlacedInBorder())
         return true;
 
@@ -1244,6 +1247,7 @@ void RenderBlock::paintDebugBoxShadowIfApplicable(GraphicsContext& context, cons
 void RenderBlock::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
     PaintPhase paintPhase = paintInfo.phase;
+    auto shouldPaintContent = !isSkippedContentRoot(*this);
 
     // 1. paint background, borders etc
     if ((paintPhase == PaintPhase::BlockBackground || paintPhase == PaintPhase::ChildBlockBackground) && style().usedVisibility() == Visibility::Visible) {
@@ -1253,7 +1257,7 @@ void RenderBlock::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
     }
     
     // Paint legends just above the border before we scroll or clip.
-    if (paintPhase == PaintPhase::BlockBackground || paintPhase == PaintPhase::ChildBlockBackground || paintPhase == PaintPhase::Selection)
+    if (shouldPaintContent && (paintPhase == PaintPhase::BlockBackground || paintPhase == PaintPhase::ChildBlockBackground || paintPhase == PaintPhase::Selection))
         paintExcludedChildrenInBorder(paintInfo, paintOffset);
     
     if (paintPhase == PaintPhase::Mask && style().usedVisibility() == Visibility::Visible) {
@@ -1336,18 +1340,20 @@ void RenderBlock::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
         return;
     
     // 2. paint contents
-    if (paintPhase != PaintPhase::SelfOutline)
-        paintContents(paintInfo, scrolledOffset);
+    if (shouldPaintContent) {
+        if (paintPhase != PaintPhase::SelfOutline)
+            paintContents(paintInfo, scrolledOffset);
 
-    // 3. paint selection
-    // FIXME: Make this work with multi column layouts.  For now don't fill gaps.
-    bool isPrinting = document().printing();
-    if (!isPrinting)
-        paintSelection(paintInfo, scrolledOffset); // Fill in gaps in selection on lines and between blocks.
+        // 3. paint selection
+        // FIXME: Make this work with multi column layouts. For now don't fill gaps.
+        bool isPrinting = document().printing();
+        if (!isPrinting)
+            paintSelection(paintInfo, scrolledOffset); // Fill in gaps in selection on lines and between blocks.
 
-    // 4. paint floats.
-    if (paintPhase == PaintPhase::Float || paintPhase == PaintPhase::Selection || paintPhase == PaintPhase::TextClip || paintPhase == PaintPhase::EventRegion || paintPhase == PaintPhase::Accessibility)
-        paintFloats(paintInfo, scrolledOffset, paintPhase == PaintPhase::Selection || paintPhase == PaintPhase::TextClip || paintPhase == PaintPhase::EventRegion || paintPhase == PaintPhase::Accessibility);
+        // 4. paint floats.
+        if (paintPhase == PaintPhase::Float || paintPhase == PaintPhase::Selection || paintPhase == PaintPhase::TextClip || paintPhase == PaintPhase::EventRegion || paintPhase == PaintPhase::Accessibility)
+            paintFloats(paintInfo, scrolledOffset, paintPhase == PaintPhase::Selection || paintPhase == PaintPhase::TextClip || paintPhase == PaintPhase::EventRegion || paintPhase == PaintPhase::Accessibility);
+    }
 
     // 5. paint outline.
     if ((paintPhase == PaintPhase::Outline || paintPhase == PaintPhase::SelfOutline) && hasOutline() && style().usedVisibility() == Visibility::Visible) {
@@ -1387,7 +1393,8 @@ void RenderBlock::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
     // 7. paint caret.
     // If the caret's node's render object's containing block is this block, and the paint action is PaintPhase::Foreground,
     // then paint the caret.
-    paintCarets(paintInfo, paintOffset);
+    if (shouldPaintContent)
+        paintCarets(paintInfo, paintOffset);
 }
 
 static ContinuationOutlineTableMap* continuationOutlineTable()
@@ -3644,7 +3651,7 @@ LayoutUnit RenderBlock::adjustIntrinsicLogicalHeightForBoxSizing(LayoutUnit heig
 
 void RenderBlock::paintExcludedChildrenInBorder(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (!isFieldset() || isSkippedContentRoot(*this))
+    if (!isFieldset())
         return;
     
     RenderBox* box = findFieldsetLegend();
