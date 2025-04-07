@@ -789,16 +789,7 @@ add_library(Skia STATIC
     modules/skcms/src/skcms_TransformSkx.cc
 )
 
-if (ANDROID)
-    target_sources(Skia PRIVATE
-        src/ports/SkDebug_android.cpp
-        src/ports/SkFontMgr_android.cpp
-        src/ports/SkFontMgr_android_parser.cpp
-    )
-    target_link_libraries(Skia PRIVATE
-        EXPAT::EXPAT
-    )
-elseif (WIN32)
+if (WIN32)
     target_sources(Skia PRIVATE
         src/ports/SkDebug_win.cpp
         src/ports/SkFontHost_win.cpp
@@ -813,19 +804,29 @@ elseif (WIN32)
 else ()
     target_sources(Skia PRIVATE
         src/ports/SkDebug_stdio.cpp
-        src/ports/SkFontConfigInterface.cpp
-        src/ports/SkFontConfigInterface_direct.cpp
-        src/ports/SkFontConfigInterface_direct_factory.cpp
         src/ports/SkFontHost_FreeType.cpp
         src/ports/SkFontHost_FreeType_common.cpp
-        src/ports/SkFontMgr_fontconfig.cpp
         src/ports/SkOSFile_posix.cpp
         src/ports/SkTypeface_proxy.cpp
     )
-    target_link_libraries(Skia PRIVATE
-        Fontconfig::Fontconfig
-        Freetype::Freetype
-    )
+    target_link_libraries(Skia PRIVATE Freetype::Freetype)
+
+    if (ANDROID)
+        target_sources(Skia PRIVATE
+            src/ports/SkDebug_android.cpp
+            src/ports/SkFontMgr_android.cpp
+            src/ports/SkFontMgr_android_parser.cpp
+        )
+        target_link_libraries(Skia PRIVATE EXPAT::EXPAT android log)
+    else ()
+        target_sources(Skia PRIVATE
+            src/ports/SkFontConfigInterface.cpp
+            src/ports/SkFontConfigInterface_direct.cpp
+            src/ports/SkFontConfigInterface_direct_factory.cpp
+            src/ports/SkFontMgr_fontconfig.cpp
+        )
+        target_link_libraries(Skia PRIVATE Fontconfig::Fontconfig)
+    endif ()
 endif ()
 
 if (USE_LIBEPOXY)
