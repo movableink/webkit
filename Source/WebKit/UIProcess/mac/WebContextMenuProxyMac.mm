@@ -478,14 +478,18 @@ RetainPtr<NSMenuItem> WebContextMenuProxyMac::createShareMenuItem(ShareMenuItemT
 
     if (!hitTestData.absoluteLinkURL.isEmpty()) {
         auto absoluteLinkURL = URL({ }, hitTestData.absoluteLinkURL);
-        if (!absoluteLinkURL.isEmpty())
-            [items addObject:absoluteLinkURL.createNSURL().get()];
+        if (!absoluteLinkURL.isEmpty()) {
+            if (RetainPtr url = absoluteLinkURL.createNSURL())
+                [items addObject:url.get()];
+        }
     }
 
     if (hitTestData.isDownloadableMedia && !hitTestData.absoluteMediaURL.isEmpty()) {
         auto downloadableMediaURL = URL({ }, hitTestData.absoluteMediaURL);
-        if (!downloadableMediaURL.isEmpty())
-            [items addObject:downloadableMediaURL.createNSURL().get()];
+        if (!downloadableMediaURL.isEmpty()) {
+            if (RetainPtr url = downloadableMediaURL.createNSURL())
+                [items addObject:url.get()];
+        }
     }
 
     bool usePlaceholder = type == ShareMenuItemType::Placeholder;

@@ -831,6 +831,15 @@ TEST(ContextMenuTests, HitTestResultHasLocalDataForLinkURL)
     Util::run(&gotProposedMenu);
 }
 
+TEST(ContextMenuTests, HitTestResultLinkWithInvalidURL)
+{
+    RetainPtr webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 400, 400)]);
+    [webView synchronouslyLoadHTMLString:@"<a href='https://' style='font-size: 100px;'>Link</a>"];
+
+    RetainPtr<_WKContextMenuElementInfo> elementInfo = [webView rightClickAtPointAndWaitForContextMenu:NSMakePoint(50, 350)];
+    EXPECT_NOT_NULL([elementInfo hitTestResult]);
+}
+
 } // namespace TestWebKitAPI
 
 #endif // PLATFORM(MAC)
