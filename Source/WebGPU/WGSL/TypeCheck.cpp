@@ -2118,10 +2118,13 @@ Behaviors TypeChecker::analyze(AST::Statement& statement)
         return Behavior::Return;
     case AST::NodeKind::ContinueStatement: {
         bool hasLoopTarget = false;
+        bool hasSwitchTarget = false;
         for (int i = m_breakTargetStack.size() - 1; i >= 0; --i) {
             auto& target = m_breakTargetStack[i];
-            if (std::holds_alternative<AST::SwitchStatement*>(target))
+            if (std::holds_alternative<AST::SwitchStatement*>(target)) {
+                hasSwitchTarget = true;
                 continue;
+            }
 
             hasLoopTarget = true;
 
@@ -2131,7 +2134,7 @@ Behaviors TypeChecker::analyze(AST::Statement& statement)
             }
 
             if (auto** loop = std::get_if<AST::LoopStatement*>(&target)) {
-                if ((*loop)->continuing().has_value()) {
+                if (hasSwitchTarget && (*loop)->continuing().has_value()) {
                     (*loop)->setContainsSwitch();
                     auto& continueStatement = downcast<AST::ContinueStatement>(statement);
                     continueStatement.setIsFromSwitchToContinuing();
