@@ -633,6 +633,8 @@ public:
 
     void invalidateAncestorBackgroundObscurationStatus();
 
+    inline bool backgroundIsKnownToBeObscured(const LayoutPoint& paintOffset);
+
 protected:
     RenderBox(Type, Element&, RenderStyle&&, OptionSet<TypeFlag> = { }, TypeSpecificFlags = { });
     RenderBox(Type, Document&, RenderStyle&&, OptionSet<TypeFlag> = { }, TypeSpecificFlags = { });
@@ -654,7 +656,7 @@ protected:
     // Returns false if it could not cheaply compute the extent (e.g. fixed background), in which case the returned rect may be incorrect.
     bool getBackgroundPaintedExtent(const LayoutPoint& paintOffset, LayoutRect&) const;
     virtual bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const;
-    bool computeBackgroundIsKnownToBeObscured(const LayoutPoint& paintOffset) override;
+    virtual bool computeBackgroundIsKnownToBeObscured(const LayoutPoint& paintOffset);
 
     void paintMaskImages(const PaintInfo&, const LayoutRect&);
 

@@ -78,8 +78,10 @@ void BackgroundPainter::paintBackground(const LayoutRect& paintRect, BleedAvoida
     if (!paintsOwnBackground(m_renderer))
         return;
 
-    if (m_renderer.backgroundIsKnownToBeObscured(paintRect.location()) && !boxShadowShouldBeAppliedToBackground(m_renderer, paintRect.location(), bleedAvoidance, { }))
-        return;
+    if (auto* renderBox = dynamicDowncast<RenderBox>(m_renderer)) {
+        if (renderBox->backgroundIsKnownToBeObscured(paintRect.location()) && !boxShadowShouldBeAppliedToBackground(*renderBox, paintRect.location(), bleedAvoidance, { }))
+            return;
+    }
 
     auto backgroundColor = m_renderer.style().visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor);
     auto compositeOp = document().compositeOperatorForBackgroundColor(backgroundColor, m_renderer);

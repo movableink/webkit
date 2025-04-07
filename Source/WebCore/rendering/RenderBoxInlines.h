@@ -161,4 +161,13 @@ inline bool isSkippedContentRoot(const RenderBox& renderBox)
     return renderBox.element() && WebCore::isSkippedContentRoot(renderBox.style(), *renderBox.protectedElement());
 }
 
+inline bool RenderBox::backgroundIsKnownToBeObscured(const LayoutPoint& paintOffset)
+{
+    if (boxDecorationState() == BoxDecorationState::InvalidObscurationStatus) {
+        auto computedBoxDecorationState = computeBackgroundIsKnownToBeObscured(paintOffset) ? BoxDecorationState::IsKnownToBeObscured : BoxDecorationState::MayBeVisible;
+        setBoxDecorationState(computedBoxDecorationState);
+    }
+    return boxDecorationState() == BoxDecorationState::IsKnownToBeObscured;
+}
+
 } // namespace WebCore

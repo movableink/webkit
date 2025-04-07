@@ -681,8 +681,7 @@ public:
         IsKnownToBeObscured,
         MayBeVisible,
     };
-    bool hasVisibleBoxDecorations() const { return m_stateBitfields.boxDecorationState() != BoxDecorationState::None; }
-    bool backgroundIsKnownToBeObscured(const LayoutPoint& paintOffset);
+    bool hasVisibleBoxDecorations() const { return boxDecorationState() != BoxDecorationState::None; }
 
     bool needsLayout() const;
     bool selfNeedsLayout() const { return m_stateBitfields.hasFlag(StateFlag::NeedsLayout); }
@@ -772,7 +771,6 @@ public:
 
     void setHasVisibleBoxDecorations(bool = true);
     void invalidateBackgroundObscurationStatus();
-    virtual bool computeBackgroundIsKnownToBeObscured(const LayoutPoint&) { return false; }
 
     void setReplacedOrAtomicInline(bool b = true) { m_stateBitfields.setFlag(StateFlag::IsReplacedOrAtomicInline, b); }
     void setHorizontalWritingMode(bool b = true) { m_stateBitfields.setFlag(StateFlag::VerticalWritingMode, !b); }
@@ -1154,6 +1152,9 @@ protected:
     void issueRepaint(std::optional<LayoutRect> partialRepaintRect = std::nullopt, ClipRepaintToLayer = ClipRepaintToLayer::No, ForceRepaint = ForceRepaint::No, std::optional<LayoutBoxExtent> additionalRepaintOutsets = std::nullopt) const;
     bool hasWBRLineBreakFlag() const { return m_typeSpecificFlags.lineBreakFlags().contains(LineBreakFlag::IsWBR); }
 
+    void setBoxDecorationState(BoxDecorationState boxDecorationState) { m_stateBitfields.setBoxDecorationState(boxDecorationState); }
+    BoxDecorationState boxDecorationState() const { return m_stateBitfields.boxDecorationState(); }
+
 private:
     virtual RepaintRects localRectsForRepaint(RepaintOutlineBounds) const;
 
@@ -1377,15 +1378,6 @@ inline void RenderObject::invalidateBackgroundObscurationStatus()
     if (!hasVisibleBoxDecorations())
         return;
     m_stateBitfields.setBoxDecorationState(BoxDecorationState::InvalidObscurationStatus);
-}
-
-inline bool RenderObject::backgroundIsKnownToBeObscured(const LayoutPoint& paintOffset)
-{
-    if (m_stateBitfields.boxDecorationState() == BoxDecorationState::InvalidObscurationStatus) {
-        BoxDecorationState boxDecorationState = computeBackgroundIsKnownToBeObscured(paintOffset) ? BoxDecorationState::IsKnownToBeObscured : BoxDecorationState::MayBeVisible;
-        m_stateBitfields.setBoxDecorationState(boxDecorationState);
-    }
-    return m_stateBitfields.boxDecorationState() == BoxDecorationState::IsKnownToBeObscured;
 }
 
 inline bool RenderObject::needsSimplifiedNormalFlowLayoutOnly() const
