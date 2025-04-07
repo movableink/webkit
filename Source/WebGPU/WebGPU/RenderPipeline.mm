@@ -1814,6 +1814,7 @@ RefPtr<RenderPipeline> RenderPipeline::recomputeLastStrideAsStride() const
     }
 
     NSError *error = nil;
+    RELEASE_ASSERT(m_device->device());
     id<MTLRenderPipelineState> renderPipelineState = [m_device->device() newRenderPipelineStateWithDescriptor:clonedRenderPipelineDescriptor error:&error];
     if (!renderPipelineState) {
         if (error)
