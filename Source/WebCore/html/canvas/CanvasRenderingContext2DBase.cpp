@@ -2809,6 +2809,17 @@ String CanvasRenderingContext2DBase::normalizeSpaces(const String& text)
     return String::adopt(WTFMove(charVector));
 }
 
+void CanvasRenderingContext2DBase::drawText(const String& text, double x, double y, bool fill, std::optional<double> maxWidth)
+{
+    if (!canDrawText(x, y, fill, maxWidth))
+        return;
+
+    String normalizedText = normalizeSpaces(text);
+    auto direction = (state().direction == Direction::Rtl) ? TextDirection::RTL : TextDirection::LTR;
+    TextRun textRun(normalizedText, 0, 0, ExpansionBehavior::allowRightOnly(), direction, false, true);
+    drawTextUnchecked(textRun, x, y, fill, maxWidth);
+}
+
 void CanvasRenderingContext2DBase::drawTextUnchecked(const TextRun& textRun, double x, double y, bool fill, std::optional<double> maxWidth)
 {
     auto measureTextRun = [&](const TextRun& textRun) -> std::tuple<float, FontMetrics>  {
