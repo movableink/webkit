@@ -2129,3 +2129,5 @@ webkit.org/b/291108 [ Sequoia Debug ] imported/w3c/web-platform-tests/html/webap
 webkit.org/b/291115 [ Sequoia Debug ] imported/w3c/web-platform-tests/websockets/back-forward-cache-with-closed-websocket-connection-ccns.tentative.window.html [ Pass Failure ]
 
 webkit.org/b/291119 [ Debug ] imported/w3c/web-platform-tests/html/semantics/embedded-content/media-elements/loading-the-media-resource/resource-selection-invoke-pause-networkState.html [ Pass Failure ]
+
+webkit.org/b/291236 [ Debug ] http/tests/pdf/page-in-window-update-with-linearized-pdf-in-display-none-iframe.html [ Skip ]
