@@ -223,7 +223,6 @@ bool RenderObject::isLegend() const
     return node() && node()->hasTagName(legendTag);
 }
 
-    
 bool RenderObject::isFieldset() const
 {
     return node() && node()->hasTagName(fieldsetTag);

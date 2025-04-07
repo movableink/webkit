@@ -3451,18 +3451,21 @@ void RenderBlock::layoutExcludedChildren(RelayoutChildren relayoutChildren)
 
 RenderBox* RenderBlock::findFieldsetLegend(FieldsetFindLegendOption option) const
 {
+    if (isSkippedContentRoot(*this))
+        return { };
+
     for (auto& legend : childrenOfType<RenderBox>(*this)) {
         if (option == FieldsetIgnoreFloatingOrOutOfFlow && legend.isFloatingOrOutOfFlowPositioned())
             continue;
         if (legend.isLegend())
             return const_cast<RenderBox*>(&legend);
     }
-    return nullptr;
+    return { };
 }
 
 void RenderBlock::adjustBorderBoxRectForPainting(LayoutRect& paintRect)
 {
-    if (!isFieldset() || isSkippedContentRoot(*this) || !intrinsicBorderForFieldset())
+    if (!isFieldset() || !intrinsicBorderForFieldset())
         return;
     
     auto* legend = findFieldsetLegend();
@@ -3485,7 +3488,7 @@ void RenderBlock::adjustBorderBoxRectForPainting(LayoutRect& paintRect)
 LayoutRect RenderBlock::paintRectToClipOutFromBorder(const LayoutRect& paintRect)
 {
     LayoutRect clipRect;
-    if (!isFieldset() || isSkippedContentRoot(*this))
+    if (!isFieldset())
         return clipRect;
     auto* legend = findFieldsetLegend();
     if (!legend)
