@@ -499,6 +499,8 @@ static bool isDeferredImage(Element* element)
 
 void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
+    ASSERT(!isSkippedContentRoot(*this));
+
     GraphicsContext& context = paintInfo.context();
     if (context.invalidatingImagesWithAsyncDecodes()) {
         if (cachedImage() && cachedImage()->isClientWaitingForAsyncDecoding(*this))

@@ -240,6 +240,8 @@ static void drawReplacementArrow(GraphicsContext& context, const FloatRect& insi
 
 void RenderEmbeddedObject::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
+    ASSERT(!isSkippedContentRoot(*this));
+
     if (!isPluginUnavailable())
         return;
 

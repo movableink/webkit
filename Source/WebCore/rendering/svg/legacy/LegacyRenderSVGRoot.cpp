@@ -241,6 +241,8 @@ bool LegacyRenderSVGRoot::shouldApplyViewportClip() const
 
 void LegacyRenderSVGRoot::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
+    ASSERT(!isSkippedContentRoot(*this));
+
     // An empty viewport disables rendering.
     bool clipViewport = shouldApplyViewportClip();
     if (clipViewport && contentBoxSize().isEmpty())

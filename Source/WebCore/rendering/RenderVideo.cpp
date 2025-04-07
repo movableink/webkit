@@ -215,6 +215,8 @@ bool RenderVideo::failedToLoadPosterImage() const
 
 void RenderVideo::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
+    ASSERT(!isSkippedContentRoot(*this));
+
     RefPtr mediaPlayer = videoElement().player();
     bool displayingPoster = videoElement().shouldDisplayPosterImage();
 

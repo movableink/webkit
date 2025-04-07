@@ -241,6 +241,8 @@ void RenderWidget::styleDidChange(StyleDifference diff, const RenderStyle* oldSt
 
 void RenderWidget::paintContents(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
+    ASSERT(!isSkippedContentRoot(*this));
+
     if (paintInfo.requireSecurityOriginAccessForWidgets) {
         if (auto contentDocument = frameOwnerElement().contentDocument()) {
             if (!document().protectedSecurityOrigin()->isSameOriginDomain(contentDocument->securityOrigin()))
