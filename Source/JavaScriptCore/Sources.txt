@@ -527,8 +527,6 @@ ftl/FTLState.cpp
 ftl/FTLThunks.cpp
 ftl/FTLValueRange.cpp
 
-fuzzilli/Fuzzilli.cpp
-
 heap/AlignedMemoryAllocator.cpp
 heap/Allocator.cpp
 heap/BlockDirectory.cpp
