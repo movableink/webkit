@@ -308,8 +308,8 @@ private:
 #if PLATFORM(MAC)
     static double resistanceForDelta(double deltaScale, double currentScale, double minMagnification, double maxMagnification);
 
-    CALayer* determineSnapshotLayerParent() const;
-    CALayer* determineLayerAdjacentToSnapshotForParent(SwipeDirection, CALayer* snapshotLayerParent) const;
+    RetainPtr<CALayer> determineSnapshotLayerParent() const;
+    RetainPtr<CALayer> determineLayerAdjacentToSnapshotForParent(SwipeDirection, CALayer* snapshotLayerParent) const;
     void applyDebuggingPropertiesToSwipeViews();
     void didMoveSwipeSnapshotLayer();
 #endif

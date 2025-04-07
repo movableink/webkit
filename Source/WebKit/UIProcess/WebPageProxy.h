@@ -1277,7 +1277,7 @@ public:
     NSWindow *platformWindow();
     void rootViewToWindow(const WebCore::IntRect& viewRect, WebCore::IntRect& windowRect);
 
-    NSView *inspectorAttachmentView();
+    RetainPtr<NSView> inspectorAttachmentView();
     _WKRemoteObjectRegistry *remoteObjectRegistry();
 
     CGRect boundsOfLayerInLayerBackedWindowCoordinates(CALayer *) const;

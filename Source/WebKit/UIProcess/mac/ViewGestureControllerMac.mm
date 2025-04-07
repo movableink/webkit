@@ -319,25 +319,25 @@ FloatRect ViewGestureController::windowRelativeBoundsForCustomSwipeViews() const
     return swipeArea;
 }
 
-static CALayer *leastCommonAncestorLayer(const Vector<RetainPtr<CALayer>>& layers)
+static RetainPtr<CALayer> leastCommonAncestorLayer(const Vector<RetainPtr<CALayer>>& layers)
 {
     Vector<Vector<CALayer *>> liveLayerPathsFromRoot(layers.size());
 
     size_t shortestPathLength = std::numeric_limits<size_t>::max();
 
     for (size_t layerIndex = 0; layerIndex < layers.size(); layerIndex++) {
-        CALayer *parent = [layers[layerIndex] superlayer];
+        RetainPtr parent = [layers[layerIndex] superlayer];
         while (parent) {
-            liveLayerPathsFromRoot[layerIndex].insert(0, parent);
+            liveLayerPathsFromRoot[layerIndex].insert(0, parent.get());
             shortestPathLength = std::min(shortestPathLength, liveLayerPathsFromRoot[layerIndex].size());
-            parent = parent.superlayer;
+            parent = parent.get().superlayer;
         }
     }
 
     for (size_t pathIndex = 0; pathIndex < shortestPathLength; pathIndex++) {
-        CALayer *firstPathLayer = liveLayerPathsFromRoot[0][pathIndex];
+        RetainPtr firstPathLayer = liveLayerPathsFromRoot[0][pathIndex];
         for (size_t layerIndex = 1; layerIndex < layers.size(); layerIndex++) {
-            if (liveLayerPathsFromRoot[layerIndex][pathIndex] != firstPathLayer)
+            if (liveLayerPathsFromRoot[layerIndex][pathIndex] != firstPathLayer.get())
                 return firstPathLayer;
         }
     }
@@ -345,7 +345,7 @@ static CALayer *leastCommonAncestorLayer(const Vector<RetainPtr<CALayer>>& layer
     return liveLayerPathsFromRoot[0][shortestPathLength];
 }
 
-CALayer *ViewGestureController::determineSnapshotLayerParent() const
+RetainPtr<CALayer> ViewGestureController::determineSnapshotLayerParent() const
 {
     if (m_currentSwipeLiveLayers.size() == 1)
         return [m_currentSwipeLiveLayers[0] superlayer];
@@ -354,36 +354,36 @@ CALayer *ViewGestureController::determineSnapshotLayerParent() const
     return leastCommonAncestorLayer(m_currentSwipeLiveLayers);
 }
 
-CALayer *ViewGestureController::determineLayerAdjacentToSnapshotForParent(SwipeDirection direction, CALayer *snapshotLayerParent) const
+RetainPtr<CALayer> ViewGestureController::determineLayerAdjacentToSnapshotForParent(SwipeDirection direction, CALayer *snapshotLayerParent) const
 {
     // If we have custom swiping views, we assume that the views were passed to us in back-to-front z-order.
-    CALayer *layerAdjacentToSnapshot = isPhysicallySwipingLeft(direction) ? m_currentSwipeLiveLayers.first().get() : m_currentSwipeLiveLayers.last().get();
+    RetainPtr layerAdjacentToSnapshot = isPhysicallySwipingLeft(direction) ? m_currentSwipeLiveLayers.first().get() : m_currentSwipeLiveLayers.last().get();
 
     if (m_currentSwipeLiveLayers.size() == 1)
         return layerAdjacentToSnapshot;
 
     // If the layers are not all siblings, find the child of the layer we're going to insert the snapshot into which has the frontmost/bottommost layer as a child.
-    while (snapshotLayerParent != layerAdjacentToSnapshot.superlayer)
-        layerAdjacentToSnapshot = layerAdjacentToSnapshot.superlayer;
+    while (snapshotLayerParent != layerAdjacentToSnapshot.get().superlayer)
+        layerAdjacentToSnapshot = layerAdjacentToSnapshot.get().superlayer;
     return layerAdjacentToSnapshot;
 }
 
 static bool layerGeometryFlippedToRoot(CALayer *layer)
 {
     bool flipped = false;
-    CALayer *parent = layer;
+    RetainPtr parent = layer;
     while (parent) {
-        if (parent.isGeometryFlipped)
+        if (parent.get().isGeometryFlipped)
             flipped = !flipped;
-        parent = parent.superlayer;
+        parent = parent.get().superlayer;
     }
     return flipped;
 }
 
 void ViewGestureController::applyDebuggingPropertiesToSwipeViews()
 {
-    CAFilter* filter = [CAFilter filterWithType:kCAFilterColorInvert];
-    [m_swipeLayer setFilters:@[ filter ]];
+    RetainPtr filter = [CAFilter filterWithType:kCAFilterColorInvert];
+    [m_swipeLayer setFilters:@[ filter.get() ]];
     [m_swipeLayer setBackgroundColor:[NSColor blueColor].CGColor];
     [m_swipeLayer setBorderColor:[NSColor yellowColor].CGColor];
     [m_swipeLayer setBorderWidth:4];
@@ -405,7 +405,7 @@ void ViewGestureController::beginSwipeGesture(WebBackForwardListItem* targetItem
 
     willBeginGesture(ViewGestureType::Swipe);
 
-    CALayer *rootContentLayer = page->acceleratedCompositingRootLayer();
+    RetainPtr rootContentLayer = page->acceleratedCompositingRootLayer();
 
     m_swipeLayer = adoptNS([[CALayer alloc] init]);
     m_swipeSnapshotLayer = adoptNS([[CALayer alloc] init]);
@@ -423,18 +423,18 @@ void ViewGestureController::beginSwipeGesture(WebBackForwardListItem* targetItem
         swipeArea.move(-obscuredContentInsets.left(), -obscuredContentInsets.bottom());
 
         for (const auto& view : m_customSwipeViews) {
-            CALayer *layer = [view layer];
+            RetainPtr layer = [view layer];
             ASSERT(layer);
-            m_currentSwipeLiveLayers.append(layer);
+            m_currentSwipeLiveLayers.append(layer.get());
         }
     } else {
         swipeArea = [rootContentLayer convertRect:CGRectMake(0, 0, page->viewSize().width(), page->viewSize().height()) toLayer:nil];
         obscuredContentInsets = page->obscuredContentInsets();
-        m_currentSwipeLiveLayers.append(rootContentLayer);
+        m_currentSwipeLiveLayers.append(rootContentLayer.get());
     }
 
-    CALayer *snapshotLayerParent = determineSnapshotLayerParent();
-    bool geometryIsFlippedToRoot = layerGeometryFlippedToRoot(snapshotLayerParent);
+    RetainPtr snapshotLayerParent = determineSnapshotLayerParent();
+    bool geometryIsFlippedToRoot = layerGeometryFlippedToRoot(snapshotLayerParent.get());
 
     RetainPtr<CGColorRef> backgroundColor = CGColorGetConstantColor(kCGColorWhite);
     if (RefPtr<ViewSnapshot> snapshot = targetItem->snapshot()) {
@@ -470,12 +470,12 @@ void ViewGestureController::beginSwipeGesture(WebBackForwardListItem* targetItem
     m_didCallEndSwipeGesture = false;
     m_removeSnapshotImmediatelyWhenGestureEnds = false;
 
-    CALayer *layerAdjacentToSnapshot = determineLayerAdjacentToSnapshotForParent(direction, snapshotLayerParent);
+    RetainPtr layerAdjacentToSnapshot = determineLayerAdjacentToSnapshotForParent(direction, snapshotLayerParent.get());
     BOOL swipingLeft = isPhysicallySwipingLeft(direction);
     if (swipingLeft)
-        [snapshotLayerParent insertSublayer:m_swipeLayer.get() below:layerAdjacentToSnapshot];
+        [snapshotLayerParent insertSublayer:m_swipeLayer.get() below:layerAdjacentToSnapshot.get()];
     else
-        [snapshotLayerParent insertSublayer:m_swipeLayer.get() above:layerAdjacentToSnapshot];
+        [snapshotLayerParent insertSublayer:m_swipeLayer.get() above:layerAdjacentToSnapshot.get()];
 
     // We don't know enough about the custom views' hierarchy to apply a shadow.
     if (m_customSwipeViews.isEmpty()) {

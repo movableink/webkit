@@ -1824,7 +1824,7 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
 {
     THROW_IF_SUSPENDED;
     if (RefPtr webFrameProxy = _page->mainFrame())
-        return _impl->printOperationWithPrintInfo(printInfo, *webFrameProxy);
+        return _impl->printOperationWithPrintInfo(printInfo, *webFrameProxy).autorelease();
     return nil;
 }
 

@@ -109,7 +109,7 @@
 
 - (NSSet<NSView *> *)_pdfHUDs
 {
-    return _impl->pdfHUDs();
+    return _impl->pdfHUDs().autorelease();
 }
 
 - (NSMenu *)_activeMenu

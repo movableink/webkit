@@ -255,7 +255,7 @@ public:
     void updatePDFHUDLocation(PDFPluginIdentifier, const WebCore::IntRect&);
     void removePDFHUD(PDFPluginIdentifier);
     void removeAllPDFHUDs();
-    NSSet *pdfHUDs();
+    RetainPtr<NSSet> pdfHUDs();
 
     void renewGState();
     void setFrameSize(CGSize);
@@ -278,7 +278,7 @@ public:
 
     void drawRect(CGRect);
     bool canChangeFrameLayout(WebFrameProxy&);
-    NSPrintOperation *printOperationWithPrintInfo(NSPrintInfo *, WebFrameProxy&);
+    RetainPtr<NSPrintOperation> printOperationWithPrintInfo(NSPrintInfo *, WebFrameProxy&);
 
     void setAutomaticallyAdjustsContentInsets(bool);
     bool automaticallyAdjustsContentInsets() const;
@@ -351,7 +351,7 @@ public:
     void updateTitlebarAdjacencyState();
 #endif
 
-    NSView *hitTest(CGPoint);
+    RetainPtr<NSView> hitTest(CGPoint);
 
     WebCore::DestinationColorSpace colorSpace();
 
@@ -529,7 +529,7 @@ public:
     CALayer *footerBannerLayer() const { return m_footerBannerLayer.get(); }
 
     void setInspectorAttachmentView(NSView *);
-    NSView *inspectorAttachmentView();
+    RetainPtr<NSView> inspectorAttachmentView();
     
     void showShareSheet(const WebCore::ShareDataWithParsedURL&, WTF::CompletionHandler<void(bool)>&&, WKWebView *);
     void shareSheetDidDismiss(WKShareSheet *);
@@ -885,7 +885,7 @@ private:
 
     void viewWillMoveToWindowImpl(NSWindow *);
 
-    id toolTipOwnerForSendingMouseEvents() const;
+    RetainPtr<id> toolTipOwnerForSendingMouseEvents() const;
 
 #if ENABLE(DRAG_SUPPORT)
     void sendDragEndToPage(CGPoint endPoint, NSDragOperation);

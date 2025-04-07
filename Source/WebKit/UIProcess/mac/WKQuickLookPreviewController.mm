@@ -82,7 +82,7 @@
     if (!PAL::isQuickLookUIFrameworkAvailable() || ![PAL::getQLPreviewPanelClass() sharedPreviewPanelExists])
         return;
 
-    if (auto panel = [PAL::getQLPreviewPanelClass() sharedPreviewPanel]; [self isControlling:panel])
+    if (RetainPtr panel = [PAL::getQLPreviewPanelClass() sharedPreviewPanel]; [self isControlling:panel.get()])
         [panel close];
 }
 

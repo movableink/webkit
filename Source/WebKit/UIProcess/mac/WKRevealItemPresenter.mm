@@ -68,7 +68,7 @@
     if (!_impl)
         return;
 
-    auto view = _impl->view();
+    RetainPtr view = _impl->view();
     if (!view)
         return;
 
@@ -81,8 +81,8 @@
     [menu setItemArray:menuItems.get()];
 
     auto clickLocationInWindow = [view convertPoint:_menuLocationInView toView:nil];
-    NSEvent *event = [NSEvent mouseEventWithType:NSEventTypeLeftMouseDown location:clickLocationInWindow modifierFlags:0 timestamp:0 windowNumber:view.window.windowNumber context:0 eventNumber:0 clickCount:1 pressure:1];
-    [NSMenu popUpContextMenu:menu.get() withEvent:event forView:view];
+    RetainPtr event = [NSEvent mouseEventWithType:NSEventTypeLeftMouseDown location:clickLocationInWindow modifierFlags:0 timestamp:0 windowNumber:view.get().window.windowNumber context:0 eventNumber:0 clickCount:1 pressure:1];
+    [NSMenu popUpContextMenu:menu.get() withEvent:event.get() forView:view.get()];
 
     [self _callDidFinishPresentationIfNeeded];
 }

@@ -279,7 +279,7 @@ private:
     void didPerformDragOperation(bool handled) final;
 #endif
 
-    NSView *inspectorAttachmentView() override;
+    RetainPtr<NSView> inspectorAttachmentView() override;
     _WKRemoteObjectRegistry *remoteObjectRegistry() override;
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)

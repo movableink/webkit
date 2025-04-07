@@ -37,6 +37,7 @@
 #import <pal/spi/mac/NSSharingServicePickerSPI.h>
 #import <pal/spi/mac/NSSharingServiceSPI.h>
 #import <wtf/cocoa/SpanCocoa.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/text/WTFString.h>
 
 // FIXME: We probably need to hang on the picker itself until the context menu operation is done, and this object will probably do that.
@@ -44,8 +45,8 @@
 
 + (WKSharingServicePickerDelegate*)sharedSharingServicePickerDelegate
 {
-    static WKSharingServicePickerDelegate* delegate = [[WKSharingServicePickerDelegate alloc] init];
-    return delegate;
+    static NeverDestroyed<RetainPtr<WKSharingServicePickerDelegate>> delegate = adoptNS([[WKSharingServicePickerDelegate alloc] init]);
+    return delegate.get().get();
 }
 
 - (WebKit::WebContextMenuProxyMac*)menuProxy
@@ -88,14 +89,14 @@
     if (!_filterEditingServices)
         return proposedServices;
 
-    NSMutableArray *services = [NSMutableArray arrayWithCapacity:proposedServices.count];
+    RetainPtr services = adoptNS([[NSMutableArray alloc] initWithCapacity:proposedServices.count]);
     
     for (NSSharingService *service in proposedServices) {
         if (service.type != NSSharingServiceTypeEditor)
             [services addObject:service];
     }
     
-    return services;
+    return services.autorelease();
 }
 
 - (id <NSSharingServiceDelegate>)sharingServicePicker:(NSSharingServicePicker *)sharingServicePicker delegateForSharingService:(NSSharingService *)sharingService
@@ -127,32 +128,29 @@
     Vector<String> types;
     std::span<const uint8_t> dataReference;
 
-    id item = [items objectAtIndex:0];
+    RetainPtr<id> item = [items objectAtIndex:0];
 
-    if ([item isKindOfClass:[NSAttributedString class]]) {
-        NSData *data = [item RTFDFromRange:NSMakeRange(0, [item length]) documentAttributes:@{ }];
-        dataReference = span(data);
+    if (RetainPtr attributedString = dynamic_objc_cast<NSAttributedString>(item.get())) {
+        RetainPtr data = [attributedString RTFDFromRange:NSMakeRange(0, [attributedString length]) documentAttributes:@{ }];
+        dataReference = span(data.get());
 
         types.append(NSPasteboardTypeRTFD);
         types.append(WebCore::legacyRTFDPasteboardType());
-    } else if ([item isKindOfClass:[NSData class]]) {
-        NSData *data = (NSData *)item;
-        RetainPtr<CGImageSourceRef> source = adoptCF(CGImageSourceCreateWithData((CFDataRef)data, NULL));
+    } else if (RetainPtr data = dynamic_objc_cast<NSData>(item.get())) {
+        RetainPtr<CGImageSourceRef> source = adoptCF(CGImageSourceCreateWithData(bridge_cast(data.get()), NULL));
         RetainPtr<CGImageRef> image = adoptCF(CGImageSourceCreateImageAtIndex(source.get(), 0, NULL));
 
         if (!image)
             return;
 
-        dataReference = span(data);
+        dataReference = span(data.get());
         types.append(NSPasteboardTypeTIFF);
-    } else if ([item isKindOfClass:[NSItemProvider class]]) {
-        NSItemProvider *itemProvider = (NSItemProvider *)item;
-        
+    } else if (RetainPtr itemProvider = dynamic_objc_cast<NSItemProvider>(item.get())) {
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         RefPtr menuProxy = _menuProxy.get();
         WeakPtr weakPage = menuProxy ? menuProxy->page() : nullptr;
-        NSString *itemUTI = itemProvider.registeredTypeIdentifiers.firstObject;
-        [itemProvider loadDataRepresentationForTypeIdentifier:itemUTI completionHandler:[weakPage, attachmentID = _attachmentID, itemUTI](NSData *data, NSError *error) {
+        RetainPtr<NSString> itemUTI = itemProvider.get().registeredTypeIdentifiers.firstObject;
+        [itemProvider loadDataRepresentationForTypeIdentifier:itemUTI.get() completionHandler:[weakPage, attachmentID = _attachmentID, itemUTI](NSData *data, NSError *error) {
             RefPtr webPage = weakPage.get();
             
             if (!webPage)
@@ -165,8 +163,8 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             if (!apiAttachment)
                 return;
             
-            auto attachment = wrapper(apiAttachment);
-            [attachment setData:data newContentType:itemUTI];
+            RetainPtr attachment = wrapper(apiAttachment);
+            [attachment setData:data newContentType:itemUTI.get()];
             webPage->didInvalidateDataForAttachment(*apiAttachment.get());
         }];
 ALLOW_DEPRECATED_DECLARATIONS_END

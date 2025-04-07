@@ -460,8 +460,8 @@ RefPtr<WebPageProxy> WebInspectorUIProxy::platformCreateFrontendPage()
     }
 
     m_objCAdapter = adoptNS([[WKWebInspectorUIProxyObjCAdapter alloc] initWithWebInspectorUIProxy:this]);
-    NSView *inspectedView = inspectedPage->inspectorAttachmentView();
-    [[NSNotificationCenter defaultCenter] addObserver:m_objCAdapter.get() selector:@selector(inspectedViewFrameDidChange:) name:NSViewFrameDidChangeNotification object:inspectedView];
+    RetainPtr inspectedView = inspectedPage->inspectorAttachmentView();
+    [[NSNotificationCenter defaultCenter] addObserver:m_objCAdapter.get() selector:@selector(inspectedViewFrameDidChange:) name:NSViewFrameDidChangeNotification object:inspectedView.get()];
 
     auto configuration = inspectedPage->uiClient().configurationForLocalInspector(*inspectedPage,  *this);
     m_inspectorViewController = adoptNS([[WKInspectorViewController alloc] initWithConfiguration: WebKit::wrapper(configuration.get()) inspectedPage:inspectedPage.get()]);
@@ -605,18 +605,18 @@ bool WebInspectorUIProxy::platformCanAttach(bool webProcessCanAttach)
     if (!inspectedPage)
         return false;
 
-    NSView *inspectedView = inspectedPage->inspectorAttachmentView();
-    if ([WKInspectorViewController viewIsInspectorWebView:inspectedView])
+    RetainPtr inspectedView = inspectedPage->inspectorAttachmentView();
+    if ([WKInspectorViewController viewIsInspectorWebView:inspectedView.get()])
         return webProcessCanAttach;
 
-    if (inspectedView.hidden)
+    if (inspectedView.get().hidden)
         return false;
 
     static const float minimumAttachedHeight = 250;
     static const float maximumAttachedHeightRatio = 0.75;
     static const float minimumAttachedWidth = 500;
 
-    NSRect inspectedViewFrame = inspectedView.frame;
+    NSRect inspectedViewFrame = inspectedView.get().frame;
 
     float maximumAttachedHeight = NSHeight(inspectedViewFrame) * maximumAttachedHeightRatio;
     return minimumAttachedHeight <= maximumAttachedHeight && minimumAttachedWidth <= NSWidth(inspectedViewFrame);
@@ -758,13 +758,13 @@ void WebInspectorUIProxy::inspectedViewFrameDidChange(CGFloat currentDimension)
     if (!inspectedPage)
         return;
 
-    NSView *inspectedView = inspectedPage->inspectorAttachmentView();
+    RetainPtr inspectedView = inspectedPage->inspectorAttachmentView();
     WKWebView *inspectorView = [m_inspectorViewController webView];
 
-    NSRect inspectedViewFrame = inspectedView.frame;
+    NSRect inspectedViewFrame = inspectedView.get().frame;
     NSRect oldInspectorViewFrame = inspectorView.frame;
     NSRect newInspectorViewFrame = NSZeroRect;
-    NSRect parentBounds = inspectedView.superview.bounds;
+    NSRect parentBounds = inspectedView.get().superview.bounds;
     CGFloat inspectedViewTop = NSMaxY(inspectedViewFrame);
 
     switch (m_attachmentSide) {
@@ -794,7 +794,7 @@ void WebInspectorUIProxy::inspectedViewFrameDidChange(CGFloat currentDimension)
         newInspectorViewFrame = NSMakeRect(parentWidth - inspectorWidth, 0, inspectorWidth, NSHeight(parentBounds));
 
         if (NSWindow *inspectorWindow = inspectorView.window) {
-            NSRect contentLayoutRect = [inspectedView.superview convertRect:inspectorWindow.contentLayoutRect fromView:nil];
+            NSRect contentLayoutRect = [inspectedView.get().superview convertRect:inspectorWindow.contentLayoutRect fromView:nil];
             newInspectorViewFrame = NSIntersectionRect(newInspectorViewFrame, contentLayoutRect);
         }
         break;
@@ -813,7 +813,7 @@ void WebInspectorUIProxy::inspectedViewFrameDidChange(CGFloat currentDimension)
         newInspectorViewFrame = NSMakeRect(0, 0, inspectorWidth, NSHeight(parentBounds));
 
         if (NSWindow *inspectorWindow = inspectorView.window) {
-            NSRect contentLayoutRect = [inspectedView.superview convertRect:inspectorWindow.contentLayoutRect fromView:nil];
+            NSRect contentLayoutRect = [inspectedView.get().superview convertRect:inspectorWindow.contentLayoutRect fromView:nil];
             newInspectorViewFrame = NSIntersectionRect(newInspectorViewFrame, contentLayoutRect);
         }
         break;
@@ -835,7 +835,7 @@ void WebInspectorUIProxy::inspectedViewFrameDidChange(CGFloat currentDimension)
 void WebInspectorUIProxy::platformAttach()
 {
     ASSERT(protectedInspectedPage());
-    NSView *inspectedView = protectedInspectedPage()->inspectorAttachmentView();
+    RetainPtr inspectedView = protectedInspectedPage()->inspectorAttachmentView();
     WKWebView *inspectorView = [m_inspectorViewController webView];
 
     if (m_inspectorWindow) {
@@ -864,14 +864,14 @@ void WebInspectorUIProxy::platformAttach()
 
     inspectedViewFrameDidChange(currentDimension);
 
-    [inspectedView.superview addSubview:inspectorView positioned:NSWindowBelow relativeTo:inspectedView];
+    [inspectedView.get().superview addSubview:inspectorView positioned:NSWindowBelow relativeTo:inspectedView.get()];
     [inspectorView.window makeFirstResponder:inspectorView];
 }
 
 void WebInspectorUIProxy::platformDetach()
 {
     RefPtr inspectedPage = m_inspectedPage.get();
-    NSView *inspectedView = inspectedPage ? inspectedPage->inspectorAttachmentView() : nil;
+    RetainPtr inspectedView = inspectedPage ? inspectedPage->inspectorAttachmentView() : nil;
     WKWebView *inspectorView = [m_inspectorViewController webView];
 
     [inspectorView removeFromSuperview];
@@ -880,7 +880,7 @@ void WebInspectorUIProxy::platformDetach()
     // Make sure that we size the inspected view's frame after detaching so that it takes up the space that the
     // attached inspector used to. Preserve the top position of the inspected view so banners in Safari still work.
     if (inspectedView)
-        inspectedView.frame = NSMakeRect(0, 0, NSWidth(inspectedView.superview.bounds), NSMaxY(inspectedView.frame));
+        inspectedView.get().frame = NSMakeRect(0, 0, NSWidth(inspectedView.get().superview.bounds), NSMaxY(inspectedView.get().frame));
 
     // Return early if we are not visible. This means the inspector was closed while attached
     // and we should not create and show the inspector window.

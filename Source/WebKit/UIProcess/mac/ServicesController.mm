@@ -86,13 +86,13 @@ void ServicesController::refreshExistingServices(bool refreshImmediately)
     dispatch_after(refreshTime, m_refreshQueue, ^{
         auto serviceLookupGroup = adoptOSObject(dispatch_group_create());
 
-        static NSImage *image { [[NSImage alloc] init] };
-        hasCompatibleServicesForItems(serviceLookupGroup.get(), @[ image ], [this] (bool hasServices) {
+        static NeverDestroyed<RetainPtr<NSImage>> image = adoptNS([[NSImage alloc] init]);
+        hasCompatibleServicesForItems(serviceLookupGroup.get(), @[image.get().get()], [this] (bool hasServices) {
             m_hasImageServices = hasServices;
         });
 
-        static NSAttributedString *attributedString { [[NSAttributedString alloc] initWithString:@"a"] };
-        hasCompatibleServicesForItems(serviceLookupGroup.get(), @[ attributedString ], [this] (bool hasServices) {
+        static NeverDestroyed<RetainPtr<NSAttributedString>> attributedString = adoptNS([[NSAttributedString alloc] initWithString:@"a"]);
+        hasCompatibleServicesForItems(serviceLookupGroup.get(), @[attributedString.get().get()], [this] (bool hasServices) {
             m_hasSelectionServices = hasServices;
         });
 
@@ -101,10 +101,10 @@ void ServicesController::refreshExistingServices(bool refreshImmediately)
         std::call_once(attributedStringWithRichContentOnceFlag, [&] {
             WorkQueue::protectedMain()->dispatchSync([&] {
                 auto attachment = adoptNS([[NSTextAttachment alloc] init]);
-                auto cell = adoptNS([[NSTextAttachmentCell alloc] initImageCell:image]);
+                auto cell = adoptNS([[NSTextAttachmentCell alloc] initImageCell:image.get().get()]);
                 [attachment setAttachmentCell:cell.get()];
                 auto richString = adoptNS([[NSAttributedString attributedStringWithAttachment:attachment.get()] mutableCopy]);
-                [richString appendAttributedString:attributedString];
+                [richString appendAttributedString:attributedString.get().get()];
                 attributedStringWithRichContent.get() = WTFMove(richString);
             });
         });

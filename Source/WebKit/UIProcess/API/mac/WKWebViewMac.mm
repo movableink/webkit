@@ -868,7 +868,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 {
     if (!_impl)
         return [super hitTest:point];
-    return _impl->hitTest(NSPointToCGPoint(point));
+    return _impl->hitTest(NSPointToCGPoint(point)).autorelease();
 }
 
 - (NSInteger)conversationIdentifier
@@ -1675,7 +1675,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (NSView *)_inspectorAttachmentView
 {
-    return _impl->inspectorAttachmentView();
+    return _impl->inspectorAttachmentView().autorelease();
 }
 
 - (void)_setInspectorAttachmentView:(NSView *)newView
@@ -1852,7 +1852,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 - (NSPrintOperation *)_printOperationWithPrintInfo:(NSPrintInfo *)printInfo forFrame:(_WKFrameHandle *)frameHandle
 {
     if (RefPtr webFrameProxy = WebKit::WebFrameProxy::webFrame(frameHandle->_frameHandle->frameID()))
-        return _impl->printOperationWithPrintInfo(printInfo, *webFrameProxy);
+        return _impl->printOperationWithPrintInfo(printInfo, *webFrameProxy).autorelease();
     return nil;
 }
 

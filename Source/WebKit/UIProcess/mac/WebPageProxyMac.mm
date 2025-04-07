@@ -688,7 +688,7 @@ void WebPageProxy::showValidationMessage(const IntRect& anchorClientRect, const 
     RefPtr { m_validationBubble }->showRelativeTo(anchorClientRect);
 }
 
-NSView *WebPageProxy::inspectorAttachmentView()
+RetainPtr<NSView> WebPageProxy::inspectorAttachmentView()
 {
     RefPtr pageClient = this->pageClient();
     return pageClient ? pageClient->inspectorAttachmentView() : nullptr;

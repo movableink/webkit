@@ -72,14 +72,14 @@ void DisplayCaptureSessionManager::alertForGetDisplayMedia(WebPageProxy& page, c
     RetainPtr alert = adoptNS([[NSAlert alloc] init]);
     [alert setMessageText:alertTitle.get()];
 
-    auto *button = [alert addButtonWithTitle:allowWindowButtonString.get()];
-    button.keyEquivalent = @"";
+    RetainPtr button = [alert addButtonWithTitle:allowWindowButtonString.get()];
+    button.get().keyEquivalent = @"";
 
     button = [alert addButtonWithTitle:allowScreenButtonString.get()];
-    button.keyEquivalent = @"";
+    button.get().keyEquivalent = @"";
 
     button = [alert addButtonWithTitle:doNotAllowButtonString.get()];
-    button.keyEquivalent = @"\E";
+    button.get().keyEquivalent = @"\E";
 
     [alert beginSheetModalForWindow:[webView window] completionHandler:[completionBlock = makeBlockPtr(WTFMove(completionHandler))](NSModalResponse returnCode) {
         DisplayCaptureSessionManager::CaptureSessionType result = DisplayCaptureSessionManager::CaptureSessionType::None;

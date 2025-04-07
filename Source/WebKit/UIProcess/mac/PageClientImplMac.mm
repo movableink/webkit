@@ -164,8 +164,8 @@ NSWindow *PageClientImpl::activeWindow() const
 bool PageClientImpl::isViewWindowActive()
 {
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanCommunicateWithWindowServer));
-    NSWindow *activeViewWindow = activeWindow();
-    return activeViewWindow.isKeyWindow || (activeViewWindow && [NSApp keyWindow] == activeViewWindow);
+    RetainPtr activeViewWindow = activeWindow();
+    return activeViewWindow.get().isKeyWindow || (activeViewWindow && [NSApp keyWindow] == activeViewWindow.get());
 }
 
 bool PageClientImpl::isViewFocused()
@@ -193,23 +193,23 @@ void PageClientImpl::makeFirstResponder()
     
 bool PageClientImpl::isViewVisible()
 {
-    NSView *activeView = this->activeView();
-    NSWindow *activeViewWindow = activeWindow();
+    RetainPtr activeView = this->activeView();
+    RetainPtr activeViewWindow = activeWindow();
 
     auto windowIsOccluded = [&]()->bool {
-        return m_impl && m_impl->windowOcclusionDetectionEnabled() && (activeViewWindow.occlusionState & NSWindowOcclusionStateVisible) != NSWindowOcclusionStateVisible;
+        return m_impl && m_impl->windowOcclusionDetectionEnabled() && (activeViewWindow.get().occlusionState & NSWindowOcclusionStateVisible) != NSWindowOcclusionStateVisible;
     };
 
-    LOG_WITH_STREAM(ActivityState, stream << "PageClientImpl " << this << " isViewVisible(): activeViewWindow " << activeViewWindow
-        << " (window visible " << activeViewWindow.isVisible << ", view hidden " << activeView.isHiddenOrHasHiddenAncestor << ", window occluded " << windowIsOccluded() << ")");
+    LOG_WITH_STREAM(ActivityState, stream << "PageClientImpl " << this << " isViewVisible(): activeViewWindow " << activeViewWindow.get()
+        << " (window visible " << activeViewWindow.get().isVisible << ", view hidden " << activeView.get().isHiddenOrHasHiddenAncestor << ", window occluded " << windowIsOccluded() << ")");
 
     if (!activeViewWindow)
         return false;
 
-    if (!activeViewWindow.isVisible)
+    if (!activeViewWindow.get().isVisible)
         return false;
 
-    if (activeView.isHiddenOrHasHiddenAncestor)
+    if (activeView.get().isHiddenOrHasHiddenAncestor)
         return false;
 
     if (windowIsOccluded())
@@ -312,16 +312,16 @@ void PageClientImpl::setCursor(const WebCore::Cursor& cursor)
     if (!view)
         return;
 
-    NSWindow *window = [view window];
+    RetainPtr window = [view window];
     if (!window)
         return;
 
     auto mouseLocationInScreen = NSEvent.mouseLocation;
-    if (window.windowNumber != [NSWindow windowNumberAtPoint:mouseLocationInScreen belowWindowWithWindowNumber:0])
+    if (window.get().windowNumber != [NSWindow windowNumberAtPoint:mouseLocationInScreen belowWindowWithWindowNumber:0])
         return;
 
-    NSCursor *platformCursor = cursor.platformCursor();
-    if ([NSCursor currentCursor] == platformCursor)
+    RetainPtr platformCursor = cursor.platformCursor();
+    if ([NSCursor currentCursor] == platformCursor.get())
         return;
 
     if (m_impl->imageAnalysisOverlayViewHasCursorAtPoint([view convertPoint:mouseLocationInScreen fromView:nil]))
@@ -589,16 +589,16 @@ void PageClientImpl::enterAcceleratedCompositingMode(const LayerTreeContext& lay
 {
     ASSERT(!layerTreeContext.isEmpty());
 
-    CALayer *renderLayer = [CALayer _web_renderLayerWithContextID:layerTreeContext.contextID shouldPreserveFlip:NO];
-    m_impl->enterAcceleratedCompositingWithRootLayer(renderLayer);
+    RetainPtr renderLayer = [CALayer _web_renderLayerWithContextID:layerTreeContext.contextID shouldPreserveFlip:NO];
+    m_impl->enterAcceleratedCompositingWithRootLayer(renderLayer.get());
 }
 
 void PageClientImpl::didFirstLayerFlush(const LayerTreeContext& layerTreeContext)
 {
     ASSERT(!layerTreeContext.isEmpty());
 
-    CALayer *renderLayer = [CALayer _web_renderLayerWithContextID:layerTreeContext.contextID shouldPreserveFlip:NO];
-    m_impl->setAcceleratedCompositingRootLayer(renderLayer);
+    RetainPtr renderLayer = [CALayer _web_renderLayerWithContextID:layerTreeContext.contextID shouldPreserveFlip:NO];
+    m_impl->setAcceleratedCompositingRootLayer(renderLayer.get());
 }
 
 void PageClientImpl::exitAcceleratedCompositingMode()
@@ -610,8 +610,8 @@ void PageClientImpl::updateAcceleratedCompositingMode(const LayerTreeContext& la
 {
     ASSERT(!layerTreeContext.isEmpty());
 
-    CALayer *renderLayer = [CALayer _web_renderLayerWithContextID:layerTreeContext.contextID shouldPreserveFlip:NO];
-    m_impl->setAcceleratedCompositingRootLayer(renderLayer);
+    RetainPtr renderLayer = [CALayer _web_renderLayerWithContextID:layerTreeContext.contextID shouldPreserveFlip:NO];
+    m_impl->setAcceleratedCompositingRootLayer(renderLayer.get());
 }
 
 void PageClientImpl::setRemoteLayerTreeRootNode(RemoteLayerTreeNode* rootNode)
@@ -942,7 +942,7 @@ void PageClientImpl::didChangeBackgroundColor()
 
 CGRect PageClientImpl::boundsOfLayerInLayerBackedWindowCoordinates(CALayer *layer) const
 {
-    CALayer *windowContentLayer = static_cast<NSView *>([m_view window].contentView).layer;
+    RetainPtr<CALayer> windowContentLayer = static_cast<NSView *>([m_view window].contentView).layer;
     ASSERT(windowContentLayer);
 
     return [windowContentLayer convertRect:layer.bounds fromLayer:layer];
@@ -1002,7 +1002,7 @@ void PageClientImpl::didPerformDragOperation(bool handled)
 
 #endif
 
-NSView *PageClientImpl::inspectorAttachmentView()
+RetainPtr<NSView> PageClientImpl::inspectorAttachmentView()
 {
     return m_impl->inspectorAttachmentView();
 }
@@ -1099,14 +1099,14 @@ bool PageClientImpl::appUsesCustomAccentColor()
     static dispatch_once_t once;
     static BOOL usesCustomAppAccentColor = NO;
     dispatch_once(&once, ^{
-        NSBundle *bundleForAccentColor = [NSBundle mainBundle];
-        NSDictionary *info = [bundleForAccentColor infoDictionary];
-        NSString *accentColorName = info[@"NSAccentColorName"];
+        RetainPtr bundleForAccentColor = [NSBundle mainBundle];
+        RetainPtr info = [bundleForAccentColor infoDictionary];
+        RetainPtr<NSString> accentColorName = info.get()[@"NSAccentColorName"];
         if ([accentColorName length])
-            usesCustomAppAccentColor = !![NSColor colorNamed:accentColorName bundle:bundleForAccentColor];
+            usesCustomAppAccentColor = !![NSColor colorNamed:accentColorName.get() bundle:bundleForAccentColor.get()];
 
-        if (!usesCustomAppAccentColor && [(accentColorName = info[@"NSAppAccentColorName"]) length])
-            usesCustomAppAccentColor = !![NSColor colorNamed:accentColorName bundle:bundleForAccentColor];
+        if (!usesCustomAppAccentColor && [(accentColorName = info.get()[@"NSAppAccentColorName"]) length])
+            usesCustomAppAccentColor = !![NSColor colorNamed:accentColorName.get() bundle:bundleForAccentColor.get()];
     });
 
     return usesCustomAppAccentColor;
