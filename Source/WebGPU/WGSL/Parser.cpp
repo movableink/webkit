@@ -940,14 +940,8 @@ Result<AST::Expression::Ref> Parser<Lexer>::parseArrayType()
 
         if (current().type == TokenType::Comma) {
             consume();
-            // FIXME: According to https://www.w3.org/TR/WGSL/#syntax-element_count_expression
-            // this should be: AdditiveExpression | BitwiseExpression.
-            //
-            // The WGSL grammar doesn't specify expression operator precedence so
-            // until then just parse AdditiveExpression.
             if (current().type != TokenType::TemplateArgsRight) {
-                PARSE(elementCountLHS, UnaryExpression);
-                PARSE(elementCount, AdditiveExpressionPostUnary, WTFMove(elementCountLHS));
+                PARSE(elementCount, Expression);
                 maybeElementCount = &elementCount.get();
 
                 if (current().type == TokenType::Comma)
