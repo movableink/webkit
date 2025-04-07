@@ -164,8 +164,12 @@ inline bool isSkippedContentRoot(const RenderBox& renderBox)
 inline bool RenderBox::backgroundIsKnownToBeObscured(const LayoutPoint& paintOffset)
 {
     if (boxDecorationState() == BoxDecorationState::InvalidObscurationStatus) {
-        auto computedBoxDecorationState = computeBackgroundIsKnownToBeObscured(paintOffset) ? BoxDecorationState::IsKnownToBeObscured : BoxDecorationState::MayBeVisible;
-        setBoxDecorationState(computedBoxDecorationState);
+        auto computedBoxDecorationState = [&] {
+            if (isSkippedContentRoot(*this))
+                return BoxDecorationState::MayBeVisible;
+            return computeBackgroundIsKnownToBeObscured(paintOffset) ? BoxDecorationState::IsKnownToBeObscured : BoxDecorationState::MayBeVisible;
+        };
+        setBoxDecorationState(computedBoxDecorationState());
     }
     return boxDecorationState() == BoxDecorationState::IsKnownToBeObscured;
 }
