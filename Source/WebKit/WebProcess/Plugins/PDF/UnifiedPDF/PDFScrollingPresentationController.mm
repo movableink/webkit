@@ -313,6 +313,11 @@ void PDFScrollingPresentationController::updateForCurrentScrollability(OptionSet
         return;
     if (auto* tiledBacking = m_contentsLayer->tiledBacking())
         tiledBacking->setScrollability(scrollability);
+
+#if ENABLE(PDFKIT_PAINTED_SELECTIONS)
+    if (auto* tiledBacking = m_selectionLayer->tiledBacking())
+        tiledBacking->setScrollability(scrollability);
+#endif
 }
 
 auto PDFScrollingPresentationController::layerCoveragesForRepaintPageCoverage(RepaintRequirements repaintRequirements, const PDFPageCoverage& pageCoverage) -> Vector<LayerCoverage>
