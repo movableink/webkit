@@ -707,6 +707,10 @@ public:
                 m_catchableFromWasm = error->isCatchableFromWasm();
             else
                 m_catchableFromWasm = true;
+
+            // https://webassembly.github.io/exception-handling/js-api/#create-a-host-function
+            if (!m_wasmTag)
+                m_wasmTag = &Wasm::Tag::jsExceptionTag();
         }
 #else
         UNUSED_PARAM(thrownValue);
@@ -736,12 +740,6 @@ public:
 #if ENABLE(WEBASSEMBLY)
                 if (m_catchableFromWasm) {
                     auto* wasmCallee = static_cast<Wasm::Callee*>(nativeCallee);
-                    if (wasmCallee->compilationMode() == Wasm::CompilationMode::WasmToJSMode) {
-                        // https://webassembly.github.io/exception-handling/js-api/#create-a-host-function
-                        if (!m_wasmTag)
-                            m_wasmTag = &Wasm::Tag::jsExceptionTag();
-                    }
-
                     if (wasmCallee->hasExceptionHandlers()) {
                         JSWebAssemblyInstance* instance = m_callFrame->wasmInstance();
                         unsigned exceptionHandlerIndex = m_callFrame->callSiteIndex().bits();
