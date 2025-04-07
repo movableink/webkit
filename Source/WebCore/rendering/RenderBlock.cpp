@@ -2138,6 +2138,8 @@ Node* RenderBlock::nodeForHitTest() const
 
 bool RenderBlock::hitTestChildren(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& adjustedLocation, HitTestAction hitTestAction)
 {
+    ASSERT(!isSkippedContentRoot(*this));
+
     // Hit test descendants first.
     const LayoutSize localOffset = toLayoutSize(adjustedLocation);
     const LayoutSize scrolledOffset(localOffset - toLayoutSize(scrollPosition()));
@@ -2171,14 +2173,17 @@ bool RenderBlock::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
     if (!hitTestClipPath(locationInContainer, accumulatedOffset))
         return false;
 
-    // If we have clipping, then we can't have any spillout.
-    bool useClip = (hasControlClip() || hasNonVisibleOverflow());
-    bool checkChildren = !useClip || (hasControlClip() ? locationInContainer.intersects(controlClipRect(adjustedLocation)) : locationInContainer.intersects(overflowClipRect(adjustedLocation, OverlayScrollbarSizeRelevancy::IncludeOverlayScrollbarSize)));
-    if (checkChildren && hitTestChildren(request, result, locationInContainer, adjustedLocation, hitTestAction))
-        return true;
+    auto shouldHittestContent = !isSkippedContentRoot(*this);
+    if (shouldHittestContent) {
+        // If we have clipping, then we can't have any spillout.
+        bool useClip = (hasControlClip() || hasNonVisibleOverflow());
+        bool checkChildren = !useClip || (hasControlClip() ? locationInContainer.intersects(controlClipRect(adjustedLocation)) : locationInContainer.intersects(overflowClipRect(adjustedLocation, OverlayScrollbarSizeRelevancy::IncludeOverlayScrollbarSize)));
+        if (checkChildren && hitTestChildren(request, result, locationInContainer, adjustedLocation, hitTestAction))
+            return true;
 
-    if (!checkChildren && hitTestExcludedChildrenInBorder(request, result, locationInContainer, adjustedLocation, hitTestAction))
-        return true;
+        if (!checkChildren && hitTestExcludedChildrenInBorder(request, result, locationInContainer, adjustedLocation, hitTestAction))
+            return true;
+    }
 
     if (!hitTestBorderRadius(locationInContainer, accumulatedOffset))
         return false;
