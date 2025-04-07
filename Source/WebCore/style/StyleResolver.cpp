@@ -340,9 +340,6 @@ ResolvedStyle Resolver::styleForElement(Element& element, const ResolutionContex
     Adjuster adjuster(document(), *state.parentStyle(), context.parentBoxStyle, &element);
     adjuster.adjust(style, state.userAgentAppearanceStyle());
 
-    if (style.usesViewportUnits())
-        document().setHasStyleWithViewportUnits();
-
     return { state.takeStyle(), WTFMove(elementStyleRelations), collector.releaseMatchResult() };
 }
 
@@ -358,9 +355,6 @@ ResolvedStyle Resolver::styleForElementWithCachedMatchResult(Element& element, c
 
     Adjuster adjuster(document(), *state.parentStyle(), context.parentBoxStyle, &element);
     adjuster.adjust(style, state.userAgentAppearanceStyle());
-
-    if (style.usesViewportUnits())
-        document().setHasStyleWithViewportUnits();
 
     return { state.takeStyle(), { }, makeUnique<MatchResult>(matchResult) };
 }
@@ -582,9 +576,6 @@ std::optional<ResolvedStyle> Resolver::styleForPseudoElement(Element& element, c
 
     Adjuster::adjustVisibilityForPseudoElement(*state.style(), element);
 
-    if (state.style()->usesViewportUnits())
-        document().setHasStyleWithViewportUnits();
-
     return ResolvedStyle { state.takeStyle(), nullptr, collector.releaseMatchResult() };
 }
 
@@ -710,7 +701,7 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
         bool explicitlyInheritedEqual = !hasExplicitlyInherited || parentStyle.nonInheritedEqual(*cacheEntry->parentRenderStyle);
 
         if (inheritedEqual) {
-            InsideLink linkStatus = state.style()->insideLink();
+            InsideLink linkStatus = style.insideLink();
             // If the cache item parent style has identical inherited properties to the current parent style then the
             // resulting style will be identical too. We copy the inherited properties over from the cache and are done.
             style.inheritFrom(*cacheEntry->renderStyle);
@@ -747,7 +738,7 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
         state.setUserAgentAppearanceStyle(WTFMove(userAgentStyle));
     }
 
-    Builder builder(*state.style(), builderContext(state), matchResult, CascadeLevel::Author, includedProperties);
+    Builder builder(style, builderContext(state), matchResult, CascadeLevel::Author, includedProperties);
 
     // Top priority properties may affect resolution of high priority ones.
     builder.applyTopPriorityProperties();
@@ -766,6 +757,8 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
 
     for (auto& contentAttribute : builder.state().registeredContentAttributes())
         ruleSets().mutableFeatures().registerContentAttribute(contentAttribute);
+    if (style.usesViewportUnits())
+        document().setHasStyleWithViewportUnits();
 
     if (cacheEntry || !cacheHash)
         return;

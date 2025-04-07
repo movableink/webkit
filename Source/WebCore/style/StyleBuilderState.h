@@ -138,6 +138,9 @@ public:
     bool isCurrentPropertyInvalidAtComputedValueTime() const;
     void setCurrentPropertyInvalidAtComputedValueTime();
 
+    void setUsesViewportUnits();
+    void setUsesContainerUnits();
+
     Ref<Calculation::RandomKeyMap> randomKeyMap(bool perElement) const;
 
     AnchorPositionedStates* anchorPositionedStates() { return m_context.treeResolutionState ? &m_context.treeResolutionState->anchorPositionedStates : nullptr; }

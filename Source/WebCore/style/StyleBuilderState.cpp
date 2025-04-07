@@ -308,6 +308,16 @@ void BuilderState::setCurrentPropertyInvalidAtComputedValueTime()
     m_invalidAtComputedValueTimeProperties.set(cssPropertyID());
 }
 
+void BuilderState::setUsesViewportUnits()
+{
+    m_style.setUsesViewportUnits();
+}
+
+void BuilderState::setUsesContainerUnits()
+{
+    m_style.setUsesContainerUnits();
+}
+
 Ref<Calculation::RandomKeyMap> BuilderState::randomKeyMap(bool perElement) const
 {
     if (perElement) {
