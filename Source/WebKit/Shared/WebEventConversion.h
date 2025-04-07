@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WebEventConversion_h
-#define WebEventConversion_h
+#pragma once
 
 #include "WebEventModifier.h"
 #include <WebCore/PlatformKeyboardEvent.h>
@@ -57,8 +56,6 @@ class WebTouchPoint;
 class WebGestureEvent;
 #endif
 
-OptionSet<WebCore::PlatformEvent::Modifier> platform(OptionSet<WebEventModifier>);
-
 WebCore::PlatformMouseEvent platform(const WebMouseEvent&);
 WebCore::PlatformWheelEvent platform(const WebWheelEvent&);
 WebCore::PlatformKeyboardEvent platform(const WebKeyboardEvent&);
@@ -74,6 +71,13 @@ WebCore::PlatformTouchPoint platform(const WebTouchPoint&);
 WebCore::PlatformGestureEvent platform(const WebGestureEvent&);
 #endif
 
-} // namespace WebKit
+WebCore::MouseButton platform(WebMouseEventButton);
+WebMouseEventButton kit(WebCore::MouseButton);
 
-#endif // WebEventConversion_h
+WebCore::PlatformEvent::Type platform(WebEventType);
+WebEventType kit(WebCore::PlatformEvent::Type);
+
+OptionSet<WebCore::PlatformEvent::Modifier> platform(OptionSet<WebEventModifier>);
+OptionSet<WebKit::WebEventModifier> kit(OptionSet<WebCore::PlatformEvent::Modifier>);
+
+} // namespace WebKit

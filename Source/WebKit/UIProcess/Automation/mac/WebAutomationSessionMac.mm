@@ -30,6 +30,7 @@
 
 #import "Logging.h"
 #import "WebAutomationSessionMacros.h"
+#import "WebEventConversion.h"
 #import "WebEventFactory.h"
 #import "WebInspectorUIProxy.h"
 #import "WebPageProxy.h"
@@ -39,6 +40,7 @@
 #import <Foundation/Foundation.h>
 #import <WebCore/IntPoint.h>
 #import <WebCore/IntSize.h>
+#import <WebCore/PlatformEventFactoryMac.h>
 #import <WebCore/PlatformMouseEvent.h>
 #import <objc/runtime.h>
 #import <pal/spi/mac/NSEventSPI.h>
@@ -188,18 +190,7 @@ void WebAutomationSession::platformSimulateMouseInteraction(WebPageProxy& page, 
 
     auto locationInWindow = viewportLocationToWindowLocation(locationInViewport, page);
 
-    NSEventModifierFlags modifiers = 0;
-    if (keyModifiers.contains(WebEventModifier::MetaKey))
-        modifiers |= NSEventModifierFlagCommand;
-    if (keyModifiers.contains(WebEventModifier::AltKey))
-        modifiers |= NSEventModifierFlagOption;
-    if (keyModifiers.contains(WebEventModifier::ControlKey))
-        modifiers |= NSEventModifierFlagControl;
-    if (keyModifiers.contains(WebEventModifier::ShiftKey))
-        modifiers |= NSEventModifierFlagShift;
-    if (keyModifiers.contains(WebEventModifier::CapsLockKey))
-        modifiers |= NSEventModifierFlagCapsLock;
-
+    NSEventModifierFlags modifiers = WebEventFactory::toNSEventModifierFlags(keyModifiers);
     NSTimeInterval timestamp = [NSDate timeIntervalSinceReferenceDate];
     NSWindow *window = page.platformWindow();
     NSInteger windowNumber = window.windowNumber;
@@ -285,7 +276,7 @@ void WebAutomationSession::platformSimulateMouseInteraction(WebPageProxy& page, 
 
 OptionSet<WebEventModifier> WebAutomationSession::platformWebModifiersFromRaw(WebPageProxy&, unsigned modifiers)
 {
-    return WebEventFactory::webEventModifiersForNSEventModifierFlags(modifiers);
+    return kit(WebCore::modifiersForModifierFlags(modifiers));
 }
 
 #endif // ENABLE(WEBDRIVER_MOUSE_INTERACTIONS)

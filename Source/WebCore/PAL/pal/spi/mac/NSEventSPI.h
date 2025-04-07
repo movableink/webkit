@@ -47,6 +47,11 @@ enum {
 - (nullable NSEvent *)_initWithCGEvent:(nullable CGEventRef)cgEvent eventRef:(nullable void*)eventRef;
 - (nullable void*)_eventRef NS_RETURNS_INNER_POINTER;
 - (NSEvent *)_eventRelativeToWindow:(NSWindow *)window;
+
+- (NSInteger)_scrollCount;
+- (CGFloat)_unacceleratedScrollingDeltaX;
+- (CGFloat)_unacceleratedScrollingDeltaY;
+
 @end
 
 NS_ASSUME_NONNULL_END
