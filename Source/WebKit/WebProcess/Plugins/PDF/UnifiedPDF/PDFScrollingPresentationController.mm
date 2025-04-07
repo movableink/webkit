@@ -168,7 +168,8 @@ void PDFScrollingPresentationController::setupLayers(GraphicsLayer& scrolledCont
         m_selectionLayer->setDrawsContent(true);
         m_selectionLayer->setAcceleratesDrawing(true);
         m_selectionLayer->setBlendMode(BlendMode::Multiply);
-        scrolledContentsLayer.addChild(*m_selectionLayer);
+
+        // m_selectionLayer will be parented on-demand in `setSelectionLayerEnabled`.
     }
 #endif
 }
@@ -431,6 +432,19 @@ void PDFScrollingPresentationController::paintContents(const GraphicsLayer* laye
 void PDFScrollingPresentationController::paintPDFSelection(const GraphicsLayer* layer, GraphicsContext& context, const FloatRect& clipRect, std::optional<PDFLayoutRow> row)
 {
     m_plugin->paintPDFSelection(layer, context, clipRect, row);
+}
+
+void PDFScrollingPresentationController::setSelectionLayerEnabled(bool enabled)
+{
+#if ENABLE(PDFKIT_PAINTED_SELECTIONS)
+    bool wasEnabled = !!m_selectionLayer->parent();
+    if (wasEnabled == enabled)
+        return;
+    if (!enabled)
+        m_selectionLayer->removeFromParent();
+    else
+        m_contentsLayer->parent()->addChild(*m_selectionLayer);
+#endif
 }
 
 std::optional<PlatformLayerIdentifier> PDFScrollingPresentationController::contentsLayerIdentifier() const

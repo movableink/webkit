@@ -230,6 +230,8 @@ public:
 
     static WebCore::ViewportConfiguration::Parameters viewportParameters();
 
+    bool hasSelection() const;
+
 private:
     explicit UnifiedPDFPlugin(WebCore::HTMLPlugInElement&);
     bool isUnifiedPDFPlugin() const override { return true; }

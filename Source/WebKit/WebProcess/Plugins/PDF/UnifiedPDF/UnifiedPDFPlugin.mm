@@ -900,9 +900,14 @@ void UnifiedPDFPlugin::paintPDFContent(const WebCore::GraphicsLayer* layer, Grap
     }
 }
 
+bool UnifiedPDFPlugin::hasSelection() const
+{
+    return m_currentSelection && ![m_currentSelection isEmpty];
+}
+
 void UnifiedPDFPlugin::paintPDFSelection(const GraphicsLayer* layer, GraphicsContext& context, const FloatRect& clipRect, std::optional<PDFLayoutRow> row)
 {
-    if (!m_currentSelection || [m_currentSelection isEmpty] || !m_presentationController)
+    if (!hasSelection() || !m_presentationController)
         return;
 
     bool isVisibleAndActive = false;
@@ -1238,7 +1243,7 @@ bool UnifiedPDFPlugin::geometryDidChange(const IntSize& pluginSize, const Affine
     bool sizeChanged = pluginSize != m_size;
 
 #if PLATFORM(IOS_FAMILY)
-    if (sizeChanged && m_currentSelection) {
+    if (sizeChanged && hasSelection()) {
         if (RefPtr webPage = this->webPage())
             webPage->scheduleFullEditorStateUpdate();
     }
@@ -2454,7 +2459,7 @@ std::optional<PDFContextMenu> UnifiedPDFPlugin::createContextMenu(const WebMouse
         menuItems.append(item);
     };
 
-    if ([m_pdfDocument allowsCopying] && m_currentSelection) {
+    if ([m_pdfDocument allowsCopying] && hasSelection()) {
         menuItems.appendVector(selectionContextMenuItems(contextMenuEventRootViewPoint));
         addSeparator();
     }
@@ -2558,7 +2563,7 @@ PDFContextMenuItem UnifiedPDFPlugin::separatorContextMenuItem() const
 
 Vector<PDFContextMenuItem> UnifiedPDFPlugin::selectionContextMenuItems(const IntPoint& contextMenuEventRootViewPoint) const
 {
-    if (![m_pdfDocument allowsCopying] || !m_currentSelection || [m_currentSelection isEmpty])
+    if (![m_pdfDocument allowsCopying] || !hasSelection())
         return { };
 
     Vector<PDFContextMenuItem> items {
@@ -2779,7 +2784,7 @@ bool UnifiedPDFPlugin::isEditingCommandEnabled(const String& commandName)
         return true;
 
     if (equalLettersIgnoringASCIICase(commandName, "copy"_s) || equalLettersIgnoringASCIICase(commandName, "takefindstringfromselection"_s))
-        return !!m_currentSelection;
+        return hasSelection();
 
     return false;
 }
@@ -2799,7 +2804,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 bool UnifiedPDFPlugin::performCopyEditingOperation() const
 {
-    if (!m_currentSelection)
+    if (!hasSelection())
         return false;
 
     if (![m_pdfDocument allowsCopying]) {
@@ -2829,7 +2834,7 @@ bool UnifiedPDFPlugin::performCopyEditingOperation() const
 
 bool UnifiedPDFPlugin::takeFindStringFromSelection()
 {
-    if (!m_currentSelection)
+    if (!hasSelection())
         return false;
 
     String findString { m_currentSelection.get().string };
@@ -2876,7 +2881,7 @@ auto UnifiedPDFPlugin::selectionGranularityForMouseEvent(const WebMouseEvent& ev
 
 void UnifiedPDFPlugin::extendCurrentSelectionIfNeeded()
 {
-    if (!m_currentSelection)
+    if (!hasSelection())
         return;
     PDFPage *firstPageOfCurrentSelection = [[m_currentSelection pages] firstObject];
 
@@ -2915,7 +2920,7 @@ void UnifiedPDFPlugin::beginTrackingSelection(PDFDocumentLayout::PageIndex pageI
 void UnifiedPDFPlugin::updateCurrentSelectionForContextMenuEventIfNeeded()
 {
     auto page = m_documentLayout.pageAtIndex(m_selectionTrackingData.startPageIndex);
-    if (!m_currentSelection || !(FloatRect([m_currentSelection boundsForPage:page.get()]).contains(m_selectionTrackingData.startPagePoint)))
+    if (!hasSelection() || !(FloatRect([m_currentSelection boundsForPage:page.get()]).contains(m_selectionTrackingData.startPagePoint)))
         setCurrentSelection([page selectionForWordAtPoint:m_selectionTrackingData.startPagePoint]);
 }
 
@@ -2931,7 +2936,7 @@ void UnifiedPDFPlugin::freezeCursorDuringSelectionDragIfNeeded(IsDraggingSelecti
     if (isDraggingSelection == IsDraggingSelection::No)
         return;
 
-    if (!m_currentSelection || [m_currentSelection isEmpty])
+    if (!hasSelection())
         return;
 
     if (!std::exchange(m_selectionTrackingData.cursorIsFrozenForSelectionDrag, true))
@@ -3029,7 +3034,7 @@ void UnifiedPDFPlugin::repaintOnSelectionChange(ActiveStateChangeReason reason, 
 {
     switch (reason) {
     case ActiveStateChangeReason::WindowActivityChanged:
-        if (!m_currentSelection || [m_currentSelection isEmpty])
+        if (!hasSelection())
             return;
         break;
     case ActiveStateChangeReason::SetCurrentSelection:
@@ -3057,6 +3062,7 @@ void UnifiedPDFPlugin::setCurrentSelection(RetainPtr<PDFSelection>&& selection)
 #if ENABLE(TEXT_SELECTION)
     // FIXME: <https://webkit.org/b/268980> Selection painting requests should be only be made if the current selection has changed.
     // FIXME: <https://webkit.org/b/270070> Selection painting should be optimized by only repainting diff between old and new selection.
+    m_presentationController->setSelectionLayerEnabled(hasSelection());
     repaintOnSelectionChange(ActiveStateChangeReason::SetCurrentSelection, previousSelection.get());
 #endif
     notifySelectionChanged();
@@ -3069,7 +3075,7 @@ String UnifiedPDFPlugin::fullDocumentString() const
 
 String UnifiedPDFPlugin::selectionString() const
 {
-    if (!m_currentSelection)
+    if (!hasSelection())
         return { };
     return m_currentSelection.get().string;
 }
@@ -3179,7 +3185,7 @@ void UnifiedPDFPlugin::autoscrollTimerFired()
 
 void UnifiedPDFPlugin::continueAutoscroll()
 {
-    if (!m_inActiveAutoscroll || !m_currentSelection || [m_currentSelection isEmpty])
+    if (!m_inActiveAutoscroll || !hasSelection())
         return;
 
     auto lastKnownMousePositionInPluginSpace = lastKnownMousePositionInView();
