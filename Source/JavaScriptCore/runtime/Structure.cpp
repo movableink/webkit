@@ -302,7 +302,6 @@ Structure::Structure(VM& vm, StructureVariant variant, Structure* previous)
     , m_classInfo(previous->m_classInfo)
     , m_transitionWatchpointSet(IsWatched)
 {
-    ASSERT(this->variant() != StructureVariant::WebAssemblyGC);
     setDictionaryKind(previous->dictionaryKind());
     setIsPinnedPropertyTable(false);
     setHasBeenFlattenedBefore(previous->hasBeenFlattenedBefore());

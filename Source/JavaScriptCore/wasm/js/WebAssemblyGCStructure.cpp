@@ -36,7 +36,16 @@ WebAssemblyGCStructure::WebAssemblyGCStructure(VM& vm, JSGlobalObject* globalObj
     : Structure(vm, StructureVariant::WebAssemblyGC, globalObject, typeInfo, classInfo)
     , m_rtt(WTFMove(rtt))
     , m_type(WTFMove(type))
-{ }
+{
+}
+
+WebAssemblyGCStructure::WebAssemblyGCStructure(VM& vm, WebAssemblyGCStructure* previous)
+    : Structure(vm, StructureVariant::WebAssemblyGC, previous)
+    , m_rtt(previous->m_rtt)
+    , m_type(previous->m_type)
+{
+}
+
 
 WebAssemblyGCStructure* WebAssemblyGCStructure::create(VM& vm, JSGlobalObject* globalObject, const TypeInfo& typeInfo, const ClassInfo* classInfo, Ref<const Wasm::TypeDefinition>&& type, Ref<const Wasm::RTT>&& rtt)
 {

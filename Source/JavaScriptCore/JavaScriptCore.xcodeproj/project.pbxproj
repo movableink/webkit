@@ -769,7 +769,7 @@
 		14CA958D16AB50FA00938A06 /* ObjectAllocationProfile.h in Headers */ = {isa = PBXBuildFile; fileRef = 14CA958C16AB50FA00938A06 /* ObjectAllocationProfile.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		14D01A7721FB351F00BC54E9 /* JSScriptSourceProvider.h in Headers */ = {isa = PBXBuildFile; fileRef = 14D01A7621FB350300BC54E9 /* JSScriptSourceProvider.h */; };
 		14D01A7721FBEF3800CAE0D0 /* JSWebAssemblyStruct.h in Headers */ = {isa = PBXBuildFile; fileRef = 14D01BE026DEEF3800CAE0D0 /* JSWebAssemblyStruct.h */; };
-		14D01A7721FBEF3800CAE0D1 /* WebAssemblyGCStructure.h in Headers */ = {isa = PBXBuildFile; fileRef = 14D01BE026DEEF3800CAE0D1 /* WebAssemblyGCStructure.h */; };
+		14D01A7721FBEF3800CAE0D1 /* WebAssemblyGCStructure.h in Headers */ = {isa = PBXBuildFile; fileRef = 14D01BE026DEEF3800CAE0D1 /* WebAssemblyGCStructure.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		14D01BE626DEEF3800CAE0D0 /* WebAssemblyTagConstructor.h in Headers */ = {isa = PBXBuildFile; fileRef = 14D01BDA26DEEF3700CAE0D0 /* WebAssemblyTagConstructor.h */; };
 		14D01BE726DEEF3800CAE0D0 /* WebAssemblyTagPrototype.h in Headers */ = {isa = PBXBuildFile; fileRef = 14D01BDB26DEEF3700CAE0D0 /* WebAssemblyTagPrototype.h */; };
 		14D01BE926DECC3800CAE0D0 /* WebAssemblyStructPrototype.h in Headers */ = {isa = PBXBuildFile; fileRef = 14D01BDD26DEEF378CCAE0D0 /* WebAssemblyStructPrototype.h */; };

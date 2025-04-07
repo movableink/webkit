@@ -1313,6 +1313,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     wasm/js/JSWebAssembly.h
     wasm/js/JSWebAssemblyMemory.h
     wasm/js/JSWebAssemblyModule.h
+    wasm/js/WebAssemblyGCStructure.h
     wasm/js/WebAssemblyModuleRecord.h
 
 
