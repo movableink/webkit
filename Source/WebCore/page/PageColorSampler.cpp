@@ -309,7 +309,6 @@ std::variant<PredominantColorType, Color> PageColorSampler::predominantColor(Pag
     if (!pixelBuffer)
         return PredominantColorType::None;
 
-    static constexpr auto nearlyTransparentAlphaThreshold = 0.1;
     static constexpr auto sampleCount = 29;
     static constexpr auto minimumSampleCountForPredominantColor = 0.5 * sampleCount;
     static constexpr auto bytesPerPixel = 4;
