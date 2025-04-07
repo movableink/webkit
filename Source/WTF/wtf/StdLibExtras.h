@@ -32,8 +32,10 @@
 #include <climits>
 #include <concepts>
 #include <cstring>
+#include <errno.h>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <span>
 #include <type_traits>
 #include <utility>
@@ -1540,6 +1542,19 @@ ALWAYS_INLINE void lazyInitialize(const std::unique_ptr<T>& ptr, std::unique_ptr
     const_cast<std::unique_ptr<T>&>(ptr) = std::move(obj);
 }
 
+ALWAYS_INLINE std::optional<double> stringToDouble(std::span<const char> buffer, size_t& parsedLength)
+{
+    RELEASE_ASSERT(buffer.back() == '\0');
+    char* end;
+    auto result = std::strtod(buffer.data(), &end);
+    if (errno == ERANGE) {
+        parsedLength = 0;
+        return std::nullopt;
+    }
+    parsedLength = end - buffer.data();
+    return result;
+}
+
 } // namespace WTF
 
 #define WTFMove(value) std::move<WTF::CheckMoveParameter>(value)
@@ -1603,6 +1618,7 @@ using WTF::spanHasPrefix;
 using WTF::spanHasSuffix;
 using WTF::spansOverlap;
 using WTF::spanReinterpretCast;
+using WTF::stringToDouble;
 using WTF::toTwosComplement;
 using WTF::tryBinarySearch;
 using WTF::unsafeMakeSpan;

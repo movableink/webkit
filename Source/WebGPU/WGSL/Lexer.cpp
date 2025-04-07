@@ -706,6 +706,7 @@ Token Lexer<T>::lexNumber()
     char suffix = '\0';
     char exponentSign = '\0';
     bool isHex = false;
+    auto start = m_code.span();
     auto integral = m_code.span();
     const T* fract = nullptr;
     const T* exponent = nullptr;
@@ -1024,9 +1025,18 @@ Token Lexer<T>::lexNumber()
         return convert(result);
     }
 
+    auto length = static_cast<size_t>(m_code.position() - start.data());
+    if (suffix)
+        length--;
+    Vector<char, 256> buffer(length + 1);
+    for (unsigned i = 0; i < length; ++i)
+        buffer[i] = start[i];
+    buffer[length] = '\0';
     size_t parsedLength;
-    double result = WTF::parseHexDouble(integral, parsedLength);
-    return convert(result);
+    auto maybeResult = stringToDouble(buffer.span(), parsedLength);
+    if (!maybeResult || parsedLength != length)
+        return makeToken(TokenType::Invalid);
+    return convert(*maybeResult);
 }
 
 template class Lexer<LChar>;
