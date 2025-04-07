@@ -89,7 +89,7 @@ void removeScreenTimeData(const HashSet<URL>& websitesToRemove, const WebsiteDat
     RetainPtr webHistory = adoptNS([PAL::allocSTWebHistoryInstance() initWithProfileIdentifier:profileIdentifier]);
 
     for (auto& url : websitesToRemove)
-        [webHistory deleteHistoryForURL:url];
+        [webHistory deleteHistoryForURL:url.createNSURL().get()];
 }
 
 void removeScreenTimeDataWithInterval(WallTime modifiedSince, const WebsiteDataStoreConfiguration& configuration)
