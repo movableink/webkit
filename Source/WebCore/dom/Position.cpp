@@ -1642,7 +1642,7 @@ template<TreeType treeType> std::partial_ordering treeOrder(const Position& a, c
     return treeOrder<treeType>(*makeBoundaryPoint(a), *makeBoundaryPoint(b));
 }
 
-std::partial_ordering documentOrder(const Position& a, const Position& b)
+std::partial_ordering operator<=>(const Position& a, const Position& b)
 {
     return treeOrder<ComposedTree>(a, b);
 }

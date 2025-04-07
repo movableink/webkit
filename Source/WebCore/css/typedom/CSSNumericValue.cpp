@@ -406,7 +406,7 @@ ExceptionOr<Ref<CSSMathSum>> CSSNumericValue::toSum(FixedVector<String>&& units)
 
     if (parsedUnits.isEmpty()) {
         std::sort(values.begin(), values.end(), [](auto& a, auto& b) {
-            return compareSpans(downcast<CSSUnitValue>(a)->unitSerialization().span(), downcast<CSSUnitValue>(b)->unitSerialization().span()) < 0;
+            return is_lt(compareSpans(downcast<CSSUnitValue>(a)->unitSerialization().span(), downcast<CSSUnitValue>(b)->unitSerialization().span()));
         });
         return CSSMathSum::create(WTFMove(values));
     }

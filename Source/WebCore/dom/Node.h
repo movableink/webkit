@@ -821,11 +821,6 @@ private:
 
 bool connectedInSameTreeScope(const Node*, const Node*);
 
-// FIXME: We should remove these but std::is_eq() / std::is_neq() are not available in
-// some of our SDKs yet (rdar://87314077).
-constexpr bool is_eq(std::partial_ordering cmp) { return cmp == 0; }
-constexpr bool is_neq(std::partial_ordering cmp) { return cmp != 0; }
-
 enum TreeType { Tree, ShadowIncludingTree, ComposedTree };
 template<TreeType = Tree> ContainerNode* parent(const Node&);
 template<TreeType = Tree> Node* commonInclusiveAncestor(const Node&, const Node&);

@@ -227,7 +227,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AXTextMarker);
 class AXTextMarker {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AXTextMarker);
     friend class AXTextMarkerRange;
-    friend std::partial_ordering partialOrder(const AXTextMarker&, const AXTextMarker&);
+    friend std::partial_ordering operator<=>(const AXTextMarker&, const AXTextMarker&);
 public:
     // Constructors
     AXTextMarker(const VisiblePosition&, TextMarkerOrigin = TextMarkerOrigin::Unknown);
@@ -358,6 +358,8 @@ public:
     AXTextMarkerRange markerRangeForLineIndex(unsigned lineIndex) const;
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
 
+    friend bool operator==(const AXTextMarker& a, const AXTextMarker& b) { return a.isEqual(b); }
+
 private:
 #if ENABLE(AX_THREAD_TEXT_APIS)
     const AXTextRuns* runs() const;
@@ -376,7 +378,7 @@ private:
 
 class AXTextMarkerRange {
     WTF_MAKE_TZONE_ALLOCATED(AXTextMarkerRange);
-    friend bool operator==(const AXTextMarkerRange&, const AXTextMarkerRange&);
+    friend bool operator==(const AXTextMarkerRange&, const AXTextMarkerRange&) = default;
     friend bool operator<(const AXTextMarkerRange&, const AXTextMarkerRange&);
     friend bool operator>(const AXTextMarkerRange&, const AXTextMarkerRange&);
 public:
@@ -441,31 +443,14 @@ inline AXTextMarkerRange::AXTextMarkerRange(std::optional<AXID> treeID, std::opt
     : AXTextMarkerRange(treeID, objectID, range.location, range.location + range.length)
 { }
 
-inline bool operator==(const AXTextMarker& marker1, const AXTextMarker& marker2)
-{
-    return marker1.isEqual(marker2);
-}
-
-inline bool operator==(const AXTextMarkerRange& range1, const AXTextMarkerRange& range2)
-{
-    return range1.m_start == range2.m_start && range1.m_end == range2.m_end;
-}
-
-inline bool operator!=(const AXTextMarkerRange& range1, const AXTextMarkerRange& range2)
-{
-    return !(range1 == range2);
-}
-
 inline bool operator<(const AXTextMarkerRange& range1, const AXTextMarkerRange& range2)
 {
-    return is_lt(partialOrder(range1.m_start, range2.m_start))
-        || is_lt(partialOrder(range1.m_end, range2.m_end));
+    return is_lt(range1.m_start <=> range2.m_start) || is_lt(range1.m_end <=> range2.m_end);
 }
 
 inline bool operator>(const AXTextMarkerRange& range1, const AXTextMarkerRange& range2)
 {
-    return is_gt(partialOrder(range1.m_start, range2.m_start))
-        || is_gt(partialOrder(range1.m_end, range2.m_end));
+    return is_gt(range1.m_start <=> range2.m_start) || is_gt(range1.m_end <=> range2.m_end);
 }
 
 inline bool operator<=(const AXTextMarkerRange& range1, const AXTextMarkerRange& range2)

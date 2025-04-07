@@ -270,7 +270,7 @@ struct SubtagComparison {
     size_t keyContinue;
     size_t rangeLength;
     size_t rangeContinue;
-    int comparison;
+    std::strong_ordering comparison { std::strong_ordering::equal };
 };
 
 static SubtagComparison subtagCompare(std::span<const char> key, std::span<const char> range)
@@ -299,7 +299,7 @@ static SubtagComparison subtagCompare(std::span<const char> key, std::span<const
     return result;
 }
 
-static int quoteTableLanguageComparisonFunction(const QuotesForLanguage& key, std::span<const QuotesForLanguage> range)
+static std::strong_ordering quoteTableLanguageComparisonFunction(const QuotesForLanguage& key, std::span<const QuotesForLanguage> range)
 {
     // These strings need to be compared according to "Extended Filtering", as in Section 3.3.2 in RFC4647.
     // https://tools.ietf.org/html/rfc4647#page-10
@@ -316,13 +316,13 @@ static int quoteTableLanguageComparisonFunction(const QuotesForLanguage& key, st
     if (firstSubtagComparison.keyLength != firstSubtagComparison.rangeLength)
         return firstSubtagComparison.comparison;
 
-    if (firstSubtagComparison.comparison)
+    if (is_neq(firstSubtagComparison.comparison))
         return firstSubtagComparison.comparison;
 
     for (auto& checkFurtherRange : range.subspan(1)) {
-        if (!quoteTableLanguageComparisonFunction(key, singleElementSpan(checkFurtherRange))) {
+        if (is_eq(quoteTableLanguageComparisonFunction(key, singleElementSpan(checkFurtherRange)))) {
             // Tell the binary search to check later in the array of ranges, to eventually find the match we just found here.
-            return 1;
+            return std::strong_ordering::greater;
         }
     }
 
@@ -331,7 +331,7 @@ static int quoteTableLanguageComparisonFunction(const QuotesForLanguage& key, st
 
         if (!nextSubtagComparison.rangeLength) {
             // E.g. The key is "zh-Hans" and the range is "zh".
-            return 0;
+            return std::strong_ordering::equal;
         }
 
         if (!nextSubtagComparison.keyLength) {
@@ -342,12 +342,12 @@ static int quoteTableLanguageComparisonFunction(const QuotesForLanguage& key, st
         if (nextSubtagComparison.keyLength == 1) {
             // E.g. the key is "zh-x-Hant" and the range is "zh-Hant".
             // We want to try to find the range "zh", so tell the binary search to check earlier in the array of ranges.
-            return -1;
+            return std::strong_ordering::less;
         }
 
-        if (nextSubtagComparison.keyLength == nextSubtagComparison.rangeLength && !nextSubtagComparison.comparison) {
+        if (nextSubtagComparison.keyLength == nextSubtagComparison.rangeLength && is_eq(nextSubtagComparison.comparison)) {
             // E.g. the key is "de-Latn-ch" and the range is "de-ch".
-            return 0;
+            return std::strong_ordering::equal;
         }
 
         keyOffset += nextSubtagComparison.keyContinue;
@@ -360,10 +360,10 @@ static const QuotesForLanguage* binaryFindQuotes(const QuotesForLanguage& key, s
         return nullptr;
 
     auto& middle = subrange[subrange.size() / 2];
-    int comparison = quoteTableLanguageComparisonFunction(key, std::span { quoteTable }.subspan(&middle - quoteTable.data(), 1 + middle.checkFurther));
-    if (!comparison)
+    auto comparison = quoteTableLanguageComparisonFunction(key, std::span { quoteTable }.subspan(&middle - quoteTable.data(), 1 + middle.checkFurther));
+    if (is_eq(comparison))
         return &middle;
-    if (comparison < 0)
+    if (is_lt(comparison))
         return binaryFindQuotes(key, subrange.first(subrange.size() / 2));
     return binaryFindQuotes(key, subrange.subspan(subrange.size() / 2 + 1));
 }
@@ -382,7 +382,7 @@ static const QuotesForLanguage* quotesForLanguage(const String& language)
 
         for (unsigned i = 0; i < std::size(quoteTable); ++i) {
             if (i)
-                ASSERT(compareSpans(quoteTable[i - 1].language, quoteTable[i].language) < 0);
+                ASSERT(is_lt(compareSpans(quoteTable[i - 1].language, quoteTable[i].language)));
 
             for (auto character : quoteTable[i].language)
                 ASSERT(isASCIILower(character) || character == '-');

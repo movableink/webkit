@@ -7441,7 +7441,7 @@ constexpr ASCIILiteral string(std::partial_ordering ordering)
         return "less"_s;
     if (is_gt(ordering))
         return "greater"_s;
-    if (WebCore::is_eq(ordering))
+    if (is_eq(ordering))
         return "equivalent"_s;
     return "unordered"_s;
 }

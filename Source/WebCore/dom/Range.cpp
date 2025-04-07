@@ -198,7 +198,7 @@ ExceptionOr<short> Range::comparePoint(Node& container, unsigned offset) const
     auto ordering = treeOrder({ container, offset }, makeSimpleRange(*this));
     if (is_lt(ordering))
         return -1;
-    if (WebCore::is_eq(ordering))
+    if (is_eq(ordering))
         return 0;
     if (is_gt(ordering))
         return 1;
@@ -266,7 +266,7 @@ ExceptionOr<short> Range::compareBoundaryPoints(unsigned short how, const Range&
     auto ordering = treeOrder(makeBoundaryPoint(*thisPoint), makeBoundaryPoint(*otherPoint));
     if (is_lt(ordering))
         return -1;
-    if (WebCore::is_eq(ordering))
+    if (is_eq(ordering))
         return 0;
     if (is_gt(ordering))
         return 1;

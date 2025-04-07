@@ -306,16 +306,6 @@ Seconds OperatingDate::secondsSinceEpoch() const
     return Seconds { dateToDaysFrom1970(m_year, m_month, m_monthDay) * secondsPerDay };
 }
 
-bool OperatingDate::operator<(const OperatingDate& other) const
-{
-    return secondsSinceEpoch() < other.secondsSinceEpoch();
-}
-
-bool OperatingDate::operator<=(const OperatingDate& other) const
-{
-    return secondsSinceEpoch() <= other.secondsSinceEpoch();
-}
-
 static DataRemovalFrequency toDataRemovalFrequency(int value)
 {
     switch (value) {

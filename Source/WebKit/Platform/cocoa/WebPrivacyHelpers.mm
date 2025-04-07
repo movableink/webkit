@@ -569,16 +569,14 @@ public:
         else {
             while (upper - lower > 1) {
                 auto middle = (lower + upper) / 2;
-                switch (address.compare(list[middle].m_network)) {
-                case WebCore::IPAddress::ComparisonResult::Equal:
+                auto compareResult = address <=> list[middle].m_network;
+                if (is_eq(compareResult))
                     return &list[middle];
-                case WebCore::IPAddress::ComparisonResult::Less:
+                if (is_lt(compareResult))
                     upper = middle;
-                    break;
-                case WebCore::IPAddress::ComparisonResult::Greater:
+                else if (is_gt(compareResult))
                     lower = middle;
-                    break;
-                case WebCore::IPAddress::ComparisonResult::CannotCompare:
+                else {
                     ASSERT_NOT_REACHED();
                     return nullptr;
                 }

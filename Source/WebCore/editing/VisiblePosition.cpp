@@ -807,7 +807,7 @@ VisiblePositionRange makeVisiblePositionRange(const std::optional<SimpleRange>& 
     return { makeContainerOffsetPosition(range->start), makeContainerOffsetPosition(range->end) };
 }
 
-std::partial_ordering documentOrder(const VisiblePosition& a, const VisiblePosition& b)
+std::partial_ordering operator<=>(const VisiblePosition& a, const VisiblePosition& b)
 {
     // FIXME: Should two positions with different affinity be considered equivalent or not?
     return treeOrder<ComposedTree>(a.deepEquivalent(), b.deepEquivalent());

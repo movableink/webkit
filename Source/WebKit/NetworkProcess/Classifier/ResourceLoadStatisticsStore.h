@@ -66,8 +66,7 @@ public:
     int monthDay() const { return m_monthDay; }
 
     friend bool operator==(const OperatingDate&, const OperatingDate&) = default;
-    bool operator<(const OperatingDate& other) const;
-    bool operator<=(const OperatingDate& other) const;
+    friend auto operator<=>(const OperatingDate& a, const OperatingDate& b) { return a.secondsSinceEpoch() <=> b.secondsSinceEpoch(); }
     
     OperatingDate(int year, int month, int monthDay)
         : m_year(year)

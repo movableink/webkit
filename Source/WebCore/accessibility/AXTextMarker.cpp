@@ -289,7 +289,7 @@ AXTextMarkerRange::AXTextMarkerRange(const std::optional<SimpleRange>& range)
 
 AXTextMarkerRange::AXTextMarkerRange(const AXTextMarker& start, const AXTextMarker& end)
 {
-    std::partial_ordering order = partialOrder(start, end);
+    auto order = start <=> end;
     if (order == std::partial_ordering::unordered) {
         m_start = { };
         m_end = { };
@@ -303,7 +303,7 @@ AXTextMarkerRange::AXTextMarkerRange(const AXTextMarker& start, const AXTextMark
 
 AXTextMarkerRange::AXTextMarkerRange(AXTextMarker&& start, AXTextMarker&& end)
 {
-    std::partial_ordering order = partialOrder(start, end);
+    auto order = start <=> end;
     if (order == std::partial_ordering::unordered) {
         m_start = { };
         m_end = { };
@@ -465,7 +465,7 @@ String AXTextMarkerRange::debugDescription() const
         ", end: {"_s, m_end.debugDescription(), '}');
 }
 
-std::partial_ordering partialOrder(const AXTextMarker& marker1, const AXTextMarker& marker2)
+std::partial_ordering operator<=>(const AXTextMarker& marker1, const AXTextMarker& marker2)
 {
     if (marker1.objectID() == marker2.objectID() && LIKELY(marker1.treeID() == marker2.treeID())) {
         if (LIKELY(marker1.m_data.characterOffset < marker2.m_data.characterOffset))
@@ -1467,7 +1467,7 @@ AXTextMarkerRange AXTextMarker::wordRange(WordRangeType type) const
         endMarker = nextWordEnd();
         startMarker = endMarker.previousWordStart();
         // Don't return a right word if the word start is more than a position away from current text marker (e.g., there's a space between the word and current marker).
-        std::partial_ordering order = partialOrder(startMarker, *this);
+        auto order = startMarker <=> *this;
         if (order == std::partial_ordering::unordered)
             return { };
         if (is_gt(order))
@@ -1476,7 +1476,7 @@ AXTextMarkerRange AXTextMarker::wordRange(WordRangeType type) const
         startMarker = previousWordStart();
         endMarker = startMarker.nextWordEnd();
         // Don't return a left word if the word end is more than a position away from current text marker.
-        std::partial_ordering order = partialOrder(endMarker, *this);
+        auto order = endMarker <=> *this;
         if (order == std::partial_ordering::unordered)
             return { };
         if (is_lt(order))

@@ -62,11 +62,9 @@ public:
     double operator/(const WebAnimationTime&) const;
     WebAnimationTime& operator+=(const WebAnimationTime&);
     WebAnimationTime& operator-=(const WebAnimationTime&);
-    bool operator<(const WebAnimationTime&) const;
-    bool operator<=(const WebAnimationTime&) const;
-    bool operator>(const WebAnimationTime&) const;
-    bool operator>=(const WebAnimationTime&) const;
+
     friend bool operator==(const WebAnimationTime&, const WebAnimationTime&) = default;
+    friend std::partial_ordering operator<=>(const WebAnimationTime&, const WebAnimationTime&);
 
     WebAnimationTime operator+(const Seconds&) const;
     WebAnimationTime operator-(const Seconds&) const;
