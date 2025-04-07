@@ -126,9 +126,6 @@ messages -> WebProcess : AuxiliaryProcess WantsAsyncDispatchMessage {
 #if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
     SetScreenProperties(struct WebCore::ScreenProperties screenProperties)
 #endif
-#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM)
-    SetAvailableInputDevices(OptionSet<WebKit::AvailableInputDevices> availableInputDevices)
-#endif
 #if PLATFORM(MAC)
     ScrollerStylePreferenceChanged(bool useOvelayScrollbars)
 #endif
@@ -174,6 +171,7 @@ messages -> WebProcess : AuxiliaryProcess WantsAsyncDispatchMessage {
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
     SendMessageToWebProcessExtension(struct WebKit::UserMessage userMessage)
+    SetAvailableInputDevices(OptionSet<WebKit::AvailableInputDevices> availableInputDevices)
 #endif
 
     SeedResourceLoadStatisticsForTesting(WebCore::RegistrableDomain firstPartyDomain, WebCore::RegistrableDomain thirdPartyDomain, bool shouldScheduleNotification) -> ()

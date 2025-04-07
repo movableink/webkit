@@ -558,7 +558,7 @@ def types_that_cannot_be_forward_declared():
 
 def conditions_for_header(header):
     conditions = {
-        '"AvailableInputDevices.h"': ["PLATFORM(WPE)"],
+        '"AvailableInputDevices.h"': ["PLATFORM(GTK)", "PLATFORM(WPE)"],
         '"CoreIPCAuditToken.h"': ["HAVE(AUDIT_TOKEN)"],
         '"DMABufRendererBufferFormat.h"': ["PLATFORM(GTK)", "PLATFORM(WPE)"],
         '"GestureTypes.h"': ["PLATFORM(IOS_FAMILY)"],

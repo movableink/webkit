@@ -22,7 +22,7 @@
 # THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-#if PLATFORM(WPE)
+#if PLATFORM(GTK) || PLATFORM(WPE)
 
 [OptionSet] enum class WebKit::AvailableInputDevices : uint8_t {
     Mouse,
@@ -30,4 +30,4 @@
     Touchscreen,
 };
 
-#endif // PLATFORM(WPE)
+#endif // PLATFORM(GTK) || PLATFORM(WPE)

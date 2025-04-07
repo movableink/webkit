@@ -59,13 +59,10 @@
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
+#include "AvailableInputDevices.h"
 #include "RendererBufferTransportMode.h"
 #include <WebCore/SystemSettings.h>
 #include <wtf/MemoryPressureHandler.h>
-#endif
-
-#if PLATFORM(WPE)
-#include "AvailableInputDevices.h"
 #endif
 
 namespace API {
@@ -236,6 +233,9 @@ struct WebProcessCreationParameters {
 #if PLATFORM(GTK) || PLATFORM(WPE)
     OptionSet<RendererBufferTransportMode> rendererBufferTransportMode;
     WebCore::SystemSettings::State systemSettings;
+    std::optional<MemoryPressureHandler::Configuration> memoryPressureHandlerConfiguration;
+    bool disableFontHintingForTesting { false };
+    OptionSet<AvailableInputDevices> availableInputDevices;
 #endif
 
 #if PLATFORM(GTK)
@@ -256,21 +256,12 @@ struct WebProcessCreationParameters {
     bool applicationAccessibilityEnabled { false };
 #endif
 
-#if PLATFORM(GTK) || PLATFORM(WPE)
-    std::optional<MemoryPressureHandler::Configuration> memoryPressureHandlerConfiguration;
-    bool disableFontHintingForTesting { false };
-#endif
-
 #if USE(GLIB)
     String applicationID;
     String applicationName;
 #if ENABLE(REMOTE_INSPECTOR)
     CString inspectorServerAddress;
 #endif
-#endif
-
-#if PLATFORM(WPE)
-    OptionSet<AvailableInputDevices> availableInputDevices;
 #endif
 
 #if USE(ATSPI)

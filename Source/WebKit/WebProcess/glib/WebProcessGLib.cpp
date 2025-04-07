@@ -196,9 +196,9 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
         } else
             initializePlatformDisplayIfNeeded();
     }
+#endif
 
     m_availableInputDevices = parameters.availableInputDevices;
-#endif
 
 #if USE(GSTREAMER)
     WebCore::setGStreamerOptionsFromUIProcess(WTFMove(parameters.gstreamerOptions));
@@ -297,9 +297,7 @@ void WebProcess::setScreenProperties(const WebCore::ScreenProperties& properties
     for (auto& page : m_pageMap.values())
         page->screenPropertiesDidChange();
 }
-#endif
 
-#if PLATFORM(WPE)
 std::optional<AvailableInputDevices> WebProcess::primaryPointingDevice() const
 {
     if (m_availableInputDevices.contains(AvailableInputDevices::Mouse))
@@ -309,13 +307,11 @@ std::optional<AvailableInputDevices> WebProcess::primaryPointingDevice() const
     return std::nullopt;
 }
 
-#if ENABLE(WPE_PLATFORM)
 void WebProcess::setAvailableInputDevices(OptionSet<AvailableInputDevices> availableInputDevices)
 {
     m_availableInputDevices = availableInputDevices;
 }
-#endif // ENABLE(WPE_PLATFORM)
-#endif // PLATFORM(WPE)
+#endif // PLATFORM(GTK) || PLATFORM(WPE)
 
 } // namespace WebKit
 

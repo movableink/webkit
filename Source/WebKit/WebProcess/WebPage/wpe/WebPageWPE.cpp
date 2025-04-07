@@ -27,11 +27,8 @@
 #include "WebPage.h"
 
 #include "DrawingArea.h"
-#include "WebPageProxy.h"
 #include "WebPageProxyMessages.h"
 #include <WebCore/NotImplemented.h>
-#include <WebCore/PlatformScreen.h>
-#include <WebCore/PointerCharacteristics.h>
 
 namespace WebKit {
 using namespace WebCore;
@@ -44,37 +41,6 @@ bool WebPage::platformCanHandleRequest(const ResourceRequest&)
 {
     notImplemented();
     return false;
-}
-
-bool WebPage::hoverSupportedByPrimaryPointingDevice() const
-{
-    return WebProcess::singleton().primaryPointingDevice() == AvailableInputDevices::Mouse;
-}
-
-bool WebPage::hoverSupportedByAnyAvailablePointingDevice() const
-{
-    return WebProcess::singleton().availableInputDevices().contains(AvailableInputDevices::Mouse);
-}
-
-std::optional<PointerCharacteristics> WebPage::pointerCharacteristicsOfPrimaryPointingDevice() const
-{
-    const auto& primaryPointingDevice = WebProcess::singleton().primaryPointingDevice();
-    if (primaryPointingDevice == AvailableInputDevices::Mouse)
-        return PointerCharacteristics::Fine;
-    if (primaryPointingDevice == AvailableInputDevices::Touchscreen)
-        return PointerCharacteristics::Coarse;
-    return std::nullopt;
-}
-
-OptionSet<PointerCharacteristics> WebPage::pointerCharacteristicsOfAllAvailablePointingDevices() const
-{
-    OptionSet<PointerCharacteristics> pointerCharacteristics;
-    const auto& availableInputs = WebProcess::singleton().availableInputDevices();
-    if (availableInputs.contains(AvailableInputDevices::Mouse))
-        pointerCharacteristics.add(PointerCharacteristics::Fine);
-    if (availableInputs.contains(AvailableInputDevices::Touchscreen))
-        pointerCharacteristics.add(PointerCharacteristics::Coarse);
-    return pointerCharacteristics;
 }
 
 #if USE(GBM) && ENABLE(WPE_PLATFORM)

@@ -74,11 +74,8 @@ OBJC_CLASS NSMutableDictionary;
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
-#include "RendererBufferTransportMode.h"
-#endif
-
-#if PLATFORM(WPE)
 #include "AvailableInputDevices.h"
+#include "RendererBufferTransportMode.h"
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -479,14 +476,9 @@ public:
 #if PLATFORM(GTK) || PLATFORM(WPE)
     const OptionSet<RendererBufferTransportMode>& rendererBufferTransportMode() const { return m_rendererBufferTransportMode; }
     void initializePlatformDisplayIfNeeded() const;
-#endif
-
-#if PLATFORM(WPE)
     const OptionSet<AvailableInputDevices>& availableInputDevices() const { return m_availableInputDevices; }
     std::optional<AvailableInputDevices> primaryPointingDevice() const;
-#if ENABLE(WPE_PLATFORM)
     void setAvailableInputDevices(OptionSet<AvailableInputDevices>);
-#endif // ENABLE(WPE_PLATFORM)
 #endif // PLATFORM(WPE)
 
     String mediaKeysStorageDirectory() const { return m_mediaKeysStorageDirectory; }
@@ -847,9 +839,6 @@ private:
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
     OptionSet<RendererBufferTransportMode> m_rendererBufferTransportMode;
-#endif
-
-#if PLATFORM(WPE)
     OptionSet<AvailableInputDevices> m_availableInputDevices;
 #endif
 

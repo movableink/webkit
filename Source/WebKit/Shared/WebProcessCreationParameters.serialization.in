@@ -181,6 +181,9 @@
 #if PLATFORM(GTK) || PLATFORM(WPE)
     OptionSet<WebKit::RendererBufferTransportMode> rendererBufferTransportMode;
     WebCore::SystemSettings::State systemSettings;
+    std::optional<WTF::MemoryPressureHandler::Configuration> memoryPressureHandlerConfiguration;
+    bool disableFontHintingForTesting;
+    OptionSet<WebKit::AvailableInputDevices> availableInputDevices;
 #endif
 
 #if PLATFORM(GTK)
@@ -201,21 +204,12 @@
     bool applicationAccessibilityEnabled;
 #endif
 
-#if PLATFORM(GTK) || PLATFORM(WPE)
-    std::optional<WTF::MemoryPressureHandler::Configuration> memoryPressureHandlerConfiguration;
-    bool disableFontHintingForTesting;
-#endif
-
 #if USE(GLIB)
     String applicationID;
     String applicationName;
 #endif
 #if USE(GLIB) && ENABLE(REMOTE_INSPECTOR)
     CString inspectorServerAddress;
-#endif
-
-#if PLATFORM(WPE)
-    OptionSet<WebKit::AvailableInputDevices> availableInputDevices;
 #endif
 
 #if USE(ATSPI)

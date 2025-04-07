@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if PLATFORM(WPE)
+#if PLATFORM(GTK) || PLATFORM(WPE)
 
 namespace WebKit {
 
@@ -37,4 +37,4 @@ enum class AvailableInputDevices : uint8_t {
 
 } // namespace WebKit
 
-#endif // PLATFORM(WPE)
+#endif // PLATFORM(GTK) || PLATFORM(WPE)

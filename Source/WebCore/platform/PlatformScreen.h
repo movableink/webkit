@@ -162,10 +162,8 @@ WEBCORE_EXPORT float screenScaleFactor(UIScreen * = nullptr);
 #if ENABLE(TOUCH_EVENTS)
 #if PLATFORM(GTK)
 WEBCORE_EXPORT bool screenHasTouchDevice();
-WEBCORE_EXPORT bool screenIsTouchPrimaryInputDevice();
 #else
 constexpr bool screenHasTouchDevice() { return true; }
-constexpr bool screenIsTouchPrimaryInputDevice() { return true; }
 #endif
 #endif
 

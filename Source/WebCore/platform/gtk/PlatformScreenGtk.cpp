@@ -134,26 +134,13 @@ bool screenSupportsExtendedColor(Widget*)
 #if ENABLE(TOUCH_EVENTS)
 bool screenHasTouchDevice()
 {
+    // FIXME: Pass this from UI process as a screen property.
     auto* display = gdk_display_get_default();
     if (!display)
         return true;
 
     auto* seat = gdk_display_get_default_seat(display);
     return seat ? gdk_seat_get_capabilities(seat) & GDK_SEAT_CAPABILITY_TOUCH : true;
-}
-
-bool screenIsTouchPrimaryInputDevice()
-{
-    auto* display = gdk_display_get_default();
-    if (!display)
-        return true;
-
-    auto* seat = gdk_display_get_default_seat(display);
-    if (!seat)
-        return true;
-
-    auto* device = gdk_seat_get_pointer(seat);
-    return device ? gdk_device_get_source(device) == GDK_SOURCE_TOUCHSCREEN : true;
 }
 #endif // ENABLE(TOUCH_EVENTS)
 

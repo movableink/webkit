@@ -63,6 +63,7 @@
 #if PLATFORM(GTK)
 #include "AcceleratedBackingStoreDMABuf.h"
 #include "Display.h"
+#include <gtk/gtk.h>
 #endif
 
 #if PLATFORM(WPE) && ENABLE(WPE_PLATFORM)
@@ -92,7 +93,21 @@ static OptionSet<AvailableInputDevices> toAvailableInputDevices(WPEAvailableInpu
 }
 #endif
 
-#if PLATFORM(WPE)
+#if PLATFORM(GTK)
+static OptionSet<AvailableInputDevices> toAvailableInputDevices(GdkSeatCapabilities capabilities)
+{
+    OptionSet<AvailableInputDevices> availableInputDevices;
+    if (capabilities & GDK_SEAT_CAPABILITY_POINTER)
+        availableInputDevices.add(AvailableInputDevices::Mouse);
+    if (capabilities & GDK_SEAT_CAPABILITY_KEYBOARD)
+        availableInputDevices.add(AvailableInputDevices::Keyboard);
+    if (capabilities & GDK_SEAT_CAPABILITY_TOUCH)
+        availableInputDevices.add(AvailableInputDevices::Touchscreen);
+    return availableInputDevices;
+}
+#endif
+
+#if PLATFORM(GTK) || PLATFORM(WPE)
 static OptionSet<AvailableInputDevices> availableInputDevices()
 {
 #if ENABLE(WPE_PLATFORM)
@@ -102,11 +117,24 @@ static OptionSet<AvailableInputDevices> availableInputDevices()
         return toAvailableInputDevices(inputDevices);
     }
 #endif
+#if PLATFORM(GTK)
+    if (auto* display = gdk_display_get_default()) {
+        if (auto* seat = gdk_display_get_default_seat(display))
+            return toAvailableInputDevices(gdk_seat_get_capabilities(seat));
+    }
+#endif
 #if ENABLE(TOUCH_EVENTS)
     return AvailableInputDevices::Touchscreen;
 #else
     return AvailableInputDevices::Mouse;
 #endif
+}
+#endif // PLATFORM(GTK) || PLATFORM(WPE)
+
+#if PLATFORM(GTK)
+static void seatDevicesChangedCallback(GdkSeat* seat, GdkDevice*, WebProcessPool* pool)
+{
+    pool->sendToAllProcesses(Messages::WebProcess::SetAvailableInputDevices(toAvailableInputDevices(gdk_seat_get_capabilities(seat))));
 }
 #endif
 
@@ -146,6 +174,15 @@ void WebProcessPool::platformInitialize(NeedsGlobalStaticInitialization)
         }), this);
     }
 #endif
+
+#if PLATFORM(GTK)
+    if (auto* display = gdk_display_get_default()) {
+        if (auto* seat = gdk_display_get_default_seat(display)) {
+            g_signal_connect(seat, "device-added", G_CALLBACK(seatDevicesChangedCallback), this);
+            g_signal_connect(seat, "device-removed", G_CALLBACK(seatDevicesChangedCallback), this);
+        }
+    }
+#endif
 }
 
 void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process, WebProcessCreationParameters& parameters)
@@ -177,10 +214,9 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
         parameters.hostClientFileDescriptor = UnixFileDescriptor { wpe_renderer_host_create_client(), UnixFileDescriptor::Adopt };
         parameters.implementationLibraryName = FileSystem::fileSystemRepresentation(String::fromLatin1(wpe_loader_get_loaded_implementation_library_name()));
     }
-
-    parameters.availableInputDevices = availableInputDevices();
 #endif
 
+    parameters.availableInputDevices = availableInputDevices();
     parameters.memoryCacheDisabled = m_memoryCacheDisabled || LegacyGlobalSettings::singleton().cacheModel() == CacheModel::DocumentViewer;
 
 #if OS(LINUX)
@@ -236,6 +272,12 @@ void WebProcessPool::platformInvalidateContext()
     if (usingWPEPlatformAPI) {
         auto* display = wpe_display_get_primary();
         g_signal_handlers_disconnect_by_data(display, this);
+    }
+#endif
+#if PLATFORM(GTK)
+    if (auto* display = gdk_display_get_default()) {
+        if (auto* seat = gdk_display_get_default_seat(display))
+            g_signal_handlers_disconnect_by_data(seat, this);
     }
 #endif
 }
