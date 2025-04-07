@@ -2630,6 +2630,24 @@ void LocalFrameView::scrollElementToRect(const Element& element, const IntRect& 
     setScrollPosition(IntPoint(bounds.x() - centeringOffsetX - rect.x(), bounds.y() - centeringOffsetY - rect.y()));
 }
 
+void LocalFrameView::setScrollOffsetWithOptions(std::optional<int> x, std::optional<int> y, const ScrollPositionChangeOptions& options)
+{
+    if (x && y) {
+        setScrollOffsetWithOptions({ *x, *y }, options);
+        return;
+    }
+
+    auto offset = scrollOffsetFromPosition(scrollPosition());
+
+    if (x)
+        offset.setX(*x);
+
+    if (y)
+        offset.setY(*y);
+
+    setScrollOffsetWithOptions(offset, options);
+}
+
 void LocalFrameView::setScrollOffsetWithOptions(const ScrollOffset& scrollOffset, const ScrollPositionChangeOptions& options)
 {
     LOG_WITH_STREAM(Scrolling, stream << "LocalFrameView::setScrollOffset " << scrollOffset << " animated " << (options.animated == ScrollIsAnimated::Yes) << ", clearing anchor");

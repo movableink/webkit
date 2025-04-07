@@ -100,8 +100,11 @@ extension WebPageWebView {
         set { self._allowsMagnification = newValue }
     }
 
-    public func setContentOffset(_ offset: CGPoint, animated: Bool) {
-        scrollView.setContentOffset(offset, animated: animated)
+    public func setContentOffset(x: Double?, y: Double?, animated: Bool) {
+        let currentOffset = scrollView.contentOffset
+        let newOffset = CGPoint(x: x ?? currentOffset.x, y: y ?? currentOffset.y)
+
+        scrollView.setContentOffset(newOffset, animated: animated)
     }
 
     public func scrollTo(edge: NSDirectionalRectEdge, animated: Bool) {
@@ -128,8 +131,8 @@ extension WebPageWebView {
         set { self._rubberBandingEnabled.formUnion([.left, .right]) }
     }
 
-    public func setContentOffset(_ offset: CGPoint, animated: Bool) {
-        self._setContentOffset(offset, animated: animated)
+    public func setContentOffset(x: Double?, y: Double?, animated: Bool) {
+        self._setContentOffset(x: x.map(NSNumber.init(value:)), y: y.map(NSNumber.init(value:)), animated: animated)
     }
 
     public func scrollTo(edge: NSDirectionalRectEdge, animated: Bool) {

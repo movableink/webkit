@@ -595,7 +595,7 @@ RetainPtr<NSError> nsErrorFromExceptionDetails(const std::optional<WebCore::Exce
 @property (nonatomic, setter=_setAlwaysBounceVertical:) BOOL _alwaysBounceVertical;
 @property (nonatomic, setter=_setAlwaysBounceHorizontal:) BOOL _alwaysBounceHorizontal;
 
-- (void)_setContentOffset:(CGPoint)contentOffset animated:(BOOL)animated;
+- (void)_setContentOffsetX:(NSNumber *)x y:(NSNumber *)y animated:(BOOL)animated NS_SWIFT_NAME(_setContentOffset(x:y:animated:));
 #endif
 
 #if PLATFORM(IOS_FAMILY)

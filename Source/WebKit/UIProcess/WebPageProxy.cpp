@@ -15325,9 +15325,9 @@ void WebPageProxy::scrollToRect(const FloatRect& targetRect, const FloatPoint& o
     send(Messages::WebPage::ScrollToRect(targetRect, origin));
 }
 
-void WebPageProxy::setContentOffset(WebCore::ScrollOffset offset, WebCore::ScrollIsAnimated animated)
+void WebPageProxy::setContentOffset(std::optional<int> x, std::optional<int> y, WebCore::ScrollIsAnimated animated)
 {
-    send(Messages::WebPage::SetContentOffset(offset, animated));
+    send(Messages::WebPage::SetContentOffset(x, y, animated));
 }
 
 void WebPageProxy::scrollToEdge(WebCore::RectEdges<bool> edges, WebCore::ScrollIsAnimated animated)

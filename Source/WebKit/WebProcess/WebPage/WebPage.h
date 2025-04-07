@@ -1442,7 +1442,7 @@ public:
     bool alwaysShowsVerticalScroller() const { return m_alwaysShowsVerticalScroller; };
 
     void scrollToRect(const WebCore::FloatRect& targetRect, const WebCore::FloatPoint& origin);
-    void setContentOffset(WebCore::ScrollOffset, WebCore::ScrollIsAnimated);
+    void setContentOffset(std::optional<int> x, std::optional<int> y, WebCore::ScrollIsAnimated);
     void scrollToEdge(WebCore::RectEdges<bool>, WebCore::ScrollIsAnimated);
 
     void setMinimumSizeForAutoLayout(const WebCore::IntSize&);

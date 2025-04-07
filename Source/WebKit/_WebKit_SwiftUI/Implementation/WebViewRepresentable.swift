@@ -152,11 +152,16 @@ final class WebViewCoordinator {
         }
 
         view.scrollPosition = scrollPosition
+        let scrollPositionValue = scrollPosition.position?.wrappedValue
 
-        if let point = scrollPosition.position?.wrappedValue.point {
-            webView.setContentOffset(point, animated: context.transaction.isAnimated)
-        } else if let edge = scrollPosition.position?.wrappedValue.edge {
+        if let point = scrollPositionValue?.point {
+            webView.setContentOffset(x: point.x, y: point.y, animated: context.transaction.isAnimated)
+        } else if let edge = scrollPositionValue?.edge {
             webView.scrollTo(edge: NSDirectionalRectEdge(edge), animated: context.transaction.isAnimated)
+        } else if let x = scrollPositionValue?.x {
+            webView.setContentOffset(x: x, y: nil, animated: context.transaction.isAnimated)
+        } else if let y = scrollPositionValue?.y {
+            webView.setContentOffset(x: nil, y: y, animated: context.transaction.isAnimated)
         }
     }
 

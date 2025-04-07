@@ -9495,7 +9495,7 @@ void WebPage::scrollToRect(const WebCore::FloatRect& targetRect, const WebCore::
     frameView->setScrollPosition(IntPoint(targetRect.minXMinYCorner()));
 }
 
-void WebPage::setContentOffset(WebCore::ScrollOffset offset, WebCore::ScrollIsAnimated animated)
+void WebPage::setContentOffset(std::optional<int> x, std::optional<int> y, WebCore::ScrollIsAnimated animated)
 {
     RefPtr frameView = localMainFrameView();
     if (!frameView)
@@ -9504,7 +9504,7 @@ void WebPage::setContentOffset(WebCore::ScrollOffset offset, WebCore::ScrollIsAn
     auto options = WebCore::ScrollPositionChangeOptions::createProgrammatic();
     options.animated = animated;
 
-    frameView->setScrollOffsetWithOptions(offset, options);
+    frameView->setScrollOffsetWithOptions(x, y, options);
 }
 
 void WebPage::scrollToEdge(WebCore::RectEdges<bool> edges, WebCore::ScrollIsAnimated animated)

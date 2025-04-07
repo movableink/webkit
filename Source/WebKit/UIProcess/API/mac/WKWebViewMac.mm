@@ -1370,9 +1370,17 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     _impl->insertText(string, replacementRange);
 }
 
-- (void)_setContentOffset:(CGPoint)contentOffset animated:(BOOL)animated
+- (void)_setContentOffsetX:(NSNumber *)x y:(NSNumber *)y animated:(BOOL)animated
 {
-    _page->setContentOffset(WebCore::IntPoint { contentOffset }, animated ? WebCore::ScrollIsAnimated::Yes : WebCore::ScrollIsAnimated::No);
+    std::optional<int> optionalX = std::nullopt;
+    if (x)
+        optionalX = static_cast<int>([x doubleValue]);
+
+    std::optional<int> optionalY = std::nullopt;
+    if (y)
+        optionalY = static_cast<int>([y doubleValue]);
+
+    _page->setContentOffset(optionalX, optionalY, animated ? WebCore::ScrollIsAnimated::Yes : WebCore::ScrollIsAnimated::No);
 }
 
 #pragma mark - QLPreviewPanelController
