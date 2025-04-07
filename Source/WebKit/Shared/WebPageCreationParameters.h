@@ -169,9 +169,7 @@ struct WebPageCreationParameters {
     
     WebCore::ScrollPinningBehavior scrollPinningBehavior { WebCore::ScrollPinningBehavior::DoNotPin };
 
-    // FIXME: This should be std::optional<WebCore::ScrollbarOverlayStyle>, but we would need to
-    // correctly handle enums inside Optionals when encoding and decoding. 
-    std::optional<uint32_t> scrollbarOverlayStyle { };
+    std::optional<WebCore::ScrollbarOverlayStyle> scrollbarOverlayStyle { };
 
     bool backgroundExtendsBeyondPage { false };
 

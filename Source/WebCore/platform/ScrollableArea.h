@@ -491,7 +491,7 @@ private:
     ScrollElasticity m_verticalScrollElasticity { ScrollElasticity::None };
     ScrollElasticity m_horizontalScrollElasticity { ScrollElasticity::None };
 
-    ScrollbarOverlayStyle m_scrollbarOverlayStyle { ScrollbarOverlayStyle::ScrollbarOverlayStyleDefault };
+    ScrollbarOverlayStyle m_scrollbarOverlayStyle { ScrollbarOverlayStyle::Default };
 
     ScrollType m_currentScrollType { ScrollType::User };
     ScrollAnimationStatus m_scrollAnimationStatus { ScrollAnimationStatus::NotAnimating };

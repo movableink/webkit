@@ -305,10 +305,10 @@ enum class ScrollbarStyle : uint8_t {
     Overlay
 };
 
-enum ScrollbarOverlayStyle: uint8_t {
-    ScrollbarOverlayStyleDefault,
-    ScrollbarOverlayStyleDark,
-    ScrollbarOverlayStyleLight
+enum class ScrollbarOverlayStyle : uint8_t {
+    Default,
+    Dark,
+    Light
 };
 
 enum class ScrollPinningBehavior : uint8_t {

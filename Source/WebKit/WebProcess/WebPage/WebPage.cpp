@@ -8198,13 +8198,10 @@ void WebPage::setScrollPinningBehavior(WebCore::ScrollPinningBehavior pinning)
         localMainFrame->protectedView()->setScrollPinningBehavior(m_internals->scrollPinningBehavior);
 }
 
-void WebPage::setScrollbarOverlayStyle(std::optional<uint32_t> scrollbarStyle)
+void WebPage::setScrollbarOverlayStyle(std::optional<WebCore::ScrollbarOverlayStyle> scrollbarStyle)
 {
-    if (scrollbarStyle)
-        m_scrollbarOverlayStyle = static_cast<ScrollbarOverlayStyle>(scrollbarStyle.value());
-    else
-        m_scrollbarOverlayStyle = std::optional<ScrollbarOverlayStyle>();
-    
+    m_scrollbarOverlayStyle = scrollbarStyle;
+
     if (RefPtr localMainFrame = this->localMainFrame())
         localMainFrame->protectedView()->recalculateScrollbarOverlayStyle();
 }

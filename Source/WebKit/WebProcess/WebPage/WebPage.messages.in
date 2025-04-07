@@ -569,7 +569,7 @@ messages -> WebPage WantsAsyncDispatchMessage {
 #endif
 
     SetScrollPinningBehavior(enum:uint8_t WebCore::ScrollPinningBehavior pinning)
-    SetScrollbarOverlayStyle(std::optional<uint32_t> scrollbarStyle)
+    SetScrollbarOverlayStyle(std::optional<WebCore::ScrollbarOverlayStyle> scrollbarStyle)
 
     GetBytecodeProfile() -> (String string)
 

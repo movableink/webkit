@@ -459,7 +459,7 @@ void ScrollableArea::invalidateScrollbars()
 bool ScrollableArea::useDarkAppearanceForScrollbars() const
 {
     // If dark appearance is used or the overlay style is light (because of a dark page background), set the dark appearance.
-    return useDarkAppearance() || scrollbarOverlayStyle() == WebCore::ScrollbarOverlayStyleLight;
+    return useDarkAppearance() || scrollbarOverlayStyle() == WebCore::ScrollbarOverlayStyle::Light;
 }
 
 void ScrollableArea::invalidateScrollbar(Scrollbar& scrollbar, const IntRect& rect)

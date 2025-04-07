@@ -247,13 +247,13 @@ void ScrollbarThemeMac::updateScrollbarOverlayStyle(Scrollbar& scrollbar)
     BEGIN_BLOCK_OBJC_EXCEPTIONS
     NSScrollerImp *painter = scrollerImpForScrollbar(scrollbar);
     switch (scrollbar.scrollableArea().scrollbarOverlayStyle()) {
-    case ScrollbarOverlayStyleDefault:
+    case ScrollbarOverlayStyle::Default:
         [painter setKnobStyle:NSScrollerKnobStyleDefault];
         break;
-    case ScrollbarOverlayStyleDark:
+    case ScrollbarOverlayStyle::Dark:
         [painter setKnobStyle:NSScrollerKnobStyleDark];
         break;
-    case ScrollbarOverlayStyleLight:
+    case ScrollbarOverlayStyle::Light:
         [painter setKnobStyle:NSScrollerKnobStyleLight];
         break;
     }

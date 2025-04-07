@@ -272,9 +272,9 @@ bool ScrollView::platformIsOffscreen() const
 static inline NSScrollerKnobStyle toNSScrollerKnobStyle(ScrollbarOverlayStyle style)
 {
     switch (style) {
-    case ScrollbarOverlayStyleDark:
+    case ScrollbarOverlayStyle::Dark:
         return NSScrollerKnobStyleDark;
-    case ScrollbarOverlayStyleLight:
+    case ScrollbarOverlayStyle::Light:
         return NSScrollerKnobStyleLight;
     default:
         return NSScrollerKnobStyleDefault;

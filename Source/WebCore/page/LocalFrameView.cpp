@@ -378,12 +378,12 @@ void LocalFrameView::recalculateScrollbarOverlayStyle()
         auto background = documentBackgroundColor();
         if (background.isVisible()) {
             if (background.lightness() <= .5f)
-                return ScrollbarOverlayStyleLight;
+                return ScrollbarOverlayStyle::Light;
         } else {
             if (useDarkAppearance())
-                return ScrollbarOverlayStyleLight;
+                return ScrollbarOverlayStyle::Light;
         }
-        return ScrollbarOverlayStyleDefault;
+        return ScrollbarOverlayStyle::Default;
     }();
     if (scrollbarOverlayStyle() != style)
         setScrollbarOverlayStyle(style);

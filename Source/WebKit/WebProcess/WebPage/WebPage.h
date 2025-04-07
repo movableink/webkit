@@ -253,7 +253,7 @@ enum class ScrollGranularity : uint8_t;
 enum ScrollLogicalDirection : uint8_t;
 enum class ScrollPinningBehavior : uint8_t;
 enum class ScrollbarMode : uint8_t;
-enum ScrollbarOverlayStyle : uint8_t;
+enum class ScrollbarOverlayStyle : uint8_t;
 enum class ShouldTreatAsContinuingLoad : uint8_t;
 enum class StorageAccessScope : bool;
 enum class SyntheticClickResult : uint8_t;
@@ -1479,7 +1479,7 @@ public:
     void setScrollPinningBehavior(WebCore::ScrollPinningBehavior);
 
     std::optional<WebCore::ScrollbarOverlayStyle> scrollbarOverlayStyle() { return m_scrollbarOverlayStyle; }
-    void setScrollbarOverlayStyle(std::optional<uint32_t /* WebCore::ScrollbarOverlayStyle */> scrollbarStyle);
+    void setScrollbarOverlayStyle(std::optional<WebCore::ScrollbarOverlayStyle> scrollbarStyle);
 
     Ref<WebCore::DocumentLoader> createDocumentLoader(WebCore::LocalFrame&, const WebCore::ResourceRequest&, const WebCore::SubstituteData&);
     void updateCachedDocumentLoader(WebCore::DocumentLoader&, WebCore::LocalFrame&);

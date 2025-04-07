@@ -55,11 +55,11 @@ _WKOverlayScrollbarStyle toAPIScrollbarStyle(std::optional<WebCore::ScrollbarOve
         return _WKOverlayScrollbarStyleAutomatic;
     
     switch (coreScrollbarStyle.value()) {
-    case WebCore::ScrollbarOverlayStyleDark:
+    case WebCore::ScrollbarOverlayStyle::Dark:
         return _WKOverlayScrollbarStyleDark;
-    case WebCore::ScrollbarOverlayStyleLight:
+    case WebCore::ScrollbarOverlayStyle::Light:
         return _WKOverlayScrollbarStyleLight;
-    case WebCore::ScrollbarOverlayStyleDefault:
+    case WebCore::ScrollbarOverlayStyle::Default:
         return _WKOverlayScrollbarStyleDefault;
     }
     ASSERT_NOT_REACHED();
@@ -70,11 +70,11 @@ std::optional<WebCore::ScrollbarOverlayStyle> toCoreScrollbarStyle(_WKOverlayScr
 {
     switch (scrollbarStyle) {
     case _WKOverlayScrollbarStyleDark:
-        return WebCore::ScrollbarOverlayStyleDark;
+        return WebCore::ScrollbarOverlayStyle::Dark;
     case _WKOverlayScrollbarStyleLight:
-        return WebCore::ScrollbarOverlayStyleLight;
+        return WebCore::ScrollbarOverlayStyle::Light;
     case _WKOverlayScrollbarStyleDefault:
-        return WebCore::ScrollbarOverlayStyleDefault;
+        return WebCore::ScrollbarOverlayStyle::Default;
     case _WKOverlayScrollbarStyleAutomatic:
         break;
     }

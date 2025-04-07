@@ -3486,11 +3486,11 @@ ExceptionOr<String> Internals::scrollbarOverlayStyle(Node* node) const
 
     auto* scrollableArea = areaOrException.releaseReturnValue();
     switch (scrollableArea->scrollbarOverlayStyle()) {
-    case ScrollbarOverlayStyleDefault:
+    case ScrollbarOverlayStyle::Default:
         return "default"_str;
-    case ScrollbarOverlayStyleDark:
+    case ScrollbarOverlayStyle::Dark:
         return "dark"_str;
-    case ScrollbarOverlayStyleLight:
+    case ScrollbarOverlayStyle::Light:
         return "light"_str;
     }
 

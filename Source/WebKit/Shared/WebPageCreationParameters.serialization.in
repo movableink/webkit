@@ -91,7 +91,7 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
 
     WebCore::ScrollPinningBehavior scrollPinningBehavior;
 
-    std::optional<uint32_t> scrollbarOverlayStyle;
+    std::optional<WebCore::ScrollbarOverlayStyle> scrollbarOverlayStyle;
 
     bool backgroundExtendsBeyondPage;
 
