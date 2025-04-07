@@ -308,6 +308,8 @@ void PDFScrollingPresentationController::updateDebugBorders(bool showDebugBorder
 
 void PDFScrollingPresentationController::updateForCurrentScrollability(OptionSet<TiledBackingScrollability> scrollability)
 {
+    if (!m_contentsLayer)
+        return;
     if (auto* tiledBacking = m_contentsLayer->tiledBacking())
         tiledBacking->setScrollability(scrollability);
 }

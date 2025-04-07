@@ -1700,7 +1700,8 @@ void UnifiedPDFPlugin::updateScrollingExtents()
     RefPtr scrollingCoordinator = page->scrollingCoordinator();
     scrollingCoordinator->setScrollingNodeScrollableAreaGeometry(m_scrollingNodeID, *this);
 
-    m_presentationController->updateForCurrentScrollability(computeScrollability());
+    if (m_presentationController)
+        m_presentationController->updateForCurrentScrollability(computeScrollability());
 
     CheckedPtr renderer = m_element->renderer();
     if (!renderer)
