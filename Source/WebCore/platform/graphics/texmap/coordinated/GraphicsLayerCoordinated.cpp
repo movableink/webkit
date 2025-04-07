@@ -111,11 +111,8 @@ void GraphicsLayerCoordinated::setNeedsDisplayInRect(const FloatRect& initialRec
 
     addRepaintRect(rect);
 
-    if (!m_dirtyRegion) {
-        static constexpr FloatSize minDamageSize = { 512, 512 };
-        auto viewVisibleSize = client().enclosingFrameViewVisibleSize();
-        m_dirtyRegion = Damage(m_size.constrainedBetween(minDamageSize, viewVisibleSize));
-    }
+    if (!m_dirtyRegion)
+        m_dirtyRegion = Damage(m_size, Damage::Mode::Rectangles, 32);
 
     if (m_dirtyRegion->add(rect))
         noteLayerPropertyChanged(Change::DirtyRegion, ScheduleFlush::Yes);

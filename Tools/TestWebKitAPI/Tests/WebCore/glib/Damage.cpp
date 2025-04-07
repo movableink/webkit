@@ -596,6 +596,81 @@ TEST(Damage, RectsForPainting)
     EXPECT_EQ(damage.rects(), damage.rectsForPainting());
 }
 
+TEST(Damage, MaxRectangles)
+{
+    Damage damage(IntSize { 512, 512 }, Damage::Mode::Rectangles, 2);
+    EXPECT_TRUE(damage.add(Vector<IntRect, 1> {
+        { 0, 0, 4, 4 },
+        { 300, 0, 4, 4 },
+        { 0, 300, 4, 4 },
+        { 300, 300, 4, 4 }
+    }));
+    EXPECT_EQ(damage.rects().size(), 2);
+    EXPECT_EQ(damage.rects()[0], IntRect(0, 0, 4, 304));
+    EXPECT_EQ(damage.rects()[1], IntRect(300, 0, 4, 304));
+
+    damage = Damage(IntSize { 2048, 1024 }, Damage::Mode::Rectangles, 3);
+    EXPECT_TRUE(damage.add(Vector<IntRect, 1> {
+        { 100, 100, 200, 200 },
+        { 700, 500, 200, 200 },
+        { 1400, 700, 200, 200 },
+        { 1800, 800, 200, 200 }
+    }));
+    EXPECT_EQ(damage.rects().size(), 3);
+    EXPECT_EQ(damage.rects()[0], IntRect(100, 100, 200, 200));
+    EXPECT_EQ(damage.rects()[1], IntRect(700, 500, 200, 200));
+    EXPECT_EQ(damage.rects()[2], IntRect(1400, 700, 600, 300));
+
+    // Using MaxRectangles = 0 means no maximum so default fixed cell size is used
+    damage = Damage(IntSize { 512, 512 }, Damage::Mode::Rectangles, 0);
+    EXPECT_TRUE(damage.add(Vector<IntRect, 1> {
+        { 0, 0, 4, 4 },
+        { 300, 0, 4, 4 },
+        { 0, 300, 4, 4 },
+        { 300, 300, 4, 4 },
+        { 384, 384, 4, 4 }
+    }));
+    EXPECT_EQ(damage.rects().size(), 4);
+    EXPECT_EQ(damage.rects()[0], IntRect(0, 0, 4, 4));
+    EXPECT_EQ(damage.rects()[1], IntRect(300, 0, 4, 4));
+    EXPECT_EQ(damage.rects()[2], IntRect(0, 300, 4, 4));
+    EXPECT_EQ(damage.rects()[3], IntRect(300, 300, 88, 88));
+
+    // Passing MaxRectangles = 1 always unifies.
+    damage = Damage(IntSize { 512, 512 }, Damage::Mode::Rectangles, 1);
+    EXPECT_TRUE(damage.add(Vector<IntRect, 1> {
+        { 0, 0, 4, 4 },
+        { 300, 0, 4, 4 },
+        { 0, 300, 4, 4 },
+        { 300, 300, 4, 4 },
+        { 384, 384, 4, 4 }
+    }));
+    EXPECT_EQ(damage.rects().size(), 1);
+    EXPECT_EQ(damage.rects()[0], damage.bounds());
+    EXPECT_EQ(damage.bounds(), IntRect(0, 0, 388, 388));
+
+    // Passing MaxRectangles with BoundingBode mode ignores it.
+    damage = Damage(IntSize { 1024, 768 }, Damage::Mode::BoundingBox, 2);
+    EXPECT_TRUE(damage.add(Vector<IntRect, 1> {
+        { 100, 100, 200, 200 },
+        { 200, 200, 200, 200 },
+        { 300, 300, 200, 200 }
+    }));
+    EXPECT_EQ(damage.rects().size(), 1);
+    EXPECT_EQ(damage.rects()[0], damage.bounds());
+    EXPECT_EQ(damage.bounds(), IntRect(100, 100, 400, 400));
+
+    // Passing MaxRectangles with Full mode ignores it.
+    damage = Damage(IntSize { 1024, 768 }, Damage::Mode::Full, 3);
+    EXPECT_FALSE(damage.add(Vector<IntRect, 1> {
+        { 100, 100, 200, 200 },
+        { 300, 300, 200, 200 }
+    }));
+    EXPECT_EQ(damage.rects().size(), 1);
+    EXPECT_EQ(damage.rects()[0], damage.bounds());
+    EXPECT_EQ(damage.bounds(), IntRect(0, 0, 1024, 768));
+}
+
 } // namespace TestWebKitAPI
 
 #endif // PLATFORM(GTK) || PLATFORM(WPE)
