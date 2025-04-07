@@ -165,7 +165,6 @@ rendering/updating/RenderTreeBuilder.h
 style/CustomPropertyRegistry.h
 style/StyleBuilderState.h
 style/StyleScope.h
-style/StyleSharingResolver.h
 style/values/color/StyleColorResolutionState.h
 svg/properties/SVGAnimationAdditiveListFunctionImpl.h
 svg/properties/SVGAnimationAdditiveValueFunctionImpl.h

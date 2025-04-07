@@ -275,9 +275,6 @@ void ScopeRuleSets::collectFeatures() const
     RELEASE_ASSERT(!m_isInvalidatingStyleWithRuleSets);
 
     m_features.clear();
-    // Collect all ids and rules using sibling selectors (:first-child and similar)
-    // in the current set of stylesheets. Style sharing code uses this information to reject
-    // sharing candidates.
     if (UserAgentStyle::defaultStyle)
         m_features.add(UserAgentStyle::defaultStyle->features());
     m_defaultStyleVersionOnFeatureCollection = UserAgentStyle::defaultStyleVersion;
@@ -290,8 +287,6 @@ void ScopeRuleSets::collectFeatures() const
     if (auto* userStyle = this->userStyle())
         m_features.add(userStyle->features());
 
-    m_siblingRuleSet = makeRuleSet(m_features.siblingRules);
-    m_uncommonAttributeRuleSet = makeRuleSet(m_features.uncommonAttributeRules);
     m_scopeBreakingHasPseudoClassInvalidationRuleSet = makeRuleSet(m_features.scopeBreakingHasPseudoClassRules);
 
     m_idInvalidationRuleSets.clear();

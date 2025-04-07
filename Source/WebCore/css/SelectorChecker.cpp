@@ -943,10 +943,8 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, LocalContext& c
             return false;
         }
         case CSSSelector::PseudoClass::PlaceholderShown:
-            if (auto* formControl = dynamicDowncast<HTMLTextFormControlElement>(element)) {
-                addStyleRelation(checkingContext, element, Style::Relation::Unique);
+            if (auto* formControl = dynamicDowncast<HTMLTextFormControlElement>(element))
                 return formControl->isPlaceholderVisible();
-            }
             return false;
         case CSSSelector::PseudoClass::NthChild: {
             if (auto* parentElement = dynamicDowncast<Element>(element.parentNode())) {
@@ -1531,7 +1529,6 @@ bool SelectorChecker::matchHasPseudoClass(CheckingContext& checkingContext, cons
         case Style::Relation::FirstChild:
         case Style::Relation::LastChild:
         case Style::Relation::NthChildIndex:
-        case Style::Relation::Unique:
             return;
         case Style::Relation::AffectedByHasWithPositionalPseudoClass:
             ASSERT_NOT_REACHED();

@@ -529,9 +529,6 @@ inline bool ElementRuleCollector::ruleMatches(const RuleData& ruleData, unsigned
 #endif
         bool selectorMatches = SelectorCompiler::ruleCollectorSimpleSelectorChecker(compiledSelector, &element(), &specificity);
 
-        if (selectorMatches && ruleData.containsUncommonAttributeSelector())
-            m_didMatchUncommonAttributeSelector = true;
-
         return selectorMatches;
     }
 #endif // ENABLE(CSS_SELECTOR_JIT)
@@ -564,10 +561,6 @@ inline bool ElementRuleCollector::ruleMatches(const RuleData& ruleData, unsigned
             specificity = selector->computeSpecificity();
     }
 
-    if (ruleData.containsUncommonAttributeSelector()) {
-        if (selectorMatches || context.pseudoIDSet)
-            m_didMatchUncommonAttributeSelector = true;
-    }
     m_matchedPseudoElementIds.merge(context.pseudoIDSet);
     m_styleRelations.appendVector(context.styleRelations);
 

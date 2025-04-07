@@ -68,8 +68,6 @@ public:
     RuleSet* styleForCascadeLevel(CascadeLevel);
 
     const RuleFeatureSet& features() const;
-    RuleSet* sibling() const { return m_siblingRuleSet.get(); }
-    RuleSet* uncommonAttribute() const { return m_uncommonAttributeRuleSet.get(); }
     RuleSet* scopeBreakingHasPseudoClassInvalidationRuleSet() const { return m_scopeBreakingHasPseudoClassInvalidationRuleSet.get(); }
 
     const Vector<InvalidationRuleSet>* idInvalidationRuleSets(const AtomString&) const;
@@ -121,8 +119,6 @@ private:
 
     Resolver& m_styleResolver;
     mutable RuleFeatureSet m_features;
-    mutable RefPtr<RuleSet> m_siblingRuleSet;
-    mutable RefPtr<RuleSet> m_uncommonAttributeRuleSet;
     mutable RefPtr<RuleSet> m_scopeBreakingHasPseudoClassInvalidationRuleSet;
     mutable UncheckedKeyHashMap<AtomString, std::unique_ptr<Vector<InvalidationRuleSet>>> m_idInvalidationRuleSets;
     mutable UncheckedKeyHashMap<AtomString, std::unique_ptr<Vector<InvalidationRuleSet>>> m_classInvalidationRuleSets;

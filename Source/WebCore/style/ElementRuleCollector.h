@@ -77,7 +77,6 @@ public:
 
     const PseudoIdSet& matchedPseudoElementIds() const { return m_matchedPseudoElementIds; }
     const Relations& styleRelations() const { return m_styleRelations; }
-    bool didMatchUncommonAttributeSelector() const { return m_didMatchUncommonAttributeSelector; }
 
     void addAuthorKeyframeRules(const StyleRuleKeyframe&);
 
@@ -139,7 +138,6 @@ private:
 
     // Output.
     Vector<RefPtr<const StyleRule>> m_matchedRuleList;
-    bool m_didMatchUncommonAttributeSelector { false };
     std::unique_ptr<MatchResult> m_result;
     Relations m_styleRelations;
     PseudoIdSet m_matchedPseudoElementIds;

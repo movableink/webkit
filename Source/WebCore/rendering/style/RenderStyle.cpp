@@ -224,7 +224,6 @@ RenderStyle::RenderStyle(CreateDefaultStyleTag)
     m_nonInheritedFlags.hasExplicitlyInheritedProperties = false;
     m_nonInheritedFlags.disallowsFastPathInheritance = false;
     m_nonInheritedFlags.hasContentNone = false;
-    m_nonInheritedFlags.isUnique = false;
     m_nonInheritedFlags.emptyState = false;
     m_nonInheritedFlags.firstChildState = false;
     m_nonInheritedFlags.lastChildState = false;
@@ -403,7 +402,6 @@ inline void RenderStyle::NonInheritedFlags::copyNonInheritedFrom(const NonInheri
     hasExplicitlyInheritedProperties = other.hasExplicitlyInheritedProperties;
     disallowsFastPathInheritance = other.disallowsFastPathInheritance;
     hasContentNone = other.hasContentNone;
-    isUnique = other.isUnique;
 }
 
 void RenderStyle::copyNonInheritedFrom(const RenderStyle& other)
@@ -447,19 +445,6 @@ bool RenderStyle::operator==(const RenderStyle& other) const
         && m_rareInheritedData == other.m_rareInheritedData
         && m_inheritedData == other.m_inheritedData
         && m_svgStyle == other.m_svgStyle;
-}
-
-bool RenderStyle::hasUniquePseudoStyle() const
-{
-    if (!m_cachedPseudoStyles || pseudoElementType() != PseudoId::None)
-        return false;
-
-    for (auto& [key, pseudoStyle] : m_cachedPseudoStyles->styles) {
-        if (pseudoStyle->unique())
-            return true;
-    }
-
-    return false;
 }
 
 RenderStyle* RenderStyle::getCachedPseudoStyle(const Style::PseudoElementIdentifier& pseudoElementIdentifier) const
@@ -1621,7 +1606,6 @@ void RenderStyle::conservativelyCollectChangedAnimatableProperties(const RenderS
         // hasExplicitlyInheritedProperties
         // disallowsFastPathInheritance
         // hasContentNone
-        // isUnique
         // emptyState
         // firstChildState
         // lastChildState
@@ -2398,7 +2382,6 @@ const String& RenderStyle::contentAltText() const
 
 void RenderStyle::setHasAttrContent()
 {
-    setUnique();
     SET_NESTED_VAR(m_nonInheritedData, miscData, hasAttrContent, true);
 }
 
@@ -4048,7 +4031,6 @@ void RenderStyle::NonInheritedFlags::dumpDifferences(TextStream& ts, const NonIn
 
     LOG_IF_DIFFERENT(usesViewportUnits);
     LOG_IF_DIFFERENT(usesContainerUnits);
-    LOG_IF_DIFFERENT(isUnique);
     LOG_IF_DIFFERENT(hasContentNone);
 
     LOG_IF_DIFFERENT_WITH_CAST(TextDecorationLine, textDecorationLine);

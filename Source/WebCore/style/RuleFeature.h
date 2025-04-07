@@ -111,8 +111,6 @@ struct RuleFeatureSet {
     UncheckedKeyHashSet<AtomString> attributeLowercaseLocalNamesInRules;
     UncheckedKeyHashSet<AtomString> attributeLocalNamesInRules;
     UncheckedKeyHashSet<AtomString> contentAttributeNamesInRules;
-    Vector<RuleAndSelector> siblingRules;
-    Vector<RuleAndSelector> uncommonAttributeRules;
 
     UncheckedKeyHashMap<AtomString, std::unique_ptr<RuleFeatureVector>> idRules;
     UncheckedKeyHashMap<AtomString, std::unique_ptr<RuleFeatureVector>> classRules;
@@ -134,8 +132,6 @@ struct RuleFeatureSet {
 
 private:
     struct SelectorFeatures {
-        bool hasSiblingSelector { false };
-
         using InvalidationFeature = std::tuple<const CSSSelector*, MatchElement, IsNegation>;
         using HasInvalidationFeature = std::tuple<const CSSSelector*, MatchElement, IsNegation, DoesBreakScope>;
 

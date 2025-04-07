@@ -436,7 +436,6 @@ public:
     inline bool hasAnyPublicPseudoStyles() const;
     inline bool hasPseudoStyle(PseudoId) const;
     inline void setHasPseudoStyles(PseudoIdSet);
-    bool hasUniquePseudoStyle() const;
 
     inline bool hasDisplayAffectedByAnimations() const;
     inline void setHasDisplayAffectedByAnimations();
@@ -1886,16 +1885,12 @@ public:
     inline void setHasExplicitlySetWritingMode();
     inline bool setTextOrientation(TextOrientation);
 
-    // A unique style is one that has matches something that makes it impossible to share.
-    bool unique() const { return m_nonInheritedFlags.isUnique; }
-    void setUnique() { m_nonInheritedFlags.isUnique = true; }
-
     bool emptyState() const { return m_nonInheritedFlags.emptyState; }
-    void setEmptyState(bool v) { setUnique(); m_nonInheritedFlags.emptyState = v; }
+    void setEmptyState(bool v) { m_nonInheritedFlags.emptyState = v; }
     bool firstChildState() const { return m_nonInheritedFlags.firstChildState; }
-    void setFirstChildState() { setUnique(); m_nonInheritedFlags.firstChildState = true; }
+    void setFirstChildState() { m_nonInheritedFlags.firstChildState = true; }
     bool lastChildState() const { return m_nonInheritedFlags.lastChildState; }
-    void setLastChildState() { setUnique(); m_nonInheritedFlags.lastChildState = true; }
+    void setLastChildState() { m_nonInheritedFlags.lastChildState = true; }
 
     Color colorResolvingCurrentColor(CSSPropertyID colorProperty, bool visitedLink) const;
 
@@ -2376,7 +2371,6 @@ private:
 
         unsigned usesViewportUnits : 1;
         unsigned usesContainerUnits : 1;
-        unsigned isUnique : 1; // Style cannot be shared.
         unsigned hasContentNone : 1;
         unsigned textDecorationLine : TextDecorationLineBits; // Text decorations defined *only* by this element.
         unsigned hasExplicitlyInheritedProperties : 1; // Explicitly inherits a non-inherited property.

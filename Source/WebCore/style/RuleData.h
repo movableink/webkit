@@ -63,7 +63,6 @@ public:
 
     bool canMatchPseudoElement() const { return m_canMatchPseudoElement; }
     MatchBasedOnRuleHash matchBasedOnRuleHash() const { return static_cast<MatchBasedOnRuleHash>(m_matchBasedOnRuleHash); }
-    bool containsUncommonAttributeSelector() const { return m_containsUncommonAttributeSelector; }
     unsigned linkMatchType() const { return m_linkMatchType; }
     PropertyAllowlist propertyAllowlist() const { return static_cast<PropertyAllowlist>(m_propertyAllowlist); }
     IsStartingStyle isStartingStyle() const { return static_cast<IsStartingStyle>(m_isStartingStyle); }
@@ -82,7 +81,6 @@ private:
     unsigned m_position : 21;
     unsigned m_matchBasedOnRuleHash : 3;
     unsigned m_canMatchPseudoElement : 1;
-    unsigned m_containsUncommonAttributeSelector : 1;
     unsigned m_linkMatchType : 2; //  SelectorChecker::LinkMatchMask
     unsigned m_propertyAllowlist : 2;
     unsigned m_isStartingStyle : 1;

@@ -90,7 +90,6 @@ TreeResolver::~TreeResolver()
 
 TreeResolver::Scope::Scope(Document& document, Update& update)
     : resolver(document.styleScope().resolver())
-    , sharingResolver(document, resolver->ruleSets(), selectorMatchingState)
 {
     document.setIsResolvingTreeStyle(true);
 
@@ -103,7 +102,6 @@ TreeResolver::Scope::Scope(Document& document, Update& update)
 
 TreeResolver::Scope::Scope(ShadowRoot& shadowRoot, Scope& enclosingScope)
     : resolver(shadowRoot.styleScope().resolver())
-    , sharingResolver(shadowRoot.documentScope(), resolver->ruleSets(), selectorMatchingState)
     , shadowRoot(&shadowRoot)
     , enclosingScope(&enclosingScope)
 {
@@ -173,9 +171,6 @@ ResolvedStyle TreeResolver::styleForStyleable(const Styleable& styleable, Resolu
         style->fastPathInheritFrom(parent().style);
         return { WTFMove(style) };
     }
-
-    if (auto style = scope().sharingResolver.resolve(styleable, *m_update))
-        return { WTFMove(style) };
 
     if (resolutionType == ResolutionType::FullWithMatchResultCache) {
         if (auto cachedMatchResult = m_document->styleScope().matchResultCache().get(element))

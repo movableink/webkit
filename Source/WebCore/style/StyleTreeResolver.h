@@ -30,7 +30,6 @@
 #include "SelectorChecker.h"
 #include "SelectorMatchingState.h"
 #include "StyleChange.h"
-#include "StyleSharingResolver.h"
 #include "StyleUpdate.h"
 #include "Styleable.h"
 #include "TreeResolutionState.h"
@@ -99,7 +98,6 @@ private:
         WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(TreeResolverScope);
         Ref<Resolver> resolver;
         SelectorMatchingState selectorMatchingState;
-        SharingResolver sharingResolver;
         RefPtr<ShadowRoot> shadowRoot;
         RefPtr<Scope> enclosingScope;
 
