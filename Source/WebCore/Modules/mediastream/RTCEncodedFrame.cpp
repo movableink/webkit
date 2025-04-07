@@ -59,8 +59,7 @@ uint64_t RTCEncodedFrame::timestamp() const
 
 Ref<RTCRtpTransformableFrame> RTCEncodedFrame::rtcFrame(JSC::VM& vm, ShouldNeuter shouldNeuter)
 {
-    ASSERT(!m_isNeutered);
-    if (shouldNeuter == ShouldNeuter::Yes) {
+    if (shouldNeuter == ShouldNeuter::Yes && !m_isNeutered) {
         m_isNeutered = true;
         if (m_data) {
             m_frame->setData(m_data->span());
