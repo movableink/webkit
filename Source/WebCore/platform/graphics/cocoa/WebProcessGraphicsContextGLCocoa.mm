@@ -131,6 +131,8 @@ private:
 // GraphicsContextGL type that is used when WebGL is run in-process in WebContent process.
 class WebProcessGraphicsContextGLCocoa final : public GraphicsContextGLCocoa
 {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WebProcessGraphicsContextGLCocoa);
 public:
     ~WebProcessGraphicsContextGLCocoa();
 
