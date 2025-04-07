@@ -158,6 +158,9 @@ const wasmInstance = csr0
 if X86_64 or ARM64 or ARM64E or RISCV64
     const memoryBase = csr3
     const boundsCheckingSize = csr4
+elsif ARMv7
+    const memoryBase = t2
+    const boundsCheckingSize = t3
 else
     const memoryBase = invalidGPR
     const boundsCheckingSize = invalidGPR
@@ -229,39 +232,6 @@ end
 
 macro advanceMCByReg(amount)
     addp amount, MC
-end
-
-# Typed push/pop to make code pretty
-macro pushFloat32FT0()
-    pushFPR()
-end
-
-macro pushFloat32FT1()
-    pushFPR1()
-end
-
-macro popFloat32FT0()
-    popFPR()
-end
-
-macro popFloat32FT1()
-    popFPR1()
-end
-
-macro pushFloat64FT0()
-    pushFPR()
-end
-
-macro pushFloat64FT1()
-    pushFPR1()
-end
-
-macro popFloat64FT0()
-    popFPR()
-end
-
-macro popFloat64FT1()
-    popFPR1()
 end
 
 macro decodeLEBVarUInt32(offset, dst, scratch1, scratch2, scratch3, scratch4)
@@ -568,7 +538,9 @@ if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     getIPIntCallee()
 
     # on x86, PL will hold the PC relative offset for argumINT, then IB will take over
-    initPCRelative(ipint_entry, PL)
+    if X86_64
+        initPCRelative(ipint_entry, PL)
+    end
     ipintEntry()
 else
     break

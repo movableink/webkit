@@ -185,7 +185,7 @@ end
 
 # Entering IPInt
 
-# PM = location in argumINT bytecode
+# MC = location in argumINT bytecode
 # csr0 = tmp
 # csr1 = dst
 # csr2 = src
@@ -6072,15 +6072,14 @@ _wasm_ipint_call_return_location_wide32:
     # call frame
     # call frame        <- sp
 
-    loadi [MC], sc3
-    advanceMC(IPInt::CallReturnMetadata::resultBytecode)
+    loadi IPInt::CallReturnMetadata::stackFrameSize[MC], sc3
     leap [sp, sc3], sc3
 
     const mintRetSrc = sc1
     const mintRetDst = sc2
 
-    loadi [MC], sc1
-    advanceMC(4)
+    loadi IPInt::CallReturnMetadata::firstStackArgumentSPOffset[MC], mintRetSrc
+    advanceMC(IPInt::CallReturnMetadata::resultBytecode)
     leap [sp, mintRetSrc], mintRetSrc
 
 if ARM64 or ARM64E
