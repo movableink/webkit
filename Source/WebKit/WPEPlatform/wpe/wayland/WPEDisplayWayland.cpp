@@ -433,9 +433,10 @@ static WPEView* wpeDisplayWaylandCreateView(WPEDisplay* display)
     auto* displayWayland = WPE_DISPLAY_WAYLAND(display);
     auto* view = wpe_view_wayland_new(displayWayland);
 
-    // FIXME: create the toplevel conditionally.
-    GRefPtr<WPEToplevel> toplevel = adoptGRef(wpe_toplevel_wayland_new(displayWayland));
-    wpe_view_set_toplevel(view, toplevel.get());
+    if (wpe_settings_get_boolean(wpe_display_get_settings(display), WPE_SETTING_CREATE_VIEWS_WITH_A_TOPLEVEL, nullptr)) {
+        GRefPtr<WPEToplevel> toplevel = adoptGRef(wpe_toplevel_wayland_new(displayWayland));
+        wpe_view_set_toplevel(view, toplevel.get());
+    }
 
     return view;
 }
