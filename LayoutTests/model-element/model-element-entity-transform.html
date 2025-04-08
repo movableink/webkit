@@ -84,5 +84,24 @@ promise_test(async t => {
     assert_3d_matrix_equals(model.entityTransform, orbitFitTransform);
 }, `<model> ignores entityTransform when stagemode is set`);
 
+promise_test(async t => {
+    const [model, source] = createModelAndSource(t, "resources/cube.usdz");
+    await model.ready;
+
+    const angle = 57.64999999999886;
+    const rotationAmount = 10;
+
+    for (var iteration = 0; iteration < 6; ++iteration) {
+        try {
+            const matrix = new DOMMatrixReadOnly();
+            const newMatrix = matrix.translate(0, 0, -10).rotate(0, angle + iteration * rotationAmount, 0);
+            model.entityTransform = newMatrix;
+            assert_3d_matrix_equals(model.entityTransform, newMatrix);
+        } catch (error) {
+            console.error('Error setting transform: ' + error.name);
+        }
+    }
+}, `<model> gets the updated entityTransform after rotation`);
+
 </script>
 </body>
