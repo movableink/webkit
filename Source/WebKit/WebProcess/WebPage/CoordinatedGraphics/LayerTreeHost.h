@@ -186,7 +186,9 @@ private:
     HashSet<Ref<WebCore::CoordinatedPlatformLayer>> m_layers;
     bool m_layerTreeStateIsFrozen { false };
     bool m_pendingResize { false };
+#if HAVE(DISPLAY_LINK)
     bool m_pendingForceRepaint { false };
+#endif
     bool m_isSuspended { false };
     bool m_isWaitingForRenderer { false };
     bool m_scheduledWhileWaitingForRenderer { false };
