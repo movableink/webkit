@@ -155,7 +155,8 @@ bool isShaderValidationEnabled(id<MTLDevice> device)
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         // Workaround for rdar://141660277
-        if ((result = [NSStringFromClass([device class]) containsString:@"Debug"]))
+        NSString* deviceName = NSStringFromClass([device class]);
+        if ((result = [deviceName containsString:@"Debug"] || [deviceName containsString:@"LegacySV"]))
             WTFLogAlways("WebGPU: Using DEBUG Metal device: retaining references"); // NOLINT
     });
     return result;
