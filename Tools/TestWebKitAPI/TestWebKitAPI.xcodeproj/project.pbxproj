@@ -167,6 +167,8 @@
 		3A9C438828E3E057002F7294 /* ASTStringDumperTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3A9C438028E3E057002F7294 /* ASTStringDumperTests.cpp */; };
 		3A9C438B28E3E240002F7294 /* TestWGSLAPI.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3A9C438928E3E240002F7294 /* TestWGSLAPI.cpp */; };
 		3ADD8988299F192F005DCE4E /* MetalGenerationTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3ADD897E299F1400005DCE4E /* MetalGenerationTests.cpp */; };
+		3AF4A0952D9DEE0B00B3FF5E /* icon-svg-16.tiff in Copy Resources */ = {isa = PBXBuildFile; fileRef = 3AF4A0932D9DEE0B00B3FF5E /* icon-svg-16.tiff */; };
+		3AF4A0962D9DEE0B00B3FF5E /* icon-svg-256.tiff in Copy Resources */ = {isa = PBXBuildFile; fileRef = 3AF4A0942D9DEE0B00B3FF5E /* icon-svg-256.tiff */; };
 		4102EE1727845ED500D6BE74 /* ServiceWorkerRoutines.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4102EE1627845ED500D6BE74 /* ServiceWorkerRoutines.cpp */; };
 		411204CE2D3AAD8E009A8554 /* SharedVideoFrame.mm in Sources */ = {isa = PBXBuildFile; fileRef = 411204CD2D3AAD8E009A8554 /* SharedVideoFrame.mm */; };
 		411223C726035FBF00B0A0B6 /* WebRTC.mm in Sources */ = {isa = PBXBuildFile; fileRef = 411223C626035FBE00B0A0B6 /* WebRTC.mm */; };
@@ -1831,6 +1833,8 @@
 				A17C47792C98E5C20023F3C7 /* Helvetica_light.svg in Copy Resources */,
 				A17C46772C98E4D20023F3C7 /* HTMLCollectionNamedItem.html in Copy Resources */,
 				A17C46782C98E4D20023F3C7 /* HTMLFormCollectionNamedItem.html in Copy Resources */,
+				3AF4A0952D9DEE0B00B3FF5E /* icon-svg-16.tiff in Copy Resources */,
+				3AF4A0962D9DEE0B00B3FF5E /* icon-svg-256.tiff in Copy Resources */,
 				D2D9A6BE2D96B539004A2C92 /* icon-with-subresource.svg in Copy Resources */,
 				A17C46C12C98E54B0023F3C7 /* icon.png in Copy Resources */,
 				A17C46C12C98E54B0023F3C8 /* icon.svg in Copy Resources */,
@@ -2592,6 +2596,8 @@
 		3AA7856029B6C8AA00C4374A /* TestWebKitAPIPrefix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestWebKitAPIPrefix.h; sourceTree = "<group>"; };
 		3ADD897E299F1400005DCE4E /* MetalGenerationTests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MetalGenerationTests.cpp; sourceTree = "<group>"; };
 		3AEA55B22CB0897200A9ECAA /* WKPreferences.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WKPreferences.mm; sourceTree = "<group>"; };
+		3AF4A0932D9DEE0B00B3FF5E /* icon-svg-16.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = "icon-svg-16.tiff"; sourceTree = "<group>"; };
+		3AF4A0942D9DEE0B00B3FF5E /* icon-svg-256.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = "icon-svg-256.tiff"; sourceTree = "<group>"; };
 		3F1B52681D3D7129008D60C4 /* FullscreenLayoutConstraints.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = FullscreenLayoutConstraints.mm; sourceTree = "<group>"; };
 		3FBD1B491D39D1DB00E6D6FA /* FullscreenLayoutConstraints.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = FullscreenLayoutConstraints.html; sourceTree = "<group>"; };
 		3FCC4FE41EC4E8520076E37C /* PictureInPictureDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PictureInPictureDelegate.mm; sourceTree = "<group>"; };
@@ -5982,6 +5988,8 @@
 				41BAF4E225AC9DB800D82F32 /* getUserMedia2.html */,
 				4A410F4D19AF7BEF002EBAC5 /* getUserMediaAudioVideoCapture.html */,
 				4198524F27AD7B70005477B7 /* getUserMediaPermission.html */,
+				3AF4A0932D9DEE0B00B3FF5E /* icon-svg-16.tiff */,
+				3AF4A0942D9DEE0B00B3FF5E /* icon-svg-256.tiff */,
 				D2D9A6BD2D96B539004A2C92 /* icon-with-subresource.svg */,
 				BCBD372E125ABBE600D2C29F /* icon.png */,
 				BCBD372E125ABBE600D2C2AF /* icon.svg */,

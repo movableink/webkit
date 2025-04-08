@@ -32,9 +32,12 @@
 #import "TestNavigationDelegate.h"
 #import "TestWKWebView.h"
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
+#import <WebCore/Image.h>
+#import <WebCore/NativeImage.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <wtf/Expected.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/Base64.h>
 
@@ -266,10 +269,30 @@ TEST(WebKit, CreateIconDataFromImageData)
     Util::run(&done);
 }
 
+RetainPtr<NSData> tiffRepresentation(CocoaImage *image)
+{
+#if USE(APPKIT)
+    return [image TIFFRepresentation];
+#else
+    RetainPtr cgImage = [image CGImage];
+    if (!cgImage)
+        return nullptr;
+
+    RefPtr nativeImage = WebCore::NativeImage::create(WTFMove(cgImage));
+    if (!nativeImage)
+        return nullptr;
+
+    Ref nativeImageRef { nativeImage.releaseNonNull() };
+    return bridge_cast(WebCore::ImageAdapter::tiffRepresentation({ nativeImageRef }));
+#endif
+}
+
 TEST(WebKit, CreateIconDataFromImageDataSVG)
 {
     RetainPtr webView = adoptNS([WKWebView new]);
     RetainPtr imageData = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"icon" ofType:@"svg"]];
+    RetainPtr expectedIconData16 = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"icon-svg-16" ofType:@"tiff"]];
+    RetainPtr expectedIconData256 = [NSData dataWithContentsOfFile:[NSBundle.test_resourcesBundle pathForResource:@"icon-svg-256" ofType:@"tiff"]];
     RetainPtr length1 = [NSNumber numberWithUnsignedInt:16];
     RetainPtr length2 = [NSNumber numberWithUnsignedInt:256];
     NSArray *lengths = @[length1.get(), length2.get()];
@@ -289,6 +312,7 @@ TEST(WebKit, CreateIconDataFromImageDataSVG)
         EXPECT_NOT_NULL(result);
         EXPECT_EQ(result.size.width, 256);
         EXPECT_EQ(result.size.height, 256);
+        EXPECT_TRUE([tiffRepresentation(result) isEqualToData:expectedIconData256.get()]);
         done = true;
     }];
     Util::run(&done);
@@ -299,6 +323,7 @@ TEST(WebKit, CreateIconDataFromImageDataSVG)
         EXPECT_NOT_NULL(result);
         EXPECT_EQ(result.size.width, 16);
         EXPECT_EQ(result.size.height, 16);
+        EXPECT_TRUE([tiffRepresentation(result) isEqualToData:expectedIconData16.get()]);
         done = true;
     }];
     Util::run(&done);
@@ -309,6 +334,7 @@ TEST(WebKit, CreateIconDataFromImageDataSVG)
         EXPECT_NOT_NULL(result);
         EXPECT_EQ(result.size.width, 256);
         EXPECT_EQ(result.size.height, 256);
+        EXPECT_TRUE([tiffRepresentation(result) isEqualToData:expectedIconData256.get()]);
         done = true;
     }];
     Util::run(&done);
