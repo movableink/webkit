@@ -380,6 +380,24 @@ TEST(WKWebExtensionAPIStorage, GetBytesInUse)
     Util::loadAndRunExtension(storageManifest, @{ @"background.js": backgroundScript });
 }
 
+TEST(WKWebExtensionAPIStorage, GetBytesInUseWhenEmpty)
+{
+    auto *backgroundScript = Util::constructScript(@[
+        @"var result = await browser?.storage?.local?.getBytesInUse()",
+        @"browser.test.assertEq(result, 0)",
+
+        @"result = await browser?.storage?.local?.getBytesInUse('nonexistent')",
+        @"browser.test.assertEq(result, 0)",
+
+        @"result = await browser?.storage?.local?.getBytesInUse([ 'a', 'b', 'c' ])",
+        @"browser.test.assertEq(result, 0)",
+
+        @"browser.test.notifyPass()",
+    ]);
+
+    Util::loadAndRunExtension(storageManifest, @{ @"background.js": backgroundScript });
+}
+
 TEST(WKWebExtensionAPIStorage, Remove)
 {
     auto *backgroundScript = Util::constructScript(@[
