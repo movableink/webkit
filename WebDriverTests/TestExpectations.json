@@ -1807,13 +1807,19 @@
                 "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/205923"}}
             },
             "test_no_top_browsing_context": {
-                "expected": {
-                    "wpe": {"status": ["FAIL"], "bug": "webkit.org/b/212950"},
-                    "gtk": {"status": ["FAIL"], "bug": "webkit.org/b/230612"}
-                }
+                "expected": { "all": {"status": ["FAIL"], "bug": "webkit.org/b/230612"}}
             },
-            "test_no_browsing_context": {
-                "expected": {"wpe": {"status": ["FAIL"], "bug": "webkit.org/b/212950"}}
+            "test_no_such_element_from_other_window_handle[open]": {
+                "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/230612"}}
+            },
+            "test_no_such_element_from_other_window_handle[closed]": {
+                "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/230612"}}
+            },
+            "test_no_such_element_from_other_frame[open]": {
+                "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/230612"}}
+            },
+            "test_no_such_element_from_other_frame[closed]": {
+                "expected": {"all": {"status": ["FAIL"], "bug": "webkit.org/b/230612"}}
             }
         }
     },
