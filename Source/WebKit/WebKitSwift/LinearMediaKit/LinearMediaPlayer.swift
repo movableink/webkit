@@ -64,6 +64,7 @@ private class SwiftOnlyData: NSObject {
     var videoReceiverEndpointObserver: Cancellable?
 
     var isImmersiveVideo = false
+    weak var viewController: PlayableViewController?
     weak var defaultEntity: Entity?
 }
 
@@ -191,9 +192,14 @@ enum LinearMediaPlayerErrors: Error {
     func makeViewController() -> PlayableViewController {
         Logger.linearMediaPlayer.log("\(#function)")
 
+        if let viewController = swiftOnlyData.viewController {
+            return viewController
+        }
         let viewController = PlayableViewController()
         viewController.playable = self
         viewController.prefersAutoDimming = true
+        swiftOnlyData.viewController = viewController;
+
         return viewController
     }
     
