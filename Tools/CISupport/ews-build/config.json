@@ -190,6 +190,10 @@
     { "name": "ews250", "platform": "mac-sequoia" },
     { "name": "ews251", "platform": "mac-sonoma"},
     { "name": "ews252", "platform": "mac-sonoma"},
+    { "name": "ews260", "platform": "mac-sequoia"},
+    { "name": "ews262", "platform": "mac-sequoia"},
+    { "name": "ews263", "platform": "mac-sequoia"},
+    { "name": "ews264", "platform": "mac-sequoia"},
     { "name": "ews253", "platform": "*", "max_builds": 3 },
     { "name": "ews254", "platform": "ios-simulator-18" },
     { "name": "ews255", "platform": "ios-simulator-18" },
@@ -310,7 +314,7 @@
       "name": "macOS-Safer-CPP-Checks-EWS", "shortname": "mac-safer-cpp", "icon": "buildOnly",
       "factory": "SaferCPPStaticAnalyzerFactory", "platform": "mac-sequoia",
       "configuration": "release", "architectures": ["arm64"],
-      "workernames": ["ews237", "ews246", "ews247", "ews248", "ews249", "ews250"]
+      "workernames": ["ews237", "ews246", "ews247", "ews248", "ews249", "ews250", "ews260", "ews262", "ews263", "ews264"]
     },
     {
       "name": "watchOS-11-Build-EWS", "shortname": "watch", "icon": "buildOnly",
