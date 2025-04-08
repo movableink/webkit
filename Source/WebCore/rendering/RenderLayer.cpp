@@ -4645,7 +4645,20 @@ RenderLayer::HitLayer RenderLayer::hitTestLayer(RenderLayer* rootLayer, RenderLa
             return { };
     }
 
-    if (request.viewportConstrainedLayersOnly() && !m_hasViewportConstrainedDescendant && !isViewportConstrained() && !hasFixedAncestor())
+    bool skipLayerForFixedContainerSampling = [&] {
+        if (!request.isForFixedContainerSampling())
+            return false;
+
+        if (!m_hasViewportConstrainedDescendant && !isViewportConstrained() && !hasFixedAncestor())
+            return true;
+
+        if (hasCompositedScrollableOverflow() && !renderer().hasBackground())
+            return true;
+
+        return false;
+    }();
+
+    if (skipLayerForFixedContainerSampling)
         return { };
 
     // The natural thing would be to keep HitTestingTransformState on the stack, but it's big, so we heap-allocate.

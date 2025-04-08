@@ -1994,7 +1994,7 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
             ReadOnly,
             DisallowUserAgentShadowContent,
             IgnoreClipping,
-            ViewportConstrainedLayersOnly,
+            ForFixedContainerSampling,
         };
 
         HitTestResult result { hitTestLocationForSide(side) };
