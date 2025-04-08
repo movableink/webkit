@@ -132,10 +132,8 @@ void WebPage::platformInitializeAccessibility(ShouldInitializeNSAccessibility sh
     // Get the pid for the starting process.
     pid_t pid = legacyPresentingApplicationPID();
     createMockAccessibilityElement(pid);
-    if (shouldInitializeNSAccessibility == ShouldInitializeNSAccessibility::Yes) {
-        if (protectedCorePage()->localMainFrame())
-            accessibilityTransferRemoteToken(accessibilityRemoteTokenData());
-    }
+    if (protectedCorePage()->localMainFrame())
+        accessibilityTransferRemoteToken(accessibilityRemoteTokenData());
 
     // Close Mach connection to Launch Services.
 #if HAVE(LS_SERVER_CONNECTION_STATUS_RELEASE_NOTIFICATIONS_MASK)
@@ -1083,9 +1081,6 @@ void WebPage::initializeAccessibility(Vector<SandboxExtension::Handle>&& handles
     });
 
     [NSApplication _accessibilityInitialize];
-
-    if (protectedCorePage()->localMainFrame())
-        accessibilityTransferRemoteToken(accessibilityRemoteTokenData());
 
     for (auto& extension : extensions)
         extension->revoke();
