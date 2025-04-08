@@ -234,6 +234,20 @@ void MediaSourcePrivateAVFObjC::flushActiveSourceBuffersIfNeeded()
         downcast<SourceBufferPrivateAVFObjC>(sourceBuffer)->flushIfNeeded();
 }
 
+#if PLATFORM(IOS_FAMILY)
+void MediaSourcePrivateAVFObjC::applicationWillResignActive()
+{
+    for (auto* sourceBuffer : m_activeSourceBuffers)
+        downcast<SourceBufferPrivateAVFObjC>(sourceBuffer)->applicationWillResignActive();
+}
+
+void MediaSourcePrivateAVFObjC::applicationDidBecomeActive()
+{
+    for (auto* sourceBuffer : m_activeSourceBuffers)
+        downcast<SourceBufferPrivateAVFObjC>(sourceBuffer)->applicationDidBecomeActive();
+}
+#endif
+
 #if ENABLE(ENCRYPTED_MEDIA)
 void MediaSourcePrivateAVFObjC::cdmInstanceAttached(CDMInstance& instance)
 {

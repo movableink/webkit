@@ -287,6 +287,8 @@ private:
 
 #if PLATFORM(IOS_FAMILY)
     void sceneIdentifierDidChange() final;
+    void applicationWillResignActive() final;
+    void applicationDidBecomeActive() final;
 #endif
 
     void isInFullscreenOrPictureInPictureChanged(bool) final;
@@ -373,6 +375,7 @@ private:
     uint32_t m_pendingAppends { 0 };
 #if PLATFORM(IOS_FAMILY)
     bool m_displayLayerWasInterrupted { false };
+    bool m_applicationIsActive { true };
 #endif
     bool m_hasAudio { false };
     bool m_hasVideo { false };

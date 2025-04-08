@@ -169,6 +169,8 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
 
 #if PLATFORM(IOS_FAMILY)
     void sceneIdentifierDidChange() final;
+    void applicationWillResignActive() final;
+    void applicationDidBecomeActive() final;
 #endif
 
 #if !RELEASE_LOG_DISABLED

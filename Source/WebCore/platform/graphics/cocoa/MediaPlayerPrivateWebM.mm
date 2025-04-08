@@ -2027,6 +2027,19 @@ void MediaPlayerPrivateWebM::sceneIdentifierDidChange()
     updateSpatialTrackingLabel();
 #endif
 }
+
+void MediaPlayerPrivateWebM::applicationWillResignActive()
+{
+    ALWAYS_LOG(LOGIDENTIFIER);
+    m_applicationIsActive = false;
+}
+
+void MediaPlayerPrivateWebM::applicationDidBecomeActive()
+{
+    ALWAYS_LOG(LOGIDENTIFIER);
+    m_applicationIsActive = true;
+    flushIfNeeded();
+}
 #endif
 
 void MediaPlayerPrivateWebM::isInFullscreenOrPictureInPictureChanged(bool isInFullscreenOrPictureInPicture)
@@ -2046,9 +2059,11 @@ void MediaPlayerPrivateWebM::setLayerRequiresFlush()
     ALWAYS_LOG(LOGIDENTIFIER);
 #if PLATFORM(IOS_FAMILY)
     m_displayLayerWasInterrupted = true;
-#endif
-    // FIXME: Do not immediately flush the layer if the process is now backgrounded on iOS.
+    if (m_applicationIsActive)
+        flushIfNeeded();
+#else
     flushIfNeeded();
+#endif
 }
 
 std::optional<VideoPlaybackQualityMetrics> MediaPlayerPrivateWebM::videoPlaybackQualityMetrics()

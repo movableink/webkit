@@ -89,6 +89,11 @@ public:
     void videoRendererWillReconfigure(VideoMediaSampleRenderer&);
     void videoRendererDidReconfigure(VideoMediaSampleRenderer&);
 
+#if PLATFORM(IOS_FAMILY)
+    void applicationWillResignActive();
+    void applicationDidBecomeActive();
+#endif
+
     void flushActiveSourceBuffersIfNeeded();
 
 #if ENABLE(ENCRYPTED_MEDIA)

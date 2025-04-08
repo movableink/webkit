@@ -124,6 +124,11 @@ public:
     void flush();
     void flushIfNeeded();
 
+#if PLATFORM(IOS_FAMILY)
+    void applicationWillResignActive();
+    void applicationDidBecomeActive();
+#endif
+
     void registerForErrorNotifications(SourceBufferPrivateAVFObjCErrorClient*);
     void unregisterForErrorNotifications(SourceBufferPrivateAVFObjCErrorClient*);
 
@@ -196,6 +201,7 @@ private:
     bool requiresFlush() const;
     void flushVideo();
     void setLayerRequiresFlush();
+
 ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
     RetainPtr<AVSampleBufferAudioRenderer> audioRendererForTrackID(TrackID) const;
     void flushAudio(AVSampleBufferAudioRenderer *);
@@ -233,6 +239,7 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     const Ref<WebAVSampleBufferListener> m_listener;
 #if PLATFORM(IOS_FAMILY)
     bool m_displayLayerWasInterrupted { false };
+    bool m_applicationIsActive { true };
 #endif
     RetainPtr<NSError> m_hdcpError;
     Box<BinarySemaphore> m_hasSessionSemaphore;
@@ -276,7 +283,6 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
 #endif
-
     ProcessIdentity m_resourceOwner;
 };
 

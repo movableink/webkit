@@ -955,9 +955,28 @@ void SourceBufferPrivateAVFObjC::setLayerRequiresFlush()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
     m_layerRequiresFlush = true;
-    // FIXME: Do not immediately flush the layer if the process is now backgrounded on iOS.
+#if PLATFORM(IOS_FAMILY)
+    if (m_applicationIsActive)
+        flushIfNeeded();
+#else
+    flushIfNeeded();
+#endif
+}
+
+#if PLATFORM(IOS_FAMILY)
+void SourceBufferPrivateAVFObjC::applicationWillResignActive()
+{
+    ALWAYS_LOG(LOGIDENTIFIER);
+    m_applicationIsActive = false;
+}
+
+void SourceBufferPrivateAVFObjC::applicationDidBecomeActive()
+{
+    ALWAYS_LOG(LOGIDENTIFIER);
+    m_applicationIsActive = true;
     flushIfNeeded();
 }
+#endif
 
 ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
 RetainPtr<AVSampleBufferAudioRenderer> SourceBufferPrivateAVFObjC::audioRendererForTrackID(TrackID trackID) const

@@ -1917,6 +1917,18 @@ void MediaPlayerPrivateMediaSourceAVFObjC::sceneIdentifierDidChange()
     updateSpatialTrackingLabel();
 #endif
 }
+
+void MediaPlayerPrivateMediaSourceAVFObjC::applicationWillResignActive()
+{
+    if (RefPtr mediaSourcePrivate = m_mediaSourcePrivate)
+        mediaSourcePrivate->applicationWillResignActive();
+}
+
+void MediaPlayerPrivateMediaSourceAVFObjC::applicationDidBecomeActive()
+{
+    if (RefPtr mediaSourcePrivate = m_mediaSourcePrivate)
+        mediaSourcePrivate->applicationDidBecomeActive();
+}
 #endif
 
 void MediaPlayerPrivateMediaSourceAVFObjC::isInFullscreenOrPictureInPictureChanged(bool isInFullscreenOrPictureInPicture)
