@@ -49,6 +49,7 @@
 #import <wtf/JSONValues.h>
 #import <wtf/LoggerHelper.h>
 #import <wtf/TZoneMallocInlines.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/Base64.h>
 #import <wtf/text/StringHash.h>
@@ -1029,11 +1030,11 @@ void CDMInstanceSessionFairPlayStreamingAVFObjC::loadSession(LicenseType license
         for (NSData* expiredSessionData in [PAL::getAVContentKeySessionClass() pendingExpiredSessionReportsWithAppIdentifier:appIdentifier.get() storageDirectoryAtURL:storageURL]) {
             static const NSString *PlaybackSessionIdKey = @"PlaybackSessionID";
             NSDictionary *expiredSession = [NSPropertyListSerialization propertyListWithData:expiredSessionData options:kCFPropertyListImmutable format:nullptr error:nullptr];
-            NSString *playbackSessionIdValue = (NSString *)[expiredSession objectForKey:PlaybackSessionIdKey];
-            if (![playbackSessionIdValue isKindOfClass:[NSString class]])
+            RetainPtr playbackSessionIdValue = dynamic_objc_cast<NSString>([expiredSession objectForKey:PlaybackSessionIdKey]);
+            if (!playbackSessionIdValue)
                 continue;
 
-            if (sessionId == String(playbackSessionIdValue)) {
+            if (sessionId == String(playbackSessionIdValue.get())) {
                 // FIXME(rdar://problem/35934922): use key values stored in expired session report once available
                 changedKeys.append((KeyStatusVector::ValueType){ SharedBuffer::create(), KeyStatus::Released });
                 m_expiredSessions.append(expiredSessionData);
@@ -1095,11 +1096,11 @@ void CDMInstanceSessionFairPlayStreamingAVFObjC::removeSessionData(const String&
         for (NSData* expiredSessionData in [PAL::getAVContentKeySessionClass() pendingExpiredSessionReportsWithAppIdentifier:appIdentifier.get() storageDirectoryAtURL:storageURL]) {
             NSDictionary *expiredSession = [NSPropertyListSerialization propertyListWithData:expiredSessionData options:kCFPropertyListImmutable format:nullptr error:nullptr];
             static const NSString *PlaybackSessionIdKey = @"PlaybackSessionID";
-            NSString *playbackSessionIdValue = (NSString *)[expiredSession objectForKey:PlaybackSessionIdKey];
-            if (![playbackSessionIdValue isKindOfClass:[NSString class]])
+            RetainPtr playbackSessionIdValue = dynamic_objc_cast<NSString>([expiredSession objectForKey:PlaybackSessionIdKey]);
+            if (!playbackSessionIdValue)
                 continue;
 
-            if (sessionId == String(playbackSessionIdValue)) {
+            if (sessionId == String(playbackSessionIdValue.get())) {
                 // FIXME(rdar://problem/35934922): use key values stored in expired session report once available
                 changedKeys.append((KeyStatusVector::ValueType){ SharedBuffer::create(), KeyStatus::Released });
                 m_expiredSessions.append(expiredSessionData);

@@ -198,7 +198,7 @@ void WebClipCache::persist()
             NSString *securityOriginString = [url absoluteString];
             if (!securityOriginString)
                 continue;
-            [entries addObject:@[bundleIdentifier.get(), securityOriginString, (NSString *)webClipIdentifier]];
+            [entries addObject:@[bundleIdentifier.get(), securityOriginString, webClipIdentifier.createNSString().get()]];
         }
 
         NSError *error = nil;

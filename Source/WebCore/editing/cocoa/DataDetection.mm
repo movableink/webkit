@@ -59,6 +59,7 @@
 #import "VisibleUnits.h"
 #import <wtf/WorkQueue.h>
 #import <wtf/cf/TypeCastsCF.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/text/MakeString.h>
 #import <wtf/text/ParsingUtilities.h>
 #import <wtf/text/StringBuilder.h>
@@ -177,7 +178,7 @@ std::optional<DetectedItem> DataDetection::detectItemAroundHitTestResult(const H
 
 bool DataDetection::canBePresentedByDataDetectors(const URL& url)
 {
-    return [PAL::softLink_DataDetectorsCore_DDURLTapAndHoldSchemes() containsObject:(NSString *)url.protocol().convertToASCIILowercase()];
+    return [PAL::softLink_DataDetectorsCore_DDURLTapAndHoldSchemes() containsObject:url.protocol().convertToASCIILowercase().createNSString().get()];
 }
 
 bool DataDetection::isDataDetectorLink(Element& element)
@@ -235,12 +236,12 @@ static BOOL resultIsURL(DDResultRef result)
         return NO;
     
     static NeverDestroyed<RetainPtr<NSSet>> urlTypes = [NSSet setWithObjects:
-        (NSString *)PAL::get_DataDetectorsCore_DDBinderHttpURLKey(),
-        (NSString *)PAL::get_DataDetectorsCore_DDBinderWebURLKey(),
-        (NSString *)PAL::get_DataDetectorsCore_DDBinderMailURLKey(),
-        (NSString *)PAL::get_DataDetectorsCore_DDBinderGenericURLKey(),
-        (NSString *)PAL::get_DataDetectorsCore_DDBinderEmailKey(), nil];
-    return [urlTypes.get() containsObject:(NSString *)PAL::softLink_DataDetectorsCore_DDResultGetType(result)];
+        bridge_cast(PAL::get_DataDetectorsCore_DDBinderHttpURLKey()),
+        bridge_cast(PAL::get_DataDetectorsCore_DDBinderWebURLKey()),
+        bridge_cast(PAL::get_DataDetectorsCore_DDBinderMailURLKey()),
+        bridge_cast(PAL::get_DataDetectorsCore_DDBinderGenericURLKey()),
+        bridge_cast(PAL::get_DataDetectorsCore_DDBinderEmailKey()), nil];
+    return [urlTypes.get() containsObject:bridge_cast(PAL::softLink_DataDetectorsCore_DDResultGetType(result))];
 }
 
 static NSString *constructURLStringForResult(DDResultRef currentResult, NSString *resultIdentifier, NSDate *referenceDate, NSTimeZone *referenceTimeZone, OptionSet<DataDetectorType> detectionTypes)

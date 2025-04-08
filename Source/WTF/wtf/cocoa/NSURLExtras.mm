@@ -100,20 +100,24 @@ static String decodePercentEscapes(const String& string)
     return substring.get();
 }
 
-NSString *decodeHostName(NSString *string)
+RetainPtr<NSString> decodeHostName(NSString *string)
 {
     std::optional<String> host = URLHelpers::mapHostName(string, nullptr);
     if (!host)
         return nil;
-    return !*host ? string : (NSString *)*host;
+    if (!*host)
+        return string;
+    return host->createNSString();
 }
 
-NSString *encodeHostName(NSString *string)
+RetainPtr<NSString> encodeHostName(NSString *string)
 {
     std::optional<String> host = URLHelpers::mapHostName(string, decodePercentEscapes);
     if (!host)
         return nil;
-    return !*host ? string : (NSString *)*host;
+    if (!*host)
+        return string;
+    return host->createNSString();
 }
 
 static RetainPtr<NSString> stringByTrimmingWhitespace(NSString *string)

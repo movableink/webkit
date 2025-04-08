@@ -51,6 +51,7 @@
 #import <wtf/Assertions.h>
 #import <wtf/NeverDestroyed.h>
 #import <wtf/StdLibExtras.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 using namespace WebCore;
 
@@ -295,7 +296,7 @@ static RetainPtr<CGColorRef> createCGColorWithDeviceWhite(CGFloat white, CGFloat
         title = adoptCF(CGPDFStringCopyTextString(value));
 
     if (title && CFStringGetLength(title.get())) {
-        _title = (NSString *)title.get();
+        _title = bridge_cast(title.get());
         core([self _frame])->loader().client().dispatchDidReceiveTitle({ _title.get(), TextDirection::LTR });
     }
 }

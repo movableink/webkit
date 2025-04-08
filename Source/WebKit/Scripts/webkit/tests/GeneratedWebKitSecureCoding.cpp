@@ -74,7 +74,7 @@ template<typename T> static Vector<std::pair<String, RetainPtr<T>>> vectorFromDi
     __block Vector<std::pair<String, RetainPtr<T>>> result;
     [dictionary enumerateKeysAndObjectsUsingBlock:^(id key, id value, BOOL*){
         if ([key isKindOfClass:NSString.class] && [value isKindOfClass:IPC::getClass<T>()])
-            result.append((NSString *)key, (T)value);
+            result.append(checked_objc_cast<NSString>(key), (T)value);
     }];
     return result;
 }

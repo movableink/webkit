@@ -48,6 +48,7 @@
 #import <wtf/Lock.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/Vector.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/text/WTFString.h>
 #import <wtf/text/StringHash.h>
 
@@ -408,8 +409,8 @@ inline Expected<Result, JSValueRef> performPropertyOperation(NSStringFunction st
 
     Result result;
     // If it's a NSString already, reduce indirection and just pass the NSString.
-    if ([propertyKey isKindOfClass:[NSString class]]) {
-        auto name = OpaqueJSString::tryCreate((NSString *)propertyKey);
+    if (auto *propertyKeyString = dynamic_objc_cast<NSString>(propertyKey)) {
+        auto name = OpaqueJSString::tryCreate(propertyKeyString);
         result = stringFunction([context JSGlobalContextRef], object, name.get(), arguments..., &exception);
     } else
         result = jsFunction([context JSGlobalContextRef], object, [[JSValue valueWithObject:propertyKey inContext:context] JSValueRef], arguments..., &exception);
@@ -1148,8 +1149,8 @@ static ObjcContainerConvertor::Task objectToValueWithoutCopy(JSContext *context,
         if ([object isKindOfClass:[JSValue class]])
             return { object, ((JSValue *)object)->m_value, ContainerNone };
 
-        if ([object isKindOfClass:[NSString class]]) {
-            auto string = OpaqueJSString::tryCreate((NSString *)object);
+        if (auto *nsString = dynamic_objc_cast<NSString>(object)) {
+            auto string = OpaqueJSString::tryCreate(nsString);
             return { object, JSValueMakeString(contextRef, string.get()), ContainerNone };
         }
 
@@ -1205,8 +1206,8 @@ JSValueRef objectToValue(JSContext *context, id object)
             ASSERT([current.objc isKindOfClass:[NSDictionary class]]);
             NSDictionary *dictionary = (NSDictionary *)current.objc;
             for (id key in [dictionary keyEnumerator]) {
-                if ([key isKindOfClass:[NSString class]]) {
-                    auto propertyName = OpaqueJSString::tryCreate((NSString *)key);
+                if (auto *keyString = dynamic_objc_cast<NSString>(key)) {
+                    auto propertyName = OpaqueJSString::tryCreate(keyString);
                     JSObjectSetProperty(contextRef, js, propertyName.get(), convertor.convert([dictionary objectForKey:key]), 0, 0);
                 }
             }

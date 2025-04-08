@@ -908,10 +908,10 @@ void MediaPlayerPrivateAVFoundationObjC::createAVAssetForURL(const URL& url, Ret
     if (PAL::canLoad_AVFoundation_AVURLAssetOutOfBandMIMETypeKey() && !type.isEmpty() && !player->contentMIMETypeWasInferredFromExtension()) {
         auto codecs = player->contentTypeCodecs();
         if (!codecs.isEmpty()) {
-            NSString *typeString = [NSString stringWithFormat:@"%@; codecs=\"%@\"", (NSString *)type, (NSString *)codecs];
-            [options setObject:typeString forKey:AVURLAssetOutOfBandMIMETypeKey];
+            RetainPtr typeString = adoptNS([[NSString alloc] initWithFormat:@"%@; codecs=\"%@\"", type.createNSString().get(), codecs.createNSString().get()]);
+            [options setObject:typeString.get() forKey:AVURLAssetOutOfBandMIMETypeKey];
         } else
-            [options setObject:(NSString *)type forKey:AVURLAssetOutOfBandMIMETypeKey];
+            [options setObject:type.createNSString().get() forKey:AVURLAssetOutOfBandMIMETypeKey];
     }
 
     auto outOfBandTrackSources = player->outOfBandTrackSources();
@@ -950,7 +950,7 @@ void MediaPlayerPrivateAVFoundationObjC::createAVAssetForURL(const URL& url, Ret
     if (allowedMediaContainerTypes && PAL::canLoad_AVFoundation_AVURLAssetAllowableTypeCategoriesKey()) {
         auto nsTypes = adoptNS([[NSMutableArray alloc] init]);
         for (auto type : *allowedMediaContainerTypes)
-            [nsTypes addObject:(NSString *)UTIFromMIMEType(type)];
+            [nsTypes addObject:UTIFromMIMEType(type).createNSString().get()];
         [options setObject:nsTypes.get() forKey:AVURLAssetAllowableTypeCategoriesKey];
     }
 

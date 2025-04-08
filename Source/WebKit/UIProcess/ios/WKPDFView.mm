@@ -52,6 +52,7 @@
 #import <wtf/WeakObjCPtr.h>
 #import <wtf/cocoa/Entitlements.h>
 #import <wtf/cocoa/NSURLExtras.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 #if PLATFORM(APPLETV)
 #import "PDFKitSoftLink.h"
@@ -698,8 +699,8 @@ static NSStringCompareOptions stringCompareOptions(_WKFindOptions findOptions)
 
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     NSDictionary *representations = @{
-        (NSString *)kUTTypeUTF8PlainText : (NSString *)_positionInformation.url.string(),
-        (NSString *)kUTTypeURL : _positionInformation.url.createNSURL().get(),
+        bridge_cast(kUTTypeUTF8PlainText) : _positionInformation.url.string().createNSString().get(),
+        bridge_cast(kUTTypeURL) : _positionInformation.url.createNSURL().get(),
     };
 ALLOW_DEPRECATED_DECLARATIONS_END
 

@@ -1699,7 +1699,7 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
 
 - (NSString *)mediaType
 {
-    return _page->overriddenMediaType().isNull() ? nil : (NSString *)_page->overriddenMediaType();
+    return _page->overriddenMediaType().isNull() ? nil : _page->overriddenMediaType().createNSString().autorelease();
 }
 
 - (id)interactionState

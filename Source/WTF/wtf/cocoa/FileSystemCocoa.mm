@@ -274,7 +274,7 @@ bool setExcludedFromBackup(const String& path, bool excluded)
         return false;
 
     NSError *error;
-    if (![[NSURL fileURLWithPath:(NSString *)path isDirectory:YES] setResourceValue:[NSNumber numberWithBool:excluded] forKey:NSURLIsExcludedFromBackupKey error:&error]) {
+    if (![[NSURL fileURLWithPath:path.createNSString().get() isDirectory:YES] setResourceValue:[NSNumber numberWithBool:excluded] forKey:NSURLIsExcludedFromBackupKey error:&error]) {
         LOG_ERROR("Cannot exclude path '%s' from backup with error '%@'", path.utf8().data(), error.localizedDescription);
         return false;
     }

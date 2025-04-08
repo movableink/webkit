@@ -50,6 +50,7 @@
 #import <wtf/FileSystem.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/WorkQueue.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
 #import <pal/cocoa/AVFoundationSoftLink.h>
@@ -213,11 +214,11 @@ void CDMSessionAVContentKeySession::releaseKeys()
         for (NSData* expiredSessionData in expiredSessions) {
             static const NSString *PlaybackSessionIdKey = @"PlaybackSessionID";
             NSDictionary *expiredSession = [NSPropertyListSerialization propertyListWithData:expiredSessionData options:kCFPropertyListImmutable format:nullptr error:nullptr];
-            NSString *playbackSessionIdValue = (NSString *)[expiredSession objectForKey:PlaybackSessionIdKey];
-            if (![playbackSessionIdValue isKindOfClass:[NSString class]])
+            RetainPtr playbackSessionIdValue = dynamic_objc_cast<NSString>([expiredSession objectForKey:PlaybackSessionIdKey]);
+            if (!playbackSessionIdValue)
                 continue;
 
-            if (m_sessionId == String(playbackSessionIdValue)) {
+            if (m_sessionId == String(playbackSessionIdValue.get())) {
                 ALWAYS_LOG(LOGIDENTIFIER, "found session, sending expiration message");
                 m_expiredSession = expiredSessionData;
                 m_client->sendMessage(Uint8Array::create(span(m_expiredSession.get())).ptr(), emptyString());

@@ -50,6 +50,7 @@
 #import <wtf/MonotonicTime.h>
 #import <wtf/SoftLinking.h>
 #import <wtf/Vector.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 using namespace WebCore;
 
@@ -334,8 +335,8 @@ static const float PAGE_HEIGHT_INSET = 4.0f * 2.0f;
         title = adoptCF(CGPDFStringCopyTextString(value));
 
     if (title && CFStringGetLength(title.get())) {
-        [self setTitle:(NSString *)title.get()];
-        [[self _frame] _dispatchDidReceiveTitle:(NSString *)title.get()];
+        [self setTitle:bridge_cast(title.get())];
+        [[self _frame] _dispatchDidReceiveTitle:bridge_cast(title.get())];
     }
 }
 

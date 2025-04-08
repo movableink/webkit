@@ -298,7 +298,7 @@ static void appendFilesAsShareableURLs(RetainPtr<NSMutableArray>&& shareDataArra
     auto shareDataArray = adoptNS([[NSMutableArray alloc] init]);
     
     if (!data.shareData.text.isEmpty())
-        [shareDataArray addObject:(NSString *)data.shareData.text];
+        [shareDataArray addObject:data.shareData.text.createNSString().get()];
     
     if (data.url) {
         RetainPtr url = data.url.value().createNSURL();

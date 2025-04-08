@@ -39,6 +39,7 @@
 #import <wtf/HashCountedSet.h>
 #import <wtf/ListHashSet.h>
 #import <wtf/URL.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/StringHash.h>
 
@@ -49,7 +50,7 @@ static bool isFilePasteboardType(const String& type)
     return [legacyFilenamesPasteboardType() isEqualToString:type]
         || [legacyFilesPromisePasteboardType() isEqualToString:type]
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        || [(NSString *)kUTTypeFileURL isEqualToString:type];
+        || [bridge_cast(kUTTypeFileURL) isEqualToString:type];
 ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
@@ -157,8 +158,8 @@ void PlatformPasteboard::getPathnamesForType(Vector<String>& pathnames, const St
     if (!isFilePasteboardType(pasteboardType))
         return;
     id paths = [m_pasteboard propertyListForType:pasteboardType];
-    if ([paths isKindOfClass:[NSString class]]) {
-        pathnames.append((NSString *)paths);
+    if (auto *pathsString = dynamic_objc_cast<NSString>(paths)) {
+        pathnames.append(pathsString);
         return;
     }
     pathnames = makeVector<String>(paths);
@@ -167,7 +168,7 @@ void PlatformPasteboard::getPathnamesForType(Vector<String>& pathnames, const St
 static bool pasteboardMayContainFilePaths(NSPasteboard *pasteboard)
 {
     for (NSString *type in pasteboard.types) {
-        if ([type isEqualToString:(NSString *)legacyFilenamesPasteboardType()] || [type isEqualToString:(NSString *)legacyFilesPromisePasteboardType()] || Pasteboard::shouldTreatCocoaTypeAsFile(type))
+        if ([type isEqualToString:legacyFilenamesPasteboardType()] || [type isEqualToString:legacyFilesPromisePasteboardType()] || Pasteboard::shouldTreatCocoaTypeAsFile(type))
             return true;
     }
     return false;
@@ -452,14 +453,14 @@ int64_t PlatformPasteboard::setStringForType(const String& string, const String&
         }
 
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        if ([[m_pasteboard types] containsObject:(NSString *)kUTTypeURL]) {
-            didWriteData = [m_pasteboard setString:[url absoluteString] forType:(NSString *)kUTTypeURL];
+        if ([[m_pasteboard types] containsObject:bridge_cast(kUTTypeURL)]) {
+            didWriteData = [m_pasteboard setString:[url absoluteString] forType:bridge_cast(kUTTypeURL)];
             if (!didWriteData)
                 return 0;
         }
 
-        if ([[m_pasteboard types] containsObject:(NSString *)kUTTypeFileURL] && [url isFileURL]) {
-            didWriteData = [m_pasteboard setString:[url absoluteString] forType:(NSString *)kUTTypeFileURL];
+        if ([[m_pasteboard types] containsObject:bridge_cast(kUTTypeFileURL)] && [url isFileURL]) {
+            didWriteData = [m_pasteboard setString:[url absoluteString] forType:bridge_cast(kUTTypeFileURL)];
             if (!didWriteData)
                 return 0;
         }
