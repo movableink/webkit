@@ -662,14 +662,14 @@ static NSString *escapeKey(NSString *key)
     const HashSet<CFTypeRef>* _allowedClasses;
 }
 
-- (id)initWithInterface:(_WKRemoteObjectInterface *)interface rootObjectDictionary:(const API::Dictionary*)rootObjectDictionary replyToSelector:(SEL)replyToSelector
+- (id)initWithInterface:(_WKRemoteObjectInterface *)interface rootObjectDictionary:(Ref<API::Dictionary>&&)rootObjectDictionary replyToSelector:(SEL)replyToSelector
 {
     if (!(self = [super init]))
         return nil;
 
     _interface = interface;
 
-    lazyInitialize(_rootDictionary, Ref { *rootObjectDictionary });
+    lazyInitialize(_rootDictionary, WTFMove(rootObjectDictionary));
     _currentDictionary = _rootDictionary;
 
     _replyToSelector = replyToSelector;

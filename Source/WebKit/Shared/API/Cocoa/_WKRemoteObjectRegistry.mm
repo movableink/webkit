@@ -215,6 +215,8 @@ static NSString *replyBlockSignature(Protocol *protocol, SEL selector, NSUIntege
 {
     auto& interfaceIdentifier = remoteObjectInvocation.interfaceIdentifier();
     RefPtr encodedInvocation = remoteObjectInvocation.encodedInvocation();
+    if (!encodedInvocation)
+        return;
 
     auto interfaceAndObject = _exportedObjects.get(interfaceIdentifier);
     if (!interfaceAndObject.second) {
@@ -224,7 +226,7 @@ static NSString *replyBlockSignature(Protocol *protocol, SEL selector, NSUIntege
 
     RetainPtr<_WKRemoteObjectInterface> interface = interfaceAndObject.second;
 
-    RetainPtr decoder = adoptNS([[WKRemoteObjectDecoder alloc] initWithInterface:interface.get() rootObjectDictionary:encodedInvocation.get() replyToSelector:nullptr]);
+    RetainPtr decoder = adoptNS([[WKRemoteObjectDecoder alloc] initWithInterface:interface.get() rootObjectDictionary:encodedInvocation.releaseNonNull() replyToSelector:nullptr]);
 
     RetainPtr<NSInvocation> invocation = [decoder decodeObjectOfClass:[NSInvocation class] forKey:invocationKey];
 
@@ -337,7 +339,7 @@ static NSString *replyBlockSignature(Protocol *protocol, SEL selector, NSUIntege
     auto pendingReply = it->value;
     _pendingReplies.remove(it);
 
-    auto decoder = adoptNS([[WKRemoteObjectDecoder alloc] initWithInterface:pendingReply.interface.get() rootObjectDictionary:downcast<API::Dictionary>(encodedInvocation.get()) replyToSelector:pendingReply.selector]);
+    auto decoder = adoptNS([[WKRemoteObjectDecoder alloc] initWithInterface:pendingReply.interface.get() rootObjectDictionary:Ref { *downcast<API::Dictionary>(encodedInvocation.get()) } replyToSelector:pendingReply.selector]);
 
     RetainPtr replyInvocation = [decoder decodeObjectOfClass:[NSInvocation class] forKey:invocationKey];
 
