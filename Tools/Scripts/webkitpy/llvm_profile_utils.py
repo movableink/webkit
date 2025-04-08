@@ -53,9 +53,10 @@ class ExecutablesFromEnvAndXcode:
     @cache
     def detect_binaries(cls):
         llvm_profdata_binaries = []
-        process = shutil.which(cls.EXECUTABLE_NAME)
-        if not process.returncode:
-            llvm_profdata_binaries.append(process.stdout.strip())
+
+        llvm_profdata_from_search_path = shutil.which(cls.EXECUTABLE_NAME)
+        if llvm_profdata_from_search_path:
+            llvm_profdata_binaries.append(llvm_profdata_from_search_path)
 
         for sdk_name in ('macosx.internal', 'iphoneos.internal', 'macosx', 'iphoneos'):
             binary_path = locate_binary_xcrun(sdk_name, cls.EXECUTABLE_NAME)
