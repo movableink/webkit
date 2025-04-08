@@ -2936,6 +2936,21 @@ auto Document::updateLayoutIgnorePendingStylesheets(OptionSet<LayoutOptions> lay
     return updateLayout(layoutOptions, context);
 }
 
+
+static RenderElement* rootForSkippedLayout(RenderElement& rootCandidate)
+{
+    auto skippedSubtreeRoot = [&] (auto& skippedRootOrSkippedContent) -> RenderElement* {
+        if (auto* renderBox = dynamicDowncast<RenderBox>(skippedRootOrSkippedContent); renderBox && isSkippedContentRoot(*renderBox))
+            return renderBox;
+        for (auto* ancestor = skippedRootOrSkippedContent.containingBlock(); ancestor; ancestor = ancestor->containingBlock()) {
+            if (isSkippedContentRoot(*ancestor))
+                return ancestor;
+        }
+        return &skippedRootOrSkippedContent.view();
+    };
+    return skippedSubtreeRoot(rootCandidate);
+}
+
 auto Document::updateLayout(OptionSet<LayoutOptions> layoutOptions, const Element* context) -> UpdateLayoutResult
 {
     bool oldIgnore = m_ignorePendingStylesheets;
@@ -2982,47 +2997,37 @@ auto Document::updateLayout(OptionSet<LayoutOptions> layoutOptions, const Elemen
                 if (!layoutOptions.containsAny({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }))
                     return false;
 
-                if (context && !context->renderer())
+                if (context && (!context->renderer() || !context->renderer()->style().isSkippedRootOrSkippedContent()))
                     return false;
 
-                auto shouldForceLayoutOnRenderer = [&](auto& renderer) {
+                auto* rootForLayout = rootForSkippedLayout(context ? *context->renderer() : *renderView());
+                if (!rootForLayout) {
+                    ASSERT_NOT_REACHED();
+                    return false;
+                }
+
+                auto markRendererDirtyIfNeeded = [&](auto& renderer) {
                     auto everhadLayoutAndWasSkippedDuringLast = renderer.wasSkippedDuringLastLayoutDueToContentVisibility();
-                    if (!everhadLayoutAndWasSkippedDuringLast) {
-                        // Never had layout.
-                        return true;
-                    }
-                    if (*everhadLayoutAndWasSkippedDuringLast) {
-                        // Was skipped at the last layout.
-                        return true;
-                    }
+                    // Never had layout or was skipped at the last one (or marked dirty since the last layout, but not self needs layout which is required to "refresh" stale content).
+                    if (!everhadLayoutAndWasSkippedDuringLast || *everhadLayoutAndWasSkippedDuringLast || (renderer.needsLayout() && !renderer.selfNeedsLayout()))
+                        renderer.setNeedsLayout();
                     return renderer.needsLayout();
                 };
 
-                if (context) {
-                    if (!context->renderer()->style().isSkippedRootOrSkippedContent())
-                        return false;
-
-                    auto& skippedRootRenderer = *context->renderer();
-                    if (!shouldForceLayoutOnRenderer(skippedRootRenderer))
-                        return false;
-                    skippedRootRenderer.setNeedsLayout();
-                } else {
-                    ASSERT(!layoutOptions.contains(LayoutOptions::TreatContentVisibilityHiddenAsVisible));
-
-                    auto isSkippedContentStale = false;
-                    for (auto& descendant : descendantsOfType<RenderBlock>(*renderView())) {
-                        if (descendant.style().usedContentVisibility() != ContentVisibility::Auto) {
-                            // FIXME: While 'c-v: auto' is used 'hidden' inside 'c-v: hidden' we could entirly skip hidden subtrees.
-                            continue;
-                        }
-                        if (shouldForceLayoutOnRenderer(descendant)) {
-                            descendant.setNeedsLayout();
-                            isSkippedContentStale = true;
-                        }
+                auto isSkippedContentStale = markRendererDirtyIfNeeded(*rootForLayout);
+                if (layoutOptions.contains(LayoutOptions::TreatContentVisibilityHiddenAsVisible)) {
+                    for (auto& descendant : descendantsOfType<RenderObject>(*rootForLayout))
+                        isSkippedContentStale |= markRendererDirtyIfNeeded(descendant);
+                } else if (layoutOptions.contains(LayoutOptions::TreatContentVisibilityAutoAsVisible)) {
+                    for (auto& descendant : descendantsOfType<RenderObject>(*rootForLayout)) {
+                        // FIXME: While 'c-v: auto' is used 'hidden' inside 'c-v: hidden' we could entirly skip hidden subtrees here.
+                        if (descendant.style().usedContentVisibility() == ContentVisibility::Auto)
+                            isSkippedContentStale |= markRendererDirtyIfNeeded(descendant);
                     }
-                    if (!isSkippedContentStale)
-                        return false;
                 }
+
+                if (!isSkippedContentStale)
+                    return false;
 
                 auto overrideTypes = [&] {
                     auto types = OptionSet<ContentVisibilityOverrideScope::OverrideType> { };
