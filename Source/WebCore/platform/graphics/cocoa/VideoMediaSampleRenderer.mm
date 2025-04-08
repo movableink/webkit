@@ -369,6 +369,7 @@ void VideoMediaSampleRenderer::enqueueSample(const MediaSample& sample)
     if (sample.platformSampleType() != PlatformSample::Type::CMSampleBufferType)
         return;
 
+    ASSERT(!m_needsFlushing);
     auto cmSampleBuffer = sample.platformSample().sample.cmSampleBuffer;
 
     bool needsDecompressionSession = false;
@@ -382,7 +383,7 @@ void VideoMediaSampleRenderer::enqueueSample(const MediaSample& sample)
     }
 #endif
 
-    if (!decompressionSession() && (!renderer() || ((prefersDecompressionSession() || needsDecompressionSession) && !sample.isProtected())))
+    if (!decompressionSession() && (!renderer() || ((prefersDecompressionSession() || needsDecompressionSession || isUsingDecompressionSession()) && !sample.isProtected())))
         initializeDecompressionSession();
 
     if (!isUsingDecompressionSession()) {
@@ -458,6 +459,20 @@ void VideoMediaSampleRenderer::decodeNextSample()
         ++m_totalVideoFrames;
 
         if (!result) {
+            if (result.error() == kVTInvalidSessionErr) {
+                RELEASE_LOG(Media, "VTDecompressionSession got invalidated, requesting flush");
+                RefPtr decompressionSession = [&] {
+                    Locker lock { m_lock };
+                    return std::exchange(m_decompressionSession, nullptr);
+                }();
+                if (decompressionSession)
+                    decompressionSession->invalidate();
+                callOnMainThread([protectedThis] {
+                    protectedThis->notifyVideoRendererRequiresFlushToResumeDecoding();
+                });
+                return;
+            }
+
             m_gotDecodingError = true;
             ++m_corruptedVideoFrames;
 
@@ -517,21 +532,20 @@ void VideoMediaSampleRenderer::initializeDecompressionSession()
 {
     assertIsMainThread();
 
-    if (isUsingDecompressionSession())
-        return;
-
     {
         Locker locker { m_lock };
 
-        ASSERT(!m_decompressionSession && !m_decodedSampleQueue);
+        ASSERT(!m_decompressionSession);
         if (m_decompressionSession)
             return;
 
         m_decompressionSession = WebCoreDecompressionSession::createOpenGL();
         m_isUsingDecompressionSession = true;
     }
-    m_decodedSampleQueue = createBufferQueue();
-    m_startupTime = MonotonicTime::now();
+    if (!m_decodedSampleQueue) {
+        m_decodedSampleQueue = createBufferQueue();
+        m_startupTime = MonotonicTime::now();
+    }
 
     resetReadyForMoreSample();
 }
@@ -725,10 +739,12 @@ void VideoMediaSampleRenderer::flush()
     if (!isUsingDecompressionSession())
         return;
 
+    m_needsFlushing = false;
     cancelTimer();
     flushCompressedSampleQueue();
 
-    decompressionSession()->flush();
+    if (RefPtr decompressionSession = this->decompressionSession())
+        decompressionSession->flush();
     dispatcher()->dispatch([weakThis = ThreadSafeWeakPtr { *this }]() mutable {
         if (RefPtr protectedThis = weakThis.get()) {
             protectedThis->flushDecodedSampleQueue();
@@ -963,12 +979,27 @@ void VideoMediaSampleRenderer::notifyWhenDecodingErrorOccurred(Function<void(OSS
     m_errorOccurredFunction = WTFMove(callback);
 }
 
+void VideoMediaSampleRenderer::notifyWhenVideoRendererRequiresFlushToResumeDecoding(Function<void()>&& callback)
+{
+    assertIsMainThread();
+    m_rendererNeedsFlushFunction = WTFMove(callback);
+}
+
 void VideoMediaSampleRenderer::notifyErrorHasOccurred(OSStatus status)
 {
     assertIsMainThread();
 
     if (m_errorOccurredFunction)
         m_errorOccurredFunction(status);
+}
+
+void VideoMediaSampleRenderer::notifyVideoRendererRequiresFlushToResumeDecoding()
+{
+    assertIsMainThread();
+
+    m_needsFlushing = true;
+    if (m_rendererNeedsFlushFunction)
+        m_rendererNeedsFlushFunction();
 }
 
 Ref<GuaranteedSerialFunctionDispatcher> VideoMediaSampleRenderer::dispatcher() const

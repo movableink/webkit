@@ -74,6 +74,7 @@ public:
 
     void notifyWhenHasAvailableVideoFrame(Function<void(const MediaTime&, double)>&&);
     void notifyWhenDecodingErrorOccurred(Function<void(OSStatus)>&&);
+    void notifyWhenVideoRendererRequiresFlushToResumeDecoding(Function<void()>&&);
 
     void flush();
 
@@ -140,6 +141,7 @@ private:
 
     void notifyHasAvailableVideoFrame(const MediaTime&, double, FlushId);
     void notifyErrorHasOccurred(OSStatus);
+    void notifyVideoRendererRequiresFlushToResumeDecoding();
 
     Ref<GuaranteedSerialFunctionDispatcher> dispatcher() const;
     void ensureOnDispatcher(Function<void()>&&) const;
@@ -172,6 +174,7 @@ private:
     bool m_prefersDecompressionSession WTF_GUARDED_BY_CAPABILITY(mainThread) { false };
     std::optional<uint32_t> m_currentCodec;
     std::atomic<bool> m_gotDecodingError { false };
+    bool m_needsFlushing WTF_GUARDED_BY_CAPABILITY(mainThread) { false };
 
     // Playback Statistics
     std::atomic<unsigned> m_totalVideoFrames { 0 };
@@ -182,6 +185,7 @@ private:
 
     Function<void(const MediaTime&, double)> m_hasAvailableFrameCallback WTF_GUARDED_BY_CAPABILITY(mainThread);
     Function<void(OSStatus)> m_errorOccurredFunction WTF_GUARDED_BY_CAPABILITY(mainThread);
+    Function<void()> m_rendererNeedsFlushFunction WTF_GUARDED_BY_CAPABILITY(mainThread);
     ProcessIdentity m_resourceOwner;
     MonotonicTime m_startupTime;
 };

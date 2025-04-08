@@ -195,6 +195,7 @@ private:
     bool isEnabledVideoTrackID(TrackID) const;
     bool requiresFlush() const;
     void flushVideo();
+    void setLayerRequiresFlush();
 ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
     RetainPtr<AVSampleBufferAudioRenderer> audioRendererForTrackID(TrackID) const;
     void flushAudio(AVSampleBufferAudioRenderer *);

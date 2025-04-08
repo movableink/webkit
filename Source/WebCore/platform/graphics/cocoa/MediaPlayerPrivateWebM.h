@@ -228,9 +228,7 @@ private:
     void didUpdateFormatDescriptionForTrackId(Ref<TrackInfo>&&, TrackID);
 
     void flush();
-#if PLATFORM(IOS_FAMILY)
     void flushIfNeeded();
-#endif
     void flushTrack(TrackID);
     void flushVideo();
     void flushAudio(AVSampleBufferAudioRenderer*);
@@ -304,6 +302,7 @@ private:
         StagedLayer
     };
     AcceleratedVideoMode acceleratedVideoMode() const;
+    void setLayerRequiresFlush();
 
     const Logger& logger() const final { return m_logger.get(); }
     Ref<const Logger> protectedLogger() const { return logger(); }

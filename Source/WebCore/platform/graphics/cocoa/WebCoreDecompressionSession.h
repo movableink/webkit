@@ -30,6 +30,7 @@
 #include "ProcessIdentity.h"
 #include <CoreMedia/CMTime.h>
 #include <atomic>
+#include <wtf/Expected.h>
 #include <wtf/Function.h>
 #include <wtf/Lock.h>
 #include <wtf/MediaTime.h>
@@ -73,7 +74,7 @@ private:
     };
     WEBCORE_EXPORT explicit WebCoreDecompressionSession(Mode);
 
-    RetainPtr<VTDecompressionSessionRef> ensureDecompressionSessionForSample(CMSampleBufferRef);
+    Expected<RetainPtr<VTDecompressionSessionRef>, OSStatus> ensureDecompressionSessionForSample(CMSampleBufferRef);
 
     Ref<DecodingPromise> decodeSampleInternal(CMSampleBufferRef, bool displaying);
     void handleDecompressionOutput(bool displaying, OSStatus, VTDecodeInfoFlags, CVImageBufferRef, CMTime presentationTimeStamp, CMTime presentationDuration);

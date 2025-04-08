@@ -951,6 +951,14 @@ void SourceBufferPrivateAVFObjC::flushVideo()
     }
 }
 
+void SourceBufferPrivateAVFObjC::setLayerRequiresFlush()
+{
+    ALWAYS_LOG(LOGIDENTIFIER);
+    m_layerRequiresFlush = true;
+    // FIXME: Do not immediately flush the layer if the process is now backgrounded on iOS.
+    flushIfNeeded();
+}
+
 ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
 RetainPtr<AVSampleBufferAudioRenderer> SourceBufferPrivateAVFObjC::audioRendererForTrackID(TrackID trackID) const
 ALLOW_NEW_API_WITHOUT_GUARDS_END
@@ -1318,6 +1326,10 @@ void SourceBufferPrivateAVFObjC::configureVideoRenderer(VideoMediaSampleRenderer
         if (RefPtr protectedThis = weakThis.get(); protectedThis && protectedThis->m_enabledVideoTrackID)
             protectedThis->didBecomeReadyForMoreSamples(*protectedThis->m_enabledVideoTrackID);
     });
+    videoRenderer.notifyWhenVideoRendererRequiresFlushToResumeDecoding([weakThis = ThreadSafeWeakPtr { *this }] {
+        if (RefPtr protectedThis = weakThis.get())
+            protectedThis->setLayerRequiresFlush();
+    });
     m_listener->beginObservingVideoRenderer(videoRenderer.renderer());
 }
 
@@ -1325,6 +1337,7 @@ void SourceBufferPrivateAVFObjC::invalidateVideoRenderer(VideoMediaSampleRendere
 {
     videoRenderer.flush();
     videoRenderer.stopRequestingMediaData();
+    videoRenderer.notifyWhenVideoRendererRequiresFlushToResumeDecoding({ });
     m_listener->stopObservingVideoRenderer(videoRenderer.renderer());
 
 #if ENABLE(ENCRYPTED_MEDIA) && HAVE(AVCONTENTKEYSESSION)
