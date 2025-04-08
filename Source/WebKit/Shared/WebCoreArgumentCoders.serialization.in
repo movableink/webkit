@@ -2524,6 +2524,9 @@ struct WebCore::ScreenProperties {
 #if HAVE(SUPPORT_HDR_DISPLAY)
     OptionSet<WebCore::ContentsFormat> screenContentsFormatsForTesting;
 #endif
+#if ENABLE(TOUCH_EVENTS) && PLATFORM(GTK)
+    bool screenHasTouchDevice;
+#endif
 };
 
 class WebCore::PlatformTimeRanges {
