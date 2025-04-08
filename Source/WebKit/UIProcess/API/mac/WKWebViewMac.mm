@@ -201,8 +201,6 @@ static WebCore::FloatBoxExtent coreBoxExtentsFromEdgeInsets(NSEdgeInsets insets)
         _impl->setUserInterfaceLayoutDirection(userInterfaceLayoutDirection);
 }
 
-#if USE(NSVIEW_SEMANTICCONTEXT)
-
 - (void)_setSemanticContext:(NSViewSemanticContext)semanticContext
 {
     auto wasUsingFormSemanticContext = _impl ? _impl->useFormSemanticContext() : false;
@@ -215,8 +213,6 @@ static WebCore::FloatBoxExtent coreBoxExtentsFromEdgeInsets(NSEdgeInsets insets)
     if (wasUsingFormSemanticContext != _impl->useFormSemanticContext())
         _impl->semanticContextDidChange();
 }
-
-#endif
 
 ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
 - (void)renewGState

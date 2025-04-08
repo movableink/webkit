@@ -78,12 +78,8 @@ NSView *ControlFactoryMac::drawingView(const FloatRect& rect, const ControlStyle
     // Use a fake view.
     [m_drawingView setFrameSize:NSSizeFromCGSize(rect.size())];
     [m_drawingView setAppearance:[NSAppearance currentDrawingAppearance]];
-#if USE(NSVIEW_SEMANTICCONTEXT)
     if (style.states.contains(ControlStyle::State::FormSemanticContext))
         [m_drawingView _setSemanticContext:NSViewSemanticContextForm];
-#else
-    UNUSED_PARAM(style);
-#endif
     return m_drawingView.get();
 }
 

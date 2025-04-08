@@ -217,12 +217,8 @@ static void applyViewlessCellSettings(float deviceScaleFactor, const ControlStyl
     [cell _setFallbackBezelPresentationState:isInActiveWindow ? NSPresentationStateActiveKey : NSPresentationStateInactive];
 #endif
 
-#if USE(NSVIEW_SEMANTICCONTEXT)
     if (style.states.contains(ControlStyle::State::FormSemanticContext))
         [cell _setFallbackSemanticContext:NSViewSemanticContextForm];
-#else
-    UNUSED_PARAM(style);
-#endif
 }
 
 static void performDrawingWithUnflippedContext(GraphicsContext& context, const FloatRect& rect, Function<void(const FloatRect&)>&& draw)
