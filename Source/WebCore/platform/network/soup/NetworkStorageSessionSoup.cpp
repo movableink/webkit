@@ -173,49 +173,48 @@ void NetworkStorageSession::setCookieObserverHandler(Function<void ()>&& handler
 }
 
 #if USE(LIBSECRET)
-static const char* schemeFromProtectionSpaceServerType(ProtectionSpace::ServerType serverType)
+static ASCIILiteral schemeFromProtectionSpaceServerType(ProtectionSpace::ServerType serverType)
 {
     switch (serverType) {
     case ProtectionSpace::ServerType::HTTP:
     case ProtectionSpace::ServerType::ProxyHTTP:
-        return "http";
+        return "http"_s;
     case ProtectionSpace::ServerType::HTTPS:
     case ProtectionSpace::ServerType::ProxyHTTPS:
-        return "https";
+        return "https"_s;
     case ProtectionSpace::ServerType::FTP:
     case ProtectionSpace::ServerType::ProxyFTP:
-        return "ftp";
+        return "ftp"_s;
     case ProtectionSpace::ServerType::FTPS:
     case ProtectionSpace::ServerType::ProxySOCKS:
         break;
     }
-
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-static const char* authTypeFromProtectionSpaceAuthenticationScheme(ProtectionSpace::AuthenticationScheme scheme)
+static ASCIILiteral authTypeFromProtectionSpaceAuthenticationScheme(ProtectionSpace::AuthenticationScheme scheme)
 {
     switch (scheme) {
     case ProtectionSpace::AuthenticationScheme::Default:
     case ProtectionSpace::AuthenticationScheme::HTTPBasic:
-        return "Basic";
+        return "Basic"_s;
     case ProtectionSpace::AuthenticationScheme::HTTPDigest:
-        return "Digest";
+        return "Digest"_s;
     case ProtectionSpace::AuthenticationScheme::NTLM:
-        return "NTLM";
+        return "NTLM"_s;
     case ProtectionSpace::AuthenticationScheme::Negotiate:
-        return "Negotiate";
+        return "Negotiate"_s;
     case ProtectionSpace::AuthenticationScheme::HTMLForm:
     case ProtectionSpace::AuthenticationScheme::ClientCertificateRequested:
     case ProtectionSpace::AuthenticationScheme::ServerTrustEvaluationRequested:
         ASSERT_NOT_REACHED();
         break;
     case ProtectionSpace::AuthenticationScheme::ClientCertificatePINRequested:
-        return "Certificate PIN";
+        return "Certificate PIN"_s;
     case ProtectionSpace::AuthenticationScheme::OAuth:
-        return "OAuth";
+        return "OAuth"_s;
     case ProtectionSpace::AuthenticationScheme::Unknown:
-        return "unknown";
+        return "unknown"_s;
     }
 
     RELEASE_ASSERT_NOT_REACHED();
@@ -256,8 +255,8 @@ void NetworkStorageSession::getCredentialFromPersistentStorage(const ProtectionS
         "domain", realm.utf8().data(),
         "server", protectionSpace.host().utf8().data(),
         "port", protectionSpace.port(),
-        "protocol", schemeFromProtectionSpaceServerType(protectionSpace.serverType()),
-        "authtype", authTypeFromProtectionSpaceAuthenticationScheme(protectionSpace.authenticationScheme()),
+        "protocol", schemeFromProtectionSpaceServerType(protectionSpace.serverType()).characters(),
+        "authtype", authTypeFromProtectionSpaceAuthenticationScheme(protectionSpace.authenticationScheme()).characters(),
         nullptr));
     if (!attributes) {
         completionHandler({ });
@@ -316,8 +315,8 @@ void NetworkStorageSession::saveCredentialToPersistentStorage(const ProtectionSp
         "domain", realm.utf8().data(),
         "server", protectionSpace.host().utf8().data(),
         "port", protectionSpace.port(),
-        "protocol", schemeFromProtectionSpaceServerType(protectionSpace.serverType()),
-        "authtype", authTypeFromProtectionSpaceAuthenticationScheme(protectionSpace.authenticationScheme()),
+        "protocol", schemeFromProtectionSpaceServerType(protectionSpace.serverType()).characters(),
+        "authtype", authTypeFromProtectionSpaceAuthenticationScheme(protectionSpace.authenticationScheme()).characters(),
         nullptr));
     if (!attributes)
         return;
