@@ -233,9 +233,9 @@ bool WebGL2RenderingContext::validateBufferTargetCompatibility(ASCIILiteral func
     return true;
 }
 
-WebGLBuffer* WebGL2RenderingContext::validateBufferDataParameters(ASCIILiteral functionName, GCGLenum target, GCGLenum usage)
+RefPtr<WebGLBuffer> WebGL2RenderingContext::validateBufferDataParameters(ASCIILiteral functionName, GCGLenum target, GCGLenum usage)
 {
-    WebGLBuffer* buffer = validateBufferDataTarget(functionName, target);
+    RefPtr buffer = validateBufferDataTarget(functionName, target);
     if (!buffer)
         return nullptr;
     switch (usage) {
@@ -255,9 +255,9 @@ WebGLBuffer* WebGL2RenderingContext::validateBufferDataParameters(ASCIILiteral f
     return nullptr;
 }
 
-WebGLBuffer* WebGL2RenderingContext::validateBufferDataTarget(ASCIILiteral functionName, GCGLenum target)
+RefPtr<WebGLBuffer> WebGL2RenderingContext::validateBufferDataTarget(ASCIILiteral functionName, GCGLenum target)
 {
-    WebGLBuffer* buffer = nullptr;
+    RefPtr<WebGLBuffer> buffer;
     switch (target) {
     case GraphicsContextGL::ELEMENT_ARRAY_BUFFER:
         buffer = m_boundVertexArrayObject->getElementArrayBuffer();
@@ -291,10 +291,10 @@ WebGLBuffer* WebGL2RenderingContext::validateBufferDataTarget(ASCIILiteral funct
         synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, functionName, "no buffer"_s);
         return nullptr;
     }
-    if (m_boundTransformFeedback->hasBoundIndexedTransformFeedbackBuffer(buffer)) {
+    if (m_boundTransformFeedback->hasBoundIndexedTransformFeedbackBuffer(buffer.get())) {
         ASSERT(buffer != m_boundVertexArrayObject->getElementArrayBuffer());
         if (m_boundIndexedUniformBuffers.contains(buffer)
-            || m_boundVertexArrayObject->hasArrayBuffer(buffer)
+            || m_boundVertexArrayObject->hasArrayBuffer(buffer.get())
             || buffer == m_boundArrayBuffer
             || buffer == m_boundCopyReadBuffer
             || buffer == m_boundCopyWriteBuffer

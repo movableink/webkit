@@ -191,7 +191,7 @@ public:
     ~ScopedWebGLRestoreFramebuffer()
     {
         RefPtr gl = m_context->graphicsContextGL();
-        if (auto* gl2Ccontext = dynamicDowncast<WebGL2RenderingContext>(m_context.get())) {
+        if (RefPtr gl2Ccontext = dynamicDowncast<WebGL2RenderingContext>(m_context.get())) {
             gl->bindFramebuffer(GraphicsContextGL::READ_FRAMEBUFFER, objectOrZero(gl2Ccontext->m_readFramebufferBinding));
             gl->bindFramebuffer(GraphicsContextGL::DRAW_FRAMEBUFFER, objectOrZero(gl2Ccontext->m_framebufferBinding));
         } else

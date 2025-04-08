@@ -746,7 +746,6 @@ html/canvas/WebGLRenderingContext.cpp
 html/canvas/WebGLRenderingContextBase.cpp
 html/canvas/WebGLSync.cpp
 html/canvas/WebGLTransformFeedback.cpp
-html/canvas/WebGLUtilities.cpp
 html/canvas/WebGLVertexArrayObject.cpp
 html/canvas/WebGLVertexArrayObjectBase.cpp
 html/canvas/WebGLVertexArrayObjectOES.cpp

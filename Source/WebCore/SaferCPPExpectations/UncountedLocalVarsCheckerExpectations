@@ -397,8 +397,6 @@ html/canvas/WebGLMultiDraw.cpp
 html/canvas/WebGLMultiDrawInstancedBaseVertexBaseInstance.cpp
 html/canvas/WebGLPolygonMode.cpp
 html/canvas/WebGLProvokingVertex.cpp
-html/canvas/WebGLRenderingContextBase.cpp
-html/canvas/WebGLUtilities.h
 html/parser/HTMLConstructionSite.cpp
 html/shadow/DateTimeEditElement.cpp
 html/shadow/MediaControlTextTrackContainerElement.cpp

@@ -332,7 +332,7 @@ static void addActiveContext(WebGLRenderingContextBase& newContext)
     auto& contexts = activeContexts();
     auto maxContextsSize = isMainThread() ? maxActiveContexts : maxActiveWorkerContexts;
     if (contexts.size() >= maxContextsSize) {
-        auto* earliest = *std::min_element(contexts.begin(), contexts.end(), [] (auto& a, auto& b) {
+        RefPtr earliest = *std::min_element(contexts.begin(), contexts.end(), [] (auto& a, auto& b) {
             return a->activeOrdinal() < b->activeOrdinal();
         });
         earliest->recycleContext();
@@ -447,7 +447,7 @@ static GraphicsContextGLAttributes resolveGraphicsContextGLAttributes(const WebG
 
 std::unique_ptr<WebGLRenderingContextBase> WebGLRenderingContextBase::create(CanvasBase& canvas, WebGLContextAttributes attributes, WebGLVersion type)
 {
-    auto scriptExecutionContext = canvas.scriptExecutionContext();
+    RefPtr scriptExecutionContext = canvas.scriptExecutionContext();
     if (!scriptExecutionContext)
         return nullptr;
 
@@ -498,12 +498,12 @@ WebGLRenderingContextBase::WebGLRenderingContextBase(CanvasBase& canvas, CanvasR
 
 WebGLCanvas WebGLRenderingContextBase::canvas()
 {
-    auto& base = canvasBase();
+    Ref base = canvasBase();
 #if ENABLE(OFFSCREEN_CANVAS)
-    if (auto* offscreenCanvas = dynamicDowncast<OffscreenCanvas>(base))
+    if (RefPtr offscreenCanvas = dynamicDowncast<OffscreenCanvas>(base.get()))
         return offscreenCanvas;
 #endif
-    return &downcast<HTMLCanvasElement>(base);
+    return &downcast<HTMLCanvasElement>(base.get());
 }
 
 #if ENABLE(OFFSCREEN_CANVAS)
@@ -758,7 +758,7 @@ bool WebGLRenderingContextBase::clearIfComposited(WebGLRenderingContextBase::Cal
 
 RefPtr<ImageBuffer> WebGLRenderingContextBase::surfaceBufferToImageBuffer(SurfaceBuffer sourceBuffer)
 {
-    auto buffer = canvasBase().buffer();
+    RefPtr buffer = protectedCanvasBase()->buffer();
     if (isContextLost())
         return buffer;
     if (!buffer)
@@ -976,9 +976,9 @@ bool WebGLRenderingContextBase::validateBufferTarget(ASCIILiteral functionName, 
     }
 }
 
-WebGLBuffer* WebGLRenderingContextBase::validateBufferDataTarget(ASCIILiteral functionName, GCGLenum target)
+RefPtr<WebGLBuffer> WebGLRenderingContextBase::validateBufferDataTarget(ASCIILiteral functionName, GCGLenum target)
 {
-    WebGLBuffer* buffer = nullptr;
+    RefPtr<WebGLBuffer> buffer;
     switch (target) {
     case GraphicsContextGL::ELEMENT_ARRAY_BUFFER:
         buffer = m_boundVertexArrayObject->getElementArrayBuffer();
@@ -1165,8 +1165,8 @@ void WebGLRenderingContextBase::bufferData(GCGLenum target, std::optional<Buffer
     if (!buffer)
         return;
 
-    std::visit([&](auto& data) {
-        m_context->bufferData(target, data->span(), usage);
+    std::visit([context = m_context, target, usage](auto& data) {
+        context->bufferData(target, data->span(), usage);
     }, data.value());
 }
 
@@ -1182,8 +1182,8 @@ void WebGLRenderingContextBase::bufferSubData(GCGLenum target, long long offset,
         return;
     }
 
-    std::visit([&](auto& data) {
-        m_context->bufferSubData(target, static_cast<GCGLintptr>(offset), data->span());
+    std::visit([context = m_context, target, offset](auto& data) {
+        context->bufferSubData(target, static_cast<GCGLintptr>(offset), data->span());
     }, data);
 }
 
@@ -1457,8 +1457,7 @@ void WebGLRenderingContextBase::deleteRenderbuffer(WebGLRenderbuffer* renderbuff
         m_renderbufferBinding = nullptr;
     if (m_framebufferBinding)
         m_framebufferBinding->removeAttachmentFromBoundFramebuffer(locker, GraphicsContextGL::FRAMEBUFFER, renderbuffer);
-    auto readFramebufferBinding = getFramebufferBinding(GraphicsContextGL::READ_FRAMEBUFFER);
-    if (readFramebufferBinding)
+    if (RefPtr readFramebufferBinding = getFramebufferBinding(GraphicsContextGL::READ_FRAMEBUFFER))
         readFramebufferBinding->removeAttachmentFromBoundFramebuffer(locker, GraphicsContextGL::READ_FRAMEBUFFER, renderbuffer);
 }
 
@@ -1489,8 +1488,7 @@ void WebGLRenderingContextBase::deleteTexture(WebGLTexture* texture)
     }
     if (m_framebufferBinding)
         m_framebufferBinding->removeAttachmentFromBoundFramebuffer(locker, GraphicsContextGL::FRAMEBUFFER, texture);
-    auto readFramebufferBinding = getFramebufferBinding(GraphicsContextGL::READ_FRAMEBUFFER);
-    if (readFramebufferBinding)
+    if (RefPtr readFramebufferBinding = getFramebufferBinding(GraphicsContextGL::READ_FRAMEBUFFER))
         readFramebufferBinding->removeAttachmentFromBoundFramebuffer(locker, GraphicsContextGL::READ_FRAMEBUFFER, texture);
 }
 
@@ -1657,7 +1655,7 @@ void WebGLRenderingContextBase::framebufferRenderbuffer(GCGLenum target, GCGLenu
     // Don't allow the default framebuffer to be mutated; all current
     // implementations use an FBO internally in place of the default
     // FBO.
-    WebGLFramebuffer* framebufferBinding = getFramebufferBinding(target);
+    RefPtr framebufferBinding = getFramebufferBinding(target);
     if (!framebufferBinding || !framebufferBinding->object()) {
         synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "framebufferRenderbuffer"_s, "no framebuffer bound"_s);
         return;
@@ -1687,7 +1685,7 @@ void WebGLRenderingContextBase::framebufferTexture2D(GCGLenum target, GCGLenum a
     // Don't allow the default framebuffer to be mutated; all current
     // implementations use an FBO internally in place of the default
     // FBO.
-    WebGLFramebuffer* framebufferBinding = getFramebufferBinding(target);
+    RefPtr framebufferBinding = getFramebufferBinding(target);
     if (!framebufferBinding || !framebufferBinding->object()) {
         synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "framebufferTexture2D"_s, "no framebuffer bound"_s);
         return;
@@ -2074,7 +2072,7 @@ WebGLAny WebGLRenderingContextBase::getParameter(GCGLenum pname)
         if (m_oesVertexArrayObject) {
             if (m_boundVertexArrayObject->isDefaultObject())
                 return nullptr;
-            return RefPtr { static_cast<WebGLVertexArrayObjectOES*>(m_boundVertexArrayObject.get()) };
+            return RefPtr { downcast<WebGLVertexArrayObjectOES>(m_boundVertexArrayObject.get()) };
         }
         synthesizeGLError(GraphicsContextGL::INVALID_ENUM, "getParameter"_s, "invalid parameter name, OES_vertex_array_object not enabled"_s);
         return nullptr;
@@ -3149,7 +3147,7 @@ ExceptionOr<void> WebGLRenderingContextBase::texImageSourceHelper(TexImageFuncti
     if (isContextLost())
         return { };
 
-    return std::visit([this, functionID, target, level, internalformat, border, format, type, xoffset, yoffset, zoffset, inputSourceImageRect, depth, unpackImageHeight](auto&& source) {
+    return std::visit([this, protectedThis = Ref { *this }, functionID, target, level, internalformat, border, format, type, xoffset, yoffset, zoffset, inputSourceImageRect, depth, unpackImageHeight](auto&& source) {
         return texImageSource(functionID, target, level, internalformat, border, format, type, xoffset, yoffset, zoffset, inputSourceImageRect, depth, unpackImageHeight, *source);
     }, source);
 }
@@ -4887,7 +4885,7 @@ void WebGLRenderingContextBase::printToConsole(MessageLevel level, String&& mess
     if (!shouldPrintToConsole())
         return;
 
-    auto* scriptExecutionContext = this->scriptExecutionContext();
+    RefPtr scriptExecutionContext = this->scriptExecutionContext();
     if (!scriptExecutionContext)
         return;
 
@@ -5016,9 +5014,9 @@ std::optional<std::span<const GCGLint>> WebGLRenderingContextBase::validateUnifo
 template
 std::optional<std::span<const GCGLfloat>> WebGLRenderingContextBase::validateUniformMatrixParameters<GCGLfloat, Float32Array>(ASCIILiteral functionName, const WebGLUniformLocation*, GCGLboolean transpose, const TypedList<Float32Array, float>& values, GCGLsizei requiredMinSize, GCGLuint srcOffset, GCGLuint srcLength);
 
-WebGLBuffer* WebGLRenderingContextBase::validateBufferDataParameters(ASCIILiteral functionName, GCGLenum target, GCGLenum usage)
+RefPtr<WebGLBuffer> WebGLRenderingContextBase::validateBufferDataParameters(ASCIILiteral functionName, GCGLenum target, GCGLenum usage)
 {
-    WebGLBuffer* buffer = validateBufferDataTarget(functionName, target);
+    RefPtr buffer = validateBufferDataTarget(functionName, target);
     if (!buffer)
         return nullptr;
     switch (usage) {
@@ -5167,17 +5165,15 @@ void WebGLRenderingContextBase::vertexAttribfvImpl(ASCIILiteral functionName, GC
 
 void WebGLRenderingContextBase::scheduleTaskToDispatchContextLostEvent()
 {
-    // It is safe to capture |this| because we keep the canvas element alive and it owns |this|.
-    canvasBase().queueTaskKeepingObjectAlive(TaskSource::WebGL, [this](auto&) {
-        if (isContextStopped())
-            return;
-        if (!isContextLost())
+    canvasBase().queueTaskKeepingObjectAlive(TaskSource::WebGL, [weakThis = WeakPtr { *this }](auto&) {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis || protectedThis->isContextStopped() || !protectedThis->isContextLost())
             return;
         auto event = WebGLContextEvent::create(eventNames().webglcontextlostEvent, Event::CanBubble::No, Event::IsCancelable::Yes, emptyString());
-        canvasBase().dispatchEvent(event);
-        m_contextLostState->restoreRequested = event->defaultPrevented();
-        if (m_contextLostState->mode == RealLostContext && m_contextLostState->restoreRequested)
-            maybeRestoreContextSoon();
+        protectedThis->canvasBase().dispatchEvent(event);
+        protectedThis->m_contextLostState->restoreRequested = event->defaultPrevented();
+        if (protectedThis->m_contextLostState->mode == RealLostContext && protectedThis->m_contextLostState->restoreRequested)
+            protectedThis->maybeRestoreContextSoon();
     });
 }
 
@@ -5225,7 +5221,7 @@ void WebGLRenderingContextBase::maybeRestoreContext()
             canvasBase().dispatchEvent(WebGLContextEvent::create(eventNames().webglcontextrestoredEvent, Event::CanBubble::No, Event::IsCancelable::Yes, emptyString()));
             // Notify the render layer to reconfigure the structure of the backing. This causes the backing to
             // start using the new layer contents display delegate from the new context.
-            if (auto* htmlCanvas = this->htmlCanvas()) {
+            if (RefPtr htmlCanvas = this->htmlCanvas()) {
                 CheckedPtr renderBox = htmlCanvas->renderBox();
                 if (renderBox && renderBox->hasAcceleratedCompositing())
                     renderBox->contentChanged(ContentChangeType::Canvas);
@@ -5537,7 +5533,7 @@ void WebGLRenderingContextBase::addDebugMessage(GCGLenum type, GCGLenum id, GCGL
     if (!shouldPrintToConsole())
         return;
 
-    auto* scriptExecutionContext = this->scriptExecutionContext();
+    RefPtr scriptExecutionContext = this->scriptExecutionContext();
     if (!scriptExecutionContext)
         return;
 

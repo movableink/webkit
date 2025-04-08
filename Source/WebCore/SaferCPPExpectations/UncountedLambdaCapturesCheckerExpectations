@@ -81,7 +81,6 @@ html/NumberInputType.cpp
 html/canvas/CanvasRenderingContext2DBase.cpp
 html/canvas/CanvasStyle.cpp
 html/canvas/GPUCanvasContextCocoa.mm
-html/canvas/WebGLRenderingContextBase.cpp
 html/track/LoadableTextTrack.cpp
 html/track/TrackBase.cpp
 inspector/InspectorOverlay.cpp

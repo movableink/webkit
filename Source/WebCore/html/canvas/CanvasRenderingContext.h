@@ -64,6 +64,7 @@ public:
     WEBCORE_EXPORT void deref() const;
 
     CanvasBase& canvasBase() const { return m_canvas; }
+    Ref<CanvasBase> protectedCanvasBase() const { return m_canvas.get(); }
 
     bool is2dBase() const { return is2d() || isOffscreen2d() || isPaint(); }
     bool is2d() const { return m_type == Type::CanvasElement2D; }
