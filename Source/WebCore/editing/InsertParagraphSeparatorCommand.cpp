@@ -82,7 +82,7 @@ void InsertParagraphSeparatorCommand::calculateStyleBeforeInsertion(const Positi
     if (!isStartOfParagraph(visiblePosition) && !isEndOfParagraph(visiblePosition))
         return;
 
-    m_style = EditingStyle::create(position, EditingStyle::EditingPropertiesInEffect);
+    m_style = EditingStyle::create(position, EditingStyle::PropertiesToInclude::EditingPropertiesInEffect);
     protectedStyle()->mergeTypingStyle(*position.document());
 }
 

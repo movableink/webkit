@@ -66,7 +66,7 @@ enum class StandardFontFamilySerializationMode : uint8_t { Keep, Strip };
 class EditingStyle : public RefCounted<EditingStyle> {
 public:
 
-    enum PropertiesToInclude { AllProperties, OnlyEditingInheritableProperties, EditingPropertiesInEffect };
+    enum class PropertiesToInclude { AllProperties, OnlyEditingInheritableProperties, EditingPropertiesInEffect, PostLayoutProperties };
 
     enum ShouldPreserveWritingDirection { PreserveWritingDirection, DoNotPreserveWritingDirection };
     enum ShouldExtractMatchingStyle { ExtractMatchingStyle, DoNotExtractMatchingStyle };
@@ -77,12 +77,12 @@ public:
         return adoptRef(*new EditingStyle);
     }
 
-    static Ref<EditingStyle> create(Node* node, PropertiesToInclude propertiesToInclude = OnlyEditingInheritableProperties)
+    static Ref<EditingStyle> create(Node* node, PropertiesToInclude propertiesToInclude = PropertiesToInclude::OnlyEditingInheritableProperties)
     {
         return adoptRef(*new EditingStyle(node, propertiesToInclude));
     }
 
-    static Ref<EditingStyle> create(const Position& position, PropertiesToInclude propertiesToInclude = OnlyEditingInheritableProperties)
+    static Ref<EditingStyle> create(const Position& position, PropertiesToInclude propertiesToInclude = PropertiesToInclude::OnlyEditingInheritableProperties)
     {
         return adoptRef(*new EditingStyle(position, propertiesToInclude));
     }
@@ -144,7 +144,7 @@ public:
     void prepareToApplyAt(const Position&, ShouldPreserveWritingDirection = DoNotPreserveWritingDirection);
     void mergeTypingStyle(Document&);
     enum CSSPropertyOverrideMode { OverrideValues, DoNotOverrideValues };
-    void mergeInlineStyleOfElement(StyledElement&, CSSPropertyOverrideMode, PropertiesToInclude = AllProperties);
+    void mergeInlineStyleOfElement(StyledElement&, CSSPropertyOverrideMode, PropertiesToInclude = PropertiesToInclude::AllProperties);
     static Ref<EditingStyle> wrappingStyleForSerialization(Node& context, bool shouldAnnotate, StandardFontFamilySerializationMode);
     void mergeStyleFromRules(StyledElement&);
     void mergeStyleFromRulesForSerialization(StyledElement&, StandardFontFamilySerializationMode);
@@ -166,7 +166,10 @@ public:
     TextDecorationChange strikeThroughChange() const { return static_cast<TextDecorationChange>(m_strikeThroughChange); }
 
     WEBCORE_EXPORT bool hasStyle(CSSPropertyID, const String& value);
-    WEBCORE_EXPORT static RefPtr<EditingStyle> styleAtSelectionStart(const VisibleSelection&, bool shouldUseBackgroundColorInEffect = false);
+    WEBCORE_EXPORT bool fontWeightIsBold();
+    WEBCORE_EXPORT bool fontStyleIsItalic();
+    WEBCORE_EXPORT bool webkitTextDecorationsInEffectIsUnderline();
+    WEBCORE_EXPORT static RefPtr<EditingStyle> styleAtSelectionStart(const VisibleSelection&, bool shouldUseBackgroundColorInEffect = false, PropertiesToInclude = PropertiesToInclude::AllProperties);
     static WritingDirection textDirectionForSelection(const VisibleSelection&, EditingStyle* typingStyle, bool& hasNestedOrMultipleEmbeddings);
     static bool isEmbedOrIsolate(CSSValueID unicodeBidi) { return unicodeBidi == CSSValueID::CSSValueIsolate || unicodeBidi == CSSValueID::CSSValueWebkitIsolate || unicodeBidi == CSSValueID::CSSValueEmbed; }
 
