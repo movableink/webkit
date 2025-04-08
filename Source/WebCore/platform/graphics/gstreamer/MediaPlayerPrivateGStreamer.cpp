@@ -214,6 +214,10 @@ void MediaPlayerPrivateGStreamer::tearDown(bool clearMediaPlayer)
     GST_DEBUG_OBJECT(pipeline(), "Disposing player");
     m_isPlayerShuttingDown.store(true);
 
+#if ENABLE(MEDIA_TELEMETRY)
+    MediaTelemetryReport::singleton().reportPlaybackState(MediaTelemetryReport::AVPipelineState::Stop);
+#endif
+
     m_sinkTaskQueue.startAborting();
 
     for (auto& track : m_audioTracks.values())
@@ -279,6 +283,10 @@ void MediaPlayerPrivateGStreamer::tearDown(bool clearMediaPlayer)
     m_player = nullptr;
     if (m_notifier->isValid())
         m_notifier->invalidate();
+
+#if ENABLE(MEDIA_TELEMETRY)
+    MediaTelemetryReport::singleton().reportPlaybackState(MediaTelemetryReport::AVPipelineState::Destroy);
+#endif
 }
 
 bool MediaPlayerPrivateGStreamer::isAvailable()
@@ -463,6 +471,9 @@ void MediaPlayerPrivateGStreamer::play()
         m_isDelayingLoad = false;
         m_preload = MediaPlayer::Preload::Auto;
         GST_INFO_OBJECT(pipeline(), "Play");
+#if ENABLE(MEDIA_TELEMETRY)
+        MediaTelemetryReport::singleton().reportPlaybackState(MediaTelemetryReport::AVPipelineState::Play);
+#endif
         RefPtr player = m_player.get();
         if (player) {
             if (player->isLooping()) {
@@ -487,9 +498,12 @@ void MediaPlayerPrivateGStreamer::pause()
         return;
 
     auto result = changePipelineState(GST_STATE_PAUSED);
-    if (result == ChangePipelineStateResult::Ok)
+    if (result == ChangePipelineStateResult::Ok) {
         GST_INFO_OBJECT(pipeline(), "Pause");
-    else if (result == ChangePipelineStateResult::Failed)
+#if ENABLE(MEDIA_TELEMETRY)
+        MediaTelemetryReport::singleton().reportPlaybackState(MediaTelemetryReport::AVPipelineState::Pause);
+#endif
+    } else if (result == ChangePipelineStateResult::Failed)
         loadingFailed(MediaPlayer::NetworkState::Empty);
 }
 
@@ -618,6 +632,9 @@ void MediaPlayerPrivateGStreamer::seekToTarget(const SeekTarget& inTarget)
     auto target = inTarget;
     target.time = std::min(inTarget.time, maxTimeSeekable());
     GST_INFO_OBJECT(pipeline(), "[Seek] seeking to %s", toString(target.time).utf8().data());
+#if ENABLE(MEDIA_TELEMETRY)
+    MediaTelemetryReport::singleton().reportPlaybackState(MediaTelemetryReport::AVPipelineState::SeekStart, makeString(toString(playbackPosition()), "->"_s, toString(target.time)));
+#endif
 
     if (m_isSeeking) {
         m_timeOfOverlappingSeek = target.time;
@@ -2019,6 +2036,10 @@ void MediaPlayerPrivateGStreamer::handleMessage(GstMessage* message)
             break;
 
         m_errorMessage = String::fromLatin1(err->message);
+#if ENABLE(MEDIA_TELEMETRY)
+        MediaTelemetryReport::singleton().reportPlaybackState(MediaTelemetryReport::AVPipelineState::PlaybackError,
+            m_errorMessage);
+#endif
 
         error = MediaPlayer::NetworkState::Empty;
         if (g_error_matches(err.get(), GST_STREAM_ERROR, GST_STREAM_ERROR_CODEC_NOT_FOUND)
@@ -2688,6 +2709,10 @@ void MediaPlayerPrivateGStreamer::purgeOldDownloadFiles(const String& downloadFi
 void MediaPlayerPrivateGStreamer::finishSeek()
 {
     GST_DEBUG_OBJECT(pipeline(), "[Seek] seeked to %s", toString(m_seekTarget.time).utf8().data());
+#if ENABLE(MEDIA_TELEMETRY)
+    MediaTelemetryReport::singleton().reportPlaybackState(MediaTelemetryReport::AVPipelineState::SeekDone,
+        toString(m_seekTarget.time));
+#endif
     m_isSeeking = false;
     invalidateCachedPosition();
     if (m_timeOfOverlappingSeek != m_seekTarget.time && m_timeOfOverlappingSeek.isValid()) {
@@ -3082,6 +3107,9 @@ void MediaPlayerPrivateGStreamer::didEnd()
     }
 
     timeChanged(MediaTime::invalidTime());
+#if ENABLE(MEDIA_TELEMETRY)
+    MediaTelemetryReport::singleton().reportPlaybackState(MediaTelemetryReport::AVPipelineState::EndOfStream);
+#endif
 }
 
 void MediaPlayerPrivateGStreamer::getSupportedTypes(HashSet<String>& types)
@@ -3355,6 +3383,10 @@ void MediaPlayerPrivateGStreamer::createGSTPlayBin(const URL& url)
         if (auto* scale = makeGStreamerElement("scaletempo"_s))
             g_object_set(m_pipeline.get(), "audio-filter", scale, nullptr);
     }
+#if ENABLE(MEDIA_TELEMETRY)
+    MediaTelemetryReport::singleton().reportDrmInfo(getDrm());
+    MediaTelemetryReport::singleton().reportPlaybackState(MediaTelemetryReport::AVPipelineState::Create);
+#endif
 }
 
 void MediaPlayerPrivateGStreamer::setupCodecProbe(GstElement* element)
@@ -3486,6 +3518,9 @@ void MediaPlayerPrivateGStreamer::pausedTimerFired()
 {
     GST_DEBUG_OBJECT(pipeline(), "In PAUSED for too long. Releasing pipeline resources.");
     tearDown(true);
+#if ENABLE(MEDIA_TELEMETRY)
+    MediaTelemetryReport::singleton().reportPlaybackState(MediaTelemetryReport::AVPipelineState::Destroy);
+#endif
 }
 
 void MediaPlayerPrivateGStreamer::acceleratedRenderingStateChanged()
@@ -4499,6 +4534,37 @@ String MediaPlayerPrivateGStreamer::codecForStreamId(TrackID streamId)
 
     return m_codecs.get(streamId);
 }
+
+#if ENABLE(MEDIA_TELEMETRY)
+MediaTelemetryReport::DrmType MediaPlayerPrivateGStreamer::getDrm() const
+{
+    if (!m_pipeline)
+        return MediaTelemetryReport::DrmType::None;
+
+    GRefPtr<GstContext> drmCdmInstanceContext = adoptGRef(gst_element_get_context(GST_ELEMENT(m_pipeline.get()), "drm-cdm-instance"));
+    if (!drmCdmInstanceContext)
+        return MediaTelemetryReport::DrmType::None;
+
+    const GstStructure* drmCdmInstanceStructure = gst_context_get_structure(drmCdmInstanceContext.get());
+    if (!drmCdmInstanceStructure)
+        return MediaTelemetryReport::DrmType::None;
+
+    const GValue* drmCdmInstanceVal = gst_structure_get_value(drmCdmInstanceStructure, "cdm-instance");
+    if (!drmCdmInstanceVal)
+        return MediaTelemetryReport::DrmType::None;
+
+    const CDMInstance* drmCdmInstance = static_cast<const CDMInstance*>(g_value_get_pointer(drmCdmInstanceVal));
+    if (!drmCdmInstance)
+        return MediaTelemetryReport::DrmType::None;
+
+    String keySystem = drmCdmInstance->keySystem();
+    if (GStreamerEMEUtilities::isPlayReadyKeySystem(keySystem))
+        return MediaTelemetryReport::DrmType::PlayReady;
+    if (GStreamerEMEUtilities::isWidevineKeySystem(keySystem))
+        return MediaTelemetryReport::DrmType::Widevine;
+    return MediaTelemetryReport::DrmType::Unknown;
+}
+#endif
 
 #undef GST_CAT_DEFAULT
 
