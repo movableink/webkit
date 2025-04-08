@@ -682,12 +682,15 @@ std::pair<uint32_t, uint32_t> RenderBundleEncoder::computeMininumVertexInstanceC
     });
 }
 
-void RenderBundleEncoder::storeVertexBufferCountsForValidation(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance, MTLIndexType indexType, NSUInteger indexBufferOffsetInBytes)
+bool RenderBundleEncoder::storeVertexBufferCountsForValidation(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance, MTLIndexType indexType, NSUInteger indexBufferOffsetInBytes)
 {
+    if (m_renderPassEncoder.get())
+        return true;
+
     id<MTLBuffer> indexBuffer = m_indexBuffer.get() ? m_indexBuffer->buffer() : nil;
     id<MTLIndirectRenderCommand> icbCommand = currentRenderCommand();
-    if (!icbCommand || !indexBuffer)
-        return;
+    if (!icbCommand || !indexBuffer || m_indexBuffer->isDestroyed())
+        return false;
 
     bool needsValidationLayerWorkaround;
     auto indexSizeInBytes = (m_indexType == MTLIndexTypeUInt16 ? sizeof(uint16_t) : sizeof(uint32_t));
@@ -713,6 +716,7 @@ void RenderBundleEncoder::storeVertexBufferCountsForValidation(uint32_t indexCou
             .primitiveType = static_cast<decltype(IndexData::primitiveType)>(m_primitiveType),
         }
     });
+    return true;
 }
 
 RenderBundleEncoder::FinalizeRenderCommand RenderBundleEncoder::drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance)
@@ -745,7 +749,8 @@ RenderBundleEncoder::FinalizeRenderCommand RenderBundleEncoder::drawIndexed(uint
 
     auto indexCountTimesSizeInBytes = checkedProduct<size_t>(indexCount, indexSizeInBytes);
     if (id<MTLIndirectRenderCommand> icbCommand = currentRenderCommand()) {
-        storeVertexBufferCountsForValidation(indexCount, instanceCount, indexBufferOffsetInBytes / indexSizeInBytes, baseVertex, firstInstance, m_indexType, indexBufferOffsetInBytes);
+        if (!storeVertexBufferCountsForValidation(indexCount, instanceCount, indexBufferOffsetInBytes / indexSizeInBytes, baseVertex, firstInstance, m_indexType, indexBufferOffsetInBytes))
+            return finalizeRenderCommand();
 
         RefPtr renderPassEncoder = m_renderPassEncoder.get();
         if (renderPassEncoder && (useIndirectCall == RenderPassEncoder::IndexCall::IndirectDraw || useIndirectCall == RenderPassEncoder::IndexCall::CachedIndirectDraw)) {
@@ -908,6 +913,7 @@ void RenderBundleEncoder::endCurrentICB()
         m_currentPipelineState = nil;
         m_dynamicOffsetsFragmentBuffer = nil;
         m_dynamicOffsetsVertexBuffer = nil;
+        m_minVertexCountForDrawCommand.clear();
         m_resources = [NSMapTable strongToStrongObjectsMapTable];
     };
     if (!m_icbDescriptor.commandTypes && !m_requiresCommandReplay) {
