@@ -27,6 +27,7 @@
 
 #import "Test.h"
 #import "WTFTestUtilities.h"
+#import <WebKit/WKWebViewPrivate.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/URL.h>
 #import <wtf/Vector.h>
@@ -62,7 +63,7 @@ static const char* originalDataAsString(NSURL *URL)
 
 static const char* userVisibleString(NSURL *URL)
 {
-    return [WTF::userVisibleString(URL) UTF8String];
+    return [WKWebView _userVisibleStringForURL:URL].UTF8String;
 }
 
 static NSURL *literalURL(const char* literal)
@@ -70,7 +71,7 @@ static NSURL *literalURL(const char* literal)
     return WTF::URLWithData(literalAsData(literal), nil);
 }
 
-TEST(WTF_URLExtras, URLExtras)
+TEST(URLExtras, URLExtras)
 {
     EXPECT_STREQ("http://site.com", originalDataAsString(literalURL("http://site.com")));
     EXPECT_STREQ("http://%77ebsite.com", originalDataAsString(literalURL("http://%77ebsite.com")));
@@ -90,7 +91,7 @@ TEST(WTF_URLExtras, URLExtras)
     EXPECT_STREQ("a..example.com", [WTF::decodeHostName(@"a..example.com") UTF8String]);
 }
     
-TEST(WTF_URLExtras, URLExtras_Spoof)
+TEST(URLExtras, URLExtras_Spoof)
 {
     Vector<ASCIILiteral> punycodedSpoofHosts = {
         "xn--cfa45g"_s, // U+0131, U+0307
@@ -177,7 +178,7 @@ TEST(WTF_URLExtras, URLExtras_Spoof)
     }
 }
 
-TEST(WTF_URLExtras, URLExtras_NotSpoofed)
+TEST(URLExtras, URLExtras_NotSpoofed)
 {
     // Valid mixtures of Armenian and other scripts
     EXPECT_STREQ("https://en.wikipedia.org/wiki/.\u0570\u0561\u0575", userVisibleString(literalURL("https://en.wikipedia.org/wiki/.\u0570\u0561\u0575")));
@@ -224,7 +225,7 @@ TEST(WTF_URLExtras, URLExtras_NotSpoofed)
     EXPECT_STREQ("https://\u00ED\u00CDabc/", userVisibleString(literalURL("https://\u00ED\u00CDabc/")));
 }
 
-TEST(WTF_URLExtras, URLExtras_DivisionSign)
+TEST(URLExtras, URLExtras_DivisionSign)
 {
     // Selected the division sign as an example of a non-ASCII character that is allowed in host names, since it's a lookalike character.
 
@@ -266,12 +267,7 @@ TEST(WTF, URLExtras_Solidus)
     EXPECT_STREQ("site.com/othersite.org", [WTF::decodeHostName(@"site.com\xEF\xBC\x8Fothersite.org") UTF8String]);
 }
 
-// FIXME: rdar://148285224
-#if ((PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 150400) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 180400)) && !defined(NDEBUG)
-TEST(WTF_URLExtras, DISABLED_URLExtras_Space)
-#else
-TEST(WTF_URLExtras, URLExtras_Space)
-#endif
+TEST(URLExtras, URLExtras_Space)
 {
     // Selected ideographic space, which looks like the ASCII space, which is not allowed unescaped.
 
@@ -290,17 +286,12 @@ TEST(WTF_URLExtras, URLExtras_Space)
     EXPECT_STREQ("site.com\xE3\x80\x80othersite.org", [WTF::decodeHostName(@"site.com\xE3\x80\x80othersite.org") UTF8String]);
 }
 
-TEST(WTF_URLExtras, URLExtras_File)
+TEST(URLExtras, URLExtras_File)
 {
     EXPECT_STREQ("file:///%E2%98%83", [[WTF::URLWithUserTypedString(@"file:///☃", nil) absoluteString] UTF8String]);
 }
 
-// FIXME: rdar://148285224
-#if ((PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 150400) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 180400)) && !defined(NDEBUG)
-TEST(WTF_URLExtras, DISABLED_URLExtras_ParsingError)
-#else
-TEST(WTF_URLExtras, URLExtras_ParsingError)
-#endif
+TEST(URLExtras, URLExtras_ParsingError)
 {
     // Expect IDN failure.
     NSURL *url = WTF::URLWithUserTypedString(@"http://.com", nil);
@@ -330,7 +321,7 @@ TEST(WTF_URLExtras, URLExtras_ParsingError)
     EXPECT_STREQ(buffer.data(), "/Ação.html");
 }
 
-TEST(WTF_URLExtras, URLExtras_Nil)
+TEST(URLExtras, URLExtras_Nil)
 {
     NSURL *url1 = WTF::URLWithUserTypedString(nil);
     EXPECT_TRUE(url1 == nil);
@@ -339,7 +330,7 @@ TEST(WTF_URLExtras, URLExtras_Nil)
     EXPECT_TRUE(url2 == nil);
 }
 
-TEST(WTF_URLExtras, CreateNSArray)
+TEST(URLExtras, CreateNSArray)
 {
     Vector<URL> urls { URL { "https://webkit.org/"_str } };
     auto array = createNSArray(urls);

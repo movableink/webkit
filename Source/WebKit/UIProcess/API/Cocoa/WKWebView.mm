@@ -185,6 +185,7 @@
 #import <wtf/SystemTracing.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/UUID.h>
+#import <wtf/cocoa/NSURLExtras.h>
 #import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #import <wtf/cocoa/SpanCocoa.h>
 #import <wtf/cocoa/TypeCastsCocoa.h>
@@ -3784,6 +3785,11 @@ static RetainPtr<NSArray> wkTextManipulationErrors(NSArray<_WKTextManipulationIt
         else
             completionHandler({ }, [NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]);
     });
+}
+
++ (NSString *)_userVisibleStringForURL:(NSURL *)url
+{
+    return WTF::userVisibleString(url);
 }
 
 - (void)_toggleInWindow

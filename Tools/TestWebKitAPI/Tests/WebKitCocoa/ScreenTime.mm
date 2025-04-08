@@ -28,7 +28,11 @@
 #if ENABLE(SCREEN_TIME)
 
 #import "InstanceMethodSwizzler.h"
+#import "PlatformUtilities.h"
+#import "Test.h"
+#import "TestNavigationDelegate.h"
 #import "TestWKWebView.h"
+#import "Utilities.h"
 #import <ScreenTime/STWebHistory.h>
 #import <ScreenTime/STWebpageController.h>
 #import <WebKit/WKPreferencesPrivate.h>
