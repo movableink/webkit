@@ -32,6 +32,7 @@ class GStreamerQuirkBroadcom final : public GStreamerQuirkBroadcomBase {
 public:
     GStreamerQuirkBroadcom();
     const ASCIILiteral identifier() const final { return "Broadcom"_s; }
+    bool isPlatformSupported() const final;
 
     void configureElement(GstElement*, const OptionSet<ElementRuntimeCharacteristics>&) final;
     std::optional<bool> isHardwareAccelerated(GstElementFactory*) final;

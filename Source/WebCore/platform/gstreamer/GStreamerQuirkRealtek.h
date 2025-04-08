@@ -30,6 +30,7 @@ class GStreamerQuirkRealtek final : public GStreamerQuirk {
 public:
     GStreamerQuirkRealtek();
     const ASCIILiteral identifier() const final { return "Realtek"_s; }
+    bool isPlatformSupported() const final;
 
     GstElement* createWebAudioSink() final;
     void configureElement(GstElement*, const OptionSet<ElementRuntimeCharacteristics>&) final;

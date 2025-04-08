@@ -35,6 +35,7 @@ class GStreamerQuirkRialto final : public GStreamerQuirk {
 public:
     GStreamerQuirkRialto();
     const ASCIILiteral identifier() const final { return "Rialto"_s; }
+    bool isPlatformSupported() const final;
 
     void configureElement(GstElement*, const OptionSet<ElementRuntimeCharacteristics>&) final;
     GstElement* createAudioSink() final;

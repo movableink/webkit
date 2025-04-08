@@ -36,6 +36,12 @@ GStreamerQuirkAmLogic::GStreamerQuirkAmLogic()
     GST_DEBUG_CATEGORY_INIT(webkit_amlogic_quirks_debug, "webkitquirksamlogic", 0, "WebKit AmLogic Quirks");
 }
 
+bool GStreamerQuirkAmLogic::isPlatformSupported() const
+{
+    auto amlogicFactory = adoptGRef(gst_element_factory_find("amlhalasink"));
+    return amlogicFactory;
+}
+
 GstElement* GStreamerQuirkAmLogic::createWebAudioSink()
 {
     // autoaudiosink changes child element state to READY internally in auto detection phase

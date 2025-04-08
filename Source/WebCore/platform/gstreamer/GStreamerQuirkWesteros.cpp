@@ -51,6 +51,12 @@ GStreamerQuirkWesteros::GStreamerQuirkWesteros()
     }
 }
 
+bool GStreamerQuirkWesteros::isPlatformSupported() const
+{
+    auto westerosFactory = adoptGRef(gst_element_factory_find("westerossink"));
+    return westerosFactory;
+}
+
 void GStreamerQuirkWesteros::configureElement(GstElement* element, const OptionSet<ElementRuntimeCharacteristics>& characteristics)
 {
     auto view = StringView::fromLatin1(GST_ELEMENT_NAME(element));

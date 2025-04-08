@@ -81,7 +81,7 @@ GStreamerQuirksManager::GStreamerQuirksManager(bool isForTesting, bool loadQuirk
     if (quirksList) {
         StringView quirks { unsafeSpan(quirksList) };
         if (WTF::equalLettersIgnoringASCIICase(quirks, "help"_s)) {
-            gst_printerrln("Supported quirks for WEBKIT_GST_QUIRKS are: amlogic, broadcom, bcmnexus, openmax, realtek, westeros");
+            gst_printerrln("Supported quirks for WEBKIT_GST_QUIRKS are: amlogic, broadcom, bcmnexus, openmax, realtek, rialto, westeros");
             return;
         }
 
@@ -121,7 +121,7 @@ GStreamerQuirksManager::GStreamerQuirksManager(bool isForTesting, bool loadQuirk
 
     StringView identifier { unsafeSpan(holePunchQuirk) };
     if (WTF::equalLettersIgnoringASCIICase(identifier, "help"_s)) {
-        WTFLogAlways("Supported quirks for WEBKIT_GST_HOLE_PUNCH_QUIRK are: fake, westeros, bcmnexus");
+        gst_printerrln("Supported quirks for WEBKIT_GST_HOLE_PUNCH_QUIRK are: fake, bcmnexus, rialto, westeros");
         return;
     }
 
