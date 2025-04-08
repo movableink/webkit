@@ -50,6 +50,7 @@
  */
 struct _WPEToplevelPrivate {
     GWeakPtr<WPEDisplay> display;
+    unsigned maxViews;
     ListHashSet<WPEView*> views;
 
     int width;
@@ -73,6 +74,7 @@ enum {
     PROP_0,
 
     PROP_DISPLAY,
+    PROP_MAX_VIEWS,
 
     N_PROPERTIES
 };
@@ -116,6 +118,9 @@ static void wpeToplevelSetProperty(GObject* object, guint propId, const GValue* 
     case PROP_DISPLAY:
         toplevel->priv->display.reset(WPE_DISPLAY(g_value_get_object(value)));
         break;
+    case PROP_MAX_VIEWS:
+        toplevel->priv->maxViews = g_value_get_uint(value);
+        break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, paramSpec);
     }
@@ -128,6 +133,9 @@ static void wpeToplevelGetProperty(GObject* object, guint propId, GValue* value,
     switch (propId) {
     case PROP_DISPLAY:
         g_value_set_object(value, wpe_toplevel_get_display(toplevel));
+        break;
+    case PROP_MAX_VIEWS:
+        g_value_set_uint(value, wpe_toplevel_get_max_views(toplevel));
         break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, paramSpec);
@@ -152,6 +160,19 @@ static void wpe_toplevel_class_init(WPEToplevelClass* toplevelClass)
             "display",
             nullptr, nullptr,
             WPE_TYPE_DISPLAY,
+            static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+
+    /**
+     * WPEToplevel:max-views:
+     *
+     * The maximum number of #WPEView that can be added to the #WPEToplevel.
+     * A value of 0 means no limit.
+     */
+    sObjProperties[PROP_MAX_VIEWS] =
+        g_param_spec_uint(
+            "max-views",
+            nullptr, nullptr,
+            0, G_MAXUINT, 1,
             static_cast<GParamFlags>(WEBKIT_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
     g_object_class_install_properties(objectClass, N_PROPERTIES, sObjProperties.data());
@@ -247,8 +268,7 @@ guint wpe_toplevel_get_max_views(WPEToplevel* toplevel)
 {
     g_return_val_if_fail(WPE_IS_TOPLEVEL(toplevel), 0);
 
-    auto* toplevelClass = WPE_TOPLEVEL_GET_CLASS(toplevel);
-    return toplevelClass->get_max_views ? toplevelClass->get_max_views(toplevel) : 1;
+    return toplevel->priv->maxViews;
 }
 
 /**

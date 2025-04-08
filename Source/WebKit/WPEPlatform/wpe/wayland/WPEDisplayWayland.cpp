@@ -434,7 +434,7 @@ static WPEView* wpeDisplayWaylandCreateView(WPEDisplay* display)
     auto* view = wpe_view_wayland_new(displayWayland);
 
     if (wpe_settings_get_boolean(wpe_display_get_settings(display), WPE_SETTING_CREATE_VIEWS_WITH_A_TOPLEVEL, nullptr)) {
-        GRefPtr<WPEToplevel> toplevel = adoptGRef(wpe_toplevel_wayland_new(displayWayland));
+        GRefPtr<WPEToplevel> toplevel = adoptGRef(wpe_toplevel_wayland_new(displayWayland, 1));
         wpe_view_set_toplevel(view, toplevel.get());
     }
 

@@ -882,14 +882,15 @@ struct zwp_linux_surface_synchronization_v1* wpeToplevelWaylandGetSurfaceSync(WP
 /**
  * wpe_toplevel_wayland_new:
  * @display: a #WPEDisplayWayland
+ * @max_views: the maximum number of views allowed, or 0 for no limit
  *
- * Create a new #WPEToplevel on @display.
+ * Create a new #WPEToplevel on @display with @max_views allowed
  *
  * Returns: (transfer full): a #WPEToplevel
  */
-WPEToplevel* wpe_toplevel_wayland_new(WPEDisplayWayland* display)
+WPEToplevel* wpe_toplevel_wayland_new(WPEDisplayWayland* display, guint maxViews)
 {
-    return WPE_TOPLEVEL(g_object_new(WPE_TYPE_TOPLEVEL_WAYLAND, "display", display, nullptr));
+    return WPE_TOPLEVEL(g_object_new(WPE_TYPE_TOPLEVEL_WAYLAND, "display", display, "max-views", maxViews, nullptr));
 }
 
 /**

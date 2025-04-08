@@ -561,8 +561,11 @@ void wpe_view_set_toplevel(WPEView* view, WPEToplevel* toplevel)
     if (priv->toplevel == toplevel)
         return;
 
-    if (toplevel && wpe_toplevel_get_n_views(toplevel) == wpe_toplevel_get_max_views(toplevel))
-        return;
+    if (toplevel) {
+        auto maxViews = wpe_toplevel_get_max_views(toplevel);
+        if (maxViews && wpe_toplevel_get_n_views(toplevel) == maxViews)
+            return;
+    }
 
     if (priv->toplevel)
         wpeToplevelRemoveView(priv->toplevel.get(), view);

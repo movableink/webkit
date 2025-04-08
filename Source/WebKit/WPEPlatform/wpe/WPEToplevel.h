@@ -49,7 +49,6 @@ struct _WPEToplevelClass
 
     void                    (* set_title)                     (WPEToplevel *toplevel,
                                                                const char  *title);
-    guint                   (* get_max_views)                 (WPEToplevel *toplevel);
     WPEScreen              *(* get_screen)                    (WPEToplevel *toplevel);
     gboolean                (* resize)                        (WPEToplevel *toplevel,
                                                                int          width,
