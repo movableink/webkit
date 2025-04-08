@@ -143,7 +143,6 @@
 		071BC59023CE1EAA00680D7C /* RemoteMediaPlayerProxyMessages.h in Headers */ = {isa = PBXBuildFile; fileRef = 071BC58D23CE1EAA00680D7C /* RemoteMediaPlayerProxyMessages.h */; };
 		07275C612D00CD24002315A5 /* CrossImportOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07275C602D00CD24002315A5 /* CrossImportOverlay.swift */; };
 		07275C632D00D32D002315A5 /* WebPage+SwiftUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07275C622D00D32D002315A5 /* WebPage+SwiftUI.swift */; };
-		07275C672D00E3CA002315A5 /* SwiftUI.swiftoverlay in Resources */ = {isa = PBXBuildFile; fileRef = 07275C662D00E3CA002315A5 /* SwiftUI.swiftoverlay */; };
 		07275C682D00E3D6002315A5 /* SwiftUI.swiftoverlay in Install SwiftUI Cross Import Overlay */ = {isa = PBXBuildFile; fileRef = 07275C662D00E3CA002315A5 /* SwiftUI.swiftoverlay */; };
 		07275C6C2D00F051002315A5 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8DC2EF5B0486A6940098B216 /* WebKit.framework */; };
 		07275C8F2D011396002315A5 /* Empty.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07275C8E2D011396002315A5 /* Empty.swift */; };
@@ -18727,7 +18726,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				07275C672D00E3CA002315A5 /* SwiftUI.swiftoverlay in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
