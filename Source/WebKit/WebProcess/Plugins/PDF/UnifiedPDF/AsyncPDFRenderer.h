@@ -194,10 +194,10 @@ public:
 
     // Updates existing tiles. Can result in temporarily stale content.
     void setNeedsRenderForRect(WebCore::GraphicsLayer&, const WebCore::FloatRect& bounds);
-    void setNeedsPagePreviewRenderForPageCoverage(const PDFPageCoverage&);
 
     void generatePreviewImageForPage(PDFDocumentLayout::PageIndex, float scale);
     void removePreviewForPage(PDFDocumentLayout::PageIndex);
+    void invalidatePreviewsForPageCoverage(const PDFPageCoverage&);
 
     void setShowDebugBorders(bool);
 
@@ -253,6 +253,7 @@ private:
 
     void didCompletePagePreviewRender(RefPtr<WebCore::NativeImage>&&, const PDFPagePreviewRenderRequest&);
     void removePagePreviewsOutsideCoverageRect(const WebCore::FloatRect&, const std::optional<PDFLayoutRow>& = { });
+    void ensurePreviewsForCurrentPageCoverage();
 
     static WebCore::FloatRect convertTileRectToPaintingCoords(const WebCore::FloatRect&, float pageScaleFactor);
     static WebCore::AffineTransform tileToPaintingTransform(float tilingScaleFactor);
@@ -286,6 +287,8 @@ private:
     ListHashSet<PDFPagePreviewRenderKey> m_pendingPagePreviewOrder;
     HashMap<PDFPagePreviewRenderKey, PDFPagePreviewRenderRequest> m_pendingPagePreviews;
     HashMap<PDFPagePreviewRenderKey, RenderedPDFPagePreview> m_pagePreviews;
+
+    std::optional<PDFPageCoverage> m_currentPageCoverage;
 
     bool m_showDebugBorders { false };
 };

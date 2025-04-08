@@ -309,19 +309,16 @@ void AsyncPDFRenderer::willRepaintAllTiles(TiledBacking&, TileGridIdentifier)
     clearRequestsAndCachedTiles();
 }
 
-void AsyncPDFRenderer::coverageRectDidChange(TiledBacking& tiledBacking, const FloatRect& coverageRect)
+void AsyncPDFRenderer::ensurePreviewsForCurrentPageCoverage()
 {
+    if (!m_currentPageCoverage)
+        return;
+
     RefPtr presentationController = m_presentationController.get();
     if (!presentationController)
         return;
 
-    std::optional<PDFLayoutRow> layoutRow;
-    RefPtr<GraphicsLayer> layer = layerForTileGrid(tiledBacking.primaryGridIdentifier());
-    if (layer)
-        layoutRow = presentationController->rowForLayer(layer.get());
-
-    auto pageCoverage = presentationController->pageCoverageForContentsRect(coverageRect, layoutRow);
-
+    auto pageCoverage = *m_currentPageCoverage;
     auto pagePreviewScale = presentationController->scaleForPagePreviews();
 
     for (auto& pageInfo : pageCoverage) {
@@ -331,10 +328,27 @@ void AsyncPDFRenderer::coverageRectDidChange(TiledBacking& tiledBacking, const F
         generatePreviewImageForPage(pageInfo.pageIndex, pagePreviewScale);
     }
 
+    LOG_WITH_STREAM(PDFAsyncRendering, stream << "AsyncPDFRenderer::ensurePreviewImagesForPageCoverage " << pageCoverage << " - preview scale " << pagePreviewScale << " - have " << m_pagePreviews.size() << " page previews and " << m_pendingPagePreviews.size() << " enqueued");
+}
+
+void AsyncPDFRenderer::coverageRectDidChange(TiledBacking& tiledBacking, const FloatRect& coverageRect)
+{
+    RefPtr presentationController = m_presentationController.get();
+    if (!presentationController)
+        return;
+
+    std::optional<PDFLayoutRow> layoutRow;
+    RefPtr layer = layerForTileGrid(tiledBacking.primaryGridIdentifier());
+    if (layer)
+        layoutRow = presentationController->rowForLayer(layer.get());
+
+    m_currentPageCoverage = presentationController->pageCoverageForContentsRect(coverageRect, layoutRow);
+    ensurePreviewsForCurrentPageCoverage();
+
     if (!presentationController->pluginShouldCachePagePreviews())
         removePagePreviewsOutsideCoverageRect(coverageRect, layoutRow);
 
-    LOG_WITH_STREAM(PDFAsyncRendering, stream << "AsyncPDFRenderer::coverageRectDidChange " << coverageRect << " " << pageCoverage << " - preview scale " << pagePreviewScale << " - have " << m_pagePreviews.size() << " page previews and " << m_pendingPagePreviews.size() << " enqueued");
+    LOG_WITH_STREAM(PDFAsyncRendering, stream << "AsyncPDFRenderer::coverageRectDidChange " << coverageRect);
 }
 
 void AsyncPDFRenderer::removePagePreviewsOutsideCoverageRect(const FloatRect& coverageRect, const std::optional<PDFLayoutRow>& layoutRow)
@@ -839,14 +853,15 @@ void AsyncPDFRenderer::setNeedsRenderForRect(GraphicsLayer& layer, const FloatRe
     }
 }
 
-void AsyncPDFRenderer::setNeedsPagePreviewRenderForPageCoverage(const PDFPageCoverage& pageCoverage)
+void AsyncPDFRenderer::invalidatePreviewsForPageCoverage(const PDFPageCoverage& pageCoverage)
 {
     RefPtr presentationController = m_presentationController.get();
     if (!presentationController)
         return;
-    auto pagePreviewScale = presentationController->scaleForPagePreviews();
     for (auto& pageInfo : pageCoverage)
-        generatePreviewImageForPage(pageInfo.pageIndex, pagePreviewScale);
+        removePreviewForPage(pageInfo.pageIndex);
+
+    ensurePreviewsForCurrentPageCoverage();
 }
 
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)

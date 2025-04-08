@@ -216,7 +216,7 @@ void PDFPresentationController::setNeedsRepaintForPageCoverage(RepaintRequiremen
         }
         if (layer && !bounds.isEmpty())
             asyncRenderer->setNeedsRenderForRect(*layer, bounds);
-        asyncRenderer->setNeedsPagePreviewRenderForPageCoverage(coverage);
+        asyncRenderer->invalidatePreviewsForPageCoverage(coverage);
     }
 }
 
