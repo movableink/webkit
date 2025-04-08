@@ -46,6 +46,8 @@ namespace WebKit {
 class WebMouseEvent;
 class WebWheelEvent;
 class WebKeyboardEvent;
+enum class WebEventType : uint8_t;
+enum class WebMouseEventButton : int8_t;
 
 #if ENABLE(TOUCH_EVENTS)
 class WebTouchEvent;

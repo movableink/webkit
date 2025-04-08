@@ -33,6 +33,7 @@
 #include "MemoryPressureMonitor.h"
 #include "WebMemoryPressureHandler.h"
 #include "WebProcessCreationParameters.h"
+#include "WebProcessMessages.h"
 #include <WebCore/PlatformDisplay.h>
 #include <WebCore/SystemSettings.h>
 #include <wtf/FileSystem.h>

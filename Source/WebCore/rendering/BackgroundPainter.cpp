@@ -35,6 +35,7 @@
 #include "GraphicsContext.h"
 #include "InlineIteratorInlineBox.h"
 #include "PaintInfo.h"
+#include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderElementInlines.h"
 #include "RenderImage.h"
