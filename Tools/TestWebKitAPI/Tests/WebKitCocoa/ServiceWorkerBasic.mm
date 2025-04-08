@@ -2113,21 +2113,24 @@ TEST(ServiceWorkers, SuspendAndTerminateWorker)
 {
     [WKWebsiteDataStore _allowWebsiteDataRecordsForAllOrigins];
 
+    RetainPtr dataStoreConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] init]);
+    [dataStoreConfiguration setServiceWorkerProcessTerminationDelayEnabled:NO];
+    RetainPtr dataStore = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:dataStoreConfiguration.get()]);
+
     // Start with a clean slate data store
-    [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] modifiedSince:[NSDate distantPast] completionHandler:^() {
+    [dataStore removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] modifiedSince:[NSDate distantPast] completionHandler:^() {
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
     done = false;
 
-    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
-
+    RetainPtr configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
     if ([[configuration preferences] inactiveSchedulingPolicy] == WKInactiveSchedulingPolicyNone)
         return;
 
     [[configuration preferences] setInactiveSchedulingPolicy:WKInactiveSchedulingPolicySuspend];
 
-    auto messageHandler = adoptNS([[SWMessageHandler alloc] init]);
+    RetainPtr messageHandler = adoptNS([[SWMessageHandlerWithExpectedMessage alloc] init]);
     [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"sw"];
 
     TestWebKitAPI::HTTPServer server({
@@ -2138,8 +2141,11 @@ TEST(ServiceWorkers, SuspendAndTerminateWorker)
     auto *processPool = configuration.get().processPool;
     auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
 
+    expectedMessage = "Message from worker: ServiceWorker received: Hello from the web page"_s;
     [webView loadRequest:server.request()];
-    [webView _test_waitForDidFinishNavigation];
+    // Wait until ServiceWorker is launched.
+    TestWebKitAPI::Util::run(&done);
+    done = false;
 
     EXPECT_TRUE(waitUntilEvaluatesToTrue([&] { return [processPool _serviceWorkerProcessCount] == 1; }));
 
@@ -2156,17 +2162,19 @@ TEST(ServiceWorkers, SuspendAndTerminateWorker)
     EXPECT_TRUE(waitUntilEvaluatesToTrue([&] { return isPIDSuspended(pidBeforeTerminatingServiceWorker); }));
 
     // Process with service worker and page is suspended, let's terminate the service worker.
-    [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:[NSSet setWithObject:WKWebsiteDataTypeServiceWorkerRegistrations] modifiedSince:[NSDate distantPast] completionHandler:^() {
+    [dataStore removeDataOfTypes:[NSSet setWithObject:WKWebsiteDataTypeServiceWorkerRegistrations] modifiedSince:[NSDate distantPast] completionHandler:^() {
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
     done = false;
 
+    // ServiceWorker should be terminated after 1s (WebCore::SWServerWorker::startTermination::terminationDelayForTesting),
+    // so we wait for 2s.
     bool serviceWorkersAllTerminated = waitUntilEvaluatesToTrue([&]() {
         __block bool done;
         __block NSUInteger serviceWorkerCount;
 
-        [[WKWebsiteDataStore defaultDataStore] _runningOrTerminatingServiceWorkerCountForTesting:^(NSUInteger count) {
+        [dataStore _runningOrTerminatingServiceWorkerCountForTesting:^(NSUInteger count) {
             serviceWorkerCount = count;
             done = true;
         }];
@@ -2177,6 +2185,7 @@ TEST(ServiceWorkers, SuspendAndTerminateWorker)
     EXPECT_TRUE(serviceWorkersAllTerminated);
 
     // Let's verify the WKWebView did not crash and has the same PID as before.
+    expectedMessage = "OK"_s;
     [webView evaluateJavaScript:@"log('OK')" completionHandler: nil];
     TestWebKitAPI::Util::run(&done);
     done = false;
