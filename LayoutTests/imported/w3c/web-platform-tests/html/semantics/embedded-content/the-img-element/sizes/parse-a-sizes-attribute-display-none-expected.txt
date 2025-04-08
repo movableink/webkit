@@ -50,7 +50,7 @@ PASS <img srcset="/images/green-1x1.png?e41 50w, /images/green-16x16.png?e41 51w
 PASS <img srcset="/images/green-1x1.png?e42 50w, /images/green-16x16.png?e42 51w" sizes="not (min-width:0) 100vw, 1px"> ref sizes="1px" (display:none)
 PASS <img srcset="/images/green-1x1.png?e43 50w, /images/green-16x16.png?e43 51w" sizes="(min-width:unknown-mf-value) 100vw, 1px"> ref sizes="1px" (display:none)
 PASS <img srcset="/images/green-1x1.png?e44 50w, /images/green-16x16.png?e44 51w" sizes="not (min-width:unknown-mf-value) 100vw, 1px"> ref sizes="1px" (display:none)
-FAIL <img srcset="/images/green-1x1.png?e45 50w, /images/green-16x16.png?e45 51w" sizes="(min-width:-1px) 100vw, 1px"> ref sizes="1px" (display:none) assert_equals: expected "http://localhost:8800/images/green-1x1.png" but got "http://localhost:8800/images/green-16x16.png"
+PASS <img srcset="/images/green-1x1.png?e45 50w, /images/green-16x16.png?e45 51w" sizes="(min-width:-1px) 1px, 100vw"> ref sizes="1px" (display:none)
 PASS <img srcset="/images/green-1x1.png?e46 50w, /images/green-16x16.png?e46 51w" sizes="not (min-width:-1px) 100vw, 1px"> ref sizes="1px" (display:none)
 PASS <img srcset="/images/green-1x1.png?e47 50w, /images/green-16x16.png?e47 51w" sizes="(unknown-mf-name) 100vw, 1px"> ref sizes="1px" (display:none)
 PASS <img srcset="/images/green-1x1.png?e48 50w, /images/green-16x16.png?e48 51w" sizes="not (unknown-mf-name) 100vw, 1px"> ref sizes="1px" (display:none)
@@ -142,7 +142,6 @@ PASS <img srcset="/images/green-1x1.png?f18 50w, /images/green-16x16.png?f18 51w
 PASS <img srcset="/images/green-1x1.png?f19 50w, /images/green-16x16.png?f19 51w" data-foo="1" sizes="attr(data-foo, px, 1px)"> ref sizes="100vw" (display:none)
 PASS <img srcset="/images/green-1x1.png?f20 50w, /images/green-16x16.png?f20 51w" sizes="toggle(1px)"> ref sizes="100vw" (display:none)
 PASS <img srcset="/images/green-1x1.png?f21 50w, /images/green-16x16.png?f21 51w" sizes="inherit"> ref sizes="100vw" (display:none)
-PASS <img srcset="/images/green-1x1.png?f22 50w, /images/green-16x16.png?f22 51w" sizes="auto"> ref sizes="100vw" (display:none)
 PASS <img srcset="/images/green-1x1.png?f23 50w, /images/green-16x16.png?f23 51w" sizes="initial"> ref sizes="100vw" (display:none)
 PASS <img srcset="/images/green-1x1.png?f24 50w, /images/green-16x16.png?f24 51w" sizes="unset"> ref sizes="100vw" (display:none)
 PASS <img srcset="/images/green-1x1.png?f25 50w, /images/green-16x16.png?f25 51w" sizes="default"> ref sizes="100vw" (display:none)

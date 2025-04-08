@@ -2299,6 +2299,13 @@ fast/webgpu/nocrash/fuzz-284937.html [ Skip ]
 
 # Imported W3C HTML/DOM ref tests that are failing.
 imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/environment-changes/viewport-change.html [ Failure ]
+imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/update-the-image-data/current-request-microtask-002.html [ Skip ]
+webkit.org/b/253143 imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/sizes/sizes-auto-rendering.html [ ImageOnlyFailure ]
+webkit.org/b/253143 imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/sizes/sizes-auto-rendering-dynamic.html [ ImageOnlyFailure ]
+webkit.org/b/253143 imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/sizes/sizes-auto-rendering-3.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/naturalWidth-naturalHeight.html [ Pass Failure ]
+imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/empty-src-no-current-request.html [ Pass Failure ]
+imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/relevant-mutations-lazy.html [ Pass Failure ]
 
 # Imported Mozilla SVG tests
 webkit.org/b/32177 imported/mozilla/svg/as-image/background-image-rect-1png.html [ ImageOnlyFailure ]

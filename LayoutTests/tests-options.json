@@ -3878,10 +3878,10 @@
     "imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/decode/image-decode.html": [
         "slow"
     ],
-    "imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/relevant-mutations.html": [
+    "imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/relevant-mutations-lazy.html": [
         "slow"
     ],
-    "imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/sizes/parse-a-sizes-attribute.html": [
+    "imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/relevant-mutations.html": [
         "slow"
     ],
     "imported/w3c/web-platform-tests/html/semantics/embedded-content/the-object-element/object-events.html": [
