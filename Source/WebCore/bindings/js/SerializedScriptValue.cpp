@@ -5545,6 +5545,7 @@ DeserializationResult CloneDeserializer::deserialize()
             JSArray* outArray = constructEmptyArray(m_globalObject, static_cast<JSC::ArrayAllocationProfile*>(nullptr), length);
             if (UNLIKELY(scope.exception())) {
                 SERIALIZE_TRACE("FAIL deserialize");
+                fail();
                 goto error;
             }
             addToObjectPool<ArrayTag>(outArray);
@@ -5591,6 +5592,11 @@ DeserializationResult CloneDeserializer::deserialize()
 
             if (JSValue terminal = readTerminal()) {
                 putProperty(outputObjectStack.last(), index, terminal);
+                if (UNLIKELY(scope.exception())) {
+                    SERIALIZE_TRACE("FAIL deserialize");
+                    fail();
+                    goto error;
+                }
                 goto arrayStartVisitIndexedMember;
             }
             if (m_failed)
@@ -5602,6 +5608,11 @@ DeserializationResult CloneDeserializer::deserialize()
         case ArrayEndVisitIndexedMember: {
             JSObject* outArray = outputObjectStack.last();
             putProperty(outArray, indexStack.last(), outValue);
+            if (UNLIKELY(scope.exception())) {
+                SERIALIZE_TRACE("FAIL deserialize");
+                fail();
+                goto error;
+            }
             indexStack.removeLast();
             goto arrayStartVisitIndexedMember;
         }
@@ -5677,6 +5688,11 @@ DeserializationResult CloneDeserializer::deserialize()
         }
         case MapDataEndVisitValue: {
             mapStack.last()->set(m_lexicalGlobalObject, mapKeyStack.last(), outValue);
+            if (UNLIKELY(scope.exception())) {
+                SERIALIZE_TRACE("FAIL deserialize");
+                fail();
+                goto error;
+            }
             mapKeyStack.removeLast();
             goto mapDataStartVisitEntry;
         }
@@ -5704,6 +5720,11 @@ DeserializationResult CloneDeserializer::deserialize()
         case SetDataEndVisitKey: {
             JSSet* set = setStack.last();
             set->add(m_lexicalGlobalObject, outValue);
+            if (UNLIKELY(scope.exception())) {
+                SERIALIZE_TRACE("FAIL deserialize");
+                fail();
+                goto error;
+            }
             goto setDataStartVisitEntry;
         }
 
@@ -6184,6 +6205,8 @@ ExceptionOr<Ref<SerializedScriptValue>> SerializedScriptValue::create(JSGlobalOb
 ExceptionOr<Ref<SerializedScriptValue>> SerializedScriptValue::create(JSGlobalObject& lexicalGlobalObject, JSValue value, Vector<JSC::Strong<JSC::JSObject>>&& transferList, Vector<Ref<MessagePort>>& messagePorts, SerializationForStorage forStorage, SerializationErrorMode throwExceptions, SerializationContext context)
 {
     VM& vm = lexicalGlobalObject.vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     Vector<RefPtr<JSC::ArrayBuffer>> arrayBuffers;
     Vector<RefPtr<ImageBitmap>> imageBitmaps;
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
@@ -6329,6 +6352,7 @@ ExceptionOr<Ref<SerializedScriptValue>> SerializedScriptValue::create(JSGlobalOb
 #if ENABLE(MEDIA_STREAM)
     Vector<RefPtr<MediaStreamTrack>> serializedMediaStreamTracks;
 #endif
+
     auto code = CloneSerializer::serialize(&lexicalGlobalObject, value, messagePorts, arrayBuffers, imageBitmaps,
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
         offscreenCanvases,
@@ -6358,9 +6382,17 @@ ExceptionOr<Ref<SerializedScriptValue>> SerializedScriptValue::create(JSGlobalOb
 #endif
         blobHandles, buffer, context, *sharedBuffers, forStorage);
 
+    // Serialization may throw an exception. If we see one, we should exit early. To satisfy
+    // exception checks, we need to check the exception here. When we throw an exception, we
+    // need to make sure that our exception code is set, so we raise this in the error code.
+    if (UNLIKELY(scope.exception()))
+        code = SerializationReturnCode::ExistingExceptionError;
+
     if (throwExceptions == SerializationErrorMode::Throwing)
         maybeThrowExceptionIfSerializationFailed(lexicalGlobalObject, code);
 
+    // If maybeThrowExceptionIfSerializationFailed threw just now, or we failed with a status code
+    // other than success, we should exit right now.
     if (code != SerializationReturnCode::SuccessfullyCompleted)
         return exceptionForSerializationFailure(code);
 
@@ -6491,6 +6523,9 @@ JSValue SerializedScriptValue::deserialize(JSGlobalObject& lexicalGlobalObject, 
 
 JSValue SerializedScriptValue::deserialize(JSGlobalObject& lexicalGlobalObject, JSGlobalObject* globalObject, const Vector<Ref<MessagePort>>& messagePorts, const Vector<String>& blobURLs, const Vector<String>& blobFilePaths, SerializationErrorMode throwExceptions, bool* didFail)
 {
+    VM& vm = lexicalGlobalObject.vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     DeserializationResult result = CloneDeserializer::deserialize(&lexicalGlobalObject, globalObject, messagePorts, WTFMove(m_internals.detachedImageBitmaps)
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
         , WTFMove(m_internals.detachedOffscreenCanvases)
@@ -6522,8 +6557,17 @@ JSValue SerializedScriptValue::deserialize(JSGlobalObject& lexicalGlobalObject, 
         );
     if (didFail)
         *didFail = result.second != SerializationReturnCode::SuccessfullyCompleted;
-    if (throwExceptions == SerializationErrorMode::Throwing)
+
+    // Deserialize may throw an exception. Similar to serialize (SerializedScriptValue::create),
+    // we'll ensure that we raise this.
+    if (UNLIKELY(scope.exception()))
+        result.second = SerializationReturnCode::ValidationError;
+
+    if (UNLIKELY(scope.exception()) || throwExceptions == SerializationErrorMode::Throwing)
         maybeThrowExceptionIfSerializationFailed(lexicalGlobalObject, result.second);
+
+    // Handling newly thrown exceptions is a bit simpler here since we don't deal with return codes.
+    RETURN_IF_EXCEPTION(scope, jsNull());
     return result.first ? result.first : jsNull();
 }
 
