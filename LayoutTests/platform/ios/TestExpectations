@@ -7838,3 +7838,5 @@ webkit.org/b/291108 [ Release ] imported/w3c/web-platform-tests/html/webappapis/
 webkit.org/b/291115 imported/w3c/web-platform-tests/websockets/back-forward-cache-with-closed-websocket-connection-ccns.tentative.window.html [ Pass Failure ]
 
 webkit.org/b/290568 fast/multicol/simple-line-layout-line-index-after-strut.html [ Crash ImageOnlyFailure ]
+
+webkit.org/b/291278 http/tests/IndexedDB/storage-limit-1.https.html [ Pass Failure ]
