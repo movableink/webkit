@@ -7919,6 +7919,8 @@ PlatformDynamicRangeLimit HTMLMediaElement::computePlayerDynamicRangeLimit() con
         return m_platformDynamicRangeLimit;
 
     bool shouldSuppressHDR = [this]() {
+        if (m_videoFullscreenMode == VideoFullscreenModeStandard)
+            return false;
         if (Page* page = document().page())
             return page->shouldSuppressHDR();
         return false;
@@ -8412,17 +8414,21 @@ void HTMLMediaElement::setOverridePreferredDynamicRangeMode(DynamicRangeMode mod
     player->setShouldDisableHDR(shouldDisableHDR());
 }
 
-void HTMLMediaElement::dynamicRangeLimitDidChange(PlatformDynamicRangeLimit platformDynamicRangeLimit)
+void HTMLMediaElement::updatePlayerDynamicRangeLimit() const
 {
-    m_platformDynamicRangeLimit = platformDynamicRangeLimit;
     if (RefPtr player = m_player)
         player->setPlatformDynamicRangeLimit(computePlayerDynamicRangeLimit());
 }
 
+void HTMLMediaElement::dynamicRangeLimitDidChange(PlatformDynamicRangeLimit platformDynamicRangeLimit)
+{
+    m_platformDynamicRangeLimit = platformDynamicRangeLimit;
+    updatePlayerDynamicRangeLimit();
+}
+
 void HTMLMediaElement::shouldSuppressHDRDidChange()
 {
-    if (RefPtr player = m_player)
-        player->setPlatformDynamicRangeLimit(computePlayerDynamicRangeLimit());
+    updatePlayerDynamicRangeLimit();
 }
 
 Vector<String> HTMLMediaElement::mediaPlayerPreferredAudioCharacteristics() const
@@ -9584,6 +9590,7 @@ void HTMLMediaElement::setFullscreenMode(VideoFullscreenMode mode)
     schedulePlaybackControlsManagerUpdate();
 
     computeAcceleratedRenderingStateAndUpdateMediaPlayer();
+    updatePlayerDynamicRangeLimit();
 }
 
 void HTMLMediaElement::addClient(HTMLMediaElementClient& client)
