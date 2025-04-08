@@ -4351,6 +4351,9 @@ webkit.org/b/278719 imported/w3c/web-platform-tests/touch-events/touch-toucheven
 
 webkit.org/b/282966 imported/w3c/web-platform-tests/scroll-to-text-fragment/iframe-scroll.sub.html [ Failure ]
 
+# EWS indicates this test is too slow on bots.
+security/decode-buffer-size.html [ Skip ]
+
 webkit.org/b/153771 animations/resume-after-page-cache.html [ Failure Pass ]
 
 fast/canvas/webgl/context-lost-restored-p3.html [ Failure ]
