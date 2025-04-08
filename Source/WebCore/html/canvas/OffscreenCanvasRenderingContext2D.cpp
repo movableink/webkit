@@ -76,6 +76,17 @@ OffscreenCanvasRenderingContext2D::OffscreenCanvasRenderingContext2D(CanvasBase&
 {
 }
 
+void OffscreenCanvasRenderingContext2D::drawText(const String& text, double x, double y, bool fill, std::optional<double> maxWidth)
+{
+    if (!canDrawText(x, y, fill, maxWidth))
+        return;
+
+    String normalizedText = normalizeSpaces(text);
+    auto direction = (state().direction == Direction::Rtl) ? TextDirection::RTL : TextDirection::LTR;
+    TextRun textRun(normalizedText, 0, 0, ExpansionBehavior::allowRightOnly(), direction, false, true);
+    drawTextUnchecked(textRun, x, y, fill, maxWidth);
+}
+
 OffscreenCanvasRenderingContext2D::~OffscreenCanvasRenderingContext2D() = default;
 
 void OffscreenCanvasRenderingContext2D::setFont(const String& newFont)
