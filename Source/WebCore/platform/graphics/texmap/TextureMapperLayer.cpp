@@ -560,7 +560,7 @@ void TextureMapperLayer::damageWholeLayer()
     if (m_state.size.isEmpty())
         return;
 
-    ensureDamageInLayerCoordinateSpace().makeFull(m_state.size);
+    ensureDamageInLayerCoordinateSpace().makeFull();
 }
 
 void TextureMapperLayer::damageWholeLayerIncludingItsRectFromPreviousFrame()

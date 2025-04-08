@@ -43,6 +43,7 @@ TEST(Damage, Mode)
 {
     // Rectangles is the default mode.
     Damage rectsDamage(IntSize { 1024, 768 });
+    EXPECT_TRUE(rectsDamage.mode() == Damage::Mode::Rectangles);
     EXPECT_TRUE(rectsDamage.add(IntRect { 100, 100, 200, 200 }));
     EXPECT_TRUE(rectsDamage.add(IntRect { 300, 300, 200, 200 }));
     EXPECT_FALSE(rectsDamage.isEmpty());
@@ -54,6 +55,7 @@ TEST(Damage, Mode)
 
     // BoundingBox always unite damage in bounds.
     Damage bboxDamage(IntSize { 1024, 768 }, Damage::Mode::BoundingBox);
+    EXPECT_TRUE(bboxDamage.mode() == Damage::Mode::BoundingBox);
     EXPECT_TRUE(bboxDamage.add(IntRect { 100, 100, 200, 200 }));
     EXPECT_TRUE(bboxDamage.add(IntRect { 300, 300, 200, 200 }));
     EXPECT_FALSE(bboxDamage.isEmpty());
@@ -66,6 +68,7 @@ TEST(Damage, Mode)
 
     // Full ignores any adds and always reports the whole area.
     Damage fullDamage(IntSize { 1024, 768 }, Damage::Mode::Full);
+    EXPECT_TRUE(fullDamage.mode() == Damage::Mode::Full);
     EXPECT_FALSE(fullDamage.add(IntRect { 100, 100, 200, 200 }));
     EXPECT_FALSE(fullDamage.add(IntRect { 300, 300, 200, 200 }));
     EXPECT_FALSE(fullDamage.isEmpty());
@@ -77,25 +80,89 @@ TEST(Damage, Mode)
     EXPECT_EQ(fullDamage.bounds().height(), 768);
 
     // We can make a Damage full.
-    Damage fullDamage2 = rectsDamage;
-    fullDamage2.makeFull();
-    EXPECT_FALSE(fullDamage2.isEmpty());
-    EXPECT_EQ(fullDamage2.rects().size(), 1);
-    EXPECT_EQ(fullDamage2.rects()[0], fullDamage.bounds());
-    EXPECT_EQ(fullDamage2.bounds().x(), 0);
-    EXPECT_EQ(fullDamage2.bounds().y(), 0);
-    EXPECT_EQ(fullDamage2.bounds().width(), 1024);
-    EXPECT_EQ(fullDamage2.bounds().height(), 768);
+    fullDamage = rectsDamage;
+    EXPECT_TRUE(fullDamage.mode() == Damage::Mode::Rectangles);
+    fullDamage.makeFull();
+    EXPECT_TRUE(fullDamage.mode() == Damage::Mode::Full);
+    EXPECT_FALSE(fullDamage.isEmpty());
+    EXPECT_EQ(fullDamage.rects().size(), 1);
+    EXPECT_EQ(fullDamage.rects()[0], fullDamage.bounds());
+    EXPECT_EQ(fullDamage.bounds().x(), 0);
+    EXPECT_EQ(fullDamage.bounds().y(), 0);
+    EXPECT_EQ(fullDamage.bounds().width(), 1024);
+    EXPECT_EQ(fullDamage.bounds().height(), 768);
 
-    // We can make a Damage full with different size.
-    Damage fullDamage3 = rectsDamage;
-    fullDamage3.makeFull(IntSize { 800, 600 });
-    EXPECT_FALSE(fullDamage3.isEmpty());
-    EXPECT_EQ(fullDamage3.rects().size(), 1);
-    EXPECT_EQ(fullDamage3.bounds().x(), 0);
-    EXPECT_EQ(fullDamage3.bounds().y(), 0);
-    EXPECT_EQ(fullDamage3.bounds().width(), 800);
-    EXPECT_EQ(fullDamage3.bounds().height(), 600);
+    // Adding a rectangle with the size of the Damage rect makes it full.
+    fullDamage = rectsDamage;
+    EXPECT_TRUE(fullDamage.mode() == Damage::Mode::Rectangles);
+    EXPECT_TRUE(fullDamage.add(IntRect { 0, 0, 1024, 768 }));
+    EXPECT_TRUE(fullDamage.mode() == Damage::Mode::Full);
+    EXPECT_FALSE(fullDamage.isEmpty());
+    EXPECT_EQ(fullDamage.rects().size(), 1);
+    EXPECT_EQ(fullDamage.bounds().x(), 0);
+    EXPECT_EQ(fullDamage.bounds().y(), 0);
+    EXPECT_EQ(fullDamage.bounds().width(), 1024);
+    EXPECT_EQ(fullDamage.bounds().height(), 768);
+
+    // Adding a rectangle containing the Damage rect makes it full.
+    fullDamage = rectsDamage;
+    EXPECT_TRUE(fullDamage.mode() == Damage::Mode::Rectangles);
+    EXPECT_TRUE(fullDamage.add(IntRect { 0, 0, 2048, 1024 }));
+    EXPECT_TRUE(fullDamage.mode() == Damage::Mode::Full);
+    EXPECT_FALSE(fullDamage.isEmpty());
+    EXPECT_EQ(fullDamage.rects().size(), 1);
+    EXPECT_EQ(fullDamage.bounds().x(), 0);
+    EXPECT_EQ(fullDamage.bounds().y(), 0);
+    EXPECT_EQ(fullDamage.bounds().width(), 1024);
+    EXPECT_EQ(fullDamage.bounds().height(), 768);
+
+    // Adding vector of rects with any value containing the Damage rect makes it full.
+    fullDamage = rectsDamage;
+    EXPECT_TRUE(fullDamage.mode() == Damage::Mode::Rectangles);
+    EXPECT_TRUE(fullDamage.add(Vector<IntRect, 1> {
+        { 200, 200, 200, 200 },
+        { 0, 0, 1024, 768 },
+        { 400, 400, 200, 200 }
+    }));
+    EXPECT_TRUE(fullDamage.mode() == Damage::Mode::Full);
+    EXPECT_FALSE(fullDamage.isEmpty());
+    EXPECT_EQ(fullDamage.rects().size(), 1);
+    EXPECT_EQ(fullDamage.bounds().x(), 0);
+    EXPECT_EQ(fullDamage.bounds().y(), 0);
+    EXPECT_EQ(fullDamage.bounds().width(), 1024);
+    EXPECT_EQ(fullDamage.bounds().height(), 768);
+
+    // It should be the same if the vector is long enough to unite.
+    fullDamage = Damage(IntSize { 512, 512 });
+    EXPECT_TRUE(fullDamage.mode() == Damage::Mode::Rectangles);
+    EXPECT_TRUE(fullDamage.add(Vector<IntRect, 1> {
+        { 0, 0, 4, 4 },
+        { 200, 0, 4, 4 },
+        { 0, 200, 4, 4 },
+        { 200, 200, 4, 4 },
+        { 0, 0, 512, 512 },
+        { 128, 128, 4, 4 }
+    }));
+    EXPECT_TRUE(fullDamage.mode() == Damage::Mode::Full);
+    EXPECT_FALSE(fullDamage.isEmpty());
+    EXPECT_EQ(fullDamage.rects().size(), 1);
+    EXPECT_EQ(fullDamage.bounds().x(), 0);
+    EXPECT_EQ(fullDamage.bounds().y(), 0);
+    EXPECT_EQ(fullDamage.bounds().width(), 512);
+    EXPECT_EQ(fullDamage.bounds().height(), 512);
+
+    // Adding a full Damage to another with the same rect makes it full.
+    fullDamage = rectsDamage;
+    EXPECT_TRUE(fullDamage.mode() == Damage::Mode::Rectangles);
+    Damage fullDamage2(IntSize { 1024, 768 }, Damage::Mode::Full);
+    EXPECT_TRUE(fullDamage.add(fullDamage2));
+    EXPECT_TRUE(fullDamage.mode() == Damage::Mode::Full);
+    EXPECT_FALSE(fullDamage.isEmpty());
+    EXPECT_EQ(fullDamage.rects().size(), 1);
+    EXPECT_EQ(fullDamage.bounds().x(), 0);
+    EXPECT_EQ(fullDamage.bounds().y(), 0);
+    EXPECT_EQ(fullDamage.bounds().width(), 1024);
+    EXPECT_EQ(fullDamage.bounds().height(), 768);
 }
 
 TEST(Damage, Move)

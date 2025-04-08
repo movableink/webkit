@@ -135,37 +135,26 @@ public:
         return rects;
     }
 
-    void makeFull(const IntRect& rect)
+    void makeFull()
     {
-        if (m_mode == Mode::Full && m_rect == rect)
+        if (m_mode == Mode::Full)
             return;
 
-        m_rect = rect;
         m_mode = Mode::Full;
         m_rects.clear();
         m_shouldUnite = false;
         initialize(NoMaxRectangles);
     }
 
-    void makeFull(const IntSize& size)
-    {
-        makeFull({ { }, size });
-    }
-
-    void makeFull(const FloatSize& size)
-    {
-        makeFull(ceiledIntSize(LayoutSize(size)));
-    }
-
-    void makeFull()
-    {
-        makeFull(m_rect);
-    }
-
     bool add(const IntRect& rect)
     {
         if (rect.isEmpty() || !shouldAdd())
             return false;
+
+        if (rect.contains(m_rect)) {
+            makeFull();
+            return true;
+        }
 
         const auto rectsCount = m_rects.size();
         if (!rectsCount || rect.contains(m_minimumBoundingRectangle)) {
@@ -228,6 +217,11 @@ public:
                     if (rect.isEmpty())
                         continue;
 
+                    if (rect.contains(m_rect)) {
+                        makeFull();
+                        return true;
+                    }
+
                     m_minimumBoundingRectangle.unite(rect);
                     unite(rect);
                 }
@@ -253,6 +247,11 @@ public:
     {
         if (other.isEmpty() || !shouldAdd())
             return false;
+
+        if (other.m_mode == Mode::Full && m_rect == other.m_rect) {
+            makeFull();
+            return true;
+        }
 
         // When both Damage are already united and have the same rect and grid, we can just iterate the rects and unite them.
         if (m_mode == Mode::Rectangles && m_shouldUnite && m_mode == other.m_mode && m_rect == other.m_rect && m_gridCells == other.m_gridCells && other.m_shouldUnite && m_rects.size() == other.m_rects.size()) {

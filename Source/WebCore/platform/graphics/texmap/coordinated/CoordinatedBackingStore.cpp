@@ -67,21 +67,24 @@ void CoordinatedBackingStore::paintToTextureMapper(TextureMapper& textureMapper,
     ASSERT(!m_size.isZero());
     FloatRect layerRect = { { }, m_size };
     TransformationMatrix adjustedTransform = transform * TransformationMatrix::rectToRect(layerRect, targetRect);
+
+#if ENABLE(DAMAGE_TRACKING)
+    const auto& frameDamage = textureMapper.damage();
+    const auto canUseDamageToDrawTextureFragment = [&]() {
+        return frameDamage
+            && !frameDamage->isEmpty()
+            && frameDamage->mode() != Damage::Mode::Full
+            && adjustedTransform.isIdentity()
+            && opacity == 1.0;
+    }();
+#endif
+
     for (const auto& tile : m_tiles.values()) {
         ASSERT(tile.scale() == m_scale);
         const auto allEdgesExposed = allTileEdgesExposed(layerRect, tile.rect()) ? TextureMapper::AllEdgesExposed::Yes : TextureMapper::AllEdgesExposed::No;
+
 #if ENABLE(DAMAGE_TRACKING)
-        const auto& frameDamage = textureMapper.damage();
-        const auto canUseDamageToDrawTextureFragment = [&]() {
-            return frameDamage
-                && !frameDamage->isEmpty()
-                && adjustedTransform.isIdentity()
-                && allEdgesExposed == TextureMapper::AllEdgesExposed::No
-                && opacity == 1.0
-                && tile.texture().isOpaque()
-                && !tile.texture().filterOperation();
-        }();
-        if (canUseDamageToDrawTextureFragment) {
+        if (canUseDamageToDrawTextureFragment && allEdgesExposed == TextureMapper::AllEdgesExposed::No && tile.texture().isOpaque() && !tile.texture().filterOperation()) {
             // We use Damage here as it's a convenient way to track per-tile damage.
             // If the tile size is big enough, the Damage will have a better resolution
             // and will allow more than one "draw" operation thus reducing the re-painted
@@ -97,7 +100,9 @@ void CoordinatedBackingStore::paintToTextureMapper(TextureMapper& textureMapper,
                 const auto sourceRect = FloatRect { FloatPoint { tileDamageRect.location() - tile.rect().location() }, tileDamageRect.size() };
                 textureMapper.drawTextureFragment(tile.texture(), sourceRect, tileDamageRect);
             }
-        } else
+
+            continue;
+        }
 #endif
         textureMapper.drawTexture(tile.texture(), tile.rect(), adjustedTransform, opacity, allEdgesExposed);
     }

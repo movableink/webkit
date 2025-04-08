@@ -86,7 +86,7 @@ void GraphicsLayerCoordinated::setNeedsDisplay()
         if (m_dirtyRegion->mode() == Damage::Mode::Full)
             return;
 
-        m_dirtyRegion->makeFull(m_size);
+        m_dirtyRegion->makeFull();
     } else
         m_dirtyRegion = Damage(m_size, Damage::Mode::Full);
 
