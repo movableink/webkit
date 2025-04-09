@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -246,7 +246,7 @@ TEST(TypeCastsCocoa, dynamic_objc_cast_RetainPtr)
     }
 
     @autoreleasepool {
-        RetainPtr<id> object = adoptNS<id>([[NSString alloc] initWithFormat:@"%s", helloWorldCString]);
+        auto object = adoptNS<id>([[NSString alloc] initWithFormat:@"%s", helloWorldCString]);
         uintptr_t objectPtr;
         AUTORELEASEPOOL_FOR_ARC_DEBUG {
             objectPtr = reinterpret_cast<uintptr_t>(object.get());

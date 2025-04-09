@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -405,6 +405,21 @@ TEST(RETAIN_PTR_TEST_NAME, HashMapCFTypeDeletedValue)
     map.remove(key);
 
     EXPECT_EQ(1, CFGetRetainCount(key.get()));
+}
+
+TEST(RETAIN_PTR_TEST_NAME, RetainPtrType)
+{
+    // CF Types.
+    static_assert(std::is_same_v<RetainPtr<CFTypeRef>, RetainPtr<WTF::RetainPtrType<CFTypeRef>>>);
+    static_assert(std::is_same_v<RetainPtr<CFStringRef>, RetainPtr<WTF::RetainPtrType<CFStringRef>>>);
+    static_assert(std::is_same_v<RetainPtr<CFMutableStringRef>, RetainPtr<WTF::RetainPtrType<CFMutableStringRef>>>);
+
+    // Cocoa Types.
+    static_assert(std::is_same_v<RetainPtr<id>, RetainPtr<WTF::RetainPtrType<id>>>);
+    static_assert(std::is_same_v<RetainPtr<NSString>, RetainPtr<WTF::RetainPtrType<NSString>>>);
+    static_assert(std::is_same_v<RetainPtr<NSString>, RetainPtr<WTF::RetainPtrType<NSString *>>>);
+    static_assert(std::is_same_v<RetainPtr<NSMutableString>, RetainPtr<WTF::RetainPtrType<NSMutableString>>>);
+    static_assert(std::is_same_v<RetainPtr<NSMutableString>, RetainPtr<WTF::RetainPtrType<NSMutableString *>>>);
 }
 
 } // namespace TestWebKitAPI
