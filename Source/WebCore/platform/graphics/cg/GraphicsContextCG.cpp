@@ -805,7 +805,7 @@ void GraphicsContextCG::strokePath(const Path& path)
 
 #if USE(CG_CONTEXT_STROKE_LINE_SEGMENTS_WHEN_STROKING_PATH)
     if (auto line = path.singleDataLine()) {
-        CGPoint cgPoints[2] { line->start, line->end };
+        CGPoint cgPoints[2] { line->start(), line->end() };
         CGContextStrokeLineSegments(context, cgPoints, 2);
         return;
     }

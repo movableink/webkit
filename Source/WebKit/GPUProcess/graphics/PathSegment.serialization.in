@@ -93,8 +93,7 @@ header: <WebCore/PathSegmentData.h>
 };
 
 [AdditionalEncoder=StreamConnectionEncoder, CustomHeader] struct WebCore::PathDataLine {
-    WebCore::FloatPoint start;
-    WebCore::FloatPoint end;
+    std::span<const float, 4> span();
 };
 
 [AdditionalEncoder=StreamConnectionEncoder, CustomHeader] struct WebCore::PathDataQuadCurve {

@@ -107,8 +107,8 @@ inline void PathImpl::addSegment(PathSegment segment)
             add(WTFMove(segment));
         },
         [&](PathDataLine segment) {
-            add(PathMoveTo { segment.start });
-            add(PathLineTo { segment.end });
+            add(PathMoveTo { segment.start() });
+            add(PathLineTo { segment.end() });
         },
         [&](PathDataQuadCurve segment) {
             add(PathMoveTo { segment.start });

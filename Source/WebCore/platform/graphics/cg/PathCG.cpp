@@ -549,8 +549,8 @@ FloatRect PathCG::strokeBoundingRect(NOESCAPE const Function<void(GraphicsContex
 
 static inline void addToCGContextPath(CGContextRef context, PathDataLine segment)
 {
-    addToCGContextPath(context, PathMoveTo { segment.start });
-    addToCGContextPath(context, PathLineTo { segment.end });
+    addToCGContextPath(context, PathMoveTo { segment.start() });
+    addToCGContextPath(context, PathLineTo { segment.end() });
 }
 
 static inline void addToCGContextPath(CGContextRef context, PathDataQuadCurve segment)

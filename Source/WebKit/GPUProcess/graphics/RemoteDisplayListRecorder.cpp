@@ -561,7 +561,7 @@ void RemoteDisplayListRecorder::strokeRect(const FloatRect& rect, float lineWidt
 void RemoteDisplayListRecorder::strokeLine(const PathDataLine& line)
 {
 #if ENABLE(INLINE_PATH_DATA)
-    auto path = Path({ PathSegment { PathDataLine { { line.start }, { line.end } } } });
+    auto path = Path({ PathSegment { PathDataLine { { line.start() }, { line.end() } } } });
 #else
     Path path;
     path.moveTo(line.start);

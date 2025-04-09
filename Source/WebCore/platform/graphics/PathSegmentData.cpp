@@ -651,8 +651,8 @@ WTF::TextStream& operator<<(WTF::TextStream& ts, const PathContinuousRoundedRect
 
 FloatPoint PathDataLine::calculateEndPoint(const FloatPoint&, FloatPoint& lastMoveToPoint) const
 {
-    lastMoveToPoint = start;
-    return end;
+    lastMoveToPoint = start();
+    return end();
 }
 
 std::optional<FloatPoint> PathDataLine::tryGetEndPointWithoutContext() const
@@ -668,27 +668,27 @@ void PathDataLine::extendFastBoundingRect(const FloatPoint& currentPoint, const 
 
 void PathDataLine::extendBoundingRect(const FloatPoint&, const FloatPoint&, FloatRect& boundingRect) const
 {
-    boundingRect.extend(start);
-    boundingRect.extend(end);
+    boundingRect.extend(start());
+    boundingRect.extend(end());
 }
 
 void PathDataLine::applyElements(const PathElementApplier& applier) const
 {
-    applier({ PathElement::Type::MoveToPoint, { start } });
-    applier({ PathElement::Type::AddLineToPoint, { end } });
+    applier({ PathElement::Type::MoveToPoint, { start() } });
+    applier({ PathElement::Type::AddLineToPoint, { end() } });
 }
 
 void PathDataLine::transform(const AffineTransform& transform)
 {
-    start = transform.mapPoint(start);
-    end = transform.mapPoint(end);
+    setStart(transform.mapPoint(start()));
+    setEnd(transform.mapPoint(end()));
 }
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, const PathDataLine& data)
 {
-    ts << "move to "_s << data.start;
+    ts << "move to "_s << data.start();
     ts << ", "_s;
-    ts << "add line to "_s << data.end;
+    ts << "add line to "_s << data.end();
     return ts;
 }
 
