@@ -160,21 +160,6 @@ void RemoteDisplayListRecorderProxy::concatCTM(const AffineTransform& transform)
     send(Messages::RemoteDisplayListRecorder::ConcatCTM(transform));
 }
 
-void RemoteDisplayListRecorderProxy::recordSetInlineFillColor(PackedColor::RGBA color)
-{
-    send(Messages::RemoteDisplayListRecorder::SetInlineFillColor(color));
-}
-
-void RemoteDisplayListRecorderProxy::recordSetInlineStroke(DisplayList::SetInlineStroke&& item)
-{
-    send(Messages::RemoteDisplayListRecorder::SetInlineStroke(item.colorData(), item.thickness()));
-}
-
-void RemoteDisplayListRecorderProxy::recordSetState(const GraphicsContextState& state)
-{
-    send(Messages::RemoteDisplayListRecorder::SetState(DisplayList::SetState { state }));
-}
-
 void RemoteDisplayListRecorderProxy::setLineCap(LineCap lineCap)
 {
     send(Messages::RemoteDisplayListRecorder::SetLineCap(lineCap));
@@ -193,11 +178,6 @@ void RemoteDisplayListRecorderProxy::setLineJoin(LineJoin lineJoin)
 void RemoteDisplayListRecorderProxy::setMiterLimit(float limit)
 {
     send(Messages::RemoteDisplayListRecorder::SetMiterLimit(limit));
-}
-
-void RemoteDisplayListRecorderProxy::recordClearDropShadow()
-{
-    send(Messages::RemoteDisplayListRecorder::ClearDropShadow());
 }
 
 void RemoteDisplayListRecorderProxy::clip(const FloatRect& rect)
@@ -363,6 +343,38 @@ void RemoteDisplayListRecorderProxy::drawFocusRing(const Vector<FloatRect>& rect
     send(Messages::RemoteDisplayListRecorder::DrawFocusRingRects(rects, outlineOffset, outlineWidth, color));
 }
 
+void RemoteDisplayListRecorderProxy::fillPath(const Path& path)
+{
+    appendStateChangeItemIfNecessary();
+
+    if (auto segment = path.singleSegment()) {
+        WTF::switchOn(segment->data(),
+#if ENABLE(INLINE_PATH_DATA)
+        [&](const PathArc &arc) {
+            send(Messages::RemoteDisplayListRecorder::FillArc(arc));
+        },
+        [&](const PathClosedArc& closedArc) {
+            send(Messages::RemoteDisplayListRecorder::FillClosedArc(closedArc));
+        },
+        [&](const PathDataLine& line) {
+            send(Messages::RemoteDisplayListRecorder::FillLine(line));
+        },
+        [&](const PathDataQuadCurve& curve) {
+            send(Messages::RemoteDisplayListRecorder::FillQuadCurve(curve));
+        },
+        [&](const PathDataBezierCurve& curve) {
+            send(Messages::RemoteDisplayListRecorder::FillBezierCurve(curve));
+        },
+#endif
+        [&](auto&&) {
+            send(Messages::RemoteDisplayListRecorder::FillPathSegment(*segment));
+        });
+        return;
+    }
+
+    send(Messages::RemoteDisplayListRecorder::FillPath(path));
+}
+
 void RemoteDisplayListRecorderProxy::fillRect(const FloatRect& rect, RequiresClipToRect requiresClipToRect)
 {
     appendStateChangeItemIfNecessary();
@@ -405,45 +417,6 @@ void RemoteDisplayListRecorderProxy::fillRectWithRoundedHole(const FloatRect& re
     send(Messages::RemoteDisplayListRecorder::FillRectWithRoundedHole(rect, roundedRect, color));
 }
 
-#if ENABLE(INLINE_PATH_DATA)
-
-void RemoteDisplayListRecorderProxy::recordFillLine(const PathDataLine& line)
-{
-    send(Messages::RemoteDisplayListRecorder::FillLine(line));
-}
-
-void RemoteDisplayListRecorderProxy::recordFillArc(const PathArc& arc)
-{
-    send(Messages::RemoteDisplayListRecorder::FillArc(arc));
-}
-
-void RemoteDisplayListRecorderProxy::recordFillClosedArc(const PathClosedArc& closedArc)
-{
-    send(Messages::RemoteDisplayListRecorder::FillClosedArc(closedArc));
-}
-
-void RemoteDisplayListRecorderProxy::recordFillQuadCurve(const PathDataQuadCurve& curve)
-{
-    send(Messages::RemoteDisplayListRecorder::FillQuadCurve(curve));
-}
-
-void RemoteDisplayListRecorderProxy::recordFillBezierCurve(const PathDataBezierCurve& curve)
-{
-    send(Messages::RemoteDisplayListRecorder::FillBezierCurve(curve));
-}
-
-#endif // ENABLE(INLINE_PATH_DATA)
-
-void RemoteDisplayListRecorderProxy::recordFillPathSegment(const PathSegment& segment)
-{
-    send(Messages::RemoteDisplayListRecorder::FillPathSegment(segment));
-}
-
-void RemoteDisplayListRecorderProxy::recordFillPath(const Path& path)
-{
-    send(Messages::RemoteDisplayListRecorder::FillPath(path));
-}
-
 void RemoteDisplayListRecorderProxy::fillEllipse(const FloatRect& rect)
 {
     appendStateChangeItemIfNecessary();
@@ -471,54 +444,51 @@ void RemoteDisplayListRecorderProxy::drawVideoFrame(VideoFrame& frame, const Flo
 }
 #endif
 
+void RemoteDisplayListRecorderProxy::strokePath(const Path& path)
+{
+    if (const auto* segment = path.singleSegmentIfExists()) {
+#if ENABLE(INLINE_PATH_DATA)
+        if (const auto* line = std::get_if<PathDataLine>(&segment->data())) {
+            auto strokeData = appendStateChangeItemForInlineStrokeIfNecessary();
+            if (!strokeData.color && !strokeData.thickness)
+                send(Messages::RemoteDisplayListRecorder::StrokeLine(*line));
+            else
+                send(Messages::RemoteDisplayListRecorder::StrokeLineWithColorAndThickness(*line, strokeData.color, strokeData.thickness));
+            return;
+        }
+#endif
+        appendStateChangeItemIfNecessary();
+        WTF::switchOn(segment->data(),
+#if ENABLE(INLINE_PATH_DATA)
+            [&](const PathArc &arc) {
+                send(Messages::RemoteDisplayListRecorder::StrokeArc(arc));
+            },
+            [&](const PathClosedArc& closedArc) {
+                send(Messages::RemoteDisplayListRecorder::StrokeClosedArc(closedArc));
+            },
+            [&](const PathDataLine& line) {
+                send(Messages::RemoteDisplayListRecorder::StrokeLine(line));
+            },
+            [&](const PathDataQuadCurve& curve) {
+                send(Messages::RemoteDisplayListRecorder::StrokeQuadCurve(curve));
+            },
+            [&](const PathDataBezierCurve& curve) {
+                send(Messages::RemoteDisplayListRecorder::StrokeBezierCurve(curve));
+            },
+#endif
+            [&](auto&&) {
+                send(Messages::RemoteDisplayListRecorder::StrokePathSegment(*segment));
+            });
+        return;
+    }
+    appendStateChangeItemIfNecessary();
+    send(Messages::RemoteDisplayListRecorder::StrokePath(path));
+}
+
 void RemoteDisplayListRecorderProxy::strokeRect(const FloatRect& rect, float width)
 {
     appendStateChangeItemIfNecessary();
     send(Messages::RemoteDisplayListRecorder::StrokeRect(rect, width));
-}
-
-#if ENABLE(INLINE_PATH_DATA)
-
-void RemoteDisplayListRecorderProxy::recordStrokeLine(const PathDataLine& line)
-{
-    send(Messages::RemoteDisplayListRecorder::StrokeLine(line));
-}
-
-void RemoteDisplayListRecorderProxy::recordStrokeLineWithColorAndThickness(const PathDataLine& line, DisplayList::SetInlineStroke&& item)
-{
-    send(Messages::RemoteDisplayListRecorder::StrokeLineWithColorAndThickness(line, item.colorData(), item.thickness()));
-}
-
-void RemoteDisplayListRecorderProxy::recordStrokeArc(const PathArc& arc)
-{
-    send(Messages::RemoteDisplayListRecorder::StrokeArc(arc));
-}
-
-void RemoteDisplayListRecorderProxy::recordStrokeClosedArc(const PathClosedArc& closedArc)
-{
-    send(Messages::RemoteDisplayListRecorder::StrokeClosedArc(closedArc));
-}
-
-void RemoteDisplayListRecorderProxy::recordStrokeQuadCurve(const PathDataQuadCurve& curve)
-{
-    send(Messages::RemoteDisplayListRecorder::StrokeQuadCurve(curve));
-}
-
-void RemoteDisplayListRecorderProxy::recordStrokeBezierCurve(const PathDataBezierCurve& curve)
-{
-    send(Messages::RemoteDisplayListRecorder::StrokeBezierCurve(curve));
-}
-
-#endif // ENABLE(INLINE_PATH_DATA)
-
-void RemoteDisplayListRecorderProxy::recordStrokePathSegment(const PathSegment& segment)
-{
-    send(Messages::RemoteDisplayListRecorder::StrokePathSegment(segment));
-}
-
-void RemoteDisplayListRecorderProxy::recordStrokePath(const Path& path)
-{
-    send(Messages::RemoteDisplayListRecorder::StrokePath(path));
 }
 
 void RemoteDisplayListRecorderProxy::strokeEllipse(const FloatRect& rect)
@@ -700,6 +670,104 @@ RefPtr<ImageBuffer> RemoteDisplayListRecorderProxy::createAlignedImageBuffer(con
 {
     auto renderingMode = !renderingMethod ? this->renderingModeForCompatibleBuffer() : RenderingMode::Unaccelerated;
     return GraphicsContext::createScaledImageBuffer(rect, scaleFactor(), colorSpace, renderingMode, renderingMethod);
+}
+
+void RemoteDisplayListRecorderProxy::appendStateChangeItemIfNecessary()
+{
+    auto& state = currentState().state;
+    auto changes = state.changes();
+    if (!changes)
+        return;
+    auto recordFullItem = [&] {
+        if (changes.contains(GraphicsContextState::Change::FillBrush)) {
+            if (RefPtr pattern = fillPattern())
+                recordResourceUse(pattern->tileImage());
+            else if (RefPtr gradient = fillGradient()) {
+                if (gradient->hasValidRenderingResourceIdentifier())
+                    recordResourceUse(*gradient);
+            }
+        }
+        if (changes.contains(GraphicsContextState::Change::StrokeBrush)) {
+            if (RefPtr pattern = strokePattern())
+                recordResourceUse(pattern->tileImage());
+            else if (RefPtr gradient = strokeGradient()) {
+                if (gradient->hasValidRenderingResourceIdentifier())
+                    recordResourceUse(*gradient);
+            }
+        }
+        send(Messages::RemoteDisplayListRecorder::SetState(DisplayList::SetState { state }));
+        state.didApplyChanges();
+        currentState().lastDrawingState = state;
+    };
+    if (!changes.containsOnly({ GraphicsContextState::Change::FillBrush, GraphicsContextState::Change::StrokeBrush, GraphicsContextState::Change::StrokeThickness })) {
+        recordFullItem();
+        return;
+    }
+    std::optional<PackedColor::RGBA> fillColor;
+    if (changes.contains(GraphicsContextState::Change::FillBrush)) {
+        fillColor = state.fillBrush().packedColor();
+        if (!fillColor) {
+            recordFullItem();
+            return;
+        }
+    }
+    std::optional<PackedColor::RGBA> strokeColor;
+    if (changes.contains(GraphicsContextState::Change::StrokeBrush)) {
+        strokeColor = state.strokeBrush().packedColor();
+        if (!strokeColor) {
+            recordFullItem();
+            return;
+        }
+    }
+    std::optional<float> strokeThickness;
+    if (changes.contains(GraphicsContextState::Change::StrokeThickness))
+        strokeThickness = state.strokeThickness();
+
+    if (fillColor)
+        send(Messages::RemoteDisplayListRecorder::SetInlineFillColor(*fillColor));
+    if (strokeColor || strokeThickness)
+        send(Messages::RemoteDisplayListRecorder::SetInlineStroke(strokeColor, strokeThickness));
+
+    state.didApplyChanges();
+    currentState().lastDrawingState = state;
+}
+
+RemoteDisplayListRecorderProxy::InlineStrokeData RemoteDisplayListRecorderProxy::appendStateChangeItemForInlineStrokeIfNecessary()
+{
+    auto& state = currentState().state;
+    auto changes = state.changes();
+    if (!changes)
+        return { };
+    if (!changes.containsOnly({ GraphicsContextState::Change::StrokeBrush, GraphicsContextState::Change::StrokeThickness })) {
+        appendStateChangeItemIfNecessary();
+        return { };
+    }
+    auto& lastDrawingState = currentState().lastDrawingState;
+    std::optional<PackedColor::RGBA> packedColor;
+    if (changes.contains(GraphicsContextState::Change::StrokeBrush)) {
+        packedColor = state.strokeBrush().packedColor();
+        if (!packedColor) {
+            appendStateChangeItemIfNecessary();
+            return { };
+        }
+        if (!lastDrawingState)
+            lastDrawingState = state;
+        else {
+            // Set through strokeBrush() to avoid comparison.
+            lastDrawingState->strokeBrush().setColor(state.strokeBrush().color());
+        }
+    }
+    std::optional<float> strokeThickness;
+    if (changes.contains(GraphicsContextState::Change::StrokeThickness)) {
+        strokeThickness = state.strokeThickness();
+        if (!lastDrawingState)
+            lastDrawingState = state;
+        else
+            lastDrawingState->setStrokeThickness(*strokeThickness);
+    }
+    state.didApplyChanges();
+    lastDrawingState->didApplyChanges();
+    return { packedColor, strokeThickness };
 }
 
 void RemoteDisplayListRecorderProxy::disconnect()

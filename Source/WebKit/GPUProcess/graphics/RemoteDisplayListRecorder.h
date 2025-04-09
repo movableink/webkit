@@ -74,7 +74,6 @@ public:
     void setLineDash(WebCore::DashArray&&, float dashOffset);
     void setLineJoin(WebCore::LineJoin);
     void setMiterLimit(float);
-    void clearDropShadow();
     void clip(const WebCore::FloatRect&);
     void clipRoundedRect(const WebCore::FloatRoundedRect&);
     void clipOut(const WebCore::FloatRect&);
