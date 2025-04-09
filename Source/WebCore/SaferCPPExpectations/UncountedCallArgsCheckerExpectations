@@ -886,7 +886,6 @@ page/LocalFrameView.cpp
 page/Location.cpp
 page/NavigationDestination.cpp
 page/NavigationDestination.h
-page/NavigationHistoryEntry.cpp
 page/NavigationTransition.cpp
 page/Navigator.cpp
 page/NavigatorLoginStatus.cpp

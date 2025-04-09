@@ -66,7 +66,7 @@ Ref<NavigationHistoryEntry> NavigationHistoryEntry::create(Navigation& navigatio
     RefPtr state = historyItem->navigationAPIStateObject();
     if (!state)
         state = other.m_state;
-    Ref entry = adoptRef(*new NavigationHistoryEntry(navigation, DocumentState::fromContext(other.scriptExecutionContext()), WTFMove(historyItem), other.m_urlString, other.m_key, WTFMove(state), other.m_id));
+    Ref entry = adoptRef(*new NavigationHistoryEntry(navigation, DocumentState::fromContext(other.protectedScriptExecutionContext().get()), WTFMove(historyItem), other.m_urlString, other.m_key, WTFMove(state), other.m_id));
     entry->suspendIfNeeded();
     return entry;
 }
@@ -118,7 +118,7 @@ uint64_t NavigationHistoryEntry::index() const
     RefPtr document = dynamicDowncast<Document>(scriptExecutionContext());
     if (!document || !document->isFullyActive())
         return -1;
-    return document->domWindow()->navigation().entries().findIf([this] (auto& entry) {
+    return document->protectedWindow()->protectedNavigation()->entries().findIf([this] (auto& entry) {
         return entry.ptr() == this;
     });
 }
@@ -141,16 +141,17 @@ JSC::JSValue NavigationHistoryEntry::getState(JSDOMGlobalObject& globalObject) c
     if (!document || !document->isFullyActive())
         return JSC::jsUndefined();
 
-    if (!m_state)
+    RefPtr state = m_state;
+    if (!state)
         return JSC::jsUndefined();
 
-    return m_state->deserialize(globalObject, &globalObject, SerializationErrorMode::Throwing);
+    return state->deserialize(globalObject, &globalObject, SerializationErrorMode::Throwing);
 }
 
 void NavigationHistoryEntry::setState(RefPtr<SerializedScriptValue>&& state)
 {
     m_state = state;
-    m_associatedHistoryItem->setNavigationAPIStateObject(WTFMove(state));
+    protectedAssociatedHistoryItem()->setNavigationAPIStateObject(WTFMove(state));
 }
 
 auto NavigationHistoryEntry::DocumentState::fromContext(ScriptExecutionContext* context) -> DocumentState
