@@ -4213,7 +4213,7 @@ static void performDragWithLegacyFiles(WebPageProxy& page, Box<Vector<String>>&&
     });
 }
 
-static bool handleLegacyFilesPasteboard(id<NSDraggingInfo> draggingInfo, Box<WebCore::DragData>&& dragData, WebPageProxy& page, RetainPtr<NSView<WebViewImplDelegate>> view)
+static bool handleLegacyFilesPromisePasteboard(id<NSDraggingInfo> draggingInfo, Box<WebCore::DragData>&& dragData, WebPageProxy& page, RetainPtr<NSView<WebViewImplDelegate>> view)
 {
     // FIXME: legacyFilesPromisePasteboardType() contains UTIs, not path names. Also, it's not
     // guaranteed that the count of UTIs equals the count of files, since some clients only write
@@ -4249,6 +4249,49 @@ static bool handleLegacyFilesPasteboard(id<NSDraggingInfo> draggingInfo, Box<Web
     return true;
 }
 
+static bool handleLegacyFilesPasteboard(id<NSDraggingInfo> draggingInfo, Box<WebCore::DragData>&& dragData, WebPageProxy& page)
+{
+    RetainPtr files = dynamic_objc_cast<NSArray>([draggingInfo.draggingPasteboard propertyListForType:WebCore::legacyFilenamesPasteboardType()]);
+    if (!files)
+        return false;
+
+    String pasteboardName = draggingInfo.draggingPasteboard.name;
+
+    RetainPtr originalFileURLs = adoptNS([[NSMutableArray alloc] initWithCapacity:[files count]]);
+    for (NSString *file in files.get())
+        [originalFileURLs addObject:adoptNS([[NSURL alloc] initFileURLWithPath:file]).get()];
+
+    auto task = makeBlockPtr([protectedPage = Ref { page }, originalFileURLs, dragData, pasteboardName = pasteboardName.isolatedCopy()] mutable {
+        ASSERT(!RunLoop::isMain());
+
+        RetainPtr coordinator = adoptNS([[NSFileCoordinator alloc] initWithFilePresenter:nil]);
+
+        NSError *prepareError = nil;
+        [coordinator prepareForReadingItemsAtURLs:originalFileURLs.get() options:0 writingItemsAtURLs:@[] options:0 error:&prepareError byAccessor:[coordinator, originalFileURLs, protectedPage = WTFMove(protectedPage), dragData, pasteboardName](void (^completionHandler)(void)) mutable {
+            auto fileNames = Box<Vector<String>>::create();
+
+            for (NSURL *originalFileURL in originalFileURLs.get()) {
+                NSError *error = nil;
+                [coordinator coordinateReadingItemAtURL:originalFileURL options:NSFileCoordinatorReadingWithoutChanges error:&error byAccessor:[fileNames](NSURL *newURL) {
+                    fileNames->append(newURL.path);
+                }];
+
+                RELEASE_LOG_ERROR_IF(error, DragAndDrop, "Failed to coordinate reading file: %@.", error.localizedDescription);
+            }
+
+            RunLoop::protectedMain()->dispatch([protectedPage = WTFMove(protectedPage), fileNames, dragData, pasteboardName, completionHandler = makeBlockPtr(completionHandler)] mutable {
+                performDragWithLegacyFiles(protectedPage, WTFMove(fileNames), WTFMove(dragData), pasteboardName);
+                completionHandler();
+            });
+        }];
+
+        RELEASE_LOG_ERROR_IF(prepareError, DragAndDrop, "Failed to prepare for reading files with error: %@.", prepareError.localizedDescription);
+    });
+
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), task.get());
+    return true;
+}
+
 bool WebViewImpl::performDragOperation(id<NSDraggingInfo> draggingInfo)
 {
     WebCore::IntPoint client([m_view convertPoint:draggingInfo.draggingLocation fromView:nil]);
@@ -4260,15 +4303,10 @@ bool WebViewImpl::performDragOperation(id<NSDraggingInfo> draggingInfo)
     Vector<SandboxExtension::Handle> sandboxExtensionForUpload;
 
     if (![types containsObject:PasteboardTypes::WebArchivePboardType] && [types containsObject:WebCore::legacyFilesPromisePasteboardType()])
-        return handleLegacyFilesPasteboard(draggingInfo, WTFMove(dragData), page(), m_view.get());
+        return handleLegacyFilesPromisePasteboard(draggingInfo, WTFMove(dragData), page(), m_view.get());
 
-    if ([types containsObject:WebCore::legacyFilenamesPasteboardType()]) {
-        RetainPtr files = dynamic_objc_cast<NSArray>([draggingInfo.draggingPasteboard propertyListForType:WebCore::legacyFilenamesPasteboardType()]);
-        if (!files)
-            return false;
-
-        m_page->createSandboxExtensionsIfNeeded(makeVector<String>(files.get()), sandboxExtensionHandle, sandboxExtensionForUpload);
-    }
+    if ([types containsObject:WebCore::legacyFilenamesPasteboardType()])
+        return handleLegacyFilesPasteboard(draggingInfo, WTFMove(dragData), page());
 
     String draggingPasteboardName = draggingInfo.draggingPasteboard.name;
     m_page->performDragOperation(*dragData, draggingPasteboardName, WTFMove(sandboxExtensionHandle), WTFMove(sandboxExtensionForUpload));
