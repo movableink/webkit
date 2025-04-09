@@ -38,7 +38,6 @@
 #include "ScreenProperties.h"
 #include "SystemSettings.h"
 #include "Widget.h"
-#include <gtk/gtk.h>
 
 namespace WebCore {
 
@@ -87,16 +86,6 @@ bool screenHasInvertedColors()
 
 double fontDPI()
 {
-#if !USE(GTK4)
-    // The code in this conditionally-compiled block is needed in order to
-    // respect the GDK_DPI_SCALE setting that was present in GTK3 as an
-    // additional font scaling factor.
-    if (auto* display = gdk_display_get_default()) {
-        if (auto* screen = gdk_display_get_default_screen(display))
-            return gdk_screen_get_resolution(screen);
-    }
-#endif
-
     auto xftDPI = SystemSettings::singleton().xftDPI();
     if (xftDPI)
         return xftDPI.value() / 1024.0;
