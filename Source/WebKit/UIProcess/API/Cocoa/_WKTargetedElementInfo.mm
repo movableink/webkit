@@ -217,7 +217,7 @@
 
     auto bounds = _info->boundsInRootView();
     return [NSString stringWithFormat:@"<%@ %p \"%@\" at {{%.0f,%.0f},{%.0f,%.0f}}>"
-        , self.class, self, (NSString *)firstSelector
+        , self.class, self, firstSelector.createNSString().get()
         , bounds.x(), bounds.y(), bounds.width(), bounds.height()];
 }
 

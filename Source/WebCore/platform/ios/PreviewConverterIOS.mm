@@ -35,6 +35,8 @@
 #import "ResourceRequest.h"
 #import "ResourceResponse.h"
 #import "SharedBuffer.h"
+#import <wtf/cocoa/TypeCastsCocoa.h>
+
 #import <pal/ios/QuickLookSoftLink.h>
 
 @interface WebPreviewConverterDelegate : NSObject
@@ -145,7 +147,7 @@ static NSDictionary *optionsWithPassword(const String& password)
     if (password.isNull())
         return nil;
     
-    return @{ (NSString *)PAL::get_QuickLook_kQLPreviewOptionPasswordKey() : password };
+    return @{ bridge_cast(PAL::get_QuickLook_kQLPreviewOptionPasswordKey()) : password.createNSString().get() };
 }
 
 void PreviewConverter::platformUnlockWithPassword(const String& password)

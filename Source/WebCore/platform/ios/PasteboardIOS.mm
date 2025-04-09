@@ -503,7 +503,7 @@ static RetainPtr<NSString> cocoaTypeFromHTMLClipboardType(const String& type)
         return utiType;
 
     // No mapping, just pass the whole string though.
-    return (NSString *)type;
+    return type.createNSString();
 }
 
 void Pasteboard::clear(const String& type)

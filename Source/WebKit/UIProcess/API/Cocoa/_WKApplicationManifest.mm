@@ -359,14 +359,14 @@ static std::optional<WebCore::ApplicationManifest::Shortcut> makeVectorElement(c
     return *_applicationManifest;
 }
 
-static NSString *nullableNSString(const WTF::String& string)
+static RetainPtr<NSString> nullableNSString(const WTF::String& string)
 {
-    return string.isNull() ? nil : (NSString *)string;
+    return !string.isNull() ? string.createNSString() : nil;
 }
 
 - (NSString *)rawJSON
 {
-    return nullableNSString(_applicationManifest->applicationManifest().rawJSON);
+    return nullableNSString(_applicationManifest->applicationManifest().rawJSON).autorelease();
 }
 
 - (_WKApplicationManifestDirection)direction
@@ -387,17 +387,17 @@ static NSString *nullableNSString(const WTF::String& string)
 
 - (NSString *)name
 {
-    return nullableNSString(_applicationManifest->applicationManifest().name);
+    return nullableNSString(_applicationManifest->applicationManifest().name).autorelease();
 }
 
 - (NSString *)shortName
 {
-    return nullableNSString(_applicationManifest->applicationManifest().shortName);
+    return nullableNSString(_applicationManifest->applicationManifest().shortName).autorelease();
 }
 
 - (NSString *)applicationDescription
 {
-    return nullableNSString(_applicationManifest->applicationManifest().description);
+    return nullableNSString(_applicationManifest->applicationManifest().description).autorelease();
 }
 
 - (NSURL *)scope

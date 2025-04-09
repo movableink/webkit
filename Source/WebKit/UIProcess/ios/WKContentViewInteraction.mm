@@ -4336,7 +4336,7 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(FORWARD_ACTION_TO_WKWEBVIEW)
 {
     if (!_page->editorState().postLayoutData)
         return nil;
-    return (NSString *)_page->editorState().postLayoutData->wordAtSelection;
+    return _page->editorState().postLayoutData->wordAtSelection.createNSString().autorelease();
 }
 
 - (NSArray *)alternativesForSelectedText

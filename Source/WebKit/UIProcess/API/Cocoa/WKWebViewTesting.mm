@@ -219,7 +219,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
         return contents;
 
 #if PLATFORM(IOS_FAMILY)
-    return [_contentView _contentsOfUserInterfaceItem:(NSString *)userInterfaceItem];
+    return [_contentView _contentsOfUserInterfaceItem:userInterfaceItem];
 #else
     return nil;
 #endif

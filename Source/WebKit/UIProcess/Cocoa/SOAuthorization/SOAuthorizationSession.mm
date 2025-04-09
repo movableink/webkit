@@ -238,9 +238,9 @@ void SOAuthorizationSession::continueStartAfterDecidePolicy(const SOAuthorizatio
         initiatorOrigin = m_navigationAction->sourceFrame()->securityOrigin().securityOrigin()->toString();
     if (m_action == InitiatingAction::SubFrame && m_page->mainFrame())
         initiatorOrigin = WebCore::SecurityOrigin::create(m_page->mainFrame()->url())->toString();
-    NSDictionary *authorizationOptions = @{
+    RetainPtr<NSDictionary> authorizationOptions = @{
         SOAuthorizationOptionUserActionInitiated: @(m_navigationAction->isProcessingUserGesture()),
-        SOAuthorizationOptionInitiatorOrigin: (NSString *)initiatorOrigin,
+        SOAuthorizationOptionInitiatorOrigin: initiatorOrigin.createNSString().get(),
         SOAuthorizationOptionInitiatingAction: @(static_cast<NSInteger>(m_action))
     };
 #if PLATFORM(IOS_FAMILY)
@@ -249,13 +249,13 @@ void SOAuthorizationSession::continueStartAfterDecidePolicy(const SOAuthorizatio
     if ([webViewUIDelegate respondsToSelector:@selector(_hostSceneIdentifierForWebView:)]) {
         NSString *callerSceneID = [webViewUIDelegate _hostSceneIdentifierForWebView:webView.get()];
         if (callerSceneID) {
-            NSMutableDictionary *mutableAuthorizationOptions = [authorizationOptions mutableCopy];
-            mutableAuthorizationOptions[@"callerSceneIdentifier"] = callerSceneID;
-            authorizationOptions = mutableAuthorizationOptions;
+            RetainPtr mutableAuthorizationOptions = adoptNS([authorizationOptions mutableCopy]);
+            mutableAuthorizationOptions.get()[@"callerSceneIdentifier"] = callerSceneID;
+            authorizationOptions = WTFMove(mutableAuthorizationOptions);
         }
     }
 #endif
-    [m_soAuthorization setAuthorizationOptions:authorizationOptions];
+    [m_soAuthorization setAuthorizationOptions:authorizationOptions.get()];
 
 #if PLATFORM(VISION)
     // rdar://130904577 - Investigate supporting embedded authorization view controller on visionOS.

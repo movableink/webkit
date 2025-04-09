@@ -66,12 +66,12 @@ void ResourceResponse::initNSURLResponse() const
     // FIXME: We lose the status text and the HTTP version here.
     RetainPtr headerDictionary = adoptNS([[NSMutableDictionary alloc] init]);
     for (auto& header : m_httpHeaderFields)
-        [headerDictionary setObject:(NSString *)header.value forKey:(NSString *)header.key];
+        [headerDictionary setObject:header.value.createNSString().get() forKey:header.key.createNSString().get()];
 
     m_nsResponse = adoptNS([[NSHTTPURLResponse alloc] initWithURL:m_url.createNSURL().get() statusCode:m_httpStatusCode HTTPVersion:(NSString*)kCFHTTPVersion1_1 headerFields:headerDictionary.get()]);
 
     // Mime type sniffing doesn't work with a synthesized response.
-    [m_nsResponse _setMIMEType:(NSString *)m_mimeType];
+    [m_nsResponse _setMIMEType:m_mimeType.createNSString().get()];
 }
 
 void ResourceResponse::disableLazyInitialization()

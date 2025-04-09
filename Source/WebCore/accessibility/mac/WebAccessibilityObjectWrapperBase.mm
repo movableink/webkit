@@ -393,7 +393,7 @@ NSArray *makeNSArray(const WebCore::AXCoreObject::AccessibilityChildrenVector& c
 
 - (NSArray<NSString *> *)baseAccessibilitySpeechHint
 {
-    return [(NSString *)self.axBackingObject->speechHint() componentsSeparatedByString:@" "];
+    return [self.axBackingObject->speechHint().createNSString() componentsSeparatedByString:@" "];
 }
 
 #if HAVE(ACCESSIBILITY_FRAMEWORK)
@@ -717,13 +717,13 @@ std::optional<SimpleRange> makeDOMRange(Document* document, NSRange range)
     auto editingStyles = axObject->resolvedEditingStyles();
     for (String& key : editingStyles.keys()) {
         auto value = editingStyles.get(key);
-        id result = WTF::switchOn(value,
-            [] (String& typedValue) -> id { return (NSString *)typedValue; },
-            [] (bool& typedValue) -> id { return @(typedValue); },
-            [] (int& typedValue) -> id { return @(typedValue); },
+        RetainPtr result = WTF::switchOn(value,
+            [] (String& typedValue) -> RetainPtr<id> { return typedValue.createNSString(); },
+            [] (bool& typedValue) -> RetainPtr<id> { return @(typedValue); },
+            [] (int& typedValue) -> RetainPtr<id> { return @(typedValue); },
             [] (auto&) { return nil; }
         );
-        results[(NSString *)key] = result;
+        results[key.createNSString().get()] = result.get();
     }
     return results;
 }

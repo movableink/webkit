@@ -573,7 +573,7 @@ RetainPtr<NSObject<NSSecureCoding>> Object::toNSObject()
     case Object::Type::Data:
         return API::wrapper(downcast<API::Data>(*this));
     case Object::Type::String:
-        return (NSString *)downcast<API::String>(*this).string();
+        return downcast<API::String>(*this).string().createNSString();
     default:
         // Other API::Object::Types are intentionally not supported.
         break;

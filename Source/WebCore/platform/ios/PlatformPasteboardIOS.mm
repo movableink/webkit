@@ -448,7 +448,7 @@ static void addRepresentationsForPlainText(WebItemProviderRegistrationInfoList *
         [itemsToRegister addRepresentingObject:platformURL];
 
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    [itemsToRegister addData:[(NSString *)plainText dataUsingEncoding:NSUTF8StringEncoding] forType:(NSString *)kUTTypeUTF8PlainText];
+    [itemsToRegister addData:[plainText.createNSString() dataUsingEncoding:NSUTF8StringEncoding] forType:bridge_cast(kUTTypeUTF8PlainText)];
 ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
@@ -491,14 +491,14 @@ void PlatformPasteboard::write(const PasteboardWebContent& content)
 
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     if (content.dataInRTFDFormat)
-        [representationsToRegister addData:content.dataInRTFDFormat->createNSData().get() forType:(NSString *)kUTTypeFlatRTFD];
+        [representationsToRegister addData:content.dataInRTFDFormat->createNSData().get() forType:bridge_cast(kUTTypeFlatRTFD)];
 
     if (content.dataInRTFFormat)
-        [representationsToRegister addData:content.dataInRTFFormat->createNSData().get() forType:(NSString *)kUTTypeRTF];
+        [representationsToRegister addData:content.dataInRTFFormat->createNSData().get() forType:bridge_cast(kUTTypeRTF)];
 
     if (!content.dataInHTMLFormat.isEmpty()) {
-        NSData *htmlAsData = [(NSString *)content.dataInHTMLFormat dataUsingEncoding:NSUTF8StringEncoding];
-        [representationsToRegister addData:htmlAsData forType:(NSString *)kUTTypeHTML];
+        NSData *htmlAsData = [content.dataInHTMLFormat.createNSString() dataUsingEncoding:NSUTF8StringEncoding];
+        [representationsToRegister addData:htmlAsData forType:bridge_cast(kUTTypeHTML)];
     }
 ALLOW_DEPRECATED_DECLARATIONS_END
 
@@ -525,7 +525,7 @@ void PlatformPasteboard::write(const PasteboardImage& pasteboardImage)
             utiOrMIMEType = UTIFromMIMEType(utiOrMIMEType);
 
         auto imageData = pasteboardImage.resourceData->makeContiguous()->createNSData();
-        [representationsToRegister addData:imageData.get() forType:(NSString *)utiOrMIMEType];
+        [representationsToRegister addData:imageData.get() forType:utiOrMIMEType.createNSString().get()];
         [representationsToRegister setPreferredPresentationSize:pasteboardImage.imageSize];
         [representationsToRegister setSuggestedName:pasteboardImage.suggestedName];
     }
@@ -536,7 +536,7 @@ void PlatformPasteboard::write(const PasteboardImage& pasteboardImage)
     auto& pasteboardURL = pasteboardImage.url;
     if (RetainPtr nsURL = pasteboardURL.url.createNSURL()) {
 #if HAVE(NSURL_TITLE)
-        [nsURL _web_setTitle:pasteboardURL.title.isEmpty() ? WTF::userVisibleString(pasteboardURL.url.createNSURL().get()) : (NSString *)pasteboardURL.title];
+        [nsURL _web_setTitle:pasteboardURL.title.isEmpty() ? WTF::userVisibleString(pasteboardURL.url.createNSURL().get()) : pasteboardURL.title.createNSString().get()];
 #endif
         [representationsToRegister addRepresentingObject:nsURL.get()];
     }
@@ -574,7 +574,7 @@ void PlatformPasteboard::write(const PasteboardURL& url)
             [nsURL _web_setTitle:url.title];
 #endif
         [representationsToRegister addRepresentingObject:nsURL.get()];
-        [representationsToRegister addRepresentingObject:(NSString *)url.url.string()];
+        [representationsToRegister addRepresentingObject:url.url.string().createNSString().get()];
     }
 
     registerItemToPasteboard(representationsToRegister.get(), m_pasteboard.get());
@@ -596,10 +596,10 @@ Vector<String> PlatformPasteboard::typesSafeForDOMToReadAndWrite(const String& o
         if (![teamDataObject isKindOfClass:NSDictionary.class])
             continue;
 
-        id originInTeamData = [teamDataObject objectForKey:@(originKeyForTeamData)];
-        if (![originInTeamData isKindOfClass:NSString.class])
+        RetainPtr originInTeamData = dynamic_objc_cast<NSString>([teamDataObject objectForKey:@(originKeyForTeamData)]);
+        if (!originInTeamData)
             continue;
-        if (String((NSString *)originInTeamData) != origin)
+        if (String(originInTeamData.get()) != origin)
             continue;
 
         id customTypes = [teamDataObject objectForKey:@(customTypesKeyForTeamData)];
@@ -670,13 +670,13 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             else if (UTTypeConformsTo(cfType.get(), kUTTypePlainText))
                 [representationsToRegister addRepresentingObject:nsStringValue];
             else
-                [representationsToRegister addData:[nsStringValue dataUsingEncoding:NSUTF8StringEncoding] forType:(NSString *)cocoaType];
+                [representationsToRegister addData:[nsStringValue dataUsingEncoding:NSUTF8StringEncoding] forType:cocoaType.createNSString().get()];
 ALLOW_DEPRECATED_DECLARATIONS_END
             return;
         }
 
         auto buffer = std::get<Ref<SharedBuffer>>(value);
-        [representationsToRegister addData:buffer->createNSData().get() forType:(NSString *)cocoaType];
+        [representationsToRegister addData:buffer->createNSData().get() forType:cocoaType.createNSString().get()];
     });
 
     return representationsToRegister;

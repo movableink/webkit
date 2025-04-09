@@ -251,7 +251,7 @@ String DragData::asPlainText() const
         return WTF::userVisibleString([NSURL URLWithString:string]);
 
     // FIXME: WTF should offer a non-Mac-specific way to convert string to precomposed form so we can do it for all platforms.
-    return [(NSString *)string precomposedStringWithCanonicalMapping];
+    return [string.createNSString() precomposedStringWithCanonicalMapping];
 }
 
 Color DragData::asColor() const

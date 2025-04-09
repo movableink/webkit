@@ -198,14 +198,16 @@
 
 - (NSString *)_web_decodeHostName
 {
-    NSString *name = WTF::decodeHostName(self);
-    return !name ? self : name;
+    if (RetainPtr name = WTF::decodeHostName(self))
+        return name.autorelease();
+    return self;
 }
 
 - (NSString *)_web_encodeHostName
 {
-    NSString *name = WTF::encodeHostName(self);
-    return !name ? self : name;
+    if (RetainPtr name = WTF::encodeHostName(self))
+        return name.autorelease();
+    return self;
 }
 
 - (NSString *)_webkit_decodeHostName

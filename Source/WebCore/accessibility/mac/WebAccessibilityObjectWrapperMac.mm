@@ -1330,7 +1330,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
             [] (bool& typedValue) -> id { return @(typedValue); },
             [] (unsigned& typedValue) -> id { return @(typedValue); },
             [] (float& typedValue) -> id { return @(typedValue); },
-            [] (String& typedValue) -> id { return (NSString *)typedValue; },
+            [] (String& typedValue) -> id { return typedValue.createNSString().autorelease(); },
             [&backingObject] (WallTime& typedValue) -> id {
                 NSInteger offset = gmtToLocalTimeOffset(backingObject->dateTimeComponentsType());
                 auto time = typedValue.secondsSinceEpoch().value();
@@ -1346,7 +1346,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     if ([attributeName isEqualToString:NSAccessibilityDateTimeComponentsAttribute])
         return @(convertToAXFDateTimeComponents(backingObject->dateTimeComponentsType()));
 
-    if ([attributeName isEqualToString:(NSString *)kAXMenuItemMarkCharAttribute]) {
+    if ([attributeName isEqualToString:bridge_cast(kAXMenuItemMarkCharAttribute)]) {
         const unichar ch = 0x2713; // ✓ used on Mac for selected menu items.
         return (backingObject->isChecked()) ? [NSString stringWithCharacters:&ch length:1] : nil;
     }
@@ -3441,22 +3441,22 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     }
 
     if (backingObject->isTextControl()) {
-        if ([attribute isEqualToString: (NSString *)kAXLineForIndexParameterizedAttribute]) {
+        if ([attribute isEqualToString: bridge_cast(kAXLineForIndexParameterizedAttribute)]) {
             int lineNumber = backingObject->doAXLineForIndex([number intValue]);
             if (lineNumber < 0)
                 return nil;
             return @(lineNumber);
         }
 
-        if ([attribute isEqualToString:(NSString *)kAXRangeForLineParameterizedAttribute]) {
+        if ([attribute isEqualToString:bridge_cast(kAXRangeForLineParameterizedAttribute)]) {
             auto textRange = backingObject->doAXRangeForLine([number intValue]);
             return [NSValue valueWithRange:textRange];
         }
 
-        if ([attribute isEqualToString:(NSString *)kAXStringForRangeParameterizedAttribute])
+        if ([attribute isEqualToString:bridge_cast(kAXStringForRangeParameterizedAttribute)])
             return rangeSet ? (id)backingObject->doAXStringForRange(range) : nil;
 
-        if ([attribute isEqualToString:(NSString *)kAXRangeForPositionParameterizedAttribute]) {
+        if ([attribute isEqualToString:bridge_cast(kAXRangeForPositionParameterizedAttribute)]) {
             if (!pointSet)
                 return nil;
 
@@ -3465,12 +3465,12 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
             return [NSValue valueWithRange:textRange];
         }
 
-        if ([attribute isEqualToString:(NSString *)kAXRangeForIndexParameterizedAttribute]) {
+        if ([attribute isEqualToString:bridge_cast(kAXRangeForIndexParameterizedAttribute)]) {
             auto textRange = backingObject->doAXRangeForIndex([number intValue]);
             return [NSValue valueWithRange:textRange];
         }
 
-        if ([attribute isEqualToString:(NSString *)kAXBoundsForRangeParameterizedAttribute]) {
+        if ([attribute isEqualToString:bridge_cast(kAXBoundsForRangeParameterizedAttribute)]) {
             if (!rangeSet)
                 return nil;
 
@@ -3479,13 +3479,13 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
             return [NSValue valueWithRect:rect];
         }
 
-        if ([attribute isEqualToString:(NSString *)kAXRTFForRangeParameterizedAttribute])
+        if ([attribute isEqualToString:bridge_cast(kAXRTFForRangeParameterizedAttribute)])
             return rangeSet ? rtfForNSRange(*backingObject, range) : nil;
 
-        if ([attribute isEqualToString:(NSString *)kAXAttributedStringForRangeParameterizedAttribute])
+        if ([attribute isEqualToString:bridge_cast(kAXAttributedStringForRangeParameterizedAttribute)])
             return rangeSet ? attributedStringForNSRange(*backingObject, range) : nil;
 
-        if ([attribute isEqualToString:(NSString *)kAXStyleRangeForIndexParameterizedAttribute]) {
+        if ([attribute isEqualToString:bridge_cast(kAXStyleRangeForIndexParameterizedAttribute)]) {
             auto textRange = backingObject->doAXStyleRangeForIndex([number intValue]);
             return [NSValue valueWithRange:textRange];
         }
