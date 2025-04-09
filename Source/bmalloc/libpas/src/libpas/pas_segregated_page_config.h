@@ -137,6 +137,10 @@ struct pas_segregated_page_config {
     /* Sharing granule size expressed as a shift. The sweet spot is PAS_BITVECTOR_WORD_SHIFT if
        you want perf. */
     uint8_t sharing_shift;
+
+    /* Padding to insert between partial views in the page, in bytes.
+     * Aligned to PAS_PARTIAL_VIEW_PADDING_ALIGN bytes. */
+    uint8_t partial_view_padding;
     
     /* Number of bits needed for alloc bits. This ends up impacting the size of the page header,
        so this value needs to be set in a way that is compatible with page_size, payload_size,

@@ -618,6 +618,7 @@ pas_local_allocator_start_allocating_in_primordial_partial_view(
     static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_OTHER);
     
     unsigned size;
+    unsigned effective_minimum_size;
     unsigned alignment;
 
     PAS_ASSERT(page_config.base.is_enabled);
@@ -627,6 +628,8 @@ pas_local_allocator_start_allocating_in_primordial_partial_view(
 
     size = allocator->object_size;
     alignment = (unsigned)pas_local_allocator_alignment(allocator);
+    effective_minimum_size = pas_segregated_shared_view_compute_minimum_size_for_bump(
+        size, page_config);
     
     for (;;) {
         pas_segregated_shared_view* shared_view;
@@ -641,7 +644,7 @@ pas_local_allocator_start_allocating_in_primordial_partial_view(
         shared_page_directory = page_config.shared_page_directory_selector(heap, size_directory);
         
         shared_view = pas_segregated_shared_page_directory_find_first_eligible(
-            shared_page_directory, size, alignment, pas_lock_is_not_held);
+            shared_page_directory, effective_minimum_size, alignment, pas_lock_is_not_held);
 
         PAS_ASSERT(shared_view);
         

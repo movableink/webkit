@@ -66,6 +66,12 @@
 /* Use VA-based memory zeroing when the allocation size exceeds this threshold. */
 #define PAS_VA_BASED_ZERO_MEMORY_SHIFT   24
 
+/* Default amount of padding between backing allocations of different partial views within a
+ * single segregated shared page. Most useful for heaps which allocate user-facing objects. */
+#define PAS_SMALL_PARTIAL_VIEW_PADDING   16
+#define PAS_MEDIUM_PARTIAL_VIEW_PADDING  0
+#define PAS_PARTIAL_VIEW_PADDING_ALIGN   16
+
 /* This is the same as PAS_BITVECTOR_WORD_SHIFT, which is a nice performance optimization but
    isn't necessary. It's a performance optimization because there are specialized fast code
    paths for sharing_shift == PAS_BITVECTOR_WORD_SHIFT. */
