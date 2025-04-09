@@ -1801,9 +1801,6 @@ fast/flexbox/overhanging-floats-removed.html [ Failure ]
 fast/forms/autofocus-opera-003.html [ Failure ]
 fast/forms/button-with-float.html [ ImageOnlyFailure ]
 
-# <rdar://122127465>
-fast/forms/ios/focus-input-in-fixed.html [ Pass Crash ]
-
 fast/forms/datalist/input-list.html [ Failure ]
 fast/forms/fieldset-legend-padding-unclipped-fieldset-border.html [ Failure ]
 fast/forms/fieldset-with-float.html [ Failure ]
@@ -4530,9 +4527,7 @@ fast/images/hdr-pseudo-before-image.html [ Pass ]
 fast/images/hdr-svg-inline-image.html [ Pass ]
 
 # Re-enabling tests fixed by DocumentManager in iOS16+ rdar://102159271
-fast/forms/ios/file-upload-panel-capture.html [ Pass Crash ] # remove crash after this is resolved: webkit.org/b/268568
 fast/forms/ios/show-file-upload-context-menu-above-keyboard.html [ Pass ]
-fast/forms/ios/file-upload-panel-accept.html [ Pass ]
 
 # rdar://110034620 (REGRESSION ( iOS17 ): [ iOS17 ] compositing/clipping/nested-overflow-with-border-radius.html is a consistent image failure)
 compositing/clipping/nested-overflow-with-border-radius.html [ ImageOnlyFailure ]
@@ -7680,8 +7675,6 @@ webkit.org/b/286318 http/tests/iframe-monitor [ Pass ]
 # webkit.org/b/286934 [ Debug ] ipc/create-media-source-with-invalid-constraints-crash.html [ Skip ]
 
 webkit.org/b/287291 http/tests/site-isolation/selection-focus.html [ ImageOnlyFailure ]
-
-webkit.org/b/287660 fast/forms/ios/file-upload-panel.html [ Pass Crash ]
 
 webkit.org/b/287672 imported/w3c/web-platform-tests/css/css-cascade/all-prop-initial-xml.html [ Failure ]
 
