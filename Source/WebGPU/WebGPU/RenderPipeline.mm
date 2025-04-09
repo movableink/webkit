@@ -1526,7 +1526,8 @@ std::pair<Ref<RenderPipeline>, NSString*> Device::createRenderPipeline(const WGP
     RELEASE_ASSERT([mtlRenderPipelineDescriptor respondsToSelector:@selector(setSampleMask:)]);
     uint32_t sampleMask = RenderBundleEncoder::defaultSampleMask;
     if (auto mask = descriptor.multisample.mask; mask != sampleMask) {
-        [mtlRenderPipelineDescriptor setSampleMask:mask];
+        if (!usesSampleMask)
+            [mtlRenderPipelineDescriptor setSampleMask:mask];
         sampleMask = mask;
     }
 

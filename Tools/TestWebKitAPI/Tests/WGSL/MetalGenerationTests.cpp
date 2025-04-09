@@ -112,7 +112,7 @@ using __UnpackedType = typename __UnpackedTypeImpl<T>::Type;
 template<typename T>
 using __PackedType = typename __PackedTypeImpl<T>::Type;
 
-[[fragment]] void function0(vec<float, 4> parameter0 [[position]], unsigned parameter1 [[sample_id]], unsigned parameter2 [[sample_mask]])
+[[fragment]] void function0(vec<float, 4> parameter0 [[position]], unsigned parameter1 [[sample_id]], unsigned parameter2 [[sample_mask]], const constant unsigned* __DynamicOffsets [[buffer(8)]])
 {
     vec<float, 4> local0 = parameter0;
     unsigned local1 = (parameter1 + parameter2);
