@@ -1265,7 +1265,7 @@ bool LineLayout::insertedIntoTree(const RenderElement& parent, RenderObject& chi
 bool LineLayout::removedFromTree(const RenderElement& parent, RenderObject& child)
 {
     if (!child.everHadLayout()) {
-        BoxTreeUpdater { flow() }.remove(parent, child);
+        ensureLineDamage().addDetachedBox(BoxTreeUpdater { flow() }.remove(parent, child));
         return false;
     }
 
