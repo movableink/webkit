@@ -3,7 +3,7 @@
 import hashlib
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs
 
 file = __file__.split(':/cygwin')[-1]
@@ -12,7 +12,7 @@ sys.path.insert(0, http_root)
 
 from resources.portabilityLayer import get_cookies
 
-current_time = datetime.utcnow()
+current_time = datetime.now(timezone.utc)
 expires = current_time + timedelta(seconds=1)
 
 query = parse_qs(os.environ.get('QUERY_STRING', ''), keep_blank_values=True)

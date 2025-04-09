@@ -5,7 +5,7 @@
 import os
 import sys
 from datetime import datetime
-from datetime import timedelta
+from datetime import timedelta, timezone
 from urllib.parse import parse_qs
 
 sys.stdout.write(
@@ -14,12 +14,12 @@ sys.stdout.write(
     'Last-Modified: {modified} GMT\r\n'
     'Pragma: no-cache\r\n'
     'Etag: "{size}-{mtime}"\r\n'
-    'Content-Type: application/x-mpegurl\r\n\r\n'.format(modified=datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S'), size=os.path.getsize(__file__), mtime=os.stat(__file__).st_mtime)
+    'Content-Type: application/x-mpegurl\r\n\r\n'.format(modified=datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S'), size=os.path.getsize(__file__), mtime=os.stat(__file__).st_mtime)
 )
 
 chunk_duration = 6.0272
 chunk_count = 5
-chunk_time = datetime.utcnow()
+chunk_time = datetime.now(timezone.utc)
 
 sys.stdout.write(
     '#EXTM3U\n'

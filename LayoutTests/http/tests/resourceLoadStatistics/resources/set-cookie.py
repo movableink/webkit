@@ -2,7 +2,7 @@
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs
 
 query = parse_qs(os.environ.get('QUERY_STRING', ''), keep_blank_values=True)
@@ -14,7 +14,7 @@ partitioned = ""
 if isPartitioned is not None and isPartitioned:
     partitioned = "Partitioned; "
 
-expires = datetime.utcnow() + timedelta(seconds=60*60*24*30)
+expires = datetime.now(timezone.utc) + timedelta(seconds=60*60*24*30)
 
 sys.stdout.write(
     'Set-Cookie: {name}={value}; expires={expires} GMT; Max-Age=2592000; SameSite=None; Secure; {partitioned}path=/\r\n'
