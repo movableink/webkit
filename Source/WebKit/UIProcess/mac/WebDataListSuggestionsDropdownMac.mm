@@ -170,6 +170,14 @@ void WebDataListSuggestionsDropdownMac::close()
     return NSWindowShadowSecondaryWindow;
 }
 
+#if ENABLE(WINDOW_ADJUSTMENT_FOR_DATALIST_DROPDOWN)
+#import <WebKitAdditions/WebDataListSuggestionsDropdownMacAdditions.mm>
+#else
+- (void)adjustWindowIfNeeded
+{
+}
+#endif
+
 @end
 
 @implementation WKDataListSuggestionView {
@@ -343,6 +351,7 @@ static BOOL shouldShowDividersBetweenCells(const Vector<WebCore::DataListSuggest
     [_enclosingWindow setMovable:NO];
     [_enclosingWindow setBackgroundColor:[NSColor clearColor]];
     [_enclosingWindow setOpaque:NO];
+    [_enclosingWindow adjustWindowIfNeeded];
 
     _scrollView = adoptNS([[NSScrollView alloc] initWithFrame:[_enclosingWindow contentView].bounds]);
     [_scrollView setHasVerticalScroller:YES];
