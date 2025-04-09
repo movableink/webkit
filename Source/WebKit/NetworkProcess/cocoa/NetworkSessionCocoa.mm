@@ -1563,7 +1563,7 @@ void NetworkSessionCocoa::notifyAdAttributionKitOfSessionTermination()
     if (m_donatedEphemeralImpressionSessionID) {
         // FIXME: Remove this respondsToSelector check in 2026 or so.
         if ([ASDInstallWebAttributionService.sharedInstance respondsToSelector:@selector(removeInstallWebAttributionParamsFromPrivateBrowsingSessionID:completionHandler:)])
-            [ASDInstallWebAttributionService.sharedInstance removeInstallWebAttributionParamsFromPrivateBrowsingSessionID:*m_donatedEphemeralImpressionSessionID completionHandler:^(NSError *) { }];
+            [ASDInstallWebAttributionService.sharedInstance removeInstallWebAttributionParamsFromPrivateBrowsingSessionID:m_donatedEphemeralImpressionSessionID->createNSUUID().get() completionHandler:^(NSError *) { }];
     }
 #endif
 }
@@ -2257,7 +2257,7 @@ void NetworkSessionCocoa::donateToSKAdNetwork(WebCore::PrivateClickMeasurement&&
 
         // FIXME: Remove this respondsToSelector check in 2026 or so.
         if ([config respondsToSelector:@selector(privateBrowsingSessionId)])
-            config.get().privateBrowsingSessionId = *m_donatedEphemeralImpressionSessionID;
+            config.get().privateBrowsingSessionId = m_donatedEphemeralImpressionSessionID->createNSUUID().get();
     }
 #endif // HAVE(AD_ATTRIBUTION_KIT_PRIVATE_BROWSING)
 #if HAVE(ASD_INSTALL_WEB_ATTRIBUTION_SERVICE)

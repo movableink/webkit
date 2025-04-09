@@ -66,7 +66,7 @@ public:
     WTF_EXPORT_PRIVATE static UUID createVersion5(UUID, std::span<const uint8_t>);
 
 #ifdef __OBJC__
-    WTF_EXPORT_PRIVATE operator NSUUID *() const;
+    WTF_EXPORT_PRIVATE RetainPtr<NSUUID> createNSUUID() const;
     WTF_EXPORT_PRIVATE static std::optional<UUID> fromNSUUID(NSUUID *);
 #endif
 

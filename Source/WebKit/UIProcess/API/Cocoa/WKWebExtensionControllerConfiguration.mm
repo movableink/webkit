@@ -160,7 +160,7 @@ WK_OBJECT_DEALLOC_IMPL_ON_MAIN_THREAD(WKWebExtensionControllerConfiguration, Web
 - (NSUUID *)identifier
 {
     if (auto identifier = self._protectedWebExtensionControllerConfiguration->identifier())
-        return identifier.value();
+        return identifier.value().createNSUUID().autorelease();
     return nil;
 }
 

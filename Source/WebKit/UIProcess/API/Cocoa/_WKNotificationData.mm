@@ -219,7 +219,7 @@ static NSString *dataKey = @"data";
 
 - (NSUUID *)uuid
 {
-    return (NSUUID *)_coreData.notificationID;
+    return (NSUUID *)_coreData.notificationID.createNSUUID().autorelease();
 }
 
 - (NSDictionary *)userInfo

@@ -853,7 +853,7 @@ static WebKit::UnifiedOriginStorageLevel toUnifiedOriginStorageLevel(_WKUnifiedO
     if (!currentIdentifier)
         return nullptr;
 
-    return *currentIdentifier;
+    return currentIdentifier->createNSUUID().autorelease();
 }
 
 - (API::Object&)_apiObject

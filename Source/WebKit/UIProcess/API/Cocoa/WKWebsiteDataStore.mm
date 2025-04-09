@@ -645,7 +645,7 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
     WebKit::WebsiteDataStore::fetchAllDataStoreIdentifiers([completionHandlerCopy](auto&& identifiers) {
         auto result = adoptNS([[NSMutableArray alloc] initWithCapacity:identifiers.size()]);
         for (auto identifier : identifiers)
-            [result addObject:(NSUUID *)identifier];
+            [result addObject:identifier.createNSUUID().get()];
 
         completionHandlerCopy(result.autorelease());
     });
@@ -1355,7 +1355,7 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
     if (!identifier)
         return nil;
 
-    return *identifier;
+    return identifier->createNSUUID().autorelease();
 }
 
 - (NSString *)_webPushPartition

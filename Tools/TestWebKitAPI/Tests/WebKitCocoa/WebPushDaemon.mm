@@ -921,7 +921,7 @@ public:
 
         RetainPtr<_WKWebsiteDataStoreConfiguration> dataStoreConfiguration;
         if (dataStoreIdentifier)
-            dataStoreConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] initWithIdentifier:*dataStoreIdentifier]);
+            dataStoreConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] initWithIdentifier:dataStoreIdentifier->createNSUUID().get()]);
         else
             dataStoreConfiguration = adoptNS([_WKWebsiteDataStoreConfiguration new]);
         [dataStoreConfiguration setWebPushPartitionString:pushPartition];

@@ -104,7 +104,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 
 - (NSUUID *)_documentIdentifier
 {
-    return _frameInfo->documentID()->object();
+    return _frameInfo->documentID()->object().createNSUUID().autorelease();
 }
 
 - (pid_t)_processIdentifier

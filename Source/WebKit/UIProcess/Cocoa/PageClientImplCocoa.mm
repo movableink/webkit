@@ -282,12 +282,12 @@ WindowKind PageClientImplCocoa::windowKind()
 #if ENABLE(WRITING_TOOLS)
 void PageClientImplCocoa::proofreadingSessionShowDetailsForSuggestionWithIDRelativeToRect(const WebCore::WritingTools::TextSuggestion::ID& replacementID, WebCore::IntRect selectionBoundsInRootView)
 {
-    [m_webView _proofreadingSessionShowDetailsForSuggestionWithUUID:replacementID relativeToRect:selectionBoundsInRootView];
+    [m_webView _proofreadingSessionShowDetailsForSuggestionWithUUID:replacementID.createNSUUID().get() relativeToRect:selectionBoundsInRootView];
 }
 
 void PageClientImplCocoa::proofreadingSessionUpdateStateForSuggestionWithID(WebCore::WritingTools::TextSuggestion::State state, const WebCore::WritingTools::TextSuggestion::ID& replacementID)
 {
-    [m_webView _proofreadingSessionUpdateState:state forSuggestionWithUUID:replacementID];
+    [m_webView _proofreadingSessionUpdateState:state forSuggestionWithUUID:replacementID.createNSUUID().get()];
 }
 
 static NSString *writingToolsActiveKey = @"writingToolsActive";
@@ -314,12 +314,12 @@ bool PageClientImplCocoa::writingToolsTextReplacementsFinished()
 
 void PageClientImplCocoa::addTextAnimationForAnimationID(const WTF::UUID& uuid, const WebCore::TextAnimationData& data)
 {
-    [m_webView _addTextAnimationForAnimationID:uuid withData:data];
+    [m_webView _addTextAnimationForAnimationID:uuid.createNSUUID().get() withData:data];
 }
 
 void PageClientImplCocoa::removeTextAnimationForAnimationID(const WTF::UUID& uuid)
 {
-    [m_webView _removeTextAnimationForAnimationID:uuid];
+    [m_webView _removeTextAnimationForAnimationID:uuid.createNSUUID().get()];
 }
 
 #endif

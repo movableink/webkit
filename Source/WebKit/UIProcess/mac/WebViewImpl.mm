@@ -4811,7 +4811,7 @@ void WebViewImpl::addTextAnimationForAnimationID(WTF::UUID uuid, const WebCore::
     if (!m_textAnimationTypeManager)
         m_textAnimationTypeManager = adoptNS([[WKTextAnimationManager alloc] initWithWebViewImpl:*this]);
 
-    [m_textAnimationTypeManager addTextAnimationForAnimationID:uuid withData:data];
+    [m_textAnimationTypeManager addTextAnimationForAnimationID:uuid.createNSUUID().get() withData:data];
 }
 
 void WebViewImpl::removeTextAnimationForAnimationID(WTF::UUID uuid)
@@ -4819,7 +4819,7 @@ void WebViewImpl::removeTextAnimationForAnimationID(WTF::UUID uuid)
     if (!m_page->preferences().textAnimationsEnabled())
         return;
 
-    [m_textAnimationTypeManager removeTextAnimationForAnimationID:uuid];
+    [m_textAnimationTypeManager removeTextAnimationForAnimationID:uuid.createNSUUID().get()];
 }
 
 void WebViewImpl::hideTextAnimationView()
