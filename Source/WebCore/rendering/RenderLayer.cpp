@@ -1045,6 +1045,9 @@ OptionSet<RenderLayer::UpdateLayerPositionsFlag> RenderLayer::flagsForUpdateLaye
         if (parent->behavesAsFixed() || (parent->renderer().isFixedPositioned() && !parent->hasFixedContainingBlockAncestor()))
             flags.add(SeenFixedLayer);
 
+        if (parent->renderer().isStickilyPositioned())
+            flags.add(SeenStickyLayer);
+
         if (parent->hasCompositedScrollingAncestor() || parent->hasCompositedScrollableOverflow())
             flags.add(SeenCompositedScrollingLayer);
     }
@@ -1302,6 +1305,7 @@ void RenderLayer::recursiveUpdateLayerPositions(OptionSet<UpdateLayerPositionsFl
     UPDATE_OR_VERIFY_STATE_BIT(m_hasTransformedAncestor, flags.contains(SeenTransformedLayer));
     UPDATE_OR_VERIFY_STATE_BIT(m_has3DTransformedAncestor, flags.contains(Seen3DTransformedLayer));
     UPDATE_OR_VERIFY_STATE_BIT(m_hasFixedAncestor, flags.contains(SeenFixedLayer));
+    UPDATE_OR_VERIFY_STATE_BIT(m_hasStickyAncestor, flags.contains(SeenStickyLayer))
     UPDATE_OR_VERIFY_STATE_BIT(m_hasPaginatedAncestor, flags.contains(UpdatePagination));
     UPDATE_OR_VERIFY_STATE_BIT(m_hasCompositedScrollingAncestor, flags.contains(SeenCompositedScrollingLayer));
 #undef UPDATE_OR_VERIFY_STATE_BIT
@@ -1331,6 +1335,9 @@ void RenderLayer::recursiveUpdateLayerPositions(OptionSet<UpdateLayerPositionsFl
         setBehavesAsFixed(true);
         flags.add(SeenFixedLayer);
     }
+
+    if (m_hasStickyAncestor || renderer().isStickilyPositioned())
+        flags.add(SeenStickyLayer);
 
     if (hasCompositedScrollableOverflow())
         flags.add(SeenCompositedScrollingLayer);
@@ -3635,8 +3642,7 @@ void RenderLayer::paintLayerContents(GraphicsContext& context, const LayerPainti
         if (!paintingInfo.paintBehavior.contains(PaintBehavior::FixedAndStickyLayersOnly))
             return false;
 
-        // FIXME: This should also account for stickily-positioned ancestors.
-        if (hasFixedAncestor())
+        if (hasFixedAncestor() || m_hasStickyAncestor)
             return false;
 
         if (isViewportConstrained())
@@ -4649,7 +4655,7 @@ RenderLayer::HitLayer RenderLayer::hitTestLayer(RenderLayer* rootLayer, RenderLa
         if (!request.isForFixedContainerSampling())
             return false;
 
-        if (!m_hasViewportConstrainedDescendant && !isViewportConstrained() && !hasFixedAncestor())
+        if (!m_hasViewportConstrainedDescendant && !isViewportConstrained() && !hasFixedAncestor() && !m_hasStickyAncestor)
             return true;
 
         if (hasCompositedScrollableOverflow() && !renderer().hasBackground())

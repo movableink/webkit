@@ -1924,7 +1924,7 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
     TraceScope tracingScope { FixedContainerEdgeSamplingStart, FixedContainerEdgeSamplingEnd };
 
     static constexpr auto sampleRectThickness = 2;
-    static constexpr auto sampleRectMargin = 2;
+    static constexpr auto sampleRectMargin = 4;
     static constexpr auto thinBorderWidth = 10;
 
     struct FixedContainerResult {

@@ -1062,7 +1062,7 @@ private:
 
     void willUpdateLayerPositions();
 
-    enum UpdateLayerPositionsFlag {
+    enum UpdateLayerPositionsFlag : uint16_t {
         CheckForRepaint                     = 1 << 0,
         NeedsFullRepaintInBacking           = 1 << 1,
         ContainingClippingLayerChangedSize  = 1 << 2,
@@ -1074,6 +1074,7 @@ private:
         SeenCompositedScrollingLayer        = 1 << 8,
         SubtreeNeedsUpdate                  = 1 << 9,
         EnvironmentChanged                  = 1 << 10,
+        SeenStickyLayer                     = 1 << 11,
     };
     static OptionSet<UpdateLayerPositionsFlag> flagsForUpdateLayerPositions(RenderLayer& startingLayer);
 
@@ -1363,6 +1364,7 @@ private:
     bool m_hasTransformedAncestor : 1;
     bool m_has3DTransformedAncestor : 1;
 
+    bool m_hasStickyAncestor : 1 { false };
     bool m_hasFixedAncestor : 1 { false };
     bool m_hasPaginatedAncestor : 1 { false };
 
