@@ -26,10 +26,7 @@
 #import "config.h"
 #import "TestsController.h"
 #import <wtf/RetainPtr.h>
-
-#if !defined(BUILDING_TEST_IPC) && !defined(BUILDING_TEST_WTF) && !defined(BUILDING_TEST_WGSL)
-#import <WebKit/WKProcessPoolPrivate.h>
-#endif
+#import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 
 extern "C" void _BeginEventReceiptOnThread(void);
 
@@ -73,9 +70,7 @@ int main(int argc, char** argv)
         [argumentDomain addEntriesFromDictionary:argumentDefaults.get()];
         [[NSUserDefaults standardUserDefaults] setVolatileDomain:argumentDomain.get() forName:NSArgumentDomain];
 
-#if !defined(BUILDING_TEST_IPC) && !defined(BUILDING_TEST_WTF) && !defined(BUILDING_TEST_WGSL)
-        [WKProcessPool _setLinkedOnOrAfterEverythingForTesting];
-#endif
+        enableAllSDKAlignedBehaviors();
 
         [NSApplication sharedApplication];
         _BeginEventReceiptOnThread(); // Makes window visibility notifications work (and possibly more).

@@ -27,10 +27,7 @@
 #import "TestsController.h"
 #import "UIKitMacHelperSPI.h"
 #import <wtf/RetainPtr.h>
-
-#if !defined(BUILDING_TEST_IPC) && !defined(BUILDING_TEST_WTF) && !defined(BUILDING_TEST_WGSL)
-#import <WebKit/WKProcessPoolPrivate.h>
-#endif
+#import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 
 int main(int argc, char** argv)
 {
@@ -49,9 +46,7 @@ int main(int argc, char** argv)
 
         [[NSUserDefaults standardUserDefaults] setVolatileDomain:argumentDomain.get() forName:NSArgumentDomain];
 
-#if !defined(BUILDING_TEST_IPC) && !defined(BUILDING_TEST_WTF) && !defined(BUILDING_TEST_WGSL)
-        [WKProcessPool _setLinkedOnOrAfterEverythingForTesting];
-#endif
+        enableAllSDKAlignedBehaviors();
 
         passed = TestWebKitAPI::TestsController::singleton().run(argc, argv);
     }
