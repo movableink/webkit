@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #if PLATFORM(MAC)
 
 #import "APIUIClient.h"
+#import "APIWebsitePolicies.h"
 #import "CocoaImage.h"
 #import "Connection.h"
 #import "FrameInfoData.h"
@@ -60,6 +61,7 @@
 #import <WebCore/DragItem.h>
 #import <WebCore/GraphicsLayer.h>
 #import <WebCore/LegacyNSPasteboardTypes.h>
+#import <WebCore/Quirks.h>
 #import <WebCore/SharedBuffer.h>
 #import <WebCore/TextAlternativeWithRange.h>
 #import <WebCore/UniversalAccessZoom.h>
@@ -971,6 +973,22 @@ WebCore::FloatRect WebPageProxy::selectionBoundingRectInRootViewCoordinates() co
     auto bounds = WebCore::FloatRect { editorState().postLayoutData->selectionBoundingRect };
     bounds.move(internals().scrollPositionDuringLastEditorStateUpdate - mainFrameScrollPosition());
     return bounds;
+}
+
+WebContentMode WebPageProxy::effectiveContentModeAfterAdjustingPolicies(API::WebsitePolicies& policies, const WebCore::ResourceRequest& request)
+{
+    Ref preferences = m_preferences;
+    if (preferences->needsSiteSpecificQuirks()) {
+        if (policies.customUserAgent().isEmpty() && customUserAgent().isEmpty()) {
+            // FIXME (263619): This is done here for adding a UA override to tiktok. Should be in a common location.
+            // needsCustomUserAgentOverride() is currently very generic on purpose.
+            // In the future we want to pass more parameters for targeting specific domains.
+            if (auto customUserAgentForQuirk = Quirks::needsCustomUserAgentOverride(request.url(), m_applicationNameForUserAgent))
+                policies.setCustomUserAgent(WTFMove(*customUserAgentForQuirk));
+        }
+    }
+
+    return WebContentMode::Recommended;
 }
 
 } // namespace WebKit

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -1525,18 +1525,23 @@ String WebPageProxy::predictedUserAgentForRequest(const WebCore::ResourceRequest
 
 WebContentMode WebPageProxy::effectiveContentModeAfterAdjustingPolicies(API::WebsitePolicies& policies, const WebCore::ResourceRequest& request)
 {
-    if (m_preferences->mediaSourceEnabled()) {
+    Ref preferences = m_preferences;
+    if (preferences->mediaSourceEnabled()) {
         // FIXME: This is a compatibility hack to ensure that turning MSE on via the existing preference still enables MSE.
         policies.setMediaSourcePolicy(WebsiteMediaSourcePolicy::Enable);
     }
 
-    if (auto selectors = Quirks::defaultVisibilityAdjustmentSelectors(request.url()))
-        policies.setVisibilityAdjustmentSelectors({ WTFMove(*selectors) });
+    const bool needsSiteSpecificQuirks = preferences->needsSiteSpecificQuirks();
 
-    if (Quirks::needsIPhoneUserAgent(request.url())) {
-        policies.setCustomUserAgent(makeStringByReplacingAll(standardUserAgentWithApplicationName(m_applicationNameForUserAgent), "iPad"_s, "iPhone"_s));
-        policies.setCustomNavigatorPlatform("iPhone"_s);
-        return WebContentMode::Mobile;
+    if (needsSiteSpecificQuirks) {
+        if (auto selectors = Quirks::defaultVisibilityAdjustmentSelectors(request.url()))
+            policies.setVisibilityAdjustmentSelectors({ WTFMove(*selectors) });
+
+        if (Quirks::needsIPhoneUserAgent(request.url())) {
+            policies.setCustomUserAgent(makeStringByReplacingAll(standardUserAgentWithApplicationName(m_applicationNameForUserAgent), "iPad"_s, "iPhone"_s));
+            policies.setCustomNavigatorPlatform("iPhone"_s);
+            return WebContentMode::Mobile;
+        }
     }
 
     bool useDesktopBrowsingMode = useDesktopClassBrowsing(policies, request);
@@ -1552,11 +1557,12 @@ WebContentMode WebPageProxy::effectiveContentModeAfterAdjustingPolicies(API::Web
         auto applicationName = policies.applicationNameForDesktopUserAgent();
         if (applicationName.isEmpty())
             applicationName = applicationNameForDesktopUserAgent();
-        // FIXME: This is done here for adding a UA override to tiktok.
-        // needsCustomUserAgentOverride() is currently very generic on purpose.
-        // In the future we want to pass more parameters for targeting specific domains.
-        if (Quirks::needsCustomUserAgentOverride(request.url()))
-            policies.setCustomUserAgent(makeStringByReplacingAll(standardUserAgentWithApplicationName(m_applicationNameForUserAgent), "like Gecko"_s, "like Gecko, like Chrome/136."_s));
+        std::optional<String> customUserAgentForQuirk;
+        if (needsSiteSpecificQuirks)
+            customUserAgentForQuirk = Quirks::needsCustomUserAgentOverride(request.url(), m_applicationNameForUserAgent);
+
+        if (customUserAgentForQuirk)
+            policies.setCustomUserAgent(WTFMove(*customUserAgentForQuirk));
         else
             policies.setCustomUserAgent(standardUserAgentWithApplicationName(applicationName, emptyString(), UserAgentType::Desktop));
     }
@@ -1576,7 +1582,7 @@ WebContentMode WebPageProxy::effectiveContentModeAfterAdjustingPolicies(API::Web
     }
 
 #if ENABLE(TOUCH_EVENTS)
-    if (m_preferences->needsSiteSpecificQuirks() && Quirks::shouldOmitTouchEventDOMAttributesForDesktopWebsite(request.url()))
+    if (needsSiteSpecificQuirks && Quirks::shouldOmitTouchEventDOMAttributesForDesktopWebsite(request.url()))
         policies.setOverrideTouchEventDOMAttributesEnabled(false);
 #endif
 

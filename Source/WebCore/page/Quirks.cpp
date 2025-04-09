@@ -1447,11 +1447,18 @@ bool Quirks::needsIPhoneUserAgent(const URL& url)
     return false;
 }
 
-bool Quirks::needsCustomUserAgentOverride(const URL& url)
+std::optional<String> Quirks::needsCustomUserAgentOverride(const URL& url, const String& applicationNameForUserAgent)
 {
-    if (url.host() == "tiktok.com"_s)
-        return true;
-    return false;
+#if PLATFORM(COCOA)
+    auto hostDomain = RegistrableDomain(url);
+    // FIXME(rdar://148759791): Remove this once TikTok removes the outdated error message.
+    if (hostDomain.string() == "tiktok.com"_s)
+        return makeStringByReplacingAll(standardUserAgentWithApplicationName(applicationNameForUserAgent), "like Gecko"_s, "like Gecko, like Chrome/136."_s);
+#else
+    UNUSED_PARAM(url);
+    UNUSED_PARAM(applicationNameForUserAgent);
+#endif
+    return { };
 }
 
 bool Quirks::needsDesktopUserAgent(const URL& url)

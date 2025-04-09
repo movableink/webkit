@@ -77,6 +77,7 @@ public:
     WebKit::WebUserContentControllerProxy* userContentController() const { return m_userContentController.get(); }
     void setUserContentController(RefPtr<WebKit::WebUserContentControllerProxy>&&);
 
+    void setCustomUserAgent(WTF::String&& customUserAgent) { m_data.customUserAgent = WTFMove(customUserAgent); }
     void setCustomUserAgent(const WTF::String& customUserAgent) { m_data.customUserAgent = customUserAgent; }
     const WTF::String& customUserAgent() const { return m_data.customUserAgent; }
 
