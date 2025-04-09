@@ -1087,9 +1087,9 @@ void AssemblyHelpers::emitAllocateVariableSized(GPRReg resultGPR, const JITAlloc
 
     unsigned stepShift = getLSBSet(MarkedSpace::sizeStep);
 
-    add32(TrustedImm32(MarkedSpace::sizeStep - 1), allocationSize, scratchGPR1);
-    urshift32(TrustedImm32(stepShift), scratchGPR1);
-    slowPath.append(branch32(Above, scratchGPR1, TrustedImm32(MarkedSpace::largeCutoff >> stepShift)));
+    addPtr(TrustedImm32(MarkedSpace::sizeStep - 1), allocationSize, scratchGPR1);
+    urshiftPtr(TrustedImm32(stepShift), scratchGPR1);
+    slowPath.append(branchPtr(Above, scratchGPR1, TrustedImmPtr(MarkedSpace::largeCutoff >> stepShift)));
     JIT_COMMENT(*this, "Load the Allocator from the CompleteSubspace's buffer");
     loadPtr(subspaceAllocatorsBase.indexedBy(scratchGPR1, ScalePtr), scratchGPR1);
 
