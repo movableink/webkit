@@ -10555,8 +10555,7 @@ void Document::removeTopLayerElement(Element& element)
     auto didRemove = m_topLayerElements.remove(element);
     RELEASE_ASSERT(didRemove);
     if (auto* candidatePopover = dynamicDowncast<HTMLElement>(element); candidatePopover && candidatePopover->isPopoverShowing() && candidatePopover->popoverState() == PopoverState::Auto) {
-        auto didRemove = m_autoPopoverList.remove(*candidatePopover);
-        RELEASE_ASSERT(didRemove);
+        m_autoPopoverList.remove(*candidatePopover);
 #if PLATFORM(IOS_FAMILY) && ENABLE(TOUCH_EVENTS)
         if (!needsPointerEventHandlingForPopover())
             invalidateRenderingDependentRegions();
