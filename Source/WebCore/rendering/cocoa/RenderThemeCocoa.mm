@@ -52,6 +52,7 @@
 #import "RenderText.h"
 #import "Theme.h"
 #import "TypedElementDescendantIteratorInlines.h"
+#import "UserAgentParts.h"
 #import "UserAgentScripts.h"
 #import "UserAgentStyleSheets.h"
 #import <CoreGraphics/CoreGraphics.h>
@@ -426,6 +427,46 @@ void RenderThemeCocoa::adjustColorWellStyle(RenderStyle& style, const Element* e
 #endif
 
     RenderTheme::adjustColorWellStyle(style, element);
+}
+
+void RenderThemeCocoa::adjustColorWellSwatchStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustColorWellSwatchStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustColorWellSwatchStyle(style, element);
+}
+
+void RenderThemeCocoa::adjustColorWellSwatchOverlayStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustColorWellSwatchOverlayStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustColorWellSwatchOverlayStyle(style, element);
+}
+
+void RenderThemeCocoa::adjustColorWellSwatchWrapperStyle(RenderStyle& style, const Element* element) const
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (adjustColorWellSwatchWrapperStyleForVectorBasedControls(style, element))
+        return;
+#endif
+
+    RenderTheme::adjustColorWellSwatchWrapperStyle(style, element);
+}
+
+bool RenderThemeCocoa::paintColorWellSwatch(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+{
+#if ENABLE(VECTOR_BASED_CONTROLS_ON_MAC)
+    if (paintColorWellSwatchForVectorBasedControls(box, paintInfo, rect))
+        return false;
+#endif
+
+    return RenderTheme::paintColorWellSwatch(box, paintInfo, rect);
 }
 
 bool RenderThemeCocoa::paintColorWell(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)

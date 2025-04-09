@@ -106,6 +106,15 @@ TextStream& operator<<(TextStream& ts, StyleAppearance appearance)
     case StyleAppearance::ColorWell:
         ts << "color-well"_s;
         break;
+    case StyleAppearance::ColorWellSwatch:
+        ts << "color-well-swatch"_s;
+        break;
+    case StyleAppearance::ColorWellSwatchOverlay:
+        ts << "color-well-swatch-overlay"_s;
+        break;
+    case StyleAppearance::ColorWellSwatchWrapper:
+        ts << "color-well-swatch-wrapper"_s;
+        break;
 #if ENABLE(SERVICE_CONTROLS)
     case StyleAppearance::ImageControlsButton:
         ts << "image-controls-button"_s;

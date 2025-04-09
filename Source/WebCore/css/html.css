@@ -1023,7 +1023,12 @@ input[type="color"] {
 #endif
 }
 
+input[type="color"]::-internal-color-swatch-overlay {
+    appearance: auto;
+}
+
 input[type="color"]::-webkit-color-swatch-wrapper {
+    appearance: auto;
     display: flex;
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     border-radius: inherit;
@@ -1038,6 +1043,7 @@ input[type="color"]::-webkit-color-swatch-wrapper {
 }
 
 input[type="color"]::-webkit-color-swatch {
+    appearance: auto;
     background-color: #000000;
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     border-radius: inherit;

@@ -64,6 +64,11 @@ protected:
     bool paintColorWell(const RenderObject&, const PaintInfo&, const IntRect&) override;
     void paintColorWellDecorations(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
+    void adjustColorWellSwatchStyle(RenderStyle&, const Element*) const override;
+    void adjustColorWellSwatchOverlayStyle(RenderStyle&, const Element*) const override;
+    void adjustColorWellSwatchWrapperStyle(RenderStyle&, const Element*) const override;
+    bool paintColorWellSwatch(const RenderObject&, const PaintInfo&, const IntRect&) override;
+
     void adjustInnerSpinButtonStyle(RenderStyle&, const Element*) const override;
     bool paintInnerSpinButton(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 

@@ -290,6 +290,11 @@ protected:
     virtual bool paintColorWell(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
     virtual void paintColorWellDecorations(const RenderObject&, const PaintInfo&, const FloatRect&) { }
 
+    virtual void adjustColorWellSwatchStyle(RenderStyle&, const Element*) const { }
+    virtual void adjustColorWellSwatchOverlayStyle(RenderStyle&, const Element*) const { }
+    virtual void adjustColorWellSwatchWrapperStyle(RenderStyle&, const Element*) const { }
+    virtual bool paintColorWellSwatch(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+
     virtual void adjustInnerSpinButtonStyle(RenderStyle&, const Element*) const;
     virtual bool paintInnerSpinButton(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 

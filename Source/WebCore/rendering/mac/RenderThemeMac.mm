@@ -155,6 +155,9 @@ bool RenderThemeMac::canPaint(const PaintInfo& paintInfo, const Settings& settin
     case StyleAppearance::Button:
     case StyleAppearance::Checkbox:
     case StyleAppearance::ColorWell:
+    case StyleAppearance::ColorWellSwatch:
+    case StyleAppearance::ColorWellSwatchOverlay:
+    case StyleAppearance::ColorWellSwatchWrapper:
     case StyleAppearance::DefaultButton:
 #if ENABLE(SERVICE_CONTROLS)
     case StyleAppearance::ImageControlsButton:
@@ -975,6 +978,7 @@ void RenderThemeMac::createColorWellSwatchSubtree(HTMLElement& swatch)
     Ref document = swatch.document();
     Ref div = HTMLDivElement::create(document);
     swatch.appendChild(ContainerNode::ChildChange::Source::Parser, div);
+    div->setUserAgentPart(UserAgentParts::internalColorSwatchOverlay());
     div->setInlineStyleProperty(CSSPropertyHeight, "100%"_s);
     div->setInlineStyleProperty(CSSPropertyWidth, "100%"_s);
     div->setInlineStyleProperty(CSSPropertyClipPath, "polygon(0 0, 100% 0, 0 100%)"_s);

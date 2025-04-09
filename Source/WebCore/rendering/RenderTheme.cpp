@@ -98,11 +98,37 @@ RenderTheme::RenderTheme()
 
 RenderTheme::~RenderTheme() = default;
 
+static bool parentOfElementUsesPrimitiveAppearance(const Element& element)
+{
+    if (RefPtr parent = element.parentOrShadowHostElement()) {
+        if (CheckedPtr computedStyle = parent->computedStyle())
+            return computedStyle->usedAppearance() == StyleAppearance::None;
+    }
+
+    return false;
+}
+
 StyleAppearance RenderTheme::adjustAppearanceForElement(RenderStyle& style, const Element* element, StyleAppearance autoAppearance) const
 {
     if (!element) {
         style.setUsedAppearance(StyleAppearance::None);
         return StyleAppearance::None;
+    }
+
+    // Each user agent part for input type='color' controls
+    // should use StyleAppearance::None if their parent is
+    // using primitive appearance.
+
+    // FIXME: (rdar://148625484) If the parent devolves
+    // after the initial styles are applied, the children
+    // are not immediately updated to match.
+
+    if ((autoAppearance == StyleAppearance::ColorWellSwatch
+        || autoAppearance == StyleAppearance::ColorWellSwatchOverlay
+        || autoAppearance == StyleAppearance::ColorWellSwatchWrapper)
+        && parentOfElementUsesPrimitiveAppearance(*element)) {
+            style.setUsedAppearance(StyleAppearance::None);
+            return StyleAppearance::None;
     }
 
     auto appearance = style.usedAppearance();
@@ -277,6 +303,12 @@ void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const 
         return adjustRadioStyle(style, element);
     case StyleAppearance::ColorWell:
         return adjustColorWellStyle(style, element);
+    case StyleAppearance::ColorWellSwatch:
+        return adjustColorWellSwatchStyle(style, element);
+    case StyleAppearance::ColorWellSwatchOverlay:
+        return adjustColorWellSwatchOverlayStyle(style, element);
+    case StyleAppearance::ColorWellSwatchWrapper:
+        return adjustColorWellSwatchWrapperStyle(style, element);
     case StyleAppearance::PushButton:
     case StyleAppearance::SquareButton:
     case StyleAppearance::DefaultButton:
@@ -435,6 +467,15 @@ StyleAppearance RenderTheme::autoAppearanceForElement(RenderStyle& style, const 
 
         if (part == UserAgentParts::webkitInnerSpinButton())
             return StyleAppearance::InnerSpinButton;
+
+        if (part == UserAgentParts::internalColorSwatchOverlay())
+            return StyleAppearance::ColorWellSwatchOverlay;
+
+        if (part == UserAgentParts::webkitColorSwatch())
+            return StyleAppearance::ColorWellSwatch;
+
+        if (part == UserAgentParts::webkitColorSwatchWrapper())
+            return StyleAppearance::ColorWellSwatchWrapper;
 
         if (part == UserAgentParts::thumb())
             return StyleAppearance::SwitchThumb;
@@ -609,6 +650,11 @@ RefPtr<ControlPart> RenderTheme::createControlPart(const RenderObject& renderer)
 
     case StyleAppearance::TextField:
         return TextFieldPart::create();
+
+    case StyleAppearance::ColorWellSwatch:
+    case StyleAppearance::ColorWellSwatchOverlay:
+    case StyleAppearance::ColorWellSwatchWrapper:
+        break;
 
     case StyleAppearance::ColorWell:
         return ColorWellPart::create();
@@ -830,6 +876,8 @@ bool RenderTheme::paint(const RenderBox& box, const PaintInfo& paintInfo, const 
         return paintRadio(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::ColorWell:
         return paintColorWell(box, paintInfo, integralSnappedRect);
+    case StyleAppearance::ColorWellSwatch:
+        return paintColorWellSwatch(box, paintInfo, integralSnappedRect);
     case StyleAppearance::PushButton:
     case StyleAppearance::SquareButton:
     case StyleAppearance::DefaultButton:

@@ -61,6 +61,9 @@ enum class StyleAppearance : uint8_t {
     TextField,
     // Internal-only Values
     ColorWell,
+    ColorWellSwatch,
+    ColorWellSwatchOverlay,
+    ColorWellSwatchWrapper,
 #if ENABLE(SERVICE_CONTROLS)
     ImageControlsButton,
 #endif
