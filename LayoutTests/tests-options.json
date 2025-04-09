@@ -2069,6 +2069,9 @@
     "imported/w3c/web-platform-tests/css/selectors/media/media-loading-state.html": [
         "slow"
     ],
+    "imported/w3c/web-platform-tests/custom-elements/ElementInternals-role.html": [
+        "slow"
+    ],
     "imported/w3c/web-platform-tests/custom-elements/form-associated/ElementInternals-target-element-is-held-strongly.html": [
         "slow"
     ],

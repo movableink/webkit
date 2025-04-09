@@ -17,6 +17,7 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/custom-elements/state/ElementInternals-states.html
 /LayoutTests/imported/w3c/web-platform-tests/custom-elements/state/META.yml
 /LayoutTests/imported/w3c/web-platform-tests/custom-elements/state/README.md
+/LayoutTests/imported/w3c/web-platform-tests/custom-elements/state/WEB_FEATURES.yml
 /LayoutTests/imported/w3c/web-platform-tests/custom-elements/state/custom-state-set-strong-ref.html
 /LayoutTests/imported/w3c/web-platform-tests/custom-elements/state/state-css-selector-nth-of.html
 /LayoutTests/imported/w3c/web-platform-tests/custom-elements/state/state-css-selector-shadow-dom.html
