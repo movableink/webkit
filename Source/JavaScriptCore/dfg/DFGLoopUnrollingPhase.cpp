@@ -54,7 +54,7 @@ public:
         BasicBlock* loopBody(uint32_t i) { return loop->at(i).node(); }
         BasicBlock* header() const { return loop->header().node(); }
         // If operand is a constant, it indicates that we can do fully unrolling.
-        bool shouldFullyUnroll() const { return std::holds_alternative<CheckedInt32>(operand); }
+        bool shouldFullyUnroll() const { return std::holds_alternative<CheckedInt32>(operand) && std::holds_alternative<CheckedInt32>(initialValue); }
 
         Node* condition() const
         {
@@ -73,7 +73,7 @@ public:
 
         // for (i = initialValue; condition(i, operand); i = update(i, updateValue)) { ... }
         Node* inductionVariable { nullptr };
-        CheckedInt32 initialValue { INT_MIN };
+        std::variant<Node*, CheckedInt32> initialValue { INT_MIN };
         std::variant<Node*, CheckedInt32> operand { INT_MIN };
         Node* update { nullptr };
         CheckedInt32 updateValue { INT_MIN };
@@ -345,14 +345,18 @@ public:
 
         auto isInitialValueValid = [&]() ALWAYS_INLINE_LAMBDA {
             Node* initialization = nullptr;
-            for (Node* n : *data.preHeader) {
-                if (n->op() != SetLocal || !data.isInductionVariable(n))
+            for (Node* node : *data.preHeader) {
+                if (node->op() != SetLocal || !data.isInductionVariable(node))
                     continue;
-                initialization = n;
+                initialization = node;
             }
-            if (!initialization || !initialization->child1()->isInt32Constant())
+            if (!initialization)
                 return false;
-            data.initialValue = initialization->child1()->asInt32();
+            Node* initialValue = initialization->child1().node();
+            if (initialValue->isInt32Constant())
+                data.initialValue = initialValue->asInt32();
+            else
+                data.initialValue = initialValue;
             return true;
         };
         if (!isInitialValueValid()) {
@@ -388,7 +392,7 @@ public:
             CheckedUint32 iterationCount = 0;
             auto compare = comparisonFunction(condition, data.inverseCondition);
             auto update = updateFunction(data.update);
-            for (CheckedInt32 i = data.initialValue; compare(i, std::get<CheckedInt32>(data.operand));) {
+            for (CheckedInt32 i = std::get<CheckedInt32>(data.initialValue); compare(i, std::get<CheckedInt32>(data.operand));) {
                 if (iterationCount > Options::maxLoopUnrollingIterationCount()) {
                     dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *data.header(), " since maxLoopUnrollingIterationCount =", Options::maxLoopUnrollingIterationCount());
                     return false;
@@ -648,11 +652,13 @@ void LoopUnrollingPhase::LoopData::dump(PrintStream& out) const
         out.print("<null>");
     out.print(", ");
 
-    out.print("initValue=", initialValue, ", ");
-    if (shouldFullyUnroll())
+    if (shouldFullyUnroll()) {
+        out.print("initValue=", std::get<CheckedInt32>(initialValue), ", ");
         out.print("operand=", std::get<CheckedInt32>(operand), ", ");
-    else
+    } else {
+        out.print("initValue=", std::get<Node*>(initialValue), ", ");
         out.print("operand=", std::get<Node*>(operand), ", ");
+    }
 
     out.print("update=");
     if (update)
