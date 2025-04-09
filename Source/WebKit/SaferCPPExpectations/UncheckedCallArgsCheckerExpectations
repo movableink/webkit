@@ -9,7 +9,6 @@ WebProcess/Plugins/PDF/UnifiedPDF/PDFPresentationController.mm
 WebProcess/Plugins/PDF/UnifiedPDF/PDFScrollingPresentationController.mm
 WebProcess/Plugins/PluginView.cpp
 WebProcess/WebCoreSupport/mac/WebPopupMenuMac.mm
-WebProcess/WebPage/FindController.cpp
 WebProcess/WebPage/RemoteLayerTree/RemoteScrollbarsController.mm
 WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm
 WebProcess/cocoa/PlaybackSessionManager.mm
