@@ -3782,7 +3782,7 @@ void MediaPlayerPrivateGStreamer::triggerRepaint(GRefPtr<GstSample>&& sample)
         shouldTriggerResize = !m_sample;
         if (!shouldTriggerResize) {
             auto previousBuffer = gst_sample_get_buffer(m_sample.get());
-            RELEASE_ASSERT(previousBuffer);
+            // We're omitting a !previousBuffer assert here because on some embedded platforms the buffer can't be deep copied by flushCurrentBuffer().
             isDuplicateSample = buffer == previousBuffer;
         }
         m_sample = WTFMove(sample);
@@ -3884,6 +3884,8 @@ void MediaPlayerPrivateGStreamer::flushCurrentBuffer()
         // might have to be reclaimed by a non-sysmem buffer pool.
         const GstStructure* info = gst_sample_get_info(m_sample.get());
         auto buffer = adoptGRef(gst_buffer_copy_deep(gst_sample_get_buffer(m_sample.get())));
+        if (!buffer)
+            GST_DEBUG_OBJECT(pipeline(), "Buffer couldn't be deep-copied on this platform, setting null buffer on the sample instead");
         m_sample = adoptGRef(gst_sample_new(buffer.get(), gst_sample_get_caps(m_sample.get()),
             gst_sample_get_segment(m_sample.get()), info ? gst_structure_copy(info) : nullptr));
     }
