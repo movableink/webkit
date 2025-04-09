@@ -47,6 +47,13 @@ do { \
     return makeUnexpected(STRING_FOR_PREDEFINED_ERROR_NAME(errorName)); \
 } while (false)
 
+#define SYNC_FAIL_WITH_PREDEFINED_ERROR_IF(condition, errorName) \
+do { \
+    if (condition) { \
+        return makeUnexpected(STRING_FOR_PREDEFINED_ERROR_NAME(errorName)); \
+    } \
+} while (false)
+
 #define SYNC_FAIL_WITH_PREDEFINED_ERROR_AND_DETAILS(errorName, detailsString) \
 do { \
     return makeUnexpected(STRING_FOR_PREDEFINED_ERROR_NAME_AND_DETAILS(errorName, detailsString)); \
@@ -56,6 +63,14 @@ do { \
 do { \
     callback(makeUnexpected(STRING_FOR_PREDEFINED_ERROR_NAME(errorName))); \
     return; \
+} while (false)
+
+#define ASYNC_FAIL_WITH_PREDEFINED_ERROR_IF(condition, errorName) \
+do { \
+    if (condition) { \
+        callback(makeUnexpected(STRING_FOR_PREDEFINED_ERROR_NAME(errorName))); \
+        return; \
+    } \
 } while (false)
 
 #define ASYNC_FAIL_WITH_PREDEFINED_ERROR_AND_DETAILS(errorName, detailsString) \

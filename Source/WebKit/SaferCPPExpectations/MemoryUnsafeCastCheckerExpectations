@@ -1,4 +1,5 @@
 AutomationProtocolObjects.h
+WebDriverBidiProtocolObjects.h
 Shared/API/c/cf/WKStringCF.mm
 Shared/API/c/cf/WKURLCF.mm
 UIProcess/API/Cocoa/WKNSURLAuthenticationChallenge.mm

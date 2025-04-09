@@ -1,12 +1,29 @@
 {
     "domain": "BidiBrowser",
     "exposedAs": "browser",
-    "description": "The browser module contains commands for managing the remote end browser process.",
     "condition": "ENABLE(WEBDRIVER_BIDI)",
+    "description": "The browser module contains commands for managing the remote end browser process.",
+    "spec": "https://w3c.github.io/webdriver-bidi/#module-browser",
+    "wpt": "https://github.com/web-platform-tests/wpt/tree/master/webdriver/tests/bidi/browser",
+    "types": [
+        {
+            "id": "ClientWindow",
+            "description": "String uniquely identifying a client window.",
+            "spec": "https://w3c.github.io/webdriver-bidi/#type-browser-ClientWindow",
+            "type": "string"
+        },
+        {
+            "id": "UserContext",
+            "description": "Unique string identifying a user context with separate storage.",
+            "spec": "https://github.com/web-platform-tests/wpt/tree/master/webdriver/tests/bidi/browser",
+            "type": "string"
+        }
+    ],
     "commands": [
         {
             "name": "close",
-            "description": "Terminates the WebDriver session to which it is sent."
+            "description": "Terminates the WebDriver session to which it is sent and cleans up remote end automation state.",
+            "spec": "https://w3c.github.io/webdriver-bidi/#command-browser-close"
         }
     ]
 }

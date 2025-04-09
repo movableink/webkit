@@ -41,7 +41,8 @@ class WebAutomationSession;
 class WebDriverBidiProcessor final
     : public Inspector::FrontendChannel
     , public Inspector::BidiBrowserBackendDispatcherHandler
-    , public Inspector::BidiBrowsingContextBackendDispatcherHandler {
+    , public Inspector::BidiBrowsingContextBackendDispatcherHandler
+    , public Inspector::BidiScriptBackendDispatcherHandler {
     WTF_MAKE_TZONE_ALLOCATED(WebDriverBidiProcessor);
 public:
     explicit WebDriverBidiProcessor(WebAutomationSession&);
@@ -56,10 +57,19 @@ public:
     void sendMessageToFrontend(const String&) override;
 
     // Inspector::BidiBrowsingContextDispatcherHandler methods.
-    void navigate(const Inspector::Protocol::BidiBrowsingContext::BrowsingContext&, const String& url, std::optional<Inspector::Protocol::BidiBrowsingContext::ReadinessState>&&, Inspector::CommandCallbackOf<String, String>&&) override;
+    void activate(const Inspector::Protocol::BidiBrowsingContext::BrowsingContext&, Inspector::CommandCallback<void>&&) override;
+    void close(const Inspector::Protocol::BidiBrowsingContext::BrowsingContext&, std::optional<bool>&& optionalPromptUnload, Inspector::CommandCallback<void>&&) override;
+    void create(Inspector::Protocol::BidiBrowsingContext::CreateType, const Inspector::Protocol::BidiBrowsingContext::BrowsingContext& optionalReferenceContext, std::optional<bool>&& optionalBackground, const String& optionalUserContext, Inspector::CommandCallback<String>&&) override;
+    void getTree(const Inspector::Protocol::BidiBrowsingContext::BrowsingContext& optionalRoot, std::optional<double>&& optionalMaxDepth, Inspector::CommandCallback<Ref<JSON::ArrayOf<Inspector::Protocol::BidiBrowsingContext::Info>>>&&) override;
+    void navigate(const Inspector::Protocol::BidiBrowsingContext::BrowsingContext&, const String& url, std::optional<Inspector::Protocol::BidiBrowsingContext::ReadinessState>&&, Inspector::CommandCallbackOf<String, Inspector::Protocol::BidiBrowsingContext::Navigation>&&) override;
+    void reload(const Inspector::Protocol::BidiBrowsingContext::BrowsingContext&, std::optional<bool>&& optionalIgnoreCache, std::optional<Inspector::Protocol::BidiBrowsingContext::ReadinessState>&& optionalWait, Inspector::CommandCallbackOf<String, String>&&) override;
 
     // Inspector::BidiBrowserBackendDispatcherHandler methods.
     Inspector::Protocol::ErrorStringOr<void> close() override;
+
+    // Inspector::BidiScriptBackendDispatcherHandler methods.
+    void callFunction(const String& functionDeclaration, bool awaitPromise, Ref<JSON::Object>&& target, RefPtr<JSON::Array>&& optionalArguments, std::optional<Inspector::Protocol::BidiScript::ResultOwnership>&&, RefPtr<JSON::Object>&& optionalSerializationOptions, RefPtr<JSON::Object>&& optionalThis, std::optional<bool>&& optionalUserActivation, Inspector::CommandCallbackOf<Inspector::Protocol::BidiScript::EvaluateResultType, String, RefPtr<Inspector::Protocol::BidiScript::RemoteValue>, RefPtr<Inspector::Protocol::BidiScript::ExceptionDetails>>&&) override;
+    void evaluate(const String& expression, bool awaitPromise, Ref<JSON::Object>&& target, std::optional<Inspector::Protocol::BidiScript::ResultOwnership>&&, RefPtr<JSON::Object>&& optionalSerializationOptions,  std::optional<bool>&& optionalUserActivation, Inspector::CommandCallbackOf<Inspector::Protocol::BidiScript::EvaluateResultType, String, RefPtr<Inspector::Protocol::BidiScript::RemoteValue>, RefPtr<Inspector::Protocol::BidiScript::ExceptionDetails>>&&) override;
 
     // Event entry points called from the owning WebAutomationSession.
     void logEntryAdded(const String& level, const String& source, const String& message, double timestamp, const String& type, const String& method);
@@ -75,6 +85,7 @@ private:
 
     Ref<Inspector::BidiBrowserBackendDispatcher> m_browserDomainDispatcher;
     Ref<Inspector::BidiBrowsingContextBackendDispatcher> m_browsingContextDomainDispatcher;
+    Ref<Inspector::BidiScriptBackendDispatcher> m_scriptDomainDispatcher;
 
     std::unique_ptr<Inspector::BidiLogFrontendDispatcher> m_logDomainNotifier;
 };

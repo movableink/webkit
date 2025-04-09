@@ -7089,6 +7089,11 @@
 		996B2B9C25E257EE00719379 /* InspectorExtensionDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InspectorExtensionDelegate.h; sourceTree = "<group>"; };
 		996B2B9E25E2582C00719379 /* APIInspectorExtensionClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = APIInspectorExtensionClient.h; sourceTree = "<group>"; };
 		996B2BA025E2591100719379 /* _WKInspectorExtensionDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _WKInspectorExtensionDelegate.h; sourceTree = "<group>"; };
+		996D00402D7AA0CD0049C7D8 /* BidiBrowser.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = BidiBrowser.json; sourceTree = "<group>"; };
+		996D00412D7AA0CD0049C7D8 /* BidiBrowsingContext.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = BidiBrowsingContext.json; sourceTree = "<group>"; };
+		996D00422D7AA0CD0049C7D8 /* BidiLog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = BidiLog.json; sourceTree = "<group>"; };
+		996D00432D7AA0CD0049C7D8 /* BidiScript.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = BidiScript.json; sourceTree = "<group>"; };
+		996D00452D7AA0FD0049C7D8 /* CombinedWebDriverBidiDomains.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = CombinedWebDriverBidiDomains.json; sourceTree = "<group>"; };
 		99788AC91F421DCA00C08000 /* _WKAutomationSessionConfiguration.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _WKAutomationSessionConfiguration.h; sourceTree = "<group>"; };
 		99788ACA1F421DCA00C08000 /* _WKAutomationSessionConfiguration.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = _WKAutomationSessionConfiguration.mm; sourceTree = "<group>"; };
 		9979659A25310A4800B31AE3 /* WebInspectorUIExtensionControllerMessages.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebInspectorUIExtensionControllerMessages.h; sourceTree = "<group>"; };
@@ -13889,6 +13894,7 @@
 				99C3AE251DAD946700AF5C16 /* cocoa */,
 				9946EF821E7B023D00541E79 /* ios */,
 				99C3AE221DAD8E1400AF5C16 /* mac */,
+				996D00442D7AA0CD0049C7D8 /* protocol */,
 				9955A6E91C7980BB00EB6A93 /* Automation.json */,
 				995226D5207D184600F78420 /* SimulatedInputDispatcher.cpp */,
 				995226D4207D184500F78420 /* SimulatedInputDispatcher.h */,
@@ -13900,6 +13906,17 @@
 				99A5144E2D5AB7D500937177 /* WebDriverBidiProcessor.h */,
 			);
 			path = Automation;
+			sourceTree = "<group>";
+		};
+		996D00442D7AA0CD0049C7D8 /* protocol */ = {
+			isa = PBXGroup;
+			children = (
+				996D00402D7AA0CD0049C7D8 /* BidiBrowser.json */,
+				996D00412D7AA0CD0049C7D8 /* BidiBrowsingContext.json */,
+				996D00422D7AA0CD0049C7D8 /* BidiLog.json */,
+				996D00432D7AA0CD0049C7D8 /* BidiScript.json */,
+			);
+			path = protocol;
 			sourceTree = "<group>";
 		};
 		99C3AE221DAD8E1400AF5C16 /* mac */ = {
@@ -15537,6 +15554,7 @@
 				EB7D252A27B31B3F009CB586 /* com.apple.WebKit.webpushd.mac.sb */,
 				51DAAEBF2AA198DE00DB2AA4 /* com.apple.WebKit.webpushd.relocatable.mac.sb */,
 				E1967E37150AB5E200C73169 /* com.apple.WebProcess.sb */,
+				996D00452D7AA0FD0049C7D8 /* CombinedWebDriverBidiDomains.json */,
 				1AB7D6171288B9D900CFD08C /* DownloadProxyMessageReceiver.cpp */,
 				1AB7D6181288B9D900CFD08C /* DownloadProxyMessages.h */,
 				1A64229712DD029200CAAE2C /* DrawingAreaMessageReceiver.cpp */,

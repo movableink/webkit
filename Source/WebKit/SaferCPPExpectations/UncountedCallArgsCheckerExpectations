@@ -88,6 +88,7 @@ UIProcess/API/Cocoa/_WKWebAuthenticationPanel.mm
 UIProcess/API/Cocoa/_WKWebsiteDataStoreConfiguration.mm
 WebDriverBidiBackendDispatchers.cpp
 WebDriverBidiFrontendDispatchers.cpp
+WebDriverBidiProtocolObjects.h
 WebProcess/ApplePay/WebPaymentCoordinator.cpp
 WebProcess/Automation/WebAutomationDOMWindowObserver.cpp
 WebProcess/Cache/WebCacheStorageConnection.cpp

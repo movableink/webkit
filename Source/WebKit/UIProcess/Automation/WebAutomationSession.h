@@ -117,6 +117,11 @@ class WebAutomationSession final : public API::ObjectImpl<API::Object::Type::Aut
     , public SimulatedInputDispatcher::Client
 #endif
 {
+
+#if ENABLE(WEBDRIVER_BIDI)
+friend class WebDriverBidiProcessor;
+#endif
+
 public:
     WebAutomationSession();
     ~WebAutomationSession() override;
@@ -280,9 +285,10 @@ public:
 
     void didDestroyFrame(WebCore::FrameIdentifier);
 
-private:
     RefPtr<WebPageProxy> webPageProxyForHandle(const String&);
     String handleForWebPageProxy(const WebPageProxy&);
+
+private:
     Ref<Inspector::Protocol::Automation::BrowsingContext> buildBrowsingContextForPage(WebPageProxy&, WebCore::FloatRect windowFrame);
     void getNextContext(Vector<Ref<WebPageProxy>>&&, Ref<JSON::ArrayOf<Inspector::Protocol::Automation::BrowsingContext>>, Inspector::CommandCallback<Ref<JSON::ArrayOf<Inspector::Protocol::Automation::BrowsingContext>>>&&);
 
