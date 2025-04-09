@@ -226,27 +226,9 @@ public:
     }
 
     template <typename Key2, typename T2, Key2 LastValue2>
-    bool operator<(const EnumeratedArray<Key2, T2, LastValue2>& rhs) const
+    std::strong_ordering operator<=>(const EnumeratedArray<Key2, T2, LastValue2>& rhs) const
     {
-        return m_storage < rhs.m_storage;
-    }
-
-    template <typename Key2, typename T2, Key2 LastValue2>
-    bool operator<=(const EnumeratedArray<Key2, T2, LastValue2>& rhs) const
-    {
-        return m_storage <= rhs.m_storage;
-    }
-
-    template <typename Key2, typename T2, Key2 LastValue2>
-    bool operator>(const EnumeratedArray<Key2, T2, LastValue2>& rhs) const
-    {
-        return m_storage > rhs.m_storage;
-    }
-
-    template <typename Key2, typename T2, Key2 LastValue2>
-    bool operator>=(const EnumeratedArray<Key2, T2, LastValue2>& rhs) const
-    {
-        return m_storage >= rhs.m_storage;
+        return m_storage <=> rhs.m_storage;
     }
 
 private:

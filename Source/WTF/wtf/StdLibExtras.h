@@ -1560,6 +1560,12 @@ ALWAYS_INLINE std::optional<double> stringToDouble(std::span<const char> buffer,
     return result;
 }
 
+template<typename FloatingPointType>
+ALWAYS_INLINE std::weak_ordering compareFloatingPointWithWeakOrdering(FloatingPointType a, FloatingPointType b) requires (std::is_floating_point_v<FloatingPointType>)
+{
+    return (a < b) ? std::weak_ordering::less : ((a > b) ? std::weak_ordering::greater : std::weak_ordering::equivalent);
+}
+
 } // namespace WTF
 
 #define WTFMove(value) std::move<WTF::CheckMoveParameter>(value)
@@ -1587,6 +1593,7 @@ using WTF::callStatelessLambda;
 using WTF::checkAndSet;
 using WTF::clampedMoveCursorWithinSpan;
 using WTF::compareSpans;
+using WTF::compareFloatingPointWithWeakOrdering;
 using WTF::constructFixedSizeArrayWithArguments;
 using WTF::consume;
 using WTF::consumeAndReinterpretCastTo;

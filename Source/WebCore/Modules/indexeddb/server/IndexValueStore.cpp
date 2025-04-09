@@ -198,7 +198,7 @@ IDBKeyDataSet::iterator IndexValueStore::lowestIteratorInRange(const IDBKeyRange
     }
 
     if (!range.upperKey.isNull()) {
-        if (lowestInRange->compare(range.upperKey) > 0)
+        if (*lowestInRange > range.upperKey)
             return m_orderedKeys.end();
         if (range.upperOpen && *lowestInRange == range.upperKey)
             return m_orderedKeys.end();
@@ -222,7 +222,7 @@ IDBKeyDataSet::reverse_iterator IndexValueStore::highestReverseIteratorInRange(c
     }
 
     if (!range.lowerKey.isNull()) {
-        if (highestInRange->compare(range.lowerKey) < 0)
+        if (*highestInRange < range.lowerKey)
             return m_orderedKeys.rend();
         if (range.lowerOpen && *highestInRange == range.lowerKey)
             return m_orderedKeys.rend();

@@ -504,7 +504,7 @@ IDBKeyData MemoryObjectStore::lowestKeyWithRecordInRange(const IDBKeyRangeData& 
         return { };
 
     if (!keyRangeData.upperKey.isNull()) {
-        if (lowestInRange->compare(keyRangeData.upperKey) > 0)
+        if (*lowestInRange > keyRangeData.upperKey)
             return { };
         if (keyRangeData.upperOpen && *lowestInRange == keyRangeData.upperKey)
             return { };

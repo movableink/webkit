@@ -831,24 +831,9 @@ public:
     }
 
     // Other comparisons
-    template <typename V> bool operator<(Checked<T, V> rhs) const
+    template <typename V> std::strong_ordering operator<=>(Checked<T, V> rhs) const
     {
-        return value() < rhs.value();
-    }
-
-    template <typename V> bool operator<=(Checked<T, V> rhs) const
-    {
-        return value() <= rhs.value();
-    }
-
-    template <typename V> bool operator>(Checked<T, V> rhs) const
-    {
-        return value() > rhs.value();
-    }
-
-    template <typename V> bool operator>=(Checked<T, V> rhs) const
-    {
-        return value() >= rhs.value();
+        return value() <=> rhs.value();
     }
 
 private:

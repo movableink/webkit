@@ -347,7 +347,7 @@ bool injectIDBKeyIntoScriptValue(JSGlobalObject& lexicalGlobalObject, const IDBK
 
     // Do not set if object already has the correct property value.
     JSValue existingKey;
-    if (get(lexicalGlobalObject, parent, keyPathElements.last(), existingKey) && !key->compare(createIDBKeyFromValue(lexicalGlobalObject, existingKey)))
+    if (get(lexicalGlobalObject, parent, keyPathElements.last(), existingKey) && key->isEqual(createIDBKeyFromValue(lexicalGlobalObject, existingKey)))
         return true;
     if (!set(lexicalGlobalObject.vm(), parent, keyPathElements.last(), toJS(lexicalGlobalObject, lexicalGlobalObject, key.get())))
         return false;

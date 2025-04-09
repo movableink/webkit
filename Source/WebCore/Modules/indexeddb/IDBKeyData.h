@@ -89,12 +89,6 @@ public:
     WEBCORE_EXPORT void encode(KeyedEncoder&) const;
     WEBCORE_EXPORT static WARN_UNUSED_RETURN bool decode(KeyedDecoder&, IDBKeyData&);
 
-    // compare() has the same semantics as strcmp().
-    //   - Returns negative if this IDBKeyData is less than other.
-    //   - Returns positive if this IDBKeyData is greater than other.
-    //   - Returns zero if this IDBKeyData is equal to other.
-    WEBCORE_EXPORT int compare(const IDBKeyData& other) const;
-
     void setArrayValue(const Vector<IDBKeyData>&);
     void setBinaryValue(const ThreadSafeDataBuffer&);
     void setStringValue(const String&);
@@ -108,21 +102,7 @@ public:
     WEBCORE_EXPORT static bool isValidValue(const ValueVariant&);
     IndexedDB::KeyType type() const;
 
-    bool operator<(const IDBKeyData&) const;
-    bool operator>(const IDBKeyData& other) const
-    {
-        return !(*this < other) && !(*this == other);
-    }
-
-    bool operator<=(const IDBKeyData& other) const
-    {
-        return !(*this > other);
-    }
-
-    bool operator>=(const IDBKeyData& other) const
-    {
-        return !(*this < other);
-    }
+    WEBCORE_EXPORT friend std::weak_ordering operator<=>(const IDBKeyData&, const IDBKeyData&);
 
     bool operator==(const IDBKeyData& other) const;
 

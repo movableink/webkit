@@ -96,7 +96,10 @@ static int idbKeyCollate(std::span<const uint8_t> aBuffer, std::span<const uint8
         return 1;
     }
 
-    return a.compare(b);
+    auto comparison = a <=> b;
+    if (is_eq(comparison))
+        return 0;
+    return is_lt(comparison) ? -1 : 1;
 }
 
 static const String v1RecordsTableSchema(ASCIILiteral tableName)
