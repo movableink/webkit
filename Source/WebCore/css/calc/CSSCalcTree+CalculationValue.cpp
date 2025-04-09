@@ -225,13 +225,13 @@ auto toCalculationValue(const Random::Sharing& randomSharing, const ToConversion
 
     return WTF::switchOn(randomSharing,
         [&](const Random::SharingOptions& sharingOptions) -> Calculation::Random::Fixed {
-            if (!sharingOptions.matchElement.has_value()) {
+            if (!sharingOptions.elementShared.has_value()) {
                 ASSERT(options.evaluation.conversionData->styleBuilderState()->element());
             }
 
             auto baseValue = options.evaluation.conversionData->styleBuilderState()->lookupCSSRandomBaseValue(
                 sharingOptions.identifier,
-                sharingOptions.matchElement.has_value()
+                sharingOptions.elementShared
             );
 
             return Calculation::Random::Fixed { baseValue };

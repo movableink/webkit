@@ -389,12 +389,12 @@ void serializeMathFunctionArguments(StringBuilder& builder, const IndirectNode<R
 {
     WTF::switchOn(fn->sharing,
         [&](const Random::SharingOptions& options) {
-            if (std::holds_alternative<AtomString>(options.identifier) && options.matchElement)
-                builder.append(std::get<AtomString>(options.identifier), ' ', nameLiteralForSerialization(CSSValueMatchElement), ", "_s);
+            if (std::holds_alternative<AtomString>(options.identifier) && options.elementShared)
+                builder.append(std::get<AtomString>(options.identifier), ' ', nameLiteralForSerialization(CSSValueElementShared), ", "_s);
             else if (std::holds_alternative<AtomString>(options.identifier))
                 builder.append(std::get<AtomString>(options.identifier), ", "_s);
-            else if (options.matchElement)
-                builder.append(nameLiteralForSerialization(CSSValueMatchElement), ", "_s);
+            else if (options.elementShared)
+                builder.append(nameLiteralForSerialization(CSSValueElementShared), ", "_s);
         },
         [&](const Random::SharingFixed& fixed) {
             builder.append(nameLiteralForSerialization(CSSValueFixed), ' ');

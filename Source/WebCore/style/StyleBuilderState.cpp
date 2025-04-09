@@ -318,9 +318,9 @@ void BuilderState::setUsesContainerUnits()
     m_style.setUsesContainerUnits();
 }
 
-double BuilderState::lookupCSSRandomBaseValue(const CSSCalc::RandomCachingKey& key, bool matchElement) const
+double BuilderState::lookupCSSRandomBaseValue(const CSSCalc::RandomCachingKey& key, std::optional<CSS::Keyword::ElementShared> elementShared) const
 {
-    if (!matchElement) {
+    if (!elementShared) {
         ASSERT(element());
 
         std::optional<Style::PseudoElementIdentifier> pseudoElementIdentifier;

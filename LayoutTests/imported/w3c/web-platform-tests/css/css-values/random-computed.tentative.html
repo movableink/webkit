@@ -17,11 +17,11 @@
     margin: random(0px, 100000px) random(0px, 100000px);
   }
   .randomMatchElement {
-    width: random(match-element, 0px, 100px);
-    height: random(match-element, 0px, 100px);
-    left: random(match-element, 0px, 100000px);
-    right: random(match-element, 0px, 100000px);
-    margin: random(match-element 0px, 100000px) random(match-element 0px, 100000px);
+    width: random(element-shared, 0px, 100px);
+    height: random(element-shared, 0px, 100px);
+    left: random(element-shared, 0px, 100000px);
+    right: random(element-shared, 0px, 100000px);
+    margin: random(element-shared 0px, 100000px) random(element-shared 0px, 100000px);
   }
   .randomIdentifier {
     width: random(--identifier, 0px, 100px);
@@ -31,11 +31,11 @@
     margin: random(--identifier 0px, 100000px) random(--identifier 0px, 100000px);
   }
   .randomMatchElementAndIdentifier {
-    width: random(match-element --other-identifier, 0px, 100px);
-    height: random(match-element --other-identifier, 0px, 100px);
-    left: random(match-element --other-identifier, 0px, 100000px);
-    right: random(match-element --other-identifier, 0px, 100000px);
-    margin: random(match-element --other-identifier 0px, 100000px) random(match-element --other-identifier 0px, 100000px);
+    width: random(element-shared --other-identifier, 0px, 100px);
+    height: random(element-shared --other-identifier, 0px, 100px);
+    left: random(element-shared --other-identifier, 0px, 100000px);
+    right: random(element-shared --other-identifier, 0px, 100000px);
+    margin: random(element-shared --other-identifier 0px, 100000px) random(element-shared --other-identifier 0px, 100000px);
   }
   .randomFixed {
     width: random(fixed 0.5, 10px, 100px);
@@ -176,13 +176,13 @@ const property = 'scale';
 
 test_random_computed_value_in_range(property, 'random(1, 11)', '1', '11');
 test_random_computed_value_in_range(property, 'random(--foo, 2, 12)', '2', '12');
-test_random_computed_value_in_range(property, 'random(--foo match-element, 3, 13)', '3', '13');
-test_random_computed_value_in_range(property, 'random(match-element --foo, 4, 14)', '4', '14');
+test_random_computed_value_in_range(property, 'random(--foo element-shared, 3, 13)', '3', '13');
+test_random_computed_value_in_range(property, 'random(element-shared --foo, 4, 14)', '4', '14');
 
 test_random_computed_value(property, 'random(0, 10, 5)', ['0', '5', '10']);
 test_random_computed_value(property, 'random(--foo, 10, 20, 5)', ['10', '15', '20']);
-test_random_computed_value(property, 'random(--foo match-element, 20, 30, 5)', ['20', '25', '30']);
-test_random_computed_value(property, 'random(match-element --foo, 30, 40, 5)', ['30', '35', '40']);
+test_random_computed_value(property, 'random(--foo element-shared, 20, 30, 5)', ['20', '25', '30']);
+test_random_computed_value(property, 'random(element-shared --foo, 30, 40, 5)', ['30', '35', '40']);
 
 // Test out of order.
 test_random_computed_value(property, 'random(100, 10)', '100');
@@ -254,8 +254,8 @@ test_random_computed_value_in_range(property, 'calc(10 + random(10, 100, -infini
 // Test pseudo on psuedo elements
 test_pseudo_element_random_computed_value_in_range(property, '::before', 'random(7, 17)', '7', '17');
 test_pseudo_element_random_computed_value_in_range(property, '::before', 'random(--bar, 8, 18)', '8', '18');
-test_pseudo_element_random_computed_value_in_range(property, '::before', 'random(match-element, 9, 19)', '9', '19');
-test_pseudo_element_random_computed_value_in_range(property, '::before', 'random(match-element --foo, 10, 20)', '10', '20');
+test_pseudo_element_random_computed_value_in_range(property, '::before', 'random(element-shared, 9, 19)', '9', '19');
+test_pseudo_element_random_computed_value_in_range(property, '::before', 'random(element-shared --foo, 10, 20)', '10', '20');
 
 // Test unresolvable percentage values
 test_random_computed_value_has_fixed('translate', 'random(10%, 100%)', '10%', '100%');
@@ -381,7 +381,7 @@ test(() => {
   } finally {
     document.body.removeChild(holder);
   }
-}, `Shared between elements within a property: random(match-element, a, b)`);
+}, `Shared between elements within a property: random(element-shared, a, b)`);
 
 test(() => {
   const holder = document.createElement('div');
@@ -404,7 +404,7 @@ test(() => {
   } finally {
     document.body.removeChild(holder);
   }
-}, `Shared between elements within a property - shorthand: random(match-element, a, b))`);
+}, `Shared between elements within a property - shorthand: random(element-shared, a, b))`);
 
 test(() => {
   const holder = document.createElement('div');
@@ -427,7 +427,7 @@ test(() => {
   } finally {
     document.body.removeChild(holder);
   }
-}, `Shared globally: random(--identifier match-element, a, b)`);
+}, `Shared globally: random(--identifier element-shared, a, b)`);
 
 test(() => {
   const holder = document.createElement('div');
@@ -450,7 +450,7 @@ test(() => {
   } finally {
     document.body.removeChild(holder);
   }
-}, `Shared globally - shorthand: random(match-element, a, b))`);
+}, `Shared globally - shorthand: random(element-shared, a, b))`);
 
 test(() => {
   const holder = document.createElement('div');

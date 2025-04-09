@@ -675,10 +675,10 @@ static Random::SharingOptions::Auto makeRandomSharingAuto(ParserState& state)
 
 static std::optional<Random::SharingOptions> consumeOptionalRandomSharingOptions(CSSParserTokenRange& tokens, ParserState& state)
 {
-    // <random-value-sharing-options> = [ [ auto | <dashed-ident> ] || match-element ]
+    // <random-value-sharing-options> = [ [ auto | <dashed-ident> ] || element-shared ]
 
     std::optional<std::variant<Random::SharingOptions::Auto, AtomString>> identifier;
-    std::optional<CSS::Keyword::MatchElement> matchElement;
+    std::optional<CSS::Keyword::ElementShared> elementShared;
 
     CSSParserTokenRangeGuard guard { tokens };
 
@@ -696,37 +696,37 @@ static std::optional<Random::SharingOptions> consumeOptionalRandomSharingOptions
         }
         return false;
     };
-    auto consumeMatchElement = [&] -> bool {
-        if (matchElement)
+    auto consumeElementShared = [&] -> bool {
+        if (elementShared)
             return false;
-        if (tokens.peek().id() == CSSValueMatchElement) {
+        if (tokens.peek().id() == CSSValueElementShared) {
             tokens.consumeIncludingWhitespace();
-            matchElement = CSS::Keyword::MatchElement { };
+            elementShared = CSS::Keyword::ElementShared { };
             return true;
         }
         return false;
     };
 
     for (unsigned i = 0; i < 2; ++i) {
-        if (consumeIdentifier() || consumeMatchElement())
+        if (consumeIdentifier() || consumeElementShared())
             continue;
         break;
     }
 
-    if (!identifier && !matchElement)
+    if (!identifier && !elementShared)
         return { };
 
     guard.commit();
 
     return Random::SharingOptions {
         .identifier = identifier.value_or(makeRandomSharingAuto(state)),
-        .matchElement = matchElement
+        .elementShared = elementShared
     };
 }
 
 static std::optional<Random::Sharing> consumeOptionalRandomSharing(CSSParserTokenRange& tokens, ParserState& state)
 {
-    // <random-value-sharing> = [ [ auto | <dashed-ident> ] || match-element ] | fixed <number [0,1]>
+    // <random-value-sharing> = [ [ auto | <dashed-ident> ] || element-shared ] | fixed <number [0,1]>
 
     if (tokens.peek().id() == CSSValueFixed) {
         if (auto fixed = consumeOptionalRandomSharingFixed(tokens, state))
@@ -768,7 +768,7 @@ static std::optional<TypedChild> consumeRandom(CSSParserTokenRange& tokens, int 
     } else {
         sharing = Random::SharingOptions {
             .identifier = makeRandomSharingAuto(state),
-            .matchElement = { },
+            .elementShared = { },
         };
     }
 

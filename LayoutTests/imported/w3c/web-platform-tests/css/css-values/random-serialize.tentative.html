@@ -11,17 +11,17 @@ test_valid_value('width', 'random(0px, 100px)');
 test_valid_value('width', 'random(0px, 100px, 50px)');
 test_valid_value('width', 'random(--foo, 0px, 100px)');
 test_valid_value('width', 'random(auto, 0px, 100px)', 'random(0px, 100px)');
-test_valid_value('width', 'random(--foo match-element, 0px, 100px)');
-test_valid_value('width', 'random(auto match-element, 0px, 100px)', 'random(match-element, 0px, 100px)');
-test_valid_value('width', 'random(match-element --foo, 0px, 100px)', 'random(--foo match-element, 0px, 100px)');
-test_valid_value('width', 'random(match-element auto, 0px, 100px)', 'random(match-element, 0px, 100px)');
+test_valid_value('width', 'random(--foo element-shared, 0px, 100px)');
+test_valid_value('width', 'random(auto element-shared, 0px, 100px)', 'random(element-shared, 0px, 100px)');
+test_valid_value('width', 'random(element-shared --foo, 0px, 100px)', 'random(--foo element-shared, 0px, 100px)');
+test_valid_value('width', 'random(element-shared auto, 0px, 100px)', 'random(element-shared, 0px, 100px)');
 test_valid_value('width', 'random(fixed 0.5, 0px, 100px)');
 test_valid_value('width', 'random(--foo, 0px, 100px, 50px)');
 test_valid_value('width', 'random(auto, 0px, 100px, 50px)', 'random(0px, 100px, 50px)');
-test_valid_value('width', 'random(--foo match-element, 0px, 100px, 50px)');
-test_valid_value('width', 'random(auto match-element, 0px, 100px, 50px)', 'random(match-element, 0px, 100px, 50px)');
-test_valid_value('width', 'random(match-element --foo, 0px, 100px, 50px)', 'random(--foo match-element, 0px, 100px, 50px)');
-test_valid_value('width', 'random(match-element auto, 0px, 100px, 50px)', 'random(match-element, 0px, 100px, 50px)');
+test_valid_value('width', 'random(--foo element-shared, 0px, 100px, 50px)');
+test_valid_value('width', 'random(auto element-shared, 0px, 100px, 50px)', 'random(element-shared, 0px, 100px, 50px)');
+test_valid_value('width', 'random(element-shared --foo, 0px, 100px, 50px)', 'random(--foo element-shared, 0px, 100px, 50px)');
+test_valid_value('width', 'random(element-shared auto, 0px, 100px, 50px)', 'random(element-shared, 0px, 100px, 50px)');
 test_valid_value('width', 'random(fixed 0.5, 0px, 100px, 50px)');
 
 // Test out of order.
