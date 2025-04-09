@@ -1537,6 +1537,8 @@ container-progress
 random
 // match-element
 // fixed
+sibling-count
+sibling-index
 infinity
 -infinity id=NegativeInfinity
 NaN

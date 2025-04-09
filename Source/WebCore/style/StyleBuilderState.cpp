@@ -332,5 +332,31 @@ double BuilderState::lookupCSSRandomBaseValue(const CSSCalc::RandomCachingKey& k
     return document().lookupCSSRandomBaseValue(key);
 }
 
+unsigned BuilderState::siblingCount() const
+{
+    // https://drafts.csswg.org/css-values-5/#funcdef-sibling-count
+
+    ASSERT(element());
+
+    unsigned count = 1;
+    for (const auto* sibling = ElementTraversal::previousSibling(*element()); sibling; sibling = ElementTraversal::previousSibling(*sibling))
+        ++count;
+    for (const auto* sibling = ElementTraversal::nextSibling(*element()); sibling; sibling = ElementTraversal::nextSibling(*sibling))
+        ++count;
+    return count;
+}
+
+unsigned BuilderState::siblingIndex() const
+{
+    // https://drafts.csswg.org/css-values-5/#funcdef-sibling-index
+
+    ASSERT(element());
+
+    unsigned count = 1;
+    for (const auto* sibling = ElementTraversal::previousSibling(*element()); sibling; sibling = ElementTraversal::previousSibling(*sibling))
+        ++count;
+    return count;
+}
+
 } // namespace Style
 } // namespace WebCore
