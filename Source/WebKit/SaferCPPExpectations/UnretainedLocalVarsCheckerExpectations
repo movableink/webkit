@@ -47,9 +47,7 @@ UIProcess/API/mac/WKWebViewTestingMac.mm
 UIProcess/Automation/cocoa/WebAutomationSessionCocoa.mm
 UIProcess/Automation/mac/WebAutomationSessionMac.mm
 UIProcess/Cocoa/ModelElementControllerCocoa.mm
-UIProcess/Cocoa/UIDelegate.mm
 UIProcess/Cocoa/WKContactPicker.mm
-UIProcess/Cocoa/WKShareSheet.mm
 UIProcess/Cocoa/WKStorageAccessAlert.mm
 UIProcess/Cocoa/WebPageProxyCocoa.mm
 UIProcess/Cocoa/WebPreferencesCocoa.mm

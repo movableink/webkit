@@ -38,6 +38,7 @@
 @class _WKActivatedElementInfo;
 @class WKWebView;
 @protocol WKUIDelegate;
+@protocol WKUIDelegatePrivate;
 
 namespace API {
 class FrameInfo;
@@ -205,6 +206,8 @@ private:
         void recentlyAccessedGamepadsForTesting(WebPageProxy&) final;
         void stoppedAccessingGamepadsForTesting(WebPageProxy&) final;
 #endif
+
+        id<WKUIDelegatePrivate> uiDelegatePrivate();
 
         WeakPtr<UIDelegate> m_uiDelegate;
     };
