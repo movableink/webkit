@@ -1407,6 +1407,11 @@ WebFileSystemStorageConnection& WebProcess::fileSystemStorageConnection()
     return *m_fileSystemStorageConnection;
 }
 
+Ref<WebFileSystemStorageConnection> WebProcess::protectedFileSystemStorageConnection()
+{
+    return fileSystemStorageConnection();
+}
+
 WebLoaderStrategy& WebProcess::webLoaderStrategy()
 {
     return m_webLoaderStrategy;

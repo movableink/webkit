@@ -266,6 +266,7 @@ public:
     WebLoaderStrategy& webLoaderStrategy();
     Ref<WebLoaderStrategy> protectedWebLoaderStrategy();
     WebFileSystemStorageConnection& fileSystemStorageConnection();
+    Ref<WebFileSystemStorageConnection> protectedFileSystemStorageConnection();
 
     RefPtr<WebTransportSession> webTransportSession(WebTransportSessionIdentifier);
     void addWebTransportSession(WebTransportSessionIdentifier, WebTransportSession&);

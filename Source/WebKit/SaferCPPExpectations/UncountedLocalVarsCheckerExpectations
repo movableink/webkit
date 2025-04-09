@@ -36,7 +36,6 @@ WebProcess/Inspector/WebInspectorClient.cpp
 WebProcess/Inspector/WebInspectorInternal.cpp
 WebProcess/MediaStream/UserMediaPermissionRequestManager.cpp
 WebProcess/Model/mac/ARKitInlinePreviewModelPlayerMac.mm
-WebProcess/Network/NetworkProcessConnection.cpp
 WebProcess/Network/WebLoaderStrategy.cpp
 WebProcess/Network/WebSocketChannel.cpp
 WebProcess/Network/webrtc/LibWebRTCNetworkManager.cpp

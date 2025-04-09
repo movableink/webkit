@@ -82,6 +82,7 @@ public:
     WebSWClientConnection& serviceWorkerConnection();
     Ref<WebSWClientConnection> protectedServiceWorkerConnection();
     WebSharedWorkerObjectConnection& sharedWorkerConnection();
+    Ref<WebSharedWorkerObjectConnection> protectedSharedWorkerConnection();
 
 #if HAVE(AUDIT_TOKEN)
     void setNetworkProcessAuditToken(std::optional<audit_token_t> auditToken) { m_networkProcessAuditToken = auditToken; }

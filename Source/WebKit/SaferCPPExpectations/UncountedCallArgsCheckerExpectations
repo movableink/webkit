@@ -153,7 +153,6 @@ WebProcess/Inspector/WebInspectorClient.cpp
 WebProcess/Inspector/WebInspectorInternal.cpp
 WebProcess/Inspector/WebInspectorUI.cpp
 WebProcess/Inspector/WebInspectorUIExtensionController.cpp
-WebProcess/Network/NetworkProcessConnection.cpp
 WebProcess/Network/WebLoaderStrategy.cpp
 WebProcess/Network/WebMockContentFilterManager.cpp
 WebProcess/Network/WebSocketChannel.cpp
