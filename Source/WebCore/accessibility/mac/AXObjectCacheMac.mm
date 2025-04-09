@@ -539,7 +539,7 @@ static void addFirstTextMarker(NSMutableDictionary *change, AXObjectCache& cache
 
 static NSDictionary *textReplacementChangeDictionary(AXObjectCache& cache, AccessibilityObject& object, AXTextEditType type, const String& string, const VisiblePosition& visiblePosition = { })
 {
-    RetainPtr text = string.createNSString();
+    NSString *text = (NSString *)string;
     NSUInteger length = [text length];
     if (!length)
         return nil;
@@ -550,7 +550,7 @@ static NSDictionary *textReplacementChangeDictionary(AXObjectCache& cache, Acces
         [change setObject:@(length) forKey:NSAccessibilityTextChangeValueLength];
         text = [text substringToIndex:AXValueChangeTruncationLength];
     }
-    [change setObject:text.get() forKey:NSAccessibilityTextChangeValue];
+    [change setObject:text forKey:NSAccessibilityTextChangeValue];
 
     if (!visiblePosition.isNull())
         addTextMarkerForVisiblePosition(change.get(), cache, visiblePosition);

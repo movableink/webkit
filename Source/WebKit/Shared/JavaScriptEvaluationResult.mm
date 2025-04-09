@@ -40,7 +40,6 @@
 #import <WebCore/ExceptionDetails.h>
 #import <WebCore/SerializedScriptValue.h>
 #import <wtf/RunLoop.h>
-#import <wtf/cocoa/TypeCastsCocoa.h>
 
 namespace WebKit {
 
@@ -63,7 +62,7 @@ RetainPtr<id> JavaScriptEvaluationResult::toID(Variant&& root)
     }, [] (CoreIPCNumber&& value) -> RetainPtr<id> {
         return value.toID();
     }, [] (String&& value) -> RetainPtr<id> {
-        return value.createNSString();
+        return (NSString *)value;
     }, [] (Seconds value) -> RetainPtr<id> {
         return [NSDate dateWithTimeIntervalSince1970:value.seconds()];
     }, [&] (Vector<JSObjectID>&& vector) -> RetainPtr<id> {
@@ -169,8 +168,8 @@ auto JavaScriptEvaluationResult::toVariant(id object) -> Variant
         return CoreIPCNumber((NSNumber *)object);
     }
 
-    if (auto* nsString = dynamic_objc_cast<NSString>(object))
-        return String(nsString);
+    if ([object isKindOfClass:NSString.class])
+        return String((NSString *)object);
 
     if ([object isKindOfClass:NSDate.class])
         return Seconds([(NSDate *)object timeIntervalSince1970]);

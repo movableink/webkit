@@ -103,7 +103,7 @@ static RetainPtr<NSError> createNSErrorFromResourceErrorBase(const ResourceError
         [userInfo setValue:resourceError.localizedDescription() forKey:NSLocalizedDescriptionKey];
 
     if (!resourceError.failingURL().isEmpty()) {
-        [userInfo setValue:resourceError.failingURL().string().createNSString().get() forKey:@"NSErrorFailingURLStringKey"];
+        [userInfo setValue:(NSString *)resourceError.failingURL().string() forKey:@"NSErrorFailingURLStringKey"];
         if (RetainPtr cocoaURL = (NSURL *)resourceError.failingURL().createNSURL())
             [userInfo setValue:cocoaURL.get() forKey:@"NSErrorFailingURLKey"];
     }

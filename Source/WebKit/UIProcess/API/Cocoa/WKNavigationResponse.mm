@@ -88,7 +88,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 - (NSString *)_downloadAttribute
 {
     const String& attribute = _navigationResponse->downloadAttribute();
-    return attribute.isNull() ? nil : attribute.createNSString().autorelease();
+    return attribute.isNull() ? nil : (NSString *)attribute;
 }
 
 - (BOOL)_wasPrivateRelayed

@@ -2766,7 +2766,7 @@ void WebViewImpl::registerEditCommand(Ref<WebEditCommandProxy>&& command, UndoOr
     RetainPtr undoManager = [m_view undoManager];
     [undoManager registerUndoWithTarget:m_undoTarget.get() selector:((undoOrRedo == UndoOrRedo::Undo) ? @selector(undoEditing:) : @selector(redoEditing:)) object:commandObjC.get()];
     if (!actionName.isEmpty())
-        [undoManager setActionName:actionName.createNSString().get()];
+        [undoManager setActionName:(NSString *)actionName];
 }
 
 void WebViewImpl::clearAllEditCommands()

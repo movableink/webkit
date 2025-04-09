@@ -1840,9 +1840,9 @@ BOOL HTMLConverter::_processElement(Element& element, NSInteger depth)
     } else if (element.hasTagName(brTag)) {
         Element* blockElement = _blockLevelElementForNode(element.parentInComposedTree());
         NSString *breakClass = element.getAttribute(classAttr);
-        RetainPtr blockTag = blockElement ? blockElement->tagName().createNSString() : nil;
+        NSString *blockTag = blockElement ? (NSString *)blockElement->tagName() : nil;
         BOOL isExtraBreak = [AppleInterchangeNewline.createNSString() isEqualToString:breakClass];
-        BOOL blockElementIsParagraph = ([@"P" isEqualToString:blockTag.get()] || [@"LI" isEqualToString:blockTag.get()] || ([blockTag hasPrefix:@"H"] && 2 == [blockTag length]));
+        BOOL blockElementIsParagraph = ([@"P" isEqualToString:blockTag] || [@"LI" isEqualToString:blockTag] || ([blockTag hasPrefix:@"H"] && 2 == [blockTag length]));
         if (isExtraBreak)
             _flags.hasTrailingNewline = YES;
         else {
@@ -1874,14 +1874,14 @@ BOOL HTMLConverter::_processElement(Element& element, NSInteger depth)
     } else if (element.hasTagName(inputTag)) {
         if (RefPtr inputElement = dynamicDowncast<HTMLInputElement>(element)) {
             if (inputElement->type() == textAtom()) {
-                RetainPtr value = inputElement->value().createNSString();
+                RetainPtr value = (NSString *)inputElement->value();
                 if (value && [value length] > 0)
                     _addValue(value.get(), element);
             }
         }
     } else if (element.hasTagName(textareaTag)) {
         if (RefPtr textAreaElement = dynamicDowncast<HTMLTextAreaElement>(element)) {
-            RetainPtr value = textAreaElement->value().createNSString();
+            RetainPtr value = (NSString *)textAreaElement->value();
             if (value && [value length] > 0)
                 _addValue(value.get(), element);
         }
@@ -2401,7 +2401,7 @@ static RetainPtr<NSFileWrapper> fileWrapperForElement(const HTMLAttachmentElemen
 {
     auto identifier = element.uniqueIdentifier();
 
-    RetainPtr data = [identifier.createNSString() dataUsingEncoding:NSUTF8StringEncoding];
+    RetainPtr data = [(NSString *)identifier dataUsingEncoding:NSUTF8StringEncoding];
     if (!data)
         return nil;
 

@@ -77,11 +77,11 @@ NSDictionary *NotificationOptionsPayload::dictionaryRepresentation() const
 {
     return @{
         WebDirKey : @((uint8_t)dir),
-        WebLangKey : lang.createNSString().get(),
-        WebBodyKey : body.createNSString().get(),
-        WebTagKey : tag.createNSString().get(),
-        WebIconKey : icon.createNSString().get(),
-        WebDataJSONKey : dataJSONString.createNSString().get(),
+        WebLangKey : (NSString *)lang,
+        WebBodyKey : (NSString *)body,
+        WebTagKey : (NSString *)tag,
+        WebIconKey : (NSString *)icon,
+        WebDataJSONKey : (NSString *)dataJSONString,
         WebSilentKey : silent.has_value() ? @(*silent) : [NSNull null],
     };
 }

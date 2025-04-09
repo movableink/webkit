@@ -72,7 +72,7 @@ WK_OBJECT_DEALLOC_IMPL_ON_MAIN_THREAD(WKWebExtensionCommand, WebExtensionCommand
 - (NSString *)debugDescription
 {
     return [NSString stringWithFormat:@"<%@: %p; identifier = %@; shortcut = %@>", NSStringFromClass(self.class), self,
-        self.identifier, self.activationKey.length ? self._protectedWebExtensionCommand->shortcutString().createNSString().get() : @"(none)"];
+        self.identifier, self.activationKey.length ? (NSString *)self._protectedWebExtensionCommand->shortcutString() : @"(none)"];
 }
 
 - (WKWebExtensionContext *)webExtensionContext

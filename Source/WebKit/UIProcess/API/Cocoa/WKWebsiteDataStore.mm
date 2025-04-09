@@ -356,7 +356,7 @@ private:
         if (!m_hasDidExceedMemoryFootprintThresholdSelector)
             return;
 
-        [m_delegate.getAutoreleased() websiteDataStore:m_dataStore.getAutoreleased() domain:domain.createNSString().get() didExceedMemoryFootprintThreshold:footprint withPageCount:pageCount processLifetime:processLifetime.seconds() inForeground:inForeground wasPrivateRelayed:wasPrivateRelayed == WebCore::WasPrivateRelayed::Yes canSuspend:canSuspend == CanSuspend::Yes];
+        [m_delegate.getAutoreleased() websiteDataStore:m_dataStore.getAutoreleased() domain:(NSString *)domain didExceedMemoryFootprintThreshold:footprint withPageCount:pageCount processLifetime:processLifetime.seconds() inForeground:inForeground wasPrivateRelayed:wasPrivateRelayed == WebCore::WasPrivateRelayed::Yes canSuspend:canSuspend == CanSuspend::Yes];
     }
 
     WeakObjCPtr<WKWebsiteDataStore> m_dataStore;
@@ -665,7 +665,7 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
         if (errorString.isEmpty())
             return completionHandlerCopy(nil);
 
-        completionHandlerCopy([NSError errorWithDomain:@"WKWebSiteDataStore" code:WKErrorUnknown userInfo:@{ NSLocalizedDescriptionKey:errorString.createNSString().get() }]);
+        completionHandlerCopy([NSError errorWithDomain:@"WKWebSiteDataStore" code:WKErrorUnknown userInfo:@{ NSLocalizedDescriptionKey:(NSString *)errorString }]);
     });
 }
 
@@ -1250,7 +1250,7 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
     _websiteDataStore->protectedNetworkProcess()->getAllBackgroundFetchIdentifiers(_websiteDataStore->sessionID(), [completionHandler = makeBlockPtr(completionHandler)] (auto identifiers) {
         auto result = adoptNS([[NSMutableArray alloc] initWithCapacity:identifiers.size()]);
         for (auto identifier : identifiers)
-            [result addObject:identifier];
+            [result addObject:(NSString *)identifier];
         completionHandler(result.autorelease());
     });
 }

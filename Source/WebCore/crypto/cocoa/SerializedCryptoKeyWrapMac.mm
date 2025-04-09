@@ -35,7 +35,6 @@
 #import <wtf/ProcessPrivilege.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/cf/VectorCF.h>
-#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/spi/cocoa/SecuritySPI.h>
 #import <wtf/text/Base64.h>
@@ -94,7 +93,7 @@ static std::optional<Vector<uint8_t>> createAndStoreMasterKey()
     NSBundle *mainBundle = [NSBundle mainBundle];
     NSString *applicationName = [mainBundle objectForInfoDictionaryKey:@"CFBundleDisplayName"];
     if (!applicationName)
-        applicationName = [mainBundle objectForInfoDictionaryKey:bridge_cast(kCFBundleNameKey)];
+        applicationName = [mainBundle objectForInfoDictionaryKey:(NSString *)kCFBundleNameKey];
     if (!applicationName)
         applicationName = [mainBundle bundleIdentifier];
     NSString *localizedItemName = webCryptoMasterKeyKeychainLabel(applicationName);

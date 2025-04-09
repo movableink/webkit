@@ -330,11 +330,11 @@ RetainPtr<NSArray> NetworkStorageSession::httpCookiesForURL(CFHTTPCookieStorageR
     // NetworkStorageSession could instead keep a NSHTTPCookieStorage object for us.
     RetainPtr<NSHTTPCookieStorage> nsCookieStorage = adoptNS([[NSHTTPCookieStorage alloc] _initWithCFHTTPCookieStorage:cookieStorage]);
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
-    RetainPtr partitionKey = isOptInCookiePartitioningEnabled() ? cookiePartitionIdentifier(firstParty).createNSString() : nil;
+    NSString* partitionKey = isOptInCookiePartitioningEnabled() ? (NSString *)cookiePartitionIdentifier(firstParty) : nil;
 #else
-    RetainPtr<NSString> partitionKey;
+    NSString* partitionKey = nil;
 #endif
-    return cookiesForURLFromStorage(nsCookieStorage.get(), url, firstParty, sameSiteInfo, thirdPartyCookieBlockingDecision, partitionKey.get());
+    return cookiesForURLFromStorage(nsCookieStorage.get(), url, firstParty, sameSiteInfo, thirdPartyCookieBlockingDecision, partitionKey);
 }
 
 RetainPtr<NSHTTPCookie> NetworkStorageSession::capExpiryOfPersistentCookie(NSHTTPCookie *cookie, Seconds cap)
@@ -366,7 +366,7 @@ NSHTTPCookie *NetworkStorageSession::setCookiePartition(NSHTTPCookie *cookie, NS
     }
 
     auto properties = adoptNS([[cookie properties] mutableCopy]);
-    [properties setObject:partitionKey forKey:@"StoragePartition"];
+    [properties setObject:(NSString *)partitionKey forKey:@"StoragePartition"];
     return [NSHTTPCookie cookieWithProperties:properties.get()];
 }
 #endif
@@ -733,7 +733,7 @@ Vector<Cookie> NetworkStorageSession::domCookiesForHost(const URL& firstParty)
     auto host = firstParty.host().toString();
 
     // _getCookiesForDomain only returned unpartitioned (i.e., nil partition) cookies
-    RetainPtr<NSArray> unpartitionedCookies = [nsCookieStorage() _getCookiesForDomain:host.createNSString().get()];
+    RetainPtr<NSArray> unpartitionedCookies = [nsCookieStorage() _getCookiesForDomain:(NSString *)host];
     RetainPtr nsCookies = adoptNS([[NSMutableArray alloc] initWithArray:unpartitionedCookies.get()]);
 
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
@@ -745,7 +745,7 @@ Vector<Cookie> NetworkStorageSession::domCookiesForHost(const URL& firstParty)
         // completionHandler synchronously. We crash if this invariant is not
         // met.
         bool wasCompletionHandlerCalled { false };
-        RetainPtr partitionKey = cookiePartitionIdentifier(firstParty).createNSString();
+        String partitionKey = cookiePartitionIdentifier(firstParty);
         auto completionHandler = [&wasCompletionHandlerCalled, &nsCookies, &host, &partitionKey, &firstParty] (NSArray *cookies) {
             wasCompletionHandlerCalled = true;
 
@@ -756,15 +756,15 @@ Vector<Cookie> NetworkStorageSession::domCookiesForHost(const URL& firstParty)
                 if (![host hasSuffix:nsCookie.domain])
                     continue;
 
-                ASSERT([nsCookie._storagePartition isEqualToString:partitionKey.get()]);
-                if (![nsCookie._storagePartition isEqualToString:partitionKey.get()])
+                ASSERT([nsCookie._storagePartition isEqualToString:partitionKey]);
+                if (![nsCookie._storagePartition isEqualToString:partitionKey])
                     continue;
 
                 [nsCookies addObject:nsCookie];
             }
         };
 
-        [nsCookieStorage() _getCookiesForPartition:partitionKey.get() completionHandler:completionHandler];
+        [nsCookieStorage() _getCookiesForPartition:(NSString *)partitionKey completionHandler:completionHandler];
         RELEASE_ASSERT(wasCompletionHandlerCalled);
     }
 #endif
@@ -847,10 +847,10 @@ bool NetworkStorageSession::startListeningForCookieChangeNotifications(CookieCha
 
     if (!m_subscribedDomainsForCookieChanges)
         m_subscribedDomainsForCookieChanges = adoptNS([[NSMutableSet alloc] init]);
-    else if ([m_subscribedDomainsForCookieChanges containsObject:host.createNSString().get()])
+    else if ([m_subscribedDomainsForCookieChanges containsObject:(NSString *)host])
         return true;
 
-    [m_subscribedDomainsForCookieChanges addObject:host.createNSString().get()];
+    [m_subscribedDomainsForCookieChanges addObject:(NSString *)host];
     [nsCookieStorage() _setSubscribedDomainsForCookieChanges:m_subscribedDomainsForCookieChanges.get()];
     return true;
 }
@@ -869,8 +869,8 @@ void NetworkStorageSession::stopListeningForCookieChangeNotifications(CookieChan
         observers.remove(observer);
         if (observers.isEmptyIgnoringNullReferences()) {
             m_cookieChangeObservers.remove(it);
-            ASSERT([m_subscribedDomainsForCookieChanges containsObject:host.createNSString().get()]);
-            [m_subscribedDomainsForCookieChanges removeObject:host.createNSString().get()];
+            ASSERT([m_subscribedDomainsForCookieChanges containsObject:(NSString *)host]);
+            [m_subscribedDomainsForCookieChanges removeObject:(NSString *)host];
             subscribedURLsChanged = true;
         }
     }

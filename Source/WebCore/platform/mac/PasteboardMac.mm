@@ -82,7 +82,7 @@ static Vector<String> writableTypesForImage()
 
 NSArray *Pasteboard::supportedFileUploadPasteboardTypes()
 {
-    return @[ legacyFilesPromisePasteboardType(), legacyFilenamesPasteboardType() ];
+    return @[ (NSString *)legacyFilesPromisePasteboardType(), (NSString *)legacyFilenamesPasteboardType() ];
 }
 
 Pasteboard::Pasteboard(std::unique_ptr<PasteboardContext>&& context)
@@ -211,7 +211,7 @@ static long writeURLForTypes(const Vector<String>& types, const String& pasteboa
     
     RetainPtr nsURL = pasteboardURL.url.createNSURL();
     NSString *userVisibleString = pasteboardURL.userVisibleForm;
-    RetainPtr title = pasteboardURL.title.createNSString();
+    NSString *title = (NSString *)pasteboardURL.title;
     if (![title length]) {
         title = [[nsURL path] lastPathComponent];
         if (![title length])
@@ -219,7 +219,7 @@ static long writeURLForTypes(const Vector<String>& types, const String& pasteboa
     }
 
     if (types.contains(WebURLsWithTitlesPboardType)) {
-        PasteboardURL url = { pasteboardURL.url, String(title.get()).trim(deprecatedIsSpaceOrNewline), emptyString() };
+        PasteboardURL url = { pasteboardURL.url, String(title).trim(deprecatedIsSpaceOrNewline), emptyString() };
         newChangeCount = platformStrategies()->pasteboardStrategy()->setURL(url, pasteboardName, context);
     }
     if (types.contains(String(legacyURLPasteboardType())))
@@ -227,7 +227,7 @@ static long writeURLForTypes(const Vector<String>& types, const String& pasteboa
     if (types.contains(WebURLPboardType))
         newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType(userVisibleString, WebURLPboardType, pasteboardName, context);
     if (types.contains(WebURLNamePboardType))
-        newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType(title.get(), WebURLNamePboardType, pasteboardName, context);
+        newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType(title, WebURLNamePboardType, pasteboardName, context);
     if (types.contains(String(legacyStringPasteboardType())))
         newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType(userVisibleString, legacyStringPasteboardType(), pasteboardName, context);
 

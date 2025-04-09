@@ -30,7 +30,6 @@
 #import "WebPageProxy.h"
 #import <WebCore/MIMETypeRegistry.h>
 #import <WebCore/SharedBuffer.h>
-#import <wtf/cocoa/TypeCastsCocoa.h>
 
 #if PLATFORM(IOS_FAMILY)
 #import <MobileCoreServices/MobileCoreServices.h>
@@ -110,12 +109,12 @@ void Attachment::setFileWrapperAndUpdateContentType(NSFileWrapper *fileWrapper, 
     if (!contentType.length) {
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         if (fileWrapper.directory)
-            contentType = bridge_cast(kUTTypeDirectory);
+            contentType = (NSString *)kUTTypeDirectory;
         else if (fileWrapper.regularFile) {
             if (NSString *pathExtension = (fileWrapper.filename.length ? fileWrapper.filename : fileWrapper.preferredFilename).pathExtension)
                 contentType = WebCore::MIMETypeRegistry::mimeTypeForExtension(WTF::String(pathExtension));
             if (!contentType.length)
-                contentType = bridge_cast(kUTTypeData);
+                contentType = (NSString *)kUTTypeData;
         }
 ALLOW_DEPRECATED_DECLARATIONS_END
     }

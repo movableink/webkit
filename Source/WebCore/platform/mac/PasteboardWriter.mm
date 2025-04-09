@@ -73,10 +73,10 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (auto& urlData = data.urlData()) {
         RetainPtr nsURL = urlData->url.createNSURL();
         NSString *userVisibleString = urlData->userVisibleForm;
-        RetainPtr title = urlData->title.createNSString();
-        if (!title.get().length) {
+        NSString *title = (NSString *)urlData->title;
+        if (!title.length) {
             title = nsURL.get().path.lastPathComponent;
-            if (!title.get().length)
+            if (!title.length)
                 title = userVisibleString;
         }
 
@@ -100,7 +100,7 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 ALLOW_DEPRECATED_DECLARATIONS_END
 
         // WebURLNamePboardType.
-        [pasteboardItem setString:title.get() forType:@"public.url-name"];
+        [pasteboardItem setString:title forType:@"public.url-name"];
 
         // NSPasteboardTypeString.
         [pasteboardItem setString:userVisibleString forType:NSPasteboardTypeString];

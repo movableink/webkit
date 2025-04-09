@@ -107,20 +107,19 @@ void WebExtensionContextProxy::dispatchCommandsCommandEvent(const String& identi
 
     auto *tab = tabParameters ? toWebAPI(tabParameters.value()) : nil;
 
-    RetainPtr nsIdentifier = identifier.createNSString();
     enumerateFramesAndNamespaceObjects([&](auto& frame, auto& namespaceObject) {
         RefPtr coreFrame = frame.protectedCoreLocalFrame();
         WebCore::UserGestureIndicator gestureIndicator(WebCore::IsProcessingUserGesture::Yes, coreFrame ? coreFrame->document() : nullptr);
-        namespaceObject.commands().onCommand().invokeListenersWithArgument(nsIdentifier.get(), tab);
+        namespaceObject.commands().onCommand().invokeListenersWithArgument((NSString *)identifier, tab);
     });
 }
 
 void WebExtensionContextProxy::dispatchCommandsChangedEvent(const String& identifier, const String& oldShortcut, const String& newShortcut)
 {
     auto *changeInfo = @{
-        nameKey: identifier.createNSString().get(),
-        oldShortcutKey: oldShortcut.createNSString().get(),
-        newShortcutKey: newShortcut.createNSString().get()
+        nameKey: (NSString *)identifier,
+        oldShortcutKey: (NSString *)oldShortcut,
+        newShortcutKey: (NSString *)newShortcut
     };
 
     enumerateNamespaceObjects([&](auto& namespaceObject) {

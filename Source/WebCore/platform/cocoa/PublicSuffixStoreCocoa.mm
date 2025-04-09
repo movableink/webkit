@@ -28,14 +28,13 @@
 
 #import <pal/spi/cf/CFNetworkSPI.h>
 #import <wtf/cocoa/NSURLExtras.h>
-#import <wtf/cocoa/TypeCastsCocoa.h>
 
 namespace WebCore {
 
 static bool isPublicSuffixCF(const String& domain)
 {
-    RetainPtr host = WTF::decodeHostName(domain);
-    return host && _CFHostIsDomainTopLevel(bridge_cast(host.get()));
+    NSString *host = WTF::decodeHostName(domain);
+    return host && _CFHostIsDomainTopLevel((__bridge CFStringRef)host);
 }
 
 bool PublicSuffixStore::platformIsPublicSuffix(StringView domain) const

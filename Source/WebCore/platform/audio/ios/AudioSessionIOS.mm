@@ -418,7 +418,7 @@ void AudioSessionIOS::updateSpatialExperience()
         [session setIntendedSpatialExperience:AVAudioSessionSpatialExperienceHeadTracked options:@{
             @"AVAudioSessionSpatialExperienceOptionSoundStageSize" : @(size),
             @"AVAudioSessionSpatialExperienceOptionAnchoringStrategy" : @(AVAudioSessionAnchoringStrategyScene),
-            @"AVAudioSessionSpatialExperienceOptionSceneIdentifier" : m_sceneIdentifier.createNSString().get()
+            @"AVAudioSessionSpatialExperienceOptionSceneIdentifier" : (NSString *)m_sceneIdentifier
         } error:&error];
     } else {
         [session setIntendedSpatialExperience:AVAudioSessionSpatialExperienceHeadTracked options:@{

@@ -129,7 +129,7 @@ bool WebExtensionCommand::setActivationKey(String activationKey)
         notAllowedCharacterSet = allowedCharacterSet.invertedSet;
     });
 
-    if ([activationKey.createNSString() rangeOfCharacterFromSet:notAllowedCharacterSet].location != NSNotFound)
+    if ([(NSString *)activationKey rangeOfCharacterFromSet:notAllowedCharacterSet].location != NSNotFound)
         return false;
 
     dispatchChangedEventSoonIfNeeded();

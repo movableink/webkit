@@ -88,7 +88,7 @@ static NSString *dataKey = @"data";
 
 - (NSString *)title
 {
-    return _coreData.title.createNSString().autorelease();
+    return (NSString *)_coreData.title;
 }
 
 - (void)setDir:(_WKNotificationDirection)dir
@@ -125,7 +125,7 @@ static NSString *dataKey = @"data";
 
 - (NSString *)lang
 {
-    return _coreData.language.createNSString().autorelease();
+    return (NSString *)_coreData.language;
 }
 
 - (void)setBody:(NSString *)body
@@ -135,7 +135,7 @@ static NSString *dataKey = @"data";
 
 - (NSString *)body
 {
-    return _coreData.body.createNSString().autorelease();
+    return (NSString *)_coreData.body;
 }
 
 - (void)setTag:(NSString *)tag
@@ -145,7 +145,7 @@ static NSString *dataKey = @"data";
 
 - (NSString *)tag
 {
-    return _coreData.tag.createNSString().autorelease();
+    return (NSString *)_coreData.tag;
 }
 
 - (void)setAlert:(_WKNotificationAlert)alert
@@ -182,7 +182,7 @@ static NSString *dataKey = @"data";
 
 - (NSString *)origin
 {
-    return _coreData.originString.createNSString().autorelease();
+    return (NSString *)_coreData.originString;
 }
 
 - (void)setSecurityOrigin:(NSURL *)securityOrigin
@@ -207,7 +207,7 @@ static NSString *dataKey = @"data";
 
 - (NSString *)identifier
 {
-    return _coreData.notificationID.toString().createNSString().autorelease();
+    return (NSString *)_coreData.notificationID.toString();
 }
 
 - (void)setUuid:(NSUUID *)uuid

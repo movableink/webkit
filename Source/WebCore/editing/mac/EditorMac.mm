@@ -233,7 +233,7 @@ String Editor::plainTextFromPasteboard(const PasteboardPlainText& text)
         string = WTF::userVisibleString([NSURL URLWithString:string]);
 
     // FIXME: WTF should offer a non-Mac-specific way to convert string to precomposed form so we can do it for all platforms.
-    return [string.createNSString() precomposedStringWithCanonicalMapping];
+    return [(NSString *)string precomposedStringWithCanonicalMapping];
 }
 
 void Editor::writeImageToPasteboard(Pasteboard& pasteboard, Element& imageElement, const URL& url, const String& title)

@@ -297,8 +297,8 @@ TEST(URLExtras, URLExtras_ParsingError)
     NSURL *url = WTF::URLWithUserTypedString(@"http://.com", nil);
     EXPECT_TRUE(url == nil);
 
-    RetainPtr encodedHostName = WTF::encodeHostName(@"http://.com");
-    EXPECT_TRUE(encodedHostName.get() == nil);
+    NSString *encodedHostName = WTF::encodeHostName(@"http://.com");
+    EXPECT_TRUE(encodedHostName == nil);
 
     WTF::URL url2 { utf16String(u"http://\u2267\u222E\uFE63\u0661\u06F1") };
     EXPECT_NULL([url2.createNSURL() absoluteString]);

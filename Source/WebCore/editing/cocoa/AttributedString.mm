@@ -342,7 +342,7 @@ static RetainPtr<id> toNSObject(const AttributedString::AttributeValue& value, I
     return WTF::switchOn(value.value, [] (double value) -> RetainPtr<id> {
         return adoptNS([[NSNumber alloc] initWithDouble:value]);
     }, [] (const String& value) -> RetainPtr<id> {
-        return value.createNSString();
+        return (NSString *)value;
     }, [&] (const ParagraphStyle& value) -> RetainPtr<id> {
         return reconstructStyle(value, tables, tableBlocks, lists);
     }, [] (const RetainPtr<NSPresentationIntent>& value) -> RetainPtr<id> {
@@ -351,7 +351,7 @@ static RetainPtr<id> toNSObject(const AttributedString::AttributeValue& value, I
         return value.createNSURL();
     }, [] (const Vector<String>& value) -> RetainPtr<id> {
         return createNSArray(value, [] (const String& string) {
-            return string.createNSString();
+            return (NSString *)string;
         });
     }, [] (const Vector<double>& value) -> RetainPtr<id> {
         return createNSArray(value, [] (double number) {
@@ -367,11 +367,11 @@ static RetainPtr<id> toNSObject(const AttributedString::AttributeValue& value, I
 
         RetainPtr fileWrapper = adoptNS([[NSFileWrapper alloc] initRegularFileWithContents:data.get()]);
         if (!value.preferredFilename.isNull())
-            [fileWrapper setPreferredFilename:filenameByFixingIllegalCharacters(value.preferredFilename.createNSString().get())];
+            [fileWrapper setPreferredFilename:filenameByFixingIllegalCharacters((NSString *)value.preferredFilename)];
 
         auto textAttachment = adoptNS([[PlatformNSTextAttachment alloc] initWithFileWrapper:fileWrapper.get()]);
         if (!value.accessibilityLabel.isNull())
-            ((NSTextAttachment*)textAttachment.get()).accessibilityLabel = value.accessibilityLabel.createNSString().get();
+            ((NSTextAttachment*)textAttachment.get()).accessibilityLabel = (NSString *)value.accessibilityLabel;
 
         return textAttachment;
 #if ENABLE(MULTI_REPRESENTATION_HEIC)
@@ -396,7 +396,7 @@ static RetainPtr<NSDictionary> toNSDictionary(const HashMap<String, AttributedSt
     auto result = adoptNS([[NSMutableDictionary alloc] initWithCapacity:map.size()]);
     for (auto& pair : map) {
         if (auto nsObject = toNSObject(pair.value, tables, tableBlocks, lists))
-            [result setObject:nsObject.get() forKey:pair.key.createNSString().get()];
+            [result setObject:nsObject.get() forKey:(NSString *)pair.key];
     }
     return result;
 }
@@ -425,7 +425,7 @@ RetainPtr<NSAttributedString> AttributedString::nsAttributedString() const
     IdentifierToTableMap tables;
     IdentifierToTableBlockMap tableBlocks;
     IdentifierToListMap lists;
-    RetainPtr result = adoptNS([[NSMutableAttributedString alloc] initWithString:string.createNSString().get()]);
+    auto result = adoptNS([[NSMutableAttributedString alloc] initWithString:(NSString *)string]);
     for (auto& pair : attributes) {
         auto& map = pair.second;
         auto& range = pair.first;
@@ -443,8 +443,8 @@ static std::optional<AttributedString::AttributeValue> extractArray(NSArray *arr
         Vector<String> result;
         result.reserveInitialCapacity(arrayLength);
         for (id element in array) {
-            if (auto *string = dynamic_objc_cast<NSString>(element))
-                result.append(string);
+            if ([element isKindOfClass:NSString.class])
+                result.append((NSString *)element);
             else
                 RELEASE_LOG_ERROR(Editing, "NSAttributedString extraction failed with array containing <%@>", NSStringFromClass([element class]));
         }
@@ -751,8 +751,7 @@ static HashMap<String, AttributedString::AttributeValue> extractDictionary(NSDic
 {
     HashMap<String, AttributedString::AttributeValue> result;
     [dictionary enumerateKeysAndObjectsUsingBlock:[&](id key, id value, BOOL *) {
-        RetainPtr keyString = dynamic_objc_cast<NSString>(key);
-        if (!keyString) {
+        if (![key isKindOfClass:NSString.class]) {
             ASSERT_NOT_REACHED();
             return;
         }
@@ -761,7 +760,7 @@ static HashMap<String, AttributedString::AttributeValue> extractDictionary(NSDic
             ASSERT_NOT_REACHED();
             return;
         }
-        result.set(keyString.get(), WTFMove(*extractedValue));
+        result.set((NSString *)key, WTFMove(*extractedValue));
     }];
     return result;
 }

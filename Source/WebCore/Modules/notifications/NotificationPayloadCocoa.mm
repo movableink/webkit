@@ -81,7 +81,7 @@ NSDictionary *NotificationPayload::dictionaryRepresentation() const
 
     return @{
         WebNotificationDefaultActionKey : defaultActionURL.createNSURL().get(),
-        WebNotificationTitleKey : title.createNSString().get(),
+        WebNotificationTitleKey : (NSString *)title,
         WebNotificationAppBadgeKey : nsAppBadge,
         WebNotificationOptionsKey : nsOptions,
         WebNotificationMutableKey : @(isMutable),

@@ -71,8 +71,8 @@ SerializedPlatformDataCueValue::SerializedPlatformDataCueValue(AVMetadataItem *i
             m_data->otherAttributes.add(keyString, value);
     }
 
-    if (auto *keyString = dynamic_objc_cast<NSString>(item.key))
-        m_data->key = keyString;
+    if ([item.key isKindOfClass:NSString.class])
+        m_data->key = (NSString *)item.key;
 
     if (item.locale)
         m_data->locale = item.locale;

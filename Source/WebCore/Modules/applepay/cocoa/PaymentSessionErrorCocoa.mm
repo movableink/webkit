@@ -29,8 +29,6 @@
 #if ENABLE(APPLE_PAY)
 
 #import "ApplePaySessionError.h"
-#import <wtf/cocoa/TypeCastsCocoa.h>
-
 #import <pal/cocoa/PassKitSoftLink.h>
 
 namespace WebCore {
@@ -46,8 +44,9 @@ static std::optional<ApplePaySessionError> additionalError(NSError *error)
     if (error.code != pkPaymentAuthorizationFeatureApplicationError)
         return std::nullopt;
 
-    RetainPtr bindTokenValue = checked_objc_cast<NSString>(error.userInfo[bindTokenKey]);
-    return ApplePaySessionError { "featureApplicationError"_s, { { "bindToken"_s, bindTokenValue.get() } } };
+    id bindTokenValue = error.userInfo[bindTokenKey];
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!bindTokenValue || [bindTokenValue isKindOfClass:NSString.class]);
+    return ApplePaySessionError { "featureApplicationError"_s, { { "bindToken"_s, (NSString *)bindTokenValue } } };
 #else
     UNUSED_PARAM(error);
     return std::nullopt;

@@ -198,26 +198,24 @@
 
 - (NSString *)_web_decodeHostName
 {
-    if (RetainPtr name = WTF::decodeHostName(self))
-        return name.autorelease();
-    return self;
+    NSString *name = WTF::decodeHostName(self);
+    return !name ? self : name;
 }
 
 - (NSString *)_web_encodeHostName
 {
-    if (RetainPtr name = WTF::encodeHostName(self))
-        return name.autorelease();
-    return self;
+    NSString *name = WTF::encodeHostName(self);
+    return !name ? self : name;
 }
 
 - (NSString *)_webkit_decodeHostName
 {
-    return WTF::decodeHostName(self).autorelease();
+    return WTF::decodeHostName(self);
 }
 
 - (NSString *)_webkit_encodeHostName
 {
-    return WTF::encodeHostName(self).autorelease();
+    return WTF::encodeHostName(self);
 }
 
 -(NSRange)_webkit_rangeOfURLScheme
