@@ -48,6 +48,7 @@
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "ElementInlines.h"
+#include "ElementTraversal.h"
 #include "FontCache.h"
 #include "HTMLElement.h"
 #include "RenderStyleSetters.h"

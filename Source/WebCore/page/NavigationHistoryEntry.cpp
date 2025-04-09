@@ -26,6 +26,7 @@
 #include "config.h"
 #include "NavigationHistoryEntry.h"
 
+#include "DocumentInlines.h"
 #include "EventNames.h"
 #include "FrameLoader.h"
 #include "HistoryController.h"
