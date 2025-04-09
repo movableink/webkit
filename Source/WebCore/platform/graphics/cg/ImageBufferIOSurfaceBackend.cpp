@@ -296,9 +296,6 @@ void ImageBufferIOSurfaceBackend::prepareForExternalWrite()
 
 RetainPtr<CGImageRef> ImageBufferIOSurfaceBackend::createImage()
 {
-    // CGIOSurfaceContextCreateImage flushes, so clear the flush need.
-    if (m_context)
-        m_context->consumeHasDrawn();
     // Consumers may hold on to the image, so mark external writes needing the invalidation marker.
     m_mayHaveOutstandingBackingStoreReferences = true;
     return m_surface->createImage(ensurePlatformContext());
@@ -306,9 +303,6 @@ RetainPtr<CGImageRef> ImageBufferIOSurfaceBackend::createImage()
 
 RetainPtr<CGImageRef> ImageBufferIOSurfaceBackend::createImageReference()
 {
-    // CGIOSurfaceContextCreateImageReference flushes, so clear the flush need.
-    if (m_context)
-        m_context->consumeHasDrawn();
     // The reference is used only in synchronized manner, so after the use ends, we can update
     // externally without invalidation marker. Thus we do not set m_mayHaveOutstandingBackingStoreReferences.
     auto image = adoptCF(CGIOSurfaceContextCreateImageReference(ensurePlatformContext()));
