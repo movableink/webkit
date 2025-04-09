@@ -251,6 +251,8 @@ public:
 
     bool needsWebKitMediaTextTrackDisplayQuirk() const;
 
+    bool shouldSupportHoverMediaQueries() const;
+
 private:
     bool needsQuirks() const;
     bool isDomain(const String&) const;

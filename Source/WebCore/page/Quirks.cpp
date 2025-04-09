@@ -1825,6 +1825,16 @@ bool Quirks::needsWebKitMediaTextTrackDisplayQuirk() const
     return needsQuirks() && m_quirksData.needsWebKitMediaTextTrackDisplayQuirk;
 }
 
+// rdar://138806698
+bool Quirks::shouldSupportHoverMediaQueries() const
+{
+#if ENABLE(DESKTOP_CONTENT_MODE_QUIRKS)
+    return needsQuirks() && m_quirksData.shouldSupportHoverMediaQueriesQuirk;
+#else
+    return false;
+#endif
+}
+
 URL Quirks::topDocumentURL() const
 {
     if (UNLIKELY(!m_topDocumentURLForTesting.isEmpty()))
@@ -2115,6 +2125,8 @@ static void handleMaxQuirks(QuirksData& quirksData, const URL& quirksURL, const 
     UNUSED_PARAM(documentURL);
     // max.com: rdar://138424489
     quirksData.needsZeroMaxTouchPointsQuirk = true;
+    // max.com: rdar://138806698
+    quirksData.shouldSupportHoverMediaQueriesQuirk = true;
 }
 #endif
 

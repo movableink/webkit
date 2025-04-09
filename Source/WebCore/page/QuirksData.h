@@ -129,6 +129,7 @@ struct WEBCORE_EXPORT QuirksData {
 #if ENABLE(DESKTOP_CONTENT_MODE_QUIRKS)
     bool needsZeroMaxTouchPointsQuirk { false };
     bool shouldHideCoarsePointerCharacteristicsQuirk { false };
+    bool shouldSupportHoverMediaQueriesQuirk { false };
 #endif
 
 #if ENABLE(FLIP_SCREEN_DIMENSIONS_QUIRKS)
