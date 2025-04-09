@@ -33,7 +33,10 @@
 #include "CSSParserContext.h"
 #include "CSSParserIdioms.h"
 #include "CSSParserTokenRange.h"
+#include "CSSParserTokenRangeGuard.h"
 #include "CSSPropertyParserConsumer+Ident.h"
+#include "CSSPropertyParserConsumer+MetaConsumer.h"
+#include "CSSPropertyParserConsumer+NumberDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParserState.h"
 #include "CSSPropertyParsing.h"
@@ -88,9 +91,6 @@ struct ParserState {
 
     // Tracks whether the parse tree contains any non-canonical dimension units that require conversion data (e.g. em, vh, etc.).
     bool requiresConversionData = false;
-
-    // Tracks whether the parse tree contains any nodes that disqualify the tree from style sharing.
-    bool unique = false;
 };
 
 } // namespace (anonymous)
@@ -156,10 +156,9 @@ std::optional<Tree> parseAndSimplify(CSSParserTokenRange& range, CSS::PropertyPa
         .type = root->type,
         .stage = CSSCalc::Stage::Specified,
         .requiresConversionData = state.requiresConversionData,
-        .unique = state.unique,
     };
 
-    LOG_WITH_STREAM(Calc, stream << "Completed top level parse/simplification for function '" << nameLiteralForSerialization(function) << "': " << serializationForCSS(result, { parserOptions.range, CSS::defaultSerializationContext() }) << ", type: " << getType(result.root) << ", category=" << parserOptions.category << ", requires-conversion-data: " << result.requiresConversionData << ", unique: " << result.unique);
+    LOG_WITH_STREAM(Calc, stream << "Completed top level parse/simplification for function '" << nameLiteralForSerialization(function) << "': " << serializationForCSS(result, { parserOptions.range, CSS::defaultSerializationContext() }) << ", type: " << getType(result.root) << ", category=" << parserOptions.category << ", requires-conversion-data: " << result.requiresConversionData);
 
     return result;
 }
@@ -628,60 +627,140 @@ static std::optional<TypedChild> consumeRound(CSSParserTokenRange& tokens, int d
     return std::nullopt;
 }
 
-static std::optional<Random::CachingOptions> consumeOptionalRandomCachingOptions(CSSParserTokenRange& tokens)
+static std::optional<Random::SharingFixed> consumeOptionalRandomSharingFixed(CSSParserTokenRange& tokens, ParserState& state)
 {
-    // <random-caching-options> = <dashed-ident> || per-element
+    // <random-value-sharing-fixed> = fixed <number [0,1]>
 
-    std::optional<AtomString> identifier;
-    std::optional<CSS::Keyword::PerElement> perElement;
+    ASSERT(tokens.peek().id() == CSSValueFixed);
+
+    CSSParserTokenRangeGuard guard { tokens };
+
+    tokens.consumeIncludingWhitespace();
+
+    // Use a non-property parsing state for the fixed number value to disconnect it from the current parse.
+    // FIXME: Add a mechanism to pass along the depth count when doing this so that we can limit stack usage.
+    auto numberParsingState = CSS::PropertyParserState { .context = state.propertyParserState.context };
+    auto number = CSSPropertyParserHelpers::MetaConsumer<CSS::Number<CSS::ClosedUnitRange>>::consume(tokens, numberParsingState);
+    if (!number)
+        return { };
+
+    guard.commit();
+
+    return Random::SharingFixed {
+        .value = WTFMove(*number)
+    };
+}
+
+static Random::SharingOptions::Auto makeRandomSharingAuto(ParserState& state)
+{
+    return {
+        .property = state.propertyParserState.currentProperty,
+        .index = state.propertyParserState.cssRandomFunctionCount
+    };
+}
+
+static std::optional<Random::SharingOptions> consumeOptionalRandomSharingOptions(CSSParserTokenRange& tokens, ParserState& state)
+{
+    // <random-value-sharing-options> = [ [ auto | <dashed-ident> ] || match-element ]
+
+    std::optional<std::variant<Random::SharingOptions::Auto, AtomString>> identifier;
+    std::optional<CSS::Keyword::MatchElement> matchElement;
+
+    CSSParserTokenRangeGuard guard { tokens };
 
     auto consumeIdentifier = [&] -> bool {
-        if (identifier || tokens.peek().type() != IdentToken || !isValidCustomIdentifier(tokens.peek().id()) || !tokens.peek().value().startsWith("--"_s))
+        if (identifier)
             return false;
-        identifier = tokens.consumeIncludingWhitespace().value().toAtomString();
-        return true;
+        if (tokens.peek().id() == CSSValueAuto) {
+            tokens.consumeIncludingWhitespace();
+            identifier = makeRandomSharingAuto(state);
+            return true;
+        }
+        if (tokens.peek().type() == IdentToken && isValidCustomIdentifier(tokens.peek().id()) && tokens.peek().value().startsWith("--"_s)) {
+            identifier = tokens.consumeIncludingWhitespace().value().toAtomString();
+            return true;
+        }
+        return false;
     };
-    auto consumePerElement = [&] -> bool {
-        if (perElement || tokens.peek().id() != CSSValuePerElement)
+    auto consumeMatchElement = [&] -> bool {
+        if (matchElement)
             return false;
-        tokens.consumeIncludingWhitespace();
-        perElement = CSS::Keyword::PerElement { };
-        return true;
+        if (tokens.peek().id() == CSSValueMatchElement) {
+            tokens.consumeIncludingWhitespace();
+            matchElement = CSS::Keyword::MatchElement { };
+            return true;
+        }
+        return false;
     };
 
     for (unsigned i = 0; i < 2; ++i) {
-        if (consumeIdentifier() || consumePerElement())
+        if (consumeIdentifier() || consumeMatchElement())
             continue;
         break;
     }
 
-    if (!identifier && !perElement)
+    if (!identifier && !matchElement)
         return { };
 
-    return Random::CachingOptions {
-        .identifier = identifier.value_or(AtomString { }),
-        .perElement = perElement.has_value()
+    guard.commit();
+
+    return Random::SharingOptions {
+        .identifier = identifier.value_or(makeRandomSharingAuto(state)),
+        .matchElement = matchElement
     };
+}
+
+static std::optional<Random::Sharing> consumeOptionalRandomSharing(CSSParserTokenRange& tokens, ParserState& state)
+{
+    // <random-value-sharing> = [ [ auto | <dashed-ident> ] || match-element ] | fixed <number [0,1]>
+
+    if (tokens.peek().id() == CSSValueFixed) {
+        if (auto fixed = consumeOptionalRandomSharingFixed(tokens, state))
+            return Random::Sharing { WTFMove(*fixed) };
+        return { };
+    } else {
+        if (auto options = consumeOptionalRandomSharingOptions(tokens, state))
+            return Random::Sharing { WTFMove(*options) };
+        return { };
+    }
 }
 
 static std::optional<TypedChild> consumeRandom(CSSParserTokenRange& tokens, int depth, ParserState& state)
 {
-    // <random()> = random( <random-caching-options>? , <calc-sum>, <calc-sum>, [by <calc-sum>]? )
+    // <random()> = random( <random-value-sharing>? , <calc-sum>, <calc-sum>, <calc-sum>? )
 
     if (!state.propertyParserState.context.cssRandomFunctionEnabled)
         return { };
 
+    if (state.propertyParserState.currentRule != StyleRuleType::Style)
+        return { };
+    if (state.propertyParserState.currentProperty == CSSPropertyInvalid)
+        return { };
+
+    // FIXME: Add support for custom properties by including the custom property name in CSS::PropertyParserState for registered properties.
+    if (state.propertyParserState.currentProperty == CSSPropertyCustom)
+        return { };
+
     using Op = Random;
 
-    Random::CachingOptions cachingOptions;
-    if (auto optionalCachingOptions = consumeOptionalRandomCachingOptions(tokens)) {
+    std::optional<Random::Sharing> sharing;
+    if (auto optionalSharing = consumeOptionalRandomSharing(tokens, state)) {
         if (!CSSPropertyParserHelpers::consumeCommaIncludingWhitespace(tokens)) {
-            LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - missing comma after <random-caching-options>");
+            LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - missing comma after <random-value-sharing>");
             return { };
         }
 
-        cachingOptions = WTFMove(*optionalCachingOptions);
+        sharing = WTFMove(optionalSharing);
+    } else {
+        sharing = Random::SharingOptions {
+            .identifier = makeRandomSharingAuto(state),
+            .matchElement = { },
+        };
     }
+
+    // Increment the random function count early, but after processing the the sharing production to
+    // ensure that any nested random() functions in the <calc-sum> productions have an incremented value.
+    ++state.propertyParserState.cssRandomFunctionCount;
 
     auto min = parseCalcSum(tokens, depth, state);
     if (!min) {
@@ -728,10 +807,8 @@ static std::optional<TypedChild> consumeRandom(CSSParserTokenRange& tokens, int 
         }
 
         state.requiresConversionData = true;
-        if (cachingOptions.perElement)
-            state.unique = true;
 
-        Op op { WTFMove(cachingOptions), WTFMove(min->child), WTFMove(max->child), std::nullopt };
+        Op op { WTFMove(*sharing), WTFMove(min->child), WTFMove(max->child), std::nullopt };
 
         if (auto* simplificationOptions = state.simplificationOptions) {
             if (auto replacement = simplify(op, *simplificationOptions))
@@ -743,11 +820,6 @@ static std::optional<TypedChild> consumeRandom(CSSParserTokenRange& tokens, int 
 
     if (!CSSPropertyParserHelpers::consumeCommaIncludingWhitespace(tokens)) {
         LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - missing comma after argument `max`");
-        return { };
-    }
-
-    if (!CSSPropertyParserHelpers::consumeIdentRaw<CSSValueBy>(tokens)) {
-        LOG_WITH_STREAM(Calc, stream << "Failed '" << nameLiteralForSerialization(Op::id) << "' function - missing literal 'by'");
         return { };
     }
 
@@ -790,10 +862,8 @@ static std::optional<TypedChild> consumeRandom(CSSParserTokenRange& tokens, int 
     }
 
     state.requiresConversionData = true;
-    if (cachingOptions.perElement)
-        state.unique = true;
 
-    Op op { WTFMove(cachingOptions), WTFMove(min->child), WTFMove(max->child), WTFMove(step->child) };
+    Op op { WTFMove(*sharing), WTFMove(min->child), WTFMove(max->child), WTFMove(step->child) };
 
     if (auto* simplificationOptions = state.simplificationOptions) {
         if (auto replacement = simplify(op, *simplificationOptions))
@@ -1421,7 +1491,7 @@ std::optional<TypedChild> parseCalcFunction(CSSParserTokenRange& tokens, CSSValu
         return consumeExactlyOneArgument<Sign>(tokens, depth, state);
 
     case CSSValueRandom:
-        // <random()> = random( <random-caching-options>? , <calc-sum>, <calc-sum>, [by <calc-sum>]? )
+        // <random()> = random( <random-value-sharing>? , <calc-sum>, <calc-sum>, <calc-sum>? )
         //     - INPUT: "same" <number>, <dimension>, or <percentage>
         //     - OUTPUT: same type
         return consumeRandom(tokens, depth, state);

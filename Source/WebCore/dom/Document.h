@@ -349,8 +349,9 @@ using MediaProducerMediaStateFlags = OptionSet<MediaProducerMediaState>;
 using MediaProducerMutedStateFlags = OptionSet<MediaProducerMutedState>;
 using PlatformDisplayID = uint32_t;
 
-namespace Calculation {
-class RandomKeyMap;
+namespace CSSCalc {
+class RandomCachingKeyMap;
+struct RandomCachingKey;
 }
 
 namespace Style {
@@ -1989,7 +1990,7 @@ public:
     void setShouldSkipResourceMonitorThrottling(bool flag) { m_shouldSkipResourceMonitorThrottling = flag; }
 #endif
 
-    Ref<Calculation::RandomKeyMap> randomKeyMap() const;
+    double lookupCSSRandomBaseValue(const CSSCalc::RandomCachingKey&) const;
 
     // Cache of the first (in tree order) Element with 'attribute'.
     Element* cachedFirstElementWithAttribute(const QualifiedName& attribute) const;
@@ -2727,7 +2728,7 @@ private:
     bool m_shouldSkipResourceMonitorThrottling { false };
 #endif
 
-    mutable RefPtr<Calculation::RandomKeyMap> m_randomKeyMap;
+    mutable RefPtr<CSSCalc::RandomCachingKeyMap> m_randomCachingKeyMap;
 
     Ref<DocumentSyncData> m_syncData;
 }; // class Document

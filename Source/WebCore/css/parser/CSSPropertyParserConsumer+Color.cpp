@@ -900,11 +900,8 @@ Color parseColorRawSlow(const String& string, const CSSParserContext& context, c
     // Handle leading whitespace.
     range.consumeWhitespace();
 
-    auto propertyParserState = CSS::PropertyParserState {
-        .context = context,
-    };
-
-    auto result = consumeUnresolvedColor(range, propertyParserState, options);
+    auto state = CSS::PropertyParserState { .context = context };
+    auto result = consumeUnresolvedColor(range, state, options);
 
     // Handle trailing whitespace.
     range.consumeWhitespace();
@@ -927,11 +924,8 @@ Color deprecatedParseColorRawWithoutContext(const String& string, const CSSColor
     // Handle leading whitespace.
     range.consumeWhitespace();
 
-    auto propertyParserState = CSS::PropertyParserState {
-        .context = context,
-    };
-
-    auto result = consumeUnresolvedColor(range, propertyParserState, options);
+    auto state = CSS::PropertyParserState { .context = context };
+    auto result = consumeUnresolvedColor(range, state, options);
 
     // Handle trailing whitespace.
     range.consumeWhitespace();

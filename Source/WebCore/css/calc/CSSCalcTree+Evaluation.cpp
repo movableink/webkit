@@ -26,12 +26,14 @@
 #include "CSSCalcTree+Evaluation.h"
 
 #include "AnchorPositionEvaluator.h"
+#include "CSSCalcRandomCachingKey.h"
 #include "CSSCalcSymbolTable.h"
 #include "CSSCalcTree+ContainerProgressEvaluator.h"
 #include "CSSCalcTree+Mappings.h"
 #include "CSSCalcTree+MediaProgressEvaluator.h"
 #include "CSSCalcTree+Simplification.h"
 #include "CSSCalcTree.h"
+#include "CSSUnevaluatedCalc.h"
 #include "CalculationExecutor.h"
 #include "RenderStyle.h"
 #include "RenderStyleInlines.h"
@@ -177,8 +179,6 @@ std::optional<double> evaluate(const IndirectNode<Random>& root, const Evaluatio
 {
     if (!options.conversionData || !options.conversionData->styleBuilderState())
         return { };
-    if (root->cachingOptions.perElement && !options.conversionData->styleBuilderState()->element())
-        return { };
 
     auto min = evaluate(root->min, options);
     if (!min)
@@ -192,23 +192,31 @@ std::optional<double> evaluate(const IndirectNode<Random>& root, const Evaluatio
     if (!step)
         return { };
 
-    // RandomKeyMap relies on using NaN for HashTable deleted/empty values but
-    // the result is always NaN if either is NaN, so we can return early here.
-    if (std::isnan(*min) || std::isnan(*max))
-        return std::numeric_limits<double>::quiet_NaN();
+    auto randomBaseValue = WTF::switchOn(root->sharing,
+        [&](const Random::SharingOptions& sharingOptions) -> std::optional<double> {
+            if (!sharingOptions.matchElement.has_value() && !options.conversionData->styleBuilderState()->element())
+                return { };
 
-    auto keyMap = options.conversionData->styleBuilderState()->randomKeyMap(
-        root->cachingOptions.perElement
+            return options.conversionData->styleBuilderState()->lookupCSSRandomBaseValue(
+                sharingOptions.identifier,
+                sharingOptions.matchElement.has_value()
+            );
+        },
+        [&](const Random::SharingFixed& sharingFixed) -> std::optional<double> {
+            return WTF::switchOn(sharingFixed.value,
+                [&](const CSS::Number<CSS::ClosedUnitRange>::Raw& raw) -> std::optional<double> {
+                    return raw.value;
+                },
+                [&](const CSS::Number<CSS::ClosedUnitRange>::Calc& calc) -> std::optional<double> {
+                    return calc.evaluate(Calculation::Category::Number, *options.conversionData->styleBuilderState());
+                }
+            );
+        }
     );
+    if (!randomBaseValue)
+        return { };
 
-    auto randomUnitInterval = keyMap->lookupUnitInterval(
-        root->cachingOptions.identifier,
-        *min,
-        *max,
-        *step
-    );
-
-    return Calculation::executeOperation<ToCalculationTreeOp<Random>>(randomUnitInterval, *min, *max, *step);
+    return Calculation::executeOperation<ToCalculationTreeOp<Random>>(*randomBaseValue, *min, *max, *step);
 }
 
 std::optional<double> evaluate(const IndirectNode<MediaProgress>& root, const EvaluationOptions& options)

@@ -45,8 +45,8 @@ class RenderStyle;
 class StyleImage;
 class StyleResolver;
 
-namespace Calculation {
-class RandomKeyMap;
+namespace CSSCalc {
+struct RandomCachingKey;
 }
 
 namespace CSS {
@@ -141,7 +141,7 @@ public:
     void setUsesViewportUnits();
     void setUsesContainerUnits();
 
-    Ref<Calculation::RandomKeyMap> randomKeyMap(bool perElement) const;
+    double lookupCSSRandomBaseValue(const CSSCalc::RandomCachingKey&, bool matchElement) const;
 
     AnchorPositionedStates* anchorPositionedStates() { return m_context.treeResolutionState ? &m_context.treeResolutionState->anchorPositionedStates : nullptr; }
     const std::optional<BuilderPositionTryFallback>& positionTryFallback() const { return m_context.positionTryFallback; }

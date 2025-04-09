@@ -40,6 +40,9 @@ struct PropertyParserState {
     StyleRuleType currentRule { StyleRuleType::Style };
     CSSPropertyID currentProperty { CSSPropertyInvalid };
     IsImportant important { IsImportant::No };
+
+    // Count of CSS random() functions seen so far for the current property.
+    unsigned cssRandomFunctionCount { 0 };
 };
 
 } // namespace CSS

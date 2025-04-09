@@ -489,28 +489,59 @@ template<> struct OperatorExecutor<Progress> {
 };
 
 template<> struct OperatorExecutor<Random> {
-    double operator()(double randomUnitInterval, double min, double max, std::optional<double> step)
+    double operator()(double randomBaseValue, double min, double max, std::optional<double> step)
     {
-        if (!std::isfinite(min) || !std::isfinite(max))
+        if (std::isnan(min) || std::isnan(max))
             return std::numeric_limits<double>::quiet_NaN();
-        if (max <= min)
+
+        if (std::isinf(min))
             return min;
 
+        // If the maximum value is less than the minimum value, it behaves as if it’s equal to the minimum value.
+        if (max < min)
+            max = min;
+
+        auto range = max - min;
+        if (std::isinf(range))
+            return std::numeric_limits<double>::quiet_NaN();
+
         if (!step)
-            return min + ((max - min) * randomUnitInterval);
+            return min + randomBaseValue * range;
 
         if (std::isnan(*step))
             return std::numeric_limits<double>::quiet_NaN();
-        if (std::isinf(*step) || *step <= 0)
-            return min;
 
-        auto stepValue = *step;
-        auto multiples = std::floor(((max - min) / stepValue) + 1.0);
-        auto multiplePicked = std::floor(multiples * randomUnitInterval);
-        auto result = min + (multiplePicked * stepValue);
-        if (result > max)
-            return result - stepValue;
-        return result;
+        if (*step <= 0)
+            return min + randomBaseValue * range;
+
+        // Let epsilon be step / 1000, or the smallest representable value greater than zero in the numeric type being used if epsilon would round to zero.
+        auto epsilon = *step / 1000.0;
+
+        // Let N be the largest integer such that min + N * step is less than or equal to max
+        auto N = std::floor(range / *step);
+        if (std::isinf(N))
+            return min + randomBaseValue * range;
+
+        // If N produces a value that is not within epsilon of max, but N+1 would produce a value within epsilon of max, set N to N+1.
+        auto distanceToMax = max - (min + (N * *step));
+        if (std::abs(distanceToMax) > epsilon) {
+            auto distanceToMaxPlus1 = max - (min + ((N + 1) * *step));
+            if (std::abs(distanceToMaxPlus1) < epsilon)
+                N = N + 1;
+        }
+
+        // Let step index be a random integer less than N+1, given R.
+        auto stepIndex = OperatorExecutor<RoundDown>{}(randomBaseValue * (N + 1.0), 1.0);
+
+        // Let value be min + step index * step.
+        auto value = min + stepIndex * *step;
+
+        // If step index is N and value is within epsilon of max, return max
+        if (stepIndex == N && std::abs(max - value) < epsilon)
+            return max;
+
+        // Otherwise, return value.
+        return value;
     }
 };
 

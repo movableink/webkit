@@ -958,6 +958,8 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     css/StyleSheetContents.h
     css/StyleSheetList.h
 
+    css/calc/CSSCalcRandomCachingKey.h
+    css/calc/CSSCalcRandomCachingKeyMap.h
     css/calc/CSSCalcSymbolTable.h
     css/calc/CSSCalcSymbolsAllowed.h
     css/calc/CSSCalcTree.h
@@ -2020,8 +2022,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     platform/calc/CalculationCategory.h
     platform/calc/CalculationOperator.h
-    platform/calc/CalculationRandomKey.h
-    platform/calc/CalculationRandomKeyMap.h
     platform/calc/CalculationRange.h
     platform/calc/CalculationTree.h
     platform/calc/CalculationValue.h

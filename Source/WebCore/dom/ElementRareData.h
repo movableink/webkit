@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "CalculationRandomKeyMap.h"
+#include "CSSCalcRandomCachingKeyMap.h"
 #include "CustomElementDefaultARIA.h"
 #include "CustomElementReactionQueue.h"
 #include "CustomStateSet.h"
@@ -170,8 +170,8 @@ public:
     OptionSet<VisibilityAdjustment> visibilityAdjustment() const { return m_visibilityAdjustment; }
     void setVisibilityAdjustment(OptionSet<VisibilityAdjustment> adjustment) { m_visibilityAdjustment = adjustment; }
 
-    Ref<Calculation::RandomKeyMap> ensureRandomKeyMap(const std::optional<Style::PseudoElementIdentifier>&);
-    bool hasRandomKeyMap() const;
+    Ref<CSSCalc::RandomCachingKeyMap> ensureRandomCachingKeyMap(const std::optional<Style::PseudoElementIdentifier>&);
+    bool hasRandomCachingKeyMap() const;
 
 #if DUMP_NODE_STATISTICS
     OptionSet<UseType> useTypes() const
@@ -288,7 +288,7 @@ private:
 
     OptionSet<VisibilityAdjustment> m_visibilityAdjustment;
 
-    HashMap<std::optional<Style::PseudoElementIdentifier>, Ref<Calculation::RandomKeyMap>> m_randomKeyMaps;
+    HashMap<std::optional<Style::PseudoElementIdentifier>, Ref<CSSCalc::RandomCachingKeyMap>> m_randomCachingKeyMaps;
 };
 
 inline ElementRareData::ElementRareData()
@@ -357,16 +357,16 @@ inline void ElementRareData::setViewTransitionCapturedName(const std::optional<S
     m_viewTransitionCapturedName.set(pseudoElementIdentifier, captureName);
 }
 
-inline Ref<Calculation::RandomKeyMap> ElementRareData::ensureRandomKeyMap(const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier)
+inline Ref<CSSCalc::RandomCachingKeyMap> ElementRareData::ensureRandomCachingKeyMap(const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier)
 {
-    return m_randomKeyMaps.ensure(pseudoElementIdentifier, [] -> Ref<Calculation::RandomKeyMap> {
-        return Calculation::RandomKeyMap::create();
+    return m_randomCachingKeyMaps.ensure(pseudoElementIdentifier, [] {
+        return CSSCalc::RandomCachingKeyMap::create();
     }).iterator->value;
 }
 
-inline bool ElementRareData::hasRandomKeyMap() const
+inline bool ElementRareData::hasRandomCachingKeyMap() const
 {
-    return !m_randomKeyMaps.isEmpty();
+    return !m_randomCachingKeyMaps.isEmpty();
 }
 
 inline ElementRareData* Element::elementRareData() const

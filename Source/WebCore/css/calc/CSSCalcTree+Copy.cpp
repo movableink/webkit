@@ -32,7 +32,7 @@ namespace CSSCalc {
 
 static auto copy(const MQ::MediaProgressProviding*) -> const MQ::MediaProgressProviding*;
 static auto copy(const CQ::ContainerProgressProviding*) -> const CQ::ContainerProgressProviding*;
-static auto copy(const Random::CachingOptions&) -> Random::CachingOptions;
+static auto copy(const Random::Sharing&) -> Random::Sharing;
 static auto copy(const CSSValueID&) -> CSSValueID;
 static auto copy(const AtomString&) -> AtomString;
 static auto copy(const CSS::Keyword::None&) -> CSS::Keyword::None;
@@ -57,7 +57,7 @@ const CQ::ContainerProgressProviding* copy(const CQ::ContainerProgressProviding*
     return root;
 }
 
-Random::CachingOptions copy(const Random::CachingOptions& root)
+Random::Sharing copy(const Random::Sharing& root)
 {
     return root;
 }

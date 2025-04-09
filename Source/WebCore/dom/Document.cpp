@@ -35,6 +35,7 @@
 #include "BeforeUnloadEvent.h"
 #include "CDATASection.h"
 #include "CSSAnimation.h"
+#include "CSSCalcRandomCachingKeyMap.h"
 #include "CSSFontSelector.h"
 #include "CSSKeywordColor.h"
 #include "CSSParser.h"
@@ -48,7 +49,6 @@
 #include "CachedFontLoadRequest.h"
 #include "CachedFrame.h"
 #include "CachedResourceLoader.h"
-#include "CalculationRandomKeyMap.h"
 #include "CanvasRenderingContext2D.h"
 #include "CaretPosition.h"
 #include "CaretPositionFromPointOptions.h"
@@ -11595,11 +11595,11 @@ ResourceMonitor* Document::parentResourceMonitorIfExists()
 
 #endif
 
-Ref<Calculation::RandomKeyMap> Document::randomKeyMap() const
+double Document::lookupCSSRandomBaseValue(const CSSCalc::RandomCachingKey& key) const
 {
-    if (!m_randomKeyMap)
-        m_randomKeyMap = Calculation::RandomKeyMap::create();
-    return *m_randomKeyMap;
+    if (!m_randomCachingKeyMap)
+        m_randomCachingKeyMap = CSSCalc::RandomCachingKeyMap::create();
+    return m_randomCachingKeyMap->lookupCSSRandomBaseValue(key);
 }
 
 } // namespace WebCore

@@ -1535,8 +1535,8 @@ to-zero
 media-progress
 container-progress
 random
-per-element
-// by
+// match-element
+// fixed
 infinity
 -infinity id=NegativeInfinity
 NaN

@@ -129,20 +129,7 @@ double evaluate(const IndirectNode<Random>& root, double percentResolutionLength
     auto max = evaluate(root->max, percentResolutionLength);
     auto step = evaluate(root->step, percentResolutionLength);
 
-    // RandomKeyMap relies on using NaN for HashTable deleted/empty values but
-    // the result is always NaN if either is NaN, so we can return early here.
-    if (std::isnan(min) || std::isnan(max))
-        return std::numeric_limits<double>::quiet_NaN();
-
-    Ref keyMap = root->cachingOptions.keyMap;
-    auto randomUnitInterval = keyMap->lookupUnitInterval(
-        root->cachingOptions.identifier,
-        min,
-        max,
-        step
-    );
-
-    return executeOperation<Random>(randomUnitInterval, min, max, step);
+    return executeOperation<Random>(root->fixed.baseValue, min, max, step);
 }
 
 double evaluate(const IndirectNode<Blend>& root, double percentResolutionLength)

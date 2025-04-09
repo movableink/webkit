@@ -26,6 +26,7 @@
 #pragma once
 
 #include "CSSCalcType.h"
+#include "CSSPrimitiveNumeric.h"
 #include "CSSPrimitiveNumericRange.h"
 #include "CSSUnits.h"
 #include "CSSValueKeywords.h"
@@ -282,9 +283,6 @@ struct Tree {
 
     // `requiresConversionData` is used both to both indicate whether eager evaluation of the tree (at parse time) is possible or not and to trigger a warning in `CSSCalcValue::doubleValueDeprecated` that the evaluation results will be incorrect.
     bool requiresConversionData = false;
-
-    // `unique` is used to indicate if the calculation tree disqualifies styles it used by for style sharing.
-    bool unique = false;
 
     bool operator==(const Tree&) const = default;
 };
@@ -736,22 +734,34 @@ struct Random {
     WTF_MAKE_STRUCT_TZONE_ALLOCATED(Random);
     static constexpr auto id = CSSValueRandom;
 
-    // <random-caching-options> = <dashed-ident> || per-element
-    struct CachingOptions {
-        AtomString identifier;
-        bool perElement { false };
+    // <random-value-sharing> = [ [ auto | <dashed-ident> ] || match-element ] | fixed <number [0,1]>
+    struct SharingOptions {
+        struct Auto {
+            CSSPropertyID property;
+            unsigned index;
 
-        bool operator==(const CachingOptions&) const = default;
+            bool operator==(const Auto&) const = default;
+        };
+        std::variant<Auto, AtomString> identifier;
+        std::optional<CSS::Keyword::MatchElement> matchElement;
+
+        bool operator==(const SharingOptions&) const = default;
     };
+    struct SharingFixed {
+        CSS::Number<CSS::ClosedUnitRange> value;
 
-    // <random()> = random( <random-caching-options>? , <calc-sum>, <calc-sum>, [by <calc-sum>]? )
+        bool operator==(const SharingFixed&) const = default;
+    };
+    using Sharing = std::variant<SharingOptions, SharingFixed>;
+
+    // <random()> = random( <random-value-sharing>? , <calc-sum>, <calc-sum>, <calc-sum>? )
     //     - INPUT: "same" <number>, <dimension>, or <percentage>
     //     - OUTPUT: same type
     static constexpr auto input = AllowedTypes::Any;
     static constexpr auto merge = MergePolicy::Same;
     static constexpr auto output = OutputTransform::None;
 
-    CachingOptions cachingOptions;
+    Sharing sharing;
     Child min;
     Child max;
     std::optional<Child> step;
@@ -1238,7 +1248,7 @@ template<size_t I> const auto& get(const Sign& root)
 template<size_t I> const auto& get(const Random& root)
 {
     if constexpr (!I)
-        return root.cachingOptions;
+        return root.sharing;
     else if constexpr (I == 1)
         return root.min;
     else if constexpr (I == 2)

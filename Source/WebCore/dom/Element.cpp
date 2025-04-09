@@ -6262,16 +6262,16 @@ HTMLElement* Element::topmostPopoverAncestor(TopLayerElementType topLayerType)
     return topmostAncestor.get();
 }
 
-Ref<Calculation::RandomKeyMap> Element::randomKeyMap(const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier) const
+double Element::lookupCSSRandomBaseValue(const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier, const CSSCalc::RandomCachingKey& key) const
 {
-    return const_cast<Element*>(this)->ensureElementRareData().ensureRandomKeyMap(pseudoElementIdentifier);
+    return const_cast<Element*>(this)->ensureElementRareData().ensureRandomCachingKeyMap(pseudoElementIdentifier)->lookupCSSRandomBaseValue(key);
 }
 
-bool Element::hasRandomKeyMap() const
+bool Element::hasRandomCachingKeyMap() const
 {
     if (!hasRareData())
         return false;
-    return elementRareData()->hasRandomKeyMap();
+    return elementRareData()->hasRandomCachingKeyMap();
 }
 
 } // namespace WebCore

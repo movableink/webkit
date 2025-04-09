@@ -149,8 +149,8 @@ enum class ContentRelevancy : uint8_t {
     Selected = 1 << 3,
 };
 
-namespace Calculation {
-class RandomKeyMap;
+namespace CSSCalc {
+struct RandomCachingKey;
 }
 
 namespace CSS {
@@ -854,8 +854,8 @@ public:
     AtomString viewTransitionCapturedName(const std::optional<Style::PseudoElementIdentifier>&) const;
     void setViewTransitionCapturedName(const std::optional<Style::PseudoElementIdentifier>&, AtomString);
 
-    Ref<Calculation::RandomKeyMap> randomKeyMap(const std::optional<Style::PseudoElementIdentifier>&) const;
-    bool hasRandomKeyMap() const;
+    double lookupCSSRandomBaseValue(const std::optional<Style::PseudoElementIdentifier>&, const CSSCalc::RandomCachingKey&) const;
+    bool hasRandomCachingKeyMap() const;
 
 protected:
     Element(const QualifiedName&, Document&, OptionSet<TypeFlag>);

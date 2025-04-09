@@ -373,19 +373,28 @@ void serializeMathFunctionArguments(StringBuilder& builder, const IndirectNode<P
 
 void serializeMathFunctionArguments(StringBuilder& builder, const IndirectNode<Random>& fn, SerializationState& state)
 {
-    if (!fn->cachingOptions.identifier.isNull() && fn->cachingOptions.perElement)
-        builder.append(fn->cachingOptions.identifier, ' ', nameLiteralForSerialization(CSSValuePerElement), ", "_s);
-    else if (!fn->cachingOptions.identifier.isNull())
-        builder.append(fn->cachingOptions.identifier, ", "_s);
-    else if (fn->cachingOptions.perElement)
-        builder.append(nameLiteralForSerialization(CSSValuePerElement), ", "_s);
+    WTF::switchOn(fn->sharing,
+        [&](const Random::SharingOptions& options) {
+            if (std::holds_alternative<AtomString>(options.identifier) && options.matchElement)
+                builder.append(std::get<AtomString>(options.identifier), ' ', nameLiteralForSerialization(CSSValueMatchElement), ", "_s);
+            else if (std::holds_alternative<AtomString>(options.identifier))
+                builder.append(std::get<AtomString>(options.identifier), ", "_s);
+            else if (options.matchElement)
+                builder.append(nameLiteralForSerialization(CSSValueMatchElement), ", "_s);
+        },
+        [&](const Random::SharingFixed& fixed) {
+            builder.append(nameLiteralForSerialization(CSSValueFixed), ' ');
+            serializationForCSS(builder, state.serializationContext, fixed.value);
+            builder.append(", "_s);
+        }
+    );
 
     serializeCalculationTree(builder, fn->min, state);
     builder.append(", "_s);
     serializeCalculationTree(builder, fn->max, state);
 
     if (fn->step) {
-        builder.append(", "_s, nameLiteralForSerialization(CSSValueBy), ' ');
+        builder.append(", "_s);
         serializeCalculationTree(builder, *fn->step, state);
     }
 }
