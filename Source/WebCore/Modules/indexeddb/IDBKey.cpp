@@ -133,7 +133,7 @@ std::weak_ordering IDBKey::compare(const IDBKey& other) const
     }
     case IndexedDB::KeyType::Date:
     case IndexedDB::KeyType::Number:
-        return compareFloatingPointWithWeakOrdering(std::get<double>(m_value), std::get<double>(other.m_value));
+        return weakOrderingCast(std::get<double>(m_value) <=> std::get<double>(other.m_value));
     case IndexedDB::KeyType::Invalid:
     case IndexedDB::KeyType::Min:
     case IndexedDB::KeyType::Max:

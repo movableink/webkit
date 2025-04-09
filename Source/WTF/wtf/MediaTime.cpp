@@ -362,22 +362,11 @@ std::weak_ordering operator<=>(const MediaTime& a, const MediaTime& b)
     if (orFlags & MediaTime::Indefinite)
         return a.isIndefinite() ? std::weak_ordering::greater : std::weak_ordering::less;
 
-    if (andFlags & MediaTime::DoubleValue) {
-        if (a.m_timeValueAsDouble == b.m_timeValueAsDouble)
-            return std::weak_ordering::equivalent;
+    if (andFlags & MediaTime::DoubleValue)
+        return weakOrderingCast(a.m_timeValueAsDouble <=> b.m_timeValueAsDouble);
 
-        return a.m_timeValueAsDouble < b.m_timeValueAsDouble ? std::weak_ordering::less : std::weak_ordering::greater;
-    }
-
-    if (orFlags & MediaTime::DoubleValue) {
-        double aAsDouble = a.toDouble();
-        double bAsDouble = b.toDouble();
-        if (aAsDouble > bAsDouble)
-            return std::weak_ordering::greater;
-        if (aAsDouble < bAsDouble)
-            return std::weak_ordering::less;
-        return std::weak_ordering::equivalent;
-    }
+    if (orFlags & MediaTime::DoubleValue)
+        return weakOrderingCast(a.toDouble() <=> b.toDouble());
 
     if ((a.m_timeValue < 0) != (b.m_timeValue < 0))
         return a.m_timeValue < 0 ? std::weak_ordering::less : std::weak_ordering::greater;

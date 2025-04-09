@@ -1560,10 +1560,12 @@ ALWAYS_INLINE std::optional<double> stringToDouble(std::span<const char> buffer,
     return result;
 }
 
-template<typename FloatingPointType>
-ALWAYS_INLINE std::weak_ordering compareFloatingPointWithWeakOrdering(FloatingPointType a, FloatingPointType b) requires (std::is_floating_point_v<FloatingPointType>)
+ALWAYS_INLINE std::weak_ordering weakOrderingCast(std::partial_ordering ordering)
 {
-    return (a < b) ? std::weak_ordering::less : ((a > b) ? std::weak_ordering::greater : std::weak_ordering::equivalent);
+    RELEASE_ASSERT(ordering != std::partial_ordering::unordered);
+    if (is_eq(ordering))
+        return std::weak_ordering::equivalent;
+    return is_lt(ordering) ? std::weak_ordering::less : std::weak_ordering::greater;
 }
 
 } // namespace WTF
@@ -1593,7 +1595,6 @@ using WTF::callStatelessLambda;
 using WTF::checkAndSet;
 using WTF::clampedMoveCursorWithinSpan;
 using WTF::compareSpans;
-using WTF::compareFloatingPointWithWeakOrdering;
 using WTF::constructFixedSizeArrayWithArguments;
 using WTF::consume;
 using WTF::consumeAndReinterpretCastTo;
@@ -1636,6 +1637,7 @@ using WTF::tryBinarySearch;
 using WTF::unsafeMakeSpan;
 using WTF::valueOrCompute;
 using WTF::valueOrDefault;
+using WTF::weakOrderingCast;
 using WTF::zeroBytes;
 using WTF::zeroSpan;
 using WTF::Invocable;

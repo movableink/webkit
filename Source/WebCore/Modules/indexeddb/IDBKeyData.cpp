@@ -291,9 +291,9 @@ std::weak_ordering operator<=>(const IDBKeyData& a, const IDBKeyData& b)
         return comparison < 0 ? std::weak_ordering::less : std::weak_ordering::greater;
     }
     case IndexedDB::KeyType::Date:
-        return compareFloatingPointWithWeakOrdering(std::get<IDBKeyData::Date>(a.m_value).value, std::get<IDBKeyData::Date>(b.m_value).value);
+        return weakOrderingCast(std::get<IDBKeyData::Date>(a.m_value).value <=> std::get<IDBKeyData::Date>(b.m_value).value);
     case IndexedDB::KeyType::Number:
-        return compareFloatingPointWithWeakOrdering(std::get<double>(a.m_value), std::get<double>(b.m_value));
+        return weakOrderingCast(std::get<double>(a.m_value) <=> std::get<double>(b.m_value));
     case IndexedDB::KeyType::Max:
     case IndexedDB::KeyType::Min:
         return std::weak_ordering::equivalent;
