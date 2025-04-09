@@ -208,6 +208,12 @@ std::partial_ordering operator<=>(const WebAnimationTime& a, const WebAnimationT
     return a.m_value <=> b.m_value;
 }
 
+std::partial_ordering operator<=>(const WebAnimationTime& a, Seconds b)
+{
+    ASSERT(a.m_type == WebAnimationTime::Type::Time);
+    return a.m_value <=> b.seconds();
+}
+
 WebAnimationTime WebAnimationTime::operator+(const Seconds& other) const
 {
     ASSERT(m_type == Type::Time);
@@ -218,30 +224,6 @@ WebAnimationTime WebAnimationTime::operator-(const Seconds& other) const
 {
     ASSERT(m_type == Type::Time);
     return { m_type, m_value - other.seconds() };
-}
-
-bool WebAnimationTime::operator<(const Seconds& other) const
-{
-    ASSERT(m_type == Type::Time);
-    return m_value < other.seconds();
-}
-
-bool WebAnimationTime::operator<=(const Seconds& other) const
-{
-    ASSERT(m_type == Type::Time);
-    return m_value <= other.seconds();
-}
-
-bool WebAnimationTime::operator>(const Seconds& other) const
-{
-    ASSERT(m_type == Type::Time);
-    return m_value > other.seconds();
-}
-
-bool WebAnimationTime::operator>=(const Seconds& other) const
-{
-    ASSERT(m_type == Type::Time);
-    return m_value >= other.seconds();
 }
 
 bool WebAnimationTime::operator==(const Seconds& other) const
