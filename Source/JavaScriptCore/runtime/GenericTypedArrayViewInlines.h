@@ -165,7 +165,7 @@ template<typename Adaptor>
 JSArrayBufferView* GenericTypedArrayView<Adaptor>::wrapImpl(JSGlobalObject* lexicalGlobalObject, JSGlobalObject* globalObject)
 {
     UNUSED_PARAM(lexicalGlobalObject);
-    return Adaptor::JSViewType::create(globalObject, globalObject->typedArrayStructure(Adaptor::typeValue, isResizableOrGrowableShared()), this);
+    return Adaptor::JSViewType::tryCreate(globalObject, globalObject->typedArrayStructure(Adaptor::typeValue, isResizableOrGrowableShared()), this);
 }
 
 } // namespace JSC

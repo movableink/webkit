@@ -133,14 +133,8 @@ JSGenericTypedArrayView<Adaptor>* JSGenericTypedArrayView<Adaptor>::create(JSGlo
 }
 
 template<typename Adaptor>
-JSGenericTypedArrayView<Adaptor>* JSGenericTypedArrayView<Adaptor>::create(JSGlobalObject* globalObject, Structure* structure, RefPtr<typename Adaptor::ViewType>&& impl)
+JSGenericTypedArrayView<Adaptor>* JSGenericTypedArrayView<Adaptor>::create(VM& vm, Structure* structure, RefPtr<typename Adaptor::ViewType>&& impl)
 {
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    if (!impl->possiblySharedBuffer()) {
-        throwTypeError(globalObject, scope, typedArrayBufferHasBeenDetachedErrorMessage);
-        return nullptr;
-    }
     ConstructionContext context(vm, structure, impl->possiblySharedBuffer(), impl->byteOffsetRaw(), impl->isAutoLength() ? std::nullopt : std::optional { impl->lengthRaw() });
     ASSERT(context);
     JSGenericTypedArrayView* result =
@@ -148,6 +142,18 @@ JSGenericTypedArrayView<Adaptor>* JSGenericTypedArrayView<Adaptor>::create(JSGlo
         JSGenericTypedArrayView(vm, context);
     result->finishCreation(vm);
     return result;
+}
+
+template<typename Adaptor>
+JSGenericTypedArrayView<Adaptor>* JSGenericTypedArrayView<Adaptor>::tryCreate(JSGlobalObject* globalObject, Structure* structure, RefPtr<typename Adaptor::ViewType>&& impl)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    if (!impl->possiblySharedBuffer()) {
+        throwTypeError(globalObject, scope, typedArrayBufferHasBeenDetachedErrorMessage);
+        return nullptr;
+    }
+    return create(vm, structure, WTFMove(impl));
 }
 
 template<typename Adaptor>
