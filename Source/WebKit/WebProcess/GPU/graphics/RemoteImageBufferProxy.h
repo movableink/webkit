@@ -113,7 +113,6 @@ private:
 
     mutable RemoteDisplayListRecorderProxy m_context;
     WeakPtr<RemoteRenderingBackendProxy> m_renderingBackend;
-    bool m_needsFlush { true };
 };
 
 class RemoteSerializedImageBufferProxy : public WebCore::SerializedImageBuffer, public Identified<RemoteSerializedImageBufferIdentifier> {

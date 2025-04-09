@@ -57,6 +57,9 @@ public:
 
 
     void setClient(ThreadSafeWeakPtr<RemoteImageBufferProxy>&& client) { m_client = WTFMove(client); }
+    // Returns false if there has not been any potential draws since last call.
+    // Returns true if there has been potential draws since last call.
+    bool consumeHasDrawn();
 
 private:
     template<typename T> void send(T&& message);
@@ -173,7 +176,14 @@ private:
     Lock m_sharedVideoFrameWriterLock;
     std::unique_ptr<SharedVideoFrameWriter> m_sharedVideoFrameWriter WTF_GUARDED_BY_LOCK(m_sharedVideoFrameWriterLock);
 #endif
+    // Flag for pending draws. Start with true because we do not know what commands have been scheduled to the context.
+    bool m_hasDrawn { true };
 };
+
+inline bool RemoteDisplayListRecorderProxy::consumeHasDrawn()
+{
+    return std::exchange(m_hasDrawn, false);
+}
 
 } // namespace WebKit
 

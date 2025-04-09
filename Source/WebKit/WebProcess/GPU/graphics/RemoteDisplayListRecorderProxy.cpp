@@ -79,8 +79,11 @@ ALWAYS_INLINE void RemoteDisplayListRecorderProxy::send(T&& message)
     if (UNLIKELY(!connection))
         return;
 
-    if (RefPtr client = m_client.get())
-        client->backingStoreWillChange();
+    if (!m_hasDrawn) {
+        if (RefPtr client = m_client.get())
+            client->backingStoreWillChange();
+        m_hasDrawn = true;
+    }
     auto result = connection->send(std::forward<T>(message), m_identifier);
     if (UNLIKELY(result != IPC::Error::NoError)) {
         RELEASE_LOG(RemoteLayerBuffers, "RemoteDisplayListRecorderProxy::send - failed, name:%" PUBLIC_LOG_STRING ", error:%" PUBLIC_LOG_STRING,
