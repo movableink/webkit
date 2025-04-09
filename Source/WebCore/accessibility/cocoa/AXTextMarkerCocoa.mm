@@ -95,6 +95,13 @@ RetainPtr<NSAttributedString> AXTextMarkerRange::toAttributedString(AXCoreObject
     }
 
     RetainPtr<NSMutableAttributedString> result = start.isolatedObject()->createAttributedString(makeString(listMarkerText, start.runs()->substring(start.offset())), spellCheck);
+    auto appendToResult = [&result] (RetainPtr<NSMutableAttributedString> string) {
+        if (result)
+            [result appendAttributedString:string.autorelease()];
+        else
+            result = string;
+    };
+
     auto emitNewlineOnExit = [&] (AXIsolatedObject& object) {
         // FIXME: This function should not just be emitting newlines, but instead handling every character type in TextEmissionBehavior.
         auto behavior = object.textEmissionBehavior();
@@ -107,7 +114,7 @@ RetainPtr<NSAttributedString> AXTextMarkerRange::toAttributedString(AXCoreObject
             // FIXME: This is super inefficient. We are creating a whole new dictionary and attributed string just to append newline(s).
             NSString *newlineString = behavior == TextEmissionBehavior::Newline ? @"\n" : @"\n\n";
             NSDictionary *attributes = [result attributesAtIndex:length - 1 effectiveRange:nil];
-            [result appendAttributedString:adoptNS([[NSAttributedString alloc] initWithString:newlineString attributes:attributes]).get()];
+            appendToResult(adoptNS([[NSMutableAttributedString alloc] initWithString:newlineString attributes:attributes]));
         }
     };
 
@@ -115,10 +122,10 @@ RetainPtr<NSAttributedString> AXTextMarkerRange::toAttributedString(AXCoreObject
     // we may want to detect this and try searching AXDirection::Previous?
     RefPtr current = findObjectWithRuns(*start.isolatedObject(), AXDirection::Next, std::nullopt, emitNewlineOnExit);
     while (current && current->objectID() != end.objectID()) {
-        [result appendAttributedString:current->createAttributedString(current->textRuns()->toString(), spellCheck).autorelease()];
+        appendToResult(current->createAttributedString(current->textRuns()->toString(), spellCheck));
         current = findObjectWithRuns(*current, AXDirection::Next, std::nullopt, emitNewlineOnExit);
     }
-    [result appendAttributedString:end.isolatedObject()->createAttributedString(end.runs()->substring(0, end.offset()), spellCheck).autorelease()];
+    appendToResult(end.isolatedObject()->createAttributedString(end.runs()->substring(0, end.offset()), spellCheck));
 
     return result;
 }

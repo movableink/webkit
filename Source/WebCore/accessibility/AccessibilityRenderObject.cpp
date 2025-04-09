@@ -1416,8 +1416,7 @@ AXTextRuns AccessibilityRenderObject::textRuns()
         return { renderLineBreak->containingBlock(), { AXTextRun(box ? box->lineIndex() : 0, makeString('\n').isolatedCopy(), { lengthOneDomOffsets }, { 0 }, 0) } };
     }
 
-    RefPtr node = this->node();
-    if (is<HTMLMediaElement>(node) || is<HTMLAttachmentElement>(node) || isImage()) {
+    if (isReplacedElement()) {
         auto* containingBlock = renderer ? renderer->containingBlock() : nullptr;
         FloatRect rect = frameRect();
         uint16_t width = static_cast<uint16_t>(rect.width());

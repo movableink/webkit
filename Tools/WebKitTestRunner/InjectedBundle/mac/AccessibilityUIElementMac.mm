@@ -2545,6 +2545,10 @@ static JSRetainPtr<JSStringRef> createJSStringRef(id string)
             [mutableString appendFormat:@"%@: YES\n", NSAccessibilityStrikethroughTextAttribute];
             appendColorDescription(mutableString, NSAccessibilityStrikethroughColorTextAttribute, attributes);
         }
+
+        id attachment = [attributes objectForKey:NSAccessibilityAttachmentTextAttribute];
+        if (attachment)
+            [mutableString appendFormat:@"%@: {present}\n", NSAccessibilityAttachmentTextAttribute];
     };
     [string enumerateAttributesInRange:NSMakeRange(0, [string length]) options:(NSAttributedStringEnumerationOptions)0 usingBlock:attributeEnumerationBlock];
     [mutableString appendString:[string string]];

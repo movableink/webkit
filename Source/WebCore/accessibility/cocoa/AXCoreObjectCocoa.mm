@@ -208,6 +208,18 @@ RetainPtr<NSMutableAttributedString> AXCoreObject::createAttributedString(String
 
     auto string = adoptNS([[NSMutableAttributedString alloc] initWithString:text.createNSStringWithoutCopying().get()]);
     NSRange range = NSMakeRange(0, [string length]);
+
+    if (isReplacedElement()) {
+        if (id wrapper = this->wrapper()) {
+#if PLATFORM(MAC)
+            [string.get() addAttribute:NSAccessibilityAttachmentTextAttribute value:(__bridge id)adoptCF(NSAccessibilityCreateAXUIElementRef(wrapper)).get() range:range];
+#else
+            [string.get() addAttribute:AccessibilityTokenAttachment value:wrapper range:range];
+#endif // PLATFORM(MAC)
+        }
+        return string;
+    }
+
     attributedStringSetStyle(string.get(), stylesForAttributedString(), range);
 
     unsigned blockquoteLevel = 0;
@@ -269,7 +281,6 @@ RetainPtr<NSMutableAttributedString> AXCoreObject::createAttributedString(String
         } else
             attributedStringSetNeedsSpellCheck(string.get(), *this);
     }
-
     return string;
 }
 

@@ -947,6 +947,7 @@ bool AXCoreObject::isTableCellInSameColGroup(AXCoreObject* tableCell)
 
 bool AXCoreObject::isReplacedElement() const
 {
+    // FIXME: Should this include <legend> and form control elements like TextIterator::isRendererReplacedElement does?
     switch (roleValue()) {
     case AccessibilityRole::Audio:
     case AccessibilityRole::Image:
