@@ -459,8 +459,13 @@ TiledBacking* RenderLayerBacking::tiledBacking() const
     return m_graphicsLayer->tiledBacking();
 }
 
-static TiledBacking::TileCoverage computePageTiledBackingCoverage(const RenderLayer& layer)
+static TiledBacking::TileCoverage computePageTiledBackingCoverage(const RenderLayer& layer, bool isMainFrameRenderViewLayer)
 {
+    // Plugin documents don't use the main tiles, as they have their own composited contents.
+    // Avoid the cost of the main tiles.
+    if (isMainFrameRenderViewLayer && layer.renderer().document().isPluginDocument())
+        return TiledBacking::NoCoverage;
+
     // If the page is non-visible, don't incur the cost of keeping extra tiles for scrolling.
     if (!layer.page().isVisible())
         return TiledBacking::CoverageForVisibleArea;
@@ -505,7 +510,7 @@ static TiledBacking::TileCoverage computeOverflowTiledBackingCoverage(const Rend
 void RenderLayerBacking::adjustTiledBackingCoverage()
 {
     if (m_isFrameLayerWithTiledBacking) {
-        auto tileCoverage = computePageTiledBackingCoverage(m_owningLayer);
+        auto tileCoverage = computePageTiledBackingCoverage(m_owningLayer, m_isMainFrameRenderViewLayer);
         if (auto* tiledBacking = this->tiledBacking())
             tiledBacking->setTileCoverage(tileCoverage);
     }

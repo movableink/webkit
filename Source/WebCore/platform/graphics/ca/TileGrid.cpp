@@ -351,6 +351,11 @@ void TileGrid::removeTilesInCohort(TileCohort cohort)
 
 void TileGrid::revalidateTiles(OptionSet<ValidationPolicyFlag> validationPolicy)
 {
+    if (m_controller->tileCoverage() == TiledBacking::NoCoverage) {
+        removeAllTiles();
+        return;
+    }
+
     FloatRect coverageRect = m_controller->coverageRect();
     IntRect bounds = m_controller->bounds();
 
@@ -574,8 +579,11 @@ void TileGrid::cohortRemovalTimerFired()
 
 IntRect TileGrid::ensureTilesForRect(const FloatRect& rect, HashSet<TileIndex>& tilesNeedingDisplay, CoverageType newTileType)
 {
+    if (m_controller->tileCoverage() == TiledBacking::NoCoverage)
+        return { };
+
     if (!m_controller->isInWindow())
-        return IntRect();
+        return { };
 
     FloatRect scaledRect(rect);
     scaledRect.scale(m_scale);
@@ -584,7 +592,7 @@ IntRect TileGrid::ensureTilesForRect(const FloatRect& rect, HashSet<TileIndex>& 
     TileIndex topLeft;
     TileIndex bottomRight;
     if (!getTileIndexRangeForRect(rectInTileCoords, topLeft, bottomRight))
-        return IntRect();
+        return { };
 
     TileCohort currCohort = nextTileCohort();
     unsigned tilesInCohort = 0;
