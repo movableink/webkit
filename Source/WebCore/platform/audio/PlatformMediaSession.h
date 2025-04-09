@@ -132,7 +132,7 @@ class PlatformMediaSession
     , public MediaPlaybackTargetClient
 #endif
 #if !RELEASE_LOG_DISABLED
-    , private LoggerHelper
+    , public LoggerHelper
 #endif
 {
     WTF_MAKE_TZONE_ALLOCATED(PlatformMediaSession);
@@ -263,9 +263,10 @@ public:
     virtual String description() const;
 #endif
 
+    PlatformMediaSessionClient& client() const { return m_client; }
+
 protected:
     PlatformMediaSession(PlatformMediaSessionManager&, PlatformMediaSessionClient&);
-    PlatformMediaSessionClient& client() const { return m_client; }
 
 private:
     bool processClientWillPausePlayback(DelayCallingUpdateNowPlaying);
@@ -286,8 +287,6 @@ private:
     bool m_hasPlayedAudiblySinceLastInterruption { false };
     bool m_preparingToPlay { false };
     bool m_isActiveNowPlayingSession { false };
-
-    friend class PlatformMediaSessionManager;
 };
 
 class PlatformMediaSessionClient {

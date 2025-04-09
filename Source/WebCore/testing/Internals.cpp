@@ -4936,21 +4936,21 @@ ExceptionOr<void> Internals::setMediaSessionRestrictions(const String& mediaType
     auto restrictions = PlatformMediaSessionManager::singleton().restrictions(mediaType);
     PlatformMediaSessionManager::singleton().removeRestriction(mediaType, restrictions);
 
-    restrictions = PlatformMediaSessionManager::NoRestrictions;
+    restrictions = MediaSessionRestriction::NoRestrictions;
 
     for (StringView restrictionString : restrictionsString.split(',')) {
         if (equalLettersIgnoringASCIICase(restrictionString, "concurrentplaybacknotpermitted"_s))
-            restrictions |= PlatformMediaSessionManager::ConcurrentPlaybackNotPermitted;
+            restrictions |= MediaSessionRestriction::ConcurrentPlaybackNotPermitted;
         if (equalLettersIgnoringASCIICase(restrictionString, "backgroundprocessplaybackrestricted"_s))
-            restrictions |= PlatformMediaSessionManager::BackgroundProcessPlaybackRestricted;
+            restrictions |= MediaSessionRestriction::BackgroundProcessPlaybackRestricted;
         if (equalLettersIgnoringASCIICase(restrictionString, "backgroundtabplaybackrestricted"_s))
-            restrictions |= PlatformMediaSessionManager::BackgroundTabPlaybackRestricted;
+            restrictions |= MediaSessionRestriction::BackgroundTabPlaybackRestricted;
         if (equalLettersIgnoringASCIICase(restrictionString, "interruptedplaybacknotpermitted"_s))
-            restrictions |= PlatformMediaSessionManager::InterruptedPlaybackNotPermitted;
+            restrictions |= MediaSessionRestriction::InterruptedPlaybackNotPermitted;
         if (equalLettersIgnoringASCIICase(restrictionString, "inactiveprocessplaybackrestricted"_s))
-            restrictions |= PlatformMediaSessionManager::InactiveProcessPlaybackRestricted;
+            restrictions |= MediaSessionRestriction::InactiveProcessPlaybackRestricted;
         if (equalLettersIgnoringASCIICase(restrictionString, "suspendedunderlockplaybackrestricted"_s))
-            restrictions |= PlatformMediaSessionManager::SuspendedUnderLockPlaybackRestricted;
+            restrictions |= MediaSessionRestriction::SuspendedUnderLockPlaybackRestricted;
     }
     PlatformMediaSessionManager::singleton().addRestriction(mediaType, restrictions);
     return { };
@@ -4962,24 +4962,24 @@ ExceptionOr<String> Internals::mediaSessionRestrictions(const String& mediaTypeS
     if (mediaType == PlatformMediaSession::MediaType::None)
         return Exception { ExceptionCode::InvalidAccessError };
 
-    PlatformMediaSessionManager::SessionRestrictions restrictions = PlatformMediaSessionManager::singleton().restrictions(mediaType);
-    if (restrictions == PlatformMediaSessionManager::NoRestrictions)
+    auto restrictions = PlatformMediaSessionManager::singleton().restrictions(mediaType);
+    if (restrictions == MediaSessionRestriction::NoRestrictions)
         return String();
 
     StringBuilder builder;
-    if (restrictions & PlatformMediaSessionManager::ConcurrentPlaybackNotPermitted)
+    if (restrictions & MediaSessionRestriction::ConcurrentPlaybackNotPermitted)
         builder.append("concurrentplaybacknotpermitted"_s);
-    if (restrictions & PlatformMediaSessionManager::BackgroundProcessPlaybackRestricted) {
+    if (restrictions & MediaSessionRestriction::BackgroundProcessPlaybackRestricted) {
         if (!builder.isEmpty())
             builder.append(',');
         builder.append("backgroundprocessplaybackrestricted"_s);
     }
-    if (restrictions & PlatformMediaSessionManager::BackgroundTabPlaybackRestricted) {
+    if (restrictions & MediaSessionRestriction::BackgroundTabPlaybackRestricted) {
         if (!builder.isEmpty())
             builder.append(',');
         builder.append("backgroundtabplaybackrestricted"_s);
     }
-    if (restrictions & PlatformMediaSessionManager::InterruptedPlaybackNotPermitted) {
+    if (restrictions & MediaSessionRestriction::InterruptedPlaybackNotPermitted) {
         if (!builder.isEmpty())
             builder.append(',');
         builder.append("interruptedplaybacknotpermitted"_s);

@@ -77,12 +77,12 @@ void MediaSessionManageriOS::resetRestrictions()
 
     if (ramSize() < systemMemoryRequiredForVideoInBackgroundTabs) {
         ALWAYS_LOG(LOGIDENTIFIER, "restricting video in background tabs because system memory = ", ramSize());
-        addRestriction(PlatformMediaSession::MediaType::Video, BackgroundTabPlaybackRestricted);
+        addRestriction(PlatformMediaSession::MediaType::Video, MediaSessionRestriction::BackgroundTabPlaybackRestricted);
     }
 
-    addRestriction(PlatformMediaSession::MediaType::Video, BackgroundProcessPlaybackRestricted);
-    addRestriction(PlatformMediaSession::MediaType::WebAudio, BackgroundProcessPlaybackRestricted);
-    addRestriction(PlatformMediaSession::MediaType::VideoAudio, ConcurrentPlaybackNotPermitted | BackgroundProcessPlaybackRestricted | SuspendedUnderLockPlaybackRestricted);
+    addRestriction(PlatformMediaSession::MediaType::Video, MediaSessionRestriction::BackgroundProcessPlaybackRestricted);
+    addRestriction(PlatformMediaSession::MediaType::WebAudio, MediaSessionRestriction::BackgroundProcessPlaybackRestricted);
+    addRestriction(PlatformMediaSession::MediaType::VideoAudio, { MediaSessionRestriction::ConcurrentPlaybackNotPermitted, MediaSessionRestriction::BackgroundProcessPlaybackRestricted, MediaSessionRestriction::SuspendedUnderLockPlaybackRestricted });
 }
 #endif
 
@@ -233,7 +233,7 @@ void MediaSessionManageriOS::activeVideoRouteDidChange(SupportsAirPlayVideo supp
     nowPlayingSession->setShouldPlayToPlaybackTarget(supportsAirPlayVideo == SupportsAirPlayVideo::Yes);
 }
 
-void MediaSessionManageriOS::applicationWillEnterForeground(SuspendedUnderLock isSuspendedUnderLock)
+void MediaSessionManageriOS::uiApplicationWillEnterForeground(SuspendedUnderLock isSuspendedUnderLock)
 {
     if (willIgnoreSystemInterruptions())
         return;
@@ -241,7 +241,7 @@ void MediaSessionManageriOS::applicationWillEnterForeground(SuspendedUnderLock i
     MediaSessionManagerCocoa::applicationWillEnterForeground(isSuspendedUnderLock == SuspendedUnderLock::Yes);
 }
 
-void MediaSessionManageriOS::applicationDidBecomeActive()
+void MediaSessionManageriOS::uiApplicationDidBecomeActive()
 {
     if (willIgnoreSystemInterruptions())
         return;
@@ -249,7 +249,7 @@ void MediaSessionManageriOS::applicationDidBecomeActive()
     MediaSessionManagerCocoa::applicationDidBecomeActive();
 }
 
-void MediaSessionManageriOS::applicationDidEnterBackground(SuspendedUnderLock isSuspendedUnderLock)
+void MediaSessionManageriOS::uiApplicationDidEnterBackground(SuspendedUnderLock isSuspendedUnderLock)
 {
     if (willIgnoreSystemInterruptions())
         return;
@@ -257,7 +257,7 @@ void MediaSessionManageriOS::applicationDidEnterBackground(SuspendedUnderLock is
     MediaSessionManagerCocoa::applicationDidEnterBackground(isSuspendedUnderLock == SuspendedUnderLock::Yes);
 }
 
-void MediaSessionManageriOS::applicationWillBecomeInactive()
+void MediaSessionManageriOS::uiApplicationWillBecomeInactive()
 {
     if (willIgnoreSystemInterruptions())
         return;

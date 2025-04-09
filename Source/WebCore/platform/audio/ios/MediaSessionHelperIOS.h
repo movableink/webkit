@@ -47,10 +47,10 @@ public:
     virtual ~MediaSessionHelperClient() = default;
 
     enum class SuspendedUnderLock : bool { No, Yes };
-    virtual void applicationWillEnterForeground(SuspendedUnderLock) = 0;
-    virtual void applicationDidEnterBackground(SuspendedUnderLock) = 0;
-    virtual void applicationWillBecomeInactive() = 0;
-    virtual void applicationDidBecomeActive() = 0;
+    virtual void uiApplicationWillEnterForeground(SuspendedUnderLock) = 0;
+    virtual void uiApplicationDidEnterBackground(SuspendedUnderLock) = 0;
+    virtual void uiApplicationWillBecomeInactive() = 0;
+    virtual void uiApplicationDidBecomeActive() = 0;
 
     enum class HasAvailableTargets : bool { No, Yes };
     virtual void externalOutputDeviceAvailableDidChange(HasAvailableTargets) = 0;

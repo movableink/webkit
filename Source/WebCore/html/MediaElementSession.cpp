@@ -337,8 +337,8 @@ void MediaElementSession::clientDataBufferingTimerFired()
     if (state() != PlatformMediaSession::State::Playing || !m_element.elementIsHidden())
         return;
 
-    PlatformMediaSessionManager::SessionRestrictions restrictions = PlatformMediaSessionManager::singleton().restrictions(mediaType());
-    if ((restrictions & PlatformMediaSessionManager::BackgroundTabPlaybackRestricted) == PlatformMediaSessionManager::BackgroundTabPlaybackRestricted)
+    auto restrictions = PlatformMediaSessionManager::singleton().restrictions(mediaType());
+    if ((restrictions & MediaSessionRestriction::BackgroundTabPlaybackRestricted) == MediaSessionRestriction::BackgroundTabPlaybackRestricted)
         pauseSession();
 }
 
