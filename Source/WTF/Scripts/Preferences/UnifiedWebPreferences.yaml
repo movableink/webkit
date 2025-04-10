@@ -3962,6 +3962,19 @@ InspectorStartsAttached:
     WebKit:
       default: true
 
+InspectorSupportsShowingCertificate:
+  type: bool
+  status: embedder
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      "PLATFORM(COCOA) || PLATFORM(WIN)": true
+      default: false
+    WebCore:
+      "PLATFORM(COCOA) || PLATFORM(WIN)": true
+      default: false
+
 InspectorWindowFrame:
   type: String
   status: embedder

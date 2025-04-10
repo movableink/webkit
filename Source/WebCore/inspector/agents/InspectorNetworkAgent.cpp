@@ -58,7 +58,6 @@
 #include "LocalFrame.h"
 #include "MIMETypeRegistry.h"
 #include "MemoryCache.h"
-#include "NetworkResourcesData.h"
 #include "Page.h"
 #include "PlatformStrategies.h"
 #include "ProgressTracker.h"
@@ -189,12 +188,12 @@ Ref<Inspector::Protocol::Network::WebSocketFrame> buildWebSocketMessage(const We
 
 } // namespace
 
-InspectorNetworkAgent::InspectorNetworkAgent(WebAgentContext& context, uint32_t maximumResourcesContentSize)
+InspectorNetworkAgent::InspectorNetworkAgent(WebAgentContext& context, const NetworkResourcesData::Settings& networkResourcesDataSettings)
     : InspectorAgentBase("Network"_s, context)
     , m_frontendDispatcher(makeUnique<Inspector::NetworkFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(Inspector::NetworkBackendDispatcher::create(context.backendDispatcher, this))
     , m_injectedScriptManager(context.injectedScriptManager)
-    , m_resourcesData(makeUnique<NetworkResourcesData>(maximumResourcesContentSize))
+    , m_resourcesData(makeUnique<NetworkResourcesData>(networkResourcesDataSettings))
 {
 }
 
