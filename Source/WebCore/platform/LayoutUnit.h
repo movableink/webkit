@@ -246,109 +246,14 @@ private:
     int m_value;
 };
 
-inline bool operator<=(const LayoutUnit& a, float b)
-{
-    return a.toFloat() <= b;
-}
-
-inline bool operator<=(const LayoutUnit& a, int b)
-{
-    return a <= LayoutUnit(b);
-}
-
-inline bool operator<=(const float a, const LayoutUnit& b)
-{
-    return a <= b.toFloat();
-}
-
-inline bool operator<=(const int a, const LayoutUnit& b)
-{
-    return LayoutUnit(a) <= b;
-}
-
-inline bool operator>=(const LayoutUnit& a, int b)
-{
-    return a >= LayoutUnit(b);
-}
-
-inline bool operator>=(const float a, const LayoutUnit& b)
-{
-    return a >= b.toFloat();
-}
-
-inline bool operator>=(const LayoutUnit& a, float b)
-{
-    return a.toFloat() >= b;
-}
-
-inline bool operator>=(const int a, const LayoutUnit& b)
-{
-    return LayoutUnit(a) >= b;
-}
-
-inline bool operator<(const LayoutUnit& a, int b)
-{
-    return a < LayoutUnit(b);
-}
-
-inline bool operator<(const LayoutUnit& a, float b)
-{
-    return a.toFloat() < b;
-}
-
-inline bool operator<(const LayoutUnit& a, double b)
-{
-    return a.toDouble() < b;
-}
-
-inline bool operator<(const int a, const LayoutUnit& b)
-{
-    return LayoutUnit(a) < b;
-}
-
-inline bool operator<(const float a, const LayoutUnit& b)
-{
-    return a < b.toFloat();
-}
-
-inline bool operator>(const LayoutUnit& a, double b)
-{
-    return a.toDouble() > b;
-}
-
-inline bool operator>(const LayoutUnit& a, float b)
-{
-    return a.toFloat() > b;
-}
-
-inline bool operator>(const LayoutUnit& a, int b)
-{
-    return a > LayoutUnit(b);
-}
-
-inline bool operator>(const int a, const LayoutUnit& b)
-{
-    return LayoutUnit(a) > b;
-}
-
-inline bool operator>(const float a, const LayoutUnit& b)
-{
-    return a > b.toFloat();
-}
-
-inline bool operator>(const double a, const LayoutUnit& b)
-{
-    return a > b.toDouble();
-}
-
 inline bool operator==(const LayoutUnit& a, int b)
 {
     return a == LayoutUnit(b);
 }
 
-inline bool operator==(const int a, const LayoutUnit& b)
+inline auto operator<=>(const LayoutUnit& a, int b)
 {
-    return LayoutUnit(a) == b;
+    return a <=> LayoutUnit(b);
 }
 
 inline bool operator==(const LayoutUnit& a, float b)
@@ -356,9 +261,14 @@ inline bool operator==(const LayoutUnit& a, float b)
     return a.toFloat() == b;
 }
 
-inline bool operator==(const float a, const LayoutUnit& b)
+inline auto operator<=>(const LayoutUnit& a, float b)
 {
-    return a == b.toFloat();
+    return a.toFloat() <=> b;
+}
+
+inline auto operator<=>(const LayoutUnit& a, double b)
+{
+    return a.toDouble() <=> b;
 }
 
 // For multiplication that's prone to overflow, this bounds it to LayoutUnit::max() and ::min()
