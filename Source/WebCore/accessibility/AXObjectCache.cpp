@@ -3686,7 +3686,7 @@ std::optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(co
 
         };
 
-        if (isRendererReplacedElement(node->renderer()))
+        if (isRendererReplacedElement(node->renderer()) || is<RenderLineBreak>(node->renderer()))
             return createFromRendererAndOffset(*node->renderer(), domOffset);
 
         CheckedPtr<const RenderText> renderText = dynamicDowncast<RenderText>(node ? node->renderer() : nullptr);

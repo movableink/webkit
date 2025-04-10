@@ -31,6 +31,7 @@
 #include "PaintInfo.h"
 #include "RenderBox.h"
 #include "RenderInline.h"
+#include "RenderLineBreak.h"
 #include "RenderStyleInlines.h"
 #include "TextBoxPainter.h"
 #include <wtf/Assertions.h>
@@ -74,8 +75,13 @@ void InlineContentPainter::paintDisplayBox(const InlineDisplay::Box& box)
         return;
     }
 
-    if (box.isLineBreak())
+    if (box.isLineBreak()) {
+        if (m_paintInfo.phase == PaintPhase::Accessibility) {
+            auto* renderLineBreak = dynamicDowncast<RenderLineBreak>(box.layoutBox().rendererForIntegration());
+            m_paintInfo.accessibilityRegionContext()->takeBounds(renderLineBreak, m_paintOffset);
+        }
         return;
+    }
 
     if (box.isInlineBox()) {
         if (!box.isVisible() || !hasDamage(box))

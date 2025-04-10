@@ -133,6 +133,7 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
         String language = object.language();
         if (!language.isEmpty())
             setProperty(AXProperty::Language, WTFMove(language).isolatedCopy());
+        setProperty(AXProperty::IsEnabled, object.isEnabled());
     };
 
     // Allocate a capacity based on the minimum properties an object has (based on measurements from a real webpage).
@@ -160,7 +161,6 @@ void AXIsolatedObject::initializeProperties(const Ref<AccessibilityObject>& axOb
 
     setProperty(AXProperty::IsAttachment, object.isAttachment());
     setProperty(AXProperty::IsBusy, object.isBusy());
-    setProperty(AXProperty::IsEnabled, object.isEnabled());
     setProperty(AXProperty::IsExpanded, object.isExpanded());
 
     // FIXME: These three properties, plus AXProperty::IsRadioInput below, are basically

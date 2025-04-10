@@ -95,11 +95,14 @@ RetainPtr<NSAttributedString> AXTextMarkerRange::toAttributedString(AXCoreObject
     }
 
     RetainPtr<NSMutableAttributedString> result = start.isolatedObject()->createAttributedString(makeString(listMarkerText, start.runs()->substring(start.offset())), spellCheck);
-    auto appendToResult = [&result] (RetainPtr<NSMutableAttributedString> string) {
+    auto appendToResult = [&result] (RetainPtr<NSMutableAttributedString>&& string) {
+        if (!string)
+            return;
+
         if (result)
             [result appendAttributedString:string.autorelease()];
         else
-            result = string;
+            result = WTFMove(string);
     };
 
     auto emitNewlineOnExit = [&] (AXIsolatedObject& object) {

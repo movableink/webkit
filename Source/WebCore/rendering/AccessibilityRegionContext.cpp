@@ -31,6 +31,7 @@
 #include "RenderBox.h"
 #include "RenderBoxModelObject.h"
 #include "RenderInline.h"
+#include "RenderLineBreak.h"
 #include "RenderStyleInlines.h"
 #include "RenderText.h"
 #include "RenderView.h"
@@ -77,6 +78,22 @@ void AccessibilityRegionContext::takeBounds(const RenderBox& renderBox, FloatRec
 {
     auto mappedPaintRect = enclosingIntRect(mapRect(paintRect));
     takeBoundsInternal(renderBox, WTFMove(mappedPaintRect));
+}
+
+void AccessibilityRegionContext::takeBounds(const RenderLineBreak* renderLineBreak, const LayoutPoint& paintOffset)
+{
+    if (!renderLineBreak)
+        return;
+    auto mappedPaintRect = renderLineBreak->linesBoundingBox();
+    mappedPaintRect.moveBy(roundedIntPoint(paintOffset));
+    // We want <br>s to have non-empty rects so that something is drawn when they are navigated to by-line by
+    // ATs like VoiceOver. Make them at least 2px so they roughly match the size of a cursor in either horizontal
+    // or vertical writing modes (matching CaretRectComputation::caretWidth).
+    if (!mappedPaintRect.width())
+        mappedPaintRect.setWidth(2);
+    if (!mappedPaintRect.height())
+        mappedPaintRect.setHeight(2);
+    takeBoundsInternal(*renderLineBreak, WTFMove(mappedPaintRect));
 }
 
 void AccessibilityRegionContext::takeBoundsInternal(const RenderBoxModelObject& renderObject, IntRect&& paintRect)

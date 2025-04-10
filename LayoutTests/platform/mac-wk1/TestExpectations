@@ -1237,6 +1237,8 @@ accessibility/mac/text-operation/text-operation-uppercase.html [ Skip ]
 
 # Skipping because AXTextMarkerRangeIsValid is not supported on WK1.
 accessibility/mac/attributed-string-with-image.html [ Skip ]
+accessibility/mac/br-element-properties.html [ Skip ]
+accessibility/mac/br-element-text-selection.html [ Skip ]
 accessibility/mac/dynamic-selection.html [ Skip ]
 accessibility/mac/replaced-element-text-selection.html [ Skip ]
 
