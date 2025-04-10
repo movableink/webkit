@@ -47,6 +47,7 @@
 #include "LibWebRTCResolverIdentifier.h"
 #include "LogStreamIdentifier.h"
 #include "MarkSurfacesAsVolatileRequestIdentifier.h"
+#include "NetworkConnectionToWebProcess.h"
 #include "NetworkResourceLoadIdentifier.h"
 #include "PDFPluginIdentifier.h"
 #include "PlaybackSessionContextIdentifier.h"
@@ -628,6 +629,7 @@ Vector<ASCIILiteral> serializedIdentifiers()
     static_assert(sizeof(uint64_t) == sizeof(WebKit::LibWebRTCResolverIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::LogStreamIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::MarkSurfacesAsVolatileRequestIdentifier));
+    static_assert(sizeof(uint64_t) == sizeof(WebKit::MessageBatchIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::NetworkResourceLoadIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::PDFPluginIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::PageGroupIdentifier));
@@ -779,6 +781,7 @@ Vector<ASCIILiteral> serializedIdentifiers()
         "WebKit::LibWebRTCResolverIdentifier"_s,
         "WebKit::LogStreamIdentifier"_s,
         "WebKit::MarkSurfacesAsVolatileRequestIdentifier"_s,
+        "WebKit::MessageBatchIdentifier"_s,
         "WebKit::NetworkResourceLoadIdentifier"_s,
         "WebKit::PDFPluginIdentifier"_s,
         "WebKit::PageGroupIdentifier"_s,

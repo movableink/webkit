@@ -140,6 +140,7 @@ template: struct WebKit::IPCConnectionTesterIdentifierType
 template: struct WebKit::IPCStreamTesterIdentifierType
 template: struct WebKit::JSObjectIDType
 template: struct WebKit::MarkSurfacesAsVolatileRequestIdentifierType
+template: struct WebKit::MessageBatchIdentifierType
 template: struct WebKit::NetworkResourceLoadIdentifierType
 template: struct WebKit::PDFPluginIdentifierType
 template: struct WebKit::PageGroupIdentifierType
