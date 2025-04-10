@@ -4,7 +4,6 @@ WebKitBuild/Release/usr/local/include/wtf/text/icu/TextBreakIteratorICU.h
 WebKitBuild/Release/usr/local/include/wtf/unicode/Collator.h
 wtf/Bag.h
 wtf/HashTable.h
-wtf/KeyValuePair.h
 wtf/Logger.h
 wtf/ParkingLot.h
 wtf/PrintStream.h

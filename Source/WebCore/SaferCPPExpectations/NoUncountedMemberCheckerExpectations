@@ -57,6 +57,7 @@ page/scrolling/ScrollingCoordinator.h
 page/scrolling/ScrollingTreeGestureState.h
 page/scrolling/mac/ScrollerMac.h
 platform/PODInterval.h
+platform/cocoa/WebAVPlayerLayer.h
 platform/encryptedmedia/CDMProxy.h
 platform/graphics/ComplexTextController.h
 platform/graphics/GraphicsLayer.h
@@ -70,6 +71,7 @@ platform/mediarecorder/MediaRecorderPrivate.h
 platform/mediastream/AudioMediaStreamTrackRenderer.h
 platform/mediastream/mac/CoreAudioCaptureSource.h
 platform/mock/ScrollbarsControllerMock.h
+platform/network/cocoa/WebCoreNSURLSession.mm
 platform/network/mac/WebCoreResourceHandleAsOperationQueueDelegate.h
 plugins/PluginData.h
 rendering/RenderQuote.cpp

@@ -34,13 +34,11 @@ Modules/webdatabase/DatabaseManager.h
 Modules/webdatabase/DatabaseThread.h
 accessibility/AXTextMarker.cpp
 accessibility/AccessibilityObject.cpp
-animation/TimelineRange.cpp
 bindings/js/GCController.cpp
 bindings/js/JSDOMAsyncIterator.h
 bindings/js/JSDOMConvertBase.h
 bindings/js/JSLocationCustom.cpp
 bindings/js/JSPaintRenderingContext2DCustom.cpp
-bindings/js/WebCoreJSClientData.h
 bindings/js/WebCoreOpaqueRootInlines.h
 bindings/js/WindowProxy.h
 bridge/objc/objc_runtime.h
@@ -54,7 +52,6 @@ css/CSSToLengthConversionData.h
 css/MediaList.h
 css/StyleSheetContents.cpp
 css/StyleSheetContents.h
-css/calc/CSSCalcTree+ContainerProgressEvaluator.cpp
 css/calc/CSSCalcTree.h
 css/parser/CSSPropertyParser.h
 css/values/primitives/CSSPrimitiveData.h
@@ -63,13 +60,8 @@ dom/Element.h
 dom/FragmentDirectiveRangeFinder.cpp
 dom/Node.h
 editing/Editor.h
-editing/TextCheckingHelper.h
 editing/TextIterator.cpp
 editing/VisibleUnits.cpp
-html/FormListedElement.cpp
-html/HTMLBRElement.cpp
-html/HTMLInputElement.cpp
-html/HTMLLinkElement.cpp
 html/HTMLMediaElement.cpp
 html/MediaElementSession.h
 html/canvas/PlaceholderRenderingContext.cpp
@@ -81,7 +73,6 @@ html/shadow/DateTimeEditElement.h
 html/track/InbandGenericTextTrack.cpp
 html/track/InbandWebVTTTextTrack.cpp
 html/track/TrackBase.h
-inspector/InspectorController.cpp
 inspector/InspectorController.h
 inspector/InspectorFrontendHost.h
 inspector/InspectorInstrumentation.h
@@ -102,7 +93,6 @@ layout/formattingContexts/inline/text/TextUtil.cpp
 layout/integration/LayoutIntegrationUtils.h
 layout/integration/inline/LayoutIntegrationLineLayout.h
 layout/layouttree/LayoutElementBox.h
-loader/DocumentLoader.cpp
 loader/DocumentThreadableLoader.h
 loader/cache/CachedImageClient.h
 loader/cache/CachedResourceHandle.h
@@ -121,7 +111,6 @@ platform/PlatformStrategies.h
 platform/Scrollbar.h
 platform/ThreadGlobalData.h
 platform/ThreadTimers.h
-platform/cocoa/DragImageCocoa.mm
 platform/cocoa/TelephoneNumberDetectorCocoa.cpp
 platform/graphics/ComplexTextController.h
 platform/graphics/FontSelectionAlgorithm.h
@@ -139,10 +128,6 @@ platform/mediastream/libwebrtc/LibWebRTCDav1dDecoder.cpp
 platform/mediastream/mac/CoreAudioSharedUnit.h
 platform/network/cocoa/CredentialCocoa.h
 platform/network/cocoa/ProtectionSpaceCocoa.h
-platform/sql/SQLiteDatabase.cpp
-platform/sql/SQLiteDatabase.h
-platform/sql/SQLiteStatement.cpp
-platform/sql/SQLiteStatement.h
 rendering/AccessibilityRegionContext.h
 rendering/BreakLines.h
 rendering/ImageQualityController.h
@@ -150,7 +135,6 @@ rendering/PaintInfo.h
 rendering/RenderLayer.h
 rendering/RenderLayerBacking.cpp
 rendering/RenderLayerCompositor.cpp
-rendering/RenderLayerCompositor.h
 rendering/RenderLineBoxList.h
 rendering/RenderTableCellInlines.h
 rendering/RenderText.cpp
@@ -161,11 +145,8 @@ rendering/line/LineWidth.h
 rendering/style/StyleCachedImage.cpp
 rendering/svg/SVGRenderingContext.h
 rendering/svg/SVGTextLayoutAttributesBuilder.h
-rendering/updating/RenderTreeBuilder.h
-style/CustomPropertyRegistry.h
 style/StyleBuilderState.h
 style/StyleScope.h
-style/values/color/StyleColorResolutionState.h
 svg/properties/SVGAnimationAdditiveListFunctionImpl.h
 svg/properties/SVGAnimationAdditiveValueFunctionImpl.h
 testing/Internals.cpp

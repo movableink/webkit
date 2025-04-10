@@ -1,19 +1,12 @@
-Platform/IPC/ArgumentCoders.h
+<<<<<<< HEAD
+=======
+>>>>>>> f1f4378deaa5 (Update safer C++ expectations.)
 Platform/IPC/Connection.h
-Platform/IPC/Encoder.h
 Platform/IPC/MessageSenderInlines.h
 Platform/classifier/cocoa/ResourceLoadStatisticsClassifierCocoa.cpp
 Platform/cocoa/WebPrivacyHelpers.h
-Shared/Extensions/WebExtensionSQLiteDatabase.cpp
-Shared/Extensions/WebExtensionSQLiteDatabase.h
-Shared/Extensions/WebExtensionSQLiteHelpers.h
-Shared/Extensions/WebExtensionSQLiteRow.cpp
-Shared/Extensions/WebExtensionSQLiteStatement.cpp
-Shared/Extensions/WebExtensionSQLiteStatement.h
-Shared/Extensions/_WKWebExtensionSQLiteDatabase.mm
-Shared/Extensions/_WKWebExtensionSQLiteHelpers.h
-Shared/Extensions/_WKWebExtensionSQLiteRow.mm
-Shared/Extensions/_WKWebExtensionSQLiteStatement.mm
+UIProcess/API/C/WKPage.cpp
+UIProcess/Automation/WebAutomationSession.h
 UIProcess/WebProcessPool.h
 WebProcess/Extensions/Bindings/JSWebExtensionWrapper.h
 WebProcess/WebCoreSupport/WebLocalFrameLoaderClient.cpp
