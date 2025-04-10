@@ -52,8 +52,8 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaRecorderPrivateWriterWebM);
 
-static const char* kH264CodecId = "V_MPEG4/ISO/AVC";
-static const char* kPcmCodecId = "A_PCM/FLOAT/IEEE";
+static constexpr auto kH264CodecId = "V_MPEG4/ISO/AVC"_s;
+static constexpr auto kPcmCodecId = "A_PCM/FLOAT/IEEE"_s;
 
 static const char* mkvCodeIcForMediaVideoCodecId(FourCC codec)
 {
@@ -62,9 +62,9 @@ static const char* mkvCodeIcForMediaVideoCodecId(FourCC codec)
     case 'vp92':
     case kCMVideoCodecType_VP9: return mkvmuxer::Tracks::kVp9CodecId;
     case kCMVideoCodecType_AV1: return mkvmuxer::Tracks::kAv1CodecId;
-    case kCMVideoCodecType_H264: return kH264CodecId;
+    case kCMVideoCodecType_H264: return kH264CodecId.characters();
     case kAudioFormatOpus: return mkvmuxer::Tracks::kOpusCodecId;
-    case kAudioFormatLinearPCM: return kPcmCodecId;
+    case kAudioFormatLinearPCM: return kPcmCodecId.characters();
     default:
         ASSERT_NOT_REACHED("Unsupported codec");
         return "";
