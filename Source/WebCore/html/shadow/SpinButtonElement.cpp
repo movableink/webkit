@@ -71,6 +71,12 @@ void SpinButtonElement::willDetachRenderers()
     releaseCapture();
 }
 
+bool SpinButtonElement::isDisabledFormControl() const
+{
+    RefPtr host = shadowHost();
+    return host && host->isDisabledFormControl();
+}
+
 void SpinButtonElement::defaultEventHandler(Event& event)
 {
     auto* mouseEvent = dynamicDowncast<MouseEvent>(event);
