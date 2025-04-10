@@ -78,6 +78,9 @@ RetainPtr<UIView> ModelPresentationManagerProxy::startDragForModel(const WebCore
 #if PLATFORM(VISION)
     CGRect frame = [modelView frame];
     [modelView _setAssumedNoncoplanarHostedContentSize:SPSize3DMake(CGRectGetWidth(frame), CGRectGetHeight(frame), 100)];
+
+    auto hostedView = modelPresentation->pageHostedModelView;
+    [hostedView setPortalCrossing:YES];
 #endif
 
     m_activelyDraggedModelLayerIDs.add(layerIdentifier);
@@ -87,6 +90,16 @@ RetainPtr<UIView> ModelPresentationManagerProxy::startDragForModel(const WebCore
 
 void ModelPresentationManagerProxy::doneWithCurrentDragSession()
 {
+    for (WebCore::PlatformLayerIdentifier layerIdentifier : m_activelyDraggedModelLayerIDs) {
+        auto iterator = m_modelPresentations.find(layerIdentifier);
+        if (iterator == m_modelPresentations.end())
+            continue;
+
+        auto& modelPresentation = iterator->value;
+        if (auto pageHostedModelView = modelPresentation->pageHostedModelView)
+            [modelPresentation->pageHostedModelView setPortalCrossing:NO];
+    }
+
     m_activelyDraggedModelLayerIDs.clear();
 }
 

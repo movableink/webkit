@@ -109,7 +109,8 @@
         REEntityAddComponentByClass(_stereoContentEntity.get(), RENetworkComponentGetComponentType());
         REPtr<REComponentRef> stereoContentComponent = REEntityGetOrAddComponentByClass(_stereoContentEntity.get(), REEmbeddedStereoContentComponentGetComponentType());
         REPtr<REComponentRef> worldRootComponent = REEntityGetOrAddComponentByClass(_stereoContentEntity.get(), REWorldRootComponentGetComponentType());
-        if (stereoContentComponent && worldRootComponent) {
+        REPtr<REComponentRef> portalCrossingComponent = REEntityGetOrAddComponentByClass(_stereoContentEntity.get(), REPortalCrossingFlagsComponentGetComponentType());
+        if (stereoContentComponent && worldRootComponent && portalCrossingComponent) {
             REPtr<REWorldRootRef> worldRoot = adoptRE(RECreateWorldRoot());
             REEmbeddedStereoContentComponentSetWorldRoot(stereoContentComponent.get(), worldRoot.get());
             REWorldRootComponentSetWorldRoot(worldRootComponent.get(), worldRoot.get());
@@ -120,6 +121,12 @@
             REEmbeddedStereoContentComponentSetAllowsCrossing(stereoContentComponent.get(), true);
             REEmbeddedStereoContentComponentSetIsStereo(stereoContentComponent.get(), true);
             REEmbeddedStereoContentComponentSetEnableClipping(stereoContentComponent.get(), true);
+
+            // FIXME: https://bugs.webkit.org/show_bug.cgi?id=290950
+            REEmbeddedStereoContentComponentSetLightingBlendDistance(stereoContentComponent.get(), 0.0);
+
+            REPortalCrossingFlagsComponentSetEnabled(portalCrossingComponent.get(), false);
+            REPortalCrossingFlagsComponentSetInherited(portalCrossingComponent.get(), false);
 
             REEntitySetParent(_stereoContentEntity.get(), _rootEntity.get());
 
@@ -290,6 +297,17 @@
     [_stereoContentLayer setFrame:self.bounds];
 }
 #endif
+
+- (void)setPortalCrossing:(BOOL)enabled
+{
+#if HAVE(RE_STEREO_CONTENT_SUPPORT)
+    if (REPtr<REComponentRef> portalCrossingComponent = REEntityGetOrAddComponentByClass(_stereoContentEntity.get(), REPortalCrossingFlagsComponentGetComponentType())) {
+        REPortalCrossingFlagsComponentSetEnabled(portalCrossingComponent.get(), enabled);
+        REPortalCrossingFlagsComponentSetInherited(portalCrossingComponent.get(), enabled);
+        RENetworkMarkComponentDirty(portalCrossingComponent.get());
+    }
+#endif
+}
 
 @end
 

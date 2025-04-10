@@ -35,6 +35,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, retain) UIView *remoteModelView;
 @property (nonatomic) BOOL shouldDisablePortal;
 - (void)applyBackgroundColor:(std::optional<WebCore::Color>)backgroundColor;
+- (void)setPortalCrossing:(BOOL)enabled;
 
 @end
 

@@ -325,7 +325,8 @@ public final class WKSRKEntity: NSObject {
                 let environment = try await EnvironmentResource(cube: textureResource, options: .init())
 
                 await MainActor.run {
-                    entity.components[ImageBasedLightComponent.self] = .init(source: .single(environment))
+                    entity.components[VirtualEnvironmentProbeComponent.self] = .init(source: .single(.init(environment: environment)))
+                    entity.components[ImageBasedLightComponent.self] = .init(source: .none)
                     entity.components[ImageBasedLightReceiverComponent.self] = .init(imageBasedLight: entity)
                     Logger.realityKitEntity.info("Successfully applied IBL to entity")
                     completion(true)
@@ -346,7 +347,8 @@ public final class WKSRKEntity: NSObject {
 #if canImport(RealityFoundation, _version: 380)
                 let environment = await EnvironmentResource.defaultObject()
                 await MainActor.run {
-                    entity.components[ImageBasedLightComponent.self] = .init(source: .single(environment))
+                    entity.components[VirtualEnvironmentProbeComponent.self] = .init(source: .single(.init(environment: environment)))
+                    entity.components[ImageBasedLightComponent.self] = .init(source: .none)
                     entity.components[ImageBasedLightReceiverComponent.self] = .init(imageBasedLight: entity)
                 }
 #else
