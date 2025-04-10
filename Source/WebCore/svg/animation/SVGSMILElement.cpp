@@ -865,20 +865,15 @@ void SVGSMILElement::resolveInterval(bool first, SMILTime& beginResult, SMILTime
         SMILTime tempBegin = findInstanceTime(Begin, beginAfter, equalsMinimumOK);
         if (tempBegin.isUnresolved())
             break;
-        SMILTime tempEnd;
-        if (m_endTimes.isEmpty())
-            tempEnd = resolveActiveEnd(tempBegin, SMILTime::indefinite());
-        else {
-            tempEnd = findInstanceTime(End, tempBegin, true);
-            if ((first && tempBegin == tempEnd && tempEnd == lastIntervalTempEnd) || (!first && tempEnd == m_intervalEnd)) 
-                tempEnd = findInstanceTime(End, tempBegin, false);    
-            if (tempEnd.isUnresolved()) {
-                if (!m_endTimes.isEmpty() && !m_hasEndEventConditions)
-                    break;
-            }
-            tempEnd = resolveActiveEnd(tempBegin, tempEnd);
+        SMILTime tempEnd = findInstanceTime(End, tempBegin, true);
+        if (!m_endTimes.isEmpty()) {
+            if ((first && tempBegin == tempEnd && tempEnd == lastIntervalTempEnd) || (!first && tempEnd == m_intervalEnd))
+                tempEnd = findInstanceTime(End, tempBegin, false);
+            if (tempEnd.isUnresolved() && !m_hasEndEventConditions)
+                break;
         }
-        if (!first || (tempEnd > 0 || (!tempBegin.value() && !tempEnd.value()))) {
+        tempEnd = resolveActiveEnd(tempBegin, tempEnd);
+        if (!first || tempEnd > SMILTime() || (!tempBegin.value() && !tempEnd.value())) {
             beginResult = tempBegin;
             endResult = tempEnd;
             return;
