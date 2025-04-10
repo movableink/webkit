@@ -1788,6 +1788,8 @@ public:
     void modelProcessConnectionDidBecomeAvailable(ModelProcessConnection&);
 #endif
 
+    void createTextFragmentDirectiveFromSelection(CompletionHandler<void(URL&&)>&&);
+
 #if ENABLE(APP_HIGHLIGHTS)
     WebCore::CreateNewGroupForHighlight highlightIsNewGroup() const;
     WebCore::HighlightRequestOriginatedInApp highlightRequestOriginatedInApp() const;

@@ -9385,6 +9385,12 @@ void WebPage::revokeSandboxExtensions(Vector<Ref<SandboxExtension>>& sandboxExte
     sandboxExtensions.clear();
 }
 
+void WebPage::createTextFragmentDirectiveFromSelection(CompletionHandler<void(URL&&)>&& completionHandler)
+{
+    auto url = protectedCorePage()->fragmentDirectiveURLForSelectedText();
+    completionHandler(WTFMove(url));
+}
+
 #if ENABLE(APP_HIGHLIGHTS)
 WebCore::CreateNewGroupForHighlight WebPage::highlightIsNewGroup() const
 {

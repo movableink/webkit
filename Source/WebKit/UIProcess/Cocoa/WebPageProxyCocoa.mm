@@ -809,6 +809,15 @@ void WebPageProxy::addActivityStateUpdateCompletionHandler(CompletionHandler<voi
     m_activityStateUpdateCallbacks.append(WTFMove(completionHandler));
 }
 
+void WebPageProxy::createTextFragmentDirectiveFromSelection(CompletionHandler<void(URL&&)>&& completionHandler)
+{
+    if (!hasRunningProcess())
+        return;
+
+    protectedLegacyMainFrameProcess()->sendWithAsyncReply(Messages::WebPage::CreateTextFragmentDirectiveFromSelection(), WTFMove(completionHandler), webPageIDInMainFrameProcess());
+
+}
+
 #if ENABLE(APP_HIGHLIGHTS)
 void WebPageProxy::createAppHighlightInSelectedRange(WebCore::CreateNewGroupForHighlight createNewGroup, WebCore::HighlightRequestOriginatedInApp requestOriginatedInApp)
 {

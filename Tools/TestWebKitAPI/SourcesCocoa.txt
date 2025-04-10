@@ -306,6 +306,7 @@ Tests/WebKitCocoa/WKAttachmentTests.mm
 Tests/WebKitCocoa/WKContentExtensionStore.mm
 Tests/WebKitCocoa/WKContentViewEditingActions.mm
 Tests/WebKitCocoa/WKContentViewTargetForAction.mm
+Tests/WebKitCocoa/WKFragmentDirectiveGeneration.mm
 Tests/WebKitCocoa/WKHTTPCookieStore.mm
 Tests/WebKitCocoa/WKInspectorDelegate.mm
 Tests/WebKitCocoa/WKInspectorExtension.mm

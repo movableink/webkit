@@ -3976,6 +3976,13 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
 #endif
 }
 
+- (void)_textFragmentDirectiveFromSelectionWithCompletionHandler:(void(^)(NSURL *))completionHandler
+{
+    _page->createTextFragmentDirectiveFromSelection([completion = makeBlockPtr(completionHandler)](URL&& url) {
+        completion(url.createNSURL().get());
+    });
+}
+
 - (void)_requestAllTextWithCompletionHandler:(void(^)(NSArray<_WKTextRun *> *))completionHandler
 {
     _page->requestAllTextAndRects([weakSelf = WeakObjCPtr<WKWebView>(self), completion = makeBlockPtr(completionHandler)](auto&& textRuns) {

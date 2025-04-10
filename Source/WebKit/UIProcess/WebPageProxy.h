@@ -2360,6 +2360,8 @@ public:
 
     void copyLinkWithHighlight();
 
+    void createTextFragmentDirectiveFromSelection(CompletionHandler<void(URL&&)>&&);
+
 #if ENABLE(APP_HIGHLIGHTS)
     void createAppHighlightInSelectedRange(WebCore::CreateNewGroupForHighlight, WebCore::HighlightRequestOriginatedInApp);
     void restoreAppHighlightsAndScrollToIndex(const Vector<Ref<WebCore::SharedMemory>>& highlights, const std::optional<unsigned> index);
