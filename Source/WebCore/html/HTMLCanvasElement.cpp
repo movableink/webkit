@@ -887,6 +887,12 @@ void HTMLCanvasElement::createImageBuffer() const
     if (m_context && m_context->is2d()) {
         // Recalculate compositing requirements if acceleration state changed.
         const_cast<HTMLCanvasElement*>(this)->invalidateStyleAndLayerComposition();
+#if USE(SKIA)
+        if (CheckedPtr renderer = renderBox()) {
+            if (usesContentsAsLayerContents())
+                renderer->contentChanged(ContentChangeType::Canvas);
+        }
+#endif
     }
 #endif
 }
