@@ -101,6 +101,9 @@ const int CanvasRenderingContext2DBase::DefaultFontSize = 10;
 const ASCIILiteral CanvasRenderingContext2DBase::DefaultFontFamily = "sans-serif"_s;
 static constexpr ASCIILiteral DefaultFont = "10px sans-serif"_s;
 
+// putImageData data smaller than this is cached in anticipation for next getImageData.
+static constexpr unsigned putImageDataCacheAreaLimit = 60 * 60;
+
 static CanvasLineCap toCanvasLineCap(LineCap lineCap)
 {
     switch (lineCap) {
@@ -2475,15 +2478,13 @@ CanvasRenderingContext2DBase::CachedContentsImageData::CachedContentsImageData(C
 {
 }
 
-static constexpr unsigned imageDataSizeThresholdForCaching = 60 * 60;
-
 RefPtr<ByteArrayPixelBuffer> CanvasRenderingContext2DBase::cacheImageDataIfPossible(const ImageData& imageData, const IntRect& sourceRect, const IntPoint& destinationPosition)
 {
     if (!destinationPosition.isZero() || !sourceRect.location().isZero() || sourceRect.size() != imageData.size() || sourceRect.size() != canvasBase().size())
         return nullptr;
 
     auto size = imageData.size();
-    if (size.area() > imageDataSizeThresholdForCaching)
+    if (size.unclampedArea() > putImageDataCacheAreaLimit)
         return nullptr;
 
     if (imageData.colorSpace() != m_settings.colorSpace)

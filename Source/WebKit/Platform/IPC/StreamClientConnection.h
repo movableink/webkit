@@ -77,6 +77,7 @@ public:
     void setMaxBatchSize(unsigned);
 
     void open(Connection::Client&, SerialFunctionDispatcher& = RunLoop::currentSingleton());
+    // Ensures that all sent messages are receiveable by the receiver.
     Error flushSentMessages();
     void invalidate();
 
@@ -94,6 +95,9 @@ public:
     Error waitForAndDispatchImmediately(ObjectIdentifierGeneric<U, V, W> destinationID, OptionSet<WaitForOption> = { });
     template<typename>
     Error waitForAsyncReplyAndDispatchImmediately(AsyncReplyID);
+
+    // Ensures batched messages are processed sometime in the future. FIXME: Currently distinct from flushSentMessages().
+    void flushBatch() { wakeUpServer(WakeUpServer::No); }
 
     void addWorkQueueMessageReceiver(ReceiverName, WorkQueue&, WorkQueueMessageReceiverBase&, uint64_t destinationID = 0);
     void removeWorkQueueMessageReceiver(ReceiverName, uint64_t destinationID = 0);

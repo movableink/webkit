@@ -53,6 +53,11 @@
 namespace WebKit {
 using namespace WebCore;
 
+// putPixelBuffer calls are marked as batched if they are smaller than this. Speeds up multiple small pixel buffer sends
+// while minimizing the risk of large memory areas being kept unused in IPC buffers.
+// See also CanvasRenderingContext2DBase putImageDataCacheAreaLimit.
+constexpr uint64_t putPixelBufferBatchedAreaLimit = 60 * 60;
+
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteImageBufferProxy);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteSerializedImageBufferProxy);
 
@@ -329,6 +334,11 @@ void RemoteImageBufferProxy::putPixelBuffer(const PixelBufferSourceView& pixelBu
     ASSERT(resolutionScale() == 1);
     backingStoreWillChange();
     send(Messages::RemoteImageBuffer::PutPixelBuffer(pixelBuffer, srcRect.location(), srcRect.size(), destPoint, destFormat));
+    // Small putPixelBuffers are batched, large ones are not.
+    if (pixelBuffer.size().unclampedArea() > putPixelBufferBatchedAreaLimit) {
+        if (RefPtr connection = this->connection())
+            connection->flushBatch();
+    }
 }
 
 void RemoteImageBufferProxy::convertToLuminanceMask()
