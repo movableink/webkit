@@ -36,6 +36,7 @@
 #include "ElementInlines.h"
 #include "EventLoop.h"
 #include "EventNames.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLDialogElement.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLMediaElement.h"
@@ -356,6 +357,12 @@ bool DocumentFullscreen::isSimpleFullscreenDocument() const
         }
     }
     return foundFullscreenFlag;
+}
+
+// MARK: - Simple helper to get document frame
+LocalFrame* DocumentFullscreen::frame() const
+{
+    return document().frame();
 }
 
 // MARK: - Collect documents to unfullscreen (exit helper).

@@ -298,7 +298,9 @@ void RemoteLayerTreeHost::layerWillBeRemoved(WebCore::ProcessIdentifier processI
     }
 
     if (auto node = m_nodes.take(layerID)) {
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
         animationsWereRemovedFromNode(*node);
+#endif
         if (auto hostingIdentifier = node->remoteContextHostingIdentifier())
             m_hostingLayers.remove(*hostingIdentifier);
         if (auto hostedIdentifier = node->remoteContextHostedIdentifier()) {

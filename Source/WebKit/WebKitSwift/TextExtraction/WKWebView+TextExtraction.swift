@@ -21,7 +21,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-#if canImport(UIIntelligenceSupport)
+#if HAVE_UIINTELLIGENCESUPPORT_FRAMEWORK
 
 @_spiOnly import WebKit
 @_spiOnly import UIIntelligenceSupport
@@ -99,4 +99,4 @@ extension WKWebView {
     }
 }
 
-#endif // canImport(UIIntelligenceSupport)
+#endif // HAVE_UIINTELLIGENCESUPPORT_FRAMEWORK

@@ -126,9 +126,12 @@ OTHER_SWIFT_FLAGS_AVAILABILITY_ = -Xfrontend -define-availability -Xfrontend "WK
 OTHER_SWIFT_FLAGS_XCODE_BEFORE_16 = -Xfrontend -enable-experimental-concurrency -Xfrontend -enable-upcoming-feature -Xfrontend IsolatedDefaultValues;
 
 WK_ENABLE_SWIFTUI = YES;
+WK_ENABLE_SWIFTUI[sdk=macosx*] = $(WK_ENABLE_SWIFTUI$(WK_MACOS_1500));
 WK_ENABLE_SWIFTUI[sdk=macosx13*] = NO;
 WK_ENABLE_SWIFTUI[sdk=macosx14*] = NO;
 WK_ENABLE_SWIFTUI[sdk=macosx15*] = NO;
+WK_ENABLE_SWIFTUI_MACOS_SINCE_1500 = YES;
+WK_ENABLE_SWIFTUI_MACOS_BEFORE_1500 = NO;
 WK_ENABLE_SWIFTUI[sdk=iphone*17*] = NO;
 WK_ENABLE_SWIFTUI[sdk=iphone*18*] = NO;
 WK_ENABLE_SWIFTUI[sdk=watch*] = NO;

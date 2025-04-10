@@ -24,8 +24,9 @@
  */
 
 #import <Foundation/Foundation.h>
+#import <wtf/Platform.h>
 
-#if !TARGET_OS_WATCH && !TARGET_OS_TV && __has_include(<WritingTools/WritingTools.h>)
+#if !TARGET_OS_WATCH && !TARGET_OS_TV && HAVE(WRITING_TOOLS)
 
 #import "WKIntelligenceTextEffectCoordinator.h"
 

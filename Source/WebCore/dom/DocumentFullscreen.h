@@ -65,7 +65,7 @@ public:
     const Document& document() const { return m_document.get(); }
     Ref<Document> protectedDocument() const { return m_document.get(); }
     Page* page() const { return document().page(); }
-    LocalFrame* frame() const { return document().frame(); }
+    LocalFrame* frame() const;
     Element* documentElement() const { return document().documentElement(); }
     bool isSimpleFullscreenDocument() const;
     Document::BackForwardCacheState backForwardCacheState() const { return document().backForwardCacheState(); }

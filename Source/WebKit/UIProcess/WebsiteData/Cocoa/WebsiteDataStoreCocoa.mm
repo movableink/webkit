@@ -247,7 +247,7 @@ std::optional<bool> WebsiteDataStore::useNetworkLoader()
         return isEnabled;
     if (!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::UseCFNetworkNetworkLoader))
         return std::nullopt;
-#if defined(NW_SETTINGS_HAS_UNIFIED_HTTP)
+#if HAVE(NWSETTINGS_UNIFIED_HTTP) && defined(NW_SETTINGS_HAS_UNIFIED_HTTP)
     if (isRunningTest(applicationBundleIdentifier()))
         return true;
     if (nw_settings_get_unified_http_enabled())

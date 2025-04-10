@@ -128,7 +128,9 @@ void RemoteScrollingCoordinatorProxyMac::setRubberBandingInProgressForNode(Scrol
 {
     if (isRubberBanding) {
         if (scrollingTree().scrollingPerformanceTestingEnabled()) {
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
             m_eventDispatcher->didStartRubberbanding();
+#endif
             protectedWebPageProxy()->logScrollingEvent(static_cast<uint32_t>(PerformanceLoggingClient::ScrollingEvent::StartedRubberbanding), MonotonicTime::now(), 0);
         }
         m_uiState.addNodeWithActiveRubberband(nodeID);

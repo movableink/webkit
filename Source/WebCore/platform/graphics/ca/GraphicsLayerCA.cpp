@@ -5238,6 +5238,8 @@ Vector<std::pair<String, double>> GraphicsLayerCA::acceleratedAnimationsForTesti
 
         return animations;
     }
+#else
+    UNUSED_PARAM(settings);
 #endif
 
     for (auto& animation : m_animations) {
