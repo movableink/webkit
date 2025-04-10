@@ -61,19 +61,25 @@ function* testSteps()
     debug("Now let's retrieve the blobs using a cursor.");
 
     var blobResults = [];
-    objectStore = db.transaction("TestObjectStore").objectStore("TestObjectStore");
-    objectStore.openCursor().onsuccess = function(event) {
-        let cursor = event.target.result;
-        if (cursor) {
-            debug("Got item from cursor");
-            blobResults.push(cursor.value);
-            cursor.continue();
-        }
-        else {
-            debug("Finished cursor");
-            asyncContinue();
-        }
-    };
+    try { 
+        objectStore = db.transaction("TestObjectStore").objectStore("TestObjectStore");
+        objectStore.openCursor().onsuccess = function(event) {
+            let cursor = event.target.result;
+            if (cursor) {
+                debug("Got item from cursor");
+                blobResults.push(cursor.value);
+                cursor.continue();
+            }
+            else {
+                debug("Finished cursor");
+                asyncContinue();
+            }
+        }; 
+    } catch(e) {
+        testFailed('Failed to open cursor with error: ' + e.message);
+        finishJSTest();
+        return;
+    }
 
     event = yield;
     debug("blobResults.length is " + blobResults.length);

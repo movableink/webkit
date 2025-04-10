@@ -60,8 +60,15 @@ function* testSteps()
 {
     debug("Now let's retrieve the svg image blob.");
 
-    objectStore = db.transaction("TestObjectStore").objectStore("TestObjectStore");
-    idbRequest(objectStore.get("foo"));
+    try { 
+        objectStore = db.transaction("TestObjectStore").objectStore("TestObjectStore");
+        idbRequest(objectStore.get("foo"));
+    } catch(e) {
+        testFailed('Failed to get item: ' + e.message);
+        finishJSTest();
+        return;
+    }
+
     event = yield;
     
     var blob = event.target.result;
