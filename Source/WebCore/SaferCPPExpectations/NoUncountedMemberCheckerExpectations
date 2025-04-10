@@ -92,7 +92,6 @@ workers/WorkerConsoleClient.h
 workers/WorkerMessagingProxy.h
 workers/WorkerNotificationClient.h
 workers/WorkerOrWorkletGlobalScope.h
-workers/service/NavigationPreloadManager.h
 workers/service/background-fetch/ServiceWorkerRegistrationBackgroundFetchAPI.h
 xml/XMLHttpRequestProgressEventThrottle.h
 xml/XMLHttpRequestUpload.h

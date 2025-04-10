@@ -1377,7 +1377,6 @@ workers/WorkerOrWorkletThread.cpp
 workers/WorkerRunLoop.cpp
 workers/WorkerScriptLoader.cpp
 workers/service/FetchEvent.cpp
-workers/service/NavigationPreloadManager.cpp
 workers/service/ServiceWorker.cpp
 workers/service/ServiceWorkerClientData.cpp
 workers/service/ServiceWorkerContainer.cpp
