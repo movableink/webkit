@@ -599,10 +599,6 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             style.setUserModify(UserModify::ReadOnly);
 
         if (is<HTMLMarqueeElement>(*element)) {
-            // For now, <marquee> requires an overflow clip to work properly.
-            style.setOverflowX(Overflow::Hidden);
-            style.setOverflowY(Overflow::Hidden);
-
             bool isVertical = style.marqueeDirection() == MarqueeDirection::Up || style.marqueeDirection() == MarqueeDirection::Down;
             // Make horizontal marquees not wrap.
             if (!isVertical) {

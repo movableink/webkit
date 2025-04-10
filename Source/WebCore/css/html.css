@@ -54,6 +54,7 @@ address, article, aside, div, footer, header, hgroup, main, nav, search, section
 marquee {
     display: inline-block;
     text-align: initial;
+    overflow: hidden !important;
 }
 
 blockquote {
