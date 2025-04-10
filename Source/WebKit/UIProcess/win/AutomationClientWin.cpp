@@ -71,6 +71,7 @@ void AutomationClient::closeAutomationSession()
 
         processPool->automationSession()->setClient(nullptr);
         processPool->setAutomationSession(nullptr);
+        processPool->setPagesControlledByAutomation(false);
     });
 }
 

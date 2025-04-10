@@ -27,8 +27,6 @@
 
 #if ENABLE(REMOTE_INSPECTOR)
 #include "APIAutomationSessionClient.h"
-#include "WebProcessPool.h"
-#include "WebView.h"
 #include <JavaScriptCore/RemoteInspectorServer.h>
 
 namespace WebKit {
@@ -41,21 +39,15 @@ public:
 
     // From API::AutomationSessionClient
     void requestNewPageWithOptions(WebKit::WebAutomationSession&, API::AutomationSessionBrowsingContextOptions, CompletionHandler<void(WebKit::WebPageProxy*)>&&) override;
+    void requestMaximizeWindowOfPage(WebKit::WebAutomationSession&, WebKit::WebPageProxy&, CompletionHandler<void()>&&) override;
+    void requestHideWindowOfPage(WebKit::WebAutomationSession&, WebKit::WebPageProxy&, CompletionHandler<void()>&&) override;
+    void requestRestoreWindowOfPage(WebKit::WebAutomationSession&, WebKit::WebPageProxy&, CompletionHandler<void()>&&) override;
     void didDisconnectFromRemote(WebKit::WebAutomationSession&) override;
-
-    void retainWebView(Ref<WebView>&&);
-    void releaseWebView(WebPageProxy*);
 
 private:
     String m_sessionIdentifier;
     Inspector::RemoteInspector::Client::SessionCapabilities m_capabilities { };
 
-    static void close(WKPageRef, const void*);
-
-    static void didReceiveAuthenticationChallenge(WKPageRef, WKAuthenticationChallengeRef, const void*);
-    void didReceiveAuthenticationChallenge(WKPageRef, WKAuthenticationChallengeRef);
-
-    HashSet<Ref<WebView>> m_webViews;
 };
 
 } // namespace WebKit

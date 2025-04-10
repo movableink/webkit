@@ -27,15 +27,14 @@
 #include "AutomationSessionClientWin.h"
 
 #if ENABLE(REMOTE_INSPECTOR)
+#include "APINavigationAction.h"
 #include "APIPageConfiguration.h"
-#include "WKAPICast.h"
+#include "APIUIClient.h"
+#include "APIWindowFeatures.h"
+#include "BrowsingContextGroup.h"
 #include "WebAutomationSession.h"
 #include "WebPageProxy.h"
-#include <WebKit/WKAuthenticationChallenge.h>
-#include <WebKit/WKAuthenticationDecisionListener.h>
-#include <WebKit/WKCredential.h>
-#include <WebKit/WKRetainPtr.h>
-#include <WebKit/WKString.h>
+#include "WebProcessPool.h"
 #include <wtf/RunLoop.h>
 
 namespace WebKit {
@@ -46,58 +45,102 @@ AutomationSessionClient::AutomationSessionClient(const String& sessionIdentifier
 {
 }
 
-void AutomationSessionClient::close(WKPageRef pageRef, const void* clientInfo)
-{
-    auto page = WebKit::toImpl(pageRef);
-    page->setControlledByAutomation(false);
-
-    auto sessionClient = static_cast<AutomationSessionClient*>(const_cast<void*>(clientInfo));
-    sessionClient->releaseWebView(page);
-}
-
-void AutomationSessionClient::didReceiveAuthenticationChallenge(WKPageRef page, WKAuthenticationChallengeRef authenticationChallenge, const void *clientInfo)
-{
-    static_cast<AutomationSessionClient*>(const_cast<void*>(clientInfo))->didReceiveAuthenticationChallenge(page, authenticationChallenge);
-}
-
-void AutomationSessionClient::didReceiveAuthenticationChallenge(WKPageRef page, WKAuthenticationChallengeRef authenticationChallenge)
-{
-    auto decisionListener = WKAuthenticationChallengeGetDecisionListener(authenticationChallenge);
-    if (m_capabilities.acceptInsecureCertificates) {
-        auto username = adoptWK(WKStringCreateWithUTF8CString("accept server trust"));
-        auto password = adoptWK(WKStringCreateWithUTF8CString(""));
-        auto credential = adoptWK(WKCredentialCreate(username.get(), password.get(), kWKCredentialPersistenceNone));
-        WKAuthenticationDecisionListenerUseCredential(decisionListener, credential.get());
-    } else
-        WKAuthenticationDecisionListenerRejectProtectionSpaceAndContinue(decisionListener);
-}
-
 void AutomationSessionClient::requestNewPageWithOptions(WebKit::WebAutomationSession& session, API::AutomationSessionBrowsingContextOptions options, CompletionHandler<void(WebKit::WebPageProxy*)>&& completionHandler)
 {
-    auto pageConfiguration = API::PageConfiguration::create();
-    pageConfiguration->setProcessPool(session.protectedProcessPool());
+    RefPtr<WebProcessPool> processPool = session.protectedProcessPool();
+    if (processPool && processPool->processes().size()) {
+        auto& processProxy = processPool->processes()[0];
+        if (processProxy->pageCount()) {
+            Ref firstPage = *processProxy->pages().begin();
+            Ref configuration = firstPage->configuration().copy();
+            Ref browsingContextGroup = firstPage->protectedBrowsingContextGroup();
 
-    RECT r { };
-    Ref newWindow = WebView::create(r, pageConfiguration, 0);
+            WebCore::WindowFeatures windowFeatures;
+            // FIXME: Attributes of the window of firstPage should be set to windowFeatures.
+            //        That way, the application can use them in WKPageUIClient.createNewPage().
+            //        https://webkit.org/b/290979
+            configuration->setWindowFeatures(WTFMove(windowFeatures));
+            configuration->setRelatedPage(firstPage);
+            configuration->setBrowsingContextGroup(WTFMove(browsingContextGroup));
+            configuration->setControlledByAutomation(true);
 
-    auto newPage = newWindow->page();
-    newPage->setControlledByAutomation(true);
+            NavigationActionData navigationActionData {
+                WebCore::NavigationType::Other, /* navigationType */
+                { }, /* modifiers */
+                WebMouseEventButton::None, /* mouseButton */
+                WebMouseEventSyntheticClickType::NoTap, /* syntheticClickType */
+                std::nullopt, /* userGestureTokenIdentifier */
+                std::nullopt, /* userGestureAuthorizationToken */
+                false, /* canHandleRequest */
+                WebCore::ShouldOpenExternalURLsPolicy::ShouldNotAllow, /* shouldOpenExternalURLsPolicy */
+                { }, /* downloadAttribute */
+                { }, /* clickLocationInRootViewCoordinates */
+                { }, /* redirectResponse */
+                false, /* isRequestFromClientOrUserInput */
+                false, /* treatAsSameOriginNavigation */
+                false, /* hasOpenedFrames */
+                false, /* openedByDOMWithOpener */
+                false, /* hasOpener */
+                false, /* isPerformingHTTPFallback */
+                false, /* isInitialFrameSrcLoad */
+                { }, /* openedMainFrameName */
+                { }, /* requesterOrigin */
+                { }, /* requesterTopOrigin */
+                std::nullopt, /* targetBackForwardItemIdentifier */
+                std::nullopt, /* sourceBackForwardItemIdentifier */
+                WebCore::LockHistory::No, /* lockHistory */
+                WebCore::LockBackForwardList::No, /* lockBackForwardList */
+                { }, /* clientRedirectSourceForHistory */
+                { }, /* effectiveSandboxFlags */
+                std::nullopt, /* ownerPermissionsPolicy */
+                std::nullopt, /* privateClickMeasurement */
+                { }, /* advancedPrivacyProtections */
+                { }, /* originatorAdvancedPrivacyProtections */
+                legacyEmptyFrameInfo(WebCore::ResourceRequest()), /* originatingFrameInfoData */
+                std::nullopt, /* originatingPageID */
+                legacyEmptyFrameInfo(WebCore::ResourceRequest()), /* frameInfo */
+                std::nullopt, /* navigationID */
+                { }, /* originalRequest */
+                { } /* request */
+            };
 
-    WKPageUIClientV0 uiClient = { };
-    uiClient.base.version = 0;
-    uiClient.base.clientInfo = this;
-    uiClient.close = close;
-    WKPageSetPageUIClient(toAPI(newPage), &uiClient.base);
+            auto userInitiatedActivity = API::UserInitiatedAction::create();
+            Ref navigationAction = API::NavigationAction::create(WTFMove(navigationActionData), nullptr, nullptr, String(), WebCore::ResourceRequest(), URL(), false, WTFMove(userInitiatedActivity));
 
-    WKPageNavigationClientV0 navigationClient = { };
-    navigationClient.base.version = 0;
-    navigationClient.base.clientInfo = this;
-    navigationClient.didReceiveAuthenticationChallenge = didReceiveAuthenticationChallenge;
-    WKPageSetPageNavigationClient(toAPI(newPage), &navigationClient.base);
+            firstPage->uiClient().createNewPage(firstPage, WTFMove(configuration), WTFMove(navigationAction), [completionHandler = WTFMove(completionHandler)](auto&& newPage) mutable {
+                if (newPage) {
+                    newPage->setControlledByAutomation(true);
+                    completionHandler(newPage.get());
+                } else
+                    completionHandler(nullptr);
+            });
+            return;
+        }
+    }
+    completionHandler(nullptr);
+}
 
-    retainWebView(WTFMove(newWindow));
+static HWND getRootWindowHandle(WebKit::WebPageProxy& page)
+{
+    return ::GetAncestor(reinterpret_cast<HWND>(page.viewWidget()), GA_ROOT);
+}
 
-    completionHandler(newPage);
+void AutomationSessionClient::requestMaximizeWindowOfPage(WebKit::WebAutomationSession&, WebKit::WebPageProxy& page, CompletionHandler<void()>&& completionHandler)
+{
+    ::ShowWindow(getRootWindowHandle(page), SW_MAXIMIZE);
+    completionHandler();
+}
+
+void AutomationSessionClient::requestHideWindowOfPage(WebKit::WebAutomationSession&, WebKit::WebPageProxy& page, CompletionHandler<void()>&& completionHandler)
+{
+    ::ShowWindow(getRootWindowHandle(page), SW_MINIMIZE);
+    completionHandler();
+}
+
+void AutomationSessionClient::requestRestoreWindowOfPage(WebKit::WebAutomationSession&, WebKit::WebPageProxy& page, CompletionHandler<void()>&& completionHandler)
+{
+    ::ShowWindow(getRootWindowHandle(page), SW_RESTORE);
+    completionHandler();
 }
 
 void AutomationSessionClient::didDisconnectFromRemote(WebKit::WebAutomationSession& session)
@@ -110,22 +153,6 @@ void AutomationSessionClient::didDisconnectFromRemote(WebKit::WebAutomationSessi
             processPool->setAutomationSession(nullptr);
             processPool->setPagesControlledByAutomation(false);
         }
-    });
-}
-
-void AutomationSessionClient::retainWebView(Ref<WebView>&& webView)
-{
-    m_webViews.add(WTFMove(webView));
-}
-
-void AutomationSessionClient::releaseWebView(WebPageProxy* page)
-{
-    m_webViews.removeIf([&](auto& view) {
-        if (view->page() == page) {
-            view->close();
-            return true;
-        }
-        return false;
     });
 }
 

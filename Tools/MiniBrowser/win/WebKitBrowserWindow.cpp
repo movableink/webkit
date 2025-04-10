@@ -40,6 +40,7 @@
 #include <WebKit/WKHTTPCookieStoreRef.h>
 #include <WebKit/WKInspector.h>
 #include <WebKit/WKNavigationResponseRef.h>
+#include <WebKit/WKPagePrivate.h>
 #include <WebKit/WKPreferencesRefPrivate.h>
 #include <WebKit/WKProtectionSpace.h>
 #include <WebKit/WKProtectionSpaceCurl.h>
@@ -165,6 +166,7 @@ WebKitBrowserWindow::WebKitBrowserWindow(BrowserWindowClient& client, WKPageConf
     WKViewSetIsInWindow(m_view.get(), true);
 
     auto page = WKViewGetPage(m_view.get());
+    m_isControlledByAutomation = WKPageGetIsControlledByAutomation(page);
 
     WKPageNavigationClientV3 navigationClient = { };
     navigationClient.base.version = 3;
@@ -558,6 +560,14 @@ void WebKitBrowserWindow::didReceiveAuthenticationChallenge(WKPageRef, WKAuthent
     auto decisionListener = WKAuthenticationChallengeGetDecisionListener(challenge);
     auto authenticationScheme = WKProtectionSpaceGetAuthenticationScheme(protectionSpace);
 
+    if (thisWindow.m_isControlledByAutomation) {
+        WKRetainPtr<WKStringRef> username = createWKString("accept server trust");
+        WKRetainPtr<WKStringRef> password = createWKString("");
+        WKRetainPtr<WKCredentialRef> wkCredential = adoptWK(WKCredentialCreate(username.get(), password.get(), kWKCredentialPersistenceForSession));
+        WKAuthenticationDecisionListenerUseCredential(decisionListener, wkCredential.get());
+        return;
+    }
+
     if (authenticationScheme == kWKProtectionSpaceAuthenticationSchemeServerTrustEvaluationRequested) {
         if (thisWindow.canTrustServerCertificate(protectionSpace)) {
             WKRetainPtr<WKStringRef> username = createWKString("accept server trust");
@@ -671,7 +681,7 @@ void WebKitBrowserWindow::downloadDidFailWithError(WKDownloadRef, WKErrorRef err
 void WebKitBrowserWindow::close(WKPageRef, const void* clientInfo)
 {
     auto& thisWindow = toWebKitBrowserWindow(clientInfo);
-    PostMessage(thisWindow.hwnd(), WM_CLOSE, 0, 0);
+    PostMessage(thisWindow.m_hMainWnd, WM_CLOSE, 0, 0);
 }
 
 WKPageRef WebKitBrowserWindow::createNewPage(WKPageRef, WKPageConfigurationRef pageConf, WKNavigationActionRef, WKWindowFeaturesRef, const void*)
