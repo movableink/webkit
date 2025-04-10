@@ -744,6 +744,11 @@ void RenderBlockFlow::layoutInFlowChildren(RelayoutChildren relayoutChildren, La
         return;
     }
 
+    if (layoutContext().isSkippedContentRootForLayout(*this)) {
+        clearNeedsLayoutForSkippedContent();
+        return;
+    }
+
     if (childrenInline()) {
         auto textBoxTrimmer = TextBoxTrimmer { *this };
         auto lineClampUpdater = LineClampUpdater { *this };
