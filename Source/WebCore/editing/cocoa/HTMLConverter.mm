@@ -2611,10 +2611,10 @@ static void updateAttributes(const Node* node, const RenderStyle& style, OptionS
         return enclosingLink->absoluteLinkURL();
     }();
 
-    if (linkURL.isEmpty())
+    if (RetainPtr linkNSURL = linkURL.createNSURL(); linkURL.isEmpty() || !linkNSURL)
         [attributes removeObjectForKey:NSLinkAttributeName];
     else
-        [attributes setObject:linkURL.createNSURL().get() forKey:NSLinkAttributeName];
+        [attributes setObject:linkNSURL.get() forKey:NSLinkAttributeName];
 
 }
 

@@ -82,4 +82,33 @@ TEST(WebKit, AttributedSubstringForProposedRangeWithImage)
     EXPECT_EQ(didReceiveInvalidMessage, false);
 }
 
+TEST(WebKit, AttributedSubstringForProposedRangeWithAnchorWithInvalidHref)
+{
+    WKRetainPtr context = adoptWK(Util::createContextWithInjectedBundle());
+    PlatformWebView webView(context.get());
+
+    WKPageNavigationClientV0 loaderClient;
+    zeroBytes(loaderClient);
+    loaderClient.base.version = 0;
+    loaderClient.didFinishNavigation = didFinishNavigation;
+    loaderClient.webProcessDidCrash = processDidCrash;
+    WKPageSetPageNavigationClient(webView.page(), &loaderClient.base);
+
+    WKContextSetInvalidMessageFunction(invalidMessageFunction);
+
+    WKRetainPtr url = adoptWK(Util::createURLForResource("anchor-element-with-invalid-href", "html"));
+    WKPageLoadURL(webView.page(), url.get());
+    Util::run(&didFinishLoad);
+
+    [webView.platformView() attributedSubstringForProposedRange:NSMakeRange(0, 7) completionHandler: ^(NSAttributedString *attrString, NSRange actualRange) {
+        EXPECT_WK_STREQ(@"Bad URL", attrString.string);
+        didFinishTest = true;
+    }];
+
+    Util::run(&didFinishTest);
+
+    EXPECT_EQ(didObserveWebProcessToCrash, false);
+    EXPECT_EQ(didReceiveInvalidMessage, false);
+}
+
 } // namespace TestWebKitAPI
