@@ -23,7 +23,7 @@
 
 import Foundation
 
-#if HAVE_WRITING_TOOLS
+#if HAVE_WRITING_TOOLS_FRAMEWORK
 
 #if canImport(AppKit) && !targetEnvironment(macCatalyst)
 import AppKit
@@ -640,4 +640,4 @@ class PlatformIntelligencePonderingTextEffect<Chunk>: PlatformIntelligenceTextEf
     }
 }
 
-#endif // HAVE_WRITING_TOOLS
+#endif // HAVE_WRITING_TOOLS_FRAMEWORK
