@@ -1,5 +1,4 @@
 GeneratedWebKitSecureCoding.mm
-NetworkProcess/webrtc/NetworkRTCUtilitiesCocoa.mm
 Platform/classifier/cocoa/ResourceLoadStatisticsClassifierCocoa.cpp
 Platform/cocoa/ImageAnalysisUtilities.mm
 Platform/cocoa/MediaPlaybackTargetContextSerialized.mm
@@ -46,8 +45,6 @@ UIProcess/API/mac/WKWebViewMac.mm
 UIProcess/API/mac/WKWebViewTestingMac.mm
 UIProcess/Automation/cocoa/WebAutomationSessionCocoa.mm
 UIProcess/Automation/mac/WebAutomationSessionMac.mm
-UIProcess/Cocoa/ModelElementControllerCocoa.mm
-UIProcess/Cocoa/WKContactPicker.mm
 UIProcess/Cocoa/WKStorageAccessAlert.mm
 UIProcess/Cocoa/WebPageProxyCocoa.mm
 UIProcess/Cocoa/WebPreferencesCocoa.mm
@@ -61,7 +58,6 @@ UIProcess/Inspector/mac/WKInspectorResourceURLSchemeHandler.mm
 UIProcess/Inspector/mac/WKInspectorViewController.mm
 UIProcess/Inspector/mac/WebInspectorUIProxyMac.mm
 UIProcess/Network/NetworkProcessProxyCocoa.mm
-UIProcess/mac/WebViewImpl.mm
 WebProcess/GPU/graphics/cocoa/ImageBufferShareableMappedIOSurfaceBitmapBackend.cpp
 WebProcess/GPU/media/cocoa/VideoLayerRemoteCocoa.mm
 WebProcess/GPU/webrtc/SharedVideoFrame.cpp
@@ -69,7 +65,6 @@ WebProcess/InjectedBundle/API/mac/WKDOMInternals.mm
 WebProcess/InjectedBundle/API/mac/WKWebProcessPlugIn.mm
 WebProcess/InjectedBundle/API/mac/WKWebProcessPlugInBrowserContextController.mm
 WebProcess/InjectedBundle/mac/InjectedBundleMac.mm
-WebProcess/Model/mac/ARKitInlinePreviewModelPlayerMac.mm
 WebProcess/Plugins/PDF/PDFAnnotationTypeHelpers.mm
 WebProcess/Plugins/PDF/PDFPluginBase.mm
 WebProcess/Plugins/PDF/PDFPluginChoiceAnnotation.mm

@@ -214,21 +214,22 @@ static void* lib##Library() \
     @class className; \
     static Class init##className(); \
     static Class (*get##className##Class)() = init##className; \
-    SUPPRESS_UNRETAINED_LOCAL static Class class##className; \
+    struct class##className##Wrapper { SUPPRESS_UNCOUNTED_MEMBER Class classObject; }; \
+    static class##className##Wrapper class##className; \
     \
     static Class className##Function() \
     { \
-        return class##className; \
+        return class##className.classObject; \
     } \
     \
     static Class init##className() \
     { \
         framework##Library(); \
         _STORE_IN_GETCLASS_SECTION static char const auditedClassName[] = #className; \
-        class##className = objc_getClass(auditedClassName); \
-        RELEASE_ASSERT(class##className); \
+        class##className.classObject = objc_getClass(auditedClassName); \
+        RELEASE_ASSERT(class##className.classObject); \
         get##className##Class = className##Function; \
-        return class##className; \
+        return class##className.classObject; \
     } \
     _Pragma("clang diagnostic push") \
     _Pragma("clang diagnostic ignored \"-Wunused-function\"") \
@@ -242,20 +243,21 @@ static void* lib##Library() \
     @class className; \
     static Class init##className(); \
     static Class (*get##className##Class)() = init##className; \
-    SUPPRESS_UNRETAINED_LOCAL static Class class##className; \
+    struct class##className##Wrapper { SUPPRESS_UNCOUNTED_MEMBER Class classObject; }; \
+    static class##className##Wrapper class##className; \
     \
     static Class className##Function() \
     { \
-        return class##className; \
+        return class##className.classObject; \
     } \
     \
     static Class init##className() \
     { \
         framework##Library(); \
         _STORE_IN_GETCLASS_SECTION static char const auditedClassName[] = #className; \
-        class##className = objc_getClass(auditedClassName); \
+        class##className.classObject = objc_getClass(auditedClassName); \
         get##className##Class = className##Function; \
-        return class##className; \
+        return class##className.classObject; \
     } \
     _Pragma("clang diagnostic push") \
     _Pragma("clang diagnostic ignored \"-Wunused-function\"") \
