@@ -5177,7 +5177,7 @@ MediaSourceEnabled:
 
 MediaSourceInWorkerEnabled:
   type: bool
-  status: mature
+  status: stable
   category: media
   humanReadableName: "MediaSource in a Worker"
   humanReadableDescription: "MediaSource in a Worker"
