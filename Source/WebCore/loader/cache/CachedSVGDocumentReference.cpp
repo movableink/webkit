@@ -34,8 +34,8 @@
 
 namespace WebCore {
 
-CachedSVGDocumentReference::CachedSVGDocumentReference(const String& url)
-    : m_url(url)
+CachedSVGDocumentReference::CachedSVGDocumentReference(const Style::URL& location)
+    : m_location { location }
 {
 }
 
@@ -52,7 +52,7 @@ void CachedSVGDocumentReference::load(CachedResourceLoader& loader, const Resour
 
     auto fetchOptions = options;
     fetchOptions.mode = FetchOptions::Mode::SameOrigin;
-    CachedResourceRequest request(ResourceRequest(loader.document()->completeURL(m_url)), fetchOptions);
+    CachedResourceRequest request(ResourceRequest(m_location.resolved), fetchOptions);
     request.setInitiatorType(cachedResourceRequestInitiatorTypes().css);
     m_document = loader.requestSVGDocument(WTFMove(request)).value_or(nullptr);
     if (CachedResourceHandle document = m_document)
@@ -61,4 +61,4 @@ void CachedSVGDocumentReference::load(CachedResourceLoader& loader, const Resour
     m_loadRequested = true;
 }
 
-}
+} // namespace WebCore

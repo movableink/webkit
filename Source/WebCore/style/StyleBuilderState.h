@@ -28,6 +28,7 @@
 #include "CSSToLengthConversionData.h"
 #include "CSSToStyleMap.h"
 #include "CascadeLevel.h"
+#include "Document.h"
 #include "PositionArea.h"
 #include "PositionTryFallback.h"
 #include "PropertyCascade.h"
@@ -91,6 +92,7 @@ public:
     const RenderStyle* rootElementStyle() const { return m_context.rootElementStyle; }
 
     const Document& document() const { return m_context.document.get(); }
+    Ref<const Document> protectedDocument() const { return m_context.document; }
     const Element* element() const { return m_context.element.get(); }
 
     inline void setFontDescription(FontCascadeDescription&&);
