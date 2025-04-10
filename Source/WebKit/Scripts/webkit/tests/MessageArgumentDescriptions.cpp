@@ -53,9 +53,6 @@
 #include "QuotaIncreaseRequestIdentifier.h"
 #include "RemoteAudioDestinationIdentifier.h"
 #include "RemoteAudioHardwareListenerIdentifier.h"
-#if ENABLE(GPU_PROCESS) && USE(AUDIO_SESSION)
-#include "RemoteAudioSessionIdentifier.h"
-#endif
 #if ENABLE(GPU_PROCESS) && ENABLE(ENCRYPTED_MEDIA)
 #include "RemoteCDMIdentifier.h"
 #endif
@@ -116,7 +113,6 @@
 #include <WebCore/AttributedString.h>
 #endif
 #include <WebCore/BackgroundFetchRecordIdentifier.h>
-#include <WebCore/BroadcastChannelIdentifier.h>
 #include <WebCore/DictationContext.h>
 #include <WebCore/ElementIdentifier.h>
 #include <WebCore/FetchIdentifier.h>
@@ -560,7 +556,6 @@ Vector<ASCIILiteral> serializedIdentifiers()
     static_assert(sizeof(uint64_t) == sizeof(WebCore::BackForwardFrameItemIdentifierID));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::BackForwardItemIdentifierID));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::BackgroundFetchRecordIdentifier));
-    static_assert(sizeof(uint64_t) == sizeof(WebCore::BroadcastChannelIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::DOMCacheIdentifierID));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::DictationContext));
     static_assert(sizeof(uint64_t) == sizeof(WebCore::ElementIdentifier));
@@ -640,9 +635,6 @@ Vector<ASCIILiteral> serializedIdentifiers()
     static_assert(sizeof(uint64_t) == sizeof(WebKit::QuotaIncreaseRequestIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::RemoteAudioDestinationIdentifier));
     static_assert(sizeof(uint64_t) == sizeof(WebKit::RemoteAudioHardwareListenerIdentifier));
-#if ENABLE(GPU_PROCESS) && USE(AUDIO_SESSION)
-    static_assert(sizeof(uint64_t) == sizeof(WebKit::RemoteAudioSessionIdentifier));
-#endif
     static_assert(sizeof(uint64_t) == sizeof(WebKit::RemoteImageBufferSetIdentifier));
 #if ENABLE(GPU_PROCESS) && ENABLE(ENCRYPTED_MEDIA)
     static_assert(sizeof(uint64_t) == sizeof(WebKit::RemoteCDMIdentifier));
@@ -715,7 +707,6 @@ Vector<ASCIILiteral> serializedIdentifiers()
         "WebCore::BackForwardFrameItemIdentifierID"_s,
         "WebCore::BackForwardItemIdentifierID"_s,
         "WebCore::BackgroundFetchRecordIdentifier"_s,
-        "WebCore::BroadcastChannelIdentifier"_s,
         "WebCore::DOMCacheIdentifierID"_s,
         "WebCore::DictationContext"_s,
         "WebCore::ElementIdentifier"_s,
@@ -795,9 +786,6 @@ Vector<ASCIILiteral> serializedIdentifiers()
         "WebKit::QuotaIncreaseRequestIdentifier"_s,
         "WebKit::RemoteAudioDestinationIdentifier"_s,
         "WebKit::RemoteAudioHardwareListenerIdentifier"_s,
-#if ENABLE(GPU_PROCESS) && USE(AUDIO_SESSION)
-        "WebKit::RemoteAudioSessionIdentifier"_s,
-#endif
         "WebKit::RemoteImageBufferSetIdentifier"_s,
 #if ENABLE(GPU_PROCESS) && ENABLE(ENCRYPTED_MEDIA)
         "WebKit::RemoteCDMIdentifier"_s,
@@ -1233,7 +1221,7 @@ std::optional<Vector<ArgumentDescription>> messageArgumentDescriptions(MessageNa
 #if ENABLE(TEST_FEATURE)
     case MessageName::TestWithSuperclass_TestAsyncMessage:
         return Vector<ArgumentDescription> {
-            { "twoStateEnum"_s, "bool"_s },
+            { "twoStateEnum"_s, "WebKit::TestTwoStateEnum"_s },
         };
     case MessageName::TestWithSuperclass_TestAsyncMessageWithNoArguments:
         return Vector<ArgumentDescription> { };

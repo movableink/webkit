@@ -49,6 +49,7 @@
 #include <WebCore/ExceptionData.h>
 #include <WebCore/LegacySchemeRegistry.h>
 #include <WebCore/NotImplemented.h>
+#include <WebCore/NotificationData.h>
 #include <WebCore/SWServerRegistration.h>
 #include <WebCore/ScriptExecutionContextIdentifier.h>
 #include <WebCore/SecurityOrigin.h>

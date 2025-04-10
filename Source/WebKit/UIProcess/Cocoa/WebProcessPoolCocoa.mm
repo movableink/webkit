@@ -29,6 +29,7 @@
 #import "APINavigation.h"
 #import "AccessibilityPreferences.h"
 #import "AccessibilitySupportSPI.h"
+#import "AdditionalFonts.h"
 #import "ArgumentCodersCocoa.h"
 #import "CookieStorageUtilsCF.h"
 #import "DefaultWebBrowserChecks.h"

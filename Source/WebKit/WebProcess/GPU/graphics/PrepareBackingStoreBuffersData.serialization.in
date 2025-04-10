@@ -23,6 +23,7 @@
 #if ENABLE(GPU_PROCESS) && PLATFORM(COCOA)
 
 header: "PrepareBackingStoreBuffersData.h"
+header: "RemoteImageBufferSetIdentifier.h"
 
 [AdditionalEncoder=StreamConnectionEncoder, CustomHeader] struct WebKit::ImageBufferSetPrepareBufferForDisplayInputData {
     WebKit::RemoteImageBufferSetIdentifier remoteBufferSet;

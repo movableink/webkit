@@ -97,7 +97,7 @@ messages -> GPUProcess : AuxiliaryProcess {
     WebXRPromptAccepted(std::optional<WebCore::ProcessIdentity> processIdentity) -> (bool accepted)
 #endif
 #if HAVE(AUDIT_TOKEN)
-    SetPresentingApplicationAuditToken(WebCore::ProcessIdentifier processIdentifier, WebCore::PageIdentifier pageIdentifier, std::optional<WebKit::CoreIPCAuditToken> auditToken);
+    SetPresentingApplicationAuditToken(WebCore::ProcessIdentifier processIdentifier, WebCore::PageIdentifier pageIdentifier, struct std::optional<WebKit::CoreIPCAuditToken> auditToken);
 #endif
 #if PLATFORM(VISION) && ENABLE(MODEL_PROCESS)
     RequestSharedSimulationConnection(struct WebKit::CoreIPCAuditToken modelProcessAuditToken) -> (std::optional<IPC::SharedFileHandle> sharedSimulationConnection)

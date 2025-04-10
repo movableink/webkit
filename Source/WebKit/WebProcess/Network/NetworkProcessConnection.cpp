@@ -61,7 +61,9 @@
 #include "WebSharedWorkerObjectConnectionMessages.h"
 #include "WebSocketChannel.h"
 #include "WebSocketChannelMessages.h"
+#include "WebTransportSession.h"
 #include "WebTransportSessionMessages.h"
+#include <WebCore/BackgroundFetchRecordInformation.h>
 #include <WebCore/CachedResource.h>
 #include <WebCore/HTTPCookieAcceptPolicy.h>
 #include <WebCore/InspectorInstrumentationWebKit.h>
@@ -97,7 +99,7 @@ NetworkProcessConnection::~NetworkProcessConnection()
 bool NetworkProcessConnection::dispatchMessage(IPC::Connection& connection, IPC::Decoder& decoder)
 {
     if (decoder.messageReceiverName() == Messages::WebResourceLoader::messageReceiverName()) {
-        if (RefPtr webResourceLoader = WebProcess::singleton().protectedWebLoaderStrategy()->webResourceLoaderForIdentifier(AtomicObjectIdentifier<WebCore::ResourceLoader>(decoder.destinationID())))
+        if (RefPtr webResourceLoader = WebProcess::singleton().protectedWebLoaderStrategy()->webResourceLoaderForIdentifier(AtomicObjectIdentifier<WebCore::ResourceLoaderIdentifierType>(decoder.destinationID())))
             webResourceLoader->didReceiveMessage(connection, decoder);
         return true;
     }

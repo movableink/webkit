@@ -30,6 +30,7 @@
 #include "NetworkProcessConnection.h"
 #include "WebCookieJar.h"
 #include "WebProcess.h"
+#include <WebCore/Cookie.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebKit {

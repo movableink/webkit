@@ -58,6 +58,7 @@
 #include "ContentAsStringIncludesChildFrames.h"
 #include "DownloadProxy.h"
 #include "GeolocationPermissionRequestProxy.h"
+#include "JavaScriptEvaluationResult.h"
 #include "LegacySessionStateCoding.h"
 #include "Logging.h"
 #include "MediaKeySystemPermissionRequest.h"

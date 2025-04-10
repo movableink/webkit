@@ -103,10 +103,10 @@ public:
     void drawPath(const WebCore::Path&);
     void drawFocusRingPath(const WebCore::Path&, float outlineWidth, const WebCore::Color&);
     void drawFocusRingRects(const Vector<WebCore::FloatRect>&, float outlineOffset, float outlineWidth, const WebCore::Color&);
-    void fillRect(const WebCore::FloatRect&, WebCore::GraphicsContext::RequiresClipToRect);
+    void fillRect(const WebCore::FloatRect&, WebCore::RequiresClipToRect);
     void fillRectWithColor(const WebCore::FloatRect&, const WebCore::Color&);
     void fillRectWithGradient(const WebCore::FloatRect&, Ref<WebCore::Gradient>&&);
-    void fillRectWithGradientAndSpaceTransform(const WebCore::FloatRect&, Ref<WebCore::Gradient>&&, const WebCore::AffineTransform&, WebCore::GraphicsContext::RequiresClipToRect);
+    void fillRectWithGradientAndSpaceTransform(const WebCore::FloatRect&, Ref<WebCore::Gradient>&&, const WebCore::AffineTransform&, WebCore::RequiresClipToRect);
     void fillCompositedRect(const WebCore::FloatRect&, const WebCore::Color&, WebCore::CompositeOperator, WebCore::BlendMode);
     void fillRoundedRect(const WebCore::FloatRoundedRect&, const WebCore::Color&, WebCore::BlendMode);
     void fillRectWithRoundedHole(const WebCore::FloatRect&, const WebCore::FloatRoundedRect&, const WebCore::Color&);

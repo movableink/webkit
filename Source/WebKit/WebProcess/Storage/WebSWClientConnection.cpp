@@ -41,6 +41,7 @@
 #include "WebSWOriginTable.h"
 #include "WebSWServerConnectionMessages.h"
 #include <WebCore/BackgroundFetchInformation.h>
+#include <WebCore/BackgroundFetchRecordInformation.h>
 #include <WebCore/BackgroundFetchRequest.h>
 #include <WebCore/CookieChangeSubscription.h>
 #include <WebCore/DeprecatedGlobalSettings.h>
@@ -57,6 +58,7 @@
 #include <WebCore/ServiceWorkerJobData.h>
 #include <WebCore/ServiceWorkerRegistrationData.h>
 #include <WebCore/ServiceWorkerRegistrationKey.h>
+#include <WebCore/ServiceWorkerRoute.h>
 #include <WebCore/WorkerFetchResult.h>
 #include <WebCore/WorkerScriptLoader.h>
 #include <wtf/Vector.h>

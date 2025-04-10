@@ -28,11 +28,14 @@
 
 #include "APIFrameInfo.h"
 #include "MessageSenderInlines.h"
+#include "SharedBufferReference.h"
 #include "URLSchemeTaskParameters.h"
 #include "WebErrors.h"
 #include "WebPageMessages.h"
 #include "WebPageProxy.h"
 #include "WebURLSchemeHandler.h"
+#include "WebURLSchemeHandlerIdentifier.h"
+#include <WebCore/ResourceLoaderIdentifier.h>
 
 namespace WebKit {
 using namespace WebCore;

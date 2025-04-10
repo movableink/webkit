@@ -44,6 +44,7 @@
 #include <JavaScriptCore/OpaqueJSString.h>
 #include <WebCore/AXObjectCache.h>
 #include <WebCore/AccessibilityObject.h>
+#include <WebCore/Cookie.h>
 #include <WebCore/CookieJar.h>
 #include <WebCore/DOMRect.h>
 #include <WebCore/DOMRectList.h>

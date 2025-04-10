@@ -32,7 +32,7 @@
  messages -> NetworkStorageManager {
     [EnabledBy=FileSystemAccessEnabled] Persisted(struct WebCore::ClientOrigin origin) -> (bool persisted)
     [EnabledBy=FileSystemAccessEnabled] Persist(struct WebCore::ClientOrigin origin) -> (bool persisted)
-    [EnabledBy=FileSystemAccessEnabled] Estimate(struct WebCore::ClientOrigin origin) -> (std::optional<WebCore::StorageEstimate> result);
+    [EnabledBy=FileSystemAccessEnabled] Estimate(struct WebCore::ClientOrigin origin) -> (struct std::optional<WebCore::StorageEstimate> result);
     [EnabledBy=FileSystemAccessEnabled] FileSystemGetDirectory(struct WebCore::ClientOrigin origin) -> (Expected<std::optional<WebCore::FileSystemHandleIdentifier>, WebKit::FileSystemStorageError> result)
     [EnabledBy=FileSystemAccessEnabled] CloseHandle(WebCore::FileSystemHandleIdentifier identifier)
     [EnabledBy=FileSystemAccessEnabled] IsSameEntry(WebCore::FileSystemHandleIdentifier identifier, WebCore::FileSystemHandleIdentifier targetIdentifier) -> (bool result)

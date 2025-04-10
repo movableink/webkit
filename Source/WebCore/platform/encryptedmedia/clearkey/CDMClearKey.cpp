@@ -420,14 +420,14 @@ CDMInstanceClearKey::~CDMInstanceClearKey() = default;
 
 void CDMInstanceClearKey::initializeWithConfiguration(const CDMKeySystemConfiguration&, AllowDistinctiveIdentifiers distinctiveIdentifiers, AllowPersistentState persistentState, SuccessCallback&& callback)
 {
-    SuccessValue succeeded = (distinctiveIdentifiers == AllowDistinctiveIdentifiers::No && persistentState == AllowPersistentState::No) ? Succeeded : Failed;
+    SuccessValue succeeded = (distinctiveIdentifiers == AllowDistinctiveIdentifiers::No && persistentState == AllowPersistentState::No) ? CDMInstanceSuccessValue::Succeeded : CDMInstanceSuccessValue::Failed;
     callback(succeeded);
 }
 
 void CDMInstanceClearKey::setServerCertificate(Ref<SharedBuffer>&&, SuccessCallback&& callback)
 {
     // Reject setting any server certificate.
-    callback(Failed);
+    callback(CDMInstanceSuccessValue::Failed);
 }
 
 void CDMInstanceClearKey::setStorageDirectory(const String&)

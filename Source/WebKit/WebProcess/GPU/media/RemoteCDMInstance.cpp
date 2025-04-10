@@ -74,7 +74,7 @@ void RemoteCDMInstance::initializeWithConfiguration(const WebCore::CDMKeySystemC
 {
     RefPtr factory = m_factory.get();
     if (!factory) {
-        callback(Failed);
+        callback(CDMInstanceSuccessValue::Failed);
         return;
     }
 
@@ -85,7 +85,7 @@ void RemoteCDMInstance::setServerCertificate(Ref<WebCore::SharedBuffer>&& certif
 {
     RefPtr factory = m_factory.get();
     if (!factory) {
-        callback(Failed);
+        callback(CDMInstanceSuccessValue::Failed);
         return;
     }
 

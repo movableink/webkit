@@ -4523,9 +4523,6 @@ enum class WebCore::CDMSessionType : uint8_t {
     PersistentUsageRecord,
     PersistentLicense
 };
-using WebCore::CDMInstanceSession::LicenseType = WebCore::CDMSessionType;
-using WebCore::CDMInstanceSession::Message = std::pair<WebCore::CDMMessageType, Ref<WebCore::SharedBuffer>>
-using WebCore::CDMInstanceSession::KeyStatusVector = Vector<std::pair<Ref<WebCore::SharedBuffer>, WebCore::CDMKeyStatus>>;
 
 struct WebCore::CDMRestrictions {
     bool distinctiveIdentifierDenied;
@@ -5065,7 +5062,7 @@ enum class WebCore::AudioSessionSoundStageSize : uint8_t {
     Large,
 };
 
-[Nested] enum class WebCore::AudioSession::MayResume : bool;
+enum class WebCore::AudioSessionMayResume : bool;
 
 enum class WebCore::AudioSessionRoutingArbitrationError : uint8_t {
     None,
@@ -5110,7 +5107,7 @@ enum class WebCore::CDMInstanceSessionLoadFailure : uint8_t {
 };
 
 header: <WebCore/CDMInstance.h>
-[Nested] enum class WebCore::CDMInstance::HDCPStatus : uint8_t {
+[Nested] enum class WebCore::CDMInstanceHDCPStatus : uint8_t {
     Unknown,
     Valid,
     OutputRestricted,
@@ -5215,7 +5212,6 @@ header: <WebCore/PlatformMediaSession.h>
     std::optional<double> time;
     std::optional<bool> fastSeek;
 }
-using WebCore::PlatformMediaSession::RemoteCommandArgument = WebCore::PlatformMediaSessionRemoteCommandArgument;
 
 class WebCore::SocketStreamError {
     int m_errorCode;
@@ -8727,7 +8723,6 @@ using WebCore::DOMCacheEngine::RemoveCacheIdentifierOrError = Expected<bool, Web
 using WebCore::SVGFilterExpression = Vector<WebCore::SVGFilterExpressionTerm>;
 using WebCore::SandboxFlags = OptionSet<WebCore::SandboxFlag>;
 #if ENABLE(VIDEO)
-using WebCore::MediaPlayerEnums::VideoFullscreenMode = uint32_t
 using WebCore::MediaPlayer::VideoFullscreenMode = uint32_t
 using WebCore::TrackID = uint64_t
 #endif
@@ -8735,7 +8730,7 @@ using WebCore::EpochTimeStamp = uint64_t
 using WebCore::SharedMemory::Handle = WebCore::SharedMemoryHandle
 using WebCore::ServiceWorkerOrClientIdentifier = std::variant<WebCore::ScriptExecutionContextIdentifier, WebCore::ServiceWorkerIdentifier>
 
-[Nested] enum class WebCore::GraphicsContext::RequiresClipToRect : bool
+enum class WebCore::RequiresClipToRect : bool
 
 enum class WebCore::HighlightVisibility : bool
 
@@ -8835,10 +8830,10 @@ enum class WebCore::WillContinueLoading : bool
 
 #if ENABLE(GPU_PROCESS) && ENABLE(ENCRYPTED_MEDIA)
 header: <WebCore/CDMPrivate.h>
-[Nested] enum class WebCore::CDMPrivate::LocalStorageAccess : bool
-[Nested] enum class WebCore::CDMInstance::AllowPersistentState : bool
-[Nested] enum class WebCore::CDMInstance::SuccessValue : bool
-[Nested] enum class WebCore::CDMInstance::AllowDistinctiveIdentifiers : bool
+enum class WebCore::CDMPrivateLocalStorageAccess : bool
+enum class WebCore::CDMInstanceAllowPersistentState : bool
+enum class WebCore::CDMInstanceSuccessValue : bool
+enum class WebCore::CDMInstanceAllowDistinctiveIdentifiers : bool
 #endif
 
 #if ENABLE(GPU_PROCESS) && ENABLE(LEGACY_ENCRYPTED_MEDIA)
@@ -8846,8 +8841,6 @@ using WebCore::LegacyCDMSessionClient::MediaKeyErrorCode = unsigned short
 #endif
 
 #if ENABLE(GPU_PROCESS) && ENABLE(VIDEO)
-# FIXME: This should be an OptionSet<LoadOption>
-using WebCore::PlatformMediaResourceLoader::LoadOptions = unsigned
 enum class WebCore::ShouldContinuePolicyCheck : bool
 #endif
 

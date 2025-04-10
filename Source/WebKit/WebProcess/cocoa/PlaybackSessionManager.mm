@@ -41,6 +41,7 @@
 #import <WebCore/Event.h>
 #import <WebCore/EventNames.h>
 #import <WebCore/HTMLMediaElement.h>
+#import <WebCore/MediaSelectionOption.h>
 #import <WebCore/Navigator.h>
 #import <WebCore/NavigatorMediaSession.h>
 #import <WebCore/Quirks.h>

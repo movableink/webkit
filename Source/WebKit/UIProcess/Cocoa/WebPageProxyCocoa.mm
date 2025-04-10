@@ -67,6 +67,7 @@
 #import <Foundation/NSURLRequest.h>
 #import <WebCore/AppHighlight.h>
 #import <WebCore/ApplePayAMSUIRequest.h>
+#import <WebCore/DictationAlternative.h>
 #import <WebCore/DragItem.h>
 #import <WebCore/GeometryUtilities.h>
 #import <WebCore/HighlightVisibility.h>

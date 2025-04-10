@@ -91,7 +91,7 @@ messages -> WebPageProxy {
     ThemeColorChanged(WebCore::Color themeColor)
 #endif
 #if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
-    [EnabledBy=WebPageSpatialBackdropEnabled] SpatialBackdropSourceChanged(std::optional<WebCore::SpatialBackdropSource> spatialBackdropSource)
+    [EnabledBy=WebPageSpatialBackdropEnabled] SpatialBackdropSourceChanged(struct std::optional<WebCore::SpatialBackdropSource> spatialBackdropSource)
 #endif
     PageExtendedBackgroundColorDidChange(WebCore::Color backgroundColor)
     SampledPageTopColorChanged(WebCore::Color sampledPageTopColor)
@@ -207,7 +207,7 @@ messages -> WebPageProxy {
     # Support for connecting the Accessibility worlds of the UI and the Web processes
     BindAccessibilityTree(String plugID)
 
-    SetInputMethodState(std::optional<WebKit::InputMethodState> state);
+    SetInputMethodState(struct std::optional<WebKit::InputMethodState> state);
 #endif
 
     # BackForward messages
@@ -341,7 +341,7 @@ messages -> WebPageProxy {
     DidHandleDragStartRequest(bool started)
     DidHandleAdditionalDragItemsRequest(bool added)
     WillReceiveEditDragSnapshot()
-    DidReceiveEditDragSnapshot(std::optional<WebCore::TextIndicatorData> textIndicator)
+    DidReceiveEditDragSnapshot(struct std::optional<WebCore::TextIndicatorData> textIndicator)
 #endif
 
 #if ENABLE(MODEL_PROCESS)

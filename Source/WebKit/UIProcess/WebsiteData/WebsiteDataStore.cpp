@@ -33,6 +33,7 @@
 #include "DeviceIdHashSaltStorage.h"
 #include "DownloadProxy.h"
 #include "GPUProcessProxy.h"
+#include "ITPThirdPartyData.h"
 #include "Logging.h"
 #include "MockAuthenticatorManager.h"
 #include "NetworkProcessConnectionInfo.h"
@@ -52,8 +53,10 @@
 #include "WebProcessCache.h"
 #include "WebProcessMessages.h"
 #include "WebProcessPool.h"
+#include "WebPushMessage.h"
 #include "WebResourceLoadStatisticsStore.h"
 #include "WebsiteData.h"
+#include "WebsiteDataFetchOption.h"
 #include "WebsiteDataStoreClient.h"
 #include "WebsiteDataStoreParameters.h"
 #include <WebCore/ApplicationCacheStorage.h>

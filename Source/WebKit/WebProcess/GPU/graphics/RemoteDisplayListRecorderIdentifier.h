@@ -31,7 +31,7 @@
 
 namespace WebKit {
 
-enum class RemoteDisplayListRecorderIdentifierType { };
+struct RemoteDisplayListRecorderIdentifierType;
 using RemoteDisplayListRecorderIdentifier = AtomicObjectIdentifier<RemoteDisplayListRecorderIdentifierType>;
 
 } // namespace WebKit

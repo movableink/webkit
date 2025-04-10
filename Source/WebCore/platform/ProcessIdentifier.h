@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum class ProcessIdentifierType { };
+struct ProcessIdentifierType;
 using ProcessIdentifier = ObjectIdentifier<ProcessIdentifierType>;
 
 namespace Process {

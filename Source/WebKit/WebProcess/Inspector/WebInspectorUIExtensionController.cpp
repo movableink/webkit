@@ -28,6 +28,7 @@
 
 #if ENABLE(INSPECTOR_EXTENSIONS)
 
+#include "JavaScriptEvaluationResult.h"
 #include "Logging.h"
 #include "WebInspectorUI.h"
 #include "WebInspectorUIExtensionControllerMessages.h"

@@ -380,22 +380,22 @@ void CDMInstanceFairPlayStreamingAVFObjC::initializeWithConfiguration(const CDMK
     // FIXME: verify that FairPlayStreaming does not (and cannot) expose a distinctive identifier to the client
     auto initialize = [&] () {
         if (configuration.distinctiveIdentifier == CDMRequirement::Required)
-            return Failed;
+            return CDMInstanceSuccessValue::Failed;
 
         if (configuration.persistentState != CDMRequirement::Required && (configuration.sessionTypes.contains(CDMSessionType::PersistentUsageRecord) || configuration.sessionTypes.contains(CDMSessionType::PersistentLicense)))
-            return Failed;
+            return CDMInstanceSuccessValue::Failed;
 
         if (configuration.persistentState == CDMRequirement::Required && !m_storageURL)
-            return Failed;
+            return CDMInstanceSuccessValue::Failed;
 
         if (configuration.sessionTypes.contains(CDMSessionType::PersistentLicense) && !supportsPersistentKeys())
-            return Failed;
+            return CDMInstanceSuccessValue::Failed;
 
         if (!PAL::canLoad_AVFoundation_AVContentKeySystemFairPlayStreaming())
-            return Failed;
+            return CDMInstanceSuccessValue::Failed;
 
         m_persistentStateAllowed = persistentState == AllowPersistentState::Yes;
-        return Succeeded;
+        return CDMInstanceSuccessValue::Succeeded;
     };
     callback(initialize());
 }
@@ -404,7 +404,7 @@ void CDMInstanceFairPlayStreamingAVFObjC::setServerCertificate(Ref<SharedBuffer>
 {
     INFO_LOG(LOGIDENTIFIER);
     m_serverCertificate = WTFMove(serverCertificate);
-    callback(Succeeded);
+    callback(CDMInstanceSuccessValue::Succeeded);
 }
 
 void CDMInstanceFairPlayStreamingAVFObjC::setStorageDirectory(const String& storageDirectory)

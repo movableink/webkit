@@ -30,6 +30,7 @@
 #include "FrameInfoData.h"
 #include "InjectUserScriptImmediately.h"
 #include "InjectedBundleScriptWorld.h"
+#include "JavaScriptEvaluationResult.h"
 #include "ScriptMessageHandlerIdentifier.h"
 #include "WebCompiledContentRuleList.h"
 #include "WebFrame.h"

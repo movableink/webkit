@@ -255,17 +255,17 @@ void MockCDMInstance::initializeWithConfiguration(const MediaKeySystemConfigurat
 {
     auto initialize = [&] {
         if (!m_cdm || !m_cdm->supportsConfiguration(configuration))
-            return Failed;
+            return CDMInstanceSuccessValue::Failed;
 
         MockCDMFactory* factory = m_cdm ? m_cdm->factory() : nullptr;
         if (!factory)
-            return Failed;
+            return CDMInstanceSuccessValue::Failed;
 
         bool distinctiveIdentifiersAllowed = (distinctiveIdentifiers == AllowDistinctiveIdentifiers::Yes);
 
         if (m_distinctiveIdentifiersAllowed != distinctiveIdentifiersAllowed) {
             if (!distinctiveIdentifiersAllowed && factory->distinctiveIdentifiersRequirement() == MediaKeysRequirement::Required)
-                return Failed;
+                return CDMInstanceSuccessValue::Failed;
 
             m_distinctiveIdentifiersAllowed = distinctiveIdentifiersAllowed;
         }
@@ -274,11 +274,11 @@ void MockCDMInstance::initializeWithConfiguration(const MediaKeySystemConfigurat
 
         if (m_persistentStateAllowed != persistentStateAllowed) {
             if (!persistentStateAllowed && factory->persistentStateRequirement() == MediaKeysRequirement::Required)
-                return Failed;
+                return CDMInstanceSuccessValue::Failed;
 
             m_persistentStateAllowed = persistentStateAllowed;
         }
-        return Succeeded;
+        return CDMInstanceSuccessValue::Succeeded;
     };
 
     callback(initialize());
@@ -287,7 +287,7 @@ void MockCDMInstance::initializeWithConfiguration(const MediaKeySystemConfigurat
 void MockCDMInstance::setServerCertificate(Ref<SharedBuffer>&& certificate, SuccessCallback&& callback)
 {
     Ref contiguousData = certificate->makeContiguous();
-    callback(equalLettersIgnoringASCIICase(StringView { contiguousData->span() }, "valid"_s) ? Succeeded : Failed);
+    callback(equalLettersIgnoringASCIICase(StringView { contiguousData->span() }, "valid"_s) ? CDMInstanceSuccessValue::Succeeded : CDMInstanceSuccessValue::Failed);
 }
 
 void MockCDMInstance::setStorageDirectory(const String&)

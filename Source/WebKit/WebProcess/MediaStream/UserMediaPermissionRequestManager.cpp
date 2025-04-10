@@ -29,6 +29,7 @@
 #include "WebPage.h"
 #include "WebPageProxyMessages.h"
 #include <WebCore/CaptureDevice.h>
+#include <WebCore/CaptureDeviceWithCapabilities.h>
 #include <WebCore/Document.h>
 #include <WebCore/FrameDestructionObserverInlines.h>
 #include <WebCore/FrameLoader.h>

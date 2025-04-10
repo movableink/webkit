@@ -111,7 +111,7 @@ struct TextRecognitionResult;
 enum class DOMPasteAccessCategory : uint8_t;
 enum class DOMPasteAccessResponse : uint8_t;
 enum class DOMPasteRequiresInteraction : bool;
-enum class ElementIdentifierType;
+struct ElementIdentifierType;
 enum class MouseEventPolicy : uint8_t;
 enum class RouteSharingPolicy : uint8_t;
 enum class TextIndicatorDismissalAnimation : uint8_t;

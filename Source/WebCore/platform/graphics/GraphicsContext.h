@@ -59,6 +59,8 @@ class SystemImage;
 class TextRun;
 class VideoFrame;
 
+enum class RequiresClipToRect : bool { No, Yes };
+
 namespace DisplayList {
 class DrawNativeImage;
 }
@@ -220,7 +222,7 @@ public:
     virtual void fillEllipse(const FloatRect& ellipse) { fillEllipseAsPath(ellipse); }
     virtual void strokeEllipse(const FloatRect& ellipse) { strokeEllipseAsPath(ellipse); }
 
-    enum class RequiresClipToRect : bool { No, Yes };
+    using RequiresClipToRect = WebCore::RequiresClipToRect;
     virtual void fillRect(const FloatRect&, RequiresClipToRect = RequiresClipToRect::Yes) = 0;
     virtual void fillRect(const FloatRect&, const Color&) = 0;
     virtual void fillRect(const FloatRect&, Gradient&, const AffineTransform&, RequiresClipToRect = RequiresClipToRect::Yes) = 0;

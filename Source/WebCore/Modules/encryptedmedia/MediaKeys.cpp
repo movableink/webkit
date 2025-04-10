@@ -141,7 +141,7 @@ void MediaKeys::setServerCertificate(const BufferSource& serverCertificate, Ref<
 #endif
         // 5.2. If the preceding step failed, resolve promise with a new DOMException whose name is the appropriate error name.
         // 5.1. [Else,] Resolve promise with true.
-        if (success == CDMInstance::Failed) {
+        if (success == CDMInstanceSuccessValue::Failed) {
             ERROR_LOG(identifier, "::task() - Rejected, setServerCertificate() failed");
             promise->reject(ExceptionCode::InvalidStateError);
             return;

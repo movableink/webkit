@@ -33,7 +33,7 @@
 
 namespace WebKit {
 
-enum class RemoteSerializedImageBufferIdentifierType { };
+struct RemoteSerializedImageBufferIdentifierType;
 using RemoteSerializedImageBufferIdentifier = AtomicObjectIdentifier<RemoteSerializedImageBufferIdentifierType>;
 using RemoteSerializedImageBufferReadReference = IPC::ObjectIdentifierReadReference<RemoteSerializedImageBufferIdentifier>;
 using RemoteSerializedImageBufferWriteReference = IPC::ObjectIdentifierWriteReference<RemoteSerializedImageBufferIdentifier>;

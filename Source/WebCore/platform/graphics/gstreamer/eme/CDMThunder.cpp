@@ -253,14 +253,14 @@ CDMInstanceThunder::CDMInstanceThunder(const String& keySystem)
 void CDMInstanceThunder::initializeWithConfiguration(const CDMKeySystemConfiguration&, AllowDistinctiveIdentifiers, AllowPersistentState,
     SuccessCallback&& callback)
 {
-    callback(Succeeded);
+    callback(CDMInstanceSuccessValue::Succeeded);
 }
 
 void CDMInstanceThunder::setServerCertificate(Ref<SharedBuffer>&& certificate,  SuccessCallback&& callback)
 {
     auto data = certificate->extractData();
     OpenCDMError error = opencdm_system_set_server_certificate(m_thunderSystem.get(), const_cast<uint8_t*>(data.data()), data.size());
-    callback(!error ? Succeeded : Failed);
+    callback(!error ? CDMInstanceSuccessValue::Succeeded : CDMInstanceSuccessValue::Failed);
 }
 
 void CDMInstanceThunder::setStorageDirectory(const String& storageDirectory)

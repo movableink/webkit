@@ -62,7 +62,7 @@ messages -> WebPage WantsAsyncDispatchMessage {
     SetSceneIdentifier(String sceneIdentifier)
     SetViewportConfigurationViewLayoutSize(WebCore::FloatSize size, double scaleFactor, double minimumEffectiveDeviceWidth)
     SetDeviceOrientation(WebCore::IntDegrees deviceOrientation)
-    SetOverrideViewportArguments(std::optional<WebCore::ViewportArguments> arguments)
+    SetOverrideViewportArguments(struct std::optional<WebCore::ViewportArguments> arguments)
     DynamicViewportSizeUpdate(struct WebKit::DynamicViewportSizeUpdate target)
     
     SetScreenIsBeingCaptured(bool captured)
@@ -109,7 +109,7 @@ messages -> WebPage WantsAsyncDispatchMessage {
     HandleAutocorrectionContextRequest()
     RequestEvasionRectsAboveSelection() -> (Vector<WebCore::FloatRect> rects)
     RequestPositionInformation(struct WebKit::InteractionInformationRequest request)
-    StartInteractionWithElementContextOrPosition(std::optional<WebCore::ElementContext> elementContext, WebCore::IntPoint point)
+    StartInteractionWithElementContextOrPosition(struct std::optional<WebCore::ElementContext> elementContext, WebCore::IntPoint point)
     StopInteraction()
     PerformActionOnElement(uint32_t action, String authenticationToken) -> ()
     PerformActionOnElements(uint32_t action, Vector<WebCore::ElementContext> elements)
@@ -134,7 +134,7 @@ messages -> WebPage WantsAsyncDispatchMessage {
     StoreSelectionForAccessibility(bool shouldStore)
     StartAutoscrollAtPosition(WebCore::FloatPoint positionInWindow)
     CancelAutoscroll()
-    RequestFocusedElementInformation() -> (std::optional<WebKit::FocusedElementInformation> info)
+    RequestFocusedElementInformation() -> (struct std::optional<WebKit::FocusedElementInformation> info)
     HardwareKeyboardAvailabilityChanged(struct WebKit::HardwareKeyboardState state)
     SetIsShowingInputViewForFocusedElement(bool showingInputView)
     UpdateSelectionWithDelta(int64_t locationDelta, int64_t lengthDelta) -> ()
@@ -162,7 +162,7 @@ messages -> WebPage WantsAsyncDispatchMessage {
     DidBeginTouchPoint(WebCore::FloatPoint locationInRootView)
 #endif
 #if !ENABLE(IOS_TOUCH_EVENTS) && ENABLE(TOUCH_EVENTS)
-    TouchEvent(WebKit::WebTouchEvent event) -> (std::optional<WebKit::WebEventType> eventType, bool handled)
+    TouchEvent(WebKit::WebTouchEvent event) -> (enum:uint8_t std::optional<WebKit::WebEventType> eventType, bool handled)
 #endif
 
     CancelPointer(WebCore::PointerID pointerId, WebCore::IntPoint documentPoint)
@@ -196,7 +196,7 @@ messages -> WebPage WantsAsyncDispatchMessage {
     LoadAlternateHTML(struct WebKit::LoadParameters loadParameters)
     CreateRemoteSubframe(WebCore::FrameIdentifier parentID, WebCore::FrameIdentifier newChildID, String frameName, Ref<WebCore::FrameTreeSyncData> frameTreeSyncData)
 
-    GetFrameTree() -> (std::optional<WebKit::FrameTreeNodeData> data)
+    GetFrameTree() -> (struct std::optional<WebKit::FrameTreeNodeData> data)
     DidFinishLoadInAnotherProcess(WebCore::FrameIdentifier frameID)
     FrameWasRemovedInAnotherProcess(WebCore::FrameIdentifier frameID)
     UpdateFrameTreeSyncData(WebCore::FrameIdentifier frameID, Ref<WebCore::FrameTreeSyncData> frameTreeSyncData)
@@ -352,10 +352,10 @@ messages -> WebPage WantsAsyncDispatchMessage {
 
     # Drag and drop.
 #if PLATFORM(GTK) && ENABLE(DRAG_SUPPORT)
-    PerformDragControllerAction(enum:uint8_t WebKit::DragControllerAction action, WebCore::IntPoint clientPosition, WebCore::IntPoint globalPosition, OptionSet<WebCore::DragOperation> draggingSourceOperationMask, WebCore::SelectionData selection, OptionSet<WebCore::DragApplicationFlags> flags) -> (std::optional<WebCore::DragOperation> dragOperation, enum:uint8_t WebCore::DragHandlingMethod dragHandlingMethod, bool mouseIsOverFileInput, unsigned numberOfItemsToBeAccepted, WebCore::IntRect insertionRect, WebCore::IntRect editableElementRect, struct std::optional<WebCore::RemoteUserInputEventData> remoteUserInputEventData)
+    PerformDragControllerAction(enum:uint8_t WebKit::DragControllerAction action, WebCore::IntPoint clientPosition, WebCore::IntPoint globalPosition, OptionSet<WebCore::DragOperation> draggingSourceOperationMask, WebCore::SelectionData selection, OptionSet<WebCore::DragApplicationFlags> flags) -> (enum:uint8_t std::optional<WebCore::DragOperation> dragOperation, enum:uint8_t WebCore::DragHandlingMethod dragHandlingMethod, bool mouseIsOverFileInput, unsigned numberOfItemsToBeAccepted, WebCore::IntRect insertionRect, WebCore::IntRect editableElementRect, struct std::optional<WebCore::RemoteUserInputEventData> remoteUserInputEventData)
 #endif
 #if !PLATFORM(GTK) && ENABLE(DRAG_SUPPORT)
-    PerformDragControllerAction(std::optional<WebCore::FrameIdentifier> frameID, enum:uint8_t WebKit::DragControllerAction action, WebCore::DragData dragData) -> (std::optional<WebCore::DragOperation> dragOperation, enum:uint8_t WebCore::DragHandlingMethod dragHandlingMethod, bool mouseIsOverFileInput, unsigned numberOfItemsToBeAccepted, WebCore::IntRect insertionRect, WebCore::IntRect editableElementRect, struct std::optional<WebCore::RemoteUserInputEventData> remoteUserInputEventData)
+    PerformDragControllerAction(std::optional<WebCore::FrameIdentifier> frameID, enum:uint8_t WebKit::DragControllerAction action, WebCore::DragData dragData) -> (enum:uint8_t std::optional<WebCore::DragOperation> dragOperation, enum:uint8_t WebCore::DragHandlingMethod dragHandlingMethod, bool mouseIsOverFileInput, unsigned numberOfItemsToBeAccepted, WebCore::IntRect insertionRect, WebCore::IntRect editableElementRect, struct std::optional<WebCore::RemoteUserInputEventData> remoteUserInputEventData)
     PerformDragOperation(WebCore::DragData dragData, WebKit::SandboxExtensionHandle sandboxExtensionHandle, Vector<WebKit::SandboxExtensionHandle> sandboxExtensionsForUpload) -> (bool handled)
 #endif
 #if ENABLE(DRAG_SUPPORT)
@@ -373,12 +373,12 @@ messages -> WebPage WantsAsyncDispatchMessage {
 #if PLATFORM(IOS_FAMILY) && ENABLE(DRAG_SUPPORT)
     RequestDragStart(WebCore::IntPoint clientPosition, WebCore::IntPoint globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask)
     RequestAdditionalItemsForDragSession(WebCore::IntPoint clientPosition, WebCore::IntPoint globalPosition, OptionSet<WebCore::DragSourceAction> allowedActionsMask)
-    InsertDroppedImagePlaceholders(Vector<WebCore::IntSize> imageSize) -> (Vector<WebCore::IntRect> dropPreviewRects, std::optional<WebCore::TextIndicatorData> textIndicator)
+    InsertDroppedImagePlaceholders(Vector<WebCore::IntSize> imageSize) -> (Vector<WebCore::IntRect> dropPreviewRects, struct std::optional<WebCore::TextIndicatorData> textIndicator)
     DidConcludeDrop()
 #endif
 
 #if PLATFORM(COCOA)
-    InsertTextPlaceholder(WebCore::IntSize size) -> (std::optional<WebCore::ElementContext> placeholder)
+    InsertTextPlaceholder(WebCore::IntSize size) -> (struct std::optional<WebCore::ElementContext> placeholder)
     RemoveTextPlaceholder(struct WebCore::ElementContext placeholder) -> ()
 #endif
 
@@ -569,7 +569,7 @@ messages -> WebPage WantsAsyncDispatchMessage {
 #endif
 
     SetScrollPinningBehavior(enum:uint8_t WebCore::ScrollPinningBehavior pinning)
-    SetScrollbarOverlayStyle(std::optional<WebCore::ScrollbarOverlayStyle> scrollbarStyle)
+    SetScrollbarOverlayStyle(enum:uint8_t std::optional<WebCore::ScrollbarOverlayStyle> scrollbarStyle)
 
     GetBytecodeProfile() -> (String string)
 
@@ -582,9 +582,9 @@ messages -> WebPage WantsAsyncDispatchMessage {
     ImmediateActionDidCancel()
     ImmediateActionDidComplete()
 
-    DataDetectorsDidPresentUI(WebCore::PageOverlay::PageOverlayID pageOverlay)
-    DataDetectorsDidChangeUI(WebCore::PageOverlay::PageOverlayID pageOverlay)
-    DataDetectorsDidHideUI(WebCore::PageOverlay::PageOverlayID pageOverlay)
+    DataDetectorsDidPresentUI(uint64_t pageOverlay)
+    DataDetectorsDidChangeUI(uint64_t pageOverlay)
+    DataDetectorsDidHideUI(uint64_t pageOverlay)
 
     HandleAcceptedCandidate(struct WebCore::TextCheckingResult acceptedCandidate)
 
@@ -663,7 +663,7 @@ messages -> WebPage WantsAsyncDispatchMessage {
 #endif
 
 #if ENABLE(APPLICATION_MANIFEST)
-    GetApplicationManifest() -> (std::optional<WebCore::ApplicationManifest> manifest)
+    GetApplicationManifest() -> (struct std::optional<WebCore::ApplicationManifest> manifest)
 #endif
 
     GetTextFragmentMatch() -> (String match)
@@ -672,7 +672,7 @@ messages -> WebPage WantsAsyncDispatchMessage {
     ZoomPDFIn(WebKit::PDFPluginIdentifier identifier)
     ZoomPDFOut(WebKit::PDFPluginIdentifier identifier)
     SavePDF(WebKit::PDFPluginIdentifier identifier) -> (String filename, URL url, std::span<const uint8_t> data)
-    OpenPDFWithPreview(WebKit::PDFPluginIdentifier identifier) -> (String filename, std::optional<WebKit::FrameInfoData> frameInfo, std::span<const uint8_t> data)
+    OpenPDFWithPreview(WebKit::PDFPluginIdentifier identifier) -> (String filename, struct std::optional<WebKit::FrameInfoData> frameInfo, std::span<const uint8_t> data)
 #endif
 
     UpdateCurrentModifierState(OptionSet<WebCore::PlatformEventModifier> modifiers)
@@ -723,7 +723,7 @@ messages -> WebPage WantsAsyncDispatchMessage {
     SetAppHighlightsVisibility(enum:bool WebCore::HighlightVisibility highlightVisibility)
 #endif
 
-    HandleWheelEvent(WebCore::FrameIdentifier frameID, WebKit::WebWheelEvent event, OptionSet<WebCore::WheelEventProcessingSteps> processingSteps, std::optional<bool> willStartSwipe) -> (std::optional<WebCore::ScrollingNodeID> scrollingNodeID, std::optional<WebCore::WheelScrollGestureState> gestureState, bool handled, struct std::optional<WebCore::RemoteUserInputEventData> remoteUserInputEventData)
+    HandleWheelEvent(WebCore::FrameIdentifier frameID, WebKit::WebWheelEvent event, OptionSet<WebCore::WheelEventProcessingSteps> processingSteps, std::optional<bool> willStartSwipe) -> (std::optional<WebCore::ScrollingNodeID> scrollingNodeID, enum:uint8_t std::optional<WebCore::WheelScrollGestureState> gestureState, bool handled, struct std::optional<WebCore::RemoteUserInputEventData> remoteUserInputEventData)
 #if PLATFORM(IOS_FAMILY)
     DispatchWheelEventWithoutScrolling(WebCore::FrameIdentifier frameID, WebKit::WebWheelEvent event) -> (bool defaultPrevented)
 #endif
@@ -820,20 +820,20 @@ messages -> WebPage WantsAsyncDispatchMessage {
 
     UpdateTextVisibilityForActiveWritingToolsSession(struct WebCore::CharacterRange rangeRelativeToSessionRange, bool visible, WTF::UUID identifier) -> ()
 
-    TextPreviewDataForActiveWritingToolsSession(struct WebCore::CharacterRange rangeRelativeToSessionRange) -> (std::optional<WebCore::TextIndicatorData> data)
+    TextPreviewDataForActiveWritingToolsSession(struct WebCore::CharacterRange rangeRelativeToSessionRange) -> (struct std::optional<WebCore::TextIndicatorData> data)
 
     SetSelectionForActiveWritingToolsSession(struct WebCore::CharacterRange rangeRelativeToSessionRange) -> ()
 
     DecorateTextReplacementsForActiveWritingToolsSession(struct WebCore::CharacterRange rangeRelativeToSessionRange) -> ()
 
-    CreateTextIndicatorForTextAnimationID(WTF::UUID uuid) -> (std::optional<WebCore::TextIndicatorData> textIndicator)
+    CreateTextIndicatorForTextAnimationID(WTF::UUID uuid) -> (struct std::optional<WebCore::TextIndicatorData> textIndicator)
     UpdateUnderlyingTextVisibilityForTextAnimationID(WTF::UUID uuid, bool visible) -> ()
 
     IntelligenceTextAnimationsDidComplete();
 #endif
 
 #if PLATFORM(COCOA)
-    CreateTextIndicatorForElementWithID(String elementID) -> (std::optional<WebCore::TextIndicatorData> textIndicator)
+    CreateTextIndicatorForElementWithID(String elementID) -> (struct std::optional<WebCore::TextIndicatorData> textIndicator)
 #endif
 
     TakeSnapshotForTargetedElement(WebCore::ElementIdentifier elementID, WebCore::ScriptExecutionContextIdentifier documentID) -> (std::optional<WebCore::ShareableBitmapHandle> image)

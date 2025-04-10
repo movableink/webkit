@@ -30,6 +30,7 @@
 #include "NetworkProcessConnection.h"
 #include "WebProcess.h"
 #include <WebCore/BlobDataFileReference.h>
+#include <WebCore/BlobPart.h>
 #include <WebCore/CrossOriginOpenerPolicy.h>
 #include <WebCore/SWContextManager.h>
 

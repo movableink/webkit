@@ -89,6 +89,7 @@
 #include "WebSharedWorkerContextManagerConnection.h"
 #include "WebSharedWorkerContextManagerConnectionMessages.h"
 #include "WebSharedWorkerProvider.h"
+#include "WebTransportSession.h"
 #include "WebsiteData.h"
 #include "WebsiteDataStoreParameters.h"
 #include "WebsiteDataType.h"

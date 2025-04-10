@@ -35,6 +35,7 @@
 #import "APISerializedScriptValue.h"
 #import "CocoaHelpers.h"
 #import "JSWebExtensionWrapper.h"
+#import "JavaScriptEvaluationResult.h"
 #import "MessageSenderInlines.h"
 #import "WebExtensionContextMessages.h"
 #import "WebExtensionTabIdentifier.h"

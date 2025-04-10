@@ -55,6 +55,7 @@
 #include <WebCore/MediaPlayer.h>
 #include <WebCore/MediaPlayerPrivate.h>
 #include <WebCore/NotImplemented.h>
+#include <WebCore/ResourceError.h>
 #include <WebCore/SecurityOrigin.h>
 #include <wtf/TZoneMallocInlines.h>
 

@@ -39,6 +39,7 @@
 #import "WebExtensionConstants.h"
 #import "WebExtensionContextMessages.h"
 #import "WebExtensionContextProxy.h"
+#import "WebExtensionStorageAccessLevel.h"
 #import "WebExtensionUtilities.h"
 #import "WebProcess.h"
 #import <wtf/cocoa/VectorCocoa.h>

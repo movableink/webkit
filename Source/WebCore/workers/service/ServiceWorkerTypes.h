@@ -65,10 +65,10 @@ enum class ServiceWorkerClientFrameType : uint8_t {
 enum class ServiceWorkerIsInspectable : bool { No, Yes };
 enum class ShouldNotifyWhenResolved : bool { No, Yes };
 
-enum class ServiceWorkerRegistrationIdentifierType { };
+struct ServiceWorkerRegistrationIdentifierType;
 using ServiceWorkerRegistrationIdentifier = AtomicObjectIdentifier<ServiceWorkerRegistrationIdentifierType>;
 
-enum class ServiceWorkerJobIdentifierType { };
+struct ServiceWorkerJobIdentifierType;
 using ServiceWorkerJobIdentifier = AtomicObjectIdentifier<ServiceWorkerJobIdentifierType>;
 
 enum class SWServerToContextConnectionIdentifierType { };
