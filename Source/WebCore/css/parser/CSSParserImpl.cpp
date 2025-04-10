@@ -341,7 +341,7 @@ static CSSParserImpl::AllowedRules computeNewAllowedRules(CSSParserImpl::Allowed
 }
 
 template<typename T>
-bool CSSParserImpl::consumeRuleList(CSSParserTokenRange range, RuleList ruleListType, const T callback)
+bool CSSParserImpl::consumeRuleList(CSSParserTokenRange range, RuleList ruleListType, NOESCAPE const T& callback)
 {
     auto allowedRules = AllowedRules::RegularRules;
     switch (ruleListType) {

@@ -134,7 +134,7 @@ private:
 
     // Returns whether the first encountered rule was valid
     template<typename T>
-    bool consumeRuleList(CSSParserTokenRange, RuleList, T callback);
+    bool consumeRuleList(CSSParserTokenRange, RuleList, NOESCAPE const T& callback);
 
     // This function updates the range it's given.
     RefPtr<StyleRuleBase> consumeQualifiedRule(CSSParserTokenRange&, AllowedRules);

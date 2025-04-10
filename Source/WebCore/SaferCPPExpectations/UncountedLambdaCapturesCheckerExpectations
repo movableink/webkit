@@ -59,7 +59,6 @@ css/CSSValue.cpp
 css/CSSVariableReferenceValue.cpp
 css/SelectorChecker.cpp
 css/StyleRule.cpp
-css/parser/CSSParserImpl.cpp
 dom/ContainerNode.cpp
 dom/ContentVisibilityDocumentState.cpp
 dom/CustomElementDefaultARIA.cpp

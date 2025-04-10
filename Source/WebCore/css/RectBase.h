@@ -30,6 +30,10 @@ public:
     const CSSValue& right() const { return m_right.get(); }
     const CSSValue& bottom() const { return m_bottom.get(); }
     const CSSValue& left() const { return m_left.get(); }
+    Ref<const CSSValue> protectedTop() const { return m_top; }
+    Ref<const CSSValue> protectedRight() const { return m_right; }
+    Ref<const CSSValue> protectedBottom() const { return m_bottom; }
+    Ref<const CSSValue> protectedLeft() const { return m_left; }
 
     bool equals(const RectBase& other) const
     {

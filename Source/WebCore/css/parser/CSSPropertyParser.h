@@ -33,7 +33,6 @@
 namespace WebCore {
 
 class CSSCustomPropertyValue;
-class CSSProperty;
 class StylePropertyShorthand;
 
 namespace CSS {

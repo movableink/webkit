@@ -215,13 +215,14 @@ static bool isGridTrackFixedSized(const CSSPrimitiveValue& primitiveValue)
 
 static bool isGridTrackFixedSized(const CSSValue& value)
 {
-    if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value))
+    if (RefPtr primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value))
         return isGridTrackFixedSized(*primitiveValue);
     auto& function = downcast<CSSFunctionValue>(value);
     if (function.name() == CSSValueFitContent || function.length() < 2)
         return false;
-    return isGridTrackFixedSized(downcast<CSSPrimitiveValue>(*function.item(0)))
-        || isGridTrackFixedSized(downcast<CSSPrimitiveValue>(*function.item(1)));
+
+    return isGridTrackFixedSized(downcast<CSSPrimitiveValue>(*function.protectedItem(0)))
+        || isGridTrackFixedSized(downcast<CSSPrimitiveValue>(*function.protectedItem(1)));
 }
 
 static RefPtr<CSSPrimitiveValue> consumeGridBreadth(CSSParserTokenRange& range, CSS::PropertyParserState& state)

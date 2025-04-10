@@ -25,7 +25,6 @@ css/StyleProperties.h
 css/StyleRuleImport.h
 css/StyleSheetContents.h
 css/StyleSheetList.h
-css/parser/SizesCalcParser.h
 dom/CollectionIndexCache.h
 dom/Node.cpp
 dom/Node.h

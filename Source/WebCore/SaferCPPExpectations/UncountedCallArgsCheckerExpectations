@@ -472,9 +472,6 @@ css/StyleRuleImport.cpp
 css/StyleRuleImport.h
 css/StyleSheetContents.cpp
 css/StyleSheetList.cpp
-css/parser/CSSPropertyParser.cpp
-css/parser/CSSPropertyParserConsumer+Grid.cpp
-css/parser/SizesCalcParser.cpp
 css/query/GenericMediaQuerySerialization.cpp
 css/typedom/CSSOMVariableReferenceValue.cpp
 css/typedom/CSSStyleImageValue.cpp
