@@ -1472,8 +1472,8 @@ GlyphBuffer FontCascade::layoutComplexText(const TextRun& run, unsigned from, un
     GlyphBuffer glyphBuffer;
 
     ComplexTextController controller(*this, run, false, 0, forTextEmphasis == ForTextEmphasisOrNot::ForTextEmphasis);
-    GlyphBuffer dummyGlyphBuffer;
-    controller.advance(from, &dummyGlyphBuffer);
+    GlyphBuffer glyphBufferForStartingIndex;
+    controller.advance(from, &glyphBufferForStartingIndex);
     controller.advance(to, &glyphBuffer);
 
     if (glyphBuffer.isEmpty())
@@ -1483,17 +1483,17 @@ GlyphBuffer FontCascade::layoutComplexText(const TextRun& run, unsigned from, un
         // Exploit the fact that the sum of the paint advances is equal to
         // the sum of the layout advances.
         FloatSize initialAdvance = controller.totalAdvance();
-        for (unsigned i = 0; i < dummyGlyphBuffer.size(); ++i)
-            initialAdvance -= WebCore::size(dummyGlyphBuffer.advanceAt(i));
+        for (unsigned i = 0; i < glyphBufferForStartingIndex.size(); ++i)
+            initialAdvance -= WebCore::size(glyphBufferForStartingIndex.advanceAt(i));
         for (unsigned i = 0; i < glyphBuffer.size(); ++i)
             initialAdvance -= WebCore::size(glyphBuffer.advanceAt(i));
         // FIXME: Shouldn't we subtract the other initial advance?
         glyphBuffer.reverse(0, glyphBuffer.size());
         glyphBuffer.setInitialAdvance(makeGlyphBufferAdvance(initialAdvance));
     } else {
-        FloatSize initialAdvance = WebCore::size(dummyGlyphBuffer.initialAdvance());
-        for (unsigned i = 0; i < dummyGlyphBuffer.size(); ++i)
-            initialAdvance += WebCore::size(dummyGlyphBuffer.advanceAt(i));
+        FloatSize initialAdvance = WebCore::size(glyphBufferForStartingIndex.initialAdvance());
+        for (unsigned i = 0; i < glyphBufferForStartingIndex.size(); ++i)
+            initialAdvance += WebCore::size(glyphBufferForStartingIndex.advanceAt(i));
         // FIXME: Shouldn't we add the other initial advance?
         glyphBuffer.setInitialAdvance(makeGlyphBufferAdvance(initialAdvance));
     }
