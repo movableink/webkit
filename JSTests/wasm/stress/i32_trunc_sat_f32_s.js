@@ -1,3 +1,4 @@
+//@ skip unless $isSIMDPlatform
 //@ $skipModes << "wasm-no-wasm-jit".to_sym
 
 function shouldBe(actual, expected) {
