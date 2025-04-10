@@ -1105,9 +1105,9 @@ static BOOL isArrayOfExcludedDomainsValid(NSArray<NSString *> *excludedDomains)
 - (NSComparisonResult)compare:(_WKWebExtensionDeclarativeNetRequestRule *)rule
 {
     if (_priority < rule.priority)
-        return NSOrderedAscending;
-    if (_priority > rule.priority)
         return NSOrderedDescending;
+    if (_priority > rule.priority)
+        return NSOrderedAscending;
 
     if (priorityForRuleType(_action[declarativeNetRequestRuleActionTypeKey]) < priorityForRuleType(rule.action[declarativeNetRequestRuleActionTypeKey]))
         return NSOrderedAscending;

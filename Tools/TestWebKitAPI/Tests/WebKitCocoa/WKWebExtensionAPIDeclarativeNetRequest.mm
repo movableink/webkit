@@ -2655,8 +2655,8 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RulesSortByPriorityFromDifferentRul
     NSArray *sortedTranslatedRules = [_WKWebExtensionDeclarativeNetRequestTranslator translateRules:rules errorStrings:nil];
     EXPECT_NOT_NULL(sortedTranslatedRules);
 
-    EXPECT_NS_EQUAL(sortedTranslatedRules[0][@"action"][@"type"], @"block");
-    EXPECT_NS_EQUAL(sortedTranslatedRules[1][@"action"][@"type"], @"ignore-previous-rules");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[0][@"action"][@"type"], @"ignore-previous-rules");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[1][@"action"][@"type"], @"block");
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RulesSortWithoutExplicitPriority)
@@ -2686,9 +2686,9 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RulesSortWithoutExplicitPriority)
     NSArray *sortedTranslatedRules = [_WKWebExtensionDeclarativeNetRequestTranslator translateRules:rules errorStrings:nil];
     EXPECT_NOT_NULL(sortedTranslatedRules);
 
-    EXPECT_NS_EQUAL(sortedTranslatedRules[0][@"action"][@"type"], @"ignore-previous-rules");
-    EXPECT_NS_EQUAL(sortedTranslatedRules[1][@"action"][@"type"], @"make-https");
-    EXPECT_NS_EQUAL(sortedTranslatedRules[2][@"action"][@"type"], @"block");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[0][@"action"][@"type"], @"block");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[1][@"action"][@"type"], @"ignore-previous-rules");
+    EXPECT_NS_EQUAL(sortedTranslatedRules[2][@"action"][@"type"], @"make-https");
 }
 
 TEST(WKWebExtensionAPIDeclarativeNetRequest, RulesSortByActionType)
