@@ -506,14 +506,8 @@ css3/masking/clip-path-inset.html [ ImageOnlyFailure ]
 css3/masking/mask-repeat-space-padding.html [ ImageOnlyFailure ]
 editing/caret/caret-in-empty-cell.html [ ImageOnlyFailure ]
 fast/clip/overflow-hidden-with-border-radius-overflow-clipping-parent.html [ ImageOnlyFailure ]
-fast/css-generated-content/close-quote-negative-depth.html [ ImageOnlyFailure Pass ]
-fast/css-generated-content/content-property-change.html [ ImageOnlyFailure Pass ]
 fast/css-generated-content/initial-letter-pagination-sunken-rl.html [ ImageOnlyFailure ]
 fast/css-generated-content/initial-letter-pagination-sunken.html [ ImageOnlyFailure ]
-fast/css-generated-content/nested-quote-more-than-pairs.html [ ImageOnlyFailure Pass ]
-fast/css-generated-content/quote-first-letter.html [ ImageOnlyFailure Pass ]
-fast/css-generated-content/quotes-lang-case-insensitive.html [ ImageOnlyFailure Pass ]
-fast/css-generated-content/quotes-lang.html [ ImageOnlyFailure Pass ]
 fast/css/cascade/box-shadow-and-webkit-box-shadow-cascade-order.html [ ImageOnlyFailure ]
 fast/css/ignore-empty-focus-ring-rects.html [ ImageOnlyFailure ]
 fast/masking/clip-path-inset-large-radii.html [ ImageOnlyFailure ]
@@ -528,7 +522,6 @@ ietestcenter/css3/multicolumn/column-width-applies-to-003.htm [ ImageOnlyFailure
 ietestcenter/css3/multicolumn/column-width-applies-to-004.htm [ ImageOnlyFailure ]
 ietestcenter/css3/multicolumn/column-width-applies-to-013.htm [ ImageOnlyFailure ]
 ietestcenter/css3/multicolumn/column-width-applies-to-014.htm [ ImageOnlyFailure ]
-imported/blink/fast/css/text-overflow-ellipsis-button.html [ ImageOnlyFailure Pass ]
 imported/w3c/web-platform-tests/css/selectors/focus-within-004.html [ ImageOnlyFailure ]
 
 
@@ -631,15 +624,6 @@ js/dom/modules/import-mjs-module.html [ Failure ]
 js/dom/missing-exception-check-in-convertNumbers.html [ Skip ]
 
 js/dom/Promise-reject-large-string.html [ DumpJSConsoleLogInStdErr ]
-
-[ Debug ] js/dom/domjit-accessor-polymorphic.html [ Skip ]
-[ Debug ] js/dom/domjit-function-get-element-by-id.html [ Skip ]
-[ Debug ] js/error-should-not-strong-reference-global-object.html [ Skip ]
-[ Debug ] js/regress-150434.html [ Skip ]
-[ Debug ] js/slow-stress/Int32Array-alloc-large-long-lived.html [ Skip ]
-[ Debug ] js/slow-stress/nested-function-parsing-random.html [ Skip ]
-[ Debug ] js/sort-with-side-effecting-comparisons.html [ Skip ]
-[ Debug ] js/stack-overflow-regexp.html [ Skip ]
 
 # "Out of memory" only on buildbot
 [ Debug ] js/large-expressions.html [ Failure Pass ]
@@ -874,7 +858,6 @@ http/tests/security/contentSecurityPolicy/audioworklet-script-src-blocked.html [
 
 http/tests/security/contentSecurityPolicy/block-all-mixed-content/insecure-iframe-in-main-frame.html [ Failure Pass ]
 
-webkit.org/b/291024 http/tests/security/contentSecurityPolicy/block-all-mixed-content/insecure-image-in-iframe.html [ Skip ] # Failure Pass
 webkit.org/b/291024 http/tests/security/contentSecurityPolicy/upgrade-insecure-requests/proper-open-window-upgrades-UpgradeMixedContent.html [ Skip ] # Failure Pass
 webkit.org/b/291024 http/tests/security/contentSecurityPolicy/upgrade-insecure-requests/proper-open-window-upgrades.html [ Skip ] # Failure Pass
 
