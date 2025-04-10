@@ -45,6 +45,7 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		00E43E412D9781430060461A /* WebContentCaptivePortalExtension.appex in Embed Extensions */ = {isa = PBXBuildFile; fileRef = 00E43E3F2D977FC70060461A /* WebContentCaptivePortalExtension.appex */; platformFilters = (ios, ); settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		0F18E6E51D6B9B9E0027E547 /* UIScriptContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0F18E6DD1D6B9AAF0027E547 /* UIScriptContext.cpp */; };
 		0F18E6E61D6B9BA20027E547 /* UIScriptControllerShared.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0F18E6DF1D6B9AAF0027E547 /* UIScriptControllerShared.cpp */; };
 		0F18E7181D6BC4560027E547 /* JSWrapper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0F18E7151D6BC4560027E547 /* JSWrapper.cpp */; };
@@ -275,6 +276,7 @@
 			files = (
 				E372BC382C08EB01006DFE67 /* GPUExtension.appex in Embed Extensions */,
 				E372BC362C08E29C006DFE67 /* NetworkingExtension.appex in Embed Extensions */,
+				00E43E412D9781430060461A /* WebContentCaptivePortalExtension.appex in Embed Extensions */,
 				E372BC3A2C08F323006DFE67 /* WebContentExtension.appex in Embed Extensions */,
 			);
 			name = "Embed Extensions";
@@ -283,6 +285,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		00E43E3F2D977FC70060461A /* WebContentCaptivePortalExtension.appex */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.extensionkit-extension"; path = WebContentCaptivePortalExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		0F18E6DD1D6B9AAF0027E547 /* UIScriptContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = UIScriptContext.cpp; path = ../TestRunnerShared/UIScriptContext/UIScriptContext.cpp; sourceTree = "<group>"; };
 		0F18E6DE1D6B9AAF0027E547 /* UIScriptContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UIScriptContext.h; path = ../TestRunnerShared/UIScriptContext/UIScriptContext.h; sourceTree = "<group>"; };
 		0F18E6DF1D6B9AAF0027E547 /* UIScriptControllerShared.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = UIScriptControllerShared.cpp; path = ../TestRunnerShared/UIScriptContext/UIScriptControllerShared.cpp; sourceTree = "<group>"; };
@@ -566,6 +569,7 @@
 		08FB7794FE84155DC02AAC07 /* WebKitTestRunner */ = {
 			isa = PBXGroup;
 			children = (
+				00E43E3F2D977FC70060461A /* WebContentCaptivePortalExtension.appex */,
 				E3E17D412CC4445D0077C3AE /* WebKitEligibilityUtil */,
 				E372BC392C08F323006DFE67 /* WebContentExtension.appex */,
 				E372BC372C08EB01006DFE67 /* GPUExtension.appex */,
