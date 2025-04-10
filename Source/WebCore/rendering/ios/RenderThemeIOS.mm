@@ -616,7 +616,7 @@ void RenderThemeIOS::adjustSliderTrackStyle(RenderStyle& style, const Element* e
 
 constexpr auto nativeControlBorderInlineSize = 1.0f;
 
-bool RenderThemeIOS::paintSliderTrack(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeIOS::paintSliderTrack(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (box.settings().macStyleControlsOnCatalyst())
@@ -722,7 +722,7 @@ void RenderThemeIOS::adjustSliderThumbSize(RenderStyle& style, const Element* el
 constexpr auto reducedMotionProgressAnimationMinOpacity = 0.3f;
 constexpr auto reducedMotionProgressAnimationMaxOpacity = 0.6f;
 
-bool RenderThemeIOS::paintProgressBar(const RenderObject& renderer, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeIOS::paintProgressBar(const RenderObject& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (renderer.settings().macStyleControlsOnCatalyst())
@@ -853,7 +853,7 @@ void RenderThemeIOS::adjustSearchFieldStyle(RenderStyle& style, const Element* e
     adjustRoundBorderRadius(style, *box);
 }
 
-void RenderThemeIOS::paintSearchFieldDecorations(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)
+void RenderThemeIOS::paintSearchFieldDecorations(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (paintSearchFieldDecorationsForCatalyst(box, paintInfo, rect))
@@ -1651,7 +1651,7 @@ bool RenderThemeIOS::supportsMeter(StyleAppearance appearance) const
     return appearance == StyleAppearance::Meter;
 }
 
-bool RenderThemeIOS::paintMeter(const RenderObject& renderer, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeIOS::paintMeter(const RenderObject& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (renderer.settings().macStyleControlsOnCatalyst())
@@ -1882,7 +1882,7 @@ void RenderThemeIOS::adjustSearchFieldDecorationPartStyle(RenderStyle& style, co
     style.setMarginEnd({ searchFieldDecorationMargin, LengthType::Fixed });
 }
 
-bool RenderThemeIOS::paintSearchFieldDecorationPart(const RenderObject& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeIOS::paintSearchFieldDecorationPart(const RenderObject& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
 #if ENABLE(MAC_STYLE_CONTROLS_ON_CATALYST)
     if (box.settings().macStyleControlsOnCatalyst())
@@ -1931,7 +1931,7 @@ void RenderThemeIOS::adjustSearchFieldResultsDecorationPartStyle(RenderStyle& st
     adjustSearchFieldDecorationPartStyle(style, element);
 }
 
-bool RenderThemeIOS::paintSearchFieldResultsDecorationPart(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeIOS::paintSearchFieldResultsDecorationPart(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
     return paintSearchFieldDecorationPart(box, paintInfo, rect);
 }
@@ -1941,7 +1941,7 @@ void RenderThemeIOS::adjustSearchFieldResultsButtonStyle(RenderStyle& style, con
     adjustSearchFieldDecorationPartStyle(style, element);
 }
 
-bool RenderThemeIOS::paintSearchFieldResultsButton(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeIOS::paintSearchFieldResultsButton(const RenderBox& box, const PaintInfo& paintInfo, const FloatRect& rect)
 {
     return paintSearchFieldDecorationPart(box, paintInfo, rect);
 }

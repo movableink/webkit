@@ -220,7 +220,7 @@ public:
     virtual String fileListNameForWidth(const FileList*, const FontCascade&, int width, bool multipleFilesAllowed) const;
 
     enum class FileUploadDecorations : bool { SingleFile, MultipleFiles };
-    virtual void paintFileUploadIconDecorations(const RenderObject& /*inputRenderer*/, const RenderObject& /*buttonRenderer*/, const PaintInfo&, const IntRect&, Icon*, FileUploadDecorations) { }
+    virtual void paintFileUploadIconDecorations(const RenderObject& /*inputRenderer*/, const RenderObject& /*buttonRenderer*/, const PaintInfo&, const FloatRect&, Icon*, FileUploadDecorations) { }
     
 #if ENABLE(SERVICE_CONTROLS)
     virtual IntSize imageControlsButtonSize() const { return IntSize(); }
@@ -284,16 +284,16 @@ protected:
     virtual bool paintRadio(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustButtonStyle(RenderStyle&, const Element*) const;
-    virtual bool paintButton(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintButton(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustColorWellStyle(RenderStyle&, const Element*) const;
-    virtual bool paintColorWell(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintColorWell(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
     virtual void paintColorWellDecorations(const RenderObject&, const PaintInfo&, const FloatRect&) { }
 
     virtual void adjustColorWellSwatchStyle(RenderStyle&, const Element*) const { }
     virtual void adjustColorWellSwatchOverlayStyle(RenderStyle&, const Element*) const { }
     virtual void adjustColorWellSwatchWrapperStyle(RenderStyle&, const Element*) const { }
-    virtual bool paintColorWellSwatch(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintColorWellSwatch(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustInnerSpinButtonStyle(RenderStyle&, const Element*) const;
     virtual bool paintInnerSpinButton(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
@@ -308,14 +308,14 @@ protected:
 
     virtual void adjustMenuListStyle(RenderStyle&, const Element*) const;
     virtual bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
-    virtual void paintMenuListDecorations(const RenderObject&, const PaintInfo&, const IntRect&) { }
+    virtual void paintMenuListDecorations(const RenderObject&, const PaintInfo&, const FloatRect&) { }
 
     virtual void adjustMenuListButtonStyle(RenderStyle&, const Element*) const { }
     virtual void paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) { }
-    virtual bool paintMenuListButton(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintMenuListButton(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustMeterStyle(RenderStyle&, const Element*) const;
-    virtual bool paintMeter(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintMeter(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
 #if ENABLE(APPLE_PAY)
     virtual void adjustApplePayButtonStyle(RenderStyle&, const Element*) const { }
@@ -336,29 +336,29 @@ protected:
 #endif
 
     virtual void adjustProgressBarStyle(RenderStyle&, const Element*) const { }
-    virtual bool paintProgressBar(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintProgressBar(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustSliderTrackStyle(RenderStyle&, const Element*) const { }
-    virtual bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintSliderTrack(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustSliderThumbStyle(RenderStyle&, const Element*) const;
-    virtual bool paintSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintSliderThumb(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustSearchFieldStyle(RenderStyle&, const Element*) const { }
     virtual bool paintSearchField(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
-    virtual void paintSearchFieldDecorations(const RenderBox&, const PaintInfo&, const IntRect&) { }
+    virtual void paintSearchFieldDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) { }
 
     virtual void adjustSearchFieldCancelButtonStyle(RenderStyle&, const Element*) const { }
-    virtual bool paintSearchFieldCancelButton(const RenderBox&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintSearchFieldCancelButton(const RenderBox&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustSearchFieldDecorationPartStyle(RenderStyle&, const Element*) const { }
-    virtual bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustSearchFieldResultsDecorationPartStyle(RenderStyle&, const Element*) const { }
-    virtual bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const FloatRect&) { return true; }
 
     virtual void adjustSearchFieldResultsButtonStyle(RenderStyle&, const Element*) const { }
-    virtual bool paintSearchFieldResultsButton(const RenderBox&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintSearchFieldResultsButton(const RenderBox&, const PaintInfo&, const FloatRect&) { return true; }
 
     void adjustSwitchStyleDisplay(RenderStyle&) const;
     virtual void adjustSwitchStyle(RenderStyle&, const Element*) const;

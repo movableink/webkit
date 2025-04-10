@@ -865,7 +865,6 @@ bool RenderTheme::paint(const RenderBox& box, const PaintInfo& paintInfo, const 
     if (UNLIKELY(!canPaint(paintInfo, box.settings(), appearance)))
         return false;
 
-    IntRect integralSnappedRect = snappedIntRect(rect);
     float deviceScaleFactor = box.document().deviceScaleFactor();
     FloatRect devicePixelSnappedRect = snapRectToDevicePixels(rect, deviceScaleFactor);
 
@@ -875,28 +874,28 @@ bool RenderTheme::paint(const RenderBox& box, const PaintInfo& paintInfo, const 
     case StyleAppearance::Radio:
         return paintRadio(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::ColorWell:
-        return paintColorWell(box, paintInfo, integralSnappedRect);
+        return paintColorWell(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::ColorWellSwatch:
-        return paintColorWellSwatch(box, paintInfo, integralSnappedRect);
+        return paintColorWellSwatch(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::PushButton:
     case StyleAppearance::SquareButton:
     case StyleAppearance::DefaultButton:
     case StyleAppearance::Button:
-        return paintButton(box, paintInfo, integralSnappedRect);
+        return paintButton(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::Menulist:
         return paintMenuList(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::MenulistButton:
-        return paintMenuListButton(box, paintInfo, integralSnappedRect);
+        return paintMenuListButton(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::Meter:
-        return paintMeter(box, paintInfo, integralSnappedRect);
+        return paintMeter(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::ProgressBar:
-        return paintProgressBar(box, paintInfo, integralSnappedRect);
+        return paintProgressBar(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::SliderHorizontal:
     case StyleAppearance::SliderVertical:
-        return paintSliderTrack(box, paintInfo, integralSnappedRect);
+        return paintSliderTrack(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::SliderThumbHorizontal:
     case StyleAppearance::SliderThumbVertical:
-        return paintSliderThumb(box, paintInfo, integralSnappedRect);
+        return paintSliderThumb(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::TextField:
     case StyleAppearance::TextArea:
     case StyleAppearance::Listbox:
@@ -906,13 +905,13 @@ bool RenderTheme::paint(const RenderBox& box, const PaintInfo& paintInfo, const 
     case StyleAppearance::SearchField:
         return paintSearchField(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::SearchFieldCancelButton:
-        return paintSearchFieldCancelButton(box, paintInfo, integralSnappedRect);
+        return paintSearchFieldCancelButton(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::SearchFieldDecoration:
-        return paintSearchFieldDecorationPart(box, paintInfo, integralSnappedRect);
+        return paintSearchFieldDecorationPart(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::SearchFieldResultsDecoration:
-        return paintSearchFieldResultsDecorationPart(box, paintInfo, integralSnappedRect);
+        return paintSearchFieldResultsDecorationPart(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::SearchFieldResultsButton:
-        return paintSearchFieldResultsButton(box, paintInfo, integralSnappedRect);
+        return paintSearchFieldResultsButton(box, paintInfo, devicePixelSnappedRect);
     case StyleAppearance::Switch:
         return true;
     case StyleAppearance::SwitchThumb:
@@ -921,14 +920,14 @@ bool RenderTheme::paint(const RenderBox& box, const PaintInfo& paintInfo, const 
         return paintSwitchTrack(box, paintInfo, devicePixelSnappedRect);
 #if ENABLE(SERVICE_CONTROLS)
     case StyleAppearance::ImageControlsButton:
-        return paintImageControlsButton(box, paintInfo, integralSnappedRect);
+        return paintImageControlsButton(box, paintInfo, snappedIntRect(rect));
 #endif
     case StyleAppearance::ListButton:
         return paintListButton(box, paintInfo, devicePixelSnappedRect);
 #if ENABLE(ATTACHMENT_ELEMENT)
     case StyleAppearance::Attachment:
     case StyleAppearance::BorderlessAttachment:
-        return paintAttachment(box, paintInfo, integralSnappedRect);
+        return paintAttachment(box, paintInfo, snappedIntRect(rect));
 #endif
     default:
         break;
@@ -991,10 +990,6 @@ void RenderTheme::paintDecorations(const RenderBox& box, const PaintInfo& paintI
     if (paintInfo.context().paintingDisabled())
         return;
 
-    // FIXME: Investigate whether all controls can use a device-pixel-snapped rect
-    // rather than an integral-snapped rect.
-
-    IntRect integralSnappedRect = snappedIntRect(rect);
     FloatRect devicePixelSnappedRect = snapRectToDevicePixels(rect, box.document().deviceScaleFactor());
 
     // Call the appropriate paint method based off the appearance value.
@@ -1012,11 +1007,11 @@ void RenderTheme::paintDecorations(const RenderBox& box, const PaintInfo& paintI
         paintColorWellDecorations(box, paintInfo, devicePixelSnappedRect);
         break;
     case StyleAppearance::Menulist:
-        paintMenuListDecorations(box, paintInfo, integralSnappedRect);
+        paintMenuListDecorations(box, paintInfo, devicePixelSnappedRect);
         break;
     case StyleAppearance::SliderThumbHorizontal:
     case StyleAppearance::SearchField:
-        paintSearchFieldDecorations(box, paintInfo, integralSnappedRect);
+        paintSearchFieldDecorations(box, paintInfo, devicePixelSnappedRect);
         break;
     case StyleAppearance::Meter:
     case StyleAppearance::ProgressBar:

@@ -58,16 +58,16 @@ protected:
     bool paintRadio(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustButtonStyle(RenderStyle&, const Element*) const override;
-    bool paintButton(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintButton(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustColorWellStyle(RenderStyle&, const Element*) const override;
-    bool paintColorWell(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintColorWell(const RenderObject&, const PaintInfo&, const FloatRect&) override;
     void paintColorWellDecorations(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustColorWellSwatchStyle(RenderStyle&, const Element*) const override;
     void adjustColorWellSwatchOverlayStyle(RenderStyle&, const Element*) const override;
     void adjustColorWellSwatchWrapperStyle(RenderStyle&, const Element*) const override;
-    bool paintColorWellSwatch(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintColorWellSwatch(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustInnerSpinButtonStyle(RenderStyle&, const Element*) const override;
     bool paintInnerSpinButton(const RenderObject&, const PaintInfo&, const FloatRect&) override;
@@ -82,43 +82,43 @@ protected:
 
     void adjustMenuListStyle(RenderStyle&, const Element*) const override;
     bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) override;
-    void paintMenuListDecorations(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    void paintMenuListDecorations(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustMenuListButtonStyle(RenderStyle&, const Element*) const override;
     void paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) override;
-    bool paintMenuListButton(const RenderObject&, const PaintInfo&, const IntRect&) final;
+    bool paintMenuListButton(const RenderObject&, const PaintInfo&, const FloatRect&) final;
 
     void adjustMeterStyle(RenderStyle&, const Element*) const override;
-    bool paintMeter(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintMeter(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustListButtonStyle(RenderStyle&, const Element*) const override;
     bool paintListButton(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustProgressBarStyle(RenderStyle&, const Element*) const override;
-    bool paintProgressBar(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintProgressBar(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustSliderTrackStyle(RenderStyle&, const Element*) const override;
-    bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintSliderTrack(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustSliderThumbSize(RenderStyle&, const Element*) const override;
     void adjustSliderThumbStyle(RenderStyle&, const Element*) const override;
-    bool paintSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintSliderThumb(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustSearchFieldStyle(RenderStyle&, const Element*) const override;
     bool paintSearchField(const RenderObject&, const PaintInfo&, const FloatRect&) override;
-    void paintSearchFieldDecorations(const RenderBox&, const PaintInfo&, const IntRect&) override;
+    void paintSearchFieldDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) override;
 
     void adjustSearchFieldCancelButtonStyle(RenderStyle&, const Element*) const override;
-    bool paintSearchFieldCancelButton(const RenderBox&, const PaintInfo&, const IntRect&) override;
+    bool paintSearchFieldCancelButton(const RenderBox&, const PaintInfo&, const FloatRect&) override;
 
     void adjustSearchFieldDecorationPartStyle(RenderStyle&, const Element*) const override;
-    bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustSearchFieldResultsDecorationPartStyle(RenderStyle&, const Element*) const override;
-    bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const IntRect&) override;
+    bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const FloatRect&) override;
 
     void adjustSearchFieldResultsButtonStyle(RenderStyle&, const Element*) const override;
-    bool paintSearchFieldResultsButton(const RenderBox&, const PaintInfo&, const IntRect&) override;
+    bool paintSearchFieldResultsButton(const RenderBox&, const PaintInfo&, const FloatRect&) override;
 
     void adjustSwitchStyle(RenderStyle&, const Element*) const override;
     bool paintSwitchThumb(const RenderObject&, const PaintInfo&, const FloatRect&) override;
@@ -138,7 +138,7 @@ private:
 
     bool shouldHaveCapsLockIndicator(const HTMLInputElement&) const final;
 
-    void paintFileUploadIconDecorations(const RenderObject& inputRenderer, const RenderObject& buttonRenderer, const PaintInfo&, const IntRect&, Icon*, FileUploadDecorations) override;
+    void paintFileUploadIconDecorations(const RenderObject& inputRenderer, const RenderObject& buttonRenderer, const PaintInfo&, const FloatRect&, Icon*, FileUploadDecorations) override;
 
     Seconds animationRepeatIntervalForProgressBar(const RenderProgress&) const final;
 
