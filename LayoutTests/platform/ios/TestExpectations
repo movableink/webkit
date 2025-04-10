@@ -7833,3 +7833,12 @@ webkit.org/b/291115 imported/w3c/web-platform-tests/websockets/back-forward-cach
 webkit.org/b/290568 fast/multicol/simple-line-layout-line-index-after-strut.html [ Crash ImageOnlyFailure ]
 
 webkit.org/b/291278 http/tests/IndexedDB/storage-limit-1.https.html [ Pass Failure ]
+
+# webkit.org/b/291345 [ iOS ] 7x imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-*.https.html are flaky failures. 
+imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register.https.html [ Pass Failure ]
+imported/w3c/web-platform-tests/trusted-types/ServiceWorker-block-eval-function-constructor.https.html [ Pass Failure ]
+imported/w3c/web-platform-tests/trusted-types/ServiceWorker-eval.https.html [ Pass Failure ]
+imported/w3c/web-platform-tests/trusted-types/ServiceWorker-importScripts.https.html [ Pass Failure ]
+imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register-from-DedicatedWorker.https.html [ Pass Failure ]
+imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register-from-ServiceWorker.https.html [ Pass Failure ]
+imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register-from-SharedWorker.https.html [ Pass Failure ]
