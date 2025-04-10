@@ -1,9 +1,7 @@
 API/JSObjectRef.cpp
 BytecodeStructs.h
 assembler/Printer.h
-b3/B3CaseCollection.h
 b3/B3StackmapGenerationParams.h
-b3/B3SwitchValue.h
 b3/B3Value.h
 b3/B3VariableValue.h
 b3/air/AirAllocateRegistersAndStackAndGenerateCode.h
@@ -34,7 +32,6 @@ heap/HeapInlines.h
 heap/HeapProfiler.h
 heap/HeapSnapshotBuilder.h
 heap/MarkedBlock.h
-heap/MarkingConstraintSolver.h
 heap/SlotVisitor.h
 heap/WeakImpl.h
 heap/WeakSet.h
@@ -62,19 +59,6 @@ runtime/DumpContext.h
 runtime/FunctionExecutable.h
 runtime/FunctionExecutableInlines.h
 runtime/GetPutInfo.h
-runtime/IntlCollator.cpp
-runtime/IntlDateTimeFormat.cpp
-runtime/IntlDurationFormat.cpp
-runtime/IntlListFormat.cpp
-runtime/IntlLocale.cpp
-runtime/IntlNumberFormat.cpp
-runtime/IntlNumberFormatInlines.h
-runtime/IntlObject.cpp
-runtime/IntlPluralRules.cpp
-runtime/IntlRelativeTimeFormat.cpp
-runtime/IntlSegmentIterator.cpp
-runtime/IntlSegmenter.cpp
-runtime/IntlSegments.cpp
 runtime/JSArrayBufferConstructor.cpp
 runtime/JSCConfig.h
 runtime/JSGlobalObject.h
@@ -84,7 +68,6 @@ runtime/MicrotaskQueue.h
 runtime/NumericStrings.h
 runtime/PropertySlot.h
 runtime/SmallStrings.h
-runtime/StringPrototype.cpp
 runtime/StringReplaceCache.h
 runtime/StringSplitCache.h
 runtime/Structure.h

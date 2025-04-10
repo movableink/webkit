@@ -1,12 +1,7 @@
-<<<<<<< HEAD
-=======
->>>>>>> f1f4378deaa5 (Update safer C++ expectations.)
 Platform/IPC/Connection.h
 Platform/IPC/MessageSenderInlines.h
 Platform/classifier/cocoa/ResourceLoadStatisticsClassifierCocoa.cpp
 Platform/cocoa/WebPrivacyHelpers.h
-UIProcess/API/C/WKPage.cpp
-UIProcess/Automation/WebAutomationSession.h
 UIProcess/WebProcessPool.h
 WebProcess/Extensions/Bindings/JSWebExtensionWrapper.h
 WebProcess/WebCoreSupport/WebLocalFrameLoaderClient.cpp
