@@ -25,6 +25,7 @@
 #include "config.h"
 #include "CSSPropertyParserConsumer+URL.h"
 
+#include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSParserTokenRangeGuard.h"
 #include "CSSPrimitiveValue.h"
