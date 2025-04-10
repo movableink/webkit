@@ -445,12 +445,12 @@ inline AXTextMarkerRange::AXTextMarkerRange(std::optional<AXID> treeID, std::opt
 
 inline bool operator<(const AXTextMarkerRange& range1, const AXTextMarkerRange& range2)
 {
-    return is_lt(range1.m_start <=> range2.m_start) || is_lt(range1.m_end <=> range2.m_end);
+    return range1.m_start < range2.m_start || range1.m_end < range2.m_end;
 }
 
 inline bool operator>(const AXTextMarkerRange& range1, const AXTextMarkerRange& range2)
 {
-    return is_gt(range1.m_start <=> range2.m_start) || is_gt(range1.m_end <=> range2.m_end);
+    return range1.m_start > range2.m_start || range1.m_end > range2.m_end;
 }
 
 inline bool operator<=(const AXTextMarkerRange& range1, const AXTextMarkerRange& range2)
