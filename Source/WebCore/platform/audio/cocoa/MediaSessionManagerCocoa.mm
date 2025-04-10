@@ -229,7 +229,7 @@ void MediaSessionManagerCocoa::beginInterruption(PlatformMediaSession::Interrupt
 {
     if (type == PlatformMediaSession::InterruptionType::SystemInterruption) {
         forEachSession([] (auto& session) {
-            session.clearHasPlayedAudiblySinceLastInterruption();
+            session.setHasPlayedAudiblySinceLastInterruption(false);
         });
     }
 
@@ -271,7 +271,7 @@ void MediaSessionManagerCocoa::scheduleSessionStatusUpdate()
     });
 }
 
-bool MediaSessionManagerCocoa::sessionWillBeginPlayback(PlatformMediaSession& session)
+bool MediaSessionManagerCocoa::sessionWillBeginPlayback(PlatformMediaSessionInterface& session)
 {
     if (!PlatformMediaSessionManager::sessionWillBeginPlayback(session))
         return false;
@@ -280,12 +280,12 @@ bool MediaSessionManagerCocoa::sessionWillBeginPlayback(PlatformMediaSession& se
     return true;
 }
 
-void MediaSessionManagerCocoa::sessionDidEndRemoteScrubbing(PlatformMediaSession&)
+void MediaSessionManagerCocoa::sessionDidEndRemoteScrubbing(PlatformMediaSessionInterface&)
 {
     scheduleSessionStatusUpdate();
 }
 
-void MediaSessionManagerCocoa::addSession(PlatformMediaSession& session)
+void MediaSessionManagerCocoa::addSession(PlatformMediaSessionInterface& session)
 {
     m_nowPlayingManager->addClient(*this);
 
@@ -297,7 +297,7 @@ void MediaSessionManagerCocoa::addSession(PlatformMediaSession& session)
     PlatformMediaSessionManager::addSession(session);
 }
 
-void MediaSessionManagerCocoa::removeSession(PlatformMediaSession& session)
+void MediaSessionManagerCocoa::removeSession(PlatformMediaSessionInterface& session)
 {
     PlatformMediaSessionManager::removeSession(session);
 
@@ -309,14 +309,14 @@ void MediaSessionManagerCocoa::removeSession(PlatformMediaSession& session)
     scheduleSessionStatusUpdate();
 }
 
-void MediaSessionManagerCocoa::setCurrentSession(PlatformMediaSession& session)
+void MediaSessionManagerCocoa::setCurrentSession(PlatformMediaSessionInterface& session)
 {
     PlatformMediaSessionManager::setCurrentSession(session);
 
     m_nowPlayingManager->updateSupportedCommands();
 }
 
-void MediaSessionManagerCocoa::sessionWillEndPlayback(PlatformMediaSession& session, DelayCallingUpdateNowPlaying delayCallingUpdateNowPlaying)
+void MediaSessionManagerCocoa::sessionWillEndPlayback(PlatformMediaSessionInterface& session, DelayCallingUpdateNowPlaying delayCallingUpdateNowPlaying)
 {
     PlatformMediaSessionManager::sessionWillEndPlayback(session, delayCallingUpdateNowPlaying);
 
@@ -349,7 +349,7 @@ void MediaSessionManagerCocoa::sessionWillEndPlayback(PlatformMediaSession& sess
 #endif
 }
 
-void MediaSessionManagerCocoa::clientCharacteristicsChanged(PlatformMediaSession& session, bool)
+void MediaSessionManagerCocoa::clientCharacteristicsChanged(PlatformMediaSessionInterface& session, bool)
 {
     MEDIASESSIONMANAGER_RELEASE_LOG(MEDIASESSIONMANAGERCOCOA_CLIENTCHARACTERISTICSCHANGED, session.logIdentifier());
     scheduleSessionStatusUpdate();
@@ -470,14 +470,14 @@ void MediaSessionManagerCocoa::setNowPlayingInfo(bool setAsNowPlayingApplication
     }
 }
 
-WeakPtr<PlatformMediaSession> MediaSessionManagerCocoa::nowPlayingEligibleSession()
+WeakPtr<PlatformMediaSessionInterface> MediaSessionManagerCocoa::nowPlayingEligibleSession()
 {
     return bestEligibleSessionForRemoteControls([](auto& session) {
         return session.isNowPlayingEligible();
     }, PlatformMediaSession::PlaybackControlsPurpose::NowPlaying);
 }
 
-void MediaSessionManagerCocoa::updateActiveNowPlayingSession(CheckedPtr<PlatformMediaSession> activeNowPlayingSession)
+void MediaSessionManagerCocoa::updateActiveNowPlayingSession(RefPtr<PlatformMediaSessionInterface> activeNowPlayingSession)
 {
     forEachSession([&](auto& session) {
         session.setActiveNowPlayingSession(&session == activeNowPlayingSession.get());
@@ -492,7 +492,7 @@ void MediaSessionManagerCocoa::updateNowPlayingInfo()
     BEGIN_BLOCK_OBJC_EXCEPTIONS
 
     std::optional<NowPlayingInfo> nowPlayingInfo;
-    CheckedPtr session = nowPlayingEligibleSession().get();
+    RefPtr session = nowPlayingEligibleSession().get();
     if (session)
         nowPlayingInfo = session->nowPlayingInfo();
 

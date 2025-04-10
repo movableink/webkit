@@ -139,7 +139,7 @@ void MediaSessionManageriOS::updatePresentingApplicationPIDIfNecessary(ProcessID
 #endif
 }
 
-bool MediaSessionManageriOS::sessionWillBeginPlayback(PlatformMediaSession& session)
+bool MediaSessionManageriOS::sessionWillBeginPlayback(PlatformMediaSessionInterface& session)
 {
     if (!MediaSessionManagerCocoa::sessionWillBeginPlayback(session))
         return false;
@@ -157,7 +157,7 @@ bool MediaSessionManageriOS::sessionWillBeginPlayback(PlatformMediaSession& sess
     return true;
 }
 
-void MediaSessionManageriOS::sessionWillEndPlayback(PlatformMediaSession& session, DelayCallingUpdateNowPlaying delayCallingUpdateNowPlaying)
+void MediaSessionManageriOS::sessionWillEndPlayback(PlatformMediaSessionInterface& session, DelayCallingUpdateNowPlaying delayCallingUpdateNowPlaying)
 {
     MediaSessionManagerCocoa::sessionWillEndPlayback(session, delayCallingUpdateNowPlaying);
 
@@ -225,7 +225,7 @@ void MediaSessionManageriOS::activeVideoRouteDidChange(SupportsAirPlayVideo supp
     m_playbackTargetSupportsAirPlayVideo = supportsAirPlayVideo == SupportsAirPlayVideo::Yes;
 #endif
 
-    CheckedPtr nowPlayingSession = nowPlayingEligibleSession().get();
+    RefPtr nowPlayingSession = nowPlayingEligibleSession().get();
     if (!nowPlayingSession)
         return;
 

@@ -2018,6 +2018,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/audio/NowPlayingMetadataObserver.h
     platform/audio/PlatformAudioData.h
     platform/audio/PlatformMediaSession.h
+    platform/audio/PlatformMediaSessionInterface.h
     platform/audio/PlatformMediaSessionManager.h
     platform/audio/PlatformRawAudioData.h
     platform/audio/PushPullFIFO.h

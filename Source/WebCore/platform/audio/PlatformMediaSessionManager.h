@@ -63,10 +63,10 @@ public:
 
     virtual ~PlatformMediaSessionManager();
 
-    void addSession(PlatformMediaSession&) override;
-    void removeSession(PlatformMediaSession&) override;
-    void setCurrentSession(PlatformMediaSession&) override;
-    PlatformMediaSession* currentSession() const final;
+    void addSession(PlatformMediaSessionInterface&) override;
+    void removeSession(PlatformMediaSessionInterface&) override;
+    void setCurrentSession(PlatformMediaSessionInterface&) override;
+    RefPtr<PlatformMediaSessionInterface> currentSession() const final;
 
     bool activeAudioSessionRequired() const final;
     bool hasActiveAudioSession() const final;
@@ -99,12 +99,12 @@ public:
     WEBCORE_EXPORT MediaSessionRestrictions restrictions(PlatformMediaSession::MediaType) final;
     void resetRestrictions() override;
 
-    bool sessionWillBeginPlayback(PlatformMediaSession&) override;
-    void sessionWillEndPlayback(PlatformMediaSession&, DelayCallingUpdateNowPlaying) override;
-    void sessionStateChanged(PlatformMediaSession&) override;
+    bool sessionWillBeginPlayback(PlatformMediaSessionInterface&) override;
+    void sessionWillEndPlayback(PlatformMediaSessionInterface&, DelayCallingUpdateNowPlaying) override;
+    void sessionStateChanged(PlatformMediaSessionInterface&) override;
     void sessionCanProduceAudioChanged() override;
 
-    void sessionIsPlayingToWirelessPlaybackTargetChanged(PlatformMediaSession&) final;
+    void sessionIsPlayingToWirelessPlaybackTargetChanged(PlatformMediaSessionInterface&) final;
 
     WEBCORE_EXPORT void setIsPlayingToAutomotiveHeadUnit(bool) final;
     bool isPlayingToAutomotiveHeadUnit() const final { return m_isPlayingToAutomotiveHeadUnit; }
@@ -112,7 +112,7 @@ public:
     WEBCORE_EXPORT void setSupportsSpatialAudioPlayback(bool) final;
     std::optional<bool> supportsSpatialAudioPlaybackForConfiguration(const MediaConfiguration&) override;
 
-    void forEachMatchingSession(NOESCAPE const Function<bool(const PlatformMediaSession&)>& predicate, NOESCAPE const Function<void(PlatformMediaSession&)>& matchingCallback);
+    void forEachMatchingSession(NOESCAPE const Function<bool(const PlatformMediaSessionInterface&)>& predicate, NOESCAPE const Function<void(PlatformMediaSessionInterface&)>& matchingCallback);
 
     bool processIsSuspended() const final { return m_processIsSuspended; }
 
@@ -131,7 +131,7 @@ public:
 
     bool isApplicationInBackground() const final { return m_isApplicationInBackground; }
 
-    WeakPtr<PlatformMediaSession> bestEligibleSessionForRemoteControls(NOESCAPE const Function<bool(const PlatformMediaSession&)>&, PlatformMediaSession::PlaybackControlsPurpose) final;
+    WeakPtr<PlatformMediaSessionInterface> bestEligibleSessionForRemoteControls(NOESCAPE const Function<bool(const PlatformMediaSessionInterface&)>&, PlatformMediaSession::PlaybackControlsPurpose) final;
 
     std::optional<NowPlayingInfo> nowPlayingInfo() const override;
     WEBCORE_EXPORT void addNowPlayingMetadataObserver(const NowPlayingMetadataObserver&) final;
@@ -142,9 +142,9 @@ protected:
     static std::unique_ptr<PlatformMediaSessionManager> create();
     PlatformMediaSessionManager();
 
-    void forEachSession(NOESCAPE const Function<void(PlatformMediaSession&)>&);
-    void forEachSessionInGroup(std::optional<MediaSessionGroupIdentifier>, NOESCAPE const Function<void(PlatformMediaSession&)>&);
-    bool anyOfSessions(NOESCAPE const Function<bool(const PlatformMediaSession&)>&) const;
+    void forEachSession(NOESCAPE const Function<void(PlatformMediaSessionInterface&)>&);
+    void forEachSessionInGroup(std::optional<MediaSessionGroupIdentifier>, NOESCAPE const Function<void(PlatformMediaSessionInterface&)>&);
+    bool anyOfSessions(NOESCAPE const Function<bool(const PlatformMediaSessionInterface&)>&) const;
 
     void maybeDeactivateAudioSession();
     bool maybeActivateAudioSession();
@@ -174,8 +174,8 @@ private:
     void scheduleUpdateSessionState();
     virtual void updateSessionState() { }
 
-    Vector<WeakPtr<PlatformMediaSession>> sessionsMatching(NOESCAPE const Function<bool(const PlatformMediaSession&)>&) const;
-    WeakPtr<PlatformMediaSession> firstSessionMatching(NOESCAPE const Function<bool(const PlatformMediaSession&)>&) const;
+    Vector<WeakPtr<PlatformMediaSessionInterface>> sessionsMatching(NOESCAPE const Function<bool(const PlatformMediaSessionInterface&)>&) const;
+    WeakPtr<PlatformMediaSessionInterface> firstSessionMatching(NOESCAPE const Function<bool(const PlatformMediaSessionInterface&)>&) const;
 
 #if !RELEASE_LOG_DISABLED
     void scheduleStateLog();
@@ -183,7 +183,7 @@ private:
 #endif
 
     std::array<MediaSessionRestrictions, static_cast<unsigned>(PlatformMediaSession::MediaType::WebAudio) + 1> m_restrictions;
-    mutable Vector<WeakPtr<PlatformMediaSession>> m_sessions;
+    mutable Vector<WeakPtr<PlatformMediaSessionInterface>> m_sessions;
 
     std::optional<PlatformMediaSession::InterruptionType> m_currentInterruption;
     mutable bool m_isApplicationInBackground { false };

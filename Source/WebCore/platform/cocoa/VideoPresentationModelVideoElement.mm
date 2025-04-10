@@ -217,7 +217,7 @@ void VideoPresentationModelVideoElement::videoInteractedWith()
     if (!videoElement)
         return;
 
-    CheckedPtr mediaSession = videoElement->mediaSessionIfExists();
+    RefPtr mediaSession = videoElement->mediaSessionIfExists();
     if (!mediaSession || (!mediaSession->mostRecentUserInteractionTime() && mediaSession->hasBehaviorRestriction(MediaElementSession::RequireUserGestureForAudioRateChange)))
         return;
 

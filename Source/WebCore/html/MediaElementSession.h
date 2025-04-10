@@ -72,6 +72,11 @@ enum class MediaSessionPlaybackState : uint8_t;
 class MediaElementSession final : public PlatformMediaSession {
     WTF_MAKE_TZONE_ALLOCATED(MediaElementSession);
 public:
+    static Ref<MediaElementSession> create(HTMLMediaElement& element)
+    {
+        return adoptRef(*new MediaElementSession(element));
+    }
+
     explicit MediaElementSession(HTMLMediaElement&);
     virtual ~MediaElementSession();
 
@@ -276,7 +281,7 @@ struct LogArgument<WebCore::MediaPlaybackDenialReason> {
 
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::MediaElementSession)
-static bool isType(const WebCore::PlatformMediaSession& session) { return WebCore::MediaElementSession::isMediaElementSessionMediaType(session.mediaType()); }
+static bool isType(const WebCore::PlatformMediaSessionInterface& session) { return WebCore::MediaElementSession::isMediaElementSessionMediaType(session.mediaType()); }
 SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(VIDEO)

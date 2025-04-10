@@ -129,7 +129,7 @@ ExceptionOr<Ref<AudioContext>> AudioContext::create(Document& document, AudioCon
 AudioContext::AudioContext(Document& document, const AudioContextOptions& contextOptions)
     : BaseAudioContext(document)
     , m_destinationNode(makeUniqueRefWithoutRefCountedCheck<DefaultAudioDestinationNode>(*this, contextOptions.sampleRate))
-    , m_mediaSession(PlatformMediaSession::create(PlatformMediaSessionManager::singleton(), *this))
+    , m_mediaSession(PlatformMediaSession::create(*this))
     , m_currentIdentifier(MediaUniqueIdentifier::generate())
 {
     constructCommon();
@@ -594,12 +594,12 @@ std::optional<NowPlayingInfo> AudioContext::nowPlayingInfo() const
     return nowPlayingInfo;
 }
 
-WeakPtr<PlatformMediaSession> AudioContext::selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSession>>& sessions, PlatformMediaSession::PlaybackControlsPurpose purpose)
+WeakPtr<PlatformMediaSessionInterface> AudioContext::selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSessionInterface>>& sessions, PlatformMediaSession::PlaybackControlsPurpose purpose)
 {
     if (purpose != PlatformMediaSession::PlaybackControlsPurpose::NowPlaying)
         return nullptr;
 
-    WeakPtr<PlatformMediaSession> audibleSession;
+    WeakPtr<PlatformMediaSessionInterface> audibleSession;
     for (auto& session : sessions) {
         if (!isNowPlayingEligible())
             continue;

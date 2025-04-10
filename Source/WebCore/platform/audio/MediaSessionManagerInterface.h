@@ -58,8 +58,8 @@ public:
     WEBCORE_EXPORT MediaSessionManagerInterface() = default;
     WEBCORE_EXPORT virtual ~MediaSessionManagerInterface() = default;
 
-    virtual void addSession(PlatformMediaSession&) = 0;
-    virtual void removeSession(PlatformMediaSession&) = 0;
+    virtual void addSession(PlatformMediaSessionInterface&) = 0;
+    virtual void removeSession(PlatformMediaSessionInterface&) = 0;
 
     virtual bool activeAudioSessionRequired() const = 0;
     virtual bool hasActiveAudioSession() const = 0;
@@ -105,20 +105,20 @@ public:
     virtual MediaSessionRestrictions restrictions(PlatformMediaSession::MediaType) = 0;
     virtual void resetRestrictions() = 0;
 
-    virtual bool sessionWillBeginPlayback(PlatformMediaSession&) = 0;
-    virtual void sessionWillEndPlayback(PlatformMediaSession&, DelayCallingUpdateNowPlaying) = 0;
-    virtual void sessionStateChanged(PlatformMediaSession&) = 0;
-    virtual void sessionDidEndRemoteScrubbing(PlatformMediaSession&) { }
+    virtual bool sessionWillBeginPlayback(PlatformMediaSessionInterface&) = 0;
+    virtual void sessionWillEndPlayback(PlatformMediaSessionInterface&, DelayCallingUpdateNowPlaying) = 0;
+    virtual void sessionStateChanged(PlatformMediaSessionInterface&) = 0;
+    virtual void sessionDidEndRemoteScrubbing(PlatformMediaSessionInterface&) { }
     virtual void sessionCanProduceAudioChanged() = 0;
-    virtual void clientCharacteristicsChanged(PlatformMediaSession&, bool) { }
+    virtual void clientCharacteristicsChanged(PlatformMediaSessionInterface&, bool) { }
 
     virtual void configureWirelessTargetMonitoring() { }
     virtual bool hasWirelessTargetsAvailable() { return false; }
     virtual bool isMonitoringWirelessTargets() const { return false; }
-    virtual void sessionIsPlayingToWirelessPlaybackTargetChanged(PlatformMediaSession&) = 0;
+    virtual void sessionIsPlayingToWirelessPlaybackTargetChanged(PlatformMediaSessionInterface&) = 0;
 
-    virtual void setCurrentSession(PlatformMediaSession&) = 0;
-    virtual PlatformMediaSession* currentSession() const = 0;
+    virtual void setCurrentSession(PlatformMediaSessionInterface&) = 0;
+    virtual RefPtr<PlatformMediaSessionInterface> currentSession() const = 0;
 
     virtual void setIsPlayingToAutomotiveHeadUnit(bool) = 0;
     virtual bool isPlayingToAutomotiveHeadUnit() const = 0;
@@ -147,7 +147,7 @@ public:
     virtual void scheduleSessionStatusUpdate() { }
     virtual void resetSessionState() { };
 
-    virtual WeakPtr<PlatformMediaSession> bestEligibleSessionForRemoteControls(NOESCAPE const Function<bool(const PlatformMediaSession&)>&, PlatformMediaSession::PlaybackControlsPurpose) = 0;
+    virtual WeakPtr<PlatformMediaSessionInterface> bestEligibleSessionForRemoteControls(NOESCAPE const Function<bool(const PlatformMediaSessionInterface&)>&, PlatformMediaSession::PlaybackControlsPurpose) = 0;
 
     virtual void updatePresentingApplicationPIDIfNecessary(ProcessID) { }
 };

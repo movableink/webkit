@@ -631,8 +631,7 @@ HTMLMediaElement::HTMLMediaElement(const QualifiedName& tagName, Document& docum
 void HTMLMediaElement::initializeMediaSession()
 {
     ASSERT(!m_mediaSession);
-    m_mediaSession = makeUnique<MediaElementSession>(*this);
-
+    m_mediaSession = MediaElementSession::create(*this);
     m_mediaSession->addBehaviorRestriction(MediaElementSession::RequireUserGestureForFullscreen);
     m_mediaSession->addBehaviorRestriction(MediaElementSession::RequirePageConsentToLoadMedia);
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
@@ -812,7 +811,7 @@ std::optional<NowPlayingInfo> HTMLMediaElement::nowPlayingInfo() const
     return m_mediaSession->computeNowPlayingInfo();
 }
 
-WeakPtr<PlatformMediaSession> HTMLMediaElement::selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSession>>& sessions, PlatformMediaSession::PlaybackControlsPurpose purpose)
+WeakPtr<PlatformMediaSessionInterface> HTMLMediaElement::selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSessionInterface>>& sessions, PlatformMediaSession::PlaybackControlsPurpose purpose)
 {
     if (!sessions.size())
         return nullptr;
@@ -5062,13 +5061,6 @@ void HTMLMediaElement::forgetResourceSpecificTracks()
         removeVideoTrack(*m_videoTracks->lastItem());
 }
 
-#if !RELEASE_LOG_DISABLED
-Ref<Logger> HTMLMediaElement::protectedLogger() const
-{
-    return *m_logger;
-}
-#endif
-
 #if ENABLE(WEB_AUDIO)
 MediaElementAudioSourceNode* HTMLMediaElement::audioSourceNode()
 {
@@ -6799,7 +6791,7 @@ bool HTMLMediaElement::virtualHasPendingActivity() const
         if (isPlaying())
             return true;
 
-        auto* mediaSession = this->mediaSessionIfExists();
+        RefPtr mediaSession = this->mediaSessionIfExists();
         if (!mediaSession)
             return false;
 
@@ -8917,14 +8909,14 @@ PlatformMediaSession::MediaType HTMLMediaElement::presentationType() const
 PlatformMediaSession::DisplayType HTMLMediaElement::displayType() const
 {
     if (m_videoFullscreenMode == VideoFullscreenModeStandard)
-        return PlatformMediaSession::Fullscreen;
+        return PlatformMediaSession::DisplayType::Fullscreen;
     if (m_videoFullscreenMode & VideoFullscreenModePictureInPicture)
-        return PlatformMediaSession::Optimized;
+        return PlatformMediaSession::DisplayType::Optimized;
     if (m_videoFullscreenMode == VideoFullscreenModeNone)
-        return PlatformMediaSession::Normal;
+        return PlatformMediaSession::DisplayType::Normal;
 
     ASSERT_NOT_REACHED();
-    return PlatformMediaSession::Normal;
+    return PlatformMediaSession::DisplayType::Normal;
 }
 
 bool HTMLMediaElement::canProduceAudio() const

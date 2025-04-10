@@ -53,7 +53,7 @@ class AudioContext final
 public:
     // Create an AudioContext for rendering to the audio hardware.
     static ExceptionOr<Ref<AudioContext>> create(Document&, AudioContextOptions&&);
-    ~AudioContext();
+    virtual ~AudioContext();
 
     void ref() const final { ThreadSafeRefCounted::ref(); }
     void deref() const final { ThreadSafeRefCounted::deref(); }
@@ -140,17 +140,17 @@ private:
     bool canReceiveRemoteControlCommands() const final;
     void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&) final;
     bool supportsSeeking() const final { return false; }
-    bool shouldOverrideBackgroundPlaybackRestriction(PlatformMediaSession::InterruptionType) const final;
     bool canProduceAudio() const final { return true; }
+    std::optional<MediaSessionGroupIdentifier> mediaSessionGroupIdentifier() const final;
+    void isActiveNowPlayingSessionChanged() final;
+    std::optional<ProcessID> mediaSessionPresentingApplicationPID() const final;
+    bool shouldOverrideBackgroundPlaybackRestriction(PlatformMediaSession::InterruptionType) const final;
     bool isSuspended() const final;
     bool isPlaying() const final;
     bool isAudible() const final;
-    std::optional<MediaSessionGroupIdentifier> mediaSessionGroupIdentifier() const final;
     bool isNowPlayingEligible() const final;
     std::optional<NowPlayingInfo> nowPlayingInfo() const final;
-    WeakPtr<PlatformMediaSession> selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSession>>&, PlatformMediaSession::PlaybackControlsPurpose) final;
-    void isActiveNowPlayingSessionChanged() final;
-    std::optional<ProcessID> mediaSessionPresentingApplicationPID() const final;
+    WeakPtr<PlatformMediaSessionInterface> selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSessionInterface>>&, PlatformMediaSession::PlaybackControlsPurpose) final;
 
     // MediaCanStartListener.
     void mediaCanStart(Document&) final;
@@ -161,7 +161,7 @@ private:
     bool virtualHasPendingActivity() const final;
 
     UniqueRef<DefaultAudioDestinationNode> m_destinationNode;
-    std::unique_ptr<PlatformMediaSession> m_mediaSession;
+    Ref<PlatformMediaSession> m_mediaSession;
     MediaUniqueIdentifier m_currentIdentifier;
 
     BehaviorRestrictions m_restrictions { NoRestrictions };
