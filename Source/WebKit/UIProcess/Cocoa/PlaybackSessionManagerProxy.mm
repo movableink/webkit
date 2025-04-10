@@ -1063,17 +1063,17 @@ void PlaybackSessionManagerProxy::setVideoReceiverEndpoint(PlaybackSessionContex
         return;
 
     VideoReceiverEndpointMessage endpointMessage(WTFMove(processIdentifier), contextId, WTFMove(playerIdentifier), endpoint, endpointIdentifier);
-    xpc_connection_send_message(xpcConnection.get(), endpointMessage.encode().get());
+    xpc_connection_send_message_with_reply(xpcConnection.get(), endpointMessage.encode().get(), dispatch_get_main_queue(), ^(xpc_object_t reply) {
+        RefPtr videoPresentationManager = page->videoPresentationManager();
+        if (!videoPresentationManager)
+            return;
 
-    RefPtr videoPresentationManager = page->videoPresentationManager();
-    if (!videoPresentationManager)
-        return;
+        RefPtr controlsManagerInterface = videoPresentationManager->controlsManagerInterface();
+        if (!controlsManagerInterface)
+            return;
 
-    RefPtr controlsManagerInterface = videoPresentationManager->controlsManagerInterface();
-    if (!controlsManagerInterface)
-        return;
-
-    controlsManagerInterface->didSetVideoReceiverEndpoint();
+        controlsManagerInterface->didSetVideoReceiverEndpoint();
+    });
 #else
     UNUSED_PARAM(contextId);
     UNUSED_PARAM(endpoint);
