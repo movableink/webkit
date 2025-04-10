@@ -2319,6 +2319,86 @@ TEST(WKWebExtension, LoadWithBadURL)
     EXPECT_NOT_NULL(error);
 }
 
+TEST(WKWebExtension, ContentScriptImport)
+{
+    static auto *pageScript = Util::constructScript(@[
+        @"const registration = await navigator.serviceWorker.register('./service-worker.js')",
+        @"let worker = registration.installing",
+
+        @"worker.addEventListener('statechange', () => {",
+        @"  if (worker.state === 'activated')",
+        @"    window.postMessage('ready', '*')",
+        @"})",
+    ]);
+
+    static auto *serviceWorkerScript = Util::constructScript(@[
+        @"self.addEventListener('install', (event) => self.skipWaiting())",
+        @"self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()))",
+
+        @"self.addEventListener('fetch', (event) => {",
+        @"  const url = new URL(event.request.url)",
+        @"  if (url.pathname.endsWith('/good.js'))",
+        @"    event.respondWith(fetch('./bad.js'))",
+        @"  else",
+        @"    event.respondWith(fetch(event.request.url))",
+        @"})"
+    ]);
+
+    static auto *badScript = @"browser.test.notifyFail('Injected script from Service Worker executed.')";
+    static auto *goodScript = @"browser.test.notifyPass()";
+
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { { { "Content-Type"_s, "text/html"_s } }, @"<script type='module' src='page.js'></script>" } },
+        { "/page.js"_s, { { { "Content-Type"_s, "application/javascript"_s } }, pageScript } },
+        { "/service-worker.js"_s, { { { "Content-Type"_s, "application/javascript"_s } }, serviceWorkerScript } },
+        { "/bad.js"_s, { { { "Content-Type"_s, "application/javascript"_s } }, badScript } },
+        { "/good.js"_s, { { { "Content-Type"_s, "application/javascript"_s } }, goodScript } },
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    static auto *manifest = @{
+        @"manifest_version": @3,
+
+        @"name": @"Test Extension",
+        @"description": @"Test Extension",
+        @"version": @"1.0",
+
+        @"background": @{
+            @"scripts": @[ @"background.js" ],
+            @"persistent": @NO
+        },
+
+        @"content_scripts": @[@{
+            @"matches": @[ @"*://*/*" ],
+            @"js": @[ @"content.js" ]
+        }]
+    };
+
+    static auto *contentScript = Util::constructScript(@[
+        @"window.addEventListener('message', (event) => {",
+        @"  browser.test.assertEq(event.data, 'ready', 'Expected message to be ready')",
+        [NSString stringWithFormat:@"  import('%@')", server.requestWithLocalhost("/good.js"_s).URL.absoluteString],
+        @"})"
+    ]);
+
+    static auto *backgroundScript = @"browser.test.sendMessage('Load Tab')";
+
+    auto *resources = @{
+        @"background.js": backgroundScript,
+        @"content.js": contentScript
+    };
+
+    auto manager = Util::loadExtension(manifest, resources);
+
+    auto *urlRequest = server.requestWithLocalhost();
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forURL:urlRequest.URL];
+
+    [manager runUntilTestMessage:@"Load Tab"];
+
+    [manager.get().defaultTab.webView loadRequest:urlRequest];
+
+    [manager run];
+}
+
 } // namespace TestWebKitAPI
 
 #endif // ENABLE(WK_WEB_EXTENSIONS)

@@ -42,12 +42,12 @@ Ref<CachedScriptFetcher> CachedScriptFetcher::create(const AtomString& charset)
     return adoptRef(*new CachedScriptFetcher(charset));
 }
 
-CachedResourceHandle<CachedScript> CachedScriptFetcher::requestModuleScript(Document& document, const URL& sourceURL, String&& integrity) const
+CachedResourceHandle<CachedScript> CachedScriptFetcher::requestModuleScript(Document& document, const URL& sourceURL, String&& integrity, std::optional<ServiceWorkersMode> serviceWorkersMode) const
 {
-    return requestScriptWithCache(document, sourceURL, String { }, WTFMove(integrity), { });
+    return requestScriptWithCache(document, sourceURL, String { }, WTFMove(integrity), { }, serviceWorkersMode);
 }
 
-CachedResourceHandle<CachedScript> CachedScriptFetcher::requestScriptWithCache(Document& document, const URL& sourceURL, const String& crossOriginMode, String&& integrity, std::optional<ResourceLoadPriority> resourceLoadPriority) const
+CachedResourceHandle<CachedScript> CachedScriptFetcher::requestScriptWithCache(Document& document, const URL& sourceURL, const String& crossOriginMode, String&& integrity, std::optional<ResourceLoadPriority> resourceLoadPriority, std::optional<ServiceWorkersMode> serviceWorkersMode) const
 {
     if (!document.settings().isScriptEnabled())
         return nullptr;
@@ -57,6 +57,7 @@ CachedResourceHandle<CachedScript> CachedScriptFetcher::requestScriptWithCache(D
     ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
     options.contentSecurityPolicyImposition = hasKnownNonce ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
     options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
+    options.serviceWorkersMode = serviceWorkersMode.value_or(ServiceWorkersMode::All);
     options.integrity = WTFMove(integrity);
     options.referrerPolicy = m_referrerPolicy;
     options.fetchPriority = m_fetchPriority;
