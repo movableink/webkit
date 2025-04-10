@@ -779,10 +779,22 @@ static std::optional<CalendarRecord> parseCalendar(StringParsingBuffer<Character
 
     if (!canBeCalendar(buffer))
         return std::nullopt;
-    buffer.advanceBy(6);
+    // Skip '['
+    buffer.advance();
+
+    // Parse the key
+    unsigned keyLength = 0;
+    while (buffer[keyLength] != '=')
+        keyLength++;
+    if (!keyLength)
+        return std::nullopt;
+    buffer.advanceBy(keyLength);
 
     if (buffer.atEnd())
         return std::nullopt;
+
+    // Consume the '='
+    buffer.advance();
 
     unsigned nameLength = 0;
     {
