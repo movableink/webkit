@@ -183,6 +183,10 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     // Implicit means that this selector is not author/UA written.
     bool isImplicit() const { return m_isImplicit; }
 
+#if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
+    bool destructorHasBeenCalled() const { return m_destructorHasBeenCalled; }
+#endif
+
 private:
     friend class MutableCSSSelector;
 

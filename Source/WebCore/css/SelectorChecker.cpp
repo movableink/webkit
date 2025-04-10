@@ -204,6 +204,8 @@ SelectorChecker::SelectorChecker(Document& document)
 
 bool SelectorChecker::match(const CSSSelector& selector, const Element& element, CheckingContext& checkingContext) const
 {
+    ASSERT_WITH_SECURITY_IMPLICATION(!selector.destructorHasBeenCalled());
+
     auto pseudoElementIdentifier = checkingContext.pseudoId == PseudoId::None ? std::nullopt : std::optional(Style::PseudoElementIdentifier { checkingContext.pseudoId, checkingContext.pseudoElementNameArgument });
     LocalContext context(selector, element, checkingContext.resolvingMode == SelectorChecker::Mode::QueryingRules ? VisitedMatchType::Disabled : VisitedMatchType::Enabled, pseudoElementIdentifier);
 

@@ -162,6 +162,9 @@ public:
 
     friend class CSSStyleSheet;
 
+    bool hasResolvedNesting() const { return m_hasResolvedNesting; }
+    void setHasResolvedNesting(bool value) const { m_hasResolvedNesting = value; }
+
 private:
     WEBCORE_EXPORT StyleSheetContents(StyleRuleImport* ownerRule, const String& originalURL, const CSSParserContext&);
     StyleSheetContents(const StyleSheetContents&);
@@ -187,6 +190,7 @@ private:
     bool m_didLoadErrorOccur { false };
     bool m_usesStyleBasedEditability { false };
     bool m_isMutable { false };
+    mutable bool m_hasResolvedNesting { false };
     mutable std::optional<bool> m_hasNestingRulesCache;
     unsigned m_inMemoryCacheCount { 0 };
 
