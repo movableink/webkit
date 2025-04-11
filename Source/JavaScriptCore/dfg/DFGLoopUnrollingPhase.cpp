@@ -73,8 +73,8 @@ public:
 
         // for (i = initialValue; condition(i, operand); i = update(i, updateValue)) { ... }
         Node* inductionVariable { nullptr };
-        std::variant<Node*, CheckedInt32> initialValue { INT_MIN };
-        std::variant<Node*, CheckedInt32> operand { INT_MIN };
+        std::variant<std::monostate, Node*, CheckedInt32> initialValue { };
+        std::variant<std::monostate, Node*, CheckedInt32> operand { };
         Node* update { nullptr };
         CheckedInt32 updateValue { INT_MIN };
         CheckedUint32 iterationCount { 0 };
@@ -159,7 +159,7 @@ public:
 
         LoopData data = { loop };
 
-        if (!shouldUnrollLoop(data))
+        if (Options::disallowLoopUnrollingForNonInnermost() && !data.loop->isInnerMostLoop())
             return false;
 
         // PreHeader                          PreHeader
@@ -188,6 +188,17 @@ public:
         if (!identifyInductionVariable(data))
             return false;
         dataLogLnIf(Options::verboseLoopUnrolling(), "\tFound InductionVariable with LoopData=", data);
+
+        if (!isLoopBodyUnrollable(data))
+            return false;
+        dataLogLnIf(Options::verboseLoopUnrolling(), "\tFound LoopBody is within threshold and clonable");
+
+        if (!Options::usePartialLoopUnrolling()) {
+            if (!data.shouldFullyUnroll()) {
+                dataLogLnIf(Options::verboseLoopUnrolling(), "\tPartial Unrolling is disabled");
+                return false;
+            }
+        }
 
         BasicBlock* header = data.header();
         unrollLoop(data);
@@ -329,10 +340,8 @@ public:
             Edge operand = condition->child2();
             if (operand->isInt32Constant() && operand.useKind() == Int32Use)
                 data.operand = operand->asInt32();
-            else if (Options::usePartialLoopUnrolling())
-                data.operand = operand.node();
             else
-                return false;
+                data.operand = operand.node();
             data.update = condition->child1().node();
             data.updateValue = update->child2()->asInt32();
             data.inductionVariable = condition->child1()->child1().node();
@@ -417,11 +426,8 @@ public:
         return true;
     }
 
-    bool shouldUnrollLoop(LoopData& data)
+    bool isLoopBodyUnrollable(LoopData& data)
     {
-        if (Options::disallowLoopUnrollingForNonInnermost() && !data.loop->isInnerMostLoop())
-            return false;
-
         uint32_t materialNodeCount = 0;
         uint32_t maxLoopUnrollingBodyNodeSize = data.shouldFullyUnroll() ? Options::maxLoopUnrollingBodyNodeSize() : Options::maxPartialLoopUnrollingBodyNodeSize();
         for (uint32_t i = 0; i < data.loopSize(); ++i) {
@@ -652,13 +658,15 @@ void LoopUnrollingPhase::LoopData::dump(PrintStream& out) const
         out.print("<null>");
     out.print(", ");
 
-    if (shouldFullyUnroll()) {
-        out.print("initValue=", std::get<CheckedInt32>(initialValue), ", ");
-        out.print("operand=", std::get<CheckedInt32>(operand), ", ");
-    } else {
-        out.print("initValue=", std::get<Node*>(initialValue), ", ");
-        out.print("operand=", std::get<Node*>(operand), ", ");
-    }
+    if (auto* value = std::get_if<CheckedInt32>(&initialValue))
+        out.print("initValue=", *value, ", ");
+    else if (auto* value = std::get_if<Node*>(&initialValue))
+        out.print("initValue=", *value, ", ");
+
+    if (auto* value = std::get_if<CheckedInt32>(&operand))
+        out.print("operand=", *value, ", ");
+    else if (auto* value = std::get_if<Node*>(&operand))
+        out.print("operand=", *value, ", ");
 
     out.print("update=");
     if (update)
