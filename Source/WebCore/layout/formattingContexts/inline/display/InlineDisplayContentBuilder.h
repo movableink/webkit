@@ -70,8 +70,6 @@ private:
     void adjustVisualGeometryForDisplayBox(size_t displayBoxNodeIndex, InlineLayoutUnit& accumulatedOffset, InlineLayoutUnit lineBoxLogicalTop, const DisplayBoxTree&, InlineDisplay::Boxes&, const UncheckedKeyHashMap<const Box*, IsFirstLastIndex>&);
     size_t ensureDisplayBoxForContainer(const ElementBox&, DisplayBoxTree&, AncestorStack&, InlineDisplay::Boxes&);
 
-    InlineRect flipLogicalRectToVisualForWritingModeWithinLine(const InlineRect& logicalRect, const InlineRect& lineLogicalRect, WritingMode) const;
-    InlineRect flipRootInlineBoxRectToVisualForWritingMode(const InlineRect& rootInlineBoxLogicalRect, WritingMode) const;
     template <typename BoxType, typename LayoutUnitType>
     void setLogicalLeft(BoxType&, LayoutUnitType logicalLeft, WritingMode) const;
     void setLogicalRight(InlineDisplay::Box&, InlineLayoutUnit logicalRight, WritingMode) const;
@@ -110,7 +108,6 @@ inline InlineRect InlineDisplayContentBuilder::mapInlineRectLogicalToVisual(cons
         return visualRect;
 
     case StyleWritingMode::HorizontalBt:
-        visualRect.setLeft(logicalRect.left());
         visualRect.setTop(containerLogicalRect.height() - logicalRect.bottom());
         return visualRect;
 
