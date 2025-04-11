@@ -69,8 +69,6 @@ dom/Subscriber.cpp
 dom/ViewTransition.cpp
 dom/ViewportArguments.cpp
 editing/Editor.cpp
-fileapi/Blob.cpp
-fileapi/FileReader.cpp
 html/FormAssociatedCustomElement.cpp
 html/HTMLImageElement.cpp
 html/HTMLMediaElement.cpp

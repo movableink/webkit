@@ -77,7 +77,7 @@ void BlobURLRegistry::registerURL(const ScriptExecutionContext& context, const U
         Locker locker { m_urlsPerContextLock };
         m_urlsPerContext.add(context.identifier(), UncheckedKeyHashSet<URL>()).iterator->value.add(publicURL.isolatedCopy());
     }
-    ThreadableBlobRegistry::registerBlobURL(context.securityOrigin(), context.policyContainer(), publicURL, downcast<Blob>(blob).url(), context.topOrigin().data());
+    ThreadableBlobRegistry::registerBlobURL(context.protectedSecurityOrigin().get(), context.policyContainer(), publicURL, downcast<Blob>(blob).url(), context.topOrigin().data());
 }
 
 void BlobURLRegistry::unregisterURL(const URL& url, const SecurityOriginData& topOrigin)
@@ -268,12 +268,12 @@ String Blob::normalizedContentType(const String& contentType)
 
 void Blob::loadBlob(FileReaderLoader::ReadType readType, Function<void(BlobLoader&)>&& completionHandler)
 {
-    auto blobLoader = makeUnique<BlobLoader>([this, pendingActivity = makePendingActivity(*this), completionHandler = WTFMove(completionHandler)](BlobLoader& blobLoader) mutable {
+    auto blobLoader = makeUnique<BlobLoader>([pendingActivity = makePendingActivity(*this), completionHandler = WTFMove(completionHandler)](BlobLoader& blobLoader) mutable {
         completionHandler(blobLoader);
-        m_blobLoaders.take(&blobLoader);
+        pendingActivity->object().m_blobLoaders.take(&blobLoader);
     });
 
-    blobLoader->start(*this, scriptExecutionContext(), readType);
+    blobLoader->start(*this, protectedScriptExecutionContext().get(), readType);
 
     if (blobLoader->isLoading())
         m_blobLoaders.add(WTFMove(blobLoader));

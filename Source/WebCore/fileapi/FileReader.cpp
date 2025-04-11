@@ -128,7 +128,7 @@ ExceptionOr<void> FileReader::readInternal(Blob& blob, FileReaderLoader::ReadTyp
     m_loader = makeUnique<FileReaderLoader>(m_readType, static_cast<FileReaderLoaderClient*>(this));
     m_loader->setEncoding(m_encoding);
     m_loader->setDataType(m_blob->type());
-    m_loader->start(scriptExecutionContext(), blob);
+    m_loader->start(protectedScriptExecutionContext().get(), blob);
 
     return { };
 }
@@ -150,53 +150,53 @@ void FileReader::abort()
 
 void FileReader::didStartLoading()
 {
-    enqueueTask([this] {
-        fireEvent(eventNames().loadstartEvent);
+    enqueueTask([](auto& reader) {
+        reader.fireEvent(eventNames().loadstartEvent);
     });
 }
 
 void FileReader::didReceiveData()
 {
-    enqueueTask([this] {
+    enqueueTask([](auto& reader) {
         auto now = MonotonicTime::now();
-        if (m_lastProgressNotificationTime.isNaN()) {
-            m_lastProgressNotificationTime = now;
+        if (reader.m_lastProgressNotificationTime.isNaN()) {
+            reader.m_lastProgressNotificationTime = now;
             return;
         }
-        if (now - m_lastProgressNotificationTime > progressNotificationInterval) {
-            fireEvent(eventNames().progressEvent);
-            m_lastProgressNotificationTime = now;
+        if (now - reader.m_lastProgressNotificationTime > progressNotificationInterval) {
+            reader.fireEvent(eventNames().progressEvent);
+            reader.m_lastProgressNotificationTime = now;
         }
     });
 }
 
 void FileReader::didFinishLoading()
 {
-    enqueueTask([this] {
-        if (m_state == DONE)
+    enqueueTask([](auto& reader) {
+        if (reader.m_state == DONE)
             return;
-        m_finishedLoading = true;
-        if (m_loader->bytesLoaded())
-            fireEvent(eventNames().progressEvent);
-        if (m_state == DONE)
+        reader.m_finishedLoading = true;
+        if (reader.m_loader->bytesLoaded())
+            reader.fireEvent(eventNames().progressEvent);
+        if (reader.m_state == DONE)
             return;
-        m_state = DONE;
-        fireEvent(eventNames().loadEvent);
-        fireEvent(eventNames().loadendEvent);
+        reader.m_state = DONE;
+        reader.fireEvent(eventNames().loadEvent);
+        reader.fireEvent(eventNames().loadendEvent);
     });
 }
 
 void FileReader::didFail(ExceptionCode errorCode)
 {
-    enqueueTask([this, errorCode] {
-        if (m_state == DONE)
+    enqueueTask([errorCode](auto& reader) {
+        if (reader.m_state == DONE)
             return;
-        m_state = DONE;
+        reader.m_state = DONE;
 
-        m_error = DOMException::create(Exception { errorCode });
+        reader.m_error = DOMException::create(Exception { errorCode });
 
-        fireEvent(eventNames().errorEvent);
-        fireEvent(eventNames().loadendEvent);
+        reader.fireEvent(eventNames().errorEvent);
+        reader.fireEvent(eventNames().loadendEvent);
     });
 }
 
@@ -222,7 +222,7 @@ std::optional<std::variant<String, RefPtr<JSC::ArrayBuffer>>> FileReader::result
     return { WTFMove(result) };
 }
 
-void FileReader::enqueueTask(Function<void()>&& task)
+void FileReader::enqueueTask(Function<void(FileReader&)>&& task)
 {
     if (!scriptExecutionContext())
         return;
@@ -233,7 +233,7 @@ void FileReader::enqueueTask(Function<void()>&& task)
     queueTaskKeepingObjectAlive(*this, TaskSource::FileReading, [taskIdentifier](auto& reader) {
         auto task = reader.m_pendingTasks.take(taskIdentifier);
         if (task && !reader.isContextStopped())
-            task();
+            task(reader);
     });
 }
 

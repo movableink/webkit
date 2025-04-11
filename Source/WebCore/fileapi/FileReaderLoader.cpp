@@ -86,7 +86,8 @@ void FileReaderLoader::start(ScriptExecutionContext* scriptExecutionContext, con
     ASSERT(scriptExecutionContext);
 
     // The blob is read by routing through the request handling layer given a temporary public url.
-    m_urlForReading = { BlobURL::createPublicURL(scriptExecutionContext->securityOrigin()), scriptExecutionContext->topOrigin().data() };
+    RefPtr securityOrigin = scriptExecutionContext->securityOrigin();
+    m_urlForReading = { BlobURL::createPublicURL(securityOrigin.get()), scriptExecutionContext->topOrigin().data() };
     if (m_urlForReading.isEmpty()) {
         failed(ExceptionCode::SecurityError);
         return;
@@ -96,7 +97,7 @@ void FileReaderLoader::start(ScriptExecutionContext* scriptExecutionContext, con
     if (!contentSecurityPolicy)
         return;
 
-    ThreadableBlobRegistry::registerBlobURL(scriptExecutionContext->securityOrigin(), scriptExecutionContext->policyContainer(), m_urlForReading, blobURL);
+    ThreadableBlobRegistry::registerBlobURL(securityOrigin.get(), scriptExecutionContext->policyContainer(), m_urlForReading, blobURL);
 
     // Construct and load the request.
     ResourceRequest request(m_urlForReading);
@@ -127,8 +128,8 @@ void FileReaderLoader::cancel()
 
 void FileReaderLoader::terminate()
 {
-    if (m_loader) {
-        m_loader->cancel();
+    if (RefPtr loader = m_loader) {
+        loader->cancel();
         cleanup();
     }
 }
@@ -359,10 +360,11 @@ void FileReaderLoader::convertToText()
     // FIXME: consider supporting incremental decoding to improve the perf.
     if (!m_decoder)
         m_decoder = TextResourceDecoder::create("text/plain"_s, m_encoding.isValid() ? m_encoding : PAL::UTF8Encoding());
+    Ref decoder = *m_decoder;
     if (isCompleted())
-        m_stringResult = m_decoder->decodeAndFlush(m_rawData->span().first(m_bytesLoaded));
+        m_stringResult = decoder->decodeAndFlush(m_rawData->span().first(m_bytesLoaded));
     else
-        m_stringResult = m_decoder->decode(m_rawData->span().first(m_bytesLoaded));
+        m_stringResult = decoder->decode(m_rawData->span().first(m_bytesLoaded));
 }
 
 void FileReaderLoader::convertToDataURL()

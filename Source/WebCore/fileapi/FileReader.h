@@ -90,7 +90,7 @@ private:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
-    void enqueueTask(Function<void()>&&);
+    void enqueueTask(Function<void(FileReader&)>&&);
 
     void didStartLoading() final;
     void didReceiveData() final;
@@ -109,7 +109,7 @@ private:
     std::unique_ptr<FileReaderLoader> m_loader;
     RefPtr<DOMException> m_error;
     MonotonicTime m_lastProgressNotificationTime { MonotonicTime::nan() };
-    HashMap<uint64_t, Function<void()>> m_pendingTasks;
+    HashMap<uint64_t, Function<void(FileReader&)>> m_pendingTasks;
 };
 
 } // namespace WebCore
