@@ -2171,11 +2171,13 @@ void CodeBlock::jettison(Profiler::JettisonReason reason, ReoptimizationMode mod
     RELEASE_ASSERT(reason != Profiler::NotJettisoned);
 
 #if ENABLE(JIT)
-    ConcurrentJSLocker locker(m_lock);
-    forEachStructureStubInfo([&](StructureStubInfo& stubInfo) {
-        stubInfo.reset(locker, this);
-        return IterationStatus::Continue;
-    });
+    {
+        ConcurrentJSLocker locker(m_lock);
+        forEachStructureStubInfo([&](StructureStubInfo& stubInfo) {
+            stubInfo.reset(locker, this);
+            return IterationStatus::Continue;
+        });
+    }
 #endif
 
     
