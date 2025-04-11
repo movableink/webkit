@@ -107,7 +107,7 @@ namespace JSC {
 #define __HI(x) *(1+(int*)&x)
 #define __LO(x) *(int*)&x
 
-static const double
+static constexpr double
 bp[] = {1.0, 1.5,},
 dp_h[] = { 0.0, 5.84962487220764160156e-01,}, /* 0x3FE2B803, 0x40000000 */
 dp_l[] = { 0.0, 1.35003920212974897128e-08,}, /* 0x3E4CFDEB, 0x43CFD006 */

@@ -34,24 +34,24 @@
 
 namespace JSC {
 
-const int32_t maxExponentForIntegerMathPow = 1000;
+constexpr int32_t maxExponentForIntegerMathPow = 1000;
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationMathPow, double, (double x, double y));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationToInt32, UCPUStrictInt32, (double));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationToInt32SensibleSlow, UCPUStrictInt32, (double));
 
-constexpr double maxSafeInteger()
+consteval double maxSafeInteger()
 {
     // 2 ^ 53 - 1
     return 9007199254740991.0;
 }
 
-constexpr double minSafeInteger()
+consteval double minSafeInteger()
 {
     // -(2 ^ 53 - 1)
     return -9007199254740991.0;
 }
 
-constexpr uint64_t maxSafeIntegerAsUInt64()
+consteval uint64_t maxSafeIntegerAsUInt64()
 {
     // 2 ^ 53 - 1
     return 9007199254740991ULL;
