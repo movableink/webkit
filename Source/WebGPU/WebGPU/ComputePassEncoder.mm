@@ -58,6 +58,7 @@ ComputePassEncoder::ComputePassEncoder(id<MTLComputeCommandEncoder> computeComma
     , m_parentEncoder(parentEncoder)
 {
     protectedParentEncoder()->lock(true);
+    RELEASE_ASSERT(m_maxDynamicOffsetAtIndex.size() >= m_device->limits().maxBindGroups);
 }
 
 ComputePassEncoder::ComputePassEncoder(CommandEncoder& parentEncoder, Device& device, NSString* errorString)
@@ -67,6 +68,7 @@ ComputePassEncoder::ComputePassEncoder(CommandEncoder& parentEncoder, Device& de
 {
     protectedParentEncoder()->lock(true);
     m_parentEncoder->setLastError(errorString);
+    RELEASE_ASSERT(m_maxDynamicOffsetAtIndex.size() >= m_device->limits().maxBindGroups);
 }
 
 ComputePassEncoder::~ComputePassEncoder()
@@ -193,27 +195,32 @@ void ComputePassEncoder::executePreDispatchCommands(const Buffer* indirectBuffer
 
     Ref pipelineLayout = pipeline->pipelineLayout();
     auto pipelineLayoutCount = pipelineLayout->numberOfBindGroupLayouts();
+    auto pipelineIdentifier = pipeline->uniqueId();
     for (auto& kvp : m_bindGroups) {
         auto bindGroupIndex = kvp.key;
+
         if (!kvp.value.get()) {
             makeInvalid(@"bind group was deallocated");
             return;
         }
         auto group = kvp.value;
-        if (group->makeSubmitInvalid(ShaderStage::Compute, pipelineLayout->optionalBindGroupLayout(bindGroupIndex))) {
-            protectedParentEncoder()->makeSubmitInvalid();
-            return;
-        }
+        if (group->hasSamplers())
+            protectedParentEncoder()->rebindSamplersPreCommit(group.get());
 
-        protectedParentEncoder()->addOnCommitHandler([group](CommandBuffer&) {
-            return group ? group->rebindSamplersIfNeeded() : true;
-        });
-        const Vector<uint32_t>* dynamicOffsets = nullptr;
-        if (auto it = m_bindGroupDynamicOffsets.find(bindGroupIndex); it != m_bindGroupDynamicOffsets.end())
-            dynamicOffsets = &it->value;
-        if (NSString* error = errorValidatingBindGroup(*group, pipeline->minimumBufferSizes(bindGroupIndex), dynamicOffsets)) {
-            makeInvalid(error);
-            return;
+        if (!group->previouslyValidatedBindGroup(bindGroupIndex, pipelineIdentifier, m_maxDynamicOffsetAtIndex[bindGroupIndex])) {
+            if (group->makeSubmitInvalid(ShaderStage::Compute, pipelineLayout->optionalBindGroupLayout(bindGroupIndex))) {
+                protectedParentEncoder()->makeSubmitInvalid();
+                return;
+            }
+
+            const Vector<uint32_t>* dynamicOffsets = nullptr;
+            if (auto it = m_bindGroupDynamicOffsets.find(bindGroupIndex); it != m_bindGroupDynamicOffsets.end())
+                dynamicOffsets = &it->value;
+            if (NSString* error = errorValidatingBindGroup(*group, pipeline->minimumBufferSizes(bindGroupIndex), dynamicOffsets)) {
+                makeInvalid(error);
+                return;
+            }
+            group->validatedSuccessfully(bindGroupIndex, pipelineIdentifier, m_maxDynamicOffsetAtIndex[bindGroupIndex]);
         }
         [computeCommandEncoder() setBuffer:group->computeArgumentBuffer() offset:0 atIndex:bindGroupIndex];
     }
@@ -253,11 +260,9 @@ void ComputePassEncoder::executePreDispatchCommands(const Buffer* indirectBuffer
     for (auto& kvp : m_bindGroupDynamicOffsets) {
         Ref pipelineLayout = pipeline->pipelineLayout();
         auto bindGroupIndex = kvp.key;
-        auto* pcomputeOffsets = pipelineLayout->computeOffsets(bindGroupIndex, kvp.value);
-        if (pcomputeOffsets && pcomputeOffsets->size()) {
-            auto& computeOffsets = *pcomputeOffsets;
-            auto startIndex = pipelineLayout->computeOffsetForBindGroup(bindGroupIndex);
-            memcpySpan(m_computeDynamicOffsets.mutableSpan().subspan(startIndex), computeOffsets.span());
+        if (!pipelineLayout->updateComputeOffsets(bindGroupIndex, kvp.value, m_computeDynamicOffsets)) {
+            makeInvalid(@"Invalid offset calculation");
+            return;
         }
     }
 
@@ -444,7 +449,7 @@ static void setCommandEncoder(const BindGroupEntryUsageData::Resource& resource,
     });
 }
 
-void ComputePassEncoder::setBindGroup(uint32_t groupIndex, const BindGroup& group, std::span<const uint32_t> dynamicOffsets)
+void ComputePassEncoder::setBindGroup(uint32_t groupIndex, const BindGroup& group, std::optional<Vector<uint32_t>>&& dynamicOffsets)
 {
     RETURN_IF_FINISHED();
     if (!isValidToUseWith(group, *this)) {
@@ -462,15 +467,16 @@ void ComputePassEncoder::setBindGroup(uint32_t groupIndex, const BindGroup& grou
         makeInvalid(@"GPUComputePassEncoder.setBindGroup: bind group is nil");
         return;
     }
-    if (NSString* error = bindGroupLayout->errorValidatingDynamicOffsets(dynamicOffsets, group)) {
+    if (NSString* error = bindGroupLayout->errorValidatingDynamicOffsets(dynamicOffsets ? dynamicOffsets->span() : std::span<const uint32_t> { }, group, m_maxDynamicOffsetAtIndex[groupIndex])) {
         makeInvalid([NSString stringWithFormat:@"GPUComputePassEncoder.setBindGroup: %@", error]);
         return;
     }
 
-    if (dynamicOffsets.size())
-        m_bindGroupDynamicOffsets.set(groupIndex, Vector<uint32_t>(dynamicOffsets));
-    else
-        m_bindGroupDynamicOffsets.remove(groupIndex);
+    if (dynamicOffsets && dynamicOffsets->size()) {
+        m_bindGroupDynamicOffsets.set(groupIndex, WTFMove(*dynamicOffsets));
+        m_maxDynamicOffsetAtIndex[groupIndex] = 0;
+    } else if (m_bindGroupDynamicOffsets.remove(groupIndex))
+        m_maxDynamicOffsetAtIndex[groupIndex] = 0;
 
     Vector<const BindableResources*> resourceList;
     for (const auto& resource : group.resources()) {
@@ -501,6 +507,7 @@ void ComputePassEncoder::setPipeline(const ComputePipeline& pipeline)
     m_pipeline = &pipeline;
     m_computeDynamicOffsets.resize(m_pipeline->protectedPipelineLayout()->sizeOfComputeDynamicOffsets());
     m_computeDynamicOffsets.fill(0);
+    m_maxDynamicOffsetAtIndex.fill(0);
 
     ASSERT(pipeline.computePipelineState());
     m_threadsPerThreadgroup = pipeline.threadsPerThreadgroup();
@@ -567,9 +574,9 @@ void wgpuComputePassEncoderPushDebugGroup(WGPUComputePassEncoder computePassEnco
     WebGPU::protectedFromAPI(computePassEncoder)->pushDebugGroup(WebGPU::fromAPI(groupLabel));
 }
 
-void wgpuComputePassEncoderSetBindGroup(WGPUComputePassEncoder computePassEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, const uint32_t* dynamicOffsets)
+void wgpuComputePassEncoderSetBindGroup(WGPUComputePassEncoder computePassEncoder, uint32_t groupIndex, WGPUBindGroup group, std::optional<Vector<uint32_t>>&& dynamicOffsets)
 {
-    WebGPU::protectedFromAPI(computePassEncoder)->setBindGroup(groupIndex, WebGPU::protectedFromAPI(group), unsafeMakeSpan(dynamicOffsets, dynamicOffsetCount));
+    WebGPU::protectedFromAPI(computePassEncoder)->setBindGroup(groupIndex, WebGPU::protectedFromAPI(group), WTFMove(dynamicOffsets));
 }
 
 void wgpuComputePassEncoderSetPipeline(WGPUComputePassEncoder computePassEncoder, WGPUComputePipeline pipeline)
