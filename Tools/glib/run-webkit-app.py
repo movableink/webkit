@@ -37,11 +37,19 @@ def get_default_configuration(output_dir):
         return None
 
 
+def prepend_path_var(env, name, value):
+    if name in env:
+        env[name] = f'{value}:{env[name]}'
+    else:
+        env[name] = value
+
+
 def main():
     parser = argparse.ArgumentParser(description='run-webkit-app runs an executable with a specific build of WebKit')
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--release', action='store_const', dest='configuration', const='Release')
     group.add_argument('--debug', action='store_const', dest='configuration', const='Debug')
+    parser.add_argument('--wpe', action='store_true')
     parser.add_argument('executable', nargs=argparse.REMAINDER)
     options = parser.parse_args(sys.argv[1:])
 
@@ -61,17 +69,15 @@ def main():
     if not subdir:
         sys.exit('ERROR: You must specify either --debug/--release or set it with `set-webkit-configuration`.')
 
-    build_dir = path.join(output_dir, 'GTK', subdir)
+    build_dir = path.join(output_dir, 'WPE' if options.wpe else 'GTK', subdir)
 
     env = os.environ.copy()
 
     libdir = path.join(build_dir, 'lib')
     env['WEBKIT_EXEC_PATH'] = path.join(build_dir, 'bin')
     env['WEBKIT_INJECTED_BUNDLE_PATH'] = libdir
-    if 'LD_LIBRARY_PATH' in env:
-        env['LD_LIBRARY_PATH'] = ':'.join((libdir, env['LD_LIBRARY_PATH']))
-    else:
-        env['LD_LIBRARY_PATH'] = libdir
+    prepend_path_var(env, 'LD_LIBRARY_PATH', libdir)
+    prepend_path_var(env, 'GI_TYPELIB_PATH', build_dir)
 
     proc = subprocess.run(options.executable, env=env)
     sys.exit(proc.returncode)
