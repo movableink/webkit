@@ -319,7 +319,7 @@ inline Vector<String> String::splitInternal(StringView separator) const
 }
 
 template<bool allowEmptyEntries>
-inline void String::splitInternal(UChar separator, const SplitFunctor& functor) const
+inline void String::splitInternal(UChar separator, NOESCAPE const SplitFunctor& functor) const
 {
     StringView view(*this);
 
@@ -345,7 +345,7 @@ inline Vector<String> String::splitInternal(UChar separator) const
     return result;
 }
 
-void String::split(UChar separator, const SplitFunctor& functor) const
+void String::split(UChar separator, NOESCAPE const SplitFunctor& functor) const
 {
     splitInternal<false>(separator, functor);
 }
@@ -360,7 +360,7 @@ Vector<String> String::split(StringView separator) const
     return splitInternal<false>(separator);
 }
 
-void String::splitAllowingEmptyEntries(UChar separator, const SplitFunctor& functor) const
+void String::splitAllowingEmptyEntries(UChar separator, NOESCAPE const SplitFunctor& functor) const
 {
     splitInternal<true>(separator, functor);
 }

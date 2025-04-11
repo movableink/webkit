@@ -251,7 +251,7 @@ private:
     }
 
     template<typename T, typename Read8Functor>
-    ALWAYS_INLINE static constexpr void consume24Characters(const T* p, const Read8Functor& wyr8, uint64_t& seed, uint64_t& see1, uint64_t& see2)
+    ALWAYS_INLINE static constexpr void consume24Characters(const T* p, NOESCAPE const Read8Functor& wyr8, uint64_t& seed, uint64_t& see1, uint64_t& see2)
     {
         seed = wymix(wyr8(p) ^ secret[1], wyr8(p + 4) ^ seed);
         see1 = wymix(wyr8(p + 8) ^ secret[2], wyr8(p + 12) ^ see1);
@@ -268,7 +268,7 @@ private:
     }
 
     template<typename T, typename Read8Functor>
-    ALWAYS_INLINE static constexpr void handleGreaterThan8CharactersCase(T*& p, unsigned& i, const Read8Functor& wyr8, uint64_t& seed, uint64_t see1, uint64_t see2)
+    ALWAYS_INLINE static constexpr void handleGreaterThan8CharactersCase(T*& p, unsigned& i, NOESCAPE const Read8Functor& wyr8, uint64_t& seed, uint64_t see1, uint64_t see2)
     {
         if (UNLIKELY(i > 24)) {
             do {

@@ -122,9 +122,6 @@ style/ElementRuleCollector.cpp
 style/StyleBuilderConverter.h
 style/StyleTreeResolver.cpp
 style/Styleable.cpp
-svg/SVGAnimationElement.cpp
-svg/SVGViewSpec.cpp
-svg/properties/SVGPropertyOwnerRegistry.h
 testing/MockMediaSessionCoordinator.cpp
 workers/Worker.cpp
 workers/WorkerMessagingProxy.cpp

@@ -180,7 +180,7 @@ public:
     // Enumerate all the SVGMemberAccessors recursively. The functor will be called and will
     // be given the pair<QualifiedName, SVGMemberAccessor> till the functor returns false.
     template<typename Functor>
-    static bool enumerateRecursively(const Functor& functor)
+    static bool enumerateRecursively(NOESCAPE const Functor& functor)
     {
         for (const auto& entry : attributeNameToAccessorMap()) {
             if (!functor(entry))
@@ -190,7 +190,7 @@ public:
     }
 
     template<typename Functor>
-    static bool lookupRecursivelyAndApply(const QualifiedName& attributeName, const Functor& functor)
+    static bool lookupRecursivelyAndApply(const QualifiedName& attributeName, NOESCAPE const Functor& functor)
     {
         if (auto* accessor = findAccessor(attributeName)) {
             functor(*accessor);
@@ -359,11 +359,11 @@ private:
     // from enumerateRecursively(). It returns true and is enable_if<I == sizeof...(BaseTypes)>. So it is mainly for
     // breaking the recursion.
     template<typename Functor, size_t I = 0>
-    static typename std::enable_if<I == sizeof...(BaseTypes), bool>::type enumerateRecursivelyBaseTypes(const Functor&) { return true; }
+    static typename std::enable_if<I == sizeof...(BaseTypes), bool>::type enumerateRecursivelyBaseTypes(NOESCAPE const Functor&) { return true; }
 
     // This version of animatedTypesBaseTypes() is enable_if<I < sizeof...(BaseTypes)>.
     template<typename Functor, size_t I = 0>
-    static typename std::enable_if<I < sizeof...(BaseTypes), bool>::type enumerateRecursivelyBaseTypes(const Functor& functor)
+    static typename std::enable_if<I < sizeof...(BaseTypes), bool>::type enumerateRecursivelyBaseTypes(NOESCAPE const Functor& functor)
     {
         // Get the base type at index 'I' using std::tuple and std::tuple_element.
         using BaseType = typename std::tuple_element<I, typename std::tuple<BaseTypes...>>::type;
@@ -380,10 +380,10 @@ private:
     }
 
     template<typename Functor, size_t I = 0>
-    static typename std::enable_if<I == sizeof...(BaseTypes), bool>::type lookupRecursivelyAndApplyBaseTypes(const QualifiedName&, const Functor&) { return false; }
+    static typename std::enable_if<I == sizeof...(BaseTypes), bool>::type lookupRecursivelyAndApplyBaseTypes(const QualifiedName&, NOESCAPE const Functor&) { return false; }
 
     template<typename Functor, size_t I = 0>
-    static typename std::enable_if<I < sizeof...(BaseTypes), bool>::type lookupRecursivelyAndApplyBaseTypes(const QualifiedName& attributeName, const Functor& functor)
+    static typename std::enable_if<I < sizeof...(BaseTypes), bool>::type lookupRecursivelyAndApplyBaseTypes(const QualifiedName& attributeName, NOESCAPE const Functor& functor)
     {
         // Get the base type at index 'I' using std::tuple and std::tuple_element.
         using BaseType = typename std::tuple_element<I, typename std::tuple<BaseTypes...>>::type;
