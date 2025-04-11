@@ -219,12 +219,12 @@ using namespace WebCore;
 
 static void registerUserDefaults()
 {
-    NSMutableDictionary *registrationDictionary = [NSMutableDictionary dictionary];
+    RetainPtr registrationDictionary = adoptNS([[NSMutableDictionary alloc] init]);
     
     [registrationDictionary setObject:@YES forKey:WebKitJSCJITEnabledDefaultsKey];
     [registrationDictionary setObject:@YES forKey:WebKitJSCFTLJITEnabledDefaultsKey];
 
-    [[NSUserDefaults standardUserDefaults] registerDefaults:registrationDictionary];
+    [[NSUserDefaults standardUserDefaults] registerDefaults:registrationDictionary.get()];
 }
 
 static std::optional<bool>& cachedLockdownModeEnabledGlobally()
@@ -274,13 +274,13 @@ static AccessibilityPreferences accessibilityPreferences()
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
 void WebProcessPool::setMediaAccessibilityPreferences(WebProcessProxy& process)
 {
-    static dispatch_queue_t mediaAccessibilityQueue;
+    static LazyNeverDestroyed<RetainPtr<dispatch_queue_t>> mediaAccessibilityQueue;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        mediaAccessibilityQueue = dispatch_queue_create("MediaAccessibility queue", DISPATCH_QUEUE_SERIAL);
+        mediaAccessibilityQueue.construct(dispatch_queue_create("MediaAccessibility queue", DISPATCH_QUEUE_SERIAL));
     });
 
-    dispatch_async(mediaAccessibilityQueue, [weakProcess = WeakPtr { process }] {
+    dispatch_async(mediaAccessibilityQueue.get().get(), [weakProcess = WeakPtr { process }] {
         auto captionDisplayMode = WebCore::CaptionUserPreferencesMediaAF::platformCaptionDisplayMode();
         auto preferredLanguages = WebCore::CaptionUserPreferencesMediaAF::platformPreferredLanguages();
         callOnMainRunLoop([weakProcess, captionDisplayMode, preferredLanguages = crossThreadCopy(WTFMove(preferredLanguages))] {
@@ -376,7 +376,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     parameters.accessibilityEnhancedUserInterfaceEnabled = false;
 #endif
 
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    RetainPtr defaults = [NSUserDefaults standardUserDefaults];
 
     parameters.shouldEnableJIT = [defaults boolForKey:WebKitJSCJITEnabledDefaultsKey];
     parameters.shouldEnableFTLJIT = [defaults boolForKey:WebKitJSCFTLJITEnabledDefaultsKey];
@@ -421,9 +421,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
             LOG_ERROR("Failed to encode bundle parameters: %@", exception);
         }
 
-        auto data = keyedArchiver.get().encodedData;
+        RetainPtr<NSData> data = keyedArchiver.get().encodedData;
 
-        parameters.bundleParameterData = API::Data::createWithoutCopying(WTFMove(data));
+        parameters.bundleParameterData = API::Data::createWithoutCopying(data.get());
     }
     parameters.networkATSContext = adoptCF(_CFNetworkCopyATSContext());
 
@@ -536,7 +536,7 @@ void WebProcessPool::platformInitializeNetworkProcess(NetworkProcessCreationPara
 {
     parameters.uiProcessBundleIdentifier = applicationBundleIdentifier();
 
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    RetainPtr defaults = [NSUserDefaults standardUserDefaults];
 
     parameters.networkATSContext = adoptCF(_CFNetworkCopyATSContext());
 
@@ -564,7 +564,7 @@ void WebProcessPool::platformInvalidateContext()
 #if PLATFORM(IOS_FAMILY)
 void WebProcessPool::setJavaScriptConfigurationFileEnabledFromDefaults()
 {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    RetainPtr defaults = [NSUserDefaults standardUserDefaults];
 
     setJavaScriptConfigurationFileEnabled([defaults boolForKey:@"WebKitJavaScriptCoreUseConfigFile"]);
 }
@@ -911,9 +911,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #endif
 
     m_finishedMobileAssetFontDownloadObserver = [[NSNotificationCenter defaultCenter] addObserverForName:@"FontActivateNotification" object:nil queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification *notification) {
-        NSString *fontFamily = notification.userInfo[@"FontActivateNotificationFontFamilyKey"];
-        if ([fontFamily isKindOfClass:[NSString class]]) {
-            RetainPtr ctFont = adoptCF(CTFontCreateWithName((__bridge CFStringRef)fontFamily, 0.0, nullptr));
+        RetainPtr fontFamily = dynamic_objc_cast<NSString>(notification.userInfo[@"FontActivateNotificationFontFamilyKey"]);
+        if (fontFamily) {
+            RetainPtr ctFont = adoptCF(CTFontCreateWithName(bridge_cast(fontFamily.get()), 0.0, nullptr));
             RetainPtr downloaded = adoptCF(static_cast<CFBooleanRef>(CTFontCopyAttribute(ctFont.get(), kCTFontDownloadedAttribute)));
             if (downloaded == kCFBooleanFalse)
                 return;
@@ -1052,12 +1052,12 @@ void WebProcessPool::setCookieStoragePartitioningEnabled(bool enabled)
 
 void WebProcessPool::clearPermanentCredentialsForProtectionSpace(WebCore::ProtectionSpace&& protectionSpace)
 {
-    auto sharedStorage = [NSURLCredentialStorage sharedCredentialStorage];
-    auto credentials = [sharedStorage credentialsForProtectionSpace:protectionSpace.nsSpace()];
-    for (NSString* user in credentials) {
-        auto credential = credentials[user];
-        if (credential.persistence == NSURLCredentialPersistencePermanent)
-            [sharedStorage removeCredential:credentials[user] forProtectionSpace:protectionSpace.nsSpace()];
+    RetainPtr sharedStorage = [NSURLCredentialStorage sharedCredentialStorage];
+    RetainPtr credentials = [sharedStorage credentialsForProtectionSpace:protectionSpace.nsSpace()];
+    for (NSString* user in credentials.get()) {
+        RetainPtr<NSURLCredential> credential = credentials.get()[user];
+        if (credential.get().persistence == NSURLCredentialPersistencePermanent)
+            [sharedStorage removeCredential:credentials.get()[user] forProtectionSpace:protectionSpace.nsSpace()];
     }
 }
 
@@ -1425,10 +1425,10 @@ static void addUserInstalledFontURLs(NSString *path, Vector<URL>& fontURLs)
     RetainPtr enumerator = [NSFileManager.defaultManager enumeratorAtPath:path];
 
     for (NSString *font in enumerator.get()) {
-        NSURL *nsFontURL = [NSURL fileURLWithPath:[path stringByAppendingPathComponent:font]];
-        UTType *utType = [UTType typeWithFilenameExtension:nsFontURL.pathExtension];
+        RetainPtr nsFontURL = [NSURL fileURLWithPath:[path stringByAppendingPathComponent:font]];
+        RetainPtr utType = [UTType typeWithFilenameExtension:nsFontURL.get().pathExtension];
         if ([utType isSubtypeOfType:UTTypeFont]) {
-            URL fontURL(nsFontURL);
+            URL fontURL(nsFontURL.get());
             fontURLs.append(fontURL);
             RELEASE_LOG(Process, "Registering font url %s", fontURL.string().utf8().data());
         }

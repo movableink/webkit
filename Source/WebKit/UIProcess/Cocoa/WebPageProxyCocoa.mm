@@ -240,7 +240,7 @@ void WebPageProxy::beginSafeBrowsingCheck(const URL& url, bool forMainFrameNavig
 #if HAVE(SAFE_BROWSING)
     if (!url.isValid())
         return listener.didReceiveSafeBrowsingResults({ });
-    SSBLookupContext *context = [SSBLookupContext sharedLookupContext];
+    RetainPtr context = [SSBLookupContext sharedLookupContext];
     if (!context)
         return listener.didReceiveSafeBrowsingResults({ });
     [context lookUpURL:url.createNSURL().get() completionHandler:makeBlockPtr([listener = Ref { listener }, forMainFrameNavigation, url = url] (SSBLookupResult *result, NSError *error) mutable {
@@ -453,9 +453,9 @@ void WebPageProxy::addDictationAlternative(TextAlternativeWithRange&& alternativ
     if (!pageClient)
         return;
 
-    auto nsAlternatives = alternative.alternatives.get();
-    auto context = pageClient->addDictationAlternatives(nsAlternatives);
-    protectedLegacyMainFrameProcess()->sendWithAsyncReply(Messages::WebPage::AddDictationAlternative { nsAlternatives.primaryString, *context }, [context, weakThis = WeakPtr { *this }](bool success) {
+    RetainPtr nsAlternatives = alternative.alternatives.get();
+    auto context = pageClient->addDictationAlternatives(nsAlternatives.get());
+    protectedLegacyMainFrameProcess()->sendWithAsyncReply(Messages::WebPage::AddDictationAlternative { nsAlternatives.get().primaryString, *context }, [context, weakThis = WeakPtr { *this }](bool success) {
         if (RefPtr protectedThis = weakThis.get(); protectedThis && !success)
             protectedThis->removeDictationAlternatives(*context);
     }, webPageIDInMainFrameProcess());
@@ -744,11 +744,11 @@ void WebPageProxy::fullscreenVideoTextRecognitionTimerFired()
 
 bool WebPageProxy::updateIconForDirectory(NSFileWrapper *fileWrapper, const String& identifier)
 {
-    auto image = [fileWrapper icon];
+    RetainPtr image = [fileWrapper icon];
     if (!image)
         return false;
 
-    auto convertedImage = convertPlatformImageToBitmap(image, iconSize);
+    auto convertedImage = convertPlatformImageToBitmap(image.get(), iconSize);
     if (!convertedImage)
         return false;
 
@@ -902,7 +902,7 @@ void WebPageProxy::startApplePayAMSUISession(URL&& originatingURL, ApplePayAMSUI
     // FIXME: When in element fullscreen, UIClient::presentingViewController() may not return the
     // WKFullScreenViewController even though that is the presenting view controller of the WKWebView.
     // We should call PageClientImpl::presentingViewController() instead.
-    PlatformViewController *presentingViewController = uiClient().presentingViewController();
+    RetainPtr presentingViewController = uiClient().presentingViewController();
     if (!presentingViewController) {
         completionHandler(std::nullopt);
         return;
@@ -913,7 +913,7 @@ void WebPageProxy::startApplePayAMSUISession(URL&& originatingURL, ApplePayAMSUI
 
     auto amsBag = retainPtr([getAMSUIEngagementTaskClass() createBagForSubProfile]);
 
-    m_applePayAMSUISession = adoptNS([allocAMSUIEngagementTaskInstance() initWithRequest:amsRequest.get() bag:amsBag.get() presentingViewController:presentingViewController]);
+    m_applePayAMSUISession = adoptNS([allocAMSUIEngagementTaskInstance() initWithRequest:amsRequest.get() bag:amsBag.get() presentingViewController:presentingViewController.get()]);
     [m_applePayAMSUISession setRemotePresentation:YES];
 
     auto amsResult = retainPtr([m_applePayAMSUISession presentEngagement]);
@@ -1022,13 +1022,13 @@ NSDictionary *WebPageProxy::contentsOfUserInterfaceItem(NSString *userInterfaceI
 #if PLATFORM(MAC)
 bool WebPageProxy::isQuarantinedAndNotUserApproved(const String& fileURLString)
 {
-    NSURL *fileURL = [NSURL URLWithString:fileURLString];
-    if ([fileURL.pathExtension caseInsensitiveCompare:@"webarchive"] != NSOrderedSame)
+    RetainPtr fileURL = adoptNS([[NSURL alloc] initWithString:fileURLString]);
+    if ([fileURL.get().pathExtension caseInsensitiveCompare:@"webarchive"] != NSOrderedSame)
         return false;
 
     qtn_file_t qf = qtn_file_alloc();
 
-    int quarantineError = qtn_file_init_with_path(qf, fileURL.path.fileSystemRepresentation);
+    int quarantineError = qtn_file_init_with_path(qf, fileURL.get().path.fileSystemRepresentation);
 
     if (quarantineError == ENOENT || quarantineError == QTN_NOT_QUARANTINED)
         return false;
@@ -1085,7 +1085,7 @@ void WebPageProxy::replaceImageForRemoveBackground(const ElementContext& element
 
 bool WebPageProxy::useGPUProcessForDOMRenderingEnabled() const
 {
-    if (id useGPUProcessForDOMRendering = [[NSUserDefaults standardUserDefaults] objectForKey:@"WebKit2GPUProcessForDOMRendering"])
+    if (RetainPtr useGPUProcessForDOMRendering = [[NSUserDefaults standardUserDefaults] objectForKey:@"WebKit2GPUProcessForDOMRendering"])
         return [useGPUProcessForDOMRendering boolValue];
 
     if (protectedPreferences()->useGPUProcessForDOMRenderingEnabled())
@@ -1547,11 +1547,11 @@ String WebPageProxy::presentingApplicationBundleIdentifier() const
 {
     if (std::optional auditToken = presentingApplicationAuditToken()) {
         NSError *error = nil;
-        auto bundleProxy = [LSBundleProxy bundleProxyWithAuditToken:*auditToken error:&error];
+        RetainPtr bundleProxy = [LSBundleProxy bundleProxyWithAuditToken:*auditToken error:&error];
         if (error)
             RELEASE_LOG_ERROR(WebRTC, "Failed to get attribution bundleID from audit token with error: %@.", error.localizedDescription);
         else
-            return bundleProxy.bundleIdentifier;
+            return bundleProxy.get().bundleIdentifier;
     }
 #if PLATFORM(MAC)
     else

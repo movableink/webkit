@@ -208,7 +208,7 @@ static WebCore::CocoaColor *colorForItem(WarningItem item, ViewType *warning)
 static RetainPtr<ViewType> viewForIconImage(_WKWarningView *warningView)
 {
     NSString *symbolName;
-    WebCore::CocoaColor *color = colorForItem(WarningItem::WarningSymbol, warningView);
+    RetainPtr color = colorForItem(WarningItem::WarningSymbol, warningView);
     BOOL shouldSetTint = NO;
     CGFloat imagePointSize = fontOfSize(WarningTextSize::Title).pointSize * imageIconPointSizeMultiplier;
     WTF::switchOn(warningView.warning->data(), [&] (const WebKit::BrowsingWarning::SafeBrowsingWarningData&) {
@@ -221,10 +221,10 @@ static RetainPtr<ViewType> viewForIconImage(_WKWarningView *warningView)
     RetainPtr view = [NSImageView imageViewWithImage:[NSImage imageWithSystemSymbolName:symbolName accessibilityDescription:nil]];
     [view setSymbolConfiguration:[NSImageSymbolConfiguration configurationWithPointSize:imagePointSize weight:NSFontWeightRegular scale:NSImageSymbolScaleLarge]];
     if (shouldSetTint)
-        [view setContentTintColor:color];
+        [view setContentTintColor:color.get()];
 #else
     RetainPtr view = adoptNS([[UIImageView alloc] initWithImage:[UIImage systemImageNamed:symbolName]]);
-    [view setTintColor:color];
+    [view setTintColor:color.get()];
     [view setPreferredSymbolConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:imagePointSize]];
     [view setContentMode:UIViewContentModeScaleAspectFit];
 #endif
@@ -233,7 +233,7 @@ static RetainPtr<ViewType> viewForIconImage(_WKWarningView *warningView)
 
 static ButtonType *makeButton(WarningItem item, _WKWarningView *warning, SEL action)
 {
-    NSString *title = nil;
+    RetainPtr<NSString> title;
     if (item == WarningItem::ShowDetailsButton)
         title = WEB_UI_NSSTRING(@"Show Details", "Action from safe browsing warning");
     else if (item == WarningItem::ContinueButton)
@@ -241,10 +241,10 @@ static ButtonType *makeButton(WarningItem item, _WKWarningView *warning, SEL act
     else
         title = WEB_UI_NSSTRING(@"Go Back", "Action from safe browsing warning");
 #if PLATFORM(MAC)
-    return [NSButton buttonWithTitle:title target:warning action:action];
+    return [NSButton buttonWithTitle:title.get() target:warning action:action];
 #else
     UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
-    auto attributedTitle = adoptNS([[NSAttributedString alloc] initWithString:title attributes:@{
+    auto attributedTitle = adoptNS([[NSAttributedString alloc] initWithString:title.get() attributes:@{
         NSUnderlineStyleAttributeName:@(NSUnderlineStyleSingle),
         NSUnderlineColorAttributeName:[UIColor whiteColor],
         NSForegroundColorAttributeName:colorForItem(item, warning),
@@ -356,18 +356,18 @@ static RetainPtr<ViewType> makeLabel(NSAttributedString *attributedString)
 #endif
     }]).get());
 
-    auto primaryButton = WTF::switchOn(_warning->data(), [&] (const WebKit::BrowsingWarning::SafeBrowsingWarningData&) {
+    RetainPtr primaryButton = WTF::switchOn(_warning->data(), [&] (const WebKit::BrowsingWarning::SafeBrowsingWarningData&) {
         return makeButton(WarningItem::ShowDetailsButton, self, @selector(showDetailsClicked));
     }, [&] (const WebKit::BrowsingWarning::HTTPSNavigationFailureData&) {
         return makeButton(WarningItem::ContinueButton, self, @selector(continueClicked));
     });
-    auto goBack = makeButton(WarningItem::GoBackButton, self, @selector(goBackClicked));
-    auto box = adoptNS([_WKWarningViewBox new]);
+    RetainPtr goBack = makeButton(WarningItem::GoBackButton, self, @selector(goBackClicked));
+    RetainPtr box = adoptNS([_WKWarningViewBox new]);
     _box = box.get();
     [box setWarningViewBackgroundColor:colorForItem(WarningItem::BoxBackground, self)];
     [box layer].cornerRadius = boxCornerRadius;
 
-    for (ViewType *view in @[ warningViewIcon.get(), title.get(), warning.get(), goBack, primaryButton ]) {
+    for (ViewType *view in @[ warningViewIcon.get(), title.get(), warning.get(), goBack.get(), primaryButton.get() ]) {
         view.translatesAutoresizingMaskIntoConstraints = NO;
         [box addSubview:view];
     }
@@ -403,23 +403,23 @@ static RetainPtr<ViewType> makeLabel(NSAttributedString *attributedString)
 
         [[[title trailingAnchor] anchorWithOffsetToAnchor:[box trailingAnchor]] constraintGreaterThanOrEqualToConstant:marginSize],
         [[[warning trailingAnchor] anchorWithOffsetToAnchor:[box trailingAnchor]] constraintGreaterThanOrEqualToConstant:marginSize],
-        [[goBack.trailingAnchor anchorWithOffsetToAnchor:[box trailingAnchor]] constraintEqualToConstant:marginSize],
+        [[goBack.get().trailingAnchor anchorWithOffsetToAnchor:[box trailingAnchor]] constraintEqualToConstant:marginSize],
 
-        [[[warning bottomAnchor] anchorWithOffsetToAnchor:goBack.topAnchor] constraintEqualToConstant:marginSize],
+        [[[warning bottomAnchor] anchorWithOffsetToAnchor:goBack.get().topAnchor] constraintEqualToConstant:marginSize],
     ]];
 
-    bool needsVerticalButtonLayout = buttonSize(primaryButton).width + buttonSize(goBack).width + 3 * marginSize > self.frame.size.width;
+    bool needsVerticalButtonLayout = buttonSize(primaryButton.get()).width + buttonSize(goBack.get()).width + 3 * marginSize > self.frame.size.width;
     if (needsVerticalButtonLayout) {
         [NSLayoutConstraint activateConstraints:@[
-            [[primaryButton.trailingAnchor anchorWithOffsetToAnchor:[box trailingAnchor]] constraintEqualToConstant:marginSize],
-            [[goBack.bottomAnchor anchorWithOffsetToAnchor:primaryButton.topAnchor] constraintEqualToConstant:marginSize],
-            [[goBack.bottomAnchor anchorWithOffsetToAnchor:[box bottomAnchor]] constraintEqualToConstant:marginSize * 2 + buttonSize(primaryButton).height],
+            [[primaryButton.get().trailingAnchor anchorWithOffsetToAnchor:[box trailingAnchor]] constraintEqualToConstant:marginSize],
+            [[goBack.get().bottomAnchor anchorWithOffsetToAnchor:primaryButton.get().topAnchor] constraintEqualToConstant:marginSize],
+            [[goBack.get().bottomAnchor anchorWithOffsetToAnchor:[box bottomAnchor]] constraintEqualToConstant:marginSize * 2 + buttonSize(primaryButton.get()).height],
         ]];
     } else {
         [NSLayoutConstraint activateConstraints:@[
-            [[primaryButton.trailingAnchor anchorWithOffsetToAnchor:goBack.leadingAnchor] constraintEqualToConstant:marginSize],
-            [goBack.topAnchor constraintEqualToAnchor:primaryButton.topAnchor],
-            [[goBack.bottomAnchor anchorWithOffsetToAnchor:[box bottomAnchor]] constraintEqualToConstant:marginSize],
+            [[primaryButton.get().trailingAnchor anchorWithOffsetToAnchor:goBack.get().leadingAnchor] constraintEqualToConstant:marginSize],
+            [goBack.get().topAnchor constraintEqualToAnchor:primaryButton.get().topAnchor],
+            [[goBack.get().bottomAnchor anchorWithOffsetToAnchor:[box bottomAnchor]] constraintEqualToConstant:marginSize],
         ]];
     }
 #if !PLATFORM(MAC)
@@ -435,8 +435,8 @@ static RetainPtr<ViewType> makeLabel(NSAttributedString *attributedString)
 
 - (void)showDetailsClicked
 {
-    _WKWarningViewBox *box = _box.get().get();
-    ButtonType *showDetails = box.subviews.lastObject;
+    RetainPtr box = _box.get().get();
+    RetainPtr<ButtonType> showDetails = box.get().subviews.lastObject;
     [showDetails removeFromSuperview];
 
     auto text = adoptNS([self._protectedWarning->details() mutableCopy]);
@@ -451,10 +451,10 @@ static RetainPtr<ViewType> makeLabel(NSAttributedString *attributedString)
     constexpr auto maxY = kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
     constexpr auto minY = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner;
 #if PLATFORM(MAC)
-    box.layer.maskedCorners = maxY;
+    box.get().layer.maskedCorners = maxY;
     [bottom layer].maskedCorners = minY;
 #else
-    box.layer.maskedCorners = minY;
+    box.get().layer.maskedCorners = minY;
     [bottom layer].maskedCorners = maxY;
 #endif
 #endif
@@ -469,9 +469,9 @@ static RetainPtr<ViewType> makeLabel(NSAttributedString *attributedString)
     [bottom addSubview:details.get()];
 #if HAVE(SAFE_BROWSING)
     [NSLayoutConstraint activateConstraints:@[
-        [box.widthAnchor constraintEqualToAnchor:[bottom widthAnchor]],
-        [box.bottomAnchor constraintEqualToAnchor:[bottom topAnchor]],
-        [box.leadingAnchor constraintEqualToAnchor:[bottom leadingAnchor]],
+        [box.get().widthAnchor constraintEqualToAnchor:[bottom widthAnchor]],
+        [box.get().bottomAnchor constraintEqualToAnchor:[bottom topAnchor]],
+        [box.get().leadingAnchor constraintEqualToAnchor:[bottom leadingAnchor]],
         [[line widthAnchor] constraintEqualToAnchor:[bottom widthAnchor]],
         [[line leadingAnchor] constraintEqualToAnchor:[bottom leadingAnchor]],
         [[line topAnchor] constraintEqualToAnchor:[bottom topAnchor]],
@@ -612,11 +612,11 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     self->_warning = warning;
     self.delegate = warning;
 
-    auto *foregroundColor = colorForItem(WarningItem::MessageText, warning);
-    auto string = adoptNS([attributedString mutableCopy]);
-    [string addAttributes:@{ NSForegroundColorAttributeName : foregroundColor } range:NSMakeRange(0, [string length])];
+    RetainPtr foregroundColor = colorForItem(WarningItem::MessageText, warning);
+    RetainPtr string = adoptNS([attributedString mutableCopy]);
+    [string addAttributes:@{ NSForegroundColorAttributeName : foregroundColor.get() } range:NSMakeRange(0, [string length])];
     [self setBackgroundColor:colorForItem(WarningItem::BoxBackground, warning)];
-    [self setLinkTextAttributes:@{ NSForegroundColorAttributeName : foregroundColor }];
+    [self setLinkTextAttributes:@{ NSForegroundColorAttributeName : foregroundColor.get() }];
     [self.textStorage appendAttributedString:string.get()];
     self.editable = NO;
 #if !PLATFORM(MAC)

@@ -214,8 +214,8 @@ static void* lib##Library() \
     @class className; \
     static Class init##className(); \
     static Class (*get##className##Class)() = init##className; \
-    struct class##className##Wrapper { SUPPRESS_UNCOUNTED_MEMBER Class classObject; }; \
-    static class##className##Wrapper class##className; \
+    struct Class##className##Wrapper { SUPPRESS_UNCOUNTED_MEMBER Class classObject; }; \
+    static Class##className##Wrapper class##className; \
     \
     static Class className##Function() \
     { \
@@ -330,11 +330,12 @@ static void* lib##Library() \
 #define SOFT_LINK_CONSTANT_MAY_FAIL(framework, name, type) \
     static bool init##name(); \
     static type (*get##name)() = 0; \
-    static type constant##name; \
+    struct Constant##name##Wrapper { SUPPRESS_UNRETAINED_LOCAL type constant; }; \
+    static Constant##name##Wrapper constant##name; \
     \
     static type name##Function() \
     { \
-        return constant##name; \
+        return constant##name.constant; \
     } \
     \
     static bool canLoad##name() \
@@ -350,7 +351,7 @@ static void* lib##Library() \
         void* constant = dlsym(framework##Library(), auditedName); \
         if (!constant) \
             return false; \
-        constant##name = *static_cast<type const *>(constant); \
+        constant##name.constant = *static_cast<type const *>(constant); \
         get##name = name##Function; \
         return true; \
     }

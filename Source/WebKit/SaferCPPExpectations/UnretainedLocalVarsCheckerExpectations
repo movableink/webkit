@@ -16,11 +16,6 @@ UIProcess/API/mac/WKWebViewMac.mm
 UIProcess/API/mac/WKWebViewTestingMac.mm
 UIProcess/Automation/cocoa/WebAutomationSessionCocoa.mm
 UIProcess/Automation/mac/WebAutomationSessionMac.mm
-UIProcess/Cocoa/WKStorageAccessAlert.mm
-UIProcess/Cocoa/WebPageProxyCocoa.mm
-UIProcess/Cocoa/WebPreferencesCocoa.mm
-UIProcess/Cocoa/WebProcessPoolCocoa.mm
-UIProcess/Cocoa/_WKWarningView.mm
 UIProcess/Extensions/Cocoa/API/WebExtensionContextAPITabsCocoa.mm
 UIProcess/Extensions/Cocoa/WebExtensionCocoa.mm
 UIProcess/Gamepad/mac/UIGamepadProviderMac.mm
