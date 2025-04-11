@@ -81,11 +81,6 @@
 #endif
 #endif // USE(SANDBOX_VERSION_3)
 
-;;;
-;;; The following rules were originally contained in 'system.sb'. We are duplicating them here so we can
-;;; remove unneeded sandbox extensions.
-;;;
-
 ;;; Allow registration of per-pid services.
 (allow mach-register
     (local-name
