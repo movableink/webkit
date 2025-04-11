@@ -26,7 +26,6 @@
 
 #include "CSSValueKeywords.h"
 #include "FontDescription.h"
-#include <variant>
 #include <wtf/RefCountedFixedVector.h>
 
 #if PLATFORM(COCOA)

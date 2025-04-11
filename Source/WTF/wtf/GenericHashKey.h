@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/HashTraits.h>
+#include <wtf/Variant.h>
 
 namespace WTF {
 

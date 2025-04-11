@@ -915,6 +915,7 @@
 		EBEE51132D2DF488004FEC23 /* ContinuousApproximateTime.h in Headers */ = {isa = PBXBuildFile; fileRef = EBEE51112D2DF488004FEC23 /* ContinuousApproximateTime.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		EBEE51142D2DF488004FEC23 /* ContinuousApproximateTime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = EBEE51122D2DF488004FEC23 /* ContinuousApproximateTime.cpp */; };
 		FA0C387B2BEAD56B00583842 /* SmallMap.h in Headers */ = {isa = PBXBuildFile; fileRef = FA0C387A2BEAD56B00583842 /* SmallMap.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		FA864D602DA9809F006820D3 /* Variant.h in Headers */ = {isa = PBXBuildFile; fileRef = FA864D5F2DA9809F006820D3 /* Variant.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		FAC31B9D2D80083D006CCA20 /* CoroutineUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = FAC31B9C2D80083D006CCA20 /* CoroutineUtilities.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		FE032AD22463E43B0012D7C7 /* WTFConfig.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FE032AD02463E43B0012D7C7 /* WTFConfig.cpp */; };
 		FE03831C2ABC04F700A576A2 /* TZoneMallocInlines.h in Headers */ = {isa = PBXBuildFile; fileRef = FE03831A2ABC04F700A576A2 /* TZoneMallocInlines.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -1961,6 +1962,7 @@
 		F6D67D3226F90142006E0349 /* Int128.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Int128.h; sourceTree = "<group>"; };
 		F72BBDB107FA424886178B9E /* SymbolImpl.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SymbolImpl.cpp; sourceTree = "<group>"; };
 		FA0C387A2BEAD56B00583842 /* SmallMap.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SmallMap.h; sourceTree = "<group>"; };
+		FA864D5F2DA9809F006820D3 /* Variant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Variant.h; sourceTree = "<group>"; };
 		FAC31B9C2D80083D006CCA20 /* CoroutineUtilities.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CoroutineUtilities.h; sourceTree = "<group>"; };
 		FE032AD02463E43B0012D7C7 /* WTFConfig.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WTFConfig.cpp; sourceTree = "<group>"; };
 		FE032AD12463E43B0012D7C7 /* WTFConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WTFConfig.h; sourceTree = "<group>"; };
@@ -2668,6 +2670,7 @@
 				7AFEC6AE1EB22AC600DADE36 /* UUID.h */,
 				A8A47311151A825B004123FG /* ValidatedReinterpretCast.h */,
 				A8A4736F151A825B004123FF /* ValueCheck.h */,
+				FA864D5F2DA9809F006820D3 /* Variant.h */,
 				BCE0DFAA2D18670B003F0349 /* VariantExtras.h */,
 				BCEA08032CCFDB33000AC148 /* VariantList.h */,
 				BC05ACA52CEA70E500750CB1 /* VariantListOperations.h */,
@@ -3805,6 +3808,7 @@
 				DD3DC8C227A4BF8E007E5B61 /* UUID.h in Headers */,
 				DD3DC98127A4BF8E007E5B62 /* ValidatedReinterpretCast.h in Headers */,
 				DD3DC86D27A4BF8E007E5B61 /* ValueCheck.h in Headers */,
+				FA864D602DA9809F006820D3 /* Variant.h in Headers */,
 				BCE0DFAB2D18670B003F0349 /* VariantExtras.h in Headers */,
 				BCEA08042CCFDB33000AC148 /* VariantList.h in Headers */,
 				BC05ACA62CEA70E500750CB1 /* VariantListOperations.h in Headers */,

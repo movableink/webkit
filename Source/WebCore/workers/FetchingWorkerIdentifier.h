@@ -27,7 +27,6 @@
 
 #include "ServiceWorkerIdentifier.h"
 #include "SharedWorkerIdentifier.h"
-#include <variant>
 
 namespace WebCore {
 

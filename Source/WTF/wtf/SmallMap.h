@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include <variant>
 #include <wtf/HashMap.h>
 #include <wtf/ScopedLambda.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/Variant.h>
 
 namespace WTF {
 

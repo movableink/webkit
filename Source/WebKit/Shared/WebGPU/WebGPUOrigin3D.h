@@ -29,7 +29,6 @@
 
 #include <WebCore/WebGPUIntegralTypes.h>
 #include <optional>
-#include <variant>
 #include <wtf/Vector.h>
 
 namespace WebKit::WebGPU {

@@ -27,7 +27,6 @@
 
 #include "GPUIntegralTypes.h"
 #include "WebGPUExtent3D.h"
-#include <variant>
 #include <wtf/Vector.h>
 
 namespace WebCore {

@@ -29,7 +29,6 @@
 #include "CommonAtomStrings.h"
 #include "FillMode.h"
 #include "PlaybackDirection.h"
-#include <variant>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {

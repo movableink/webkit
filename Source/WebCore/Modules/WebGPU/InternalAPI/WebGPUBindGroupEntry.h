@@ -31,7 +31,6 @@
 #include "WebGPUSampler.h"
 #include "WebGPUTextureView.h"
 #include <functional>
-#include <variant>
 
 namespace WebCore::WebGPU {
 

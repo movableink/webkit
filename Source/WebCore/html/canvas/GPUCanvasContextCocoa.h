@@ -36,7 +36,6 @@
 #include "IOSurface.h"
 #include "OffscreenCanvas.h"
 #include "PlatformCALayer.h"
-#include <variant>
 #include <wtf/MachSendRight.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>

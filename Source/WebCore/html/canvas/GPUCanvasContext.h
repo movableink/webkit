@@ -27,7 +27,6 @@
 
 #include "ExceptionOr.h"
 #include "GPUBasedCanvasRenderingContext.h"
-#include <variant>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>

@@ -27,7 +27,6 @@
 
 #include "GPUIntegralTypes.h"
 #include "WebGPUOrigin3D.h"
-#include <variant>
 #include <wtf/Vector.h>
 
 namespace WebCore {

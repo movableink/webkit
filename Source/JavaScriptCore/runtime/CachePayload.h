@@ -26,7 +26,6 @@
 #pragma once
 
 #include "VM.h"
-#include <variant>
 #include <wtf/MallocSpan.h>
 #include <wtf/MappedFileData.h>
 

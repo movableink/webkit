@@ -28,7 +28,6 @@
 
 #include "DoubleRange.h"
 #include "LongRange.h"
-#include <variant>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 

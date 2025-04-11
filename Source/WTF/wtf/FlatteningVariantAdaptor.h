@@ -24,10 +24,10 @@
 
 #pragma once
 
-#include <variant>
 #include <wtf/Brigand.h>
 #include <wtf/CompactVariant.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/Variant.h>
 #include <wtf/VariantExtras.h>
 
 namespace WTF {

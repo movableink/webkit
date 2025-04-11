@@ -33,7 +33,6 @@
 
 #include <tuple>
 #include <type_traits>
-#include <variant>
 #include <wtf/Assertions.h>
 #include <wtf/Expected.h>
 #include <wtf/Forward.h>
@@ -42,6 +41,7 @@
 #include <wtf/RefPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/TypeTraits.h>
+#include <wtf/Variant.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {

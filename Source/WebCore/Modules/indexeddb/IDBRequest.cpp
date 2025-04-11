@@ -46,7 +46,6 @@
 #include "ThreadSafeDataBuffer.h"
 #include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/StrongInlines.h>
-#include <variant>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
 

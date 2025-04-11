@@ -43,7 +43,6 @@
 #include "ServiceWorkerTypes.h"
 #include "SharedWorkerIdentifier.h"
 #include "StoredCredentialsPolicy.h"
-#include <variant>
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>

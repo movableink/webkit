@@ -33,7 +33,6 @@
 #include "PushSubscriptionJSON.h"
 
 #include <optional>
-#include <variant>
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMalloc.h>
 

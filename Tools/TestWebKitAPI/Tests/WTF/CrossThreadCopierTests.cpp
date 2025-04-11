@@ -26,9 +26,9 @@
 #include "config.h"
 
 #include "Test.h"
-#include <variant>
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/URL.h>
+#include <wtf/Variant.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 

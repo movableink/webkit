@@ -29,7 +29,6 @@
 #include "DocumentMarker.h"
 #include "EventLoop.h"
 #include "Position.h"
-#include <variant>
 #include <wtf/Noncopyable.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakRef.h>

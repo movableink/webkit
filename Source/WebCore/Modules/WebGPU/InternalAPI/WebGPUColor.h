@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include <variant>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 

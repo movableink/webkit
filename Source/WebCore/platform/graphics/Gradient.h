@@ -33,7 +33,6 @@
 #include "GradientColorStops.h"
 #include "GraphicsTypes.h"
 #include "RenderingResource.h"
-#include <variant>
 #include <wtf/Vector.h>
 
 #if USE(SKIA)

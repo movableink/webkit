@@ -27,7 +27,6 @@
 
 #include "IndexedDB.h"
 #include "ThreadSafeDataBuffer.h"
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMalloc.h>

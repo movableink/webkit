@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include <variant>
 #include <wtf/Hasher.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/TextStream.h>

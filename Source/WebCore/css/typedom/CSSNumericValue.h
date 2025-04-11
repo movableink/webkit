@@ -27,7 +27,6 @@
 
 #include "CSSNumericType.h"
 #include "CSSStyleValue.h"
-#include <variant>
 #include <wtf/HashMap.h>
 
 namespace WebCore {

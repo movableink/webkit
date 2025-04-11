@@ -28,7 +28,6 @@
 #include "WebGPUInternalError.h"
 #include "WebGPUOutOfMemoryError.h"
 #include "WebGPUValidationError.h"
-#include <variant>
 #include <wtf/Ref.h>
 
 namespace WebCore::WebGPU {

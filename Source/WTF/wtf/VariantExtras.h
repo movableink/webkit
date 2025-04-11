@@ -24,8 +24,8 @@
 
 #pragma once
 
-#include <variant>
 #include <wtf/StdLibExtras.h>
+#include <wtf/Variant.h>
 #include <wtf/VectorTraits.h>
 
 namespace WTF {

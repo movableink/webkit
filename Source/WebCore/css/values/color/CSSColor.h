@@ -31,7 +31,6 @@
 #include "CSSKeywordColor.h"
 #include "CSSResolvedColor.h"
 #include "CSSValueTypes.h"
-#include <variant>
 #include <wtf/Markable.h>
 
 namespace WebCore {

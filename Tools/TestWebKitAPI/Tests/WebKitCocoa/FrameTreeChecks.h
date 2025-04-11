@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include <variant>
+#include <wtf/Variant.h>
 #include <wtf/Vector.h>
 
 namespace TestWebKitAPI {

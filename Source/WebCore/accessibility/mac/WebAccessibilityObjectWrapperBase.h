@@ -30,7 +30,6 @@
 #import "CocoaAccessibilityConstants.h"
 #import "FontPlatformData.h"
 #import <CoreGraphics/CoreGraphics.h>
-#import <variant>
 #import <wtf/Markable.h>
 #import <wtf/RefPtr.h>
 #import <wtf/WeakPtr.h>

@@ -34,7 +34,6 @@
 #include "ColorTypes.h"
 #include "StylePrimitiveNumericTypes.h"
 #include <optional>
-#include <variant>
 #include <wtf/Brigand.h>
 #include <wtf/OptionSet.h>
 #include <wtf/StdLibExtras.h>

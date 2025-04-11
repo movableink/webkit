@@ -26,7 +26,6 @@
 #pragma once
 
 #include "RenderingResourceIdentifier.h"
-#include <variant>
 #include <wtf/OptionSet.h>
 
 namespace WTF {

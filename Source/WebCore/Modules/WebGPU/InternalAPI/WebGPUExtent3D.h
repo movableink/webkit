@@ -26,7 +26,6 @@
 #pragma once
 
 #include "WebGPUIntegralTypes.h"
-#include <variant>
 #include <wtf/Vector.h>
 
 namespace WebCore::WebGPU {

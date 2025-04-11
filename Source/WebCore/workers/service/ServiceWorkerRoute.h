@@ -32,7 +32,6 @@
 #include "RouterSourceEnum.h"
 #include "RunningStatus.h"
 #include <optional>
-#include <variant>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 

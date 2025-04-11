@@ -26,7 +26,6 @@
 
 #include "ExceptionOr.h"
 #include "ScriptExecutionContext.h"
-#include <variant>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>

@@ -31,7 +31,6 @@
 #include "CSSPrimitiveNumericTypes+EvaluateCalc.h"
 #include "CSSRelativeColorResolver.h"
 #include "CSSRelativeColorSerialization.h"
-#include <variant>
 #include <wtf/Forward.h>
 
 namespace WebCore {

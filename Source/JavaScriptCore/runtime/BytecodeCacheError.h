@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ParserError.h"
-#include <variant>
 
 namespace JSC {
 

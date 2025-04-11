@@ -64,7 +64,6 @@
 #include "StaticNodeList.h"
 #include "TemplateContentDocumentFragment.h"
 #include <algorithm>
-#include <variant>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {

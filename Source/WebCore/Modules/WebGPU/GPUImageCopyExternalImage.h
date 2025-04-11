@@ -35,7 +35,6 @@
 #include "WebCodecsVideoFrame.h"
 #include "WebGPUImageCopyExternalImage.h"
 #include <optional>
-#include <variant>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {

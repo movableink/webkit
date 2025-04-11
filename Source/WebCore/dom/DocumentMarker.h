@@ -22,7 +22,6 @@
 
 #include "DictationContext.h"
 #include "SimpleRange.h"
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
 #include <wtf/UUID.h>

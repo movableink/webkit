@@ -30,7 +30,6 @@
 #include "ScriptWrappable.h"
 #include "TransformationMatrix.h"
 #include <JavaScriptCore/Forward.h>
-#include <variant>
 #include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>

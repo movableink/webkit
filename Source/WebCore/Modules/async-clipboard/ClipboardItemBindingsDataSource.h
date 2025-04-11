@@ -28,7 +28,6 @@
 #include "ClipboardItemDataSource.h"
 #include "ExceptionCode.h"
 #include "FileReaderLoaderClient.h"
-#include <variant>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 

@@ -33,7 +33,6 @@
 #include "ExceptionOr.h"
 #include "JsonWebKey.h"
 #include <pal/crypto/CryptoDigest.h>
-#include <variant>
 #include <wtf/Function.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>

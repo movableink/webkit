@@ -33,7 +33,6 @@
 #include <wtf/URL.h>
 #include "XMLHttpRequestEventTarget.h"
 #include "XMLHttpRequestProgressEventThrottle.h"
-#include <variant>
 #include <wtf/CancellableTask.h>
 #include <wtf/text/StringBuilder.h>
 

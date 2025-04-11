@@ -26,7 +26,6 @@
 #pragma once
 
 #include <WebCore/ShareableBitmap.h>
-#include <variant>
 #include <wtf/MachSendRight.h>
 
 #if ENABLE(RE_DYNAMIC_CONTENT_SCALING)

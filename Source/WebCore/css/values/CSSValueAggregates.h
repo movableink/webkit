@@ -30,7 +30,6 @@
 #include <optional>
 #include <tuple>
 #include <utility>
-#include <variant>
 #include <wtf/Markable.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>

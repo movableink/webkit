@@ -39,7 +39,6 @@
 #include "SecurityOriginData.h"
 #include "URLKeepingBlobAlive.h"
 #include "URLRegistry.h"
-#include <variant>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 

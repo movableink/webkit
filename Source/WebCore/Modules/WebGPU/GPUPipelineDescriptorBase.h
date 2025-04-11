@@ -30,7 +30,6 @@
 #include "GPUPipelineLayout.h"
 #include "WebGPUPipelineDescriptorBase.h"
 
-#include <variant>
 
 namespace WebCore {
 

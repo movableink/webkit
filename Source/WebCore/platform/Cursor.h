@@ -27,7 +27,6 @@
 
 #include "Image.h"
 #include "IntPoint.h"
-#include <variant>
 #include <wtf/Assertions.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>

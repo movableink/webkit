@@ -31,7 +31,6 @@
 #include "Color.h"
 #include "ColorSerialization.h"
 #include <optional>
-#include <variant>
 
 namespace WebCore {
 

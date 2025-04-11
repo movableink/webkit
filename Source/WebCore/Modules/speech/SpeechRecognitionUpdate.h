@@ -28,7 +28,6 @@
 #include "SpeechRecognitionConnectionClientIdentifier.h"
 #include "SpeechRecognitionError.h"
 #include "SpeechRecognitionResultData.h"
-#include <variant>
 #include <wtf/ArgumentCoder.h>
 
 namespace WebCore {

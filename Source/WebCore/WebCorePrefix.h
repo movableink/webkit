@@ -75,6 +75,7 @@
 #include <new>
 #include <string>
 #include <typeinfo>
+#include <wtf/Variant.h>
 #endif
 
 #if defined(__APPLE__)

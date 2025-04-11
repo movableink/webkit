@@ -29,7 +29,6 @@
 #include "CSSPrimitiveNumericTypes+Serialization.h"
 #include "ColorSerialization.h"
 #include <optional>
-#include <variant>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {

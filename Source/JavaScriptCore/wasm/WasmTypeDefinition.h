@@ -25,8 +25,6 @@
 
 #pragma once
 
-#include <variant>
-
 #if ENABLE(WEBASSEMBLY)
 
 #include "JITCompilation.h"

@@ -30,7 +30,6 @@
 #include "CoreIPCAVOutputContext.h"
 #include <WebCore/MediaPlaybackTargetCocoa.h>
 #include <WebCore/MediaPlaybackTargetMock.h>
-#include <variant>
 
 namespace WebKit {
 

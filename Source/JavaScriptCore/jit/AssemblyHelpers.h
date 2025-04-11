@@ -46,7 +46,6 @@
 #include "TagRegistersMode.h"
 #include "TypeofType.h"
 #include "VM.h"
-#include <variant>
 #include <wtf/TZoneMalloc.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN

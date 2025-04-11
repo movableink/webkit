@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include <variant>
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
 #include <wtf/Vector.h>

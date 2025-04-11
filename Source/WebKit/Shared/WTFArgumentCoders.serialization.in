@@ -239,7 +239,7 @@ header: <wtf/MemoryPressureHandler.h>
     Critical,
 }
 
-header: <variant>
+header: <wtf/Variant.h>
 [AdditionalEncoder=StreamConnectionEncoder, Nested] struct std::monostate {
 }
 

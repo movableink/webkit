@@ -21,7 +21,6 @@
 
 #include "Color.h"
 #include "RenderSVGResourceContainer.h"
-#include <variant>
 
 namespace WebCore {
 

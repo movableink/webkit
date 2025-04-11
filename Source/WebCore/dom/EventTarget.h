@@ -36,7 +36,6 @@
 #include "ExceptionOr.h"
 #include "ScriptWrappable.h"
 #include <memory>
-#include <variant>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>

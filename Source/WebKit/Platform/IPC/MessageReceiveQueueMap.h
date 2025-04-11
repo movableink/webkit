@@ -27,7 +27,6 @@
 
 #include "Decoder.h"
 #include "MessageReceiveQueue.h"
-#include <variant>
 #include <wtf/HashMap.h>
 
 namespace IPC {

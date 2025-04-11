@@ -34,7 +34,6 @@
 #include "SourceBufferParser.h"
 #include <CoreAudio/CoreAudioTypes.h>
 #include <pal/spi/cf/CoreMediaSPI.h>
-#include <variant>
 #include <webm/callback.h>
 #include <webm/common/vp9_header_parser.h>
 #include <webm/status.h>

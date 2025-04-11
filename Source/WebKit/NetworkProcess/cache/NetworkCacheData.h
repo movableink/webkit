@@ -44,7 +44,6 @@
 #endif
 
 #if USE(CURL)
-#include <variant>
 #include <wtf/Box.h>
 #endif
 

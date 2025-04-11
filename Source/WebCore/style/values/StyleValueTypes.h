@@ -30,7 +30,6 @@
 #include <optional>
 #include <tuple>
 #include <utility>
-#include <variant>
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {

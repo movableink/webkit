@@ -35,7 +35,6 @@
 #include "CSSOpacityFunction.h"
 #include "CSSSaturateFunction.h"
 #include "CSSSepiaFunction.h"
-#include <variant>
 
 namespace WebCore {
 namespace CSS {

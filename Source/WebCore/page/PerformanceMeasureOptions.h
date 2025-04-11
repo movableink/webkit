@@ -26,7 +26,6 @@
 #pragma once
 
 #include <JavaScriptCore/JSCJSValue.h>
-#include <variant>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {

@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ArgumentCoders.h"
-#include <variant>
 #include <wtf/HashTraits.h>
 #include <wtf/text/WTFString.h>
 

@@ -29,7 +29,6 @@
 
 #include "AudioContextLatencyCategory.h"
 #include <optional>
-#include <variant>
 
 namespace WebCore {
 

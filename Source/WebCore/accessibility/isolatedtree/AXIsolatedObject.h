@@ -34,7 +34,6 @@
 #include "LayoutRect.h"
 #include "Path.h"
 #include "RenderStyleConstants.h"
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>

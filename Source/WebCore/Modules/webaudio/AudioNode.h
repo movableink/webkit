@@ -29,7 +29,6 @@
 #include "ChannelInterpretation.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/LoggerHelper.h>
 

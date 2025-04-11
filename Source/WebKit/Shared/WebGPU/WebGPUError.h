@@ -30,7 +30,6 @@
 #include "WebGPUInternalError.h"
 #include "WebGPUOutOfMemoryError.h"
 #include "WebGPUValidationError.h"
-#include <variant>
 
 namespace WebKit::WebGPU {
 

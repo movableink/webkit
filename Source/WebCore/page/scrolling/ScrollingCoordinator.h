@@ -35,7 +35,6 @@
 #include "ScrollingCoordinatorTypes.h"
 #include "UserInterfaceLayoutDirection.h"
 #include "WheelEventTestMonitor.h"
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>

@@ -32,7 +32,6 @@
 
 #include <ExceptionOr.h>
 #include <span>
-#include <variant>
 
 namespace WebCore {
 

@@ -29,7 +29,6 @@
 #include "StringAdaptors.h"
 #include <JavaScriptCore/HandleTypes.h>
 #include <JavaScriptCore/Strong.h>
-#include <variant>
 #include <wtf/Brigand.h>
 #include <wtf/Compiler.h>
 #include <wtf/Markable.h>

@@ -28,7 +28,6 @@
 #include "AlphaPremultiplication.h"
 #include "ColorTypes.h"
 #include <optional>
-#include <variant>
 #include <wtf/Hasher.h>
 
 namespace WTF {

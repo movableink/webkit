@@ -33,7 +33,6 @@
 #include "MacroAssemblerCodeRef.h"
 #include "NativeFunction.h"
 #include "Opcode.h"
-#include <variant>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
 

@@ -39,7 +39,6 @@
 #include <span>
 #include <type_traits>
 #include <utility>
-#include <variant>
 #include <wtf/Assertions.h>
 #include <wtf/Brigand.h>
 #include <wtf/CheckedArithmetic.h>
@@ -50,6 +49,7 @@
 #include <wtf/StringExtras.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/TypeTraits.h>
+#include <wtf/Variant.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 

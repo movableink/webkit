@@ -26,7 +26,6 @@
 #pragma once
 
 #include "FontMetrics.h"
-#include <variant>
 #include <wtf/Markable.h>
 #include <wtf/text/TextStream.h>
 

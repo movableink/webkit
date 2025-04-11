@@ -27,7 +27,6 @@
 
 #include "ExtendableEventInit.h"
 #include <JavaScriptCore/ArrayBuffer.h>
-#include <variant>
 
 namespace WebCore {
 

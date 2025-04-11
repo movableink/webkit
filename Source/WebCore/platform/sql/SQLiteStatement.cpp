@@ -30,7 +30,6 @@
 #include "SQLValue.h"
 #include "SQLiteDatabaseTracker.h"
 #include <sqlite3.h>
-#include <variant>
 #include <wtf/Assertions.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>

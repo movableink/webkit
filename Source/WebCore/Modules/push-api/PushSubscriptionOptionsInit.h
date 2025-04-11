@@ -27,7 +27,6 @@
 
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <optional>
-#include <variant>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {

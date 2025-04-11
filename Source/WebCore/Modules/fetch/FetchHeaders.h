@@ -31,7 +31,6 @@
 #include "ExceptionOr.h"
 #include "FetchHeadersGuard.h"
 #include "HTTPHeaderMap.h"
-#include <variant>
 #include <wtf/HashTraits.h>
 #include <wtf/Vector.h>
 

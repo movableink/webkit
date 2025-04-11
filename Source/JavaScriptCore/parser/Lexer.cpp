@@ -32,7 +32,6 @@
 #include "ParseInt.h"
 #include <limits.h>
 #include <string.h>
-#include <variant>
 #include <wtf/Assertions.h>
 #include <wtf/HexNumber.h>
 #include <wtf/dtoa.h>

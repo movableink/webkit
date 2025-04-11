@@ -182,11 +182,11 @@ inline namespace fundamentals_v3 {
 #include <optional>
 #include <type_traits>
 #include <utility>
-#include <variant>
 #include <wtf/Assertions.h>
 #include <wtf/Compiler.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Unexpected.h>
+#include <wtf/Variant.h>
 
 namespace std {
 namespace experimental {

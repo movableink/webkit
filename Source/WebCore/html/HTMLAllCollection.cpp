@@ -30,7 +30,6 @@
 #include "Element.h"
 #include "NodeRareDataInlines.h"
 #include <JavaScriptCore/Identifier.h>
-#include <variant>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {

@@ -30,7 +30,6 @@
 #include "IntersectionObserverCallback.h"
 #include "LengthBox.h"
 #include "ReducedResolutionSeconds.h"
-#include <variant>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>

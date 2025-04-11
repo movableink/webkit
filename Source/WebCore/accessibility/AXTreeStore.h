@@ -26,7 +26,6 @@
 
 #include "AXCoreObject.h"
 #include "ActivityState.h"
-#include <variant>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>

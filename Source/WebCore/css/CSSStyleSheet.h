@@ -27,7 +27,6 @@
 #include "MediaQuery.h"
 #include "StyleSheet.h"
 #include <memory>
-#include <variant>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TypeCasts.h>

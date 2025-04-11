@@ -30,7 +30,6 @@
 #include <JavaScriptCore/InspectorProtocolObjects.h>
 #include <JavaScriptCore/ScriptCallFrame.h>
 #include <JavaScriptCore/ScriptCallStack.h>
-#include <variant>
 #include <wtf/HashSet.h>
 #include <wtf/WeakRef.h>
 

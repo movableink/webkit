@@ -27,7 +27,6 @@
 #include "CalculationOperator.h"
 #include <optional>
 #include <tuple>
-#include <variant>
 #include <wtf/Ref.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>

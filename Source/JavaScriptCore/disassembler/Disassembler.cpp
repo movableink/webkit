@@ -27,7 +27,6 @@
 #include "Disassembler.h"
 
 #include "MacroAssemblerCodeRef.h"
-#include <variant>
 #include <wtf/Condition.h>
 #include <wtf/DataLog.h>
 #include <wtf/Deque.h>

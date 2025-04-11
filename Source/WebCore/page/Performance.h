@@ -39,7 +39,6 @@
 #include "ReducedResolutionSeconds.h"
 #include "ScriptExecutionContext.h"
 #include "Timer.h"
-#include <variant>
 #include <wtf/ListHashSet.h>
 
 namespace JSC {

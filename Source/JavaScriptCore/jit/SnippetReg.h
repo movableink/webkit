@@ -27,7 +27,6 @@
 #pragma once
 
 #include "Reg.h"
-#include <variant>
 
 #if ENABLE(JIT)
 

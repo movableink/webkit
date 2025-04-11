@@ -27,7 +27,6 @@
 
 #include "PageIdentifier.h"
 #include "ScriptExecutionContextIdentifier.h"
-#include <variant>
 #include <wtf/CheckedPtr.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/FastMalloc.h>

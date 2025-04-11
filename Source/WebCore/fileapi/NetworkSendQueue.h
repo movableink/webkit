@@ -28,7 +28,6 @@
 #include "ContextDestructionObserver.h"
 #include "ExceptionCode.h"
 #include <span>
-#include <variant>
 #include <wtf/Deque.h>
 #include <wtf/Function.h>
 #include <wtf/UniqueRef.h>

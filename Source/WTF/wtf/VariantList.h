@@ -26,8 +26,8 @@
 
 #include <array>
 #include <span>
-#include <variant>
 #include <wtf/StdLibExtras.h>
+#include <wtf/Variant.h>
 #include <wtf/VariantListOperations.h>
 #include <wtf/Vector.h>
 

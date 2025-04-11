@@ -29,7 +29,6 @@
 
 #include <WebCore/FrameIdentifier.h>
 #include <WebCore/IntPoint.h>
-#include <variant>
 #include <wtf/CompletionHandler.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/RunLoop.h>

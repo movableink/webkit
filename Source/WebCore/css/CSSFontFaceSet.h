@@ -26,7 +26,6 @@
 #pragma once
 
 #include "CSSFontFace.h"
-#include <variant>
 #include <wtf/HashMap.h>
 #include <wtf/Observer.h>
 #include <wtf/Vector.h>

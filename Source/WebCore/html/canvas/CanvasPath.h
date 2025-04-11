@@ -30,7 +30,6 @@
 
 #include "ExceptionOr.h"
 #include "Path.h"
-#include <variant>
 #include <wtf/Forward.h>
 
 namespace WebCore {

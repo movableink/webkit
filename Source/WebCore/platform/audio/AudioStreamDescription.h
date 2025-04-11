@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include <variant>
 
 typedef struct AudioStreamBasicDescription AudioStreamBasicDescription;
 

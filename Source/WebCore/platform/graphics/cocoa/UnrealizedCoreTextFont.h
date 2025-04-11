@@ -29,7 +29,6 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreText/CoreText.h>
 #include <optional>
-#include <variant>
 #include <wtf/RetainPtr.h>
 
 namespace WebCore {

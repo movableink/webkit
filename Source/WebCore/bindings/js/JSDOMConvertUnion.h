@@ -35,7 +35,6 @@
 #include "JSDOMConvertUndefined.h"
 #include <JavaScriptCore/IteratorOperations.h>
 #include <JavaScriptCore/JSArrayBufferViewInlines.h>
-#include <variant>
 
 namespace WebCore {
 

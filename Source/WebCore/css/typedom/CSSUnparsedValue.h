@@ -26,7 +26,6 @@
 #pragma once
 
 #include "CSSStyleValue.h"
-#include <variant>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {

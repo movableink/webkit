@@ -29,7 +29,6 @@
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <JavaScriptCore/ArrayBufferView.h>
 #include <span>
-#include <variant>
 #include <wtf/Compiler.h>
 #include <wtf/RefPtr.h>
 

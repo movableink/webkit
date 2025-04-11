@@ -30,7 +30,6 @@
 #include "Encoder.h"
 #include "GeneratedSerializers.h"
 #include <utility>
-#include <variant>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Box.h>
 #include <wtf/CheckedArithmetic.h>

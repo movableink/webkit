@@ -32,7 +32,6 @@
 #include "GPUTextureView.h"
 #include "WebGPUBindGroupEntry.h"
 #include <utility>
-#include <variant>
 
 namespace WebCore {
 

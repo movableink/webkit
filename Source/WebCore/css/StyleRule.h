@@ -31,7 +31,6 @@
 #include "MediaQuery.h"
 #include "StyleRuleType.h"
 #include <map>
-#include <variant>
 #include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>

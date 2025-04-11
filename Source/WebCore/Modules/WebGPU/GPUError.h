@@ -28,7 +28,6 @@
 #include "GPUInternalError.h"
 #include "GPUOutOfMemoryError.h"
 #include "GPUValidationError.h"
-#include <variant>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {

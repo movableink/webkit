@@ -27,7 +27,6 @@
 #include "CSSPrimitiveNumericConcepts.h"
 #include "CSSValueTypes.h"
 #include <optional>
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/IterationStatus.h>
 #include <wtf/Ref.h>

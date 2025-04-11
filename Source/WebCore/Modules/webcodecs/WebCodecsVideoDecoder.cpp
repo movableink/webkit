@@ -46,7 +46,6 @@
 #include "WebCodecsUtilities.h"
 #include "WebCodecsVideoFrame.h"
 #include "WebCodecsVideoFrameOutputCallback.h"
-#include <variant>
 #include <wtf/ASCIICType.h>
 #include <wtf/TZoneMallocInlines.h>
 

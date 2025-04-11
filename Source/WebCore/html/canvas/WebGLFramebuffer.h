@@ -28,7 +28,6 @@
 #if ENABLE(WEBGL)
 
 #include "WebGLObject.h"
-#include <variant>
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>

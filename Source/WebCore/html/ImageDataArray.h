@@ -32,7 +32,6 @@
 #include <JavaScriptCore/Float16Array.h>
 #include <JavaScriptCore/Uint8ClampedArray.h>
 #include <optional>
-#include <variant>
 #include <wtf/JSONValues.h>
 
 namespace WebCore {

@@ -26,7 +26,6 @@
 #pragma once
 
 #include "DiagnosticLoggingDomain.h"
-#include <variant>
 #include <wtf/CheckedPtr.h>
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/HashMap.h>

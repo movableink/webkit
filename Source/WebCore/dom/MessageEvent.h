@@ -33,7 +33,6 @@
 #include "SerializedScriptValue.h"
 #include "ServiceWorker.h"
 #include "WindowProxy.h"
-#include <variant>
 
 namespace WebCore {
 

@@ -26,7 +26,6 @@
 #pragma once
 
 #include <optional>
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/HashTraits.h>
 #include <wtf/StdLibExtras.h>
