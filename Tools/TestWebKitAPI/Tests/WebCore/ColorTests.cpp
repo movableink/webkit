@@ -335,10 +335,21 @@ TEST(Color, MoveConstructor)
     EXPECT_EQ(serializationForCSS(c2), "color(display-p3 1 0.5 0.25)"_s);
 }
 
+namespace {
+template<typename T>
+void selfMove(T& a, T&& b)
+{
+    a = WTFMove(b);
+}
+}
+
 TEST(Color, MoveAssignment)
 {
     Color c1 { DisplayP3<float> { 1.0, 0.5, 0.25, 1.0 } };
-    Color c2 = WTFMove(c1);
+    Color c2;
+    c2 = WTFMove(c1);
+
+    EXPECT_TRUE(c2.isValid());
 
     // We should have moved the out of line color pointer into c2,
     // and set c1 to invalid so that it doesn't cause deletion.
@@ -354,6 +365,23 @@ TEST(Color, MoveAssignment)
     EXPECT_FLOAT_EQ(0.25, b);
     EXPECT_FLOAT_EQ(1.0, alpha);
     EXPECT_EQ(serializationForCSS(c2), "color(display-p3 1 0.5 0.25)"_s);
+
+    // The API contract is that move invalidates. We should mark the source as invalid even if the
+    // colors are the same. Tests a bug where the implementation would return early from move with
+    // invalid condition.
+    Color c3 { DisplayP3<float> { 1.0, 0.5, 0.25, 1.0 } };
+    EXPECT_EQ(c2, c3);
+    c2 = WTFMove(c3);
+    EXPECT_FALSE(c3.isValid()); // Moved-from source marked invalid.
+    EXPECT_TRUE(c2.isValid());
+    EXPECT_EQ(serializationForCSS(c2), "color(display-p3 1 0.5 0.25)"_s);
+
+    // Moving into itself works.
+    selfMove(c2, WTFMove(c2));
+    EXPECT_TRUE(c2.isValid());
+    EXPECT_EQ(serializationForCSS(c2), "color(display-p3 1 0.5 0.25)"_s);
+    selfMove(c1, WTFMove(c1));
+    EXPECT_FALSE(c1.isValid());
 }
 
 Color makeColor()

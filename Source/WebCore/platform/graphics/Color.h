@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #pragma once
@@ -84,13 +84,13 @@ public:
 
     Color() = default;
 
-    WEBCORE_EXPORT Color(SRGBA<uint8_t>, OptionSet<Flags> = { });
+    Color(SRGBA<uint8_t>, OptionSet<Flags> = { });
     Color(std::optional<SRGBA<uint8_t>>, OptionSet<Flags> = { });
     WEBCORE_EXPORT Color(std::optional<ColorDataForIPC>&&);
 
     template<typename ColorType, typename std::enable_if_t<IsColorTypeWithComponentType<ColorType, float>>* = nullptr>
     Color(const ColorType&, OptionSet<Flags> = { });
-    
+
     template<typename ColorType, typename std::enable_if_t<IsColorTypeWithComponentType<ColorType, float>>* = nullptr>
     Color(const std::optional<ColorType>&, OptionSet<Flags> = { });
 
@@ -99,11 +99,11 @@ public:
     bool isHashTableDeletedValue() const;
     bool isHashTableEmptyValue() const;
 
-    WEBCORE_EXPORT Color(const Color&);
-    WEBCORE_EXPORT Color(Color&&);
+    Color(const Color&);
+    Color(Color&&);
 
-    WEBCORE_EXPORT Color& operator=(const Color&);
-    WEBCORE_EXPORT Color& operator=(Color&&);
+    Color& operator=(const Color&);
+    Color& operator=(Color&&);
 
     ~Color();
 
@@ -391,6 +391,46 @@ inline Color::Color(WTF::HashTableEmptyValueType)
 inline Color::Color(WTF::HashTableDeletedValueType)
 {
     m_colorAndFlags = encodedFlags({ FlagsIncludingPrivate::HashTableDeletedValue });
+}
+
+inline Color::Color(const Color& other)
+    : m_colorAndFlags(other.m_colorAndFlags)
+{
+    if (isOutOfLine())
+        asOutOfLine().ref();
+}
+
+inline Color::Color(Color&& other)
+{
+    *this = WTFMove(other);
+}
+
+inline Color& Color::operator=(const Color& other)
+{
+    if (m_colorAndFlags == other.m_colorAndFlags)
+        return *this;
+
+    if (isOutOfLine())
+        asOutOfLine().deref();
+
+    m_colorAndFlags = other.m_colorAndFlags;
+
+    if (isOutOfLine())
+        asOutOfLine().ref();
+
+    return *this;
+}
+
+inline Color& Color::operator=(Color&& other)
+{
+    if (this == &other)
+        return *this;
+
+    if (isOutOfLine())
+        asOutOfLine().deref();
+
+    m_colorAndFlags = std::exchange(other.m_colorAndFlags, invalidColorAndFlags);
+    return *this;
 }
 
 inline bool Color::isHashTableDeletedValue() const
