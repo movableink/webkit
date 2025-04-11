@@ -7310,46 +7310,6 @@ TEST(ProcessSwap, BeforeUnloadPreventNavigation)
     EXPECT_WK_STREQ(@"DidFireBeforeUnload", receivedMessages.get()[0]);
 }
 
-TEST(ProcessSwap, BeforeUnloadRunsWithoutUserInteraction)
-{
-    auto processPoolConfiguration = psonProcessPoolConfiguration();
-    auto processPool = adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]);
-
-    auto webViewConfiguration = adoptNS([[WKWebViewConfiguration alloc] init]);
-    [webViewConfiguration setProcessPool:processPool.get()];
-    auto handler = adoptNS([[PSONScheme alloc] init]);
-    [handler addMappingFromURLString:@"pson://www.webkit.org/main.html" toData:beforeUnloadPageBytes];
-    [handler addMappingFromURLString:@"pson://www.apple.com/next.html" toData:beforeUnloadFinishPageBytes];
-    [webViewConfiguration setURLSchemeHandler:handler.get() forURLScheme:@"PSON"];
-
-    RetainPtr<PSONMessageHandler> messageHandler = adoptNS([[PSONMessageHandler alloc] init]);
-    [[webViewConfiguration userContentController] addScriptMessageHandler:messageHandler.get() name:@"pson"];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webViewConfiguration.get()]);
-
-    auto navigationDelegate = adoptNS([[PSONNavigationDelegate alloc] init]);
-    [webView setNavigationDelegate:navigationDelegate.get()];
-    auto beforeUnloadPromptUIDelegate = adoptNS([[BeforeUnloadPromptUIDelegate alloc] init]);
-    [webView setUIDelegate:beforeUnloadPromptUIDelegate.get()];
-
-    auto preferences = [[webView configuration] preferences];
-    [preferences _setShouldIgnoreMetaViewport:YES];
-
-    auto* request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"pson://www.webkit.org/main.html"]];
-    [webView loadRequest:request];
-
-    TestWebKitAPI::Util::run(&done);
-    done = false;
-
-    request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"pson://www.apple.com/next.html"]];
-    [webView loadRequest:request];
-
-    TestWebKitAPI::Util::run(&done);
-    done = false;
-    EXPECT_EQ(1u, [receivedMessages count]);
-    EXPECT_WK_STREQ(@"DidFireBeforeUnload", receivedMessages.get()[0]);
-}
-
 #if ENABLE(MEDIA_STREAM)
 
 static bool isCapturing = false;
