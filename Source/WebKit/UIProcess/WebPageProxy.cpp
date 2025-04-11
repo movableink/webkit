@@ -8470,6 +8470,9 @@ void WebPageProxy::createNewPage(IPC::Connection& connection, WindowFeatures&& w
 
         newPage->m_shouldSuppressAppLinksInNextNavigationPolicyDecision = mainFrameURL.host() == request.url().host();
 
+        if (privateClickMeasurement)
+            newPage->internals().privateClickMeasurement = { { WTFMove(*privateClickMeasurement), { }, { } } };
+
         if (navigationDataForNewProcess && !openedBlobURL) {
             reply(std::nullopt, std::nullopt);
             newPage->loadRequest(WTFMove(request), shouldOpenExternalURLsPolicy, IsPerformingHTTPFallback::No, WTFMove(navigationDataForNewProcess));
@@ -8479,8 +8482,6 @@ void WebPageProxy::createNewPage(IPC::Connection& connection, WindowFeatures&& w
         ASSERT(newPage->m_mainFrame);
         reply(newPage->webPageIDInMainFrameProcess(), newPage->creationParameters(protectedLegacyMainFrameProcess(), *newPage->drawingArea(), newPage->m_mainFrame->frameID(), std::nullopt));
 
-        if (privateClickMeasurement)
-            newPage->internals().privateClickMeasurement = { { WTFMove(*privateClickMeasurement), { }, { } } };
 #if HAVE(APP_SSO)
         newPage->m_shouldSuppressSOAuthorizationInNextNavigationPolicyDecision = true;
 #endif

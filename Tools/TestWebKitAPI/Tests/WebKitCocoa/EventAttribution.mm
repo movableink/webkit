@@ -567,7 +567,7 @@ TEST(PrivateClickMeasurement, DaemonDebugMode)
     cleanUpDaemon(tempDir);
 }
 
-static void setupSKAdNetworkTest(Vector<String>& consoleMessages, id<WKNavigationDelegate> navigationDelegate)
+static void setupSKAdNetworkTest(Vector<String>& consoleMessages, id<WKNavigationDelegate> navigationDelegate, NSString *html, id<WKUIDelegate> uiDelegate = nil)
 {
     HTTPServer server({ { "/app/id1234567890"_s, { "hello"_s } } }, HTTPServer::Protocol::HttpsProxy);
 
@@ -591,9 +591,7 @@ static void setupSKAdNetworkTest(Vector<String>& consoleMessages, id<WKNavigatio
     setInjectedBundleClient(webView.get(), consoleMessages);
     [viewConfiguration.websiteDataStore _setPrivateClickMeasurementDebugModeEnabled:YES];
 
-    [webView synchronouslyLoadHTMLString:@"<body>"
-        "<a href='https://apps.apple.com/app/id1234567890' id='anchorid' attributiondestination='https://destination/' attributionSourceNonce='MTIzNDU2Nzg5MDEyMzQ1Ng'>anchor</a>"
-        "</body>" baseURL:[NSURL URLWithString:@"https://example.com/"]];
+    [webView synchronouslyLoadHTMLString:html baseURL:[NSURL URLWithString:@"https://example.com/"]];
 
     while (consoleMessages.isEmpty())
         Util::spinRunLoop();
@@ -601,11 +599,13 @@ static void setupSKAdNetworkTest(Vector<String>& consoleMessages, id<WKNavigatio
     consoleMessages.clear();
 
     webView.get().navigationDelegate = navigationDelegate;
+    webView.get().UIDelegate = uiDelegate;
 
     [webView clickOnElementID:@"anchorid"];
 }
 
 const char* expectedSKAdNetworkConsoleMessage = "Submitting potential install attribution for AdamId: 1234567890, adNetworkRegistrableDomain: destination, impressionId: MTIzNDU2Nzg5MDEyMzQ1Ng, sourceWebRegistrableDomain: example.com, version: 3";
+static NSString *linkToAppStoreHTML = @"<body><a href='https://apps.apple.com/app/id1234567890' id='anchorid' attributiondestination='https://destination/' attributionSourceNonce='MTIzNDU2Nzg5MDEyMzQ1Ng'>anchor</a></body>";
 
 // rdar://129248776
 #if defined(NDEBUG)
@@ -620,7 +620,36 @@ TEST(PrivateClickMeasurement, SKAdNetwork)
     delegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *navigationAction, void (^decisionHandler)(WKNavigationActionPolicy)) {
         decisionHandler(_WKNavigationActionPolicyAllowWithoutTryingAppLink);
     };
-    setupSKAdNetworkTest(consoleMessages, delegate.get());
+    setupSKAdNetworkTest(consoleMessages, delegate.get(), linkToAppStoreHTML);
+    while (consoleMessages.isEmpty())
+        Util::spinRunLoop();
+    EXPECT_WK_STREQ(consoleMessages[0], expectedSKAdNetworkConsoleMessage);
+}
+
+// rdar://129248776
+#if defined(NDEBUG)
+TEST(PrivateClickMeasurement, DISABLED_SKAdNetworkAboutBlank)
+#else
+TEST(PrivateClickMeasurement, SKAdNetworkAboutBlank)
+#endif
+{
+    Vector<String> consoleMessages;
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    auto uiDelegate = adoptNS([TestUIDelegate new]);
+    __block RetainPtr<TestWKWebView> openedWebView;
+    uiDelegate.get().createWebViewWithConfiguration = ^(WKWebViewConfiguration *configuration, WKNavigationAction *, WKWindowFeatures *) {
+        openedWebView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectZero configuration:configuration]);
+        openedWebView.get().navigationDelegate = delegate.get();
+        return openedWebView.get();
+    };
+    [delegate allowAnyTLSCertificate];
+    delegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *navigationAction, void (^decisionHandler)(WKNavigationActionPolicy)) {
+        decisionHandler(_WKNavigationActionPolicyAllowWithoutTryingAppLink);
+    };
+    NSString *linkToAppStoreHTMLWithAboutBlank = @"<body>"
+    "    <a target='_blank' href='https://apps.apple.com/app/id1234567890' id='anchorid' attributiondestination='https://destination/' attributionSourceNonce='MTIzNDU2Nzg5MDEyMzQ1Ng'>anchor</a>"
+    "</body>";
+    setupSKAdNetworkTest(consoleMessages, delegate.get(), linkToAppStoreHTMLWithAboutBlank, uiDelegate.get());
     while (consoleMessages.isEmpty())
         Util::spinRunLoop();
     EXPECT_WK_STREQ(consoleMessages[0], expectedSKAdNetworkConsoleMessage);
@@ -642,7 +671,7 @@ TEST(PrivateClickMeasurement, SKAdNetworkWithoutNavigatingToAppStoreLink)
         EXPECT_EQ(0u, consoleMessages.size());
         [navigationAction _storeSKAdNetworkAttribution];
     };
-    setupSKAdNetworkTest(consoleMessages, delegate.get());
+    setupSKAdNetworkTest(consoleMessages, delegate.get(), linkToAppStoreHTML);
 
     while (consoleMessages.isEmpty())
         Util::spinRunLoop();
