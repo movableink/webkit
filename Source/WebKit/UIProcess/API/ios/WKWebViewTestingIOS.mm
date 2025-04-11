@@ -412,12 +412,6 @@ static void dumpUIView(TextStream& ts, UIView *view)
     _page->setDeviceOrientationUserPermissionHandlerForTesting(WTFMove(handlerWrapper));
 }
 
-- (void)_setDeviceHasAGXCompilerServiceForTesting
-{
-    if (_page)
-        _page->setDeviceHasAGXCompilerServiceForTesting();
-}
-
 - (void)_resetObscuredInsetsForTesting
 {
     if (self._haveSetObscuredInsets)

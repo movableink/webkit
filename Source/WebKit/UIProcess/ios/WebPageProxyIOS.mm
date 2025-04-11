@@ -68,7 +68,6 @@
 #import "WebProcessPool.h"
 #import "WebProcessProxy.h"
 #import "WebScreenOrientationManagerProxy.h"
-#import <WebCore/AGXCompilerService.h>
 #import <WebCore/ElementIdentifier.h>
 #import <WebCore/LocalFrameView.h>
 #import <WebCore/NotImplemented.h>
@@ -1679,11 +1678,6 @@ std::optional<IPC::AsyncReplyID> WebPageProxy::willPerformPasteCommand(DOMPasteA
     case DOMPasteAccessCategory::Fonts:
         return grantAccessToCurrentPasteboardData(UIPasteboardNameGeneral, WTFMove(completionHandler), frameID);
     }
-}
-
-void WebPageProxy::setDeviceHasAGXCompilerServiceForTesting() const
-{
-    WebCore::setDeviceHasAGXCompilerServiceForTesting();
 }
 
 void WebPageProxy::showDataDetectorsUIForPositionInformation(const InteractionInformationAtPosition& positionInfo)

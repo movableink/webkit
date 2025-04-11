@@ -137,10 +137,6 @@
 #endif
 
     std::optional<WebKit::WebProcessDataStoreParameters> websiteDataStoreParameters;
-    
-#if PLATFORM(IOS) || PLATFORM(VISION)
-    Vector<WebKit::SandboxExtensionHandle> compilerServiceExtensionHandles;
-#endif
 
     std::optional<WebKit::SandboxExtensionHandle> mobileGestaltExtensionHandle;
     std::optional<WebKit::SandboxExtensionHandle> launchServicesExtensionHandle;
@@ -150,10 +146,6 @@
 #if HAVE(VIDEO_RESTRICTED_DECODING)
     bool enableDecodingHEIC;
     bool enableDecodingAVIF;
-#endif
-
-#if PLATFORM(IOS_FAMILY)
-    Vector<WebKit::SandboxExtensionHandle> dynamicIOKitExtensionHandles;
 #endif
 
 #if PLATFORM(VISION)

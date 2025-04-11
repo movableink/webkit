@@ -188,10 +188,6 @@ struct WebProcessCreationParameters {
 #endif
 
     std::optional<WebProcessDataStoreParameters> websiteDataStoreParameters;
-    
-#if PLATFORM(IOS) || PLATFORM(VISION)
-    Vector<SandboxExtension::Handle> compilerServiceExtensionHandles;
-#endif
 
     std::optional<SandboxExtension::Handle> mobileGestaltExtensionHandle;
     std::optional<SandboxExtension::Handle> launchServicesExtensionHandle;
@@ -201,10 +197,6 @@ struct WebProcessCreationParameters {
 #endif
     bool enableDecodingHEIC { false };
     bool enableDecodingAVIF { false };
-#endif
-
-#if PLATFORM(IOS_FAMILY)
-    Vector<SandboxExtension::Handle> dynamicIOKitExtensionHandles;
 #endif
 
 #if PLATFORM(VISION)

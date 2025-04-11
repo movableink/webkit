@@ -527,14 +527,6 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     scrollerStylePreferenceChanged(parameters.useOverlayScrollbars);
 #endif
 
-#if PLATFORM(IOS) || PLATFORM(VISION)
-    SandboxExtension::consumePermanently(parameters.compilerServiceExtensionHandles);
-#endif
-
-#if PLATFORM(IOS_FAMILY)
-    SandboxExtension::consumePermanently(parameters.dynamicIOKitExtensionHandles);
-#endif
-
 #if PLATFORM(VISION)
     SandboxExtension::consumePermanently(parameters.metalCacheDirectoryExtensionHandles);
 #endif

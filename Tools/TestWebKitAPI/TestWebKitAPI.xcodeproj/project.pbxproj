@@ -1217,7 +1217,6 @@
 		C15CBB3F23FB177A00300CC7 /* PreferenceChanges.mm in Sources */ = {isa = PBXBuildFile; fileRef = C15CBB3E23FB177A00300CC7 /* PreferenceChanges.mm */; };
 		C1692DCA23D10DAE006E88F7 /* Battery.mm in Sources */ = {isa = PBXBuildFile; fileRef = C1692DC923D10DAE006E88F7 /* Battery.mm */; };
 		C1F4840724EDDB400053ECB8 /* AccessibilityReduceMotion.mm in Sources */ = {isa = PBXBuildFile; fileRef = C1F4840624EDDB400053ECB8 /* AccessibilityReduceMotion.mm */; };
-		C1F7B7392449083F00124557 /* AGXCompilerService.mm in Sources */ = {isa = PBXBuildFile; fileRef = C1F7B7382449083F00124557 /* AGXCompilerService.mm */; };
 		C1FF9EDB244644F000839AE4 /* WebFilter.mm in Sources */ = {isa = PBXBuildFile; fileRef = C1FF9EDA244644F000839AE4 /* WebFilter.mm */; };
 		C54237F116B8957D00E638FC /* PasteboardNotifications_Bundle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C54237ED16B8955800E638FC /* PasteboardNotifications_Bundle.cpp */; };
 		C9E6DD351EA97D0800DD78AA /* FirstResponderSuppression.mm in Sources */ = {isa = PBXBuildFile; fileRef = C9E6DD311EA972D800DD78AA /* FirstResponderSuppression.mm */; };
@@ -3551,7 +3550,6 @@
 		C1692DC923D10DAE006E88F7 /* Battery.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = Battery.mm; sourceTree = "<group>"; };
 		C1D8EE212028E8E3008EB141 /* WebProcessTerminate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebProcessTerminate.mm; sourceTree = "<group>"; };
 		C1F4840624EDDB400053ECB8 /* AccessibilityReduceMotion.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AccessibilityReduceMotion.mm; sourceTree = "<group>"; };
-		C1F7B7382449083F00124557 /* AGXCompilerService.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AGXCompilerService.mm; sourceTree = "<group>"; };
 		C1FF9EDA244644F000839AE4 /* WebFilter.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WebFilter.mm; sourceTree = "<group>"; };
 		C20F88A62295B96700D610FA /* CoreText.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreText.framework; path = System/Library/Frameworks/CoreText.framework; sourceTree = SDKROOT; };
 		C22FA32A228F8708009D7988 /* TextWidth.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = TextWidth.mm; sourceTree = "<group>"; };
@@ -4315,7 +4313,6 @@
 				C1F4840624EDDB400053ECB8 /* AccessibilityReduceMotion.mm */,
 				E3F8AB91241AB9CE003E2A7E /* AccessibilityRemoteUIApp.mm */,
 				F4A715A72950C8D900B4D0D6 /* AdvancedPrivacyProtections.mm */,
-				C1F7B7382449083F00124557 /* AGXCompilerService.mm */,
 				48124A262925A0C100EED506 /* AnimationControl.mm */,
 				C15CBB2F23F1FF1A00300CC7 /* BacklightLevelNotification.mm */,
 				C1692DC923D10DAE006E88F7 /* Battery.mm */,
@@ -7073,7 +7070,6 @@
 				55F9D2E52205031800A9AB38 /* AdditionalSupportedImageTypes.mm in Sources */,
 				F4A715A82950C8D900B4D0D6 /* AdvancedPrivacyProtections.mm in Sources */,
 				7A909A7D1D877480007E10F8 /* AffineTransform.cpp in Sources */,
-				C1F7B7392449083F00124557 /* AGXCompilerService.mm in Sources */,
 				A1EB6C312D5582530096D4F8 /* AllowInlinePlaybackInDesktopClassBrowsing.mm in Sources */,
 				48124A272925A0C100EED506 /* AnimationControl.mm in Sources */,
 				712E4BC125DDC52A0007201C /* AnimationFrameRate.cpp in Sources */,

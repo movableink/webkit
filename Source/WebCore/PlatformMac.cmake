@@ -601,7 +601,6 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     platform/cf/MediaAccessibilitySoftLink.h
 
-    platform/cocoa/AGXCompilerService.h
     platform/cocoa/CoreVideoSoftLink.h
     platform/cocoa/LocalCurrentGraphicsContext.h
     platform/cocoa/NetworkExtensionContentFilter.h

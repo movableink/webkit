@@ -83,8 +83,6 @@
 
 - (void)_setDeviceOrientationUserPermissionHandlerForTesting:(BOOL (^)(void))handler;
 
-- (void)_setDeviceHasAGXCompilerServiceForTesting;
-
 - (void)_resetObscuredInsetsForTesting;
 - (BOOL)_hasResizeAssertion;
 - (void)_simulateSelectionStart;

@@ -1197,14 +1197,6 @@
 #define HAVE_POWERLOG_TASK_MODE_QUERY 1
 #endif
 
-// FIXME: Surely if we don't have the compiler service on iOS,
-// we must not have it on watchOS & tvOS & visionOS either?
-#if PLATFORM(WATCHOS) \
-    || PLATFORM(APPLETV) \
-    || PLATFORM(VISION)
-#define HAVE_AGX_COMPILER_SERVICE 1
-#endif
-
 #if PLATFORM(MAC)
 #define HAVE_GPU_AVAILABILITY_CHECK 1
 #endif

@@ -249,10 +249,6 @@ void GPUProcess::initializeGPUProcess(GPUProcessCreationParameters&& parameters,
     SandboxExtension::consumePermanently(parameters.containerCachesDirectoryExtensionHandle);
     SandboxExtension::consumePermanently(parameters.containerTemporaryDirectoryExtensionHandle);
 #endif
-#if PLATFORM(IOS_FAMILY)
-    SandboxExtension::consumePermanently(parameters.compilerServiceExtensionHandles);
-    SandboxExtension::consumePermanently(parameters.dynamicIOKitExtensionHandles);
-#endif
 
     populateMobileGestaltCache(WTFMove(parameters.mobileGestaltExtensionHandle));
 

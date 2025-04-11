@@ -2021,7 +2021,6 @@ public:
 
     const Function<bool()>& deviceOrientationUserPermissionHandlerForTesting() const { return m_deviceOrientationUserPermissionHandlerForTesting; };
     void setDeviceOrientationUserPermissionHandlerForTesting(Function<bool()>&& handler) { m_deviceOrientationUserPermissionHandlerForTesting = WTFMove(handler); }
-    void setDeviceHasAGXCompilerServiceForTesting() const;
 
     void statusBarWasTapped();
 #endif

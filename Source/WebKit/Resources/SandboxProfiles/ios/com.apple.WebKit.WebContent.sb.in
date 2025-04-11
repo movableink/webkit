@@ -908,31 +908,6 @@
         (require-not (extension "com.apple.webkit.extension.mach"))
         (global-name "com.apple.audio.AudioComponentRegistrar")))
 
-#if HAVE(AGX_COMPILER_SERVICE)
-(allow iokit-open-user-client
-    (require-all
-        (extension "com.apple.webkit.extension.iokit")
-        (iokit-user-client-class
-            "AGXCommandQueue"
-            "AGXDevice"
-            "AGXSharedUserClient"
-            "IOAccelContext"
-            "IOAccelDevice"
-            "IOAccelSharedUserClient"
-            "IOAccelSubmitter2"
-            "IOAccelContext2"
-            "IOAccelDevice2"
-            "IOAccelSharedUserClient2"
-        )
-    )
-)
-
-(allow mach-lookup
-    (require-all
-        (extension "com.apple.webkit.extension.mach")
-        (xpc-service-name-prefix "com.apple.AGXCompilerService")))
-#endif // HAVE(AGX_COMPILER_SERVICE)
-
 ;; These services have been identified as unused during living-on.
 ;; This list overrides some definitions above and in common.sb.
 ;; FIXME: remove overridden rules once the final list has been

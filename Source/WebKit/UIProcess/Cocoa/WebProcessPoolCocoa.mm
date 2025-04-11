@@ -63,7 +63,6 @@
 #import "_WKSystemPreferencesInternal.h"
 #import <UniformTypeIdentifiers/UTCoreTypes.h>
 #import <UniformTypeIdentifiers/UTType.h>
-#import <WebCore/AGXCompilerService.h>
 #import <WebCore/Color.h>
 #import <WebCore/FontCacheCoreText.h>
 #import <WebCore/LocalizedDeviceModel.h>
@@ -436,16 +435,6 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     parameters.screenProperties = WTFMove(screenProperties);
 #if PLATFORM(MAC)
     parameters.useOverlayScrollbars = ([NSScroller preferredScrollerStyle] == NSScrollerStyleOverlay);
-#endif
-    
-#if (PLATFORM(IOS) || PLATFORM(VISION)) && HAVE(AGX_COMPILER_SERVICE)
-    if (WebCore::deviceHasAGXCompilerService())
-        parameters.compilerServiceExtensionHandles = SandboxExtension::createHandlesForMachLookup(WebCore::agxCompilerServices(), std::nullopt);
-#endif
-
-#if PLATFORM(IOS_FAMILY) && HAVE(AGX_COMPILER_SERVICE)
-    if (WebCore::deviceHasAGXCompilerService())
-        parameters.dynamicIOKitExtensionHandles = SandboxExtension::createHandlesForIOKitClassExtensions(WebCore::agxCompilerClasses(), std::nullopt);
 #endif
 
 #if PLATFORM(VISION)
