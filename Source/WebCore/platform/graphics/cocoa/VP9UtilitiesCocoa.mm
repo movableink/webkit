@@ -100,7 +100,7 @@ void VP9TestingOverrides::resetOverridesToDefaultValues()
 
 void VP9TestingOverrides::setShouldEnableVP9Decoder(bool enabled)
 {
-    m_swVPDecodersAlwaysEnabled = enabled;
+    m_vp9DecoderEnabled = enabled;
 }
 
 bool VP9TestingOverrides::shouldEnableVP9Decoder() const
