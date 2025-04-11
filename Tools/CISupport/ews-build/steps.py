@@ -7141,7 +7141,7 @@ class FindModifiedSaferCPPExpectations(shell.ShellCommandNewStyle, AddToLogMixin
     name = 'find-modified-safer-cpp-expectations'
     RE_FILE = r'^(\+|-)(?P<file>[^/+/-].+(?:\.cpp|\.mm|\.h))$'
     RE_EXPECTATIONS = r'^(\+\+\+).+(Source/(?P<project>.+)/SaferCPPExpectations/(?P<checker>.+)Expectations)$'
-    command = ['git', 'diff', 'head~1', '--', '*Expectations']
+    command = ['git', 'diff', 'HEAD~1', '--', '*Expectations']
 
     def __init__(self, **kwargs):
         super().__init__(logEnviron=False, **kwargs)

@@ -9282,7 +9282,7 @@ diff --git a/Source/WebCore/SaferCPPExpectations/UncountedCallArgsCheckerExpecta
         self.expectRemoteCommands(
             ExpectShell(workdir='wkdir',
                         logEnviron=False,
-                        command=['git', 'diff', 'head~1', '--', '*Expectations'])
+                        command=['git', 'diff', 'HEAD~1', '--', '*Expectations'])
             + ExpectShell.log('stdio', stdout=commit_diff)
             + 0,
         )
@@ -9315,7 +9315,7 @@ index 8a2d2375b8d2..f7ebc3b11b94 100644
         self.expectRemoteCommands(
             ExpectShell(workdir='wkdir',
                         logEnviron=False,
-                        command=['git', 'diff', 'head~1', '--', '*Expectations'])
+                        command=['git', 'diff', 'HEAD~1', '--', '*Expectations'])
             + ExpectShell.log('stdio', stdout=commit_diff)
             + 0,
         )
@@ -9334,7 +9334,7 @@ index 8a2d2375b8d2..f7ebc3b11b94 100644
         self.expectRemoteCommands(
             ExpectShell(workdir='wkdir',
                         logEnviron=False,
-                        command=['git', 'diff', 'head~1', '--', '*Expectations'])
+                        command=['git', 'diff', 'HEAD~1', '--', '*Expectations'])
             + ExpectShell.log('stdio', stdout=commit_diff)
             + 0,
         )
@@ -9352,7 +9352,7 @@ index 8a2d2375b8d2..f7ebc3b11b94 100644
         self.expectRemoteCommands(
             ExpectShell(workdir='wkdir',
                         logEnviron=False,
-                        command=['git', 'diff', 'head~1', '--', '*Expectations'])
+                        command=['git', 'diff', 'HEAD~1', '--', '*Expectations'])
             + ExpectShell.log('stdio', stdout='Failure')
             + 1,
         )
