@@ -322,7 +322,7 @@ RefPtr<ShaderModule> DeviceImpl::createShaderModule(const ShaderModuleDescriptor
         hintsEntries.append(WGPUShaderModuleCompilationHint {
             nullptr,
             entryPoints[i].data(),
-            convertToBackingContext->convertToBacking(hint.pipelineLayout)
+            convertToBackingContext->convertToBacking(hint.protectedPipelineLayout().get())
         });
     }
 

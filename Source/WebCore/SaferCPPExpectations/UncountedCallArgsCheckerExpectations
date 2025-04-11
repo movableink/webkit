@@ -17,7 +17,6 @@ Modules/WebGPU/GPUExternalTexture.cpp
 Modules/WebGPU/GPUPipelineLayout.cpp
 Modules/WebGPU/GPUPresentationContext.cpp
 Modules/WebGPU/GPUQuerySet.cpp
-Modules/WebGPU/GPUQueue.cpp
 Modules/WebGPU/GPURenderBundle.cpp
 Modules/WebGPU/GPURenderBundleEncoder.cpp
 Modules/WebGPU/GPURenderPassEncoder.cpp
@@ -26,7 +25,6 @@ Modules/WebGPU/GPUSampler.cpp
 Modules/WebGPU/GPUShaderModule.cpp
 Modules/WebGPU/GPUTexture.cpp
 Modules/WebGPU/GPUTextureView.cpp
-Modules/WebGPU/Implementation/WebGPUDeviceImpl.cpp
 Modules/WebGPU/Implementation/WebGPUImpl.cpp
 Modules/airplay/WebMediaSessionManager.cpp
 Modules/applepay-ams-ui/ApplePayAMSUIPaymentHandler.cpp

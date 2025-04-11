@@ -1,5 +1,3 @@
-Modules/WebGPU/GPUBuffer.cpp
-Modules/WebGPU/GPUQueue.cpp
 Modules/WebGPU/Implementation/WebGPUDeviceImpl.cpp
 Modules/WebGPU/Implementation/WebGPUImpl.cpp
 Modules/applepay/ApplePaySetup.cpp

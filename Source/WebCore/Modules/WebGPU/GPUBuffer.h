@@ -77,7 +77,7 @@ private:
     GPUBuffer(Ref<WebGPU::Buffer>&&, size_t, GPUBufferUsageFlags, bool, GPUDevice&);
     void internalUnmap(ScriptExecutionContext&);
 
-    Ref<WebGPU::Buffer> m_backing;
+    const Ref<WebGPU::Buffer> m_backing;
     struct ArrayBufferWithOffset {
         RefPtr<JSC::ArrayBuffer> buffer;
         size_t offset { 0 };
