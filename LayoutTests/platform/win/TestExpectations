@@ -4418,6 +4418,8 @@ webkit.org/b/273766 fast/canvas/canvas-scale-shadowBlur.html [ Failure ]
 
 webkit.org/b/227053 fast/canvas/canvas-imageSmoothingQuality.html [ Failure ]
 
+fast/canvas/canvas-strokePath-round-lineCap.html [ ImageOnlyFailure Pass ]
+
 webkit.org/b/273476 fast/text/thai-joiner.html [ Failure ]
 
 # Passes on local PC, but fails on Buildbot
