@@ -9,7 +9,7 @@
     Number.MIN_VALUE,
     Number.MAX_VALUE,
     Number.MAX_SAFE_INTEGER,
-    Number.MAX_SAFE_INTEGER,
+    Number.MIN_SAFE_INTEGER,
     Infinity,
     NaN,
   ];
