@@ -172,6 +172,12 @@ void ArrayPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 
 // ------------------------------ Array Functions ----------------------------
 
+enum class RelativeNegativeIndex : bool {
+    No,
+    Yes,
+};
+
+template <RelativeNegativeIndex relativeNegativeIndex>
 static inline uint64_t argumentClampedIndexFromStartOrEnd(JSGlobalObject* globalObject, JSValue value, uint64_t length, uint64_t undefinedValue = 0)
 {
     if (value.isUndefined())
@@ -180,8 +186,11 @@ static inline uint64_t argumentClampedIndexFromStartOrEnd(JSGlobalObject* global
     if (LIKELY(value.isInt32())) {
         int64_t indexInt64 = value.asInt32();
         if (indexInt64 < 0) {
-            indexInt64 += length;
-            return indexInt64 < 0 ? 0 : static_cast<uint64_t>(indexInt64);
+            if constexpr (relativeNegativeIndex == RelativeNegativeIndex::Yes) {
+                indexInt64 += length;
+                return indexInt64 < 0 ? 0 : static_cast<uint64_t>(indexInt64);
+            } else
+                return 0;
         }
         uint64_t indexUInt64 = static_cast<uint64_t>(indexInt64);
         return std::min(indexUInt64, length);
@@ -189,8 +198,11 @@ static inline uint64_t argumentClampedIndexFromStartOrEnd(JSGlobalObject* global
 
     double indexDouble = value.toIntegerOrInfinity(globalObject);
     if (indexDouble < 0) {
-        indexDouble += length;
-        return indexDouble < 0 ? 0 : static_cast<uint64_t>(indexDouble);
+        if constexpr (relativeNegativeIndex == RelativeNegativeIndex::Yes) {
+            indexDouble += length;
+            return indexDouble < 0 ? 0 : static_cast<uint64_t>(indexDouble);
+        } else
+            return 0;
     }
     return indexDouble > length ? length : static_cast<uint64_t>(indexDouble);
 }
@@ -902,9 +914,9 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncSlice, (JSGlobalObject* globalObject, Cal
     uint64_t length = toLength(globalObject, thisObj);
     RETURN_IF_EXCEPTION(scope, { });
 
-    uint64_t begin = argumentClampedIndexFromStartOrEnd(globalObject, callFrame->argument(0), length);
+    uint64_t begin = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, callFrame->argument(0), length);
     RETURN_IF_EXCEPTION(scope, { });
-    uint64_t end = argumentClampedIndexFromStartOrEnd(globalObject, callFrame->argument(1), length, length);
+    uint64_t end = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, callFrame->argument(1), length, length);
     RETURN_IF_EXCEPTION(scope, { });
     if (end < begin)
         end = begin;
@@ -1264,32 +1276,20 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncSplice, (JSGlobalObject* globalObject, Ca
         return JSValue::encode(result);
     }
 
-    uint64_t actualStart = argumentClampedIndexFromStartOrEnd(globalObject, callFrame->argument(0), length);
+    uint64_t actualStart = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, callFrame->argument(0), length);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    uint64_t actualDeleteCount = length - actualStart;
-    if (callFrame->argumentCount() > 1) {
-        JSValue deleteCountValue = callFrame->uncheckedArgument(1);
-        if (LIKELY(deleteCountValue.isInt32())) {
-            int32_t deleteCount = deleteCountValue.asInt32();
-            if (deleteCount < 0)
-                actualDeleteCount = 0;
-            else if (static_cast<uint64_t>(deleteCount) > length - actualStart)
-                actualDeleteCount = length - actualStart;
-            else
-                actualDeleteCount = static_cast<uint64_t>(deleteCount);
-        } else {
-            double deleteCount = deleteCountValue.toIntegerOrInfinity(globalObject);
-            RETURN_IF_EXCEPTION(scope, encodedJSValue());
-            if (deleteCount < 0)
-                actualDeleteCount = 0;
-            else if (deleteCount > length - actualStart)
-                actualDeleteCount = length - actualStart;
-            else
-                actualDeleteCount = static_cast<uint64_t>(deleteCount);
-        }
+    uint64_t itemCount = 0;
+    uint64_t actualDeleteCount = 0;
+    if (callFrame->argumentCount() == 1)
+        actualDeleteCount = length - actualStart;
+    else if (callFrame->argumentCount() > 1) {
+        itemCount = callFrame->argumentCount() - 2;
+        actualDeleteCount = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::No>(globalObject, callFrame->uncheckedArgument(1), length - actualStart);
+        RETURN_IF_EXCEPTION(scope, { });
     }
-    unsigned itemCount = std::max<int>(callFrame->argumentCount() - 2, 0);
+    ASSERT(callFrame->argumentCount() || (!itemCount && !actualDeleteCount));
+
     if (UNLIKELY(length - actualDeleteCount + itemCount > static_cast<uint64_t>(maxSafeInteger())))
         return throwVMTypeError(globalObject, scope, "Splice cannot produce an array of length larger than (2 ** 53) - 1"_s);
 
@@ -1504,7 +1504,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncIndexOf, (JSGlobalObject* globalObject, C
     if (!length)
         return JSValue::encode(jsNumber(-1));
 
-    uint64_t index = argumentClampedIndexFromStartOrEnd(globalObject, callFrame->argument(1), length);
+    uint64_t index = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, callFrame->argument(1), length);
     RETURN_IF_EXCEPTION(scope, { });
     JSValue searchElement = callFrame->argument(0);
 
@@ -1998,11 +1998,11 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncFill, (JSGlobalObject* globalObject, Call
     RETURN_IF_EXCEPTION(scope, { });
 
     JSValue argStart = callFrame->argument(1);
-    uint64_t k = argumentClampedIndexFromStartOrEnd(globalObject, argStart, length, 0);
+    uint64_t k = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, argStart, length, 0);
     RETURN_IF_EXCEPTION(scope, { });
 
     JSValue argEnd = callFrame->argument(2);
-    uint64_t finalIndex = argumentClampedIndexFromStartOrEnd(globalObject, argEnd, length, length);
+    uint64_t finalIndex = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, argEnd, length, length);
     RETURN_IF_EXCEPTION(scope, { });
 
     if (k > finalIndex)
@@ -2191,7 +2191,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncIncludes, (JSGlobalObject* globalObject, 
     if (!length)
         return JSValue::encode(jsBoolean(false));
 
-    uint64_t index = argumentClampedIndexFromStartOrEnd(globalObject, callFrame->argument(1), length, 0);
+    uint64_t index = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, callFrame->argument(1), length, 0);
     RETURN_IF_EXCEPTION(scope, { });
 
     ASSERT(index <= length);
@@ -2236,11 +2236,11 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncCopyWithin, (JSGlobalObject* globalObject
     uint64_t length = toLength(globalObject, thisObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    uint64_t to = argumentClampedIndexFromStartOrEnd(globalObject, callFrame->argument(0), length);
+    uint64_t to = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, callFrame->argument(0), length);
     RETURN_IF_EXCEPTION(scope, { });
-    uint64_t from = argumentClampedIndexFromStartOrEnd(globalObject, callFrame->argument(1), length);
+    uint64_t from = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, callFrame->argument(1), length);
     RETURN_IF_EXCEPTION(scope, { });
-    uint64_t finalIndex = argumentClampedIndexFromStartOrEnd(globalObject, callFrame->argument(2), length, length);
+    uint64_t finalIndex = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, callFrame->argument(2), length, length);
     RETURN_IF_EXCEPTION(scope, { });
 
     if (finalIndex < from)
