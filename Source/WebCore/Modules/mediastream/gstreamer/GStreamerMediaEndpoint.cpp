@@ -905,7 +905,7 @@ void GStreamerMediaEndpoint::doSetRemoteDescription(const RTCSessionDescription&
         if (error && error->code == GST_WEBRTC_ERROR_INVALID_STATE)
             m_peerConnectionBackend.setRemoteDescriptionFailed(Exception { ExceptionCode::InvalidStateError, "Failed to set remote answer sdp"_s });
         else
-            m_peerConnectionBackend.setRemoteDescriptionFailed(Exception { ExceptionCode::OperationError, "Unable to apply session remote description"_s });
+            m_peerConnectionBackend.setRemoteDescriptionFailed(Exception { ExceptionCode::InvalidAccessError, "Unable to apply session remote description"_s });
     });
 #if !RELEASE_LOG_DISABLED
     startLoggingStats();

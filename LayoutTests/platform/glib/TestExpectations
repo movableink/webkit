@@ -2408,7 +2408,6 @@ imported/w3c/web-platform-tests/webrtc/protocol/handover-datachannel.html [ Fail
 imported/w3c/web-platform-tests/webrtc/protocol/additional-codecs.html [ Failure ]
 imported/w3c/web-platform-tests/webrtc/protocol/codecs-subsequent-offer.https.html [ Failure ]
 imported/w3c/web-platform-tests/webrtc/protocol/pt-no-bundle.html [ Failure ]
-imported/w3c/web-platform-tests/webrtc/protocol/sdes-dont-dont-dont.html [ Failure ]
 imported/w3c/web-platform-tests/webrtc/protocol/transceiver-mline-recycling.html [ Failure ]
 imported/w3c/web-platform-tests/webrtc/RTCRtpParameters-codecs.html [ Failure ]
 
