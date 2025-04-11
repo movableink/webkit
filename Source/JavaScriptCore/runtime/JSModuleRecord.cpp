@@ -28,7 +28,10 @@
 
 #include "BuiltinNames.h"
 #include "Interpreter.h"
+#include "JSAsyncFunction.h"
+#include "JSAsyncGeneratorFunction.h"
 #include "JSCInlines.h"
+#include "JSGeneratorFunction.h"
 #include "JSModuleEnvironment.h"
 #include "JSModuleLoader.h"
 #include "JSModuleNamespaceObject.h"
@@ -240,7 +243,17 @@ void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, Modul
                     unlinkedFunctionExecutable->unlinkedFunctionStart(),
                     unlinkedFunctionExecutable->unlinkedFunctionEnd());
             }
-            JSFunction* function = JSFunction::create(vm, globalObject, unlinkedFunctionExecutable->link(vm, moduleProgramExecutable, moduleProgramExecutable->source()), moduleEnvironment);
+            auto* executable = unlinkedFunctionExecutable->link(vm, moduleProgramExecutable, moduleProgramExecutable->source());
+            SourceParseMode parseMode = executable->parseMode();
+            JSFunction* function = nullptr;
+            if (isAsyncGeneratorWrapperParseMode(parseMode))
+                function = JSAsyncGeneratorFunction::create(vm, globalObject, executable, moduleEnvironment);
+            else if (isGeneratorWrapperParseMode(parseMode))
+                function = JSGeneratorFunction::create(vm, globalObject, executable, moduleEnvironment);
+            else if (isAsyncFunctionWrapperParseMode(parseMode))
+                function = JSAsyncFunction::create(vm, globalObject, executable, moduleEnvironment);
+            else
+                function = JSFunction::create(vm, globalObject, executable, moduleEnvironment);
             bool putResult = false;
             symbolTablePutTouchWatchpointSet(moduleEnvironment, globalObject, unlinkedFunctionExecutable->name(), function, /* shouldThrowReadOnlyError */ false, /* ignoreReadOnlyErrors */ true, putResult);
             RETURN_IF_EXCEPTION(scope, void());
