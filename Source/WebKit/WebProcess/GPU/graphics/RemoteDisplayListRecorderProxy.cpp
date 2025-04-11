@@ -678,55 +678,74 @@ void RemoteDisplayListRecorderProxy::appendStateChangeItemIfNecessary()
     auto changes = state.changes();
     if (!changes)
         return;
-    auto recordFullItem = [&] {
-        if (changes.contains(GraphicsContextState::Change::FillBrush)) {
-            if (RefPtr pattern = fillPattern())
-                recordResourceUse(pattern->tileImage());
-            else if (RefPtr gradient = fillGradient()) {
-                if (gradient->hasValidRenderingResourceIdentifier())
-                    recordResourceUse(*gradient);
-            }
-        }
-        if (changes.contains(GraphicsContextState::Change::StrokeBrush)) {
-            if (RefPtr pattern = strokePattern())
-                recordResourceUse(pattern->tileImage());
-            else if (RefPtr gradient = strokeGradient()) {
-                if (gradient->hasValidRenderingResourceIdentifier())
-                    recordResourceUse(*gradient);
-            }
-        }
-        send(Messages::RemoteDisplayListRecorder::SetState(DisplayList::SetState { state }));
-        state.didApplyChanges();
-        currentState().lastDrawingState = state;
-    };
-    if (!changes.containsOnly({ GraphicsContextState::Change::FillBrush, GraphicsContextState::Change::StrokeBrush, GraphicsContextState::Change::StrokeThickness })) {
-        recordFullItem();
-        return;
-    }
-    std::optional<PackedColor::RGBA> fillColor;
     if (changes.contains(GraphicsContextState::Change::FillBrush)) {
-        fillColor = state.fillBrush().packedColor();
-        if (!fillColor) {
-            recordFullItem();
-            return;
-        }
+        const auto& fillBrush = state.fillBrush();
+        if (auto packedColor = fillBrush.packedColor())
+            send(Messages::RemoteDisplayListRecorder::SetFillPackedColor(*packedColor));
+        else if (RefPtr pattern = fillBrush.pattern()) {
+            recordResourceUse(pattern->tileImage());
+            send(Messages::RemoteDisplayListRecorder::SetFillPattern(pattern->tileImage().imageIdentifier(), pattern->parameters()));
+        } else if (RefPtr gradient = fillBrush.gradient()) {
+            if (gradient->hasValidRenderingResourceIdentifier()) {
+                recordResourceUse(*gradient);
+                send(Messages::RemoteDisplayListRecorder::SetFillCachedGradient(gradient->renderingResourceIdentifier(), fillBrush.gradientSpaceTransform()));
+            } else
+                send(Messages::RemoteDisplayListRecorder::SetFillGradient(*gradient, fillBrush.gradientSpaceTransform()));
+        } else
+            send(Messages::RemoteDisplayListRecorder::SetFillColor(fillBrush.color()));
     }
-    std::optional<PackedColor::RGBA> strokeColor;
     if (changes.contains(GraphicsContextState::Change::StrokeBrush)) {
-        strokeColor = state.strokeBrush().packedColor();
-        if (!strokeColor) {
-            recordFullItem();
-            return;
-        }
+        const auto& strokeBrush = state.strokeBrush();
+        if (auto packedColor = strokeBrush.packedColor()) {
+            if (changes.contains(GraphicsContextState::Change::StrokeThickness)) {
+                send(Messages::RemoteDisplayListRecorder::SetStrokePackedColorAndThickness(*packedColor, state.strokeThickness()));
+                changes.remove(GraphicsContextState::Change::StrokeThickness);
+            } else
+                send(Messages::RemoteDisplayListRecorder::SetStrokePackedColor(*packedColor));
+        } else if (RefPtr pattern = strokeBrush.pattern()) {
+            recordResourceUse(pattern->tileImage());
+            send(Messages::RemoteDisplayListRecorder::SetStrokePattern(pattern->tileImage().imageIdentifier(), pattern->parameters()));
+        } else if (RefPtr gradient = strokeBrush.gradient()) {
+            if (gradient->hasValidRenderingResourceIdentifier()) {
+                recordResourceUse(*gradient);
+                send(Messages::RemoteDisplayListRecorder::SetStrokeCachedGradient(gradient->renderingResourceIdentifier(), strokeBrush.gradientSpaceTransform()));
+            } else
+                send(Messages::RemoteDisplayListRecorder::SetStrokeGradient(*gradient, strokeBrush.gradientSpaceTransform()));
+        } else
+            send(Messages::RemoteDisplayListRecorder::SetStrokeColor(strokeBrush.color()));
     }
-    std::optional<float> strokeThickness;
+    if (changes.contains(GraphicsContextState::Change::FillRule))
+        send(Messages::RemoteDisplayListRecorder::SetFillRule(state.fillRule()));
     if (changes.contains(GraphicsContextState::Change::StrokeThickness))
-        strokeThickness = state.strokeThickness();
-
-    if (fillColor)
-        send(Messages::RemoteDisplayListRecorder::SetInlineFillColor(*fillColor));
-    if (strokeColor || strokeThickness)
-        send(Messages::RemoteDisplayListRecorder::SetInlineStroke(strokeColor, strokeThickness));
+        send(Messages::RemoteDisplayListRecorder::SetStrokeThickness(state.strokeThickness()));
+    if (changes.contains(GraphicsContextState::Change::StrokeStyle))
+        send(Messages::RemoteDisplayListRecorder::SetStrokeStyle(state.strokeStyle()));
+    if (changes.contains(GraphicsContextState::Change::CompositeMode))
+        send(Messages::RemoteDisplayListRecorder::SetCompositeMode(state.compositeMode()));
+    // Note: due to bugs in GraphicsContext interface and GraphicsContextCG, we have to send ShadowsIgnoreTransforms
+    // before the DropShadow and Style.
+    if (changes.contains(GraphicsContextState::Change::ShadowsIgnoreTransforms))
+        send(Messages::RemoteDisplayListRecorder::SetShadowsIgnoreTransforms(state.shadowsIgnoreTransforms()));
+    if (changes.contains(GraphicsContextState::Change::DropShadow))
+        send(Messages::RemoteDisplayListRecorder::SetDropShadow(state.dropShadow()));
+    if (changes.contains(GraphicsContextState::Change::Style))
+        send(Messages::RemoteDisplayListRecorder::SetStyle(state.style()));
+    if (changes.contains(GraphicsContextState::Change::Alpha))
+        send(Messages::RemoteDisplayListRecorder::SetAlpha(state.alpha()));
+    if (changes.contains(GraphicsContextState::Change::TextDrawingMode))
+        send(Messages::RemoteDisplayListRecorder::SetTextDrawingMode(state.textDrawingMode()));
+    if (changes.contains(GraphicsContextState::Change::ImageInterpolationQuality))
+        send(Messages::RemoteDisplayListRecorder::SetImageInterpolationQuality(state.imageInterpolationQuality()));
+    if (changes.contains(GraphicsContextState::Change::ShouldAntialias))
+        send(Messages::RemoteDisplayListRecorder::SetShouldAntialias(state.shouldAntialias()));
+    if (changes.contains(GraphicsContextState::Change::ShouldSmoothFonts))
+        send(Messages::RemoteDisplayListRecorder::SetShouldSmoothFonts(state.shouldSmoothFonts()));
+    if (changes.contains(GraphicsContextState::Change::ShouldSubpixelQuantizeFonts))
+        send(Messages::RemoteDisplayListRecorder::SetShouldSubpixelQuantizeFonts(state.shouldSubpixelQuantizeFonts()));
+    if (changes.contains(GraphicsContextState::Change::DrawLuminanceMask))
+        send(Messages::RemoteDisplayListRecorder::SetDrawLuminanceMask(state.drawLuminanceMask()));
+    if (changes.contains(GraphicsContextState::Change::UseDarkAppearance))
+        send(Messages::RemoteDisplayListRecorder::SetUseDarkAppearance(state.useDarkAppearance()));
 
     state.didApplyChanges();
     currentState().lastDrawingState = state;
