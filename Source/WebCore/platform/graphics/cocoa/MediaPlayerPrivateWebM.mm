@@ -1453,7 +1453,7 @@ void MediaPlayerPrivateWebM::addAudioRenderer(TrackID trackId)
         if (deviceId.isEmpty())
             renderer.get().audioOutputDeviceUniqueID = nil;
         else
-            renderer.get().audioOutputDeviceUniqueID = deviceId;
+            renderer.get().audioOutputDeviceUniqueID = deviceId.createNSString().get();
     }
 #endif
 

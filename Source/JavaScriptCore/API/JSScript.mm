@@ -209,7 +209,7 @@ static bool validateBytecodeCachePath(NSURL* cachePath, NSError** error)
     String errorString { };
     [self writeCache:errorString];
     if (!errorString.isNull()) {
-        createError(errorString, error);
+        createError(errorString.createNSString().get(), error);
         return NO;
     }
 

@@ -163,7 +163,7 @@ static NSDate * __nullable networkLoadMetricsDate(MonotonicTime time)
 @dynamic networkProtocolName;
 - (nullable NSString *)networkProtocolName
 {
-    return _metrics.protocol;
+    return _metrics.protocol.createNSString().autorelease();
 }
 
 @dynamic reusedConnection;

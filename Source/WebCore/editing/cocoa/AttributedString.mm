@@ -192,7 +192,7 @@ inline static RetainPtr<NSParagraphStyle> reconstructStyle(const ParagraphStyle&
 {
     for (const auto& item : style.textLists) {
         lists.ensure(item.thisID, [&] {
-            RetainPtr list = adoptNS([[PlatformNSTextList alloc] initWithMarkerFormat:item.markerFormat options:0]);
+            RetainPtr list = adoptNS([[PlatformNSTextList alloc] initWithMarkerFormat:item.markerFormat.createNSString().get() options:0]);
             [list setStartingItemNumber:item.startingItemNumber];
             return list;
         });
@@ -296,19 +296,19 @@ static RetainPtr<NSAdaptiveImageGlyph> toWebMultiRepresentationHEICAttachment(co
             return attachment;
     }
 
-    NSString *identifier = attachmentData.identifier;
-    NSString *description = attachmentData.description;
-    if (!description.length)
+    RetainPtr identifier = attachmentData.identifier.createNSString();
+    RetainPtr description = attachmentData.description.createNSString();
+    if (!description.get().length)
         description = @"Apple Emoji";
 
 #if HAVE(NS_EMOJI_IMAGE_STRIKE_PROVENANCE)
     RetainPtr<NSMutableDictionary<NSString *, NSString *>> provenanceInfo = [NSMutableDictionary dictionaryWithCapacity:2];
 
-    NSString *credit = attachmentData.credit;
-    NSString *digitalSourceType = attachmentData.digitalSourceType;
-    if (identifier.length && digitalSourceType.length) {
-        [provenanceInfo setObject:credit forKey:(__bridge NSString *)kCGImagePropertyIPTCCredit];
-        [provenanceInfo setObject:digitalSourceType forKey:(__bridge NSString *)kCGImagePropertyIPTCExtDigitalSourceType];
+    RetainPtr credit = attachmentData.credit.createNSString();
+    RetainPtr digitalSourceType = attachmentData.digitalSourceType.createNSString();
+    if (identifier.get().length && digitalSourceType.get().length) {
+        [provenanceInfo setObject:credit.get() forKey:bridge_cast(kCGImagePropertyIPTCCredit)];
+        [provenanceInfo setObject:digitalSourceType.get() forKey:bridge_cast(kCGImagePropertyIPTCExtDigitalSourceType)];
     }
 #endif
 
@@ -328,7 +328,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (![images count])
         return nil;
 
-    RetainPtr asset = adoptNS([[CTEmojiImageAsset alloc] initWithContentIdentifier:identifier shortDescription:description strikeImages:images]);
+    RetainPtr asset = adoptNS([[CTEmojiImageAsset alloc] initWithContentIdentifier:identifier.get() shortDescription:description.get() strikeImages:images]);
     if (![asset imageData])
         return nil;
 

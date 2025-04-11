@@ -30,6 +30,7 @@
 
 #ifdef __OBJC__
 #include <objc/objc.h>
+#include <wtf/RetainPtr.h>
 #endif
 
 #if OS(WINDOWS)
@@ -248,8 +249,10 @@ public:
     // This conversion converts the null string to an empty NSString rather than to nil.
     // Given Cocoa idioms, this is a more useful default. Clients that need to preserve the
     // null string can check isNull explicitly.
+    RetainPtr<NSString> createNSString() const;
+
+    // FIXME: Port call sites to createNSString() and remove this.
     operator NSString *() const;
-    WTF_EXPORT_PRIVATE RetainPtr<NSString> createNSString() const;
 #endif
 
 #if OS(WINDOWS)
@@ -509,6 +512,13 @@ inline String::operator NSString *() const
     if (!m_impl)
         return @"";
     SUPPRESS_UNCOUNTED_ARG return *m_impl;
+}
+
+inline RetainPtr<NSString> String::createNSString() const
+{
+    if (RefPtr impl = m_impl)
+        return impl->createNSString();
+    return @"";
 }
 
 inline NSString * nsStringNilIfEmpty(const String& string)

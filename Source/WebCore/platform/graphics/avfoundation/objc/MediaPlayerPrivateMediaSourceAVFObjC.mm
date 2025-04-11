@@ -567,7 +567,7 @@ void MediaPlayerPrivateMediaSourceAVFObjC::setRateDouble(double rate)
     if (auto player = m_player.get()) {
         auto algorithm = MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(player->pitchCorrectionAlgorithm(), player->preservesPitch(), m_rate);
         for (const auto& key : m_sampleBufferAudioRendererMap.keys())
-            [(__bridge AVSampleBufferAudioRenderer *)key.get() setAudioTimePitchAlgorithm:algorithm];
+            [(__bridge AVSampleBufferAudioRenderer *)key.get() setAudioTimePitchAlgorithm:algorithm.createNSString().get()];
     }
 
     if (shouldBePlaying())
@@ -590,7 +590,7 @@ void MediaPlayerPrivateMediaSourceAVFObjC::setPreservesPitch(bool preservesPitch
     if (auto player = m_player.get()) {
         auto algorithm = MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(player->pitchCorrectionAlgorithm(), preservesPitch, m_rate);
         for (const auto& key : m_sampleBufferAudioRendererMap.keys())
-            [(__bridge AVSampleBufferAudioRenderer *)key.get() setAudioTimePitchAlgorithm:algorithm];
+            [(__bridge AVSampleBufferAudioRenderer *)key.get() setAudioTimePitchAlgorithm:algorithm.createNSString().get()];
     }
 }
 
@@ -1491,7 +1491,7 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     [audioRenderer setMuted:player->muted()];
     [audioRenderer setVolume:player->volume()];
     auto algorithm = MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(player->pitchCorrectionAlgorithm(), player->preservesPitch(), m_rate);
-    [audioRenderer setAudioTimePitchAlgorithm:algorithm];
+    [audioRenderer setAudioTimePitchAlgorithm:algorithm.createNSString().get()];
 #if PLATFORM(MAC)
 ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
     if ([audioRenderer respondsToSelector:@selector(setIsUnaccompaniedByVisuals:)])
@@ -1505,7 +1505,7 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
         if (deviceId.isEmpty())
             audioRenderer.audioOutputDeviceUniqueID = nil;
         else
-            audioRenderer.audioOutputDeviceUniqueID = deviceId;
+            audioRenderer.audioOutputDeviceUniqueID = deviceId.createNSString().get();
     }
 #endif
 
@@ -1645,7 +1645,7 @@ void MediaPlayerPrivateMediaSourceAVFObjC::audioOutputDeviceChanged()
         if (deviceId.isEmpty())
             renderer.audioOutputDeviceUniqueID = nil;
         else
-            renderer.audioOutputDeviceUniqueID = deviceId;
+            renderer.audioOutputDeviceUniqueID = deviceId.createNSString().get();
     }
 #endif
 }

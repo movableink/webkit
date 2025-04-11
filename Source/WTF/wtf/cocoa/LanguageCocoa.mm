@@ -56,7 +56,7 @@ size_t indexOfBestMatchingLanguageInList(const String& language, const Vector<St
 
 LocaleComponents parseLocale(const String& localeIdentifier)
 {
-    auto locale = retainPtr([NSLocale localeWithLocaleIdentifier:localeIdentifier]);
+    auto locale = retainPtr([NSLocale localeWithLocaleIdentifier:localeIdentifier.createNSString().get()]);
 
     return {
         locale.get().languageCode,

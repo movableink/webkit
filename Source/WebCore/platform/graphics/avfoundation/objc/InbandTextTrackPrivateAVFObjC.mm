@@ -88,10 +88,10 @@ String InbandTextTrackPrivateAVFObjC::mediaType() const
 bool InbandTextTrackPrivateAVFObjC::hasMediaCharacteristic(const String& type) const
 {
     if (m_mediaSelectionOption)
-        return [m_mediaSelectionOption hasMediaCharacteristic:type];
+        return [m_mediaSelectionOption hasMediaCharacteristic:type.createNSString().get()];
 
     if (m_assetTrack)
-        return [m_assetTrack hasMediaCharacteristic:type];
+        return [m_assetTrack hasMediaCharacteristic:type.createNSString().get()];
 
     return false;
 }

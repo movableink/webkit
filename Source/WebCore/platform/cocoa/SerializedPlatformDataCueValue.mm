@@ -95,16 +95,16 @@ RetainPtr<NSDictionary> SerializedPlatformDataCueValue::toNSDictionary() const
     auto dictionary = adoptNS([NSMutableDictionary new]);
 
     if (!m_data->type.isNull())
-        [dictionary setObject:m_data->type forKey:@"type"];
+        [dictionary setObject:m_data->type.createNSString().get() forKey:@"type"];
 
     for (auto& pair : m_data->otherAttributes)
-        [dictionary setObject:pair.value forKey:pair.key];
+        [dictionary setObject:pair.value.createNSString().get() forKey:pair.key.createNSString().get()];
 
     if (m_data->locale)
         [dictionary setObject:m_data->locale.get() forKey:@"locale"];
 
     if (!m_data->key.isNull())
-        [dictionary setObject:m_data->key forKey:@"key"];
+        [dictionary setObject:m_data->key.createNSString().get() forKey:@"key"];
 
     WTF::switchOn(m_data->value, [] (std::nullptr_t) {
     }, [&] (RetainPtr<NSString> string) {

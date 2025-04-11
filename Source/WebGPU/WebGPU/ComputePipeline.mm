@@ -91,11 +91,11 @@ std::pair<Ref<ComputePipeline>, NSString*> Device::createComputePipeline(const W
         return returnInvalidComputePipeline(*this, isAsync, @"GPUDevice.createComputePipeline: Pipeline layout is invalid");
 
     auto& deviceLimits = limits();
-    auto label = fromAPI(descriptor.label);
+    auto label = fromAPI(descriptor.label).createNSString();
     auto entryPointName = descriptor.compute.entryPoint ? fromAPI(descriptor.compute.entryPoint) : shaderModule->defaultComputeEntryPoint();
     NSError *error;
     BufferBindingSizesForPipeline minimumBufferSizes;
-    auto libraryCreationResult = createLibrary(m_device, shaderModule.get(), &pipelineLayout.get(), entryPointName, label, descriptor.compute.constantsSpan(), minimumBufferSizes, &error);
+    auto libraryCreationResult = createLibrary(m_device, shaderModule.get(), &pipelineLayout.get(), entryPointName.createNSString().get(), label.get(), descriptor.compute.constantsSpan(), minimumBufferSizes, &error);
     if (!libraryCreationResult || &pipelineLayout->device() != this)
         return returnInvalidComputePipeline(*this, isAsync, error.localizedDescription ?: @"Compute library failed creation");
 
@@ -107,7 +107,7 @@ std::pair<Ref<ComputePipeline>, NSString*> Device::createComputePipeline(const W
         return returnInvalidComputePipeline(*this, isAsync);
     WGSL::Reflection::Compute computeInformation = std::get<WGSL::Reflection::Compute>(entryPointInformation.typedEntryPoint);
 
-    auto function = createFunction(library, entryPointInformation, label);
+    auto function = createFunction(library, entryPointInformation, label.get());
     if (!function || function.functionType != MTLFunctionTypeKernel || entryPointInformation.specializationConstants.size() != wgslConstantValues.size())
         return returnInvalidComputePipeline(*this, isAsync);
 
@@ -129,11 +129,11 @@ std::pair<Ref<ComputePipeline>, NSString*> Device::createComputePipeline(const W
         auto generatedPipelineLayout = generatePipelineLayout(bindGroupEntries);
         if (!generatedPipelineLayout->isValid())
             return returnInvalidComputePipeline(*this, isAsync);
-        auto computePipelineState = createComputePipelineState(m_device, function, generatedPipelineLayout, size, label, shaderValidationState());
+        auto computePipelineState = createComputePipelineState(m_device, function, generatedPipelineLayout, size, label.get(), shaderValidationState());
         return std::make_pair(ComputePipeline::create(computePipelineState, WTFMove(generatedPipelineLayout), size, WTFMove(minimumBufferSizes), *this), nil);
     }
 
-    auto computePipelineState = createComputePipelineState(m_device, function, pipelineLayout, size, label, shaderValidationState());
+    auto computePipelineState = createComputePipelineState(m_device, function, pipelineLayout, size, label.get(), shaderValidationState());
     return std::make_pair(ComputePipeline::create(computePipelineState, WTFMove(pipelineLayout), size, WTFMove(minimumBufferSizes), *this), nil);
 }
 

@@ -127,7 +127,7 @@ Ref<CommandEncoder> Device::createCommandEncoder(const WGPUCommandEncoderDescrip
     if (!commandBuffer)
         return CommandEncoder::createInvalid(*this);
 
-    commandBuffer.label = fromAPI(descriptor.label);
+    commandBuffer.label = fromAPI(descriptor.label).createNSString().get();
 
     auto commandEncoder = CommandEncoder::create(commandBuffer, *this, m_commandEncoderId++);
     m_commandEncoderMap.set(commandEncoder->uniqueId(), commandEncoder.ptr());
@@ -285,7 +285,7 @@ Ref<ComputePassEncoder> CommandEncoder::beginComputePass(const WGPUComputePassDe
 
     id<MTLComputeCommandEncoder> computeCommandEncoder = [m_commandBuffer computeCommandEncoderWithDescriptor:computePassDescriptor];
     setExistingEncoder(computeCommandEncoder);
-    computeCommandEncoder.label = fromAPI(descriptor.label);
+    computeCommandEncoder.label = fromAPI(descriptor.label).createNSString().get();
 
     return ComputePassEncoder::create(computeCommandEncoder, descriptor, *this, m_device);
 }
@@ -2079,7 +2079,7 @@ Ref<CommandBuffer> CommandEncoder::finish(const WGPUCommandBufferDescriptor& des
     m_commandBuffer = nil;
     m_existingCommandEncoder = nil;
 
-    commandBuffer.label = fromAPI(descriptor.label);
+    commandBuffer.label = fromAPI(descriptor.label).createNSString().get();
 
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
     if (m_managedBuffers.count || m_managedTextures.count) {
@@ -2115,7 +2115,7 @@ void CommandEncoder::insertDebugMarker(String&& markerLabel)
     finalizeBlitCommandEncoder();
 
     // There's no direct way of doing this, so we just push/pop an empty debug group.
-    [m_commandBuffer pushDebugGroup:markerLabel];
+    [m_commandBuffer pushDebugGroup:markerLabel.createNSString().get()];
     [m_commandBuffer popDebugGroup];
 }
 
@@ -2159,7 +2159,7 @@ void CommandEncoder::pushDebugGroup(String&& groupLabel)
     finalizeBlitCommandEncoder();
 
     ++m_debugGroupStackSize;
-    [m_commandBuffer pushDebugGroup:groupLabel];
+    [m_commandBuffer pushDebugGroup:groupLabel.createNSString().get()];
 }
 
 #if !ENABLE(WEBGPU_SWIFT)
@@ -2259,7 +2259,7 @@ void CommandEncoder::writeTimestamp(QuerySet& querySet, uint32_t queryIndex)
 
 void CommandEncoder::setLabel(String&& label)
 {
-    m_commandBuffer.label = label;
+    m_commandBuffer.label = label.createNSString().get();
 }
 
 void CommandEncoder::lock(bool shouldLock)

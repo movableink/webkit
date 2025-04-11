@@ -1285,10 +1285,10 @@ uint32_t BindGroup::dynamicOffset(uint32_t bindingIndex, const Vector<uint32_t>*
 
 void BindGroup::setLabel(String&& label)
 {
-    auto labelString = label;
-    m_vertexArgumentBuffer.label = labelString;
-    m_fragmentArgumentBuffer.label = labelString;
-    m_computeArgumentBuffer.label = labelString;
+    RetainPtr labelString = label.createNSString();
+    m_vertexArgumentBuffer.label = labelString.get();
+    m_fragmentArgumentBuffer.label = labelString.get();
+    m_computeArgumentBuffer.label = labelString.get();
 }
 
 bool BindGroup::allowedUsage(const OptionSet<BindGroupEntryUsage>& allowedUsage)

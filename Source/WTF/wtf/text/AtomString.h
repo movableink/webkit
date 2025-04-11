@@ -113,7 +113,10 @@ public:
 
 #if USE(FOUNDATION) && defined(__OBJC__)
     AtomString(NSString *);
-    operator NSString *() const { return m_string; }
+    RetainPtr<NSString> createNSString() const { return m_string.createNSString(); }
+
+    // FIXME: remove this operator and port call sites to createNSString().
+    operator NSString *() const { return m_string.createNSString().autorelease(); }
 #endif
 
 #if OS(WINDOWS)

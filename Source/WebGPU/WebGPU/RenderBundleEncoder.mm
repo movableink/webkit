@@ -1410,7 +1410,7 @@ void RenderBundleEncoder::setVertexBuffer(uint32_t slot, Buffer* optionalBuffer,
 
 void RenderBundleEncoder::setLabel(String&& label)
 {
-    m_indirectCommandBuffer.label = label;
+    m_indirectCommandBuffer.label = label.createNSString().get();
 }
 
 #undef RETURN_IF_FINISHED

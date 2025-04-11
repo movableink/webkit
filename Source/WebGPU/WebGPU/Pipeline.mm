@@ -56,7 +56,7 @@ std::optional<LibraryCreationResult> createLibrary(id<MTLDevice> device, const S
     auto prepareResult = WGSL::prepare(*ast, entryPoint, wgslPipelineLayout ? &*wgslPipelineLayout : nullptr);
     if (std::holds_alternative<WGSL::Error>(prepareResult)) {
         auto wgslError = std::get<WGSL::Error>(prepareResult);
-        *error = [NSError errorWithDomain:@"WebGPU" code:1 userInfo:@{ NSLocalizedDescriptionKey: wgslError.message() }];
+        *error = [NSError errorWithDomain:@"WebGPU" code:1 userInfo:@{ NSLocalizedDescriptionKey: wgslError.message().createNSString().get() }];
         return std::nullopt;
     }
 
@@ -149,7 +149,7 @@ std::optional<LibraryCreationResult> createLibrary(id<MTLDevice> device, const S
 
     auto generationResult = WGSL::generate(*ast, result, wgslConstantValues);
     if (auto* generationError = std::get_if<WGSL::Error>(&generationResult)) {
-        *error = [NSError errorWithDomain:@"WebGPU" code:1 userInfo:@{ NSLocalizedDescriptionKey: generationError->message() }];
+        *error = [NSError errorWithDomain:@"WebGPU" code:1 userInfo:@{ NSLocalizedDescriptionKey: generationError->message().createNSString().get() }];
         return std::nullopt;
     }
     auto& msl = std::get<String>(generationResult);
@@ -164,7 +164,7 @@ std::optional<LibraryCreationResult> createLibrary(id<MTLDevice> device, const S
 id<MTLFunction> createFunction(id<MTLLibrary> library, const WGSL::Reflection::EntryPointInformation& entryPointInformation, NSString *label)
 {
     auto functionDescriptor = [MTLFunctionDescriptor new];
-    functionDescriptor.name = entryPointInformation.mangledName;
+    functionDescriptor.name = entryPointInformation.mangledName.createNSString().get();
     NSError *error = nil;
     id<MTLFunction> function = [library newFunctionWithDescriptor:functionDescriptor error:&error];
     if (error)

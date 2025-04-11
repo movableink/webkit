@@ -1289,7 +1289,7 @@ void RenderPassEncoder::insertDebugMarker(String&& markerLabel)
     if (!prepareTheEncoderState())
         return;
 
-    [m_renderCommandEncoder insertDebugSignpost:markerLabel];
+    [m_renderCommandEncoder insertDebugSignpost:markerLabel.createNSString().get()];
 }
 
 bool RenderPassEncoder::validatePopDebugGroup() const
@@ -1343,7 +1343,7 @@ void RenderPassEncoder::pushDebugGroup(String&& groupLabel)
         return;
 
     ++m_debugGroupStackSize;
-    [m_renderCommandEncoder pushDebugGroup:groupLabel];
+    [m_renderCommandEncoder pushDebugGroup:groupLabel.createNSString().get()];
 }
 
 void RenderPassEncoder::setBindGroup(uint32_t groupIndex, const BindGroup& group, std::span<const uint32_t> dynamicOffsets)
@@ -1551,7 +1551,7 @@ void RenderPassEncoder::setViewport(float x, float y, float width, float height,
 
 void RenderPassEncoder::setLabel(String&& label)
 {
-    m_renderCommandEncoder.label = label;
+    m_renderCommandEncoder.label = label.createNSString().get();
 }
 
 #undef CHECKED_SET_PSO

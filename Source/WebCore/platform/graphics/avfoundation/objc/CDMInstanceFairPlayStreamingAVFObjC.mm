@@ -365,7 +365,7 @@ bool CDMInstanceFairPlayStreamingAVFObjC::supportsPersistentKeys()
 
 bool CDMInstanceFairPlayStreamingAVFObjC::supportsMediaCapability(const CDMMediaCapability& capability)
 {
-    if (![PAL::getAVURLAssetClass() isPlayableExtendedMIMEType:capability.contentType])
+    if (![PAL::getAVURLAssetClass() isPlayableExtendedMIMEType:capability.contentType.createNSString().get()])
         return false;
 
     // FairPlay only supports 'cbcs' encryption:
@@ -434,7 +434,7 @@ void CDMInstanceFairPlayStreamingAVFObjC::setStorageDirectory(const String& stor
             return;
     }
 
-    m_storageURL = adoptNS([[NSURL alloc] initFileURLWithPath:storagePath isDirectory:NO]);
+    m_storageURL = adoptNS([[NSURL alloc] initFileURLWithPath:storagePath.createNSString().get() isDirectory:NO]);
 }
 
 RefPtr<CDMInstanceSession> CDMInstanceFairPlayStreamingAVFObjC::createSession()
@@ -803,7 +803,7 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
 #if HAVE(FAIRPLAYSTREAMING_CENC_INITDATA)
     else if (initDataType == InitDataRegistry::cencName()) {
         auto psshString = base64EncodeToString(initData->makeContiguous()->span());
-        initializationData = [NSJSONSerialization dataWithJSONObject:@{ @"pssh": (NSString*)psshString } options:NSJSONWritingPrettyPrinted error:nil];
+        initializationData = [NSJSONSerialization dataWithJSONObject:@{ @"pssh": psshString.createNSString().get() } options:NSJSONWritingPrettyPrinted error:nil];
     }
 #endif
 #if HAVE(FAIRPLAYSTREAMING_MTPS_INITDATA)

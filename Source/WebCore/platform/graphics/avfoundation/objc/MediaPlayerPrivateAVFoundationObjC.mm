@@ -314,7 +314,7 @@ static AVAssetCache *assetCacheForPath(const String& path)
     if (path.isEmpty())
         return nil;
 
-    return [PAL::getAVAssetCacheClass() assetCacheWithURL:[NSURL fileURLWithPath:path isDirectory:YES]];
+    return [PAL::getAVAssetCacheClass() assetCacheWithURL:[NSURL fileURLWithPath:path.createNSString().get() isDirectory:YES]];
 }
 
 static AVAssetCache *ensureAssetCacheExistsForPath(const String& path)
@@ -918,11 +918,11 @@ void MediaPlayerPrivateAVFoundationObjC::createAVAssetForURL(const URL& url, Ret
     if (!outOfBandTrackSources.isEmpty()) {
         auto outOfBandTracks = createNSArray(outOfBandTrackSources, [] (auto& trackSource) {
             return @{
-                AVOutOfBandAlternateTrackDisplayNameKey: trackSource->label(),
-                AVOutOfBandAlternateTrackExtendedLanguageTagKey: trackSource->language(),
+                AVOutOfBandAlternateTrackDisplayNameKey: trackSource->label().createNSString().get(),
+                AVOutOfBandAlternateTrackExtendedLanguageTagKey: trackSource->language().createNSString().get(),
                 AVOutOfBandAlternateTrackIsDefaultKey: trackSource->isDefault() ? @YES : @NO,
-                AVOutOfBandAlternateTrackIdentifierKey: String::number(trackSource->uniqueId()),
-                AVOutOfBandAlternateTrackSourceKey: trackSource->url(),
+                AVOutOfBandAlternateTrackIdentifierKey: String::number(trackSource->uniqueId()).createNSString().get(),
+                AVOutOfBandAlternateTrackSourceKey: trackSource->url().createNSString().get(),
                 AVOutOfBandAlternateTrackMediaCharactersticsKey: mediaDescriptionForKind(trackSource->kind()),
             };
         });
@@ -1123,7 +1123,7 @@ void MediaPlayerPrivateAVFoundationObjC::createAVPlayer()
         if (audioOutputDeviceId.isEmpty())
             m_avPlayer.get().audioOutputDeviceUniqueID = nil;
         else
-            m_avPlayer.get().audioOutputDeviceUniqueID = audioOutputDeviceId;
+            m_avPlayer.get().audioOutputDeviceUniqueID = audioOutputDeviceId.createNSString().get();
     }
 #endif
 
@@ -1188,7 +1188,7 @@ void MediaPlayerPrivateAVFoundationObjC::createAVPlayerItem()
         [m_avPlayerItem addObserver:m_objcObserver.get() forKeyPath:keyName options:options context:(void *)MediaPlayerAVFoundationObservationContextPlayerItem];
     }
 
-    [m_avPlayerItem setAudioTimePitchAlgorithm:MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(player->pitchCorrectionAlgorithm(), player->preservesPitch(), m_requestedRate)];
+    [m_avPlayerItem setAudioTimePitchAlgorithm:MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(player->pitchCorrectionAlgorithm(), player->preservesPitch(), m_requestedRate).createNSString().get()];
 
 #if HAVE(AVFOUNDATION_INTERSTITIAL_EVENTS)
 ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN
@@ -1676,7 +1676,7 @@ void MediaPlayerPrivateAVFoundationObjC::setRateDouble(double rate)
 void MediaPlayerPrivateAVFoundationObjC::setPlayerRate(double rate, std::optional<MonotonicTime>&& hostTime)
 {
     if (auto player = this->player())
-        [m_avPlayerItem setAudioTimePitchAlgorithm:MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(player->pitchCorrectionAlgorithm(), player->preservesPitch(), m_requestedRate)];
+        [m_avPlayerItem setAudioTimePitchAlgorithm:MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(player->pitchCorrectionAlgorithm(), player->preservesPitch(), m_requestedRate).createNSString().get()];
 
     setShouldObserveTimeControlStatus(false);
 
@@ -1744,14 +1744,14 @@ void MediaPlayerPrivateAVFoundationObjC::setPreservesPitch(bool preservesPitch)
 {
     auto player = this->player();
     if (m_avPlayerItem && player)
-        [m_avPlayerItem setAudioTimePitchAlgorithm:MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(player->pitchCorrectionAlgorithm(), preservesPitch, m_requestedRate)];
+        [m_avPlayerItem setAudioTimePitchAlgorithm:MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(player->pitchCorrectionAlgorithm(), preservesPitch, m_requestedRate).createNSString().get()];
 }
 
 void MediaPlayerPrivateAVFoundationObjC::setPitchCorrectionAlgorithm(MediaPlayer::PitchCorrectionAlgorithm pitchCorrectionAlgorithm)
 {
     auto player = this->player();
     if (m_avPlayerItem && player)
-        [m_avPlayerItem setAudioTimePitchAlgorithm:MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(pitchCorrectionAlgorithm, player->preservesPitch(), m_requestedRate)];
+        [m_avPlayerItem setAudioTimePitchAlgorithm:MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(pitchCorrectionAlgorithm, player->preservesPitch(), m_requestedRate).createNSString().get()];
 }
 
 const PlatformTimeRanges& MediaPlayerPrivateAVFoundationObjC::platformBufferedTimeRanges() const
@@ -2172,7 +2172,7 @@ bool MediaPlayerPrivateAVFoundationObjC::shouldWaitForLoadingOfResource(AVAssetR
             return true;
         }
 
-        RetainPtr<NSData> keyURIData = [keyURI dataUsingEncoding:NSUTF8StringEncoding allowLossyConversion:YES];
+        RetainPtr keyURIData = [keyURI.createNSString() dataUsingEncoding:NSUTF8StringEncoding allowLossyConversion:YES];
         m_keyID = SharedBuffer::create(keyURIData.get());
         player->initializationDataEncountered("skd"_s, protectedKeyID()->tryCreateArrayBuffer());
         setWaitingForKey(true);
@@ -4037,7 +4037,7 @@ void MediaPlayerPrivateAVFoundationObjC::audioOutputDeviceChanged()
     if (deviceId.isEmpty())
         m_avPlayer.get().audioOutputDeviceUniqueID = nil;
     else
-        m_avPlayer.get().audioOutputDeviceUniqueID = deviceId;
+        m_avPlayer.get().audioOutputDeviceUniqueID = deviceId.createNSString().get();
 #endif
 }
 

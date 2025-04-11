@@ -59,7 +59,7 @@ void ResourceResponse::initNSURLResponse() const
             expectedContentLength = static_cast<NSInteger>(m_expectedContentLength);
 
         RetainPtr encodingNSString = nsStringNilIfEmpty(m_textEncodingName);
-        m_nsResponse = adoptNS([[NSURLResponse alloc] initWithURL:m_url.createNSURL().get() MIMEType:m_mimeType expectedContentLength:expectedContentLength textEncodingName:encodingNSString.get()]);
+        m_nsResponse = adoptNS([[NSURLResponse alloc] initWithURL:m_url.createNSURL().get() MIMEType:m_mimeType.createNSString().get() expectedContentLength:expectedContentLength textEncodingName:encodingNSString.get()]);
         return;
     }
 

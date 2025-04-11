@@ -77,7 +77,7 @@ String createTemporaryZipArchive(const String& path)
     String temporaryFile;
 
     RetainPtr coordinator = adoptNS([[NSFileCoordinator alloc] initWithFilePresenter:nil]);
-    [coordinator coordinateReadingItemAtURL:[NSURL fileURLWithPath:path] options:NSFileCoordinatorReadingWithoutChanges error:nullptr byAccessor:[&](NSURL *newURL) mutable {
+    [coordinator coordinateReadingItemAtURL:[NSURL fileURLWithPath:path.createNSString().get()] options:NSFileCoordinatorReadingWithoutChanges error:nullptr byAccessor:[&](NSURL *newURL) mutable {
         CString archivePath([NSTemporaryDirectory() stringByAppendingPathComponent:@"WebKitGeneratedFileXXXXXX"].fileSystemRepresentation);
         int fd = mkostemp(archivePath.mutableSpanIncludingNullTerminator().data(), O_CLOEXEC);
         if (fd == -1)
@@ -107,7 +107,7 @@ String extractTemporaryZipArchive(const String& path)
         return nullString();
 
     RetainPtr coordinator = adoptNS([[NSFileCoordinator alloc] initWithFilePresenter:nil]);
-    [coordinator coordinateReadingItemAtURL:[NSURL fileURLWithPath:path] options:NSFileCoordinatorReadingWithoutChanges error:nullptr byAccessor:[&](NSURL *newURL) mutable {
+    [coordinator coordinateReadingItemAtURL:[NSURL fileURLWithPath:path.createNSString().get()] options:NSFileCoordinatorReadingWithoutChanges error:nullptr byAccessor:[&](NSURL *newURL) mutable {
         auto *options = @{
             bridge_id_cast(kBOMCopierOptionExtractPKZipKey): @YES,
             bridge_id_cast(kBOMCopierOptionSequesterResourcesKey): @YES,
@@ -120,9 +120,10 @@ String extractTemporaryZipArchive(const String& path)
         BOMCopierFree(copier);
     }];
 
-    auto *contentsOfTemporaryDirectory = [NSFileManager.defaultManager contentsOfDirectoryAtPath:temporaryDirectory error:nil];
+    RetainPtr nsTemporaryDirectory = temporaryDirectory.createNSString();
+    auto *contentsOfTemporaryDirectory = [NSFileManager.defaultManager contentsOfDirectoryAtPath:nsTemporaryDirectory.get() error:nil];
     if (contentsOfTemporaryDirectory.count == 1) {
-        auto *subdirectoryPath = [temporaryDirectory stringByAppendingPathComponent:contentsOfTemporaryDirectory.firstObject];
+        auto *subdirectoryPath = [nsTemporaryDirectory stringByAppendingPathComponent:contentsOfTemporaryDirectory.firstObject];
         BOOL isDirectory;
         if ([NSFileManager.defaultManager fileExistsAtPath:subdirectoryPath isDirectory:&isDirectory] && isDirectory)
             temporaryDirectory = subdirectoryPath;

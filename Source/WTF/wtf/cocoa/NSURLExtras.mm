@@ -218,7 +218,7 @@ NSURL *URLWithUserTypedString(NSString *string, NSURL *)
 
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=186057
     // We should be able to use url.createCFURL instead of using directly CFURL parsing routines.
-    RetainPtr data = dataWithUserTypedString(mappedString);
+    RetainPtr data = dataWithUserTypedString(mappedString.createNSString().get());
     if (!data)
         return [NSURL URLWithString:@""];
 
@@ -322,7 +322,7 @@ NSData *originalURLData(NSURL *URL)
 
 NSString *userVisibleString(NSURL *URL)
 {
-    return URLHelpers::userVisibleURL(span(originalURLData(URL)));
+    return URLHelpers::userVisibleURL(span(originalURLData(URL))).createNSString().autorelease();
 }
 
 BOOL isUserVisibleURL(NSString *string)

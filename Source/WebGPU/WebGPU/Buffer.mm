@@ -157,7 +157,7 @@ Ref<Buffer> Device::createBuffer(const WGPUBufferDescriptor& descriptor)
         return Buffer::createInvalid(*this);
     }
 
-    buffer.label = fromAPI(descriptor.label);
+    buffer.label = fromAPI(descriptor.label).createNSString().get();
 
     if (descriptor.mappedAtCreation)
         return Buffer::create(buffer, descriptor.size, descriptor.usage, Buffer::State::MappedAtCreation, { static_cast<size_t>(0), static_cast<size_t>(descriptor.size) }, *this);
@@ -427,7 +427,7 @@ void Buffer::unmap()
 
 void Buffer::setLabel(String&& label)
 {
-    m_buffer.label = label;
+    m_buffer.label = label.createNSString().get();
 }
 
 uint64_t Buffer::initialSize() const

@@ -177,7 +177,7 @@ static AVMediaType toAVMediaType(MediaSelectionOption::MediaType type)
 static RetainPtr<NSArray> mediaSelectionOptions(const Vector<MediaSelectionOption>& options)
 {
     return createNSArray(options, [] (auto& option) {
-        return adoptNS([[WebAVMediaSelectionOption alloc] initWithMediaType:toAVMediaType(option.mediaType) displayName:option.displayName]);
+        return adoptNS([[WebAVMediaSelectionOption alloc] initWithMediaType:toAVMediaType(option.mediaType) displayName:option.displayName.createNSString().get()]);
     });
 }
 
@@ -206,7 +206,7 @@ void PlaybackSessionInterfaceAVKitLegacy::externalPlaybackChanged(bool enabled, 
         externalPlaybackType = AVPlayerControllerExternalPlaybackTypeTVOut;
 
     WebAVPlayerController* playerController = m_playerController.get();
-    playerController.externalPlaybackAirPlayDeviceLocalizedName = localizedDeviceName;
+    playerController.externalPlaybackAirPlayDeviceLocalizedName = localizedDeviceName.createNSString().get();
     playerController.externalPlaybackType = externalPlaybackType;
     playerController.externalPlaybackActive = enabled;
 }

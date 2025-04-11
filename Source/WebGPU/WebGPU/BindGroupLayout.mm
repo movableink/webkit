@@ -443,7 +443,7 @@ Ref<BindGroupLayout> Device::createBindGroupLayout(const WGPUBindGroupLayoutDesc
         }];
         argumentDescriptors[stage] = sortedArray;
         argumentEncoders[stage] = arguments[stage].get().count ? [m_device newArgumentEncoderWithArguments:sortedArray] : nil;
-        argumentEncoders[stage].label = label;
+        argumentEncoders[stage].label = label.createNSString().get();
         if (arguments[stage].get().count && !argumentEncoders[stage])
             return BindGroupLayout::createInvalid(*this);
     }
@@ -623,10 +623,10 @@ BindGroupLayout::~BindGroupLayout() = default;
 
 void BindGroupLayout::setLabel(String&& label)
 {
-    auto labelString = label;
-    m_vertexArgumentEncoder.label = labelString;
-    m_fragmentArgumentEncoder.label = labelString;
-    m_computeArgumentEncoder.label = labelString;
+    RetainPtr labelString = label.createNSString();
+    m_vertexArgumentEncoder.label = labelString.get();
+    m_fragmentArgumentEncoder.label = labelString.get();
+    m_computeArgumentEncoder.label = labelString.get();
 }
 
 NSUInteger BindGroupLayout::encodedLength(ShaderStage shaderStage) const

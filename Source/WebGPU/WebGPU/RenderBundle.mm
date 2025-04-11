@@ -80,7 +80,7 @@ bool RenderBundle::isValid() const
 
 void RenderBundle::setLabel(String&& label)
 {
-    m_renderBundlesResources.firstObject.indirectCommandBuffer.label = label;
+    m_renderBundlesResources.firstObject.indirectCommandBuffer.label = label.createNSString().get();
 }
 
 void RenderBundle::replayCommands(RenderPassEncoder& renderPassEncoder) const

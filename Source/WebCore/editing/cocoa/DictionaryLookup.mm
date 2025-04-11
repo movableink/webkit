@@ -280,7 +280,7 @@ std::optional<SimpleRange> DictionaryLookup::rangeForSelection(const VisibleSele
 
     auto fullCharacterRange = *makeSimpleRange(paragraphStart, paragraphEnd);
     String itemString = plainText(fullCharacterRange);
-    NSRange highlightRange = adoptNS([PAL::allocRVItemInstance() initWithText:itemString selectedRange:rangeToPass]).get().highlightRange;
+    NSRange highlightRange = adoptNS([PAL::allocRVItemInstance() initWithText:itemString.createNSString().get() selectedRange:rangeToPass]).get().highlightRange;
 
     return { { resolveCharacterRange(fullCharacterRange, highlightRange) } };
 
@@ -351,7 +351,7 @@ std::optional<SimpleRange> DictionaryLookup::rangeAtHitTestResult(const HitTestR
     NSRange selectedRange = [PAL::getRVSelectionClass() revealRangeAtIndex:hitIndex selectedRanges:@[[NSValue valueWithRange:selectionRange]] shouldUpdateSelection:nil];
 
     String itemString = plainText(*fullCharacterRange);
-    auto highlightRange = adoptNS([PAL::allocRVItemInstance() initWithText:itemString selectedRange:selectedRange]).get().highlightRange;
+    auto highlightRange = adoptNS([PAL::allocRVItemInstance() initWithText:itemString.createNSString().get() selectedRange:selectedRange]).get().highlightRange;
 
     if (highlightRange.location == NSNotFound || !highlightRange.length)
         return std::nullopt;

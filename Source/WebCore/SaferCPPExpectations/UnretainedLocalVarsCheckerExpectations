@@ -24,7 +24,6 @@ editing/cocoa/AttributedString.mm
 editing/cocoa/DataDetection.mm
 editing/cocoa/FontAttributesCocoa.mm
 editing/cocoa/HTMLConverter.mm
-editing/cocoa/WebArchiveResourceFromNSAttributedString.mm
 editing/cocoa/WebContentReaderCocoa.mm
 loader/ContentFilter.cpp
 loader/archive/cf/LegacyWebArchive.cpp

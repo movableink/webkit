@@ -371,7 +371,7 @@ void ComputePassEncoder::insertDebugMarker(String&& markerLabel)
     if (!prepareTheEncoderState())
         return;
 
-    [m_computeCommandEncoder insertDebugSignpost:markerLabel];
+    [m_computeCommandEncoder insertDebugSignpost:markerLabel.createNSString().get()];
 }
 
 bool ComputePassEncoder::validatePopDebugGroup() const
@@ -427,7 +427,7 @@ void ComputePassEncoder::pushDebugGroup(String&& groupLabel)
         return;
 
     ++m_debugGroupStackSize;
-    [m_computeCommandEncoder pushDebugGroup:groupLabel];
+    [m_computeCommandEncoder pushDebugGroup:groupLabel.createNSString().get()];
 }
 
 static void setCommandEncoder(const BindGroupEntryUsageData::Resource& resource, CommandEncoder& parentEncoder)
@@ -508,7 +508,7 @@ void ComputePassEncoder::setPipeline(const ComputePipeline& pipeline)
 
 void ComputePassEncoder::setLabel(String&& label)
 {
-    m_computeCommandEncoder.label = label;
+    m_computeCommandEncoder.label = label.createNSString().get();
 }
 
 bool ComputePassEncoder::isValid() const

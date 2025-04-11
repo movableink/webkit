@@ -251,7 +251,7 @@ void PresentationContextIOSurface::configure(Device& device, const WGPUSwapChain
             textureDescriptor.usage = existingUsage;
             textureDescriptor.usage |= MTLTextureUsageShaderRead;
             id<MTLTexture> luminanceClampTexture = device.newTextureWithDescriptor(textureDescriptor);
-            luminanceClampTexture.label = fromAPI(descriptor.label);
+            luminanceClampTexture.label = fromAPI(descriptor.label).createNSString().get();
             auto viewFormats = descriptor.viewFormats;
             parentLuminanceClampTexture = Texture::create(luminanceClampTexture, wgpuTextureDescriptor, WTFMove(viewFormats), device);
             parentLuminanceClampTexture->makeCanvasBacking();
@@ -261,7 +261,7 @@ void PresentationContextIOSurface::configure(Device& device, const WGPUSwapChain
         }
 
         id<MTLTexture> texture = device.newTextureWithDescriptor(textureDescriptor, bridge_cast(iosurface));
-        texture.label = fromAPI(descriptor.label);
+        texture.label = fromAPI(descriptor.label).createNSString().get();
         auto viewFormats = descriptor.viewFormats;
         auto parentTexture = Texture::create(texture, wgpuTextureDescriptor, WTFMove(viewFormats), device);
         parentTexture->makeCanvasBacking();

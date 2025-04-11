@@ -908,7 +908,7 @@ NSDictionary *HTMLConverter::computedAttributesForElement(Element& element)
     if (!font) {
         String fontName = _caches->propertyValueForNode(element, CSSPropertyFontFamily);
         if (fontName.length())
-            font = _fontForNameAndSize(fontName.convertToASCIILowercase(), fontSize, _fontCache.get());
+            font = _fontForNameAndSize(fontName.convertToASCIILowercase().createNSString().get(), fontSize, _fontCache.get());
         if (!font)
             font = [PlatformFontClass fontWithName:@"Times" size:fontSize];
 
@@ -1007,7 +1007,7 @@ NSDictionary *HTMLConverter::computedAttributesForElement(Element& element)
 
     String textShadow = _caches->propertyValueForNode(element, CSSPropertyTextShadow);
     if (textShadow.length() > 4) {
-        NSShadow *shadow = _shadowForShadowStyle(textShadow);
+        NSShadow *shadow = _shadowForShadowStyle(textShadow.createNSString().get());
         if (shadow)
             [attrs setObject:shadow forKey:NSShadowAttributeName];
     }
@@ -1621,7 +1621,7 @@ BOOL HTMLConverter::_enterElement(Element& element, BOOL embedded)
     else if ((!m_ignoreUserSelectNoneContent || !m_userSelectNoneStateCache.nodeOnlyContainsUserSelectNone(element)) && (!displayValue.length() || !(displayValue == noneAtom() || displayValue == "table-column"_s || displayValue == "table-column-group"_s))) {
         if (_caches->isBlockElement(element) && !element.hasTagName(brTag) && !(displayValue == "table-cell"_s && ![_textTables count])
             && !([_textLists count] > 0 && displayValue == "block"_s && !element.hasTagName(liTag) && !element.hasTagName(ulTag) && !element.hasTagName(olTag)))
-            _newParagraphForElement(element, element.tagName(), NO, YES);
+            _newParagraphForElement(element, element.tagName().createNSString().get(), NO, YES);
         return YES;
     }
     return NO;
@@ -1786,7 +1786,7 @@ BOOL HTMLConverter::_processElement(Element& element, NSInteger depth)
 #if ENABLE(ATTACHMENT_ELEMENT)
     } else if (RefPtr attachment = dynamicDowncast<HTMLAttachmentElement>(element)) {
         if (attachment->file()) {
-            RetainPtr url = [NSURL fileURLWithPath:attachment->file()->path()];
+            RetainPtr url = [NSURL fileURLWithPath:attachment->file()->path().createNSString().get()];
             if (url)
                 _addAttachmentForElement(element, url.get(), isBlockLevel, NO);
         }
@@ -1849,21 +1849,21 @@ BOOL HTMLConverter::_processElement(Element& element, NSInteger depth)
             if (blockElement && blockElementIsParagraph)
                 _newLineForElement(element);
             else
-                _newParagraphForElement(element, element.tagName(), YES, NO);
+                _newParagraphForElement(element, element.tagName().createNSString().get(), YES, NO);
         }
     } else if (element.hasTagName(ulTag)) {
         RetainPtr<NSTextList> list;
         String listStyleType = _caches->propertyValueForNode(element, CSSPropertyListStyleType);
         if (!listStyleType.length())
             listStyleType = @"disc";
-        list = adoptNS([[PlatformNSTextList alloc] initWithMarkerFormat:makeString("{"_s, listStyleType, "}"_s) options:0]);
+        list = adoptNS([[PlatformNSTextList alloc] initWithMarkerFormat:makeString("{"_s, listStyleType, "}"_s).createNSString().get() options:0]);
         [_textLists addObject:list.get()];
     } else if (element.hasTagName(olTag)) {
         RetainPtr<NSTextList> list;
         String listStyleType = _caches->propertyValueForNode(element, CSSPropertyListStyleType);
         if (!listStyleType.length())
             listStyleType = "decimal"_s;
-        list = adoptNS([[PlatformNSTextList alloc] initWithMarkerFormat:makeString('{', listStyleType, '}') options:0]);
+        list = adoptNS([[PlatformNSTextList alloc] initWithMarkerFormat:makeString('{', listStyleType, '}').createNSString().get() options:0]);
         if (RefPtr olElement = dynamicDowncast<HTMLOListElement>(element)) {
             auto startingItemNumber = olElement->start();
             [list setStartingItemNumber:startingItemNumber];
@@ -1977,7 +1977,7 @@ void HTMLConverter::_exitElement(Element& element, NSInteger depth, NSUInteger s
         } else if ([_textLists count] > 0 && displayValue == "block"_s && !element.hasTagName(liTag) && !element.hasTagName(ulTag) && !element.hasTagName(olTag)) {
             _newLineForElement(element);
         } else {
-            _newParagraphForElement(element, element.tagName(), (range.length == 0), YES);
+            _newParagraphForElement(element, element.tagName().createNSString().get(), !range.length, YES);
         }
     } else if ([_writingDirectionArray count] > 0) {
         String bidi = _caches->propertyValueForNode(element, CSSPropertyUnicodeBidi);
@@ -2162,7 +2162,7 @@ void HTMLConverter::_processText(Text& text)
         else if (textTransform == "lowercase"_s)
             outputString = outputString.convertToLowercaseWithoutLocale(); // FIXME: Needs locale to work correctly.
 
-        [_attrStr replaceCharactersInRange:rangeToReplace withString:outputString];
+        [_attrStr replaceCharactersInRange:rangeToReplace withString:outputString.createNSString().get()];
         rangeToReplace.length = outputString.length();
         if (rangeToReplace.length)
             [_attrStr setAttributes:aggregatedAttributesForAncestors(text) range:rangeToReplace];
@@ -2313,10 +2313,10 @@ static RetainPtr<NSFileWrapper> fileWrapperForURL(DocumentLoader* dataSource, NS
     if (dataSource) {
         if (RefPtr<ArchiveResource> resource = dataSource->subresource(URL)) {
             auto wrapper = adoptNS([[NSFileWrapper alloc] initRegularFileWithContents:resource->data().makeContiguous()->createNSData().get()]);
-            NSString *filename = resource->response().suggestedFilename();
+            RetainPtr filename = resource->response().suggestedFilename().createNSString();
             if (!filename || ![filename length])
                 filename = suggestedFilenameWithMIMEType(resource->url().createNSURL().get(), resource->mimeType());
-            [wrapper setPreferredFilename:filename];
+            [wrapper setPreferredFilename:filename.get()];
             return wrapper;
         }
     }
@@ -2379,7 +2379,7 @@ static RetainPtr<NSFileWrapper> fileWrapperForElement(const HTMLImageElement& el
     if (CachedImage* cachedImage = element.cachedImage()) {
         if (RefPtr sharedBuffer = cachedImage->resourceBuffer()) {
             RetainPtr wrapper = adoptNS([[NSFileWrapper alloc] initRegularFileWithContents:sharedBuffer->makeContiguous()->createNSData().get()]);
-            [wrapper setPreferredFilename:preferredFilenameForElement(element)];
+            [wrapper setPreferredFilename:preferredFilenameForElement(element).createNSString().get()];
             return wrapper;
         }
     }
@@ -2409,7 +2409,7 @@ static RetainPtr<NSFileWrapper> fileWrapperForElement(const HTMLAttachmentElemen
     // to an existing HTMLAttachmentElement.
 
     RetainPtr wrapper = adoptNS([[NSFileWrapper alloc] initRegularFileWithContents:data.get()]);
-    [wrapper setPreferredFilename:makeString(WebContentReader::placeholderAttachmentFilenamePrefix, identifier)];
+    [wrapper setPreferredFilename:makeString(WebContentReader::placeholderAttachmentFilenamePrefix, identifier).createNSString().get()];
     return wrapper;
 }
 
@@ -2677,7 +2677,7 @@ static AttributedString editingAttributedStringInternal(const SimpleRange& range
         if (!replaceNoBreakSpaces)
             text = it.text().createNSStringWithoutCopying();
         else
-            text = makeStringByReplacingAll(it.text(), noBreakSpace, ' ');
+            text = makeStringByReplacingAll(it.text(), noBreakSpace, ' ').createNSString();
 
         [string replaceCharactersInRange:NSMakeRange(stringLength, 0) withString:text.get()];
         [string setAttributes:attributes.get() range:NSMakeRange(stringLength, currentTextLength)];
