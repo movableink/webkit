@@ -240,44 +240,40 @@ public:
     bool locateTail(LoopData& data)
     {
         BasicBlock* header = data.header();
-        BasicBlock* tail = nullptr;
 
+        // TailBlock: A block that branches back to the header (i.e., loop back edge)
+        BasicBlock* tail = nullptr;
         for (BasicBlock* predecessor : header->predecessors) {
             if (!m_graph.m_cpsDominators->dominates(header, predecessor))
                 continue;
-
             if (tail) {
                 dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *header, " since it contains two tails: ", *predecessor, " and ", *tail);
                 return false;
             }
-
             tail = predecessor;
         }
-
         if (!tail) {
             dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *header, " since it has no tail");
             return false;
         }
 
-        // PreHeader                          PreHeader
-        //  |                                  |
-        // Header <---                        Header_0
-        //  |        |       unrolled to       |
-        //  |       Tail  =================>  Branch_0
-        //  |        |                         |
-        // Branch ----                        Tail_0
-        //  |                                  |
-        // Next                               ...
-        //                                     |
-        //                                    Header_n
-        //                                     |
-        //                                    Branch_n
-        //                                     |
-        //                                    Next
-        //
-        // FIXME: This is not supported yet. We should do it only if it's profitable.
-        if (!tail->terminal()->isBranch()) {
-            dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *header, " since it has a non-branch tail");
+        // ExitBlock: A block that exits the loop.
+        BasicBlock* exit = nullptr;
+        for (unsigned i = 0; i < data.loopSize(); ++i) {
+            BasicBlock* body = data.loopBody(i);
+            for (BasicBlock* successor : body->successors()) {
+                if (data.loop->contains(successor))
+                    continue;
+                if (exit) {
+                    dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *header, " since it contains two exit blocks: ", *body, " and ", *exit);
+                    return false;
+                }
+                exit = body;
+            }
+        }
+
+        if (tail != exit) {
+            dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *header, " since the exit ", *exit, " and tail ", *tail, " are not the same one");
             return false;
         }
 
