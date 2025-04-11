@@ -27,7 +27,6 @@
 #include "ArgumentCoders.h"
 #include "Connection.h"
 #include "MessageNames.h"
-#include <WebCore/FloatSegment.h>
 #include <span>
 #include <wtf/Forward.h>
 #include <wtf/RuntimeApplicationChecks.h>
@@ -53,17 +52,18 @@ public:
     static constexpr bool deferSendingIfSuspended = false;
 
     explicit TestSpanOfConstFloat(const std::span<const float>& floats)
-        : m_arguments(floats)
+        : m_floats(floats)
     {
     }
 
-    auto&& arguments()
+    template<typename Encoder>
+    void encode(Encoder& encoder)
     {
-        return WTFMove(m_arguments);
+        encoder << m_floats;
     }
 
 private:
-    std::tuple<const std::span<const float>&> m_arguments;
+    const std::span<const float>& m_floats;
 };
 
 class TestSpanOfConstFloatSegments {
@@ -77,17 +77,18 @@ public:
     static constexpr bool deferSendingIfSuspended = false;
 
     explicit TestSpanOfConstFloatSegments(const std::span<const WebCore::FloatSegment>& floatSegments)
-        : m_arguments(floatSegments)
+        : m_floatSegments(floatSegments)
     {
     }
 
-    auto&& arguments()
+    template<typename Encoder>
+    void encode(Encoder& encoder)
     {
-        return WTFMove(m_arguments);
+        encoder << m_floatSegments;
     }
 
 private:
-    std::tuple<const std::span<const WebCore::FloatSegment>&> m_arguments;
+    const std::span<const WebCore::FloatSegment>& m_floatSegments;
 };
 
 } // namespace TestWithSpanOfConst

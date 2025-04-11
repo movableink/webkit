@@ -50,7 +50,7 @@ messages -> RemoteDisplayListRecorder Stream {
     SetStrokeThickness(float thickness) StreamBatched
     SetStrokeStyle(enum:uint8_t WebCore::StrokeStyle style) StreamBatched
     SetCompositeMode(struct WebCore::CompositeMode mode) StreamBatched
-    SetDropShadow(std::optional<WebCore::GraphicsDropShadow> dropShadow) StreamBatched
+    SetDropShadow(struct std::optional<WebCore::GraphicsDropShadow> dropShadow) StreamBatched
     SetStyle(std::optional<WebCore::GraphicsStyle> style) StreamBatched
     SetAlpha(float alpha) StreamBatched
     SetTextDrawingMode(enum:uint8_t WebCore::TextDrawingModeFlags mode) StreamBatched

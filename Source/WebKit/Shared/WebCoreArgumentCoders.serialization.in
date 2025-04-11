@@ -7330,7 +7330,6 @@ header: <WebCore/InspectorFrontendClient.h>
     Light,
     Dark,
 };
-using WebCore::InspectorFrontendClient::Appearance = WebCore::InspectorFrontendClientAppearance;
 
 [Nested] enum class WebCore::InspectorFrontendClient::SaveMode : uint8_t {
     SingleFile,
@@ -7344,7 +7343,6 @@ header: <WebCore/InspectorFrontendClient.h>
     String content;
     bool base64Encoded;
 };
-using WebCore::InspectorFrontendClient::SaveData = WebCore::InspectorFrontendClientSaveData;
 
 #if ENABLE(VIDEO)
 header: <WebCore/PlatformTextTrack.h>

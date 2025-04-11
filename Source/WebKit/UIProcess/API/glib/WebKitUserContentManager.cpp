@@ -22,6 +22,7 @@
 
 #include "APISerializedScriptValue.h"
 #include "InjectUserScriptImmediately.h"
+#include "JavaScriptEvaluationResult.h"
 #include "WebKitInitialize.h"
 #include "WebKitUserContentManagerPrivate.h"
 #include "WebKitUserContentPrivate.h"

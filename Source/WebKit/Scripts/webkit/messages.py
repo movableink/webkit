@@ -51,7 +51,6 @@ _license_header = """/*
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 """
 
 WANTS_DISPATCH_MESSAGE_ATTRIBUTE = 'WantsDispatchMessage'
@@ -231,8 +230,6 @@ def message_to_struct_declaration(receiver, message):
     result = []
     function_parameters = [(function_parameter_type(x.type, x.kind), x.name) for x in message.parameters]
 
-    arguments_constructor_parameters = [arguments_constructor_name(x.type, x.name) for x in message.parameters]
-
     result.append('class %s {\n' % message.name)
     result.append('public:\n')
     result.append('    using Arguments = std::tuple<%s>;\n' % ', '.join([parameter.type for parameter in message.parameters]))
@@ -269,33 +266,39 @@ def message_to_struct_declaration(receiver, message):
             else:
                 result.append('    using Promise = WTF::NativePromise<std::tuple<%s>, IPC::Error>;\n' % ', '.join([parameter.type for parameter in message.reply_parameters]))
 
-    if len(function_parameters) or receiver.receiver_dispatched_from:
-        result.append('    %s%s(%s)' % (len(function_parameters) == 1 and 'explicit ' or '', message.name, ', '.join([' '.join(x) for x in function_parameters])))
-        result.append('\n        : m_arguments(%s)\n' % ', '.join(arguments_constructor_parameters))
-        result.append('    {\n')
-        result += generate_dispatched_for_x(receiver.receiver_dispatched_from, spacing='        ')
-        result.append('    }\n\n')
+    result.append('    %s%s(%s)\n' % (len(message.parameters) == 1 and 'explicit ' or '', message.name, ', '.join([' '.join(x) for x in function_parameters])))
+    for i in range(len(message.parameters)):
+        parameter = message.parameters[i]
+        result.append('        %s m_%s(%s)\n' % (',' if i else ':', parameter.name, arguments_constructor_name(parameter.type, parameter.name)))
+    result.append('    {\n')
+    result += generate_dispatched_for_x(receiver.receiver_dispatched_from, spacing='        ')
+    result.append('    }\n\n')
 
     if message.coalescing_key_indices is not None:
-        result.append('    // Not valid to call this after arguments() is called.\n')
         if message.coalescing_key_indices:
             result.append('    void encodeCoalescingKey(IPC::Encoder& encoder) const\n')
             result.append('    {\n')
-            get_arguments_string = ' << '.join((f'std::get<{i}>(m_arguments)' for i in message.coalescing_key_indices))
-            result.append(f'        encoder << {get_arguments_string};\n')
+            for i in message.coalescing_key_indices:
+                result.append('        encoder << m_%s;\n' % message.parameters[i].name)
         else:
             result.append('    void encodeCoalescingKey(IPC::Encoder&) const\n')
             result.append('    {\n')
         result.append('    }\n')
         result.append('\n')
 
-    result.append('    auto&& arguments()\n')
+    result.append('    template<typename Encoder>\n')
+    result.append('    void encode(Encoder& encoder)\n')
     result.append('    {\n')
-    result.append('        return WTFMove(m_arguments);\n')
+    for parameter in message.parameters:
+        if parameter.type in types_that_must_be_moved():
+            result.append('        encoder << WTFMove(m_%s);\n' % parameter.name)
+        else:
+            result.append('        encoder << m_%s;\n' % parameter.name)
     result.append('    }\n')
     result.append('\n')
     result.append('private:\n')
-    result.append('    std::tuple<%s> m_arguments;\n' % ', '.join([x[0] for x in function_parameters]))
+    for parameter in function_parameters:
+        result.append('    %s m_%s;\n' % parameter)
     result.append('};\n')
     return surround_in_condition(''.join(result), message.condition)
 
@@ -345,6 +348,8 @@ def forward_declaration(namespace, kind_and_type):
         return 'struct %s' % type
     elif kind.startswith('enum:'):
         return 'enum class %s : %s' % (type, kind[5:])
+    elif qualified_name in serialized_identifiers():
+        return 'struct ' + type + 'Type;\nusing ' + type + ' = ' + atomic_object_identifier(qualified_name) + 'ObjectIdentifier<' + type + 'Type>'
     elif qualified_name in serialized_identifiers():
         return 'struct ' + type + 'Type;\nusing ' + type + ' = ' + atomic_object_identifier(qualified_name) + 'ObjectIdentifier<' + type + 'Type>'
     else:
@@ -609,7 +614,7 @@ def types_that_cannot_be_forward_declared():
         'WebKit::WebKeyboardEvent',
         'WebKit::XRDeviceIdentifier',
         'WTF::SystemMemoryPressureStatus',
-    ] + serialized_identifiers() + types_that_must_be_moved())
+    ] + types_that_must_be_moved())
 
 
 def conditions_for_header(header):
@@ -645,6 +650,7 @@ def conditions_for_header(header):
         '<WebCore/DynamicContentScalingDisplayList.h>': ["ENABLE(RE_DYNAMIC_CONTENT_SCALING)"],
         '<WebCore/ImageUtilities.h>': ["PLATFORM(COCOA)"],
         '<WebCore/MediaPlaybackTargetContext.h>': ["ENABLE(WIRELESS_PLAYBACK_TARGET)"],
+        '<WebCore/ModelPlayerIdentifier.h>': ["ENABLE(MODEL_PROCESS)"],
         '<WebCore/PlaybackTargetClientContextIdentifier.h>': ["ENABLE(WIRELESS_PLAYBACK_TARGET)"],
         '<WebCore/SoupNetworkProxySettings.h>': ["USE(SOUP)"],
         '<WebCore/SelectionData.h>': ["PLATFORM(GTK)"],
@@ -677,6 +683,9 @@ def forward_declarations_and_headers(receiver):
     for parameter in receiver.iterparameters():
         kind = parameter.kind
         type = parameter.type
+
+        if type.startswith('std::optional<') and type.endswith('>'):
+            type = type[14: len(type) - 1]
 
         if type.find('<') != -1 or type in no_forward_declaration_types:
             # Don't forward declare class templates.
@@ -718,7 +727,7 @@ def generate_messages_header(receiver):
     result = []
 
     result.append(_license_header)
-
+    result.append('\n')
     result.append('#pragma once\n')
     result.append('\n')
 
@@ -922,7 +931,7 @@ def argument_coder_headers_for_type(type):
     return headers
 
 
-def headers_for_type(type):
+def headers_for_type(type, for_implementation_file=False):
     header_infos_and_types = class_template_headers(type)
 
     special_cases = {
@@ -1054,6 +1063,8 @@ def headers_for_type(type):
         'WebCore::IndexedDB::ObjectStoreOverwriteMode': ['<WebCore/IndexedDB.h>'],
         'WebCore::InputMode': ['<WebCore/InputMode.h>'],
         'WebCore::InspectorClientDeveloperPreference': ['<WebCore/InspectorClient.h>'],
+        'WebCore::InspectorFrontendClientAppearance': ['<WebCore/InspectorFrontendClient.h>'],
+        'WebCore::InspectorFrontendClientSaveData': ['<WebCore/InspectorFrontendClient.h>'],
         'WebCore::InspectorOverlayHighlight': ['<WebCore/InspectorOverlay.h>'],
         'WebCore::IsLoggedIn': ['<WebCore/IsLoggedIn.h>'],
         'WebCore::IDBResourceObjectIdentifier': ['<WebCore/IDBResourceIdentifier.h>'],
@@ -1204,6 +1215,7 @@ def headers_for_type(type):
         'WebCore::TrackInfo': ['<WebCore/MediaSample.h>'],
         'WebCore::TrackInfo::TrackType': ['<WebCore/MediaSample.h>'],
         'WebCore::UserGestureTokenIdentifierID': ['"GeneratedSerializers.h"'],
+        'WebCore::WindowIdentifier': ['<WebCore/GlobalWindowIdentifier.h>'],
         'WebCore::WritingTools::Context': ['<WebCore/WritingToolsTypes.h>'],
         'WebCore::WritingTools::ContextID': ['<WebCore/WritingToolsTypes.h>'],
         'WebCore::WritingTools::Action': ['<WebCore/WritingToolsTypes.h>'],
@@ -1219,7 +1231,6 @@ def headers_for_type(type):
         'WebCore::VideoFrameRotation': ['<WebCore/VideoFrame.h>'],
         'WebCore::VideoPlaybackQualityMetrics': ['<WebCore/VideoPlaybackQualityMetrics.h>'],
         'WebCore::VideoPresetData': ['<WebCore/VideoPreset.h>'],
-        'WebCore::WindowIdentifier': ['<WebCore/GlobalWindowIdentifier.h>'],
         'WebCore::WebGPU::AddressMode': ['<WebCore/WebGPUAddressMode.h>'],
         'WebCore::WebGPU::BlendFactor': ['<WebCore/WebGPUBlendFactor.h>'],
         'WebCore::WebGPU::BlendOperation': ['<WebCore/WebGPUBlendOperation.h>'],
@@ -1418,6 +1429,9 @@ def headers_for_type(type):
             headers += special_cases[type]
             continue
 
+        if not for_implementation_file and type not in types_that_cannot_be_forward_declared():
+            continue
+
         # We assume that we must include a header for a type iff it has a scope
         # resolution operator (::).
         split = type.split('::')
@@ -1455,7 +1469,7 @@ def collect_header_conditions_for_receiver(receiver, header_conditions):
                     header_conditions[header] = []
                 header_conditions[header].extend(conditions)
 
-        type_headers = headers_for_type(type)
+        type_headers = headers_for_type(type, True)
         for header in type_headers:
             if header not in header_conditions:
                 header_conditions[header] = []
@@ -1557,6 +1571,7 @@ def generate_message_handler(receiver):
     result = []
 
     result.append(_license_header)
+    result.append('\n')
     result.append('#include "config.h"\n')
 
     if receiver.condition:
@@ -1721,6 +1736,7 @@ def generate_message_handler(receiver):
 def generate_message_names_header(receivers):
     result = []
     result.append(_license_header)
+    result.append('\n')
     result.append('#pragma once\n')
     result.append('\n')
     result.append('#include <algorithm>\n')
@@ -1802,6 +1818,7 @@ def generate_message_names_header(receivers):
 def generate_message_names_implementation(receivers):
     result = []
     result.append(_license_header)
+    result.append('\n')
     result.append('#include "config.h"\n')
     result.append('#include "MessageNames.h"\n')
     result.append('\n')
@@ -1829,47 +1846,47 @@ def generate_message_names_implementation(receivers):
 
 
 def generate_js_value_conversion_function(result, receivers, function_name, decoder_function_name, argument_type, predicate=lambda message: True):
-    result.append('std::optional<JSC::JSValue> %s(JSC::JSGlobalObject* globalObject, MessageName name, Decoder& decoder)\n' % function_name)
-    result.append('{\n')
-    result.append('    switch (name) {\n')
+    result.append('std::optional<JSC::JSValue> %s(JSC::JSGlobalObject* globalObject, MessageName name, Decoder& decoder)' % function_name)
+    result.append('{')
+    result.append('    switch (name) {')
     for receiver in receivers:
         if receiver.has_attribute(BUILTIN_ATTRIBUTE):
             continue
         if receiver.condition:
-            result.append('#if %s\n' % receiver.condition)
+            result.append('#if %s' % receiver.condition)
         previous_message_condition = None
         for message in receiver.messages:
             if not predicate(message):
                 continue
             if previous_message_condition != message.condition:
                 if previous_message_condition:
-                    result.append('#endif\n')
+                    result.append('#endif')
                 if message.condition:
-                    result.append('#if %s\n' % message.condition)
+                    result.append('#if %s' % message.condition)
             previous_message_condition = message.condition
-            result.append('    case MessageName::%s_%s:\n' % (receiver.name, message.name))
-            result.append('        return %s<MessageName::%s_%s>(globalObject, decoder);\n' % (decoder_function_name, receiver.name, message.name))
+            result.append('    case MessageName::%s_%s:' % (receiver.name, message.name))
+            result.append('        return %s<MessageName::%s_%s>(globalObject, decoder);' % (decoder_function_name, receiver.name, message.name))
         if previous_message_condition:
-            result.append('#endif\n')
+            result.append('#endif')
         if receiver.condition:
-            result.append('#endif\n')
-    result.append('    default:\n')
-    result.append('        break;\n')
-    result.append('    }\n')
-    result.append('    return std::nullopt;\n')
-    result.append('}\n')
+            result.append('#endif')
+    result.append('    default:')
+    result.append('        break;')
+    result.append('    }')
+    result.append('    return std::nullopt;')
+    result.append('}')
 
 
 def generate_js_argument_descriptions(receivers, function_name, arguments_from_message):
     result = []
-    result.append('std::optional<Vector<ArgumentDescription>> %s(MessageName name)\n' % function_name)
-    result.append('{\n')
-    result.append('    switch (name) {\n')
+    result.append('std::optional<Vector<ArgumentDescription>> %s(MessageName name)' % function_name)
+    result.append('{')
+    result.append('    switch (name) {')
     for receiver in receivers:
         if receiver.has_attribute(BUILTIN_ATTRIBUTE):
             continue
         if receiver.condition:
-            result.append('#if %s\n' % receiver.condition)
+            result.append('#if %s' % receiver.condition)
         previous_message_condition = None
         for message in receiver.messages:
             if message.has_attribute(BUILTIN_ATTRIBUTE):
@@ -1879,126 +1896,94 @@ def generate_js_argument_descriptions(receivers, function_name, arguments_from_m
                 continue
             if previous_message_condition != message.condition:
                 if previous_message_condition:
-                    result.append('#endif\n')
+                    result.append('#endif')
                 if message.condition:
-                    result.append('#if %s\n' % message.condition)
+                    result.append('#if %s' % message.condition)
             previous_message_condition = message.condition
-            result.append('    case MessageName::%s_%s:\n' % (receiver.name, message.name))
+            result.append('    case MessageName::%s_%s:' % (receiver.name, message.name))
 
             if not len(argument_list):
-                result.append('        return Vector<ArgumentDescription> { };\n')
+                result.append('        return Vector<ArgumentDescription> { };')
                 continue
 
-            result.append('        return Vector<ArgumentDescription> {\n')
+            result.append('        return Vector<ArgumentDescription> {')
             for argument in argument_list:
-                result.append('            { "%s"_s, "%s"_s },\n' % (argument.name, argument.type))
-            result.append('        };\n')
+                result.append('            { "%s"_s, "%s"_s },' % (argument.name, argument.type))
+            result.append('        };')
         if previous_message_condition:
-            result.append('#endif\n')
+            result.append('#endif')
         if receiver.condition:
-            result.append('#endif\n')
-    result.append('    default:\n')
-    result.append('        break;\n')
-    result.append('    }\n')
-    result.append('    return std::nullopt;\n')
-    result.append('}\n')
+            result.append('#endif')
+    result.append('    default:')
+    result.append('        break;')
+    result.append('    }')
+    result.append('    return std::nullopt;')
+    result.append('}')
     return result
+
+
+def header_and_condition_from_parameter(parameter, message, receiver):
+    type = parameter.type
+    if type.startswith('std::optional<') and type.endswith('>'):
+        type = type[14: len(type) - 1]
+    headers = []
+    for header in headers_for_type(type, True):
+        conditions = []
+        if message.condition is not None:
+            conditions.append(message.condition)
+        if receiver.condition is not None:
+            conditions.append(receiver.condition)
+        headers.append((header, ' && '.join(conditions)))
+    return headers
 
 
 def generate_message_argument_description_implementation(receivers, receiver_headers):
     result = []
     result.append(_license_header)
-    result.append('#include "config.h"\n')
-    result.append('#include "MessageArgumentDescriptions.h"\n')
-    result.append('\n')
-    result.append('#if ENABLE(IPC_TESTING_API) || !LOG_DISABLED\n')
-    result.append('\n')
-    all_headers = ['"JSIPCBinding.h"']
-    for identifier in serialized_identifiers():
-        for header in headers_for_type(identifier):
-            all_headers.append(header)
-    all_headers = sorted(list(dict.fromkeys(all_headers)))
-    for header in all_headers:
-        conditions = conditions_for_header(header)
-        if conditions and None not in conditions:
-            result.append('#if %s\n' % ' || '.join(sorted(set(conditions))))
-            result.append('#include %s\n' % header)
-            result.append('#endif\n')
-        else:
-            result.append('#include %s\n' % header)
-
-    for receiver in receivers:
-        if receiver.has_attribute(BUILTIN_ATTRIBUTE):
-            continue
-        if receiver.condition:
-            result.append('#if %s\n' % receiver.condition)
-        header_conditions = {
-            '"%s"' % messages_header_filename(receiver): [None]
-        }
-        result += generate_header_includes_from_conditions(header_conditions)
-        if receiver.condition:
-            result.append('#endif\n')
-
-    result.append('\n')
-
-    result.append('namespace IPC {\n')
-    result.append('\n')
-    result.append('#if ENABLE(IPC_TESTING_API)\n')
-    result.append('\n')
+    result.append('#include "config.h"')
+    result.append('#include "MessageArgumentDescriptions.h"')
+    result.append('')
+    result.append('#include "JSIPCBinding.h"')
+    result.append('#include "MessageNames.h"')
+    result.append('')
+    result.append('#if ENABLE(IPC_TESTING_API) || !LOG_DISABLED')
+    result.append('')
+    result.append('namespace IPC {')
+    result.append('')
+    result.append('#if ENABLE(IPC_TESTING_API)')
+    result.append('')
 
     generate_js_value_conversion_function(result, receivers, 'jsValueForArguments', 'jsValueForDecodedMessage', 'Arguments')
 
-    result.append('\n')
+    result.append('')
 
     generate_js_value_conversion_function(result, receivers, 'jsValueForReplyArguments', 'jsValueForDecodedMessageReply', 'ReplyArguments', lambda message: message.reply_parameters is not None)
 
-    result.append('\n')
-    result.append('Vector<ASCIILiteral> serializedIdentifiers()\n')
-    result.append('{\n')
-
-    identifier_headers = {}
-    for identifier in serialized_identifiers():
-        assert(len(headers_for_type(identifier)) == 1)
-        identifier_headers[identifier] = headers_for_type(identifier)[0]
+    result.append('')
+    result.append('Vector<ASCIILiteral> serializedIdentifiers()')
+    result.append('{')
+    result.append('    return {')
 
     for identifier in serialized_identifiers():
-        conditions = conditions_for_header(identifier_headers[identifier])
-        statement = '    static_assert(sizeof(uint64_t) == sizeof(' + identifier + '));\n'
-        if conditions and None not in conditions:
-            result.append('#if %s\n' % ' || '.join(sorted(set(conditions))))
-            result.append(statement)
-            result.append('#endif\n')
-        else:
-            result.append(statement)
+        result.append('        "' + identifier + '"_s,')
 
-    result.append('    return {\n')
+    result.append('    };')
+    result.append('}')
 
-    for identifier in serialized_identifiers():
-        conditions = conditions_for_header(identifier_headers[identifier])
-        statement = '        "' + identifier + '"_s,\n'
-        if conditions and None not in conditions:
-            result.append('#if %s\n' % ' || '.join(sorted(set(conditions))))
-            result.append(statement)
-            result.append('#endif\n')
-        else:
-            result.append(statement)
-
-    result.append('    };\n')
-    result.append('}\n')
-
-    result.append('\n')
-    result.append('#endif // ENABLE(IPC_TESTING_API)\n')
-    result.append('\n')
+    result.append('')
+    result.append('#endif // ENABLE(IPC_TESTING_API)')
+    result.append('')
 
     result += generate_js_argument_descriptions(receivers, 'messageArgumentDescriptions', lambda message: message.parameters)
 
-    result.append('\n')
+    result.append('')
 
     result += generate_js_argument_descriptions(receivers, 'messageReplyArgumentDescriptions', lambda message: message.reply_parameters)
 
-    result.append('\n')
+    result.append('')
 
-    result.append('} // namespace WebKit\n')
-    result.append('\n')
-    result.append('#endif // ENABLE(IPC_TESTING_API) || !LOG_DISABLED\n')
-    return ''.join(result)
+    result.append('} // namespace WebKit')
+    result.append('')
+    result.append('#endif // ENABLE(IPC_TESTING_API) || !LOG_DISABLED')
+    result.append('')
+    return '\n'.join(result)

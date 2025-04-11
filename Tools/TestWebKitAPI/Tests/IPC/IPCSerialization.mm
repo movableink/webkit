@@ -698,17 +698,17 @@ public:
     static constexpr bool isSync = false;
 
     ObjCPingBackMessage(const ObjCHolderForTesting& holder)
-        : m_arguments(holder)
+        : m_holder(holder)
     {
     }
 
-    auto&& arguments()
+    template<typename Encoder> void encode(Encoder& encoder)
     {
-        return WTFMove(m_arguments);
+        encoder << m_holder;
     }
 
 private:
-    std::tuple<const ObjCHolderForTesting&> m_arguments;
+    const ObjCHolderForTesting& m_holder;
 };
 
 class CFPingBackMessage {
@@ -723,17 +723,17 @@ public:
     static constexpr bool isSync = false;
 
     CFPingBackMessage(const CFHolderForTesting& holder)
-        : m_arguments(holder)
+        : m_holder(holder)
     {
     }
 
-    auto&& arguments()
+    template<typename Encoder> void encode(Encoder& encoder)
     {
-        return WTFMove(m_arguments);
+        encoder << m_holder;
     }
 
 private:
-    std::tuple<const CFHolderForTesting&> m_arguments;
+    const CFHolderForTesting& m_holder;
 };
 
 /*

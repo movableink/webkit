@@ -41,12 +41,19 @@ struct MockTestMessageWithConnection {
     static constexpr bool canDispatchOutOfOrder = false;
     static constexpr bool replyCanDispatchOutOfOrder = false;
     static constexpr IPC::MessageName name()  { return static_cast<IPC::MessageName>(123); }
-    auto&& arguments() { return WTFMove(m_arguments); }
     MockTestMessageWithConnection(IPC::Connection::Handle&& handle)
-        : m_arguments(WTFMove(handle))
+        : m_handle(WTFMove(handle))
     {
     }
-    std::tuple<IPC::Connection::Handle&&> m_arguments;
+
+    template<typename Encoder>
+    void encode(Encoder& encoder)
+    {
+        encoder << WTFMove(m_handle);
+    }
+
+private:
+    IPC::Connection::Handle&& m_handle;
 };
 
 struct MockTestSyncMessage {
@@ -55,16 +62,8 @@ struct MockTestSyncMessage {
     static constexpr bool replyCanDispatchOutOfOrder = false;
     static constexpr IPC::MessageName name()  { return IPC::MessageName::IPCTester_SyncPing; }
     using ReplyArguments = std::tuple<>;
-    auto&& arguments()
-    {
-        return WTFMove(m_arguments);
-    }
 
-    MockTestSyncMessage()
-    {
-    }
-
-    std::tuple<> m_arguments;
+    template<typename Encoder> void encode(Encoder&) { }
 };
 
 struct MockTestSyncMessageWithDataReply {
@@ -73,16 +72,8 @@ struct MockTestSyncMessageWithDataReply {
     static constexpr bool replyCanDispatchOutOfOrder = false;
     static constexpr IPC::MessageName name()  { return IPC::MessageName::IPCTester_SyncPing; } // Needs to be sync.
     using ReplyArguments = std::tuple<std::span<const uint8_t>>;
-    auto&& arguments()
-    {
-        return WTFMove(m_arguments);
-    }
 
-    MockTestSyncMessageWithDataReply()
-    {
-    }
-
-    std::tuple<> m_arguments;
+    template<typename Encoder> void encode(Encoder&) { }
 };
 
 namespace {

@@ -755,7 +755,7 @@ Error Connection::send(T&& message, uint64_t destinationID, OptionSet<SendOption
     static_assert(!T::isSync, "Async message expected");
 
     auto encoder = makeUniqueRef<Encoder>(T::name(), destinationID);
-    encoder.get() << message.arguments();
+    message.encode(encoder.get());
 
     return sendMessage(WTFMove(encoder), sendOptions, qos);
 }
@@ -776,7 +776,7 @@ std::optional<Connection::AsyncReplyID> Connection::sendWithAsyncReply(T&& messa
     auto handler = makeAsyncReplyHandler<T>(std::forward<C>(completionHandler));
     auto replyID = handler.replyID;
     auto encoder = makeUniqueRef<Encoder>(T::name(), destinationID);
-    encoder.get() << message.arguments();
+    message.encode(encoder.get());
     if (sendMessageWithAsyncReply(WTFMove(encoder), WTFMove(handler), sendOptions) == Error::NoError)
         return replyID;
     // FIXME: Propagate the error back.
@@ -790,7 +790,7 @@ std::optional<Connection::AsyncReplyID> Connection::sendWithAsyncReplyOnDispatch
     auto handler = makeAsyncReplyHandlerWithDispatcher<T>(std::forward<C>(completionHandler), dispatcher);
     auto replyID = handler.replyID;
     auto encoder = makeUniqueRef<Encoder>(T::name(), destinationID);
-    encoder.get() << message.arguments();
+    message.encode(encoder.get());
     if (sendMessageWithAsyncReplyWithDispatcher(WTFMove(encoder), WTFMove(handler), sendOptions) == Error::NoError)
         return replyID;
     // FIXME: Propagate the error back.
@@ -805,7 +805,7 @@ Ref<Promise> Connection::sendWithPromisedReply(T&& message, uint64_t destination
     auto promise = producer.promise();
     auto handler = makeAsyncReplyHandlerWithDispatcher<PC, T, Promise>(WTFMove(producer));
     auto encoder = makeUniqueRef<Encoder>(T::name(), destinationID);
-    encoder.get() << message.arguments();
+    message.encode(encoder.get());
     sendMessageWithAsyncReplyWithDispatcher(WTFMove(encoder), WTFMove(handler), sendOptions);
     // The promise will be rejected in the handler should an error occur.
     return promise;
@@ -822,7 +822,7 @@ template<typename T> Connection::SendSyncResult<T> Connection::sendSync(T&& mess
     }
 
     // Encode the rest of the input arguments.
-    encoder.get() << message.arguments();
+    message.encode(encoder.get());
 
     // Now send the message and wait for a reply.
     auto replyDecoderOrError = sendSyncMessage(syncRequestID, WTFMove(encoder), timeout, sendSyncOptions);

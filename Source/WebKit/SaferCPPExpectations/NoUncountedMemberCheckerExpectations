@@ -18,3 +18,4 @@ WebProcess/InjectedBundle/API/Cocoa/WKWebProcessPlugInCSSStyleDeclarationHandleI
 WebProcess/InjectedBundle/API/Cocoa/WKWebProcessPlugInNodeHandleInternal.h
 WebProcess/InjectedBundle/API/Cocoa/WKWebProcessPlugInRangeHandleInternal.h
 WebProcess/InjectedBundle/API/Cocoa/WKWebProcessPlugInScriptWorldInternal.h
+WebKitBuild/Release/DerivedSources/WebKit/NetworkConnectionToWebProcessMessages.h

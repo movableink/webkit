@@ -36,12 +36,18 @@ struct MockTestMessageWithSignal {
     static constexpr bool canDispatchOutOfOrder = false;
     static constexpr bool replyCanDispatchOutOfOrder = false;
     static constexpr IPC::MessageName name()  { return static_cast<IPC::MessageName>(123); }
-    auto&& arguments() { return WTFMove(m_arguments); }
     MockTestMessageWithSignal(IPC::Signal&& signal)
-        : m_arguments(WTFMove(signal))
+        : m_signal(WTFMove(signal))
     {
     }
-    std::tuple<IPC::Signal&&> m_arguments;
+
+    template<typename Encoder>
+    void encode(Encoder& encoder)
+    {
+        encoder << WTFMove(m_signal);
+    }
+private:
+    IPC::Signal&& m_signal;
 };
 
 class EventTestABBA : public testing::TestWithParam<std::tuple<ConnectionTestDirection>>, protected ConnectionTestBase {
