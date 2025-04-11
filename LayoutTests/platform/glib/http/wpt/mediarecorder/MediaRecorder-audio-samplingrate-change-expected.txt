@@ -1,7 +1,5 @@
 
 
-Harness Error (TIMEOUT), message = null
-
 PASS Recorder with sampling rate change
-TIMEOUT Recorder WebM with sampling rate change Test timed out
+FAIL Recorder WebM with sampling rate change assert_greater_than: video got recorded past change of sample rate expected a number greater than 0.5 but got 0.314
 
