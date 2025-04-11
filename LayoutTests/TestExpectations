@@ -855,7 +855,6 @@ imported/w3c/web-platform-tests/html/browsers/browsing-the-web/history-traversal
 imported/w3c/web-platform-tests/cors/image-tainting-in-cross-origin-iframe.sub.html [ Skip ]
 imported/w3c/web-platform-tests/dom/events/EventListener-incumbent-global-1.sub.html [ Skip ]
 imported/w3c/web-platform-tests/dom/events/EventListener-incumbent-global-2.sub.html [ Skip ]
-imported/w3c/web-platform-tests/webmessaging/broadcastchannel/origin.window.html [ Skip ]
 imported/w3c/web-platform-tests/html/browsers/origin/relaxing-the-same-origin-restriction/document_domain_access_details.sub.html [ Skip ]
 imported/w3c/web-platform-tests/html/browsers/sandboxing/sandbox-disallow-scripts-via-unsandboxed-popup.tentative.html [ Skip ]
 imported/w3c/web-platform-tests/html/canvas/element/fill-and-stroke-styles/2d.pattern.transform.infinity.html [ Skip ]
@@ -2000,6 +1999,10 @@ webkit.org/b/187034 imported/w3c/web-platform-tests/webmessaging/with-ports/020.
 webkit.org/b/187034 imported/w3c/web-platform-tests/webmessaging/with-ports/021.html [ Skip ]
 webkit.org/b/187034 imported/w3c/web-platform-tests/webmessaging/without-ports/020.html [ Skip ]
 webkit.org/b/187034 imported/w3c/web-platform-tests/webmessaging/without-ports/021.html [ Skip ]
+webkit.org/b/187034 imported/w3c/web-platform-tests/webmessaging/broadcastchannel/origin.window.html [ Skip ]
+
+# This webmessaging WPT test is flaky.
+webkit.org/b/289126 imported/w3c/web-platform-tests/webmessaging/broadcastchannel/cross-partition.https.tentative.html [ Skip ]
 
 # This webmessaging WPT test crashes in debug.
 webkit.org/b/260895 [ Debug ] imported/w3c/web-platform-tests/webmessaging/broadcastchannel/opaque-origin.html [ Crash ]
