@@ -1,4 +1,4 @@
-# Copyright (C) 2017-2024 Apple Inc. All rights reserved.
+# Copyright (C) 2017-2025 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -1672,7 +1672,6 @@ class GenerateS3URL(master.MasterShellCommandNewStyle):
         build_url = f'{self.master.config.buildbotURL}#/builders/{self.build._builderid}/builds/{self.build.number}'
         if match:
             self.build.s3url = match.group('url')
-            print(f'build: {build_url}, url for GenerateS3URL: {self.build.s3url}')
             bucket_url = S3_BUCKET_MINIFIED if self.minified else S3_BUCKET
             self.build.s3_archives.append(S3URL + f"{bucket_url}/{self.identifier}/{self.getProperty('archive_revision')}{f'-{self.additions}' if self.additions else ''}.{self.extension}")
             defer.returnValue(rc)
