@@ -14,7 +14,6 @@ Modules/cache/DOMCacheStorage.cpp
 Modules/encryptedmedia/MediaKeySystemRequest.cpp
 Modules/fetch/FetchBody.cpp
 Modules/fetch/FetchRequest.cpp
-Modules/fetch/FetchResponse.cpp
 Modules/gamepad/GamepadHapticActuator.cpp
 Modules/geolocation/Geolocation.cpp
 Modules/highlight/AppHighlightStorage.cpp

@@ -59,8 +59,6 @@ Modules/fetch/FetchBodyConsumer.cpp
 Modules/fetch/FetchBodySource.cpp
 Modules/fetch/FetchLoader.cpp
 Modules/fetch/FetchRequest.cpp
-Modules/fetch/FetchResponse.cpp
-Modules/fetch/FormDataConsumer.cpp
 Modules/filesystemaccess/FileSystemDirectoryHandle.cpp
 Modules/filesystemaccess/FileSystemFileHandle.cpp
 Modules/filesystemaccess/FileSystemHandle.cpp

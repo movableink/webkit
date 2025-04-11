@@ -69,7 +69,7 @@ private:
     Callback m_callback;
 
     size_t m_currentElementIndex { 0 };
-    Ref<WorkQueue> m_fileQueue;
+    const Ref<WorkQueue> m_fileQueue;
     std::unique_ptr<BlobLoader> m_blobLoader;
     bool m_isReadingFile { false };
 };

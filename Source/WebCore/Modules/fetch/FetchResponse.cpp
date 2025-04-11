@@ -201,9 +201,8 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::clone()
         return Exception { ExceptionCode::TypeError, "Body is disturbed or locked"_s };
 
     // If loading, let's create a stream so that data is teed on both clones.
+    RefPtr context = scriptExecutionContext();
     if (isLoading() && !m_readableStreamSource) {
-        RefPtr context = scriptExecutionContext();
-
         auto* globalObject = context ? context->globalObject() : nullptr;
         if (!globalObject)
             return Exception { ExceptionCode::InvalidStateError, "Context is stopped"_s };
@@ -218,7 +217,7 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::clone()
         m_internalResponse.setHTTPHeaderFields(HTTPHeaderMap { headers().internalHeaders() });
 
     Ref headers = FetchHeaders::create(this->headers());
-    auto clone = FetchResponse::create(scriptExecutionContext(), std::nullopt, WTFMove(headers), ResourceResponse { m_internalResponse });
+    auto clone = FetchResponse::create(context.get(), std::nullopt, WTFMove(headers), ResourceResponse { m_internalResponse });
     clone->cloneBody(*this);
     clone->m_opaqueLoadIdentifier = m_opaqueLoadIdentifier;
     clone->m_bodySizeWithPadding = m_bodySizeWithPadding;
@@ -227,36 +226,35 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::clone()
 
 void FetchResponse::addAbortSteps(Ref<AbortSignal>&& signal)
 {
-    m_abortSignal = WTFMove(signal);
-    m_abortSignal->addAlgorithm([this, weakThis = WeakPtr { *this }](JSC::JSValue) {
+    m_abortSignal = signal.copyRef();
+    signal->addAlgorithm([weakThis = WeakPtr { *this }](JSC::JSValue) {
         RefPtr protectedThis = weakThis.get();
-
         if (!protectedThis)
             return;
 
-        m_abortSignal = nullptr;
+        protectedThis->m_abortSignal = nullptr;
 
-        setLoadingError(Exception { ExceptionCode::AbortError, "Fetch is aborted"_s });
+        protectedThis->setLoadingError(Exception { ExceptionCode::AbortError, "Fetch is aborted"_s });
 
-        if (m_loader) {
-            if (auto callback = m_loader->takeNotificationCallback())
+        if (protectedThis->m_loader) {
+            if (auto callback = protectedThis->m_loader->takeNotificationCallback())
                 callback(Exception { ExceptionCode::AbortError, "Fetch is aborted"_s });
 
-            if (auto callback = m_loader->takeConsumeDataCallback())
+            if (auto callback = protectedThis->m_loader->takeConsumeDataCallback())
                 callback(Exception { ExceptionCode::AbortError, "Fetch is aborted"_s });
         }
 
-        if (m_readableStreamSource) {
-            if (!m_readableStreamSource->isCancelling())
-                m_readableStreamSource->error(*loadingException());
-            m_readableStreamSource = nullptr;
+        if (RefPtr readableStreamSource = protectedThis->m_readableStreamSource) {
+            if (!readableStreamSource->isCancelling())
+                readableStreamSource->error(*protectedThis->loadingException());
+            protectedThis->m_readableStreamSource = nullptr;
         }
-        if (m_body)
-            m_body->loadingFailed(*loadingException());
+        if (protectedThis->m_body)
+            protectedThis->m_body->loadingFailed(*protectedThis->loadingException());
 
-        if (auto loader = WTFMove(m_loader))
+        if (auto loader = WTFMove(protectedThis->m_loader))
             loader->stop();
-        if (auto bodyLoader = WTFMove(m_bodyLoader))
+        if (auto bodyLoader = WTFMove(protectedThis->m_bodyLoader))
             bodyLoader->stop();
     });
 }
@@ -398,22 +396,22 @@ void FetchResponse::Loader::didReceiveData(const SharedBuffer& buffer)
         return;
     }
 
-    auto& source = *response->m_readableStreamSource;
+    Ref source = *response->m_readableStreamSource;
 
-    if (!source.isPulling()) {
+    if (!source->isPulling()) {
         response->body().consumer().append(buffer);
         return;
     }
 
-    if (response->body().consumer().hasData() && !source.enqueue(response->body().consumer().takeAsArrayBuffer())) {
+    if (response->body().consumer().hasData() && !source->enqueue(response->body().consumer().takeAsArrayBuffer())) {
         stop();
         return;
     }
-    if (!source.enqueue(buffer.tryCreateArrayBuffer())) {
+    if (!source->enqueue(buffer.tryCreateArrayBuffer())) {
         stop();
         return;
     }
-    source.resolvePullPromise();
+    source->resolvePullPromise();
 }
 
 bool FetchResponse::Loader::start(ScriptExecutionContext& context, const FetchRequest& request, const String& initiator)
@@ -480,7 +478,7 @@ void FetchResponse::consumeBodyReceivedByChunk(ConsumeDataByChunkCallback&& call
     m_isDisturbed = true;
 
     if (hasReadableStreamBody()) {
-        m_body->consumer().extract(*m_body->readableStream(), WTFMove(callback));
+        m_body->consumer().extract(*m_body->protectedReadableStream(), WTFMove(callback));
         return;
     }
 
@@ -524,25 +522,26 @@ void FetchResponse::consumeBodyAsStream()
 
     auto data = m_loader->startStreaming();
     if (data) {
-        if (!m_readableStreamSource->enqueue(data->tryCreateArrayBuffer())) {
+        Ref readableStreamSource = *m_readableStreamSource;
+        if (!readableStreamSource->enqueue(data->tryCreateArrayBuffer())) {
             stop();
             return;
         }
-        m_readableStreamSource->resolvePullPromise();
+        readableStreamSource->resolvePullPromise();
     }
 }
 
 void FetchResponse::closeStream()
 {
     ASSERT(m_readableStreamSource);
-    m_readableStreamSource->close();
+    Ref { *m_readableStreamSource }->close();
     m_readableStreamSource = nullptr;
 }
 
 void FetchResponse::cancelStream()
 {
     if (isAllowedToRunScript() && hasReadableStreamBody()) {
-        body().readableStream()->cancel(Exception { ExceptionCode::AbortError, "load is cancelled"_s });
+        body().protectedReadableStream()->cancel(Exception { ExceptionCode::AbortError, "load is cancelled"_s });
         return;
     }
     cancel();
@@ -554,12 +553,13 @@ void FetchResponse::feedStream()
     bool shouldCloseStream = !m_loader;
 
     if (body().consumer().hasData()) {
-        if (!m_readableStreamSource->enqueue(body().consumer().takeAsArrayBuffer())) {
+        Ref readableStreamSource = *m_readableStreamSource;
+        if (!readableStreamSource->enqueue(body().consumer().takeAsArrayBuffer())) {
             stop();
             return;
         }
         if (!shouldCloseStream) {
-            m_readableStreamSource->resolvePullPromise();
+            readableStreamSource->resolvePullPromise();
             return;
         }
     } else if (!shouldCloseStream)
@@ -631,9 +631,9 @@ void FetchResponse::processReceivedError()
             callback(*loadingException());
     }
 
-    if (m_readableStreamSource) {
-        if (!m_readableStreamSource->isCancelling())
-            m_readableStreamSource->error(*loadingException());
+    if (RefPtr readableStreamSource = m_readableStreamSource) {
+        if (!readableStreamSource->isCancelling())
+            readableStreamSource->error(*loadingException());
         m_readableStreamSource = nullptr;
     }
 
@@ -650,9 +650,9 @@ void FetchResponse::didSucceed(const NetworkLoadMetrics& metrics)
             consumeDataCallback(nullptr);
     }
 
-    if (m_readableStreamSource) {
+    if (RefPtr readableStreamSource = m_readableStreamSource) {
         if (body().consumer().hasData())
-            m_readableStreamSource->enqueue(body().consumer().takeAsArrayBuffer());
+            readableStreamSource->enqueue(body().consumer().takeAsArrayBuffer());
 
         closeStream();
     }
