@@ -7842,3 +7842,5 @@ imported/w3c/web-platform-tests/trusted-types/ServiceWorker-importScripts.https.
 imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register-from-DedicatedWorker.https.html [ Pass Failure ]
 imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register-from-ServiceWorker.https.html [ Pass Failure ]
 imported/w3c/web-platform-tests/trusted-types/ServiceWorkerContainer-register-from-SharedWorker.https.html [ Pass Failure ]
+
+webkit.org/b/291436 http/tests/security/contentSecurityPolicy/extensions/manifest-v3/default-src/manifest-v3-default-src-block-wildcard.html [ Failure ]
