@@ -111,6 +111,10 @@ RefPtr<GStreamerAudioRTPPacketizer> GStreamerAudioRTPPacketizer::create(RefPtr<U
         return nullptr;
     }
 
+    // Make sure the audio encoder tracks upstream timestamps.
+    if (gstObjectHasProperty(encoder.get(), "perfect-timestamp"_s))
+        g_object_set(encoder.get(), "perfect-timestamp", FALSE, nullptr);
+
     // Align MTU with libwebrtc implementation, also helping to reduce packet fragmentation.
     g_object_set(payloader.get(), "auto-header-extension", TRUE, "mtu", 1200, nullptr);
 

@@ -193,6 +193,12 @@ bool GStreamerMediaEndpoint::initializePipeline()
             g_object_set(rtpBin.get(), "add-reference-timestamp-meta", TRUE, nullptr);
     }
 
+    // Prevent drift between RTP timestamps and NTP time as reported by RTCP packets.
+    gst_util_set_object_arg(G_OBJECT(rtpBin.get()), "ntp-time-source", "clock-time");
+
+    // Use the time at which the audio/video frames were captured, without latency induced by encoders.
+    g_object_set(rtpBin.get(), "rtcp-sync-send-time", TRUE, nullptr);
+
     g_signal_connect(rtpBin.get(), "new-jitterbuffer", G_CALLBACK(+[](GstElement*, GstElement* element, unsigned, unsigned ssrc, GStreamerMediaEndpoint* endPoint) {
 
         // Workaround for https://gitlab.freedesktop.org/gstreamer/gst-plugins-good/-/issues/914
