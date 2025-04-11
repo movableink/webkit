@@ -67,13 +67,8 @@
 #include "TransformSource.h"
 #include "XMLNSNames.h"
 #include "XMLDocumentParserScope.h"
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
-IGNORE_WARNINGS_BEGIN("undef")
 #include <libxml/parser.h>
 #include <libxml/parserInternals.h>
-IGNORE_WARNINGS_END
-IGNORE_WARNINGS_END
 #include <wtf/MallocSpan.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -124,9 +119,7 @@ struct XMLMalloc {
     static void* malloc(size_t size) { return xmlMallocHelper(size); }
     static void free(void* p)
     {
-        IGNORE_WARNINGS_BEGIN("deprecated-declarations")
         xmlFree(p);
-        IGNORE_WARNINGS_END
     }
 };
 
@@ -256,8 +249,6 @@ private:
     struct PendingStartElementNSCallback : public PendingCallback {
         virtual ~PendingStartElementNSCallback()
         {
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
             xmlFree(xmlLocalName);
             xmlFree(xmlPrefix);
             xmlFree(xmlURI);
@@ -267,7 +258,6 @@ IGNORE_WARNINGS_BEGIN("deprecated-declarations")
                 for (int j = 0; j < 4; j++)
                     xmlFree(attributes[i * 5 + j]);
             }
-IGNORE_WARNINGS_END
         }
 
         void call(XMLDocumentParser* parser) override
@@ -304,11 +294,8 @@ IGNORE_WARNINGS_END
     struct PendingProcessingInstructionCallback : public PendingCallback {
         virtual ~PendingProcessingInstructionCallback()
         {
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
             xmlFree(target);
             xmlFree(data);
-IGNORE_WARNINGS_END
         }
 
         void call(XMLDocumentParser* parser) override
@@ -332,10 +319,7 @@ IGNORE_WARNINGS_END
     struct PendingCommentCallback : public PendingCallback {
         virtual ~PendingCommentCallback()
         {
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
             xmlFree(s);
-IGNORE_WARNINGS_END
         }
 
         void call(XMLDocumentParser* parser) override
@@ -349,12 +333,9 @@ IGNORE_WARNINGS_END
     struct PendingInternalSubsetCallback : public PendingCallback {
         virtual ~PendingInternalSubsetCallback()
         {
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
             xmlFree(name);
             xmlFree(externalID);
             xmlFree(systemID);
-IGNORE_WARNINGS_END
         }
 
         void call(XMLDocumentParser* parser) override
@@ -370,10 +351,7 @@ IGNORE_WARNINGS_END
     struct PendingErrorCallback: public PendingCallback {
         virtual ~PendingErrorCallback()
         {
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
             xmlFree(message);
-IGNORE_WARNINGS_END
         }
 
         void call(XMLDocumentParser* parser) override
