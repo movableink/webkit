@@ -147,11 +147,11 @@ StepRange NumberInputType::createStepRange(AnyStepHandling anyStepHandling) cons
     const Decimal stepBase = findStepBase(numberDefaultStepBase);
 
     const Decimal doubleMax = Decimal::doubleMax();
-    const Element& element = *this->element();
+    Ref element = *this->element();
 
     RangeLimitations rangeLimitations = RangeLimitations::Invalid;
     auto extractBound = [&] (const QualifiedName& attributeName, const Decimal& defaultValue) -> Decimal {
-        const AtomString& attributeValue = element.attributeWithoutSynchronization(attributeName);
+        const AtomString& attributeValue = element->attributeWithoutSynchronization(attributeName);
         Decimal valueFromAttribute = parseToNumberOrNaN(attributeValue);
         if (valueFromAttribute.isFinite()) {
             rangeLimitations = RangeLimitations::Valid;
@@ -162,7 +162,7 @@ StepRange NumberInputType::createStepRange(AnyStepHandling anyStepHandling) cons
     Decimal minimum = extractBound(minAttr, -doubleMax);
     Decimal maximum = extractBound(maxAttr, doubleMax);
 
-    const Decimal step = StepRange::parseStep(anyStepHandling, stepDescription, element.attributeWithoutSynchronization(stepAttr));
+    const Decimal step = StepRange::parseStep(anyStepHandling, stepDescription, element->attributeWithoutSynchronization(stepAttr));
     return StepRange(stepBase, rangeLimitations, minimum, maximum, step, stepDescription);
 }
 

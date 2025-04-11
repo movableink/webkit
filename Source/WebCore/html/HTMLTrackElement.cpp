@@ -190,39 +190,39 @@ void HTMLTrackElement::scheduleLoad()
 
     // 4. Run the remainder of these steps asynchronously, allowing whatever caused these steps to run to continue.
     m_loadPending = true;
-    scheduleTask([this]() mutable {
+    scheduleTask([](auto& track) mutable {
 
-        SetForScope loadPending { m_loadPending, true, false };
+        SetForScope loadPending { track.m_loadPending, true, false };
 
-        if (!hasAttributeWithoutSynchronization(srcAttr)) {
-            track().removeAllCues();
+        if (!track.hasAttributeWithoutSynchronization(srcAttr)) {
+            track.track().removeAllCues();
             return;
         }
 
         // 6. Set the text track readiness state to loading.
-        setReadyState(HTMLTrackElement::LOADING);
+        track.setReadyState(HTMLTrackElement::LOADING);
 
         // 7. Let URL be the track URL of the track element.
-        URL trackURL = getNonEmptyURLAttribute(srcAttr);
+        URL trackURL = track.getNonEmptyURLAttribute(srcAttr);
 
         // ... if URL is the empty string, then queue a task to first change the text track readiness state
         // to failed to load and then fire an event named error at the track element.
         // 8. If the track element's parent is a media element then let CORS mode be the state of the parent media
         // element's crossorigin content attribute. Otherwise, let CORS mode be No CORS.
-        if (!canLoadURL(trackURL)) {
-            track().removeAllCues();
-            didCompleteLoad(HTMLTrackElement::Failure);
+        if (!track.canLoadURL(trackURL)) {
+            track.track().removeAllCues();
+            track.didCompleteLoad(HTMLTrackElement::Failure);
             return;
         }
 
-        m_track->scheduleLoad(trackURL);
+        track.m_track->scheduleLoad(trackURL);
     });
 }
 
-void HTMLTrackElement::scheduleTask(Function<void()>&& task)
+void HTMLTrackElement::scheduleTask(Function<void(HTMLTrackElement&)>&& task)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [task = WTFMove(task)](auto&) mutable {
-        task();
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [task = WTFMove(task)](auto& track) mutable {
+        task(track);
     });
 }
 

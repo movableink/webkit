@@ -1079,7 +1079,7 @@ private:
     bool ensureMediaControls();
 
     using JSSetupFunction = Function<bool(JSDOMGlobalObject&, JSC::JSGlobalObject&, ScriptController&, DOMWrapperWorld&)>;
-    bool setupAndCallJS(const JSSetupFunction&);
+    bool setupAndCallJS(NOESCAPE const JSSetupFunction&);
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
     void prepareForDocumentSuspension() final;

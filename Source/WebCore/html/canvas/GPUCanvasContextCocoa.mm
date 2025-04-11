@@ -204,16 +204,17 @@ RefPtr<ImageBuffer> GPUCanvasContextCocoa::surfaceBufferToImageBuffer(SurfaceBuf
         return canvasBase().buffer();
 
     auto frameCount = m_configuration->frameCount;
-    m_compositorIntegration->prepareForDisplay(frameCount, [this, weakThis = WeakPtr { *this }, frameCount] {
-        if (!weakThis)
+    m_compositorIntegration->prepareForDisplay(frameCount, [weakThis = WeakPtr { *this }, frameCount] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
 
-        auto& base = canvasBase();
+        auto& base = protectedThis->canvasBase();
         base.clearCopiedImage();
-        if (auto buffer = base.buffer(); buffer && m_configuration) {
+        if (auto buffer = base.buffer(); buffer && protectedThis->m_configuration) {
             buffer->flushDrawingContext();
-            m_compositorIntegration->paintCompositedResultsToCanvas(*buffer, frameCount);
-            present(frameCount);
+            protectedThis->m_compositorIntegration->paintCompositedResultsToCanvas(*buffer, frameCount);
+            protectedThis->present(frameCount);
         }
     });
     return canvasBase().buffer();
@@ -422,13 +423,14 @@ void GPUCanvasContextCocoa::prepareForDisplay()
     ASSERT(m_configuration->frameCount < m_configuration->renderBuffers.size());
 
     auto frameIndex = m_configuration->frameCount;
-    m_compositorIntegration->prepareForDisplay(frameIndex, [this, weakThis = WeakPtr { *this }, frameIndex] {
-        if (!weakThis)
+    m_compositorIntegration->prepareForDisplay(frameIndex, [weakThis = WeakPtr { *this }, frameIndex] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
-        if (frameIndex >= m_configuration->renderBuffers.size())
+        if (frameIndex >= protectedThis->m_configuration->renderBuffers.size())
             return;
-        m_layerContentsDisplayDelegate->setDisplayBuffer(m_configuration->renderBuffers[frameIndex]);
-        present(frameIndex);
+        protectedThis->m_layerContentsDisplayDelegate->setDisplayBuffer(protectedThis->m_configuration->renderBuffers[frameIndex]);
+        protectedThis->present(frameIndex);
     });
 }
 

@@ -33,7 +33,7 @@ namespace CSSPropertyParserHelpers {
 
 // MARK: <color> parsing (raw)
 
-template<typename F> WebCore::Color parseColorRaw(const String& string, const CSSParserContext& context, F&& lazySlowPathOptionsFunctor)
+template<typename F> WebCore::Color parseColorRaw(const String& string, const CSSParserContext& context, NOESCAPE const F& lazySlowPathOptionsFunctor)
 {
     if (auto color = CSSParserFastPaths::parseSimpleColor(string, context))
         return *color;

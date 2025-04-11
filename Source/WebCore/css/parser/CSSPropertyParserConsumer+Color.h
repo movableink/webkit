@@ -68,7 +68,7 @@ WebCore::Color consumeColorRaw(CSSParserTokenRange&, CSS::PropertyParserState&, 
 WEBCORE_EXPORT WebCore::Color parseColorRawSlow(const String&, const CSSParserContext&, const CSSColorParsingOptions&, CSS::PlatformColorResolutionState&);
 
 // NOTE: Callers must include CSSPropertyParserConsumer+ColorInlines.h to use this.
-template<typename F> WebCore::Color parseColorRaw(const String&, const CSSParserContext&, F&& lazySlowPathOptionsFunctor);
+template<typename F> WebCore::Color parseColorRaw(const String&, const CSSParserContext&, NOESCAPE const F& lazySlowPathOptionsFunctor);
 
 // FIXME: All callers are not getting the right Settings, keyword resolution and calc resolution
 // when using this function and should switch to parseColorRaw().

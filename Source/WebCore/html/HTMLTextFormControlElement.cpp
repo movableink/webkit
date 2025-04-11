@@ -804,7 +804,7 @@ String HTMLTextFormControlElement::valueWithHardLineBreaks() const
     if (!renderer)
         return value();
 
-    Node* breakNode = nullptr;
+    RefPtr<Node> breakNode;
     unsigned breakOffset = 0;
     auto currentLineBox = InlineIterator::firstLineBoxFor(*renderer);
     if (!currentLineBox)

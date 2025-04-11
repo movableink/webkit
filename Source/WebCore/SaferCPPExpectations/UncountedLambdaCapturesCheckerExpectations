@@ -67,15 +67,7 @@ dom/ViewTransition.cpp
 dom/ViewportArguments.cpp
 editing/Editor.cpp
 html/FormAssociatedCustomElement.cpp
-html/HTMLImageElement.cpp
-html/HTMLMediaElement.cpp
-html/HTMLTextFormControlElement.cpp
-html/HTMLTrackElement.cpp
-html/NumberInputType.cpp
 html/canvas/CanvasRenderingContext2DBase.cpp
-html/canvas/CanvasStyle.cpp
-html/canvas/GPUCanvasContextCocoa.mm
-html/track/LoadableTextTrack.cpp
 html/track/TrackBase.cpp
 inspector/InspectorOverlay.cpp
 inspector/agents/page/PageDOMDebuggerAgent.cpp

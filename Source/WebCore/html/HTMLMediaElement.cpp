@@ -1873,52 +1873,52 @@ void HTMLMediaElement::loadResource(const URL& initialURL, const ContentType& in
             contentType = ContentType { m_blob->type() };
     }
 
-    auto completionHandler = [url, player = m_player, logSiteIdentifier, weakThis = WeakPtr { *this }, this](SnifferPromise::Result&& result) {
+    auto completionHandler = [url, player = m_player, logSiteIdentifier, weakThis = WeakPtr { *this }](SnifferPromise::Result&& result) {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
 
         if (!result) {
             if (result.error() != PlatformMediaError::Cancelled)
-                mediaLoadingFailed(MediaPlayer::NetworkState::NetworkError);
+                protectedThis->mediaLoadingFailed(MediaPlayer::NetworkState::NetworkError);
             return;
         }
 
         MediaPlayer::LoadOptions options = {
             .contentType = *result,
-            .requiresRemotePlayback = !!m_remotePlaybackConfiguration,
-            .supportsLimitedMatroska = limitedMatroskaSupportEnabled()
+            .requiresRemotePlayback = !!protectedThis->m_remotePlaybackConfiguration,
+            .supportsLimitedMatroska = protectedThis->limitedMatroskaSupportEnabled()
         };
 
 #if ENABLE(MEDIA_SOURCE)
-        if (!m_mediaSource && url.protocolIs(mediaSourceBlobProtocol) && !m_remotePlaybackConfiguration) {
+        if (!protectedThis->m_mediaSource && url.protocolIs(mediaSourceBlobProtocol) && !protectedThis->m_remotePlaybackConfiguration) {
             if (RefPtr mediaSource = MediaSource::lookup(url.string()))
-                m_mediaSource = MediaSourceInterfaceMainThread::create(mediaSource.releaseNonNull());
+                protectedThis->m_mediaSource = MediaSourceInterfaceMainThread::create(mediaSource.releaseNonNull());
         }
 
-        if (m_mediaSource) {
-            ALWAYS_LOG(logSiteIdentifier, "loading MSE blob");
+        if (protectedThis->m_mediaSource) {
+            ALWAYS_LOG_WITH_THIS(protectedThis, logSiteIdentifier, "loading MSE blob");
 #if !RELEASE_LOG_DISABLED
-            m_mediaSource->setLogIdentifier(m_logIdentifier);
+            protectedThis->m_mediaSource->setLogIdentifier(protectedThis->m_logIdentifier);
 #endif
-            if (url.protocolIs(mediaSourceBlobProtocol) && m_mediaSource->detachable()) {
-                document().addConsoleMessage(MessageSource::MediaSource, MessageLevel::Error, makeString("Unable to attach detachable MediaSource via blob URL, use srcObject attribute"_s));
-                return mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
+            if (url.protocolIs(mediaSourceBlobProtocol) && protectedThis->m_mediaSource->detachable()) {
+                protectedThis->document().addConsoleMessage(MessageSource::MediaSource, MessageLevel::Error, makeString("Unable to attach detachable MediaSource via blob URL, use srcObject attribute"_s));
+                return protectedThis->mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
             }
 
-            if (!m_mediaSource->attachToElement(*this)) {
+            if (!protectedThis->m_mediaSource->attachToElement(protectedThis.get())) {
                 // Forget our reference to the MediaSource, so we leave it alone
                 // while processing remainder of load failure.
-                m_mediaSource = nullptr;
-            } else  if (RefPtr mediaSource = m_mediaSource; !mediaSource->client() || !player->load(url, options, *mediaSource->client())) {
+                protectedThis->m_mediaSource = nullptr;
+            } else  if (RefPtr mediaSource = protectedThis->m_mediaSource; !mediaSource->client() || !player->load(url, options, *mediaSource->client())) {
                 // We have to detach the MediaSource before we forget the reference to it.
                 mediaSource->detachFromElement();
-                m_mediaSource = nullptr;
+                protectedThis->m_mediaSource = nullptr;
             }
-            if (!m_mediaSource)
-                mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
+            if (!protectedThis->m_mediaSource)
+                protectedThis->mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
             else
-                mediaPlayerRenderingModeChanged();
+                protectedThis->mediaPlayerRenderingModeChanged();
             return;
         }
 #else
@@ -1926,19 +1926,19 @@ void HTMLMediaElement::loadResource(const URL& initialURL, const ContentType& in
 #endif
 
 #if ENABLE(MEDIA_STREAM)
-        if (m_mediaStreamSrcObject && !m_remotePlaybackConfiguration) {
-            ALWAYS_LOG(logSiteIdentifier, "loading media stream blob ", m_mediaStreamSrcObject->logIdentifier());
-            if (!player->load(m_mediaStreamSrcObject->protectedPrivateStream()))
-                mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
+        if (protectedThis->m_mediaStreamSrcObject && !protectedThis->m_remotePlaybackConfiguration) {
+            ALWAYS_LOG_WITH_THIS(protectedThis, logSiteIdentifier, "loading media stream blob ", protectedThis->m_mediaStreamSrcObject->logIdentifier());
+            if (!player->load(protectedThis->m_mediaStreamSrcObject->protectedPrivateStream()))
+                protectedThis->mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
             else
-                mediaPlayerRenderingModeChanged();
+                protectedThis->mediaPlayerRenderingModeChanged();
             return;
         }
 #endif
         if (!player->load(url, options))
-            mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
+            protectedThis->mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
         else
-            mediaPlayerRenderingModeChanged();
+            protectedThis->mediaPlayerRenderingModeChanged();
     };
 
     if (needsContentTypeToPlay() && !url.isEmpty()) {
@@ -2128,14 +2128,14 @@ void HTMLMediaElement::updateActiveTextTrackCues(const MediaTime& movieTime)
     INFO_LOG(identifier, "nextInterestingTime:", nextInterestingTime);
 
     if (RefPtr player = m_player; nextInterestingTime.isValid() && player) {
-        player->performTaskAtTime([this, weakThis = WeakPtr { *this }, identifier] {
+        player->performTaskAtTime([weakThis = WeakPtr { *this }, identifier] {
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis)
                 return;
 
-            auto currentMediaTime = this->currentMediaTime();
-            INFO_LOG(identifier, "lambda(), currentMediaTime: ", currentMediaTime);
-            updateActiveTextTrackCues(currentMediaTime);
+            auto currentMediaTime = protectedThis->currentMediaTime();
+            INFO_LOG_WITH_THIS(protectedThis, identifier, "lambda(), currentMediaTime: ", currentMediaTime);
+            protectedThis->updateActiveTextTrackCues(currentMediaTime);
         }, nextInterestingTime);
     }
 
@@ -2944,26 +2944,26 @@ void HTMLMediaElement::setNetworkState(MediaPlayer::NetworkState state)
     if (state == MediaPlayer::NetworkState::FormatError && m_readyState < HAVE_METADATA && m_loadState == LoadingFromSrcAttr && needsContentTypeToPlay() && m_firstTimePlaying && !m_sniffer && !m_networkErrorOccured && m_lastContentTypeUsed) {
         // We couldn't find a suitable MediaPlayer, this could be due to the content-type having been initially set incorrectly.
         auto url = m_blob ? m_blobURLForReading.url() : currentSrc();
-        sniffForContentType(url)->whenSettled(RunLoop::protectedMain(), [weakThis = WeakPtr { *this }, this, url, player = m_player, lastContentType = *m_lastContentTypeUsed](auto&& result) {
+        sniffForContentType(url)->whenSettled(RunLoop::protectedMain(), [weakThis = WeakPtr { *this }, url, player = m_player, lastContentType = *m_lastContentTypeUsed](auto&& result) {
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis)
                 return;
             if (!result) {
                 if (result.error() != PlatformMediaError::Cancelled)
-                    mediaLoadingFailed(MediaPlayer::NetworkState::NetworkError);
+                    protectedThis->mediaLoadingFailed(MediaPlayer::NetworkState::NetworkError);
                 return;
             }
             player->reset();
 
             MediaPlayer::LoadOptions options = {
                 .contentType = *result,
-                .requiresRemotePlayback = !!m_remotePlaybackConfiguration,
-                .supportsLimitedMatroska = limitedMatroskaSupportEnabled()
+                .requiresRemotePlayback = !!protectedThis->m_remotePlaybackConfiguration,
+                .supportsLimitedMatroska = protectedThis->limitedMatroskaSupportEnabled()
             };
             if (result->isEmpty() || lastContentType == *result || !player->load(url, options))
-                mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
+                protectedThis->mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
             else
-                mediaPlayerRenderingModeChanged();
+                protectedThis->mediaPlayerRenderingModeChanged();
         });
         return;
     }
@@ -3628,25 +3628,25 @@ void HTMLMediaElement::progressEventTimerFired()
     if (!m_player->supportsProgressMonitoring())
         return;
 
-    m_player->didLoadingProgress([this, weakThis = WeakPtr { *this }](bool progress) {
+    m_player->didLoadingProgress([weakThis = WeakPtr { *this }](bool progress) {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
         MonotonicTime time = MonotonicTime::now();
-        Seconds timedelta = time - m_previousProgressTime;
+        Seconds timedelta = time - protectedThis->m_previousProgressTime;
         if (progress) {
-            scheduleEvent(eventNames().progressEvent);
-            m_previousProgressTime = time;
-            if (m_sentStalledEvent) {
-                m_sentStalledEvent = false;
-                updateStalledState();
+            protectedThis->scheduleEvent(eventNames().progressEvent);
+            protectedThis->m_previousProgressTime = time;
+            if (protectedThis->m_sentStalledEvent) {
+                protectedThis->m_sentStalledEvent = false;
+                protectedThis->updateStalledState();
             }
-            updateRenderer();
-        } else if (timedelta > 3_s && !m_sentStalledEvent) {
-            scheduleEvent(eventNames().stalledEvent);
-            m_sentStalledEvent = true;
-            updateStalledState();
-            setShouldDelayLoadEvent(false);
+            protectedThis->updateRenderer();
+        } else if (timedelta > 3_s && !protectedThis->m_sentStalledEvent) {
+            protectedThis->scheduleEvent(eventNames().stalledEvent);
+            protectedThis->m_sentStalledEvent = true;
+            protectedThis->updateStalledState();
+            protectedThis->setShouldDelayLoadEvent(false);
         }
     });
 }
@@ -5322,7 +5322,7 @@ static JSC::JSValue controllerJSValue(JSC::JSGlobalObject& lexicalGlobalObject, 
     return controllerJSWrapper;
 }
 
-bool HTMLMediaElement::setupAndCallJS(const JSSetupFunction& task)
+bool HTMLMediaElement::setupAndCallJS(NOESCAPE const JSSetupFunction& task)
 {
     RefPtr page = document().page();
     if (!page)
@@ -5399,18 +5399,15 @@ void HTMLMediaElement::updateCaptionContainer()
 
 void HTMLMediaElement::layoutSizeChanged()
 {
-    auto task = [this] {
-        if (isContextStopped())
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [](auto& element) mutable {
+        if (element.isContextStopped())
             return;
 
-        if (RefPtr root = userAgentShadowRoot())
+        if (RefPtr root = element.userAgentShadowRoot())
             root->dispatchEvent(Event::create(eventNames().resizeEvent, Event::CanBubble::No, Event::IsCancelable::No));
 
-        if (RefPtr mediaControlsHost = m_mediaControlsHost)
+        if (RefPtr mediaControlsHost = element.m_mediaControlsHost)
             mediaControlsHost->updateCaptionDisplaySizes();
-    };
-    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [task = WTFMove(task)](auto&) mutable {
-        task();
     });
 
     if (!m_receivedLayoutSizeChanged) {

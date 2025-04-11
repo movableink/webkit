@@ -72,7 +72,7 @@ public:
     RefPtr<HTMLMediaElement> mediaElement() const;
     const AtomString& mediaElementCrossOriginAttribute() const;
 
-    void scheduleTask(Function<void()>&&);
+    void scheduleTask(Function<void(HTMLTrackElement&)>&&);
 
 private:
     HTMLTrackElement(const QualifiedName&, Document&);
