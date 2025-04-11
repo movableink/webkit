@@ -41,6 +41,7 @@ public:
 
     const RefPtr<MediaStreamTrackPrivate>& track() const { return m_track; }
 
+    void setMediaStreamID(const String& mediaStreamId) { m_mediaStreamId = mediaStreamId; }
     const String& mediaStreamID() const { return m_mediaStreamId; }
     const GRefPtr<GstCaps>& allowedCaps() const;
     WARN_UNUSED_RETURN GRefPtr<GstCaps> rtpCaps() const;

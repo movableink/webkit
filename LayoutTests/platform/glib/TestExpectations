@@ -2398,12 +2398,16 @@ imported/w3c/web-platform-tests/webrtc/protocol/dtls-fingerprint-validation.html
 imported/w3c/web-platform-tests/webrtc/protocol/dtls-setup.https.html [ Failure ]
 imported/w3c/web-platform-tests/webrtc/protocol/ice-state.https.html [ Failure ]
 imported/w3c/web-platform-tests/webrtc/protocol/ice-ufragpwd.html [ Failure ]
-imported/w3c/web-platform-tests/webrtc/protocol/msid-generate.html [ Failure ]
 imported/w3c/web-platform-tests/webrtc/protocol/msid-parse.html [ Failure ]
 imported/w3c/web-platform-tests/webrtc/protocol/rtp-payloadtypes.html [ Failure ]
 imported/w3c/web-platform-tests/webrtc/protocol/vp8-fmtp.html [ Failure ]
 imported/w3c/web-platform-tests/webrtc/protocol/h264-profile-levels.https.html [ Failure ]
 imported/w3c/web-platform-tests/webrtc/protocol/handover-datachannel.html [ Failure ]
+
+# Missing support for multiple MediaStreams per track/transceiver.
+# https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/3954
+imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-setRemoteDescription-tracks.https.html [ Skip ]
+imported/w3c/web-platform-tests/webrtc/protocol/msid-generate.html [ Failure ]
 
 imported/w3c/web-platform-tests/webrtc/protocol/additional-codecs.html [ Failure ]
 imported/w3c/web-platform-tests/webrtc/protocol/codecs-subsequent-offer.https.html [ Failure ]
