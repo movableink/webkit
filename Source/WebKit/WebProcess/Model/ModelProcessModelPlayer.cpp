@@ -34,6 +34,7 @@
 #include "WebPage.h"
 #include "WebProcess.h"
 #include <WebCore/LayerHostingContextIdentifier.h>
+#include <WebCore/Model.h>
 #include <WebCore/Page.h>
 #include <WebCore/ResourceError.h>
 #include <WebCore/TransformationMatrix.h>
