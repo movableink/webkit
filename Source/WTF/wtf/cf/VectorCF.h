@@ -130,8 +130,8 @@ template<typename VectorElementType, typename CFType> Vector<VectorElementType> 
     vector.reserveInitialCapacity(count);
     for (CFIndex i = 0; i < count; ++i) {
         constexpr const VectorElementType* typedNull = nullptr;
-        if (CFType element = dynamic_cf_cast<CFType>(CFArrayGetValueAtIndex(array, i))) {
-            if (auto vectorElement = makeVectorElement(typedNull, element))
+        if (RetainPtr element = dynamic_cf_cast<CFType>(CFArrayGetValueAtIndex(array, i))) {
+            if (auto vectorElement = makeVectorElement(typedNull, element.get()))
                 vector.append(WTFMove(*vectorElement));
         }
     }
@@ -151,8 +151,8 @@ template<typename MapLambdaType> Vector<typename LambdaTypeTraits<MapLambdaType>
     CFIndex count = CFArrayGetCount(array);
     vector.reserveInitialCapacity(count);
     for (CFIndex i = 0; i < count; ++i) {
-        if (CFType element = dynamic_cf_cast<CFType>(CFArrayGetValueAtIndex(array, i))) {
-            if (auto vectorElement = std::invoke(std::forward<MapLambdaType>(lambda), element))
+        if (RetainPtr element = dynamic_cf_cast<CFType>(CFArrayGetValueAtIndex(array, i))) {
+            if (auto vectorElement = std::invoke(std::forward<MapLambdaType>(lambda), element.get()))
                 vector.append(WTFMove(*vectorElement));
         }
     }
