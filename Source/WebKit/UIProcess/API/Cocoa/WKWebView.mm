@@ -3143,6 +3143,132 @@ static WebCore::CocoaColor *sampledFixedPositionContentColor(const WebCore::Fixe
 
 #endif // ENABLE(CONTENT_INSET_BACKGROUND_FILL)
 
+namespace WebKit {
+enum class WebViewDataType : uint32_t {
+    SessionStorage
+};
+}
+
+namespace WTF {
+template<> struct EnumTraitsForPersistence<WebKit::WebViewDataType> {
+    using values = EnumValues<
+        WebKit::WebViewDataType,
+        WebKit::WebViewDataType::SessionStorage
+    >;
+};
+}
+
+struct WKWebViewData {
+    std::optional<HashMap<WebCore::ClientOrigin, HashMap<String, String>>> sessionStorage;
+};
+
+- (void)fetchDataOfTypes:(WKWebViewDataType)dataTypes completionHandler:(void (^)(NSData *, NSError *))completionHandler
+{
+    Vector<WebKit::WebViewDataType> dataTypesToEncode;
+    if (dataTypes & _WKWebViewDataTypeSessionStorage)
+        dataTypesToEncode.append(WebKit::WebViewDataType::SessionStorage);
+
+    auto data = Box<WKWebViewData>::create();
+
+    Ref callbackAggregator = CallbackAggregator::create([completionHandler = makeBlockPtr(completionHandler), dataTypesToEncode = WTFMove(dataTypesToEncode), data] {
+        WTF::Persistence::Encoder encoder;
+        constexpr unsigned currentWKWebViewDataSerializationVersion = 1;
+        encoder << currentWKWebViewDataSerializationVersion;
+        encoder << dataTypesToEncode;
+
+        for (auto& dataTypeToEncode : dataTypesToEncode) {
+            switch (dataTypeToEncode) {
+            case WebKit::WebViewDataType::SessionStorage:
+                if (!data->sessionStorage) {
+                    NSDictionary *userInfo = @{ NSLocalizedDescriptionKey : @"Unknown error occurred while fetching data.", };
+                    completionHandler(nullptr, adoptNS([[NSError alloc] initWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:userInfo]).get());
+                    return;
+                }
+
+                encoder << data->sessionStorage.value();
+                break;
+            default:
+                ASSERT_NOT_REACHED();
+                break;
+            }
+        }
+
+        completionHandler(toNSData(encoder.span()).get(), nullptr);
+    });
+
+    if (dataTypes & _WKWebViewDataTypeSessionStorage) {
+        RefPtr page = [self _protectedPage];
+        page->fetchSessionStorage([callbackAggregator, protectedPage = page, data](auto&& sessionStorage) {
+            data->sessionStorage = WTFMove(sessionStorage);
+        });
+    }
+}
+
+- (void)restoreData:(NSData *)data completionHandler:(void(^)(NSError *))completionHandler
+{
+    WTF::Persistence::Decoder decoder(span(data));
+
+    std::optional<unsigned> currentWKWebViewDataSerializationVersion;
+    decoder >> currentWKWebViewDataSerializationVersion;
+
+    if (!currentWKWebViewDataSerializationVersion) {
+        NSDictionary *userInfo = @{ NSLocalizedDescriptionKey : @"Version number is missing.", };
+        completionHandler(adoptNS([[NSError alloc] initWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:userInfo]).get());
+
+        return;
+    }
+
+    std::optional<Vector<WebKit::WebViewDataType>> encodedDataTypes;
+    decoder >> encodedDataTypes;
+
+    if (!encodedDataTypes) {
+        NSDictionary *userInfo = @{ NSLocalizedDescriptionKey : @"List of encoded data types is missing.", };
+        completionHandler(adoptNS([[NSError alloc] initWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:userInfo]).get());
+
+        return;
+    }
+
+    auto error = Box<RetainPtr<NSError>>::create(nil);
+
+    Ref callbackAggregator = CallbackAggregator::create([completionHandler = makeBlockPtr(completionHandler), error] {
+        if (*error)
+            completionHandler(error->get());
+        else
+            completionHandler(nullptr);
+    });
+
+    for (auto& encodedDataType : *encodedDataTypes) {
+        switch (encodedDataType) {
+        case WebKit::WebViewDataType::SessionStorage: {
+            std::optional<HashMap<WebCore::ClientOrigin, HashMap<String, String>>> sessionStorage;
+            decoder >> sessionStorage;
+
+            if (!sessionStorage) {
+                NSDictionary *userInfo = @{ NSLocalizedDescriptionKey : @"Encoded session storage data is missing.", };
+                *error = adoptNS([[NSError alloc] initWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:userInfo]).get();
+
+                return;
+            }
+
+            if (!sessionStorage->isEmpty()) {
+                RefPtr page = [self _protectedPage];
+                page->restoreSessionStorage(WTFMove(*sessionStorage), [callbackAggregator, error](bool restoreSucceeded) {
+                    if (!restoreSucceeded) {
+                        NSDictionary *userInfo = @{ NSLocalizedDescriptionKey : @"Unknown error occurred while restoring data.", };
+                        *error = adoptNS([[NSError alloc] initWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:userInfo]).get();
+                    }
+                });
+            }
+
+            break;
+        }
+        default:
+            ASSERT_NOT_REACHED();
+            break;
+        }
+    }
+}
+
 @end
 
 #pragma mark -
@@ -5784,109 +5910,22 @@ static Vector<Ref<API::TargetedElementInfo>> elementsFromWKElements(NSArray<_WKT
     }
 }
 
-namespace WebKit {
-enum class WebViewDataType : uint32_t {
-    SessionStorage
-};
-}
-
-namespace WTF {
-template<> struct EnumTraitsForPersistence<WebKit::WebViewDataType> {
-    using values = EnumValues<
-        WebKit::WebViewDataType,
-        WebKit::WebViewDataType::SessionStorage
-    >;
-};
-}
-
-struct WKWebViewData {
-    std::optional<HashMap<WebCore::ClientOrigin, HashMap<String, String>>> sessionStorage;
-};
-
 - (void)_fetchDataOfTypes:(_WKWebViewDataType)dataTypes completionHandler:(void (^)(NSData *))completionHandler
 {
-    Vector<WebKit::WebViewDataType> dataTypesToEncode;
-    if (dataTypes & _WKWebViewDataTypeSessionStorage)
-        dataTypesToEncode.append(WebKit::WebViewDataType::SessionStorage);
+    auto completionHandlerWithError = [completionHandler = WTFMove(completionHandler)](NSData *data, NSError *error) {
+        completionHandler(data);
+    };
 
-    auto data = Box<WKWebViewData>::create();
-
-    auto callbackAggregator = CallbackAggregator::create([completionHandler = makeBlockPtr(completionHandler), dataTypesToEncode = WTFMove(dataTypesToEncode), data] {
-        WTF::Persistence::Encoder encoder;
-        constexpr unsigned currentWKWebViewDataSerializationVersion = 1;
-        encoder << currentWKWebViewDataSerializationVersion;
-        encoder << dataTypesToEncode;
-
-        for (auto& dataTypeToEncode : dataTypesToEncode) {
-            switch (dataTypeToEncode) {
-            case WebKit::WebViewDataType::SessionStorage:
-                encoder << data->sessionStorage.value();
-                break;
-            default:
-                ASSERT_NOT_REACHED();
-                break;
-            }
-        }
-
-        completionHandler(toNSData(encoder.span()).get());
-    });
-
-    if (dataTypes & _WKWebViewDataTypeSessionStorage) {
-        RefPtr page = [self _protectedPage];
-        page->fetchSessionStorage([callbackAggregator, protectedPage = page, data](auto&& sessionStorage) {
-            data->sessionStorage = WTFMove(sessionStorage);
-        });
-    }
+    [self fetchDataOfTypes:dataTypes completionHandler:completionHandlerWithError];
 }
 
 - (void)_restoreData:(NSData *)data completionHandler:(void(^)(BOOL))completionHandler
 {
-    WTF::Persistence::Decoder decoder(span(data));
+    auto completionHandlerWithError = [completionHandler = WTFMove(completionHandler)](NSError *error) {
+        completionHandler(!error);
+    };
 
-    std::optional<unsigned> currentWKWebViewDataSerializationVersion;
-    decoder >> currentWKWebViewDataSerializationVersion;
-    if (!currentWKWebViewDataSerializationVersion) {
-        completionHandler(NO);
-        return;
-    }
-
-    std::optional<Vector<WebKit::WebViewDataType>> encodedDataTypes;
-    decoder >> encodedDataTypes;
-    if (!encodedDataTypes) {
-        completionHandler(NO);
-        return;
-    }
-
-    auto succeeded = Box<bool>::create(true);
-    auto callbackAggregator = CallbackAggregator::create([completionHandler = makeBlockPtr(completionHandler), succeeded] {
-        completionHandler(*succeeded);
-    });
-
-    for (auto& encodedDataType : *encodedDataTypes) {
-        switch (encodedDataType) {
-        case WebKit::WebViewDataType::SessionStorage: {
-            std::optional<HashMap<WebCore::ClientOrigin, HashMap<String, String>>> sessionStorage;
-            decoder >> sessionStorage;
-
-            if (!sessionStorage) {
-                *succeeded = false;
-                return;
-            }
-
-            if (!sessionStorage->isEmpty()) {
-                RefPtr page = [self _protectedPage];
-                page->restoreSessionStorage(WTFMove(*sessionStorage), [callbackAggregator, succeeded](bool restoreSucceeded) {
-                    if (!restoreSucceeded)
-                        *succeeded = false;
-                });
-            }
-            break;
-        }
-        default:
-            ASSERT_NOT_REACHED();
-            break;
-        }
-    }
+    [self restoreData:data completionHandler:completionHandlerWithError];
 }
 
 - (audit_token_t)presentingApplicationAuditToken

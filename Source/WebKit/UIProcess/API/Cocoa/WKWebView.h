@@ -670,6 +670,26 @@ The uniform type identifier kUTTypeWebArchive can be used get the related pasteb
  */
 @property (nonatomic, readonly, getter=isWritingToolsActive) BOOL writingToolsActive WK_API_AVAILABLE(macos(15.0), ios(18.0), visionos(WK_XROS_TBA));
 
+/* @enum WKWebViewDataType
+   @abstract The type of WKWebView data.
+   @constant WKWebViewDataTypeSessionStorage Session Storage data.
+*/
+typedef NS_OPTIONS(NSUInteger, WKWebViewDataType) {
+    WKWebViewDataTypeSessionStorage = 1 << 0
+} WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
+
+/* @abstract Called when the client wants to fetch WKWebView data.
+   @param dataTypes The option set of WKWebView data types whose data the client wants to fetch.
+   @param completionHandler The completion handler that should be invoked with the retrieved data and possibly an error. The retrieved data will be a serialized blob. If an error occurred, the retrieved data will be nil. An error may occur if the data cannot be retrieved for some reason (such as a crash).
+*/
+- (void)fetchDataOfTypes:(WKWebViewDataType)dataTypes completionHandler:(WK_SWIFT_UI_ACTOR void (^)(NSData * _Nullable data, NSError * _Nullable error))completionHandler NS_SWIFT_NAME(fetchData(of:completionHandler:)) WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
+
+/* @abstract Called when the client wants to restore WKWebView data.
+   @param data The serialized blob containing the data that the client wants to restore.
+   @param completionHandler The completion handler that may be invoked with an error if the data is in an invalid format or if the data cannot be restored for some other reason (such as a crash).
+ */
+- (void)restoreData:(NSData *)data completionHandler:(WK_SWIFT_UI_ACTOR void(^)(NSError * _Nullable error))completionHandler NS_SWIFT_NAME(restoreData(_:completionHandler:)) WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA), visionos(WK_XROS_TBA));
+
 @end
 
 #if !TARGET_OS_IPHONE

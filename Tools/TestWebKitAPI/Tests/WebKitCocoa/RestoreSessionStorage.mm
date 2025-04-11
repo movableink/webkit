@@ -33,7 +33,7 @@
 #import "TestWKWebView.h"
 #import "Utilities.h"
 #import <WebKit/WKScriptMessageHandler.h>
-#import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebView.h>
 #import <WebKit/WKWebsiteDataStore.h>
 #import <wtf/RetainPtr.h>
 
@@ -69,8 +69,9 @@ static void testRestoreSessionStorage(RetainPtr<WKWebsiteDataStore> websiteDataS
 
     // Fetch the session storage data.
     __block RetainPtr<NSData> sessionStorageData;
-    [webView _fetchDataOfTypes:_WKWebViewDataTypeSessionStorage completionHandler:^(NSData *data) {
+    [webView fetchDataOfTypes:_WKWebViewDataTypeSessionStorage completionHandler:^(NSData *data, NSError *error) {
         EXPECT_NOT_NULL(data);
+        EXPECT_NULL(error);
         sessionStorageData = data;
         done = true;
     }];
@@ -91,8 +92,8 @@ static void testRestoreSessionStorage(RetainPtr<WKWebsiteDataStore> websiteDataS
     [newWebView setNavigationDelegate:navigationDelegate.get()];
 
     // Restore the session storage data.
-    [newWebView _restoreData:sessionStorageData.get() completionHandler:^(BOOL succeeded) {
-        EXPECT_TRUE(succeeded);
+    [newWebView restoreData:sessionStorageData.get() completionHandler:^(NSError *error) {
+        EXPECT_NULL(error);
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
@@ -205,8 +206,9 @@ static void testRestoreSessionStorageThirdPartyIFrame(RetainPtr<WKWebsiteDataSto
 
     // Fetch the session storage data.
     __block RetainPtr<NSData> sessionStorageData;
-    [webView _fetchDataOfTypes:_WKWebViewDataTypeSessionStorage completionHandler:^(NSData *data) {
+    [webView fetchDataOfTypes:_WKWebViewDataTypeSessionStorage completionHandler:^(NSData *data, NSError *error) {
         EXPECT_NOT_NULL(data);
+        EXPECT_NULL(error);
         sessionStorageData = data;
         done = true;
     }];
@@ -227,8 +229,8 @@ static void testRestoreSessionStorageThirdPartyIFrame(RetainPtr<WKWebsiteDataSto
     [newWebView setNavigationDelegate:navigationDelegate.get()];
 
     // Restore the local storage data.
-    [newWebView _restoreData:sessionStorageData.get() completionHandler:^(BOOL succeeded) {
-        EXPECT_TRUE(succeeded);
+    [newWebView restoreData:sessionStorageData.get() completionHandler:^(NSError *error) {
+        EXPECT_NULL(error);
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
