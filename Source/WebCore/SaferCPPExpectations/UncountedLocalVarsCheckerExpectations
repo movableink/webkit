@@ -458,7 +458,6 @@ loader/appcache/DOMApplicationCache.cpp
 loader/archive/cf/LegacyWebArchive.cpp
 loader/cache/CachedImage.cpp
 loader/cache/CachedResourceRequest.cpp
-loader/cache/CachedSVGFont.cpp
 mathml/MathMLSelectElement.cpp
 page/BarProp.cpp
 page/CaptionUserPreferences.cpp
