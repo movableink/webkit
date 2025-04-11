@@ -406,6 +406,7 @@ private:
         DeferrableOneShotTimer evictionTimer;
     };
 
+    void setHasInvertibleTransform(bool);
     void applyLineDash() const;
     void setShadow(const FloatSize& offset, float blur, const Color&);
     void applyShadow();
@@ -485,8 +486,6 @@ private:
 #endif
     bool hasDeferredOperations() const final;
     void flushDeferredOperations() final;
-
-    bool hasInvertibleTransform() const final { return state().hasInvertibleTransform; }
 
     // The relationship between FontCascade and CanvasRenderingContext2D::FontProxy must hold certain invariants.
     // Therefore, all font operations must pass through the proxy.

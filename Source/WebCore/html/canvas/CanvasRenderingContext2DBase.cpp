@@ -521,8 +521,13 @@ void CanvasRenderingContext2DBase::restore()
         return;
     m_path.transform(state().transform);
     m_stateStack.removeLast();
-    if (std::optional<AffineTransform> inverse = state().transform.inverse())
+    auto& state = this->state();
+    m_hasInvertibleTransform = state.hasInvertibleTransform;
+    if (hasInvertibleTransform()) {
+        std::optional<AffineTransform> inverse = state.transform.inverse();
+        ASSERT(inverse);
         m_path.transform(inverse.value());
+    }
     GraphicsContext* c = drawingContext();
     if (!c)
         return;
@@ -782,6 +787,12 @@ void CanvasRenderingContext2DBase::setLineDashOffset(double offset)
     applyLineDash();
 }
 
+void CanvasRenderingContext2DBase::setHasInvertibleTransform(bool value)
+{
+    modifiableState().hasInvertibleTransform = value;
+    m_hasInvertibleTransform = value;
+}
+
 void CanvasRenderingContext2DBase::applyLineDash() const
 {
     GraphicsContext* c = effectiveDrawingContext();
@@ -854,7 +865,7 @@ void CanvasRenderingContext2DBase::scale(double sx, double sy)
     GraphicsContext* c = effectiveDrawingContext();
     if (!c)
         return;
-    if (!state().hasInvertibleTransform)
+    if (UNLIKELY(!hasInvertibleTransform()))
         return;
 
     if (!std::isfinite(sx) || !std::isfinite(sy))
@@ -868,7 +879,7 @@ void CanvasRenderingContext2DBase::scale(double sx, double sy)
     realizeSaves();
 
     if (!sx || !sy) {
-        modifiableState().hasInvertibleTransform = false;
+        setHasInvertibleTransform(false);
         return;
     }
 
@@ -882,7 +893,7 @@ void CanvasRenderingContext2DBase::rotate(double angleInRadians)
     GraphicsContext* c = effectiveDrawingContext();
     if (!c)
         return;
-    if (!state().hasInvertibleTransform)
+    if (UNLIKELY(!hasInvertibleTransform()))
         return;
 
     if (!std::isfinite(angleInRadians))
@@ -905,7 +916,7 @@ void CanvasRenderingContext2DBase::translate(double tx, double ty)
     GraphicsContext* c = effectiveDrawingContext();
     if (!c)
         return;
-    if (!state().hasInvertibleTransform)
+    if (UNLIKELY(!hasInvertibleTransform()))
         return;
 
     if (!std::isfinite(tx) || !std::isfinite(ty))
@@ -928,7 +939,7 @@ void CanvasRenderingContext2DBase::transform(double m11, double m12, double m21,
     GraphicsContext* c = effectiveDrawingContext();
     if (!c)
         return;
-    if (!state().hasInvertibleTransform)
+    if (UNLIKELY(!hasInvertibleTransform()))
         return;
 
     if (!std::isfinite(m11) || !std::isfinite(m21) || !std::isfinite(dx) || !std::isfinite(m12) || !std::isfinite(m22) || !std::isfinite(dy))
@@ -947,7 +958,7 @@ void CanvasRenderingContext2DBase::transform(double m11, double m12, double m21,
         m_path.transform(inverse.value());
         return;
     }
-    modifiableState().hasInvertibleTransform = false;
+    setHasInvertibleTransform(false);
 }
 
 Ref<DOMMatrix> CanvasRenderingContext2DBase::getTransform() const
@@ -984,18 +995,16 @@ void CanvasRenderingContext2DBase::resetTransform()
     if (!c)
         return;
 
-    AffineTransform ctm = state().transform;
-    bool hasInvertibleTransform = state().hasInvertibleTransform;
+    if (hasInvertibleTransform())
+        m_path.transform(state().transform);
 
     realizeSaves();
 
     c->setCTM(baseTransform());
     modifiableState().transform = AffineTransform();
 
-    if (hasInvertibleTransform)
-        m_path.transform(ctm);
 
-    modifiableState().hasInvertibleTransform = true;
+    setHasInvertibleTransform(true);
 }
 
 void CanvasRenderingContext2DBase::setStrokeColor(const String& color, std::optional<float> alpha)
@@ -1169,7 +1178,7 @@ void CanvasRenderingContext2DBase::fillInternal(const Path& path, CanvasFillRule
     auto* c = effectiveDrawingContext();
     if (!c)
         return;
-    if (!state().hasInvertibleTransform)
+    if (UNLIKELY(!hasInvertibleTransform()))
         return;
 
     // If gradient size is zero, then paint nothing.
@@ -1212,7 +1221,7 @@ void CanvasRenderingContext2DBase::strokeInternal(const Path& path)
     auto* c = effectiveDrawingContext();
     if (!c)
         return;
-    if (!state().hasInvertibleTransform)
+    if (UNLIKELY(!hasInvertibleTransform()))
         return;
 
     // If gradient size is zero, then paint nothing.
@@ -1246,7 +1255,7 @@ void CanvasRenderingContext2DBase::clipInternal(const Path& path, CanvasFillRule
     auto* c = effectiveDrawingContext();
     if (!c)
         return;
-    if (!state().hasInvertibleTransform)
+    if (UNLIKELY(!hasInvertibleTransform()))
         return;
 
     realizeSaves();
@@ -1296,10 +1305,10 @@ bool CanvasRenderingContext2DBase::isPointInPathInternal(const Path& path, doubl
     
     if (!effectiveDrawingContext())
         return false;
-    auto& state = this->state();
-    if (!state.hasInvertibleTransform)
+    if (UNLIKELY(!hasInvertibleTransform()))
         return false;
 
+    auto& state = this->state();
     auto transformedPoint = valueOrDefault(state.transform.inverse()).mapPoint(FloatPoint(x, y));
     ASSERT(std::isfinite(transformedPoint.x()) && std::isfinite(transformedPoint.y()));
 
@@ -1313,10 +1322,10 @@ bool CanvasRenderingContext2DBase::isPointInStrokeInternal(const Path& path, dou
 
     if (!effectiveDrawingContext())
         return false;
-    auto& state = this->state();
-    if (!state.hasInvertibleTransform)
+    if (UNLIKELY(!hasInvertibleTransform()))
         return false;
 
+    auto& state = this->state();
     auto transformedPoint = valueOrDefault(state.transform.inverse()).mapPoint(FloatPoint(x, y));
     ASSERT(std::isfinite(transformedPoint.x()) && std::isfinite(transformedPoint.y()));
 
@@ -1340,7 +1349,7 @@ void CanvasRenderingContext2DBase::clearRect(double x, double y, double width, d
     auto* context = effectiveDrawingContext();
     if (!context)
         return;
-    if (!state().hasInvertibleTransform)
+    if (UNLIKELY(!hasInvertibleTransform()))
         return;
     FloatRect rect(x, y, width, height);
 
@@ -1382,7 +1391,7 @@ void CanvasRenderingContext2DBase::fillRect(double x, double y, double width, do
     auto* c = effectiveDrawingContext();
     if (!c)
         return;
-    if (!state().hasInvertibleTransform)
+    if (UNLIKELY(!hasInvertibleTransform()))
         return;
 
     // from the HTML5 Canvas spec:
@@ -1434,7 +1443,7 @@ void CanvasRenderingContext2DBase::strokeRect(double x, double y, double width, 
     auto* c = effectiveDrawingContext();
     if (!c)
         return;
-    if (!state().hasInvertibleTransform)
+    if (UNLIKELY(!hasInvertibleTransform()))
         return;
     if (!(state().lineWidth >= 0))
         return;
@@ -1748,7 +1757,7 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(Document& document, Ca
     GraphicsContext* c = effectiveDrawingContext();
     if (!c)
         return { };
-    if (!state().hasInvertibleTransform)
+    if (UNLIKELY(!hasInvertibleTransform()))
         return { };
 
     RefPtr<Image> image = cachedImage.imageForRenderer(renderer);
@@ -1829,7 +1838,7 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(CanvasBase& sourceCanv
     GraphicsContext* c = effectiveDrawingContext();
     if (!c)
         return { };
-    if (!state().hasInvertibleTransform)
+    if (UNLIKELY(!hasInvertibleTransform()))
         return { };
 
     Ref protectedCanvas { sourceCanvas };
@@ -1891,7 +1900,7 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(HTMLVideoElement& vide
     GraphicsContext* c = effectiveDrawingContext();
     if (!c)
         return { };
-    if (!state().hasInvertibleTransform)
+    if (UNLIKELY(!hasInvertibleTransform()))
         return { };
 
     checkOrigin(&video);
@@ -1943,7 +1952,7 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(ImageBitmap& imageBitm
     GraphicsContext* c = effectiveDrawingContext();
     if (!c)
         return { };
-    if (!state().hasInvertibleTransform)
+    if (UNLIKELY(!hasInvertibleTransform()))
         return { };
 
     RefPtr buffer = imageBitmap.buffer();
@@ -2336,7 +2345,7 @@ void CanvasRenderingContext2DBase::didDraw(std::optional<FloatRect> rect, Option
     if (dirtyRect.isEmpty())
         return;
 
-    if (!state().hasInvertibleTransform)
+    if (UNLIKELY(!hasInvertibleTransform()))
         return;
 
     if (options.contains(DidDrawOption::ApplyTransform))
@@ -2761,7 +2770,7 @@ bool CanvasRenderingContext2DBase::canDrawText(double x, double y, bool fill, st
     auto* c = effectiveDrawingContext();
     if (!c)
         return false;
-    if (!state().hasInvertibleTransform)
+    if (UNLIKELY(!hasInvertibleTransform()))
         return false;
     if (!std::isfinite(x) || !std::isfinite(y))
         return false;
