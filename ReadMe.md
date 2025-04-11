@@ -39,7 +39,12 @@ Run the following command to build a macOS debug build with debugging symbols an
 Tools/Scripts/build-webkit --debug
 ```
 
-For performance testing, and other purposes, use `--release` instead.
+For performance testing, and other purposes, use `--release` instead. If you
+also need debug symbols (dSYMs), run:
+
+```
+Tools/Scripts/build-webkit --release DEBUG_INFORMATION_FORMAT=dwarf-with-dsym 
+```
 
 #### Embedded Builds
 
