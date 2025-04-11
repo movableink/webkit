@@ -2024,6 +2024,7 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
             ReadOnly,
             DisallowUserAgentShadowContent,
             IgnoreClipping,
+            IgnoreCSSPointerEventsProperty,
             ForFixedContainerSampling,
         };
 
