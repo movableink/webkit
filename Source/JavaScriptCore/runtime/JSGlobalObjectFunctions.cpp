@@ -1137,6 +1137,12 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncHandlePositiveProxySetTrapResult, (JSGlobalOb
     return JSValue::encode(jsUndefined());
 }
 
+JSC_DEFINE_HOST_FUNCTION(globalFuncIsFinite, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    JSValue argument = callFrame->argument(0);
+    return JSValue::encode(jsBoolean(std::isfinite(argument.toNumber(globalObject))));
+}
+
 JSC_DEFINE_HOST_FUNCTION(globalFuncIsNaN, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     JSValue argument = callFrame->argument(0);

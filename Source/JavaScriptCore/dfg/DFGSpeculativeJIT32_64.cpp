@@ -3806,6 +3806,11 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
+    case GlobalIsFinite: {
+        compileGlobalIsFinite(node);
+        break;
+    }
+
     case NumberIsFinite: {
         compileNumberIsFinite(node);
         break;

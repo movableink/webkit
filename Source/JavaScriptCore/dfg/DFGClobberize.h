@@ -272,6 +272,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         def(PureValue(node));
         return;
 
+    case GlobalIsFinite:
     case GlobalIsNaN:
         ASSERT(node->child1().useKind() == UntypedUse);
         clobberTop();

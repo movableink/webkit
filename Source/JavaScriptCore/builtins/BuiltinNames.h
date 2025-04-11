@@ -138,6 +138,7 @@ namespace JSC {
     macro(appendMemcpy) \
     macro(regExpCreate) \
     macro(isRegExp) \
+    macro(isFinite) \
     macro(replaceUsingRegExp) \
     macro(replaceUsingStringSearch) \
     macro(replaceAllUsingStringSearch) \

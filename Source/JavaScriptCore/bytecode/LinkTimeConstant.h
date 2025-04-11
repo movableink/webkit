@@ -69,6 +69,7 @@ class JSGlobalObject;
     v(typedArrayFromFast, nullptr) \
     v(isDetached, nullptr) \
     v(isBoundFunction, nullptr) \
+    v(isFinite, nullptr) \
     v(hasInstanceBoundFunction, nullptr) \
     v(instanceOf, nullptr) \
     v(BuiltinLog, nullptr) \

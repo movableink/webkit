@@ -2036,6 +2036,19 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         break;
     }
 
+    case GlobalIsFinite: {
+        ASSERT(node->child1().useKind() == UntypedUse);
+        AbstractValue& child = forNode(node->child1());
+        if (JSValue value = child.value(); value && value.isNumber()) {
+            didFoldClobberWorld();
+            setConstant(node, jsBoolean(std::isfinite(value.asNumber())));
+            break;
+        }
+        clobberWorld();
+        setNonCellTypeForNode(node, SpecBoolean);
+        break;
+    }
+
     case NumberIsFinite: {
         AbstractValue& child = forNode(node->child1());
         if (JSValue value = child.value()) {

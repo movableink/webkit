@@ -1252,6 +1252,7 @@ private:
         case NumberIsInteger:
         case GlobalIsNaN:
         case NumberIsNaN:
+        case GlobalIsFinite:
         case NumberIsFinite:
         case IsObject:
         case IsCallable:

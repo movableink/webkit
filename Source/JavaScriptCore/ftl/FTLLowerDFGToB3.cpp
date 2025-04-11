@@ -1563,6 +1563,9 @@ private:
         case NumberIsNaN:
             compileNumberIsNaN();
             break;
+        case GlobalIsFinite:
+            compileGlobalIsFinite();
+            break;
         case NumberIsFinite:
             compileNumberIsFinite();
             break;
@@ -14250,6 +14253,36 @@ IGNORE_CLANG_WARNINGS_END
                 setBoolean(m_out.phi(Int32, fastResult, slowResult));
             } else
                 setBoolean(vmCall(Int32, operationNumberIsNaN, argument));
+            break;
+        }
+        default:
+            DFG_CRASH(m_graph, m_node, "Bad use kind");
+            break;
+        }
+    }
+
+    void compileGlobalIsFinite()
+    {
+        switch (m_node->child1().useKind()) {
+        case UntypedUse: {
+            JSGlobalObject* globalObject = m_graph.globalObjectFor(m_origin.semantic);
+            LValue argument = lowJSValue(m_node->child1());
+            bool mayBeInt32 = abstractValue(m_node->child1()).m_type & SpecInt32Only;
+            if (mayBeInt32) {
+                LBasicBlock notInt32NumberCase = m_out.newBlock();
+                LBasicBlock continuation = m_out.newBlock();
+
+                ValueFromBlock fastResult = m_out.anchor(m_out.constInt32(1));
+                m_out.branch(isInt32(argument, provenType(m_node->child1())), unsure(continuation), unsure(notInt32NumberCase));
+
+                LBasicBlock lastNext = m_out.appendTo(notInt32NumberCase, continuation);
+                ValueFromBlock slowResult = m_out.anchor(vmCall(Int32, operationIsFinite, weakPointer(globalObject), argument));
+                m_out.jump(continuation);
+
+                m_out.appendTo(continuation, lastNext);
+                setBoolean(m_out.phi(Int32, fastResult, slowResult));
+            } else
+                setBoolean(vmCall(Int32, operationIsFinite, weakPointer(globalObject), argument));
             break;
         }
         default:

@@ -484,6 +484,7 @@ bool doesGC(Graph& graph, Node* node)
 
     case ToIntegerOrInfinity:
     case ToLength:
+    case GlobalIsFinite:
     case GlobalIsNaN:
         return node->child1().useKind() == UntypedUse;
 

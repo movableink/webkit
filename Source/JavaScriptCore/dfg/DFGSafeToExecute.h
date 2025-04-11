@@ -344,6 +344,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case StringIndexOf:
         return true;
 
+    case GlobalIsFinite:
     case GlobalIsNaN:
         return false;
 
