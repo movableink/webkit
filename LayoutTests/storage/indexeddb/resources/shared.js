@@ -226,3 +226,16 @@ function waitForRequests(requests, callback) {
         req.onerror = unexpectedErrorCallback;
     });
 }
+
+var isTestEnded = false;
+function endTestWithLog(text)
+{
+    if (isTestEnded)
+        return;
+
+    isTestEnded = true;
+    if (text)
+        debug(text);
+    finishJSTest();
+}
+
