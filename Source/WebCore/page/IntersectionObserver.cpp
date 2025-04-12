@@ -353,7 +353,7 @@ static std::optional<LayoutRect> computeClippedRectInRootContentsSpace(const Lay
     return computeClippedRectInRootContentsSpace(rectInFrameViewSpace, ownerRenderer.get(), scrollMargin);
 }
 
-auto IntersectionObserver::computeIntersectionState(const IntersectionObserverRegistration& registration, LocalFrameView& frameView, Element& target, bool applyRootMargin) const -> IntersectionObservationState
+auto IntersectionObserver::computeIntersectionState(const IntersectionObserverRegistration& registration, LocalFrameView& frameView, Element& target, ApplyRootMargin applyRootMargin) const -> IntersectionObservationState
 {
     bool isFirstObservation = !registration.previousThresholdIndex;
 
@@ -411,7 +411,7 @@ auto IntersectionObserver::computeIntersectionState(const IntersectionObserverRe
         return intersectionState;
     }
 
-    if (applyRootMargin) {
+    if (applyRootMargin == ApplyRootMargin::Yes) {
         expandRootBoundsWithRootMargin(intersectionState.rootBounds, scrollMarginBox(), rootRenderer->style().usedZoom());
         expandRootBoundsWithRootMargin(intersectionState.rootBounds, rootMarginBox(), rootRenderer->style().usedZoom());
     }
@@ -516,7 +516,8 @@ auto IntersectionObserver::updateObservations(Document& hostDocument) -> NeedNot
         auto& registration = targetRegistrations[index];
 
         bool isSameOriginObservation = &target->document() == &hostDocument || target->document().protectedSecurityOrigin()->isSameOriginDomain(hostDocument.securityOrigin());
-        auto intersectionState = computeIntersectionState(registration, *frameView, *target, isSameOriginObservation);
+        auto applyRootMargin = isSameOriginObservation ? ApplyRootMargin::Yes : ApplyRootMargin::No;
+        auto intersectionState = computeIntersectionState(registration, *frameView, *target, applyRootMargin);
 
         if (intersectionState.observationChanged) {
             FloatRect targetBoundingClientRect;
