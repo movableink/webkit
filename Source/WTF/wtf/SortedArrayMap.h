@@ -110,8 +110,6 @@ bool operator<(ComparableASCIILiteral, ComparableStringView);
 bool operator<(ComparableCaseFoldingASCIILiteral, ComparableStringView);
 bool operator<(ComparableLettersLiteral, ComparableStringView);
 
-template<typename OtherType> bool operator==(OtherType, ComparableStringView);
-
 template<typename StorageInteger, ASCIISubset> class PackedASCIISubsetLiteral {
 public:
     static_assert(std::is_unsigned_v<StorageInteger>);
@@ -333,11 +331,6 @@ inline bool operator<(ComparableStringView a, ComparableCaseFoldingASCIILiteral 
 inline bool operator<(ComparableCaseFoldingASCIILiteral a, ComparableStringView b)
 {
     return lessThanASCIICaseFolding(a.literal, b.string);
-}
-
-template<typename OtherType> inline bool operator==(OtherType a, ComparableStringView b)
-{
-    return b == a;
 }
 
 template<typename StorageInteger, ASCIISubset subset> constexpr PackedASCIISubsetLiteral<StorageInteger, subset>::PackedASCIISubsetLiteral(ASCIILiteral string)

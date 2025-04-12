@@ -294,7 +294,6 @@ static_assert(sizeof(URL) == sizeof(String) + 8 * sizeof(unsigned), "URL should 
 
 bool operator==(const URL&, const URL&);
 bool operator==(const URL&, const String&);
-bool operator==(const String&, const URL&);
 
 WTF_EXPORT_PRIVATE bool equalIgnoringFragmentIdentifier(const URL&, const URL&);
 WTF_EXPORT_PRIVATE bool protocolHostAndPortAreEqual(const URL&, const URL&);
@@ -353,11 +352,6 @@ inline bool operator==(const URL& a, const URL& b)
 inline bool operator==(const URL& a, const String& b)
 {
     return a.string() == b;
-}
-
-inline bool operator==(const String& a, const URL& b)
-{
-    return a == b.string();
 }
 
 inline URL::URL(HashTableDeletedValueType)

@@ -152,8 +152,6 @@ inline bool operator==(const AtomString& a, const AtomString& b) { return a.impl
 inline bool operator==(const AtomString& a, ASCIILiteral b) { return WTF::equal(a.impl(), b); }
 inline bool operator==(const AtomString& a, const Vector<UChar>& b) { return a.impl() && equal(a.impl(), b.span()); }
 inline bool operator==(const AtomString& a, const String& b) { return equal(a.impl(), b.impl()); }
-inline bool operator==(const String& a, const AtomString& b) { return equal(a.impl(), b.impl()); }
-inline bool operator==(const Vector<UChar>& a, const AtomString& b) { return b == a; }
 
 bool equalIgnoringASCIICase(const AtomString&, const AtomString&);
 bool equalIgnoringASCIICase(const AtomString&, const String&);

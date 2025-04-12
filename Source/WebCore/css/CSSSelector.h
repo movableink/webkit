@@ -271,7 +271,6 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     } m_data;
 };
 
-inline bool operator==(const AtomString& a, const PossiblyQuotedIdentifier& b) { return a == b.identifier; }
 inline bool operator==(const PossiblyQuotedIdentifier& a, const AtomString& b) { return a.identifier == b; }
 
 inline const QualifiedName& CSSSelector::attribute() const

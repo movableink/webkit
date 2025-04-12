@@ -262,7 +262,6 @@ bool startsWithLettersIgnoringASCIICase(StringView, ASCIILiteral);
 
 inline bool operator==(StringView a, StringView b) { return equal(a, b); }
 inline bool operator==(StringView a, ASCIILiteral b) { return equal(a, b); }
-inline bool operator==(ASCIILiteral a, StringView b) { return equal(b, a); }
 
 struct StringViewWithUnderlyingString;
 

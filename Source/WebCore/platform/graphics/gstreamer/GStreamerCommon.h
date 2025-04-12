@@ -179,8 +179,6 @@ private:
         return a.isValid() && GST_IS_BUFFER(b) && a.size() == gst_buffer_get_size(nonConstB) && !gst_buffer_memcmp(nonConstB, 0, a.data(), a.size());
     }
 
-    friend bool operator==(const GstBuffer* a, const GstBufferMapper& b) { return operator==(b, a); }
-
     GstBuffer* m_buffer { nullptr };
     MapType m_info;
     bool m_isValid { false };

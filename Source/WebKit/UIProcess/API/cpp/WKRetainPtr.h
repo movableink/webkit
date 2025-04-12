@@ -219,11 +219,6 @@ template<typename T, typename U> inline bool operator==(const WKRetainPtr<T>& a,
     return a.get() == b; 
 }
 
-template<typename T, typename U> inline bool operator==(T* a, const WKRetainPtr<U>& b) 
-{
-    return a == b.get(); 
-}
-
 #if (defined(WIN32) || defined(_WIN32)) && !((_MSC_VER > 1900) && __clang__)
 template<typename T> inline WKRetainPtr<T> adoptWK(T) _Check_return_;
 #else

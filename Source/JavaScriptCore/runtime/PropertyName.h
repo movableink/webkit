@@ -99,11 +99,6 @@ inline bool operator==(PropertyName a, const Identifier& b)
     return a.uid() == b.impl();
 }
 
-inline bool operator==(const Identifier& a, PropertyName b)
-{
-    return a.impl() == b.uid();
-}
-
 inline bool operator==(PropertyName a, PropertyName b)
 {
     return a.uid() == b.uid();

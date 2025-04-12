@@ -303,11 +303,6 @@ template<typename T, typename U> constexpr bool operator==(const RetainPtr<T>& a
     return a.get() == b; 
 }
 
-template<typename T, typename U> constexpr bool operator==(T* a, const RetainPtr<U>& b)
-{
-    return a == b.get(); 
-}
-
 template<typename T> constexpr RetainPtr<RetainPtrType<T>> adoptCF(T CF_RELEASES_ARGUMENT ptr)
 {
     static_assert(!IsNSType<T>, "Don't use adoptCF with Objective-C pointer types, use adoptNS.");

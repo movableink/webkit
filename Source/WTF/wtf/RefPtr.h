@@ -99,8 +99,6 @@ private:
     friend bool operator==(const RefPtr<T1, U, V>&, const RefPtr<X, Y, Z>&);
     template<typename T1, typename U, typename V, typename X>
     friend bool operator==(const RefPtr<T1, U, V>&, X*);
-    template<typename T1, typename X, typename Y, typename Z>
-    friend bool operator==(T1*, const RefPtr<X, Y, Z>&);
 
     enum AdoptTag { Adopt };
     RefPtr(T* ptr, AdoptTag) : m_ptr(ptr) { }
@@ -205,12 +203,6 @@ template<typename T, typename U, typename V, typename X>
 inline bool operator==(const RefPtr<T, U, V>& a, X* b)
 {
     return a.m_ptr == b;
-}
-
-template<typename T, typename X, typename Y, typename Z>
-inline bool operator==(T* a, const RefPtr<X, Y, Z>& b)
-{
-    return a == b.m_ptr;
 }
 
 template<typename T, typename U, typename V>

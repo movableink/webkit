@@ -96,7 +96,6 @@ public:
     // Two keys are equal if they have the same ID, ignoring key value and status.
     friend bool operator==(const KeyHandle &k1, const KeyHandle &k2) { return k1.m_id == k2.m_id; }
     friend bool operator==(const KeyHandle &k, const KeyIDType& keyID) { return k.m_id == keyID; }
-    friend bool operator==(const KeyIDType& keyID, const KeyHandle &k) { return k == keyID; }
 
 protected:
 
