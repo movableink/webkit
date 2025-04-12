@@ -460,27 +460,22 @@ static inline bool mightBeHSL(std::span<const CharacterType> characters)
 static std::optional<SRGBA<uint8_t>> finishParsingHexColor(uint32_t value, unsigned length)
 {
     switch (length) {
-    case 3:
-        // #abc converts to #aabbcc
-        // FIXME: Replace conversion to PackedColor::ARGB with simpler bit math to construct
-        // the SRGBA<uint8_t> directly.
-        return asSRGBA(PackedColor::ARGB {
-               0xFF000000
-            | (value & 0xF00) << 12 | (value & 0xF00) << 8
-            | (value & 0xF0) << 8 | (value & 0xF0) << 4
-            | (value & 0xF) << 4 | (value & 0xF) });
-    case 4:
-        // #abcd converts to ddaabbcc since alpha bytes are the high bytes.
-        // FIXME: Replace conversion to PackedColor::ARGB with simpler bit math to construct
-        // the SRGBA<uint8_t> directly.
-        return asSRGBA(PackedColor::ARGB {
-              (value & 0xF) << 28 | (value & 0xF) << 24
-            | (value & 0xF000) << 8 | (value & 0xF000) << 4
-            | (value & 0xF00) << 4 | (value & 0xF00)
-            | (value & 0xF0) | (value & 0xF0) >> 4 });
+    case 3: {
+        // #234 converts to #223344.
+        uint8_t r = (value & 0x0F00) >> 8;
+        uint8_t g = (value & 0x00F0) >> 4;
+        uint8_t b = (value & 0x000F);
+        return SRGBA<uint8_t>(r << 4 | r, g << 4 | g, b << 4 | b);
+    }
+    case 4: {
+        // #234a converts to #223344aa.
+        uint8_t r = (value & 0xF000) >> 12;
+        uint8_t g = (value & 0x0F00) >> 8;
+        uint8_t b = (value & 0x00F0) >> 4;
+        uint8_t a = (value & 0x000F);
+        return SRGBA<uint8_t>(r << 4 | r, g << 4 | g, b << 4 | b, a << 4 | a);
+    }
     case 6:
-        // FIXME: Replace conversion to PackedColor::ARGB with simpler bit math to construct
-        // the SRGBA<uint8_t> directly.
         return asSRGBA(PackedColor::ARGB { 0xFF000000 | value });
     case 8:
         return asSRGBA(PackedColor::RGBA { value });
