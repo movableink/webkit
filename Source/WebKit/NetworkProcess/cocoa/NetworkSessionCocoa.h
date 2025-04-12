@@ -163,7 +163,7 @@ public:
     const Vector<RetainPtr<nw_proxy_config_t>>& proxyConfigs() const { return m_nwProxyConfigs; }
 
     void clearProxyConfigData() final;
-    void setProxyConfigData(const Vector<std::pair<Vector<uint8_t>, WTF::UUID>>&) final;
+    void setProxyConfigData(const Vector<std::pair<Vector<uint8_t>, std::optional<WTF::UUID>>>&) final;
 
     void applyProxyConfigurationToSessionConfiguration(NSURLSessionConfiguration *);
 #endif

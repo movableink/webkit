@@ -56,7 +56,7 @@ header: <wtf/text/AtomString.h>
 
 [WebKitPlatform] class WTF::UUID {
     uint64_t high();
-    [Validator='((static_cast<UInt128>(*high) << 64) | *low) != WTF::UUID::deletedValue'] uint64_t low();
+    [Validator='WTF::UUID::isValid(*high, *low)'] uint64_t low();
 }
 
 header: <wtf/ObjectIdentifier.h>

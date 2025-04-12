@@ -6937,7 +6937,7 @@ using WebCore::WritingTools::ContextID = WTF::UUID;
 
 header: <WebCore/WritingToolsTypes.h>
 [CustomHeader] struct WebCore::WritingTools::Context {
-    WebCore::WritingTools::ContextID identifier;
+    Markable<WebCore::WritingTools::ContextID> identifier;
     WebCore::AttributedString attributedText;
     WebCore::CharacterRange range;
 };

@@ -112,6 +112,12 @@ public:
     {
     }
 
+    static bool isValid(uint64_t high, uint64_t low)
+    {
+        auto data = (static_cast<UInt128>(high) << 64) | low;
+        return data != deletedValue && data != emptyValue;
+    }
+
     constexpr bool isHashTableDeletedValue() const { return m_data == deletedValue; }
     constexpr bool isHashTableEmptyValue() const { return m_data == emptyValue; }
     WTF_EXPORT_PRIVATE String toString() const;
