@@ -2468,7 +2468,8 @@ std::optional<Vector<Ref<Element>>> Element::elementsArrayForAttributeInternal(c
     if (!elements)
         return std::nullopt;
 
-    if (document().settings().shadowRootReferenceTargetEnabled()) {
+    if (document().settings().shadowRootReferenceTargetEnabled()
+        && (attributeName != aria_ownsAttr || document().settings().shadowRootReferenceTargetEnabledForAriaOwns())) {
         elements = compactMap(elements.value(), [&](Ref<Element>& element) -> std::optional<Ref<Element>> {
             if (RefPtr deepReferenceTarget = element->resolveReferenceTarget())
                 return *deepReferenceTarget;
