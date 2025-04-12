@@ -49,7 +49,7 @@ void WebKitDecoderReceiver::initializeFromFormatDescription(CMFormatDescriptionR
     // decoder session for use in creating its own internal CVPixelBufferPool, which we
     // will use post-decode.
     m_isFullRange = false;
-    m_is10bit = false;
+    m_bufferType = BufferType::I420;
 
     auto extensions = CMFormatDescriptionGetExtensions(formatDescription);
     if (!extensions)
@@ -70,23 +70,29 @@ void WebKitDecoderReceiver::initializeFromFormatDescription(CMFormatDescriptionR
     auto configurationRecordData = CFDataGetBytePtr(configurationRecord);
     auto bitDepthChromaAndRange = *(configurationRecordData + 6);
 
-    if ((bitDepthChromaAndRange >> 4) == 10)
-        m_is10bit = true;
-
-    if (bitDepthChromaAndRange & 0x1)
-        m_isFullRange = true;
+    m_isFullRange = bitDepthChromaAndRange & 0x1;
+    uint8_t bitDepth = bitDepthChromaAndRange >> 4;
+    uint8_t chromaSubsampling = (bitDepthChromaAndRange & 0xf0) >> 1;
+    if (!chromaSubsampling || chromaSubsampling == 1)
+        m_bufferType = bitDepth == 10 ? BufferType::I010 : BufferType::I420;
+    else if (chromaSubsampling == 2)
+        m_bufferType = bitDepth == 10 ? BufferType::I210 : BufferType::I422;
 }
 
-CVPixelBufferPoolRef WebKitDecoderReceiver::pixelBufferPool(size_t pixelBufferWidth, size_t pixelBufferHeight, bool is10bit)
+CVPixelBufferPoolRef WebKitDecoderReceiver::pixelBufferPool(size_t pixelBufferWidth, size_t pixelBufferHeight, BufferType type)
 {
-    if (m_pixelBufferPool && m_pixelBufferWidth == pixelBufferWidth && m_pixelBufferHeight == pixelBufferHeight && m_is10bit == is10bit)
+    if (m_pixelBufferPool && m_pixelBufferWidth == pixelBufferWidth && m_pixelBufferHeight == pixelBufferHeight && m_bufferType == type)
         return m_pixelBufferPool;
 
     OSType pixelFormat;
-    if (is10bit)
-        pixelFormat = m_isFullRange ? kCVPixelFormatType_420YpCbCr10BiPlanarFullRange : kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange;
-    else
+    if (type == BufferType::I420 || type == BufferType::I422)
         pixelFormat = m_isFullRange ? kCVPixelFormatType_420YpCbCr8BiPlanarFullRange : kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange;
+    else if (type == BufferType::I010)
+        pixelFormat = m_isFullRange ? kCVPixelFormatType_420YpCbCr10BiPlanarFullRange : kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange;
+    else if (type == BufferType::I210)
+        pixelFormat = m_isFullRange ? kCVPixelFormatType_422YpCbCr10BiPlanarFullRange : kCVPixelFormatType_422YpCbCr10BiPlanarVideoRange;
+    else
+        return nil;
 
     auto createPixelFormatAttributes = [] (OSType pixelFormat) {
         auto createNumber = [] (int32_t format) -> CFNumberRef {
@@ -134,7 +140,7 @@ CVPixelBufferPoolRef WebKitDecoderReceiver::pixelBufferPool(size_t pixelBufferWi
 
     m_pixelBufferWidth = pixelBufferWidth;
     m_pixelBufferHeight = pixelBufferHeight;
-    m_is10bit = is10bit;
+    m_bufferType = type;
 
     return m_pixelBufferPool;
 }
@@ -161,7 +167,7 @@ OSStatus WebKitDecoderReceiver::decoderFailed(int error)
 int32_t WebKitDecoderReceiver::Decoded(VideoFrame& frame)
 {
     auto pixelBuffer = createPixelBufferFromFrame(frame, [this](size_t width, size_t height, BufferType type) -> CVPixelBufferRef {
-        auto pixelBufferPool = this->pixelBufferPool(width, height, type == BufferType::I010);
+        auto pixelBufferPool = this->pixelBufferPool(width, height, type);
         if (!pixelBufferPool)
             return nullptr;
 

@@ -4558,6 +4558,7 @@ storage/indexeddb/modern/deleteindex-4-private.html [ Pass Crash ]
 
 # No VP9 decoder on simulator and no ability to load VideoToolbox plugins.
 media/vp9.html [ Skip ]
+media/media-vp9-yuv422p10.html [ Skip ]
 
 # Requires specific encoder behavior.
 http/wpt/webcodecs/encoder-task-failing.html [ Failure ]

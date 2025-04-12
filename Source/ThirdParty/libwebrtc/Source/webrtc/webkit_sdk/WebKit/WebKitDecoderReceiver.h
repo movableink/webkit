@@ -47,13 +47,13 @@ private:
     int32_t Decoded(VideoFrame&, int64_t decode_time_ms) final;
     void Decoded(VideoFrame&, std::optional<int32_t> decode_time_ms, std::optional<uint8_t> qp) final;
 
-    CVPixelBufferPoolRef pixelBufferPool(size_t pixelBufferWidth, size_t pixelBufferHeight, bool is10bit);
+    CVPixelBufferPoolRef pixelBufferPool(size_t pixelBufferWidth, size_t pixelBufferHeight, BufferType);
 
     VTVideoDecoderSession m_session { nullptr };
     VTVideoDecoderFrame m_currentFrame { nullptr };
     size_t m_pixelBufferWidth { 0 };
     size_t m_pixelBufferHeight { 0 };
-    bool m_is10bit { false };
+    BufferType m_bufferType { BufferType::I420 };
     bool m_isFullRange { false };
     CVPixelBufferPoolRef m_pixelBufferPool { nullptr };
 };
