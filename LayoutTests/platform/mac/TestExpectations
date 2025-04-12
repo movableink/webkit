@@ -2430,3 +2430,5 @@ imported/w3c/web-platform-tests/svg/pservers/reftests/meshgradient-complex-001.s
 
 # The color input only has a swatch overlay on macOS
 fast/forms/color/input-color-swatch-overlay-appearance.html [ Pass ]
+
+webkit.org/b/291459 [ Release ] imported/w3c/web-platform-tests/css/css-shapes/shape-outside/shape-image/shape-image-018.html [ Pass Failure ]
