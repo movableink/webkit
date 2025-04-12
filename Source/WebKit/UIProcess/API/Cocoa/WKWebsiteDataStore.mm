@@ -1591,23 +1591,17 @@ struct WKWebsiteData {
 
 - (void)_fetchDataOfTypes:(NSSet<NSString *> *)dataTypes completionHandler:(void(^)(NSData *))completionHandler
 {
-    auto completionHandlerWithError = [completionHandler = WTFMove(completionHandler)](NSData *data, NSError *error) {
+    [self fetchDataOfTypes:dataTypes completionHandler:makeBlockPtr([completionHandler = makeBlockPtr(completionHandler)](NSData *data, NSError *error) {
+        UNUSED_PARAM(error);
         completionHandler(data);
-    };
-
-    [self fetchDataOfTypes:dataTypes completionHandler:completionHandlerWithError];
+    }).get()];
 }
 
 - (void)_restoreData:(NSData *)data completionHandler:(void(^)(BOOL))completionHandler
 {
-    auto completionHandlerWithError = [completionHandler = WTFMove(completionHandler)](NSError *error) {
-        if (!error)
-            completionHandler(YES);
-        else
-            completionHandler(NO);
-    };
-
-    [self restoreData:data completionHandler:completionHandlerWithError];
+    [self restoreData:data completionHandler:makeBlockPtr([completionHandler = makeBlockPtr(completionHandler)](NSError *error) {
+        completionHandler(!error);
+    }).get()];
 }
 
 @end
