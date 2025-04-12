@@ -61,7 +61,7 @@ typedef struct {
 @property (nonatomic) NSTimeInterval currentTime;
 
 + (bool)isLoadFromDataAvailable;
-+ (void)loadFromData:(NSData *)data completionHandler:(void (^)(WKSRKEntity * _Nullable entity))completionHandler;
++ (void)loadFromData:(NSData *)data withAttributionTaskID:(nullable NSString *)attributionTaskId completionHandler:(void (^)(WKSRKEntity * _Nullable entity))completionHandler;
 - (instancetype)initWithCoreEntity:(REEntityRef)coreEntity;
 - (void)setParentCoreEntity:(REEntityRef)parentCoreEntity preservingWorldTransform:(BOOL)preservingWorldTransform NS_SWIFT_NAME(setParent(_:preservingWorldTransform:));
 - (void)setUpAnimationWithAutoPlay:(BOOL)autoPlay;

@@ -100,7 +100,7 @@ private:
 
     // Message Handlers
     void initializeModelProcess(ModelProcessCreationParameters&&, CompletionHandler<void()>&&);
-    void createModelConnectionToWebProcess(WebCore::ProcessIdentifier, PAL::SessionID, IPC::Connection::Handle&&, ModelProcessConnectionParameters&&, CompletionHandler<void()>&&);
+    void createModelConnectionToWebProcess(WebCore::ProcessIdentifier, PAL::SessionID, IPC::Connection::Handle&&, ModelProcessConnectionParameters&&, const std::optional<String>& attributionTaskID, CompletionHandler<void()>&&);
     void sharedPreferencesForWebProcessDidChange(WebCore::ProcessIdentifier, SharedPreferencesForWebProcess&&, CompletionHandler<void()>&&);
     void addSession(PAL::SessionID);
     void removeSession(PAL::SessionID);

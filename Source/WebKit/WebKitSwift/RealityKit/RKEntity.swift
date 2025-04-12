@@ -27,6 +27,7 @@ import Combine
 import CoreGraphics
 import Foundation
  @_spi(RealityKit) import RealityKit
+ @_spi(RealityKit_Webkit) import RealityKit
 import WebKitSwift
 import os
 import simd
@@ -52,11 +53,17 @@ public final class WKSRKEntity: NSObject {
 #endif
     }
 
-    @objc(loadFromData:completionHandler:) public static func load(from data: Data, completionHandler: @MainActor @escaping (WKSRKEntity?) -> Void) {
+    @objc(loadFromData:withAttributionTaskID:completionHandler:) public static func load(from data: Data, attributionTaskId: String?, completionHandler: @MainActor @escaping (WKSRKEntity?) -> Void) {
 #if canImport(RealityKit, _version: 377)
         Task {
             do {
-                let loadedEntity = try await Entity(fromData: data)
+                var loadOptions = Entity.__LoadOptions()
+#if canImport(RealityKit, _version: 400)
+                if let attributionTaskId {
+                    loadOptions.memoryAttributionID = attributionTaskId
+                }
+#endif
+                let loadedEntity = try await Entity(fromData: data, options: loadOptions)
                 let result: WKSRKEntity = .init(with: loadedEntity)
                 await completionHandler(result)
             } catch {

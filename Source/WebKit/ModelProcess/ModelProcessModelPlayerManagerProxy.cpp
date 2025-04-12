@@ -69,7 +69,7 @@ void ModelProcessModelPlayerManagerProxy::createModelPlayer(WebCore::ModelPlayer
     ASSERT(m_modelConnectionToWebProcess);
     ASSERT(!m_proxies.contains(identifier));
 
-    auto proxy = ModelProcessModelPlayerProxy::create(*this, identifier, m_modelConnectionToWebProcess->protectedConnection());
+    auto proxy = ModelProcessModelPlayerProxy::create(*this, identifier, m_modelConnectionToWebProcess->protectedConnection(), m_modelConnectionToWebProcess->attributionTaskID());
     m_proxies.add(identifier, WTFMove(proxy));
 }
 

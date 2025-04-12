@@ -76,7 +76,13 @@ ModelProcess::ModelProcess(AuxiliaryProcessInitializationParameters&& parameters
 
 ModelProcess::~ModelProcess() = default;
 
-void ModelProcess::createModelConnectionToWebProcess(WebCore::ProcessIdentifier identifier, PAL::SessionID sessionID, IPC::Connection::Handle&& connectionHandle, ModelProcessConnectionParameters&& parameters, CompletionHandler<void()>&& completionHandler)
+void ModelProcess::createModelConnectionToWebProcess(
+    WebCore::ProcessIdentifier identifier,
+    PAL::SessionID sessionID,
+    IPC::Connection::Handle&& connectionHandle,
+    ModelProcessConnectionParameters&& parameters,
+    const std::optional<String>& attributionTaskID,
+    CompletionHandler<void()>&& completionHandler)
 {
     RELEASE_LOG(Process, "%p - ModelProcess::createModelConnectionToWebProcess: processIdentifier=%" PRIu64, this, identifier.toUInt64());
 
@@ -98,7 +104,7 @@ void ModelProcess::createModelConnectionToWebProcess(WebCore::ProcessIdentifier 
     });
 #endif
 
-    auto newConnection = ModelConnectionToWebProcess::create(*this, identifier, sessionID, WTFMove(connectionHandle), WTFMove(parameters));
+    auto newConnection = ModelConnectionToWebProcess::create(*this, identifier, sessionID, WTFMove(connectionHandle), WTFMove(parameters), attributionTaskID);
 
 #if ENABLE(IPC_TESTING_API)
     if (parameters.ignoreInvalidMessageForTesting)

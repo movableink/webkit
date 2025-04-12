@@ -1149,6 +1149,10 @@ void WebProcessPool::disconnectProcess(WebProcessProxy& process)
     // Clearing everything causes assertion failures, so it's less trouble to skip that for now.
     Ref protectedProcess { process };
 
+#if ENABLE(MODEL_PROCESS) && HAVE(TASK_IDENTITY_TOKEN)
+    process.unregisterMemoryAttributionIDIfNeeded();
+#endif
+
     protectedBackForwardCache()->removeEntriesForProcess(process);
 
     if (process.isRunningWorkers())

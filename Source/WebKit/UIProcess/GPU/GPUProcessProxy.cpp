@@ -915,6 +915,18 @@ void GPUProcessProxy::requestSharedSimulationConnection(audit_token_t modelProce
 {
     sendWithAsyncReply(Messages::GPUProcess::RequestSharedSimulationConnection { modelProcessAuditToken }, WTFMove(completionHandler));
 }
+
+#if HAVE(TASK_IDENTITY_TOKEN)
+void GPUProcessProxy::createMemoryAttributionIDForTask(WebCore::ProcessIdentity processIdentity, CompletionHandler<void(const std::optional<String>&)>&& completionHandler)
+{
+    sendWithAsyncReply(Messages::GPUProcess::CreateMemoryAttributionIDForTask { WTFMove(processIdentity) }, WTFMove(completionHandler));
+}
+
+void GPUProcessProxy::unregisterMemoryAttributionID(const String& attributionID, CompletionHandler<void()>&& completionHandler)
+{
+    sendWithAsyncReply(Messages::GPUProcess::UnregisterMemoryAttributionID { attributionID }, WTFMove(completionHandler));
+}
+#endif
 #endif
 
 } // namespace WebKit

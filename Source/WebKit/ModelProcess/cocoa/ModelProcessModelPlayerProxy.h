@@ -67,7 +67,7 @@ class ModelProcessModelPlayerProxy final
     , private IPC::MessageReceiver {
     WTF_MAKE_TZONE_ALLOCATED(ModelProcessModelPlayerProxy);
 public:
-    static Ref<ModelProcessModelPlayerProxy> create(ModelProcessModelPlayerManagerProxy&, WebCore::ModelPlayerIdentifier, Ref<IPC::Connection>&&);
+    static Ref<ModelProcessModelPlayerProxy> create(ModelProcessModelPlayerManagerProxy&, WebCore::ModelPlayerIdentifier, Ref<IPC::Connection>&&, const std::optional<String>&);
     ~ModelProcessModelPlayerProxy();
 
     void ref() const final { WebCore::ModelPlayer::ref(); }
@@ -140,7 +140,7 @@ public:
     USING_CAN_MAKE_WEAKPTR(WebCore::REModelLoaderClient);
 
 private:
-    ModelProcessModelPlayerProxy(ModelProcessModelPlayerManagerProxy&, WebCore::ModelPlayerIdentifier, Ref<IPC::Connection>&&);
+    ModelProcessModelPlayerProxy(ModelProcessModelPlayerManagerProxy&, WebCore::ModelPlayerIdentifier, Ref<IPC::Connection>&&, const std::optional<String>&);
 
     void computeTransform(bool);
     void applyEnvironmentMapDataAndRelease();
@@ -179,6 +179,8 @@ private:
     // For interactions
     RetainPtr<WKStageModeInteractionDriver> m_stageModeInteractionDriver;
     WebCore::StageModeOperation m_stageModeOperation { WebCore::StageModeOperation::None };
+
+    std::optional<String> m_attributionTaskID;
 };
 
 } // namespace WebKit

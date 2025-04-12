@@ -1217,6 +1217,42 @@ void WebProcessProxy::modelProcessExited(ProcessTerminationReason reason)
         page->modelProcessExited(reason);
 }
 
+#if HAVE(TASK_IDENTITY_TOKEN)
+void WebProcessProxy::createMemoryAttributionIDIfNeeded(CompletionHandler<void(const std::optional<String>&)>&& completionHandler)
+{
+    if (m_memoryAttributionID.has_value()) {
+        completionHandler(m_memoryAttributionID);
+        return;
+    }
+
+    GPUProcessProxy::getOrCreate()->createMemoryAttributionIDForTask(m_processIdentity, [this, weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)]
+    (const std::optional<String>& attributionTaskID) mutable {
+        if (!weakThis)
+            return;
+
+        if (attributionTaskID.has_value()) {
+            WEBPROCESSPROXY_RELEASE_LOG(Process, "createMemoryAttributionIDIfNeeded: created memory attribution ID");
+            m_memoryAttributionID = attributionTaskID;
+        }
+
+        completionHandler(m_memoryAttributionID);
+    });
+
+}
+
+void WebProcessProxy::unregisterMemoryAttributionIDIfNeeded()
+{
+    if (!m_memoryAttributionID.has_value())
+        return;
+
+    GPUProcessProxy::getOrCreate()->unregisterMemoryAttributionID(m_memoryAttributionID.value(), [this, weakThis = WeakPtr { *this }]() mutable {
+        if (!weakThis)
+            return;
+
+        WEBPROCESSPROXY_RELEASE_LOG(Process, "unregisterMemoryAttributionIDIfNeeded: unregistered memory attribution ID");
+    });
+}
+#endif // HAVE(TASK_IDENTITY_TOKEN)
 #endif // ENABLE(MODEL_PROCESS)
 
 #if !PLATFORM(MAC)

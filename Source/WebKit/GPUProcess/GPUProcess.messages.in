@@ -101,6 +101,10 @@ messages -> GPUProcess : AuxiliaryProcess {
 #endif
 #if PLATFORM(VISION) && ENABLE(MODEL_PROCESS)
     RequestSharedSimulationConnection(struct WebKit::CoreIPCAuditToken modelProcessAuditToken) -> (std::optional<IPC::SharedFileHandle> sharedSimulationConnection)
+#if HAVE(TASK_IDENTITY_TOKEN)
+    CreateMemoryAttributionIDForTask(WebCore::ProcessIdentity processIdentity) -> (std::optional<String> completionHandler)
+    UnregisterMemoryAttributionID(String attributionID) -> ()
+#endif
 #endif
 }
 

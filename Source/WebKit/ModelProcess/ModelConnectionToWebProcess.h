@@ -71,7 +71,7 @@ class ModelConnectionToWebProcess
     WTF_MAKE_FAST_ALLOCATED;
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ModelConnectionToWebProcess);
 public:
-    static Ref<ModelConnectionToWebProcess> create(ModelProcess&, WebCore::ProcessIdentifier, PAL::SessionID, IPC::Connection::Handle&&, ModelProcessConnectionParameters&&);
+    static Ref<ModelConnectionToWebProcess> create(ModelProcess&, WebCore::ProcessIdentifier, PAL::SessionID, IPC::Connection::Handle&&, ModelProcessConnectionParameters&&, const std::optional<String>&);
     virtual ~ModelConnectionToWebProcess();
 
     void ref() const final { ThreadSafeRefCounted::ref(); }
@@ -104,8 +104,10 @@ public:
 
     bool isAlwaysOnLoggingAllowed() const;
 
+    const std::optional<String> attributionTaskID() const { return m_attributionTaskID; };
+
 private:
-    ModelConnectionToWebProcess(ModelProcess&, WebCore::ProcessIdentifier, PAL::SessionID, IPC::Connection::Handle&&, ModelProcessConnectionParameters&&);
+    ModelConnectionToWebProcess(ModelProcess&, WebCore::ProcessIdentifier, PAL::SessionID, IPC::Connection::Handle&&, ModelProcessConnectionParameters&&, const std::optional<String>&);
 
 #if HAVE(VISIBILITY_PROPAGATION_VIEW)
     void createVisibilityPropagationContextForPage(WebPageProxyIdentifier, WebCore::PageIdentifier, bool canShowWhileLocked);
@@ -146,6 +148,8 @@ private:
 #if ENABLE(IPC_TESTING_API)
     const Ref<IPCTester> m_ipcTester;
 #endif
+
+    std::optional<String> m_attributionTaskID;
 
     SharedPreferencesForWebProcess m_sharedPreferencesForWebProcess;
 };

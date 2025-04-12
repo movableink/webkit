@@ -128,9 +128,9 @@ private:
 
 class RKModelLoaderUSD final : public WebCore::REModelLoader, public CanMakeWeakPtr<RKModelLoaderUSD> {
 public:
-    static Ref<RKModelLoaderUSD> create(Model& model, REModelLoaderClient& client)
+    static Ref<RKModelLoaderUSD> create(Model& model, const std::optional<String>& attributionTaskID, REModelLoaderClient& client)
     {
-        return adoptRef(*new RKModelLoaderUSD(model, client));
+        return adoptRef(*new RKModelLoaderUSD(model, attributionTaskID, client));
     }
 
     virtual ~RKModelLoaderUSD() = default;
@@ -140,9 +140,10 @@ public:
     bool isCanceled() const { return m_canceled; }
 
 private:
-    RKModelLoaderUSD(Model& model, REModelLoaderClient& client)
+    RKModelLoaderUSD(Model& model, const std::optional<String>& attributionTaskID, REModelLoaderClient& client)
         : m_canceled { false }
         , m_model { model }
+        , m_attributionTaskID { attributionTaskID }
         , m_client { client }
     {
     }
@@ -174,6 +175,7 @@ private:
     bool m_canceled { false };
 
     Ref<Model> m_model;
+    std::optional<String> m_attributionTaskID;
     WeakPtr<REModelLoaderClient> m_client;
 };
 
@@ -187,7 +189,10 @@ static ResourceError toResourceError(String payload, Model& model)
 
 void RKModelLoaderUSD::load()
 {
-    [getWKSRKEntityClass() loadFromData:m_model->data()->createNSData().get() completionHandler:makeBlockPtr([weakThis = WeakPtr { *this }] (WKSRKEntity *entity) mutable {
+    NSString *attributionID = nil;
+    if (m_attributionTaskID.has_value())
+        attributionID = m_attributionTaskID.value();
+    [getWKSRKEntityClass() loadFromData:m_model->data()->createNSData().get() withAttributionTaskID:attributionID completionHandler:makeBlockPtr([weakThis = WeakPtr { *this }] (WKSRKEntity *entity) mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -201,9 +206,9 @@ void RKModelLoaderUSD::load()
     }).get()];
 }
 
-static Ref<REModelLoader> loadREModelUsingRKUSDLoader(Model& model, REModelLoaderClient& client)
+static Ref<REModelLoader> loadREModelUsingRKUSDLoader(Model& model, const std::optional<String>& attributionTaskID, REModelLoaderClient& client)
 {
-    auto loader = RKModelLoaderUSD::create(model, client);
+    auto loader = RKModelLoaderUSD::create(model, attributionTaskID, client);
 
     dispatch_async(dispatch_get_main_queue(), [loader] () mutable {
         loader->load();
@@ -214,15 +219,16 @@ static Ref<REModelLoader> loadREModelUsingRKUSDLoader(Model& model, REModelLoade
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ModelProcessModelPlayerProxy);
 
-Ref<ModelProcessModelPlayerProxy> ModelProcessModelPlayerProxy::create(ModelProcessModelPlayerManagerProxy& manager, WebCore::ModelPlayerIdentifier identifier, Ref<IPC::Connection>&& connection)
+Ref<ModelProcessModelPlayerProxy> ModelProcessModelPlayerProxy::create(ModelProcessModelPlayerManagerProxy& manager, WebCore::ModelPlayerIdentifier identifier, Ref<IPC::Connection>&& connection, const std::optional<String>& attributionTaskID)
 {
-    return adoptRef(*new ModelProcessModelPlayerProxy(manager, identifier, WTFMove(connection)));
+    return adoptRef(*new ModelProcessModelPlayerProxy(manager, identifier, WTFMove(connection), attributionTaskID));
 }
 
-ModelProcessModelPlayerProxy::ModelProcessModelPlayerProxy(ModelProcessModelPlayerManagerProxy& manager, WebCore::ModelPlayerIdentifier identifier, Ref<IPC::Connection>&& connection)
+ModelProcessModelPlayerProxy::ModelProcessModelPlayerProxy(ModelProcessModelPlayerManagerProxy& manager, WebCore::ModelPlayerIdentifier identifier, Ref<IPC::Connection>&& connection, const std::optional<String>& attributionTaskID)
     : m_id(identifier)
     , m_webProcessConnection(WTFMove(connection))
     , m_manager(manager)
+    , m_attributionTaskID(attributionTaskID)
 {
     RELEASE_LOG(ModelElement, "%p - ModelProcessModelPlayerProxy initialized id=%" PRIu64, this, identifier.toUInt64());
     m_objCAdapter = adoptNS([[WKModelProcessModelPlayerProxyObjCAdapter alloc] initWithModelProcessModelPlayerProxy:*this]);
@@ -553,7 +559,7 @@ void ModelProcessModelPlayerProxy::load(WebCore::Model& model, WebCore::LayoutSi
     WKREEngine::shared().runWithSharedScene([this, protectedThis = Ref { *this }, model = Ref { model }] (RESceneRef scene) {
         m_scene = scene;
         if ([getWKSRKEntityClass() isLoadFromDataAvailable])
-            m_loader = loadREModelUsingRKUSDLoader(model.get(), *this);
+            m_loader = loadREModelUsingRKUSDLoader(model.get(), m_attributionTaskID, *this);
         else
             m_loader = WebCore::loadREModel(model.get(), *this);
     });

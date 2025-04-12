@@ -163,6 +163,10 @@ public:
 
 #if PLATFORM(VISION) && ENABLE(MODEL_PROCESS)
     void requestSharedSimulationConnection(CoreIPCAuditToken&&, CompletionHandler<void(std::optional<IPC::SharedFileHandle>)>&&);
+#if HAVE(TASK_IDENTITY_TOKEN)
+    void createMemoryAttributionIDForTask(WebCore::ProcessIdentity, CompletionHandler<void(const std::optional<String>&)>&&);
+    void unregisterMemoryAttributionID(const String&, CompletionHandler<void()>&&);
+#endif
 #endif
 
 private:

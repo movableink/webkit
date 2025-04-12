@@ -456,6 +456,10 @@ public:
 #if ENABLE(MODEL_PROCESS)
     void modelProcessDidFinishLaunching();
     void modelProcessExited(ProcessTerminationReason);
+#if HAVE(TASK_IDENTITY_TOKEN)
+    void createMemoryAttributionIDIfNeeded(CompletionHandler<void(const std::optional<String>&)>&&);
+    void unregisterMemoryAttributionIDIfNeeded();
+#endif
 #endif
 
 #if PLATFORM(COCOA)
@@ -831,6 +835,7 @@ private:
 #endif
 #if ENABLE(MODEL_PROCESS)
     uint64_t m_sharedPreferencesVersionInModelProcess { 0 };
+    std::optional<String> m_memoryAttributionID;
 #endif
     uint64_t m_awaitedSharedPreferencesVersion { 0 };
     CompletionHandler<void(bool success)> m_sharedPreferencesForWebProcessCompletionHandler;

@@ -561,6 +561,7 @@ fi
 if [[ "${WK_PLATFORM_NAME}" == xros ]]; then
     plistbuddy Add :com.apple.surfboard.application-service-client bool YES
     plistbuddy Add :com.apple.surfboard.shared-simulation-connection-request bool YES
+    plistbuddy Add :com.apple.surfboard.shared-simulation-memory-attribution bool YES
 fi
 
     plistbuddy Add :com.apple.developer.hardened-process bool YES
