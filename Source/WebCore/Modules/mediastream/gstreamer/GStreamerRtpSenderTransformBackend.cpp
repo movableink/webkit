@@ -51,10 +51,11 @@ void GStreamerRtpSenderTransformBackend::setTransformableFrameCallback(Callback&
     notImplemented();
 }
 
-void GStreamerRtpSenderTransformBackend::requestKeyFrame()
+bool GStreamerRtpSenderTransformBackend::requestKeyFrame(const String&)
 {
     ASSERT(mediaType() == MediaType::Video);
     notImplemented();
+    return true;
 }
 
 } // namespace WebCore

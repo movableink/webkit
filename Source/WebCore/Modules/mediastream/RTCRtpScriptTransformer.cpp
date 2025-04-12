@@ -171,6 +171,7 @@ void RTCRtpScriptTransformer::enqueueFrame(ScriptExecutionContext& context, Ref<
 
     bool isVideo = m_backend->mediaType() == RTCRtpTransformBackend::MediaType::Video;
     if (isVideo && !m_pendingKeyFramePromises.isEmpty() && frame->isKeyFrame()) {
+        // FIXME: We should take into account rids to resolve promises.
         for (auto& promise : std::exchange(m_pendingKeyFramePromises, { }))
             promise->resolve<IDLUnsignedLongLong>(frame->timestamp());
     }
@@ -190,7 +191,28 @@ void RTCRtpScriptTransformer::enqueueFrame(ScriptExecutionContext& context, Ref<
     m_readableSource->enqueue(value);
 }
 
-void RTCRtpScriptTransformer::generateKeyFrame(Ref<DeferredPromise>&& promise)
+static std::optional<Exception> validateRid(const String& rid)
+{
+    if (rid.isNull())
+        return { };
+
+    if (rid.isEmpty())
+        return Exception { ExceptionCode::NotAllowedError, "rid is empty"_s };
+
+    constexpr unsigned maxRidLength = 255;
+    if (rid.length() > maxRidLength)
+        return Exception { ExceptionCode::NotAllowedError, "rid is too long"_s };
+
+    auto foundBadCharacters = rid.find([](auto character) -> bool {
+        return !isASCIIDigit(character) && !isASCIIAlpha(character);
+    });
+    if (foundBadCharacters != notFound)
+        return Exception { ExceptionCode::NotAllowedError, "rid has a character that is not alpha numeric"_s };
+
+    return { };
+}
+
+void RTCRtpScriptTransformer::generateKeyFrame(const String& rid, Ref<DeferredPromise>&& promise)
 {
     RefPtr context = scriptExecutionContext();
     if (!context || !m_backend || m_backend->side() != RTCRtpTransformBackend::Side::Sender || m_backend->mediaType() != RTCRtpTransformBackend::MediaType::Video) {
@@ -198,10 +220,19 @@ void RTCRtpScriptTransformer::generateKeyFrame(Ref<DeferredPromise>&& promise)
         return;
     }
 
-    bool shouldRequestKeyFrame = m_pendingKeyFramePromises.isEmpty();
+    if (auto exception = validateRid(rid)) {
+        promise->reject(WTFMove(*exception));
+        return;
+    }
+
+    if (!m_backend->requestKeyFrame(rid)) {
+        context->eventLoop().queueTask(TaskSource::Networking, [promise = WTFMove(promise)]() mutable {
+            promise->reject(Exception { ExceptionCode::NotFoundError, "rid was not found or is empty"_s });
+        });
+        return;
+    }
+
     m_pendingKeyFramePromises.append(WTFMove(promise));
-    if (shouldRequestKeyFrame)
-        m_backend->requestKeyFrame();
 }
 
 void RTCRtpScriptTransformer::sendKeyFrameRequest(Ref<DeferredPromise>&& promise)
@@ -213,7 +244,7 @@ void RTCRtpScriptTransformer::sendKeyFrameRequest(Ref<DeferredPromise>&& promise
     }
 
     // FIXME: We should be able to know when the FIR request is sent to resolve the promise at this exact time.
-    m_backend->requestKeyFrame();
+    m_backend->requestKeyFrame({ });
 
     context->eventLoop().queueTask(TaskSource::Networking, [promise = WTFMove(promise)]() mutable {
         promise->resolve();

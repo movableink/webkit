@@ -2,8 +2,8 @@
 
 PASS generateKeyFrame() throws for audio
 PASS generateKeyFrame(null) resolves for video sender, and throws for video receiver
-FAIL generateKeyFrame throws NotAllowedError for invalid rid assert_equals: expected "failure" but got "success"
-FAIL generateKeyFrame throws NotFoundError for unknown rid assert_equals: expected "failure" but got "success"
+PASS generateKeyFrame throws NotAllowedError for invalid rid
+PASS generateKeyFrame throws NotFoundError for unknown rid
 PASS generateKeyFrame throws for unset transforms
 PASS generateKeyFrame timestamp should advance
 PASS await generateKeyFrame, await generateKeyFrame should see an increase in count of keyframes
