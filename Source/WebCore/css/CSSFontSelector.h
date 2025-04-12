@@ -92,6 +92,7 @@ public:
     bool isCSSFontSelector() const final { return true; }
 
     ScriptExecutionContext* scriptExecutionContext() const { return m_context.get(); }
+    Ref<ScriptExecutionContext> protectedScriptExecutionContext() const { return *m_context; }
 
     FontFaceSet* fontFaceSetIfExists();
     FontFaceSet& fontFaceSet();
