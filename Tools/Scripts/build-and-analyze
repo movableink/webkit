@@ -89,6 +89,8 @@ def make_analyzer_flags(output_dir, args):
             'alpha.webkit.UncheckedLocalVarsChecker',
             'alpha.webkit.UncountedCallArgsChecker',
             'alpha.webkit.UncountedLocalVarsChecker',
+            'alpha.webkit.UnretainedCallArgsChecker',
+            'alpha.webkit.UnretainedLambdaCapturesChecker',
             'alpha.webkit.UnretainedLocalVarsChecker',
             'webkit.NoUncountedMemberChecker',
             'webkit.RefCntblBaseVirtualDtor',
