@@ -172,7 +172,7 @@ void RTCRtpScriptTransformer::enqueueFrame(ScriptExecutionContext& context, Ref<
     bool isVideo = m_backend->mediaType() == RTCRtpTransformBackend::MediaType::Video;
     if (isVideo && !m_pendingKeyFramePromises.isEmpty() && frame->isKeyFrame()) {
         for (auto& promise : std::exchange(m_pendingKeyFramePromises, { }))
-            promise->resolve();
+            promise->resolve<IDLUnsignedLongLong>(frame->timestamp());
     }
 
 #if !RELEASE_LOG_DISABLED
