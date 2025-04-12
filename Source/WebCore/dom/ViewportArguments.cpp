@@ -203,7 +203,7 @@ void restrictScaleFactorToInitialScaleIfNotUserScalable(ViewportAttributes& resu
         result.maximumScale = result.minimumScale = result.initialScale;
 }
 
-static float numericPrefix(StringView key, StringView value, const InternalViewportErrorHandler& errorHandler, bool* ok = nullptr)
+static float numericPrefix(StringView key, StringView value, NOESCAPE const InternalViewportErrorHandler& errorHandler, bool* ok = nullptr)
 {
     size_t parsedLength;
     float numericValue;
@@ -224,7 +224,7 @@ static float numericPrefix(StringView key, StringView value, const InternalViewp
     return numericValue;
 }
 
-static float findSizeValue(StringView key, StringView value, const InternalViewportErrorHandler& errorHandler, bool* valueWasExplicit = nullptr)
+static float findSizeValue(StringView key, StringView value, NOESCAPE const InternalViewportErrorHandler& errorHandler, bool* valueWasExplicit = nullptr)
 {
     // 1) Non-negative number values are translated to px lengths.
     // 2) Negative number values are translated to auto.
@@ -251,7 +251,7 @@ static float findSizeValue(StringView key, StringView value, const InternalViewp
     return sizeValue;
 }
 
-static float findScaleValue(StringView key, StringView value, const InternalViewportErrorHandler& errorHandler)
+static float findScaleValue(StringView key, StringView value, NOESCAPE const InternalViewportErrorHandler& errorHandler)
 {
     // 1) Non-negative number values are translated to <number> values.
     // 2) Negative number values are translated to auto.
@@ -279,7 +279,7 @@ static float findScaleValue(StringView key, StringView value, const InternalView
     return numericValue;
 }
 
-static bool findBooleanValue(StringView key, StringView value, const InternalViewportErrorHandler& errorHandler)
+static bool findBooleanValue(StringView key, StringView value, NOESCAPE const InternalViewportErrorHandler& errorHandler)
 {
     // yes and no are used as keywords.
     // Numbers >= 1, numbers <= -1, device-width and device-height are mapped to yes.
@@ -296,7 +296,7 @@ static bool findBooleanValue(StringView key, StringView value, const InternalVie
     return std::abs(numericPrefix(key, value, errorHandler)) >= 1;
 }
 
-static ViewportFit parseViewportFitValue(StringView key, StringView value, const InternalViewportErrorHandler& errorHandler)
+static ViewportFit parseViewportFitValue(StringView key, StringView value, NOESCAPE const InternalViewportErrorHandler& errorHandler)
 {
     if (equalLettersIgnoringASCIICase(value, "auto"_s))
         return ViewportFit::Auto;
@@ -366,7 +366,7 @@ static void reportViewportWarning(Document& document, ViewportErrorCode errorCod
     document.addConsoleMessage(MessageSource::Rendering, viewportErrorMessageLevel(errorCode), message);
 }
 
-void setViewportFeature(ViewportArguments& arguments, StringView key, StringView value, const ViewportErrorHandler& errorHandler)
+void setViewportFeature(ViewportArguments& arguments, StringView key, StringView value, NOESCAPE const ViewportErrorHandler& errorHandler)
 {
     InternalViewportErrorHandler internalErrorHandler = [&errorHandler] (ViewportErrorCode errorCode, StringView replacement1, StringView replacement2) {
         errorHandler(errorCode, viewportErrorMessage(errorCode, replacement1, replacement2));

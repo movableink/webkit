@@ -56,15 +56,10 @@ css/CSSValue.cpp
 css/CSSVariableReferenceValue.cpp
 css/SelectorChecker.cpp
 css/StyleRule.cpp
-dom/ContainerNode.cpp
 dom/ContentVisibilityDocumentState.cpp
 dom/CustomElementDefaultARIA.cpp
 dom/Document.cpp
-dom/MessagePort.cpp
-dom/Node.cpp
 dom/Subscriber.cpp
-dom/ViewTransition.cpp
-dom/ViewportArguments.cpp
 editing/Editor.cpp
 html/FormAssociatedCustomElement.cpp
 html/canvas/CanvasRenderingContext2DBase.cpp

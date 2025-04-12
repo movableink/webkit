@@ -301,7 +301,7 @@ static ContainerNode::ChildChange makeChildChangeForCloneInsertion(ClonedChildIn
 
 template<typename DOMInsertionWork>
 static ALWAYS_INLINE void executeNodeInsertionWithScriptAssertion(ContainerNode& containerNode, Node& child, Node* beforeChild,
-    ContainerNode::ChildChange::Source source, ReplacedAllChildren replacedAllChildren, DOMInsertionWork doNodeInsertion)
+    ContainerNode::ChildChange::Source source, ReplacedAllChildren replacedAllChildren, NOESCAPE const DOMInsertionWork& doNodeInsertion)
 {
     auto childChange = makeChildChangeForInsertion(containerNode, child, beforeChild, source, replacedAllChildren);
 
@@ -331,7 +331,7 @@ static ALWAYS_INLINE void executeNodeInsertionWithScriptAssertion(ContainerNode&
 }
 
 template<typename DOMInsertionWork>
-static ALWAYS_INLINE void executeParserNodeInsertionIntoIsolatedTreeWithoutNotifyingParent(ContainerNode& containerNode, Node& child, DOMInsertionWork doNodeInsertion)
+static ALWAYS_INLINE void executeParserNodeInsertionIntoIsolatedTreeWithoutNotifyingParent(ContainerNode& containerNode, Node& child, NOESCAPE const DOMInsertionWork& doNodeInsertion)
 {
     {
         WidgetHierarchyUpdatesSuspensionScope suspendWidgetHierarchyUpdates;

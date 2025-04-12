@@ -408,17 +408,17 @@ void DOMCache::put(RequestInfo&& info, Ref<FetchResponse>&& response, DOMPromise
 
     if (response->isBodyReceivedByChunk()) {
         auto& responseRef = response.get();
-        responseRef.consumeBodyReceivedByChunk([promise = WTFMove(promise), request = WTFMove(request), response = WTFMove(response), data = SharedBufferBuilder(), pendingActivity = makePendingActivity(*this), this](auto&& result) mutable {
+        responseRef.consumeBodyReceivedByChunk([promise = WTFMove(promise), request = WTFMove(request), response = WTFMove(response), data = SharedBufferBuilder(), pendingActivity = makePendingActivity(*this)](auto&& result) mutable {
 
             if (result.hasException()) {
-                this->putWithResponseData(WTFMove(promise), WTFMove(request), WTFMove(response), result.releaseException().isolatedCopy());
+                pendingActivity->object().putWithResponseData(WTFMove(promise), WTFMove(request), WTFMove(response), result.releaseException().isolatedCopy());
                 return;
             }
 
             if (auto* chunk = result.returnValue())
                 data.append(*chunk);
             else
-                this->putWithResponseData(WTFMove(promise), WTFMove(request), WTFMove(response), RefPtr<SharedBuffer> { data.takeAsContiguous() });
+                pendingActivity->object().putWithResponseData(WTFMove(promise), WTFMove(request), WTFMove(response), RefPtr<SharedBuffer> { data.takeAsContiguous() });
         });
         return;
     }
@@ -494,14 +494,14 @@ void DOMCache::queryCache(ResourceRequest&& request, const CacheQueryOptions& op
 
     RetrieveRecordsOptions retrieveOptions { WTFMove(request), scriptExecutionContext()->crossOriginEmbedderPolicy(), *scriptExecutionContext()->securityOrigin(), options.ignoreSearch, options.ignoreMethod, options.ignoreVary, shouldRetrieveResponses == ShouldRetrieveResponses::Yes };
 
-    context->enqueueTaskWhenSettled(m_connection->retrieveRecords(m_identifier, WTFMove(retrieveOptions)), TaskSource::DOMManipulation, [this, pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)] (auto&& result) mutable {
-        if (m_isStopped) {
-            callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), DOMCacheEngine::Error::Stopped));
+    context->enqueueTaskWhenSettled(m_connection->retrieveRecords(m_identifier, WTFMove(retrieveOptions)), TaskSource::DOMManipulation, [pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)] (auto&& result) mutable {
+        if (pendingActivity->object().m_isStopped) {
+            callback(DOMCacheEngine::convertToExceptionAndLog(pendingActivity->object().scriptExecutionContext(), DOMCacheEngine::Error::Stopped));
             return;
         }
 
         if (!result) {
-            callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
+            callback(DOMCacheEngine::convertToExceptionAndLog(pendingActivity->object().scriptExecutionContext(), result.error()));
             return;
         }
 
@@ -522,14 +522,14 @@ void DOMCache::batchDeleteOperation(const FetchRequest& request, CacheQueryOptio
         return;
     }
 
-    context->enqueueTaskWhenSettled(m_connection->batchDeleteOperation(m_identifier, request.internalRequest(), WTFMove(options)), TaskSource::DOMManipulation, [this, pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)] (auto&& result) mutable {
-        if (m_isStopped) {
-            callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), DOMCacheEngine::Error::Stopped));
+    context->enqueueTaskWhenSettled(m_connection->batchDeleteOperation(m_identifier, request.internalRequest(), WTFMove(options)), TaskSource::DOMManipulation, [pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)] (auto&& result) mutable {
+        if (pendingActivity->object().m_isStopped) {
+            callback(DOMCacheEngine::convertToExceptionAndLog(pendingActivity->object().scriptExecutionContext(), DOMCacheEngine::Error::Stopped));
             return;
         }
 
         if (!result) {
-            callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
+            callback(DOMCacheEngine::convertToExceptionAndLog(pendingActivity->object().scriptExecutionContext(), result.error()));
             return;
         }
         callback(!result.value().isEmpty());
@@ -576,14 +576,14 @@ void DOMCache::batchPutOperation(Vector<Record>&& records, CompletionHandler<voi
     auto crossThreadRecords = WTF::map(WTFMove(records), [](Record&& record) {
         return toCrossThreadRecord(WTFMove(record));
     });
-    context->enqueueTaskWhenSettled(m_connection->batchPutOperation(m_identifier, WTFMove(crossThreadRecords)), TaskSource::DOMManipulation, [this, pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)] (auto&& result) mutable {
-        if (m_isStopped) {
-            callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), DOMCacheEngine::Error::Stopped));
+    context->enqueueTaskWhenSettled(m_connection->batchPutOperation(m_identifier, WTFMove(crossThreadRecords)), TaskSource::DOMManipulation, [pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)] (auto&& result) mutable {
+        if (pendingActivity->object().m_isStopped) {
+            callback(DOMCacheEngine::convertToExceptionAndLog(pendingActivity->object().scriptExecutionContext(), DOMCacheEngine::Error::Stopped));
             return;
         }
 
         if (!result) {
-            callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
+            callback(DOMCacheEngine::convertToExceptionAndLog(pendingActivity->object().scriptExecutionContext(), result.error()));
             return;
         }
         callback({ });

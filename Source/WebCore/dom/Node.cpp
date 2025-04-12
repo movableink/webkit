@@ -2210,7 +2210,7 @@ enum EventTargetInterfaceType Node::eventTargetInterface() const
 }
 
 template <typename MoveNodeFunction, typename MoveShadowRootFunction>
-static unsigned traverseSubtreeToUpdateTreeScope(Node& root, MoveNodeFunction moveNode, MoveShadowRootFunction moveShadowRoot)
+static unsigned traverseSubtreeToUpdateTreeScope(Node& root, NOESCAPE const MoveNodeFunction& moveNode, NOESCAPE const MoveShadowRootFunction& moveShadowRoot)
 {
     unsigned count = 0;
     for (Node* node = &root; node; node = NodeTraversal::next(*node, &root)) {

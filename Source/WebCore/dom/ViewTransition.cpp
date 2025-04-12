@@ -175,10 +175,10 @@ void ViewTransition::skipViewTransition(ExceptionOr<JSC::JSValue>&& reason)
     ASSERT(m_phase != ViewTransitionPhase::Done);
 
     if (m_phase < ViewTransitionPhase::UpdateCallbackCalled) {
-        protectedDocument()->checkedEventLoop()->queueTask(TaskSource::DOMManipulation, [this, weakThis = WeakPtr { *this }] {
+        protectedDocument()->checkedEventLoop()->queueTask(TaskSource::DOMManipulation, [weakThis = WeakPtr { *this }] {
             RefPtr protectedThis = weakThis.get();
             if (protectedThis && protectedThis->protectedDocument()->globalObject())
-                callUpdateCallback();
+                protectedThis->callUpdateCallback();
         });
 
         if (m_isCrossDocument)
@@ -209,7 +209,7 @@ void ViewTransition::skipViewTransition(ExceptionOr<JSC::JSValue>&& reason)
             Ref { m_finished.second }->resolve();
             break;
         case DOMPromise::Status::Rejected:
-            Ref { m_finished.second }->rejectWithCallback([&] (auto&) {
+            Ref { m_finished.second }->rejectWithCallback([this, protectedThis = Ref { *this }] (auto&) {
                 return Ref { m_updateCallbackDone.first }->result();
             }, RejectAsHandled::Yes);
             break;
@@ -269,24 +269,24 @@ void ViewTransition::callUpdateCallback()
         }
     }
 
-    callbackPromise->whenSettled([this, weakThis = WeakPtr { *this }, callbackPromise] () mutable {
+    callbackPromise->whenSettled([weakThis = WeakPtr { *this }, callbackPromise] () mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
-        m_updateCallbackTimeout = nullptr;
+        protectedThis->m_updateCallbackTimeout = nullptr;
         switch (callbackPromise->status()) {
         case DOMPromise::Status::Fulfilled:
-            Ref { m_updateCallbackDone.second }->resolve();
-            activateViewTransition();
+            Ref { protectedThis->m_updateCallbackDone.second }->resolve();
+            protectedThis->activateViewTransition();
             break;
         case DOMPromise::Status::Rejected:
-            Ref { m_updateCallbackDone.second }->rejectWithCallback([&] (auto&) {
+            Ref { protectedThis->m_updateCallbackDone.second }->rejectWithCallback([&] (auto&) {
                 return callbackPromise->result();
             }, RejectAsHandled::No);
-            if (m_phase == ViewTransitionPhase::Done)
+            if (protectedThis->m_phase == ViewTransitionPhase::Done)
                 return;
-            Ref { m_ready.second }->markAsHandled();
-            skipViewTransition(callbackPromise->result());
+            Ref { protectedThis->m_ready.second }->markAsHandled();
+            protectedThis->skipViewTransition(callbackPromise->result());
             break;
         case DOMPromise::Status::Pending:
             ASSERT_NOT_REACHED();
@@ -294,14 +294,14 @@ void ViewTransition::callUpdateCallback()
         }
     });
 
-    m_updateCallbackTimeout = protectedDocument()->checkedEventLoop()->scheduleTask(defaultTimeout, TaskSource::DOMManipulation, [this, weakThis = WeakPtr { *this }] {
-        LOG_WITH_STREAM(ViewTransitions, stream << "ViewTransition " << this << " update callback timed out");
+    m_updateCallbackTimeout = protectedDocument()->checkedEventLoop()->scheduleTask(defaultTimeout, TaskSource::DOMManipulation, [weakThis = WeakPtr { *this }] {
         RefPtr protectedThis = weakThis.get();
+        LOG_WITH_STREAM(ViewTransitions, stream << "ViewTransition " << protectedThis.get() << " update callback timed out");
         if (!protectedThis)
             return;
-        if (m_phase == ViewTransitionPhase::Done)
+        if (protectedThis->m_phase == ViewTransitionPhase::Done)
             return;
-        skipViewTransition(Exception { ExceptionCode::TimeoutError, "View transition update callback timed out."_s });
+        protectedThis->skipViewTransition(Exception { ExceptionCode::TimeoutError, "View transition update callback timed out."_s });
     });
 }
 
@@ -326,14 +326,14 @@ void ViewTransition::setupViewTransition()
     else
         protectedDocument()->setRenderingIsSuppressedForViewTransitionAfterUpdateRendering();
 
-    protectedDocument()->checkedEventLoop()->queueTask(TaskSource::DOMManipulation, [this, weakThis = WeakPtr { *this }] {
+    protectedDocument()->checkedEventLoop()->queueTask(TaskSource::DOMManipulation, [weakThis = WeakPtr { *this }] {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
-        if (m_phase == ViewTransitionPhase::Done)
+        if (protectedThis->m_phase == ViewTransitionPhase::Done)
             return;
 
-        callUpdateCallback();
+        protectedThis->callUpdateCallback();
     });
 }
 
@@ -453,7 +453,7 @@ static RefPtr<ImageBuffer> snapshotElementVisualOverflowClippedToViewport(LocalF
 }
 
 // This only iterates through elements with a RenderLayer, which is sufficient for View Transitions which force their creation.
-static ExceptionOr<void> forEachRendererInPaintOrder(const std::function<ExceptionOr<void>(RenderLayerModelObject&)>& function, RenderLayer& layer)
+static ExceptionOr<void> forEachRendererInPaintOrder(NOESCAPE const std::function<ExceptionOr<void>(RenderLayerModelObject&)>& function, RenderLayer& layer)
 {
     auto result = function(layer.renderer());
     if (result.hasException())

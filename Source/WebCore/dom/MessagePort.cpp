@@ -249,12 +249,13 @@ void MessagePort::dispatchMessages()
     if (!context || context->activeDOMObjectsAreSuspended() || !isEntangled())
         return;
 
-    auto messagesTakenHandler = [this, protectedThis = makePendingActivity(*this)](Vector<MessageWithMessagePorts>&& messages, CompletionHandler<void()>&& completionCallback) mutable {
+    auto messagesTakenHandler = [pendingActivity = makePendingActivity(*this)](Vector<MessageWithMessagePorts>&& messages, CompletionHandler<void()>&& completionCallback) mutable {
+        Ref protectedThis = pendingActivity->object();
         auto scopeExit = makeScopeExit(WTFMove(completionCallback));
 
-        LOG(MessagePorts, "MessagePort %s (%p) dispatching %zu messages", m_identifier.logString().utf8().data(), this, messages.size());
+        LOG(MessagePorts, "MessagePort %s (%p) dispatching %zu messages", protectedThis->m_identifier.logString().utf8().data(), protectedThis.ptr(), messages.size());
 
-        RefPtr<ScriptExecutionContext> context = scriptExecutionContext();
+        RefPtr<ScriptExecutionContext> context = protectedThis->scriptExecutionContext();
         if (!context || !context->globalObject())
             return;
 
@@ -278,7 +279,7 @@ void MessagePort::dispatchMessages()
             }
 
             // Per specification, each MessagePort object has a task source called the port message queue.
-            queueTaskKeepingObjectAlive(*this, TaskSource::PostedMessageQueue, [event = WTFMove(event)](auto& port) {
+            queueTaskKeepingObjectAlive(protectedThis.get(), TaskSource::PostedMessageQueue, [event = WTFMove(event)](auto& port) {
                 port.dispatchEvent(event.event);
             });
         }

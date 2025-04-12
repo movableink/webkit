@@ -152,14 +152,14 @@ public:
     }
 
     template<typename CallbackType>
-    void enumerateEventListenerTypes(CallbackType callback) const
+    void enumerateEventListenerTypes(NOESCAPE const CallbackType& callback) const
     {
         if (auto* data = eventTargetData())
             data->eventListenerMap.enumerateEventListenerTypes(callback);
     }
 
     template<typename CallbackType>
-    bool containsMatchingEventListener(CallbackType callback) const
+    bool containsMatchingEventListener(NOESCAPE const CallbackType& callback) const
     {
         if (auto* data = eventTargetData())
             return data->eventListenerMap.containsMatchingEventListener(callback);

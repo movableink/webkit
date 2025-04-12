@@ -68,14 +68,14 @@ public:
     Vector<AtomString> eventTypes() const;
 
     template<typename CallbackType>
-    void enumerateEventListenerTypes(CallbackType callback) const
+    void enumerateEventListenerTypes(NOESCAPE const CallbackType& callback) const
     {
         for (auto& entry : m_entries)
             callback(entry.first, entry.second.size());
     }
 
     template<typename CallbackType>
-    bool containsMatchingEventListener(CallbackType callback) const
+    bool containsMatchingEventListener(NOESCAPE const CallbackType& callback) const
     {
         for (auto& entry : m_entries) {
             if (callback(entry.first, m_entries))
