@@ -86,13 +86,13 @@ DOMNode *kit(Node* value)
 - (NSString *)nodeName
 {
     JSMainThreadNullState state;
-    return unwrap(*self).nodeName();
+    return unwrap(*self).nodeName().createNSString().autorelease();
 }
 
 - (NSString *)nodeValue
 {
     JSMainThreadNullState state;
-    return unwrap(*self).nodeValue();
+    return unwrap(*self).nodeValue().createNSString().autorelease();
 }
 
 - (void)setNodeValue:(NSString *)newNodeValue
@@ -182,13 +182,13 @@ DOMNode *kit(Node* value)
 - (NSString *)baseURI
 {
     JSMainThreadNullState state;
-    return unwrap(*self).baseURI().string();
+    return unwrap(*self).baseURI().string().createNSString().autorelease();
 }
 
 - (NSString *)textContent
 {
     JSMainThreadNullState state;
-    return unwrap(*self).textContent();
+    return unwrap(*self).textContent().createNSString().autorelease();
 }
 
 - (void)setTextContent:(NSString *)newTextContent

@@ -377,7 +377,7 @@ void AXObjectCache::postPlatformAnnouncementNotification(const String& message)
 #endif
 
     NSDictionary *userInfo = @{ NSAccessibilityPriorityKey: @(NSAccessibilityPriorityHigh),
-        NSAccessibilityAnnouncementKey: message,
+        NSAccessibilityAnnouncementKey: message.createNSString().get(),
     };
     NSAccessibilityPostNotificationWithUserInfo(NSApp, NSAccessibilityAnnouncementRequestedNotification, userInfo);
 

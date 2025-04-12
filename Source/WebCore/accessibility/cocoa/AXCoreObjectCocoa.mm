@@ -143,7 +143,7 @@ void attributedStringSetExpandedText(NSMutableAttributedString *string, const AX
         return;
 
     if (object.supportsExpandedTextValue())
-        [string addAttribute:NSAccessibilityExpandedTextValueAttribute value:object.expandedTextValue() range:range];
+        [string addAttribute:NSAccessibilityExpandedTextValueAttribute value:object.expandedTextValue().createNSString().get() range:range];
 }
 
 void attributedStringSetNeedsSpellCheck(NSMutableAttributedString *string, const AXCoreObject& object)
@@ -339,7 +339,7 @@ bool AXCoreObject::isEmptyGroup()
     if (UNLIKELY(isRemoteFrame()))
         return false;
 
-    return [rolePlatformString() isEqual:NSAccessibilityGroupRole]
+    return [rolePlatformString().createNSString() isEqual:NSAccessibilityGroupRole]
         && !firstUnignoredChild()
         && ![renderWidgetChildren(*this) count];
 }

@@ -210,7 +210,7 @@ static long writeURLForTypes(const Vector<String>& types, const String& pasteboa
     ASSERT(!pasteboardURL.url.isEmpty());
     
     RetainPtr nsURL = pasteboardURL.url.createNSURL();
-    NSString *userVisibleString = pasteboardURL.userVisibleForm;
+    RetainPtr userVisibleString = pasteboardURL.userVisibleForm.createNSString();
     RetainPtr title = pasteboardURL.title.createNSString();
     if (![title length]) {
         title = [[nsURL path] lastPathComponent];
@@ -225,11 +225,11 @@ static long writeURLForTypes(const Vector<String>& types, const String& pasteboa
     if (types.contains(String(legacyURLPasteboardType())))
         newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType([nsURL absoluteString], legacyURLPasteboardType(), pasteboardName, context);
     if (types.contains(WebURLPboardType))
-        newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType(userVisibleString, WebURLPboardType, pasteboardName, context);
+        newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType(userVisibleString.get(), WebURLPboardType, pasteboardName, context);
     if (types.contains(WebURLNamePboardType))
         newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType(title.get(), WebURLNamePboardType, pasteboardName, context);
     if (types.contains(String(legacyStringPasteboardType())))
-        newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType(userVisibleString, legacyStringPasteboardType(), pasteboardName, context);
+        newChangeCount = platformStrategies()->pasteboardStrategy()->setStringForType(userVisibleString.get(), legacyStringPasteboardType(), pasteboardName, context);
 
     return newChangeCount;
 }
@@ -609,9 +609,9 @@ bool Pasteboard::hasData()
 
 static String cocoaTypeFromHTMLClipboardType(const String& type)
 {
-    if (NSString *platformType = PlatformPasteboard::platformPasteboardTypeForSafeTypeForDOMToReadAndWrite(type)) {
-        if (platformType.length)
-            return platformType;
+    if (RetainPtr platformType = PlatformPasteboard::platformPasteboardTypeForSafeTypeForDOMToReadAndWrite(type).createNSString().get()) {
+        if (platformType.get().length)
+            return platformType.get();
     }
 
     // Reject types that might contain subframe information.
@@ -648,7 +648,7 @@ Vector<String> Pasteboard::readPlatformValuesAsStrings(const String& domType, in
     auto values = strategy.allStringsForType(cocoaType, pasteboardName, context());
     if (cocoaType == String(legacyStringPasteboardType())) {
         values = values.map([&] (auto& value) -> String {
-            return [value precomposedStringWithCanonicalMapping];
+            return [value.createNSString() precomposedStringWithCanonicalMapping];
         });
     }
 
@@ -703,7 +703,7 @@ void Pasteboard::writeString(const String& type, const String& data)
 
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     if (cocoaType == String(legacyURLPasteboardType()) || cocoaType == String(kUTTypeFileURL)) {
-        NSURL *url = [NSURL URLWithString:cocoaData];
+        RetainPtr url = adoptNS([[NSURL alloc] initWithString:cocoaData.createNSString().get()]);
         if ([url isFileURL])
             return;
         platformStrategies()->pasteboardStrategy()->setTypes({ cocoaType }, m_pasteboardName, context());

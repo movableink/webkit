@@ -95,7 +95,7 @@
     WebCore::JSMainThreadNullState state;
     auto range = makeSimpleRange(*IMPL);
     range.start.document().updateLayout();
-    return plainText(range);
+    return plainText(range).createNSString().autorelease();
 }
 
 - (void)setStart:(DOMNode *)refNode offset:(int)offset
@@ -219,7 +219,7 @@
 - (NSString *)toString
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->toString();
+    return IMPL->toString().createNSString().autorelease();
 }
 
 - (void)detach

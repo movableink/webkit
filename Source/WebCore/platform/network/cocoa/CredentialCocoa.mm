@@ -91,7 +91,7 @@ NSURLCredential *Credential::nsCredential() const
     if (CredentialBase::isEmpty())
         return nil;
 
-    m_nsCredential = adoptNS([[NSURLCredential alloc] initWithUser:user() password:password() persistence:toNSURLCredentialPersistence(persistence())]);
+    m_nsCredential = adoptNS([[NSURLCredential alloc] initWithUser:user().createNSString().get() password:password().createNSString().get() persistence:toNSURLCredentialPersistence(persistence())]);
 
     return m_nsCredential.get();
 }

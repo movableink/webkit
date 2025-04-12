@@ -60,7 +60,7 @@ void WebValidationMessageClient::showValidationMessage(const Element& anchor, co
 
     m_currentAnchor = &anchor;
     m_currentAnchorRect = anchor.boundingBoxInRootViewCoordinates();
-    [m_view showFormValidationMessage:message withAnchorRect:m_currentAnchorRect];
+    [m_view showFormValidationMessage:message.createNSString().get() withAnchorRect:m_currentAnchorRect];
 }
 
 void WebValidationMessageClient::hideValidationMessage(const Element& anchor)

@@ -39,7 +39,7 @@ WebCore::ResourceError WebResourceLoadScheduler::pluginWillHandleLoadError(const
 
 WebCore::ResourceError WebResourceLoadScheduler::pluginWillHandleLoadErrorFromResponse(const WebCore::ResourceResponse& response)
 {
-    return [[[NSError alloc] _initWithPluginErrorCode:WebKitErrorPlugInWillHandleLoad contentURL:response.url().createNSURL().get() pluginPageURL:nil pluginName:nil MIMEType:response.mimeType()] autorelease];
+    return [[[NSError alloc] _initWithPluginErrorCode:WebKitErrorPlugInWillHandleLoad contentURL:response.url().createNSURL().get() pluginPageURL:nil pluginName:nil MIMEType:response.mimeType().createNSString().get()] autorelease];
 }
 
 WebCore::ResourceError WebResourceLoadScheduler::cancelledError(const WebCore::ResourceRequest& request) const

@@ -142,7 +142,7 @@ using namespace JSC;
     if (nodeType != Node::DOCUMENT_NODE && nodeType != Node::DOCUMENT_TYPE_NODE)
         markupString = makeString(documentTypeString(node.document()), markupString);
 
-    return markupString;
+    return markupString.createNSString().autorelease();
 }
 
 - (NSRect)_renderRect:(bool *)isReplaced
@@ -193,7 +193,7 @@ using namespace JSC;
 - (NSString *)markupString
 {
     auto range = makeSimpleRange(*core(self));
-    return makeString(documentTypeString(range.start.document()), serializePreservingVisualAppearance(range, nullptr, AnnotateForInterchange::Yes));
+    return makeString(documentTypeString(range.start.document()), serializePreservingVisualAppearance(range, nullptr, AnnotateForInterchange::Yes)).createNSString().autorelease();
 }
 
 @end

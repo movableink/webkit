@@ -43,7 +43,7 @@
 - (NSString *)text
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->text();
+    return IMPL->text().createNSString().autorelease();
 }
 
 - (void)setText:(NSString *)newText
@@ -115,7 +115,7 @@
 - (NSString *)src
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr).string();
+    return IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr).string().createNSString().autorelease();
 }
 
 - (void)setSrc:(NSString *)newSrc
@@ -139,7 +139,7 @@
 - (NSString *)crossOrigin
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->crossOrigin();
+    return IMPL->crossOrigin().createNSString().autorelease();
 }
 
 - (void)setCrossOrigin:(NSString *)newCrossOrigin

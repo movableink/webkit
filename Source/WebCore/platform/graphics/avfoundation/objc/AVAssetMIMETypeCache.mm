@@ -116,11 +116,11 @@ bool AVAssetMIMETypeCache::canDecodeExtendedType(const ContentType& typeParamete
 #if HAVE(AVURLASSET_ISPLAYABLEEXTENDEDMIMETYPEWITHOPTIONS)
     if (PAL::canLoad_AVFoundation_AVURLAssetExtendedMIMETypePlayabilityTreatPlaylistMIMETypesAsISOBMFFMediaDataContainersKey()
         && [PAL::getAVURLAssetClass() respondsToSelector:@selector(isPlayableExtendedMIMEType:options:)]) {
-        if ([PAL::getAVURLAssetClass() isPlayableExtendedMIMEType:type.raw() options:@{ AVURLAssetExtendedMIMETypePlayabilityTreatPlaylistMIMETypesAsISOBMFFMediaDataContainersKey: @YES }])
+        if ([PAL::getAVURLAssetClass() isPlayableExtendedMIMEType:type.raw().createNSString().get() options:@{ AVURLAssetExtendedMIMETypePlayabilityTreatPlaylistMIMETypesAsISOBMFFMediaDataContainersKey: @YES }])
             return true;
     } else
 #endif
-    if ([PAL::getAVURLAssetClass() isPlayableExtendedMIMEType:type.raw()])
+    if ([PAL::getAVURLAssetClass() isPlayableExtendedMIMEType:type.raw().createNSString().get()])
         return true;
 
 #endif // ENABLE(VIDEO) && USE(AVFOUNDATION)

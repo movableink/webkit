@@ -53,7 +53,7 @@
 
 - (NSString *)manifest
 {
-    return nullString();
+    return @"";
 }
 
 - (void)setManifest:(NSString *)newManifest

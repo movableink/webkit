@@ -63,7 +63,7 @@ ValidationBubble::ValidationBubble(NSView* view, const String& message, const Se
     [label setEditable:NO];
     [label setDrawsBackground:NO];
     [label setBordered:NO];
-    [label setStringValue:message];
+    [label setStringValue:message.createNSString().get()];
     m_fontSize = std::max(settings.minimumFontSize, 13.0);
     [label setFont:[NSFont systemFontOfSize:m_fontSize]];
     [label setMaximumNumberOfLines:4];

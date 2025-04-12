@@ -201,7 +201,7 @@ DOMHTMLTextAreaElement *kit(WebCore::HTMLTextAreaElement* value)
 - (NSString *)defaultValue
 {
     WebCore::JSMainThreadNullState state;
-    return unwrap(*self).defaultValue();
+    return unwrap(*self).defaultValue().createNSString().autorelease();
 }
 
 - (void)setDefaultValue:(NSString *)newDefaultValue
@@ -213,7 +213,7 @@ DOMHTMLTextAreaElement *kit(WebCore::HTMLTextAreaElement* value)
 - (NSString *)value
 {
     WebCore::JSMainThreadNullState state;
-    return unwrap(*self).value();
+    return unwrap(*self).value().createNSString().autorelease();
 }
 
 - (void)setValue:(NSString *)newValue
@@ -291,7 +291,7 @@ DOMHTMLTextAreaElement *kit(WebCore::HTMLTextAreaElement* value)
 - (NSString *)autocomplete
 {
     WebCore::JSMainThreadNullState state;
-    return unwrap(*self).autocomplete();
+    return unwrap(*self).autocomplete().createNSString().autorelease();
 }
 
 - (void)setAutocomplete:(NSString *)newAutocomplete

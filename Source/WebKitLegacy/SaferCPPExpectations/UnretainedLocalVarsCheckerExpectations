@@ -49,9 +49,7 @@ mac/Panels/WebPanelAuthenticationHandler.m
 mac/Plugins/WebBasePluginPackage.mm
 mac/Plugins/WebPluginController.mm
 mac/Plugins/WebPluginDatabase.mm
-mac/Storage/WebDatabaseProvider.mm
 mac/Storage/WebStorageManager.mm
-mac/WebCoreSupport/CorrectionPanel.mm
 mac/WebCoreSupport/PopupMenuMac.mm
 mac/WebCoreSupport/WebChromeClient.mm
 mac/WebCoreSupport/WebContextMenuClient.mm
@@ -69,7 +67,6 @@ mac/WebView/WebDelegateImplementationCaching.mm
 mac/WebView/WebDynamicScrollBarsView.mm
 mac/WebView/WebFrame.mm
 mac/WebView/WebFrameView.mm
-mac/WebView/WebHTMLRepresentation.mm
 mac/WebView/WebHTMLView.mm
 mac/WebView/WebImmediateActionController.mm
 mac/WebView/WebJSPDFDoc.mm

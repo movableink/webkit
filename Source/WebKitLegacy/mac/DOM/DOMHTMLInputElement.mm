@@ -99,7 +99,7 @@
 - (NSString *)autocomplete
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->autocomplete();
+    return IMPL->autocomplete().createNSString().autorelease();
 }
 
 - (void)setAutocomplete:(NSString *)newAutocomplete
@@ -191,7 +191,7 @@
 - (NSString *)formAction
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->formAction();
+    return IMPL->formAction().createNSString().autorelease();
 }
 
 - (void)setFormAction:(NSString *)newFormAction
@@ -203,7 +203,7 @@
 - (NSString *)formEnctype
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->formEnctype();
+    return IMPL->formEnctype().createNSString().autorelease();
 }
 
 - (void)setFormEnctype:(NSString *)newFormEnctype
@@ -215,7 +215,7 @@
 - (NSString *)formMethod
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->formMethod();
+    return IMPL->formMethod().createNSString().autorelease();
 }
 
 - (void)setFormMethod:(NSString *)newFormMethod
@@ -389,7 +389,7 @@
 - (NSString *)size
 {
     WebCore::JSMainThreadNullState state;
-    return WTF::String::number(IMPL->size());
+    return WTF::String::number(IMPL->size()).createNSString().autorelease();
 }
 
 - (void)setSize:(NSString *)newSize
@@ -401,7 +401,7 @@
 - (NSString *)src
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr).string();
+    return IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr).string().createNSString().autorelease();
 }
 
 - (void)setSrc:(NSString *)newSrc
@@ -449,7 +449,7 @@
 - (NSString *)value
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->value();
+    return IMPL->value().createNSString().autorelease();
 }
 
 - (void)setValue:(NSString *)newValue
@@ -503,7 +503,7 @@
 - (NSString *)validationMessage
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->validationMessage();
+    return IMPL->validationMessage().createNSString().autorelease();
 }
 
 - (DOMNodeList *)labels
@@ -596,7 +596,7 @@
 - (NSString *)altDisplayString
 {
     WebCore::JSMainThreadNullState state;
-    return WebCore::displayString(IMPL->alt(), core(self));
+    return WebCore::displayString(IMPL->alt(), core(self)).createNSString().autorelease();
 }
 
 - (NSURL *)absoluteImageURL

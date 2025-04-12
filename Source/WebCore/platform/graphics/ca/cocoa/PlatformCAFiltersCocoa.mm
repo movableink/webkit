@@ -164,7 +164,7 @@ void PlatformCAFilters::presentationModifiers(const FilterOperations& initialFil
         case FilterOperation::Type::Contrast:
         case FilterOperation::Type::Blur: {
             auto keyValueName = makeString("filters."_s, filterName, '.', animatedFilterPropertyName(initialFilterOperation->type()));
-            presentationModifiers.append({ type, adoptNS([[CAPresentationModifier alloc] initWithKeyPath:keyValueName initialValue:filterValueForOperation(initialFilterOperation).get() additive:NO group:group.get()]) });
+            presentationModifiers.append({ type, adoptNS([[CAPresentationModifier alloc] initWithKeyPath:keyValueName.createNSString().get() initialValue:filterValueForOperation(initialFilterOperation).get() additive:NO group:group.get()]) });
             continue;
         }
         case FilterOperation::Type::AppleInvertLightness:
@@ -274,35 +274,35 @@ void PlatformCAFilters::setFiltersOnLayer(PlatformLayer* layer, const FilterOper
             const auto& colorMatrixOperation = downcast<BasicColorMatrixFilterOperation>(filterOperation);
             CAFilter *filter = [CAFilter filterWithType:kCAFilterColorMonochrome];
             [filter setValue:[NSNumber numberWithFloat:colorMatrixOperation.amount()] forKey:@"inputAmount"];
-            [filter setName:filterName];
+            [filter setName:filterName.createNSString().get()];
             return filter;
         }
         case FilterOperation::Type::Sepia: {
             RetainPtr<NSValue> colorMatrixValue = PlatformCAFilters::colorMatrixValueForFilter(filterOperation.type(), &filterOperation);
             CAFilter *filter = [CAFilter filterWithType:kCAFilterColorMatrix];
             [filter setValue:colorMatrixValue.get() forKey:@"inputColorMatrix"];
-            [filter setName:filterName];
+            [filter setName:filterName.createNSString().get()];
             return filter;
         }
         case FilterOperation::Type::Saturate: {
             const auto& colorMatrixOperation = downcast<BasicColorMatrixFilterOperation>(filterOperation);
             CAFilter *filter = [CAFilter filterWithType:kCAFilterColorSaturate];
             [filter setValue:[NSNumber numberWithFloat:colorMatrixOperation.amount()] forKey:@"inputAmount"];
-            [filter setName:filterName];
+            [filter setName:filterName.createNSString().get()];
             return filter;
         }
         case FilterOperation::Type::HueRotate: {
             const auto& colorMatrixOperation = downcast<BasicColorMatrixFilterOperation>(filterOperation);
             CAFilter *filter = [CAFilter filterWithType:kCAFilterColorHueRotate];
             [filter setValue:[NSNumber numberWithFloat:deg2rad(colorMatrixOperation.amount())] forKey:@"inputAngle"];
-            [filter setName:filterName];
+            [filter setName:filterName.createNSString().get()];
             return filter;
         }
         case FilterOperation::Type::Invert: {
             RetainPtr<NSValue> colorMatrixValue = PlatformCAFilters::colorMatrixValueForFilter(filterOperation.type(), &filterOperation);
             CAFilter *filter = [CAFilter filterWithType:kCAFilterColorMatrix];
             [filter setValue:colorMatrixValue.get() forKey:@"inputColorMatrix"];
-            [filter setName:filterName];
+            [filter setName:filterName.createNSString().get()];
             return filter;
         }
         case FilterOperation::Type::AppleInvertLightness:
@@ -312,21 +312,21 @@ void PlatformCAFilters::setFiltersOnLayer(PlatformLayer* layer, const FilterOper
             RetainPtr<NSValue> colorMatrixValue = PlatformCAFilters::colorMatrixValueForFilter(filterOperation.type(), &filterOperation);
             CAFilter *filter = [CAFilter filterWithType:kCAFilterColorMatrix];
             [filter setValue:colorMatrixValue.get() forKey:@"inputColorMatrix"];
-            [filter setName:filterName];
+            [filter setName:filterName.createNSString().get()];
             return filter;
         }
         case FilterOperation::Type::Brightness: {
             RetainPtr<NSValue> colorMatrixValue = PlatformCAFilters::colorMatrixValueForFilter(filterOperation.type(), &filterOperation);
             CAFilter *filter = [CAFilter filterWithType:kCAFilterColorMatrix];
             [filter setValue:colorMatrixValue.get() forKey:@"inputColorMatrix"];
-            [filter setName:filterName];
+            [filter setName:filterName.createNSString().get()];
             return filter;
         }
         case FilterOperation::Type::Contrast: {
             RetainPtr<NSValue> colorMatrixValue = PlatformCAFilters::colorMatrixValueForFilter(filterOperation.type(), &filterOperation);
             CAFilter *filter = [CAFilter filterWithType:kCAFilterColorMatrix];
             [filter setValue:colorMatrixValue.get() forKey:@"inputColorMatrix"];
-            [filter setName:filterName];
+            [filter setName:filterName.createNSString().get()];
             return filter;
         }
         case FilterOperation::Type::Blur: {
@@ -348,7 +348,7 @@ void PlatformCAFilters::setFiltersOnLayer(PlatformLayer* layer, const FilterOper
                     [filter setValue:@YES forKey:@"inputHardEdges"];
 #endif
             }
-            [filter setName:filterName];
+            [filter setName:filterName.createNSString().get()];
             return filter;
         }
         case FilterOperation::Type::Passthrough:

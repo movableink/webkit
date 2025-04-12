@@ -63,7 +63,7 @@
 - (NSString *)label
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->label();
+    return IMPL->label().createNSString().autorelease();
 }
 
 - (void)setLabel:(NSString *)newLabel
@@ -99,7 +99,7 @@
 - (NSString *)value
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->value();
+    return IMPL->value().createNSString().autorelease();
 }
 
 - (void)setValue:(NSString *)newValue
@@ -111,7 +111,7 @@
 - (NSString *)text
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->text();
+    return IMPL->text().createNSString().autorelease();
 }
 
 - (int)index

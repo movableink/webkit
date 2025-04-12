@@ -122,13 +122,13 @@
 - (NSString *)xmlEncoding
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->xmlEncoding();
+    return IMPL->xmlEncoding().createNSString().autorelease();
 }
 
 - (NSString *)xmlVersion
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->xmlVersion();
+    return IMPL->xmlVersion().createNSString().autorelease();
 }
 
 - (void)setXmlVersion:(NSString *)newXmlVersion
@@ -152,7 +152,7 @@
 - (NSString *)documentURI
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->documentURI();
+    return IMPL->documentURI().createNSString().autorelease();
 }
 
 - (void)setDocumentURI:(NSString *)newDocumentURI
@@ -176,13 +176,13 @@
 - (NSString *)contentType
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->contentType();
+    return IMPL->contentType().createNSString().autorelease();
 }
 
 - (NSString *)title
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->title();
+    return IMPL->title().createNSString().autorelease();
 }
 
 - (void)setTitle:(NSString *)newTitle
@@ -194,7 +194,7 @@
 - (NSString *)dir
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->dir();
+    return IMPL->dir().createNSString().autorelease();
 }
 
 - (void)setDir:(NSString *)newDir
@@ -206,25 +206,25 @@
 - (NSString *)referrer
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->referrer();
+    return IMPL->referrer().createNSString().autorelease();
 }
 
 - (NSString *)domain
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->domain();
+    return IMPL->domain().createNSString().autorelease();
 }
 
 - (NSString *)URL
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->urlForBindings().string();
+    return IMPL->urlForBindings().string().createNSString().autorelease();
 }
 
 - (NSString *)cookie
 {
     WebCore::JSMainThreadNullState state;
-    return raiseOnDOMError(IMPL->cookie());
+    return raiseOnDOMError(IMPL->cookie()).createNSString().autorelease();
 }
 
 - (void)setCookie:(NSString *)newCookie
@@ -284,7 +284,7 @@
 - (NSString *)lastModified
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->lastModified();
+    return IMPL->lastModified().createNSString().autorelease();
 }
 
 - (NSString *)charset
@@ -301,7 +301,7 @@
 
 - (NSString *)defaultCharset
 {
-    return IMPL->defaultCharsetForLegacyBindings();
+    return IMPL->defaultCharsetForLegacyBindings().createNSString().autorelease();
 }
 
 - (NSString *)readyState
@@ -349,7 +349,7 @@
 - (NSString *)compatMode
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->compatMode();
+    return IMPL->compatMode().createNSString().autorelease();
 }
 
 #if ENABLE(FULLSCREEN_API)
@@ -415,7 +415,7 @@
 - (NSString *)origin
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->securityOrigin().toString();
+    return IMPL->securityOrigin().toString().createNSString().autorelease();
 }
 
 - (DOMElement *)scrollingElement
@@ -662,7 +662,7 @@ static RefPtr<WebCore::XPathNSResolver> wrap(id <DOMXPathNSResolver> resolver)
 {
     WebCore::JSMainThreadNullState state;
     auto result = IMPL->queryCommandValue(command);
-    return result.hasException() ? String() : result.returnValue();
+    return result.hasException() ? @"" : result.returnValue().createNSString().autorelease();
 }
 
 - (DOMNodeList *)getElementsByName:(NSString *)elementName

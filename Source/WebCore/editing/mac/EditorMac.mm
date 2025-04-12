@@ -230,7 +230,7 @@ String Editor::plainTextFromPasteboard(const PasteboardPlainText& text)
     // FIXME: It's not clear this is 100% correct since we know -[NSURL URLWithString:] does not handle
     // all the same cases we handle well in the URL code for creating an NSURL.
     if (text.isURL)
-        string = WTF::userVisibleString([NSURL URLWithString:string]);
+        string = WTF::userVisibleString([NSURL URLWithString:string.createNSString().get()]);
 
     // FIXME: WTF should offer a non-Mac-specific way to convert string to precomposed form so we can do it for all platforms.
     return [string.createNSString() precomposedStringWithCanonicalMapping];

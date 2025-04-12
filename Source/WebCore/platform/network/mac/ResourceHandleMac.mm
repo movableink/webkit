@@ -529,8 +529,8 @@ bool ResourceHandle::tryHandlePasswordBasedAuthentication(const AuthenticationCh
         return false;
 
     if (!d->m_user.isEmpty() || !d->m_password.isEmpty()) {
-        auto credential = adoptNS([[NSURLCredential alloc] initWithUser:d->m_user
-            password:d->m_password persistence:NSURLCredentialPersistenceForSession]);
+        auto credential = adoptNS([[NSURLCredential alloc] initWithUser:d->m_user.createNSString().get()
+            password:d->m_password.createNSString().get() persistence:NSURLCredentialPersistenceForSession]);
         d->m_currentMacChallenge = challenge.nsURLAuthenticationChallenge();
         d->m_currentWebChallenge = challenge;
         receivedCredential(challenge, Credential(credential.get()));

@@ -183,13 +183,13 @@ static void cacheValueForKey(const void *key, const void *value, void *self)
     return [[[self _domNode] ownerDocument] webFrame];
 }
 
-// String's NSString* operator converts null Strings to empty NSStrings for compatibility
+// String::createNSString() converts null Strings to empty NSStrings for compatibility
 // with AppKit. We need to work around that here.
 static NSString* NSStringOrNil(String coreString)
 {
     if (coreString.isNull())
         return nil;
-    return coreString;
+    return coreString.createNSString().autorelease();
 }
 
 - (NSString *)_altDisplayString

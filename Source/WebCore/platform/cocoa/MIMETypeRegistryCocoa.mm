@@ -160,9 +160,9 @@ Vector<String> MIMETypeRegistry::extensionsForMIMEType(const String& type)
     if (type.endsWith('*'))
         return extensionsForWildcardMIMEType(type);
 
-    NSArray *extensions = [[NSURLFileTypeMappings sharedMappings] extensionsForMIMEType:type];
-    if (extensions.count)
-        return makeVector<String>(extensions);
+    RetainPtr<NSArray> extensions = [[NSURLFileTypeMappings sharedMappings] extensionsForMIMEType:type.createNSString().get()];
+    if (extensions.get().count)
+        return makeVector<String>(extensions.get());
 
     auto mapEntry = additionalExtensionsMap().find(type);
     if (mapEntry != additionalExtensionsMap().end())

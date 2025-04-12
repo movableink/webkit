@@ -127,7 +127,7 @@
 - (NSString *)data
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getURLAttribute(WebCore::HTMLNames::dataAttr).string();
+    return IMPL->getURLAttribute(WebCore::HTMLNames::dataAttr).string().createNSString().autorelease();
 }
 
 - (void)setData:(NSString *)newData

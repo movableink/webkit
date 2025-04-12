@@ -97,9 +97,9 @@ static std::optional<Vector<uint8_t>> createAndStoreMasterKey()
         applicationName = [mainBundle objectForInfoDictionaryKey:bridge_cast(kCFBundleNameKey)];
     if (!applicationName)
         applicationName = [mainBundle bundleIdentifier];
-    NSString *localizedItemName = webCryptoMasterKeyKeychainLabel(applicationName);
+    RetainPtr localizedItemName = webCryptoMasterKeyKeychainLabel(applicationName).createNSString();
 #else
-    NSString *localizedItemName = webCryptoMasterKeyKeychainLabel([[NSRunningApplication currentApplication] localizedName]);
+    RetainPtr localizedItemName = webCryptoMasterKeyKeychainLabel([[NSRunningApplication currentApplication] localizedName]).createNSString();
 #endif
 
     OSStatus status;
@@ -107,7 +107,7 @@ static std::optional<Vector<uint8_t>> createAndStoreMasterKey()
 #if USE(KEYCHAIN_ACCESS_CONTROL_LISTS)
     SecAccessRef accessRef;
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    status = SecAccessCreate((__bridge CFStringRef)localizedItemName, nullptr, &accessRef);
+    status = SecAccessCreate(bridge_cast(localizedItemName.get()), nullptr, &accessRef);
 ALLOW_DEPRECATED_DECLARATIONS_END
     if (status) {
         WTFLogAlways("Cannot create a security access object for storing WebCrypto master key, error %d", (int)status);
@@ -131,7 +131,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     RetainPtr<SecTrustedApplicationRef> trustedApp = adoptCF(trustedAppRef);
 
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    status = SecACLSetContents(acl, (__bridge CFArrayRef)@[ (__bridge id)trustedApp.get() ], (__bridge CFStringRef)localizedItemName, kSecKeychainPromptRequirePassphase);
+    status = SecACLSetContents(acl, (__bridge CFArrayRef)@[ (__bridge id)trustedApp.get() ], bridge_cast(localizedItemName.get()), kSecKeychainPromptRequirePassphase);
 ALLOW_DEPRECATED_DECLARATIONS_END
     if (status) {
         WTFLogAlways("Cannot set ACL for WebCrypto master key, error %d", (int)status);
@@ -148,8 +148,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #if USE(KEYCHAIN_ACCESS_CONTROL_LISTS)
         (id)kSecAttrAccess : (__bridge id)access.get(),
 #endif
-        (id)kSecAttrComment : webCryptoMasterKeyKeychainComment(),
-        (id)kSecAttrLabel : localizedItemName,
+        (id)kSecAttrComment : webCryptoMasterKeyKeychainComment().createNSString().get(),
+        (id)kSecAttrLabel : localizedItemName.get(),
         (id)kSecAttrAccount : masterKeyAccountNameForCurrentApplication(),
         (id)kSecValueData : toNSData(base64EncodedMasterKeyData).autorelease(),
     };

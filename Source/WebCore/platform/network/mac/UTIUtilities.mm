@@ -48,7 +48,7 @@ namespace WebCore {
 
 String MIMETypeFromUTI(const String& uti)
 {
-    RetainPtr type = [UTType typeWithIdentifier:uti];
+    RetainPtr type = [UTType typeWithIdentifier:uti.createNSString().get()];
     return type.get().preferredMIMEType;
 }
 
@@ -118,7 +118,7 @@ public:
         if (auto type = UTIFromPotentiallyUnknownMIMEType(mimeType))
             return type;
 
-        if (RetainPtr type = [UTType typeWithMIMEType:mimeType])
+        if (RetainPtr type = [UTType typeWithMIMEType:mimeType.createNSString().get()])
             return type.get().identifier;
 
         return @"";
@@ -140,9 +140,9 @@ String UTIFromMIMEType(const String& mimeType)
     return cacheUTIFromMIMEType().get(mimeType).get();
 }
 
-bool isDeclaredUTI(const String& UTI)
+bool isDeclaredUTI(const String& uti)
 {
-    RetainPtr type = [UTType typeWithIdentifier:UTI];
+    RetainPtr type = [UTType typeWithIdentifier:uti.createNSString().get()];
     return type.get().isDeclared;
 }
 

@@ -57,7 +57,7 @@
 - (NSString *)src
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr).string();
+    return IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr).string().createNSString().autorelease();
 }
 
 - (void)setSrc:(NSString *)newSrc
@@ -69,13 +69,13 @@
 - (NSString *)currentSrc
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->currentSrc().string();
+    return IMPL->currentSrc().string().createNSString().autorelease();
 }
 
 - (NSString *)crossOrigin
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->crossOrigin();
+    return IMPL->crossOrigin().createNSString().autorelease();
 }
 
 - (void)setCrossOrigin:(NSString *)newCrossOrigin
@@ -93,7 +93,7 @@
 - (NSString *)preload
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->preload();
+    return IMPL->preload().createNSString().autorelease();
 }
 
 - (void)setPreload:(NSString *)newPreload
@@ -309,7 +309,7 @@
 - (NSString *)canPlayType:(NSString *)type
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->canPlayType(type);
+    return IMPL->canPlayType(type).createNSString().autorelease();
 }
 
 - (NSTimeInterval)getStartDate

@@ -76,7 +76,7 @@ static constexpr auto QuickTimeCocoaPluginIdentifier = "com.apple.quicktime.webp
         return nil;
     
     path = [pluginPath stringByResolvingSymlinksInPath];
-    cfBundle = adoptCF(CFBundleCreate(kCFAllocatorDefault, (CFURLRef)[NSURL fileURLWithPath:path]));
+    cfBundle = adoptCF(CFBundleCreate(kCFAllocatorDefault, (CFURLRef)[NSURL fileURLWithPath:path.createNSString().get()]));
 
     if (!cfBundle) {
         [self release];
@@ -158,7 +158,7 @@ static constexpr auto QuickTimeCocoaPluginIdentifier = "com.apple.quicktime.webp
         pluginInfo.mimes.append(mimeClassInfo);
     }
 
-    NSString *filename = [(NSString *)path lastPathComponent];
+    NSString *filename = [path.createNSString() lastPathComponent];
     pluginInfo.file = filename;
 
     NSString *theName = [self _objectForInfoDictionaryKey:WebPluginNameKey];

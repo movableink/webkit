@@ -189,7 +189,7 @@
 - (NSString *)text
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->text();
+    return IMPL->text().createNSString().autorelease();
 }
 
 - (NSURL *)absoluteLinkURL
@@ -207,7 +207,7 @@
 - (NSString *)href
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getURLAttribute(WebCore::HTMLNames::hrefAttr).string();
+    return IMPL->getURLAttribute(WebCore::HTMLNames::hrefAttr).string().createNSString().autorelease();
 }
 
 - (void)setHref:(NSString *)newHref
@@ -219,49 +219,49 @@
 - (NSString *)origin
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->origin();
+    return IMPL->origin().createNSString().autorelease();
 }
 
 - (NSString *)protocol
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->protocol();
+    return IMPL->protocol().createNSString().autorelease();
 }
 
 - (NSString *)host
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->host();
+    return IMPL->host().createNSString().autorelease();
 }
 
 - (NSString *)hostname
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->hostname();
+    return IMPL->hostname().createNSString().autorelease();
 }
 
 - (NSString *)port
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->port();
+    return IMPL->port().createNSString().autorelease();
 }
 
 - (NSString *)pathname
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->pathname();
+    return IMPL->pathname().createNSString().autorelease();
 }
 
 - (NSString *)search
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->search();
+    return IMPL->search().createNSString().autorelease();
 }
 
 - (NSString *)hashName
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->hash();
+    return IMPL->hash().createNSString().autorelease();
 }
 
 @end

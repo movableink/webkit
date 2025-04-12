@@ -374,7 +374,7 @@ bool WebCoreAVFResourceLoader::responseReceived(const String& mimeType, int stat
     if (AVAssetResourceLoadingContentInformationRequest* contentInfo = [m_avRequest contentInformationRequest]) {
         String uti = UTIFromMIMEType(mimeType);
 
-        [contentInfo setContentType:uti];
+        [contentInfo setContentType:uti.createNSString().get()];
 
         [contentInfo setContentLength:contentRange.isValid() ? contentRange.instanceLength() : expectedContentLength];
         [contentInfo setByteRangeAccessSupported:YES];

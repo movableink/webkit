@@ -154,7 +154,7 @@
 - (NSString *)src
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr).string();
+    return IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr).string().createNSString().autorelease();
 }
 
 - (void)setSrc:(NSString *)newSrc
@@ -166,7 +166,7 @@
 - (NSString *)srcdoc
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::srcdocAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::srcdocAttr).createNSString().autorelease();
 }
 
 - (void)setSrcdoc:(NSString *)newSrcdoc

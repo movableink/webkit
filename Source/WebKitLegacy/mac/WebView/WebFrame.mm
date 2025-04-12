@@ -601,14 +601,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (NSString *)_selectedString
 {
-    return _private->coreFrame->displayStringModifiedByEncoding(_private->coreFrame->editor().selectedText());
+    return _private->coreFrame->displayStringModifiedByEncoding(_private->coreFrame->editor().selectedText()).createNSString().autorelease();
 }
 
 - (NSString *)_stringForRange:(DOMRange *)range
 {
     if (!range)
         return @"";
-    return plainText(makeSimpleRange(*core(range)), { }, true);
+    return plainText(makeSimpleRange(*core(range)), { }, true).createNSString().autorelease();
 }
 
 - (OptionSet<WebCore::PaintBehavior>)_paintBehaviorForDestinationContext:(CGContextRef)context
@@ -723,7 +723,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     auto* lexicalGlobalObject = _private->coreFrame->script().globalObject(WebCore::mainThreadNormalWorldSingleton());
     JSC::JSLockHolder lock(lexicalGlobalObject);
 #endif
-    return result.toWTFString(lexicalGlobalObject);
+    return result.toWTFString(lexicalGlobalObject).createNSString().autorelease();
 }
 
 - (NSRect)_caretRectAtPosition:(const WebCore::Position&)pos affinity:(NSSelectionAffinity)affinity
@@ -2105,7 +2105,7 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
 
     auto* lexicalGlobalObject = anyWorldGlobalObject;
     JSC::JSLockHolder lock(lexicalGlobalObject);
-    return result.toWTFString(lexicalGlobalObject);
+    return result.toWTFString(lexicalGlobalObject).createNSString().autorelease();
 }
 
 - (JSGlobalContextRef)_globalContextForScriptWorld:(WebScriptWorld *)world
@@ -2171,13 +2171,13 @@ static WebFrameLoadType toWebFrameLoadType(WebCore::FrameLoadType frameLoadType)
     WebCore::AXObjectCache::setEnhancedUserInterfaceAccessibility(enable);
 }
 
-- (NSString*)_layerTreeAsText
+- (NSString *)_layerTreeAsText
 {
     auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return @"";
 
-    return coreFrame->contentRenderer()->compositor().layerTreeAsText();
+    return coreFrame->contentRenderer()->compositor().layerTreeAsText().createNSString().autorelease();
 }
 
 - (id)accessibilityRoot

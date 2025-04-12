@@ -405,9 +405,9 @@ static RetainPtr<NSArray>& additionalWebPlugInPaths()
 - (void)_addPlugin:(WebBasePluginPackage *)plugin
 {
     ASSERT(plugin);
-    NSString *pluginPath = [plugin path];
+    RetainPtr pluginPath = [plugin path].createNSString();
     ASSERT(pluginPath);
-    [plugins setObject:plugin forKey:pluginPath];
+    [plugins setObject:plugin forKey:pluginPath.get()];
     [plugin wasAddedToPluginDatabase:self];
 }
 
@@ -428,10 +428,10 @@ static RetainPtr<NSArray>& additionalWebPlugInPaths()
     }
 
     // Remove plug-in from database
-    NSString *pluginPath = [plugin path];
+    RetainPtr pluginPath = [plugin path].createNSString();
     ASSERT(pluginPath);
     auto protectedPlugin = retainPtr(plugin);
-    [plugins removeObjectForKey:pluginPath];
+    [plugins removeObjectForKey:pluginPath.get()];
     [plugin wasRemovedFromPluginDatabase:self];
 }
 

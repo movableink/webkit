@@ -298,7 +298,7 @@ bool WebEditorClient::shouldEndEditing(const SimpleRange& range)
 bool WebEditorClient::shouldInsertText(const String& text, const std::optional<SimpleRange>& range, EditorInsertAction action)
 {
     WebView* webView = m_webView;
-    return [[webView _editingDelegateForwarder] webView:webView shouldInsertText:text replacingDOMRange:kit(range) givenAction:kit(action)];
+    return [[webView _editingDelegateForwarder] webView:webView shouldInsertText:text.createNSString().get() replacingDOMRange:kit(range) givenAction:kit(action)];
 }
 
 bool WebEditorClient::shouldChangeSelectedRange(const std::optional<SimpleRange>& fromRange, const std::optional<SimpleRange>& toRange, Affinity selectionAffinity, bool stillSelecting)
@@ -482,7 +482,7 @@ void _WebCreateFragment(Document& document, NSAttributedString *string, Fragment
 void WebEditorClient::setInsertionPasteboard(const String& pasteboardName)
 {
 #if !PLATFORM(IOS_FAMILY)
-    NSPasteboard *pasteboard = pasteboardName.isEmpty() ? nil : [NSPasteboard pasteboardWithName:pasteboardName];
+    NSPasteboard *pasteboard = pasteboardName.isEmpty() ? nil : [NSPasteboard pasteboardWithName:pasteboardName.createNSString().get()];
     [m_webView _setInsertionPasteboard:pasteboard];
 #endif
 }
@@ -596,10 +596,10 @@ void WebEditorClient::registerUndoOrRedoStep(UndoStep& step, bool isRedo)
         return;
 #endif
 
-    NSString *actionName = step.label();
+    RetainPtr actionName = step.label().createNSString();
     [undoManager registerUndoWithTarget:m_undoTarget.get() selector:(isRedo ? @selector(redoEditing:) : @selector(undoEditing:)) object:[WebUndoStep stepWithUndoStep:step]];
     if (actionName)
-        [undoManager setActionName:actionName];
+        [undoManager setActionName:actionName.get()];
     m_haveUndoRedoOperations = YES;
 }
 
@@ -912,12 +912,12 @@ bool WebEditorClient::shouldEraseMarkersAfterChangeSelection(TextCheckingType ty
 
 void WebEditorClient::ignoreWordInSpellDocument(const String& text)
 {
-    [[NSSpellChecker sharedSpellChecker] ignoreWord:text inSpellDocumentWithTag:spellCheckerDocumentTag()];
+    [[NSSpellChecker sharedSpellChecker] ignoreWord:text.createNSString().get() inSpellDocumentWithTag:spellCheckerDocumentTag()];
 }
 
 void WebEditorClient::learnWord(const String& text)
 {
-    [[NSSpellChecker sharedSpellChecker] learnWord:text];
+    [[NSSpellChecker sharedSpellChecker] learnWord:text.createNSString().get()];
 }
 
 void WebEditorClient::checkSpellingOfString(StringView text, int* misspellingLocation, int* misspellingLength)
@@ -1051,15 +1051,15 @@ void WebEditorClient::updateSpellingUIWithGrammarString(const String& badGrammar
 {
     auto dictionary = @{
         NSGrammarRange: [NSValue valueWithRange:grammarDetail.range],
-        NSGrammarUserDescription: grammarDetail.userDescription,
+        NSGrammarUserDescription: grammarDetail.userDescription.createNSString().get(),
         NSGrammarCorrections: createNSArray(grammarDetail.guesses).get(),
     };
-    [[NSSpellChecker sharedSpellChecker] updateSpellingPanelWithGrammarString:badGrammarPhrase detail:dictionary];
+    [[NSSpellChecker sharedSpellChecker] updateSpellingPanelWithGrammarString:badGrammarPhrase.createNSString().get() detail:dictionary];
 }
 
 void WebEditorClient::updateSpellingUIWithMisspelledWord(const String& misspelledWord)
 {
-    [[NSSpellChecker sharedSpellChecker] updateSpellingPanelWithMisspelledWord:misspelledWord];
+    [[NSSpellChecker sharedSpellChecker] updateSpellingPanelWithMisspelledWord:misspelledWord.createNSString().get()];
 }
 
 void WebEditorClient::showSpellingUI(bool show)
@@ -1079,15 +1079,16 @@ bool WebEditorClient::spellingUIIsShowing()
 void WebEditorClient::getGuessesForWord(const String& word, const String& context, const WebCore::VisibleSelection& currentSelection, Vector<String>& guesses)
 {
     guesses.clear();
-    NSString *language = nil;
+    RetainPtr<NSString> language;
     NSOrthography* orthography = nil;
     NSSpellChecker *checker = [NSSpellChecker sharedSpellChecker];
     NSDictionary *options = @{ NSTextCheckingInsertionPointKey : @(insertionPointFromCurrentSelection(currentSelection)) };
     if (context.length()) {
-        [checker checkString:context range:NSMakeRange(0, context.length()) types:NSTextCheckingTypeOrthography options:options inSpellDocumentWithTag:spellCheckerDocumentTag() orthography:&orthography wordCount:0];
-        language = [checker languageForWordRange:NSMakeRange(0, context.length()) inString:context orthography:orthography];
+        RetainPtr nsContext = context.createNSString();
+        [checker checkString:nsContext.get() range:NSMakeRange(0, context.length()) types:NSTextCheckingTypeOrthography options:options inSpellDocumentWithTag:spellCheckerDocumentTag() orthography:&orthography wordCount:0];
+        language = [checker languageForWordRange:NSMakeRange(0, context.length()) inString:nsContext.get() orthography:orthography];
     }
-    NSArray *stringsArray = [checker guessesForWordRange:NSMakeRange(0, word.length()) inString:word language:language inSpellDocumentWithTag:spellCheckerDocumentTag()];
+    NSArray *stringsArray = [checker guessesForWordRange:NSMakeRange(0, word.length()) inString:word.createNSString().get() language:language.get() inSpellDocumentWithTag:spellCheckerDocumentTag()];
     if (stringsArray.count)
         guesses = makeVector<String>(stringsArray);
 }
@@ -1118,10 +1119,10 @@ void WebEditorClient::requestCandidatesForSelection(const VisibleSelection& sele
     auto selectionStartOffsetInParagraph = characterCount(*makeSimpleRange(startOfParagraph(selectionStart), selectionStart));
     auto selectionLength = characterCount(*makeSimpleRange(selectionStart, selection.visibleEnd()));
     auto contextRangeForCandidateRequest = frame->editor().contextRangeForCandidateRequest();
-    String contextForCandidateReqeuest = contextRangeForCandidateRequest ? plainText(*contextRangeForCandidateRequest) : String();
+    String contextForCandidateRequest = contextRangeForCandidateRequest ? plainText(*contextRangeForCandidateRequest) : String();
 
     m_rangeForCandidates = NSMakeRange(selectionStartOffsetInParagraph, selectionLength);
-    m_paragraphContextForCandidateRequest = contextForCandidateReqeuest;
+    m_paragraphContextForCandidateRequest = contextForCandidateRequest.createNSString();
 
     NSTextCheckingTypes checkingTypes = NSTextCheckingTypeSpelling | NSTextCheckingTypeReplacement | NSTextCheckingTypeCorrection;
     WeakPtr weakEditor { *this };
@@ -1252,7 +1253,7 @@ void WebEditorClient::requestCheckingOfString(TextCheckingRequest& request, cons
     WeakPtr weakThis { *this };
     NSDictionary *options = @{ NSTextCheckingInsertionPointKey : [NSNumber numberWithUnsignedInteger:insertionPointFromCurrentSelection(currentSelection)] };
     NSTextCheckingType types = NSTextCheckingTypeSpelling | NSTextCheckingTypeGrammar | NSTextCheckingTypeLink | NSTextCheckingTypeQuote | NSTextCheckingTypeDash | NSTextCheckingTypeReplacement | NSTextCheckingTypeCorrection;
-    [[NSSpellChecker sharedSpellChecker] requestCheckingOfString:request.data().text() range:range types:types options:options inSpellDocumentWithTag:0 completionHandler:^(NSInteger, NSArray *results, NSOrthography *, NSInteger) {
+    [[NSSpellChecker sharedSpellChecker] requestCheckingOfString:request.data().text().createNSString().get() range:range types:types options:options inSpellDocumentWithTag:0 completionHandler:^(NSInteger, NSArray *results, NSOrthography *, NSInteger) {
         RetainPtr<WebEditorSpellCheckResponder> responder = adoptNS([[WebEditorSpellCheckResponder alloc] initWithClient:weakThis identifier:identifier results:results]);
         [currentLoop performBlock:^{
             [responder perform];

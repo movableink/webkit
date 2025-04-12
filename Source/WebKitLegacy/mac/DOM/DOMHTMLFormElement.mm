@@ -57,7 +57,7 @@
 - (NSString *)action
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getURLAttribute(WebCore::HTMLNames::actionAttr).string();
+    return IMPL->getURLAttribute(WebCore::HTMLNames::actionAttr).string().createNSString().autorelease();
 }
 
 - (void)setAction:(NSString *)newAction
@@ -81,7 +81,7 @@
 - (NSString *)enctype
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->enctype();
+    return IMPL->enctype().createNSString().autorelease();
 }
 
 - (void)setEnctype:(NSString *)newEnctype
@@ -93,7 +93,7 @@
 - (NSString *)encoding
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->enctype();
+    return IMPL->enctype().createNSString().autorelease();
 }
 
 - (void)setEncoding:(NSString *)newEncoding
@@ -105,7 +105,7 @@
 - (NSString *)method
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->method();
+    return IMPL->method().createNSString().autorelease();
 }
 
 - (void)setMethod:(NSString *)newMethod

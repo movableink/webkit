@@ -34,7 +34,7 @@ namespace WebCore {
 
 static bool isPublicSuffixCF(const String& domain)
 {
-    RetainPtr host = WTF::decodeHostName(domain);
+    RetainPtr host = WTF::decodeHostName(domain.createNSString().get());
     return host && _CFHostIsDomainTopLevel(bridge_cast(host.get()));
 }
 

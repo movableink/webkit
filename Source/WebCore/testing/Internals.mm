@@ -198,9 +198,9 @@ bool Internals::privatePlayerMuted(const HTMLMediaElement& element)
 
 String Internals::encodedPreferenceValue(const String& domain, const String& key)
 {
-    auto userDefaults = adoptNS([[NSUserDefaults alloc] initWithSuiteName:domain]);
-    id value = [userDefaults objectForKey:key];
-    auto data = retainPtr([NSKeyedArchiver archivedDataWithRootObject:value requiringSecureCoding:YES error:nullptr]);
+    RetainPtr userDefaults = adoptNS([[NSUserDefaults alloc] initWithSuiteName:domain.createNSString().get()]);
+    RetainPtr value = [userDefaults objectForKey:key.createNSString().get()];
+    RetainPtr data = retainPtr([NSKeyedArchiver archivedDataWithRootObject:value.get() requiringSecureCoding:YES error:nullptr]);
     return [data base64EncodedStringWithOptions:0];
 }
 
@@ -267,7 +267,7 @@ RetainPtr<VKCImageAnalysis> Internals::fakeImageAnalysisResultForTesting(const V
             fullText.append(newlineCharacter);
     }
 
-    return adoptNS((id)[[FakeImageAnalysisResult alloc] initWithString:fullText.toString()]);
+    return adoptNS((id)[[FakeImageAnalysisResult alloc] initWithString:fullText.toString().createNSString().get()]);
 }
 
 #endif // ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)

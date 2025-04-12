@@ -156,7 +156,7 @@
 - (NSString *)innerText
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->innerText();
+    return IMPL->innerText().createNSString().autorelease();
 }
 
 - (void)setInnerText:(NSString *)newInnerText
@@ -168,7 +168,7 @@
 - (NSString *)outerText
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->outerText();
+    return IMPL->outerText().createNSString().autorelease();
 }
 
 - (void)setOuterText:(NSString *)newOuterText
@@ -180,7 +180,7 @@
 - (NSString *)contentEditable
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->contentEditable();
+    return IMPL->contentEditable().createNSString().autorelease();
 }
 
 - (void)setContentEditable:(NSString *)newContentEditable
@@ -228,7 +228,7 @@
 - (NSString *)titleDisplayString
 {
     WebCore::JSMainThreadNullState state;
-    return WebCore::displayString(IMPL->title(), core(self));
+    return WebCore::displayString(IMPL->title(), core(self)).createNSString().autorelease();
 }
 
 - (DOMElement *)insertAdjacentElement:(NSString *)where element:(DOMElement *)element

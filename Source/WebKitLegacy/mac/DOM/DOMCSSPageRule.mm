@@ -45,7 +45,7 @@
 - (NSString *)selectorText
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->selectorText();
+    return IMPL->selectorText().createNSString().autorelease();
 }
 
 - (void)setSelectorText:(NSString *)newSelectorText

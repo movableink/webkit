@@ -192,8 +192,8 @@ String preferredExtensionForImageType(const String& uti)
     String oldExtension = adoptCF(UTTypeCopyPreferredTagWithClass(uti.createCFString().get(), kUTTagClassFilenameExtension)).get();
     ALLOW_DEPRECATED_DECLARATIONS_END
 
-    auto *type = [UTType typeWithIdentifier:uti];
-    String extension = type.preferredFilenameExtension;
+    RetainPtr type = [UTType typeWithIdentifier:uti.createNSString().get()];
+    String extension = type.get().preferredFilenameExtension;
     if (UNLIKELY(oldExtension != extension)) {
         std::array<uint64_t, 6> values { 0, 0, 0, 0, 0, 0 };
         auto utiInfo = makeString(uti, '~', oldExtension, '~', extension);

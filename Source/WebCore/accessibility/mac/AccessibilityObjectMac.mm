@@ -419,7 +419,7 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         return [remoteFramePlatformElement().get() accessibilityAttributeValue:NSAccessibilityRoleDescriptionAttribute];
 ALLOW_DEPRECATED_DECLARATIONS_END
 
-    NSString *axRole = rolePlatformString();
+    RetainPtr axRole = rolePlatformString().createNSString();
 
     if ([axRole isEqualToString:NSAccessibilityGroupRole]) {
         if (isOutput())

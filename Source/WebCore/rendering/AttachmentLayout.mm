@@ -349,8 +349,8 @@ void AttachmentLayout::buildWrappedLines(String& text, CTFontRef font, NSDiction
     if (text.isEmpty())
         return;
     
-    auto attributedText = adoptNS([[NSAttributedString alloc] initWithString:text attributes:textAttributes]);
-    auto framesetter = adoptCF(CTFramesetterCreateWithAttributedString((CFAttributedStringRef)attributedText.get()));
+    RetainPtr attributedText = adoptNS([[NSAttributedString alloc] initWithString:text.createNSString().get() attributes:textAttributes]);
+    RetainPtr framesetter = adoptCF(CTFramesetterCreateWithAttributedString((CFAttributedStringRef)attributedText.get()));
     
     CFRange fitRange;
     auto textSize = CTFramesetterSuggestFrameSizeWithConstraints(framesetter.get(), CFRangeMake(0, 0), nullptr, CGSizeMake(wrappingWidth, CGFLOAT_MAX), &fitRange);
@@ -396,8 +396,8 @@ void AttachmentLayout::buildSingleLine(const String& text, CTFontRef font, NSDic
 {
     if (text.isEmpty())
         return;
-    RetainPtr<NSAttributedString> attributedText = adoptNS([[NSAttributedString alloc] initWithString:text attributes:textAttributes]);
-    
+
+    RetainPtr attributedText = adoptNS([[NSAttributedString alloc] initWithString:text.createNSString().get() attributes:textAttributes]);
     addLine(font, adoptCF(CTLineCreateWithAttributedString((CFAttributedStringRef)attributedText.get())).get(), true);
 }
 

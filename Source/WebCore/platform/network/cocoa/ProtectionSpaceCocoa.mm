@@ -182,9 +182,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     }
 
     if (proxyType)
-        lazyInitialize(m_nsSpace, adoptNS([[NSURLProtectionSpace alloc] initWithProxyHost:host() port:port() type:proxyType.get() realm:realm() authenticationMethod:method]));
+        lazyInitialize(m_nsSpace, adoptNS([[NSURLProtectionSpace alloc] initWithProxyHost:host().createNSString().get() port:port() type:proxyType.get() realm:realm().createNSString().get() authenticationMethod:method]));
     else
-        lazyInitialize(m_nsSpace, adoptNS([[NSURLProtectionSpace alloc] initWithHost:host() port:port() protocol:protocol.get() realm:realm() authenticationMethod:method]));
+        lazyInitialize(m_nsSpace, adoptNS([[NSURLProtectionSpace alloc] initWithHost:host().createNSString().get() port:port() protocol:protocol.get() realm:realm().createNSString().get() authenticationMethod:method]));
 
     return m_nsSpace.get();
 }

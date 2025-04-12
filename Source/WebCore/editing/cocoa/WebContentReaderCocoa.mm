@@ -759,7 +759,7 @@ bool WebContentReader::readPlainText(const String& text)
     if (!m_allowPlainText)
         return false;
 
-    String precomposedString = [text precomposedStringWithCanonicalMapping];
+    String precomposedString = [text.createNSString() precomposedStringWithCanonicalMapping];
     if (RefPtr page = frame().page())
         precomposedString = page->applyLinkDecorationFiltering(precomposedString, LinkDecorationFilteringTrigger::Paste);
 
@@ -925,7 +925,7 @@ bool WebContentReader::readURL(const URL& url, const String& title)
     auto anchor = HTMLAnchorElement::create(document.get());
     anchor->setAttributeWithoutSynchronization(HTMLNames::hrefAttr, AtomString { sanitizedURLString });
 
-    NSString *linkText = title.isEmpty() ? sanitizedURLString : title;
+    RetainPtr linkText = title.isEmpty() ? sanitizedURLString.createNSString() : title.createNSString();
     anchor->appendChild(document->createTextNode([linkText precomposedStringWithCanonicalMapping]));
 
     auto newFragment = document->createDocumentFragment();

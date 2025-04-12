@@ -500,7 +500,7 @@ static RetainPtr<NSHTTPCookie> parseDOMCookie(String cookieString, NSURL* cookie
     // cookiesWithResponseHeaderFields doesn't parse cookies without a value
     cookieString = cookieString.contains('=') ? cookieString : makeString(cookieString, '=');
 
-    return adjustScriptWrittenCookie([NSHTTPCookie _cookieForSetCookieString:cookieString forURL:cookieURL partition:nsStringNilIfEmpty(partition)], cappedLifetime);
+    return adjustScriptWrittenCookie([NSHTTPCookie _cookieForSetCookieString:cookieString.createNSString().get() forURL:cookieURL partition:nsStringNilIfEmpty(partition)], cappedLifetime);
 }
 
 void NetworkStorageSession::setCookiesFromDOM(const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, std::optional<FrameIdentifier> frameID, std::optional<PageIdentifier> pageID, ApplyTrackingPrevention applyTrackingPrevention, RequiresScriptTelemetry requiresScriptTelemetry, const String& cookieString, ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking) const
@@ -730,10 +730,10 @@ void NetworkStorageSession::deleteAllCookiesModifiedSince(WallTime timePoint, Co
 
 Vector<Cookie> NetworkStorageSession::domCookiesForHost(const URL& firstParty)
 {
-    auto host = firstParty.host().toString();
+    RetainPtr host = firstParty.host().toString().createNSString();
 
     // _getCookiesForDomain only returned unpartitioned (i.e., nil partition) cookies
-    RetainPtr<NSArray> unpartitionedCookies = [nsCookieStorage() _getCookiesForDomain:host.createNSString().get()];
+    RetainPtr<NSArray> unpartitionedCookies = [nsCookieStorage() _getCookiesForDomain:host.get()];
     RetainPtr nsCookies = adoptNS([[NSMutableArray alloc] initWithArray:unpartitionedCookies.get()]);
 
 #if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
@@ -749,9 +749,9 @@ Vector<Cookie> NetworkStorageSession::domCookiesForHost(const URL& firstParty)
         auto completionHandler = [&wasCompletionHandlerCalled, &nsCookies, &host, &partitionKey, &firstParty] (NSArray *cookies) {
             wasCompletionHandlerCalled = true;
 
-            RegistrableDomain registrableDomain { firstParty };
+            RetainPtr registrableDomain = RegistrableDomain { firstParty }.string().createNSString();
             for (NSHTTPCookie *nsCookie in cookies) {
-                if (![nsCookie.domain hasSuffix:registrableDomain.string()])
+                if (![nsCookie.domain hasSuffix:registrableDomain.get()])
                     continue;
                 if (![host hasSuffix:nsCookie.domain])
                     continue;

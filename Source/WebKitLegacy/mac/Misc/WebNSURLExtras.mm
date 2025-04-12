@@ -185,7 +185,7 @@
 
 - (NSString *)_webkit_stringByReplacingValidPercentEscapes
 {
-    return PAL::decodeURLEscapeSequences(String(self));
+    return PAL::decodeURLEscapeSequences(String(self)).createNSString().autorelease();
 }
 
 - (NSString *)_webkit_scriptIfJavaScriptURL

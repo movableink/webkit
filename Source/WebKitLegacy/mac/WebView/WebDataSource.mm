@@ -500,10 +500,10 @@ void addTypesFromClass(NSMutableDictionary *allTypes, Class objCClass, NSArray *
 
 - (NSString *)textEncodingName
 {
-    NSString *textEncodingName = toPrivate(_private)->loader->overrideEncoding();
+    RetainPtr textEncodingName = toPrivate(_private)->loader->overrideEncoding().createNSString();
     if (!textEncodingName)
         textEncodingName = [[self response] textEncodingName];
-    return textEncodingName;
+    return textEncodingName.autorelease();
 }
 
 - (BOOL)isLoading

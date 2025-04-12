@@ -78,7 +78,7 @@ LocaleCocoa::LocaleCocoa(const AtomString& locale)
     // NSLocale returns a lower case NSLocaleLanguageCode so we don't have care about case.
     NSString* language = [m_locale objectForKey:NSLocaleLanguageCode];
     if ([availableLanguages indexOfObject:language] == NSNotFound)
-        m_locale = adoptNS([[NSLocale alloc] initWithLocaleIdentifier:defaultLanguage()]);
+        m_locale = adoptNS([[NSLocale alloc] initWithLocaleIdentifier:defaultLanguage().createNSString().get()]);
     [m_gregorianCalendar setLocale:m_locale.get()];
 }
 

@@ -105,7 +105,7 @@ void PopupMenuMac::populate()
 
         // FIXME: Add support for styling the foreground and background colors.
         // FIXME: Find a way to customize text color when an item is highlighted.
-        RetainPtr<NSAttributedString> string = adoptNS([[NSAttributedString alloc] initWithString:m_client->itemText(i) attributes:attributes.get()]);
+        RetainPtr<NSAttributedString> string = adoptNS([[NSAttributedString alloc] initWithString:m_client->itemText(i).createNSString().get() attributes:attributes.get()]);
 
         [m_popup addItemWithTitle:@""];
         NSMenuItem *menuItem = [m_popup lastItem];
@@ -114,14 +114,14 @@ void PopupMenuMac::populate()
         // but typeahead will use the non-attributed string that doesn't contain any leading or trailing whitespace.
         [menuItem setTitle:[[string string] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]]];
         [menuItem setEnabled:m_client->itemIsEnabled(i)];
-        [menuItem setToolTip:m_client->itemToolTip(i)];
+        [menuItem setToolTip:m_client->itemToolTip(i).createNSString().get()];
 
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         // Allow the accessible text of the item to be overridden if necessary.
         if (AXObjectCache::accessibilityEnabled()) {
-            NSString *accessibilityOverride = m_client->itemAccessibilityText(i);
+            RetainPtr accessibilityOverride = m_client->itemAccessibilityText(i).createNSString();
             if ([accessibilityOverride length])
-                [menuItem accessibilitySetOverrideValue:accessibilityOverride forAttribute:NSAccessibilityDescriptionAttribute];
+                [menuItem accessibilitySetOverrideValue:accessibilityOverride.get() forAttribute:NSAccessibilityDescriptionAttribute];
         }
 ALLOW_DEPRECATED_DECLARATIONS_END
     }

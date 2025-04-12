@@ -81,7 +81,7 @@
 - (NSString *)border
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::borderAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::borderAttr).createNSString().autorelease();
 }
 
 - (void)setBorder:(NSString *)newBorder
@@ -93,7 +93,7 @@
 - (NSString *)crossOrigin
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->crossOrigin();
+    return IMPL->crossOrigin().createNSString().autorelease();
 }
 
 - (void)setCrossOrigin:(NSString *)newCrossOrigin
@@ -141,7 +141,7 @@
 - (NSString *)longDesc
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getURLAttribute(WebCore::HTMLNames::longdescAttr).string();
+    return IMPL->getURLAttribute(WebCore::HTMLNames::longdescAttr).string().createNSString().autorelease();
 }
 
 - (void)setLongDesc:(NSString *)newLongDesc
@@ -153,7 +153,7 @@
 - (NSString *)src
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr).string();
+    return IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr).string().createNSString().autorelease();
 }
 
 - (void)setSrc:(NSString *)newSrc
@@ -189,7 +189,7 @@
 - (NSString *)currentSrc
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->currentSrc().string();
+    return IMPL->currentSrc().string().createNSString().autorelease();
 }
 
 - (NSString *)useMap
@@ -237,7 +237,7 @@
 - (NSString *)lowsrc
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getURLAttribute(WebCore::HTMLNames::lowsrcAttr).string();
+    return IMPL->getURLAttribute(WebCore::HTMLNames::lowsrcAttr).string().createNSString().autorelease();
 }
 
 - (void)setLowsrc:(NSString *)newLowsrc
@@ -273,7 +273,7 @@
 - (NSString *)altDisplayString
 {
     WebCore::JSMainThreadNullState state;
-    return WebCore::displayString(IMPL->alt(), core(self));
+    return WebCore::displayString(IMPL->alt(), core(self)).createNSString().autorelease();
 }
 
 - (NSURL *)absoluteImageURL

@@ -214,7 +214,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (NSUInteger)hash
 {
-    return [(NSString*)core(_private)->urlString() hash];
+    return [core(_private)->urlString().createNSString() hash];
 }
 
 - (BOOL)isEqual:(id)anObject
@@ -228,7 +228,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 - (NSString *)description
 {
     HistoryItem* coreItem = core(_private);
-    NSMutableString *result = [NSMutableString stringWithFormat:@"%@ %@", [super description], (NSString*)coreItem->urlString()];
+    NSMutableString *result = [NSMutableString stringWithFormat:@"%@ %@", [super description], coreItem->urlString().createNSString().get()];
     if (!coreItem->target().isEmpty()) {
         NSString *target = coreItem->target();
         [result appendFormat:@" in \"%@\"", target];
@@ -400,11 +400,11 @@ WebHistoryItem *kit(HistoryItem* item)
     HistoryItem* coreItem = core(_private);
     
     if (!coreItem->urlString().isEmpty())
-        [dict setObject:(NSString*)coreItem->urlString() forKey:@""];
+        [dict setObject:coreItem->urlString().createNSString().get() forKey:@""];
     if (!coreItem->title().isEmpty())
-        [dict setObject:(NSString*)coreItem->title() forKey:titleKey];
+        [dict setObject:coreItem->title().createNSString().get() forKey:titleKey];
     if (!coreItem->alternateTitle().isEmpty())
-        [dict setObject:(NSString*)coreItem->alternateTitle() forKey:displayTitleKey];
+        [dict setObject:coreItem->alternateTitle().createNSString().get() forKey:displayTitleKey];
     if (_private->_lastVisitedTime) {
         // Store as a string to maintain backward compatibility. (See 3245793)
         [dict setObject:[NSString stringWithFormat:@"%.1lf", _private->_lastVisitedTime]

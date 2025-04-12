@@ -1319,7 +1319,7 @@ String RenderThemeMac::fileListNameForWidth(const FileList* fileList, const Font
     if (fileList->isEmpty())
         strToTruncate = fileListDefaultLabel(multipleFilesAllowed);
     else if (fileList->length() == 1)
-        strToTruncate = [[NSFileManager defaultManager] displayNameAtPath:(fileList->item(0)->path())];
+        strToTruncate = [[NSFileManager defaultManager] displayNameAtPath:fileList->item(0)->path().createNSString().get()];
     else
         return StringTruncator::rightTruncate(multipleFileUploadText(fileList->length()), width, font);
 
@@ -1384,8 +1384,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         LOG_ATTACHMENT("-> No icon for filename! Will fallback to title...");
     }
 
-    NSString *cocoaTitle = title;
-    if (auto fileExtension = cocoaTitle.pathExtension; fileExtension.length) {
+    RetainPtr nsTitle = title.createNSString();
+    if (auto fileExtension = nsTitle.get().pathExtension; fileExtension.length) {
         if (auto icon = Icon::createIconForFileExtension(fileExtension)) {
             LOG_ATTACHMENT("-> Got icon for title file extension '%s'", String(fileExtension).utf8().data());
             return icon;

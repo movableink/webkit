@@ -100,7 +100,7 @@ static RetainPtr<NSError> createNSErrorFromResourceErrorBase(const ResourceError
     RetainPtr<NSMutableDictionary> userInfo = adoptNS([[NSMutableDictionary alloc] init]);
 
     if (!resourceError.localizedDescription().isEmpty())
-        [userInfo setValue:resourceError.localizedDescription() forKey:NSLocalizedDescriptionKey];
+        [userInfo setValue:resourceError.localizedDescription().createNSString().get() forKey:NSLocalizedDescriptionKey];
 
     if (!resourceError.failingURL().isEmpty()) {
         [userInfo setValue:resourceError.failingURL().string().createNSString().get() forKey:@"NSErrorFailingURLStringKey"];
@@ -108,7 +108,7 @@ static RetainPtr<NSError> createNSErrorFromResourceErrorBase(const ResourceError
             [userInfo setValue:cocoaURL.get() forKey:@"NSErrorFailingURLKey"];
     }
 
-    return adoptNS([[NSError alloc] initWithDomain:resourceError.domain() code:resourceError.errorCode() userInfo:userInfo.get()]);
+    return adoptNS([[NSError alloc] initWithDomain:resourceError.domain().createNSString().get() code:resourceError.errorCode() userInfo:userInfo.get()]);
 }
 
 ResourceError::ResourceError(NSError *nsError)
@@ -165,7 +165,8 @@ ResourceError::ErrorRecoveryMethod ResourceError::errorRecoveryMethod() const
     lazyInit();
 
     bool isRecoverableError { false };
-    if ([m_domain isEqualToString:NSURLErrorDomain]) {
+    RetainPtr nsDomain = m_domain.createNSString();
+    if ([nsDomain isEqualToString:NSURLErrorDomain]) {
         switch (m_errorCode) {
         case NSURLErrorTimedOut:
         case NSURLErrorCannotFindHost:
@@ -189,7 +190,7 @@ ResourceError::ErrorRecoveryMethod ResourceError::errorRecoveryMethod() const
         case NSURLErrorClientCertificateRequired:
             isRecoverableError = true;
         }
-    } else if ([m_domain isEqualToString:@"WebKitErrorDomain"]) {
+    } else if ([nsDomain isEqualToString:@"WebKitErrorDomain"]) {
         // FIXME: These literals should be moved into a central location that is shared with WebKit::API.
         constexpr auto httpsUpgradeRedirectLoop { 304 };
         isRecoverableError = m_errorCode == httpsUpgradeRedirectLoop;

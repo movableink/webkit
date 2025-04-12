@@ -261,7 +261,7 @@ static RetainPtr<NSCountedSet> createNSCountedSet(const HashCountedSet<ASCIILite
 
 - (NSString *)renderTreeAsExternalRepresentationForPrinting
 {
-    return externalRepresentation(_private->coreFrame, { RenderAsTextFlag::PrintingMode });
+    return externalRepresentation(_private->coreFrame, { RenderAsTextFlag::PrintingMode }).createNSString().autorelease();
 }
 
 static OptionSet<RenderAsTextFlag> toRenderAsTextFlags(WebRenderTreeAsTextOptions options)
@@ -286,7 +286,7 @@ static OptionSet<RenderAsTextFlag> toRenderAsTextFlags(WebRenderTreeAsTextOption
 
 - (NSString *)renderTreeAsExternalRepresentationWithOptions:(WebRenderTreeAsTextOptions)options
 {
-    return externalRepresentation(_private->coreFrame, toRenderAsTextFlags(options));
+    return externalRepresentation(_private->coreFrame, toRenderAsTextFlags(options)).createNSString().autorelease();
 }
 
 - (int)numberOfPagesWithPageWidth:(float)pageWidthInPixels pageHeight:(float)pageHeightInPixels

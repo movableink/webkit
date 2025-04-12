@@ -109,7 +109,7 @@ static RetainPtr<NSURL> writeToTemporaryFile(WebCore::Model& modelSource)
     ASSERT_UNUSED(byteCount, byteCount == modelSource.data()->size());
     fileHandle = { };
 
-    return adoptNS([[NSURL alloc] initFileURLWithPath:filePath]);
+    return adoptNS([[NSURL alloc] initFileURLWithPath:filePath.createNSString().get()]);
 }
 
 Ref<SceneKitModelLoader> loadSceneKitModelUsingUSDLoader(Model& modelSource, SceneKitModelLoaderClient& client)
