@@ -153,7 +153,6 @@ SVGSMILElement::SVGSMILElement(const QualifiedName& tagName, Document& doc, Uniq
     , m_cachedMin(invalidCachedTime)
     , m_cachedMax(invalidCachedTime)
 {
-    resolveFirstInterval();
 }
 
 SVGSMILElement::~SVGSMILElement()
