@@ -85,11 +85,7 @@ TEST(LockdownMode, NotAllowedFontLoadingAPI)
         auto referenceResult = static_cast<NSNumber *>([webView objectByEvaluatingJavaScript:@"reference.offsetWidth"]).intValue;
 
         EXPECT_NE(beforeTargetResult, targetResult);
-#if HAVE(CTFONTMANAGER_CREATEMEMORYSAFEFONTDESCRIPTORFROMDATA)
-        EXPECT_NE(targetResult, referenceResult);
-#else
         EXPECT_EQ(targetResult, referenceResult);
-#endif
     }
 }
 
@@ -203,11 +199,7 @@ TEST(LockdownMode, NotAllowedFont)
         auto targetResult = static_cast<NSNumber *>([webView objectByEvaluatingJavaScript:@"target.offsetWidth"]).intValue;
         auto referenceResult = static_cast<NSNumber *>([webView objectByEvaluatingJavaScript:@"reference.offsetWidth"]).intValue;
 
-#if HAVE(CTFONTMANAGER_CREATEMEMORYSAFEFONTDESCRIPTORFROMDATA)
-        EXPECT_NE(targetResult, referenceResult);
-#else
         EXPECT_EQ(targetResult, referenceResult);
-#endif
     }
 }
 }
