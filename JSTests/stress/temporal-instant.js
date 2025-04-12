@@ -285,6 +285,8 @@ shouldBe(`${Temporal.Instant.from('1976-11-18T15:23:30+00')}`, '1976-11-18T15:23
 shouldBe(`${Temporal.Instant.from('1976-11-18T15Z')}`, '1976-11-18T15:00:00Z');
 // ignores any specified calendar
 shouldBe(`${Temporal.Instant.from('1976-11-18T15:23:30.123456789Z[u-ca=discord]')}`, '1976-11-18T15:23:30.123456789Z');
+// critical annotations work
+shouldBe(`${Temporal.Instant.from('1976-11-18T15:23:30.123456789Z[!u-ca=hebrew]')}`, '1976-11-18T15:23:30.123456789Z');
 // no junk at end of string
 shouldThrow(() => Temporal.Instant.from('1976-11-18T15:23:30.123456789Zjunk'), RangeError);
 // non-ASCII minusSign is invalid

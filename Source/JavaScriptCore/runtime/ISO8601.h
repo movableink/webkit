@@ -251,6 +251,7 @@ struct TimeZoneRecord {
 static constexpr unsigned minCalendarLength = 3;
 static constexpr unsigned maxCalendarLength = 8;
 struct CalendarRecord {
+    bool m_critical { false }; // True if annotated with !
     Vector<LChar, maxCalendarLength> m_name;
 };
 
