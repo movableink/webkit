@@ -1319,7 +1319,7 @@ private:
 
     static void firstTimeInitialization();
 
-    WEBCORE_EXPORT void initGroup();
+    void initGroup();
 
     void setIsInWindowInternal(bool);
     void setIsVisibleInternal(bool);
