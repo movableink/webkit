@@ -14,7 +14,6 @@ Modules/model-element/scenekit/SceneKitModelPlayer.mm
 Modules/notifications/NotificationDataCocoa.mm
 Modules/notifications/NotificationOptionsPayloadCocoa.mm
 Modules/notifications/NotificationPayloadCocoa.mm
-Modules/speech/cocoa/SpeechRecognizerCocoa.mm
 Modules/speech/cocoa/WebSpeechRecognizerTask.mm
 PAL/pal/cocoa/AVFAudioSoftLink.h
 PAL/pal/cocoa/AVFoundationSoftLink.h
@@ -59,9 +58,9 @@ fileapi/FileCocoa.mm
 inspector/agents/page/PageTimelineAgent.cpp
 inspector/mac/PageDebuggerMac.mm
 loader/archive/cf/LegacyWebArchiveMac.mm
-loader/cocoa/BundleResourceLoader.mm
 loader/cocoa/DiskCacheMonitorCocoa.mm
 loader/cocoa/PrivateClickMeasurementCocoa.mm
+loader/mac/LoaderNSURLExtras.mm
 page/CaptionUserPreferencesMediaAF.cpp
 page/cocoa/MemoryReleaseCocoa.mm
 page/cocoa/PageCocoa.mm
@@ -99,14 +98,12 @@ platform/cocoa/EffectiveRateChangedListener.mm
 platform/cocoa/FileMonitorCocoa.mm
 platform/cocoa/LocalizedStringsCocoa.mm
 platform/cocoa/LowPowerModeNotifier.mm
-platform/cocoa/MIMETypeRegistryCocoa.mm
 platform/cocoa/NetworkExtensionContentFilter.mm
 platform/cocoa/ParentalControlsContentFilter.mm
 platform/cocoa/PasteboardCocoa.mm
 platform/cocoa/PlatformPasteboardCocoa.mm
 platform/cocoa/PlatformSpeechSynthesizerCocoa.mm
 platform/cocoa/PowerSourceNotifier.mm
-platform/cocoa/PublicSuffixStoreCocoa.mm
 platform/cocoa/SearchPopupMenuCocoa.mm
 platform/cocoa/TextRecognitionResultCocoa.mm
 platform/cocoa/UserAgentCocoa.mm
@@ -171,7 +168,6 @@ platform/graphics/cg/ImageDecoderCG.cpp
 platform/graphics/cg/NativeImageCG.cpp
 platform/graphics/cg/PathCG.cpp
 platform/graphics/cg/ShareableBitmapCG.mm
-platform/graphics/cg/UTIRegistry.mm
 platform/graphics/cocoa/CMUtilities.mm
 platform/graphics/cocoa/FontCacheCoreText.cpp
 platform/graphics/cocoa/GraphicsContextCocoa.mm
@@ -231,7 +227,6 @@ platform/mac/ScrollbarThemeMac.mm
 platform/mac/ScrollbarsControllerMac.mm
 platform/mac/ScrollingMomentumCalculatorMac.mm
 platform/mac/SerializedPlatformDataCueMac.mm
-platform/mac/ValidationBubbleMac.mm
 platform/mac/VideoPresentationInterfaceMac.mm
 platform/mac/WebCoreFullScreenPlaceholderView.mm
 platform/mac/WebCoreFullScreenWarningView.mm
@@ -262,7 +257,6 @@ platform/network/mac/NetworkStateNotifierMac.cpp
 platform/network/mac/ResourceErrorMac.mm
 platform/network/mac/ResourceHandleMac.mm
 platform/network/mac/SynchronousLoaderClient.mm
-platform/network/mac/UTIUtilities.mm
 platform/network/mac/WebCoreResourceHandleAsOperationQueueDelegate.mm
 platform/network/mac/WebCoreURLResponse.mm
 platform/text/cocoa/LocaleCocoa.mm

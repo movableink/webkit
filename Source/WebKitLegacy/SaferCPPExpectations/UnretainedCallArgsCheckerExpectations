@@ -45,7 +45,6 @@ mac/Storage/WebDatabaseProvider.mm
 mac/Storage/WebDatabaseQuotaManager.mm
 mac/Storage/WebStorageManager.mm
 mac/Storage/WebStorageTrackerClient.mm
-mac/WebCoreSupport/CorrectionPanel.mm
 mac/WebCoreSupport/PopupMenuMac.mm
 mac/WebCoreSupport/SearchPopupMenuMac.mm
 mac/WebCoreSupport/WebAlternativeTextClient.mm
