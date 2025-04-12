@@ -82,7 +82,6 @@ void computeUsesForBytecodeIndexImpl(const JSInstruction* instruction, Checkpoin
 
     // No uses.
     case op_new_reg_exp:
-    case op_debug:
     case op_loop_hint:
     case op_jmp:
     case op_new_object:
@@ -110,6 +109,7 @@ void computeUsesForBytecodeIndexImpl(const JSInstruction* instruction, Checkpoin
     USES(OpProfileType, targetVirtualRegister);
     USES(OpThrow, value)
     USES(OpThrowStaticError, message)
+    USES(OpDebug, data)
     USES(OpEnd, value)
     USES(OpRet, value)
     USES(OpJtrue, condition)

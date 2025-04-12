@@ -1666,7 +1666,8 @@ void JIT::emit_op_debug(const JSInstruction* currentInstruction)
     loadPtr(addressFor(CallFrameSlot::codeBlock), regT0);
     load32(Address(regT0, CodeBlock::offsetOfDebuggerRequests()), regT0);
     Jump noDebuggerRequests = branchTest32(Zero, regT0);
-    callOperation(operationDebug, TrustedImmPtr(&vm()), static_cast<int>(bytecode.m_debugHookType));
+    emitGetVirtualRegister(bytecode.m_data, jsRegT32);
+    callOperation(operationDebug, TrustedImmPtr(&vm()), static_cast<int>(bytecode.m_debugHookType), jsRegT32);
     noDebuggerRequests.link(this);
 }
 

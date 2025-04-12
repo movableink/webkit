@@ -1684,7 +1684,7 @@ JSValue Interpreter::executeModuleProgram(JSModuleRecord* record, ModuleProgramE
     return JSValue::decode(vmEntryToJavaScript(jitCode->addressForCall(), &vm, &protoCallFrame));
 }
 
-NEVER_INLINE void Interpreter::debug(CallFrame* callFrame, DebugHookType debugHookType)
+NEVER_INLINE void Interpreter::debug(CallFrame* callFrame, DebugHookType debugHookType, JSValue data)
 {
     VM& vm = this->vm();
     DeferTermination deferScope(vm);
@@ -1712,6 +1712,12 @@ NEVER_INLINE void Interpreter::debug(CallFrame* callFrame, DebugHookType debugHo
             break;
         case WillExecuteExpression:
             debugger->atExpression(callFrame);
+            break;
+        case WillAwait:
+            debugger->willAwait(callFrame, data);
+            break;
+        case DidAwait:
+            debugger->didAwait(callFrame, data);
             break;
         case WillExecuteProgram:
             debugger->willExecuteProgram(callFrame);
@@ -1753,6 +1759,12 @@ void printInternal(PrintStream& out, JSC::DebugHookType type)
         return;
     case JSC::WillExecuteExpression:
         out.print("WillExecuteExpression");
+        return;
+    case JSC::WillAwait:
+        out.print("WillAwait");
+        return;
+    case JSC::DidAwait:
+        out.print("DidAwait");
         return;
     }
 }

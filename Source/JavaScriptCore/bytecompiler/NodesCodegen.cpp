@@ -4856,7 +4856,7 @@ void ReturnNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
     if (m_value) {
         returnRegister = generator.emitNodeInTailPositionFromReturnNode(dst, m_value);
         if (generator.parseMode() == SourceParseMode::AsyncGeneratorBodyMode)
-            returnRegister = generator.emitAwait(generator.newTemporary(), returnRegister.get());
+            returnRegister = generator.emitAwait(generator.newTemporary(), returnRegister.get(), position());
     } else
         returnRegister = generator.emitLoad(dst, jsUndefined());
 
@@ -5243,14 +5243,14 @@ inline void ScopeNode::emitStatementsBytecode(BytecodeGenerator& generator, Regi
 
 static void emitProgramNodeBytecode(BytecodeGenerator& generator, ScopeNode& scopeNode)
 {
-    generator.emitDebugHook(WillExecuteProgram, scopeNode.startLine(), scopeNode.startStartOffset(), scopeNode.startLineStartOffset());
+    generator.emitDebugHook(WillExecuteProgram, JSTextPosition(scopeNode.startLine(), scopeNode.startStartOffset(), scopeNode.startLineStartOffset()));
 
     RefPtr<RegisterID> dstRegister = generator.newTemporary();
     generator.emitLoad(dstRegister.get(), jsUndefined());
     generator.emitProfileControlFlow(scopeNode.startStartOffset());
     scopeNode.emitStatementsBytecode(generator, dstRegister.get());
 
-    generator.emitDebugHook(DidExecuteProgram, scopeNode.lastLine(), scopeNode.startOffset(), scopeNode.lineStartOffset());
+    generator.emitDebugHook(DidExecuteProgram, JSTextPosition(scopeNode.lastLine(), scopeNode.startOffset(), scopeNode.lineStartOffset()));
     generator.emitEnd(dstRegister.get());
 }
 
@@ -5272,13 +5272,13 @@ void ModuleProgramNode::emitBytecode(BytecodeGenerator& generator, RegisterID*)
 
 void EvalNode::emitBytecode(BytecodeGenerator& generator, RegisterID*)
 {
-    generator.emitDebugHook(WillExecuteProgram, startLine(), startStartOffset(), startLineStartOffset());
+    generator.emitDebugHook(WillExecuteProgram, JSTextPosition(startLine(), startStartOffset(), startLineStartOffset()));
 
     RefPtr<RegisterID> dstRegister = generator.newTemporary();
     generator.emitLoad(dstRegister.get(), jsUndefined());
     emitStatementsBytecode(generator, dstRegister.get());
 
-    generator.emitDebugHook(DidExecuteProgram, lastLine(), startOffset(), lineStartOffset());
+    generator.emitDebugHook(DidExecuteProgram, JSTextPosition(lastLine(), startOffset(), lineStartOffset()));
     generator.emitEnd(dstRegister.get());
 }
 
@@ -5298,7 +5298,7 @@ void FunctionNode::emitBytecode(BytecodeGenerator& generator, RegisterID*)
     }
 
     generator.emitProfileControlFlow(startStartOffset());
-    generator.emitDebugHook(DidEnterCallFrame, startLine(), startStartOffset(), startLineStartOffset());
+    generator.emitDebugHook(DidEnterCallFrame, JSTextPosition(startLine(), startStartOffset(), startLineStartOffset()));
 
     switch (generator.parseMode()) {
     case SourceParseMode::GeneratorWrapperFunctionMode:
@@ -5328,7 +5328,7 @@ void FunctionNode::emitBytecode(BytecodeGenerator& generator, RegisterID*)
         }
         
         ASSERT(startOffset() >= lineStartOffset());
-        generator.emitDebugHook(WillLeaveCallFrame, lastLine(), startOffset(), lineStartOffset());
+        generator.emitDebugHook(WillLeaveCallFrame, JSTextPosition(lastLine(), startOffset(), lineStartOffset()));
         generator.emitReturn(generator.generatorRegister());
         break;
     }
@@ -5357,7 +5357,7 @@ void FunctionNode::emitBytecode(BytecodeGenerator& generator, RegisterID*)
         generator.emitPutGeneratorFields(next.get());
 
         ASSERT(startOffset() >= lineStartOffset());
-        generator.emitDebugHook(WillLeaveCallFrame, lastLine(), startOffset(), lineStartOffset());
+        generator.emitDebugHook(WillLeaveCallFrame, JSTextPosition(lastLine(), startOffset(), lineStartOffset()));
 
         // load and call @asyncFunctionResume
         RefPtr<RegisterID> asyncFunctionResume = generator.moveLinkTimeConstant(nullptr, LinkTimeConstant::asyncFunctionResume);
@@ -5492,7 +5492,7 @@ RegisterID* AwaitExprNode::emitBytecode(BytecodeGenerator& generator, RegisterID
 {
     RefPtr<RegisterID> arg = generator.newTemporary();
     generator.emitNode(arg.get(), argument());
-    return generator.emitAwait(dst ? dst : generator.newTemporary(), arg.get());
+    return generator.emitAwait(dst ? dst : generator.newTemporary(), arg.get(), position());
 }
 
 // ------------------------------ DefineFieldNode ---------------------------------

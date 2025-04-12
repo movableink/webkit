@@ -367,7 +367,7 @@ JSC_DECLARE_JIT_OPERATION(operationNewAsyncGenerator, JSCell*, (VM*, Structure*)
 JSC_DECLARE_JIT_OPERATION(operationNewRegExp, JSCell*, (JSGlobalObject*, JSCell*));
 JSC_DECLARE_JIT_OPERATION(operationHandleTraps, UnusedPtr, (JSGlobalObject*));
 JSC_DECLARE_JIT_OPERATION(operationThrow, void, (JSGlobalObject*, EncodedJSValue));
-JSC_DECLARE_JIT_OPERATION(operationDebug, void, (VM*, int32_t));
+JSC_DECLARE_JIT_OPERATION(operationDebug, void, (VM*, int32_t debugHookType, EncodedJSValue encodedData));
 #if ENABLE(DFG_JIT)
 JSC_DECLARE_JIT_OPERATION(operationOptimize, UGPRPair, (VM*, uint32_t));
 JSC_DECLARE_JIT_OPERATION(operationTryOSREnterAtCatchAndValueProfile, UGPRPair, (VM*, uint32_t));

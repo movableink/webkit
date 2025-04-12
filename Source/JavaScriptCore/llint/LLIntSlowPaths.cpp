@@ -2338,7 +2338,8 @@ LLINT_SLOW_PATH_DECL(slow_path_debug)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpDebug>();
-    vm.interpreter.debug(callFrame, bytecode.m_debugHookType);
+    auto data = getOperand(callFrame, bytecode.m_data);
+    vm.interpreter.debug(callFrame, bytecode.m_debugHookType, data);
     
     LLINT_END();
 }

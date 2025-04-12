@@ -1023,10 +1023,9 @@ namespace JSC {
         RegisterID* emitLoadDerivedConstructorFromArrowFunctionLexicalEnvironment();
         RegisterID* emitLoadDerivedConstructor();
 
-        void emitDebugHook(DebugHookType, const JSTextPosition&);
-        void emitDebugHook(DebugHookType, unsigned line, unsigned charOffset, unsigned lineStart);
-        void emitDebugHook(StatementNode*);
-        void emitDebugHook(ExpressionNode*);
+        void emitDebugHook(DebugHookType, const JSTextPosition&, RegisterID* data = nullptr);
+        void emitDebugHook(StatementNode*, RegisterID* data = nullptr);
+        void emitDebugHook(ExpressionNode*, RegisterID* data = nullptr);
         void emitWillLeaveCallFrameDebugHook();
 
         RegisterID* emitLoad(RegisterID* dst, CompletionType type) { return emitLoad(dst, jsNumber(static_cast<int32_t>(type))); }
@@ -1059,8 +1058,7 @@ namespace JSC {
         void emitGeneratorStateLabel();
         void emitGeneratorStateChange(int32_t state);
         RegisterID* emitYield(RegisterID* argument);
-        RegisterID* emitAwait(RegisterID* dst, RegisterID* src);
-        RegisterID* emitAwait(RegisterID* srcDst) { return emitAwait(srcDst, srcDst); }
+        RegisterID* emitAwait(RegisterID* dst, RegisterID* src, const JSTextPosition&);
         RegisterID* emitDelegateYield(RegisterID* argument, ThrowableExpressionData*);
         RegisterID* generatorStateRegister() { return &m_parameters[static_cast<int32_t>(JSGenerator::Argument::State)]; }
         RegisterID* generatorValueRegister() { return &m_parameters[static_cast<int32_t>(JSGenerator::Argument::Value)]; }

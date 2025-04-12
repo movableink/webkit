@@ -2897,14 +2897,14 @@ JSC_DEFINE_JIT_OPERATION(operationHandleTraps, UnusedPtr, (JSGlobalObject* globa
     OPERATION_RETURN(scope, nullptr);
 }
 
-JSC_DEFINE_JIT_OPERATION(operationDebug, void, (VM* vmPointer, int32_t debugHookType))
+JSC_DEFINE_JIT_OPERATION(operationDebug, void, (VM* vmPointer, int32_t debugHookType, EncodedJSValue encodedData))
 {
     VM& vm = *vmPointer;
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    vm.interpreter.debug(callFrame, static_cast<DebugHookType>(debugHookType));
+    vm.interpreter.debug(callFrame, static_cast<DebugHookType>(debugHookType), JSValue::decode(encodedData));
     OPERATION_RETURN(scope);
 }
 

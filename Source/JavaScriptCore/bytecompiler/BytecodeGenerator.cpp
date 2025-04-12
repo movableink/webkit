@@ -4007,7 +4007,7 @@ void BytecodeGenerator::emitPopWithScope()
     RELEASE_ASSERT(stackEntry.m_isWithScope);
 }
 
-void BytecodeGenerator::emitDebugHook(DebugHookType debugHookType, const JSTextPosition& divot)
+void BytecodeGenerator::emitDebugHook(DebugHookType debugHookType, const JSTextPosition& divot, RegisterID* data)
 {
     if (LIKELY(!shouldEmitDebugHooks()))
         return;
@@ -4019,31 +4019,29 @@ void BytecodeGenerator::emitDebugHook(DebugHookType debugHookType, const JSTextP
     m_lastDebugHook.type = debugHookType;
 
     emitExpressionInfo(divot, divot, divot);
-    OpDebug::emit(this, debugHookType, false);
+
+    if (!data)
+        data = emitLoad(nullptr, jsUndefined());
+    OpDebug::emit(this, debugHookType, data);
 }
 
-void BytecodeGenerator::emitDebugHook(DebugHookType debugHookType, unsigned line, unsigned charOffset, unsigned lineStart)
-{
-    emitDebugHook(debugHookType, JSTextPosition(line, charOffset, lineStart));
-}
-
-void BytecodeGenerator::emitDebugHook(StatementNode* statement)
+void BytecodeGenerator::emitDebugHook(StatementNode* statement, RegisterID* data)
 {
     // DebuggerStatementNode will output its own special debug hook.
     if (statement->isDebuggerStatement())
         return;
 
-    emitDebugHook(WillExecuteStatement, statement->position());
+    emitDebugHook(WillExecuteStatement, statement->position(), data);
 }
 
-void BytecodeGenerator::emitDebugHook(ExpressionNode* expr)
+void BytecodeGenerator::emitDebugHook(ExpressionNode* expr, RegisterID* data)
 {
-    emitDebugHook(WillExecuteStatement, expr->position());
+    emitDebugHook(WillExecuteStatement, expr->position(), data);
 }
 
 void BytecodeGenerator::emitWillLeaveCallFrameDebugHook()
 {
-    emitDebugHook(WillLeaveCallFrame, m_scopeNode->lastLine(), m_scopeNode->startOffset(), m_scopeNode->lineStartOffset());
+    emitDebugHook(WillLeaveCallFrame, JSTextPosition(m_scopeNode->lastLine(), m_scopeNode->startOffset(), m_scopeNode->lineStartOffset()));
 }
 
 void BytecodeGenerator::pushFinallyControlFlowScope(FinallyContext& finallyContext)
@@ -4974,8 +4972,10 @@ RegisterID* BytecodeGenerator::emitYield(RegisterID* argument)
     return generatorValueRegister();
 }
 
-RegisterID* BytecodeGenerator::emitAwait(RegisterID* dst, RegisterID* src)
+RegisterID* BytecodeGenerator::emitAwait(RegisterID* dst, RegisterID* src, const JSTextPosition& position)
 {
+    emitDebugHook(WillAwait, position, generatorRegister());
+
     emitYieldPoint(src, JSAsyncGenerator::AsyncGeneratorSuspendReason::Await);
 
     Ref<Label> normalLabel = newLabel();
@@ -4984,7 +4984,11 @@ RegisterID* BytecodeGenerator::emitAwait(RegisterID* dst, RegisterID* src)
     emitThrow(generatorValueRegister());
 
     emitLabel(normalLabel.get());
-    return move(dst, generatorValueRegister());
+    auto result = move(dst, generatorValueRegister());
+
+    emitDebugHook(DidAwait, position, generatorRegister());
+
+    return result;
 }
 
 RegisterID* BytecodeGenerator::emitCallIterator(RegisterID* iterator, RegisterID* argument, ThrowableExpressionData* node)
@@ -5040,7 +5044,7 @@ RegisterID* BytecodeGenerator::emitIteratorGenericNext(RegisterID* dst, Register
         emitCall(dst, nextMethod, NoExpectedFunction, nextArguments, node->divot(), node->divotStart(), node->divotEnd(), DebuggableCall::No);
 
         if (doEmitAwait == EmitAwait::Yes)
-            emitAwait(dst);
+            emitAwait(dst, dst, node->divot());
     }
     {
         Ref<Label> typeIsObject = newLabel();
@@ -5075,7 +5079,7 @@ void BytecodeGenerator::emitIteratorGenericClose(RegisterID* iterator, const Thr
     emitCall(value.get(), returnMethod.get(), NoExpectedFunction, returnArguments, node->divot(), node->divotStart(), node->divotEnd(), DebuggableCall::No);
 
     if (doEmitAwait == EmitAwait::Yes)
-        emitAwait(value.get());
+        emitAwait(value.get(), value.get(), node->divot());
 
     emitJumpIfTrue(emitIsObject(newTemporary(), value.get()), done.get());
     emitThrowTypeError("Iterator result interface is not an object."_s);
@@ -5177,7 +5181,7 @@ RegisterID* BytecodeGenerator::emitDelegateYield(RegisterID* argument, Throwable
                     emitJumpIfFalse(emitIsUndefinedOrNull(newTemporary(), returnMethod.get()), returnMethodFound.get());
 
                     if (parseMode() == SourceParseMode::AsyncGeneratorBodyMode)
-                        emitAwait(value.get());
+                        emitAwait(value.get(), value.get(), node->divot());
 
                     Ref<Label> returnSequence = newLabel();
                     emitJump(returnSequence.get());
@@ -5189,7 +5193,7 @@ RegisterID* BytecodeGenerator::emitDelegateYield(RegisterID* argument, Throwable
                     emitCall(value.get(), returnMethod.get(), NoExpectedFunction, returnArguments, node->divot(), node->divotStart(), node->divotEnd(), DebuggableCall::No);
 
                     if (parseMode() == SourceParseMode::AsyncGeneratorBodyMode)
-                        emitAwait(value.get());
+                        emitAwait(value.get(), value.get(), node->divot());
 
                     Ref<Label> returnIteratorResultIsObject = newLabel();
                     emitJumpIfTrue(emitIsObject(newTemporary(), value.get()), returnIteratorResultIsObject.get());
@@ -5222,7 +5226,7 @@ RegisterID* BytecodeGenerator::emitDelegateYield(RegisterID* argument, Throwable
             emitLabel(branchOnResult.get());
 
             if (parseMode() == SourceParseMode::AsyncGeneratorBodyMode)
-                emitAwait(value.get());
+                emitAwait(value.get(), value.get(), node->divot());
 
             Ref<Label> iteratorValueIsObject = newLabel();
             emitJumpIfTrue(emitIsObject(newTemporary(), value.get()), iteratorValueIsObject.get());

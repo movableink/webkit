@@ -1133,7 +1133,7 @@ op :throw_static_error,
 op :debug,
     args: {
         debugHookType: DebugHookType,
-        hasBreakpoint: bool,
+        data: VirtualRegister,
     }
 
 op :end,

@@ -116,12 +116,12 @@ void WebScriptDebugger::sourceParsed(JSC::JSGlobalObject* lexicalGlobalObject, J
     m_callingDelegate = false;
 }
 
-void WebScriptDebugger::handlePause(JSC::JSGlobalObject* globalObject, Debugger::ReasonForPause reason)
+void WebScriptDebugger::handlePause(JSC::JSGlobalObject* globalObject)
 {
     if (m_callingDelegate)
         return;
 
-    if (reason != Debugger::PausedForException)
+    if (reasonForPause() != Debugger::PausedForException)
         return;
 
     m_callingDelegate = true;
