@@ -2035,7 +2035,16 @@ FixedContainerEdges LocalFrameView::fixedContainerEdges(BoxSideSet sides) const
 
         document->hitTest({ HitTestSource::User, hitTestOptions }, result);
 
-        RefPtr hitNode = result.isRectBasedTest() ? result.listBasedTestResult().first().ptr() : result.innerNonSharedNode();
+        RefPtr hitNode = [&] -> RefPtr<Node> {
+            if (!result.isRectBasedTest())
+                return result.innerNonSharedNode();
+
+            if (auto& resultsList = result.listBasedTestResult(); !resultsList.isEmpty())
+                return resultsList.first().ptr();
+
+            return { };
+        }();
+
         if (!hitNode)
             return { };
 
