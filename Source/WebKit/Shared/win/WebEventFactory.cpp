@@ -484,7 +484,7 @@ WebKeyboardEvent WebEventFactory::createWebKeyboardEvent(HWND hwnd, UINT message
 #if ENABLE(TOUCH_EVENTS)
 WebTouchEvent WebEventFactory::createWebTouchEvent()
 {
-    return WebTouchEvent();
+    return WebTouchEvent({ WebEventType::TouchMove, OptionSet<WebEventModifier> { }, WallTime::now() }, { }, { }, { });
 }
 #endif // ENABLE(TOUCH_EVENTS)
 
