@@ -1833,6 +1833,11 @@ private:
 
             if (hasError(m_errorCode))
                 return;
+
+            if (m_delegate.abortedDueToError()) {
+                m_errorCode = m_delegate.abortErrorCode();
+                return;
+            }
         }
 
         if (!m_parenthesesStack.isEmpty())
@@ -2213,6 +2218,38 @@ private:
  * message where a parse error occurs.
  *
  * The Delegate must implement `YarrSyntaxCheckable` concept.
+ * The Delegate must implement the following interface:
+ *
+ *    void assertionBOL();
+ *    void assertionEOL();
+ *    void assertionWordBoundary(bool invert);
+ *
+ *    void atomPatternCharacter(char32_t ch);
+ *    void atomBuiltInCharacterClass(BuiltInCharacterClassID classID, bool invert);
+ *    void atomCharacterClassBegin(bool invert)
+ *    void atomCharacterClassAtom(char32_t ch)
+ *    void atomCharacterClassRange(char32_t begin, char32_t end)
+ *    void atomCharacterClassBuiltIn(BuiltInCharacterClassID classID, bool invert)
+ *    void atomClassStringDisjunction(Vector<Vector<char32_t>>&)
+ *    void atomCharacterClassSetOp(CharacterClassSetOp setOp)
+ *    void atomCharacterClassPushNested()
+ *    void atomCharacterClassPopNested()
+ *    void atomCharacterClassEnd()
+ *    void atomParenthesesSubpatternBegin(bool capture = true, std::optional<String> groupName);
+ *    void atomParentheticalAssertionBegin(bool invert, MatchDirection matchDirection);
+ *    void atomParenthesesEnd();
+ *    void atomBackReference(unsigned subpatternId);
+ *    void atomNamedBackReference(const String& subpatternName);
+ *    void atomNamedForwardReference(const String& subpatternName);
+ *
+ *    void quantifyAtom(unsigned min, unsigned max, bool greedy);
+ *
+ *    void disjunction(CreateDisjunctionPurpose purpose);
+ *
+ *    bool abortedDueToError() const;
+ *    ErrorCode abortErrorCode() const;
+ *
+ *    void resetForReparsing();
  *
  * The regular expression is described by a sequence of assertion*() and atom*()
  * callbacks to the delegate, describing the terms in the regular expression.

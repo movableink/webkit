@@ -415,7 +415,7 @@ public:
         unicodeOpSorted(rhsSortedMatchesUnicode, rhsRangesUnicode);
     }
 
-    bool hasInverteStrings()
+    bool hasInvertedStrings()
     {
         return m_invertedStrings;
     }
@@ -1306,7 +1306,7 @@ public:
 
     void atomCharacterClassEnd()
     {
-        if (m_currentCharacterClassConstructor->hasInverteStrings()) {
+        if (m_currentCharacterClassConstructor->hasInvertedStrings()) {
             m_error = ErrorCode::NegatedClassSetMayContainStrings;
             return;
         }
@@ -1690,6 +1690,16 @@ public:
         }
 
         m_alternative = m_alternative->m_parent->addNewAlternative(m_pattern.m_numSubpatterns, parenthesisMatchDirection());
+    }
+
+    inline bool abortedDueToError() const
+    {
+        return hasError(m_error);
+    }
+
+    inline ErrorCode abortErrorCode() const
+    {
+        return m_error;
     }
 
     ErrorCode setupAlternativeOffsets(PatternAlternative* alternative, unsigned currentCallFrameSize, unsigned initialInputPosition, unsigned& newCallFrameSize) WARN_UNUSED_RETURN
