@@ -1571,14 +1571,8 @@ static void adjustRegionAfterViewportSizeChange(Region& region, FloatSize oldSiz
 
 void ElementTargetingController::adjustVisibilityInRepeatedlyTargetedRegions(Document& document)
 {
-    if (m_didCollectInitialAdjustments && (!m_page || !m_page->hasEverSetVisibilityAdjustment()))
+    if (RefPtr frame = document.frame(); !frame || !frame->isMainFrame())
         return;
-
-    if (!document.isTopDocument()) {
-        // Only the top document supports declarative visibility adjustment via element selectors.
-        m_didCollectInitialAdjustments = true;
-        return;
-    }
 
     RefPtr frameView = document.view();
     if (!frameView)
