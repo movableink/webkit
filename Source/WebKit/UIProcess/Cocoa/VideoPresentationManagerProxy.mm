@@ -847,18 +847,16 @@ PlatformLayerContainer VideoPresentationManagerProxy::createLayerWithID(Playback
     auto [model, interface] = ensureModelAndInterface(contextId);
     addClientForContext(contextId);
 
-    Ref protectedModel = model;
-    if (protectedModel->videoDimensions().isEmpty() && !nativeSize.isEmpty())
-        protectedModel->setVideoDimensions(nativeSize);
+    if (model->videoDimensions().isEmpty() && !nativeSize.isEmpty())
+        model->setVideoDimensions(nativeSize);
 
     RetainPtr<WKLayerHostView> view = createLayerHostViewWithID(contextId, videoLayerID, initialSize, hostingDeviceScaleFactor);
 
-    Ref protectedInterface = interface;
-    if (!protectedInterface->playerLayer()) {
-        ALWAYS_LOG(LOGIDENTIFIER, protectedModel->logIdentifier(), ", Creating AVPlayerLayer, initialSize: ", initialSize, ", nativeSize: ", nativeSize);
+    if (!interface->playerLayer()) {
+        ALWAYS_LOG(LOGIDENTIFIER, model->logIdentifier(), ", Creating AVPlayerLayer, initialSize: ", initialSize, ", nativeSize: ", nativeSize);
         auto playerLayer = adoptNS([[WebAVPlayerLayer alloc] init]);
 
-        [playerLayer setPresentationModel:protectedModel.ptr()];
+        [playerLayer setPresentationModel:model.ptr()];
         [playerLayer setVideoSublayer:[view layer]];
 
         // The videoView may already be reparented in fullscreen, so only parent the view
@@ -866,7 +864,7 @@ PlatformLayerContainer VideoPresentationManagerProxy::createLayerWithID(Playback
         if (![[view layer] superlayer])
             [playerLayer addSublayer:[view layer]];
 
-        protectedInterface->setPlayerLayer(playerLayer.get());
+        interface->setPlayerLayer(playerLayer.get());
 
         [playerLayer setFrame:CGRectMake(0, 0, initialSize.width(), initialSize.height())];
         [playerLayer setNeedsLayout];
@@ -876,7 +874,7 @@ PlatformLayerContainer VideoPresentationManagerProxy::createLayerWithID(Playback
     if (RefPtr page = m_page.get())
         page->protectedLegacyMainFrameProcess()->send(Messages::VideoPresentationManager::EnsureUpdatedVideoDimensions(contextId, nativeSize), page->webPageIDInMainFrameProcess());
 
-    return protectedInterface->playerLayer();
+    return interface->playerLayer();
 }
 
 RetainPtr<WKLayerHostView> VideoPresentationManagerProxy::createLayerHostViewWithID(PlaybackSessionContextIdentifier contextId, WebKit::LayerHostingContextID videoLayerID, const WebCore::FloatSize& initialSize, float hostingDeviceScaleFactor)
@@ -1115,7 +1113,7 @@ void VideoPresentationManagerProxy::setVideoDimensions(PlaybackSessionContextIde
 {
     auto [model, interface] = ensureModelAndInterface(contextId);
     bool videosInElementFullscrenChanged = model->videoDimensions() != videoDimensions && model->isChildOfElementFullscreen();
-    Ref { model }->setVideoDimensions(videoDimensions);
+    model->setVideoDimensions(videoDimensions);
 
     if (m_mockVideoPresentationModeEnabled) {
         if (videoDimensions.isEmpty())
