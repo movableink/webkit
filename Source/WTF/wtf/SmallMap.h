@@ -42,7 +42,7 @@ public:
 
     static_assert(sizeof(Pair) <= 4 * sizeof(uint64_t), "Don't use SmallMap with large types. It probably wastes memory.");
 
-    Value& ensure(const Key& key, const auto& functor)
+    Value& ensure(const Key& key, NOESCAPE const auto& functor)
     {
         ASSERT(Map::isValidKey(key));
         if (std::holds_alternative<std::monostate>(m_storage)) {
@@ -83,7 +83,7 @@ public:
         return nullptr;
     }
 
-    void forEach(const auto& callback) const
+    void forEach(NOESCAPE const auto& callback) const
     {
         switchOn(m_storage, [&] (const std::monostate&) {
         }, [&] (const Pair& pair) {

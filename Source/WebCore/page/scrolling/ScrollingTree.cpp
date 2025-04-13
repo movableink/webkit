@@ -271,18 +271,16 @@ OptionSet<EventListenerRegionType> ScrollingTree::eventListenerRegionTypesForPoi
 }
 #endif
 
-void ScrollingTree::traverseScrollingTree(VisitorFunction&& visitorFunction)
+void ScrollingTree::traverseScrollingTree(NOESCAPE const VisitorFunction& visitorFunction)
 {
     Locker locker { m_treeLock };
     RefPtr rootNode = m_rootNode;
     if (!rootNode)
         return;
-
-    auto function = WTFMove(visitorFunction);
-    traverseScrollingTreeRecursive(*rootNode, function);
+    traverseScrollingTreeRecursive(*rootNode, visitorFunction);
 }
 
-void ScrollingTree::traverseScrollingTreeRecursive(ScrollingTreeNode& node, const VisitorFunction& visitorFunction)
+void ScrollingTree::traverseScrollingTreeRecursive(ScrollingTreeNode& node, NOESCAPE const VisitorFunction& visitorFunction)
 {
     bool scrolledSinceLastCommit = false;
     std::optional<FloatPoint> scrollPosition;

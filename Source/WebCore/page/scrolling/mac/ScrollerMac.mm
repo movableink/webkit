@@ -401,7 +401,7 @@ void ScrollerMac::updatePairScrollerImps()
 
 void ScrollerMac::mouseEnteredScrollbar()
 {
-    m_pair.ensureOnMainThreadWithProtectedThis([this] {
+    m_pair.ensureOnMainThreadWithProtectedThis([this](auto&) {
         // At this time, only legacy scrollbars needs to send notifications here.
         if (m_pair.scrollbarStyle() != WebCore::ScrollbarStyle::AlwaysVisible)
             return;
@@ -415,7 +415,7 @@ void ScrollerMac::mouseEnteredScrollbar()
 
 void ScrollerMac::mouseExitedScrollbar()
 {
-    m_pair.ensureOnMainThreadWithProtectedThis([this] {
+    m_pair.ensureOnMainThreadWithProtectedThis([this](auto&) {
         // At this time, only legacy scrollbars needs to send notifications here.
         if (m_pair.scrollbarStyle() != WebCore::ScrollbarStyle::AlwaysVisible)
             return;

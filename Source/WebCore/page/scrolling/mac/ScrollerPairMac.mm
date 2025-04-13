@@ -171,18 +171,18 @@ ScrollerPairMac::~ScrollerPairMac()
 
 void ScrollerPairMac::handleWheelEventPhase(PlatformWheelEventPhase phase)
 {
-    ensureOnMainThreadWithProtectedThis([phase, this] {
+    ensureOnMainThreadWithProtectedThis([phase](auto& scrollerPair) {
         switch (phase) {
         case PlatformWheelEventPhase::Began:
-            [m_scrollerImpPair beginScrollGesture];
+            [scrollerPair.m_scrollerImpPair beginScrollGesture];
             break;
         case PlatformWheelEventPhase::Ended:
         case PlatformWheelEventPhase::Cancelled:
-            [m_scrollerImpPair endScrollGesture];
+            [scrollerPair.m_scrollerImpPair endScrollGesture];
             break;
         case PlatformWheelEventPhase::MayBegin:
-            [m_scrollerImpPair beginScrollGesture];
-            [m_scrollerImpPair contentAreaScrolled];
+            [scrollerPair.m_scrollerImpPair beginScrollGesture];
+            [scrollerPair.m_scrollerImpPair contentAreaScrolled];
             break;
         default:
             break;
@@ -197,11 +197,11 @@ void ScrollerPairMac::viewWillStartLiveResize()
     
     m_inLiveResize = true;
 
-    ensureOnMainThreadWithProtectedThis([this] {
-        if ([m_scrollerImpPair overlayScrollerStateIsLocked])
+    ensureOnMainThreadWithProtectedThis([](auto& scrollerPair) {
+        if ([scrollerPair.m_scrollerImpPair overlayScrollerStateIsLocked])
             return;
 
-        [m_scrollerImpPair startLiveResize];
+        [scrollerPair.m_scrollerImpPair startLiveResize];
     });
 }
 
@@ -212,21 +212,21 @@ void ScrollerPairMac::viewWillEndLiveResize()
     
     m_inLiveResize = false;
 
-    ensureOnMainThreadWithProtectedThis([this] {
-        if ([m_scrollerImpPair overlayScrollerStateIsLocked])
+    ensureOnMainThreadWithProtectedThis([](auto& scrollerPair) {
+        if ([scrollerPair.m_scrollerImpPair overlayScrollerStateIsLocked])
             return;
 
-        [m_scrollerImpPair endLiveResize];
+        [scrollerPair.m_scrollerImpPair endLiveResize];
     });
 }
 
 void ScrollerPairMac::contentsSizeChanged()
 {
-    ensureOnMainThreadWithProtectedThis([this] {
-        if ([m_scrollerImpPair overlayScrollerStateIsLocked])
+    ensureOnMainThreadWithProtectedThis([](auto& scrollerPair) {
+        if ([scrollerPair.m_scrollerImpPair overlayScrollerStateIsLocked])
             return;
 
-        [m_scrollerImpPair contentAreaDidResize];
+        [scrollerPair.m_scrollerImpPair contentAreaDidResize];
     });
 }
 
@@ -257,8 +257,8 @@ void ScrollerPairMac::updateValues()
 
     if (offset != m_lastScrollOffset) {
         if (m_lastScrollOffset) {
-            ensureOnMainThreadWithProtectedThis([delta = offset - *m_lastScrollOffset, this] {
-                [m_scrollerImpPair contentAreaScrolledInDirection:NSMakePoint(delta.width(), delta.height())];
+            ensureOnMainThreadWithProtectedThis([delta = offset - *m_lastScrollOffset](auto& scrollerPair) {
+                [scrollerPair.m_scrollerImpPair contentAreaScrolledInDirection:NSMakePoint(delta.width(), delta.height())];
             });
         }
         m_lastScrollOffset = offset;
@@ -337,15 +337,15 @@ String ScrollerPairMac::scrollbarStateForOrientation(ScrollbarOrientation orient
 
 void ScrollerPairMac::setVerticalScrollerImp(NSScrollerImp *scrollerImp)
 {
-    ensureOnMainThreadWithProtectedThis([this, scrollerImp = RetainPtr { scrollerImp }] {
-        [m_scrollerImpPair setVerticalScrollerImp:scrollerImp.get()];
+    ensureOnMainThreadWithProtectedThis([scrollerImp = RetainPtr { scrollerImp }](auto& srollerPair) {
+        [srollerPair.m_scrollerImpPair setVerticalScrollerImp:scrollerImp.get()];
     });
 }
 
 void ScrollerPairMac::setHorizontalScrollerImp(NSScrollerImp *scrollerImp)
 {
-    ensureOnMainThreadWithProtectedThis([this, scrollerImp = RetainPtr { scrollerImp }] {
-        [m_scrollerImpPair setHorizontalScrollerImp:scrollerImp.get()];
+    ensureOnMainThreadWithProtectedThis([scrollerImp = RetainPtr { scrollerImp }](auto& scrollerPair) {
+        [scrollerPair.m_scrollerImpPair setHorizontalScrollerImp:scrollerImp.get()];
     });
 }
 
@@ -353,17 +353,17 @@ void ScrollerPairMac::setScrollbarStyle(ScrollbarStyle style)
 {
     m_scrollbarStyle = style;
 
-    ensureOnMainThreadWithProtectedThis([this, scrollerStyle = nsScrollerStyle(style)] {
-        m_horizontalScroller.updateScrollbarStyle();
-        m_verticalScroller.updateScrollbarStyle();
-        [m_scrollerImpPair setScrollerStyle:scrollerStyle];
+    ensureOnMainThreadWithProtectedThis([scrollerStyle = nsScrollerStyle(style)](auto& scrollerPair) {
+        scrollerPair.m_horizontalScroller.updateScrollbarStyle();
+        scrollerPair.m_verticalScroller.updateScrollbarStyle();
+        [scrollerPair.m_scrollerImpPair setScrollerStyle:scrollerStyle];
     });
 }
 
-void ScrollerPairMac::ensureOnMainThreadWithProtectedThis(Function<void()>&& task)
+void ScrollerPairMac::ensureOnMainThreadWithProtectedThis(Function<void(ScrollerPairMac&)>&& task)
 {
     ensureOnMainThread([protectedThis = Ref { *this }, task = WTFMove(task)]() mutable {
-        task();
+        task(protectedThis.get());
     });
 }
 
@@ -371,11 +371,11 @@ void ScrollerPairMac::mouseEnteredContentArea()
 {
     LOG_WITH_STREAM(OverlayScrollbars, stream << "ScrollerPairMac for [" << protectedNode()->scrollingNodeID() << "] mouseEnteredContentArea");
 
-    ensureOnMainThreadWithProtectedThis([this] {
-        if ([m_scrollerImpPair overlayScrollerStateIsLocked])
+    ensureOnMainThreadWithProtectedThis([](auto& scrollerPair) {
+        if ([scrollerPair.m_scrollerImpPair overlayScrollerStateIsLocked])
             return;
 
-        [m_scrollerImpPair mouseEnteredContentArea];
+        [scrollerPair.m_scrollerImpPair mouseEnteredContentArea];
     });
 }
 
@@ -384,11 +384,11 @@ void ScrollerPairMac::mouseExitedContentArea()
     m_mouseInContentArea = false;
     LOG_WITH_STREAM(OverlayScrollbars, stream << "ScrollerPairMac for [" << protectedNode()->scrollingNodeID() << "] mouseExitedContentArea");
 
-    ensureOnMainThreadWithProtectedThis([this] {
-        if ([m_scrollerImpPair overlayScrollerStateIsLocked])
+    ensureOnMainThreadWithProtectedThis([](auto& scrollerPair) {
+        if ([scrollerPair.m_scrollerImpPair overlayScrollerStateIsLocked])
             return;
 
-        [m_scrollerImpPair mouseExitedContentArea];
+        [scrollerPair.m_scrollerImpPair mouseExitedContentArea];
     });
 }
 
@@ -398,11 +398,11 @@ void ScrollerPairMac::mouseMovedInContentArea(const MouseLocationState& state)
     horizontalScroller().setLastKnownMousePositionInScrollbar(state.locationInHorizontalScrollbar);
     verticalScroller().setLastKnownMousePositionInScrollbar(state.locationInVerticalScrollbar);
 
-    ensureOnMainThreadWithProtectedThis([this] {
-        if ([m_scrollerImpPair overlayScrollerStateIsLocked])
+    ensureOnMainThreadWithProtectedThis([](auto& scrollerPair) {
+        if ([scrollerPair.m_scrollerImpPair overlayScrollerStateIsLocked])
             return;
         
-        [m_scrollerImpPair mouseMovedInContentArea];
+        [scrollerPair.m_scrollerImpPair mouseMovedInContentArea];
     });
 }
 

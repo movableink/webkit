@@ -1215,7 +1215,7 @@ std::optional<ScrollingNodeID> AsyncScrollingCoordinator::scrollableContainerNod
 String AsyncScrollingCoordinator::scrollingStateTreeAsText(OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     StringBuilder stateTree;
-    m_scrollingStateTrees.forEach([&] (auto& key, auto& tree) {
+    m_scrollingStateTrees.forEach([&](auto& key, auto& tree) {
         if (tree->rootStateNode()) {
             if (m_eventTrackingRegionsDirty)
                 tree->rootStateNode()->setEventTrackingRegions(absoluteEventTrackingRegions());

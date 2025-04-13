@@ -76,9 +76,6 @@ page/ShareDataReader.cpp
 page/UserMessageHandlersNamespace.cpp
 page/cocoa/ResourceUsageOverlayCocoa.mm
 page/csp/ContentSecurityPolicy.cpp
-page/scrolling/AsyncScrollingCoordinator.cpp
-page/scrolling/ThreadedScrollingCoordinator.cpp
-page/scrolling/mac/ScrollerPairMac.mm
 platform/RemoteCommandListener.cpp
 platform/ScrollableArea.cpp
 platform/Timer.h
