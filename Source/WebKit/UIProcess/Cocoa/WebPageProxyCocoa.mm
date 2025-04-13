@@ -1366,7 +1366,7 @@ void WebPageProxy::addTextAnimationForAnimationIDWithCompletionHandler(IPC::Conn
     // Storing and sending information for the different shaped SPI on iOS.
     if (styleData.runMode == WebCore::TextAnimationRunMode::RunAnimation) {
         if (styleData.style == WebCore::TextAnimationType::Source)
-            internals().sourceAnimationIDtoDestinationAnimationID.add(styleData.destinationAnimationUUID, uuid);
+            internals().sourceAnimationIDtoDestinationAnimationID.add(*styleData.destinationAnimationUUID, uuid);
 
         if (styleData.style == WebCore::TextAnimationType::Final) {
             if (auto sourceAnimationID = internals().sourceAnimationIDtoDestinationAnimationID.take(uuid)) {
