@@ -298,7 +298,7 @@ static std::optional<CSS::FilterProperty::List> consumeUnresolvedFilterValueList
     };
 
     do {
-        if (auto url = consumeURLRaw(rangeCopy, state)) {
+        if (auto url = consumeURLRaw(rangeCopy, state, { })) {
             list.value.append(CSS::FilterReference { WTFMove(*url) });
             continue;
         }

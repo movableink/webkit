@@ -571,7 +571,7 @@ static RefPtr<CSSFontFaceSrcResourceValue> consumeFontFaceSrcURI(CSSParserTokenR
 
     // https://drafts.csswg.org/css-fonts-4/#typedef-font-src
 
-    auto location = consumeURLRaw(range, state);
+    auto location = consumeURLRaw(range, state, { });
     if (!location)
         return nullptr;
 

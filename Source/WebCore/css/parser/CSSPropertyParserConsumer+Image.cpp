@@ -1259,7 +1259,7 @@ RefPtr<CSSValue> consumeImage(CSSParserTokenRange& range, CSS::PropertyParserSta
     }
 
     if (allowedImageTypes.contains(AllowedImageType::URLFunction)) {
-        if (auto imageURL = consumeURLRaw(range, state))
+        if (auto imageURL = consumeURLRaw(range, state, { AllowedURLModifiers::CrossOrigin, AllowedURLModifiers::ReferrerPolicy }))
             return CSSImageValue::create(WTFMove(*imageURL));
     }
 

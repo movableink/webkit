@@ -143,7 +143,7 @@ RefPtr<CSSValue> consumeOffsetPath(CSSParserTokenRange& range, CSS::PropertyPars
         return consumeIdent(range);
 
     // FIXME: It should be possible to consume both a <url> and <coord-box>.
-    if (auto url = consumeURL(range, state))
+    if (auto url = consumeURL(range, state, { }))
         return url;
 
     RefPtr<CSSValue> shapeOrRay;

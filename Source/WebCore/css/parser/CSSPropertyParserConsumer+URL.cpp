@@ -55,7 +55,7 @@ namespace CSSPropertyParserHelpers {
 // <integrity-modifier> = integrity( <string> )
 // <referrerpolicy-modifier> = referrerpolicy( no-referrer | no-referrer-when-downgrade | same-origin | origin | strict-origin | origin-when-cross-origin | strict-origin-when-cross-origin | unsafe-url)
 
-std::optional<CSS::URL> consumeURLRaw(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+std::optional<CSS::URL> consumeURLRaw(CSSParserTokenRange& range, CSS::PropertyParserState& state, OptionSet<AllowedURLModifiers> allowedURLModifiers)
 {
     auto& token = range.peek();
     if (token.type() == UrlToken) {
@@ -86,6 +86,8 @@ std::optional<CSS::URL> consumeURLRaw(CSSParserTokenRange& range, CSS::PropertyP
             while (!args.atEnd()) {
                 switch (args.peek().functionId()) {
                 case CSSValueCrossorigin: {
+                    if (!allowedURLModifiers.contains(AllowedURLModifiers::CrossOrigin))
+                        return { };
                     if (result->modifiers.crossorigin)
                         return { };
                     auto crossoriginArgs = consumeFunction(args);
@@ -99,6 +101,8 @@ std::optional<CSS::URL> consumeURLRaw(CSSParserTokenRange& range, CSS::PropertyP
                     break;
                 }
                 case CSSValueIntegrity: {
+                    if (!allowedURLModifiers.contains(AllowedURLModifiers::Integrity))
+                        return { };
                     if (result->modifiers.integrity)
                         return { };
                     auto integrityArgs = consumeFunction(args);
@@ -109,6 +113,8 @@ std::optional<CSS::URL> consumeURLRaw(CSSParserTokenRange& range, CSS::PropertyP
                     break;
                 }
                 case CSSValueReferrerpolicy: {
+                    if (!allowedURLModifiers.contains(AllowedURLModifiers::ReferrerPolicy))
+                        return { };
                     if (result->modifiers.referrerpolicy)
                         return { };
                     auto referrerpolicyArgs = consumeFunction(args);
@@ -145,9 +151,9 @@ std::optional<CSS::URL> consumeURLRaw(CSSParserTokenRange& range, CSS::PropertyP
     return { };
 }
 
-RefPtr<CSSValue> consumeURL(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+RefPtr<CSSValue> consumeURL(CSSParserTokenRange& range, CSS::PropertyParserState& state, OptionSet<AllowedURLModifiers> allowedURLModifiers)
 {
-    if (auto rawURL = consumeURLRaw(range, state))
+    if (auto rawURL = consumeURLRaw(range, state, allowedURLModifiers))
         return CSSURLValue::create(WTFMove(*rawURL));
     return nullptr;
 }

@@ -1052,6 +1052,30 @@ public:
     {
         builderState.style().setTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt(fromCSSValueDeducingType(builderState, value));
     }
+    static void applyInitialTestUrlWithModifiers(BuilderState& builderState)
+    {
+        builderState.style().setTestUrlWithModifiers(RenderStyle::initialTestUrlWithModifiers());
+    }
+    static void applyInheritTestUrlWithModifiers(BuilderState& builderState)
+    {
+        builderState.style().setTestUrlWithModifiers(forwardInheritedValue(builderState.parentStyle().testUrlWithModifiers()));
+    }
+    static void applyValueTestUrlWithModifiers(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestUrlWithModifiers(fromCSSValueDeducingType(builderState, value));
+    }
+    static void applyInitialTestUrlWithNoModifiers(BuilderState& builderState)
+    {
+        builderState.style().setTestUrlWithNoModifiers(RenderStyle::initialTestUrlWithNoModifiers());
+    }
+    static void applyInheritTestUrlWithNoModifiers(BuilderState& builderState)
+    {
+        builderState.style().setTestUrlWithNoModifiers(forwardInheritedValue(builderState.parentStyle().testUrlWithNoModifiers()));
+    }
+    static void applyValueTestUrlWithNoModifiers(BuilderState& builderState, CSSValue& value)
+    {
+        builderState.style().setTestUrlWithNoModifiers(fromCSSValueDeducingType(builderState, value));
+    }
     static void applyInitialTestUsingSharedRule(BuilderState& builderState)
     {
         builderState.style().setTestUsingSharedRule(RenderStyle::initialTestUsingSharedRule());
@@ -2257,6 +2281,32 @@ void BuilderGenerated::applyProperty(CSSPropertyID id, BuilderState& builderStat
             break;
         case ApplyValueType::Value:
             BuilderFunctions::applyValueTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt(builderState, value);
+            break;
+        }
+        break;
+    case CSSPropertyID::CSSPropertyTestUrlWithModifiers:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestUrlWithModifiers(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestUrlWithModifiers(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestUrlWithModifiers(builderState, value);
+            break;
+        }
+        break;
+    case CSSPropertyID::CSSPropertyTestUrlWithNoModifiers:
+        switch (valueType) {
+        case ApplyValueType::Initial:
+            BuilderFunctions::applyInitialTestUrlWithNoModifiers(builderState);
+            break;
+        case ApplyValueType::Inherit:
+            BuilderFunctions::applyInheritTestUrlWithNoModifiers(builderState);
+            break;
+        case ApplyValueType::Value:
+            BuilderFunctions::applyValueTestUrlWithNoModifiers(builderState, value);
             break;
         }
         break;

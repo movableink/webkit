@@ -103,7 +103,7 @@ RefPtr<CSSValue> consumeClipPath(CSSParserTokenRange& range, CSS::PropertyParser
     if (range.peek().id() == CSSValueNone)
         return consumeIdent(range);
 
-    if (auto url = consumeURL(range, state))
+    if (auto url = consumeURL(range, state, { }))
         return url;
 
     RefPtr<CSSValue> shape;

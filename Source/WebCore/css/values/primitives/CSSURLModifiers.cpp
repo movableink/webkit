@@ -42,6 +42,8 @@ void applyModifiersToLoaderOptions(const URLModifiers& modifiers, ResourceLoader
         // 2. If the given value is use-credentials, set request's credentials mode to "include"
         if (std::holds_alternative<Keyword::UseCredentials>(modifiers.crossorigin->parameters))
             loaderOptions.credentials = FetchOptions::Credentials::Include;
+        else
+            loaderOptions.credentials = FetchOptions::Credentials::SameOrigin;
     }
 
     if (modifiers.integrity) {

@@ -497,7 +497,7 @@ std::pair<RefPtr<CSSValue>, CSSCustomPropertySyntax::Type> CSSPropertyParser::co
         case CSSCustomPropertySyntax::Type::Image:
             return consumeImage(range, state, { AllowedImageType::URLFunction, AllowedImageType::GeneratedImage });
         case CSSCustomPropertySyntax::Type::URL:
-            return consumeURL(range, state);
+            return consumeURL(range, state, { });
         case CSSCustomPropertySyntax::Type::String:
             return consumeString(range);
         case CSSCustomPropertySyntax::Type::TransformFunction:

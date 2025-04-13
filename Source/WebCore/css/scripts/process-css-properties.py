@@ -1578,6 +1578,7 @@ ANCHOR_MAPPINGS = {'allowed': 'AnchorPolicy::Allow', 'forbidden': 'AnchorPolicy:
 ANCHOR_SIZE_MAPPINGS = {'allowed': 'AnchorSizePolicy::Allow', 'forbidden': 'AnchorSizePolicy::Forbid'}
 ALLOWED_COLOR_TYPES_MAPPINGS = {'absolute': 'CSS::ColorType::Absolute', 'current': 'CSS::ColorType::Current', 'system': 'CSS::ColorType::System'}
 ALLOWED_IMAGE_TYPES_MAPPINGS = {'url': 'AllowedImageType::URLFunction', 'image-set': 'AllowedImageType::ImageSet', 'generated': 'AllowedImageType::GeneratedImage'}
+ALLOWED_URL_MODIFIER_MAPPINGS = {'crossorigin': 'AllowedURLModifiers::CrossOrigin', 'integrity': 'AllowedURLModifiers::Integrity', 'referrerpolicy': 'AllowedURLModifiers::ReferrerPolicy'}
 
 class ReferenceTerm:
     builtins = BuiltinSchema(
@@ -1613,7 +1614,8 @@ class ReferenceTerm:
         BuiltinSchema.Entry('custom-ident',
             BuiltinSchema.StringParameter('excluding')),
         BuiltinSchema.Entry('dashed-ident'),
-        BuiltinSchema.Entry('url'),
+        BuiltinSchema.Entry('url',
+            BuiltinSchema.StringParameter('allowed-modifiers', mappings=ALLOWED_URL_MODIFIER_MAPPINGS)),
         BuiltinSchema.Entry('feature-tag-value'),
         BuiltinSchema.Entry('variation-tag-value'),
         BuiltinSchema.Entry('unicode-range-token'),
@@ -6188,13 +6190,21 @@ class TermGeneratorReferenceTerm(TermGenerator):
             elif isinstance(builtin, BuiltinPositionConsumer):
                 return f"consumePosition({range_string}, {state_string})"
             elif isinstance(builtin, BuiltinColorConsumer):
-                return f"consumeColor({range_string}, {state_string}, {{ .allowedColorTypes = {{ {builtin.allowed_types} }} }})"
+                if builtin.allowed_types:
+                    return f"consumeColor({range_string}, {state_string}, {{ .allowedColorTypes = {{ {builtin.allowed_types} }} }})"
+                return f"consumeColor({range_string}, {state_string}, {{ .allowedColorTypes = {{ }} }})"
             elif isinstance(builtin, BuiltinImageConsumer):
-                return f"consumeImage({range_string}, {state_string}, {{ {builtin.allowed_types} }})"
+                if builtin.allowed_types:
+                    return f"consumeImage({range_string}, {state_string}, {{ {builtin.allowed_types} }})"
+                return f"consumeImage({range_string}, {state_string}, {{ }})"
             elif isinstance(builtin, BuiltinCustomIdentConsumer):
                 if builtin.excluding:
                     return f"consumeCustomIdentExcluding({range_string}, {{ { ', '.join(ValueKeywordName(id).id for id in builtin.excluding)} }})"
                 return f"consumeCustomIdent({range_string})"
+            elif isinstance(builtin, BuiltinURLConsumer):
+                if builtin.allowed_modifiers:
+                    return f"consumeURL({range_string}, {state_string}, {{ {builtin.allowed_modifiers} }})"
+                return f"consumeURL({range_string}, {state_string}, {{ }})"
             elif self.requires_state:
                 return f"consume{self.term.name.id_without_prefix}({range_string}, {state_string})"
             else:

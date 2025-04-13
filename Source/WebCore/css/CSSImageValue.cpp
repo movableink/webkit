@@ -112,7 +112,7 @@ CachedImage* CSSImageValue::loadImage(CachedResourceLoader& loader, const Resour
         ASSERT(loader.document());
 
         ResourceLoaderOptions loadOptions = options;
-        loadOptions.loadedFromOpaqueSource = m_location.modifiers.loadedFromOpaqueSource;
+        CSS::applyModifiersToLoaderOptions(m_location.modifiers, loadOptions);
 
         CachedResourceRequest request(ResourceRequest(m_location.resolved), loadOptions);
         if (m_initiatorType.isEmpty())

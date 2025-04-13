@@ -141,6 +141,26 @@ static bool isKeywordValidForTestMatchOneWithReferenceWithSettingsFlag(CSSValueI
     }
 }
 
+static bool isKeywordValidForTestUrlWithModifiers(CSSValueID keyword)
+{
+    switch (keyword) {
+    case CSSValueID::CSSValueNone:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool isKeywordValidForTestUrlWithNoModifiers(CSSValueID keyword)
+{
+    switch (keyword) {
+    case CSSValueID::CSSValueNone:
+        return true;
+    default:
+        return false;
+    }
+}
+
 static bool isKeywordValidForTestUsingSharedRule(CSSValueID keyword)
 {
     switch (keyword) {
@@ -3106,6 +3126,24 @@ static RefPtr<CSSValue> consumeTestUnboundedRepetitionWithSpacesWithMinSingleIte
     return consumeUnboundedRepetition(range, state);
 }
 
+static RefPtr<CSSValue> consumeTestUrlWithModifiers(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+{
+    // none
+    if (auto result = consumeIdent(range, isKeywordValidForTestUrlWithModifiers))
+        return result;
+    // <url allowed-modifiers=['crossorigin', 'integrity', 'referrerpolicy']>
+    return consumeURL(range, state, { AllowedURLModifiers::CrossOrigin, AllowedURLModifiers::Integrity, AllowedURLModifiers::ReferrerPolicy });
+}
+
+static RefPtr<CSSValue> consumeTestUrlWithNoModifiers(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+{
+    // none
+    if (auto result = consumeIdent(range, isKeywordValidForTestUrlWithNoModifiers))
+        return result;
+    // <url>
+    return consumeURL(range, state, { });
+}
+
 static RefPtr<CSSValue> consumeTestUsingSharedRule(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // auto
@@ -3328,6 +3366,10 @@ RefPtr<CSSValue> CSSPropertyParsing::parseStyleProperty(CSSParserTokenRange& ran
         return consumeTestUnboundedRepetitionWithSpacesWithMinNoSingleItemOpt(range, state);
     case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt:
         return consumeTestUnboundedRepetitionWithSpacesWithMinSingleItemOpt(range, state);
+    case CSSPropertyID::CSSPropertyTestUrlWithModifiers:
+        return consumeTestUrlWithModifiers(range, state);
+    case CSSPropertyID::CSSPropertyTestUrlWithNoModifiers:
+        return consumeTestUrlWithNoModifiers(range, state);
     case CSSPropertyID::CSSPropertyTestUsingSharedRule:
         return consumeTestUsingSharedRule(range, state);
     case CSSPropertyID::CSSPropertyTestUsingSharedRuleExported:
@@ -3354,6 +3396,10 @@ bool CSSPropertyParsing::isKeywordValidForStyleProperty(CSSPropertyID id, CSSVal
         return isKeywordValidForTestMatchOneWithMultipleKeywords(keyword);
     case CSSPropertyID::CSSPropertyTestMatchOneWithReferenceWithSettingsFlag:
         return isKeywordValidForTestMatchOneWithReferenceWithSettingsFlag(keyword);
+    case CSSPropertyID::CSSPropertyTestUrlWithModifiers:
+        return isKeywordValidForTestUrlWithModifiers(keyword);
+    case CSSPropertyID::CSSPropertyTestUrlWithNoModifiers:
+        return isKeywordValidForTestUrlWithNoModifiers(keyword);
     case CSSPropertyID::CSSPropertyTestUsingSharedRule:
         return isKeywordValidForTestUsingSharedRule(keyword);
     case CSSPropertyID::CSSPropertyTestUsingSharedRuleExported:
@@ -3374,6 +3420,8 @@ bool CSSPropertyParsing::isKeywordFastPathEligibleStyleProperty(CSSPropertyID id
     case CSSPropertyID::CSSPropertyTestMatchOneWithKeywordWithSettingsFlag:
     case CSSPropertyID::CSSPropertyTestMatchOneWithMultipleKeywords:
     case CSSPropertyID::CSSPropertyTestMatchOneWithReferenceWithSettingsFlag:
+    case CSSPropertyID::CSSPropertyTestUrlWithModifiers:
+    case CSSPropertyID::CSSPropertyTestUrlWithNoModifiers:
     case CSSPropertyID::CSSPropertyTestUsingSharedRule:
     case CSSPropertyID::CSSPropertyTestUsingSharedRuleExported:
     case CSSPropertyID::CSSPropertyTestUsingSharedRuleWithOverrideFunction:

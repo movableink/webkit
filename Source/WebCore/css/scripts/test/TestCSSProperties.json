@@ -717,6 +717,20 @@
             "codegen-properties": {
                 "parser-grammar": "foo@(aliased-to=baz) | bar"
             }
+        },
+        "test-url-with-no-modifiers": {
+            "animation-type": "discrete",
+            "initial": "none",
+            "codegen-properties": {
+                "parser-grammar": "none | <url>"
+            }
+        },
+        "test-url-with-modifiers": {
+            "animation-type": "discrete",
+            "initial": "none",
+            "codegen-properties": {
+                "parser-grammar": "none | <url allowed-modifiers=crossorigin,integrity,referrerpolicy>"
+            }
         }
     },
     "descriptors": {
