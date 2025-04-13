@@ -271,8 +271,8 @@ public:
     void allowLimitedMatroska() { m_allowLimitedMatroska = true; }
 private:
     TrackData* trackDataForTrackNumber(uint64_t);
-    static bool isSupportedVideoCodec(StringView);
-    static bool isSupportedAudioCodec(StringView);
+    bool isSupportedVideoCodec(StringView);
+    bool isSupportedAudioCodec(StringView);
     void flushPendingVideoSamples();
 
     // webm::Callback

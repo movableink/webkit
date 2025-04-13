@@ -1399,12 +1399,12 @@ WebMParser::ConsumeFrameDataResult WebMParser::AudioTrackData::consumeFrameData(
 
 bool WebMParser::isSupportedVideoCodec(StringView name)
 {
-    return name == "V_VP8"_s || name == "V_VP9"_s || name == "V_MPEG4/ISO/AVC"_s;
+    return name == "V_VP8"_s || name == "V_VP9"_s || (name == "V_MPEG4/ISO/AVC"_s && m_allowLimitedMatroska);
 }
 
 bool WebMParser::isSupportedAudioCodec(StringView name)
 {
-    return name == "A_VORBIS"_s || name == "A_OPUS"_s || name == "A_PCM/FLOAT/IEEE"_s;
+    return name == "A_VORBIS"_s || name == "A_OPUS"_s || (name == "A_PCM/FLOAT/IEEE"_s && m_allowLimitedMatroska);
 }
 
 SourceBufferParserWebM::SourceBufferParserWebM()
