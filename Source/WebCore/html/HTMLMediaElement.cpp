@@ -6788,7 +6788,8 @@ bool HTMLMediaElement::virtualHasPendingActivity() const
         if (isPlaying())
             return true;
 
-        RefPtr mediaSession = this->mediaSessionIfExists();
+        // This function could be called on a non-main thread.
+        SUPPRESS_UNCOUNTED_LOCAL auto* mediaSession = this->mediaSessionIfExists();
         if (!mediaSession)
             return false;
 
