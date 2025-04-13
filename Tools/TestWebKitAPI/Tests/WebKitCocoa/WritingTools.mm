@@ -67,10 +67,6 @@ WEAK_IMPORT_OBJC_CLASS(WTContext);
 WEAK_IMPORT_OBJC_CLASS(WTSession);
 WEAK_IMPORT_OBJC_CLASS(WTTextSuggestion);
 
-#if PLATFORM(VISION)
-asm(".linker_option \"-framework\", \"WritingTools\"");
-#endif
-
 #if PLATFORM(MAC)
 
 @interface WKWebView (Staging_136152077)
