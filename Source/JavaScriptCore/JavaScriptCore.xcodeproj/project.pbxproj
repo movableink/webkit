@@ -1448,6 +1448,7 @@
 		9177A1DC22F958D500B34CA2 /* HeapAnalyzer.h in Headers */ = {isa = PBXBuildFile; fileRef = 9177A1DB22F958D300B34CA2 /* HeapAnalyzer.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		918E15C12447B22700447A56 /* AggregateErrorPrototype.h in Headers */ = {isa = PBXBuildFile; fileRef = 918E15BD2447B22600447A56 /* AggregateErrorPrototype.h */; };
 		918E15C32447B22700447A56 /* AggregateErrorConstructor.h in Headers */ = {isa = PBXBuildFile; fileRef = 918E15BF2447B22700447A56 /* AggregateErrorConstructor.h */; };
+		92B4EF902D71C3650068CB55 /* LLVMProfiling.h in Headers */ = {isa = PBXBuildFile; fileRef = 92B4EF8F2D71C3650068CB55 /* LLVMProfiling.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		93052C350FB792190048FDC3 /* ParserArena.h in Headers */ = {isa = PBXBuildFile; fileRef = 93052C330FB792190048FDC3 /* ParserArena.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		932F5BDD0822A1C700736975 /* jsc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 45E12D8806A49B0F00E9DF84 /* jsc.cpp */; };
 		933040040E6A749400786E6A /* SmallStrings.h in Headers */ = {isa = PBXBuildFile; fileRef = 93303FEA0E6A72C000786E6A /* SmallStrings.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -4846,6 +4847,8 @@
 		91D1578C24E0BE35001F4CED /* Breakpoint.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Breakpoint.cpp; sourceTree = "<group>"; };
 		91F548A52A4CF448007292DE /* MapConstructor.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = MapConstructor.js; sourceTree = "<group>"; };
 		91FD55322A4CF52100F5D482 /* MapConstructor.lut.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MapConstructor.lut.h; sourceTree = "<group>"; };
+		92B4EF8F2D71C3650068CB55 /* LLVMProfiling.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LLVMProfiling.h; sourceTree = "<group>"; };
+		92B4EF962D71C5270068CB55 /* LLVMProfiling.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = LLVMProfiling.cpp; sourceTree = "<group>"; };
 		93052C320FB792190048FDC3 /* ParserArena.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ParserArena.cpp; sourceTree = "<group>"; };
 		93052C330FB792190048FDC3 /* ParserArena.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ParserArena.h; sourceTree = "<group>"; };
 		930DAD030FB1EB1A0082D205 /* NodeConstructors.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NodeConstructors.h; sourceTree = "<group>"; };
@@ -9081,6 +9084,8 @@
 				FEC579772310954B00BCA83F /* IntegrityInlines.h */,
 				FE384EE11ADDB7AD0055DE2C /* JSDollarVM.cpp */,
 				FE384EE21ADDB7AD0055DE2C /* JSDollarVM.h */,
+				92B4EF962D71C5270068CB55 /* LLVMProfiling.cpp */,
+				92B4EF8F2D71C3650068CB55 /* LLVMProfiling.h */,
 				86B5822C14D22F5F00A9C306 /* ProfileTreeNode.h */,
 				FEF9AD622D8B9848005821C5 /* SourceProfiler.cpp */,
 				FEF9AD612D8B9848005821C5 /* SourceProfiler.h */,
@@ -11598,6 +11603,7 @@
 				53FA2AE11CF37F3F0022711D /* LLIntPrototypeLoadAdaptiveStructureWatchpoint.h in Headers */,
 				0F4680A514BA7F8D00BFE272 /* LLIntSlowPaths.h in Headers */,
 				0F0B839D14BCF46600885B4F /* LLIntThunks.h in Headers */,
+				92B4EF902D71C3650068CB55 /* LLVMProfiling.h in Headers */,
 				0F75A061200D26180038E2CF /* LocalAllocator.h in Headers */,
 				0F75A060200D260B0038E2CF /* LocalAllocatorInlines.h in Headers */,
 				BC18C4370E16F5CD00B34460 /* Lookup.h in Headers */,

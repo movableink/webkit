@@ -2278,6 +2278,7 @@ platform/FileStream.cpp
 platform/FrameRateMonitor.cpp
 platform/KeyboardScroll.cpp
 platform/KeyboardScrollingAnimator.cpp
+platform/LLVMProfiling.cpp
 platform/LayoutUnit.cpp
 platform/LegacySchemeRegistry.cpp
 platform/Length.cpp

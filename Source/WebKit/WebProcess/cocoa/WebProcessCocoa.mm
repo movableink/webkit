@@ -604,7 +604,7 @@ void WebProcess::platformSetWebsiteDataStoreParameters(WebProcessDataStoreParame
 #endif
 #if PLATFORM(IOS_FAMILY)
     if (auto& handle = parameters.containerTemporaryDirectoryExtensionHandle)
-        SandboxExtension::consumePermanently(*handle);
+        grantAccessToContainerTempDirectory(*handle);
 #endif
 
     if (!parameters.javaScriptConfigurationDirectory.isEmpty()) {

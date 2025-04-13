@@ -26,9 +26,12 @@
 #pragma once
 
 #include "Connection.h"
+#include "LLVMProfiling.h"
 #include "MessageReceiverMap.h"
 #include "MessageSender.h"
 #include "SandboxExtension.h"
+#include <JavaScriptCore/LLVMProfiling.h>
+#include <WebCore/LLVMProfiling.h>
 #include <WebCore/ProcessIdentifier.h>
 #include <WebCore/UserActivity.h>
 #include <wtf/AbstractRefCounted.h>
@@ -165,6 +168,7 @@ protected:
     static void openDirectoryCacheInvalidated(SandboxExtension::Handle&&);
 #endif
 
+    void grantAccessToContainerTempDirectory(const SandboxExtension::Handle&);
     void populateMobileGestaltCache(std::optional<SandboxExtension::Handle>&& mobileGestaltExtensionHandle);
 
 #if HAVE(AUDIO_COMPONENT_SERVER_REGISTRATIONS)

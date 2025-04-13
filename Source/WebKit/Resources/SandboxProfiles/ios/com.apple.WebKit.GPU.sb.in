@@ -28,6 +28,7 @@
     (fcntl-command
         F_ADDFILESIGS_RETURN
         F_CHECK_LV
+        F_GETFL
         F_GETPATH
         F_GETPROTECTIONCLASS
         F_SETFD

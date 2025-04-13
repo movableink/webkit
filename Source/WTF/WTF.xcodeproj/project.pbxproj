@@ -158,6 +158,7 @@
 		8348BA0E21FBC0D500FD3054 /* ObjectIdentifier.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8348BA0D21FBC0D400FD3054 /* ObjectIdentifier.cpp */; };
 		8AB05DFB2C99482E00738BDD /* PreciseSum.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8AB05DF92C99482E00738BDD /* PreciseSum.cpp */; };
 		8AB05DFC2C99482E00738BDD /* PreciseSum.h in Headers */ = {isa = PBXBuildFile; fileRef = 8AB05DFA2C99482E00738BDD /* PreciseSum.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		92874A1B2D6AF35200BBF326 /* LLVMProfilingUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = 92874A1A2D6AF34200BBF326 /* LLVMProfilingUtils.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		93853DD328755A6C00FF4E2B /* EscapedFormsForJSON.h in Headers */ = {isa = PBXBuildFile; fileRef = 93853DD228755A6600FF4E2B /* EscapedFormsForJSON.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		93934BD318A1E8C300D0D6A1 /* StringViewCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = 93934BD218A1E8C300D0D6A1 /* StringViewCocoa.mm */; };
 		93934BD518A1F16900D0D6A1 /* StringViewCF.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 93934BD418A1F16900D0D6A1 /* StringViewCF.cpp */; };
@@ -1410,6 +1411,7 @@
 		86F46F5F1A2840EE00CCBF22 /* RefCounter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RefCounter.h; sourceTree = "<group>"; };
 		8AB05DF92C99482E00738BDD /* PreciseSum.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PreciseSum.cpp; sourceTree = "<group>"; };
 		8AB05DFA2C99482E00738BDD /* PreciseSum.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PreciseSum.h; sourceTree = "<group>"; };
+		92874A1A2D6AF34200BBF326 /* LLVMProfilingUtils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LLVMProfilingUtils.h; sourceTree = "<group>"; };
 		93156C8D262C982200EAE27B /* SortedArrayMap.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SortedArrayMap.h; sourceTree = "<group>"; };
 		93241657243BC2E50032FAAE /* VectorCocoa.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VectorCocoa.h; sourceTree = "<group>"; };
 		933D63191FCB6AB90032ECD6 /* StringHasher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StringHasher.h; sourceTree = "<group>"; };
@@ -2390,6 +2392,7 @@
 				A70DA0831799F04D00529A9B /* ListDump.h */,
 				A8A472C1151A825A004123FF /* ListHashSet.h */,
 				0FF4B4C41E88939C00DBBE86 /* Liveness.h */,
+				92874A1A2D6AF34200BBF326 /* LLVMProfilingUtils.h */,
 				0FE164681B6FFC9600400E7C /* Lock.cpp */,
 				0FE164691B6FFC9600400E7C /* Lock.h */,
 				0F0FCDDD1DD167F900CCAB53 /* LockAlgorithm.h */,
@@ -3515,6 +3518,7 @@
 				DD3DC96727A4BF8E007E5B61 /* ListDump.h in Headers */,
 				DD3DC8E027A4BF8E007E5B61 /* ListHashSet.h in Headers */,
 				DD3DC87827A4BF8E007E5B61 /* Liveness.h in Headers */,
+				92874A1B2D6AF35200BBF326 /* LLVMProfilingUtils.h in Headers */,
 				DD3DC89027A4BF8E007E5B61 /* Lock.h in Headers */,
 				DD3DC98827A4BF8E007E5B61 /* LockAlgorithm.h in Headers */,
 				DD3DC94427A4BF8E007E5B61 /* LockAlgorithmInlines.h in Headers */,

@@ -540,7 +540,7 @@ void NetworkProcess::addWebsiteDataStore(WebsiteDataStoreParameters&& parameters
     if (auto& handle = parameters.parentBundleDirectoryExtensionHandle)
         SandboxExtension::consumePermanently(*handle);
     if (auto& handle = parameters.tempDirectoryExtensionHandle)
-        SandboxExtension::consumePermanently(*handle);
+        grantAccessToContainerTempDirectory(*handle);
 #endif
 
     addStorageSession(sessionID, parameters);
