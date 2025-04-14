@@ -76,7 +76,7 @@ static inline WKUserContentExtensionStoreResult toResult(const std::error_code& 
 void WKUserContentExtensionStoreCompile(WKUserContentExtensionStoreRef store, WKStringRef identifier, WKStringRef jsonSource, void* context, WKUserContentExtensionStoreFunction callback)
 {
 #if ENABLE(CONTENT_EXTENSIONS)
-    toImpl(store)->compileContentRuleList(toWTFString(identifier), toWTFString(jsonSource), [context, callback](RefPtr<API::ContentRuleList> contentRuleList, std::error_code error) {
+    toProtectedImpl(store)->compileContentRuleList(toWTFString(identifier), toWTFString(jsonSource), [context, callback](RefPtr<API::ContentRuleList> contentRuleList, std::error_code error) {
         callback(error ? nullptr : toAPILeakingRef(WTFMove(contentRuleList)), toResult(error), context);
     });
 #else
@@ -88,7 +88,7 @@ void WKUserContentExtensionStoreCompile(WKUserContentExtensionStoreRef store, WK
 void WKUserContentExtensionStoreLookup(WKUserContentExtensionStoreRef store, WKStringRef identifier, void* context, WKUserContentExtensionStoreFunction callback)
 {
 #if ENABLE(CONTENT_EXTENSIONS)
-    toImpl(store)->lookupContentRuleList(toWTFString(identifier), [context, callback](RefPtr<API::ContentRuleList> contentRuleList, std::error_code error) {
+    toProtectedImpl(store)->lookupContentRuleList(toWTFString(identifier), [context, callback](RefPtr<API::ContentRuleList> contentRuleList, std::error_code error) {
         callback(error ? nullptr : toAPILeakingRef(WTFMove(contentRuleList)), toResult(error), context);
     });
 #else
@@ -99,7 +99,7 @@ void WKUserContentExtensionStoreLookup(WKUserContentExtensionStoreRef store, WKS
 void WKUserContentExtensionStoreRemove(WKUserContentExtensionStoreRef store, WKStringRef identifier, void* context, WKUserContentExtensionStoreFunction callback)
 {
 #if ENABLE(CONTENT_EXTENSIONS)
-    toImpl(store)->removeContentRuleList(toWTFString(identifier), [context, callback](std::error_code error) {
+    toProtectedImpl(store)->removeContentRuleList(toWTFString(identifier), [context, callback](std::error_code error) {
         callback(nullptr, toResult(error), context);
     });
 #else
