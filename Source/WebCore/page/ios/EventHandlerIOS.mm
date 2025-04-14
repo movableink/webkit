@@ -786,13 +786,13 @@ bool EventHandler::eventLoopHandleMouseDragged(const MouseEventWithHitTestResult
     return false;
 }
 
-bool EventHandler::tryToBeginDragAtPoint(const IntPoint& clientPosition, const IntPoint&)
+DragStartRequestResult EventHandler::tryToBeginDragAtPoint(const IntPoint& clientPosition, const IntPoint&)
 {
     Ref frame = m_frame.get();
 
     RefPtr document = frame->document();
     if (!document)
-        return false;
+        return DragStartRequestResult::Ended;
 
     SetForScope shouldAllowMouseDownToStartDrag { m_shouldAllowMouseDownToStartDrag, true };
 
@@ -811,14 +811,14 @@ bool EventHandler::tryToBeginDragAtPoint(const IntPoint& clientPosition, const I
     auto hitTestedMouseEvent = document->prepareMouseEvent(hitType, documentPoint, syntheticMouseMoveEvent);
 
     auto subframe = dynamicDowncast<LocalFrame>(subframeForHitTestResult(hitTestedMouseEvent));
-    if (subframe && subframe->eventHandler().tryToBeginDragAtPoint(adjustedClientPosition, adjustedGlobalPosition))
-        return true;
+    if (subframe && subframe->eventHandler().tryToBeginDragAtPoint(adjustedClientPosition, adjustedGlobalPosition) == DragStartRequestResult::Started)
+        return DragStartRequestResult::Started;
 
     if (!eventMayStartDrag(syntheticMousePressEvent))
-        return false;
+        return DragStartRequestResult::Ended;
 
     handleMousePressEvent(syntheticMousePressEvent);
-    bool handledDrag = m_mouseDownMayStartDrag && handleMouseDraggedEvent(hitTestedMouseEvent, DontCheckDragHysteresis);
+    DragStartRequestResult handledDrag = m_mouseDownMayStartDrag && handleMouseDraggedEvent(hitTestedMouseEvent, DontCheckDragHysteresis) ? DragStartRequestResult::Started : DragStartRequestResult::Ended;
     // Reset this bit to prevent autoscrolling from updating the selection with the last mouse location.
     m_mouseDownMayStartSelect = false;
     // Reset this bit to ensure that WebChromeClientIOS::observedContentChange() is called by EventHandler::mousePressed()

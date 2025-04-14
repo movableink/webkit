@@ -120,6 +120,7 @@ extern const int ImageDragHysteresis;
 extern const int TextDragHysteresis;
 extern const int ColorDragHystersis;
 extern const int GeneralDragHysteresis;
+enum class DragStartRequestResult : uint8_t;
 #endif
 
 #if ENABLE(IOS_GESTURE_EVENTS) || ENABLE(MAC_GESTURE_EVENTS)
@@ -364,7 +365,7 @@ public:
 #endif
 
 #if PLATFORM(IOS_FAMILY) && ENABLE(DRAG_SUPPORT)
-    WEBCORE_EXPORT bool tryToBeginDragAtPoint(const IntPoint& clientPosition, const IntPoint& globalPosition);
+    WEBCORE_EXPORT DragStartRequestResult tryToBeginDragAtPoint(const IntPoint& clientPosition, const IntPoint& globalPosition);
 #endif
     
 #if PLATFORM(IOS_FAMILY)
