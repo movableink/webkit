@@ -40,6 +40,7 @@
 #import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/WKProcessPoolPrivate.h>
 #import <WebKit/WKUIDelegatePrivate.h>
+#import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/_WKAuthenticationExtensionsClientInputs.h>
 #import <WebKit/_WKAuthenticationExtensionsClientOutputs.h>
 #import <WebKit/_WKAuthenticatorAssertionResponse.h>
@@ -413,14 +414,21 @@ void cleanUpKeychain()
 
 } // namesapce;
 
+static RetainPtr<TestWKWebView> setUpTestWebViewForTestAuthenticationPanel()
+{
+    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
+    [configuration _setAllowTestOnlyIPC:YES];
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    return webView;
+}
+
 #if HAVE(NEAR_FIELD)
 TEST(WebAuthenticationPanel, NoPanelNfcSucceed)
 {
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-nfc" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     [webView focus];
 
     [webView loadRequest:[NSURLRequest requestWithURL:testURL.get()]];
@@ -437,9 +445,7 @@ TEST(WebAuthenticationPanel, NoPanelHidSuccess)
 {
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     [webView focus];
 
     [webView loadRequest:[NSURLRequest requestWithURL:testURL.get()]];
@@ -456,9 +462,7 @@ TEST(WebAuthenticationPanel, PanelHidSuccess1)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -482,9 +486,7 @@ TEST(WebAuthenticationPanel, PanelHidSuccess2)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-hid" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -508,9 +510,7 @@ TEST(WebAuthenticationPanel, PanelRacy1)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-nfc" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [delegate setIsRacy:true];
     [webView setUIDelegate:delegate.get()];
@@ -531,9 +531,7 @@ TEST(WebAuthenticationPanel, PanelRacy2)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-nfc" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [delegate setIsRacy:true];
     [webView setUIDelegate:delegate.get()];
@@ -559,9 +557,7 @@ TEST(WebAuthenticationPanel, PanelTwice)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -581,9 +577,7 @@ TEST(WebAuthenticationPanel, ReloadHidCancel)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-cancel" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -600,9 +594,7 @@ TEST(WebAuthenticationPanel, LocationChangeHidCancel)
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-cancel" withExtension:@"html"];
     RetainPtr<NSURL> otherURL = [NSBundle.test_resourcesBundle URLForResource:@"simple" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -619,9 +611,7 @@ TEST(WebAuthenticationPanel, NewLoadHidCancel)
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-cancel" withExtension:@"html"];
     RetainPtr<NSURL> otherURL = [NSBundle.test_resourcesBundle URLForResource:@"simple" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -637,9 +627,7 @@ TEST(WebAuthenticationPanel, CloseHidCancel)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-cancel" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -676,9 +664,7 @@ TEST(WebAuthenticationPanel, SubFrameChangeLocationHidCancel)
         });
     });
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -722,9 +708,7 @@ TEST(WebAuthenticationPanel, SubFrameDestructionHidCancel)
         });
     });
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -740,9 +724,7 @@ TEST(WebAuthenticationPanel, PanelHidCancel)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-cancel" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -768,9 +750,7 @@ TEST(WebAuthenticationPanel, PanelHidCtapNoCredentialsFound)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-no-credentials" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -785,9 +765,7 @@ TEST(WebAuthenticationPanel, PanelU2fCtapNoCredentialsFound)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-u2f-no-credentials" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -807,9 +785,7 @@ TEST(WebAuthenticationPanel, FakePanelHidSuccess)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [delegate setIsFake:true];
     [webView setUIDelegate:delegate.get()];
@@ -825,9 +801,7 @@ TEST(WebAuthenticationPanel, FakePanelHidCtapNoCredentialsFound)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-no-credentials" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [delegate setIsFake:true];
     [webView setUIDelegate:delegate.get()];
@@ -848,9 +822,7 @@ TEST(WebAuthenticationPanel, NullPanelHidSuccess)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [delegate setIsNull:true];
     [webView setUIDelegate:delegate.get()];
@@ -866,9 +838,7 @@ TEST(WebAuthenticationPanel, NullPanelHidCtapNoCredentialsFound)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-no-credentials" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [delegate setIsNull:true];
     [webView setUIDelegate:delegate.get()];
@@ -885,9 +855,7 @@ TEST(WebAuthenticationPanel, PanelMultipleNFCTagsPresent)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-nfc-multiple-tags" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -903,9 +871,7 @@ TEST(WebAuthenticationPanel, PanelHidCancelReloadNoCrash)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-cancel" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -927,9 +893,7 @@ TEST(WebAuthenticationPanel, PanelHidSuccessCancelNoCrash)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -949,9 +913,7 @@ TEST(WebAuthenticationPanel, PanelHidCtapNoCredentialsFoundCancelNoCrash)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-no-credentials" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -966,9 +928,7 @@ TEST(WebAuthenticationPanel, PinGetRetriesError)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-hid-pin-get-retries-error" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     [webView focus];
     [webView loadRequest:[NSURLRequest requestWithURL:testURL.get()]];
     [webView waitForMessage:@"Unknown internal error. Error code: 2"];
@@ -979,9 +939,7 @@ TEST(WebAuthenticationPanel, PinGetKeyAgreementError)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-hid-pin-get-key-agreement-error" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     [webView focus];
     [webView loadRequest:[NSURLRequest requestWithURL:testURL.get()]];
     [webView waitForMessage:@"Unknown internal error. Error code: 2"];
@@ -992,9 +950,7 @@ TEST(WebAuthenticationPanel, PinRequestPinErrorNoDelegate)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-hid-pin" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     [webView focus];
     [webView loadRequest:[NSURLRequest requestWithURL:testURL.get()]];
     [webView waitForMessage:@"Pin is null."];
@@ -1005,9 +961,7 @@ TEST(WebAuthenticationPanel, PinRequestPinErrorNullDelegate)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-hid-pin" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [delegate setIsNull:true];
     [webView setUIDelegate:delegate.get()];
@@ -1022,9 +976,7 @@ TEST(WebAuthenticationPanel, PinRequestPinError)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-hid-pin-get-pin-token-fake-pin-invalid-error-retry" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1041,9 +993,7 @@ TEST(WebAuthenticationPanel, PinGetPinTokenPinBlockedError)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-hid-pin-get-pin-token-pin-blocked-error" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1060,9 +1010,7 @@ TEST(WebAuthenticationPanel, PinGetPinTokenPinAuthBlockedError)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-hid-pin-get-pin-token-pin-auth-blocked-error" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1079,9 +1027,7 @@ TEST(WebAuthenticationPanel, PinGetPinTokenPinInvalidErrorAndRetry)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-hid-pin-get-pin-token-pin-invalid-error-retry" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1097,9 +1043,7 @@ TEST(WebAuthenticationPanel, PinGetPinTokenPinAuthInvalidErrorAndRetry)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-hid-pin-get-pin-token-pin-auth-invalid-error-retry" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1115,9 +1059,7 @@ TEST(WebAuthenticationPanel, MakeCredentialInternalUV)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-hid-internal-uv" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1131,9 +1073,7 @@ TEST(WebAuthenticationPanel, MakeCredentialPin)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-hid-pin" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1148,9 +1088,7 @@ TEST(WebAuthenticationPanel, MakeCredentialPinAuthBlockedError)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-hid-pin-auth-blocked-error" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1167,9 +1105,7 @@ TEST(WebAuthenticationPanel, MakeCredentialPinInvalidErrorAndRetry)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-hid-pin-invalid-error-retry" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1190,9 +1126,7 @@ TEST(WebAuthenticationPanel, GetAssertionPin)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-pin" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1212,9 +1146,7 @@ TEST(WebAuthenticationPanel, GetAssertionInternalUV)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-internal-uv" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1233,9 +1165,7 @@ TEST(WebAuthenticationPanel, GetAssertionInternalUVPinFallback)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-internal-uv-pin-fallback" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1255,9 +1185,7 @@ TEST(WebAuthenticationPanel, GetAssertionPinAuthBlockedError)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-pin-auth-blocked-error" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1279,9 +1207,7 @@ TEST(WebAuthenticationPanel, GetAssertionPinInvalidErrorAndRetry)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-pin-invalid-error-retry" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1298,10 +1224,9 @@ TEST(WebAuthenticationPanel, NfcPinCachedDisconnect)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-nfc-pin-disconnect" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
+
     [webView setUIDelegate:delegate.get()];
     [webView focus];
 
@@ -1316,9 +1241,7 @@ TEST(WebAuthenticationPanel, MultipleAccountsNullDelegate)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-multiple-accounts" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [delegate setIsNull:true];
     [webView setUIDelegate:delegate.get()];
@@ -1338,9 +1261,7 @@ TEST(WebAuthenticationPanel, MultipleAccounts)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-hid-multiple-accounts" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1359,9 +1280,7 @@ TEST(WebAuthenticationPanel, LAError)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-la-error" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1375,9 +1294,7 @@ TEST(WebAuthenticationPanel, LADuplicateCredential)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-la-duplicate-credential" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1391,11 +1308,12 @@ TEST(WebAuthenticationPanel, LADuplicateCredential)
 TEST(WebAuthenticationPanel, LADuplicateCredentialWithConsent)
 {
     reset();
+    // In case this wasn't cleaned up by another test.
+    cleanUpKeychain();
+
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-la-duplicate-credential" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1417,9 +1335,7 @@ TEST(WebAuthenticationPanel, LANoCredential)
 
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-la" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1438,9 +1354,7 @@ TEST(WebAuthenticationPanel, LAMakeCredentialAllowLocalAuthenticator)
     reset();
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-make-credential-la" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1457,11 +1371,12 @@ TEST(WebAuthenticationPanel, LAMakeCredentialAllowLocalAuthenticator)
 TEST(WebAuthenticationPanel, LAGetAssertion)
 {
     reset();
+    // In case this wasn't cleaned up by another test.
+    cleanUpKeychain();
+
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-la" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1476,11 +1391,12 @@ TEST(WebAuthenticationPanel, LAGetAssertion)
 TEST(WebAuthenticationPanel, LAGetAssertionMultipleCredentialStore)
 {
     reset();
+    // In case this wasn't cleaned up by another test.
+    cleanUpKeychain();
+
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-la" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1511,9 +1427,7 @@ TEST(WebAuthenticationPanel, LAGetAssertionNoMockNoUserGesture)
     webAuthenticationPanelRequestNoGesture = false;
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-la-no-mock" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -1529,11 +1443,12 @@ TEST(WebAuthenticationPanel, LAGetAssertionNoMockNoUserGesture)
 TEST(WebAuthenticationPanel, LAGetAssertionMultipleOrder)
 {
     reset();
+    // In case this wasn't cleaned up by another test.
+    cleanUpKeychain();
+
     RetainPtr<NSURL> testURL = [NSBundle.test_resourcesBundle URLForResource:@"web-authentication-get-assertion-la" withExtension:@"html"];
 
-    auto *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES];
-
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+    auto webView = setUpTestWebViewForTestAuthenticationPanel();
     auto delegate = adoptNS([[TestWebAuthenticationPanelUIDelegate alloc] init]);
     [webView setUIDelegate:delegate.get()];
     [webView focus];
@@ -2496,6 +2411,8 @@ TEST(WebAuthenticationPanel, ImportMalformedCredential)
 TEST(WebAuthenticationPanel, DeleteOneCredential)
 {
     reset();
+    // In case this wasn't cleaned up by another test.
+    cleanUpKeychain();
 
     ASSERT_TRUE(addKeyToKeychain(testES256PrivateKeyBase64, "example.com"_s, testUserEntityBundleBase64));
 

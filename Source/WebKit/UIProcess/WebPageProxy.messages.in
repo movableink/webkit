@@ -576,7 +576,7 @@ messages -> WebPageProxy {
 #endif
 
 #if ENABLE(WEB_AUTHN)
-    SetMockWebAuthenticationConfiguration(struct WebCore::MockWebAuthenticationConfiguration configuration);
+    [EnabledBy=AllowTestOnlyIPC] SetMockWebAuthenticationConfiguration(struct WebCore::MockWebAuthenticationConfiguration configuration);
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
