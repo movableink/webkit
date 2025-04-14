@@ -1240,7 +1240,8 @@ pre, xmp, plaintext, listing {
     display: block;
     font-family: monospace;
     white-space: pre;
-    margin: 1__qem 0;
+    margin-block: 1__qem;
+    margin-inline: 0;
 }
 
 mark {

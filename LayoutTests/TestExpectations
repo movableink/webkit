@@ -7884,6 +7884,4 @@ webkit.org/b/290133 [ Debug ] svg/dom/SVGGeometry-isPointInFill-with-null-path.h
 # The color input only has a swatch overlay on macOS
 fast/forms/color/input-color-swatch-overlay-appearance.html [ Skip ]
 
-imported/w3c/web-platform-tests/html/rendering/the-css-user-agent-style-sheet-and-presentational-hints/pre-margin-block.html [ ImageOnlyFailure ]
-
 webkit.org/b/288831 [ Debug ] fast/css/shadow-box-recursion-depth.html [ Pass Timeout ]
