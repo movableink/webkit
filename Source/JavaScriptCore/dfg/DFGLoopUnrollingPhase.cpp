@@ -84,7 +84,7 @@ public:
 
     LoopUnrollingPhase(Graph& graph)
         : Phase(graph, "Loop Unrolling"_s)
-        , m_blockInsertionSet(graph)
+        , m_cloneHelper(graph)
     {
     }
 
@@ -457,14 +457,6 @@ public:
         return true;
     }
 
-    BasicBlock* makeBlock(uint32_t executionCount = 0)
-    {
-        auto* block = m_blockInsertionSet.insert(m_graph.numBlocks(), executionCount);
-        block->cfaHasVisited = false;
-        block->cfaDidFinish = false;
-        return block;
-    }
-
     void unrollLoop(LoopData& data)
     {
         dataLogLnIf(Options::verboseLoopUnrolling(), data.shouldFullyUnroll() ?  "Fully" : "Partially", " unrolling...");
@@ -474,20 +466,6 @@ public:
         BasicBlock* const next = data.next;
 
         dataLogLnIf(Options::verboseLoopUnrolling(), "tailTerminalOriginSemantic ", tail->terminal()->origin.semantic);
-
-        // Mapping from the origin to the clones.
-        UncheckedKeyHashMap<BasicBlock*, BasicBlock*> blockClones;
-        UncheckedKeyHashMap<Node*, Node*> nodeClones;
-
-        auto replaceOperands = [&](auto& nodes) ALWAYS_INLINE_LAMBDA {
-            for (uint32_t i = 0; i < nodes.size(); ++i) {
-                if (auto& node = nodes.at(i)) {
-                    auto itr = nodeClones.find(node);
-                    if (itr != nodeClones.end())
-                        node = itr->value;
-                }
-            }
-        };
 
         //  ### Constant ###         ### Partial ###
         //
@@ -500,7 +478,7 @@ public:
         //  BodyGraph_1 -----       -- BodyGraph_1  |
         //   |T                         |F          |
         //  Next                       Next <--------
-        auto convertTailBranchToNextJump = [&](BasicBlock* tail, BasicBlock* taken) {
+        auto updateTailBranch = [&](BasicBlock* tail, BasicBlock* taken) {
             BasicBlock* notTaken = next;
             auto* terminal = tail->terminal();
             if (data.shouldFullyUnroll()) {
@@ -527,7 +505,6 @@ public:
         m_graph.initializeNodeOwners(); // This is only used for the debug assertion in cloneNodeImpl.
 #endif
 
-        CloneHelper helper(m_graph, nodeClones);
         BasicBlock* taken = next;
         uint32_t cloneCount = 0;
         if (data.shouldFullyUnroll()) {
@@ -535,71 +512,25 @@ public:
             cloneCount = data.iterationCount - 1;
         } else
             cloneCount = Options::maxPartialLoopUnrollingIterationCount() - 1;
+
         while (cloneCount--) {
-            blockClones.clear();
-            nodeClones.clear();
-
-            // 1. Initialize all block clones.
+            m_cloneHelper.clear();
             for (uint32_t i = 0; i < data.loopSize(); ++i) {
-                BasicBlock* body = data.loopBody(i);
-                blockClones.add(body, makeBlock(body->executionCount));
-            }
-
-            for (uint32_t i = 0; i < data.loopSize(); ++i) {
-                BasicBlock* const body = data.loopBody(i);
-                BasicBlock* const clone = blockClones.get(body);
-
-                // 2. Clone Phis.
-                clone->phis.resize(body->phis.size());
-                for (size_t i = 0; i < body->phis.size(); ++i) {
-                    Node* bodyPhi = body->phis[i];
-                    Node* phiClone = m_graph.addNode(bodyPhi->prediction(), bodyPhi->op(), bodyPhi->origin, OpInfo(bodyPhi->variableAccessData()));
-                    nodeClones.add(bodyPhi, phiClone);
-                    clone->phis[i] = phiClone;
-                }
-
-                // 3. Clone nodes.
-                for (Node* node : *body)
-                    helper.cloneNode(clone, node);
-
-                // 4. Clone variables and tail and head.
-                clone->variablesAtTail = body->variablesAtTail;
-                replaceOperands(clone->variablesAtTail);
-                clone->variablesAtHead = body->variablesAtHead;
-                replaceOperands(clone->variablesAtHead);
-
-                // 5. Clone successors. (predecessors will be fixed in resetReachability below)
-                if (body == tail) {
+                BasicBlock* block = data.loopBody(i);
+                m_cloneHelper.cloneBlock(block, [&](BasicBlock* clone) {
+                    if (block != tail)
+                        return false;
                     ASSERT(tail->terminal()->isBranch());
                     bool isTakenNextInPartialMode = taken == next && !data.shouldFullyUnroll();
-                    convertTailBranchToNextJump(clone, isTakenNextInPartialMode ? header : taken);
-                } else {
-                    for (uint32_t i = 0; i < body->numSuccessors(); ++i) {
-                        auto& successor = clone->successor(i);
-                        ASSERT(successor == body->successor(i));
-                        if (data.loop->contains(successor))
-                            successor = blockClones.get(successor);
-                    }
-                }
-
-#if ASSERT_ENABLED
-                clone->cloneSource = body;
-#endif
+                    updateTailBranch(clone, isTakenNextInPartialMode ? header : taken);
+                    return true;
+                });
             }
-
-            taken = blockClones.get(header);
+            taken = m_cloneHelper.blockClone(header);
         }
+        updateTailBranch(tail, taken);
 
-        // 6. Replace the original loop tail branch with a jump to the last header clone.
-        convertTailBranchToNextJump(tail, taken);
-
-        // Done clone.
-        if (!m_blockInsertionSet.execute()) {
-            m_graph.invalidateCFG();
-            m_graph.dethread();
-        }
-        m_graph.resetReachability();
-        m_graph.killUnreachableBlocks();
+        m_cloneHelper.finalize();
         ASSERT(m_graph.m_form == LoadStore);
     }
 
@@ -608,7 +539,7 @@ public:
     bool isMaterialNode(Node*);
 
 private:
-    BlockInsertionSet m_blockInsertionSet;
+    CloneHelper m_cloneHelper;
     UncheckedKeyHashSet<BasicBlock*> m_unrolledLoopHeaders;
 };
 

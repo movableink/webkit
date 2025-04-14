@@ -154,6 +154,31 @@ Node* CloneHelper::cloneNodeImpl(BasicBlock* into, Node* node)
     RELEASE_ASSERT_NOT_REACHED();
 }
 
+BasicBlock* CloneHelper::blockClone(BasicBlock* block)
+{
+    auto iter = m_blockClones.find(block);
+    if (iter != m_blockClones.end())
+        return iter->value;
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+void CloneHelper::finalize()
+{
+    if (!m_blockInsertionSet.execute()) {
+        m_graph.invalidateCFG();
+        m_graph.dethread();
+    }
+    m_graph.resetReachability();
+    m_graph.killUnreachableBlocks();
+}
+
+void CloneHelper::clear()
+{
+    m_blockClones.clear();
+    m_nodeClones.clear();
+}
+
 } } // namespace JSC::DFG
 
 #endif // ENABLE(DFG_JIT)
