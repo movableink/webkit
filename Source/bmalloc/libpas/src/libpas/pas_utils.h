@@ -100,8 +100,9 @@ PAS_BEGIN_EXTERN_C;
 #define __PAS_UNUSED_3(x, ...) PAS_UNUSED_PARAM(x), __PAS_UNUSED_2(__VA_ARGS__)
 #define __PAS_UNUSED_4(x, ...) PAS_UNUSED_PARAM(x), __PAS_UNUSED_3(__VA_ARGS__)
 #define __PAS_UNUSED_5(x, ...) PAS_UNUSED_PARAM(x), __PAS_UNUSED_4(__VA_ARGS__)
-#define __PAS_UNUSED_V_ARITY_IMPL(_1, _2, _3, _4, _5, N, ...) N
-#define __PAS_UNUSED_V_ARITY(...) __PAS_UNUSED_V_ARITY_IMPL(__VA_ARGS__, 5, 4, 3, 2, 1)
+#define __PAS_UNUSED_6(x, ...) PAS_UNUSED_PARAM(x), __PAS_UNUSED_5(__VA_ARGS__)
+#define __PAS_UNUSED_V_ARITY_IMPL(_1, _2, _3, _4, _5, _6, N, ...) N
+#define __PAS_UNUSED_V_ARITY(...) __PAS_UNUSED_V_ARITY_IMPL(__VA_ARGS__, 6, 5, 4, 3, 2, 1)
 #define __PAS_UNUSED_V_IMPL2(nargs) __PAS_UNUSED_ ## nargs
 #define __PAS_UNUSED_V_IMPL(nargs) __PAS_UNUSED_V_IMPL2(nargs)
 

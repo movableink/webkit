@@ -498,6 +498,7 @@ typedef enum {
 static PAS_ALWAYS_INLINE pas_allocation_result
 pas_local_allocator_set_up_primordial_bump(
     pas_local_allocator* allocator,
+    pas_allocation_mode allocation_mode,
     pas_segregated_partial_view* view,
     pas_segregated_shared_handle* handle,
     pas_segregated_page* page,
@@ -596,6 +597,8 @@ pas_local_allocator_set_up_primordial_bump(
         }
     }
 
+    PAS_PROFILE(POPULATE_PRIMORDIAL_PARTIAL_VIEW, page_config, page, view, bump_result, allocation_mode);
+
     switch (mode) {
     case pas_local_allocator_primordial_bump_return_first_allocation:
         return pas_allocation_result_create_success(page_boundary + begin_offset);
@@ -611,6 +614,7 @@ pas_local_allocator_set_up_primordial_bump(
 static PAS_ALWAYS_INLINE bool
 pas_local_allocator_start_allocating_in_primordial_partial_view(
     pas_local_allocator* allocator,
+    pas_allocation_mode allocation_mode,
     pas_segregated_partial_view* view,
     pas_segregated_size_directory* size_directory,
     pas_segregated_page_config page_config)
@@ -704,7 +708,7 @@ pas_local_allocator_start_allocating_in_primordial_partial_view(
         pas_zero_memory(allocator->bits, pas_segregated_page_config_num_alloc_bytes(page_config));
 
         pas_local_allocator_set_up_primordial_bump(
-            allocator, view, handle, page, &held_lock, bump_result,
+            allocator, allocation_mode, view, handle, page, &held_lock, bump_result,
             pas_local_allocator_primordial_bump_stash_whole_allocation,
             page_config);
 
@@ -894,6 +898,7 @@ pas_local_allocator_try_allocate_in_primordial_partial_view(
 
     result = pas_local_allocator_set_up_primordial_bump(
         allocator,
+        allocation_mode,
         partial_view,
         pas_unwrap_shared_handle(shared_view->shared_handle_or_page_boundary, page_config),
         page,
@@ -914,6 +919,7 @@ pas_local_allocator_try_allocate_in_primordial_partial_view(
 static PAS_ALWAYS_INLINE bool
 pas_local_allocator_refill_with_known_config(
     pas_local_allocator* allocator,
+    pas_allocation_mode allocation_mode,
     pas_allocator_counts* counts,
     pas_segregated_page_config page_config)
 {
@@ -1193,7 +1199,7 @@ pas_local_allocator_refill_with_known_config(
             pas_log("Going the primordial route.\n");
         
         return page_config.specialized_local_allocator_start_allocating_in_primordial_partial_view(
-            allocator, pas_segregated_view_get_partial(new_view), size_directory);
+            allocator, allocation_mode, pas_segregated_view_get_partial(new_view), size_directory);
     }
 
     new_page = pas_segregated_page_for_boundary(
@@ -1584,7 +1590,7 @@ pas_local_allocator_try_allocate_small_segregated_slow_impl(
            inlining this made it twice as expensive. It's just one of those things: if code size is ever
            an issue, then we should ponder turning this back into an outline call. */
         refill_result = pas_local_allocator_refill_with_known_config(
-            allocator, counts, config.small_segregated_config);
+            allocator, allocation_mode, counts, config.small_segregated_config);
 
         if (!refill_result)
             return pas_allocation_result_create_failure();
@@ -1726,7 +1732,7 @@ pas_local_allocator_try_allocate_slow_impl(pas_local_allocator* allocator,
 
         page_config = pas_segregated_page_config_kind_get_config(
             pas_local_allocator_config_kind_get_segregated_page_config_kind(allocator->config_kind));
-        page_config->specialized_local_allocator_refill(allocator, counts);
+        page_config->specialized_local_allocator_refill(allocator, allocation_mode, counts);
 
         PAS_TESTING_ASSERT(!pas_local_allocator_has_bitfit(allocator));
 

@@ -91,10 +91,11 @@ typedef pas_allocation_result
     pas_local_allocator* allocator, pas_allocation_mode allocation_mode);
 typedef bool
 (*pas_segregated_page_config_specialized_local_allocator_start_allocating_in_primordial_partial_view)(
-    pas_local_allocator* allocator, pas_segregated_partial_view* partial,
+    pas_local_allocator* allocator, pas_allocation_mode allocation_mode, pas_segregated_partial_view* partial,
     pas_segregated_size_directory* size_directory);
 typedef bool (*pas_segregated_page_config_specialized_local_allocator_refill)(
     pas_local_allocator* allocator,
+    pas_allocation_mode allocation_mode,
     pas_allocator_counts* counts);
 typedef void (*pas_segregated_page_config_specialized_local_allocator_return_memory_to_page)(
     pas_local_allocator* allocator,
@@ -206,10 +207,12 @@ PAS_API extern bool pas_medium_segregated_page_config_variant_is_enabled_overrid
         pas_local_allocator* allocator, pas_allocation_mode allocation_mode); \
     PAS_API bool lower_case_page_config_name ## _specialized_local_allocator_start_allocating_in_primordial_partial_view( \
         pas_local_allocator* allocator, \
+        pas_allocation_mode allocation_mode, \
         pas_segregated_partial_view* partial, \
         pas_segregated_size_directory* size_directory); \
     PAS_API bool lower_case_page_config_name ## _specialized_local_allocator_refill( \
         pas_local_allocator* allocator, \
+        pas_allocation_mode allocation_mode, \
         pas_allocator_counts* counts); \
     PAS_API void \
     lower_case_page_config_name ## _specialized_local_allocator_return_memory_to_page( \
