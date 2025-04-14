@@ -835,6 +835,22 @@ bool JSArray::fastCopywithin(JSGlobalObject* globalObject, uint64_t from64, uint
         memmoveSpan(destination, source);
         return true;
     }
+    case ArrayWithArrayStorage: {
+        auto& storage = *this->butterfly()->arrayStorage();
+        if (storage.m_sparseMap.get())
+            return false;
+        if (length > storage.vectorLength())
+            return false;
+        if (storage.hasHoles())
+            return false;
+        ASSERT(!globalObject->isHavingABadTime());
+
+        auto vector = this->butterfly()->arrayStorage()->m_vector;
+        gcSafeMemmove(vector + to, vector + from, count * sizeof(JSValue));
+        vm.writeBarrier(this);
+
+        return true;
+    }
     default:
         return false;
     }
