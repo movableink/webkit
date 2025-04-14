@@ -105,9 +105,7 @@ void MemoryBackingStoreTransaction::addExistingIndex(MemoryIndex& index)
 void MemoryBackingStoreTransaction::indexDeleted(Ref<MemoryIndex>&& index)
 {
     m_indexes.remove(&index.get());
-    auto addResult = m_deletedIndexes.add(index->info().name(), nullptr);
-    if (addResult.isNewEntry)
-        addResult.iterator->value = WTFMove(index);
+    m_deletedIndexes.add(WTFMove(index));
 }
 
 void MemoryBackingStoreTransaction::addExistingObjectStore(MemoryObjectStore& objectStore)
@@ -134,8 +132,8 @@ void MemoryBackingStoreTransaction::objectStoreDeleted(Ref<MemoryObjectStore>&& 
     // keep it for transaction abort.
     if (auto addedObjectStore = m_versionChangeAddedObjectStores.take(&objectStore.get())) {
         // We don't need to track its indexes either.
-        m_deletedIndexes.removeIf([identifier = objectStore->info().identifier()](auto& entry) {
-            return entry.value->objectStore()->info().identifier() == identifier;
+        m_deletedIndexes.removeIf([identifier = objectStore->info().identifier()](auto& index) {
+            return index->objectStore()->info().identifier() == identifier;
         });
         return;
     }
@@ -207,8 +205,8 @@ void MemoryBackingStoreTransaction::abort()
     // Restore added object stores.
     for (const auto& objectStore : m_versionChangeAddedObjectStores)
         m_backingStore->removeObjectStoreForVersionChangeAbort(*objectStore);
-    m_deletedIndexes.removeIf([&](auto& entry) {
-        return m_versionChangeAddedObjectStores.contains(entry.value->objectStore());
+    m_deletedIndexes.removeIf([&](auto& index) {
+        return m_versionChangeAddedObjectStores.contains(index->objectStore());
     });
     m_versionChangeAddedObjectStores.clear();
 
@@ -226,7 +224,7 @@ void MemoryBackingStoreTransaction::abort()
         m_backingStore->setDatabaseInfo(*m_originalDatabaseInfo);
     }
 
-    for (auto& index : m_deletedIndexes.values()) {
+    for (auto& index : m_deletedIndexes) {
         RELEASE_ASSERT(m_backingStore->hasObjectStore(index->info().objectStoreIdentifier()));
         index->protectedObjectStore()->maybeRestoreDeletedIndex(*index);
     }
