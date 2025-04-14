@@ -146,7 +146,7 @@ private:
     std::optional<DedicatedConnectionClient> m_dedicatedConnectionClient;
     uint64_t m_currentDestinationID { 0 };
     StreamClientConnectionBuffer m_buffer;
-    unsigned m_maxBatchSize { 20 }; // Number of messages marked as StreamBatched to accumulate before notifying the server.
+    unsigned m_maxBatchSize { 100 }; // Number of messages marked as StreamBatched to accumulate before notifying the server.
     unsigned m_batchSize { 0 };
     const Seconds m_defaultTimeoutDuration;
 
