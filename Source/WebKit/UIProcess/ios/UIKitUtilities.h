@@ -32,6 +32,7 @@
 
 namespace WebCore {
 class FloatQuad;
+enum class BoxSide : uint8_t;
 }
 
 @interface UIScrollView (WebKitInternal)
@@ -80,6 +81,7 @@ namespace WebKit {
 
 RetainPtr<UIAlertController> createUIAlertController(NSString *title, NSString *message);
 UIScrollView *scrollViewForTouches(NSSet<UITouch *> *);
+UIRectEdge uiRectEdgeForSide(WebCore::BoxSide);
 
 } // namespace WebKit
 

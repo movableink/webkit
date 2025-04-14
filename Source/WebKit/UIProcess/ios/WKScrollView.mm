@@ -136,6 +136,9 @@ static BOOL shouldForwardScrollViewDelegateMethodToExternalDelegate(SEL selector
     BOOL _backgroundColorSetByClient;
     BOOL _indicatorStyleSetByClient;
     BOOL _decelerationRateSetByClient;
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+    BOOL _fixedColorExtensionEdgesSetByClient;
+#endif
 // FIXME: Likely we can remove this special case for watchOS.
 #if !PLATFORM(WATCHOS)
     BOOL _contentInsetAdjustmentBehaviorWasExternallyOverridden;
@@ -577,6 +580,10 @@ static inline bool valuesAreWithinOnePixel(CGFloat a, CGFloat b)
 }
 
 #endif // HAVE(PEPPER_UI_CORE)
+
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/WKScrollViewAdditions.mm>)
+#import <WebKitAdditions/WKScrollViewAdditions.mm>
+#endif
 
 @end
 

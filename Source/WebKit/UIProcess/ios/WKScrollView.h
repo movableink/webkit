@@ -43,6 +43,10 @@
 - (BOOL)_setContentScrollInsetInternal:(UIEdgeInsets)insets;
 - (void)_setDecelerationRateInternal:(UIScrollViewDecelerationRate)rate;
 
+#if ENABLE(CONTENT_INSET_BACKGROUND_FILL)
+- (void)_setFixedColorExtensionEdges:(UIRectEdge)edges;
+#endif
+
 - (void)_resetContentInset;
 @property (nonatomic, readonly) BOOL _contentInsetWasExternallyOverridden;
 
