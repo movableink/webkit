@@ -529,6 +529,10 @@ public:
     WEBCORE_EXPORT void exitFullscreen();
     WEBCORE_EXPORT void prepareForVideoFullscreenStandby();
 
+#if ENABLE(FULLSCREEN_API)
+    void documentFullscreenChanged(bool isChildOfElementFullscreen);
+#endif
+
     bool hasClosedCaptions() const override;
     bool closedCaptionsVisible() const override;
     void setClosedCaptionsVisible(bool) override;
@@ -1225,6 +1229,9 @@ private:
 
     VideoFullscreenMode m_videoFullscreenMode { VideoFullscreenModeNone };
     bool m_videoFullscreenStandby { false };
+#if ENABLE(FULLSCREEN_API)
+    bool m_isChildOfElementFullscreen { false };
+#endif
     bool m_preparedForInline;
     Function<void()> m_preparedForInlineCompletionHandler;
 

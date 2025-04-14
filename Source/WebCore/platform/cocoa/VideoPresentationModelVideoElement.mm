@@ -205,6 +205,8 @@ void VideoPresentationModelVideoElement::documentFullscreenChanged()
     if (std::exchange(m_isChildOfElementFullscreen, isChildOfElementFullscreen) == isChildOfElementFullscreen)
         return;
 
+    videoElement->documentFullscreenChanged(isChildOfElementFullscreen);
+
     for (auto& client : copyToVector(m_clients))
         client->isChildOfElementFullscreenChanged(m_isChildOfElementFullscreen);
 }

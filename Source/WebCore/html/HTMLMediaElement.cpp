@@ -7515,6 +7515,14 @@ void HTMLMediaElement::didStopBeingFullscreenElement()
     m_changingVideoFullscreenMode = false;
 }
 
+#if ENABLE(FULLSCREEN_API)
+void HTMLMediaElement::documentFullscreenChanged(bool isChildOfElementFullscreen)
+{
+    m_isChildOfElementFullscreen = isChildOfElementFullscreen;
+    updatePlayerDynamicRangeLimit();
+}
+#endif
+
 PlatformLayer* HTMLMediaElement::platformLayer() const
 {
     return m_player ? m_player->platformLayer() : nullptr;
@@ -7911,8 +7919,15 @@ PlatformDynamicRangeLimit HTMLMediaElement::computePlayerDynamicRangeLimit() con
     bool shouldSuppressHDR = [this]() {
         if (m_videoFullscreenMode == VideoFullscreenModeStandard)
             return false;
+
+#if ENABLE(FULLSCREEN_API)
+        if (m_isChildOfElementFullscreen)
+            return false;
+#endif
+
         if (Page* page = document().page())
             return page->shouldSuppressHDR();
+
         return false;
     }();
     return shouldSuppressHDR ? maxLimitWhenSuppressingHDR : m_platformDynamicRangeLimit;
