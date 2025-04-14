@@ -71,13 +71,8 @@ namespace Metal {
     template <typename T>\n \
     auto __wgsl##__capitalizedName(T value)\n \
     {\n \
-        if constexpr(__wgslMetalAppleGPUFamily < 9) { \n\
-            volatile auto result = __name(value);\n \
-            return result;\n \
-        } else { \n\
-            auto result = __name(value);\n \
-            return result;\n \
-        }\n \
+        volatile auto result = __name(value);\n \
+        return result;\n \
     }\n)
 
 #define DEFINE_VOLATILE_HELPER(__name, __capitalizedName) \

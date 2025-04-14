@@ -73,28 +73,10 @@ static std::optional<ShaderModuleParameters> findShaderModuleParameters(const WG
     return { { *wgsl, hints } };
 }
 
-static NSString* appleGPUFamilyToString(id<MTLDevice> device)
-{
-    if ([device supportsFamily:MTLGPUFamilyApple9])
-        return @"9";
-    if ([device supportsFamily:MTLGPUFamilyApple8])
-        return @"8";
-    if ([device supportsFamily:MTLGPUFamilyApple7])
-        return @"7";
-    if ([device supportsFamily:MTLGPUFamilyApple6])
-        return @"6";
-    if ([device supportsFamily:MTLGPUFamilyApple5])
-        return @"5";
-    if ([device supportsFamily:MTLGPUFamilyApple4])
-        return @"4";
-    return @"0xFF";
-}
-
 id<MTLLibrary> ShaderModule::createLibrary(id<MTLDevice> device, const String& msl, String&& label, NSError** error)
 {
     static bool requireSafeMath = false;
     auto options = [MTLCompileOptions new];
-    options.preprocessorMacros = @{ @"__wgslMetalAppleGPUFamily" : appleGPUFamilyToString(device) };
 #if ENABLE(WEBGPU_BY_DEFAULT)
     static auto mathMode = MTLMathModeRelaxed;
     static auto mathFunctions = MTLMathFloatingPointFunctionsFast;
