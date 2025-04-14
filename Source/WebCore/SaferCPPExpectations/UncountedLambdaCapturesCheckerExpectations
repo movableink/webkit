@@ -6,11 +6,6 @@ Modules/cache/DOMCache.cpp
 Modules/cache/DOMCacheStorage.cpp
 Modules/encryptedmedia/MediaKeySession.cpp
 Modules/encryptedmedia/NavigatorEME.cpp
-Modules/entriesapi/DOMFileSystem.cpp
-Modules/entriesapi/FileSystemDirectoryEntry.cpp
-Modules/entriesapi/FileSystemDirectoryReader.cpp
-Modules/entriesapi/FileSystemEntry.cpp
-Modules/entriesapi/FileSystemFileEntry.cpp
 Modules/gamepad/GamepadHapticActuator.cpp
 Modules/indexeddb/IDBObjectStore.cpp
 Modules/indexeddb/client/IDBConnectionProxy.cpp
@@ -62,7 +57,6 @@ dom/Document.cpp
 dom/Subscriber.cpp
 editing/Editor.cpp
 html/FormAssociatedCustomElement.cpp
-html/canvas/CanvasRenderingContext2DBase.cpp
 html/track/TrackBase.cpp
 inspector/InspectorOverlay.cpp
 inspector/agents/page/PageDOMDebuggerAgent.cpp
@@ -110,7 +104,6 @@ testing/MockMediaSessionCoordinator.cpp
 workers/Worker.cpp
 workers/WorkerMessagingProxy.cpp
 workers/WorkerOrWorkletThread.cpp
-workers/WorkerThread.cpp
 workers/service/ExtendableEvent.cpp
 workers/service/ServiceWorkerContainer.cpp
 workers/service/ServiceWorkerGlobalScope.cpp

@@ -303,7 +303,7 @@ void DOMFileSystem::getEntry(ScriptExecutionContext& context, FileSystemDirector
     ASSERT(resolvedVirtualPath[0] == '/');
     auto fullPath = evaluatePath(resolvedVirtualPath);
     if (fullPath == m_rootPath) {
-        callOnMainThread([this, context = Ref { context }, completionCallback = WTFMove(completionCallback)]() mutable {
+        callOnMainThread([this, protectedThis = Ref { *this }, context = Ref { context }, completionCallback = WTFMove(completionCallback)]() mutable {
             completionCallback(Ref<FileSystemEntry> { root(context) });
         });
         return;

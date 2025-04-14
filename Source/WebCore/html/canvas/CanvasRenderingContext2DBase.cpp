@@ -1205,7 +1205,7 @@ void CanvasRenderingContext2DBase::fillInternal(const Path& path, CanvasFillRule
     } else
         c->fillPath(path);
 
-    didDraw(repaintEntireCanvas, [&]() {
+    didDraw(repaintEntireCanvas, [&] {
         return targetSwitcher ? targetSwitcher->expandedBounds() : path.fastBoundingRect();
     });
 
@@ -1245,7 +1245,7 @@ void CanvasRenderingContext2DBase::strokeInternal(const Path& path)
     } else
         c->strokePath(path);
 
-    didDraw(repaintEntireCanvas, [&]() {
+    didDraw(repaintEntireCanvas, [&] {
         return targetSwitcher ? targetSwitcher->expandedBounds() : inflatedStrokeRect(path.fastBoundingRect());
     });
 }
@@ -2386,7 +2386,7 @@ void CanvasRenderingContext2DBase::didDraw(bool entireCanvas, const FloatRect& r
 }
 
 template<typename RectProvider>
-void CanvasRenderingContext2DBase::didDraw(bool entireCanvas, RectProvider rectProvider, OptionSet<DidDrawOption> options)
+void CanvasRenderingContext2DBase::didDraw(bool entireCanvas, NOESCAPE const RectProvider& rectProvider, OptionSet<DidDrawOption> options)
 {
     if (isEntireBackingStoreDirty())
         didDraw(std::nullopt, options);

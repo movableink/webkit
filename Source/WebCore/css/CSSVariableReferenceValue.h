@@ -67,7 +67,7 @@ public:
     
     const CSSVariableData& data() const { return m_data.get(); }
 
-    template<typename CacheFunction> bool resolveAndCacheValue(Style::BuilderState&, CacheFunction&&) const;
+    template<typename CacheFunction> bool resolveAndCacheValue(Style::BuilderState&, NOESCAPE const CacheFunction&) const;
 
 private:
     explicit CSSVariableReferenceValue(Ref<CSSVariableData>&&);
@@ -98,7 +98,7 @@ private:
 };
 
 template<typename CacheFunction>
-bool CSSVariableReferenceValue::resolveAndCacheValue(Style::BuilderState& builderState, CacheFunction&& cacheFunction) const
+bool CSSVariableReferenceValue::resolveAndCacheValue(Style::BuilderState& builderState, NOESCAPE const CacheFunction& cacheFunction) const
 
 {
     if (auto data = tryResolveSimpleReference(builderState)) {

@@ -151,7 +151,8 @@ Ref<Thread> WorkerThread::createThread()
         return Thread::currentSingleton();
     }
 
-    return Thread::create(threadName(), [this] {
+    // WorkerOrWorkletThread::workerOrWorkletThread destroys the worker and expects a single reference to this.
+    SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE return Thread::create(threadName(), [this] {
         workerOrWorkletThread();
     }, ThreadType::JavaScript);
 }
