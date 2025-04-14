@@ -27,14 +27,12 @@
 
 #import "Logging.h"
 #import "WKCrashReporter.h"
-#import "WebKitServiceNames.h"
 #import "XPCEndpointMessages.h"
 #import "XPCServiceEntryPoint.h"
 #import "XPCUtilities.h"
 #import <CoreFoundation/CoreFoundation.h>
 #import <mach/mach.h>
 #import <pal/spi/cf/CFUtilitiesSPI.h>
-#import <pal/spi/cocoa/CoreServicesSPI.h>
 #import <pal/spi/cocoa/LaunchServicesSPI.h>
 #import <sys/sysctl.h>
 #import <wtf/BlockPtr.h>
@@ -128,20 +126,6 @@ static void checkFrameworkVersion(xpc_object_t message)
 
 static bool s_isWebProcess = false;
 
-static void setUserDirSuffix(ASCIILiteral suffix)
-{
-#if PLATFORM(IOS_FAMILY)
-    if (_set_user_dir_suffix(suffix)) {
-        RELEASE_LOG(IPC, "Successfully set temp dir");
-        confstr(_CS_DARWIN_USER_TEMP_DIR, nullptr, 0);
-        return;
-    }
-    RELEASE_LOG_ERROR(IPC, "Failed to set temp dir: errno = %d", errno);
-#else
-    UNUSED_PARAM(suffix);
-#endif
-}
-
 void XPCServiceEventHandler(xpc_connection_t peer)
 {
     OSObjectPtr<xpc_connection_t> retainedPeerConnection(peer);
@@ -212,19 +196,15 @@ void XPCServiceEventHandler(xpc_connection_t peer)
                 RELEASE_LOG_ERROR(IPC, "XPCServiceEventHandler: 'service-name' is not present in the XPC dictionary");
                 return;
             }
-
             CFStringRef entryPointFunctionName = nullptr;
-            if (serviceName.startsWith(webContentServiceName)) {
+            if (serviceName.startsWith("com.apple.WebKit.WebContent"_s)) {
                 s_isWebProcess = true;
-                setUserDirSuffix(webContentServiceName);
                 entryPointFunctionName = CFSTR(STRINGIZE_VALUE_OF(WEBCONTENT_SERVICE_INITIALIZER));
-            } else if (serviceName == networkingServiceName) {
-                setUserDirSuffix(networkingServiceName);
+            } else if (serviceName == "com.apple.WebKit.Networking"_s)
                 entryPointFunctionName = CFSTR(STRINGIZE_VALUE_OF(NETWORK_SERVICE_INITIALIZER));
-            } else if (serviceName == gpuServiceName) {
-                setUserDirSuffix(gpuServiceName);
+            else if (serviceName == "com.apple.WebKit.GPU"_s)
                 entryPointFunctionName = CFSTR(STRINGIZE_VALUE_OF(GPU_SERVICE_INITIALIZER));
-            } else if (serviceName == modelServiceName)
+            else if (serviceName == "com.apple.WebKit.Model"_s)
                 entryPointFunctionName = CFSTR(STRINGIZE_VALUE_OF(MODEL_SERVICE_INITIALIZER));
             else {
                 RELEASE_LOG_ERROR(IPC, "XPCServiceEventHandler: Unexpected 'service-name': %{public}s", serviceName.utf8().data());
