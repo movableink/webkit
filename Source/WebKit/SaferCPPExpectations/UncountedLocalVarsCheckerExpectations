@@ -1,6 +1,5 @@
 UIProcess/API/C/WKContext.cpp
 UIProcess/API/C/WKContextMenuListener.cpp
-UIProcess/API/C/WKFrame.cpp
 UIProcess/API/C/WKInspector.cpp
 UIProcess/API/C/WKPage.cpp
 UIProcess/API/C/WKUserScriptRef.cpp

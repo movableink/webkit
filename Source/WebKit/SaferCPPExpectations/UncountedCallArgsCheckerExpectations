@@ -15,7 +15,6 @@ UIProcess/API/C/WKContextMenuListener.cpp
 UIProcess/API/C/WKCredential.cpp
 UIProcess/API/C/WKDownloadRef.cpp
 UIProcess/API/C/WKFormSubmissionListener.cpp
-UIProcess/API/C/WKFrame.cpp
 UIProcess/API/C/WKFrameInfoRef.cpp
 UIProcess/API/C/WKFramePolicyListener.cpp
 UIProcess/API/C/WKGeolocationManager.cpp
