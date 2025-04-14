@@ -53,7 +53,12 @@ public:
     RemoteDisplayListRecorderProxy(const WebCore::DestinationColorSpace&, WebCore::ContentsFormat, WebCore::RenderingMode, const WebCore::FloatRect& initialClip, const WebCore::AffineTransform&, RemoteDisplayListRecorderIdentifier, RemoteRenderingBackendProxy&);
     ~RemoteDisplayListRecorderProxy();
     RemoteDisplayListRecorderIdentifier identifier() const { return m_identifier; }
+
+    // Called when rendering backend connection is lost.
     void disconnect();
+
+    // Called when rendering backend gets discarded but reference to the owning image buffer is still referenced.
+    void abandon();
 
 
     void setClient(ThreadSafeWeakPtr<RemoteImageBufferProxy>&& client) { m_client = WTFMove(client); }
@@ -63,7 +68,6 @@ public:
 
 private:
     template<typename T> void send(T&& message);
-    RefPtr<IPC::StreamClientConnection> connection() const;
     void didBecomeUnresponsive() const;
 
     WebCore::RenderingMode renderingMode() const final;
@@ -156,6 +160,7 @@ private:
 
     const WebCore::RenderingMode m_renderingMode;
     const RemoteDisplayListRecorderIdentifier m_identifier;
+    RefPtr<IPC::StreamClientConnection> m_connection;
     WeakPtr<RemoteRenderingBackendProxy> m_renderingBackend;
     std::optional<WebCore::ContentsFormat> m_contentsFormat;
     ThreadSafeWeakPtr<RemoteImageBufferProxy> m_client;

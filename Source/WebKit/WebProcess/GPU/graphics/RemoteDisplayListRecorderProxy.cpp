@@ -75,9 +75,14 @@ RemoteDisplayListRecorderProxy::~RemoteDisplayListRecorderProxy() = default;
 template<typename T>
 ALWAYS_INLINE void RemoteDisplayListRecorderProxy::send(T&& message)
 {
-    RefPtr connection = this->connection();
-    if (UNLIKELY(!connection))
-        return;
+    RefPtr connection = m_connection;
+    if (UNLIKELY(!connection)) {
+        if (RefPtr backend = m_renderingBackend.get())
+            connection = backend->connection();
+        if (!connection)
+            return;
+        m_connection = connection;
+    }
 
     if (!m_hasDrawn) {
         if (RefPtr client = m_client.get())
@@ -90,14 +95,6 @@ ALWAYS_INLINE void RemoteDisplayListRecorderProxy::send(T&& message)
             IPC::description(T::name()).characters(), IPC::errorAsString(result).characters());
         didBecomeUnresponsive();
     }
-}
-
-ALWAYS_INLINE RefPtr<IPC::StreamClientConnection> RemoteDisplayListRecorderProxy::connection() const
-{
-    RefPtr backend = m_renderingBackend.get();
-    if (UNLIKELY(!backend))
-        return nullptr;
-    return backend->connection();
 }
 
 void RemoteDisplayListRecorderProxy::didBecomeUnresponsive() const
@@ -551,7 +548,8 @@ void RemoteDisplayListRecorderProxy::setURLForRect(const URL& link, const FloatR
 
 bool RemoteDisplayListRecorderProxy::recordResourceUse(NativeImage& image)
 {
-    if (UNLIKELY(!m_renderingBackend)) {
+    RefPtr renderingBackend = m_renderingBackend.get();
+    if (UNLIKELY(!renderingBackend)) {
         ASSERT_NOT_REACHED();
         return false;
     }
@@ -575,7 +573,7 @@ bool RemoteDisplayListRecorderProxy::recordResourceUse(NativeImage& image)
 #endif
     }
 
-    m_renderingBackend->remoteResourceCacheProxy().recordNativeImageUse(image, colorSpace);
+    renderingBackend->remoteResourceCacheProxy().recordNativeImageUse(image, colorSpace);
     return true;
 }
 
@@ -602,45 +600,49 @@ bool RemoteDisplayListRecorderProxy::recordResourceUse(const SourceImage& image)
 
 bool RemoteDisplayListRecorderProxy::recordResourceUse(Font& font)
 {
-    if (UNLIKELY(!m_renderingBackend)) {
+    RefPtr renderingBackend = m_renderingBackend.get();
+    if (UNLIKELY(!renderingBackend)) {
         ASSERT_NOT_REACHED();
         return false;
     }
 
-    m_renderingBackend->remoteResourceCacheProxy().recordFontUse(font);
+    renderingBackend->remoteResourceCacheProxy().recordFontUse(font);
     return true;
 }
 
 bool RemoteDisplayListRecorderProxy::recordResourceUse(DecomposedGlyphs& decomposedGlyphs)
 {
-    if (UNLIKELY(!m_renderingBackend)) {
+    RefPtr renderingBackend = m_renderingBackend.get();
+    if (UNLIKELY(!renderingBackend)) {
         ASSERT_NOT_REACHED();
         return false;
     }
 
-    m_renderingBackend->remoteResourceCacheProxy().recordDecomposedGlyphsUse(decomposedGlyphs);
+    renderingBackend->remoteResourceCacheProxy().recordDecomposedGlyphsUse(decomposedGlyphs);
     return true;
 }
 
 bool RemoteDisplayListRecorderProxy::recordResourceUse(Gradient& gradient)
 {
-    if (UNLIKELY(!m_renderingBackend)) {
+    RefPtr renderingBackend = m_renderingBackend.get();
+    if (UNLIKELY(!renderingBackend)) {
         ASSERT_NOT_REACHED();
         return false;
     }
 
-    m_renderingBackend->remoteResourceCacheProxy().recordGradientUse(gradient);
+    renderingBackend->remoteResourceCacheProxy().recordGradientUse(gradient);
     return true;
 }
 
 bool RemoteDisplayListRecorderProxy::recordResourceUse(Filter& filter)
 {
-    if (UNLIKELY(!m_renderingBackend)) {
+    RefPtr renderingBackend = m_renderingBackend.get();
+    if (UNLIKELY(!renderingBackend)) {
         ASSERT_NOT_REACHED();
         return false;
     }
 
-    m_renderingBackend->remoteResourceCacheProxy().recordFilterUse(filter);
+    renderingBackend->remoteResourceCacheProxy().recordFilterUse(filter);
     return true;
 }
 
@@ -791,12 +793,20 @@ RemoteDisplayListRecorderProxy::InlineStrokeData RemoteDisplayListRecorderProxy:
 
 void RemoteDisplayListRecorderProxy::disconnect()
 {
-    m_renderingBackend = nullptr;
+    m_connection = nullptr;
 #if PLATFORM(COCOA) && ENABLE(VIDEO)
     Locker locker { m_sharedVideoFrameWriterLock };
-    if (m_sharedVideoFrameWriter)
+    if (m_sharedVideoFrameWriter) {
         m_sharedVideoFrameWriter->disable();
+        m_sharedVideoFrameWriter = nullptr;
+    }
 #endif
+}
+
+void RemoteDisplayListRecorderProxy::abandon()
+{
+    disconnect();
+    m_renderingBackend = nullptr;
 }
 
 } // namespace WebCore

@@ -313,6 +313,7 @@ void RemoteImageBufferSetProxy::disconnect()
     m_prepareForDisplayIsPending = false;
     m_generation++;
     m_remoteNeedsConfigurationUpdate = true;
+    m_context = std::nullopt;
 }
 
 GraphicsContext& RemoteImageBufferSetProxy::context()

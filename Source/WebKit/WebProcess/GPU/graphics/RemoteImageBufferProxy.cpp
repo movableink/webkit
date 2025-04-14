@@ -174,7 +174,7 @@ void RemoteImageBufferProxy::didCreateBackend(std::optional<ImageBufferBackendHa
     }
 
     if (!backend) {
-        m_context.disconnect();
+        m_context.abandon();
         if (RefPtr renderingBackend = m_renderingBackend.get()) {
             m_renderingBackend = nullptr;
             renderingBackend->releaseImageBuffer(*this);
@@ -298,6 +298,7 @@ RefPtr<PixelBuffer> RemoteImageBufferProxy::getPixelBuffer(const PixelBufferForm
 void RemoteImageBufferProxy::disconnect()
 {
     m_context.consumeHasDrawn();
+    m_context.disconnect();
     if (m_backend)
         prepareForBackingStoreChange();
     m_backend = nullptr;
@@ -387,7 +388,7 @@ std::unique_ptr<SerializedImageBuffer> RemoteImageBufferProxy::sinkIntoSerialize
     ASSERT(hasOneRef());
 
     flushDrawingContext();
-    m_context.disconnect();
+    m_context.abandon();
 
     RefPtr renderingBackend = m_renderingBackend.get();
     if (!renderingBackend)
