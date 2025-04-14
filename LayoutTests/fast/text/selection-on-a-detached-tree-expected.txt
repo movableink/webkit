@@ -1,6 +1,2 @@
 
-
-PASS if no
-crash
-or assert.
-
+PASS if nocrashor assert.

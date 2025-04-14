@@ -91,9 +91,23 @@ void FrameLoader::SubframeLoader::clear()
     m_containsPlugins = false;
 }
 
+bool FrameLoader::SubframeLoader::canCreateSubFrame() const
+{
+    Ref frame = m_frame.get();
+    if (!frame->page() || frame->protectedPage()->subframeCount() >= Page::maxNumberOfFrames)
+        return false;
+
+    if (frame->tree().depth() >= Page::maxFrameDepth)
+        return false;
+
+    return true;
+}
+
 void FrameLoader::SubframeLoader::createFrameIfNecessary(HTMLFrameOwnerElement& ownerElement, const AtomString& frameName)
 {
     if (ownerElement.contentFrame())
+        return;
+    if (!canCreateSubFrame())
         return;
     protectedFrame()->protectedLoader()->client().createFrame(frameName, ownerElement);
     if (!ownerElement.contentFrame())
@@ -302,6 +316,8 @@ RefPtr<LocalFrame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerEleme
         return nullptr;
 
     if (frame->tree().depth() >= Page::maxFrameDepth)
+
+    if (!canCreateSubFrame())
         return nullptr;
 
     // Prevent initial empty document load from triggering load events.

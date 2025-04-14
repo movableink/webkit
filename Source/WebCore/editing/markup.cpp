@@ -643,7 +643,7 @@ String StyledMarkupAccumulator::textContentRespectingRange(const Text& text)
         start = m_start.offsetInContainerNode();
     if (&text == m_end.containerNode())
         end = m_end.offsetInContainerNode();
-    ASSERT(start < end);
+    ASSERT(start <= end);
     return text.data().substring(start, end - start);
 }
 
