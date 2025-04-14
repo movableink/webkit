@@ -23,10 +23,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if ENABLE(LLVM_PROFILE_GENERATION) && PLATFORM(IOS_FAMILY)
-
 #include "config.h"
 #include "LLVMProfiling.h"
+
+#if ENABLE(LLVM_PROFILE_GENERATION) && PLATFORM(IOS_FAMILY)
 
 #include <wtf/LLVMProfilingUtils.h>
 
