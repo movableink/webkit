@@ -27,7 +27,6 @@
 #include "CustomPaintCanvas.h"
 
 #include "BitmapImage.h"
-#include "CSSParserContext.h"
 #include "CanvasRenderingContext.h"
 #include "ImageBitmap.h"
 #include "PaintRenderingContext2D.h"
@@ -99,12 +98,10 @@ void CustomPaintCanvas::clearCopiedImage() const
     m_copiedImage = nullptr;
 }
 
-const CSSParserContext& CustomPaintCanvas::cssParserContext() const
+std::unique_ptr<CSSParserContext> CustomPaintCanvas::createCSSParserContext() const
 {
     // FIXME: Rather than using a default CSSParserContext, there should be one exposed via ScriptExecutionContext.
-    if (!m_cssParserContext)
-        m_cssParserContext = WTF::makeUnique<CSSParserContext>(HTMLStandardMode);
-    return *m_cssParserContext;
+    return makeUnique<CSSParserContext>(HTMLStandardMode);
 }
 
 } // namespace WebCore

@@ -29,7 +29,6 @@
 #if ENABLE(OFFSCREEN_CANVAS)
 
 #include "BitmapImage.h"
-#include "CSSParserContext.h"
 #include "CSSValuePool.h"
 #include "CanvasRenderingContext.h"
 #include "Chrome.h"
@@ -466,12 +465,10 @@ void OffscreenCanvas::dispatchEvent(Event& event)
     EventDispatcher::dispatchEvent({ this }, event);
 }
 
-const CSSParserContext& OffscreenCanvas::cssParserContext() const
+std::unique_ptr<CSSParserContext> OffscreenCanvas::createCSSParserContext() const
 {
     // FIXME: Rather than using a default CSSParserContext, there should be one exposed via ScriptExecutionContext.
-    if (!m_cssParserContext)
-        m_cssParserContext = WTF::makeUnique<CSSParserContext>(HTMLStandardMode);
-    return *m_cssParserContext;
+    return makeUnique<CSSParserContext>(HTMLStandardMode);
 }
 
 }

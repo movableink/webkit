@@ -69,7 +69,7 @@ public:
     void queueTaskKeepingObjectAlive(TaskSource, Function<void(CanvasBase&)>&&) final { };
     void dispatchEvent(Event&) final { }
 
-    const CSSParserContext& cssParserContext() const final;
+    std::unique_ptr<CSSParserContext> createCSSParserContext() const final;
 
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
@@ -81,7 +81,6 @@ private:
 
     std::unique_ptr<PaintRenderingContext2D> m_context;
     mutable RefPtr<Image> m_copiedImage;
-    mutable std::unique_ptr<CSSParserContext> m_cssParserContext;
 };
 
 }

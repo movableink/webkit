@@ -128,7 +128,7 @@ public:
 
     CanvasRenderingContext* renderingContext() const final { return m_context.get(); }
 
-    const CSSParserContext& cssParserContext() const final;
+    std::unique_ptr<CSSParserContext> createCSSParserContext() const final;
 
     ExceptionOr<std::optional<OffscreenRenderingContext>> getContext(JSC::JSGlobalObject&, RenderingContextType, FixedVector<JSC::Strong<JSC::Unknown>>&& arguments);
     ExceptionOr<RefPtr<ImageBitmap>> transferToImageBitmap();
@@ -174,8 +174,6 @@ private:
     mutable RefPtr<Image> m_copiedImage;
     bool m_detached { false };
     bool m_hasScheduledCommit { false };
-
-    mutable std::unique_ptr<CSSParserContext> m_cssParserContext;
 };
 
 }
