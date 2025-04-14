@@ -204,9 +204,11 @@ class OSXBrowserDriver(BrowserDriver):
         return temp_args
 
     def prepare_pgo_profile_collection(self):
-        shutil.rmtree(self.pgo_profile_output_directory, ignore_errors=True)
-        os.mkdir(self.pgo_profile_output_directory)
+        for directory in self.pgo_profile_output_directories:
+            shutil.rmtree(directory, ignore_errors=True)
+            os.mkdir(directory)
 
     def collect_pgo_profile(self, destination):
-        _log.info(f'Copying PGO profiles from {self.pgo_profile_output_directory} to {destination}')
-        shutil.copytree(self.pgo_profile_output_directory, destination, dirs_exist_ok=True)
+        _log.info(f'Copying PGO profiles from {self.pgo_profile_output_directories} to {destination}')
+        for directory in self.pgo_profile_output_directories:
+            shutil.copytree(directory, destination, dirs_exist_ok=True)

@@ -112,5 +112,5 @@ class OSXSafariDriver(OSXBrowserDriver):
             _log.error('Reset safari window size failed - Error: {}'.format(error))
 
     @property
-    def pgo_profile_output_directory(self):
-        return '/private/tmp/WebKitPGO'
+    def pgo_profile_output_directories(self):
+        return ['/private/tmp/WebKitPGO']
