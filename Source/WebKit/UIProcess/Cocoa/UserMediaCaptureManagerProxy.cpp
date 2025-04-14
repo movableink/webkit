@@ -190,34 +190,34 @@ public:
 
     void applyConstraints(WebCore::MediaConstraints&& constraints, CompletionHandler<void(std::optional<RealtimeMediaSource::ApplyConstraintsError>&&)> callback)
     {
-        queueAndProcessSerialAction([this, weakThis = WeakPtr { *this }, constraints = WTFMove(constraints), callback = WTFMove(callback)]() mutable {
-            auto protectedThis = weakThis.get();
+        queueAndProcessSerialAction([weakThis = WeakPtr { *this }, constraints = WTFMove(constraints), callback = WTFMove(callback)]() mutable {
+            RefPtr protectedThis = weakThis.get();
             if (!protectedThis) {
                 callback(RealtimeMediaSource::ApplyConstraintsError { { }, { } });
                 return GenericPromise::createAndResolve();
             }
 
-            Ref source = m_source;
+            Ref source = protectedThis->m_source;
             if (source->type() != RealtimeMediaSource::Type::Video) {
                 source->applyConstraints(constraints, WTFMove(callback));
                 return GenericPromise::createAndResolve();
             }
 
-            source->removeVideoFrameObserver(*this);
+            source->removeVideoFrameObserver(*protectedThis);
 
-            source->applyConstraints(WTFMove(constraints), [this, weakThis = WTFMove(weakThis), &constraints, callback = WTFMove(callback)](auto&& error) mutable {
-                auto protectedThis = weakThis.get();
+            source->applyConstraints(WTFMove(constraints), [weakThis = WTFMove(weakThis), &constraints, callback = WTFMove(callback)](auto&& error) mutable {
+                RefPtr protectedThis = weakThis.get();
                 if (!protectedThis) {
                     callback(RealtimeMediaSource::ApplyConstraintsError { { }, { } });
                     return;
                 }
 
                 if (!error) {
-                    updateVideoConstraints(constraints);
-                    m_settings = { };
+                    protectedThis->updateVideoConstraints(constraints);
+                    protectedThis->m_settings = { };
                 }
 
-                protectedSource()->addVideoFrameObserver(*this, { m_widthConstraint, m_heightConstraint }, m_frameRateConstraint);
+                protectedThis->protectedSource()->addVideoFrameObserver(*protectedThis, { protectedThis->m_widthConstraint, protectedThis->m_heightConstraint }, protectedThis->m_frameRateConstraint);
 
                 callback(WTFMove(error));
             });
@@ -266,14 +266,14 @@ public:
         RealtimeMediaSource::TakePhotoNativePromise::Producer takePhotoProducer;
         Ref<RealtimeMediaSource::TakePhotoNativePromise> takePhotoPromise = takePhotoProducer;
 
-        queueAndProcessSerialAction([this, weakThis = WeakPtr { *this }, photoSettings = WTFMove(photoSettings), takePhotoProducer = WTFMove(takePhotoProducer)]() mutable -> Ref<GenericPromise> {
-            auto protectedThis = weakThis.get();
+        queueAndProcessSerialAction([weakThis = WeakPtr { *this }, photoSettings = WTFMove(photoSettings), takePhotoProducer = WTFMove(takePhotoProducer)]() mutable -> Ref<GenericPromise> {
+            RefPtr protectedThis = weakThis.get();
             if (!protectedThis) {
                 takePhotoProducer.reject("Track has ended"_s);
                 return GenericPromise::createAndResolve();
             }
 
-            return protectedSource()->takePhoto(WTFMove(photoSettings))->whenSettled(RunLoop::protectedMain(), [takePhotoProducer = WTFMove(takePhotoProducer)] (auto&& result) mutable {
+            return protectedThis->protectedSource()->takePhoto(WTFMove(photoSettings))->whenSettled(RunLoop::protectedMain(), [takePhotoProducer = WTFMove(takePhotoProducer)] (auto&& result) mutable {
                 ASSERT(isMainRunLoop());
 
                 takePhotoProducer.settle(WTFMove(result));
