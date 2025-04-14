@@ -303,7 +303,8 @@ ALWAYS_INLINE JSString* stringReplaceAllStringString(JSGlobalObject* globalObjec
 }
 
 enum class StringReplaceMode : bool { Single, Global };
-inline JSString* replaceUsingStringSearch(VM& vm, JSGlobalObject* globalObject, JSString* jsString, const String& string, const String& searchString, JSValue replaceValue, StringReplaceMode mode)
+template <StringReplaceMode mode>
+inline JSString* replaceUsingStringSearch(VM& vm, JSGlobalObject* globalObject, JSString* jsString, const String& string, const String& searchString, JSValue replaceValue)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -325,7 +326,7 @@ inline JSString* replaceUsingStringSearch(VM& vm, JSGlobalObject* globalObject, 
     }
 
     if (!replaceString.isNull()) {
-        if (mode == StringReplaceMode::Single)
+        if constexpr (mode == StringReplaceMode::Single)
             RELEASE_AND_RETURN(scope, (stringReplaceStringString<StringReplaceSubstitutions::Yes, StringReplaceUseTable::No, BoyerMooreHorspoolTable<uint8_t>>(globalObject, jsString, string, searchString, replaceString, nullptr)));
         else {
             ASSERT(mode == StringReplaceMode::Global);
@@ -373,7 +374,7 @@ inline JSString* replaceUsingStringSearch(VM& vm, JSGlobalObject* globalObject, 
         replacements.append(replaceString);
 
         endOfLastMatch = matchEnd;
-        if (mode == StringReplaceMode::Single)
+        if constexpr (mode == StringReplaceMode::Single)
             break;
         matchStart = StringView(string).find(vm.adaptiveStringSearcherTables(), StringView(searchString), !searchStringLength ? endOfLastMatch + 1 : endOfLastMatch);
     } while (matchStart != notFound);
@@ -1183,7 +1184,8 @@ inline bool checkObjectCoercible(JSValue thisValue)
     return true;
 }
 
-ALWAYS_INLINE JSString* replace(VM& vm, JSGlobalObject* globalObject, JSValue thisValue, JSValue searchValue, JSValue replaceValue, StringReplaceMode replaceMode)
+template<StringReplaceMode replaceMode>
+ALWAYS_INLINE JSString* replace(VM& vm, JSGlobalObject* globalObject, JSValue thisValue, JSValue searchValue, JSValue replaceValue)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -1200,10 +1202,12 @@ ALWAYS_INLINE JSString* replace(VM& vm, JSGlobalObject* globalObject, JSValue th
     if (searchValue.inherits<RegExpObject>())
         RELEASE_AND_RETURN(scope, replaceUsingRegExpSearch(vm, globalObject, string, searchValue, replaceValue));
 
-    if (searchJSString && replaceJSString) {
-        if (JSString* result = tryReplaceOneCharUsingString<DollarCheck::Yes>(globalObject, string, searchJSString, replaceJSString))
-            return result;
-        RETURN_IF_EXCEPTION(scope, nullptr);
+    if constexpr (replaceMode == StringReplaceMode::Single) {
+        if (searchJSString && replaceJSString) {
+            if (JSString* result = tryReplaceOneCharUsingString<DollarCheck::Yes>(globalObject, string, searchJSString, replaceJSString))
+                return result;
+            RETURN_IF_EXCEPTION(scope, nullptr);
+        }
     }
 
     auto thisString = string->value(globalObject);
@@ -1214,13 +1218,13 @@ ALWAYS_INLINE JSString* replace(VM& vm, JSGlobalObject* globalObject, JSValue th
         auto searchString = searchJSString->value(globalObject);
         RETURN_IF_EXCEPTION(scope, nullptr);
 
-        RELEASE_AND_RETURN(scope, replaceUsingStringSearch(vm, globalObject, string, thisString, WTFMove(searchString), replaceValue, replaceMode));
+        RELEASE_AND_RETURN(scope, replaceUsingStringSearch<replaceMode>(vm, globalObject, string, thisString, WTFMove(searchString), replaceValue));
     }
 
     String searchString = searchValue.toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
-    RELEASE_AND_RETURN(scope, replaceUsingStringSearch(vm, globalObject, string, thisString, WTFMove(searchString), replaceValue, replaceMode));
+    RELEASE_AND_RETURN(scope, replaceUsingStringSearch<replaceMode>(vm, globalObject, string, thisString, WTFMove(searchString), replaceValue));
 }
 
 } // namespace JSC
