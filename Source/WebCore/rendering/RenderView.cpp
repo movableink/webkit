@@ -500,7 +500,8 @@ void RenderView::repaintViewRectangle(const LayoutRect& repaintRect) const
         auto* ownerBox = ownerElement->renderBox();
         if (!ownerBox)
             return;
-        LayoutRect viewRect = this->viewRect();
+
+        auto viewRect = LayoutRect { this->viewRect() };
 #if PLATFORM(IOS_FAMILY)
         // Don't clip using the visible rect since clipping is handled at a higher level on iPhone.
         // FIXME: This statement is wrong for iframes.
@@ -510,6 +511,13 @@ void RenderView::repaintViewRectangle(const LayoutRect& repaintRect) const
 #endif
         if (adjustedRect.isEmpty())
             return;
+
+        if (adjustedRect == viewRect) {
+            // We know this RenderView isn't composited here, which means it has no composited descendants, so it's OK to trigger `setNeedsFullRepaint`
+            // which would otherwise force all compositing layers to repaint.
+            ASSERT(!isComposited());
+            frameView().layoutContext().setNeedsFullRepaint();
+        }
 
         adjustedRect.moveBy(-viewRect.location());
         adjustedRect.moveBy(ownerBox->contentBoxRect().location());
