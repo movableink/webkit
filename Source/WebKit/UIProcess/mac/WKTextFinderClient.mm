@@ -260,7 +260,7 @@ private:
     void (^copiedCompletionHandler)(NSString *) = Block_copy(completionHandler);
 
     self._protectedPage->getSelectionOrContentsAsString([copiedCompletionHandler] (const String& string) {
-        copiedCompletionHandler(string);
+        copiedCompletionHandler(string.createNSString().get());
         Block_release(copiedCompletionHandler);
     });
 }

@@ -47,7 +47,7 @@
 
 static NSURL *URLFromString(const WTF::String& urlString)
 {
-    return urlString.isEmpty() ? nil : [NSURL URLWithString:urlString];
+    return urlString.isEmpty() ? nil : [NSURL URLWithString:urlString.createNSString().get()];
 }
 
 - (NSURL *)absoluteImageURL
@@ -72,7 +72,7 @@ static NSURL *URLFromString(const WTF::String& urlString)
 
 - (NSString *)linkLocalDataMIMEType
 {
-    return _hitTestResult->linkLocalDataMIMEType();
+    return _hitTestResult->linkLocalDataMIMEType().createNSString().autorelease();
 }
 
 - (NSURL *)absoluteMediaURL
@@ -82,32 +82,32 @@ static NSURL *URLFromString(const WTF::String& urlString)
 
 - (NSString *)linkLabel
 {
-    return _hitTestResult->linkLabel();
+    return _hitTestResult->linkLabel().createNSString().autorelease();
 }
 
 - (NSString *)linkTitle
 {
-    return _hitTestResult->linkTitle();
+    return _hitTestResult->linkTitle().createNSString().autorelease();
 }
 
 - (NSString *)lookupText
 {
-    return _hitTestResult->lookupText();
+    return _hitTestResult->lookupText().createNSString().autorelease();
 }
 
 - (NSString *)linkSuggestedFilename
 {
-    return _hitTestResult->linkSuggestedFilename();
+    return _hitTestResult->linkSuggestedFilename().createNSString().autorelease();
 }
 
 - (NSString *)imageSuggestedFilename
 {
-    return _hitTestResult->imageSuggestedFilename();
+    return _hitTestResult->imageSuggestedFilename().createNSString().autorelease();
 }
 
 - (NSString *)imageMIMEType
 {
-    return _hitTestResult->sourceImageMIMEType();
+    return _hitTestResult->sourceImageMIMEType().createNSString().autorelease();
 }
 
 - (BOOL)isContentEditable

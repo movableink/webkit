@@ -394,7 +394,7 @@ void PageClientImpl::setPromisedDataForImage(const String& pasteboardName, Ref<F
 {
     auto image = BitmapImage::create();
     image->setData(WTFMove(imageBuffer), true);
-    m_impl->setPromisedDataForImage(image.get(), filename, extension, title, url, visibleURL, archiveBuffer.get(), pasteboardName, originIdentifier);
+    m_impl->setPromisedDataForImage(image.get(), filename.createNSString().get(), extension.createNSString().get(), title.createNSString().get(), url.createNSString().get(), visibleURL.createNSString().get(), archiveBuffer.get(), pasteboardName.createNSString().get(), originIdentifier.createNSString().get());
 }
 
 void PageClientImpl::updateSecureInputState()
@@ -755,7 +755,7 @@ void PageClientImpl::intrinsicContentSizeDidChange(const IntSize& intrinsicConte
 
 bool PageClientImpl::executeSavedCommandBySelector(const String& selectorString)
 {
-    return m_impl->executeSavedCommandBySelector(NSSelectorFromString(selectorString));
+    return m_impl->executeSavedCommandBySelector(NSSelectorFromString(selectorString.createNSString().get()));
 }
 
 void PageClientImpl::showDictationAlternativeUI(const WebCore::FloatRect& boundingBoxOfDictatedText, WebCore::DictationContext dictationContext)
@@ -932,7 +932,7 @@ void PageClientImpl::didSameDocumentNavigationForMainFrame(SameDocumentNavigatio
 
 void PageClientImpl::handleControlledElementIDResponse(const String& identifier)
 {
-    [webView() _handleControlledElementIDResponse:identifier];
+    [webView() _handleControlledElementIDResponse:identifier.createNSString().get()];
 }
 
 void PageClientImpl::didChangeBackgroundColor()

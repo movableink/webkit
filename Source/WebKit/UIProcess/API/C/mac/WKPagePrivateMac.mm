@@ -79,7 +79,7 @@
 
 - (NSString *)title
 {
-    return _page->pageLoadState().title();
+    return _page->pageLoadState().title().createNSString().autorelease();
 }
 
 - (NSURL *)URL

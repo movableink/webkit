@@ -60,7 +60,7 @@
 
 - (NSString *)text
 {
-    return _rangeHandle->text();
+    return _rangeHandle->text().createNSString().autorelease();
 }
 
 #if TARGET_OS_IPHONE

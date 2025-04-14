@@ -108,7 +108,7 @@ static void checkURLArgument(NSURL *url)
 
 - (NSURL *)_webStorageDirectory
 {
-    return [NSURL fileURLWithPath:_configuration->localStorageDirectory() isDirectory:YES];
+    return [NSURL fileURLWithPath:_configuration->localStorageDirectory().createNSString().get() isDirectory:YES];
 }
 
 - (void)_setWebStorageDirectory:(NSURL *)url
@@ -125,7 +125,7 @@ static void checkURLArgument(NSURL *url)
 
 - (NSURL *)_indexedDBDatabaseDirectory
 {
-    return [NSURL fileURLWithPath:_configuration->indexedDBDatabaseDirectory() isDirectory:YES];
+    return [NSURL fileURLWithPath:_configuration->indexedDBDatabaseDirectory().createNSString().get() isDirectory:YES];
 }
 
 - (void)_setIndexedDBDatabaseDirectory:(NSURL *)url
@@ -142,7 +142,7 @@ static void checkURLArgument(NSURL *url)
 
 - (NSURL *)networkCacheDirectory
 {
-    return [NSURL fileURLWithPath:_configuration->networkCacheDirectory() isDirectory:YES];
+    return [NSURL fileURLWithPath:_configuration->networkCacheDirectory().createNSString().get() isDirectory:YES];
 }
 
 - (void)setNetworkCacheDirectory:(NSURL *)url
@@ -159,7 +159,7 @@ static void checkURLArgument(NSURL *url)
 
 - (NSURL *)deviceIdHashSaltsStorageDirectory
 {
-    return [NSURL fileURLWithPath:_configuration->deviceIdHashSaltsStorageDirectory() isDirectory:YES];
+    return [NSURL fileURLWithPath:_configuration->deviceIdHashSaltsStorageDirectory().createNSString().get() isDirectory:YES];
 }
 
 - (void)setDeviceIdHashSaltsStorageDirectory:(NSURL *)url
@@ -176,7 +176,7 @@ static void checkURLArgument(NSURL *url)
 
 - (NSURL *)_webSQLDatabaseDirectory
 {
-    return [NSURL fileURLWithPath:_configuration->webSQLDatabaseDirectory() isDirectory:YES];
+    return [NSURL fileURLWithPath:_configuration->webSQLDatabaseDirectory().createNSString().get() isDirectory:YES];
 }
 
 - (void)_setWebSQLDatabaseDirectory:(NSURL *)url
@@ -213,7 +213,7 @@ static void checkURLArgument(NSURL *url)
 
 - (NSURL *)_cookieStorageFile
 {
-    return [NSURL fileURLWithPath:_configuration->cookieStorageFile() isDirectory:NO];
+    return [NSURL fileURLWithPath:_configuration->cookieStorageFile().createNSString().get() isDirectory:NO];
 }
 
 - (void)_setCookieStorageFile:(NSURL *)url
@@ -233,7 +233,7 @@ static void checkURLArgument(NSURL *url)
 
 - (NSURL *)_resourceLoadStatisticsDirectory
 {
-    return [NSURL fileURLWithPath:_configuration->resourceLoadStatisticsDirectory() isDirectory:YES];
+    return [NSURL fileURLWithPath:_configuration->resourceLoadStatisticsDirectory().createNSString().get() isDirectory:YES];
 }
 
 - (void)_setResourceLoadStatisticsDirectory:(NSURL *)url
@@ -250,7 +250,7 @@ static void checkURLArgument(NSURL *url)
 
 - (NSURL *)_cacheStorageDirectory
 {
-    return [NSURL fileURLWithPath:_configuration->cacheStorageDirectory() isDirectory:YES];
+    return [NSURL fileURLWithPath:_configuration->cacheStorageDirectory().createNSString().get() isDirectory:YES];
 }
 
 - (void)_setCacheStorageDirectory:(NSURL *)url
@@ -267,7 +267,7 @@ static void checkURLArgument(NSURL *url)
 
 - (NSURL *)_serviceWorkerRegistrationDirectory
 {
-    return [NSURL fileURLWithPath:_configuration->serviceWorkerRegistrationDirectory() isDirectory:YES];
+    return [NSURL fileURLWithPath:_configuration->serviceWorkerRegistrationDirectory().createNSString().get() isDirectory:YES];
 }
 
 - (void)_setServiceWorkerRegistrationDirectory:(NSURL *)url
@@ -299,12 +299,12 @@ static void checkURLArgument(NSURL *url)
 
 - (NSString *)sourceApplicationBundleIdentifier
 {
-    return _configuration->sourceApplicationBundleIdentifier();
+    return _configuration->sourceApplicationBundleIdentifier().createNSString().autorelease();
 }
 
 - (NSString *)sourceApplicationSecondaryIdentifier
 {
-    return _configuration->sourceApplicationSecondaryIdentifier();
+    return _configuration->sourceApplicationSecondaryIdentifier().createNSString().autorelease();
 }
 
 - (void)setSourceApplicationSecondaryIdentifier:(NSString *)identifier
@@ -314,7 +314,7 @@ static void checkURLArgument(NSURL *url)
 
 - (NSURL *)applicationCacheDirectory
 {
-    return [NSURL fileURLWithPath:_configuration->applicationCacheDirectory() isDirectory:YES];
+    return [NSURL fileURLWithPath:_configuration->applicationCacheDirectory().createNSString().get() isDirectory:YES];
 }
 
 - (void)setApplicationCacheDirectory:(NSURL *)url
@@ -331,7 +331,7 @@ static void checkURLArgument(NSURL *url)
 
 - (NSString *)applicationCacheFlatFileSubdirectoryName
 {
-    return _configuration->applicationCacheFlatFileSubdirectoryName();
+    return _configuration->applicationCacheFlatFileSubdirectoryName().createNSString().autorelease();
 }
 
 - (void)setApplicationCacheFlatFileSubdirectoryName:(NSString *)name
@@ -347,7 +347,7 @@ static void checkURLArgument(NSURL *url)
 
 - (NSURL *)mediaCacheDirectory
 {
-    return [NSURL fileURLWithPath:_configuration->mediaCacheDirectory() isDirectory:YES];
+    return [NSURL fileURLWithPath:_configuration->mediaCacheDirectory().createNSString().get() isDirectory:YES];
 }
 
 - (void)setMediaCacheDirectory:(NSURL *)url
@@ -364,7 +364,7 @@ static void checkURLArgument(NSURL *url)
 
 - (NSURL *)mediaKeysStorageDirectory
 {
-    return [NSURL fileURLWithPath:_configuration->mediaKeysStorageDirectory() isDirectory:YES];
+    return [NSURL fileURLWithPath:_configuration->mediaKeysStorageDirectory().createNSString().get() isDirectory:YES];
 }
 
 - (void)setMediaKeysStorageDirectory:(NSURL *)url
@@ -381,7 +381,7 @@ static void checkURLArgument(NSURL *url)
 
 - (NSURL *)hstsStorageDirectory
 {
-    return [NSURL fileURLWithPath:_configuration->hstsStorageDirectory() isDirectory:YES];
+    return [NSURL fileURLWithPath:_configuration->hstsStorageDirectory().createNSString().get() isDirectory:YES];
 }
 
 - (void)setHSTSStorageDirectory:(NSURL *)url
@@ -398,7 +398,7 @@ static void checkURLArgument(NSURL *url)
 
 - (NSURL *)alternativeServicesStorageDirectory
 {
-    return [NSURL fileURLWithPath:_configuration->alternativeServicesDirectory() isDirectory:YES];
+    return [NSURL fileURLWithPath:_configuration->alternativeServicesDirectory().createNSString().get() isDirectory:YES];
 }
 
 - (void)setAlternativeServicesStorageDirectory:(NSURL *)url
@@ -418,7 +418,7 @@ static void checkURLArgument(NSURL *url)
     auto& directory = _configuration->generalStorageDirectory();
     if (directory.isNull())
         return nil;
-    return [NSURL fileURLWithPath:directory isDirectory:YES];
+    return [NSURL fileURLWithPath:directory.createNSString().get() isDirectory:YES];
 }
 
 - (void)setGeneralStorageDirectory:(NSURL *)url
@@ -469,7 +469,7 @@ static WebKit::UnifiedOriginStorageLevel toUnifiedOriginStorageLevel(_WKUnifiedO
 
 - (NSString *)webPushPartitionString
 {
-    return _configuration->webPushPartitionString();
+    return _configuration->webPushPartitionString().createNSString().autorelease();
 }
 
 - (void)setWebPushPartitionString:(NSString *)string
@@ -597,7 +597,7 @@ static WebKit::UnifiedOriginStorageLevel toUnifiedOriginStorageLevel(_WKUnifiedO
 
 - (NSURL *)_resourceMonitorThrottlerDirectory
 {
-    return [NSURL fileURLWithPath:_configuration->resourceMonitorThrottlerDirectory() isDirectory:YES];
+    return [NSURL fileURLWithPath:_configuration->resourceMonitorThrottlerDirectory().createNSString().get() isDirectory:YES];
 }
 
 - (void)_setResourceMonitorThrottlerDirectory:(NSURL *)url
@@ -661,7 +661,7 @@ static WebKit::UnifiedOriginStorageLevel toUnifiedOriginStorageLevel(_WKUnifiedO
 
 - (NSString *)boundInterfaceIdentifier
 {
-    return _configuration->boundInterfaceIdentifier();
+    return _configuration->boundInterfaceIdentifier().createNSString().autorelease();
 }
 
 - (void)setBoundInterfaceIdentifier:(NSString *)identifier
@@ -696,7 +696,7 @@ static WebKit::UnifiedOriginStorageLevel toUnifiedOriginStorageLevel(_WKUnifiedO
 
 - (NSString *)dataConnectionServiceType
 {
-    return _configuration->dataConnectionServiceType();
+    return _configuration->dataConnectionServiceType().createNSString().autorelease();
 }
 
 - (void)setDataConnectionServiceType:(NSString *)type
@@ -791,7 +791,7 @@ static WebKit::UnifiedOriginStorageLevel toUnifiedOriginStorageLevel(_WKUnifiedO
 
 - (NSString *)pcmMachServiceName
 {
-    return _configuration->pcmMachServiceName();
+    return _configuration->pcmMachServiceName().createNSString().autorelease();
 }
 
 - (void)setPCMMachServiceName:(NSString *)name
@@ -801,7 +801,7 @@ static WebKit::UnifiedOriginStorageLevel toUnifiedOriginStorageLevel(_WKUnifiedO
 
 - (NSString *)webPushMachServiceName
 {
-    return _configuration->webPushMachServiceName();
+    return _configuration->webPushMachServiceName().createNSString().autorelease();
 }
 
 - (void)setWebPushMachServiceName:(NSString *)name

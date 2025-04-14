@@ -71,8 +71,8 @@ inline static RetainPtr<WKTextExtractionTextItem> createWKTextItem(const TextExt
     RetainPtr<WKTextExtractionEditable> editable;
     if (data.editable) {
         editable = adoptNS([allocWKTextExtractionEditableInstance()
-            initWithLabel:data.editable->label
-            placeholder:data.editable->placeholder
+            initWithLabel:data.editable->label.createNSString().get()
+            placeholder:data.editable->placeholder.createNSString().get()
             isSecure:static_cast<BOOL>(data.editable->isSecure)
             isFocused:static_cast<BOOL>(data.editable->isFocused)]);
     }
@@ -96,7 +96,7 @@ inline static RetainPtr<WKTextExtractionTextItem> createWKTextItem(const TextExt
     });
 
     return adoptNS([allocWKTextExtractionTextItemInstance()
-        initWithContent:data.content
+        initWithContent:data.content.createNSString().get()
         selectedRange:selectedRange
         links:links.get()
         editable:editable.get()
@@ -113,7 +113,7 @@ inline static RetainPtr<WKTextExtractionItem> createItemWithChildren(const TextE
         }, [&](const TextExtraction::ScrollableItemData& data) -> RetainPtr<WKTextExtractionItem> {
             return adoptNS([allocWKTextExtractionScrollableItemInstance() initWithContentSize:data.contentSize rectInWebView:rectInWebView children:children]);
         }, [&](const TextExtraction::ImageItemData& data) -> RetainPtr<WKTextExtractionItem> {
-            return adoptNS([allocWKTextExtractionImageItemInstance() initWithName:data.name altText:data.altText rectInWebView:rectInWebView children:children]);
+            return adoptNS([allocWKTextExtractionImageItemInstance() initWithName:data.name.createNSString().get() altText:data.altText.createNSString().get() rectInWebView:rectInWebView children:children]);
         }, [&](TextExtraction::ContainerType type) -> RetainPtr<WKTextExtractionItem> {
             return adoptNS([allocWKTextExtractionContainerItemInstance() initWithContainer:containerType(type) rectInWebView:rectInWebView children:children]);
         }

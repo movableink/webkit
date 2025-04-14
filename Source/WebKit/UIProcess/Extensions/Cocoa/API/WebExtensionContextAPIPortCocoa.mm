@@ -221,7 +221,7 @@ void WebExtensionContext::firePortMessageEventsIfNeeded(WebExtensionContentWorld
 
     case WebExtensionContentWorldType::Native:
         if (RefPtr nativePort = m_nativePortMap.get(channelIdentifier))
-            nativePort->receiveMessage(parseJSON(messageJSON, JSONOptions::FragmentsAllowed), std::nullopt);
+            nativePort->receiveMessage(parseJSON(messageJSON.createNSString().get(), JSONOptions::FragmentsAllowed), std::nullopt);
         return;
 
     case WebExtensionContentWorldType::WebPage:
@@ -260,7 +260,7 @@ void WebExtensionContext::sendQueuedNativePortMessagesIfNeeded(WebExtensionPortC
     RELEASE_LOG_DEBUG(Extensions, "Sending %{public}zu queued message(s) to port channel %{public}llu in native world", messages.size(), channelIdentifier.toUInt64());
 
     for (auto& entry : messages) {
-        id message = parseJSON(std::get<String>(entry), JSONOptions::FragmentsAllowed);
+        id message = parseJSON(std::get<String>(entry).createNSString().get(), JSONOptions::FragmentsAllowed);
 
         nativePort->sendMessage(message, [=](WebExtensionMessagePort::Error error) {
             if (error)

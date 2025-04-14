@@ -430,10 +430,10 @@ void ProcessAssertion::init(const String& environmentIdentifier)
     if (environmentIdentifier.isEmpty())
         target = [RBSTarget targetWithPid:m_pid];
     else
-        target = [RBSTarget targetWithPid:m_pid environmentIdentifier:environmentIdentifier];
+        target = [RBSTarget targetWithPid:m_pid environmentIdentifier:environmentIdentifier.createNSString().get()];
 
-    RBSDomainAttribute *domainAttribute = [RBSDomainAttribute attributeWithDomain:String(runningBoardDomainForAssertionType(m_assertionType)) name:String(runningBoardAssertionName)];
-    m_rbsAssertion = adoptNS([[RBSAssertion alloc] initWithExplanation:m_reason target:target attributes:@[domainAttribute]]);
+    RBSDomainAttribute *domainAttribute = [RBSDomainAttribute attributeWithDomain:runningBoardDomainForAssertionType(m_assertionType).createNSString().get() name:runningBoardAssertionName.createNSString().get()];
+    m_rbsAssertion = adoptNS([[RBSAssertion alloc] initWithExplanation:m_reason.createNSString().get() target:target attributes:@[domainAttribute]]);
 
     m_delegate = adoptNS([[WKRBSAssertionDelegate alloc] init]);
     [m_rbsAssertion addObserver:m_delegate.get()];

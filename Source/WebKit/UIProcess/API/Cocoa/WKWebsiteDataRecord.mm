@@ -135,7 +135,7 @@ static NSString *dataTypesToString(NSSet *dataTypes)
 
 - (NSString *)displayName
 {
-    return _websiteDataRecord->websiteDataRecord().displayName;
+    return _websiteDataRecord->websiteDataRecord().displayName.createNSString().autorelease();
 }
 
 - (NSSet *)dataTypes
@@ -166,8 +166,8 @@ static NSString *dataTypesToString(NSSet *dataTypes)
 
 - (NSArray<NSString *> *)_originsStrings
 {
-    return createNSArray(_websiteDataRecord->websiteDataRecord().origins, [] (auto& origin) -> NSString * {
-        return origin.toString();
+    return createNSArray(_websiteDataRecord->websiteDataRecord().origins, [] (auto& origin) {
+        return origin.toString().createNSString();
     }).autorelease();
 }
 

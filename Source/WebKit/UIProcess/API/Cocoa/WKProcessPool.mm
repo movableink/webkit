@@ -334,7 +334,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 
 - (NSURL *)_javaScriptConfigurationDirectory
 {
-    return [NSURL fileURLWithPath:_processPool->javaScriptConfigurationDirectory() isDirectory:YES];
+    return [NSURL fileURLWithPath:_processPool->javaScriptConfigurationDirectory().createNSString().get() isDirectory:YES];
 }
 
 - (void)_setJavaScriptConfigurationDirectory:(NSURL *)directory

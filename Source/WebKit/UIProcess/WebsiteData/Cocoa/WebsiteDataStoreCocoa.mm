@@ -306,7 +306,7 @@ void WebsiteDataStore::fetchAllDataStoreIdentifiers(CompletionHandler<void(Vecto
 void WebsiteDataStore::removeDataStoreWithIdentifierImpl(const WTF::UUID& identifier, CompletionHandler<void(const String&)>&& completionHandler)
 {
     websiteDataStoreIOQueueSingleton().dispatch([completionHandler = WTFMove(completionHandler), identifier, directory = defaultWebsiteDataStoreDirectory(identifier).isolatedCopy()]() mutable {
-        RetainPtr nsCredentialStorage = adoptNS([[NSURLCredentialStorage alloc] _initWithIdentifier:identifier.toString() private:NO]);
+        RetainPtr nsCredentialStorage = adoptNS([[NSURLCredentialStorage alloc] _initWithIdentifier:identifier.toString().createNSString().get() private:NO]);
         RetainPtr credentials = [nsCredentialStorage allCredentials];
         for (NSURLProtectionSpace *space in credentials.get()) {
             for (NSURLCredential *credential in [credentials.get()[space] allValues])
@@ -412,20 +412,20 @@ String WebsiteDataStore::defaultGeneralStorageDirectory(const String& baseDirect
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         // This is the old storage directory, and there might be files left here.
-        auto oldDirectory = cacheDirectoryFileSystemRepresentation("Storage"_s, { }, ShouldCreateDirectory::No);
+        RetainPtr oldDirectory = cacheDirectoryFileSystemRepresentation("Storage"_s, { }, ShouldCreateDirectory::No).createNSString();
         RetainPtr fileManager = [NSFileManager defaultManager];
-        RetainPtr<NSArray> files = [fileManager contentsOfDirectoryAtPath:oldDirectory error:0];
+        RetainPtr<NSArray> files = [fileManager contentsOfDirectoryAtPath:oldDirectory.get() error:0];
         if (files) {
             for (NSString *fileName in files.get()) {
                 if (![fileName length])
                     continue;
 
-                RetainPtr path = [directory stringByAppendingPathComponent:fileName];
+                RetainPtr path = [directory.createNSString() stringByAppendingPathComponent:fileName];
                 RetainPtr oldPath = [oldDirectory stringByAppendingPathComponent:fileName];
                 [fileManager moveItemAtPath:oldPath.get() toPath:path.get() error:nil];
             }
         }
-        [fileManager removeItemAtPath:oldDirectory error:nil];
+        [fileManager removeItemAtPath:oldDirectory.get() error:nil];
     });
 
     return directory;
@@ -573,7 +573,7 @@ String WebsiteDataStore::tempDirectoryFileSystemRepresentation(const String& dir
         tempURL.get() = [url URLByAppendingPathComponent:@"WebKit" isDirectory:YES];
     });
     
-    RetainPtr url = [tempURL.get() URLByAppendingPathComponent:directoryName isDirectory:YES];
+    RetainPtr url = [tempURL.get() URLByAppendingPathComponent:directoryName.createNSString().get() isDirectory:YES];
 
     if (shouldCreateDirectory == ShouldCreateDirectory::Yes
         && (![[NSFileManager defaultManager] createDirectoryAtURL:url.get() withIntermediateDirectories:YES attributes:nil error:nullptr]))
@@ -598,7 +598,7 @@ String WebsiteDataStore::cacheDirectoryFileSystemRepresentation(const String& di
         cacheURL.get() = [url URLByAppendingPathComponent:@"WebKit" isDirectory:YES];
     });
 
-    RetainPtr url = [cacheURL.get() URLByAppendingPathComponent:directoryName isDirectory:YES];
+    RetainPtr url = [cacheURL.get() URLByAppendingPathComponent:directoryName.createNSString().get() isDirectory:YES];
     if (shouldCreateDirectory == ShouldCreateDirectory::Yes
         && ![[NSFileManager defaultManager] createDirectoryAtURL:url.get() withIntermediateDirectories:YES attributes:nil error:nullptr])
         LOG_ERROR("Failed to create directory %@", url.get());
@@ -623,7 +623,7 @@ String WebsiteDataStore::websiteDataDirectoryFileSystemRepresentation(const Stri
         websiteDataURL.get() = [url URLByAppendingPathComponent:@"WebsiteData" isDirectory:YES];
     });
 
-    RetainPtr url = [websiteDataURL.get() URLByAppendingPathComponent:directoryName isDirectory:YES];
+    RetainPtr url = [websiteDataURL.get() URLByAppendingPathComponent:directoryName.createNSString().get() isDirectory:YES];
 
     if (shouldCreateDirectory == ShouldCreateDirectory::Yes) {
         if (![[NSFileManager defaultManager] createDirectoryAtURL:url.get() withIntermediateDirectories:YES attributes:nil error:nullptr])

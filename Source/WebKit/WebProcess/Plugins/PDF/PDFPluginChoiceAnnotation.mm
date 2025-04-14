@@ -59,7 +59,7 @@ void PDFPluginChoiceAnnotation::updateGeometry()
 
 void PDFPluginChoiceAnnotation::commit()
 {
-    annotation().widgetStringValue = downcast<HTMLSelectElement>(element())->value();
+    annotation().widgetStringValue = downcast<HTMLSelectElement>(element())->value().createNSString().get();
 
     PDFPluginAnnotation::commit();
 }

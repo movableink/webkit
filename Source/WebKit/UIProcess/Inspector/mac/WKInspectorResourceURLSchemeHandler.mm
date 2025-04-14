@@ -56,7 +56,7 @@
 - (NSSet<NSURL *> *)mainResourceURLsForCSP
 {
     if (!_mainResourceURLsForCSP)
-        _mainResourceURLsForCSP = adoptNS([[NSSet alloc] initWithObjects:[NSURL URLWithString:WebKit::WebInspectorUIProxy::inspectorPageURL()], [NSURL URLWithString:WebKit::WebInspectorUIProxy::inspectorTestPageURL()], nil]);
+        _mainResourceURLsForCSP = adoptNS([[NSSet alloc] initWithObjects:adoptNS([[NSURL alloc] initWithString:WebKit::WebInspectorUIProxy::inspectorPageURL().createNSString().get()]).get(), adoptNS([[NSURL alloc] initWithString:WebKit::WebInspectorUIProxy::inspectorTestPageURL().createNSString().get()]).get(), nil]);
 
     return _mainResourceURLsForCSP.get();
 }
@@ -98,14 +98,14 @@
             return;
         }
 
-        NSString *mimeType = WebCore::MIMETypeRegistry::mimeTypeForExtension(String(fileURLForRequest.pathExtension));
+        RetainPtr mimeType = WebCore::MIMETypeRegistry::mimeTypeForExtension(String(fileURLForRequest.pathExtension)).createNSString();
         if (!mimeType)
             mimeType = @"application/octet-stream";
 
         RetainPtr<NSMutableDictionary> headerFields = adoptNS(@{
             @"Access-Control-Allow-Origin": @"*",
             @"Content-Length": adoptNS([[NSString alloc] initWithFormat:@"%zu", (size_t)fileData.length]).get(),
-            @"Content-Type": mimeType,
+            @"Content-Type": mimeType.get(),
         }.mutableCopy);
 
         // Allow fetches for resources that use a registered custom URL scheme.

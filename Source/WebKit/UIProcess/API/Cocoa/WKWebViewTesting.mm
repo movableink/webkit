@@ -95,7 +95,7 @@
 #endif
     }
 
-    return ts.release();
+    return ts.release().createNSString().autorelease();
 }
 
 static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
@@ -233,7 +233,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
     }
 
     _page->requestActiveNowPlayingSessionInfo([handler = makeBlockPtr(callback)] (bool registeredAsNowPlayingApplication, WebCore::NowPlayingInfo&& nowPlayingInfo) {
-        handler(nowPlayingInfo.allowsNowPlayingControlsVisibility, registeredAsNowPlayingApplication, nowPlayingInfo.metadata.title, nowPlayingInfo.duration, nowPlayingInfo.currentTime, nowPlayingInfo.uniqueIdentifier ? nowPlayingInfo.uniqueIdentifier->toUInt64() : 0);
+        handler(nowPlayingInfo.allowsNowPlayingControlsVisibility, registeredAsNowPlayingApplication, nowPlayingInfo.metadata.title.createNSString().get(), nowPlayingInfo.duration, nowPlayingInfo.currentTime, nowPlayingInfo.uniqueIdentifier ? nowPlayingInfo.uniqueIdentifier->toUInt64() : 0);
     });
 }
 
@@ -250,10 +250,10 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 
     auto nowPlayingMetadataObserver = makeUnique<WebCore::NowPlayingMetadataObserver>([observer = makeBlockPtr(observer)](auto& metadata) {
         RetainPtr nowPlayingMetadata = adoptNS([[_WKNowPlayingMetadata alloc] init]);
-        [nowPlayingMetadata setTitle:metadata.title];
-        [nowPlayingMetadata setArtist:metadata.artist];
-        [nowPlayingMetadata setAlbum:metadata.album];
-        [nowPlayingMetadata setSourceApplicationIdentifier:metadata.sourceApplicationIdentifier];
+        [nowPlayingMetadata setTitle:metadata.title.createNSString().get()];
+        [nowPlayingMetadata setArtist:metadata.artist.createNSString().get()];
+        [nowPlayingMetadata setAlbum:metadata.album.createNSString().get()];
+        [nowPlayingMetadata setSourceApplicationIdentifier:metadata.sourceApplicationIdentifier.createNSString().get()];
         observer(nowPlayingMetadata.get());
     });
 
@@ -272,7 +272,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
     if (!coordinator)
         return @"";
 
-    return coordinator->scrollingTreeAsText();
+    return coordinator->scrollingTreeAsText().createNSString().autorelease();
 }
 
 - (pid_t)_networkProcessIdentifier
@@ -461,7 +461,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 {
     if (!_page || !ObjectIdentifier<WebCore::ProcessIdentifierType>::isValidIdentifier(processID) || !ObjectIdentifier<WebCore::ScrollingNodeIDType>::isValidIdentifier(scrollingNodeID))
         return @"";
-    return _page->scrollbarStateForScrollingNodeID(WebCore::ScrollingNodeID(ObjectIdentifier<WebCore::ScrollingNodeIDType>(scrollingNodeID), ObjectIdentifier<WebCore::ProcessIdentifierType>(processID)), isVertical);
+    return _page->scrollbarStateForScrollingNodeID(WebCore::ScrollingNodeID(ObjectIdentifier<WebCore::ScrollingNodeIDType>(scrollingNodeID), ObjectIdentifier<WebCore::ProcessIdentifierType>(processID)), isVertical).createNSString().autorelease();
 }
 
 - (WKWebViewAudioRoutingArbitrationStatus)_audioRoutingArbitrationStatus
@@ -567,7 +567,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
         return completionHandler({ });
 
     pageForTesting->dumpPrivateClickMeasurement([completionHandler = makeBlockPtr(completionHandler)](const String& privateClickMeasurement) {
-        completionHandler(privateClickMeasurement);
+        completionHandler(privateClickMeasurement.createNSString().get());
     });
 }
 
@@ -810,7 +810,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 
         void setTrack(const String& track, WebKit::MediaSessionCommandCompletionHandler&& callback) final
         {
-            [m_clientCoordinator setTrack:track withCompletion:makeBlockPtr([weakThis = WeakPtr { *this }, callback = WTFMove(callback)] (BOOL success) mutable {
+            [m_clientCoordinator setTrack:track.createNSString().get() withCompletion:makeBlockPtr([weakThis = WeakPtr { *this }, callback = WTFMove(callback)] (BOOL success) mutable {
                 if (!weakThis) {
                     callback(WebCore::ExceptionData { WebCore::ExceptionCode::InvalidStateError, String() });
                     return;
@@ -857,7 +857,7 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 
         void trackIdentifierChanged(const String& identifier) final
         {
-            [m_clientCoordinator trackIdentifierChanged:identifier];
+            [m_clientCoordinator trackIdentifierChanged:identifier.createNSString().get()];
         }
 
     private:

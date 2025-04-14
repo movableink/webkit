@@ -159,7 +159,7 @@ void NetworkDataTaskCocoa::applySniffingPoliciesAndBindRequestToInferfaceIfNeede
         [mutableRequest _setProperty:@NO forKey:bridge_cast(_kCFURLConnectionPropertyShouldSniff)];
 
     if (!boundInterfaceIdentifier.isNull())
-        [mutableRequest setBoundInterfaceIdentifier:boundInterfaceIdentifier];
+        [mutableRequest setBoundInterfaceIdentifier:boundInterfaceIdentifier.createNSString().get()];
 
     nsRequest = WTFMove(mutableRequest);
 }
@@ -518,7 +518,7 @@ void NetworkDataTaskCocoa::setPendingDownloadLocation(const WTF::String& filenam
     if (RefPtr extention = m_sandboxExtension)
         extention->consume();
 
-    m_task.get()._pathToDownloadTaskFile = m_pendingDownloadLocation;
+    m_task.get()._pathToDownloadTaskFile = m_pendingDownloadLocation.createNSString().get();
 
     if (allowOverwrite && FileSystem::fileExists(m_pendingDownloadLocation))
         FileSystem::deleteFile(filename);

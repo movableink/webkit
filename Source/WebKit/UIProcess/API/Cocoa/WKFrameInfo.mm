@@ -129,7 +129,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 
 - (NSString *)_title
 {
-    return _frameInfo->title();
+    return _frameInfo->title().createNSString().autorelease();
 }
 
 - (BOOL)_isScrollable

@@ -498,7 +498,7 @@ static RetainPtr<CAAnimation> createAnimation(CALayer *layer, RemoteLayerTreeHos
     RetainPtr<CAAnimation> caAnimation;
     switch (properties.animationType) {
     case PlatformCAAnimation::AnimationType::Basic: {
-        auto basicAnimation = [CABasicAnimation animationWithKeyPath:properties.keyPath];
+        RetainPtr basicAnimation = [CABasicAnimation animationWithKeyPath:properties.keyPath.createNSString().get()];
 
         if (properties.keyValues.size() > 1) {
             [basicAnimation setFromValue:animationValueFromKeyframeValue(properties.keyValues[0]).get()];
@@ -508,7 +508,7 @@ static RetainPtr<CAAnimation> createAnimation(CALayer *layer, RemoteLayerTreeHos
         if (properties.timingFunctions.size())
             [basicAnimation setTimingFunction:toCAMediaTimingFunction(properties.timingFunctions[0].get(), properties.reverseTimingFunctions)];
 
-        caAnimation = basicAnimation;
+        caAnimation = WTFMove(basicAnimation);
         break;
     }
     case PlatformCAAnimation::AnimationType::Group: {
@@ -527,7 +527,7 @@ static RetainPtr<CAAnimation> createAnimation(CALayer *layer, RemoteLayerTreeHos
         break;
     }
     case PlatformCAAnimation::AnimationType::Keyframe: {
-        auto keyframeAnimation = [CAKeyframeAnimation animationWithKeyPath:properties.keyPath];
+        RetainPtr keyframeAnimation = [CAKeyframeAnimation animationWithKeyPath:properties.keyPath.createNSString().get()];
 
         if (properties.keyValues.size()) {
             [keyframeAnimation setValues:createNSArray(properties.keyValues, [] (auto& value) {
@@ -550,11 +550,11 @@ static RetainPtr<CAAnimation> createAnimation(CALayer *layer, RemoteLayerTreeHos
             }).get()];
         }
 
-        caAnimation = keyframeAnimation;
+        caAnimation = WTFMove(keyframeAnimation);
         break;
     }
     case PlatformCAAnimation::AnimationType::Spring: {
-        auto springAnimation = [CASpringAnimation animationWithKeyPath:properties.keyPath];
+        RetainPtr springAnimation = [CASpringAnimation animationWithKeyPath:properties.keyPath.createNSString().get()];
 
         if (properties.keyValues.size() > 1) {
             [springAnimation setFromValue:animationValueFromKeyframeValue(properties.keyValues[0]).get()];
@@ -571,7 +571,7 @@ static RetainPtr<CAAnimation> createAnimation(CALayer *layer, RemoteLayerTreeHos
                 [springAnimation setInitialVelocity:function->initialVelocity()];
             }
         }
-        caAnimation = springAnimation;
+        caAnimation = WTFMove(springAnimation);
         break;
     }
     }
@@ -622,7 +622,7 @@ static void addAnimationToLayer(CALayer *layer, RemoteLayerTreeHost* layerTreeHo
         return;
     }
 
-    [layer addAnimation:createAnimation(layer, layerTreeHost, properties).get() forKey:key];
+    [layer addAnimation:createAnimation(layer, layerTreeHost, properties).get() forKey:key.createNSString().get()];
     [layer setInheritsTiming:NO];
 }
 
@@ -631,7 +631,7 @@ void PlatformCAAnimationRemote::updateLayerAnimations(CALayer *layer, RemoteLaye
     BEGIN_BLOCK_OBJC_EXCEPTIONS
 
     for (const auto& value : animationsToRemove)
-        [layer removeAnimationForKey:value];
+        [layer removeAnimationForKey:value.createNSString().get()];
 
     for (const auto& keyAnimationPair : animationsToAdd)
         addAnimationToLayer(layer, layerTreeHost, keyAnimationPair.first, keyAnimationPair.second);

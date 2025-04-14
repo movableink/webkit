@@ -43,7 +43,7 @@ void WebExtensionController::testResult(bool result, String message, String sour
 {
     auto delegate = this->delegate();
     if ([delegate respondsToSelector:@selector(_webExtensionController:recordTestAssertionResult:withMessage:andSourceURL:lineNumber:)]) {
-        [delegate _webExtensionController:wrapper() recordTestAssertionResult:result withMessage:message andSourceURL:sourceURL lineNumber:lineNumber];
+        [delegate _webExtensionController:wrapper() recordTestAssertionResult:result withMessage:message.createNSString().get() andSourceURL:sourceURL.createNSString().get() lineNumber:lineNumber];
         return;
     }
 
@@ -62,7 +62,7 @@ void WebExtensionController::testEqual(bool result, String expectedValue, String
 {
     auto delegate = this->delegate();
     if ([delegate respondsToSelector:@selector(_webExtensionController:recordTestEqualityResult:expectedValue:actualValue:withMessage:andSourceURL:lineNumber:)]) {
-        [delegate _webExtensionController:wrapper() recordTestEqualityResult:result expectedValue:expectedValue actualValue:actualValue withMessage:message andSourceURL:sourceURL lineNumber:lineNumber];
+        [delegate _webExtensionController:wrapper() recordTestEqualityResult:result expectedValue:expectedValue.createNSString().get() actualValue:actualValue.createNSString().get() withMessage:message.createNSString().get() andSourceURL:sourceURL.createNSString().get() lineNumber:lineNumber];
         return;
     }
 
@@ -81,7 +81,7 @@ void WebExtensionController::testLogMessage(String message, String sourceURL, un
 {
     auto delegate = this->delegate();
     if ([delegate respondsToSelector:@selector(_webExtensionController:logTestMessage:andSourceURL:lineNumber:)]) {
-        [delegate _webExtensionController:wrapper() logTestMessage:message andSourceURL:sourceURL lineNumber:lineNumber];
+        [delegate _webExtensionController:wrapper() logTestMessage:message.createNSString().get() andSourceURL:sourceURL.createNSString().get() lineNumber:lineNumber];
         return;
     }
 
@@ -95,18 +95,18 @@ void WebExtensionController::testSentMessage(String message, String argument, St
 {
     auto delegate = this->delegate();
     if ([delegate respondsToSelector:@selector(_webExtensionController:receivedTestMessage:withArgument:andSourceURL:lineNumber:)]) {
-        [delegate _webExtensionController:wrapper() receivedTestMessage:message withArgument:parseJSON(argument, JSONOptions::FragmentsAllowed) andSourceURL:sourceURL lineNumber:lineNumber];
+        [delegate _webExtensionController:wrapper() receivedTestMessage:message.createNSString().get() withArgument:parseJSON(argument.createNSString().get(), JSONOptions::FragmentsAllowed) andSourceURL:sourceURL.createNSString().get() lineNumber:lineNumber];
         return;
     }
 
-    RELEASE_LOG_INFO(Extensions, "Test sent message: %{public}@ %{public}@ (%{public}@:%{public}u)", message.createNSString().get(), (NSString *)argument, sourceURL.createNSString().get(), lineNumber);
+    RELEASE_LOG_INFO(Extensions, "Test sent message: %{public}@ %{public}@ (%{public}@:%{public}u)", message.createNSString().get(), argument.createNSString().get(), sourceURL.createNSString().get(), lineNumber);
 }
 
 void WebExtensionController::testAdded(String testName, String sourceURL, unsigned lineNumber)
 {
     auto delegate = this->delegate();
     if ([delegate respondsToSelector:@selector(_webExtensionController:recordTestAddedWithName:andSourceURL:lineNumber:)]) {
-        [delegate _webExtensionController:wrapper() recordTestAddedWithName:testName andSourceURL:sourceURL lineNumber:lineNumber];
+        [delegate _webExtensionController:wrapper() recordTestAddedWithName:testName.createNSString().get() andSourceURL:sourceURL.createNSString().get() lineNumber:lineNumber];
         return;
     }
 
@@ -117,7 +117,7 @@ void WebExtensionController::testStarted(String testName, String sourceURL, unsi
 {
     auto delegate = this->delegate();
     if ([delegate respondsToSelector:@selector(_webExtensionController:recordTestStartedWithName:andSourceURL:lineNumber:)]) {
-        [delegate _webExtensionController:wrapper() recordTestStartedWithName:testName andSourceURL:sourceURL lineNumber:lineNumber];
+        [delegate _webExtensionController:wrapper() recordTestStartedWithName:testName.createNSString().get() andSourceURL:sourceURL.createNSString().get() lineNumber:lineNumber];
         return;
     }
 
@@ -128,7 +128,7 @@ void WebExtensionController::testFinished(String testName, bool result, String m
 {
     auto delegate = this->delegate();
     if ([delegate respondsToSelector:@selector(_webExtensionController:recordTestFinishedWithName:result:message:andSourceURL:lineNumber:)]) {
-        [delegate _webExtensionController:wrapper() recordTestFinishedWithName:testName result:result message:message andSourceURL:sourceURL lineNumber:lineNumber];
+        [delegate _webExtensionController:wrapper() recordTestFinishedWithName:testName.createNSString().get() result:result message:message.createNSString().get() andSourceURL:sourceURL.createNSString().get() lineNumber:lineNumber];
         return;
     }
 

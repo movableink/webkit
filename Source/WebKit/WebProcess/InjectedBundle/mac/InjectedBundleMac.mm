@@ -118,7 +118,7 @@ bool InjectedBundle::initialize(const WebProcessCreationParameters& parameters, 
         }
     }
 
-    m_platformBundle = adoptNS([[NSBundle alloc] initWithPath:m_path]);
+    m_platformBundle = adoptNS([[NSBundle alloc] initWithPath:m_path.createNSString().get()]);
     if (!m_platformBundle) {
         WTFLogAlways("InjectedBundle::load failed - Could not create the bundle.\n");
         return false;
@@ -261,7 +261,7 @@ void InjectedBundle::setBundleParameter(const String& key, std::span<const uint8
     if (!m_bundleParameters && parameter)
         m_bundleParameters = adoptNS([[WKWebProcessBundleParameters alloc] initWithDictionary:@{ }]);
 
-    [m_bundleParameters setParameter:parameter forKey:key];
+    [m_bundleParameters setParameter:parameter forKey:key.createNSString().get()];
 }
 
 void InjectedBundle::setBundleParameters(std::span<const uint8_t> value)

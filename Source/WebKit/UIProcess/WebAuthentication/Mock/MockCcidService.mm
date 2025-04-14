@@ -93,7 +93,7 @@ RetainPtr<NSData> MockCcidService::nextReply()
     if (m_configuration.ccid->payloadBase64.isEmpty())
         return nil;
 
-    auto result = adoptNS([[NSData alloc] initWithBase64EncodedString:m_configuration.ccid->payloadBase64[0] options:NSDataBase64DecodingIgnoreUnknownCharacters]);
+    auto result = adoptNS([[NSData alloc] initWithBase64EncodedString:m_configuration.ccid->payloadBase64[0].createNSString().get() options:NSDataBase64DecodingIgnoreUnknownCharacters]);
     m_configuration.ccid->payloadBase64.remove(0);
     return result;
 }

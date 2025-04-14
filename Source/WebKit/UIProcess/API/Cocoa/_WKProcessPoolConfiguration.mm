@@ -56,7 +56,7 @@
 
 - (NSURL *)injectedBundleURL
 {
-    return [NSURL fileURLWithPath:_processPoolConfiguration->injectedBundlePath()];
+    return [NSURL fileURLWithPath:_processPoolConfiguration->injectedBundlePath().createNSString().get()];
 }
 
 - (void)setInjectedBundleURL:(NSURL *)injectedBundleURL
@@ -369,7 +369,7 @@
 
 - (NSString *)timeZoneOverride
 {
-    return _processPoolConfiguration->timeZoneOverride();
+    return _processPoolConfiguration->timeZoneOverride().createNSString().autorelease();
 }
 
 - (void)setTimeZoneOverride:(NSString *)timeZone

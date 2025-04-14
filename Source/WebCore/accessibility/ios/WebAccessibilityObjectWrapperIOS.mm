@@ -294,7 +294,7 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
     if (![self _prepareAccessibilityCall])
         return nil;
 
-    return self.axBackingObject->identifierAttribute();
+    return self.axBackingObject->identifierAttribute().createNSString().autorelease();
 }
 
 - (BOOL)accessibilityCanFuzzyHitTest
@@ -497,7 +497,7 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
     if (![self _prepareAccessibilityCall])
         return nil;
 
-    return accessibilityRoleToString(self.axBackingObject->roleValue());
+    return accessibilityRoleToString(self.axBackingObject->roleValue()).createNSString().autorelease();
 }
 
 - (BOOL)accessibilityHasPopup
@@ -513,7 +513,7 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
     if (![self _prepareAccessibilityCall])
         return nil;
 
-    return self.axBackingObject->popupValue();
+    return self.axBackingObject->popupValue().createNSString().autorelease();
 }
 
 - (BOOL)accessibilityIsInDescriptionListDefinition
@@ -564,7 +564,7 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
     if (![self _prepareAccessibilityCall])
         return nil;
     
-    return self.axBackingObject->languageIncludingAncestors();
+    return self.axBackingObject->languageIncludingAncestors().createNSString().autorelease();
 }
 
 - (BOOL)accessibilityIsDialog
@@ -710,7 +710,7 @@ static AccessibilityObjectWrapper *ancestorWithRole(const AXCoreObject& descenda
 - (NSString *)interactiveVideoDescription
 {
     auto* mediaObject = dynamicDowncast<AccessibilityMediaObject>(self.axBackingObject);
-    return mediaObject ? mediaObject->interactiveVideoDuration() : nullString();
+    return mediaObject ? mediaObject->interactiveVideoDuration().createNSString().autorelease() : @"";
 }
 
 - (BOOL)accessibilityIsMediaPlaying
@@ -1130,23 +1130,23 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
         return nil;
 
     if (self.axBackingObject->isColorWell())
-        return AXColorWellText();
+        return AXColorWellText().createNSString().autorelease();
 
-    return self.axBackingObject->roleDescription();
+    return self.axBackingObject->roleDescription().createNSString().autorelease();
 }
 
 - (NSString *)accessibilityBrailleLabel
 {
     if (![self _prepareAccessibilityCall])
         return nil;
-    return self.axBackingObject->brailleLabel();
+    return self.axBackingObject->brailleLabel().createNSString().autorelease();
 }
 
 - (NSString *)accessibilityBrailleRoleDescription
 {
     if (![self _prepareAccessibilityCall])
         return nil;
-    return self.axBackingObject->brailleRoleDescription();
+    return self.axBackingObject->brailleRoleDescription().createNSString().autorelease();
 }
 
 - (NSString *)accessibilityLabel
@@ -1175,8 +1175,8 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
         if (heading) {
             auto headingLabel = heading->descriptionAttributeValue();
             if (!headingLabel.isEmpty())
-                return headingLabel;
-            return backingObject->stringValue();
+                return headingLabel.createNSString().autorelease();
+            return backingObject->stringValue().createNSString().autorelease();
         }
     }
 
@@ -1184,8 +1184,8 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     // so concatenate them when different.
     String title = backingObject->titleAttributeValue();
     String description = backingObject->descriptionAttributeValue();
-    NSString *landmarkDescription = [self ariaLandmarkRoleDescription];
-    NSString *interactiveVideoDescription = [self interactiveVideoDescription];
+    RetainPtr landmarkDescription = [self ariaLandmarkRoleDescription];
+    RetainPtr interactiveVideoDescription = [self interactiveVideoDescription];
 
     // We should expose the value of the input type date or time through AXValue instead of AXTitle.
     if (backingObject->isDateTime() && title == String([self accessibilityValue]))
@@ -1193,22 +1193,22 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
 
     // Footer is not considered a landmark, but we want the role description.
     if (backingObject->roleValue() == AccessibilityRole::Footer)
-        landmarkDescription = AXFooterRoleDescriptionText();
+        landmarkDescription = AXFooterRoleDescriptionText().createNSString();
 
     NSMutableString *result = [NSMutableString string];
     if (backingObject->roleValue() == AccessibilityRole::HorizontalRule)
-        appendStringToResult(result, AXHorizontalRuleDescriptionText());
+        appendStringToResult(result, AXHorizontalRuleDescriptionText().createNSString().get());
 
-    appendStringToResult(result, title);
+    appendStringToResult(result, title.createNSString().get());
     if (description != title)
-        appendStringToResult(result, description);
+        appendStringToResult(result, description.createNSString().get());
     if ([self stringValueShouldBeUsedInLabel]) {
-        NSString *valueLabel = backingObject->stringValue();
+        RetainPtr valueLabel = backingObject->stringValue().createNSString();
         valueLabel = [valueLabel stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-        appendStringToResult(result, valueLabel);
+        appendStringToResult(result, valueLabel.get());
     }
-    appendStringToResult(result, landmarkDescription);
-    appendStringToResult(result, interactiveVideoDescription);
+    appendStringToResult(result, landmarkDescription.get());
+    appendStringToResult(result, interactiveVideoDescription.get());
 
     return [result length] ? result : nil;
 }
@@ -1468,7 +1468,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     if (auto* parent = Accessibility::findAncestor<AXCoreObject>(*self.axBackingObject, true, [] (const AXCoreObject& object) {
         return object.supportsDatetimeAttribute();
     }))
-        return parent->datetimeAttributeValue();
+        return parent->datetimeAttributeValue().createNSString().autorelease();
 
     return nil;
 }
@@ -1478,7 +1478,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     if (![self _prepareAccessibilityCall])
         return nil;
 
-    return self.axBackingObject->placeholderValue();
+    return self.axBackingObject->placeholderValue().createNSString().autorelease();
 }
 
 - (NSString *)accessibilityColorStringValue
@@ -1543,13 +1543,13 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
 
     // A text control should return its text data as the axValue (per iPhone AX API).
     if (![self stringValueShouldBeUsedInLabel])
-        return backingObject->stringValue();
+        return backingObject->stringValue().createNSString().autorelease();
 
     if (backingObject->isRangeControl()) {
         // Prefer a valueDescription if provided by the author (through aria-valuetext).
         String valueDescription = backingObject->valueDescription();
         if (!valueDescription.isEmpty())
-            return valueDescription;
+            return valueDescription.createNSString().autorelease();
 
         return [NSString stringWithFormat:@"%.2f", backingObject->valueForRange()];
     }
@@ -1623,7 +1623,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     appendStringToResult(result, [self baseAccessibilityHelpText]);
     
     if ([self accessibilityIsShowingValidationMessage])
-        appendStringToResult(result, self.axBackingObject->validationMessage());
+        appendStringToResult(result, self.axBackingObject->validationMessage().createNSString().get());
     
     return result;
 }
@@ -1888,7 +1888,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     if (![self _prepareAccessibilityCall])
         return nil;
     
-    return self.axBackingObject->embeddedImageDescription();
+    return self.axBackingObject->embeddedImageDescription().createNSString().autorelease();
 }
 
 - (NSArray *)accessibilityImageOverlayElements
@@ -1906,7 +1906,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     if (![self _prepareAccessibilityCall])
         return nil;
     
-    return self.axBackingObject->linkRelValue();
+    return self.axBackingObject->linkRelValue().createNSString().autorelease();
 }
 
 - (BOOL)accessibilityRequired
@@ -2228,7 +2228,7 @@ static RenderObject* rendererForView(WAKView* view)
     AXTextMarkerRange axRange { markers };
     if (!axRange)
         return nil;
-    return axRange.toString();
+    return axRange.toString().createNSString().autorelease();
 }
 
 // This method is intended to return an array of strings and accessibility elements that
@@ -2367,7 +2367,7 @@ static RenderObject* rendererForView(WAKView* view)
     auto webRange = makeDOMRange(self.axBackingObject->document(), range);
     if (!webRange)
         return nil;
-    return AXTextMarkerRange { webRange }.toString();
+    return AXTextMarkerRange { webRange }.toString().createNSString().autorelease();
 }
 
 - (NSAttributedString *)attributedStringForRange:(NSRange)range
@@ -2797,14 +2797,14 @@ static RenderObject* rendererForView(WAKView* view)
 {
     if (![self _prepareAccessibilityCall])
         return nil;
-    return self.axBackingObject->expandedTextValue();
+    return self.axBackingObject->expandedTextValue().createNSString().autorelease();
 }
 
 - (NSString *)accessibilityIdentifier
 {
     if (![self _prepareAccessibilityCall])
         return nil;
-    return self.axBackingObject->identifierAttribute();
+    return self.axBackingObject->identifierAttribute().createNSString().autorelease();
 }
 
 - (BOOL)accessibilityIsInsertion
@@ -2904,7 +2904,7 @@ static RenderObject* rendererForView(WAKView* view)
     if (![self _prepareAccessibilityCall])
         return nil;
 
-    return self.axBackingObject->liveRegionStatus();
+    return self.axBackingObject->liveRegionStatus().createNSString().autorelease();
 }
 
 - (NSString *)accessibilityARIARelevantStatus
@@ -2912,7 +2912,7 @@ static RenderObject* rendererForView(WAKView* view)
     if (![self _prepareAccessibilityCall])
         return nil;
     
-    return self.axBackingObject->liveRegionRelevant();
+    return self.axBackingObject->liveRegionRelevant().createNSString().autorelease();
 }
 
 - (BOOL)accessibilityARIALiveRegionIsAtomic
@@ -2984,7 +2984,7 @@ static RenderObject* rendererForView(WAKView* view)
     if (![self _prepareAccessibilityCall])
         return nil;
     
-    return self.axBackingObject->invalidStatus();
+    return self.axBackingObject->invalidStatus().createNSString().autorelease();
 }
 
 - (NSString *)accessibilityCurrentState
@@ -2992,7 +2992,7 @@ static RenderObject* rendererForView(WAKView* view)
     if (![self _prepareAccessibilityCall])
         return nil;
 
-    return self.axBackingObject->currentValue();
+    return self.axBackingObject->currentValue().createNSString().autorelease();
 }
 
 - (NSString *)accessibilitySortDirection
@@ -3114,7 +3114,7 @@ static RenderObject* rendererForView(WAKView* view)
     if (![self _prepareAccessibilityCall])
         return nil;
 
-    return self.axBackingObject->mathFencedOpenString();
+    return self.axBackingObject->mathFencedOpenString().createNSString().autorelease();
 }
 
 - (NSString *)accessibilityMathFencedCloseString
@@ -3122,7 +3122,7 @@ static RenderObject* rendererForView(WAKView* view)
     if (![self _prepareAccessibilityCall])
         return nil;
 
-    return self.axBackingObject->mathFencedCloseString();
+    return self.axBackingObject->mathFencedCloseString().createNSString().autorelease();
 }
 
 - (BOOL)accessibilityIsMathTopObject

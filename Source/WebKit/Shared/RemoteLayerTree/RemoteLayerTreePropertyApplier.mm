@@ -417,7 +417,7 @@ void RemoteLayerTreePropertyApplier::applyPropertiesToLayer(CALayer *layer, Remo
         layer.masksToBounds = properties.masksToBounds;
 
     if (properties.changedProperties & LayerChange::NameChanged)
-        layer.name = properties.name;
+        layer.name = properties.name.createNSString().get();
 
     if (properties.changedProperties & LayerChange::BackgroundColorChanged)
         layer.backgroundColor = cgColorFromColor(properties.backgroundColor).get();

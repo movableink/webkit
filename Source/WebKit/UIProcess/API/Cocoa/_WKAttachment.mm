@@ -58,9 +58,9 @@ static const NSInteger InvalidAttachmentErrorCode = 2;
         return nil;
 
     _attachment = &attachment;
-    _filePath = attachment.filePath();
-    _mimeType = attachment.mimeType();
-    _utiType = attachment.utiType();
+    _filePath = attachment.filePath().createNSString();
+    _mimeType = attachment.mimeType().createNSString();
+    _utiType = attachment.utiType().createNSString();
     return self;
 }
 
@@ -180,7 +180,7 @@ static const NSInteger InvalidAttachmentErrorCode = 2;
 
 - (NSString *)uniqueIdentifier
 {
-    return _attachment->identifier();
+    return _attachment->identifier().createNSString().autorelease();
 }
 
 - (NSString *)description

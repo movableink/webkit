@@ -115,7 +115,7 @@ RetainPtr<SecKeyRef> privateKeyFromBase64(const String& base64PrivateKey)
         (id)kSecAttrKeyClass: (id)kSecAttrKeyClassPrivate,
         (id)kSecAttrKeySizeInBits: @256,
     };
-    RetainPtr<NSData> privateKey = adoptNS([[NSData alloc] initWithBase64EncodedString:base64PrivateKey options:0]);
+    RetainPtr<NSData> privateKey = adoptNS([[NSData alloc] initWithBase64EncodedString:base64PrivateKey.createNSString().get() options:0]);
     CFErrorRef errorRef = nullptr;
     auto key = adoptCF(SecKeyCreateWithData(
         bridge_cast(privateKey.get()),

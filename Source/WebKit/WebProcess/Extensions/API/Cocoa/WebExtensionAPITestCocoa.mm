@@ -386,15 +386,15 @@ JSValue *WebExtensionAPITest::addTest(JSContextRef context, JSValue *testFunctio
 {
     auto testName = testFunction[@"name"].toString;
     if (!testName.length)
-        return [JSValue valueWithNewPromiseRejectedWithReason:toErrorString(callingAPIName, nullString(), "The supplied test function must be named."_s) inContext:toJSContext(context)];
+        return [JSValue valueWithNewPromiseRejectedWithReason:toErrorString(callingAPIName, nullString(), "The supplied test function must be named."_s).createNSString().get() inContext:toJSContext(context)];
 
     RefPtr page = toWebPage(context);
     if (!page)
-        return [JSValue valueWithNewPromiseRejectedWithReason:toErrorString(callingAPIName, nullString(), "Error creating a new test."_s) inContext:toJSContext(context)];
+        return [JSValue valueWithNewPromiseRejectedWithReason:toErrorString(callingAPIName, nullString(), "Error creating a new test."_s).createNSString().get() inContext:toJSContext(context)];
 
     RefPtr webExtensionControllerProxy = page->webExtensionControllerProxy();
     if (!webExtensionControllerProxy)
-        return [JSValue valueWithNewPromiseRejectedWithReason:toErrorString(callingAPIName, nullString(), "Error creating a new test."_s) inContext:toJSContext(context)];
+        return [JSValue valueWithNewPromiseRejectedWithReason:toErrorString(callingAPIName, nullString(), "Error creating a new test."_s).createNSString().get() inContext:toJSContext(context)];
 
     __block JSValue *resolveCallback;
     __block JSValue *rejectCallback;
@@ -464,18 +464,19 @@ void WebExtensionAPITest::startNextTest()
 
 void WebExtensionContextProxy::dispatchTestMessageEvent(const String& message, const String& argumentJSON, WebExtensionContentWorldType contentWorldType)
 {
-    id argument = parseJSON(argumentJSON, JSONOptions::FragmentsAllowed);
+    id argument = parseJSON(argumentJSON.createNSString().get(), JSONOptions::FragmentsAllowed);
 
+    RetainPtr nsMessage = message.createNSString();
     if (contentWorldType == WebExtensionContentWorldType::WebPage) {
         enumerateFramesAndWebPageNamespaceObjects([&](auto&, auto& namespaceObject) {
-            namespaceObject.test().onMessage().invokeListenersWithArgument(message, argument);
+            namespaceObject.test().onMessage().invokeListenersWithArgument(nsMessage.get(), argument);
         });
 
         return;
     }
 
     enumerateFramesAndNamespaceObjects([&](auto&, auto& namespaceObject) {
-        namespaceObject.test().onMessage().invokeListenersWithArgument(message, argument);
+        namespaceObject.test().onMessage().invokeListenersWithArgument(nsMessage.get(), argument);
     }, toDOMWrapperWorld(contentWorldType));
 }
 

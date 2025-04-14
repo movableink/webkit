@@ -2,7 +2,6 @@ Platform/classifier/cocoa/ResourceLoadStatisticsClassifierCocoa.cpp
 Platform/cocoa/PaymentAuthorizationPresenter.mm
 Platform/cocoa/_WKWebViewTextInputNotifications.mm
 Platform/mac/MenuUtilities.mm
-UIProcess/API/Cocoa/APIAttachmentCocoa.mm
 UIProcess/API/Cocoa/NSAttributedString.mm
 UIProcess/API/Cocoa/WKContentRuleList.mm
 UIProcess/API/Cocoa/WKContentRuleListStore.mm
@@ -34,7 +33,6 @@ WebProcess/Plugins/PDF/PDFPluginBase.mm
 WebProcess/Plugins/PDF/UnifiedPDF/UnifiedPDFPlugin.mm
 WebProcess/Plugins/PDF/WKAccessibilityPDFDocumentObject.mm
 WebProcess/WebCoreSupport/mac/WebDragClientMac.mm
-WebProcess/WebCoreSupport/mac/WebEditorClientMac.mm
 WebProcess/WebCoreSupport/mac/WebPopupMenuMac.mm
 WebProcess/WebPage/Cocoa/WebCookieJarCocoa.mm
 WebProcess/WebPage/RemoteLayerTree/PlatformCALayerRemoteCustom.mm

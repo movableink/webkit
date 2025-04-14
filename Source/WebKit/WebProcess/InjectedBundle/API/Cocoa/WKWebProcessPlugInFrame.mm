@@ -154,7 +154,7 @@
     auto* coreFrame = _frame->coreLocalFrame();
     if (!coreFrame)
         return nil;
-    return coreFrame->document()->securityOrigin().toString();
+    return coreFrame->document()->securityOrigin().toString().createNSString().autorelease();
 }
 
 static RetainPtr<NSArray> collectIcons(WebCore::LocalFrame* frame, OptionSet<WebCore::LinkIconType> iconTypes)

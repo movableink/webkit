@@ -73,7 +73,7 @@
 
 - (NSString *)source
 {
-    return _userStyleSheet->userStyleSheet().source();
+    return _userStyleSheet->userStyleSheet().source().createNSString().autorelease();
 }
 
 - (NSURL *)baseURL

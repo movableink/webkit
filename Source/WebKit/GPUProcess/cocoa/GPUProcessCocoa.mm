@@ -69,7 +69,7 @@ RetainPtr<NSDictionary> GPUProcess::additionalStateForDiagnosticReport() const
 
             auto stateInfo = adoptNS([[NSMutableDictionary alloc] initWithCapacity:backendMap.size()]);
             // FIXME: Log some additional diagnostic state on RemoteRenderingBackend.
-            [webProcessConnectionInfo setObject:stateInfo.get() forKey:webProcessIdentifier.loggingString()];
+            [webProcessConnectionInfo setObject:stateInfo.get() forKey:webProcessIdentifier.loggingString().createNSString().get()];
         }
 
         if ([webProcessConnectionInfo count])

@@ -151,8 +151,8 @@ static NSMutableAttributedString *browsingDetailsText(const URL& url, SSBService
 
         RetainPtr attributedString = adoptNS([[NSMutableAttributedString alloc] initWithString:adoptNS([[NSString alloc] initWithFormat:@"%@ %@\n\n%@", phishingDescription.get(), learnMore.get(), phishingActions.get()]).get()]);
         addLinkAndReplace(attributedString.get(), learnMore.get(), learnMore.get(), learnMoreURL(result));
-        replace(attributedString.get(), @"%provider-display-name%", localizedProviderDisplayName(result));
-        replace(attributedString.get(), @"%provider%", localizedProviderShortName(result));
+        replace(attributedString.get(), @"%provider-display-name%", localizedProviderDisplayName(result).createNSString().get());
+        replace(attributedString.get(), @"%provider%", localizedProviderShortName(result).createNSString().get());
         addLinkAndReplace(attributedString.get(), @"%report-an-error%", reportAnError.get(), reportAnErrorURL(url, result).get());
         addLinkAndReplace(attributedString.get(), @"%bypass-link%", visitUnsafeWebsite.get(), BrowsingWarning::visitUnsafeWebsiteSentinel());
         return attributedString.autorelease();
@@ -160,9 +160,9 @@ static NSMutableAttributedString *browsingDetailsText(const URL& url, SSBService
 
     auto malwareOrUnwantedSoftwareDetails = [&] (NSString *description, NSString *statusStringToReplace, bool confirmMalware) {
         auto malwareDescription = adoptNS([[NSMutableAttributedString alloc] initWithString:description]);
-        replace(malwareDescription.get(), @"%safeBrowsingProvider%", localizedProviderDisplayName(result));
+        replace(malwareDescription.get(), @"%safeBrowsingProvider%", localizedProviderDisplayName(result).createNSString().get());
         auto statusLink = adoptNS([[NSMutableAttributedString alloc] initWithString:WEB_UI_NSSTRING(@"the status of “%site%”", "Part of malware description")]);
-        replace(statusLink.get(), @"%site%", url.host().toString());
+        replace(statusLink.get(), @"%site%", url.host().toString().createNSString().get());
         addLinkAndReplace(malwareDescription.get(), statusStringToReplace, [statusLink string], malwareDetailsURL(url, result).get());
 
         auto ifYouUnderstand = adoptNS([[NSMutableAttributedString alloc] initWithString:WEB_UI_NSSTRING(@"If you understand the risks involved, you can %visit-this-unsafe-site-link%.", "Action from safe browsing warning")]);

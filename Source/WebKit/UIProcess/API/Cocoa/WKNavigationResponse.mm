@@ -98,7 +98,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 
 - (NSString *)_proxyName
 {
-    return _navigationResponse->response().proxyName();
+    return _navigationResponse->response().proxyName().createNSString().autorelease();
 }
 
 - (BOOL)_isFromNetwork

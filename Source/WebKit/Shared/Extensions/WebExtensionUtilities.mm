@@ -297,7 +297,7 @@ bool validateDictionary(NSDictionary<NSString *, id> *dictionary, NSString *sour
         errorString = [[NSString alloc] initWithFormat:@"it is missing required keys: %@", formatList(remainingRequiredKeys.allObjects)];
 
     if (errorString && outExceptionString)
-        *outExceptionString = toErrorString(nullString(), sourceKey, errorString);
+        *outExceptionString = toErrorString(nullString(), sourceKey, errorString).createNSString().autorelease();
 
     return !errorString;
 }
@@ -310,14 +310,14 @@ bool validateObject(NSObject *object, NSString *sourceKey, id expectedValueType,
     validate(nil, object, expectedValueType, &errorString);
 
     if (errorString && outExceptionString)
-        *outExceptionString = toErrorString(nullString(), sourceKey, errorString);
+        *outExceptionString = toErrorString(nullString(), sourceKey, errorString).createNSString().autorelease();
 
     return !errorString;
 }
 
 JSObjectRef toJSError(JSContextRef context, NSString *callingAPIName, NSString *sourceKey, NSString *underlyingErrorString)
 {
-    return toJSError(context, toErrorString(callingAPIName, sourceKey, underlyingErrorString));
+    return toJSError(context, toErrorString(callingAPIName, sourceKey, underlyingErrorString).createNSString().get());
 }
 
 JSObjectRef toJSRejectedPromise(JSContextRef context, NSString *callingAPIName, NSString *sourceKey, NSString *underlyingErrorString)

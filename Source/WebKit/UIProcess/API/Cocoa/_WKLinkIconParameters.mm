@@ -61,7 +61,7 @@
 
     _attributes = adoptNS([[NSMutableDictionary alloc] initWithCapacity:linkIcon.attributes.size()]);
     for (auto& attributePair : linkIcon.attributes)
-        _attributes.get()[attributePair.first.createNSString().get()] = attributePair.second;
+        _attributes.get()[attributePair.first.createNSString().get()] = attributePair.second.createNSString().get();
 
     return self;
 }

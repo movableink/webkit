@@ -231,7 +231,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
     [coder encodeBool:self.suppressesIncrementalRendering forKey:@"suppressesIncrementalRendering"];
 
     if (auto& applicationNameForUserAgent = _pageConfiguration->applicationNameForUserAgent())
-        [coder encodeObject:*applicationNameForUserAgent forKey:@"applicationNameForUserAgent"];
+        [coder encodeObject:applicationNameForUserAgent->createNSString().get() forKey:@"applicationNameForUserAgent"];
 
     [coder encodeBool:self.allowsAirPlayForMediaPlayback forKey:@"allowsAirPlayForMediaPlayback"];
 
@@ -1050,7 +1050,7 @@ static WebKit::AttributionOverrideTesting toAttributionOverrideTesting(_WKAttrib
     const auto& schemes = self._protectedPageConfiguration->maskedURLSchemes();
     NSMutableSet<NSString *> *set = [NSMutableSet setWithCapacity:schemes.size()];
     for (const auto& scheme : schemes)
-        [set addObject:scheme];
+        [set addObject:scheme.createNSString().get()];
     return set;
 }
 
@@ -1089,7 +1089,7 @@ static WebKit::AttributionOverrideTesting toAttributionOverrideTesting(_WKAttrib
         return nil;
     NSMutableSet<NSString *> *set = [NSMutableSet setWithCapacity:hosts->size()];
     for (const auto& host : *hosts)
-        [set addObject:host];
+        [set addObject:host.createNSString().get()];
     return set;
 }
 
@@ -1319,7 +1319,7 @@ static WebKit::AttributionOverrideTesting toAttributionOverrideTesting(_WKAttrib
 
 - (NSString *)_overrideContentSecurityPolicy
 {
-    return _pageConfiguration->overrideContentSecurityPolicy();
+    return _pageConfiguration->overrideContentSecurityPolicy().createNSString().autorelease();
 }
 
 - (void)_setOverrideContentSecurityPolicy:(NSString *)overrideContentSecurityPolicy
@@ -1329,7 +1329,7 @@ static WebKit::AttributionOverrideTesting toAttributionOverrideTesting(_WKAttrib
 
 - (NSString *)_mediaContentTypesRequiringHardwareSupport
 {
-    return _pageConfiguration->mediaContentTypesRequiringHardwareSupport();
+    return _pageConfiguration->mediaContentTypesRequiringHardwareSupport().createNSString().autorelease();
 }
 
 - (void)_setMediaContentTypesRequiringHardwareSupport:(NSString *)mediaContentTypesRequiringHardwareSupport
@@ -1454,7 +1454,7 @@ static WebKit::AttributionOverrideTesting toAttributionOverrideTesting(_WKAttrib
 
 - (NSString *)_processDisplayName
 {
-    return _pageConfiguration->processDisplayName();
+    return _pageConfiguration->processDisplayName().createNSString().autorelease();
 }
 
 - (void)_setProcessDisplayName:(NSString *)lsDisplayName
@@ -1492,7 +1492,7 @@ static WebKit::AttributionOverrideTesting toAttributionOverrideTesting(_WKAttrib
     auto& identifier = _pageConfiguration->attributedBundleIdentifier();
     if (!identifier)
         return nil;
-    return identifier;
+    return identifier.createNSString().autorelease();
 }
 
 - (void)_setContentSecurityPolicyModeForExtension:(_WKContentSecurityPolicyModeForExtension)mode

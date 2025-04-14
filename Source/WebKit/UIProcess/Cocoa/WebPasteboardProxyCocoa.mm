@@ -203,7 +203,7 @@ void WebPasteboardProxy::getPasteboardPathnamesForType(IPC::Connection& connecti
 #if PLATFORM(MAC)
             bool needsExtensions = pasteboardType == String(WebCore::legacyFilenamesPasteboardType());
             sandboxExtensions = pathnames.map([needsExtensions](auto& filename) {
-                if (!needsExtensions || ![[NSFileManager defaultManager] fileExistsAtPath:filename])
+                if (!needsExtensions || ![[NSFileManager defaultManager] fileExistsAtPath:filename.createNSString().get()])
                     return SandboxExtension::Handle { };
 
                 return valueOrDefault(SandboxExtension::createHandle(filename, SandboxExtension::Type::ReadOnly));

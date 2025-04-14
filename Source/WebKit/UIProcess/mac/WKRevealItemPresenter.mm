@@ -72,11 +72,11 @@
     if (!view)
         return;
 
-    auto menuItems = retainPtr([_presenter menuItemsForItem:_item.get() documentContext:nil presentingContext:_presentingContext.get() options:nil]);
+    RetainPtr menuItems = [_presenter menuItemsForItem:_item.get() documentContext:nil presentingContext:_presentingContext.get() options:nil];
     if (![menuItems count])
         return;
 
-    auto menu = adoptNS([[NSMenu alloc] initWithTitle:emptyString()]);
+    RetainPtr menu = adoptNS([[NSMenu alloc] initWithTitle:@""]);
     [menu setAutoenablesItems:NO];
     [menu setItemArray:menuItems.get()];
 

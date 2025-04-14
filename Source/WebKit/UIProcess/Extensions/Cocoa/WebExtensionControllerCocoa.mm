@@ -165,7 +165,7 @@ void WebExtensionController::getDataRecords(OptionSet<WebExtensionDataType> data
 
             calculateStorageSize(storage, dataType, makeBlockPtr([recordHolder, aggregator, uniqueIdentifier, displayName, dataType, record = Ref { record }](Expected<size_t, WebExtensionError>&& result) mutable {
                 if (!result)
-                    record->addError(result.error(), dataType);
+                    record->addError(result.error().createNSString().get(), dataType);
                 else
                     record->setSizeOfType(dataType, result.value());
             }));
@@ -215,7 +215,7 @@ void WebExtensionController::getDataRecord(OptionSet<WebExtensionDataType> dataT
 
         calculateStorageSize(storage, dataType, makeBlockPtr([recordHolder, aggregator, matchingUniqueIdentifier, displayName, dataType, record = Ref { record }](Expected<size_t, WebExtensionError>&& result) mutable {
             if (!result)
-                record->addError(result.error(), dataType);
+                record->addError(result.error().createNSString().get(), dataType);
             else
                 record->setSizeOfType(dataType, result.value());
         }));
@@ -246,9 +246,9 @@ void WebExtensionController::removeData(OptionSet<WebExtensionDataType> dataType
 
             removeStorage(storage, dataType, makeBlockPtr([aggregator, uniqueIdentifier, dataType, record = Ref { record }](Expected<void, WebExtensionError>&& result) mutable {
                 if (!result)
-                    record->addError(result.error(), dataType);
+                    record->addError(result.error().createNSString().get(), dataType);
                 else
-                    [NSDistributedNotificationCenter.defaultCenter postNotificationName:WebExtensionLocalStorageWasDeletedNotification object:nil userInfo:@{ WebExtensionUniqueIdentifierKey: uniqueIdentifier }];
+                    [NSDistributedNotificationCenter.defaultCenter postNotificationName:WebExtensionLocalStorageWasDeletedNotification object:nil userInfo:@{ WebExtensionUniqueIdentifierKey: uniqueIdentifier.createNSString().get() }];
             }));
         }
     }

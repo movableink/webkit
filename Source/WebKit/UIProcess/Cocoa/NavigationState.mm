@@ -755,8 +755,8 @@ void NavigationState::NavigationClient::contentRuleListNotification(WebPageProxy
                 identifiers = adoptNS([NSMutableArray new]);
             if (!notifications)
                 notifications = adoptNS([NSMutableArray new]);
-            [identifiers addObject:listIdentifier];
-            [notifications addObject:notification];
+            [identifiers addObject:listIdentifier.createNSString().get()];
+            [notifications addObject:notification.createNSString().get()];
         }
     }
 
@@ -765,7 +765,7 @@ void NavigationState::NavigationClient::contentRuleListNotification(WebPageProxy
 
     if (m_navigationState->m_navigationDelegateMethods.webViewContentRuleListWithIdentifierPerformedActionForURL) {
         for (auto&& pair : WTFMove(results.results))
-            [static_cast<id<WKNavigationDelegatePrivate>>(navigationDelegate) _webView:protectedNavigationState()->webView().get() contentRuleListWithIdentifier:pair.first performedAction:wrapper(API::ContentRuleListAction::create(WTFMove(pair.second)).get()) forURL:url.createNSURL().get()];
+            [static_cast<id<WKNavigationDelegatePrivate>>(navigationDelegate) _webView:protectedNavigationState()->webView().get() contentRuleListWithIdentifier:pair.first.createNSString().get() performedAction:wrapper(API::ContentRuleListAction::create(WTFMove(pair.second)).get()) forURL:url.createNSURL().get()];
     }
 }
 #endif
@@ -1086,7 +1086,7 @@ void NavigationState::NavigationClient::didPromptForStorageAccess(WebPageProxy&,
         return;
 
     if (navigationState->m_navigationDelegateMethods.webViewDidPromptForStorageAccessForSubFrameDomainForQuirk)
-        [static_cast<id<WKNavigationDelegatePrivate>>(navigationDelegate) _webView:navigationState->webView().get() didPromptForStorageAccess:topFrameDomain forSubFrameDomain:subFrameDomain forQuirk:hasQuirk];
+        [static_cast<id<WKNavigationDelegatePrivate>>(navigationDelegate) _webView:navigationState->webView().get() didPromptForStorageAccess:topFrameDomain.createNSString().get() forSubFrameDomain:subFrameDomain.createNSString().get() forQuirk:hasQuirk];
 }
 
 void NavigationState::NavigationClient::didFailNavigationWithError(WebPageProxy& page, const FrameInfoData& frameInfo, API::Navigation* navigation, const URL& url, const WebCore::ResourceError& error, API::Object* userInfo)
@@ -1485,7 +1485,7 @@ void NavigationState::NavigationClient::decidePolicyForSOAuthorizationLoad(WebPa
     }
 
     auto checker = CompletionHandlerCallChecker::create(navigationDelegate.get(), @selector(_webView:decidePolicyForSOAuthorizationLoadWithCurrentPolicy:forExtension:completionHandler:));
-    [static_cast<id<WKNavigationDelegatePrivate>>(navigationDelegate) _webView:navigationState->webView().get() decidePolicyForSOAuthorizationLoadWithCurrentPolicy:wkSOAuthorizationLoadPolicy(currentSOAuthorizationLoadPolicy) forExtension:extension completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler), checker = WTFMove(checker)](_WKSOAuthorizationLoadPolicy policy) mutable {
+    [static_cast<id<WKNavigationDelegatePrivate>>(navigationDelegate) _webView:navigationState->webView().get() decidePolicyForSOAuthorizationLoadWithCurrentPolicy:wkSOAuthorizationLoadPolicy(currentSOAuthorizationLoadPolicy) forExtension:extension.createNSString().get() completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler), checker = WTFMove(checker)](_WKSOAuthorizationLoadPolicy policy) mutable {
         if (checker->completionHandlerHasBeenCalled())
             return;
         checker->didCallCompletionHandler();
@@ -1566,7 +1566,7 @@ void NavigationState::HistoryClient::didUpdateHistoryTitle(WebPageProxy&, const 
     if (!historyDelegate)
         return;
 
-    [historyDelegate _webView:navigationState->webView().get() didUpdateHistoryTitle:title forURL:[NSURL _web_URLWithWTFString:url]];
+    [historyDelegate _webView:navigationState->webView().get() didUpdateHistoryTitle:title.createNSString().get() forURL:[NSURL _web_URLWithWTFString:url.createNSString().get()]];
 }
 
 void NavigationState::willChangeIsLoading()

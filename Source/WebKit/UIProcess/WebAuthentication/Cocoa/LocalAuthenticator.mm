@@ -525,7 +525,7 @@ void LocalAuthenticator::continueMakeCredentialAfterUserVerification(SecAccessCo
         auto query = adoptNS([[NSMutableDictionary alloc] init]);
         [query setDictionary:@{
             (id)kSecClass: (id)kSecClassKey,
-            (id)kSecAttrLabel: secAttrLabel,
+            (id)kSecAttrLabel: secAttrLabel.createNSString().get(),
             (id)kSecAttrApplicationLabel: m_provisionalCredentialId.get(),
             (id)kSecUseDataProtectionKeychain: @YES
         }];

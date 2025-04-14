@@ -282,9 +282,9 @@ void requestVisualTranslation(CocoaImageAnalyzer *analyzer, NSURL *imageURL, con
             });
 
             if ([analysis respondsToSelector:@selector(translateFrom:to:withCompletion:)])
-                [analysis translateFrom:sourceLocale to:targetLocale withCompletion:completionBlock.get()];
+                [analysis translateFrom:sourceLocale.createNSString().get() to:targetLocale.createNSString().get() withCompletion:completionBlock.get()];
             else
-                [analysis translateTo:targetLocale withCompletion:completionBlock.get()];
+                [analysis translateTo:targetLocale.createNSString().get() withCompletion:completionBlock.get()];
         });
     }).get()];
 }

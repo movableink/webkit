@@ -154,7 +154,7 @@ void NetworkProcess::deleteHSTSCacheForHostNames(PAL::SessionID sessionID, const
 {
     if (auto* networkSession = downcast<NetworkSessionCocoa>(this->networkSession(sessionID))) {
         for (auto& hostName : hostNames)
-            [networkSession->hstsStorage() resetHSTSForHost:hostName];
+            [networkSession->hstsStorage() resetHSTSForHost:hostName.createNSString().get()];
     }
 }
 

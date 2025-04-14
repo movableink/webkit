@@ -49,11 +49,11 @@ void getScreenTimeURLs(std::optional<WTF::UUID> identifier, CompletionHandler<vo
     if (![PAL::getSTWebHistoryClass() instancesRespondToSelector:@selector(fetchAllHistoryWithCompletionHandler:)])
         return completionHandler({ });
 
-    STWebHistoryProfileIdentifier profileIdentifier = nil;
+    RetainPtr<NSString> profileIdentifier;
     if (identifier)
-        profileIdentifier = identifier->toString();
+        profileIdentifier = identifier->toString().createNSString();
 
-    RetainPtr webHistory = adoptNS([PAL::allocSTWebHistoryInstance() initWithProfileIdentifier:profileIdentifier]);
+    RetainPtr webHistory = adoptNS([PAL::allocSTWebHistoryInstance() initWithProfileIdentifier:profileIdentifier.get()]);
 
     // STWebHistory.fetchAllHistoryWithCompletionHandler sometimes deallocates its block instead of calling it.
     // FIXME: Remove this once rdar://145889845 is widely available.
@@ -82,11 +82,11 @@ void getScreenTimeURLs(std::optional<WTF::UUID> identifier, CompletionHandler<vo
 
 void removeScreenTimeData(const HashSet<URL>& websitesToRemove, const WebsiteDataStoreConfiguration& configuration)
 {
-    STWebHistoryProfileIdentifier profileIdentifier = nil;
+    RetainPtr<NSString> profileIdentifier;
     if (configuration.identifier())
-        profileIdentifier = configuration.identifier()->toString();
+        profileIdentifier = configuration.identifier()->toString().createNSString();
 
-    RetainPtr webHistory = adoptNS([PAL::allocSTWebHistoryInstance() initWithProfileIdentifier:profileIdentifier]);
+    RetainPtr webHistory = adoptNS([PAL::allocSTWebHistoryInstance() initWithProfileIdentifier:profileIdentifier.get()]);
 
     for (auto& url : websitesToRemove)
         [webHistory deleteHistoryForURL:url.createNSURL().get()];
@@ -94,11 +94,11 @@ void removeScreenTimeData(const HashSet<URL>& websitesToRemove, const WebsiteDat
 
 void removeScreenTimeDataWithInterval(WallTime modifiedSince, const WebsiteDataStoreConfiguration& configuration)
 {
-    STWebHistoryProfileIdentifier profileIdentifier = nil;
+    RetainPtr<NSString> profileIdentifier;
     if (configuration.identifier())
-        profileIdentifier = configuration.identifier()->toString();
+        profileIdentifier = configuration.identifier()->toString().createNSString();
 
-    RetainPtr webHistory = adoptNS([PAL::allocSTWebHistoryInstance() initWithProfileIdentifier:profileIdentifier]);
+    RetainPtr webHistory = adoptNS([PAL::allocSTWebHistoryInstance() initWithProfileIdentifier:profileIdentifier.get()]);
 
     if (!modifiedSince.isNaN()) {
         NSTimeInterval timeInterval = modifiedSince.secondsSinceEpoch().seconds();

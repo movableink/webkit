@@ -849,13 +849,13 @@ NSString *WebExtensionAction::popupWebViewInspectionName()
         if (RefPtr extensionContext = this->extensionContext())
             m_popupWebViewInspectionName = WEB_UI_FORMAT_CFSTRING("%@ — Extension Popup Page", "Label for an inspectable Web Extension popup page", extensionContext->protectedExtension()->displayShortName().createCFString().get());
     }
-    return m_popupWebViewInspectionName;
+    return m_popupWebViewInspectionName.createNSString().autorelease();
 }
 
 void WebExtensionAction::setPopupWebViewInspectionName(const String& name)
 {
     m_popupWebViewInspectionName = name;
-    m_popupWebView.get()._remoteInspectionNameOverride = name;
+    m_popupWebView.get()._remoteInspectionNameOverride = name.createNSString().get();
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -988,7 +988,7 @@ WKWebView *WebExtensionAction::popupWebView()
     m_popupWebView.get().navigationDelegate = m_popupWebViewDelegate.get();
     m_popupWebView.get().UIDelegate = m_popupWebViewDelegate.get();
     m_popupWebView.get().inspectable = extensionContext->isInspectable();
-    m_popupWebView.get().accessibilityLabel = extensionContext->protectedExtension()->displayName();
+    m_popupWebView.get().accessibilityLabel = extensionContext->protectedExtension()->displayName().createNSString().get();
     m_popupWebView.get()._remoteInspectionNameOverride = popupWebViewInspectionName();
 
 #if PLATFORM(MAC)

@@ -119,22 +119,22 @@ RetainPtr<SecKeyRef> MockLocalConnection::createCredentialPrivateKey(LAContext *
     };
     CFErrorRef errorRef = nullptr;
     auto key = adoptCF(SecKeyCreateWithData(
-        (__bridge CFDataRef)adoptNS([[NSData alloc] initWithBase64EncodedString:m_configuration.local->privateKeyBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters]).get(),
+        (__bridge CFDataRef)adoptNS([[NSData alloc] initWithBase64EncodedString:m_configuration.local->privateKeyBase64.createNSString().get() options:NSDataBase64DecodingIgnoreUnknownCharacters]).get(),
         (__bridge CFDictionaryRef)options,
         &errorRef
     ));
     if (errorRef)
         return nullptr;
 
-    NSDictionary* addQuery = @{
+    RetainPtr addQuery = @{
         (id)kSecValueRef: (id)key.get(),
         (id)kSecClass: (id)kSecClassKey,
-        (id)kSecAttrLabel: secAttrLabel,
+        (id)kSecAttrLabel: secAttrLabel.createNSString().get(),
         (id)kSecAttrApplicationTag: secAttrApplicationTag,
         (id)kSecAttrAccessible: (id)kSecAttrAccessibleAfterFirstUnlock,
         (id)kSecUseDataProtectionKeychain: @YES
     };
-    OSStatus status = SecItemAdd((__bridge CFDictionaryRef)addQuery, NULL);
+    OSStatus status = SecItemAdd(bridge_cast(addQuery.get()), NULL);
     if (status) {
         LOG_ERROR("Couldn't add the key to the keychain. %d", status);
         return nullptr;
@@ -166,18 +166,18 @@ void MockLocalConnection::filterResponses(Vector<Ref<AuthenticatorAssertionRespo
 RetainPtr<NSArray> MockLocalConnection::getExistingCredentials(const String& rpId)
 {
     // Search Keychain for existing credential matched the RP ID.
-    NSDictionary *query = @{
+    RetainPtr query = @{
         (id)kSecClass: (id)kSecClassKey,
         (id)kSecAttrKeyClass: (id)kSecAttrKeyClassPrivate,
         (id)kSecAttrSynchronizable: (id)kSecAttrSynchronizableAny,
-        (id)kSecAttrLabel: rpId,
+        (id)kSecAttrLabel: rpId.createNSString().get(),
         (id)kSecReturnAttributes: @YES,
         (id)kSecMatchLimit: (id)kSecMatchLimitAll,
         (id)kSecUseDataProtectionKeychain: @YES
     };
 
     CFTypeRef attributesArrayRef = nullptr;
-    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, &attributesArrayRef);
+    OSStatus status = SecItemCopyMatching(bridge_cast(query.get()), &attributesArrayRef);
     if (status && status != errSecItemNotFound)
         return nullptr;
     RetainPtr nsAttributesArray = bridge_cast(adoptCF(checked_cf_cast<CFArrayRef>(attributesArrayRef)));

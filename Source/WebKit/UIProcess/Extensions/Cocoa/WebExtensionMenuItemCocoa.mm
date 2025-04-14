@@ -289,13 +289,13 @@ CocoaMenuItem *WebExtensionMenuItem::platformMenuItem(const WebExtensionMenuItem
     if (type() == WebExtensionMenuItemType::Separator)
         return [NSMenuItem separatorItem];
 
-    auto *result = [[_WKWebExtensionMenuItem alloc] initWithTitle:processedTitle handler:makeBlockPtr([this, protectedThis = Ref { *this }, contextParameters](id sender) mutable {
+    auto *result = [[_WKWebExtensionMenuItem alloc] initWithTitle:processedTitle.createNSString().get() handler:makeBlockPtr([this, protectedThis = Ref { *this }, contextParameters](id sender) mutable {
         if (RefPtr context = extensionContext())
             context->performMenuItem(const_cast<WebExtensionMenuItem&>(*this), contextParameters, WebExtensionContext::UserTriggered::Yes);
     }).get()];
 
     if (RefPtr command = this->command()) {
-        result.keyEquivalent = command->activationKey();
+        result.keyEquivalent = command->activationKey().createNSString().get();
         result.keyEquivalentModifierMask = command->modifierFlags().toRaw();
     }
 

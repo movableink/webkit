@@ -131,7 +131,7 @@ WK_OBJECT_DEALLOC_IMPL_ON_MAIN_THREAD(WKWebExtensionContext, WebExtensionContext
 
 - (NSString *)uniqueIdentifier
 {
-    return Ref { *_webExtensionContext }->uniqueIdentifier();
+    return Ref { *_webExtensionContext }->uniqueIdentifier().createNSString().autorelease();
 }
 
 - (void)setUniqueIdentifier:(NSString *)uniqueIdentifier
@@ -199,7 +199,7 @@ static inline NSDictionary<WKWebExtensionPermission, NSDate *> *toAPI(const WebK
     NSMutableDictionary<WKWebExtensionPermission, NSDate *> *result = [NSMutableDictionary dictionaryWithCapacity:permissions.size()];
 
     for (auto& entry : permissions)
-        [result setObject:WebKit::toAPI(entry.value) forKey:entry.key];
+        [result setObject:WebKit::toAPI(entry.value) forKey:entry.key.createNSString().get()];
 
     return [result copy];
 }
@@ -318,7 +318,7 @@ static inline NSSet<WKWebExtensionPermission> *toAPI(const WebKit::WebExtensionC
     NSMutableSet<WKWebExtensionPermission> *result = [NSMutableSet setWithCapacity:permissions.size()];
 
     for (auto& permission : permissions)
-        [result addObject:permission];
+        [result addObject:permission.createNSString().get()];
 
     return [result copy];
 }

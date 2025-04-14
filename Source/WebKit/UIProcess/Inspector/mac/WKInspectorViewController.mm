@@ -126,7 +126,7 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
     RetainPtr<WKInspectorResourceURLSchemeHandler> inspectorSchemeHandler = adoptNS([WKInspectorResourceURLSchemeHandler new]);
     RetainPtr<NSMutableSet<NSString *>> allowedURLSchemes = adoptNS([[NSMutableSet alloc] initWithObjects:WKInspectorResourceScheme, nil]);
     for (auto& pair : _configuration->_configuration->urlSchemeHandlers())
-        [allowedURLSchemes addObject:pair.second];
+        [allowedURLSchemes addObject:pair.second.createNSString().get()];
 
     [inspectorSchemeHandler setAllowedURLSchemesForCSP:allowedURLSchemes.get()];
     [configuration setURLSchemeHandler:inspectorSchemeHandler.get() forURLScheme:WKInspectorResourceScheme];
@@ -178,7 +178,7 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
 
     // Ensure that a page group identifier is set. This is for computing inspection levels.
     if (!configuration.get()._groupIdentifier)
-        [configuration _setGroupIdentifier:WebKit::defaultInspectorPageGroupIdentifierForPage(inspectedPage.get())];
+        [configuration _setGroupIdentifier:WebKit::defaultInspectorPageGroupIdentifierForPage(inspectedPage.get()).createNSString().get()];
 
     // Prefer using a custom persistent data store if one exists.
     RetainPtr<WKWebsiteDataStore> targetDataStore;

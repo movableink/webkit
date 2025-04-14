@@ -492,7 +492,7 @@ static void setUpResourceLoadClient(WKWebProcessPlugInBrowserContextController *
             if ([formDelegate respondsToSelector:@selector(_webProcessPlugInBrowserContextController:willSendSubmitEventToForm:inFrame:targetFrame:values:)]) {
                 auto valueMap = adoptNS([[NSMutableDictionary alloc] initWithCapacity:values.size()]);
                 for (const auto& pair : values)
-                    [valueMap setObject:pair.second forKey:pair.first];
+                    [valueMap setObject:pair.second.createNSString().get() forKey:pair.first.createNSString().get()];
                 [formDelegate _webProcessPlugInBrowserContextController:controller.get() willSendSubmitEventToForm:wrapper(*WebKit::InjectedBundleNodeHandle::getOrCreate(formElement).get())
                     inFrame:wrapper(*sourceFrame) targetFrame:wrapper(*targetFrame) values:valueMap.get()];
             }
@@ -508,7 +508,7 @@ static void setUpResourceLoadClient(WKWebProcessPlugInBrowserContextController *
             if ([formDelegate respondsToSelector:@selector(_webProcessPlugInBrowserContextController:willSubmitForm:toFrame:fromFrame:withValues:)]) {
                 auto valueMap = adoptNS([[NSMutableDictionary alloc] initWithCapacity:values.size()]);
                 for (const auto& pair : values)
-                    [valueMap setObject:pair.second forKey:pair.first];
+                    [valueMap setObject:pair.second.createNSString().get() forKey:pair.first.createNSString().get()];
                 userData = API::Object::fromNSObject([formDelegate _webProcessPlugInBrowserContextController:controller.get() willSubmitForm:wrapper(*WebKit::InjectedBundleNodeHandle::getOrCreate(formElement).get()) toFrame:wrapper(*frame) fromFrame:wrapper(*sourceFrame) withValues:valueMap.get()]);
             }
         }
@@ -615,7 +615,7 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
                 return true;
 
             RetainPtr controller = m_controller.get();
-            return [controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:controller.get() shouldInsertText:text replacingRange:wrapper(*WebKit::createHandle(rangeToReplace)) givenAction:toWK(action)];
+            return [controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:controller.get() shouldInsertText:text.createNSString().get() replacingRange:wrapper(*WebKit::createHandle(rangeToReplace)) givenAction:toWK(action)];
         }
 
         bool shouldChangeSelectedRange(WebKit::WebPage&, const std::optional<WebCore::SimpleRange>& fromRange, const std::optional<WebCore::SimpleRange>& toRange, WebCore::Affinity affinity, bool stillSelecting) final
@@ -737,7 +737,7 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
 
 - (NSString *)_groupIdentifier
 {
-    return _page->pageGroup()->identifier();
+    return _page->pageGroup()->identifier().createNSString().autorelease();
 }
 
 @end

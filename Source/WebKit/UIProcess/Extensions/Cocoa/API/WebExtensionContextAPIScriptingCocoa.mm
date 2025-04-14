@@ -349,7 +349,7 @@ bool WebExtensionContext::createInjectedContentForScripts(const Vector<WebExtens
         auto scriptID = parameters.identifier;
 
         if (firstTimeRegistration == FirstTimeRegistration::Yes && (m_registeredScriptsMap.contains(scriptID) || idsToAdd.contains(scriptID))) {
-            *errorMessage = toErrorString(callingAPIName, nullString(), @"duplicate ID '%@'", scriptID.createNSString().get());
+            *errorMessage = toErrorString(callingAPIName, nullString(), @"duplicate ID '%@'", scriptID.createNSString().get()).createNSString().autorelease();
             return false;
         }
 
@@ -369,7 +369,7 @@ bool WebExtensionContext::createInjectedContentForScripts(const Vector<WebExtens
             RefPtr<API::Error> error;
             if (!extension->resourceStringForPath(scriptPath, error)) {
                 recordError(::WebKit::wrapper(*error));
-                *errorMessage = toErrorString(callingAPIName, nullString(), @"invalid resource '%@'", scriptPath);
+                *errorMessage = toErrorString(callingAPIName, nullString(), @"invalid resource '%@'", scriptPath).createNSString().autorelease();
                 return false;
             }
         }
@@ -384,7 +384,7 @@ bool WebExtensionContext::createInjectedContentForScripts(const Vector<WebExtens
             RefPtr<API::Error> error;
             if (!extension->resourceStringForPath(styleSheetPath, error)) {
                 recordError(::WebKit::wrapper(*error));
-                *errorMessage = toErrorString(callingAPIName, nullString(), @"invalid resource '%@'", styleSheetPath);
+                *errorMessage = toErrorString(callingAPIName, nullString(), @"invalid resource '%@'", styleSheetPath).createNSString().autorelease();
                 return false;
             }
         }
@@ -393,13 +393,13 @@ bool WebExtensionContext::createInjectedContentForScripts(const Vector<WebExtens
         auto *matchesArray = parameters.matchPatterns ? createNSArray(parameters.matchPatterns.value()).get() : @[ ];
         for (NSString *matchPatternString in matchesArray) {
             if (!matchPatternString.length) {
-                *errorMessage = toErrorString(callingAPIName, nullString(), @"script with ID '%@' contains an empty match pattern", scriptID.createNSString().get());
+                *errorMessage = toErrorString(callingAPIName, nullString(), @"script with ID '%@' contains an empty match pattern", scriptID.createNSString().get()).createNSString().autorelease();
                 return false;
             }
 
             RefPtr matchPattern = WebExtensionMatchPattern::getOrCreate(matchPatternString);
             if (!matchPattern || !matchPattern->isSupported()) {
-                *errorMessage = toErrorString(callingAPIName, nullString(), @"script with ID '%@' has an invalid match pattern '%@'", scriptID.createNSString().get(), matchPatternString);
+                *errorMessage = toErrorString(callingAPIName, nullString(), @"script with ID '%@' has an invalid match pattern '%@'", scriptID.createNSString().get(), matchPatternString).createNSString().autorelease();
                 return false;
             }
 
@@ -410,13 +410,13 @@ bool WebExtensionContext::createInjectedContentForScripts(const Vector<WebExtens
         auto *excludeMatchesArray = parameters.excludeMatchPatterns ? createNSArray(parameters.excludeMatchPatterns.value()).get() : @[ ];
         for (NSString *matchPatternString in excludeMatchesArray) {
             if (!matchPatternString.length) {
-                *errorMessage = toErrorString(callingAPIName, nullString(), @"script with ID '%@' contains an empty exclude match pattern", scriptID.createNSString().get());
+                *errorMessage = toErrorString(callingAPIName, nullString(), @"script with ID '%@' contains an empty exclude match pattern", scriptID.createNSString().get()).createNSString().autorelease();
                 return false;
             }
 
             RefPtr matchPattern = WebExtensionMatchPattern::getOrCreate(matchPatternString);
             if (!matchPattern || !matchPattern->isSupported()) {
-                *errorMessage = toErrorString(callingAPIName, nullString(), @"script with ID '%@' has an invalid exclude match pattern '%@'", scriptID.createNSString().get(), matchPatternString);
+                *errorMessage = toErrorString(callingAPIName, nullString(), @"script with ID '%@' has an invalid exclude match pattern '%@'", scriptID.createNSString().get(), matchPatternString).createNSString().autorelease();
                 return false;
             }
 

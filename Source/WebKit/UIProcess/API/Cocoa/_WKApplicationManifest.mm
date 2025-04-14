@@ -120,10 +120,10 @@ static std::optional<WebCore::ApplicationManifest::Shortcut> makeVectorElement(c
 
     if (icon) {
         _src = icon->src.createNSURL();
-        _sizes = createNSArray(icon->sizes, [] (auto& size) -> NSString * {
-            return size;
+        _sizes = createNSArray(icon->sizes, [] (auto& size) {
+            return size.createNSString();
         });
-        _type = adoptNS([icon->type copy]);
+        _type = icon->type.createNSString();
         _purposes = fromPurposes(icon->purposes);
     }
 
@@ -212,7 +212,7 @@ static std::optional<WebCore::ApplicationManifest::Shortcut> makeVectorElement(c
         return nil;
 
     if (shortcut) {
-        _name = adoptNS([shortcut->name copy]);
+        _name = shortcut->name.createNSString();
         _url = shortcut->url.createNSURL();
         _icons = createNSArray(shortcut->icons, [] (auto& icon) {
             return adoptNS([[_WKApplicationManifestIcon alloc] initWithCoreIcon:&icon]);
@@ -476,8 +476,8 @@ static RetainPtr<NSString> nullableNSString(const WTF::String& string)
 
 - (NSArray<NSString *> *)categories
 {
-    return createNSArray(_applicationManifest->applicationManifest().categories, [] (auto& category) -> NSString * {
-        return category;
+    return createNSArray(_applicationManifest->applicationManifest().categories, [] (auto& category) {
+        return category.createNSString();
     }).autorelease();
 }
 

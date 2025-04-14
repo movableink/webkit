@@ -1238,7 +1238,7 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     auto documentInteractionController = adoptNS([PAL::allocUIDocumentInteractionControllerInstance() init]);
 ALLOW_DEPRECATED_DECLARATIONS_END
 
-    [documentInteractionController setName:fileName.isEmpty() ? title : fileName];
+    [documentInteractionController setName:fileName.isEmpty() ? title.createNSString().get() : fileName.createNSString().get()];
 
     if (!attachmentType.isEmpty()) {
         String UTI;

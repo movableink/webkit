@@ -52,7 +52,7 @@
 - (NSString *)identifier
 {
 #if ENABLE(CONTENT_EXTENSIONS)
-    return Ref { *_contentRuleList }->name();
+    return Ref { *_contentRuleList }->name().createNSString().autorelease();
 #else
     return nil;
 #endif

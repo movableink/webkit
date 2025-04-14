@@ -453,7 +453,7 @@ void ResourceMonitorURLsController::getSource(CompletionHandler<void(String&&)>&
             RELEASE_LOG_ERROR(ResourceMonitoring, "Failed to request resource monitor urls source from WebPrivacy");
 
         for (auto& completionHandler : std::exchange(lookupCompletionHandlers.get(), { }))
-            completionHandler(String { source });
+            completionHandler(source);
     }];
 }
 

@@ -28,13 +28,14 @@
 
 #import <wtf/HashMap.h>
 #import <wtf/NeverDestroyed.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/text/StringHash.h>
 
 namespace WebKit {
 
 bool CoreIPCLocale::isValidIdentifier(const String& identifier)
 {
-    if ([[NSLocale availableLocaleIdentifiers] containsObject:identifier])
+    if ([[NSLocale availableLocaleIdentifiers] containsObject:identifier.createNSString().get()])
         return true;
     if (canonicalLocaleStringReplacement(identifier))
         return true;
@@ -49,7 +50,7 @@ CoreIPCLocale::CoreIPCLocale(NSLocale *locale)
 CoreIPCLocale::CoreIPCLocale(String&& identifier)
     : m_identifier([[NSLocale currentLocale] localeIdentifier])
 {
-    if ([[NSLocale availableLocaleIdentifiers] containsObject:identifier])
+    if ([[NSLocale availableLocaleIdentifiers] containsObject:identifier.createNSString().get()])
         m_identifier = identifier;
     else if (auto fixedLocale = canonicalLocaleStringReplacement(identifier))
         m_identifier = *fixedLocale;
@@ -71,7 +72,7 @@ std::optional<String> CoreIPCLocale::canonicalLocaleStringReplacement(const Stri
         }
         return dictionary;
     }();
-    if (RetainPtr<NSString> entry = [dictionary.get() objectForKey:identifier])
+    if (RetainPtr entry = checked_objc_cast<NSString>([dictionary.get() objectForKey:identifier.createNSString().get()]))
         return String(entry.get());
     return std::nullopt;
 }

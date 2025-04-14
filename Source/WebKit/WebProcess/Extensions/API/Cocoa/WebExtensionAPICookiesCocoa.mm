@@ -119,16 +119,16 @@ static inline NSDictionary *toWebAPI(const WebExtensionCookieParameters& cookieP
     auto& cookie = cookieParameters.cookie;
 
     NSMutableDictionary *result = [@{
-        domainKey: cookie.domain,
+        domainKey: cookie.domain.createNSString().get(),
         hostOnlyKey: @(!cookie.domain.startsWith('.')),
         httpOnlyKey: @(cookie.httpOnly),
-        nameKey: cookie.name,
-        pathKey: cookie.path,
+        nameKey: cookie.name.createNSString().get(),
+        pathKey: cookie.path.createNSString().get(),
         sameSiteKey: toWebAPI(cookie.sameSite),
         secureKey: @(cookie.secure),
         sessionKey: @(cookie.session),
         storeIdKey: toWebAPI(cookieParameters.sessionIdentifier.value()),
-        valueKey: cookie.value,
+        valueKey: cookie.value.createNSString().get(),
     } mutableCopy];
 
     if (cookie.expires)
@@ -165,20 +165,20 @@ std::optional<WebExtensionAPICookies::ParsedDetails> WebExtensionAPICookies::par
 
     String name = details[nameKey];
     if (!name.isNull() && name.isEmpty()) {
-        *outExceptionString = toErrorString(nullString(), nameKey, @"it must not be empty");
+        *outExceptionString = toErrorString(nullString(), nameKey, @"it must not be empty").createNSString().autorelease();
         return std::nullopt;
     }
 
     URL url;
     if (NSString *urlString = details[urlKey]) {
         if (!urlString.length) {
-            *outExceptionString = toErrorString(nullString(), urlKey, @"it must not be empty");
+            *outExceptionString = toErrorString(nullString(), urlKey, @"it must not be empty").createNSString().autorelease();
             return std::nullopt;
         }
 
         url = URL { urlString };
         if (!url.isValid()) {
-            *outExceptionString = toErrorString(nullString(), urlKey, @"'%@' is not a valid URL", urlString);
+            *outExceptionString = toErrorString(nullString(), urlKey, @"'%@' is not a valid URL", urlString).createNSString().autorelease();
             return std::nullopt;
         }
     }
@@ -186,13 +186,13 @@ std::optional<WebExtensionAPICookies::ParsedDetails> WebExtensionAPICookies::par
     std::optional<PAL::SessionID> sessionID;
     if (NSString *storeID = details[storeIdKey]) {
         if (!storeID.length) {
-            *outExceptionString = toErrorString(nullString(), storeIdKey, @"it must not be empty");
+            *outExceptionString = toErrorString(nullString(), storeIdKey, @"it must not be empty").createNSString().autorelease();
             return std::nullopt;
         }
 
         sessionID = toImpl(storeID);
         if (!sessionID) {
-            *outExceptionString = toErrorString(nullString(), storeIdKey, @"'%@' is not a valid cookie store identifier", storeID);
+            *outExceptionString = toErrorString(nullString(), storeIdKey, @"'%@' is not a valid cookie store identifier", storeID).createNSString().autorelease();
             return std::nullopt;
         }
     }
@@ -212,7 +212,7 @@ void WebExtensionAPICookies::get(NSDictionary *details, Ref<WebExtensionCallback
 
     WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::CookiesGet(sessionID, name, url), [protectedThis = Ref { *this }, callback = WTFMove(callback)](Expected<std::optional<WebExtensionCookieParameters>, WebExtensionError>&& result) {
         if (!result) {
-            callback->reportError(result.error());
+            callback->reportError(result.error().createNSString().get());
             return;
         }
 
@@ -274,7 +274,7 @@ void WebExtensionAPICookies::getAll(NSDictionary *details, Ref<WebExtensionCallb
 
     WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::CookiesGetAll(sessionID, url, WTFMove(filterParameters)), [protectedThis = Ref { *this }, callback = WTFMove(callback)](Expected<Vector<WebExtensionCookieParameters>, WebExtensionError>&& result) {
         if (!result) {
-            callback->reportError(result.error());
+            callback->reportError(result.error().createNSString().get());
             return;
         }
 
@@ -331,14 +331,14 @@ void WebExtensionAPICookies::set(NSDictionary *details, Ref<WebExtensionCallback
         else if ([sameSiteString isEqualToString:strictKey])
             cookie.sameSite = WebCore::Cookie::SameSitePolicy::Strict;
         else {
-            *outExceptionString = toErrorString(nullString(), sameSiteKey, @"it must specify either 'no_restriction', 'lax', or 'strict'");
+            *outExceptionString = toErrorString(nullString(), sameSiteKey, @"it must specify either 'no_restriction', 'lax', or 'strict'").createNSString().autorelease();
             return;
         }
     }
 
     WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::CookiesSet(sessionID, cookieParameters), [protectedThis = Ref { *this }, callback = WTFMove(callback)](Expected<std::optional<WebExtensionCookieParameters>, WebExtensionError>&& result) {
         if (!result) {
-            callback->reportError(result.error());
+            callback->reportError(result.error().createNSString().get());
             return;
         }
 
@@ -358,7 +358,7 @@ void WebExtensionAPICookies::remove(NSDictionary *details, Ref<WebExtensionCallb
 
     WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::CookiesRemove(sessionID, name, url), [protectedThis = Ref { *this }, callback = WTFMove(callback)](Expected<std::optional<WebExtensionCookieParameters>, WebExtensionError>&& result) {
         if (!result) {
-            callback->reportError(result.error());
+            callback->reportError(result.error().createNSString().get());
             return;
         }
 
@@ -372,7 +372,7 @@ void WebExtensionAPICookies::getAllCookieStores(Ref<WebExtensionCallbackHandler>
 
     WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::CookiesGetAllCookieStores(), [protectedThis = Ref { *this }, callback = WTFMove(callback)](Expected<HashMap<PAL::SessionID, Vector<WebExtensionTabIdentifier>>, WebExtensionError>&& result) {
         if (!result) {
-            callback->reportError(result.error());
+            callback->reportError(result.error().createNSString().get());
             return;
         }
 

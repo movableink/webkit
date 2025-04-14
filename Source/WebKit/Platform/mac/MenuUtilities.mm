@@ -127,7 +127,7 @@ NSMenuItem *menuItemForTelephoneNumber(const String& telephoneNumber)
     for (NSMenuItem *item in proposedMenuItems) {
         auto action = actionForMenuItem(item);
         if ([action.actionUTI hasPrefix:@"com.apple.dial"]) {
-            item.title = formattedPhoneNumberString(telephoneNumber);
+            item.title = formattedPhoneNumberString(telephoneNumber.createNSString().get());
             return item;
         }
     }
@@ -143,7 +143,7 @@ RetainPtr<NSMenu> menuForTelephoneNumber(const String& telephoneNumber, NSView *
     RetainPtr<NSMenu> menu = adoptNS([[NSMenu alloc] init]);
     auto urlComponents = adoptNS([[NSURLComponents alloc] init]);
     [urlComponents setScheme:@"tel"];
-    [urlComponents setPath:telephoneNumber];
+    [urlComponents setPath:telephoneNumber.createNSString().get()];
     auto item = adoptNS([PAL::allocRVItemInstance() initWithURL:[urlComponents URL] rangeInContext:NSMakeRange(0, telephoneNumber.length())]);
     auto presenter = adoptNS([PAL::allocRVPresenterInstance() init]);
     auto delegate = adoptNS([[WKEmptyPresenterHighlightDelegate alloc] initWithRect:rect]);

@@ -48,7 +48,7 @@
 
 - (NSString *)tagName
 {
-    return downcast<WebCore::Element>(*_impl).tagName();
+    return downcast<WebCore::Element>(*_impl).tagName().createNSString().autorelease();
 }
 
 @end

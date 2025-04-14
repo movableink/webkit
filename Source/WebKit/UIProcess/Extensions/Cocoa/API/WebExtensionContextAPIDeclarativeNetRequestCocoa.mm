@@ -134,7 +134,7 @@ void WebExtensionContext::declarativeNetRequestToggleRulesets(const Vector<Strin
         else
             m_enabledStaticRulesetIDs.remove(identifier);
 
-        [rulesetIdentifiersToEnabledState setObject:@(newValue) forKey:identifier];
+        [rulesetIdentifiersToEnabledState setObject:@(newValue) forKey:identifier.createNSString().get()];
     }
 }
 
@@ -276,7 +276,7 @@ void WebExtensionContext::declarativeNetRequestGetMatchedRules(std::optional<Web
 _WKWebExtensionDeclarativeNetRequestSQLiteStore *WebExtensionContext::declarativeNetRequestDynamicRulesStore()
 {
     if (!m_declarativeNetRequestDynamicRulesStore)
-        m_declarativeNetRequestDynamicRulesStore = [[_WKWebExtensionDeclarativeNetRequestSQLiteStore alloc] initWithUniqueIdentifier:uniqueIdentifier() storageType:_WKWebExtensionDeclarativeNetRequestStorageType::Dynamic directory:storageDirectory() usesInMemoryDatabase:!storageIsPersistent()];
+        m_declarativeNetRequestDynamicRulesStore = [[_WKWebExtensionDeclarativeNetRequestSQLiteStore alloc] initWithUniqueIdentifier:uniqueIdentifier().createNSString().get() storageType:_WKWebExtensionDeclarativeNetRequestStorageType::Dynamic directory:storageDirectory().createNSString().get() usesInMemoryDatabase:!storageIsPersistent()];
 
     return m_declarativeNetRequestDynamicRulesStore.get();
 }
@@ -284,7 +284,7 @@ _WKWebExtensionDeclarativeNetRequestSQLiteStore *WebExtensionContext::declarativ
 _WKWebExtensionDeclarativeNetRequestSQLiteStore *WebExtensionContext::declarativeNetRequestSessionRulesStore()
 {
     if (!m_declarativeNetRequestSessionRulesStore)
-        m_declarativeNetRequestSessionRulesStore = [[_WKWebExtensionDeclarativeNetRequestSQLiteStore alloc] initWithUniqueIdentifier:uniqueIdentifier() storageType:_WKWebExtensionDeclarativeNetRequestStorageType::Session directory:storageDirectory() usesInMemoryDatabase:YES];
+        m_declarativeNetRequestSessionRulesStore = [[_WKWebExtensionDeclarativeNetRequestSQLiteStore alloc] initWithUniqueIdentifier:uniqueIdentifier().createNSString().get() storageType:_WKWebExtensionDeclarativeNetRequestStorageType::Session directory:storageDirectory().createNSString().get() usesInMemoryDatabase:YES];
 
     return m_declarativeNetRequestSessionRulesStore.get();
 }
@@ -376,7 +376,7 @@ void WebExtensionContext::declarativeNetRequestUpdateDynamicRules(String&& rules
         return @(ruleID);
     }).get();
 
-    auto *rulesToAdd = dynamic_objc_cast<NSArray>(parseJSON(rulesToAddJSON, JSONOptions::FragmentsAllowed)) ?: @[ ];
+    auto *rulesToAdd = dynamic_objc_cast<NSArray>(parseJSON(rulesToAddJSON.createNSString().get(), JSONOptions::FragmentsAllowed)) ?: @[ ];
 
     if (!ruleIDsToDelete.count && !rulesToAdd.count) {
         completionHandler({ });
@@ -418,7 +418,7 @@ void WebExtensionContext::declarativeNetRequestUpdateSessionRules(String&& rules
         return @(ruleID);
     }).get();
 
-    auto *rulesToAdd = dynamic_objc_cast<NSArray>(parseJSON(rulesToAddJSON, JSONOptions::FragmentsAllowed)) ?: @[ ];
+    auto *rulesToAdd = dynamic_objc_cast<NSArray>(parseJSON(rulesToAddJSON.createNSString().get(), JSONOptions::FragmentsAllowed)) ?: @[ ];
 
     if (!ruleIDsToDelete.count && !rulesToAdd.count) {
         completionHandler({ });

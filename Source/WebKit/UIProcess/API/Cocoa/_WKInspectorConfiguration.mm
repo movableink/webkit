@@ -75,7 +75,7 @@
 {
     for (auto pair : _configuration->urlSchemeHandlers()) {
         auto& handler = downcast<WebKit::WebURLSchemeHandlerCocoa>(pair.first.get());
-        [configuration setURLSchemeHandler:handler.apiHandler() forURLScheme:pair.second];
+        [configuration setURLSchemeHandler:handler.apiHandler() forURLScheme:pair.second.createNSString().get()];
     }
 
     if (auto* processPool = self.processPool)
@@ -91,7 +91,7 @@
 
     for (auto pair : _configuration->urlSchemeHandlers()) {
         auto& handler = downcast<WebKit::WebURLSchemeHandlerCocoa>(pair.first.get());
-        [configuration setURLSchemeHandler:handler.apiHandler() forURLScheme:pair.second];
+        [configuration setURLSchemeHandler:handler.apiHandler() forURLScheme:pair.second.createNSString().get()];
     }
 
     if (auto* processPool = self.processPool)

@@ -157,45 +157,45 @@ static RetainPtr<NSArray> nsArrayFromVectorOfLabeledValues(const Vector<CoreIPCC
             return actualValue.toID();
         }, labeledValue.value);
 
-        return adoptNS([[PAL::getCNLabeledValueClass() alloc] initWithIdentifier:labeledValue.identifier label:labeledValue.label value:theValue.get()]);
+        return adoptNS([[PAL::getCNLabeledValueClass() alloc] initWithIdentifier:labeledValue.identifier.createNSString().get() label:labeledValue.label.createNSString().get() value:theValue.get()]);
     });
 }
 
 RetainPtr<id> CoreIPCCNContact::toID() const
 {
-    RetainPtr<CNMutableContact> result = adoptNS([[PAL::getCNMutableContactClass() alloc] initWithIdentifier:m_identifier]);
+    RetainPtr<CNMutableContact> result = adoptNS([[PAL::getCNMutableContactClass() alloc] initWithIdentifier:m_identifier.createNSString().get()]);
     result.get().contactType = (CNContactType)m_contactType;
 
     if (!m_namePrefix.isNull())
-        result.get().namePrefix = m_namePrefix;
+        result.get().namePrefix = m_namePrefix.createNSString().get();
     if (!m_givenName.isNull())
-        result.get().givenName = m_givenName;
+        result.get().givenName = m_givenName.createNSString().get();
     if (!m_middleName.isNull())
-        result.get().middleName = m_middleName;
+        result.get().middleName = m_middleName.createNSString().get();
     if (!m_familyName.isNull())
-        result.get().familyName = m_familyName;
+        result.get().familyName = m_familyName.createNSString().get();
     if (!m_previousFamilyName.isNull())
-        result.get().previousFamilyName = m_previousFamilyName;
+        result.get().previousFamilyName = m_previousFamilyName.createNSString().get();
     if (!m_nameSuffix.isNull())
-        result.get().nameSuffix = m_nameSuffix;
+        result.get().nameSuffix = m_nameSuffix.createNSString().get();
     if (!m_nickname.isNull())
-        result.get().nickname = m_nickname;
+        result.get().nickname = m_nickname.createNSString().get();
     if (!m_organizationName.isNull())
-        result.get().organizationName = m_organizationName;
+        result.get().organizationName = m_organizationName.createNSString().get();
     if (!m_departmentName.isNull())
-        result.get().departmentName = m_departmentName;
+        result.get().departmentName = m_departmentName.createNSString().get();
     if (!m_jobTitle.isNull())
-        result.get().jobTitle = m_jobTitle;
+        result.get().jobTitle = m_jobTitle.createNSString().get();
     if (!m_phoneticGivenName.isNull())
-        result.get().phoneticGivenName = m_phoneticGivenName;
+        result.get().phoneticGivenName = m_phoneticGivenName.createNSString().get();
     if (!m_phoneticMiddleName.isNull())
-        result.get().phoneticMiddleName = m_phoneticMiddleName;
+        result.get().phoneticMiddleName = m_phoneticMiddleName.createNSString().get();
     if (!m_phoneticFamilyName.isNull())
-        result.get().phoneticFamilyName = m_phoneticFamilyName;
+        result.get().phoneticFamilyName = m_phoneticFamilyName.createNSString().get();
     if (!m_phoneticOrganizationName.isNull())
-        result.get().phoneticOrganizationName = m_phoneticOrganizationName;
+        result.get().phoneticOrganizationName = m_phoneticOrganizationName.createNSString().get();
     if (!m_note.isNull())
-        result.get().note = m_note;
+        result.get().note = m_note.createNSString().get();
 
     if (m_birthday)
         result.get().birthday = m_birthday->toID().get();

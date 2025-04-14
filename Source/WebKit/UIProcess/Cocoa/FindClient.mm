@@ -57,19 +57,19 @@ void FindClient::setDelegate(id <_WKFindDelegate> delegate)
 void FindClient::didCountStringMatches(WebPageProxy*, const String& string, uint32_t matchCount)
 {
     if (m_delegateMethods.webviewDidCountStringMatches)
-        [m_delegate.get() _webView:m_webView.get().get() didCountMatches:matchCount forString:string];
+        [m_delegate.get() _webView:m_webView.get().get() didCountMatches:matchCount forString:string.createNSString().get()];
 }
 
 void FindClient::didFindString(WebPageProxy*, const String& string, const Vector<WebCore::IntRect>&, uint32_t matchCount, int32_t matchIndex, bool)
 {
     if (m_delegateMethods.webviewDidFindString)
-        [m_delegate.get() _webView:m_webView.get().get() didFindMatches:matchCount forString:string withMatchIndex:matchIndex];
+        [m_delegate.get() _webView:m_webView.get().get() didFindMatches:matchCount forString:string.createNSString().get() withMatchIndex:matchIndex];
 }
 
 void FindClient::didFailToFindString(WebPageProxy*, const String& string)
 {
     if (m_delegateMethods.webviewDidFailToFindString)
-        [m_delegate.get() _webView:m_webView.get().get() didFailToFindString:string];
+        [m_delegate.get() _webView:m_webView.get().get() didFailToFindString:string.createNSString().get()];
 }
 
 void FindClient::didAddLayerForFindOverlay(WebKit::WebPageProxy*, PlatformLayer* layer)

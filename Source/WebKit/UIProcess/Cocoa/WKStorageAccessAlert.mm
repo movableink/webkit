@@ -175,7 +175,7 @@ void presentStorageAccessAlertSSOQuirk(WKWebView *webView, const String& organiz
         relatedWebsitesString = adoptNS([[NSString alloc] initWithFormat:WEB_UI_NSSTRING(@"Related %@ websites", @"Label describing the list of related websites controlled by the same organization"), organizationName.createCFString().get()]);
         accessoryTextList = adoptNS([[NSMutableArray alloc] initWithCapacity:uniqueDomainList.size()]);
         for (const auto& domains : uniqueDomainList)
-            [accessoryTextList addObject:domains];
+            [accessoryTextList addObject:domains.createNSString().get()];
     }
 
     displayStorageAccessAlert(webView, alertTitle.get(), informativeText.get(), relatedWebsitesString.get(), accessoryTextList.get(), WTFMove(completionHandler));

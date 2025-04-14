@@ -71,7 +71,7 @@ void Download::resume(std::span<const uint8_t> resumeData, const String& path, S
     }
     ASSERT(!cocoaSession.sessionWrapperForDownloadResume().downloadMap.contains(taskIdentifier));
     cocoaSession.sessionWrapperForDownloadResume().downloadMap.add(taskIdentifier, m_downloadID);
-    m_downloadTask.get()._pathToDownloadTaskFile = path;
+    m_downloadTask.get()._pathToDownloadTaskFile = path.createNSString().get();
 
     [m_downloadTask resume];
 

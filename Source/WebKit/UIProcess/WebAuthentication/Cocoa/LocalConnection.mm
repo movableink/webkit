@@ -35,6 +35,7 @@
 #import <wtf/RunLoop.h>
 #import <wtf/TZoneMallocInlines.h>
 #import <wtf/cocoa/SpanCocoa.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 #import "LocalAuthenticationSoftLink.h"
 
@@ -90,7 +91,7 @@ void LocalConnection::verifyUser(const String& rpId, ClientDataType type, SecAcc
     auto options = adoptNS([[NSMutableDictionary alloc] init]);
 #if HAVE(UNIFIED_ASC_AUTH_UI)
     if ([m_context biometryType] == LABiometryTypeTouchID) {
-        [options setObject:title forKey:@(LAOptionAuthenticationTitle)];
+        [options setObject:title.createNSString().get() forKey:@(LAOptionAuthenticationTitle)];
         [options setObject:@NO forKey:@(LAOptionFallbackVisible)];
     }
 #endif
@@ -181,7 +182,7 @@ RetainPtr<SecKeyRef> LocalConnection::createCredentialPrivateKey(LAContext *cont
         (id)kSecAttrAccessControl: (id)accessControlRef,
         (id)kSecAttrIsPermanent: @YES,
         (id)kSecAttrAccessGroup: LocalAuthenticatorAccessGroup,
-        (id)kSecAttrLabel: secAttrLabel,
+        (id)kSecAttrLabel: secAttrLabel.createNSString().get(),
         (id)kSecAttrApplicationTag: secAttrApplicationTag,
     };
 
@@ -212,18 +213,18 @@ RetainPtr<SecKeyRef> LocalConnection::createCredentialPrivateKey(LAContext *cont
 RetainPtr<NSArray> LocalConnection::getExistingCredentials(const String& rpId)
 {
     // Search Keychain for existing credential matched the RP ID.
-    NSDictionary *query = @{
+    RetainPtr query = @{
         (id)kSecClass: (id)kSecClassKey,
         (id)kSecAttrSynchronizable: (id)kSecAttrSynchronizableAny,
         (id)kSecAttrAccessGroup: LocalAuthenticatorAccessGroup,
-        (id)kSecAttrLabel: rpId,
+        (id)kSecAttrLabel: rpId.createNSString().get(),
         (id)kSecReturnAttributes: @YES,
         (id)kSecMatchLimit: (id)kSecMatchLimitAll,
         (id)kSecUseDataProtectionKeychain: @YES
     };
 
     CFTypeRef attributesArrayRef = nullptr;
-    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, &attributesArrayRef);
+    OSStatus status = SecItemCopyMatching(bridge_cast(query.get()), &attributesArrayRef);
     if (status && status != errSecItemNotFound)
         return nullptr;
     RetainPtr nsAttributesArray = bridge_cast(adoptCF(checked_cf_cast<CFArrayRef>(attributesArrayRef)));

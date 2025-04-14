@@ -117,7 +117,7 @@ static _WKResourceLoadInfoResourceType toWKResourceLoadInfoResourceType(WebKit::
 
 - (NSString *)originalHTTPMethod
 {
-    return _info->originalHTTPMethod();
+    return _info->originalHTTPMethod().createNSString().autorelease();
 }
 
 - (NSDate *)eventTimestamp

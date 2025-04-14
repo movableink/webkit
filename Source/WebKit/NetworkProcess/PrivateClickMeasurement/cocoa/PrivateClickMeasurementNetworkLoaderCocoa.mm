@@ -115,11 +115,11 @@ void NetworkLoader::start(URL&& url, RefPtr<JSON::Object>&& jsonPayload, WebCore
         return callback({ }, { });
 
     auto request = adoptNS([[NSMutableURLRequest alloc] initWithURL:url.createNSURL().get()]);
-    [request setValue:WebCore::HTTPHeaderValues::maxAge0() forHTTPHeaderField:@"Cache-Control"];
-    [request setValue:WebCore::standardUserAgentWithApplicationName({ }) forHTTPHeaderField:@"User-Agent"];
+    [request setValue:WebCore::HTTPHeaderValues::maxAge0().createNSString().get() forHTTPHeaderField:@"Cache-Control"];
+    [request setValue:WebCore::standardUserAgentWithApplicationName({ }).createNSString().get() forHTTPHeaderField:@"User-Agent"];
     if (jsonPayload) {
         request.get().HTTPMethod = @"POST";
-        [request setValue:WebCore::HTTPHeaderValues::applicationJSONContentType() forHTTPHeaderField:@"Content-Type"];
+        [request setValue:WebCore::HTTPHeaderValues::applicationJSONContentType().createNSString().get() forHTTPHeaderField:@"Content-Type"];
         auto body = jsonPayload->toJSONString().utf8();
         request.get().HTTPBody = toNSData(byteCast<uint8_t>(body.span())).get();
     }

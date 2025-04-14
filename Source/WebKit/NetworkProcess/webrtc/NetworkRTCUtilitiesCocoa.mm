@@ -30,6 +30,7 @@
 
 #import <WebCore/RegistrableDomain.h>
 #import <wtf/SoftLinking.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/text/WTFString.h>
 
 SOFT_LINK_LIBRARY(libnetworkextension)
@@ -64,10 +65,10 @@ void setNWParametersTrackerOptions(nw_parameters_t parameters, bool shouldBypass
 
 bool isKnownTracker(const WebCore::RegistrableDomain& domain)
 {
-    NSArray<NSString *> *domains = @[domain.string()];
+    RetainPtr domains = @[domain.string().createNSString().get()];
     NEHelperTrackerDomainContextRef *context = nil;
     CFIndex index = 0;
-    return !!NEHelperTrackerGetDisposition(nullptr, (CFArrayRef)domains, context, &index);
+    return !!NEHelperTrackerGetDisposition(nullptr, bridge_cast(domains.get()), context, &index);
 }
 
 std::optional<uint32_t> trafficClassFromDSCP(rtc::DiffServCodePoint dscpValue)

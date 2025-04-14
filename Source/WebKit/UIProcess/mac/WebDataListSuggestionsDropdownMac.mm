@@ -531,7 +531,7 @@ static BOOL shouldShowDividersBetweenCells(const Vector<WebCore::DataListSuggest
 
     auto& suggestion = _suggestions.at(row);
     [result setShouldShowBottomDivider:_showDividersBetweenCells && row < static_cast<NSInteger>(_suggestions.size() - 1)];
-    [result setValue:suggestion.value label:suggestion.label];
+    [result setValue:suggestion.value.createNSString().get() label:suggestion.label.createNSString().get()];
 
     return result.autorelease();
 }

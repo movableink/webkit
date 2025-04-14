@@ -540,7 +540,7 @@ static _WKStorageBlockingPolicy toAPI(WebCore::StorageBlockingPolicy policy)
 
 - (NSString *)_fixedPitchFontFamily
 {
-    return _preferences->fixedFontFamily();
+    return _preferences->fixedFontFamily().createNSString().autorelease();
 }
 
 - (void)_setFixedPitchFontFamily:(NSString *)fixedPitchFontFamily
@@ -1003,7 +1003,7 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
 
 - (NSString *)_defaultTextEncodingName
 {
-    return _preferences->defaultTextEncodingName();
+    return _preferences->defaultTextEncodingName().createNSString().autorelease();
 }
 
 - (void)_setAuthorAndUserStylesEnabled:(BOOL)enabled
@@ -1133,7 +1133,7 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
 
 - (NSString *)_standardFontFamily
 {
-    return _preferences->standardFontFamily();
+    return _preferences->standardFontFamily().createNSString().autorelease();
 }
 
 - (void)_setBackspaceKeyNavigationEnabled:(BOOL)enabled

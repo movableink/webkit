@@ -218,7 +218,7 @@ String WebExtensionCommand::userVisibleShortcut() const
         return emptyString();
 
 #if PLATFORM(MAC)
-    NSKeyboardShortcut *shortcut = [NSKeyboardShortcut shortcutWithKeyEquivalent:key modifierMask:flags.toRaw()];
+    NSKeyboardShortcut *shortcut = [NSKeyboardShortcut shortcutWithKeyEquivalent:key.createNSString().get() modifierMask:flags.toRaw()];
     return shortcut.localizedDisplayName ?: @"";
 #else
     static NeverDestroyed<HashMap<String, String>> specialKeyMap = HashMap<String, String> {
@@ -275,12 +275,12 @@ String WebExtensionCommand::userVisibleShortcut() const
 CocoaMenuItem *WebExtensionCommand::platformMenuItem() const
 {
 #if USE(APPKIT)
-    auto *result = [[_WKWebExtensionMenuItem alloc] initWithTitle:description() handler:makeBlockPtr([this, protectedThis = Ref { *this }](id sender) mutable {
+    auto *result = [[_WKWebExtensionMenuItem alloc] initWithTitle:description().createNSString().get() handler:makeBlockPtr([this, protectedThis = Ref { *this }](id sender) mutable {
         if (RefPtr context = extensionContext())
             context->performCommand(const_cast<WebExtensionCommand&>(*this), WebExtensionContext::UserTriggered::Yes);
     }).get()];
 
-    result.keyEquivalent = activationKey();
+    result.keyEquivalent = activationKey().createNSString().get();
     result.keyEquivalentModifierMask = modifierFlags().toRaw();
     if (RefPtr context = extensionContext())
         result.image = toCocoaImage(context->protectedExtension()->icon(WebCore::FloatSize(16, 16)));

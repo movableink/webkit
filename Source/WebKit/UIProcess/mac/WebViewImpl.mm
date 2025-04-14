@@ -785,7 +785,7 @@ static const NSUInteger orderedListSegment = 2;
 
     _webViewImpl = webViewImpl;
 
-    RetainPtr insertListControl = [NSSegmentedControl segmentedControlWithLabels:@[ WebCore::insertListTypeNone(), WebCore::insertListTypeBulleted(), WebCore::insertListTypeNumbered() ] trackingMode:NSSegmentSwitchTrackingSelectOne target:self action:@selector(_selectList:)];
+    RetainPtr insertListControl = [NSSegmentedControl segmentedControlWithLabels:@[ WebCore::insertListTypeNone().createNSString().get(), WebCore::insertListTypeBulleted().createNSString().get(), WebCore::insertListTypeNumbered().createNSString().get() ] trackingMode:NSSegmentSwitchTrackingSelectOne target:self action:@selector(_selectList:)];
     [insertListControl setWidth:listControlSegmentWidth forSegment:noListSegment];
     [insertListControl setWidth:listControlSegmentWidth forSegment:unorderedListSegment];
     [insertListControl setWidth:listControlSegmentWidth forSegment:orderedListSegment];
@@ -795,9 +795,9 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     RetainPtr<id> segmentElement = NSAccessibilityUnignoredDescendant(insertListControl.get());
     RetainPtr<NSArray> segments = [segmentElement accessibilityAttributeValue:NSAccessibilityChildrenAttribute];
     ASSERT(segments.get().count == 3);
-    [segments.get()[noListSegment] accessibilitySetOverrideValue:WebCore::insertListTypeNone() forAttribute:NSAccessibilityDescriptionAttribute];
-    [segments.get()[unorderedListSegment] accessibilitySetOverrideValue:WebCore::insertListTypeBulletedAccessibilityTitle() forAttribute:NSAccessibilityDescriptionAttribute];
-    [segments.get()[orderedListSegment] accessibilitySetOverrideValue:WebCore::insertListTypeNumberedAccessibilityTitle() forAttribute:NSAccessibilityDescriptionAttribute];
+    [segments.get()[noListSegment] accessibilitySetOverrideValue:WebCore::insertListTypeNone().createNSString().get() forAttribute:NSAccessibilityDescriptionAttribute];
+    [segments.get()[unorderedListSegment] accessibilitySetOverrideValue:WebCore::insertListTypeBulletedAccessibilityTitle().createNSString().get() forAttribute:NSAccessibilityDescriptionAttribute];
+    [segments.get()[orderedListSegment] accessibilitySetOverrideValue:WebCore::insertListTypeNumberedAccessibilityTitle().createNSString().get() forAttribute:NSAccessibilityDescriptionAttribute];
 ALLOW_DEPRECATED_DECLARATIONS_END
 
     self.view = insertListControl.get();
@@ -1871,7 +1871,7 @@ RetainPtr<NSPrintOperation> WebViewImpl::printOperationWithPrintInfo(NSPrintInfo
     // NSPrintOperation takes ownership of the view.
     RetainPtr<NSPrintOperation> printOperation = [NSPrintOperation printOperationWithView:printingView.get() printInfo:printInfo];
     [printOperation setCanSpawnSeparateThread:YES];
-    [printOperation setJobTitle:frame.title()];
+    [printOperation setJobTitle:frame.title().createNSString().get()];
     printingView->_printOperation = printOperation.get();
     return printOperation;
 }
@@ -2780,7 +2780,7 @@ bool WebViewImpl::writeSelectionToPasteboard(NSPasteboard *pasteboard, NSArray *
     [pasteboard declareTypes:types owner:nil];
     for (size_t i = 0; i < numTypes; ++i) {
         if ([[types objectAtIndex:i] isEqualTo:WebCore::legacyStringPasteboardType()])
-            [pasteboard setString:m_page->stringSelectionForPasteboard() forType:WebCore::legacyStringPasteboardType()];
+            [pasteboard setString:m_page->stringSelectionForPasteboard().createNSString().get() forType:WebCore::legacyStringPasteboardType()];
         else {
             RefPtr<WebCore::SharedBuffer> buffer = m_page->dataSelectionForPasteboard([types objectAtIndex:i]);
             [pasteboard setData:buffer ? buffer->createNSData().get() : nil forType:[types objectAtIndex:i]];
@@ -2993,7 +2993,7 @@ bool WebViewImpl::validateUserInterfaceItem(id<NSValidatedUserInterfaceItem> ite
 
     if (action == @selector(showGuessPanel:)) {
         if (RetainPtr menuItem = WebKit::menuItem(item))
-            [menuItem setTitle:WebCore::contextMenuItemTagShowSpellingPanel(![[[NSSpellChecker sharedSpellChecker] spellingPanel] isVisible])];
+            [menuItem setTitle:WebCore::contextMenuItemTagShowSpellingPanel(![[[NSSpellChecker sharedSpellChecker] spellingPanel] isVisible]).createNSString().get()];
         return m_page->editorState().isContentEditable;
     }
 
@@ -3021,7 +3021,7 @@ bool WebViewImpl::validateUserInterfaceItem(id<NSValidatedUserInterfaceItem> ite
 
     if (action == @selector(orderFrontSubstitutionsPanel:)) {
         if (RetainPtr menuItem = WebKit::menuItem(item))
-            [menuItem setTitle:WebCore::contextMenuItemTagShowSubstitutions(![[[NSSpellChecker sharedSpellChecker] substitutionsPanel] isVisible])];
+            [menuItem setTitle:WebCore::contextMenuItemTagShowSubstitutions(![[[NSSpellChecker sharedSpellChecker] substitutionsPanel] isVisible]).createNSString().get()];
         return m_page->editorState().isContentEditable;
     }
 
@@ -3087,7 +3087,7 @@ bool WebViewImpl::validateUserInterfaceItem(id<NSValidatedUserInterfaceItem> ite
             if (!weakThis)
                 return;
 
-            weakThis->setUserInterfaceItemState(commandName, isEnabled, state);
+            weakThis->setUserInterfaceItemState(commandName.createNSString().get(), isEnabled, state);
         });
     }
 
@@ -3115,7 +3115,7 @@ void WebViewImpl::startSpeaking()
         if (!string)
             return;
 
-        [NSApp speakString:string];
+        [NSApp speakString:string.createNSString().get()];
     });
 }
 
@@ -3348,7 +3348,7 @@ void WebViewImpl::requestCandidatesForSelectionIfNeeded()
     NSTextCheckingTypes checkingTypes = getTextCheckingTypes();
 
     WeakPtr weakThis { *this };
-    m_lastCandidateRequestSequenceNumber = [[NSSpellChecker sharedSpellChecker] requestCandidatesForSelectedRange:selectedRange inString:postLayoutData->paragraphContextForCandidateRequest types:checkingTypes options:nil inSpellDocumentWithTag:spellCheckerDocumentTag() completionHandler:[weakThis](NSInteger sequenceNumber, NSArray<NSTextCheckingResult *> *candidates) {
+    m_lastCandidateRequestSequenceNumber = [[NSSpellChecker sharedSpellChecker] requestCandidatesForSelectedRange:selectedRange inString:postLayoutData->paragraphContextForCandidateRequest.createNSString().get() types:checkingTypes options:nil inSpellDocumentWithTag:spellCheckerDocumentTag() completionHandler:[weakThis](NSInteger sequenceNumber, NSArray<NSTextCheckingResult *> *candidates) {
         RunLoop::protectedMain()->dispatch([weakThis, sequenceNumber, candidates = retainPtr(candidates)] {
             if (!weakThis)
                 return;
@@ -3389,7 +3389,7 @@ void WebViewImpl::handleRequestedCandidates(NSInteger sequenceNumber, NSArray<NS
     WebCore::IntRect offsetSelectionRect = postLayoutData->selectionBoundingRect;
     offsetSelectionRect.move(0, offsetSelectionRect.height());
 
-    [candidateListTouchBarItem() setCandidates:candidates forSelectedRange:selectedRange inString:postLayoutData->paragraphContextForCandidateRequest rect:offsetSelectionRect view:m_view.getAutoreleased() completionHandler:nil];
+    [candidateListTouchBarItem() setCandidates:candidates forSelectedRange:selectedRange inString:postLayoutData->paragraphContextForCandidateRequest.createNSString().get() rect:offsetSelectionRect view:m_view.getAutoreleased() completionHandler:nil];
 
 #if HAVE(INLINE_PREDICTIONS)
     if (allowsInlinePredictions())
@@ -3930,7 +3930,7 @@ void WebViewImpl::sendToolTipMouseEntered()
 
 NSString *WebViewImpl::stringForToolTip(NSToolTipTag tag)
 {
-    return m_page->toolTip();
+    return m_page->toolTip().createNSString().autorelease();
 }
 
 void WebViewImpl::toolTipChanged(const String& oldToolTip, const String& newToolTip)
@@ -4427,7 +4427,7 @@ void WebViewImpl::startDrag(const WebCore::DragItem& item, ShareableBitmap::Hand
 
         RetainPtr fileName = attachment->fileName().createNSString();
         RetainPtr provider = adoptNS([[NSFilePromiseProvider alloc] initWithFileType:utiType.get() delegate:(id<NSFilePromiseProviderDelegate>)m_view.getAutoreleased()]);
-        RetainPtr context = adoptNS([[WKPromisedAttachmentContext alloc] initWithIdentifier:info.attachmentIdentifier fileName:fileName.get()]);
+        RetainPtr context = adoptNS([[WKPromisedAttachmentContext alloc] initWithIdentifier:info.attachmentIdentifier.createNSString().get() fileName:fileName.get()]);
         [provider setUserInfo:context.get()];
         auto draggingItem = adoptNS([[NSDraggingItem alloc] initWithPasteboardWriter:provider.get()]);
         [draggingItem setDraggingFrame:NSMakeRect(clientDragLocation.x(), clientDragLocation.y() - size.height(), size.width(), size.height()) contents:dragNSImage.get()];
@@ -4441,7 +4441,7 @@ void WebViewImpl::startDrag(const WebCore::DragItem& item, ShareableBitmap::Hand
 
         for (size_t index = 0; index < info.additionalTypesAndData.size(); ++index) {
             auto nsData = Ref { *info.additionalTypesAndData[index].second }->createNSData();
-            [pasteboard setData:nsData.get() forType:info.additionalTypesAndData[index].first];
+            [pasteboard setData:nsData.get() forType:info.additionalTypesAndData[index].first.createNSString().get()];
         }
         m_page->didStartDrag();
         return;
@@ -4485,7 +4485,7 @@ void WebViewImpl::setPromisedDataForImage(WebCore::Image& image, NSString *filen
 
     auto uti = image.uti();
     if (!uti.isEmpty() && image.data() && !image.data()->isEmpty())
-        [types addObject:uti];
+        [types addObject:uti.createNSString().get()];
 
     RetainPtr<NSData> customDataBuffer;
     if (originIdentifier.length) {
@@ -4497,7 +4497,7 @@ void WebViewImpl::setPromisedDataForImage(WebCore::Image& image, NSString *filen
 
     [types addObjectsFromArray:archiveBuffer ? PasteboardTypes::forImagesWithArchive() : PasteboardTypes::forImages()];
     [pasteboard declareTypes:types.get() owner:m_view.getAutoreleased()];
-    setFileAndURLTypes(filename, extension, uti, title, url, visibleURL, pasteboard.get());
+    setFileAndURLTypes(filename, extension, uti.createNSString().get(), title, url, visibleURL, pasteboard.get());
 
     if (archiveBuffer) {
         auto nsData = archiveBuffer->makeContiguous()->createNSData();
@@ -4531,7 +4531,7 @@ void WebViewImpl::provideDataForPasteboard(NSPasteboard *pasteboard, NSString *t
     if (!promisedImage)
         return;
 
-    if ([type isEqual:promisedImage->uti()] && promisedImage->data()) {
+    if ([type isEqual:promisedImage->uti().createNSString().get()] && promisedImage->data()) {
         if (auto platformData = promisedImage->protectedData()->makeContiguous()->createNSData())
             [pasteboard setData:(__bridge NSData *)platformData.get() forType:type];
     }
@@ -4588,10 +4588,10 @@ NSArray *WebViewImpl::namesOfPromisedFilesDroppedAtDestination(NSURL *dropDestin
         data = promisedImage->protectedData()->makeContiguous()->createNSData();
         wrapper = adoptNS([[NSFileWrapper alloc] initRegularFileWithContents:data.get()]);
     } else
-        wrapper = adoptNS([[NSFileWrapper alloc] initWithURL:[NSURL URLWithString:m_promisedURL] options:NSFileWrapperReadingImmediate error:nil]);
+        wrapper = adoptNS([[NSFileWrapper alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:m_promisedURL.createNSString().get()]).get() options:NSFileWrapperReadingImmediate error:nil]);
 
     if (wrapper)
-        [wrapper setPreferredFilename:m_promisedFilename];
+        [wrapper setPreferredFilename:m_promisedFilename.createNSString().get()];
     else {
         LOG_ERROR("Failed to create image file.");
         return nil;
@@ -4647,12 +4647,12 @@ void WebViewImpl::requestDOMPasteAccess(WebCore::DOMPasteAccessCategory pasteAcc
 
     m_domPasteMenuDelegate = adoptNS([[WKDOMPasteMenuDelegate alloc] initWithWebViewImpl:*this pasteAccessCategory:pasteAccessCategory]);
     m_domPasteRequestHandler = WTFMove(completion);
-    m_domPasteMenu = adoptNS([[NSMenu alloc] initWithTitle:WebCore::contextMenuItemTagPaste()]);
+    m_domPasteMenu = adoptNS([[NSMenu alloc] initWithTitle:WebCore::contextMenuItemTagPaste().createNSString().get()]);
 
     [m_domPasteMenu setDelegate:m_domPasteMenuDelegate.get()];
     [m_domPasteMenu setAllowsContextMenuPlugIns:NO];
 
-    auto pasteMenuItem = RetainPtr([m_domPasteMenu insertItemWithTitle:WebCore::contextMenuItemTagPaste() action:@selector(_web_grantDOMPasteAccess) keyEquivalent:emptyString() atIndex:0]);
+    auto pasteMenuItem = RetainPtr([m_domPasteMenu insertItemWithTitle:WebCore::contextMenuItemTagPaste().createNSString().get() action:@selector(_web_grantDOMPasteAccess) keyEquivalent:@"" atIndex:0]);
     [pasteMenuItem setTarget:m_domPasteMenuDelegate.get()];
 
     RetainPtr window = [m_view window];
@@ -6491,7 +6491,7 @@ void WebViewImpl::nowPlayingMediaTitleAndArtist(void(^completionHandler)(NSStrin
     }
 
     m_page->requestActiveNowPlayingSessionInfo([completionHandler = makeBlockPtr(completionHandler)] (bool registeredAsNowPlayingApplication, WebCore::NowPlayingInfo&& nowPlayingInfo) {
-        completionHandler(nowPlayingInfo.metadata.title, nowPlayingInfo.metadata.artist);
+        completionHandler(nowPlayingInfo.metadata.title.createNSString().get(), nowPlayingInfo.metadata.artist.createNSString().get());
     });
 #else
     completionHandler(nil, nil);
@@ -6530,7 +6530,7 @@ void WebViewImpl::updateMediaTouchBar()
                 [image setTemplate:YES];
 
                 RetainPtr exitFullScreenButton = [NSButton buttonWithTitle:image ? @"" : @"Exit" image:image.get() target:m_fullScreenWindowController.get() action:@selector(requestExitFullScreen)];
-                [exitFullScreenButton setAccessibilityTitle:WebCore::exitFullScreenButtonAccessibilityTitle()];
+                [exitFullScreenButton setAccessibilityTitle:WebCore::exitFullScreenButtonAccessibilityTitle().createNSString().get()];
 
                 [[exitFullScreenButton.get().widthAnchor constraintLessThanOrEqualToConstant:exitFullScreenButtonWidth] setActive:YES];
                 [m_exitFullScreenButton setView:exitFullScreenButton.get()];
@@ -6671,7 +6671,7 @@ void WebViewImpl::handleContextMenuTranslation(const WebCore::TranslationContext
 
     auto view = m_view.get();
     auto translationViewController = adoptNS([PAL::allocLTUITranslationViewControllerInstance() init]);
-    [translationViewController setText:adoptNS([[NSAttributedString alloc] initWithString:info.text]).get()];
+    [translationViewController setText:adoptNS([[NSAttributedString alloc] initWithString:info.text.createNSString().get()]).get()];
     if (info.mode == WebCore::TranslationContextMenuMode::Editable) {
         [translationViewController setIsSourceEditable:YES];
         [translationViewController setReplacementHandler:[this, weakThis = WeakPtr { *this }](NSAttributedString *string) {

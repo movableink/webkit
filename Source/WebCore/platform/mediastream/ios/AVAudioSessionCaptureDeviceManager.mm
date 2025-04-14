@@ -193,9 +193,9 @@ bool AVAudioSessionCaptureDeviceManager::setPreferredAudioSessionDeviceIDs()
 {
     AVAudioSessionPortDescription *preferredInputPort = nil;
     if (!m_preferredMicrophoneID.isEmpty()) {
-        NSString *nsDeviceUID = m_preferredMicrophoneID;
+        RetainPtr nsDeviceUID = m_preferredMicrophoneID.createNSString();
         for (AVAudioSessionPortDescription *portDescription in [m_audioSession availableInputs]) {
-            if ([portDescription.UID isEqualToString:nsDeviceUID]) {
+            if ([portDescription.UID isEqualToString:nsDeviceUID.get()]) {
                 preferredInputPort = portDescription;
                 break;
             }

@@ -125,13 +125,13 @@ void WebAutomationSession::sendSynthesizedEventsToPage(WebPageProxy& page, NSArr
 
 void WebAutomationSession::markEventAsSynthesizedForAutomation(NSEvent *event)
 {
-    objc_setAssociatedObject(event, &synthesizedAutomationEventAssociatedObjectKey, m_sessionIdentifier, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(event, &synthesizedAutomationEventAssociatedObjectKey, m_sessionIdentifier.createNSString().get(), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
 bool WebAutomationSession::wasEventSynthesizedForAutomation(NSEvent *event)
 {
     NSString *senderSessionIdentifier = objc_getAssociatedObject(event, &synthesizedAutomationEventAssociatedObjectKey);
-    if ([senderSessionIdentifier isEqualToString:m_sessionIdentifier])
+    if ([senderSessionIdentifier isEqualToString:m_sessionIdentifier.createNSString().get()])
         return true;
 
     switch (event.type) {
@@ -700,8 +700,8 @@ void WebAutomationSession::platformSimulateKeyboardInteraction(WebPageProxy& pag
         },
         [&] (CharKey charKey) {
             keyCode = keyCodeForCharKey(charKey);
-            characters = charKey;
-            unmodifiedCharacters = charKey;
+            characters = charKey.createNSString();
+            unmodifiedCharacters = characters;
         }
     );
 
@@ -813,14 +813,14 @@ void WebAutomationSession::platformSimulateKeySequence(WebPageProxy& page, const
     // This command is more similar to the 'insertText:' editing command, except
     // that this emits keyup/keydown/keypress events for roughly each character.
     // This API should move more towards that direction in the future.
-    NSString *text = keySequence;
+    RetainPtr text = keySequence.createNSString();
 
     NSTimeInterval timestamp = [NSDate timeIntervalSinceReferenceDate];
     NSWindow *window = page.platformWindow();
     NSInteger windowNumber = window.windowNumber;
     NSPoint eventPosition = NSMakePoint(0, window.frame.size.height);
 
-    [text enumerateSubstringsInRange:NSMakeRange(0, text.length) options:NSStringEnumerationByComposedCharacterSequences usingBlock:^(NSString *substring, NSRange substringRange, NSRange enclosingRange, BOOL *stop) {
+    [text enumerateSubstringsInRange:NSMakeRange(0, text.get().length) options:NSStringEnumerationByComposedCharacterSequences usingBlock:^(NSString *substring, NSRange substringRange, NSRange enclosingRange, BOOL *stop) {
     
         // For ASCII characters that are produced using Shift on a US-108 key keyboard layout,
         // WebDriver expects these to be delivered as [shift-down, key-down, key-up, shift-up]

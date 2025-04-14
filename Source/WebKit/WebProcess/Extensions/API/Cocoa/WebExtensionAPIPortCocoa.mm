@@ -103,7 +103,7 @@ void WebExtensionAPIPort::remove()
 
 NSString *WebExtensionAPIPort::name()
 {
-    return m_name;
+    return m_name.createNSString().autorelease();
 }
 
 NSDictionary *WebExtensionAPIPort::sender()
@@ -126,12 +126,12 @@ void WebExtensionAPIPort::postMessage(WebFrame& frame, NSString *message, NSStri
     // Documentation: https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/runtime/Port#postmessage
 
     if (isDisconnected()) {
-        *outExceptionString = toErrorString(nullString(), nullString(), @"the port is disconnected");
+        *outExceptionString = toErrorString(nullString(), nullString(), @"the port is disconnected").createNSString().autorelease();
         return;
     }
 
     if (message.length > webExtensionMaxMessageLength) {
-        *outExceptionString = toErrorString(nullString(), @"message", @"it exceeded the maximum allowed length");
+        *outExceptionString = toErrorString(nullString(), @"message", @"it exceeded the maximum allowed length").createNSString().autorelease();
         return;
     }
 
@@ -220,7 +220,7 @@ void WebExtensionContextProxy::dispatchPortMessageEvent(std::optional<WebPagePro
     if (ports.isEmpty())
         return;
 
-    id message = parseJSON(messageJSON, { JSONOptions::FragmentsAllowed });
+    id message = parseJSON(messageJSON.createNSString().get(), { JSONOptions::FragmentsAllowed });
 
     for (Ref port : ports) {
         // Don't send the message to other ports in the same page as the sender.

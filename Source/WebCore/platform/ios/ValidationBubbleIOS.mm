@@ -175,7 +175,7 @@ ValidationBubble::ValidationBubble(UIView *view, const String& message, const Se
     m_tapRecognizer = adoptNS([[WebValidationBubbleTapRecognizer alloc] initWithPopoverController:m_popoverController.get()]);
 
     UILabel *validationLabel = label(m_popoverController.get());
-    validationLabel.text = message;
+    validationLabel.text = message.createNSString().get();
     m_fontSize = validationLabel.font.pointSize;
     CGSize labelSize = [validationLabel sizeThatFits:CGSizeMake(validationBubbleMaxLabelWidth, CGFLOAT_MAX)];
     [m_popoverController setPreferredContentSize:CGSizeMake(labelSize.width + validationBubbleHorizontalPadding * 2, labelSize.height + validationBubbleVerticalPadding * 2)];
@@ -201,7 +201,7 @@ void ValidationBubble::show()
         protectedThis->m_startingToPresentViewController = false;
     }];
 
-    PAL::softLinkUIKitUIAccessibilityPostNotification(PAL::get_UIKit_UIAccessibilityAnnouncementNotification(), m_message);
+    PAL::softLinkUIKitUIAccessibilityPostNotification(PAL::get_UIKit_UIAccessibilityAnnouncementNotification(), m_message.createNSString().get());
 }
 
 static UIViewController *fallbackViewController(UIView *view)

@@ -294,8 +294,8 @@ RetainPtr<NSError> nsErrorFromExceptionDetails(const std::optional<WebCore::Exce
         break;
     }
 
-    [userInfo setObject:localizedDescriptionForErrorCode(errorCode) forKey:NSLocalizedDescriptionKey];
-    [userInfo setObject:details->message forKey:_WKJavaScriptExceptionMessageErrorKey];
+    [userInfo setObject:localizedDescriptionForErrorCode(errorCode).get() forKey:NSLocalizedDescriptionKey];
+    [userInfo setObject:details->message.createNSString().get() forKey:_WKJavaScriptExceptionMessageErrorKey];
     [userInfo setObject:@(details->lineNumber) forKey:_WKJavaScriptExceptionLineNumberErrorKey];
     [userInfo setObject:@(details->columnNumber) forKey:_WKJavaScriptExceptionColumnNumberErrorKey];
 
@@ -1065,7 +1065,7 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
 
 - (NSString *)title
 {
-    return _page->protectedPageLoadState()->title();
+    return _page->protectedPageLoadState()->title().createNSString().autorelease();
 }
 
 - (NSURL *)URL
@@ -1407,7 +1407,7 @@ static WKMediaPlaybackState toWKMediaPlaybackState(WebKit::MediaPlaybackState me
     if (errorMessage && handler) {
         RetainPtr<NSMutableDictionary> userInfo = adoptNS([[NSMutableDictionary alloc] init]);
 
-        [userInfo setObject:localizedDescriptionForErrorCode(WKErrorJavaScriptExceptionOccurred) forKey:NSLocalizedDescriptionKey];
+        [userInfo setObject:localizedDescriptionForErrorCode(WKErrorJavaScriptExceptionOccurred).get() forKey:NSLocalizedDescriptionKey];
         [userInfo setObject:errorMessage forKey:_WKJavaScriptExceptionMessageErrorKey];
 
         auto error = adoptNS([[NSError alloc] initWithDomain:WKErrorDomain code:WKErrorJavaScriptExceptionOccurred userInfo:userInfo.get()]);
@@ -1605,7 +1605,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (NSString *)customUserAgent
 {
-    return _page->customUserAgent();
+    return _page->customUserAgent().createNSString().autorelease();
 }
 
 - (void)setCustomUserAgent:(NSString *)customUserAgent
@@ -2053,12 +2053,12 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
     if (![delegate respondsToSelector:@selector(_webView:storeAppHighlight:inNewGroup:requestOriginatedInApp:)])
         return;
 
-    NSString *text = nil;
+    RetainPtr<NSString> text;
 
     if (highlight.text)
-        text = highlight.text.value();
+        text = highlight.text.value().createNSString();
 
-    auto wkHighlight = adoptNS([[_WKAppHighlight alloc] initWithHighlight:Ref { highlight.highlight }->makeContiguous()->createNSData().get() text:text image:nil]);
+    RetainPtr wkHighlight = adoptNS([[_WKAppHighlight alloc] initWithHighlight:Ref { highlight.highlight }->makeContiguous()->createNSData().get() text:text.get() image:nil]);
 
     if ([delegate respondsToSelector:@selector(_webView:storeAppHighlight:inNewGroup:requestOriginatedInApp:)])
         [delegate _webView:self storeAppHighlight:wkHighlight.get() inNewGroup:highlight.isNewGroup == WebCore::CreateNewGroupForHighlight::Yes requestOriginatedInApp:highlight.requestOriginatedInApp == WebCore::HighlightRequestOriginatedInApp::Yes];
@@ -2138,7 +2138,7 @@ inline OptionSet<WebKit::FindOptions> toFindOptions(WKFindConfiguration *configu
         if (data)
             completionHandler(wrapper(data), nil);
         else
-            completionHandler(nil, [NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]);
+            completionHandler(nil, adoptNS([[NSError alloc] initWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]).get());
     });
 }
 
@@ -3428,7 +3428,7 @@ FOR_EACH_PRIVATE_WKCONTENTVIEW_ACTION(FORWARD_ACTION_TO_WKCONTENTVIEW)
 
 - (NSString *)_proxyName
 {
-    return _page->pageLoadState().proxyName();
+    return _page->pageLoadState().proxyName().createNSString().autorelease();
 }
 
 - (BOOL)_isContentFromNetwork
@@ -3571,14 +3571,14 @@ static RetainPtr<NSDictionary<NSString *, id>> createUserInfo(const std::optiona
         auto createWKItem = [] (const WebCore::TextManipulationItem& item) {
             auto tokens = createNSArray(item.tokens, [] (auto& token) {
                 auto wkToken = adoptNS([[_WKTextManipulationToken alloc] init]);
-                [wkToken setIdentifier:String::number(token.identifier.toUInt64())];
-                [wkToken setContent:token.content];
+                [wkToken setIdentifier:String::number(token.identifier.toUInt64()).createNSString().get()];
+                [wkToken setContent:token.content.createNSString().get()];
                 [wkToken setExcluded:token.isExcluded];
                 [wkToken setUserInfo:createUserInfo(token.info).get()];
                 return wkToken;
             });
             auto identifier = makeString(item.frameID ? item.frameID->toUInt64() : 0, '-', item.identifier ? item.identifier->toUInt64() : 0);
-            return adoptNS([[_WKTextManipulationItem alloc] initWithIdentifier:identifier tokens:tokens.get() isSubframe:item.isSubframe isCrossSiteSubframe:item.isCrossSiteSubframe]);
+            return adoptNS([[_WKTextManipulationItem alloc] initWithIdentifier:identifier.createNSString().get() tokens:tokens.get() isSubframe:item.isSubframe isCrossSiteSubframe:item.isCrossSiteSubframe]);
         };
 
         if ([delegate respondsToSelector:@selector(_webView:didFindTextManipulationItems:)])
@@ -3662,7 +3662,7 @@ static RetainPtr<NSMutableArray> makeFailureSetForAllTextManipulationItems(NSArr
 {
     RetainPtr<NSMutableArray> wkFailures = adoptNS([[NSMutableArray alloc] initWithCapacity:items.count]);
     for (_WKTextManipulationItem *item in items)
-        [wkFailures addObject:[NSError errorWithDomain:_WKTextManipulationItemErrorDomain code:_WKTextManipulationItemErrorNotAvailable userInfo:@{_WKTextManipulationItemErrorItemKey: item}]];
+        [wkFailures addObject:adoptNS([[NSError alloc] initWithDomain:_WKTextManipulationItemErrorDomain code:_WKTextManipulationItemErrorNotAvailable userInfo:@{_WKTextManipulationItemErrorItemKey: item}]).get()];
     return wkFailures;
 };
 
@@ -3671,7 +3671,7 @@ static RetainPtr<NSArray> wkTextManipulationErrors(NSArray<_WKTextManipulationIt
     if (failures.isEmpty())
         return nil;
 
-    return createNSArray(failures, [&] (auto& coreFailure) -> NSError * {
+    return createNSArray(failures, [&] (auto& coreFailure) -> RetainPtr<NSError> {
         ASSERT(coreFailure.index < items.count);
         if (coreFailure.index >= items.count)
             return nil;
@@ -3697,7 +3697,7 @@ static RetainPtr<NSArray> wkTextManipulationErrors(NSArray<_WKTextManipulationIt
         ASSERT(identifiers->frameID == coreFailure.frameID);
         ASSERT(identifiers->itemID == coreFailure.identifier);
 #endif
-        return [NSError errorWithDomain:_WKTextManipulationItemErrorDomain code:errorCode userInfo:@{_WKTextManipulationItemErrorItemKey: item}];
+        return adoptNS([[NSError alloc] initWithDomain:_WKTextManipulationItemErrorDomain code:errorCode userInfo:@{_WKTextManipulationItemErrorItemKey: item}]);
     });
 }
 
@@ -3772,7 +3772,7 @@ static RetainPtr<NSArray> wkTextManipulationErrors(NSArray<_WKTextManipulationIt
 
 + (NSString *)_stringForFind
 {
-    return WebKit::stringForFind();
+    return WebKit::stringForFind().createNSString().autorelease();
 }
 
 + (void)_setStringForFind:(NSString *)findString
@@ -3896,7 +3896,7 @@ static RetainPtr<NSArray> wkTextManipulationErrors(NSArray<_WKTextManipulationIt
         if (result)
             completionHandler(*result, nil);
         else
-            completionHandler({ }, [NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]);
+            completionHandler({ }, adoptNS([[NSError alloc] initWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]).get());
     });
 }
 
@@ -3909,7 +3909,7 @@ static RetainPtr<NSArray> wkTextManipulationErrors(NSArray<_WKTextManipulationIt
         if (result)
             completionHandler(*result, nil);
         else
-            completionHandler({ }, [NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]);
+            completionHandler({ }, adoptNS([[NSError alloc] initWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]).get());
     });
 }
 
@@ -4216,8 +4216,8 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
 {
     _page->getInformationFromImageData(makeVector(imageData), [completionHandler = makeBlockPtr(completionHandler)](auto result) mutable {
         if (!result) {
-            NSError *error = [NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:@{ NSLocalizedDescriptionKey: WebCore::descriptionString(result.error()) }];
-            return completionHandler(nil, nil, error);
+            RetainPtr error = adoptNS([[NSError alloc] initWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:@{ NSLocalizedDescriptionKey: WebCore::descriptionString(result.error()).createNSString().get() }]);
+            return completionHandler(nil, nil, error.get());
         }
 
         auto [typeIdentifier, sizes] = result.value();
@@ -4229,7 +4229,7 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
             return [NSValue valueWithCGSize:cgSize];
 #endif
         });
-        return completionHandler(typeIdentifier, availableSizes.autorelease(), nil);
+        return completionHandler(typeIdentifier.createNSString().get(), availableSizes.autorelease(), nil);
     });
 }
 
@@ -4245,8 +4245,8 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
     auto buffer = WebCore::SharedBuffer::create(imageData);
     _page->createIconDataFromImageData(WTFMove(buffer), targetLengths, [completionHandler = makeBlockPtr(completionHandler)](auto result) mutable {
         if (!result) {
-            NSError *error = [NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:@{ NSLocalizedDescriptionKey: @"Failed to decode data" }];
-            return completionHandler(nil, error);
+            RetainPtr error = adoptNS([[NSError alloc] initWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:@{ NSLocalizedDescriptionKey: @"Failed to decode data" }]);
+            return completionHandler(nil, error.get());
         }
 
         completionHandler(result->createNSData().autorelease(), nil);
@@ -4267,8 +4267,8 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
     auto buffer = WebCore::SharedBuffer::create(imageData);
     _page->decodeImageData(WTFMove(buffer), size, [completionHandler = makeBlockPtr(completionHandler)](RefPtr<WebCore::ShareableBitmap>&& bitmap) mutable {
         if (!bitmap) {
-            NSError *error = [NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:@{ NSLocalizedDescriptionKey: @"Failed to decode data" }];
-            return completionHandler(nil, error);
+            RetainPtr error = adoptNS([[NSError alloc] initWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:@{ NSLocalizedDescriptionKey: @"Failed to decode data" }]);
+            return completionHandler(nil, error.get());
         }
 
 #if PLATFORM(MAC)
@@ -4378,19 +4378,19 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
 - (NSString *)_MIMEType
 {
     if (_page->mainFrame())
-        return _page->mainFrame()->mimeType();
+        return _page->mainFrame()->mimeType().createNSString().autorelease();
 
     return nil;
 }
 
 - (NSString *)_userAgent
 {
-    return _page->userAgent();
+    return _page->userAgent().createNSString().autorelease();
 }
 
 - (NSString *)_applicationNameForUserAgent
 {
-    return _page->applicationNameForUserAgent();
+    return _page->applicationNameForUserAgent().createNSString().autorelease();
 }
 
 - (void)_setApplicationNameForUserAgent:(NSString *)applicationNameForUserAgent
@@ -4802,7 +4802,7 @@ static void convertAndAddHighlight(Vector<Ref<WebCore::SharedMemory>>& buffers, 
 - (NSString *)_remoteInspectionNameOverride
 {
 #if ENABLE(REMOTE_INSPECTOR)
-    return _page->remoteInspectionNameOverride();
+    return _page->remoteInspectionNameOverride().createNSString().autorelease();
 #else
     return nil;
 #endif
@@ -4884,7 +4884,7 @@ static inline OptionSet<WebCore::LayoutMilestone> layoutMilestones(_WKRenderingP
     THROW_IF_SUSPENDED;
     _page->saveResources(_page->protectedMainFrame().get(), { }, directory.path, name, [completionHandler = makeBlockPtr(completionHandler)](auto result) mutable {
         if (!result)
-            return completionHandler([NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:@{ NSLocalizedDescriptionKey: WebCore::errorDescription(result.error()) }]);
+            return completionHandler(adoptNS([[NSError alloc] initWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:@{ NSLocalizedDescriptionKey: WebCore::errorDescription(result.error()).createNSString().get() }]).get());
 
         completionHandler(nil);
     });
@@ -4913,7 +4913,7 @@ static inline OptionSet<WebCore::LayoutMilestone> layoutMilestones(_WKRenderingP
 
     _page->saveResources(_page->protectedMainFrame().get(), WTFMove(markupExclusionRules), configuration.directory.path, configuration.suggestedFileName, [completionHandler = makeBlockPtr(completionHandler)](auto result) mutable {
         if (!result)
-            return completionHandler([NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:@{ NSLocalizedDescriptionKey: WebCore::errorDescription(result.error()) }]);
+            return completionHandler(adoptNS([[NSError alloc] initWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:@{ NSLocalizedDescriptionKey: WebCore::errorDescription(result.error()).createNSString().get() }]).get());
 
         completionHandler(nil);
     });
@@ -4937,7 +4937,7 @@ static inline OptionSet<WebCore::LayoutMilestone> layoutMilestones(_WKRenderingP
 {
     THROW_IF_SUSPENDED;
     _page->getContentsAsString(WebKit::ContentAsStringIncludesChildFrames::No, [handler = makeBlockPtr(completionHandler)](String string) {
-        handler(string, nil);
+        handler(string.createNSString().get(), nil);
     });
 }
 
@@ -4945,7 +4945,7 @@ static inline OptionSet<WebCore::LayoutMilestone> layoutMilestones(_WKRenderingP
 {
     THROW_IF_SUSPENDED;
     _page->getContentsAsString(WebKit::ContentAsStringIncludesChildFrames::No, [handler = makeBlockPtr(completionHandler), connection = _page->legacyMainFrameProcess().protectedConnection()](String string) {
-        handler(string, nil);
+        handler(string.createNSString().get(), nil);
     });
 }
 
@@ -4953,7 +4953,7 @@ static inline OptionSet<WebCore::LayoutMilestone> layoutMilestones(_WKRenderingP
 {
     THROW_IF_SUSPENDED;
     _page->getContentsAsString(WebKit::ContentAsStringIncludesChildFrames::Yes, [handler = makeBlockPtr(completionHandler)](String string) {
-        handler(string);
+        handler(string.createNSString().get());
     });
 }
 
@@ -5301,7 +5301,7 @@ static inline OptionSet<WebKit::FindOptions> toFindOptions(_WKFindOptions wkFind
 
             auto valueMap = adoptNS([[NSMutableDictionary alloc] initWithCapacity:textFieldValues.size()]);
             for (const auto& pair : textFieldValues)
-                [valueMap setObject:pair.second forKey:pair.first];
+                [valueMap setObject:pair.second.createNSString().get() forKey:pair.first.createNSString().get()];
 
             auto userObject = userData ? userData->toNSObject() : RetainPtr<NSObject<NSSecureCoding>>();
 
@@ -5482,7 +5482,7 @@ static inline OptionSet<WebKit::FindOptions> toFindOptions(_WKFindOptions wkFind
 {
     THROW_IF_SUSPENDED;
     _page->getProcessDisplayName([handler = makeBlockPtr(completionHandler)](auto&& name) {
-        handler(name);
+        handler(name.createNSString().get());
     });
 }
 

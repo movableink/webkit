@@ -344,7 +344,7 @@ void WebExtensionContext::sendNativeMessage(const String& applicationID, id mess
 
 void WebExtensionContext::runtimeSendNativeMessage(const String& applicationID, const String& messageJSON, CompletionHandler<void(Expected<String, WebExtensionError>&&)>&& completionHandler)
 {
-    sendNativeMessage(applicationID, parseJSON(messageJSON, JSONOptions::FragmentsAllowed), [completionHandler = WTFMove(completionHandler)](auto&& result) mutable {
+    sendNativeMessage(applicationID, parseJSON(messageJSON.createNSString().get(), JSONOptions::FragmentsAllowed), [completionHandler = WTFMove(completionHandler)](auto&& result) mutable {
         if (!result) {
             completionHandler(makeUnexpected(result.error()));
             return;

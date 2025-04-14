@@ -439,13 +439,13 @@ static void addRepresentationsForPlainText(WebItemProviderRegistrationInfoList *
         return;
 
 #if HAVE(NSURL_ENCODING_INVALID_CHARACTERS)
-    NSURL *platformURL = [NSURL URLWithString:plainText encodingInvalidCharacters:NO];
+    RetainPtr platformURL = adoptNS([[NSURL alloc] initWithString:plainText.createNSString().get() encodingInvalidCharacters:NO]);
 #else
-    NSURL *platformURL = [NSURL URLWithString:plainText];
+    RetainPtr platformURL = adoptNS([[NSURL alloc] initWithString:plainText.createNSString().get()]);
 #endif
 
-    if (URL(platformURL).isValid())
-        [itemsToRegister addRepresentingObject:platformURL];
+    if (URL(platformURL.get()).isValid())
+        [itemsToRegister addRepresentingObject:platformURL.get()];
 
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     [itemsToRegister addData:[plainText.createNSString() dataUsingEncoding:NSUTF8StringEncoding] forType:bridge_cast(kUTTypeUTF8PlainText)];
@@ -474,7 +474,7 @@ void PlatformPasteboard::write(const PasteboardWebContent& content)
 #endif
 
     for (size_t i = 0, size = content.clientTypesAndData.size(); i < size; ++i)
-        [representationsToRegister addData:content.clientTypesAndData[i].second->makeContiguous()->createNSData().get() forType:content.clientTypesAndData[i].first];
+        [representationsToRegister addData:content.clientTypesAndData[i].second->makeContiguous()->createNSData().get() forType:content.clientTypesAndData[i].first.createNSString().get()];
 
     if (content.dataInWebArchiveFormat) {
         auto webArchiveData = content.dataInWebArchiveFormat->createNSData();
@@ -517,7 +517,7 @@ void PlatformPasteboard::write(const PasteboardImage& pasteboardImage)
     auto representationsToRegister = adoptNS([[WebItemProviderRegistrationInfoList alloc] init]);
 
     for (size_t i = 0, size = pasteboardImage.clientTypesAndData.size(); i < size; ++i)
-        [representationsToRegister addData:pasteboardImage.clientTypesAndData[i].second->createNSData().get() forType:pasteboardImage.clientTypesAndData[i].first];
+        [representationsToRegister addData:pasteboardImage.clientTypesAndData[i].second->createNSData().get() forType:pasteboardImage.clientTypesAndData[i].first.createNSString().get()];
 
     if (pasteboardImage.resourceData && !pasteboardImage.resourceMIMEType.isEmpty()) {
         auto utiOrMIMEType = pasteboardImage.resourceMIMEType;
@@ -527,7 +527,7 @@ void PlatformPasteboard::write(const PasteboardImage& pasteboardImage)
         auto imageData = pasteboardImage.resourceData->makeContiguous()->createNSData();
         [representationsToRegister addData:imageData.get() forType:utiOrMIMEType.createNSString().get()];
         [representationsToRegister setPreferredPresentationSize:pasteboardImage.imageSize];
-        [representationsToRegister setSuggestedName:pasteboardImage.suggestedName];
+        [representationsToRegister setSuggestedName:pasteboardImage.suggestedName.createNSString().get()];
     }
 
     // FIXME: When writing a PasteboardImage, we currently always place the image data at a higer fidelity than the
@@ -549,14 +549,14 @@ void PlatformPasteboard::write(const String& pasteboardType, const String& text)
     auto representationsToRegister = adoptNS([[WebItemProviderRegistrationInfoList alloc] init]);
     [representationsToRegister setPreferredPresentationStyle:WebPreferredPresentationStyleInline];
 
-    NSString *pasteboardTypeAsNSString = pasteboardType;
-    if (!text.isEmpty() && pasteboardTypeAsNSString.length) {
-        auto pasteboardTypeAsCFString = (CFStringRef)pasteboardTypeAsNSString;
+    RetainPtr pasteboardTypeAsNSString = pasteboardType.createNSString();
+    if (!text.isEmpty() && pasteboardTypeAsNSString.get().length) {
+        RetainPtr pasteboardTypeAsCFString = bridge_cast(pasteboardTypeAsNSString.get());
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        if (UTTypeConformsTo(pasteboardTypeAsCFString, kUTTypeURL) || UTTypeConformsTo(pasteboardTypeAsCFString, kUTTypeText))
+        if (UTTypeConformsTo(pasteboardTypeAsCFString.get(), kUTTypeURL) || UTTypeConformsTo(pasteboardTypeAsCFString.get(), kUTTypeText))
             addRepresentationsForPlainText(representationsToRegister.get(), text);
         else
-            [representationsToRegister addData:[pasteboardTypeAsNSString dataUsingEncoding:NSUTF8StringEncoding] forType:pasteboardType];
+            [representationsToRegister addData:[pasteboardTypeAsNSString dataUsingEncoding:NSUTF8StringEncoding] forType:pasteboardType.createNSString().get()];
 ALLOW_DEPRECATED_DECLARATIONS_END
     }
 
@@ -571,7 +571,7 @@ void PlatformPasteboard::write(const PasteboardURL& url)
     if (RetainPtr nsURL = url.url.createNSURL()) {
 #if HAVE(NSURL_TITLE)
         if (!url.title.isEmpty())
-            [nsURL _web_setTitle:url.title];
+            [nsURL _web_setTitle:url.title.createNSString().get()];
 #endif
         [representationsToRegister addRepresentingObject:nsURL.get()];
         [representationsToRegister addRepresentingObject:url.url.string().createNSString().get()];
@@ -756,7 +756,8 @@ static bool isDisallowedTypeForReadBuffer(NSString *type)
 
 RefPtr<SharedBuffer> PlatformPasteboard::readBuffer(std::optional<size_t> index, const String& type) const
 {
-    if (isDisallowedTypeForReadBuffer(type))
+    RetainPtr nsType = type.createNSString();
+    if (isDisallowedTypeForReadBuffer(nsType.get()))
         return nullptr;
 
     NSInteger integerIndex = index.value_or(0);
@@ -765,7 +766,7 @@ RefPtr<SharedBuffer> PlatformPasteboard::readBuffer(std::optional<size_t> index,
 
     NSIndexSet *indexSet = [NSIndexSet indexSetWithIndex:integerIndex];
 
-    RetainPtr<NSArray> pasteboardItem = [m_pasteboard dataForPasteboardType:type inItemSet:indexSet];
+    RetainPtr<NSArray> pasteboardItem = [m_pasteboard dataForPasteboardType:nsType.get() inItemSet:indexSet];
 
     if (![pasteboardItem count])
         return nullptr;

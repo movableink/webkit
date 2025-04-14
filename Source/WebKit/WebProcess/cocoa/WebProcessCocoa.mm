@@ -981,8 +981,8 @@ static NSURL *origin(WebPage& page)
     auto rootFrameOriginString = page.rootFrameOriginString();
     // +[NSURL URLWithString:] returns nil when its argument is malformed. It's unclear when we would have a malformed URL here,
     // but it happens in practice according to <rdar://problem/14173389>. Leaving an assertion in to catch a reproducible case.
-    ASSERT([NSURL URLWithString:rootFrameOriginString]);
-    return [NSURL URLWithString:rootFrameOriginString];
+    ASSERT([NSURL URLWithString:rootFrameOriginString.createNSString().get()]);
+    return [NSURL URLWithString:rootFrameOriginString.createNSString().get()];
 }
 
 static Vector<String> activePagesOrigins(const HashMap<PageIdentifier, RefPtr<WebPage>>& pageMap)
@@ -1529,7 +1529,7 @@ void WebProcess::postNotification(const String& message, std::optional<uint64_t>
 
 void WebProcess::postObserverNotification(const String& message)
 {
-    [[NSNotificationCenter defaultCenter] postNotificationName:message object:nil];
+    [[NSNotificationCenter defaultCenter] postNotificationName:message.createNSString().get() object:nil];
 }
 
 void WebProcess::setNotifyState(const String& name, uint64_t state)

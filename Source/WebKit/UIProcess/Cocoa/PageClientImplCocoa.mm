@@ -124,7 +124,7 @@ bool PageClientImplCocoa::scrollingUpdatesDisabledForTesting()
 
 void PageClientImplCocoa::didInsertAttachment(API::Attachment& attachment, const String& source)
 {
-    [m_webView _didInsertAttachment:attachment withSource:source];
+    [m_webView _didInsertAttachment:attachment withSource:source.createNSString().get()];
 }
 
 void PageClientImplCocoa::didRemoveAttachment(API::Attachment& attachment)

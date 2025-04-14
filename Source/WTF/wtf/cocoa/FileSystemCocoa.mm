@@ -242,7 +242,7 @@ std::optional<bool> allowsMaterializingDatalessFiles(PolicyScope scope)
 bool isSafeToUseMemoryMapForPath(const String& path)
 {
     NSError *error = nil;
-    NSDictionary<NSFileAttributeKey, id> *attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:&error];
+    NSDictionary<NSFileAttributeKey, id> *attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:path.createNSString().get() error:&error];
     if (error) {
         LOG_ERROR("Unable to get path protection class");
         return false;
@@ -260,7 +260,7 @@ bool makeSafeToUseMemoryMapForPath(const String& path)
         return true;
     
     NSError *error = nil;
-    BOOL success = [[NSFileManager defaultManager] setAttributes:@{ NSFileProtectionKey: NSFileProtectionCompleteUnlessOpen } ofItemAtPath:path error:&error];
+    BOOL success = [[NSFileManager defaultManager] setAttributes:@{ NSFileProtectionKey: NSFileProtectionCompleteUnlessOpen } ofItemAtPath:path.createNSString().get() error:&error];
     if (error || !success) {
         WTFLogAlways("makeSafeToUseMemoryMapForPath(%s) failed with error %@", path.utf8().data(), error);
         return false;

@@ -209,7 +209,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
             rawHandler(nil);
 #pragma clang diagnostic pop
         } else
-            rawHandler(source);
+            rawHandler(source.createNSString().get());
     });
 #endif
 }

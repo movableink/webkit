@@ -247,7 +247,7 @@ static void* kWindowContentLayoutObserverContext = &kWindowContentLayoutObserver
 
     self.view = adoptNS([[NSView alloc] init]).get();
 
-    NSTextField *label = [NSTextField labelWithString:WEB_UI_STRING("Format:", "Label for the save data format selector when saving data in Web Inspector")];
+    NSTextField *label = [NSTextField labelWithString:WEB_UI_STRING("Format:", "Label for the save data format selector when saving data in Web Inspector").createNSString().get()];
     label.textColor = NSColor.secondaryLabelColor;
     label.font = [NSFont systemFontOfSize:NSFont.smallSystemFontSize];
     label.alignment = NSTextAlignmentRight;
@@ -255,8 +255,8 @@ static void* kWindowContentLayoutObserverContext = &kWindowContentLayoutObserver
     _popUpButton = adoptNS([[NSPopUpButton alloc] init]);
     [_popUpButton setAction:@selector(_popUpButtonAction:)];
     [_popUpButton setTarget:self];
-    [_popUpButton addItemsWithTitles:createNSArray(_saveDatas, [] (const auto& item) -> NSString * {
-        return item.displayType;
+    [_popUpButton addItemsWithTitles:createNSArray(_saveDatas, [] (const auto& item) {
+        return item.displayType.createNSString();
     }).get()];
     [_popUpButton selectItemAtIndex:0];
 
@@ -288,7 +288,7 @@ static void* kWindowContentLayoutObserverContext = &kWindowContentLayoutObserver
 
 - (NSString *)content
 {
-    return _saveDatas[[_popUpButton indexOfSelectedItem]].content;
+    return _saveDatas[[_popUpButton indexOfSelectedItem]].content.createNSString().autorelease();
 }
 
 - (BOOL)base64Encoded
@@ -298,9 +298,9 @@ static void* kWindowContentLayoutObserverContext = &kWindowContentLayoutObserver
 
 - (void)_updateSavePanel
 {
-    NSString *suggestedURL = _saveDatas[[_popUpButton indexOfSelectedItem]].url;
+    RetainPtr suggestedURL = _saveDatas[[_popUpButton indexOfSelectedItem]].url.createNSString();
 
-    if (UTType *type = [UTType typeWithFilenameExtension:suggestedURL.pathExtension])
+    if (UTType *type = [UTType typeWithFilenameExtension:suggestedURL.get().pathExtension])
         [_savePanel setAllowedContentTypes:@[ type ]];
     else
         [_savePanel setAllowedContentTypes:@[ ]];
@@ -478,8 +478,8 @@ void WebInspectorUIProxy::platformCreateFrontendWindow()
 
     NSRect savedWindowFrame = NSZeroRect;
     if (RefPtr inspectedPage = protectedInspectedPage()) {
-        NSString *savedWindowFrameString = inspectedPage->protectedPageGroup()->protectedPreferences()->inspectorWindowFrame();
-        savedWindowFrame = NSRectFromString(savedWindowFrameString);
+        RetainPtr savedWindowFrameString = inspectedPage->protectedPageGroup()->protectedPreferences()->inspectorWindowFrame().createNSString();
+        savedWindowFrame = NSRectFromString(savedWindowFrameString.get());
     }
 
     m_inspectorWindow = WebInspectorUIProxy::createFrontendWindow(savedWindowFrame, InspectionTargetType::Local, protectedInspectedPage().get());
@@ -668,7 +668,7 @@ void WebInspectorUIProxy::platformShowCertificate(const CertificateInfo& certifi
 
 void WebInspectorUIProxy::platformRevealFileExternally(const String& path)
 {
-    [[NSWorkspace sharedWorkspace] activateFileViewerSelectingURLs:@[ [NSURL URLWithString:path] ]];
+    [[NSWorkspace sharedWorkspace] activateFileViewerSelectingURLs:@[ adoptNS([[NSURL alloc] initWithString:path.createNSString().get()]).get() ]];
 }
 
 void WebInspectorUIProxy::platformSave(Vector<InspectorFrontendClient::SaveData>&& saveDatas, bool forceSaveAs)
@@ -676,16 +676,16 @@ void WebInspectorUIProxy::platformSave(Vector<InspectorFrontendClient::SaveData>
     RetainPtr<NSString> urlCommonPrefix;
     for (auto& item : saveDatas) {
         if (!urlCommonPrefix)
-            urlCommonPrefix = item.url;
+            urlCommonPrefix = item.url.createNSString();
         else
-            urlCommonPrefix = [urlCommonPrefix commonPrefixWithString:item.url options:0];
+            urlCommonPrefix = [urlCommonPrefix commonPrefixWithString:item.url.createNSString().get() options:0];
     }
     if ([urlCommonPrefix hasSuffix:@"."])
         urlCommonPrefix = [urlCommonPrefix substringToIndex:[urlCommonPrefix length] - 1];
 
     RetainPtr platformURL = m_suggestedToActualURLMap.get(urlCommonPrefix.get());
     if (!platformURL) {
-        platformURL = [NSURL URLWithString:urlCommonPrefix.get()];
+        platformURL = adoptNS([[NSURL alloc] initWithString:urlCommonPrefix.get()]);
         // The user must confirm new filenames before we can save to them.
         forceSaveAs = true;
     }

@@ -185,7 +185,7 @@ RetainPtr<id> AuxiliaryProcess::decodePreferenceValue(const std::optional<String
     if (!encodedValue)
         return nil;
     
-    RetainPtr encodedData = adoptNS([[NSData alloc] initWithBase64EncodedString:*encodedValue options:0]);
+    RetainPtr encodedData = adoptNS([[NSData alloc] initWithBase64EncodedString:encodedValue->createNSString().get() options:0]);
     RetainPtr classes = [NSSet setWithObjects:
         NSString.class,
         NSMutableString.class,
@@ -209,8 +209,8 @@ void AuxiliaryProcess::setPreferenceValue(const String& domain, const String& ke
     if (domain.isEmpty()) {
         CFPreferencesSetValue(key.createCFString().get(), (__bridge CFPropertyListRef)value, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
 #if ASSERT_ENABLED
-        id valueAfterSetting = [[NSUserDefaults standardUserDefaults] objectForKey:key];
-        ASSERT(valueAfterSetting == value || [valueAfterSetting isEqual:value] || key == "AppleLanguages"_s || key == "PayloadUUID"_s);
+        RetainPtr valueAfterSetting = [[NSUserDefaults standardUserDefaults] objectForKey:key.createNSString().get()];
+        ASSERT(valueAfterSetting.get() == value || [valueAfterSetting.get() isEqual:value] || key == "AppleLanguages"_s || key == "PayloadUUID"_s);
 #endif
     } else
         CFPreferencesSetValue(key.createCFString().get(), (__bridge CFPropertyListRef)value, domain.createCFString().get(), kCFPreferencesCurrentUser, kCFPreferencesAnyHost);

@@ -74,7 +74,7 @@ WebExtension::WebExtension(NSBundle *appExtensionBundle, NSURL *resourceURL, Ref
 
     if (m_resourceBaseURL.isValid()) {
         BOOL isDirectory;
-        if (![NSFileManager.defaultManager fileExistsAtPath:m_resourceBaseURL.fileSystemPath() isDirectory:&isDirectory]) {
+        if (![NSFileManager.defaultManager fileExistsAtPath:m_resourceBaseURL.fileSystemPath().createNSString().get() isDirectory:&isDirectory]) {
             outError = createError(Error::Unknown);
             return;
         }
@@ -135,7 +135,7 @@ NSDictionary *WebExtension::manifestDictionary()
     if (!manifestObject)
         return nil;
 
-    return parseJSON(manifestObject->toJSONString());
+    return parseJSON(manifestObject->toJSONString().createNSString().get());
 }
 
 SecStaticCodeRef WebExtension::bundleStaticCode() const
@@ -392,10 +392,11 @@ RefPtr<WebCore::Icon> WebExtension::bestIcon(RefPtr<JSON::Object> icons, WebCore
         if (iconPath.isEmpty())
             continue;
 
-        [uniquePaths addObject:iconPath];
+        RetainPtr nsIconPath = iconPath.createNSString();
+        [uniquePaths addObject:nsIconPath.get()];
 
 #if PLATFORM(IOS_FAMILY)
-        scalePaths[@(scale)] = iconPath;
+        scalePaths[@(scale)] = nsIconPath.get();
 #endif
     }
 

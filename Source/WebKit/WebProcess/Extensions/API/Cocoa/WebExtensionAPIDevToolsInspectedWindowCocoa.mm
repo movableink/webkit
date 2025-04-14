@@ -68,14 +68,14 @@ void WebExtensionAPIDevToolsInspectedWindow::eval(WebPageProxyIdentifier webPage
         frameURL = URL { url };
 
         if (!frameURL.value().isValid()) {
-            *outExceptionString = toErrorString(nullString(), frameURLKey, @"'%@' is not a valid URL", url);
+            *outExceptionString = toErrorString(nullString(), frameURLKey, @"'%@' is not a valid URL", url).createNSString().autorelease();
             return;
         }
     }
 
     WebProcess::singleton().sendWithAsyncReply(Messages::WebExtensionContext::DevToolsInspectedWindowEval(webPageProxyIdentifier, expression, frameURL), [protectedThis = Ref { *this }, callback = WTFMove(callback)](Expected<Expected<JavaScriptEvaluationResult, std::optional<WebCore::ExceptionDetails>>, WebExtensionError>&& result) mutable {
         if (!result) {
-            callback->reportError(result.error());
+            callback->reportError(result.error().createNSString().get());
             return;
         }
 

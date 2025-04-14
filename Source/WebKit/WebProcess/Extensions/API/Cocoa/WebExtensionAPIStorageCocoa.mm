@@ -112,12 +112,12 @@ void WebExtensionContextProxy::dispatchStorageChangedEvent(const String& changes
     if (!hasDOMWrapperWorld(contentWorldType))
         return;
 
-    id changes = parseJSON(changesJSON);
-    auto areaName = toAPIString(dataType);
+    RetainPtr changes = parseJSON(changesJSON.createNSString().get());
+    RetainPtr areaName = toAPIString(dataType).createNSString();
 
     enumerateFramesAndNamespaceObjects([&](WebFrame&, auto& namespaceObject) {
-        namespaceObject.storage().onChanged().invokeListenersWithArgument(changes, areaName);
-        namespaceObject.storage().storageAreaForType(dataType).onChanged().invokeListenersWithArgument(changes, areaName);
+        namespaceObject.storage().onChanged().invokeListenersWithArgument(changes.get(), areaName.get());
+        namespaceObject.storage().storageAreaForType(dataType).onChanged().invokeListenersWithArgument(changes.get(), areaName.get());
     }, toDOMWrapperWorld(contentWorldType));
 }
 

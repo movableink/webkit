@@ -301,7 +301,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         if ([attribute isEqualToString:@"AXDataDetectorTypeAtPoint"]) {
             String stringValue;
             if (protectedSelf->m_page->corePage()->pageOverlayController().copyAccessibilityAttributeStringValueForPoint(attribute, point, stringValue))
-                value = adoptNS([[NSString alloc] initWithString:stringValue]);
+                value = stringValue.createNSString();
         }
         return value;
     }).autorelease();

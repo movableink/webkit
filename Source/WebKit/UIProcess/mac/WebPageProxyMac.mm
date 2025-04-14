@@ -160,7 +160,7 @@ void WebPageProxy::getIsSpeaking(CompletionHandler<void(bool)>&& completionHandl
 void WebPageProxy::speak(const String& string)
 {
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanCommunicateWithWindowServer));
-    [NSApp speakString:string];
+    [NSApp speakString:string.createNSString().get()];
 }
 
 void WebPageProxy::stopSpeaking()
@@ -173,7 +173,7 @@ void WebPageProxy::searchTheWeb(const String& string)
 {
     RetainPtr pasteboard = [NSPasteboard pasteboardWithUniqueName];
     [pasteboard declareTypes:@[legacyStringPasteboardType()] owner:nil];
-    [pasteboard setString:string forType:legacyStringPasteboardType()];
+    [pasteboard setString:string.createNSString().get() forType:legacyStringPasteboardType()];
     
     NSPerformService(@"Search With %WebSearchProvider@", pasteboard.get());
 }
@@ -596,7 +596,7 @@ void WebPageProxy::showPDFContextMenu(const WebKit::PDFContextMenu& contextMenu,
         }
         
         RetainPtr nsItem = adoptNS([[NSMenuItem alloc] init]);
-        [nsItem setTitle:item.title];
+        [nsItem setTitle:item.title.createNSString().get()];
         [nsItem setEnabled:item.enabled == ContextMenuItemEnablement::Enabled];
         [nsItem setState:item.state];
 #if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
@@ -879,7 +879,7 @@ void WebPageProxy::showImageInQuickLookPreviewPanel(ShareableBitmap& imageBitmap
     if (!CGImageDestinationFinalize(destination.get()))
         return;
 
-    m_quickLookPreviewController = adoptNS([[WKQuickLookPreviewController alloc] initWithPage:*this imageData:(__bridge NSData *)imageData.get() title:tooltip imageURL:imageURL.createNSURL().get() activity:activity]);
+    m_quickLookPreviewController = adoptNS([[WKQuickLookPreviewController alloc] initWithPage:*this imageData:(__bridge NSData *)imageData.get() title:tooltip.createNSString().get() imageURL:imageURL.createNSURL().get() activity:activity]);
 
     // When presenting the shared QLPreviewPanel, QuickLook will search the responder chain for a suitable panel controller.
     // Make sure that we (by default) start the search at the web view, which knows how to vend the Visual Search preview

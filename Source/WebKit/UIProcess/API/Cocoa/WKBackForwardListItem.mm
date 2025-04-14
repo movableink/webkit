@@ -62,7 +62,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
     if (!item->title())
         return nil;
 
-    return item->title();
+    return item->title().createNSString().autorelease();
 }
 
 - (NSURL *)initialURL

@@ -111,7 +111,7 @@ void PDFPluginTextAnnotation::updateGeometry()
 
 void PDFPluginTextAnnotation::commit()
 {
-    annotation().widgetStringValue = value();
+    annotation().widgetStringValue = value().createNSString().get();
     PDFPluginAnnotation::commit();
 }
 

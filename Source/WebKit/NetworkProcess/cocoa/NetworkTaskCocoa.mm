@@ -174,7 +174,7 @@ void NetworkTaskCocoa::setCookieTransformForThirdPartyRequest(const WebCore::Res
 
         // FIXME: Consider making these session cookies, as well.
         if (!cookiePartition.isEmpty())
-            cookiesSetInResponse = cookiesBySettingPartition(cookiesSetInResponse, cookiePartition);
+            cookiesSetInResponse = cookiesBySettingPartition(cookiesSetInResponse, cookiePartition.createNSString().get());
 
         return cookiesSetInResponse;
     }).get();
@@ -361,7 +361,7 @@ void NetworkTaskCocoa::updateTaskWithStoragePartitionIdentifier(const WebCore::R
 
     // FIXME: Remove respondsToSelector when available with NWLoader. rdar://134913391
     if ([task() respondsToSelector:@selector(set_storagePartitionIdentifier:)])
-        task()._storagePartitionIdentifier = networkStorageSession->cookiePartitionIdentifier(request);
+        task()._storagePartitionIdentifier = networkStorageSession->cookiePartitionIdentifier(request).createNSString().get();
 }
 #endif
 

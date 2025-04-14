@@ -231,9 +231,9 @@ static void attributeStringSetLanguage(NSMutableAttributedString *attrString, Re
         return;
 
     RefPtr object = renderer->document().axObjectCache()->getOrCreate(*renderer);
-    NSString *language = object->languageIncludingAncestors();
-    if (language.length)
-        [attrString addAttribute:AccessibilityTokenLanguage value:language range:range];
+    RetainPtr language = object->languageIncludingAncestors().createNSString();
+    if (language.get().length)
+        [attrString addAttribute:AccessibilityTokenLanguage value:language.get() range:range];
     else
         [attrString removeAttribute:AccessibilityTokenLanguage range:range];
 }
@@ -303,8 +303,9 @@ static void attributedStringSetCompositionAttributes(NSMutableAttributedString *
 
     if (!lastPresentedCompleteWord.text.isEmpty() && lastPresentedCompleteWordPosition + lastPresentedCompleteWordLength <= [attributedString length]) {
         NSRange completeWordRange = NSMakeRange(lastPresentedCompleteWordPosition, lastPresentedCompleteWordLength);
-        if ([[attributedString.string substringWithRange:completeWordRange] isEqualToString:lastPresentedCompleteWord.text])
-            [attributedString addAttribute:AccessibilityAcceptedInlineTextCompletion value:lastPresentedCompleteWord.text range:completeWordRange];
+        RetainPtr lastPresentedCompleteWordText = lastPresentedCompleteWord.text.createNSString();
+        if ([[attributedString.string substringWithRange:completeWordRange] isEqualToString:lastPresentedCompleteWordText.get()])
+            [attributedString addAttribute:AccessibilityAcceptedInlineTextCompletion value:lastPresentedCompleteWordText.get() range:completeWordRange];
     }
 
     auto& lastPresentedTextPrediction = object->lastPresentedTextPrediction();
@@ -313,7 +314,7 @@ static void attributedStringSetCompositionAttributes(NSMutableAttributedString *
 
     if (!lastPresentedTextPrediction.text.isEmpty() && lastPresentedPosition + lastPresentedLength <= [attributedString length]) {
         NSRange presentedRange = NSMakeRange(lastPresentedPosition, lastPresentedLength);
-        if (![[attributedString.string substringWithRange:presentedRange] isEqualToString:lastPresentedTextPrediction.text])
+        if (![[attributedString.string substringWithRange:presentedRange] isEqualToString:lastPresentedTextPrediction.text.createNSString().get()])
             return;
 
         [attributedString addAttribute:AccessibilityInlineTextCompletion value:[attributedString.string substringWithRange:presentedRange] range:presentedRange];

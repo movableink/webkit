@@ -268,7 +268,7 @@ static void appendFilesAsShareableURLs(RetainPtr<NSMutableArray>&& shareDataArra
     auto queue = WorkQueue::create("com.apple.WebKit.WKShareSheet.ShareableFileWriter"_s);
     queue->dispatch([shareDataArray = WTFMove(shareDataArray), fileWriteTasks = WTFMove(fileWriteTasks), temporaryDirectory = retainPtr(temporaryDirectory), usePlaceholderFiles, completionHandler = WTFMove(completionHandler)]() mutable {
         for (auto& fileWriteTask : fileWriteTasks) {
-            RetainPtr fileURL = [WKShareSheet writeFileToShareableURL:WebCore::ResourceResponseBase::sanitizeSuggestedFilename(fileWriteTask.fileName) data:fileWriteTask.fileData.get() temporaryDirectory:temporaryDirectory.get()];
+            RetainPtr fileURL = [WKShareSheet writeFileToShareableURL:WebCore::ResourceResponseBase::sanitizeSuggestedFilename(fileWriteTask.fileName).createNSString().get() data:fileWriteTask.fileData.get() temporaryDirectory:temporaryDirectory.get()];
             if (!fileURL) {
                 shareDataArray = nil;
                 break;
@@ -305,7 +305,7 @@ static void appendFilesAsShareableURLs(RetainPtr<NSMutableArray>&& shareDataArra
         RetainPtr url = data.url.value().createNSURL();
         RetainPtr<NSString> title;
         if (!data.shareData.title.isEmpty())
-            title = data.shareData.title;
+            title = data.shareData.title.createNSString();
 
         if (data.originator == WebCore::ShareDataOriginator::Web) {
 #if PLATFORM(IOS_FAMILY)
@@ -503,8 +503,8 @@ static void appendFilesAsShareableURLs(RetainPtr<NSMutableArray>&& shareDataArra
 + (BOOL)setQuarantineInformationForFilePath:(NSURL *)fileURL
 {
     RetainPtr quarantineProperties = @{
-        (__bridge NSString *)kLSQuarantineTypeKey: (__bridge NSString *)kLSQuarantineTypeWebDownload,
-        (__bridge NSString *)kLSQuarantineAgentBundleIdentifierKey: applicationBundleIdentifier()
+        bridge_cast(kLSQuarantineTypeKey): bridge_cast(kLSQuarantineTypeWebDownload),
+        bridge_cast(kLSQuarantineAgentBundleIdentifierKey): applicationBundleIdentifier().createNSString().get()
     };
 
     if (![fileURL setResourceValue:quarantineProperties.get() forKey:NSURLQuarantinePropertiesKey error:nil])

@@ -119,7 +119,7 @@
 {
     auto range = makeSimpleRange(*_impl);
     range.start.document().updateLayout();
-    return plainText(range);
+    return plainText(range).createNSString().autorelease();
 }
 
 - (BOOL)isCollapsed

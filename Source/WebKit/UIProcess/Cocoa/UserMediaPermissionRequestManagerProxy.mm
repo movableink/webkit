@@ -113,7 +113,7 @@ static WebCore::VideoFrameRotation computeVideoFrameRotation(int rotation)
         if (!PAL::getAVCaptureDeviceRotationCoordinatorClass())
             return { };
 
-        RetainPtr avDevice = [PAL::getAVCaptureDeviceClass() deviceWithUniqueID:persistentId];
+        RetainPtr avDevice = [PAL::getAVCaptureDeviceClass() deviceWithUniqueID:persistentId.createNSString().get()];
         if (!avDevice)
             return { };
 

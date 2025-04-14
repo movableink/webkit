@@ -8,7 +8,6 @@ GeneratedSerializers.h
 GeneratedWebKitSecureCoding.mm
 NetworkProcess/Authentication/cocoa/AuthenticationManagerCocoa.mm
 NetworkProcess/CustomProtocols/Cocoa/LegacyCustomProtocolManagerCocoa.mm
-NetworkProcess/Downloads/cocoa/DownloadCocoa.mm
 NetworkProcess/Downloads/cocoa/WKDownloadProgress.mm
 NetworkProcess/Notifications/Cocoa/WebPushDaemonConnectionCocoa.mm
 NetworkProcess/PrivateClickMeasurement/cocoa/PrivateClickMeasurementConnectionCocoa.mm
@@ -41,7 +40,6 @@ Shared/API/Cocoa/RemoteObjectRegistry.mm
 Shared/API/Cocoa/WKBrowsingContextHandle.mm
 Shared/API/Cocoa/WKRemoteObjectCoder.mm
 Shared/API/Cocoa/_WKFrameHandle.mm
-Shared/API/Cocoa/_WKHitTestResult.mm
 Shared/API/Cocoa/_WKRemoteObjectInterface.mm
 Shared/API/Cocoa/_WKRemoteObjectRegistry.mm
 Shared/API/c/mac/WKURLRequestNS.mm
@@ -61,8 +59,6 @@ Shared/Cocoa/AuxiliaryProcessCocoa.mm
 Shared/Cocoa/CompletionHandlerCallChecker.mm
 Shared/Cocoa/CoreIPCContacts.mm
 Shared/Cocoa/CoreIPCError.mm
-Shared/Cocoa/CoreIPCLocale.mm
-Shared/Cocoa/CoreIPCNSURLRequest.mm
 Shared/Cocoa/CoreIPCPKPaymentSetupFeature.mm
 Shared/Cocoa/CoreIPCPKSecureElementPass.mm
 Shared/Cocoa/CoreIPCPassKit.mm
@@ -117,8 +113,6 @@ UIProcess/API/Cocoa/WKUserContentController.mm
 UIProcess/API/Cocoa/WKUserScript.mm
 UIProcess/API/Cocoa/WKWebView.mm
 UIProcess/API/Cocoa/WKWebViewConfiguration.mm
-UIProcess/API/Cocoa/WKWebViewTesting.mm
-UIProcess/API/Cocoa/WKWebpagePreferences.mm
 UIProcess/API/Cocoa/WKWebsiteDataRecord.mm
 UIProcess/API/Cocoa/WKWebsiteDataRecordInternal.h
 UIProcess/API/Cocoa/WKWebsiteDataStore.mm
@@ -130,14 +124,12 @@ UIProcess/API/Cocoa/_WKAuthenticationExtensionsClientInputs.mm
 UIProcess/API/Cocoa/_WKAuthenticatorAssertionResponse.mm
 UIProcess/API/Cocoa/_WKAuthenticatorAttestationResponse.mm
 UIProcess/API/Cocoa/_WKAuthenticatorResponse.mm
-UIProcess/API/Cocoa/_WKCustomHeaderFields.mm
 UIProcess/API/Cocoa/_WKDataTask.mm
 UIProcess/API/Cocoa/_WKDownload.mm
 UIProcess/API/Cocoa/_WKFeature.mm
 UIProcess/API/Cocoa/_WKInspector.mm
 UIProcess/API/Cocoa/_WKInspectorConfiguration.mm
 UIProcess/API/Cocoa/_WKInspectorExtension.mm
-UIProcess/API/Cocoa/_WKLinkIconParameters.mm
 UIProcess/API/Cocoa/_WKProcessPoolConfiguration.mm
 UIProcess/API/Cocoa/_WKPublicKeyCredentialCreationOptions.mm
 UIProcess/API/Cocoa/_WKPublicKeyCredentialDescriptor.mm
@@ -149,7 +141,6 @@ UIProcess/API/Cocoa/_WKPublicKeyCredentialUserEntity.mm
 UIProcess/API/Cocoa/_WKRemoteWebInspectorViewController.mm
 UIProcess/API/Cocoa/_WKResourceLoadInfo.mm
 UIProcess/API/Cocoa/_WKSystemPreferences.mm
-UIProcess/API/Cocoa/_WKTargetedElementInfo.mm
 UIProcess/API/Cocoa/_WKTextManipulationConfiguration.mm
 UIProcess/API/Cocoa/_WKTextManipulationToken.mm
 UIProcess/API/Cocoa/_WKThumbnailView.mm
@@ -162,7 +153,6 @@ UIProcess/API/mac/WKWebViewMac.mm
 UIProcess/API/mac/WKWebViewTestingMac.mm
 UIProcess/Authentication/cocoa/AuthenticationChallengeProxyCocoa.mm
 UIProcess/Authentication/cocoa/SecKeyProxyStore.mm
-UIProcess/Automation/cocoa/WebAutomationSessionCocoa.mm
 UIProcess/Automation/mac/WebAutomationSessionMac.mm
 UIProcess/Cocoa/AutomationClient.mm
 UIProcess/Cocoa/AutomationSessionClient.mm
@@ -194,7 +184,6 @@ UIProcess/Cocoa/WKStorageAccessAlert.mm
 UIProcess/Cocoa/WKTextExtractionUtilities.mm
 UIProcess/Cocoa/WebKitSwiftSoftLink.h
 UIProcess/Cocoa/WebPageProxyCocoa.mm
-UIProcess/Cocoa/WebPreferencesCocoa.mm
 UIProcess/Cocoa/WebProcessPoolCocoa.mm
 UIProcess/Cocoa/WebProcessProxyCocoa.mm
 UIProcess/Cocoa/_WKWarningView.mm
@@ -230,14 +219,11 @@ UIProcess/WebAuthentication/Cocoa/LocalService.mm
 UIProcess/WebAuthentication/Cocoa/NearFieldSoftLink.h
 UIProcess/WebAuthentication/Cocoa/NfcService.mm
 UIProcess/WebAuthentication/Cocoa/WebAuthenticatorCoordinatorProxy.mm
-UIProcess/WebAuthentication/Mock/MockCcidService.mm
 UIProcess/WebAuthentication/Mock/MockLocalConnection.mm
 UIProcess/WebAuthentication/Mock/MockNfcService.mm
-UIProcess/WebAuthentication/Virtual/VirtualAuthenticatorUtils.mm
 UIProcess/WebAuthentication/Virtual/VirtualLocalConnection.mm
 UIProcess/WebProcessPool.h
 UIProcess/WebsiteData/Cocoa/WebsiteDataStoreCocoa.mm
-UIProcess/mac/CorrectionPanel.mm
 UIProcess/mac/DisplayCaptureSessionManager.mm
 UIProcess/mac/PageClientImplMac.mm
 UIProcess/mac/SecItemShimProxy.cpp

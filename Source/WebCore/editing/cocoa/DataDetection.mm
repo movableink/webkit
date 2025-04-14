@@ -619,8 +619,8 @@ static NSArray * processDataDetectorScannerResults(DDScannerRef scanner, OptionS
         if (resultRanges.isEmpty())
             continue;
 
-        NSString *identifier = dataDetectorStringForPath(indexPaths[resultIndex].get());
-        NSString *correspondingURL = constructURLStringForResult(coreResult, identifier, referenceDate, (NSTimeZone *)tz.get(), types);
+        RetainPtr identifier = dataDetectorStringForPath(indexPaths[resultIndex].get()).createNSString();
+        RetainPtr correspondingURL = constructURLStringForResult(coreResult, identifier.get(), referenceDate, (NSTimeZone *)tz.get(), types);
 
         if (!correspondingURL || searchForLinkRemovingExistingDDLinks(resultRanges.first().start.container, resultRanges.last().end.container))
             continue;
@@ -657,7 +657,7 @@ static NSArray * processDataDetectorScannerResults(DDScannerRef scanner, OptionS
             parentNode->insertBefore(newTextNode.copyRef(), currentTextNode.get());
 
             Ref<HTMLAnchorElement> anchorElement = HTMLAnchorElement::create(document);
-            anchorElement->setHref(correspondingURL);
+            anchorElement->setHref(correspondingURL.get());
             anchorElement->setDir("ltr"_s);
 
             if (shouldUseLightLinks) {
@@ -689,7 +689,7 @@ static NSArray * processDataDetectorScannerResults(DDScannerRef scanner, OptionS
             // Add a special attribute to mark this URLification as the result of data detectors.
             anchorElement->setAttributeWithoutSynchronization(x_apple_data_detectorsAttr, trueAtom());
             anchorElement->setAttributeWithoutSynchronization(x_apple_data_detectors_typeAttr, dataDetectorTypeForCategory(PAL::softLink_DataDetectorsCore_DDResultGetCategory(coreResult)));
-            anchorElement->setAttributeWithoutSynchronization(x_apple_data_detectors_resultAttr, identifier);
+            anchorElement->setAttributeWithoutSynchronization(x_apple_data_detectors_resultAttr, identifier.get());
 
             parentNode->insertBefore(WTFMove(anchorElement), currentTextNode.get());
 
