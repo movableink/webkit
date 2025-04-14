@@ -135,8 +135,8 @@ std::optional<SharedVideoFrame::Buffer> SharedVideoFrameWriter::writeBuffer(CVPi
         return { };
 
     if (canUseIOSurface) {
-        if (auto surface = CVPixelBufferGetIOSurface(pixelBuffer))
-            return MachSendRight::adopt(IOSurfaceCreateMachPort(surface));
+        if (RetainPtr surface = CVPixelBufferGetIOSurface(pixelBuffer))
+            return MachSendRight::adopt(IOSurfaceCreateMachPort(surface.get()));
     }
 
     auto scope = makeScopeExit([this] { signalInCaseOfError(); });

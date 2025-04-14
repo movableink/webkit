@@ -187,8 +187,8 @@ static NSError *toNSError(const WebCore::ApplePayError& error)
 #endif
 
     if (auto contactField = error.contactField()) {
-        NSString *pkContactField = nil;
-        NSString *postalAddressKey = nil;
+        RetainPtr<NSString> pkContactField;
+        RetainPtr<NSString> postalAddressKey;
 
         switch (*contactField) {
         case WebCore::ApplePayErrorContactField::PhoneNumber:
@@ -252,9 +252,9 @@ static NSError *toNSError(const WebCore::ApplePayError& error)
             break;
         }
 
-        [userInfo setObject:pkContactField forKey:PKPaymentErrorContactFieldUserInfoKey];
+        [userInfo setObject:pkContactField.get() forKey:PKPaymentErrorContactFieldUserInfoKey];
         if (postalAddressKey)
-            [userInfo setObject:postalAddressKey forKey:PKPaymentErrorPostalAddressUserInfoKey];
+            [userInfo setObject:postalAddressKey.get() forKey:PKPaymentErrorPostalAddressUserInfoKey];
     }
 
     return [NSError errorWithDomain:PKPaymentErrorDomain code:toPKPaymentErrorCode(error.code()) userInfo:userInfo.get()];

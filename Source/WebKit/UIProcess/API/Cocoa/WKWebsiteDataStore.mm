@@ -164,7 +164,7 @@ private:
             return;
         }
 
-        auto nsURLChallenge = wrapper(challenge);
+        RetainPtr nsURLChallenge = wrapper(challenge);
         auto checker = WebKit::CompletionHandlerCallChecker::create(m_delegate.getAutoreleased(), @selector(didReceiveAuthenticationChallenge: completionHandler:));
         auto completionHandler = makeBlockPtr([challenge = WTFMove(challenge), checker = WTFMove(checker)](NSURLSessionAuthChallengeDisposition disposition, NSURLCredential *credential) mutable {
             if (checker->completionHandlerHasBeenCalled())
@@ -173,7 +173,7 @@ private:
             challenge->listener().completeChallenge(WebKit::toAuthenticationChallengeDisposition(disposition), WebCore::Credential(credential));
         });
 
-        [m_delegate.getAutoreleased() didReceiveAuthenticationChallenge:nsURLChallenge completionHandler:completionHandler.get()];
+        [m_delegate.getAutoreleased() didReceiveAuthenticationChallenge:nsURLChallenge.get() completionHandler:completionHandler.get()];
     }
 
     void openWindowFromServiceWorker(const String& url, const WebCore::SecurityOriginData& serviceWorkerOrigin, CompletionHandler<void(WebKit::WebPageProxy*)>&& callback)
@@ -266,11 +266,11 @@ private:
             return;
 
         auto apiOrigin = API::SecurityOrigin::create(origin);
-        NSNumber *nsBadge = nil;
+        RetainPtr<NSNumber> nsBadge;
         if (badge)
             nsBadge = @(*badge);
 
-        [m_delegate.getAutoreleased() websiteDataStore:m_dataStore.getAutoreleased() workerOrigin:wrapper(apiOrigin.get()) updatedAppBadge:(NSNumber *)nsBadge];
+        [m_delegate.getAutoreleased() websiteDataStore:m_dataStore.getAutoreleased() workerOrigin:wrapper(apiOrigin.get()) updatedAppBadge:nsBadge.get()];
     }
 
     void navigationToNotificationActionURL(const URL& url) final

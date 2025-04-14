@@ -47,6 +47,7 @@ struct svm_node
 extern "C" {
 #endif
 
+typedef struct svm_model svm_model;
 typedef struct svm_node svm_node;
 
 struct svm_model *svm_load_model(const char *model_file_name);

@@ -77,7 +77,7 @@
     if (!_fileLoadOperations)
         _fileLoadOperations = adoptNS([[NSMapTable alloc] initWithKeyOptions:NSPointerFunctionsStrongMemory valueOptions:NSPointerFunctionsStrongMemory capacity:5]);
 
-    NSBlockOperation *operation = [NSBlockOperation blockOperationWithBlock:^{
+    RetainPtr operation = [NSBlockOperation blockOperationWithBlock:^{
         [_fileLoadOperations removeObjectForKey:urlSchemeTask];
 
         NSURL *requestURL = urlSchemeTask.request.URL;
@@ -121,8 +121,8 @@
         [urlSchemeTask didFinish];
     }];
     
-    [_fileLoadOperations setObject:operation forKey:urlSchemeTask];
-    [[NSOperationQueue mainQueue] addOperation:operation];
+    [_fileLoadOperations setObject:operation.get() forKey:urlSchemeTask];
+    [[NSOperationQueue mainQueue] addOperation:operation.get()];
 }
 
 - (void)webView:(WKWebView *)webView stopURLSchemeTask:(id <WKURLSchemeTask>)urlSchemeTask

@@ -310,11 +310,12 @@ static void* lib##Library() \
 #define SOFT_LINK_CONSTANT(framework, name, type) \
     static type init##name(); \
     static type (*get##name)() = init##name; \
-    static type constant##name; \
+    struct Constant##name##Wrapper { SUPPRESS_UNRETAINED_LOCAL type constant; }; \
+    static Constant##name##Wrapper constant##name; \
     \
     static type name##Function() \
     { \
-        return constant##name; \
+        return constant##name.constant; \
     } \
     \
     static type init##name() \
@@ -322,9 +323,9 @@ static void* lib##Library() \
         _STORE_IN_DLSYM_SECTION static char const auditedName[] = #name; \
         void* constant = dlsym(framework##Library(), auditedName); \
         RELEASE_ASSERT_WITH_MESSAGE(constant, "%s", dlerror()); \
-        constant##name = *static_cast<type const *>(constant); \
+        constant##name.constant = *static_cast<type const *>(constant); \
         get##name = name##Function; \
-        return constant##name; \
+        return constant##name.constant; \
     }
 
 #define SOFT_LINK_CONSTANT_MAY_FAIL(framework, name, type) \

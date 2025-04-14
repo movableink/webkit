@@ -55,6 +55,7 @@
 #import <pal/spi/cf/CFUtilitiesSPI.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/CompletionHandler.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/Base64.h>
 
@@ -247,10 +248,10 @@ static void* kWindowContentLayoutObserverContext = &kWindowContentLayoutObserver
 
     self.view = adoptNS([[NSView alloc] init]).get();
 
-    NSTextField *label = [NSTextField labelWithString:WEB_UI_STRING("Format:", "Label for the save data format selector when saving data in Web Inspector").createNSString().get()];
-    label.textColor = NSColor.secondaryLabelColor;
-    label.font = [NSFont systemFontOfSize:NSFont.smallSystemFontSize];
-    label.alignment = NSTextAlignmentRight;
+    RetainPtr label = [NSTextField labelWithString:WEB_UI_STRING("Format:", "Label for the save data format selector when saving data in Web Inspector").createNSString().get()];
+    label.get().textColor = NSColor.secondaryLabelColor;
+    label.get().font = [NSFont systemFontOfSize:NSFont.smallSystemFontSize];
+    label.get().alignment = NSTextAlignmentRight;
 
     _popUpButton = adoptNS([[NSPopUpButton alloc] init]);
     [_popUpButton setAction:@selector(_popUpButtonAction:)];
@@ -260,20 +261,20 @@ static void* kWindowContentLayoutObserverContext = &kWindowContentLayoutObserver
     }).get()];
     [_popUpButton selectItemAtIndex:0];
 
-    [self.view addSubview:label];
+    [self.view addSubview:label.get()];
     [self.view addSubview:_popUpButton.get()];
 
     [label setTranslatesAutoresizingMaskIntoConstraints:NO];
     [_popUpButton setTranslatesAutoresizingMaskIntoConstraints:NO];
 
     [NSLayoutConstraint activateConstraints:@[
-        [label.topAnchor constraintEqualToAnchor:self.view.topAnchor constant:8.0],
-        [label.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:0.0],
-        [label.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor constant:-8.0],
-        [label.widthAnchor constraintEqualToConstant:64.0],
+        [label.get().topAnchor constraintEqualToAnchor:self.view.topAnchor constant:8.0],
+        [label.get().leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:0.0],
+        [label.get().bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor constant:-8.0],
+        [label.get().widthAnchor constraintEqualToConstant:64.0],
 
         [[_popUpButton topAnchor] constraintEqualToAnchor:self.view.topAnchor constant:8.0],
-        [[_popUpButton leadingAnchor] constraintEqualToAnchor:label.trailingAnchor constant:8.0],
+        [[_popUpButton leadingAnchor] constraintEqualToAnchor:label.get().trailingAnchor constant:8.0],
         [[_popUpButton bottomAnchor] constraintEqualToAnchor:self.view.bottomAnchor constant:-8.0],
         [[_popUpButton trailingAnchor] constraintEqualToAnchor:self.view.trailingAnchor constant:-20.0],
     ]];
@@ -440,8 +441,8 @@ void WebInspectorUIProxy::showSavePanel(NSWindow *frontendWindow, NSURL *platfor
         saveToURL([savePanel URL]);
     };
 
-    if (NSWindow *window = frontendWindow ?: [NSApp keyWindow])
-        [savePanel beginSheetModalForWindow:window completionHandler:makeBlockPtr(WTFMove(didShowModal)).get()];
+    if (RetainPtr window = frontendWindow ?: [NSApp keyWindow])
+        [savePanel beginSheetModalForWindow:window.get() completionHandler:makeBlockPtr(WTFMove(didShowModal)).get()];
     else
         didShowModal([savePanel runModal]);
 }
@@ -647,7 +648,7 @@ void WebInspectorUIProxy::platformShowCertificate(const CertificateInfo& certifi
 
     RetainPtr<SFCertificatePanel> certificatePanel = adoptNS([[SFCertificatePanel alloc] init]);
 
-    NSWindow *window;
+    RetainPtr<NSWindow> window;
     if (m_inspectorWindow)
         window = m_inspectorWindow.get();
     else
@@ -656,7 +657,7 @@ void WebInspectorUIProxy::platformShowCertificate(const CertificateInfo& certifi
     if (!window)
         window = [NSApp keyWindow];
 
-    [certificatePanel beginSheetForWindow:window modalDelegate:nil didEndSelector:NULL contextInfo:nullptr trust:certificateInfo.trust().get() showGroup:YES];
+    [certificatePanel beginSheetForWindow:window.get() modalDelegate:nil didEndSelector:NULL contextInfo:nullptr trust:certificateInfo.trust().get() showGroup:YES];
 
     // This must be called after the trust panel has been displayed, because the certificateView doesn't exist beforehand.
     SFCertificateView *certificateView = [certificatePanel certificateView];
@@ -726,8 +727,8 @@ void WebInspectorUIProxy::windowFrameDidChange()
     if (m_isAttached || !m_isVisible || !m_inspectorWindow || !inspectedPage)
         return;
 
-    NSString *frameString = NSStringFromRect([m_inspectorWindow frame]);
-    inspectedPage->protectedPageGroup()->protectedPreferences()->setInspectorWindowFrame(frameString);
+    RetainPtr frameString = NSStringFromRect([m_inspectorWindow frame]);
+    inspectedPage->protectedPageGroup()->protectedPreferences()->setInspectorWindowFrame(frameString.get());
 }
 
 void WebInspectorUIProxy::windowFullScreenDidChange()
@@ -931,13 +932,13 @@ String WebInspectorUIProxy::inspectorTestPageURL()
 
 DebuggableInfoData WebInspectorUIProxy::infoForLocalDebuggable()
 {
-    NSDictionary *plist = adoptCF(_CFCopySystemVersionDictionary()).bridgingAutorelease();
+    RetainPtr plist = bridge_cast(adoptCF(_CFCopySystemVersionDictionary()));
 
     DebuggableInfoData result;
     result.debuggableType = Inspector::DebuggableType::WebPage;
     result.targetPlatformName = "macOS"_s;
-    result.targetBuildVersion = plist[static_cast<NSString *>(_kCFSystemVersionBuildVersionKey)];
-    result.targetProductVersion = plist[static_cast<NSString *>(_kCFSystemVersionProductUserVisibleVersionKey)];
+    result.targetBuildVersion = plist.get()[static_cast<NSString *>(_kCFSystemVersionBuildVersionKey)];
+    result.targetProductVersion = plist.get()[static_cast<NSString *>(_kCFSystemVersionProductUserVisibleVersionKey)];
     result.targetIsSimulator = false;
 
     return result;
@@ -960,8 +961,8 @@ void WebInspectorUIProxy::applyForcedAppearance()
         break;
     }
 
-    if (NSWindow *window = m_inspectorWindow.get())
-        window.appearance = platformAppearance;
+    if (RetainPtr window = m_inspectorWindow.get())
+        window.get().appearance = platformAppearance;
 
     [m_inspectorViewController webView].appearance = platformAppearance;
 }

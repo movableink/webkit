@@ -28,7 +28,6 @@
 
 #if HAVE(CORE_PREDICTION)
 
-#include "CorePredictionSPI.h"
 #include "Logging.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/darwin/WeakLinking.h>
@@ -62,17 +61,17 @@ bool ResourceLoadStatisticsClassifierCocoa::classify(unsigned subresourceUnderTo
 
 String ResourceLoadStatisticsClassifierCocoa::storagePath()
 {
-    CFBundleRef webKitBundle = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebKit"));
-    RetainPtr<CFURLRef> resourceUrl = adoptCF(CFBundleCopyResourcesDirectoryURL(webKitBundle));
-    resourceUrl = adoptCF(CFURLCreateCopyAppendingPathComponent(nullptr, resourceUrl.get(), CFSTR("corePrediction_model"), false));
+    RetainPtr<CFBundleRef> webKitBundle = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebKit"));
+    RetainPtr<CFURLRef> resourceURL = adoptCF(CFBundleCopyResourcesDirectoryURL(webKitBundle.get()));
+    resourceURL = adoptCF(CFURLCreateCopyAppendingPathComponent(nullptr, resourceURL.get(), CFSTR("corePrediction_model"), false));
     CFErrorRef error = nullptr;
-    resourceUrl = adoptCF(CFURLCreateFilePathURL(nullptr, resourceUrl.get(), &error));
+    resourceURL = adoptCF(CFURLCreateFilePathURL(nullptr, resourceURL.get(), &error));
 
-    if (error || !resourceUrl)
+    if (error || !resourceURL)
         return String();
 
-    RetainPtr<CFStringRef> resourceUrlString = adoptCF(CFURLCopyFileSystemPath(resourceUrl.get(), kCFURLPOSIXPathStyle));
-    return String(resourceUrlString.get());
+    RetainPtr<CFStringRef> resourceURLString = adoptCF(CFURLCopyFileSystemPath(resourceURL.get(), kCFURLPOSIXPathStyle));
+    return String(resourceURLString.get());
 }
 
 bool ResourceLoadStatisticsClassifierCocoa::canUseCorePrediction()

@@ -19,7 +19,6 @@ Platform/IPC/ArgumentCoders.h
 Platform/IPC/Connection.h
 Platform/IPC/Encoder.h
 Platform/IPC/MessageSenderInlines.h
-Platform/classifier/cocoa/ResourceLoadStatisticsClassifierCocoa.cpp
 Platform/cocoa/WebPrivacyHelpers.h
 PushClientConnectionMessages.h
 RemoteAudioDestinationManagerMessages.h

@@ -289,18 +289,18 @@ static WKURLRequestRef willSendRequestForFrame(WKBundlePageRef, WKBundleFrameRef
     auto loadDelegate = pluginContextController->_loadDelegate.get();
 
     if ([loadDelegate respondsToSelector:@selector(webProcessPlugInBrowserContextController:frame:willSendRequestForResource:request:redirectResponse:)]) {
-        NSURLRequest *originalRequest = wrapper(*WebKit::toImpl(request));
+        RetainPtr originalRequest = wrapper(*WebKit::toImpl(request));
         RetainPtr<NSURLRequest> substituteRequest = [loadDelegate webProcessPlugInBrowserContextController:pluginContextController frame:wrapper(*WebKit::toImpl(frame)) willSendRequestForResource:resourceIdentifier
-            request:originalRequest redirectResponse:WebKit::toImpl(redirectResponse)->resourceResponse().nsURLResponse()];
+            request:originalRequest.get() redirectResponse:WebKit::toImpl(redirectResponse)->resourceResponse().nsURLResponse()];
 
-        if (substituteRequest != originalRequest)
+        if (substituteRequest != originalRequest.get())
             return substituteRequest ? WKURLRequestCreateWithNSURLRequest(substituteRequest.get()) : nullptr;
     } else if ([loadDelegate respondsToSelector:@selector(webProcessPlugInBrowserContextController:frame:willSendRequest:redirectResponse:)]) {
-        NSURLRequest *originalRequest = wrapper(*WebKit::toImpl(request));
-        RetainPtr<NSURLRequest> substituteRequest = [loadDelegate webProcessPlugInBrowserContextController:pluginContextController frame:wrapper(*WebKit::toImpl(frame)) willSendRequest:originalRequest
+        RetainPtr originalRequest = wrapper(*WebKit::toImpl(request));
+        RetainPtr<NSURLRequest> substituteRequest = [loadDelegate webProcessPlugInBrowserContextController:pluginContextController frame:wrapper(*WebKit::toImpl(frame)) willSendRequest:originalRequest.get()
             redirectResponse:WebKit::toImpl(redirectResponse)->resourceResponse().nsURLResponse()];
 
-        if (substituteRequest != originalRequest)
+        if (substituteRequest != originalRequest.get())
             return substituteRequest ? WKURLRequestCreateWithNSURLRequest(substituteRequest.get()) : nullptr;
     }
 
@@ -665,10 +665,10 @@ static inline WKEditorInsertAction toWK(WebCore::EditorInsertAction action)
                 return;
 
             RetainPtr controller = m_controller.get();
-            auto dataByType = [controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:controller.get() pasteboardDataForRange:wrapper(WebKit::createHandle(range).get())];
-            for (NSString *type in dataByType) {
+            RetainPtr dataByType = [controller->_editingDelegate.get() _webProcessPlugInBrowserContextController:controller.get() pasteboardDataForRange:wrapper(WebKit::createHandle(range).get())];
+            for (NSString *type in dataByType.get()) {
                 pasteboardTypes.append(type);
-                pasteboardData.append(WebCore::SharedBuffer::create(dataByType[type]));
+                pasteboardData.append(WebCore::SharedBuffer::create(dataByType.get()[type]));
             };
         }
 

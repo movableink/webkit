@@ -256,7 +256,7 @@ id WebProcess::accessibilityFocusedUIElement()
         }
 
         RefPtr object = (*isolatedTree)->focusedNode();
-        id objectWrapper = object ? object->wrapper() : nil;
+        RetainPtr objectWrapper = object ? object->wrapper() : nil;
         if (objectWrapper) {
             ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             id associatedParent = [objectWrapper accessibilityAttributeValue:@"_AXAssociatedPluginParent"];
@@ -264,7 +264,7 @@ id WebProcess::accessibilityFocusedUIElement()
             if (associatedParent)
                 objectWrapper = associatedParent;
         }
-        return objectWrapper;
+        return objectWrapper.autorelease();
     }
 #endif
 
@@ -992,11 +992,11 @@ static Vector<String> activePagesOrigins(const HashMap<PageIdentifier, RefPtr<We
         if (page->usesEphemeralSession())
             continue;
 
-        NSURL *originAsURL = origin(*page);
+        RetainPtr originAsURL = origin(*page);
         if (!originAsURL)
             continue;
 
-        origins.append(WTF::userVisibleString(originAsURL));
+        origins.append(WTF::userVisibleString(originAsURL.get()));
     }
     return origins;
 }
@@ -1328,19 +1328,19 @@ void WebProcess::dispatchSimulatedNotificationsForPreferenceChange(const String&
     // of the system, we must re-post the notification in the Web Content process after updating the default.
     
     if (key == userAccentColorPreferenceKey()) {
-        auto notificationCenter = [NSNotificationCenter defaultCenter];
+        RetainPtr notificationCenter = [NSNotificationCenter defaultCenter];
         [notificationCenter postNotificationName:@"kCUINotificationAquaColorVariantChanged" object:nil];
         [notificationCenter postNotificationName:@"NSSystemColorsWillChangeNotification" object:nil];
         [notificationCenter postNotificationName:NSSystemColorsDidChangeNotification object:nil];
     } else if (key == userHighlightColorPreferenceKey()) {
-        auto notificationCenter = [NSNotificationCenter defaultCenter];
+        RetainPtr notificationCenter = [NSNotificationCenter defaultCenter];
         [notificationCenter postNotificationName:@"NSSystemColorsWillChangeNotification" object:nil];
         [notificationCenter postNotificationName:NSSystemColorsDidChangeNotification object:nil];
     }
 #endif
     if (key == captionProfilePreferenceKey()) {
-        auto notificationCenter = CFNotificationCenterGetLocalCenter();
-        CFNotificationCenterPostNotification(notificationCenter, kMAXCaptionAppearanceSettingsChangedNotification, nullptr, nullptr, true);
+        RetainPtr notificationCenter = CFNotificationCenterGetLocalCenter();
+        CFNotificationCenterPostNotification(notificationCenter.get(), kMAXCaptionAppearanceSettingsChangedNotification, nullptr, nullptr, true);
     }
 }
 

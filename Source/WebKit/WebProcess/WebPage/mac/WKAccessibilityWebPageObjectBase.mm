@@ -79,12 +79,14 @@ namespace ax = WebCore::Accessibility;
 {
     ASSERT(isMainRunLoop());
     auto retrieveBlock = [&self]() -> id {
-        id axPlugin = nil;
+        RetainPtr<id> axPlugin;
         callOnMainRunLoopAndWait([&axPlugin, &self] {
-            if (self->m_page)
-                axPlugin = self->m_page->accessibilityObjectForMainFramePlugin();
+            if (RefPtr page = self->m_page.get()) {
+                // FIXME: This is a static analysis false positive.
+                SUPPRESS_UNRETAINED_ARG axPlugin = page->accessibilityObjectForMainFramePlugin();
+            }
         });
-        return axPlugin;
+        return axPlugin.autorelease();
     };
     
     return retrieveBlock();

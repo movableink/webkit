@@ -78,8 +78,8 @@
     if (!error)
         return nil;
 
-    auto userInfo = @{ NSHelpAnchorErrorKey: adoptNS([[NSString alloc] initWithFormat:@"Rule list parsing failed: %s", error.message().c_str()]).get() };
-    return [NSError errorWithDomain:WKErrorDomain code:WKErrorContentRuleListStoreCompileFailed userInfo:userInfo];
+    RetainPtr userInfo = @{ NSHelpAnchorErrorKey: adoptNS([[NSString alloc] initWithFormat:@"Rule list parsing failed: %s", error.message().c_str()]).get() };
+    return [NSError errorWithDomain:WKErrorDomain code:WKErrorContentRuleListStoreCompileFailed userInfo:userInfo.get()];
 #else
     return nil;
 #endif

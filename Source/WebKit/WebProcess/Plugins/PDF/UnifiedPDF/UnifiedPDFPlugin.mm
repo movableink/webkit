@@ -1426,12 +1426,12 @@ RetainPtr<PDFPage> UnifiedPDFPlugin::pageAtIndex(PDFDocumentLayout::PageIndex pa
 
 RefPtr<FragmentedSharedBuffer> UnifiedPDFPlugin::liveResourceData() const
 {
-    NSData *pdfData = liveData();
+    RetainPtr pdfData = liveData();
 
     if (!pdfData)
         return nullptr;
 
-    return SharedBuffer::create(pdfData);
+    return SharedBuffer::create(pdfData.get());
 }
 
 NSData *UnifiedPDFPlugin::liveData() const
@@ -1995,7 +1995,7 @@ bool UnifiedPDFPlugin::handleMouseEvent(const WebMouseEvent& event)
             notifyCursorChanged(toWebCoreCursorType(pdfElementTypes, altKeyIsActive));
 
             RetainPtr annotationUnderMouse = annotationForRootViewPoint(event.position());
-            if (auto* currentTrackedAnnotation = m_annotationTrackingState.trackedAnnotation(); (currentTrackedAnnotation && currentTrackedAnnotation != annotationUnderMouse) || (currentTrackedAnnotation && !m_annotationTrackingState.isBeingHovered()))
+            if (RetainPtr currentTrackedAnnotation = m_annotationTrackingState.trackedAnnotation(); (currentTrackedAnnotation && currentTrackedAnnotation.get() != annotationUnderMouse) || (currentTrackedAnnotation.get() && !m_annotationTrackingState.isBeingHovered()))
                 finishTrackingAnnotation(annotationUnderMouse.get(), mouseEventType, mouseEventButton, RepaintRequirement::HoverOverlay);
 
             if (!m_annotationTrackingState.trackedAnnotation() && annotationUnderMouse && annotationIsWidgetOfType(annotationUnderMouse.get(), WidgetType::Text) && supportsForms())
@@ -2342,8 +2342,8 @@ void UnifiedPDFPlugin::revealFragmentIfNeeded()
     }
 
     if (auto remainder = remainderForPrefix("nameddest="_s)) {
-        if (auto destination = [m_pdfDocument namedDestination:remainder->createNSString().get()])
-            revealPDFDestination(destination);
+        if (RetainPtr destination = [m_pdfDocument namedDestination:remainder->createNSString().get()])
+            revealPDFDestination(destination.get());
         return;
     }
 }
@@ -2814,8 +2814,8 @@ bool UnifiedPDFPlugin::performCopyEditingOperation() const
 
     Vector<PasteboardItem> pasteboardItems;
 
-    if (NSData *htmlData = htmlDataFromSelection(m_currentSelection.get()))
-        pasteboardItems.append({ htmlData, htmlPasteboardType() });
+    if (RetainPtr htmlData = htmlDataFromSelection(m_currentSelection.get()))
+        pasteboardItems.append({ WTFMove(htmlData), htmlPasteboardType() });
 
 #if HAVE(PDFSELECTION_HTMLDATA_RTFDATA)
     if ([m_currentSelection respondsToSelector:@selector(rtfData)]) {
@@ -3569,7 +3569,7 @@ WebCore::DictionaryPopupInfo UnifiedPDFPlugin::dictionaryPopupInfoForSelection(P
     if (!selection.string.length)
         return dictionaryPopupInfo;
 
-    NSAttributedString *nsAttributedString = [selection] {
+    RetainPtr nsAttributedString = [selection] {
         static constexpr unsigned maximumSelectionLength = 250;
         if (selection.string.length > maximumSelectionLength)
             return [selection.attributedString attributedSubstringFromRange:NSMakeRange(0, maximumSelectionLength)];
@@ -3577,7 +3577,7 @@ WebCore::DictionaryPopupInfo UnifiedPDFPlugin::dictionaryPopupInfoForSelection(P
     }();
 
     dictionaryPopupInfo.origin = rectForSelectionInRootView(selection).location();
-    dictionaryPopupInfo.platformData.attributedString = WebCore::AttributedString::fromNSAttributedString(nsAttributedString);
+    dictionaryPopupInfo.platformData.attributedString = WebCore::AttributedString::fromNSAttributedString(nsAttributedString.get());
 
     if (auto textIndicator = textIndicatorForSelection(selection, { }, presentationTransition))
         dictionaryPopupInfo.textIndicator = textIndicator->data();
@@ -3656,9 +3656,9 @@ std::pair<String, RetainPtr<PDFSelection>> UnifiedPDFPlugin::textForImmediateAct
     }
 
 #if ENABLE(REVEAL)
-    NSString *lookupText = DictionaryLookup::stringForPDFSelection(wordSelection.get());
-    if (lookupText && lookupText.length)
-        return { lookupText, wordSelection };
+    RetainPtr lookupText = DictionaryLookup::stringForPDFSelection(wordSelection.get());
+    if (lookupText && lookupText.get().length)
+        return { lookupText.get(), wordSelection };
 #endif
 
     return { { }, wordSelection };
@@ -3869,13 +3869,13 @@ static RetainPtr<PDFAnnotation> findFirstTextAnnotationStartingAtIndex(const Ret
     if (!annotations || startingIndex >= [annotations count])
         return nullptr;
 
-    auto indexRange = [&] {
+    RetainPtr indexRange = [&] {
         if (searchDirection == AnnotationSearchDirection::Forward)
-            return [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(startingIndex, [annotations count] - startingIndex)];
-        return [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, startingIndex + 1)];
+            return adoptNS([[NSIndexSet alloc] initWithIndexesInRange:NSMakeRange(startingIndex, [annotations count] - startingIndex)]);
+        return adoptNS([[NSIndexSet alloc] initWithIndexesInRange:NSMakeRange(0, startingIndex + 1)]);
     }();
 
-    auto searchResult = [annotations indexOfObjectAtIndexes:indexRange options:searchDirection == AnnotationSearchDirection::Forward ? 0 : NSEnumerationReverse passingTest:^BOOL(PDFAnnotation* annotation, NSUInteger, BOOL *) {
+    auto searchResult = [annotations indexOfObjectAtIndexes:indexRange.get() options:searchDirection == AnnotationSearchDirection::Forward ? 0 : NSEnumerationReverse passingTest:^BOOL(PDFAnnotation* annotation, NSUInteger, BOOL *) {
         return annotationIsWidgetOfType(annotation, WidgetType::Text) && ![annotation isReadOnly] && [annotation shouldDisplay];
     }];
 

@@ -51,12 +51,12 @@ void LaunchServicesDatabaseManager::handleEvent(xpc_object_t message)
     String messageName = xpcDictionaryGetString(message, XPCEndpoint::xpcMessageNameKey);
     if (messageName == LaunchServicesDatabaseXPCConstants::xpcUpdateLaunchServicesDatabaseMessageName) {
 #if HAVE(LSDATABASECONTEXT)
-        auto database = xpc_dictionary_get_value(message, LaunchServicesDatabaseXPCConstants::xpcLaunchServicesDatabaseKey);
+        RetainPtr database = xpc_dictionary_get_value(message, LaunchServicesDatabaseXPCConstants::xpcLaunchServicesDatabaseKey);
 
         RELEASE_LOG_FORWARDABLE(Loading, RECEIVED_LAUNCH_SERVICES_DATABASE);
 
         if (database)
-            [LSDatabaseContext.sharedDatabaseContext observeDatabaseChange4WebKit:database];
+            [LSDatabaseContext.sharedDatabaseContext observeDatabaseChange4WebKit:database.get()];
 #endif
         m_semaphore.signal();
         m_hasReceivedLaunchServicesDatabase = true;

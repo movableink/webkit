@@ -154,8 +154,8 @@ static WKDOMType toWKDOMType(WebCoreType impl, DOMCache<WebCoreType, WKDOMType>&
 {
     if (!impl)
         return nil;
-    if (WKDOMType wrapper = cache.get(impl))
-        return retainPtr(wrapper).autorelease();
+    if (RetainPtr wrapper = cache.get(impl))
+        return wrapper.autorelease();
     auto wrapper = createWrapper(impl);
     if (!wrapper)
         return nil;

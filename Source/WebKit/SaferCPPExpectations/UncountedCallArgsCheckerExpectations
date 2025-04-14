@@ -80,11 +80,9 @@ UIProcess/API/Cocoa/_WKResourceLoadStatisticsFirstParty.mm
 UIProcess/API/Cocoa/_WKResourceLoadStatisticsThirdParty.mm
 UIProcess/API/Cocoa/_WKTargetedElementInfo.mm
 UIProcess/API/Cocoa/_WKTargetedElementRequest.mm
-UIProcess/API/Cocoa/_WKThumbnailView.mm
 UIProcess/API/Cocoa/_WKUserInitiatedAction.mm
 UIProcess/API/Cocoa/_WKUserStyleSheet.mm
 UIProcess/API/Cocoa/_WKWebAuthenticationAssertionResponse.mm
-UIProcess/API/Cocoa/_WKWebAuthenticationPanel.mm
 UIProcess/API/Cocoa/_WKWebsiteDataStoreConfiguration.mm
 WebDriverBidiBackendDispatchers.cpp
 WebDriverBidiFrontendDispatchers.cpp

@@ -93,11 +93,11 @@ void WebCookieJar::setCookiesInPartitionedCookieStorage(const WebCore::Document&
     if (partition.isEmpty())
         return;
 
-    NSHTTPCookie *cookie = [NSHTTPCookie _cookieForSetCookieString:cookieString.createNSString().get() forURL:cookieURL.createNSURL().get() partition:partition.createNSString().get()];
+    RetainPtr cookie = [NSHTTPCookie _cookieForSetCookieString:cookieString.createNSString().get() forURL:cookieURL.createNSURL().get() partition:partition.createNSString().get()];
     if (!cookie || ![[cookie name] length] || [cookie isHTTPOnly])
         return;
 
-    [ensurePartitionedCookieStorage() _setCookies:@[cookie] forURL:cookieURL.createNSURL().get() mainDocumentURL:firstPartyURL.createNSURL().get() policyProperties:policyProperties(sameSiteInfo, cookieURL).get()];
+    [ensurePartitionedCookieStorage() _setCookies:@[cookie.get()] forURL:cookieURL.createNSURL().get() mainDocumentURL:firstPartyURL.createNSURL().get() policyProperties:policyProperties(sameSiteInfo, cookieURL).get()];
 }
 
 NSHTTPCookieStorage* WebCookieJar::ensurePartitionedCookieStorage()

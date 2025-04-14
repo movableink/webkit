@@ -433,16 +433,17 @@ void WebExtensionContext::tabsCaptureVisibleTab(WebPageProxyIdentifier webPagePr
             }
 
 #if USE(APPKIT)
-            auto cgImage = [image CGImageForProposedRect:nil context:nil hints:nil];
+            RetainPtr<CGImage> cgImage = [image CGImageForProposedRect:nil context:nil hints:nil];
 #else
-            auto cgImage = image.CGImage;
+            RetainPtr<CGImage> cgImage = image.CGImage;
 #endif
             if (!cgImage) {
                 completionHandler({ });
                 return;
             }
 
-            completionHandler(URL { WebCore::dataURL(cgImage, toMIMEType(imageFormat), imageQuality) });
+            // FIXME: This is a static analysis false positive.
+            SUPPRESS_UNRETAINED_ARG completionHandler(URL { WebCore::dataURL(cgImage.get(), toMIMEType(imageFormat), imageQuality) });
         });
     });
 }

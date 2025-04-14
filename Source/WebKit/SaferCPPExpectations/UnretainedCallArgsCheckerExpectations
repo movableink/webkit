@@ -247,7 +247,6 @@ UIProcess/mac/WebPopupMenuProxyMac.mm
 UIProcess/mac/WebViewImpl.mm
 WebProcess/ApplePay/cocoa/WebPaymentCoordinatorCocoa.mm
 WebProcess/Extensions/API/Cocoa/WebExtensionAPIActionCocoa.mm
-WebProcess/GPU/media/cocoa/VideoLayerRemoteCocoa.mm
 WebProcess/GPU/webrtc/RemoteVideoFrameObjectHeapProxyProcessor.cpp
 WebProcess/GPU/webrtc/SharedVideoFrame.cpp
 WebProcess/InjectedBundle/API/Cocoa/WKWebProcessBundleParameters.mm

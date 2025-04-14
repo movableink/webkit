@@ -163,15 +163,15 @@ void TiledCoreAnimationDrawingArea::setNeedsDisplayInRect(const IntRect& rect)
 
 void TiledCoreAnimationDrawingArea::setRootCompositingLayer(WebCore::Frame&, GraphicsLayer* graphicsLayer)
 {
-    CALayer *rootLayer = graphicsLayer ? graphicsLayer->platformLayer() : nil;
+    RetainPtr rootLayer = graphicsLayer ? graphicsLayer->platformLayer() : nil;
 
     if (m_layerTreeStateIsFrozen) {
-        m_pendingRootLayer = rootLayer;
+        m_pendingRootLayer = rootLayer.get();
         return;
     }
 
     m_pendingRootLayer = nullptr;
-    setRootCompositingLayer(rootLayer);
+    setRootCompositingLayer(rootLayer.get());
 }
 
 void TiledCoreAnimationDrawingArea::updateRenderingWithForcedRepaint()

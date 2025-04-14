@@ -215,8 +215,8 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
         return @{ userInterfaceItem: @{ @"message": message.createNSString().get(), @"fontSize": @(fontSize) } };
     }
 
-    if (NSDictionary *contents = _page->contentsOfUserInterfaceItem(userInterfaceItem))
-        return contents;
+    if (RetainPtr contents = _page->contentsOfUserInterfaceItem(userInterfaceItem))
+        return contents.autorelease();
 
 #if PLATFORM(IOS_FAMILY)
     return [_contentView _contentsOfUserInterfaceItem:userInterfaceItem];
@@ -925,78 +925,78 @@ static void dumpCALayer(TextStream& ts, CALayer *layer, bool traverse)
 {
     if (!layerID)
         return nil;
-    CALayer* layer = downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*_page->drawingArea()).layerWithIDForTesting({ ObjectIdentifier<WebCore::PlatformLayerIdentifierType>(layerID), _page->legacyMainFrameProcess().coreProcessIdentifier() });
+    RetainPtr layer = downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*_page->drawingArea()).layerWithIDForTesting({ ObjectIdentifier<WebCore::PlatformLayerIdentifierType>(layerID), _page->legacyMainFrameProcess().coreProcessIdentifier() });
     if (!layer)
         return nil;
 
     return @{
         @"bounds" : @{
-            @"x" : @(layer.bounds.origin.x),
-            @"y" : @(layer.bounds.origin.x),
-            @"width" : @(layer.bounds.size.width),
-            @"height" : @(layer.bounds.size.height),
+            @"x" : @(layer.get().bounds.origin.x),
+            @"y" : @(layer.get().bounds.origin.x),
+            @"width" : @(layer.get().bounds.size.width),
+            @"height" : @(layer.get().bounds.size.height),
 
         },
         @"position" : @{
-            @"x" : @(layer.position.x),
-            @"y" : @(layer.position.y),
+            @"x" : @(layer.get().position.x),
+            @"y" : @(layer.get().position.y),
         },
-        @"zPosition" : @(layer.zPosition),
+        @"zPosition" : @(layer.get().zPosition),
         @"anchorPoint" : @{
-            @"x" : @(layer.anchorPoint.x),
-            @"y" : @(layer.anchorPoint.y),
+            @"x" : @(layer.get().anchorPoint.x),
+            @"y" : @(layer.get().anchorPoint.y),
         },
-        @"anchorPointZ" : @(layer.anchorPointZ),
+        @"anchorPointZ" : @(layer.get().anchorPointZ),
         @"transform" : @{
-            @"m11" : @(layer.transform.m11),
-            @"m12" : @(layer.transform.m12),
-            @"m13" : @(layer.transform.m13),
-            @"m14" : @(layer.transform.m14),
+            @"m11" : @(layer.get().transform.m11),
+            @"m12" : @(layer.get().transform.m12),
+            @"m13" : @(layer.get().transform.m13),
+            @"m14" : @(layer.get().transform.m14),
 
-            @"m21" : @(layer.transform.m21),
-            @"m22" : @(layer.transform.m22),
-            @"m23" : @(layer.transform.m23),
-            @"m24" : @(layer.transform.m24),
+            @"m21" : @(layer.get().transform.m21),
+            @"m22" : @(layer.get().transform.m22),
+            @"m23" : @(layer.get().transform.m23),
+            @"m24" : @(layer.get().transform.m24),
 
-            @"m31" : @(layer.transform.m31),
-            @"m32" : @(layer.transform.m32),
-            @"m33" : @(layer.transform.m33),
-            @"m34" : @(layer.transform.m34),
+            @"m31" : @(layer.get().transform.m31),
+            @"m32" : @(layer.get().transform.m32),
+            @"m33" : @(layer.get().transform.m33),
+            @"m34" : @(layer.get().transform.m34),
 
-            @"m41" : @(layer.transform.m41),
-            @"m42" : @(layer.transform.m42),
-            @"m43" : @(layer.transform.m43),
-            @"m44" : @(layer.transform.m44),
+            @"m41" : @(layer.get().transform.m41),
+            @"m42" : @(layer.get().transform.m42),
+            @"m43" : @(layer.get().transform.m43),
+            @"m44" : @(layer.get().transform.m44),
         },
         @"sublayerTransform" : @{
-            @"m11" : @(layer.sublayerTransform.m11),
-            @"m12" : @(layer.sublayerTransform.m12),
-            @"m13" : @(layer.sublayerTransform.m13),
-            @"m14" : @(layer.sublayerTransform.m14),
+            @"m11" : @(layer.get().sublayerTransform.m11),
+            @"m12" : @(layer.get().sublayerTransform.m12),
+            @"m13" : @(layer.get().sublayerTransform.m13),
+            @"m14" : @(layer.get().sublayerTransform.m14),
 
-            @"m21" : @(layer.sublayerTransform.m21),
-            @"m22" : @(layer.sublayerTransform.m22),
-            @"m23" : @(layer.sublayerTransform.m23),
-            @"m24" : @(layer.sublayerTransform.m24),
+            @"m21" : @(layer.get().sublayerTransform.m21),
+            @"m22" : @(layer.get().sublayerTransform.m22),
+            @"m23" : @(layer.get().sublayerTransform.m23),
+            @"m24" : @(layer.get().sublayerTransform.m24),
 
-            @"m31" : @(layer.sublayerTransform.m31),
-            @"m32" : @(layer.sublayerTransform.m32),
-            @"m33" : @(layer.sublayerTransform.m33),
-            @"m34" : @(layer.sublayerTransform.m34),
+            @"m31" : @(layer.get().sublayerTransform.m31),
+            @"m32" : @(layer.get().sublayerTransform.m32),
+            @"m33" : @(layer.get().sublayerTransform.m33),
+            @"m34" : @(layer.get().sublayerTransform.m34),
 
-            @"m41" : @(layer.sublayerTransform.m41),
-            @"m42" : @(layer.sublayerTransform.m42),
-            @"m43" : @(layer.sublayerTransform.m43),
-            @"m44" : @(layer.sublayerTransform.m44),
+            @"m41" : @(layer.get().sublayerTransform.m41),
+            @"m42" : @(layer.get().sublayerTransform.m42),
+            @"m43" : @(layer.get().sublayerTransform.m43),
+            @"m44" : @(layer.get().sublayerTransform.m44),
         },
 
-        @"hidden" : @(layer.hidden),
-        @"doubleSided" : @(layer.doubleSided),
-        @"masksToBounds" : @(layer.masksToBounds),
-        @"contentsScale" : @(layer.contentsScale),
-        @"rasterizationScale" : @(layer.rasterizationScale),
-        @"opaque" : @(layer.opaque),
-        @"opacity" : @(layer.opacity),
+        @"hidden" : @(layer.get().hidden),
+        @"doubleSided" : @(layer.get().doubleSided),
+        @"masksToBounds" : @(layer.get().masksToBounds),
+        @"contentsScale" : @(layer.get().contentsScale),
+        @"rasterizationScale" : @(layer.get().rasterizationScale),
+        @"opaque" : @(layer.get().opaque),
+        @"opacity" : @(layer.get().opacity),
     };
 }
 

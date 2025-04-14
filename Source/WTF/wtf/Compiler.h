@@ -563,9 +563,12 @@
     IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("webkit.UncountedLambdaCapturesChecker")
 #define SUPPRESS_UNRETAINED_LOCAL \
     IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("alpha.webkit.UnretainedLocalVarsChecker")
+#define SUPPRESS_UNRETAINED_ARG \
+    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("alpha.webkit.UnretainedCallArgsChecker")
 #else
 #define SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE
 #define SUPPRESS_UNRETAINED_LOCAL
+#define SUPPRESS_UNRETAINED_ARG
 #endif
 
 // To suppress webkit.RefCntblBaseVirtualDtor, use NoVirtualDestructorBase instead.

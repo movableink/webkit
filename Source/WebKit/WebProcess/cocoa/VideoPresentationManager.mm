@@ -681,9 +681,9 @@ void VideoPresentationManager::didSetupFullscreen(PlaybackSessionContextIdentifi
     ASSERT(m_page);
     auto [model, interface] = ensureModelAndInterface(contextId);
     INFO_LOG(LOGIDENTIFIER, model->logIdentifier());
-    CALayer* videoLayer = interface->rootLayer().get();
+    RetainPtr videoLayer = interface->rootLayer().get();
 
-    model->setVideoFullscreenLayer(videoLayer, [protectedThis = Ref { *this }, contextId] () mutable {
+    model->setVideoFullscreenLayer(videoLayer.get(), [protectedThis = Ref { *this }, contextId] () mutable {
         RunLoop::protectedMain()->dispatch([protectedThis = WTFMove(protectedThis), contextId] {
             if (RefPtr page = protectedThis->m_page.get())
                 page->send(Messages::VideoPresentationManagerProxy::EnterFullscreen(contextId));

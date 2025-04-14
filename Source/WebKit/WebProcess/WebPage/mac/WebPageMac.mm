@@ -526,10 +526,10 @@ void WebPage::setAXIsolatedTreeRoot(WebCore::AXCoreObject* root)
 
 bool WebPage::platformCanHandleRequest(const WebCore::ResourceRequest& request)
 {
-    NSURLRequest *nsRequest = request.nsURLRequest(HTTPBodyUpdatePolicy::DoNotUpdateHTTPBody);
-    if (!nsRequest.URL)
+    RetainPtr nsRequest = request.nsURLRequest(HTTPBodyUpdatePolicy::DoNotUpdateHTTPBody);
+    if (!nsRequest.get().URL)
         return false;
-    if ([NSURLConnection canHandleRequest:nsRequest])
+    if ([NSURLConnection canHandleRequest:nsRequest.get()])
         return true;
 
     // FIXME: Return true if this scheme is any one WebKit2 knows how to handle.
@@ -808,8 +808,8 @@ void WebPage::performImmediateActionHitTestAtLocation(WebCore::FrameIdentifier f
             continue;
 
         pageOverlayDidOverrideDataDetectors = true;
-        if (auto* detectedContext = actionContext->context.get())
-            immediateActionResult.platformData.detectedDataActionContext = { { detectedContext } };
+        if (RetainPtr detectedContext = actionContext->context.get())
+            immediateActionResult.platformData.detectedDataActionContext = { { detectedContext.get() } };
         immediateActionResult.platformData.detectedDataBoundingBox = view->contentsToWindow(enclosingIntRect(unitedBoundingBoxes(RenderObject::absoluteTextQuads(actionContext->range))));
         immediateActionResult.platformData.detectedDataTextIndicator = TextIndicator::createWithRange(actionContext->range, indicatorOptions(actionContext->range), TextIndicatorPresentationTransition::FadeIn);
         immediateActionResult.platformData.detectedDataOriginatingPageOverlay = overlay->pageOverlayID();

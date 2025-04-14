@@ -82,7 +82,7 @@ std::optional<String> WebAutomationSession::platformGenerateLocalFilePathForRemo
         return std::nullopt;
     }
 
-    NSString *temporaryDirectory = FileSystem::createTemporaryDirectory(@"WebDriver");
+    RetainPtr temporaryDirectory = FileSystem::createTemporaryDirectory(@"WebDriver");
     RetainPtr remoteFile = adoptNS([[NSURL alloc] initFileURLWithPath:remoteFilePath.createNSString().get() isDirectory:NO]);
     RetainPtr localFilePath = [temporaryDirectory stringByAppendingPathComponent:remoteFile.get().lastPathComponent];
 

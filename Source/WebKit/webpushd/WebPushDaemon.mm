@@ -290,8 +290,8 @@ void WebPushDaemon::incomingPushTransactionTimerFired()
 
 static void tryCloseRequestConnection(xpc_object_t request)
 {
-    if (auto connection = xpc_dictionary_get_remote_connection(request))
-        xpc_connection_cancel(connection);
+    if (RetainPtr connection = xpc_dictionary_get_remote_connection(request))
+        xpc_connection_cancel(connection.get());
 }
 
 void WebPushDaemon::connectionEventHandler(xpc_object_t request)
@@ -1030,7 +1030,7 @@ ALLOW_NONLITERAL_FORMAT_END
 
     content.get().userInfo = notificationData.dictionaryRepresentation();
 
-    UNNotificationRequest *request = [UNNotificationRequest requestWithIdentifier:notificationData.notificationID.toString().createNSString().get() content:content.get() trigger:nil];
+    RetainPtr request = [UNNotificationRequest requestWithIdentifier:notificationData.notificationID.toString().createNSString().get() content:content.get() trigger:nil];
     RetainPtr<UNUserNotificationCenter> center = adoptNS([[m_userNotificationCenterClass alloc] initWithBundleIdentifier:notificationCenterBundleIdentifier.get()]);
     if (!center)
         RELEASE_LOG_ERROR(Push, "Failed to instantiate UNUserNotificationCenter center");
@@ -1048,7 +1048,7 @@ ALLOW_NONLITERAL_FORMAT_END
         });
     });
 
-    [center addNotificationRequest:request withCompletionHandler:blockPtr.get()];
+    [center addNotificationRequest:request.get() withCompletionHandler:blockPtr.get()];
 }
 
 void WebPushDaemon::getNotifications(PushClientConnection& connection, const URL& registrationURL, const String& tag, CompletionHandler<void(Expected<Vector<WebCore::NotificationData>, WebCore::ExceptionData>&&)>&& completionHandler)
@@ -1099,9 +1099,9 @@ void WebPushDaemon::cancelNotification(PushClientConnection& connection, WebCore
     auto placeholderBundleIdentifier = platformNotificationCenterBundleIdentifier(identifier.pushPartition);
     RetainPtr center = adoptNS([[m_userNotificationCenterClass alloc] initWithBundleIdentifier:placeholderBundleIdentifier.get()]);
 
-    auto identifiers = @[ notificationID.toString().createNSString().get() ];
-    [center removePendingNotificationRequestsWithIdentifiers:identifiers];
-    [center removeDeliveredNotificationsWithIdentifiers:identifiers];
+    RetainPtr identifiers = @[ notificationID.toString().createNSString().get() ];
+    [center removePendingNotificationRequestsWithIdentifiers:identifiers.get()];
+    [center removeDeliveredNotificationsWithIdentifiers:identifiers.get()];
 }
 
 void WebPushDaemon::getPushPermissionState(PushClientConnection& connection, const WebCore::SecurityOriginData& origin, CompletionHandler<void(WebCore::PushPermissionState)>&& replySender)
@@ -1231,9 +1231,9 @@ void WebPushDaemon::setAppBadge(PushClientConnection& connection, WebCore::Secur
 
     UNMutableNotificationContent *content = [UNMutableNotificationContent new];
     content.badge = appBadge ? [NSNumber numberWithLongLong:*appBadge] : nil;
-    UNNotificationRequest *request = [UNNotificationRequest requestWithIdentifier:NSUUID.UUID.UUIDString content:content trigger:nil];
+    RetainPtr request = [UNNotificationRequest requestWithIdentifier:NSUUID.UUID.UUIDString content:content trigger:nil];
     RetainPtr debugDescription = identifier.debugDescription().createNSString().get();
-    [center addNotificationRequest:request withCompletionHandler:^(NSError *error) {
+    [center addNotificationRequest:request.get() withCompletionHandler:^(NSError *error) {
         if (error) {
             RELEASE_LOG_ERROR(Push, "Error attempting to set badge count for web app %{public}@", debugDescription.get());
             return;

@@ -113,8 +113,8 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         if (fileWrapper.directory)
             updatedContentType = bridge_cast(kUTTypeDirectory);
         else if (fileWrapper.regularFile) {
-            if (NSString *pathExtension = (fileWrapper.filename.length ? fileWrapper.filename : fileWrapper.preferredFilename).pathExtension)
-                updatedContentType = WebCore::MIMETypeRegistry::mimeTypeForExtension(WTF::String(pathExtension)).createNSString();
+            if (RetainPtr<NSString> pathExtension = (fileWrapper.filename.length ? fileWrapper.filename : fileWrapper.preferredFilename).pathExtension)
+                updatedContentType = WebCore::MIMETypeRegistry::mimeTypeForExtension(WTF::String(pathExtension.get())).createNSString();
             if (!updatedContentType.get().length)
                 updatedContentType = bridge_cast(kUTTypeData);
         }

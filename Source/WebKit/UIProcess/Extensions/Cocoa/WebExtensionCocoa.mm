@@ -161,12 +161,12 @@ SecStaticCodeRef WebExtension::bundleStaticCode() const
 
 NSData *WebExtension::bundleHash() const
 {
-    auto staticCode = bundleStaticCode();
+    RetainPtr staticCode = bundleStaticCode();
     if (!staticCode)
         return nil;
 
     CFDictionaryRef codeSigningDictionary = nil;
-    OSStatus error = SecCodeCopySigningInformation(staticCode, kSecCSDefaultFlags, &codeSigningDictionary);
+    OSStatus error = SecCodeCopySigningInformation(staticCode.get(), kSecCSDefaultFlags, &codeSigningDictionary);
     if (error != noErr || !codeSigningDictionary) {
         if (codeSigningDictionary)
             CFRelease(codeSigningDictionary);
@@ -188,7 +188,7 @@ bool WebExtension::validateResourceData(NSURL *resourceURL, NSData *resourceData
     if (!m_shouldValidateResourceData)
         return true;
 
-    auto staticCode = bundleStaticCode();
+    RetainPtr staticCode = bundleStaticCode();
     if (!staticCode)
         return false;
 
@@ -198,7 +198,7 @@ bool WebExtension::validateResourceData(NSURL *resourceURL, NSData *resourceData
     ASSERT([resourceURLString hasPrefix:bundleSupportFilesURLString]);
 
     NSString *relativePathToResource = [resourceURLString substringFromIndex:bundleSupportFilesURLString.length].stringByRemovingPercentEncoding;
-    OSStatus result = SecCodeValidateFileResource(staticCode, bridge_cast(relativePathToResource), bridge_cast(resourceData), kSecCSDefaultFlags);
+    OSStatus result = SecCodeValidateFileResource(staticCode.get(), bridge_cast(relativePathToResource), bridge_cast(resourceData), kSecCSDefaultFlags);
 
     if (outError && result != noErr)
         *outError = [NSError errorWithDomain:NSOSStatusErrorDomain code:result userInfo:nil];

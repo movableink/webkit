@@ -87,7 +87,7 @@ std::optional<ImageBufferBackendHandle> ImageBufferShareableMappedIOSurfaceBitma
 GraphicsContext& ImageBufferShareableMappedIOSurfaceBitmapBackend::context()
 {
     if (m_context) {
-        CGContextRef cgContext = m_context->platformContext();
+        RetainPtr<CGContextRef> cgContext = m_context->platformContext();
         if (m_lock || !cgContext) {
             // The existing context is a valid context and the IOSurface is locked, or alternatively
             // the existing context is an invalid context, for some reason we ran into an error previously.
@@ -97,7 +97,7 @@ GraphicsContext& ImageBufferShareableMappedIOSurfaceBitmapBackend::context()
         // The IOSurface is unlocked for every flush to prepare for external access by the compositor.
         // Re-lock on first context() request after the external access has ended and new update starts.
         if (auto lock = m_surface->lock<IOSurface::AccessMode::ReadWrite>()) {
-            if (lock->surfaceBaseAddress() == CGBitmapContextGetData(cgContext)) {
+            if (lock->surfaceBaseAddress() == CGBitmapContextGetData(cgContext.get())) {
                 m_lock = WTFMove(lock);
                 return *m_context;
             }

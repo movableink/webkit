@@ -154,9 +154,9 @@ Ref<WebCore::PlatformCALayer> PlatformCALayerRemoteCustom::clone(PlatformCALayer
         if (PAL::isAVFoundationFrameworkAvailable() && [platformLayer() isKindOfClass:PAL::getAVPlayerLayerClass()]) {
             clonedLayer = adoptNS([PAL::allocAVPlayerLayerInstance() init]);
 
-            AVPlayerLayer *destinationPlayerLayer = static_cast<AVPlayerLayer *>(clonedLayer.get());
-            AVPlayerLayer *sourcePlayerLayer = static_cast<AVPlayerLayer *>(platformLayer());
-            RunLoop::protectedMain()->dispatch([destinationPlayerLayer, sourcePlayerLayer] {
+            RetainPtr destinationPlayerLayer = static_cast<AVPlayerLayer *>(clonedLayer.get());
+            RetainPtr sourcePlayerLayer = static_cast<AVPlayerLayer *>(platformLayer());
+            RunLoop::protectedMain()->dispatch([destinationPlayerLayer = WTFMove(destinationPlayerLayer), sourcePlayerLayer = WTFMove(sourcePlayerLayer)] {
                 [destinationPlayerLayer setPlayer:[sourcePlayerLayer player]];
             });
         } else {

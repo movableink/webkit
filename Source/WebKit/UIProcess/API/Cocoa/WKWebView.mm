@@ -1388,20 +1388,20 @@ static WKMediaPlaybackState toWKMediaPlaybackState(WebKit::MediaPlaybackState me
     NSString *errorMessage = nil;
 
     for (id key in arguments) {
-        NSString *keyString = dynamic_objc_cast<NSString>(key);
+        RetainPtr keyString = dynamic_objc_cast<NSString>(key);
         if (!keyString) {
             errorMessage = @"Key value must be NSString";
             break;
         }
 
-        id value = [arguments objectForKey:keyString];
+        id value = [arguments objectForKey:keyString.get()];
         auto serializedValue = WebKit::JavaScriptEvaluationResult::extract(value);
         if (!serializedValue) {
             errorMessage = @"Function argument values must be one of the following types, or contain only the following types: NSNumber, NSNull, NSDate, NSString, NSArray, and NSDictionary";
             break;
         }
 
-        argumentsMap->append({ keyString, WTFMove(*serializedValue) });
+        argumentsMap->append({ keyString.get(), WTFMove(*serializedValue) });
     }
 
     if (errorMessage && handler) {
@@ -2194,10 +2194,10 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
 {
     auto newSelectionAttributes = selectionAttributes(_page->editorState(), _selectionAttributes);
     if (_selectionAttributes != newSelectionAttributes) {
-        NSString *selectionAttributesKey = NSStringFromSelector(@selector(_selectionAttributes));
-        [self willChangeValueForKey:selectionAttributesKey];
+        RetainPtr selectionAttributesKey = NSStringFromSelector(@selector(_selectionAttributes));
+        [self willChangeValueForKey:selectionAttributesKey.get()];
         _selectionAttributes = newSelectionAttributes;
-        [self didChangeValueForKey:selectionAttributesKey];
+        [self didChangeValueForKey:selectionAttributesKey.get()];
     }
 
     // FIXME: We should either rename -_webView:editorStateDidChange: to clarify that it's only intended for use when testing,

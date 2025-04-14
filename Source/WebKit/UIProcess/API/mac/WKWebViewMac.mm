@@ -1250,8 +1250,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (id)_web_immediateActionAnimationControllerForHitTestResultInternal:(API::HitTestResult*)hitTestResult withType:(uint32_t)type userData:(API::Object*)userData
 {
-    id<NSSecureCoding> data = userData ? static_cast<id<NSSecureCoding>>(userData->wrapper()) : nil;
-    return [self _immediateActionAnimationControllerForHitTestResult:wrapper(*hitTestResult) withType:(_WKImmediateActionType)type userData:data];
+    RetainPtr data = userData ? static_cast<id<NSSecureCoding>>(userData->wrapper()) : nil;
+    return [self _immediateActionAnimationControllerForHitTestResult:wrapper(*hitTestResult) withType:(_WKImmediateActionType)type userData:data.get()];
 }
 
 - (void)_web_prepareForImmediateActionAnimation

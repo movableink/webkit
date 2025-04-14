@@ -95,12 +95,12 @@ bool NetworkProcessProxy::sendXPCEndpointToProcess(AuxiliaryProcessProxy& proces
         return false;
     if (!process.hasConnection())
         return false;
-    auto message = xpcEndpointMessage();
+    RetainPtr message = xpcEndpointMessage();
     if (!message)
         return false;
-    auto xpcConnection = process.connection().xpcConnection();
+    RetainPtr xpcConnection = process.connection().xpcConnection();
     RELEASE_ASSERT(xpcConnection);
-    xpc_connection_send_message(xpcConnection, message);
+    xpc_connection_send_message(xpcConnection.get(), message.get());
     return true;
 }
 

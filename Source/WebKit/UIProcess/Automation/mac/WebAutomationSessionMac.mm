@@ -80,7 +80,7 @@ static const void *synthesizedAutomationEventAssociatedObjectKey = &synthesizedA
 
 void WebAutomationSession::sendSynthesizedEventsToPage(WebPageProxy& page, NSArray *eventsToSend)
 {
-    NSWindow *window = page.platformWindow();
+    RetainPtr window = page.platformWindow();
     auto webView = page.cocoaView();
 
     // +[NSEvent pressedMouseButtons] does not account for the NSEvent objects created through eventSender JS in tests.
@@ -101,7 +101,7 @@ void WebAutomationSession::sendSynthesizedEventsToPage(WebPageProxy& page, NSArr
     });
 
     for (NSEvent *event in eventsToSend) {
-        LOG(Automation, "Sending event[%p] to window[%p]: %@", event, window, event);
+        LOG(Automation, "Sending event[%p] to window[%p]: %@", event, window.get(), event);
 
         // Take focus back in case the Inspector became focused while the prior command or
         // NSEvent was delivered to the window.
@@ -130,7 +130,7 @@ void WebAutomationSession::markEventAsSynthesizedForAutomation(NSEvent *event)
 
 bool WebAutomationSession::wasEventSynthesizedForAutomation(NSEvent *event)
 {
-    NSString *senderSessionIdentifier = objc_getAssociatedObject(event, &synthesizedAutomationEventAssociatedObjectKey);
+    RetainPtr<NSString> senderSessionIdentifier = objc_getAssociatedObject(event, &synthesizedAutomationEventAssociatedObjectKey);
     if ([senderSessionIdentifier isEqualToString:m_sessionIdentifier.createNSString().get()])
         return true;
 
@@ -192,8 +192,8 @@ void WebAutomationSession::platformSimulateMouseInteraction(WebPageProxy& page, 
 
     NSEventModifierFlags modifiers = WebEventFactory::toNSEventModifierFlags(keyModifiers);
     NSTimeInterval timestamp = [NSDate timeIntervalSinceReferenceDate];
-    NSWindow *window = page.platformWindow();
-    NSInteger windowNumber = window.windowNumber;
+    RetainPtr window = page.platformWindow();
+    NSInteger windowNumber = window.get().windowNumber;
 
     NSEventType downEventType = (NSEventType)0;
     NSEventType dragEventType = (NSEventType)0;
@@ -226,12 +226,12 @@ void WebAutomationSession::platformSimulateMouseInteraction(WebPageProxy& page, 
     switch (interaction) {
     case MouseInteraction::Move: {
         ASSERT(dragEventType);
-        NSEvent *event = [NSEvent mouseEventWithType:dragEventType location:locationInWindow modifierFlags:modifiers timestamp:timestamp windowNumber:windowNumber context:nil eventNumber:eventNumber clickCount:0 pressure:0.0f];
-        CGEventRef cgEvent = event.CGEvent;
-        CGEventSetIntegerValueField(cgEvent, kCGMouseEventDeltaX, locationInWindow.x() - m_lastClickPosition.x());
-        CGEventSetIntegerValueField(cgEvent, kCGMouseEventDeltaY, -1 * (locationInWindow.y() - m_lastClickPosition.y()));
-        event = [NSEvent eventWithCGEvent:cgEvent];
-        [eventsToBeSent addObject:event];
+        RetainPtr event = [NSEvent mouseEventWithType:dragEventType location:locationInWindow modifierFlags:modifiers timestamp:timestamp windowNumber:windowNumber context:nil eventNumber:eventNumber clickCount:0 pressure:0.0f];
+        RetainPtr<CGEventRef> cgEvent = event.get().CGEvent;
+        CGEventSetIntegerValueField(cgEvent.get(), kCGMouseEventDeltaX, locationInWindow.x() - m_lastClickPosition.x());
+        CGEventSetIntegerValueField(cgEvent.get(), kCGMouseEventDeltaY, -1 * (locationInWindow.y() - m_lastClickPosition.y()));
+        event = [NSEvent eventWithCGEvent:cgEvent.get()];
+        [eventsToBeSent addObject:event.get()];
         break;
     }
     case MouseInteraction::Down:
@@ -717,9 +717,9 @@ void WebAutomationSession::platformSimulateKeyboardInteraction(WebPageProxy& pag
 
     // FIXME: this timestamp is not even close to matching native events. Find out how to get closer.
     NSTimeInterval timestamp = [NSDate timeIntervalSinceReferenceDate];
-    NSWindow *window = page.platformWindow();
-    NSInteger windowNumber = window.windowNumber;
-    NSPoint eventPosition = NSMakePoint(0, window.frame.size.height);
+    RetainPtr window = page.platformWindow();
+    NSInteger windowNumber = window.get().windowNumber;
+    NSPoint eventPosition = NSMakePoint(0, window.get().frame.size.height);
 
     static constexpr auto characterTransformingModifiers = NSEventModifierFlagShift | NSEventModifierFlagOption;
     if (characters && (m_currentModifiers & characterTransformingModifiers)) {
@@ -816,9 +816,9 @@ void WebAutomationSession::platformSimulateKeySequence(WebPageProxy& page, const
     RetainPtr text = keySequence.createNSString();
 
     NSTimeInterval timestamp = [NSDate timeIntervalSinceReferenceDate];
-    NSWindow *window = page.platformWindow();
-    NSInteger windowNumber = window.windowNumber;
-    NSPoint eventPosition = NSMakePoint(0, window.frame.size.height);
+    RetainPtr window = page.platformWindow();
+    NSInteger windowNumber = window.get().windowNumber;
+    NSPoint eventPosition = NSMakePoint(0, window.get().frame.size.height);
 
     [text enumerateSubstringsInRange:NSMakeRange(0, text.get().length) options:NSStringEnumerationByComposedCharacterSequences usingBlock:^(NSString *substring, NSRange substringRange, NSRange enclosingRange, BOOL *stop) {
     
@@ -851,7 +851,7 @@ void WebAutomationSession::platformSimulateWheelInteraction(WebPageProxy& page, 
     auto cgScrollEvent = adoptCF(CGEventCreateScrollWheelEvent(nullptr, kCGScrollEventUnitPixel, scrollWheelCount, -delta.height(), -delta.width()));
 
     auto locationInWindow = viewportLocationToWindowLocation(locationInViewport, page);
-    NSWindow *window = page.platformWindow();
+    RetainPtr window = page.platformWindow();
 
     // Set the CGEvent location in flipped coords relative to the first screen, which compensates for the behavior of
     // +[NSEvent eventWithCGEvent:] when the event has no associated window. See <rdar://problem/17180591>.
@@ -859,7 +859,7 @@ void WebAutomationSession::platformSimulateWheelInteraction(WebPageProxy& page, 
     locationOnScreen = CGPointMake(locationOnScreen.x, NSScreen.screens.firstObject.frame.size.height - locationOnScreen.y);
     CGEventSetLocation(cgScrollEvent.get(), locationOnScreen);
 
-    NSEvent *scrollEvent = [[NSEvent eventWithCGEvent:cgScrollEvent.get()] _eventRelativeToWindow:window];
+    NSEvent *scrollEvent = [[NSEvent eventWithCGEvent:cgScrollEvent.get()] _eventRelativeToWindow:window.get()];
 
     sendSynthesizedEventsToPage(page, @[scrollEvent]);
 }

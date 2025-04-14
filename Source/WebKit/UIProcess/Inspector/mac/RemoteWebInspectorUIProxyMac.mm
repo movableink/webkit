@@ -224,9 +224,9 @@ void RemoteWebInspectorUIProxy::platformSetForcedAppearance(InspectorFrontendCli
 
     webView().appearance = platformAppearance;
 
-    NSWindow *window = m_window.get();
+    RetainPtr window = m_window.get();
     ASSERT(window);
-    window.appearance = platformAppearance;
+    window.get().appearance = platformAppearance;
 }
 
 void RemoteWebInspectorUIProxy::platformStartWindowDrag()

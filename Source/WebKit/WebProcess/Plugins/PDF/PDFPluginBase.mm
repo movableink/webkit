@@ -613,8 +613,8 @@ void PDFPluginBase::addArchiveResource()
     // FIXME: It's a hack to force add a resource to DocumentLoader. PDF documents should just be fetched as CachedResources.
 
     // Add just enough data for context menu handling and web archives to work.
-    NSDictionary* headers = @{ @"Content-Disposition": m_suggestedFilename.createNSString().get(), @"Content-Type" : @"application/pdf" };
-    RetainPtr response = adoptNS([[NSHTTPURLResponse alloc] initWithURL:m_view->mainResourceURL().createNSURL().get() statusCode:200 HTTPVersion:(NSString*)kCFHTTPVersion1_1 headerFields:headers]);
+    RetainPtr headers = @{ @"Content-Disposition": m_suggestedFilename.createNSString().get(), @"Content-Type" : @"application/pdf" };
+    RetainPtr response = adoptNS([[NSHTTPURLResponse alloc] initWithURL:m_view->mainResourceURL().createNSURL().get() statusCode:200 HTTPVersion:(NSString*)kCFHTTPVersion1_1 headerFields:headers.get()]);
     ResourceResponse synthesizedResponse(response.get());
 
     RetainPtr data = originalData();
@@ -1187,11 +1187,11 @@ void PDFPluginBase::save(CompletionHandler<void(const String&, const URL&, std::
         return;
     }
 
-    NSData *data = liveData();
+    RetainPtr data = liveData();
     URL url;
     if (m_frame)
         url = m_frame->url();
-    completionHandler(m_suggestedFilename, url, span(data));
+    completionHandler(m_suggestedFilename, url, span(data.get()));
 }
 
 void PDFPluginBase::openWithPreview(CompletionHandler<void(const String&, std::optional<FrameInfoData>&&, std::span<const uint8_t>)>&& completionHandler)
@@ -1208,8 +1208,8 @@ void PDFPluginBase::openWithPreview(CompletionHandler<void(const String&, std::o
         return;
     }
 
-    NSData *data = liveData();
-    completionHandler(m_suggestedFilename, WTFMove(frameInfo), span(data));
+    RetainPtr data = liveData();
+    completionHandler(m_suggestedFilename, WTFMove(frameInfo), span(data.get()));
 }
 
 #endif // ENABLE(PDF_HUD)

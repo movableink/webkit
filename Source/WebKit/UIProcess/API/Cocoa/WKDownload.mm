@@ -293,7 +293,7 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 
 - (WKWebView *)webView
 {
-    auto page = _download->originatingPage();
+    RefPtr page = _download->originatingPage();
     return page ? page->cocoaView().autorelease() : nil;
 }
 
@@ -322,24 +322,24 @@ WK_OBJECT_DISABLE_DISABLE_KVC_IVAR_ACCESS;
 
 - (NSProgress *)progress
 {
-    NSProgress* downloadProgress = _download->progress();
+    RetainPtr downloadProgress = _download->progress();
     if (!downloadProgress) {
         constexpr auto indeterminateUnitCount = -1;
         downloadProgress = [NSProgress progressWithTotalUnitCount:indeterminateUnitCount];
 
-        downloadProgress.kind = NSProgressKindFile;
-        downloadProgress.fileOperationKind = NSProgressFileOperationKindDownloading;
+        downloadProgress.get().kind = NSProgressKindFile;
+        downloadProgress.get().fileOperationKind = NSProgressFileOperationKindDownloading;
 
-        downloadProgress.cancellable = YES;
-        downloadProgress.cancellationHandler = makeBlockPtr([weakSelf = WeakObjCPtr<WKDownload> { self }] () mutable {
+        downloadProgress.get().cancellable = YES;
+        downloadProgress.get().cancellationHandler = makeBlockPtr([weakSelf = WeakObjCPtr<WKDownload> { self }] () mutable {
             ensureOnMainRunLoop([weakSelf = WTFMove(weakSelf)] {
                 [weakSelf cancel:nil];
             });
         }).get();
 
-        _download->setProgress(downloadProgress);
+        _download->setProgress(downloadProgress.get());
     }
-    return downloadProgress;
+    return downloadProgress.autorelease();
 }
 
 - (void)dealloc

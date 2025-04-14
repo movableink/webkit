@@ -63,8 +63,8 @@
 
     _caretType = WebCore::CaretAnimatorType::Dictation;
     if (_webView) {
-        if (NSTextInputContext *context = _webView->inputContext())
-            context.showsCursorAccessories = YES;
+        if (RetainPtr context = _webView->inputContext())
+            context.get().showsCursorAccessories = YES;
 
         _webView->page().setCaretAnimatorType(WebCore::CaretAnimatorType::Dictation);
     }

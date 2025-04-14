@@ -148,7 +148,7 @@ void WebDragClient::declareAndWriteDragImage(const String& pasteboardName, Eleme
 
     auto archive = LegacyWebArchive::create(element);
 
-    NSURLResponse *response = image->response().nsURLResponse();
+    RetainPtr response = image->response().nsURLResponse();
     
     auto imageBuffer = image->image()->data();
 
