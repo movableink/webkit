@@ -133,6 +133,7 @@ static void setUserDirSuffix(ASCIILiteral suffix)
 #if PLATFORM(IOS_FAMILY)
     if (_set_user_dir_suffix(suffix)) {
         RELEASE_LOG(IPC, "Successfully set temp dir");
+        confstr(_CS_DARWIN_USER_TEMP_DIR, nullptr, 0);
         return;
     }
     RELEASE_LOG_ERROR(IPC, "Failed to set temp dir: errno = %d", errno);
