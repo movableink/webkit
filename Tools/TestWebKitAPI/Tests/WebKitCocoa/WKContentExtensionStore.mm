@@ -1262,6 +1262,41 @@ TEST_F(WKContentRuleListStoreTest, MainResourceCrossOriginRedirect)
     EXPECT_WK_STREQ([webView _test_waitForAlert], "loaded replacement successfully: key=value");
 }
 
+TEST_F(WKContentRuleListStoreTest, MainResourceCrossOriginRedirectFromLoadedPageWithoutActivePatterns)
+{
+    using namespace TestWebKitAPI;
+    HTTPServer server({
+        { "/example"_s, { "<script>alert('original page loaded')</script>"_s } },
+        { "/after_redirect"_s, { "<script>alert('loaded replacement successfully: ' + window.location.href)</script>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto list = compileContentRuleList(R"JSON(
+        [ {
+            "action": { "type": "redirect", "redirect": { "regex-substitution": "https://apple.com/after_redirect" } },
+            "trigger": { "url-filter": "before_redirect" }
+        } ]
+    )JSON");
+
+    auto configuration = server.httpsProxyConfiguration();
+    [[configuration userContentController] addContentRuleList:list.get()];
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSZeroRect configuration:configuration]);
+
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    delegate.get().decidePolicyForNavigationActionWithPreferences = ^(WKNavigationAction *, WKWebpagePreferences *preferences, void (^decisionHandler)(WKNavigationActionPolicy, WKWebpagePreferences *)) {
+        preferences._activeContentRuleListActionPatterns = @{
+            @"testidentifier": [NSSet setWithObject:@"https://webkit.org/*"]
+        };
+        decisionHandler(WKNavigationActionPolicyAllow, preferences);
+    };
+    [delegate allowAnyTLSCertificate];
+    webView.get().navigationDelegate = delegate.get();
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com/example"]]];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "original page loaded");
+    [webView evaluateJavaScript:@"window.location = 'https://webkit.org/before_redirect'" completionHandler:nil];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "loaded replacement successfully: https://apple.com/after_redirect");
+    // FIXME: <rdar://149306346> going back should arrive back at the original page.
+}
+
 TEST_F(WKContentRuleListStoreTest, NullPatternSet)
 {
     auto list = compileContentRuleList(R"JSON(

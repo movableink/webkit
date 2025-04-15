@@ -1195,7 +1195,10 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
                 return makeUnexpected(ResourceError { errorDomainWebKitInternal, 0, url, "Resource blocked by content blocker"_s, ResourceError::Type::AccessControl });
             }
             if (type == CachedResource::Type::MainResource && RegistrableDomain { resourceRequest.url() } != originalDomain) {
-                frame->loader().load(FrameLoadRequest { frame, { resourceRequest.url() } });
+                // This needs to happen after DocumentLoader::loadMainResource stops or it will cancel this new load.
+                RunLoop::protectedMain()->dispatch([frame, url = resourceRequest.url()] {
+                    frame->loader().load(FrameLoadRequest { frame, { url } });
+                });
                 return makeUnexpected(ResourceError { errorDomainWebKitInternal, 0, url, "Loading in a new process"_s, ResourceError::Type::Cancellation });
             }
         }
