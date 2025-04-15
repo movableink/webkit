@@ -508,6 +508,12 @@ String listMarkerTextOnSameLine(const AXTextMarker& marker)
     if (!textMarkerObject)
         return { };
 
+    if (marker.offset()) {
+        // Don't return list marker text if this AXTextMarker isn't directly adjacent to the list marker.
+        // We determine this by the offset — any non-zero offset text marker is not adjacent to the list marker.
+        return { };
+    }
+
     RefPtr listItemAncestor = Accessibility::findAncestor(*textMarkerObject, /* includeSelf */ true, [] (const auto& selfOrAncestor) {
         return selfOrAncestor.isListItem();
     });
