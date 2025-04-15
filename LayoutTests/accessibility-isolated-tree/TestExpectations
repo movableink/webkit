@@ -43,7 +43,6 @@ accessibility/datetime/input-date-field-labels-and-value-changes.html [ Pass Fai
 
 # Failures introduced by ENABLE(AX_THREAD_TEXT_APIS).
 accessibility/content-editable-as-textarea.html [ Failure ]
-accessibility/full-size-kana-untransformed.html [ Failure ]
 accessibility/mac/attributed-string-for-text-marker-range-using-webarea.html [ Failure ]
 accessibility/mac/attributed-string-includes-misspelled-with-selection.html [ Failure ]
 accessibility/mac/attributed-string-with-listitem-multiple-lines.html [ Failure ]
