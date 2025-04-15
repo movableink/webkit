@@ -2546,7 +2546,7 @@ void FunctionDefinitionWriter::visit(AST::DiscardStatement&)
 #if CPU(X86_64)
     m_body.append("__asm volatile(\"\"); discard_fragment()"_s);
 #else
-    m_body.append("discard_fragment()"_s);
+    m_body.append("{ volatile bool __wgslDiscardFragmentWorkaround = true; if (__wgslDiscardFragmentWorkaround) discard_fragment(); }"_s);
 #endif
 }
 
