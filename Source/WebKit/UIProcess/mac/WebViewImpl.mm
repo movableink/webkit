@@ -2171,7 +2171,8 @@ void WebViewImpl::screenDidChangeColorSpace()
 void WebViewImpl::applicationShouldSuppressHDR(bool suppress)
 {
     m_page->setShouldSuppressHDR(suppress);
-    setDynamicRangeLimit(m_rootLayer.get(), suppress ? PlatformDynamicRangeLimit::defaultWhenSuppressingHDR() : PlatformDynamicRangeLimit::noLimit(), true);
+    if (m_page->protectedPreferences()->acceleratedDrawingEnabled())
+        setDynamicRangeLimit(m_rootLayer.get(), suppress ? PlatformDynamicRangeLimit::defaultWhenSuppressingHDR() : PlatformDynamicRangeLimit::noLimit(), true);
 }
 
 bool WebViewImpl::mightBeginDragWhileInactive()
