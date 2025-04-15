@@ -43,6 +43,13 @@ AsyncAudioDecoder::AsyncAudioDecoder()
 {
 }
 
+AsyncAudioDecoder::~AsyncAudioDecoder()
+{
+    m_runLoop->dispatch([] {
+        RunLoop::currentSingleton().stop();
+    });
+}
+
 Ref<DecodingTaskPromise> AsyncAudioDecoder::decodeAsync(Ref<ArrayBuffer>&& audioData, float sampleRate)
 {
     return WTF::invokeAsync(m_runLoop, [audioData = WTFMove(audioData), sampleRate] () mutable {

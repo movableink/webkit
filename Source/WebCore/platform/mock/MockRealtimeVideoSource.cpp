@@ -43,6 +43,7 @@
 #include "NotImplemented.h"
 #include "PlatformLayer.h"
 #include "RealtimeMediaSourceSettings.h"
+#include "ThreadGlobalData.h"
 #include "VideoFrame.h"
 #include <math.h>
 #include <wtf/NativePromise.h>
@@ -168,6 +169,11 @@ MockRealtimeVideoSource::MockRealtimeVideoSource(String&& deviceID, AtomString&&
 
 MockRealtimeVideoSource::~MockRealtimeVideoSource()
 {
+    m_runLoop->dispatch([] {
+        threadGlobalData().destroy();
+        RunLoop::currentSingleton().stop();
+    });
+
     allMockRealtimeVideoSource().remove(*this);
 }
 

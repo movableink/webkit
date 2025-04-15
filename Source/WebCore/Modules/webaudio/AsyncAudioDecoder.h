@@ -47,12 +47,13 @@ class AsyncAudioDecoder final {
     WTF_MAKE_NONCOPYABLE(AsyncAudioDecoder);
 public:
     AsyncAudioDecoder();
+    ~AsyncAudioDecoder();
 
     // Must be called on the main thread.
     Ref<DecodingTaskPromise> decodeAsync(Ref<JSC::ArrayBuffer>&& audioData, float sampleRate);
 
 private:
-    Ref<RunLoop> m_runLoop;
+    const Ref<RunLoop> m_runLoop;
 };
 
 } // namespace WebCore
