@@ -67,6 +67,7 @@ struct WEBCORE_EXPORT QuirksData {
     bool shouldDisableDataURLPaddingValidation { false };
     bool shouldDisableElementFullscreen { false };
     bool shouldDisableFetchMetadata { false };
+    bool shouldBlockFetchWithNewlineAndLessThan { false };
     bool shouldDisableLazyIframeLoadingQuirk { false };
     bool shouldDisablePushStateFilePathRestrictions { false };
     bool shouldDisableWritingSuggestionsByDefaultQuirk { false };

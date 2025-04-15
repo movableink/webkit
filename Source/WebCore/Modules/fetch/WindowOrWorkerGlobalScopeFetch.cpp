@@ -74,6 +74,11 @@ static void doFetch(ScriptExecutionContext& scope, FetchRequest::Info&& input, F
 
 void WindowOrWorkerGlobalScopeFetch::fetch(DOMWindow& window, FetchRequest::Info&& input, FetchRequest::Init&& init, Ref<DeferredPromise>&& promise)
 {
+    if (RefPtr document = window.documentIfLocal(); document && document->quirks().shouldBlockFetchWithNewlineAndLessThan()) {
+        if (auto* string = std::get_if<String>(&input); string && string->contains('\n') && string->contains('<'))
+            return promise->reject(ExceptionCode::InvalidStateError);
+    }
+
     RefPtr localWindow = dynamicDowncast<LocalDOMWindow>(window);
     if (!localWindow) {
         promise->reject(ExceptionCode::InvalidStateError);

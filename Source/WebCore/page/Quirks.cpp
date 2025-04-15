@@ -1288,6 +1288,11 @@ bool Quirks::shouldDisableFetchMetadata() const
     return needsQuirks() && m_quirksData.shouldDisableFetchMetadata;
 }
 
+bool Quirks::shouldBlockFetchWithNewlineAndLessThan() const
+{
+    return needsQuirks() && m_quirksData.shouldBlockFetchWithNewlineAndLessThan;
+}
+
 // Push state file path restrictions break Mimeo Photo Plugin (rdar://112445672).
 bool Quirks::shouldDisablePushStateFilePathRestrictions() const
 {
@@ -2562,6 +2567,15 @@ static void handleVictoriasSecretQuirks(QuirksData& quirksData, const URL& quirk
     quirksData.shouldDisableFetchMetadata = true;
 }
 
+static void handleTympanusQuirks(QuirksData& quirksData, const URL&, const String& quirksDomainString, const URL&)
+{
+    if (quirksDomainString != "tympanus.net"_s)
+        return;
+
+    // https://tympanus.net/Tutorials/WebGPUFluid/ does not load (rdar://143839620).
+    quirksData.shouldBlockFetchWithNewlineAndLessThan = true;
+}
+
 static void handleVimeoQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
 {
     if (quirksDomainString != "vimeo.com"_s)
@@ -2839,6 +2853,7 @@ void Quirks::determineRelevantQuirks()
 #if PLATFORM(MAC)
         { "trix-editor"_s, &handleTrixEditorQuirks },
 #endif
+        { "tympanus"_s, &handleTympanusQuirks },
         { "victoriassecret"_s, &handleVictoriasSecretQuirks },
         { "vimeo"_s, &handleVimeoQuirks },
 #if PLATFORM(IOS_FAMILY)

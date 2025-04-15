@@ -194,6 +194,7 @@ public:
 
     bool shouldDisableLazyIframeLoadingQuirk() const;
 
+    bool shouldBlockFetchWithNewlineAndLessThan() const;
     bool shouldDisableFetchMetadata() const;
     bool shouldDisablePushStateFilePathRestrictions() const;
 
