@@ -300,7 +300,7 @@ private:
 #endif
 
     void setCurrentTextTrack(InbandTextTrackPrivateAVF*) final;
-    InbandTextTrackPrivateAVF* currentTextTrack() const final { return m_currentTextTrack.get().get(); }
+    ThreadSafeWeakPtr<InbandTextTrackPrivateAVF> currentTextTrack() const final { return m_currentTextTrack; }
 
     void updateAudioTracks();
     void updateVideoTracks();
