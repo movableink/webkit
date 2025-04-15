@@ -92,7 +92,6 @@ public:
     void setShouldSubpixelQuantizeFonts(bool);
     void setShadowsIgnoreTransforms(bool);
     void setDrawLuminanceMask(bool);
-    void setUseDarkAppearance(bool);
     void setLineCap(WebCore::LineCap);
     void setLineDash(WebCore::DashArray&&, float dashOffset);
     void setLineJoin(WebCore::LineJoin);

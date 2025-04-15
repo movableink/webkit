@@ -50,7 +50,6 @@ bool TextPaintStyle::operator==(const TextPaintStyle& other) const
 {
     return fillColor == other.fillColor && strokeColor == other.strokeColor && emphasisMarkColor == other.emphasisMarkColor
         && strokeWidth == other.strokeWidth && paintOrder == other.paintOrder && lineJoin == other.lineJoin
-        && useDarkAppearance == other.useDarkAppearance
         && lineCap == other.lineCap && miterLimit == other.miterLimit;
 }
 
@@ -75,7 +74,6 @@ TextPaintStyle computeTextPaintStyle(const RenderText& renderer, const RenderSty
 {
     auto& frame = renderer.frame();
     TextPaintStyle paintStyle;
-    paintStyle.useDarkAppearance = frame.document() ? frame.document()->useDarkAppearance(&lineStyle) : false;
 
     auto viewportSize = frame.view() ? frame.view()->size() : IntSize();
     paintStyle.strokeWidth = lineStyle.computedStrokeWidth(viewportSize);
@@ -182,7 +180,6 @@ void updateGraphicsContext(GraphicsContext& context, const TextPaintStyle& paint
         context.setTextDrawingMode(newMode);
         mode = newMode;
     }
-    context.setUseDarkAppearance(paintStyle.useDarkAppearance);
 
     Color fillColor = fillColorType == UseEmphasisMarkColor ? paintStyle.emphasisMarkColor : paintStyle.fillColor;
     if (mode.contains(TextDrawingMode::Fill) && (fillColor != context.fillColor()))

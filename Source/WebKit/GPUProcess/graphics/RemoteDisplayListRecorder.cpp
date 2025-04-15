@@ -284,11 +284,6 @@ void RemoteDisplayListRecorder::setDrawLuminanceMask(bool value)
     context().setDrawLuminanceMask(value);
 }
 
-void RemoteDisplayListRecorder::setUseDarkAppearance(bool value)
-{
-    context().setUseDarkAppearance(value);
-}
-
 void RemoteDisplayListRecorder::setLineCap(LineCap lineCap)
 {
     context().setLineCap(lineCap);

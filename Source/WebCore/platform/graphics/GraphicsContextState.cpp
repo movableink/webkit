@@ -126,9 +126,6 @@ void GraphicsContextState::mergeSingleChange(const GraphicsContextState& state, 
     case toIndex(Change::DrawLuminanceMask).value:
         mergeChange(&GraphicsContextState::m_drawLuminanceMask);
         break;
-    case toIndex(Change::UseDarkAppearance).value:
-        mergeChange(&GraphicsContextState::m_useDarkAppearance);
-        break;
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }
@@ -163,7 +160,6 @@ void GraphicsContextState::mergeAllChanges(const GraphicsContextState& state)
     mergeChange(Change::ShouldSubpixelQuantizeFonts, &GraphicsContextState::m_shouldSubpixelQuantizeFonts);
     mergeChange(Change::ShadowsIgnoreTransforms,     &GraphicsContextState::m_shadowsIgnoreTransforms);
     mergeChange(Change::DrawLuminanceMask,           &GraphicsContextState::m_drawLuminanceMask);
-    mergeChange(Change::UseDarkAppearance,           &GraphicsContextState::m_useDarkAppearance);
 }
 
 static ASCIILiteral stateChangeName(GraphicsContextState::Change change)
@@ -216,9 +212,6 @@ static ASCIILiteral stateChangeName(GraphicsContextState::Change change)
 
     case GraphicsContextState::Change::DrawLuminanceMask:
         return "draw-luminance-mask"_s;
-
-    case GraphicsContextState::Change::UseDarkAppearance:
-        return "use-dark-appearance"_s;
     }
 
     RELEASE_ASSERT_NOT_REACHED();
@@ -253,7 +246,6 @@ TextStream& GraphicsContextState::dump(TextStream& ts) const
     dump(Change::ShouldSubpixelQuantizeFonts,   &GraphicsContextState::m_shouldSubpixelQuantizeFonts);
     dump(Change::ShadowsIgnoreTransforms,       &GraphicsContextState::m_shadowsIgnoreTransforms);
     dump(Change::DrawLuminanceMask,             &GraphicsContextState::m_drawLuminanceMask);
-    dump(Change::UseDarkAppearance,             &GraphicsContextState::m_useDarkAppearance);
     return ts;
 }
 

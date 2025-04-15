@@ -50,7 +50,6 @@ struct TextPaintStyle {
     float strokeWidth { 0 };
     // This is not set for -webkit-text-fill-color.
     bool hasExplicitlySetFillColor { false };
-    bool useDarkAppearance { false };
     PaintOrder paintOrder { PaintOrder::Normal };
     LineJoin lineJoin { LineJoin::Miter };
     LineCap lineCap { LineCap::Butt };

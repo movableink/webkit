@@ -60,7 +60,6 @@ messages -> RemoteDisplayListRecorder Stream {
     SetShouldSubpixelQuantizeFonts(bool shouldQuantize) StreamBatched
     SetShadowsIgnoreTransforms(bool shouldIgnore) StreamBatched
     SetDrawLuminanceMask(bool shouldDraw) StreamBatched
-    SetUseDarkAppearance(bool shouldUse) StreamBatched
     SetLineCap(enum:uint8_t WebCore::LineCap lineCap) StreamBatched
     SetLineDash(WebCore::DashArray dashArray, float dashOffset) StreamBatched
     SetLineJoin(enum:uint8_t WebCore::LineJoin lineJoin) StreamBatched

@@ -746,8 +746,6 @@ void RemoteDisplayListRecorderProxy::appendStateChangeItemIfNecessary()
         send(Messages::RemoteDisplayListRecorder::SetShouldSubpixelQuantizeFonts(state.shouldSubpixelQuantizeFonts()));
     if (changes.contains(GraphicsContextState::Change::DrawLuminanceMask))
         send(Messages::RemoteDisplayListRecorder::SetDrawLuminanceMask(state.drawLuminanceMask()));
-    if (changes.contains(GraphicsContextState::Change::UseDarkAppearance))
-        send(Messages::RemoteDisplayListRecorder::SetUseDarkAppearance(state.useDarkAppearance()));
 
     state.didApplyChanges();
     currentState().lastDrawingState = state;

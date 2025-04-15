@@ -167,9 +167,6 @@ public:
     bool drawLuminanceMask() const { return m_state.drawLuminanceMask(); }
     void setDrawLuminanceMask(bool drawLuminanceMask) { m_state.setDrawLuminanceMask(drawLuminanceMask); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::DrawLuminanceMask)); }
 
-    bool useDarkAppearance() const { return m_state.useDarkAppearance(); }
-    void setUseDarkAppearance(bool useDarkAppearance) { m_state.setUseDarkAppearance(useDarkAppearance); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::UseDarkAppearance)); }
-
     virtual const GraphicsContextState& state() const { return m_state; }
     void mergeLastChanges(const GraphicsContextState&, const std::optional<GraphicsContextState>& lastDrawingState = std::nullopt);
     void mergeAllChanges(const GraphicsContextState&);
