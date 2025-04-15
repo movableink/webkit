@@ -515,18 +515,20 @@ public:
 
         while (cloneCount--) {
             m_cloneHelper.clear();
-            for (uint32_t i = 0; i < data.loopSize(); ++i) {
-                BasicBlock* block = data.loopBody(i);
-                m_cloneHelper.cloneBlock(block, [&](BasicBlock* clone) {
-                    if (block != tail)
-                        return false;
-                    ASSERT(tail->terminal()->isBranch());
-                    bool isTakenNextInPartialMode = taken == next && !data.shouldFullyUnroll();
-                    updateTailBranch(clone, isTakenNextInPartialMode ? header : taken);
-                    return true;
-                });
-            }
-            taken = m_cloneHelper.blockClone(header);
+            taken = m_cloneHelper.cloneBlock(header, [&](BasicBlock* block, BasicBlock* clone) {
+                ASSERT(clone == m_cloneHelper.blockClone(block));
+                if (block != tail)
+                    return false;
+                ASSERT(tail->terminal()->isBranch());
+                bool isTakenNextInPartialMode = taken == next && !data.shouldFullyUnroll();
+                updateTailBranch(clone, isTakenNextInPartialMode ? header : taken);
+                return true;
+            });
+
+#if ASSERT_ENABLED
+            for (uint32_t i = 0; i < data.loopSize(); ++i)
+                ASSERT(m_cloneHelper.blockClone(data.loopBody(i)));
+#endif
         }
         updateTailBranch(tail, taken);
 

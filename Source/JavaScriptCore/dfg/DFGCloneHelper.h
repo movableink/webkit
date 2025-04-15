@@ -100,7 +100,7 @@ BasicBlock* CloneHelper::cloneBlock(BasicBlock* const block, const CustomizeSucc
     replaceOperands(clone->variablesAtHead = block->variablesAtHead);
 
     // 4. Clone successors. (predecessors will be fixed in the resetReachability of finalize)
-    if (!customizeSuccessors(clone)) {
+    if (!customizeSuccessors(block, clone)) {
         ASSERT(clone->numSuccessors() == block->numSuccessors());
         for (uint32_t i = 0; i < clone->numSuccessors(); ++i) {
             auto& successor = clone->successor(i);
