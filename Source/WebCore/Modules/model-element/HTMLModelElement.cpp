@@ -88,13 +88,10 @@ HTMLModelElement::HTMLModelElement(const QualifiedName& tagName, Document& docum
     , m_environmentMapReadyPromise(makeUniqueRef<EnvironmentMapPromise>())
 #endif
 {
-    document.registerForVisibilityStateChangedCallbacks(*this);
 }
 
 HTMLModelElement::~HTMLModelElement()
 {
-    document().unregisterForVisibilityStateChangedCallbacks(*this);
-
     if (m_resource) {
         m_resource->removeClient(*this);
         m_resource = nullptr;
@@ -223,10 +220,6 @@ HTMLModelElement& HTMLModelElement::readyPromiseResolve()
 void HTMLModelElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
 {
     ActiveDOMObject::didMoveToNewDocument(newDocument);
-
-    oldDocument.unregisterForVisibilityStateChangedCallbacks(*this);
-    newDocument.registerForVisibilityStateChangedCallbacks(*this);
-
     HTMLElement::didMoveToNewDocument(oldDocument, newDocument);
     sourcesChanged();
 }
@@ -1127,8 +1120,10 @@ Vector<RetainPtr<id>> HTMLModelElement::accessibilityChildren()
 
 LayoutSize HTMLModelElement::contentSize() const
 {
-    ASSERT(renderer());
-    return downcast<RenderReplaced>(*renderer()).replacedContentRect().size();
+    if (CheckedPtr renderer = this->renderer())
+        return downcast<RenderReplaced>(*renderer).replacedContentRect().size();
+
+    return LayoutSize();
 }
 
 #if ENABLE(ARKIT_INLINE_PREVIEW_MAC)
@@ -1172,8 +1167,10 @@ Node::InsertedIntoAncestorResult HTMLModelElement::insertedIntoAncestor(Insertio
 {
     auto insertResult = HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
 
-    if (insertionType.connectedToDocument)
+    if (insertionType.connectedToDocument) {
+        document().registerForVisibilityStateChangedCallbacks(*this);
         m_modelPlayerProvider = document().page()->modelPlayerProvider();
+    }
 
     return insertResult;
 }
@@ -1182,8 +1179,10 @@ void HTMLModelElement::removedFromAncestor(RemovalType removalType, ContainerNod
 {
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
 
-    if (removalType.disconnectedFromDocument)
+    if (removalType.disconnectedFromDocument) {
+        document().unregisterForVisibilityStateChangedCallbacks(*this);
         deleteModelPlayer();
+    }
 }
 
 }
