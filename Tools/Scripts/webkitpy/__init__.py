@@ -107,7 +107,7 @@ AutoInstall.register(Package('webkitflaskpy', Version(0, 3, 0)), local=True)
 AutoInstall.register(Package('webkitscmpy', Version(4, 0, 0)), local=True)
 AutoInstall.register(Package('webkitbugspy', Version(0, 3, 1)), local=True)
 AutoInstall.register(Package('webkitapipy', Version(0, 1, 0)), local=True)
-AutoInstall.register(Package('yaml', Version(5, 3, 1), pypi_name='PyYAML'))
+AutoInstall.register(Package('yaml', Version(6, 0, 2), pypi_name='PyYAML'))
 
 import webkitscmpy
 
