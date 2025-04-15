@@ -260,6 +260,9 @@ void NetworkSession::invalidateAndCancel()
         m_cache = nullptr;
         FileSystem::markPurgeable(networkCacheDirectory);
     }
+
+    if (auto server = std::exchange(m_swServer, { }))
+        server->close();
 }
 
 void NetworkSession::destroyPrivateClickMeasurementStore(CompletionHandler<void()>&& completionHandler)

@@ -164,6 +164,8 @@ public:
     WEBCORE_EXPORT static Ref<SWServer> create(SWServerDelegate&, UniqueRef<SWOriginStore>&&, bool processTerminationDelayEnabled, String&& registrationDatabaseDirectory, PAL::SessionID, bool shouldRunServiceWorkersOnMainThreadForTesting, bool hasServiceWorkerEntitlement, std::optional<unsigned> overrideServiceWorkerRegistrationCountTestingValue, ServiceWorkerIsInspectable);
     WEBCORE_EXPORT ~SWServer();
 
+    WEBCORE_EXPORT void close();
+
     WEBCORE_EXPORT void clearAll(CompletionHandler<void()>&&);
     WEBCORE_EXPORT void clear(const SecurityOriginData&, CompletionHandler<void()>&&);
     WEBCORE_EXPORT void clear(const ClientOrigin&, CompletionHandler<void()>&&);
