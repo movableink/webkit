@@ -13978,12 +13978,6 @@ inline static NSString *extendSelectionCommand(UITextLayoutDirection direction)
     [self reloadInputViews];
 }
 
-// FIXME: (rdar://130540028) Remove uses of the old WritingToolsAllowedInputOptions API in favor of the new WritingToolsResultOptions API, and remove staging.
-- (PlatformWritingToolsResultOptions)writingToolsAllowedInputOptions
-{
-    return [_webView allowedWritingToolsResultOptions];
-}
-
 - (PlatformWritingToolsResultOptions)allowedWritingToolsResultOptions
 {
     return [_webView allowedWritingToolsResultOptions];

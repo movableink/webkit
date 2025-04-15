@@ -2344,12 +2344,6 @@ static _WKSelectionAttributes selectionAttributes(const WebKit::EditorState& edi
     return PlatformWritingToolsResultPlainText | PlatformWritingToolsResultRichText | PlatformWritingToolsResultList | PlatformWritingToolsResultTable;
 }
 
-// FIXME: (rdar://130540028) Remove uses of the old WritingToolsAllowedInputOptions API in favor of the new WritingToolsResultOptions API, and remove staging.
-- (PlatformWritingToolsResultOptions)writingToolsAllowedInputOptions
-{
-    return [self allowedWritingToolsResultOptions];
-}
-
 - (PlatformWritingToolsBehavior)writingToolsBehavior
 {
     return WebKit::convertToPlatformWritingToolsBehavior(_page->writingToolsBehavior());

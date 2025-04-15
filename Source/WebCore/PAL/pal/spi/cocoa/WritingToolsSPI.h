@@ -43,14 +43,12 @@ constexpr auto PlatformWritingToolsBehaviorDefault = NSWritingToolsBehaviorDefau
 constexpr auto PlatformWritingToolsBehaviorLimited = NSWritingToolsBehaviorLimited;
 constexpr auto PlatformWritingToolsBehaviorComplete = NSWritingToolsBehaviorComplete;
 
-// FIXME: (rdar://130540028) Remove uses of the old WritingToolsAllowedInputOptions API in favor of the new WritingToolsResultOptions API, and remove staging.
+using PlatformWritingToolsResultOptions = NSWritingToolsResultOptions;
 
-using PlatformWritingToolsResultOptions = NSUInteger;
-
-constexpr auto PlatformWritingToolsResultPlainText = (PlatformWritingToolsResultOptions)(1 << 0);
-constexpr auto PlatformWritingToolsResultRichText = (PlatformWritingToolsResultOptions)(1 << 1);
-constexpr auto PlatformWritingToolsResultList = (PlatformWritingToolsResultOptions)(1 << 2);
-constexpr auto PlatformWritingToolsResultTable = (PlatformWritingToolsResultOptions)(1 << 3);
+constexpr auto PlatformWritingToolsResultPlainText = NSWritingToolsResultPlainText;
+constexpr auto PlatformWritingToolsResultRichText = NSWritingToolsResultRichText;
+constexpr auto PlatformWritingToolsResultList = NSWritingToolsResultList;
+constexpr auto PlatformWritingToolsResultTable = NSWritingToolsResultTable;
 
 #else
 
@@ -63,14 +61,12 @@ constexpr auto PlatformWritingToolsBehaviorDefault = UIWritingToolsBehaviorDefau
 constexpr auto PlatformWritingToolsBehaviorLimited = UIWritingToolsBehaviorLimited;
 constexpr auto PlatformWritingToolsBehaviorComplete = UIWritingToolsBehaviorComplete;
 
-// FIXME: (rdar://130540028) Remove uses of the old WritingToolsAllowedInputOptions API in favor of the new WritingToolsResultOptions API, and remove staging.
+using PlatformWritingToolsResultOptions = UIWritingToolsResultOptions;
 
-using PlatformWritingToolsResultOptions = NSUInteger;
-
-constexpr auto PlatformWritingToolsResultPlainText = (PlatformWritingToolsResultOptions)(1 << 0);
-constexpr auto PlatformWritingToolsResultRichText = (PlatformWritingToolsResultOptions)(1 << 1);
-constexpr auto PlatformWritingToolsResultList = (PlatformWritingToolsResultOptions)(1 << 2);
-constexpr auto PlatformWritingToolsResultTable = (PlatformWritingToolsResultOptions)(1 << 3);
+constexpr auto PlatformWritingToolsResultPlainText = UIWritingToolsResultPlainText;
+constexpr auto PlatformWritingToolsResultRichText = UIWritingToolsResultRichText;
+constexpr auto PlatformWritingToolsResultList = UIWritingToolsResultList;
+constexpr auto PlatformWritingToolsResultTable = UIWritingToolsResultTable;
 
 #endif
 
