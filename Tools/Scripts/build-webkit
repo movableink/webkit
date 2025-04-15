@@ -131,6 +131,7 @@ Usage: $programName [options] [options to pass to build system]
   --cross-target=<target_machine>   Use the cross-toolchain-helper to build WebKit for the specified machine (Linux platforms only)
 
   --gtk                             Build the GTK+ port
+  --haiku                           Build the Haiku port
   --wpe                             Build the WPE port
   --win                             Build the Windows port
   --playstation                     Build the PlayStation port

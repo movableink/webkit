@@ -218,6 +218,7 @@ BEGIN {
 # Ports
 use constant {
     GTK         => "GTK",
+    Haiku       => "Haiku",
     iOS         => "iOS",
     tvOS        => "tvOS",
     watchOS     => "watchOS",
@@ -578,6 +579,7 @@ sub determineArchitecture
     }
 
     $architecture = 'x86_64' if $architecture =~ /amd64/i;
+    $architecture = 'x86' if $architecture =~ /BePC/i && isHaiku();
     $architecture = 'arm64' if $architecture =~ /aarch64/i;
 }
 
@@ -771,6 +773,8 @@ sub determineNumberOfCPUs
     return if defined $numberOfCPUs;
     if (defined($ENV{NUMBER_OF_PROCESSORS})) {
         $numberOfCPUs = $ENV{NUMBER_OF_PROCESSORS};
+    } elsif (isHaiku()) {
+        $numberOfCPUs = `sysinfo -cpu | grep "CPU #" | wc -l`
     } elsif (isLinux()) {
         use POSIX;
         $numberOfCPUs = POSIX::sysconf(83); # _SC_NPROCESSORS_ONLN = 83
@@ -846,6 +850,7 @@ sub argumentsForConfiguration()
     push(@args, '--jsc-only') if isJSCOnly();
     push(@args, '--win') if isWin();
     push(@args, '--playstation') if isPlayStation();
+    push(@args, '--haiku') if isHaiku();
     return @args;
 }
 
@@ -1745,6 +1750,7 @@ sub determinePortName()
 
     my %argToPortName = (
         gtk => GTK,
+        haiku => Haiku,
         'jsc-only' => JSCOnly,
         playstation => PlayStation,
         win => Win,
@@ -1905,6 +1911,11 @@ sub isLinux()
 sub isBSD()
 {
     return ($^O eq "freebsd") || ($^O eq "openbsd") || ($^O eq "netbsd") || 0;
+}
+
+sub isHaiku()
+{
+    return ($^O eq "haiku") || 0;
 }
 
 sub isX86_64()
@@ -2248,7 +2259,7 @@ sub scriptPathForName($)
 
 sub launcherPath()
 {
-    if (isGtk() || isWPE()) {
+    if (isGtk() || isWPE() || isHaiku()) {
         return scriptPathForName("run-minibrowser");
     } elsif (isAppleWebKit()) {
         return scriptPathForName("run-safari");
@@ -2257,7 +2268,7 @@ sub launcherPath()
 
 sub launcherName()
 {
-    if (isGtk() || isWPE()) {
+    if (isGtk() || isWPE() || isHaiku()) {
         return "MiniBrowser";
     } elsif (isAppleMacWebKit()) {
         return "Safari";
@@ -2595,7 +2606,7 @@ sub shouldBuildForCrossTarget()
 
 sub wrapperPrefixIfNeeded()
 {
-    if (isAnyWindows() || isJSCOnly() || isPlayStation()) {
+    if (isAnyWindows() || isJSCOnly() || isPlayStation() || isHaiku()) {
         return ();
     }
     if (isAppleCocoaWebKit()) {
