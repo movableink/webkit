@@ -15,3 +15,5 @@ None
 ------------------------------------------------------------------------
 List of files:
 /LayoutTests/imported/w3c/web-platform-tests/svg/embedded/support/external-with-data-url.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/embedded/support/image-with-nested-data-url-images.svg
+/LayoutTests/imported/w3c/web-platform-tests/svg/embedded/support/image-with-nested-rects.svg

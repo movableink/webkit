@@ -1401,9 +1401,6 @@ svg/as-image/svg-nested.html
 # Height of actual image is 1-2 pixels shorter than expected image.
 fast/backgrounds/gradient-background-on-subpixel-position.html [ ImageOnlyFailure ]
 
-# Difference of less 0.03% between images.
-svg/as-image/svg-image-with-data-uri-from-canvas.html [ ImageOnlyFailure ]
-
 # HTTP tests that time out:
 http/tests/security/XFrameOptions/x-frame-options-deny-delete-frame-in-load-event.html
 http/tests/local/blob/send-hybrid-blob.html
@@ -4773,6 +4770,11 @@ imported/w3c/web-platform-tests/svg/painting/reftests/marker-path-002.svg [ Imag
 imported/w3c/web-platform-tests/svg/painting/reftests/marker-path-021.svg [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/painting/reftests/marker-path-022.svg [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/svg/painting/reftests/marker-path-023.svg [ ImageOnlyFailure ]
+
+# Difference of 0.04% between images.
+imported/w3c/web-platform-tests/svg/embedded/image-embedding-nested-data-url-from-canvas-post-window-load.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/embedded/image-embedding-nested-data-url-from-canvas-window-load.html [ ImageOnlyFailure ]
+imported/w3c/web-platform-tests/svg/embedded/image-embedding-nested-data-url-from-canvas.html [ ImageOnlyFailure ]
 
 webkit.org/b/269852 imported/w3c/web-platform-tests/css/filter-effects/backdrop-filter-edge-behavior.html [ ImageOnlyFailure ]
 
