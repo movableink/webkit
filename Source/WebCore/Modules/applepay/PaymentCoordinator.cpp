@@ -48,6 +48,7 @@
 
 #define PAYMENT_COORDINATOR_RELEASE_LOG_ERROR(fmt, ...) RELEASE_LOG_ERROR(ApplePay, "%p - PaymentCoordinator::" fmt, this, ##__VA_ARGS__)
 #define PAYMENT_COORDINATOR_RELEASE_LOG(fmt, ...) RELEASE_LOG(ApplePay, "%p - PaymentCoordinator::" fmt, this, ##__VA_ARGS__)
+#define PAYMENT_COORDINATOR_RELEASE_LOG_WITH_THIS(thisPointer, fmt, ...) RELEASE_LOG(ApplePay, "%p - PaymentCoordinator::" fmt, thisPointer, ##__VA_ARGS__)
 
 namespace WebCore {
 
@@ -81,11 +82,11 @@ bool PaymentCoordinator::canMakePayments()
 
 void PaymentCoordinator::canMakePaymentsWithActiveCard(Document& document, const String& merchantIdentifier, Function<void(bool)>&& completionHandler)
 {
-    m_client->canMakePaymentsWithActiveCard(merchantIdentifier, document.domain(), [this, weakThis = WeakPtr { *this }, document = WeakPtr<Document, WeakPtrImplWithEventTargetData> { document }, completionHandler = WTFMove(completionHandler)](bool canMakePayments) {
+    m_client->canMakePaymentsWithActiveCard(merchantIdentifier, document.domain(), [weakThis = WeakPtr { *this }, document = WeakPtr<Document, WeakPtrImplWithEventTargetData> { document }, completionHandler = WTFMove(completionHandler)](bool canMakePayments) {
         if (!weakThis)
             return completionHandler(false);
 
-        PAYMENT_COORDINATOR_RELEASE_LOG("canMakePaymentsWithActiveCard() -> %d", canMakePayments);
+        PAYMENT_COORDINATOR_RELEASE_LOG_WITH_THIS(weakThis.get(), "canMakePaymentsWithActiveCard() -> %d", canMakePayments);
 
         if (!canMakePayments)
             return completionHandler(false);
@@ -292,10 +293,10 @@ std::optional<String> PaymentCoordinator::validatedPaymentNetwork(Document&, uns
 void PaymentCoordinator::getSetupFeatures(const ApplePaySetupConfiguration& configuration, const URL& url, CompletionHandler<void(Vector<Ref<ApplePaySetupFeature>>&&)>&& completionHandler)
 {
     PAYMENT_COORDINATOR_RELEASE_LOG("getSetupFeatures()");
-    m_client->getSetupFeatures(configuration, url, [this, weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)](Vector<Ref<ApplePaySetupFeature>>&& features) mutable {
+    m_client->getSetupFeatures(configuration, url, [weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)](Vector<Ref<ApplePaySetupFeature>>&& features) mutable {
         if (!weakThis)
             return;
-        PAYMENT_COORDINATOR_RELEASE_LOG("getSetupFeatures() completed (features: %zu)", features.size());
+        PAYMENT_COORDINATOR_RELEASE_LOG_WITH_THIS(weakThis.get(), "getSetupFeatures() completed (features: %zu)", features.size());
         completionHandler(WTFMove(features));
     });
 }
@@ -303,10 +304,10 @@ void PaymentCoordinator::getSetupFeatures(const ApplePaySetupConfiguration& conf
 void PaymentCoordinator::beginApplePaySetup(const ApplePaySetupConfiguration& configuration, const URL& url, Vector<Ref<ApplePaySetupFeature>>&& features, CompletionHandler<void(bool)>&& completionHandler)
 {
     PAYMENT_COORDINATOR_RELEASE_LOG("beginApplePaySetup()");
-    m_client->beginApplePaySetup(configuration, url, WTFMove(features), [this, weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)](bool success) mutable {
+    m_client->beginApplePaySetup(configuration, url, WTFMove(features), [weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)](bool success) mutable {
         if (!weakThis)
             return;
-        PAYMENT_COORDINATOR_RELEASE_LOG("beginApplePaySetup() completed (success: %d)", success);
+        PAYMENT_COORDINATOR_RELEASE_LOG_WITH_THIS(weakThis.get(), "beginApplePaySetup() completed (success: %d)", success);
         completionHandler(success);
     });
 }

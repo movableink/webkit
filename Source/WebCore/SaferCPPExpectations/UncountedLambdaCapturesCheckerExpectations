@@ -1,7 +1,5 @@
 Modules/WebGPU/Implementation/WebGPUDeviceImpl.cpp
 Modules/WebGPU/Implementation/WebGPUImpl.cpp
-Modules/applepay/ApplePaySetup.cpp
-Modules/applepay/PaymentCoordinator.cpp
 Modules/cache/DOMCache.cpp
 Modules/cache/DOMCacheStorage.cpp
 Modules/encryptedmedia/MediaKeySession.cpp
