@@ -39,7 +39,7 @@ class WeakPtrImplWithEventTargetData;
 class CSSStyleImageValue final : public CSSStyleValue {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSStyleImageValue);
 public:
-    static Ref<CSSStyleImageValue> create(Ref<CSSImageValue>&& cssValue, Document* document)
+    static Ref<CSSStyleImageValue> create(Ref<CSSImageValue>&& cssValue, Document& document)
     {
         return adoptRef(*new CSSStyleImageValue(WTFMove(cssValue), document));
     }
@@ -55,7 +55,7 @@ public:
     RefPtr<CSSValue> toCSSValue() const final;
 
 private:
-    CSSStyleImageValue(Ref<CSSImageValue>&&, Document*);
+    CSSStyleImageValue(Ref<CSSImageValue>&&, Document&);
 
     Ref<CSSImageValue> m_cssValue;
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
