@@ -40,6 +40,7 @@ enum class SDKAlignedBehavior {
     AuthorizationHeaderOnSameOriginRedirects,
     BlanksViewOnJSPrompt,
     BlocksConnectionsToAddressWithOnlyZeros,
+    BrowsingContextControllerMethodStubRemoved,
     ContextMenuTriggersLinkActivationNavigationType,
     ConvertsInvalidURLsToBlank,
     ConvertsInvalidURLsToNull,
@@ -231,6 +232,8 @@ WTF_EXPORT_PRIVATE bool isUNIQLOApp();
 WTF_EXPORT_PRIVATE bool isWechat();
 WTF_EXPORT_PRIVATE bool isDOFUSTouch();
 WTF_EXPORT_PRIVATE bool isMyRideK12();
+WTF_EXPORT_PRIVATE bool isChinaConstructionBank();
+WTF_EXPORT_PRIVATE bool isKanbawzaBank();
 
 } // IOSApplication
 

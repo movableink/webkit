@@ -537,12 +537,39 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
     [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
 }
 
+#if PLATFORM(IOS_FAMILY)
+
+static id browsingContextControllerMethodStub(id, SEL)
+{
+    return nil;
+}
+
+static void addBrowsingContextControllerMethodStubIfNeeded()
+{
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        if (linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::BrowsingContextControllerMethodStubRemoved))
+            return;
+
+        if (!WTF::IOSApplication::isChinaConstructionBank() && !WTF::IOSApplication::isKanbawzaBank())
+            return;
+
+        class_addMethod(WKWebView.class, NSSelectorFromString(@"browsingContextController"), reinterpret_cast<IMP>(browsingContextControllerMethodStub), "@@:");
+    });
+}
+
+#endif // PLATFORM(IOS_FAMILY)
+
 - (void)_initializeWithConfiguration:(WKWebViewConfiguration *)configuration
 {
     if (!configuration)
         [NSException raise:NSInvalidArgumentException format:@"Configuration cannot be nil"];
 
     _configuration = adoptNS([configuration copy]);
+
+#if PLATFORM(IOS_FAMILY)
+    addBrowsingContextControllerMethodStubIfNeeded();
+#endif
 
     ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     if (WKWebView *relatedWebView = [_configuration _relatedWebView]) {

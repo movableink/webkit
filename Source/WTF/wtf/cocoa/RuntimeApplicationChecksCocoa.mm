@@ -715,6 +715,18 @@ bool IOSApplication::isHimalaya()
     return isHimalayaApp;
 }
 
+bool IOSApplication::isChinaConstructionBank()
+{
+    static bool isChinaConstructionBankApp = applicationBundleIsEqualTo("com.ccb.ccbDemo"_s);
+    return isChinaConstructionBankApp;
+}
+
+bool IOSApplication::isKanbawzaBank()
+{
+    static bool isKanbawzaBankApp = applicationBundleIsEqualTo("com.KBZBank.KBZPayCustomer"_s);
+    return isKanbawzaBankApp;
+}
+
 #endif // PLATFORM(IOS_FAMILY)
 
 } // namespace WTF
