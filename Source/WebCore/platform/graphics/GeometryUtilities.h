@@ -111,6 +111,16 @@ struct RotatedRect {
 
 WEBCORE_EXPORT RotatedRect rotatedBoundingRectWithMinimumAngleOfRotation(const FloatQuad&, std::optional<float> minRotationInRadians = std::nullopt);
 
+static inline float min3(float a, float b, float c)
+{
+    return std::min(std::min(a, b), c);
+}
+
+static inline float max3(float a, float b, float c)
+{
+    return std::max(std::max(a, b), c);
+}
+
 static inline float min4(float a, float b, float c, float d)
 {
     return std::min(std::min(a, b), std::min(c, d));

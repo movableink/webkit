@@ -27,9 +27,30 @@
 #include "PathSegmentData.h"
 
 #include "AffineTransform.h"
+#include "GeometryUtilities.h"
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+
+inline void extendRect(FloatRect& rect, FloatPoint a, FloatPoint b, FloatPoint c)
+{
+    auto minX = min3(a.x(), b.x(), c.x());
+    auto maxX = max3(a.x(), b.x(), c.x());
+    auto minY = min3(a.y(), b.y(), c.y());
+    auto maxY = max3(a.y(), b.y(), c.y());
+
+    rect.extend({ minX, minY }, { maxX, maxY });
+}
+
+inline void extendRect(FloatRect& rect, FloatPoint a, FloatPoint b, FloatPoint c, FloatPoint d)
+{
+    auto minX = min4(a.x(), b.x(), c.x(), d.x());
+    auto maxX = max4(a.x(), b.x(), c.x(), d.x());
+    auto minY = min4(a.y(), b.y(), c.y(), d.y());
+    auto maxY = max4(a.y(), b.y(), c.y(), d.y());
+
+    rect.extend({ minX, minY }, { maxX, maxY });
+}
 
 FloatPoint PathMoveTo::calculateEndPoint(const FloatPoint&, FloatPoint& lastMoveToPoint) const
 {
@@ -118,9 +139,7 @@ std::optional<FloatPoint> PathQuadCurveTo::tryGetEndPointWithoutContext() const
 
 void PathQuadCurveTo::extendFastBoundingRect(const FloatPoint& currentPoint, const FloatPoint&, FloatRect& boundingRect) const
 {
-    boundingRect.extend(currentPoint);
-    boundingRect.extend(controlPoint);
-    boundingRect.extend(endPoint);
+    extendRect(boundingRect, currentPoint, controlPoint, endPoint);
 }
 
 static float calculateQuadratic(float t, float p0, float p1, float p2)
@@ -180,9 +199,7 @@ static FloatPoint calculateQuadraticExtremity(const FloatPoint& currentPoint, co
 void PathQuadCurveTo::extendBoundingRect(const FloatPoint& currentPoint, const FloatPoint&, FloatRect& boundingRect) const
 {
     auto extremity = calculateQuadraticExtremity(currentPoint, controlPoint, endPoint);
-    boundingRect.extend(currentPoint);
-    boundingRect.extend(extremity);
-    boundingRect.extend(endPoint);
+    extendRect(boundingRect, currentPoint, extremity, endPoint);
 }
 
 void PathQuadCurveTo::applyElements(const PathElementApplier& applier) const
@@ -215,10 +232,7 @@ std::optional<FloatPoint> PathBezierCurveTo::tryGetEndPointWithoutContext() cons
 
 void PathBezierCurveTo::extendFastBoundingRect(const FloatPoint& currentPoint, const FloatPoint&, FloatRect& boundingRect) const
 {
-    boundingRect.extend(currentPoint);
-    boundingRect.extend(controlPoint1);
-    boundingRect.extend(controlPoint2);
-    boundingRect.extend(endPoint);
+    extendRect(boundingRect, currentPoint, controlPoint1, controlPoint2, endPoint);
 }
 
 static float calculateBezier(float t, float p0, float p1, float p2, float p3)
@@ -302,10 +316,7 @@ static std::pair<FloatPoint, FloatPoint> calculateBezierExtremities(const FloatP
 void PathBezierCurveTo::extendBoundingRect(const FloatPoint& currentPoint, const FloatPoint&, FloatRect& boundingRect) const
 {
     auto bezierExtremities = calculateBezierExtremities(currentPoint, controlPoint1, controlPoint2, endPoint);
-    boundingRect.extend(currentPoint);
-    boundingRect.extend(bezierExtremities.first);
-    boundingRect.extend(bezierExtremities.second);
-    boundingRect.extend(endPoint);
+    extendRect(boundingRect, currentPoint, bezierExtremities.first, bezierExtremities.second, endPoint);
 }
 
 void PathBezierCurveTo::applyElements(const PathElementApplier& applier) const
@@ -361,16 +372,13 @@ std::optional<FloatPoint> PathArcTo::tryGetEndPointWithoutContext() const
 
 void PathArcTo::extendFastBoundingRect(const FloatPoint& currentPoint, const FloatPoint&, FloatRect& boundingRect) const
 {
-    boundingRect.extend(currentPoint);
-    boundingRect.extend(controlPoint1);
-    boundingRect.extend(controlPoint2);
+    extendRect(boundingRect, currentPoint, controlPoint1, controlPoint2);
 }
 
 void PathArcTo::extendBoundingRect(const FloatPoint& currentPoint, const FloatPoint&, FloatRect& boundingRect) const
 {
-    boundingRect.extend(currentPoint);
-    boundingRect.extend(controlPoint1);
-    boundingRect.extend(calculateArcToEndPoint(currentPoint, controlPoint1, controlPoint2, radius));
+    auto endPoint = calculateArcToEndPoint(currentPoint, controlPoint1, controlPoint2, radius);
+    extendRect(boundingRect, currentPoint, controlPoint1, endPoint);
 }
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, const PathArcTo& data)
@@ -395,8 +403,7 @@ void PathArc::extendFastBoundingRect(const FloatPoint&, const FloatPoint&, Float
 {
     auto minXMinYCorner = center - FloatSize { radius, radius };
     auto maxXMaxYCorner = center + FloatSize { radius, radius };
-    boundingRect.extend(minXMinYCorner);
-    boundingRect.extend(maxXMaxYCorner);
+    boundingRect.extend(minXMinYCorner, maxXMaxYCorner);
 }
 
 static float angleInClockwise(float angle, RotationDirection direction)
@@ -409,8 +416,7 @@ void PathArc::extendBoundingRect(const FloatPoint&, const FloatPoint&, FloatRect
     auto circleRect = FloatRect { center - FloatSize { radius, radius }, center + FloatSize { radius, radius } };
 
     if (endAngle - startAngle >= radiansPerTurnFloat) {
-        boundingRect.extend(circleRect.minXMinYCorner());
-        boundingRect.extend(circleRect.maxXMaxYCorner());
+        boundingRect.extend(circleRect.minXMinYCorner(), circleRect.maxXMaxYCorner());
         return;
     }
 
@@ -508,17 +514,14 @@ void PathEllipse::extendFastBoundingRect(const FloatPoint&, const FloatPoint&, F
     auto maxXMaxYCorner = center + FloatSize { radiusX, radiusY };
 
     if (!rotation) {
-        boundingRect.extend(minXMinYCorner);
-        boundingRect.extend(maxXMaxYCorner);
+        boundingRect.extend(minXMinYCorner, maxXMaxYCorner);
         return;
     }
 
     auto rect = FloatRect { minXMinYCorner, maxXMaxYCorner };
     auto rotation = AffineTransform::makeRotation(deg2rad(this->rotation));
     rect = rotation.mapRect(rect);
-
-    boundingRect.extend(rect.minXMinYCorner());
-    boundingRect.extend(rect.maxXMaxYCorner());
+    boundingRect.uniteEvenIfEmpty(rect);
 }
 
 void PathEllipse::extendBoundingRect(const FloatPoint& currentPoint, const FloatPoint&, FloatRect& boundingRect) const
@@ -552,8 +555,7 @@ void PathEllipseInRect::extendFastBoundingRect(const FloatPoint& currentPoint, c
 
 void PathEllipseInRect::extendBoundingRect(const FloatPoint&, const FloatPoint&, FloatRect& boundingRect) const
 {
-    boundingRect.extend(rect.minXMinYCorner());
-    boundingRect.extend(rect.maxXMaxYCorner());
+    boundingRect.uniteEvenIfEmpty(rect);
 }
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, const PathEllipseInRect& data)
@@ -581,8 +583,7 @@ void PathRect::extendFastBoundingRect(const FloatPoint& currentPoint, const Floa
 
 void PathRect::extendBoundingRect(const FloatPoint&, const FloatPoint&, FloatRect& boundingRect) const
 {
-    boundingRect.extend(rect.minXMinYCorner());
-    boundingRect.extend(rect.maxXMaxYCorner());
+    boundingRect.uniteEvenIfEmpty(rect);
 }
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, const PathRect& data)
@@ -610,8 +611,7 @@ void PathRoundedRect::extendFastBoundingRect(const FloatPoint& currentPoint, con
 
 void PathRoundedRect::extendBoundingRect(const FloatPoint&, const FloatPoint&, FloatRect& boundingRect) const
 {
-    boundingRect.extend(roundedRect.rect().minXMinYCorner());
-    boundingRect.extend(roundedRect.rect().maxXMaxYCorner());
+    boundingRect.uniteEvenIfEmpty(roundedRect.rect());
 }
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, const PathRoundedRect& data)
@@ -639,8 +639,7 @@ void PathContinuousRoundedRect::extendFastBoundingRect(const FloatPoint& current
 
 void PathContinuousRoundedRect::extendBoundingRect(const FloatPoint&, const FloatPoint&, FloatRect& boundingRect) const
 {
-    boundingRect.extend(rect.minXMinYCorner());
-    boundingRect.extend(rect.maxXMaxYCorner());
+    boundingRect.uniteEvenIfEmpty(rect);
 }
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, const PathContinuousRoundedRect& data)
@@ -706,17 +705,13 @@ std::optional<FloatPoint> PathDataQuadCurve::tryGetEndPointWithoutContext() cons
 
 void PathDataQuadCurve::extendFastBoundingRect(const FloatPoint&, const FloatPoint&, FloatRect& boundingRect) const
 {
-    boundingRect.extend(start);
-    boundingRect.extend(controlPoint);
-    boundingRect.extend(endPoint);
+    extendRect(boundingRect, start, controlPoint, endPoint);
 }
 
 void PathDataQuadCurve::extendBoundingRect(const FloatPoint&, const FloatPoint&, FloatRect& boundingRect) const
 {
     auto extremity = calculateQuadraticExtremity(start, controlPoint, endPoint);
-    boundingRect.extend(start);
-    boundingRect.extend(extremity);
-    boundingRect.extend(endPoint);
+    extendRect(boundingRect, start, extremity, endPoint);
 }
 
 void PathDataQuadCurve::applyElements(const PathElementApplier& applier) const
@@ -754,19 +749,13 @@ std::optional<FloatPoint> PathDataBezierCurve::tryGetEndPointWithoutContext() co
 
 void PathDataBezierCurve::extendFastBoundingRect(const FloatPoint&, const FloatPoint&, FloatRect& boundingRect) const
 {
-    boundingRect.extend(start);
-    boundingRect.extend(controlPoint1);
-    boundingRect.extend(controlPoint2);
-    boundingRect.extend(endPoint);
+    extendRect(boundingRect, start, controlPoint1, controlPoint2, endPoint);
 }
 
 void PathDataBezierCurve::extendBoundingRect(const FloatPoint&, const FloatPoint&, FloatRect& boundingRect) const
 {
     auto bezierExtremities = calculateBezierExtremities(start, controlPoint1, controlPoint2, endPoint);
-    boundingRect.extend(start);
-    boundingRect.extend(bezierExtremities.first);
-    boundingRect.extend(bezierExtremities.second);
-    boundingRect.extend(endPoint);
+    extendRect(boundingRect, start, bezierExtremities.first, bezierExtremities.second, endPoint);
 }
 
 void PathDataBezierCurve::applyElements(const PathElementApplier& applier) const
@@ -805,16 +794,13 @@ std::optional<FloatPoint> PathDataArc::tryGetEndPointWithoutContext() const
 
 void PathDataArc::extendFastBoundingRect(const FloatPoint&, const FloatPoint&, FloatRect& boundingRect) const
 {
-    boundingRect.extend(start);
-    boundingRect.extend(controlPoint1);
-    boundingRect.extend(controlPoint2);
+    extendRect(boundingRect, start, controlPoint1, controlPoint2);
 }
 
 void PathDataArc::extendBoundingRect(const FloatPoint&, const FloatPoint&, FloatRect& boundingRect) const
 {
-    boundingRect.extend(start);
-    boundingRect.extend(controlPoint1);
-    boundingRect.extend(calculateArcToEndPoint(start, controlPoint1, controlPoint2, radius));
+    auto endPoint = calculateArcToEndPoint(start, controlPoint1, controlPoint2, radius);
+    extendRect(boundingRect, start, controlPoint1, endPoint);
 }
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, const PathDataArc& data)
