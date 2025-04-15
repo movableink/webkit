@@ -562,21 +562,31 @@ static bool canBeCalendar(const StringParsingBuffer<CharacterType>& buffer)
     //     Alpha AnnotationValueComponent[opt]
     //     DecimalDigit AnnotationValueComponent[opt]
 
-    // Note, we currently only support 'u-ca' as the content for AnnotationKey.
     // This just checks for '[', followed by an optional '!' (critical flag),
-    // followed by 'u-ca', followed by an '='.
+    // followed by a valid key, followed by an '='.
 
     size_t length = buffer.lengthRemaining();
-    // Because of `[u-ca=`, `]`, and `AnnotationValue`, the annotation must have
-    // length >= 7.
-    if (length < 7)
+    // Because of `[`, `=`, `]`, `AnnotationKey`, and `AnnotationValue`,
+    // the annotation must have length >= 5.
+    if (length < 5)
         return false;
     if (*buffer != '[')
         return false;
     size_t index = 1;
     if (buffer[index] == '!')
         ++index;
-    return buffer[index] == 'u' && buffer[index + 1] == '-' && buffer[index + 2] == 'c' && buffer[index + 3] == 'a' && buffer[index + 4] == '=';
+    if (!isASCIILower(buffer[index]) && buffer[index] != '_')
+        return false;
+    ++index;
+    while (index < length) {
+        if (buffer[index] == '=')
+            return true;
+        if (isASCIILower(buffer[index]) || isASCIIDigit(buffer[index]) || buffer[index] == '-' || buffer[index] == '_')
+            ++index;
+        else
+            return false;
+    }
+    return false;
 }
 
 template<typename CharacterType>
@@ -819,6 +829,7 @@ static std::optional<CalendarRecord> parseCalendar(StringParsingBuffer<Character
         keyLength++;
     if (!keyLength)
         return std::nullopt;
+    auto key(buffer.span().first(keyLength));
     buffer.advanceBy(keyLength);
 
     if (buffer.atEnd())
@@ -840,6 +851,27 @@ static std::optional<CalendarRecord> parseCalendar(StringParsingBuffer<Character
         if (!index)
             return std::nullopt;
         nameLength = index;
+    }
+
+    // Check if the key is equal to "u-ca"
+    if (key.size() != 4
+        || key[0] != 'u' || key[1] != '-'
+        || key[2] != 'c' || key[3] != 'a') {
+        // Annotation is unknown
+        // Consume the rest of the annotation
+        buffer.advanceBy(nameLength);
+        if (buffer.atEnd() || *buffer != ']') {
+            // Parse error
+            return std::nullopt;
+        }
+        // Consume the ']'
+        buffer.advance();
+        // Check for unknown annotations with critical flag
+        // https://tc39.es/proposal-temporal/#sec-temporal-parseisodatetime
+        // step 4(a)(ii)(2)(d)(i)
+        if (isCritical)
+            return std::nullopt;
+        return CalendarRecord { /* isCritical = */ false, /* isUnknown = */ true, { } };
     }
 
     auto isValidComponent = [&](unsigned start, unsigned end) {
@@ -886,7 +918,7 @@ static std::optional<CalendarRecord> parseCalendar(StringParsingBuffer<Character
     if (*buffer != ']')
         return std::nullopt;
     buffer.advance();
-    return CalendarRecord { isCritical, WTFMove(result) };
+    return CalendarRecord { isCritical, /* isUnknown = */ false, WTFMove(result) };
 }
 
 template<typename CharacterType>

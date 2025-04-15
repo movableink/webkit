@@ -252,6 +252,7 @@ static constexpr unsigned minCalendarLength = 3;
 static constexpr unsigned maxCalendarLength = 8;
 struct CalendarRecord {
     bool m_critical { false }; // True if annotated with !
+    bool m_unknown { false }; // True if key is not 'u-ca'
     Vector<LChar, maxCalendarLength> m_name;
 };
 
