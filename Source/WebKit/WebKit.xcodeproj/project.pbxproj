@@ -18392,6 +18392,7 @@
 				07275C4C2D00C934002315A5 /* Frameworks */,
 				07275C4D2D00C934002315A5 /* Resources */,
 				07275CBE2D014A44002315A5 /* Create Symlink to Cryptex Path */,
+				DD725ED62D9129C200E72544 /* Audit SPI use */,
 			);
 			buildRules = (
 			);
@@ -18672,6 +18673,7 @@
 				5DF408C6131DD49700130071 /* Check For Framework Include Consistency */,
 				A55DEAA61670402E003DB841 /* Check For Inappropriate Macros in External Headers */,
 				1A2180161B5454620046AEC4 /* Add Symlink in /System/Library/PrivateFrameworks */,
+				DD725EBD2D8938A500E72544 /* Audit SPI use */,
 				5379C7AC21E5288500E4A8F6 /* Check .xcfilelists */,
 				933170072234674500B32554 /* Create symlinks to XPC services and dylibs */,
 				0FB94836239F31B700926A8F /* Copy Testing Headers */,
@@ -18754,6 +18756,7 @@
 				CD95493226159004008372D9 /* Sources */,
 				CD95493326159004008372D9 /* Frameworks */,
 				6577FFBA2769C64A0011AEC8 /* Create Symlink to Cryptex Path */,
+				DD725ED52D9129A600E72544 /* Audit SPI use */,
 			);
 			buildRules = (
 			);
@@ -19773,6 +19776,69 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "xcrun clang -E -P -w -target ${ARCHS%% *}-${LLVM_TARGET_TRIPLE_VENDOR}-${LLVM_TARGET_TRIPLE_OS_VERSION}${LLVM_TARGET_TRIPLE_SUFFIX} - < \"${SCRIPT_INPUT_FILE_0}\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+		};
+		DD725EBD2D8938A500E72544 /* Audit SPI use */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			dependencyFile = "$(DERIVED_FILES_DIR)/audit-spi.d";
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(WTF_BUILD_SCRIPTS_DIR)/audit-spi-if-needed.sh",
+			);
+			name = "Audit SPI use";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/audit-spi.timestamp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ -f \"${SCRIPT_INPUT_FILE_0}\" ]\nthen \"${SCRIPT_INPUT_FILE_0}\" \"${BUILT_PRODUCTS_DIR}/JavaScriptCore.framework/JavaScriptCore\" \"${BUILT_PRODUCTS_DIR}/libwebrtc.dylib\" \"${BUILT_PRODUCTS_DIR}/WebCore.framework/WebCore\" \"${BUILT_PRODUCTS_DIR}/WebGPU.framework/WebGPU\" \"${BUILT_PRODUCTS_DIR}/libWebKitSwift.dylib\"\nfi && touch \"${DERIVED_FILES_DIR}/audit-spi.d\"\n";
+		};
+		DD725ED52D9129A600E72544 /* Audit SPI use */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			dependencyFile = "$(DERIVED_FILES_DIR)/audit-spi.d";
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(WTF_BUILD_SCRIPTS_DIR)/audit-spi-if-needed.sh",
+			);
+			name = "Audit SPI use";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/audit-spi.timestamp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ -f \"${SCRIPT_INPUT_FILE_0}\" ]\nthen \"${SCRIPT_INPUT_FILE_0}\" \"${BUILT_PRODUCTS_DIR}/JavaScriptCore.framework/JavaScriptCore\" \"${BUILT_PRODUCTS_DIR}/WebCore.framework/WebCore\" \"${BUILT_PRODUCTS_DIR}/WebGPU.framework/WebGPU\" \"${BUILT_PRODUCTS_DIR}/libWebKitSwift.dylib\"\nfi && touch \"${DERIVED_FILES_DIR}/audit-spi.d\"\n";
+		};
+		DD725ED62D9129C200E72544 /* Audit SPI use */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			dependencyFile = "$(DERIVED_FILES_DIR)/audit-spi.d";
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(WTF_BUILD_SCRIPTS_DIR)/audit-spi-if-needed.sh",
+			);
+			name = "Audit SPI use";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/audit-spi.timestamp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ -f \"${SCRIPT_INPUT_FILE_0}\" ]\nthen \"${SCRIPT_INPUT_FILE_0}\" \"${BUILT_PRODUCTS_DIR}/JavaScriptCore.framework/JavaScriptCore\" \"${BUILT_PRODUCTS_DIR}/WebCore.framework/WebCore\" \"${BUILT_PRODUCTS_DIR}/WebGPU.framework/WebGPU\" \"${BUILT_PRODUCTS_DIR}/WebKit.framework/WebKit\" \nfi && touch \"${DERIVED_FILES_DIR}/audit-spi.d\"\n";
 		};
 		DDC907B5298B2DE800ECA4D6 /* Migrate WebCore and WebKitLegacy Headers */ = {
 			isa = PBXShellScriptBuildPhase;

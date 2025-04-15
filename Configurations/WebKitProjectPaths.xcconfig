@@ -98,6 +98,10 @@ WK_VERSIONED_SDK_ADDITIONS_PATH = $(WK_VERSIONED_SDK_ADDITIONS_PATH_$(USE_INTERN
 WK_VERSIONED_SDK_ADDITIONS_PATH_ = $(WK_WORKSPACE_DIR)/WebKitLibraries/SDKs/$(PLATFORM_NAME)$($(DEPLOYMENT_TARGET_SETTING_NAME):base:base).0-additions.sdk;
 WK_VERSIONED_SDK_ADDITIONS_PATH_YES = $(WK_WORKSPACE_DIR)/WebKitLibraries/SDKs/$(PLATFORM_NAME)$($(DEPLOYMENT_TARGET_SETTING_NAME):base:base).0.internal-additions.sdk;
 
+// Partial SDK DBs used for analysis are checked in to WebKitLibraries, but the
+// internal build may override this location.
+WK_SDKDB_DIR = $(inherited:default=$(WK_WORKSPACE_DIR)/WebKitLibraries/SDKDBs/$(SDK_NAME));
+
 WTF_BUILD_SCRIPTS_DIR = $(WTF_BUILD_SCRIPTS_DIR_$(CONFIGURATION));
 WTF_BUILD_SCRIPTS_DIR_Release = $(WTF_BUILD_SCRIPTS_DIR_engineering);
 WTF_BUILD_SCRIPTS_DIR_Debug = $(WTF_BUILD_SCRIPTS_DIR_engineering);

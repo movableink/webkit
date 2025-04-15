@@ -1084,6 +1084,7 @@
 				1CEBD7E02716AFBA00A5254D /* Frameworks */,
 				1CEBD7E12716AFBA00A5254D /* Resources */,
 				6577FFC8276ACA060011AEC8 /* Create Symlink to Cryptex Path */,
+				DD725EBA2D8937A200E72544 /* Audit SPI use */,
 			);
 			buildRules = (
 			);
@@ -1204,6 +1205,27 @@
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/zsh;
 			shellScript = "\"${SRCROOT}/Scripts/create-symlink-to-cryptex.sh\"\n";
+		};
+		DD725EBA2D8937A200E72544 /* Audit SPI use */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			dependencyFile = "$(DERIVED_FILES_DIR)/audit-spi.d";
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(WTF_BUILD_SCRIPTS_DIR)/audit-spi-if-needed.sh",
+			);
+			name = "Audit SPI use";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/audit-spi.timestamp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ -f \"${SCRIPT_INPUT_FILE_0}\" ]\nthen \"${SCRIPT_INPUT_FILE_0}\" \"${BUILT_PRODUCTS_DIR}/JavaScriptCore.framework/JavaScriptCore\"\nfi && touch \"${DERIVED_FILES_DIR}/audit-spi.d\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

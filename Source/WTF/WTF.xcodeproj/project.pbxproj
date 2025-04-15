@@ -574,6 +574,7 @@
 		DD4901EA27B4748A00D7E50D /* WindowsExtras.h in Headers */ = {isa = PBXBuildFile; fileRef = DD4901E327B4748A00D7E50D /* WindowsExtras.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD4901EB27B4748A00D7E50D /* ParallelJobsOpenMP.h in Headers */ = {isa = PBXBuildFile; fileRef = DD4901E427B4748A00D7E50D /* ParallelJobsOpenMP.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DD4901EC27B4748A00D7E50D /* MainThreadData.h in Headers */ = {isa = PBXBuildFile; fileRef = DD4901E527B4748A00D7E50D /* MainThreadData.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		DD725ECA2D8A443E00E72544 /* audit-spi-if-needed.sh in Headers */ = {isa = PBXBuildFile; fileRef = DD725EC92D8A442900E72544 /* audit-spi-if-needed.sh */; settings = {ATTRIBUTES = (Private, ); }; };
 		DDA35E4A29CA9B68006C1018 /* PlatformEnablePlayStation.h in Headers */ = {isa = PBXBuildFile; fileRef = DD4901E127B4748A00D7E50D /* PlatformEnablePlayStation.h */; };
 		DDCAF31D27B1E7C500C45308 /* GenericHashKey.h in Headers */ = {isa = PBXBuildFile; fileRef = E3FD6D6627A1F6AD00935000 /* GenericHashKey.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DDF306D827C08654006A526F /* CFStringSPI.h in Headers */ = {isa = PBXBuildFile; fileRef = DDF306C127C08654006A526F /* CFStringSPI.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -1661,6 +1662,7 @@
 		DD4901E427B4748A00D7E50D /* ParallelJobsOpenMP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ParallelJobsOpenMP.h; sourceTree = "<group>"; };
 		DD4901E527B4748A00D7E50D /* MainThreadData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MainThreadData.h; sourceTree = "<group>"; };
 		DD4901ED27B474D900D7E50D /* NullTextBreakIterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NullTextBreakIterator.h; sourceTree = "<group>"; };
+		DD725EC92D8A442900E72544 /* audit-spi-if-needed.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "audit-spi-if-needed.sh"; sourceTree = "<group>"; };
 		DD9C67FB2D70243000D4BEC7 /* generate-platform-args */ = {isa = PBXFileReference; explicitFileType = text.script.python; path = "generate-platform-args"; sourceTree = "<group>"; };
 		DDD8BAC227B347C400C109E0 /* translit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = translit.h; sourceTree = "<group>"; };
 		DDD8BAC327B347C400C109E0 /* ustdio.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ustdio.h; sourceTree = "<group>"; };
@@ -2868,6 +2870,7 @@
 		DD3DC9FF27A4E176007E5B61 /* Scripts */ = {
 			isa = PBXGroup;
 			children = (
+				DD725EC92D8A442900E72544 /* audit-spi-if-needed.sh */,
 				DD9C67FB2D70243000D4BEC7 /* generate-platform-args */,
 				DD3DCA0027A4E176007E5B61 /* Preferences */,
 				DD28DF2329D368BD00BBB459 /* generate-tapi-filelist.py */,
@@ -3297,6 +3300,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DD725ECA2D8A443E00E72544 /* audit-spi-if-needed.sh in Headers */,
 				FE6997E129D241630078B9C6 /* AbortWithReasonSPI.h in Headers */,
 				144EB7462CBC94B100926E1B /* AbstractRefCounted.h in Headers */,
 				1404B3E52CBC954D00A7471C /* AbstractRefCountedAndCanMakeWeakPtr.h in Headers */,

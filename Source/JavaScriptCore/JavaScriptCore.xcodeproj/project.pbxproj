@@ -12430,6 +12430,7 @@
 				932F5B3F0822A1C700736975 /* Headers */,
 				932F5B910822A1C700736975 /* Sources */,
 				932F5BD20822A1C700736975 /* Frameworks */,
+				DDFD2AD32C93BD6900ACE884 /* Audit SPI use */,
 				5D29D8BE0E9860B400C3D2D0 /* Check For Weak VTables and Externals */,
 				3713F014142905240036387F /* Check For Inappropriate Objective-C Class Names */,
 				A55DEAA416703DF7003DB841 /* Check For Inappropriate Macros in External Headers */,
@@ -12845,6 +12846,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "if [ \"${ACTION}\" = \"installhdrs\" ] || [ \"${ACTION}\" = \"installapi\" ]; then\n    exit 0;\nfi\n\nif [ -f ../../Tools/Scripts/check-for-inappropriate-files-in-framework ]; then\n    export PRODUCT_NAME=JavaScriptCore\n    if [ -z \"${WK_FRAMEWORK_VERSION_PREFIX}\" ]; then\n        export SHALLOW_BUNDLE=YES\n    fi\n    ../../Tools/Scripts/check-for-inappropriate-files-in-framework || exit $?\nfi\n";
+		};
+		DDFD2AD32C93BD6900ACE884 /* Audit SPI use */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			dependencyFile = "$(DERIVED_FILES_DIR)/audit-spi.d";
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(WTF_BUILD_SCRIPTS_DIR)/audit-spi-if-needed.sh",
+			);
+			name = "Audit SPI use";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/audit-spi.timestamp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ -f \"${SCRIPT_INPUT_FILE_0}\" ]\nthen \"${SCRIPT_INPUT_FILE_0}\"\nfi && touch \"${DERIVED_FILES_DIR}/audit-spi.d\"\n";
 		};
 		E1AC2E2C20F7B95800B0897D /* Unlock Keychain */ = {
 			isa = PBXShellScriptBuildPhase;

@@ -39,7 +39,6 @@ AutoInstall.install(Package('future', Version(0, 18, 2), aliases=['libfuturize',
 AutoInstall.install(Package('pbr', Version(5, 9, 0)))
 AutoInstall.install(Package('lz4', Version(4, 3, 2)))
 AutoInstall.install(Package('jwt', Version(1, 7, 1), pypi_name='PyJWT'))
-AutoInstall.install(Package('pyyaml', Version(5, 3, 1), pypi_name='PyYAML'))
 
 AutoInstall.install(Package('autobahn', Version(20, 7, 1), wheel=False))
 AutoInstall.install(Package('automat', Version(20, 2, 0), pypi_name='Automat'))
