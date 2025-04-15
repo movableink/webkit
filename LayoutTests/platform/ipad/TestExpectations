@@ -18,9 +18,7 @@ fast/forms/ios/user-scalable-does-not-scale-for-keyboard-focus-with-user-scalabl
 fast/forms/ios/zoom-after-input-tap-wide-input.html [ Skip ]
 fast/forms/ios/zoom-after-input-tap.html [ Skip ]
 
-
 media/video-volume.html [ Pass ]
-media/video-background-playback.html [ Pass ]
 
 fast/forms/ios/scroll-to-reveal-focused-select.html [ Crash Failure ]
 fast/forms/ios/time-picker-value-change.html [ Failure ]
