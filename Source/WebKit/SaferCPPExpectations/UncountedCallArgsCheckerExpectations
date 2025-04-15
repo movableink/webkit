@@ -103,7 +103,6 @@ WebProcess/Extensions/API/Cocoa/WebExtensionAPIWindowsEventCocoa.mm
 WebProcess/Extensions/Bindings/Cocoa/JSWebExtensionWrapperCocoa.mm
 WebProcess/FullScreen/WebFullScreenManager.cpp
 WebProcess/GPU/media/MediaPlayerPrivateRemote.cpp
-WebProcess/GPU/media/MediaSourcePrivateRemote.cpp
 WebProcess/GPU/media/RemoteAudioHardwareListener.cpp
 WebProcess/GPU/media/RemoteImageDecoderAVFManager.cpp
 WebProcess/GPU/media/RemoteLegacyCDMFactory.cpp
