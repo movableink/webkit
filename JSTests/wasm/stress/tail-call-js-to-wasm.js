@@ -1,7 +1,7 @@
 import { instantiate } from "../wabt-wrapper.js";
 import * as assert from "../assert.js";
 
-let count = 10;
+let count = 20;
 function splat(strOrGen, num = count) {
     let result = Array(num).fill(strOrGen); // need to fill the array otherwise map yields nothing.
     if (typeof strOrGen == "function")
@@ -48,7 +48,6 @@ async function testCallToTail() {
         )
     )
     `
-
     let instance = await instantiate(wat, {}, { tail_call: true });
     let func = instance.exports.test;
 
@@ -59,5 +58,34 @@ async function testCallToTail() {
     }
 }
 
+async function testCallToTail2() {
+    let wat = `
+    (module
+        (func (export "test") (result ${splat("i32")})
+            (call $callee ${splat((i) => "(i32.const " + i + ")\n")})
+        )
+        (func $callee (param ${splat("i32")}) (result ${splat("i32")})
+            ${splat((i) => i < count ? "(i32.const " + (i + 100) + ")\n"
+                : "(local.get " + (i % count) + ")\n", count * 2)}
+            (return_call $tail)
+        )
+
+        (func $tail (param ${splat("i32", count * 2)}) (result ${splat("i32")})
+            ${splat((i) => "(i32.add (local.get " + i + ")(local.get " + (i + count) + "))\n")}
+        )
+    )
+    `
+    let instance = await instantiate(wat, {}, { tail_call: true });
+    let func = instance.exports.test;
+
+    for (let i = 0; i < 1e4; ++i) {
+        let results = func();
+        for (let j = 0; j < count; ++j)
+            assert.eq(results[j], 2 * j + 100);
+    }
+}
+
+
 assert.asyncTest(testTail());
 assert.asyncTest(testCallToTail());
+assert.asyncTest(testCallToTail2());

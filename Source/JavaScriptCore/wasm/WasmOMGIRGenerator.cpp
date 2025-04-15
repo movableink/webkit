@@ -5035,6 +5035,11 @@ static inline void prepareForTailCallImpl(unsigned functionIndex, CCallHelpers& 
 
     JIT_COMMENT(jit, "SP[", safeAreaLowerBound, "] to SP[", stackUpperBound, "] form the safe portion of the stack to clobber; Scratches go from SP[0] to SP[", scratchAreaUpperBound, "].");
 
+    if (clobbersTmp) {
+        tmpSpill = allocateSpill(Width::Width64);
+        jit.storePtr(tmp, CCallHelpers::Address(MacroAssembler::stackPointerRegister, tmpSpill));
+    }
+
 #if ASSERT_ENABLED
     // Clobber all safe values to make debugging easier.
     for (int i = safeAreaLowerBound; i < stackUpperBound; i += sizeof(Register)) {
@@ -5047,11 +5052,6 @@ static inline void prepareForTailCallImpl(unsigned functionIndex, CCallHelpers& 
     Vector<std::tuple<int, int, Width>> argsToMove;
     Vector<std::tuple<int, int, Width>> spillsToMove;
     argsToMove.reserveInitialCapacity(wasmCalleeInfoAsCallee.params.size() + 1);
-
-    if (clobbersTmp) {
-        tmpSpill = allocateSpill(WidthPtr);
-        jit.storePtr(tmp, CCallHelpers::Address(MacroAssembler::stackPointerRegister, tmpSpill));
-    }
 
     // We will complete those moves who's source is closest to the danger frontier first.
     // That will move the danger frontier.
@@ -5072,9 +5072,12 @@ static inline void prepareForTailCallImpl(unsigned functionIndex, CCallHelpers& 
             continue;
         }
 
-        auto saveSrc = [tmp, dstType, &allocateSpill, &jit, &fpOffsetToSPOffset](ValueRep src) -> std::tuple<int, Width> {
+        auto saveSrc = [tmp, clobbersTmp, tmpSpill, dstType, &allocateSpill, &jit, &fpOffsetToSPOffset](ValueRep src) -> std::tuple<int, Width> {
             int srcOffset = 0;
-            if (src.isGPR()) {
+            if (clobbersTmp && src.isGPR() && src.gpr() == tmp) {
+                // Before tmp may have been clobbered, it was spilled to tmpSpill.
+                srcOffset = tmpSpill;
+            } else if (src.isGPR()) {
                 srcOffset = allocateSpill(WidthPtr);
                 jit.storePtr(src.gpr(), CCallHelpers::Address(MacroAssembler::stackPointerRegister, srcOffset));
             } else if (src.isFPR()) {
