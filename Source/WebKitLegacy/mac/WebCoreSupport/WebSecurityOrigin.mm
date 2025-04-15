@@ -80,7 +80,7 @@ using namespace WebCore;
 #if PLATFORM(IOS_FAMILY)
 - (NSString *)toString
 {
-    return reinterpret_cast<SecurityOrigin*>(_private)->toString();
+    return reinterpret_cast<SecurityOrigin*>(_private)->toString().createNSString().autorelease();
 }
 #endif
 

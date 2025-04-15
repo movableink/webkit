@@ -157,7 +157,7 @@ static bool laContextRequested = false;
 {
     ASSERT_NE(panel, nil);
     EXPECT_EQ(retries, 8ul);
-    completionHandler(webAuthenticationPanelPin);
+    completionHandler(webAuthenticationPanelPin.createNSString().get());
 }
 
 - (void)panel:(_WKWebAuthenticationPanel *)panel selectAssertionResponse:(NSArray < _WKWebAuthenticationAssertionResponse *> *)responses source:(_WKWebAuthenticationSource)source completionHandler:(void (^)(_WKWebAuthenticationAssertionResponse *))completionHandler
@@ -365,7 +365,7 @@ bool addKeyToKeychain(const String& privateKeyBase64, const String& rpId, const 
     };
     CFErrorRef errorRef = nullptr;
     auto key = adoptCF(SecKeyCreateWithData(
-        (__bridge CFDataRef)adoptNS([[NSData alloc] initWithBase64EncodedString:privateKeyBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters]).get(),
+        (__bridge CFDataRef)adoptNS([[NSData alloc] initWithBase64EncodedString:privateKeyBase64.createNSString().get() options:NSDataBase64DecodingIgnoreUnknownCharacters]).get(),
         (__bridge CFDictionaryRef)options,
         &errorRef
     ));
@@ -377,11 +377,11 @@ bool addKeyToKeychain(const String& privateKeyBase64, const String& rpId, const 
     [addQuery setDictionary:@{
         (id)kSecValueRef: (id)key.get(),
         (id)kSecClass: (id)kSecClassKey,
-        (id)kSecAttrLabel: rpId,
-        (id)kSecAttrApplicationTag: adoptNS([[NSData alloc] initWithBase64EncodedString:userHandleBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters]).get(),
+        (id)kSecAttrLabel: rpId.createNSString().get(),
+        (id)kSecAttrApplicationTag: adoptNS([[NSData alloc] initWithBase64EncodedString:userHandleBase64.createNSString().get() options:NSDataBase64DecodingIgnoreUnknownCharacters]).get(),
         (id)kSecAttrAccessible: (id)kSecAttrAccessibleAfterFirstUnlock,
         (id)kSecUseDataProtectionKeychain: @YES,
-        (id)kSecAttrAccessGroup: testWebKitAPIAccessGroup,
+        (id)kSecAttrAccessGroup: testWebKitAPIAccessGroup.createNSString().get(),
         (id)kSecAttrAlias: credentialID.get(),
     }];
     if (synchronizable)
@@ -401,12 +401,12 @@ void cleanUpKeychain()
         (id)kSecAttrSynchronizable: (id)kSecAttrSynchronizableAny,
         (id)kSecAttrAccessible: (id)kSecAttrAccessibleAfterFirstUnlock,
         (id)kSecUseDataProtectionKeychain: @YES,
-        (id)kSecAttrAccessGroup: testWebKitAPIAccessGroup,
+        (id)kSecAttrAccessGroup: testWebKitAPIAccessGroup.createNSString().get(),
     }];
 
     SecItemDelete((__bridge CFDictionaryRef)deleteQuery);
 
-    deleteQuery[(id)kSecAttrAccessGroup] = testWebKitAPIAlternateAccessGroup;
+    deleteQuery[(id)kSecAttrAccessGroup] = testWebKitAPIAlternateAccessGroup.createNSString().get();
     SecItemDelete((__bridge CFDictionaryRef)deleteQuery);
 }
 
@@ -646,14 +646,14 @@ TEST(WebAuthenticationPanel, SubFrameChangeLocationHidCancel)
             "Content-Length: %d\r\n\r\n"
             "%@",
             parentFrame.length(),
-            (id)parentFrame
+            parentFrame.createNSString().get()
         ];
         RetainPtr<NSString> secondResponse = [NSString stringWithFormat:
             @"HTTP/1.1 200 OK\r\n"
             "Content-Length: %d\r\n\r\n"
             "%@",
             subFrame.length(),
-            (id)subFrame
+            subFrame.createNSString().get()
         ];
         connection.receiveHTTPRequest([=] (Vector<char>&&) {
             connection.send(firstResponse.get(), [=] {
@@ -671,13 +671,13 @@ TEST(WebAuthenticationPanel, SubFrameChangeLocationHidCancel)
 
     auto port = static_cast<unsigned>(server.port());
     auto url = makeString("http://localhost:"_s, port);
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:(id)url]]];
+    [webView loadRequest:adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:url.createNSString().get()]).get()]).get()];
     Util::run(&webAuthenticationPanelRan);
     [webView evaluateJavaScript:@"theFrame.src = 'simple.html'" completionHandler:nil];
     Util::run(&webAuthenticationPanelFailed);
 
     // A bit of extra checks.
-    checkFrameInfo([delegate frame], false, (id)makeString(url, "/iFrame.html"_s), @"http", @"localhost", port, webView.get());
+    checkFrameInfo([delegate frame], false, makeString(url, "/iFrame.html"_s).createNSString().get(), @"http", @"localhost", port, webView.get());
     checkPanel([delegate panel], @"localhost", @[adoptNS([[NSNumber alloc] initWithInt:_WKWebAuthenticationTransportUSB]).get()], _WKWebAuthenticationTypeGet);
 }
 
@@ -689,14 +689,14 @@ TEST(WebAuthenticationPanel, SubFrameDestructionHidCancel)
             "Content-Length: %d\r\n\r\n"
             "%@",
             parentFrame.length(),
-            (id)parentFrame
+            parentFrame.createNSString().get()
         ];
         RetainPtr<NSString> secondResponse = [NSString stringWithFormat:
             @"HTTP/1.1 200 OK\r\n"
             "Content-Length: %d\r\n\r\n"
             "%@",
             subFrame.length(),
-            (id)subFrame
+            subFrame.createNSString().get()
         ];
 
         connection.receiveHTTPRequest([=] (Vector<char>&&) {
@@ -713,7 +713,7 @@ TEST(WebAuthenticationPanel, SubFrameDestructionHidCancel)
     [webView setUIDelegate:delegate.get()];
     [webView focus];
 
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:(id)makeString("http://localhost:"_s, server.port())]]];
+    [webView loadRequest:adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:makeString("http://localhost:"_s, server.port()).createNSString().get()]).get()]).get()];
     Util::run(&webAuthenticationPanelRan);
     [webView evaluateJavaScript:@"theFrame.parentNode.removeChild(theFrame)" completionHandler:nil];
     Util::run(&webAuthenticationPanelFailed);
@@ -1745,7 +1745,7 @@ TEST(WebAuthenticationPanel, MakeCredentialLA)
     auto options = adoptNS([[_WKPublicKeyCredentialCreationOptions alloc] initWithRelyingParty:rp.get() user:user.get() publicKeyCredentialParamaters:publicKeyCredentialParamaters]);
 
     auto panel = adoptNS([[_WKWebAuthenticationPanel alloc] init]);
-    [panel setMockConfiguration:@{ @"privateKeyBase64": testES256PrivateKeyBase64 }];
+    [panel setMockConfiguration:@{ @"privateKeyBase64": testES256PrivateKeyBase64.createNSString().get() }];
     auto delegate = adoptNS([[TestWebAuthenticationPanelDelegate alloc] init]);
     [panel setDelegate:delegate.get()];
 
@@ -1782,7 +1782,7 @@ TEST(WebAuthenticationPanel, MakeCredentialLAClientDataHashMediation)
     auto options = adoptNS([[_WKPublicKeyCredentialCreationOptions alloc] initWithRelyingParty:rp.get() user:user.get() publicKeyCredentialParamaters:publicKeyCredentialParamaters]);
 
     auto panel = adoptNS([[_WKWebAuthenticationPanel alloc] init]);
-    [panel setMockConfiguration:@{ @"privateKeyBase64": testES256PrivateKeyBase64 }];
+    [panel setMockConfiguration:@{ @"privateKeyBase64": testES256PrivateKeyBase64.createNSString().get() }];
     auto delegate = adoptNS([[TestWebAuthenticationPanelDelegate alloc] init]);
     [panel setDelegate:delegate.get()];
 
@@ -1821,7 +1821,7 @@ TEST(WebAuthenticationPanel, MakeCredentialLAAttestationFalback)
     options.get().attestation = _WKAttestationConveyancePreferenceDirect;
 
     auto panel = adoptNS([[_WKWebAuthenticationPanel alloc] init]);
-    [panel setMockConfiguration:@{ @"privateKeyBase64": testES256PrivateKeyBase64 }];
+    [panel setMockConfiguration:@{ @"privateKeyBase64": testES256PrivateKeyBase64.createNSString().get() }];
     auto delegate = adoptNS([[TestWebAuthenticationPanelDelegate alloc] init]);
     [panel setDelegate:delegate.get()];
 
@@ -2346,10 +2346,10 @@ TEST(WebAuthenticationPanel, ExportImportCredential)
 
     addKeyToKeychain(testES256PrivateKeyBase64, "example.com"_s, testUserEntityBundleBase64);
 
-    auto *credentials = [_WKWebAuthenticationPanel getAllLocalAuthenticatorCredentialsWithAccessGroup:testWebKitAPIAccessGroup];
+    auto *credentials = [_WKWebAuthenticationPanel getAllLocalAuthenticatorCredentialsWithAccessGroup:testWebKitAPIAccessGroup.createNSString().get()];
     EXPECT_NOT_NULL(credentials);
     EXPECT_EQ([credentials count], 1lu);
-    EXPECT_EQ([[_WKWebAuthenticationPanel getAllLocalAuthenticatorCredentialsWithAccessGroup:testWebKitAPIAlternateAccessGroup] count], 0lu);
+    EXPECT_EQ([[_WKWebAuthenticationPanel getAllLocalAuthenticatorCredentialsWithAccessGroup:testWebKitAPIAlternateAccessGroup.createNSString().get()] count], 0lu);
 
     EXPECT_NOT_NULL([credentials firstObject]);
     NSError *error = nil;
@@ -2357,13 +2357,13 @@ TEST(WebAuthenticationPanel, ExportImportCredential)
 
     cleanUpKeychain();
 
-    EXPECT_EQ([[_WKWebAuthenticationPanel getAllLocalAuthenticatorCredentialsWithAccessGroup:testWebKitAPIAccessGroup] count], 0lu);
+    EXPECT_EQ([[_WKWebAuthenticationPanel getAllLocalAuthenticatorCredentialsWithAccessGroup:testWebKitAPIAccessGroup.createNSString().get()] count], 0lu);
 
-    auto credentialId = [_WKWebAuthenticationPanel importLocalAuthenticatorWithAccessGroup:testWebKitAPIAlternateAccessGroup credential:exportedKey error:&error];
+    auto credentialId = [_WKWebAuthenticationPanel importLocalAuthenticatorWithAccessGroup:testWebKitAPIAlternateAccessGroup.createNSString().get() credential:exportedKey error:&error];
     EXPECT_WK_STREQ([[credentials firstObject][_WKLocalAuthenticatorCredentialIDKey] base64EncodedStringWithOptions:0], [credentialId base64EncodedStringWithOptions:0]);
 
-    EXPECT_EQ([[_WKWebAuthenticationPanel getAllLocalAuthenticatorCredentialsWithAccessGroup:testWebKitAPIAccessGroup] count], 0lu);
-    EXPECT_EQ([[_WKWebAuthenticationPanel getAllLocalAuthenticatorCredentialsWithAccessGroup:testWebKitAPIAlternateAccessGroup] count], 1lu);
+    EXPECT_EQ([[_WKWebAuthenticationPanel getAllLocalAuthenticatorCredentialsWithAccessGroup:testWebKitAPIAccessGroup.createNSString().get()] count], 0lu);
+    EXPECT_EQ([[_WKWebAuthenticationPanel getAllLocalAuthenticatorCredentialsWithAccessGroup:testWebKitAPIAlternateAccessGroup.createNSString().get()] count], 1lu);
     cleanUpKeychain();
 }
 
@@ -2374,7 +2374,7 @@ TEST(WebAuthenticationPanel, ExportImportDuplicateCredential)
 
     addKeyToKeychain(testES256PrivateKeyBase64, "example.com"_s, testUserEntityBundleBase64);
 
-    auto *credentials = [_WKWebAuthenticationPanel getAllLocalAuthenticatorCredentialsWithAccessGroup:testWebKitAPIAccessGroup];
+    auto *credentials = [_WKWebAuthenticationPanel getAllLocalAuthenticatorCredentialsWithAccessGroup:testWebKitAPIAccessGroup.createNSString().get()];
     EXPECT_NOT_NULL(credentials);
     EXPECT_EQ([credentials count], 1lu);
 
@@ -2383,14 +2383,14 @@ TEST(WebAuthenticationPanel, ExportImportDuplicateCredential)
     auto exportedKey = [_WKWebAuthenticationPanel exportLocalAuthenticatorCredentialWithID:[credentials firstObject][_WKLocalAuthenticatorCredentialIDKey] error:&error];
     cleanUpKeychain();
 
-    auto credentialId = [_WKWebAuthenticationPanel importLocalAuthenticatorWithAccessGroup:testWebKitAPIAccessGroup credential:exportedKey error:&error];
+    auto credentialId = [_WKWebAuthenticationPanel importLocalAuthenticatorWithAccessGroup:testWebKitAPIAccessGroup.createNSString().get() credential:exportedKey error:&error];
 
-    credentials = [_WKWebAuthenticationPanel getAllLocalAuthenticatorCredentialsWithAccessGroup:testWebKitAPIAccessGroup];
+    credentials = [_WKWebAuthenticationPanel getAllLocalAuthenticatorCredentialsWithAccessGroup:testWebKitAPIAccessGroup.createNSString().get()];
     EXPECT_NOT_NULL(credentials);
     EXPECT_EQ([credentials count], 1lu);
     addKeyToKeychain(testES256PrivateKeyBase64, "example.com"_s, testUserEntityBundleBase64, [credentials firstObject][_WKLocalAuthenticatorCredentialSynchronizableKey]);
 
-    credentialId = [_WKWebAuthenticationPanel importLocalAuthenticatorWithAccessGroup:testWebKitAPIAccessGroup credential:exportedKey error:&error];
+    credentialId = [_WKWebAuthenticationPanel importLocalAuthenticatorWithAccessGroup:testWebKitAPIAccessGroup.createNSString().get() credential:exportedKey error:&error];
     EXPECT_EQ(credentialId, nil);
     EXPECT_EQ(error.code, WKErrorDuplicateCredential);
 
@@ -2402,7 +2402,7 @@ TEST(WebAuthenticationPanel, ImportMalformedCredential)
     reset();
 
     NSError *error = nil;
-    auto credentialId = [_WKWebAuthenticationPanel importLocalAuthenticatorCredential:adoptNS([[NSData alloc] initWithBase64EncodedString:testUserEntityBundleBase64 options:0]).get() error:&error];
+    auto credentialId = [_WKWebAuthenticationPanel importLocalAuthenticatorCredential:adoptNS([[NSData alloc] initWithBase64EncodedString:testUserEntityBundleBase64.createNSString().get() options:0]).get() error:&error];
 
     EXPECT_EQ(error.code, WKErrorMalformedCredential);
     EXPECT_EQ(credentialId, nil);

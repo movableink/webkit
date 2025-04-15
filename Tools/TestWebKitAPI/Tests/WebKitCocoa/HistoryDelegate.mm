@@ -80,8 +80,8 @@ TEST(HistoryDelegate, NonpersistentDataStoreDoesNotSendHistoryEvents)
     [webView _setHistoryDelegate:historyDelegate.get()];
 
     auto mainURL = makeString("http://localhost:"_s, server.port(), "/"_s);
-    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:mainURL]];
-    [webView loadRequest:request];
+    RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:mainURL.createNSString().get()]).get()]);
+    [webView loadRequest:request.get()];
     [webView _test_waitForDidFinishNavigation];
     TestWebKitAPI::Util::spinRunLoop();
 
@@ -107,23 +107,23 @@ TEST(HistoryDelegate, NonpersistentDataStoreSendsHistoryEventsWhenAllowingPrivac
     [webView _setHistoryDelegate:historyDelegate.get()];
 
     auto mainURL = makeString("http://localhost:"_s, server.port(), "/"_s);
-    auto url = [NSURL URLWithString:mainURL];
-    NSURLRequest *request = [NSURLRequest requestWithURL:url];
-    [webView loadRequest:request];
+    RetainPtr url = adoptNS([[NSURL alloc] initWithString:mainURL.createNSString().get()]);
+    RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:url.get()]);
+    [webView loadRequest:request.get()];
 
     TestWebKitAPI::Util::waitFor([&] {
         return historyDelegate->lastNavigationData && historyDelegate->lastUpdatedTitle;
     });
 
-    EXPECT_NS_EQUAL([historyDelegate->lastNavigationData originalRequest], request);
-    EXPECT_NS_EQUAL([historyDelegate->lastNavigationData originalRequest].URL, url);
+    EXPECT_NS_EQUAL([historyDelegate->lastNavigationData originalRequest], request.get());
+    EXPECT_NS_EQUAL([historyDelegate->lastNavigationData originalRequest].URL, url.get());
     EXPECT_NS_EQUAL(historyDelegate->lastUpdatedTitle.get(), @"Page Title");
 
     auto sourceURL = makeString("http://localhost:"_s, server.port(), "/server_redirect_source"_s);
     auto destinationURL = makeString("http://localhost:"_s, server.port(), "/server_redirect_destination"_s);
-    url = [NSURL URLWithString:sourceURL];
-    request = [NSURLRequest requestWithURL:url];
-    [webView loadRequest:request];
+    url = adoptNS([[NSURL alloc] initWithString:sourceURL.createNSString().get()]);
+    request = adoptNS([[NSURLRequest alloc] initWithURL:url.get()]);
+    [webView loadRequest:request.get()];
     [webView _test_waitForDidFinishNavigation];
     TestWebKitAPI::Util::spinRunLoop();
 
@@ -152,23 +152,23 @@ TEST(HistoryDelegate, PersistentDataStoreSendsHistoryEvents)
     [webView _setHistoryDelegate:historyDelegate.get()];
 
     auto mainURL = makeString("http://localhost:"_s, server.port(), "/"_s);
-    auto url = [NSURL URLWithString:mainURL];
-    NSURLRequest *request = [NSURLRequest requestWithURL:url];
-    [webView loadRequest:request];
+    RetainPtr url = adoptNS([[NSURL alloc] initWithString:mainURL.createNSString().get()]);
+    RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:url.get()]);
+    [webView loadRequest:request.get()];
 
     TestWebKitAPI::Util::waitFor([&] {
         return historyDelegate->lastNavigationData && historyDelegate->lastUpdatedTitle;
     });
 
-    EXPECT_NS_EQUAL([historyDelegate->lastNavigationData originalRequest], request);
-    EXPECT_NS_EQUAL([historyDelegate->lastNavigationData originalRequest].URL, url);
+    EXPECT_NS_EQUAL([historyDelegate->lastNavigationData originalRequest], request.get());
+    EXPECT_NS_EQUAL([historyDelegate->lastNavigationData originalRequest].URL, url.get());
     EXPECT_NS_EQUAL(historyDelegate->lastUpdatedTitle.get(), @"Page Title");
 
     auto sourceURL = makeString("http://localhost:"_s, server.port(), "/server_redirect_source"_s);
     auto destinationURL = makeString("http://localhost:"_s, server.port(), "/server_redirect_destination"_s);
-    url = [NSURL URLWithString:sourceURL];
-    request = [NSURLRequest requestWithURL:url];
-    [webView loadRequest:request];
+    url = adoptNS([[NSURL alloc] initWithString:sourceURL.createNSString().get()]);
+    request = adoptNS([[NSURLRequest alloc] initWithURL:url.get()]);
+    [webView loadRequest:request.get()];
     [webView _test_waitForDidFinishNavigation];
     TestWebKitAPI::Util::spinRunLoop();
 

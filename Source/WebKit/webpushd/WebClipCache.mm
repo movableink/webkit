@@ -170,7 +170,7 @@ static RetainPtr<NSArray> loadWebClipCachePropertyList(NSString *path)
 
 void WebClipCache::load()
 {
-    RetainPtr entries = loadWebClipCachePropertyList(m_path);
+    RetainPtr entries = loadWebClipCachePropertyList(m_path.createNSString().get());
     if (!entries)
         return;
 
@@ -247,7 +247,7 @@ bool WebClipCache::isWebClipVisible(const String& bundleIdentifier, const String
     if (bundleIdentifier == "com.apple.SafariViewService"_s)
         return true;
 
-    UIWebClip *webClip = [UIWebClip webClipWithIdentifier:webClipIdentifier];
+    UIWebClip *webClip = [UIWebClip webClipWithIdentifier:webClipIdentifier.createNSString().get()];
     if (![webClip respondsToSelector:@selector(trustedClientBundleIdentifiers)])
         return true;
 

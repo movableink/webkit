@@ -356,18 +356,18 @@ static RetainPtr<WKWebView> createdWebView;
         }).get());
     };
 
-    NSURL *finalURL = task.request.URL;
+    RetainPtr<NSURL> finalURL = task.request.URL;
     auto target = _redirects.get(task.request.URL.absoluteString);
     if (!target.isEmpty()) {
-        auto redirectResponse = adoptNS([[NSURLResponse alloc] initWithURL:task.request.URL MIMEType:nil expectedContentLength:0 textEncodingName:nil]);
+        RetainPtr redirectResponse = adoptNS([[NSURLResponse alloc] initWithURL:task.request.URL MIMEType:nil expectedContentLength:0 textEncodingName:nil]);
 
-        finalURL = [NSURL URLWithString:(NSString *)target];
-        auto request = adoptNS([[NSURLRequest alloc] initWithURL:finalURL]);
+        finalURL = adoptNS([[NSURL alloc] initWithString:target.createNSString().get()]);
+        auto request = adoptNS([[NSURLRequest alloc] initWithURL:finalURL.get()]);
 
         [(id<WKURLSchemeTaskPrivate>)task _didPerformRedirection:redirectResponse.get() newRequest:request.get()];
     }
 
-    doAsynchronouslyIfNecessary([finalURL = retainPtr(finalURL)](id <WKURLSchemeTask> task) {
+    doAsynchronouslyIfNecessary([finalURL](id <WKURLSchemeTask> task) {
         NSMutableDictionary* headerDictionary = [NSMutableDictionary dictionary];
         [headerDictionary setObject:@"text/html" forKey:@"Content-Type"];
         [headerDictionary setObject:@"1" forKey:@"Content-Length"];
@@ -376,7 +376,7 @@ static RetainPtr<WKWebView> createdWebView;
         [task didReceiveResponse:response.get()];
     }, 0.1);
 
-    doAsynchronouslyIfNecessary([self, finalURL = retainPtr(finalURL)](id <WKURLSchemeTask> task) {
+    doAsynchronouslyIfNecessary([self, finalURL](id <WKURLSchemeTask> task) {
         if (auto data = _dataMappings.get([finalURL absoluteString]))
             [task didReceiveData:data.get()];
         else if (_bytes) {
@@ -793,8 +793,8 @@ TEST(ProcessSwap, PSONRedirectionToExternal)
 
     [webView configuration].preferences.fraudulentWebsiteWarningEnabled = NO;
 
-    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:popupURL]];
-    [webView loadRequest:request];
+    RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:popupURL.createNSString().get()]).get()]);
+    [webView loadRequest:request.get()];
     done = false;
 
     __block BOOL isRedirection = NO;
@@ -4106,7 +4106,7 @@ TEST(ProcessSwap, NumberOfCachedProcesses)
 
     const unsigned maxSuspendedPageCount = [processPool _maximumSuspendedPageCount];
     for (unsigned i = 0; i < maxSuspendedPageCount + 2; i++)
-        [handler addMappingFromURLString:makeString("pson://www.domain-"_s, i, ".com"_s) toData:pageCache1Bytes];
+        [handler addMappingFromURLString:makeString("pson://www.domain-"_s, i, ".com"_s).createNSString().get() toData:pageCache1Bytes];
     [webViewConfiguration setURLSchemeHandler:handler.get() forURLScheme:@"PSON"];
 
     auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:webViewConfiguration.get()]);
@@ -4114,8 +4114,8 @@ TEST(ProcessSwap, NumberOfCachedProcesses)
     [webView setNavigationDelegate:delegate.get()];
 
     for (unsigned i = 0; i < maxSuspendedPageCount + 1; i++) {
-        NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:makeString("pson://www.domain-"_s, i, ".com"_s)]];
-        [webView loadRequest:request];
+        RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:makeString("pson://www.domain-"_s, i, ".com"_s).createNSString().get()]).get()]);
+        [webView loadRequest:request.get()];
         TestWebKitAPI::Util::run(&done);
         done = false;
 
@@ -4124,8 +4124,8 @@ TEST(ProcessSwap, NumberOfCachedProcesses)
         EXPECT_FALSE([processPool _hasPrewarmedWebProcess]);
     }
 
-    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:makeString("pson://www.domain-"_s, maxSuspendedPageCount + 1, ".com"_s)]];
-    [webView loadRequest:request];
+    RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:makeString("pson://www.domain-"_s, maxSuspendedPageCount + 1, ".com"_s).createNSString().get()]).get()]);
+    [webView loadRequest:request.get()];
     TestWebKitAPI::Util::run(&done);
     done = false;
 
@@ -4560,7 +4560,7 @@ TEST(ProcessSwap, CrossOriginBlobNavigation)
 
     finishedRunningScript = false;
     auto script = makeString("document.getElementById('link').href = '"_s, blobURL, '\'');
-    [webView _evaluateJavaScriptWithoutUserGesture:(NSString *)script completionHandler: [&] (id result, NSError *error) {
+    [webView _evaluateJavaScriptWithoutUserGesture:script.createNSString().get() completionHandler: [&] (id result, NSError *error) {
         finishedRunningScript = true;
     }];
     TestWebKitAPI::Util::run(&finishedRunningScript);
@@ -8758,7 +8758,7 @@ static void checkSettingsControlledByLockdownMode(WKWebView *webView, ShouldBeEn
     auto runJSCheck = [&](const String& js) -> bool {
         bool finishedRunningScript = false;
         bool checkResult = false;
-        [webView evaluateJavaScript:js completionHandler:[&] (id result, NSError *error) {
+        [webView evaluateJavaScript:js.createNSString().get() completionHandler:[&] (id result, NSError *error) {
             EXPECT_NULL(error);
             checkResult = [result boolValue];
             finishedRunningScript = true;

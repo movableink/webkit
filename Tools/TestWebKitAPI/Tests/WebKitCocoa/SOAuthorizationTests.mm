@@ -681,7 +681,7 @@ TEST(SOAuthorizationRedirect, InterceptionSucceed2)
     [webView _loadRequest:[NSURLRequest requestWithURL:testURL.createNSURL().get()] shouldOpenExternalURLs:YES];
 #elif PLATFORM(IOS) || PLATFORM(VISION)
     // Here we force RedirectSOAuthorizationSession to go to the with user gestures route.
-    [webView evaluateJavaScript: [NSString stringWithFormat:@"location = '%@'", (id)testURL.string()] completionHandler:nil];
+    [webView evaluateJavaScript:adoptNS([[NSString alloc] initWithFormat:@"location = '%@'", testURL.string().createNSString().get()]).get() completionHandler:nil];
 #endif
     Util::run(&authorizationPerformed);
 #if PLATFORM(MAC)
@@ -714,7 +714,7 @@ TEST(SOAuthorizationRedirect, InterceptionSucceed3)
     [webView _loadRequest:[NSURLRequest requestWithURL:testURL.createNSURL().get()] shouldOpenExternalURLs:YES];
 #elif PLATFORM(IOS) || PLATFORM(VISION)
     // Here we force RedirectSOAuthorizationSession to go to the with user gestures route.
-    [webView evaluateJavaScript: [NSString stringWithFormat:@"location = '%@'", (id)testURL.string()] completionHandler:nil];
+    [webView evaluateJavaScript:adoptNS([[NSString alloc] initWithFormat:@"location = '%@'", testURL.string().createNSString().get()]).get() completionHandler:nil];
 #endif
     Util::run(&authorizationPerformed);
     EXPECT_TRUE(gAuthorization.enableEmbeddedAuthorizationViewController);
@@ -1119,7 +1119,7 @@ TEST(SOAuthorizationRedirect, InterceptionSucceedWithRedirectionAndCookie)
     [webView loadRequest:[NSURLRequest requestWithURL:testURL.createNSURL().get()]];
 #elif PLATFORM(IOS) || PLATFORM(VISION)
     // Here we force RedirectSOAuthorizationSession to go to the with user gestures route.
-    [webView evaluateJavaScript: [NSString stringWithFormat:@"location = '%@'", (id)testURL.string()] completionHandler:nil];
+    [webView evaluateJavaScript:adoptNS([[NSString alloc] initWithFormat:@"location = '%@'", testURL.string().createNSString().get()]).get() completionHandler:nil];
 #endif
     Util::run(&authorizationPerformed);
 #if PLATFORM(MAC)
@@ -1160,7 +1160,7 @@ TEST(SOAuthorizationRedirect, InterceptionSucceedWithDifferentOrigin)
     EXPECT_TRUE(policyForAppSSOPerformed);
 
     URL redirectURL { "https://www.example.com"_str };
-    auto response = adoptNS([[NSHTTPURLResponse alloc] initWithURL:redirectURL.createNSURL().get() statusCode:302 HTTPVersion:@"HTTP/1.1" headerFields:@{ @"Location" : redirectURL.string() }]);
+    RetainPtr response = adoptNS([[NSHTTPURLResponse alloc] initWithURL:redirectURL.createNSURL().get() statusCode:302 HTTPVersion:@"HTTP/1.1" headerFields:@{ @"Location" : redirectURL.string().createNSString().get() }]);
     [gDelegate authorization:gAuthorization didCompleteWithHTTPResponse:response.get() httpBody:adoptNS([[NSData alloc] init]).get()];
     Util::run(&navigationCompleted);
     EXPECT_WK_STREQ(testURL.get().absoluteString, finalURL);
@@ -1970,7 +1970,7 @@ TEST(SOAuthorizationPopUp, NoInterceptions)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:testURL.get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:testURL.get()];
     Util::run(&navigationCompleted);
 
     [delegate setShouldOpenExternalSchemes:true];
@@ -2002,7 +2002,7 @@ TEST(SOAuthorizationPopUp, NoInterceptionsSubFrame)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:baseURL.get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:baseURL.get()];
     Util::run(&navigationCompleted);
 
     // The new window will not navigate to the testURL as the iframe has an opaque origin.
@@ -2045,7 +2045,7 @@ TEST(SOAuthorizationPopUp, InterceptionError)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:baseURL.get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:baseURL.get()];
     Util::run(&navigationCompleted);
 
     [delegate setShouldOpenExternalSchemes:true];
@@ -2086,7 +2086,7 @@ TEST(SOAuthorizationPopUp, InterceptionCancel)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:baseURL.get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:baseURL.get()];
     Util::run(&navigationCompleted);
 
 #if PLATFORM(MAC)
@@ -2122,7 +2122,7 @@ TEST(SOAuthorizationPopUp, InterceptionSucceedCloseByItself)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:baseURL.get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:baseURL.get()];
     Util::run(&navigationCompleted);
 
 #if PLATFORM(MAC)
@@ -2160,7 +2160,7 @@ TEST(SOAuthorizationPopUp, InterceptionSucceedCloseByParent)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:baseURL.get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:baseURL.get()];
     Util::run(&navigationCompleted);
 
 #if PLATFORM(MAC)
@@ -2198,7 +2198,7 @@ TEST(SOAuthorizationPopUp, InterceptionSucceedCloseByWebKit)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:baseURL.get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:baseURL.get()];
     Util::run(&navigationCompleted);
 
 #if PLATFORM(MAC)
@@ -2232,7 +2232,7 @@ TEST(SOAuthorizationPopUp, InterceptionSucceedWithOtherHttpStatusCode)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:baseURL.get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:baseURL.get()];
     Util::run(&navigationCompleted);
 
     [delegate setShouldOpenExternalSchemes:true];
@@ -2277,7 +2277,7 @@ TEST(SOAuthorizationPopUp, InterceptionSucceedWithCookie)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:baseURL.get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:baseURL.get()];
     Util::run(&navigationCompleted);
 
 #if PLATFORM(MAC)
@@ -2315,7 +2315,7 @@ TEST(SOAuthorizationPopUp, InterceptionSucceedTwice)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:baseURL.get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:baseURL.get()];
     Util::run(&navigationCompleted);
 
     for (int i = 0; i < 2; i++) {
@@ -2355,7 +2355,7 @@ TEST(SOAuthorizationPopUp, InterceptionSucceedSuppressActiveSession)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:baseURL.get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:baseURL.get()];
     Util::run(&navigationCompleted);
 
 #if PLATFORM(MAC)
@@ -2377,7 +2377,7 @@ TEST(SOAuthorizationPopUp, InterceptionSucceedSuppressActiveSession)
     configureSOAuthorizationWebView(newWebView.get(), delegate.get());
 
     navigationCompleted = false;
-    [newWebView loadHTMLString:testHtml baseURL:baseURL.get()];
+    [newWebView loadHTMLString:testHtml.createNSString().get() baseURL:baseURL.get()];
     Util::run(&navigationCompleted);
 
     authorizationPerformed = false;
@@ -2425,7 +2425,7 @@ TEST(SOAuthorizationPopUp, InterceptionSucceedNewWindowNavigation)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:baseURL.get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:baseURL.get()];
     Util::run(&navigationCompleted);
 
 #if PLATFORM(MAC)
@@ -2458,7 +2458,7 @@ TEST(SOAuthorizationPopUp, AuthorizationOptions)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:URL { "http://www.webkit.org"_str }.createNSURL().get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:URL { "http://www.webkit.org"_str }.createNSURL().get()];
     Util::run(&navigationCompleted);
 
 #if PLATFORM(MAC)
@@ -2484,7 +2484,7 @@ TEST(SOAuthorizationPopUp, SOAuthorizationLoadPolicyIgnore)
     configureSOAuthorizationWebView(webView.get(), delegate.get());
     [delegate setAllowSOAuthorizationLoad:false];
 
-    [webView loadHTMLString:testHtml baseURL:URL { "http://www.webkit.org"_str }.createNSURL().get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:URL { "http://www.webkit.org"_str }.createNSURL().get()];
     Util::run(&navigationCompleted);
 
 #if PLATFORM(MAC)
@@ -2515,7 +2515,7 @@ TEST(SOAuthorizationPopUp, SOAuthorizationLoadPolicyAllowAsync)
     configureSOAuthorizationWebView(webView.get(), delegate.get());
     [delegate setIsAsyncExecution:true];
 
-    [webView loadHTMLString:testHtml baseURL:baseURL.get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:baseURL.get()];
     Util::run(&navigationCompleted);
 
 #if PLATFORM(MAC)
@@ -2551,7 +2551,7 @@ TEST(SOAuthorizationPopUp, SOAuthorizationLoadPolicyIgnoreAsync)
     [delegate setAllowSOAuthorizationLoad:false];
     [delegate setIsAsyncExecution:true];
 
-    [webView loadHTMLString:testHtml baseURL:URL { "http://www.webkit.org"_str }.createNSURL().get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:URL { "http://www.webkit.org"_str }.createNSURL().get()];
     Util::run(&navigationCompleted);
 
 #if PLATFORM(MAC)
@@ -2579,7 +2579,7 @@ TEST(SOAuthorizationSubFrame, NoInterceptions)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:baseURL.get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:baseURL.get()];
     Util::run(&allMessagesReceived);
     EXPECT_FALSE(policyForAppSSOPerformed);
 }
@@ -2595,7 +2595,7 @@ TEST(SOAuthorizationSubFrame, NoInterceptionsNonAppleFirstPartyMainFrame)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:URL { "http://www.webkit.org"_str }.createNSURL().get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:URL { "http://www.webkit.org"_str }.createNSURL().get()];
     // Try to wait until the iframe load is finished.
     Util::runFor(0.5_s);
     // Make sure we don't intercept the iframe.
@@ -2621,7 +2621,7 @@ TEST(SOAuthorizationSubFrame, InterceptionError)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:baseURL.get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:baseURL.get()];
     Util::run(&allMessagesReceived);
 
     checkAuthorizationOptions(false, "file://"_s, 2);
@@ -2653,7 +2653,7 @@ TEST(SOAuthorizationSubFrame, InterceptionCancel)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:baseURL.get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:baseURL.get()];
     Util::run(&allMessagesReceived);
 
     checkAuthorizationOptions(false, "file://"_s, 2);
@@ -2684,7 +2684,7 @@ TEST(SOAuthorizationSubFrame, InterceptionSuccess)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:nil];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:nil];
     Util::run(&allMessagesReceived);
 
     checkAuthorizationOptions(false, "null"_s, 2);
@@ -2716,7 +2716,7 @@ TEST(SOAuthorizationSubFrame, InterceptionSucceedWithOtherHttpStatusCode)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:baseURL.get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:baseURL.get()];
     Util::run(&allMessagesReceived);
 
     checkAuthorizationOptions(false, "file://"_s, 2);
@@ -2751,7 +2751,7 @@ TEST(SOAuthorizationSubFrame, InterceptionSucceedWithCookie)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:[NSURL URLWithString:@"http://example.com"]];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:adoptNS([[NSURL alloc] initWithString:@"http://example.com"]).get()];
     Util::run(&allMessagesReceived);
 
     checkAuthorizationOptions(false, "http://example.com"_s, 2);
@@ -2781,7 +2781,7 @@ TEST(SOAuthorizationSubFrame, InterceptionSucceedWithCookieButCSPDeny)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:nil];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:nil];
     Util::run(&allMessagesReceived);
 
     checkAuthorizationOptions(false, "null"_s, 2);
@@ -2812,7 +2812,7 @@ TEST(SOAuthorizationSubFrame, InterceptionSucceedWithCookieButXFrameDeny)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:nil];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:nil];
     Util::run(&allMessagesReceived);
 
     checkAuthorizationOptions(false, "null"_s, 2);
@@ -2850,7 +2850,7 @@ TEST(SOAuthorizationSubFrame, InterceptionSuccessTwice)
 
         [messageHandler resetExpectations:@[@"http://www.example.com", @"SOAuthorizationDidStart"]];
 
-        [webView loadHTMLString:testHtml baseURL:nil];
+        [webView loadHTMLString:testHtml.createNSString().get() baseURL:nil];
         Util::run(&allMessagesReceived);
 
         checkAuthorizationOptions(false, "null"_s, 2);
@@ -2882,7 +2882,7 @@ TEST(SOAuthorizationSubFrame, AuthorizationOptions)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:URL { "http://www.apple.com"_str }.createNSURL().get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:URL { "http://www.apple.com"_str }.createNSURL().get()];
     Util::run(&allMessagesReceived);
 
     checkAuthorizationOptions(false, "http://www.apple.com"_s, 2);
@@ -2901,7 +2901,7 @@ TEST(SOAuthorizationSubFrame, SOAuthorizationLoadPolicyIgnore)
     configureSOAuthorizationWebView(webView.get(), delegate.get());
     [delegate setAllowSOAuthorizationLoad:false];
 
-    [webView loadHTMLString:testHtml baseURL:URL { "http://www.apple.com"_str }.createNSURL().get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:URL { "http://www.apple.com"_str }.createNSURL().get()];
     // Try to wait until the iframe load is finished.
     Util::runFor(0.5_s);
     // Make sure we don't intercept the iframe.
@@ -2931,7 +2931,7 @@ TEST(SOAuthorizationSubFrame, SOAuthorizationLoadPolicyAllowAsync)
     configureSOAuthorizationWebView(webView.get(), delegate.get());
     [delegate setIsAsyncExecution:true];
 
-    [webView loadHTMLString:testHtml baseURL:nil];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:nil];
     Util::run(&allMessagesReceived);
 
     checkAuthorizationOptions(false, "null"_s, 2);
@@ -2959,7 +2959,7 @@ TEST(SOAuthorizationSubFrame, SOAuthorizationLoadPolicyIgnoreAsync)
     [delegate setAllowSOAuthorizationLoad:false];
     [delegate setIsAsyncExecution:true];
 
-    [webView loadHTMLString:testHtml baseURL:URL("http://www.apple.com"_s).createNSURL().get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:URL("http://www.apple.com"_s).createNSURL().get()];
     // Try to wait until the iframe load is finished.
     Util::runFor(0.5_s);
     // Make sure we don't intercept the iframe.
@@ -2979,14 +2979,14 @@ TEST(SOAuthorizationSubFrame, InterceptionErrorWithReferrer)
             "Content-Length: %d\r\n\r\n"
             "%@",
             parentHtml.length(),
-            (id)parentHtml
+            parentHtml.createNSString().get()
         ];
         RetainPtr<NSString> secondResponse = [NSString stringWithFormat:
             @"HTTP/1.1 200 OK\r\n"
             "Content-Length: %d\r\n\r\n"
             "%@",
             frameHtml.length(),
-            (id)frameHtml
+            frameHtml.createNSString().get()
         ];
 
         connection.receiveHTTPRequest([=](Vector<char>&&) {
@@ -2999,14 +2999,15 @@ TEST(SOAuthorizationSubFrame, InterceptionErrorWithReferrer)
     });
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
     auto origin = makeString("http://127.0.0.1:"_s, server.port());
+    RetainPtr nsOrigin = origin.createNSString();
 
-    auto messageHandler = adoptNS([[TestSOAuthorizationScriptMessageHandler alloc] initWithExpectation:@[origin, @"SOAuthorizationDidStart", origin, @"SOAuthorizationDidCancel", origin, @"Hello.", origin, makeString("Referrer: "_s, origin, '/')]]);
+    RetainPtr messageHandler = adoptNS([[TestSOAuthorizationScriptMessageHandler alloc] initWithExpectation:@[nsOrigin.get(), @"SOAuthorizationDidStart", nsOrigin.get(), @"SOAuthorizationDidCancel", nsOrigin.get(), @"Hello.", nsOrigin.get(), makeString("Referrer: "_s, origin, '/').createNSString().get()]]);
     [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"testHandler"];
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500) configuration:configuration.get()]);
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView _loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:(id)origin]] shouldOpenExternalURLs:NO];
+    [webView _loadRequest:adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:nsOrigin.get()]).get()]).get() shouldOpenExternalURLs:NO];
 
     Util::run(&authorizationPerformed);
     EXPECT_TRUE(policyForAppSSOPerformed);
@@ -3033,7 +3034,7 @@ TEST(SOAuthorizationSubFrame, InterceptionErrorMessageOrder)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:baseURL.get()];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:baseURL.get()];
     Util::run(&authorizationPerformed);
     EXPECT_TRUE(policyForAppSSOPerformed);
     [gDelegate authorization:gAuthorization didCompleteWithError:adoptNS([[NSError alloc] initWithDomain:NSCocoaErrorDomain code:0 userInfo:nil]).get()];
@@ -3057,7 +3058,7 @@ TEST(SOAuthorizationSubFrame, InterceptionSuccessMessageOrder)
     auto delegate = adoptNS([[TestSOAuthorizationDelegate alloc] init]);
     configureSOAuthorizationWebView(webView.get(), delegate.get());
 
-    [webView loadHTMLString:testHtml baseURL:nil];
+    [webView loadHTMLString:testHtml.createNSString().get() baseURL:nil];
     Util::run(&authorizationPerformed);
     EXPECT_TRUE(policyForAppSSOPerformed);
 

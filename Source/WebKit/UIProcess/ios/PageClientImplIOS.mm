@@ -495,7 +495,7 @@ void PageClientImpl::relayAccessibilityNotification(const String& notificationNa
 {
     auto contentView = this->contentView();
     if ([contentView respondsToSelector:@selector(accessibilityRelayNotification:notificationData:)])
-        [contentView accessibilityRelayNotification:notificationName notificationData:notificationData.get()];
+        [contentView accessibilityRelayNotification:notificationName.createNSString().get() notificationData:notificationData.get()];
 }
 
 IntRect PageClientImpl::rootViewToAccessibilityScreen(const IntRect& rect)
@@ -542,7 +542,7 @@ void PageClientImpl::doneDeferringTouchEnd(bool preventNativeGestures)
 
 void PageClientImpl::requestTextRecognition(const URL& imageURL, ShareableBitmap::Handle&& imageData, const String& sourceLanguageIdentifier, const String& targetLanguageIdentifier, CompletionHandler<void(TextRecognitionResult&&)>&& completion)
 {
-    [contentView() requestTextRecognition:imageURL.createNSURL().get() imageData:WTFMove(imageData) sourceLanguageIdentifier:sourceLanguageIdentifier targetLanguageIdentifier:targetLanguageIdentifier completionHandler:WTFMove(completion)];
+    [contentView() requestTextRecognition:imageURL.createNSURL().get() imageData:WTFMove(imageData) sourceLanguageIdentifier:sourceLanguageIdentifier.createNSString().get() targetLanguageIdentifier:targetLanguageIdentifier.createNSString().get() completionHandler:WTFMove(completion)];
 }
 
 #endif // ENABLE(IMAGE_ANALYSIS)
@@ -738,7 +738,7 @@ void PageClientImpl::reconcileEnclosingScrollViewContentOffset(EditorState& stat
 
 void PageClientImpl::showPlaybackTargetPicker(bool hasVideo, const IntRect& elementRect, WebCore::RouteSharingPolicy policy, const String& contextUID)
 {
-    [contentView() _showPlaybackTargetPicker:hasVideo fromRect:elementRect routeSharingPolicy:policy routingContextUID:contextUID];
+    [contentView() _showPlaybackTargetPicker:hasVideo fromRect:elementRect routeSharingPolicy:policy routingContextUID:contextUID.createNSString().get()];
 }
 
 bool PageClientImpl::handleRunOpenPanel(WebPageProxy*, WebFrameProxy*, const FrameInfoData& frameInfo, API::OpenPanelParameters* parameters, WebOpenPanelResultListenerProxy* listener)
@@ -1097,7 +1097,7 @@ void PageClientImpl::requestPasswordForQuickLookDocument(const String& fileName,
         return;
     }
 
-    [webView _showPasswordViewWithDocumentName:fileName passwordHandler:passwordHandler.get()];
+    [webView _showPasswordViewWithDocumentName:fileName.createNSString().get() passwordHandler:passwordHandler.get()];
 }
 #endif
 

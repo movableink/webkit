@@ -1101,8 +1101,8 @@ TEST(KeyboardInputTests, NoCrashWhenDiscardingMarkedText)
     [webView _setEditable:YES];
 
     auto navigateAndSetMarkedText = [&](const String& urlString) {
-        auto request = [NSURLRequest requestWithURL:[NSURL URLWithString:(NSString *)urlString]];
-        [webView loadSimulatedRequest:request responseHTMLString:@"<body>Hello world</body>"];
+        RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:urlString.createNSString().get()]).get()]);
+        [webView loadSimulatedRequest:request.get() responseHTMLString:@"<body>Hello world</body>"];
         [navigationDelegate waitForDidFinishNavigation];
         [webView selectAll:nil];
         [[webView textInputContentView] setMarkedText:@"Hello" selectedRange:NSMakeRange(0, 5)];

@@ -206,10 +206,10 @@ void TestController::cocoaPlatformInitialize(const Options& options)
         return;
 
     String resourceLoadStatisticsFolder = makeString(String::fromUTF8(dumpRenderTreeTemp), "/ResourceLoadStatistics"_s);
-    [[NSFileManager defaultManager] createDirectoryAtPath:resourceLoadStatisticsFolder withIntermediateDirectories:YES attributes:nil error: nil];
+    [[NSFileManager defaultManager] createDirectoryAtPath:resourceLoadStatisticsFolder.createNSString().get() withIntermediateDirectories:YES attributes:nil error: nil];
     String fullBrowsingSessionResourceLog = makeString(resourceLoadStatisticsFolder, "/full_browsing_session_resourceLog.plist"_s);
     NSDictionary *resourceLogPlist = @{ @"version": @(1) };
-    if (![resourceLogPlist writeToFile:fullBrowsingSessionResourceLog atomically:YES])
+    if (![resourceLogPlist writeToFile:fullBrowsingSessionResourceLog.createNSString().get() atomically:YES])
         WTFCrash();
     
     if (options.webCoreLogChannels.length())
@@ -491,7 +491,7 @@ void TestController::cocoaResetStateToConsistentValues(const TestOptions& option
 
 void TestController::platformSetStatisticsCrossSiteLoadWithLinkDecoration(WKStringRef fromHost, WKStringRef toHost, bool wasFiltered, void* context, SetStatisticsCrossSiteLoadWithLinkDecorationCallBack callback)
 {
-    [m_mainWebView->platformView() _setStatisticsCrossSiteLoadWithLinkDecorationForTesting:toWTFString(fromHost) withToHost:toWTFString(toHost) withWasFiltered:wasFiltered withCompletionHandler:^{
+    [m_mainWebView->platformView() _setStatisticsCrossSiteLoadWithLinkDecorationForTesting:toWTFString(fromHost).createNSString().get() withToHost:toWTFString(toHost).createNSString().get() withWasFiltered:wasFiltered withCompletionHandler:^{
         callback(context);
     }];
 }
@@ -587,7 +587,7 @@ void TestController::clearAppPrivacyReportTestingData()
 
 void TestController::injectUserScript(WKStringRef script)
 {
-    auto userScript = adoptNS([[WKUserScript alloc] initWithSource: toWTFString(script) injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:NO]);
+    auto userScript = adoptNS([[WKUserScript alloc] initWithSource: toWTFString(script).createNSString().get() injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:NO]);
 
     [[globalWebViewConfiguration() userContentController] addUserScript: userScript.get()];
 }
@@ -601,7 +601,7 @@ void TestController::addTestKeyToKeychain(const String& privateKeyBase64, const 
     };
     CFErrorRef errorRef = nullptr;
     auto key = adoptCF(SecKeyCreateWithData(
-        (__bridge CFDataRef)adoptNS([[NSData alloc] initWithBase64EncodedString:privateKeyBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters]).get(),
+        (__bridge CFDataRef)adoptNS([[NSData alloc] initWithBase64EncodedString:privateKeyBase64.createNSString().get() options:NSDataBase64DecodingIgnoreUnknownCharacters]).get(),
         (__bridge CFDictionaryRef)options,
         &errorRef
     ));
@@ -610,8 +610,8 @@ void TestController::addTestKeyToKeychain(const String& privateKeyBase64, const 
     NSDictionary* addQuery = @{
         (id)kSecValueRef: (id)key.get(),
         (id)kSecClass: (id)kSecClassKey,
-        (id)kSecAttrLabel: attrLabel,
-        (id)kSecAttrApplicationTag: adoptNS([[NSData alloc] initWithBase64EncodedString:applicationTagBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters]).get(),
+        (id)kSecAttrLabel: attrLabel.createNSString().get(),
+        (id)kSecAttrApplicationTag: adoptNS([[NSData alloc] initWithBase64EncodedString:applicationTagBase64.createNSString().get() options:NSDataBase64DecodingIgnoreUnknownCharacters]).get(),
         (id)kSecAttrAccessible: (id)kSecAttrAccessibleAfterFirstUnlock,
         (id)kSecUseDataProtectionKeychain: @YES
     };
@@ -623,10 +623,10 @@ void TestController::cleanUpKeychain(const String& attrLabel, const String& appl
 {
     auto deleteQuery = adoptNS([[NSMutableDictionary alloc] init]);
     [deleteQuery setObject:(id)kSecClassKey forKey:(id)kSecClass];
-    [deleteQuery setObject:attrLabel forKey:(id)kSecAttrLabel];
+    [deleteQuery setObject:attrLabel.createNSString().get() forKey:(id)kSecAttrLabel];
     [deleteQuery setObject:@YES forKey:(id)kSecUseDataProtectionKeychain];
 
-    auto credentialID = adoptNS([[NSData alloc] initWithBase64EncodedString:applicationLabelBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters]);
+    auto credentialID = adoptNS([[NSData alloc] initWithBase64EncodedString:applicationLabelBase64.createNSString().get() options:NSDataBase64DecodingIgnoreUnknownCharacters]);
     if (!!applicationLabelBase64)
         [deleteQuery setObject:credentialID.get() forKey:(id)kSecAttrAlias];
 
@@ -640,12 +640,12 @@ void TestController::cleanUpKeychain(const String& attrLabel, const String& appl
 
 bool TestController::keyExistsInKeychain(const String& attrLabel, const String& applicationLabelBase64)
 {
-    auto credentialID = adoptNS([[NSData alloc] initWithBase64EncodedString:applicationLabelBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters]);
+    auto credentialID = adoptNS([[NSData alloc] initWithBase64EncodedString:applicationLabelBase64.createNSString().get() options:NSDataBase64DecodingIgnoreUnknownCharacters]);
     auto query = adoptNS([[NSMutableDictionary alloc] init]);
     [query setDictionary:@{
         (id)kSecClass: (id)kSecClassKey,
         (id)kSecAttrKeyClass: (id)kSecAttrKeyClassPrivate,
-        (id)kSecAttrLabel: attrLabel,
+        (id)kSecAttrLabel: attrLabel.createNSString().get(),
         (id)kSecAttrAlias: credentialID.get(),
         (id)kSecUseDataProtectionKeychain: @YES
     }];
@@ -763,7 +763,7 @@ WKRetainPtr<WKStringRef> TestController::getBackgroundFetchIdentifier()
 void TestController::abortBackgroundFetch(WKStringRef identifier)
 {
     __block bool isDone = false;
-    [globalWebViewConfiguration().get().websiteDataStore _abortBackgroundFetch:toWTFString(identifier) completionHandler:^() {
+    [globalWebViewConfiguration().get().websiteDataStore _abortBackgroundFetch:toWTFString(identifier).createNSString().get() completionHandler:^() {
         isDone = true;
     }];
     platformRunUntil(isDone, noTimeout);
@@ -772,7 +772,7 @@ void TestController::abortBackgroundFetch(WKStringRef identifier)
 void TestController::pauseBackgroundFetch(WKStringRef identifier)
 {
     __block bool isDone = false;
-    [globalWebViewConfiguration().get().websiteDataStore _pauseBackgroundFetch:toWTFString(identifier) completionHandler:^() {
+    [globalWebViewConfiguration().get().websiteDataStore _pauseBackgroundFetch:toWTFString(identifier).createNSString().get() completionHandler:^() {
         isDone = true;
     }];
     platformRunUntil(isDone, noTimeout);
@@ -781,7 +781,7 @@ void TestController::pauseBackgroundFetch(WKStringRef identifier)
 void TestController::resumeBackgroundFetch(WKStringRef identifier)
 {
     __block bool isDone = false;
-    [globalWebViewConfiguration().get().websiteDataStore _resumeBackgroundFetch:toWTFString(identifier) completionHandler:^() {
+    [globalWebViewConfiguration().get().websiteDataStore _resumeBackgroundFetch:toWTFString(identifier).createNSString().get() completionHandler:^() {
         isDone = true;
     }];
     platformRunUntil(isDone, noTimeout);
@@ -790,7 +790,7 @@ void TestController::resumeBackgroundFetch(WKStringRef identifier)
 void TestController::simulateClickBackgroundFetch(WKStringRef identifier)
 {
     __block bool isDone = false;
-    [globalWebViewConfiguration().get().websiteDataStore _clickBackgroundFetch:toWTFString(identifier) completionHandler:^() {
+    [globalWebViewConfiguration().get().websiteDataStore _clickBackgroundFetch:toWTFString(identifier).createNSString().get() completionHandler:^() {
         isDone = true;
     }];
     platformRunUntil(isDone, noTimeout);
@@ -820,7 +820,7 @@ WKRetainPtr<WKStringRef> TestController::backgroundFetchState(WKStringRef identi
 {
     __block bool isDone = false;
     __block String backgroundFetchState;
-    [globalWebViewConfiguration().get().websiteDataStore _getBackgroundFetchState:toWTFString(identifier) completionHandler:^(NSDictionary *state) {
+    [globalWebViewConfiguration().get().websiteDataStore _getBackgroundFetchState:toWTFString(identifier).createNSString().get() completionHandler:^(NSDictionary *state) {
         backgroundFetchState = makeString("{ "_s,
             "\"downloaded\":"_s, [[state valueForKey:@"Downloaded"] unsignedIntegerValue], ',',
             "\"isPaused\":"_s, [[state valueForKey:@"IsPaused"] boolValue] ? "true"_s : "false"_s,

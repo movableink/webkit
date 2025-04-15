@@ -287,7 +287,7 @@ CocoaMenuItem *WebExtensionCommand::platformMenuItem() const
 
     return result;
 #else
-    return [UIAction actionWithTitle:description() image:nil identifier:nil handler:makeBlockPtr([this, protectedThis = Ref { *this }](UIAction *) mutable {
+    return [UIAction actionWithTitle:description().createNSString().get() image:nil identifier:nil handler:makeBlockPtr([this, protectedThis = Ref { *this }](UIAction *) mutable {
         if (RefPtr context = extensionContext())
             context->performCommand(const_cast<WebExtensionCommand&>(*this), WebExtensionContext::UserTriggered::Yes);
     }).get()];
@@ -300,12 +300,12 @@ UIKeyCommand *WebExtensionCommand::keyCommand() const
     if (activationKey().isEmpty())
         return nil;
 
-    return [_WKWebExtensionKeyCommand commandWithTitle:description() image:nil input:activationKey() modifierFlags:modifierFlags().toRaw() identifier:identifier()];
+    return [_WKWebExtensionKeyCommand commandWithTitle:description().createNSString().get() image:nil input:activationKey().createNSString().get() modifierFlags:modifierFlags().toRaw() identifier:identifier().createNSString().get()];
 }
 
 bool WebExtensionCommand::matchesKeyCommand(UIKeyCommand *keyCommand) const
 {
-    return keyCommand.modifierFlags == modifierFlags().toRaw() && [keyCommand.input isEqual:activationKey()] && [keyCommand.propertyList[@"identifier"] isEqual:identifier()];
+    return keyCommand.modifierFlags == modifierFlags().toRaw() && [keyCommand.input isEqual:activationKey().createNSString().get()] && [keyCommand.propertyList[@"identifier"] isEqual:identifier().createNSString().get()];
 }
 #endif
 

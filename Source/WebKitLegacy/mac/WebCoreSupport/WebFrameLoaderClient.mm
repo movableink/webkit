@@ -1939,13 +1939,13 @@ RefPtr<WebCore::LegacyPreviewLoaderClient> WebFrameLoaderClient::createPreviewLo
     if (![m_webFrame webView].preferences.quickLookDocumentSavingEnabled)
         return nullptr;
 
-    NSString *filePath = WebCore::createTemporaryFileForQuickLook(fileName);
+    RetainPtr filePath = WebCore::createTemporaryFileForQuickLook(fileName.createNSString().get());
     if (!filePath)
         return nullptr;
 
-    auto documentWriter = adoptRef(*new QuickLookDocumentWriter(filePath));
+    auto documentWriter = adoptRef(*new QuickLookDocumentWriter(filePath.get()));
 
-    [m_webFrame provisionalDataSource]._quickLookContent = @{ WebQuickLookFileNameKey : filePath, WebQuickLookUTIKey : uti };
+    [m_webFrame provisionalDataSource]._quickLookContent = @{ WebQuickLookFileNameKey : filePath.get(), WebQuickLookUTIKey : uti.createNSString().get() };
     [m_webFrame provisionalDataSource]._quickLookPreviewLoaderClient = documentWriter.ptr();
     return documentWriter;
 }

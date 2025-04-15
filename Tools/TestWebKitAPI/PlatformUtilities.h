@@ -33,6 +33,8 @@
 
 #include "Utilities.h"
 #include <string>
+#include <wtf/text/ASCIILiteral.h>
+#include <wtf/text/WTFString.h>
 
 #if PLATFORM(COCOA) && defined(__OBJC__)
 #import "TestNSBundleExtras.h"
@@ -57,6 +59,9 @@ namespace TestWebKitAPI {
 namespace Util {
 
 std::string toSTD(const char*);
+ALWAYS_INLINE std::string toSTD(ASCIILiteral literal) { return toSTD(literal.characters()); }
+ALWAYS_INLINE std::string toSTD(const String& string) { return toSTD(string.utf8().data()); }
+
 #if USE(FOUNDATION)
 std::string toSTD(NSString *);
 bool jsonMatchesExpectedValues(NSString *jsonString, NSDictionary *expected);

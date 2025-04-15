@@ -279,7 +279,7 @@ TEST(PushAPI, firePushEventDataStoreDelegate)
 
     RetainPtr<FirePushEventDataStoreDelegate> delegate = adoptNS([FirePushEventDataStoreDelegate new]);
     delegate.get().permissions = @{
-        (NSString *)server.origin() : @YES
+        server.origin().createNSString().get() : @YES
     };
     [configuration websiteDataStore]._delegate = delegate.get();
 
@@ -387,7 +387,7 @@ TEST(PushAPI, testSilentFlag)
 
     RetainPtr<FirePushEventDataStoreDelegate> delegate = adoptNS([FirePushEventDataStoreDelegate new]);
     delegate.get().permissions = @{
-        (NSString *)server.origin() : @YES
+        server.origin().createNSString().get() : @YES
     };
     [configuration websiteDataStore]._delegate = delegate.get();
 

@@ -777,7 +777,7 @@ TEST(ServiceWorkers, ThirdPartyRestoredFromDisk)
     String thirdPartyIframeURL = URL(server.requestWithLocalhost("/thirdPartyIframeWithSW.html"_s).URL).string();
     String injectFrameScript = makeString("let frame = document.createElement('iframe'); frame.src = '"_s, thirdPartyIframeURL, "'; document.body.append(frame);"_s);
     bool addedIframe = false;
-    [webView evaluateJavaScript:(NSString *)injectFrameScript completionHandler: [&] (id, NSError *error) {
+    [webView evaluateJavaScript:injectFrameScript.createNSString().get() completionHandler: [&] (id, NSError *error) {
         EXPECT_TRUE(!error);
         addedIframe = true;
     }];
@@ -811,7 +811,7 @@ TEST(ServiceWorkers, ThirdPartyRestoredFromDisk)
     String thirdPartyIframeURL2 = URL(server.requestWithLocalhost("/thirdPartyIframeWithSW2.html"_s).URL).string();
     String injectFrameScript2 = makeString("let frame = document.createElement('iframe'); frame.src = '"_s, thirdPartyIframeURL2, "'; document.body.append(frame);"_s);
     addedIframe = false;
-    [webView evaluateJavaScript:(NSString *)injectFrameScript2 completionHandler: [&] (id, NSError *error) {
+    [webView evaluateJavaScript:injectFrameScript2.createNSString().get() completionHandler: [&] (id, NSError *error) {
         EXPECT_TRUE(!error);
         addedIframe = true;
     }];
@@ -1649,8 +1649,8 @@ TEST(ServiceWorkers, ServiceWorkerAndCacheStorageSpecificDirectories)
     [webView loadRequest:server.request("/second.html"_s)];
     TestWebKitAPI::Util::run(&done);
     done = false;
-    NSString* tempDirectoryInUse = FileSystem::realPath(tempDirectory);
-    String expectedString = [NSString stringWithFormat:@"\"path\": \"%@\"", tempDirectoryInUse];
+    RetainPtr tempDirectoryInUse = FileSystem::realPath(tempDirectory).createNSString();
+    String expectedString = [NSString stringWithFormat:@"\"path\": \"%@\"", tempDirectoryInUse.get()];
     EXPECT_TRUE(retrievedString.contains(expectedString));
 
     [[configuration websiteDataStore] removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] modifiedSince:[NSDate distantPast] completionHandler:^() {
@@ -1976,7 +1976,7 @@ TEST(ServiceWorkers, LockdownModeInServiceWorkerProcess)
         bool finishedRunningScript = false;
         done = false;
         auto js = makeString("worker.postMessage('"_s, jsToEvalInWorker,"');"_s);
-        [webView evaluateJavaScript:js completionHandler:[&] (id result, NSError *error) {
+        [webView evaluateJavaScript:js.createNSString().get() completionHandler:[&] (id result, NSError *error) {
             EXPECT_NULL(error);
             finishedRunningScript = true;
         }];

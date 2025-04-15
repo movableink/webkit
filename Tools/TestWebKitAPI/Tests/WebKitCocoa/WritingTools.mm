@@ -228,7 +228,7 @@ using PlatformTextPlaceholder = NSTextPlaceholder;
 {
     auto string = String { [self contentsAsString] };
     auto updatedString = makeStringByReplacingAll(string, noBreakSpace, space);
-    return (NSString *)updatedString;
+    return updatedString.createNSString().autorelease();
 }
 
 - (NSUInteger)transparentContentMarkerCount:(NSString *)evaluateNodeExpression

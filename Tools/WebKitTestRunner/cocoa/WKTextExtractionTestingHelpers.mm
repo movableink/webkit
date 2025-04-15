@@ -141,7 +141,7 @@ NSString *recursiveDescription(WKTextExtractionItem *item, IncludeRects includeR
 {
     TextStream stream { TextStream::LineMode::MultipleLine };
     buildRecursiveDescription(stream, item, includeRects);
-    return stream.release();
+    return stream.release().createNSString().autorelease();
 }
 
 } // namespace WTR

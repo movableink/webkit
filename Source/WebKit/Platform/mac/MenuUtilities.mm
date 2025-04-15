@@ -127,7 +127,7 @@ NSMenuItem *menuItemForTelephoneNumber(const String& telephoneNumber)
     for (NSMenuItem *item in proposedMenuItems.get()) {
         RetainPtr action = actionForMenuItem(item);
         if ([action.get().actionUTI hasPrefix:@"com.apple.dial"]) {
-            item.title = formattedPhoneNumberString(telephoneNumber);
+            item.title = formattedPhoneNumberString(telephoneNumber.createNSString().get());
             return item;
         }
     }

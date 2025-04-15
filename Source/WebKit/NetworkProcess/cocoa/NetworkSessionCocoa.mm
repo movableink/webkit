@@ -1491,7 +1491,7 @@ NetworkSessionCocoa::NetworkSessionCocoa(NetworkProcess& networkProcess, const N
 
 #if PLATFORM(IOS_FAMILY)
     if (!m_dataConnectionServiceType.isEmpty())
-        configuration.get()._CTDataConnectionServiceType = m_dataConnectionServiceType;
+        configuration.get()._CTDataConnectionServiceType = m_dataConnectionServiceType.createNSString().get();
 #endif
 
 #if ENABLE(LEGACY_CUSTOM_PROTOCOL_MANAGER)
@@ -2246,9 +2246,9 @@ void NetworkSessionCocoa::donateToSKAdNetwork(WebCore::PrivateClickMeasurement&&
 #if HAVE(SKADNETWORK_v4)
     auto config = adoptNS([ASDInstallWebAttributionParamsConfig new]);
     config.get().appAdamId = @(*pcm.adamID());
-    config.get().adNetworkRegistrableDomain = pcm.destinationSite().registrableDomain.string();
-    config.get().impressionId = pcm.ephemeralSourceNonce()->nonce;
-    config.get().sourceWebRegistrableDomain = pcm.sourceSite().registrableDomain.string();
+    config.get().adNetworkRegistrableDomain = pcm.destinationSite().registrableDomain.string().createNSString().get();
+    config.get().impressionId = pcm.ephemeralSourceNonce()->nonce.createNSString().get();
+    config.get().sourceWebRegistrableDomain = pcm.sourceSite().registrableDomain.string().createNSString().get();
     config.get().version = @"4.0";
     config.get().attributionContext = AttributionTypeDefault;
 #if HAVE(AD_ATTRIBUTION_KIT_PRIVATE_BROWSING)

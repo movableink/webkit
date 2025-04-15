@@ -393,7 +393,7 @@ static WebCore::Node* firstNodeAfter(const WebCore::BoundaryPoint& point)
     auto* cachedImage = core(self)->cachedImage();
     if (!cachedImage || !cachedImage->image())
         return nil;
-    return cachedImage->response().mimeType();
+    return cachedImage->response().mimeType().createNSString().autorelease();
 }
 
 @end

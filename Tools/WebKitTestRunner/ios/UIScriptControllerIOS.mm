@@ -415,7 +415,7 @@ void UIScriptControllerIOS::singleTapAtPointWithModifiers(WebCore::FloatPoint lo
     waitForSingleTapToReset();
 
     for (auto& modifierFlag : modifierFlags)
-        [[HIDEventGenerator sharedHIDEventGenerator] keyDown:modifierFlag];
+        [[HIDEventGenerator sharedHIDEventGenerator] keyDown:modifierFlag.createNSString().get()];
 
     [[HIDEventGenerator sharedHIDEventGenerator] tap:globalToContentCoordinates(webView(), location.x(), location.y()) completionBlock:[this, protectedThis = Ref { *this }, modifierFlags = WTFMove(modifierFlags), block = WTFMove(block)] () mutable {
         if (!m_context)
@@ -423,7 +423,7 @@ void UIScriptControllerIOS::singleTapAtPointWithModifiers(WebCore::FloatPoint lo
 
         for (size_t i = modifierFlags.size(); i; ) {
             --i;
-            [[HIDEventGenerator sharedHIDEventGenerator] keyUp:modifierFlags[i]];
+            [[HIDEventGenerator sharedHIDEventGenerator] keyUp:modifierFlags[i].createNSString().get()];
         }
         [[HIDEventGenerator sharedHIDEventGenerator] sendMarkerHIDEventWithCompletionBlock:block.get()];
     }];
@@ -489,7 +489,7 @@ void UIScriptControllerIOS::stylusTapAtPointWithModifiers(long x, long y, float 
 
     auto modifierFlags = parseModifierArray(m_context->jsContext(), modifierArray);
     for (auto& modifierFlag : modifierFlags)
-        [[HIDEventGenerator sharedHIDEventGenerator] keyDown:modifierFlag];
+        [[HIDEventGenerator sharedHIDEventGenerator] keyDown:modifierFlag.createNSString().get()];
 
     auto location = globalToContentCoordinates(webView(), x, y);
     [[HIDEventGenerator sharedHIDEventGenerator] stylusTapAtPoint:location azimuthAngle:azimuthAngle altitudeAngle:altitudeAngle pressure:pressure completionBlock:makeBlockPtr([this, protectedThis = Ref { *this }, callbackID, modifierFlags = WTFMove(modifierFlags)] {
@@ -497,7 +497,7 @@ void UIScriptControllerIOS::stylusTapAtPointWithModifiers(long x, long y, float 
             return;
         for (size_t i = modifierFlags.size(); i; ) {
             --i;
-            [[HIDEventGenerator sharedHIDEventGenerator] keyUp:modifierFlags[i]];
+            [[HIDEventGenerator sharedHIDEventGenerator] keyUp:modifierFlags[i].createNSString().get()];
         }
         [[HIDEventGenerator sharedHIDEventGenerator] sendMarkerHIDEventWithCompletionBlock:makeBlockPtr([this, protectedThis = Ref { *this }, callbackID] {
             if (!m_context)
@@ -526,7 +526,7 @@ void UIScriptControllerIOS::sendEventStream(JSStringRef eventsJSON, JSValueRef c
     unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
 
     String jsonString = eventsJSON->string();
-    auto eventInfo = dynamic_objc_cast<NSDictionary>([NSJSONSerialization JSONObjectWithData:[(NSString *)jsonString dataUsingEncoding:NSUTF8StringEncoding] options:NSJSONReadingMutableContainers | NSJSONReadingMutableLeaves error:nil]);
+    auto eventInfo = dynamic_objc_cast<NSDictionary>([NSJSONSerialization JSONObjectWithData:[jsonString.createNSString() dataUsingEncoding:NSUTF8StringEncoding] options:NSJSONReadingMutableContainers | NSJSONReadingMutableLeaves error:nil]);
 
     auto *webView = this->webView();
     
@@ -632,7 +632,7 @@ void UIScriptControllerIOS::typeCharacterUsingHardwareKeyboard(JSStringRef chara
     unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
 
     // Assumes that the keyboard is already shown.
-    [[HIDEventGenerator sharedHIDEventGenerator] keyPress:toWTFString(character) completionBlock:makeBlockPtr([protectedThis = Ref { *this }, callbackID] {
+    [[HIDEventGenerator sharedHIDEventGenerator] keyPress:toWTFString(character).createNSString().get() completionBlock:makeBlockPtr([protectedThis = Ref { *this }, callbackID] {
         if (protectedThis->m_context)
             protectedThis->m_context->asyncTaskComplete(callbackID);
     }).get()];
@@ -653,7 +653,7 @@ void UIScriptControllerIOS::rawKeyDown(JSStringRef key)
 {
     // Key can be either a single Unicode code point or the name of a special key (e.g. "downArrow").
     // HIDEventGenerator knows how to map these special keys to the appropriate keycode.
-    [[HIDEventGenerator sharedHIDEventGenerator] keyDown:toWTFString(key)];
+    [[HIDEventGenerator sharedHIDEventGenerator] keyDown:toWTFString(key).createNSString().get()];
     [[HIDEventGenerator sharedHIDEventGenerator] sendMarkerHIDEventWithCompletionBlock:^{ /* Do nothing */ }];
 }
 
@@ -661,7 +661,7 @@ void UIScriptControllerIOS::rawKeyUp(JSStringRef key)
 {
     // Key can be either a single Unicode code point or the name of a special key (e.g. "downArrow").
     // HIDEventGenerator knows how to map these special keys to the appropriate keycode.
-    [[HIDEventGenerator sharedHIDEventGenerator] keyUp:toWTFString(key)];
+    [[HIDEventGenerator sharedHIDEventGenerator] keyUp:toWTFString(key).createNSString().get()];
     [[HIDEventGenerator sharedHIDEventGenerator] sendMarkerHIDEventWithCompletionBlock:^{ /* Do nothing */ }];
 }
 
@@ -673,14 +673,14 @@ void UIScriptControllerIOS::keyDown(JSStringRef character, JSValueRef modifierAr
     auto modifierFlags = parseModifierArray(m_context->jsContext(), modifierArray);
 
     for (auto& modifierFlag : modifierFlags)
-        [[HIDEventGenerator sharedHIDEventGenerator] keyDown:modifierFlag];
+        [[HIDEventGenerator sharedHIDEventGenerator] keyDown:modifierFlag.createNSString().get()];
 
-    [[HIDEventGenerator sharedHIDEventGenerator] keyDown:inputString];
-    [[HIDEventGenerator sharedHIDEventGenerator] keyUp:inputString];
+    [[HIDEventGenerator sharedHIDEventGenerator] keyDown:inputString.createNSString().get()];
+    [[HIDEventGenerator sharedHIDEventGenerator] keyUp:inputString.createNSString().get()];
 
     for (size_t i = modifierFlags.size(); i; ) {
         --i;
-        [[HIDEventGenerator sharedHIDEventGenerator] keyUp:modifierFlags[i]];
+        [[HIDEventGenerator sharedHIDEventGenerator] keyUp:modifierFlags[i].createNSString().get()];
     }
 
     [[HIDEventGenerator sharedHIDEventGenerator] sendMarkerHIDEventWithCompletionBlock:^{ /* Do nothing */ }];
@@ -885,13 +885,13 @@ void UIScriptControllerIOS::applyAutocorrection(JSStringRef newString, JSStringR
             }).get());
         });
         auto options = underline ? BETextReplacementOptionsAddUnderline : BETextReplacementOptionsNone;
-        [asyncInput replaceText:toWTFString(oldString) withText:toWTFString(newString) options:options completionHandler:completionWrapper.get()];
+        [asyncInput replaceText:toWTFString(oldString).createNSString().get() withText:toWTFString(newString).createNSString().get() options:options completionHandler:completionWrapper.get()];
         return;
     }
 #endif // USE(BROWSERENGINEKIT)
 
     auto contentView = static_cast<id<UIWKInteractionViewProtocol>>(platformContentView());
-    [contentView applyAutocorrection:toWTFString(newString) toString:toWTFString(oldString) shouldUnderline:underline withCompletionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, callbackID](UIWKAutocorrectionRects *) {
+    [contentView applyAutocorrection:toWTFString(newString).createNSString().get() toString:toWTFString(oldString).createNSString().get() shouldUnderline:underline withCompletionHandler:makeBlockPtr([this, protectedThis = Ref { *this }, callbackID](UIWKAutocorrectionRects *) {
         dispatch_async(dispatch_get_main_queue(), makeBlockPtr([this, protectedThis = Ref { *this }, callbackID] {
             // applyAutocorrection can call its completion handler synchronously,
             // which makes UIScriptController unhappy (see bug 172884).
@@ -1496,12 +1496,12 @@ JSObjectRef UIScriptControllerIOS::tapHighlightViewRect() const
 
 JSObjectRef UIScriptControllerIOS::attachmentInfo(JSStringRef jsAttachmentIdentifier)
 {
-    auto attachmentIdentifier = toWTFString(jsAttachmentIdentifier);
-    _WKAttachment *attachment = [webView() _attachmentForIdentifier:attachmentIdentifier];
+    RetainPtr attachmentIdentifier = toWTFString(jsAttachmentIdentifier).createNSString();
+    _WKAttachment *attachment = [webView() _attachmentForIdentifier:attachmentIdentifier.get()];
     _WKAttachmentInfo *attachmentInfo = attachment.info;
 
     NSDictionary *attachmentInfoDictionary = @{
-        @"id": attachmentIdentifier,
+        @"id": attachmentIdentifier.get(),
         @"name": attachmentInfo.name,
         @"contentType": attachmentInfo.contentType,
         @"filePath": attachmentInfo.filePath,
@@ -1571,7 +1571,7 @@ void UIScriptControllerIOS::doAfterDoubleTapDelay(JSValueRef callback)
 
 void UIScriptControllerIOS::copyText(JSStringRef text)
 {
-    UIPasteboard.generalPasteboard.string = text->string();
+    UIPasteboard.generalPasteboard.string = text->string().createNSString().get();
 }
 
 int64_t UIScriptControllerIOS::pasteboardChangeCount() const
@@ -1620,13 +1620,13 @@ bool UIScriptControllerIOS::isWebContentFirstResponder() const
 
 void UIScriptControllerIOS::setInlinePrediction(JSStringRef text, unsigned startIndex)
 {
-    NSString *plainText = text->string().substring(startIndex);
-    auto attributedText = adoptNS([[NSAttributedString alloc] initWithString:plainText attributes:@{
+    RetainPtr plainText = text->string().substring(startIndex).createNSString();
+    auto attributedText = adoptNS([[NSAttributedString alloc] initWithString:plainText.get() attributes:@{
         NSBackgroundColorAttributeName : UIColor.clearColor,
         NSForegroundColorAttributeName : UIColor.systemGrayColor,
     }]);
 
-    [UIKeyboardImpl.activeInstance setInlineCompletionAsMarkedText:attributedText.get() selectedRange:NSMakeRange(0, 0) inputString:plainText searchString:@""];
+    [UIKeyboardImpl.activeInstance setInlineCompletionAsMarkedText:attributedText.get() selectedRange:NSMakeRange(0, 0) inputString:plainText.get() searchString:@""];
 }
 
 void UIScriptControllerIOS::acceptInlinePrediction()

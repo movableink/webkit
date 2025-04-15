@@ -536,7 +536,7 @@ Vector<String> Pasteboard::readPlatformValuesAsStrings(const String& domType, in
     auto values = strategy.allStringsForType(cocoaType.get(), pasteboardName, context());
     if ([cocoaType isEqualToString:UTTypePlainText.identifier]) {
         values = values.map([&] (auto& value) -> String {
-            return [value precomposedStringWithCanonicalMapping];
+            return [value.createNSString() precomposedStringWithCanonicalMapping];
         });
     }
 

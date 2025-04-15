@@ -346,7 +346,7 @@ void PlatformWebView::addChromeInputField()
 
 void PlatformWebView::setTextInChromeInputField(const String& text)
 {
-    chromeInputField(m_window).text = text;
+    chromeInputField(m_window).text = text.createNSString().get();
 }
 
 void PlatformWebView::selectChromeInputField()

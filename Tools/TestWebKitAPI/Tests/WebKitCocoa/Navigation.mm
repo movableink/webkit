@@ -1791,29 +1791,29 @@ TEST(WKNavigation, HTTPSFirstLocalHostIPAddress)
         finishedSuccessfully = true;
     };
     [webView setNavigationDelegate:delegate.get()];
-    auto url = makeString("http://localhost:"_s, httpServer.port(), "/notsecure"_s);
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:url]]];
+    RetainPtr url = makeString("http://localhost:"_s, httpServer.port(), "/notsecure"_s).createNSString();
+    [webView loadRequest:adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:url.get()]).get()]).get()];
     TestWebKitAPI::Util::run(&finishedSuccessfully);
 
     EXPECT_EQ(errorCode, 0);
     EXPECT_TRUE(finishedSuccessfully);
     EXPECT_FALSE(didReceiveAuthenticationChallenge);
     EXPECT_EQ(loadCount, 1);
-    EXPECT_WK_STREQ(url, [webView URL].absoluteString);
+    EXPECT_WK_STREQ(url.get(), [webView URL].absoluteString);
 
     errorCode = 0;
     finishedSuccessfully = false;
     didReceiveAuthenticationChallenge = false;
     loadCount = 0;
-    url = makeString("http://127.0.0.1:"_s, httpServer.port(), "/notsecure"_s);
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:url]]];
+    url = makeString("http://127.0.0.1:"_s, httpServer.port(), "/notsecure"_s).createNSString();
+    [webView loadRequest:adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:url.get()]).get()]).get()];
     TestWebKitAPI::Util::run(&finishedSuccessfully);
 
     EXPECT_EQ(errorCode, 0);
     EXPECT_TRUE(finishedSuccessfully);
     EXPECT_FALSE(didReceiveAuthenticationChallenge);
     EXPECT_EQ(loadCount, 1);
-    EXPECT_WK_STREQ(url, [webView URL].absoluteString);
+    EXPECT_WK_STREQ(url.get(), [webView URL].absoluteString);
 }
 
 TEST(WKNavigation, HTTPSOnlyInitialLoad)
@@ -3123,7 +3123,7 @@ TEST(WKNavigation, PreferredHTTPSPolicyAutomaticHTTPFallbackLocalHostIPAddress)
     };
     [webView setNavigationDelegate:delegate.get()];
     auto url = makeString("http://localhost:"_s, httpServer.port(), "/notsecure"_s);
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:url]]];
+    [webView loadRequest:adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:url.createNSString().get()]).get()]).get()];
     TestWebKitAPI::Util::run(&finishedSuccessfully);
 
     EXPECT_EQ(errorCode, 0);
@@ -3137,7 +3137,7 @@ TEST(WKNavigation, PreferredHTTPSPolicyAutomaticHTTPFallbackLocalHostIPAddress)
     didReceiveAuthenticationChallenge = false;
     loadCount = 0;
     url = makeString("http://127.0.0.1:"_s, httpServer.port(), "/notsecure"_s);
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:url]]];
+    [webView loadRequest:adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:url.createNSString().get()]).get()]).get()];
     TestWebKitAPI::Util::run(&finishedSuccessfully);
 
     EXPECT_EQ(errorCode, 0);

@@ -110,8 +110,8 @@ TEST(IconLoading, DefaultFavicon)
     webView.get()._iconLoadingDelegate = iconDelegate.get();
 
     auto mainURL = makeString("http://localhost:"_s, server.port(), "/"_s);
-    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:mainURL]];
-    [webView loadRequest:request];
+    RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:mainURL.createNSString().get()]).get()]);
+    [webView loadRequest:request.get()];
 
     TestWebKitAPI::Util::run(&doneWithIcons);
     TestWebKitAPI::Util::run(&iconDelegate.get()->receivedFaviconDataCallback);
@@ -151,8 +151,8 @@ TEST(IconLoading, AlreadyCachedIcon)
     webView.get()._iconLoadingDelegate = iconDelegate.get();
 
     auto mainURL = makeString("http://localhost:"_s, server.port(), "/"_s);
-    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:mainURL]];
-    [webView loadRequest:request];
+    RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:mainURL.createNSString().get()]).get()]);
+    [webView loadRequest:request.get()];
 
     TestWebKitAPI::Util::run(&iconDelegate.get()->receivedFaviconDataCallback);
 
@@ -162,8 +162,8 @@ TEST(IconLoading, AlreadyCachedIcon)
     iconDelegate.get()->receivedFaviconData = nil;
 
     // Load another main resource that results in the same icon being loaded (which should come from the memory cache).
-    request = [NSURLRequest requestWithURL:[NSURL URLWithString:makeString(mainURL, "main"_s)]];
-    [webView loadRequest:request];
+    request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:makeString(mainURL, "main"_s).createNSString().get()]).get()]);
+    [webView loadRequest:request.get()];
 
     TestWebKitAPI::Util::run(&iconDelegate.get()->receivedFaviconDataCallback);
 
@@ -187,8 +187,8 @@ TEST(IconLoading, IconLoadCancelledCallback)
     webView.get()._iconLoadingDelegate = iconDelegate.get();
 
     auto mainURL = makeString("http://localhost:"_s, server.port(), "/"_s);
-    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:mainURL]];
-    [webView loadRequest:request];
+    RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:mainURL.createNSString().get()]).get()]);
+    [webView loadRequest:request.get()];
 
     TestWebKitAPI::Util::run(&doneWithIcons);
 
@@ -216,8 +216,8 @@ TEST(IconLoading, IconLoadCancelledCallback2)
     webView.get()._iconLoadingDelegate = iconDelegate.get();
 
     auto mainURL = makeString("http://localhost:"_s, server.port(), "/"_s);
-    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:mainURL]];
-    [webView loadRequest:request];
+    RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:mainURL.createNSString().get()]).get()]);
+    [webView loadRequest:request.get()];
 
     TestWebKitAPI::Util::run(&iconDelegate.get()->didSaveCallback);
 

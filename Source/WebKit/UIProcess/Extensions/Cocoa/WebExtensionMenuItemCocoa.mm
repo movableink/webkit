@@ -327,7 +327,7 @@ CocoaMenuItem *WebExtensionMenuItem::platformMenuItem(const WebExtensionMenuItem
 
     // iOS does not support sub-menus that are disabled or hidden, so return a normal action in that case.
     if (submenuItems().isEmpty() || !isEnabled() || !isVisible()) {
-        auto *action = [UIAction actionWithTitle:processedTitle image:toCocoaImage(icon({ 20, 20 })) identifier:nil handler:makeBlockPtr([this, protectedThis = Ref { *this }, contextParameters](UIAction *) mutable {
+        auto *action = [UIAction actionWithTitle:processedTitle.createNSString().get() image:toCocoaImage(icon({ 20, 20 })) identifier:nil handler:makeBlockPtr([this, protectedThis = Ref { *this }, contextParameters](UIAction *) mutable {
             if (RefPtr context = extensionContext())
                 context->performMenuItem(const_cast<WebExtensionMenuItem&>(*this), contextParameters, WebExtensionContext::UserTriggered::Yes);
         }).get()];
@@ -344,7 +344,7 @@ CocoaMenuItem *WebExtensionMenuItem::platformMenuItem(const WebExtensionMenuItem
         return action;
     }
 
-    return [UIMenu menuWithTitle:processedTitle image:toCocoaImage(icon({ 20, 20 })) identifier:nil options:0 children:submenuItemArray];
+    return [UIMenu menuWithTitle:processedTitle.createNSString().get() image:toCocoaImage(icon({ 20, 20 })) identifier:nil options:0 children:submenuItemArray];
 #endif
 }
 

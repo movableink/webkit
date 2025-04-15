@@ -356,7 +356,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #if PLATFORM(IOS_FAMILY)
     auto& serviceType = client->paymentCoordinatorCTDataConnectionServiceType(*this);
     if (!serviceType.isEmpty() && [result respondsToSelector:@selector(setCTDataConnectionServiceType:)])
-        [result setCTDataConnectionServiceType:serviceType];
+        [result setCTDataConnectionServiceType:serviceType.createNSString().get()];
 #endif
 
 #if HAVE(PASSKIT_INSTALLMENTS)

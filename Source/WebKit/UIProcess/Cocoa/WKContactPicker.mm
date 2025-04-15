@@ -166,7 +166,7 @@ SOFT_LINK_CLASS(ContactsUI, CNContactPickerViewController)
 #if HAVE(CNCONTACTPICKERVIEWCONTROLLER)
     _contactPickerViewController = adoptNS([allocCNContactPickerViewControllerInstance() init]);
     [_contactPickerViewController setDelegate:_contactPickerDelegate.get()];
-    [_contactPickerViewController setPrompt:requestData.url];
+    [_contactPickerViewController setPrompt:requestData.url.createNSString().get()];
 
     auto presentationViewController = [_webView _wk_viewControllerForFullScreenPresentation];
     [presentationViewController presentViewController:_contactPickerViewController.get() animated:YES completion:[weakSelf = WeakObjCPtr<WKContactPicker>(self)] {

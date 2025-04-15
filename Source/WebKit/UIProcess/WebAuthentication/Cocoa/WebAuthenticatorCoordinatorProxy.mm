@@ -1156,7 +1156,7 @@ void WebAuthenticatorCoordinatorProxy::performRequestLegacy(RetainPtr<ASCCredent
     }
 
     if (RefPtr pageClient = webPageProxy->pageClient())
-        requestContext.get().windowSceneIdentifier = pageClient->sceneID();
+        requestContext.get().windowSceneIdentifier = pageClient->sceneID().createNSString().get();
 
     [m_proxy performAuthorizationRequestsForContext:requestContext.get() withCompletionHandler:makeBlockPtr([weakThis = WeakPtr { *this }, handler = WTFMove(handler)](id<ASCCredentialProtocol> credential, NSError *error) mutable {
         callOnMainRunLoop([weakThis, handler = WTFMove(handler), credential = retainPtr(credential), error = retainPtr(error)] () mutable {

@@ -5706,7 +5706,7 @@ void WebPage::requestDocumentEditingContext(DocumentEditingContextRequest&& requ
         if (wantsAttributedText)
             return editingAttributedStringReplacingNoBreakSpace(*range, textBehaviors, { IncludedElement::Images, IncludedElement::Attachments });
 
-        return AttributedString::fromNSAttributedString(adoptNS([[NSAttributedString alloc] initWithString:plainTextReplacingNoBreakSpace(*range, textBehaviors)]));
+        return AttributedString::fromNSAttributedString(adoptNS([[NSAttributedString alloc] initWithString:plainTextReplacingNoBreakSpace(*range, textBehaviors).createNSString().get()]));
     };
 
     DocumentEditingContext context;
@@ -5718,7 +5718,7 @@ void WebPage::requestDocumentEditingContext(DocumentEditingContextRequest&& requ
         auto markedTextLength = context.markedText.string.length();
 
         ptrdiff_t distanceToSelectionStart = distanceBetweenPositions(rangeOfInterestInSelection.start, compositionVisiblePositionRange.start);
-        ptrdiff_t distanceToSelectionEnd = distanceToSelectionStart + [context.selectedText.string length];
+        ptrdiff_t distanceToSelectionEnd = distanceToSelectionStart + [context.selectedText.string.createNSString() length];
 
         distanceToSelectionStart = clampTo<ptrdiff_t>(distanceToSelectionStart, 0, markedTextLength);
         distanceToSelectionEnd = clampTo<ptrdiff_t>(distanceToSelectionEnd, 0, markedTextLength);
@@ -5730,7 +5730,7 @@ void WebPage::requestDocumentEditingContext(DocumentEditingContextRequest&& requ
         };
     } else if (auto* suggestion = frame->editor().writingSuggestionData()) {
         if (auto suffix = suggestion->content(); !suffix.isEmpty()) {
-            context.markedText = AttributedString::fromNSAttributedString(adoptNS([[NSAttributedString alloc] initWithString:WTFMove(suffix)]));
+            context.markedText = AttributedString::fromNSAttributedString(adoptNS([[NSAttributedString alloc] initWithString:suffix.createNSString().get()]));
             context.selectedRangeInMarkedText = { 0, 0 };
         }
     }

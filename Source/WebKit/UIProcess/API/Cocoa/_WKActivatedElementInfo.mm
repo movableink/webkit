@@ -72,9 +72,9 @@
     
     _URL = information.url.createNSURL();
     _imageURL = information.imageURL.createNSURL();
-    _imageMIMEType = information.imageMIMEType;
+    _imageMIMEType = information.imageMIMEType.createNSString().get();
     _interactionLocation = information.request.point;
-    _title = information.title;
+    _title = information.title.createNSString().get();
     _boundingRect = information.bounds;
     
     if (information.isAttachment)
@@ -87,7 +87,7 @@
         _type = _WKActivatedElementTypeUnspecified;
     
     _image = information.image;
-    _ID = information.idAttribute;
+    _ID = information.idAttribute.createNSString().get();
     _animatedImage = information.isAnimatedImage;
     _isAnimating = information.isAnimating;
     _canShowAnimationControls = information.canShowAnimationControls;
@@ -137,7 +137,7 @@
     Vector<WebCore::ElementAnimationContext> animationsAtPoint;
 #endif
 
-    return [self _initWithType:type URL:url imageURL:imageURL location:information.request.point title:information.title ID:information.idAttribute rect:information.bounds image:image imageMIMEType:information.imageMIMEType isAnimatedImage:information.isAnimatedImage isAnimating:information.isAnimating canShowAnimationControls:information.canShowAnimationControls animationsUnderElement:animationsAtPoint userInfo:userInfo];
+    return [self _initWithType:type URL:url imageURL:imageURL location:information.request.point title:information.title.createNSString().get() ID:information.idAttribute.createNSString().get() rect:information.bounds image:image imageMIMEType:information.imageMIMEType.createNSString().get() isAnimatedImage:information.isAnimatedImage isAnimating:information.isAnimating canShowAnimationControls:information.canShowAnimationControls animationsUnderElement:animationsAtPoint userInfo:userInfo];
 }
 #endif // PLATFORM(IOS_FAMILY)
 

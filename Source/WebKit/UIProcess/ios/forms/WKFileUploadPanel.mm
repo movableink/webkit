@@ -244,7 +244,7 @@ static NSString * firstUTIThatConformsTo(NSArray<NSString *> *typeIdentifiers, U
 #else
     _progressController = adoptNS([allocPUActivityProgressControllerInstance() init]);
 #endif
-    [_progressController setTitle:WEB_UI_STRING_KEY("Preparing…", "Preparing (file upload)", "Title for file upload progress view")];
+    [_progressController setTitle:WEB_UI_STRING_KEY("Preparing…", "Preparing (file upload)", "Title for file upload progress view").createNSString().get()];
     [_progressController showAnimated:YES allowDelay:YES];
 
     [_progressController setCancellationHandler:makeBlockPtr([weakSelf = WeakObjCPtr<WKFileUploadMediaTranscoder>(self)] {
@@ -505,13 +505,13 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     Ref<API::Array> acceptMimeTypes = parameters->acceptMIMETypes();
     NSMutableArray *mimeTypes = [NSMutableArray arrayWithCapacity:acceptMimeTypes->size()];
     for (auto mimeType : acceptMimeTypes->elementsOfType<API::String>())
-        [mimeTypes addObject:mimeType->string()];
+        [mimeTypes addObject:mimeType->string().createNSString().get()];
 
     Ref<API::Array> acceptFileExtensions = parameters->acceptFileExtensions();
     for (auto extension : acceptFileExtensions->elementsOfType<API::String>()) {
         String mimeType = WebCore::MIMETypeRegistry::mimeTypeForExtension(extension->stringView().substring(1));
         if (!mimeType.isEmpty())
-            [mimeTypes addObject:mimeType];
+            [mimeTypes addObject:mimeType.createNSString().get()];
     }
 
     _acceptedUTIs = UTIsForMIMETypes(mimeTypes);
@@ -699,14 +699,14 @@ static NSSet<NSString *> *UTIsForMIMETypes(NSArray *mimeTypes)
 - (NSString *)_chooseFilesButtonLabel
 {
     if (_allowMultipleFiles)
-        return WebCore::fileButtonChooseMultipleFilesLabel();
+        return WebCore::fileButtonChooseMultipleFilesLabel().createNSString().autorelease();
 
-    return WebCore::fileButtonChooseFileLabel();
+    return WebCore::fileButtonChooseFileLabel().createNSString().autorelease();
 }
 
 - (NSString *)_photoLibraryButtonLabel
 {
-    return WEB_UI_STRING_KEY("Photo Library", "Photo Library (file upload action sheet)", "File Upload alert sheet button string for choosing an existing media item from the Photo Library");
+    return WEB_UI_STRING_KEY("Photo Library", "Photo Library (file upload action sheet)", "File Upload alert sheet button string for choosing an existing media item from the Photo Library").createNSString().autorelease();
 }
 
 - (NSString *)_cameraButtonLabel
@@ -714,12 +714,12 @@ static NSSet<NSString *> *UTIsForMIMETypes(NSArray *mimeTypes)
     ASSERT(_allowedImagePickerTypes.containsAny({ WKFileUploadPanelImagePickerType::Image, WKFileUploadPanelImagePickerType::Video }));
 
     if (_allowedImagePickerTypes.containsAll({ WKFileUploadPanelImagePickerType::Image, WKFileUploadPanelImagePickerType::Video }))
-        return WEB_UI_STRING_KEY("Take Photo or Video", "Take Photo or Video (file upload action sheet)", "File Upload alert sheet camera button string for taking photos or videos");
+        return WEB_UI_STRING_KEY("Take Photo or Video", "Take Photo or Video (file upload action sheet)", "File Upload alert sheet camera button string for taking photos or videos").createNSString().autorelease();
 
     if (_allowedImagePickerTypes.contains(WKFileUploadPanelImagePickerType::Video))
-        return WEB_UI_STRING_KEY("Take Video", "Take Video (file upload action sheet)", "File Upload alert sheet camera button string for taking only videos");
+        return WEB_UI_STRING_KEY("Take Video", "Take Video (file upload action sheet)", "File Upload alert sheet camera button string for taking only videos").createNSString().autorelease();
 
-    return WEB_UI_STRING_KEY("Take Photo", "Take Photo (file upload action sheet)", "File Upload alert sheet camera button string for taking only photos");
+    return WEB_UI_STRING_KEY("Take Photo", "Take Photo (file upload action sheet)", "File Upload alert sheet camera button string for taking only photos").createNSString().autorelease();
 }
 
 #if USE(UICONTEXTMENU)
@@ -958,14 +958,14 @@ static NSSet<NSString *> *UTIsForMIMETypes(NSArray *mimeTypes)
 
 #pragma mark - UIDocumentPickerControllerDelegate implementation
 
-static NSString *displayStringForDocumentsAtURLs(NSArray<NSURL *> *urls)
+static RetainPtr<NSString> displayStringForDocumentsAtURLs(NSArray<NSURL *> *urls)
 {
     auto urlsCount = urls.count;
     ASSERT(urlsCount);
     if (urlsCount == 1)
         return urls[0].lastPathComponent;
 
-    return WebCore::multipleFileUploadText(urlsCount);
+    return WebCore::multipleFileUploadText(urlsCount).createNSString();
 }
 
 - (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray<NSURL *> *)urlsFromUIKit
@@ -1002,7 +1002,7 @@ static NSString *displayStringForDocumentsAtURLs(NSArray<NSURL *> *urls)
 
         [retainedSelf->_view _removeTemporaryDirectoriesWhenDeallocated:std::exchange(retainedSelf->_temporaryUploadedFileURLs, { })];
         RunLoop::protectedMain()->dispatch([retainedSelf = WTFMove(retainedSelf), maybeMovedURLs = WTFMove(maybeMovedURLs)] {
-            [retainedSelf _chooseFiles:maybeMovedURLs.get() displayString:displayStringForDocumentsAtURLs(maybeMovedURLs.get()) iconImage:WebKit::iconForFiles({ maybeMovedURLs.get()[0].absoluteString }).get()];
+            [retainedSelf _chooseFiles:maybeMovedURLs.get() displayString:displayStringForDocumentsAtURLs(maybeMovedURLs.get()).get() iconImage:WebKit::iconForFiles({ maybeMovedURLs.get()[0].absoluteString }).get()];
         });
     }).get());
 }

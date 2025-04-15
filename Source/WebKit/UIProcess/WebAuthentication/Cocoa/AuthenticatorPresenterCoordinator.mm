@@ -52,12 +52,12 @@ AuthenticatorPresenterCoordinator::AuthenticatorPresenterCoordinator(const Authe
 #if HAVE(ASC_AUTH_UI)
     m_context = adoptNS([allocASCAuthorizationPresentationContextInstance() initWithRequestContext:nullptr appIdentifier:nullptr]);
     if ([getASCAuthorizationPresentationContextClass() instancesRespondToSelector:@selector(setServiceName:)])
-        [m_context setServiceName:rpId];
+        [m_context setServiceName:rpId.createNSString().get()];
 
     switch (type) {
     case ClientDataType::Create: {
         auto options = adoptNS([allocASCPublicKeyCredentialCreationOptionsInstance() init]);
-        [options setUserName:username];
+        [options setUserName:username.createNSString().get()];
 
         if (transports.contains(AuthenticatorTransport::Internal))
             [m_context addLoginChoice:adoptNS([allocASCPlatformPublicKeyCredentialLoginChoiceInstance() initRegistrationChoiceWithOptions:options.get()]).get()];
@@ -229,7 +229,7 @@ void AuthenticatorPresenterCoordinator::selectAssertionResponse(Vector<Ref<Authe
             if (response->userHandle())
                 userHandle = toNSData(response->userHandle()->span());
 
-            auto loginChoice = adoptNS([allocASCSecurityKeyPublicKeyCredentialLoginChoiceInstance() initWithName:response->name() displayName:response->displayName() userHandle:userHandle.get()]);
+            auto loginChoice = adoptNS([allocASCSecurityKeyPublicKeyCredentialLoginChoiceInstance() initWithName:response->name().createNSString().get() displayName:response->displayName().createNSString().get() userHandle:userHandle.get()]);
             [loginChoices addObject:loginChoice.get()];
 
             m_credentials.add(response->name(), WTFMove(response));
@@ -246,7 +246,7 @@ void AuthenticatorPresenterCoordinator::selectAssertionResponse(Vector<Ref<Authe
             if (response->userHandle())
                 userHandle = toNSData(response->userHandle()->span());
 
-            auto loginChoice = adoptNS([allocASCPlatformPublicKeyCredentialLoginChoiceInstance() initWithName:response->name() displayName:response->displayName() userHandle:userHandle.get()]);
+            auto loginChoice = adoptNS([allocASCPlatformPublicKeyCredentialLoginChoiceInstance() initWithName:response->name().createNSString().get() displayName:response->displayName().createNSString().get() userHandle:userHandle.get()]);
             [m_context addLoginChoice:loginChoice.get()];
 
             m_credentials.add(response->name(), WTFMove(response));

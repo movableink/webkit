@@ -261,7 +261,7 @@ TEST(WebKit, SystemPreviewTriggered)
     [webView synchronouslyLoadTestPageNamed:@"system-preview-trigger"];
     Util::run(&hasTriggerInfo);
 
-    [webView _triggerSystemPreviewActionOnElement:elementID document:documentID page:pageID];
+    [webView _triggerSystemPreviewActionOnElement:elementID document:documentID.createNSString().get() page:pageID];
     Util::run(&wasTriggered);
 }
 
@@ -276,7 +276,7 @@ TEST(WebKit, SystemPreviewTriggeredOnDetachedElement)
     [webView synchronouslyLoadTestPageNamed:@"system-preview-trigger"];
     Util::run(&hasTriggerInfo);
 
-    [webView _triggerSystemPreviewActionOnElement:elementID document:documentID page:pageID];
+    [webView _triggerSystemPreviewActionOnElement:elementID document:documentID.createNSString().get() page:pageID];
     Util::run(&wasTriggeredByDetachedElement);
 }
 

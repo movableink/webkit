@@ -218,7 +218,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(HideEditMenuScope);
     auto tileGridContainerName = WebCore::TileController::tileGridContainerLayerName();
     [subviews enumerateObjectsUsingBlock:^(UIView *view, NSUInteger index, BOOL* stop) {
         RetainPtr compositingView = dynamic_objc_cast<WKCompositingView>(view);
-        if ([[compositingView layer].name isEqualToString:tileGridContainerName]) {
+        if ([[compositingView layer].name isEqualToString:tileGridContainerName.createNSString().get()]) {
             indexAfterTileGridContainer = index + 1;
             *stop = YES;
         }

@@ -80,14 +80,14 @@
             return;
         }
 
-        NSString *mimeType = WebCore::MIMETypeRegistry::mimeTypeForExtension(String(fileURLForRequest.pathExtension));
+        RetainPtr mimeType = WebCore::MIMETypeRegistry::mimeTypeForExtension(String(fileURLForRequest.pathExtension)).createNSString();
         if (!mimeType)
             mimeType = @"application/octet-stream";
 
         RetainPtr<NSMutableDictionary> headerFields = adoptNS(@{
             @"Access-Control-Allow-Origin": @"*",
             @"Content-Length": [NSString stringWithFormat:@"%zu", (size_t)fileData.length],
-            @"Content-Type": mimeType,
+            @"Content-Type": mimeType.get(),
         }.mutableCopy);
 
         RetainPtr<NSHTTPURLResponse> urlResponse = adoptNS([[NSHTTPURLResponse alloc] initWithURL:urlSchemeTask.request.URL statusCode:200 HTTPVersion:nil headerFields:headerFields.get()]);

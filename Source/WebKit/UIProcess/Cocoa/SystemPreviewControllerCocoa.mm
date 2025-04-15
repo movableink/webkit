@@ -130,13 +130,13 @@ static NSString * const _WKARQLWebsiteURLParameterKey = @"ARQLWebsiteURLParamete
     _itemProvider = adoptNS([[NSItemProvider alloc] init]);
     // FIXME: We are launching the preview controller before getting a response from the resource, which
     // means we don't actually know the real MIME type yet.
-    NSString *contentType = WebCore::UTIFromMIMEType("model/vnd.usdz+zip"_s);
+    RetainPtr contentType = WebCore::UTIFromMIMEType("model/vnd.usdz+zip"_s).createNSString();
 
 #if HAVE(ARKIT_QUICK_LOOK_PREVIEW_ITEM)
     RetainPtr previewItem = adoptNS([WebKit::allocARQuickLookPreviewItemInstance() initWithFileAtURL:_downloadedURL.createNSURL().get()]);
     [previewItem setCanonicalWebPageURL:_originatingPageURL.createNSURL().get()];
 
-    _item = adoptNS([allocARQuickLookWebKitItemInstance() initWithPreviewItemProvider:_itemProvider.get() contentType:contentType previewTitle:@"Preview" fileSize:@(0) previewItem:previewItem.get()]);
+    _item = adoptNS([allocARQuickLookWebKitItemInstance() initWithPreviewItemProvider:_itemProvider.get() contentType:contentType.get() previewTitle:@"Preview" fileSize:@(0) previewItem:previewItem.get()]);
     [_item setDelegate:self];
 
     if ([_item respondsToSelector:(@selector(setAdditionalParameters:))]) {
@@ -150,7 +150,7 @@ static NSString * const _WKARQLWebsiteURLParameterKey = @"ARQLWebsiteURLParamete
     [_item setUseLoadingTimeout:NO];
 
     WeakObjCPtr<_WKPreviewControllerDataSource> weakSelf { self };
-    [_itemProvider registerItemForTypeIdentifier:contentType loadHandler:[weakSelf = WTFMove(weakSelf)] (NSItemProviderCompletionHandler completionHandler, Class expectedValueClass, NSDictionary * options) {
+    [_itemProvider registerItemForTypeIdentifier:contentType.get() loadHandler:[weakSelf = WTFMove(weakSelf)] (NSItemProviderCompletionHandler completionHandler, Class expectedValueClass, NSDictionary * options) {
         if (auto strongSelf = weakSelf.get()) {
             // If the download happened instantly, the call to finish might have come before this
             // loadHandler. In that case, call the completionHandler here.

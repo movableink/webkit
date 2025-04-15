@@ -1161,8 +1161,8 @@ TEST(ResourceLoadStatistics, DataSummaryWithCachedProcess)
     [webView setNavigationDelegate:delegate.get()];
 
     for (unsigned i = 0; i < maxSuspendedPageCount + 1; i++) {
-        NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:makeString("resource-load-statistics://www.domain-"_s, i, ".com"_s)]];
-        [webView loadRequest:request];
+        RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:makeString("resource-load-statistics://www.domain-"_s, i, ".com"_s).createNSString().get()]).get()]);
+        [webView loadRequest:request.get()];
         [delegate waitForDidFinishNavigation];
 
         EXPECT_EQ(i + 1, [processPool _webProcessCount]);
@@ -1170,8 +1170,8 @@ TEST(ResourceLoadStatistics, DataSummaryWithCachedProcess)
         EXPECT_FALSE([processPool _hasPrewarmedWebProcess]);
     }
     
-    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:makeString("resource-load-statistics://www.domain-"_s, maxSuspendedPageCount + 1, ".com"_s)]];
-    [webView loadRequest:request];
+    RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:adoptNS([[NSURL alloc] initWithString:makeString("resource-load-statistics://www.domain-"_s, maxSuspendedPageCount + 1, ".com"_s).createNSString().get()]).get()]);
+    [webView loadRequest:request.get()];
     [delegate waitForDidFinishNavigation];
 
     // This will timeout if waiting for IPC from a cached process.

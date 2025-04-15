@@ -113,14 +113,14 @@ void WebChromeClientIOS::focus()
 void WebChromeClientIOS::runJavaScriptAlert(LocalFrame& frame, const WTF::String& message)
 {
     WebThreadLockPushModal();
-    [[webView() _UIDelegateForwarder] webView:webView() runJavaScriptAlertPanelWithMessage:message initiatedByFrame:kit(&frame)];
+    [[webView() _UIDelegateForwarder] webView:webView() runJavaScriptAlertPanelWithMessage:message.createNSString().get() initiatedByFrame:kit(&frame)];
     WebThreadLockPopModal();
 }
 
 bool WebChromeClientIOS::runJavaScriptConfirm(LocalFrame& frame, const WTF::String& message)
 {
     WebThreadLockPushModal();
-    bool result = [[webView() _UIDelegateForwarder] webView:webView() runJavaScriptConfirmPanelWithMessage:message initiatedByFrame:kit(&frame)];
+    bool result = [[webView() _UIDelegateForwarder] webView:webView() runJavaScriptConfirmPanelWithMessage:message.createNSString().get() initiatedByFrame:kit(&frame)];
     WebThreadLockPopModal();
     return result;
 }
@@ -128,7 +128,7 @@ bool WebChromeClientIOS::runJavaScriptConfirm(LocalFrame& frame, const WTF::Stri
 bool WebChromeClientIOS::runJavaScriptPrompt(LocalFrame& frame, const WTF::String& prompt, const WTF::String& defaultText, WTF::String& result)
 {
     WebThreadLockPushModal();
-    result = [[webView() _UIDelegateForwarder] webView:webView() runJavaScriptTextInputPanelWithPrompt:prompt defaultText:defaultText initiatedByFrame:kit(&frame)];
+    result = [[webView() _UIDelegateForwarder] webView:webView() runJavaScriptTextInputPanelWithPrompt:prompt.createNSString().get() defaultText:defaultText.createNSString().get() initiatedByFrame:kit(&frame)];
     WebThreadLockPopModal();
     return !result.isNull();
 }

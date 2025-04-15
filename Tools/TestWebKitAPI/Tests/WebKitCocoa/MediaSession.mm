@@ -183,8 +183,9 @@ public:
     {
         for (auto event : events) {
             auto eventMessage = makeString(event, " event"_s);
-            [_messageHandlers addObject:eventMessage];
-            [webView() performAfterReceivingMessage:eventMessage action:[this, eventMessage = WTFMove(eventMessage)] {
+            RetainPtr nsEventMessage = eventMessage.createNSString();
+            [_messageHandlers addObject:nsEventMessage.get()];
+            [webView() performAfterReceivingMessage:nsEventMessage.get() action:[this, eventMessage = WTFMove(eventMessage)] {
                 _eventListenersCalled.add(eventMessage);
             }];
         }
@@ -216,8 +217,9 @@ public:
     {
         for (auto handler : handlers) {
             auto handlerMessage = makeString(handler, " handler"_s);
-            [_messageHandlers addObject:handlerMessage];
-            [webView() performAfterReceivingMessage:handlerMessage action:[this, handlerMessage = WTFMove(handlerMessage)] {
+            RetainPtr nsHandleMessage = handlerMessage.createNSString();
+            [_messageHandlers addObject:nsHandleMessage.get()];
+            [webView() performAfterReceivingMessage:nsHandleMessage.get() action:[this, handlerMessage = WTFMove(handlerMessage)] {
                 _mediaSessionHandlersCalled.add(handlerMessage);
             }];
         }

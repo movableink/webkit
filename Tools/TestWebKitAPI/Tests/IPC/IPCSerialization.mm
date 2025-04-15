@@ -826,15 +826,15 @@ String certDataBase64(""
 
 static RetainPtr<SecCertificateRef> createCertificate()
 {
-    NSData *certData = [[NSData alloc] initWithBase64EncodedString:certDataBase64 options:0];
-    auto cert = adoptCF(SecCertificateCreateWithData(kCFAllocatorDefault, (CFDataRef)certData));
+    RetainPtr certData = adoptNS([[NSData alloc] initWithBase64EncodedString:certDataBase64.createNSString().get() options:0]);
+    auto cert = adoptCF(SecCertificateCreateWithData(kCFAllocatorDefault, (CFDataRef)certData.get()));
     EXPECT_NOT_NULL(cert);
     return cert;
 }
 
 static RetainPtr<SecKeyRef> createPrivateKey()
 {
-    NSData * keyData = [[NSData alloc] initWithBase64EncodedString:privateKeyDataBase64 options:0];
+    RetainPtr keyData = adoptNS([[NSData alloc] initWithBase64EncodedString:privateKeyDataBase64.createNSString().get() options:0]);
 
     NSDictionary *keyAttrs = @{
         (id)kSecAttrKeyType: (id)kSecAttrKeyTypeRSA,
@@ -842,7 +842,7 @@ static RetainPtr<SecKeyRef> createPrivateKey()
         (id)kSecAttrKeyClass: (id)kSecAttrKeyClassPrivate
     };
 
-    auto privateKey = adoptCF(SecKeyCreateWithData((CFDataRef)keyData, (CFDictionaryRef)keyAttrs, NULL));
+    auto privateKey = adoptCF(SecKeyCreateWithData((CFDataRef)keyData.get(), (CFDictionaryRef)keyAttrs, NULL));
     EXPECT_NOT_NULL(privateKey);
     return privateKey;
 }
@@ -1529,13 +1529,13 @@ TEST(IPCSerialization, SecTrustRef)
     NSDictionary *appleCertificatePlist = @{
         @"anchorsOnly" : @(NO),
         @"certificates" : @[
-            [[NSData alloc] initWithBase64EncodedString:cert1 options:0],
-            [[NSData alloc] initWithBase64EncodedString:cert2 options:0]
+            [[NSData alloc] initWithBase64EncodedString:cert1.createNSString().get() options:0],
+            [[NSData alloc] initWithBase64EncodedString:cert2.createNSString().get() options:0]
         ],
         @"chain" : @[
-            [[NSData alloc] initWithBase64EncodedString:chain1 options:0],
-            [[NSData alloc] initWithBase64EncodedString:chain2 options:0],
-            [[NSData alloc] initWithBase64EncodedString:chain3 options:0],
+            [[NSData alloc] initWithBase64EncodedString:chain1.createNSString().get() options:0],
+            [[NSData alloc] initWithBase64EncodedString:chain2.createNSString().get() options:0],
+            [[NSData alloc] initWithBase64EncodedString:chain3.createNSString().get() options:0],
         ],
         @"details" : @[
             @{ },
@@ -1566,10 +1566,10 @@ TEST(IPCSerialization, SecTrustRef)
                     @"DuplicateExtension" : @(YES),
                     @"ExtendedKeyUsage" : @[
                         [NSData new],
-                        [[NSData alloc] initWithBase64EncodedString:extendedKeyUsage1 options:0],
-                        [[NSData alloc] initWithBase64EncodedString:extendedKeyUsage2 options:0],
-                        [[NSData alloc] initWithBase64EncodedString:extendedKeyUsage3 options:0],
-                        [[NSData alloc] initWithBase64EncodedString:extendedKeyUsage4 options:0],
+                        [[NSData alloc] initWithBase64EncodedString:extendedKeyUsage1.createNSString().get() options:0],
+                        [[NSData alloc] initWithBase64EncodedString:extendedKeyUsage2.createNSString().get() options:0],
+                        [[NSData alloc] initWithBase64EncodedString:extendedKeyUsage3.createNSString().get() options:0],
+                        [[NSData alloc] initWithBase64EncodedString:extendedKeyUsage4.createNSString().get() options:0],
                     ],
                     @"GrayListedLeaf" : @(YES),
                     @"IdLinkage" : @(YES),
@@ -1623,7 +1623,7 @@ TEST(IPCSerialization, SecTrustRef)
             [NSData dataWithBytes:"BBBB" length:strlen("BBBB")]
         ],
         @"anchors" : @[
-            [[NSData alloc] initWithBase64EncodedString:cert1 options:0]
+            [[NSData alloc] initWithBase64EncodedString:cert1.createNSString().get() options:0]
         ],
         @"trustedLogs" : @[
             [NSData dataWithBytes:"CCCC" length:strlen("CCCC")]

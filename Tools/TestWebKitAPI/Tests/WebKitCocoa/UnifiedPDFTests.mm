@@ -111,7 +111,7 @@ public:
 
     void synchronouslyLoadPDFDocument(String documentName)
     {
-        RetainPtr request = [NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:documentName withExtension:@"pdf"]];
+        RetainPtr request = adoptNS([[NSURLRequest alloc] initWithURL:[NSBundle.test_resourcesBundle URLForResource:documentName.createNSString().get() withExtension:@"pdf"]]);
         [webView synchronouslyLoadRequest:request.get()];
         [[webView window] makeFirstResponder:webView.get()];
         [[webView window] makeKeyAndOrderFront:nil];
@@ -612,7 +612,7 @@ UNIFIED_PDF_TEST(DISABLED_RespectsPageFragment)
     auto path = makeString('/', fileName, ".pdf"_s);
     auto pathWithFragment = makeString(path, "#page=2"_s);
 
-    RetainPtr pdfURL = [NSBundle.test_resourcesBundle URLForResource:String { fileName } withExtension:@"pdf"];
+    RetainPtr pdfURL = [NSBundle.test_resourcesBundle URLForResource:fileName.createNSString().get() withExtension:@"pdf"];
     HTTPResponse response { [NSData dataWithContentsOfURL:pdfURL.get()] };
     HTTPServer server { { { path, response }, { pathWithFragment, response } } };
 

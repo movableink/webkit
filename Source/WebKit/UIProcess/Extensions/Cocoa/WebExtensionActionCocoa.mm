@@ -394,7 +394,7 @@ static void* kvoContext = &kvoContext;
     self.popoverPresentationController.delegate = self;
 
     UINavigationItem *navigationItem = self.navigationItem;
-    navigationItem.title = extensionContext->protectedExtension()->displayName();
+    navigationItem.title = extensionContext->protectedExtension()->displayName().createNSString().get();
     navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(_dismissPopup)];
 
     [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(_viewControllerDismissalTransitionDidEnd:) name:UIPresentationControllerDismissalTransitionDidEndNotification object:nil];

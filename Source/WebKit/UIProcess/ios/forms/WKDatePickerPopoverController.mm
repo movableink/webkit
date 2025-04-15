@@ -266,7 +266,7 @@ const CGFloat toolbarBottomMarginSmall = 2;
     [_contentView setTranslatesAutoresizingMaskIntoConstraints:NO];
 
 #if USE(UITOOLBAR_FOR_DATE_PICKER_ACCESSORY_VIEW)
-    auto resetButton = adoptNS([[UIBarButtonItem alloc] initWithTitle:WEB_UI_STRING_KEY("Reset", "Reset Button Date/Time Context Menu", "Reset button in date input context menu") style:UIBarButtonItemStylePlain target:self action:@selector(resetDatePicker)]);
+    auto resetButton = adoptNS([[UIBarButtonItem alloc] initWithTitle:WEB_UI_STRING_KEY("Reset", "Reset Button Date/Time Context Menu", "Reset button in date input context menu").createNSString().get() style:UIBarButtonItemStylePlain target:self action:@selector(resetDatePicker)]);
     auto doneButton = adoptNS([[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(dismissDatePicker)]);
 
     [_contentView accessoryView].items = @[ resetButton.get(), UIBarButtonItem.flexibleSpaceItem, doneButton.get() ];

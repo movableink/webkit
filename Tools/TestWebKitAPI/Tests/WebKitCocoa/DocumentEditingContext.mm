@@ -897,7 +897,7 @@ TEST(DocumentEditingContext, SpatialAndCurrentSelectionRequest_LimitContextToEdi
             "  <p style='font-size:500px;'>hello world</p>"
             "  <input style='position: absolute; top: 100px; left: 100px;' value='foo' />"
             "</body>"_s
-        })];
+        }.createNSString().get())];
         [webView stringByEvaluatingJavaScript:@"document.querySelector('input').focus()"];
         [webView stringByEvaluatingJavaScript:@"document.querySelector('input').select()"];
 
@@ -924,7 +924,7 @@ TEST(DocumentEditingContext, SpatialAndCurrentSelectionRequest_LimitContextToVis
         "        getSelection().selectAllChildren(document.getElementById('target'));"
         "    </script>"
         "</body>"_s
-    })];
+    }.createNSString().get())];
 
     auto trimmedComponentsSeparatedByNewlines = [](const String& string) {
         auto components = string.split('\n');
@@ -1572,7 +1572,7 @@ TEST(DocumentEditingContext, CharacterRectsInEditableWebView)
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 320, 568)]);
     [webView _setEditable:YES];
-    [webView synchronouslyLoadHTMLString:makeString("<meta name='viewport' content='width=device-width, initial-scale=1'><body>"_s, longTextString, "</body>"_s)];
+    [webView synchronouslyLoadHTMLString:makeString("<meta name='viewport' content='width=device-width, initial-scale=1'><body>"_s, longTextString, "</body>"_s).createNSString().get()];
     [webView objectByEvaluatingJavaScript:@"getSelection().setPosition(document.body, 0)"];
     [webView waitForNextPresentationUpdate];
 

@@ -730,7 +730,7 @@ NSArray *LocalFrame::interpretationsForCurrentRoot() const
 
     // There are no phrases with alternatives, so there is just one interpretation.
     if (markersInRoot.isEmpty())
-        return @[plainText(rangeOfRootContents)];
+        return @[plainText(rangeOfRootContents).createNSString().get()];
 
     // The number of interpretations will be i1 * i2 * ... * iN, where iX is the number of interpretations for the Xth phrase with alternatives.
     size_t interpretationsCount = 1;

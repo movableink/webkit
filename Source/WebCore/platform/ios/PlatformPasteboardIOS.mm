@@ -645,7 +645,7 @@ static RetainPtr<WebItemProviderRegistrationInfoList> createItemProviderRegistra
             // events, we need an additional in-memory representation of the pasteboard types array that contains
             // all of the custom types. We use the teamData property, available on NSItemProvider on iOS, to store
             // this information, since the contents of teamData are immediately available prior to the drop.
-            NSDictionary *teamDataDictionary = @{ @(originKeyForTeamData) : data.origin(), @(customTypesKeyForTeamData) : createNSArray(data.orderedTypes()).get() };
+            NSDictionary *teamDataDictionary = @{ @(originKeyForTeamData) : data.origin().createNSString().get(), @(customTypesKeyForTeamData) : createNSArray(data.orderedTypes()).get() };
             if (NSData *teamData = [NSKeyedArchiver archivedDataWithRootObject:teamDataDictionary requiringSecureCoding:YES error:nullptr]) {
                 [representationsToRegister setTeamData:teamData];
                 [representationsToRegister addData:serializedSharedBuffer.get() forType:@(PasteboardCustomData::cocoaType().characters())];
@@ -662,13 +662,13 @@ static RetainPtr<WebItemProviderRegistrationInfoList> createItemProviderRegistra
             if (std::get<String>(value).isNull())
                 return;
 
-            NSString *nsStringValue = std::get<String>(value);
+            RetainPtr nsStringValue = std::get<String>(value).createNSString();
             auto cfType = cocoaType.createCFString();
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             if (UTTypeConformsTo(cfType.get(), kUTTypeURL))
-                [representationsToRegister addRepresentingObject:[NSURL URLWithString:nsStringValue]];
+                [representationsToRegister addRepresentingObject:adoptNS([[NSURL alloc] initWithString:nsStringValue.get()]).get()];
             else if (UTTypeConformsTo(cfType.get(), kUTTypePlainText))
-                [representationsToRegister addRepresentingObject:nsStringValue];
+                [representationsToRegister addRepresentingObject:nsStringValue.get()];
             else
                 [representationsToRegister addData:[nsStringValue dataUsingEncoding:NSUTF8StringEncoding] forType:cocoaType.createNSString().get()];
 ALLOW_DEPRECATED_DECLARATIONS_END
@@ -788,7 +788,7 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         return { };
 
     NSIndexSet *indexSet = [NSIndexSet indexSetWithIndex:index];
-    auto value = retainPtr([m_pasteboard valuesForPasteboardType:type inItemSet:indexSet].firstObject ?: [m_pasteboard dataForPasteboardType:type inItemSet:indexSet].firstObject);
+    RetainPtr value = [m_pasteboard valuesForPasteboardType:type.createNSString().get() inItemSet:indexSet].firstObject ?: [m_pasteboard dataForPasteboardType:type.createNSString().get() inItemSet:indexSet].firstObject;
     if (!value)
         return { };
 
@@ -873,7 +873,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         // and if it isn't, we bail out of page navigation.
         return true;
     }
-    return URL { [NSURL URLWithString:urlString] }.protocolIsInHTTPFamily();
+    return URL { adoptNS([[NSURL alloc] initWithString:urlString.createNSString().get()]).get() }.protocolIsInHTTPFamily();
 }
 
 }

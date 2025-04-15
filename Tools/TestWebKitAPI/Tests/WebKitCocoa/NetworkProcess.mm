@@ -333,7 +333,7 @@ static void waitUntilNetworkProcessIsResponsive(WKWebView *webView1, WKWebView *
     // The first WebProcess tries setting a cookie until the second Webview is able to see it.
     auto expectedCookieString = makeString("TEST="_s, createVersion4UUIDString());
     auto setTestCookieString = makeString("setInterval(() => { document.cookie='"_s, expectedCookieString, "'; }, 100);"_s);
-    [webView1 evaluateJavaScript:(NSString *)setTestCookieString completionHandler: [&] (id result, NSError *error) {
+    [webView1 evaluateJavaScript:setTestCookieString.createNSString().get() completionHandler: [&] (id result, NSError *error) {
         EXPECT_TRUE(!error);
     }];
 

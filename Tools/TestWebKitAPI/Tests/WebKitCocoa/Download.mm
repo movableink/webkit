@@ -118,7 +118,7 @@ IGNORE_WARNINGS_END
     EXPECT_TRUE(!_destinationPath.isEmpty());
 
     *allowOverwrite = YES;
-    return _destinationPath;
+    return _destinationPath.createNSString().autorelease();
 }
 
 - (void)_downloadDidFinish:(_WKDownload *)download
@@ -126,7 +126,7 @@ IGNORE_WARNINGS_END
     EXPECT_EQ(_download, download);
     EXPECT_EQ(expectedUserInitiatedState, download.wasUserInitiated);
     EXPECT_TRUE(_expectedContentLength == NSURLResponseUnknownLength || static_cast<uint64_t>(_expectedContentLength) == _receivedContentLength);
-    EXPECT_TRUE([[NSFileManager defaultManager] contentsEqualAtPath:_destinationPath andPath:[sourceURL path]]);
+    EXPECT_TRUE([[NSFileManager defaultManager] contentsEqualAtPath:_destinationPath.createNSString().get() andPath:[sourceURL path]]);
     FileSystem::deleteFile(_destinationPath);
     isDone = true;
 }
@@ -422,7 +422,7 @@ IGNORE_WARNINGS_END
     EXPECT_TRUE(!_destinationPath.isEmpty());
 
     *allowOverwrite = YES;
-    return _destinationPath;
+    return _destinationPath.createNSString().autorelease();
 }
 
 - (void)_downloadDidFinish:(_WKDownload *)download
@@ -432,7 +432,7 @@ IGNORE_WARNINGS_END
     EXPECT_TRUE(_expectedContentLength == NSURLResponseUnknownLength || static_cast<uint64_t>(_expectedContentLength) == _receivedContentLength);
     NSString* expectedContent = @"{\"x\":42,\"s\":\"hello, world\"}";
     NSData* expectedData = [expectedContent dataUsingEncoding:NSUTF8StringEncoding];
-    EXPECT_TRUE([[[NSFileManager defaultManager] contentsAtPath:_destinationPath] isEqualToData:expectedData]);
+    EXPECT_TRUE([[[NSFileManager defaultManager] contentsAtPath:_destinationPath.createNSString().get()] isEqualToData:expectedData]);
     FileSystem::deleteFile(_destinationPath);
     isDone = true;
 }
@@ -479,7 +479,7 @@ IGNORE_WARNINGS_END
     _destinationPath = FileSystem::createTemporaryFile("TestWebKitAPI"_s);
     EXPECT_TRUE(!_destinationPath.isEmpty());
     *allowOverwrite = YES;
-    return _destinationPath;
+    return _destinationPath.createNSString().autorelease();
 }
 
 - (void)_download:(_WKDownload *)download didReceiveServerRedirectToURL:(NSURL *)url
@@ -652,7 +652,7 @@ TEST(_WKDownload, DownloadCanceledWhileDecidingDestination)
     _destinationPath = FileSystem::createTemporaryFile(String { filename });
     EXPECT_TRUE(!_destinationPath.isEmpty());
 
-    completionHandler(YES, _destinationPath);
+    completionHandler(YES, _destinationPath.createNSString().get());
 }
 
 - (void)_downloadDidFinish:(_WKDownload *)download
@@ -1126,7 +1126,7 @@ TEST(WebKit, DownloadNavigationResponseFromMemoryCache)
 
 - (void)download:(WKDownload *)download decideDestinationUsingResponse:(NSURLResponse *)response suggestedFilename:(NSString *)suggestedFilename completionHandler:(void (^)(NSURL *destination))completionHandler
 {
-    _path = FileSystem::createTemporaryFile("TestWebKitAPI"_s);
+    _path = FileSystem::createTemporaryFile("TestWebKitAPI"_s).createNSString().get();
     EXPECT_TRUE(_path && [_path.get() length]);
     FileSystem::deleteFile(String(_path.get()));
 
@@ -2008,7 +2008,7 @@ TEST(WKDownload, ResumeWithExtraInitialDataOnDisk)
         NSError *error = nil;
         [[NSFileManager defaultManager] removeItemAtURL:expectedDownloadFile error:&error];
         EXPECT_NULL(error);
-        EXPECT_TRUE([[(NSString *)makeString(longString<3000>('b'), longString<2000>('c')) dataUsingEncoding:NSUTF8StringEncoding] writeToURL:expectedDownloadFile atomically:YES]);
+        EXPECT_TRUE([[makeString(longString<3000>('b'), longString<2000>('c')).createNSString() dataUsingEncoding:NSUTF8StringEncoding] writeToURL:expectedDownloadFile atomically:YES]);
     });
 
     checkFileContents(expectedDownloadFile, makeString(longString<3000>('b'), longString<2000>('c'), longString<5000>('d')));

@@ -1940,7 +1940,7 @@ static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
     else
         _private->textIndicatorData = adoptNS([[WebUITextIndicatorData alloc] initWithImage:image scale:_private->page->deviceScaleFactor()]);
     _private->draggedLinkURL = dragItem.url.isEmpty() ? RetainPtr<NSURL>() : dragItem.url.createNSURL();
-    _private->draggedLinkTitle = dragItem.title.isEmpty() ? nil : (NSString *)dragItem.title;
+    _private->draggedLinkTitle = dragItem.title.isEmpty() ? nil : dragItem.title.createNSString().get();
     _private->dragPreviewFrameInRootViewCoordinates = dragItem.dragPreviewFrameInRootViewCoordinates;
     _private->dragSourceAction = kit(dragItem.sourceAction);
 }
@@ -7717,7 +7717,7 @@ static NSAppleEventDescriptor* aeDescFromJSValue(JSC::JSGlobalObject* lexicalGlo
 #if PLATFORM(IOS_FAMILY)
 - (void)removeVisitedLink:(NSURL *)url
 {
-    _private->group->visitedLinkStore().removeVisitedLink(URL(url).string());
+    _private->group->visitedLinkStore().removeVisitedLink(URL(url).string().createNSString().get());
 }
 #endif
 

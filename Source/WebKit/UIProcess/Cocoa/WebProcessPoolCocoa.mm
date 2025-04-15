@@ -1107,7 +1107,7 @@ static bool isLockdownModeEnabledBySystemIgnoringCaching()
         return false;
 
 #if PLATFORM(IOS_FAMILY)
-    if (processHasContainer() && [_WKSystemPreferences isCaptivePortalModeIgnored:pathForProcessContainer()])
+    if (processHasContainer() && [_WKSystemPreferences isCaptivePortalModeIgnored:pathForProcessContainer().createNSString().get()])
         return false;
 #endif
     

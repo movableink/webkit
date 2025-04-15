@@ -139,7 +139,7 @@ void GPUProcess::platformInitializeGPUProcess(GPUProcessCreationParameters& para
     }
 
 #if USE(SANDBOX_EXTENSIONS_FOR_CACHE_AND_TEMP_DIRECTORY_ACCESS) && USE(EXTENSIONKIT)
-    MTLSetShaderCachePath(parameters.containerCachesDirectory);
+    MTLSetShaderCachePath(parameters.containerCachesDirectory.createNSString().get());
 #endif
 }
 
