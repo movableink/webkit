@@ -143,7 +143,7 @@ const MatchedDeclarationsCache::Entry* MatchedDeclarationsCache::find(unsigned h
         return nullptr;
 
     auto& entry = it->value;
-    if (!matchResult.cacheablePropertiesEqual(entry.matchResult))
+    if (!matchResult.cacheablePropertiesEqual(*entry.matchResult))
         return nullptr;
 
     if (&entry.parentRenderStyle->inheritedCustomProperties() != &inheritedCustomProperties)
@@ -169,7 +169,7 @@ void MatchedDeclarationsCache::add(const RenderStyle& style, const RenderStyle& 
     ASSERT(hash);
     // Note that we don't cache the original RenderStyle instance. It may be further modified.
     // The RenderStyle in the cache is really just a holder for the substructures and never used as-is.
-    m_entries.add(hash, Entry { matchResult, RenderStyle::clonePtr(style), RenderStyle::clonePtr(parentStyle), userAgentAppearanceStyleCopy() });
+    m_entries.add(hash, Entry { &matchResult, RenderStyle::clonePtr(style), RenderStyle::clonePtr(parentStyle), userAgentAppearanceStyleCopy() });
 }
 
 void MatchedDeclarationsCache::remove(unsigned hash)
@@ -207,7 +207,7 @@ void MatchedDeclarationsCache::sweep()
     };
 
     m_entries.removeIf([&](auto& keyValue) {
-        auto& matchResult = keyValue.value.matchResult;
+        auto& matchResult = *keyValue.value.matchResult;
         return hasOneRef(matchResult.userAgentDeclarations) || hasOneRef(matchResult.userDeclarations) || hasOneRef(matchResult.authorDeclarations);
     });
 

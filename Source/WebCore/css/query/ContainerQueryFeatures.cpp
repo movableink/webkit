@@ -311,8 +311,9 @@ struct StyleFeatureSchema : public FeatureSchema {
             };
 
             auto dummyStyle = RenderStyle::clone(style);
+            auto dummyMatchResult = Style::MatchResult::create();
 
-            auto styleBuilder = Style::Builder { dummyStyle, WTFMove(builderContext), { }, { } };
+            auto styleBuilder = Style::Builder { dummyStyle, WTFMove(builderContext), dummyMatchResult, { } };
             return styleBuilder.resolveCustomPropertyForContainerQueries(*featureValue);
         }();
 

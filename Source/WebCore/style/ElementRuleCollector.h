@@ -69,7 +69,7 @@ public:
 
 
     const MatchResult& matchResult() const;
-    std::unique_ptr<MatchResult> releaseMatchResult();
+    Ref<MatchResult> releaseMatchResult();
 
     const Vector<RefPtr<const StyleRule>>& matchedRuleList() const;
 
@@ -138,7 +138,7 @@ private:
 
     // Output.
     Vector<RefPtr<const StyleRule>> m_matchedRuleList;
-    std::unique_ptr<MatchResult> m_result;
+    Ref<MatchResult> m_result;
     Relations m_styleRelations;
     PseudoIdSet m_matchedPseudoElementIds;
 };

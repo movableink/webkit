@@ -36,6 +36,7 @@ public:
     PageRuleCollector(ScopeRuleSets& ruleSets, WritingMode rootWritingMode)
         : m_ruleSets(ruleSets)
         , m_rootWritingMode(rootWritingMode)
+        , m_result(MatchResult::create())
     { }
 
     void matchAllPageRules(int pageIndex);
@@ -53,7 +54,7 @@ private:
     ScopeRuleSets& m_ruleSets;
     WritingMode m_rootWritingMode;
 
-    MatchResult m_result;
+    Ref<MatchResult> m_result;
 };
 
 } // namespace Style

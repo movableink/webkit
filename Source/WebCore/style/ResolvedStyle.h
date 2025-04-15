@@ -29,7 +29,7 @@ namespace Style {
 struct ResolvedStyle {
     std::unique_ptr<RenderStyle> style;
     std::unique_ptr<Relations> relations { };
-    std::unique_ptr<MatchResult> matchResult { };
+    RefPtr<const MatchResult> matchResult { };
 };
 
 } // namespace Style

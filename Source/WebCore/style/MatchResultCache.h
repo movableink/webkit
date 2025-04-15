@@ -42,11 +42,11 @@ public:
     MatchResultCache();
     ~MatchResultCache();
 
-    const MatchResult* get(const Element&);
+    RefPtr<const MatchResult> get(const Element&);
     void update(const Element&, const MatchResult&);
 
 private:
-    WeakHashMap<const Element, UniqueRef<MatchResult>, WeakPtrImplWithEventTargetData> m_cachedMatchResults;
+    WeakHashMap<const Element, RefPtr<const MatchResult>, WeakPtrImplWithEventTargetData> m_cachedMatchResults;
 };
 
 }

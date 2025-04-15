@@ -85,7 +85,7 @@ void PageRuleCollector::matchPageRules(RuleSet* rules, bool isLeftPage, bool isF
 
     std::stable_sort(matchedPageRules.begin(), matchedPageRules.end(), comparePageRules);
 
-    m_result.authorDeclarations.appendContainerWithMapping(matchedPageRules, [](auto& pageRule) {
+    m_result->authorDeclarations.appendContainerWithMapping(matchedPageRules, [](auto& pageRule) {
         return MatchedProperties { pageRule->properties() };
     });
 }

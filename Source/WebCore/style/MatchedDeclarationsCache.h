@@ -47,7 +47,7 @@ public:
     static unsigned computeHash(const MatchResult&, const StyleCustomPropertyData& inheritedCustomProperties);
 
     struct Entry {
-        MatchResult matchResult;
+        RefPtr<const MatchResult> matchResult;
         std::unique_ptr<const RenderStyle> renderStyle;
         std::unique_ptr<const RenderStyle> parentRenderStyle;
         std::unique_ptr<const RenderStyle> userAgentAppearanceStyle;

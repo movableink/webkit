@@ -102,7 +102,7 @@ ElementRuleCollector::ElementRuleCollector(const Element& element, const ScopeRu
     , m_userAgentMediaQueryStyle(ruleSets.userAgentMediaQueryStyle())
     , m_dynamicViewTransitionsStyle(ruleSets.dynamicViewTransitionsStyle())
     , m_selectorMatchingState(selectorMatchingState)
-    , m_result(makeUnique<MatchResult>(element.isLink()))
+    , m_result(MatchResult::create(element.isLink()))
 {
     ASSERT(!m_selectorMatchingState || m_selectorMatchingState->selectorFilter.parentStackIsConsistent(element.parentNode()));
 }
@@ -111,7 +111,7 @@ ElementRuleCollector::ElementRuleCollector(const Element& element, const RuleSet
     : m_element(element)
     , m_authorStyle(authorStyle)
     , m_selectorMatchingState(selectorMatchingState)
-    , m_result(makeUnique<MatchResult>(element.isLink()))
+    , m_result(MatchResult::create(element.isLink()))
 {
     ASSERT(!m_selectorMatchingState || m_selectorMatchingState->selectorFilter.parentStackIsConsistent(element.parentNode()));
 }
@@ -119,10 +119,10 @@ ElementRuleCollector::ElementRuleCollector(const Element& element, const RuleSet
 const MatchResult& ElementRuleCollector::matchResult() const
 {
     ASSERT(m_mode == SelectorChecker::Mode::ResolvingStyle);
-    return *m_result;
+    return m_result;
 }
 
-std::unique_ptr<MatchResult> ElementRuleCollector::releaseMatchResult()
+Ref<MatchResult> ElementRuleCollector::releaseMatchResult()
 {
     return WTFMove(m_result);
 }

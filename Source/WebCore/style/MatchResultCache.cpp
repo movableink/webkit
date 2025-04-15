@@ -36,7 +36,7 @@ namespace Style {
 MatchResultCache::MatchResultCache() = default;
 MatchResultCache::~MatchResultCache() = default;
 
-const MatchResult* MatchResultCache::get(const Element& element)
+RefPtr<const MatchResult> MatchResultCache::get(const Element& element)
 {
     auto it = m_cachedMatchResults.find(element);
     if (it == m_cachedMatchResults.end())
@@ -72,7 +72,7 @@ void MatchResultCache::update(const Element& element, const MatchResult& matchRe
     // selector matching when it gets mutated again.
     auto* styledElement = dynamicDowncast<StyledElement>(element);
     if (styledElement && styledElement->inlineStyle() && styledElement->inlineStyle()->isMutable())
-        m_cachedMatchResults.set(element, makeUniqueRef<MatchResult>(matchResult));
+        m_cachedMatchResults.set(element, &matchResult);
     else
         m_cachedMatchResults.remove(element);
 }
