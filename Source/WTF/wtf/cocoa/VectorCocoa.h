@@ -91,6 +91,9 @@ template<typename CollectionType, typename MapFunctionType> RetainPtr<NSMutableA
 
 template<typename VectorElementType> Vector<VectorElementType> makeVector(NSArray *array)
 {
+    if (!array)
+        return { };
+
     Vector<VectorElementType> vector;
     vector.reserveInitialCapacity(array.count);
     for (id element in array) {
@@ -104,6 +107,9 @@ template<typename VectorElementType> Vector<VectorElementType> makeVector(NSArra
 
 template<typename MapFunctionType> Vector<typename std::invoke_result_t<MapFunctionType, id>::value_type> makeVector(NSArray *array, NOESCAPE MapFunctionType&& function)
 {
+    if (!array)
+        return { };
+
     Vector<typename std::invoke_result_t<MapFunctionType, id>::value_type> vector;
     vector.reserveInitialCapacity(array.count);
     for (id element in array) {
