@@ -85,7 +85,12 @@ TEST(LockdownMode, NotAllowedFontLoadingAPI)
         auto referenceResult = static_cast<NSNumber *>([webView objectByEvaluatingJavaScript:@"reference.offsetWidth"]).intValue;
 
         EXPECT_NE(beforeTargetResult, targetResult);
+    // FIXME: (webkit.org/b/290478) We should expose the safe font parser setting to here and make the next assert conditional to it.
+#if HAVE(CTFONTMANAGER_CREATEMEMORYSAFEFONTDESCRIPTORFROMDATA)
+        EXPECT_NE(targetResult, referenceResult);
+#else
         EXPECT_EQ(targetResult, referenceResult);
+#endif
     }
 }
 
@@ -199,7 +204,12 @@ TEST(LockdownMode, NotAllowedFont)
         auto targetResult = static_cast<NSNumber *>([webView objectByEvaluatingJavaScript:@"target.offsetWidth"]).intValue;
         auto referenceResult = static_cast<NSNumber *>([webView objectByEvaluatingJavaScript:@"reference.offsetWidth"]).intValue;
 
+    // FIXME: (webkit.org/b/290478) We should expose the safe font parser setting to here and make the next assert conditional to it.
+#if HAVE(CTFONTMANAGER_CREATEMEMORYSAFEFONTDESCRIPTORFROMDATA)
+        EXPECT_NE(targetResult, referenceResult);
+#else
         EXPECT_EQ(targetResult, referenceResult);
+#endif
     }
 }
 }
