@@ -157,7 +157,7 @@ void UniqueIDBDatabaseTransaction::createObjectStore(const IDBRequestData& reque
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::createObjectStore");
 
-    ASSERT(isVersionChange());
+    RELEASE_ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
     auto* database = this->database();
@@ -182,7 +182,7 @@ void UniqueIDBDatabaseTransaction::deleteObjectStore(const IDBRequestData& reque
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::deleteObjectStore");
 
-    ASSERT(isVersionChange());
+    RELEASE_ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
     auto* database = this->database();
@@ -209,7 +209,7 @@ void UniqueIDBDatabaseTransaction::renameObjectStore(const IDBRequestData& reque
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::renameObjectStore");
 
-    ASSERT(isVersionChange());
+    RELEASE_ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
     auto* database = this->database();
@@ -260,7 +260,7 @@ void UniqueIDBDatabaseTransaction::deleteIndex(const IDBRequestData& requestData
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::deleteIndex");
 
-    ASSERT(isVersionChange());
+    RELEASE_ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
     auto* database = this->database();
@@ -285,7 +285,7 @@ void UniqueIDBDatabaseTransaction::renameIndex(const IDBRequestData& requestData
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::renameIndex");
 
-    ASSERT(isVersionChange());
+    RELEASE_ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
     auto* database = this->database();
