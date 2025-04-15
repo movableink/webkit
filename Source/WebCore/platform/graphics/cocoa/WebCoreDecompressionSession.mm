@@ -290,16 +290,22 @@ RetainPtr<CVPixelBufferRef> WebCoreDecompressionSession::decodeSampleSync(CMSamp
     return pixelBuffer;
 }
 
+bool WebCoreDecompressionSession::isNonRecoverableError(OSStatus status) const
+{
+    return status != noErr && status != kVTVideoDecoderReferenceMissingErr;
+}
+
 void WebCoreDecompressionSession::handleDecompressionOutput(bool displaying, OSStatus status, VTDecodeInfoFlags, CVImageBufferRef rawImageBuffer, CMTime presentationTimeStamp, CMTime presentationDuration)
 {
     assertIsCurrent(m_decompressionQueue.get());
 
-    if (status != noErr) {
+    if (isNonRecoverableError(status)) {
+        RELEASE_LOG_ERROR(Media, "Video sample decompression failed with error:%d", int(status));
         m_lastDecodingError = status;
         return;
     }
 
-    if (!displaying)
+    if (!displaying || !rawImageBuffer)
         return;
 
     CMVideoFormatDescriptionRef rawImageBufferDescription = nullptr;

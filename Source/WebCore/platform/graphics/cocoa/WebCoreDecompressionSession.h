@@ -83,6 +83,8 @@ private:
     Ref<MediaPromise> initializeVideoDecoder(FourCharCode, std::span<const uint8_t>, const std::optional<PlatformVideoColorSpace>&);
     bool isInvalidated() const { return m_invalidated; }
 
+    bool isNonRecoverableError(OSStatus) const;
+
     Mode m_mode;
     mutable Lock m_lock;
     RetainPtr<VTDecompressionSessionRef> m_decompressionSession WTF_GUARDED_BY_LOCK(m_lock);
