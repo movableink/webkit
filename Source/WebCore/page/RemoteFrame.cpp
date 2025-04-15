@@ -167,4 +167,9 @@ void RemoteFrame::updateScrollingMode()
         m_client->updateScrollingMode(ownerElement->scrollingMode());
 }
 
+RefPtr<SecurityOrigin> RemoteFrame::frameDocumentSecurityOrigin() const
+{
+    return frameTreeSyncData().frameDocumentSecurityOrigin;
+}
+
 } // namespace WebCore

@@ -3720,6 +3720,27 @@ TEST(SiteIsolation, RedirectToCSP)
     [navigationDelegate waitForDidFinishNavigation];
 }
 
+TEST(SiteIsolation, IframeWithCSPHeaderForFrameAncestors)
+{
+    HTTPServer server({
+        { "/"_s, { "<iframe src='https://webkit.org/iframe'></iframe>"_s } },
+        { "/iframe"_s, { { { "Content-Type"_s, "text/html"_s }, { "Content-Security-Policy"_s, "frame-ancestors https://example.com"_s } }, "<script>alert('iframe loaded')</script>"_s } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    __block bool receivedAlert { false };
+    auto uiDelegate = adoptNS([TestUIDelegate new]);
+    uiDelegate.get().runJavaScriptAlertPanelWithMessage = ^(WKWebView *, NSString *message, WKFrameInfo *, void (^completionHandler)(void)) {
+        EXPECT_WK_STREQ(message, "iframe loaded");
+        completionHandler();
+        receivedAlert = true;
+    };
+
+    auto [webView, navigationDelegate] = siteIsolatedViewAndDelegate(server);
+    webView.get().UIDelegate = uiDelegate.get();
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://example.com"]]];
+    Util::run(&receivedAlert);
+}
+
 TEST(SiteIsolation, MultipleWebViewsWithSameOpenedConfiguration)
 {
     HTTPServer server({

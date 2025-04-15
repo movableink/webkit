@@ -64,3 +64,4 @@ DocumentSecurityOrigin : RefPtr<WebCore::SecurityOrigin> [DocumentSyncData Heade
 DocumentClasses : OptionSet<WebCore::DocumentClass> [DocumentSyncData Header="DocumentClasses.h"]
 HasInjectedUserScript : bool [DocumentSyncData]
 FrameCanCreatePaymentSession : bool [FrameTreeSyncData]
+FrameDocumentSecurityOrigin : RefPtr<WebCore::SecurityOrigin> [FrameTreeSyncData Header="SecurityOrigin.h"]

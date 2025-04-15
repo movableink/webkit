@@ -1539,7 +1539,14 @@ bool LocalFrame::frameCanCreatePaymentSession() const
 #else
     return false;
 #endif
+}
 
+RefPtr<SecurityOrigin> LocalFrame::frameDocumentSecurityOrigin() const
+{
+    if (RefPtr document = this->document())
+        return &document->securityOrigin();
+
+    return nullptr;
 }
 
 } // namespace WebCore

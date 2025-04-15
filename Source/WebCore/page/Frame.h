@@ -134,7 +134,8 @@ public:
     WEBCORE_EXPORT void updateFrameTreeSyncData(Ref<FrameTreeSyncData>&&);
 
     virtual bool frameCanCreatePaymentSession() const;
-    FrameTreeSyncData& frameTreeSyncData() { return m_frameTreeSyncData.get(); }
+    FrameTreeSyncData& frameTreeSyncData() const { return m_frameTreeSyncData.get(); }
+    WEBCORE_EXPORT virtual RefPtr<SecurityOrigin> frameDocumentSecurityOrigin() const = 0;
 
 protected:
     Frame(Page&, FrameIdentifier, FrameType, HTMLFrameOwnerElement*, Frame* parent, Frame* opener, Ref<FrameTreeSyncData>&&);

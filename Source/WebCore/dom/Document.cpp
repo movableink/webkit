@@ -725,6 +725,7 @@ void Document::populateDocumentSyncDataForNewlyConstructedDocument(ProcessSyncDa
     case ProcessSyncDataType::IsAutofocusProcessed:
     case ProcessSyncDataType::UserDidInteractWithPage:
     case ProcessSyncDataType::FrameCanCreatePaymentSession:
+    case ProcessSyncDataType::FrameDocumentSecurityOrigin:
         break;
     }
 }

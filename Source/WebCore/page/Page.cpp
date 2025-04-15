@@ -925,6 +925,7 @@ void Page::updateProcessSyncData(const ProcessSyncData& data)
         protectedTopDocumentSyncData()->update(data);
         break;
     case ProcessSyncDataType::FrameCanCreatePaymentSession:
+    case ProcessSyncDataType::FrameDocumentSecurityOrigin:
         ASSERT_NOT_REACHED();
     }
 }

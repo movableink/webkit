@@ -569,9 +569,13 @@ void WebLoaderStrategy::scheduleLoadFromNetworkProcess(ResourceLoader& resourceL
 
     if (resourceLoader.options().mode == FetchOptions::Mode::Navigate) {
         Vector<Ref<SecurityOrigin>> frameAncestorOrigins;
-        for (auto* frame = resourceLoader.frame()->tree().parent(); frame; frame = frame->tree().parent()) {
-            auto* localFrame = dynamicDowncast<LocalFrame>(frame);
-            frameAncestorOrigins.append(localFrame ? localFrame->document()->securityOrigin() : SecurityOrigin::opaqueOrigin());
+        for (RefPtr frame = resourceLoader.frame()->tree().parent(); frame; frame = frame->tree().parent()) {
+            RefPtr<WebCore::SecurityOrigin> frameOrigin = frame->frameDocumentSecurityOrigin();
+            if (!frameOrigin) {
+                WEBLOADERSTRATEGY_RELEASE_LOG_ERROR("scheduleLoad: Unable to get document origin of frame (frameID=%" PRIu64 ")", frame->frameID().toUInt64());
+                frameOrigin = &SecurityOrigin::opaqueOrigin();
+            }
+            frameAncestorOrigins.append(*frameOrigin);
         }
         loadParameters.frameAncestorOrigins = WTFMove(frameAncestorOrigins);
     }

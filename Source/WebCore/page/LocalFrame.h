@@ -352,6 +352,7 @@ private:
     bool preventsParentFromBeingComplete() const final;
     void changeLocation(FrameLoadRequest&&) final;
     void didFinishLoadInAnotherProcess() final;
+    RefPtr<SecurityOrigin> frameDocumentSecurityOrigin() const final;
 
     FrameView* virtualView() const final;
     void disconnectView() final;
