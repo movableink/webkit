@@ -28,6 +28,7 @@
 #if ENABLE(AX_THREAD_TEXT_APIS)
 
 #include "FloatRect.h"
+#include "TextAffinity.h"
 #include "TextFlags.h"
 #include <CoreText/CTFont.h>
 #include <wtf/text/MakeString.h>
@@ -139,6 +140,7 @@ struct AXTextRuns {
         RELEASE_ASSERT(runs[index].text.length());
         return runs[index].text.length();
     }
+    size_t lastRunIndex() const { return size() - 1; }
     unsigned lastRunLength() const
     {
         if (runs.isEmpty())
@@ -153,8 +155,7 @@ struct AXTextRuns {
     unsigned runLengthSumTo(size_t index) const;
     unsigned domOffset(unsigned) const;
 
-    size_t indexForOffset(unsigned textOffset) const;
-    AXTextRunLineID lineIDForOffset(unsigned textOffset) const;
+    size_t indexForOffset(unsigned textOffset, Affinity) const;
     AXTextRunLineID lineID(size_t index) const
     {
         RELEASE_ASSERT(index < runs.size());

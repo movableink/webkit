@@ -38,6 +38,7 @@
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/Scope.h>
 
 namespace WebCore {
 
@@ -641,7 +642,7 @@ AXTextRunLineID AXTextMarker::lineID() const
         return toTextRunMarker().lineID();
 
     const auto* runs = this->runs();
-    size_t runIndex = runs->indexForOffset(offset());
+    size_t runIndex = runs->indexForOffset(offset(), affinity());
     return runIndex != notFound ? runs->lineID(runIndex) : AXTextRunLineID();
 }
 
@@ -756,11 +757,6 @@ int AXTextMarker::lineNumberForIndex(unsigned index) const
         return -1;
     }
 
-    // To match the behavior of the VisiblePosition implementation of this functionality, we need to
-    // check an extra position ahead (as tested by ax-thread-text-apis/textarea-line-for-index.html),
-    // so increment index.
-    ++index;
-
     unsigned lineIndex = 0;
     auto currentMarker = *this;
     while (index) {
@@ -785,7 +781,7 @@ bool AXTextMarker::atLineBoundaryForDirection(AXDirection direction) const
     if (!isInTextRun())
         return toTextRunMarker().atLineBoundaryForDirection(direction);
 
-    size_t runIndex = runs()->indexForOffset(offset());
+    size_t runIndex = runs()->indexForOffset(offset(), affinity());
     TEXT_MARKER_ASSERT(runIndex != notFound, "atLineBoundaryForDirection (1)");
     if (runIndex == notFound)
         return false;
@@ -1110,7 +1106,7 @@ AXTextMarker AXTextMarker::findLine(AXDirection direction, AXTextUnitBoundary bo
     if (!isInTextRun())
         return toTextRunMarker(stopAtID).findLine(direction, boundary, includeTrailingLineBreak, stopAtID);
 
-    size_t runIndex = runs()->indexForOffset(offset());
+    size_t runIndex = runs()->indexForOffset(offset(), affinity());
     TEXT_MARKER_ASSERT(runIndex != notFound, "findLine (1)");
     if (runIndex == notFound)
         return { };
@@ -1123,8 +1119,35 @@ AXTextMarker AXTextMarker::findLine(AXDirection direction, AXTextUnitBoundary bo
     // we need the end position of the next line instead. Determine this by checking the next or previous marker.
     if (atLineBoundaryForDirection(direction, currentRuns, runIndex)) {
         auto adjacentMarker = findMarker(direction, CoalesceObjectBreaks::No, IgnoreBRs::Yes, stopAtID);
-        bool findOnNextLine = (direction == AXDirection::Previous && boundary == AXTextUnitBoundary::Start)
-            || (direction == AXDirection::Next && boundary == AXTextUnitBoundary::End);
+        bool findingNextLineEnd = direction == AXDirection::Next && boundary == AXTextUnitBoundary::End;
+        bool findOnNextLine = findingNextLineEnd || (direction == AXDirection::Previous && boundary == AXTextUnitBoundary::Start);
+
+        if (findingNextLineEnd && currentRuns == adjacentMarker.runs()) {
+            // Imagine wanting to find the next-line-end in this markup (taken from
+            // editable-single-letter-soft-linebreak-lines.html), where | represents the current position:
+            //   A| (offset 1, upstream)
+            //   B
+            //   C
+            // `findMarker` currently doesn't set any affinity, leaving it as the default value of downstream.
+            // Thus, adjacentMarker will be (offset 2, downstream), which actually skips the line "B" is on:
+            //   A
+            //   B
+            //  |C
+            // We need to detect this to avoid skipping a line.
+            size_t adjacentRunIndex = currentRuns->indexForOffset(adjacentMarker.offset(), adjacentMarker.affinity());
+            if (adjacentRunIndex != notFound && adjacentRunIndex > runIndex && adjacentRunIndex - runIndex > 1) {
+                // The scenario we're trying to detect should only have resulted in one run / line being skipped.
+                // Our affinity flip won't result in the correct behavior if we've somehow jumped >2 lines.
+                ASSERT(adjacentRunIndex - runIndex == 2);
+                // This scenario really should only happen with single "entity" runs (where an entity could be an ASCII
+                // character, or a multi-byte emoji that occupies multiple indices but is one atomic entity).
+                ASSERT(!currentRuns->containsOnlyASCII || (currentRuns->runLength(runIndex) == 1 && currentRuns->runLength(adjacentRunIndex) == 1));
+                // The next line end is simply the adjacent marker with an upstream affinity (with an ASSERT to verify this).
+                ASSERT(currentRuns->indexForOffset(adjacentMarker.offset(), Affinity::Upstream) == runIndex + 1);
+                adjacentMarker.setAffinity(Affinity::Upstream);
+                return adjacentMarker;
+            }
+        }
 
         if (findOnNextLine)
             return adjacentMarker.findLine(direction, boundary, includeTrailingLineBreak, stopAtID);
@@ -1146,8 +1169,18 @@ AXTextMarker AXTextMarker::findLine(AXDirection direction, AXTextUnitBoundary bo
         // We should search in the right direction for a change in the line index.
         for (size_t i = runIndex; direction == AXDirection::Next ? i < currentRuns->size() : i >= 0; direction == AXDirection::Next ? i++ : i--) {
             cumulativeOffset += currentRuns->runLength(i);
-            if (currentRuns->lineID(i) != startLineID)
+            if (currentRuns->lineID(i) != startLineID) {
+                if (boundary == AXTextUnitBoundary::End) {
+                    // We are returning a line-end position, which is upstream in the case of soft linebreaks, e.g.:
+                    // foo|
+                    // bar
+                    // rather than:
+                    // foo
+                    // |bar
+                    linePosition.setAffinity(Affinity::Upstream);
+                }
                 return linePosition;
+            }
             linePosition = AXTextMarker(*currentObject, computeOffset(cumulativeOffset, currentRuns->runLength(i)), origin);
 
             if (direction == AXDirection::Previous && !i) {
@@ -1174,7 +1207,7 @@ AXTextMarker AXTextMarker::findParagraph(AXDirection direction, AXTextUnitBounda
     if (!isInTextRun())
         return toTextRunMarker().findParagraph(direction, boundary);
 
-    size_t runIndex = runs()->indexForOffset(offset());
+    size_t runIndex = runs()->indexForOffset(offset(), affinity());
     TEXT_MARKER_ASSERT(runIndex != notFound, "findParagraph");
     if (runIndex == notFound)
         return { };

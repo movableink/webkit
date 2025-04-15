@@ -48,21 +48,24 @@ String AXTextRuns::debugDescription() const
     return makeString('[', interleave(runs, [&](auto& run) { return run.debugDescription(containingBlock); }, ", "_s), ']');
 }
 
-size_t AXTextRuns::indexForOffset(unsigned textOffset) const
+size_t AXTextRuns::indexForOffset(unsigned textOffset, Affinity affinity) const
 {
     size_t cumulativeLength = 0;
     for (size_t i = 0; i < runs.size(); i++) {
         cumulativeLength += runLength(i);
-        if (cumulativeLength >= textOffset)
+        if (cumulativeLength > textOffset) {
+            // The offset points into the middle of a run, which is never amibiguous.
             return i;
+        }
+        if (cumulativeLength == textOffset) {
+            // The offset points to the end of a run, which could make this an ambiguous position
+            // when considering soft linebreaks.
+            if (affinity == Affinity::Downstream && i < lastRunIndex())
+                return i + 1;
+            return i;
+        }
     }
     return notFound;
-}
-
-AXTextRunLineID AXTextRuns::lineIDForOffset(unsigned textOffset) const
-{
-    size_t runIndex = indexForOffset(textOffset);
-    return runIndex == notFound ? AXTextRunLineID() : lineID(runIndex);
 }
 
 unsigned AXTextRuns::runLengthSumTo(size_t index) const
@@ -149,8 +152,9 @@ FloatRect AXTextRuns::localRect(unsigned start, unsigned end, FontOrientation or
     if (smallerOffset > largerOffset)
         std::swap(smallerOffset, largerOffset);
 
-    unsigned runIndexOfSmallerOffset = indexForOffset(smallerOffset);
-    unsigned runIndexOfLargerOffset = indexForOffset(largerOffset);
+    // Hardcode Affinity::Upstream to avoid unnecessarily accounting for an extra line.
+    unsigned runIndexOfSmallerOffset = indexForOffset(smallerOffset, Affinity::Upstream);
+    unsigned runIndexOfLargerOffset = indexForOffset(largerOffset, Affinity::Upstream);
 
     auto computeAdvance = [&] (const AXTextRun& run, unsigned offsetOfFirstCharacterInRun, unsigned startIndex, unsigned endIndex) {
         const auto& characterAdvances = run.advances();

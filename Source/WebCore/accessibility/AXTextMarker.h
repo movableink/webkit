@@ -273,6 +273,9 @@ public:
     RefPtr<AXCoreObject> object() const;
     bool isValid() const { return object(); }
     bool isIgnored() const { return m_data.ignored; }
+    Affinity affinity() const { return m_data.affinity; }
+    bool isDownstream() const { return affinity() == Affinity::Downstream; }
+    void setAffinity(Affinity affinity) { m_data.affinity = affinity; }
 
     String debugDescription() const;
     TextMarkerOrigin origin() const { return m_data.origin; }

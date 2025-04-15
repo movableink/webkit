@@ -3666,7 +3666,7 @@ std::optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(co
         // the rendered, post-whitespace-collapse text.
         unsigned domOffset = position.deprecatedEditingOffset();
 
-        auto createFromRendererAndOffset = [&origin] (RenderObject& renderer, unsigned offset) -> std::optional<TextMarkerData> {
+        auto createFromRendererAndOffset = [&origin, &visiblePosition] (RenderObject& renderer, unsigned offset) -> std::optional<TextMarkerData> {
             CheckedPtr cache = renderer.document().axObjectCache();
             RefPtr object = cache ? cache->getOrCreate(renderer) : nullptr;
             if (!object)
@@ -3677,7 +3677,7 @@ std::optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(co
                 object->objectID(),
                 offset,
                 Position::PositionIsOffsetInAnchor,
-                Affinity::Downstream,
+                visiblePosition.affinity(),
                 0,
                 offset,
                 object->isIgnored(),
