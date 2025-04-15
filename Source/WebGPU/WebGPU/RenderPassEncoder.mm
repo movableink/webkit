@@ -1045,8 +1045,6 @@ bool RenderPassEncoder::splitRenderPass()
 #endif
 #endif
     Ref parentEncoder = m_parentEncoder;
-    id<MTLFence> fence = [m_device->device() newFence];
-    [m_renderCommandEncoder updateFence:fence afterStages:MTLRenderStageVertex];
     parentEncoder->endEncoding(m_renderCommandEncoder);
     if (issuedDrawCall()) {
         for (size_t i = 0; i < m_descriptorColorAttachments.size(); ++i)
@@ -1058,8 +1056,13 @@ bool RenderPassEncoder::splitRenderPass()
     m_priorVertexDynamicOffsets.clear();
     m_priorFragmentDynamicOffsets.clear();
 
+    if (!m_splitPassEvent)
+        m_splitPassEvent = [m_device->device() newEvent];
+    ++m_passSplitCount;
+    [parentEncoder->commandBuffer() encodeSignalEvent:m_splitPassEvent value:m_passSplitCount];
+    [parentEncoder->commandBuffer() encodeWaitForEvent:m_splitPassEvent value:m_passSplitCount];
+
     m_renderCommandEncoder = [parentEncoder->commandBuffer() renderCommandEncoderWithDescriptor:m_metalDescriptor];
-    [m_renderCommandEncoder waitForFence:fence beforeStages:MTLRenderStageVertex];
     parentEncoder->setExistingEncoder(m_renderCommandEncoder);
     if (m_viewport)
         [m_renderCommandEncoder setViewport:*m_viewport];
