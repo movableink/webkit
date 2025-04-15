@@ -161,8 +161,9 @@ CommandEncoder::CommandEncoder(id<MTLCommandBuffer> commandBuffer, Device& devic
             if (apiBuffer->mustTakeSlowIndexValidationPath()) {
                 for (DrawIndexCacheContainerValue& key : skippedDrawIndexedValidationKeys) {
                     apiBuffer->takeSlowIndexValidationPath(commandBuffer, key.firstIndex, key.indexCount, key.vertexCount, key.instanceCount, key.indexType(), key.firstInstance, key.baseVertex, key.minInstanceCount, key.primitiveOffset());
-                    commandBuffer.addPostCommitHandler([apiBuffer = WTFMove(apiBuffer)](id<MTLCommandBuffer>) {
-                        apiBuffer->clearMustTakeSlowIndexValidationPath();
+                    commandBuffer.addPostCommitHandler([bufferIdentifier, device = Ref { commandBuffer.device() }](id<MTLCommandBuffer>) {
+                        if (RefPtr apiBuffer = device->lookupBuffer(bufferIdentifier))
+                            apiBuffer->clearMustTakeSlowIndexValidationPath();
                     });
                 }
             }
