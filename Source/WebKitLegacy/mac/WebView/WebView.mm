@@ -1926,8 +1926,7 @@ static WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
     auto* localMainFrame = dynamicDowncast<WebCore::LocalFrame>(_private->page->mainFrame());
     if (!localMainFrame)
         return NO;
-
-    return localMainFrame->eventHandler().tryToBeginDragAtPoint(WebCore::IntPoint(clientPosition), WebCore::IntPoint(globalPosition)) == WebCore::DragStartRequestResult::Started;
+    return localMainFrame->eventHandler().tryToBeginDragAtPoint(WebCore::IntPoint(clientPosition), WebCore::IntPoint(globalPosition));
 }
 
 - (void)_startDrag:(const WebCore::DragItem&)dragItem

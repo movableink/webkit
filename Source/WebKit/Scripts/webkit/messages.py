@@ -1018,7 +1018,6 @@ def headers_for_type(type, for_implementation_file=False):
         'WebCore::DragHandlingMethod': ['<WebCore/DragActions.h>'],
         'WebCore::DragOperation': ['<WebCore/DragActions.h>'],
         'WebCore::DragSourceAction': ['<WebCore/DragActions.h>'],
-        'WebCore::DragStartRequestResult': ['<WebCore/DragActions.h>'],
         'WebCore::DynamicRangeMode': ['<WebCore/PlatformScreen.h>'],
         'WebCore::ElementAnimationContext': ['<WebCore/ElementAnimationContext.h>'],
         'WebCore::ElementContext': ['<WebCore/ElementContext.h>'],
