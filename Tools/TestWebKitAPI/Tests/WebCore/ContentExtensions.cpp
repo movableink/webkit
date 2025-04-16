@@ -1169,6 +1169,23 @@ TEST_F(ContentExtensionTest, ResourceType)
     testRequest(backend, mainDocumentRequest("http://block_only_images.org"_s), { });
 }
 
+TEST_F(ContentExtensionTest, RequestMethod)
+{
+    // Positive cases
+    testRequest(makeBackend("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\".*\", \"request-method\": \"get\"}}]"_s), { URL { "http://block_all_request_methods.org"_s }, URL { "http://block_all_request_methods.org"_str }, URL { "http://block_all_request_methods.org"_str }, ResourceType::TopDocument, false, RequestMethod::Get }, { variantIndex<ContentExtensions::BlockLoadAction> });
+    testRequest(makeBackend("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\".*\", \"request-method\": \"post\"}}]"_s), { URL { "http://block_all_request_methods.org"_s }, URL { "http://block_all_request_methods.org"_str }, URL { "http://block_all_request_methods.org"_str }, ResourceType::TopDocument, false, RequestMethod::Post }, { variantIndex<ContentExtensions::BlockLoadAction> });
+    testRequest(makeBackend("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\".*\", \"request-method\": \"head\"}}]"_s), { URL { "http://block_all_request_methods.org"_s }, URL { "http://block_all_request_methods.org"_str }, URL { "http://block_all_request_methods.org"_str }, ResourceType::TopDocument, false, RequestMethod::Head }, { variantIndex<ContentExtensions::BlockLoadAction> });
+    testRequest(makeBackend("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\".*\", \"request-method\": \"options\"}}]"_s), { URL { "http://block_all_request_methods.org"_s }, URL { "http://block_all_request_methods.org"_str }, URL { "http://block_all_request_methods.org"_str }, ResourceType::TopDocument, false, RequestMethod::Options }, { variantIndex<ContentExtensions::BlockLoadAction> });
+    testRequest(makeBackend("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\".*\", \"request-method\": \"trace\"}}]"_s), { URL { "http://block_all_request_methods.org"_s }, URL { "http://block_all_request_methods.org"_str }, URL { "http://block_all_request_methods.org"_str }, ResourceType::TopDocument, false, RequestMethod::Trace }, { variantIndex<ContentExtensions::BlockLoadAction> });
+    testRequest(makeBackend("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\".*\", \"request-method\": \"put\"}}]"_s), { URL { "http://block_all_request_methods.org"_s }, URL { "http://block_all_request_methods.org"_str }, URL { "http://block_all_request_methods.org"_str }, ResourceType::TopDocument, false, RequestMethod::Put }, { variantIndex<ContentExtensions::BlockLoadAction> });
+    testRequest(makeBackend("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\".*\", \"request-method\": \"delete\"}}]"_s), { URL { "http://block_all_request_methods.org"_s }, URL { "http://block_all_request_methods.org"_str }, URL { "http://block_all_request_methods.org"_str }, ResourceType::TopDocument, false, RequestMethod::Delete }, { variantIndex<ContentExtensions::BlockLoadAction> });
+    testRequest(makeBackend("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\".*\", \"request-method\": \"patch\"}}]"_s), { URL { "http://block_all_request_methods.org"_s }, URL { "http://block_all_request_methods.org"_str }, URL { "http://block_all_request_methods.org"_str }, ResourceType::TopDocument, false, RequestMethod::Patch }, { variantIndex<ContentExtensions::BlockLoadAction> });
+    testRequest(makeBackend("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\".*\", \"request-method\": \"connect\"}}]"_s), { URL { "http://block_all_request_methods.org"_s }, URL { "http://block_all_request_methods.org"_str }, URL { "http://block_all_request_methods.org"_str }, ResourceType::TopDocument, false, RequestMethod::Connect }, { variantIndex<ContentExtensions::BlockLoadAction> });
+
+    // Negative case
+    testRequest(makeBackend("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\".*\", \"request-method\": \"get\"}}]"_s), { URL { "http://block_all_request_methods.org"_s }, URL { "http://block_all_request_methods.org"_str }, URL { "http://block_all_request_methods.org"_str }, ResourceType::TopDocument, false, RequestMethod::Post }, { });
+}
+
 TEST_F(ContentExtensionTest, ResourceAndLoadType)
 {
     auto backend = makeBackend("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\"BlockOnlyIfThirdPartyAndScript\",\"resource-type\":[\"script\"],\"load-type\":[\"third-party\"]}}]"_s);
@@ -1515,7 +1532,14 @@ TEST_F(ContentExtensionTest, InvalidJSON)
     String rules150001 = makeString(rules.toString(), "{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\"a\"}},{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\"a\"}}]"_s);
     checkCompilerError(WTFMove(rules150000), { });
     checkCompilerError(WTFMove(rules150001), ContentExtensionError::JSONTooManyRules);
-    
+
+    checkCompilerError("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\".*\",\"request-method\":\"foo\"}}]"_s, ContentExtensionError::JSONInvalidRequestMethod);
+    checkCompilerError("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\".*\",\"request-method\":null}}]"_s, ContentExtensionError::JSONInvalidRequestMethod);
+    checkCompilerError("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\".*\",\"request-method\":false}}]"_s, ContentExtensionError::JSONInvalidRequestMethod);
+    checkCompilerError("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\".*\",\"request-method\":1}}]"_s, ContentExtensionError::JSONInvalidRequestMethod);
+    checkCompilerError("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\".*\",\"request-method\":[]}}]"_s, ContentExtensionError::JSONInvalidRequestMethod);
+    checkCompilerError("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\".*\",\"request-method\":{}}}]"_s, ContentExtensionError::JSONInvalidRequestMethod);
+
     checkCompilerError("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\"webkit.org\",\"if-domain\":{}}}]"_s, ContentExtensionError::JSONInvalidConditionList);
     checkCompilerError("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\"webkit.org\",\"if-domain\":[5]}}]"_s, ContentExtensionError::JSONInvalidConditionList);
     checkCompilerError("[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\"webkit.org\",\"if-domain\":[\"a\"]}}]"_s, { });

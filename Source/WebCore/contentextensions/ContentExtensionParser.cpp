@@ -166,6 +166,15 @@ static Expected<Trigger, std::error_code> loadTrigger(const JSON::Object& ruleOb
             return makeUnexpected(error);
     }
 
+    if (auto requestMethodValue = triggerObject->getValue("request-method"_s)) {
+        auto requestMethod = readRequestMethod(requestMethodValue->asString());
+
+        if (!requestMethod.has_value())
+            return makeUnexpected(ContentExtensionError::JSONInvalidRequestMethod);
+
+        trigger.flags |= static_cast<ResourceFlags>(requestMethod.value());
+    }
+
     auto checkCondition = [&] (ASCIILiteral key, Expected<Vector<String>, std::error_code> (*listReader)(const JSON::Array&), ActionCondition actionCondition) -> std::error_code {
         if (auto value = triggerObject->getValue(key)) {
             if (trigger.flags & ActionConditionMask)

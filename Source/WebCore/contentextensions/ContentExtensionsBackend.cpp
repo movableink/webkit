@@ -235,6 +235,7 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
     URL mainDocumentURL;
     URL frameURL;
     bool mainFrameContext = false;
+    RequestMethod requestMethod = readRequestMethod(initiatingDocumentLoader.request().httpMethod()).value_or(RequestMethod::None);
 
     if (auto* frame = initiatingDocumentLoader.frame()) {
         mainFrameContext = frame->isMainFrame();
@@ -252,7 +253,7 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
     else
         frameURL = url;
 
-    ResourceLoadInfo resourceLoadInfo { url, mainDocumentURL, frameURL, resourceType, mainFrameContext };
+    ResourceLoadInfo resourceLoadInfo { url, mainDocumentURL, frameURL, resourceType, mainFrameContext, requestMethod };
     auto actions = actionsForResourceLoad(resourceLoadInfo, ruleListFilter);
 
     ContentRuleListResults results;
@@ -338,9 +339,10 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
     return results;
 }
 
-ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForPingLoad(const URL& url, const URL& mainDocumentURL, const URL& frameURL)
+ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForPingLoad(const URL& url, const URL& mainDocumentURL, const URL& frameURL, const String& httpMethod)
 {
-    ResourceLoadInfo resourceLoadInfo { url, mainDocumentURL, frameURL, ResourceType::Ping };
+    RequestMethod requestMethod = readRequestMethod(httpMethod).value_or(RequestMethod::None);
+    ResourceLoadInfo resourceLoadInfo { url, mainDocumentURL, frameURL, ResourceType::Ping, false, requestMethod };
     auto actions = actionsForResourceLoad(resourceLoadInfo);
 
     ContentRuleListResults results;

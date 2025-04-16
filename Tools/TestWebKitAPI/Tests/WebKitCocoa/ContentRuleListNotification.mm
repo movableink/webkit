@@ -348,6 +348,49 @@ TEST(ContentRuleList, ResourceTypes)
         Util::spinRunLoop();
 }
 
+TEST(ContentRuleList, RequestMethods)
+{
+    NSArray<NSString *> *requestMethods = @[@"get", @"head", @"options", @"trace", @"put", @"delete", @"post", @"patch", @"connect"];
+    auto listWithRequestMethod = [] (NSString *method) {
+        return makeContentRuleList([NSString stringWithFormat:@"[{\"action\":{\"type\":\"block\"},\"trigger\":{\"url-filter\":\".*\", \"request-method\": \"%@\"}}]", method]);
+    };
+
+    auto delegate = adoptNS([[ContentRuleListNotificationDelegate alloc] init]);
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [configuration setURLSchemeHandler:delegate.get() forURLScheme:@"apitest"];
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    [webView setNavigationDelegate:delegate.get()];
+    [webView setUIDelegate:delegate.get()];
+
+    for (NSString *requestMethodUnderTest in requestMethods) {
+        Vector<Notification> expectedNotifications;
+        [[configuration userContentController] addContentRuleList:listWithRequestMethod(requestMethodUnderTest).get()];
+
+        for (NSString *requestMethod in requestMethods) {
+            auto currentSize = notificationList.size();
+            BOOL requestMethodMatchesMethodUnderTest = [requestMethod isEqualToString:requestMethodUnderTest];
+
+            NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"apitest:///"]];
+            [request setHTTPMethod:requestMethod.uppercaseString];
+            [webView loadRequest:request];
+
+            while (requestMethodMatchesMethodUnderTest && notificationList.size() == currentSize)
+                TestWebKitAPI::Util::spinRunLoop();
+
+            [webView stopLoading];
+
+            if (requestMethodMatchesMethodUnderTest)
+                expectedNotifications.append({ "testidentifier"_s, "apitest:///"_s, true, false, false, { } });
+        }
+
+        EXPECT_TRUE(expectedNotifications == notificationList);
+
+        notificationList.clear();
+        [[configuration userContentController] removeAllContentRuleLists];
+    }
+}
+
 TEST(ContentRuleList, ThirdParty)
 {
     auto handler = [[TestURLSchemeHandler new] autorelease];

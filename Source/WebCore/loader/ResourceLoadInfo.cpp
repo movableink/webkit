@@ -152,11 +152,34 @@ std::optional<OptionSet<LoadContext>> readLoadContext(StringView name)
     return std::nullopt;
 }
 
+std::optional<RequestMethod> readRequestMethod(StringView name)
+{
+    if (equalIgnoringASCIICase(name, "get"_s))
+        return RequestMethod::Get;
+    if (equalIgnoringASCIICase(name, "head"_s))
+        return RequestMethod::Head;
+    if (equalIgnoringASCIICase(name, "options"_s))
+        return RequestMethod::Options;
+    if (equalIgnoringASCIICase(name, "trace"_s))
+        return RequestMethod::Trace;
+    if (equalIgnoringASCIICase(name, "put"_s))
+        return RequestMethod::Put;
+    if (equalIgnoringASCIICase(name, "delete"_s))
+        return RequestMethod::Delete;
+    if (equalIgnoringASCIICase(name, "post"_s))
+        return RequestMethod::Post;
+    if (equalIgnoringASCIICase(name, "patch"_s))
+        return RequestMethod::Patch;
+    if (equalIgnoringASCIICase(name, "connect"_s))
+        return RequestMethod::Connect;
+    return std::nullopt;
+}
+
 bool ResourceLoadInfo::isThirdParty() const
 {
     return !RegistrableDomain(mainDocumentURL).matches(resourceURL);
 }
-    
+
 ResourceFlags ResourceLoadInfo::getResourceFlags() const
 {
     ResourceFlags flags = 0;
@@ -164,6 +187,7 @@ ResourceFlags ResourceLoadInfo::getResourceFlags() const
     flags |= type.toRaw();
     flags |= isThirdParty() ? static_cast<ResourceFlags>(LoadType::ThirdParty) : static_cast<ResourceFlags>(LoadType::FirstParty);
     flags |= mainFrameContext ? static_cast<ResourceFlags>(LoadContext::TopFrame) : static_cast<ResourceFlags>(LoadContext::ChildFrame);
+    flags |= static_cast<ResourceFlags>(requestMethod);
     return flags;
 }
 
