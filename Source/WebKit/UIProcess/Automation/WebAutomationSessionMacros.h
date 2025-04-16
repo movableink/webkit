@@ -59,6 +59,22 @@ do { \
     return makeUnexpected(STRING_FOR_PREDEFINED_ERROR_NAME_AND_DETAILS(errorName, detailsString)); \
 } while (false)
 
+#define SYNC_FAIL_WITH_PREDEFINED_ERROR_AND_DETAILS_IF(condition, errorName, detailsString) \
+do { \
+    if (condition) { \
+        return makeUnexpected(STRING_FOR_PREDEFINED_ERROR_NAME_AND_DETAILS(errorName, detailsString)); \
+    } \
+} while (false)
+
+#define ASYNC_FAIL_WITH_PREDEFINED_ERROR_IF_SET(optionalError) \
+do { \
+    if (optionalError.has_value()) { \
+        callback(makeUnexpected(STRING_FOR_PREDEFINED_ERROR_MESSAGE(optionalError.value()))); \
+        return; \
+    } \
+} while (false)
+
+
 #define ASYNC_FAIL_WITH_PREDEFINED_ERROR(errorName) \
 do { \
     callback(makeUnexpected(STRING_FOR_PREDEFINED_ERROR_NAME(errorName))); \
@@ -77,4 +93,12 @@ do { \
 do { \
     callback(makeUnexpected(STRING_FOR_PREDEFINED_ERROR_NAME_AND_DETAILS(errorName, detailsString))); \
     return; \
+} while (false)
+
+#define ASYNC_FAIL_WITH_PREDEFINED_ERROR_AND_DETAILS_IF(condition, errorName, detailsString) \
+do { \
+    if (condition) { \
+        callback(makeUnexpected(STRING_FOR_PREDEFINED_ERROR_NAME_AND_DETAILS(errorName, detailsString))); \
+        return; \
+    } \
 } while (false)

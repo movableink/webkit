@@ -54,8 +54,7 @@ using namespace WebCore;
 void WebAutomationSession::inspectBrowsingContext(const Inspector::Protocol::Automation::BrowsingContextHandle& handle, std::optional<bool>&& enableAutoCapturing, Inspector::CommandCallback<void>&& callback)
 {
     auto page = webPageProxyForHandle(handle);
-    if (!page)
-        ASYNC_FAIL_WITH_PREDEFINED_ERROR(WindowNotFound);
+    ASYNC_FAIL_WITH_PREDEFINED_ERROR_IF(!page, WindowNotFound);
 
     if (auto pendingCallback = m_pendingInspectorCallbacksPerPage.take(page->identifier()))
         pendingCallback(makeUnexpected(STRING_FOR_PREDEFINED_ERROR_NAME(Timeout)));
