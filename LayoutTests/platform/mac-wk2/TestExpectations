@@ -2104,8 +2104,6 @@ webkit.org/b/289370 [ Debug arm64 ] media/video-webm-seek-singlekeyframe.html [ 
 
 webkit.org/b/289487 [ Sequoia Release x86_64 ] fast/webgpu/nocrash/RenderBundle_WRITE.html [ Pass Timeout ]
 
-webkit.org/b/289556 [ Sequoia Release x86_64 ] fast/events/page-visibility-transition-test.html [ Pass Timeout ]
-
 webkit.org/b/289975 fast/css/mac/focus-ring-color-should-not-expose-accent-color.html [ Failure ]
 
 imported/w3c/web-platform-tests/css/css-position/backdrop-inherit-rendered.html [ Pass ImageOnlyFailure ]
