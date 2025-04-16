@@ -391,7 +391,7 @@ public:
     void computeStackCheckSize(bool& needsOverflowCheck, int32_t& checkSize);
 
     // SIMD
-    bool usesSIMD() { return m_info.usesSIMD(m_functionIndex) || m_didInlineSIMDFunction; }
+    bool usesSIMD() { return m_info.usesSIMD(m_functionIndex); }
     void notifyFunctionUsesSIMD() { ASSERT(m_info.usesSIMD(m_functionIndex)); }
     PartialResult WARN_UNUSED_RETURN addSIMDLoad(ExpressionType pointer, uint32_t offset, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addSIMDStore(ExpressionType value, ExpressionType pointer, uint32_t offset);
@@ -958,10 +958,14 @@ private:
     const CompilationMode m_compilationMode;
     const FunctionCodeIndex m_functionIndex;
     const unsigned m_loopIndexForOSREntry { UINT_MAX };
-    bool m_didInlineSIMDFunction { false };
+
+    struct RootBlock {
+        BasicBlock* block;
+        bool usesSIMD;
+    };
 
     Procedure& m_proc;
-    Vector<BasicBlock*> m_rootBlocks;
+    Vector<RootBlock> m_rootBlocks;
     BasicBlock* m_topLevelBlock;
     BasicBlock* m_currentBlock { nullptr };
 
@@ -1115,8 +1119,8 @@ OMGIRGenerator::OMGIRGenerator(CompilationContext& context, OMGIRGenerator& pare
     , m_callSiteIndex(0)
 {
     m_topLevelBlock = m_proc.addBlock();
-    m_rootBlocks.append(m_proc.addBlock());
-    m_currentBlock = m_rootBlocks[0];
+    m_rootBlocks.append({ m_proc.addBlock(), m_info.usesSIMD(m_functionIndex) });
+    m_currentBlock = m_rootBlocks[0].block;
     m_instanceValue = rootCaller.m_instanceValue;
     m_baseMemoryValue = rootCaller.m_baseMemoryValue;
     m_boundsCheckingSizeValue = rootCaller.m_boundsCheckingSizeValue;
@@ -1144,8 +1148,8 @@ OMGIRGenerator::OMGIRGenerator(CompilationContext& context, CalleeGroup& calleeG
     , m_numImportFunctions(info.importFunctionCount())
 {
     m_topLevelBlock = m_proc.addBlock();
-    m_rootBlocks.append(m_proc.addBlock());
-    m_currentBlock = m_rootBlocks[0];
+    m_rootBlocks.append({ m_proc.addBlock(), m_info.usesSIMD(m_functionIndex) });
+    m_currentBlock = m_rootBlocks[0].block;
 
     // FIXME we don't really need to pin registers here if there's no memory. It makes wasm -> wasm thunks simpler for now. https://bugs.webkit.org/show_bug.cgi?id=166623
 
@@ -1356,19 +1360,25 @@ void OMGIRGenerator::insertEntrySwitch()
 {
     m_proc.setNumEntrypoints(m_rootBlocks.size());
 
-    Ref<B3::Air::PrologueGenerator> catchPrologueGenerator = createSharedTask<B3::Air::PrologueGeneratorFunction>([didInlineSIMD = m_didInlineSIMDFunction] (CCallHelpers& jit, B3::Air::Code& code) {
+    Ref<B3::Air::PrologueGenerator> catchPrologueGenerator = createSharedTask<B3::Air::PrologueGeneratorFunction>([] (CCallHelpers& jit, B3::Air::Code& code) {
         AllowMacroScratchRegisterUsage allowScratch(jit);
         jit.addPtr(CCallHelpers::TrustedImm32(-code.frameSize()), GPRInfo::callFrameRegister, CCallHelpers::stackPointerRegister);
-        jit.probe(tagCFunction<JITProbePtrTag>(code.usesSIMD() || didInlineSIMD ? buildEntryBufferForCatchSIMD : buildEntryBufferForCatchNoSIMD), nullptr, code.usesSIMD() ? SavedFPWidth::SaveVectors : SavedFPWidth::DontSaveVectors);
+        jit.probe(tagCFunction<JITProbePtrTag>(code.usesSIMD() ? buildEntryBufferForCatchSIMD : buildEntryBufferForCatchNoSIMD), nullptr, code.usesSIMD() ? SavedFPWidth::SaveVectors : SavedFPWidth::DontSaveVectors);
+    });
+
+    Ref<B3::Air::PrologueGenerator> catchSIMDPrologueGenerator = createSharedTask<B3::Air::PrologueGeneratorFunction>([] (CCallHelpers& jit, B3::Air::Code& code) {
+        AllowMacroScratchRegisterUsage allowScratch(jit);
+        jit.addPtr(CCallHelpers::TrustedImm32(-code.frameSize()), GPRInfo::callFrameRegister, CCallHelpers::stackPointerRegister);
+        jit.probe(tagCFunction<JITProbePtrTag>(buildEntryBufferForCatchSIMD), nullptr, SavedFPWidth::SaveVectors);
     });
 
     m_proc.code().setPrologueForEntrypoint(0, Ref<B3::Air::PrologueGenerator>(*m_prologueGenerator));
     for (unsigned i = 1; i < m_rootBlocks.size(); ++i)
-        m_proc.code().setPrologueForEntrypoint(i, catchPrologueGenerator.copyRef());
+        m_proc.code().setPrologueForEntrypoint(i, m_rootBlocks[i].usesSIMD ? catchSIMDPrologueGenerator.copyRef() : catchPrologueGenerator.copyRef());
 
     m_currentBlock = m_topLevelBlock;
     m_currentBlock->appendNew<Value>(m_proc, EntrySwitch, Origin());
-    for (BasicBlock* block : m_rootBlocks)
+    for (auto [block, _] : m_rootBlocks)
         m_currentBlock->appendSuccessor(FrequentedBlock(block));
 }
 
@@ -1386,7 +1396,7 @@ void OMGIRGenerator::insertConstants()
 
     Value* storeCallSiteIndex = m_proc.add<B3::MemoryValue>(B3::Store, Origin(), invalidCallSiteIndex, framePointer(), safeCast<int32_t>(CallFrameSlot::argumentCountIncludingThis * sizeof(Register) + TagOffset));
 
-    BasicBlock* block = m_rootBlocks[0];
+    BasicBlock* block = m_rootBlocks[0].block;
     m_constantInsertionValues.insertValue(0, storeCallSiteIndex);
     m_constantInsertionValues.execute(block);
 }
@@ -4184,8 +4194,8 @@ auto OMGIRGenerator::addLoop(BlockSignature signature, Stack& enclosingStack, Co
     if (loopIndex == m_loopIndexForOSREntry) {
         dataLogLnIf(WasmOMGIRGeneratorInternal::verbose, "Setting up for OSR entry");
 
-        m_currentBlock = m_rootBlocks[0];
-        Value* pointer = m_rootBlocks[0]->appendNew<ArgumentRegValue>(m_proc, Origin(), GPRInfo::argumentGPR0);
+        m_currentBlock = m_rootBlocks[0].block;
+        Value* pointer = m_rootBlocks[0].block->appendNew<ArgumentRegValue>(m_proc, Origin(), GPRInfo::argumentGPR0);
 
         unsigned indexInBuffer = 0;
 
@@ -4396,7 +4406,7 @@ auto OMGIRGenerator::addCatchAllToUnreachable(ControlType& data) -> PartialResul
 Value* OMGIRGenerator::emitCatchImpl(CatchKind kind, ControlType& data, unsigned exceptionIndex)
 {
     m_currentBlock = m_proc.addBlock();
-    m_rootBlocks.append(m_currentBlock);
+    m_rootBlocks.append({ m_currentBlock, usesSIMD() });
     m_stackSize = data.stackSize();
 
     if (ControlType::isTry(data)) {
@@ -4450,7 +4460,7 @@ Value* OMGIRGenerator::emitCatchImpl(CatchKind kind, ControlType& data, unsigned
 auto OMGIRGenerator::emitCatchTableImpl(ControlData& data, const ControlData::TryTableTarget& target, const Stack& stack) -> void
 {
     auto block = m_proc.addBlock();
-    m_rootBlocks.append(block);
+    m_rootBlocks.append({ block, usesSIMD() });
     auto oldBlock = m_currentBlock;
     m_currentBlock = block;
 
@@ -5428,16 +5438,16 @@ auto OMGIRGenerator::emitInlineDirectCall(FunctionCodeIndex calleeFunctionIndex,
 
     irGenerator.insertConstants();
     for (unsigned i = 1; i < irGenerator.m_rootBlocks.size(); ++i) {
-        auto* block = irGenerator.m_rootBlocks[i];
-        dataLogLnIf(WasmOMGIRGeneratorInternal::verboseInlining, "Block (", i, ")", *block, " is an inline catch handler");
-        m_rootBlocks.append(block);
+        auto block = irGenerator.m_rootBlocks[i];
+        dataLogLnIf(WasmOMGIRGeneratorInternal::verboseInlining, "Block (", i, ")", block.block, " is an inline catch handler");
+        m_rootBlocks.append({ block.block, block.usesSIMD || irGenerator.usesSIMD() });
     }
     m_exceptionHandlers.appendVector(WTFMove(irGenerator.m_exceptionHandlers));
     if (irGenerator.m_exceptionHandlers.size())
         m_hasExceptionHandlers = { true };
     RELEASE_ASSERT(!irGenerator.m_callSiteIndex);
 
-    irGenerator.m_topLevelBlock->appendNewControlValue(m_proc, B3::Jump, origin(), FrequentedBlock(irGenerator.m_rootBlocks[0]));
+    irGenerator.m_topLevelBlock->appendNewControlValue(m_proc, B3::Jump, origin(), FrequentedBlock(irGenerator.m_rootBlocks[0].block));
     m_makesCalls |= irGenerator.m_makesCalls;
     ASSERT(&irGenerator.m_proc == &m_proc);
 
@@ -5453,10 +5463,6 @@ auto OMGIRGenerator::emitInlineDirectCall(FunctionCodeIndex calleeFunctionIndex,
     m_callee->addCodeOrigin(firstInlineCallSiteIndex, lastInlineCallSiteIndex, m_info, calleeFunctionIndex + m_numImportFunctions);
 
     dataLogLnIf(WasmOMGIRGeneratorInternal::verboseInlining, "Inlining CallSiteIndex range: ", firstInlineCallSiteIndex, " -> ", lastInlineCallSiteIndex, " [", m_inlineDepth, "]");
-
-    // If we inlined a SIMD function (this handles transitively), mark ourselves as SIMD.
-    if (irGenerator.usesSIMD())
-        m_didInlineSIMDFunction = true;
 
     return { };
 }
