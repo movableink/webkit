@@ -53,7 +53,6 @@ css/MediaList.h
 css/StyleSheetContents.cpp
 css/StyleSheetContents.h
 css/calc/CSSCalcTree.h
-css/parser/CSSPropertyParser.h
 css/values/primitives/CSSPrimitiveData.h
 dom/CustomElementReactionQueue.h
 dom/Element.h
@@ -65,7 +64,6 @@ editing/VisibleUnits.cpp
 html/HTMLMediaElement.cpp
 html/MediaElementSession.h
 html/canvas/PlaceholderRenderingContext.cpp
-html/parser/CSSPreloadScanner.h
 html/parser/HTMLConstructionSite.cpp
 html/parser/HTMLDocumentParser.cpp
 html/parser/HTMLTreeBuilder.h
@@ -112,11 +110,8 @@ platform/Scrollbar.h
 platform/ThreadGlobalData.h
 platform/ThreadTimers.h
 platform/cocoa/TelephoneNumberDetectorCocoa.cpp
-platform/graphics/ComplexTextController.h
-platform/graphics/FontSelectionAlgorithm.h
 platform/graphics/ImageBufferContextSwitcher.h
 platform/graphics/StringTruncator.cpp
-platform/graphics/WidthIterator.h
 platform/graphics/angle/ANGLEUtilities.cpp
 platform/graphics/angle/GraphicsContextGLANGLE.cpp
 platform/graphics/ca/GraphicsLayerCA.cpp
@@ -131,8 +126,6 @@ platform/network/cocoa/ProtectionSpaceCocoa.h
 rendering/AccessibilityRegionContext.h
 rendering/BreakLines.h
 rendering/ImageQualityController.h
-rendering/PaintInfo.h
-rendering/RenderLayer.h
 rendering/RenderLayerBacking.cpp
 rendering/RenderLayerCompositor.cpp
 rendering/RenderLineBoxList.h

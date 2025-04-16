@@ -2,9 +2,6 @@ WebKitBuild/Release/usr/local/include/wtf/text/SymbolImpl.h
 WebKitBuild/Release/usr/local/include/wtf/text/TextBreakIterator.h
 WebKitBuild/Release/usr/local/include/wtf/text/icu/TextBreakIteratorICU.h
 WebKitBuild/Release/usr/local/include/wtf/unicode/Collator.h
-wtf/Bag.h
-wtf/HashTable.h
-wtf/Logger.h
 wtf/ParkingLot.h
 wtf/PrintStream.h
 wtf/RetainPtr.h

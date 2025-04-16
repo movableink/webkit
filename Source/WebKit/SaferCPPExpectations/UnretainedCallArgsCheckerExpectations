@@ -1,13 +1,10 @@
 GPUProcess/cocoa/GPUProcessCocoa.mm
-GPUProcess/graphics/WebGPU/RemoteDevice.cpp
 GPUProcess/mac/GPUProcessMac.mm
 GPUProcess/media/RemoteVideoFrameObjectHeap.cpp
 GPUProcess/media/cocoa/RemoteMediaPlayerProxyCocoa.mm
 GPUProcess/webrtc/RemoteSampleBufferDisplayLayer.mm
-GeneratedSerializers.h
 GeneratedWebKitSecureCoding.mm
 NetworkProcess/Authentication/cocoa/AuthenticationManagerCocoa.mm
-NetworkProcess/CustomProtocols/Cocoa/LegacyCustomProtocolManagerCocoa.mm
 NetworkProcess/Downloads/cocoa/WKDownloadProgress.mm
 NetworkProcess/Notifications/Cocoa/WebPushDaemonConnectionCocoa.mm
 NetworkProcess/PrivateClickMeasurement/cocoa/PrivateClickMeasurementConnectionCocoa.mm
@@ -54,6 +51,7 @@ Shared/ApplePay/cocoa/RecurringPaymentRequestCocoa.mm
 Shared/ApplePay/cocoa/WebPaymentCoordinatorProxyCocoa.mm
 Shared/ApplePay/mac/WebPaymentCoordinatorProxyMac.mm
 Shared/Authentication/cocoa/AuthenticationChallengeDispositionCocoa.mm
+Shared/Cocoa/APIObject.mm
 Shared/Cocoa/ArgumentCodersCocoa.mm
 Shared/Cocoa/AuxiliaryProcessCocoa.mm
 Shared/Cocoa/CompletionHandlerCallChecker.mm
@@ -73,7 +71,6 @@ Shared/Cocoa/WKNSURLRequest.mm
 Shared/Cocoa/WKObject.h
 Shared/Cocoa/WebErrorsCocoa.mm
 Shared/Cocoa/WebIconUtilities.mm
-Shared/Cocoa/WebPushMessageCocoa.mm
 Shared/Cocoa/XPCEndpoint.mm
 Shared/Cocoa/XPCEndpointClient.mm
 Shared/Daemon/DaemonUtilities.mm
@@ -83,7 +80,6 @@ Shared/EntryPointUtilities/Cocoa/XPCService/XPCServiceEntryPoint.h
 Shared/EntryPointUtilities/Cocoa/XPCService/XPCServiceEntryPoint.mm
 Shared/EntryPointUtilities/Cocoa/XPCService/XPCServiceMain.mm
 Shared/JavaScriptEvaluationResult.mm
-Shared/RemoteLayerTree/RemoteLayerBackingStore.mm
 Shared/RemoteLayerTree/RemoteLayerTreePropertyApplier.mm
 Shared/cf/CookieStorageUtilsCF.mm
 Shared/cf/CoreIPCNumber.mm
@@ -159,7 +155,6 @@ UIProcess/Cocoa/AutomationSessionClient.mm
 UIProcess/Cocoa/BrowsingWarningCocoa.mm
 UIProcess/Cocoa/DiagnosticLoggingClient.mm
 UIProcess/Cocoa/FindClient.mm
-UIProcess/Cocoa/GPUProcessProxyCocoa.mm
 UIProcess/Cocoa/GlobalFindInPageState.mm
 UIProcess/Cocoa/GroupActivities/GroupActivitiesCoordinator.mm
 UIProcess/Cocoa/GroupActivities/GroupActivitiesSessionNotifier.mm
@@ -187,9 +182,7 @@ UIProcess/Cocoa/WebPageProxyCocoa.mm
 UIProcess/Cocoa/WebProcessPoolCocoa.mm
 UIProcess/Cocoa/WebProcessProxyCocoa.mm
 UIProcess/Cocoa/_WKWarningView.mm
-UIProcess/Extensions/Cocoa/WebExtensionActionCocoa.mm
 UIProcess/Extensions/Cocoa/WebExtensionCocoa.mm
-UIProcess/Extensions/Cocoa/WebExtensionContextCocoa.mm
 UIProcess/Extensions/WebExtensionController.h
 UIProcess/Gamepad/mac/UIGamepadProviderMac.mm
 UIProcess/Inspector/Cocoa/InspectorExtensionDelegate.mm
@@ -246,7 +239,6 @@ UIProcess/mac/WebPageProxyMac.mm
 UIProcess/mac/WebPopupMenuProxyMac.mm
 UIProcess/mac/WebViewImpl.mm
 WebProcess/ApplePay/cocoa/WebPaymentCoordinatorCocoa.mm
-WebProcess/Extensions/API/Cocoa/WebExtensionAPIActionCocoa.mm
 WebProcess/GPU/webrtc/RemoteVideoFrameObjectHeapProxyProcessor.cpp
 WebProcess/GPU/webrtc/SharedVideoFrame.cpp
 WebProcess/InjectedBundle/API/Cocoa/WKWebProcessBundleParameters.mm
@@ -277,6 +269,8 @@ WebProcess/WebPage/mac/WKAccessibilityWebPageObjectMac.mm
 WebProcess/WebPage/mac/WebPageMac.mm
 WebProcess/cocoa/LaunchServicesDatabaseManager.mm
 WebProcess/cocoa/WebProcessCocoa.mm
+mac/WebView/WebDocumentLoaderMac.mm
+mac/WebView/WebJSPDFDoc.mm
 webpushd/ApplePushServiceConnection.mm
 webpushd/MockPushServiceConnection.mm
 webpushd/PushService.mm

@@ -4,7 +4,6 @@ assembler/Printer.h
 b3/B3StackmapGenerationParams.h
 b3/B3Value.h
 b3/B3VariableValue.h
-b3/air/AirAllocateRegistersAndStackAndGenerateCode.h
 b3/air/AirCode.h
 b3/testb3_3.cpp
 b3/testb3_6.cpp
@@ -15,8 +14,6 @@ bytecode/GetByStatus.h
 bytecode/ICStatusMap.h
 bytecode/Repatch.cpp
 bytecode/StructureStubClearingWatchpoint.h
-bytecompiler/Label.h
-dfg/DFGAbstractValue.h
 dfg/DFGCommon.h
 dfg/DFGEdge.h
 dfg/DFGInlineCacheWrapper.h

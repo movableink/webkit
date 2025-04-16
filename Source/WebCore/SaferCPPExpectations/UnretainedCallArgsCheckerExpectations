@@ -60,7 +60,6 @@ inspector/mac/PageDebuggerMac.mm
 loader/archive/cf/LegacyWebArchiveMac.mm
 loader/cocoa/DiskCacheMonitorCocoa.mm
 loader/cocoa/PrivateClickMeasurementCocoa.mm
-loader/mac/LoaderNSURLExtras.mm
 page/CaptionUserPreferencesMediaAF.cpp
 page/cocoa/MemoryReleaseCocoa.mm
 page/cocoa/PageCocoa.mm
@@ -70,17 +69,13 @@ page/mac/EventHandlerMac.mm
 page/mac/ImageOverlayControllerMac.mm
 page/mac/ServicesOverlayController.mm
 page/mac/TextIndicatorWindow.mm
-page/scrolling/cocoa/ScrollingTreeFixedNodeCocoa.mm
-page/scrolling/cocoa/ScrollingTreeOverflowScrollProxyNodeCocoa.mm
-page/scrolling/cocoa/ScrollingTreePositionedNodeCocoa.mm
-page/scrolling/cocoa/ScrollingTreeStickyNodeCocoa.mm
 page/scrolling/mac/ScrollerMac.mm
 page/scrolling/mac/ScrollerPairMac.mm
-page/scrolling/mac/ScrollingTreeFrameScrollingNodeMac.mm
 page/scrolling/mac/ScrollingTreeOverflowScrollingNodeMac.mm
 page/scrolling/mac/ScrollingTreePluginScrollingNodeMac.mm
 page/scrolling/mac/ScrollingTreeScrollingNodeDelegateMac.mm
 platform/LocalizedStrings.cpp
+platform/MIMETypeRegistry.cpp
 platform/audio/cocoa/AudioFileReaderCocoa.cpp
 platform/audio/cocoa/AudioSampleBufferConverter.mm
 platform/audio/cocoa/AudioSessionCocoa.mm
@@ -105,6 +100,7 @@ platform/cocoa/PlatformPasteboardCocoa.mm
 platform/cocoa/PlatformSpeechSynthesizerCocoa.mm
 platform/cocoa/PowerSourceNotifier.mm
 platform/cocoa/SearchPopupMenuCocoa.mm
+platform/cocoa/SystemBattery.mm
 platform/cocoa/TextRecognitionResultCocoa.mm
 platform/cocoa/UserAgentCocoa.mm
 platform/cocoa/VideoFullscreenCaptions.mm
@@ -148,6 +144,7 @@ platform/graphics/avfoundation/objc/VideoLayerManagerObjC.mm
 platform/graphics/avfoundation/objc/VideoTrackPrivateMediaSourceAVFObjC.mm
 platform/graphics/avfoundation/objc/WebAVContentKeyGroup.mm
 platform/graphics/avfoundation/objc/WebCoreAVFResourceLoader.mm
+platform/graphics/ca/GraphicsLayerCA.cpp
 platform/graphics/ca/TileCoverageMap.cpp
 platform/graphics/ca/cocoa/PlatformCAAnimationCocoa.mm
 platform/graphics/ca/cocoa/PlatformCAFiltersCocoa.mm
@@ -258,11 +255,9 @@ platform/network/mac/ResourceErrorMac.mm
 platform/network/mac/ResourceHandleMac.mm
 platform/network/mac/SynchronousLoaderClient.mm
 platform/network/mac/WebCoreResourceHandleAsOperationQueueDelegate.mm
-platform/network/mac/WebCoreURLResponse.mm
 platform/text/cocoa/LocaleCocoa.mm
 platform/text/cocoa/LocalizedDateCache.mm
 rendering/AttachmentLayout.mm
-rendering/cocoa/RenderThemeCocoa.mm
 rendering/mac/RenderThemeMac.mm
 testing/Internals.mm
 testing/ServiceWorkerInternals.mm

@@ -81,6 +81,7 @@ rendering/svg/SVGTextLayoutAttributesBuilder.h
 rendering/updating/RenderTreeUpdater.h
 style/ClassChangeInvalidation.cpp
 style/ElementRuleCollector.cpp
+style/PropertyCascade.h
 style/PseudoClassChangeInvalidation.h
 style/RuleSetBuilder.h
 style/StyleRelations.h
