@@ -153,12 +153,10 @@ void AudioContext::constructCommon()
     ASSERT(document());
     RefPtr mainFrameDocument = document()->mainFrameDocument();
     if (!mainFrameDocument || mainFrameDocument->requiresUserGestureForAudioPlayback())
-        addBehaviorRestriction(RequireUserGestureForAudioStartRestriction);
-    else
-        m_restrictions = NoRestrictions;
+        addBehaviorRestriction(BehaviorRestrictionFlags::RequireUserGestureForAudioStartRestriction);
 
 #if PLATFORM(COCOA)
-    addBehaviorRestriction(RequirePageConsentForAudioStartRestriction);
+    addBehaviorRestriction(BehaviorRestrictionFlags::RequirePageConsentForAudioStartRestriction);
 #endif
 }
 
@@ -357,7 +355,7 @@ bool AudioContext::willPausePlayback()
     if (userGestureRequiredForAudioStart()) {
         if (!document->processingUserGestureForMedia())
             return false;
-        removeBehaviorRestriction(RequireUserGestureForAudioStartRestriction);
+        removeBehaviorRestriction(BehaviorRestrictionFlags::RequireUserGestureForAudioStartRestriction);
     }
 
     if (pageConsentRequiredForAudioStart()) {
@@ -366,7 +364,7 @@ bool AudioContext::willPausePlayback()
             document->addMediaCanStartListener(*this);
             return false;
         }
-        removeBehaviorRestriction(RequirePageConsentForAudioStartRestriction);
+        removeBehaviorRestriction(BehaviorRestrictionFlags::RequirePageConsentForAudioStartRestriction);
     }
 
     return m_mediaSession->clientWillPausePlayback();
@@ -416,7 +414,7 @@ bool AudioContext::willBeginPlayback()
             ALWAYS_LOG(LOGIDENTIFIER, "returning false, not processing user gesture or capturing");
             return false;
         }
-        removeBehaviorRestriction(RequireUserGestureForAudioStartRestriction);
+        removeBehaviorRestriction(BehaviorRestrictionFlags::RequireUserGestureForAudioStartRestriction);
     }
 
     if (pageConsentRequiredForAudioStart()) {
@@ -426,7 +424,7 @@ bool AudioContext::willBeginPlayback()
             ALWAYS_LOG(LOGIDENTIFIER, "returning false, page doesn't allow media to start");
             return false;
         }
-        removeBehaviorRestriction(RequirePageConsentForAudioStartRestriction);
+        removeBehaviorRestriction(BehaviorRestrictionFlags::RequirePageConsentForAudioStartRestriction);
     }
 
     m_mediaSession->setActive(true);
@@ -654,7 +652,7 @@ const String& AudioContext::sceneIdentifier() const
 void AudioContext::mediaCanStart(Document& document)
 {
     ASSERT_UNUSED(document, &document == this->document());
-    removeBehaviorRestriction(RequirePageConsentForAudioStartRestriction);
+    removeBehaviorRestriction(BehaviorRestrictionFlags::RequirePageConsentForAudioStartRestriction);
     mayResumePlayback(true);
 }
 

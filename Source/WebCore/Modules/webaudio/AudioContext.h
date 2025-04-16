@@ -89,15 +89,14 @@ public:
     void isPlayingAudioDidChange();
 
     // Restrictions to change default behaviors.
-    enum BehaviorRestrictionFlags {
-        NoRestrictions = 0,
+    enum class BehaviorRestrictionFlags : uint8_t {
         RequireUserGestureForAudioStartRestriction = 1 << 0,
         RequirePageConsentForAudioStartRestriction = 1 << 1,
     };
-    typedef unsigned BehaviorRestrictions;
+    using BehaviorRestrictions = OptionSet<BehaviorRestrictionFlags>;
     BehaviorRestrictions behaviorRestrictions() const { return m_restrictions; }
-    void addBehaviorRestriction(BehaviorRestrictions restriction) { m_restrictions |= restriction; }
-    void removeBehaviorRestriction(BehaviorRestrictions restriction) { m_restrictions &= ~restriction; }
+    void addBehaviorRestriction(BehaviorRestrictions restriction) { m_restrictions.add(restriction); }
+    void removeBehaviorRestriction(BehaviorRestrictions restriction) { m_restrictions.remove(restriction); }
 
     void defaultDestinationWillBecomeConnected();
 
@@ -117,8 +116,8 @@ private:
 
     void constructCommon();
 
-    bool userGestureRequiredForAudioStart() const { return m_restrictions & RequireUserGestureForAudioStartRestriction; }
-    bool pageConsentRequiredForAudioStart() const { return m_restrictions & RequirePageConsentForAudioStartRestriction; }
+    bool userGestureRequiredForAudioStart() const { return m_restrictions.contains(BehaviorRestrictionFlags::RequireUserGestureForAudioStartRestriction); }
+    bool pageConsentRequiredForAudioStart() const { return m_restrictions.contains(BehaviorRestrictionFlags::RequirePageConsentForAudioStartRestriction); }
 
     bool willPausePlayback();
 
@@ -164,7 +163,7 @@ private:
     Ref<PlatformMediaSession> m_mediaSession;
     MediaUniqueIdentifier m_currentIdentifier;
 
-    BehaviorRestrictions m_restrictions { NoRestrictions };
+    BehaviorRestrictions m_restrictions;
 
     // [[suspended by user]] flag in the specification:
     // https://www.w3.org/TR/webaudio/#dom-audiocontext-suspended-by-user-slot
@@ -174,6 +173,16 @@ private:
 };
 
 } // WebCore
+
+namespace WTF {
+template<> struct EnumTraits<WebCore::AudioContext::BehaviorRestrictionFlags> {
+    using values = EnumValues<
+        WebCore::AudioContext::BehaviorRestrictionFlags,
+        WebCore::AudioContext::BehaviorRestrictionFlags::RequireUserGestureForAudioStartRestriction,
+        WebCore::AudioContext::BehaviorRestrictionFlags::RequirePageConsentForAudioStartRestriction
+    >;
+};
+} // namespace WTF
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AudioContext)
     static bool isType(const WebCore::BaseAudioContext& context) { return !context.isOfflineContext(); }

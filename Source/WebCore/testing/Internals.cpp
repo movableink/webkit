@@ -5172,15 +5172,13 @@ void Internals::setAudioContextRestrictions(AudioContext& context, StringView re
     auto restrictions = context.behaviorRestrictions();
     context.removeBehaviorRestriction(restrictions);
 
-    restrictions = AudioContext::NoRestrictions;
+    restrictions = { };
 
     for (StringView restrictionString : restrictionsString.split(',')) {
-        if (equalLettersIgnoringASCIICase(restrictionString, "norestrictions"_s))
-            restrictions |= AudioContext::NoRestrictions;
         if (equalLettersIgnoringASCIICase(restrictionString, "requireusergestureforaudiostart"_s))
-            restrictions |= AudioContext::RequireUserGestureForAudioStartRestriction;
+            restrictions.add(AudioContext::BehaviorRestrictionFlags::RequireUserGestureForAudioStartRestriction);
         if (equalLettersIgnoringASCIICase(restrictionString, "requirepageconsentforaudiostart"_s))
-            restrictions |= AudioContext::RequirePageConsentForAudioStartRestriction;
+            restrictions.add(AudioContext::BehaviorRestrictionFlags::RequirePageConsentForAudioStartRestriction);
     }
     context.addBehaviorRestriction(restrictions);
 }
