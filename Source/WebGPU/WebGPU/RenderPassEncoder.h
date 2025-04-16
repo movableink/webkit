@@ -212,6 +212,7 @@ private:
     bool m_clearStencilAttachment { false };
     bool m_occlusionQueryActive { false };
     bool m_passEnded { false };
+    bool m_ignoreBufferCache { false };
     Vector<bool> m_bindGroupDynamicOffsetsChanged;
 } SWIFT_SHARED_REFERENCE(refRenderPassEncoder, derefRenderPassEncoder);
 

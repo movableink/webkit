@@ -70,6 +70,11 @@ static std::pair<uint64_t, uint32_t> makeKey(uint64_t bufferIdentifier, uint32_t
 
 void RenderPassEncoder::setVertexBuffer(id<MTLRenderCommandEncoder> commandEncoder, id<MTLBuffer> buffer, uint32_t offset, uint32_t bufferIndex)
 {
+    if (UNLIKELY(m_ignoreBufferCache)) {
+        [commandEncoder setVertexBuffer:buffer offset:offset atIndex:bufferIndex];
+        return;
+    }
+
     uint64_t bufferIdentifier = buffer.gpuAddress;
     if (auto key = makeKey(bufferIdentifier, offset); m_existingVertexBuffers[bufferIndex] != key || !bufferIdentifier) {
         [commandEncoder setVertexBuffer:buffer offset:offset atIndex:bufferIndex];
@@ -80,6 +85,11 @@ void RenderPassEncoder::setVertexBuffer(id<MTLRenderCommandEncoder> commandEncod
 
 void RenderPassEncoder::setFragmentBuffer(id<MTLRenderCommandEncoder> commandEncoder, id<MTLBuffer> buffer, uint32_t offset, uint32_t bufferIndex)
 {
+    if (UNLIKELY(m_ignoreBufferCache)) {
+        [commandEncoder setFragmentBuffer:buffer offset:offset atIndex:bufferIndex];
+        return;
+    }
+
     uint64_t bufferIdentifier = buffer.gpuAddress;
     if (auto key = makeKey(bufferIdentifier, offset); m_existingFragmentBuffers[bufferIndex] != key || !bufferIdentifier) {
         [commandEncoder setFragmentBuffer:buffer offset:offset atIndex:bufferIndex];
@@ -1296,7 +1306,9 @@ void RenderPassEncoder::executeBundles(Vector<Ref<RenderBundle>>&& bundles)
             [renderCommandEncoder() executeCommandsInBuffer:indirectCommandBuffer withRange:NSMakeRange(0, indirectCommandBuffer.size)];
         }
 
+        m_ignoreBufferCache = true;
         bundle->replayCommands(*this);
+        m_ignoreBufferCache = false;
     }
 
     m_vertexBuffers.fill(BufferAndOffset { });
