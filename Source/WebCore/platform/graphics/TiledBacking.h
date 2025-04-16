@@ -149,8 +149,7 @@ public:
         CoverageForVisibleArea = 0,
         CoverageForVerticalScrolling = 1 << 0,
         CoverageForHorizontalScrolling = 1 << 1,
-        CoverageForScrolling = CoverageForVerticalScrolling | CoverageForHorizontalScrolling,
-        NoCoverage = 1 << 2, // Not to be used in combination with other bits.
+        CoverageForScrolling = CoverageForVerticalScrolling | CoverageForHorizontalScrolling
     };
     typedef unsigned TileCoverage;
 

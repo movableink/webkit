@@ -50,7 +50,6 @@
 #import <WebKit/WKNavigationDelegatePrivate.h>
 #import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
-#import <WebKit/WKWebViewPrivateForTesting.h>
 #import <WebKit/WKWebpagePreferencesPrivate.h>
 #import <WebKit/_WKFeature.h>
 #import <wtf/RetainPtr.h>
@@ -258,56 +257,6 @@ UNIFIED_PDF_TEST(SnapshotsPaintPageContent)
     }];
 
     Util::run(&done);
-}
-
-static bool traverseLayerTree(CALayer *layer, bool(^block)(CALayer *))
-{
-    if (block(layer))
-        return true;
-    for (CALayer *child in layer.sublayers) {
-        if (traverseLayerTree(child, block))
-            return true;
-    }
-
-    return false;
-}
-
-static CALayer *renderViewTileGridLayer(WKWebView *webView)
-{
-    __block CALayer *renderViewLayer = nil;
-    __block CALayer *tileGridLayer = nil;
-
-    traverseLayerTree([webView layer], ^(CALayer *layer) {
-        if ([layer.name containsString:@"RenderView"]) {
-            renderViewLayer = layer;
-            return true;
-        }
-        return false;
-    });
-
-    traverseLayerTree(renderViewLayer, ^(CALayer *layer) {
-        if ([layer.name containsString:@"TileGrid container"]) {
-            tileGridLayer = layer;
-            return true;
-        }
-        return false;
-    });
-
-    return tileGridLayer;
-}
-
-UNIFIED_PDF_TEST(MainFrameTileGridHasNoCoverage)
-{
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 600, 600) configuration:configurationForWebViewTestingUnifiedPDF().get() addToWindow:YES]);
-
-    RetainPtr request = [NSURLRequest requestWithURL:[NSBundle.test_resourcesBundle URLForResource:@"test" withExtension:@"pdf"]];
-    [webView loadRequest:request.get()];
-    [webView _test_waitForDidFinishNavigation];
-    [webView waitForNextPresentationUpdate];
-
-    CALayer *tileGridLayer = renderViewTileGridLayer(webView.get());
-    EXPECT_NOT_NULL(tileGridLayer);
-    EXPECT_EQ(tileGridLayer.sublayers.count, 0UL);
 }
 
 #if PLATFORM(IOS) || PLATFORM(VISION)
