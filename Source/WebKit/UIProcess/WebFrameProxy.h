@@ -54,6 +54,7 @@ class Decoder;
 }
 
 namespace WebCore {
+class SecurityOriginData;
 enum class SandboxFlag : uint16_t;
 using SandboxFlags = OptionSet<SandboxFlag>;
 enum class ResourceResponseSource : uint8_t;
@@ -218,6 +219,7 @@ public:
 
     WebCore::LayerHostingContextIdentifier layerHostingContextIdentifier() const { return m_layerHostingContextIdentifier; }
     void updateRemoteFrameSize(WebCore::IntSize);
+    void setAppBadge(const WebCore::SecurityOriginData&, std::optional<uint64_t> badge);
 
     WebCore::SandboxFlags effectiveSandboxFlags() const { return m_effectiveSandboxFlags; }
     void updateSandboxFlags(WebCore::SandboxFlags sandboxFlags) { m_effectiveSandboxFlags = sandboxFlags; }

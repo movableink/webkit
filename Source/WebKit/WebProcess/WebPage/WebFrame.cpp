@@ -1498,4 +1498,9 @@ uint64_t WebFrame::messageSenderDestinationID() const
     return m_frameID.toUInt64();
 }
 
+void WebFrame::setAppBadge(const WebCore::SecurityOriginData& origin, std::optional<uint64_t> badge)
+{
+    send(Messages::WebFrameProxy::SetAppBadge(origin, badge));
+}
+
 } // namespace WebKit

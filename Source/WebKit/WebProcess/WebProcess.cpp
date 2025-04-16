@@ -2274,7 +2274,7 @@ bool WebProcess::areAllPagesThrottleable() const
     });
 }
 
-void WebProcess::setAppBadge(std::optional<WebPageProxyIdentifier> pageIdentifier, const WebCore::SecurityOriginData& origin, std::optional<uint64_t> badge)
+void WebProcess::setAppBadge(WebCore::Frame* frame, const WebCore::SecurityOriginData& origin, std::optional<uint64_t> badge)
 {
 #if ENABLE(WEB_PUSH_NOTIFICATIONS)
     if (DeprecatedGlobalSettings::builtInNotificationsEnabled()) {
@@ -2284,7 +2284,12 @@ void WebProcess::setAppBadge(std::optional<WebPageProxyIdentifier> pageIdentifie
     }
 #endif
 
-    protectedParentProcessConnection()->send(Messages::WebProcessProxy::SetAppBadge(pageIdentifier, origin, badge), 0);
+    RefPtr protectedFrame = frame;
+    if (frame) {
+        if (auto webFrame = WebFrame::fromCoreFrame(*frame))
+            webFrame->setAppBadge(origin, badge);
+    } else
+        protectedParentProcessConnection()->send(Messages::WebProcessProxy::SetAppBadgeFromWorker(origin, badge), 0);
 }
 
 #if HAVE(DISPLAY_LINK)

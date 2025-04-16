@@ -254,6 +254,8 @@ public:
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&);
     static void sendCancelReply(IPC::Connection&, IPC::Decoder&);
 
+    void setAppBadge(const WebCore::SecurityOriginData&, std::optional<uint64_t> badge);
+
 private:
     WebFrame(WebPage&, WebCore::FrameIdentifier);
 

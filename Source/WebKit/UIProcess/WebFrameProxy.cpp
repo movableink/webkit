@@ -27,6 +27,7 @@
 #include "WebFrameProxy.h"
 
 #include "APINavigation.h"
+#include "APIUIClient.h"
 #include "BrowsingContextGroup.h"
 #include "Connection.h"
 #include "DrawingAreaMessages.h"
@@ -760,6 +761,12 @@ void WebFrameProxy::updateRemoteFrameSize(WebCore::IntSize size)
 {
     m_remoteFrameSize = size;
     send(Messages::WebFrame::UpdateFrameSize(size));
+}
+
+void WebFrameProxy::setAppBadge(const WebCore::SecurityOriginData& origin, std::optional<uint64_t> badge)
+{
+    if (RefPtr webPageProxy = m_page.get())
+        webPageProxy->uiClient().updateAppBadge(*webPageProxy, origin, badge);
 }
 
 std::optional<SharedPreferencesForWebProcess> WebFrameProxy::sharedPreferencesForWebProcess() const
