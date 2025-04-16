@@ -241,6 +241,8 @@ public:
     ContentSecurityPolicyModeForExtension contentSecurityPolicyModeForExtension() const { return m_contentSecurityPolicyModeForExtension; }
     const HashAlgorithmSetCollection& hashesToReport();
 
+    void setIsReportingToConsoleEnabled(bool value) { m_isReportingToConsoleEnabled = value; }
+
 private:
     void logToConsole(const String& message, const String& contextURL = String(), const OrdinalNumber& contextLine = OrdinalNumber::beforeFirst(), const OrdinalNumber& contextColumn = OrdinalNumber::beforeFirst(), JSC::JSGlobalObject* = nullptr) const;
     void applyPolicyToScriptExecutionContext();
@@ -289,19 +291,20 @@ private:
     String m_lastPolicyWebAssemblyDisabledErrorMessage;
     String m_referrer;
     SandboxFlags m_sandboxFlags;
-    bool m_overrideInlineStyleAllowed { false };
-    bool m_isReportingEnabled { true };
-    bool m_upgradeInsecureRequests { false };
-    bool m_hasAPIPolicy { false };
-    bool m_trustedEvalEnabled { true };
     int m_httpStatusCode { 0 };
     OptionSet<ContentSecurityPolicyHashAlgorithm> m_hashAlgorithmsForInlineScripts;
     OptionSet<ContentSecurityPolicyHashAlgorithm> m_hashAlgorithmsForInlineStylesheets;
     UncheckedKeyHashSet<SecurityOriginData> m_insecureNavigationRequestsToUpgrade;
     mutable std::optional<ContentSecurityPolicyResponseHeaders> m_cachedResponseHeaders;
-    bool m_isHeaderDelivered { false };
     ContentSecurityPolicyModeForExtension m_contentSecurityPolicyModeForExtension { ContentSecurityPolicyModeForExtension::None };
     HashAlgorithmSetCollection m_hashesToReport;
+    bool m_isReportingEnabled { true };
+    bool m_overrideInlineStyleAllowed : 1 { false };
+    bool m_isReportingToConsoleEnabled : 1 { true };
+    bool m_upgradeInsecureRequests : 1 { false };
+    bool m_hasAPIPolicy : 1 { false };
+    bool m_trustedEvalEnabled : 1 { true };
+    bool m_isHeaderDelivered : 1 { false };
 };
 
 } // namespace WebCore

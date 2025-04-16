@@ -1144,7 +1144,7 @@ void ContentSecurityPolicy::logToConsole(const String& message, const String& co
     if (message.isEmpty())
         return;
 
-    if (!m_isReportingEnabled)
+    if (!m_isReportingEnabled || !m_isReportingToConsoleEnabled)
         return;
 
     if (m_client)
