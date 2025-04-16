@@ -328,8 +328,9 @@ void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::
     bool isUnset = valueID == CSSValueUnset;
     bool isRevert = valueID == CSSValueRevert;
     bool isRevertLayer = valueID == CSSValueRevertLayer;
+    bool isRevertOrRevertLayer = isRevert || isRevertLayer;
 
-    if (isRevert || isRevertLayer) {
+    if (isRevertOrRevertLayer) {
         // In @keyframes, 'revert-layer' rolls back the cascaded value to the author level.
         // We can just not apply the property in order to keep the value from the base style.
         if (isRevertLayer && m_state.m_isBuildingKeyframeStyle)
@@ -359,8 +360,6 @@ void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::
                 return;
             }
         }
-
-        isUnset = true;
     }
 
     auto isInheritedProperty = [&] {
@@ -373,7 +372,7 @@ void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::
         return isInheritedProperty() ? ApplyValueType::Inherit : ApplyValueType::Initial;
     };
 
-    if (isUnset)
+    if (isUnset || isRevertOrRevertLayer)
         valueType = unsetValueType();
 
     if (!m_state.applyPropertyToRegularStyle() && !isValidVisitedLinkProperty(id)) {
@@ -408,18 +407,16 @@ void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::
 
     BuilderGenerated::applyProperty(id, m_state, valueToApply.get(), valueType);
 
-    if (!isUnset) {
-        if (cascadeLevel == CascadeLevel::Author && m_state.element()->isDevolvableWidget() && CSSProperty::disablesNativeAppearance(id) && m_state.applyPropertyToRegularStyle())
-            style.setNativeAppearanceDisabled(true);
+    if (!isRevertOrRevertLayer && cascadeLevel == CascadeLevel::Author && m_state.element()->isDevolvableWidget() && CSSProperty::disablesNativeAppearance(id) && m_state.applyPropertyToRegularStyle())
+        style.setNativeAppearanceDisabled(true);
 
-        if (m_state.isCurrentPropertyInvalidAtComputedValueTime()) {
-            // https://drafts.csswg.org/css-variables-2/#invalid-variables
-            // A declaration can be invalid at computed-value time if...
-            // When this happens, the computed value is one of the following...
-            // Otherwise: Either the property’s inherited value or its initial value depending on whether the property
-            // is inherited or not, respectively, as if the property’s value had been specified as the unset keyword
-            BuilderGenerated::applyProperty(id, m_state, valueToApply.get(), unsetValueType());
-        }
+    if (!isUnset && !isRevertOrRevertLayer && m_state.isCurrentPropertyInvalidAtComputedValueTime()) {
+        // https://drafts.csswg.org/css-variables-2/#invalid-variables
+        // A declaration can be invalid at computed-value time if...
+        // When this happens, the computed value is one of the following...
+        // Otherwise: Either the property’s inherited value or its initial value depending on whether the property
+        // is inherited or not, respectively, as if the property’s value had been specified as the unset keyword
+        BuilderGenerated::applyProperty(id, m_state, valueToApply.get(), unsetValueType());
     }
 }
 
