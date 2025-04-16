@@ -66,7 +66,6 @@ accessibility/mac/text-marker-word-nav.html [ Failure ]
 accessibility/mac/selected-visible-position-range.html [ Timeout ]
 accessibility/mac/text-marker-word-nav.html [ Timeout ]
 accessibility/mac/text-operation/text-operation-replace-across-multiple-fields.html [ Timeout ]
-accessibility/mac/textmarker-routines.html [ Timeout ]
 accessibility/textarea-insertion-point-line-number.html [ Failure ]
 
 accessibility/mac/doctype-node-in-text-marker-crash.html [ Crash ]

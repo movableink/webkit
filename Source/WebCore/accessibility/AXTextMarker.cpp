@@ -892,7 +892,7 @@ AXTextMarker AXTextMarker::nextMarkerFromOffset(unsigned offset) const
 
     auto marker = *this;
     while (offset) {
-        if (auto newMarker = marker.findMarker(AXDirection::Next))
+        if (auto newMarker = marker.findMarker(AXDirection::Next, CoalesceObjectBreaks::No))
             marker = WTFMove(newMarker);
         else
             break;
