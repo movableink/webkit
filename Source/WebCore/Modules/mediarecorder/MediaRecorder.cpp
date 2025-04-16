@@ -178,13 +178,12 @@ ExceptionOr<void> MediaRecorder::startRecording(std::optional<unsigned> timeSlic
 
     m_private = result.releaseReturnValue();
     m_private->startRecording([pendingActivity = makePendingActivity(*this)](auto&& mimeTypeOrException, unsigned audioBitsPerSecond, unsigned videoBitsPerSecond) mutable {
-        Ref protectedThis = pendingActivity->object();
-        if (!protectedThis->m_isActive)
+        if (!pendingActivity->object().m_isActive)
             return;
 
         if (mimeTypeOrException.hasException()) {
-            protectedThis->stopRecordingInternal();
-            queueTaskKeepingObjectAlive(protectedThis.get(), TaskSource::Networking, [exception = mimeTypeOrException.releaseException()](auto& recorder) mutable {
+            pendingActivity->object().stopRecordingInternal();
+            queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::Networking, [exception = mimeTypeOrException.releaseException()](auto& recorder) mutable {
                 if (!recorder.m_isActive)
                     return;
                 recorder.dispatchError(WTFMove(exception));
@@ -192,7 +191,7 @@ ExceptionOr<void> MediaRecorder::startRecording(std::optional<unsigned> timeSlic
             return;
         }
 
-        queueTaskKeepingObjectAlive(protectedThis.get(), TaskSource::Networking, [mimeType = mimeTypeOrException.releaseReturnValue(), audioBitsPerSecond, videoBitsPerSecond](auto& recorder) mutable {
+        queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::Networking, [mimeType = mimeTypeOrException.releaseReturnValue(), audioBitsPerSecond, videoBitsPerSecond](auto& recorder) mutable {
             if (!recorder.m_isActive)
                 return;
             recorder.m_options.mimeType = WTFMove(mimeType);
@@ -293,10 +292,9 @@ ExceptionOr<void> MediaRecorder::pauseRecording()
     }
 
     m_private->pause([pendingActivity = makePendingActivity(*this)]() {
-        Ref protectedThis = pendingActivity->object();
-        if (!protectedThis->m_isActive)
+        if (!pendingActivity->object().m_isActive)
             return;
-        queueTaskKeepingObjectAlive(protectedThis.get(), TaskSource::Networking, [](auto& recorder) mutable {
+        queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::Networking, [](auto& recorder) mutable {
             if (!recorder.m_isActive)
                 return;
             recorder.dispatchEvent(Event::create(eventNames().pauseEvent, Event::CanBubble::No, Event::IsCancelable::No));
@@ -321,10 +319,9 @@ ExceptionOr<void> MediaRecorder::resumeRecording()
     }
 
     m_private->resume([pendingActivity = makePendingActivity(*this)]() {
-        Ref protectedThis = pendingActivity->object();
-        if (!protectedThis->m_isActive)
+        if (!pendingActivity->object().m_isActive)
             return;
-        queueTaskKeepingObjectAlive(protectedThis.get(), TaskSource::Networking, [](auto& recorder) mutable {
+        queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::Networking, [](auto& recorder) mutable {
             if (!recorder.m_isActive)
                 return;
             recorder.dispatchEvent(Event::create(eventNames().resumeEvent, Event::CanBubble::No, Event::IsCancelable::No));
@@ -354,11 +351,10 @@ void MediaRecorder::fetchData(FetchDataCallback&& callback, TakePrivateRecorder 
 
     m_isFetchingData = true;
     privateRecorder.fetchData([pendingActivity = makePendingActivity(*this), callback = WTFMove(fetchDataCallback)](auto&& buffer, auto& mimeType, auto timeCode) mutable {
-        Ref protectedThis = pendingActivity->object();
-        protectedThis->m_isFetchingData = false;
-        callback(protectedThis, WTFMove(buffer), mimeType, timeCode);
-        for (auto& task : std::exchange(protectedThis->m_pendingFetchDataTasks, { }))
-            task(protectedThis, FragmentedSharedBuffer::create(), mimeType, timeCode);
+        pendingActivity->object().m_isFetchingData = false;
+        callback(pendingActivity->object(), WTFMove(buffer), mimeType, timeCode);
+        for (auto& task : std::exchange(pendingActivity->object().m_pendingFetchDataTasks, { }))
+            task(pendingActivity->object(), FragmentedSharedBuffer::create(), mimeType, timeCode);
     });
 }
 
@@ -415,8 +411,7 @@ void MediaRecorder::trackEnded(MediaStreamTrackPrivate&)
 
     queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [](auto& recorder) {
         recorder.stopRecordingInternal([pendingActivity = recorder.makePendingActivity(recorder)] {
-            Ref protectedThis = pendingActivity->object();
-            queueTaskKeepingObjectAlive(protectedThis.get(), TaskSource::Networking, [](auto& recorder) {
+            queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::Networking, [](auto& recorder) {
                 if (!recorder.m_isActive)
                     return;
                 recorder.dispatchEvent(createDataAvailableEvent(recorder.scriptExecutionContext(), { }, { }, 0));

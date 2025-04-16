@@ -250,12 +250,11 @@ void MessagePort::dispatchMessages()
         return;
 
     auto messagesTakenHandler = [pendingActivity = makePendingActivity(*this)](Vector<MessageWithMessagePorts>&& messages, CompletionHandler<void()>&& completionCallback) mutable {
-        Ref protectedThis = pendingActivity->object();
         auto scopeExit = makeScopeExit(WTFMove(completionCallback));
 
-        LOG(MessagePorts, "MessagePort %s (%p) dispatching %zu messages", protectedThis->m_identifier.logString().utf8().data(), protectedThis.ptr(), messages.size());
+        LOG(MessagePorts, "MessagePort %s (%p) dispatching %zu messages", pendingActivity->object().m_identifier.logString().utf8().data(), &pendingActivity->object(), messages.size());
 
-        RefPtr<ScriptExecutionContext> context = protectedThis->scriptExecutionContext();
+        RefPtr context = pendingActivity->object().scriptExecutionContext();
         if (!context || !context->globalObject())
             return;
 
@@ -279,7 +278,7 @@ void MessagePort::dispatchMessages()
             }
 
             // Per specification, each MessagePort object has a task source called the port message queue.
-            queueTaskKeepingObjectAlive(protectedThis.get(), TaskSource::PostedMessageQueue, [event = WTFMove(event)](auto& port) {
+            queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::PostedMessageQueue, [event = WTFMove(event)](auto& port) {
                 port.dispatchEvent(event.event);
             });
         }
