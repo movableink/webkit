@@ -279,19 +279,24 @@ void ApplicationStateTracker::setScene(UIScene *scene)
     };
 
     if (m_scene.get() == scene) {
-        m_isInBackground = isWindowAndSceneInBackground(m_window, m_scene);
+        setIsInBackground(isWindowAndSceneInBackground(m_window, m_scene));
         return;
     }
 
     removeAllObservers();
 
+    if (!scene && m_scene && m_isInBackground) {
+        m_scene = nil;
+        return;
+    }
+
     m_scene = scene;
-    m_isInBackground = isWindowAndSceneInBackground(m_window, m_scene);
+    setIsInBackground(isWindowAndSceneInBackground(m_window, m_scene));
 
     if (!m_scene)
         return;
 
-    RELEASE_LOG(ViewState, "%p - ApplicationStateTracker::ApplicationStateTracker(): m_isInBackground=%d", this, m_isInBackground);
+    RELEASE_LOG(ViewState, "%p - ApplicationStateTracker: add observers for scene", this);
 
     NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
     m_didEnterBackgroundObserver = [notificationCenter addObserverForName:UISceneDidEnterBackgroundNotification object:scene queue:nil usingBlock:[this, weakThis = WeakPtr { *this }](NSNotification *notification) {
@@ -330,20 +335,22 @@ void ApplicationStateTracker::setViewController(UIViewController *serviceViewCon
 
     m_viewController = serviceViewController;
     if (!m_viewController) {
-        m_isInBackground = true;
+        setIsInBackground(true);
         return;
     }
 
     pid_t applicationPID = serviceViewController._hostProcessIdentifier;
     ASSERT(applicationPID);
 
-    m_isInBackground = !EndowmentStateTracker::isApplicationForeground(applicationPID);
+    bool isInBackground = !EndowmentStateTracker::isApplicationForeground(applicationPID);
 
     // Workaround for <rdar://problem/34028921>. If the host application is StoreKitUIService then it is also a ViewService
     // and is always in the background. We need to treat StoreKitUIService as foreground for the purpose of process suspension
     // or its ViewServices will get suspended.
     if ([serviceViewController._hostApplicationBundleIdentifier isEqualToString:@"com.apple.ios.StoreKitUIService"])
-        m_isInBackground = false;
+        isInBackground = false;
+
+    setIsInBackground(isInBackground);
 
     RELEASE_LOG(ProcessSuspension, "%{public}s has PID %d, host application PID=%d, isInBackground=%d", _UIApplicationIsExtension() ? "Extension" : "ViewService", getpid(), applicationPID, m_isInBackground);
 
@@ -362,9 +369,19 @@ void ApplicationStateTracker::setViewController(UIViewController *serviceViewCon
     }];
 }
 
+void ApplicationStateTracker::setIsInBackground(bool isInBackground)
+{
+    if (m_isInBackground == isInBackground)
+        return;
+
+    RELEASE_LOG(ViewState, "%p - ApplicationStateTracker::setIsInBackground: %d", this, isInBackground);
+
+    m_isInBackground = isInBackground;
+}
+
 void ApplicationStateTracker::applicationDidEnterBackground()
 {
-    m_isInBackground = true;
+    setIsInBackground(true);
     updateApplicationBackgroundState();
 
     if (auto view = m_view.get())
@@ -373,7 +390,7 @@ void ApplicationStateTracker::applicationDidEnterBackground()
 
 void ApplicationStateTracker::applicationWillEnterForeground()
 {
-    m_isInBackground = false;
+    setIsInBackground(false);
     updateApplicationBackgroundState();
 
     if (auto view = m_view.get())
