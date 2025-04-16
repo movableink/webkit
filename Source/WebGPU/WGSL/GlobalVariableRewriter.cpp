@@ -169,6 +169,7 @@ private:
     const HashMap<String, PipelineLayout*>& m_pipelineLayouts;
     HashMap<String, Reflection::EntryPointInformation>& m_entryPointInformations;
     HashMap<AST::Variable*, AST::Variable*> m_bufferLengthMap;
+    HashMap<AST::Variable*, AST::Variable*> m_reverseBufferLengthMap;
     AST::Expression* m_bufferLengthType { nullptr };
     AST::Expression* m_bufferLengthReferenceType { nullptr };
     AST::Function* m_currentFunction { nullptr };
@@ -755,8 +756,7 @@ std::optional<Error> RewriteGlobalVariables::collectGlobals()
             result.iterator->value.append({ resource->binding, globalVar->name() });
             packResource(*globalVar);
 
-            if (!m_generatedLayout || globalVar->maybeReferenceType()->inferredType()->containsRuntimeArray())
-                bufferLengths.append({ globalVar, resource->group });
+            bufferLengths.append({ globalVar, resource->group });
         }
     }
 
@@ -779,6 +779,8 @@ std::optional<Error> RewriteGlobalVariables::collectGlobals()
             ASSERT(it != m_groupBindingMap.end());
 
             auto binding = it->value.last().first + 1;
+            it->value.append({ binding, name });
+
             auto result = m_globals.add(name, Global {
                 { {
                     group,
@@ -786,9 +788,10 @@ std::optional<Error> RewriteGlobalVariables::collectGlobals()
                 } },
                 &lengthVariable
             });
-            m_bufferLengthMap.add(variable, &lengthVariable);
             ASSERT_UNUSED(result, result.isNewEntry);
-            it->value.append({ binding, name });
+
+            m_bufferLengthMap.add(variable, &lengthVariable);
+            m_reverseBufferLengthMap.add(&lengthVariable, variable);
         }
     }
 
@@ -1390,6 +1393,111 @@ void RewriteGlobalVariables::usesOverride(AST::Variable& variable)
     m_entryPointInformation->specializationConstants.add(entryName, Reflection::SpecializationConstant { variable.name(), constantType, variable.maybeInitializer() });
 }
 
+enum class BindingType {
+    Undefined,
+    Buffer,
+    Texture,
+    TextureMultisampled,
+    TextureStorageReadOnly,
+    TextureStorageReadWrite,
+    TextureStorageWriteOnly,
+    Sampler,
+    SamplerComparison,
+    TextureExternal,
+};
+
+static BindingType bindingTypeForPrimitive(const Types::Primitive& primitive)
+{
+    switch (primitive.kind) {
+    case Types::Primitive::AbstractInt:
+    case Types::Primitive::AbstractFloat:
+    case Types::Primitive::I32:
+    case Types::Primitive::U32:
+    case Types::Primitive::F32:
+    case Types::Primitive::F16:
+    case Types::Primitive::Bool:
+    case Types::Primitive::Void:
+        return BindingType::Buffer;
+    case Types::Primitive::Sampler:
+        return BindingType::Sampler;
+    case Types::Primitive::SamplerComparison:
+        return BindingType::SamplerComparison;
+
+    case Types::Primitive::TextureExternal:
+        return BindingType::TextureExternal;
+
+    case Types::Primitive::AccessMode:
+    case Types::Primitive::TexelFormat:
+    case Types::Primitive::AddressSpace:
+        return BindingType::Undefined;
+    }
+}
+
+static BindingType bindingTypeForType(const Type* type)
+{
+    if (!type)
+        return BindingType::Undefined;
+
+    return WTF::switchOn(*type,
+        [&](const Types::Primitive& primitive) {
+            return bindingTypeForPrimitive(primitive);
+        },
+        [&](const Types::Vector&) {
+            return BindingType::Buffer;
+        },
+        [&](const Types::Array&) -> BindingType {
+            return BindingType::Buffer;
+        },
+        [&](const Types::Struct&) -> BindingType {
+            return BindingType::Buffer;
+        },
+        [&](const Types::PrimitiveStruct&) -> BindingType {
+            return BindingType::Buffer;
+        },
+        [&](const Types::Matrix&) {
+            return BindingType::Buffer;
+        },
+        [&](const Types::Reference&) -> BindingType {
+            return BindingType::Buffer;
+        },
+        [&](const Types::Pointer&) -> BindingType {
+            return BindingType::Buffer;
+        },
+        [&](const Types::Function&) -> BindingType {
+            RELEASE_ASSERT_NOT_REACHED();
+        },
+        [&](const Types::Texture& texture) {
+        return texture.kind == Types::Texture::Kind::TextureMultisampled2d ? BindingType::TextureMultisampled : BindingType::Texture;
+        },
+        [&](const Types::TextureStorage& storageTexture) {
+        switch (storageTexture.access) {
+        case AccessMode::Read:
+            return BindingType::TextureStorageReadOnly;
+        case AccessMode::ReadWrite:
+            return BindingType::TextureStorageReadWrite;
+        case AccessMode::Write:
+            return BindingType::TextureStorageWriteOnly;
+        }
+        },
+        [&](const Types::TextureDepth& texture) {
+            return texture.kind == Types::TextureDepth::Kind::TextureDepthMultisampled2d ? BindingType::TextureMultisampled : BindingType::Texture;
+        },
+        [&](const Types::Atomic&) -> BindingType {
+            return BindingType::Buffer;
+        },
+        [&](const Types::TypeConstructor&) -> BindingType {
+            RELEASE_ASSERT_NOT_REACHED();
+        },
+        [&](const Types::Bottom&) -> BindingType {
+            RELEASE_ASSERT_NOT_REACHED();
+        });
+}
+
+static bool isExternalTexture(const AST::Variable& variable)
+{
+    return bindingTypeForType(variable.storeType()) == BindingType::TextureExternal;
+}
+
 Vector<unsigned> RewriteGlobalVariables::insertStructs(const UsedResources& usedResources)
 {
     Vector<unsigned> groups;
@@ -1406,15 +1514,21 @@ Vector<unsigned> RewriteGlobalVariables::insertStructs(const UsedResources& used
         HashMap<AST::Variable*, unsigned> bufferSizeToOwnerMap;
         for (auto [binding, globalName] : bindingGlobalMap) {
             unsigned group = groupBinding.key;
-            if (!usedBindings.contains(binding))
-                continue;
-            if (!m_reads.contains(globalName))
-                continue;
-
             auto it = m_globals.find(globalName);
             RELEASE_ASSERT(it != m_globals.end());
-
             auto& global = it->value;
+
+            if (auto bufferIt = m_reverseBufferLengthMap.find(global.declaration); bufferIt != m_reverseBufferLengthMap.end()) {
+                if (isExternalTexture(*bufferIt->value))
+                    continue;
+                if (bufferIt->value->addressSpace() != AddressSpace::Storage)
+                    continue;
+                if (!bufferSizeToOwnerMap.contains(global.declaration))
+                    continue;
+            } else if (!usedBindings.contains(binding))
+                continue;
+            else if (!m_reads.contains(globalName))
+                continue;
             ASSERT(global.declaration->maybeTypeName());
 
             entries.append({ metalId, &createArgumentBufferEntry(metalId, *global.declaration) });
@@ -1560,106 +1674,6 @@ static AccessMode accessModeForBindingMember(const BindGroupLayoutEntry::Binding
     }, [](const ExternalTextureBindingLayout&) {
         return AccessMode::Read;
     });
-}
-
-enum class BindingType {
-    Undefined,
-    Buffer,
-    Texture,
-    TextureMultisampled,
-    TextureStorageReadOnly,
-    TextureStorageReadWrite,
-    TextureStorageWriteOnly,
-    Sampler,
-    SamplerComparison,
-    TextureExternal,
-};
-
-static BindingType bindingTypeForPrimitive(const Types::Primitive& primitive)
-{
-    switch (primitive.kind) {
-    case Types::Primitive::AbstractInt:
-    case Types::Primitive::AbstractFloat:
-    case Types::Primitive::I32:
-    case Types::Primitive::U32:
-    case Types::Primitive::F32:
-    case Types::Primitive::F16:
-    case Types::Primitive::Bool:
-    case Types::Primitive::Void:
-        return BindingType::Buffer;
-    case Types::Primitive::Sampler:
-        return BindingType::Sampler;
-    case Types::Primitive::SamplerComparison:
-        return BindingType::SamplerComparison;
-
-    case Types::Primitive::TextureExternal:
-        return BindingType::TextureExternal;
-
-    case Types::Primitive::AccessMode:
-    case Types::Primitive::TexelFormat:
-    case Types::Primitive::AddressSpace:
-        return BindingType::Undefined;
-    }
-}
-
-static BindingType bindingTypeForType(const Type* type)
-{
-    if (!type)
-        return BindingType::Undefined;
-
-    return WTF::switchOn(*type,
-        [&](const Types::Primitive& primitive) {
-            return bindingTypeForPrimitive(primitive);
-        },
-        [&](const Types::Vector&) {
-            return BindingType::Buffer;
-        },
-        [&](const Types::Array&) -> BindingType {
-            return BindingType::Buffer;
-        },
-        [&](const Types::Struct&) -> BindingType {
-            return BindingType::Buffer;
-        },
-        [&](const Types::PrimitiveStruct&) -> BindingType {
-            return BindingType::Buffer;
-        },
-        [&](const Types::Matrix&) {
-            return BindingType::Buffer;
-        },
-        [&](const Types::Reference&) -> BindingType {
-            return BindingType::Buffer;
-        },
-        [&](const Types::Pointer&) -> BindingType {
-            return BindingType::Buffer;
-        },
-        [&](const Types::Function&) -> BindingType {
-            RELEASE_ASSERT_NOT_REACHED();
-        },
-        [&](const Types::Texture& texture) {
-        return texture.kind == Types::Texture::Kind::TextureMultisampled2d ? BindingType::TextureMultisampled : BindingType::Texture;
-        },
-        [&](const Types::TextureStorage& storageTexture) {
-        switch (storageTexture.access) {
-        case AccessMode::Read:
-            return BindingType::TextureStorageReadOnly;
-        case AccessMode::ReadWrite:
-            return BindingType::TextureStorageReadWrite;
-        case AccessMode::Write:
-            return BindingType::TextureStorageWriteOnly;
-        }
-        },
-        [&](const Types::TextureDepth& texture) {
-            return texture.kind == Types::TextureDepth::Kind::TextureDepthMultisampled2d ? BindingType::TextureMultisampled : BindingType::Texture;
-        },
-        [&](const Types::Atomic&) -> BindingType {
-            return BindingType::Buffer;
-        },
-        [&](const Types::TypeConstructor&) -> BindingType {
-            RELEASE_ASSERT_NOT_REACHED();
-        },
-        [&](const Types::Bottom&) -> BindingType {
-            RELEASE_ASSERT_NOT_REACHED();
-        });
 }
 
 static bool isBuffer(const AST::Variable& variable)
@@ -1959,11 +1973,6 @@ static bool isStorageTexture(const AST::Variable& variable, const StorageTexture
     default:
         return false;
     }
-}
-
-static bool isExternalTexture(const AST::Variable& variable)
-{
-    return bindingTypeForType(variable.storeType()) == BindingType::TextureExternal;
 }
 
 static String errorValidatingTypes(const AST::Variable& variable, const BindGroupLayoutEntry::BindingMember& bindingMember)
