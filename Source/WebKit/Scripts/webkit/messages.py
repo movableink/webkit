@@ -1108,7 +1108,6 @@ def headers_for_type(type, for_implementation_file=False):
         'WebCore::ModalContainerControlType': ['<WebCore/ModalContainerTypes.h>'],
         'WebCore::ModalContainerDecision': ['<WebCore/ModalContainerTypes.h>'],
         'WebCore::MouseEventPolicy': ['<WebCore/DocumentLoader.h>'],
-        'WebCore::NeedsBeforeUnloadEvent': ['<WebCore/FrameLoaderTypes.h>'],
         'WebCore::NetworkTransactionInformation': ['<WebCore/NetworkLoadInformation.h>'],
         'WebCore::NowPlayingMetadata': ['<WebCore/NowPlayingInfo.h>'],
         'WebCore::OpaqueOriginIdentifier': ['<WebCore/SecurityOriginData.h>'],

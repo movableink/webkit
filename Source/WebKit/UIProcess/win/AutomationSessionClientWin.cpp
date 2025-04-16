@@ -92,7 +92,6 @@ void AutomationSessionClient::requestNewPageWithOptions(WebKit::WebAutomationSes
                 WebCore::LockBackForwardList::No, /* lockBackForwardList */
                 { }, /* clientRedirectSourceForHistory */
                 { }, /* effectiveSandboxFlags */
-                WebCore::MayNeedBeforeUnloadPrompt::No,
                 std::nullopt, /* ownerPermissionsPolicy */
                 std::nullopt, /* privateClickMeasurement */
                 { }, /* advancedPrivacyProtections */

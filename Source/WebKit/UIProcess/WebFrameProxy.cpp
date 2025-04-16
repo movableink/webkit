@@ -351,11 +351,6 @@ WebFramePolicyListenerProxy& WebFrameProxy::setUpPolicyListenerProxy(CompletionH
     return *m_activeListener;
 }
 
-void WebFrameProxy::dispatchBeforeUnloadEventForCrossProcessNavigation(CompletionHandler<void(bool)>&& completionHandler)
-{
-    sendWithAsyncReply(Messages::WebFrame::DispatchBeforeUnloadEventForCrossProcessNavigation(), WTFMove(completionHandler));
-}
-
 void WebFrameProxy::getWebArchive(CompletionHandler<void(API::Data*)>&& callback)
 {
     if (RefPtr page = m_page.get())

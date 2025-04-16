@@ -4928,33 +4928,10 @@ void WebPageProxy::receivedNavigationActionPolicyDecision(WebProcessProxy& proce
             if (suspendedPage && suspendedPage->pageIsClosedOrClosing())
                 suspendedPage = nullptr;
 
-            receivedPolicyDecision(policyAction, navigation.ptr(), nullptr, navigationAction.copyRef(), WillContinueLoadInNewProcess::Yes, std::nullopt, WTFMove(message), WTFMove(completionHandler));
+            auto isPerformingHTTPFallback = navigationAction->data().isPerformingHTTPFallback ? IsPerformingHTTPFallback::Yes : IsPerformingHTTPFallback::No;
+            continueNavigationInNewProcess(navigation, frame.get(), WTFMove(suspendedPage), WTFMove(processNavigatingTo), processSwapRequestedByClient, ShouldTreatAsContinuingLoad::YesAfterNavigationPolicyDecision, std::nullopt, loadedWebArchive, isPerformingHTTPFallback, replacedDataStoreForWebArchiveLoad.get());
 
-            bool mayNeedBeforeUnloadPrompt = navigationAction->mayNeedBeforeUnloadPrompt();
-            CompletionHandler<void(bool)> continueLoad = [
-                this,
-                protectedThis = Ref { *this },
-                navigation = WTFMove(navigation),
-                navigationAction = WTFMove(navigationAction),
-                processSwapRequestedByClient,
-                preventProcessShutdownScope = processNavigatingTo->shutdownPreventingScope(),
-                processNavigatingTo = WTFMove(processNavigatingTo),
-                frame = Ref { frame },
-                suspendedPage = WTFMove(suspendedPage),
-                loadedWebArchive,
-                replacedDataStoreForWebArchiveLoad
-            ](bool shouldContinueLoad) mutable {
-                if (!shouldContinueLoad)
-                    return;
-                auto isPerformingHTTPFallback = navigationAction->data().isPerformingHTTPFallback ? IsPerformingHTTPFallback::Yes : IsPerformingHTTPFallback::No;
-                continueNavigationInNewProcess(navigation, frame.get(), WTFMove(suspendedPage), WTFMove(processNavigatingTo), processSwapRequestedByClient, ShouldTreatAsContinuingLoad::YesAfterNavigationPolicyDecision, std::nullopt, loadedWebArchive, isPerformingHTTPFallback, replacedDataStoreForWebArchiveLoad.get());
-            };
-
-            if (mayNeedBeforeUnloadPrompt)
-                frame->dispatchBeforeUnloadEventForCrossProcessNavigation(WTFMove(continueLoad));
-            else
-                continueLoad(true);
-
+            receivedPolicyDecision(policyAction, navigation.ptr(), nullptr, WTFMove(navigationAction), WillContinueLoadInNewProcess::Yes, std::nullopt, WTFMove(message), WTFMove(completionHandler));
             return;
         }
 
