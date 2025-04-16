@@ -69,6 +69,7 @@ mac/WebView/WebArchive.mm
 mac/WebView/WebDelegateImplementationCaching.mm
 mac/WebView/WebDeviceOrientation.mm
 mac/WebView/WebDeviceOrientationProviderMock.mm
+mac/WebView/WebDocumentLoaderMac.mm
 mac/WebView/WebDynamicScrollBarsView.mm
 mac/WebView/WebFeature.m
 mac/WebView/WebFrame.mm
@@ -78,6 +79,7 @@ mac/WebView/WebGeolocationPosition.mm
 mac/WebView/WebHTMLRepresentation.mm
 mac/WebView/WebHTMLView.mm
 mac/WebView/WebImmediateActionController.mm
+mac/WebView/WebJSPDFDoc.mm
 mac/WebView/WebNavigationData.mm
 mac/WebView/WebNotification.mm
 mac/WebView/WebPDFDocumentExtras.mm

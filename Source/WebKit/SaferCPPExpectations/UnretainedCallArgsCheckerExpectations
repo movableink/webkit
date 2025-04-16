@@ -269,8 +269,6 @@ WebProcess/WebPage/mac/WKAccessibilityWebPageObjectMac.mm
 WebProcess/WebPage/mac/WebPageMac.mm
 WebProcess/cocoa/LaunchServicesDatabaseManager.mm
 WebProcess/cocoa/WebProcessCocoa.mm
-mac/WebView/WebDocumentLoaderMac.mm
-mac/WebView/WebJSPDFDoc.mm
 webpushd/ApplePushServiceConnection.mm
 webpushd/MockPushServiceConnection.mm
 webpushd/PushService.mm
