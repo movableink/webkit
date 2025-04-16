@@ -236,7 +236,7 @@ static constexpr auto QuickTimeCocoaPluginIdentifier = "com.apple.quicktime.webp
     
     for (auto& entry : pluginInfo.mimes) {
         if (entry.extensions.contains(extension))
-            return entry.type;
+            return entry.type.createNSString().autorelease();
     }
 
     return nil;

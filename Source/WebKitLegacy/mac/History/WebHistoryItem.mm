@@ -230,8 +230,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     HistoryItem* coreItem = core(_private);
     NSMutableString *result = [NSMutableString stringWithFormat:@"%@ %@", [super description], coreItem->urlString().createNSString().get()];
     if (!coreItem->target().isEmpty()) {
-        NSString *target = coreItem->target();
-        [result appendFormat:@" in \"%@\"", target];
+        RetainPtr target = coreItem->target().createNSString();
+        [result appendFormat:@" in \"%@\"", target.get()];
     }
     if (coreItem->isTargetItem())
         [result appendString:@" *target*"];

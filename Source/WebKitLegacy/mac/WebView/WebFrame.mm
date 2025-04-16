@@ -2379,7 +2379,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     auto coreFrame = _private->coreFrame;
     if (!coreFrame)
         return nil;
-    return coreFrame->tree().uniqueName();
+    return coreFrame->tree().uniqueName().createNSString().autorelease();
 }
 
 - (WebFrameView *)frameView

@@ -291,7 +291,7 @@
 - (NSString *)mediaGroup
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::mediagroupAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::mediagroupAttr).createNSString().autorelease();
 }
 
 - (void)setMediaGroup:(NSString *)newMediaGroup

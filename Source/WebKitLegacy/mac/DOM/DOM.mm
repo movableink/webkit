@@ -394,7 +394,7 @@ id <DOMEventTarget> kit(EventTarget* target)
     auto* link = [self _linkElement];
     if (!link)
         return nil;
-    return link->getAttribute(HTMLNames::targetAttr);
+    return link->getAttribute(HTMLNames::targetAttr).createNSString().autorelease();
 }
 
 - (CGRect)hrefFrame

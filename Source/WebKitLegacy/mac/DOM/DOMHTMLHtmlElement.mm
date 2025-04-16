@@ -42,7 +42,7 @@
 - (NSString *)version
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::versionAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::versionAttr).createNSString().autorelease();
 }
 
 - (void)setVersion:(NSString *)newVersion

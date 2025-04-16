@@ -40,6 +40,7 @@
 #import <wtf/Language.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/TZoneMallocInlines.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/AtomStringHash.h>
 #import "LocalizedDateCache.h"
@@ -70,7 +71,7 @@ static RetainPtr<NSDateFormatter> createDateTimeFormatter(NSLocale* locale, NSCa
 }
 
 LocaleCocoa::LocaleCocoa(const AtomString& locale)
-    : m_locale(adoptNS([[NSLocale alloc] initWithLocaleIdentifier:locale]))
+    : m_locale(adoptNS([[NSLocale alloc] initWithLocaleIdentifier:locale.createNSString().get()]))
     , m_gregorianCalendar(adoptNS([[NSCalendar alloc] initWithCalendarIdentifier:NSCalendarIdentifierGregorian]))
     , m_didInitializeNumberData(false)
 {
@@ -292,7 +293,7 @@ RetainPtr<CFStringRef> LocaleCocoa::canonicalLanguageIdentifierFromString(const 
     if (cache.m_key == string)
         return cache.m_value;
     auto result = cache.m_map.ensure(string, [&] {
-        return (__bridge CFStringRef)[NSLocale canonicalLanguageIdentifierFromString:string];
+        return bridge_cast([NSLocale canonicalLanguageIdentifierFromString:string.createNSString().get()]);
     }).iterator->value;
     cache.m_key = string;
     cache.m_value = result;

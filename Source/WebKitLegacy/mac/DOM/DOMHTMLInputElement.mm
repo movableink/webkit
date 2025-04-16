@@ -75,7 +75,7 @@
 - (NSString *)accept
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::acceptAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::acceptAttr).createNSString().autorelease();
 }
 
 - (void)setAccept:(NSString *)newAccept
@@ -87,7 +87,7 @@
 - (NSString *)alt
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::altAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::altAttr).createNSString().autorelease();
 }
 
 - (void)setAlt:(NSString *)newAlt
@@ -147,7 +147,7 @@
 - (NSString *)dirName
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::dirnameAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::dirnameAttr).createNSString().autorelease();
 }
 
 - (void)setDirName:(NSString *)newDirName
@@ -239,7 +239,7 @@
 - (NSString *)formTarget
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::formtargetAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::formtargetAttr).createNSString().autorelease();
 }
 
 - (void)setFormTarget:(NSString *)newFormTarget
@@ -281,7 +281,7 @@
 - (NSString *)max
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::maxAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::maxAttr).createNSString().autorelease();
 }
 
 - (void)setMax:(NSString *)newMax
@@ -305,7 +305,7 @@
 - (NSString *)min
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::minAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::minAttr).createNSString().autorelease();
 }
 
 - (void)setMin:(NSString *)newMin
@@ -329,7 +329,7 @@
 - (NSString *)name
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getNameAttribute();
+    return IMPL->getNameAttribute().createNSString().autorelease();
 }
 
 - (void)setName:(NSString *)newName
@@ -341,7 +341,7 @@
 - (NSString *)pattern
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::patternAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::patternAttr).createNSString().autorelease();
 }
 
 - (void)setPattern:(NSString *)newPattern
@@ -353,7 +353,7 @@
 - (NSString *)placeholder
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::placeholderAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::placeholderAttr).createNSString().autorelease();
 }
 
 - (void)setPlaceholder:(NSString *)newPlaceholder
@@ -413,7 +413,7 @@
 - (NSString *)step
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::stepAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::stepAttr).createNSString().autorelease();
 }
 
 - (void)setStep:(NSString *)newStep
@@ -425,7 +425,7 @@
 - (NSString *)type
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->type();
+    return IMPL->type().createNSString().autorelease();
 }
 
 - (void)setType:(NSString *)newType
@@ -437,7 +437,7 @@
 - (NSString *)defaultValue
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->defaultValue();
+    return IMPL->defaultValue().createNSString().autorelease();
 }
 
 - (void)setDefaultValue:(NSString *)newDefaultValue
@@ -539,7 +539,7 @@
 - (NSString *)selectionDirection
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->selectionDirection();
+    return IMPL->selectionDirection().createNSString().autorelease();
 }
 
 - (void)setSelectionDirection:(NSString *)newSelectionDirection
@@ -551,7 +551,7 @@
 - (NSString *)align
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::alignAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::alignAttr).createNSString().autorelease();
 }
 
 - (void)setAlign:(NSString *)newAlign
@@ -563,7 +563,7 @@
 - (NSString *)useMap
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::usemapAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::usemapAttr).createNSString().autorelease();
 }
 
 - (void)setUseMap:(NSString *)newUseMap
@@ -584,7 +584,7 @@
 - (NSString *)accessKey
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::accesskeyAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::accesskeyAttr).createNSString().autorelease();
 }
 
 - (void)setAccessKey:(NSString *)newAccessKey

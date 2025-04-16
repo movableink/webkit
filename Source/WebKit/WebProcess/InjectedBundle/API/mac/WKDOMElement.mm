@@ -38,7 +38,7 @@
 
 - (NSString *)getAttribute:(NSString *)attribute
 {
-    return downcast<WebCore::Element>(*_impl).getAttribute(attribute);
+    return downcast<WebCore::Element>(*_impl).getAttribute(attribute).createNSString().autorelease();
 }
 
 - (void)setAttribute:(NSString *)name value:(NSString *)value

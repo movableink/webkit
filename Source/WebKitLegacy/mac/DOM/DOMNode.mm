@@ -152,13 +152,13 @@ DOMNode *kit(Node* value)
 - (NSString *)namespaceURI
 {
     JSMainThreadNullState state;
-    return unwrap(*self).namespaceURI();
+    return unwrap(*self).namespaceURI().createNSString().autorelease();
 }
 
 - (NSString *)prefix
 {
     JSMainThreadNullState state;
-    return unwrap(*self).prefix();
+    return unwrap(*self).prefix().createNSString().autorelease();
 }
 
 - (void)setPrefix:(NSString *)newPrefix
@@ -170,7 +170,7 @@ DOMNode *kit(Node* value)
 - (NSString *)localName
 {
     JSMainThreadNullState state;
-    return unwrap(*self).localName();
+    return unwrap(*self).localName().createNSString().autorelease();
 }
 
 - (DOMNamedNodeMap *)attributes
@@ -297,13 +297,13 @@ DOMNode *kit(Node* value)
 - (NSString *)lookupPrefix:(NSString *)inNamespaceURI
 {
     JSMainThreadNullState state;
-    return unwrap(*self).lookupPrefix(inNamespaceURI);
+    return unwrap(*self).lookupPrefix(inNamespaceURI).createNSString().autorelease();
 }
 
 - (NSString *)lookupNamespaceURI:(NSString *)inPrefix
 {
     JSMainThreadNullState state;
-    return unwrap(*self).lookupNamespaceURI(inPrefix);
+    return unwrap(*self).lookupNamespaceURI(inPrefix).createNSString().autorelease();
 }
 
 - (BOOL)isDefaultNamespace:(NSString *)inNamespaceURI

@@ -820,12 +820,12 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     m_requestLicenseCallback = WTFMove(callback);
 
     if (m_group) {
-        auto* options = @{ ContentKeyReportGroupKey: m_group.get(), InitializationDataTypeKey: (NSString*)initDataType };
+        auto* options = @{ ContentKeyReportGroupKey: m_group.get(), InitializationDataTypeKey: initDataType.createNSString().get() };
         [m_group processContentKeyRequestWithIdentifier:identifier.get() initializationData:initializationData.get() options:options];
         return;
     }
 
-    auto* options = @{ InitializationDataTypeKey: (NSString*)initDataType };
+    auto* options = @{ InitializationDataTypeKey: initDataType.createNSString().get() };
     [m_session processContentKeyRequestWithIdentifier:identifier.get() initializationData:initializationData.get() options:options];
 }
 

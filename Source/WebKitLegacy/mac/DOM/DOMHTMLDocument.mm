@@ -71,7 +71,7 @@
 - (NSString *)dir
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->dir();
+    return IMPL->dir().createNSString().autorelease();
 }
 
 - (void)setDir:(NSString *)newDir

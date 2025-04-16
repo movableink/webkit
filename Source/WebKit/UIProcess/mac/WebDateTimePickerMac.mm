@@ -238,7 +238,7 @@ void WebDateTimePickerMac::didChooseDate(StringView date)
 
     RetainPtr currentDateValueString = _params.currentValue.createNSString();
 
-    RetainPtr<NSString> format = [self dateFormatStringForType:_params.type];
+    RetainPtr<NSString> format = [self dateFormatStringForType:_params.type.createNSString().get()];
     [_dateFormatter setDateFormat:format.get()];
 
     if (![currentDateValueString length])

@@ -1308,9 +1308,9 @@ BOOL HTMLConverter::_addAttachmentForElement(Element& element, NSURL *url, BOOL 
             RetainPtr textAttachment = adoptNS([[PlatformNSTextAttachment alloc] initWithFileWrapper:fileWrapper.get()]);
 
             if (auto& ariaLabel = element.getAttribute("aria-label"_s); !ariaLabel.isEmpty())
-                [textAttachment setAccessibilityLabel:ariaLabel];
+                [textAttachment setAccessibilityLabel:ariaLabel.createNSString().get()];
             if (auto& altText = element.getAttribute("alt"_s); !altText.isEmpty())
-                [textAttachment setAccessibilityLabel:altText];
+                [textAttachment setAccessibilityLabel:altText.createNSString().get()];
 
 #if PLATFORM(IOS_FAMILY)
             float verticalAlign = 0.0;
@@ -1385,7 +1385,7 @@ void HTMLConverter::_fillInBlock(NSTextBlock *block, Element& element, PlatformC
 {
     float result = 0;
     
-    NSString *width = element.getAttribute(widthAttr);
+    RetainPtr width = element.getAttribute(widthAttr).createNSString();
     if ((width && [width length]) || !isTable) {
         if (_caches->floatPropertyValueForNode(element, CSSPropertyWidth, result))
             [block setValue:result type:NSTextBlockAbsoluteValueType forDimension:NSTextBlockWidth];
@@ -1592,10 +1592,10 @@ void HTMLConverter::_processHeadElement(Element& element)
     // FIXME: Should gather data from other sources e.g. Word, but for that we would need to be able to get comments from DOM
     
     for (HTMLMetaElement* child = Traversal<HTMLMetaElement>::firstChild(element); child; child = Traversal<HTMLMetaElement>::nextSibling(*child)) {
-        NSString *name = child->name();
-        NSString *content = child->content();
+        RetainPtr name = child->name().createNSString();
+        RetainPtr content = child->content().createNSString();
         if (name && content)
-            _processMetaElementWithName(name, content);
+            _processMetaElementWithName(name.get(), content.get());
     }
 }
 
@@ -1634,15 +1634,15 @@ void HTMLConverter::_addLinkForElement(Element& element, NSRange range)
         return;
 #endif
 
-    NSString *urlString = element.getAttribute(hrefAttr);
-    NSString *strippedString = [urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    RetainPtr urlString = element.getAttribute(hrefAttr).createNSString();
+    RetainPtr strippedString = [urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
     if (urlString && [urlString length] > 0 && strippedString && [strippedString length] > 0 && ![strippedString hasPrefix:@"#"]) {
-        RetainPtr url = element.document().completeURL(urlString).createNSURL();
+        RetainPtr url = element.document().completeURL(urlString.get()).createNSURL();
         if (!url)
-            url = element.document().completeURL(strippedString).createNSURL();
+            url = element.document().completeURL(strippedString.get()).createNSURL();
         if (!url)
-            url = [NSURL _web_URLWithString:strippedString relativeToURL:nil];
-        [_attrStr addAttribute:NSLinkAttributeName value:url ? (id)url.get() : (id)urlString range:range];
+            url = [NSURL _web_URLWithString:strippedString.get() relativeToURL:nil];
+        [_attrStr addAttribute:NSLinkAttributeName value:url ? (id)url.get() : (id)urlString.get() range:range];
     }
 }
 
@@ -1660,10 +1660,10 @@ void HTMLConverter::_addTableForElement(Element *tableElement)
         ASSERT(tableElement);
         Element& coreTableElement = *tableElement;
         
-        NSString *cellSpacing = coreTableElement.getAttribute(cellspacingAttr);
+        RetainPtr cellSpacing = coreTableElement.getAttribute(cellspacingAttr).createNSString();
         if (cellSpacing && [cellSpacing length] > 0 && ![cellSpacing hasSuffix:@"%"])
             cellSpacingVal = [cellSpacing floatValue];
-        NSString *cellPadding = coreTableElement.getAttribute(cellpaddingAttr);
+        RetainPtr cellPadding = coreTableElement.getAttribute(cellpaddingAttr).createNSString();
         if (cellPadding && [cellPadding length] > 0 && ![cellPadding hasSuffix:@"%"])
             cellPaddingVal = [cellPadding floatValue];
         
@@ -1797,9 +1797,9 @@ BOOL HTMLConverter::_processElement(Element& element, NSInteger depth)
         if (imageElement->isMultiRepresentationHEIC())
             retval = !_addMultiRepresentationHEICAttachmentForImageElement(*imageElement);
 #endif
-        NSString *urlString = element.imageSourceURL();
+        RetainPtr urlString = element.imageSourceURL().createNSString();
         if (retval && urlString && [urlString length] > 0) {
-            RetainPtr url = element.document().completeURL(urlString).createNSURL();
+            RetainPtr url = element.document().completeURL(urlString.get()).createNSURL();
             if (!url)
                 url = [NSURL _web_URLWithString:[urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:nil];
 #if PLATFORM(IOS_FAMILY)
@@ -1812,21 +1812,21 @@ BOOL HTMLConverter::_processElement(Element& element, NSInteger depth)
         }
         retval = NO;
     } else if (element.hasTagName(objectTag)) {
-        NSString *baseString = element.getAttribute(codebaseAttr);
-        NSString *urlString = element.getAttribute(dataAttr);
-        NSString *declareString = element.getAttribute(declareAttr);
-        if (urlString && [urlString length] > 0 && ![@"true" isEqualToString:declareString]) {
+        RetainPtr baseString = element.getAttribute(codebaseAttr).createNSString();
+        RetainPtr urlString = element.getAttribute(dataAttr).createNSString();
+        RetainPtr declareString = element.getAttribute(declareAttr).createNSString();
+        if (urlString && [urlString length] > 0 && ![@"true" isEqualToString:declareString.get()]) {
             RetainPtr<NSURL> baseURL;
             RetainPtr<NSURL> url;
             if (baseString && [baseString length] > 0) {
-                baseURL = element.document().completeURL(baseString).createNSURL();
+                baseURL = element.document().completeURL(baseString.get()).createNSURL();
                 if (!baseURL)
                     baseURL = [NSURL _web_URLWithString:[baseString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:nil];
             }
             if (baseURL)
                 url = [NSURL _web_URLWithString:[urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:baseURL.get()];
             if (!url)
-                url = element.document().completeURL(urlString).createNSURL();
+                url = element.document().completeURL(urlString.get()).createNSURL();
             if (!url)
                 url = [NSURL _web_URLWithString:[urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:nil];
             if (url)
@@ -1839,9 +1839,9 @@ BOOL HTMLConverter::_processElement(Element& element, NSInteger depth)
         }
     } else if (element.hasTagName(brTag)) {
         Element* blockElement = _blockLevelElementForNode(element.parentInComposedTree());
-        NSString *breakClass = element.getAttribute(classAttr);
+        RetainPtr breakClass = element.getAttribute(classAttr).createNSString();
         RetainPtr blockTag = blockElement ? blockElement->tagName().createNSString() : nil;
-        BOOL isExtraBreak = [AppleInterchangeNewline.createNSString() isEqualToString:breakClass];
+        BOOL isExtraBreak = [AppleInterchangeNewline.createNSString() isEqualToString:breakClass.get()];
         BOOL blockElementIsParagraph = ([@"P" isEqualToString:blockTag.get()] || [@"LI" isEqualToString:blockTag.get()] || ([blockTag hasPrefix:@"H"] && 2 == [blockTag length]));
         if (isExtraBreak)
             _flags.hasTrailingNewline = YES;
@@ -2048,18 +2048,18 @@ void HTMLConverter::_exitElement(Element& element, NSInteger depth, NSUInteger s
     } else if (element.hasTagName(qTag)) {
         _addQuoteForElement(element, NO, --_quoteLevel);
     } else if (element.hasTagName(spanTag)) {
-        NSString *className = element.getAttribute(classAttr);
+        RetainPtr className = element.getAttribute(classAttr).createNSString();
         NSMutableString *mutableString;
         NSUInteger i, count = 0;
         unichar c;
-        if ([@"Apple-converted-space" isEqualToString:className]) {
+        if ([@"Apple-converted-space" isEqualToString:className.get()]) {
             mutableString = [_attrStr mutableString];
             for (i = range.location; i < NSMaxRange(range); i++) {
                 c = [mutableString characterAtIndex:i];
                 if (0xa0 == c)
                     [mutableString replaceCharactersInRange:NSMakeRange(i, 1) withString:@" "];
             }
-        } else if ([@"Apple-converted-tab" isEqualToString:className]) {
+        } else if ([@"Apple-converted-tab" isEqualToString:className.get()]) {
             mutableString = [_attrStr mutableString];
             for (i = range.location; i < NSMaxRange(range); i++) {
                 NSRange rangeToReplace = NSMakeRange(NSNotFound, 0);
@@ -2347,7 +2347,7 @@ static String preferredFilenameForElement(const HTMLImageElement& element)
     auto suggestedName = [&] -> String {
         RetainPtr url = element.document().completeURL(urlString).createNSURL();
         if (!url)
-            url = [NSURL _web_URLWithString:[urlString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:nil];
+            url = [NSURL _web_URLWithString:[urlString.createNSString() stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] relativeToURL:nil];
 
         RefPtr frame = element.document().frame();
         if (frame->loader().frameHasLoaded()) {

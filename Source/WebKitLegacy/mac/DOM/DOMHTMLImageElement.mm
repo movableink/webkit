@@ -45,7 +45,7 @@
 - (NSString *)name
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getNameAttribute();
+    return IMPL->getNameAttribute().createNSString().autorelease();
 }
 
 - (void)setName:(NSString *)newName
@@ -57,7 +57,7 @@
 - (NSString *)align
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::alignAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::alignAttr).createNSString().autorelease();
 }
 
 - (void)setAlign:(NSString *)newAlign
@@ -69,7 +69,7 @@
 - (NSString *)alt
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::altAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::altAttr).createNSString().autorelease();
 }
 
 - (void)setAlt:(NSString *)newAlt
@@ -165,7 +165,7 @@
 - (NSString *)srcset
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::srcsetAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::srcsetAttr).createNSString().autorelease();
 }
 
 - (void)setSrcset:(NSString *)newSrcset
@@ -177,7 +177,7 @@
 - (NSString *)sizes
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::sizesAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::sizesAttr).createNSString().autorelease();
 }
 
 - (void)setSizes:(NSString *)newSizes
@@ -195,7 +195,7 @@
 - (NSString *)useMap
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::usemapAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::usemapAttr).createNSString().autorelease();
 }
 
 - (void)setUseMap:(NSString *)newUseMap

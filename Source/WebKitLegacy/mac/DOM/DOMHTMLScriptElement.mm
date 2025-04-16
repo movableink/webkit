@@ -55,7 +55,7 @@
 - (NSString *)htmlFor
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::forAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::forAttr).createNSString().autorelease();
 }
 
 - (void)setHtmlFor:(NSString *)newHtmlFor
@@ -67,7 +67,7 @@
 - (NSString *)event
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::eventAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::eventAttr).createNSString().autorelease();
 }
 
 - (void)setEvent:(NSString *)newEvent
@@ -79,7 +79,7 @@
 - (NSString *)charset
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::charsetAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::charsetAttr).createNSString().autorelease();
 }
 
 - (void)setCharset:(NSString *)newCharset
@@ -127,7 +127,7 @@
 - (NSString *)type
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::typeAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::typeAttr).createNSString().autorelease();
 }
 
 - (void)setType:(NSString *)newType
@@ -151,7 +151,7 @@
 - (NSString *)nonce
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::nonceAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::nonceAttr).createNSString().autorelease();
 }
 
 - (void)setNonce:(NSString *)newNonce

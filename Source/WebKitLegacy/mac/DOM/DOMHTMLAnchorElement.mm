@@ -45,7 +45,7 @@
 - (NSString *)charset
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::charsetAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::charsetAttr).createNSString().autorelease();
 }
 
 - (void)setCharset:(NSString *)newCharset
@@ -57,7 +57,7 @@
 - (NSString *)coords
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::coordsAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::coordsAttr).createNSString().autorelease();
 }
 
 - (void)setCoords:(NSString *)newCoords
@@ -69,7 +69,7 @@
 - (NSString *)download
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::downloadAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::downloadAttr).createNSString().autorelease();
 }
 
 - (void)setDownload:(NSString *)newDownload
@@ -81,7 +81,7 @@
 - (NSString *)hreflang
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::hreflangAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::hreflangAttr).createNSString().autorelease();
 }
 
 - (void)setHreflang:(NSString *)newHreflang
@@ -93,7 +93,7 @@
 - (NSString *)name
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getNameAttribute();
+    return IMPL->getNameAttribute().createNSString().autorelease();
 }
 
 - (void)setName:(NSString *)newName
@@ -105,7 +105,7 @@
 - (NSString *)ping
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::pingAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::pingAttr).createNSString().autorelease();
 }
 
 - (void)setPing:(NSString *)newPing
@@ -117,7 +117,7 @@
 - (NSString *)rel
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::relAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::relAttr).createNSString().autorelease();
 }
 
 - (void)setRel:(NSString *)newRel
@@ -129,7 +129,7 @@
 - (NSString *)rev
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::revAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::revAttr).createNSString().autorelease();
 }
 
 - (void)setRev:(NSString *)newRev
@@ -141,7 +141,7 @@
 - (NSString *)shape
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::shapeAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::shapeAttr).createNSString().autorelease();
 }
 
 - (void)setShape:(NSString *)newShape
@@ -153,7 +153,7 @@
 - (NSString *)target
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::targetAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::targetAttr).createNSString().autorelease();
 }
 
 - (void)setTarget:(NSString *)newTarget
@@ -165,7 +165,7 @@
 - (NSString *)type
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::typeAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::typeAttr).createNSString().autorelease();
 }
 
 - (void)setType:(NSString *)newType
@@ -177,7 +177,7 @@
 - (NSString *)accessKey
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::accesskeyAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::accesskeyAttr).createNSString().autorelease();
 }
 
 - (void)setAccessKey:(NSString *)newAccessKey

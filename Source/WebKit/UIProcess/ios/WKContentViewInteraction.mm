@@ -15724,7 +15724,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         }
     );
 
-    [range setFrameIdentifier:webRange.frameIdentifier];
+    [range setFrameIdentifier:webRange.frameIdentifier.createNSString().get()];
     [range setOrder:webRange.order];
     return range.autorelease();
 }

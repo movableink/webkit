@@ -69,7 +69,7 @@ DOMHTMLTextAreaElement *kit(WebCore::HTMLTextAreaElement* value)
 - (NSString *)dirName
 {
     WebCore::JSMainThreadNullState state;
-    return unwrap(*self).getAttribute(WebCore::HTMLNames::dirnameAttr);
+    return unwrap(*self).getAttribute(WebCore::HTMLNames::dirnameAttr).createNSString().autorelease();
 }
 
 - (void)setDirName:(NSString *)newDirName
@@ -111,7 +111,7 @@ DOMHTMLTextAreaElement *kit(WebCore::HTMLTextAreaElement* value)
 - (NSString *)name
 {
     WebCore::JSMainThreadNullState state;
-    return unwrap(*self).getNameAttribute();
+    return unwrap(*self).getNameAttribute().createNSString().autorelease();
 }
 
 - (void)setName:(NSString *)newName
@@ -123,7 +123,7 @@ DOMHTMLTextAreaElement *kit(WebCore::HTMLTextAreaElement* value)
 - (NSString *)placeholder
 {
     WebCore::JSMainThreadNullState state;
-    return unwrap(*self).getAttribute(WebCore::HTMLNames::placeholderAttr);
+    return unwrap(*self).getAttribute(WebCore::HTMLNames::placeholderAttr).createNSString().autorelease();
 }
 
 - (void)setPlaceholder:(NSString *)newPlaceholder
@@ -183,7 +183,7 @@ DOMHTMLTextAreaElement *kit(WebCore::HTMLTextAreaElement* value)
 - (NSString *)wrap
 {
     WebCore::JSMainThreadNullState state;
-    return unwrap(*self).getAttribute(WebCore::HTMLNames::wrapAttr);
+    return unwrap(*self).getAttribute(WebCore::HTMLNames::wrapAttr).createNSString().autorelease();
 }
 
 - (void)setWrap:(NSString *)newWrap
@@ -195,7 +195,7 @@ DOMHTMLTextAreaElement *kit(WebCore::HTMLTextAreaElement* value)
 - (NSString *)type
 {
     WebCore::JSMainThreadNullState state;
-    return unwrap(*self).type();
+    return unwrap(*self).type().createNSString().autorelease();
 }
 
 - (NSString *)defaultValue
@@ -267,7 +267,7 @@ DOMHTMLTextAreaElement *kit(WebCore::HTMLTextAreaElement* value)
 - (NSString *)selectionDirection
 {
     WebCore::JSMainThreadNullState state;
-    return unwrap(*self).selectionDirection();
+    return unwrap(*self).selectionDirection().createNSString().autorelease();
 }
 
 - (void)setSelectionDirection:(NSString *)newSelectionDirection
@@ -279,7 +279,7 @@ DOMHTMLTextAreaElement *kit(WebCore::HTMLTextAreaElement* value)
 - (NSString *)accessKey
 {
     WebCore::JSMainThreadNullState state;
-    return unwrap(*self).getAttribute(WebCore::HTMLNames::accesskeyAttr);
+    return unwrap(*self).getAttribute(WebCore::HTMLNames::accesskeyAttr).createNSString().autorelease();
 }
 
 - (void)setAccessKey:(NSString *)newAccessKey

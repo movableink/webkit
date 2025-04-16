@@ -54,7 +54,7 @@
 - (NSString *)target
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::targetAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::targetAttr).createNSString().autorelease();
 }
 
 - (void)setTarget:(NSString *)newTarget

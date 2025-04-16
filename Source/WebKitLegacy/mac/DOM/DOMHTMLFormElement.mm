@@ -45,7 +45,7 @@
 - (NSString *)acceptCharset
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::accept_charsetAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::accept_charsetAttr).createNSString().autorelease();
 }
 
 - (void)setAcceptCharset:(NSString *)newAcceptCharset
@@ -69,7 +69,7 @@
 - (NSString *)autocomplete
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->autocomplete();
+    return IMPL->autocomplete().createNSString().autorelease();
 }
 
 - (void)setAutocomplete:(NSString *)newAutocomplete
@@ -117,7 +117,7 @@
 - (NSString *)name
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getNameAttribute();
+    return IMPL->getNameAttribute().createNSString().autorelease();
 }
 
 - (void)setName:(NSString *)newName
@@ -141,7 +141,7 @@
 - (NSString *)target
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::targetAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::targetAttr).createNSString().autorelease();
 }
 
 - (void)setTarget:(NSString *)newTarget

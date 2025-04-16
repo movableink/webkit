@@ -46,7 +46,7 @@
 - (NSString *)alt
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::altAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::altAttr).createNSString().autorelease();
 }
 
 - (void)setAlt:(NSString *)newAlt
@@ -58,7 +58,7 @@
 - (NSString *)coords
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::coordsAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::coordsAttr).createNSString().autorelease();
 }
 
 - (void)setCoords:(NSString *)newCoords
@@ -82,7 +82,7 @@
 - (NSString *)ping
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::pingAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::pingAttr).createNSString().autorelease();
 }
 
 - (void)setPing:(NSString *)newPing
@@ -94,7 +94,7 @@
 - (NSString *)rel
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::relAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::relAttr).createNSString().autorelease();
 }
 
 - (void)setRel:(NSString *)newRel
@@ -106,7 +106,7 @@
 - (NSString *)shape
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::shapeAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::shapeAttr).createNSString().autorelease();
 }
 
 - (void)setShape:(NSString *)newShape
@@ -118,7 +118,7 @@
 - (NSString *)target
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::targetAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::targetAttr).createNSString().autorelease();
 }
 
 - (void)setTarget:(NSString *)newTarget
@@ -130,7 +130,7 @@
 - (NSString *)accessKey
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getAttribute(WebCore::HTMLNames::accesskeyAttr);
+    return IMPL->getAttribute(WebCore::HTMLNames::accesskeyAttr).createNSString().autorelease();
 }
 
 - (void)setAccessKey:(NSString *)newAccessKey

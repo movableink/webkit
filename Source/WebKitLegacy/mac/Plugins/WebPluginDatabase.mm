@@ -291,7 +291,7 @@ static RetainPtr<NSArray>& additionalWebPlugInPaths()
         while ((plugin = [pluginEnumerator nextObject])) {
             const auto& pluginInfo = [plugin pluginInfo];
             for (size_t i = 0; i < pluginInfo.mimes.size(); ++i)
-                [MIMETypes addObject:pluginInfo.mimes[i].type];
+                [MIMETypes addObject:pluginInfo.mimes[i].type.createNSString().get()];
         }
 
         // Register plug-in views and representations.
@@ -418,12 +418,12 @@ static RetainPtr<NSArray>& additionalWebPlugInPaths()
     // Unregister plug-in's MIME type registrations
     const auto& pluginInfo = [plugin pluginInfo];
     for (size_t i = 0; i < pluginInfo.mimes.size(); ++i) {
-        NSString *MIMEType = pluginInfo.mimes[i].type;
+        RetainPtr MIMEType = pluginInfo.mimes[i].type.createNSString();
 
-        if ([registeredMIMETypes containsObject:MIMEType]) {
+        if ([registeredMIMETypes containsObject:MIMEType.get()]) {
             if (self == sharedDatabase())
-                [WebView _unregisterPluginMIMEType:MIMEType];
-            [registeredMIMETypes removeObject:MIMEType];
+                [WebView _unregisterPluginMIMEType:MIMEType.get()];
+            [registeredMIMETypes removeObject:MIMEType.get()];
         }
     }
 
