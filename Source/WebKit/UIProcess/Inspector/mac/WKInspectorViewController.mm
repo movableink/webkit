@@ -57,6 +57,9 @@
 
 static NSString * const WKInspectorResourceScheme = @"inspector-resource";
 
+static NSString * const safeAreaInsetsKVOKey = @"safeAreaInsets";
+static void* const safeAreaInsetsKVOContext = (void*)&safeAreaInsetsKVOContext;
+
 @interface WKInspectorViewController () <WKUIDelegate, WKNavigationDelegate, WKInspectorWKWebViewDelegate>
 @end
 
@@ -110,9 +113,20 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
         [_webView _setAutomaticallyAdjustsContentInsets:NO];
         [_webView _setUseSystemAppearance:YES];
         [_webView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+
+        [_webView _setObscuredContentInsets:self.webView.safeAreaInsets immediate:NO];
+        [_webView addObserver:self forKeyPath:safeAreaInsetsKVOKey options:0 context:safeAreaInsetsKVOContext];
     }
 
     return _webView.get();
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey, id> *)change context:(void*)context
+{
+    if (context == safeAreaInsetsKVOContext)
+        [_webView _setObscuredContentInsets:self.webView.safeAreaInsets immediate:NO];
+    else
+        [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
 }
 
 - (void)setDelegate:(id <WKInspectorViewControllerDelegate>)delegate
@@ -273,6 +287,8 @@ static NSString * const WKInspectorResourceScheme = @"inspector-resource";
 {
     if (!!_delegate && [_delegate respondsToSelector:@selector(inspectorViewControllerInspectorDidCrash:)])
         [_delegate inspectorViewControllerInspectorDidCrash:self];
+
+    [webView removeObserver:self forKeyPath:safeAreaInsetsKVOKey];
 }
 
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler
