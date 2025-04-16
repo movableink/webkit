@@ -6624,6 +6624,19 @@
    },
    {
       "emails" : [
+         "pchimento@igalia.com",
+         "philip.chimento@gmail.com"
+      ],
+      "expertise" : "JavaScriptCore, Temporal",
+      "github" : "ptomato",
+      "name" : "Philip Chimento",
+      "nicks" : [
+         "pchimento",
+         "ptomato"
+      ]
+   },
+   {
+      "emails" : [
          "philipj@opera.com"
       ],
       "name" : "Philip J\u00e4genstedt",
