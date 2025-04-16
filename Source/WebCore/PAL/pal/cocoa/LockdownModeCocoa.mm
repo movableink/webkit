@@ -24,12 +24,13 @@
  */
 
 #import "config.h"
-#import "LockdownModeSoftLink.h"
+#import "LockdownModeCocoa.h"
 
 #if HAVE(LOCKDOWN_MODE_FRAMEWORK)
 
 #import <LockdownMode/LockdownMode.h>
 #import <sys/sysctl.h>
+#import <wtf/NeverDestroyed.h>
 #import <wtf/SoftLinking.h>
 
 OBJC_CLASS LockdownModeManager;
@@ -39,7 +40,7 @@ SOFT_LINK_CLASS_OPTIONAL(LockdownMode, LockdownModeManager)
 
 namespace PAL {
 
-BOOL isLockdownModeEnabled()
+bool isLockdownModeEnabled()
 {
     if (LockdownModeLibrary())
         return [(LockdownModeManager *)[getLockdownModeManagerClass() shared] enabled];
@@ -53,6 +54,22 @@ BOOL isLockdownModeEnabled()
     return false;
 }
 
+static std::optional<bool>& isLockdownModeEnabledForCurrentProcessCached()
+{
+    static NeverDestroyed<std::optional<bool>> cachedIsLockdownModeEnabledForCurrentProcess;
+    return cachedIsLockdownModeEnabledForCurrentProcess;
 }
+
+bool isLockdownModeEnabledForCurrentProcess()
+{
+    return isLockdownModeEnabledForCurrentProcessCached().value_or(isLockdownModeEnabled());
+}
+
+void setLockdownModeEnabledForCurrentProcess(bool isLockdownModeEnabled)
+{
+    isLockdownModeEnabledForCurrentProcessCached() = isLockdownModeEnabled;
+}
+
+} // namespace PAL
 
 #endif

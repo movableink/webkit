@@ -42,19 +42,11 @@
 #import <MobileCoreServices/MobileCoreServices.h>
 #endif
 
-#import <pal/cocoa/LockdownModeSoftLink.h>
+#if HAVE(LOCKDOWN_MODE_FRAMEWORK)
+#import <pal/cocoa/LockdownModeCocoa.h>
+#endif
 
 namespace WebCore {
-
-#if HAVE(LOCKDOWN_MODE_FRAMEWORK)
-static bool isLockdownModeEnabled()
-{
-    static std::optional<bool> isLockdownModeEnabled;
-    if (!isLockdownModeEnabled)
-        isLockdownModeEnabled = PAL::isLockdownModeEnabled();
-    return *isLockdownModeEnabled;
-}
-#endif
 
 template<std::size_t size>
 static MemoryCompactLookupOnlyRobinHoodHashSet<String> filterSupportedImageTypes(const std::array<ASCIILiteral, size>& imageTypes)
@@ -138,7 +130,7 @@ static const MemoryCompactLookupOnlyRobinHoodHashSet<String>& lockdownSupportedI
 const MemoryCompactLookupOnlyRobinHoodHashSet<String>& supportedImageTypes()
 {
 #if HAVE(LOCKDOWN_MODE_FRAMEWORK)
-    if (isLockdownModeEnabled())
+    if (PAL::isLockdownModeEnabledForCurrentProcess())
         return lockdownSupportedImageTypes();
 #endif
     return defaultSupportedImageTypes();
@@ -153,7 +145,7 @@ MemoryCompactRobinHoodHashSet<String>& additionalSupportedImageTypes()
 void setAdditionalSupportedImageTypes(const Vector<String>& imageTypes)
 {
 #if HAVE(LOCKDOWN_MODE_FRAMEWORK)
-    if (isLockdownModeEnabled())
+    if (PAL::isLockdownModeEnabledForCurrentProcess())
         return;
 #endif
     MIMETypeRegistry::additionalSupportedImageMIMETypes().clear();
@@ -230,7 +222,7 @@ static Vector<String> allowableLockdownSupportedImageTypes()
 static Vector<String> allowableSupportedImageTypes()
 {
 #if HAVE(LOCKDOWN_MODE_FRAMEWORK)
-    if (isLockdownModeEnabled())
+    if (PAL::isLockdownModeEnabledForCurrentProcess())
         return allowableLockdownSupportedImageTypes();
 #endif
     return allowableDefaultSupportedImageTypes();
