@@ -1118,13 +1118,13 @@ Quirks::StorageAccessResult Quirks::triggerOptionalStorageAccessQuirk(Element& e
 
         // If the click is synthetic, the user has already gone through the storage access flow and we should not request again.
         if (isStorageAccessQuirkDomainAndElement(document->url(), element) && isSyntheticClick == IsSyntheticClick::No) {
-            return requestStorageAccessAndHandleClick([element = WeakPtr { element }, platformEvent, eventType, detail, relatedTarget] (ShouldDispatchClick shouldDispatchClick) mutable {
+            return requestStorageAccessAndHandleClick([element = WeakPtr { element }, platformEvent, eventType, detail, relatedTarget = WeakPtr { relatedTarget }] (ShouldDispatchClick shouldDispatchClick) mutable {
                 RefPtr protectedElement { element.get() };
                 if (!protectedElement)
                     return;
 
                 if (shouldDispatchClick == ShouldDispatchClick::Yes)
-                    protectedElement->dispatchMouseEvent(platformEvent, eventType, detail, relatedTarget, IsSyntheticClick::Yes);
+                    protectedElement->dispatchMouseEvent(platformEvent, eventType, detail, relatedTarget.get(), IsSyntheticClick::Yes);
             });
         }
     }

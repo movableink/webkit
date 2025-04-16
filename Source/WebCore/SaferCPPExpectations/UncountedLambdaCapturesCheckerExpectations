@@ -58,13 +58,8 @@ html/track/TrackBase.cpp
 inspector/InspectorOverlay.cpp
 inspector/agents/page/PageDOMDebuggerAgent.cpp
 loader/NetscapePlugInStreamLoader.cpp
-page/EventSource.cpp
 page/ImageAnalysisQueue.cpp
-page/LocalDOMWindow.cpp
-page/Quirks.cpp
-page/ScreenOrientation.cpp
 page/ShareDataReader.cpp
-page/UserMessageHandlersNamespace.cpp
 page/cocoa/ResourceUsageOverlayCocoa.mm
 page/csp/ContentSecurityPolicy.cpp
 platform/RemoteCommandListener.cpp

@@ -603,7 +603,7 @@ void WebUserContentController::removeAllUserContent()
     }
 }
 
-void WebUserContentController::forEachUserScript(Function<void(WebCore::DOMWrapperWorld&, const WebCore::UserScript&)>&& functor) const
+void WebUserContentController::forEachUserScript(NOESCAPE const Function<void(WebCore::DOMWrapperWorld&, const WebCore::UserScript&)>& functor) const
 {
     for (const auto& worldAndUserScriptVector : m_userScripts) {
         auto& world = worldAndUserScriptVector.key->coreWorld();
@@ -612,7 +612,7 @@ void WebUserContentController::forEachUserScript(Function<void(WebCore::DOMWrapp
     }
 }
 
-void WebUserContentController::forEachUserStyleSheet(Function<void(const WebCore::UserStyleSheet&)>&& functor) const
+void WebUserContentController::forEachUserStyleSheet(NOESCAPE const Function<void(const WebCore::UserStyleSheet&)>& functor) const
 {
     for (auto& styleSheetVector : m_userStyleSheets.values()) {
         for (const auto& identifierUserStyleSheetPair : styleSheetVector)
@@ -621,7 +621,7 @@ void WebUserContentController::forEachUserStyleSheet(Function<void(const WebCore
 }
 
 #if ENABLE(USER_MESSAGE_HANDLERS)
-void WebUserContentController::forEachUserMessageHandler(Function<void(const WebCore::UserMessageHandlerDescriptor&)>&& functor) const
+void WebUserContentController::forEachUserMessageHandler(NOESCAPE const Function<void(const WebCore::UserMessageHandlerDescriptor&)>& functor) const
 {
     for (auto& userMessageHandlerVector : m_userMessageHandlers.values()) {
         for (auto& pair : userMessageHandlerVector)

@@ -746,7 +746,7 @@ void LocalFrame::injectUserScripts(UserScriptInjectionTime injectionTime)
         return;
 
     RefPtr page = this->page();
-    page->protectedUserContentProvider()->forEachUserScript([this, protectedThis = Ref { *this }, injectionTime] (DOMWrapperWorld& world, const UserScript& script) {
+    page->protectedUserContentProvider()->forEachUserScript([this, injectionTime](DOMWrapperWorld& world, const UserScript& script) {
         if (script.injectionTime() == injectionTime)
             injectUserScriptImmediately(world, script);
     });

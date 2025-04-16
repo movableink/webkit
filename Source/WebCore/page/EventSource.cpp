@@ -417,9 +417,9 @@ void EventSource::resume()
 
     m_isSuspendedForBackForwardCache = false;
     if (std::exchange(m_shouldReconnectOnResume, false)) {
-        scriptExecutionContext()->postTask([this, pendingActivity = makePendingActivity(*this)](ScriptExecutionContext&) {
-            if (!isContextStopped())
-                scheduleReconnect();
+        scriptExecutionContext()->postTask([pendingActivity = makePendingActivity(*this)](ScriptExecutionContext&) {
+            if (!pendingActivity->object().isContextStopped())
+                pendingActivity->object().scheduleReconnect();
         });
     }
 }

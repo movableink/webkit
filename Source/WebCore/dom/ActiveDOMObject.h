@@ -94,7 +94,7 @@ public:
         T& object() { return m_thisObject.get(); }
 
     private:
-        Ref<T> m_thisObject;
+        const Ref<T> m_thisObject;
     };
 
     template<class T> Ref<PendingActivity<T>> makePendingActivity(T& thisObject)
