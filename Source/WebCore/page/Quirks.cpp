@@ -1557,7 +1557,7 @@ String Quirks::scriptToEvaluateBeforeRunningScriptFromURL(const URL& scriptURL)
 // disneyplus: rdar://137613110
 bool Quirks::shouldHideCoarsePointerCharacteristics() const
 {
-#if ENABLE(DESKTOP_CONTENT_MODE_QUIRKS)
+#if PLATFORM(IOS_FAMILY) || ENABLE(DESKTOP_CONTENT_MODE_QUIRKS)
     return needsQuirks() && m_quirksData.shouldHideCoarsePointerCharacteristicsQuirk;
 #else
     return false;
@@ -2109,7 +2109,7 @@ static void handleWeatherQuirks(QuirksData& quirksData, const URL& quirksURL, co
 }
 #endif
 
-#if ENABLE(DESKTOP_CONTENT_MODE_QUIRKS)
+#if PLATFORM(IOS_FAMILY) || ENABLE(DESKTOP_CONTENT_MODE_QUIRKS)
 static void handleDisneyPlusQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
 {
     if (quirksDomainString != "disneyplus.com"_s)
@@ -2120,7 +2120,9 @@ static void handleDisneyPlusQuirks(QuirksData& quirksData, const URL& quirksURL,
     // disneyplus rdar://137613110
     quirksData.shouldHideCoarsePointerCharacteristicsQuirk = true;
 }
+#endif
 
+#if ENABLE(DESKTOP_CONTENT_MODE_QUIRKS)
 static void handleMaxQuirks(QuirksData& quirksData, const URL& quirksURL, const String& quirksDomainString, const URL& documentURL)
 {
     if (quirksDomainString != "max.com"_s)
@@ -2786,7 +2788,7 @@ void Quirks::determineRelevantQuirks()
         { "digitaltrends"_s, &handleDigitalTrendsQuirks },
         { "steampowered"_s, &handleSteamQuirks },
 #endif
-#if ENABLE(DESKTOP_CONTENT_MODE_QUIRKS)
+#if PLATFORM(IOS_FAMILY) || ENABLE(DESKTOP_CONTENT_MODE_QUIRKS)
         { "disneyplus"_s, &handleDisneyPlusQuirks },
 #endif
         { "espn"_s, &handleESPNQuirks },
