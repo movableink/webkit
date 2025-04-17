@@ -621,8 +621,10 @@ CSSStyleSheet::RuleMutationScope::RuleMutationScope(CSSRule* rule)
 
 CSSStyleSheet::RuleMutationScope::~RuleMutationScope()
 {
-    if (m_styleSheet)
+    if (m_styleSheet) {
         m_styleSheet->didMutateRules(m_mutationType, m_contentsClonedForMutation, m_insertedKeyframesRule.get(), m_modifiedKeyframesRuleName);
+        m_styleSheet->contents().clearHasNestingRulesCache();
+    }
 }
 
 }
