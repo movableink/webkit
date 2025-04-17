@@ -448,10 +448,10 @@ RefPtr<CDMInstanceSession> CDMInstanceClearKey::createSession()
 
 void CDMInstanceSessionClearKey::requestLicense(LicenseType, KeyGroupingStrategy, const AtomString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&& callback)
 {
-    static uint32_t s_sessionIdValue = 0;
-    ++s_sessionIdValue;
-
-    m_sessionID = String::number(s_sessionIdValue);
+    if (RefPtr parentInstance = protectedParentInstance())
+        m_sessionID = String::number(parentInstance->getNextSessionIdValue());
+    else
+        m_sessionID = emptyString();
 
     if (equalLettersIgnoringASCIICase(initDataType, "cenc"_s))
         initData = extractKeyidsFromCencInitData(initData.get());
