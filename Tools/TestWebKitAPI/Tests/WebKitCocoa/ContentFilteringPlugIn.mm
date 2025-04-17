@@ -116,7 +116,7 @@ using DecisionPoint = MockContentFilterSettings::DecisionPoint;
 - (void)checkIfPlatformFrameworksAreLoaded:(void (^)(BOOL parentalControlsLoaded))completionHandler
 {
     bool parentalControlsLoaded = false;
-#if HAVE(PARENTAL_CONTROLS)
+#if HAVE(PARENTAL_CONTROLS) && HAVE(WEBCONTENTANALYSIS_FRAMEWORK)
     parentalControlsLoaded = NSVersionOfRunTimeLibrary("WebContentAnalysis") != -1;
 #endif
 

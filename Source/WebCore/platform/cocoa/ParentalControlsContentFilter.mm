@@ -45,8 +45,10 @@
 #import <pal/cocoa/WebContentRestrictionsSoftLink.h>
 #endif
 
+#if HAVE(WEBCONTENTANALYSIS_FRAMEWORK)
 SOFT_LINK_PRIVATE_FRAMEWORK_OPTIONAL(WebContentAnalysis);
 SOFT_LINK_CLASS_OPTIONAL(WebContentAnalysis, WebFilterEvaluator);
+#endif
 
 namespace WebCore {
 
@@ -59,9 +61,13 @@ bool ParentalControlsContentFilter::enabled() const
         return ParentalControlsURLFilter::singleton().isEnabled();
 #endif
 
+#if HAVE(WEBCONTENTANALYSIS_FRAMEWORK)
     bool enabled = [getWebFilterEvaluatorClass() isManagedSession];
     LOG(ContentFiltering, "ParentalControlsContentFilter is %s.\n", enabled ? "enabled" : "not enabled");
     return enabled;
+#else
+    return false;
+#endif
 }
 
 UniqueRef<ParentalControlsContentFilter> ParentalControlsContentFilter::create(const PlatformContentFilter::FilterParameters& params)
@@ -105,6 +111,7 @@ void ParentalControlsContentFilter::responseReceived(const ResourceResponse& res
     }
 #endif
 
+#if HAVE(WEBCONTENTANALYSIS_FRAMEWORK)
     ASSERT(!m_webFilterEvaluator);
 
     m_webFilterEvaluator = adoptNS([allocWebFilterEvaluatorInstance() initWithResponse:response.nsURLResponse()]);
@@ -112,6 +119,8 @@ void ParentalControlsContentFilter::responseReceived(const ResourceResponse& res
     if (m_hostProcessAuditToken)
         m_webFilterEvaluator.get().browserAuditToken = *m_hostProcessAuditToken;
 #endif
+#endif // HAVE(WEBCONTENTANALYSIS_FRAMEWORK)
+
     updateFilterState();
 }
 
@@ -122,10 +131,14 @@ void ParentalControlsContentFilter::addData(const SharedBuffer& data)
         return;
 #endif
 
+#if HAVE(WEBCONTENTANALYSIS_FRAMEWORK)
     ASSERT(![m_replacementData length]);
     m_replacementData = [m_webFilterEvaluator addData:data.createNSData().get()];
     updateFilterState();
     ASSERT(needsMoreData() || [m_replacementData length]);
+#else
+    UNUSED_PARAM(data);
+#endif
 }
 
 void ParentalControlsContentFilter::finishedAddingData()
@@ -135,9 +148,11 @@ void ParentalControlsContentFilter::finishedAddingData()
         return;
 #endif
 
+#if HAVE(WEBCONTENTANALYSIS_FRAMEWORK)
     ASSERT(![m_replacementData length]);
     m_replacementData = [m_webFilterEvaluator dataComplete];
     updateFilterState();
+#endif
 }
 
 Ref<FragmentedSharedBuffer> ParentalControlsContentFilter::replacementData() const
@@ -164,6 +179,7 @@ ContentFilterUnblockHandler ParentalControlsContentFilter::unblockHandler() cons
 
 void ParentalControlsContentFilter::updateFilterState()
 {
+#if HAVE(WEBCONTENTANALYSIS_FRAMEWORK)
     switch ([m_webFilterEvaluator filterState]) {
     case kWFEStateAllowed:
     case kWFEStateEvaluating:
@@ -176,6 +192,7 @@ void ParentalControlsContentFilter::updateFilterState()
         m_state = State::Filtering;
         break;
     }
+#endif // HAVE(WEBCONTENTANALYSIS_FRAMEWORK)
 
 #if !LOG_DISABLED
     if (!needsMoreData())

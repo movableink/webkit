@@ -118,13 +118,6 @@ SOFT_LINK_CLASS_OPTIONAL(Synapse, SYNotesActivationObserver)
 #import <WebCore/RenderThemeMac.h>
 #endif
 
-#if PLATFORM(IOS) || PLATFORM(VISION)
-#import <pal/spi/cocoa/WebFilterEvaluatorSPI.h>
-
-SOFT_LINK_PRIVATE_FRAMEWORK(WebContentAnalysis);
-SOFT_LINK_CLASS(WebContentAnalysis, WebFilterEvaluator);
-#endif
-
 #if HAVE(SCREEN_CAPTURE_KIT)
 #import <WebCore/ScreenCaptureKitSharingSessionManager.h>
 #endif

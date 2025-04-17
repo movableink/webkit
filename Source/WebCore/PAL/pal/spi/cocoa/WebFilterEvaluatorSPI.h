@@ -29,7 +29,9 @@ DECLARE_SYSTEM_HEADER
 
 #if USE(APPLE_INTERNAL_SDK)
 
+#if HAVE(WEBCONTENTANALYSIS_FRAMEWORK)
 #import <WebContentAnalysis/WebFilterEvaluator.h>
+#endif
 
 #else
 
