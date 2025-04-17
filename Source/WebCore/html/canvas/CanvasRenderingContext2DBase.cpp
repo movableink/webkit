@@ -236,6 +236,14 @@ static TextBaseline fromCanvasTextBaseline(CanvasTextBaseline canvasTextBaseline
     return TopTextBaseline;
 }
 
+static Color parseColorWithOverrideAlpha(const String& colorString, float alpha, CanvasBase& canvasBase)
+{
+    auto color = parseColor(colorString, canvasBase);
+    if (!color.isValid())
+        return color;
+    return color.colorWithAlpha(alpha);
+}
+
 CanvasRenderingContext2DBase::CanvasRenderingContext2DBase(CanvasBase& canvas, CanvasRenderingContext::Type type, CanvasRenderingContext2DSettings&& settings, bool usesCSSCompatibilityParseMode)
     : CanvasRenderingContext(canvas, type)
     , m_stateStack(1)
@@ -564,53 +572,32 @@ void CanvasRenderingContext2DBase::endLayer()
     didDrawEntireCanvas();
 }
 
-void CanvasRenderingContext2DBase::setStrokeStyle(CanvasStyle style)
+void CanvasRenderingContext2DBase::setStrokeColorImpl(Color&& color, String&& unparsedColor)
 {
-    if (state().strokeStyle.isEquivalentColor(style))
+    ASSERT(color.isValid());
+    if (state().strokeStyle.color() == color)
         return;
-
-    checkOrigin(style.canvasPattern().get());
 
     realizeSaves();
-    State& state = modifiableState();
-    state.strokeStyle = WTFMove(style);
-    GraphicsContext* c = effectiveDrawingContext();
-    if (!c)
-        return;
-    state.strokeStyle.applyStrokeColor(*c);
-    state.unparsedStrokeColor = String();
+    if (auto* c = effectiveDrawingContext())
+        c->setStrokeColor(color);
+    auto& state = modifiableState();
+    state.strokeStyle = color;
+    state.unparsedStrokeColor = WTFMove(unparsedColor);
 }
 
-void CanvasRenderingContext2DBase::setStrokeStyle(std::optional<CanvasStyle> style)
+void CanvasRenderingContext2DBase::setFillColorImpl(Color&& color, String&& unparsedColor)
 {
-    if (!style)
+    ASSERT(color.isValid());
+    if (state().fillStyle.color() == color)
         return;
-    return setStrokeStyle(WTFMove(*style));
-}
-
-void CanvasRenderingContext2DBase::setFillStyle(CanvasStyle style)
-{
-    if (state().fillStyle.isEquivalentColor(style))
-        return;
-
-    checkOrigin(style.canvasPattern().get());
 
     realizeSaves();
-    State& state = modifiableState();
-    state.fillStyle = WTFMove(style);
-    GraphicsContext* c = effectiveDrawingContext();
-    if (!c)
-        return;
-
-    state.fillStyle.applyFillColor(*c);
-    state.unparsedFillColor = String();
-}
-
-void CanvasRenderingContext2DBase::setFillStyle(std::optional<CanvasStyle> style)
-{
-    if (!style)
-        return;
-    return setFillStyle(WTFMove(*style));
+    if (auto* c = effectiveDrawingContext())
+        c->setFillColor(color);
+    auto& state = modifiableState();
+    state.fillStyle = color;
+    state.unparsedFillColor = WTFMove(unparsedColor);
 }
 
 void CanvasRenderingContext2DBase::setLineWidth(double width)
@@ -1007,22 +994,24 @@ void CanvasRenderingContext2DBase::resetTransform()
     setHasInvertibleTransform(true);
 }
 
-void CanvasRenderingContext2DBase::setStrokeColor(const String& color, std::optional<float> alpha)
+void CanvasRenderingContext2DBase::setStrokeColor(String&& colorString, std::optional<float> alpha)
 {
     if (alpha) {
         if (std::isnan(*alpha))
             return;
 
-        setStrokeStyle(CanvasStyle::createFromStringWithOverrideAlpha(color, alpha.value(), canvasBase()));
+        auto color = parseColorWithOverrideAlpha(colorString, alpha.value(), canvasBase());
+        if (!color.isValid())
+            return;
+        setStrokeColorImpl(WTFMove(color));
         return;
     }
-
-    if (color == state().unparsedStrokeColor)
+    if (colorString == state().unparsedStrokeColor)
         return;
-
-    realizeSaves();
-    setStrokeStyle(CanvasStyle::createFromString(color, canvasBase()));
-    modifiableState().unparsedStrokeColor = color;
+    auto color = parseColor(colorString, canvasBase());
+    if (!color.isValid())
+        return;
+    setStrokeColorImpl(WTFMove(color), WTFMove(colorString));
 }
 
 void CanvasRenderingContext2DBase::setStrokeColor(float grayLevel, float alpha)
@@ -1030,10 +1019,7 @@ void CanvasRenderingContext2DBase::setStrokeColor(float grayLevel, float alpha)
     if (std::isnan(grayLevel) || std::isnan(alpha))
         return;
 
-    auto color = makeFromComponentsClamping<SRGBA<float>>(grayLevel, grayLevel, grayLevel, alpha);
-    if (state().strokeStyle.isEquivalent(color))
-        return;
-    setStrokeStyle(CanvasStyle(color));
+    setStrokeColorImpl(convertColor<SRGBA<uint8_t>>(makeFromComponentsClamping<SRGBA<float>>(grayLevel, grayLevel, grayLevel, alpha)));
 }
 
 void CanvasRenderingContext2DBase::setStrokeColor(float r, float g, float b, float a)
@@ -1041,28 +1027,26 @@ void CanvasRenderingContext2DBase::setStrokeColor(float r, float g, float b, flo
     if (std::isnan(r) || std::isnan(g) || std::isnan(b)  || std::isnan(a))
         return;
 
-    auto color = makeFromComponentsClamping<SRGBA<float>>(r, g, b, a);
-    if (state().strokeStyle.isEquivalent(color))
-        return;
-    setStrokeStyle(CanvasStyle(color));
+    setStrokeColorImpl(convertColor<SRGBA<uint8_t>>(makeFromComponentsClamping<SRGBA<float>>(r, g, b, a)));
 }
 
-void CanvasRenderingContext2DBase::setFillColor(const String& color, std::optional<float> alpha)
+void CanvasRenderingContext2DBase::setFillColor(String&& colorString, std::optional<float> alpha)
 {
     if (alpha) {
         if (std::isnan(*alpha))
             return;
-
-        setFillStyle(CanvasStyle::createFromStringWithOverrideAlpha(color, alpha.value(), canvasBase()));
+        auto color = parseColorWithOverrideAlpha(colorString, alpha.value(), canvasBase());
+        if (!color.isValid())
+            return;
+        setFillColorImpl(WTFMove(color));
         return;
     }
-
-    if (color == state().unparsedFillColor)
+    if (colorString == state().unparsedFillColor)
         return;
-
-    realizeSaves();
-    setFillStyle(CanvasStyle::createFromString(color, canvasBase()));
-    modifiableState().unparsedFillColor = color;
+    auto color = parseColor(colorString, canvasBase());
+    if (!color.isValid())
+        return;
+    setFillColorImpl(WTFMove(color), WTFMove(colorString));
 }
 
 void CanvasRenderingContext2DBase::setFillColor(float grayLevel, float alpha)
@@ -1070,10 +1054,7 @@ void CanvasRenderingContext2DBase::setFillColor(float grayLevel, float alpha)
     if (std::isnan(grayLevel) || std::isnan(alpha))
         return;
 
-    auto color = makeFromComponentsClamping<SRGBA<float>>(grayLevel, grayLevel, grayLevel, alpha);
-    if (state().fillStyle.isEquivalent(color))
-        return;
-    setFillStyle(CanvasStyle(color));
+    setFillColorImpl(convertColor<SRGBA<uint8_t>>(makeFromComponentsClamping<SRGBA<float>>(grayLevel, grayLevel, grayLevel, alpha)));
 }
 
 void CanvasRenderingContext2DBase::setFillColor(float r, float g, float b, float a)
@@ -1081,10 +1062,7 @@ void CanvasRenderingContext2DBase::setFillColor(float r, float g, float b, float
     if (std::isnan(r) || std::isnan(g) || std::isnan(b)  || std::isnan(a))
         return;
 
-    auto color = makeFromComponentsClamping<SRGBA<float>>(r, g, b, a);
-    if (state().fillStyle.isEquivalent(color))
-        return;
-    setFillStyle(CanvasStyle(color));
+    setFillColorImpl(convertColor<SRGBA<uint8_t>>(makeFromComponentsClamping<SRGBA<float>>(r, g, b, a)));
 }
 
 void CanvasRenderingContext2DBase::beginPath()
@@ -2113,11 +2091,38 @@ CanvasRenderingContext2DBase::StyleVariant CanvasRenderingContext2DBase::strokeS
 
 void CanvasRenderingContext2DBase::setStrokeStyle(CanvasRenderingContext2DBase::StyleVariant&& style)
 {
-    WTF::switchOn(WTFMove(style),
-        [this](String&& string) { this->setStrokeColor(WTFMove(string)); },
-        [this](RefPtr<CanvasGradient>&& gradient) { this->setStrokeStyle(CanvasStyle(gradient.releaseNonNull())); },
-        [this](RefPtr<CanvasPattern>&& pattern) { this->setStrokeStyle(CanvasStyle(pattern.releaseNonNull())); }
-    );
+    if (std::holds_alternative<String>(style)) {
+        auto colorString = std::get<String>(WTFMove(style));
+        if (colorString == state().unparsedStrokeColor)
+            return;
+
+        auto color = parseColor(colorString, canvasBase());
+        if (!color.isValid())
+            return;
+
+        setStrokeColorImpl(WTFMove(color), WTFMove(colorString));
+        return;
+    }
+
+    if (std::holds_alternative<RefPtr<CanvasGradient>>(style)) {
+        Ref gradient = std::get<RefPtr<CanvasGradient>>(WTFMove(style)).releaseNonNull();
+        realizeSaves();
+        if (auto* c = effectiveDrawingContext())
+            c->setStrokeGradient(gradient->gradient());
+        auto& state = modifiableState();
+        state.strokeStyle = WTFMove(gradient);
+        state.unparsedStrokeColor = String();
+        return;
+    }
+
+    Ref pattern = std::get<RefPtr<CanvasPattern>>(WTFMove(style)).releaseNonNull();
+    checkOrigin(pattern.ptr());
+    realizeSaves();
+    if (auto* c = effectiveDrawingContext())
+        c->setStrokePattern(pattern->pattern());
+    auto& state = modifiableState();
+    state.strokeStyle = WTFMove(pattern);
+    state.unparsedStrokeColor = String();
 }
 
 CanvasRenderingContext2DBase::StyleVariant CanvasRenderingContext2DBase::fillStyle() const
@@ -2127,11 +2132,38 @@ CanvasRenderingContext2DBase::StyleVariant CanvasRenderingContext2DBase::fillSty
 
 void CanvasRenderingContext2DBase::setFillStyle(CanvasRenderingContext2DBase::StyleVariant&& style)
 {
-    WTF::switchOn(WTFMove(style),
-        [this](String&& string) { this->setFillColor(WTFMove(string)); },
-        [this](RefPtr<CanvasGradient>&& gradient) { this->setFillStyle(CanvasStyle(gradient.releaseNonNull())); },
-        [this](RefPtr<CanvasPattern>&& pattern) { this->setFillStyle(CanvasStyle(pattern.releaseNonNull())); }
-    );
+    if (std::holds_alternative<String>(style)) {
+        auto colorString = std::get<String>(WTFMove(style));
+        if (colorString == state().unparsedFillColor)
+            return;
+
+        auto color = parseColor(colorString, canvasBase());
+        if (!color.isValid())
+            return;
+
+        setFillColorImpl(WTFMove(color), WTFMove(colorString));
+        return;
+    }
+
+    if (std::holds_alternative<RefPtr<CanvasGradient>>(style)) {
+        Ref gradient = std::get<RefPtr<CanvasGradient>>(WTFMove(style)).releaseNonNull();
+        realizeSaves();
+        if (auto* c = effectiveDrawingContext())
+            c->setFillGradient(gradient->gradient());
+        auto& state = modifiableState();
+        state.fillStyle = WTFMove(gradient);
+        state.unparsedFillColor = String();
+        return;
+    }
+
+    Ref pattern = std::get<RefPtr<CanvasPattern>>(WTFMove(style)).releaseNonNull();
+    checkOrigin(pattern.ptr());
+    realizeSaves();
+    if (auto* c = effectiveDrawingContext())
+        c->setFillPattern(pattern->pattern());
+    auto& state = modifiableState();
+    state.fillStyle = WTFMove(pattern);
+    state.unparsedFillColor = String();
 }
 
 ExceptionOr<Ref<CanvasGradient>> CanvasRenderingContext2DBase::createLinearGradient(float x0, float y0, float x1, float y1)
@@ -2905,7 +2937,10 @@ void CanvasRenderingContext2DBase::drawTextUnchecked(const TextRun& textRun, dou
 
         GraphicsContextStateSaver stateSaver(*c);
         c->clipToImageBuffer(*maskImage, maskRect);
-        drawStyle.applyFillColor(*c);
+        if (RefPtr gradient = drawStyle.canvasGradient())
+            c->setFillGradient(gradient->gradient());
+        else
+            c->setFillPattern(drawStyle.canvasPattern()->pattern());
         c->fillRect(maskRect);
         didDraw(false, FloatRect { maskRect });
         return;

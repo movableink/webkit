@@ -42,22 +42,13 @@ class ScriptExecutionContext;
 class CanvasStyle {
 public:
     CanvasStyle(Color);
-    CanvasStyle(const SRGBA<float>&);
-    CanvasStyle(CanvasGradient&);
-    CanvasStyle(CanvasPattern&);
+    CanvasStyle(Ref<CanvasGradient>&&);
+    CanvasStyle(Ref<CanvasPattern>&&);
 
-    static std::optional<CanvasStyle> createFromString(const String& color, CanvasBase&);
-    static std::optional<CanvasStyle> createFromStringWithOverrideAlpha(const String& color, float alpha, CanvasBase&);
-
-    String color() const;
+    Color color() const;
+    String colorString() const;
     RefPtr<CanvasGradient> canvasGradient() const;
     RefPtr<CanvasPattern> canvasPattern() const;
-
-    void applyFillColor(GraphicsContext&) const;
-    void applyStrokeColor(GraphicsContext&) const;
-
-    bool isEquivalentColor(const CanvasStyle&) const;
-    bool isEquivalent(const SRGBA<float>&) const;
 
     template<typename... F>
     decltype(auto) visit(F&&... f) const
@@ -83,6 +74,21 @@ private:
 Color parseColor(const String& colorString, CanvasBase&);
 Color parseColor(const String& colorString, ScriptExecutionContext&);
 
+inline CanvasStyle::CanvasStyle(Color color)
+    : m_style(WTFMove(color))
+{
+}
+
+inline CanvasStyle::CanvasStyle(Ref<CanvasGradient>&& gradient)
+    : m_style(WTFMove(gradient))
+{
+}
+
+inline CanvasStyle::CanvasStyle(Ref<CanvasPattern>&& pattern)
+    : m_style(WTFMove(pattern))
+{
+}
+
 inline RefPtr<CanvasGradient> CanvasStyle::canvasGradient() const
 {
     if (!std::holds_alternative<Ref<CanvasGradient>>(m_style))
@@ -97,11 +103,18 @@ inline RefPtr<CanvasPattern> CanvasStyle::canvasPattern() const
     return std::get<Ref<CanvasPattern>>(m_style).ptr();
 }
 
-inline String CanvasStyle::color() const
+inline String CanvasStyle::colorString() const
 {
     if (!std::holds_alternative<Color>(m_style))
         return String();
     return serializationForHTML(std::get<Color>(m_style));
+}
+
+inline Color CanvasStyle::color() const
+{
+    if (auto* color = std::get_if<Color>(&m_style))
+        return *color;
+    return { };
 }
 
 } // namespace WebCore

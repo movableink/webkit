@@ -172,11 +172,11 @@ public:
     ExceptionOr<void> setTransform(DOMMatrix2DInit&&);
     void resetTransform();
 
-    void setStrokeColor(const String& color, std::optional<float> alpha = std::nullopt);
+    void setStrokeColor(String&& color, std::optional<float> alpha = std::nullopt);
     void setStrokeColor(float grayLevel, float alpha = 1.0);
     void setStrokeColor(float r, float g, float b, float a);
 
-    void setFillColor(const String& color, std::optional<float> alpha = std::nullopt);
+    void setFillColor(String&& color, std::optional<float> alpha = std::nullopt);
     void setFillColor(float grayLevel, float alpha = 1.0f);
     void setFillColor(float r, float g, float b, float a);
 
@@ -425,11 +425,8 @@ private:
 
     void unwindStateStack();
     void realizeSavesLoop();
-
-    void setStrokeStyle(CanvasStyle);
-    void setStrokeStyle(std::optional<CanvasStyle>);
-    void setFillStyle(CanvasStyle);
-    void setFillStyle(std::optional<CanvasStyle>);
+    void setStrokeColorImpl(Color&& color, String&& unparsedColor = { });
+    void setFillColorImpl(Color&& color, String&& unparsedColor = { });
 
     ExceptionOr<RefPtr<CanvasPattern>> createPattern(CachedImage&, RenderElement*, bool repeatX, bool repeatY);
     ExceptionOr<RefPtr<CanvasPattern>> createPattern(HTMLImageElement&, bool repeatX, bool repeatY);
