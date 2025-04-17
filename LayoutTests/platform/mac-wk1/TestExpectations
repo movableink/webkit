@@ -3100,4 +3100,3 @@ webkit.org/b/291207 fullscreen/full-screen-document-background-color.html [ Pass
 
 webkit.org/b/291577 fast/hidpi/filters-reference.html [ ImageOnlyFailure ]
 
-webkit.org/b/291603 accessibility/text-marker/text-marker-debug-description.html [ Pass Failure ]

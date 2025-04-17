@@ -1157,6 +1157,26 @@ static JSValueRef setSelectedTextMarkerRangeCallback(JSContextRef context, JSObj
     return JSValueMakeBoolean(context, false);
 }
 
+static JSValueRef textMarkerDebugDescriptionCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    AccessibilityTextMarker* marker = nullptr;
+    if (argumentCount == 1)
+        marker = toTextMarker(JSValueToObject(context, arguments[0], exception));
+
+    auto description = toAXElement(thisObject)->textMarkerDebugDescription(marker);
+    return JSValueMakeString(context, description.get());
+}
+
+static JSValueRef textMarkerRangeDebugDescriptionCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    AccessibilityTextMarkerRange* markerRange = nullptr;
+    if (argumentCount == 1)
+        markerRange = toTextMarkerRange(JSValueToObject(context, arguments[0], exception));
+
+    auto description = toAXElement(thisObject)->textMarkerRangeDebugDescription(markerRange);
+    return JSValueMakeString(context, description.get());
+}
+
 // Static Value Getters
 
 static JSValueRef getARIADropEffectsCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
@@ -1918,7 +1938,21 @@ AccessibilityTextMarkerRange AccessibilityUIElement::textMarkerRangeMatchesTextN
 }
 #endif
 
-#endif
+#endif // !SUPPORTS_AX_TEXTMARKERS
+
+#if PLATFORM(IOS_FAMILY) || !SUPPORTS_AX_TEXTMARKERS
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::textMarkerDebugDescription(AccessibilityTextMarker*)
+{
+    return nullptr;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::textMarkerRangeDebugDescription(AccessibilityTextMarkerRange*)
+{
+    return nullptr;
+}
+
+#endif // PLATFORM(IOS_FAMILY) || !SUPPORTS_AX_TEXTMARKERS
 
 // Destruction
 
@@ -2138,6 +2172,8 @@ JSClassRef AccessibilityUIElement::getJSClass()
         { "sentenceTextMarkerRangeForTextMarker", sentenceTextMarkerRangeForTextMarkerCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "previousSentenceStartTextMarkerForTextMarker", previousSentenceStartTextMarkerForTextMarkerCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "nextSentenceEndTextMarkerForTextMarker", nextSentenceEndTextMarkerForTextMarkerCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "textMarkerDebugDescription", textMarkerDebugDescriptionCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "textMarkerRangeDebugDescription", textMarkerRangeDebugDescriptionCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setSelectedChild", setSelectedChildCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setSelectedChildAtIndex", setSelectedChildAtIndexCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "removeSelectionAtIndex", removeSelectionAtIndexCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },

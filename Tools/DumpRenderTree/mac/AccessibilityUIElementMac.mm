@@ -2154,6 +2154,32 @@ AccessibilityTextMarker AccessibilityUIElement::nextSentenceEndTextMarkerForText
     return nullptr;
 }
 
+JSRetainPtr<JSStringRef> AccessibilityUIElement::textMarkerDebugDescription(AccessibilityTextMarker* marker)
+{
+    if (!marker)
+        return nullptr;
+
+    BEGIN_AX_OBJC_EXCEPTIONS
+    RetainPtr description = [m_element accessibilityAttributeValue:@"AXTextMarkerDebugDescription" forParameter:marker->platformTextMarker()];
+    return [description createJSStringRef];
+    END_AX_OBJC_EXCEPTIONS
+
+    return nullptr;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::textMarkerRangeDebugDescription(AccessibilityTextMarkerRange* range)
+{
+    if (!range)
+        return nullptr;
+
+    BEGIN_AX_OBJC_EXCEPTIONS
+    RetainPtr description = [m_element accessibilityAttributeValue:@"AXTextMarkerRangeDebugDescription" forParameter:range->platformTextMarkerRange()];
+    return [description createJSStringRef];
+    END_AX_OBJC_EXCEPTIONS
+
+    return nullptr;
+}
+
 #endif // SUPPORTS_AX_TEXTMARKERS && PLATFORM(MAC)
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::supportedActions()
