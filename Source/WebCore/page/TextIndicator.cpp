@@ -320,7 +320,7 @@ static bool initializeIndicator(TextIndicatorData& data, LocalFrame& frame, cons
         data.options.add(TextIndicatorOption::PaintAllContent);
 #if PLATFORM(IOS_FAMILY)
     else if (data.options.contains(TextIndicatorOption::UseSelectionRectForSizing)) {
-        textRects = RenderObject::collectSelectionGeometries(range).map([&](auto& geometry) -> FloatRect {
+        textRects = RenderObject::collectSelectionGeometries(range).geometries.map([&](auto& geometry) -> FloatRect {
             return geometry.rect();
         });
     }

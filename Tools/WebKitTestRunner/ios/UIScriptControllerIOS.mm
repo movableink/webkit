@@ -93,7 +93,13 @@ SOFT_LINK_CLASS(UIKit, UIPhysicalKeyboardEvent)
             return frontmostView.get();
     }
 
-    return [self.layer.presentationLayer containsPoint:point] ? self : nil;
+    if (![self.layer.presentationLayer containsPoint:point])
+        return nil;
+
+    if ([self.layer.name isEqualToString:@"Page TiledBacking containment"])
+        return nil;
+
+    return self;
 }
 
 @end

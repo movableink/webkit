@@ -131,6 +131,7 @@
 #import <WebCore/Pasteboard.h>
 #import <WebCore/Path.h>
 #import <WebCore/PathUtilities.h>
+#import <WebCore/PlatformLayerIdentifier.h>
 #import <WebCore/PlatformTextAlternatives.h>
 #import <WebCore/PromisedAttachmentInfo.h>
 #import <WebCore/ScrollTypes.h>
@@ -14111,15 +14112,33 @@ static inline WKTextAnimationType toWKTextAnimationType(WebCore::TextAnimationTy
     if (!_page->editorState().hasVisualData())
         return self;
 
+    return [self _viewForLayerID:_page->editorState().visualData->enclosingLayerID] ?: self;
+}
+
+- (UIView *)_viewForLayerID:(std::optional<WebCore::PlatformLayerIdentifier>)layerID
+{
     WeakPtr drawingArea = downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(_page->drawingArea());
     if (!drawingArea)
-        return self;
+        return nil;
 
-    WeakPtr layerTreeNode = drawingArea->remoteLayerTreeHost().nodeForID(_page->editorState().visualData->enclosingLayerID);
+    WeakPtr layerTreeNode = drawingArea->remoteLayerTreeHost().nodeForID(layerID);
     if (!layerTreeNode)
-        return self;
+        return nil;
 
-    return layerTreeNode->uiView() ?: self;
+    return layerTreeNode->uiView();
+}
+
+- (NSArray<UIView *> *)allViewsIntersectingSelectionRange
+{
+    if (!self.selectionHonorsOverflowScrolling)
+        return @[ ];
+
+    if (!_page->editorState().hasVisualData())
+        return @[ ];
+
+    return createNSArray(_page->editorState().visualData->intersectingLayerIDs, [&](auto& layerID) {
+        return [self _viewForLayerID:layerID];
+    }).autorelease();
 }
 
 - (BOOL)_shouldHideSelectionDuringOverflowScroll:(UIScrollView *)scrollView
