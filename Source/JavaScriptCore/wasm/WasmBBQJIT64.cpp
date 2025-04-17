@@ -1611,7 +1611,7 @@ void BBQJIT::emitAllocateGCArrayUninitialized(GPRReg resultGPR, uint32_t typeInd
         if (sizeInBytes && sizeInBytes.value() <= MarkedSpace::largeCutoff) {
             size_t sizeClassIndex = MarkedSpace::sizeClassToIndex(sizeInBytes.value());
             m_jit.loadPtr(allocatorBufferBase.withOffset(sizeClassIndex * sizeof(Allocator)), scratchGPR2);
-            JIT_COMMENT(m_jit, "Do array alloctation constant sized");
+            JIT_COMMENT(m_jit, "Do array allocation constant sized");
             m_jit.emitAllocateWithNonNullAllocator(resultGPR, JITAllocator::variableNonNull(), scratchGPR2, scratchGPR, slowPath, AssemblyHelpers::SlowAllocationResult::UndefinedBehavior);
             m_jit.storePtr(TrustedImmPtr(nullptr), MacroAssembler::Address(resultGPR, JSObject::butterflyOffset()));
             m_jit.loadPtr(structureAddress, scratchGPR);
@@ -1625,7 +1625,7 @@ void BBQJIT::emitAllocateGCArrayUninitialized(GPRReg resultGPR, uint32_t typeInd
     } else {
         sizeLocation = loadIfNecessary(size);
 
-        JIT_COMMENT(m_jit, "Do array alloctation variable sized");
+        JIT_COMMENT(m_jit, "Do array allocation variable sized");
 
         ASSERT(hasOneBitSet(elementSize));
         m_jit.lshift64(sizeLocation.asGPR(), TrustedImm32(getLSBSet(elementSize)), scratchGPR);
@@ -2130,7 +2130,7 @@ void BBQJIT::emitAllocateGCStructUninitialized(GPRReg resultGPR, uint32_t typeIn
     if (sizeInBytes <= MarkedSpace::largeCutoff) {
         size_t sizeClassIndex = MarkedSpace::sizeClassToIndex(sizeInBytes);
         m_jit.loadPtr(allocatorBufferBase.withOffset(sizeClassIndex * sizeof(Allocator)), scratchGPR2);
-        JIT_COMMENT(m_jit, "Do struct alloctation");
+        JIT_COMMENT(m_jit, "Do struct allocation");
         m_jit.emitAllocateWithNonNullAllocator(resultGPR, JITAllocator::variableNonNull(), scratchGPR2, scratchGPR, slowPath, AssemblyHelpers::SlowAllocationResult::UndefinedBehavior);
         m_jit.storePtr(TrustedImmPtr(nullptr), MacroAssembler::Address(resultGPR, JSObject::butterflyOffset()));
         m_jit.loadPtr(structureAddress, scratchGPR);
