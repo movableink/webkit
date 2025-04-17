@@ -1727,3 +1727,5 @@ webkit.org/b/290449 imported/w3c/web-platform-tests/svg/fonts/zero-font-size-adj
 webkit.org/b/290449 imported/w3c/web-platform-tests/svg/fonts/zero-font-size-adjust.html [ Failure ]
 
 webkit.org/b/291636 svg/text/timeout-long-text-content.html [ Skip ]
+
+webkit.org/b/286580 http/tests/media/clearkey/clear-key-session-id.html [ Skip ]
