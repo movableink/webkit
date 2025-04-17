@@ -306,20 +306,18 @@ function reduce(reducer /*, initialValue */)
     }
 
     var iterated = this;
-    var initialValue = @argument(1);
-
     var iteratedNextMethod = this.next;
 
     var accumulator;
     var counter = 0;
-    if (initialValue === @undefined) {
+    if (@argumentCount() <= 1) {
         var result = @iteratorGenericNext(iteratedNextMethod, iterated);
         if (result.done)
             @throwTypeError("Iterator.prototype.reduce requires an initial value or an iterator that is not done.");
         accumulator = result.value;
         counter = 1;
     } else
-        accumulator = initialValue;
+        accumulator = @argument(1);
 
     for (;;) {
         var result = @iteratorGenericNext(iteratedNextMethod, iterated);
