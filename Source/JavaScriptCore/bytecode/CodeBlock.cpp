@@ -120,6 +120,11 @@ CString CodeBlock::inferredName() const
     }
 }
 
+String CodeBlock::inferredNameWithHash() const
+{
+    return makeString(inferredName(), "#"_s, hashAsStringIfPossible());
+}
+
 bool CodeBlock::hasHash() const
 {
     return !!m_hash;
@@ -164,7 +169,7 @@ CString CodeBlock::hashAsStringIfPossible() const
 
 void CodeBlock::dumpAssumingJITType(PrintStream& out, JITType jitType) const
 {
-    out.print(inferredName(), "#", hashAsStringIfPossible());
+    out.print(inferredNameWithHash());
     out.print(":[", RawPointer(this), "->");
     if (!!m_alternative)
         out.print(RawPointer(alternative()), "->");
@@ -201,7 +206,7 @@ void CodeBlock::dump(PrintStream& out) const
 
 void CodeBlock::dumpSimpleName(PrintStream& out) const
 {
-    out.print(inferredName(), "#", hashAsStringIfPossible());
+    out.print(inferredNameWithHash());
 }
 
 void CodeBlock::dumpSource()

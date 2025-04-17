@@ -66,7 +66,7 @@ SpeculatedType WideningNumberPredictionFuzzerAgent::getPrediction(CodeBlock* cod
     }
 
     if (Options::dumpFuzzerAgentPredictions())
-        dataLogLn("WideningNumberPredictionFuzzerAgent::getPrediction name:(", codeBlock->inferredName(), "#", codeBlock->hashAsStringIfPossible(), "),bytecodeIndex:(", codeOrigin.bytecodeIndex(), "),original:(", SpeculationDump(original), "),generated:(", SpeculationDump(generated), ")");
+        dataLogLn("WideningNumberPredictionFuzzerAgent::getPrediction name:(", codeBlock->inferredNameWithHash(), "),bytecodeIndex:(", codeOrigin.bytecodeIndex(), "),original:(", SpeculationDump(original), "),generated:(", SpeculationDump(generated), ")");
 
     return generated;
 }

@@ -80,6 +80,8 @@ public:
         CheckedUint32 iterationCount { 0 };
 
         bool inverseCondition { false };
+
+        uint32_t loopBodySize { 0 };
     };
 
     LoopUnrollingPhase(Graph& graph)
@@ -200,13 +202,10 @@ public:
             }
         }
 
-        BasicBlock* header = data.header();
+        dataLogLnIf(Options::printEachUnrolledLoop(), "\tIn function ", m_graph.m_codeBlock->inferredNameWithHash(), ", ", data.shouldFullyUnroll() ?  "fully" : "partially", " unrolling the loop with data=", data);
         unrollLoop(data);
 
         dataLogIf(Options::verboseLoopUnrolling(), "\tGraph after Loop Unrolling for loop\n", m_graph);
-        dataLogLnIf(Options::printEachUnrolledLoop(), "\tIn function ", m_graph.m_codeBlock->inferredName(), ", successfully unrolled the loop header=", *header);
-
-        m_unrolledLoopHeaders.add(header);
         return true;
     }
 
@@ -454,6 +453,8 @@ public:
                 }
             }
         }
+
+        data.loopBodySize = materialNodeCount;
         return true;
     }
 
@@ -534,6 +535,8 @@ public:
 
         m_cloneHelper.finalize();
         ASSERT(m_graph.m_form == LoadStore);
+
+        m_unrolledLoopHeaders.add(header);
     }
 
     // Returns true if the node would emit code when lowered to B3.
@@ -608,7 +611,9 @@ void LoopUnrollingPhase::LoopData::dump(PrintStream& out) const
 
     out.print("iterationCount=", iterationCount, ", ");
 
-    out.print("inverseCondition=", inverseCondition);
+    out.print("inverseCondition=", inverseCondition, ", ");
+
+    out.print("loopBodySize=", loopBodySize);
 }
 
 // FIXME: Add more condition and update operations if they are profitable.

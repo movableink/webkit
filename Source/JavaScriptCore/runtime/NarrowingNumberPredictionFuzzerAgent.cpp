@@ -63,7 +63,7 @@ SpeculatedType NarrowingNumberPredictionFuzzerAgent::getPrediction(CodeBlock* co
     }
 
     if (Options::dumpFuzzerAgentPredictions())
-        dataLogLn("NarrowingNumberPredictionFuzzerAgent::getPrediction name:(", codeBlock->inferredName(), "#", codeBlock->hashAsStringIfPossible(), "),bytecodeIndex:(", codeOrigin.bytecodeIndex(), "),original:(", SpeculationDump(original), "),generated:(", SpeculationDump(generated), ")");
+        dataLogLn("NarrowingNumberPredictionFuzzerAgent::getPrediction name:(", codeBlock->inferredNameWithHash(), "),bytecodeIndex:(", codeOrigin.bytecodeIndex(), "),original:(", SpeculationDump(original), "),generated:(", SpeculationDump(generated), ")");
 
     return generated;
 }
