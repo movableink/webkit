@@ -622,9 +622,9 @@ void MediaSessionManagerCocoa::updateNowPlayingSuppression(const NowPlayingInfo*
         RELEASE_LOG(Media, "MediaSessionManagerCocoa::updateNowPlayingSuppression: clearing suppressPresentationOverBundleIdentifiers (hasNowPlayingInfo=%d, isVideo=%d)", !!nowPlayingInfo, nowPlayingInfo && nowPlayingInfo->isVideo);
         [nowPlayingActivityController() suppressPresentationOverBundleIdentifiers:nil];
     } else {
-        NSString *sourceApplicationIdentifier = nowPlayingInfo->metadata.sourceApplicationIdentifier;
-        RELEASE_LOG(Media, "MediaSessionManagerCocoa::updateNowPlayingSuppression: setting suppressPresentationOverBundleIdentifiers to %@", sourceApplicationIdentifier);
-        [nowPlayingActivityController() suppressPresentationOverBundleIdentifiers:[NSSet setWithArray:@[sourceApplicationIdentifier]]];
+        RetainPtr sourceApplicationIdentifier = nowPlayingInfo->metadata.sourceApplicationIdentifier.createNSString();
+        RELEASE_LOG(Media, "MediaSessionManagerCocoa::updateNowPlayingSuppression: setting suppressPresentationOverBundleIdentifiers to %@", sourceApplicationIdentifier.get());
+        [nowPlayingActivityController() suppressPresentationOverBundleIdentifiers:[NSSet setWithArray:@[sourceApplicationIdentifier.get()]]];
     }
 }
 
