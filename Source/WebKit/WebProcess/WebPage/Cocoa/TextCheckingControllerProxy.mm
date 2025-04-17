@@ -210,7 +210,7 @@ WebCore::AttributedString TextCheckingControllerProxy::annotatedSubstringBetween
             auto attributeRange = characterRange(*entireRange, subrange);
             ASSERT(attributeRange.location + attributeRange.length <= [string length]);
             if (attributeRange.location + attributeRange.length <= [string length])
-                [string addAttribute:data.key value:data.value range:WTFMove(attributeRange)];
+                [string addAttribute:data.key.createNSString().get() value:data.value.createNSString().get() range:WTFMove(attributeRange)];
         }
     }
 
