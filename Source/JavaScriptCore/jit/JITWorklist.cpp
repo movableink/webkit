@@ -108,9 +108,10 @@ CompilationResult JITWorklist::enqueue(Ref<JITPlan> plan)
     m_queues[tier].append(WTFMove(plan));
 
     if (m_numberOfActiveThreads < Options::numberOfWorklistThreads()
-        && m_ongoingCompilationsPerTier[tier] < m_maximumNumberOfConcurrentCompilationsPerTier[tier])
+        && m_ongoingCompilationsPerTier[tier] < m_maximumNumberOfConcurrentCompilationsPerTier[tier]) {
         m_planEnqueued->notifyOne(locker);
-
+        m_numberOfActiveThreads++;
+    }
     return CompilationDeferred;
 }
 

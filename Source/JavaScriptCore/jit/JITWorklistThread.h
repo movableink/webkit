@@ -61,7 +61,6 @@ private:
     JITWorklist& m_worklist;
     RefPtr<JITPlan> m_plan { nullptr };
     Safepoint* m_safepoint { nullptr };
-    bool m_isActive { false };
 };
 
 } // namespace JSC
