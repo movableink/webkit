@@ -3098,5 +3098,5 @@ imported/w3c/web-platform-tests/css/css-position/sticky/position-sticky-escape-s
 
 webkit.org/b/291207 fullscreen/full-screen-document-background-color.html [ Pass Failure ]
 
-webkit.org/b/291577 fast/hidpi/filters-reference.html [ ImageOnlyFailure ]
+webkit.org/b/132766 fast/hidpi/filters-reference.html [ ImageOnlyFailure ]
 
