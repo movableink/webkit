@@ -121,10 +121,12 @@ void ResourceMonitor::didReceiveResponse(const URL& url, OptionSet<ContentExtens
     });
 }
 
+#if !RELEASE_LOG_DISABLED
 static ASCIILiteral eligibilityToString(ResourceMonitorEligibility eligibility)
 {
     return eligibility == ResourceMonitorEligibility::Eligible ? "eligible"_s : "not eligible"_s;
 }
+#endif
 
 void ResourceMonitor::continueAfterDidReceiveEligibility(Eligibility eligibility, const URL& url, OptionSet<ContentExtensions::ResourceType> resourceType)
 {
@@ -140,6 +142,10 @@ void ResourceMonitor::continueAfterDidReceiveEligibility(Eligibility eligibility
         ContentExtensions::resourceTypeToString(resourceType).characters(),
         eligibilityToString(eligibility).characters()
     );
+#if RELEASE_LOG_DISABLED
+    UNUSED_PARAM(url);
+    UNUSED_PARAM(resourceType);
+#endif
     setEligibility(eligibility);
 }
 

@@ -79,6 +79,10 @@ static ContinuousApproximateTime doubleToContinuousApproximateTime(double timest
 void ResourceMonitorPersistence::reportSQLError(ASCIILiteral method, ASCIILiteral action)
 {
     RELEASE_LOG_ERROR(ResourceMonitoring, "ResourceMonitorPersistence::%" PUBLIC_LOG_STRING ": Failed to %" PUBLIC_LOG_STRING " (%d) - %" PUBLIC_LOG_STRING, method.characters(), action.characters(), m_sqliteDB->lastError(), m_sqliteDB->lastErrorMsg());
+#if RELEASE_LOG_DISABLED
+    UNUSED_PARAM(method);
+    UNUSED_PARAM(action);
+#endif
 }
 
 bool ResourceMonitorPersistence::openDatabase(String&& path)

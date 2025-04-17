@@ -120,13 +120,13 @@ public:
 #define DEBUG_LOG(channelName, ...)   (UNUSED_PARAM(channelName))
 #define WILL_LOG(_level_)    false
 
-#define ALWAYS_LOG_WITH_THIS(thisPtr, channelName, ...)   (UNUSED_PARAM(channelName))
-#define ERROR_LOG_WITH_THIS(thisPtr, channelName, ...)    (UNUSED_PARAM(channelName))
-#define INFO_LOG_WITH_THIS(thisPtr, channelName, ...)     (UNUSED_PARAM(channelName))
+#define ALWAYS_LOG_WITH_THIS(thisPtr, channelName, ...)   do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
+#define ERROR_LOG_WITH_THIS(thisPtr, channelName, ...)    do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
+#define INFO_LOG_WITH_THIS(thisPtr, channelName, ...)     do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
 
-#define ALWAYS_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)  (UNUSED_PARAM(channelName))
-#define ERROR_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)   (UNUSED_PARAM(channelName))
-#define INFO_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)    (UNUSED_PARAM(channelName))
+#define ALWAYS_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)  do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
+#define ERROR_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)   do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
+#define INFO_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)    do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
 
 #define ALWAYS_LOG_IF(condition, ...)     ((void)0)
 #define ERROR_LOG_IF(condition, ...)      ((void)0)
