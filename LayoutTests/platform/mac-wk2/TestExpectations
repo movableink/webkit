@@ -2133,3 +2133,5 @@ webkit.org/b/291236 [ Debug ] http/tests/pdf/page-in-window-update-with-lineariz
 webkit.org/b/291394 [ Debug ] imported/w3c/web-platform-tests/wasm/webapi/esm-integration/script-src-blocks-wasm.tentative.sub.html [ Pass Failure ]
 
 webkit.org/b/291640 [ Sequoia+ X86_64 ] imported/w3c/web-platform-tests/webrtc/RTCPeerConnection-GC.https.html [ Failure ]
+
+webkit.org/b/291710 [ Debug ] swipe/basic-cached-back-swipe.html [ Pass Timeout ]
