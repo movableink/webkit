@@ -172,7 +172,9 @@ bool defaultBuiltInNotificationsEnabled();
 bool defaultDeviceOrientationPermissionAPIEnabled();
 #endif
 
+#if ENABLE(REQUIRES_PAGE_VISIBILITY_FOR_NOW_PLAYING)
 bool defaultRequiresPageVisibilityForVideoToBeNowPlaying();
+#endif
 
 bool defaultCookieStoreAPIEnabled();
 

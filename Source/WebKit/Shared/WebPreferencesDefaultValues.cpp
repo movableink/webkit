@@ -348,6 +348,7 @@ bool defaultDeviceOrientationPermissionAPIEnabled()
 }
 #endif
 
+#if ENABLE(REQUIRES_PAGE_VISIBILITY_FOR_NOW_PLAYING)
 bool defaultRequiresPageVisibilityForVideoToBeNowPlaying()
 {
 #if USE(APPLE_INTERNAL_SDK)
@@ -357,6 +358,7 @@ bool defaultRequiresPageVisibilityForVideoToBeNowPlaying()
 
     return false;
 }
+#endif
 
 bool defaultCookieStoreAPIEnabled()
 {

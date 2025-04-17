@@ -1725,12 +1725,18 @@ static WebCore::EditableLinkBehavior toEditableLinkBehavior(_WKEditableLinkBehav
 
 - (void)_setRequiresPageVisibilityForVideoToBeNowPlayingForTesting:(BOOL)enabled
 {
+#if ENABLE(REQUIRES_PAGE_VISIBILITY_FOR_NOW_PLAYING)
     _preferences->setRequiresPageVisibilityForVideoToBeNowPlaying(enabled);
+#endif
 }
 
 - (BOOL)_requiresPageVisibilityForVideoToBeNowPlayingForTesting
 {
+#if ENABLE(REQUIRES_PAGE_VISIBILITY_FOR_NOW_PLAYING)
     return _preferences->requiresPageVisibilityForVideoToBeNowPlaying();
+#else
+    return NO;
+#endif
 }
 
 - (BOOL)_siteIsolationEnabled
