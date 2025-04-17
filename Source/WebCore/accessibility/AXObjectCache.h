@@ -355,7 +355,7 @@ public:
     void detachWrapper(AXCoreObject*, AccessibilityDetachmentType);
 #endif
 private:
-    using DOMObjectVariant = std::variant<std::nullptr_t, RenderObject*, Node*, Widget*>;
+    using DOMObjectVariant = Variant<std::nullptr_t, RenderObject*, Node*, Widget*>;
     void cacheAndInitializeWrapper(AccessibilityObject&, DOMObjectVariant = nullptr);
     void attachWrapper(AccessibilityObject&);
 
@@ -424,7 +424,7 @@ public:
         AtomString oldValue;
         AtomString newValue;
     };
-    using DeferredCollection = std::variant<UncheckedKeyHashMap<Element*, String>
+    using DeferredCollection = Variant<UncheckedKeyHashMap<Element*, String>
         , HashSet<AXID>
         , ListHashSet<Node*>
         , ListHashSet<Ref<AccessibilityObject>>

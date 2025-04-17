@@ -37,7 +37,7 @@ template<Range nR = All, Range pR = nR, typename V = double> struct NumberOrPerc
     using Number = CSS::Number<nR, V>;
     using Percentage = CSS::Percentage<pR, V>;
 
-    NumberOrPercentage(std::variant<Number, Percentage>&& value)
+    NumberOrPercentage(Variant<Number, Percentage>&& value)
     {
         WTF::switchOn(WTFMove(value), [this](auto&& alternative) { this->value = WTFMove(alternative); });
     }
@@ -95,14 +95,14 @@ private:
 
     bool isEmpty() const { return std::holds_alternative<PrimitiveDataEmptyToken>(value); }
 
-    std::variant<PrimitiveDataEmptyToken, Number, Percentage> value;
+    Variant<PrimitiveDataEmptyToken, Number, Percentage> value;
 };
 
 template<Range nR = All, Range pR = nR, typename V = double> struct NumberOrPercentageResolvedToNumber {
     using Number = CSS::Number<nR, V>;
     using Percentage = CSS::Percentage<pR, V>;
 
-    NumberOrPercentageResolvedToNumber(std::variant<Number, Percentage>&& value)
+    NumberOrPercentageResolvedToNumber(Variant<Number, Percentage>&& value)
     {
         WTF::switchOn(WTFMove(value), [this](auto&& alternative) { this->value = WTFMove(alternative); });
     }
@@ -160,7 +160,7 @@ private:
 
     bool isEmpty() const { return std::holds_alternative<PrimitiveDataEmptyToken>(value); }
 
-    std::variant<PrimitiveDataEmptyToken, Number, Percentage> value;
+    Variant<PrimitiveDataEmptyToken, Number, Percentage> value;
 };
 
 } // namespace CSS

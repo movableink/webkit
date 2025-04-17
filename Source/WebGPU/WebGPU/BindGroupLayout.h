@@ -55,7 +55,7 @@ public:
     struct Entry {
         uint32_t binding;
         WGPUShaderStageFlags visibility;
-        using BindingLayout = std::variant<WGPUBufferBindingLayout, WGPUSamplerBindingLayout, WGPUTextureBindingLayout, WGPUStorageTextureBindingLayout, WGPUExternalTextureBindingLayout>;
+        using BindingLayout = Variant<WGPUBufferBindingLayout, WGPUSamplerBindingLayout, WGPUTextureBindingLayout, WGPUStorageTextureBindingLayout, WGPUExternalTextureBindingLayout>;
         BindingLayout bindingLayout;
         ArgumentBufferIndices argumentBufferIndices;
         ArgumentBufferIndices bufferSizeArgumentBufferIndices;

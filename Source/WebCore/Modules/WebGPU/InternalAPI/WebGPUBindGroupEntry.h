@@ -34,7 +34,7 @@
 
 namespace WebCore::WebGPU {
 
-using BindingResource = std::variant<std::reference_wrapper<Sampler>, std::reference_wrapper<TextureView>, BufferBinding, std::reference_wrapper<ExternalTexture>>;
+using BindingResource = Variant<std::reference_wrapper<Sampler>, std::reference_wrapper<TextureView>, BufferBinding, std::reference_wrapper<ExternalTexture>>;
 
 struct BindGroupEntry {
     Index32 binding { 0 };

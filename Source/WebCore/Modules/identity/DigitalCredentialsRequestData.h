@@ -32,7 +32,7 @@
 
 namespace WebCore {
 
-using DigitalCredentialRequestTypes = std::variant<MobileDocumentRequest, OpenID4VPRequest>;
+using DigitalCredentialRequestTypes = Variant<MobileDocumentRequest, OpenID4VPRequest>;
 
 struct DigitalCredentialsRequestData {
     Vector<DigitalCredentialRequestTypes> requests;

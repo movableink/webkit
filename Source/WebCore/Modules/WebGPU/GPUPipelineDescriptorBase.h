@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-using GPULayoutMode = std::variant<
+using GPULayoutMode = Variant<
     RefPtr<GPUPipelineLayout>,
     GPUAutoLayoutMode
 >;

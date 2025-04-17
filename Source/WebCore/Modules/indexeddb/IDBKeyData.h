@@ -46,7 +46,7 @@ public:
     struct Min { Min isolatedCopy() const { return { }; } };
     struct Max { Max isolatedCopy() const { return { }; } };
     struct Invalid { Invalid isolatedCopy() const { return { }; } };
-    using ValueVariant = std::variant<std::nullptr_t, Invalid, Vector<IDBKeyData>, String, double, Date, ThreadSafeDataBuffer, Min, Max>;
+    using ValueVariant = Variant<std::nullptr_t, Invalid, Vector<IDBKeyData>, String, double, Date, ThreadSafeDataBuffer, Min, Max>;
 
     enum IsolatedCopyTag { IsolatedCopy };
 

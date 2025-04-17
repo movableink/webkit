@@ -673,7 +673,7 @@ static NSEventModifierFlags eventModifierFlagsForVirtualKey(VirtualKey key)
     }
 }
 
-void WebAutomationSession::platformSimulateKeyboardInteraction(WebPageProxy& page, KeyboardInteraction interaction, std::variant<VirtualKey, CharKey>&& key)
+void WebAutomationSession::platformSimulateKeyboardInteraction(WebPageProxy& page, KeyboardInteraction interaction, Variant<VirtualKey, CharKey>&& key)
 {
     // FIXME: this function and the Automation protocol enum should probably adopt key names
     // from W3C UIEvents standard. For more details: https://w3c.github.io/uievents-code/

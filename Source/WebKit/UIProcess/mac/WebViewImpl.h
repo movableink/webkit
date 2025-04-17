@@ -304,7 +304,7 @@ public:
     void setViewScale(CGFloat);
     CGFloat viewScale() const;
 
-    void showWarningView(const BrowsingWarning&, CompletionHandler<void(std::variant<ContinueUnsafeLoad, URL>&&)>&&);
+    void showWarningView(const BrowsingWarning&, CompletionHandler<void(Variant<ContinueUnsafeLoad, URL>&&)>&&);
     void clearWarningView();
     void clearWarningViewIfForMainFrameNavigation();
 

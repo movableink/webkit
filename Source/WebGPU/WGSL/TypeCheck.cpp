@@ -79,7 +79,7 @@ enum class Behavior : uint8_t {
 };
 using Behaviors = OptionSet<Behavior>;
 
-using BreakTarget = std::variant<
+using BreakTarget = Variant<
     AST::SwitchStatement*,
     AST::LoopStatement*,
     AST::ForStatement*,

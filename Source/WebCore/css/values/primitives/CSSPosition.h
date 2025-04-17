@@ -30,14 +30,14 @@ namespace WebCore {
 namespace CSS {
 
 struct TwoComponentPositionHorizontal {
-    std::variant<Keyword::Left, Keyword::Right, Keyword::Center, LengthPercentage<>> offset;
+    Variant<Keyword::Left, Keyword::Right, Keyword::Center, LengthPercentage<>> offset;
 
     bool operator==(const TwoComponentPositionHorizontal&) const = default;
 };
 DEFINE_TYPE_WRAPPER_GET(TwoComponentPositionHorizontal, offset);
 
 struct TwoComponentPositionVertical {
-    std::variant<Keyword::Top, Keyword::Bottom, Keyword::Center, LengthPercentage<>> offset;
+    Variant<Keyword::Top, Keyword::Bottom, Keyword::Center, LengthPercentage<>> offset;
 
     bool operator==(const TwoComponentPositionVertical&) const = default;
 };
@@ -45,8 +45,8 @@ DEFINE_TYPE_WRAPPER_GET(TwoComponentPositionVertical, offset);
 
 using TwoComponentPosition              = SpaceSeparatedTuple<TwoComponentPositionHorizontal, TwoComponentPositionVertical>;
 
-using FourComponentPositionHorizontal   = SpaceSeparatedTuple<std::variant<Keyword::Left, Keyword::Right>, LengthPercentage<>>;
-using FourComponentPositionVertical     = SpaceSeparatedTuple<std::variant<Keyword::Top, Keyword::Bottom>, LengthPercentage<>>;
+using FourComponentPositionHorizontal   = SpaceSeparatedTuple<Variant<Keyword::Left, Keyword::Right>, LengthPercentage<>>;
+using FourComponentPositionVertical     = SpaceSeparatedTuple<Variant<Keyword::Top, Keyword::Bottom>, LengthPercentage<>>;
 using FourComponentPosition             = SpaceSeparatedTuple<FourComponentPositionHorizontal, FourComponentPositionVertical>;
 
 struct Position {
@@ -70,7 +70,7 @@ struct Position {
     {
     }
 
-    Position(std::variant<TwoComponentPosition, FourComponentPosition>&& variant)
+    Position(Variant<TwoComponentPosition, FourComponentPosition>&& variant)
         : value { WTFMove(variant) }
     {
     }
@@ -82,7 +82,7 @@ struct Position {
 
     bool operator==(const Position&) const = default;
 
-    std::variant<TwoComponentPosition, FourComponentPosition> value;
+    Variant<TwoComponentPosition, FourComponentPosition> value;
 };
 DEFINE_TYPE_WRAPPER_GET(Position, value);
 

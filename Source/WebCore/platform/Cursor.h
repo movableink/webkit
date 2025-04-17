@@ -139,7 +139,7 @@ public:
         float scaleFactor { 0 };
 #endif
     };
-    using IPCData = std::variant<Type /* Non custom type */, std::optional<CustomCursorIPCData>>;
+    using IPCData = Variant<Type /* Non custom type */, std::optional<CustomCursorIPCData>>;
 
     Cursor() = default;
     static std::optional<Cursor> fromIPCData(IPCData&&);

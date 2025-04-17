@@ -179,17 +179,17 @@ static String updatePolicyVector(NSDictionary *policyOption, CoreIPCSecTrustData
                 if (![secondLevelArray isKindOfClass:NSArray.class])
                     return makeString("CoreIPCSecTrust::PolicyOptionValueShape::ArrayOfArrayContainingDateOrNumber second level array unexpected type for key "_s, (String)optionKey);
 
-                Vector<std::variant<WebKit::CoreIPCNumber, WebKit::CoreIPCDate>> innerVector;
+                Vector<Variant<WebKit::CoreIPCNumber, WebKit::CoreIPCDate>> innerVector;
                 innerVector.reserveCapacity(secondLevelArray.count);
 
                 for (id element in secondLevelArray) {
                     if ([element isKindOfClass:NSNumber.class]) {
                         NSNumber *e = element;
-                        std::variant<WebKit::CoreIPCNumber, WebKit::CoreIPCDate> v = CoreIPCNumber(e);
+                        Variant<WebKit::CoreIPCNumber, WebKit::CoreIPCDate> v = CoreIPCNumber(e);
                         innerVector.append(WTFMove(v));
                     } else if ([element isKindOfClass:NSDate.class]) {
                         NSDate *d = element;
-                        std::variant<WebKit::CoreIPCNumber, WebKit::CoreIPCDate> v = CoreIPCDate(d);
+                        Variant<WebKit::CoreIPCNumber, WebKit::CoreIPCDate> v = CoreIPCDate(d);
                         innerVector.append(WTFMove(v));
                     } else
                         return makeString("CoreIPCSecTrust::PolicyOptionValueShape::ArrayOfArrayContainingDateOrNumber second level array contents unexpected type for key "_s, (String)optionKey);
@@ -510,7 +510,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
                 id value = [exception objectForKey:key];
                 if ([value isKindOfClass:NSData.class]) {
                     CoreIPCData data { value };
-                    std::variant<CoreIPCNumber, CoreIPCData, bool> v = WTFMove(data);
+                    Variant<CoreIPCNumber, CoreIPCData, bool> v = WTFMove(data);
                     auto p = std::make_pair(WTFMove(k), WTFMove(v));
                     innerVector.append(WTFMove(p));
                 } else if ([value isKindOfClass:NSNumber.class]) {
@@ -572,9 +572,9 @@ static RetainPtr<NSDictionary> createPolicyDictionary(const CoreIPCSecTrustData:
             },
             [&] (const CoreIPCSecTrustData::PolicyArrayOfArrayContainingDateOrNumbers& a) {
                 RetainPtr outerArray = adoptNS([[NSMutableArray alloc] initWithCapacity:a.size()]);
-                for (const Vector<std::variant<CoreIPCNumber, CoreIPCDate>>& inner : a) {
+                for (const Vector<Variant<CoreIPCNumber, CoreIPCDate>>& inner : a) {
                     RetainPtr innerArray = adoptNS([[NSMutableArray alloc] initWithCapacity:inner.size()]);
-                    for (const std::variant<CoreIPCNumber, CoreIPCDate>& v : inner) {
+                    for (const Variant<CoreIPCNumber, CoreIPCDate>& v : inner) {
                         WTF::switchOn(v,
                             [&] (const CoreIPCNumber& i) {
                                 [innerArray addObject:i.toID().get()];

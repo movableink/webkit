@@ -82,7 +82,7 @@ public:
     struct Entry {
         JSValue value;
         WTF::Range<unsigned> range;
-        std::variant<std::monostate, Object, Array> properties;
+        Variant<std::monostate, Object, Array> properties;
     };
 
     JSONRanges() = default;

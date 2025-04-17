@@ -28,14 +28,14 @@
 
 namespace WTF {
 
-// A `CompactVariant` acts like a `std::variant` with the following differences:
+// A `CompactVariant` acts like a `Variant` with the following differences:
 // - All alternatives must be pointers, smart pointers, have size of 56 bits or fewer, or be specialized for `CompactVariantTraits`.
 // - Can only contain 254 or fewer alternatives.
 // - Has a more limited API, only offering `holds_alternative()` for type checking and `switchOn()` for value access.
 
 template<CompactVariantAlternative... Ts> class CompactVariant {
     static_assert(sizeof...(Ts) < 255);
-    using StdVariant = std::variant<Ts...>;
+    using StdVariant = Variant<Ts...>;
     using Index = uint8_t;
     using Storage = uint64_t;
     using Operations = CompactVariantOperations<Ts...>;

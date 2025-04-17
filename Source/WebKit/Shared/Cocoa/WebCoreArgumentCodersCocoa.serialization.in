@@ -35,7 +35,7 @@ header: <WebCore/FontPlatformData.h>
 };
 
 [CustomHeader] struct WebCore::FontPlatformOpticalSize {
-    std::variant<RetainPtr<CFNumberRef>, String> opticalSize;
+    Variant<RetainPtr<CFNumberRef>, String> opticalSize;
 };
 
 [CustomHeader] struct WebCore::FontPlatformSerializedAttributes {
@@ -231,10 +231,10 @@ header: <WebCore/AttributedString.h>
 
 [Nested] struct WebCore::AttributedString::AttributeValue {
 #if ENABLE(MULTI_REPRESENTATION_HEIC)
-    std::variant<double, String, URL, Ref<WebCore::Font>, Vector<String>, Vector<double>, WebCore::ParagraphStyle, RetainPtr<NSPresentationIntent>, RetainPtr<NSShadow>, RetainPtr<NSDate>, WebCore::AttributedString::ColorFromCGColor, WebCore::AttributedString::ColorFromPlatformColor, WebCore::MultiRepresentationHEICAttachmentData, WebCore::TextAttachmentFileWrapper, WebCore::TextAttachmentMissingImage> value;
+    Variant<double, String, URL, Ref<WebCore::Font>, Vector<String>, Vector<double>, WebCore::ParagraphStyle, RetainPtr<NSPresentationIntent>, RetainPtr<NSShadow>, RetainPtr<NSDate>, WebCore::AttributedString::ColorFromCGColor, WebCore::AttributedString::ColorFromPlatformColor, WebCore::MultiRepresentationHEICAttachmentData, WebCore::TextAttachmentFileWrapper, WebCore::TextAttachmentMissingImage> value;
 #endif
 #if !ENABLE(MULTI_REPRESENTATION_HEIC)
-    std::variant<double, String, URL, Ref<WebCore::Font>, Vector<String>, Vector<double>, WebCore::ParagraphStyle, RetainPtr<NSPresentationIntent>, RetainPtr<NSShadow>, RetainPtr<NSDate>, WebCore::AttributedString::ColorFromCGColor, WebCore::AttributedString::ColorFromPlatformColor, WebCore::TextAttachmentFileWrapper, WebCore::TextAttachmentMissingImage> value;
+    Variant<double, String, URL, Ref<WebCore::Font>, Vector<String>, Vector<double>, WebCore::ParagraphStyle, RetainPtr<NSPresentationIntent>, RetainPtr<NSShadow>, RetainPtr<NSDate>, WebCore::AttributedString::ColorFromCGColor, WebCore::AttributedString::ColorFromPlatformColor, WebCore::TextAttachmentFileWrapper, WebCore::TextAttachmentMissingImage> value;
 #endif
 }
 

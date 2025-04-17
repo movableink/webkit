@@ -41,7 +41,7 @@ namespace NetworkCache {
 
 #if !USE(GLIB) && USE(CURL)
 Data::Data(Vector<uint8_t>&& data)
-    : Data(std::variant<Vector<uint8_t>, FileSystem::MappedFileData> { WTFMove(data) })
+    : Data(Variant<Vector<uint8_t>, FileSystem::MappedFileData> { WTFMove(data) })
 {
 }
 #elif !PLATFORM(COCOA)

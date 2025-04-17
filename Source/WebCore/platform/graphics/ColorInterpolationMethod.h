@@ -150,7 +150,7 @@ struct ColorInterpolationMethod {
 
     friend constexpr bool operator==(const ColorInterpolationMethod&, const ColorInterpolationMethod&) = default;
 
-    std::variant<
+    Variant<
         HSL,
         HWB,
         LCH,

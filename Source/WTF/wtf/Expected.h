@@ -242,7 +242,7 @@ struct base {
     typedef T value_type;
     typedef E error_type;
     typedef unexpected<E> unexpected_type;
-    std::variant<value_type, error_type> s;
+    Variant<value_type, error_type> s;
     constexpr base() { }
     constexpr base(value_tag_t, const value_type& val) : s(std::in_place_index_t<0>(), val) { }
     constexpr base(value_tag_t, value_type&& val) : s(std::in_place_index_t<0>(), std::forward<value_type>(val)) { }
@@ -251,7 +251,7 @@ struct base {
     constexpr base(const base& o)
         : s(o.s) { }
     constexpr base(base&& o)
-        : s(std::forward<std::variant<value_type, error_type>>(o.s)) { }
+        : s(std::forward<Variant<value_type, error_type>>(o.s)) { }
 };
 
 template<class E>

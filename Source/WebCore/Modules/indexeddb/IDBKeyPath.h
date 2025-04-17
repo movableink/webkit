@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-using IDBKeyPath = std::variant<String, Vector<String>>;
+using IDBKeyPath = Variant<String, Vector<String>>;
 bool isIDBKeyPathValid(const IDBKeyPath&);
 
 enum class IDBKeyPathParseError {

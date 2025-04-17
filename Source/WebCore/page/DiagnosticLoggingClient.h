@@ -38,7 +38,7 @@ enum DiagnosticLoggingResultType : uint8_t;
 enum class ShouldSample : bool { No, Yes };
 
 struct DiagnosticLoggingDictionary {
-    using Payload = std::variant<String, uint64_t, int64_t, bool, double>;
+    using Payload = Variant<String, uint64_t, int64_t, bool, double>;
     using Dictionary = HashMap<String, Payload>;
     Dictionary dictionary;
     void set(String key, Payload value) { dictionary.set(WTFMove(key), WTFMove(value)); }

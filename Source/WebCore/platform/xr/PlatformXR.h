@@ -255,7 +255,7 @@ struct FrameData {
     static constexpr size_t projectionMatrixSize = 16;
     typedef std::array<float, projectionMatrixSize> ProjectionMatrix;
 
-    using Projection = std::variant<Fov, ProjectionMatrix, std::nullptr_t>;
+    using Projection = Variant<Fov, ProjectionMatrix, std::nullptr_t>;
 
     struct View {
         Pose offset;

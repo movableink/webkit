@@ -124,7 +124,7 @@ public:
         PCM,
     };
 
-    using ConsumeFrameDataResult = std::variant<MediaTime, webm::Status>;
+    using ConsumeFrameDataResult = Variant<MediaTime, webm::Status>;
 
     class TrackData {
         WTF_MAKE_TZONE_ALLOCATED(TrackData);
@@ -311,7 +311,7 @@ private:
     UniqueRef<SegmentReader> m_reader;
 
     Vector<UniqueRef<TrackData>> m_tracks;
-    using BlockVariant = std::variant<webm::Block, webm::SimpleBlock>;
+    using BlockVariant = Variant<webm::Block, webm::SimpleBlock>;
     std::optional<BlockVariant> m_currentBlock;
     std::optional<uint64_t> m_rewindToPosition;
 

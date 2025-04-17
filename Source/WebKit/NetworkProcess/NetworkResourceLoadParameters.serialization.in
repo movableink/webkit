@@ -109,4 +109,4 @@ enum class WebKit::NavigatingToAppBoundDomain : bool;
     bool shouldRecordFrameLoadForStorageAccess;
 };
 
-using WebCore::FetchingWorkerIdentifier = std::variant<std::monostate, WebCore::SharedWorkerIdentifier, WebCore::ServiceWorkerIdentifier>;
+using WebCore::FetchingWorkerIdentifier = Variant<std::monostate, WebCore::SharedWorkerIdentifier, WebCore::ServiceWorkerIdentifier>;

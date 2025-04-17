@@ -735,7 +735,7 @@ template<CSSValueID Name> static RefPtr<CSSValue> consumeRadialGradient(CSSParse
 
     std::optional<ShapeKeyword> shape;
 
-    using Size = std::variant<CSS::RadialGradient::Extent, CSS::Length<CSS::Nonnegative>, SpaceSeparatedArray<CSS::LengthPercentage<CSS::Nonnegative>, 2>>;
+    using Size = Variant<CSS::RadialGradient::Extent, CSS::Length<CSS::Nonnegative>, SpaceSeparatedArray<CSS::LengthPercentage<CSS::Nonnegative>, 2>>;
     std::optional<Size> size;
 
     // First part of grammar, the size/shape clause:

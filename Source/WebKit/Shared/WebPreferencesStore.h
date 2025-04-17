@@ -38,7 +38,7 @@ namespace WebKit {
 // FIXME: WebPreferencesStore should be RefCounted. See usage in WebProcessPool.cpp.
 
 struct WebPreferencesStore {
-    using Value = std::variant<String, bool, uint32_t, double>;
+    using Value = Variant<String, bool, uint32_t, double>;
     using ValueMap = MemoryCompactRobinHoodHashMap<String, Value>;
 
     // NOTE: The getters in this class have non-standard names to aid in the use of the preference macros.

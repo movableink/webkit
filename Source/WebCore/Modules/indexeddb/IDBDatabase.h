@@ -64,7 +64,7 @@ public:
 
     ExceptionOr<Ref<IDBObjectStore>> createObjectStore(const String& name, ObjectStoreParameters&&);
 
-    using StringOrVectorOfStrings = std::variant<String, Vector<String>>;
+    using StringOrVectorOfStrings = Variant<String, Vector<String>>;
     struct TransactionOptions {
         std::optional<IDBTransactionDurability> durability;
     };

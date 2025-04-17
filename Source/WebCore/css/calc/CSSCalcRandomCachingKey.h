@@ -35,7 +35,7 @@ namespace WebCore {
 namespace CSSCalc {
 
 struct RandomCachingKey {
-    using Identifier = std::variant<
+    using Identifier = Variant<
         Random::SharingOptions::Auto,
         AtomString,
         WTF::HashTableDeletedValueType,
@@ -43,12 +43,12 @@ struct RandomCachingKey {
     >;
     Identifier identifier;
 
-    RandomCachingKey(std::variant<Random::SharingOptions::Auto, AtomString>&& identifier)
+    RandomCachingKey(Variant<Random::SharingOptions::Auto, AtomString>&& identifier)
         : identifier { WTF::switchOn(WTFMove(identifier), [](auto&& alternative) { return Identifier { WTFMove(alternative) }; }) }
     {
     }
 
-    RandomCachingKey(const std::variant<Random::SharingOptions::Auto, AtomString>& identifier)
+    RandomCachingKey(const Variant<Random::SharingOptions::Auto, AtomString>& identifier)
         : identifier { WTF::switchOn(identifier, [](const auto& alternative) { return Identifier { alternative }; }) }
     {
     }

@@ -36,7 +36,7 @@ namespace CSS {
 
 // <crossorigin-modifier> = crossorigin( anonymous | use-credentials )
 // https://drafts.csswg.org/css-values-5/#typedef-request-url-modifier-crossorigin-modifier
-using URLCrossoriginParameters = std::variant<
+using URLCrossoriginParameters = Variant<
     Keyword::Anonymous,
     Keyword::UseCredentials
 >;
@@ -49,7 +49,7 @@ using URLIntegrityFunction = FunctionNotation<CSSValueIntegrity, URLIntegrityPar
 
 // <referrerpolicy-modifier> = referrerpolicy( no-referrer | no-referrer-when-downgrade | same-origin | origin | strict-origin | origin-when-cross-origin | strict-origin-when-cross-origin | unsafe-url )
 // https://drafts.csswg.org/css-values-5/#typedef-request-url-modifier-referrerpolicy-modifier
-using URLReferrerpolicyParameters = std::variant<
+using URLReferrerpolicyParameters = Variant<
     Keyword::NoReferrer,
     Keyword::NoReferrerWhenDowngrade,
     Keyword::SameOrigin,

@@ -238,14 +238,14 @@ private:
 };
 static_assert(sizeof(PlainDate) == sizeof(int32_t));
 
-using TimeZone = std::variant<TimeZoneID, int64_t>;
+using TimeZone = Variant<TimeZoneID, int64_t>;
 
 // https://tc39.es/proposal-temporal/#sec-temporal-parsetemporaltimezonestring
 // Record { [[Z]], [[OffsetString]], [[Name]] }
 struct TimeZoneRecord {
     bool m_z { false };
     std::optional<int64_t> m_offset;
-    std::variant<Vector<LChar>, int64_t> m_nameOrOffset;
+    Variant<Vector<LChar>, int64_t> m_nameOrOffset;
 };
 
 static constexpr unsigned minCalendarLength = 3;

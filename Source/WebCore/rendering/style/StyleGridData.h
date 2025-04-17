@@ -47,7 +47,7 @@ struct OrderedNamedGridLinesMap {
     UncheckedKeyHashMap<unsigned, Vector<String>, IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> map;
 };
 
-typedef std::variant<GridTrackSize, Vector<String>> RepeatEntry;
+typedef Variant<GridTrackSize, Vector<String>> RepeatEntry;
 typedef Vector<RepeatEntry> RepeatTrackList;
 
 struct GridTrackEntrySubgrid {
@@ -72,7 +72,7 @@ struct GridTrackEntryAutoRepeat {
     RepeatTrackList list;
 };
 
-using GridTrackEntry = std::variant<GridTrackSize, Vector<String>, GridTrackEntryRepeat, GridTrackEntryAutoRepeat, GridTrackEntrySubgrid, GridTrackEntryMasonry>;
+using GridTrackEntry = Variant<GridTrackSize, Vector<String>, GridTrackEntryRepeat, GridTrackEntryAutoRepeat, GridTrackEntrySubgrid, GridTrackEntryMasonry>;
 struct GridTrackList {
     Vector<GridTrackEntry> list;
     friend bool operator==(const GridTrackList&, const GridTrackList&) = default;

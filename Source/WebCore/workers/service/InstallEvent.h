@@ -47,7 +47,7 @@ public:
     }
     ~InstallEvent();
 
-    void addRoutes(JSC::JSGlobalObject&, std::variant<RouterRule, Vector<RouterRule>>&&, Ref<DeferredPromise>&&);
+    void addRoutes(JSC::JSGlobalObject&, Variant<RouterRule, Vector<RouterRule>>&&, Ref<DeferredPromise>&&);
 
 private:
     WEBCORE_EXPORT InstallEvent(const AtomString&, ExtendableEventInit&&, IsTrusted);

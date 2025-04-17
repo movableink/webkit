@@ -52,7 +52,7 @@ class AuthenticatorManager : public RefCounted<AuthenticatorManager>, public Aut
     WTF_MAKE_TZONE_ALLOCATED(AuthenticatorManager);
     WTF_MAKE_NONCOPYABLE(AuthenticatorManager);
 public:
-    using Respond = std::variant<Ref<WebCore::AuthenticatorResponse>, WebCore::ExceptionData>;
+    using Respond = Variant<Ref<WebCore::AuthenticatorResponse>, WebCore::ExceptionData>;
     using Callback = CompletionHandler<void(Respond&&)>;
     using TransportSet = HashSet<WebCore::AuthenticatorTransport, WTF::IntHash<WebCore::AuthenticatorTransport>, WTF::StrongEnumHashTraits<WebCore::AuthenticatorTransport>>;
 

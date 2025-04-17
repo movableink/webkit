@@ -85,7 +85,7 @@ CoreIPCNSURLCredential::CoreIPCNSURLCredential(NSURLCredential *credential)
                 ASSERT_NOT_REACHED();
                 break;
             }
-            std::optional<std::variant<CoreIPCNumber, CoreIPCString, CoreIPCDate>> option;
+            std::optional<Variant<CoreIPCNumber, CoreIPCString, CoreIPCDate>> option;
             if ([value isKindOfClass:NSString.class])
                 option = CoreIPCString(value);
             if ([value isKindOfClass:NSNumber.class])

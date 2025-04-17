@@ -33,7 +33,7 @@
 
 namespace WebKit::WebGPU {
 
-using Error = std::variant<OutOfMemoryError, ValidationError, InternalError>;
+using Error = Variant<OutOfMemoryError, ValidationError, InternalError>;
 
 } // namespace WebKit::WebGPU
 

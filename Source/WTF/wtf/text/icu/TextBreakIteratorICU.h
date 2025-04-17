@@ -43,7 +43,7 @@ public:
     };
     struct CharacterMode {
     };
-    using Mode = std::variant<LineMode, CharacterMode>;
+    using Mode = Variant<LineMode, CharacterMode>;
 
     TextBreakIteratorICU(StringView string, std::span<const UChar> priorContext, Mode mode, const AtomString& locale)
     {

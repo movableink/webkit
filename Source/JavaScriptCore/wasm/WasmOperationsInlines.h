@@ -321,7 +321,7 @@ inline void arraySet(JSWebAssemblyInstance* instance, uint32_t typeIndex, Encode
     arrayObject->set(instance->vm(), index, value);
 }
 
-inline bool doArrayFill(VM& vm, EncodedJSValue arrayValue, uint32_t offset, std::variant<uint64_t, v128_t> value, uint32_t size)
+inline bool doArrayFill(VM& vm, EncodedJSValue arrayValue, uint32_t offset, Variant<uint64_t, v128_t> value, uint32_t size)
 {
     JSValue arrayRef = JSValue::decode(arrayValue);
     ASSERT(arrayRef.isObject());

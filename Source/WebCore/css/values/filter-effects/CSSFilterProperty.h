@@ -39,7 +39,7 @@
 namespace WebCore {
 namespace CSS {
 
-using Filter = std::variant<
+using Filter = Variant<
     BlurFunction,
     BrightnessFunction,
     ContrastFunction,

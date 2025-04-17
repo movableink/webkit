@@ -134,7 +134,7 @@ private:
     const PathMoveTo* asSingleMoveTo() const;
     const PathArc* asSingleArc() const;
 
-    std::variant<std::monostate, PathSegment, DataRef<PathImpl>> m_data;
+    Variant<std::monostate, PathSegment, DataRef<PathImpl>> m_data;
 };
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Path&);

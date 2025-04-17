@@ -81,7 +81,7 @@ public:
         float angleRadians;
     };
 
-    using Data = std::variant<LinearData, RadialData, ConicData>;
+    using Data = Variant<LinearData, RadialData, ConicData>;
 
     WEBCORE_EXPORT static Ref<Gradient> create(Data&&, ColorInterpolationMethod, GradientSpreadMethod = GradientSpreadMethod::Pad, GradientColorStops&& = { }, std::optional<RenderingResourceIdentifier> = std::nullopt);
     ~Gradient();

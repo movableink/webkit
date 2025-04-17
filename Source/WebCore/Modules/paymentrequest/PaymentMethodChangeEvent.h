@@ -47,7 +47,7 @@ public:
     }
 
     using MethodDetailsFunction = std::function<JSC::Strong<JSC::JSObject>(JSC::JSGlobalObject&)>;
-    using MethodDetailsType = std::variant<JSValueInWrappedObject, MethodDetailsFunction>;
+    using MethodDetailsType = Variant<JSValueInWrappedObject, MethodDetailsFunction>;
 
     const String& methodName() const { return m_methodName; }
     const MethodDetailsType& methodDetails() const { return m_methodDetails; }

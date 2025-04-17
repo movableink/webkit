@@ -58,7 +58,7 @@ enum class CoreIPCNSURLCredentialType : uint8_t {
 
 struct CoreIPCNSURLCredentialData {
     using Flags = std::pair<CoreIPCString, CoreIPCString>;
-    using Attributes = std::pair<CoreIPCString, std::variant<CoreIPCNumber, CoreIPCString, CoreIPCDate>>;
+    using Attributes = std::pair<CoreIPCString, Variant<CoreIPCNumber, CoreIPCString, CoreIPCDate>>;
 
     CoreIPCNSURLCredentialPersistence persistence { CoreIPCNSURLCredentialPersistence::None };
     CoreIPCNSURLCredentialType type { CoreIPCNSURLCredentialType::Password };

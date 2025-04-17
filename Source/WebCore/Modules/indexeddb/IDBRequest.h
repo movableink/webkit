@@ -82,11 +82,11 @@ public:
 
     virtual ~IDBRequest();
 
-    using Result = std::variant<RefPtr<IDBCursor>, RefPtr<IDBDatabase>, IDBKeyData, Vector<IDBKeyData>, IDBGetResult, IDBGetAllResult, uint64_t, NullResultType>;
+    using Result = Variant<RefPtr<IDBCursor>, RefPtr<IDBDatabase>, IDBKeyData, Vector<IDBKeyData>, IDBGetResult, IDBGetAllResult, uint64_t, NullResultType>;
     ExceptionOr<Result> result() const;
     JSValueInWrappedObject& resultWrapper() { return m_resultWrapper; }
 
-    using Source = std::variant<RefPtr<IDBObjectStore>, RefPtr<IDBIndex>, RefPtr<IDBCursor>>;
+    using Source = Variant<RefPtr<IDBObjectStore>, RefPtr<IDBIndex>, RefPtr<IDBCursor>>;
     const std::optional<Source>& source() const { return m_source; }
 
     ExceptionOr<DOMException*> error() const;

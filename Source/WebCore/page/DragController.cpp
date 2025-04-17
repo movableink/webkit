@@ -311,7 +311,7 @@ void DragController::mouseMovedIntoDocument(RefPtr<Document>&& newDocument)
     m_documentUnderMouse = WTFMove(newDocument);
 }
 
-std::variant<std::optional<DragOperation>, RemoteUserInputEventData> DragController::dragEnteredOrUpdated(LocalFrame& frame, DragData&& dragData)
+Variant<std::optional<DragOperation>, RemoteUserInputEventData> DragController::dragEnteredOrUpdated(LocalFrame& frame, DragData&& dragData)
 {
     auto point = frame.protectedView()->windowToContents(dragData.clientPosition());
     auto hitTestResult = HitTestResult(point);

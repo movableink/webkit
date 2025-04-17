@@ -34,7 +34,7 @@ namespace WebCore {
 
 class SourceBrush {
 public:
-    using OptionalPatternGradient = std::variant<std::monostate, SourceBrushLogicalGradient, Ref<Pattern>>;
+    using OptionalPatternGradient = Variant<std::monostate, SourceBrushLogicalGradient, Ref<Pattern>>;
 
     SourceBrush() = default;
     SourceBrush(const Color& color)

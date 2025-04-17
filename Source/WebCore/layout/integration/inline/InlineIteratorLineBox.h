@@ -44,7 +44,7 @@ struct EndLineBoxIterator { };
 
 class LineBox {
 public:
-    using PathVariant = std::variant<
+    using PathVariant = Variant<
         LineBoxIteratorModernPath,
         LineBoxIteratorLegacyPath
     >;

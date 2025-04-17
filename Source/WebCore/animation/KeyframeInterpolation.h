@@ -36,7 +36,7 @@ namespace WebCore {
 
 class KeyframeInterpolation {
 public:
-    using Property = std::variant<AnimatableCSSProperty, AcceleratedEffectProperty>;
+    using Property = Variant<AnimatableCSSProperty, AcceleratedEffectProperty>;
 
     class Keyframe {
     public:

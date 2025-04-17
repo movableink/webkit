@@ -181,7 +181,7 @@ private:
 
     Document* document();
 
-    const std::variant<Ref<MutableStyleProperties>, Ref<StyleRuleFontFace>> m_propertiesOrCSSConnection;
+    const Variant<Ref<MutableStyleProperties>, Ref<StyleRuleFontFace>> m_propertiesOrCSSConnection;
     RefPtr<CSSValueList> m_families;
     Vector<UnicodeRange> m_ranges;
 

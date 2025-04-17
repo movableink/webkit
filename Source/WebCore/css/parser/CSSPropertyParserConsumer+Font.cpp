@@ -71,7 +71,7 @@
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-template<typename Result, typename... Ts> static Result forwardVariantTo(std::variant<Ts...>&& variant)
+template<typename Result, typename... Ts> static Result forwardVariantTo(Variant<Ts...>&& variant)
 {
     return WTF::switchOn(WTFMove(variant), [](auto&& alternative) -> Result { return { WTFMove(alternative) }; });
 }

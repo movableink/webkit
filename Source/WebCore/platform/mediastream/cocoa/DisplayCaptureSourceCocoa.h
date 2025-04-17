@@ -73,7 +73,7 @@ class DisplayCaptureSourceCocoa final
     , public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<DisplayCaptureSourceCocoa, WTF::DestructionThread::MainRunLoop> {
     WTF_MAKE_TZONE_ALLOCATED(DisplayCaptureSourceCocoa);
 public:
-    using DisplayFrameType = std::variant<RefPtr<NativeImage>, RetainPtr<IOSurfaceRef>, RetainPtr<CMSampleBufferRef>>;
+    using DisplayFrameType = Variant<RefPtr<NativeImage>, RetainPtr<IOSurfaceRef>, RetainPtr<CMSampleBufferRef>>;
 
     class Capturer : public LoggerHelper {
         WTF_MAKE_TZONE_ALLOCATED(Capturer);

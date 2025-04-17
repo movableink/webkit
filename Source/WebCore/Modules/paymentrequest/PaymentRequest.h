@@ -104,7 +104,7 @@ public:
     ExceptionOr<void> retry(PaymentValidationErrors&&);
     void cancel();
 
-    using MethodIdentifier = std::variant<String, URL>;
+    using MethodIdentifier = Variant<String, URL>;
 
 private:
     struct Method {

@@ -60,7 +60,7 @@ template<typename T> concept  CompactVariantAlternative =
     || CompactVariantTraits<T>::hasAlternativeRepresentation;
 
 template<CompactVariantAlternative... Ts> struct CompactVariantOperations {
-    using StdVariant = std::variant<Ts...>;
+    using StdVariant = Variant<Ts...>;
     using Index = uint8_t;
     using Storage = uint64_t;
     static constexpr Storage movedFromDataValue = std::numeric_limits<Storage>::max();

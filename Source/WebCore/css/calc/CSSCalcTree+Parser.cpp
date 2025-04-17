@@ -677,7 +677,7 @@ static std::optional<Random::SharingOptions> consumeOptionalRandomSharingOptions
 {
     // <random-value-sharing-options> = [ [ auto | <dashed-ident> ] || element-shared ]
 
-    std::optional<std::variant<Random::SharingOptions::Auto, AtomString>> identifier;
+    std::optional<Variant<Random::SharingOptions::Auto, AtomString>> identifier;
     std::optional<CSS::Keyword::ElementShared> elementShared;
 
     CSSParserTokenRangeGuard guard { tokens };

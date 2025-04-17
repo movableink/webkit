@@ -61,7 +61,7 @@ public:
 
 private:
     friend struct IPC::ArgumentCoder<SpeechRecognitionUpdate, void>;
-    using Content = std::variant<std::monostate, SpeechRecognitionError, Vector<SpeechRecognitionResultData>>;
+    using Content = Variant<std::monostate, SpeechRecognitionError, Vector<SpeechRecognitionResultData>>;
     WEBCORE_EXPORT SpeechRecognitionUpdate(SpeechRecognitionConnectionClientIdentifier, SpeechRecognitionUpdateType, Content);
 
     SpeechRecognitionConnectionClientIdentifier m_clientIdentifier;

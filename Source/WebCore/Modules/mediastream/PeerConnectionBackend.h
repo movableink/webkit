@@ -256,7 +256,7 @@ protected:
     };
     using StatsLogEvent = String;
 
-    using LogEvent = std::variant<MessageLogEvent, StatsLogEvent>;
+    using LogEvent = Variant<MessageLogEvent, StatsLogEvent>;
     String generateJSONLogEvent(LogEvent&&, bool isForGatherLogs);
     void emitJSONLogEvent(String&&);
 

@@ -76,10 +76,10 @@ using SWServerToContextConnectionIdentifier = ObjectIdentifier<SWServerToContext
 using SWServerConnectionIdentifierType = ProcessIdentifierType;
 using SWServerConnectionIdentifier = ObjectIdentifier<SWServerConnectionIdentifierType>;
 
-using ServiceWorkerOrClientData = std::variant<ServiceWorkerData, ServiceWorkerClientData>;
+using ServiceWorkerOrClientData = Variant<ServiceWorkerData, ServiceWorkerClientData>;
 
 // FIXME: It should be possible to replace ServiceWorkerOrClientIdentifier with ScriptExecutionContextIdentifier entirely.
-using ServiceWorkerOrClientIdentifier = std::variant<ScriptExecutionContextIdentifier, ServiceWorkerIdentifier>;
+using ServiceWorkerOrClientIdentifier = Variant<ScriptExecutionContextIdentifier, ServiceWorkerIdentifier>;
 
 struct ServiceWorkerScripts {
     ServiceWorkerScripts isolatedCopy() const

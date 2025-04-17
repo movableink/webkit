@@ -65,7 +65,7 @@ struct Length {
 public:
     Length(LengthType = LengthType::Auto);
 
-    using FloatOrInt = std::variant<float, int>;
+    using FloatOrInt = Variant<float, int>;
     struct AutoData { };
     struct NormalData { };
     struct RelativeData {
@@ -106,7 +106,7 @@ public:
     };
     struct ContentData { };
     struct UndefinedData { };
-    using IPCData = std::variant<
+    using IPCData = Variant<
         AutoData,
         NormalData,
         RelativeData,

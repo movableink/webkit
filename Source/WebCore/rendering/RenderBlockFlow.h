@@ -573,7 +573,7 @@ protected:
     std::unique_ptr<RenderBlockFlowRareData> m_rareBlockFlowData;
 
 private:
-    std::variant<
+    Variant<
         std::monostate,
         std::unique_ptr<LayoutIntegration::LineLayout>,
         std::unique_ptr<LegacyLineLayout>

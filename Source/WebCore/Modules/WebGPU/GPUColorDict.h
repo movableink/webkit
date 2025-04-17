@@ -48,7 +48,7 @@ struct GPUColorDict {
     double a { 0 };
 };
 
-using GPUColor = std::variant<Vector<double>, GPUColorDict>;
+using GPUColor = Variant<Vector<double>, GPUColorDict>;
 
 inline WebGPU::Color convertToBacking(const GPUColor& color)
 {

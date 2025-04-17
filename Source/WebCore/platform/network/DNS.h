@@ -84,7 +84,7 @@ public:
     friend bool operator==(const IPAddress& a, const IPAddress& b) { return is_eq(a <=> b); }
 
 private:
-    std::variant<WTF::HashTableEmptyValueType, struct in_addr, struct in6_addr> m_address;
+    Variant<WTF::HashTableEmptyValueType, struct in_addr, struct in6_addr> m_address;
 };
 
 enum class DNSError { Unknown, CannotResolve, Cancelled };

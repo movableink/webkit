@@ -33,8 +33,8 @@
 
 namespace WebCore {
 
-using OptionalDoubleOrString = std::optional<std::variant<double, String>>;
-using DoubleOrCSSNumericValueOrString = std::variant<double, RefPtr<CSSNumericValue>, String>;
+using OptionalDoubleOrString = std::optional<Variant<double, String>>;
+using DoubleOrCSSNumericValueOrString = Variant<double, RefPtr<CSSNumericValue>, String>;
 
 struct EffectTiming {
     DoubleOrCSSNumericValueOrString duration { autoAtom() };

@@ -110,7 +110,7 @@ template<CSS::DimensionPercentageNumeric CSSType> struct PrimitiveNumeric<CSSTyp
     }
 
     // NOTE: CalculatedValue is intentionally not part of IPCData.
-    using IPCData = std::variant<Dimension, Percentage>;
+    using IPCData = Variant<Dimension, Percentage>;
     PrimitiveNumeric(IPCData&& data)
         : m_value { WTF::switchOn(WTFMove(data), [&](auto&& data) -> Representation { return { WTFMove(data) }; }) }
     {

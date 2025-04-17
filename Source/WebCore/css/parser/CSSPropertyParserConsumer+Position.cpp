@@ -338,7 +338,7 @@ RefPtr<CSSValue> consumePositionY(CSSParserTokenRange& range, CSS::PropertyParse
 
 // MARK: Unresolved Position
 
-using PositionUnresolvedComponent = std::variant<CSS::Keyword::Left, CSS::Keyword::Right, CSS::Keyword::Top, CSS::Keyword::Bottom, CSS::Keyword::Center, CSS::LengthPercentage<>>;
+using PositionUnresolvedComponent = Variant<CSS::Keyword::Left, CSS::Keyword::Right, CSS::Keyword::Top, CSS::Keyword::Bottom, CSS::Keyword::Center, CSS::LengthPercentage<>>;
 
 static std::optional<PositionUnresolvedComponent> consumePositionUnresolvedComponent(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {

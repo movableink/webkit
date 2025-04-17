@@ -65,7 +65,7 @@ FloatPoint RequestedScrollData::destinationPosition(FloatPoint currentScrollPosi
     return computeDestinationPosition(currentScrollPosition, requestType, scrollPositionOrDelta);
 }
 
-FloatPoint RequestedScrollData::computeDestinationPosition(FloatPoint currentScrollPosition, ScrollRequestType requestType, const std::variant<FloatPoint, FloatSize>& scrollPositionOrDelta)
+FloatPoint RequestedScrollData::computeDestinationPosition(FloatPoint currentScrollPosition, ScrollRequestType requestType, const Variant<FloatPoint, FloatSize>& scrollPositionOrDelta)
 {
     if (requestType == ScrollRequestType::DeltaUpdate)
         return currentScrollPosition + std::get<FloatSize>(scrollPositionOrDelta);

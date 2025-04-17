@@ -46,7 +46,7 @@ struct EndIterator { };
 
 class Box {
 public:
-    using PathVariant = std::variant<
+    using PathVariant = Variant<
         BoxModernPath,
         BoxLegacyPath
     >;

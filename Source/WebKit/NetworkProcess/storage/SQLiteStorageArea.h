@@ -91,7 +91,7 @@ private:
     std::unique_ptr<WebCore::SQLiteDatabase> m_database;
     std::unique_ptr<WebCore::SQLiteTransaction> m_transaction;
     Vector<std::unique_ptr<WebCore::SQLiteStatement>> m_cachedStatements;
-    using Value = std::variant<String, unsigned>;
+    using Value = Variant<String, unsigned>;
     std::optional<HashMap<String, Value>> m_cache;
     std::optional<unsigned> m_cacheSize;
 };

@@ -162,7 +162,7 @@ private:
 
     struct FetchTask {
         RefPtr<ServiceWorkerFetch::Client> client;
-        std::variant<std::nullptr_t, Ref<FetchEvent>, UniqueRef<ResourceError>, UniqueRef<ResourceResponse>> navigationPreload;
+        Variant<std::nullptr_t, Ref<FetchEvent>, UniqueRef<ResourceError>, UniqueRef<ResourceResponse>> navigationPreload;
     };
     HashMap<FetchKey, FetchTask> m_ongoingFetchTasks;
 };

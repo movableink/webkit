@@ -59,7 +59,7 @@ class MediaPlayer;
 class SharedBuffer;
 
 using KeyIDType = Vector<uint8_t>;
-using KeyHandleValueVariant = std::variant<
+using KeyHandleValueVariant = Variant<
     Vector<uint8_t>
 #if ENABLE(THUNDER)
     , BoxPtr<OpenCDMSession>

@@ -237,9 +237,9 @@ static void checkException(GlobalObject*, bool isLastFile, bool hasException, JS
 class Message : public ThreadSafeRefCounted<Message> {
 public:
 #if ENABLE(WEBASSEMBLY)
-    using Content = std::variant<ArrayBufferContents, RefPtr<SharedArrayBufferContents>>;
+    using Content = Variant<ArrayBufferContents, RefPtr<SharedArrayBufferContents>>;
 #else
-    using Content = std::variant<ArrayBufferContents>;
+    using Content = Variant<ArrayBufferContents>;
 #endif
     Message(Content&&, int32_t);
     ~Message();
@@ -2062,7 +2062,7 @@ JSC_DEFINE_HOST_FUNCTION(functionWriteFile, (JSGlobalObject* globalObject, CallF
     String fileName = callFrame->argument(0).toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    std::variant<String, std::span<const uint8_t>> data;
+    Variant<String, std::span<const uint8_t>> data;
     JSValue dataValue = callFrame->argument(1);
 
     if (dataValue.isString()) {

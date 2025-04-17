@@ -943,7 +943,7 @@ template<CSSValueID Name> static Ref<WebCore::Gradient> createPlatformGradient(c
         return position ? computeEndPoint(*position, size) : FloatPoint { size.width() / 2, size.height() / 2 };
     };
 
-    auto computeCircleRadius = [&](const std::variant<RadialGradient::Circle::Length, RadialGradient::Extent>& circleLengthOrExtent, FloatPoint centerPoint) -> std::pair<float, float> {
+    auto computeCircleRadius = [&](const Variant<RadialGradient::Circle::Length, RadialGradient::Extent>& circleLengthOrExtent, FloatPoint centerPoint) -> std::pair<float, float> {
         return WTF::switchOn(circleLengthOrExtent,
             [&](const RadialGradient::Circle::Length& circleLength) -> std::pair<float, float> {
                 return { circleLength.value, 1 };
@@ -967,7 +967,7 @@ template<CSSValueID Name> static Ref<WebCore::Gradient> createPlatformGradient(c
         );
     };
 
-    auto computeEllipseRadii = [&](const std::variant<RadialGradient::Ellipse::Size, RadialGradient::Extent>& ellipseSizeOrExtent, FloatPoint centerPoint) -> std::pair<float, float> {
+    auto computeEllipseRadii = [&](const Variant<RadialGradient::Ellipse::Size, RadialGradient::Extent>& ellipseSizeOrExtent, FloatPoint centerPoint) -> std::pair<float, float> {
         return WTF::switchOn(ellipseSizeOrExtent,
             [&](const RadialGradient::Ellipse::Size& ellipseSize) -> std::pair<float, float> {
                 auto xDist = resolveRadius(get<0>(ellipseSize), size.width());
@@ -1038,7 +1038,7 @@ template<CSSValueID Name> static Ref<WebCore::Gradient> createPlatformGradient(c
         return position ? computeEndPoint(*position, size) : FloatPoint { size.width() / 2, size.height() / 2 };
     };
 
-    auto computeEllipseRadii = [&](const std::variant<PrefixedRadialGradient::Ellipse::Size, PrefixedRadialGradient::Extent>& ellipseSizeOrExtent, FloatPoint centerPoint) -> std::pair<float, float> {
+    auto computeEllipseRadii = [&](const Variant<PrefixedRadialGradient::Ellipse::Size, PrefixedRadialGradient::Extent>& ellipseSizeOrExtent, FloatPoint centerPoint) -> std::pair<float, float> {
         return WTF::switchOn(ellipseSizeOrExtent,
             [&](const PrefixedRadialGradient::Ellipse::Size& ellipseSize) -> std::pair<float, float> {
                 auto xDist = resolveRadius(get<0>(ellipseSize), size.width());

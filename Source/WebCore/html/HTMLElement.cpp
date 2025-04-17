@@ -1003,7 +1003,7 @@ void HTMLElement::setEnterKeyHint(const AtomString& value)
 }
 
 // https://html.spec.whatwg.org/#dom-hidden
-std::optional<std::variant<bool, double, String>> HTMLElement::hidden() const
+std::optional<Variant<bool, double, String>> HTMLElement::hidden() const
 {
     auto value = attributeWithoutSynchronization(HTMLNames::hiddenAttr);
     if (document().settings().hiddenUntilFoundEnabled() && equalIgnoringASCIICase(value, "until-found"_s))
@@ -1012,7 +1012,7 @@ std::optional<std::variant<bool, double, String>> HTMLElement::hidden() const
 }
 
 // https://html.spec.whatwg.org/#dom-hidden
-void HTMLElement::setHidden(const std::optional<std::variant<bool, double, String>>& value)
+void HTMLElement::setHidden(const std::optional<Variant<bool, double, String>>& value)
 {
     if (!value) {
         removeAttribute(hiddenAttr);
@@ -1281,7 +1281,7 @@ ExceptionOr<void> HTMLElement::hidePopover()
     return hidePopoverInternal(FocusPreviousElement::Yes, FireEvents::Yes);
 }
 
-ExceptionOr<bool> HTMLElement::togglePopover(std::optional<std::variant<WebCore::HTMLElement::TogglePopoverOptions, bool>> options)
+ExceptionOr<bool> HTMLElement::togglePopover(std::optional<Variant<WebCore::HTMLElement::TogglePopoverOptions, bool>> options)
 {
     std::optional<bool> force;
     HTMLElement* invoker = nullptr;

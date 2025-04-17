@@ -40,7 +40,7 @@ public:
     struct Entry {
         WEBCORE_EXPORT Entry();
         WEBCORE_EXPORT Entry(const Entry&);
-        WEBCORE_EXPORT Entry(const String&, const String&, const std::variant<String, Ref<WebCore::SharedBuffer>>&);
+        WEBCORE_EXPORT Entry(const String&, const String&, const Variant<String, Ref<WebCore::SharedBuffer>>&);
         WEBCORE_EXPORT Entry(Entry&&);
         WEBCORE_EXPORT Entry& operator=(const Entry& otherData);
         WEBCORE_EXPORT Entry& operator=(Entry&& otherData);
@@ -48,7 +48,7 @@ public:
 
         String type;
         String customData;
-        std::variant<String, Ref<SharedBuffer>> platformData;
+        Variant<String, Ref<SharedBuffer>> platformData;
     };
 
     WEBCORE_EXPORT PasteboardCustomData();
@@ -83,7 +83,7 @@ public:
 
     void forEachType(Function<void(const String&)>&&) const;
     void forEachPlatformString(Function<void(const String& type, const String& data)>&&) const;
-    void forEachPlatformStringOrBuffer(Function<void(const String& type, const std::variant<String, Ref<SharedBuffer>>& data)>&&) const;
+    void forEachPlatformStringOrBuffer(Function<void(const String& type, const Variant<String, Ref<SharedBuffer>>& data)>&&) const;
     void forEachCustomString(Function<void(const String& type, const String& data)>&&) const;
 
     bool hasData() const;

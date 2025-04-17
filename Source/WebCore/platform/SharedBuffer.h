@@ -137,7 +137,7 @@ private:
     explicit DataSegment(Provider&& provider)
         : m_immutableData(WTFMove(provider)) { }
 
-    std::variant<Vector<uint8_t>,
+    Variant<Vector<uint8_t>,
 #if USE(CF)
         RetainPtr<CFDataRef>,
 #endif
@@ -159,7 +159,7 @@ private:
 
 class FragmentedSharedBuffer : public ThreadSafeRefCounted<FragmentedSharedBuffer> {
 public:
-    using IPCData = std::variant<std::optional<WebCore::SharedMemoryHandle>, Vector<std::span<const uint8_t>>>;
+    using IPCData = Variant<std::optional<WebCore::SharedMemoryHandle>, Vector<std::span<const uint8_t>>>;
 
     WEBCORE_EXPORT static Ref<FragmentedSharedBuffer> create();
     WEBCORE_EXPORT static Ref<FragmentedSharedBuffer> create(std::span<const uint8_t>);

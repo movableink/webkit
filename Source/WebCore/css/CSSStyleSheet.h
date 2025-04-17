@@ -61,7 +61,7 @@ class CSSStyleSheet final : public StyleSheet, public CanMakeSingleThreadWeakPtr
 public:
     struct Init {
         String baseURL;
-        std::variant<RefPtr<MediaList>, String> media { emptyString() };
+        Variant<RefPtr<MediaList>, String> media { emptyString() };
         bool disabled { false };
     };
     static Ref<CSSStyleSheet> create(Ref<StyleSheetContents>&&, CSSImportRule* ownerRule = 0);

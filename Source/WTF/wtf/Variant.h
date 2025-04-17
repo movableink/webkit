@@ -26,3 +26,8 @@
 #pragma once
 
 #include <variant>
+
+namespace WTF {
+template<class... Ts> using Variant = std::variant<Ts...>;
+}
+using WTF::Variant;

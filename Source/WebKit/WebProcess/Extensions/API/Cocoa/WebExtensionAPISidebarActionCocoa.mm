@@ -73,7 +73,7 @@ static ParseResult parseSidebarActionDetails(NSDictionary *details)
     return std::monostate();
 }
 
-static std::variant<std::monostate, String, SidebarError> parseDetailsStringFromKey(NSDictionary *dict, NSString *key, bool required = false)
+static Variant<std::monostate, String, SidebarError> parseDetailsStringFromKey(NSDictionary *dict, NSString *key, bool required = false)
 {
     RetainPtr<id> maybeValue = [dict objectForKey:key];
     if (!maybeValue && required)

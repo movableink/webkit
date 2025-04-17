@@ -41,7 +41,7 @@ class ScriptExecutionContext;
 class FetchHeaders : public RefCounted<FetchHeaders> {
 public:
     using Guard = FetchHeadersGuard;
-    using Init = std::variant<Vector<Vector<String>>, Vector<KeyValuePair<String, String>>>;
+    using Init = Variant<Vector<Vector<String>>, Vector<KeyValuePair<String, String>>>;
     static ExceptionOr<Ref<FetchHeaders>> create(std::optional<Init>&&);
 
     static Ref<FetchHeaders> create(Guard guard = Guard::None, HTTPHeaderMap&& headers = { }, Vector<String>&& setCookieValues = { }) { return adoptRef(*new FetchHeaders { guard, WTFMove(headers), WTFMove(setCookieValues) }); }

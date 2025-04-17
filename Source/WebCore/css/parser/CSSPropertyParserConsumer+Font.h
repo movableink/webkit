@@ -64,27 +64,27 @@ namespace CSSPropertyParserHelpers {
 
 // normal | italic | oblique <angle [-90deg,90deg]>?
 using UnresolvedFontStyleObliqueAngle = CSS::Angle<CSS::Range{-90, 90}>;
-using UnresolvedFontStyle = std::variant<CSSValueID, UnresolvedFontStyleObliqueAngle>;
+using UnresolvedFontStyle = Variant<CSSValueID, UnresolvedFontStyleObliqueAngle>;
 
 // normal | small-caps
 using UnresolvedFontVariantCaps = CSSValueID;
 
 // normal | bold | bolder | lighter | <number [1,1000]>
 using UnresolvedFontWeightNumber = CSS::Number<CSS::Range{1, 1000}>;
-using UnresolvedFontWeight = std::variant<CSSValueID, UnresolvedFontWeightNumber>;
+using UnresolvedFontWeight = Variant<CSSValueID, UnresolvedFontWeightNumber>;
 
 // normal | <percentage [0,∞]> | ultra-condensed | extra-condensed | condensed | semi-condensed | semi-expanded | expanded | extra-expanded | ultra-expanded
 using UnresolvedFontWidthPercentage = CSS::Percentage<CSS::Nonnegative>;
-using UnresolvedFontWidth = std::variant<CSSValueID, UnresolvedFontWidthPercentage>;
+using UnresolvedFontWidth = Variant<CSSValueID, UnresolvedFontWidthPercentage>;
 
 // <absolute-size> | <relative-size> | <length-percentage [0,∞]>
-using UnresolvedFontSize = std::variant<CSSValueID, CSS::LengthPercentage<CSS::Nonnegative>>;
+using UnresolvedFontSize = Variant<CSSValueID, CSS::LengthPercentage<CSS::Nonnegative>>;
 
 // normal | <number [0,∞]> | <length-percentage [0,∞]>
-using UnresolvedFontLineHeight = std::variant<CSSValueID, CSS::Number<CSS::Nonnegative>, CSS::LengthPercentage<CSS::Nonnegative>>;
+using UnresolvedFontLineHeight = Variant<CSSValueID, CSS::Number<CSS::Nonnegative>, CSS::LengthPercentage<CSS::Nonnegative>>;
 
 // [ <family-name> | <generic-family> ]#
-using UnresolvedFontFamilyName = std::variant<CSSValueID, AtomString>;
+using UnresolvedFontFamilyName = Variant<CSSValueID, AtomString>;
 using UnresolvedFontFamily = Vector<UnresolvedFontFamilyName>;
 
 struct UnresolvedFont {

@@ -93,7 +93,7 @@ public:
     // Returns nullptr if the anchor element can't be found.
     static RefPtr<Element> findAnchorForAnchorFunctionAndAttemptResolution(BuilderState&, std::optional<ScopedName> elementName);
 
-    using Side = std::variant<CSSValueID, double>;
+    using Side = Variant<CSSValueID, double>;
     static bool propertyAllowsAnchorFunction(CSSPropertyID);
     static std::optional<double> evaluate(BuilderState&, std::optional<ScopedName> elementName, Side);
 

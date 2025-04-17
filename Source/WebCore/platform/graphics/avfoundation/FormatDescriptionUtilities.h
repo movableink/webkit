@@ -39,7 +39,7 @@ struct PlatformVideoColorSpace;
 FloatSize presentationSizeFromFormatDescription(CMFormatDescriptionRef);
 std::optional<PlatformVideoColorSpace> colorSpaceFromFormatDescription(CMFormatDescriptionRef);
 String codecFromFormatDescription(CMFormatDescriptionRef);
-using VideoMetadata = std::variant<SpatialVideoMetadata, bool>;
+using VideoMetadata = Variant<SpatialVideoMetadata, bool>;
 std::optional<VideoMetadata> videoMetadataFromFormatDescription(CMFormatDescriptionRef);
 
 } // namespace WebCore

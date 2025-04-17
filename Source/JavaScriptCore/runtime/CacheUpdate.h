@@ -56,7 +56,7 @@ public:
     const FunctionUpdate& asFunction() const;
 
 private:
-    std::variant<GlobalUpdate, FunctionUpdate> m_update;
+    Variant<GlobalUpdate, FunctionUpdate> m_update;
 };
 
 } // namespace JSC

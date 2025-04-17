@@ -49,7 +49,7 @@ struct ResourceRequestPlatformData {
     bool m_wasSchemeOptimisticallyUpgraded { false };
 };
 
-using ResourceRequestData = std::variant<ResourceRequestBase::RequestData, ResourceRequestPlatformData>;
+using ResourceRequestData = Variant<ResourceRequestBase::RequestData, ResourceRequestPlatformData>;
 
 class ResourceRequest : public ResourceRequestBase {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(ResourceRequest, WEBCORE_EXPORT);

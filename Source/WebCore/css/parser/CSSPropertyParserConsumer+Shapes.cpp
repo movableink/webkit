@@ -658,7 +658,7 @@ static std::optional<CSS::ArcCommand> consumeShapeArcCommand(CSSParserTokenRange
     if (!affinity)
         return { };
 
-    using ToBy = std::variant<CSS::ArcCommand::To, CSS::ArcCommand::By>;
+    using ToBy = Variant<CSS::ArcCommand::To, CSS::ArcCommand::By>;
     auto toBy = WTF::switchOn(*affinity,
         [&](CSS::Keyword::To) -> std::optional<ToBy> {
             auto position = consumePositionUnresolved(range, state);

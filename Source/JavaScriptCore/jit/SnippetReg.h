@@ -85,7 +85,7 @@ public:
     }
 
 private:
-    std::variant<GPRReg, FPRReg, JSValueRegs> m_variant;
+    Variant<GPRReg, FPRReg, JSValueRegs> m_variant;
 };
 
 }

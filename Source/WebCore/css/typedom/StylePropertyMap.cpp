@@ -63,7 +63,7 @@ static RefPtr<CSSValue> cssValueFromStyleValues(CSSPropertyID propertyID, Vector
 }
 
 // https://drafts.css-houdini.org/css-typed-om/#dom-stylepropertymap-set
-ExceptionOr<void> StylePropertyMap::set(Document& document, const AtomString& property, FixedVector<std::variant<RefPtr<CSSStyleValue>, String>>&& values)
+ExceptionOr<void> StylePropertyMap::set(Document& document, const AtomString& property, FixedVector<Variant<RefPtr<CSSStyleValue>, String>>&& values)
 {
     if (isCustomPropertyName(property)) {
         auto styleValuesOrException = CSSStyleValueFactory::vectorFromStyleValuesOrStrings(document, property, WTFMove(values));
@@ -142,7 +142,7 @@ ExceptionOr<void> StylePropertyMap::set(Document& document, const AtomString& pr
 }
 
 // https://drafts.css-houdini.org/css-typed-om/#dom-stylepropertymap-append
-ExceptionOr<void> StylePropertyMap::append(Document& document, const AtomString& property, FixedVector<std::variant<RefPtr<CSSStyleValue>, String>>&& values)
+ExceptionOr<void> StylePropertyMap::append(Document& document, const AtomString& property, FixedVector<Variant<RefPtr<CSSStyleValue>, String>>&& values)
 {
     if (values.isEmpty())
         return { };

@@ -33,7 +33,7 @@ namespace WebCore {
 namespace Calculation {
 
 static auto evaluate(const None&, double percentResolutionLength) -> None;
-static auto evaluate(const ChildOrNone&, double percentResolutionLength) -> std::variant<double, None>;
+static auto evaluate(const ChildOrNone&, double percentResolutionLength) -> Variant<double, None>;
 static auto evaluate(const std::optional<Child>&, double percentResolutionLength) -> std::optional<double>;
 static auto evaluate(const Child&, double percentResolutionLength) -> double;
 static auto evaluate(const Number&, double percentResolutionLength) -> double;
@@ -56,9 +56,11 @@ None evaluate(const None& root, double)
     return root;
 }
 
-std::variant<double, None> evaluate(const ChildOrNone& root, double percentResolutionLength)
+Variant<double, None> evaluate(const ChildOrNone& root, double percentResolutionLength)
 {
-    return WTF::switchOn(root, [&](const auto& root) { return std::variant<double, None> { evaluate(root, percentResolutionLength) }; });
+    return WTF::switchOn(root, [&](const auto& root) {
+        return Variant<double, None> { evaluate(root, percentResolutionLength) };
+    });
 }
 
 double evaluate(const Child& root, double percentResolutionLength)

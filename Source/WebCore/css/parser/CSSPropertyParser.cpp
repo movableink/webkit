@@ -1096,7 +1096,7 @@ struct InitialNumericValue {
     double number;
     CSSUnitType type { CSSUnitType::CSS_NUMBER };
 };
-using InitialValue = std::variant<CSSValueID, InitialNumericValue>;
+using InitialValue = Variant<CSSValueID, InitialNumericValue>;
 
 static constexpr InitialValue initialValueForLonghand(CSSPropertyID longhand)
 {

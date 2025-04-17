@@ -66,7 +66,7 @@ public:
 private:
     explicit LocalAuthenticator(Ref<LocalConnection>&&);
 
-    std::optional<WebCore::ExceptionData> processClientExtensions(std::variant<Ref<WebCore::AuthenticatorAttestationResponse>, Ref<WebCore::AuthenticatorAssertionResponse>>);
+    std::optional<WebCore::ExceptionData> processClientExtensions(Variant<Ref<WebCore::AuthenticatorAttestationResponse>, Ref<WebCore::AuthenticatorAssertionResponse>>);
 
     void makeCredential() final;
     void continueMakeCredentialAfterReceivingLAContext(LAContext *);

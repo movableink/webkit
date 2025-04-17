@@ -131,7 +131,9 @@ template<typename T, size_t N> struct ToCSSMapping<SpaceSeparatedVector<T, N>> {
 template<typename T, size_t N> struct ToCSSMapping<CommaSeparatedVector<T, N>> { using type = CommaSeparatedVector<CSSType<T>, N>; };
 
 // Standard Variant-Like type mappings:
-template<typename... Ts> struct ToCSSMapping<std::variant<Ts...>> { using type = std::variant<CSSType<Ts>...>; };
+template<typename... Ts> struct ToCSSMapping<Variant<Ts...>> {
+    using type = Variant<CSSType<Ts>...>;
+};
 
 // Constrained for `TreatAsNonConverting`.
 template<NonConverting StyleType> struct ToCSS<StyleType> {
@@ -254,7 +256,9 @@ template<typename T, size_t N> struct ToStyleMapping<SpaceSeparatedVector<T, N>>
 template<typename T, size_t N> struct ToStyleMapping<CommaSeparatedVector<T, N>> { using type = CommaSeparatedVector<StyleType<T>, N>; };
 
 // Standard Variant-Like type mappings:
-template<typename... Ts> struct ToStyleMapping<std::variant<Ts...>> { using type = std::variant<StyleType<Ts>...>; };
+template<typename... Ts> struct ToStyleMapping<Variant<Ts...>> {
+    using type = Variant<StyleType<Ts>...>;
+};
 
 // Constrained for `TreatAsNonConverting`.
 template<NonConverting CSSType> struct ToStyle<CSSType> {
@@ -511,9 +515,9 @@ template<CSSValueID C> struct Blending<Constant<C>> {
     }
 };
 
-// Specialization for `std::variant`.
-template<typename... StyleTypes> struct Blending<std::variant<StyleTypes...>> {
-    auto canBlend(const std::variant<StyleTypes...>& a, const std::variant<StyleTypes...>& b) -> bool
+// Specialization for `Variant`.
+template<typename... StyleTypes> struct Blending<Variant<StyleTypes...>> {
+    auto canBlend(const Variant<StyleTypes...>& a, const Variant<StyleTypes...>& b) -> bool
     {
         return std::visit(WTF::makeVisitor(
             []<typename T>(const T& a, const T& b) -> bool {
@@ -524,7 +528,7 @@ template<typename... StyleTypes> struct Blending<std::variant<StyleTypes...>> {
             }
         ), a, b);
     }
-    auto canBlend(const std::variant<StyleTypes...>& a, const std::variant<StyleTypes...>& b, const RenderStyle& aStyle, const RenderStyle& bStyle) -> bool
+    auto canBlend(const Variant<StyleTypes...>& a, const Variant<StyleTypes...>& b, const RenderStyle& aStyle, const RenderStyle& bStyle) -> bool
     {
         return std::visit(WTF::makeVisitor(
             [&]<typename T>(const T& a, const T& b) -> bool {
@@ -535,24 +539,24 @@ template<typename... StyleTypes> struct Blending<std::variant<StyleTypes...>> {
             }
         ), a, b);
     }
-    auto blend(const std::variant<StyleTypes...>& a, const std::variant<StyleTypes...>& b, const BlendingContext& context) -> std::variant<StyleTypes...>
+    auto blend(const Variant<StyleTypes...>& a, const Variant<StyleTypes...>& b, const BlendingContext& context) -> Variant<StyleTypes...>
     {
         return std::visit(WTF::makeVisitor(
-            [&]<typename T>(const T& a, const T& b) -> std::variant<StyleTypes...> {
+            [&]<typename T>(const T& a, const T& b) -> Variant<StyleTypes...> {
                 return WebCore::Style::blend(a, b, context);
             },
-            [](const auto&, const auto&) -> std::variant<StyleTypes...> {
+            [](const auto&, const auto&) -> Variant<StyleTypes...> {
                 RELEASE_ASSERT_NOT_REACHED();
             }
         ), a, b);
     }
-    auto blend(const std::variant<StyleTypes...>& a, const std::variant<StyleTypes...>& b, const RenderStyle& aStyle, const RenderStyle& bStyle, const BlendingContext& context) -> std::variant<StyleTypes...>
+    auto blend(const Variant<StyleTypes...>& a, const Variant<StyleTypes...>& b, const RenderStyle& aStyle, const RenderStyle& bStyle, const BlendingContext& context) -> Variant<StyleTypes...>
     {
         return std::visit(WTF::makeVisitor(
-            [&]<typename T>(const T& a, const T& b) -> std::variant<StyleTypes...> {
+            [&]<typename T>(const T& a, const T& b) -> Variant<StyleTypes...> {
                 return WebCore::Style::blend(a, b, aStyle, bStyle, context);
             },
-            [](const auto&, const auto&) -> std::variant<StyleTypes...> {
+            [](const auto&, const auto&) -> Variant<StyleTypes...> {
                 RELEASE_ASSERT_NOT_REACHED();
             }
         ), a, b);

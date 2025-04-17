@@ -279,7 +279,7 @@ def generate_process_sync_data_header(synched_datas, document_synched_datas, fra
             result.append('#endif')
 
     result.append("")
-    result.append("using ProcessSyncDataVariant = std::variant<")
+    result.append("using ProcessSyncDataVariant = Variant<")
     for data in synched_datas[:-1]:
         result.append('    %s,' % data.fully_qualified_type)
 
@@ -533,7 +533,7 @@ def generate_process_sync_data_serialiation_in(synched_datas, document_synched_d
             result.append('#endif')
 
     result.append("")
-    variant_string = "using WebCore::ProcessSyncDataVariant = std::variant<"
+    variant_string = "using WebCore::ProcessSyncDataVariant = Variant<"
     for data in synched_datas[:-1]:
         variant_string += data.fully_qualified_type + ', '
     variant_string += synched_datas[-1].fully_qualified_type + '>;'

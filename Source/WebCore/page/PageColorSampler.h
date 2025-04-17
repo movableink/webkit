@@ -40,7 +40,7 @@ public:
     static std::optional<Color> sampleTop(Page&);
 
     static constexpr auto nearlyTransparentAlphaThreshold = 0.1;
-    static std::variant<PredominantColorType, Color> predominantColor(Page&, const LayoutRect&);
+    static Variant<PredominantColorType, Color> predominantColor(Page&, const LayoutRect&);
 };
 
 } // namespace WebCore

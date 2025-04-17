@@ -340,7 +340,7 @@ class CompactTDZEnvironment {
 
     using Compact = Vector<PackedRefPtr<UniquedStringImpl>>;
     using Inflated = TDZEnvironment;
-    using Variables = std::variant<Compact, Inflated>;
+    using Variables = Variant<Compact, Inflated>;
 
 public:
     CompactTDZEnvironment(const TDZEnvironment&);

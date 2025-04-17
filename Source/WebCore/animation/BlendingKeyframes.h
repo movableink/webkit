@@ -104,7 +104,7 @@ private:
     bool m_containsDirectionAwareProperty { false };
 };
 
-using KeyframesIdentifier = std::variant<AtomString, uint64_t>;
+using KeyframesIdentifier = Variant<AtomString, uint64_t>;
 
 class BlendingKeyframes {
 public:

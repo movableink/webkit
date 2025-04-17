@@ -278,7 +278,7 @@ std::optional<Color> PageColorSampler::sampleTop(Page& page)
         return averageColor(std::span(samples));
 }
 
-std::variant<PredominantColorType, Color> PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteRect)
+Variant<PredominantColorType, Color> PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteRect)
 {
     RefPtr frame = page.localMainFrame();
     if (!frame)

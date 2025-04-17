@@ -92,7 +92,7 @@ public:
 private:
     explicit WorkerInspectorProxy(const String& identifier);
 
-    using PageOrWorkerGlobalScopeIdentifier = std::variant<PageIdentifier, ScriptExecutionContextIdentifier>;
+    using PageOrWorkerGlobalScopeIdentifier = Variant<PageIdentifier, ScriptExecutionContextIdentifier>;
     static std::optional<PageOrWorkerGlobalScopeIdentifier> pageOrWorkerGlobalScopeIdentifier(ScriptExecutionContext&);
 
     void addToProxyMap();

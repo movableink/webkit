@@ -30,8 +30,8 @@
 
 namespace WebCore {
 
-using CSSColorRGBComp = std::variant<double, RefPtr<CSSNumericValue>, String, RefPtr<CSSKeywordValue>>;
-using RectifiedCSSColorRGBComp = std::variant<RefPtr<CSSNumericValue>, RefPtr<CSSKeywordValue>>;
+using CSSColorRGBComp = Variant<double, RefPtr<CSSNumericValue>, String, RefPtr<CSSKeywordValue>>;
+using RectifiedCSSColorRGBComp = Variant<RefPtr<CSSNumericValue>, RefPtr<CSSKeywordValue>>;
 
 class CSSRGB final : public CSSOMColorValue {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSRGB);

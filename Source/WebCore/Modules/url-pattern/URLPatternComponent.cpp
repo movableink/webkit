@@ -119,7 +119,7 @@ URLPatternComponentResult URLPatternComponent::createComponentMatchResult(Script
     for (unsigned index = 1; index < length; ++index) {
         auto match = execResult.get(globalObject, index);
 
-        std::variant<std::monostate, String> value;
+        Variant<std::monostate, String> value;
         if (!match.isNull() && !match.isUndefined())
             value = match.toWTFString(globalObject);
 

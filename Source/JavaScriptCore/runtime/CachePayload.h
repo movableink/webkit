@@ -44,7 +44,7 @@ public:
     JS_EXPORT_PRIVATE std::span<const uint8_t> span() const;
 
 private:
-    using DataType = std::variant<MallocSpan<uint8_t, VMMalloc>, FileSystem::MappedFileData>;
+    using DataType = Variant<MallocSpan<uint8_t, VMMalloc>, FileSystem::MappedFileData>;
     explicit CachePayload(DataType&&);
 
     DataType m_data;

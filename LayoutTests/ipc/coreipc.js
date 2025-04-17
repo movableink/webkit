@@ -548,7 +548,7 @@ export class ArgumentSerializer {
                     return ArgumentSerializer.serializeStdArray(innerType, argument);
                 case 'HashSet':
                     return ArgumentSerializer.serializeHashSet(innerType, argument);
-                case 'std::variant':
+                case 'Variant':
                     return ArgumentSerializer.serializeVariant(innerType, argument);
                 case 'std::pair':
                     return ArgumentSerializer.serializePair(innerType, argument);

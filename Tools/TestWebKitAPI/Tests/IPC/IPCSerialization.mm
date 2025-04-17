@@ -100,7 +100,7 @@ struct CFHolderForTesting {
         return result;
     }
 
-    using ValueType = std::variant<
+    using ValueType = Variant<
         std::nullptr_t,
         RetainPtr<CFArrayRef>,
         RetainPtr<CFBooleanRef>,
@@ -437,7 +437,7 @@ struct ObjCHolderForTesting {
         return result;
     }
 
-    typedef std::variant<
+    typedef Variant<
         std::nullptr_t,
         RetainPtr<NSDate>,
         RetainPtr<NSString>,

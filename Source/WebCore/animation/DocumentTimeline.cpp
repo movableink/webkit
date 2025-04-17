@@ -485,17 +485,17 @@ unsigned DocumentTimeline::numberOfAnimationTimelineInvalidationsForTesting() co
     return m_numberOfAnimationTimelineInvalidationsForTesting;
 }
 
-ExceptionOr<Ref<WebAnimation>> DocumentTimeline::animate(Ref<CustomEffectCallback>&& callback, std::optional<std::variant<double, CustomAnimationOptions>>&& options)
+ExceptionOr<Ref<WebAnimation>> DocumentTimeline::animate(Ref<CustomEffectCallback>&& callback, std::optional<Variant<double, CustomAnimationOptions>>&& options)
 {
     if (!m_document)
         return Exception { ExceptionCode::InvalidStateError };
 
     String id = emptyString();
-    std::variant<FramesPerSecond, AnimationFrameRatePreset> frameRate = AnimationFrameRatePreset::Auto;
-    std::optional<std::variant<double, EffectTiming>> customEffectOptions;
+    Variant<FramesPerSecond, AnimationFrameRatePreset> frameRate = AnimationFrameRatePreset::Auto;
+    std::optional<Variant<double, EffectTiming>> customEffectOptions;
 
     if (options) {
-        std::variant<double, EffectTiming> customEffectOptionsVariant;
+        Variant<double, EffectTiming> customEffectOptionsVariant;
         if (std::holds_alternative<double>(*options))
             customEffectOptionsVariant = std::get<double>(*options);
         else {

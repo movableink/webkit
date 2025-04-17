@@ -1180,7 +1180,7 @@ std::optional<Child> simplify(Hypot& root, const SimplificationOptions& options)
     struct PercentageTag { };
     struct DimensionTag { CanonicalDimension::Dimension dimension; };
     struct FailureTag { };
-    std::variant<std::monostate, NumberTag, PercentageTag, DimensionTag, FailureTag> result;
+    Variant<std::monostate, NumberTag, PercentageTag, DimensionTag, FailureTag> result;
 
     double value = executeMathOperation<Hypot>(root.children.value, [&](const auto& child) {
         return WTF::switchOn(result,

@@ -61,7 +61,7 @@ public:
     struct CharacterMode {
         friend bool operator==(CharacterMode, CharacterMode) = default;
     };
-    using Mode = std::variant<LineMode, CaretMode, DeleteMode, CharacterMode>;
+    using Mode = Variant<LineMode, CaretMode, DeleteMode, CharacterMode>;
 
     enum class ContentAnalysis : bool {
         Linguistic,
@@ -99,7 +99,7 @@ private:
     friend class CachedTextBreakIterator;
     friend class TextBreakIteratorCache;
 
-    using Backing = std::variant<TextBreakIteratorICU, TextBreakIteratorPlatform>;
+    using Backing = Variant<TextBreakIteratorICU, TextBreakIteratorPlatform>;
 
     static Backing mapModeToBackingIterator(StringView, std::span<const UChar> priorContext, Mode, ContentAnalysis, const AtomString& locale);
 

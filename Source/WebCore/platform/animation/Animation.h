@@ -158,7 +158,7 @@ public:
         ViewTimelineInsets insets;
         bool operator==(const AnonymousViewTimeline& o) const { return axis == o.axis && insets == o.insets; }
     };
-    using Timeline = std::variant<TimelineKeyword, AtomString, AnonymousScrollTimeline, AnonymousViewTimeline>;
+    using Timeline = Variant<TimelineKeyword, AtomString, AnonymousScrollTimeline, AnonymousViewTimeline>;
 
     Direction direction() const { return static_cast<Direction>(m_direction); }
     bool directionIsForwards() const { return direction() == Direction::Normal || direction() == Direction::Alternate; }

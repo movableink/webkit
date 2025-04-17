@@ -57,7 +57,7 @@ public:
 
     static bool platformCompare(const Credential&, const Credential&);
 
-    using IPCData = std::variant<NonPlatformData, RetainPtr<NSURLCredential>>;
+    using IPCData = Variant<NonPlatformData, RetainPtr<NSURLCredential>>;
     WEBCORE_EXPORT static Credential fromIPCData(IPCData&&);
     WEBCORE_EXPORT IPCData ipcData() const;
 

@@ -49,7 +49,7 @@ class WebPageProxy;
 
 struct WebAuthenticationRequestData {
     Vector<uint8_t> hash;
-    std::variant<WebCore::PublicKeyCredentialCreationOptions, WebCore::PublicKeyCredentialRequestOptions> options;
+    Variant<WebCore::PublicKeyCredentialCreationOptions, WebCore::PublicKeyCredentialRequestOptions> options;
 
     // FIXME<rdar://problem/71509848>: Remove the following deprecated fields.
     WeakPtr<WebPageProxy> page;
@@ -64,8 +64,8 @@ struct WebAuthenticationRequestData {
     std::optional<WebCore::SecurityOriginData> parentOrigin;
 };
 
-WebCore::ClientDataType getClientDataType(const std::variant<WebCore::PublicKeyCredentialCreationOptions, WebCore::PublicKeyCredentialRequestOptions>&);
-WebCore::UserVerificationRequirement getUserVerificationRequirement(const std::variant<WebCore::PublicKeyCredentialCreationOptions, WebCore::PublicKeyCredentialRequestOptions>&);
+WebCore::ClientDataType getClientDataType(const Variant<WebCore::PublicKeyCredentialCreationOptions, WebCore::PublicKeyCredentialRequestOptions>&);
+WebCore::UserVerificationRequirement getUserVerificationRequirement(const Variant<WebCore::PublicKeyCredentialCreationOptions, WebCore::PublicKeyCredentialRequestOptions>&);
 
 } // namespace WebKit
 

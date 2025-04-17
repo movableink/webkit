@@ -36,7 +36,7 @@ template<CSS::Range nR = CSS::All, CSS::Range pR = nR, typename V = double> stru
     using Number = Style::Number<nR, V>;
     using Percentage = Style::Percentage<pR, V>;
 
-    NumberOrPercentage(std::variant<Number, Percentage>&& value)
+    NumberOrPercentage(Variant<Number, Percentage>&& value)
     {
         WTF::switchOn(WTFMove(value), [this](auto&& alternative) { this->value = WTFMove(alternative); });
     }
@@ -84,7 +84,7 @@ private:
 
     bool isEmpty() const { return std::holds_alternative<CSS::PrimitiveDataEmptyToken>(value); }
 
-    std::variant<CSS::PrimitiveDataEmptyToken, Number, Percentage> value;
+    Variant<CSS::PrimitiveDataEmptyToken, Number, Percentage> value;
 };
 
 template<CSS::Range nR = CSS::All, CSS::Range pR = nR, typename V = double> struct NumberOrPercentageResolvedToNumber {

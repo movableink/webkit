@@ -701,7 +701,7 @@ void WebAnimation::applyPendingPlaybackRate()
         m_effect->animationPlaybackRateDidChange();
 }
 
-void WebAnimation::setBindingsFrameRate(std::variant<FramesPerSecond, AnimationFrameRatePreset>&& frameRate)
+void WebAnimation::setBindingsFrameRate(Variant<FramesPerSecond, AnimationFrameRatePreset>&& frameRate)
 {
     m_bindingsFrameRate = WTFMove(frameRate);
 

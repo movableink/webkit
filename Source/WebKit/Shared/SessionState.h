@@ -57,7 +57,7 @@ struct HTTPBody {
             std::optional<WallTime> expectedFileModificationTime;
         };
         using BlobURLString = String;
-        using Data = std::variant<Vector<uint8_t>, FileData, BlobURLString>;
+        using Data = Variant<Vector<uint8_t>, FileData, BlobURLString>;
         Data data;
     };
 

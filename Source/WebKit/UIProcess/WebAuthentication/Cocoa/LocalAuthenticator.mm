@@ -428,7 +428,7 @@ std::optional<WebCore::ExceptionData> LocalAuthenticator::processLargeBlobExtens
     return std::nullopt;
 }
 
-std::optional<WebCore::ExceptionData> LocalAuthenticator::processClientExtensions(std::variant<Ref<AuthenticatorAttestationResponse>, Ref<AuthenticatorAssertionResponse>> response)
+std::optional<WebCore::ExceptionData> LocalAuthenticator::processClientExtensions(Variant<Ref<AuthenticatorAttestationResponse>, Ref<AuthenticatorAssertionResponse>> response)
 {
     using namespace LocalAuthenticatorInternal;
     return WTF::switchOn(response, [&](const Ref<AuthenticatorAttestationResponse>& response) -> std::optional<WebCore::ExceptionData> {

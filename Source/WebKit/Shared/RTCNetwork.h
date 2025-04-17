@@ -55,7 +55,7 @@ struct IPAddress {
     IPAddress() = default;
     explicit IPAddress(const rtc::IPAddress&);
     explicit IPAddress(const struct sockaddr&);
-    explicit IPAddress(std::variant<UnspecifiedFamily, uint32_t, std::array<uint32_t, 4>> value)
+    explicit IPAddress(Variant<UnspecifiedFamily, uint32_t, std::array<uint32_t, 4>> value)
         : value(value)
     {
     }
@@ -65,7 +65,7 @@ struct IPAddress {
 
     bool isUnspecified() const { return std::holds_alternative<UnspecifiedFamily>(value); }
 
-    std::variant<UnspecifiedFamily, uint32_t, std::array<uint32_t, 4>> value;
+    Variant<UnspecifiedFamily, uint32_t, std::array<uint32_t, 4>> value;
 };
 
 struct InterfaceAddress {

@@ -46,7 +46,7 @@ public:
     void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
 
 private:
-    using Supplement = std::variant<Vector<uint8_t>, String>;
+    using Supplement = Variant<Vector<uint8_t>, String>;
 
     SubFrameSOAuthorizationSession(RetainPtr<WKSOAuthorizationDelegate>, Ref<API::NavigationAction>&&, WebPageProxy&, Callback&&, std::optional<WebCore::FrameIdentifier>);
 

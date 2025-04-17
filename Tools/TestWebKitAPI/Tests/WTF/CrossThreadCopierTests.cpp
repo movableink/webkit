@@ -111,7 +111,7 @@ TEST(WTF_CrossThreadCopier, Pair)
 
 TEST(WTF_CrossThreadCopier, Variant)
 {
-    std::variant<String, URL> variant;
+    Variant<String, URL> variant;
     variant = "foo"_str;
     auto* impl = std::get<String>(variant).impl();
     auto copy = crossThreadCopy(variant);

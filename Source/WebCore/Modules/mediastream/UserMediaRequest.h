@@ -60,7 +60,7 @@ public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
 
-    using TrackConstraints = std::variant<bool, MediaTrackConstraints>;
+    using TrackConstraints = Variant<bool, MediaTrackConstraints>;
     static Ref<UserMediaRequest> create(Document&, MediaStreamRequest&&, TrackConstraints&&, TrackConstraints&&, DOMPromiseDeferred<IDLInterface<MediaStream>>&&);
     virtual ~UserMediaRequest();
 

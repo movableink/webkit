@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-static std::variant<String, Ref<SharedBuffer>> copyPlatformData(const std::variant<String, Ref<SharedBuffer>>& other)
+static Variant<String, Ref<SharedBuffer>> copyPlatformData(const Variant<String, Ref<SharedBuffer>>& other)
 {
     if (std::holds_alternative<String>(other))
         return { std::get<String>(other) };
@@ -59,7 +59,7 @@ PasteboardCustomData::Entry::Entry(const String& dataType)
 PasteboardCustomData::Entry::Entry() = default;
 PasteboardCustomData::Entry::Entry(Entry&&) = default;
 
-PasteboardCustomData::Entry::Entry(const String& type, const String& customData, const std::variant<String, Ref<WebCore::SharedBuffer>>& platformData)
+PasteboardCustomData::Entry::Entry(const String& type, const String& customData, const Variant<String, Ref<WebCore::SharedBuffer>>& platformData)
     : type(type)
     , customData(customData)
     , platformData(platformData)
@@ -272,7 +272,7 @@ void PasteboardCustomData::forEachCustomString(Function<void(const String& type,
     }
 }
 
-void PasteboardCustomData::forEachPlatformStringOrBuffer(Function<void(const String& type, const std::variant<String, Ref<SharedBuffer>>& data)>&& function) const
+void PasteboardCustomData::forEachPlatformStringOrBuffer(Function<void(const String& type, const Variant<String, Ref<SharedBuffer>>& data)>&& function) const
 {
     for (auto& entry : m_data) {
         auto& data = entry.platformData;

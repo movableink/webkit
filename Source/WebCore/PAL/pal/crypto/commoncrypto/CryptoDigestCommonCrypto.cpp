@@ -39,7 +39,7 @@ namespace PAL {
 struct CryptoDigestContext {
     WTF_MAKE_STRUCT_TZONE_ALLOCATED(CryptoDigestContext);
     CryptoDigest::Algorithm algorithm;
-    std::variant<
+    Variant<
 #if HAVE(SWIFT_CPP_INTEROP)
         std::unique_ptr<PAL::Digest>,
 #endif
@@ -82,9 +82,9 @@ CryptoDigest::~CryptoDigest()
 }
 
 #if HAVE(SWIFT_CPP_INTEROP)
-static std::variant<std::unique_ptr<PAL::Digest>, std::unique_ptr<CC_SHA1_CTX>, std::unique_ptr<CC_SHA256_CTX>, std::unique_ptr<CC_SHA512_CTX>> createCryptoDigest(CryptoDigest::Algorithm algorithm)
+static Variant<std::unique_ptr<PAL::Digest>, std::unique_ptr<CC_SHA1_CTX>, std::unique_ptr<CC_SHA256_CTX>, std::unique_ptr<CC_SHA512_CTX>> createCryptoDigest(CryptoDigest::Algorithm algorithm)
 #else
-static std::variant<std::unique_ptr<CC_SHA1_CTX>, std::unique_ptr<CC_SHA256_CTX>, std::unique_ptr<CC_SHA512_CTX>> createCryptoDigest(CryptoDigest::Algorithm algorithm)
+static Variant<std::unique_ptr<CC_SHA1_CTX>, std::unique_ptr<CC_SHA256_CTX>, std::unique_ptr<CC_SHA512_CTX>> createCryptoDigest(CryptoDigest::Algorithm algorithm)
 #endif
 {
     switch (algorithm) {

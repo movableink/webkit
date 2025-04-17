@@ -56,7 +56,7 @@ class WebCodecsVideoFrame : public RefCounted<WebCodecsVideoFrame>, public Conte
 public:
     ~WebCodecsVideoFrame();
 
-    using CanvasImageSource = std::variant<RefPtr<HTMLImageElement>
+    using CanvasImageSource = Variant<RefPtr<HTMLImageElement>
         , RefPtr<SVGImageElement>
         , RefPtr<HTMLCanvasElement>
         , RefPtr<ImageBitmap>

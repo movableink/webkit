@@ -141,7 +141,7 @@ public:
         WTF::UUID uuid;
     };
 
-    using Data = std::variant<
+    using Data = Variant<
         String
         , DictationData // DictationAlternatives
 #if PLATFORM(IOS_FAMILY)

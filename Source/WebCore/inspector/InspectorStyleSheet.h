@@ -156,7 +156,7 @@ public:
         virtual void styleSheetChanged(InspectorStyleSheet*) = 0;
     };
 
-    using StyleDeclarationOrCSSRule = std::variant<CSSStyleDeclaration*, CSSRule*>;
+    using StyleDeclarationOrCSSRule = Variant<CSSStyleDeclaration*, CSSRule*>;
 
     static Ref<InspectorStyleSheet> create(InspectorPageAgent*, const String& id, RefPtr<CSSStyleSheet>&& pageStyleSheet, Inspector::Protocol::CSS::StyleSheetOrigin, const String& documentURL, Listener*);
     static String styleSheetURL(CSSStyleSheet* pageStyleSheet);

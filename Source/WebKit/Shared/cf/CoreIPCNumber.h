@@ -36,7 +36,7 @@ namespace WebKit {
 
 class CoreIPCNumber {
 public:
-    using NumberHolder = std::variant<
+    using NumberHolder = Variant<
         char,
         unsigned char,
         short,

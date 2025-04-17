@@ -71,7 +71,7 @@ struct GraphicsColorMatrix {
     friend bool operator==(const GraphicsColorMatrix&, const GraphicsColorMatrix&) = default;
 };
 
-using GraphicsStyle = std::variant<
+using GraphicsStyle = Variant<
     GraphicsDropShadow,
     GraphicsGaussianBlur,
     GraphicsColorMatrix

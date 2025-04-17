@@ -147,7 +147,7 @@ enum class HTMLMediaElementSourceType : uint8_t {
     StoredStream,
 };
 
-using MediaProvider = std::optional < std::variant <
+using MediaProvider = std::optional < Variant <
 #if ENABLE(MEDIA_STREAM)
     RefPtr<MediaStream>,
 #endif

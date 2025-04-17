@@ -82,7 +82,7 @@ public:
     using AttributeChangedPayload = std::tuple<QualifiedName, AtomString, AtomString>;
     using FormDisabledPayload = bool;
     using FormStateRestorePayload = CustomElementFormValue;
-    using Payload = std::optional<std::variant<AdoptedPayload, AttributeChangedPayload, FormAssociatedPayload, FormDisabledPayload, FormStateRestorePayload>>;
+    using Payload = std::optional<Variant<AdoptedPayload, AttributeChangedPayload, FormAssociatedPayload, FormDisabledPayload, FormStateRestorePayload>>;
 
     CustomElementReactionQueueItem();
     CustomElementReactionQueueItem(CustomElementReactionQueueItem&&);

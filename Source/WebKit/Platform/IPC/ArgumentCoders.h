@@ -753,11 +753,11 @@ template<typename ErrorType> struct ArgumentCoder<Expected<void, ErrorType>> {
 
 using EncodedVariantIndex = uint8_t;
 
-template<typename... Types> struct ArgumentCoder<std::variant<Types...>> {
+template<typename... Types> struct ArgumentCoder<Variant<Types...>> {
     template<typename Encoder, typename T>
     static void encode(Encoder& encoder, T&& variant)
     {
-        static_assert(std::is_same_v<std::remove_cvref_t<T>, std::variant<Types...>>);
+        static_assert(std::is_same_v<std::remove_cvref_t<T>, Variant<Types...>>);
         static_assert(sizeof...(Types) <= static_cast<size_t>(std::numeric_limits<EncodedVariantIndex>::max()));
 
         EncodedVariantIndex i = variant.index();
@@ -779,7 +779,7 @@ template<typename... Types> struct ArgumentCoder<std::variant<Types...>> {
     }
 
     template<typename Decoder>
-    static std::optional<std::variant<Types...>> decode(Decoder& decoder)
+    static std::optional<Variant<Types...>> decode(Decoder& decoder)
     {
         auto i = decoder.template decode<EncodedVariantIndex>();
         if (!i || *i >= sizeof...(Types))
@@ -788,15 +788,15 @@ template<typename... Types> struct ArgumentCoder<std::variant<Types...>> {
     }
 
     template<typename Decoder, size_t... Indices>
-    static std::optional<std::variant<Types...>> decode(Decoder& decoder, std::index_sequence<Indices...>, size_t i)
+    static std::optional<Variant<Types...>> decode(Decoder& decoder, std::index_sequence<Indices...>, size_t i)
     {
         constexpr size_t index = sizeof...(Indices);
         if constexpr (index < sizeof...(Types)) {
             if (index == i) {
-                auto optional = decoder.template decode<typename std::variant_alternative_t<index, std::variant<Types...>>>();
+                auto optional = decoder.template decode<typename std::variant_alternative_t<index, Variant<Types...>>>();
                 if (!optional)
                     return std::nullopt;
-                return std::make_optional<std::variant<Types...>>(std::in_place_index<index>, WTFMove(*optional));
+                return std::make_optional<Variant<Types...>>(std::in_place_index<index>, WTFMove(*optional));
             }
             return decode(decoder, std::make_index_sequence<index + 1> { }, i);
         } else

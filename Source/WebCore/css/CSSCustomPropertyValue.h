@@ -53,7 +53,7 @@ public:
         bool operator==(const TransformSyntaxValue& other) const { return transform.get() == other.transform.get(); }
     };
 
-    using SyntaxValue = std::variant<Length, NumericSyntaxValue, Style::Color, RefPtr<StyleImage>, Style::URL, String, TransformSyntaxValue>;
+    using SyntaxValue = Variant<Length, NumericSyntaxValue, Style::Color, RefPtr<StyleImage>, Style::URL, String, TransformSyntaxValue>;
 
     struct SyntaxValueList {
         Vector<SyntaxValue> values;
@@ -62,7 +62,7 @@ public:
         friend bool operator==(const SyntaxValueList&, const SyntaxValueList&) = default;
     };
 
-    using VariantValue = std::variant<Ref<CSSVariableReferenceValue>, CSSValueID, Ref<CSSVariableData>, SyntaxValue, SyntaxValueList>;
+    using VariantValue = Variant<Ref<CSSVariableReferenceValue>, CSSValueID, Ref<CSSVariableData>, SyntaxValue, SyntaxValueList>;
 
     static Ref<CSSCustomPropertyValue> createEmpty(const AtomString& name);
 

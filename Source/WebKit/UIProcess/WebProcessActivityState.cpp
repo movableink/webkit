@@ -88,7 +88,7 @@ void WebProcessActivityState::takeMutedCaptureAssertion()
     Ref isMutedCaptureAssertion = ProcessAssertion::create(protectedProcess(), "WebKit Muted Media Capture"_s, ProcessAssertionType::Background);
     m_isMutedCaptureAssertion = isMutedCaptureAssertion.copyRef();
 
-    auto page = std::visit([](auto&& weakPageRef) -> std::variant<WeakPtr<WebPageProxy>, WeakPtr<RemotePageProxy>> {
+    auto page = std::visit([](auto&& weakPageRef) -> Variant<WeakPtr<WebPageProxy>, WeakPtr<RemotePageProxy>> {
         return weakPageRef.get();
     }, m_page);
 

@@ -232,7 +232,7 @@ template<> struct OperatorExecutor<Clamp> {
         return std::max(min, std::min(val, max));
     }
 
-    template<std::floating_point T> T operator()(std::variant<T, None> min, T val, std::variant<T, None> max)
+    template<std::floating_point T> T operator()(Variant<T, None> min, T val, Variant<T, None> max)
     {
         bool minIsNone = std::holds_alternative<None>(min);
         bool maxIsNone = std::holds_alternative<None>(max);

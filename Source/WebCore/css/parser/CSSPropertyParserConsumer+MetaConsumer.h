@@ -47,7 +47,7 @@ namespace CSSPropertyParserHelpers {
 
 /// The result of a meta consume.
 /// To be used with a list of `CSS` types (e.g. `ConsumeResult<CSS::Angle<Range>, CSS::Percentage<Range>, CSS::Keyword::None>`), which will yield a
-/// result type of either a std::variant of those types (e.g.`std::variant<CSS::Angle<Range>, CSS::Percentage<Range>, CSS::Keyword::None>`) or the type
+/// result type of either a Variant of those types (e.g.`Variant<CSS::Angle<Range>, CSS::Percentage<Range>, CSS::Keyword::None>`) or the type
 /// itself if only a single type was specified.
 template<typename... Ts>
 struct MetaConsumeResult {
@@ -226,7 +226,7 @@ struct MetaConsumer {
         return consume(range, state, { }, { }, std::forward<F>(f)...);
     }
 
-    // Overloaded with no continuation functor parameters allowing a for simplified interface when returning a single value / or std::variant is acceptable.
+    // Overloaded with no continuation functor parameters allowing a for simplified interface when returning a single value / or Variant is acceptable.
     static decltype(auto) consume(CSSParserTokenRange& range, CSS::PropertyParserState& state, CSSCalcSymbolsAllowed symbolsAllowed = { }, CSSPropertyParserOptions options = { })
     {
         using ResultType = typename MetaConsumeResult<T, Ts...>::type;

@@ -43,7 +43,7 @@ namespace WebCore {
 namespace CSSCalc {
 
 static auto evaluate(const CSS::Keyword::None&, const EvaluationOptions&) -> std::optional<Calculation::None>;
-static auto evaluate(const ChildOrNone&, const EvaluationOptions&) -> std::optional<std::variant<double, Calculation::None>>;
+static auto evaluate(const ChildOrNone&, const EvaluationOptions&) -> std::optional<Variant<double, Calculation::None>>;
 static auto evaluate(const std::optional<Child>&, const EvaluationOptions&) -> std::optional<std::optional<double>>;
 static auto evaluate(const Child&, const EvaluationOptions&) -> std::optional<double>;
 static auto evaluate(const Number&, const EvaluationOptions&) -> std::optional<double>;
@@ -97,12 +97,12 @@ std::optional<Calculation::None> evaluate(const CSS::Keyword::None&, const Evalu
     return Calculation::None { };
 }
 
-std::optional<std::variant<double, Calculation::None>> evaluate(const ChildOrNone& root, const EvaluationOptions& options)
+std::optional<Variant<double, Calculation::None>> evaluate(const ChildOrNone& root, const EvaluationOptions& options)
 {
     return WTF::switchOn(root,
-        [&](const auto& root) -> std::optional<std::variant<double, Calculation::None>> {
+        [&](const auto& root) -> std::optional<Variant<double, Calculation::None>> {
             if (auto value = evaluate(root, options))
-                return std::variant<double, Calculation::None> { *value };
+                return Variant<double, Calculation::None> { *value };
             return std::nullopt;
         }
     );

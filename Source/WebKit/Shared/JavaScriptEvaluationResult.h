@@ -62,7 +62,7 @@ class JavaScriptEvaluationResult {
 public:
 #if PLATFORM(COCOA)
     enum class NullType : bool { NullPointer, NSNull };
-    using Variant = std::variant<NullType, bool, CoreIPCNumber, String, Seconds, Vector<JSObjectID>, HashMap<JSObjectID, JSObjectID>>;
+    using Variant = Variant<NullType, bool, CoreIPCNumber, String, Seconds, Vector<JSObjectID>, HashMap<JSObjectID, JSObjectID>>;
 
     JavaScriptEvaluationResult(JSObjectID, HashMap<JSObjectID, Variant>&&);
     static std::optional<JavaScriptEvaluationResult> extract(id);

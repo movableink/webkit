@@ -48,7 +48,7 @@ namespace WebKit {
 struct DragSourceState {
     OptionSet<WebCore::DragSourceAction> action;
     CGRect dragPreviewFrameInRootViewCoordinates { CGRectZero };
-    using DragPreviewContentType = std::variant<RetainPtr<UIImage>, RetainPtr<UIView>>;
+    using DragPreviewContentType = Variant<RetainPtr<UIImage>, RetainPtr<UIView>>;
     DragPreviewContentType dragPreviewContent;
     std::optional<WebCore::TextIndicatorData> indicatorData;
     std::optional<WebCore::Path> visiblePath;

@@ -140,7 +140,7 @@ struct Array {
     // std::monostate represents a runtime-sized array
     // unsigned represents a creation fixed array (constant size)
     // AST::Expression* represents a fixed array (override size)
-    using Size = std::variant<std::monostate, unsigned, AST::Expression*>;
+    using Size = Variant<std::monostate, unsigned, AST::Expression*>;
 
     const Type* element;
     Size size;
@@ -249,7 +249,7 @@ struct Bottom {
 
 } // namespace Types
 
-struct Type : public std::variant<
+struct Type : public Variant<
     Types::Primitive,
     Types::Vector,
     Types::Matrix,
@@ -266,7 +266,7 @@ struct Type : public std::variant<
     Types::TypeConstructor,
     Types::Bottom
 > {
-    using std::variant<
+    using Variant<
         Types::Primitive,
         Types::Vector,
         Types::Matrix,

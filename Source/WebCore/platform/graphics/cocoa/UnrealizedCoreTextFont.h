@@ -79,7 +79,7 @@ private:
         };
     };
 
-    using OpticalSizingType = std::variant<OpticalSizingTypes::None, OpticalSizingTypes::JustVariation, OpticalSizingTypes::Everything>;
+    using OpticalSizingType = Variant<OpticalSizingTypes::None, OpticalSizingTypes::JustVariation, OpticalSizingTypes::Everything>;
 
     static void modifyFromContext(CFMutableDictionaryRef attributes, const FontDescription&, const FontCreationContext&, ApplyTraitsVariations, float weight, float width, float slope, CGFloat size, const OpticalSizingType&);
 
@@ -98,7 +98,7 @@ private:
     };
     RebuildReason rebuildReason(CTFontRef) const;
 
-    std::variant<RetainPtr<CTFontRef>, RetainPtr<CTFontDescriptorRef>> m_baseFont;
+    Variant<RetainPtr<CTFontRef>, RetainPtr<CTFontDescriptorRef>> m_baseFont;
     RetainPtr<CFMutableDictionaryRef> m_attributes { adoptCF(CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks)) };
 
     ApplyTraitsVariations m_applyTraitsVariations { ApplyTraitsVariations::Yes };

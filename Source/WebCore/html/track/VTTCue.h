@@ -123,7 +123,7 @@ public:
     virtual ~VTTCue();
 
     enum AutoKeyword { Auto };
-    using LineAndPositionSetting = std::variant<double, AutoKeyword>;
+    using LineAndPositionSetting = Variant<double, AutoKeyword>;
 
     using DirectionSetting = VTTDirectionSetting;
     static constexpr size_t DirectionSettingCount = static_cast<size_t>(DirectionSetting::VerticalGrowingRight) + 1;

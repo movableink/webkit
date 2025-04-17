@@ -373,7 +373,7 @@ private:
     StyleRuleLayer(CascadeLayerName&&, Vector<Ref<StyleRuleBase>>&&);
     StyleRuleLayer(const StyleRuleLayer&) = default;
 
-    std::variant<CascadeLayerName, Vector<CascadeLayerName>> m_nameVariant;
+    Variant<CascadeLayerName, Vector<CascadeLayerName>> m_nameVariant;
 };
 
 class StyleRuleContainer final : public StyleRuleGroup {

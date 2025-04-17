@@ -454,12 +454,12 @@ public:
 
     explicit StorageType(Type t)
     {
-        m_storageType = std::variant<Type, PackedType>(t);
+        m_storageType = Variant<Type, PackedType>(t);
     }
 
     explicit StorageType(PackedType t)
     {
-        m_storageType = std::variant<Type, PackedType>(t);
+        m_storageType = Variant<Type, PackedType>(t);
     }
 
     // Return a value type suitable for validating instruction arguments. Packed types cannot show up as value types and need to be unpacked to I32.
@@ -522,7 +522,7 @@ public:
     void dump(WTF::PrintStream& out) const;
 
 private:
-    std::variant<Type, PackedType> m_storageType;
+    Variant<Type, PackedType> m_storageType;
 
 };
 
@@ -869,7 +869,7 @@ private:
 
     static Type substitute(Type, TypeIndex);
 
-    std::variant<FunctionSignature, StructType, ArrayType, RecursionGroup, Projection, Subtype> m_typeHeader;
+    Variant<FunctionSignature, StructType, ArrayType, RecursionGroup, Projection, Subtype> m_typeHeader;
     // Payload is stored here.
 };
 

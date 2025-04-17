@@ -201,7 +201,7 @@ template<typename Op> struct IndirectNode {
     bool operator==(const IndirectNode<Op>& other) const { return type == other.type && op.get() == other.op.get(); }
 };
 
-using Node = std::variant<
+using Node = Variant<
     Number,
     Percentage,
     CanonicalDimension,
@@ -257,7 +257,7 @@ struct Child {
 };
 
 struct ChildOrNone {
-    std::variant<Child, CSS::Keyword::None> value;
+    Variant<Child, CSS::Keyword::None> value;
 
     ChildOrNone(Child&&);
     ChildOrNone(CSS::Keyword::None);
@@ -768,7 +768,7 @@ struct Random {
 
             bool operator==(const Auto&) const = default;
         };
-        std::variant<Auto, AtomString> identifier;
+        Variant<Auto, AtomString> identifier;
         std::optional<CSS::Keyword::ElementShared> elementShared;
 
         bool operator==(const SharingOptions&) const = default;
@@ -778,7 +778,7 @@ struct Random {
 
         bool operator==(const SharingFixed&) const = default;
     };
-    using Sharing = std::variant<SharingOptions, SharingFixed>;
+    using Sharing = Variant<SharingOptions, SharingFixed>;
 
     // <random()> = random( <random-value-sharing>? , <calc-sum>, <calc-sum>, <calc-sum>? )
     //     - INPUT: "same" <number>, <dimension>, or <percentage>
@@ -855,7 +855,7 @@ struct ContainerProgress {
 
 struct AnchorSide {
     // <anchor-side> = inside | outside | top | left | right | bottom | start | end | self-start | self-end | <percentage> | center
-    std::variant<CSSValueID, Child> value;
+    Variant<CSSValueID, Child> value;
 
     AnchorSide(CSSValueID);
     AnchorSide(Child&&);

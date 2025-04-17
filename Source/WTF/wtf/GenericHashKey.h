@@ -80,7 +80,7 @@ public:
     }
 
 private:
-    std::variant<Key, EmptyKey, DeletedKey> m_value;
+    Variant<Key, EmptyKey, DeletedKey> m_value;
 };
 
 template<typename K, typename H> struct HashTraits<GenericHashKey<K, H>> : GenericHashTraits<GenericHashKey<K, H>> {

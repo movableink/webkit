@@ -83,7 +83,7 @@ private:
         RetainPtr<CGColorSpaceRef> colorSpace;
     };
 
-    using Strategy = std::variant<Gradient, Shading>;
+    using Strategy = Variant<Gradient, Shading>;
 
     Strategy pickStrategy(ColorInterpolationMethod, const GradientColorStops&) const;
     Strategy makeGradient(ColorInterpolationMethod, const GradientColorStops&) const;

@@ -564,7 +564,7 @@ enum class AccessibilityTextSource {
     Action,
 };
 
-using AXEditingStyleValueVariant = std::variant<String, bool, int>;
+using AXEditingStyleValueVariant = Variant<String, bool, int>;
 
 enum class AccessibilityObjectInclusion : uint8_t {
     IncludeObject,
@@ -1116,7 +1116,7 @@ public:
 
     virtual bool inheritsPresentationalRole() const = 0;
 
-    using AXValue = std::variant<bool, unsigned, float, String, WallTime, AccessibilityButtonState, AXCoreObject*>;
+    using AXValue = Variant<bool, unsigned, float, String, WallTime, AccessibilityButtonState, AXCoreObject*>;
     AXValue value();
 
     // Accessibility Text

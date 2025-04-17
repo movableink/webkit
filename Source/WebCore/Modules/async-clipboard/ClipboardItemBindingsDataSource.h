@@ -55,7 +55,7 @@ private:
     void clearItemTypeLoaders();
     void invokeCompletionHandler();
 
-    using BufferOrString = std::variant<String, Ref<SharedBuffer>>;
+    using BufferOrString = Variant<String, Ref<SharedBuffer>>;
     class ClipboardItemTypeLoader : public FileReaderLoaderClient, public RefCounted<ClipboardItemTypeLoader> {
     public:
         static Ref<ClipboardItemTypeLoader> create(Clipboard& writingDestination, const String& type, CompletionHandler<void()>&& completionHandler)

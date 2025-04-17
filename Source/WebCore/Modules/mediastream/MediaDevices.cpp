@@ -110,7 +110,7 @@ static bool isDefaultDeviceIdConstraint(const std::optional<StringConstraint>& d
     return deviceId->getExact(exact) && exact.size() == 1 && exact[0] == "default"_s;
 }
 
-static MediaConstraints createMediaConstraints(const std::variant<bool, MediaTrackConstraints>& constraints, const Document* document = nullptr)
+static MediaConstraints createMediaConstraints(const Variant<bool, MediaTrackConstraints>& constraints, const Document* document = nullptr)
 {
     return WTF::switchOn(constraints,
         [&] (bool isValid) {
@@ -358,7 +358,7 @@ void MediaDevices::exposeDevices(Vector<CaptureDeviceWithCapabilities>&& newDevi
 
     m_audioOutputDeviceIdToPersistentId.clear();
 
-    Vector<std::variant<RefPtr<MediaDeviceInfo>, RefPtr<InputDeviceInfo>>> devices;
+    Vector<Variant<RefPtr<MediaDeviceInfo>, RefPtr<InputDeviceInfo>>> devices;
     for (auto& newDeviceWithCapabilities : newDevices) {
         auto& newDevice = newDeviceWithCapabilities.device;
         if (!canAccessMicrophone && newDevice.type() == CaptureDevice::DeviceType::Microphone)

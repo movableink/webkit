@@ -48,7 +48,7 @@ template<typename R, typename Base, typename T, typename... Ts>
 struct MetaResolver : Base {
     using ResultType = R;
 
-    static ResultType resolve(std::variant<T, Ts...>&& consumeResult, CSSPropertyParserOptions options = { }) requires (sizeof...(Ts) > 0)
+    static ResultType resolve(Variant<T, Ts...>&& consumeResult, CSSPropertyParserOptions options = { }) requires (sizeof...(Ts) > 0)
     {
         return WTF::switchOn(WTFMove(consumeResult), [&](auto&& value) -> ResultType {
             return Base::resolve(WTFMove(value), options);

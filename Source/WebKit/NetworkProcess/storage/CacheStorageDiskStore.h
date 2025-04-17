@@ -35,7 +35,7 @@ namespace WebCore {
 class FormData;
 class SharedBuffer;
 namespace DOMCacheEngine {
-using ResponseBody = std::variant<std::nullptr_t, Ref<FormData>, Ref<SharedBuffer>>;
+using ResponseBody = Variant<std::nullptr_t, Ref<FormData>, Ref<SharedBuffer>>;
 }
 }
 

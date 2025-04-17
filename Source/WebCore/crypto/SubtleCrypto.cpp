@@ -545,7 +545,7 @@ static void normalizeJsonWebKey(JsonWebKey& webKey)
 // FIXME: This returns an std::optional<KeyData> and takes a promise, rather than returning an
 // ExceptionOr<KeyData> and letting the caller handle the promise, to work around an issue where
 // Variant types (which KeyData is) in ExceptionOr<> cause compile issues on some platforms. This
-// should be resolved by adopting a standards compliant std::variant (see https://webkit.org/b/175583)
+// should be resolved by adopting a standards compliant Variant (see https://webkit.org/b/175583)
 static std::optional<KeyData> toKeyData(SubtleCrypto::KeyFormat format, SubtleCrypto::KeyDataVariant&& keyDataVariant, Ref<DeferredPromise>& promise)
 {
     switch (format) {

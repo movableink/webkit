@@ -59,7 +59,7 @@ public:
     }
     explicit SecurityOriginData(ProcessQualified<OpaqueOriginIdentifier> opaqueOriginIdentifier)
         : m_data(opaqueOriginIdentifier) { }
-    explicit SecurityOriginData(std::variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>>&& data)
+    explicit SecurityOriginData(Variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>>&& data)
         : m_data(WTFMove(data)) { }
     SecurityOriginData(WTF::HashTableDeletedValueType)
         : m_data { Tuple { WTF::HashTableDeletedValue, { }, { } } } { }
@@ -159,9 +159,9 @@ public:
 
     WEBCORE_EXPORT static bool shouldTreatAsOpaqueOrigin(const URL&);
     
-    const std::variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>>& data() const { return m_data; }
+    const Variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>>& data() const { return m_data; }
 private:
-    std::variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>> m_data;
+    Variant<Tuple, ProcessQualified<OpaqueOriginIdentifier>> m_data;
 };
 
 WEBCORE_EXPORT bool operator==(const SecurityOriginData&, const SecurityOriginData&);

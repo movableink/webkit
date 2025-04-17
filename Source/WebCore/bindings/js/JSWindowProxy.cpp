@@ -225,7 +225,7 @@ static bool hasSameMainFrame(const Frame* a, const FrameInfo& b)
     return a && (&a->mainFrame() == b.mainFrame.ptr());
 }
 
-static void logCrossTabPropertyAccess(Frame& childFrame, const std::variant<PropertyName, unsigned>& propertyName)
+static void logCrossTabPropertyAccess(Frame& childFrame, const Variant<PropertyName, unsigned>& propertyName)
 {
 #if LOG_DISABLED
     UNUSED_PARAM(childFrame);
@@ -249,7 +249,7 @@ static void logCrossTabPropertyAccess(Frame& childFrame, const std::variant<Prop
 #endif // #if LOG_DISABLED
 }
 
-static void checkCrossTabWindowProxyUsage(JSWindowProxy* proxy, JSGlobalObject* lexicalGlobalObject, const std::variant<PropertyName, unsigned>& propertyName)
+static void checkCrossTabWindowProxyUsage(JSWindowProxy* proxy, JSGlobalObject* lexicalGlobalObject, const Variant<PropertyName, unsigned>& propertyName)
 {
     if (!proxy || !lexicalGlobalObject)
         return;

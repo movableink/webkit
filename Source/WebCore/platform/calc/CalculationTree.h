@@ -133,7 +133,7 @@ template<typename Op> struct IndirectNode {
     bool operator==(const IndirectNode<Op>& other) const { return op.get() == other.op.get(); }
 };
 
-using Node = std::variant<
+using Node = Variant<
     Number,
     Percentage,
     Dimension,
@@ -182,7 +182,7 @@ struct Child {
 };
 
 struct ChildOrNone {
-    std::variant<Child, None> value;
+    Variant<Child, None> value;
 
     ChildOrNone(Child&&);
     ChildOrNone(None);

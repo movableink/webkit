@@ -1235,7 +1235,7 @@ private:
     class Storage {
         struct NoResult { };
 
-        using StorageType = std::variant<NoResult, Result, ResultRunnable>;
+        using StorageType = Variant<NoResult, Result, ResultRunnable>;
         struct RefCountedResult : ThreadSafeRefCounted<RefCountedResult> {
             StorageType result = NoResult { };
         };

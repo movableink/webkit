@@ -49,7 +49,7 @@ public:
 
     static bool shouldWrapValue(NSValue *);
 
-    using Value = std::variant<NSRange, CGRect, UniqueRef<CoreIPCNSCFObject>>;
+    using Value = Variant<NSRange, CGRect, UniqueRef<CoreIPCNSCFObject>>;
 
 private:
     friend struct IPC::ArgumentCoder<CoreIPCNSValue, void>;

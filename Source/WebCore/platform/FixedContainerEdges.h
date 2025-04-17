@@ -35,7 +35,7 @@ enum class PredominantColorType : uint8_t {
     Multiple,
 };
 
-using FixedContainerEdge = std::variant<WebCore::PredominantColorType, WebCore::Color>;
+using FixedContainerEdge = Variant<WebCore::PredominantColorType, WebCore::Color>;
 
 struct FixedContainerEdges {
     RectEdges<FixedContainerEdge> colors { PredominantColorType::None, PredominantColorType::None, PredominantColorType::None, PredominantColorType::None };

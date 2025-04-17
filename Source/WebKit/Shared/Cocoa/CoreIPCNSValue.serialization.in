@@ -31,7 +31,7 @@ webkit_platform_headers: "CoreIPCNSValue.h" <Foundation/NSRange.h>
 using NSRange = _NSRange
 
 [WebKitPlatform] class WebKit::CoreIPCNSValue {
-    std::variant<NSRange, CGRect, UniqueRef<WebKit::CoreIPCNSCFObject>> m_value
+    Variant<NSRange, CGRect, UniqueRef<WebKit::CoreIPCNSCFObject>> m_value
 }
 
 #endif // PLATFORM(COCOA)

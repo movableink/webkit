@@ -206,7 +206,7 @@ static String rangeStringFromSingleTimelineRangeName(SingleTimelineRange::Name r
     return "normal"_s;
 }
 
-static std::optional<std::variant<double, TimelineRangeOffset>> doubleOrTimelineRangeOffsetFromString(const String& offsetString, const Document& document)
+static std::optional<Variant<double, TimelineRangeOffset>> doubleOrTimelineRangeOffsetFromString(const String& offsetString, const Document& document)
 {
     bool doubleParsingSuccess = true;
     auto doubleValue = offsetString.toDouble(&doubleParsingSuccess);
@@ -788,7 +788,7 @@ static inline ExceptionOr<void> processPropertyIndexedKeyframes(JSGlobalObject& 
     return { };
 }
 
-ExceptionOr<Ref<KeyframeEffect>> KeyframeEffect::create(JSGlobalObject& lexicalGlobalObject, Document& document, Element* target, Strong<JSObject>&& keyframes, std::optional<std::variant<double, KeyframeEffectOptions>>&& options)
+ExceptionOr<Ref<KeyframeEffect>> KeyframeEffect::create(JSGlobalObject& lexicalGlobalObject, Document& document, Element* target, Strong<JSObject>&& keyframes, std::optional<Variant<double, KeyframeEffectOptions>>&& options)
 {
     auto keyframeEffect = adoptRef(*new KeyframeEffect(target, { }));
     keyframeEffect->m_document = document;
@@ -797,7 +797,7 @@ ExceptionOr<Ref<KeyframeEffect>> KeyframeEffect::create(JSGlobalObject& lexicalG
         OptionalEffectTiming timing;
         auto optionsValue = options.value();
         if (std::holds_alternative<double>(optionsValue)) {
-            std::variant<double, String> duration = std::get<double>(optionsValue);
+            Variant<double, String> duration = std::get<double>(optionsValue);
             timing.duration = duration;
         } else {
             auto keyframeEffectOptions = std::get<KeyframeEffectOptions>(optionsValue);

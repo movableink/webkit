@@ -62,7 +62,7 @@ public:
     BackgroundFetchFailureReason failureReason() const { return m_information.failureReason; }
     bool recordsAvailable() const { return m_information.recordsAvailable; }
 
-    using RequestInfo = std::variant<RefPtr<FetchRequest>, String>;
+    using RequestInfo = Variant<RefPtr<FetchRequest>, String>;
 
     void abort(ScriptExecutionContext&, DOMPromiseDeferred<IDLBoolean>&&);
     void match(ScriptExecutionContext&, RequestInfo&&, const CacheQueryOptions&, DOMPromiseDeferred<IDLInterface<BackgroundFetchRecord>>&&);

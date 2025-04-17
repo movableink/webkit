@@ -71,7 +71,7 @@ struct ServiceWorkerRouteCondition {
     std::unique_ptr<ServiceWorkerRouteCondition> notCondition;
 };
 
-using RouterSource = std::variant<RouterSourceDict, RouterSourceEnum>;
+using RouterSource = Variant<RouterSourceDict, RouterSourceEnum>;
 
 struct ServiceWorkerRoute {
     ServiceWorkerRouteCondition condition;

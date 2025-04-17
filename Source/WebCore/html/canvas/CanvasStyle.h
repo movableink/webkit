@@ -68,7 +68,7 @@ public:
     }
 
 private:
-    std::variant<Color, Ref<CanvasGradient>, Ref<CanvasPattern>> m_style;
+    Variant<Color, Ref<CanvasGradient>, Ref<CanvasPattern>> m_style;
 };
 
 Color parseColor(const String& colorString, CanvasBase&);

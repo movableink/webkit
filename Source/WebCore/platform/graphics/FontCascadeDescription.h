@@ -46,7 +46,7 @@ typedef FontFamilySpecificationCoreText FontFamilyPlatformSpecification;
 typedef FontFamilySpecificationNull FontFamilyPlatformSpecification;
 #endif
 
-typedef std::variant<AtomString, FontFamilyPlatformSpecification> FontFamilySpecification;
+typedef Variant<AtomString, FontFamilyPlatformSpecification> FontFamilySpecification;
 
 class Font;
 

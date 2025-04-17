@@ -135,7 +135,7 @@ private:
     bool m_isDismissedByEditing { };
     AlternativeTextType m_type;
     String m_originalText;
-    std::variant<AutocorrectionReplacement, DictationContext> m_details;
+    Variant<AutocorrectionReplacement, DictationContext> m_details;
 
     String m_originalStringForLastDeletedAutocorrection;
     Position m_positionForLastDeletedAutocorrection;

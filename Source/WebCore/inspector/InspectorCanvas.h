@@ -101,7 +101,7 @@ private:
 
     void appendActionSnapshotIfNeeded();
 
-    using DuplicateDataVariant = std::variant<
+    using DuplicateDataVariant = Variant<
         RefPtr<CanvasGradient>,
         RefPtr<CanvasPattern>,
         RefPtr<HTMLCanvasElement>,

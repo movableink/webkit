@@ -60,7 +60,7 @@ static constexpr auto isTextureBindGroupEntryUsage(OptionSet<BindGroupEntryUsage
 struct BindGroupEntryUsageData {
     OptionSet<BindGroupEntryUsage> usage { BindGroupEntryUsage::Undefined };
     uint32_t binding { 0 };
-    using Resource = std::variant<RefPtr<Buffer>, RefPtr<const TextureView>, RefPtr<const ExternalTexture>>;
+    using Resource = Variant<RefPtr<Buffer>, RefPtr<const TextureView>, RefPtr<const ExternalTexture>>;
     Resource resource;
     uint64_t entryOffset { 0 };
     uint64_t entrySize { 0 };

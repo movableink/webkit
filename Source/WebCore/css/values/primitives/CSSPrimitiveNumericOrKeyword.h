@@ -76,7 +76,7 @@ template<Numeric NumericType, PrimitiveKeyword... Ks> struct PrimitiveNumericOrK
     }
 
     template<typename... U>
-    constexpr PrimitiveNumericOrKeyword(std::variant<U...>&& variant)
+    constexpr PrimitiveNumericOrKeyword(Variant<U...>&& variant)
         : m_data {
             WTF::switchOn(WTFMove(variant),
                 [](NumericType&& numeric) {

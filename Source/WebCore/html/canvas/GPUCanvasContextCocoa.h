@@ -49,9 +49,9 @@ class GPUCanvasContextCocoa final : public GPUCanvasContext {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(GPUCanvasContextCocoa);
 public:
 #if ENABLE(OFFSCREEN_CANVAS)
-    using CanvasType = std::variant<RefPtr<HTMLCanvasElement>, RefPtr<OffscreenCanvas>>;
+    using CanvasType = Variant<RefPtr<HTMLCanvasElement>, RefPtr<OffscreenCanvas>>;
 #else
-    using CanvasType = std::variant<RefPtr<HTMLCanvasElement>>;
+    using CanvasType = Variant<RefPtr<HTMLCanvasElement>>;
 #endif
 
     static std::unique_ptr<GPUCanvasContextCocoa> create(CanvasBase&, GPU&);

@@ -104,7 +104,7 @@ class BeginPage;
 class EndPage;
 class SetURLForRect;
 
-using Item = std::variant
+using Item = Variant
     < ApplyDeviceScaleFactor
     , BeginTransparencyLayer
     , BeginTransparencyLayerWithCompositeMode

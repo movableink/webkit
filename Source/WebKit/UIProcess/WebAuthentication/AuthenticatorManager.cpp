@@ -156,7 +156,7 @@ static AuthenticatorManager::TransportSet collectTransports(const Vector<PublicK
     return result;
 }
 
-static String getRpId(const std::variant<PublicKeyCredentialCreationOptions, PublicKeyCredentialRequestOptions>& options)
+static String getRpId(const Variant<PublicKeyCredentialCreationOptions, PublicKeyCredentialRequestOptions>& options)
 {
     if (std::holds_alternative<PublicKeyCredentialCreationOptions>(options)) {
         auto& creationOptions = std::get<PublicKeyCredentialCreationOptions>(options);
@@ -166,7 +166,7 @@ static String getRpId(const std::variant<PublicKeyCredentialCreationOptions, Pub
     return std::get<PublicKeyCredentialRequestOptions>(options).rpId;
 }
 
-static String getUserName(const std::variant<PublicKeyCredentialCreationOptions, PublicKeyCredentialRequestOptions>& options)
+static String getUserName(const Variant<PublicKeyCredentialCreationOptions, PublicKeyCredentialRequestOptions>& options)
 {
     if (std::holds_alternative<PublicKeyCredentialCreationOptions>(options))
         return std::get<PublicKeyCredentialCreationOptions>(options).user.name;

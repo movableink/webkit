@@ -47,7 +47,7 @@ public:
     {
     }
 
-    using OriginsVariant = std::variant<HashSet<SecurityOriginData>, AllowAllOrigins>;
+    using OriginsVariant = Variant<HashSet<SecurityOriginData>, AllowAllOrigins>;
     explicit Allowlist(OriginsVariant&& origins)
         : m_origins(WTFMove(origins))
     {

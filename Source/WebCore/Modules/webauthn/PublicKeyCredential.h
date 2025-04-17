@@ -40,7 +40,7 @@ enum class AuthenticatorAttachment : uint8_t;
 class AuthenticatorResponse;
 class Document;
 typedef IDLRecord<IDLDOMString, IDLBoolean> PublicKeyCredentialClientCapabilities;
-typedef std::variant<RegistrationResponseJSON, AuthenticationResponseJSON> PublicKeyCredentialJSON;
+typedef Variant<RegistrationResponseJSON, AuthenticationResponseJSON> PublicKeyCredentialJSON;
 
 struct PublicKeyCredentialCreationOptions;
 struct PublicKeyCredentialCreationOptionsJSON;

@@ -1257,7 +1257,7 @@ def generate_one_serialized_type_info(type):
         result.append(f'#if {type.condition}')
     result.append(f'        {{ "{type.name_declaration_for_serialized_type_info()}"_s, {{')
     if type.members_are_subclasses:
-        result.append('            { "std::variant<"')
+        result.append('            { "Variant<"')
         for i in range(len(type.members)):
             member = type.members[i]
             if member.condition is not None:
@@ -1648,10 +1648,10 @@ def parse_serialized_types(file):
             declaration = match.groups()[0]
             additional_forward_declarations.append(ConditionalForwardDeclaration(declaration, type_condition))
             continue
-        match = re.search(r'using (.*) = std::variant<$', line)
+        match = re.search(r'using (.*) = Variant<$', line)
         if match:
             line_number = line_number + 1
-            alias_lines = ['std::variant<']
+            alias_lines = ['Variant<']
             while not file_lines[line_number].startswith('>'):
                 alias_lines.append('    ' + file_lines[line_number])
                 line_number = line_number + 1

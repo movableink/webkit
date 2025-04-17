@@ -32,7 +32,7 @@ namespace WebCore {
 
 class PathSegment {
 public:
-    using Data = std::variant<
+    using Data = Variant<
         PathMoveTo,
 
         PathLineTo,

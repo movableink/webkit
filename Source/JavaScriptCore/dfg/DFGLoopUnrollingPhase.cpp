@@ -73,8 +73,8 @@ public:
 
         // for (i = initialValue; condition(i, operand); i = update(i, updateValue)) { ... }
         Node* inductionVariable { nullptr };
-        std::variant<std::monostate, Node*, CheckedInt32> initialValue { };
-        std::variant<std::monostate, Node*, CheckedInt32> operand { };
+        Variant<std::monostate, Node*, CheckedInt32> initialValue { };
+        Variant<std::monostate, Node*, CheckedInt32> operand { };
         Node* update { nullptr };
         CheckedInt32 updateValue { INT_MIN };
         CheckedUint32 iterationCount { 0 };

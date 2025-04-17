@@ -138,8 +138,8 @@ public:
     String enterKeyHint() const;
     void setEnterKeyHint(const AtomString& value);
 
-    std::optional<std::variant<bool, double, String>> hidden() const;
-    void setHidden(const std::optional<std::variant<bool, double, String>>&);
+    std::optional<Variant<bool, double, String>> hidden() const;
+    void setHidden(const std::optional<Variant<bool, double, String>>&);
 
     WEBCORE_EXPORT static bool shouldExtendSelectionToTargetNode(const Node& targetNode, const VisibleSelection& selectionBeforeUpdate);
 
@@ -158,7 +158,7 @@ public:
     ExceptionOr<void> showPopoverInternal(HTMLElement* = nullptr);
     ExceptionOr<void> hidePopover();
     ExceptionOr<void> hidePopoverInternal(FocusPreviousElement, FireEvents);
-    ExceptionOr<bool> togglePopover(std::optional<std::variant<WebCore::HTMLElement::TogglePopoverOptions, bool>>);
+    ExceptionOr<bool> togglePopover(std::optional<Variant<WebCore::HTMLElement::TogglePopoverOptions, bool>>);
 
     const AtomString& popover() const;
     void setPopover(const AtomString& value) { setAttributeWithoutSynchronization(HTMLNames::popoverAttr, value); };

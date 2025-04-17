@@ -93,7 +93,7 @@ struct WEBCORE_EXPORT ModifyHeadersAction {
             RemoveOperation isolatedCopy() && { return { WTFMove(header).isolatedCopy() }; }
             friend bool operator==(const RemoveOperation&, const RemoveOperation&) = default;
         };
-        using OperationVariant = std::variant<AppendOperation, SetOperation, RemoveOperation>;
+        using OperationVariant = Variant<AppendOperation, SetOperation, RemoveOperation>;
         OperationVariant operation;
 
         static Expected<ModifyHeaderInfo, std::error_code> parse(const JSON::Value&);
@@ -186,7 +186,7 @@ struct WEBCORE_EXPORT RedirectAction {
         String password;
         String path;
         std::optional<std::optional<uint16_t>> port;
-        using QueryTransformVariant = std::variant<String, QueryTransform>;
+        using QueryTransformVariant = Variant<String, QueryTransform>;
         QueryTransformVariant queryTransform;
         String scheme;
         String username;
@@ -209,7 +209,7 @@ struct WEBCORE_EXPORT RedirectAction {
     };
 
     enum class HashTableType : uint8_t { Empty, Deleted, Full } hashTableType;
-    using ActionVariant = std::variant<ExtensionPathAction, RegexSubstitutionAction, URLTransformAction, URLAction>;
+    using ActionVariant = Variant<ExtensionPathAction, RegexSubstitutionAction, URLTransformAction, URLAction>;
     ActionVariant action;
 
     RedirectAction(ActionVariant&& action)
@@ -232,7 +232,7 @@ struct WEBCORE_EXPORT RedirectAction {
     void applyToRequest(ResourceRequest&, const URL&);
 };
 
-using ActionData = std::variant<
+using ActionData = Variant<
     BlockLoadAction,
     BlockCookiesAction,
     CSSDisplayNoneSelectorAction,

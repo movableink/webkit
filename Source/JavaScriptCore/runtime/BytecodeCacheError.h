@@ -69,7 +69,7 @@ public:
     JS_EXPORT_PRIVATE String message() const;
 
 private:
-    std::variant<ParserError, StandardError, WriteError> m_error;
+    Variant<ParserError, StandardError, WriteError> m_error;
 };
 
 } // namespace JSC

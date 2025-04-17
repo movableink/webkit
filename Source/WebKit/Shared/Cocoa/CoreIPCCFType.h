@@ -53,7 +53,7 @@ class CoreIPCSecTrust;
 class CoreIPCSecAccessControl;
 #endif
 
-using CFObjectValue = std::variant<
+using CFObjectValue = Variant<
     std::nullptr_t,
     CoreIPCCFArray,
     CoreIPCBoolean,

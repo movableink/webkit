@@ -96,7 +96,7 @@ MediaPlaybackTargetContextSerialized::MediaPlaybackTargetContextSerialized(Strin
 }
 #endif
 
-std::variant<MediaPlaybackTargetContextCocoa, MediaPlaybackTargetContextMock> MediaPlaybackTargetContextSerialized::platformContext() const
+Variant<MediaPlaybackTargetContextCocoa, MediaPlaybackTargetContextMock> MediaPlaybackTargetContextSerialized::platformContext() const
 {
     if (m_targetType == MediaPlaybackTargetContextType::Mock)
         return MediaPlaybackTargetContextMock(m_deviceName, m_state);
@@ -111,8 +111,8 @@ std::variant<MediaPlaybackTargetContextCocoa, MediaPlaybackTargetContextMock> Me
     propertyList[@"AVOutputContextSerializationKeyContextType"] = m_contextType.createNSString().get();
     auto unarchiver = adoptNS([[WKKeyedCoder alloc] initWithDictionary:propertyList]);
     auto outputContext = adoptNS([[PAL::getAVOutputContextClass() alloc] initWithCoder:unarchiver.get()]);
-    // std::variant construction in older clang gives either an error, a vtable linkage error unless we construct it this way.
-    std::variant<MediaPlaybackTargetContextCocoa, MediaPlaybackTargetContextMock> variant { std::in_place_type<MediaPlaybackTargetContextCocoa>, WTFMove(outputContext) };
+    // Variant construction in older clang gives either an error, a vtable linkage error unless we construct it this way.
+    Variant<MediaPlaybackTargetContextCocoa, MediaPlaybackTargetContextMock> variant { std::in_place_type<MediaPlaybackTargetContextCocoa>, WTFMove(outputContext) };
     return variant;
 #endif
 }

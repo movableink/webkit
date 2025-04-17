@@ -70,10 +70,10 @@ class IntersectionObserver : public RefCountedAndCanMakeWeakPtr<IntersectionObse
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(IntersectionObserver);
 public:
     struct Init {
-        std::optional<std::variant<RefPtr<Element>, RefPtr<Document>>> root;
+        std::optional<Variant<RefPtr<Element>, RefPtr<Document>>> root;
         String rootMargin;
         String scrollMargin;
-        std::variant<double, Vector<double>> threshold;
+        Variant<double, Vector<double>> threshold;
     };
 
     static ExceptionOr<Ref<IntersectionObserver>> create(Document&, Ref<IntersectionObserverCallback>&&, Init&&, IncludeObscuredInsets = IncludeObscuredInsets::No);

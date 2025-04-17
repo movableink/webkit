@@ -267,7 +267,7 @@ static bool shouldTreatAsPasswordField(const Element* element)
     return input && input->hasEverBeenPasswordField();
 }
 
-static inline std::variant<SkipExtraction, ItemData, URL, Editable> extractItemData(Node& node, TraversalContext& context)
+static inline Variant<SkipExtraction, ItemData, URL, Editable> extractItemData(Node& node, TraversalContext& context)
 {
     CheckedPtr renderer = node.renderer();
 
@@ -477,7 +477,7 @@ Item extractItem(std::optional<WebCore::FloatRect>&& collectionRectInRootView, P
     return root;
 }
 
-using Token = std::variant<String, IntSize>;
+using Token = Variant<String, IntSize>;
 struct TokenAndBlockOffset {
     Vector<Token> tokens;
     int offset { 0 };

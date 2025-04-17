@@ -126,7 +126,7 @@ template<typename T> inline constexpr auto TreatAsOptionalLike<WTF::Markable<T>>
 template<typename... Ts> inline constexpr auto TreatAsTupleLike<std::tuple<Ts...>> = true;
 
 // - Variant-like
-template<typename... Ts> inline constexpr auto TreatAsVariantLike<std::variant<Ts...>> = true;
+template<typename... Ts> inline constexpr auto TreatAsVariantLike<Variant<Ts...>> = true;
 
 // MARK: - Standard Leaf Types
 

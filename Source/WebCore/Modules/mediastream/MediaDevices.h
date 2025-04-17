@@ -80,14 +80,14 @@ public:
     };
 
     struct StreamConstraints {
-        std::variant<bool, MediaTrackConstraints> video;
-        std::variant<bool, MediaTrackConstraints> audio;
+        Variant<bool, MediaTrackConstraints> video;
+        Variant<bool, MediaTrackConstraints> audio;
     };
     void getUserMedia(StreamConstraints&&, Promise&&);
 
     struct DisplayMediaStreamConstraints {
-        std::variant<bool, MediaTrackConstraints> video;
-        std::variant<bool, MediaTrackConstraints> audio;
+        Variant<bool, MediaTrackConstraints> video;
+        Variant<bool, MediaTrackConstraints> audio;
     };
     void getDisplayMedia(DisplayMediaStreamConstraints&&, Promise&&);
 

@@ -37,6 +37,6 @@ struct ColorDict {
     double a { 0 };
 };
 
-using Color = std::variant<Vector<double>, ColorDict>;
+using Color = Variant<Vector<double>, ColorDict>;
 
 } // namespace WebCore::WebGPU
