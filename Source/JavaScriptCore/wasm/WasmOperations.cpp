@@ -1228,6 +1228,11 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmLoopOSREnterBBQJIT, void, (Probe:
         if (value.isGPR()) {
             ASSERT(!type.isFloat() && !type.isVector());
             context.gpr(value.gpr()) = encodedValue;
+#if USE(JSVALUE32_64)
+        } else if (value.isRegPair(B3::ValueRep::OSRValueRep)) {
+            context.gpr(value.gprHi(B3::ValueRep::OSRValueRep)) = (encodedValue >> 32) & 0xffffffff;
+            context.gpr(value.gprLo(B3::ValueRep::OSRValueRep)) = encodedValue & 0xffffffff;
+#endif
         } else if (value.isFPR()) {
             ASSERT(type.isFloat()); // We don't expect vectors from LLInt right now.
             context.fpr(value.fpr()) = encodedValue;
@@ -1253,7 +1258,8 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationWasmLoopOSREnterBBQJIT, void, (Probe:
                 RELEASE_ASSERT_NOT_REACHED();
                 break;
             }
-        }
+        } else
+            RELEASE_ASSERT_NOT_REACHED();
     };
 
     unsigned indexInScratchBuffer = BBQCallee::extraOSRValuesForLoopIndex;
