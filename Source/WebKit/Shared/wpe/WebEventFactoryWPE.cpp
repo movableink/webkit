@@ -182,7 +182,24 @@ WebWheelEvent WebEventFactory::createWebWheelEvent(WPEEvent* event, WebWheelEven
     auto wheelTicks = FloatSize(deltaX, deltaY);
     FloatSize delta;
     if (hasPreciseScrollingDeltas) {
-        static const double wpeScrollDeltaMultiplier = 2.5;
+        double wpeScrollDeltaMultiplier;
+
+        switch (wpe_event_get_input_source(event)) {
+        case WPE_INPUT_SOURCE_MOUSE:
+        case WPE_INPUT_SOURCE_PEN:
+        case WPE_INPUT_SOURCE_KEYBOARD:
+        case WPE_INPUT_SOURCE_TOUCHPAD:
+        case WPE_INPUT_SOURCE_TRACKPOINT:
+            wpeScrollDeltaMultiplier = 2.5;
+            break;
+        case WPE_INPUT_SOURCE_TOUCHSCREEN:
+        case WPE_INPUT_SOURCE_TABLET_PAD:
+            wpeScrollDeltaMultiplier = 1.0;
+            break;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+        }
+
         delta = wheelTicks.scaled(wpeScrollDeltaMultiplier);
     } else {
         auto* view = wpe_event_get_view(event);

@@ -426,7 +426,7 @@ void ViewPlatform::handleGesture(WPEEvent* event)
     case WPE_GESTURE_DRAG:
         if (double x, y, dx, dy; wpe_gesture_controller_get_gesture_position(gestureController, &x, &y) && wpe_gesture_controller_get_gesture_delta(gestureController, &dx, &dy)) {
             GRefPtr<WPEEvent> simulatedScrollEvent = adoptGRef(wpe_event_scroll_new(
-                m_wpeView.get(), WPE_INPUT_SOURCE_MOUSE, 0, static_cast<WPEModifiers>(0), dx, dy, TRUE, FALSE, x, y
+                m_wpeView.get(), WPE_INPUT_SOURCE_TOUCHSCREEN, 0, static_cast<WPEModifiers>(0), dx, dy, TRUE, FALSE, x, y
             ));
             auto phase = wpe_gesture_controller_is_drag_begin(gestureController)
                 ? WebWheelEvent::Phase::PhaseBegan
