@@ -213,7 +213,7 @@ DOMHTMLTextAreaElement *kit(WebCore::HTMLTextAreaElement* value)
 - (NSString *)value
 {
     WebCore::JSMainThreadNullState state;
-    return unwrap(*self).value().createNSString().autorelease();
+    return unwrap(*self).value()->createNSString().autorelease();
 }
 
 - (void)setValue:(NSString *)newValue

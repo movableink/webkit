@@ -159,7 +159,7 @@ protected:
     template<unsigned characterCount> constexpr StringImplShape(unsigned refCount, unsigned length, const char (&characters)[characterCount], unsigned hashAndFlags, ConstructWithConstExprTag);
     template<unsigned characterCount> constexpr StringImplShape(unsigned refCount, unsigned length, const char16_t (&characters)[characterCount], unsigned hashAndFlags, ConstructWithConstExprTag);
 
-    unsigned m_refCount;
+    std::atomic<unsigned> m_refCount;
     unsigned m_length;
     union {
         const LChar* m_data8;
@@ -361,11 +361,11 @@ public:
     unsigned symbolAwareHash() const;
     unsigned existingSymbolAwareHash() const;
 
-    SUPPRESS_TSAN bool isStatic() const { return m_refCount & s_refCountFlagIsStaticString; }
+    SUPPRESS_TSAN bool isStatic() const { return m_refCount.load(std::memory_order_relaxed) & s_refCountFlagIsStaticString; }
 
-    size_t refCount() const { return m_refCount / s_refCountIncrement; }
-    bool hasOneRef() const { return m_refCount == s_refCountIncrement; }
-    bool hasAtLeastOneRef() const { return m_refCount; } // For assertions.
+    size_t refCount() const { return m_refCount.load(std::memory_order_relaxed) / s_refCountIncrement; }
+    bool hasOneRef() const { return m_refCount.load(std::memory_order_relaxed) == s_refCountIncrement; }
+    bool hasAtLeastOneRef() const { return m_refCount.load(std::memory_order_relaxed); } // For assertions.
 
     void ref();
     void deref();
@@ -1139,7 +1139,7 @@ inline void StringImpl::ref()
         return;
 #endif
 
-    m_refCount += s_refCountIncrement;
+    m_refCount.fetch_add(s_refCountIncrement, std::memory_order_relaxed);
 }
 
 inline void StringImpl::deref()
@@ -1151,12 +1151,11 @@ inline void StringImpl::deref()
         return;
 #endif
 
-    unsigned tempRefCount = m_refCount - s_refCountIncrement;
-    if (!tempRefCount) {
-        StringImpl::destroy(this);
+    auto oldRefCount = m_refCount.fetch_sub(s_refCountIncrement, std::memory_order_relaxed);
+    if (oldRefCount != s_refCountIncrement)
         return;
-    }
-    m_refCount = tempRefCount;
+
+    StringImpl::destroy(this);
 }
 
 inline UChar StringImpl::at(unsigned i) const

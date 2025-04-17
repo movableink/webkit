@@ -237,11 +237,7 @@ void BuilderState::updateFontForZoomChange()
     if (m_style.usedZoom() == parentStyle().usedZoom() && m_style.textZoom() == parentStyle().textZoom())
         return;
 
-    const auto& childFont = m_style.fontDescription();
-    auto newFontDescription = childFont;
-    setFontSize(newFontDescription, childFont.specifiedSize());
-
-    m_style.setFontDescriptionWithoutUpdate(WTFMove(newFontDescription));
+    setFontDescriptionFontSize(m_style.fontDescription().specifiedSize());
 }
 
 void BuilderState::updateFontForGenericFamilyChange()

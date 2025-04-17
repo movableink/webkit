@@ -210,7 +210,7 @@ void RenderSearchField::updateCancelButtonVisibility() const
 
 Visibility RenderSearchField::visibilityForCancelButton() const
 {
-    return (style().usedVisibility() == Visibility::Hidden || inputElement().value().isEmpty()) ? Visibility::Hidden : Visibility::Visible;
+    return (style().usedVisibility() == Visibility::Hidden || inputElement().value()->isEmpty()) ? Visibility::Hidden : Visibility::Visible;
 }
 
 const AtomString& RenderSearchField::autosaveName() const

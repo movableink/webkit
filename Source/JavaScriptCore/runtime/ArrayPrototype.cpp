@@ -285,6 +285,12 @@ inline JSValue fastJoin(JSGlobalObject* globalObject, JSObject* thisObject, Stri
             break;
         auto data = butterfly.contiguous().data();
         bool holesKnownToBeOK = false;
+
+        JSOnlyStringsJoiner onlyStringsJoiner(separator);
+        if (auto joined = onlyStringsJoiner.tryJoin(globalObject, data, length))
+            RELEASE_AND_RETURN(scope, joined);
+        RETURN_IF_EXCEPTION(scope, { });
+
         for (; i < length; ++i) {
             if (JSValue value = data[i].get()) {
                 if (!joiner.appendWithoutSideEffects(globalObject, value))
@@ -1512,15 +1518,15 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncIndexOf, (JSGlobalObject* globalObject, C
         JSArray* array = asArray(thisObject);
         Butterfly* butterfly = array->butterfly();
         if (isCopyOnWrite(array->indexingMode()) && JSImmutableButterfly::isOnlyAtomStringsStructure(vm, butterfly) && searchElement.isString()) {
-            AtomString search = asString(searchElement)->toAtomString(globalObject);
+            auto search = asString(searchElement)->toAtomString(globalObject);
             RETURN_IF_EXCEPTION(scope, { });
 
             JSValue result = jsNumber(-1);
-            if (vm.atomStringToJSStringMap.contains(search.impl())) {
+            if (vm.atomStringToJSStringMap.contains(search.data)) {
                 auto data = butterfly->contiguous().data();
                 for (unsigned i = index; i < length; ++i) {
                     JSValue value = data[i].get();
-                    if (asString(value)->getValueImpl() == search.impl()) {
+                    if (asString(value)->getValueImpl() == search.data) {
                         result = jsNumber(i);
                         break;
                     }

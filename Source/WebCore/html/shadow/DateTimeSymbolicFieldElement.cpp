@@ -97,9 +97,11 @@ void DateTimeSymbolicFieldElement::stepUp()
     setValueAsInteger(newValue, DispatchInputAndChangeEvents);
 }
 
-String DateTimeSymbolicFieldElement::value() const
+ValueOrReference<String> DateTimeSymbolicFieldElement::value() const
 {
-    return hasValue() ? m_symbols[m_selectedIndex] : emptyString();
+    if (hasValue())
+        return m_symbols[m_selectedIndex];
+    return emptyString();
 }
 
 String DateTimeSymbolicFieldElement::placeholderValue() const

@@ -368,6 +368,7 @@ set(WTF_PUBLIC_HEADERS
     VMTags.h
     ValidatedReinterpretCast.h
     ValueCheck.h
+    ValueOrReference.h
     Variant.h
     VariantExtras.h
     VariantList.h

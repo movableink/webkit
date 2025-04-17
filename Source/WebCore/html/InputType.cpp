@@ -736,7 +736,7 @@ bool InputType::rendererIsNeeded()
     return true;
 }
 
-String InputType::fallbackValue() const
+ValueOrReference<String> InputType::fallbackValue() const
 {
     return String();
 }
@@ -811,7 +811,7 @@ bool InputType::isEmptyValue() const
     return true;
 }
 
-String InputType::sanitizeValue(const String& proposedValue) const
+ValueOrReference<String> InputType::sanitizeValue(const String& proposedValue LIFETIME_BOUND) const
 {
     return proposedValue;
 }

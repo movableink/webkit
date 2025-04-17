@@ -252,12 +252,12 @@ bool HTMLInputElement::isValidValue(const String& value) const
 
 bool HTMLInputElement::tooShort() const
 {
-    return tooShort(value(), CheckDirtyFlag);
+    return tooShort(value().get(), CheckDirtyFlag);
 }
 
 bool HTMLInputElement::tooLong() const
 {
-    return tooLong(value(), CheckDirtyFlag);
+    return tooLong(value().get(), CheckDirtyFlag);
 }
 
 bool HTMLInputElement::typeMismatch() const
@@ -355,8 +355,8 @@ bool HTMLInputElement::stepMismatch() const
 
 bool HTMLInputElement::computeValidity() const
 {
-    String value = this->value();
-    bool someError = m_inputType->isInvalid(value) || tooShort(value, CheckDirtyFlag) || tooLong(value, CheckDirtyFlag) || customError();
+    auto value = this->value();
+    bool someError = m_inputType->isInvalid(value) || tooShort(value.get(), CheckDirtyFlag) || tooLong(value.get(), CheckDirtyFlag) || customError();
     return !someError;
 }
 
@@ -381,7 +381,7 @@ std::optional<double> HTMLInputElement::listOptionValueAsDouble(const HTMLOption
     if (!isValidValue(optionValue))
         return std::nullopt;
 
-    return parseToDoubleForNumberType(sanitizeValue(optionValue));
+    return parseToDoubleForNumberType(sanitizeValue(optionValue).get());
 }
 
 ExceptionOr<void> HTMLInputElement::stepUp(int n)
@@ -1149,7 +1149,7 @@ void HTMLInputElement::copyNonAttributePropertiesFromElement(const Element& sour
         m_inputType->updateInnerTextValue();
 }
 
-String HTMLInputElement::value() const
+ValueOrReference<String> HTMLInputElement::value() const
 {
     if (protectedDocument()->requiresScriptExecutionTelemetry(ScriptTelemetryCategory::FormControls))
         return m_inputType->defaultValue();
@@ -1160,7 +1160,7 @@ String HTMLInputElement::value() const
         return m_valueIfDirty;
 
     if (auto& valueString = attributeWithoutSynchronization(valueAttr); !valueString.isNull()) {
-        if (auto sanitizedValue = sanitizeValue(valueString); !sanitizedValue.isNull())
+        if (auto sanitizedValue = sanitizeValue(valueString); !sanitizedValue->isNull())
             return sanitizedValue;
     }
 
@@ -1169,7 +1169,7 @@ String HTMLInputElement::value() const
 
 String HTMLInputElement::valueWithDefault() const
 {
-    if (auto value = this->value(); !value.isNull())
+    if (auto value = this->value(); !value->isNull())
         return value;
 
     return m_inputType->defaultValue();
@@ -1187,12 +1187,12 @@ ExceptionOr<void> HTMLInputElement::setValue(const String& value, TextFieldEvent
 
     setLastChangeWasNotUserEdit();
     setFormControlValueMatchesRenderer(false);
-    m_inputType->setValue(WTFMove(sanitizedValue), valueChanged, eventBehavior, selection);
+    m_inputType->setValue(sanitizedValue, valueChanged, eventBehavior, selection);
     if (selfOrPrecedingNodesAffectDirAuto())
         updateEffectiveTextDirection();
 
     if (valueChanged && eventBehavior == DispatchNoEvent)
-        setTextAsOfLastFormControlChangeEvent(sanitizedValue);
+        setTextAsOfLastFormControlChangeEvent(String(sanitizedValue));
 
     bool wasModifiedProgrammatically = eventBehavior == DispatchNoEvent;
     if (wasModifiedProgrammatically) {
@@ -1253,7 +1253,7 @@ void HTMLInputElement::setValueFromRenderer(const String& value)
     // Input types that support the selection API do *not* sanitize their
     // user input in order to retain parity between what's in the model and
     // what's on the screen.
-    ASSERT(m_inputType->supportsSelectionAPI() || value == sanitizeValue(value) || sanitizeValue(value).isEmpty());
+    ASSERT(m_inputType->supportsSelectionAPI() || value == sanitizeValue(value) || sanitizeValue(value)->isEmpty());
 
     // Workaround for bug where trailing \n is included in the result of textContent.
     // The assert macro above may also be simplified by removing the expression
@@ -1690,7 +1690,7 @@ String HTMLInputElement::visibleValue() const
     return m_inputType->visibleValue();
 }
 
-String HTMLInputElement::sanitizeValue(const String& proposedValue) const
+ValueOrReference<String> HTMLInputElement::sanitizeValue(const String& proposedValue LIFETIME_BOUND) const
 {
     if (proposedValue.isNull())
         return proposedValue;
@@ -2142,7 +2142,7 @@ void HTMLInputElement::minLengthAttributeChanged(const AtomString& newValue)
 void HTMLInputElement::updateValueIfNeeded()
 {
     auto newValue = sanitizeValue(m_valueIfDirty);
-    ASSERT(!m_valueIfDirty.isNull() || newValue.isNull());
+    ASSERT(!m_valueIfDirty.isNull() || newValue->isNull());
     if (newValue != m_valueIfDirty)
         setValue(newValue);
 }

@@ -44,6 +44,7 @@
 		143A90BA2CC2F08D002D3E27 /* IndexedRange.h in Headers */ = {isa = PBXBuildFile; fileRef = 143A90B92CC2F08D002D3E27 /* IndexedRange.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		143DDE9620C8BC37007F76FA /* Entitlements.mm in Sources */ = {isa = PBXBuildFile; fileRef = 143DDE9520C8BC37007F76FA /* Entitlements.mm */; };
 		143F611F1565F0F900DB514A /* RAMSize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 143F611D1565F0F900DB514A /* RAMSize.cpp */; };
+		144177D62D89B7C100F5099E /* ValueOrReference.h in Headers */ = {isa = PBXBuildFile; fileRef = 144177D52D89B7C100F5099E /* ValueOrReference.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		144EB7462CBC94B100926E1B /* AbstractRefCounted.h in Headers */ = {isa = PBXBuildFile; fileRef = 144EB7452CBC94B100926E1B /* AbstractRefCounted.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		145DE2882CE95CE700F9F1D2 /* ZippedRange.h in Headers */ = {isa = PBXBuildFile; fileRef = 145DE2872CE95CE700F9F1D2 /* ZippedRange.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		1469419D16EAB10A0024E146 /* AutodrainedPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1469419B16EAB10A0024E146 /* AutodrainedPool.cpp */; };
@@ -1168,6 +1169,7 @@
 		143DDE9720C8BE99007F76FA /* Entitlements.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Entitlements.h; sourceTree = "<group>"; };
 		143F611D1565F0F900DB514A /* RAMSize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RAMSize.cpp; sourceTree = "<group>"; };
 		143F611E1565F0F900DB514A /* RAMSize.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RAMSize.h; sourceTree = "<group>"; };
+		144177D52D89B7C100F5099E /* ValueOrReference.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ValueOrReference.h; sourceTree = "<group>"; };
 		1447AEC518FCE57700B3D7FF /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		1447AECA18FCE5B900B3D7FF /* libicucore.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libicucore.dylib; path = /usr/lib/libicucore.dylib; sourceTree = "<absolute>"; };
 		144EB7452CBC94B100926E1B /* AbstractRefCounted.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AbstractRefCounted.h; sourceTree = "<group>"; };
@@ -2676,6 +2678,7 @@
 				A8A47311151A825B004123FG /* ValidatedReinterpretCast.h */,
 				A8A4736F151A825B004123FF /* ValueCheck.h */,
 				FA864D5F2DA9809F006820D3 /* Variant.h */,
+				144177D52D89B7C100F5099E /* ValueOrReference.h */,
 				BCE0DFAA2D18670B003F0349 /* VariantExtras.h */,
 				BCEA08032CCFDB33000AC148 /* VariantList.h */,
 				BC05ACA52CEA70E500750CB1 /* VariantListOperations.h */,
@@ -3817,6 +3820,7 @@
 				DD3DC98127A4BF8E007E5B62 /* ValidatedReinterpretCast.h in Headers */,
 				DD3DC86D27A4BF8E007E5B61 /* ValueCheck.h in Headers */,
 				FA864D602DA9809F006820D3 /* Variant.h in Headers */,
+				144177D62D89B7C100F5099E /* ValueOrReference.h in Headers */,
 				BCE0DFAB2D18670B003F0349 /* VariantExtras.h in Headers */,
 				BCEA08042CCFDB33000AC148 /* VariantList.h in Headers */,
 				BC05ACA62CEA70E500750CB1 /* VariantListOperations.h in Headers */,

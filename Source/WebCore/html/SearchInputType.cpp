@@ -202,7 +202,7 @@ float SearchInputType::decorationWidth() const
 
 void SearchInputType::setValue(const String& sanitizedValue, bool valueChanged, TextFieldEventBehavior eventBehavior, TextControlSetValueSelection selection)
 {
-    bool emptinessChanged = valueChanged && sanitizedValue.isEmpty() != protectedElement()->value().isEmpty();
+    bool emptinessChanged = valueChanged && sanitizedValue.isEmpty() != protectedElement()->value()->isEmpty();
 
     BaseTextInputType::setValue(sanitizedValue, valueChanged, eventBehavior, selection);
 

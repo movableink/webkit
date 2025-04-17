@@ -278,7 +278,7 @@ inline void substituteBackreferencesInline(StringBuilder& result, const String& 
 
 void substituteBackreferences(StringBuilder& result, const String& replacement, StringView source, const int* ovector, RegExp* reg)
 {
-    substituteBackreferencesInline(result, replacement, source, ovector, reg);
+    return substituteBackreferencesInline(result, replacement, source, ovector, reg);
 }
 
 JSC_DEFINE_HOST_FUNCTION(stringProtoFuncRepeatCharacter, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -323,10 +323,11 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncReplaceUsingRegExp, (JSGlobalObject* glo
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
     JSValue searchValue = callFrame->argument(0);
-    if (!searchValue.inherits<RegExpObject>())
+    RegExpObject* regExpObject = jsDynamicCast<RegExpObject*>(searchValue);
+    if (!regExpObject)
         return JSValue::encode(jsUndefined());
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(replaceUsingRegExpSearch(vm, globalObject, string, searchValue, callFrame->argument(1))));
+    RELEASE_AND_RETURN(scope, JSValue::encode(replaceUsingRegExpSearch(vm, globalObject, string, regExpObject, callFrame->argument(1))));
 }
 
 JSC_DEFINE_HOST_FUNCTION(stringProtoFuncReplaceUsingStringSearch, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -669,9 +670,10 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncSplitFast, (JSGlobalObject* globalObject
     // 9. If separator is a RegExp object (its [[Class]] is "RegExp"), let R = separator;
     //    otherwise let R = ToString(separator).
     JSValue separatorValue = callFrame->uncheckedArgument(0);
-    String separator = separatorValue.toWTFString(globalObject);
+    JSString* separatorString = separatorValue.toString(globalObject);
+    auto separator = separatorString->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    unsigned separatorLength = separator.length();
+    unsigned separatorLength = separator.data.length();
 
     // 10. If lim == 0, return A.
     if (!limit)
@@ -761,7 +763,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncSplitFast, (JSGlobalObject* globalObject
         // c. Call CreateDataProperty(A, "0", S).
         // d. Return A.
         scope.release();
-        if (!separator.isEmpty())
+        if (!separator.data.isEmpty())
             result.append(input->length());
         return JSValue::encode(cacheAndCreateArray());
     }
@@ -811,7 +813,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncSplitFast, (JSGlobalObject* globalObject
     // -separator length == 1, 16 bits
     // -separator length > 1
     StringImpl* stringImpl = input->impl();
-    StringImpl* separatorImpl = separator.impl();
+    StringImpl* separatorImpl = separator.data.impl();
 
     if (separatorLength == 1) {
         UChar separatorCharacter = separatorImpl->at(0);

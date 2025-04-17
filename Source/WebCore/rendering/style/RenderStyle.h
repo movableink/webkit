@@ -595,6 +595,9 @@ public:
     WEBCORE_EXPORT const FontMetrics& metricsOfPrimaryFont() const;
     WEBCORE_EXPORT const FontCascadeDescription& fontDescription() const;
 
+    WEBCORE_EXPORT FontCascade& mutableFontCascadeWithoutUpdate();
+    WEBCORE_EXPORT FontCascadeDescription& mutableFontDescriptionWithoutUpdate();
+
     inline bool fontCascadeEqual(const RenderStyle&) const;
 
     float specifiedFontSize() const;

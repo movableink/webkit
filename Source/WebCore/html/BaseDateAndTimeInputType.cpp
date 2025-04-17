@@ -196,7 +196,7 @@ bool BaseDateAndTimeInputType::typeMismatch() const
 bool BaseDateAndTimeInputType::hasBadInput() const
 {
     ASSERT(element());
-    return protectedElement()->value().isEmpty() && m_dateTimeEditElement && protectedDateTimeEditElement()->editableFieldsHaveValues();
+    return protectedElement()->value()->isEmpty() && m_dateTimeEditElement && protectedDateTimeEditElement()->editableFieldsHaveValues();
 }
 
 Decimal BaseDateAndTimeInputType::defaultValueForStepUp() const
@@ -259,9 +259,11 @@ String BaseDateAndTimeInputType::visibleValue() const
     return localizeValue(protectedElement()->value());
 }
 
-String BaseDateAndTimeInputType::sanitizeValue(const String& proposedValue) const
+ValueOrReference<String> BaseDateAndTimeInputType::sanitizeValue(const String& proposedValue LIFETIME_BOUND) const
 {
-    return typeMismatchFor(proposedValue) ? emptyString() : proposedValue;
+    if (typeMismatchFor(proposedValue))
+        return emptyString();
+    return proposedValue;
 }
 
 bool BaseDateAndTimeInputType::supportsReadOnly() const
@@ -403,7 +405,7 @@ void BaseDateAndTimeInputType::updateInnerTextValue()
 
     DateTimeEditElement::LayoutParameters layoutParameters(input->locale());
 
-    auto date = parseToDateComponents(input->value());
+    auto date = parseToDateComponents(input->value().get());
     if (date)
         setupLayoutParameters(layoutParameters, *date);
     else {
@@ -620,7 +622,7 @@ bool BaseDateAndTimeInputType::setupDateTimeChooserParameters(DateTimeChooserPar
     auto* computedStyle = element->computedStyle();
     parameters.isAnchorElementRTL = computedStyle->writingMode().computedTextDirection() == TextDirection::RTL;
     parameters.useDarkAppearance = document->useDarkAppearance(computedStyle);
-    auto date = valueOrDefault(parseToDateComponents(element->value()));
+    auto date = valueOrDefault(parseToDateComponents(element->value().get()));
     parameters.hasSecondField = shouldHaveSecondField(date);
     parameters.hasMillisecondField = shouldHaveMillisecondField(date);
 

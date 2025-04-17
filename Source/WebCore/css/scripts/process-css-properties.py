@@ -3933,20 +3933,14 @@ class GenerateStyleBuilderGenerated:
     # Font property setters.
 
     def _generate_font_property_initial_value_setter(self, to, property):
-        to.write(f"auto fontDescription = builderState.fontDescription();")
-        to.write(f"fontDescription.{property.codegen_properties.font_description_setter}(FontCascadeDescription::{property.codegen_properties.font_description_initial}());")
-        to.write(f"builderState.setFontDescription(WTFMove(fontDescription));")
+        to.write(f"builderState.{property.codegen_properties.font_description_setter.replace('set', 'setFontDescription', 1)}(FontCascadeDescription::{property.codegen_properties.font_description_initial}());")
 
     def _generate_font_property_inherit_value_setter(self, to, property):
-        to.write(f"auto fontDescription = builderState.fontDescription();")
         to.write(f"auto inheritedValue = builderState.parentFontDescription().{property.codegen_properties.font_description_getter}();")
-        to.write(f"fontDescription.{property.codegen_properties.font_description_setter}(WTFMove(inheritedValue));")
-        to.write(f"builderState.setFontDescription(WTFMove(fontDescription));")
+        to.write(f"builderState.{property.codegen_properties.font_description_setter.replace('set', 'setFontDescription', 1)}(WTFMove(inheritedValue));")
 
     def _generate_font_property_value_setter(self, to, property, value):
-        to.write(f"auto fontDescription = builderState.fontDescription();")
-        to.write(f"fontDescription.{property.codegen_properties.font_description_setter}({value});")
-        to.write(f"builderState.setFontDescription(WTFMove(fontDescription));")
+        to.write(f"builderState.{property.codegen_properties.font_description_setter.replace('set', 'setFontDescription', 1)}({value});")
 
     # Fill Layer property setters.
 

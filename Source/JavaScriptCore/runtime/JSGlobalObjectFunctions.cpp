@@ -935,8 +935,10 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
         RETURN_IF_EXCEPTION(scope, { });
     }
 
-    if (LIKELY(canPerformFastPropertyEnumerationForCopyDataProperties(source->structure()))) {
-        Vector<RefPtr<UniquedStringImpl>, 8> properties;
+    auto sourceStructure = source->structure();
+    if (LIKELY(canPerformFastPropertyEnumerationForCopyDataProperties(sourceStructure))) {
+        EnsureStillAliveScope sourceStructureScope(sourceStructure);
+        Vector<UniquedStringImpl*, 8> properties; // sourceStructure ensures the lifetimes of these strings.
         MarkedArgumentBuffer values;
 
         // FIXME: It doesn't seem like we should have to do this in two phases, but
@@ -946,7 +948,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
         // that ends up transitioning the structure underneath us.
         // https://bugs.webkit.org/show_bug.cgi?id=187837
 
-        source->structure()->forEachProperty(vm, [&](const PropertyTableEntry& entry) ALWAYS_INLINE_LAMBDA {
+        sourceStructure->forEachProperty(vm, [&](const PropertyTableEntry& entry) ALWAYS_INLINE_LAMBDA {
             PropertyName propertyName(entry.key());
             if (propertyName.isPrivateName())
                 return true;
@@ -970,8 +972,9 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
             target->putOwnDataPropertyBatching(vm, properties.data(), values.data(), properties.size());
         else {
             for (size_t i = 0; i < properties.size(); ++i)
-                target->putDirect(vm, properties[i].get(), values.at(i));
+                target->putDirect(vm, properties[i], values.at(i));
         }
+
         return JSValue::encode(target);
     }
 
@@ -1032,7 +1035,8 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCloneObject, (JSGlobalObject* globalObject, C
     RETURN_IF_EXCEPTION(scope, { });
 
     if (LIKELY(canPerformFastPropertyEnumerationForCopyDataProperties(sourceStructure))) {
-        Vector<RefPtr<UniquedStringImpl>, 8> properties;
+        EnsureStillAliveScope sourceStructureScope(sourceStructure);
+        Vector<UniquedStringImpl*, 8> properties; // sourceStructure ensures the lifetimes of these strings.
         MarkedArgumentBuffer values;
 
         // FIXME: It doesn't seem like we should have to do this in two phases, but
@@ -1057,6 +1061,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCloneObject, (JSGlobalObject* globalObject, C
         RETURN_IF_EXCEPTION(scope, { });
 
         target->putOwnDataPropertyBatching(vm, properties.data(), values.data(), properties.size());
+
         return JSValue::encode(target);
     }
 

@@ -102,12 +102,14 @@ CompilationResult JITWorklist::enqueue(Ref<JITPlan> plan)
         dump(locker, WTF::dataFile());
         dataLog(": Enqueueing plan to optimize ", plan->key(), "\n");
     }
-    unsigned tier = static_cast<unsigned>(plan->tier());
+
+    auto tier = static_cast<unsigned>(plan->tier());
+
     ASSERT(m_plans.find(plan->key()) == m_plans.end());
     m_plans.add(plan->key(), plan.copyRef());
     m_queues[tier].append(WTFMove(plan));
 
-    if (m_numberOfActiveThreads < Options::numberOfWorklistThreads()
+    if (m_numberOfActiveThreads < m_threads.size()
         && m_ongoingCompilationsPerTier[tier] < m_maximumNumberOfConcurrentCompilationsPerTier[tier]) {
         m_planEnqueued->notifyOne(locker);
         m_numberOfActiveThreads++;

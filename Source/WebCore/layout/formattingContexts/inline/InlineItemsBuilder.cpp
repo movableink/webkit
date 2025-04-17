@@ -816,7 +816,7 @@ InlineContentCache::InlineItems::ContentAttributes InlineItemsBuilder::computeCo
 
 bool InlineItemsBuilder::buildInlineItemListForTextFromBreakingPositionsCache(const InlineTextBox& inlineTextBox, InlineItemList& inlineItemList)
 {
-    auto text = inlineTextBox.content();
+    auto& text = inlineTextBox.content();
     auto* breakingPositions = TextBreakingPositionCache::singleton().get({ text, { inlineTextBox.style() }, m_securityOrigin.data() });
     if (!breakingPositions)
         return false;

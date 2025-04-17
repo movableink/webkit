@@ -449,7 +449,7 @@
 - (NSString *)value
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->value().createNSString().autorelease();
+    return IMPL->value()->createNSString().autorelease();
 }
 
 - (void)setValue:(NSString *)newValue
