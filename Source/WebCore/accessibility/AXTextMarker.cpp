@@ -227,28 +227,25 @@ String AXTextMarker::debugDescription() const
     auto separator = ", "_s;
     RefPtr object = this->object();
 
-    String ids;
-#if PLATFORM(MAC)
-    // Since treeID and objectID change from run to run and this is used in a Mac LayoutTest, don't include them in the debugDescription when running tests.
-    if (!AXObjectCache::clientIsInTestMode()) {
-#endif
-        ids = makeString(
-            "treeID "_s, treeID() ? treeID()->loggingString() : "null"_s
-            , separator, "objectID "_s, objectID() ? objectID()->loggingString() : "null"_s
-            , separator);
-#if PLATFORM(MAC)
-    }
-#endif
+    // Most text markers have the default affinity of downstream — avoid noisy output by only logging anything if
+    // the value is the non-default one: upstream.
+    String affinity = m_data.affinity == Affinity::Downstream ? ""_s : makeString(separator, "upstream"_s);
+    String origin = m_data.origin == TextMarkerOrigin::Unknown ? ""_s : makeString(separator, originToString(m_data.origin));
+    // If there is no object, we'll log it once here, then emptyString() for role which also requires an object.
+    String id = object ? makeString("ID "_s, object->objectID().loggingString()) : String("no object"_s);
 
-    return makeString(ids
-        , "role "_s, object ? accessibilityRoleToString(object->roleValue()) : "no object"_s
+    return makeString("{"_s
+        , id
+        , object ? makeString(separator, "role "_s, accessibilityRoleToString(object->roleValue())) : ""_s
         , isIgnored() ? makeString(separator, "ignored"_s) : ""_s
-        , separator, "anchor "_s, m_data.anchorType
-        , separator, "affinity "_s, m_data.affinity
+        // Anchor type and other fields below are not used for text markers processed off the main-thread.
+        , isMainThread() ? makeString(separator, "anchor "_s, m_data.anchorType) : ""_s
+        , affinity
         , separator, "offset "_s, m_data.offset
-        , separator, "charStart "_s, m_data.characterStart
-        , separator, "charOffset "_s, m_data.characterOffset
-        , separator, "origin "_s, originToString(m_data.origin)
+        , isMainThread() ? makeString(separator, "charStart "_s, m_data.characterStart) : ""_s
+        , isMainThread() ? makeString(separator, "charOffset "_s, m_data.characterOffset) : ""_s
+        , origin
+        , "}"_s
     );
 }
 
