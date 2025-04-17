@@ -95,7 +95,6 @@ platform/graphics/cocoa/IOSurface.mm
 platform/graphics/cocoa/IconCocoa.mm
 platform/graphics/cocoa/ImageAdapterCocoa.mm
 platform/graphics/cocoa/MediaPlayerPrivateWebM.mm
-platform/graphics/cocoa/UnrealizedCoreTextFont.cpp
 platform/graphics/cocoa/VideoMediaSampleRenderer.mm
 platform/graphics/cocoa/WebCoreDecompressionSession.mm
 platform/graphics/coretext/ComplexTextControllerCoreText.mm
