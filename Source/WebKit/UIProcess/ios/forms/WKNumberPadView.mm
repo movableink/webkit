@@ -116,7 +116,7 @@ static UIColor *buttonTitleColorForKey(WKNumberPadKey key)
     return key == WKNumberPadKeyAccept ? [UIColor systemBlueColor] : [UIColor whiteColor];
 }
 
-static NSString *buttonTitleForKey(WKNumberPadKey key)
+static RetainPtr<NSString> buttonTitleForKey(WKNumberPadKey key)
 {
     switch (key) {
     case WKNumberPadKeyDash:
@@ -134,11 +134,11 @@ static NSString *buttonTitleForKey(WKNumberPadKey key)
     case WKNumberPadKeyToggleMode:
         return @"…";
     case WKNumberPadKeyAccept:
-        return WebCore::numberPadOKButtonTitle();
+        return WebCore::numberPadOKButtonTitle().createNSString();
     case WKNumberPadKeyNone:
         return nil;
     default:
-        return String::number(key);
+        return String::number(key).createNSString();
     }
 }
 
@@ -238,12 +238,12 @@ static NSString *buttonTitleForKey(WKNumberPadKey key)
 
 - (NSString *)defaultTitle
 {
-    return buttonTitleForKey(self.defaultKey);
+    return buttonTitleForKey(self.defaultKey).autorelease();
 }
 
 - (NSString *)alternateTitle
 {
-    return buttonTitleForKey(self.alternateKey);
+    return buttonTitleForKey(self.alternateKey).autorelease();
 }
 
 - (WKNumberPadKey)currentKey
@@ -319,7 +319,7 @@ static NSString *buttonTitleForKey(WKNumberPadKey key)
         BOOL enabled = self.alternateKey != WKNumberPadKeyNone;
         [self setEnabled:enabled];
         // This matches behavior on iOS, wherein switching to symbol keys disables any keys that don't support alternatives, but leaves their titles unchanged.
-        [self setTitle:buttonTitleForKey(enabled ? self.alternateKey : self.defaultKey) forState:UIControlStateNormal];
+        [self setTitle:buttonTitleForKey(enabled ? self.alternateKey : self.defaultKey).get() forState:UIControlStateNormal];
         [self setTitleColor:buttonTitleColorForKey(enabled ? self.alternateKey : self.defaultKey) forState:UIControlStateNormal];
     } else {
         [self setEnabled:self.defaultKey != WKNumberPadKeyNone];

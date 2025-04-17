@@ -256,7 +256,7 @@ static void dumpUIView(TextStream& ts, UIView *view)
         auto rects = [(WKBaseScrollView *)view overlayRegionsForTesting];
         auto overlaysAsStrings = adoptNS([[NSMutableArray alloc] initWithCapacity:rects.size()]);
         for (auto rect : rects)
-            [overlaysAsStrings addObject:rectToString(CGRect(rect))];
+            [overlaysAsStrings addObject:rectToString(CGRect(rect)).createNSString().get()];
 
         [overlaysAsStrings sortUsingSelector:@selector(localizedCaseInsensitiveCompare:)];
         for (NSString *overlayAsString in overlaysAsStrings.get())

@@ -272,13 +272,13 @@ const CGFloat toolbarBottomMarginSmall = 2;
     [_contentView accessoryView].items = @[ resetButton.get(), UIBarButtonItem.flexibleSpaceItem, doneButton.get() ];
 #else
     RetainPtr resetButton = [UIButton buttonWithType:UIButtonTypePlain];
-    [resetButton setTitle:WEB_UI_STRING_KEY("Reset", "Reset Button Date/Time Context Menu", "Reset button in date input context menu") forState:UIControlStateNormal];
+    [resetButton setTitle:WEB_UI_STRING_KEY("Reset", "Reset Button Date/Time Context Menu", "Reset button in date input context menu").createNSString().get() forState:UIControlStateNormal];
     [resetButton setTitleColor:UIColor.labelColor forState:UIControlStateNormal];
     [resetButton addTarget:self action:@selector(resetDatePicker) forControlEvents:UIControlEventPrimaryActionTriggered];
     [resetButton setTranslatesAutoresizingMaskIntoConstraints:NO];
 
     RetainPtr doneButton = [UIButton buttonWithType:UIButtonTypePlain];
-    [doneButton setTitle:WebCore::formControlDoneButtonTitle() forState:UIControlStateNormal];
+    [doneButton setTitle:WebCore::formControlDoneButtonTitle().createNSString().get() forState:UIControlStateNormal];
     [doneButton setTitleColor:UIColor.labelColor forState:UIControlStateNormal];
     [doneButton addTarget:self action:@selector(dismissDatePicker) forControlEvents:UIControlEventPrimaryActionTriggered];
     [doneButton setTranslatesAutoresizingMaskIntoConstraints:NO];

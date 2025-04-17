@@ -110,9 +110,9 @@ static void configureLayerAsGuard(CALayer *layer, NSString *groupName)
     layer.remoteEffects = @[ group ];
 }
 
-static NSString *interactionRegionGroupNameForRegion(const WebCore::PlatformLayerIdentifier& layerID, const WebCore::InteractionRegion& interactionRegion)
+static RetainPtr<NSString> interactionRegionGroupNameForRegion(const WebCore::PlatformLayerIdentifier& layerID, const WebCore::InteractionRegion& interactionRegion)
 {
-    return makeString("WKInteractionRegion-"_s, interactionRegion.elementIdentifier.toUInt64());
+    return makeString("WKInteractionRegion-"_s, interactionRegion.elementIdentifier.toUInt64()).createNSString();
 }
 
 static void configureRemoteEffect(CALayer *layer, WebCore::InteractionRegion::Type type, NSString *groupName)
@@ -235,11 +235,11 @@ void updateLayersForInteractionRegions(RemoteLayerTreeNode& node)
         if (!node.visibleRect() || !node.visibleRect()->intersects(rect))
             continue;
 
-        auto interactionRegionGroupName = interactionRegionGroupNameForRegion(node.layerID(), region);
+        RetainPtr interactionRegionGroupName = interactionRegionGroupNameForRegion(node.layerID(), region);
         auto key = std::make_pair(enclosingIntRect(rect), region.type);
         if (dedupeSet.contains(key))
             continue;
-        auto reuseKey = std::make_pair(interactionRegionGroupName, region.type);
+        auto reuseKey = std::make_pair(String { interactionRegionGroupName.get() }, region.type);
 
         RetainPtr<CALayer> regionLayer;
         bool didReuseLayer = true;
@@ -260,7 +260,7 @@ void updateLayersForInteractionRegions(RemoteLayerTreeNode& node)
             }
 
             didReuseLayer = false;
-            regionLayer = adoptNS(createInteractionRegionLayer(region.type, interactionRegionGroupName));
+            regionLayer = adoptNS(createInteractionRegionLayer(region.type, interactionRegionGroupName.get()));
         };
         findOrCreateLayer();
 
@@ -272,7 +272,7 @@ void updateLayersForInteractionRegions(RemoteLayerTreeNode& node)
 
             bool shouldReconfigureRemoteEffect = didReuseLayerBasedOnRect && ![interactionRegionGroupName isEqualToString:interactionRegionGroupNameForLayer(regionLayer.get())];
             if (shouldReconfigureRemoteEffect)
-                configureRemoteEffect(regionLayer.get(), region.type, interactionRegionGroupName);
+                configureRemoteEffect(regionLayer.get(), region.type, interactionRegionGroupName.get());
         }
 
         if (!didReuseLayerBasedOnRect)

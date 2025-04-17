@@ -2477,7 +2477,7 @@ void NetworkSessionCocoa::removeNetworkWebsiteData(std::optional<WallTime> modif
     NSDictionary *options = @{
         (id)getkSymptomAnalyticsServiceDomainTrackingClearHistoryKey(): @{
             (id)getkSymptomAnalyticsServiceDomainTrackingClearHistoryBundleIDs(): @{
-                bundleID : contextArray.get(),
+                bundleID.createNSString().get() : contextArray.get(),
             },
             (id)getkSymptomAnalyticsServiceDomainTrackingClearHistoryStartDate(): startDate,
             (id)getkSymptomAnalyticsServiceDomainTrackingClearHistoryEndDate(): [NSDate distantFuture]

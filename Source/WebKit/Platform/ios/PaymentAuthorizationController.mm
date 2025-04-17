@@ -130,7 +130,7 @@
 - (NSString *)presentationSceneBundleIdentifierForPaymentAuthorizationController:(PKPaymentAuthorizationController *)controller
 {
     if (!_presenter)
-        return applicationBundleIdentifier();
+        return applicationBundleIdentifier().createNSString().autorelease();
     return nsStringNilIfEmpty(_presenter->bundleIdentifier());
 }
 #endif

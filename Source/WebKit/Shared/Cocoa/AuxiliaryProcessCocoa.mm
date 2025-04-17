@@ -260,7 +260,7 @@ void AuxiliaryProcess::handleAXPreferenceChange(const String& domain, const Stri
         // these methods need to be called directly.
         if (CFEqual(key.createCFString().get(), kAXSReduceMotionPreference) && [value isKindOfClass:[NSNumber class]])
             _AXSSetReduceMotionEnabled([(NSNumber *)value boolValue]);
-        else if (CFEqual(key.createCFString().get(), increaseContrastPreferenceKey()) && [value isKindOfClass:[NSNumber class]])
+        else if (key == increaseContrastPreferenceKey() && [value isKindOfClass:[NSNumber class]])
             _AXSSetDarkenSystemColors([(NSNumber *)value boolValue]);
 #endif
     }

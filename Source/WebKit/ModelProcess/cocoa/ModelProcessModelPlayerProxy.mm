@@ -189,10 +189,10 @@ static ResourceError toResourceError(String payload, Model& model)
 
 void RKModelLoaderUSD::load()
 {
-    NSString *attributionID = nil;
+    RetainPtr<NSString> attributionID;
     if (m_attributionTaskID.has_value())
-        attributionID = m_attributionTaskID.value();
-    [getWKSRKEntityClass() loadFromData:m_model->data()->createNSData().get() withAttributionTaskID:attributionID completionHandler:makeBlockPtr([weakThis = WeakPtr { *this }] (WKSRKEntity *entity) mutable {
+        attributionID = m_attributionTaskID.value().createNSString();
+    [getWKSRKEntityClass() loadFromData:m_model->data()->createNSData().get() withAttributionTaskID:attributionID.get() completionHandler:makeBlockPtr([weakThis = WeakPtr { *this }] (WKSRKEntity *entity) mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;

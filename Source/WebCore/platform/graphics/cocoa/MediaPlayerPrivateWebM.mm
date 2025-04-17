@@ -1822,7 +1822,7 @@ void MediaPlayerPrivateWebM::updateSpatialTrackingLabel()
 
     if (!m_spatialTrackingLabel.isNull()) {
         INFO_LOG(LOGIDENTIFIER, "Explicitly set STSLabel: ", m_spatialTrackingLabel);
-        renderer.STSLabel = m_spatialTrackingLabel;
+        renderer.STSLabel = m_spatialTrackingLabel.createNSString().get();
         return;
     }
 
@@ -1843,16 +1843,16 @@ void MediaPlayerPrivateWebM::updateSpatialTrackingLabel()
     // the session's spatial tracking label if not, and set the label directly on each audio
     // renderer.
     AVAudioSession *session = [PAL::getAVAudioSessionClass() sharedInstance];
-    String defaultLabel;
+    RetainPtr<NSString> defaultLabel;
     if (!m_defaultSpatialTrackingLabel.isNull()) {
         INFO_LOG(LOGIDENTIFIER, "Default STSLabel: ", m_defaultSpatialTrackingLabel);
-        defaultLabel = m_defaultSpatialTrackingLabel;
+        defaultLabel = m_defaultSpatialTrackingLabel.createNSString();
     } else {
         INFO_LOG(LOGIDENTIFIER, "AVAudioSession label: ", session.spatialTrackingLabel);
         defaultLabel = session.spatialTrackingLabel;
     }
     for (auto& renderer : m_audioRenderers)
-        [(__bridge AVSampleBufferAudioRenderer *)renderer.second.get() setSTSLabel:defaultLabel];
+        [(__bridge AVSampleBufferAudioRenderer *)renderer.second.get() setSTSLabel:defaultLabel.get()];
 }
 #endif
 

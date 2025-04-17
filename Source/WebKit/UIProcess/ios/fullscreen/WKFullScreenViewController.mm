@@ -471,7 +471,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     descriptor = [descriptor fontDescriptorByAddingAttributes:@{
         UIFontWeightTrait : [NSNumber numberWithDouble:UIFontWeightMedium]
     }];
-    RetainPtr buttonTitle = adoptNS([[NSMutableAttributedString alloc] initWithString:label attributes:@{
+    RetainPtr buttonTitle = adoptNS([[NSMutableAttributedString alloc] initWithString:label.createNSString().get() attributes:@{
         NSFontAttributeName : [UIFont fontWithDescriptor:descriptor.get() size:0]
     }]);
     fullscreenButtonConfiguration.attributedTitle = buttonTitle.get();

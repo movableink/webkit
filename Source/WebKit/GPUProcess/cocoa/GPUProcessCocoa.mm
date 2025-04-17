@@ -188,7 +188,7 @@ void GPUProcess::createMemoryAttributionIDForTask(WebCore::ProcessIdentity proce
 void GPUProcess::unregisterMemoryAttributionID(const String& attributionID, CompletionHandler<void()>&& completionHandler)
 {
     Ref<WKSharedSimulationConnectionHelper> sharedSimulationConnectionHelper = adoptRef(*new WKSharedSimulationConnectionHelper);
-    sharedSimulationConnectionHelper->unregisterMemoryAttributionID(attributionID, [sharedSimulationConnectionHelper, completionHandler = WTFMove(completionHandler)] (RetainPtr<id> appService) mutable {
+    sharedSimulationConnectionHelper->unregisterMemoryAttributionID(attributionID.createNSString().get(), [sharedSimulationConnectionHelper, completionHandler = WTFMove(completionHandler)] (RetainPtr<id> appService) mutable {
         if (appService)
             RELEASE_LOG(ModelElement, "GPUProcess: Memory attribution ID unregistration succeeded");
         else

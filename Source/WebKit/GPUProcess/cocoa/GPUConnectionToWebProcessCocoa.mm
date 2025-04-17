@@ -61,7 +61,7 @@ bool GPUConnectionToWebProcess::setCaptureAttributionString()
 
     RetainPtr visibleName = applicationVisibleNameFromOrigin(m_captureOrigin->data());
     if (!visibleName)
-        visibleName = gpuProcess().applicationVisibleName();
+        visibleName = gpuProcess().applicationVisibleName().createNSString();
 
     if ([PAL::getSTDynamicActivityAttributionPublisherClass() respondsToSelector:@selector(setCurrentAttributionWebsiteString:auditToken:)])
         [PAL::getSTDynamicActivityAttributionPublisherClass() setCurrentAttributionWebsiteString:visibleName.get() auditToken:auditToken.value()];

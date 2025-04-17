@@ -8870,7 +8870,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 {
     auto context = adoptNS([[PUICTextInputContext alloc] init]);
     [self _updateTextInputTraits:context.get()];
-    [context setInitialText:_focusedElementInformation.value];
+    [context setInitialText:_focusedElementInformation.value.createNSString().get()];
 #if HAVE(QUICKBOARD_CONTROLLER)
     [context setAcceptsEmoji:YES];
     [context setShouldPresentModernTextInputUI:YES];
@@ -9105,9 +9105,9 @@ static bool canUseQuickboardControllerFor(UITextContentType type)
     case WebKit::InputType::Color:
         return nil;
     case WebKit::InputType::Search:
-        return WebCore::formControlSearchButtonTitle();
+        return WebCore::formControlSearchButtonTitle().createNSString().autorelease();
     default:
-        return WebCore::formControlGoButtonTitle();
+        return WebCore::formControlGoButtonTitle().createNSString().autorelease();
     }
 }
 
@@ -9162,7 +9162,7 @@ static bool canUseQuickboardControllerFor(UITextContentType type)
         return @"";
     }
 
-    return options[index].text;
+    return options[index].text.createNSString().autorelease();
 }
 
 - (void)selectMenu:(WKSelectMenuListViewController *)selectMenu didCheckItemAtIndex:(NSUInteger)index checked:(BOOL)checked
@@ -11918,7 +11918,7 @@ static WebKit::DocumentEditingContextRequest toWebRequest(id request)
 
 - (NSString *)initialValueForViewController:(PUICQuickboardViewController *)controller
 {
-    return _focusedElementInformation.value;
+    return _focusedElementInformation.value.createNSString().autorelease();
 }
 
 - (BOOL)shouldDisplayInputContextViewForListViewController:(PUICQuickboardViewController *)controller

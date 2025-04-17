@@ -381,7 +381,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     // Propagate the view's visibility state to the WebContent process so that it is marked as "Foreground Running" when necessary.
 #if HAVE(NON_HOSTING_VISIBILITY_PROPAGATION_VIEW)
     auto environmentIdentifier = _page->legacyMainFrameProcess().environmentIdentifier();
-    _visibilityPropagationViewForWebProcess = adoptNS([[_UINonHostingVisibilityPropagationView alloc] initWithFrame:CGRectZero pid:processID environmentIdentifier:environmentIdentifier]);
+    _visibilityPropagationViewForWebProcess = adoptNS([[_UINonHostingVisibilityPropagationView alloc] initWithFrame:CGRectZero pid:processID environmentIdentifier:environmentIdentifier.createNSString().get()]);
 #else
     _visibilityPropagationViewForWebProcess = adoptNS([[_UILayerHostView alloc] initWithFrame:CGRectZero pid:processID contextID:contextID]);
 #endif

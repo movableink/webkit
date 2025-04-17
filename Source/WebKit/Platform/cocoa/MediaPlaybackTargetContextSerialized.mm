@@ -107,8 +107,8 @@ std::variant<MediaPlaybackTargetContextCocoa, MediaPlaybackTargetContextMock> Me
     return MediaPlaybackTargetContextCocoa(dynamic_objc_cast<AVOutputContext>(m_context.toID()));
 #else
     auto propertyList = [NSMutableDictionary dictionaryWithCapacity:2];
-    propertyList[@"AVOutputContextSerializationKeyContextID"] = m_contextID;
-    propertyList[@"AVOutputContextSerializationKeyContextType"] = m_contextType;
+    propertyList[@"AVOutputContextSerializationKeyContextID"] = m_contextID.createNSString().get();
+    propertyList[@"AVOutputContextSerializationKeyContextType"] = m_contextType.createNSString().get();
     auto unarchiver = adoptNS([[WKKeyedCoder alloc] initWithDictionary:propertyList]);
     auto outputContext = adoptNS([[PAL::getAVOutputContextClass() alloc] initWithCoder:unarchiver.get()]);
     // std::variant construction in older clang gives either an error, a vtable linkage error unless we construct it this way.

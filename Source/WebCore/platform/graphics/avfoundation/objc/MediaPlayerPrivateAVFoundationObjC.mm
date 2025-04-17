@@ -4102,7 +4102,7 @@ void MediaPlayerPrivateAVFoundationObjC::updateSpatialTrackingLabel()
 
     if (!m_spatialTrackingLabel.isNull()) {
         INFO_LOG(LOGIDENTIFIER, "Explicitly set STSLabel: ", m_spatialTrackingLabel);
-        [m_avPlayer _setSTSLabel:m_spatialTrackingLabel];
+        [m_avPlayer _setSTSLabel:m_spatialTrackingLabel.createNSString().get()];
         return;
     }
 
@@ -4117,7 +4117,7 @@ void MediaPlayerPrivateAVFoundationObjC::updateSpatialTrackingLabel()
     if (!m_defaultSpatialTrackingLabel.isNull()) {
         // If a default spatial tracking label was explicitly set, use it.
         INFO_LOG(LOGIDENTIFIER, "Default STSLabel: ", m_defaultSpatialTrackingLabel);
-        [m_avPlayer _setSTSLabel:m_defaultSpatialTrackingLabel];
+        [m_avPlayer _setSTSLabel:m_defaultSpatialTrackingLabel.createNSString().get()];
         return;
     }
 

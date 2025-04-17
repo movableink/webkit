@@ -681,7 +681,7 @@ void PDFPlugin::teardownPasswordEntryForm()
 
 void PDFPlugin::attemptToUnlockPDF(const String& password)
 {
-    [m_pdfLayerController attemptToUnlockWithPassword:password];
+    [m_pdfLayerController attemptToUnlockWithPassword:password.createNSString().get()];
 
     if (!isLocked()) {
         m_passwordField = nullptr;
@@ -1152,7 +1152,7 @@ bool PDFPlugin::handleKeyboardEvent(const WebKeyboardEvent& event)
 
     NSUInteger modifierFlags = modifierFlagsFromWebEvent(event);
     
-    NSEvent *fakeEvent = [NSEvent keyEventWithType:eventType location:NSZeroPoint modifierFlags:modifierFlags timestamp:0 windowNumber:0 context:0 characters:event.text() charactersIgnoringModifiers:event.unmodifiedText() isARepeat:event.isAutoRepeat() keyCode:event.nativeVirtualKeyCode()];
+    NSEvent *fakeEvent = [NSEvent keyEventWithType:eventType location:NSZeroPoint modifierFlags:modifierFlags timestamp:0 windowNumber:0 context:0 characters:event.text().createNSString().get() charactersIgnoringModifiers:event.unmodifiedText().createNSString().get() isARepeat:event.isAutoRepeat() keyCode:event.nativeVirtualKeyCode()];
     
     if (event.type() == WebEventType::KeyDown)
         return [m_pdfLayerController keyDown:fakeEvent];
@@ -1305,7 +1305,7 @@ unsigned PDFPlugin::countFindMatches(const String& target, WebCore::FindOptions 
         return 0;
 
     NSStringCompareOptions nsOptions = options.contains(FindOption::CaseInsensitive) ? NSCaseInsensitiveSearch : 0;
-    return [[m_pdfDocument findString:target withOptions:nsOptions] count];
+    return [[m_pdfDocument findString:target.createNSString().get() withOptions:nsOptions] count];
 }
 
 PDFSelection *PDFPlugin::nextMatchForString(const String& target, bool searchForward, bool caseSensitive, bool wrapSearch, PDFSelection *initialSelection, bool startInSelection)
@@ -1334,15 +1334,16 @@ PDFSelection *PDFPlugin::nextMatchForString(const String& target, bool searchFor
         }
     }
 
-    PDFSelection *foundSelection = [m_pdfDocument findString:target fromSelection:selectionForInitialSearch.get() withOptions:options];
+    RetainPtr nsTarget = target.createNSString();
+    PDFSelection *foundSelection = [m_pdfDocument findString:nsTarget.get() fromSelection:selectionForInitialSearch.get() withOptions:options];
 
     // If we first searched in the selection, and we found the selection, search again from just past the selection.
     if (startInSelection && [foundSelection isEqual:initialSelection])
-        foundSelection = [m_pdfDocument findString:target fromSelection:initialSelection withOptions:options];
+        foundSelection = [m_pdfDocument findString:nsTarget.get() fromSelection:initialSelection withOptions:options];
 
     if (!foundSelection && wrapSearch) {
         auto emptySelection = adoptNS([allocPDFSelectionInstance() initWithDocument:m_pdfDocument.get()]);
-        foundSelection = [m_pdfDocument findString:target fromSelection:emptySelection.get() withOptions:options];
+        foundSelection = [m_pdfDocument findString:nsTarget.get() fromSelection:emptySelection.get() withOptions:options];
     }
 
     return foundSelection;
@@ -1363,7 +1364,7 @@ bool PDFPlugin::findString(const String& target, WebCore::FindOptions options, u
 
     if (target.isEmpty()) {
         auto searchSelection = [m_pdfLayerController searchSelection];
-        [m_pdfLayerController findString:target caseSensitive:caseSensitive highlightMatches:YES];
+        [m_pdfLayerController findString:target.createNSString().get() caseSensitive:caseSensitive highlightMatches:YES];
         [m_pdfLayerController setSearchSelection:searchSelection];
         m_lastFindString = emptyString();
         return false;
@@ -1376,7 +1377,7 @@ bool PDFPlugin::findString(const String& target, WebCore::FindOptions options, u
         [m_pdfLayerController setSearchSelection:selection];
         [m_pdfLayerController gotoSelection:selection];
     } else {
-        [m_pdfLayerController findString:target caseSensitive:caseSensitive highlightMatches:YES];
+        [m_pdfLayerController findString:target.createNSString().get() caseSensitive:caseSensitive highlightMatches:YES];
         m_lastFindString = target;
     }
 
