@@ -516,22 +516,13 @@ RenderBox* RenderObject::enclosingScrollableContainer() const
     return document().documentElement() ? document().documentElement()->renderBox() : nullptr;
 }
 
-static CheckedPtr<RenderElement> nearestBaselineContextAncestor(const RenderElement& renderer)
-{
-    for (CheckedPtr container = renderer.containingBlock(); container; container = container->containingBlock()) {
-        if (container->childrenInline() || container->isFlexibleBoxIncludingDeprecated() || container->isRenderGrid() || container->isRenderTableRow())
-            return container;
-    }
-    return nullptr;
-}
-
 enum class RelayoutBoundary {
     No,
     OverflowOnly,
     Yes,
 };
 
-static inline RelayoutBoundary isLayoutBoundary(const RenderElement& renderer, std::optional<CheckedPtr<RenderElement>>& cachedBaselineContextAncestor)
+static inline RelayoutBoundary isLayoutBoundary(const RenderElement& renderer)
 {
     // FIXME: In future it may be possible to broaden these conditions in order to improve performance.
     if (renderer.isRenderView())
@@ -563,11 +554,6 @@ static inline RelayoutBoundary isLayoutBoundary(const RenderElement& renderer, s
 
     // Tables size to their contents, even with a fixed height.
     if (renderer.isRenderTable())
-        return RelayoutBoundary::No;
-
-    if (!cachedBaselineContextAncestor.has_value())
-        cachedBaselineContextAncestor = nearestBaselineContextAncestor(renderer);
-    if (cachedBaselineContextAncestor.value())
         return RelayoutBoundary::No;
 
     if (CheckedPtr block = dynamicDowncast<RenderBlock>(renderer)) {
@@ -617,7 +603,6 @@ RenderElement* RenderObject::markContainingBlocksForLayout(RenderElement* layout
         return downcast<RenderElement>(this);
 
     CheckedPtr ancestor = container();
-    std::optional<CheckedPtr<RenderElement>> nearestBaselineContextAncestor;
 
     bool simplifiedNormalFlowLayout = needsSimplifiedNormalFlowLayout() && !selfNeedsLayout() && !normalChildNeedsLayout();
     bool hasOutOfFlowPosition = isOutOfFlowPositioned();
@@ -633,9 +618,6 @@ RenderElement* RenderObject::markContainingBlocksForLayout(RenderElement* layout
             // Internal render tree shuffle.
             return { };
         }
-
-        if (nearestBaselineContextAncestor == ancestor)
-            nearestBaselineContextAncestor = std::nullopt;
 
         if (simplifiedNormalFlowLayout && ancestor->overflowChangesMayAffectLayout())
             simplifiedNormalFlowLayout = false;
@@ -667,10 +649,10 @@ RenderElement* RenderObject::markContainingBlocksForLayout(RenderElement* layout
             if (ancestor == layoutRoot)
                 return layoutRoot;
 
-            if (isLayoutBoundary(*ancestor, nearestBaselineContextAncestor) > RelayoutBoundary::No)
+            if (isLayoutBoundary(*ancestor) > RelayoutBoundary::No)
                 simplifiedNormalFlowLayout = true;
         } else {
-            auto boundary = isLayoutBoundary(*ancestor, nearestBaselineContextAncestor);
+            auto boundary = isLayoutBoundary(*ancestor);
             if (boundary == RelayoutBoundary::Yes)
                 return ancestor.get();
             if (boundary == RelayoutBoundary::OverflowOnly)
