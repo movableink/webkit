@@ -205,9 +205,6 @@ RenderBlockFlow* RenderBlockFlow::previousSiblingWithOverhangingFloats(bool& par
 
 void RenderBlockFlow::rebuildFloatingObjectSetFromIntrudingFloats()
 {
-    if (isSkippedContentRoot(*this))
-        return;
-
     UncheckedKeyHashSet<CheckedPtr<RenderBox>> oldIntrudingFloatSet;
 
     if (m_floatingObjects) {
@@ -3084,8 +3081,7 @@ void RenderBlockFlow::markSiblingsWithFloatsForLayout(RenderBox* floatToRemove)
             CheckedPtr nextSiblingBlockFlow = dynamicDowncast<RenderBlockFlow>(*nextSibling);
             if (!nextSiblingBlockFlow)
                 continue;
-            auto shouldCheckSubtree = isSkippedContentRoot(*nextSiblingBlockFlow) || nextSiblingBlockFlow->isSkippedContent() || nextSiblingBlockFlow->containsFloat(floatBoxToRemove);
-            if (shouldCheckSubtree)
+            if (nextSiblingBlockFlow->containsFloat(floatBoxToRemove))
                 nextSiblingBlockFlow->markAllDescendantsWithFloatsForLayout(&floatBoxToRemove);
         }
     };
