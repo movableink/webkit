@@ -131,7 +131,7 @@ auto LibWebRTCCodecsProxy::createDecoderCallback(VideoDecoderIdentifier identifi
     }
     return [weakThis = ThreadSafeWeakPtr { *this }, identifier, connection = m_connection, resourceOwner = m_resourceOwner, videoFrameObjectHeap = WTFMove(videoFrameObjectHeap), frameRateMonitor = WTFMove(frameRateMonitor)] (CVPixelBufferRef pixelBuffer, int64_t timeStamp, int64_t timeStampNs, bool isReordered) mutable {
         RefPtr protectedThis = weakThis.get();
-        auto scope = makeScopeExit([&] {
+        auto scope = makeScopeExit([&, pixelBuffer = retainPtr(pixelBuffer)] {
             if (!protectedThis)
                 return;
 

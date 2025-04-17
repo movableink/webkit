@@ -199,12 +199,12 @@ void WebDataListSuggestionsDropdownMac::close()
     [_bottomDivider layer].backgroundColor = NSColor.separatorColor.CGColor;
     [self addSubview:_bottomDivider.get()];
 
-    auto setUpTextField = [&](NSTextField *textField) {
+    auto setUpTextField = [strongSelf = retainPtr(self)](NSTextField *textField) {
         textField.editable = NO;
         textField.bezeled = NO;
         textField.font = [NSFont menuFontOfSize:0];
         textField.drawsBackground = NO;
-        [self addSubview:textField];
+        [strongSelf addSubview:textField];
     };
 
     setUpTextField(_valueField.get());

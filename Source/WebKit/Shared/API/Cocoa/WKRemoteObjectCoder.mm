@@ -469,8 +469,8 @@ static void encodeObject(WKRemoteObjectEncoder *encoder, id object)
     }
 
     encoder->_objectsBeingEncoded.add(object);
-    auto exitScope = makeScopeExit([encoder, object] {
-        encoder->_objectsBeingEncoded.remove(object);
+    auto exitScope = makeScopeExit([encoder = retainPtr(encoder), object = retainPtr(object)] {
+        encoder->_objectsBeingEncoded.remove(object.get());
     });
 
     Ref { *encoder->_currentDictionary }->set(classNameKey, API::String::create(String::fromLatin1(class_getName(objectClass.get()))));

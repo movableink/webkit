@@ -929,8 +929,8 @@ struct WKWebsiteData {
         return;
 
     if (callback) {
-        _websiteDataStore->setStatisticsTestingCallback([callback = makeBlockPtr(callback), self](const String& event) {
-            callback(self, event.createNSString().get());
+        _websiteDataStore->setStatisticsTestingCallback([callback = makeBlockPtr(callback), strongSelf = retainPtr(self)](const String& event) {
+            callback(strongSelf.get(), event.createNSString().get());
         });
         return;
     }

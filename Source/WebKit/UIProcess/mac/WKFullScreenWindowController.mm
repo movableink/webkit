@@ -633,11 +633,11 @@ static RetainPtr<CGImageRef> takeWindowSnapshot(CGSWindowID windowID, bool captu
     if (_pipObserver)
         return;
 
-    _pipObserver = WTF::makeUnique<WebKit::VideoPresentationManagerProxy::VideoInPictureInPictureDidChangeObserver>([self] (bool inPiP) {
+    _pipObserver = WTF::makeUnique<WebKit::VideoPresentationManagerProxy::VideoInPictureInPictureDidChangeObserver>([strongSelf = retainPtr(self)] (bool inPiP) {
         if (inPiP)
-            [self didEnterPictureInPicture];
+            [strongSelf didEnterPictureInPicture];
         else
-            [self didExitPictureInPicture];
+            [strongSelf didExitPictureInPicture];
     });
 
     videoPresentationManager->addVideoInPictureInPictureDidChangeObserver(*_pipObserver);

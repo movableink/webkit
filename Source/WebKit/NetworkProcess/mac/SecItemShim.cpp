@@ -72,6 +72,8 @@ static std::optional<SecItemResponseData> sendSecItemRequest(SecItemRequestData:
         return response;
     }
 
+    RetainPtr cfQuery = query;
+    RetainPtr cfAttributesToMatch = attributesToMatch;
     std::optional<SecItemResponseData> response;
     BinarySemaphore semaphore;
 
@@ -81,7 +83,7 @@ static std::optional<SecItemResponseData> sendSecItemRequest(SecItemRequestData:
             return;
         }
 
-        globalNetworkProcess()->protectedParentProcessConnection()->sendWithAsyncReply(Messages::SecItemShimProxy::SecItemRequest(SecItemRequestData(requestType, query, attributesToMatch)), [&](auto reply) {
+        globalNetworkProcess()->protectedParentProcessConnection()->sendWithAsyncReply(Messages::SecItemShimProxy::SecItemRequest(SecItemRequestData(requestType, cfQuery.get(), cfAttributesToMatch.get())), [&](auto reply) {
             if (reply)
                 response = WTFMove(*reply);
 

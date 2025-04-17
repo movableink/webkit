@@ -423,9 +423,9 @@ void ModelElementController::setAnimationIsPlayingForModelElement(ModelIdentifie
 
 #if ENABLE(ARKIT_INLINE_PREVIEW_ANIMATIONS_CONTROL)
     [preview setIsPlaying:isPlaying reply:makeBlockPtr([weakThis = WeakPtr { *this }, completionHandler = WTFMove(completionHandler)] (BOOL, NSError *error) mutable {
-        callOnMainRunLoop([error, weakThis = WTFMove(weakThis), completionHandler = WTFMove(completionHandler)] () mutable {
+        callOnMainRunLoop([success = !error, weakThis = WTFMove(weakThis), completionHandler = WTFMove(completionHandler)] () mutable {
             if (weakThis)
-                completionHandler(!error);
+                completionHandler(success);
         });
     }).get()];
 #else
