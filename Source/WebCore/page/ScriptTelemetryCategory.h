@@ -26,23 +26,22 @@
 #pragma once
 
 #include <wtf/HashTraits.h>
+#include <wtf/OptionSet.h>
 #include <wtf/text/ASCIILiteral.h>
 
 namespace WebCore {
+
+enum class AdvancedPrivacyProtections : uint16_t;
 
 enum class ScriptTelemetryCategory : uint8_t {
     Unspecified = 0,
     Audio,
     Canvas,
     Cookies,
-    Gamepads,
     HardwareConcurrency,
     LocalStorage,
-    MediaDevices,
-    Notifications,
     Payments,
     QueryParameters,
-    Permissions,
     Referrer,
     ScreenOrViewport,
     Speech,
@@ -51,6 +50,8 @@ enum class ScriptTelemetryCategory : uint8_t {
 
 String makeLogMessage(const URL&, ScriptTelemetryCategory);
 ASCIILiteral description(ScriptTelemetryCategory);
+
+bool shouldEnableScriptTelemetry(ScriptTelemetryCategory, OptionSet<AdvancedPrivacyProtections>);
 
 } // namespace WebCore
 

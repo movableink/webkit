@@ -958,6 +958,9 @@ bool ScriptExecutionContext::requiresScriptExecutionTelemetry(ScriptTelemetryCat
     if (!vm->topCallFrame)
         return false;
 
+    if (!shouldEnableScriptTelemetry(category, advancedPrivacyProtections()))
+        return false;
+
     auto [taintedness, taintedURL] = JSC::sourceTaintedOriginFromStack(*vm, vm->topCallFrame);
     switch (taintedness) {
     case JSC::SourceTaintedOrigin::Untainted:
