@@ -31,6 +31,7 @@
 #include "FloatConversion.h"
 #include "FloatQuad.h"
 #include "FloatRect.h"
+#include "GeometryUtilities.h"
 #include "IntRect.h"
 #include "Region.h"
 #include "TransformationMatrix.h"
@@ -316,12 +317,53 @@ FloatRect AffineTransform::mapRect(const FloatRect& rect) const
         return mappedRect;
     }
 
-    FloatQuad result;
-    result.setP1(mapPoint(rect.location()));
-    result.setP2(mapPoint(FloatPoint(rect.maxX(), rect.y())));
-    result.setP3(mapPoint(FloatPoint(rect.maxX(), rect.maxY())));
-    result.setP4(mapPoint(FloatPoint(rect.x(), rect.maxY())));
-    return result.boundingBox();
+    // This is equivalent to mapPoint() on each corner, then finding the bounds of the resulting quad.
+    // Map point is:
+    // x2 = a * x + c * y + tx;
+    // y2 = b * x + d * y + ty;
+    // and since x and y are the same for points sharing a side, we can save some computation.
+
+    auto a = this->a();
+    auto b = this->b();
+    auto c = this->c();
+    auto d = this->d();
+
+    auto tx = e();
+    auto ty = f();
+
+    double left = rect.x();
+    double top = rect.y();
+
+    double right = rect.maxX();
+    double bottom = rect.maxY();
+
+    double aLeft = a * left;
+    double aRight = a * right;
+
+    double bLeft = b * left;
+    double bRight = b * right;
+
+    double cTop = c * top;
+    double cBottom = c * bottom;
+
+    double dTop = d * top;
+    double dBottom = d * bottom;
+
+    auto x1 = narrowPrecisionToFloat(aLeft + cTop + tx);
+    auto y1 = narrowPrecisionToFloat(bLeft + dTop + ty);
+    auto x2 = narrowPrecisionToFloat(aRight + cTop + tx);
+    auto y2 = narrowPrecisionToFloat(bRight + dTop + ty);
+    auto x3 = narrowPrecisionToFloat(aRight + cBottom + tx);
+    auto y3 = narrowPrecisionToFloat(bRight + dBottom + ty);
+    auto x4 = narrowPrecisionToFloat(aLeft + cBottom + tx);
+    auto y4 = narrowPrecisionToFloat(bLeft + dBottom + ty);
+
+    auto minX = min4(x1, x2, x3, x4);
+    auto minY = min4(y1, y2, y3, y4);
+    auto maxX = max4(x1, x2, x3, x4);
+    auto maxY = max4(y1, y2, y3, y4);
+
+    return FloatRect { minX, minY, maxX - minX, maxY - minY };
 }
 
 FloatQuad AffineTransform::mapQuad(const FloatQuad& q) const
