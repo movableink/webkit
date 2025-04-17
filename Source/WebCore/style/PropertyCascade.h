@@ -51,21 +51,10 @@ public:
         StartingStyle = 1 << 5,
         NonCacheable = 1 << 6,
     };
+    static constexpr OptionSet<PropertyType> normalProperties() { return { PropertyType::NonInherited,  PropertyType::Inherited }; }
+    static constexpr OptionSet<PropertyType> startingStyleProperties() { return normalProperties() | PropertyType::StartingStyle; }
 
-    static constexpr OptionSet<PropertyType> normalPropertyTypes() { return { PropertyType::NonInherited,  PropertyType::Inherited }; }
-    static constexpr OptionSet<PropertyType> startingStylePropertyTypes() { return normalPropertyTypes() | PropertyType::StartingStyle; }
-
-    struct IncludedProperties {
-        OptionSet<PropertyType> types;
-        // Ids are mutually exclusive with types. They are low-priority only.
-        Vector<CSSPropertyID> ids { };
-
-        bool isEmpty() const { return !types && ids.isEmpty(); }
-    };
-
-    static IncludedProperties normalProperties() { return { normalPropertyTypes() }; }
-
-    PropertyCascade(const MatchResult&, CascadeLevel, IncludedProperties&&, const UncheckedKeyHashSet<AnimatableCSSProperty>* = nullptr, const StyleProperties* positionTryFallbackProperties = nullptr);
+    PropertyCascade(const MatchResult&, CascadeLevel, OptionSet<PropertyType> includedProperties, const UncheckedKeyHashSet<AnimatableCSSProperty>* = nullptr, const StyleProperties* positionTryFallbackProperties = nullptr);
     PropertyCascade(const PropertyCascade&, CascadeLevel, std::optional<ScopeOrdinal> rollbackScope = { }, std::optional<CascadeLayerPriority> maximumCascadeLayerPriorityForRollback = { });
 
     ~PropertyCascade();
@@ -100,8 +89,6 @@ public:
     PropertyBitSet& propertyIsPresent() { return m_propertyIsPresent; }
     const PropertyBitSet& propertyIsPresent() const { return m_propertyIsPresent; }
 
-    bool applyLowPriorityOnly() const { return !m_includedProperties.ids.isEmpty(); }
-
 private:
     void buildCascade();
     bool addNormalMatches(CascadeLevel);
@@ -121,7 +108,7 @@ private:
     void sortLogicalGroupPropertyIDs();
 
     const MatchResult& m_matchResult;
-    const IncludedProperties m_includedProperties;
+    const OptionSet<PropertyType> m_includedProperties;
     const CascadeLevel m_maximumCascadeLevel;
     const std::optional<ScopeOrdinal> m_rollbackScope;
     const std::optional<CascadeLayerPriority> m_maximumCascadeLayerPriorityForRollback;

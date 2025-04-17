@@ -93,8 +93,8 @@ static auto positionTryFallbackProperties(const BuilderContext& context)
     return context.positionTryFallback ? context.positionTryFallback->properties.get() : nullptr;
 }
 
-Builder::Builder(RenderStyle& style, BuilderContext&& context, const MatchResult& matchResult, CascadeLevel cascadeLevel, PropertyCascade::IncludedProperties&& includedProperties, const UncheckedKeyHashSet<AnimatableCSSProperty>* animatedPropertes)
-    : m_cascade(matchResult, cascadeLevel, WTFMove(includedProperties), animatedPropertes, positionTryFallbackProperties(context))
+Builder::Builder(RenderStyle& style, BuilderContext&& context, const MatchResult& matchResult, CascadeLevel cascadeLevel, OptionSet<PropertyCascade::PropertyType> includedProperties, const UncheckedKeyHashSet<AnimatableCSSProperty>* animatedPropertes)
+    : m_cascade(matchResult, cascadeLevel, includedProperties, animatedPropertes, positionTryFallbackProperties(context))
     , m_state(*this, style, WTFMove(context))
 {
 }
@@ -109,16 +109,11 @@ void Builder::applyAllProperties()
     applyTopPriorityProperties();
     applyHighPriorityProperties();
     applyNonHighPriorityProperties();
-
-    adjustAfterApplying();
 }
 
 // Top priority properties affect resolution of high priority properties.
 void Builder::applyTopPriorityProperties()
 {
-    if (m_cascade.applyLowPriorityOnly())
-        return;
-
     applyProperties(firstTopPriorityProperty, lastTopPriorityProperty);
     m_state.adjustStyleForInterCharacterRuby();
 }
@@ -126,9 +121,6 @@ void Builder::applyTopPriorityProperties()
 // High priority properties may affect resolution of other properties (they are mostly font related).
 void Builder::applyHighPriorityProperties()
 {
-    if (m_cascade.applyLowPriorityOnly())
-        return;
-
     applyProperties(firstHighPriorityProperty, lastHighPriorityProperty);
     m_state.updateFont();
     // This needs to apply before other properties for the `lh` unit, but after updating the font.
@@ -145,11 +137,6 @@ void Builder::applyNonHighPriorityProperties()
     applyCustomProperties();
 
     ASSERT(!m_state.fontDirty());
-}
-
-void Builder::adjustAfterApplying()
-{
-    Adjuster::adjustFromBuilder(m_state.style());
 }
 
 void Builder::applyLogicalGroupProperties()

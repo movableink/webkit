@@ -25,8 +25,6 @@
 
 #pragma once
 
-#include "PropertyCascade.h"
-#include "ResolvedStyle.h"
 #include <wtf/WeakHashMap.h>
 
 namespace WebCore {
@@ -36,11 +34,7 @@ class WeakPtrImplWithEventTargetData;
 
 namespace Style {
 
-struct CachedMatchResult {
-    UnadjustedStyle unadjustedStyle;
-    PropertyCascade::IncludedProperties changedProperties;
-    CheckedRef<RenderStyle> styleToUpdate;
-};
+struct MatchResult;
 
 class MatchResultCache {
     WTF_MAKE_FAST_ALLOCATED;
@@ -48,16 +42,11 @@ public:
     MatchResultCache();
     ~MatchResultCache();
 
-    const std::optional<CachedMatchResult> resultWithCurrentInlineStyle(const Element&);
-    static void update(CachedMatchResult&, const RenderStyle&);
-    void set(const Element&, const UnadjustedStyle&);
+    RefPtr<const MatchResult> get(const Element&);
+    void update(const Element&, const MatchResult&);
 
 private:
-    struct Entry;
-    static bool isUsableAfterInlineStyleChange(CheckedRef<const MatchResultCache::Entry>, const StyleProperties& inlineStyle);
-    static PropertyCascade::IncludedProperties computeAndUpdateChangedProperties(MatchResultCache::Entry&);
-
-    WeakHashMap<const Element, UniqueRef<Entry>, WeakPtrImplWithEventTargetData> m_entries;
+    WeakHashMap<const Element, RefPtr<const MatchResult>, WeakPtrImplWithEventTargetData> m_cachedMatchResults;
 };
 
 }

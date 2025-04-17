@@ -26,7 +26,6 @@
 #include "InspectorCSSOMWrappers.h"
 #include "MatchedDeclarationsCache.h"
 #include "MediaQueryEvaluator.h"
-#include "PropertyCascade.h"
 #include "RuleSet.h"
 #include "StyleScopeRuleSets.h"
 #include "TreeResolutionState.h"
@@ -73,10 +72,8 @@ enum class RuleMatchingBehavior: uint8_t {
 namespace Style {
 
 struct BuilderContext;
-struct CachedMatchResult;
 struct ResolvedStyle;
 struct SelectorMatchingState;
-struct UnadjustedStyle;
 
 struct ResolutionContext {
     const RenderStyle* parentStyle;
@@ -99,10 +96,8 @@ public:
     static Ref<Resolver> create(Document&, ScopeType);
     ~Resolver();
 
-    UnadjustedStyle unadjustedStyleForElement(Element&, const ResolutionContext&, RuleMatchingBehavior = RuleMatchingBehavior::MatchAllRules);
-    UnadjustedStyle unadjustedStyleForCachedMatchResult(Element&, const ResolutionContext&, CachedMatchResult&&);
-
     ResolvedStyle styleForElement(Element&, const ResolutionContext&, RuleMatchingBehavior = RuleMatchingBehavior::MatchAllRules);
+    ResolvedStyle styleForElementWithCachedMatchResult(Element&, const ResolutionContext&, const MatchResult&, const RenderStyle& existingRenderStyle);
 
     void keyframeStylesForAnimation(Element&, const RenderStyle& elementStyle, const ResolutionContext&, BlendingKeyframes&, const TimingFunction*);
 
@@ -175,11 +170,10 @@ private:
 
     class State;
 
-    State initializeStateAndStyle(const Element&, const ResolutionContext&, std::unique_ptr<RenderStyle>&& initialStyle = { });
+    State initializeStateAndStyle(const Element&, const ResolutionContext&);
     BuilderContext builderContext(State&);
 
-    void applyMatchedProperties(State&, const MatchResult&, PropertyCascade::IncludedProperties&&);
-    void setGlobalStateAfterApplyingProperties(const BuilderState&);
+    void applyMatchedProperties(State&, const MatchResult&);
 
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     const ScopeType m_scopeType;

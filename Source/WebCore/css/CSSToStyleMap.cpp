@@ -233,7 +233,8 @@ void CSSToStyleMap::mapFillXPosition(CSSPropertyID propertyID, FillLayer& layer,
         length = Style::BuilderConverter::convertPositionComponentX(m_builderState, value);
 
     layer.setXPosition(length);
-    layer.setBackgroundXOrigin(value.isPair() ? fromCSSValue<Edge>(value.first()) : Edge::Left);
+    if (value.isPair())
+        layer.setBackgroundXOrigin(fromCSSValue<Edge>(value.first()));
 }
 
 void CSSToStyleMap::mapFillYPosition(CSSPropertyID propertyID, FillLayer& layer, const CSSValue& value)
@@ -251,7 +252,8 @@ void CSSToStyleMap::mapFillYPosition(CSSPropertyID propertyID, FillLayer& layer,
         length = Style::BuilderConverter::convertPositionComponentY(m_builderState, value);
 
     layer.setYPosition(length);
-    layer.setBackgroundYOrigin(value.isPair() ? fromCSSValue<Edge>(value.first()) : Edge::Top);
+    if (value.isPair())
+        layer.setBackgroundYOrigin(fromCSSValue<Edge>(value.first()));
 }
 
 void CSSToStyleMap::mapFillMaskMode(CSSPropertyID propertyID, FillLayer& layer, const CSSValue& value)
