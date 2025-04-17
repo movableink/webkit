@@ -656,7 +656,6 @@ LLIntGenerator::LLIntGenerator(ModuleInformation& info, FunctionCodeIndex functi
     , m_info(info)
     , m_functionIndex(functionIndex)
 {
-    m_codeBlock->m_callees = FixedBitVector(m_info.internalFunctionCount());
     {
         auto& threadSpecific = threadSpecificBuffer();
         Buffer buffer = WTFMove(*threadSpecific);
@@ -1663,8 +1662,6 @@ auto LLIntGenerator::addCall(FunctionSpaceIndex functionIndex, const TypeDefinit
     ASSERT(callType == CallType::Call || isTailCall);
     ASSERT(signature.as<FunctionSignature>()->argumentCount() == args.size());
     LLIntCallInformation wasmCalleeInfo = callInformationForCaller(*signature.as<FunctionSignature>());
-    if (!m_info.isImportedFunctionFromFunctionIndexSpace(functionIndex))
-        m_codeBlock->m_callees.testAndSet(functionIndex - m_info.importFunctionCount());
 
     unifyValuesWithBlock(wasmCalleeInfo.arguments, args);
 
