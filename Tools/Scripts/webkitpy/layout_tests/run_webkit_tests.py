@@ -249,13 +249,8 @@ def parse_args(args):
     ]))
 
     option_group_definitions.append(("Testing Options", [
-        optparse.make_option("--build", dest="build",
-            action="store_true", default=True,
-            help="Check to ensure the DumpRenderTree build is up-to-date "
-                 "(default)."),
-        optparse.make_option("--no-build", dest="build",
-            action="store_false", help="Don't check to see if the "
-                                       "DumpRenderTree build is up-to-date."),
+        optparse.make_option("--build", dest="build", action="store_true", default=False, help="Check to ensure the DumpRenderTree build is up-to-date."),
+        optparse.make_option("--no-build", dest="build", action="store_false", help="Don't check to see if the DumpRenderTree or WebKitTestRunner build is up-to-date (default)."),
         optparse.make_option("-n", "--dry-run", action="store_true",
             default=False,
             help="Do everything but actually run the tests or upload results."),
