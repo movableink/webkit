@@ -638,7 +638,7 @@ std::span<const uint8_t> DataSegment::span() const
         [](const FileSystem::MappedFileData& data) { return data.span(); },
         [](const Provider& provider) { return provider.span(); }
     );
-    return std::visit(visitor, m_immutableData);
+    return WTF::visit(visitor, m_immutableData);
 }
 
 bool DataSegment::containsMappedFileData() const

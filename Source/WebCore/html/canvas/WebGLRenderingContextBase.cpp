@@ -1165,7 +1165,7 @@ void WebGLRenderingContextBase::bufferData(GCGLenum target, std::optional<Buffer
     if (!buffer)
         return;
 
-    std::visit([context = m_context, target, usage](auto& data) {
+    WTF::visit([context = m_context, target, usage](auto& data) {
         context->bufferData(target, data->span(), usage);
     }, data.value());
 }
@@ -1182,7 +1182,7 @@ void WebGLRenderingContextBase::bufferSubData(GCGLenum target, long long offset,
         return;
     }
 
-    std::visit([context = m_context, target, offset](auto& data) {
+    WTF::visit([context = m_context, target, offset](auto& data) {
         context->bufferSubData(target, static_cast<GCGLintptr>(offset), data->span());
     }, data);
 }
@@ -3147,7 +3147,7 @@ ExceptionOr<void> WebGLRenderingContextBase::texImageSourceHelper(TexImageFuncti
     if (isContextLost())
         return { };
 
-    return std::visit([this, protectedThis = Ref { *this }, functionID, target, level, internalformat, border, format, type, xoffset, yoffset, zoffset, inputSourceImageRect, depth, unpackImageHeight](auto&& source) {
+    return WTF::visit([this, protectedThis = Ref { *this }, functionID, target, level, internalformat, border, format, type, xoffset, yoffset, zoffset, inputSourceImageRect, depth, unpackImageHeight](auto&& source) {
         return texImageSource(functionID, target, level, internalformat, border, format, type, xoffset, yoffset, zoffset, inputSourceImageRect, depth, unpackImageHeight, *source);
     }, source);
 }

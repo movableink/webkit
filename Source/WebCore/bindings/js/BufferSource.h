@@ -58,20 +58,20 @@ public:
 
     size_t length() const
     {
-        return std::visit([](auto& buffer) {
+        return WTF::visit([](auto& buffer) {
             return buffer ? buffer->byteLength() : 0;
         }, m_variant);
     }
 
     std::span<const uint8_t> span() const
     {
-        return std::visit([](auto& buffer) {
+        return WTF::visit([](auto& buffer) {
             return buffer ? buffer->span() : std::span<const uint8_t> { };
         }, m_variant);
     }
     std::span<uint8_t> mutableSpan()
     {
-        return std::visit([](auto& buffer) {
+        return WTF::visit([](auto& buffer) {
             return buffer ? buffer->mutableSpan() : std::span<uint8_t> { };
         }, m_variant);
     }

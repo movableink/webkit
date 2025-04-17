@@ -42,7 +42,7 @@ struct FixedContainerEdges {
 
     bool hasFixedEdge(BoxSide side) const
     {
-        return std::visit(WTF::makeVisitor([&](PredominantColorType type) {
+        return WTF::visit(WTF::makeVisitor([&](PredominantColorType type) {
             return type != PredominantColorType::None;
         }, [&](const Color&) {
             return true;
@@ -51,7 +51,7 @@ struct FixedContainerEdges {
 
     Color predominantColor(BoxSide side) const
     {
-        return std::visit(WTF::makeVisitor([&](PredominantColorType) -> Color {
+        return WTF::visit(WTF::makeVisitor([&](PredominantColorType) -> Color {
             return { };
         }, [&](const Color& color) {
             return color;

@@ -165,7 +165,7 @@ static Ref<Inspector::Protocol::IndexedDB::KeyPath> keyPathFromIDBKeyPath(const 
         keyPath->setArray(WTFMove(array));
         return keyPath;
     });
-    return std::visit(visitor, idbKeyPath.value());
+    return WTF::visit(visitor, idbKeyPath.value());
 }
 
 static RefPtr<IDBTransaction> transactionForDatabase(IDBDatabase* idbDatabase, const String& objectStoreName, IDBTransactionMode mode = IDBTransactionMode::Readonly)

@@ -350,7 +350,7 @@ RefPtr<TypeDefinition> TypeDefinition::tryCreateFunctionSignature(FunctionArgCou
     void* memory = nullptr;
     if (!result.getValue(memory))
         return nullptr;
-    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(std::in_place_type<FunctionSignature>, argumentCount, returnCount);
+    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(WTF::InPlaceType<FunctionSignature>, argumentCount, returnCount);
     return adoptRef(signature);
 }
 
@@ -361,7 +361,7 @@ RefPtr<TypeDefinition> TypeDefinition::tryCreateStructType(StructFieldCount fiel
     void* memory = nullptr;
     if (!result.getValue(memory))
         return nullptr;
-    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(std::in_place_type<StructType>, fieldCount, fields);
+    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(WTF::InPlaceType<StructType>, fieldCount, fields);
     return adoptRef(signature);
 }
 
@@ -372,7 +372,7 @@ RefPtr<TypeDefinition> TypeDefinition::tryCreateArrayType()
     void* memory = nullptr;
     if (!result.getValue(memory))
         return nullptr;
-    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(std::in_place_type<ArrayType>);
+    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(WTF::InPlaceType<ArrayType>);
     return adoptRef(signature);
 }
 
@@ -383,7 +383,7 @@ RefPtr<TypeDefinition> TypeDefinition::tryCreateRecursionGroup(RecursionGroupCou
     void* memory = nullptr;
     if (!result.getValue(memory))
         return nullptr;
-    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(std::in_place_type<RecursionGroup>, typeCount);
+    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(WTF::InPlaceType<RecursionGroup>, typeCount);
     return adoptRef(signature);
 }
 
@@ -394,7 +394,7 @@ RefPtr<TypeDefinition> TypeDefinition::tryCreateProjection()
     void* memory = nullptr;
     if (!result.getValue(memory))
         return nullptr;
-    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(std::in_place_type<Projection>);
+    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(WTF::InPlaceType<Projection>);
     return adoptRef(signature);
 }
 
@@ -405,7 +405,7 @@ RefPtr<TypeDefinition> TypeDefinition::tryCreateSubtype(SupertypeCount count, bo
     void* memory = nullptr;
     if (!result.getValue(memory))
         return nullptr;
-    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(std::in_place_type<Subtype>, count, isFinal);
+    TypeDefinition* signature = new (NotNull, memory) TypeDefinition(WTF::InPlaceType<Subtype>, count, isFinal);
     return adoptRef(signature);
 }
 

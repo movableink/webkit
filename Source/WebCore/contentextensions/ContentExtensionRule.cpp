@@ -41,7 +41,7 @@ ContentExtensionRule::ContentExtensionRule(Trigger&& trigger, Action&& action)
 
 template<size_t index, typename... Types>
 struct VariantDeserializerHelper {
-    using VariantType = typename std::variant_alternative<index, Variant<Types...>>::type;
+    using VariantType = typename WTF::VariantAlternativeT<index, Variant<Types...>>;
     static Variant<Types...> deserialize(std::span<const uint8_t> span, size_t i)
     {
         if (i == index)
@@ -58,7 +58,7 @@ struct VariantDeserializerHelper {
 
 template<typename... Types>
 struct VariantDeserializerHelper<0, Types...> {
-    using VariantType = typename std::variant_alternative<0, Variant<Types...>>::type;
+    using VariantType = typename WTF::VariantAlternativeT<0, Variant<Types...>>;
     static Variant<Types...> deserialize(std::span<const uint8_t> span, size_t i)
     {
         ASSERT_UNUSED(i, !i);

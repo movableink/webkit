@@ -168,7 +168,7 @@ void ModifyHeadersAction::applyToRequest(ResourceRequest& request, UncheckedKeyH
 
 void ModifyHeadersAction::ModifyHeaderInfo::applyToRequest(ResourceRequest& request, UncheckedKeyHashMap<String, ModifyHeadersAction::ModifyHeadersOperationType>& headerNameToFirstOperationApplied)
 {
-    std::visit(WTF::makeVisitor([&] (const AppendOperation& operation) {
+    WTF::visit(WTF::makeVisitor([&] (const AppendOperation& operation) {
         ModifyHeadersOperationType previouslyAppliedHeaderOperation = headerNameToFirstOperationApplied.get(operation.header);
         if (previouslyAppliedHeaderOperation == ModifyHeadersAction::ModifyHeadersOperationType::Remove)
             return;
@@ -242,7 +242,7 @@ void ModifyHeadersAction::ModifyHeaderInfo::serialize(Vector<uint8_t>& vector) c
     auto beginIndex = vector.size();
     append(vector, 0);
     vector.append(operation.index());
-    std::visit(WTF::makeVisitor([&] (const RemoveOperation& operation) {
+    WTF::visit(WTF::makeVisitor([&] (const RemoveOperation& operation) {
         append(vector, operation.header.utf8());
     }, [&] (const auto& operation) {
         auto valueUTF8 = operation.value.utf8();
@@ -332,7 +332,7 @@ void RedirectAction::serialize(Vector<uint8_t>& vector) const
     auto beginIndex = vector.size();
     append(vector, 0);
     vector.append(action.index());
-    std::visit(WTF::makeVisitor([&](const ExtensionPathAction& action) {
+    WTF::visit(WTF::makeVisitor([&](const ExtensionPathAction& action) {
         append(vector, action.extensionPath.utf8());
     }, [&](const RegexSubstitutionAction& action) {
         action.serialize(vector);
@@ -371,7 +371,7 @@ size_t RedirectAction::serializedLength(std::span<const uint8_t> span)
 
 void RedirectAction::applyToRequest(ResourceRequest& request, const URL& extensionBaseURL)
 {
-    std::visit(WTF::makeVisitor([&](const ExtensionPathAction& action) {
+    WTF::visit(WTF::makeVisitor([&](const ExtensionPathAction& action) {
         auto url = extensionBaseURL;
         url.setPath(action.extensionPath);
         request.setURL(WTFMove(url));
@@ -593,7 +593,7 @@ void RedirectAction::URLTransformAction::serialize(Vector<uint8_t>& vector) cons
     }
     if (hasQuery) {
         vector.append(queryTransform.index());
-        std::visit(WTF::makeVisitor([&](const String&) {
+        WTF::visit(WTF::makeVisitor([&](const String&) {
             append(vector, queryStringUTF8.length());
             append(vector, queryStringUTF8);
         }, [&](const QueryTransform& transform) {
@@ -723,7 +723,7 @@ void RedirectAction::URLTransformAction::applyToURL(URL& url) const
         url.setPath(path);
     if (!!port)
         url.setPort(*port);
-    std::visit(WTF::makeVisitor([&] (const String& query) {
+    WTF::visit(WTF::makeVisitor([&] (const String& query) {
         if (!query.isNull())
             url.setQuery(query.isEmpty() ? StringView() : StringView(query));
     }, [&] (const URLTransformAction::QueryTransform& transform) {

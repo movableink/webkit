@@ -1305,7 +1305,7 @@ static Ref<CSSValue> valueForGridTrackList(GridTrackSizingDirection direction, R
     });
 
     for (auto& entry : computedTracks)
-        std::visit(trackEntryVisitor, entry);
+        WTF::visit(trackEntryVisitor, entry);
 
     return CSSValueList::createSpaceSeparated(WTFMove(list));
 }

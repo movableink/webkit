@@ -597,13 +597,13 @@ template<typename T> concept HasSwitchOn = requires(T t) {
 #ifdef _LIBCPP_VERSION
 
 // Single-variant switch-based visit function adapted from https://www.reddit.com/r/cpp/comments/kst2pu/comment/giilcxv/.
-// Works around bad code generation for std::visit with one Variant by some standard library / compilers that
+// Works around bad code generation for WTF::visit with one Variant by some standard library / compilers that
 // lead to excessive binary size growth. Currently only needed by libc++. See https://webkit.org/b/279498.
 
 
 template<size_t Minimum = 0, class F, class V> ALWAYS_INLINE decltype(auto) visitOneVariant(NOESCAPE F&& f, V&& v)
 {
-    constexpr auto Maximum = std::variant_size_v<std::remove_cvref_t<V>>;
+    constexpr auto Maximum = VariantSizeV<std::remove_cvref_t<V>>;
 
 #define WTF_INDEX_VISIT_CASE(Min, Max, N) f(std::get<Min + N>(std::forward<V>(v)))
 #define WTF_INDEX_VISIT_NEXT(Min, Max)    visitOneVariant<Min>(std::forward<F>(f), std::forward<V>(v))
@@ -621,9 +621,9 @@ template<class V, class... F> requires (!HasSwitchOn<V>) ALWAYS_INLINE auto swit
 
 #else
 
-template<class V, class... F> requires (!HasSwitchOn<V>) ALWAYS_INLINE auto switchOn(V&& v, F&&... f) -> decltype(std::visit(makeVisitor(std::forward<F>(f)...), asVariant(std::forward<V>(v))))
+template<class V, class... F> requires (!HasSwitchOn<V>) ALWAYS_INLINE auto switchOn(V&& v, F&&... f) -> decltype(WTF::visit(makeVisitor(std::forward<F>(f)...), asVariant(std::forward<V>(v))))
 {
-    return std::visit(makeVisitor(std::forward<F>(f)...), asVariant(std::forward<V>(v)));
+    return WTF::visit(makeVisitor(std::forward<F>(f)...), asVariant(std::forward<V>(v)));
 }
 
 #endif
@@ -781,12 +781,12 @@ template<typename TypeList> using VariantOrSingle = std::conditional_t<
 //   };
 
 template<typename T> struct IsStdInPlaceTypeImpl : std::false_type {};
-template<typename T> struct IsStdInPlaceTypeImpl<std::in_place_type_t<T>> : std::true_type {};
+template<typename T> struct IsStdInPlaceTypeImpl<WTF::InPlaceTypeT<T>> : std::true_type { };
 template<typename T> using IsStdInPlaceType = IsStdInPlaceTypeImpl<std::remove_cvref_t<T>>;
 template<typename T> constexpr bool IsStdInPlaceTypeV = IsStdInPlaceType<T>::value;
 
 template<typename T> struct IsStdInPlaceIndexImpl : std::false_type { };
-template<size_t I>   struct IsStdInPlaceIndexImpl<std::in_place_index_t<I>> : std::true_type { };
+template<size_t I>   struct IsStdInPlaceIndexImpl<WTF::InPlaceIndexT<I>> : std::true_type { };
 template<typename T> using IsStdInPlaceIndex = IsStdInPlaceIndexImpl<std::remove_cvref_t<T>>;
 template<typename T> constexpr bool IsStdInPlaceIndexV = IsStdInPlaceIndex<T>::value;
 

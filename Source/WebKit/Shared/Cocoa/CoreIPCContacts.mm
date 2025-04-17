@@ -153,7 +153,7 @@ bool CoreIPCCNContact::isValidCNContactType(NSInteger proposedType)
 static RetainPtr<NSArray> nsArrayFromVectorOfLabeledValues(const Vector<CoreIPCContactLabeledValue>& labeledValues)
 {
     return createNSArray(labeledValues, [] (auto& labeledValue) -> RetainPtr<id> {
-        auto theValue = std::visit([] (auto& actualValue) -> RetainPtr<id> {
+        auto theValue = WTF::visit([] (auto& actualValue) -> RetainPtr<id> {
             return actualValue.toID();
         }, labeledValue.value);
 

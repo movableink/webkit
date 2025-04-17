@@ -205,7 +205,7 @@ void StyleGridData::computeCachedTrackData(const GridTrackList& list, Vector<Gri
     });
 
     for (const auto& entry : list.list)
-        std::visit(visitor, entry);
+        WTF::visit(visitor, entry);
 
     // The parser should have rejected any <track-list> without any <track-size> as
     // this is not conformant to the syntax.
@@ -220,7 +220,7 @@ WTF::TextStream& operator<<(WTF::TextStream& ts, const RepeatEntry& entry)
         ts << names;
     });
 
-    std::visit(visitor, entry);
+    WTF::visit(visitor, entry);
     return ts;
 }
 
@@ -240,7 +240,7 @@ WTF::TextStream& operator<<(WTF::TextStream& ts, const GridTrackEntry& entry)
         ts << "masonry"_s;
     });
 
-    std::visit(visitor, entry);
+    WTF::visit(visitor, entry);
     return ts;
 }
 

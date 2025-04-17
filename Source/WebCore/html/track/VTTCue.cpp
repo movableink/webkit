@@ -159,7 +159,7 @@ void VTTCueBox::applyCSSPropertiesWithRegion()
         return;
 
     // the 'left' property must be set to left
-    std::visit(WTF::makeVisitor([this, protectedThis = Ref { *this }] (double left) {
+    WTF::visit(WTF::makeVisitor([this, protectedThis = Ref { *this }] (double left) {
         setInlineStyleProperty(CSSPropertyLeft, left, CSSUnitType::CSS_PERCENTAGE);
     }, [this, protectedThis = Ref { *this }] (auto) {
         setInlineStyleProperty(CSSPropertyLeft, CSSValueAuto);
@@ -210,14 +210,14 @@ void VTTCueBox::applyCSSProperties()
     setInlineStyleProperty(CSSPropertyWritingMode, cue->getCSSWritingMode());
 
     // the 'top' property must be set to top
-    std::visit(WTF::makeVisitor([this, protectedThis = Ref { *this }] (double top) {
+    WTF::visit(WTF::makeVisitor([this, protectedThis = Ref { *this }] (double top) {
         setInlineStyleProperty(CSSPropertyTop, top, CSSUnitType::CSS_CQH);
     }, [this, protectedThis = Ref { *this }] (auto) {
         setInlineStyleProperty(CSSPropertyTop, CSSValueAuto);
     }), cue->top());
 
     // the 'left' property must be set to left
-    std::visit(WTF::makeVisitor([this, protectedThis = Ref { *this }] (double left) {
+    WTF::visit(WTF::makeVisitor([this, protectedThis = Ref { *this }] (double left) {
         setInlineStyleProperty(CSSPropertyLeft, left, CSSUnitType::CSS_CQW);
     }, [this, protectedThis = Ref { *this }] (auto) {
         setInlineStyleProperty(CSSPropertyLeft, CSSValueAuto);
@@ -230,14 +230,14 @@ void VTTCueBox::applyCSSProperties()
     // is not a true viewport, but it is a container, so they serve the same purpose.
 
     // the 'width' property must be set to width
-    std::visit(WTF::makeVisitor([this, protectedThis = Ref { *this }] (double width) {
+    WTF::visit(WTF::makeVisitor([this, protectedThis = Ref { *this }] (double width) {
         setInlineStyleProperty(CSSPropertyWidth, width, CSSUnitType::CSS_CQW);
     }, [this, protectedThis = Ref { *this }] (auto) {
         setInlineStyleProperty(CSSPropertyWidth, CSSValueAuto);
     }), cue->width());
 
     // the 'height' property must be set to height
-    std::visit(WTF::makeVisitor([this, protectedThis = Ref { *this }] (double height) {
+    WTF::visit(WTF::makeVisitor([this, protectedThis = Ref { *this }] (double height) {
         setInlineStyleProperty(CSSPropertyHeight, height, CSSUnitType::CSS_CQH);
     }, [this, protectedThis = Ref { *this }] (auto) {
         setInlineStyleProperty(CSSPropertyHeight, CSSValueAuto);

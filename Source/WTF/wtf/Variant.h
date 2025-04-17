@@ -25,9 +25,28 @@
 
 #pragma once
 
+#include <utility>
 #include <variant>
 
 namespace WTF {
-template<class... Ts> using Variant = std::variant<Ts...>;
+template<typename... Ts> using Variant = std::variant<Ts...>;
+template<typename T> constexpr std::in_place_type_t<T> InPlaceType { };
+template<typename T> using InPlaceTypeT = std::in_place_type_t<T>;
+template<size_t I> constexpr std::in_place_index_t<I> InPlaceIndex { };
+template<size_t I> using InPlaceIndexT = std::in_place_index_t<I>;
+template <size_t I, class T> struct VariantAlternative;
+template<size_t I, typename... Types> struct VariantAlternative<I, Variant<Types...>> : std::variant_alternative<I, Variant<Types...>> { };
+template<size_t I, typename T> using VariantAlternativeT = typename VariantAlternative<I, T>::type;
+template<typename T> struct VariantSize;
+template<typename... Types> struct VariantSize<Variant<Types...>> : std::integral_constant<std::size_t, sizeof...(Types)> { };
+template<typename T> struct VariantSize<const T> : VariantSize<T> { };
+template<typename T> constexpr size_t VariantSizeV = VariantSize<T>::value;
+
+template<typename Visitor, typename... Variants> constexpr auto visit(Visitor&& v, Variants&&... values)
+    -> decltype(std::visit<Visitor, Variants...>(std::forward<Visitor>(v), std::forward<Variants>(values)...))
+{
+    return std::visit<Visitor, Variants...>(std::forward<Visitor>(v), std::forward<Variants>(values)...);
+}
+
 }
 using WTF::Variant;

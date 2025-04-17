@@ -324,13 +324,13 @@ template<typename... Types> struct CrossThreadCopierBase<false, false, Variant<T
     static constexpr bool IsNeeded = (CrossThreadCopier<std::remove_cvref_t<Types>>::IsNeeded || ...);
     static Variant<Types...> copy(const Type& source)
     {
-        return std::visit([] (auto& type) -> Variant<Types...> {
+        return WTF::visit([] (auto& type) -> Variant<Types...> {
             return CrossThreadCopier<std::remove_cvref_t<decltype(type)>>::copy(type);
         }, source);
     }
     static Variant<Types...> copy(Type&& source)
     {
-        return std::visit([] (auto&& type) -> Variant<Types...> {
+        return WTF::visit([] (auto&& type) -> Variant<Types...> {
             return CrossThreadCopier<std::remove_cvref_t<decltype(type)>>::copy(std::forward<decltype(type)>(type));
         }, WTFMove(source));
     }

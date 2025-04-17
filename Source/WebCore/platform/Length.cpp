@@ -237,7 +237,7 @@ void Length::deref() const
 
 LengthType Length::typeFromIndex(const IPCData& data)
 {
-    static_assert(std::variant_size_v<IPCData> == 13);
+    static_assert(WTF::VariantSizeV<IPCData> == 13);
     switch (data.index()) {
     case WTF::alternativeIndexV<AutoData, IPCData>:
         return LengthType::Auto;

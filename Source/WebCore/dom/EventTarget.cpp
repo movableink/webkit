@@ -132,7 +132,7 @@ void EventTarget::addEventListenerForBindings(const AtomString& eventType, RefPt
         SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE addEventListener(eventType, listener.releaseNonNull(), capture);
     });
 
-    std::visit(visitor, variant);
+    WTF::visit(visitor, variant);
 }
 
 void EventTarget::removeEventListenerForBindings(const AtomString& eventType, RefPtr<EventListener>&& listener, EventListenerOptionsOrBoolean&& variant)
@@ -148,7 +148,7 @@ void EventTarget::removeEventListenerForBindings(const AtomString& eventType, Re
         SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE removeEventListener(eventType, *listener, capture);
     });
 
-    std::visit(visitor, variant);
+    WTF::visit(visitor, variant);
 }
 
 bool EventTarget::removeEventListener(const AtomString& eventType, EventListener& listener, const EventListenerOptions& options)

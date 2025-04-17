@@ -519,7 +519,7 @@ template<CSSValueID C> struct Blending<Constant<C>> {
 template<typename... StyleTypes> struct Blending<Variant<StyleTypes...>> {
     auto canBlend(const Variant<StyleTypes...>& a, const Variant<StyleTypes...>& b) -> bool
     {
-        return std::visit(WTF::makeVisitor(
+        return WTF::visit(WTF::makeVisitor(
             []<typename T>(const T& a, const T& b) -> bool {
                 return WebCore::Style::canBlend(a, b);
             },
@@ -530,7 +530,7 @@ template<typename... StyleTypes> struct Blending<Variant<StyleTypes...>> {
     }
     auto canBlend(const Variant<StyleTypes...>& a, const Variant<StyleTypes...>& b, const RenderStyle& aStyle, const RenderStyle& bStyle) -> bool
     {
-        return std::visit(WTF::makeVisitor(
+        return WTF::visit(WTF::makeVisitor(
             [&]<typename T>(const T& a, const T& b) -> bool {
                 return WebCore::Style::canBlend(a, b, aStyle, bStyle);
             },
@@ -541,7 +541,7 @@ template<typename... StyleTypes> struct Blending<Variant<StyleTypes...>> {
     }
     auto blend(const Variant<StyleTypes...>& a, const Variant<StyleTypes...>& b, const BlendingContext& context) -> Variant<StyleTypes...>
     {
-        return std::visit(WTF::makeVisitor(
+        return WTF::visit(WTF::makeVisitor(
             [&]<typename T>(const T& a, const T& b) -> Variant<StyleTypes...> {
                 return WebCore::Style::blend(a, b, context);
             },
@@ -552,7 +552,7 @@ template<typename... StyleTypes> struct Blending<Variant<StyleTypes...>> {
     }
     auto blend(const Variant<StyleTypes...>& a, const Variant<StyleTypes...>& b, const RenderStyle& aStyle, const RenderStyle& bStyle, const BlendingContext& context) -> Variant<StyleTypes...>
     {
-        return std::visit(WTF::makeVisitor(
+        return WTF::visit(WTF::makeVisitor(
             [&]<typename T>(const T& a, const T& b) -> Variant<StyleTypes...> {
                 return WebCore::Style::blend(a, b, aStyle, bStyle, context);
             },

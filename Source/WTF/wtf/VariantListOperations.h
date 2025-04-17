@@ -361,7 +361,7 @@ template<typename V> struct VariantListProxy {
 
     template<size_t I> bool holds_alternative() const
     {
-        static_assert(I <= std::variant_size_v<Variant>);
+        static_assert(I <= VariantSizeV<Variant>);
         return Operations::readIndex(buffer) == I;
     }
 

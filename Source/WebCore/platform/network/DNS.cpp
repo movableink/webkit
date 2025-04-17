@@ -88,7 +88,7 @@ bool isIPAddressDisallowed(const URL& url)
 
 bool IPAddress::containsOnlyZeros() const
 {
-    return std::visit(WTF::makeVisitor([] (const WTF::HashTableEmptyValueType&) {
+    return WTF::visit(WTF::makeVisitor([] (const WTF::HashTableEmptyValueType&) {
         ASSERT_NOT_REACHED();
         return false;
     }, [] (const in_addr& address) {

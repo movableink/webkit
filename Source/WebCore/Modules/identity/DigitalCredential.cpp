@@ -74,13 +74,13 @@ static ExceptionOr<DigitalCredentialRequestTypes> jsToCredentialRequest(const Do
         auto result = convertDictionary<MobileDocumentRequest>(*globalObject, request.data.get());
         if (result.hasException(scope))
             return Exception { ExceptionCode::ExistingExceptionError };
-        return DigitalCredentialRequestTypes { std::in_place_type<MobileDocumentRequest>, result.releaseReturnValue() };
+        return DigitalCredentialRequestTypes { WTF::InPlaceType<MobileDocumentRequest>, result.releaseReturnValue() };
     }
     case IdentityCredentialProtocol::Openid4vp: {
         auto result = convertDictionary<OpenID4VPRequest>(*globalObject, request.data.get());
         if (result.hasException(scope))
             return Exception { ExceptionCode::ExistingExceptionError };
-        return DigitalCredentialRequestTypes { std::in_place_type<OpenID4VPRequest>, result.releaseReturnValue() };
+        return DigitalCredentialRequestTypes { WTF::InPlaceType<OpenID4VPRequest>, result.releaseReturnValue() };
     }
     default:
         ASSERT_NOT_REACHED();
@@ -146,7 +146,7 @@ void DigitalCredential::discoverFromExternalSource(const Document& document, Cre
         }
 
         DigitalCredentialRequestTypes credentialVariant = resultOrException.releaseReturnValue();
-        std::visit(
+        WTF::visit(
             [&](auto& credential) { requestData.requests.append(credential); },
             credentialVariant);
     }

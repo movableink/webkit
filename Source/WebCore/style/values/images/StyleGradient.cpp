@@ -893,7 +893,7 @@ template<CSSValueID Name> static Ref<WebCore::Gradient> createPlatformGradient(c
             );
         },
         [&](const SpaceSeparatedTuple<Horizontal, Vertical>& pair) -> std::pair<FloatPoint, FloatPoint> {
-            return std::visit(WTF::makeVisitor(
+            return WTF::visit(WTF::makeVisitor(
                 [&](CSS::Keyword::Left, CSS::Keyword::Top) -> std::pair<FloatPoint, FloatPoint> {
                     return { { 0, 0 }, { size.width(), size.height() } };
                 },

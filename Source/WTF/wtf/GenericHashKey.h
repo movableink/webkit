@@ -40,13 +40,13 @@ class GenericHashKey final {
 
 public:
     constexpr GenericHashKey(Key&& key)
-        : m_value(std::in_place_type_t<Key>(), WTFMove(key))
+        : m_value(InPlaceTypeT<Key>(), WTFMove(key))
     {
     }
 
     template<typename K>
     constexpr GenericHashKey(K&& key)
-        : m_value(std::in_place_type_t<Key>(), std::forward<K>(key))
+        : m_value(InPlaceTypeT<Key>(), std::forward<K>(key))
     {
     }
 

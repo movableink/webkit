@@ -179,7 +179,7 @@ static FontRanges realizeNextFallback(const FontCascadeDescription& description,
             return { fontFamilySpecification.fontRanges(description), IsGenericFontFamily::Yes };
         });
         const auto& currentFamily = description.effectiveFamilyAt(index++);
-        auto ranges = std::visit(visitor, currentFamily);
+        auto ranges = WTF::visit(visitor, currentFamily);
         if (!ranges.isNull())
             return ranges;
     }

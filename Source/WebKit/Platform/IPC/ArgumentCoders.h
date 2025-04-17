@@ -793,10 +793,10 @@ template<typename... Types> struct ArgumentCoder<Variant<Types...>> {
         constexpr size_t index = sizeof...(Indices);
         if constexpr (index < sizeof...(Types)) {
             if (index == i) {
-                auto optional = decoder.template decode<typename std::variant_alternative_t<index, Variant<Types...>>>();
+                auto optional = decoder.template decode<typename WTF::VariantAlternativeT<index, Variant<Types...>>>();
                 if (!optional)
                     return std::nullopt;
-                return std::make_optional<Variant<Types...>>(std::in_place_index<index>, WTFMove(*optional));
+                return std::make_optional<Variant<Types...>>(WTF::InPlaceIndex<index>, WTFMove(*optional));
             }
             return decode(decoder, std::make_index_sequence<index + 1> { }, i);
         } else

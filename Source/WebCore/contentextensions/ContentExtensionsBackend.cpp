@@ -264,7 +264,7 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
         const String& contentRuleListIdentifier = actionsFromContentRuleList.contentRuleListIdentifier;
         ContentRuleListResults::Result result;
         for (const auto& action : actionsFromContentRuleList.actions) {
-            std::visit(WTF::makeVisitor([&](const BlockLoadAction&) {
+            WTF::visit(WTF::makeVisitor([&](const BlockLoadAction&) {
                 results.summary.blockedLoad = true;
                 result.blockedLoad = true;
             }, [&](const BlockCookiesAction&) {
@@ -349,7 +349,7 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForPingL
     makeSecureIfNecessary(results, url);
     for (const auto& actionsFromContentRuleList : actions) {
         for (const auto& action : actionsFromContentRuleList.actions) {
-            std::visit(WTF::makeVisitor([&](const BlockLoadAction&) {
+            WTF::visit(WTF::makeVisitor([&](const BlockLoadAction&) {
                 results.summary.blockedLoad = true;
             }, [&](const BlockCookiesAction&) {
                 results.summary.blockedCookies = true;
@@ -380,7 +380,7 @@ bool ContentExtensionsBackend::processContentRuleListsForResourceMonitoring(cons
     bool matched = false;
     for (const auto& actionsFromContentRuleList : actions) {
         for (const auto& action : actionsFromContentRuleList.actions) {
-            std::visit(WTF::makeVisitor([&](const BlockLoadAction&) {
+            WTF::visit(WTF::makeVisitor([&](const BlockLoadAction&) {
                 matched = true;
             }, [&](const BlockCookiesAction&) {
             }, [&](const CSSDisplayNoneSelectorAction&) {

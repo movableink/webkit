@@ -471,7 +471,7 @@ static IndexKey::Data createKeyPathArray(JSGlobalObject& lexicalGlobalObject, JS
         return keys;
     });
 
-    return std::visit(visitor, info.keyPath());
+    return WTF::visit(visitor, info.keyPath());
 }
 
 void generateIndexKeyForValue(JSGlobalObject& lexicalGlobalObject, const IDBIndexInfo& info, JSValue value, IndexKey& outKey, const std::optional<IDBKeyPath>& objectStoreKeyPath, const IDBKeyData& objectStoreKey)

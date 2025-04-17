@@ -106,7 +106,7 @@ static Vector<unsigned> serializeActions(const Vector<ContentExtensionRule>& rul
             actionLocations.append(actions.size());
 
             actions.append(actionData.index());
-            std::visit(WTF::makeVisitor([&](const auto& member) {
+            WTF::visit(WTF::makeVisitor([&](const auto& member) {
                 member.serialize(actions);
             }), actionData);
             continue;
@@ -140,7 +140,7 @@ static Vector<unsigned> serializeActions(const Vector<ContentExtensionRule>& rul
             }).iterator->value;
         };
 
-        auto actionLocation = std::visit(WTF::makeVisitor([&] (const CSSDisplayNoneSelectorAction& actionData) {
+        auto actionLocation = WTF::visit(WTF::makeVisitor([&] (const CSSDisplayNoneSelectorAction& actionData) {
             const auto addResult = cssDisplayNoneActionsMap.add(rule.trigger(), PendingDisplayNoneActions());
             auto& pendingStringActions = addResult.iterator->value;
             if (!pendingStringActions.combinedSelectors.isEmpty())

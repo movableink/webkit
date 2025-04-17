@@ -600,7 +600,7 @@ inline bool canInterpolate(const GridTrackList& from, const GridTrackList& to)
     );
 
     for (i = 0; i < from.list.size(); i++) {
-        if (!std::visit(visitor, from.list[i]))
+        if (!WTF::visit(visitor, from.list[i]))
             return false;
     }
 
@@ -655,7 +655,7 @@ inline RepeatTrackList blendFunc(const RepeatTrackList& from, const RepeatTrackL
     );
 
     for (i = 0; i < from.size(); i++)
-        std::visit(visitor, from[i]);
+        WTF::visit(visitor, from[i]);
 
     return result;
 }
@@ -700,7 +700,7 @@ inline GridTrackList blendFunc(const GridTrackList& from, const GridTrackList& t
 
 
     for (i = 0; i < from.list.size(); i++)
-        std::visit(visitor, from.list[i]);
+        WTF::visit(visitor, from.list[i]);
 
     return result;
 }

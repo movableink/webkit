@@ -66,7 +66,7 @@ void addValuesToTable(WebCore::SQLiteDatabase& database, ASCIILiteral query, std
         }, [&] (double real) {
             return statement->bindDouble(i + 1, real);
         });
-        auto result = std::visit(visitor, values[i]);
+        auto result = WTF::visit(visitor, values[i]);
         EXPECT_EQ(result, SQLITE_OK);
     }
     EXPECT_EQ(statement->step(), SQLITE_DONE);

@@ -57,7 +57,7 @@ public:
     // This is simplified version of https://w3c.github.io/webappsec-permissions-policy/#matches.
     bool matches(const SecurityOriginData& origin) const
     {
-        return std::visit(WTF::makeVisitor([&origin](const HashSet<SecurityOriginData>& origins) -> bool {
+        return WTF::visit(WTF::makeVisitor([&origin](const HashSet<SecurityOriginData>& origins) -> bool {
             return origins.contains(origin);
         }, [&] (const auto&) {
             return true;

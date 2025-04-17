@@ -109,7 +109,7 @@ TEST(WTF_CompactVariant, SmartPointers)
         RefLogger testRefLogger("testRefLogger");
         Ref<RefLogger> ref(testRefLogger);
 
-        CompactVariant<Ref<RefLogger>, std::unique_ptr<double>> variant { std::in_place_type<Ref<RefLogger>>, WTFMove(ref) };
+        CompactVariant<Ref<RefLogger>, std::unique_ptr<double>> variant { WTF::InPlaceType<Ref<RefLogger>>, WTFMove(ref) };
 
         EXPECT_TRUE(WTF::holdsAlternative<Ref<RefLogger>>(variant));
         EXPECT_FALSE(WTF::holdsAlternative<std::unique_ptr<double>>(variant));
@@ -357,7 +357,7 @@ TEST(WTF_CompactVariant, ArgumentConstruct)
 TEST(WTF_CompactVariant, ArgumentConstructInPlaceType)
 {
     {
-        CompactVariant<float, LifecycleLogger> variant { std::in_place_type<LifecycleLogger>, "compact" };
+        CompactVariant<float, LifecycleLogger> variant { WTF::InPlaceType<LifecycleLogger>, "compact" };
 
         ASSERT_STREQ("construct(compact) ", takeLogStr().c_str());
     }
@@ -367,7 +367,7 @@ TEST(WTF_CompactVariant, ArgumentConstructInPlaceType)
 TEST(WTF_CompactVariant, ArgumentConstructInPlaceIndex)
 {
     {
-        CompactVariant<float, LifecycleLogger> variant { std::in_place_index<1>, "compact" };
+        CompactVariant<float, LifecycleLogger> variant { WTF::InPlaceIndex<1>, "compact" };
 
         ASSERT_STREQ("construct(compact) ", takeLogStr().c_str());
     }
@@ -421,7 +421,7 @@ TEST(WTF_CompactVariant, ArgumentCopyAssignment)
 TEST(WTF_CompactVariant, CopyConstruct)
 {
     {
-        CompactVariant<float, LifecycleLogger> variant { std::in_place_type<LifecycleLogger>, "compact" };
+        CompactVariant<float, LifecycleLogger> variant { WTF::InPlaceType<LifecycleLogger>, "compact" };
 
         CompactVariant<float, LifecycleLogger> other { variant };
 
@@ -433,7 +433,7 @@ TEST(WTF_CompactVariant, CopyConstruct)
 TEST(WTF_CompactVariant, CopyAssignment)
 {
     {
-        CompactVariant<float, LifecycleLogger> variant { std::in_place_type<LifecycleLogger>, "compact" };
+        CompactVariant<float, LifecycleLogger> variant { WTF::InPlaceType<LifecycleLogger>, "compact" };
 
         CompactVariant<float, LifecycleLogger> other = variant;
 
@@ -445,7 +445,7 @@ TEST(WTF_CompactVariant, CopyAssignment)
 TEST(WTF_CompactVariant, MoveConstruct)
 {
     {
-        CompactVariant<float, LifecycleLogger> variant { std::in_place_type<LifecycleLogger>, "compact" };
+        CompactVariant<float, LifecycleLogger> variant { WTF::InPlaceType<LifecycleLogger>, "compact" };
 
         CompactVariant<float, LifecycleLogger> other { WTFMove(variant) };
 
@@ -457,7 +457,7 @@ TEST(WTF_CompactVariant, MoveConstruct)
 TEST(WTF_CompactVariant, MoveAssignment)
 {
     {
-        CompactVariant<float, LifecycleLogger> variant { std::in_place_type<LifecycleLogger>, "compact" };
+        CompactVariant<float, LifecycleLogger> variant { WTF::InPlaceType<LifecycleLogger>, "compact" };
 
         CompactVariant<float, LifecycleLogger> other = WTFMove(variant);
 
@@ -469,7 +469,7 @@ TEST(WTF_CompactVariant, MoveAssignment)
 TEST(WTF_CompactVariant, ConstructThenReassign)
 {
     {
-        CompactVariant<float, LifecycleLogger> variant { std::in_place_type<LifecycleLogger>, "compact" };
+        CompactVariant<float, LifecycleLogger> variant { WTF::InPlaceType<LifecycleLogger>, "compact" };
 
         variant = 1.0f;
 
@@ -544,7 +544,7 @@ TEST(WTF_CompactVariant, SwitchOn)
 {
     // `switchOn` should not cause any lifecycle events.
     {
-        CompactVariant<float, LifecycleLogger> variant { std::in_place_type<LifecycleLogger>, "compact" };
+        CompactVariant<float, LifecycleLogger> variant { WTF::InPlaceType<LifecycleLogger>, "compact" };
 
         WTF::switchOn(variant,
             [&](const float&) { },

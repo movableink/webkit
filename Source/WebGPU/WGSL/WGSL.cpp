@@ -82,7 +82,7 @@ Variant<SuccessfulCheck, FailedCheck> staticCheck(const String& wgsl, const std:
     RUN_PASS(mangleNames, shaderModule);
 
     Vector<Warning> warnings { };
-    return Variant<SuccessfulCheck, FailedCheck>(std::in_place_type<SuccessfulCheck>, WTFMove(warnings), WTFMove(shaderModule));
+    return Variant<SuccessfulCheck, FailedCheck>(WTF::InPlaceType<SuccessfulCheck>, WTFMove(warnings), WTFMove(shaderModule));
 }
 
 SuccessfulCheck::SuccessfulCheck(SuccessfulCheck&&) = default;

@@ -93,10 +93,10 @@ template<typename Arg, typename... Ts> struct VariantBestMatch<Variant<Ts...>, A
 
 template<typename V, typename F> constexpr decltype(auto) typeForIndex(size_t index, NOESCAPE F&& f)
 {
-    return visitAtIndex<0, std::variant_size_v<std::remove_cvref_t<V>>>(
+    return visitAtIndex<0, VariantSizeV<std::remove_cvref_t<V>>>(
         index,
         [&]<size_t I>() ALWAYS_INLINE_LAMBDA {
-           return f.template operator()<std::variant_alternative_t<I, std::remove_cvref_t<V>>>();
+            return f.template operator()<VariantAlternativeT<I, std::remove_cvref_t<V>>>();
         }
     );
 }

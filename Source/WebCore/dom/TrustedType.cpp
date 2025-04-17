@@ -181,7 +181,7 @@ ExceptionOr<String> trustedTypeCompliantString(TrustedType expectedType, ScriptE
         return WTFMove(std::get<Exception>(convertedInput));
 
     if (!std::holds_alternative<std::monostate>(convertedInput)) {
-        stringValue = std::visit(TrustedTypeVisitor { }, convertedInput);
+        stringValue = WTF::visit(TrustedTypeVisitor { }, convertedInput);
         if (stringValue.isNull())
             convertedInput = std::monostate();
     }
@@ -302,7 +302,7 @@ ExceptionOr<String> requireTrustedTypesForPreNavigationCheckPasses(ScriptExecuti
         return String(urlString);
     }
 
-    auto stringifiedConvertedScriptSource = std::visit(TrustedTypeVisitor { }, convertedScriptSource);
+    auto stringifiedConvertedScriptSource = WTF::visit(TrustedTypeVisitor { }, convertedScriptSource);
 
     auto newURL = URL(makeString("javascript:"_s, stringifiedConvertedScriptSource));
     return String(newURL.isValid()

@@ -112,7 +112,7 @@ WebCore::Path PathComputation<Circle>::operator()(const Circle& value, const Flo
 auto Blending<Circle>::canBlend(const Circle& a, const Circle& b) -> bool
 {
     auto canBlendRadius = [](const auto& radiusA, const auto& radiusB) {
-        return std::visit(WTF::makeVisitor(
+        return WTF::visit(WTF::makeVisitor(
             [](const Circle::Length&, const Circle::Length&) {
                 return true;
             },
@@ -130,7 +130,7 @@ auto Blending<Circle>::canBlend(const Circle& a, const Circle& b) -> bool
 auto Blending<Circle>::blend(const Circle& a, const Circle& b, const BlendingContext& context) -> Circle
 {
     auto blendRadius = [](const auto& radiusA, const auto& radiusB, const BlendingContext& context) -> Circle::RadialSize {
-        return std::visit(WTF::makeVisitor(
+        return WTF::visit(WTF::makeVisitor(
             [&](const Circle::Length& lengthA, const Circle::Length& lengthB) -> Circle::RadialSize {
                 return WebCore::Style::blend(lengthA, lengthB, context);
             },

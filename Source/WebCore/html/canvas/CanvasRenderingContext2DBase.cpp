@@ -2566,7 +2566,7 @@ RefPtr<ImageData> CanvasRenderingContext2DBase::makeImageDataIfContentsCached(co
         return ImageData::create(sourceRect.size(), colorSpace);
     if (std::holds_alternative<CachedContentsUnknown>(m_cachedContents))
         return nullptr;
-    static_assert(std::variant_size_v<decltype(m_cachedContents)> == 3); // Written this way to avoid dangling references during visit.
+    static_assert(WTF::VariantSizeV<decltype(m_cachedContents)> == 3); // Written this way to avoid dangling references during visit.
     // Always consume the cached image data.
     Ref pixelBuffer = WTFMove(std::get<CachedContentsImageData>(m_cachedContents).imageData);
     m_cachedContents.emplace<CachedContentsUnknown>();

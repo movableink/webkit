@@ -112,7 +112,7 @@ Variant<MediaPlaybackTargetContextCocoa, MediaPlaybackTargetContextMock> MediaPl
     auto unarchiver = adoptNS([[WKKeyedCoder alloc] initWithDictionary:propertyList]);
     auto outputContext = adoptNS([[PAL::getAVOutputContextClass() alloc] initWithCoder:unarchiver.get()]);
     // Variant construction in older clang gives either an error, a vtable linkage error unless we construct it this way.
-    Variant<MediaPlaybackTargetContextCocoa, MediaPlaybackTargetContextMock> variant { std::in_place_type<MediaPlaybackTargetContextCocoa>, WTFMove(outputContext) };
+    Variant<MediaPlaybackTargetContextCocoa, MediaPlaybackTargetContextMock> variant { WTF::InPlaceType<MediaPlaybackTargetContextCocoa>, WTFMove(outputContext) };
     return variant;
 #endif
 }

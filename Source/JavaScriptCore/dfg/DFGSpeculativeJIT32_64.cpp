@@ -852,7 +852,7 @@ void SpeculativeJIT::emitCall(Node* node)
     LinkableConstant callLinkInfoConstant;
     if (!isDirect) {
         std::tie(callLinkInfo, callLinkInfoConstant) = addCallLinkInfo(m_currentNode->origin.semantic);
-        std::visit([&](auto* callLinkInfo) {
+        WTF::visit([&](auto* callLinkInfo) {
             callLinkInfo->setUpCall(callType);
         }, callLinkInfo);
     }
@@ -4811,7 +4811,7 @@ void SpeculativeJIT::compileHasPrivate(Node* node, AccessType type)
         codeBlock(), stubInfo, JITType::DFGJIT, codeOrigin, callSite, type, usedRegisters,
         JSValueRegs::payloadOnly(baseGPR), JSValueRegs::payloadOnly(propertyOrBrandGPR), resultRegs, InvalidGPRReg, InvalidGPRReg);
 
-    std::visit([&](auto* stubInfo) {
+    WTF::visit([&](auto* stubInfo) {
         stubInfo->propertyIsSymbol = true;
     }, stubInfo);
 
@@ -4914,7 +4914,7 @@ void SpeculativeJIT::compilePutByVal(Node* node)
             codeBlock(), stubInfo, JITType::DFGJIT, codeOrigin, callSite, isDirect ? (ecmaMode.isStrict() ? AccessType::PutByValDirectStrict : AccessType::PutByValDirectSloppy) : (ecmaMode.isStrict() ? AccessType::PutByValStrict : AccessType::PutByValSloppy), usedRegisters,
             baseRegs, propertyRegs, valueRegs, InvalidGPRReg, InvalidGPRReg);
 
-        std::visit([&](auto* stubInfo) {
+        WTF::visit([&](auto* stubInfo) {
             if (m_state.forNode(child2).isType(SpecString))
                 stubInfo->propertyIsString = true;
             else if (m_state.forNode(child2).isType(SpecInt32Only))
@@ -5069,7 +5069,7 @@ void SpeculativeJIT::compileGetPrivateNameByVal(Node* node, JSValueRegs baseRegs
         codeBlock(), stubInfo, JITType::DFGJIT, codeOrigin, callSite, AccessType::GetPrivateName, usedRegisters,
         baseRegs, propertyRegs, resultRegs, InvalidGPRReg, InvalidGPRReg);
 
-    std::visit([&](auto* stubInfo) {
+    WTF::visit([&](auto* stubInfo) {
         stubInfo->propertyIsSymbol = true;
     }, stubInfo);
 
@@ -5173,7 +5173,7 @@ void SpeculativeJIT::compilePutPrivateName(Node* node)
         codeBlock(), stubInfo, JITType::DFGJIT, codeOrigin, callSite, node->privateFieldPutKind().isDefine() ? AccessType::DefinePrivateNameByVal : AccessType::SetPrivateNameByVal, usedRegisters,
         JSValueRegs::payloadOnly(baseGPR), JSValueRegs::payloadOnly(propertyGPR), valueRegs, InvalidGPRReg, InvalidGPRReg);
 
-    std::visit([&](auto* stubInfo) {
+    WTF::visit([&](auto* stubInfo) {
         stubInfo->propertyIsSymbol = true;
     }, stubInfo);
 
@@ -5232,7 +5232,7 @@ void SpeculativeJIT::compileCheckPrivateBrand(Node* node)
         codeBlock(), stubInfo, JITType::DFGJIT, codeOrigin, callSite, AccessType::CheckPrivateBrand, usedRegisters,
         baseRegs, JSValueRegs::payloadOnly(brandGPR), InvalidGPRReg);
 
-    std::visit([&](auto* stubInfo) {
+    WTF::visit([&](auto* stubInfo) {
         stubInfo->propertyIsSymbol = true;
     }, stubInfo);
 
@@ -5269,7 +5269,7 @@ void SpeculativeJIT::compileSetPrivateBrand(Node* node)
         codeBlock(), stubInfo, JITType::DFGJIT, codeOrigin, callSite, AccessType::SetPrivateBrand, usedRegisters,
         JSValueRegs::payloadOnly(baseGPR), JSValueRegs::payloadOnly(brandGPR), InvalidGPRReg);
 
-    std::visit([&](auto* stubInfo) {
+    WTF::visit([&](auto* stubInfo) {
         stubInfo->propertyIsSymbol = true;
     }, stubInfo);
 

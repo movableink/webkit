@@ -374,7 +374,7 @@ template<typename... T> struct JSConverter<IDLUnion<T...>> {
     static constexpr bool needsState = true;
     static constexpr bool needsGlobalObject = true;
 
-    using Sequence = brigand::make_sequence<brigand::ptrdiff_t<0>, std::variant_size<ImplementationType>::value>;
+    using Sequence = brigand::make_sequence<brigand::ptrdiff_t<0>, WTF::VariantSizeV<ImplementationType>>;
 
     static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, const ImplementationType& variant)
     {

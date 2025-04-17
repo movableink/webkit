@@ -2089,7 +2089,7 @@ JSC_DEFINE_HOST_FUNCTION(functionWriteFile, (JSGlobalObject* globalObject, CallF
     if (!handle)
         return throwVMError(globalObject, scope, "Could not open file."_s);
 
-    auto size = std::visit(WTF::makeVisitor([&](const String& string) {
+    auto size = WTF::visit(WTF::makeVisitor([&](const String& string) {
         CString utf8 = string.utf8();
         return handle.write(byteCast<uint8_t>(utf8.span()));
     }, [&] (const std::span<const uint8_t>& data) {

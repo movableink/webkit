@@ -176,7 +176,7 @@ String MediaControlsHost::displayNameForTrack(const std::optional<TextOrAudioTra
     if (!page)
         return emptyString();
 
-    return std::visit([page] (auto& track) {
+    return WTF::visit([page] (auto& track) {
         return page->group().ensureCaptionPreferences().displayNameForTrack(track.get());
     }, track.value());
 }
