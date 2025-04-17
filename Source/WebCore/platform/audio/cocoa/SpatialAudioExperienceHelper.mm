@@ -50,7 +50,7 @@ RetainPtr<CASpatialAudioExperience> createSpatialAudioExperienceWithOptions(cons
         // the spatial tracking label, and use that label to create a CAAudioTether. This
         // tether informs the audio rendering subsystem about the connection between the
         // visual layer and the audio being generated.
-        RetainPtr uuid = adoptNS([[NSUUID alloc] initWithUUIDString:options.spatialTrackingLabel]);
+        RetainPtr uuid = adoptNS([[NSUUID alloc] initWithUUIDString:options.spatialTrackingLabel.createNSString().get()]);
         RetainPtr tether = adoptNS([[CAAudioTether alloc] initWithType:CAAudioTetherTypeLayer identifier:uuid.get() pid:0]);
         RetainPtr anchoringStrategy = adoptNS([[CAAudioTetherAnchoringStrategy alloc] initWithAudioTether:tether.get()]);
         return adoptNS([[CAHeadTrackedSpatialAudio alloc] initWithSoundStageSize:toCASoundStageSize(options.soundStageSize) anchoringStrategy:anchoringStrategy.get()]);

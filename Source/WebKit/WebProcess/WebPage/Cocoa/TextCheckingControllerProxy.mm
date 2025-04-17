@@ -130,11 +130,12 @@ void TextCheckingControllerProxy::replaceRelativeToSelection(const WebCore::Attr
     auto& markers = frame->document()->markers();
     markers.removeMarkers(rangeAndOffset->range, relevantMarkerTypes());
 
+    RetainPtr annotatedNSString = annotatedString.string.createNSString();
     if (relativeReplacementLocation != NSNotFound) {
         if (auto rangeAndOffsetOfReplacement = rangeAndOffsetRelativeToSelection(selectionOffset + relativeReplacementLocation, relativeReplacementLength)) {
             bool restoreSelection = frameSelection.selection().isRange();
 
-            frame->editor().replaceRangeForSpellChecking(rangeAndOffsetOfReplacement->range, [annotatedString.string substringWithRange:NSMakeRange(relativeReplacementLocation, relativeReplacementLength + [annotatedString.string length] - length)]);
+            frame->editor().replaceRangeForSpellChecking(rangeAndOffsetOfReplacement->range, [annotatedNSString substringWithRange:NSMakeRange(relativeReplacementLocation, relativeReplacementLength + [annotatedNSString length] - length)]);
 
             if (restoreSelection) {
                 uint64_t selectionLocationToRestore = locationInRoot - selectionOffset;
@@ -144,7 +145,7 @@ void TextCheckingControllerProxy::replaceRelativeToSelection(const WebCore::Attr
         }
     }
 
-    [annotatedString.nsAttributedString() enumerateAttributesInRange:NSMakeRange(0, [annotatedString.string length]) options:0 usingBlock:^(NSDictionary<NSAttributedStringKey, id> *attrs, NSRange attributeRange, BOOL *stop) {
+    [annotatedString.nsAttributedString() enumerateAttributesInRange:NSMakeRange(0, [annotatedNSString length]) options:0 usingBlock:^(NSDictionary<NSAttributedStringKey, id> *attrs, NSRange attributeRange, BOOL *stop) {
         auto attributeCoreRange = resolveCharacterRange(makeRangeSelectingNodeContents(*root), { locationInRoot + attributeRange.location, attributeRange.length });
 
         [attrs enumerateKeysAndObjectsUsingBlock:^(NSAttributedStringKey key, id value, BOOL *stop) {
