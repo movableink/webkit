@@ -352,12 +352,12 @@ std::unique_ptr<LinkPreloadResourceClient> LinkLoader::preloadIfNeeded(const Lin
         if (params.relAttribute.isLinkModulePreload) {
             options.mode = FetchOptions::Mode::Cors;
             options.credentials = equalLettersIgnoringASCIICase(params.crossOrigin, "use-credentials"_s) ? FetchOptions::Credentials::Include : FetchOptions::Credentials::SameOrigin;
-            CachedResourceRequest cachedRequest { ResourceRequest { url }, WTFMove(options) };
+            CachedResourceRequest cachedRequest { ResourceRequest { WTFMove(url) }, WTFMove(options) };
             cachedRequest.setOrigin(document.securityOrigin());
             updateRequestForAccessControl(cachedRequest.resourceRequest(), document.securityOrigin(), options.storedCredentialsPolicy);
             return cachedRequest;
         }
-        return createPotentialAccessControlRequest(url, WTFMove(options), document, params.crossOrigin);
+        return createPotentialAccessControlRequest(WTFMove(url), WTFMove(options), document, params.crossOrigin);
     }();
     linkRequest.setPriority(DefaultResourceLoadPriority::forResourceType(type.value()));
     linkRequest.setInitiatorType("link"_s);

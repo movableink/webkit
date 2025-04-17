@@ -291,7 +291,7 @@ bool DragController::performDragOperation(DragData&& dragData)
         return false;
 
     client().willPerformDragDestinationAction(DragDestinationAction::Load, dragData);
-    ResourceRequest resourceRequest { urlString };
+    ResourceRequest resourceRequest { WTFMove(urlString) };
     resourceRequest.setIsAppInitiated(false);
     FrameLoadRequest frameLoadRequest { *localMainFrame, resourceRequest };
     frameLoadRequest.setShouldOpenExternalURLsPolicy(shouldOpenExternalURLsPolicy);

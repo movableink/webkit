@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc.  All rights reserved.
  * Copyright (C) 2006 Samuel Weinig <sam.weinig@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,14 +44,30 @@ using ResourceRequestData = std::variant<ResourceRequestBase::RequestData, Resou
 
 class ResourceRequest : public ResourceRequestBase {
 public:
+    explicit ResourceRequest(String&& url)
+        : ResourceRequestBase(URL({ }, WTFMove(url)), ResourceRequestCachePolicy::UseProtocolCachePolicy)
+    {
+    }
+
     explicit ResourceRequest(const String& url)
         : ResourceRequestBase(URL({ }, url), ResourceRequestCachePolicy::UseProtocolCachePolicy)
+    {
+    }
+
+    ResourceRequest(URL&& url)
+        : ResourceRequestBase(WTFMove(url), ResourceRequestCachePolicy::UseProtocolCachePolicy)
     {
     }
 
     ResourceRequest(const URL& url)
         : ResourceRequestBase(url, ResourceRequestCachePolicy::UseProtocolCachePolicy)
     {
+    }
+
+    ResourceRequest(URL&& url, const String& referrer, ResourceRequestCachePolicy policy = ResourceRequestCachePolicy::UseProtocolCachePolicy)
+        : ResourceRequestBase(WTFMove(url), policy)
+    {
+        setHTTPReferrer(referrer);
     }
 
     ResourceRequest(const URL& url, const String& referrer, ResourceRequestCachePolicy policy = ResourceRequestCachePolicy::UseProtocolCachePolicy)
@@ -95,7 +111,7 @@ public:
     // We only need to encode platform data if acceptEncoding or redirectCount are not the default.
     bool encodingRequiresPlatformData() const { return !m_acceptEncoding || m_redirectCount; }
 
-    WEBCORE_EXPORT static ResourceRequest fromResourceRequestData(ResourceRequestData);
+    WEBCORE_EXPORT static ResourceRequest fromResourceRequestData(ResourceRequestData&&);
     WEBCORE_EXPORT ResourceRequestData getRequestDataToSerialize() const;
 
 private:

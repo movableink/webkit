@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc.  All rights reserved.
  * Copyright (C) 2006 Samuel Weinig <sam.weinig@gmail.com>
  * Copyright (C) 2019 Sony Interactive Entertainment Inc.
  *
@@ -33,14 +33,30 @@ namespace WebCore {
 
 class ResourceRequest : public ResourceRequestBase {
 public:
-    ResourceRequest(const String& url)
+    explicit ResourceRequest(String&& url)
+        : ResourceRequestBase(URL({ }, WTFMove(url)), ResourceRequestCachePolicy::UseProtocolCachePolicy)
+    {
+    }
+
+    explicit ResourceRequest(const String& url)
         : ResourceRequestBase(URL({ }, url), ResourceRequestCachePolicy::UseProtocolCachePolicy)
+    {
+    }
+
+    ResourceRequest(URL&& url)
+        : ResourceRequestBase(WTFMove(url), ResourceRequestCachePolicy::UseProtocolCachePolicy)
     {
     }
 
     ResourceRequest(const URL& url)
         : ResourceRequestBase(url, ResourceRequestCachePolicy::UseProtocolCachePolicy)
     {
+    }
+
+    ResourceRequest(URL&& url, const String& referrer, ResourceRequestCachePolicy policy = ResourceRequestCachePolicy::UseProtocolCachePolicy)
+        : ResourceRequestBase(WTFMove(url), policy)
+    {
+        setHTTPReferrer(referrer);
     }
 
     ResourceRequest(const URL& url, const String& referrer, ResourceRequestCachePolicy policy = ResourceRequestCachePolicy::UseProtocolCachePolicy)

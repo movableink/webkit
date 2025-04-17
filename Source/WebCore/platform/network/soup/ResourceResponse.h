@@ -37,6 +37,11 @@ class ResourceResponse : public ResourceResponseBase {
 public:
     ResourceResponse() = default;
 
+    ResourceResponse(URL&& url, String&& mimeType, long long expectedLength, String&& textEncodingName)
+        : ResourceResponseBase(WTFMove(url), WTFMove(mimeType), expectedLength, WTFMove(textEncodingName))
+    {
+    }
+
     ResourceResponse(const URL& url, const String& mimeType, long long expectedLength, const String& textEncodingName)
         : ResourceResponseBase(url, mimeType, expectedLength, textEncodingName)
     {

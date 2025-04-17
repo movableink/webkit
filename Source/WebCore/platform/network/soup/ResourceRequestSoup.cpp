@@ -238,7 +238,7 @@ void ResourceRequest::updateFromDelegatePreservingOldProperties(const ResourceRe
         setInspectorInitiatorNodeIdentifier(*oldInspectorInitiatorNodeIdentifier);
 }
 
-ResourceRequest ResourceRequest::fromResourceRequestData(ResourceRequestData requestData)
+ResourceRequest ResourceRequest::fromResourceRequestData(ResourceRequestData&& requestData)
 {
     if (std::holds_alternative<ResourceRequestBase::RequestData>(requestData))
         return ResourceRequest(WTFMove(std::get<ResourceRequestBase::RequestData>(requestData)));

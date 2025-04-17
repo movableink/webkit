@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,6 +60,16 @@ ResourceResponseBase::ResourceResponseBase()
 {
 }
 
+ResourceResponseBase::ResourceResponseBase(URL&& url, String&& mimeType, long long expectedLength, const String& textEncodingName)
+    : m_url(WTFMove(url))
+    , m_mimeType(WTFMove(mimeType))
+    , m_expectedContentLength(expectedLength)
+    , m_textEncodingName(textEncodingName)
+    , m_certificateInfo(CertificateInfo()) // Empty but valid for synthetic responses.
+    , m_isNull(false)
+{
+}
+
 ResourceResponseBase::ResourceResponseBase(const URL& url, const String& mimeType, long long expectedLength, const String& textEncodingName)
     : m_url(url)
     , m_mimeType(mimeType)
@@ -70,16 +80,16 @@ ResourceResponseBase::ResourceResponseBase(const URL& url, const String& mimeTyp
 {
 }
 
-ResourceResponseBase::ResourceResponseBase(std::optional<ResourceResponseData> data)
-    : m_url(data ? data->url : URL { })
-    , m_mimeType(data ? data->mimeType : AtomString { })
+ResourceResponseBase::ResourceResponseBase(std::optional<ResourceResponseData>&& data)
+    : m_url(data ? WTFMove(data->url) : URL { })
+    , m_mimeType(data ? WTFMove(data->mimeType) : AtomString { })
     , m_expectedContentLength(data ? data->expectedContentLength : 0)
-    , m_textEncodingName(data ? data->textEncodingName : String { })
-    , m_httpStatusText(data ? data->httpStatusText : String { })
-    , m_httpVersion(data ? data->httpVersion : String { })
-    , m_httpHeaderFields(data ? data->httpHeaderFields : HTTPHeaderMap { })
-    , m_networkLoadMetrics(data && data->networkLoadMetrics ? Box<NetworkLoadMetrics>::create(*data->networkLoadMetrics) : Box<NetworkLoadMetrics> { })
-    , m_certificateInfo(data ? data->certificateInfo : std::nullopt)
+    , m_textEncodingName(data ? WTFMove(data->textEncodingName) : String { })
+    , m_httpStatusText(data ? WTFMove(data->httpStatusText) : String { })
+    , m_httpVersion(data ? WTFMove(data->httpVersion) : String { })
+    , m_httpHeaderFields(data ? WTFMove(data->httpHeaderFields) : HTTPHeaderMap { })
+    , m_networkLoadMetrics(data && data->networkLoadMetrics ? Box<NetworkLoadMetrics>::create(WTFMove(*data->networkLoadMetrics)) : Box<NetworkLoadMetrics> { })
+    , m_certificateInfo(data ? WTFMove(data->certificateInfo) : std::nullopt)
     , m_httpStatusCode(data ? data->httpStatusCode : 0)
     , m_isNull(!data)
     , m_usedLegacyTLS(data ? data->usedLegacyTLS : UsedLegacyTLS::No)
@@ -151,7 +161,7 @@ ResourceResponse ResourceResponseBase::fromCrossThreadData(CrossThreadData&& dat
 {
     ResourceResponse response;
 
-    response.setURL(data.url);
+    response.setURL(WTFMove(data.url));
     response.setMimeType(WTFMove(data.mimeType));
     response.setExpectedContentLength(data.expectedContentLength);
     response.setTextEncodingName(WTFMove(data.textEncodingName));
@@ -259,6 +269,16 @@ const URL& ResourceResponseBase::url() const
     lazyInit(CommonFieldsOnly);
 
     return m_url;
+}
+
+void ResourceResponseBase::setURL(URL&& url)
+{
+    lazyInit(CommonFieldsOnly);
+    m_isNull = false;
+
+    m_url = WTFMove(url);
+
+    // FIXME: Should invalidate or update platform response if present.
 }
 
 void ResourceResponseBase::setURL(const URL& url)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc.  All rights reserved.
  * Copyright (C) 2018 Sony Interactive Entertainment Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,6 +36,11 @@ class ResourceResponse : public ResourceResponseBase {
 public:
     ResourceResponse()
         : ResourceResponseBase()
+    {
+    }
+
+    ResourceResponse(URL&& url, String&& mimeType, long long expectedLength, String&& textEncodingName)
+        : ResourceResponseBase(WTFMove(url), WTFMove(mimeType), expectedLength, WTFMove(textEncodingName))
     {
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc.  All rights reserved.
  * Copyright (C) 2006 Samuel Weinig <sam.weinig@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -54,14 +54,30 @@ using ResourceRequestData = Variant<ResourceRequestBase::RequestData, ResourceRe
 class ResourceRequest : public ResourceRequestBase {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(ResourceRequest, WEBCORE_EXPORT);
 public:
-    explicit ResourceRequest(const String& url) 
+    explicit ResourceRequest(String&& url)
+        : ResourceRequestBase(URL({ }, WTFMove(url)), ResourceRequestCachePolicy::UseProtocolCachePolicy)
+    {
+    }
+
+    explicit ResourceRequest(const String& url)
         : ResourceRequestBase(URL({ }, url), ResourceRequestCachePolicy::UseProtocolCachePolicy)
     {
     }
 
-    ResourceRequest(const URL& url) 
+    ResourceRequest(URL&& url)
+        : ResourceRequestBase(WTFMove(url), ResourceRequestCachePolicy::UseProtocolCachePolicy)
+    {
+    }
+
+    ResourceRequest(const URL& url)
         : ResourceRequestBase(url, ResourceRequestCachePolicy::UseProtocolCachePolicy)
     {
+    }
+
+    ResourceRequest(URL&& url, const String& referrer, ResourceRequestCachePolicy policy = ResourceRequestCachePolicy::UseProtocolCachePolicy)
+        : ResourceRequestBase(WTFMove(url), policy)
+    {
+        setHTTPReferrer(referrer);
     }
 
     ResourceRequest(const URL& url, const String& referrer, ResourceRequestCachePolicy policy = ResourceRequestCachePolicy::UseProtocolCachePolicy)
@@ -89,7 +105,7 @@ public:
 
     ResourceRequest(ResourceRequestPlatformData&&, const String& cachePartition, bool hiddenFromInspector);
 
-    WEBCORE_EXPORT static ResourceRequest fromResourceRequestData(ResourceRequestData, const String& cachePartition, bool hiddenFromInspector);
+    WEBCORE_EXPORT static ResourceRequest fromResourceRequestData(ResourceRequestData&&, String&& cachePartition, bool hiddenFromInspector);
 
     WEBCORE_EXPORT void updateFromDelegatePreservingOldProperties(const ResourceRequest&);
     

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -87,6 +87,7 @@ public:
     WEBCORE_EXPORT bool isSuccessful() const;
 
     WEBCORE_EXPORT const URL& url() const;
+    WEBCORE_EXPORT void setURL(URL&&);
     WEBCORE_EXPORT void setURL(const URL&);
 
     WEBCORE_EXPORT const String& mimeType() const;
@@ -220,7 +221,7 @@ public:
 
     WEBCORE_EXPORT static ResourceResponse dataURLResponse(const URL&, const DataURLDecoder::Result&);
     
-    WEBCORE_EXPORT ResourceResponseBase(std::optional<ResourceResponseData>);
+    WEBCORE_EXPORT ResourceResponseBase(std::optional<ResourceResponseData>&&);
     
     WEBCORE_EXPORT std::optional<ResourceResponseData> getResponseData() const;
 
@@ -232,6 +233,7 @@ protected:
     };
 
     WEBCORE_EXPORT ResourceResponseBase();
+    WEBCORE_EXPORT ResourceResponseBase(URL&&, String&& mimeType, long long expectedLength, const String& textEncodingName);
     WEBCORE_EXPORT ResourceResponseBase(const URL&, const String& mimeType, long long expectedLength, const String& textEncodingName);
 
     WEBCORE_EXPORT void lazyInit(InitLevel) const;

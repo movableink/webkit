@@ -2225,7 +2225,7 @@ void WebPage::loadData(LoadParameters&& loadParameters)
     if (loadParameters.isServiceWorkerLoad && corePage())
         corePage()->markAsServiceWorkerPage();
 
-    ResourceResponse response(URL(), loadParameters.MIMEType, sharedBuffer->size(), loadParameters.encodingName);
+    ResourceResponse response(URL(), WTFMove(loadParameters.MIMEType), sharedBuffer->size(), WTFMove(loadParameters.encodingName));
     loadDataImpl(loadParameters.navigationID, loadParameters.shouldTreatAsContinuingLoad, WTFMove(loadParameters.websitePolicies), sharedBuffer.releaseNonNull(), ResourceRequest(baseURL), WTFMove(response), URL(), loadParameters.userData, loadParameters.isNavigatingToAppBoundDomain, loadParameters.sessionHistoryVisibility, loadParameters.shouldOpenExternalURLsPolicy);
 }
 
@@ -2243,7 +2243,7 @@ void WebPage::loadAlternateHTML(LoadParameters&& loadParameters)
     }
     m_mainFrame->coreLocalFrame()->loader().setProvisionalLoadErrorBeingHandledURL(provisionalLoadErrorURL);
 
-    ResourceResponse response(URL(), loadParameters.MIMEType, sharedBuffer->size(), loadParameters.encodingName);
+    ResourceResponse response(URL(), WTFMove(loadParameters.MIMEType), sharedBuffer->size(), WTFMove(loadParameters.encodingName));
     loadDataImpl(loadParameters.navigationID, loadParameters.shouldTreatAsContinuingLoad, WTFMove(loadParameters.websitePolicies), sharedBuffer.releaseNonNull(), ResourceRequest(baseURL), WTFMove(response), unreachableURL, loadParameters.userData, loadParameters.isNavigatingToAppBoundDomain, WebCore::SubstituteData::SessionHistoryVisibility::Hidden);
     m_mainFrame->coreLocalFrame()->loader().setProvisionalLoadErrorBeingHandledURL({ });
 }

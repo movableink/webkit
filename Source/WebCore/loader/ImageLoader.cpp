@@ -254,7 +254,7 @@ void ImageLoader::updateFromElement(RelevantMutation relevantMutation)
                 imageURL = document->completeURL(attr);
             m_pendingURL = attr;
         }
-        ResourceRequest resourceRequest(imageURL);
+        ResourceRequest resourceRequest(WTFMove(imageURL));
         resourceRequest.setInspectorInitiatorNodeIdentifier(InspectorInstrumentation::identifierForNode(element));
 
         auto request = createPotentialAccessControlRequest(WTFMove(resourceRequest), WTFMove(options), document, crossOriginAttribute);
@@ -292,7 +292,7 @@ void ImageLoader::updateFromElement(RelevantMutation relevantMutation)
         if (imageElement && imageElement->isMultiRepresentationHEIC()) {
             auto fallbackURL = imageElement->src();
             if (!fallbackURL.isNull()) {
-                ResourceRequest resourceRequest(fallbackURL);
+                ResourceRequest resourceRequest(WTFMove(fallbackURL));
                 resourceRequest.setInspectorInitiatorNodeIdentifier(InspectorInstrumentation::identifierForNode(*imageElement));
 
                 auto request = createPotentialAccessControlRequest(WTFMove(resourceRequest), WTFMove(options), document, crossOriginAttribute);

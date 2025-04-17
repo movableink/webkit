@@ -88,11 +88,11 @@ ResourceRequestData ResourceRequest::getRequestDataToSerialize() const
     return m_requestData;
 }
 
-ResourceRequest ResourceRequest::fromResourceRequestData(ResourceRequestData requestData, const String& cachePartition, bool hiddenFromInspector)
+ResourceRequest ResourceRequest::fromResourceRequestData(ResourceRequestData&& requestData, String&& cachePartition, bool hiddenFromInspector)
 {
     if (std::holds_alternative<RequestData>(requestData))
-        return ResourceRequest(WTFMove(std::get<RequestData>(requestData)), cachePartition, hiddenFromInspector);
-    return ResourceRequest(WTFMove(std::get<ResourceRequestPlatformData>(requestData)), cachePartition, hiddenFromInspector);
+        return ResourceRequest(WTFMove(std::get<RequestData>(requestData)), WTFMove(cachePartition), hiddenFromInspector);
+    return ResourceRequest(WTFMove(std::get<ResourceRequestPlatformData>(requestData)), WTFMove(cachePartition), hiddenFromInspector);
 }
 
 NSURLRequest *ResourceRequest::nsURLRequest(HTTPBodyUpdatePolicy bodyPolicy) const
