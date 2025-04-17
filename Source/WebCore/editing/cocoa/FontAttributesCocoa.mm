@@ -86,8 +86,8 @@ RetainPtr<NSTextList> TextList::createTextList() const
 RetainPtr<NSDictionary> FontAttributes::createDictionary() const
 {
     NSMutableDictionary *attributes = [NSMutableDictionary dictionary];
-    if (auto cocoaFont = font ? (__bridge CocoaFont *)font->getCTFont() : nil)
-        attributes[NSFontAttributeName] = cocoaFont;
+    if (RetainPtr cocoaFont = font ? (__bridge CocoaFont *)font->getCTFont() : nil)
+        attributes[NSFontAttributeName] = cocoaFont.get();
 
     if (foregroundColor.isValid())
         attributes[NSForegroundColorAttributeName] = cocoaColor(foregroundColor).get();
