@@ -30,6 +30,7 @@
 #import "ColorCocoa.h"
 #import "FontCocoa.h"
 #import <pal/spi/cocoa/NSAttributedStringSPI.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -86,7 +87,7 @@ RetainPtr<NSTextList> TextList::createTextList() const
 RetainPtr<NSDictionary> FontAttributes::createDictionary() const
 {
     NSMutableDictionary *attributes = [NSMutableDictionary dictionary];
-    if (RetainPtr cocoaFont = font ? (__bridge CocoaFont *)font->getCTFont() : nil)
+    if (RetainPtr cocoaFont = font ? bridge_cast(font->getCTFont()) : nil)
         attributes[NSFontAttributeName] = cocoaFont.get();
 
     if (foregroundColor.isValid())
