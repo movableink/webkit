@@ -464,6 +464,10 @@ void Connection::removeMessageReceiver(ReceiverName receiverName, uint64_t desti
 template<typename MessageReceiverType>
 void Connection::dispatchMessageReceiverMessage(MessageReceiverType& messageReceiver, UniqueRef<Decoder>&& decoder)
 {
+#if ASSERT_ENABLED
+    ++m_inDispatchMessageCount;
+#endif
+
     if (decoder->isSyncMessage()) {
         auto replyEncoder = makeUniqueRef<Encoder>(MessageName::SyncMessageReply, decoder->syncRequestID().toUInt64());
         messageReceiver.didReceiveSyncMessage(*this, *decoder, replyEncoder);
@@ -474,6 +478,11 @@ void Connection::dispatchMessageReceiverMessage(MessageReceiverType& messageRece
             sendMessageImpl(makeUniqueRef<Encoder>(MessageName::CancelSyncMessageReply, decoder->syncRequestID().toUInt64()), { });
     } else
         messageReceiver.didReceiveMessage(*this, *decoder);
+
+#if ASSERT_ENABLED
+    --m_inDispatchMessageCount;
+#endif
+
 #if ENABLE(IPC_TESTING_API)
     if (m_ignoreInvalidMessageForTesting)
         return;
@@ -1417,7 +1426,9 @@ void Connection::dispatchMessage(UniqueRef<Decoder> message)
         m_inDispatchMessageMarkedToUseFullySynchronousModeForTesting++;
     }
 
-    m_inDispatchMessageCount++;
+#if ASSERT_ENABLED
+    ++m_inDispatchMessageCount;
+#endif
 
     bool isDispatchingMessageWhileWaitingForSyncReply = (message->shouldDispatchMessageWhenWaitingForSyncReply() == ShouldDispatchWhenWaitingForSyncReply::Yes)
         || (message->shouldDispatchMessageWhenWaitingForSyncReply() == ShouldDispatchWhenWaitingForSyncReply::YesDuringUnboundedIPC && UnboundedSynchronousIPCScope::hasOngoingUnboundedSyncIPC());
@@ -1434,7 +1445,10 @@ void Connection::dispatchMessage(UniqueRef<Decoder> message)
         dispatchMessage(*message);
 
     m_didReceiveInvalidMessage |= !message->isValid();
-    m_inDispatchMessageCount--;
+
+#if ASSERT_ENABLED
+    --m_inDispatchMessageCount;
+#endif
 
     // FIXME: For synchronous messages, we should not decrement the counter until we send a response.
     // Otherwise, we would deadlock if processing the message results in a sync message back after we exit this function.

@@ -468,9 +468,6 @@ public:
 
     void wakeUpRunLoop();
 
-    void incrementDispatchMessageMarkedDispatchWhenWaitingForSyncReplyCount() { ++m_inDispatchMessageMarkedDispatchWhenWaitingForSyncReplyCount; }
-    void decrementDispatchMessageMarkedDispatchWhenWaitingForSyncReplyCount() { --m_inDispatchMessageMarkedDispatchWhenWaitingForSyncReplyCount; }
-
     bool inSendSync() const { return m_inSendSyncCount; }
     unsigned inDispatchSyncMessageCount() const { return m_inDispatchSyncMessageCount; }
 
@@ -629,7 +626,6 @@ private:
     bool m_isConnected { false };
 
     unsigned m_inSendSyncCount { 0 };
-    unsigned m_inDispatchMessageCount { 0 };
     unsigned m_inDispatchSyncMessageCount { 0 };
     unsigned m_inDispatchMessageMarkedDispatchWhenWaitingForSyncReplyCount { 0 };
     unsigned m_inDispatchMessageMarkedToUseFullySynchronousModeForTesting { 0 };
@@ -637,6 +633,10 @@ private:
     bool m_ignoreTimeoutsForTesting { false };
     bool m_didReceiveInvalidMessage { false };
     std::optional<uint8_t> m_incomingMessagesThrottlingLevel;
+
+#if ASSERT_ENABLED
+    std::atomic<unsigned> m_inDispatchMessageCount { 0 };
+#endif
 
     // Incoming messages.
 #if ENABLE(UNFAIR_LOCK)
