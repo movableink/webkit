@@ -304,6 +304,8 @@ shouldThrow(() => Temporal.Instant.from('1976-11-18T15:23:30.1234Z[-foo=bar]'), 
 shouldThrow(() => Temporal.Instant.from('1976-11-18T15:23:30Z[1foo=bar]'), RangeError);
 // no zero-length annotation key
 shouldThrow(() => Temporal.Instant.from('1976-11-18T15:23:30.123456789Z[======]'), RangeError);
+// no zero-length annotation value
+shouldThrow(() => Temporal.Instant.from('1976-11-18T15:23:30.123456789Z[!x-ff=]'), RangeError);
 // non-ASCII minusSign is invalid
 shouldThrow(() => Temporal.Instant.from('1976-11-18T15:23:30.12\u221202:00'), RangeError);
 shouldThrow(() => Temporal.Instant.from('\u2212009999-11-18T15:23:30.12Z'), RangeError);

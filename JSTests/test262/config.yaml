@@ -249,6 +249,7 @@ skip:
     - test/built-ins/Temporal/PlainDate/prototype/toPlainDateTime/argument-object.js
     - test/built-ins/Temporal/PlainDate/prototype/toPlainDateTime/argument-string-calendar-annotation.js
     - test/built-ins/Temporal/PlainDate/prototype/toPlainDateTime/argument-string-time-designator-required-for-disambiguation.js
+    - test/built-ins/Temporal/PlainDate/prototype/toPlainDateTime/argument-string-time-zone-annotation.js
     - test/built-ins/Temporal/PlainDate/prototype/toPlainDateTime/argument-string-unknown-annotation.js
     - test/built-ins/Temporal/PlainDate/prototype/toPlainDateTime/basic.js
     - test/built-ins/Temporal/PlainDate/prototype/toString/calendarname-always.js
@@ -270,7 +271,6 @@ skip:
     - test/built-ins/Temporal/PlainDateTime/compare/argument-propertybag-calendar-leap-second.js
     - test/built-ins/Temporal/PlainDateTime/compare/argument-propertybag-calendar-number.js
     - test/built-ins/Temporal/PlainDateTime/compare/argument-propertybag-calendar-wrong-type.js
-    - test/built-ins/Temporal/PlainDateTime/compare/argument-string-time-zone-annotation.js
     - test/built-ins/Temporal/PlainDateTime/compare/calendar-temporal-object.js
     - test/built-ins/Temporal/PlainDateTime/constructor-full.js
     - test/built-ins/Temporal/PlainDateTime/from/argument-plaindate.js
@@ -291,6 +291,7 @@ skip:
     - test/built-ins/Temporal/PlainDateTime/prototype/equals/argument-propertybag-calendar-number.js
     - test/built-ins/Temporal/PlainDateTime/prototype/equals/argument-propertybag-calendar-wrong-type.js
     - test/built-ins/Temporal/PlainDateTime/prototype/equals/argument-string-calendar-annotation.js
+    - test/built-ins/Temporal/PlainDateTime/prototype/equals/argument-string-time-zone-annotation.js
     - test/built-ins/Temporal/PlainDateTime/prototype/equals/calendar-temporal-object.js
     - test/built-ins/Temporal/PlainDateTime/prototype/round/smallestunit-plurals-accepted.js
     - test/built-ins/Temporal/PlainDateTime/prototype/round/smallestunit-string-shorthand.js
@@ -304,6 +305,7 @@ skip:
     - test/built-ins/Temporal/PlainDateTime/prototype/with/calendar-temporal-object-throws.js
     - test/built-ins/Temporal/PlainDateTime/prototype/withPlainTime/argument-string-calendar-annotation.js
     - test/built-ins/Temporal/PlainDateTime/prototype/withPlainTime/argument-string-time-designator-required-for-disambiguation.js
+    - test/built-ins/Temporal/PlainDateTime/prototype/withPlainTime/argument-string-time-zone-annotation.js
     - test/built-ins/Temporal/PlainDateTime/prototype/withPlainTime/argument-string-unknown-annotation.js
     - test/built-ins/Temporal/PlainTime/compare/argument-string-time-designator-required-for-disambiguation.js
     - test/built-ins/Temporal/PlainTime/from/argument-string-time-designator-required-for-disambiguation.js
@@ -338,24 +340,11 @@ skip:
     - test/intl402/Temporal/Instant/prototype/toString/timezone-string-datetime.js
 
     # Depends on annotations in datetime strings
-    - test/built-ins/Temporal/Instant/compare/argument-string-time-zone-annotation.js
-    - test/built-ins/Temporal/Instant/from/argument-string-time-zone-annotation.js
-    - test/built-ins/Temporal/Instant/prototype/equals/argument-string-time-zone-annotation.js
-    - test/built-ins/Temporal/Instant/prototype/since/argument-string-time-zone-annotation.js
-    - test/built-ins/Temporal/Instant/prototype/until/argument-string-time-zone-annotation.js
     - test/built-ins/Temporal/PlainDate/compare/argument-string-time-zone-annotation.js
     - test/built-ins/Temporal/PlainDate/from/argument-string-time-zone-annotation.js
     - test/built-ins/Temporal/PlainDate/prototype/equals/argument-string-time-zone-annotation.js
     - test/built-ins/Temporal/PlainDate/prototype/since/argument-string-time-zone-annotation.js
-    - test/built-ins/Temporal/PlainDate/prototype/toPlainDateTime/argument-string-time-zone-annotation.js
     - test/built-ins/Temporal/PlainDate/prototype/until/argument-string-time-zone-annotation.js
-    - test/built-ins/Temporal/PlainDateTime/prototype/equals/argument-string-time-zone-annotation.js
-    - test/built-ins/Temporal/PlainDateTime/prototype/withPlainTime/argument-string-time-zone-annotation.js
-    - test/built-ins/Temporal/PlainTime/compare/argument-string-time-zone-annotation.js
-    - test/built-ins/Temporal/PlainTime/from/argument-string-time-zone-annotation.js
-    - test/built-ins/Temporal/PlainTime/prototype/equals/argument-string-time-zone-annotation.js
-    - test/built-ins/Temporal/PlainTime/prototype/since/argument-string-time-zone-annotation.js
-    - test/built-ins/Temporal/PlainTime/prototype/until/argument-string-time-zone-annotation.js
 
     # Depends on Temporal.ZonedDateTime
     - test/built-ins/Temporal/Duration/compare/relativeto-zoneddatetime-negative-epochnanoseconds.js

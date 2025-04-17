@@ -510,7 +510,7 @@ ISO8601::Duration TemporalDuration::round(JSGlobalObject* globalObject, JSValue 
         throwRangeError(globalObject, scope, "Cannot round a duration of years, months, or weeks without a relativeTo option"_s);
         return { };
     }
-    if (largestUnit <= TemporalUnit::Week) {
+    if (largestUnit <= TemporalUnit::Week || smallestUnit <= TemporalUnit::Week) {
         throwVMError(globalObject, scope, "FIXME: years, months, or weeks rounding with relativeTo not implemented yet"_s);
         return { };
     }
@@ -548,6 +548,10 @@ double TemporalDuration::total(JSGlobalObject* globalObject, JSValue optionsValu
     // FIXME: Implement relativeTo parameter after PlainDateTime / ZonedDateTime.
     if (unit > TemporalUnit::Year && (years() || months() || weeks() || (days() && unit < TemporalUnit::Day))) {
         throwRangeError(globalObject, scope, "Cannot total a duration of years, months, or weeks without a relativeTo option"_s);
+        return { };
+    }
+    if (unit <= TemporalUnit::Week) {
+        throwVMError(globalObject, scope, "FIXME: years, months, or weeks totalling with relativeTo not implemented yet"_s);
         return { };
     }
 
