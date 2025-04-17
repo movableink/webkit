@@ -553,6 +553,70 @@ void WebKitBrowserWindow::didFailProvisionalNavigation(WKPageRef, WKNavigationRe
     MessageBox(thisWindow.m_hMainWnd, text.str().c_str(), L"Provisional Navigation Failure", MB_OK | MB_ICONWARNING);
 }
 
+std::wstring toAuthText(WKProtectionSpaceRef protectionSpace)
+{
+    auto scheme = [&] {
+        switch (WKProtectionSpaceGetAuthenticationScheme(protectionSpace)) {
+        case kWKProtectionSpaceAuthenticationSchemeDefault:
+            return L"Default";
+        case kWKProtectionSpaceAuthenticationSchemeHTTPBasic:
+            return L"HTTPBasic";
+        case kWKProtectionSpaceAuthenticationSchemeHTTPDigest:
+            return L"HTTPDigest";
+        case kWKProtectionSpaceAuthenticationSchemeHTMLForm:
+            return L"HTMLForm";
+        case kWKProtectionSpaceAuthenticationSchemeNTLM:
+            return L"NTLM";
+        case kWKProtectionSpaceAuthenticationSchemeNegotiate:
+            return L"Negotiate";
+        case kWKProtectionSpaceAuthenticationSchemeClientCertificateRequested:
+            return L"ClientCertificateRequested";
+        case kWKProtectionSpaceAuthenticationSchemeServerTrustEvaluationRequested:
+            return L"ServerTrustEvaluationRequested";
+        case kWKProtectionSpaceAuthenticationSchemeOAuth:
+            return L"OAuth";
+        case kWKProtectionSpaceAuthenticationSchemeUnknown:
+            return L"Unknown";
+        }
+        return L"Invalid Value";
+    }();
+
+    auto serverType = [&] {
+        switch (WKProtectionSpaceGetServerType(protectionSpace)) {
+        case kWKProtectionSpaceServerTypeHTTP:
+            return L"ServerTypeHTTP";
+        case kWKProtectionSpaceServerTypeHTTPS:
+            return L"ServerTypeHTTPS";
+        case kWKProtectionSpaceServerTypeFTP:
+            return L"ServerTypeFTP";
+        case kWKProtectionSpaceServerTypeFTPS:
+            return L"ServerTypeFTPS";
+        case kWKProtectionSpaceProxyTypeHTTP:
+            return L"ProxyTypeHTTP";
+        case kWKProtectionSpaceProxyTypeHTTPS:
+            return L"ProxyTypeHTTPS";
+        case kWKProtectionSpaceProxyTypeFTP:
+            return L"ProxyTypeFTP";
+        case kWKProtectionSpaceProxyTypeSOCKS:
+            return L"ProxyTypeSOCKS";
+        }
+        return L"Invalid Value";
+    }();
+
+    auto host = createString(adoptWK(WKProtectionSpaceCopyHost(protectionSpace)).get());
+    auto realm = createString(adoptWK(WKProtectionSpaceCopyRealm(protectionSpace)).get());
+    auto isProxy = WKProtectionSpaceGetIsProxy(protectionSpace);
+
+    std::wstringstream text;
+    text << L"Scheme: " << scheme << L"\r\n";
+    text << L"Host: " << host << L"\r\n";
+    text << L"Port: " << WKProtectionSpaceGetPort(protectionSpace) << L"\r\n";
+    text << L"Server Type: " << serverType << L"\r\n";
+    text << L"isProxy: " << isProxy << L"\r\n";
+    text << L"Realm: " << realm << L"\r\n";
+    return text.str();
+}
+
 void WebKitBrowserWindow::didReceiveAuthenticationChallenge(WKPageRef, WKAuthenticationChallengeRef challenge, const void* clientInfo)
 {
     auto& thisWindow = toWebKitBrowserWindow(clientInfo);
@@ -577,9 +641,7 @@ void WebKitBrowserWindow::didReceiveAuthenticationChallenge(WKPageRef, WKAuthent
             return;
         }
     } else {
-        WKRetainPtr<WKStringRef> realm(WKProtectionSpaceCopyRealm(protectionSpace));
-
-        if (auto credential = askCredential(thisWindow.hwnd(), createString(realm.get()))) {
+        if (auto credential = askCredential(thisWindow.hwnd(), toAuthText(protectionSpace))) {
             WKRetainPtr<WKStringRef> username = createWKString(credential->username);
             WKRetainPtr<WKStringRef> password = createWKString(credential->password);
             WKRetainPtr<WKCredentialRef> wkCredential = adoptWK(WKCredentialCreate(username.get(), password.get(), kWKCredentialPersistenceForSession));

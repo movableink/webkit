@@ -52,7 +52,7 @@ bool getAppDataFolder(_bstr_t& directory);
 bool getKnownFolderPath(REFKNOWNFOLDERID, std::wstring&);
 CommandLineOptions parseCommandLine();
 void createCrashReport(EXCEPTION_POINTERS*);
-std::optional<Credential> askCredential(HWND, const std::wstring& realm);
+std::optional<Credential> askCredential(HWND, const std::wstring& text);
 bool askProxySettings(HWND, ProxySettings&);
 
 bool askServerTrustEvaluation(HWND, const std::wstring& text);
