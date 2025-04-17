@@ -45,11 +45,12 @@
 
 #if USE(SYSPROF_CAPTURE)
 #include <wtf/SystemTracing.h>
+#endif
+
 #if USE(SKIA_OPENTYPE_SVG)
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include <skia/modules/svg/SkSVGOpenTypeSVGDecoder.h>
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-#endif
 #endif
 
 namespace WebKit {
