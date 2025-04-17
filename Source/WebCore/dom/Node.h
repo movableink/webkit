@@ -181,7 +181,7 @@ public:
     inline bool hasChildNodes() const;
 
     enum class CloningOperation {
-        OnlySelf,
+        SelfOnly,
         SelfWithTemplateContent,
         Everything,
     };

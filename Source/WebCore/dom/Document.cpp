@@ -1628,7 +1628,7 @@ ExceptionOr<Ref<Node>> Document::importNode(Node& nodeToImport, std::variant<boo
     case Node::CDATA_SECTION_NODE:
     case Node::PROCESSING_INSTRUCTION_NODE:
     case Node::COMMENT_NODE:
-        return nodeToImport.cloneNodeInternal(*this, subtree ? Node::CloningOperation::Everything : Node::CloningOperation::OnlySelf, registry.get());
+        return nodeToImport.cloneNodeInternal(*this, subtree ? Node::CloningOperation::Everything : Node::CloningOperation::SelfOnly, registry.get());
 
     case Node::ATTRIBUTE_NODE: {
         auto& attribute = uncheckedDowncast<Attr>(nodeToImport);
@@ -5403,7 +5403,7 @@ Ref<Node> Document::cloneNodeInternal(Document&, CloningOperation type, CustomEl
     Ref clone = cloneDocumentWithoutChildren();
     clone->cloneDataFromDocument(*this);
     switch (type) {
-    case CloningOperation::OnlySelf:
+    case CloningOperation::SelfOnly:
     case CloningOperation::SelfWithTemplateContent:
         break;
     case CloningOperation::Everything:

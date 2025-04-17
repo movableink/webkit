@@ -79,7 +79,7 @@ Ref<Node> DocumentFragment::cloneNodeInternal(Document& document, CloningOperati
 {
     Ref clone = create(document);
     switch (type) {
-    case CloningOperation::OnlySelf:
+    case CloningOperation::SelfOnly:
     case CloningOperation::SelfWithTemplateContent:
         break;
     case CloningOperation::Everything:

@@ -285,7 +285,7 @@ Ref<Node> ShadowRoot::cloneNodeInternal(Document& document, CloningOperation typ
             m_availableToElementInternals ? AvailableToElementInternals::Yes : AvailableToElementInternals::No,
             registry,
             m_hasScopedCustomElementRegistry ? ScopedCustomElementRegistry::Yes : ScopedCustomElementRegistry::No);
-    case CloningOperation::OnlySelf:
+    case CloningOperation::SelfOnly:
     case CloningOperation::Everything:
         break;
     }

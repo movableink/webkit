@@ -631,7 +631,7 @@ bool Element::dispatchSimulatedClick(Event* underlyingEvent, SimulatedClickMouse
 Ref<Node> Element::cloneNodeInternal(Document& document, CloningOperation type, CustomElementRegistry* registry)
 {
     switch (type) {
-    case CloningOperation::OnlySelf:
+    case CloningOperation::SelfOnly:
     case CloningOperation::SelfWithTemplateContent: {
         Ref clone = cloneElementWithoutChildren(document, registry);
         ScriptDisallowedScope::EventAllowedScope eventAllowedScope { clone };
