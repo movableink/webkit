@@ -77,7 +77,6 @@ plugins/PluginData.h
 rendering/RenderQuote.cpp
 rendering/TextBoxPainter.h
 rendering/style/StyleGeneratedImage.cpp
-rendering/svg/SVGTextLayoutAttributesBuilder.h
 rendering/updating/RenderTreeUpdater.h
 style/ClassChangeInvalidation.cpp
 style/ElementRuleCollector.cpp

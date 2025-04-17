@@ -137,7 +137,6 @@ rendering/TextPainter.h
 rendering/line/LineWidth.h
 rendering/style/StyleCachedImage.cpp
 rendering/svg/SVGRenderingContext.h
-rendering/svg/SVGTextLayoutAttributesBuilder.h
 style/StyleBuilderState.h
 style/StyleScope.h
 svg/properties/SVGAnimationAdditiveListFunctionImpl.h
