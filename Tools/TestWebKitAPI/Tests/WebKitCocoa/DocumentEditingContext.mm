@@ -1665,7 +1665,7 @@ TEST(DocumentEditingContext, RequestAnnotationsForTextChecking)
 {
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
     auto loadWebViewAndGetContext = [&] {
-        [webView synchronouslyLoadHTMLString:makeString("<body>"_s, longTextString, "</body>"_s)];
+        [webView synchronouslyLoadHTMLString:makeString("<body>"_s, longTextString, "</body>"_s).createNSString().get()];
         [webView objectByEvaluatingJavaScript:@"(() => {"
             "    let text = document.body.childNodes[0];"
             "    getSelection().setBaseAndExtent(text, 90, text, 94);"
