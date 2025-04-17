@@ -1935,6 +1935,7 @@ void NetworkStorageManager::iterateCursor(const WebCore::IDBRequestData& request
 
 void NetworkStorageManager::getAllDatabaseNamesAndVersions(IPC::Connection& connection, const WebCore::IDBResourceIdentifier& requestIdentifier, const WebCore::ClientOrigin& origin)
 {
+    MESSAGE_CHECK(requestIdentifier.connectionIdentifier(), connection);
     Ref connectionToClient = m_idbStorageRegistry->ensureConnectionToClient(connection.uniqueID(), *requestIdentifier.connectionIdentifier());
     auto result = checkedOriginStorageManager(origin)->idbStorageManager(*m_idbStorageRegistry).getAllDatabaseNamesAndVersions();
     connectionToClient->didGetAllDatabaseNamesAndVersions(requestIdentifier, WTFMove(result));
