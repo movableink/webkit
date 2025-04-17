@@ -52,6 +52,7 @@
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
+#include "MatchResultCache.h"
 #include "MediaList.h"
 #include "MutableCSSSelector.h"
 #include "NodeRenderStyle.h"
@@ -142,6 +143,7 @@ public:
     void setStyle(std::unique_ptr<RenderStyle> style) { m_style = WTFMove(style); }
     RenderStyle* style() const { return m_style.get(); }
     std::unique_ptr<RenderStyle> takeStyle() { return WTFMove(m_style); }
+    std::unique_ptr<RenderStyle> takeUserAgentAppearanceStyle() { return WTFMove(m_userAgentAppearanceStyle); }
 
     void setParentStyle(std::unique_ptr<RenderStyle> parentStyle)
     {
@@ -269,11 +271,13 @@ void Resolver::addKeyframeStyle(Ref<StyleRuleKeyframes>&& rule)
     document().keyframesRuleDidChange(animationName);
 }
 
-auto Resolver::initializeStateAndStyle(const Element& element, const ResolutionContext& context) -> State
+auto Resolver::initializeStateAndStyle(const Element& element, const ResolutionContext& context, std::unique_ptr<RenderStyle>&& initialStyle) -> State
 {
     auto state = State { element, context.parentStyle, context.documentElementStyle, context.treeResolutionState.get() };
 
-    if (state.parentStyle()) {
+    if (initialStyle)
+        state.setStyle(WTFMove(initialStyle));
+    else if (state.parentStyle()) {
         state.setStyle(RenderStyle::createPtrWithRegisteredInitialValues(document().customPropertyRegistry()));
         if (&element == document().documentElement() && !context.isSVGUseTreeRoot) {
             // Initial values for custom properties are inserted to the document element style. Don't overwrite them.
@@ -311,7 +315,7 @@ BuilderContext Resolver::builderContext(State& state)
     };
 }
 
-ResolvedStyle Resolver::styleForElement(Element& element, const ResolutionContext& context, RuleMatchingBehavior matchingBehavior)
+UnadjustedStyle Resolver::unadjustedStyleForElement(Element& element, const ResolutionContext& context, RuleMatchingBehavior matchingBehavior)
 {
     auto state = initializeStateAndStyle(element, context);
     auto& style = *state.style();
@@ -331,28 +335,58 @@ ResolvedStyle Resolver::styleForElement(Element& element, const ResolutionContex
 
     auto elementStyleRelations = commitRelationsToRenderStyle(style, element, collector.styleRelations());
 
-    applyMatchedProperties(state, collector.matchResult());
+    applyMatchedProperties(state, collector.matchResult(), PropertyCascade::normalProperties());
 
-    Adjuster adjuster(document(), *state.parentStyle(), context.parentBoxStyle, &element);
-    adjuster.adjust(style, state.userAgentAppearanceStyle());
-
-    return { state.takeStyle(), WTFMove(elementStyleRelations), collector.releaseMatchResult() };
+    return {
+        .style = state.takeStyle(),
+        .userAgentAppearanceStyle = state.takeUserAgentAppearanceStyle(),
+        .relations = WTFMove(elementStyleRelations),
+        .matchResult = collector.releaseMatchResult()
+    };
 }
 
-ResolvedStyle Resolver::styleForElementWithCachedMatchResult(Element& element, const ResolutionContext& context, const MatchResult& matchResult, const RenderStyle& existingRenderStyle)
+ResolvedStyle Resolver::styleForElement(Element& element, const ResolutionContext& context, RuleMatchingBehavior matchingBehavior)
 {
-    auto state = initializeStateAndStyle(element, context);
-    auto& style = *state.style();
+    auto unadjustedStyle = unadjustedStyleForElement(element, context, matchingBehavior);
+    auto& parentStyle = context.parentStyle ? *context.parentStyle : RenderStyle::defaultStyle();
 
-    style.copyPseudoElementBitsFrom(existingRenderStyle);
-    copyRelations(style, existingRenderStyle);
+    auto style = WTFMove(unadjustedStyle.style);
 
-    applyMatchedProperties(state, matchResult);
+    Adjuster adjuster(document(), parentStyle, context.parentBoxStyle, &element);
+    adjuster.adjust(*style, unadjustedStyle.userAgentAppearanceStyle.get());
 
-    Adjuster adjuster(document(), *state.parentStyle(), context.parentBoxStyle, &element);
-    adjuster.adjust(style, state.userAgentAppearanceStyle());
+    return {
+        .style = WTFMove(style),
+        .relations = WTFMove(unadjustedStyle.relations),
+        .matchResult = WTFMove(unadjustedStyle.matchResult)
+    };
+}
 
-    return { state.takeStyle(), { }, &matchResult };
+UnadjustedStyle Resolver::unadjustedStyleForCachedMatchResult(Element& element, const ResolutionContext& context, CachedMatchResult&& cachedResult)
+{
+    auto& unadjustedStyle = cachedResult.unadjustedStyle;
+
+    if (cachedResult.changedProperties.isEmpty()) {
+        // The cached result can be used as-is.
+        return WTFMove(unadjustedStyle);
+    }
+
+    bool applyPartially = !cachedResult.changedProperties.ids.isEmpty();
+
+    auto state = initializeStateAndStyle(element, context, applyPartially ? WTFMove(unadjustedStyle.style) : nullptr);
+    if (!applyPartially) {
+        state.style()->copyPseudoElementBitsFrom(*unadjustedStyle.style);
+        copyRelations(*state.style(), *unadjustedStyle.style);
+    }
+
+    applyMatchedProperties(state, *unadjustedStyle.matchResult, WTFMove(cachedResult.changedProperties));
+
+    return {
+        .style = state.takeStyle(),
+        .userAgentAppearanceStyle = state.takeUserAgentAppearanceStyle(),
+        .relations = WTFMove(unadjustedStyle.relations),
+        .matchResult = unadjustedStyle.matchResult
+    };
 }
 
 std::unique_ptr<RenderStyle> Resolver::styleForKeyframe(Element& element, const RenderStyle& elementStyle, const ResolutionContext& context, const StyleRuleKeyframe& keyframe, BlendingKeyframe& blendingKeyframe)
@@ -565,7 +599,7 @@ std::optional<ResolvedStyle> Resolver::styleForPseudoElement(Element& element, c
     if (!pseudoElementRequest.nameArgument().isNull())
         state.style()->setPseudoElementNameArgument(pseudoElementRequest.nameArgument());
 
-    applyMatchedProperties(state, collector.matchResult());
+    applyMatchedProperties(state, collector.matchResult(), PropertyCascade::normalProperties());
 
     Adjuster adjuster(document(), *state.parentStyle(), context.parentBoxStyle, nullptr);
     adjuster.adjust(*state.style(), state.userAgentAppearanceStyle());
@@ -673,14 +707,13 @@ void Resolver::clearCachedDeclarationsAffectedByViewportUnits()
     m_matchedDeclarationsCache.clearEntriesAffectedByViewportUnits();
 }
 
-void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResult)
+void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResult, PropertyCascade::IncludedProperties&& includedProperties)
 {
     auto& style = *state.style();
     auto& parentStyle = *state.parentStyle();
     auto& element = *state.element();
 
     unsigned cacheHash = MatchedDeclarationsCache::computeHash(matchResult, parentStyle.inheritedCustomProperties());
-    auto includedProperties = PropertyCascade::normalProperties();
 
     auto* cacheEntry = m_matchedDeclarationsCache.find(cacheHash, matchResult, parentStyle.inheritedCustomProperties());
 
@@ -716,11 +749,11 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
         includedProperties = { };
 
         if (!inheritedEqual)
-            includedProperties.add(PropertyCascade::PropertyType::Inherited);
+            includedProperties.types.add(PropertyCascade::PropertyType::Inherited);
         if (!explicitlyInheritedEqual)
-            includedProperties.add(PropertyCascade::PropertyType::ExplicitlyInherited);
+            includedProperties.types.add(PropertyCascade::PropertyType::ExplicitlyInherited);
         if (!matchResult.nonCacheablePropertyIds.isEmpty())
-            includedProperties.add(PropertyCascade::PropertyType::NonCacheable);
+            includedProperties.types.add(PropertyCascade::PropertyType::NonCacheable);
     }
 
     if (elementTypeHasAppearanceFromUAStyle(element)) {
@@ -734,7 +767,7 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
         state.setUserAgentAppearanceStyle(WTFMove(userAgentStyle));
     }
 
-    Builder builder(style, builderContext(state), matchResult, CascadeLevel::Author, includedProperties);
+    Builder builder(style, builderContext(state), matchResult, CascadeLevel::Author, WTFMove(includedProperties));
 
     // Top priority properties may affect resolution of high priority ones.
     builder.applyTopPriorityProperties();
@@ -745,22 +778,29 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
     if (cacheEntry && !cacheEntry->isUsableAfterHighPriorityProperties(style)) {
         // High-priority properties may affect resolution of other properties. Kick out the existing cache entry and try again.
         m_matchedDeclarationsCache.remove(cacheHash);
-        applyMatchedProperties(state, matchResult);
+        applyMatchedProperties(state, matchResult, PropertyCascade::normalProperties());
         return;
     }
 
     builder.applyNonHighPriorityProperties();
+    builder.adjustAfterApplying();
 
-    for (auto& contentAttribute : builder.state().registeredContentAttributes())
-        ruleSets().mutableFeatures().registerContentAttribute(contentAttribute);
-    if (style.usesViewportUnits())
-        document().setHasStyleWithViewportUnits();
+    setGlobalStateAfterApplyingProperties(builder.state());
 
     if (cacheEntry || !cacheHash)
         return;
 
     if (MatchedDeclarationsCache::isCacheable(element, style, parentStyle))
         m_matchedDeclarationsCache.add(style, parentStyle, state.userAgentAppearanceStyle(), cacheHash, matchResult);
+}
+
+void Resolver::setGlobalStateAfterApplyingProperties(const BuilderState& builderState)
+{
+    // FIXME: This stuff should be somewhere else.
+    for (auto& contentAttribute : builderState.registeredContentAttributes())
+        ruleSets().mutableFeatures().registerContentAttribute(contentAttribute);
+    if (builderState.style().usesViewportUnits())
+        document().setHasStyleWithViewportUnits();
 }
 
 bool Resolver::hasSelectorForAttribute(const Element& element, const AtomString& attributeName) const

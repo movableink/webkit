@@ -49,6 +49,7 @@ class Adjuster {
 public:
     Adjuster(const Document&, const RenderStyle& parentStyle, const RenderStyle* parentBoxStyle, Element*);
 
+    static void adjustFromBuilder(RenderStyle&);
     void adjust(RenderStyle&, const RenderStyle* userAgentAppearanceStyle) const;
     void adjustAnimatedStyle(RenderStyle&, OptionSet<AnimationImpact>) const;
 
