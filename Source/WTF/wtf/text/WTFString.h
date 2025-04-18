@@ -250,9 +250,6 @@ public:
     // Given Cocoa idioms, this is a more useful default. Clients that need to preserve the
     // null string can check isNull explicitly.
     RetainPtr<NSString> createNSString() const;
-
-    // FIXME: Port call sites to createNSString() and remove this.
-    operator NSString *() const;
 #endif
 
 #if OS(WINDOWS)
@@ -504,13 +501,6 @@ inline Expected<std::invoke_result_t<Func, std::span<const char8_t>>, UTF8Conver
 }
 
 #if USE(FOUNDATION) && defined(__OBJC__)
-
-inline String::operator NSString *() const
-{
-    if (!m_impl)
-        return @"";
-    SUPPRESS_UNCOUNTED_ARG return *m_impl;
-}
 
 inline RetainPtr<NSString> String::createNSString() const
 {
