@@ -95,6 +95,8 @@ static NSString * const declarativeNetRequestRuleConditionCaseSensitiveKey = @"i
 static NSString * const declarativeNetRequestRuleConditionRegexFilterKey = @"regexFilter";
 static NSString * const declarativeNetRequestRuleConditionResourceTypeKey = @"resourceTypes";
 static NSString * const declarativeNetRequestRuleConditionURLFilterKey = @"urlFilter";
+static NSString * const declarativeNetRequestRuleConditionRequestMethodsKey = @"requestMethods";
+static NSString * const declarativeNetRequestRuleConditionExcludedRequestMethodsKey = @"excludedRequestMethods";
 
 // The ordering of these values is important because it's used in sorting the content blocking rules.
 typedef NS_ENUM(NSInteger, DeclarativeNetRequestRuleActionType) {
@@ -212,6 +214,8 @@ using namespace WebKit;
         declarativeNetRequestRuleConditionURLFilterKey: NSString.class,
         ruleConditionInitiatorDomainsKey: @[ NSString.class ],
         ruleConditionExcludedInitiatorDomainsKey: @[ NSString.class ],
+        declarativeNetRequestRuleConditionRequestMethodsKey: @[ NSString.class ],
+        declarativeNetRequestRuleConditionExcludedRequestMethodsKey: @[ NSString.class ],
     };
 
     if (!validateDictionary(_condition, nil, @[ ], keyToExpectedValueTypeInConditionDictionary, &exceptionString)) {
@@ -364,6 +368,23 @@ using namespace WebKit;
         }
     }
 
+    if (NSArray<NSString *> *requestMethods = _condition[declarativeNetRequestRuleConditionRequestMethodsKey]) {
+        if (!isArrayOfRequestMethodsValid(requestMethods)) {
+            if (outErrorString)
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `requestMethods` must be non-empty and can only contain %@.", (long)_ruleID, validRequestMethodsString()];
+
+            return nil;
+        }
+    }
+
+    if (NSArray<NSString *> *excludedRequestMethods = _condition[declarativeNetRequestRuleConditionExcludedRequestMethodsKey]) {
+        if (!isArrayOfRequestMethodsValid(excludedRequestMethods)) {
+            if (outErrorString)
+                *outErrorString = [[NSString alloc] initWithFormat:@"Rule with id %ld is invalid. `excludedRequestMethods` must be non-empty and can only contain %@.", (long)_ruleID, validRequestMethodsString()];
+
+            return nil;
+        }
+    }
 
     if ([_action[declarativeNetRequestRuleActionTypeKey] isEqualToString:declarativeNetRequestRuleActionTypeRedirect]) {
         NSDictionary<NSString *, id> *redirectDictionary = _action[declarativeNetRequestRuleActionRedirect];
@@ -702,6 +723,41 @@ static BOOL isArrayOfExcludedDomainsValid(NSArray<NSString *> *excludedDomains)
     return YES;
 }
 
+static NSSet<NSString *> *validRequestMethods(void)
+{
+    static NSSet<NSString *> *validRequestMethods;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        validRequestMethods = [NSSet setWithObjects:@"get", @"head", @"options", @"trace", @"put", @"delete", @"post", @"patch", @"connect", nil];
+    });
+    return validRequestMethods;
+}
+
+static NSString *validRequestMethodsString(void)
+{
+    static NSString *validRequestMethodsString;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSArray *validRequestMethodsArray = validRequestMethods().allObjects;
+        validRequestMethodsString = [[validRequestMethodsArray subarrayWithRange:NSMakeRange(0, validRequestMethodsArray.count - 1)] componentsJoinedByString:@", "];
+        validRequestMethodsString = [NSString stringWithFormat:@"%@, and %@", validRequestMethodsString, validRequestMethodsArray.lastObject];
+    });
+    return validRequestMethodsString;
+}
+
+static BOOL isArrayOfRequestMethodsValid(NSArray<NSString *> *requestMethods)
+{
+    if (!requestMethods.count)
+        return NO;
+
+    for (NSString *requestMethod in requestMethods) {
+        if (![validRequestMethods() containsObject:requestMethod])
+            return NO;
+    }
+
+    return YES;
+}
+
 - (void)removeInvalidResourceTypesForKey:(NSString *)ruleConditionKey
 {
     NSArray *actualResourceTypes = _condition[ruleConditionKey];
@@ -732,8 +788,8 @@ static BOOL isArrayOfExcludedDomainsValid(NSArray<NSString *> *excludedDomains)
     NSString *chromeActionType = _action[declarativeNetRequestRuleActionTypeKey];
     NSString *webKitActionType = chromeActionTypesToWebKitActionTypes[chromeActionType];
 
-    NSDictionary *(^createModifiedConditionsForURLFilter)(NSString *) = ^NSDictionary *(NSString *urlFilter) {
-        NSMutableDictionary *modifiedCondition = [self->_condition mutableCopy];
+    NSDictionary *(^createModifiedConditionsForURLFilter)(NSDictionary *, NSString *) = ^NSDictionary *(NSDictionary *condition, NSString *urlFilter) {
+        NSMutableDictionary *modifiedCondition = [condition mutableCopy];
         modifiedCondition[declarativeNetRequestRuleConditionURLFilterKey] = urlFilter;
         modifiedCondition[declarativeNetRequestRuleConditionRegexFilterKey] = nil;
         modifiedCondition[ruleConditionRequestDomainsKey] = nil;
@@ -741,20 +797,50 @@ static BOOL isArrayOfExcludedDomainsValid(NSArray<NSString *> *excludedDomains)
         return modifiedCondition;
     };
 
-    // We have to create one rule per request domain, unless we have a regex filter, in which case we just ignore request domains...
+    NSDictionary *(^createModifiedConditionsForRequestMethod)(NSDictionary *, NSString *) = ^NSDictionary *(NSDictionary *condition, NSString *requestMethod) {
+        NSMutableDictionary *modifiedCondition = [condition mutableCopy];
+        modifiedCondition[declarativeNetRequestRuleConditionRequestMethodsKey] = requestMethod;
+        modifiedCondition[declarativeNetRequestRuleConditionExcludedRequestMethodsKey] = nil;
+        return modifiedCondition;
+    };
+
     NSArray *requestDomains = _condition[ruleConditionRequestDomainsKey];
+    NSArray *excludedRequestDomains = _condition[ruleConditionExcludedRequestDomainsKey];
+    NSArray *requestMethods = _condition[declarativeNetRequestRuleConditionRequestMethodsKey];
+    NSArray *excludedRequestMethods = _condition[declarativeNetRequestRuleConditionExcludedRequestMethodsKey];
+
+    // We have to create one rule per request domain (unless we have a regex filter), and we also have to create one rule per request method...
     if (requestDomains && !_condition[declarativeNetRequestRuleConditionRegexFilterKey]) {
         for (NSString *requestDomain in requestDomains) {
             NSString *combinedRequestDomainAndURLFilter = [self _combineRequestDomain:requestDomain withURLFilter:_condition[declarativeNetRequestRuleConditionURLFilterKey]];
-            [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:createModifiedConditionsForURLFilter(combinedRequestDomainAndURLFilter) webKitActionType:webKitActionType chromeActionType:chromeActionType]];
+            NSDictionary *modifiedConditionsForURLFilter = createModifiedConditionsForURLFilter(_condition, combinedRequestDomainAndURLFilter);
+
+            if (requestMethods) {
+                for (NSString *requestMethod in requestMethods)
+                    [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:createModifiedConditionsForRequestMethod(modifiedConditionsForURLFilter, requestMethod) webKitActionType:webKitActionType chromeActionType:chromeActionType]];
+            } else
+                [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:modifiedConditionsForURLFilter webKitActionType:webKitActionType chromeActionType:chromeActionType]];
         }
+    } else if (requestMethods) {
+        for (NSString *requestMethod in requestMethods)
+            [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:createModifiedConditionsForRequestMethod(_condition, requestMethod) webKitActionType:webKitActionType chromeActionType:chromeActionType]];
     } else
         [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:_condition webKitActionType:webKitActionType chromeActionType:chromeActionType]];
 
-    // ...and we also have to create one ignore-previous-rules rule per excluded request domain
-    if (NSArray *excludedRequestDomains = _condition[ruleConditionExcludedRequestDomainsKey]) {
-        for (NSString *excludedRequestDomain in excludedRequestDomains)
-            [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:createModifiedConditionsForURLFilter(excludedRequestDomain) webKitActionType:@"ignore-previous-rules" chromeActionType:chromeActionType]];
+    // ...and we also have to create one ignore-previous-rules rule per excluded request domain and excluded request method
+    if (excludedRequestDomains) {
+        for (NSString *excludedRequestDomain in excludedRequestDomains) {
+            NSDictionary *modifiedConditionsForURLFilter = createModifiedConditionsForURLFilter(_condition, excludedRequestDomain);
+
+            if (excludedRequestMethods) {
+                for (NSString *excludedRequestMethod in excludedRequestMethods)
+                    [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:createModifiedConditionsForRequestMethod(modifiedConditionsForURLFilter, excludedRequestMethod) webKitActionType:@"ignore-previous-rules" chromeActionType:chromeActionType]];
+            } else
+                [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:modifiedConditionsForURLFilter webKitActionType:@"ignore-previous-rules" chromeActionType:chromeActionType]];
+        }
+    } else if (excludedRequestMethods) {
+        for (NSString *excludedRequestMethod in excludedRequestMethods)
+            [convertedRules addObjectsFromArray:[self _convertRulesWithModifiedCondition:createModifiedConditionsForRequestMethod(_condition, excludedRequestMethod) webKitActionType:@"ignore-previous-rules" chromeActionType:chromeActionType]];
     }
 
     return convertedRules;
@@ -887,6 +973,9 @@ static BOOL isArrayOfExcludedDomainsValid(NSArray<NSString *> *excludedDomains)
         triggerDictionary[@"if-frame-url"] = mapObjects(domains, convertToURLRegexBlock);
     else if (NSArray *excludedDomains = condition[ruleConditionExcludedInitiatorDomainsKey])
         triggerDictionary[@"unless-frame-url"] = mapObjects(excludedDomains, convertToURLRegexBlock);
+
+    if (NSString *requestMethod = condition[declarativeNetRequestRuleConditionRequestMethodsKey])
+        triggerDictionary[@"request-method"] = requestMethod;
 
     // FIXME: <rdar://72203692> Support 'allowAllRequests' when the resource type is 'sub_frame'.
     if (isRuleForAllowAllRequests)

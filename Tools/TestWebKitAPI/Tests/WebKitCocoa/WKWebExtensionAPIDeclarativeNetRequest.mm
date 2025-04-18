@@ -2276,6 +2276,171 @@ TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithExcludedRequestDo
     EXPECT_NS_EQUAL(convertedRules[1], passRuleConversion);
 }
 
+TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithInvalidRequestMethods)
+{
+    NSDictionary *rule = @{
+        @"id": @1,
+        @"action": @{ @"type": @"block" },
+        @"condition": @{
+            @"requestMethods": @[ @"bad" ],
+            @"resourceTypes": @[ @"main_frame" ],
+        },
+    };
+
+    _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
+    EXPECT_NULL(validatedRule);
+}
+
+TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithInvalidExcludedRequestMethods)
+{
+    NSDictionary *rule = @{
+        @"id": @1,
+        @"action": @{ @"type": @"block" },
+        @"condition": @{
+            @"excludedRequestMethods": @[ @"bad" ],
+            @"resourceTypes": @[ @"main_frame" ],
+        },
+    };
+
+    _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
+    EXPECT_NULL(validatedRule);
+}
+
+TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithRequestMethods)
+{
+    NSDictionary *rule = @{
+        @"id": @1,
+        @"action": @{ @"type": @"block" },
+        @"condition": @{
+            @"requestMethods": @[ @"get", @"post" ],
+            @"resourceTypes": @[ @"main_frame" ],
+        },
+    };
+
+    _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
+    NSArray *convertedRules = validatedRule.ruleInWebKitFormat;
+    EXPECT_NOT_NULL(convertedRules);
+
+    NSArray *correctRuleConversion = @[
+        @{
+            @"action": @{
+                @"type": @"block",
+            },
+            @"trigger": @{
+                @"url-filter": @".*",
+                @"resource-type": @[ @"top-document" ],
+                @"request-method": @"get",
+            },
+        },
+        @{
+            @"action": @{
+                @"type": @"block",
+            },
+            @"trigger": @{
+                @"url-filter": @".*",
+                @"resource-type": @[ @"top-document" ],
+                @"request-method": @"post",
+            },
+        }
+    ];
+
+    EXPECT_NS_EQUAL(convertedRules, correctRuleConversion);
+}
+
+TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithExcludedRequestMethods)
+{
+    NSDictionary *rule = @{
+        @"id": @1,
+        @"action": @{ @"type": @"block" },
+        @"condition": @{
+            @"excludedRequestMethods": @[ @"get", @"post" ],
+            @"resourceTypes": @[ @"main_frame" ],
+        },
+    };
+
+    _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
+    NSArray *convertedRules = validatedRule.ruleInWebKitFormat;
+    EXPECT_NOT_NULL(convertedRules);
+
+    NSArray *correctRuleConversion = @[
+        @{
+            @"action": @{
+                @"type": @"block",
+            },
+            @"trigger": @{
+                @"url-filter": @".*",
+                @"resource-type": @[ @"top-document" ],
+            },
+        },
+        @{
+            @"action": @{
+                @"type": @"ignore-previous-rules",
+            },
+            @"trigger": @{
+                @"url-filter": @".*",
+                @"resource-type": @[ @"top-document" ],
+                @"request-method": @"get",
+            },
+        },
+        @{
+            @"action": @{
+                @"type": @"ignore-previous-rules",
+            },
+            @"trigger": @{
+                @"url-filter": @".*",
+                @"resource-type": @[ @"top-document" ],
+                @"request-method": @"post",
+            },
+        }
+    ];
+
+    EXPECT_NS_EQUAL(convertedRules, correctRuleConversion);
+}
+
+TEST(WKWebExtensionAPIDeclarativeNetRequest, RuleConversionWithRequestMethodsAndExcludedRequestMethodsAndRequestDomainsAndExcludedRequestDomains)
+{
+    NSDictionary *rule = @{
+        @"id": @1,
+        @"action": @{ @"type": @"block" },
+        @"condition": @{
+            @"requestDomains": @[ @"apple.com" ],
+            @"excludedRequestDomains": @[ @"google.com" ],
+            @"requestMethods": @[ @"get" ],
+            @"excludedRequestMethods": @[ @"post" ],
+            @"resourceTypes": @[ @"main_frame" ],
+        },
+    };
+
+    _WKWebExtensionDeclarativeNetRequestRule *validatedRule = [[_WKWebExtensionDeclarativeNetRequestRule alloc] initWithDictionary:rule errorString:nil];
+    NSArray *convertedRules = validatedRule.ruleInWebKitFormat;
+    EXPECT_NOT_NULL(convertedRules);
+
+    NSArray *correctRuleConversion = @[
+        @{
+            @"action": @{
+                @"type": @"block",
+            },
+            @"trigger": @{
+                @"url-filter": @"^[^:]+://+([^:/]+\\.)?apple\\.com",
+                @"resource-type": @[ @"top-document" ],
+                @"request-method": @"get",
+            },
+        },
+        @{
+            @"action": @{
+                @"type": @"ignore-previous-rules",
+            },
+            @"trigger": @{
+                @"url-filter": @"google\\.com",
+                @"resource-type": @[ @"top-document" ],
+                @"request-method": @"post",
+            },
+        },
+    ];
+
+    EXPECT_NS_EQUAL(convertedRules, correctRuleConversion);
+}
+
 TEST(WKWebExtensionAPIDeclarativeNetRequest, NonASCIIURLFilter)
 {
     NSDictionary *rule = @{
