@@ -46,6 +46,7 @@
 #include "PaintWorkletGlobalScope.h"
 #include "RenderStyleSetters.h"
 #include "Settings.h"
+#include "StyleAdjuster.h"
 #include "StyleBuilderGenerated.h"
 #include "StyleCustomPropertyData.h"
 #include "StyleFontSizeFunctions.h"
