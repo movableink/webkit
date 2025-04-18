@@ -26,7 +26,6 @@
 #include "config.h"
 #include "DOMMatrixReadOnly.h"
 
-#include "CSSParser.h"
 #include "CSSParserContext.h"
 #include "CSSParserMode.h"
 #include "CSSPropertyParserConsumer+Transform.h"

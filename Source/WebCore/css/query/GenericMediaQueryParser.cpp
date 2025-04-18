@@ -26,7 +26,7 @@
 #include "GenericMediaQueryParser.h"
 
 #include "CSSCustomPropertyValue.h"
-#include "CSSParserImpl.h"
+#include "CSSParser.h"
 #include "CSSPropertyParser.h"
 #include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
@@ -72,7 +72,7 @@ static RefPtr<CSSValue> consumeCustomPropertyValue(AtomString propertyName, CSSP
     range.consumeAll();
 
     // Syntax is that of a valid declaration so !important is allowed. It just gets ignored.
-    CSSParserImpl::consumeTrailingImportantAndWhitespace(valueRange);
+    CSSParser::consumeTrailingImportantAndWhitespace(valueRange);
 
     if (valueRange.atEnd())
         return CSSCustomPropertyValue::createEmpty(propertyName);

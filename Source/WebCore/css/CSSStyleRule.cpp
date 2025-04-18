@@ -25,8 +25,8 @@
 #include "CSSGroupingRule.h"
 #include "CSSParser.h"
 #include "CSSParserEnum.h"
-#include "CSSParserImpl.h"
 #include "CSSRuleList.h"
+#include "CSSSelectorParser.h"
 #include "CSSSerializationContext.h"
 #include "CSSStyleProperties.h"
 #include "CSSStyleSheet.h"
@@ -117,7 +117,7 @@ void CSSStyleRule::setSelectorText(const String& selectorText)
         return;
 
     RefPtr sheet = parentStyleSheet();
-    auto selectorList = CSSParser::parseSelectorList(selectorText, parserContext(), sheet ? &sheet->contents() : nullptr, nestedContext());
+    auto selectorList = CSSSelectorParser::parseSelectorList(selectorText, parserContext(), sheet ? &sheet->contents() : nullptr, nestedContext());
     if (!selectorList)
         return;
 
@@ -237,9 +237,9 @@ ExceptionOr<unsigned> CSSStyleRule::insertRule(const String& ruleString, unsigne
         return Exception { ExceptionCode::IndexSizeError };
 
     RefPtr styleSheet = parentStyleSheet();
-    RefPtr newRule = CSSParser::parseRule(ruleString, parserContext(), styleSheet ? &styleSheet->contents() : nullptr, CSSParserEnum::NestedContextType::Style);
+    RefPtr newRule = CSSParser::parseRule(ruleString, parserContext(), styleSheet ? &styleSheet->contents() : nullptr, CSSParser::AllowedRules::ImportRules, CSSParserEnum::NestedContextType::Style);
     if (!newRule) {
-        newRule = CSSParserImpl::parseNestedDeclarations(parserContext(), ruleString);
+        newRule = CSSParser::parseNestedDeclarations(parserContext(), ruleString);
         if (!newRule)
             return Exception { ExceptionCode::SyntaxError };
     }

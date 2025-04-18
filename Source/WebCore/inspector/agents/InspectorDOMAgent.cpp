@@ -39,13 +39,11 @@
 #include "AudioTrackConfiguration.h"
 #include "AudioTrackList.h"
 #include "CSSComputedStyleDeclaration.h"
-#include "CSSParser.h"
 #include "CSSPropertyNames.h"
 #include "CSSPropertySourceData.h"
 #include "CSSRule.h"
 #include "CSSRuleList.h"
-#include "CSSSelector.h"
-#include "CSSSelectorList.h"
+#include "CSSSelectorParser.h"
 #include "CSSStyleRule.h"
 #include "CSSStyleSheet.h"
 #include "CharacterData.h"
@@ -1522,7 +1520,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorDOMAgent::highlightSelector(co
     if (!document)
         return makeUnexpected("Missing document of frame for given frameId"_s);
 
-    auto selectorList = CSSParser::parseSelectorList(selectorString, CSSParserContext(*document));
+    auto selectorList = CSSSelectorParser::parseSelectorList(selectorString, CSSParserContext(*document));
     if (!selectorList)
         return { };
 

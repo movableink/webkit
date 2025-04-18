@@ -36,7 +36,6 @@
 #include "BitmapImage.h"
 #include "CSSFontSelector.h"
 #include "CSSMarkup.h"
-#include "CSSParser.h"
 #include "CSSPrimitiveNumericTypes+Serialization.h"
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParserConsumer+LengthDefinitions.h"

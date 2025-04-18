@@ -31,7 +31,6 @@
 #include "CSSColorValue.h"
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSFontStyleWithAngleValue.h"
-#include "CSSParser.h"
 #include "CSSParserIdioms.h"
 #include "CSSPropertyParserConsumer+Font.h"
 #include "CSSRuleList.h"

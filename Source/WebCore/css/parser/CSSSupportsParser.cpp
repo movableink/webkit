@@ -30,7 +30,7 @@
 #include "config.h"
 #include "CSSSupportsParser.h"
 
-#include "CSSParserImpl.h"
+#include "CSSParser.h"
 #include "CSSPropertyParserConsumer+Font.h"
 #include "CSSPropertyParserState.h"
 #include "CSSSelectorParser.h"
@@ -40,7 +40,7 @@
 
 namespace WebCore {
 
-CSSSupportsParser::SupportsResult CSSSupportsParser::supportsCondition(CSSParserTokenRange range, CSSParserImpl& parser, ParsingMode mode)
+CSSSupportsParser::SupportsResult CSSSupportsParser::supportsCondition(CSSParserTokenRange range, CSSParser& parser, ParsingMode mode)
 {
     // FIXME: The spec allows leading whitespace in @supports but not CSS.supports,
     // but major browser vendors allow it in CSS.supports also.
@@ -55,6 +55,14 @@ CSSSupportsParser::SupportsResult CSSSupportsParser::supportsCondition(CSSParser
     // parenthesis. The only productions that wouldn't have parsed above are the
     // declaration condition or the general enclosed productions.
     return supportsParser.consumeSupportsFeatureOrGeneralEnclosed(range);
+}
+
+CSSSupportsParser::SupportsResult CSSSupportsParser::supportsCondition(const String& condition, const CSSParserContext& context, ParsingMode mode)
+{
+    CSSParser parser(context, condition);
+    if (!parser.tokenizer())
+        return SupportsResult::Invalid;
+    return supportsCondition(parser.tokenizer()->tokenRange(), parser, mode);
 }
 
 enum class ClauseType { Unresolved, Conjunction, Disjunction };

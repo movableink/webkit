@@ -27,7 +27,6 @@
 #include "HTMLElement.h"
 
 #include "CSSMarkup.h"
-#include "CSSParser.h"
 #include "CSSParserFastPaths.h"
 #include "CSSPropertyNames.h"
 #include "CSSRatioValue.h"

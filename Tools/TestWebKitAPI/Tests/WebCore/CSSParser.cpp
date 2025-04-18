@@ -44,7 +44,7 @@ TEST(CSSParser, ParseColorInput)
 {
     auto properties = MutableStyleProperties::create();
 
-    ASSERT_TRUE(CSSParser::parseDeclaration(properties, "color: #ff0000;"_s, strictCSSParserContext()));
+    ASSERT_TRUE(CSSParser::parseDeclarationList(properties, "color: #ff0000;"_s, strictCSSParserContext()));
     auto value = properties->getPropertyCSSValue(CSSPropertyColor).get();
 
     ASSERT_TRUE(is<CSSValue>(value));
@@ -58,7 +58,7 @@ TEST(CSSParser, ParseColorWithNewlineAndWhitespacesInput)
 {
     auto properties = MutableStyleProperties::create();
 
-    ASSERT_TRUE(CSSParser::parseDeclaration(properties, "color:  \n    #ff0000;"_s, strictCSSParserContext()));
+    ASSERT_TRUE(CSSParser::parseDeclarationList(properties, "color:  \n    #ff0000;"_s, strictCSSParserContext()));
     auto value = properties->getPropertyCSSValue(CSSPropertyColor).get();
 
     ASSERT_TRUE(is<CSSValue>(value));
@@ -72,7 +72,7 @@ TEST(CSSParser, ParseCustomPropertyWithNewlineInput)
 {
     auto properties = MutableStyleProperties::create();
 
-    ASSERT_TRUE(CSSParser::parseDeclaration(properties, "--mycustomprop: ValueHere\nWithAnotherValue;"_s, strictCSSParserContext()));
+    ASSERT_TRUE(CSSParser::parseDeclarationList(properties, "--mycustomprop: ValueHere\nWithAnotherValue;"_s, strictCSSParserContext()));
     auto customPropValue = downcast<CSSCustomPropertyValue>(properties->propertyAt(0).value());
 
     ASSERT_TRUE(is<CSSCustomPropertyValue>(customPropValue));
@@ -86,7 +86,7 @@ TEST(CSSParser, ParseCustomPropertyWithNewlineAndWhitespacesInput)
 {
     auto properties = MutableStyleProperties::create();
 
-    ASSERT_TRUE(CSSParser::parseDeclaration(properties, "--mycustomprop: ValueHere\nWithAnotherValue         ShouldPreserveAllWhitespace;"_s, strictCSSParserContext()));
+    ASSERT_TRUE(CSSParser::parseDeclarationList(properties, "--mycustomprop: ValueHere\nWithAnotherValue         ShouldPreserveAllWhitespace;"_s, strictCSSParserContext()));
     auto customPropValue = downcast<CSSCustomPropertyValue>(properties->propertyAt(0).value());
 
     ASSERT_TRUE(is<CSSCustomPropertyValue>(customPropValue));
@@ -100,7 +100,7 @@ TEST(CSSParser, ParseCustomPropertyWithNewlineBetweenIdentInput)
 {
     auto properties = MutableStyleProperties::create();
 
-    ASSERT_TRUE(CSSParser::parseDeclaration(properties, "--mycustomprop: foo\nbar"_s, strictCSSParserContext()));
+    ASSERT_TRUE(CSSParser::parseDeclarationList(properties, "--mycustomprop: foo\nbar"_s, strictCSSParserContext()));
     auto customPropValue = downcast<CSSCustomPropertyValue>(properties->propertyAt(0).value());
 
     ASSERT_TRUE(is<CSSCustomPropertyValue>(customPropValue));
@@ -114,7 +114,7 @@ TEST(CSSParser, ParseColorPropertyWithNewlineBetweenIdentInput)
 {
     auto properties = MutableStyleProperties::create();
 
-    ASSERT_TRUE(CSSParser::parseDeclaration(properties, "color: #ff0000;"_s, strictCSSParserContext()));
+    ASSERT_TRUE(CSSParser::parseDeclarationList(properties, "color: #ff0000;"_s, strictCSSParserContext()));
     auto value = properties->propertyAt(0).value();
 
     ASSERT_TRUE(is<CSSValue>(value));
@@ -140,7 +140,7 @@ TEST(CSSParser, ParseTextTransformPropertyWithNewlineBetweenTwoIdentInput)
     };
 
     auto properties = MutableStyleProperties::create();
-    ASSERT_TRUE(CSSParser::parseDeclaration(properties, "text-transform: capitalize\nfull-width;"_s, strictCSSParserContext()));
+    ASSERT_TRUE(CSSParser::parseDeclarationList(properties, "text-transform: capitalize\nfull-width;"_s, strictCSSParserContext()));
     check(properties);
 
     auto value = properties->propertyAt(0).value();
@@ -153,7 +153,7 @@ TEST(CSSParser, ParseTextTransformPropertyWithNewlineBetweenTwoIdentInput)
     builder.append("text-transform: "_s, serialized, ";"_s);
     auto decl = builder.toString();
 
-    ASSERT_TRUE(CSSParser::parseDeclaration(properties2, decl, strictCSSParserContext()));
+    ASSERT_TRUE(CSSParser::parseDeclarationList(properties2, decl, strictCSSParserContext()));
     check(properties2);
 }
 
@@ -203,7 +203,7 @@ TEST(CSSPropertyParser, GridTrackLimits)
     auto properties = MutableStyleProperties::create();
 
     for (auto& testCase : testCases) {
-        ASSERT_TRUE(CSSParser::parseDeclaration(properties, testCase.input, strictCSSParserContext()));
+        ASSERT_TRUE(CSSParser::parseDeclarationList(properties, testCase.input, strictCSSParserContext()));
         RefPtr<CSSValue> value = properties->getPropertyCSSValue(testCase.propertyID);
 
         ASSERT_TRUE(is<CSSValueContainingVector>(value.get()));

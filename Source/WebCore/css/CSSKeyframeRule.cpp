@@ -27,7 +27,6 @@
 #include "CSSKeyframeRule.h"
 
 #include "CSSKeyframesRule.h"
-#include "CSSParser.h"
 #include "CSSPropertyParserConsumer+Animations.h"
 #include "CSSSerializationContext.h"
 #include "CSSStyleProperties.h"

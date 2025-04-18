@@ -35,8 +35,8 @@
 #include "CSSFontStyleWithAngleValue.h"
 #include "CSSFontVariantLigaturesParser.h"
 #include "CSSFontVariantNumericParser.h"
+#include "CSSParser.h"
 #include "CSSParserIdioms.h"
-#include "CSSParserImpl.h"
 #include "CSSParserToken.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
@@ -657,7 +657,7 @@ RefPtr<CSSValueList> parseFontFaceSrc(const String& string, ScriptExecutionConte
 {
     RefPtr document = dynamicDowncast<Document>(context);
     CSSParserContext parserContext = document ? CSSParserContext(*document) : CSSParserContext(HTMLStandardMode);
-    CSSParserImpl parser(parserContext, string);
+    CSSParser parser(parserContext, string);
     CSSParserTokenRange range = parser.tokenizer()->tokenRange();
 
     range.consumeWhitespace();
@@ -681,7 +681,7 @@ RefPtr<CSSValue> parseFontFaceSizeAdjust(const String& string, ScriptExecutionCo
     // https://www.w3.org/TR/css-fonts-5/#descdef-font-face-size-adjust
 
     CSSParserContext parserContext(parserMode(context));
-    CSSParserImpl parser(parserContext, string);
+    CSSParser parser(parserContext, string);
     CSSParserTokenRange range = parser.tokenizer()->tokenRange();
 
     range.consumeWhitespace();
@@ -705,7 +705,7 @@ RefPtr<CSSValueList> parseFontFaceUnicodeRange(const String& string, ScriptExecu
     // https://drafts.csswg.org/css-fonts/#descdef-font-face-unicode-range
 
     CSSParserContext parserContext(parserMode(context));
-    CSSParserImpl parser(parserContext, string);
+    CSSParser parser(parserContext, string);
     CSSParserTokenRange range = parser.tokenizer()->tokenRange();
 
     range.consumeWhitespace();
@@ -728,7 +728,7 @@ RefPtr<CSSValue> parseFontFaceDisplay(const String& string, ScriptExecutionConte
     // https://drafts.csswg.org/css-fonts/#descdef-font-face-font-display
 
     CSSParserContext parserContext(parserMode(context));
-    CSSParserImpl parser(parserContext, string);
+    CSSParser parser(parserContext, string);
     CSSParserTokenRange range = parser.tokenizer()->tokenRange();
 
     range.consumeWhitespace();
@@ -753,7 +753,7 @@ RefPtr<CSSValue> parseFontFaceFontStyle(const String& string, ScriptExecutionCon
     // FIXME: Missing support for "auto" identifier.
 
     CSSParserContext parserContext(parserMode(context));
-    CSSParserImpl parser(parserContext, string);
+    CSSParser parser(parserContext, string);
     CSSParserTokenRange range = parser.tokenizer()->tokenRange();
 
     range.consumeWhitespace();
@@ -886,7 +886,7 @@ RefPtr<CSSValue> parseFontFaceFeatureSettings(const String& string, ScriptExecut
     // https://drafts.csswg.org/css-fonts/#descdef-font-face-font-feature-settings
 
     CSSParserContext parserContext(parserMode(context));
-    CSSParserImpl parser(parserContext, string);
+    CSSParser parser(parserContext, string);
     CSSParserTokenRange range = parser.tokenizer()->tokenRange();
 
     range.consumeWhitespace();
@@ -932,7 +932,7 @@ RefPtr<CSSValue> parseFontFaceFontWidth(const String& string, ScriptExecutionCon
     // https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-width
 
     CSSParserContext parserContext(parserMode(context));
-    CSSParserImpl parser(parserContext, string);
+    CSSParser parser(parserContext, string);
     CSSParserTokenRange range = parser.tokenizer()->tokenRange();
 
     range.consumeWhitespace();
@@ -956,7 +956,7 @@ RefPtr<CSSValue> parseFontFaceFontWeight(const String& string, ScriptExecutionCo
     // https://drafts.csswg.org/css-fonts-4/#descdef-font-face-font-weight
 
     CSSParserContext parserContext(parserMode(context));
-    CSSParserImpl parser(parserContext, string);
+    CSSParser parser(parserContext, string);
     CSSParserTokenRange range = parser.tokenizer()->tokenRange();
 
     range.consumeWhitespace();

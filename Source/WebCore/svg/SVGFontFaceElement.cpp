@@ -25,7 +25,6 @@
 
 #include "CSSFontFaceSrcValue.h"
 #include "CSSFontSelector.h"
-#include "CSSParser.h"
 #include "CSSParserIdioms.h"
 #include "CSSPropertyNames.h"
 #include "CSSStyleSheet.h"

@@ -24,7 +24,6 @@
 #include "RenderStyle.h"
 
 #include "CSSCustomPropertyValue.h"
-#include "CSSParser.h"
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParser.h"
 #include "ColorBlending.h"

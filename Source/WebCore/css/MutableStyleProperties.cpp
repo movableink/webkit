@@ -244,7 +244,7 @@ bool MutableStyleProperties::parseDeclaration(const String& styleDeclaration, CS
     m_propertyVector.clear();
 
     context.mode = cssParserMode();
-    CSSParser::parseDeclaration(*this, styleDeclaration, context);
+    CSSParser::parseDeclarationList(*this, styleDeclaration, context);
 
     // We could do better. Just changing property order does not require style invalidation.
     return oldProperties != m_propertyVector;

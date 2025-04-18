@@ -34,7 +34,6 @@
 #include "CSSParserIdioms.h"
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
-#include "CSSSelector.h"
 #include "CSSSelectorInlines.h"
 #include "CSSTokenizer.h"
 #include "CommonAtomStrings.h"
@@ -249,6 +248,11 @@ MutableCSSSelectorList CSSSelectorParser::consumeNestedComplexForgivingSelectorL
     return consumeForgivingSelectorList(range, [&] (CSSParserTokenRange& range) {
         return consumeNestedComplexSelector(range);
     });
+}
+
+std::optional<CSSSelectorList> CSSSelectorParser::parseSelectorList(const String& string, const CSSParserContext& context, StyleSheetContents* styleSheet, CSSParserEnum::NestedContext nestedContext)
+{
+    return parseCSSSelectorList(CSSTokenizer(string).tokenRange(), context, styleSheet, nestedContext);
 }
 
 bool CSSSelectorParser::supportsComplexSelector(CSSParserTokenRange range, const CSSSelectorParserContext& context)

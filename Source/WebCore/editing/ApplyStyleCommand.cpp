@@ -28,7 +28,6 @@
 #include "ApplyStyleCommand.h"
 
 #include "CSSComputedStyleDeclaration.h"
-#include "CSSParser.h"
 #include "CSSSerializationContext.h"
 #include "CSSValuePool.h"
 #include "Document.h"

@@ -424,13 +424,13 @@ bool StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cached
         return false;
     }
 
-    CSSParser::parseSheet(sheetText, parserContext(), *this);
+    CSSParser::parseStyleSheet(sheetText, parserContext(), *this);
     return true;
 }
 
 bool StyleSheetContents::parseString(const String& sheetText)
 {
-    CSSParser::parseSheet(sheetText, parserContext(), *this);
+    CSSParser::parseStyleSheet(sheetText, parserContext(), *this);
     return true;
 }
 

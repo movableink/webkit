@@ -38,7 +38,6 @@
 #include "CSSCalcRandomCachingKeyMap.h"
 #include "CSSFontSelector.h"
 #include "CSSKeywordColor.h"
-#include "CSSParser.h"
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParserConsumer+ColorAdjust.h"
 #include "CSSSerializationContext.h"

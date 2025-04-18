@@ -32,7 +32,6 @@
 #include "CSSGroupingRule.h"
 
 #include "CSSParser.h"
-#include "CSSParserImpl.h"
 #include "CSSRuleList.h"
 #include "CSSStyleSheet.h"
 #include "StylePropertiesInlines.h"
@@ -77,11 +76,11 @@ ExceptionOr<unsigned> CSSGroupingRule::insertRule(const String& ruleString, unsi
     }
 
     RefPtr styleSheet = parentStyleSheet();
-    RefPtr newRule = CSSParser::parseRule(ruleString, parserContext(), styleSheet ? &styleSheet->contents() : nullptr, nestedContext());
+    RefPtr newRule = CSSParser::parseRule(ruleString, parserContext(), styleSheet ? &styleSheet->contents() : nullptr, CSSParser::AllowedRules::ImportRules, nestedContext());
     if (!newRule) {
         if (!hasStyleRuleAncestor())
             return Exception { ExceptionCode::SyntaxError };
-        newRule = CSSParserImpl::parseNestedDeclarations(parserContext(), ruleString);
+        newRule = CSSParser::parseNestedDeclarations(parserContext(), ruleString);
         if (!newRule)
             return Exception { ExceptionCode::SyntaxError };
     }

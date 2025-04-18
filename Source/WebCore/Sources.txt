@@ -1022,7 +1022,6 @@ css/parser/CSSCustomPropertySyntax.cpp
 css/parser/CSSParser.cpp
 css/parser/CSSParserContext.cpp
 css/parser/CSSParserFastPaths.cpp
-css/parser/CSSParserImpl.cpp
 css/parser/CSSParserObserverWrapper.cpp
 css/parser/CSSParserToken.cpp
 css/parser/CSSParserTokenRange.cpp

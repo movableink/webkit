@@ -41,9 +41,9 @@
 #include "Blob.h"
 #include "CSSKeyframesRule.h"
 #include "CSSMediaRule.h"
-#include "CSSParser.h"
 #include "CSSPropertyParser.h"
 #include "CSSPropertyParserConsumer+ColorInlines.h"
+#include "CSSSelectorParser.h"
 #include "CSSStyleRule.h"
 #include "CSSSupportsRule.h"
 #include "CacheStorageConnection.h"
@@ -7601,7 +7601,7 @@ void Internals::acceptTypedArrays(Int32Array&)
 
 Internals::SelectorFilterHashCounts Internals::selectorFilterHashCounts(const String& selector)
 {
-    auto selectorList = CSSParser::parseSelectorList(selector, CSSParserContext(*contextDocument()));
+    auto selectorList = CSSSelectorParser::parseSelectorList(selector, CSSParserContext(*contextDocument()));
     if (!selectorList)
         return { };
     

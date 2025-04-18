@@ -25,7 +25,6 @@
 #include "HTMLBodyElement.h"
 
 #include "CSSImageValue.h"
-#include "CSSParser.h"
 #include "CSSValueKeywords.h"
 #include "DOMWrapperWorld.h"
 #include "ElementInlines.h"

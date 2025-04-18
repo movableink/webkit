@@ -29,7 +29,6 @@
 #include "AXObjectCache.h"
 #include "Attr.h"
 #include "AttributeChangeInvalidation.h"
-#include "CSSParser.h"
 #include "CheckVisibilityOptions.h"
 #include "ChildChangeInvalidation.h"
 #include "ChildListMutationScope.h"
