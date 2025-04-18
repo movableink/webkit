@@ -917,6 +917,9 @@ void NetworkConnectionToWebProcess::setRawCookie(const URL& firstParty, const UR
 
 void NetworkConnectionToWebProcess::deleteCookie(const URL& firstParty, const URL& url, const String& cookieName, CompletionHandler<void()>&& completionHandler)
 {
+    MESSAGE_CHECK_COMPLETION(!firstParty.isEmpty(), completionHandler());
+    MESSAGE_CHECK_COMPLETION(!url.isEmpty(), completionHandler());
+    MESSAGE_CHECK_COMPLETION(!cookieName.isEmpty(), completionHandler());
     auto allowCookieAccess = protectedNetworkProcess()->allowsFirstPartyForCookies(m_webProcessIdentifier, firstParty);
     MESSAGE_CHECK_COMPLETION(allowCookieAccess != NetworkProcess::AllowCookieAccess::Terminate, completionHandler());
     if (allowCookieAccess != NetworkProcess::AllowCookieAccess::Allow)
