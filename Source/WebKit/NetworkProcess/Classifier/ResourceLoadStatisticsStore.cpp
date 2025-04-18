@@ -1310,6 +1310,7 @@ void ResourceLoadStatisticsStore::insertDomainRelationships(const ResourceLoadSt
 void ResourceLoadStatisticsStore::merge(WebCore::SQLiteStatement* current, const ResourceLoadStatistics& other)
 {
     ASSERT(!RunLoop::isMain());
+    RELEASE_LOG(ResourceLoadStatistics, "ResourceLoadStatisticsStore::merge: sessionID=%" PRIu64, m_sessionID.toUInt64());
 
     auto transactionScope = beginTransactionIfNecessary();
 
@@ -3214,6 +3215,7 @@ void ResourceLoadStatisticsStore::updateOperatingDatesParameters()
                 return;
             }
             memberOperatingDate = OperatingDate(getOperatingDateWindowStatement->columnInt(0), getOperatingDateWindowStatement->columnInt(1), getOperatingDateWindowStatement->columnInt(2));
+            RELEASE_LOG(ResourceLoadStatistics, "ResourceLoadStatisticsStore::updateOperatingDatesParameters: sessionID=%" PRIu64 ", memberOperatingDate: %lf", m_sessionID.toUInt64(), memberOperatingDate->secondsSinceEpoch().value());
         }
     };
 
@@ -3224,6 +3226,7 @@ void ResourceLoadStatisticsStore::updateOperatingDatesParameters()
 void ResourceLoadStatisticsStore::includeTodayAsOperatingDateIfNecessary()
 {
     ASSERT(!RunLoop::isMain());
+    RELEASE_LOG(ResourceLoadStatistics, "ResourceLoadStatisticsStore::includeTodayAsOperatingDateIfNecessary: sessionID=%" PRIu64, m_sessionID.toUInt64());
 
     auto today = OperatingDate::today(m_timeAdvanceForTesting);
     if (m_operatingDatesSize > 0) {

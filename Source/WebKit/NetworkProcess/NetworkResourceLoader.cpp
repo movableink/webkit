@@ -97,6 +97,7 @@
 
 #define LOADER_RELEASE_LOG_WITH_THIS(thisPtr, fmt, ...) RELEASE_LOG(Network, "%p - [pageProxyID=%" PRIu64 ", webPageID=%" PRIu64 ", frameID=%" PRIu64 ", resourceID=%" PRIu64 ", isMainResource=%d, destination=%u, isSynchronous=%d] NetworkResourceLoader::" fmt, WTF::getPtr(thisPtr), thisPtr->webPageProxyID().toUInt64(), thisPtr->pageID().toUInt64(), thisPtr->frameID().toUInt64(), thisPtr->coreIdentifier().toUInt64(), thisPtr->isMainResource(), static_cast<unsigned>(thisPtr->m_parameters.options.destination), thisPtr->isSynchronous(), ##__VA_ARGS__)
 #define LOADER_RELEASE_LOG(fmt, ...) RELEASE_LOG(Network, "%p - [pageProxyID=%" PRIu64 ", webPageID=%" PRIu64 ", frameID=%" PRIu64 ", resourceID=%" PRIu64 ", isMainResource=%d, destination=%u, isSynchronous=%d] NetworkResourceLoader::" fmt, this, webPageProxyID().toUInt64(), pageID().toUInt64(), frameID().toUInt64(), coreIdentifier().toUInt64(), isMainResource(), static_cast<unsigned>(m_parameters.options.destination), isSynchronous(), ##__VA_ARGS__)
+#define LOADER_RELEASE_LOG_DEBUG(fmt, ...) RELEASE_LOG_DEBUG(Network, "%p - [pageProxyID=%" PRIu64 ", webPageID=%" PRIu64 ", frameID=%" PRIu64 ", resourceID=%" PRIu64 ", isMainResource=%d, destination=%u, isSynchronous=%d] NetworkResourceLoader::" fmt, this, webPageProxyID().toUInt64(), pageID().toUInt64(), frameID().toUInt64(), coreIdentifier().toUInt64(), isMainResource(), static_cast<unsigned>(m_parameters.options.destination), isSynchronous(), ##__VA_ARGS__)
 #define LOADER_RELEASE_LOG_ERROR(fmt, ...) RELEASE_LOG_ERROR(Network, "%p - [pageProxyID=%" PRIu64 ", webPageID=%" PRIu64 ", frameID=%" PRIu64 ", resourceID=%" PRIu64 ", isMainResource=%d, destination=%u, isSynchronous=%d] NetworkResourceLoader::" fmt, this, webPageProxyID().toUInt64(), pageID().toUInt64(), frameID().toUInt64(), coreIdentifier().toUInt64(), isMainResource(), static_cast<unsigned>(m_parameters.options.destination), isSynchronous(), ##__VA_ARGS__)
 #define LOADER_RELEASE_LOG_FAULT(fmt, ...) RELEASE_LOG_FAULT(Network, "%p - [pageProxyID=%" PRIu64 ", webPageID=%" PRIu64 ", frameID=%" PRIu64 ", resourceID=%" PRIu64 ", isMainResource=%d, destination=%u, isSynchronous=%d] NetworkResourceLoader::" fmt, this, webPageProxyID().toUInt64(), pageID().toUInt64(), frameID().toUInt64(), coreIdentifier().toUInt64(), isMainResource(), static_cast<unsigned>(m_parameters.options.destination), isSynchronous(), ##__VA_ARGS__)
 
@@ -1119,6 +1120,13 @@ void NetworkResourceLoader::didFinishLoading(const NetworkLoadMetrics& networkLo
     ASSERT(!m_networkLoadChecker || networkLoadMetrics.failsTAOCheck == m_networkLoadChecker->timingAllowFailedFlag());
 
     LOADER_RELEASE_LOG("didFinishLoading: (numBytesReceived=%zd, hasCacheEntryForValidation=%d)", m_numBytesReceived, !!m_cacheEntryForValidation);
+
+    // rdar://149080634: We can remove this when we finish investigating the logout issues.
+    if (m_response.httpStatusCode() >= httpStatus400BadRequest && networkLoadMetrics.additionalNetworkLoadMetricsForWebInspector) {
+        const auto& requestMetrics = networkLoadMetrics.additionalNetworkLoadMetricsForWebInspector;
+        const auto& cookies = requestMetrics->requestHeaders.get(HTTPHeaderName::Cookie);
+        LOADER_RELEASE_LOG_DEBUG("didFinishLoading: (httpStatusCode=%d, headerCount=%u, cookieHeaderLength=%u, cookieCount=%zu)", m_response.httpStatusCode(), requestMetrics->requestHeaders.size(), cookies.length(), cookies.split("; "_s).size());
+    }
 
     Ref connection = m_connection;
     if (shouldCaptureExtraNetworkLoadMetrics())

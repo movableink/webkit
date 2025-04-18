@@ -778,6 +778,7 @@ void WebResourceLoadStatisticsStore::removeAllStorageAccess(CompletionHandler<vo
 void WebResourceLoadStatisticsStore::performDailyTasks()
 {
     ASSERT(RunLoop::isMain());
+    RELEASE_LOG(ResourceLoadStatistics, "WebResourceLoadStatisticsStore::performDailyTasks");
 
     postTask([this] {
         if (RefPtr statisticsStore = m_statisticsStore) {
