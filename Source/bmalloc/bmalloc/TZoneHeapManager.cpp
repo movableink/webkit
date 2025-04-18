@@ -60,7 +60,7 @@ static unsigned bucketsForSmallSizes { defaultBucketsForSmallSizes };
 static unsigned bucketsForLargeSizes { defaultBucketsForLargeSizes };
 static unsigned maxSmallSize { defaultMaxSmallSize };
 
-static bool requirePerBootPrimodialSeed;
+static bool requirePerBootPrimordialSeed;
 
 static constexpr bool verbose = false;
 
@@ -144,7 +144,7 @@ void determineTZoneMallocFallback()
 void TZoneHeapManager::requirePerBootSeed()
 {
     RELEASE_BASSERT(s_state < State::Seeded);
-    requirePerBootPrimodialSeed = true;
+    requirePerBootPrimordialSeed = true;
 }
 
 void TZoneHeapManager::setBucketParams(unsigned smallSizeCount, unsigned largeSizeCount, unsigned smallSizeLimit)
@@ -220,7 +220,7 @@ void TZoneHeapManager::init()
     auto sysctlResult = sysctl(mib, 2, &timeValue, &size, nullptr, 0);
     if (sysctlResult) {
         TZONE_LOG_DEBUG("kern.boottime is required for TZoneHeap initialization: %d errno %d\n", sysctlResult, errno);
-        RELEASE_BASSERT(!sysctlResult || !requirePerBootPrimodialSeed);
+        RELEASE_BASSERT(!sysctlResult || !requirePerBootPrimordialSeed);
         // Some clients of JSC may not have access to kern.boottime. In those cases, use a fallback.
         gettimeofday(&timeValue, NULL);
     }
