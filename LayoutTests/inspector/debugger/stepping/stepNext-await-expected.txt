@@ -23,7 +23,7 @@ PAUSE AT <anonymous>:7:5
       9    }
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:8:5
       4    async function testStatements() {
       5        debugger;
@@ -34,7 +34,7 @@ PAUSE AT <anonymous>:8:5
      10
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:9:5
       5        debugger;
       6        let x = await 1;
@@ -67,7 +67,7 @@ PAUSE AT <anonymous>:14:5
      16        TestPage.dispatchEventToFrontend("done");
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:15:5
      11    async function testFunctions() {
      12        debugger;
@@ -78,7 +78,7 @@ PAUSE AT <anonymous>:15:5
      17    }
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:16:5
      12        debugger;
      13        let before = await 1;
@@ -89,7 +89,7 @@ PAUSE AT <anonymous>:16:5
      18
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:17:5
      13        let before = await 1;
      14        await a();
@@ -122,7 +122,7 @@ PAUSE AT <anonymous>:22:5
      24        TestPage.dispatchEventToFrontend("done");
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:23:5
      19    async function testEval() {
      20        debugger;
@@ -133,7 +133,7 @@ PAUSE AT <anonymous>:23:5
      25    }
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:24:5
      20        debugger;
      21        let before = await 1;
@@ -144,7 +144,7 @@ PAUSE AT <anonymous>:24:5
      26
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:25:5
      21        let before = await 1;
      22        await eval("1 + 1");
@@ -177,7 +177,7 @@ PAUSE AT <anonymous>:31:9
      33        TestPage.dispatchEventToFrontend("done");
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:33:5
      29            debugger;
      30            let inner = await 1;
@@ -188,7 +188,7 @@ PAUSE AT <anonymous>:33:5
      35
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:34:5
      30            let inner = await 1;
      31        })();
@@ -221,7 +221,7 @@ PAUSE AT <anonymous>:39:5
      41        await a(), await b(), await c();
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:40:9
      36    async function testCommas() {
      37        debugger;
@@ -232,7 +232,7 @@ PAUSE AT <anonymous>:40:9
      42        await true && (await a(), await b(), await c()) && await true;
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:41:9
      37        debugger;
      38        let x = await 1,
@@ -243,7 +243,7 @@ PAUSE AT <anonymous>:41:9
      43        TestPage.dispatchEventToFrontend("done");
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:42:5
      38        let x = await 1,
      39            y = await 2,
@@ -254,7 +254,7 @@ PAUSE AT <anonymous>:42:5
      44    }
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:42:16
      38        let x = await 1,
      39            y = await 2,
@@ -265,7 +265,7 @@ PAUSE AT <anonymous>:42:16
      44    }
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:42:27
      38        let x = await 1,
      39            y = await 2,
@@ -276,7 +276,7 @@ PAUSE AT <anonymous>:42:27
      44    }
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:43:5
      39            y = await 2,
      40            z = await 3;
@@ -287,7 +287,7 @@ PAUSE AT <anonymous>:43:5
      45
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:43:20
      39            y = await 2,
      40            z = await 3;
@@ -298,7 +298,7 @@ PAUSE AT <anonymous>:43:20
      45
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:43:31
      39            y = await 2,
      40            z = await 3;
@@ -309,7 +309,7 @@ PAUSE AT <anonymous>:43:31
      45
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:43:42
      39            y = await 2,
      40            z = await 3;
@@ -320,7 +320,7 @@ PAUSE AT <anonymous>:43:42
      45
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:44:5
      40            z = await 3;
      41        await a(), await b(), await c();
@@ -353,7 +353,7 @@ PAUSE AT <anonymous>:49:5
      51
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:49:24
      45
      46    async function testChainedExpressions() {
@@ -364,7 +364,7 @@ PAUSE AT <anonymous>:49:24
      51
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:49:37
      45
      46    async function testChainedExpressions() {
@@ -375,7 +375,7 @@ PAUSE AT <anonymous>:49:37
      51
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:50:5
      46    async function testChainedExpressions() {
      47        debugger;
@@ -408,7 +408,7 @@ PAUSE AT <anonymous>:55:5
      57        TestPage.dispatchEventToFrontend("done");
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:56:9
      52    async function testDeclarations() {
      53        debugger;
@@ -419,7 +419,7 @@ PAUSE AT <anonymous>:56:9
      58    }
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:57:9
      53        debugger;
      54        let x = await a(),
@@ -430,7 +430,7 @@ PAUSE AT <anonymous>:57:9
      59
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:58:5
      54        let x = await a(),
      55            y = await b(),
@@ -494,7 +494,7 @@ PAUSE AT <anonymous>:74:16
      76        TestPage.dispatchEventToFrontend("done");
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:75:9
      71    async function testFor() {
      72        debugger;
@@ -514,7 +514,7 @@ PAUSE AT <anonymous>:74:16
      76        TestPage.dispatchEventToFrontend("done");
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:75:9
      71    async function testFor() {
      72        debugger;
@@ -534,7 +534,7 @@ PAUSE AT <anonymous>:74:16
      76        TestPage.dispatchEventToFrontend("done");
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:77:5
      73        for await (let item of [a(), b()]) {
      74            c();
@@ -576,7 +576,7 @@ PAUSE AT <anonymous>:86:9
      88            if (state === 2)
 
 RESUMED
-PAUSED (other)
+PAUSED (debugger-statement)
 PAUSE AT <anonymous>:87:13
      83            if (state === 1)
      84                await a(); // should not pause on this line

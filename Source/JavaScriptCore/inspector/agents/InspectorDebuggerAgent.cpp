@@ -353,9 +353,9 @@ void InspectorDebuggerAgent::setSuppressAllPauses(bool suppress)
 
 void InspectorDebuggerAgent::updatePauseReasonAndData(DebuggerFrontendDispatcher::Reason reason, RefPtr<JSON::Object>&& data)
 {
-    if (m_pauseReason != DebuggerFrontendDispatcher::Reason::BlackboxedScript) {
-        m_preBlackboxPauseReason = m_pauseReason;
-        m_preBlackboxPauseData = WTFMove(m_pauseData);
+    if (m_pauseReason != DebuggerFrontendDispatcher::Reason::Other && m_pauseReason != DebuggerFrontendDispatcher::Reason::BlackboxedScript) {
+        m_lastPauseReason = m_pauseReason;
+        m_lastPauseData = WTFMove(m_pauseData);
     }
 
     m_pauseReason = reason;
@@ -1715,9 +1715,9 @@ void InspectorDebuggerAgent::didPause(JSC::JSGlobalObject* globalObject, JSC::De
             // There should be no break data, as we would've already continued past the breakpoint.
             ASSERT(!m_pauseData);
 
-            // Don't call `updatePauseReasonAndData` so as to not override `m_preBlackboxPauseData`.
+            // Don't call `updatePauseReasonAndData` so as to not override `m_lastPauseData`.
             if (m_pauseReason != DebuggerFrontendDispatcher::Reason::BlackboxedScript)
-                m_preBlackboxPauseReason = m_pauseReason;
+                m_lastPauseReason = m_pauseReason;
             m_pauseReason = DebuggerFrontendDispatcher::Reason::BlackboxedScript;
             break;
         }
@@ -1727,6 +1727,12 @@ void InspectorDebuggerAgent::didPause(JSC::JSGlobalObject* globalObject, JSC::De
         case JSC::Debugger::PausedAtEndOfProgram:
             // Pause was just stepping. Nothing to report.
             break;
+        case JSC::Debugger::PausedAfterAwait:
+            // We should not have preserved the pause reason and data.
+            ASSERT(!m_pauseData);
+            m_pauseReason = m_lastPauseReason;
+            m_pauseData = m_lastPauseData;
+            break;
         case JSC::Debugger::NotPaused:
             ASSERT_NOT_REACHED();
             break;
@@ -1734,7 +1740,7 @@ void InspectorDebuggerAgent::didPause(JSC::JSGlobalObject* globalObject, JSC::De
     }
 
     if (m_debugger.reasonForPause() == JSC::Debugger::PausedAfterBlackboxedScript) {
-        // Ensure that `m_preBlackboxPauseReason` is populated with the most recent data.
+        // Ensure that `m_lastPauseReason` is populated with the most recent data.
         updatePauseReasonAndData(m_pauseReason, nullptr);
 
         RefPtr<JSON::Object> data;
@@ -1744,10 +1750,10 @@ void InspectorDebuggerAgent::didPause(JSC::JSGlobalObject* globalObject, JSC::De
             data->setString("originalReason"_s, Protocol::Helpers::getEnumConstantValue(DebuggerFrontendDispatcher::Reason::Breakpoint));
             if (auto pauseReason = buildBreakpointPauseReason(debuggerBreakpointId))
                 data->setValue("originalData"_s, pauseReason.releaseNonNull());
-        } else if (m_preBlackboxPauseData) {
+        } else if (m_lastPauseData) {
             data = JSON::Object::create();
-            data->setString("originalReason"_s, Protocol::Helpers::getEnumConstantValue(m_preBlackboxPauseReason));
-            data->setValue("originalData"_s, m_preBlackboxPauseData.releaseNonNull());
+            data->setString("originalReason"_s, Protocol::Helpers::getEnumConstantValue(m_lastPauseReason));
+            data->setValue("originalData"_s, m_lastPauseData.releaseNonNull());
         }
         updatePauseReasonAndData(DebuggerFrontendDispatcher::Reason::BlackboxedScript, WTFMove(data));
     }

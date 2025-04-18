@@ -292,8 +292,8 @@ private:
     DebuggerFrontendDispatcher::Reason m_pauseReason;
     RefPtr<JSON::Object> m_pauseData;
 
-    DebuggerFrontendDispatcher::Reason m_preBlackboxPauseReason;
-    RefPtr<JSON::Object> m_preBlackboxPauseData;
+    DebuggerFrontendDispatcher::Reason m_lastPauseReason;
+    RefPtr<JSON::Object> m_lastPauseData;
 
     UncheckedKeyHashMap<AsyncCallIdentifier, RefPtr<AsyncStackTrace>> m_pendingAsyncCalls;
     Vector<AsyncCallIdentifier> m_currentAsyncCallIdentifierStack;
