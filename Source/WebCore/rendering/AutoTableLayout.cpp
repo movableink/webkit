@@ -252,6 +252,13 @@ void AutoTableLayout::computeIntrinsicLogicalWidths(LayoutUnit& minWidth, Layout
             maxWidth = m_scaledWidthFromPercentColumns;
     }
 
+    if (intrinsics == TableIntrinsics::ForKeyword && m_layoutStruct.isEmpty()) {
+        ASSERT(!minWidth);
+        ASSERT(!maxWidth);
+        minWidth = m_table->bordersPaddingAndSpacingInRowDirection();
+        maxWidth = minWidth;
+    }
+
     maxWidth = std::max(maxWidth, LayoutUnit(spanMaxLogicalWidth));
 }
 
