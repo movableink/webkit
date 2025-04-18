@@ -55,7 +55,7 @@ private:
     void clearAll(CompletionHandler<void()>&&);
     void flushChanges(CompletionHandler<void()>&&);
     void closeFiles(CompletionHandler<void()>&&);
-    void importRegistrations(CompletionHandler<void(std::optional<Vector<WebCore::ServiceWorkerContextData>>)>&&);
+    void importRegistrations(CompletionHandler<void(std::optional<Vector<WebCore::ServiceWorkerContextData>>&&)>&&);
     void updateRegistration(const WebCore::ServiceWorkerContextData&);
     void removeRegistration(const WebCore::ServiceWorkerRegistrationKey&);
 

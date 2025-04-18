@@ -79,7 +79,7 @@ void WebSWRegistrationStore::closeFiles(CompletionHandler<void()>&& callback)
         callback();
 }
 
-void WebSWRegistrationStore::importRegistrations(CompletionHandler<void(std::optional<Vector<WebCore::ServiceWorkerContextData>>)>&& callback)
+void WebSWRegistrationStore::importRegistrations(CompletionHandler<void(std::optional<Vector<WebCore::ServiceWorkerContextData>>&&)>&& callback)
 {
     if (RefPtr manager = m_manager.get())
         manager->importServiceWorkerRegistrations(WTFMove(callback));

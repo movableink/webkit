@@ -2145,7 +2145,7 @@ void NetworkStorageManager::clearServiceWorkerRegistrations(CompletionHandler<vo
     });
 }
 
-void NetworkStorageManager::importServiceWorkerRegistrations(CompletionHandler<void(std::optional<Vector<WebCore::ServiceWorkerContextData>>)>&& completionHandler)
+void NetworkStorageManager::importServiceWorkerRegistrations(CompletionHandler<void(std::optional<Vector<WebCore::ServiceWorkerContextData>>&&)>&& completionHandler)
 {
     ASSERT(RunLoop::isMain());
 
@@ -2169,7 +2169,7 @@ void NetworkStorageManager::importServiceWorkerRegistrations(CompletionHandler<v
                 removeOriginStorageManagerIfPossible(origin);
             }
             if (hasResult)
-                result = registrations;
+                result = WTFMove(registrations);
         }
 
         RunLoop::protectedMain()->dispatch([protectedThis = WTFMove(protectedThis), result = crossThreadCopy(WTFMove(result)), completionHandler = WTFMove(completionHandler)]() mutable {
