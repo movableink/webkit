@@ -138,28 +138,10 @@ LayoutRepainter::CheckForRepaint SVGRenderSupport::checkForSVGRepaintDuringLayou
     return LayoutRepainter::CheckForRepaint::Yes;
 }
 
-// Update a bounding box taking into account the validity of the other bounding box.
-static inline void updateObjectBoundingBox(FloatRect& objectBoundingBox, bool& objectBoundingBoxValid, const RenderObject* other, FloatRect otherBoundingBox)
+auto SVGRenderSupport::computeContainerBoundingBoxes(const RenderElement& container, RepaintRectCalculation repaintRectCalculation) -> ContainerBoundingBoxes
 {
-    CheckedPtr otherContainer = dynamicDowncast<LegacyRenderSVGContainer>(*other);
-    bool otherValid = !otherContainer || otherContainer->isObjectBoundingBoxValid();
-    if (!otherValid)
-        return;
+    ContainerBoundingBoxes result;
 
-    if (!objectBoundingBoxValid) {
-        objectBoundingBox = otherBoundingBox;
-        objectBoundingBoxValid = true;
-        return;
-    }
-
-    objectBoundingBox.uniteEvenIfEmpty(otherBoundingBox);
-}
-
-void SVGRenderSupport::computeContainerBoundingBoxes(const RenderElement& container, FloatRect& objectBoundingBox, bool& objectBoundingBoxValid, FloatRect& repaintBoundingBox, RepaintRectCalculation repaintRectCalculation)
-{
-    objectBoundingBox = FloatRect();
-    objectBoundingBoxValid = false;
-    repaintBoundingBox = FloatRect();
     for (CheckedRef current : childrenOfType<RenderObject>(container)) {
         if (current->isLegacyRenderSVGHiddenContainer())
             continue;
@@ -177,15 +159,28 @@ void SVGRenderSupport::computeContainerBoundingBoxes(const RenderElement& contai
         if (auto* foreignObject = dynamicDowncast<LegacyRenderSVGForeignObject>(current.ptr()); (foreignObject && !foreignObject->isObjectBoundingBoxValid()))
             continue;
 
-        const AffineTransform& transform = current->localToParentTransform();
-        if (transform.isIdentity()) {
-            updateObjectBoundingBox(objectBoundingBox, objectBoundingBoxValid, current.ptr(), current->objectBoundingBox());
-            repaintBoundingBox.unite(current->repaintRectInLocalCoordinates(repaintRectCalculation));
-        } else {
-            updateObjectBoundingBox(objectBoundingBox, objectBoundingBoxValid, current.ptr(), transform.mapRect(current->objectBoundingBox()));
-            repaintBoundingBox.unite(transform.mapRect(current->repaintRectInLocalCoordinates(repaintRectCalculation)));
-        }
+        auto& transform = current->localToParentTransform();
+
+        auto repaintRect = current->repaintRectInLocalCoordinates(repaintRectCalculation);
+        if (!transform.isIdentity())
+            repaintRect = transform.mapRect(repaintRect);
+
+        result.repaintBoundingBox.unite(repaintRect);
+
+        if (auto* container = dynamicDowncast<LegacyRenderSVGContainer>(current.ptr()); (container && !container->isObjectBoundingBoxValid()))
+            continue;
+
+        auto objectBounds = current->objectBoundingBox();
+        if (!transform.isIdentity())
+            objectBounds = transform.mapRect(objectBounds);
+
+        if (!result.objectBoundingBox)
+            result.objectBoundingBox = objectBounds;
+        else
+            result.objectBoundingBox->uniteEvenIfEmpty(objectBounds);
     }
+
+    return result;
 }
 
 FloatRect SVGRenderSupport::computeContainerStrokeBoundingBox(const RenderElement& container)

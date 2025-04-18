@@ -61,9 +61,6 @@ const int defaultHeight = 150;
 
 LegacyRenderSVGRoot::LegacyRenderSVGRoot(SVGSVGElement& element, RenderStyle&& style)
     : RenderReplaced(Type::LegacySVGRoot, element, WTFMove(style), ReplacedFlag::UsesBoundaryCaching)
-    , m_isLayoutSizeChanged(false)
-    , m_needsBoundariesOrTransformUpdate(true)
-    , m_hasBoxDecorations(false)
 {
     ASSERT(isLegacyRenderSVGRoot());
     LayoutSize intrinsicSize(calculateIntrinsicSize());
@@ -468,11 +465,14 @@ void LegacyRenderSVGRoot::updateCachedBoundaries()
     m_strokeBoundingBox = std::nullopt;
     m_repaintBoundingBox = { };
     m_accurateRepaintBoundingBox = std::nullopt;
-    FloatRect repaintBoundingBox;
-    SVGRenderSupport::computeContainerBoundingBoxes(*this, m_objectBoundingBox, m_objectBoundingBoxValid, repaintBoundingBox);
-    SVGRenderSupport::intersectRepaintRectWithResources(*this, repaintBoundingBox);
-    repaintBoundingBox.inflate(horizontalBorderAndPaddingExtent());
-    m_repaintBoundingBox = repaintBoundingBox;
+
+    auto boundingBoxes = SVGRenderSupport::computeContainerBoundingBoxes(*this);
+    m_objectBoundingBox = boundingBoxes.objectBoundingBox;
+
+    SVGRenderSupport::intersectRepaintRectWithResources(*this, boundingBoxes.repaintBoundingBox);
+    boundingBoxes.repaintBoundingBox.inflate(horizontalBorderAndPaddingExtent());
+
+    m_repaintBoundingBox = boundingBoxes.repaintBoundingBox;
 }
 
 FloatRect LegacyRenderSVGRoot::strokeBoundingBox() const
@@ -495,13 +495,12 @@ FloatRect LegacyRenderSVGRoot::repaintRectInLocalCoordinates(RepaintRectCalculat
     if (!m_accurateRepaintBoundingBox) {
         // Initialize m_accurateRepaintBoundingBox before calling computeContainerBoundingBoxes, since recursively referenced markers can cause us to re-enter here.
         m_accurateRepaintBoundingBox = FloatRect { };
-        FloatRect objectBoundingBox;
-        FloatRect repaintBoundingBox;
-        bool objectBoundingBoxValid = true;
-        SVGRenderSupport::computeContainerBoundingBoxes(*this, objectBoundingBox, objectBoundingBoxValid, repaintBoundingBox, RepaintRectCalculation::Accurate);
-        SVGRenderSupport::intersectRepaintRectWithResources(*this, repaintBoundingBox, RepaintRectCalculation::Accurate);
-        repaintBoundingBox.inflate(horizontalBorderAndPaddingExtent());
-        m_accurateRepaintBoundingBox = repaintBoundingBox;
+
+        auto boundingBoxes = SVGRenderSupport::computeContainerBoundingBoxes(*this, RepaintRectCalculation::Accurate);
+        SVGRenderSupport::intersectRepaintRectWithResources(*this, boundingBoxes.repaintBoundingBox, RepaintRectCalculation::Accurate);
+        boundingBoxes.repaintBoundingBox.inflate(horizontalBorderAndPaddingExtent());
+
+        m_accurateRepaintBoundingBox = boundingBoxes.repaintBoundingBox;
     }
     return *m_accurateRepaintBoundingBox;
 }

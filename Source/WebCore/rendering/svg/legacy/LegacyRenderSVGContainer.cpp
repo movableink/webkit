@@ -186,10 +186,12 @@ void LegacyRenderSVGContainer::updateCachedBoundaries()
     m_strokeBoundingBox = std::nullopt;
     m_repaintBoundingBox = { };
     m_accurateRepaintBoundingBox = std::nullopt;
-    FloatRect repaintBoundingBox;
-    SVGRenderSupport::computeContainerBoundingBoxes(*this, m_objectBoundingBox, m_objectBoundingBoxValid, repaintBoundingBox);
-    SVGRenderSupport::intersectRepaintRectWithResources(*this, repaintBoundingBox);
-    m_repaintBoundingBox = repaintBoundingBox;
+
+    auto boundingBoxes = SVGRenderSupport::computeContainerBoundingBoxes(*this);
+    m_objectBoundingBox = boundingBoxes.objectBoundingBox;
+
+    SVGRenderSupport::intersectRepaintRectWithResources(*this, boundingBoxes.repaintBoundingBox);
+    m_repaintBoundingBox = boundingBoxes.repaintBoundingBox;
 }
 
 FloatRect LegacyRenderSVGContainer::strokeBoundingBox() const
@@ -210,12 +212,9 @@ FloatRect LegacyRenderSVGContainer::repaintRectInLocalCoordinates(RepaintRectCal
     if (!m_accurateRepaintBoundingBox) {
         // Initialize m_accurateRepaintBoundingBox before calling computeContainerBoundingBoxes, since recursively referenced markers can cause us to re-enter here.
         m_accurateRepaintBoundingBox = FloatRect { };
-        FloatRect objectBoundingBox;
-        FloatRect repaintBoundingBox;
-        bool objectBoundingBoxValid = true;
-        SVGRenderSupport::computeContainerBoundingBoxes(*this, objectBoundingBox, objectBoundingBoxValid, repaintBoundingBox, RepaintRectCalculation::Accurate);
-        SVGRenderSupport::intersectRepaintRectWithResources(*this, repaintBoundingBox, RepaintRectCalculation::Accurate);
-        m_accurateRepaintBoundingBox = repaintBoundingBox;
+        auto boundingBoxes = SVGRenderSupport::computeContainerBoundingBoxes(*this, RepaintRectCalculation::Accurate);
+        SVGRenderSupport::intersectRepaintRectWithResources(*this, boundingBoxes.repaintBoundingBox, RepaintRectCalculation::Accurate);
+        m_accurateRepaintBoundingBox = boundingBoxes.repaintBoundingBox;
     }
     return *m_accurateRepaintBoundingBox;
 }
@@ -247,7 +246,7 @@ bool LegacyRenderSVGContainer::nodeAtFloatPoint(const HitTestRequest& request, H
     }
 
     // Accessibility wants to return SVG containers, if appropriate.
-    if (request.type() & HitTestRequest::Type::AccessibilityHitTest && m_objectBoundingBox.contains(localPoint)) {
+    if (request.type() & HitTestRequest::Type::AccessibilityHitTest && objectBoundingBox().contains(localPoint)) {
         updateHitTestResult(result, LayoutPoint(localPoint));
         if (result.addNodeToListBasedTestResult(protectedNodeForHitTest().get(), request, flooredLayoutPoint(localPoint)) == HitTestProgress::Stop)
             return true;

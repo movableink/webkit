@@ -86,7 +86,7 @@ private:
 
     const AffineTransform& localToParentTransform() const override;
 
-    FloatRect objectBoundingBox() const override { return m_objectBoundingBox; }
+    FloatRect objectBoundingBox() const override { return m_objectBoundingBox.value_or(FloatRect()); }
     FloatRect strokeBoundingBox() const override;
     FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const override;
 
@@ -114,18 +114,18 @@ private:
     FloatSize calculateIntrinsicSize() const;
 
     IntSize m_containerSize;
-    FloatRect m_objectBoundingBox;
-    bool m_objectBoundingBoxValid { false };
-    bool m_inLayout { false };
-    mutable Markable<FloatRect, FloatRect::MarkableTraits> m_strokeBoundingBox;
     FloatRect m_repaintBoundingBox;
+    Markable<FloatRect> m_objectBoundingBox;
+    mutable Markable<FloatRect, FloatRect::MarkableTraits> m_strokeBoundingBox;
     mutable Markable<FloatRect, FloatRect::MarkableTraits> m_accurateRepaintBoundingBox;
     mutable AffineTransform m_localToParentTransform;
     AffineTransform m_localToBorderBoxTransform;
     SingleThreadWeakHashSet<LegacyRenderSVGResourceContainer> m_resourcesNeedingToInvalidateClients;
-    bool m_isLayoutSizeChanged : 1;
-    bool m_needsBoundariesOrTransformUpdate : 1;
-    bool m_hasBoxDecorations : 1;
+
+    bool m_inLayout { false };
+    bool m_isLayoutSizeChanged : 1 { false };
+    bool m_needsBoundariesOrTransformUpdate : 1 { true };
+    bool m_hasBoxDecorations : 1 { false };
 };
 
 } // namespace WebCore
