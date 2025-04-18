@@ -54,7 +54,7 @@ version = Version(3, 1, 9)
 import webkitflaskpy
 
 AutoInstall.register(Package('aenum', Version(2, 2, 6)))
-AutoInstall.register(Package('attrs', Version(21, 3, 0)))
+AutoInstall.register(Package('attrs', Version(21, 3, 0), aliases=['attr']))
 AutoInstall.register(Package('aioredis', Version(1, 3, 1)))
 AutoInstall.register(Package('async-timeout', Version(3, 0, 1)))
 AutoInstall.register(Package('boto3', Version(1, 33, 10), wheel=True))
