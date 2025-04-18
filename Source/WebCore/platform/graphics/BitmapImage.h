@@ -72,7 +72,7 @@ public:
     FloatSize size(ImageOrientation orientation = ImageOrientation::Orientation::FromImage) const final { return m_source->size(orientation); }
     FloatSize sourceSize(ImageOrientation orientation = ImageOrientation::Orientation::FromImage) const { return m_source->sourceSize(orientation); }
     DestinationColorSpace colorSpace() final { return m_source->colorSpace(); }
-    bool hasHDRContent() const final { return hasHDRContentForTesting() || m_source->headroom() > Headroom::None; }
+    bool hasHDRContent() const final { return hasHDRContentForTesting() || m_source->hasHDRContent(); }
     ImageOrientation orientation() const final { return m_source->orientation(); }
     unsigned frameCount() const final { return m_source->frameCount(); }
 #if ASSERT_ENABLED

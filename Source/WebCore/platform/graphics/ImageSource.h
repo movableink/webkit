@@ -80,8 +80,9 @@ public:
     virtual unsigned frameCount() const { return 1; }
     virtual DestinationColorSpace colorSpace() const = 0;
     virtual std::optional<Color> singlePixelSolidColor() const = 0;
-    virtual Headroom headroom() const = 0;
+    virtual bool hasHDRContent() const = 0;
 
+    ShouldDecodeToHDR shouldDecodeToHDR() const { return hasHDRContent() ? ShouldDecodeToHDR::Yes : ShouldDecodeToHDR::No; }
     bool hasSolidColor() const;
 
     virtual String uti() const { return String(); }

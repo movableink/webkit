@@ -160,7 +160,8 @@ private:
     ImageOrientation orientation() const final { return m_descriptor.orientation(); }
     DestinationColorSpace colorSpace() const final { return m_descriptor.colorSpace(); }
     std::optional<Color> singlePixelSolidColor() const final { return m_descriptor.singlePixelSolidColor(); }
-    Headroom headroom() const final { return m_descriptor.headroom(); }
+    bool hasHDRGainMap() const { return m_descriptor.hasHDRGainMap(); }
+    bool hasHDRContent() const final { return m_descriptor.hasHDRGainMap() || m_descriptor.headroom() > Headroom::None; }
 
     String uti() const final { return m_descriptor.uti(); }
     String filenameExtension() const final { return m_descriptor.filenameExtension(); }

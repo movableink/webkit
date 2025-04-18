@@ -58,6 +58,7 @@ public:
     DestinationColorSpace colorSpace() const;
     std::optional<Color> singlePixelSolidColor() const;
     Headroom headroom() const;
+    bool hasHDRGainMap() const;
 
     String uti() const;
     String filenameExtension() const;
@@ -88,12 +89,13 @@ private:
         ColorSpace                  = 1 << 7,
         SinglePixelSolidColor       = 1 << 8,
         Headroom                    = 1 << 9,
+        HasHDRGainMap               = 1 << 10,
 
-        UTI                         = 1 << 10,
-        FilenameExtension           = 1 << 11,
-        AccessibilityDescription    = 1 << 12,
-        HotSpot                     = 1 << 13,
-        MaximumSubsamplingLevel     = 1 << 14,
+        UTI                         = 1 << 11,
+        FilenameExtension           = 1 << 12,
+        AccessibilityDescription    = 1 << 13,
+        HotSpot                     = 1 << 14,
+        MaximumSubsamplingLevel     = 1 << 15,
     };
 
     template<typename MetadataType>
@@ -117,6 +119,7 @@ private:
     mutable DestinationColorSpace m_colorSpace { DestinationColorSpace::SRGB() };
     mutable std::optional<Color> m_singlePixelSolidColor;
     mutable Headroom m_headroom { Headroom::None };
+    mutable bool m_hasHDRGainMap { false };
 
     mutable String m_uti;
     mutable String m_filenameExtension;

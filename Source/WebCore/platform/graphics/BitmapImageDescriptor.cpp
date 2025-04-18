@@ -168,6 +168,11 @@ Headroom BitmapImageDescriptor::headroom() const
     return primaryImageFrameMetadata(m_headroom, CachedFlag::Headroom, &ImageFrame::headroom);
 }
 
+bool BitmapImageDescriptor::hasHDRGainMap() const
+{
+    return imageMetadata(m_hasHDRGainMap, false, CachedFlag::HasHDRGainMap, &ImageDecoder::hasHDRGainMap);
+}
+
 String BitmapImageDescriptor::uti() const
 {
 #if USE(CG)

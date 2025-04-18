@@ -97,7 +97,7 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
     auto sizeForDrawing = expandedIntSize(sourceSize * scaleFactorForDrawing);
     auto subsamplingLevel =  m_source->subsamplingLevelForScaleFactor(context, scaleFactorForDrawing, options.allowImageSubsampling());
 
-    auto nativeImage = m_source->currentNativeImageForDrawing(subsamplingLevel, { options.decodingMode(), sizeForDrawing });
+    auto nativeImage = m_source->currentNativeImageForDrawing(subsamplingLevel, { options.decodingMode(), m_source->shouldDecodeToHDR(), sizeForDrawing });
 
     if (!nativeImage) {
         if (nativeImage.error() != DecodingStatus::Decoding)
