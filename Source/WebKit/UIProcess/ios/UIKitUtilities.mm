@@ -269,6 +269,21 @@ static UIAxis axesForDelta(WebCore::FloatSize delta)
     };
 }
 
+- (UIView *)_wk_previousSibling
+{
+    RetainPtr superview = [self superview];
+    if (!superview)
+        return nil;
+
+    UIView *previousSibling = nil;
+    for (UIView *currentSibling in [superview subviews]) {
+        if (currentSibling == self)
+            break;
+        previousSibling = currentSibling;
+    }
+    return previousSibling;
+}
+
 @end
 
 @implementation UIViewController (WebKitInternal)

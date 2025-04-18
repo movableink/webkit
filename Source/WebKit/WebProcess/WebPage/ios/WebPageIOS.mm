@@ -6090,6 +6090,9 @@ void WebPage::computeEnclosingLayerID(EditorState& state, const VisibleSelection
             if (RefPtr foregroundLayer = backing->foregroundLayer())
                 return foregroundLayer;
 
+            if (backing->isFrameLayerWithTiledBacking())
+                return backing->parentForSublayers();
+
             return backing->graphicsLayer();
         }();
 

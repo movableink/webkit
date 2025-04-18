@@ -1693,6 +1693,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     _selectionInteractionType = SelectionInteractionType::None;
     _lastSelectionChildScrollViewContentOffset = std::nullopt;
+    _lastSiblingBeforeSelectionHighlight = nil;
     _waitingForEditorStateAfterScrollingSelectionContainer = NO;
 
     _cachedHasCustomTintColor = std::nullopt;
@@ -9362,6 +9363,7 @@ static bool canUseQuickboardControllerFor(UITextContentType type)
                     return WebCore::roundedIntPoint([scrollView contentOffset]);
                 return { };
             }();
+            _lastSiblingBeforeSelectionHighlight = [self _siblingBeforeSelectionHighlight];
         }
 
         _selectionNeedsUpdate = NO;
@@ -9369,8 +9371,11 @@ static bool canUseQuickboardControllerFor(UITextContentType type)
             [_textInteractionWrapper didEndScrollingOverflow];
             _shouldRestoreSelection = NO;
         }
-    } else
+    } else {
+        if (_lastSiblingBeforeSelectionHighlight != [self _siblingBeforeSelectionHighlight])
+            [_textInteractionWrapper prepareToMoveSelectionContainer:self._selectionContainerViewInternal];
         [self _updateSelectionViewsInChildScrollViewIfNeeded];
+    }
 
     if (postLayoutData.isStableStateUpdate && _needsDeferredEndScrollingSelectionUpdate && _page->inStableState()) {
         auto firstResponder = self.firstResponder;
@@ -9381,6 +9386,11 @@ static bool canUseQuickboardControllerFor(UITextContentType type)
 
         _needsDeferredEndScrollingSelectionUpdate = NO;
     }
+}
+
+- (UIView *)_siblingBeforeSelectionHighlight
+{
+    return [[_textInteractionWrapper selectionHighlightView] _wk_previousSibling];
 }
 
 - (void)_updateSelectionViewsInChildScrollViewIfNeeded

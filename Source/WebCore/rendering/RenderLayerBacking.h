@@ -150,7 +150,7 @@ public:
 
     bool hasMaskLayer() const { return m_maskLayer; }
 
-    GraphicsLayer* parentForSublayers() const;
+    WEBCORE_EXPORT GraphicsLayer* parentForSublayers() const;
     GraphicsLayer* childForSuperlayers() const;
     GraphicsLayer* childForSuperlayersExcludingViewTransitions() const;
 
