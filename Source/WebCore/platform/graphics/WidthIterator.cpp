@@ -506,7 +506,7 @@ auto WidthIterator::calculateAdditionalWidth(GlyphBuffer& glyphBuffer, GlyphBuff
     auto character = m_run.get()[currentCharacterIndex];
 
     if (character == tabCharacter && m_run->allowTabs()) {
-        auto& font = glyphBuffer.fontAt(trailingGlyphIndex);
+        Ref font = glyphBuffer.fontAt(trailingGlyphIndex);
         // Synthetic bold will be handled in applyCSSVisibilityRules() later.
         auto newWidth = m_fontCascade->tabWidth(font, m_run->tabSize(), position, Font::SyntheticBoldInclusion::Exclude);
         auto currentWidth = width(glyphBuffer.advanceAt(trailingGlyphIndex));
