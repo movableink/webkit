@@ -249,11 +249,10 @@ class Checkout(object):
         num_commits = 1 if sentinel.returncode else int(sentinel.stdout.rstrip())
         while num_commits > 1 and (num_commits < 50 or branch == self.repository.default_branch):
             num_commits -= 1
-            if run(
+            run(
                 [self.repository.executable(), 'push', remote, '{}~{}:{}'.format(branch, num_commits, dest_branch or branch)],
                 cwd=self.repository.root_path,
-            ).returncode:
-                break
+            )
 
         return not run(
             [self.repository.executable(), 'push', remote, '{}:{}'.format(branch, dest_branch or branch)],
@@ -261,20 +260,22 @@ class Checkout(object):
         ).returncode
 
     def forward_update(self, branch=None, tag=None, remote=None, track=False):
+        did_succeed = True
+
         for match, tos in self.forwarding:
             if match not in (remote, '{}:{}'.format(remote, branch or tag)):
                 continue
             for to in tos:
                 split = to.split(':', 1)
-                self.push_update(
+                did_succeed = did_succeed and self.push_update(
                     branch=branch,
                     tag=tag,
                     remote=split[0],
                     track=track,
                     dest_branch=split[1] if len(split) > 1 else None,
                 )
-            return
-        return
+            return did_succeed
+        return did_succeed
 
     def fetch(self, remote=REMOTE):
         return not run(
