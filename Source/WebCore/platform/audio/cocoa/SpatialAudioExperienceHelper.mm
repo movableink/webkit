@@ -66,7 +66,7 @@ RetainPtr<CASpatialAudioExperience> createSpatialAudioExperienceWithOptions(cons
     if (options.sceneIdentifier.isEmpty())
         return nil;
 
-    RetainPtr anchoring = adoptNS([[CASceneAnchoringStrategy alloc] initWithSceneIdentifier:options.sceneIdentifier]);
+    RetainPtr anchoring = adoptNS([[CASceneAnchoringStrategy alloc] initWithSceneIdentifier:options.sceneIdentifier.createNSString().get()]);
     return adoptNS([[CAHeadTrackedSpatialAudio alloc] initWithSoundStageSize:toCASoundStageSize(options.soundStageSize) anchoringStrategy:anchoring.get()]);
 }
 
