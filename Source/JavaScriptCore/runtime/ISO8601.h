@@ -250,10 +250,13 @@ struct TimeZoneRecord {
 
 static constexpr unsigned minCalendarLength = 3;
 static constexpr unsigned maxCalendarLength = 8;
-struct CalendarRecord {
-    bool m_critical { false }; // True if annotated with !
-    bool m_unknown { false }; // True if key is not 'u-ca'
-    Vector<LChar, maxCalendarLength> m_name;
+enum class RFC9557Flag : bool { None, Critical }; // "Critical" = "!" flag
+enum class RFC9557Key : bool { Calendar, Other };
+using RFC9557Value = Vector<LChar, maxCalendarLength>;
+struct RFC9557Annotation {
+    RFC9557Flag m_flag;
+    RFC9557Key m_key;
+    RFC9557Value m_value;
 };
 
 // https://tc39.es/proposal-temporal/#sup-isvalidtimezonename
@@ -262,10 +265,11 @@ std::optional<Duration> parseDuration(StringView);
 std::optional<int64_t> parseUTCOffset(StringView, bool parseSubMinutePrecision = true);
 std::optional<int64_t> parseUTCOffsetInMinutes(StringView);
 enum class ValidateTimeZoneID : bool { No, Yes };
+using CalendarID = RFC9557Value;
 std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>>> parseTime(StringView);
-std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> parseCalendarTime(StringView);
+std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarID>>> parseCalendarTime(StringView);
 std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>>> parseDateTime(StringView);
-std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> parseCalendarDateTime(StringView);
+std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>, std::optional<CalendarID>>> parseCalendarDateTime(StringView);
 uint8_t dayOfWeek(PlainDate);
 uint16_t dayOfYear(PlainDate);
 uint8_t weeksInYear(int32_t year);
