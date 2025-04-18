@@ -60,6 +60,16 @@ ResourceResponseBase::ResourceResponseBase()
 {
 }
 
+ResourceResponseBase::ResourceResponseBase(URL&& url, String&& mimeType, long long expectedLength, String&& textEncodingName)
+    : m_url(WTFMove(url))
+    , m_mimeType(WTFMove(mimeType))
+    , m_expectedContentLength(expectedLength)
+    , m_textEncodingName(WTFMove(textEncodingName))
+    , m_certificateInfo(CertificateInfo()) // Empty but valid for synthetic responses.
+    , m_isNull(false)
+{
+}
+
 ResourceResponseBase::ResourceResponseBase(URL&& url, String&& mimeType, long long expectedLength, const String& textEncodingName)
     : m_url(WTFMove(url))
     , m_mimeType(WTFMove(mimeType))

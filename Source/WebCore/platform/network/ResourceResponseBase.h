@@ -233,6 +233,7 @@ protected:
     };
 
     WEBCORE_EXPORT ResourceResponseBase();
+    WEBCORE_EXPORT ResourceResponseBase(URL&&, String&& mimeType, long long expectedLength, String&& textEncodingName);
     WEBCORE_EXPORT ResourceResponseBase(URL&&, String&& mimeType, long long expectedLength, const String& textEncodingName);
     WEBCORE_EXPORT ResourceResponseBase(const URL&, const String& mimeType, long long expectedLength, const String& textEncodingName);
 
