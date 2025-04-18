@@ -181,7 +181,7 @@ namespace WebCore {
     String contextMenuItemTagWritingTools();
 #endif
 #if ENABLE(UNIFIED_PDF)
-    WEBCORE_EXPORT String contextMenuItemPDFOpenWithPreview();
+    WEBCORE_EXPORT String contextMenuItemPDFOpenWithDefaultViewer(const String& appName);
 #endif
 #if ENABLE(PDFJS) || ENABLE(UNIFIED_PDF)
     WEBCORE_EXPORT String contextMenuItemPDFSinglePage();

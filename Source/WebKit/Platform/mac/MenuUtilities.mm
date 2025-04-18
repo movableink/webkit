@@ -169,16 +169,35 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
     case WebCore::ContextMenuItemBaseApplicationTag:
     case WebCore::ContextMenuItemBaseCustomTag:
     case WebCore::ContextMenuItemLastCustomTag:
+    case WebCore::ContextMenuItemPDFContinuous:
+    case WebCore::ContextMenuItemPDFFacingPages:
+    case WebCore::ContextMenuItemPDFSinglePage:
+    case WebCore::ContextMenuItemPDFSinglePageContinuous:
+    case WebCore::ContextMenuItemPDFTwoPages:
+    case WebCore::ContextMenuItemPDFTwoPagesContinuous:
+    case WebCore::ContextMenuItemTagCheckGrammarWithSpelling:
+    case WebCore::ContextMenuItemTagCheckSpellingWhileTyping:
+    case WebCore::ContextMenuItemTagCorrectSpellingAutomatically:
     case WebCore::ContextMenuItemTagDictationAlternative:
     case WebCore::ContextMenuItemTagFontMenu:
     case WebCore::ContextMenuItemTagNoAction:
     case WebCore::ContextMenuItemTagNoGuessesFound:
     case WebCore::ContextMenuItemTagOther:
-    case WebCore::ContextMenuItemTagSpellingGuess:
+    case WebCore::ContextMenuItemTagOutline:
+    case WebCore::ContextMenuItemTagPDFFacingPagesScrolling:
+    case WebCore::ContextMenuItemTagPDFSinglePageScrolling:
+    case WebCore::ContextMenuItemTagShowMediaStats:
+    case WebCore::ContextMenuItemTagSmartCopyPaste:
+    case WebCore::ContextMenuItemTagSmartDashes:
+    case WebCore::ContextMenuItemTagSmartLinks:
+    case WebCore::ContextMenuItemTagSmartQuotes:
     case WebCore::ContextMenuItemTagSpeechMenu:
+    case WebCore::ContextMenuItemTagSpellingGuess:
     case WebCore::ContextMenuItemTagSpellingMenu:
+    case WebCore::ContextMenuItemTagStyles:
     case WebCore::ContextMenuItemTagSubstitutionsMenu:
     case WebCore::ContextMenuItemTagTextDirectionMenu:
+    case WebCore::ContextMenuItemTagTextReplacement:
     case WebCore::ContextMenuItemTagTransformationsMenu:
     case WebCore::ContextMenuItemTagWritingDirectionMenu:
     case WebCore::ContextMenuItemTagWritingTools:
@@ -187,22 +206,10 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
         return @"sparkle.magnifyingglass";
     case WebCore::ContextMenuItemPDFActualSize:
         return @"text.magnifyingglass";
-    case WebCore::ContextMenuItemPDFContinuous:
-    case WebCore::ContextMenuItemPDFSinglePageContinuous:
-    case WebCore::ContextMenuItemTagPDFSinglePageScrolling:
-        return @"rectangle.stack";
-    case WebCore::ContextMenuItemPDFFacingPages:
-    case WebCore::ContextMenuItemPDFTwoPages:
-        return @"rectangle.split.2x1";
     case WebCore::ContextMenuItemPDFNextPage:
         return @"chevron.right";
     case WebCore::ContextMenuItemPDFPreviousPage:
         return @"chevron.left";
-    case WebCore::ContextMenuItemPDFSinglePage:
-        return @"rectangle.portrait";
-    case WebCore::ContextMenuItemPDFTwoPagesContinuous:
-    case WebCore::ContextMenuItemTagPDFFacingPagesScrolling:
-        return @"rectangle.stack.fill";
     case WebCore::ContextMenuItemPDFZoomIn:
         return @"plus.magnifyingglass";
     case WebCore::ContextMenuItemPDFZoomOut:
@@ -216,12 +223,8 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
         return @"textformat.characters";
     case WebCore::ContextMenuItemTagChangeBack:
         return @"arrow.uturn.backward.circle";
-    case WebCore::ContextMenuItemTagCheckGrammarWithSpelling:
-        return @"character.magnify";
     case WebCore::ContextMenuItemTagCheckSpelling:
         return @"text.page.badge.magnifyingglass";
-    case WebCore::ContextMenuItemTagCheckSpellingWhileTyping:
-        return @"character.cursor.ibeam";
     case WebCore::ContextMenuItemTagCopy:
     case WebCore::ContextMenuItemTagCopyImageToClipboard:
     case WebCore::ContextMenuItemTagCopyLinkToClipboard:
@@ -231,8 +234,6 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
         return @"text.quote";
     case WebCore::ContextMenuItemTagCopySubject:
         return @"circle.dashed.rectangle";
-    case WebCore::ContextMenuItemTagCorrectSpellingAutomatically:
-        return @"keyboard.badge.eye";
     case WebCore::ContextMenuItemTagCut:
         return [NSMenuItem _systemImageNameForAction:@selector(cut:)];
     case WebCore::ContextMenuItemTagDefaultDirection:
@@ -281,8 +282,6 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
         return @"safari";
     case WebCore::ContextMenuItemTagOpenWithDefaultApplication:
         return @"arrow.up.forward.app";
-    case WebCore::ContextMenuItemTagOutline:
-        return @"character.circle";
     case WebCore::ContextMenuItemTagPaste:
         return [NSMenuItem _systemImageNameForAction:@selector(paste:)];
     case WebCore::ContextMenuItemTagPauseAllAnimations:
@@ -303,32 +302,18 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
         return @"paintpalette";
     case WebCore::ContextMenuItemTagShowFonts:
         return @"text.and.command.macwindow";
-    case WebCore::ContextMenuItemTagShowMediaStats:
-        return @"info";
     case WebCore::ContextMenuItemTagShowSpellingPanel:
     case WebCore::ContextMenuItemTagShowSubstitutions:
         return useAlternateImage ? @"eye.slash" : @"text.and.command.macwindow";
-    case WebCore::ContextMenuItemTagSmartCopyPaste:
-        return @"list.clipboard";
-    case WebCore::ContextMenuItemTagSmartDashes:
-        return @"arrowtriangle.right.and.line.vertical.and.arrowtriangle.left";
-    case WebCore::ContextMenuItemTagSmartLinks:
-        return @"link";
-    case WebCore::ContextMenuItemTagSmartQuotes:
-        return @"quote.closing";
     case WebCore::ContextMenuItemTagStartSpeaking:
         return @"play.fill";
     case WebCore::ContextMenuItemTagStop:
     case WebCore::ContextMenuItemTagStopSpeaking:
         return @"stop.fill";
-    case WebCore::ContextMenuItemTagStyles:
-        return @"bold.italic.underline";
     case WebCore::ContextMenuItemTagTextDirectionLeftToRight:
-        return @"arrow.left.to.line";
+        return @"arrow.right";
     case WebCore::ContextMenuItemTagTextDirectionRightToLeft:
-        return @"arrow.right.to.line";
-    case WebCore::ContextMenuItemTagTextReplacement:
-        return @"text.page.badge.magnifyingglass";
+        return @"arrow.left";
     case WebCore::ContextMenuItemTagToggleMediaControls:
         return useAlternateImage ? @"eye" : @"eye.slash";
     case WebCore::ContextMenuItemTagToggleMediaLoop:
@@ -342,7 +327,7 @@ NSString *symbolNameForAction(const WebCore::ContextMenuAction action, bool useA
     case WebCore::ContextMenuItemTagTranslate:
         return @"translate";
     case WebCore::ContextMenuItemTagUnderline:
-        return @"underline";
+        return [NSMenuItem _systemImageNameForAction:@selector(underline:)];
     }
 
     return nil;

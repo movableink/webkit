@@ -713,18 +713,16 @@ void ContextMenuController::createAndAppendFontSubMenu(ContextMenuItem& fontMenu
 #if PLATFORM(COCOA)
     ContextMenuItem styles(ContextMenuItemType::Action, ContextMenuItemTagStyles, contextMenuItemTagStyles());
     ContextMenuItem showColors(ContextMenuItemType::Action, ContextMenuItemTagShowColors, contextMenuItemTagShowColors());
-#endif
-
-#if PLATFORM(COCOA)
     appendItem(showFonts, &fontMenu);
+    appendItem(*separatorItem(), &fontMenu);
 #endif
     appendItem(bold, &fontMenu);
     appendItem(italic, &fontMenu);
     appendItem(underline, &fontMenu);
+    appendItem(*separatorItem(), &fontMenu);
     appendItem(outline, &fontMenu);
 #if PLATFORM(COCOA)
     appendItem(styles, &fontMenu);
-    appendItem(*separatorItem(), &fontMenu);
     appendItem(showColors, &fontMenu);
 #endif
 

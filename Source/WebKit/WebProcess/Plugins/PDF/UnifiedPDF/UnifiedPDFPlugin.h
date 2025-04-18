@@ -358,7 +358,7 @@ private:
         Copy,
         CopyLink,
         NextPage,
-        OpenWithPreview,
+        OpenWithDefaultViewer,
         PreviousPage,
         SinglePage,
         SinglePageContinuous,

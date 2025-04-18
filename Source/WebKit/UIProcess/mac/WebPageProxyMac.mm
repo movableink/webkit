@@ -589,18 +589,38 @@ void WebPageProxy::showPDFContextMenu(const WebKit::PDFContextMenu& contextMenu,
     [nsMenu setAllowsContextMenuPlugIns:false];
     for (unsigned i = 0; i < contextMenu.items.size(); i++) {
         auto& item = contextMenu.items[i];
-        
+        auto isOpenWithDefaultViewerItem = item.action == WebCore::ContextMenuItemTagOpenWithDefaultApplication;
+
         if (item.separator == ContextMenuItemIsSeparator::Yes) {
             [nsMenu insertItem:[NSMenuItem separatorItem] atIndex:i];
             continue;
         }
-        
+
         RetainPtr nsItem = adoptNS([[NSMenuItem alloc] init]);
-        [nsItem setTitle:item.title.createNSString().get()];
+
+#if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
+        auto shouldSetImage = m_preferences->contextMenuImagesForInternalClientsEnabled();
+#endif
+        if (isOpenWithDefaultViewerItem) {
+            RetainPtr defaultPDFViewerPath = [[[NSWorkspace sharedWorkspace] URLForApplicationToOpenContentType:UTTypePDF] path];
+            RetainPtr defaultPDFViewerName = [[NSFileManager defaultManager] displayNameAtPath:defaultPDFViewerPath.get()];
+
+            String itemTitle = contextMenuItemPDFOpenWithDefaultViewer(defaultPDFViewerName.get());
+            [nsItem setTitle:itemTitle.createNSString().get()];
+#if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
+            if (shouldSetImage) {
+                RetainPtr icon = [[NSWorkspace sharedWorkspace] iconForFile:defaultPDFViewerPath.get()];
+                [icon setSize:NSMakeSize(16.f, 16.f)];
+                [nsItem _setActionImage:icon.get()];
+            }
+#endif
+        } else
+            [nsItem setTitle:item.title.createNSString().get()];
+
         [nsItem setEnabled:item.enabled == ContextMenuItemEnablement::Enabled];
         [nsItem setState:item.state];
 #if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
-        if (m_preferences->contextMenuImagesForInternalClientsEnabled() && [nsItem respondsToSelector:@selector(_setActionImage:)])
+        if (shouldSetImage && ![nsItem _hasActionImage])
             [nsItem _setActionImage:[NSImage imageWithSystemSymbolName:symbolNameForAction(item.action, false) accessibilityDescription:nil]];
 #endif
         if (item.hasAction == ContextMenuItemHasAction::Yes) {

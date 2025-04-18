@@ -2392,7 +2392,7 @@ ContextMenuAction UnifiedPDFPlugin::contextMenuActionFromTag(ContextMenuItemTag 
         return ContextMenuItemTagNoAction;
     case ContextMenuItemTag::NextPage:
         return ContextMenuItemPDFNextPage;
-    case ContextMenuItemTag::OpenWithPreview:
+    case ContextMenuItemTag::OpenWithDefaultViewer:
         return ContextMenuItemTagOpenWithDefaultApplication;
     case ContextMenuItemTag::PreviousPage:
         return ContextMenuItemPDFPreviousPage;
@@ -2424,7 +2424,7 @@ auto UnifiedPDFPlugin::toContextMenuItemTag(int tagValue) -> ContextMenuItemTag
         ContextMenuItemTag::Copy,
         ContextMenuItemTag::CopyLink,
         ContextMenuItemTag::NextPage,
-        ContextMenuItemTag::OpenWithPreview,
+        ContextMenuItemTag::OpenWithDefaultViewer,
         ContextMenuItemTag::PreviousPage,
         ContextMenuItemTag::SinglePage,
         ContextMenuItemTag::SinglePageContinuous,
@@ -2464,7 +2464,7 @@ std::optional<PDFContextMenu> UnifiedPDFPlugin::createContextMenu(const WebMouse
         addSeparator();
     }
 
-    menuItems.append(contextMenuItem(ContextMenuItemTag::OpenWithPreview));
+    menuItems.append(contextMenuItem(ContextMenuItemTag::OpenWithDefaultViewer));
 
     addSeparator();
 
@@ -2483,7 +2483,7 @@ std::optional<PDFContextMenu> UnifiedPDFPlugin::createContextMenu(const WebMouse
 
     auto contextMenuPoint = frameView->contentsToScreen(IntRect(frameView->windowToContents(contextMenuEventRootViewPoint), IntSize())).location();
 
-    return PDFContextMenu { contextMenuPoint, WTFMove(menuItems), { enumToUnderlyingType(ContextMenuItemTag::OpenWithPreview) } };
+    return PDFContextMenu { contextMenuPoint, WTFMove(menuItems), { enumToUnderlyingType(ContextMenuItemTag::OpenWithDefaultViewer) } };
 }
 
 bool UnifiedPDFPlugin::isDisplayModeContextMenuItemTag(ContextMenuItemTag tag) const
@@ -2508,8 +2508,9 @@ String UnifiedPDFPlugin::titleForContextMenuItemTag(ContextMenuItemTag tag) cons
         return contextMenuItemTagCopyLinkToClipboard();
     case ContextMenuItemTag::NextPage:
         return contextMenuItemPDFNextPage();
-    case ContextMenuItemTag::OpenWithPreview:
-        return contextMenuItemPDFOpenWithPreview();
+    // The title for the OpenWithDefaultViewer item is determined in the UI Process.
+    case ContextMenuItemTag::OpenWithDefaultViewer:
+        return ""_s;
     case ContextMenuItemTag::PreviousPage:
         return contextMenuItemPDFPreviousPage();
     case ContextMenuItemTag::SinglePage:
@@ -2547,7 +2548,7 @@ PDFContextMenuItem UnifiedPDFPlugin::contextMenuItem(ContextMenuItemTag tag, boo
         } else if (tag == ContextMenuItemTag::AutoSize)
             state = m_shouldUpdateAutoSizeScale == ShouldUpdateAutoSizeScale::Yes;
 
-        bool disableItemDueToLockedDocument = isLocked() && tag != ContextMenuItemTag::OpenWithPreview;
+        bool disableItemDueToLockedDocument = isLocked() && tag != ContextMenuItemTag::OpenWithDefaultViewer;
         auto itemEnabled = disableItemDueToLockedDocument ? ContextMenuItemEnablement::Disabled : ContextMenuItemEnablement::Enabled;
         auto itemHasAction = hasAction && !disableItemDueToLockedDocument ? ContextMenuItemHasAction::Yes : ContextMenuItemHasAction::No;
 
@@ -2639,8 +2640,8 @@ void UnifiedPDFPlugin::performContextMenuAction(ContextMenuItemTag tag, const In
     case ContextMenuItemTag::CopyLink:
         performCopyLinkOperation(contextMenuEventRootViewPoint);
         break;
-    // The OpenWithPreview action is handled in the UI Process.
-    case ContextMenuItemTag::OpenWithPreview: return;
+    // The OpenWithDefaultViewer action is handled in the UI Process.
+    case ContextMenuItemTag::OpenWithDefaultViewer: return;
     case ContextMenuItemTag::SinglePage:
     case ContextMenuItemTag::SinglePageContinuous:
     case ContextMenuItemTag::TwoPagesContinuous:

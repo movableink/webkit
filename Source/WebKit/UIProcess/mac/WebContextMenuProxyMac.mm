@@ -518,22 +518,16 @@ RetainPtr<NSMenuItem> WebContextMenuProxyMac::createShareMenuItem(ShareMenuItemT
     if (!shareMenuItem)
         return nil;
 
-#if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
-    RetainPtr<NSImage> actionImage;
-    bool shouldSetMenuItemImage = page()->protectedPreferences()->contextMenuImagesForInternalClientsEnabled() && [shareMenuItem respondsToSelector:@selector(_setActionImage:)];
-    if (shouldSetMenuItemImage)
-        actionImage = [shareMenuItem _actionImage];
-#endif
-
     if (usePlaceholder) {
         shareMenuItem = adoptNS([[NSMenuItem alloc] initWithTitle:[shareMenuItem title] action:@selector(performShare:) keyEquivalent:@""]);
-#if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
-        if (shouldSetMenuItemImage)
-            [shareMenuItem _setActionImage:actionImage.get()];
-#endif
         [shareMenuItem setTarget:[WKMenuTarget sharedMenuTarget]];
     } else
         [shareMenuItem setRepresentedObject:sharingServicePicker.get()];
+
+#if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
+    if (page()->protectedPreferences()->contextMenuImagesForInternalClientsEnabled() && ![shareMenuItem _hasActionImage])
+        [shareMenuItem _setActionImage:[NSImage imageWithSystemSymbolName:@"square.and.arrow.up" accessibilityDescription:nil]];
+#endif
 
     [shareMenuItem setIdentifier:_WKMenuItemIdentifierShareMenu];
     return shareMenuItem;
@@ -901,6 +895,10 @@ void WebContextMenuProxyMac::getContextMenuItem(const WebContextMenuItemData& it
         if ([NSMenuItem.class respondsToSelector:@selector(standardWritingToolsMenuItem)]) {
             RetainPtr menuItem = [NSMenuItem standardWritingToolsMenuItem];
             [[menuItem submenu] setAutoenablesItems:NO];
+#if ENABLE(CONTEXT_MENU_IMAGES_FOR_INTERNAL_CLIENTS)
+            if (page()->protectedPreferences()->contextMenuImagesForInternalClientsEnabled() && ![menuItem _hasActionImage])
+                [menuItem _setActionImage:[NSImage imageWithSystemSymbolName:@"apple.intelligence" accessibilityDescription:nil]];
+#endif
 
             for (NSMenuItem *subItem in [menuItem submenu].itemArray) {
                 if (subItem.isSeparatorItem)
