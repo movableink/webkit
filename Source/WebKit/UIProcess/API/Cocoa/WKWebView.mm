@@ -476,18 +476,18 @@ static uint32_t convertSystemLayoutDirection(NSUserInterfaceLayoutDirection dire
             [_screenTimeWebpageController setURL:[self _mainFrameURL]];
         if (!showsSystemScreenTimeBlockingView && _screenTimeBlurredSnapshot) {
             [_screenTimeBlurredSnapshot setHidden:NO];
-            RELEASE_LOG(ScreenTime, "Screen Time has updated visibility to show blurred view.");
+            RELEASE_LOG(ScreenTime, "Screen Time has updated to use the blurred view for any blocked URL.");
         } else if (showsSystemScreenTimeBlockingView) {
             [[_screenTimeWebpageController view] setHidden:NO];
-            RELEASE_LOG(ScreenTime, "Screen Time has updated visibility to show system shield.");
+            RELEASE_LOG(ScreenTime, "Screen Time has updated to use the system shield for any blocked URL.");
         }
     } else {
         if (_screenTimeBlurredSnapshot) {
             [_screenTimeBlurredSnapshot setHidden:YES];
-            RELEASE_LOG(ScreenTime, "Screen Time has updated visibility to hide blurred view.");
+            RELEASE_LOG(ScreenTime, "Screen Time has updated to hide the blurred view for all URLs.");
         } else if (showsSystemScreenTimeBlockingView) {
             [[_screenTimeWebpageController view] setHidden:YES];
-            RELEASE_LOG(ScreenTime, "Screen Time has updated visibility to hide system shield.");
+            RELEASE_LOG(ScreenTime, "Screen Time has updated to hide the system shield for all URLs.");
         }
     }
 
