@@ -7848,3 +7848,5 @@ webkit.org/b/291451 imported/w3c/web-platform-tests/navigation-api/navigation-me
 webkit.org/b/291456 fast/forms/state-restore-per-form.html [ Pass Timeout ]
 
 webkit.org/b/291459 imported/w3c/web-platform-tests/css/css-shapes/shape-outside/shape-image/shape-image-018.html [ Pass Failure ]
+
+webkit.org/b/291767 media/video-aspect-ratio.html [ Pass Failure ]
