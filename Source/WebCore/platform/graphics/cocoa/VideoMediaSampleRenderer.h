@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "FrameRateMonitor.h"
 #include "ProcessIdentity.h"
 #include "SampleMap.h"
 #include <CoreMedia/CMTime.h>
@@ -112,7 +113,7 @@ private:
 
     void resetReadyForMoreSample();
     void initializeDecompressionSession();
-    void decodeNextSample();
+    void decodeNextSampleIfNeeded();
     using FlushId = int;
     void decodedFrameAvailable(RetainPtr<CMSampleBufferRef>&&, FlushId);
     enum class DecodedFrameResult : uint8_t {
@@ -133,6 +134,7 @@ private:
     size_t decodedSamplesCount() const;
     RetainPtr<CMSampleBufferRef> nextDecodedSample() const;
     CMTime nextDecodedSampleEndTime() const;
+    size_t maximumDecodedSampleCount(const WebCoreDecompressionSession&) const;
 
     void assignResourceOwner(CMSampleBufferRef);
     bool areSamplesQueuesReadyForMoreMediaData(size_t waterMark) const;
@@ -157,9 +159,9 @@ private:
     mutable Lock m_lock;
     TimebaseAndTimerSource m_timebaseAndTimerSource WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<EffectiveRateChangedListener> m_effectiveRateChangedListener;
-    std::atomic<ssize_t> m_framesBeingDecoded { 0 };
     std::atomic<FlushId> m_flushId { 0 };
     Deque<std::pair<RetainPtr<CMSampleBufferRef>, FlushId>> m_compressedSampleQueue WTF_GUARDED_BY_CAPABILITY(dispatcher().get());
+    std::atomic<uint32_t> m_compressedSampleQueueSize { 0 };
     RetainPtr<CMBufferQueueRef> m_decodedSampleQueue; // created on the main thread, immutable after creation.
     RefPtr<WebCoreDecompressionSession> m_decompressionSession WTF_GUARDED_BY_LOCK(m_lock);
     std::atomic<bool> m_isUsingDecompressionSession { false };
@@ -188,6 +190,8 @@ private:
     Function<void()> m_rendererNeedsFlushFunction WTF_GUARDED_BY_CAPABILITY(mainThread);
     ProcessIdentity m_resourceOwner;
     MonotonicTime m_startupTime;
+    MonotonicTime m_timeSinceLastDecode;
+    FrameRateMonitor m_frameRateMonitor;
 };
 
 } // namespace WebCore

@@ -66,6 +66,7 @@ public:
     WEBCORE_EXPORT void flush();
 
     void setResourceOwner(const ProcessIdentity& resourceOwner) { m_resourceOwner = resourceOwner; }
+    bool isHardwareAccelerated() const;
 
 private:
     enum Mode {
@@ -89,6 +90,7 @@ private:
     mutable Lock m_lock;
     RetainPtr<VTDecompressionSessionRef> m_decompressionSession WTF_GUARDED_BY_LOCK(m_lock);
     const Ref<WorkQueue> m_decompressionQueue;
+    mutable std::optional<bool> m_isHardwareAccelerated WTF_GUARDED_BY_LOCK(m_lock);
 
     std::atomic<uint32_t> m_flushId { 0 };
     RefPtr<VideoDecoder> m_videoDecoder WTF_GUARDED_BY_LOCK(m_lock);

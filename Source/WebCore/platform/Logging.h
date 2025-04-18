@@ -131,6 +131,7 @@ namespace WebCore {
     M(Loading) \
     M(Media) \
     M(MediaCaptureSamples) \
+    M(MediaPerformance) \
     M(MediaQueries) \
     M(MediaSource) \
     M(MediaStream) \
