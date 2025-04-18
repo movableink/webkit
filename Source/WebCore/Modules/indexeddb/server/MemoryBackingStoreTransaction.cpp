@@ -38,11 +38,9 @@
 namespace WebCore {
 namespace IDBServer {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(MemoryBackingStoreTransaction);
-
-std::unique_ptr<MemoryBackingStoreTransaction> MemoryBackingStoreTransaction::create(MemoryIDBBackingStore& backingStore, const IDBTransactionInfo& info)
+Ref<MemoryBackingStoreTransaction> MemoryBackingStoreTransaction::create(MemoryIDBBackingStore& backingStore, const IDBTransactionInfo& info)
 {
-    return makeUnique<MemoryBackingStoreTransaction>(backingStore, info);
+    return adoptRef(*new MemoryBackingStoreTransaction(backingStore, info));
 }
 
 MemoryBackingStoreTransaction::MemoryBackingStoreTransaction(MemoryIDBBackingStore& backingStore, const IDBTransactionInfo& info)
@@ -248,13 +246,19 @@ void MemoryBackingStoreTransaction::finish()
 {
     m_inProgress = false;
 
-    if (!isWriting())
+    if (!isWriting()) {
+        // Read-only transaction does not track object stores, so get it from backing store.
+        for (auto objectStoreName : m_info.objectStores()) {
+            if (RefPtr objectStore = m_backingStore->objectStoreForName(objectStoreName))
+                objectStore->transactionFinished(*this);
+        }
         return;
+    }
 
     for (auto& objectStore : m_objectStores)
-        objectStore->writeTransactionFinished(*this);
+        objectStore->transactionFinished(*this);
     for (auto& objectStore : m_deletedObjectStores.values())
-        objectStore->writeTransactionFinished(*this);
+        objectStore->transactionFinished(*this);
 }
 
 MemoryCursor* MemoryBackingStoreTransaction::cursor(const IDBResourceIdentifier& identifier) const

@@ -36,6 +36,7 @@ namespace IDBServer {
 
 MemoryCursor::MemoryCursor(const IDBCursorInfo& info, MemoryBackingStoreTransaction& transaction)
     : m_info(info)
+    , m_transaction(transaction)
 {
     ASSERT(!isMainThread());
 
@@ -45,6 +46,11 @@ MemoryCursor::MemoryCursor(const IDBCursorInfo& info, MemoryBackingStoreTransact
 MemoryCursor::~MemoryCursor()
 {
     ASSERT(!isMainThread());
+}
+
+MemoryBackingStoreTransaction* MemoryCursor::transaction() const
+{
+    return m_transaction.get();
 }
 
 } // namespace IDBServer

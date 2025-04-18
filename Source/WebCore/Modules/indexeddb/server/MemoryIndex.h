@@ -90,6 +90,7 @@ public:
     void cursorDidBecomeDirty(MemoryIndexCursor&);
 
     void notifyCursorsOfValueChange(const IDBKeyData& indexKey, const IDBKeyData& primaryKey);
+    void transactionFinished(MemoryBackingStoreTransaction&);
 
     void writeTransactionStarted(MemoryBackingStoreTransaction&);
     void writeTransactionFinished(MemoryBackingStoreTransaction&);
@@ -108,7 +109,7 @@ private:
     IDBIndexInfo m_info;
     WeakPtr<MemoryObjectStore> m_objectStore;
 
-    CheckedPtr<MemoryBackingStoreTransaction> m_writeTransaction;
+    WeakPtr<MemoryBackingStoreTransaction> m_writeTransaction;
     HashMap<IDBKeyData, Vector<IDBKeyData>, IDBKeyDataHash, IDBKeyDataHashTraits> m_transactionModifiedRecords;
     std::unique_ptr<IndexValueStore> m_records;
 

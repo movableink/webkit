@@ -62,6 +62,7 @@ public:
 
     ~MemoryObjectStore();
 
+    void transactionFinished(MemoryBackingStoreTransaction&);
     void writeTransactionStarted(MemoryBackingStoreTransaction&);
     void writeTransactionFinished(MemoryBackingStoreTransaction&);
     void transactionAborted(MemoryBackingStoreTransaction&);
@@ -122,7 +123,7 @@ private:
 
     IDBObjectStoreInfo m_info;
 
-    CheckedPtr<MemoryBackingStoreTransaction> m_writeTransaction;
+    WeakPtr<MemoryBackingStoreTransaction> m_writeTransaction;
     uint64_t m_keyGeneratorValueBeforeTransaction { 1 };
     uint64_t m_keyGeneratorValue { 1 };
 

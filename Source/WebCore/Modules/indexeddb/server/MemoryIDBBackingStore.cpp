@@ -140,7 +140,7 @@ IDBError MemoryIDBBackingStore::createObjectStore(const IDBResourceIdentifier& t
 
     m_databaseInfo->addExistingObjectStore(info);
 
-    auto rawTransaction = m_transactions.get(transactionIdentifier);
+    RefPtr rawTransaction = m_transactions.get(transactionIdentifier);
     RELEASE_ASSERT(rawTransaction);
     RELEASE_ASSERT(rawTransaction->isVersionChange());
 
@@ -158,7 +158,7 @@ IDBError MemoryIDBBackingStore::deleteObjectStore(const IDBResourceIdentifier& t
     if (!m_databaseInfo->infoForExistingObjectStore(objectStoreIdentifier))
         return IDBError { ExceptionCode::ConstraintError };
 
-    auto transaction = m_transactions.get(transactionIdentifier);
+    RefPtr transaction = m_transactions.get(transactionIdentifier);
     RELEASE_ASSERT(transaction);
     RELEASE_ASSERT(transaction->isVersionChange());
 
@@ -181,7 +181,7 @@ IDBError MemoryIDBBackingStore::renameObjectStore(const IDBResourceIdentifier& t
     if (!m_databaseInfo->infoForExistingObjectStore(objectStoreIdentifier))
         return IDBError { ExceptionCode::ConstraintError };
 
-    auto transaction = m_transactions.get(transactionIdentifier);
+    RefPtr transaction = m_transactions.get(transactionIdentifier);
     RELEASE_ASSERT(transaction);
     RELEASE_ASSERT(transaction->isVersionChange());
 
@@ -209,7 +209,7 @@ IDBError MemoryIDBBackingStore::clearObjectStore(const IDBResourceIdentifier& tr
     ASSERT_UNUSED(transactionIdentifier, m_transactions.contains(transactionIdentifier));
 
 #ifndef NDEBUG
-    auto transaction = m_transactions.get(transactionIdentifier);
+    RefPtr transaction = m_transactions.get(transactionIdentifier);
     ASSERT_UNUSED(transaction, transaction->isWriting());
 #endif
 
@@ -235,7 +235,7 @@ IDBError MemoryIDBBackingStore::deleteIndex(const IDBResourceIdentifier& transac
     if (!indexInfo)
         return IDBError { ExceptionCode::ConstraintError };
 
-    auto rawTransaction = m_transactions.get(transactionIdentifier);
+    RefPtr rawTransaction = m_transactions.get(transactionIdentifier);
     RELEASE_ASSERT(rawTransaction);
     RELEASE_ASSERT(rawTransaction->isVersionChange());
 
@@ -263,7 +263,7 @@ IDBError MemoryIDBBackingStore::renameIndex(const IDBResourceIdentifier& transac
     if (!indexInfo)
         return IDBError { ExceptionCode::ConstraintError };
 
-    auto transaction = m_transactions.get(transactionIdentifier);
+    RefPtr transaction = m_transactions.get(transactionIdentifier);
     RELEASE_ASSERT(transaction);
     RELEASE_ASSERT(transaction->isVersionChange());
 
@@ -345,7 +345,7 @@ IDBError MemoryIDBBackingStore::addRecord(const IDBResourceIdentifier& transacti
 {
     LOG(IndexedDB, "MemoryIDBBackingStore::addRecord");
 
-    auto transaction = m_transactions.get(transactionIdentifier);
+    RefPtr transaction = m_transactions.get(transactionIdentifier);
     if (!transaction)
         return IDBError { ExceptionCode::UnknownError, "No backing store transaction found to put record"_s };
 
@@ -499,7 +499,7 @@ IDBError MemoryIDBBackingStore::openCursor(const IDBResourceIdentifier& transact
 {
     LOG(IndexedDB, "MemoryIDBBackingStore::openCursor");
 
-    CheckedPtr transaction = m_transactions.get(transactionIdentifier);
+    RefPtr transaction = m_transactions.get(transactionIdentifier);
     if (!transaction)
         return IDBError { ExceptionCode::UnknownError, "No backing store transaction found in which to open a cursor"_s };
 
@@ -542,7 +542,7 @@ IDBError MemoryIDBBackingStore::iterateCursor(const IDBResourceIdentifier& trans
 {
     LOG(IndexedDB, "MemoryIDBBackingStore::iterateCursor");
 
-    CheckedPtr transaction = m_transactions.get(transactionIdentifier);
+    RefPtr transaction = m_transactions.get(transactionIdentifier);
     if (!transaction)
         return IDBError { ExceptionCode::UnknownError, "No backing store transaction found in which to iterate cursor"_s };
 
@@ -612,7 +612,7 @@ IDBError MemoryIDBBackingStore::addIndex(const IDBResourceIdentifier& transactio
     if (!objectStoreInfo)
         return IDBError { ExceptionCode::ConstraintError, "Object store does not exist in database info."_s };
 
-    auto* transaction = m_transactions.get(transactionIdentifier);
+    RefPtr transaction = m_transactions.get(transactionIdentifier);
     if (!transaction || !transaction->isVersionChange())
         return IDBError { ExceptionCode::UnknownError, "Transaction is not in version change mode."_s };
 
@@ -642,7 +642,7 @@ void MemoryIDBBackingStore::revertAddIndex(const IDBResourceIdentifier& transact
     if (!indexInfo)
         return;
 
-    auto* rawTransaction = m_transactions.get(transactionIdentifier);
+    RefPtr rawTransaction = m_transactions.get(transactionIdentifier);
     if (!rawTransaction || !rawTransaction->isVersionChange())
         return;
 
@@ -656,7 +656,7 @@ void MemoryIDBBackingStore::revertAddIndex(const IDBResourceIdentifier& transact
 IDBError MemoryIDBBackingStore::updateIndexRecordsWithIndexKey(const IDBResourceIdentifier& transactionIdentifier, const IDBIndexInfo& indexInfo, const IDBKeyData& key, const IndexKey& indexKey, std::optional<int64_t> recordID)
 {
     UNUSED_PARAM(recordID);
-    auto* transaction = m_transactions.get(transactionIdentifier);
+    RefPtr transaction = m_transactions.get(transactionIdentifier);
     if (!transaction || !transaction->isVersionChange())
         return IDBError { ExceptionCode::UnknownError, "Transaction is not in version change mode."_s };
 
@@ -672,7 +672,7 @@ IDBError MemoryIDBBackingStore::updateIndexRecordsWithIndexKey(const IDBResource
 
 void MemoryIDBBackingStore::forEachObjectStoreRecord(const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier objectStoreIdentifier, Function<void(RecordOrError&&)>&& apply)
 {
-    auto* transaction = m_transactions.get(transactionIdentifier);
+    RefPtr transaction = m_transactions.get(transactionIdentifier);
     if (!transaction) {
         IDBError error { ExceptionCode::UnknownError, "Transaction is not active."_s };
         apply(makeUnexpected(WTFMove(error)));
@@ -689,6 +689,11 @@ void MemoryIDBBackingStore::forEachObjectStoreRecord(const IDBResourceIdentifier
     objectStore->forEachRecord([&](auto key, auto value) {
         apply(ObjectStoreRecord { key, value, std::nullopt });
     });
+}
+
+MemoryObjectStore* MemoryIDBBackingStore::objectStoreForName(const String& name) const
+{
+    return m_objectStoresByName.get(name);
 }
 
 } // namespace IDBServer
