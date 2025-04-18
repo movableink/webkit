@@ -380,6 +380,39 @@ TEST(WKWebExtensionAPIPermissions, RequestAllURLsMatchPattern)
     TestWebKitAPI::Util::run(&requestComplete);
 }
 
+TEST(WKWebExtensionAPIPermissions, ImplicitAllHostsAndURLsPermissions)
+{
+    auto *manifest = @{
+        @"manifest_version": @3,
+        @"background": @{ @"scripts": @[ @"background.js" ], @"type": @"module", @"persistent": @NO },
+        @"permissions": @[ @"tabs" ],
+    };
+
+    auto *backgroundScript = Util::constructScript(@[
+        @"browser.test.onMessage.addListener(async (message, data) => {",
+        @"  if (message != 'Run test') return",
+
+        @"  const permissions = await browser.permissions.getAll()",
+        @"  browser.test.assertTrue(permissions.origins.includes('*://*/*'))",
+
+        @"  browser.test.notifyPass()",
+        @"})",
+
+        @"browser.test.sendMessage('Loaded')",
+    ]);
+
+    auto manager = Util::loadExtension(manifest, @{ @"background.js": backgroundScript });
+    [manager.get().context setPermissionStatus:WKWebExtensionContextPermissionStatusGrantedExplicitly forMatchPattern:WKWebExtensionMatchPattern.allHostsAndSchemesMatchPattern];
+
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    configuration.get().webExtensionController = manager.get().controller;
+
+    [manager runUntilTestMessage:@"Loaded"];
+
+    [manager sendTestMessage:@"Run test"];
+    [manager run];
+}
+
 TEST(WKWebExtensionAPIPermissions, AllHostsHostPermissions)
 {
     auto *manifest = @{
