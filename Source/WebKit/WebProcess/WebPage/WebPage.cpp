@@ -657,7 +657,7 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
     , m_activityState(parameters.activityState)
     , m_userActivity("App nap disabled for page due to user activity"_s)
     , m_userInterfaceLayoutDirection(parameters.userInterfaceLayoutDirection)
-    , m_overrideContentSecurityPolicy { parameters.overrideContentSecurityPolicy }
+    , m_overrideContentSecurityPolicy { WTFMove(parameters.overrideContentSecurityPolicy) }
     , m_cpuLimit(parameters.cpuLimit)
 #if USE(WPE_RENDERER)
     , m_hostFileDescriptor(WTFMove(parameters.hostFileDescriptor))
@@ -666,8 +666,8 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
 #if ENABLE(TEXT_AUTOSIZING)
     , m_textAutoSizingAdjustmentTimer(*this, &WebPage::textAutoSizingAdjustmentTimerFired)
 #endif
-    , m_overriddenMediaType(parameters.overriddenMediaType)
-    , m_processDisplayName(parameters.processDisplayName)
+    , m_overriddenMediaType { WTFMove(parameters.overriddenMediaType) }
+    , m_processDisplayName { WTFMove(parameters.processDisplayName) }
 #if PLATFORM(GTK) || PLATFORM(WPE)
 #if USE(GBM)
     , m_preferredBufferFormats(WTFMove(parameters.preferredBufferFormats))
@@ -816,7 +816,7 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
 #endif
 
 #if ENABLE(APPLICATION_MANIFEST)
-    pageConfiguration.applicationManifest = parameters.applicationManifest;
+    pageConfiguration.applicationManifest = WTFMove(parameters.applicationManifest);
 #endif
     
 #if PLATFORM(IOS_FAMILY) && ENABLE(DEVICE_ORIENTATION)
@@ -833,9 +833,9 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
         synchronizeCORSDisablingPatternsWithNetworkProcess();
     pageConfiguration.corsDisablingPatterns = parseAndAllowAccessToCORSDisablingPatterns(m_corsDisablingPatterns);
 
-    pageConfiguration.maskedURLSchemes = parameters.maskedURLSchemes;
+    pageConfiguration.maskedURLSchemes = WTFMove(parameters.maskedURLSchemes);
     pageConfiguration.loadsSubresources = parameters.loadsSubresources;
-    pageConfiguration.allowedNetworkHosts = parameters.allowedNetworkHosts;
+    pageConfiguration.allowedNetworkHosts = WTFMove(parameters.allowedNetworkHosts);
     pageConfiguration.shouldRelaxThirdPartyCookieBlocking = parameters.shouldRelaxThirdPartyCookieBlocking;
     pageConfiguration.httpsUpgradeEnabled = parameters.httpsUpgradeEnabled;
     pageConfiguration.portsForUpgradingInsecureSchemeForTesting = parameters.portsForUpgradingInsecureSchemeForTesting;
@@ -1034,7 +1034,7 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
 
     setObscuredContentInsets(parameters.obscuredContentInsets);
 
-    m_userAgent = parameters.userAgent;
+    m_userAgent = WTFMove(parameters.userAgent);
 
     setMediaVolume(parameters.mediaVolume);
 
