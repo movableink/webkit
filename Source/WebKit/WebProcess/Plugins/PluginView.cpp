@@ -836,11 +836,11 @@ bool PluginView::performDictionaryLookupAtLocation(const WebCore::FloatPoint& po
 void PluginView::notifyWidget(WidgetNotification notification)
 {
     switch (notification) {
-    case WillPaintFlattened:
+    case WidgetNotification::WillPaintFlattened:
         if (shouldCreateTransientPaintingSnapshot())
             m_transientPaintingSnapshot = protectedPlugin()->snapshot();
         break;
-    case DidPaintFlattened:
+    case WidgetNotification::DidPaintFlattened:
         m_transientPaintingSnapshot = nullptr;
         break;
     }
