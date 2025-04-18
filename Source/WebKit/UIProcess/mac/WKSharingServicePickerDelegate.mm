@@ -151,21 +151,23 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         WeakPtr weakPage = menuProxy ? menuProxy->page() : nullptr;
         RetainPtr<NSString> itemUTI = itemProvider.get().registeredTypeIdentifiers.firstObject;
         [itemProvider loadDataRepresentationForTypeIdentifier:itemUTI.get() completionHandler:[weakPage, attachmentID = _attachmentID, itemUTI](NSData *data, NSError *error) {
-            RefPtr webPage = weakPage.get();
-            
-            if (!webPage)
-                return;
-            
-            if (error)
-                return;
-            
-            auto apiAttachment = webPage->attachmentForIdentifier(attachmentID);
-            if (!apiAttachment)
-                return;
-            
-            RetainPtr attachment = wrapper(apiAttachment);
-            [attachment setData:data newContentType:itemUTI.get()];
-            webPage->didInvalidateDataForAttachment(*apiAttachment.get());
+            ensureOnMainRunLoop([weakPage = WTFMove(weakPage), attachmentID, itemUTI, data = RetainPtr { data }, error = RetainPtr { error }] {
+                RefPtr webPage = weakPage.get();
+
+                if (!webPage)
+                    return;
+
+                if (error)
+                    return;
+
+                RefPtr apiAttachment = webPage->attachmentForIdentifier(attachmentID);
+                if (!apiAttachment)
+                    return;
+
+                RetainPtr attachment = wrapper(apiAttachment.get());
+                [attachment setData:data.get() newContentType:itemUTI.get()];
+                webPage->didInvalidateDataForAttachment(*apiAttachment.get());
+            });
         }];
 ALLOW_DEPRECATED_DECLARATIONS_END
         return;
