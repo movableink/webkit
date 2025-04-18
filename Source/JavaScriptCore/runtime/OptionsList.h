@@ -586,7 +586,7 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, useLoopUnrolling, true, Normal, nullptr) \
     v(Bool, usePartialLoopUnrolling, false, Normal, nullptr) \
     v(Bool, verboseLoopUnrolling, false, Normal, nullptr) \
-    v(Bool, disallowLoopUnrollingForNonInnermost, false, Normal, nullptr) \
+    v(Bool, disallowLoopUnrollingForNonInnermost, true, Normal, nullptr) \
     v(Unsigned, maxLoopUnrollingCount, 2, Normal, nullptr) \
     v(Unsigned, maxLoopUnrollingBodyNodeSize, 200, Normal, nullptr) \
     v(Unsigned, maxLoopUnrollingIterationCount, 4, Normal, nullptr) \
